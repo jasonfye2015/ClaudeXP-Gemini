@@ -77,6 +77,35 @@ def set_name(name):
     a.changed.emit()
 
 
+def new_account(name, owner="", organization="", computer=""):
+    """A fresh install's first account (from 'Who will use this computer?'). The profile folder takes the
+    new name; one already made under the default name during Setup is renamed to match."""
+    import random
+    a = account()
+    name = name.strip() or DEFAULT_NAME
+    docs = DATA / "Drive C" / "Documents and Settings"
+    old, new = docs / a.data.get("profile", ""), docs / _folder_name(name)
+    if a.data.get("profile") and old.exists() and old != new and not new.exists():
+        old.rename(new)
+    picks = [path.name for path in sorted(PICTURES_DIR.glob("*.png"))]
+    a.data.update(name=name, profile=new.name, owner=owner or name, organization=organization,
+                  computer=computer, picture=random.choice(picks) if picks else DEFAULT_PICTURE)
+    _save(a.data)
+    _picture.cache_clear()
+    a.changed.emit()
+
+
+def _folder_name(name):
+    bad = '<>:"/\\|?*'
+    return "".join("_" if ch in bad else ch for ch in name).strip(" .") or DEFAULT_NAME
+
+
+def registered_owner():
+    """'Registered to:' in System Properties (the name typed during Setup)."""
+    data = account().data
+    return data.get("owner") or data["name"], data.get("organization", "")
+
+
 def pictures():
     """[(id, label, QPixmap)] of every account picture to choose from."""
     out = []

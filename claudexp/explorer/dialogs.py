@@ -62,10 +62,12 @@ def msgbox(desktop, title, text, icon="error", buttons=("OK",), on_button=None, 
 def system_info(desktop):
     """System Properties: the 'About this PC' box."""
     from PySide6.QtWidgets import QApplication
-    from ..user import user_name
+    from ..user import registered_owner
+    owner, organization = registered_owner()
+    registered = [("Registered to:", owner)] + ([("", organization)] if organization else [])
     properties(desktop, "System", [
         ("System:", "Microsoft Windows XP"), ("", "Home Edition"), ("", "Version 2002"), ("-", ""),
-        ("Registered to:", user_name()), ("", "55274-OEM-0011903-00102"), ("-", ""),
+        *registered, ("", "55274-OEM-0011903-00102"), ("-", ""),
         ("Computer:", "Intel(R) Pentium(R) III processor"), ("", "866 MHz"), ("", "256 MB of RAM")],
         icon=QApplication.style().standardIcon(QStyle.SP_ComputerIcon))
 

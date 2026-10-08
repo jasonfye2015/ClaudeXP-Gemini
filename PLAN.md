@@ -128,6 +128,17 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   safe first click, Best Times), Hearts (Pauline, Michele, Ben; pass left/right/across/hold, moon
   shooting, to 100). Stats and settings in data/games.json. All Programs now has submenus
   (Program.group: Accessories, Accessories/System Tools, Games).
+- **System Recovery** (`claudexp/setup/`): press SPACE during the BIOS test -> recovery menu -> 'Press any
+  key to boot from CD...' -> blue text-mode Setup (Welcome, licence F8/Y, partitions, file system: Quick
+  format / full format / leave intact, with [X] Program history (P) and [X] Buddies' memories (M), F to
+  format, copying files, 15 s reboot) -> a real process restart (main.py relaunches ClaudeXP and waits) ->
+  GUI Setup (steps, minutes countdown, slides, wizard: name/organization, computer name, date, network)
+  -> OOBE with assets/sounds/oobe_music.mp3 (Welcome, register, Who will use this computer?, Thank you)
+  -> Welcome screen. Format wipes all of data/ (minus unchecked groups); leave-intact resets only Windows
+  settings. Program history = Program Files/*/data + data/claudeai; memories = data/journals, mail.json,
+  life.json. Nothing is deleted: it's moved to 'Recovery Backups/<date time>/' (gitignored). E: is never
+  touched. data/setup.json tracks the stage (gui/oobe) so a reboot mid-Setup resumes it.
+  CLAUDEXP_SETUP_SPEED=20 speeds Setup up for tests. ~3-4 minutes at normal speed.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

@@ -38,10 +38,12 @@ class BiosScreen(QWidget):
         self.count_timer = QTimer(self)
         self.count_timer.timeout.connect(self._count)
         self._done = True
+        self.recovery_requested = False    # SPACE pressed: show the System Recovery menu after the test
 
     # ---- the script -------------------------------------------------------------------
     def start(self):
         self._done = False
+        self.recovery_requested = False
         self.lines, self.memory, self.footer = [], None, ""
         sound.play_file(random.choice(["harddrive_startup1.mp3", "harddrive_startup2.mp3"]))  # power on
         say = lambda text, color=GREY: lambda: self.lines.append((text, color))
@@ -53,6 +55,7 @@ class BiosScreen(QWidget):
             (300, say("")),
             (100, say("Press DEL to run Setup")),
             (100, say("Press <F8> for BBS POPUP")),
+            (100, say("Press <SPACE> for System Recovery")),
             (100, say("DDR Frequency 133MHz, Single-Channel, Linear Mode")),
             (400, self._start_memory_test),
         ]
@@ -123,6 +126,14 @@ class BiosScreen(QWidget):
         self._finish()
 
     def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Space and not event.isAutoRepeat():
+            if not self.recovery_requested:
+                self.recovery_requested = True
+                for i, (text, color) in enumerate(self.lines):
+                    if text.startswith("Press <SPACE>"):
+                        self.lines[i] = ("System Recovery requested...", WHITE)
+                self.update()
+            return
         self._finish()
 
     # ---- drawing --------------------------------------------------------------------------

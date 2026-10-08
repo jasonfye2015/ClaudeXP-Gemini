@@ -32,9 +32,28 @@ class ClaudeXP(QMainWindow):
         self.stack.addWidget(self.welcome)
         self.stack.addWidget(self.desktop)
         self.stack.addWidget(self.shutdown_screen)
+        from .setup.gui import GuiSetup
+        from .setup.oobe import Oobe
+        from .setup.textmode import BootFromCD, RecoveryMenu, TextSetup
+        self.recovery_menu = RecoveryMenu()
+        self.boot_cd = BootFromCD()
+        self.text_setup = TextSetup()
+        self.gui_setup = GuiSetup()
+        self.oobe = Oobe()
+        for screen in (self.recovery_menu, self.boot_cd, self.text_setup, self.gui_setup, self.oobe):
+            self.stack.addWidget(screen)
+        self.recovery_menu.start_normally.connect(self._boot_hard_disk)
+        self.recovery_menu.reinstall.connect(self._prompt_boot_cd)
+        self.boot_cd.boot_cd.connect(self._text_setup)
+        self.boot_cd.timed_out.connect(self._boot_hard_disk)
+        self.text_setup.quit_setup.connect(self.start)
+        self.text_setup.reboot.connect(self._setup_reboot)
+        self.gui_setup.finished.connect(self._gui_setup_done)
+        self.oobe.finished.connect(self._oobe_done)
+        self._after_boot = self.show_welcome
 
         self.bios.finished.connect(self._windows_boot)
-        self.boot.finished.connect(self.show_welcome)
+        self.boot.finished.connect(lambda: self._after_boot())
         self.safe_off.turn_off.connect(QApplication.quit)
         self.safe_off.restart.connect(self.restart_from_off)
         self.welcome.logged_on.connect(self.show_desktop)
@@ -56,9 +75,76 @@ class ClaudeXP(QMainWindow):
         self.bios.start()
 
     def _windows_boot(self):
-        self.stack.setCurrentWidget(self.boot)
-        self.boot.setFocus()
+        """After the BIOS: the recovery menu (SPACE), Setup still finishing, or Windows."""
+        from . import setup
+        if self.bios.recovery_requested:
+            self.recovery_menu.reset()
+            self._show_screen(self.recovery_menu)
+        elif setup.stage() in ("gui", "oobe"):
+            # The recovery CD is still in the drive: pressing a key now would start Setup over.
+            self._prompt_boot_cd()
+        else:
+            self._boot_hard_disk()
+
+    def _show_screen(self, screen):
+        self.stack.setCurrentWidget(screen)
+        screen.setFocus()
+
+    def _boot_hard_disk(self):
+        """The Windows XP boot screen, then whatever comes next (Setup, OOBE or the Welcome screen)."""
+        from . import setup
+        stage = setup.stage()
+        self._after_boot = {"gui": self._start_gui_setup, "oobe": self._start_oobe}.get(stage, self.show_welcome)
+        self._show_screen(self.boot)
         self.boot.start()
+
+    # ---- System Recovery / reinstalling Windows ----------------------------------------------------------
+    def _prompt_boot_cd(self):
+        self._show_screen(self.boot_cd)
+        self.boot_cd.start()
+
+    def _text_setup(self):
+        self.desktop.life.powered_off = False
+        self._show_screen(self.text_setup)
+        self.text_setup.start()
+
+    def _setup_reboot(self, format_drive, program_history, memories):
+        """The end of text-mode Setup: restart ClaudeXP for real (main.py wipes C: first)."""
+        from . import setup
+        programs.shutdown_all()
+        setup.reboot_into_gui_setup(QApplication.instance(), format_drive, program_history, memories)
+
+    def _start_gui_setup(self):
+        self._show_screen(self.gui_setup)
+        self.gui_setup.start()
+
+    def _gui_setup_done(self, info):
+        from . import setup
+        setup.set_stage("oobe", **info)
+        self._after_boot = self._start_oobe
+        self.shutdown_screen.text = "Please wait..."
+        self._show_screen(self.shutdown_screen)
+        QTimer.singleShot(setup.ms(2500), self._restart_for_oobe)
+
+    def _restart_for_oobe(self):
+        self.shutdown_screen.text = "Windows is shutting down..."
+        self._show_screen(self.boot)
+        self.boot.start()
+
+    def _start_oobe(self):
+        from . import setup
+        self._show_screen(self.oobe)
+        self.oobe.start(setup.info().get("owner", ""))
+
+    def _oobe_done(self, name):
+        """Create the account from 'Who will use this computer?', then on to the Welcome screen."""
+        from . import setup, user
+        info = setup.info()
+        user.new_account(name, owner=info.get("owner", name), organization=info.get("organization", ""),
+                         computer=info.get("computer", ""))
+        setup.finished()
+        self._after_boot = self.show_welcome
+        self.show_welcome()
 
     def show_welcome(self):
         self.welcome.reset()
