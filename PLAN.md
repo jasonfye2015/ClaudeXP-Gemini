@@ -180,6 +180,12 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   Sending calls life.receive_email(): the buddy's journal notes it and a REPLY_PROMPT answer arrives 2-9 min
   later (deferred while they sleep; queue in life.json survives restarts); unknown addresses bounce from the
   Mail Delivery Subsystem. Address Book (wab) lists every buddy's address.
+- **3D Pinball - Space Cadet** (`games/pinball.py`): a 2D tribute with real physics (8 substeps per frame:
+  gravity, segment/circle collisions, flippers as swinging capsules that pass on their surface speed), plunger
+  lane with a one-way gate, top arc, pop bumpers, slingshots, drop targets -> 'Hyperspace lit' -> Hyperspace
+  hole = mission (rank Cadet..Fleet Admiral), rollover lanes -> bonus multiplier, end-of-ball bonus, nudge/TILT,
+  'ball search' for a still ball, 3 balls, top-5 high scores. Keys Z, /, Space, X/., F2, F3. Tested headless
+  with a flipper-tapping bot: no escapes, no stuck spots.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

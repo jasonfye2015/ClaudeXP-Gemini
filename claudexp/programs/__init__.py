@@ -151,6 +151,8 @@ PROGRAMS = [
             _lazy("..games.ispades", "open_internet_spades"), group="Games"),
     Program("minesweeper", "Minesweeper", "", _game_icon("mine_icon"), _game("minesweeper", "open_minesweeper"),
             group="Games"),
+    Program("pinball", "Pinball", "", _lazy("..games.pinball", "pinball_icon"), _lazy("..games.pinball", "open_pinball"),
+            group="Games"),
     Program("solitaire", "Solitaire", "", _game_icon("card_icon", "S"), _game("solitaire", "open_solitaire"),
             group="Games"),
     Program("spider", "Spider Solitaire", "", _game_icon("card_icon", "S"), _game("spider", "open_spider"),

@@ -30,7 +30,7 @@ SYSTEM = [("System Idle Process", "SYSTEM", 16), ("System", "SYSTEM", 216), ("sm
           ("svchost.exe", "SYSTEM", 17240), ("svchost.exe", "LOCAL SERVICE", 3540), ("spoolsv.exe", "SYSTEM", 4316),
           ("explorer.exe", None, 18432), ("ctfmon.exe", None, 2884), ("shieldtray.exe", None, 3972)]
 # window content module -> process image
-MODULE_IMAGES = [("ibackgammon", "bckgzm.exe"), ("ihearts", "hrtzzm.exe"), ("ispades", "shvlzm.exe"),
+MODULE_IMAGES = [("pinball", "pinball.exe"), ("ibackgammon", "bckgzm.exe"), ("ihearts", "hrtzzm.exe"), ("ispades", "shvlzm.exe"),
                  ("icheckers", "chkrzm.exe"), ("ireversi", "rvsezm.exe"), ("zone", "zclientm.exe"),
                  ("wmp", "wmplayer.exe"), ("wordpad", "wordpad.exe"), ("outlook", "msimn.exe"),
                  ("paint", "mspaint.exe"), ("notepad", "notepad.exe"), ("calc", "calc.exe"), (".cmd", "cmd.exe"),
@@ -39,7 +39,7 @@ MODULE_IMAGES = [("ibackgammon", "bckgzm.exe"), ("ihearts", "hrtzzm.exe"), ("isp
                  ("claudeai", "claudeai.exe"), ("claudeaim", "aim.exe"), ("irc", "mirc32.exe"),
                  ("muck", "claudemuck.exe"), ("defrag", "dfrgntfs.exe"), ("antivirus", "claudeshield.exe"),
                  ("updates", "wuauclt.exe"), ("printing", "spoolsv.exe")]
-MEM = {"msimn.exe": 9140, "wordpad.exe": 5480, "bckgzm.exe": 7900, "hrtzzm.exe": 8120, "shvlzm.exe": 8040,
+MEM = {"pinball.exe": 11260, "msimn.exe": 9140, "wordpad.exe": 5480, "bckgzm.exe": 7900, "hrtzzm.exe": 8120, "shvlzm.exe": 8040,
        "chkrzm.exe": 7420, "rvsezm.exe": 7064, "zclientm.exe": 6900, "wmplayer.exe": 18260, "mspaint.exe": 6840,
        "notepad.exe": 2964, "calc.exe": 3108, "cmd.exe": 1468, "taskmgr.exe": 4072, "freecell.exe": 3256,
        "sol.exe": 3920, "spider.exe": 4484, "winmine.exe": 2440, "mshearts.exe": 3672, "netscape.exe": 21336,
