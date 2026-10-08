@@ -45,6 +45,16 @@ def clean_reply(text: str, name: str) -> str:
 
 
 _vision_cache = {}
+_thinking_cache = {}
+
+
+def supports_thinking(model: str) -> bool:
+    if model not in _thinking_cache:
+        try:
+            _thinking_cache[model] = "thinking" in (ollama.show(model).capabilities or [])
+        except Exception:
+            return False
+    return _thinking_cache[model]
 
 
 def supports_vision(model: str) -> bool:
@@ -81,16 +91,20 @@ class _Emitter(QObject):
 
 
 class _ChatJob(QRunnable):
-    def __init__(self, emitter, callback, model, messages, options):
+    def __init__(self, emitter, callback, model, messages, options, think=None):
         super().__init__()
         self.emitter, self.callback = emitter, callback
         self.model, self.messages, self.options = model, messages, options
+        self.think = think
 
     def run(self):
         try:
             messages = _prepare_images(self.model, self.messages)
+            extra = {}
+            if self.think is not None and supports_thinking(self.model):
+                extra["think"] = self.think   # False: skip the (slow) hidden reasoning
             resp = ollama.chat(model=self.model, messages=messages,
-                               options=self.options, keep_alive="30m")
+                               options=self.options, keep_alive="30m", **extra)
             text, err = resp.message.content or "", ""
         except Exception as e:
             text, err = "", str(e) or e.__class__.__name__
@@ -105,6 +119,8 @@ class LLM(QObject):
         self._emitter = _Emitter(self)
         self._emitter.done.connect(lambda cb, text, err: cb(text, err))
 
-    def chat(self, model, messages, options, callback):
-        """callback(text, error) runs on the UI thread when the reply is ready."""
-        self.pool.start(_ChatJob(self._emitter, callback, model, messages, options))
+    def chat(self, model, messages, options, callback, priority=0, think=None):
+        """callback(text, error) runs on the UI thread when the reply is ready.
+        Queued jobs with a higher priority run first. think=False turns off a thinking
+        model's reasoning step (much faster); None leaves the model's default."""
+        self.pool.start(_ChatJob(self._emitter, callback, model, messages, options, think), priority)

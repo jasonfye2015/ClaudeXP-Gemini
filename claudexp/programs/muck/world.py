@@ -4,7 +4,6 @@ The client only sees text: World.line(kind, text) signals, and World.command(tex
 Rooms and MUCK-only characters live in 'Program Files/ClaudeMUCK/world'; AIM buddies come from
 ClaudeAIM's contacts (an optional "muck" section there customises them).
 """
-import json
 import random
 import time
 from collections import deque
@@ -13,15 +12,10 @@ from dataclasses import dataclass, field
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from ...paths import ROOT
-from ..aim import ensure_aim_path
-
-ensure_aim_path()
-from claudeaim import paths as aim_paths  # noqa: E402
-from claudeaim import timefmt  # noqa: E402
-from claudeaim.contacts import load_contacts  # noqa: E402
-from claudeaim.storage import Settings  # noqa: E402
-
-from .brain import WORLD_NAME, Brain  # noqa: E402
+from ..people import aim_screen_name, available, load_buddies, parse_hours
+from ..people import load_json as _load_json
+from ..people import save_json as _save_json
+from .brain import WORLD_NAME, Brain
 
 MUCK_DIR = ROOT / "Program Files" / "ClaudeMUCK"
 WORLD_DIR = MUCK_DIR / "world"
@@ -70,11 +64,6 @@ def _now():
 
 def _minutes(lo_hi):
     return random.uniform(*lo_hi) * 60
-
-
-def _clock_minutes(text):
-    h, _, m = str(text).partition(":")
-    return int(h) * 60 + int(m or 0)
 
 
 @dataclass
@@ -128,33 +117,7 @@ class Character:
 
     def available(self):
         """Awake and free to be online right now (in their own time zone)."""
-        if self.contact is not None:
-            sched = self.contact.schedule
-            if sched is None:
-                return True
-            return sched.awake_until(timefmt.local_now(self.contact.timezone)) is not None
-        if self.hours is None:
-            return True
-        now = timefmt.local_now()
-        m = now.hour * 60 + now.minute
-        start, end = self.hours
-        return start <= m < end or start <= m + 1440 < end
-
-
-def _load_json(path, default):
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return default
-
-
-def _save_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    tmp.replace(path)
+        return available(self.contact, self.hours)
 
 
 def _duration(seconds):
@@ -187,7 +150,7 @@ class World(QObject):
         self.load_errors = []
         self.descs = _load_json(DESCS_FILE, {})
         self.player = _load_json(PLAYER_FILE, None)
-        self.aim_name = Settings()["screen_name"] or ""
+        self.aim_name = aim_screen_name()
         self.logged_in = False
         self.player_room = ""
         self.player_on_since = 0.0
@@ -212,22 +175,19 @@ class World(QObject):
 
         for r in _load_json(WORLD_DIR / "regulars.json", {}).get("regulars", []):
             try:
-                hours = r.get("hours")
                 self.people.append(Character(
                     name=r["name"], species=r.get("species", "critter"), persona=r.get("persona", ""),
                     desc=r.get("desc", ""), haunts=[h for h in r.get("haunts", public) if h in self.rooms],
                     doing=r.get("doing", ""), wizard=bool(r.get("wizard")), idle_only=bool(r.get("idle_only")),
                     moves=r.get("moves", True), start_chance=float(r.get("start_chance", 0.6)),
-                    hours=(_clock_minutes(hours[0]), _clock_minutes(hours[1])) if hours else None,
+                    hours=parse_hours(r.get("hours")),
                     temperature=float(r.get("temperature", 0.9))))
             except (KeyError, ValueError) as e:
                 self.load_errors.append(f"regulars.json: {e}")
 
-        contacts, errors = load_contacts()
+        buddies, errors = load_buddies("muck")
         self.load_errors += errors
-        for c in contacts:
-            raw = _load_json(aim_paths.CONTACTS / f"{c.id}.json", {})
-            muck = raw.get("muck", {})
+        for c, muck in buddies:
             self.people.append(Character(
                 name=muck.get("name", c.screen_name), species=muck.get("species", "furry"),
                 persona=c.persona, desc=muck.get("desc", ""),

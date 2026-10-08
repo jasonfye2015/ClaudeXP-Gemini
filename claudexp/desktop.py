@@ -71,6 +71,8 @@ class Desktop(QWidget):
                         lambda: programs.launch(self, "connect")),
             DesktopIcon(self, "ClaudeAIM", programs.get("aim").icon(),
                         lambda: programs.launch(self, "aim")),
+            DesktopIcon(self, "ClaudeIRC", programs.get("irc").icon(),
+                        lambda: programs.launch(self, "irc")),
             DesktopIcon(self, "ClaudeMUCK", programs.get("muck").icon(),
                         lambda: programs.launch(self, "muck")),
             DesktopIcon(self, "Recycle Bin", style.standardIcon(QStyle.SP_TrashIcon),

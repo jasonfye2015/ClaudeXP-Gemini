@@ -1,0 +1,68 @@
+{
+  "_help": "The FurNet IRC network. 'popularity' makes characters more likely to sit in a channel. 'lurkers' are idle nicks that only fill nick lists (they join, part and quit but never talk).",
+  "network": "FurNet",
+  "server": "FurNet.IRC",
+  "port": 6667,
+  "server_version": "Unreal3.1.1-Darkshades",
+  "created": "Sat Mar 10 2001 at 18:22:01 EST",
+  "motd": [
+    "- FurNet.IRC Message of the Day -",
+    "-",
+    "-    ______           _   _      _",
+    "-   |  ____|         | \\ | |    | |",
+    "-   | |__ _   _ _ __ |  \\| | ___| |_",
+    "-   |  __| | | | '__|| . ` |/ _ \\ __|",
+    "-   | |  | |_| | |   | |\\  |  __/ |_",
+    "-   |_|   \\__,_|_|   |_| \\_|\\___|\\__|",
+    "-",
+    "-  Welcome to FurNet, the furry IRC network!",
+    "-",
+    "-  * Be excellent to each other. No harassment, no drama.",
+    "-  * Channel ops have the final word in their channels.",
+    "-  * Lost? /join #help and ask nicely.",
+    "-  * Register your nick with /msg NickServ HELP",
+    "-",
+    "-  Popular channels: #furnet #fursuiters #furry-artists #gaming",
+    "-",
+    "-  Have fun, and remember: there is no 'asl' in #furnet.",
+    "-"
+  ],
+  "autojoin": ["#furnet"],
+  "channels": {
+    "#furnet": {
+      "topic": "Welcome to #furnet, FurNet's main hangout! | Be nice, no drama | No ASL | Need help? /join #help",
+      "topic_by": "Shadowpaw",
+      "modes": "+nt",
+      "popularity": 5,
+      "lurkers": ["Tuxedo|away", "Kodiak|zzz", "FoxyLoxy", "Sabre", "Mittens^work", "Raptor_", "Lupo", "Dusty|AFK", "Kiba", "Starfire", "Vulpine", "ottermatic", "Zeke|sleep", "Blitz", "Corvid", "Nimbus|away", "Chester", "Rosco", "Juniper", "Sly"]
+    },
+    "#fursuiters": {
+      "topic": "Fursuiters & fursuit fans | Post your con pics! | Next big con: Anthrocon 2002, Philadelphia",
+      "topic_by": "ArcticFox",
+      "modes": "+nt",
+      "popularity": 2,
+      "lurkers": ["Mascot_Mike", "FluffyTail", "Kodiak|zzz", "Huskydoo", "Plush|away"]
+    },
+    "#furry-artists": {
+      "topic": "Artists' corner | Commissions open? Say so! | Critique is welcome, crap is not",
+      "topic_by": "InkWhisker",
+      "modes": "+nt",
+      "popularity": 1.5,
+      "lurkers": ["Sketchy", "Brushtail", "Inkpaw|drawing", "Pencilfox", "Doodles"]
+    },
+    "#gaming": {
+      "topic": "Games! | Diablo II LoD, Counter-Strike, Phantasy Star Online | No console wars (yes, Dreamcast is still alive)",
+      "topic_by": "Zeph",
+      "modes": "+nt",
+      "popularity": 2,
+      "lurkers": ["Frag|CS", "Pixelpup", "Ganondork", "N64kid", "Lag|away"]
+    },
+    "#help": {
+      "topic": "FurNet help channel | Ask your question and wait, someone will answer | Nick registration: /msg NickServ HELP",
+      "topic_by": "Shadowpaw",
+      "modes": "+nt",
+      "popularity": 0.6,
+      "lurkers": ["HelpBot", "Mentor|away"]
+    }
+  }
+}

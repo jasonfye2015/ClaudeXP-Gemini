@@ -41,9 +41,21 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   JSON sets name/species/desc/haunts/doing. Player + generated descriptions saved in
   `Program Files/ClaudeMUCK/data/` (gitignored). Needs the dial-up. Presence on the MUCK is
   separate from AIM presence for now (same schedules, independent sessions).
+- **ClaudeIRC** (`claudexp/programs/irc/`): mIRC 6-style client (client.py: switchbar, Status /
+  channel / query panes, nick list, Options dialog) for the simulated FurNet network (furnet.py:
+  server welcome + MOTD, channels with topics, joins/parts/quits, lurkers, FurBot !commands,
+  'asl?' guests getting kicked, /whois /list /msg /me /nick /away /ctcp ...). Network, channels and
+  IRC-only regulars in `Program Files/ClaudeIRC/` (network.json, regulars.json); AIM buddies join
+  (optional "irc" section in their contact file). Settings + private-message history in
+  `Program Files/ClaudeIRC/data/` (gitignored).
+- Shared helpers for simulated casts: `claudexp/programs/people.py`.
+- Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
+  think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
+  the model default. All programs use AIM's context_size so Ollama never reloads the model.
+  main.py exits with os._exit so a running generation can't hang shutdown.
 - userpic.jpg (Welcome + Start menu) and the 1024x768 Bliss wallpaper are in.
 
 ## Next
 1. Real XP icons/title-bar buttons as the user finds them (see list in chat 2026-10-07)
-2. ClaudeIRC (mirc_image.jpg is ready) and ClaudescapeNavigator, also requiring the dial-up
+2. ClaudescapeNavigator (LLM-generated 2001 web pages), also requiring the dial-up
 3. Shared memory between programs (a buddy remembers what you said on the MUCK when you IM them)

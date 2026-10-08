@@ -6,7 +6,8 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QStyle
 
 from .. import network, sound
-from . import aim, muck
+from ..paths import pixmap
+from . import aim, irc, muck
 from .notepad import open_notepad
 from .placeholder import open_placeholder
 
@@ -44,7 +45,8 @@ PROGRAMS = [
     Program("mycomputer", "My Computer", "", lambda: std_icon(QStyle.SP_ComputerIcon), _my_computer),
     Program("aim", "ClaudeAIM", "Instant messenger", aim.aim_icon, aim.launch, aim.shutdown),
     Program("muck", "ClaudeMUCK", "PawPrints MUCK", muck.muck_icon, muck.launch, muck.shutdown),
-    Program("connect", "Connect to the Internet", "", network.network_icon, _connect,
+    Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown),
+    Program("connect", "Connect to the Internet", "", lambda: QIcon(pixmap("aol_icon.png")), _connect,
             lambda: network.disconnect(quiet=True)),
 ]
 

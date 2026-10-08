@@ -86,7 +86,7 @@ class Brain:
         return self.settings["default_model"]
 
     def _options(self, c):
-        return {"temperature": c.temperature, "num_ctx": min(int(self.settings["context_size"]), 8192)}
+        return {"temperature": c.temperature, "num_ctx": int(self.settings["context_size"])}  # same as AIM, so Ollama never reloads
 
     def _system(self, c, extra):
         player = self.world.player_name
@@ -117,7 +117,7 @@ class Brain:
                     {"role": "user", "content": f"What just happened in {room.name} (most recent last):\n"
                                                 f"{log}\n\n{nudge}"}]
         self.llm.chat(self._model(c), messages, self._options(c),
-                      lambda text, err: callback(None if err else parse_action(text, c.name)))
+                      lambda text, err: callback(None if err else parse_action(text, c.name)), think=False)
 
     def page(self, c, text, callback):
         """The player paged c. callback(reply text or None)."""
@@ -134,7 +134,7 @@ class Brain:
             else:
                 callback(None)
 
-        self.llm.chat(self._model(c), messages, self._options(c), done)
+        self.llm.chat(self._model(c), messages, self._options(c), done, 10, think=False)  # pages jump the queue
 
     def describe(self, c, callback):
         """Write c's look description. callback(text or None)."""
@@ -146,4 +146,4 @@ class Brain:
             text = re.sub(r"\s*\n\s*", " ", text)
             callback(None if err or not text else text)
 
-        self.llm.chat(self._model(c), messages, self._options(c), done)
+        self.llm.chat(self._model(c), messages, self._options(c), done, think=False)

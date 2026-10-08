@@ -14,7 +14,7 @@ _listening = False
 
 
 def muck_icon():
-    return QIcon(pixmap("mush_image.jpg"))
+    return QIcon(pixmap("mush_icon.png"))
 
 
 def launch(desktop):
