@@ -119,6 +119,15 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   a tray printer icon, printer_sound1/2.mp3 (longer for more pages), a 'Document Printed' balloon, and a
   print queue window. Print from Notepad (Ctrl+P), Netscape, the Picture Viewer, ClaudeAI (Ctrl+P) and
   Explorer's right-click Print; Printers and Faxes in the Start menu and Control Panel.
+- **Games** (`claudexp/games/`, Start > All Programs > Games): cards are drawn in code (`cards.py`, 71x96,
+  blue crosshatch back; real XP card images could replace face_pixmap/back_pixmap) with a shared
+  drag-and-drop CardTable. Solitaire (Draw One/Three, Standard scoring + timer, double/right-click home,
+  bouncing win cascade), FreeCell (the real Microsoft deals 1-32000, Select Game, Restart, supermoves,
+  safe auto-play, win/loss streak), Spider (1/2/4 suits, Undo, runs clear, can't deal onto an empty
+  column), Minesweeper (Beginner/Intermediate/Expert/Custom, LED counters, smiley, flags/?, chording,
+  safe first click, Best Times), Hearts (Pauline, Michele, Ben; pass left/right/across/hold, moon
+  shooting, to 100). Stats and settings in data/games.json. All Programs now has submenus
+  (Program.group: Accessories, Accessories/System Tools, Games).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

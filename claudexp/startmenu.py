@@ -137,8 +137,35 @@ class StartMenu(QWidget):
     def _show_all_programs(self):
         menu = QMenu(self)
         menu.setStyleSheet(MENU_STYLE)
+        folder = self.style().standardIcon(QStyle.SP_DirIcon)
+        submenus = {"": menu}
+
+        def submenu(path):
+            # Folders first, alphabetically, like XP's All Programs.
+            if path not in submenus:
+                parent_path, _, name = path.rpartition("/")
+                parent = submenu(parent_path)
+                sub = QMenu(name, parent)
+                sub.setIcon(folder)
+                sub.setStyleSheet(MENU_STYLE)
+                folders = [a for a in parent.actions() if a.menu()]
+                after = next((a for a in folders if a.text() > name), None)
+                if after is None:
+                    after = next((a for a in parent.actions() if not a.menu()), None)
+                parent.insertMenu(after, sub)
+                submenus[path] = sub
+            return submenus[path]
+
+        for group in sorted({p.group for p in programs.PROGRAMS if p.group}):
+            submenu(group)
         for prog in programs.PROGRAMS:
-            menu.addAction(prog.icon(), prog.name, partial(self._launch_from_menu, prog.key))
+            submenu(prog.group).addAction(prog.icon(), prog.name, partial(self._launch_from_menu, prog.key))
+        for sub in submenus.values():
+            if sub is not menu:
+                items = [a for a in sub.actions() if not a.menu()]
+                for a in sorted(items, key=lambda a: a.text()):
+                    sub.removeAction(a)
+                    sub.addAction(a)
         menu.popup(self.mapToGlobal(QPoint(ALL_PROGRAMS.right() + 2, ALL_PROGRAMS.top())))
 
     def _launch_from_menu(self, key):
