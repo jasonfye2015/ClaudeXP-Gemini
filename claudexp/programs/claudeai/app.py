@@ -315,6 +315,7 @@ class ClaudeAI(QWidget):
 
         QShortcut(QKeySequence("Ctrl+Shift+O"), self, self.new_chat)
         QShortcut(QKeySequence("Ctrl+B"), self, self.toggle_sidebar)
+        QShortcut(QKeySequence("Ctrl+P"), self, lambda: self.current and self.print_chat(self.current))
         from ...user import account
         account().changed.connect(self._account_changed)
         self.render_timer = QTimer(self)
@@ -407,9 +408,16 @@ class ClaudeAI(QWidget):
         menu = QMenu(self)
         menu.addAction("☆  Unstar" if chat["pinned"] else "★  Star", lambda: self.toggle_pin(chat))
         menu.addAction("✎  Rename", lambda: self.rename(chat))
+        menu.addAction("🖨  Print...", lambda: self.print_chat(chat))
         menu.addSeparator()
         menu.addAction("🗑  Delete", lambda: self.delete(chat))
         menu.exec(pos)
+
+    def print_chat(self, chat):
+        from ...printing import print_document
+        if chat is not self.current:
+            self.open_chat(chat)
+        print_document(self.desktop, chat["title"], self.view.document())
 
     def toggle_pin(self, chat):
         chat["pinned"] = not chat["pinned"]

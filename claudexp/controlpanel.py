@@ -659,6 +659,16 @@ def user_accounts(desktop, page=0):
 
 # ---- Control Panel -------------------------------------------------------------------------------------------
 
+def _printer_icon():
+    from .printing import printer_icon
+    return QIcon(printer_icon(32))
+
+
+def _printers(desktop):
+    from .printing import printers_and_faxes
+    printers_and_faxes(desktop)
+
+
 def control_panel(desktop):
     def make():
         from . import network, programs
@@ -700,7 +710,7 @@ def control_panel(desktop):
             ("Date and Time", std(QStyle.SP_FileDialogInfoView), not_here("Date and Time")),
             ("Sounds and Audio Devices", std(QStyle.SP_MediaVolume), not_here("Sounds and Audio Devices")),
             ("Internet Options", std(QStyle.SP_BrowserReload), not_here("Internet Options")),
-            ("Printers and Faxes", std(QStyle.SP_DialogSaveButton), not_here("Printers and Faxes")),
+            ("Printers and Faxes", _printer_icon(), lambda: _printers(desktop)),
             ("Scheduled Tasks", std(QStyle.SP_FileDialogDetailedView), not_here("Scheduled Tasks")),
             ("Fonts", std(QStyle.SP_FileDialogListView), not_here("Fonts")),
         ]

@@ -915,6 +915,10 @@ class Explorer(QWidget):
                 view.setCurrentIndex(idx)
             path = Path(self.fs.filePath(self.proxy.mapToSource(idx)))
             menu.addAction("&Open", lambda: self._activated(idx)).setFont(QFont("Tahoma", 8, QFont.Bold))
+            from .viewers import AUDIO, IMAGES, TEXT, WEB
+            if path.is_file() and path.suffix.lower() in TEXT | IMAGES | WEB:
+                from ..printing import print_file
+                menu.addAction("&Print", lambda: print_file(self.desktop, path))
             menu.addSeparator()
             menu.addAction("Cu&t", lambda: self.copy_selected(True))
             menu.addAction("&Copy", lambda: self.copy_selected(False))

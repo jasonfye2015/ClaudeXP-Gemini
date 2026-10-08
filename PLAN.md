@@ -113,6 +113,12 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   Folder/Text Document; Paste; rename in place (F2); Delete -> Recycle Bin (shortcuts are hidden instead;
   Display Properties > Customize Desktop brings them back); drop onto Recycle Bin or a folder; files
   dragged in from Windows are copied. Saved in data/desktop.json.
+- **Printing** (`claudexp/printing.py`): one printer, 'Epson LQ-570+ (Dot Matrix)', that prints to PDF in
+  E:\Printed (the Local Storage folder). Text prints dot-matrix style (green-bar paper, tractor holes,
+  80 columns); web pages/chats/pictures print as normal pages. XP Print dialog (copies), a spooler with
+  a tray printer icon, printer_sound1/2.mp3 (longer for more pages), a 'Document Printed' balloon, and a
+  print queue window. Print from Notepad (Ctrl+P), Netscape, the Picture Viewer, ClaudeAI (Ctrl+P) and
+  Explorer's right-click Print; Printers and Faxes in the Start menu and Control Panel.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

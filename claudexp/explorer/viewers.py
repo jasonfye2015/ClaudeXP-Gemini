@@ -74,6 +74,9 @@ class PictureViewer(QWidget):
         row.addStretch()
         row.addWidget(prev_btn)
         row.addWidget(next_btn)
+        print_btn = QPushButton("🖨 Print...")
+        print_btn.clicked.connect(self._print)
+        row.addWidget(print_btn)
         row.addStretch()
         root = QVBoxLayout(self)
         root.setContentsMargins(4, 4, 4, 4)
@@ -81,6 +84,10 @@ class PictureViewer(QWidget):
         root.addLayout(row)
         self.path = Path(path)
         self.pixmap = QPixmap()
+
+    def _print(self):
+        from ..printing import print_image
+        print_image(self.desktop, self.path)
 
     def siblings(self):
         return sorted(p for p in self.path.parent.iterdir() if p.suffix.lower() in IMAGES)

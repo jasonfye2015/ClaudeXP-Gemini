@@ -209,8 +209,7 @@ class Browser(QWidget):
         button("Reload", style.standardIcon(QStyle.SP_BrowserReload), self.reload)
         button("Home", style.standardIcon(QStyle.SP_DirHomeIcon), self.home)
         button("Search", style.standardIcon(QStyle.SP_FileDialogContentsView), self._search)
-        button("Print", style.standardIcon(QStyle.SP_DialogSaveButton), lambda: sound.play("default"),
-               "Print (no printer installed)")
+        button("Print", style.standardIcon(QStyle.SP_DialogSaveButton), self.print_page, "Print this page")
         self.stop_act = button("Stop", style.standardIcon(QStyle.SP_BrowserStop), self.stop)
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -553,6 +552,11 @@ class Browser(QWidget):
         self.bookmarks.append({"title": web.title_of(self.page) or self.url, "url": self.url})
         save_json(BOOKMARKS_FILE, self.bookmarks)
         self.status.setText("Bookmark added.")
+
+    def print_page(self):
+        from ...printing import print_document
+        title = web.title_of(self.page) or self.url or "Netscape"
+        print_document(self.desktop, title, self.view.document())
 
     def view_source(self):
         text = QPlainTextEdit(self.page or "")

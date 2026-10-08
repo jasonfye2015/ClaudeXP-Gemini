@@ -52,6 +52,8 @@ class Notepad(QWidget):
         file_menu.addAction("&Save", self.save, QKeySequence("Ctrl+S"))
         file_menu.addAction("Save &As...", self.save_as)
         file_menu.addSeparator()
+        file_menu.addAction("&Print...", self.print_, QKeySequence("Ctrl+P"))
+        file_menu.addSeparator()
         file_menu.addAction("E&xit", lambda: self.frame.request_close() if self.frame else None)
         edit_menu = bar.addMenu("&Edit")
         edit_menu.addAction("&Undo", self.edit.undo)
@@ -68,7 +70,7 @@ class Notepad(QWidget):
         format_menu.addAction(wrap)
         bar.addMenu("&View")
         bar.addMenu("&Help")
-        for key, slot in (("Ctrl+S", self.save), ("Ctrl+N", self.new)):
+        for key, slot in (("Ctrl+S", self.save), ("Ctrl+N", self.new), ("Ctrl+P", self.print_)):
             act = QAction(self)
             act.setShortcut(QKeySequence(key))
             act.triggered.connect(slot)
@@ -92,6 +94,10 @@ class Notepad(QWidget):
     def new(self):
         self._maybe_save(lambda: (self.edit.clear(), setattr(self, "path", None),
                                   self.edit.document().setModified(False), self._update_title()))
+
+    def print_(self):
+        from ..printing import print_text
+        print_text(self.desktop, self.name(), self.edit.toPlainText())
 
     def save(self, then=None):
         if self.path is None:

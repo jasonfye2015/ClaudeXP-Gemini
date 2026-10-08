@@ -116,6 +116,9 @@ class StartMenu(QWidget):
             folders = {"My Documents": vfs.my_documents, "My Pictures": vfs.my_pictures, "My Music": vfs.my_music}
             if value == "My Computer":
                 programs.launch(self.desktop, "mycomputer")
+            elif value == "Printers and Faxes":
+                from .printing import printers_and_faxes
+                printers_and_faxes(self.desktop)
             elif value == "Control Panel":
                 from .controlpanel import control_panel
                 control_panel(self.desktop)
