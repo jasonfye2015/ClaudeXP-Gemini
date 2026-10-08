@@ -171,6 +171,15 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   partner across, bids incl. Nil, spades broken, bags, 500 to win). The Zone takes a list of opponents;
   card tables are SELF_DRIVEN with SEATS = 3 and report finished(result); each buddy's diary entry is written
   from their seat (outcome_for).
+- **WordPad** (`programs/wordpad.py`): toolbar, format bar (font, size, B/I/U, colour, align, bullets), ruler,
+  Find/Replace, Date/Time, Font dialog, Print, New (Rich Text / Text). Its own RTF writer + reader (fonts,
+  sizes, colours, bold/italic/underline/strike, alignment, unicode); .rtf/.wri open in WordPad from Explorer.
+- **Outlook Express 6 + Address Book** (`programs/outlook.py`): Inbox = the life mailbox (shared with Netscape
+  WebMail; deleted mail gets folder='deleted'), Outbox/Sent/Drafts in data/outlook.json, preview pane,
+  Contacts pane, Reply/Forward with quoting, Send/Recv (dials up), offline mail waits in the Outbox.
+  Sending calls life.receive_email(): the buddy's journal notes it and a REPLY_PROMPT answer arrives 2-9 min
+  later (deferred while they sleep; queue in life.json survives restarts); unknown addresses bounce from the
+  Mail Delivery Subsystem. Address Book (wab) lists every buddy's address.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

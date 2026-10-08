@@ -369,7 +369,7 @@ class Browser(QWidget):
             box.mark_read(msg_id)
             self._show(web.message_page(msg), url)
         else:
-            self._show(web.webmail_page(box.messages()), url)
+            self._show(web.webmail_page([m for m in box.messages() if m.get("folder", "inbox") == "inbox"]), url)
 
     def _check_offline(self, url):
         dialer = network.get(self.desktop)

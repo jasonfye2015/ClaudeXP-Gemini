@@ -58,6 +58,20 @@ Your recent diary notes:
 Write the email about this: {topic}
 Only mention things you did together with {user} if your notes say so; don't invent past conversations. Format: first line exactly "Subject: <subject>", then a blank line, then the email body (plain text, one to four short paragraphs, the way you talk), signed with your name. No markdown."""
 
+REPLY_PROMPT = """You are {name}, answering an email from your friend {user} in 2001 (it is {now}).
+About you:
+{persona}
+
+Your recent diary notes:
+{notes}
+
+{user}'s email to you, subject "{subject}":
+{body}
+
+Write your reply, the way you'd really answer them: respond to what they said and asked, share a little of your own news if it fits. Only mention things you did together with {user} if your notes say so. Format: first line exactly "Subject: <subject>" (usually "Re: " and their subject), then a blank line, then the email body (plain text, one to four short paragraphs), signed with your name. No markdown."""
+
+MAIL_REPLY_MINUTES = (2, 9)      # how long a buddy takes to answer an email (while they're awake)
+
 REACH_OUT = ("Message {user} first to tell them about something that just happened in your life: {topic} "
              "Keep it natural and short, like an IM between friends.")
 
@@ -116,14 +130,25 @@ class Mailbox:
         save_json(MAIL_FILE, msgs)
 
     def unread(self):
-        return [m for m in self.messages() if not m["read"]]
+        return [m for m in self.messages() if not m["read"] and m.get("folder", "inbox") == "inbox"]
 
-    def mark_read(self, msg_id):
+    def mark_read(self, msg_id, read=True):
         msgs = self.messages()
         for m in msgs:
             if m["id"] == msg_id:
-                m["read"] = True
+                m["read"] = read
         save_json(MAIL_FILE, msgs)
+
+    def move(self, msg_id, folder):
+        """Outlook Express folders: 'inbox' or 'deleted'."""
+        msgs = self.messages()
+        for m in msgs:
+            if m["id"] == msg_id:
+                m["folder"] = folder
+        save_json(MAIL_FILE, msgs)
+
+    def purge(self, msg_id):
+        save_json(MAIL_FILE, [m for m in self.messages() if m["id"] != msg_id])
 
 
 class LifeSim(QObject):
@@ -210,8 +235,75 @@ class LifeSim(QObject):
         world.message_added.connect(added)
 
     # ---- the clock ---------------------------------------------------------------------------------
+    # ---- email from the user (Outlook Express) ------------------------------------------------------------
+    def user_address(self):
+        return f"{re.sub(r'[^a-z0-9]', '', self.user.lower()) or 'me'}@aol.com"
+
+    def receive_email(self, to_addr, subject, body):
+        """The user sent an email. Buddies answer a few minutes later (once they're awake); an address
+        nobody has bounces back from the Mail Delivery Subsystem."""
+        addr = to_addr.strip().lower()
+        name = next((n for n in self.buddies if email_address(n) == addr), None)
+        if name is not None:
+            self.journal.add(name, f'Got an email from {self.user}, "{subject}": {body.strip()[:300]}', "talk")
+        delay = random.uniform(*MAIL_REPLY_MINUTES) * 60 if name else random.uniform(40, 90)
+        queue = self.state.setdefault("mail_queue", [])
+        queue.append({"name": name, "addr": to_addr.strip(), "subject": subject, "body": body,
+                      "due": time.time() + delay})
+        save_json(STATE_FILE, self.state)
+
+    def _deliver_mail(self):
+        queue = self.state.get("mail_queue", [])
+        now = time.time()
+        due = [q for q in queue if q["due"] <= now]
+        if not due:
+            return
+        from ..programs.people import available
+        for item in due:
+            queue.remove(item)
+            name = item["name"]
+            if name is None:
+                self.mailbox.add("Mail Delivery Subsystem", f"Undeliverable: {item['subject']}",
+                                 f"Your message did not reach some or all of the intended recipients.\n\n"
+                                 f"      Subject:  {item['subject']}\n\nThe following recipient(s) could not be "
+                                 f"reached:\n\n      {item['addr']}\n            550 User unknown\n")
+                self.mail_arrived.emit()
+                self._announce_mail()
+                continue
+            contact = self.buddies.get(name)
+            if contact is None:
+                continue
+            if not available(contact):
+                item["due"] = now + 20 * 60         # asleep: they'll answer when they're up
+                queue.append(item)
+                continue
+            self._reply_email(contact, name, item)
+        save_json(STATE_FILE, self.state)
+
+    def _reply_email(self, contact, name, item):
+        now = clock.now()
+        prompt = REPLY_PROMPT.format(name=name, user=self.user, now=f"{now:%A, %B} {now.day}, {now.year}",
+                                     persona=contact.persona, notes=self.journal.notes(name),
+                                     subject=item["subject"], body=item["body"].strip()[:3000])
+
+        def done(text):
+            if not text:
+                item["due"] = time.time() + 10 * 60     # the model was busy or failed: try again later
+                self.state.setdefault("mail_queue", []).append(item)
+                save_json(STATE_FILE, self.state)
+                return
+            m = re.match(r"\s*Subject:\s*(.+?)\s*\n(.*)", text, re.S)
+            subject, body = (m.group(1).strip('"'), m.group(2).strip()) if m else (f"Re: {item['subject']}", text)
+            self.mailbox.add(name, subject, body)
+            self.journal.add(name, f"Replied to {self.user}'s email: {subject}", "talk")
+            self.mail_arrived.emit()
+            self._announce_mail()
+
+        self._ask(contact, prompt, done)
+
     def _tick(self):
         self.state["last_running"] = datetime.now().astimezone().isoformat(timespec="seconds")
+        self._deliver_mail()
         save_json(STATE_FILE, self.state)
         self._summarise_quiet_talks()
         if time.monotonic() >= self.next_story and (self.desktop.isVisible() or self.powered_off):

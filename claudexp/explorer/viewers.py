@@ -27,6 +27,9 @@ def open_file(desktop, path):
             programs.launch(desktop, key)
         else:
             msgbox(desktop, vpath, f"{vpath} is not a valid Win32 application.", "error")
+    elif ext in (".rtf", ".wri"):
+        from ..programs.wordpad import open_wordpad
+        open_wordpad(desktop, path)
     elif ext in TEXT:
         from ..programs.notepad import open_notepad
         open_notepad(desktop, path)
