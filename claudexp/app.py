@@ -140,12 +140,16 @@ class ClaudeXP(QMainWindow):
         self._show_screen(self.oobe)
         self.oobe.start(setup.info().get("owner", ""))
 
-    def _oobe_done(self, name):
-        """Create the account from 'Who will use this computer?', then on to the Welcome screen."""
+    def _oobe_done(self, chosen):
+        """Create the account from the 'Who will use this computer?' pages, then on to the Welcome screen."""
         from . import setup, user
         info = setup.info()
+        name = chosen["name"]
         user.new_account(name, owner=info.get("owner", name), organization=info.get("organization", ""),
-                         computer=info.get("computer", ""))
+                         computer=info.get("computer", ""), picture=chosen.get("picture"),
+                         handle=chosen.get("handle"), linked_=chosen.get("linked", True),
+                         windows_password=chosen.get("windows_password"),
+                         online_password_=chosen.get("online_password"))
         setup.finished()
         self._offer_tour = True              # XP's 'Take a tour of Windows XP' balloon after the first logon
         self._after_boot = self.show_welcome

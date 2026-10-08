@@ -49,6 +49,7 @@ def launch(desktop):
     except Exception:
         _failed(desktop)
         return
+    apply_identity()
     host.install(AppHost(desktop, "ClaudeAIM", aim_icon(),
                          on_exit=_exited, on_restart=lambda: _restart(desktop)))
     _app = ClaudeAIM(QApplication.instance())
@@ -57,6 +58,17 @@ def launch(desktop):
     except Exception:
         _app = None
         _failed(desktop)
+
+
+def apply_identity():
+    """With one online identity, AIM signs on as the shared handle, password saved, Auto-login on."""
+    from .. import user
+    if not user.linked():
+        return
+    ensure_aim_path()
+    from claudeaim.storage import Settings
+    password = user.online_password()
+    Settings().update(screen_name=user.aim_name(), password=password, save_password=True, auto_login=True)
 
 
 def _bring_forward(app):

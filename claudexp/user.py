@@ -73,13 +73,17 @@ def profile_name():
 def set_name(name):
     a = account()
     a.data["name"] = name.strip() or DEFAULT_NAME
+    online = _online()
+    if online.get("same"):
+        online["handle"] = a.data["name"]          # 'Use my Windows name online' follows the rename
     _save(a.data)
     a.changed.emit()
 
 
-def new_account(name, owner="", organization="", computer=""):
-    """A fresh install's first account (from 'Who will use this computer?'). The profile folder takes the
-    new name; one already made under the default name during Setup is renamed to match."""
+def new_account(name, owner="", organization="", computer="", picture=None, handle=None, linked_=True,
+                windows_password=None, online_password_=None):
+    """A fresh install's first account (from Setup's 'Who will use this computer?' pages). The profile folder
+    takes the new name; one already made under the default name during Setup is renamed to match."""
     import random
     a = account()
     name = name.strip() or DEFAULT_NAME
@@ -89,10 +93,146 @@ def new_account(name, owner="", organization="", computer=""):
         old.rename(new)
     picks = [path.name for path in sorted(PICTURES_DIR.glob("*.png"))]
     a.data.update(name=name, profile=new.name, owner=owner or name, organization=organization,
-                  computer=computer, picture=random.choice(picks) if picks else DEFAULT_PICTURE)
+                  computer=computer,
+                  picture=picture or (random.choice(picks) if picks else DEFAULT_PICTURE),
+                  online={"handle": (handle or name).strip(), "linked": bool(linked_),
+                          "same": (handle or name).strip() == name})
     _save(a.data)
+    set_windows_password(windows_password)
+    set_online_password(online_password_)
     _picture.cache_clear()
     a.changed.emit()
+
+
+# ---- the online identity ----------------------------------------------------------------------------------------
+# One online handle shared by AOL, ClaudeAIM, ClaudeIRC, ClaudeMUCK, e-mail and the Zone (when 'linked'), and
+# optional passwords. These are pretend accounts: the Windows password is only kept as a salted hash; the online
+# password is kept (lightly encoded) so it can be filled in for you, like AIM's 'Save password'.
+
+def _online():
+    a = account()
+    online = a.data.get("online")
+    if not isinstance(online, dict):
+        # Upgrading an older install: start from the AIM screen name, and keep programs asking separately.
+        handle = ""
+        try:
+            from .programs.people import aim_screen_name
+            handle = aim_screen_name()
+        except Exception:
+            pass
+        online = {"handle": handle or a.data["name"], "linked": False}
+        a.data["online"] = online
+        _save(a.data)
+    return online
+
+
+def online_handle():
+    return _online()["handle"]
+
+
+def linked():
+    """Use the online handle for every account and sign in automatically?"""
+    return bool(_online().get("linked"))
+
+
+def same_as_windows():
+    return bool(_online().get("same"))
+
+
+def set_online(handle=None, linked_=None, same=None):
+    a = account()
+    online = _online()
+    if handle is not None and handle.strip():
+        online["handle"] = handle.strip()
+    if linked_ is not None:
+        online["linked"] = bool(linked_)
+    if same is not None:
+        online["same"] = bool(same)
+    _save(a.data)
+    a.changed.emit()
+
+
+def aim_name(handle=None):
+    """AIM screen names: 3-16 letters, digits and spaces, starting with a letter."""
+    name = "".join(ch for ch in (handle or online_handle()) if ch.isalnum() or ch == " ").strip()
+    name = name.lstrip("0123456789 ") or "XPUser"
+    return (name + "01")[:16] if len(name) < 3 else name[:16]
+
+
+def irc_nick(handle=None):
+    """IRC nicknames: no spaces; letters, digits and a few symbols; not starting with a digit."""
+    nick = "".join(ch for ch in (handle or online_handle()) if ch.isalnum() or ch in "_-[]\\`^{}|")
+    nick = nick.lstrip("0123456789-") or "XPUser"
+    return nick[:16]
+
+
+def muck_name(handle=None):
+    """MUCK characters: letters and digits only."""
+    name = "".join(ch for ch in (handle or online_handle()) if ch.isalnum())
+    return (name or "Guest")[:20]
+
+
+def email_address(handle=None):
+    slug = "".join(ch for ch in (handle or online_handle()).lower() if ch.isalnum())
+    return f"{slug or 'me'}@aol.com"
+
+
+def known_as():
+    """What the buddies call you: the shared handle, or (if programs ask separately) the AIM screen name."""
+    if linked():
+        return online_handle()
+    try:
+        from .programs.people import aim_screen_name
+        return aim_screen_name() or online_handle()
+    except Exception:
+        return online_handle()
+
+
+def _hash(password, salt):
+    import hashlib
+    return hashlib.sha256((salt + password).encode("utf-8")).hexdigest()
+
+
+def set_windows_password(password):
+    """None or '' removes it (the Welcome screen then logs on with one click)."""
+    import secrets
+    a = account()
+    if password:
+        salt = secrets.token_hex(8)
+        a.data["windows_password"] = {"salt": salt, "hash": _hash(password, salt)}
+    else:
+        a.data.pop("windows_password", None)
+    _save(a.data)
+    a.changed.emit()
+
+
+def has_windows_password():
+    return bool(account().data.get("windows_password"))
+
+
+def check_windows_password(password):
+    stored = account().data.get("windows_password")
+    return not stored or _hash(password, stored["salt"]) == stored["hash"]
+
+
+def set_online_password(password):
+    import base64
+    a = account()
+    if password:
+        a.data["online_password"] = base64.b64encode(password.encode("utf-8")).decode("ascii")
+    else:
+        a.data.pop("online_password", None)
+    _save(a.data)
+    a.changed.emit()
+
+
+def online_password():
+    import base64
+    raw = account().data.get("online_password")
+    try:
+        return base64.b64decode(raw).decode("utf-8") if raw else ""
+    except ValueError:
+        return ""
 
 
 def _folder_name(name):

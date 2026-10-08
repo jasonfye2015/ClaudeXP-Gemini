@@ -361,10 +361,24 @@ class IrcClient(QWidget):
         self.show_pane(nick)
 
     # ---- connecting ----------------------------------------------------------------------------
+    def _apply_identity(self):
+        """One online identity: the nickname follows the shared handle (no Options dialog needed)."""
+        from ... import user
+        if not user.linked():
+            return
+        s = dict(self.settings or {"realname": user.user_name(), "email": user.email_address(),
+                                   "autojoin": []})
+        s["nick"] = user.irc_nick()
+        s["alt"] = user.irc_nick() + "_"
+        if s != self.settings:
+            self.settings = s
+            save_json(SETTINGS_FILE, s)
+
     def start(self):
         status = self.panes[""]
         status.add("info", "* ClaudeIRC v6.02 - an IRC client for ClaudeXP")
         status.add("info", "* Type /help for a list of commands")
+        self._apply_identity()
         if self.settings is None:
             self.show_options(connect_after=True)
         else:
@@ -373,6 +387,7 @@ class IrcClient(QWidget):
     def connect_server(self):
         if self.net.connected or self.connecting:
             return
+        self._apply_identity()
         if self.settings is None:
             self.show_options(connect_after=True)
             return
@@ -415,7 +430,8 @@ class IrcClient(QWidget):
             self.desktop.activate(self.options_win)
             return
         s = self.settings or {}
-        default_nick = self.net.aim_name or user_name()
+        from ... import user
+        default_nick = user.irc_nick() if user.linked() else (self.net.aim_name or user_name())
         body = network.DialogBody()
         root = QVBoxLayout(body)
         root.setContentsMargins(14, 12, 14, 12)

@@ -176,7 +176,6 @@ class FurNet(QObject):
             if nick.lower() not in taken:
                 self.people.append(Person(nick=nick, ident=nick.lower().strip("_^|")[:9] or "user",
                                           realname="...", channels=chans, lurker=True, start_chance=0.85))
-        self.aim_name = aim_screen_name()
         self.brain = Brain(self)
         self.connected = False
         self.nick = ""
@@ -195,6 +194,11 @@ class FurNet(QObject):
         return [self.channels[n.lower()].name for n in names if n.lower() in self.channels]
 
     # ---- lookups --------------------------------------------------------------------
+    @property
+    def aim_name(self):
+        """The user's AIM screen name, read fresh so renames show up at once."""
+        return aim_screen_name()
+
     def person(self, nick, online_only=True):
         nick = nick.lower()
         for p in self.people:

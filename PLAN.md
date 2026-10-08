@@ -207,6 +207,15 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   The Start menu artwork lacks the item, so startmenu.py paints 'Help and Support' below Run.
 - **Tour Windows XP** (`programs/tour.py`): animated slides with the OOBE music; after Setup, a tray icon pops
   the 'Take a tour of Windows XP' balloon on the first logon.
+- **One identity** (user.py 'online' section + accounts.py widgets): a Windows name plus an online handle
+  (or 'Use my Windows name online', which then follows Windows renames), optional Windows password (salted
+  hash; Welcome screen asks, XP's 'Did you forget your password?' hint) and optional online password (kept
+  lightly encoded so it can be auto-filled). With 'linked' on: AOL dial-up user/password come from it
+  (network._load), AIM gets screen name + saved password + Auto-login before it starts (aim.apply_identity),
+  IRC nick/alt follow it with no Options dialog, the MUCK character is created/renamed to it, e-mail is
+  <handle>@aol.com, and life.user (what buddies call you) is user.known_as(). Renames are silent to the buddies.
+  Setup's OOBE has name + picture, online name, and passwords pages; User Accounts can change all of it.
+  Older installs migrate with handle = AIM screen name and linked off (switch it on in User Accounts).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

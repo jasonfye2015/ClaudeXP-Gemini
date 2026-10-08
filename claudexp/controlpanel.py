@@ -483,6 +483,9 @@ class UserAccounts(QWidget):
         self.pages.addWidget(self._home_page())
         self.pages.addWidget(self._picture_page())
         self.pages.addWidget(self._name_page())
+        self.pages.addWidget(self._online_page())
+        self.pages.addWidget(self._password_page("windows"))
+        self.pages.addWidget(self._password_page("online"))
         side = QWidget()
         side.setObjectName("uaside")
         side.setAttribute(Qt.WA_StyledBackground, True)
@@ -531,14 +534,102 @@ class UserAccounts(QWidget):
         sub = QLabel("What do you want to change about your account?")
         sub.setStyleSheet("font-family: 'Trebuchet MS'; font-size: 14px; color: #2154AF;")
         v.addWidget(sub)
-        for text, idx in (("Change my name", 2), ("Change my picture", 1)):
+        self.links = {}
+        for key, text, idx in (("name", "Change my name", 2), ("picture", "Change my picture", 1),
+                               ("online", "Change my online name", 3), ("winpw", "Create a password", 4),
+                               ("onlinepw", "Create an online password", 5)):
             b = QPushButton("▸  " + text)
             b.setStyleSheet(LINK)
             b.setCursor(Qt.PointingHandCursor)
             b.clicked.connect(lambda _c=False, i=idx: self._go(i))
             v.addWidget(b)
+            self.links[key] = b
         v.addStretch()
         return page
+
+    def _page_shell(self, title_text):
+        page = QWidget()
+        v = QVBoxLayout(page)
+        v.setContentsMargins(24, 18, 24, 18)
+        title = QLabel(title_text)
+        title.setStyleSheet(HEADER)
+        title.setWordWrap(True)
+        v.addWidget(title)
+        v.addSpacing(8)
+        return page, v
+
+    def _buttons(self, v, ok_text, ok_slot):
+        v.addStretch()
+        row = QHBoxLayout()
+        row.addStretch()
+        ok, cancel = QPushButton(ok_text), QPushButton("Cancel")
+        for b in (ok, cancel):
+            b.setFixedHeight(23)
+            row.addWidget(b)
+        ok.clicked.connect(ok_slot)
+        cancel.clicked.connect(lambda: self._go(0))
+        v.addLayout(row)
+        return ok
+
+    def _online_page(self):
+        from .accounts import OnlineNameForm
+        page, v = self._page_shell("What name do you want to use online?")
+        self.online_form = OnlineNameForm(user.user_name)
+        v.addWidget(self.online_form)
+        note = QLabel("Your buddies will simply know you by the new name.")
+        note.setWordWrap(True)
+        v.addWidget(note)
+        ok = self._buttons(v, "Change Online Name", self._change_online)
+        self.online_form.changed.connect(lambda: ok.setEnabled(self.online_form.valid()))
+        return page
+
+    def _password_page(self, kind):
+        from .accounts import PRETEND_NOTE, PasswordForm
+        title = "Your Windows password" if kind == "windows" else "Your online password"
+        page, v = self._page_shell(title)
+        explain = QLabel("The Welcome screen asks for this password when you log on." if kind == "windows" else
+                         "This password is filled in for you when you sign on to America Online and AIM.")
+        explain.setWordWrap(True)
+        v.addWidget(explain)
+        v.addSpacing(6)
+        form = PasswordForm("", "Don't use a Windows password" if kind == "windows" else
+                            "Don't use an online password")
+        v.addWidget(form)
+        note = QLabel(PRETEND_NOTE)
+        note.setWordWrap(True)
+        note.setStyleSheet("color: #606060;")
+        v.addWidget(note)
+        ok = self._buttons(v, "Save", lambda: self._save_password(kind, form))
+        form.changed.connect(lambda: ok.setEnabled(form.valid()))
+        setattr(self, f"{kind}_pw_form", form)
+        return page
+
+    def _change_online(self):
+        if not self.online_form.valid():
+            return
+        user.set_online(self.online_form.value(), self.online_form.linked(), self.online_form.is_same())
+        from .programs import aim
+        try:
+            aim.apply_identity()
+        except Exception:
+            pass
+        sound.play("navigate")
+        self._go(0)
+
+    def _save_password(self, kind, form):
+        if not form.valid():
+            return
+        if kind == "windows":
+            user.set_windows_password(form.value())
+        else:
+            user.set_online_password(form.value())
+            from .programs import aim
+            try:
+                aim.apply_identity()
+            except Exception:
+                pass
+        sound.play("navigate")
+        self._go(0)
 
     def _picture_page(self):
         page = QWidget()
@@ -618,6 +709,14 @@ class UserAccounts(QWidget):
             self.name_edit.setText(user.user_name())
             self.name_edit.selectAll()
             self.name_edit.setFocus()
+        if index == 3:
+            self.online_form.set_values(user.online_handle(), user.linked(), user.same_as_windows())
+        if index in (4, 5):
+            form = self.windows_pw_form if index == 4 else self.online_pw_form
+            has = user.has_windows_password() if index == 4 else bool(user.online_password())
+            form.none.setChecked(not has)
+            form.pw.clear()
+            form.confirm.clear()
         self.pages.setCurrentIndex(index)
 
     def _change_picture(self):
@@ -640,8 +739,17 @@ class UserAccounts(QWidget):
             scaled = pm.scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             self.card_pic.setPixmap(scaled)
             self.big_pic.setPixmap(scaled)
+        online = user.online_handle()
+        everywhere = "used for all accounts" if user.linked() else "programs ask separately"
+        locks = ("Password protected" if user.has_windows_password() else "No password")
         self.card_text.setText(f"<span style='font-size:15px; font-family:Trebuchet MS;'><b>{user.user_name()}</b>"
-                               "</span><br>Computer administrator")
+                               f"</span><br>Computer administrator<br>{locks}<br>Online: <b>{online}</b> "
+                               f"({everywhere})")
+        if hasattr(self, "links"):
+            self.links["winpw"].setText("▸  " + ("Change my password" if user.has_windows_password()
+                                                 else "Create a password"))
+            self.links["onlinepw"].setText("▸  " + ("Change my online password" if user.online_password()
+                                                    else "Create an online password"))
 
 
 def user_accounts(desktop, page=0):

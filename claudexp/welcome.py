@@ -1,7 +1,7 @@
 """The XP Welcome screen: 'To begin, click your user name'."""
 from PySide6.QtCore import QPointF, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen, QRadialGradient
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QLineEdit, QPushButton, QWidget
 
 from . import sound
 from .paths import pixmap
@@ -23,11 +23,64 @@ class WelcomeScreen(QWidget):
         from .user import account
         account().changed.connect(self.update)
         self.loading = False
+        self.prompting = False       # showing the password box
+        self.bad_password = False
+        self.pw = QLineEdit(self)
+        self.pw.setEchoMode(QLineEdit.Password)
+        self.pw.setFixedSize(170, 24)
+        self.pw.setStyleSheet("QLineEdit { border: 1px solid #1C3D91; border-radius: 3px; padding: 1px 4px;"
+                              " font-family: Tahoma; font-size: 12px; }")
+        self.pw.returnPressed.connect(self._submit)
+        self.go = QPushButton("➜", self)
+        self.go.setFixedSize(24, 24)
+        self.go.setCursor(Qt.PointingHandCursor)
+        self.go.setStyleSheet("QPushButton { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #7FD46A,"
+                              " stop:1 #2E9A1A); color: white; border: 1px solid #FFFFFF; border-radius: 4px;"
+                              " font-size: 14px; font-weight: bold; }")
+        self.go.clicked.connect(self._submit)
+        self.pw.hide()
+        self.go.hide()
 
     def reset(self):
         self.loading = False
         self.hover = None
+        self.prompting = False
+        self.bad_password = False
+        self.pw.hide()
+        self.go.hide()
+        self.pw.clear()
         self.update()
+
+    def _place_password(self):
+        r = self._tile_rect()
+        x = r.x() + 10 + PIC + 14
+        self.pw.move(x, r.center().y() + 6)
+        self.go.move(x + self.pw.width() + 6, r.center().y() + 6)
+
+    def resizeEvent(self, event):
+        self._place_password()
+
+    def _submit(self):
+        from .user import check_windows_password
+        if check_windows_password(self.pw.text()):
+            self.pw.hide()
+            self.go.hide()
+            self.prompting = False
+            self.bad_password = False
+            self._log_on()
+        else:
+            self.bad_password = True
+            sound.play("default")
+            self.pw.selectAll()
+            self.pw.setFocus()
+            self.update()
+
+    def _log_on(self):
+        self.loading = True
+        self.hover = "user"
+        self.unsetCursor()
+        self.update()
+        QTimer.singleShot(1800, self.logged_on.emit)
 
     # ---- layout -------------------------------------------------------------
     def _bands(self):
@@ -74,11 +127,18 @@ class WelcomeScreen(QWidget):
             return
         item = self._item_at(event.position().toPoint())
         if item == "user":
-            self.loading = True
-            self.hover = "user"
-            self.unsetCursor()
-            self.update()
-            QTimer.singleShot(1800, self.logged_on.emit)
+            from .user import has_windows_password
+            if has_windows_password():
+                if not self.prompting:
+                    self.prompting = True
+                    self.hover = "user"
+                    self._place_password()
+                    self.pw.show()
+                    self.go.show()
+                    self.pw.setFocus()
+                    self.update()
+                return
+            self._log_on()
         elif item == "turnoff":
             sound.play("menu")
             self.turn_off.emit()
@@ -171,7 +231,16 @@ class WelcomeScreen(QWidget):
         p.setFont(name_font)
         p.setPen(QColor("white"))
         text_x = pic.right() + 14
-        if self.loading:
+        if self.prompting:
+            p.drawText(QRect(text_x, r.y() - 6, r.right() - text_x, r.height() // 2 - 4),
+                       Qt.AlignBottom | Qt.AlignLeft, user_name())
+            p.setFont(QFont("Tahoma", 8))
+            p.setPen(QColor("#D6E2FF"))
+            p.drawText(QRect(text_x, r.center().y() - 12, r.right() - text_x, 16), Qt.AlignLeft,
+                       "Type your password")
+            if self.bad_password:
+                self._draw_hint(p, QRect(text_x - 20, r.bottom() + 10, 300, 70))
+        elif self.loading:
             p.drawText(QRect(text_x, r.y() + 8, r.right() - text_x, r.height() // 2 - 4),
                        Qt.AlignBottom | Qt.AlignLeft, user_name())
             p.setFont(QFont("Tahoma", 9))
@@ -181,6 +250,17 @@ class WelcomeScreen(QWidget):
         else:
             p.drawText(QRect(text_x, r.y(), r.right() - text_x, r.height()),
                        Qt.AlignVCenter | Qt.AlignLeft, user_name())
+
+    def _draw_hint(self, p, box):
+        """XP's yellow 'Did you forget your password?' balloon."""
+        p.setPen(QPen(QColor("#000000"), 1))
+        p.setBrush(QColor("#FFFFE1"))
+        p.drawRoundedRect(QRectF(box), 6, 6)
+        p.setFont(QFont("Tahoma", 8, QFont.Bold))
+        p.drawText(box.adjusted(10, 6, -8, 0), Qt.AlignLeft | Qt.AlignTop, "Did you forget your password?")
+        p.setFont(QFont("Tahoma", 8))
+        p.drawText(box.adjusted(10, 24, -8, -4), Qt.AlignLeft | Qt.TextWordWrap,
+                   "Please type your password again. Be sure to use the correct uppercase and lowercase letters.")
 
     def _draw_turnoff(self, p):
         r = self._turnoff_rect()

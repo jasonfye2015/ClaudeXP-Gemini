@@ -20,7 +20,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 
 from .. import broker, clock, network, sound
 from ..paths import DATA
-from ..programs.people import aim_screen_name, load_buddies, load_json, save_json
+from ..programs.people import load_buddies, load_json, save_json
 
 JOURNAL_DIR = DATA / "journals"
 MAIL_FILE = DATA / "mail.json"
@@ -162,7 +162,6 @@ class LifeSim(QObject):
         self.broker = broker.get()
         buddies, _errors = load_buddies("life")
         self.buddies = {c.screen_name: c for c, _section in buddies}
-        self.user = aim_screen_name() or "your buddy"
         self.talks = {}            # (name, program) -> {"lines": [...], "last": t, "user_spoke": bool}
         self.aim_world = None
         self.irc = None            # the FurNet object while ClaudeIRC is connected
@@ -172,6 +171,12 @@ class LifeSim(QObject):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._tick)
         self.timer.start(TICK_MS)
+
+    @property
+    def user(self):
+        """What the buddies call you (follows renames invisibly)."""
+        from .. import user as account
+        return account.known_as() or "your buddy"
 
     # ---- context for prompts ----------------------------------------------------------------
     def context(self, name):
@@ -237,7 +242,8 @@ class LifeSim(QObject):
     # ---- the clock ---------------------------------------------------------------------------------
     # ---- email from the user (Outlook Express) ------------------------------------------------------------
     def user_address(self):
-        return f"{re.sub(r'[^a-z0-9]', '', self.user.lower()) or 'me'}@aol.com"
+        from .. import user as account
+        return account.email_address(self.user)
 
     def receive_email(self, to_addr, subject, body):
         """The user sent an email. Buddies answer a few minutes later (once they're awake); an address

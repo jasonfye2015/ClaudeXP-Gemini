@@ -1,7 +1,7 @@
 """Welcome to Microsoft Windows (the first-boot 'OOBE'): the intro music, a welcome page, registration,
 'Who will use this computer?' (your account name), and 'Thank you!'."""
 from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen, QRadialGradient
+from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPalette, QPen, QRadialGradient
 from PySide6.QtWidgets import QButtonGroup, QLabel, QLineEdit, QRadioButton, QVBoxLayout, QWidget
 
 from .. import sound
@@ -10,7 +10,7 @@ from . import ms
 from .gui import draw_cover
 
 TOP, BOTTOM = 77 / 766, 671 / 766        # the dark bands of the background, as fractions of its height
-PAGES = ["welcome", "register", "users", "thanks"]
+PAGES = ["welcome", "register", "users", "online", "passwords", "thanks"]
 
 
 class NavButton(QWidget):
@@ -84,13 +84,15 @@ class NavButton(QWidget):
 
 FORM_STYLE = """
 QLabel { color: white; font-family: Tahoma; font-size: 13px; }
-QRadioButton { color: white; font-family: Tahoma; font-size: 13px; }
-QLineEdit { font-family: Tahoma; font-size: 13px; padding: 2px; border: 1px solid #7F9DB9; }
+QLineEdit { font-family: Tahoma; font-size: 13px; padding: 2px; border: 1px solid #7F9DB9; color: black; }
+QLineEdit:disabled { background: #C8D4F0; }
+QListWidget { background: rgba(255, 255, 255, 40); border: 1px solid #B0C4F0; }
+QListWidget::item:selected { background: #F5A623; }
 """
 
 
 class Oobe(QWidget):
-    finished = Signal(str)
+    finished = Signal(dict)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -133,10 +135,48 @@ class Oobe(QWidget):
         lab.setBuddy(self.name)
         uv.addWidget(lab)
         uv.addWidget(self.name)
+        uv.addSpacing(10)
+        uv.addWidget(QLabel("Pick a picture for your account:"))
+        from ..accounts import OnlineNameForm, PasswordForm, PicturePicker, PRETEND_NOTE
+        self.pictures = PicturePicker(40)
+        self.pictures.setFixedHeight(120)
+        if self.pictures.count():
+            self.pictures.setCurrentRow(0)
+        uv.addWidget(self.pictures)
         uv.addStretch()
         form.addWidget(self.users)
         self.name.textChanged.connect(self._update_buttons)
         self.name.returnPressed.connect(lambda: self._go(1))
+        # your online name
+        self.online = OnlineNameForm(lambda: self.name.text())
+        self.online.changed.connect(self._update_buttons)
+        form.addWidget(self.online)
+        # passwords
+        self.passwords = QWidget()
+        pv = QVBoxLayout(self.passwords)
+        pv.setContentsMargins(0, 0, 0, 0)
+        self.win_pw = PasswordForm("Windows password", "Don't use a Windows password (the Welcome screen "
+                                   "logs you on with one click)")
+        self.online_pw = PasswordForm("Online password", "Don't use an online password")
+        for f in (self.win_pw, self.online_pw):
+            f.changed.connect(self._update_buttons)
+            pv.addWidget(f)
+            pv.addSpacing(8)
+        note = QLabel(PRETEND_NOTE)
+        note.setWordWrap(True)
+        pv.addWidget(note)
+        pv.addStretch()
+        form.addWidget(self.passwords)
+        # white text for radio buttons and checkboxes, without restyling (and hiding) their check marks
+        from PySide6.QtWidgets import QCheckBox
+        for box in self.form.findChildren(QRadioButton) + self.form.findChildren(QCheckBox):
+            box.setStyleSheet("")
+            f = QFont("Tahoma")
+            f.setPixelSize(13)
+            box.setFont(f)
+            pal = box.palette()
+            pal.setColor(QPalette.WindowText, QColor("white"))
+            box.setPalette(pal)
         self.back = NavButton("Back", False, self)
         self.next = NavButton("Next", True, self)
         self.back.clicked.connect(lambda: self._go(-1))
@@ -171,6 +211,9 @@ class Oobe(QWidget):
 
     def _finish(self):
         name = self.name.text().strip()
+        result = {"name": name, "picture": self.pictures.selected(), "handle": self.online.value() or name,
+                  "linked": self.online.linked(), "windows_password": self.win_pw.value(),
+                  "online_password": self.online_pw.value()}
         player = self.player
         self.player = None
         if player is not None:
@@ -188,7 +231,7 @@ class Oobe(QWidget):
                 else:
                     QTimer.singleShot(60, fade_out)
             fade_out()
-        self.finished.emit(name)
+        self.finished.emit(result)
 
     def stop_music(self):
         if self.player is not None:
@@ -202,8 +245,15 @@ class Oobe(QWidget):
         w, h = self.width(), self.height()
         self.reg.setVisible(page == "register")
         self.users.setVisible(page == "users")
-        self.form.setVisible(page in ("register", "users"))
-        self.form.setGeometry(int(w * 0.12), int(h * 0.42), int(w * 0.6), int(h * 0.3))
+        self.online.setVisible(page == "online")
+        self.passwords.setVisible(page == "passwords")
+        self.form.setVisible(page in ("register", "users", "online", "passwords"))
+        if page == "register":
+            self.form.setGeometry(int(w * 0.12), int(h * 0.42), int(w * 0.6), int(h * 0.3))
+        else:
+            self.form.setGeometry(int(w * 0.12), int(h * 0.34), int(w * 0.76), int(h * 0.52))
+        if page == "online" and not self.online.value():
+            self.online.set_values(self.name.text(), True)
         band_mid = h * (BOTTOM + 1) / 2
         self.next.text = "Finish" if page == "thanks" else "Next"
         self.next.move(int(w * 0.97 - self.next.width()), int(band_mid - self.next.height() / 2))
@@ -217,7 +267,10 @@ class Oobe(QWidget):
         self.update()
 
     def _update_buttons(self):
-        self.next.setEnabled(PAGES[self.page] != "users" or bool(self.name.text().strip()))
+        page = PAGES[self.page]
+        ok = {"users": bool(self.name.text().strip()), "online": self.online.valid(),
+              "passwords": self.win_pw.valid() and self.online_pw.valid()}.get(page, True)
+        self.next.setEnabled(ok)
         self.next.update()
 
     def resizeEvent(self, event):
@@ -236,8 +289,14 @@ class Oobe(QWidget):
                      "Registering lets Microsoft tell you about product updates and special offers. Registration is "
                      "optional."),
         "users": ("Who will use this computer?",
-                  "Type your name. Windows will create a user account for you, so your desktop, documents and settings "
-                  "are your own. You can add more users later in Control Panel."),
+                  "Type your name and pick a picture. Windows will create a user account for you, so your desktop, "
+                  "documents and settings are your own."),
+        "online": ("What's your name online?",
+                   "Your buddies, chat rooms and e-mail will know you by this name. Use your Windows name, or pick "
+                   "a screen name. You can change it later in Control Panel, User Accounts."),
+        "passwords": ("Do you want to use passwords?",
+                      "Passwords are optional. A Windows password is asked for on the Welcome screen; an online "
+                      "password is filled in for you when you sign on."),
         "thanks": ("Thank you!",
                    "Congratulations, your computer is ready to use Windows XP.\n\nTo begin, click Finish."),
     }

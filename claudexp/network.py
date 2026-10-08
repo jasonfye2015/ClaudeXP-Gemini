@@ -81,6 +81,10 @@ def _load():
     data.setdefault("password", "")
     data.setdefault("save_password", True)
     data.setdefault("number", "555-0142")
+    from . import user
+    if user.linked():
+        # one online identity: AOL signs on with the shared handle and (saved) online password
+        data.update(user=user.online_handle(), password=user.online_password(), save_password=True)
     return data
 
 

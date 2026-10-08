@@ -247,6 +247,17 @@ class World(QObject):
             self.out("banner", line)
         if self.load_errors:
             self.out("error", "Warning: " + "; ".join(self.load_errors))
+        from ... import user
+        if user.linked():
+            # One online identity: your character is your shared handle (renamed quietly if it changed),
+            # created for you the first time.
+            name, password = user.muck_name(), user.online_password() or "claudexp"
+            if self.player is None:
+                QTimer.singleShot(600, lambda: self.command(f"create {name} {password}", echo=False))
+                return
+            if self.player["name"] != name or self.player["password"] != password:
+                self.player.update(name=name, password=password, autologin=True)
+                _save_json(PLAYER_FILE, self.player)
         if self.player and self.player.get("autologin"):
             QTimer.singleShot(600, lambda: self.command(f"connect {self.player['name']} {self.player['password']}",
                                                         echo=False))
