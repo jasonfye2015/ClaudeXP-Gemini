@@ -661,7 +661,7 @@ class Explorer(QWidget):
         shared = ("Shared Documents", std(QStyle.SP_DirIcon), lambda: self.navigate(vfs.shared_documents()))
         my_comp = ("My Computer", std(QStyle.SP_ComputerIcon), lambda: self.navigate(MY_COMPUTER))
         network = ("My Network Places", std(QStyle.SP_DriveNetIcon), lambda: self._not_here("My Network Places"))
-        control = ("Control Panel", std(QStyle.SP_DesktopIcon), lambda: self._not_here("Control Panel"))
+        control = ("Control Panel", std(QStyle.SP_DesktopIcon), self._control_panel)
         if loc == MY_COMPUTER:
             target = self._mc_selected()
             details = "<b>My Computer</b><br>System Folder"
@@ -676,7 +676,7 @@ class Explorer(QWidget):
                 ("System Tasks", [("View system information", std(QStyle.SP_ComputerIcon), self._system_info),
                                   ("Add or remove programs", std(QStyle.SP_DialogApplyButton),
                                    lambda: self._not_here("Add or Remove Programs")),
-                                  ("Change a setting", std(QStyle.SP_DesktopIcon), lambda: self._not_here("Control Panel"))]),
+                                  ("Change a setting", std(QStyle.SP_DesktopIcon), self._control_panel)]),
                 ("Other Places", [network, my_docs, shared, control]),
             ], details)
             n = sum(lst.count() for lst in self.mc_lists)
@@ -899,12 +899,12 @@ class Explorer(QWidget):
         properties(self.desktop, path.name, rows, icon=icon)
 
     def _system_info(self):
-        from ..user import user_name
-        properties(self.desktop, "System", [
-            ("System:", "Microsoft Windows XP"), ("", "Home Edition"), ("", "Version 2002"), ("-", ""),
-            ("Registered to:", user_name()), ("", "55274-OEM-0011903-00102"), ("-", ""),
-            ("Computer:", "Intel(R) Pentium(R) III processor"), ("", "866 MHz"), ("", "256 MB of RAM")],
-            icon=std(QStyle.SP_ComputerIcon))
+        from .dialogs import system_info
+        system_info(self.desktop)
+
+    def _control_panel(self):
+        from ..controlpanel import control_panel
+        control_panel(self.desktop)
 
     # ---- context menus --------------------------------------------------------------------------------------------
     def _context_menu(self, view, pos):
@@ -924,6 +924,10 @@ class Explorer(QWidget):
             menu.addAction("&Delete", self.delete_selected)
             menu.addAction("Rena&me", self.rename_selected)
             menu.addSeparator()
+            from .. import display
+            if path.suffix.lower() in display.IMAGE_EXTS:
+                menu.addAction("Set as Desktop &Background", lambda: display.get().set_wallpaper(path))
+                menu.addSeparator()
             menu.addAction("P&roperties", lambda: self.file_properties(path))
         else:
             view.clearSelection()

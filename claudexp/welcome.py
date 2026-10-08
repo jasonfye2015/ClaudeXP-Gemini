@@ -20,6 +20,8 @@ class WelcomeScreen(QWidget):
         self.logo = pixmap("xp_logo.png")
         self.setMouseTracking(True)
         self.hover = None        # "user" or "turnoff"
+        from .user import account
+        account().changed.connect(self.update)
         self.loading = False
 
     def reset(self):

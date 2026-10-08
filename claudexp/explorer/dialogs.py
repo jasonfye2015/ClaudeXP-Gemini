@@ -59,6 +59,17 @@ def msgbox(desktop, title, text, icon="error", buttons=("OK",), on_button=None, 
     return win
 
 
+def system_info(desktop):
+    """System Properties: the 'About this PC' box."""
+    from PySide6.QtWidgets import QApplication
+    from ..user import user_name
+    properties(desktop, "System", [
+        ("System:", "Microsoft Windows XP"), ("", "Home Edition"), ("", "Version 2002"), ("-", ""),
+        ("Registered to:", user_name()), ("", "55274-OEM-0011903-00102"), ("-", ""),
+        ("Computer:", "Intel(R) Pentium(R) III processor"), ("", "866 MHz"), ("", "256 MB of RAM")],
+        icon=QApplication.style().standardIcon(QStyle.SP_ComputerIcon))
+
+
 def size_text(n):
     if n >= 2**30:
         return f"{n / 2**30:.2f} GB"

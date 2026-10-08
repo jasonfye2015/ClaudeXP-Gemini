@@ -45,7 +45,8 @@ class StartMenu(QWidget):
         self.bg = pixmap("startmenu.jpg")
         self.setFixedSize(self.bg.size())
         self.setMouseTracking(True)
-        self.user = user_name()
+        from .user import account
+        account().changed.connect(self.update)
         self.pinned = ["navigator"]   # XP's pinned 'Internet' spot
         self.recent = ["aim", "irc", "muck", "claudeai", "connect", "notepad", "mycomputer"]
         self.hover = None
@@ -91,6 +92,12 @@ class StartMenu(QWidget):
     def mousePressEvent(self, event):
         if event.button() != Qt.LeftButton:
             return
+        if PIC_RECT.contains(event.position().toPoint()):
+            # Clicking your picture: XP's 'Pick a new picture for your account'.
+            from .controlpanel import user_accounts
+            self.desktop.hide_start_menu()
+            user_accounts(self.desktop, page=1)
+            return
         item = self._item_at(event.position().toPoint())
         if item is None:
             return
@@ -109,6 +116,9 @@ class StartMenu(QWidget):
             folders = {"My Documents": vfs.my_documents, "My Pictures": vfs.my_pictures, "My Music": vfs.my_music}
             if value == "My Computer":
                 programs.launch(self.desktop, "mycomputer")
+            elif value == "Control Panel":
+                from .controlpanel import control_panel
+                control_panel(self.desktop)
             elif value in folders:
                 vfs.setup_c()
                 explorer.launch(self.desktop, folders[value]())
@@ -166,9 +176,9 @@ class StartMenu(QWidget):
         p.setFont(font)
         name_rect = QRect(68, 8, 300, 52)
         p.setPen(QColor("#0F2C8C"))
-        p.drawText(name_rect.translated(1, 1), Qt.AlignVCenter | Qt.AlignLeft, self.user)
+        p.drawText(name_rect.translated(1, 1), Qt.AlignVCenter | Qt.AlignLeft, user_name())
         p.setPen(QColor("white"))
-        p.drawText(name_rect, Qt.AlignVCenter | Qt.AlignLeft, self.user)
+        p.drawText(name_rect, Qt.AlignVCenter | Qt.AlignLeft, user_name())
 
     def _draw_programs(self, p):
         for item_id, rect in self._items():

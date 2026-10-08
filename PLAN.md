@@ -94,6 +94,13 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   -> 'It's now safe to turn off your computer' (safe_shutdown.jpg) with Turn off (quit) / Restart
   computer (back to BIOS). The PC stays 'on' there: life.powered_off keeps story ticks running
   (news arrives as email). Closing the real window still exits (shutdown sound, then quit).
+- **Personalizing**: `claudexp/user.py` (data/user.json: account name, default 'Desktop'; picture,
+  default Snowflake from assets/user_icons, or the user's own assets/images/userpic.*; the profile
+  folder keeps its original name, like XP) and `claudexp/display.py` (data/display.json: wallpaper
+  from assets/backgrounds, default the 1024x768 Bliss; Center/Tile/Stretch; color).
+  `claudexp/controlpanel.py`: Control Panel, Display Properties (Desktop tab with monitor preview,
+  Browse finds pictures in My Pictures/E:), User Accounts (change name / picture). Desktop right-click
+  -> Properties; Start menu picture -> pick a picture; Explorer 'Set as Desktop Background'.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

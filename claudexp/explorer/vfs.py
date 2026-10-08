@@ -94,8 +94,8 @@ def to_real(vpath):
 # ---- special folders --------------------------------------------------------------------------------
 
 def user_home():
-    from ..user import user_name
-    return DRIVE_C / "Documents and Settings" / user_name()
+    from ..user import profile_name, user_name
+    return DRIVE_C / "Documents and Settings" / profile_name()
 
 
 def my_documents():
@@ -161,13 +161,29 @@ def _fake(path, lo_kb=8, hi_kb=96, text=None):
     os.utime(path, (old, old))
 
 
+def _ensure_wallpapers():
+    """C:\\WINDOWS\\Web\\Wallpaper holds the Windows XP wallpapers (and the account pictures, under All Users)."""
+    walls = DRIVE_C / "WINDOWS" / "Web" / "Wallpaper"
+    if not walls.exists():
+        walls.mkdir(parents=True)
+        for f in (ROOT / "assets" / "backgrounds").glob("*"):
+            shutil.copy2(f, walls / f.name)
+    pics = (DRIVE_C / "Documents and Settings" / "All Users" / "Application Data" / "Microsoft" /
+            "User Account Pictures" / "Default Pictures")
+    if not pics.exists():
+        pics.mkdir(parents=True)
+        for f in (ROOT / "assets" / "user_icons").glob("*"):
+            shutil.copy2(f, pics / f.name)
+
+
 def setup_c():
     """Create the XP hard drive the first time (and keep adding anything missing)."""
     DRIVE_C.mkdir(parents=True, exist_ok=True)
     if (DRIVE_C / MARKER).exists():
+        _ensure_wallpapers()
         return
-    from ..user import user_name
-    home = DRIVE_C / "Documents and Settings" / user_name()
+    from ..user import profile_name, user_name
+    home = DRIVE_C / "Documents and Settings" / profile_name()
     for sub in ("Desktop", "Favorites", "Start Menu", "My Documents/My Pictures", "My Documents/My Music",
                 "My Documents/My Received Files", "Local Settings/Temp",
                 "Local Settings/Temporary Internet Files"):
@@ -198,6 +214,7 @@ def setup_c():
     _fake(DRIVE_C / "boot.ini", text=BOOT_INI)
     _fake(DRIVE_C / "AUTOEXEC.BAT", text="")
     _fake(DRIVE_C / "CONFIG.SYS", text="")
+    _ensure_wallpapers()
     (DRIVE_C / MARKER).write_text("ClaudeXP drive C")
 
 

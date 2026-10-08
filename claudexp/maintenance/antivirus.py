@@ -61,8 +61,8 @@ def shield_icon(size=16, ok=True):
 
 def _scan_paths():
     """Plausible files to show while scanning, including real files on the ClaudeXP 'drive'."""
-    from ..user import user_name
-    user = user_name()
+    from ..user import profile_name
+    user = profile_name()
     paths = [rf"C:\WINDOWS\system32\{f}" for f in SYSTEM_FILES]
     paths += [rf"C:\WINDOWS\system32\dllcache\{f}" for f in SYSTEM_FILES[:12]]
     for base in (ROOT / "Program Files", ROOT / "assets"):
@@ -217,7 +217,7 @@ class AntiVirus:
         if self.scan_win is not None and isValid(self.scan_win):
             self.desktop.open_window(self.scan_win)
             return
-        from ..user import user_name
+        from ..user import profile_name
         body = QWidget()
         body.setObjectName("scan")
         body.setAttribute(Qt.WA_StyledBackground, True)
@@ -248,7 +248,7 @@ class AntiVirus:
         infected = []
         if random.random() < INFECTION_CHANCE:
             virus, path = random.choice(VIRUSES)
-            infected.append((virus, path.replace("{user}", user_name())))
+            infected.append((virus, path.replace("{user}", profile_name())))
         timer = QTimer(body)
         state = {"i": 0, "files": 0}
         win = self.scan_win

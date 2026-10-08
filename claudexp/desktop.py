@@ -61,8 +61,9 @@ class Desktop(QWidget):
         self.windows = []      # z-order, bottom to top
         self.task_order = []   # order windows were opened
         self.active = None
-        self.wallpaper = pixmap("windows-xp-bliss-4k-lu-1024x768.jpg")
-        self._wall_scaled = None
+        from . import display
+        self.display = display.get()
+        self.display.changed.connect(self.update)
         self._cascade = 0
 
         style = QApplication.style()
@@ -106,7 +107,6 @@ class Desktop(QWidget):
         return QRect(0, 0, self.width(), self.height() - TASKBAR_H)
 
     def resizeEvent(self, event):
-        self._wall_scaled = None
         self.taskbar.setGeometry(0, self.height() - TASKBAR_H, self.width(), TASKBAR_H)
         self.start_menu.move(0, self.height() - TASKBAR_H - self.start_menu.height())
         for win in self.windows:
@@ -115,12 +115,29 @@ class Desktop(QWidget):
 
     def paintEvent(self, event):
         p = QPainter(self)
-        if self.wallpaper.isNull():
-            p.fillRect(self.rect(), QColor("#3A6EA5"))
+        p.drawPixmap(0, 0, self.display.render(self.width(), self.height()))
+
+    def contextMenuEvent(self, event):
+        """Right-clicking the desktop itself: XP's desktop menu."""
+        if self.childAt(event.pos()) is not None:
             return
-        if self._wall_scaled is None or self._wall_scaled.size() != self.size():
-            self._wall_scaled = self.wallpaper.scaled(self.size(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-        p.drawPixmap(0, 0, self._wall_scaled)
+        from PySide6.QtWidgets import QMenu
+        from .controlpanel import display_properties
+        menu = QMenu(self)
+        menu.setStyleSheet("QMenu { background: white; border: 1px solid #ACA899; font-family: Tahoma;"
+                           " font-size: 11px; } QMenu::item { padding: 4px 24px 4px 20px; }"
+                           " QMenu::item:selected { background: #316AC5; color: white; }")
+        arrange = menu.addMenu("Arrange &Icons By")
+        arrange.setEnabled(False)
+        menu.addAction("R&efresh", self.update)
+        menu.addSeparator()
+        menu.addAction("&Paste").setEnabled(False)
+        menu.addAction("Paste &Shortcut").setEnabled(False)
+        menu.addSeparator()
+        menu.addMenu("Ne&w").setEnabled(False)
+        menu.addSeparator()
+        menu.addAction("P&roperties", lambda: display_properties(self))
+        menu.exec(event.globalPos())
 
     # ---- icons --------------------------------------------------------------
     def _open_recycle_bin(self):

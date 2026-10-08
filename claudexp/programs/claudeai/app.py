@@ -315,12 +315,19 @@ class ClaudeAI(QWidget):
 
         QShortcut(QKeySequence("Ctrl+Shift+O"), self, self.new_chat)
         QShortcut(QKeySequence("Ctrl+B"), self, self.toggle_sidebar)
+        from ...user import account
+        account().changed.connect(self._account_changed)
         self.render_timer = QTimer(self)
         self.render_timer.setSingleShot(True)
         self.render_timer.timeout.connect(self.render)
         self._apply_sidebar(self.settings["sidebar"])
         self._update_send()
         self.refresh_sidebar()
+        self.render()
+
+    def _account_changed(self):
+        self.avatar.setText(user_name()[:1].upper())
+        self.user_label.setText(user_name())
         self.render()
 
     # ---- models -----------------------------------------------------------------------------

@@ -63,9 +63,9 @@ class DiskMap(QWidget):
 class Defrag(QWidget):
     def __init__(self, desktop):
         super().__init__()
-        from ..user import user_name
+        from ..user import profile_name
         self.desktop = desktop
-        self.user = user_name()
+        self.user = profile_name()
         self.clock = None
         self.automatic = False
         self.setStyleSheet("QWidget#defrag { background: #ECE9D8; } QLabel { font-family: Tahoma; font-size: 11px; }")
