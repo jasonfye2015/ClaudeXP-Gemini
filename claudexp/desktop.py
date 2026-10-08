@@ -75,6 +75,8 @@ class Desktop(QWidget):
                         lambda: programs.launch(self, "connect")),
             DesktopIcon(self, "Netscape Navigator", programs.get("navigator").icon(),
                         lambda: programs.launch(self, "navigator")),
+            DesktopIcon(self, "ClaudeAI", programs.get("claudeai").icon(),
+                        lambda: programs.launch(self, "claudeai")),
             DesktopIcon(self, "ClaudeAIM", programs.get("aim").icon(),
                         lambda: programs.launch(self, "aim")),
             DesktopIcon(self, "ClaudeIRC", programs.get("irc").icon(),

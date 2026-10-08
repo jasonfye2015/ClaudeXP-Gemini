@@ -31,12 +31,15 @@ def _supports_thinking(model):
 class _Emitter(QObject):
     done = Signal(object, str, str)     # job, text, error
     chunk = Signal(object, str)         # job, text so far
+    thinking = Signal(object, str)      # job, reasoning so far (thinking models)
     started = Signal(object)
 
 
 class Job(QRunnable):
-    def __init__(self, broker, model, messages, options, priority, think, stream, on_done, on_chunk, images):
+    def __init__(self, broker, model, messages, options, priority, think, stream, on_done, on_chunk, images,
+                 on_thinking=None):
         super().__init__()
+        self.on_thinking = on_thinking
         self.setAutoDelete(False)
         self.broker = broker
         self.model, self.messages, self.options = model, messages, options
@@ -55,7 +58,7 @@ class Job(QRunnable):
             em.done.emit(self, "", "stopped")
             return
         em.started.emit(self)
-        text, err = "", ""
+        text, reasoning, err = "", "", ""
         try:
             import ollama
             messages = self.prepare(self.model, self.messages) if self.prepare else self.messages
@@ -68,8 +71,12 @@ class Job(QRunnable):
                     if self.stop_flag.is_set():
                         err = "stopped"
                         break
-                    text += part.message.content or ""
-                    em.chunk.emit(self, text)
+                    if getattr(part.message, "thinking", None):
+                        reasoning += part.message.thinking
+                        em.thinking.emit(self, reasoning)
+                    if part.message.content:
+                        text += part.message.content
+                        em.chunk.emit(self, text)
             else:
                 resp = ollama.chat(model=self.model, messages=messages, options=self.options,
                                    keep_alive="30m", **extra)
@@ -90,6 +97,7 @@ class Broker(QObject):
         self._emitter = _Emitter(self)
         self._emitter.done.connect(self._done)
         self._emitter.chunk.connect(lambda job, text: job.on_chunk and job.on_chunk(text))
+        self._emitter.thinking.connect(lambda job, text: job.on_thinking and job.on_thinking(text))
         self._emitter.started.connect(self._started)
         self.jobs = set()
         self.running = None
@@ -101,12 +109,13 @@ class Broker(QObject):
         """callback(text, error) on the UI thread. Returns the Job (job.stop() cancels)."""
         return self._submit(model, messages, options, priority, think, False, callback, None, images)
 
-    def stream(self, model, messages, options, on_chunk, on_done, priority=FOREGROUND, think=None):
-        """on_chunk(text_so_far) as it arrives, then on_done(text, error)."""
-        return self._submit(model, messages, options, priority, think, True, on_done, on_chunk, None)
+    def stream(self, model, messages, options, on_chunk, on_done, priority=FOREGROUND, think=None, on_thinking=None):
+        """on_chunk(text_so_far) as it arrives, then on_done(text, error). on_thinking(reasoning_so_far)
+        receives a thinking model's reasoning while it thinks."""
+        return self._submit(model, messages, options, priority, think, True, on_done, on_chunk, None, on_thinking)
 
-    def _submit(self, model, messages, options, priority, think, stream, on_done, on_chunk, images):
-        job = Job(self, model, messages, options, priority, think, stream, on_done, on_chunk, images)
+    def _submit(self, model, messages, options, priority, think, stream, on_done, on_chunk, images, on_thinking=None):
+        job = Job(self, model, messages, options, priority, think, stream, on_done, on_chunk, images, on_thinking)
         self.jobs.add(job)
         if priority <= BACKGROUND:
             if self.bg_done >= self.bg_total:     # a new batch starts

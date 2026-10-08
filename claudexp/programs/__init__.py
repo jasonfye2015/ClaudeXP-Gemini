@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QApplication, QStyle
 
 from .. import network, sound
 from ..paths import pixmap
-from . import aim, irc, muck, navigator
+from . import aim, claudeai, irc, muck, navigator
 from .notepad import open_notepad
 from .placeholder import open_placeholder
 
@@ -90,6 +90,8 @@ PROGRAMS = [
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown),
     Program("navigator", "Netscape Navigator", "Browse the Web", navigator.nav_icon, navigator.launch,
             navigator.shutdown),
+    Program("claudeai", "ClaudeAI", "Chat with your local AI", claudeai.claudeai_icon, claudeai.launch,
+            claudeai.shutdown),
     Program("winupdate", "Windows Update", "", lambda: QIcon(_update_icon()), _windows_update),
     Program("defrag", "Disk Defragmenter", "", _defrag_icon, _defrag),
     Program("antivirus", "ClaudeShield AntiVirus", "", _av_icon, _antivirus),

@@ -83,6 +83,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   Drive sounds (assets/sounds): harddrive_startup*.mp3 at boot, floppydrive_reading*.mp3 when
   opening B:, cdrom_startup*.mp3 when opening D: (sound.play_clip plays the first few seconds),
   externalHD_start*.mp3 when E: is opened after 10+ minutes idle (it 'spins up' first).
+- **ClaudeAI** (`claudexp/programs/claudeai/`): Claude Desktop-style chat with the local model.
+  Collapsible sidebar (Ctrl+B): New chat (Ctrl+Shift+O), search, Starred + Recents, per-chat menu
+  (Star, Rename, Delete). Streaming Markdown replies via the broker (FOREGROUND), Stop, Copy, Retry,
+  Extended thinking (broker.stream on_thinking -> collapsible 'Thought process'), model picker,
+  auto titles, Settings (default model, temperature, custom instructions). Saved in data/claudeai.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

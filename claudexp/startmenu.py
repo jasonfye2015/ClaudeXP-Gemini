@@ -47,7 +47,7 @@ class StartMenu(QWidget):
         self.setMouseTracking(True)
         self.user = user_name()
         self.pinned = ["navigator"]   # XP's pinned 'Internet' spot
-        self.recent = ["aim", "irc", "muck", "connect", "notepad", "mycomputer"]
+        self.recent = ["aim", "irc", "muck", "claudeai", "connect", "notepad", "mycomputer"]
         self.hover = None
         self.hide()
 
