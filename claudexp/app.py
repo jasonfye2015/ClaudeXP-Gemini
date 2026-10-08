@@ -56,6 +56,7 @@ class ClaudeXP(QMainWindow):
         self.boot.finished.connect(lambda: self._after_boot())
         self.safe_off.turn_off.connect(QApplication.quit)
         self.safe_off.restart.connect(self.restart_from_off)
+        self.safe_off.recovery.connect(lambda: self.restart_from_off(recovery=True))
         self.welcome.logged_on.connect(self.show_desktop)
         self.welcome.turn_off.connect(self.shut_down)
         self.desktop.shutdown_requested.connect(self.shut_down)
@@ -66,13 +67,13 @@ class ClaudeXP(QMainWindow):
         self.locked = False
         self.screensaver = ScreenSaverManager(self)
 
-    def start(self):
-        """Power on: the BIOS self test, then Windows boots."""
+    def start(self, recovery=False):
+        """Power on: the BIOS self test, then Windows boots (or System Recovery, with recovery=True)."""
         self.show()
         self.desktop.life.powered_off = False
         self.stack.setCurrentWidget(self.bios)
         self.bios.setFocus()
-        self.bios.start()
+        self.bios.start(recovery=recovery)
 
     def _windows_boot(self):
         """After the BIOS: the recovery menu (SPACE), Setup still finishing, or Windows."""
@@ -194,9 +195,9 @@ class ClaudeXP(QMainWindow):
         self.desktop.life.powered_off = True
         self.stack.setCurrentWidget(self.safe_off)
 
-    def restart_from_off(self):
+    def restart_from_off(self, recovery=False):
         self._shutting_down = False
-        self.start()
+        self.start(recovery=recovery)
 
     def _exit(self):
         """Closing the real ClaudeXP window: shut down quickly and quit."""

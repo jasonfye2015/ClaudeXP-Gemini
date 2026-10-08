@@ -128,7 +128,8 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   safe first click, Best Times), Hearts (Pauline, Michele, Ben; pass left/right/across/hold, moon
   shooting, to 100). Stats and settings in data/games.json. All Programs now has submenus
   (Program.group: Accessories, Accessories/System Tools, Games).
-- **System Recovery** (`claudexp/setup/`): press SPACE during the BIOS test -> recovery menu -> 'Press any
+- **System Recovery** (`claudexp/setup/`): press SPACE during the BIOS test (or 'Start recovery/format' on
+  the 'safe to turn off' screen) -> recovery menu -> 'Press any
   key to boot from CD...' -> blue text-mode Setup (Welcome, licence F8/Y, partitions, file system: Quick
   format / full format / leave intact, with [X] Program history (P) and [X] Buddies' memories (M), F to
   format, copying files, 15 s reboot) -> a real process restart (main.py relaunches ClaudeXP and waits) ->

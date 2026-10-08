@@ -41,9 +41,10 @@ class BiosScreen(QWidget):
         self.recovery_requested = False    # SPACE pressed: show the System Recovery menu after the test
 
     # ---- the script -------------------------------------------------------------------
-    def start(self):
+    def start(self, recovery=False):
+        """Run the self test. recovery=True boots into System Recovery (as if SPACE had been pressed)."""
         self._done = False
-        self.recovery_requested = False
+        self.recovery_requested = recovery
         self.lines, self.memory, self.footer = [], None, ""
         sound.play_file(random.choice(["harddrive_startup1.mp3", "harddrive_startup2.mp3"]))  # power on
         say = lambda text, color=GREY: lambda: self.lines.append((text, color))
@@ -55,7 +56,8 @@ class BiosScreen(QWidget):
             (300, say("")),
             (100, say("Press DEL to run Setup")),
             (100, say("Press <F8> for BBS POPUP")),
-            (100, say("Press <SPACE> for System Recovery")),
+            (100, say("System Recovery requested..." if recovery else "Press <SPACE> for System Recovery",
+                      WHITE if recovery else GREY)),
             (100, say("DDR Frequency 133MHz, Single-Channel, Linear Mode")),
             (400, self._start_memory_test),
         ]
@@ -164,6 +166,7 @@ class SafeOffScreen(QWidget):
     """'It's now safe to turn off your computer.' The PC is still on underneath."""
     turn_off = Signal()
     restart = Signal()
+    recovery = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -174,16 +177,21 @@ class SafeOffScreen(QWidget):
                  "QPushButton:pressed { background: #E8862A; color: black; }")
         self.off_btn = QPushButton("Turn off")
         self.restart_btn = QPushButton("Restart computer")
-        for b in (self.off_btn, self.restart_btn):
+        self.recovery_btn = QPushButton("Start recovery/format")
+        self.recovery_btn.setToolTip("Restart into System Recovery to reinstall Windows XP")
+        for b in (self.off_btn, self.restart_btn, self.recovery_btn):
             b.setStyleSheet(style)
             b.setCursor(Qt.PointingHandCursor)
         self.off_btn.clicked.connect(self.turn_off)
         self.restart_btn.clicked.connect(self.restart)
+        self.recovery_btn.clicked.connect(self.recovery)
         row = QHBoxLayout()
         row.addStretch()
         row.addWidget(self.off_btn)
         row.addSpacing(30)
         row.addWidget(self.restart_btn)
+        row.addSpacing(30)
+        row.addWidget(self.recovery_btn)
         row.addStretch()
         root = QVBoxLayout(self)
         root.addStretch()
