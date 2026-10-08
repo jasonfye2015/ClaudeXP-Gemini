@@ -43,6 +43,8 @@ class Desktop(QWidget):
         from . import life
         self.life = life.install(self)
         self.start_menu = StartMenu(self)
+        from . import menus
+        menus.install(self)              # pop-up menus stay inside the XP screen
         QApplication.instance().installEventFilter(self)
         QApplication.instance().applicationStateChanged.connect(self._app_state_changed)
 
