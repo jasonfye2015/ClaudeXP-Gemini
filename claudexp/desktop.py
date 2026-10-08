@@ -1,4 +1,6 @@
 """The desktop: wallpaper, icons, window management, taskbar and Start menu."""
+import time
+
 from PySide6.QtCore import QEvent, QRect, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter
 from PySide6.QtWidgets import QApplication, QStyle, QWidget
@@ -51,6 +53,7 @@ class DesktopIcon(QWidget):
 
 class Desktop(QWidget):
     shutdown_requested = Signal()
+    restart_requested = Signal()
     logoff_requested = Signal()
 
     def __init__(self, parent=None):
@@ -88,6 +91,9 @@ class Desktop(QWidget):
         self.taskbar = Taskbar(self)
         self.balloon = Balloon(self)
         self.hdd = HddLight(self)
+        self.last_input = time.monotonic()
+        from . import maintenance
+        self.maintenance = maintenance.install(self)
         self.start_menu = StartMenu(self)
         QApplication.instance().installEventFilter(self)
         QApplication.instance().applicationStateChanged.connect(self._app_state_changed)
@@ -240,6 +246,8 @@ class Desktop(QWidget):
 
     # ---- global click handling -------------------------------------------------
     def eventFilter(self, obj, event):
+        if event.type() in (QEvent.MouseButtonPress, QEvent.KeyPress, QEvent.Wheel):
+            self.last_input = time.monotonic()   # for 'only when idle' maintenance
         if event.type() == QEvent.MouseButtonPress and isinstance(obj, QWidget) and self.isVisible():
             self._on_any_press(obj, event)
         return False

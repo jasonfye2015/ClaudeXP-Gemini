@@ -40,6 +40,48 @@ def _connect(desktop):
         net.connect()
 
 
+def _windows_update(desktop):
+    from .. import maintenance
+    updates = maintenance.get().updates
+    if updates.ready and updates.clock is None:
+        updates.show_dialog()
+    elif updates.clock is not None:
+        desktop.balloon.dismiss()
+        updates.tray.showMessage("Automatic Updates", updates.tray.toolTip().split("\n")[-1], None, 5000)
+    elif network.is_connected():
+        if not updates.start_download():
+            open_placeholder(desktop, "Windows Update", QIcon(_update_icon()),
+                             "Your computer is up to date.\n\nThere are no new updates for you right now.",
+                             sound_event="info")
+    else:
+        network.connect(desktop, then=lambda: _windows_update(desktop))
+
+
+def _update_icon():
+    from ..maintenance.updates import shield_pixmap
+    return shield_pixmap(32)
+
+
+def _defrag_icon():
+    from ..maintenance.defrag import icon_pixmap
+    return QIcon(icon_pixmap(32))
+
+
+def _defrag(desktop):
+    from ..maintenance import defrag
+    defrag.launch(desktop)
+
+
+def _av_icon():
+    from ..maintenance.antivirus import shield_icon
+    return QIcon(shield_icon(32))
+
+
+def _antivirus(desktop):
+    from .. import maintenance
+    maintenance.get().antivirus.open()
+
+
 PROGRAMS = [
     Program("notepad", "Notepad", "Write some text", lambda: std_icon(QStyle.SP_FileIcon), open_notepad),
     Program("mycomputer", "My Computer", "", lambda: std_icon(QStyle.SP_ComputerIcon), _my_computer),
@@ -48,6 +90,9 @@ PROGRAMS = [
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown),
     Program("navigator", "Netscape Navigator", "Browse the Web", navigator.nav_icon, navigator.launch,
             navigator.shutdown),
+    Program("winupdate", "Windows Update", "", lambda: QIcon(_update_icon()), _windows_update),
+    Program("defrag", "Disk Defragmenter", "", _defrag_icon, _defrag),
+    Program("antivirus", "ClaudeShield AntiVirus", "", _av_icon, _antivirus),
     Program("connect", "Connect to the Internet", "", lambda: QIcon(pixmap("aol_icon.png")), _connect,
             lambda: network.disconnect(quiet=True)),
 ]

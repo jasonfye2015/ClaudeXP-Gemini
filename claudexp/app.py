@@ -1,4 +1,5 @@
 """ClaudeXP main window: the 'monitor' of the virtual PC."""
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 
@@ -32,6 +33,7 @@ class ClaudeXP(QMainWindow):
         self.welcome.turn_off.connect(self.shut_down)
         self.desktop.shutdown_requested.connect(self.shut_down)
         self.desktop.logoff_requested.connect(self.log_off)
+        self.desktop.restart_requested.connect(self.restart)
         QShortcut(QKeySequence("F11"), self, self.toggle_fullscreen)
 
     def start(self):
@@ -63,6 +65,25 @@ class ClaudeXP(QMainWindow):
         self.desktop.hide_start_menu()
         self.stack.setCurrentWidget(self.shutdown_screen)
         sound.play("shutdown", QApplication.quit)
+
+    def restart(self):
+        """Restart (after Windows Update): close everything, then boot again."""
+        if self._shutting_down:
+            return
+        self._shutting_down = True
+        programs.shutdown_all()
+        self.desktop.hide_start_menu()
+        for win in list(self.desktop.windows):
+            self.desktop.close_window(win)
+        self.shutdown_screen.text = "Windows is restarting..."
+        self.stack.setCurrentWidget(self.shutdown_screen)
+
+        def boot_again():
+            self._shutting_down = False
+            self.shutdown_screen.text = "Windows is shutting down..."
+            self.start()
+
+        sound.play("shutdown", lambda: QTimer.singleShot(1500, boot_again))
 
     def closeEvent(self, event):
         # Closing the real window counts as Turn Off: play the shutdown first.

@@ -69,6 +69,7 @@ class BootScreen(QWidget):
 
 class ShutdownScreen(QWidget):
     """The plain blue 'Windows is shutting down...' screen."""
+    text = "Windows is shutting down..."
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -80,6 +81,6 @@ class ShutdownScreen(QWidget):
         font.setBold(True)
         p.setFont(font)
         p.setPen(QColor("#1E3A8A"))
-        p.drawText(self.rect().translated(1, 1), Qt.AlignCenter, "Windows is shutting down...")
+        p.drawText(self.rect().translated(1, 1), Qt.AlignCenter, self.text)
         p.setPen(QColor("white"))
-        p.drawText(self.rect(), Qt.AlignCenter, "Windows is shutting down...")
+        p.drawText(self.rect(), Qt.AlignCenter, self.text)
