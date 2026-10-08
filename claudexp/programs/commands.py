@@ -10,7 +10,7 @@ NAMES = {
     "explorer": "mycomputer", "winmine": "minesweeper", "freecell": "freecell", "sol": "solitaire",
     "spider": "spider", "mshearts": "hearts", "dfrg.msc": "defrag", "dfrgntfs": "defrag", "wupdmgr": "winupdate",
     "netscape": "navigator", "claudeaim": "aim", "aim": "aim", "claudeirc": "irc", "mirc32": "irc", "mirc": "irc",
-    "wmplayer": "wmp", "mplayer2": "wmp", "mspaint": "paint", "pbrush": "paint", "claudemuck": "muck", "claudeai": "claudeai", "claudeshield": "antivirus", "isignup": "connect",
+    "chkrzm": "icheckers", "rvsezm": "ireversi", "wmplayer": "wmp", "mplayer2": "wmp", "mspaint": "paint", "pbrush": "paint", "claudemuck": "muck", "claudeai": "claudeai", "claudeshield": "antivirus", "isignup": "connect",
 }
 
 

@@ -83,7 +83,8 @@ def _lazy(module, func):
     """A program's launcher (or icon) that imports its module only when first used."""
     def call(*args):
         import importlib
-        return getattr(importlib.import_module(f".{module}", __package__), func)(*args)
+        name = module if module.startswith(".") else "." + module
+        return getattr(importlib.import_module(name, __package__), func)(*args)
     return call
 
 
@@ -133,6 +134,10 @@ PROGRAMS = [
             group="Games"),
     Program("hearts", "Hearts", "", _game_icon("card_icon", "H", "#D00000"), _game("hearts", "open_hearts"),
             group="Games"),
+    Program("icheckers", "Internet Checkers", "", _lazy("..games.icheckers", "checkers_icon"),
+            _lazy("..games.icheckers", "open_internet_checkers"), group="Games"),
+    Program("ireversi", "Internet Reversi", "", _lazy("..games.ireversi", "reversi_icon"),
+            _lazy("..games.ireversi", "open_internet_reversi"), group="Games"),
     Program("minesweeper", "Minesweeper", "", _game_icon("mine_icon"), _game("minesweeper", "open_minesweeper"),
             group="Games"),
     Program("solitaire", "Solitaire", "", _game_icon("card_icon", "S"), _game("solitaire", "open_solitaire"),

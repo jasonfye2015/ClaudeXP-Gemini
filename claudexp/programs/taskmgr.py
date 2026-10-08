@@ -30,13 +30,14 @@ SYSTEM = [("System Idle Process", "SYSTEM", 16), ("System", "SYSTEM", 216), ("sm
           ("svchost.exe", "SYSTEM", 17240), ("svchost.exe", "LOCAL SERVICE", 3540), ("spoolsv.exe", "SYSTEM", 4316),
           ("explorer.exe", None, 18432), ("ctfmon.exe", None, 2884), ("shieldtray.exe", None, 3972)]
 # window content module -> process image
-MODULE_IMAGES = [("wmp", "wmplayer.exe"), ("paint", "mspaint.exe"), ("notepad", "notepad.exe"), ("calc", "calc.exe"), (".cmd", "cmd.exe"), ("taskmgr", "taskmgr.exe"),
+MODULE_IMAGES = [("icheckers", "chkrzm.exe"), ("ireversi", "rvsezm.exe"), ("zone", "zclientm.exe"),
+                 ("wmp", "wmplayer.exe"), ("paint", "mspaint.exe"), ("notepad", "notepad.exe"), ("calc", "calc.exe"), (".cmd", "cmd.exe"), ("taskmgr", "taskmgr.exe"),
                  ("freecell", "freecell.exe"), ("solitaire", "sol.exe"), ("spider", "spider.exe"),
                  ("minesweeper", "winmine.exe"), ("hearts", "mshearts.exe"), ("navigator", "netscape.exe"),
                  ("claudeai", "claudeai.exe"), ("claudeaim", "aim.exe"), ("irc", "mirc32.exe"),
                  ("muck", "claudemuck.exe"), ("defrag", "dfrgntfs.exe"), ("antivirus", "claudeshield.exe"),
                  ("updates", "wuauclt.exe"), ("printing", "spoolsv.exe")]
-MEM = {"wmplayer.exe": 18260, "mspaint.exe": 6840, "notepad.exe": 2964, "calc.exe": 3108, "cmd.exe": 1468, "taskmgr.exe": 4072, "freecell.exe": 3256,
+MEM = {"chkrzm.exe": 7420, "rvsezm.exe": 7064, "zclientm.exe": 6900, "wmplayer.exe": 18260, "mspaint.exe": 6840, "notepad.exe": 2964, "calc.exe": 3108, "cmd.exe": 1468, "taskmgr.exe": 4072, "freecell.exe": 3256,
        "sol.exe": 3920, "spider.exe": 4484, "winmine.exe": 2440, "mshearts.exe": 3672, "netscape.exe": 21336,
        "claudeai.exe": 15872, "aim.exe": 9840, "mirc32.exe": 6212, "claudemuck.exe": 5532, "dfrgntfs.exe": 4908,
        "claudeshield.exe": 8820, "wuauclt.exe": 5216, "waol.exe": 14204}
@@ -288,7 +289,9 @@ class TaskManager(QWidget):
 
     @staticmethod
     def image_for(win):
-        module = type(win.content).__module__ if isValid(win.content) else ""
+        content = win.content if isValid(win.content) else None
+        # game windows wrap their play area; name the process after the game itself
+        module = type(getattr(content, "play", content)).__module__ if content is not None else ""
         for key, image in MODULE_IMAGES:
             if key in module:
                 return image

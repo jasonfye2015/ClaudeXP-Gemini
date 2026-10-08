@@ -160,6 +160,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   playlist, Media Library (My Music, Shared Music incl. a once-only 'Sample Music' copy of the OOBE music,
   C:\WINDOWS\Media, E:) with ID3 tags, Radio Tuner (online only; stations are always 'too busy'), Copy
   from CD / to Device messages, Skin Chooser (4 colour skins), shuffle/repeat; settings in data/wmp.json.
+- **Internet games** (`games/zone.py` + icheckers.py, ireversi.py): need the dial-up (offers to connect),
+  'Looking for opponents...', then an awake buddy (85%) or a Zone stranger; XP's canned-phrase chat with
+  replies and in-game reactions; Beginner/Intermediate/Expert (alpha-beta: checkers depth 1/4/8, reversi
+  1/3/4); Play again?; disconnect ends the game. Finished (or abandoned) games go into the buddy's journal
+  and 30% of the time they reach out about it. Process names chkrzm.exe / rvsezm.exe in Task Manager.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
