@@ -270,7 +270,7 @@ class Desktop(QWidget):
 
     # ---- global click handling -------------------------------------------------
     def eventFilter(self, obj, event):
-        if event.type() in (QEvent.MouseButtonPress, QEvent.KeyPress, QEvent.Wheel):
+        if event.type() in (QEvent.MouseButtonPress, QEvent.KeyPress, QEvent.Wheel, QEvent.MouseMove):
             self.last_input = time.monotonic()   # for 'only when idle' maintenance
         if event.type() == QEvent.MouseButtonPress and isinstance(obj, QWidget) and self.isVisible():
             self._on_any_press(obj, event)

@@ -44,7 +44,15 @@ class Display(QObject):
         self._cache = {}
 
     def apply(self, wallpaper, position, color):
-        self.data = {"wallpaper": str(wallpaper) if wallpaper else "", "position": position, "color": color}
+        self.data.update({"wallpaper": str(wallpaper) if wallpaper else "", "position": position, "color": color})
+        self._save()
+
+    def set_screensaver(self, **values):
+        """saver, wait (minutes), resume_welcome, marquee."""
+        self.data.update(values)
+        self._save()
+
+    def _save(self):
         DISPLAY_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2)

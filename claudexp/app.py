@@ -43,6 +43,9 @@ class ClaudeXP(QMainWindow):
         self.desktop.logoff_requested.connect(self.log_off)
         self.desktop.restart_requested.connect(self.restart)
         QShortcut(QKeySequence("F11"), self, self.toggle_fullscreen)
+        from .screensaver import ScreenSaverManager
+        self.locked = False
+        self.screensaver = ScreenSaverManager(self)
 
     def start(self):
         """Power on: the BIOS self test, then Windows boots."""
@@ -61,7 +64,18 @@ class ClaudeXP(QMainWindow):
         self.welcome.reset()
         self.stack.setCurrentWidget(self.welcome)
 
+    def lock(self):
+        """Screen saver 'On resume, display Welcome screen': back to Welcome, programs stay open."""
+        self.locked = True
+        self.desktop.hide_start_menu()
+        self.welcome.reset()
+        self.stack.setCurrentWidget(self.welcome)
+
     def show_desktop(self):
+        if self.locked:
+            self.locked = False
+            self.stack.setCurrentWidget(self.desktop)
+            return
         self.stack.setCurrentWidget(self.desktop)
         sound.play("startup")
         # The world moved on while the PC was off: catch up in the background (Windows Update
@@ -69,6 +83,7 @@ class ClaudeXP(QMainWindow):
         QTimer.singleShot(1500, self.desktop.life.catch_up)
 
     def log_off(self):
+        self.locked = False
         self.desktop.hide_start_menu()
         programs.shutdown_all()
         for win in list(self.desktop.windows):
@@ -81,6 +96,7 @@ class ClaudeXP(QMainWindow):
         if self._shutting_down:
             return
         self._shutting_down = True
+        self.locked = False
         programs.shutdown_all()
         self.desktop.hide_start_menu()
         for win in list(self.desktop.windows):

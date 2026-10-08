@@ -3,8 +3,9 @@ from pathlib import Path
 
 from PySide6.QtCore import QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPen, QPixmap
-from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-                               QListWidgetItem, QPushButton, QStackedWidget, QStyle, QTabWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
+                               QLineEdit, QListWidget, QListWidgetItem, QPushButton, QSpinBox, QStackedWidget, QStyle,
+                               QTabWidget, QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
 from . import display, sound, user
@@ -54,12 +55,26 @@ def monitor_icon(size=32):
 
 
 class MonitorPreview(QWidget):
-    """The little monitor in Display Properties showing the chosen background."""
+    """The little monitor in Display Properties showing the chosen background (or a live screen saver)."""
+    SCREEN = QRectF(22, 15, 156, 112)
 
-    def __init__(self):
+    def __init__(self, saver=None):
         super().__init__()
         self.settings = dict(display.get().data)
         self.setFixedSize(200, 165)
+        self.saver_widget = None
+        if saver is not None:
+            self.show_saver(saver)
+
+    def show_saver(self, name):
+        from . import screensaver
+        if self.saver_widget is not None:
+            self.saver_widget.deleteLater()
+        self.saver_widget = screensaver.make(name, self)
+        if self.saver_widget is not None:
+            self.saver_widget.setGeometry(self.SCREEN.toRect())
+            self.saver_widget.show()
+        self.update()
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -71,8 +86,9 @@ class MonitorPreview(QWidget):
         p.setPen(QPen(QColor("#8A877C"), 1))
         p.setBrush(g)
         p.drawRoundedRect(bezel, 8, 8)
-        screen = QRectF(22, 15, 156, 112)
-        p.drawPixmap(screen, display.get().render(1024, 738, self.settings), QRectF(0, 0, 1024, 738))
+        screen = self.SCREEN
+        if self.saver_widget is None:
+            p.drawPixmap(screen, display.get().render(1024, 738, self.settings), QRectF(0, 0, 1024, 738))
         p.setPen(QPen(QColor("#5A5850"), 1))
         p.setBrush(Qt.NoBrush)
         p.drawRect(screen)
@@ -178,8 +194,8 @@ def _make_display(desktop):
     custom.setEnabled(False)
     v.addWidget(custom, 0, Qt.AlignLeft)
     tabs.addTab(page, "Desktop")
-    tabs.addTab(_info_page("Screen saver:  (None)\n\nScreen savers aren't installed on this computer yet."),
-                "Screen Saver")
+    saver_tab, saver_values = _saver_tab(desktop, lambda: apply_btn.setEnabled(True))
+    tabs.addTab(saver_tab, "Screen Saver")
     tabs.addTab(_info_page("Windows and buttons:  Windows XP style\nColor scheme:  Default (blue)\n"
                            "Font size:  Normal"), "Appearance")
     tabs.addTab(_info_page("Display:  Plug and Play Monitor on NVIDIA GeForce2 MX\n\nScreen resolution:  "
@@ -210,6 +226,7 @@ def _make_display(desktop):
     def apply():
         s = chosen()
         disp.apply(s["wallpaper"], s["position"], s["color"])
+        disp.set_screensaver(**saver_values())
         apply_btn.setEnabled(False)
 
     def close():
@@ -244,6 +261,93 @@ def _make_display(desktop):
     holder["win"] = win
     desktop.open_window(win)
     return win
+
+
+def _saver_tab(desktop, on_change):
+    """Display Properties' Screen Saver tab. Returns (widget, function giving the chosen settings)."""
+    from . import screensaver
+    s = screensaver.settings()
+    page = QWidget()
+    v = QVBoxLayout(page)
+    monitor = MonitorPreview(saver=s["saver"])
+    v.addWidget(monitor, 0, Qt.AlignHCenter)
+    group = QGroupBox("Screen saver")
+    g = QGridLayout(group)
+    combo = QComboBox()
+    combo.addItems(list(screensaver.SAVERS))
+    combo.setCurrentText(s["saver"])
+    g.addWidget(combo, 0, 0, 1, 2)
+    settings_btn = QPushButton("Se&ttings")
+    preview_btn = QPushButton("Pre&view")
+    g.addWidget(settings_btn, 0, 2)
+    g.addWidget(preview_btn, 0, 3)
+    wait_row = QHBoxLayout()
+    wait_label = QLabel("&Wait:")
+    wait = QSpinBox()
+    wait.setRange(1, 9999)
+    wait.setValue(int(s["wait"]))
+    wait_label.setBuddy(wait)
+    wait_row.addWidget(wait_label)
+    wait_row.addWidget(wait)
+    wait_row.addWidget(QLabel("minutes"))
+    resume = QCheckBox("On &resume, display Welcome screen")
+    resume.setChecked(bool(s["resume_welcome"]))
+    wait_row.addSpacing(10)
+    wait_row.addWidget(resume)
+    wait_row.addStretch()
+    g.addLayout(wait_row, 1, 0, 1, 4)
+    v.addWidget(group)
+    power = QGroupBox("Monitor power")
+    pv = QHBoxLayout(power)
+    pv.addWidget(QLabel("To adjust monitor power settings and save energy, click Power."), 1)
+    power_btn = QPushButton("P&ower...")
+    power_btn.setEnabled(False)
+    pv.addWidget(power_btn)
+    v.addWidget(power)
+    state = {"marquee": s["marquee"]}
+
+    def update_enabled():
+        none = combo.currentText() == "(None)"
+        for w in (settings_btn, preview_btn, wait, resume):
+            w.setEnabled(not none)
+
+    def changed(*_):
+        monitor.show_saver(combo.currentText())
+        update_enabled()
+        on_change()
+
+    def open_settings():
+        from .explorer.dialogs import msgbox
+        if combo.currentText() == "Marquee":
+            from .programs.claudeai.app import ask_text
+
+            def set_text(text):
+                if text.strip():
+                    state["marquee"] = text.strip()
+                    on_change()
+
+            ask_text(desktop, "Marquee Setup", "Text:", state["marquee"], set_text)
+        else:
+            msgbox(desktop, "Display Properties", "This screen saver has no options that you can set.", "info")
+
+    def preview():
+        if combo.currentText() != "(None)":
+            if combo.currentText() == "Marquee":
+                display.get().data["marquee"] = state["marquee"]   # preview the new text
+            desktop.window().screensaver.start(combo.currentText())
+
+    combo.currentIndexChanged.connect(changed)
+    wait.valueChanged.connect(lambda _v: on_change())
+    resume.toggled.connect(lambda _v: on_change())
+    settings_btn.clicked.connect(open_settings)
+    preview_btn.clicked.connect(preview)
+    update_enabled()
+
+    def values():
+        return {"saver": combo.currentText(), "wait": wait.value(), "resume_welcome": resume.isChecked(),
+                "marquee": state["marquee"]}
+
+    return page, values
 
 
 def _info_page(text):

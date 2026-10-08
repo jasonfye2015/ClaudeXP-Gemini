@@ -101,6 +101,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   `claudexp/controlpanel.py`: Control Panel, Display Properties (Desktop tab with monitor preview,
   Browse finds pictures in My Pictures/E:), User Accounts (change name / picture). Desktop right-click
   -> Properties; Start menu picture -> pick a picture; Explorer 'Set as Desktop Background'.
+- **Screen savers** (`claudexp/screensaver.py`): Windows XP, Starfield, Mystify, Beziers, 3D Pipes,
+  Marquee, My Pictures Slideshow, Blank. ScreenSaverManager (on the main window) starts the chosen
+  saver after N idle minutes on the desktop or Welcome screen (default Windows XP, 10 min); mouse/key
+  wakes it; 'On resume, display Welcome screen' locks to Welcome (app.lock) with programs left open.
+  Display Properties' Screen Saver tab has a live preview, Settings (Marquee text), Preview, Wait.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
