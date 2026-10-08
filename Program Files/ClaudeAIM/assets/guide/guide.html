@@ -1,0 +1,433 @@
+<html>
+<head>
+<style>
+body { font-family: Arial; font-size: 10pt; color: #000000; }
+h1 { font-size: 18pt; color: #000080; }
+h2 { font-size: 14pt; color: #ffffff; background-color: #000080; margin-top: 24px; }
+h3 { font-size: 11pt; color: #000080; margin-top: 14px; }
+p, li { line-height: 130%; }
+.tip { background-color: #ffffe1; }
+.shot { margin-top: 6px; margin-bottom: 6px; }
+code { font-family: "Courier New"; }
+th { background-color: #c0c0c0; text-align: left; }
+</style>
+</head>
+<body>
+
+<h1>ClaudeAIM Guide</h1>
+<p>Welcome back to 2001! ClaudeAIM is an instant messenger in the style of the classic
+AOL Instant Messenger, except every buddy on your list is a character powered by an
+AI model running on your own computer (through <b>Ollama</b>). Your buddies have their
+own personalities, lives, time zones and sleep schedules. They sign on and off, go away,
+remember your conversations, send you pictures, and message you first.</p>
+<p>Use the list on the left to jump to a section.</p>
+
+<!-- ================================================================== -->
+<h2 id="welcome"><a name="welcome"></a>&nbsp;Quick Start</h2>
+<ol>
+<li>Start <b>Ollama</b>, then start ClaudeAIM (<code>ClaudeAIM.bat</code>).</li>
+<li>Listen to the modem, then type a <b>Screen Name</b> and click <b>Sign On</b>.</li>
+<li>Your <b>Buddy List</b> appears. Buddies in black are online.</li>
+<li><b>Click a buddy</b> to open an Instant Message window, type, and press <b>Enter</b>.</li>
+<li>Look for the <b>&#x1F4DD;</b> next to a name: that buddy has a message waiting for you.</li>
+</ol>
+
+<!-- ================================================================== -->
+<h2 id="signing-on"><a name="signing-on"></a>&nbsp;Signing On</h2>
+
+<h3>Dialing</h3>
+<p class="shot"><img src="dialup.png" width="560"></p>
+<p>Every session starts the old-fashioned way, with the modem dialing in. The status
+goes from <i>Dialing...</i> to <i>Connecting...</i> to <i>Connected...</i>.</p>
+<ul>
+<li><b>Cancel</b> quits ClaudeAIM.</li>
+<li>Check <b>Skip this during log on</b> to go straight to the Sign On window next time.
+(You can turn it back on in <a href="#setup">Setup</a>.)</li>
+</ul>
+
+<h3>The Sign On window</h3>
+<p class="shot"><img src="login.png"></p>
+<ul>
+<li><b>Screen Name</b>: what your buddies will call you. You choose it the first time
+you sign on, and after that it's locked in. The only way to change it is
+<b>Reset All</b> in <a href="#setup">Setup</a>.</li>
+<li><b>Password</b>: just for the feel of it. ClaudeAIM runs entirely on your computer,
+so there's nothing to log in to and the password isn't checked.</li>
+<li><b>Save password</b>: remembers what you typed in the password box.</li>
+<li><b>Auto-login</b>: skips this window next time and signs you straight on.</li>
+<li><b>Help</b> opens this Guide. <b>Setup</b> opens <a href="#setup">Setup</a>.</li>
+<li><b>Sign On</b> (or press <b>Enter</b>) connects you.</li>
+</ul>
+
+<h3>Connecting</h3>
+<p class="shot"><img src="connecting.png"></p>
+<p>After a moment you'll hear the famous <i>"Welcome!"</i> and see <b>Connected!</b>, then your
+Buddy List opens. <b>Cancel</b> takes you back to the Sign On window.</p>
+
+<!-- ================================================================== -->
+<h2 id="buddy-list"><a name="buddy-list"></a>&nbsp;The Buddy List</h2>
+<p class="shot"><img src="buddylist.png"></p>
+<p>The Buddy List is home base. Its title shows your screen name, and changes to
+<b>*Away*</b> while you're <a href="#away">away</a>.</p>
+
+<h3>Online and offline</h3>
+<ul>
+<li><b>Buddies</b> lists who's online, with a count like <i>(5/12)</i>. Names are in black.</li>
+<li><b>Offline</b> lists everyone else, in <i>grey italics</i>.</li>
+<li>When you sign on, about half of your list is already online (whoever is awake
+at that hour). The rest sign on over time.</li>
+<li>Click the small box next to a group name to fold or unfold it.</li>
+</ul>
+
+<h3>What the little pictures mean</h3>
+<table cellpadding="4" cellspacing="0" border="1">
+<tr><th>Icon</th><th>Meaning</th></tr>
+<tr><td align="center"><font size="+2">&#x1F6AA;</font></td><td>The buddy just signed on or off. You'll hear a door
+sound, and the door stays for 60 seconds.</td></tr>
+<tr><td align="center"><font size="+2">&#x1F4DD;</font></td><td><b>Message waiting!</b> The buddy sent you something you haven't
+seen yet. It goes away once you open their window and look at it.</td></tr>
+<tr><td align="center"><font size="+2">&#x2757;</font></td><td>The buddy is <b>away</b> from their computer.</td></tr>
+</table>
+<p>If messages arrived while ClaudeAIM was closed, they're still waiting next time,
+and you'll hear <i>"You've got mail!"</i> just after you sign on.</p>
+
+<h3>Opening a conversation</h3>
+<p><b>Click any buddy's name</b> to open an <a href="#im">Instant Message</a> window with them.
+This works for offline buddies too: you can read your old conversation and
+<a href="#offline">leave them a message</a>.</p>
+
+<h3>Menus</h3>
+<table cellspacing="8"><tr>
+<td valign="top"><img src="buddylist_file_menu.png"></td>
+<td valign="top">
+<p><b>File</b></p>
+<ul>
+<li><b>Set Away Status...</b>: put up an <a href="#away">away message</a>.</li>
+<li><b>Set Buddy Icon...</b>: choose <a href="#buddy-icon">your picture</a>.</li>
+<li><b>Setup...</b>: models and options (<a href="#setup">Setup</a>).</li>
+<li><b>Exit</b>: signs off with the classic <i>"Goodbye!"</i>. (Closing the Buddy List
+window doesn't sign you off; it tucks ClaudeAIM into the <a href="#tray">system tray</a>.)</li>
+</ul>
+<p><b>Help</b></p>
+<ul><li><b>Guide</b>: opens this Guide.</li></ul>
+</td></tr></table>
+
+<!-- ================================================================== -->
+<h2 id="tray"><a name="tray"></a>&nbsp;The System Tray</h2>
+<p>Once you're signed on, the little running man lives in the <b>system tray</b> (the
+icons by the clock on your taskbar). He only appears after you sign on, not during
+dial-up or on the Sign On window.</p>
+
+<h3>Can't see the tray icon?</h3>
+<p>Windows 11 hides new tray icons by default and tucks them away behind the
+<b>^</b> arrow next to the clock. To find him, click the <b>^</b> arrow; the running man
+will be in the little pop-up.</p>
+<p>To keep him on your taskbar all the time, do <b>one</b> of these:</p>
+<ul>
+<li><b>Drag</b> the running man out of the <b>^</b> pop-up and drop him on the taskbar next
+to the other icons.</li>
+<li>Or open <b>Settings &gt; Personalization &gt; Taskbar &gt; Other system tray icons</b>
+and switch <b>Python</b> on.</li>
+</ul>
+<p class="tip">&nbsp;Windows lists ClaudeAIM as <b>Python</b>, because that's the program
+running it. If you start ClaudeAIM in two different ways (for example from Thonny
+<i>and</i> from <code>ClaudeAIM.bat</code>), you may see two <b>Python</b> entries in that
+list. Switch on both.&nbsp;</p>
+
+<h3>Using the tray icon</h3>
+<ul>
+<li><b>Message waiting:</b> the icon <b>flashes</b> between the running man and the
+running man with a &#x1F4DD; until you've read everything. Hover over it to see who's
+waiting.</li>
+<li><b>Click</b> the icon to open the waiting message, or your Buddy List if
+nothing is waiting.</li>
+<li><b>Right-click</b> it for <b>Open Buddy List</b>, <b>Set Away Status...</b> (or
+<b>I'm Back</b> while you're away) and <b>Exit</b>.</li>
+<li>Closing the Buddy List window keeps ClaudeAIM running in the tray, so your buddies
+can still reach you. To sign off completely, use <b>Exit</b> (in the tray menu or the
+Buddy List's <b>File</b> menu).</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="im"><a name="im"></a>&nbsp;Instant Messages</h2>
+<p class="shot"><img src="im.png"></p>
+<p>Each buddy gets their own Instant Message window. <b>Drag its edges or corners to
+resize it</b>: the conversation grows to fill the space. New IM windows open at the
+size you last used.</p>
+
+<h3>Reading</h3>
+<ul>
+<li>The top box is your conversation. <font color="#ff0000"><b>Your buddy's name is red</b></font>,
+<font color="#0000ff"><b>yours is blue</b></font>. Scroll up to see everything you've ever
+said to each other. Your whole history is saved.</li>
+<li>Every message has a date and time. The date is <b>today, 25 years ago</b>: it's
+always 2001 in ClaudeAIM.</li>
+<li>Your buddy's messages show <b>their local time</b>. A buddy in England will be several
+hours ahead of you (in the picture above, Xavier's 4:01 PM is your 11:01 AM).</li>
+<li>Your buddy's icon is on the left of the conversation, and yours is on the left of the
+typing box.</li>
+</ul>
+
+<h3>Writing</h3>
+<ul>
+<li>Type in the bottom box and press <b>Enter</b> or click <b>Send</b>.</li>
+<li><b>Shift+Enter</b> starts a new line without sending.</li>
+<li>Send a few messages in a row if you like: your buddy waits until you've finished
+and answers them all together.</li>
+<li>Closing the window clears anything you'd typed but not sent. The conversation itself is kept.</li>
+</ul>
+
+<h3>The status bar</h3>
+<p class="shot"><img src="im_downloading.png"></p>
+<p>The strip along the bottom shows what your buddy is doing:</p>
+<ul>
+<li><i>is typing...</i>: a reply is on its way.</li>
+<li><i>is downloading image...</i>: they're receiving a <a href="#pictures">picture you sent</a>.</li>
+<li><i>is away.</i> or <i>is offline.</i></li>
+</ul>
+
+<h3>Get Info</h3>
+<p class="shot"><img src="getinfo.png"></p>
+<p><b>Get Info</b> (bottom left) shows the buddy's profile, and their local time if they
+live in a different time zone.</p>
+
+<h3>The memory meter</h3>
+<p>The little bar under <b>Send</b> shows how much of your buddy's memory the conversation
+is using. It fills from green through yellow to red. When it's full, your buddy starts
+<b>forgetting the oldest messages</b> to make room for new ones. They're still in your
+saved log; your buddy just can't recall them any more. A bigger context size in
+<a href="#setup">Setup</a> gives buddies a longer memory, but uses more of your
+computer's memory.</p>
+
+<h3>Away and offline buddies</h3>
+<ul>
+<li>Message a buddy who's <b>away</b> and you'll get their away message as an
+<i>Auto response</i>. They'll answer properly when they come back.</li>
+<li>While <b>you</b> are away, buddies who message you get your away message as an
+auto response, and you'll see it in the window too.</li>
+<li>For <b>offline</b> buddies, see <a href="#offline">Messaging offline buddies</a>.</li>
+</ul>
+
+<h3>When you're not looking</h3>
+<p>If a message arrives while a buddy's window is minimized or behind other windows,
+the window flashes on the taskbar, the <a href="#tray">tray icon</a> flashes, and the buddy
+gets a &#x1F4DD; on your Buddy List until you bring the window back to the front.</p>
+
+<h3>Menus</h3>
+<table cellspacing="8"><tr>
+<td valign="top"><img src="im_file_menu.png"></td>
+<td valign="top">
+<p><b>File</b></p>
+<ul>
+<li><b>Gallery...</b>: every picture you and this buddy have shared (<a href="#gallery">Gallery</a>).</li>
+<li><b>Close</b>: closes the window.</li>
+</ul>
+<p><b>Help</b></p>
+<ul><li><b>Guide</b>: opens this Guide.</li></ul>
+</td></tr></table>
+
+<!-- ================================================================== -->
+<h2 id="offline"><a name="offline"></a>&nbsp;Messaging Offline Buddies</h2>
+<p class="shot"><img src="im_offline.png"></p>
+<p>Just like real AIM, you can message a buddy who isn't online. You'll see a grey note
+saying your messages will be delivered when they sign on. Leave as many messages
+(and pictures) as you like.</p>
+<p>They're kept even if you close ClaudeAIM. The next time that buddy signs on, they read
+everything you left and reply after a minute or so. You'll get the &#x1F4DD; and the
+<i>"message received"</i> sound like any other message.</p>
+
+<!-- ================================================================== -->
+<h2 id="pictures"><a name="pictures"></a>&nbsp;Pictures</h2>
+
+<h3>Pictures from buddies</h3>
+<p class="shot"><img src="im_picture.png"></p>
+<p>Many buddies have photos to share: fursuit pictures, convention snaps, art, their
+truck... A picture shows up as a small thumbnail in the conversation.
+<b>Click it</b> to see it full size:</p>
+<p class="shot"><img src="picture_viewer.png"></p>
+<p>Buddies share pictures in <b>sets</b>: ask RedFawks about trucking and you'll get his
+trucking photos, arriving one after another, not one picture and not everything he owns.
+They'll share a set when the conversation turns to what it shows, if you ask, or
+sometimes to liven up a chat that's gone quiet. They remember what you've already seen
+and only send the pictures from a set you haven't seen yet.</p>
+
+<h3>Sending pictures</h3>
+<ul>
+<li><b>Drag a picture file</b> from your computer onto the typing box, or copy a picture
+and press <b>Ctrl+V</b> in the typing box. It's sent straight away.</li>
+<li>Your buddy shows <i>is downloading image...</i> for a few seconds (bigger pictures
+take longer, dial-up style), then they <b>actually look at it</b> and reply.
+This needs a model that can see images; the default Gemma 3 can.</li>
+<li>ClaudeAIM keeps its own copy of everything you send, so moving or deleting the
+original won't break your conversation.</li>
+<li>To save memory, your buddy only sees your two most recent pictures. They remember
+older ones from what they said about them.</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="gallery"><a name="gallery"></a>&nbsp;The Gallery</h2>
+<p class="shot"><img src="gallery.png"></p>
+<p>In any Instant Message window, choose <b>File &gt; Gallery...</b> to see every picture you
+and that buddy have shared, oldest first.</p>
+<ul>
+<li>Each thumbnail says who sent it and when. Hover for the exact time.</li>
+<li>Use <b>Show:</b> to see <i>All pictures</i>, only theirs, or only yours.</li>
+<li><b>Click a thumbnail</b> to open the full-size picture.</li>
+<li>New pictures appear in the Gallery as they're shared, even while it's open.</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="away"><a name="away"></a>&nbsp;Away Messages</h2>
+<p class="shot"><img src="away.png"></p>
+<ol>
+<li>On the Buddy List choose <b>File &gt; Set Away Status...</b></li>
+<li>Type your away message and click <b>I'm Away</b>.</li>
+</ol>
+<ul>
+<li>Your Buddy List title changes to <b>*Away*</b>.</li>
+<li>Buddies know you're away and what your message says. Some leave you a message
+anyway, some wait for you to come back, and the clingy ones might ask why you
+never talk to them!</li>
+<li>Anyone who messages you gets your away message as an <i>Auto response</i>.</li>
+<li>While away, the button says <b>Update</b>: change the text and click it to update your message.</li>
+<li>Click <b>Cancel</b> (or close the Away window) when you're back. Buddies notice that too.</li>
+<li>Your away message is remembered for next time.</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="buddy-icon"><a name="buddy-icon"></a>&nbsp;Your Buddy Icon</h2>
+<p class="shot"><img src="icons.png"></p>
+<p>Choose <b>File &gt; Set Buddy Icon...</b> on the Buddy List. Your icon appears next to the
+typing box in every Instant Message window.</p>
+<ul>
+<li><b>Click an icon</b> in the list on the right. It appears under
+<i>Your Icon to send to buddies</i>.</li>
+<li><b>OK</b> uses it and closes the window. <b>Apply</b> uses it and keeps the window open.
+<b>Cancel</b> keeps your old icon.</li>
+</ul>
+<h3>Using your own picture</h3>
+<ul>
+<li>Under <b>Use your own picture</b>, click <b>Browse...</b> and pick any picture.</li>
+<li>It's cropped to a square from the middle and resized to fit. If your photo is wide
+or tall, center what you want in it.</li>
+<li>It's added to the list (as <code>custom001</code>, <code>custom002</code>...), so you can pick it
+again any time. Click <b>OK</b> or <b>Apply</b> to use it.</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="setup"><a name="setup"></a>&nbsp;Setup</h2>
+<p class="shot"><img src="setup.png"></p>
+<p>Open Setup from the Sign On window or <b>File &gt; Setup...</b> on the Buddy List.</p>
+
+<h3>Ollama</h3>
+<ul>
+<li><b>Default model</b>: the AI model your buddies use, from the models you've downloaded
+in Ollama. The default is <code>gemma3:4b</code>.</li>
+<li><b>Context size</b>: how much conversation a buddy can remember at once (see
+<a href="#im">the memory meter</a>). Setup shows the most the chosen model supports. Bigger
+means longer memories but more of your computer's memory and slower replies.</li>
+</ul>
+
+<h3>Buddy models</h3>
+<p>Give individual buddies a different model, or leave them on <i>(default)</i>.</p>
+
+<h3>Options</h3>
+<ul>
+<li><b>Skip the dial-up screen during log on</b></li>
+<li><b>Auto-login</b>: skip the Sign On window.</li>
+<li><b>Play sounds</b>: turn all sounds on or off.</li>
+</ul>
+
+<h3>Reset All</h3>
+<p><b>Reset All...</b> erases your screen name, settings, away message, icon choice, every
+conversation and every picture you've sent, then restarts ClaudeAIM as if it were brand new.
+It can't be undone. Your buddies themselves, their pictures, and the icon collection
+(including icons you uploaded) are not touched.</p>
+
+<!-- ================================================================== -->
+<h2 id="buddies"><a name="buddies"></a>&nbsp;How Your Buddies Behave</h2>
+<p>Each buddy is a character with their own personality, backstory and habits, and they
+remember everything you've talked about (up to their <a href="#im">memory limit</a>).</p>
+<ul>
+<li><b>They live in 2001.</b> They think it's today's date, 25 years ago.</li>
+<li><b>They have time zones.</b> A buddy in England knows it's evening there while it's
+afternoon for you, and their messages are stamped with their local time.</li>
+<li><b>They sleep.</b> Buddies have bedtimes and wake-up times in their own time zone,
+and often stay up later and sleep in on weekends. Late at night you'll mostly find
+night owls and buddies on the other side of the world.</li>
+<li><b>They come and go.</b> They sign on and off through the day and sometimes step away.</li>
+<li><b>They message you first.</b> Many buddies say hi when you sign on, check in when a
+chat goes quiet, send a picture, or react when you go away or come back.</li>
+<li><b>They don't pester you.</b> If a buddy messages you a few times and you never
+answer, their last message will be a little worried ("everything ok?"), and then they'll
+give you space for about a day before trying again. Reply any time and they're back to normal.</li>
+<li><b>They don't leave mid-conversation.</b> Chatty buddies stay online while you're
+talking to them, at least until it gets well past their bedtime.</li>
+<li><b>Some are busy.</b> A buddy who's at work or on the road might take a few
+minutes to reply, then catch up on everything at once.</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="sounds"><a name="sounds"></a>&nbsp;Sounds</h2>
+<table cellpadding="4" cellspacing="0" border="1">
+<tr><th>When</th><th>Sound</th></tr>
+<tr><td>Starting up</td><td>Dial-up modem</td></tr>
+<tr><td>Connected</td><td>"Welcome!"</td></tr>
+<tr><td>Messages waiting from last time</td><td>"You've got mail!"</td></tr>
+<tr><td>A buddy signs on</td><td>Door opening</td></tr>
+<tr><td>A buddy signs off</td><td>Door closing</td></tr>
+<tr><td>You send a message</td><td>Message sent</td></tr>
+<tr><td>You receive a message</td><td>Message received</td></tr>
+<tr><td>Exit</td><td>"Goodbye!"</td></tr>
+</table>
+<p>Turn them all off with <b>Play sounds</b> in <a href="#setup">Setup</a>.</p>
+
+<!-- ================================================================== -->
+<h2 id="making-buddies"><a name="making-buddies"></a>&nbsp;Making Your Own Buddies</h2>
+<p>Buddies live in the <code>contacts</code> folder, one file per buddy (for example
+<code>contacts\XavierPup.json</code>). Each file describes their screen name, icon,
+personality, time zone, sleep schedule, away message, and "script" for when they
+message you. Changes take effect the next time you start ClaudeAIM.</p>
+<ul>
+<li><b>Pictures:</b> make a folder named after the buddy's file (for example
+<code>contacts\XavierPup\</code>) and put their pictures in it. Describe each picture
+in a <code>captions.txt</code> file in that folder, one line each, like
+<code>woods1.jpg: me in my suit in the forest</code>, so the buddy knows what they're sending.</li>
+<li><b>Icons:</b> buddy icons come from <code>assets\icons</code>.</li>
+<li>To take a buddy off your list without deleting them, rename their file to start
+with an underscore, like <code>_XavierPup.json</code>.</li>
+</ul>
+<p>The full list of settings is in <code>README.md</code> in the ClaudeAIM folder.</p>
+
+<!-- ================================================================== -->
+<h2 id="troubleshooting"><a name="troubleshooting"></a>&nbsp;Tips &amp; Troubleshooting</h2>
+<table cellpadding="4" cellspacing="0" border="1">
+<tr><th>If...</th><th>Try this</th></tr>
+<tr><td>I can't see the tray icon</td>
+<td>Windows is hiding it. Click the <b>^</b> by the clock, or switch on <b>Python</b> under
+<b>Settings &gt; Personalization &gt; Taskbar &gt; Other system tray icons</b>.
+See <a href="#tray">The System Tray</a>.</td></tr>
+<tr><td>A grey message says <i>Couldn't reach Ollama</i></td>
+<td>Ollama isn't running. Start it, then send your message again.</td></tr>
+<tr><td>The first reply takes a long time</td>
+<td>That's normal: the model is loading into memory. Replies after that are much quicker.</td></tr>
+<tr><td>A buddy forgot something from earlier</td>
+<td>Check the memory meter under <b>Send</b>. If it's full, raise the context size in
+<a href="#setup">Setup</a>.</td></tr>
+<tr><td>A buddy is missing from the list</td>
+<td>ClaudeAIM lists any buddy files with mistakes when it starts. Fix the file it names and restart.</td></tr>
+<tr><td>Nobody is online</td>
+<td>It may be the middle of the night for everyone! Buddies in other time zones and
+night owls are your best bet late at night.</td></tr>
+<tr><td>A buddy describes a picture wrong</td>
+<td>The buddy only knows what <code>captions.txt</code> says about each picture. Improve the description there.</td></tr>
+<tr><td>Want to test a buddy's schedule quickly?</td>
+<td>Set <code>"time_scale": 60</code> in <code>data\settings.json</code> to make buddy timers run 60 times
+faster. Set it back to <code>1.0</code> afterwards.</td></tr>
+</table>
+<p class="tip">&nbsp;Your conversations, settings and sent pictures are all stored in the
+<code>data</code> folder inside ClaudeAIM.&nbsp;</p>
+
+<p><br>Have fun, and don't forget to set an away message when you leave! &#x1F3C3;</p>
+</body>
+</html>
