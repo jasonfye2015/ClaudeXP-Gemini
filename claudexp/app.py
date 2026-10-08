@@ -147,6 +147,7 @@ class ClaudeXP(QMainWindow):
         user.new_account(name, owner=info.get("owner", name), organization=info.get("organization", ""),
                          computer=info.get("computer", ""))
         setup.finished()
+        self._offer_tour = True              # XP's 'Take a tour of Windows XP' balloon after the first logon
         self._after_boot = self.show_welcome
         self.show_welcome()
 
@@ -171,6 +172,13 @@ class ClaudeXP(QMainWindow):
         # The world moved on while the PC was off: catch up in the background (Windows Update
         # or a virus scan will start to cover for it).
         QTimer.singleShot(1500, self.desktop.life.catch_up)
+        from .programs import sysrestore
+        QTimer.singleShot(2500, lambda: sysrestore.check_completed(self.desktop))
+        QTimer.singleShot(8000, sysrestore.auto_checkpoint)
+        if getattr(self, "_offer_tour", False):
+            self._offer_tour = False
+            from .programs.tour import offer_tour
+            QTimer.singleShot(4000, lambda: offer_tour(self.desktop))
 
     def log_off(self):
         self.locked = False

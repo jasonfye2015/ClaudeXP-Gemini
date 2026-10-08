@@ -194,6 +194,19 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   the Recycle Bin, C:\\WINDOWS\\Temp and Netscape's page cache after "Are you sure?"), System Information
   (msinfo.py, the 2001 PC's hardware/software), Sound Recorder (sndrec.py: QAudioSource/QAudioSink PCM at
   22.05 kHz mono, 60 s max, waveform, .wav open/save, Delete Before/After, Effects).
+- **System Restore** (`programs/sysrestore.py`): restore points = copies of Windows' settings files (SETTINGS)
+  in data/System Volume Information/_restore/RP<n>; daily System Checkpoint at logon, one before Windows
+  Update installs, manual points; restoring makes an Undo point, then setup.reboot(app, action) restarts the
+  process and puts the files back while nothing runs (settings absent at that time go back to defaults);
+  'Restoration Complete' at the next logon. Never touches documents, mail or journals.
+- **Search Companion** (`programs/search.py`): Rover drawn and animated (wag, blink, sniff while searching);
+  pictures/music/video, documents, all files (name with wildcards, a phrase inside text files, where to look),
+  computers or people, Help, the Internet (Netscape); results stream in via a QTimer-driven os.walk.
+- **Help and Support Center** (`programs/helpctr.py`): XP home page, topics, Index, Search, Back/Forward;
+  articles are a real guide to ClaudeXP (incl. 'My buddies don't answer' -> Ollama). Links launch programs.
+  The Start menu artwork lacks the item, so startmenu.py paints 'Help and Support' below Run.
+- **Tour Windows XP** (`programs/tour.py`): animated slides with the OOBE music; after Setup, a tray icon pops
+  the 'Take a tour of Windows XP' balloon on the first logon.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

@@ -189,6 +189,8 @@ class AutoUpdates:
         if not chosen:
             self._close_dialog()
             return
+        from ..programs import sysrestore
+        sysrestore.create_point("Installed Windows Update", "update")      # XP made one before updating
         self.install_btn.setEnabled(False)
         self.later_btn.setEnabled(False)
         self.items.setEnabled(False)

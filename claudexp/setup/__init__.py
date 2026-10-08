@@ -83,8 +83,22 @@ def reboot_into_gui_setup(app, format_drive, program_history, memories):
     app.exit(RESTART)
 
 
+_after_stop = []
+
+
+def reboot(app, action=None):
+    """Restart ClaudeXP for real; action() runs once nothing is running any more (System Restore uses this
+    to put old settings back without a program saving over them)."""
+    if action is not None:
+        _after_stop.append(action)
+    app.exit(RESTART)
+
+
 def finish_reboot():
-    """Called by main.py after the event loop stops: do the pending wipe and mark GUI Setup next."""
+    """Called by main.py after the event loop stops: run pending actions, do the pending wipe (and mark GUI
+    Setup next)."""
+    while _after_stop:
+        _after_stop.pop(0)()
     if _pending_wipe is None:
         return
     w = _pending_wipe

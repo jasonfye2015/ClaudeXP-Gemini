@@ -37,6 +37,7 @@ RIGHT_ITEMS = [
     ("Printers and Faxes", QRect(192, 291, 180, 28)),
     ("Search", QRect(192, 329, 180, 28)),
     ("Run...", QRect(192, 359, 180, 28)),
+    ("Help and Support", QRect(192, 389, 180, 28)),     # not in the artwork; drawn by _draw_help_item
 ]
 
 
@@ -121,6 +122,12 @@ class StartMenu(QWidget):
             elif value == "Printers and Faxes":
                 from .printing import printers_and_faxes
                 printers_and_faxes(self.desktop)
+            elif value == "Search":
+                from .programs.search import open_search
+                open_search(self.desktop)
+            elif value == "Help and Support":
+                from .programs.helpctr import open_help
+                open_help(self.desktop)
             elif value == "Run...":
                 from .programs.run import open_run
                 open_run(self.desktop)
@@ -187,10 +194,29 @@ class StartMenu(QWidget):
         p.drawPixmap(0, 0, self.bg)
         p.fillRect(BAKED_HIGHLIGHT, QColor("#D3E5FA"))
         self._draw_control_panel_item(p)
+        self._draw_help_item(p)
         self._draw_header(p)
         self._draw_programs(p)
         self._draw_right_hover(p)
         self._draw_footer(p)
+
+    def _draw_help_item(self, p):
+        r = dict(RIGHT_ITEMS)["Help and Support"]
+        icon = QRectF(r.x() + 6, r.center().y() - 10, 20, 20)
+        grad = QLinearGradient(icon.topLeft(), icon.bottomRight())
+        grad.setColorAt(0, QColor("#6FA3F7"))
+        grad.setColorAt(1, QColor("#1D4FC4"))
+        p.setPen(QPen(QColor("#163A8F"), 1))
+        p.setBrush(grad)
+        p.drawEllipse(icon)
+        f = QFont("Tahoma", 9)
+        f.setBold(True)
+        p.setFont(f)
+        p.setPen(QColor("white"))
+        p.drawText(icon, Qt.AlignCenter, "?")
+        p.setFont(QFont("Tahoma", 8))
+        p.setPen(QColor("black"))
+        p.drawText(r.adjusted(32, 0, 0, 0), Qt.AlignVCenter | Qt.AlignLeft, "Help and Support")
 
     def _draw_control_panel_item(self, p):
         # The image only has Control Panel highlighted; repaint it un-highlighted.

@@ -12,7 +12,8 @@ NAMES = {
     "netscape": "navigator", "claudeaim": "aim", "aim": "aim", "claudeirc": "irc", "mirc32": "irc", "mirc": "irc",
     "claudemuck": "muck", "claudeai": "claudeai", "claudeshield": "antivirus", "isignup": "connect",
     "mspaint": "paint", "pbrush": "paint", "wordpad": "wordpad", "write": "wordpad",
-    "charmap": "charmap", "cleanmgr": "cleanmgr", "msinfo32": "msinfo", "sndrec32": "sndrec",
+    "charmap": "charmap", "cleanmgr": "cleanmgr", "msinfo32": "msinfo", "sndrec32": "sndrec", "rstrui": "sysrestore", "helpctr": "helpctr",
+    "tourstart": "tour",
     "pinball": "pinball", "wmplayer": "wmp", "mplayer2": "wmp", "msimn": "outlook", "wab": "wab",
     "bckgzm": "ibackgammon", "hrtzzm": "ihearts", "shvlzm": "ispades", "chkrzm": "icheckers", "rvsezm": "ireversi",
 }
