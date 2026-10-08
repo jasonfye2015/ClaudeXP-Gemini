@@ -88,6 +88,12 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   (Star, Rename, Delete). Streaming Markdown replies via the broker (FOREGROUND), Stop, Copy, Retry,
   Extended thinking (broker.stream on_thinking -> collapsible 'Thought process'), model picker,
   auto titles, Settings (default model, temperature, custom instructions). Saved in data/claudeai.
+- **Power** (`claudexp/power.py`): power-on runs an AMIBIOS POST (ami_bios_logo.png, memory test,
+  POST beep post_beep1/2.wav (generated square waves), floppy seek, drive detection matching My
+  Computer, hard drive spin-up sound) before the XP boot screen. Turn Off Computer -> shutdown sound
+  -> 'It's now safe to turn off your computer' (safe_shutdown.jpg) with Turn off (quit) / Restart
+  computer (back to BIOS). The PC stays 'on' there: life.powered_off keeps story ticks running
+  (news arrives as email). Closing the real window still exits (shutdown sound, then quit).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

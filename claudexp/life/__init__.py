@@ -142,6 +142,7 @@ class LifeSim(QObject):
         self.aim_world = None
         self.irc = None            # the FurNet object while ClaudeIRC is connected
         self.state = load_json(STATE_FILE, {})
+        self.powered_off = False      # Windows is shut down but the PC is on ('safe to turn off')
         self.next_story = time.monotonic() + random.uniform(*STORY_MINUTES) * 60
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._tick)
@@ -213,7 +214,7 @@ class LifeSim(QObject):
         self.state["last_running"] = datetime.now().astimezone().isoformat(timespec="seconds")
         save_json(STATE_FILE, self.state)
         self._summarise_quiet_talks()
-        if time.monotonic() >= self.next_story and self.desktop.isVisible():
+        if time.monotonic() >= self.next_story and (self.desktop.isVisible() or self.powered_off):
             self.next_story = time.monotonic() + random.uniform(*STORY_MINUTES) * 60
             if self.broker.background_pending() == 0:
                 self.story_tick()
