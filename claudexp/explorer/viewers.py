@@ -4,17 +4,15 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QIcon, QPixmap
-from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QStyle, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QStyle, QVBoxLayout, QWidget
 
-from .. import sound
 from ..wm import XPWindow
 from . import vfs
 from .dialogs import msgbox
 
 TEXT = {".txt", ".ini", ".log", ".bat", ".sys", ".json", ".csv", ".md", ".cfg", ".nfo", ".py", ".xml", ".reg"}
 IMAGES = {".jpg", ".jpeg", ".png", ".gif", ".bmp"}
-AUDIO = {".wav", ".mp3"}
+AUDIO = {".wav", ".mp3", ".wma", ".m4a", ".ogg", ".flac"}
 WEB = {".htm", ".html"}
 
 
@@ -35,7 +33,8 @@ def open_file(desktop, path):
     elif ext in IMAGES:
         PictureViewer.open(desktop, path)
     elif ext in AUDIO:
-        MediaPlayer.open(desktop, path)
+        from ..programs.wmp import open_wmp
+        open_wmp(desktop, path)
     elif ext in WEB:
         from ..programs import navigator
         navigator.launch(desktop, url=QUrl.fromLocalFile(str(path)).toString())
@@ -117,69 +116,3 @@ class PictureViewer(QWidget):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._fit()
-
-
-class MediaPlayer(QWidget):
-    """A small Windows Media Player for sounds and MP3s."""
-    _current = None
-
-    @classmethod
-    def open(cls, desktop, path):
-        if cls._current is not None:
-            try:
-                cls._current.load(path)
-                desktop.open_window(cls._current.frame)
-                return
-            except RuntimeError:
-                cls._current = None
-        player = cls(desktop)
-        player.frame = XPWindow(desktop, "Windows Media Player", player,
-                                QIcon(player.style().standardIcon(QStyle.SP_MediaPlay)), size=(360, 150))
-        player.frame.destroyed.connect(lambda *_: setattr(cls, "_current", None))
-        cls._current = player
-        desktop.open_window(player.frame)
-        player.load(path)
-
-    def __init__(self, desktop):
-        super().__init__()
-        self.desktop = desktop
-        self.frame = None
-        self.setObjectName("wmp")
-        self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setStyleSheet("QWidget#wmp { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3A5FA8,"
-                           " stop:1 #182F66); } QLabel { color: white; font-family: Tahoma; font-size: 11px; }")
-        self.player = QMediaPlayer(self)
-        self.output = QAudioOutput(self)
-        self.player.setAudioOutput(self.output)
-        self.title = QLabel("Now Playing:")
-        self.slider = QSlider(Qt.Horizontal)
-        self.slider.setEnabled(False)
-        play = QPushButton()
-        play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        stop = QPushButton()
-        stop.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
-        play.clicked.connect(self.play)
-        stop.clicked.connect(self.player.stop)
-        row = QHBoxLayout()
-        row.addWidget(play)
-        row.addWidget(stop)
-        row.addStretch()
-        root = QVBoxLayout(self)
-        root.addWidget(self.title)
-        root.addWidget(self.slider)
-        root.addLayout(row)
-        self.player.durationChanged.connect(lambda d: self.slider.setRange(0, d))
-        self.player.positionChanged.connect(self.slider.setValue)
-
-    def load(self, path):
-        self.title.setText(f"Now Playing:  {Path(path).name}")
-        self.player.setSource(QUrl.fromLocalFile(str(path)))
-        self.play()
-
-    def play(self):
-        self.output.setVolume(0.0 if sound.is_muted() else 1.0)
-        self.player.play()
-
-    def closeEvent(self, event):
-        self.player.stop()
-        event.accept()

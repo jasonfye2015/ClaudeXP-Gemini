@@ -149,6 +149,17 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   menu (also Cascade/Tile/Show the Desktop) or Ctrl+Alt+End (the host OS keeps Ctrl+Alt+Del and
   Ctrl+Shift+Esc). commands.py resolves names for Run and cmd. Program.listed=False keeps Task Manager out
   of All Programs.
+- **Paint** (`programs/paint.py`): all 16 XP tools with their option boxes (brush shapes, line widths, fill
+  styles, eraser sizes, zoom), 28-colour palette (left = foreground, right = background, double-click = Edit
+  Colors), 3 undo levels like XP, move/Ctrl-copy/cut/paste selections (rect and free-form, opaque/transparent),
+  text with a Fonts bar, curves (drag, then two bends), polygons, Shift for 45deg/squares/circles, canvas resize
+  handles, zoom + grid, Image menu (Flip/Rotate, Stretch, Invert, Attributes, Clear), Set As Background,
+  Print. Saves .bmp/.png/.jpg/.gif (My Pictures). Explorer's right-click 'Edit' on pictures opens it.
+- **Windows Media Player 8** (`programs/wmp.py`, replaces the old mini player): Features taskbar, Now Playing
+  with visualizations driven by the real audio (QAudioBufferOutput + Goertzel bands: Bars, Scope, Ambience),
+  playlist, Media Library (My Music, Shared Music incl. a once-only 'Sample Music' copy of the OOBE music,
+  C:\WINDOWS\Media, E:) with ID3 tags, Radio Tuner (online only; stations are always 'too busy'), Copy
+  from CD / to Device messages, Skin Chooser (4 colour skins), shuffle/repeat; settings in data/wmp.json.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

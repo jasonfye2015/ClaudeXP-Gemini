@@ -916,6 +916,9 @@ class Explorer(QWidget):
             path = Path(self.fs.filePath(self.proxy.mapToSource(idx)))
             menu.addAction("&Open", lambda: self._activated(idx)).setFont(QFont("Tahoma", 8, QFont.Bold))
             from .viewers import AUDIO, IMAGES, TEXT, WEB
+            if path.is_file() and path.suffix.lower() in IMAGES:
+                from ..programs.paint import open_paint
+                menu.addAction("&Edit", lambda: open_paint(self.desktop, path))
             if path.is_file() and path.suffix.lower() in TEXT | IMAGES | WEB:
                 from ..printing import print_file
                 menu.addAction("&Print", lambda: print_file(self.desktop, path))
