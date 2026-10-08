@@ -186,6 +186,14 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   hole = mission (rank Cadet..Fleet Admiral), rollover lanes -> bonus multiplier, end-of-ball bonus, nudge/TILT,
   'ball search' for a still ball, 3 balls, top-5 high scores. Keys Z, /, Space, X/., F2, F3. Tested headless
   with a flipper-tapping bot: no escapes, no stuck spots.
+- **Calculator Scientific view** (calc.py rewritten around an operand/operator stack: Standard is strictly
+  left-to-right, Scientific has precedence + brackets; Hex/Dec/Oct/Bin as 64-bit two's complement,
+  Degrees/Radians/Grads, Inv/Hyp, trig/log/powers/roots/n!/dms/Exp/F-E/pi, Mod/And/Or/Xor/Lsh/Not/Int,
+  digit grouping; view + grouping saved in data/calc.json).
+- **System Tools / Entertainment**: Character Map (charmap.py), Disk Cleanup (cleanmgr.py: real sizes; empties
+  the Recycle Bin, C:\\WINDOWS\\Temp and Netscape's page cache after "Are you sure?"), System Information
+  (msinfo.py, the 2001 PC's hardware/software), Sound Recorder (sndrec.py: QAudioSource/QAudioSink PCM at
+  22.05 kHz mono, 60 s max, waveform, .wav open/save, Delete Before/After, Effects).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
