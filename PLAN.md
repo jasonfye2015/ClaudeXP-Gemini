@@ -72,6 +72,17 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   remember across programs; story ticks every 45-90 min; buddies reach out (AIM IM > IRC query >
   email); Netscape WebMail inbox + 'You've got mail!'; buddy homepages show and auto-refresh with
   life news; catch-up after the PC was off (queued at login, hidden behind maintenance).
+- **My Computer / Windows Explorer** (`claudexp/explorer/`): B: floppy ('device is not ready'),
+  C: the XP disk (real folder `data/Drive C`, built on first open: Documents and Settings, Program
+  Files with .exe files that launch the ClaudeXP programs, WINDOWS with system32/Fonts/Media),
+  D: CD drive ('Please insert a disk'), E: External Drive = the real `Local Stoage` folder (or
+  `Local Storage`). Task pane, Address bar, Icons/List/Details, XP sizes/types/2001 dates, new folder,
+  rename, cut/copy/paste, drag-in copies from real Windows, delete -> Recycle Bin (`data/Recycle Bin`,
+  restorable), drive Properties pie chart. Files open in Notepad (now with Save/Save As), the Picture
+  and Fax Viewer, a mini Media Player, or Netscape (local .htm).
+  Drive sounds (assets/sounds): harddrive_startup*.mp3 at boot, floppydrive_reading*.mp3 when
+  opening B:, cdrom_startup*.mp3 when opening D: (sound.play_clip plays the first few seconds),
+  externalHD_start*.mp3 when E: is opened after 10+ minutes idle (it 'spins up' first).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

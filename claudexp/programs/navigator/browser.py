@@ -293,7 +293,7 @@ class Browser(QWidget):
                             ("Document: Done" if self.loader is None else self.status.text()))
 
     def navigate(self, url, referrer=None, regenerate=False, push=True):
-        url = web.normalize(url) if not url.startswith(("http://", "https://", "about:")) else url
+        url = web.normalize(url) if not url.startswith(("http://", "https://", "about:", "file:")) else url
         self.stop(quiet=True)
         if push:
             del self.history[self.index + 1:]
@@ -309,6 +309,9 @@ class Browser(QWidget):
             return
         if url.startswith(web.WEBMAIL_URL):
             self._webmail(url)
+            return
+        if url.startswith("file:"):
+            self._local_file(url)
             return
         if url in ("about:", "about:netscape"):
             self._show(ABOUT_PAGE, url)
@@ -331,6 +334,17 @@ class Browser(QWidget):
             QTimer.singleShot(400, lambda: self._finish_cached(url, cached))
             return
         self._load(url, referrer)
+
+    def _local_file(self, url):
+        """A page saved on C: or E: (opened from My Computer): shown as it is, no Internet needed."""
+        from pathlib import Path
+        path = Path(QUrl(url).toLocalFile())
+        try:
+            page = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            self._error(url, "The file could not be found.")
+            return
+        self._show(page, url)
 
     def _mailbox(self):
         from ...life import get as life
@@ -552,8 +566,11 @@ class Browser(QWidget):
         self.navigate("about:")
 
     # ---- lifecycle ------------------------------------------------------------------------
-    def start(self):
-        self.home()
+    def start(self, url=None):
+        if url:
+            self.navigate(url)
+        else:
+            self.home()
 
     def network_lost(self):
         if self.loader is not None:

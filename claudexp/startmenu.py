@@ -104,8 +104,14 @@ class StartMenu(QWidget):
         if kind == "prog":
             programs.launch(self.desktop, value)
         elif kind == "right":
+            from . import explorer
+            from .explorer import vfs
+            folders = {"My Documents": vfs.my_documents, "My Pictures": vfs.my_pictures, "My Music": vfs.my_music}
             if value == "My Computer":
                 programs.launch(self.desktop, "mycomputer")
+            elif value in folders:
+                vfs.setup_c()
+                explorer.launch(self.desktop, folders[value]())
             else:
                 from .programs.placeholder import open_placeholder
                 icon = self.style().standardIcon(QStyle.SP_DirIcon)

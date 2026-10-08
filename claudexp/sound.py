@@ -87,6 +87,19 @@ def play_file(name, on_finished=None):
     return player
 
 
+def play_clip(name, ms):
+    """Play the first `ms` milliseconds of a sound file (e.g. a few seconds of a floppy grinding)."""
+    player = play_file(name)
+    if player is not None:
+        QTimer.singleShot(ms, lambda: player.stop() if _alive(player) else None)
+    return player
+
+
+def _alive(obj):
+    from shiboken6 import isValid
+    return isValid(obj)
+
+
 _sounds = None
 
 

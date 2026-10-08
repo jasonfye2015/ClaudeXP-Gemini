@@ -22,16 +22,18 @@ def nav_icon():
     return icon()
 
 
-def launch(desktop):
+def launch(desktop, url=None):
     global _splash
     if _frame is not None and isValid(_frame):
         desktop.open_window(_frame)
+        if url:
+            _frame.content.navigate(url)
         return
     if _splash is not None:
         return   # already starting up
     splash_pm = pixmap("netscape_splash.jpg")
     if splash_pm.isNull():
-        _open(desktop)
+        _open(desktop, url)
         return
     # The borderless splash window Navigator showed while it loaded.
     _splash = QLabel(desktop)
@@ -42,10 +44,10 @@ def launch(desktop):
     _splash.move(area.center() - _splash.rect().center())
     _splash.show()
     _splash.raise_()
-    QTimer.singleShot(SPLASH_MS, lambda: _open(desktop))
+    QTimer.singleShot(SPLASH_MS, lambda: _open(desktop, url))
 
 
-def _open(desktop):
+def _open(desktop, url=None):
     global _frame, _listening, _splash
     if _splash is not None:
         _splash.deleteLater()
@@ -65,7 +67,7 @@ def _open(desktop):
     browser.frame = _frame
     _frame.destroyed.connect(_forget)
     desktop.open_window(_frame)
-    browser.start()
+    browser.start(url)
 
 
 def _forget(*_):

@@ -82,8 +82,7 @@ class Desktop(QWidget):
             DesktopIcon(self, "ClaudeMUCK", programs.get("muck").icon(),
                         lambda: programs.launch(self, "muck")),
             DesktopIcon(self, "Recycle Bin", style.standardIcon(QStyle.SP_TrashIcon),
-                        lambda: open_placeholder(self, "Recycle Bin", style.standardIcon(QStyle.SP_TrashIcon),
-                                                 "The Recycle Bin is empty.")),
+                        lambda: self._open_recycle_bin()),
         ]
         for i, icon in enumerate(self.icons):
             icon.move(8, 8 + i * (DesktopIcon.H + 8))
@@ -122,6 +121,10 @@ class Desktop(QWidget):
         p.drawPixmap(0, 0, self._wall_scaled)
 
     # ---- icons --------------------------------------------------------------
+    def _open_recycle_bin(self):
+        from . import explorer
+        explorer.launch(self, explorer.RECYCLE_BIN)
+
     def select_icon(self, chosen):
         for icon in self.icons:
             if icon.selected != (icon is chosen):

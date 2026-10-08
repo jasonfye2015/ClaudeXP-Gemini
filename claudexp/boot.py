@@ -25,6 +25,9 @@ class BootScreen(QWidget):
         self.timer.timeout.connect(self._tick)
 
     def start(self):
+        import random
+        from . import sound
+        sound.play_file(random.choice(["harddrive_startup1.mp3", "harddrive_startup2.mp3"]))  # the disk spins up
         self._done = False
         self.offset = -self.chunk_w
         self.timer.start(30)

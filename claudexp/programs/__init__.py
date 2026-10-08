@@ -27,8 +27,8 @@ class Program:
 
 
 def _my_computer(desktop):
-    open_placeholder(desktop, "My Computer", std_icon(QStyle.SP_ComputerIcon),
-                     "No drives installed yet.\n\nClaudeXP is still being assembled!")
+    from .. import explorer
+    explorer.launch(desktop)
 
 
 def _connect(desktop):
