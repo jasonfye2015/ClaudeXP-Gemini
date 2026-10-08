@@ -1,0 +1,10 @@
+{
+  "_help": "Facts the Web should know. When a URL's host contains a key below, its text is given to the model so pages for that site stay consistent. AIM buddies, MUCK and IRC regulars get personal homepages automatically on any URL containing their name.",
+  "sites": {
+    "furrycities": "FurryCities (www.furrycities.com) is a free homepage host for furries, like GeoCities. Personal pages live at www.furrycities.com/<name>/. Pages are amateur and colorful: guestbooks, webrings, 'under construction' signs, hit counters, MIDI music notices, art galleries and character bios.",
+    "furnet": "FurNet (www.furnet.irc) is a furry IRC network, server FurNet.IRC port 6667. Main channels: #furnet (main hangout), #fursuiters, #furry-artists, #gaming, #help. Opers and channel ops include Shadowpaw (a black wolf). FurBot is the channel bot (!hug, !8ball, !seen). Rules: be nice, no drama, no ASL. The site has rules, a channel list, a FAQ on how to use mIRC, and nick registration help.",
+    "pawprints": "PawPrints MUCK (www.pawprintsmuck.com) is a furry social MUCK running TinyMUCK 2.2fb6.0 at muck.pawprints.net port 8888, since 1997. Areas: Welcome Center, Town Square with a fox-and-wolf fountain, the Tail-Wag Cafe, Fluffington Library, Pine Hollow Park and its Treehouse Lookout, Seaside Boardwalk, Sunset Beach, Pixel Paws Arcade. Wizard: Tessellate (snow leopard). Regulars: Bubbles the otter, Grimsby the old dragon, Pixel the raccoon. The site has a newbie guide to MUCK commands, a map, and a staff page.",
+    "claudeaim": "ClaudeAIM (www.claudeaim.com) is the AOL Instant Messenger-style chat service everyone uses. The site offers downloads of version 4.7, buddy icons, away message ideas and a help section.",
+    "netscape": "Netscape (home.netscape.com) makes Netscape Navigator 4.79, the browser. Netcenter is its portal with search, news, weather, horoscopes and free web-based email."
+  }
+}

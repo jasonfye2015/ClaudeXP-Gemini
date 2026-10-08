@@ -46,8 +46,8 @@ class StartMenu(QWidget):
         self.setFixedSize(self.bg.size())
         self.setMouseTracking(True)
         self.user = user_name()
-        self.pinned = ["notepad"]
-        self.recent = ["aim", "irc", "muck", "connect", "mycomputer"]
+        self.pinned = ["navigator"]   # XP's pinned 'Internet' spot
+        self.recent = ["aim", "irc", "muck", "connect", "notepad", "mycomputer"]
         self.hover = None
         self.hide()
 

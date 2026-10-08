@@ -69,6 +69,8 @@ class Desktop(QWidget):
                         lambda: programs.launch(self, "notepad")),
             DesktopIcon(self, "America Online", QIcon(pixmap("aol_icon.png")),
                         lambda: programs.launch(self, "connect")),
+            DesktopIcon(self, "Netscape Navigator", programs.get("navigator").icon(),
+                        lambda: programs.launch(self, "navigator")),
             DesktopIcon(self, "ClaudeAIM", programs.get("aim").icon(),
                         lambda: programs.launch(self, "aim")),
             DesktopIcon(self, "ClaudeIRC", programs.get("irc").icon(),

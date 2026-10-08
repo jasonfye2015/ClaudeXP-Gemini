@@ -1,7 +1,7 @@
 # ClaudeXP plan
 
 A virtual Windows XP desktop (one PySide6 window) that will host ClaudeAIM, ClaudeIRC,
-ClaudeMUCK and ClaudescapeNavigator. ClaudeAIM (../ClaudeAIM) stays standalone; code gets
+ClaudeMUCK and NetscapeNavigator. ClaudeAIM (../ClaudeAIM) stays standalone; code gets
 copied over here when AIM moves in.
 
 Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, click/key skips boot.
@@ -48,6 +48,15 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   IRC-only regulars in `Program Files/ClaudeIRC/` (network.json, regulars.json); AIM buddies join
   (optional "irc" section in their contact file). Settings + private-message history in
   `Program Files/ClaudeIRC/data/` (gitignored).
+- **Netscape Navigator** (`claudexp/programs/navigator/`): Netscape 4-style browser (browser.py).
+  The model writes each page as 2001 HTML 3.2, streamed in like a dial-up download (web.py:
+  prompts, PageLoader thread, cache in `Program Files/Netscape/data/cache`, built-in /img/*
+  images drawn by Qt, static Netcenter home page). Buddies (and MUCK/IRC regulars) get personal
+  homepages on any URL containing their name (e.g. www.furrycities.com/ArcticFox/); site facts in
+  `Program Files/Netscape/sites.json` keep FurNet/PawPrints pages consistent. Plain words in
+  Location = search. View > Regenerate Page re-rolls a cached page. ~15 tok/s: a page takes ~1 min.
+  Real Netscape art in assets/images: netscape_icon.jpg (program icon), netscape_throbber.gif
+  (34-frame meteor throbber), netscape_splash.jpg (launch splash), netscape_about.jpg (about: page).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
@@ -57,5 +66,4 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
 
 ## Next
 1. Real XP icons/title-bar buttons as the user finds them (see list in chat 2026-10-07)
-2. ClaudescapeNavigator (LLM-generated 2001 web pages), also requiring the dial-up
-3. Shared memory between programs (a buddy remembers what you said on the MUCK when you IM them)
+2. Shared memory between programs (a buddy remembers what you said on the MUCK when you IM them)
