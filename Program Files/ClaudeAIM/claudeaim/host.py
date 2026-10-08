@@ -66,6 +66,17 @@ def user_closed(widget, event):
     return event.spontaneous() or getattr(widget, "_host_user_close", False)
 
 
+def extra_context(name):
+    """Extra things a buddy remembers (from the host's shared memory), for their prompt."""
+    return _host.extra_context(name) if _host else ""
+
+
+def world_started(world):
+    """Tell the host the buddy list is up (it may listen to conversations, or start some)."""
+    if _host:
+        _host.world_started(world)
+
+
 def muted():
     return bool(_host and _host.muted())
 

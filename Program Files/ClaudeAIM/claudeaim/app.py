@@ -95,6 +95,7 @@ class ClaudeAIM:
             self.tray.back_requested.connect(self._im_back)
             self.tray.exit_requested.connect(self.exit)
         self.world.start()
+        host.world_started(self.world)
         if self.world.has_unread():
             QTimer.singleShot(2500, lambda: self.sounds.play("gotmail.wav"))
 

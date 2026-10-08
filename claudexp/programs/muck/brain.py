@@ -107,6 +107,9 @@ class Brain:
         base = BASE.format(name=c.name, world=WORLD_NAME, now=timefmt.now_text(tz),
                            persona=c.persona or "(none)", species=c.species,
                            desc=self.world.description_of(c) or "", relationship=relationship)
+        if c.contact is not None:
+            from ...life import get as life
+            base += life().context(c.contact.screen_name) if life() else ""
         return base + extra
 
     def act(self, c, room, log_lines, nudge, callback, priority=0):

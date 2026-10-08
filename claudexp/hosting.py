@@ -100,6 +100,15 @@ class AppHost:
         self.frames.clear()
 
     # ---- the rest of the system ------------------------------------------------
+    def extra_context(self, name):
+        from . import life
+        return life.get().context(name) if life.get() else ""
+
+    def world_started(self, world):
+        from . import life
+        if life.get():
+            life.get().watch_aim(world)
+
     def muted(self):
         return sound.is_muted()
 

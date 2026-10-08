@@ -62,6 +62,13 @@ def _now():
     return time.monotonic() * SPEED
 
 
+def _heard(c, program, speaker, text):
+    """Tell the shared memory about a line of conversation with a buddy."""
+    from ...life import get as life
+    if c is not None and c.contact is not None and life() is not None:
+        life().heard(c.contact.screen_name, program, speaker, text)
+
+
 def _minutes(lo_hi):
     return random.uniform(*lo_hi) * 60
 
@@ -391,6 +398,7 @@ class World(QObject):
         self.log(room_id, line)
         if self.logged_in and self.player_room == room_id:
             self.out(kind, line)
+            _heard(p, f"the MUCK ({self.room(room_id).name})", p.name, line)
             self.next_ambient = max(self.next_ambient, _now() + random.uniform(*AMBIENT_SECONDS) / 2)
             # Sometimes someone else answers them.
             others = [o for o in self.people_in(room_id) if o is not p and not o.idle_only]
@@ -544,6 +552,7 @@ class World(QObject):
             return
         self.out("say", f'You say, "{text}"')
         self.log(self.player_room, f'{self.player_name} says, "{text}"')
+        self._tell_room_memory(f'{self.player_name} says, "{text}"')
         self._player_spoke(text)
 
     def pose(self, text, possessive=False):
@@ -554,7 +563,13 @@ class World(QObject):
         line = f"{self.player_name}{text}" if possessive else self._pose_text(self.player_name, text)
         self.out("pose", line)
         self.log(self.player_room, line)
+        self._tell_room_memory(line)
         self._player_spoke(text)
+
+    def _tell_room_memory(self, line):
+        where = f"the MUCK ({self.room(self.player_room).name})"
+        for c in self.people_in(self.player_room):
+            _heard(c, where, self.player_name, line)
 
     def _split_target(self, rest, usage):
         name, eq, msg = rest.partition("=")
@@ -584,6 +599,7 @@ class World(QObject):
             self._answer_page(p, msg)
 
     def _answer_page(self, p, msg):
+        _heard(p, "the MUCK (pages)", self.player_name, msg)
         p.thinking = True
 
         def done(reply):
@@ -598,6 +614,7 @@ class World(QObject):
         if p.online and self.logged_in:
             p.last_active = _now()
             self.out("page", f'{p.name} pages, "{reply}" to you.')
+            _heard(p, "the MUCK (pages)", p.name, reply)
 
     def whisper(self, rest):
         name, msg = self._split_target(rest, "Usage: whisper <name>=<message>")

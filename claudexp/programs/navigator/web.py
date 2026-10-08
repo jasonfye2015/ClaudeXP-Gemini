@@ -120,18 +120,31 @@ class WebKnowledge:
                     self.people.setdefault(r[name_key].lower(), (r[name_key], r["persona"], False))
         self.aim_name = aim_screen_name()
 
+    def person_in(self, url):
+        """(name, persona, is_buddy) if this URL is someone's personal page, else None."""
+        parts = urlparse(url)
+        host = parts.netloc.lower()
+        lowered = url.lower()
+        for key, person in self.people.items():
+            if re.search(rf"(^|[/~._-]){re.escape(key)}($|[/._?-])", lowered.replace(host, "", 1)) \
+                    or host.startswith(key + "."):
+                return person
+        return None
+
     def context(self, url):
         parts = urlparse(url)
         host = parts.netloc.lower()
         notes = [facts for key, facts in self.sites.items() if key in host]
-        lowered = url.lower()
-        for key, (name, persona, is_buddy) in self.people.items():
-            if re.search(rf"(^|[/~._-]){re.escape(key)}($|[/._?-])", lowered.replace(host, "", 1)) \
-                    or host.startswith(key + "."):
-                rel = (f"Their AIM buddy {self.aim_name} might visit; they're good friends."
-                       if is_buddy and self.aim_name else "")
-                notes.append(BUDDY_EXTRA.format(name=name, persona=persona, relationship=rel))
-                break
+        person = self.person_in(url)
+        if person is not None:
+            name, persona, is_buddy = person
+            rel = (f"Their AIM buddy {self.aim_name} might visit; they're good friends."
+                   if is_buddy and self.aim_name else "")
+            notes.append(BUDDY_EXTRA.format(name=name, persona=persona, relationship=rel))
+            news = _life_news(name) if is_buddy else ""
+            if news:
+                notes.append("What's been going on in their life lately (a personal page would often have a "
+                             f"'What's New' or 'Updates' section mentioning some of it):\n{news}")
         if host.startswith("search.netscape.com"):
             q = parse_qs(parts.query).get("q", [""])[0]
             notes.append(SEARCH_EXTRA.format(q=q))
@@ -173,6 +186,24 @@ class PageLoader(QObject):
             self.chunk.emit, self.finished_page.emit, broker.FOREGROUND, think=False)
 
 
+def _life_news(name):
+    from ...life import get as life
+    if life() is None:
+        return ""
+    entries = [e for e in life().journal.entries(name) if e["kind"] == "life"][-6:]
+    return "\n".join(f"- {e['date']}: {e['text']}" for e in entries)
+
+
+def life_updated_since(name, timestamp):
+    """True if this buddy's life moved on (a new journal note) after the given time."""
+    from datetime import datetime
+    from ...life import get as life
+    if life() is None:
+        return False
+    last = life().journal.last(name, "life")
+    return bool(last) and datetime.fromisoformat(last["when"]).timestamp() > timestamp
+
+
 class Cache:
     def __init__(self):
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -183,6 +214,10 @@ class Cache:
 
     def put(self, url, page):
         (CACHE_DIR / f"{cache_key(url)}.html").write_text(page, encoding="utf-8")
+
+    def mtime(self, url):
+        path = CACHE_DIR / f"{cache_key(url)}.html"
+        return path.stat().st_mtime if path.exists() else 0
 
     def drop(self, url):
         (CACHE_DIR / f"{cache_key(url)}.html").unlink(missing_ok=True)
@@ -318,8 +353,54 @@ def _broken():
 
 # ---- the home page ----------------------------------------------------------------------------------
 
-def home_page(knowledge):
+WEBMAIL_URL = "http://home.netscape.com/webmail/"
+
+
+def _mail_frame(title, inner):
+    return f"""<html><head><title>{title}</title></head><body bgcolor="#FFFFFF" text="#000000" link="#0000CC">
+<table width="100%" cellpadding="6" cellspacing="0" bgcolor="#003366"><tr><td>
+<font face="Arial" size="5" color="#FFFFFF"><b>Netscape WebMail</b></font></td>
+<td align="right"><font face="Arial" size="2"><a href="{WEBMAIL_URL}"><font color="#FFCC00">Inbox</font></a> |
+<a href="{HOME_URL}"><font color="#FFCC00">Netcenter</font></a></font></td></tr></table><br>{inner}
+<br><center><font face="Arial" size="1" color="#808080">Netscape WebMail - free email for life!</font></center>
+</body></html>"""
+
+
+def webmail_page(messages):
+    rows = []
+    for m in reversed(messages):
+        b, nb = ("", "") if m["read"] else ("<b>", "</b>")
+        rows.append(
+            f'<tr bgcolor="{"#FFFFFF" if m["read"] else "#FFFFE0"}">'
+            f'<td><font face="Arial" size="2">{b}{html.escape(m["from"])}{nb}</font></td>'
+            f'<td><font face="Arial" size="2"><a href="{WEBMAIL_URL}read?id={m["id"]}">'
+            f'{b}{html.escape(m["subject"])}{nb}</a></font></td>'
+            f'<td><font face="Arial" size="2">{html.escape(m["date"])}</font></td></tr>')
+    unread = sum(1 for m in messages if not m["read"])
+    inner = (f'<font face="Arial" size="3"><b>Inbox</b> ({len(messages)} messages, {unread} unread)</font><br><br>'
+             '<table width="100%" border="1" cellpadding="4" cellspacing="0">'
+             '<tr bgcolor="#D0D8E8"><td><font face="Arial" size="2"><b>From</b></font></td>'
+             '<td><font face="Arial" size="2"><b>Subject</b></font></td>'
+             '<td><font face="Arial" size="2"><b>Date</b></font></td></tr>'
+             + ("".join(rows) or '<tr><td colspan="3"><font face="Arial" size="2">Your Inbox is empty.</font></td></tr>')
+             + "</table>")
+    return _mail_frame("Netscape WebMail - Inbox", inner)
+
+
+def message_page(m):
+    body = html.escape(m["body"]).replace("\n", "<br>")
+    inner = (f'<table width="100%" cellpadding="4" bgcolor="#E8E8E8"><tr><td><font face="Arial" size="2">'
+             f'<b>From:</b> {html.escape(m["from"])} &lt;{html.escape(m["addr"])}&gt;<br>'
+             f'<b>Subject:</b> {html.escape(m["subject"])}<br><b>Date:</b> {html.escape(m["date"])}</font></td></tr></table>'
+             f'<br><font face="Courier New" size="3">{body}</font><br><br>'
+             f'<font face="Arial" size="2"><a href="mailto:{html.escape(m["addr"])}">Reply</a> | '
+             f'<a href="{WEBMAIL_URL}">Back to Inbox</a></font>')
+    return _mail_frame(f"Netscape WebMail - {m['subject']}", inner)
+
+
+def home_page(knowledge, unread=0):
     now = clock.now()
+    webmail = "WebMail" + (f" ({unread} new)" if unread else "")
     buddies = "".join(
         f'<li><a href="http://www.furrycities.com/{name}/">{html.escape(name)}\'s homepage</a></li>'
         for name in knowledge.buddy_names)
@@ -329,7 +410,7 @@ def home_page(knowledge):
 <td><font face="Arial" size="6" color="#FFFFFF"><b>Netscape Netcenter</b></font><br>
 <font face="Arial" size="2" color="#FFCC00">{now:%A, %B} {now.day}, {now.year}</font></td>
 <td align="right"><font face="Arial" size="2" color="#FFFFFF">Welcome back! |
-<a href="http://home.netscape.com/webmail/"><font color="#FFCC00">WebMail</font></a> |
+<a href="http://home.netscape.com/webmail/"><font color="#FFCC00">{webmail}</font></a> |
 <a href="http://home.netscape.com/help/"><font color="#FFCC00">Help</font></a></font></td></tr></table>
 <table width="100%" cellpadding="4" bgcolor="#E8E8E8"><tr><td><font face="Arial" size="2">
 <b>Search the Web:</b> type your words in the <b>Location</b> box above and press Enter.

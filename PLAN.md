@@ -57,6 +57,21 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   Location = search. View > Regenerate Page re-rolls a cached page. ~15 tok/s: a page takes ~1 min.
   Real Netscape art in assets/images: netscape_icon.jpg (program icon), netscape_throbber.gif
   (34-frame meteor throbber), netscape_splash.jpg (launch splash), netscape_about.jpg (about: page).
+- **Model broker** (`claudexp/broker.py`): every Ollama request from every program goes through one
+  queue on one worker, by priority: FOREGROUND 10 > AIM 8 > REPLY 5 > CHATTER 0 > BACKGROUND -10.
+  AIM's llm.LLM delegates to it (llm.install_broker), Netscape streams through it. Tracks the
+  background 'batch' for maintenance progress. **HDD light** (`claudexp/hdd.py`) in the tray
+  flickers while it works.
+- **Maintenance** (`claudexp/maintenance/`): Automatic Updates (tray download, 'Updates are ready',
+  install, Restart Now), Disk Defragmenter, ClaudeShield AntiVirus 2002 (tray, scans, LiveUpdate,
+  quarantine, rare 2001 worms). CoverClock: a task never finishes while background model work is
+  queued. The coordinator starts a task when a background batch of 3+ jobs begins (40 min cooldown;
+  defrag only when the user is idle 3+ min).
+- **Living world** (`claudexp/life/`): per-buddy journals in data/journals (life notes + summaries
+  of conversations from AIM/IRC/MUCK/email) injected into every program's prompts, so buddies
+  remember across programs; story ticks every 45-90 min; buddies reach out (AIM IM > IRC query >
+  email); Netscape WebMail inbox + 'You've got mail!'; buddy homepages show and auto-refresh with
+  life news; catch-up after the PC was off (queued at login, hidden behind maintenance).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
@@ -66,4 +81,5 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
 
 ## Next
 1. Real XP icons/title-bar buttons as the user finds them (see list in chat 2026-10-07)
-2. Shared memory between programs (a buddy remembers what you said on the MUCK when you IM them)
+2. Ideas: one shared presence per buddy across AIM/IRC/MUCK; IRC MemoServ memos and MUCK mail;
+   replying to emails; a 'World activity' setting (Low/Normal/Lively)

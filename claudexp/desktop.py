@@ -94,6 +94,8 @@ class Desktop(QWidget):
         self.last_input = time.monotonic()
         from . import maintenance
         self.maintenance = maintenance.install(self)
+        from . import life
+        self.life = life.install(self)
         self.start_menu = StartMenu(self)
         QApplication.instance().installEventFilter(self)
         QApplication.instance().applicationStateChanged.connect(self._app_state_changed)

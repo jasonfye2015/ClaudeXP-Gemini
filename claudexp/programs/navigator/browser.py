@@ -304,7 +304,11 @@ class Browser(QWidget):
         self.location.setText(url)
         self._update_buttons()
         if url == web.HOME_URL:
-            self._show(web.home_page(self.knowledge), url)
+            box = self._mailbox()
+            self._show(web.home_page(self.knowledge, len(box.unread()) if box else 0), url)
+            return
+        if url.startswith(web.WEBMAIL_URL):
+            self._webmail(url)
             return
         if url in ("about:", "about:netscape"):
             self._show(ABOUT_PAGE, url)
@@ -313,6 +317,9 @@ class Browser(QWidget):
             self._show("<html><head><title></title></head><body></body></html>", url)
             return
         cached = None if regenerate else self.cache.get(url)
+        person = self.knowledge.person_in(url)
+        if cached is not None and person and person[2] and web.life_updated_since(person[0], self.cache.mtime(url)):
+            cached = None   # their life moved on since we last saw the page: it's been updated
         if not network.is_connected():
             self.status.setText("Dialing your Internet connection...")
             network.connect(self.desktop, then=lambda: self.navigate(url, referrer, regenerate, push=False))
@@ -324,6 +331,32 @@ class Browser(QWidget):
             QTimer.singleShot(400, lambda: self._finish_cached(url, cached))
             return
         self._load(url, referrer)
+
+    def _mailbox(self):
+        from ...life import get as life
+        return life().mailbox if life() else None
+
+    def _webmail(self, url):
+        box = self._mailbox()
+        if box is None:
+            self._error(url, "WebMail is not available.")
+            return
+        if not network.is_connected():
+            network.connect(self.desktop, then=lambda: self.navigate(url, push=False))
+            return
+        if "read?id=" in url:
+            try:
+                msg_id = int(url.split("read?id=")[1].split("&")[0])
+            except ValueError:
+                msg_id = -1
+            msg = next((m for m in box.messages() if m["id"] == msg_id), None)
+            if msg is None:
+                self._error(url, "That message could not be found.")
+                return
+            box.mark_read(msg_id)
+            self._show(web.message_page(msg), url)
+        else:
+            self._show(web.webmail_page(box.messages()), url)
 
     def _check_offline(self, url):
         dialer = network.get(self.desktop)

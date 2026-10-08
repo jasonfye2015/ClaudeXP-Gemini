@@ -7,7 +7,7 @@ from enum import Enum
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from . import paths, timefmt
+from . import host, paths, timefmt
 from .llm import LLM, SYSTEM_PROMPT, clean_reply, estimate_tokens
 from .pictures import strip_tags
 from .storage import History
@@ -367,6 +367,17 @@ class World(QObject):
         elif not b.busy:
             self._start_reply(b, instruction=trig.prompt, initiated=True)
 
+    def reach_out(self, buddy_id, instruction):
+        """Have a buddy start a conversation (e.g. to tell the user some news). False if they can't now."""
+        b = self.buddies.get(buddy_id)
+        if b is None or not self.running or b.busy or b.presence != Presence.ONLINE:
+            return False
+        count, _last = self._unanswered(b)
+        if count >= b.contact.unanswered_limit - 1:
+            return False   # they've already sent a few unanswered messages
+        self._start_reply(b, instruction=instruction, initiated=True)
+        return True
+
     def _unanswered(self, b):
         """How many times they've messaged first since the user last said anything,
         and when the latest of those was."""
@@ -625,9 +636,9 @@ class World(QObject):
         now = timefmt.now_text(tz)
         if tz:
             now += f" where you are (for {user} it's {timefmt.clock_text()})"
-        return SYSTEM_PROMPT.format(name=b.name, user=user, now=now,
-                                    persona=b.contact.persona.strip(),
-                                    status=status) + self._pictures_prompt(b) + self._work_note(b)
+        prompt = SYSTEM_PROMPT.format(name=b.name, user=user, now=now,
+                                      persona=b.contact.persona.strip(), status=status)
+        return prompt + self._pictures_prompt(b) + self._work_note(b) + host.extra_context(b.name)
 
     def _work_note(self, b):
         """For buddies with work days/hours: say outright whether they're at work now.

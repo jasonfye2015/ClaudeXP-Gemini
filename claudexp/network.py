@@ -348,6 +348,9 @@ class Network:
         self.tray.show()
         self.tray.showMessage(f"{CONNECTION} is now connected", f"Speed: {SPEED}", None, 6000)
         self.traffic.start(350)
+        from . import life
+        if life.get() is not None:
+            life.get().connected()
         self._run_waiting()
 
     def _run_waiting(self):

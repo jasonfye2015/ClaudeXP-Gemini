@@ -95,8 +95,12 @@ class Brain:
         else:
             relationship = f"{player} is someone you've seen around on FurNet."
         tz = p.contact.timezone if p.contact is not None else None
+        memory = ""
+        if p.contact is not None:
+            from ...life import get as life
+            memory = life().context(p.contact.screen_name) if life() else ""
         return BASE.format(nick=p.nick, now=timefmt.now_text(tz), persona=p.persona or "(none)",
-                           relationship=relationship) + extra
+                           relationship=relationship) + memory + extra
 
     def channel_line(self, p, chan, nudge, callback, priority=PRIORITY_CHATTER):
         others = [m for m in self.net.member_nicks(chan.name) if m.lower() != p.nick.lower()]

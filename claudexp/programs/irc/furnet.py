@@ -60,6 +60,13 @@ def _now():
     return time.monotonic() * SPEED
 
 
+def _heard(p, program, speaker, text):
+    """Tell the shared memory about a line of conversation with a buddy."""
+    from ...life import get as life
+    if p is not None and p.contact is not None and life() is not None:
+        life().heard(p.contact.screen_name, program, speaker, text)
+
+
 def _minutes(lo_hi):
     return random.uniform(*lo_hi) * 60
 
@@ -255,6 +262,9 @@ class FurNet(QObject):
         self.out("", "mode", f"* {self.nick} sets mode: +i")
         self.next_guest = now + _minutes(GUEST_MINUTES)
         self.timer.start(TICK_MS)
+        from ...life import get as life
+        if life() is not None:
+            life().irc = self
         for p in self.people:
             if p.contact is not None and p.online and random.random() < 0.3:
                 QTimer.singleShot(random.randint(20, 120) * 1000, lambda p=p: self._buddy_says_hi(p))
@@ -267,6 +277,9 @@ class FurNet(QObject):
         if not self.connected:
             return
         self.timer.stop()
+        from ...life import get as life
+        if life() is not None and life().irc is self:
+            life().irc = None
         self.last_channels = list(self.my_channels)   # rejoined on the next connect
         self.my_channels.clear()
         self.connected = False
@@ -401,6 +414,8 @@ class FurNet(QObject):
             return
         kind, text = result
         p.last_active = _now()
+        if self.in_channel(chan.name):
+            _heard(p, f"IRC {chan.name}", p.nick, f"* {p.nick} {text}" if kind == "action" else text)
         if kind == "action":
             self._chan_out(chan, "action", f"* {p.nick} {text}")
         else:
@@ -444,6 +459,10 @@ class FurNet(QObject):
         history.append({"role": role, "content": text})
         save_json(self._history_path(p), history[-60:])
 
+    def reach_out(self, p, instruction):
+        """The life simulation wants this buddy to message the user first."""
+        self._ask_query(p, f"({instruction})", remember_nudge=False)
+
     def _buddy_says_hi(self, p):
         if not (self.connected and p.online):
             return
@@ -471,6 +490,7 @@ class FurNet(QObject):
             return
         kind, text = result
         p.last_active = _now()
+        _heard(p, "IRC (private messages)", p.nick, text)
         self._remember(p, "assistant", f"/me {text}" if kind == "action" else text)
         self.query_opened.emit(p.nick)
         self.out(p.nick, "action" if kind == "action" else "msg",
@@ -492,6 +512,7 @@ class FurNet(QObject):
             self.out(window, "notice", f"-{p.nick}- I'm a bot! Try !help in a channel.")
             return
         self._remember(p, "user", f"/me {text}" if action else text)
+        _heard(p, "IRC (private messages)", self.nick, text)
         self._ask_query(p)
 
     # ---- FurBot --------------------------------------------------------------------------------
@@ -624,6 +645,8 @@ class FurNet(QObject):
             chan = self.channel(window)
             self.out(window, "own", f"<{self.nick}> {text}")
             chan.log.append(f"<{self.nick}> {text}")
+            for p in self.members(chan.name):
+                _heard(p, f"IRC {chan.name}", self.nick, text)
             self._bot_command(chan, self.nick, text)
             self._player_said(chan, text)
         else:

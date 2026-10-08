@@ -49,6 +49,9 @@ class ClaudeXP(QMainWindow):
     def show_desktop(self):
         self.stack.setCurrentWidget(self.desktop)
         sound.play("startup")
+        # The world moved on while the PC was off: catch up in the background (Windows Update
+        # or a virus scan will start to cover for it).
+        QTimer.singleShot(1500, self.desktop.life.catch_up)
 
     def log_off(self):
         self.desktop.hide_start_menu()
