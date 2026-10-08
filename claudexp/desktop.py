@@ -8,6 +8,7 @@ from .paths import pixmap
 from .programs.placeholder import open_placeholder
 from .startmenu import StartMenu
 from .taskbar import TASKBAR_H, Taskbar
+from .hdd import HddLight
 from .tray import Balloon
 from .wm import XPWindow
 
@@ -86,6 +87,7 @@ class Desktop(QWidget):
 
         self.taskbar = Taskbar(self)
         self.balloon = Balloon(self)
+        self.hdd = HddLight(self)
         self.start_menu = StartMenu(self)
         QApplication.instance().installEventFilter(self)
         QApplication.instance().applicationStateChanged.connect(self._app_state_changed)

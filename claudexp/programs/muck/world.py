@@ -279,7 +279,7 @@ class World(QObject):
             self.out("arrive", f"{wiz.name} has arrived.")
         wiz.next_move = _now() + _minutes(MOVE_MINUTES)
         self._ask(wiz, f"{self.player_name} is a brand new player who just created their character. "
-                       "As a wizard, welcome them warmly and offer to help them get started.")
+                       "As a wizard, welcome them warmly and offer to help them get started.", 5)
 
     def _populate(self):
         """Who's already online when you connect."""
@@ -362,7 +362,7 @@ class World(QObject):
             self._ask(p, f"You just got here and {self.player_name} is here. Say hi if you feel like it, or PASS.")
 
     # ---- characters acting --------------------------------------------------------------
-    def _ask(self, p, nudge):
+    def _ask(self, p, nudge, priority=0):
         """Ask the model what p does in the player's room, then show it after a typing pause."""
         if p.thinking or p.idle_only:
             return
@@ -377,7 +377,10 @@ class World(QObject):
             delay = random.uniform(*REPLY_TYPING) + min(len(action[1]) / 25, 6)
             QTimer.singleShot(int(delay * 1000), lambda: self._perform(p, room_id, action))
 
-        self.brain.act(p, room, list(self.logs.get(room_id, [])), nudge, done)
+        if priority == 0 and self.brain.llm_busy():
+            p.thinking = False
+            return  # don't pile ambient chatter up behind other work
+        self.brain.act(p, room, list(self.logs.get(room_id, [])), nudge, done, priority)
 
     def _perform(self, p, room_id, action):
         if not (p.online and p.room == room_id):
@@ -393,7 +396,7 @@ class World(QObject):
             others = [o for o in self.people_in(room_id) if o is not p and not o.idle_only]
             addressed = [o for o in others if o.name.lower() in text.lower()]
             if addressed:
-                self._ask(addressed[0], f"{p.name} just said something to you. Respond if it makes sense, or PASS.")
+                self._ask(addressed[0], f"{p.name} just said something to you. Respond if it makes sense, or PASS.", 5)
             elif others and random.random() < 0.2:
                 self._ask(random.choice(others), "Respond if you have something to add, or PASS.")
 
@@ -419,7 +422,7 @@ class World(QObject):
         for p in responders:
             nudge = (f"{self.player_name} is talking to you. Respond." if p in addressed
                      else "Respond if it makes sense to, or PASS.")
-            self._ask(p, nudge)
+            self._ask(p, nudge, 5)
         self.next_ambient = _now() + random.uniform(*AMBIENT_SECONDS)
 
     # ---- input --------------------------------------------------------------------------
@@ -631,7 +634,7 @@ class World(QObject):
         self.look()
         present = [p for p in self.people_in(target) if not p.idle_only]
         if present and random.random() < 0.5:
-            self._ask(random.choice(present), f"{self.player_name} just arrived. Greet them if you want, or PASS.")
+            self._ask(random.choice(present), f"{self.player_name} just arrived. Greet them if you want, or PASS.", 5)
         self.next_ambient = _now() + random.uniform(*AMBIENT_SECONDS)
 
     def go(self, rest):

@@ -76,6 +76,10 @@ class Brain:
         self.llm = LLM()
         self.settings = Settings()
 
+    def llm_busy(self):
+        from ... import broker
+        return broker.get().foreground_waiting()
+
     def _model(self, c):
         if c.contact is not None:
             if c.contact.model:
@@ -105,7 +109,7 @@ class Brain:
                            desc=self.world.description_of(c) or "", relationship=relationship)
         return base + extra
 
-    def act(self, c, room, log_lines, nudge, callback):
+    def act(self, c, room, log_lines, nudge, callback, priority=0):
         """Ask c what they do in room. callback(action or None)."""
         others = [o.name for o in self.world.people_in(room.id) if o is not c]
         if self.world.player_room == room.id:
@@ -117,7 +121,7 @@ class Brain:
                     {"role": "user", "content": f"What just happened in {room.name} (most recent last):\n"
                                                 f"{log}\n\n{nudge}"}]
         self.llm.chat(self._model(c), messages, self._options(c),
-                      lambda text, err: callback(None if err else parse_action(text, c.name)), think=False)
+                      lambda text, err: callback(None if err else parse_action(text, c.name)), priority, think=False)
 
     def page(self, c, text, callback):
         """The player paged c. callback(reply text or None)."""

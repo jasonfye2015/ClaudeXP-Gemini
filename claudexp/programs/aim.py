@@ -21,6 +21,9 @@ def ensure_aim_path():
     """Make the installed ClaudeAIM package importable (other programs share its buddies)."""
     if str(AIM_DIR) not in sys.path:
         sys.path.insert(0, str(AIM_DIR))
+        from claudeaim import llm
+        from .. import broker
+        llm.install_broker(broker.get())
 
 
 def aim_icon():

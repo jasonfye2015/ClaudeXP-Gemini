@@ -346,9 +346,9 @@ class Browser(QWidget):
         self.loader = web.PageLoader(url, referrer, self.knowledge, self.model, self.num_ctx)
         loader = self.loader
         self.old_loaders.add(loader)   # keep it alive until its thread really ends
-        loader.finished.connect(lambda: (self.old_loaders.discard(loader), loader.deleteLater()))
         self.loader.chunk.connect(self._chunk)
         self.loader.finished_page.connect(self._finished)
+        loader.finished_page.connect(lambda *_: (self.old_loaders.discard(loader), loader.deleteLater()))
         self.status.setText(f"Contacting host: {urlparse(url).netloc}...")
         self.progress.setRange(0, 0)
         self._start_throbber()

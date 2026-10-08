@@ -4,10 +4,9 @@ import hashlib
 import html
 import random
 import re
-import threading
 from urllib.parse import parse_qs, quote_plus, urlparse
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QThread, Signal
+from PySide6.QtCore import QObject, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen, QPixmap, QPolygonF
 
 from ... import clock
@@ -141,8 +140,8 @@ class WebKnowledge:
 
 # ---- loading pages -------------------------------------------------------------------------------
 
-class PageLoader(QThread):
-    """Streams one page from the model. chunk(text_so_far), finished_page(html, error)."""
+class PageLoader(QObject):
+    """Streams one page from the model through the broker. chunk(text_so_far), finished_page(html, error)."""
     chunk = Signal(str)
     finished_page = Signal(str, str)
 
@@ -150,13 +149,14 @@ class PageLoader(QThread):
         super().__init__()
         self.url, self.referrer, self.knowledge = url, referrer, knowledge
         self.model, self.num_ctx = model, num_ctx
-        self.stop_flag = threading.Event()
+        self.job = None
 
     def stop(self):
-        self.stop_flag.set()
+        if self.job is not None:
+            self.job.stop()
 
-    def run(self):
-        import ollama
+    def start(self):
+        from ... import broker
         now = clock.now()
         system = PROMPT.format(date=f"{now:%A, %B} {now.day}, {now.year}")
         user = f"URL: {self.url}"
@@ -167,27 +167,10 @@ class PageLoader(QThread):
         extra = self.knowledge.context(self.url)
         if extra:
             user += "\n\n" + extra
-        text, err = "", ""
-        try:
-            kwargs = {"think": False} if _supports_thinking(self.model) else {}
-            stream = ollama.chat(model=self.model, stream=True, keep_alive="30m",
-                                 messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-                                 options={"num_ctx": self.num_ctx, "num_predict": MAX_TOKENS, "temperature": 0.9},
-                                 **kwargs)
-            for part in stream:
-                if self.stop_flag.is_set():
-                    err = "stopped"
-                    break
-                text += part.message.content or ""
-                self.chunk.emit(text)
-        except Exception as e:  # Ollama not running, model missing...
-            err = str(e) or e.__class__.__name__
-        self.finished_page.emit(text, err)
-
-
-def _supports_thinking(model):
-    from claudeaim.llm import supports_thinking
-    return supports_thinking(model)
+        self.job = broker.get().stream(
+            self.model, [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            {"num_ctx": self.num_ctx, "num_predict": MAX_TOKENS, "temperature": 0.9},
+            self.chunk.emit, self.finished_page.emit, broker.FOREGROUND, think=False)
 
 
 class Cache:

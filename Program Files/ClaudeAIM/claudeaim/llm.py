@@ -111,6 +111,15 @@ class _ChatJob(QRunnable):
         self.emitter.done.emit(self.callback, text, err)
 
 
+_broker = None
+
+
+def install_broker(broker):
+    """Inside ClaudeXP, every request goes through its shared model broker (one GPU queue)."""
+    global _broker
+    _broker = broker
+
+
 class LLM(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -119,8 +128,11 @@ class LLM(QObject):
         self._emitter = _Emitter(self)
         self._emitter.done.connect(lambda cb, text, err: cb(text, err))
 
-    def chat(self, model, messages, options, callback, priority=0, think=None):
+    def chat(self, model, messages, options, callback, priority=None, think=None):
         """callback(text, error) runs on the UI thread when the reply is ready.
-        Queued jobs with a higher priority run first. think=False turns off a thinking
-        model's reasoning step (much faster); None leaves the model's default."""
-        self.pool.start(_ChatJob(self._emitter, callback, model, messages, options, think), priority)
+        Queued jobs with a higher priority run first (None = an AIM conversation). think=False
+        turns off a thinking model's reasoning step (much faster); None leaves the model's default."""
+        if _broker is not None:
+            return _broker.chat(model, messages, options, callback, 8 if priority is None else priority,
+                                think, images=_prepare_images)
+        self.pool.start(_ChatJob(self._emitter, callback, model, messages, options, think), priority or 0)
