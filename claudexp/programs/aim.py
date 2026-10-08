@@ -17,6 +17,12 @@ _app = None   # the running ClaudeAIM, if any
 _listening = False
 
 
+def ensure_aim_path():
+    """Make the installed ClaudeAIM package importable (other programs share its buddies)."""
+    if str(AIM_DIR) not in sys.path:
+        sys.path.insert(0, str(AIM_DIR))
+
+
 def aim_icon():
     return QIcon(pixmap("aol_messenger_icon.png"))
 
@@ -34,8 +40,7 @@ def launch(desktop):
         network.on_disconnect(desktop, _disconnected)
         _listening = True
     try:
-        if str(AIM_DIR) not in sys.path:
-            sys.path.insert(0, str(AIM_DIR))
+        ensure_aim_path()
         from claudeaim import host
         from claudeaim.app import ClaudeAIM
     except Exception:

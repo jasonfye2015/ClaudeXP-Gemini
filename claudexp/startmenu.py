@@ -47,7 +47,7 @@ class StartMenu(QWidget):
         self.setMouseTracking(True)
         self.user = user_name()
         self.pinned = ["notepad"]
-        self.recent = ["aim", "connect", "mycomputer"]
+        self.recent = ["aim", "muck", "connect", "mycomputer"]
         self.hover = None
         self.hide()
 

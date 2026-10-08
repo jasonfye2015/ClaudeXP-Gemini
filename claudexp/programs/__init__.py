@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QStyle
 
 from .. import network, sound
-from . import aim
+from . import aim, muck
 from .notepad import open_notepad
 from .placeholder import open_placeholder
 
@@ -43,6 +43,7 @@ PROGRAMS = [
     Program("notepad", "Notepad", "Write some text", lambda: std_icon(QStyle.SP_FileIcon), open_notepad),
     Program("mycomputer", "My Computer", "", lambda: std_icon(QStyle.SP_ComputerIcon), _my_computer),
     Program("aim", "ClaudeAIM", "Instant messenger", aim.aim_icon, aim.launch, aim.shutdown),
+    Program("muck", "ClaudeMUCK", "PawPrints MUCK", muck.muck_icon, muck.launch, muck.shutdown),
     Program("connect", "Connect to the Internet", "", network.network_icon, _connect,
             lambda: network.disconnect(quiet=True)),
 ]

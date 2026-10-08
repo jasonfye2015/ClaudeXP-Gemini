@@ -34,8 +34,16 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   Dialing / Verifying / Registering stages, two-monitors tray icon (blinks, tooltip, Status window,
   Disconnect). Saved in data/network.json. Programs call `network.connect(desktop, then=...)`;
   AIM requires it (and skips its own dial-up when hosted); hanging up signs AIM off.
+- **ClaudeMUCK** (`claudexp/programs/muck/`): MUSHclient-style client (client.py) talking to a
+  simulated PawPrints MUCK (world.py; prompts in brain.py, reusing ClaudeAIM's Ollama helper and
+  model settings). Map and MUCK-only regulars are editable JSON in `Program Files/ClaudeMUCK/world/`
+  (rooms have 'popularity'). AIM buddies join too; an optional "muck" section in their AIM contact
+  JSON sets name/species/desc/haunts/doing. Player + generated descriptions saved in
+  `Program Files/ClaudeMUCK/data/` (gitignored). Needs the dial-up. Presence on the MUCK is
+  separate from AIM presence for now (same schedules, independent sessions).
 - userpic.jpg (Welcome + Start menu) and the 1024x768 Bliss wallpaper are in.
 
 ## Next
 1. Real XP icons/title-bar buttons as the user finds them (see list in chat 2026-10-07)
-2. IRC, Navigator, MUCK (one shared buddy cast with AIM), all requiring the dial-up connection
+2. ClaudeIRC (mirc_image.jpg is ready) and ClaudescapeNavigator, also requiring the dial-up
+3. Shared memory between programs (a buddy remembers what you said on the MUCK when you IM them)
