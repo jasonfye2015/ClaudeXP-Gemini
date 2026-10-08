@@ -140,6 +140,15 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   life.json. Nothing is deleted: it's moved to 'Recovery Backups/<date time>/' (gitignored). E: is never
   touched. data/setup.json tracks the stage (gui/oobe) so a reboot mid-Setup resumes it.
   CLAUDEXP_SETUP_SPEED=20 speeds Setup up for tests. ~3-4 minutes at normal speed.
+- **Accessories & tools** (`claudexp/programs/`): Calculator (calc.py, Standard view, XP's '0.' display,
+  memory, keyboard), Run... (run.py, Start menu; history in data/run.json), Command Prompt (cmd.py: dir, cd,
+  type, md, rd, del -> Recycle Bin, copy, ren, tree, color, title, ipconfig, ping over the dial-up, hostname,
+  shutdown -s/-r/-l, format c: -> restart into System Recovery, start, program names), Task Manager
+  (taskmgr.py: Applications, Processes, Performance, Networking; the model's work shows as svchost.exe CPU;
+  ending explorer.exe hides the taskbar/icons until 'explorer' is run). Open it from the taskbar's right-click
+  menu (also Cascade/Tile/Show the Desktop) or Ctrl+Alt+End (the host OS keeps Ctrl+Alt+Del and
+  Ctrl+Shift+Esc). commands.py resolves names for Run and cmd. Program.listed=False keeps Task Manager out
+  of All Programs.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

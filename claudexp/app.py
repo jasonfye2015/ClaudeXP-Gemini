@@ -63,6 +63,9 @@ class ClaudeXP(QMainWindow):
         self.desktop.logoff_requested.connect(self.log_off)
         self.desktop.restart_requested.connect(self.restart)
         QShortcut(QKeySequence("F11"), self, self.toggle_fullscreen)
+        # Task Manager: the real Ctrl+Alt+Del / Ctrl+Shift+Esc go to the host Windows, so (like Remote
+        # Desktop) Ctrl+Alt+End stands in for them.
+        QShortcut(QKeySequence("Ctrl+Alt+End"), self, self._task_manager)
         from .screensaver import ScreenSaverManager
         self.locked = False
         self.screensaver = ScreenSaverManager(self)
@@ -211,8 +214,9 @@ class ClaudeXP(QMainWindow):
         self.stack.setCurrentWidget(self.shutdown_screen)
         sound.play("shutdown", QApplication.quit)
 
-    def restart(self):
-        """Restart (after Windows Update): close everything, then boot again."""
+    def restart(self, recovery=False):
+        """Restart (after Windows Update): close everything, then boot again (into System Recovery
+        with recovery=True, e.g. after 'format c:' in the Command Prompt)."""
         if self._shutting_down:
             return
         self._shutting_down = True
@@ -226,7 +230,7 @@ class ClaudeXP(QMainWindow):
         def boot_again():
             self._shutting_down = False
             self.shutdown_screen.text = "Windows is shutting down..."
-            self.start()
+            self.start(recovery=recovery)
 
         sound.play("shutdown", lambda: QTimer.singleShot(1500, boot_again))
 
@@ -238,6 +242,10 @@ class ClaudeXP(QMainWindow):
         else:
             event.ignore()
             self._exit()
+
+    def _task_manager(self):
+        if self.stack.currentWidget() is self.desktop:
+            programs.launch(self.desktop, "taskmgr")
 
     def toggle_fullscreen(self):
         if self.isFullScreen():

@@ -131,6 +131,9 @@ class Taskbar(QWidget):
             elif event.button() == Qt.LeftButton:
                 icon.activated.emit(QSystemTrayIcon.Trigger)
             return
+        if event.button() == Qt.RightButton and not self.start_rect().contains(pos):
+            self._context_menu(event.globalPosition().toPoint())
+            return
         if event.button() != Qt.LeftButton:
             return
         if self.start_rect().contains(pos):
@@ -145,6 +148,61 @@ class Taskbar(QWidget):
             if rect.contains(pos):
                 self.desktop.taskbar_clicked(win)
                 return
+
+    def _context_menu(self, global_pos):
+        """XP's taskbar menu: arrange windows, Show the Desktop, Task Manager."""
+        from PySide6.QtWidgets import QMenu
+        from . import programs
+        from .startmenu import MENU_STYLE
+        d = self.desktop
+        menu = QMenu(self)
+        menu.setStyleSheet(MENU_STYLE)
+        menu.addAction("&Toolbars").setEnabled(False)
+        menu.addSeparator()
+        menu.addAction("Ca&scade Windows", lambda: self._arrange("cascade"))
+        menu.addAction("Tile Windows Hori&zontally", lambda: self._arrange("rows"))
+        menu.addAction("Tile Windows V&ertically", lambda: self._arrange("columns"))
+        menu.addAction("&Show the Desktop", self._show_desktop)
+        menu.addSeparator()
+        menu.addAction("Tas&k Manager", lambda: programs.launch(d, "taskmgr"))
+        menu.addSeparator()
+        lock = menu.addAction("&Lock the Taskbar")
+        lock.setCheckable(True)
+        lock.setChecked(True)
+        lock.setEnabled(False)
+        menu.addAction("P&roperties").setEnabled(False)
+        menu.popup(global_pos - QPoint(0, menu.sizeHint().height()))
+
+    def _visible_windows(self):
+        return [w for w in self.desktop.windows if w.isVisible() and w.on_taskbar]
+
+    def _show_desktop(self):
+        for w in self._visible_windows():
+            self.desktop.minimize(w)
+
+    def _arrange(self, how):
+        wins = self._visible_windows()
+        if not wins:
+            return
+        area = self.desktop.work_area()
+        for i, w in enumerate(wins):
+            if w.maximized:
+                w.toggle_maximize()
+            if how == "cascade":
+                w.move(area.x() + 10 + i * 26, area.y() + 10 + i * 26)
+                continue
+            n = len(wins)
+            if w.resizable:
+                if how == "rows":
+                    w.setGeometry(area.x(), area.y() + i * area.height() // n, area.width(), area.height() // n)
+                else:
+                    w.setGeometry(area.x() + i * area.width() // n, area.y(), area.width() // n, area.height())
+            else:
+                w.move(area.x() + (0 if how == "rows" else i * area.width() // n),
+                       area.y() + (i * area.height() // n if how == "rows" else 0))
+        for w in wins:
+            w.raise_()
+        self.raise_()
 
     def mouseDoubleClickEvent(self, event):
         icon = self._tray_icon_at(event.position().toPoint())

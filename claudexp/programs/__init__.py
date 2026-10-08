@@ -25,6 +25,7 @@ class Program:
     run: Callable
     shutdown: Optional[Callable] = None   # called on Log Off / Turn Off
     group: str = ""                         # All Programs submenu, e.g. "Games" or "Accessories/System Tools"
+    listed: bool = True                     # shown in All Programs (Task Manager isn't, like XP)
 
 
 def _my_computer(desktop):
@@ -78,6 +79,14 @@ def _av_icon():
     return QIcon(shield_icon(32))
 
 
+def _lazy(module, func):
+    """A program's launcher (or icon) that imports its module only when first used."""
+    def call(*args):
+        import importlib
+        return getattr(importlib.import_module(f".{module}", __package__), func)(*args)
+    return call
+
+
 def _game(module, func):
     def run(desktop):
         import importlib
@@ -109,6 +118,10 @@ PROGRAMS = [
     Program("claudeai", "ClaudeAI", "Chat with your local AI", claudeai.claudeai_icon, claudeai.launch,
             claudeai.shutdown),
     Program("winupdate", "Windows Update", "", lambda: QIcon(_update_icon()), _windows_update),
+    Program("calc", "Calculator", "", _lazy("calc", "calc_icon"), _lazy("calc", "open_calc"), group="Accessories"),
+    Program("cmd", "Command Prompt", "", _lazy("cmd", "cmd_icon"), _lazy("cmd", "open_cmd"), group="Accessories"),
+    Program("taskmgr", "Windows Task Manager", "", _lazy("taskmgr", "taskmgr_icon"), _lazy("taskmgr", "open_taskmgr"),
+            listed=False),
     Program("defrag", "Disk Defragmenter", "", _defrag_icon, _defrag, group="Accessories/System Tools"),
     Program("antivirus", "ClaudeShield AntiVirus", "", _av_icon, _antivirus),
     Program("connect", "Connect to the Internet", "", lambda: QIcon(pixmap("aol_icon.png")), _connect,

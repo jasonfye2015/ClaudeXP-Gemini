@@ -27,7 +27,7 @@ PROGRAM_HISTORY = ["claudeai"]                                 # in data/, plus 
 FILES_ON_C = ["Drive C", "Recycle Bin"]
 # 'Leave the current file system intact' still puts Windows' own settings back to their defaults:
 WINDOWS_SETTINGS = ["user.json", "display.json", "desktop.json", "network.json", "updates.json",
-                    "antivirus.json", "games.json"]
+                    "antivirus.json", "games.json", "run.json"]
 
 # Speeds Setup up for scripted tests (CLAUDEXP_SETUP_SPEED=20 runs it 20x faster).
 SPEED = max(0.01, float(os.environ.get("CLAUDEXP_SETUP_SPEED", "1") or 1))

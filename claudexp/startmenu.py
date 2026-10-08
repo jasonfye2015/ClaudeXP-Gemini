@@ -13,6 +13,8 @@ MENU_STYLE = """
 QMenu { background: white; border: 1px solid #7A96DF; font-family: Tahoma; font-size: 11px; }
 QMenu::item { padding: 5px 24px 5px 8px; }
 QMenu::item:selected { background: #316AC5; color: white; }
+QMenu::item:disabled { color: #ACA899; }
+QMenu::separator { height: 1px; background: #ACA899; margin: 3px 2px; }
 """
 
 PIC_RECT = QRect(6, 8, 52, 52)
@@ -119,6 +121,9 @@ class StartMenu(QWidget):
             elif value == "Printers and Faxes":
                 from .printing import printers_and_faxes
                 printers_and_faxes(self.desktop)
+            elif value == "Run...":
+                from .programs.run import open_run
+                open_run(self.desktop)
             elif value == "Control Panel":
                 from .controlpanel import control_panel
                 control_panel(self.desktop)
@@ -156,9 +161,10 @@ class StartMenu(QWidget):
                 submenus[path] = sub
             return submenus[path]
 
-        for group in sorted({p.group for p in programs.PROGRAMS if p.group}):
+        listed = [p for p in programs.PROGRAMS if p.listed]
+        for group in sorted({p.group for p in listed if p.group}):
             submenu(group)
-        for prog in programs.PROGRAMS:
+        for prog in listed:
             submenu(prog.group).addAction(prog.icon(), prog.name, partial(self._launch_from_menu, prog.key))
         for sub in submenus.values():
             if sub is not menu:
