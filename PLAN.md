@@ -106,6 +106,13 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   saver after N idle minutes on the desktop or Welcome screen (default Windows XP, 10 min); mouse/key
   wakes it; 'On resume, display Welcome screen' locks to Welcome (app.lock) with programs left open.
   Display Properties' Screen Saver tab has a live preview, Settings (Marquee text), Preview, Wait.
+- **Desktop icons** (`claudexp/desktop_icons.py`, IconManager on the desktop): built-in icons plus
+  everything in the real Desktop folder (C:\Documents and Settings\<profile>\Desktop, watched for
+  changes). Drag (multi-select), rubber band, Ctrl-click, snap to an 80x78 grid; Arrange Icons By
+  Name/Size/Type/Modified, Auto Arrange, Align to Grid, Show Desktop Icons; Refresh (F5); New
+  Folder/Text Document; Paste; rename in place (F2); Delete -> Recycle Bin (shortcuts are hidden instead;
+  Display Properties > Customize Desktop brings them back); drop onto Recycle Bin or a folder; files
+  dragged in from Windows are copied. Saved in data/desktop.json.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

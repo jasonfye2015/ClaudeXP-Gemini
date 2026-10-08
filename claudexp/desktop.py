@@ -15,42 +15,6 @@ from .tray import Balloon
 from .wm import XPWindow
 
 
-class DesktopIcon(QWidget):
-    W, H = 76, 70
-
-    def __init__(self, desktop, label, icon, on_open):
-        super().__init__(desktop)
-        self.desktop = desktop
-        self.label = label
-        self.icon = icon
-        self.on_open = on_open
-        self.selected = False
-        self.setFixedSize(self.W, self.H)
-
-    def mousePressEvent(self, event):
-        self.desktop.select_icon(self)
-
-    def mouseDoubleClickEvent(self, event):
-        self.desktop.select_icon(None)
-        self.on_open()
-
-    def paintEvent(self, event):
-        p = QPainter(self)
-        pm = self.icon.pixmap(32, 32, QIcon.Selected if self.selected else QIcon.Normal)
-        p.drawPixmap((self.W - 32) // 2, 2, pm)
-        p.setFont(QFont("Tahoma", 8))
-        text_rect = QRect(2, 38, self.W - 4, self.H - 38)
-        flags = Qt.AlignHCenter | Qt.AlignTop | Qt.TextWordWrap
-        if self.selected:
-            bounds = p.boundingRect(text_rect, flags, self.label).adjusted(-2, 0, 2, 0)
-            p.fillRect(bounds, QColor("#316AC5"))
-        else:
-            p.setPen(QColor(0, 0, 0, 200))
-            p.drawText(text_rect.translated(1, 1), flags, self.label)
-        p.setPen(QColor("white"))
-        p.drawText(text_rect, flags, self.label)
-
-
 class Desktop(QWidget):
     shutdown_requested = Signal()
     restart_requested = Signal()
@@ -66,29 +30,9 @@ class Desktop(QWidget):
         self.display.changed.connect(self.update)
         self._cascade = 0
 
-        style = QApplication.style()
-        self.icons = [
-            DesktopIcon(self, "My Computer", style.standardIcon(QStyle.SP_ComputerIcon),
-                        lambda: programs.launch(self, "mycomputer")),
-            DesktopIcon(self, "Notepad", style.standardIcon(QStyle.SP_FileIcon),
-                        lambda: programs.launch(self, "notepad")),
-            DesktopIcon(self, "America Online", QIcon(pixmap("aol_icon.png")),
-                        lambda: programs.launch(self, "connect")),
-            DesktopIcon(self, "Netscape Navigator", programs.get("navigator").icon(),
-                        lambda: programs.launch(self, "navigator")),
-            DesktopIcon(self, "ClaudeAI", programs.get("claudeai").icon(),
-                        lambda: programs.launch(self, "claudeai")),
-            DesktopIcon(self, "ClaudeAIM", programs.get("aim").icon(),
-                        lambda: programs.launch(self, "aim")),
-            DesktopIcon(self, "ClaudeIRC", programs.get("irc").icon(),
-                        lambda: programs.launch(self, "irc")),
-            DesktopIcon(self, "ClaudeMUCK", programs.get("muck").icon(),
-                        lambda: programs.launch(self, "muck")),
-            DesktopIcon(self, "Recycle Bin", style.standardIcon(QStyle.SP_TrashIcon),
-                        lambda: self._open_recycle_bin()),
-        ]
-        for i, icon in enumerate(self.icons):
-            icon.move(8, 8 + i * (DesktopIcon.H + 8))
+        self.setFocusPolicy(Qt.ClickFocus)
+        from .desktop_icons import IconManager
+        self.icons = IconManager(self)
 
         self.taskbar = Taskbar(self)
         self.balloon = Balloon(self)
@@ -106,7 +50,13 @@ class Desktop(QWidget):
     def work_area(self):
         return QRect(0, 0, self.width(), self.height() - TASKBAR_H)
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.icons.ready()            # the icons need the real screen size for their grid
+
     def resizeEvent(self, event):
+        if self.icons.icons and self.icons.state["auto_arrange"]:
+            self.icons.layout()
         self.taskbar.setGeometry(0, self.height() - TASKBAR_H, self.width(), TASKBAR_H)
         self.start_menu.move(0, self.height() - TASKBAR_H - self.start_menu.height())
         for win in self.windows:
@@ -121,34 +71,43 @@ class Desktop(QWidget):
         """Right-clicking the desktop itself: XP's desktop menu."""
         if self.childAt(event.pos()) is not None:
             return
-        from PySide6.QtWidgets import QMenu
-        from .controlpanel import display_properties
-        menu = QMenu(self)
-        menu.setStyleSheet("QMenu { background: white; border: 1px solid #ACA899; font-family: Tahoma;"
-                           " font-size: 11px; } QMenu::item { padding: 4px 24px 4px 20px; }"
-                           " QMenu::item:selected { background: #316AC5; color: white; }")
-        arrange = menu.addMenu("Arrange &Icons By")
-        arrange.setEnabled(False)
-        menu.addAction("R&efresh", self.update)
-        menu.addSeparator()
-        menu.addAction("&Paste").setEnabled(False)
-        menu.addAction("Paste &Shortcut").setEnabled(False)
-        menu.addSeparator()
-        menu.addMenu("Ne&w").setEnabled(False)
-        menu.addSeparator()
-        menu.addAction("P&roperties", lambda: display_properties(self))
-        menu.exec(event.globalPos())
+        self.icons.clear_selection()
+        self.icons.desktop_menu(event.globalPos())
+
+    # ---- mouse, keyboard and drops on the empty desktop (icons handle their own) ----
+    def mousePressEvent(self, event):
+        self.icons.desktop_pressed(event)
+
+    def mouseMoveEvent(self, event):
+        self.icons.desktop_dragged(event)
+
+    def mouseReleaseEvent(self, event):
+        self.icons.desktop_released(event)
+
+    def keyPressEvent(self, event):
+        if not self.icons.key_pressed(event):
+            super().keyPressEvent(event)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.setDropAction(Qt.CopyAction)
+            event.accept()
+
+    dragMoveEvent = dragEnterEvent
+
+    def dropEvent(self, event):
+        from pathlib import Path
+        paths = [Path(u.toLocalFile()) for u in event.mimeData().urls() if u.isLocalFile()]
+        if paths:
+            event.setDropAction(Qt.CopyAction)
+            event.accept()
+            self.icons.drop_files(paths, event.position().toPoint())
 
     # ---- icons --------------------------------------------------------------
     def _open_recycle_bin(self):
         from . import explorer
         explorer.launch(self, explorer.RECYCLE_BIN)
 
-    def select_icon(self, chosen):
-        for icon in self.icons:
-            if icon.selected != (icon is chosen):
-                icon.selected = icon is chosen
-                icon.update()
 
     # ---- window management ----------------------------------------------------
     def open_window(self, win: XPWindow):
@@ -293,7 +252,8 @@ class Desktop(QWidget):
         if w is not None:
             self.activate(w)
         elif obj is self:
-            self.select_icon(None)
             self.activate(None)
-        elif isinstance(obj, DesktopIcon):
-            self.activate(None)
+        else:
+            from .desktop_icons import DesktopIcon
+            if isinstance(obj, DesktopIcon):
+                self.activate(None)

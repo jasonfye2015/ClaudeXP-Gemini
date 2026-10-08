@@ -191,7 +191,7 @@ def _make_display(desktop):
     row.addLayout(side)
     v.addLayout(row)
     custom = QPushButton("Customize &Desktop...")
-    custom.setEnabled(False)
+    custom.clicked.connect(lambda: customize_desktop(desktop))
     v.addWidget(custom, 0, Qt.AlignLeft)
     tabs.addTab(page, "Desktop")
     saver_tab, saver_values = _saver_tab(desktop, lambda: apply_btn.setEnabled(True))
@@ -348,6 +348,51 @@ def _saver_tab(desktop, on_change):
                 "marquee": state["marquee"]}
 
     return page, values
+
+
+def customize_desktop(desktop):
+    """Desktop Items: tick which built-in icons appear on the desktop."""
+    from .desktop_icons import builtins
+    from .network import DialogBody, _fixed_window
+    mgr = desktop.icons
+    body = DialogBody()
+    v = QVBoxLayout(body)
+    v.setContentsMargins(14, 12, 14, 12)
+    group = QGroupBox("Desktop icons")
+    g = QVBoxLayout(group)
+    boxes = {}
+    for key, label, icon in builtins():
+        box = QCheckBox(mgr.state["labels"].get(key, label))
+        box.setIcon(icon())
+        box.setChecked(key not in mgr.state["hidden"])
+        g.addWidget(box)
+        boxes[key] = box
+    v.addWidget(group)
+    row = QHBoxLayout()
+    restore = QPushButton("Restore Default")
+    row.addWidget(restore)
+    row.addStretch()
+    ok, cancel = QPushButton("OK"), QPushButton("Cancel")
+    for b in (ok, cancel):
+        b.setFixedSize(75, 23)
+        row.addWidget(b)
+    v.addLayout(row)
+    body.setFixedWidth(300)
+    holder = {}
+
+    def close():
+        if holder.get("win") is not None:
+            desktop.close_window(holder.pop("win"))
+
+    def accept():
+        mgr.set_hidden([k for k, b in boxes.items() if not b.isChecked()])
+        close()
+
+    restore.clicked.connect(lambda: [b.setChecked(True) for b in boxes.values()])
+    ok.clicked.connect(accept)
+    cancel.clicked.connect(close)
+    holder["win"] = _fixed_window(desktop, "Desktop Items", body, close)
+    desktop.open_window(holder["win"])
 
 
 def _info_page(text):
