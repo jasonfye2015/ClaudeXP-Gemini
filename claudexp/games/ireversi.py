@@ -235,4 +235,4 @@ def reversi_icon():
 
 
 def open_internet_reversi(desktop):
-    return open_zone_game(desktop, "Reversi", ReversiBoard, ("Black", "White"), reversi_icon())
+    return open_zone_game(desktop, "Reversi", lambda _w: ReversiBoard(), ("Black", "White"), reversi_icon())

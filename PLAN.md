@@ -165,6 +165,12 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   replies and in-game reactions; Beginner/Intermediate/Expert (alpha-beta: checkers depth 1/4/8, reversi
   1/3/4); Play again?; disconnect ends the game. Finished (or abandoned) games go into the buddy's journal
   and 30% of the time they reach out about it. Process names chkrzm.exe / rvsezm.exe in Task Manager.
+  Also Internet Backgammon (ibackgammon.py: dice, bar, bearing off, use-both-dice rule, gammons; evaluator =
+  race + blots + points + hits), Internet Hearts (ihearts.py, the offline table with buddies in the seats;
+  hearts.py now has per-table names and choose/trick_taken/game_over hooks) and Internet Spades (ispades.py:
+  partner across, bids incl. Nil, spades broken, bags, 500 to win). The Zone takes a list of opponents;
+  card tables are SELF_DRIVEN with SEATS = 3 and report finished(result); each buddy's diary entry is written
+  from their seat (outcome_for).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

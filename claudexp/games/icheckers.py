@@ -307,4 +307,4 @@ def checkers_icon():
 
 
 def open_internet_checkers(desktop):
-    return open_zone_game(desktop, "Checkers", CheckersBoard, ("Red", "Black"), checkers_icon())
+    return open_zone_game(desktop, "Checkers", lambda _w: CheckersBoard(), ("Red", "Black"), checkers_icon())

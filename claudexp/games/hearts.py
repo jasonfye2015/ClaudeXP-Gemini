@@ -27,9 +27,14 @@ def sort_hand(cards):
 
 
 class HeartsTable(QWidget):
-    def __init__(self, win):
+    AI_DELAY = 450
+
+    def __init__(self, win, start=True):
         super().__init__()
         self.win = win
+        self.names = list(NAMES)
+        self.hands, self.taken, self.trick, self.selected = [[], [], [], []], [[], [], [], []], [], set()
+        self.phase, self.turn, self.scores, self.history = "idle", 0, [0, 0, 0, 0], []
         self.setMinimumSize(620, 500)
         self.button = QPushButton("", self)
         self.button.setFixedSize(110, 25)
@@ -38,7 +43,8 @@ class HeartsTable(QWidget):
         self.timer = QTimer(self)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self._step)
-        self.new_game()
+        if start:
+            self.new_game()
 
     # ---- game flow ---------------------------------------------------------------------------------------
     def new_game(self):
@@ -65,7 +71,7 @@ class HeartsTable(QWidget):
         self.leader = None
         if direction:
             self.phase = "pass"
-            self._say(f"Select three cards to pass to {NAMES[self.pass_shift]}.")
+            self._say(f"Select three cards to pass to {self.names[self.pass_shift]}.")
             self._show_button(f"Pass {direction.title()}", enabled=False)
         else:
             self._say("There is no passing this hand.")
@@ -88,15 +94,22 @@ class HeartsTable(QWidget):
             self._say("Your turn. Click a card to play it." if self.trick or not self.first_trick
                       else "You have the two of clubs; click it to lead.")
         else:
-            self._say(f"Waiting for {NAMES[self.turn]} to play.")
-            self.timer.start(450)
+            self._say(f"Waiting for {self.names[self.turn]} to play.")
+            self.timer.start(self.AI_DELAY)
         self.update()
 
     def _step(self):
         if self.phase == "collect":
             self._collect()
         elif self.phase == "play" and self.turn != 0:
-            self._play(self.turn, choose_card(self, self.turn))
+            self._play(self.turn, self.choose(self.turn))
+
+    def choose(self, player):
+        """The computer players' card (the Zone version makes beginners sloppier)."""
+        return choose_card(self, player)
+
+    def trick_taken(self, winner, cards):
+        """Hook: someone just took a trick."""
 
     def _play(self, player, card):
         self.hands[player].remove(card)
@@ -110,6 +123,7 @@ class HeartsTable(QWidget):
         lead = self.trick[0][1].suit
         winner = max((pc for pc in self.trick if pc[1].suit == lead), key=lambda pc: value(pc[1]))[0]
         self.taken[winner].extend(c for _, c in self.trick)
+        self.trick_taken(winner, [c for _, c in self.trick])
         self.trick = []
         self.first_trick = False
         if not self.hands[0]:
@@ -125,7 +139,7 @@ class HeartsTable(QWidget):
         if 26 in got:
             shooter = got.index(26)
             got = [0 if i == shooter else 26 for i in range(4)]
-            note = f"{NAMES[shooter]} shot the moon!" if shooter else "You shot the moon!"
+            note = f"{self.names[shooter]} shot the moon!" if shooter else "You shot the moon!"
         self.scores = [a + b for a, b in zip(self.scores, got)]
         self.history.append(got)
         self.hand_number += 1
@@ -137,9 +151,12 @@ class HeartsTable(QWidget):
 
     def after_scores(self, over):
         if over:
-            self.new_game()
+            self.game_over()
         else:
             self.deal()
+
+    def game_over(self):
+        self.new_game()
 
     # ---- you ------------------------------------------------------------------------------------------------
     def legal(self, player, card):
@@ -197,7 +214,7 @@ class HeartsTable(QWidget):
         self._show_button("OK")
         self.button.clicked.disconnect()
         self.button.clicked.connect(self._received_ok)
-        self._say(f"You received these cards from {NAMES[(0 - self.pass_shift) % 4]}.")
+        self._say(f"You received these cards from {self.names[(0 - self.pass_shift) % 4]}.")
         self.update()
 
     def _received_ok(self):
@@ -245,10 +262,10 @@ class HeartsTable(QWidget):
                 p.drawPixmap(x, y0 + i * 12, back_pixmap())
         # names
         p.setPen(QColor("white"))
-        p.drawText(QRect(0, 14 + CARD_H + 2, w, 16), Qt.AlignHCenter, NAMES[2])
-        p.drawText(QRect(14, h // 2 + 130, CARD_W + 40, 16), Qt.AlignLeft, NAMES[1])
-        p.drawText(QRect(w - 14 - CARD_W - 40, h // 2 + 130, CARD_W + 40, 16), Qt.AlignRight, NAMES[3])
-        p.drawText(QRect(0, h - CARD_H - 12 - 40, w, 16), Qt.AlignHCenter, NAMES[0] if NAMES[0] != "You" else _you())
+        p.drawText(QRect(0, 14 + CARD_H + 2, w, 16), Qt.AlignHCenter, self.names[2])
+        p.drawText(QRect(14, h // 2 + 130, CARD_W + 40, 16), Qt.AlignLeft, self.names[1])
+        p.drawText(QRect(w - 14 - CARD_W - 40, h // 2 + 130, CARD_W + 40, 16), Qt.AlignRight, self.names[3])
+        p.drawText(QRect(0, h - CARD_H - 12 - 40, w, 16), Qt.AlignHCenter, _you())
         # the trick
         for player, card in self.trick:
             p.drawPixmap(self._trick_pos(player), card_pixmap(card))
@@ -359,7 +376,7 @@ def _score_sheet(table, note, over):
     body = DialogBody()
     grid = QGridLayout(body)
     grid.setHorizontalSpacing(18)
-    names = [_you(), *NAMES[1:]]
+    names = [_you(), *table.names[1:]]
     for col, name in enumerate(names):
         lab = QLabel(f"<b>{name}</b>")
         lab.setAlignment(Qt.AlignRight)
@@ -419,7 +436,7 @@ def open_hearts(desktop):
 
 
 def _score_text(table):
-    names = [_you(), *NAMES[1:]]
+    names = [_you(), *table.names[1:]]
     return "\n".join(f"{n}: {s}" for n, s in zip(names, table.scores)) + f"\n\nHands played: {len(table.history)}"
 
 
