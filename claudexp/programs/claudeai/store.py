@@ -17,13 +17,15 @@ DEFAULT_INSTRUCTIONS = ("You are ClaudeAI, a helpful, thoughtful and friendly AI
 class Settings:
     def __init__(self):
         self.values = {"model": "", "instructions": DEFAULT_INSTRUCTIONS, "temperature": 0.7,
-                       "think": False, "sidebar": True}
+                       "think": False, "sidebar": True, "startup": True, "tray_tip_shown": False}
         self.values.update(load_json(SETTINGS_FILE, {}))
 
     def __getitem__(self, key):
         return self.values[key]
 
     def set(self, key, value):
+        """Change one setting without overwriting ones another part of ClaudeAI changed meanwhile."""
+        self.values.update(load_json(SETTINGS_FILE, {}))
         self.values[key] = value
         save_json(SETTINGS_FILE, self.values)
 

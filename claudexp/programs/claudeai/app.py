@@ -10,9 +10,9 @@ import time
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import (QColor, QFont, QIcon, QImage, QKeySequence, QPainter, QPainterPath, QPen, QPixmap,
                            QShortcut, QTextDocument)
-from PySide6.QtWidgets import (QApplication, QComboBox, QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
-                               QLineEdit, QListWidget, QListWidgetItem, QMenu, QPlainTextEdit, QPushButton,
-                               QSizePolicy, QTextBrowser, QToolButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QFrame, QGridLayout,
+                               QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMenu, QPlainTextEdit,
+                               QPushButton, QSizePolicy, QTextBrowser, QToolButton, QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
 from ... import broker, clock
@@ -732,13 +732,17 @@ class ClaudeAI(QWidget):
         reset = QPushButton("Reset instructions")
         reset.clicked.connect(lambda: instr.setPlainText(DEFAULT_INSTRUCTIONS))
         grid.addWidget(reset, 5, 0)
+        from . import load_at_startup, set_load_at_startup
+        startup = QCheckBox("Load ClaudeAI at startup (in the notification area)")
+        startup.setChecked(load_at_startup())
+        grid.addWidget(startup, 6, 0, 1, 2)
         row = QHBoxLayout()
         row.addStretch()
         save, cancel = QPushButton("Save"), QPushButton("Cancel")
         for b in (save, cancel):
             b.setFixedSize(75, 23)
             row.addWidget(b)
-        grid.addLayout(row, 6, 0, 1, 2)
+        grid.addLayout(row, 7, 0, 1, 2)
         body.setFixedWidth(420)
         holder = {}
 
@@ -750,6 +754,7 @@ class ClaudeAI(QWidget):
             self.settings.set("model", model.currentText())
             self.settings.set("temperature", temp.value())
             self.settings.set("instructions", instr.toPlainText().strip() or DEFAULT_INSTRUCTIONS)
+            set_load_at_startup(startup.isChecked())
             self.model_box.setCurrentText(model.currentText())
             close()
 
@@ -763,6 +768,13 @@ class ClaudeAI(QWidget):
         self.stop()
 
     def closeEvent(self, event):
+        from . import _tray, tucked_away
+        if getattr(self, "_host_user_close", False) and not getattr(self, "_exiting", False) \
+                and _tray is not None and isValid(_tray) and self.frame is not None:
+            event.ignore()                                # still running, in the notification area
+            self.desktop.withdraw(self.frame)
+            tucked_away(self.desktop)
+            return
         self.shutdown()
         event.accept()
 

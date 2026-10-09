@@ -271,6 +271,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   shortcuts once (user files keep their spots); bump it whenever builtins() is reordered. Start > Programs >
   Furry Stuff holds FurTV, FurComix, FurFolio, FurStory, Fur CD Viewer, Furry Con CD Viewer and copies of the
   folder links (only listed when that folder exists on E:).
+- **ClaudeAI tray** (`programs/claudeai/__init__.py`): spark icon in the notification area while it runs
+  (double-click opens; right-click Open / New Chat / Load at Startup / Exit). Load at Startup (settings
+  'startup', default on; also a checkbox in ClaudeAI Settings) puts it in the tray at logon without a window
+  (app.show_desktop -> claudeai.start_at_logon). X tucks the window into the tray (one-time balloon); Exit quits.
+  store.Settings.set now merges with the file so the tray and the window don't overwrite each other.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
