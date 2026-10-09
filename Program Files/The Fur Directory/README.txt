@@ -12,6 +12,9 @@ their life journal. Anything written here wins over the system's value.
 Fields
 ------
   "fur_name"      the name shown on the card (defaults to their screen name)
+  "tier"          which gallery section they're in: "main", "support" or "background". Blank = automatic:
+                  an AIM account makes them a Main Fur; an IRC/MUCK regular who chats (or anyone on more than
+                  one system) is a Support Fur; MUCK wizards, bots, idlers and IRC lurkers are Background Furs.
   "icon"          a picture for residents without an AIM icon, relative to this folder (e.g. "icons/Zeph.png")
   "screen_names"  { "aim": "", "irc": "", "muck": "", "email": "", ...any others, e.g. "icq": "" }
   "personal"      { "real_name", "location", "sex", "age", "dob", "job", "work_hours", "sleep_hours",

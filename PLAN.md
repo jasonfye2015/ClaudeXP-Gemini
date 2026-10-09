@@ -399,6 +399,9 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   AIM contact-folder pictures with captions.txt, recent life journal. Unknown top-level record keys render as new
   sections. Gallery (filter by group) with the fictional-characters disclaimer; card has Back/Gallery/Forward,
   friend/partner names link to cards, files open in their viewers, web pages in Navigator.
+  Gallery sections (TIERS): Main Furs (AIM accounts), Support Furs (IRC/MUCK regulars who chat, or anyone on 2+
+  systems), Background Furs (MUCK wizards, bots, idle-only characters, IRC lurkers); a record's "tier" overrides.
+  Header rows are full-width non-selectable list items drawn by _GalleryDelegate; filter by tier or by system.
   Desktop program folders now have their own version (state["folders"], FOLDERS) so adding a shortcut no longer
   needs a LAYOUT bump that reflows the icons.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.

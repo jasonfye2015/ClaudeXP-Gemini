@@ -18,7 +18,7 @@ from pathlib import Path
 from PySide6.QtCore import QRectF, QSize, Qt, QUrl
 from PySide6.QtGui import QColor, QFont, QIcon, QImage, QLinearGradient, QPainter, QPen, QPixmap, QTextDocument
 from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QListView, QListWidget, QListWidgetItem, QPushButton,
-                               QStackedWidget, QTextBrowser, QVBoxLayout, QWidget)
+                               QStackedWidget, QStyledItemDelegate, QTextBrowser, QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
 from ..paths import ROOT
@@ -35,6 +35,13 @@ DISCLAIMER = ("All residents of The Fur Directory are fictional characters playe
               "people, and any resemblance to real persons, living or dead, is coincidental.")
 GROUPS = [("all", "Everyone"), ("aim", "AIM buddies"), ("irc", "FurNet IRC regulars"),
           ("muck", "MUCK regulars"), ("background", "Background characters")]
+# The gallery's sections. A record's "tier" decides; otherwise: an AIM account = main; a regular who chats (or is on
+# more than one system) = support; staff, bots, idlers and lurkers who rarely talk to you = background.
+TIERS = [("main", "Main Furs", "They have their own instant-messenger accounts and talk to you directly."),
+         ("support", "Support Furs", "Regulars you meet around FurNet IRC and the MUCK."),
+         ("background", "Background Furs", "Admins, bots and the crowd in the background - they rarely talk to you.")]
+TIER_NAMES = {k: label for k, label, _d in TIERS}
+HEADER = Qt.UserRole + 1
 PICTURE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp"}
 
 
@@ -88,6 +95,27 @@ class Resident:
         self.record = {}
 
     @property
+    def systems(self):
+        """Where they have an account: 'aim', 'irc', 'muck' (plus any the record lists)."""
+        out = {k for k, v in (("aim", self.aim), ("irc", self.irc), ("muck", self.muck)) if v}
+        out |= {k for k, v in self.record.get("screen_names", {}).items() if v and k != "email"}
+        return out
+
+    @property
+    def tier(self):
+        by_hand = str(self.record.get("tier", "")).lower()
+        if by_hand in TIER_NAMES:
+            return by_hand
+        if self.aim:
+            return "main"
+        irc, muck = self.irc or {}, self.muck or {}
+        if irc.get("lurker") or irc.get("bot") or muck.get("wizard") or muck.get("idle"):
+            return "background"
+        if len(self.systems) > 1 or irc.get("persona") or muck.get("persona"):
+            return "support"
+        return "background"
+
+    @property
     def icon_path(self):
         if self.aim and self.aim.get("icon"):
             p = AIM_DIR / "assets" / "icons" / self.aim["icon"]
@@ -132,7 +160,8 @@ def residents():
         r = add(reg["name"], "muck")
         r.muck = {"name": reg["name"], "species": reg.get("species", ""), "desc": reg.get("desc", ""),
                   "doing": reg.get("doing", ""), "hours": reg.get("hours"), "persona": reg.get("persona", ""),
-                  "haunts": reg.get("haunts", [])}
+                  "haunts": reg.get("haunts", []), "wizard": bool(reg.get("wizard")),
+                  "idle": bool(reg.get("idle_only"))}
     lurk = {}
     for chan, c in _load(IRC_DIR / "network.json", {}).get("channels", {}).items():
         for nick in c.get("lurkers", []):
@@ -147,6 +176,8 @@ def residents():
         r.record = _load(RECORDS / f"{r.id}.json", {})
         if r.record.get("fur_name"):
             r.name = r.record["fur_name"]
+    order = [k for k, _l, _d in TIERS]
+    out.sort(key=lambda r: order.index(r.tier))                 # stable: keeps the order within each tier
     return out
 
 
@@ -211,9 +242,15 @@ def _e(text):
 def _hours(h):
     if not h:
         return ""
-    def fix(t):
+    def minutes(t):
         hh, _, mm = str(t).partition(":")
-        return f"{int(hh) % 24:02d}:{mm or '00'}"
+        return int(hh) * 60 + int(mm or 0)
+
+    def fix(t):
+        m = minutes(t) % 1440
+        return f"{m // 60:02d}:{m % 60:02d}"
+    if minutes(h[1]) - minutes(h[0]) >= 1440 - 1:
+        return "All day"
     return f"{fix(h[0])} - {fix(h[1])}"
 
 
@@ -292,6 +329,9 @@ class Card:
                  "muck": "MUCK regular", "background": "Background character on FurNet IRC"}[r.group]
         if irc.get("bot"):
             where += " (a bot)"
+        if muck.get("wizard"):
+            where += " (MUCK wizard)"
+        where = f"{TIER_NAMES[r.tier][:-1]}  -  {where}"
         out = [f"<html><head><style>{self.CSS}</style></head><body>",
                f'<table cellspacing=0 cellpadding=0><tr><td><img src="{icon}" width=96 height=96></td>'
                f'<td style="padding-left:14px; vertical-align:middle"><h1>{_e(r.name)}</h1>'
@@ -394,8 +434,8 @@ class Card:
         if rec.get("notes"):
             out.append(self._text("Notes", rec["notes"]))
         for key, value in rec.items():                           # anything we add later gets shown too
-            if key in ("id", "fur_name", "icon", "screen_names", "personal", "favorites", "fursona", "personality",
-                       "relationship", "friends", "relationships", "files", "webpages", "notes"):
+            if key in ("id", "fur_name", "tier", "icon", "screen_names", "personal", "favorites", "fursona",
+                       "personality", "relationship", "friends", "relationships", "files", "webpages", "notes"):
                 continue
             if isinstance(value, dict):
                 out.append(self._section(key.replace("_", " ").title(),
@@ -408,6 +448,48 @@ class Card:
 
 
 # ---- the window --------------------------------------------------------------------------------------------------
+
+class _GalleryList(QListWidget):
+    """Icon view whose section headers stretch across the whole row."""
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.fit_headers()
+
+    def fit_headers(self):
+        w = max(200, self.viewport().width() - 12)
+        for i in range(self.count()):
+            item = self.item(i)
+            if item.data(HEADER):
+                item.setSizeHint(QSize(w, 46))
+        self.doItemsLayout()
+
+
+class _GalleryDelegate(QStyledItemDelegate):
+    def paint(self, p, option, index):
+        head = index.data(HEADER)
+        if not head:
+            return super().paint(p, option, index)
+        title, blurb, n = head
+        r = QRectF(option.rect).adjusted(2, 8, -2, -2)
+        p.save()
+        p.setRenderHint(QPainter.Antialiasing)
+        g = QLinearGradient(r.topLeft(), r.topRight())
+        g.setColorAt(0, QColor("#8A5A28"))
+        g.setColorAt(1, QColor("#E8D4A8"))
+        p.setPen(Qt.NoPen)
+        p.setBrush(g)
+        p.drawRoundedRect(r, 4, 4)
+        f = QFont("Trebuchet MS", 11)
+        f.setBold(True)
+        p.setFont(f)
+        p.setPen(QColor("#FFF8E8"))
+        p.drawText(r.adjusted(10, 0, 0, 0), Qt.AlignVCenter | Qt.AlignLeft, f"{title}  ({n})")
+        p.setFont(QFont("Tahoma", 8))
+        p.setPen(QColor("#4A3418"))
+        p.drawText(r.adjusted(0, 0, -10, 0), Qt.AlignVCenter | Qt.AlignRight, blurb)
+        p.restore()
+
 
 class FurDirectory(QWidget):
     def __init__(self, desktop):
@@ -438,22 +520,26 @@ class FurDirectory(QWidget):
         top = QHBoxLayout()
         top.addWidget(QLabel("Show:"))
         self.filter = QComboBox()
-        for key, label in GROUPS:
-            self.filter.addItem(label, key)
+        self.filter.addItem("Everyone", "all")
+        for key, label, _d in TIERS:
+            self.filter.addItem(label, f"tier:{key}")
+        for key, label in (("aim", "On AIM"), ("irc", "On FurNet IRC"), ("muck", "On the MUCK")):
+            self.filter.addItem(label, f"on:{key}")
         self.filter.currentIndexChanged.connect(self.fill)
         top.addWidget(self.filter)
         top.addStretch()
         self.count = QLabel()
         top.addWidget(self.count)
         gv.addLayout(top)
-        self.grid = QListWidget()
+        self.grid = _GalleryList()
         self.grid.setViewMode(QListView.IconMode)
         self.grid.setIconSize(QSize(64, 64))
-        self.grid.setGridSize(QSize(104, 100))
         self.grid.setResizeMode(QListView.Adjust)
         self.grid.setMovement(QListView.Static)
         self.grid.setWordWrap(True)
-        self.grid.itemActivated.connect(lambda item: self.show_card(self.grid.row(item)))
+        self.grid.setSpacing(2)
+        self.grid.setItemDelegate(_GalleryDelegate(self.grid))
+        self.grid.itemActivated.connect(self._activated)
         gv.addWidget(self.grid, 1)
         note = QLabel(DISCLAIMER)
         note.setWordWrap(True)
@@ -513,20 +599,41 @@ class FurDirectory(QWidget):
         return pm
 
     def fill(self, *_):
-        group = self.filter.currentData()
-        self.shown = [r for r in self.everyone if group == "all" or r.group == group]
+        what = self.filter.currentData() or "all"
+        kind, _, value = what.partition(":")
+        self.shown = [r for r in self.everyone if kind == "all" or (kind == "tier" and r.tier == value)
+                      or (kind == "on" and value in r.systems)]
         self.grid.clear()
-        for r in self.shown:
-            item = QListWidgetItem(QIcon(QPixmap.fromImage(avatar(r, 64))), r.name)
-            item.setToolTip(dict(GROUPS)[r.group])
-            self.grid.addItem(item)
+        self.rows = []                                   # grid row -> index in self.shown (None for headers)
+        for key, label, blurb in TIERS:
+            members = [(i, r) for i, r in enumerate(self.shown) if r.tier == key]
+            if not members:
+                continue
+            head = QListWidgetItem()
+            head.setFlags(Qt.NoItemFlags)
+            head.setData(HEADER, (label, blurb, len(members)))
+            self.grid.addItem(head)
+            self.rows.append(None)
+            for i, r in members:
+                item = QListWidgetItem(QIcon(QPixmap.fromImage(avatar(r, 64))), r.name)
+                item.setSizeHint(QSize(100, 96))
+                item.setToolTip(f"{label[:-1]} - {dict(GROUPS)[r.group]}")
+                self.grid.addItem(item)
+                self.rows.append(i)
+        self.grid.fit_headers()
         self.count.setText(f"{len(self.shown)} resident{'s' if len(self.shown) != 1 else ''}")
+        self.index = 0
         self.show_gallery()
+
+    def _activated(self, item):
+        i = self.rows[self.grid.row(item)]
+        if i is not None:
+            self.show_card(i)
 
     def show_gallery(self):
         self.stack.setCurrentIndex(0)
-        if 0 <= self.index < self.grid.count():
-            self.grid.setCurrentRow(self.index)
+        if self.index in self.rows:
+            self.grid.setCurrentRow(self.rows.index(self.index))
         if self.frame is not None:
             self.frame.set_title(TITLE)
 
