@@ -52,6 +52,8 @@ def builtins():
         ("prog:gba", "Game Boy Advance Emulator", lambda: programs.get("gba").icon()),
         ("prog:gen", "Genesis Emulator", lambda: programs.get("gen").icon()),
         ("prog:sms", "Master System Emulator", lambda: programs.get("sms").icon()),
+        ("prog:gg", "Game Gear Emulator", lambda: programs.get("gg").icon()),
+        ("prog:apple2", "Apple ][ Emulator", lambda: programs.get("apple2").icon()),
         ("prog:tv", "FurTV 2000", lambda: programs.get("tv").icon()),
         ("prog:comix", "FurComix Reader", lambda: programs.get("comix").icon()),
         ("prog:folio", "FurFolio Reader", lambda: programs.get("folio").icon()),
@@ -712,7 +714,9 @@ class IconManager(QObject):
                       "gb": r"C:\Program Files\Gambatte\gambatte.exe",
                       "gbc": r"C:\Program Files\Gambatte\gambatte_gbc.exe",
                       "gba": r"C:\Program Files\mGBA\mgba.exe", "gen": r"C:\Program Files\PicoDrive\picodrive.exe",
-                      "sms": r"C:\Program Files\Genesis Plus\gpgx.exe"}.get(icon.key.split(":", 1)[1], "")
+                      "sms": r"C:\Program Files\Genesis Plus\gpgx.exe",
+                      "gg": r"C:\Program Files\Gearsystem\gearsystem.exe",
+                      "apple2": r"C:\Program Files\AppleWin\applewin.exe"}.get(icon.key.split(":", 1)[1], "")
             properties(self.desktop, icon.label, [("Target type:", "Application"), ("Target:", target),
                                                   ("-", ""), ("Start in:", str(Path(target).parent))], icon=icon.icon)
             return

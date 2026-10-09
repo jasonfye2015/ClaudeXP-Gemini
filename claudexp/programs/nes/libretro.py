@@ -16,9 +16,11 @@ ENV_GET_VARIABLE = 15
 ENV_GET_VARIABLE_UPDATE = 17
 ENV_GET_SAVE_DIRECTORY = 31
 ENV_GET_CORE_OPTIONS_VERSION = 52
+ENV_SET_KEYBOARD_CALLBACK = 12
 
 PIXEL_0RGB1555, PIXEL_XRGB8888, PIXEL_RGB565 = 0, 1, 2
 DEVICE_JOYPAD = 1
+DEVICE_KEYBOARD = 3
 MEMORY_SAVE_RAM = 0
 
 # joypad button ids
@@ -57,6 +59,7 @@ AUDIO_CB = CFUNCTYPE(None, c_int16, c_int16)
 AUDIO_BATCH_CB = CFUNCTYPE(c_size_t, POINTER(c_int16), c_size_t)
 POLL_CB = CFUNCTYPE(None)
 STATE_CB = CFUNCTYPE(c_int16, c_uint, c_uint, c_uint, c_uint)
+KEYBOARD_CB = CFUNCTYPE(None, c_bool, c_uint, ctypes.c_uint32, ctypes.c_uint16)
 
 
 class Core:
@@ -72,6 +75,8 @@ class Core:
         self.frame = None                     # the latest QImage
         self.audio = bytearray()              # 16-bit stereo samples since the last take_audio()
         self.buttons = set()
+        self.keys_down = set()                # RETROK_* codes held (computers like the Apple II)
+        self.keyboard_cb = None               # a core's keyboard event callback, if it registered one
         self.game = None                      # keeps the ROM bytes alive while loaded
         d = self.dll
         d.retro_get_system_av_info.argtypes = [POINTER(AVInfo)]
@@ -165,6 +170,21 @@ class Core:
         buf = ctypes.create_string_buffer(data, len(data))
         return bool(self.dll.retro_unserialize(buf, len(data)))
 
+    # ---- a computer keyboard -----------------------------------------------------------------------------
+    def key_event(self, down, keycode, character=0, modifiers=0):
+        """A key on a computer's keyboard (RETROK_* code; character is the Unicode it typed)."""
+        if down:
+            self.keys_down.add(keycode)
+        else:
+            self.keys_down.discard(keycode)
+        if self.keyboard_cb is not None:
+            self.keyboard_cb(bool(down), keycode, character, modifiers)
+
+    def release_keys(self):
+        for k in list(self.keys_down):
+            self.key_event(False, k)
+        self.buttons.clear()
+
     # ---- callbacks from the core ----------------------------------------------------------------------------
     def _environment(self, cmd, data):
         cmd &= 0xFFFF                                     # drop the 'experimental' flag
@@ -189,6 +209,10 @@ class Core:
                 return False
             if cmd == ENV_GET_VARIABLE_UPDATE:
                 ctypes.cast(data, POINTER(c_bool))[0] = False
+                return True
+            if cmd == ENV_SET_KEYBOARD_CALLBACK:
+                fn = ctypes.cast(data, POINTER(c_void_p))[0]
+                self.keyboard_cb = KEYBOARD_CB(fn) if fn else None
                 return True
             if cmd == ENV_GET_CORE_OPTIONS_VERSION:
                 ctypes.cast(data, POINTER(c_uint))[0] = 0
@@ -216,4 +240,6 @@ class Core:
     def _input(self, port, device, index, button):
         if port == 0 and device == DEVICE_JOYPAD:
             return 1 if button in self.buttons else 0
+        if device == DEVICE_KEYBOARD:
+            return 1 if button in self.keys_down else 0
         return 0

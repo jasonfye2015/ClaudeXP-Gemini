@@ -283,6 +283,10 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   (2 MHz audio rate) and SMS Plus GX (crashed on load) were tried and dropped. Each system is its own program with
   the user's icon, on the desktop and in Start > Programs > Game Emulation. Entry points <key>_icon/open_<key>/
   shutdown_<key> are generated from SYSTEMS; programs.EMULATORS lists names.
+  Later: Game Gear (Gearsystem) and Apple ][ (AppleWin, 560x384). Computers set System.keyboard: libretro.py
+  answers SET_KEYBOARD_CALLBACK and polls RETRO_DEVICE_KEYBOARD; every key goes to the machine as RETROK codes
+  (capitals only, like the real Apple ][+; only F-keys/Pause stay as shortcuts). ROM folders are now named
+  'NES (Roms)' etc.; icons are the user's per-folder PNGs copied to assets/images/<key>_icon.png.
 - **NES Emulator** (`programs/nes/`, shown as FCE Ultra): libretro.py is our own ctypes libretro front end
   (environment/video/audio/input callbacks, SRAM, serialize); fceu.py is the window. Core:
   assets/emulators/fceumm_libretro.dll (GPL-2, see README there; runs ~2,800 fps headless). ROMs are the user's,

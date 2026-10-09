@@ -54,6 +54,8 @@ class System:
     credits: str = ""
     scale: int = 2               # starting window size (handhelds start bigger)
     process: str = ""            # what Task Manager calls it
+    keyboard: bool = False       # a computer: every key goes to it (no controller mapping, fewer shortcuts)
+    noun: str = "game"           # 'disk' for the Apple II
 
 
 SYSTEMS = {
@@ -91,7 +93,37 @@ SYSTEMS = {
                   "Button 1:  Z\nButton 2:  X\n(Start is the console's Pause button)\n",
                   "Genesis Plus GX by Charles MacDonald and Eke-Eke. Free for non-commercial use.",
                   process="gpgx.exe"),
+    "gg": System("gg", "Game Gear", "Gearsystem", "gearsystem_libretro.dll", r"(gg|game ?gear)\b",
+                 {".gg"}, "gg_icon.png", 160, 144, {Qt.Key_Z: L.B, Qt.Key_X: L.A},
+                 "Button 1:  Z\nButton 2:  X\n",
+                 "Gearsystem by Ignacio Sanchez. Free software under the GNU GPL v3.", scale=3,
+                 process="gearsystem.exe"),
+    "apple2": System("apple2", "Apple ][", "AppleWin", "applewin_libretro.dll", r"(apple ?(ii|2|\]\[)|a2)\b",
+                     {".dsk", ".do", ".po", ".nib", ".woz", ".hdv", ".2mg"}, "apple2_icon.png", 560, 384, {},
+                     "The whole keyboard is the Apple's keyboard (letters, numbers, Return, Esc, arrows...).\n"
+                     "Most games boot by themselves; on a menu disk, type the letter or RUN name.\n\n"
+                     "Save state:  F5\nLoad state:  F7\nPause:  Pause key\nReset:  F1\n"
+                     "Disk list:  File > Disk List", "AppleWin by Michael O'Brien, Tom Charlesworth and the "
+                     "AppleWin team. Free software under the GNU GPL.", scale=1, process="applewin.exe",
+                     keyboard=True, noun="disk"),
 }
+
+# Qt key -> libretro RETROK_* code, for computer keyboards (letters and digits use their ASCII codes)
+RETROK = {Qt.Key_Return: 13, Qt.Key_Enter: 13, Qt.Key_Backspace: 8, Qt.Key_Tab: 9, Qt.Key_Escape: 27,
+          Qt.Key_Space: 32, Qt.Key_Delete: 127, Qt.Key_Up: 273, Qt.Key_Down: 274, Qt.Key_Right: 275,
+          Qt.Key_Left: 276, Qt.Key_Insert: 277, Qt.Key_Home: 278, Qt.Key_End: 279, Qt.Key_PageUp: 280,
+          Qt.Key_PageDown: 281, Qt.Key_Shift: 304, Qt.Key_Control: 306, Qt.Key_Alt: 308, Qt.Key_CapsLock: 301}
+
+
+def retrok(event):
+    k = event.key()
+    if k in RETROK:
+        return RETROK[k]
+    if Qt.Key_A <= k <= Qt.Key_Z:
+        return ord("a") + (k - Qt.Key_A)
+    if 32 <= k < 127:                       # digits and punctuation
+        return k
+    return 0
 
 _cores = {}                      # system key -> Core (each core DLL keeps global state)
 
@@ -189,7 +221,7 @@ class Screen(QWidget):
 
     def focusOutEvent(self, event):
         if self.emu.system.key in _cores:
-            _cores[self.emu.system.key].buttons.clear()        # never leave a button stuck down
+            _cores[self.emu.system.key].release_keys()          # never leave a button stuck down
         super().focusOutEvent(event)
 
 
@@ -253,13 +285,15 @@ class Emulator(QWidget):
         bar = QMenuBar()
         bar.setStyleSheet(MENU_STYLE)
         f = bar.addMenu("&File")
-        f.addAction("&Game List", self.show_list, QKeySequence("Ctrl+L"))
+        f.addAction(f"&{self.system.noun.title()} List", self.show_list,
+                    QKeySequence() if self.system.keyboard else QKeySequence("Ctrl+L"))
         self.recent_menu = f.addMenu("&Recent Games")
         f.addAction("&Close Game", self.close_game)
         f.addSeparator()
         f.addAction("E&xit", lambda: self.frame.request_close() if self.frame else None)
         n = bar.addMenu("&" + self.system.console)
-        self.pause_action = n.addAction("&Pause", self.toggle_pause, QKeySequence("P"))
+        self.pause_action = n.addAction("&Pause", self.toggle_pause,
+                                        QKeySequence("Pause" if self.system.keyboard else "P"))
         self.pause_action.setCheckable(True)
         n.addAction("&Reset", self.reset, QKeySequence("F1"))
         n.addAction("Hard Reset (&Power)", self.power)
@@ -337,7 +371,8 @@ class Emulator(QWidget):
             self.games.addItem(item)
         self._refresh_recent()
         if self.game is None:
-            self.status.setText(f"{len(roms)} games  \u2014  double-click a game to play")
+            self.status.setText(f"{len(roms)} {self.system.noun}s  \u2014  double-click a {self.system.noun} to "
+                                f"{'boot' if self.system.keyboard else 'play'}")
 
     def show_list(self):
         self.pause(True)
@@ -403,7 +438,7 @@ class Emulator(QWidget):
             not self.state.get("pause_inactive") or self.desktop.is_active(self.frame))
         if not active and not self.auto_paused and not self.paused:
             self.auto_paused = True
-            self.core.buttons.clear()
+            self.core.release_keys()
             self.screen.update()
         elif active and self.auto_paused:
             self.auto_paused = False
@@ -432,6 +467,8 @@ class Emulator(QWidget):
                                 f"State slot {self.slot}")
 
     def key(self, event, down):
+        if self.system.keyboard:
+            return self.computer_key(event, down)
         if event.isAutoRepeat():
             return event.key() in self.keys
         k = event.key()
@@ -450,6 +487,28 @@ class Emulator(QWidget):
             return False
         return True
 
+    def computer_key(self, event, down):
+        """Computers (the Apple II): every key goes to the machine; only F-keys and Pause stay ours."""
+        k = event.key()
+        if Qt.Key_F1 <= k <= Qt.Key_F12:
+            return False                                       # the menu shortcuts (F1 reset, F5/F7 states)
+        if k == Qt.Key_Pause:
+            if down:
+                self.toggle_pause()
+            return True
+        if self.game is None:
+            return False
+        code = retrok(event)
+        if not code:
+            return False
+        text = event.text().upper()                           # the Apple ][ keyboard only types capitals
+        mods = (1 if event.modifiers() & Qt.ShiftModifier else 0) | (2 if event.modifiers() & Qt.ControlModifier else 0)
+        if event.isAutoRepeat() and down:                     # typematic repeat: press again
+            self.core.key_event(True, code, ord(text[0]) if text else 0, mods)
+            return True
+        self.core.key_event(down, code, ord(text[0]) if text and down else 0, mods)
+        return True
+
     # ---- console menu ------------------------------------------------------------------------------------
     def pause(self, on):
         self.paused = on and self.game is not None
@@ -457,7 +516,7 @@ class Emulator(QWidget):
         if not self.paused:
             self.next_frame = self.clock.elapsed() / 1000
         if self.system.key in _cores:
-            _cores[self.system.key].buttons.clear()
+            _cores[self.system.key].release_keys()
         self.screen.update()
 
     def toggle_pause(self):

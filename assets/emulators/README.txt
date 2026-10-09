@@ -31,3 +31,5 @@ picodrive_libretro.dll     Genesis / Mega Drive / 32X. PicoDrive, free for non-c
                            licence). https://github.com/libretro/picodrive
 genesis_plus_gx_libretro.dll  Master System. Genesis Plus GX, free for non-commercial use.
                            https://github.com/libretro/Genesis-Plus-GX
+gearsystem_libretro.dll    Game Gear. Gearsystem, GNU GPL v3. https://github.com/drhelius/Gearsystem
+applewin_libretro.dll      Apple ][. AppleWin, GNU GPL v2. https://github.com/audetto/AppleWin

@@ -14,7 +14,7 @@ NAMES = {
     "mspaint": "paint", "pbrush": "paint", "wordpad": "wordpad", "write": "wordpad",
     "charmap": "charmap", "cleanmgr": "cleanmgr", "msinfo32": "msinfo", "sndrec32": "sndrec", "rstrui": "sysrestore", "helpctr": "helpctr",
     "tourstart": "tour", "furtv": "tv", "furcomix": "comix", "furfolio": "folio", "furstory": "stories", "furcd": "cdviewer", "furcon": "furcon", "fceu": "nes", "fceultra": "nes", "snes9x": "snes", "gambatte": "gb",
-    "gambatte_gbc": "gbc", "mgba": "gba", "picodrive": "gen", "gpgx": "sms", "tvguide": "tvguide",
+    "gambatte_gbc": "gbc", "mgba": "gba", "picodrive": "gen", "gpgx": "sms", "gearsystem": "gg", "applewin": "apple2", "tvguide": "tvguide",
     "pinball": "pinball", "wmplayer": "wmp", "mplayer2": "wmp", "msimn": "outlook", "wab": "wab",
     "bckgzm": "ibackgammon", "hrtzzm": "ihearts", "shvlzm": "ispades", "chkrzm": "icheckers", "rvsezm": "ireversi",
 }

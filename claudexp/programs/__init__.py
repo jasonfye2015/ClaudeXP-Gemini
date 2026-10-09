@@ -39,7 +39,9 @@ EMULATORS = [("nes", "NES Emulator", "Play NES games"), ("snes", "SNES Emulator"
              ("gbc", "Game Boy Color Emulator", "Play Game Boy Color games"),
              ("gba", "Game Boy Advance Emulator", "Play Game Boy Advance games"),
              ("gen", "Genesis Emulator", "Play Sega Genesis and 32X games"),
-             ("sms", "Master System Emulator", "Play Sega Master System games")]
+             ("sms", "Master System Emulator", "Play Sega Master System games"),
+             ("gg", "Game Gear Emulator", "Play Sega Game Gear games"),
+             ("apple2", "Apple ][ Emulator", "Boot Apple ][ disks")]
 
 # Desktop shortcuts to the user's own archive folders on E: (Local Storage): key -> (label, folder name prefix).
 FOLDER_SHORTCUTS = {"mediaarchive": ("Furry Media Archive", "furry media archive"),
