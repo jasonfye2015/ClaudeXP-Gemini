@@ -172,7 +172,9 @@ class ClaudeXP(QMainWindow):
             self.stack.setCurrentWidget(self.desktop)
             return
         self.stack.setCurrentWidget(self.desktop)
-        sound.play("startup")
+        # XP: the Startup sound for the first logon after starting up, the Logon chime after a Log Off
+        sound.play("logon" if getattr(self, "_logged_off", False) else "startup")
+        self._logged_off = False
         # The world moved on while the PC was off: catch up in the background (Windows Update
         # or a virus scan will start to cover for it).
         QTimer.singleShot(1500, self.desktop.life.catch_up)
@@ -192,6 +194,8 @@ class ClaudeXP(QMainWindow):
         programs.shutdown_all()
         for win in list(self.desktop.windows):
             self.desktop.close_window(win)
+        sound.play("logoff")
+        self._logged_off = True
         self.show_welcome()
 
     def shut_down(self):

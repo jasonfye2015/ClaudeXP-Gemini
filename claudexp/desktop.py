@@ -5,7 +5,7 @@ from PySide6.QtCore import QEvent, QRect, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter
 from PySide6.QtWidgets import QApplication, QStyle, QWidget
 
-from . import programs
+from . import programs, sound
 from .paths import pixmap
 from .programs.placeholder import open_placeholder
 from .startmenu import StartMenu
@@ -185,6 +185,7 @@ class Desktop(QWidget):
             self.active.notify_activation()
 
     def minimize(self, win):
+        sound.play("minimize")
         win.hide()
         self.activate(self._topmost_visible())
         self.taskbar.update()
@@ -207,6 +208,8 @@ class Desktop(QWidget):
         if win is self.active and win.isVisible():
             self.minimize(win)
         else:
+            if not win.isVisible():
+                sound.play("restore")
             self.activate(win)
 
     # ---- start menu -----------------------------------------------------------

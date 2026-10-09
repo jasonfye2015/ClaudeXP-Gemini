@@ -14,6 +14,23 @@ EVENTS = {
     "exclamation": "Windows XP Exclamation.wav",
     "info": "Windows Information Bar.wav",
     "ding": "ding.wav",
+    # XP's own sound scheme (C:\WINDOWS\Media, short names)
+    "minimize": "xp/xpmin.wav",
+    "restore": "xp/xprestor.wav",
+    "logon": "xp/xplogon.wav",
+    "logoff": "xp/xplogoff.wav",
+    "recycle": "xp/xprecycl.wav",
+    "balloon": "xp/xpballn.wav",
+    "print_done": "xp/xpprint.wav",
+    "critical": "xp/xpcrtstp.wav",
+    "notify": "xp/xpnotify.wav",
+    "hw_insert": "xp/xphdinst.wav",
+    "hw_remove": "xp/xphdrem.wav",
+    "hw_fail": "xp/xphdfail.wav",
+    "battery_low": "xp/xpbatlow.wav",
+    "battery_critical": "xp/xpbatcrt.wav",
+    "ring_in": "xp/xpringin.wav",
+    "ring_out": "xp/xprngout.wav",
 }
 
 

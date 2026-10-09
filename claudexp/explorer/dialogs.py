@@ -9,7 +9,7 @@ from .. import clock, sound
 
 ICONS = {"error": QStyle.SP_MessageBoxCritical, "warning": QStyle.SP_MessageBoxWarning,
          "info": QStyle.SP_MessageBoxInformation, "question": QStyle.SP_MessageBoxQuestion}
-SOUNDS = {"error": "error", "warning": "exclamation", "question": "exclamation", "info": "default"}
+SOUNDS = {"error": "critical", "warning": "exclamation", "question": "exclamation", "info": "default"}
 
 
 def msgbox(desktop, title, text, icon="error", buttons=("OK",), on_button=None, window_icon=None):

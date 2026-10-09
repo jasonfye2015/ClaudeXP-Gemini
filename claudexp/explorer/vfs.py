@@ -290,6 +290,9 @@ def restore(stored):
 
 def empty_recycle_bin():
     """Delete everything in the Recycle Bin for good."""
+    from .. import sound
+    if recycled():
+        sound.play("recycle")
     for stored, _orig, _when in recycled():
         if stored.is_dir():
             shutil.rmtree(stored, ignore_errors=True)

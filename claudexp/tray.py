@@ -77,6 +77,8 @@ class Balloon(QWidget):
         self.hide()
 
     def pop(self, owner, title, message, msecs):
+        from . import sound
+        sound.play("balloon")
         self.owner, self.title, self.message = owner, title, message
         anchor = self.desktop.taskbar.tray_icon_center(owner)
         if anchor is None:

@@ -227,6 +227,7 @@ class Spooler(QObject):
         self._refresh_queue()
         if self.tray is not None:
             where = vfs.to_virtual(job.output) or str(job.output)
+            sound.play("print_done")
             self.tray.showMessage("Document Printed",
                                   f"'{job.title}' ({job.pages} page{'s' if job.pages != 1 else ''}) was printed on "
                                   f"{PRINTER} and saved as {where}", None, 8000)
