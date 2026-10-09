@@ -47,6 +47,18 @@ class Desktop(QWidget):
         menus.install(self)              # pop-up menus stay inside the XP screen
         QApplication.instance().installEventFilter(self)
         QApplication.instance().applicationStateChanged.connect(self._app_state_changed)
+        from . import theme, themes
+        theme.notifier.changed.connect(self._theme_changed)
+        themes.restore(self)                 # the theme's sound scheme and pointers
+
+    def _theme_changed(self):
+        """A new visual style: re-fit every window frame, repaint the taskbar and Start menu."""
+        from . import theme
+        for win in self.findChildren(XPWindow):
+            theme.refresh_window(win)
+        self.taskbar.update()
+        self.start_menu.update()
+        self.update()
 
     # ---- layout -------------------------------------------------------------
     def work_area(self):

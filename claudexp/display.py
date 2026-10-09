@@ -27,6 +27,11 @@ def wallpapers():
         if path.stem.lower() == "bliss" and BLISS_HD.exists():
             path = BLISS_HD
         out.append((label, path))
+    from .explorer import vfs                      # and Plus!'s, once a theme has painted them
+    for name in ("Aquarium", "Da Vinci", "Nature", "Space"):
+        f = vfs.DRIVE_C / "WINDOWS" / "Web" / "Wallpaper" / f"{name}.jpg"
+        if f.exists():
+            out.append((name, f))
     return out
 
 

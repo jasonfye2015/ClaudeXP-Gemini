@@ -102,7 +102,14 @@ class DialogBody(QWidget):
         self.on_close = None
         self.setObjectName("dialog")
         self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setStyleSheet(DIALOG_STYLE)
+        self.restyle()
+
+    def restyle(self):
+        """The dialog face: XP's beige, or the Windows Classic colour scheme's."""
+        from . import theme
+        pal = theme.current().palette()
+        self.setStyleSheet(DIALOG_STYLE if pal is None else
+                           DIALOG_STYLE.replace("#ECE9D8", pal.window().color().name()))
 
     def closeEvent(self, event):
         event.accept()

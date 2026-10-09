@@ -185,6 +185,8 @@ PROGRAMS = [
             group="Accessories/Entertainment"),
     Program("flash", "Macromedia Flash Player", "Play Shockwave Flash movies", _lazy("flash", "flash_icon"),
             _lazy("flash", "open_flash"), _lazy("flash", "shutdown"), group="Accessories/Entertainment"),
+    Program("stylexp", "StyleXP", "Visual styles for Windows XP", _lazy("stylexp", "stylexp_icon"),
+            _lazy("stylexp", "open_stylexp"), group="StyleXP"),
     Program("claudeamp", "ClaudeAmp", "It really whips the llama's ass", _lazy("amp", "amp_icon"),
             _lazy("amp", "open_amp"), _lazy("amp", "shutdown"), group="ClaudeAmp"),
     Program("tv", "ClaudeTV", "Watch TV", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.tuner", "open_tv"),

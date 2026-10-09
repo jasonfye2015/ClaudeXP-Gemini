@@ -4,8 +4,7 @@ from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen, QPolyg
 from PySide6.QtWidgets import QSystemTrayIcon, QToolTip, QWidget
 from shiboken6 import isValid
 
-from . import clock, sound
-from .paths import pixmap
+from . import clock, sound, theme
 
 TASKBAR_H = 30
 BUTTON_W = 160
@@ -19,9 +18,6 @@ class Taskbar(QWidget):
     def __init__(self, desktop):
         super().__init__(desktop)
         self.desktop = desktop
-        self.tile = pixmap("taskbar_empty.jpg").scaledToHeight(TASKBAR_H, Qt.SmoothTransformation)
-        self.start_pm = pixmap("startbutton.jpg").scaledToHeight(TASKBAR_H, Qt.SmoothTransformation)
-        self.button_pm = pixmap("taskbar_window.jpg")
         self.tray_icons = []
         self.flash_on = False
         self.setFixedHeight(TASKBAR_H)
@@ -82,7 +78,7 @@ class Taskbar(QWidget):
 
     # ---- layout ----------------------------------------------------------------
     def start_rect(self):
-        return QRect(0, 0, self.start_pm.width(), TASKBAR_H)
+        return QRect(0, 0, theme.current().start_width(), TASKBAR_H)
 
     def tray_rect(self):
         width = 10 + TRAY_SLOT * (len(self._live_tray_icons()) + 1) + CLOCK_W
@@ -153,10 +149,9 @@ class Taskbar(QWidget):
         """XP's taskbar menu: arrange windows, Show the Desktop, Task Manager."""
         from PySide6.QtWidgets import QMenu
         from . import programs
-        from .startmenu import MENU_STYLE
         d = self.desktop
         menu = QMenu(self)
-        menu.setStyleSheet(MENU_STYLE)
+        menu.setStyleSheet(theme.current().menu_css())
         menu.addAction("&Toolbars").setEnabled(False)
         menu.addSeparator()
         menu.addAction("Ca&scade Windows", lambda: self._arrange("cascade"))
@@ -213,50 +208,38 @@ class Taskbar(QWidget):
 
     # ---- painting ----------------------------------------------------------------
     def paintEvent(self, event):
+        st = theme.current()
         p = QPainter(self)
         p.setRenderHint(QPainter.SmoothPixmapTransform)
-        p.drawTiledPixmap(self.rect(), self.tile)
-
-        p.drawPixmap(0, 0, self.start_pm)
-        if self.desktop.start_menu.isVisible():
-            p.fillRect(self.start_rect(), QColor(0, 40, 0, 70))
+        st.paint_taskbar(p, self.rect(), self.start_rect(), self.desktop.start_menu.isVisible())
 
         font = QFont("Tahoma", 8)
-        p.setFont(font)
         for win, rect in self.button_rects():
-            p.drawPixmap(rect, self.button_pm)
             pressed = win is self.desktop.active and win.isVisible()
+            st.paint_task_button(p, rect, pressed)
             if win.flashing and (self.flash_on or win.flash_ticks >= FLASHES):
                 grad = QLinearGradient(0, rect.top(), 0, rect.bottom())
                 grad.setColorAt(0, QColor("#F9B868"))
                 grad.setColorAt(1, QColor("#E2791B"))
                 p.fillRect(rect.adjusted(1, 1, -1, -1), grad)
-            elif pressed:
-                p.fillRect(rect.adjusted(1, 1, -1, -1), QColor(0, 20, 100, 90))
             shift = 1 if pressed else 0
             if not win.icon.isNull():
                 p.drawPixmap(rect.x() + 7 + shift, rect.center().y() - 7 + shift, win.icon.pixmap(16, 16))
             trect = QRect(rect.x() + 28 + shift, rect.y() + shift, rect.width() - 34, rect.height())
+            font.setBold(pressed and st.key == "classic")
+            p.setFont(font)
             text = p.fontMetrics().elidedText(win.title, Qt.ElideRight, trect.width())
-            p.setPen(QColor("white"))
+            p.setPen(QColor(st.task_text_color(pressed)))
             p.drawText(trect, Qt.AlignVCenter | Qt.AlignLeft, text)
 
         tray = self.tray_rect()
-        grad = QLinearGradient(0, 0, 0, TASKBAR_H)
-        grad.setColorAt(0, QColor("#1C98EB"))
-        grad.setColorAt(0.5, QColor("#0F8CE8"))
-        grad.setColorAt(1, QColor("#0F82DE"))
-        p.fillRect(tray, grad)
-        p.setPen(QColor("#0A5BC5"))
-        p.drawLine(tray.left(), 0, tray.left(), TASKBAR_H)
-        p.setPen(QColor("#3BB6FF"))
-        p.drawLine(tray.left() + 1, 0, tray.left() + 1, TASKBAR_H)
+        st.paint_tray(p, tray)
 
         for icon, rect in self.tray_icon_rects():
             p.drawPixmap(rect, icon.icon().pixmap(16, 16))
         self._draw_speaker(p, self.speaker_rect())
 
-        p.setPen(QColor("white"))
+        p.setPen(QColor(st.tray_text))
         now = clock.now()
         small = QFont("Tahoma")
         small.setPixelSize(11)

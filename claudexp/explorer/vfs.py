@@ -129,7 +129,7 @@ EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "ski.exe": "skifree", "jezzball.exe": "jezzball",
     "taipei.exe": "taipei", "rodent.exe": "rodent", "blockfall.exe": "blockfall", "tripeaks.exe": "tripeaks",
     "golf.exe": "golf", "flashpla.exe": "flash", "claudeamp.exe": "claudeamp", "winamp.exe": "claudeamp",
-    "furvideo.exe": "furvideo",
+    "furvideo.exe": "furvideo", "stylexp.exe": "stylexp",
 }
 SYSTEM32 = ["advapi32.dll", "comctl32.dll", "comdlg32.dll", "gdi32.dll", "kernel32.dll", "mshtml.dll",
             "msvcrt.dll", "ole32.dll", "oleaut32.dll", "rpcrt4.dll", "shell32.dll", "shlwapi.dll", "user32.dll",
@@ -186,11 +186,21 @@ def _ensure_wallpapers():
             shutil.copy2(f, pics / f.name)
 
 
+def _ensure_themes():
+    """C:\\WINDOWS\\Resources\\Themes: the built-in .theme files."""
+    try:
+        from .. import themes
+        themes.install_files()
+    except Exception:
+        pass
+
+
 def setup_c():
     """Create the XP hard drive the first time (and keep adding anything missing)."""
     DRIVE_C.mkdir(parents=True, exist_ok=True)
     if (DRIVE_C / MARKER).exists():
         _ensure_wallpapers()
+        _ensure_themes()
         return
     from ..user import profile_name, user_name
     home = DRIVE_C / "Documents and Settings" / profile_name()
@@ -208,7 +218,7 @@ def setup_c():
                 "ClaudeTV/ClaudeTV.exe", "FurComix Reader/FurComix.exe",
                 "FurFolio Reader/FurFolio.exe", "FurFolio Reader/FurStory.exe",
                 "Fur CD Viewer/FurCD.exe", "Furry Con CD Viewer/FurCon.exe", "Furry Video Browser/FurVideo.exe",
-                "Macromedia/Flash Player/FlashPla.exe", "ClaudeAmp/ClaudeAmp.exe",
+                "Macromedia/Flash Player/FlashPla.exe", "ClaudeAmp/ClaudeAmp.exe", "TGTSoft/StyleXP/StyleXP.exe",
                 "FCE Ultra/fceu.exe", "Snes9x/snes9x.exe",
                 "Gambatte/gambatte.exe", "Gambatte/gambatte_gbc.exe", "mGBA/mgba.exe", "PicoDrive/picodrive.exe",
                 "Genesis Plus/gpgx.exe", "Gearsystem/gearsystem.exe", "AppleWin/applewin.exe",

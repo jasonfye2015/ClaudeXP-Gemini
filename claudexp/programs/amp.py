@@ -237,6 +237,7 @@ def title_bar(p, width, text, active, buttons=("min", "close")):
 
 class AmpFrame(XPWindow):
     """An XPWindow without the Luna frame: the content draws its own Winamp title bar, and dragging it moves us."""
+    skinned = True
 
     def __init__(self, desktop, title, content, icon, resizable=False):
         super().__init__(desktop, title, content, icon, (content.width(), content.height()), buttons=())

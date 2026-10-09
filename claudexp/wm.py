@@ -1,10 +1,10 @@
 """XPWindow: a Luna-style window frame living inside the virtual desktop."""
 from PySide6.QtCore import QEvent, QPoint, QRect, QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPen
+from PySide6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPalette, QPen
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 from shiboken6 import isValid
 
-TITLE_H = 30
+TITLE_H = 30            # Luna's; the current visual style's are theme.title_h() / theme.border()
 BORDER = 4
 RESIZE_MARGIN = 6
 LEFT, RIGHT, TOP, BOTTOM = 1, 2, 4, 8
@@ -23,6 +23,8 @@ def _top_rounded_path(w, h, rad):
 
 
 class XPWindow(QWidget):
+    skinned = False          # True for windows that draw their own frame (ClaudeAmp)
+
     def __init__(self, desktop, title, content, icon=None, size=(480, 360),
                  buttons=("min", "max", "close"), on_taskbar=True):
         super().__init__(desktop)
@@ -47,10 +49,14 @@ class XPWindow(QWidget):
         self.setMouseTracking(True)
         self.setMinimumSize(220, 120)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(BORDER, TITLE_H, BORDER, BORDER)
+        from . import theme
+        st = theme.current()
+        layout.setContentsMargins(st.border, st.title_h, st.border, st.border)
         layout.setSpacing(0)
         layout.addWidget(content)
-        self.resize(*size)
+        self.resize(size[0] + 2 * (st.border - BORDER), size[1] + st.title_h - TITLE_H)
+        if not self.skinned and st.palette() is not None:
+            self.setPalette(st.palette())
 
     def set_title(self, title):
         self.title = title
@@ -61,6 +67,7 @@ class XPWindow(QWidget):
     def adopt_content(self):
         """Follow the content's own show/hide/title/size changes (for hosted programs)."""
         self.adopted = True
+        self.setPalette(QPalette())            # hosted programs keep their own colours
         self.content.installEventFilter(self)
         self.content.windowTitleChanged.connect(self.set_title)
         self.content.destroyed.connect(self._content_destroyed)
@@ -87,7 +94,8 @@ class XPWindow(QWidget):
         self.resizable = not fixed
         if fixed:
             self.buttons = tuple(b for b in self.buttons if b != "max")
-            want = c.minimumSize() + QSize(2 * BORDER, TITLE_H + BORDER)
+            from . import theme
+            want = c.minimumSize() + QSize(2 * theme.border(), theme.title_h() + theme.border())
             if self.size() != want:
                 self.setFixedSize(want)
 
@@ -130,15 +138,8 @@ class XPWindow(QWidget):
 
     # ---- geometry helpers -------------------------------------------------
     def _button_rects(self):
-        s = 21
-        y = (TITLE_H - s) // 2 + 1
-        x = self.width() - BORDER - 2 - s
-        rects = {}
-        for kind in ("close", "max", "min"):
-            if kind in self.buttons:
-                rects[kind] = QRect(x, y, s, s)
-                x -= s + 2
-        return rects
+        from . import theme
+        return theme.current().button_rects(self.width(), self.buttons)
 
     def _button_at(self, pos):
         for kind, rect in self._button_rects().items():
@@ -208,14 +209,14 @@ class XPWindow(QWidget):
         edges = self._edges_at(pos)
         if edges:
             self._resize = (edges, event.globalPosition().toPoint(), QRect(self.geometry()))
-        elif pos.y() < TITLE_H and not self.maximized:
+        elif pos.y() < self._title_h() and not self.maximized:
             self._drag = pos
 
     def mouseMoveEvent(self, event):
         gp = event.globalPosition().toPoint()
         if self._drag is not None:
             new = self.parentWidget().mapFromGlobal(gp) - self._drag
-            bottom = self.desktop.work_area().bottom() - TITLE_H
+            bottom = self.desktop.work_area().bottom() - self._title_h()
             new.setY(max(0, min(new.y(), bottom)))
             self.move(new)
             return
@@ -257,7 +258,7 @@ class XPWindow(QWidget):
 
     def mouseDoubleClickEvent(self, event):
         pos = event.position().toPoint()
-        if pos.y() < TITLE_H and not self._button_at(pos):
+        if pos.y() < self._title_h() and not self._button_at(pos):
             self.toggle_maximize()
 
     def leaveEvent(self, event):
@@ -265,81 +266,18 @@ class XPWindow(QWidget):
             self._hover_btn = None
             self.update()
 
+    def _title_h(self):
+        from . import theme
+        return theme.title_h()
+
     # ---- painting ---------------------------------------------------------
     def paintEvent(self, event):
+        from . import theme
+        st = theme.current()
         p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
         w, h = self.width(), self.height()
-        rad = 0 if self.maximized else 8
-        path = _top_rounded_path(w, h, rad)
-
-        p.fillPath(path, QColor("#0831D9") if self.active else QColor("#7B97E0"))
+        st.paint_frame(p, w, h, self.title, self.icon, self.active, self.buttons, self.maximized,
+                       self._hover_btn, self._press_btn)
         # Client area: what a real window would have under its content.
-        p.fillRect(BORDER, TITLE_H, w - 2 * BORDER, h - TITLE_H - BORDER, self.palette().window())
-        grad = QLinearGradient(0, 0, 0, TITLE_H)
-        if self.active:
-            stops = [(0, "#3D95FF"), (0.1, "#0A62F4"), (0.5, "#0055E5"), (0.9, "#0047D7"), (1, "#003DB6")]
-        else:
-            stops = [(0, "#B9CEF6"), (0.15, "#9DB9EB"), (0.6, "#94AFE8"), (1, "#7B97E0")]
-        for at, color in stops:
-            grad.setColorAt(at, QColor(color))
-        p.save()
-        p.setClipPath(path)
-        p.fillRect(0, 0, w, TITLE_H, grad)
-        p.restore()
-
-        x = BORDER + 4
-        if not self.icon.isNull():
-            p.drawPixmap(x, (TITLE_H - 16) // 2, self.icon.pixmap(16, 16))
-            x += 21
-        font = QFont("Trebuchet MS", 10)
-        font.setBold(True)
-        p.setFont(font)
-        rects = self._button_rects()
-        text_w = min(r.left() for r in rects.values()) - x - 4 if rects else self.width() - x - BORDER
-        text = p.fontMetrics().elidedText(self.title, Qt.ElideRight, text_w)
-        trect = QRect(x, 0, text_w, TITLE_H)
-        if self.active:
-            p.setPen(QColor("#0A1F7A"))
-            p.drawText(trect.translated(1, 1), Qt.AlignVCenter | Qt.AlignLeft, text)
-        p.setPen(QColor("white") if self.active else QColor("#E2EAFA"))
-        p.drawText(trect, Qt.AlignVCenter | Qt.AlignLeft, text)
-
-        for kind, rect in self._button_rects().items():
-            self._draw_button(p, rect, kind)
-
-    def _draw_button(self, p, rect, kind):
-        hover = self._hover_btn == kind
-        down = hover and self._press_btn == kind
-        if kind == "close":
-            top, bot = ("#F09A7C", "#D2502E") if hover else ("#E8795A", "#C5371A")
-        else:
-            top, bot = ("#6FA6FF", "#2C6CF0") if hover else ("#4C8DFF", "#1E5EE6")
-        if down:
-            top, bot = bot, top
-        if not self.active:
-            top, bot = ("#C4D3F5", "#9DB2E8") if kind != "close" else ("#E7A894", "#D07A63")
-        grad = QLinearGradient(0, rect.top(), 0, rect.bottom())
-        grad.setColorAt(0, QColor(top))
-        grad.setColorAt(1, QColor(bot))
-        p.setPen(QPen(QColor("white"), 1))
-        p.setBrush(grad)
-        p.drawRoundedRect(QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5), 3, 3)
-
-        x, y = rect.x(), rect.y()
-        p.setBrush(Qt.NoBrush)
-        if kind == "min":
-            p.setPen(QPen(QColor("white"), 3))
-            p.drawLine(x + 6, y + 14, x + 12, y + 14)
-        elif kind == "max":
-            p.setPen(QPen(QColor("white"), 1))
-            p.drawRect(x + 5, y + 5, 10, 10)
-            p.setPen(QPen(QColor("white"), 2))
-            p.drawLine(x + 5, y + 6, x + 15, y + 6)
-            if self.maximized:
-                p.setPen(QPen(QColor("white"), 1))
-                p.drawRect(x + 8, y + 3, 8, 8)
-        else:
-            p.setPen(QPen(QColor("white"), 2))
-            p.drawLine(QPoint(x + 6, y + 6), QPoint(x + 14, y + 14))
-            p.drawLine(QPoint(x + 14, y + 6), QPoint(x + 6, y + 14))
+        b, th = st.border, st.title_h
+        p.fillRect(b, th, w - 2 * b, h - th - b, self.palette().window())

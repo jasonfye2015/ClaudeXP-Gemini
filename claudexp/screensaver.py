@@ -10,8 +10,8 @@ import random
 import time
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import (QColor, QFont, QFontMetrics, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap,
-                           QPolygonF, QRadialGradient)
+from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QImage, QLinearGradient, QPainter, QPainterPath, QPen,
+                           QPixmap, QPolygonF, QRadialGradient)
 from PySide6.QtWidgets import QWidget
 
 from . import display
@@ -413,9 +413,169 @@ class FlyingToasters(Saver):
         super().showEvent(event)
 
 
+class _PlusSaver(Saver):
+    """The Microsoft Plus! for Windows XP savers: their theme's wallpaper, with things moving over it."""
+    WALL = ""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        from . import themes
+        self.bg = QPixmap(str(themes.wallpaper(self.WALL)))
+        self.rnd = random.Random()
+        self.things = []
+
+    def paint_bg(self, p):
+        p.setRenderHint(QPainter.SmoothPixmapTransform)
+        p.drawPixmap(QRectF(self.rect()), self.bg, QRectF(self.bg.rect()))
+
+
+class Aquarium(_PlusSaver):
+    """Plus! Aquarium: fish swim across the tank, bubbles rise."""
+    WALL = "Aquarium"
+
+    def step(self):
+        w, h, s = self.width(), self.height(), self.s()
+        if len([t for t in self.things if t[0] == "fish"]) < 7:
+            d = self.rnd.choice([1, -1])
+            self.things.append(["fish", -60 * s if d > 0 else w + 60 * s, self.rnd.uniform(0.12, 0.75) * h, d,
+                                self.rnd.uniform(40, 110) * s, self.rnd.uniform(14, 30) * s,
+                                self.rnd.choice(["#FF7A1A", "#FFD21A", "#3AA0FF", "#FF4A8A", "#9A5AFF"])])
+        if self.rnd.random() < 0.3:
+            self.things.append(["bubble", self.rnd.uniform(0, w), h * 0.9, 0, self.rnd.uniform(30, 70) * s,
+                                self.rnd.uniform(2, 7) * s, None])
+        for t in self.things:
+            if t[0] == "fish":
+                t[1] += t[3] * t[4] / self.FPS
+                t[2] += math.sin(self.t * 2 + t[4]) * 0.3 * s
+            else:
+                t[2] -= t[4] / self.FPS
+                t[1] += math.sin(self.t * 4 + t[2] / 20) * 0.6 * s
+        self.things = [t for t in self.things if -100 * s < t[1] < w + 100 * s and t[2] > -20]
+
+    def paintEvent(self, event):
+        from .themes import _fish
+        p = QPainter(self)
+        self.paint_bg(p)
+        p.setRenderHint(QPainter.Antialiasing)
+        for t in self.things:
+            if t[0] == "fish":
+                _fish(p, t[1], t[2], t[5], t[6], "#FFFFFF", t[3])
+            else:
+                p.setPen(QPen(QColor(255, 255, 255, 170), 1.2))
+                p.setBrush(Qt.NoBrush)
+                p.drawEllipse(QPointF(t[1], t[2]), t[5], t[5])
+
+
+class Nature(_PlusSaver):
+    """Plus! Nature: leaves drifting down over the hills."""
+    WALL = "Nature"
+
+    def step(self):
+        w, h, s = self.width(), self.height(), self.s()
+        if len(self.things) < 40 and self.rnd.random() < 0.4:
+            self.things.append([self.rnd.uniform(0, w), -20, self.rnd.uniform(0, 360), self.rnd.uniform(30, 70) * s,
+                                self.rnd.uniform(8, 16) * s, self.rnd.randint(15, 60)])
+        for t in self.things:
+            t[1] += t[3] / self.FPS
+            t[0] += math.sin(self.t * 1.5 + t[3]) * 1.2 * s
+            t[2] += 3
+        self.things = [t for t in self.things if t[1] < h + 30]
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        self.paint_bg(p)
+        p.setRenderHint(QPainter.Antialiasing)
+        for x, y, a, _v, size, hue in self.things:
+            p.save()
+            p.translate(x, y)
+            p.rotate(a)
+            leaf = QPainterPath()
+            leaf.moveTo(-size, 0)
+            leaf.quadTo(0, -size * 0.7, size, 0)
+            leaf.quadTo(0, size * 0.7, -size, 0)
+            p.fillPath(leaf, QColor.fromHsv(hue, 210, 220))
+            p.restore()
+
+
+class Space(_PlusSaver):
+    """Plus! Space: comets streak past the ringed planet, stars twinkle."""
+    WALL = "Space"
+
+    def step(self):
+        w, h, s = self.width(), self.height(), self.s()
+        if self.rnd.random() < 0.03 and len(self.things) < 4:
+            self.things.append([self.rnd.uniform(0, w), -10, self.rnd.uniform(-4, -1) * 60 * s,
+                                self.rnd.uniform(2, 5) * 60 * s])
+        for t in self.things:
+            t[0] += t[2] / self.FPS
+            t[1] += t[3] / self.FPS
+        self.things = [t for t in self.things if t[1] < h + 50 and t[0] > -50]
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        self.paint_bg(p)
+        p.setRenderHint(QPainter.Antialiasing)
+        rnd = random.Random(int(self.t * 3))
+        for _ in range(25):
+            b = rnd.randint(180, 255)
+            p.fillRect(QRectF(rnd.uniform(0, self.width()), rnd.uniform(0, self.height()), 2, 2), QColor(b, b, 255))
+        for x, y, vx, vy in self.things:
+            g = QLinearGradient(x, y, x - vx * 0.4, y - vy * 0.4)
+            g.setColorAt(0, QColor(255, 255, 255, 230))
+            g.setColorAt(1, QColor(120, 180, 255, 0))
+            p.setPen(QPen(QBrush(g), 3 * self.s() + 1))
+            p.drawLine(QPointF(x, y), QPointF(x - vx * 0.4, y - vy * 0.4))
+
+
+class DaVinci(_PlusSaver):
+    """Plus! Da Vinci: sketches drawing themselves in ink on the parchment."""
+    WALL = "Da Vinci"
+
+    def step(self):
+        w, h, s = self.width(), self.height(), self.s()
+        if not self.things or self.things[-1][3] >= 1:
+            if len(self.things) > 6:
+                self.things.pop(0)
+            kind = self.rnd.choice(["circle", "gear", "spiral", "wing"])
+            self.things.append([kind, QPointF(self.rnd.uniform(0.1, 0.9) * w, self.rnd.uniform(0.1, 0.9) * h),
+                                self.rnd.uniform(30, 90) * s, 0.0])
+        self.things[-1][3] = min(1.0, self.things[-1][3] + 0.012)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        self.paint_bg(p)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(QPen(QColor(80, 45, 20, 210), 2))
+        p.setBrush(Qt.NoBrush)
+        for kind, c, r, done in self.things:
+            span = int(360 * 16 * done)
+            box = QRectF(c.x() - r, c.y() - r, 2 * r, 2 * r)
+            if kind == "circle":
+                p.drawArc(box, 0, span)
+                p.drawArc(box.adjusted(r * 0.4, r * 0.4, -r * 0.4, -r * 0.4), 0, span)
+            elif kind == "gear":
+                p.drawArc(box, 0, span)
+                for k in range(int(16 * done)):
+                    a = k * math.pi / 8
+                    p.drawLine(c + QPointF(math.cos(a) * r, math.sin(a) * r),
+                               c + QPointF(math.cos(a) * r * 1.2, math.sin(a) * r * 1.2))
+            elif kind == "spiral":
+                path = QPainterPath(c)
+                for k in range(int(200 * done)):
+                    a = k * 0.12
+                    path.lineTo(c + QPointF(math.cos(a) * r * k / 200, math.sin(a) * r * k / 200))
+                p.drawPath(path)
+            else:
+                path = QPainterPath(c)
+                for k in range(int(5 * done) + 1):
+                    path.quadTo(c + QPointF(r * (0.3 + k * 0.3), -r * 0.8), c + QPointF(r * (0.3 + k * 0.3), r * 0.2))
+                p.drawPath(path)
+
+
 SAVERS = {"(None)": None, "Windows XP": WindowsXP, "3D Pipes": Pipes, "Beziers": Beziers, "Blank": Blank,
           "Flying Toasters": FlyingToasters, "Marquee": Marquee, "My Pictures Slideshow": Slideshow,
-          "Mystify": Mystify, "Starfield": Starfield}
+          "Mystify": Mystify, "Starfield": Starfield, "Aquarium": Aquarium, "Da Vinci": DaVinci, "Nature": Nature,
+          "Space": Space}
 
 
 def make(name, parent=None):

@@ -20,7 +20,8 @@ from shiboken6 import isValid
 
 from .. import sound
 from ..paths import ROOT
-from ..wm import BORDER, TITLE_H, XPWindow
+from .. import theme
+from ..wm import XPWindow
 from .notepad import MENU_STYLE
 
 RUFFLE = ROOT / "assets" / "engines" / "ruffle"
@@ -366,7 +367,7 @@ class FlashPlayer(QWidget):
         if not w or not h:
             return
         area = self.desktop.work_area()
-        chrome_w, chrome_h = 2 * BORDER, TITLE_H + BORDER + MENU_H
+        chrome_w, chrome_h = 2 * theme.border(), theme.title_h() + theme.border() + MENU_H
         zoom = min(self.zoom, (area.width() - chrome_w) / w, (area.height() - chrome_h) / h)
         self.frame.resize(max(240, int(w * zoom) + chrome_w), max(160, int(h * zoom) + chrome_h))
         g = self.frame.geometry()

@@ -364,6 +364,23 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   thumbnails); FA upload stamps ('1249280389.') are dropped from names. Double-click: video/sound -> ClaudeAmp,
   .swf -> Flash Player, pictures -> FurFolio's viewer, archives open like folders. Fur CD Viewer now shows a
   disc's .swf files as Flash cards too and opens them in the Flash Player.
+- **Themes and visual styles** (theme.py, themes.py, programs/stylexp.py): XPWindow frames, the taskbar and the
+  Start menu draw through theme.current() (a Style: paint_frame / button_rects / paint_taskbar / paint_task_button /
+  paint_tray / paint_start_menu / menu_css / palette). Frame metrics are theme.title_h() / theme.border() (wm.TITLE_H
+  stays as Luna's for callers that pass Luna-sized windows; XPWindow adapts). Styles: Luna Blue/Olive Green/Silver
+  (the Luna jpgs recoloured hue-wise, cached in data/theme_cache), Windows Classic with 14 colour schemes (palette
+  applied to ClaudeXP's own windows and DialogBody faces only - adopted/hosted windows such as ClaudeAIM keep theirs),
+  and StyleXP-only Watercolor / Aqua X / Chrome Hex. Font size Normal/Large/Extra Large bumps title bars.
+  theme.set_state() saves to display.json["theme"] and emits notifier.changed -> Desktop re-fits every XPWindow.
+  Themes (themes.py): Windows XP, Windows Classic, Plus! Aquarium / Da Vinci / Nature / Space (painted wallpapers in
+  C:\WINDOWS\Web\Wallpaper, synthesised WAV sound schemes in data/theme_sounds via sound.set_scheme, drawn
+  pointers set on the desktop widget, matching Plus! screen savers). .theme files (INI) in
+  C:\WINDOWS\Resources\Themes; Explorer opens them in Display Properties. Display Properties has real Themes
+  (sample, Save As, Delete, Browse) and Appearance tabs, a 'Please wait...' cover while styles switch; Control
+  Panel gained Sounds and Audio Devices (sound scheme) and Mouse (pointer scheme). StyleXP: 30-day trial from first
+  run (clock), 5-second nag on start, 'Patch uxtheme.dll' (+ a Windows File Protection warning), random reminder on
+  apply; after expiry the third-party style falls back to Luna at log on with an 'expired' nag. Register always
+  fails (no key server in 2001). State in data/stylexp.json.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

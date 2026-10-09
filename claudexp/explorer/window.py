@@ -28,7 +28,7 @@ FILE_TYPES = {".lnk": "Shortcut",
     ".mp3": "MP3 Format Sound", ".htm": "HTML Document", ".html": "HTML Document", ".bat": "MS-DOS Batch File",
     ".sys": "System file", ".ttf": "TrueType Font file", ".json": "JSON File", ".zip": "Compressed (zipped) Folder",
     ".doc": "Microsoft Word Document", ".pdf": "Adobe Acrobat Document", ".mid": "MIDI Sequence",
-    ".swf": "Shockwave Flash Object", ".avi": "Video Clip", ".mpg": "Movie Clip", ".mpeg": "Movie Clip",
+    ".swf": "Shockwave Flash Object", ".theme": "Windows Theme File", ".avi": "Video Clip", ".mpg": "Movie Clip", ".mpeg": "Movie Clip",
     ".wmv": "Windows Media Audio/Video file", ".asf": "Windows Media Audio/Video file", ".mov": "QuickTime Movie",
     ".mp4": "MPEG-4 Movie", ".rm": "RealMedia File", ".ram": "RealMedia File",
 }

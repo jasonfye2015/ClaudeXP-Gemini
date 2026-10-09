@@ -47,6 +47,9 @@ def open_file(desktop, path):
     elif ext in VIDEO:
         from ..programs.amp import open_amp
         open_amp(desktop, path)
+    elif ext == ".theme":
+        from ..controlpanel import display_properties
+        display_properties(desktop, theme_file=path)
     elif ext in FLASH:
         from ..programs.flash import open_flash
         open_flash(desktop, path)

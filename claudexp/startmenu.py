@@ -5,7 +5,7 @@ from PySide6.QtCore import QPoint, QRect, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen
 from PySide6.QtWidgets import QMenu, QStyle, QWidget
 
-from . import programs, sound
+from . import programs, sound, theme
 from .paths import pixmap
 from .user import draw_user_picture, user_name
 
@@ -148,7 +148,8 @@ class StartMenu(QWidget):
 
     def _show_all_programs(self):
         menu = QMenu(self)
-        menu.setStyleSheet(MENU_STYLE)
+        css = theme.current().menu_css()
+        menu.setStyleSheet(css)
         folder = self.style().standardIcon(QStyle.SP_DirIcon)
         submenus = {"": menu}
 
@@ -159,7 +160,7 @@ class StartMenu(QWidget):
                 parent = submenu(parent_path)
                 sub = QMenu(name, parent)
                 sub.setIcon(folder)
-                sub.setStyleSheet(MENU_STYLE)
+                sub.setStyleSheet(css)
                 folders = [a for a in parent.actions() if a.menu()]
                 after = next((a for a in folders if a.text() > name), None)
                 if after is None:
@@ -192,10 +193,9 @@ class StartMenu(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         p.setRenderHint(QPainter.SmoothPixmapTransform)
-        p.drawPixmap(0, 0, self.bg)
-        p.fillRect(BAKED_HIGHLIGHT, QColor("#D3E5FA"))
-        self._draw_control_panel_item(p)
-        self._draw_help_item(p)
+        self.st = theme.current()
+        self.st.paint_start_menu(p, self)
+        p.setRenderHint(QPainter.Antialiasing)
         self._draw_header(p)
         self._draw_programs(p)
         self._draw_right_hover(p)
@@ -238,9 +238,10 @@ class StartMenu(QWidget):
         font.setBold(True)
         p.setFont(font)
         name_rect = QRect(68, 8, 300, 52)
-        p.setPen(QColor("#0F2C8C"))
-        p.drawText(name_rect.translated(1, 1), Qt.AlignVCenter | Qt.AlignLeft, user_name())
-        p.setPen(QColor("white"))
+        if self.st.sm_name_shadow:
+            p.setPen(QColor(self.st.sm_name_shadow))
+            p.drawText(name_rect.translated(1, 1), Qt.AlignVCenter | Qt.AlignLeft, user_name())
+        p.setPen(QColor(self.st.sm_name))
         p.drawText(name_rect, Qt.AlignVCenter | Qt.AlignLeft, user_name())
 
     def _draw_programs(self, p):
@@ -251,28 +252,32 @@ class StartMenu(QWidget):
             prog = programs.get(key)
             hovered = self.hover == item_id
             if hovered:
-                p.fillRect(rect, QColor("#316AC5"))
+                p.fillRect(rect, QColor(self.st.sm_hover))
             pinned = key in self.pinned and rect.top() == PINNED_TOP
             p.drawPixmap(rect.x() + 6, rect.center().y() - 16, prog.icon().pixmap(32, 32))
             text_rect = rect.adjusted(46, 0, -4, 0)
             name_font = QFont("Tahoma", 8)
             name_font.setBold(pinned)
             p.setFont(name_font)
-            p.setPen(QColor("white") if hovered else QColor("black"))
+            p.setPen(QColor(self.st.sm_hover_text) if hovered else QColor(self.st.sm_text))
             if pinned and prog.blurb:
                 p.drawText(text_rect.adjusted(0, 4, 0, -rect.height() // 2), Qt.AlignBottom | Qt.AlignLeft, prog.name)
                 p.setFont(QFont("Tahoma", 8))
-                p.setPen(QColor("white") if hovered else QColor("#7F7F7F"))
+                p.setPen(QColor(self.st.sm_hover_text) if hovered else QColor(self.st.sm_sub))
                 p.drawText(text_rect.adjusted(0, rect.height() // 2, 0, -4), Qt.AlignTop | Qt.AlignLeft, prog.blurb)
             else:
                 p.drawText(text_rect, Qt.AlignVCenter | Qt.AlignLeft, prog.name)
         if self.hover == ("all", None):
-            p.fillRect(ALL_PROGRAMS, QColor(49, 106, 197, 60))
+            c = QColor(self.st.sm_hover)
+            c.setAlpha(70)
+            p.fillRect(ALL_PROGRAMS, c)
 
     def _draw_right_hover(self, p):
         if self.hover and self.hover[0] == "right":
             rect = dict(RIGHT_ITEMS)[self.hover[1]]
-            p.fillRect(rect, QColor(49, 106, 197, 70))
+            c = QColor(self.st.sm_hover)
+            c.setAlpha(80)
+            p.fillRect(rect, c)
 
     def _draw_footer(self, p):
         p.setFont(QFont("Tahoma", 8))
@@ -299,5 +304,5 @@ class StartMenu(QWidget):
                 p.drawLine(c.x() - 5, c.y(), c.x() + 4, c.y())
                 p.drawLine(c.x() + 1, c.y() - 3, c.x() + 4, c.y())
                 p.drawLine(c.x() + 1, c.y() + 3, c.x() + 4, c.y())
-            p.setPen(QColor("white"))
+            p.setPen(QColor(self.st.sm_footer_text))
             p.drawText(rect.adjusted(30, 0, 0, 0), Qt.AlignVCenter | Qt.AlignLeft, label)

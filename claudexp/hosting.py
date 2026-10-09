@@ -9,6 +9,7 @@ from shiboken6 import isValid
 
 from . import sound
 from .tray import TrayIcon
+from . import theme
 from .wm import BORDER, TITLE_H, XPWindow
 
 DEFAULT_SIZE = QSize(400, 300)
@@ -40,7 +41,7 @@ class AppHost:
             size = size.expandedTo(widget.minimumSize())
 
         frame = XPWindow(self.desktop, widget.windowTitle() or self.name, widget, self.icon,
-                         size=(size.width() + 2 * BORDER, size.height() + TITLE_H + BORDER),
+                         size=(size.width() + 2 * BORDER, size.height() + TITLE_H + BORDER),   # Luna metrics; XPWindow adapts
                          buttons=("close",) if dialog else ("min", "max", "close"),
                          on_taskbar=not dialog)
         # Keep QDialog from re-centering itself inside the frame when shown.
@@ -50,7 +51,7 @@ class AppHost:
 
         area = self.desktop.work_area()
         if pos is not None:
-            target = pos - QPoint(BORDER, TITLE_H)
+            target = pos - QPoint(theme.border(), theme.title_h())
         elif dialog:
             target = area.center() - frame.rect().center()
         else:

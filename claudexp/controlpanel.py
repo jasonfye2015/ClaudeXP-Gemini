@@ -1,7 +1,7 @@
 """Control Panel, Display Properties (desktop background) and User Accounts (name and picture)."""
 from pathlib import Path
 
-from PySide6.QtCore import QRectF, QSize, Qt
+from PySide6.QtCore import QRect, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
                                QLineEdit, QListWidget, QListWidgetItem, QPushButton, QSpinBox, QStackedWidget, QStyle,
@@ -124,11 +124,15 @@ def _found_pictures():
     return found
 
 
-def display_properties(desktop):
-    return _single(desktop, "display", lambda: _make_display(desktop))
+def display_properties(desktop, theme_file=None, tab=None):
+    """Display Properties; theme_file opens a .theme file in the Themes tab (double-clicked in Explorer)."""
+    win = _open.get("display")
+    if (theme_file is not None or tab is not None) and win is not None and isValid(win):
+        desktop.close_window(win)
+    return _single(desktop, "display", lambda: _make_display(desktop, theme_file, tab))
 
 
-def _make_display(desktop):
+def _make_display(desktop, theme_file=None, tab=None):
     from .network import DialogBody, _fixed_window
     disp = display.get()
     body = DialogBody()
@@ -139,9 +143,9 @@ def _make_display(desktop):
                        "QTabBar::tab { background: #F0EFE6; border: 1px solid #919B9C; padding: 3px 8px;"
                        " font-family: Tahoma; font-size: 11px; }"
                        "QTabBar::tab:selected { background: #FCFCFE; border-bottom-color: #FCFCFE; }")
-    for name, text in (("Themes", "A theme is a background plus a set of sounds, icons, and other elements to "
-                                  "help you personalize your computer with one click.\n\nTheme:  Windows XP"),):
-        tabs.addTab(_info_page(text), name)
+    dirty = set()
+    themes_tab, theme_choice, refresh_themes = _themes_tab(desktop, lambda: mark("theme"), theme_file)
+    tabs.addTab(themes_tab, "Themes")
 
     page = QWidget()
     v = QVBoxLayout(page)
@@ -194,13 +198,13 @@ def _make_display(desktop):
     custom.clicked.connect(lambda: customize_desktop(desktop))
     v.addWidget(custom, 0, Qt.AlignLeft)
     tabs.addTab(page, "Desktop")
-    saver_tab, saver_values = _saver_tab(desktop, lambda: apply_btn.setEnabled(True))
+    saver_tab, saver_values = _saver_tab(desktop, lambda: mark("saver"))
     tabs.addTab(saver_tab, "Screen Saver")
-    tabs.addTab(_info_page("Windows and buttons:  Windows XP style\nColor scheme:  Default (blue)\n"
-                           "Font size:  Normal"), "Appearance")
+    look_tab, look_choice, refresh_look = _appearance_tab(lambda: mark("appearance"))
+    tabs.addTab(look_tab, "Appearance")
     tabs.addTab(_info_page("Display:  Plug and Play Monitor on NVIDIA GeForce2 MX\n\nScreen resolution:  "
                            "1024 by 768 pixels\nColor quality:  Highest (32 bit)"), "Settings")
-    tabs.setCurrentIndex(1)
+    tabs.setCurrentIndex({"themes": 0, "appearance": 3}.get(tab, 0 if theme_file else 1))
     root.addWidget(tabs)
     buttons = QHBoxLayout()
     buttons.addStretch()
@@ -218,16 +222,84 @@ def _make_display(desktop):
         return {"wallpaper": item.data(Qt.UserRole) if item else "", "position": position.currentText(),
                 "color": color.currentData()}
 
+    def mark(what):
+        dirty.add(what)
+        apply_btn.setEnabled(True)
+
     def changed(*_):
         preview.settings = chosen()
         preview.update()
-        apply_btn.setEnabled(True)
+        mark("desktop")
+
+    def show_desktop_settings():
+        """After a theme changed the background: select it in the Desktop tab (without marking it changed)."""
+        d = disp.data
+        for w in (lst, position, color):
+            w.blockSignals(True)
+        found = None
+        for i in range(lst.count()):
+            if lst.item(i).data(Qt.UserRole) == (d["wallpaper"] or ""):
+                found = lst.item(i)
+        if found is None and d["wallpaper"]:
+            found = QListWidgetItem(_thumb(d["wallpaper"]), Path(d["wallpaper"]).stem.replace("_", " "))
+            found.setData(Qt.UserRole, d["wallpaper"])
+            lst.addItem(found)
+        lst.setCurrentItem(found)
+        position.setCurrentText(d["position"])
+        idx = next((i for i in range(color.count()) if color.itemData(i).lower() == d["color"].lower()), -1)
+        if idx < 0:
+            sw = QPixmap(14, 14)
+            sw.fill(QColor(d["color"]))
+            color.addItem(QIcon(sw), "Custom", d["color"])
+            idx = color.count() - 1
+        color.setCurrentIndex(idx)
+        for w in (lst, position, color):
+            w.blockSignals(False)
+        preview.settings = dict(disp.data)
+        preview.update()
 
     def apply():
-        s = chosen()
-        disp.apply(s["wallpaper"], s["position"], s["color"])
-        disp.set_screensaver(**saver_values())
+        from . import theme, themes
+        todo = set(dirty)
+        dirty.clear()
         apply_btn.setEnabled(False)
+        st = theme.state()
+        before = (st["style"], st["scheme"], st.get("font", "normal"))
+        pick = theme_choice() if "theme" in todo else None
+        new_look = look_choice() if "appearance" in todo else None
+
+        def work():
+            if pick is not None:
+                name, cfg = pick
+                themes.apply(desktop, cfg, name)
+                if cfg.get("font"):
+                    theme.set_state(font=cfg["font"])
+                show_desktop_settings()
+                refresh_look()
+            if "desktop" in todo:
+                s = chosen()
+                disp.apply(s["wallpaper"], s["position"], s["color"])
+                theme.set_state(name="Modified Theme")
+            if "saver" in todo:
+                disp.set_screensaver(**saver_values())
+            if new_look is not None:
+                style, scheme, font = new_look
+                old = theme.state()
+                if (style, scheme, font) != (old["style"], old["scheme"], old.get("font", "normal")):
+                    theme.set_state(style=style, scheme=scheme, font=font, name="Modified Theme")
+                    desk = theme.current().desktop_color()
+                    if desk and old["scheme"] != scheme:
+                        disp.apply(disp.data["wallpaper"], disp.data["position"], desk)
+                        show_desktop_settings()
+            if todo & {"theme", "appearance", "desktop"}:
+                refresh_themes()
+
+        restyle = (pick is not None and (pick[1].get("style"), pick[1].get("scheme")) != before[:2]) or \
+            (new_look is not None and new_look != before)
+        if restyle:
+            themes.with_please_wait(desktop, work)
+        else:
+            work()
 
     def close():
         win = holder.pop("win", None)
@@ -254,13 +326,454 @@ def _make_display(desktop):
     color.currentIndexChanged.connect(changed)
     browse.clicked.connect(pick_browsed)
     apply_btn.clicked.connect(apply)
-    ok.clicked.connect(lambda: (apply(), close()))
+    ok.clicked.connect(lambda: (apply(), close()) if dirty else close())
     cancel.clicked.connect(close)
     win = _fixed_window(desktop, "Display Properties", body, close)
     win.icon = QIcon(monitor_icon(16))
     holder["win"] = win
     desktop.open_window(win)
     return win
+
+
+class ThemePreview(QWidget):
+    """Display Properties' sample: the theme's background, a window in its visual style and its taskbar."""
+
+    def __init__(self, size=(360, 190)):
+        super().__init__()
+        self.setFixedSize(*size)
+        self.cfg = None
+
+    def show_settings(self, cfg):
+        self.cfg = cfg
+        self.update()
+
+    def paintEvent(self, event):
+        from . import theme, themes
+        cfg = self.cfg or {}
+        st = theme.make_style(cfg.get("style", "luna"), cfg.get("scheme", "blue"), cfg.get("font", "normal"))
+        p = QPainter(self)
+        w, h = self.width(), self.height()
+        d = dict(display.get().data)
+        wall = themes.resolve_wallpaper(cfg.get("wallpaper"))
+        if wall is not None:
+            d.update(wallpaper=wall or "", position=cfg.get("position", "Stretch"), color=cfg.get("color", d["color"]))
+        p.drawPixmap(QRectF(0, 0, w, h), display.get().render(1024, 738, d), QRectF(0, 0, 1024, 738))
+        ww, wh = w - 70, h - 66
+        p.save()
+        p.translate(22, 12)
+        st.paint_frame(p, ww, wh, "Active Window", QIcon(monitor_icon(16)), True, ("min", "max", "close"))
+        pal = st.palette()
+        face = pal.window().color() if pal is not None else QColor("#ECE9D8")
+        p.fillRect(st.border, st.title_h, ww - 2 * st.border, wh - st.title_h - st.border, face)
+        p.fillRect(QRectF(st.border + 8, st.title_h + 8, ww - 2 * st.border - 16, wh - st.title_h - 20),
+                   QColor("#000000" if face.value() < 60 else "#FFFFFF"))
+        p.setPen(QColor("#FFFFFF" if face.value() < 60 else "#000000"))
+        p.setFont(QFont("Tahoma", 8))
+        p.drawText(st.border + 14, st.title_h + 24, "Window Text")
+        p.restore()
+        p.save()
+        p.translate(0, h - 30)
+        st.paint_taskbar(p, QRect(0, 0, w, 30), QRect(0, 0, st.start_width(), 30), False)
+        p.restore()
+        p.setPen(QPen(QColor("#7F9DB9"), 1))
+        p.setBrush(Qt.NoBrush)
+        p.drawRect(self.rect().adjusted(0, 0, -1, -1))
+
+
+def _theme_entries():
+    """[(label, name, cfg, file)] for the Theme list: the built-ins, then .theme files the user saved."""
+    from . import themes
+    from .explorer import vfs
+    out = [(name, name, cfg, None) for name, cfg in themes.THEMES.items()]
+    for folder in (vfs.my_documents(), vfs.user_home() / "Desktop"):
+        if folder.is_dir():
+            for f in sorted(folder.glob("*.theme")):
+                got = themes.read_file(f)
+                if got:
+                    where = "My Documents" if folder == vfs.my_documents() else "Desktop"
+                    out.append((f"{got[0]} ({where})", got[0], got[1], f))
+    return out
+
+
+def _themes_tab(desktop, on_change, theme_file=None):
+    """Display Properties' Themes tab. Returns (widget, chosen() -> (name, cfg) or None, refresh())."""
+    from . import theme, themes
+    themes.install_files()
+    page = QWidget()
+    v = QVBoxLayout(page)
+    intro = QLabel("A theme is a background plus a set of sounds, icons, and other elements to help you "
+                   "personalize your computer with one click.")
+    intro.setWordWrap(True)
+    v.addWidget(intro)
+    theme_label = QLabel("&Theme:")
+    v.addWidget(theme_label)
+    row = QHBoxLayout()
+    combo = QComboBox()
+    theme_label.setBuddy(combo)
+    row.addWidget(combo, 1)
+    save = QPushButton("&Save As...")
+    delete = QPushButton("&Delete")
+    row.addWidget(save)
+    row.addWidget(delete)
+    v.addLayout(row)
+    v.addWidget(QLabel("Sample:"))
+    sample = ThemePreview()
+    v.addWidget(sample, 0, Qt.AlignHCenter)
+    v.addStretch()
+    extra = {}                                   # themes opened with Browse... or from Explorer: name -> (cfg, file)
+
+    def fill(select=None):
+        combo.blockSignals(True)
+        combo.clear()
+        cur = theme.state().get("name", "Windows XP")
+        entries = _theme_entries()
+        if cur not in [e[1] for e in entries] and cur not in extra:
+            combo.addItem(cur, (cur, None, None))
+        for label, name, cfg, f in entries:
+            combo.addItem(label, (name, cfg, str(f) if f else None))
+        for name, (cfg, f) in extra.items():
+            combo.addItem(name, (name, cfg, f))
+        combo.addItem("Browse...", ("__browse__", None, None))
+        target = select or cur
+        for i in range(combo.count()):
+            if combo.itemData(i)[0] == target:
+                combo.setCurrentIndex(i)
+                break
+        combo.blockSignals(False)
+        show()
+
+    def show():
+        data = combo.currentData()
+        if not data:
+            return
+        _name, cfg, f = data
+        sample.show_settings(cfg if cfg else themes.current_settings())
+        delete.setEnabled(bool(f) and str(themes.themes_dir()) not in str(f))
+
+    def picked(i):
+        data = combo.itemData(i)
+        if data and data[0] == "__browse__":
+            from .programs.opendialog import open_dialog
+
+            def got(path):
+                res = themes.read_file(path)
+                if res:
+                    extra[res[0]] = (res[1], str(path))
+                    fill(select=res[0])
+                    on_change()
+            fill()
+            open_dialog(desktop, "Open Theme", {".theme"}, got, QIcon(monitor_icon(16)), themes.themes_dir())
+            return
+        show()
+        if data and data[1] is not None:
+            on_change()
+
+    def save_as():
+        from .explorer import vfs
+        from .network import DialogBody, _fixed_window
+        body = DialogBody()
+        lay = QVBoxLayout(body)
+        lay.setContentsMargins(12, 12, 12, 12)
+        lay.addWidget(QLabel("Save the current theme in My Documents as:"))
+        name = QLineEdit("My Theme")
+        lay.addWidget(name)
+        r = QHBoxLayout()
+        r.addStretch()
+        ok, cancel = QPushButton("Save"), QPushButton("Cancel")
+        for b in (ok, cancel):
+            b.setFixedSize(75, 23)
+            r.addWidget(b)
+        lay.addLayout(r)
+        body.setFixedWidth(300)
+        holder = {}
+
+        def close():
+            w = holder.pop("win", None)
+            if w is not None and isValid(w):
+                desktop.close_window(w)
+
+        def do_save():
+            bad = set('\\/:*?"<>|')
+            label = "".join(c for c in name.text().strip() if c not in bad) or "My Theme"
+            themes.write_file(vfs.my_documents() / f"{label}.theme", label, themes.current_settings())
+            theme.set_state(name=label)
+            close()
+            fill(select=label)
+        ok.clicked.connect(do_save)
+        cancel.clicked.connect(close)
+        holder["win"] = _fixed_window(desktop, "Save Theme", body, close)
+        desktop.open_window(holder["win"])
+        name.selectAll()
+        name.setFocus()
+
+    def remove():
+        from .explorer import vfs
+        data = combo.currentData()
+        if data and data[2] and Path(data[2]).exists():
+            vfs.recycle(Path(data[2]))
+            extra.pop(data[0], None)
+            fill()
+
+    combo.currentIndexChanged.connect(picked)
+    save.clicked.connect(save_as)
+    delete.clicked.connect(remove)
+    res = themes.read_file(theme_file) if theme_file is not None else None
+    if res:
+        from PySide6.QtCore import QTimer
+        extra[res[0]] = (res[1], str(theme_file))
+        fill(select=res[0])
+        QTimer.singleShot(0, on_change)            # once the dialog (and its Apply button) exists
+    else:
+        fill()
+
+    def chosen():
+        data = combo.currentData()
+        if not data or data[1] is None:
+            return None
+        return data[0], data[1]
+    return page, chosen, fill
+
+
+class AppearancePreview(QWidget):
+    """Appearance tab sample: an inactive window, an active one and a message box."""
+
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(360, 170)
+        self.look = ("luna", "blue", "normal")
+
+    def paintEvent(self, event):
+        from . import theme
+        st = theme.make_style(*self.look)
+        p = QPainter(self)
+        p.fillRect(self.rect(), QColor(st.desktop_color() or "#5A7EC8"))
+        pal = st.palette()
+        face = pal.window().color() if pal is not None else QColor("#ECE9D8")
+        ink = QColor("#FFFFFF" if face.value() < 60 else "#000000")
+        for x, y, ww, wh, title, active in ((10, 8, 250, 100, "Inactive Window", False),
+                                             (40, 40, 310, 122, "Active Window", True)):
+            p.save()
+            p.translate(x, y)
+            st.paint_frame(p, ww, wh, title, QIcon(monitor_icon(16)), active, ("min", "max", "close"))
+            p.fillRect(st.border, st.title_h, ww - 2 * st.border, wh - st.title_h - st.border, face)
+            if active:
+                p.setFont(QFont("Tahoma", 8))
+                p.setPen(ink)
+                p.drawText(st.border + 8, st.title_h + 16, "Window Text")
+                sel = pal.highlight().color() if pal is not None else QColor("#316AC5")
+                p.fillRect(QRectF(st.border + 90, st.title_h + 5, 56, 15), sel)
+                p.setPen(QColor("white"))
+                p.drawText(st.border + 94, st.title_h + 16, "Selected")
+                p.save()
+                p.translate(80, st.title_h + 26)
+                st.paint_frame(p, 170, 56, "Message Box", None, True, ("close",))
+                p.fillRect(st.border, st.title_h, 170 - 2 * st.border, 56 - st.title_h - st.border, face)
+                p.setFont(QFont("Tahoma", 8))
+                p.setPen(ink)
+                p.drawText(st.border + 6, st.title_h + 14, "Message Text")
+                p.restore()
+            p.restore()
+        p.setPen(QPen(QColor("#7F9DB9"), 1))
+        p.setBrush(Qt.NoBrush)
+        p.drawRect(self.rect().adjusted(0, 0, -1, -1))
+
+
+def _appearance_tab(on_change):
+    """Display Properties' Appearance tab. Returns (widget, chosen() -> (style, scheme, font), refresh())."""
+    from . import theme
+    page = QWidget()
+    v = QVBoxLayout(page)
+    sample = AppearancePreview()
+    v.addWidget(sample, 0, Qt.AlignHCenter)
+    grid = QGridLayout()
+    styles, schemes, fonts = QComboBox(), QComboBox(), QComboBox()
+    for row, (text, box) in enumerate((("&Windows and buttons:", styles), ("Color s&cheme:", schemes),
+                                       ("Font si&ze:", fonts))):
+        label = QLabel(text)
+        label.setBuddy(box)
+        grid.addWidget(label, row * 2, 0)
+        grid.addWidget(box, row * 2 + 1, 0)
+    for key, label in theme.FONT_SIZES:
+        fonts.addItem(label, key)
+    v.addLayout(grid)
+    note = QLabel()
+    note.setWordWrap(True)
+    v.addWidget(note)
+    v.addStretch()
+
+    def fill_schemes(style, select=None):
+        schemes.blockSignals(True)
+        schemes.clear()
+        for key, label in theme.schemes(style):
+            schemes.addItem(label, key)
+        schemes.setCurrentIndex(max(0, schemes.findData(select)) if select is not None else 0)
+        schemes.blockSignals(False)
+
+    def chosen():
+        return styles.currentData() or "luna", schemes.currentData() or "blue", fonts.currentData() or "normal"
+
+    def update():
+        sample.look = chosen()
+        sample.update()
+        note.setText("This visual style isn't from Microsoft: it loads because StyleXP has patched uxtheme.dll."
+                     if styles.currentData() in theme.HACKED else "")
+
+    def refresh():
+        s = theme.state()
+        for w in (styles, fonts):
+            w.blockSignals(True)
+        styles.clear()
+        for key, label in theme.all_styles():
+            styles.addItem(label, key)
+        styles.setCurrentIndex(max(0, styles.findData(s["style"])))
+        fonts.setCurrentIndex(max(0, fonts.findData(s.get("font", "normal"))))
+        for w in (styles, fonts):
+            w.blockSignals(False)
+        fill_schemes(s["style"], s["scheme"])
+        update()
+
+    def style_changed(_i):
+        fill_schemes(styles.currentData())
+        update()
+        on_change()
+
+    styles.currentIndexChanged.connect(style_changed)
+    schemes.currentIndexChanged.connect(lambda _i: (update(), on_change()))
+    fonts.currentIndexChanged.connect(lambda _i: (update(), on_change()))
+    refresh()
+    return page, chosen, refresh
+
+
+def _scheme_dialog(desktop, title, icon, label, choices, current, preview, on_apply):
+    """A one-tab properties box with a scheme drop-down (Sounds and Audio Devices / Mouse)."""
+    from .network import DialogBody, _fixed_window
+    body = DialogBody()
+    v = QVBoxLayout(body)
+    v.setContentsMargins(10, 10, 10, 10)
+    v.addWidget(QLabel(label))
+    combo = QComboBox()
+    combo.addItems(choices)
+    combo.setCurrentText(current)
+    v.addWidget(combo)
+    v.addWidget(preview)
+    row = QHBoxLayout()
+    row.addStretch()
+    ok, cancel, apply_btn = QPushButton("OK"), QPushButton("Cancel"), QPushButton("&Apply")
+    for b in (ok, cancel, apply_btn):
+        b.setFixedSize(75, 23)
+        row.addWidget(b)
+    v.addLayout(row)
+    body.setFixedWidth(340)
+    holder = {}
+
+    def close():
+        w = holder.pop("win", None)
+        if w is not None and isValid(w):
+            desktop.close_window(w)
+    apply_btn.clicked.connect(lambda: on_apply(combo.currentText()))
+    ok.clicked.connect(lambda: (on_apply(combo.currentText()), close()))
+    cancel.clicked.connect(close)
+    combo.currentTextChanged.connect(lambda t: preview.show_scheme(t))
+    preview.show_scheme(combo.currentText())
+    win = _fixed_window(desktop, title, body, close)
+    win.icon = icon
+    holder["win"] = win
+    desktop.open_window(win)
+    return win
+
+
+class _SoundList(QListWidget):
+    """Program events: double-click one to hear it in the chosen scheme."""
+
+    EVENTS = [("Default Beep", "default"), ("Critical Stop", "error"), ("Exclamation", "exclamation"),
+              ("Asterisk", "info"), ("Menu Command", "menu"), ("Minimize", "minimize"), ("Restore Up", "restore"),
+              ("Windows Logon", "logon"), ("Windows Logoff", "logoff"), ("Notify", "notify"),
+              ("Empty Recycle Bin", "recycle")]
+
+    def __init__(self):
+        super().__init__()
+        self.setFixedHeight(170)
+        self.scheme = "Windows Default"
+        for label, ev in self.EVENTS:
+            it = QListWidgetItem(std(QStyle.SP_MediaVolume), label)
+            it.setData(Qt.UserRole, ev)
+            self.addItem(it)
+        self.itemDoubleClicked.connect(self._play)
+
+    def show_scheme(self, name):
+        self.scheme = name
+
+    def _play(self, item):
+        from PySide6.QtMultimedia import QSoundEffect
+        from PySide6.QtCore import QUrl
+        from . import themes
+        from .paths import SOUNDS
+        ev = item.data(Qt.UserRole)
+        if sound.is_muted() or self.scheme == "No Sounds":
+            return
+        if self.scheme in ("Aquarium", "Da Vinci", "Nature", "Space"):
+            path = themes.sound_file(self.scheme, ev)
+        else:
+            path = SOUNDS / sound.EVENTS[ev]
+        fx = QSoundEffect(self)
+        fx.setSource(QUrl.fromLocalFile(str(path)))
+        fx.play()
+        self._fx = fx
+
+
+def sound_properties(desktop):
+    from . import theme, themes
+
+    def apply(name):
+        theme.set_state(sounds=name, name="Modified Theme")
+        themes.apply_sounds(name)
+    return _single(desktop, "sounds", lambda: _scheme_dialog(
+        desktop, "Sounds and Audio Devices Properties", std(QStyle.SP_MediaVolume),
+        "Sound scheme:  (double-click an event below to hear it)", themes.SOUND_SCHEMES,
+        theme.state().get("sounds", "Windows Default"), _SoundList(), apply))
+
+
+class _PointerPreview(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(300, 90)
+        self.scheme = "Windows Default"
+
+    def show_scheme(self, name):
+        self.scheme = name
+        self.update()
+
+    def paintEvent(self, event):
+        from . import themes
+        p = QPainter(self)
+        p.fillRect(self.rect(), QColor("white"))
+        p.setPen(QColor("#7F9DB9"))
+        p.drawRect(self.rect().adjusted(0, 0, -1, -1))
+        p.setRenderHint(QPainter.Antialiasing)
+        if self.scheme == "Windows Default":                    # the standard white arrow
+            from PySide6.QtCore import QPointF
+            from PySide6.QtGui import QPolygonF
+            p.setPen(QPen(QColor("black"), 1))
+            p.setBrush(QColor("white"))
+            p.drawPolygon(QPolygonF([QPointF(32 + x, 28 + y) for x, y in
+                                     ((0, 0), (0, 22), (6, 16), (10, 25), (13, 24), (9, 15), (17, 15))]))
+        else:
+            p.drawPixmap(30, 28, themes.cursor_pixmap(self.scheme))
+        p.setPen(QColor("black"))
+        p.setFont(QFont("Tahoma", 8))
+        p.drawText(QRect(80, 0, 210, self.height()), Qt.AlignVCenter | Qt.AlignLeft,
+                   f"Normal Select\n({self.scheme})")
+
+
+def mouse_properties(desktop):
+    from . import theme, themes
+
+    def apply(name):
+        theme.set_state(cursors=name, name="Modified Theme")
+        themes.apply_cursors(desktop, name)
+    return _single(desktop, "mouse", lambda: _scheme_dialog(
+        desktop, "Mouse Properties", std(QStyle.SP_ArrowUp), "Pointers - Scheme:", themes.CURSOR_SCHEMES,
+        theme.state().get("cursors", "Windows Default"), _PointerPreview(), apply))
 
 
 def _saver_tab(desktop, on_change):
@@ -816,7 +1329,8 @@ def control_panel(desktop):
             ("Windows Update", programs.get("winupdate").icon(), lambda: programs.launch(desktop, "winupdate")),
             ("Add or Remove Programs", std(QStyle.SP_DialogApplyButton), not_here("Add or Remove Programs")),
             ("Date and Time", std(QStyle.SP_FileDialogInfoView), not_here("Date and Time")),
-            ("Sounds and Audio Devices", std(QStyle.SP_MediaVolume), not_here("Sounds and Audio Devices")),
+            ("Sounds and Audio Devices", std(QStyle.SP_MediaVolume), lambda: sound_properties(desktop)),
+            ("Mouse", std(QStyle.SP_ArrowUp), lambda: mouse_properties(desktop)),
             ("Internet Options", std(QStyle.SP_BrowserReload), not_here("Internet Options")),
             ("Printers and Faxes", _printer_icon(), lambda: _printers(desktop)),
             ("Scheduled Tasks", std(QStyle.SP_FileDialogDetailedView), not_here("Scheduled Tasks")),

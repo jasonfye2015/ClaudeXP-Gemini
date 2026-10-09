@@ -39,11 +39,23 @@ class Sounds(QObject):
         super().__init__(parent)
         self.muted = False
         self._effects = {}
+        self.scheme = None              # event -> path (or None for silence) from a theme's sound scheme
+
+    def path(self, event):
+        if self.scheme is not None and event in self.scheme:
+            return self.scheme[event]
+        return SOUNDS / EVENTS[event] if event in EVENTS else None
+
+    def set_scheme(self, scheme):
+        self.scheme = scheme
+        for effect in self._effects.values():
+            effect.deleteLater()
+        self._effects = {}
 
     def _effect(self, event):
         if event not in self._effects:
             effect = QSoundEffect(self)
-            effect.setSource(QUrl.fromLocalFile(str(SOUNDS / EVENTS[event])))
+            effect.setSource(QUrl.fromLocalFile(str(self.path(event))))
             self._effects[event] = effect
         return self._effects[event]
 
@@ -53,7 +65,8 @@ class Sounds(QObject):
 
     def play(self, event, on_finished=None):
         """Play an event sound. on_finished is called once when it ends (or right away if it can't play)."""
-        if self.muted or event not in EVENTS or not (SOUNDS / EVENTS[event]).exists():
+        path = self.path(event) if event in EVENTS else None
+        if self.muted or path is None or not path.exists():
             if on_finished:
                 QTimer.singleShot(0, on_finished)
             return
@@ -129,6 +142,11 @@ def _instance():
 
 def play(event, on_finished=None):
     _instance().play(event, on_finished)
+
+
+def set_scheme(scheme):
+    """Use a theme's sounds ({event: path or None}), or None for the Windows Default scheme."""
+    _instance().set_scheme(scheme)
 
 
 def preload():
