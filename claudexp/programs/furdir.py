@@ -272,6 +272,12 @@ def _hours(h):
     return f"{fix(h[0])} - {fix(h[1])}"
 
 
+def _age(pers):
+    """Worked out from a "dob" on ClaudeXP's 2001 calendar, when no age is written down."""
+    from ..fursonas import age_from
+    return age_from({"dob": pers.get("dob", "")}) if pers.get("dob") else ""
+
+
 def _email(name):
     try:
         from ..life import email_address
@@ -383,7 +389,7 @@ class Card:
                       ("...", r.name) else ""),
             self._row("Location", pers.get("location"), tz.replace("_", " ").split("/")[-1] if tz else ""),
             self._row("Sex", pers.get("sex")),
-            self._row("Age", pers.get("age")),
+            self._row("Age", pers.get("age"), str(_age(pers))),
             self._row("Date of birth", pers.get("dob")),
             self._row("Job", pers.get("job")),
             self._row("Work hours", pers.get("work_hours")),

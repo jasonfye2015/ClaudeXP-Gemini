@@ -417,6 +417,10 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   unlisted (only the fursona) - with he/she/they from the preset's sex. It's added to life.context() (so AIM gets it
   through hosting.extra_context, no ClaudeAIM change) and to IRC/MUCK prompts for the regulars.
   The Fur Directory lists the presets first as 'User Fursonas', the chosen one marked THIS IS YOU.
+  Five presets from the user's User Profiles/ folder: Alpha, Beep (they/them), Kithylin, OceanDragon, SnowMEW
+  (images resized: account 256px square, buddy icon 128px, albums Fursuit / Fursona Art at 1024px). Age comes from
+  "dob" on the 2001 calendar (fursonas.age_from); pronouns from "pronouns", else sex. Every preset knows the 9 AIM
+  buddies as friends by default.
 - **ClaudeRPG** (programs/rpg.py; Start > Games + desktop Games folder + desktop icon; clauderpg.exe): the
   standalone browser roguelike's ClaudeXP release copy in Program Files/ClaudeRPG/ (the newest 'ClaudeRPG v*.html'
   runs; v15.5 shipped). QWebEngineView with a named persistent profile in data/clauderpg (localStorage saves keep

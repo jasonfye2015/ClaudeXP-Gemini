@@ -266,7 +266,7 @@ class Oobe(QWidget):
                 self.name.setText(self.suggested)
         else:
             sona, pers = pr.get("fursona", default={}), pr.get("personal", default={})
-            facts = [v for v in (pers.get("age") and f"{pers['age']}-year-old", pers.get("sex", "").lower(),
+            facts = [v for v in (fursonas.age(pr) and f"{fursonas.age(pr)}-year-old", pers.get("sex", "").lower(),
                                  sona.get("species")) if v]
             where = pers.get("location", "")
             self.sona_info.setText(

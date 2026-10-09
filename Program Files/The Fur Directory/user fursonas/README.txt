@@ -20,9 +20,17 @@ profile.json uses the same fields as a resident record (see ..\README.txt), plus
   "online"        { "away_message": AIM away message,
                     "irc_realname": IRC 'Full Name',
                     "muck_desc":    the MUCK character's description (what 'look' shows) }
+  "personal"      as for residents, plus "pronouns" ("they/them" etc.; otherwise from "sex") and "dob" (M/D/YYYY;
+                  the age is worked out on ClaudeXP's 2001 calendar when "age" is blank)
+  other text      "mannerisms", "interests", "roleplay_hooks", "roleplay_notes", "sample_poses"... each shows on
+                  the card as its own section
   "knows"         [ { "name": "<resident>", "closeness": "close" | "friend" | "acquaintance",
                       "how_met": "Met at Anthrocon 2000." }, ... ]
 
 What residents know about you comes from "knows": close friends know your life (real name, job, hours,
 personality, favourites, relationship status); friends know your fursona, age, where you live, fursuit and cons;
 acquaintances and anyone not listed only know what they can see (your fursona).
+
+The five here (Alpha, Beep, Kithylin, OceanDragon, SnowMEW) were made from the source material in the ClaudeXP
+folder's "User Profiles" (Details.txt, MUCK char desc.txt and pictures): account.jpg is the profile picture cropped
+square (256px), buddy_icon.jpg the icon (128px), and photos\Fursuit and photos\Fursona Art the rest (max 1024px).

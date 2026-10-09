@@ -1,0 +1,104 @@
+{
+  "fur_name": "Alpha",
+  "handle": "Alpha",
+  "summary": "A small, snow-white arctic wolf with a plain blue collar. Friendly, curious and a little mischievous.",
+  "screen_names": {
+    "aim": "",
+    "irc": "",
+    "muck": "",
+    "email": ""
+  },
+  "personal": {
+    "real_name": "Jason Lupine",
+    "location": "",
+    "sex": "Male",
+    "pronouns": "",
+    "age": "",
+    "dob": "4/25/1978",
+    "job": "None",
+    "work_hours": "",
+    "sleep_hours": "11pm-6am",
+    "online_hours": ""
+  },
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "fursona": {
+    "species": "Arctic Wolf",
+    "colors": "Snow white",
+    "markings": "",
+    "clothing": "",
+    "description": "A small, snow-white arctic wolf with bright blue eyes and a plain blue collar.",
+    "eyes": "Blue",
+    "height": "Small",
+    "accessories": "A simple blue collar, with no bell"
+  },
+  "personality": "Alpha is friendly, curious, and approachable, with a gentle nature that makes him easy to spend time with. He enjoys meeting new people, discovering unfamiliar places, and finding little things that make an ordinary day interesting.\n\nHis small size doesn't stop him from being adventurous. Alpha can be playful and energetic when he's comfortable, though he also appreciates quiet moments and friendly company. He may occasionally be a little mischievous, especially when he thinks he can get away with something cute.\n\nAlpha values kindness and companionship. He tends to warm up to people who treat him with patience and respect, and he enjoys roleplay that allows friendships and personalities to develop naturally.",
+  "mannerisms": "• His ears perk up whenever something catches his attention.\n• His bushy tail gives away his excitement, even when he tries to act composed.\n• He may tilt his head when confused or intrigued.\n• He enjoys curling up somewhere comfortable when things grow quiet.\n• When meeting someone new, he may approach cautiously before becoming more outgoing.",
+  "interests": "Alpha is open to discovering new interests through roleplay. He might enjoy snowy landscapes, exploring forests, making friends, playful adventures, relaxing in cozy places, and simply spending time with others.",
+  "roleplay_hooks": "• A little explorer: Alpha is wandering through an unfamiliar area and is happy to have someone show him around.\n• A new friend: He approaches another character with a curious look and a tentative greeting.\n• Winter wanderer: Alpha is enjoying a snowy day and might invite someone to join him.\n• Quiet companionship: He finds a comfortable place to relax and welcomes friendly company.\n• Unexpected mischief: Alpha has discovered something interesting and may or may not have a harmless plan involving it.",
+  "roleplay_notes": "Alpha is a small, snow-white arctic wolf with blue eyes and a plain blue collar without a bell. His personality and personal history are intentionally flexible, allowing them to grow naturally through interactions. Other characters are welcome to approach him, befriend him, and help shape his adventures.",
+  "sample_poses": "Arrival:\nAlpha pads into the area, his snow-white fur looking almost luminous beneath the light. His blue eyes wander curiously over his surroundings as his fluffy tail sways behind him.\nGreeting:\nThe small arctic wolf perks up his ears and offers a friendly smile. \"Hi there! Mind if I keep you company for a while?\"\nCuriosity:\nAlpha tilts his head, bright blue eyes fixed on the unfamiliar object. One ear swivels forward as he takes a cautious step closer. \"Ooh... what's that?\"\nRelaxing:\nFinding a comfortable spot, Alpha curls up with his bushy tail tucked around his paws. He lets out a contented sigh, looking quite pleased with his little corner of the world.\nPlayful:\nAlpha gives his tail a quick wag and bounces lightly on his paws, a mischievous glint in his blue eyes. \"Bet you can't catch me!\" he announces before scampering away.",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "online": {
+    "away_message": "",
+    "irc_realname": "",
+    "muck_desc": "Alpha is a small anthropomorphic arctic wolf with beautiful, snow-white fur from the tips of his ears to the end of his tail. His thick, fluffy coat gives him a soft, cuddly appearance, reminiscent of freshly fallen snow. His bright blue eyes stand out against his pure white fur, giving him an expressive and attentive look.\n\nAround his neck, Alpha wears a simple blue collar. It adds a splash of color to his otherwise entirely white appearance without getting in the way of his fluffy coat.\n\nDespite his small stature, Alpha has the unmistakable features of an arctic wolf: pointed ears, a wolfish muzzle, strong paws, and a bushy tail."
+  },
+  "knows": [
+    {
+      "name": "ArcticFox",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "CyberianHusky",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "KittyKat",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "LazyFox",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "MushTheHusky",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "RedFawks",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "Renamon",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "WinterDragon",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "XavierPup",
+      "closeness": "friend",
+      "how_met": ""
+    }
+  ],
+  "friends": [],
+  "files": [],
+  "webpages": [],
+  "notes": ""
+}

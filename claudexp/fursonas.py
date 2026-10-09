@@ -225,6 +225,36 @@ def closeness(name):
     return None, ""
 
 
+def pronouns(p):
+    """(he, his, him) for a preset: its "pronouns" field ('they/them'...), else from its sex."""
+    pers = p.get("personal", default={})
+    given = str(pers.get("pronouns", "")).lower()
+    sex = str(pers.get("sex", "")).lower()
+    if given.startswith("he") or (not given and sex in ("male", "m")):
+        return "he", "his", "him"
+    if given.startswith("she") or (not given and sex in ("female", "f")):
+        return "she", "her", "her"
+    return "they", "their", "them"
+
+
+def age(p):
+    """Age on ClaudeXP's calendar (it's always 2001) from the preset's "dob" (M/D/YYYY), or its "age"."""
+    return age_from(p.get("personal", default={}))
+
+
+def age_from(pers):
+    """Age from a record's personal details ("age", else "dob" as M/D/YYYY on ClaudeXP's 2001 calendar)."""
+    if str(pers.get("age", "")).strip():
+        return pers["age"]
+    try:
+        from . import clock
+        m, d, y = (int(x) for x in str(pers.get("dob", "")).split("/"))
+        now = clock.now()
+        return now.year - y - ((now.month, now.day) < (m, d))
+    except (ValueError, TypeError):
+        return ""
+
+
 def knowledge(name, called=None):
     """A paragraph for a resident's prompt: what they know about you (empty for 'Be unique')."""
     p = chosen()
@@ -234,9 +264,14 @@ def knowledge(name, called=None):
     level, how_met = closeness(name)
     sona, pers = p.get("fursona", default={}), p.get("personal", default={})
     sex = str(pers.get("sex", "")).lower()
-    he, his, him = (("he", "his", "him") if sex in ("male", "m") else ("she", "her", "her")
-                    if sex in ("female", "f") else ("they", "their", "them"))
+    he, his, him = pronouns(p)
     hes = {"he": "he's", "she": "she's"}.get(he, "they're")
+    if not pers.get("age") and age(p):
+        pers = dict(pers, age=str(age(p)))
+    if he == "they" and pers.get("pronouns"):
+        lines_pron = f"(use {pers['pronouns']} pronouns for {you})"
+    else:
+        lines_pron = ""
     look = ""
     if sona.get("species"):
         look = f"{his} fursona is {_a(sona['species'])}"
@@ -247,8 +282,9 @@ def knowledge(name, called=None):
         if not look:
             return ""
         return (f"\n\nWhat you can tell about {you} just from seeing {him} around (you don't really know {him} "
-                f"yet): {look}.")
-    lines.append(f"{you} is {CLOSENESS.get(level, 'a friend')} of yours." + (f" {how_met}" if how_met else ""))
+                f"yet): {look}." + (f" {lines_pron}" if lines_pron else ""))
+    lines.append(f"{you} is {CLOSENESS.get(level, 'a friend')} of yours." + (f" {how_met}" if how_met else "")
+                 + (f" {lines_pron}" if lines_pron else ""))
     if look:
         lines.append(look[:1].upper() + look[1:] + ".")
     if level == "acquaintance":
@@ -257,7 +293,7 @@ def knowledge(name, called=None):
     if pers.get("age"):
         basics.append(f"{hes} {pers['age']}")
     if sex:
-        basics.append(f"{'male' if sex in ('male', 'm') else 'female' if sex in ('female', 'f') else sex}")
+        basics.append(f"{'male' if sex in ('male', 'm') else 'female' if sex in ('female', 'f') else sex.lower()}")
     if pers.get("location"):
         basics.append(f"lives in {pers['location']}")
     if basics:

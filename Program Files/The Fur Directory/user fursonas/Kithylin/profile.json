@@ -1,7 +1,7 @@
 {
   "fur_name": "Kithylin",
   "handle": "Kithylin",
-  "summary": "A 21-year-old angelic husky from New York who's online a lot and friendly with everyone.",
+  "summary": "A tall, fluffy angelic husky from upstate New York, with white wings, a golden halo and a little bell on his collar. Warm, curious and easy to talk to.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -9,15 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "New York",
+    "real_name": "Jason Williams",
+    "location": "Upstate New York",
     "sex": "Male",
-    "age": "21",
-    "dob": "",
-    "job": "None",
+    "pronouns": "",
+    "age": "",
+    "dob": "4/25/1978",
+    "job": "Unemployed",
     "work_hours": "",
-    "sleep_hours": "",
-    "online_hours": "Online a lot"
+    "sleep_hours": "midnight-7am",
+    "online_hours": "Online a lot",
+    "full_name": "Kithylin Perth"
   },
   "favorites": {
     "movies": [],
@@ -25,15 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "anthro angelic husky",
-    "colors": "Typical husky black and white fur",
-    "markings": "",
+    "species": "Anthropomorphic Husky",
+    "colors": "Traditional husky black-and-white markings",
+    "markings": "A pair of magnificent white angelic wings, a softly glowing golden halo, and a thick, fluffy husky tail with a natural curl",
     "clothing": "",
-    "description": "An anthro husky with typical black and white fur, white feathery angelic wings and a halo over his head."
+    "description": "A tall, fluffy black-and-white husky with bright blue eyes, white feathered angelic wings, a softly glowing golden halo and a blue collar with a little yellow bell.",
+    "eyes": "Bright blue",
+    "build": "Tall, sturdy, and comfortably fluffy",
+    "accessories": "A blue collar with a small yellow bell"
   },
-  "fursuit": "He owns a husky fursuit",
-  "conventions": "He has been to several furry conventions",
-  "personality": "Friendly with all of his contacts.",
+  "personality": "Kithylin is approachable by nature, with a presence that feels more welcoming than imposing. He enjoys good company and appreciates the little things: a pleasant conversation, a shared laugh, a peaceful walk, or the simple pleasure of being around others without needing to fill every silence.\n\nHe's curious about the people he meets and tends to be interested in what makes each individual unique. He can be a good listener when someone needs to talk, but he also appreciates playful banter and doesn't believe every conversation needs to become profound.\n\nHis manner is generally gentle and easygoing, though he isn't without his own opinions, preferences, or stubborn husky moments. He can be enthusiastic when something catches his interest, and his ears and tail have a habit of expressing excitement even when he's attempting to act composed.\n\nKithylin values kindness, honesty, and companionship. He doesn't expect everyone to be alike, nor does he believe that having wings or a halo makes him better than anyone else. He would much rather be known for how he treats others than for how he looks.",
+  "mannerisms": "• The tail: His fluffy tail tends to curl more tightly when he's pleased, sway when he's relaxed, and wag enthusiastically when he forgets to play it cool.\n• The ears: They perk up at interesting sounds, swivel toward whoever is speaking, and sometimes flatten slightly when he's embarrassed or caught off guard.\n• The bell: The little yellow bell on his blue collar gives a delicate jingle when he walks, shifts his posture, or gets particularly animated.\n• The wings: His white wings occasionally stretch or fluff themselves out, especially after sitting for a while. He may fold them neatly against his back or open them slightly when expressing himself.\n• The halo: Its warm golden glow is a constant feature of his appearance, lending a soft radiance to his silhouette.\n• Personal space: He's comfortable with friendly company, but lets new acquaintances establish their own comfort levels rather than assuming everyone wants immediate closeness.",
+  "interests": "Kithylin is happy to discover new interests through the people and places he encounters. He might enjoy exploring wooded trails, watching the world from a quiet overlook, sharing stories late into the evening, or finding a comfortable place to relax after a long day.\n\nHe has a particular appreciation for friendly company and the sort of conversations that wander from one subject to another without anyone watching the clock. A little humor, a curious question, or an unexpected adventure can be enough to make an otherwise ordinary day memorable.\n\nHe's also quite capable of enjoying peaceful solitude. Sometimes the best company is the sound of wind through the trees, the rustle of feathers, and the occasional soft jingle of his collar bell.",
+  "roleplay_hooks": "Kithylin is an open-ended character, so other players have plenty of ways to approach him.\n• A curious stranger: His wings and halo naturally invite questions, though his answers needn't be mysterious or dramatic.\n• A new friend: He welcomes conversation and enjoys learning about the lives and personalities of others.\n• An outdoor companion: A walk through the forest, a flight above the treetops, or a quiet evening under the stars could become the beginning of a story.\n• A comforting presence: Someone having a difficult day might find Kithylin willing to listen, offer company, or simply sit with them in comfortable silence.\n• A playful encounter: His expressive ears, fluffy tail, and little bell provide plenty of opportunities for lighthearted interaction.\n• An unfolding story: His origins, the nature of his wings, and whatever significance his halo might hold can remain mysteries until a story gives him a reason to explore them.",
+  "roleplay_notes": "Kithylin is intended to be a collaborative character rather than the center of every scene. He can initiate conversations, express opinions, make mistakes, and have adventures, while leaving other characters room to respond and influence events.\n\nHis angelic appearance doesn't automatically make him all-knowing, invulnerable, or morally perfect. His wings and halo are distinctive physical traits, not a claim to authority over other characters.\n\nHe responds to the world around him, and his relationships develop through shared experiences. Friends become friends over time, trust is earned, and even a brief encounter can be worthwhile without needing to turn into a grand adventure.\n\nIn short: Kithylin is a tall, fluffy, blue-eyed husky with white wings, a golden halo, and a little bell on his blue collar. He's warm, curious, approachable, and ready to see where a conversation leads.",
   "relationship": {
     "status": "",
     "partner": ""
@@ -41,21 +48,59 @@
   "online": {
     "away_message": "",
     "irc_realname": "",
-    "muck_desc": "A young anthro husky stands here, his thick fur the classic husky black and white: dark across his back, ears and the top of his head, bright white on his muzzle, chest and belly. A pair of white, feathery angelic wings fold neatly against his back, and a soft golden halo floats just above his ears, bobbing whenever his tail wags - which is often. His pale blue eyes are friendly and curious, and he looks like he's always up for a chat."
+    "muck_desc": "Standing tall on two legs, Kithylin is an unmistakably husky fellow, with a handsome black-and-white coat, expressive blue eyes, and a thick, gloriously fluffy tail that curls behind him. His build is sturdy and substantial, softened by the plush appearance of his fur. His ears are wonderfully expressive, often betraying his mood before he says a word.\n\nA pair of magnificent white wings rests upon his back, their feathers soft and immaculate. Above his head floats a golden halo, casting a gentle, warm glow over his ears and forehead. Neither feature seems to demand attention; they are simply part of who he is. His only accessory is a blue collar with a little yellow bell, which gives a cheerful jingle whenever he moves.\n\nKithylin wears no clothing, his body naturally covered in thick fur. He carries himself with a relaxed confidence, equally comfortable standing proudly in the middle of a busy gathering or curling up somewhere quiet to enjoy a peaceful moment.\n\nDespite his angelic appearance, Kithylin isn't necessarily a solemn or otherworldly figure. He's a husky, after all, and there's plenty of room for warmth, curiosity, playfulness, and the occasional bit of mischief beneath those snowy wings."
   },
   "knows": [
-    {"name": "ArcticFox", "closeness": "friend", "how_met": ""},
-    {"name": "CyberianHusky", "closeness": "friend", "how_met": ""},
-    {"name": "KittyKat", "closeness": "friend", "how_met": ""},
-    {"name": "LazyFox", "closeness": "friend", "how_met": ""},
-    {"name": "MushTheHusky", "closeness": "friend", "how_met": ""},
-    {"name": "RedFawks", "closeness": "friend", "how_met": ""},
-    {"name": "Renamon", "closeness": "friend", "how_met": ""},
-    {"name": "WinterDragon", "closeness": "friend", "how_met": ""},
-    {"name": "XavierPup", "closeness": "friend", "how_met": ""}
+    {
+      "name": "ArcticFox",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "CyberianHusky",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "KittyKat",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "LazyFox",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "MushTheHusky",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "RedFawks",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "Renamon",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "WinterDragon",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "XavierPup",
+      "closeness": "friend",
+      "how_met": ""
+    }
   ],
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": ""
+  "notes": "",
+  "fursuit": "He owns a husky fursuit",
+  "conventions": "He has been to several furry conventions"
 }
