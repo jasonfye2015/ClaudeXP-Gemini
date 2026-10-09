@@ -315,6 +315,8 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   isn't in front (or a menu/Start menu is open) it's swapped for a PrintWindow still. Config/saves in data/<game>/
   (-config, -extraconfig, -savedir); graphical_startup 0. The user's HEXEN.WAD is the 4-level demo, which lacks
   FONTAY (yellow font) that Chocolate Hexen needs: a small PWAD is generated from its own FONTA lumps at launch.
+- **ClaudeTV** (was FurTV 2000; renamed 2026-10-09 - it's plain TV, not furry): on the desktop after the folders and
+  directly in All Programs; LAYOUT=5 removes the old FurTV shortcut from the Furry Programs folder.
 - **Shortcuts + desktop folders (2026-10-09)**: explorer/shortcuts.py adds ClaudeXP .lnk files ('[ClaudeXP
   Shortcut]' + Program=key or Target=path); Explorer hides '.lnk', shows the target's icon, type 'Shortcut'; opening
   one launches it. desktop_icons LAYOUT=3 makes 'Furry Programs' (the six furry programs) and 'Emulation' (the nine

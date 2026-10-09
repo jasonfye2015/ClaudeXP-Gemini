@@ -123,7 +123,7 @@ EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "dfrgntfs.exe": "defrag", "wupdmgr.exe": "winupdate", "isignup.exe": "connect", "wmplayer.exe": "wmp",
     "wordpad.exe": "wordpad", "msimn.exe": "outlook", "wab.exe": "wab", "charmap.exe": "charmap",
     "cleanmgr.exe": "cleanmgr", "sndrec32.exe": "sndrec", "pinball.exe": "pinball",
-    "furtv.exe": "tv", "furcomix.exe": "comix", "furfolio.exe": "folio", "furstory.exe": "stories", "furcd.exe": "cdviewer", "furcon.exe": "furcon", "fceu.exe": "nes", "snes9x.exe": "snes", "gambatte.exe": "gb",
+    "claudetv.exe": "tv", "furtv.exe": "tv", "furcomix.exe": "comix", "furfolio.exe": "folio", "furstory.exe": "stories", "furcd.exe": "cdviewer", "furcon.exe": "furcon", "fceu.exe": "nes", "snes9x.exe": "snes", "gambatte.exe": "gb",
     "gambatte_gbc.exe": "gbc", "mgba.exe": "gba", "picodrive.exe": "gen", "gpgx.exe": "sms", "gearsystem.exe": "gg", "applewin.exe": "apple2",
     "doom.exe": "doom", "doom2.exe": "doom2", "wolf3d.exe": "wolf3d", "heretic.exe": "heretic", "hexen.exe": "hexen",
 }
@@ -201,7 +201,7 @@ def setup_c():
     for rel in ("ClaudeAIM/ClaudeAIM.exe", "ClaudeIRC/ClaudeIRC.exe", "ClaudeMUCK/ClaudeMUCK.exe",
                 "Netscape/Navigator/netscape.exe", "ClaudeShield AntiVirus/ClaudeShield.exe",
                 "America Online/isignup.exe", "Windows Media Player/wmplayer.exe", "Outlook Express/msimn.exe",
-                "FurTV 2000/FurTV.exe", "FurComix Reader/FurComix.exe",
+                "ClaudeTV/ClaudeTV.exe", "FurComix Reader/FurComix.exe",
                 "FurFolio Reader/FurFolio.exe", "FurFolio Reader/FurStory.exe",
                 "Fur CD Viewer/FurCD.exe", "Furry Con CD Viewer/FurCon.exe",
                 "FCE Ultra/fceu.exe", "Snes9x/snes9x.exe",

@@ -24,9 +24,9 @@ MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family
               " QMenu::item { padding: 4px 24px 4px 20px; } QMenu::item:selected { background: #316AC5; color: white; }"
               " QMenu::item:disabled { color: #ACA899; }")
 SORTS = ("Name", "Size", "Type", "Modified")
-LAYOUT = 4                  # bump when builtins() changes order
+LAYOUT = 5                  # bump when builtins() changes order
 # Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
-PROGRAM_FOLDERS = {"Furry Programs": ["tv", "comix", "folio", "stories", "cdviewer", "furcon"],
+PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon"],
                    "Emulation": ["nes", "snes", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
                    "Games": ["doom", "doom2", "wolf3d", "heretic", "hexen"]}
 FOLDERS_SINCE = {"Furry Programs": 3, "Emulation": 3, "Games": 4}    # the layout version that added each folder
@@ -45,6 +45,7 @@ def builtins():
         ("sys:mycomputer", "My Computer", lambda: std(QStyle.SP_ComputerIcon)),
         ("prog:connect", "America Online", lambda: QIcon(pixmap("aol_icon.png"))),
     ] + folders + [
+        ("prog:tv", "ClaudeTV", lambda: programs.get("tv").icon()),
         ("prog:navigator", "Netscape Navigator", lambda: programs.get("navigator").icon()),
         ("prog:claudeai", "ClaudeAI", lambda: programs.get("claudeai").icon()),
         ("prog:aim", "ClaudeAIM", lambda: programs.get("aim").icon()),
@@ -119,6 +120,11 @@ class IconManager(QObject):
             # The built-in shortcuts were reordered: let them flow into the new order once (files keep their spots).
             old = self.state.get("layout", 1)
             self._make_program_folders([n for n, v in FOLDERS_SINCE.items() if old < v])
+            if old < 5:                                  # layout 5: the TV left Furry Programs for the desktop
+                from .explorer import vfs
+                stale = vfs.user_home() / "Desktop" / "Furry Programs" / "FurTV 2000.lnk"
+                if stale.exists():
+                    stale.unlink()
             self.state["positions"] = {k: v for k, v in self.state["positions"].items()
                                        if not k.startswith(("sys:", "prog:"))
                                        and k[5:] not in PROGRAM_FOLDERS}
@@ -725,7 +731,7 @@ class IconManager(QObject):
                       "aim": r"C:\Program Files\ClaudeAIM\ClaudeAIM.exe",
                       "irc": r"C:\Program Files\ClaudeIRC\ClaudeIRC.exe",
                       "muck": r"C:\Program Files\ClaudeMUCK\ClaudeMUCK.exe",
-                      "tv": r"C:\Program Files\FurTV 2000\FurTV.exe",
+                      "tv": r"C:\Program Files\ClaudeTV\ClaudeTV.exe",
                       "comix": r"C:\Program Files\FurComix Reader\FurComix.exe",
                       "folio": r"C:\Program Files\FurFolio Reader\FurFolio.exe",
                       "stories": r"C:\Program Files\FurFolio Reader\FurStory.exe",

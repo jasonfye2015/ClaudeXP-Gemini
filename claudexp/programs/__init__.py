@@ -183,9 +183,9 @@ PROGRAMS = [
             group="Accessories/System Tools"),
     Program("sndrec", "Sound Recorder", "", _lazy("sndrec", "sndrec_icon"), _lazy("sndrec", "open_sndrec"),
             group="Accessories/Entertainment"),
+    Program("tv", "ClaudeTV", "Watch TV", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.tuner", "open_tv"),
+            _lazy(".tv.tuner", "shutdown")),
     # Start > Programs > Furry Stuff: the furry programs and the archive folders on E:
-    Program("tv", "FurTV 2000", "Watch TV", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.tuner", "open_tv"),
-            _lazy(".tv.tuner", "shutdown"), group=FURRY),
     Program("comix", "FurComix Reader", "Read comics", _lazy(".comix.reader", "comix_icon"),
             _lazy(".comix.reader", "open_comix"), group=FURRY),
     Program("folio", "FurFolio Reader", "Browse art portfolios", _lazy(".folio.gallery", "folio_icon"),

@@ -1,4 +1,4 @@
-"""FurTV 2000: an over-the-air TV tuner card's viewer, the kind that came with a Hauppauge or ATI card in 2001.
+"""ClaudeTV: an over-the-air TV tuner card's viewer, the kind that came with a Hauppauge or ATI card in 2001.
 
 Whatever is on is decided by the clock (see schedule.py): turning the TV on joins a program partway through, and
 changing channels shows a burst of snow while the tuner locks on. Channels 2, 7 and 11 have nothing on them, just
@@ -430,12 +430,12 @@ class Tuner(QWidget):
         menu.addAction("Full Screen", self.toggle_full_screen)
         menu.addSeparator()
         menu.addAction("Rescan Channels", self.rescan)
-        menu.addAction("About FurTV 2000", self.about)
+        menu.addAction("About ClaudeTV", self.about)
         menu.exec(pos)
 
     def about(self):
         from ...explorer.dialogs import msgbox
-        msgbox(self.desktop, "About FurTV 2000", "FurTV 2000 for Windows\nVersion 2.1 (Build 2117)\n\n"
+        msgbox(self.desktop, "About ClaudeTV", "ClaudeTV for Windows\nVersion 2.1 (Build 2117)\n\n"
                "Analog TV tuner software. Channels found: "
                f"{sum(not c.dead for c in self.channels)}", "info")
 
@@ -532,7 +532,7 @@ class Tuner(QWidget):
             self.state["channel"] = channel.number
             save_json(STATE_FILE, self.state)
         if self.frame is not None:
-            self.frame.set_title(f"FurTV 2000 - Channel {channel.label()}")
+            self.frame.set_title(f"ClaudeTV - Channel {channel.label()}")
         self.player.stop()
         self.source_path = None
         self.slot = None
@@ -726,7 +726,7 @@ def open_tv(desktop):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = Tuner(desktop)
-        win = XPWindow(desktop, "FurTV 2000", body, tv_icon(), (560, 500))
+        win = XPWindow(desktop, "ClaudeTV", body, tv_icon(), (560, 500))
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)

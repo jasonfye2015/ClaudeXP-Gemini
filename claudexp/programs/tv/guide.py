@@ -231,9 +231,9 @@ class Guide(QWidget):
         self.go_now()
         live = [c for c in channels if not c.dead]
         if not any(c.decks for c in live):
-            self.detail.setText("<b style='color:#FFD43A; font-size:15px'>No listings</b><br>FurTV 2000 didn't find "
+            self.detail.setText("<b style='color:#FFD43A; font-size:15px'>No listings</b><br>ClaudeTV didn't find "
                                 "any programs. Copy the TV archive to drive E: (Local Storage) and choose "
-                                "<i>Rescan Channels</i> in FurTV.")
+                                "<i>Rescan Channels</i> in ClaudeTV.")
         else:
             on = [c.at(now_secs()) for c in live]
             first = next((s for s in on if s is not None and s.kind == "program"), None)
@@ -310,7 +310,7 @@ def open_guide(desktop, tuner=None):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = Guide(desktop, tuner)
-        win = XPWindow(desktop, "TV Guide - FurTV 2000", body, tv_icon(), (720, 520))
+        win = XPWindow(desktop, "TV Guide - ClaudeTV", body, tv_icon(), (720, 520))
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)
