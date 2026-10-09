@@ -123,7 +123,7 @@ EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "dfrgntfs.exe": "defrag", "wupdmgr.exe": "winupdate", "isignup.exe": "connect", "wmplayer.exe": "wmp",
     "wordpad.exe": "wordpad", "msimn.exe": "outlook", "wab.exe": "wab", "charmap.exe": "charmap",
     "cleanmgr.exe": "cleanmgr", "sndrec32.exe": "sndrec", "pinball.exe": "pinball",
-    "furtv.exe": "tv", "furcomix.exe": "comix", "furfolio.exe": "folio", "furstory.exe": "stories", "furcd.exe": "cdviewer",
+    "furtv.exe": "tv", "furcomix.exe": "comix", "furfolio.exe": "folio", "furstory.exe": "stories", "furcd.exe": "cdviewer", "furcon.exe": "furcon",
 }
 SYSTEM32 = ["advapi32.dll", "comctl32.dll", "comdlg32.dll", "gdi32.dll", "kernel32.dll", "mshtml.dll",
             "msvcrt.dll", "ole32.dll", "oleaut32.dll", "rpcrt4.dll", "shell32.dll", "shlwapi.dll", "user32.dll",
@@ -201,7 +201,7 @@ def setup_c():
                 "America Online/isignup.exe", "Windows Media Player/wmplayer.exe", "Outlook Express/msimn.exe",
                 "FurTV 2000/FurTV.exe", "FurComix Reader/FurComix.exe",
                 "FurFolio Reader/FurFolio.exe", "FurFolio Reader/FurStory.exe",
-                "Fur CD Viewer/FurCD.exe"):
+                "Fur CD Viewer/FurCD.exe", "Furry Con CD Viewer/FurCon.exe"):
         _fake(pf / rel, 200, 900)
     (pf / "Common Files").mkdir(parents=True, exist_ok=True)
     win = DRIVE_C / "WINDOWS"

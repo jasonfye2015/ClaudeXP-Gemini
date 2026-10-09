@@ -258,7 +258,14 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   inside, folders as manila tiles with their first picture peeking out, pictures as thumbnails, videos as film
   tiles. Skips the discs' own thumbnail folders and tn_/_t images, exe/dll/html/swf, AUDIO_TS and small DVD menu
   VOBs. Pictures open in FurFolio's framed Viewer (reused via duck-typed owner methods); AVI/MPEG/VOB play in a
-  built-in VideoPane (QVideoSink painted). Desktop shortcut.
+  built-in VideoPane (QVideoSink painted). Desktop shortcut. Video tiles show a real still from FrameGrabber
+  (one QMediaPlayer on the UI thread, a still ~4s in, retried at the middle if the frame is nearly black, cached
+  in data/folio_thumbs; seeking must be deferred out of the player's own status signal or it stalls).
+- **Furry Con CD Viewer** (`programs/folio/furcon.py`, a CDViewer subclass): E:\…\FurCon CDs… (11 convention
+  recap discs, ~375 photos, ~105 videos). Lobby of con badges on lanyards in each con's colours (Anthrocon,
+  Eurofurence, Further Confusion, Midwest FurFest; names/editions normalised from folder names), sorted by con and
+  year, on hotel-carpet red. Opening a con shows the whole weekend on one page: all photos, then all videos,
+  gathered from its sub-folders. Video-only cons (5 of 11) get a video still on their badge. Desktop shortcut.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

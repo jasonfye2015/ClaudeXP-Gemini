@@ -7,11 +7,12 @@ FurFolio's framed viewer; videos (AVI, MPEG, the DVD's VOBs) play in a little bu
 
 Like the other readers, nothing is scanned ahead: each folder is listed when it's opened and thumbnails are made
 as they scroll into view (cached in data/folio_thumbs)."""
+import hashlib
 import os
 import re
 from pathlib import Path
 
-from PySide6.QtCore import QRectF, QSize, Qt, QTimer, QUrl
+from PySide6.QtCore import QObject, QRectF, QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QColor, QFont, QIcon, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QVideoSink
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QSlider, QStackedWidget, QToolButton, QVBoxLayout, QWidget
@@ -20,9 +21,9 @@ from shiboken6 import isValid
 from ...wm import XPWindow
 from ..comix.library import IMAGE_EXTS, natural_key, nice_name
 from ..comix.reader import Loader
-from .gallery import TILE, Node, Viewer, Wall, make_thumb, piece_title
+from .gallery import THUMB, THUMBS, TILE, Node, Viewer, Wall, make_thumb, piece_title
 
-VIDEO_EXTS = {".avi", ".mpg", ".mpeg", ".vob", ".mp4", ".wmv", ".mov", ".m4v", ".mkv", ".asf"}
+VIDEO_EXTS = {".avi", ".mpg", ".mpeg", ".vob", ".mp4", ".wmv", ".mov", ".m4v", ".mkv", ".asf", ".rm", ".ram"}
 SHOW_IMAGES = IMAGE_EXTS | {".svg"}
 SKIP_DIRS = {"thumbnails", "thumbnail", "thumbs", "thumb", "tn", "_vti_cnf", "_vti_pvt", "audio_ts", "autorun",
              "__macosx", "_notes", "cgi-bin"}
@@ -224,7 +225,7 @@ def _folder_tile(node, img):
     return pm
 
 
-def _video_tile(node):
+def _video_tile(node, img=None):
     pm = QPixmap(TILE)
     pm.fill(Qt.transparent)
     p = QPainter(pm)
@@ -238,10 +239,19 @@ def _video_tile(node):
         p.drawRect(QRectF(x, r.top() + 4, 7, 6))
         p.drawRect(QRectF(x, r.bottom() - 10, 7, 6))
     frame = r.adjusted(8, 16, -8, -16)
-    g = QLinearGradient(frame.topLeft(), frame.bottomRight())
-    g.setColorAt(0, QColor("#3A5A9A"))
-    g.setColorAt(1, QColor("#1A2A4A"))
-    p.fillRect(frame, g)
+    if img is not None and not img.isNull():
+        scale = max(frame.width() / img.width(), frame.height() / img.height())
+        sw, sh = frame.width() / scale, frame.height() / scale
+        p.setRenderHint(QPainter.SmoothPixmapTransform)
+        p.drawImage(frame, img, QRectF((img.width() - sw) / 2, (img.height() - sh) / 2, sw, sh))
+        p.setBrush(QColor(0, 0, 0, 110))
+        p.setPen(Qt.NoPen)
+        p.drawEllipse(frame.center(), 17, 17)
+    else:
+        g = QLinearGradient(frame.topLeft(), frame.bottomRight())
+        g.setColorAt(0, QColor("#3A5A9A"))
+        g.setColorAt(1, QColor("#1A2A4A"))
+        p.fillRect(frame, g)
     tri = QPainterPath()
     c = frame.center()
     tri.moveTo(c.x() - 10, c.y() - 13)
@@ -259,6 +269,102 @@ def _video_tile(node):
 
 
 # ---- video ---------------------------------------------------------------------------------------------------------
+
+class FrameGrabber(QObject):
+    """Takes one still a few seconds into each video, one video at a time (QMediaPlayer lives on the UI thread),
+    and caches it with the picture thumbnails."""
+    grabbed = Signal(object, object)                 # path, QImage
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.queue, self.busy = [], None
+        self.player = QMediaPlayer(self)
+        self.sink = QVideoSink(self)
+        self.player.setVideoSink(self.sink)
+        self.sink.videoFrameChanged.connect(self._frame)
+        self.player.mediaStatusChanged.connect(self._status)
+        self.player.errorOccurred.connect(lambda *_: self._finish(QImage()))
+        self.timeout = QTimer(self, singleShot=True, interval=4000, timeout=lambda: self._finish(QImage()))
+        self.seeked = self.retried = False
+
+    @staticmethod
+    def cache_file(path):
+        try:
+            st = Path(path).stat()
+        except OSError:
+            return None
+        key = f"{path}|{int(st.st_mtime)}|{st.st_size}|frame"
+        return THUMBS / (hashlib.sha1(key.encode()).hexdigest()[:20] + ".jpg")
+
+    def request(self, path):
+        f = self.cache_file(path)
+        if f is not None and f.exists():
+            img = QImage(str(f))
+            if not img.isNull():
+                QTimer.singleShot(0, lambda: self.grabbed.emit(path, img))
+                return
+        if path != self.busy and path not in self.queue:
+            self.queue.append(path)
+        self._next()
+
+    def clear(self):
+        self.queue.clear()
+
+    def _next(self):
+        if self.busy is not None or not self.queue:
+            return
+        self.busy = self.queue.pop(0)
+        self.seeked = self.retried = False
+        self.player.setSource(QUrl.fromLocalFile(str(self.busy)))
+        self.player.pause()
+        self.timeout.start()
+
+    def _status(self, status):
+        if self.busy is None:
+            return
+        if status in (QMediaPlayer.LoadedMedia, QMediaPlayer.BufferedMedia) and not self.seeked:
+            self.seeked = True
+            QTimer.singleShot(0, self._seek)        # seeking from inside the player's own signal stalls it
+
+    def _seek(self):
+        if self.busy is not None:
+            dur = self.player.duration()
+            self.player.setPosition(min(4000, dur // 3) if dur > 0 else 0)
+            self.player.play()
+        elif status == QMediaPlayer.InvalidMedia:
+            self._finish(QImage())
+
+    def _frame(self, frame):
+        if self.busy is None or not self.seeked or not frame.isValid():
+            return
+        img = frame.toImage()
+        if img.isNull():
+            return
+        tiny = img.scaled(8, 8).convertToFormat(QImage.Format_Grayscale8)
+        dark = sum(tiny.pixelColor(x, y).value() for x in range(8) for y in range(8)) / 64 < 18
+        if dark and not self.retried and self.player.duration() > 0:     # a black title card: try further in
+            self.retried = True
+            self.player.pause()
+            QTimer.singleShot(0, lambda: (self.player.setPosition(self.player.duration() // 2), self.player.play()))
+            return
+        self._finish(img.scaled(THUMB, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+
+    def _finish(self, img):
+        path, self.busy = self.busy, None
+        self.timeout.stop()
+        self.player.stop()
+        self.player.setSource(QUrl())
+        if path is not None:
+            if not img.isNull():
+                f = self.cache_file(path)
+                try:
+                    THUMBS.mkdir(parents=True, exist_ok=True)
+                    img.convertToFormat(QImage.Format_RGB32).save(str(f), "JPG", 85)
+                except (OSError, TypeError):
+                    pass
+            self.grabbed.emit(path, img)
+        QTimer.singleShot(0, self._next)
+
 
 class VideoPane(QWidget):
     """A small player: the picture painted from a video sink, play/pause, a seek bar and the time."""
@@ -358,12 +464,19 @@ class VideoPane(QWidget):
 # ---- the window -----------------------------------------------------------------------------------------------------
 
 class CDViewer(QWidget):
+    TITLE = "Fur CD Viewer"
+    PLACE = "Art CDs and DVDs"
+    RACK = "All Discs"
+
+    def find_root(self):
+        return discs_root()
+
     def __init__(self, desktop):
         super().__init__()
         self.desktop = desktop
         self.frame = None
         self.state = {"slide_ms": 5000}
-        self.root = discs_root()
+        self.root = self.find_root()
         self.history = []
         self.here = None                        # None = the rack, else the folder being browsed
         self.disc = None
@@ -371,6 +484,8 @@ class CDViewer(QWidget):
         self.waiting = {}
         self.loader = Loader(self, threads=3)
         self.loader.loaded.connect(self._thumb_loaded)
+        self.grabber = FrameGrabber(self)
+        self.grabber.grabbed.connect(lambda path, img: self._thumb_loaded(f"video:{path}", img))
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -421,7 +536,7 @@ class CDViewer(QWidget):
         self.back_btn.clicked.connect(self.go_back)
         row.addWidget(self.back_btn)
         rack = QToolButton()
-        rack.setText("All Discs")
+        rack.setText(self.RACK)
         rack.clicked.connect(self.show_rack)
         row.addWidget(rack)
         row.addSpacing(10)
@@ -449,6 +564,7 @@ class CDViewer(QWidget):
     # ---- browsing ---------------------------------------------------------------------------------------------
     def _reset(self):
         self.loader.clear()
+        self.grabber.clear()
         self.waiting.clear()
         self.thumbs = {k: v for k, v in self.thumbs.items() if v is not None}
         self.find.blockSignals(True)
@@ -466,11 +582,11 @@ class CDViewer(QWidget):
         self._set_wall_look(True)
         self.wall.fill(nodes)
         self.back_btn.setEnabled(False)
-        self.where.setText("Art CDs and DVDs")
+        self.where.setText(self.PLACE)
         self.status.setText(f"{len(nodes)} discs")
         self.stack.setCurrentIndex(0)
         if self.frame is not None:
-            self.frame.set_title("Fur CD Viewer")
+            self.frame.set_title(self.TITLE)
 
     def show_folder(self, path, remember=True):
         if remember:
@@ -490,14 +606,14 @@ class CDViewer(QWidget):
             crumbs = [self.disc.name] + [nice_name(x) for x in rel.parts]
         except (ValueError, AttributeError):
             crumbs = [nice_name(folder.name)]
-        self.where.setText("Art CDs and DVDs  ›  " + "  ›  ".join(crumbs))
+        self.where.setText(self.PLACE + "  ›  " + "  ›  ".join(crumbs))
         bits = [f"{len(dirs)} folder{'s' if len(dirs) != 1 else ''}" if dirs else "",
                 f"{len(pics)} picture{'s' if len(pics) != 1 else ''}" if pics else "",
                 f"{len(vids)} video{'s' if len(vids) != 1 else ''}" if vids else ""]
         self.status.setText(", ".join(b for b in bits if b) or "Nothing to look at in this folder.")
         self.stack.setCurrentIndex(0)
         if self.frame is not None:
-            self.frame.set_title(f"{crumbs[-1]} - Fur CD Viewer")
+            self.frame.set_title(f"{crumbs[-1]} - {self.TITLE}")
 
     def go_back(self):
         if not self.history:
@@ -527,7 +643,7 @@ class CDViewer(QWidget):
             self.stack.setCurrentWidget(self.video)
             self.video.play(node.path)
             if self.frame is not None:
-                self.frame.set_title(f"{node.name} - Fur CD Viewer")
+                self.frame.set_title(f"{node.name} - {self.TITLE}")
 
     def close_video(self):
         self.video.stop()
@@ -552,7 +668,7 @@ class CDViewer(QWidget):
 
     def set_caption(self, node):
         if self.frame is not None:
-            self.frame.set_title(f"{node.name} - Fur CD Viewer")
+            self.frame.set_title(f"{node.name} - {self.TITLE}")
         self.viewer.easel.update()
 
     def is_favorite(self, node):
@@ -575,9 +691,12 @@ class CDViewer(QWidget):
                 callback(self.thumbs[key])
                 return
             self.waiting.setdefault(key, []).append(callback)
-        if key in self.thumbs or node.kind == "video":
+        if key in self.thumbs:
             return
         self.thumbs[key] = None
+        if node.kind == "video":
+            self.grabber.request(node.path)
+            return
         path = node.path
         if node.kind == "piece":
             job = lambda: make_thumb(path)
@@ -601,7 +720,7 @@ class CDViewer(QWidget):
         elif node.kind == "folder":
             pm = _folder_tile(node, img)
         elif node.kind == "video":
-            pm = _video_tile(node)
+            pm = _video_tile(node, img)
         else:
             pm = _tile(node, img)
         item.setIcon(QIcon(pm))
@@ -623,6 +742,7 @@ class CDViewer(QWidget):
 
     def closeEvent(self, event):
         self.loader.clear()
+        self.grabber.clear()
         self.viewer.stop()
         self.video.stop()
         event.accept()

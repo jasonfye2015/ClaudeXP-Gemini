@@ -13,7 +13,7 @@ NAMES = {
     "claudemuck": "muck", "claudeai": "claudeai", "claudeshield": "antivirus", "isignup": "connect",
     "mspaint": "paint", "pbrush": "paint", "wordpad": "wordpad", "write": "wordpad",
     "charmap": "charmap", "cleanmgr": "cleanmgr", "msinfo32": "msinfo", "sndrec32": "sndrec", "rstrui": "sysrestore", "helpctr": "helpctr",
-    "tourstart": "tour", "furtv": "tv", "furcomix": "comix", "furfolio": "folio", "furstory": "stories", "furcd": "cdviewer", "tvguide": "tvguide",
+    "tourstart": "tour", "furtv": "tv", "furcomix": "comix", "furfolio": "folio", "furstory": "stories", "furcd": "cdviewer", "furcon": "furcon", "tvguide": "tvguide",
     "pinball": "pinball", "wmplayer": "wmp", "mplayer2": "wmp", "msimn": "outlook", "wab": "wab",
     "bckgzm": "ibackgammon", "hrtzzm": "ihearts", "shvlzm": "ispades", "chkrzm": "icheckers", "rvsezm": "ireversi",
 }

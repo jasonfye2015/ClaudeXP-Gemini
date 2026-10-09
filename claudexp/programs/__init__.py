@@ -181,6 +181,8 @@ PROGRAMS = [
             _lazy(".folio.stories", "open_stories"), group="FurFolio Reader"),
     Program("cdviewer", "Fur CD Viewer", "Browse art CDs and DVDs", _lazy(".folio.cdviewer", "cd_icon"),
             _lazy(".folio.cdviewer", "open_cdviewer"), _lazy(".folio.cdviewer", "shutdown")),
+    Program("furcon", "Furry Con CD Viewer", "Convention recap discs", _lazy(".folio.furcon", "con_icon"),
+            _lazy(".folio.furcon", "open_furcon"), _lazy(".folio.furcon", "shutdown")),
     Program("tvguide", "TV Guide", "", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.guide", "open_guide"), listed=False),
     *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), listed=False)
       for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
