@@ -32,6 +32,7 @@ def std(which):
 
 def builtins():
     """The icons Windows puts on the desktop: system icons and program shortcuts. (key, label, icon getter)"""
+    archive = programs.media_archive()
     return [
         ("sys:mycomputer", "My Computer", lambda: std(QStyle.SP_ComputerIcon)),
         ("prog:notepad", "Notepad", lambda: std(QStyle.SP_FileIcon)),
@@ -42,6 +43,7 @@ def builtins():
         ("prog:irc", "ClaudeIRC", lambda: programs.get("irc").icon()),
         ("prog:muck", "ClaudeMUCK", lambda: programs.get("muck").icon()),
         ("prog:tv", "FurTV 2000", lambda: programs.get("tv").icon()),
+    ] + ([("prog:mediaarchive", "Furry Media Archive", lambda: std(QStyle.SP_DirIcon))] if archive else []) + [
         ("sys:recycle", "Recycle Bin", lambda: std(QStyle.SP_TrashIcon)),
     ]
 
@@ -668,6 +670,12 @@ class IconManager(QObject):
         from .explorer import vfs
         from .explorer.dialogs import date_2001, properties, size_text
         from .explorer.window import xp_type
+        if icon.key == "prog:mediaarchive":
+            folder = programs.media_archive()
+            target = (vfs.to_virtual(folder) or "") if folder else ""
+            properties(self.desktop, icon.label, [("Target type:", "File Folder"), ("Target:", target),
+                                                  ("-", ""), ("Start in:", str(Path(target).parent))], icon=icon.icon)
+            return
         if icon.path is None:
             target = {"notepad": r"C:\WINDOWS\notepad.exe", "connect": r"C:\Program Files\America Online\isignup.exe",
                       "navigator": r"C:\Program Files\Netscape\Navigator\netscape.exe",
