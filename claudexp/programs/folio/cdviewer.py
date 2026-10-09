@@ -146,6 +146,10 @@ def open_archive(path):
                     target = (dest / info.filename).resolve()
                     if dest.resolve() in target.parents or target == dest.resolve():   # no escaping the cache
                         z.extract(info, dest)
+        elif path.suffix.lower() == ".tar":
+            import tarfile
+            with tarfile.open(path) as t:
+                t.extractall(dest, filter="data")                  # 'data' refuses paths that escape the cache
         else:
             from ..comix.library import _no_window, seven_zip
             exe = seven_zip()

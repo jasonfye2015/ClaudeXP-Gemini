@@ -426,6 +426,9 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   runs; v15.5 shipped). QWebEngineView with a named persistent profile in data/clauderpg (localStorage saves keep
   their file:// origin), audio muted with ClaudeXP, MouseLock granted (permissionRequested, else
   featurePermissionRequested), opens maximized; closing loads about:blank first so the game saves on unload.
+- **Archives are self-contained**: 7-Zip 26.03's 7z.exe + 7z.dll + License.txt ship in assets/tools/7-Zip (README in
+  assets/tools). comix.library.seven_zip() prefers it over an installed 7-Zip, so RAR/CBR (RAR5 too), 7z/CB7 and
+  LZH/LHA open on any PC; ZIP/CBZ use zipfile and the CD viewers' TAR uses tarfile (extractall filter="data").
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
