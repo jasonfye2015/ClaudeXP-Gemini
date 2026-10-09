@@ -126,6 +126,7 @@ EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "claudetv.exe": "tv", "furtv.exe": "tv", "furcomix.exe": "comix", "furfolio.exe": "folio", "furstory.exe": "stories", "furcd.exe": "cdviewer", "furcon.exe": "furcon", "fceu.exe": "nes", "snes9x.exe": "snes", "gambatte.exe": "gb",
     "gambatte_gbc.exe": "gbc", "mgba.exe": "gba", "picodrive.exe": "gen", "gpgx.exe": "sms", "gearsystem.exe": "gg", "applewin.exe": "apple2",
     "doom.exe": "doom", "doom2.exe": "doom2", "wolf3d.exe": "wolf3d", "heretic.exe": "heretic", "hexen.exe": "hexen",
+    "ski.exe": "skifree", "jezzball.exe": "jezzball",
 }
 SYSTEM32 = ["advapi32.dll", "comctl32.dll", "comdlg32.dll", "gdi32.dll", "kernel32.dll", "mshtml.dll",
             "msvcrt.dll", "ole32.dll", "oleaut32.dll", "rpcrt4.dll", "shell32.dll", "shlwapi.dll", "user32.dll",
@@ -208,7 +209,7 @@ def setup_c():
                 "Gambatte/gambatte.exe", "Gambatte/gambatte_gbc.exe", "mGBA/mgba.exe", "PicoDrive/picodrive.exe",
                 "Genesis Plus/gpgx.exe", "Gearsystem/gearsystem.exe", "AppleWin/applewin.exe",
                 "Doom/doom.exe", "Doom II/doom2.exe", "Wolfenstein 3D/wolf3d.exe", "Heretic/heretic.exe",
-                "Hexen/hexen.exe"):
+                "Hexen/hexen.exe", "Entertainment Pack/ski.exe", "Entertainment Pack/jezzball.exe"):
         _fake(pf / rel, 200, 900)
     (pf / "Common Files").mkdir(parents=True, exist_ok=True)
     win = DRIVE_C / "WINDOWS"

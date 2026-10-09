@@ -325,6 +325,13 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   version introduced each folder so upgrades only create the new ones.
   The archive folders lost their '(xx.xgb)' size suffixes; programs already matched by name prefix, and saved paths
   in data/comix.json, stories.json and tv_index.json were rewritten to the new names.
+- **SkiFree** (games/skifree.py) and **JezzBall** (games/jezzball.py): original recreations of the Entertainment Pack
+  games, code-drawn, in Start > Games. SkiFree: steer toward the mouse or arrows, F fast, obstacles per 400 px band
+  (seeded), ramps/moguls for style, the monster after 2000 m; best distance in games.json. JezzBall: 38x24 grid,
+  click = wall growing both ways (right-click/Space toggles direction), atom hits a growing half -> life lost,
+  atom-free regions flood-fill, 75% clears the level (level n: n+1 atoms and lives), time bonus; best score saved.
+  Desktop 'Games' folder mirrors Start > Games (PROGRAM_FOLDERS['Games'] is built from the Games group; LAYOUT=6
+  adds missing shortcuts and never removes any).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

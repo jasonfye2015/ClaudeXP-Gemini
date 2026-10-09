@@ -30,7 +30,7 @@ SYSTEM = [("System Idle Process", "SYSTEM", 16), ("System", "SYSTEM", 216), ("sm
           ("svchost.exe", "SYSTEM", 17240), ("svchost.exe", "LOCAL SERVICE", 3540), ("spoolsv.exe", "SYSTEM", 4316),
           ("explorer.exe", None, 18432), ("ctfmon.exe", None, 2884), ("shieldtray.exe", None, 3972)]
 # window content module -> process image
-MODULE_IMAGES = [("programs.nes.", "fceu.exe"), ("programs.tv.", "claudetv.exe"), ("programs.comix.", "furcomix.exe"), ("programs.folio.stories", "furstory.exe"), ("programs.folio.furcon", "furcon.exe"), ("programs.folio.cdviewer", "furcd.exe"), ("programs.folio.", "furfolio.exe"), ("helpctr", "helpctr.exe"), ("tour", "tourstart.exe"),
+MODULE_IMAGES = [("skifree", "ski.exe"), ("jezzball", "jezzball.exe"), ("programs.nes.", "fceu.exe"), ("programs.tv.", "claudetv.exe"), ("programs.comix.", "furcomix.exe"), ("programs.folio.stories", "furstory.exe"), ("programs.folio.furcon", "furcon.exe"), ("programs.folio.cdviewer", "furcd.exe"), ("programs.folio.", "furfolio.exe"), ("helpctr", "helpctr.exe"), ("tour", "tourstart.exe"),
                  ("sysrestore", "rstrui.exe"), ("charmap", "charmap.exe"), ("msinfo", "msinfo32.exe"), ("sndrec", "sndrec32.exe"),
                  ("pinball", "pinball.exe"), ("ibackgammon", "bckgzm.exe"), ("ihearts", "hrtzzm.exe"), ("ispades", "shvlzm.exe"),
                  ("icheckers", "chkrzm.exe"), ("ireversi", "rvsezm.exe"), ("zone", "zclientm.exe"),
@@ -41,7 +41,7 @@ MODULE_IMAGES = [("programs.nes.", "fceu.exe"), ("programs.tv.", "claudetv.exe")
                  ("claudeai", "claudeai.exe"), ("claudeaim", "aim.exe"), ("irc", "mirc32.exe"),
                  ("muck", "claudemuck.exe"), ("defrag", "dfrgntfs.exe"), ("antivirus", "claudeshield.exe"),
                  ("updates", "wuauclt.exe"), ("printing", "spoolsv.exe")]
-MEM = {"fceu.exe": 24310, "snes9x.exe": 31840, "gambatte.exe": 14120, "gambatte_gbc.exe": 14160,
+MEM = {"ski.exe": 2840, "jezzball.exe": 3120, "fceu.exe": 24310, "snes9x.exe": 31840, "gambatte.exe": 14120, "gambatte_gbc.exe": 14160,
        "mgba.exe": 28870, "picodrive.exe": 26450, "gpgx.exe": 29980, "gearsystem.exe": 16240, "applewin.exe": 22760,
        "doom.exe": 19120, "doom2.exe": 19840, "wolf3d.exe": 18760, "heretic.exe": 24800, "hexen.exe": 27300, "claudetv.exe": 21480, "furcomix.exe": 16920, "furfolio.exe": 14880, "furstory.exe": 9640, "furcd.exe": 18300, "furcon.exe": 17460, "helpctr.exe": 12400, "tourstart.exe": 9800, "rstrui.exe": 6100, "charmap.exe": 3360, "msinfo32.exe": 7720, "sndrec32.exe": 3410, "pinball.exe": 11260, "msimn.exe": 9140, "wordpad.exe": 5480, "bckgzm.exe": 7900, "hrtzzm.exe": 8120, "shvlzm.exe": 8040,
        "chkrzm.exe": 7420, "rvsezm.exe": 7064, "zclientm.exe": 6900, "wmplayer.exe": 18260, "mspaint.exe": 6840,

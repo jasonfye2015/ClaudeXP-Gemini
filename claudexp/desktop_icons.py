@@ -24,12 +24,14 @@ MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family
               " QMenu::item { padding: 4px 24px 4px 20px; } QMenu::item:selected { background: #316AC5; color: white; }"
               " QMenu::item:disabled { color: #ACA899; }")
 SORTS = ("Name", "Size", "Type", "Modified")
-LAYOUT = 5                  # bump when builtins() changes order
+LAYOUT = 6                  # bump when builtins() changes order
 # Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
 PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon"],
                    "Emulation": ["nes", "snes", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
-                   "Games": ["doom", "doom2", "wolf3d", "heretic", "hexen"]}
-FOLDERS_SINCE = {"Furry Programs": 3, "Emulation": 3, "Games": 4}    # the layout version that added each folder
+                   # the desktop Games folder mirrors Start > Programs > Games
+                   "Games": [p.key for p in programs.PROGRAMS if p.group == "Games"]}
+# the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
+FOLDERS_SINCE = {"Furry Programs": 3, "Emulation": 3, "Games": 6}
 
 
 def std(which):
