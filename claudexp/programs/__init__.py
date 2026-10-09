@@ -34,6 +34,12 @@ def _my_computer(desktop):
 
 
 FURRY = "Furry Stuff"
+EMULATORS = [("nes", "NES Emulator", "Play NES games"), ("snes", "SNES Emulator", "Play Super NES games"),
+             ("gb", "Game Boy Emulator", "Play Game Boy games"),
+             ("gbc", "Game Boy Color Emulator", "Play Game Boy Color games"),
+             ("gba", "Game Boy Advance Emulator", "Play Game Boy Advance games"),
+             ("gen", "Genesis Emulator", "Play Sega Genesis and 32X games"),
+             ("sms", "Master System Emulator", "Play Sega Master System games")]
 
 # Desktop shortcuts to the user's own archive folders on E: (Local Storage): key -> (label, folder name prefix).
 FOLDER_SHORTCUTS = {"mediaarchive": ("Furry Media Archive", "furry media archive"),
@@ -188,10 +194,9 @@ PROGRAMS = [
             _lazy(".folio.furcon", "open_furcon"), _lazy(".folio.furcon", "shutdown"), group=FURRY),
     *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)
       for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
-    Program("nes", "NES Emulator", "Play NES games", _lazy(".nes.emulator", "nes_icon"),
-            _lazy(".nes.emulator", "open_nes"), _lazy(".nes.emulator", "shutdown_nes"), group="Games"),
-    Program("snes", "SNES Emulator", "Play Super NES games", _lazy(".nes.emulator", "snes_icon"),
-            _lazy(".nes.emulator", "open_snes"), _lazy(".nes.emulator", "shutdown_snes"), group="Games"),
+    # Start > Programs > Game Emulation
+    *[Program(key, name, blurb, _lazy(".nes.emulator", f"{key}_icon"), _lazy(".nes.emulator", f"open_{key}"),
+              _lazy(".nes.emulator", f"shutdown_{key}"), group="Game Emulation") for key, name, blurb in EMULATORS],
     Program("tvguide", "TV Guide", "", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.guide", "open_guide"), listed=False),
     Program("defrag", "Disk Defragmenter", "", _defrag_icon, _defrag, group="Accessories/System Tools"),
     Program("antivirus", "ClaudeShield AntiVirus", "", _av_icon, _antivirus),

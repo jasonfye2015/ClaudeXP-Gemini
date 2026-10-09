@@ -47,6 +47,11 @@ def builtins():
         ("prog:muck", "ClaudeMUCK", lambda: programs.get("muck").icon()),
         ("prog:nes", "NES Emulator", lambda: programs.get("nes").icon()),
         ("prog:snes", "SNES Emulator", lambda: programs.get("snes").icon()),
+        ("prog:gb", "Game Boy Emulator", lambda: programs.get("gb").icon()),
+        ("prog:gbc", "Game Boy Color Emulator", lambda: programs.get("gbc").icon()),
+        ("prog:gba", "Game Boy Advance Emulator", lambda: programs.get("gba").icon()),
+        ("prog:gen", "Genesis Emulator", lambda: programs.get("gen").icon()),
+        ("prog:sms", "Master System Emulator", lambda: programs.get("sms").icon()),
         ("prog:tv", "FurTV 2000", lambda: programs.get("tv").icon()),
         ("prog:comix", "FurComix Reader", lambda: programs.get("comix").icon()),
         ("prog:folio", "FurFolio Reader", lambda: programs.get("folio").icon()),
@@ -703,7 +708,11 @@ class IconManager(QObject):
                       "cdviewer": r"C:\Program Files\Fur CD Viewer\FurCD.exe",
                       "furcon": r"C:\Program Files\Furry Con CD Viewer\FurCon.exe",
                       "nes": r"C:\Program Files\FCE Ultra\fceu.exe",
-                      "snes": r"C:\Program Files\Snes9x\snes9x.exe"}.get(icon.key.split(":", 1)[1], "")
+                      "snes": r"C:\Program Files\Snes9x\snes9x.exe",
+                      "gb": r"C:\Program Files\Gambatte\gambatte.exe",
+                      "gbc": r"C:\Program Files\Gambatte\gambatte_gbc.exe",
+                      "gba": r"C:\Program Files\mGBA\mgba.exe", "gen": r"C:\Program Files\PicoDrive\picodrive.exe",
+                      "sms": r"C:\Program Files\Genesis Plus\gpgx.exe"}.get(icon.key.split(":", 1)[1], "")
             properties(self.desktop, icon.label, [("Target type:", "Application"), ("Target:", target),
                                                   ("-", ""), ("Start in:", str(Path(target).parent))], icon=icon.icon)
             return

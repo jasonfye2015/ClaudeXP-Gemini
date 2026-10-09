@@ -278,8 +278,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   store.Settings.set now merges with the file so the tray and the window don't overwrite each other.
 - **Console emulators** (`programs/nes/emulator.py`: one window class + a SYSTEMS table of core, ROM folder
   regex, extensions, icon, size and face-button keys; NES = FCE Ultra, SNES = Snes9x 1.63 with S=X, A=Y, Q=L,
-  W=R; data/<system>/; Task Manager reads content.process_image). Adding GB/GBC/Genesis/SMS = one SYSTEMS entry
-  plus a core download.
+  W=R; data/<system>/; Task Manager reads content.process_image). Also GB (Gambatte), GBC (a renamed copy of
+  Gambatte so both run at once), GBA (mGBA), Genesis+32X (PicoDrive), Master System (Genesis Plus GX); SameBoy
+  (2 MHz audio rate) and SMS Plus GX (crashed on load) were tried and dropped. Each system is its own program with
+  the user's icon, on the desktop and in Start > Programs > Game Emulation. Entry points <key>_icon/open_<key>/
+  shutdown_<key> are generated from SYSTEMS; programs.EMULATORS lists names.
 - **NES Emulator** (`programs/nes/`, shown as FCE Ultra): libretro.py is our own ctypes libretro front end
   (environment/video/audio/input callbacks, SRAM, serialize); fceu.py is the window. Core:
   assets/emulators/fceumm_libretro.dll (GPL-2, see README there; runs ~2,800 fps headless). ROMs are the user's,

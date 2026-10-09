@@ -1,7 +1,10 @@
 """The console emulators: one XP window driven by a libretro core (assets/emulators), set up per system.
 
-  NES  - FCE Ultra (FCEUmm core), ROMs from E:\\Emulation\\NES...
-  SNES - Snes9x (Snes9x core),     ROMs from E:\\Emulation\\SNES...
+  NES      - FCE Ultra (FCEUmm)          GB   - Gambatte            GBA - mGBA
+  SNES     - Snes9x                      GBC  - Gambatte (own copy of the DLL, so GB and GBC can run together)
+  Genesis  - PicoDrive (Genesis + 32X)   SMS  - Genesis Plus GX
+
+ROMs come from the matching folder under E:\\Emulation (e.g. 'SNES (33 Roms)').
 
 The game list shows the user's own ROMs (not in git). Picking one runs it at 2x with sound; battery saves are kept
 in data/<system>/saves, save states in data/<system>/states (ten slots).
@@ -49,17 +52,45 @@ class System:
     buttons: dict = field(default_factory=dict)
     help: str = ""
     credits: str = ""
+    scale: int = 2               # starting window size (handhelds start bigger)
+    process: str = ""            # what Task Manager calls it
 
 
 SYSTEMS = {
     "nes": System("nes", "NES", "FCE Ultra", "fceumm_libretro.dll", r"(nes|famicom)\b", {".nes", ".fds", ".unf", ".unif"},
                   "nes_icon.png", 256, 240, {Qt.Key_X: L.A, Qt.Key_Z: L.B}, "A:  X\nB:  Z\n",
-                  "FCE Ultra by Bero, Xodnizel and the FCEUmm team. Free software under the GNU GPL."),
+                  "FCE Ultra by Bero, Xodnizel and the FCEUmm team. Free software under the GNU GPL.",
+                  process="fceu.exe"),
     "snes": System("snes", "SNES", "Snes9x", "snes9x_libretro.dll", r"(snes|super nintendo|super famicom|sfc)\b",
                    {".smc", ".sfc", ".swc", ".fig"}, "snes_icon.png", 256, 224,
                    {Qt.Key_X: L.A, Qt.Key_Z: L.B, Qt.Key_S: L.X, Qt.Key_A: L.Y, Qt.Key_Q: L.L, Qt.Key_W: L.R},
                    "A:  X\nB:  Z\nX:  S\nY:  A\nL:  Q\nR:  W\n",
-                   "Snes9x by Gary Henderson, Jerremy Koot and the Snes9x team. Free for non-commercial use."),
+                   "Snes9x by Gary Henderson, Jerremy Koot and the Snes9x team. Free for non-commercial use.",
+                   process="snes9x.exe"),
+    "gb": System("gb", "Game Boy", "Gambatte", "gambatte_libretro.dll", r"(gb|game ?boy)\b(?! ?(color|advance))",
+                 {".gb"}, "gb_icon.png", 160, 144, {Qt.Key_X: L.A, Qt.Key_Z: L.B}, "A:  X\nB:  Z\n",
+                 "Gambatte by Sindre Aam\u00e5s and contributors. Free software under the GNU GPL.", scale=3,
+                 process="gambatte.exe"),
+    "gbc": System("gbc", "Game Boy Color", "Gambatte Color", "gambatte_gbc_libretro.dll", r"(gbc|game ?boy ?colou?r)\b",
+                  {".gbc", ".cgb"}, "gbc_icon.png", 160, 144, {Qt.Key_X: L.A, Qt.Key_Z: L.B}, "A:  X\nB:  Z\n",
+                  "Gambatte by Sindre Aam\u00e5s and contributors. Free software under the GNU GPL.", scale=3,
+                  process="gambatte_gbc.exe"),
+    "gba": System("gba", "Game Boy Advance", "mGBA", "mgba_libretro.dll", r"(gba|game ?boy ?advance)\b",
+                  {".gba"}, "gba_icon.png", 240, 160,
+                  {Qt.Key_X: L.A, Qt.Key_Z: L.B, Qt.Key_Q: L.L, Qt.Key_W: L.R}, "A:  X\nB:  Z\nL:  Q\nR:  W\n",
+                  "mGBA by Vicki Pfau and contributors. Free software under the Mozilla Public License 2.0.",
+                  scale=3, process="mgba.exe"),
+    "gen": System("gen", "Genesis", "PicoDrive", "picodrive_libretro.dll", r"(gen|genesis|mega ?drive|md|32x)\b",
+                  {".bin", ".md", ".gen", ".smd", ".32x"}, "gen_icon.png", 320, 224,
+                  {Qt.Key_Z: L.Y, Qt.Key_X: L.B, Qt.Key_C: L.A, Qt.Key_A: L.Y, Qt.Key_S: L.B, Qt.Key_D: L.A},
+                  "A:  Z or A\nB:  X or S\nC:  C or D\nMode:  Space or Shift\n",
+                  "PicoDrive by notaz and contributors (Genesis, Mega Drive and 32X). Free for non-commercial use.",
+                  process="picodrive.exe"),
+    "sms": System("sms", "Master System", "Genesis Plus", "genesis_plus_gx_libretro.dll", r"(sms|master ?system)\b",
+                  {".sms"}, "sms_icon.png", 256, 192, {Qt.Key_Z: L.B, Qt.Key_X: L.A},
+                  "Button 1:  Z\nButton 2:  X\n(Start is the console's Pause button)\n",
+                  "Genesis Plus GX by Charles MacDonald and Eke-Eke. Free for non-commercial use.",
+                  process="gpgx.exe"),
 }
 
 _cores = {}                      # system key -> Core (each core DLL keeps global state)
@@ -118,9 +149,9 @@ class Screen(QWidget):
         p.fillRect(self.rect(), Qt.black)
         if not self.image.isNull():
             iw, ih = self.image.width(), self.image.height()
-            if ih > 300:                                       # hi-res modes are twice as tall: same picture
+            if ih >= 2 * self.emu.system.height:              # hi-res / interlaced modes: the same picture
                 ih //= 2
-            if iw > 300:
+            if iw >= 2 * self.emu.system.width:
                 iw //= 2
             if self.emu.state.get("tv_aspect"):
                 aspect = 4 / 3
@@ -167,12 +198,12 @@ class Emulator(QWidget):
         super().__init__()
         self.desktop = desktop
         self.system = system
-        self.process_image = {"nes": "fceu.exe", "snes": "snes9x.exe"}.get(system.key)      # for Task Manager
+        self.process_image = system.process                        # for Task Manager
         self.keys = {**DPAD, **system.buttons}
         self.data = DATA / system.key
         self.settings_file = self.data / "settings.json"
         self.frame = None
-        self.state = load_json(self.settings_file, {"scale": 2, "sound": True, "tv_aspect": False,
+        self.state = load_json(self.settings_file, {"scale": system.scale, "sound": True, "tv_aspect": False,
                                                     "pause_inactive": True, "recent": []})
         self.game = None
         self.slot = 1
@@ -250,7 +281,7 @@ class Emulator(QWidget):
         for k in (1, 2, 3):
             a = size.addAction(f"{k}x", lambda k=k: self.set_scale(k))
             a.setCheckable(True)
-            a.setChecked(self.state.get("scale", 2) == k)
+            a.setChecked(self.state.get("scale", self.system.scale) == k)
             sizes.addAction(a)
 
         def toggle(label, key, after=None):
@@ -344,7 +375,7 @@ class Emulator(QWidget):
         self.screen.setFocus()
         self.timer.start()
         self.sram_timer.start()
-        self.set_scale(self.state.get("scale", 2), save=False)
+        self.set_scale(self.state.get("scale", self.system.scale), save=False)
         if self.frame is not None:
             self.frame.set_title(f"{self.system.title} - {game_title(path)}")
         self.screen.say(f"Loaded {game_title(path)}")
@@ -571,7 +602,7 @@ def open_system(desktop, key):
             return None
         body = Emulator(desktop, system)
         win = XPWindow(desktop, system.title, body, icon_for(system),
-                       (system.width * 2 + 16, system.height * 2 + 90))
+                       (system.width * system.scale + 16, system.height * system.scale + 90))
         body.frame = win
         _open[key] = win
     desktop.open_window(win)
@@ -587,26 +618,10 @@ def shutdown_system(key):
         c.close()
 
 
-# program entry points
-def nes_icon():
-    return icon_for(SYSTEMS["nes"])
+# program entry points: <key>_icon(), open_<key>(desktop), shutdown_<key>() for every system
+def _entry_points(key):
+    return (lambda: icon_for(SYSTEMS[key]), lambda desktop: open_system(desktop, key), lambda: shutdown_system(key))
 
 
-def open_nes(desktop):
-    return open_system(desktop, "nes")
-
-
-def shutdown_nes():
-    shutdown_system("nes")
-
-
-def snes_icon():
-    return icon_for(SYSTEMS["snes"])
-
-
-def open_snes(desktop):
-    return open_system(desktop, "snes")
-
-
-def shutdown_snes():
-    shutdown_system("snes")
+for _key in SYSTEMS:
+    globals()[f"{_key}_icon"], globals()[f"open_{_key}"], globals()[f"shutdown_{_key}"] = _entry_points(_key)
