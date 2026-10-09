@@ -435,8 +435,9 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   download into Local Storage/ (ignored except its README.txt, which lists the expected folders); screenshots/ is
   ignored; requirements.txt pins PySide6 6.11.2, ollama 0.6.3, tzdata 2026.5 (tested on Python 3.14).
 - **Own LLM engine, no Ollama** (llm_server.py, stubs/ollama): Local Storage/LLM Models holds llama.cpp b11533
-  (llama.cpp/vulkan, plus Microsoft's VC++ runtime DLLs app-local; an optional llama.cpp/cuda 12.4 build wins when
-  present) and gemma-3-4b-it-Q4_K_M.gguf + mmproj-model-f16.gguf (vision). llm_server starts llama-server hidden on
+  (llama.cpp/vulkan, plus Microsoft's VC++ runtime DLLs app-local; an optional llama.cpp/cuda 12.4 build + cudart,
+  used only when LLM Models/engine.txt says 'cuda' - Vulkan measured faster on the GTX 1080 Ti: 76 vs 60 tok/s)
+  and gemma-3-4b-it-Q4_K_M.gguf + mmproj-model-f16.gguf (vision). llm_server starts llama-server hidden on
   127.0.0.1:<free port> (-c = the largest num_ctx asked, min 16384; -ngl 999; -np 1; --jinja; --mmproj), waits for
   /health, logs to data/llama-server.log, and puts it in a kill-on-close Windows job object so it dies with
   ClaudeXP. claudexp/__init__ puts claudexp/stubs first on sys.path, so `import ollama` (ClaudeAIM untouched, the

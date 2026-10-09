@@ -2,7 +2,8 @@
 
   Local Storage/LLM Models/
     llama.cpp/vulkan/llama-server.exe    the engine (any GPU via Vulkan, else the CPU)
-    llama.cpp/cuda/llama-server.exe      optional: NVIDIA's faster CUDA build, used when present
+    llama.cpp/cuda/llama-server.exe      optional: NVIDIA's CUDA build, used when engine.txt says 'cuda'
+    engine.txt                           optional: 'vulkan' (the default) or 'cuda'
     <model>.gguf                         the model (gemma-3-4b-it-Q4_K_M.gguf)
     mmproj-<...>.gguf                    optional: its picture 'projector', so the model can see images
 
@@ -39,9 +40,15 @@ def models_dir():
 
 
 def find_engine():
-    """llama-server.exe: the CUDA build if it's there (faster on NVIDIA), else the Vulkan one."""
+    """llama-server.exe: the build named in LLM Models/engine.txt ('vulkan' or 'cuda'), else Vulkan - measured
+    faster than CUDA on a GTX 1080 Ti - else whichever build is there."""
     base = models_dir() / "llama.cpp"
-    for flavour in ("cuda", "vulkan", "cpu"):
+    try:
+        chosen = (models_dir() / "engine.txt").read_text(encoding="utf-8").strip().lower()
+    except OSError:
+        chosen = ""
+    order = ([chosen] if chosen in ("vulkan", "cuda", "cpu") else []) + ["vulkan", "cuda", "cpu"]
+    for flavour in order:
         exe = base / flavour / "llama-server.exe"
         if exe.exists():
             return exe
