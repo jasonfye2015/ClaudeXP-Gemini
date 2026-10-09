@@ -253,6 +253,12 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   WordPerfect (.wpd document-pointer parser, ~22/29), and anything inside .zip/.gz; .cbr chapters open in FurComix.
   ~5,300 chapters, ~100% open. Reading: centred serif column, Paper/Sepia/Night, text size, chapter nav, place
   remembered (data/stories.json), Continue button on the shelf, red ribbon on books in progress.
+- **Fur CD Viewer** (`programs/folio/cdviewer.py`): E:\…\Art CDs and DVDs… (64 artist discs, ~30k images).
+  Rack of jewel cases / DVD keep cases with the disc's own cover art (cover/front/info/large… names first);
+  inside, folders as manila tiles with their first picture peeking out, pictures as thumbnails, videos as film
+  tiles. Skips the discs' own thumbnail folders and tn_/_t images, exe/dll/html/swf, AUDIO_TS and small DVD menu
+  VOBs. Pictures open in FurFolio's framed Viewer (reused via duck-typed owner methods); AVI/MPEG/VOB play in a
+  built-in VideoPane (QVideoSink painted). Desktop shortcut.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

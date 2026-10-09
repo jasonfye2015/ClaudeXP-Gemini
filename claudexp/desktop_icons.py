@@ -47,6 +47,7 @@ def builtins():
         ("prog:comix", "FurComix Reader", lambda: programs.get("comix").icon()),
         ("prog:folio", "FurFolio Reader", lambda: programs.get("folio").icon()),
         ("prog:stories", "FurStory Reader", lambda: programs.get("stories").icon()),
+        ("prog:cdviewer", "Fur CD Viewer", lambda: programs.get("cdviewer").icon()),
     ] + folders + [
         ("sys:recycle", "Recycle Bin", lambda: std(QStyle.SP_TrashIcon)),
     ]
@@ -690,7 +691,8 @@ class IconManager(QObject):
                       "tv": r"C:\Program Files\FurTV 2000\FurTV.exe",
                       "comix": r"C:\Program Files\FurComix Reader\FurComix.exe",
                       "folio": r"C:\Program Files\FurFolio Reader\FurFolio.exe",
-                      "stories": r"C:\Program Files\FurFolio Reader\FurStory.exe"}.get(icon.key.split(":", 1)[1], "")
+                      "stories": r"C:\Program Files\FurFolio Reader\FurStory.exe",
+                      "cdviewer": r"C:\Program Files\Fur CD Viewer\FurCD.exe"}.get(icon.key.split(":", 1)[1], "")
             properties(self.desktop, icon.label, [("Target type:", "Application"), ("Target:", target),
                                                   ("-", ""), ("Start in:", str(Path(target).parent))], icon=icon.icon)
             return
