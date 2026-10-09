@@ -2,8 +2,9 @@
 
 The discs stand in a rack as jewel cases (DVDs as black keep cases) with their own cover art. Opening one browses
 it like a gallery: folders as tiles with a peek at their first picture, pictures as thumbnails, videos as film
-tiles. A disc's own thumbnail folders, programs, web pages, DVD menu files and Flash are left out. Pictures open in
-FurFolio's framed viewer; videos (AVI, MPEG, the DVD's VOBs) play in a little built-in player.
+tiles, Flash movies as Flash cards. A disc's own thumbnail folders, programs, web pages and DVD menu files are left
+out. Pictures open in FurFolio's framed viewer, videos (AVI, MPEG, the DVD's VOBs) play in a little built-in player,
+and Flash opens in Macromedia Flash Player.
 
 Like the other readers, nothing is scanned ahead: each folder is listed when it's opened and thumbnails are made
 as they scroll into view (cached in data/folio_thumbs)."""
@@ -434,14 +435,14 @@ class FrameGrabber(QObject):
         if status in (QMediaPlayer.LoadedMedia, QMediaPlayer.BufferedMedia) and not self.seeked:
             self.seeked = True
             QTimer.singleShot(0, self._seek)        # seeking from inside the player's own signal stalls it
+        elif status == QMediaPlayer.InvalidMedia:
+            self._finish(QImage())
 
     def _seek(self):
         if self.busy is not None:
             dur = self.player.duration()
             self.player.setPosition(min(4000, dur // 3) if dur > 0 else 0)
             self.player.play()
-        elif status == QMediaPlayer.InvalidMedia:
-            self._finish(QImage())
 
     def _frame(self, frame):
         if self.busy is None or not self.seeked or not frame.isValid():
@@ -729,33 +730,41 @@ class CDViewer(QWidget):
         if remember:
             self.history.append(self.here)
         self._reset()
-        folder, (dirs, pics, vids) = look_through(path)
+        folder, nodes, counts = self.folder_contents(path)
         self.here = folder
-        disc_path = self.disc.path if self.disc else folder
-        nodes = [Node(folder / d, "folder", nice_name(d)) for d in dirs]
-        nodes += [Node(folder / n, "piece", piece_title(n), self.disc.name if self.disc else "") for n in pics]
-        nodes += [Node(folder / n, "video", piece_title(n), self.disc.name if self.disc else "") for n in vids]
-        sounds, archives = extras(folder)
-        nodes += [Node(folder / n, "sound", piece_title(n), self.disc.name if self.disc else "") for n in sounds]
-        nodes += [Node(folder / n, "archive", n, "") for n in archives]
         self._set_wall_look(False)
         self.wall.fill(nodes)
         self.back_btn.setEnabled(True)
-        try:
-            rel = folder.relative_to(disc_path)
-            crumbs = [self.disc.name] + [nice_name(x) for x in rel.parts]
-        except (ValueError, AttributeError):
-            crumbs = self._archive_crumbs(folder)
-        self.where.setText(self.PLACE + "  ›  " + "  ›  ".join(crumbs))
-        bits = [f"{len(dirs)} folder{'s' if len(dirs) != 1 else ''}" if dirs else "",
-                f"{len(pics)} picture{'s' if len(pics) != 1 else ''}" if pics else "",
-                f"{len(vids)} video{'s' if len(vids) != 1 else ''}" if vids else "",
-                f"{len(sounds)} sound{'s' if len(sounds) != 1 else ''}" if sounds else "",
-                f"{len(archives)} archive{'s' if len(archives) != 1 else ''}" if archives else ""]
-        self.status.setText(", ".join(b for b in bits if b) or "Nothing to look at in this folder.")
+        crumbs = self.crumbs(folder)
+        self.where.setText("  ›  ".join([self.PLACE] + crumbs))
+        bits = [f"{n} {word}{'s' if n != 1 else ''}" for word, n in counts if n]
+        self.status.setText(", ".join(bits) or "Nothing to look at in this folder.")
         self.stack.setCurrentIndex(0)
         if self.frame is not None:
-            self.frame.set_title(f"{crumbs[-1]} - {self.TITLE}")
+            self.frame.set_title(f"{crumbs[-1] if crumbs else self.PLACE} - {self.TITLE}")
+
+    def folder_contents(self, path):
+        """(the folder really shown, its nodes, [(noun, count)]) for a folder."""
+        folder, (dirs, pics, vids) = look_through(path)
+        artist = self.disc.name if self.disc else ""
+        nodes = [Node(folder / d, "folder", nice_name(d)) for d in dirs]
+        nodes += [Node(folder / n, "piece", piece_title(n), artist) for n in pics]
+        nodes += [Node(folder / n, "video", piece_title(n), artist) for n in vids]
+        from .videos import flash_files
+        flash = flash_files(folder)
+        nodes += [Node(folder / n, "flash", piece_title(n), artist) for n in flash]
+        sounds, archives = extras(folder)
+        nodes += [Node(folder / n, "sound", piece_title(n), artist) for n in sounds]
+        nodes += [Node(folder / n, "archive", n, "") for n in archives]
+        return folder, nodes, [("folder", len(dirs)), ("picture", len(pics)), ("video", len(vids)),
+                               ("Flash animation", len(flash)), ("sound", len(sounds)), ("archive", len(archives))]
+
+    def crumbs(self, folder):
+        try:
+            rel = folder.relative_to(self.disc.path)
+            return [self.disc.name] + [nice_name(x) for x in rel.parts]
+        except (ValueError, AttributeError):
+            return self._archive_crumbs(folder)
 
     def go_back(self):
         if not self.history:
@@ -791,6 +800,9 @@ class CDViewer(QWidget):
             self.video.play(node.path, title=node.name)
             if self.frame is not None:
                 self.frame.set_title(f"{node.name} - {self.TITLE}")
+        elif node.kind == "flash":
+            from ..flash import open_flash
+            open_flash(self.desktop, node.path)
         elif node.kind == "archive":
             self.status.setText(f"Opening {node.path.name}...")
             QApplication.processEvents()
@@ -859,7 +871,7 @@ class CDViewer(QWidget):
                 callback(self.thumbs[key])
                 return
             self.waiting.setdefault(key, []).append(callback)
-        if key in self.thumbs or node.kind in ("sound", "archive"):
+        if key in self.thumbs or node.kind in ("sound", "archive", "flash"):
             return
         self.thumbs[key] = None
         if node.kind == "video":
@@ -893,6 +905,9 @@ class CDViewer(QWidget):
             pm = _sound_tile(node)
         elif node.kind == "archive":
             pm = _archive_tile(node)
+        elif node.kind == "flash":
+            from .videos import _flash_tile
+            pm = _flash_tile(node)
         else:
             pm = _tile(node, img)
         item.setIcon(QIcon(pm))

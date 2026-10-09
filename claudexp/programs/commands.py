@@ -13,7 +13,7 @@ NAMES = {
     "claudemuck": "muck", "claudeai": "claudeai", "claudeshield": "antivirus", "isignup": "connect",
     "mspaint": "paint", "pbrush": "paint", "wordpad": "wordpad", "write": "wordpad",
     "charmap": "charmap", "cleanmgr": "cleanmgr", "msinfo32": "msinfo", "sndrec32": "sndrec", "rstrui": "sysrestore", "helpctr": "helpctr",
-    "tourstart": "tour", "claudetv": "tv", "furtv": "tv", "furcomix": "comix", "furfolio": "folio", "furstory": "stories", "furcd": "cdviewer", "furcon": "furcon", "fceu": "nes", "fceultra": "nes", "snes9x": "snes", "gambatte": "gb",
+    "tourstart": "tour", "claudetv": "tv", "furtv": "tv", "furcomix": "comix", "furfolio": "folio", "furstory": "stories", "furcd": "cdviewer", "furcon": "furcon", "furvideo": "furvideo", "flashpla": "flash", "flash": "flash", "claudeamp": "claudeamp", "winamp": "claudeamp", "fceu": "nes", "fceultra": "nes", "snes9x": "snes", "gambatte": "gb",
     "gambatte_gbc": "gbc", "mgba": "gba", "picodrive": "gen", "gpgx": "sms", "gearsystem": "gg", "applewin": "apple2",
     "doom": "doom", "doom2": "doom2", "wolf3d": "wolf3d", "heretic": "heretic", "hexen": "hexen",
     "ski": "skifree", "skifree": "skifree", "jezzball": "jezzball",

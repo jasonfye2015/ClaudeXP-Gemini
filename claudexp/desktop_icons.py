@@ -24,14 +24,14 @@ MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family
               " QMenu::item { padding: 4px 24px 4px 20px; } QMenu::item:selected { background: #316AC5; color: white; }"
               " QMenu::item:disabled { color: #ACA899; }")
 SORTS = ("Name", "Size", "Type", "Modified")
-LAYOUT = 7                  # bump when builtins() changes order
+LAYOUT = 8                  # bump when builtins() changes order
 # Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
-PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon"],
+PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon", "furvideo"],
                    "Emulation": ["nes", "snes", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
                    # the desktop Games folder mirrors Start > Programs > Games
                    "Games": [p.key for p in programs.PROGRAMS if p.group == "Games"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Furry Programs": 3, "Emulation": 3, "Games": 7}
+FOLDERS_SINCE = {"Furry Programs": 8, "Emulation": 3, "Games": 7}
 
 
 def std(which):
@@ -48,6 +48,8 @@ def builtins():
         ("prog:connect", "America Online", lambda: QIcon(pixmap("aol_icon.png"))),
     ] + folders + [
         ("prog:tv", "ClaudeTV", lambda: programs.get("tv").icon()),
+        ("prog:claudeamp", "ClaudeAmp", lambda: programs.get("claudeamp").icon()),
+        ("prog:flash", "Flash Player", lambda: programs.get("flash").icon()),
         ("prog:navigator", "Netscape Navigator", lambda: programs.get("navigator").icon()),
         ("prog:claudeai", "ClaudeAI", lambda: programs.get("claudeai").icon()),
         ("prog:aim", "ClaudeAIM", lambda: programs.get("aim").icon()),
@@ -739,6 +741,9 @@ class IconManager(QObject):
                       "stories": r"C:\Program Files\FurFolio Reader\FurStory.exe",
                       "cdviewer": r"C:\Program Files\Fur CD Viewer\FurCD.exe",
                       "furcon": r"C:\Program Files\Furry Con CD Viewer\FurCon.exe",
+                      "furvideo": r"C:\Program Files\Furry Video Browser\FurVideo.exe",
+                      "flash": r"C:\Program Files\Macromedia\Flash Player\FlashPla.exe",
+                      "claudeamp": r"C:\Program Files\ClaudeAmp\ClaudeAmp.exe",
                       "nes": r"C:\Program Files\FCE Ultra\fceu.exe",
                       "snes": r"C:\Program Files\Snes9x\snes9x.exe",
                       "gb": r"C:\Program Files\Gambatte\gambatte.exe",

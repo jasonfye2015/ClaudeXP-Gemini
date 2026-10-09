@@ -14,6 +14,9 @@ TEXT = {".txt", ".ini", ".log", ".bat", ".sys", ".json", ".csv", ".md", ".cfg", 
 IMAGES = {".jpg", ".jpeg", ".png", ".gif", ".bmp"}
 AUDIO = {".wav", ".mp3", ".wma", ".m4a", ".ogg", ".flac"}
 WEB = {".htm", ".html"}
+VIDEO = {".avi", ".mpg", ".mpeg", ".mp4", ".m4v", ".wmv", ".asf", ".mov", ".qt", ".mkv", ".rm", ".ram", ".rmvb",
+         ".vob", ".flv", ".3gp", ".webm", ".divx"}
+FLASH = {".swf"}
 
 
 def open_file(desktop, path):
@@ -41,6 +44,12 @@ def open_file(desktop, path):
     elif ext in AUDIO:
         from ..programs.wmp import open_wmp
         open_wmp(desktop, path)
+    elif ext in VIDEO:
+        from ..programs.amp import open_amp
+        open_amp(desktop, path)
+    elif ext in FLASH:
+        from ..programs.flash import open_flash
+        open_flash(desktop, path)
     elif ext in WEB:
         from ..programs import navigator
         navigator.launch(desktop, url=QUrl.fromLocalFile(str(path)).toString())

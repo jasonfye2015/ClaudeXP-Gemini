@@ -344,6 +344,26 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   trapped cats -> cheese, waves, 3 lives, stones from level 2), Blockfall (games/blockfall.py; falling blocks with
   7-bag, wall kicks, ghost, next preview, levels every 10 lines), TriPeaks and Golf (games/peaks.py, using cards.py's
   faces on Solitaire's felt). Best scores in games.json.
+- **Macromedia Flash Player 5** (programs/flash.py; Accessories > Entertainment + desktop icon; FlashPla.exe):
+  plays .swf with Ruffle (assets/engines/ruffle) in a QWebEngineView. A ThreadingHTTPServer on 127.0.0.1:<random>
+  serves the player page, Ruffle's files and only the movies handed to it (by token); navigation off 127.0.0.1 and
+  pop-ups are refused, Ruffle's networking is 'internal'. The page reports metadata via console.log("FP:{json}")
+  and the window sizes itself to the stage. main.py sets AA_ShareOpenGLContexts before QApplication (WebEngine).
+- **ClaudeAmp** (programs/amp.py; Start > ClaudeAmp + desktop icon; claudeamp.exe / winamp.exe): Winamp 2 lookalike
+  in an AmpFrame (an XPWindow without the Luna frame; the content paints Winamp title bars and unhandled presses fall
+  through to drag the window). Main window drawn in 275x116 skin units (Double Size = 2x), seven-segment time,
+  19-bar Goertzel spectrum / oscilloscope from QAudioBufferOutput, kbps/kHz/stereo from the stream, playlist editor
+  (multi-select, ADD/REM/SEL/MISC/LIST menus), separate resizable video window (QVideoSink, 1x/2x/FS) docked beside
+  it. Plays assets/sounds/winamp_intro.mp3 at start-up, then what it was asked for. State in data/claudeamp.json.
+  Explorer opens video files (avi/mpg/wmv/mov/mp4/rm...) in ClaudeAmp and .swf in the Flash Player. RealMedia
+  SureStream (.rm/.ram) files don't demux in Qt's FFmpeg and show an error.
+- **Furry Video Browser** (programs/folio/videos.py; Furry Stuff + desktop Furry Programs folder via LAYOUT=8 /
+  FOLDERS_SINCE; furvideo.exe): a CDViewer subclass rooted at Furry Media Archive/Video. CDViewer.show_folder now
+  goes through folder_contents() and crumbs(), which the browser overrides. Folder tiles peek a picture, else a
+  FrameGrabber still of the first video, else a Flash badge; .swf files are Flash cards (never executed for
+  thumbnails); FA upload stamps ('1249280389.') are dropped from names. Double-click: video/sound -> ClaudeAmp,
+  .swf -> Flash Player, pictures -> FurFolio's viewer, archives open like folders. Fur CD Viewer now shows a
+  disc's .swf files as Flash cards too and opens them in the Flash Player.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

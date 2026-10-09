@@ -183,6 +183,10 @@ PROGRAMS = [
             group="Accessories/System Tools"),
     Program("sndrec", "Sound Recorder", "", _lazy("sndrec", "sndrec_icon"), _lazy("sndrec", "open_sndrec"),
             group="Accessories/Entertainment"),
+    Program("flash", "Macromedia Flash Player", "Play Shockwave Flash movies", _lazy("flash", "flash_icon"),
+            _lazy("flash", "open_flash"), _lazy("flash", "shutdown"), group="Accessories/Entertainment"),
+    Program("claudeamp", "ClaudeAmp", "It really whips the llama's ass", _lazy("amp", "amp_icon"),
+            _lazy("amp", "open_amp"), _lazy("amp", "shutdown"), group="ClaudeAmp"),
     Program("tv", "ClaudeTV", "Watch TV", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.tuner", "open_tv"),
             _lazy(".tv.tuner", "shutdown")),
     # Start > Programs > Furry Stuff: the furry programs and the archive folders on E:
@@ -196,6 +200,8 @@ PROGRAMS = [
             _lazy(".folio.cdviewer", "open_cdviewer"), _lazy(".folio.cdviewer", "shutdown"), group=FURRY),
     Program("furcon", "Furry Con CD Viewer", "Convention recap discs", _lazy(".folio.furcon", "con_icon"),
             _lazy(".folio.furcon", "open_furcon"), _lazy(".folio.furcon", "shutdown"), group=FURRY),
+    Program("furvideo", "Furry Video Browser", "Browse the video archive", _lazy(".folio.videos", "video_icon"),
+            _lazy(".folio.videos", "open_videos"), _lazy(".folio.videos", "shutdown"), group=FURRY),
     *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)
       for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
     # Start > Programs > Games: the id/Raven shooters (Doom-engine ones run on PrBoom, Heretic/Hexen on Chocolate)
