@@ -12,7 +12,7 @@ from shiboken6 import isValid
 
 from .. import sound
 from ..wm import XPWindow
-from . import vfs
+from . import shortcuts, vfs
 from .dialogs import date_2001, msgbox, properties, short_date_2001, size_text
 from .viewers import open_file
 
@@ -21,7 +21,7 @@ EXTERNAL_SLEEP = 10 * 60      # seconds idle before the external drive spins dow
 _external_last_used = None    # when E: was last opened (None = still asleep since boot)
 
 # What XP called each kind of file.
-FILE_TYPES = {
+FILE_TYPES = {".lnk": "Shortcut", 
     ".exe": "Application", ".dll": "Application Extension", ".ini": "Configuration Settings",
     ".txt": "Text Document", ".log": "Text Document", ".jpg": "JPEG Image", ".jpeg": "JPEG Image",
     ".gif": "GIF Image", ".png": "PNG Image", ".bmp": "Bitmap Image", ".wav": "Wave Sound",
@@ -90,6 +90,14 @@ class FileProxy(QSortFilterProxyModel):
         return not vfs.hidden(self.fs.filePath(index))
 
     def data(self, index, role=Qt.DisplayRole):
+        if index.column() == 0 and role in (Qt.DisplayRole, Qt.DecorationRole):
+            path = self.fs.filePath(self.mapToSource(index))
+            if shortcuts.is_shortcut(path):                    # shortcuts: no '.lnk', and the target's icon
+                if role == Qt.DisplayRole:
+                    return Path(path).stem
+                icon = shortcuts.icon(path)
+                if icon is not None:
+                    return icon
         if role == Qt.DisplayRole and index.column() in (1, 2, 3):
             src = self.mapToSource(index)
             info = self.fs.fileInfo(src)

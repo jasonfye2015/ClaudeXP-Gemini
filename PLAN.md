@@ -314,6 +314,12 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   isn't in front (or a menu/Start menu is open) it's swapped for a PrintWindow still. Config/saves in data/<game>/
   (-config, -extraconfig, -savedir); graphical_startup 0. The user's HEXEN.WAD is the 4-level demo, which lacks
   FONTAY (yellow font) that Chocolate Hexen needs: a small PWAD is generated from its own FONTA lumps at launch.
+- **Shortcuts + desktop folders (2026-10-09)**: explorer/shortcuts.py adds ClaudeXP .lnk files ('[ClaudeXP
+  Shortcut]' + Program=key or Target=path); Explorer hides '.lnk', shows the target's icon, type 'Shortcut'; opening
+  one launches it. desktop_icons LAYOUT=3 makes 'Furry Programs' (the six furry programs) and 'Emulation' (the nine
+  emulators) desktop folders once and drops those loose icons; the folders sit right after the E: folder links.
+  The archive folders lost their '(xx.xgb)' size suffixes; programs already matched by name prefix, and saved paths
+  in data/comix.json, stories.json and tv_index.json were rewritten to the new names.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

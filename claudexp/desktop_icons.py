@@ -24,7 +24,10 @@ MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family
               " QMenu::item { padding: 4px 24px 4px 20px; } QMenu::item:selected { background: #316AC5; color: white; }"
               " QMenu::item:disabled { color: #ACA899; }")
 SORTS = ("Name", "Size", "Type", "Modified")
-LAYOUT = 2                  # bump when builtins() changes order
+LAYOUT = 3                  # bump when builtins() changes order
+# Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
+PROGRAM_FOLDERS = {"Furry Programs": ["tv", "comix", "folio", "stories", "cdviewer", "furcon"],
+                   "Emulation": ["nes", "snes", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"]}
 
 
 def std(which):
@@ -45,26 +48,11 @@ def builtins():
         ("prog:aim", "ClaudeAIM", lambda: programs.get("aim").icon()),
         ("prog:irc", "ClaudeIRC", lambda: programs.get("irc").icon()),
         ("prog:muck", "ClaudeMUCK", lambda: programs.get("muck").icon()),
-        ("prog:nes", "NES Emulator", lambda: programs.get("nes").icon()),
-        ("prog:snes", "SNES Emulator", lambda: programs.get("snes").icon()),
-        ("prog:gb", "Game Boy Emulator", lambda: programs.get("gb").icon()),
-        ("prog:gbc", "Game Boy Color Emulator", lambda: programs.get("gbc").icon()),
-        ("prog:gba", "Game Boy Advance Emulator", lambda: programs.get("gba").icon()),
-        ("prog:gen", "Genesis Emulator", lambda: programs.get("gen").icon()),
-        ("prog:sms", "Master System Emulator", lambda: programs.get("sms").icon()),
-        ("prog:gg", "Game Gear Emulator", lambda: programs.get("gg").icon()),
-        ("prog:apple2", "Apple ][ Emulator", lambda: programs.get("apple2").icon()),
         ("prog:doom", "Doom", lambda: programs.get("doom").icon()),
         ("prog:doom2", "Doom II", lambda: programs.get("doom2").icon()),
         ("prog:wolf3d", "Wolfenstein 3D", lambda: programs.get("wolf3d").icon()),
         ("prog:heretic", "Heretic", lambda: programs.get("heretic").icon()),
         ("prog:hexen", "Hexen", lambda: programs.get("hexen").icon()),
-        ("prog:tv", "FurTV 2000", lambda: programs.get("tv").icon()),
-        ("prog:comix", "FurComix Reader", lambda: programs.get("comix").icon()),
-        ("prog:folio", "FurFolio Reader", lambda: programs.get("folio").icon()),
-        ("prog:stories", "FurStory Reader", lambda: programs.get("stories").icon()),
-        ("prog:cdviewer", "Fur CD Viewer", lambda: programs.get("cdviewer").icon()),
-        ("prog:furcon", "Furry Con CD Viewer", lambda: programs.get("furcon").icon()),
     ]
 
 
@@ -132,8 +120,11 @@ class IconManager(QObject):
             pass
         if self.state.get("layout", 1) < LAYOUT:
             # The built-in shortcuts were reordered: let them flow into the new order once (files keep their spots).
+            if self.state.get("layout", 1) < 3:
+                self._make_program_folders()
             self.state["positions"] = {k: v for k, v in self.state["positions"].items()
-                                       if not k.startswith(("sys:", "prog:"))}
+                                       if not k.startswith(("sys:", "prog:"))
+                                       and k[5:] not in PROGRAM_FOLDERS}
             self.state["layout"] = LAYOUT
         self.icons = []
         self.press = None          # (global pos, {icon: start pos}) while dragging
@@ -150,6 +141,20 @@ class IconManager(QObject):
         desktop.setAcceptDrops(True)
 
     # ---- the Desktop folder -------------------------------------------------------------
+    def _make_program_folders(self):
+        """Desktop folders holding shortcuts to the furry programs and the emulators."""
+        from .explorer import shortcuts, vfs
+        from . import programs
+        vfs.setup_c()
+        desk = vfs.user_home() / "Desktop"
+        for name, keys in PROGRAM_FOLDERS.items():
+            folder = desk / name
+            folder.mkdir(parents=True, exist_ok=True)
+            for key in keys:
+                prog = next((p for p in programs.PROGRAMS if p.key == key), None)
+                if prog is not None and not (folder / f"{prog.name}.lnk").exists():
+                    shortcuts.make(folder / f"{prog.name}.lnk", program=key)
+
     def folder(self):
         from .explorer import vfs
         vfs.setup_c()
@@ -162,15 +167,29 @@ class IconManager(QObject):
     def rescan(self):
         """Build the icons: built-ins (unless hidden), then whatever is in the Desktop folder."""
         wanted = []
+        from .explorer import shortcuts
+        desk = self.folder()
+
+        def file_entry(f):
+            return (f"file:{f.name}", f.stem if f.is_file() and f.suffix.lower() == ".lnk" else f.name,
+                    lambda f=f: std(QStyle.SP_DirIcon) if f.is_dir()
+                    else (shortcuts.icon(f) if shortcuts.is_shortcut(f) else None)
+                    or self.icon_provider.icon(QFileInfo(str(f))), f)
+        folder_links = {f"prog:{k}" for k in programs.FOLDER_SHORTCUTS}
+        program_folders = [desk / n for n in PROGRAM_FOLDERS if (desk / n).is_dir()]
         for key, label, icon in builtins():
             if key not in self.state["hidden"]:
                 wanted.append((key, self.state["labels"].get(key, label), icon, None))
-        for f in sorted(self.folder().iterdir(), key=lambda p: p.name.lower()):
-            if f.name.startswith(".") or f.name.lower() == "desktop.ini":
+        # the program folders go right after the last E: folder link (or after America Online)
+        keys = [w[0] for w in wanted]
+        after = max((keys.index(k) for k in folder_links if k in keys),
+                    default=keys.index("prog:connect") if "prog:connect" in keys else len(keys) - 1)
+        for i, f in enumerate(program_folders):
+            wanted.insert(after + 1 + i, file_entry(f))
+        for f in sorted(desk.iterdir(), key=lambda p: p.name.lower()):
+            if f.name.startswith(".") or f.name.lower() == "desktop.ini" or f in program_folders:
                 continue
-            wanted.append((f"file:{f.name}", f.stem if f.is_file() and f.suffix.lower() == ".lnk" else f.name,
-                           lambda f=f: std(QStyle.SP_DirIcon) if f.is_dir()
-                           else self.icon_provider.icon(QFileInfo(str(f))), f))
+            wanted.append(file_entry(f))
         existing = {i.key: i for i in self.icons}
         keep = []
         for key, label, icon, path in wanted:

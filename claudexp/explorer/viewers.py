@@ -21,7 +21,10 @@ def open_file(desktop, path):
     ext = path.suffix.lower()
     vpath = vfs.to_virtual(path) or path.name
     from .. import programs
-    if ext == ".exe":
+    if ext == ".lnk":
+        from .shortcuts import open_shortcut
+        open_shortcut(desktop, path)
+    elif ext == ".exe":
         key = vfs.EXECUTABLES.get(path.name.lower())
         if key:
             programs.launch(desktop, key)
