@@ -302,6 +302,18 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
 - **Flying Toasters screen saver** (screensaver.FlyingToasters): the user's 4.4 s clip
   (assets/video/flying_toasters.mp4, 1280x718, no audio) looped silently via QVideoSink, fitted to the screen with
   the bars filled in the clip's own background colour; listed in Display Properties > Screen Saver.
+- **Doom-engine games** (Start > Programs > Games + desktop): Doom, Doom II, Wolfenstein 3D are emulator.py SYSTEMS
+  on PrBoom (one DLL copy each so they can run together), reading E:\WADs (System.top / System.games pick and name
+  the WADs; Wolfenstein 3D.wad is a Doom II TC, PrBoom finds DOOM2 beside it). Classic keys: arrows, Ctrl fire,
+  Space use, Shift run, , . strafe, PgUp/PgDn weapons, Tab map, Esc menu (A=use/confirm, X=fire, Y=run, L/R strafe,
+  L2/R2 weapons, Select map on the RetroPad). libretro.py fix: cores keep the system/save dir pointers (now stable
+  buffers) and need a real log interface (PrBoom wrote through a NULL one -> 'access violation writing 0x0').
+- **Heretic / Hexen** (`programs/doom/native.py`): no libretro core, so Chocolate Heretic/Hexen 3.1.1
+  (assets/engines/chocolate) run as their own processes; the SDL window is restyled WS_CHILD and adopted with
+  QWindow.fromWinId + createWindowContainer. A native child paints over ClaudeXP windows, so when the game window
+  isn't in front (or a menu/Start menu is open) it's swapped for a PrintWindow still. Config/saves in data/<game>/
+  (-config, -extraconfig, -savedir); graphical_startup 0. The user's HEXEN.WAD is the 4-level demo, which lacks
+  FONTAY (yellow font) that Chocolate Hexen needs: a small PWAD is generated from its own FONTA lumps at launch.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

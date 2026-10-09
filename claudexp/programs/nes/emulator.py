@@ -56,6 +56,8 @@ class System:
     process: str = ""            # what Task Manager calls it
     keyboard: bool = False       # a computer: every key goes to it (no controller mapping, fewer shortcuts)
     noun: str = "game"           # 'disk' for the Apple II
+    top: str = ""                # a folder right on E: (e.g. 'WADs') instead of one under E:\Emulation
+    games: dict = field(default_factory=dict)      # file name (lower case) -> title; only these are listed
 
 
 SYSTEMS = {
@@ -108,6 +110,27 @@ SYSTEMS = {
                      keyboard=True, noun="disk"),
 }
 
+DOOM_KEYS = {Qt.Key_Control: L.X, Qt.Key_Space: L.A, Qt.Key_Return: L.A, Qt.Key_Enter: L.A,
+                 Qt.Key_Shift: L.Y, Qt.Key_Comma: L.L, Qt.Key_Period: L.R, Qt.Key_PageUp: L.L2, Qt.Key_PageDown: L.R2,
+                 Qt.Key_Tab: L.SELECT, Qt.Key_Escape: L.START, Qt.Key_Backspace: L.B}
+DOOM_HELP = ("Move / turn:  Arrow keys\nFire:  Ctrl\nUse / open:  Space\nRun:  Shift\nStrafe:  , and .\n"
+                    "Weapons:  Page Up / Page Down\nAutomap:  Tab\nMenu:  Esc   (Enter picks)\n\n"
+                    "Pause:  P\nGame list:  File > Game List")
+PRBOOM = "PrBoom by Florian Schulze, Colin Phipps and the PrBoom team (libretro). Free software under the GNU GPL."
+SYSTEMS.update({
+    "doom": System("doom", "Doom", "Doom", "prboom_libretro.dll", "", {".wad"}, "doom_icon.png", 320, 200,
+                   DOOM_KEYS, DOOM_HELP, PRBOOM, process="doom.exe", top="WADs",
+                   games={"doom.wad": "Doom", "doom1.wad": "Doom (Shareware)", "freedoom1.wad": "Freedoom: Phase 1"}),
+    "doom2": System("doom2", "Doom II", "Doom II", "prboom_doom2_libretro.dll", "", {".wad"}, "doom2_icon.png", 320,
+                    200, DOOM_KEYS, DOOM_HELP, PRBOOM, process="doom2.exe", top="WADs",
+                    games={"doom2.wad": "Doom II: Hell on Earth", "plutonia.wad": "Final Doom: The Plutonia Experiment",
+                           "freedoom2.wad": "Freedoom: Phase 2"}),
+    "wolf3d": System("wolf3d", "Wolfenstein 3D", "Wolfenstein 3D", "prboom_wolf3d_libretro.dll", "", {".wad"},
+                     "wolf3d_icon.png", 320, 200, DOOM_KEYS, DOOM_HELP,
+                     PRBOOM + " Wolfenstein 3D here is the Doom II total conversion, played on Doom II.",
+                     process="wolf3d.exe", top="WADs", games={"wolfenstein 3d.wad": "Wolfenstein 3D"}),
+})
+
 # Qt key -> libretro RETROK_* code, for computer keyboards (letters and digits use their ASCII codes)
 RETROK = {Qt.Key_Return: 13, Qt.Key_Enter: 13, Qt.Key_Backspace: 8, Qt.Key_Tab: 9, Qt.Key_Escape: 27,
           Qt.Key_Space: 32, Qt.Key_Delete: 127, Qt.Key_Up: 273, Qt.Key_Down: 274, Qt.Key_Right: 275,
@@ -143,8 +166,10 @@ def icon_for(system):
 
 
 def rom_folders(system):
-    """This system's folders under E:\\Emulation (e.g. 'SNES (33 Roms)')."""
+    """This system's folders under E:\\Emulation (e.g. 'SNES (33 Roms)'), or its own folder on E: (WADs)."""
     from ...explorer.vfs import local_storage
+    if system.top:
+        return [d for d in local_storage().iterdir() if d.is_dir() and d.name.lower() == system.top.lower()]
     emu = next((d for d in local_storage().iterdir() if d.is_dir() and d.name.lower().startswith("emulat")), None)
     if emu is None:
         return []
@@ -152,7 +177,11 @@ def rom_folders(system):
 
 
 def game_title(path):
-    """'Legend of Zelda, The (U) (PRG 0).nes' -> 'The Legend of Zelda'."""
+    """'Legend of Zelda, The (U) (PRG 0).nes' -> 'The Legend of Zelda' (WADs use their system's game names)."""
+    name = Path(path).name.lower()
+    for system in SYSTEMS.values():
+        if name in system.games:
+            return system.games[name]
     t = re.sub(r"\s*[\[(][^\])]*[\])]", "", Path(path).stem).strip()
     m = re.match(r"(.+?), The(\s*-.*)?$", t)
     if m:
@@ -356,14 +385,21 @@ class Emulator(QWidget):
         roms = []
         for folder in rom_folders(self.system):
             for f in folder.iterdir():
-                if f.suffix.lower() in self.system.exts:
+                if f.suffix.lower() in self.system.exts and (not self.system.games or f.name.lower() in self.system.games):
                     roms.append(f)
-        for f in sorted(roms, key=lambda p: game_title(p).lower()):
-            item = QListWidgetItem(icon, game_title(f))
+        order = list(self.system.games)
+        title = (lambda p: self.system.games[p.name.lower()]) if self.system.games else game_title
+        for f in sorted(roms, key=(lambda p: order.index(p.name.lower())) if order else (lambda p: game_title(p).lower())):
+            item = QListWidgetItem(icon, title(f))
             item.setData(Qt.UserRole, str(f))
             item.setToolTip(f.name)
             self.games.addItem(item)
-        if not roms:
+        if not roms and self.system.top:
+            item = QListWidgetItem(f"No games found. Put the {self.system.console} WAD files in "
+                                   f"E:\\{self.system.top}, then choose File > Game List.")
+            item.setFlags(Qt.NoItemFlags)
+            self.games.addItem(item)
+        elif not roms:
             ext = sorted(self.system.exts)[0]
             item = QListWidgetItem(f"No games found. Put your {self.system.console} ROMs ({ext}) in "
                                    f"E:\\Emulation\\{self.system.console}, then choose File > Game List.")

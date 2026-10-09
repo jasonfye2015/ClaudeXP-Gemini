@@ -33,3 +33,6 @@ genesis_plus_gx_libretro.dll  Master System. Genesis Plus GX, free for non-comme
                            https://github.com/libretro/Genesis-Plus-GX
 gearsystem_libretro.dll    Game Gear. Gearsystem, GNU GPL v3. https://github.com/drhelius/Gearsystem
 applewin_libretro.dll      Apple ][. AppleWin, GNU GPL v2. https://github.com/audetto/AppleWin
+prboom_libretro.dll        Doom (and copies prboom_doom2_libretro.dll / prboom_wolf3d_libretro.dll so Doom, Doom II and
+                           the Wolfenstein 3D conversion can run at once). PrBoom, GNU GPL v2.
+                           https://github.com/libretro/libretro-prboom

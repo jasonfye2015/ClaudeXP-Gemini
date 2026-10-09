@@ -54,6 +54,11 @@ def builtins():
         ("prog:sms", "Master System Emulator", lambda: programs.get("sms").icon()),
         ("prog:gg", "Game Gear Emulator", lambda: programs.get("gg").icon()),
         ("prog:apple2", "Apple ][ Emulator", lambda: programs.get("apple2").icon()),
+        ("prog:doom", "Doom", lambda: programs.get("doom").icon()),
+        ("prog:doom2", "Doom II", lambda: programs.get("doom2").icon()),
+        ("prog:wolf3d", "Wolfenstein 3D", lambda: programs.get("wolf3d").icon()),
+        ("prog:heretic", "Heretic", lambda: programs.get("heretic").icon()),
+        ("prog:hexen", "Hexen", lambda: programs.get("hexen").icon()),
         ("prog:tv", "FurTV 2000", lambda: programs.get("tv").icon()),
         ("prog:comix", "FurComix Reader", lambda: programs.get("comix").icon()),
         ("prog:folio", "FurFolio Reader", lambda: programs.get("folio").icon()),
@@ -716,7 +721,10 @@ class IconManager(QObject):
                       "gba": r"C:\Program Files\mGBA\mgba.exe", "gen": r"C:\Program Files\PicoDrive\picodrive.exe",
                       "sms": r"C:\Program Files\Genesis Plus\gpgx.exe",
                       "gg": r"C:\Program Files\Gearsystem\gearsystem.exe",
-                      "apple2": r"C:\Program Files\AppleWin\applewin.exe"}.get(icon.key.split(":", 1)[1], "")
+                      "apple2": r"C:\Program Files\AppleWin\applewin.exe",
+                      "doom": r"C:\Program Files\Doom\doom.exe", "doom2": r"C:\Program Files\Doom II\doom2.exe",
+                      "wolf3d": r"C:\Program Files\Wolfenstein 3D\wolf3d.exe",
+                      "heretic": r"C:\Program Files\Heretic\heretic.exe", "hexen": r"C:\Program Files\Hexen\hexen.exe"}.get(icon.key.split(":", 1)[1], "")
             properties(self.desktop, icon.label, [("Target type:", "Application"), ("Target:", target),
                                                   ("-", ""), ("Start in:", str(Path(target).parent))], icon=icon.icon)
             return

@@ -34,6 +34,8 @@ def _my_computer(desktop):
 
 
 FURRY = "Furry Stuff"
+DOOM_GAMES = [("doom", "Doom", "Rip and tear"), ("doom2", "Doom II", "Hell on Earth"),
+              ("wolf3d", "Wolfenstein 3D", "Escape from Castle Wolfenstein")]
 EMULATORS = [("nes", "NES Emulator", "Play NES games"), ("snes", "SNES Emulator", "Play Super NES games"),
              ("gb", "Game Boy Emulator", "Play Game Boy games"),
              ("gbc", "Game Boy Color Emulator", "Play Game Boy Color games"),
@@ -196,6 +198,13 @@ PROGRAMS = [
             _lazy(".folio.furcon", "open_furcon"), _lazy(".folio.furcon", "shutdown"), group=FURRY),
     *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)
       for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
+    # Start > Programs > Games: the id/Raven shooters (Doom-engine ones run on PrBoom, Heretic/Hexen on Chocolate)
+    *[Program(key, name, blurb, _lazy(".nes.emulator", f"{key}_icon"), _lazy(".nes.emulator", f"open_{key}"),
+              _lazy(".nes.emulator", f"shutdown_{key}"), group="Games") for key, name, blurb in DOOM_GAMES],
+    Program("heretic", "Heretic", "Raven's dark fantasy shooter", _lazy(".doom.native", "heretic_icon"),
+            _lazy(".doom.native", "open_heretic"), _lazy(".doom.native", "shutdown_heretic"), group="Games"),
+    Program("hexen", "Hexen", "Beyond Heretic", _lazy(".doom.native", "hexen_icon"),
+            _lazy(".doom.native", "open_hexen"), _lazy(".doom.native", "shutdown_hexen"), group="Games"),
     # Start > Programs > Game Emulation
     *[Program(key, name, blurb, _lazy(".nes.emulator", f"{key}_icon"), _lazy(".nes.emulator", f"open_{key}"),
               _lazy(".nes.emulator", f"shutdown_{key}"), group="Game Emulation") for key, name, blurb in EMULATORS],

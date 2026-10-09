@@ -17,6 +17,7 @@ ENV_GET_VARIABLE_UPDATE = 17
 ENV_GET_SAVE_DIRECTORY = 31
 ENV_GET_CORE_OPTIONS_VERSION = 52
 ENV_SET_KEYBOARD_CALLBACK = 12
+ENV_GET_LOG_INTERFACE = 27
 
 PIXEL_0RGB1555, PIXEL_XRGB8888, PIXEL_RGB565 = 0, 1, 2
 DEVICE_JOYPAD = 1
@@ -24,7 +25,7 @@ DEVICE_KEYBOARD = 3
 MEMORY_SAVE_RAM = 0
 
 # joypad button ids
-B, Y, SELECT, START, UP, DOWN, LEFT, RIGHT, A, X, L, R = range(12)
+B, Y, SELECT, START, UP, DOWN, LEFT, RIGHT, A, X, L, R, L2, R2 = range(14)
 
 
 class GameInfo(Structure):
@@ -59,6 +60,8 @@ AUDIO_CB = CFUNCTYPE(None, c_int16, c_int16)
 AUDIO_BATCH_CB = CFUNCTYPE(c_size_t, POINTER(c_int16), c_size_t)
 POLL_CB = CFUNCTYPE(None)
 STATE_CB = CFUNCTYPE(c_int16, c_uint, c_uint, c_uint, c_uint)
+# retro_log_printf_t is variadic; on x64 the extra arguments are simply ignored by this callback
+LOG_CB = CFUNCTYPE(None, c_uint, c_char_p)
 KEYBOARD_CB = CFUNCTYPE(None, c_bool, c_uint, ctypes.c_uint32, ctypes.c_uint16)
 
 
@@ -69,14 +72,17 @@ class Core:
         self.dll = ctypes.CDLL(str(dll_path))
         self.system_dir = str(system_dir).encode("mbcs", "replace")
         self.save_dir = str(save_dir).encode("mbcs", "replace")
-        self._system_p = c_char_p(self.system_dir)
-        self._save_p = c_char_p(self.save_dir)
+        # the core keeps these pointers, so they must live as long as it does
+        self._system_buf = ctypes.create_string_buffer(self.system_dir)
+        self._save_buf = ctypes.create_string_buffer(self.save_dir)
         self.pixel_format = PIXEL_0RGB1555
         self.frame = None                     # the latest QImage
         self.audio = bytearray()              # 16-bit stereo samples since the last take_audio()
         self.buttons = set()
         self.keys_down = set()                # RETROK_* codes held (computers like the Apple II)
         self.keyboard_cb = None               # a core's keyboard event callback, if it registered one
+        self.log = []                         # the core's log messages (format strings), newest last
+        self._log_cb = LOG_CB(self._log_message)
         self.game = None                      # keeps the ROM bytes alive while loaded
         d = self.dll
         d.retro_get_system_av_info.argtypes = [POINTER(AVInfo)]
@@ -199,16 +205,19 @@ class Core:
                 ctypes.cast(data, POINTER(c_bool))[0] = True
                 return True
             if cmd == ENV_GET_SYSTEM_DIRECTORY:
-                ctypes.cast(data, POINTER(c_char_p))[0] = self._system_p.value
+                ctypes.cast(data, POINTER(c_void_p))[0] = ctypes.addressof(self._system_buf)
                 return True
             if cmd == ENV_GET_SAVE_DIRECTORY:
-                ctypes.cast(data, POINTER(c_char_p))[0] = self._save_p.value
+                ctypes.cast(data, POINTER(c_void_p))[0] = ctypes.addressof(self._save_buf)
                 return True
             if cmd == ENV_GET_VARIABLE:
                 ctypes.cast(data, POINTER(Variable))[0].value = None
                 return False
             if cmd == ENV_GET_VARIABLE_UPDATE:
                 ctypes.cast(data, POINTER(c_bool))[0] = False
+                return True
+            if cmd == ENV_GET_LOG_INTERFACE:
+                ctypes.cast(data, POINTER(c_void_p))[0] = ctypes.cast(self._log_cb, c_void_p).value
                 return True
             if cmd == ENV_SET_KEYBOARD_CALLBACK:
                 fn = ctypes.cast(data, POINTER(c_void_p))[0]
@@ -220,6 +229,11 @@ class Core:
         except (ValueError, OSError):
             return False
         return False
+
+    def _log_message(self, level, fmt):
+        text = (fmt or b"").decode("utf-8", "replace").strip()
+        if text:
+            self.log = (self.log + [text])[-50:]
 
     def _video(self, data, width, height, pitch):
         if not data:                                      # 'dupe': the picture didn't change
