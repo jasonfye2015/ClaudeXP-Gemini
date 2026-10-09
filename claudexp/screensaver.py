@@ -1,4 +1,5 @@
-"""Screen savers: Windows XP, Starfield, Mystify, Beziers, 3D Pipes, Marquee, My Pictures Slideshow, Blank.
+"""Screen savers: Windows XP, Starfield, Mystify, Beziers, 3D Pipes, Marquee, My Pictures Slideshow, Blank,
+and After Dark's Flying Toasters (a looped video clip).
 
 Each saver is a QWidget that animates at any size (full screen, or the little monitor in Display
 Properties). The manager watches for idle time and covers the whole PC screen with the chosen saver;
@@ -9,12 +10,12 @@ import random
 import time
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import (QColor, QFont, QFontMetrics, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap,
+from PySide6.QtGui import (QColor, QFont, QFontMetrics, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap,
                            QPolygonF, QRadialGradient)
 from PySide6.QtWidgets import QWidget
 
 from . import display
-from .paths import pixmap
+from .paths import ROOT, pixmap
 
 DEFAULTS = {"saver": "Windows XP", "wait": 10, "resume_welcome": False, "marquee": "Windows XP"}
 
@@ -365,8 +366,56 @@ class Slideshow(Saver):
         self._draw(p, self.current, fade)
 
 
+class FlyingToasters(Saver):
+    """After Dark's Flying Toasters: a short clip (assets/video/flying_toasters.mp4) looped silently."""
+    FPS = 2                                    # the video drives the repaints
+    CLIP = ROOT / "assets" / "video" / "flying_toasters.mp4"
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        from PySide6.QtCore import QUrl
+        from PySide6.QtMultimedia import QMediaPlayer, QVideoSink
+        self.frame = QImage()
+        self.backdrop = QColor()
+        self.player = QMediaPlayer(self)
+        self.sink = QVideoSink(self)
+        self.player.setVideoSink(self.sink)
+        self.sink.videoFrameChanged.connect(self._frame)
+        self.player.setLoops(QMediaPlayer.Infinite)
+        if self.CLIP.exists():
+            self.player.setSource(QUrl.fromLocalFile(str(self.CLIP)))
+            self.player.play()
+
+    def _frame(self, frame):
+        if frame.isValid():
+            self.frame = frame.toImage()
+            if not self.backdrop.isValid():               # the clip's sky colour, for the bars around it
+                self.backdrop = self.frame.pixelColor(2, 2)
+            self.update()
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.fillRect(self.rect(), self.backdrop if self.backdrop.isValid() else QColor("black"))
+        if self.frame.isNull():
+            return
+        p.setRenderHint(QPainter.SmoothPixmapTransform)
+        scale = min(self.width() / self.frame.width(), self.height() / self.frame.height())
+        w, h = self.frame.width() * scale, self.frame.height() * scale
+        p.drawImage(QRectF((self.width() - w) / 2, (self.height() - h) / 2, w, h), self.frame)
+
+    def hideEvent(self, event):
+        self.player.pause()
+        super().hideEvent(event)
+
+    def showEvent(self, event):
+        if self.CLIP.exists():
+            self.player.play()
+        super().showEvent(event)
+
+
 SAVERS = {"(None)": None, "Windows XP": WindowsXP, "3D Pipes": Pipes, "Beziers": Beziers, "Blank": Blank,
-          "Marquee": Marquee, "My Pictures Slideshow": Slideshow, "Mystify": Mystify, "Starfield": Starfield}
+          "Flying Toasters": FlyingToasters, "Marquee": Marquee, "My Pictures Slideshow": Slideshow,
+          "Mystify": Mystify, "Starfield": Starfield}
 
 
 def make(name, parent=None):

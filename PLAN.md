@@ -295,6 +295,9 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   state slots (data/nes/states), pause when inactive, recent games. Keys: arrows, X=A, Z=B, Enter=Start,
   Space/Shift=Select, F5/F7 states, 0-9 slot, P pause, F1 reset, Esc list. Start > Games and the desktop.
   Note: grabbing the XPWindow alone renders the screen white; grab the main window for screenshots.
+- **Flying Toasters screen saver** (screensaver.FlyingToasters): the user's 4.4 s clip
+  (assets/video/flying_toasters.mp4, 1280x718, no audio) looped silently via QVideoSink, fitted to the screen with
+  the bars filled in the clip's own background colour; listed in Display Properties > Screen Saver.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
