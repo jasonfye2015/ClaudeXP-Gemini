@@ -7,24 +7,30 @@ FurFolio's framed viewer; videos (AVI, MPEG, the DVD's VOBs) play in a little bu
 
 Like the other readers, nothing is scanned ahead: each folder is listed when it's opened and thumbnails are made
 as they scroll into view (cached in data/folio_thumbs)."""
+import ctypes
 import hashlib
 import os
 import re
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QRectF, QSize, Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QObject, QPointF, QRectF, QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QColor, QFont, QIcon, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QVideoSink
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QSlider, QStackedWidget, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QSlider, QStackedWidget, QToolButton,
+                               QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
+from ...paths import DATA
 from ...wm import XPWindow
 from ..comix.library import IMAGE_EXTS, natural_key, nice_name
 from ..comix.reader import Loader
 from .gallery import THUMB, THUMBS, TILE, Node, Viewer, Wall, make_thumb, piece_title
 
 VIDEO_EXTS = {".avi", ".mpg", ".mpeg", ".vob", ".mp4", ".wmv", ".mov", ".m4v", ".mkv", ".asf", ".rm", ".ram"}
-SHOW_IMAGES = IMAGE_EXTS | {".svg"}
+SHOW_IMAGES = IMAGE_EXTS | {".svg", ".jpe"} | {".pcx", ".iff", ".lbm", ".ilbm", ".ham", ".ham6", ".ham8", ".iff24"}
+SOUND_EXTS = {".wav", ".mp3", ".mid", ".midi", ".rmi", ".snd", ".au", ".aif", ".aiff", ".wma", ".ogg"}
+ARCHIVE_EXTS = {".zip", ".lzh", ".lha", ".tar"}              # opened like folders (via a cache in data/)
+ARCHIVE_CACHE = DATA / "cd_archives"
 SKIP_DIRS = {"thumbnails", "thumbnail", "thumbs", "thumb", "tn", "_vti_cnf", "_vti_pvt", "audio_ts", "autorun",
              "__macosx", "_notes", "cgi-bin"}
 COVER_WORDS = ("cover", "front", "title", "large", "info", "disc", "cd", "dvd", "logo")
@@ -99,6 +105,60 @@ def listing(folder):
     except OSError:
         pass
     return sorted(dirs, key=natural_key), sorted(pics, key=natural_key), sorted(vids, key=natural_key)
+
+
+def extras(folder):
+    """(sounds, archives) in a folder that the gallery also offers."""
+    sounds, archives = [], []
+    try:
+        with os.scandir(folder) as it:
+            for e in it:
+                if e.is_dir():
+                    continue
+                ext = os.path.splitext(e.name.lower())[1]
+                if ext in SOUND_EXTS:
+                    sounds.append(e.name)
+                elif ext in ARCHIVE_EXTS:
+                    archives.append(e.name)
+    except OSError:
+        pass
+    return sorted(sounds, key=natural_key), sorted(archives, key=natural_key)
+
+
+def open_archive(path):
+    """Unpack an archive into data/cd_archives/<id>/ (once) and return that folder (None if it can't be read)."""
+    path = Path(path)
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    dest = ARCHIVE_CACHE / hashlib.sha1(f"{path}|{st.st_size}|{int(st.st_mtime)}".encode()).hexdigest()[:16]
+    done = dest / ".unpacked"
+    if done.exists():
+        return dest
+    dest.mkdir(parents=True, exist_ok=True)
+    try:
+        if path.suffix.lower() == ".zip":
+            import zipfile
+            with zipfile.ZipFile(path) as z:
+                for info in z.infolist():
+                    target = (dest / info.filename).resolve()
+                    if dest.resolve() in target.parents or target == dest.resolve():   # no escaping the cache
+                        z.extract(info, dest)
+        else:
+            from ..comix.library import _no_window, seven_zip
+            exe = seven_zip()
+            if exe is None:
+                return None
+            import subprocess
+            r = subprocess.run([exe, "x", str(path), f"-o{dest}", "-y", "-bso0", "-bsp0"], capture_output=True,
+                               stdin=subprocess.DEVNULL, **_no_window())
+            if r.returncode not in (0, 1):
+                return None
+    except Exception:
+        return None
+    done.write_text(str(path), encoding="utf-8")
+    return dest
 
 
 def look_through(folder):
@@ -221,6 +281,55 @@ def _folder_tile(node, img):
     g.setColorAt(1, QColor("#E8A820"))
     p.setBrush(g)
     p.drawPath(front)
+    p.end()
+    return pm
+
+
+def _sound_tile(node):
+    pm = QPixmap(TILE)
+    pm.fill(Qt.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.Antialiasing)
+    c = QRectF(TILE.width() / 2 - 34, 30, 68, 68)
+    g = QLinearGradient(c.topLeft(), c.bottomRight())
+    g.setColorAt(0, QColor("#6AA8F0"))
+    g.setColorAt(1, QColor("#1E4A9A"))
+    p.setPen(QPen(QColor("#18366E"), 1))
+    p.setBrush(g)
+    p.drawEllipse(c)
+    p.setBrush(QColor("#FFFFFF"))
+    p.setPen(Qt.NoPen)
+    note = QPainterPath()
+    x, y = c.center().x(), c.center().y()
+    note.addEllipse(QRectF(x - 14, y + 4, 12, 9))
+    note.addEllipse(QRectF(x + 4, y, 12, 9))
+    p.drawPath(note)
+    p.setPen(QPen(QColor("#FFFFFF"), 3))
+    p.drawLine(QPointF(x - 3, y + 8), QPointF(x - 3, y - 16))
+    p.drawLine(QPointF(x + 15, y + 4), QPointF(x + 15, y - 20))
+    p.drawLine(QPointF(x - 3, y - 16), QPointF(x + 15, y - 20))
+    p.setPen(QColor("#303030"))
+    p.setFont(QFont("Tahoma", 7, QFont.Bold))
+    p.drawText(QRectF(0, c.bottom() + 6, TILE.width(), 14), Qt.AlignCenter,
+               os.path.splitext(node.path.name)[1].upper().lstrip("."))
+    p.end()
+    return pm
+
+
+def _archive_tile(node):
+    """A folder with a zipper, like XP's compressed folders."""
+    pm = _folder_tile(node, None)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.Antialiasing)
+    x = TILE.width() / 2
+    p.fillRect(QRectF(x - 6, 40, 12, TILE.height() - 52), QColor("#707070"))
+    p.setPen(QPen(QColor("#D8D8D8"), 1))
+    for y in range(44, TILE.height() - 16, 6):
+        p.drawLine(QPointF(x - 5, y), QPointF(x + 5, y))
+    p.setPen(QColor("#303030"))
+    p.setFont(QFont("Tahoma", 7, QFont.Bold))
+    p.drawText(QRectF(0, TILE.height() - 14, TILE.width(), 12), Qt.AlignCenter,
+               os.path.splitext(node.path.name)[1].upper().lstrip("."))
     p.end()
     return pm
 
@@ -417,17 +526,37 @@ class VideoPane(QWidget):
         row.addWidget(self.time)
         lay.addWidget(bar)
 
-    def play(self, path):
+    def play(self, path, title=""):
+        self.stop()
         self.frame_img = QImage()
+        self.title = title
         self.time.setText("")
+        if Path(path).suffix.lower() in (".mid", ".midi", ".rmi"):
+            self.midi = True
+            mci = ctypes.windll.winmm.mciSendStringW
+            mci("close claudexp_midi", None, 0, None)
+            mci(f'open "{Path(path).resolve()}" type sequencer alias claudexp_midi', None, 0, None)
+            mci("play claudexp_midi", None, 0, None)
+            self.time.setText("MIDI")
+            self.play_btn.setText("\u25A0")
+            self.screen.update()
+            return
+        self.midi = False
         self.player.setSource(QUrl.fromLocalFile(str(path)))
         self.player.play()
 
     def stop(self):
+        if getattr(self, "midi", False):
+            ctypes.windll.winmm.mciSendStringW("close claudexp_midi", None, 0, None)
+            self.midi = False
         self.player.stop()
         self.player.setSource(QUrl())
 
     def toggle(self):
+        if getattr(self, "midi", False):
+            self.stop()
+            self.play_btn.setText("\u25B6")
+            return
         if self.player.playbackState() == QMediaPlayer.PlayingState:
             self.player.pause()
         else:
@@ -454,6 +583,13 @@ class VideoPane(QWidget):
         p = QPainter(self.screen)
         p.fillRect(self.screen.rect(), Qt.black)
         img = self.frame_img
+        if img.isNull() and getattr(self, "title", ""):              # a sound: a note and its name
+            p.setPen(QColor("#6AA8F0"))
+            p.setFont(QFont("Segoe UI Symbol", 64))
+            p.drawText(self.screen.rect().adjusted(0, -40, 0, -40), Qt.AlignCenter, "\u266B")
+            p.setPen(QColor("#E0E8F8"))
+            p.setFont(QFont("Tahoma", 12, QFont.Bold))
+            p.drawText(self.screen.rect().adjusted(20, 90, -20, 0), Qt.AlignCenter, self.title)
         if not img.isNull():
             p.setRenderHint(QPainter.SmoothPixmapTransform)
             s = min(self.screen.width() / img.width(), self.screen.height() / img.height())
@@ -482,6 +618,7 @@ class CDViewer(QWidget):
         self.disc = None
         self.thumbs = {}
         self.waiting = {}
+        self.archive_sources = {}               # unpacked archive folder (in data/) -> the archive it came from
         self.loader = Loader(self, threads=3)
         self.loader.loaded.connect(self._thumb_loaded)
         self.grabber = FrameGrabber(self)
@@ -598,6 +735,9 @@ class CDViewer(QWidget):
         nodes = [Node(folder / d, "folder", nice_name(d)) for d in dirs]
         nodes += [Node(folder / n, "piece", piece_title(n), self.disc.name if self.disc else "") for n in pics]
         nodes += [Node(folder / n, "video", piece_title(n), self.disc.name if self.disc else "") for n in vids]
+        sounds, archives = extras(folder)
+        nodes += [Node(folder / n, "sound", piece_title(n), self.disc.name if self.disc else "") for n in sounds]
+        nodes += [Node(folder / n, "archive", n, "") for n in archives]
         self._set_wall_look(False)
         self.wall.fill(nodes)
         self.back_btn.setEnabled(True)
@@ -605,11 +745,13 @@ class CDViewer(QWidget):
             rel = folder.relative_to(disc_path)
             crumbs = [self.disc.name] + [nice_name(x) for x in rel.parts]
         except (ValueError, AttributeError):
-            crumbs = [nice_name(folder.name)]
+            crumbs = self._archive_crumbs(folder)
         self.where.setText(self.PLACE + "  ›  " + "  ›  ".join(crumbs))
         bits = [f"{len(dirs)} folder{'s' if len(dirs) != 1 else ''}" if dirs else "",
                 f"{len(pics)} picture{'s' if len(pics) != 1 else ''}" if pics else "",
-                f"{len(vids)} video{'s' if len(vids) != 1 else ''}" if vids else ""]
+                f"{len(vids)} video{'s' if len(vids) != 1 else ''}" if vids else "",
+                f"{len(sounds)} sound{'s' if len(sounds) != 1 else ''}" if sounds else "",
+                f"{len(archives)} archive{'s' if len(archives) != 1 else ''}" if archives else ""]
         self.status.setText(", ".join(b for b in bits if b) or "Nothing to look at in this folder.")
         self.stack.setCurrentIndex(0)
         if self.frame is not None:
@@ -644,6 +786,32 @@ class CDViewer(QWidget):
             self.video.play(node.path)
             if self.frame is not None:
                 self.frame.set_title(f"{node.name} - {self.TITLE}")
+        elif node.kind == "sound":
+            self.stack.setCurrentWidget(self.video)
+            self.video.play(node.path, title=node.name)
+            if self.frame is not None:
+                self.frame.set_title(f"{node.name} - {self.TITLE}")
+        elif node.kind == "archive":
+            self.status.setText(f"Opening {node.path.name}...")
+            QApplication.processEvents()
+            folder = open_archive(node.path)
+            if folder is None:
+                from ...explorer.dialogs import msgbox
+                msgbox(self.desktop, self.TITLE, f"{node.path.name} couldn't be opened.", "error")
+                return
+            self.archive_sources[folder] = node.path
+            self.show_folder(folder)
+
+    def _archive_crumbs(self, folder):
+        """Inside an unpacked archive: show where it came from (Disc > ... > name.zip > inner folders)."""
+        for cache, source in self.archive_sources.items():
+            if folder == cache or cache in folder.parents:
+                try:
+                    outer = [self.disc.name] + [nice_name(x) for x in source.parent.relative_to(self.disc.path).parts]
+                except (ValueError, AttributeError):
+                    outer = []
+                return outer + [source.name] + [nice_name(x) for x in folder.relative_to(cache).parts]
+        return [nice_name(folder.name)]
 
     def close_video(self):
         self.video.stop()
@@ -691,7 +859,7 @@ class CDViewer(QWidget):
                 callback(self.thumbs[key])
                 return
             self.waiting.setdefault(key, []).append(callback)
-        if key in self.thumbs:
+        if key in self.thumbs or node.kind in ("sound", "archive"):
             return
         self.thumbs[key] = None
         if node.kind == "video":
@@ -721,6 +889,10 @@ class CDViewer(QWidget):
             pm = _folder_tile(node, img)
         elif node.kind == "video":
             pm = _video_tile(node, img)
+        elif node.kind == "sound":
+            pm = _sound_tile(node)
+        elif node.kind == "archive":
+            pm = _archive_tile(node)
         else:
             pm = _tile(node, img)
         item.setIcon(QIcon(pm))

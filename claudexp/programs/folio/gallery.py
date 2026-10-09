@@ -173,7 +173,20 @@ def make_thumb(path):
         img = QImage(str(f))
         if not img.isNull():
             return img
+    from . import oldimages
+    if path.suffix.lower() in oldimages.EXTS:
+        img = oldimages.load(path)
+        if img.isNull():
+            return img
+        img = img.scaled(THUMB, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        try:
+            THUMBS.mkdir(parents=True, exist_ok=True)
+            img.save(str(f), "JPG", 88)
+        except OSError:
+            pass
+        return img
     reader = QImageReader(str(path))
+    reader.setDecideFormatFromContent(True)              # '.jpe' and other odd JPEG names
     reader.setAutoTransform(True)
     full = reader.size()
     if full.isValid() and (full.width() > THUMB.width() * 2 or full.height() > THUMB.height() * 2):
@@ -637,7 +650,11 @@ class Viewer(QWidget):
 
 
 def _read_full(path):
+    from . import oldimages
+    if Path(path).suffix.lower() in oldimages.EXTS:
+        return oldimages.load(path)
     reader = QImageReader(str(path))
+    reader.setDecideFormatFromContent(True)
     reader.setAutoTransform(True)
     size = reader.size()
     if size.isValid() and max(size.width(), size.height()) > 4000:          # huge scans: keep memory sane

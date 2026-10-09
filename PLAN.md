@@ -266,6 +266,12 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   built-in VideoPane (QVideoSink painted). Desktop shortcut. Video tiles show a real still from FrameGrabber
   (one QMediaPlayer on the UI thread, a still ~4s in, retried at the middle if the frame is nearly black, cached
   in data/folio_thumbs; seeking must be deferred out of the player's own status signal or it stalls).
+- **Fur CD Viewer additions (2026-10-09, 279 discs / ~168k files)**: folio/oldimages.py decodes PCX and Amiga
+  IFF/ILBM (palette, EHB, HAM6, HAM8, 24-bit deep, PBM, first frame of ANIM) in pure Python; gallery.make_thumb and
+  _read_full route those extensions there and sniff content for '.jpe'. Sounds (wav/mp3/au/...) play in the
+  VideoPane with a note card; MIDI plays through winmm MCI (needs an absolute path). zip/lzh/lha/tar archives open
+  like folders: unpacked once into data/cd_archives/<hash>/ (zip-slip guarded), breadcrumb shows the archive.
+  .cab/.cpt/.swf/.psd stay hidden on purpose.
 - **Furry Con CD Viewer** (`programs/folio/furcon.py`, a CDViewer subclass): E:\…\FurCon CDs… (11 convention
   recap discs, ~375 photos, ~105 videos). Lobby of con badges on lanyards in each con's colours (Anthrocon,
   Eurofurence, Further Confusion, Midwest FurFest; names/editions normalised from folder names), sorted by con and
