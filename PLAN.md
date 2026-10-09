@@ -276,6 +276,10 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   'startup', default on; also a checkbox in ClaudeAI Settings) puts it in the tray at logon without a window
   (app.show_desktop -> claudeai.start_at_logon). X tucks the window into the tray (one-time balloon); Exit quits.
   store.Settings.set now merges with the file so the tray and the window don't overwrite each other.
+- **Console emulators** (`programs/nes/emulator.py`: one window class + a SYSTEMS table of core, ROM folder
+  regex, extensions, icon, size and face-button keys; NES = FCE Ultra, SNES = Snes9x 1.63 with S=X, A=Y, Q=L,
+  W=R; data/<system>/; Task Manager reads content.process_image). Adding GB/GBC/Genesis/SMS = one SYSTEMS entry
+  plus a core download.
 - **NES Emulator** (`programs/nes/`, shown as FCE Ultra): libretro.py is our own ctypes libretro front end
   (environment/video/audio/input callbacks, SRAM, serialize); fceu.py is the window. Core:
   assets/emulators/fceumm_libretro.dll (GPL-2, see README there; runs ~2,800 fps headless). ROMs are the user's,

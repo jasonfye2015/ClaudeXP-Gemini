@@ -1,17 +1,21 @@
-"""NES Emulator: FCE Ultra (the FCEUmm libretro core in assets/emulators) in an XP window.
+"""The console emulators: one XP window driven by a libretro core (assets/emulators), set up per system.
 
-The game list shows the user's own ROMs from E:\\Emulation\\NES... (not in git). Picking one runs it at 2x with
-sound; battery saves (Zelda and friends) are kept in data/nes/saves, save states in data/nes/states (ten slots).
+  NES  - FCE Ultra (FCEUmm core), ROMs from E:\\Emulation\\NES...
+  SNES - Snes9x (Snes9x core),     ROMs from E:\\Emulation\\SNES...
 
-Controls: arrows = D-pad, X = A, Z = B, Enter = Start, Space or Shift = Select.
+The game list shows the user's own ROMs (not in git). Picking one runs it at 2x with sound; battery saves are kept
+in data/<system>/saves, save states in data/<system>/states (ten slots).
+
+Common keys: arrows = D-pad, Enter = Start, Space or Shift = Select (see each system for the face buttons).
 F5 save state, F7 load state, 0-9 pick a slot, P or Pause to pause, F1 reset, Esc back to the game list."""
 import os
 import re
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QElapsedTimer, QRectF, Qt, QTimer
-from PySide6.QtGui import QAction, QActionGroup, QColor, QFont, QIcon, QImage, QKeySequence, QPainter, QPixmap
+from PySide6.QtGui import QActionGroup, QColor, QFont, QIcon, QImage, QKeySequence, QPainter
 from PySide6.QtMultimedia import QAudioFormat, QAudioSink, QMediaDevices
 from PySide6.QtWidgets import (QAbstractItemView, QLabel, QListWidget, QListWidgetItem, QMenuBar, QStackedWidget,
                                QVBoxLayout, QWidget)
@@ -23,38 +27,65 @@ from ...wm import XPWindow
 from ..people import load_json, save_json
 from . import libretro as L
 
-CORE_DLL = ROOT / "assets" / "emulators" / "fceumm_libretro.dll"
-NES_DATA = DATA / "nes"
-STATE_FILE = NES_DATA / "settings.json"
-ROM_EXTS = {".nes", ".fds", ".unf", ".unif"}
-KEYS = {Qt.Key_Up: L.UP, Qt.Key_Down: L.DOWN, Qt.Key_Left: L.LEFT, Qt.Key_Right: L.RIGHT, Qt.Key_X: L.A,
-        Qt.Key_Z: L.B, Qt.Key_Return: L.START, Qt.Key_Enter: L.START, Qt.Key_Space: L.SELECT, Qt.Key_Shift: L.SELECT}
-NES_W, NES_H = 256, 240
-
-_core = None                     # one core per process (cores keep global state)
+EMULATORS = ROOT / "assets" / "emulators"
+DPAD = {Qt.Key_Up: L.UP, Qt.Key_Down: L.DOWN, Qt.Key_Left: L.LEFT, Qt.Key_Right: L.RIGHT,
+        Qt.Key_Return: L.START, Qt.Key_Enter: L.START, Qt.Key_Space: L.SELECT, Qt.Key_Shift: L.SELECT}
+SHARED_HELP = ("D-pad:  Arrow keys\nStart:  Enter\nSelect:  Space or Shift\n\n"
+               "Save state:  F5\nLoad state:  F7\nState slot:  0 - 9\nPause:  P or Pause\nReset:  F1\n"
+               "Game list:  Esc")
 
 
-def nes_icon():
-    pm = pixmap("nes_icon.png")
+@dataclass
+class System:
+    key: str                     # 'nes' -> data/nes, the program key
+    console: str                 # menu name: 'NES'
+    title: str                   # window title: 'FCE Ultra'
+    core: str                    # DLL in assets/emulators
+    folder: str                  # regex for its folder under E:\Emulation
+    exts: set
+    icon: str                    # assets/images
+    width: int
+    height: int
+    buttons: dict = field(default_factory=dict)
+    help: str = ""
+    credits: str = ""
+
+
+SYSTEMS = {
+    "nes": System("nes", "NES", "FCE Ultra", "fceumm_libretro.dll", r"(nes|famicom)\b", {".nes", ".fds", ".unf", ".unif"},
+                  "nes_icon.png", 256, 240, {Qt.Key_X: L.A, Qt.Key_Z: L.B}, "A:  X\nB:  Z\n",
+                  "FCE Ultra by Bero, Xodnizel and the FCEUmm team. Free software under the GNU GPL."),
+    "snes": System("snes", "SNES", "Snes9x", "snes9x_libretro.dll", r"(snes|super nintendo|super famicom|sfc)\b",
+                   {".smc", ".sfc", ".swc", ".fig"}, "snes_icon.png", 256, 224,
+                   {Qt.Key_X: L.A, Qt.Key_Z: L.B, Qt.Key_S: L.X, Qt.Key_A: L.Y, Qt.Key_Q: L.L, Qt.Key_W: L.R},
+                   "A:  X\nB:  Z\nX:  S\nY:  A\nL:  Q\nR:  W\n",
+                   "Snes9x by Gary Henderson, Jerremy Koot and the Snes9x team. Free for non-commercial use."),
+}
+
+_cores = {}                      # system key -> Core (each core DLL keeps global state)
+
+
+def core(system):
+    if system.key not in _cores:
+        base = DATA / system.key
+        (base / "system").mkdir(parents=True, exist_ok=True)
+        (base / "saves").mkdir(parents=True, exist_ok=True)
+        _cores[system.key] = L.Core(EMULATORS / system.core, base / "system", base / "saves")
+    return _cores[system.key]
+
+
+def icon_for(system):
+    pm = pixmap(system.icon)
     return QIcon(pm) if not pm.isNull() else QIcon()
 
 
-def core():
-    global _core
-    if _core is None:
-        (NES_DATA / "system").mkdir(parents=True, exist_ok=True)
-        (NES_DATA / "saves").mkdir(parents=True, exist_ok=True)
-        _core = L.Core(CORE_DLL, NES_DATA / "system", NES_DATA / "saves")
-    return _core
-
-
-def rom_folders():
-    """NES folders under E:\\Emulation (e.g. 'NES (36 Roms)')."""
+def rom_folders(system):
+    """This system's folders under E:\\Emulation (e.g. 'SNES (33 Roms)')."""
     from ...explorer.vfs import local_storage
     emu = next((d for d in local_storage().iterdir() if d.is_dir() and d.name.lower().startswith("emulat")), None)
     if emu is None:
         return []
-    return [d for d in sorted(emu.iterdir()) if d.is_dir() and re.match(r"(nes|famicom|nintendo)\b", d.name.lower())]
+    return [d for d in sorted(emu.iterdir()) if d.is_dir() and re.match(system.folder, d.name.lower())]
 
 
 def game_title(path):
@@ -67,7 +98,7 @@ def game_title(path):
 
 
 class Screen(QWidget):
-    """The NES picture, pixel-sharp, letterboxed in black, with FCE Ultra-style messages in the corner."""
+    """The console's picture, pixel-sharp, letterboxed in black, with messages in the corner."""
 
     def __init__(self, emu):
         super().__init__()
@@ -76,7 +107,7 @@ class Screen(QWidget):
         self.message = ""
         self.message_until = 0.0
         self.setFocusPolicy(Qt.StrongFocus)
-        self.setMinimumSize(NES_W, NES_H)
+        self.setMinimumSize(emu.system.width, emu.system.height)
 
     def say(self, text, seconds=2.0):
         self.message, self.message_until = text, time.monotonic() + seconds
@@ -86,15 +117,21 @@ class Screen(QWidget):
         p = QPainter(self)
         p.fillRect(self.rect(), Qt.black)
         if not self.image.isNull():
-            aspect = (4 / 3) if self.emu.state.get("tv_aspect") else NES_W / NES_H
-            w, h = self.width(), self.height()
-            if w / h > aspect:
-                w = int(h * aspect)
-            else:
-                h = int(w / aspect)
-            if not self.emu.state.get("tv_aspect"):                # whole-number scaling keeps pixels square
-                k = max(1, min(self.width() // NES_W, self.height() // NES_H))
-                w, h = NES_W * k, NES_H * k
+            iw, ih = self.image.width(), self.image.height()
+            if ih > 300:                                       # hi-res modes are twice as tall: same picture
+                ih //= 2
+            if iw > 300:
+                iw //= 2
+            if self.emu.state.get("tv_aspect"):
+                aspect = 4 / 3
+                w, h = self.width(), self.height()
+                if w / h > aspect:
+                    w = int(h * aspect)
+                else:
+                    h = int(w / aspect)
+            else:                                              # whole-number scaling keeps pixels square
+                k = max(1, min(self.width() // iw, self.height() // ih))
+                w, h = iw * k, ih * k
             target = QRectF((self.width() - w) / 2, (self.height() - h) / 2, w, h)
             p.setRenderHint(QPainter.SmoothPixmapTransform, False)
             p.drawImage(target, self.image)
@@ -120,17 +157,23 @@ class Screen(QWidget):
             super().keyReleaseEvent(event)
 
     def focusOutEvent(self, event):
-        core().buttons.clear()                     # never leave a button stuck down
+        if self.emu.system.key in _cores:
+            _cores[self.emu.system.key].buttons.clear()        # never leave a button stuck down
         super().focusOutEvent(event)
 
 
 class Emulator(QWidget):
-    def __init__(self, desktop):
+    def __init__(self, desktop, system):
         super().__init__()
         self.desktop = desktop
+        self.system = system
+        self.process_image = {"nes": "fceu.exe", "snes": "snes9x.exe"}.get(system.key)      # for Task Manager
+        self.keys = {**DPAD, **system.buttons}
+        self.data = DATA / system.key
+        self.settings_file = self.data / "settings.json"
         self.frame = None
-        self.state = load_json(STATE_FILE, {"scale": 2, "sound": True, "tv_aspect": False, "pause_inactive": True,
-                                            "recent": []})
+        self.state = load_json(self.settings_file, {"scale": 2, "sound": True, "tv_aspect": False,
+                                                    "pause_inactive": True, "recent": []})
         self.game = None
         self.slot = 1
         self.paused = False
@@ -148,7 +191,7 @@ class Emulator(QWidget):
         self.stack = QStackedWidget()
         lay.addWidget(self.stack, 1)
         self.games = QListWidget()
-        self.games.setIconSize(pixmap("nes_icon.png").size().scaled(24, 24, Qt.KeepAspectRatio))
+        self.games.setIconSize(pixmap(system.icon).size().scaled(24, 24, Qt.KeepAspectRatio))
         self.games.setStyleSheet("QListWidget { background: white; border: none; font: 11px Tahoma; }"
                                  "QListWidget::item { padding: 3px; } QListWidget::item:selected {"
                                  " background: #316AC5; color: white; }")
@@ -169,6 +212,10 @@ class Emulator(QWidget):
         self.sram_timer = QTimer(self, interval=30000, timeout=self._save_sram)
         self.fill_games()
 
+    @property
+    def core(self):
+        return core(self.system)
+
     # ---- menus --------------------------------------------------------------------------------------------
     def _menus(self):
         from ..notepad import MENU_STYLE
@@ -180,7 +227,7 @@ class Emulator(QWidget):
         f.addAction("&Close Game", self.close_game)
         f.addSeparator()
         f.addAction("E&xit", lambda: self.frame.request_close() if self.frame else None)
-        n = bar.addMenu("&NES")
+        n = bar.addMenu("&" + self.system.console)
         self.pause_action = n.addAction("&Pause", self.toggle_pause, QKeySequence("P"))
         self.pause_action.setCheckable(True)
         n.addAction("&Reset", self.reset, QKeySequence("F1"))
@@ -218,7 +265,7 @@ class Emulator(QWidget):
         toggle("Pause when &Inactive", "pause_inactive")
         h = bar.addMenu("&Help")
         h.addAction("&Controls...", self.show_controls)
-        h.addAction("&About FCE Ultra...", self.about)
+        h.addAction(f"&About {self.system.title}...", self.about)
         # keyboard shortcuts (F5, P...) only while the emulator window has focus, not all over the desktop
         stack = list(bar.actions())
         while stack:
@@ -240,11 +287,11 @@ class Emulator(QWidget):
     # ---- the game list -----------------------------------------------------------------------------------
     def fill_games(self):
         self.games.clear()
-        icon = nes_icon()
+        icon = icon_for(self.system)
         roms = []
-        for folder in rom_folders():
+        for folder in rom_folders(self.system):
             for f in folder.iterdir():
-                if f.suffix.lower() in ROM_EXTS:
+                if f.suffix.lower() in self.system.exts:
                     roms.append(f)
         for f in sorted(roms, key=lambda p: game_title(p).lower()):
             item = QListWidgetItem(icon, game_title(f))
@@ -252,8 +299,9 @@ class Emulator(QWidget):
             item.setToolTip(f.name)
             self.games.addItem(item)
         if not roms:
-            item = QListWidgetItem("No games found. Put your NES ROMs (.nes) in E:\\Emulation\\NES, then choose "
-                                   "File > Game List.")
+            ext = sorted(self.system.exts)[0]
+            item = QListWidgetItem(f"No games found. Put your {self.system.console} ROMs ({ext}) in "
+                                   f"E:\\Emulation\\{self.system.console}, then choose File > Game List.")
             item.setFlags(Qt.NoItemFlags)
             self.games.addItem(item)
         self._refresh_recent()
@@ -271,10 +319,10 @@ class Emulator(QWidget):
     # ---- playing -----------------------------------------------------------------------------------------
     def play(self, path):
         self.close_game()
-        c = core()
+        c = self.core
         if not c.load(path):
             from ...explorer.dialogs import msgbox
-            msgbox(self.desktop, "FCE Ultra", f"{path.name} couldn't be loaded. It may be damaged or use a "
+            msgbox(self.desktop, self.system.title, f"{path.name} couldn't be loaded. It may be damaged or use a "
                    "cartridge type this emulator doesn't support.", "error")
             return
         self.game = path
@@ -298,7 +346,7 @@ class Emulator(QWidget):
         self.sram_timer.start()
         self.set_scale(self.state.get("scale", 2), save=False)
         if self.frame is not None:
-            self.frame.set_title(f"FCE Ultra - {game_title(path)}")
+            self.frame.set_title(f"{self.system.title} - {game_title(path)}")
         self.screen.say(f"Loaded {game_title(path)}")
 
     def close_game(self):
@@ -307,15 +355,15 @@ class Emulator(QWidget):
         self._save_sram()
         self.timer.stop()
         self.sram_timer.stop()
-        core().unload()
-        core().buttons.clear()
+        self.core.unload()
+        self.core.buttons.clear()
         self._stop_audio()
         self.game = None
         self.screen.image = QImage()
         self.stack.setCurrentWidget(self.games)
         self.fill_games()
         if self.frame is not None:
-            self.frame.set_title("FCE Ultra")
+            self.frame.set_title(self.system.title)
 
     def _tick(self):
         if self.game is None:
@@ -324,14 +372,14 @@ class Emulator(QWidget):
             not self.state.get("pause_inactive") or self.desktop.is_active(self.frame))
         if not active and not self.auto_paused and not self.paused:
             self.auto_paused = True
-            core().buttons.clear()
+            self.core.buttons.clear()
             self.screen.update()
         elif active and self.auto_paused:
             self.auto_paused = False
             self.next_frame = self.clock.elapsed() / 1000
         if self.paused or self.auto_paused or self.stack.currentWidget() is not self.screen:
             return
-        c = core()
+        c = self.core
         now = self.clock.elapsed() / 1000
         step = 1.0 / c.fps
         ran = 0
@@ -354,10 +402,10 @@ class Emulator(QWidget):
 
     def key(self, event, down):
         if event.isAutoRepeat():
-            return event.key() in KEYS
+            return event.key() in self.keys
         k = event.key()
-        if k in KEYS:
-            (core().buttons.add if down else core().buttons.discard)(KEYS[k])
+        if k in self.keys:
+            (self.core.buttons.add if down else self.core.buttons.discard)(self.keys[k])
             return True
         if not down:
             return False
@@ -371,13 +419,14 @@ class Emulator(QWidget):
             return False
         return True
 
-    # ---- NES menu ---------------------------------------------------------------------------------------
+    # ---- console menu ------------------------------------------------------------------------------------
     def pause(self, on):
         self.paused = on and self.game is not None
         self.pause_action.setChecked(self.paused)
         if not self.paused:
             self.next_frame = self.clock.elapsed() / 1000
-        core().buttons.clear() if _core else None
+        if self.system.key in _cores:
+            _cores[self.system.key].buttons.clear()
         self.screen.update()
 
     def toggle_pause(self):
@@ -385,7 +434,7 @@ class Emulator(QWidget):
 
     def reset(self):
         if self.game is not None:
-            core().reset()
+            self.core.reset()
             self.screen.say("Reset")
 
     def power(self):
@@ -395,15 +444,15 @@ class Emulator(QWidget):
 
     # ---- states and battery saves ------------------------------------------------------------------------
     def _sram_file(self):
-        return NES_DATA / "saves" / (self.game.stem + ".srm")
+        return self.data / "saves" / (self.game.stem + ".srm")
 
     def _state_file(self, slot):
-        return NES_DATA / "states" / f"{self.game.stem}.st{slot}"
+        return self.data / "states" / f"{self.game.stem}.st{slot}"
 
     def _save_sram(self):
         if self.game is None:
             return
-        data = core().save_ram()
+        data = self.core.save_ram()
         if data and data != self.last_sram:
             try:
                 self._sram_file().write_bytes(data)
@@ -414,7 +463,7 @@ class Emulator(QWidget):
     def save_state(self):
         if self.game is None:
             return
-        data = core().save_state()
+        data = self.core.save_state()
         if data:
             f = self._state_file(self.slot)
             f.parent.mkdir(parents=True, exist_ok=True)
@@ -428,7 +477,7 @@ class Emulator(QWidget):
         if not f.exists():
             self.screen.say(f"State {self.slot} is empty")
             return
-        self.screen.say(f"State {self.slot} loaded" if core().load_state(f.read_bytes())
+        self.screen.say(f"State {self.slot} loaded" if self.core.load_state(f.read_bytes())
                         else f"State {self.slot} couldn't be loaded")
 
     def select_slot(self, i):
@@ -445,13 +494,13 @@ class Emulator(QWidget):
             self._save_settings()
         if self.frame is None or self.frame.maximized:
             return
+        W, H = self.system.width, self.system.height
         chrome = self.frame.size() - self.size()
         extra_h = self.height() - self.stack.height()
         area = self.desktop.work_area()
-        while k > 1 and (NES_H * k + extra_h + chrome.height() > area.height()
-                         or NES_W * k + chrome.width() > area.width()):
+        while k > 1 and (H * k + extra_h + chrome.height() > area.height() or W * k + chrome.width() > area.width()):
             k -= 1                                          # 3x doesn't fit on a 1024x768 screen
-        self.frame.resize(NES_W * k + chrome.width(), NES_H * k + extra_h + chrome.height())
+        self.frame.resize(W * k + chrome.width(), H * k + extra_h + chrome.height())
         pos = self.frame.pos()
         self.frame.move(max(0, min(pos.x(), area.right() - self.frame.width())),
                         max(0, min(pos.y(), area.bottom() - self.frame.height())))
@@ -488,22 +537,19 @@ class Emulator(QWidget):
             self.audio_out.setVolume(0.0 if (not self.state.get("sound", True) or sound.is_muted()) else 0.8)
 
     def _save_settings(self):
-        save_json(STATE_FILE, self.state)
+        save_json(self.settings_file, self.state)
 
     # ---- help ---------------------------------------------------------------------------------------------
     def show_controls(self):
         from ...explorer.dialogs import msgbox
-        msgbox(self.desktop, "Controls",
-               "D-pad:  Arrow keys\nA:  X\nB:  Z\nStart:  Enter\nSelect:  Space or Shift\n\n"
-               "Save state:  F5\nLoad state:  F7\nState slot:  0 - 9\nPause:  P or Pause\nReset:  F1\n"
-               "Game list:  Esc", "info")
+        msgbox(self.desktop, "Controls", self.system.help + SHARED_HELP, "info")
 
     def about(self):
         from ...explorer.dialogs import msgbox
-        c = core()
-        msgbox(self.desktop, "About FCE Ultra",
-               f"FCE Ultra NES Emulator\n\nEmulation core: {c.name} {c.version}\n"
-               "FCE Ultra by Bero, Xodnizel and the FCEUmm team. Free software under the GNU GPL.", "info")
+        c = self.core
+        msgbox(self.desktop, f"About {self.system.title}",
+               f"{self.system.title} {self.system.console} Emulator\n\nEmulation core: {c.name} {c.version}\n"
+               + self.system.credits, "info")
 
     def closeEvent(self, event):
         self.close_game()
@@ -514,27 +560,53 @@ class Emulator(QWidget):
 _open = {}
 
 
-def open_nes(desktop):
-    win = _open.get("win")
+def open_system(desktop, key):
+    system = SYSTEMS[key]
+    win = _open.get(key)
     if win is None or not isValid(win):
-        if not CORE_DLL.exists():
+        if not (EMULATORS / system.core).exists():
             from ...explorer.dialogs import msgbox
-            msgbox(desktop, "FCE Ultra", "The emulator core (fceumm_libretro.dll) is missing from "
-                   "assets\\emulators.", "error")
+            msgbox(desktop, system.title, f"The emulator core ({system.core}) is missing from assets\\emulators.",
+                   "error")
             return None
-        body = Emulator(desktop)
-        win = XPWindow(desktop, "FCE Ultra", body, nes_icon(), (NES_W * 2 + 16, NES_H * 2 + 90))
+        body = Emulator(desktop, system)
+        win = XPWindow(desktop, system.title, body, icon_for(system),
+                       (system.width * 2 + 16, system.height * 2 + 90))
         body.frame = win
-        _open["win"] = win
+        _open[key] = win
     desktop.open_window(win)
     return win
 
 
-def shutdown():
-    global _core
-    win = _open.get("win")
+def shutdown_system(key):
+    win = _open.get(key)
     if win is not None and isValid(win):
         win.content.close_game()
-    if _core is not None:
-        _core.close()
-        _core = None
+    c = _cores.pop(key, None)
+    if c is not None:
+        c.close()
+
+
+# program entry points
+def nes_icon():
+    return icon_for(SYSTEMS["nes"])
+
+
+def open_nes(desktop):
+    return open_system(desktop, "nes")
+
+
+def shutdown_nes():
+    shutdown_system("nes")
+
+
+def snes_icon():
+    return icon_for(SYSTEMS["snes"])
+
+
+def open_snes(desktop):
+    return open_system(desktop, "snes")
+
+
+def shutdown_snes():
+    shutdown_system("snes")

@@ -46,6 +46,7 @@ def builtins():
         ("prog:irc", "ClaudeIRC", lambda: programs.get("irc").icon()),
         ("prog:muck", "ClaudeMUCK", lambda: programs.get("muck").icon()),
         ("prog:nes", "NES Emulator", lambda: programs.get("nes").icon()),
+        ("prog:snes", "SNES Emulator", lambda: programs.get("snes").icon()),
         ("prog:tv", "FurTV 2000", lambda: programs.get("tv").icon()),
         ("prog:comix", "FurComix Reader", lambda: programs.get("comix").icon()),
         ("prog:folio", "FurFolio Reader", lambda: programs.get("folio").icon()),
@@ -701,7 +702,8 @@ class IconManager(QObject):
                       "stories": r"C:\Program Files\FurFolio Reader\FurStory.exe",
                       "cdviewer": r"C:\Program Files\Fur CD Viewer\FurCD.exe",
                       "furcon": r"C:\Program Files\Furry Con CD Viewer\FurCon.exe",
-                      "nes": r"C:\Program Files\FCE Ultra\fceu.exe"}.get(icon.key.split(":", 1)[1], "")
+                      "nes": r"C:\Program Files\FCE Ultra\fceu.exe",
+                      "snes": r"C:\Program Files\Snes9x\snes9x.exe"}.get(icon.key.split(":", 1)[1], "")
             properties(self.desktop, icon.label, [("Target type:", "Application"), ("Target:", target),
                                                   ("-", ""), ("Start in:", str(Path(target).parent))], icon=icon.icon)
             return

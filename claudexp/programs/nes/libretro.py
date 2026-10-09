@@ -22,7 +22,7 @@ DEVICE_JOYPAD = 1
 MEMORY_SAVE_RAM = 0
 
 # joypad button ids
-B, Y, SELECT, START, UP, DOWN, LEFT, RIGHT, A, X = range(10)
+B, Y, SELECT, START, UP, DOWN, LEFT, RIGHT, A, X, L, R = range(12)
 
 
 class GameInfo(Structure):

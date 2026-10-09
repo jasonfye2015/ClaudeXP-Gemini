@@ -41,7 +41,7 @@ MODULE_IMAGES = [("programs.nes.", "fceu.exe"), ("programs.tv.", "furtv.exe"), (
                  ("claudeai", "claudeai.exe"), ("claudeaim", "aim.exe"), ("irc", "mirc32.exe"),
                  ("muck", "claudemuck.exe"), ("defrag", "dfrgntfs.exe"), ("antivirus", "claudeshield.exe"),
                  ("updates", "wuauclt.exe"), ("printing", "spoolsv.exe")]
-MEM = {"fceu.exe": 24310, "furtv.exe": 21480, "furcomix.exe": 16920, "furfolio.exe": 14880, "furstory.exe": 9640, "furcd.exe": 18300, "furcon.exe": 17460, "helpctr.exe": 12400, "tourstart.exe": 9800, "rstrui.exe": 6100, "charmap.exe": 3360, "msinfo32.exe": 7720, "sndrec32.exe": 3410, "pinball.exe": 11260, "msimn.exe": 9140, "wordpad.exe": 5480, "bckgzm.exe": 7900, "hrtzzm.exe": 8120, "shvlzm.exe": 8040,
+MEM = {"fceu.exe": 24310, "snes9x.exe": 31840, "furtv.exe": 21480, "furcomix.exe": 16920, "furfolio.exe": 14880, "furstory.exe": 9640, "furcd.exe": 18300, "furcon.exe": 17460, "helpctr.exe": 12400, "tourstart.exe": 9800, "rstrui.exe": 6100, "charmap.exe": 3360, "msinfo32.exe": 7720, "sndrec32.exe": 3410, "pinball.exe": 11260, "msimn.exe": 9140, "wordpad.exe": 5480, "bckgzm.exe": 7900, "hrtzzm.exe": 8120, "shvlzm.exe": 8040,
        "chkrzm.exe": 7420, "rvsezm.exe": 7064, "zclientm.exe": 6900, "wmplayer.exe": 18260, "mspaint.exe": 6840,
        "notepad.exe": 2964, "calc.exe": 3108, "cmd.exe": 1468, "taskmgr.exe": 4072, "freecell.exe": 3256,
        "sol.exe": 3920, "spider.exe": 4484, "winmine.exe": 2440, "mshearts.exe": 3672, "netscape.exe": 21336,
@@ -296,6 +296,8 @@ class TaskManager(QWidget):
     @staticmethod
     def image_for(win):
         content = win.content if isValid(win.content) else None
+        if getattr(content, "process_image", None):
+            return content.process_image
         # game windows wrap their play area; name the process after the game itself
         module = type(getattr(content, "play", content)).__module__ if content is not None else ""
         for key, image in MODULE_IMAGES:
