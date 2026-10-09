@@ -34,7 +34,8 @@ TITLE = "The Fur Directory"
 DISCLAIMER = ("All residents of The Fur Directory are fictional characters played by ClaudeXP's AI. They are not real "
               "people, and any resemblance to real persons, living or dead, is coincidental.")
 GROUPS = [("all", "Everyone"), ("aim", "AIM buddies"), ("irc", "FurNet IRC regulars"),
-          ("muck", "MUCK regulars"), ("background", "Background characters")]
+          ("muck", "MUCK regulars"), ("background", "Background characters"),
+          ("directory", "no accounts yet")]
 # The gallery's sections. A record's "tier" decides; otherwise: an AIM account = main; a regular who chats (or is on
 # more than one system) = support; staff, bots, idlers and lurkers who rarely talk to you = background.
 TIERS = [("user", "User Fursonas", "The fursonas offered when Windows is set up. Yours is marked."),
@@ -179,6 +180,11 @@ def residents():
         r = add(name, "background")
         r.irc = {"nick": lurk[name][0][0], "realname": "", "channels": [c for _n, c in lurk[name]],
                  "hours": None, "persona": "", "bot": "bot" in name.lower(), "lurker": True}
+    ids = {r.id.lower() for r in out}
+    for f in sorted(RECORDS.glob("*.json"), key=lambda f: f.stem.lower()):   # furs with no account anywhere yet
+        if f.stem.lower() not in ids and f.stem.lower() not in seen:
+            seen[f.stem.lower()] = r = Resident(f.stem, f.stem, "directory")
+            out.append(r)
     for r in out:
         r.record = _load(RECORDS / f"{r.id}.json", {})
         if r.record.get("fur_name"):
@@ -351,7 +357,8 @@ class Card:
         icon = self._img(f"avatar:{r.id}", avatar(r, 96))
         where = {"aim": "AIM buddy - also on FurNet IRC and the MUCK", "irc": "FurNet IRC regular",
                  "muck": "MUCK regular", "background": "Background character on FurNet IRC",
-                 "user": "A fursona you can choose when Windows is set up"}[r.group]
+                 "user": "A fursona you can choose when Windows is set up",
+                 "directory": "No accounts yet"}[r.group]
         if irc.get("bot"):
             where += " (a bot)"
         if muck.get("wizard"):
@@ -363,7 +370,8 @@ class Card:
                f'<table cellspacing=0 cellpadding=0><tr><td><img src="{icon}" width=96 height=96></td>'
                f'<td style="padding-left:14px; vertical-align:middle"><h1>{_e(r.name)}</h1>'
                f'<div>{_e(where)}</div>{you}'
-               + (f'<div style="margin-top:6px"><i>"{_e(aim["profile"])}"</i></div>' if aim.get("profile") else "")
+               + (f'<div style="margin-top:6px"><i>"{_e(aim["profile"])}"</i></div>' if aim.get("profile") else
+                  f'<div style="margin-top:6px"><i>{_e(rec["summary"])}</i></div>' if rec.get("summary") else "")
                + "</td></tr></table>"]
         # screen names
         names = dict(rec.get("screen_names", {}))
