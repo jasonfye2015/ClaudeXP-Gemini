@@ -24,6 +24,7 @@ MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family
               " QMenu::item { padding: 4px 24px 4px 20px; } QMenu::item:selected { background: #316AC5; color: white; }"
               " QMenu::item:disabled { color: #ACA899; }")
 SORTS = ("Name", "Size", "Type", "Modified")
+LAYOUT = 2                  # bump when builtins() changes order
 
 
 def std(which):
@@ -35,9 +36,10 @@ def builtins():
     folders = [(f"prog:{key}", label, lambda: std(QStyle.SP_DirIcon))
                for key, (label, _prefix) in programs.FOLDER_SHORTCUTS.items() if programs.archive_folder(key)]
     return [
+        ("sys:recycle", "Recycle Bin", lambda: std(QStyle.SP_TrashIcon)),
         ("sys:mycomputer", "My Computer", lambda: std(QStyle.SP_ComputerIcon)),
-        ("prog:notepad", "Notepad", lambda: std(QStyle.SP_FileIcon)),
         ("prog:connect", "America Online", lambda: QIcon(pixmap("aol_icon.png"))),
+    ] + folders + [
         ("prog:navigator", "Netscape Navigator", lambda: programs.get("navigator").icon()),
         ("prog:claudeai", "ClaudeAI", lambda: programs.get("claudeai").icon()),
         ("prog:aim", "ClaudeAIM", lambda: programs.get("aim").icon()),
@@ -49,8 +51,6 @@ def builtins():
         ("prog:stories", "FurStory Reader", lambda: programs.get("stories").icon()),
         ("prog:cdviewer", "Fur CD Viewer", lambda: programs.get("cdviewer").icon()),
         ("prog:furcon", "Furry Con CD Viewer", lambda: programs.get("furcon").icon()),
-    ] + folders + [
-        ("sys:recycle", "Recycle Bin", lambda: std(QStyle.SP_TrashIcon)),
     ]
 
 
@@ -116,6 +116,11 @@ class IconManager(QObject):
                 self.state.update(json.load(f))
         except (OSError, ValueError):
             pass
+        if self.state.get("layout", 1) < LAYOUT:
+            # The built-in shortcuts were reordered: let them flow into the new order once (files keep their spots).
+            self.state["positions"] = {k: v for k, v in self.state["positions"].items()
+                                       if not k.startswith(("sys:", "prog:"))}
+            self.state["layout"] = LAYOUT
         self.icons = []
         self.press = None          # (global pos, {icon: start pos}) while dragging
         self.dragging = False

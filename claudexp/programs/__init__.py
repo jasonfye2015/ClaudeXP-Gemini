@@ -33,6 +33,8 @@ def _my_computer(desktop):
     explorer.launch(desktop)
 
 
+FURRY = "Furry Stuff"
+
 # Desktop shortcuts to the user's own archive folders on E: (Local Storage): key -> (label, folder name prefix).
 FOLDER_SHORTCUTS = {"mediaarchive": ("Furry Media Archive", "furry media archive"),
                     "tvmovies": ("TV and Movies", "tv and movies")}
@@ -171,21 +173,22 @@ PROGRAMS = [
             group="Accessories/System Tools"),
     Program("sndrec", "Sound Recorder", "", _lazy("sndrec", "sndrec_icon"), _lazy("sndrec", "open_sndrec"),
             group="Accessories/Entertainment"),
+    # Start > Programs > Furry Stuff: the furry programs and the archive folders on E:
     Program("tv", "FurTV 2000", "Watch TV", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.tuner", "open_tv"),
-            _lazy(".tv.tuner", "shutdown"), group="Accessories/Entertainment"),
+            _lazy(".tv.tuner", "shutdown"), group=FURRY),
     Program("comix", "FurComix Reader", "Read comics", _lazy(".comix.reader", "comix_icon"),
-            _lazy(".comix.reader", "open_comix")),
+            _lazy(".comix.reader", "open_comix"), group=FURRY),
     Program("folio", "FurFolio Reader", "Browse art portfolios", _lazy(".folio.gallery", "folio_icon"),
-            _lazy(".folio.gallery", "open_folio"), group="FurFolio Reader"),
+            _lazy(".folio.gallery", "open_folio"), group=FURRY),
     Program("stories", "FurStory Reader", "Read stories", _lazy(".folio.stories", "story_icon"),
-            _lazy(".folio.stories", "open_stories"), group="FurFolio Reader"),
+            _lazy(".folio.stories", "open_stories"), group=FURRY),
     Program("cdviewer", "Fur CD Viewer", "Browse art CDs and DVDs", _lazy(".folio.cdviewer", "cd_icon"),
-            _lazy(".folio.cdviewer", "open_cdviewer"), _lazy(".folio.cdviewer", "shutdown")),
+            _lazy(".folio.cdviewer", "open_cdviewer"), _lazy(".folio.cdviewer", "shutdown"), group=FURRY),
     Program("furcon", "Furry Con CD Viewer", "Convention recap discs", _lazy(".folio.furcon", "con_icon"),
-            _lazy(".folio.furcon", "open_furcon"), _lazy(".folio.furcon", "shutdown")),
-    Program("tvguide", "TV Guide", "", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.guide", "open_guide"), listed=False),
-    *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), listed=False)
+            _lazy(".folio.furcon", "open_furcon"), _lazy(".folio.furcon", "shutdown"), group=FURRY),
+    *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)
       for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
+    Program("tvguide", "TV Guide", "", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.guide", "open_guide"), listed=False),
     Program("defrag", "Disk Defragmenter", "", _defrag_icon, _defrag, group="Accessories/System Tools"),
     Program("antivirus", "ClaudeShield AntiVirus", "", _av_icon, _antivirus),
     Program("connect", "Connect to the Internet", "", lambda: QIcon(pixmap("aol_icon.png")), _connect,

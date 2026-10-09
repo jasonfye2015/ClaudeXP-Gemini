@@ -168,7 +168,8 @@ class StartMenu(QWidget):
                 submenus[path] = sub
             return submenus[path]
 
-        listed = [p for p in programs.PROGRAMS if p.listed]
+        listed = [p for p in programs.PROGRAMS if p.listed
+                  and (p.key not in programs.FOLDER_SHORTCUTS or programs.archive_folder(p.key))]
         for group in sorted({p.group for p in listed if p.group}):
             submenu(group)
         for prog in listed:

@@ -266,6 +266,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   Eurofurence, Further Confusion, Midwest FurFest; names/editions normalised from folder names), sorted by con and
   year, on hotel-carpet red. Opening a con shows the whole weekend on one page: all photos, then all videos,
   gathered from its sub-folders. Video-only cons (5 of 11) get a video still on their badge. Desktop shortcut.
+- **Desktop / Start menu layout (2026-10-08)**: desktop order Recycle Bin, My Computer, America Online, the E:
+  folder links, then the rest; no Notepad icon. desktop_icons.LAYOUT=2 makes existing desktops reflow the built-in
+  shortcuts once (user files keep their spots); bump it whenever builtins() is reordered. Start > Programs >
+  Furry Stuff holds FurTV, FurComix, FurFolio, FurStory, Fur CD Viewer, Furry Con CD Viewer and copies of the
+  folder links (only listed when that folder exists on E:).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
