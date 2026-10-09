@@ -216,6 +216,18 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   <handle>@aol.com, and life.user (what buddies call you) is user.known_as(). Renames are silent to the buddies.
   Setup's OOBE has name + picture, online name, and passwords pages; User Accounts can change all of it.
   Older installs migrate with handle = AIM screen name and linked off (switch it on in User Accounts).
+- **FurTV 2000** (`programs/tv/`): an over-the-air tuner card viewer for the user's own TV archive (not in
+  git; dropped into Local Storage = E:). library.py finds 'Movies…', 'TV Series…/<Show>' and '…Commercials…'
+  folders, reads running times from AVI/MP4/MKV headers (cached in data/tv_index.json, ~1s rescans) and matches
+  files to assets/tvguide/shows.txt (episode/movie details from Wikipedia) plus a show's own '*Episode Guide*.txt'.
+  schedule.py: a live wall-clock schedule from 6am Jan 1 2001, deterministic (seeded decks: every item once per
+  cycle, then reshuffled). WAGG 4: Ren & Stimpy 6am-7pm, Mongrels 7-11pm (on the half hour), Aqua Teen 11pm-6am
+  with the DVD extras as promos. KPAW 9: movies all day on 5-minute starts (plus the ATHF movie). 2-3 commercials
+  only between programs, then an Up Next card. Channels 2/7/11 are static (assets/video/static*.mp4, also used for
+  missing files). tuner.py: QVideoSink-painted picture, snow on channel change, green OSD, info band, CC
+  (subtitle tracks), SAP (audio tracks; RiffTrax riff track chosen automatically), keys, right-click menu.
+  guide.py: TV Guide Channel-style grid, 3 hours at a time, up to a week ahead, details + Watch.
+  Dates after 2001 (air dates, movie years) are hidden.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

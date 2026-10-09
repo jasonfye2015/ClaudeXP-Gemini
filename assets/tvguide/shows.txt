@@ -1,0 +1,155 @@
+# TV Guide data for the tuner, one line per episode: SHOW|S<season>E<episode or ->|Title|First aired|Description
+# Descriptions are short summaries written fresh (from Wikipedia episode lists, Oct 2026), not copied text.
+# Aqua Teen Hunger Force seasons 1-5 come from the episode guide .txt in the archive itself, when it's there.
+# Ren & Stimpy files are matched by title (the archive numbers segments its own way).
+MONGRELS|SHOW|Mongrels|2010|A British adult puppet sitcom about five animals living behind a London pub, known for crude, farcical humour.
+REN|SHOW|The Ren & Stimpy Show|1991|An anxious, short-tempered chihuahua and a dim-witted, good-natured cat stumble through gross, surreal misadventures.
+ATHF|SHOW|Aqua Teen Hunger Force|2000|Three anthropomorphic fast-food items share a house in New Jersey and torment their unlucky neighbor, Carl.
+MONGRELS|S1E1|Nelson the Online Predator|6/22/2010|Nelson struggles with cross-species dating, Marion gets adopted, Destiny sneaks into obedience classes, and Kali tries to frame a DJ.
+MONGRELS|S1E2|Destiny the Reluctant Sniffer Dog|6/29/2010|Destiny discovers a talent for sniffing bottoms, Kali reunites with an old accomplice, Nelson takes in a cub, and Marion overdoses on catnip.
+MONGRELS|S1E3|Marion the Young Lover|7/6/2010|A wildlife film crew reveals to Nelson that the local animals are actors, Destiny trains as a guide dog, and Marion tries to survive one more day.
+MONGRELS|S1E4|Nelson the Stroke Virgin|7/13/2010|Destiny enjoys fame after an award, Marion proves to be the real hero, Nelson seeks human affection, and Kali falls for a crow.
+MONGRELS|S1E5|Kali the Genetic Engineer|7/20/2010|A visiting French penfriend brings rabies, Destiny's new suitor is revealed as a scheme by her owner, and a pigeon cull drives Kali toward revenge.
+MONGRELS|S1E6|Destiny the Infection Risk|7/27/2010|Nelson falls for a flea-ridden fox met at the tip, Gary installs anti-pigeon spikes that anger Kali, and Destiny is entered into a competition.
+MONGRELS|S1E7|Marion the Superfluous Feed Character|8/3/2010|A rooftop picnic for Vince's birthday ends in disaster, Destiny dates a bossy sheepdog, and Kali plots revenge on a television presenter.
+MONGRELS|S1E8|Nelson the Naughty Arsonist|8/10/2010|On Bonfire Night, Nelson faces an angry mob over his past failure, Kali loses her wings, and Destiny pursues a modelling career.
+MONGRELS|S1E9|Mongrels Uncovered|2010|A behind-the-scenes look at how the puppets, voices and jokes of Mongrels are made.
+MONGRELS|S2E1|Marion and the Force-Field|11/7/2011|Marion and the gang return for a second series of misadventures behind the pub.
+MONGRELS|S2E2|Kali and the Rickshaw Inferno|11/7/2011|Kali's latest scheme for revenge spirals wildly out of control.
+MONGRELS|S2E3|Destiny and the V.E.T.S|11/14/2011|A trip to the vet becomes an ordeal for Destiny and her friends.
+MONGRELS|S2E4|Nelson and the Best Man's Speech|11/21/2011|Nelson is asked to be best man and must find one nice thing to say about Vince.
+MONGRELS|S2E5|Marion and the Myocardial Infarction|12/5/2011|Kali seeks revenge after Destiny's catty new friend outclasses her put-downs.
+MONGRELS|S2E6|Kali and the Psychological Warfare|12/12/2011|Kali launches a campaign of psychological warfare against a television presenter.
+MONGRELS|S2E7|Nelson and the AMAZING Nuts|11/28/2011|Marion becomes an online sensation after getting his head stuck in a car tyre.
+MONGRELS|S2E8|Vince and the Helpful Horse|12/19/2011|Nelson and the gang try to solve the mystery of what happened on New Year's Eve.
+MONGRELS|S2E9|Miquita and the Obligatory Clips Show|12/19/2011|Miquita Oliver hosts a compilation of highlights from the series so far.
+ATHF|S6E1|Gene E|3/29/2009|A wish-granting genie at the dump renders the roommates invisible, and after they accidentally kill him, they find a shrunken Carl.
+ATHF|S6E2|Shake Like Me|4/5/2009|Master Shake transforms after a radioactive bite, and his efforts to reverse it lead to a clash with Boxy Brown and a tough decision.
+ATHF|S6E3|She Creature|4/12/2009|A mysterious creature in Carl's pool proves to be a mermaid, and her encounters with the others end in explosions, except for Shake.
+ATHF|S6E4|Chick Magnet|4/19/2009|Shake buys a product meant to attract women, but it instead draws out the Aqua Teens' feminine sides.
+ATHF|S6E5|The Creature from Plaque Lagoon|4/26/2009|Shake and Meatwad try to kidnap the Tooth Fairy, leaving the Aqua Teens toothless.
+ATHF|S6E6|Time Machine|5/3/2009|Frylock's homemade time machine only manages to take him to Carl's house.
+ATHF|S6E7|2-and-a-Half-Star Wars Out of Five|5/10/2009|Frylock traces a pink man's plot to blow up the moon to a shaved Wookiee from a local tribute band.
+ATHF|S6E8|Fry Legs|5/17/2009|Frylock grows strange after falling for a woman, going to extremes to pursue her until he learns she is an alien.
+ATHF|S6E9|Der Inflatable Fuhrer|5/24/2009|Frylock takes a freelance job synthesizing a virus, only to discover his mysterious client is a balloon version of Hitler.
+ATHF|S6E10|Last Last One Forever and Ever|5/31/2009|The Aqua Teens learn that local water is flammable, with a live-action middle between animated bookends.
+ATHF|S7E1|A PE Christmas|12/13/2009|Shake impersonates Flavor Flav and Chuck D to record a holiday album, with Meatwad helping and Frylock refusing to join.
+ATHF|S7E2|Rabbot Redux|2/7/2010|The Aqua Teens relocate next to Carl, followed by a reworked version of the series pilot.
+ATHF|S7E3|Rubberman|2/14/2010|Meatwad brings a strange rubber duck to life with Carl's lamp, and the duck, named Lance, draws him into crime.
+ATHF|S7E4|Eggball|2/21/2010|Shake builds a pinball machine modeled on himself, then the group travels to Death Island to gather eggs from a flightless bird.
+ATHF|S7E5|Monster|2/28/2010|Meatwad, convinced a monster lives in his closet, runs up Frylock's credit card at a luxury hotel rather than sleep at home.
+ATHF|S7E6|Hands On a Hamburger|3/21/2010|The Aqua Teens join a burger chain contest without realizing a villain is using them in a scheme.
+ATHF|S7E7|IAMAPOD|3/28/2010|A pod imitates Master Shake and follows a band traveling down the highway.
+ATHF|S7E8|Juggalo|4/4/2010|After a prank goes fatally wrong, a vengeful angel threatens Shake with hell, so he turns to a fan for help.
+ATHF|S7E9|Multiple Meat|4/11/2010|Shake repeatedly slices Meatwad until dozens of copies crowd the living room, pushing Frylock to move out.
+ATHF|S7E10|Kangarilla and the Magic Tarantula|4/18/2010|Frylock ignores Meatwad's attempts to get his attention, until a ghost and a cell phone throw the house into chaos.
+ATHF|S7E11|Larry Miller Hair System|4/25/2010|Larry Miller pitches a hair system to Carl by showing him a fuller-haired life, and a robotic ghost's plan goes awry.
+ATHF|S7E12|One Hundred|5/2/2010|Frylock becomes fixated on the number 100 while Shake chases syndication money in a network boardroom.
+REN|S1|Stimpy's Big Day!|8/11/1991|Stimpy heads to Hollywood after winning a poem contest, leaving a jealous Ren behind.
+REN|S1|The Big Shot!|8/11/1991|Stimpy loves his newfound fame but gives it all up to reunite with Ren.
+REN|S1|Robin Höek|8/25/1991|Stimpy reads a garbled Robin Hood tale while Ren dreams of playing every role.
+REN|S1|Nurse Stimpy|8/25/1991|Stimpy nurses a sick Ren, but his own care goes badly and he falls ill.
+REN|S1|Space Madness|9/8/1991|Ren's space commander loses his mind, and Stimpy eventually presses the forbidden History Eraser button.
+REN|S1|The Boy Who Cried Rat!|9/8/1991|Starving and kicked out, the pair disguise Ren as a mouse to infiltrate the Pipes' home.
+REN|S1|The Littlest Giant|9/15/1991|In a bedtime story, Ren imagines himself as a tiny hero befriending a giant Stimpy.
+REN|S1|Big House Blues|9/15/1991|A televised version of the pilot, where the duo land in the pound and meet Jasper.
+REN|S1|Fire Dogs|9/29/1991|Ren and Stimpy pose as dalmatians to land firefighting jobs and must rescue Mrs. Buttloaves.
+REN|S1|Marooned|10/6/1991|Stranded on a strange planet, the space crew endures a series of painful mishaps.
+REN|S1|Untamed World|11/10/1991|Ren and Stimpy host a nature program and visit the Galápagos to find creatures resembling themselves.
+REN|S1|Black Hole|2/23/1992|The space duo travel through a black hole and discover a mountain of missing socks.
+REN|S1|Stimpy's Invention|2/23/1992|Stimpy's gadgets fail until he builds a helmet that forces Ren into constant happiness.
+REN|S2|In the Army|8/15/1992|Ren and Stimpy enlist in the military and must get past a bossy sergeant before ending up in combat.
+REN|S2|Powdered Toast Man|8/15/1992|The breakfast-themed hero rescues a kitten, the Pope, and the president from embarrassing trouble.
+REN|S2|Ren's Toothache|8/22/1992|After Ren's teeth fall out, a tooth fairy with no money leaves him a lint ball instead.
+REN|S2|Out West|8/29/1992|Two outlaws hire Ren and Stimpy to steal Mr. Horse so they can use him for a hanging.
+REN|S2|Rubber Nipple Salesmen|8/29/1992|Ren and Stimpy try to peddle rubber nipples to the fire chief, Mr. Horse, and the Pipes.
+REN|S2|Svën Höek|11/7/1992|Ren's supposedly brilliant cousin Svën arrives and acts like Stimpy, wrecking Ren's treasured belongings.
+REN|S2|Haunted House|11/21/1992|A lackluster ghost fails repeatedly to frighten Ren and Stimpy inside a haunted mansion.
+REN|S2|Mad Dog Höek|11/21/1992|Ren and Stimpy take on a wrestling match against the Lout Brothers, believing it is only pretend.
+REN|S2|Big Baby Scam|12/12/1992|Ren and Stimpy swap places with two babies to enjoy an easy life, which quickly turns chaotic.
+REN|S2|Dog Show|12/12/1992|A trainer enters Ren and Stimpy in an all-breed dog competition, hoping to win the top prize.
+REN|S2|Son of Stimpy|1/13/1993|Stimpy believes he has given birth after passing gas and sets out to find his "child."
+REN|S2|Monkey See, Monkey Don't!|2/13/1993|Ren and Stimpy pose as zoo primates to earn free food but get only scraps, so they request new roles.
+REN|S2|Fake Dad|2/27/1993|Ren and Stimpy adopt a grown convict posing as a child, and Stimpy adapts far better than Ren.
+REN|S2|The Great Outdoors|3/27/1993|A camping trip turns sour for Ren after a long run of bad luck.
+REN|S2|The Cat That Laid the Golden Hairball|4/3/1993|Ren forces Stimpy to churn out valuable hairballs until his production line collapses.
+REN|S2|Stimpy's Fan Club|4/24/1993|Jealous of Stimpy's fans, Ren is tricked into a letter that reveals Stimpy's own hand behind it.
+REN|S2|A Visit to Anthony|5/8/1993|The duo visit a young fan's home, where his skeptical father and a local bully confront them.
+REN|S2|The Royal Canadian Kilted Yaksmen|5/23/1993|Ren and Stimpy join an elite Canadian force and travel the country in search of action.
+REN|S2|Man's Best Friend|6/23/2003|George Liquor takes Ren and Stimpy home and vows to turn them into champion show dogs.
+REN|S3|To Salve and Salve Not!|11/20/1993|Ren works to stop Stimpy from wasting money on a salesman's can of salve.
+REN|S3|A Yard Too Far|11/20/1993|Ren and Stimpy must get past a furious baboon to reach a plate of hog jowls.
+REN|S3|Circus Midgets|11/26/1993|Hitchhiking leads Ren and Stimpy into the clutches of dangerous circus performers.
+REN|S3|No Pants Today|11/26/1993|Stimpy wanders outside without pants and runs into the Pipes, a bully, and clothed animals.
+REN|S3|Ren's Pecs|12/18/1993|Ren gets his dream chest muscles after Stimpy transplants fat from his own rear end.
+REN|S3|An Abe Divided|12/18/1993|On guard duty at the Lincoln Memorial, Ren smashes the statue's head hunting for treasure and must repair it.
+REN|S3|Stimpy's Cartoon Show|1/8/1994|Stimpy tries to make his own cartoon, but Ren becomes a meddling producer who ruins it.
+REN|S3|Jimminy Lummox|2/19/1994|Ren torments his surroundings until Stimpy tries to act as his conscience, which only makes Ren angrier.
+REN|S3|Bass Masters|2/19/1994|Ren hosts a fishing show but catches nothing while Stimpy and an escaped convict haul in every fish.
+REN|S3|Road Apples|3/12/1994|Stranded in the desert, the duo end up aboard the Pipes' RV, full of unusual cargo.
+REN|S3|Ren's Retirement|4/2/1994|Ren's tenth birthday sends him into old-man mode after Stimpy notes he is 70 in dog years.
+REN|S3|Jerry the Bellybutton Elf|4/9/1994|Stimpy journeys inside his navel, meets an elf, and Ren throws a party with many side characters.
+REN|S3|Hard Times for Haggis|4/30/1994|Haggis MacHaggis loses his mansion and hires thugs to sabotage the duo's successful show.
+REN|S3|Eat My Cookies|6/4/1994|As Girl Scouts, the duo must replace the cookies Ren forced Stimpy to eat, and Ren wants a badge.
+REN|S3|Ren's Bitter Half|6/4/1994|A genetic formula splits Ren into an evil half and an indifferent half.
+REN|S3|Lair of the Lummox|7/30/1994|The duo return as nature hosts to study the lummox, a strange creature.
+REN|S4|Hermit Ren|10/1/1994|Ren isolates himself from the world and grows lonely, while Stimpy carves a copy of him from earwax.
+REN|S4|House of Next Tuesday|10/8/1994|Ren and Stimpy move into a strange house where time is out of order.
+REN|S4|A Friend in Your Face!|10/8/1994|A clinging parasite attaches itself to Stimpy, then transfers to Ren, driving him up the wall.
+REN|S4|Blazing Entrails|10/15/1994|Stimpy is enlarged by a doctor, and Ren must enter his body to fight a brain-attacking organ bully.
+REN|S4|Lumber Jerks|10/15/1994|After reading about lumberjack pay, the duo take up logging for better money and benefits.
+REN|S4|Prehistoric Stimpy|11/5/1994|Ren and Stimpy appear as dinosaurs, and Wilbur Cobb makes a fifth appearance.
+REN|S4|Farm Hands|11/5/1994|Abner and Ewalt hire Ren and Stimpy as farm children.
+REN|S4|Magical Golden Singing Cheeses|11/12/1994|Stimpleton searches for food to keep himself and Renwaldo from starving.
+REN|S4|A Hard Day's Luck|11/12/1994|Haggis must pass a leprechaun's trials to win a full head of hair.
+REN|S4|I Love Chicken|11/19/1994|Stimpy falls for a store-bought chicken, which infuriates Ren, who sees it only as dinner.
+REN|S4|Powdered Toast Man vs. Waffle Woman|11/19/1994|The breakfast hero battles his longtime rival, Waffle Woman.
+REN|S4|It's a Dog's Life|12/3/1994|A wealthy old woman rescues Ren and Stimpy from the pound, but her home soon turns sinister.
+REN|S4|Eggyölkeo|12/3/1994|Renwaldo crafts a yolk son and wishes he could become a real boy.
+REN|S4|Double Header|1/7/1995|Stimpy and Ren are sewn together after a hospital mix-up and must work at a circus to earn money.
+REN|S4|The Scotsman in Space|1/7/1995|The space crew finds a strange Scotsman outside their ship with a wallet attached to him.
+REN|S4|Pixie King|1/14/1995|As pixies trying to earn wings, the duo compete with Ren's ambition, and Wilbur Cobb appears.
+REN|S4|Aloha Höek|1/14/1995|Ren longs for a deserted island, while Stimpy enjoys a tropical resort run by the Big Kahuna.
+REN|S4|Insomniac Ren|1/21/1995|Ren cannot sleep before an early golf game, and his friends resort to a drastic solution.
+REN|S4|My Shiny Friend|1/21/1995|Stimpy becomes obsessed with television, and Ren tries to break his habit.
+REN|S4|Cheese Rush Days|2/11/1995|As gold-rush-style pioneers hunting blue cheese, Ren traps the group inside a cheese mine.
+REN|S4|Wiener Barons|2/11/1995|Ren and Stimpy aim to become the Wiener Barons of Canada.
+REN|S4|Galoot Wranglers|3/4/1995|Wilbur Cobb spins a Western yarn about galoots for Ren and Stimpy.
+REN|S4|Ren Needs Help!|3/4/1995|After Stimpy wrecks Ren's belongings, Ren's nerves snap and he ends up in an asylum.
+REN|S4|Ol' Blue Nose|3/18/1995|Stimpy's nose leaves him to pursue a singing career, and Stimpy's own career falters without it.
+REN|S4|Stupid Sidekick Union|3/18/1995|Stimpy strikes for better conditions, and Ren's replacements fail until a clever contract changes things.
+REN|S4|Superstitious Stimpy|4/1/1995|Stimpy grows superstitious about Tuesday the 17th and works to counter Ren's bad luck.
+REN|S4|Travelogue|4/1/1995|Ren and Stimpy set out to visit an unfamiliar island called Acromeglia.
+REN|S5|Space Dogged|6/3/1995|A dog and cat become the first animals sent to space in a Russian program.
+REN|S5|Feud for Sale|6/3/1995|A salesman exploits Abner and Ewalt's rivalry for profit.
+REN|S5|Hair of the Cat|7/1/1995|Ren discovers he is allergic to Stimpy's cat hair, and Stimpy is confined to a pickle jar.
+REN|S5|City Hicks|7/1/1995|Ren and Stimpy leave their dried-out farm for the city, where they struggle to fit in.
+REN|S5|Stimpy's Pet|10/7/1995|Stimpy looks after a forgotten circus clown, Sid.
+REN|S5|Ren's Brain|10/7/1995|Stimpy takes on brain surgery and removes Ren's brain, which then wanders around unaware.
+REN|S5|Bell Hops|10/28/1995|Ren and Stimpy work as bellhops but get curious about the guests on the top floors.
+REN|S5|Dog Tags|10/28/1995|Ren sneaks Stimpy into a dog lodge, and the members demand that Ren prove he is a dog.
+REN|S5|I Was a Teenage Stimpy|11/4/1995|Stimpy enters adolescence, and Ren's patience snaps when he steals Ren's magazines.
+REN|S5|Who's Stupid Now?|11/4/1995|Facing cancellation, the producer swaps Ren and Stimpy's body types, and Ren regrets it.
+REN|S5|School Mates|11/11/1995|An old obedience school friend visits and is shocked by Ren's middle-class life with a house cat.
+REN|S5|Dinner Party|11/11/1995|Ren hosts a dinner full of odd guests while Stimpy serves as the houseboy.
+REN|S5|Big Flakes|11/18/1995|A winter cabin vacation leaves the duo snowed in past the summer thaw.
+REN|S5|Pen Pals|11/18/1995|Ren and Stimpy try to get into a jail that a commercial claimed treats prisoners like royalty.
+REN|S5|Terminal Stimpy|12/9/1995|After using up seven lives, Stimpy faces death with increasing caution.
+REN|S5|Reverend Jack|12/9/1995|Ren and Stimpy work for a preacher who worships cheese and meat, but he turns out to be odd.
+REN|S5|A Scooter for Yaksmas|12/16/1995|Denied his desired gift, Stimpy steals a bike and sets off to find a mysterious figure.
+REN|S5|Sammy and Me|10/20/1996|Stimpy becomes obsessed with the Sammy Mantis fan club and begins stalking the entertainer.
+REN|S5|The Last Temptation|10/20/1996|After a near-death experience, Ren tries to be kinder to Stimpy, and he ends up rich.
+MOVIE|Aliens|1986|R|Ripley returns to the moon where her crew met the alien, this time with a squad of Colonial Marines, and finds the colony overrun.
+MOVIE|Cowboy Bebop: The Movie|2001|R|Bounty hunters Spike, Jet, Faye, Ed and Ein chase a terrorist threatening Mars with a deadly nanomachine virus on Halloween.
+MOVIE|Jurassic Park III|2001|PG-13|Dr. Alan Grant is tricked into a rescue mission on a dinosaur-infested island, and the Spinosaurus is waiting.
+MOVIE|Jurassic Park|1993|PG-13|A billionaire's island theme park of cloned dinosaurs goes horribly wrong during a weekend preview for scientists and his grandchildren.
+MOVIE|The Matrix (RiffTrax)|1999|R|Hacker Neo learns the world is a computer simulation and joins the resistance against the machines, with RiffTrax commentary.
+MOVIE|The Matrix Reloaded (RiffTrax)|2003|R|Neo, Morpheus and Trinity race to save Zion as the machines close in, with RiffTrax commentary.
+MOVIE|The Matrix Revolutions (RiffTrax)|2003|R|The war between humans and machines comes to a head as Neo faces Agent Smith one last time, with RiffTrax commentary.
+MOVIE|Terminator 2: Judgment Day|1991|R|A reprogrammed Terminator protects young John Connor from a liquid-metal killer sent back in time to stop the future resistance.
+MOVIE|The Lord of the Rings: The Fellowship of the Ring|2001|PG-13|Hobbit Frodo Baggins sets out with eight companions to destroy the One Ring before the Dark Lord Sauron can reclaim it.
+MOVIE|The Lost World: Jurassic Park|1997|PG-13|Four years after the park disaster, a team visits a second island where dinosaurs roam free, and a T. rex reaches San Diego.
+MOVIE|Total Recall|1990|R|A construction worker's trip to a memory-implant company unlocks a past as a secret agent and sends him to Mars.
+REN|S3|Stimpy's First Fart|1993|Stimpy proudly welcomes his very first fart into the world and treats it like his own child, much to Ren's horror.
+REN|S3|To Salve and Not to Salve|11/20/1993|Ren works to stop Stimpy from wasting money on worthless junk from a sinister salesman.
+ATHF|S4E3|Star Studded Xmas Spectacular|12/2005|The Aqua Teens put on a holiday variety special that goes wrong in every way a holiday special can. (Part 1 of 2)
