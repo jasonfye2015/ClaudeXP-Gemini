@@ -44,6 +44,7 @@ def builtins():
         ("prog:irc", "ClaudeIRC", lambda: programs.get("irc").icon()),
         ("prog:muck", "ClaudeMUCK", lambda: programs.get("muck").icon()),
         ("prog:tv", "FurTV 2000", lambda: programs.get("tv").icon()),
+        ("prog:comix", "FurComix Reader", lambda: programs.get("comix").icon()),
     ] + folders + [
         ("sys:recycle", "Recycle Bin", lambda: std(QStyle.SP_TrashIcon)),
     ]
@@ -684,7 +685,8 @@ class IconManager(QObject):
                       "aim": r"C:\Program Files\ClaudeAIM\ClaudeAIM.exe",
                       "irc": r"C:\Program Files\ClaudeIRC\ClaudeIRC.exe",
                       "muck": r"C:\Program Files\ClaudeMUCK\ClaudeMUCK.exe",
-                      "tv": r"C:\Program Files\FurTV 2000\FurTV.exe"}.get(icon.key.split(":", 1)[1], "")
+                      "tv": r"C:\Program Files\FurTV 2000\FurTV.exe",
+                      "comix": r"C:\Program Files\FurComix Reader\FurComix.exe"}.get(icon.key.split(":", 1)[1], "")
             properties(self.desktop, icon.label, [("Target type:", "Application"), ("Target:", target),
                                                   ("-", ""), ("Start in:", str(Path(target).parent))], icon=icon.icon)
             return

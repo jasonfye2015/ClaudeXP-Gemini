@@ -30,7 +30,7 @@ SYSTEM = [("System Idle Process", "SYSTEM", 16), ("System", "SYSTEM", 216), ("sm
           ("svchost.exe", "SYSTEM", 17240), ("svchost.exe", "LOCAL SERVICE", 3540), ("spoolsv.exe", "SYSTEM", 4316),
           ("explorer.exe", None, 18432), ("ctfmon.exe", None, 2884), ("shieldtray.exe", None, 3972)]
 # window content module -> process image
-MODULE_IMAGES = [("programs.tv.", "furtv.exe"), ("helpctr", "helpctr.exe"), ("tour", "tourstart.exe"),
+MODULE_IMAGES = [("programs.tv.", "furtv.exe"), ("programs.comix.", "furcomix.exe"), ("helpctr", "helpctr.exe"), ("tour", "tourstart.exe"),
                  ("sysrestore", "rstrui.exe"), ("charmap", "charmap.exe"), ("msinfo", "msinfo32.exe"), ("sndrec", "sndrec32.exe"),
                  ("pinball", "pinball.exe"), ("ibackgammon", "bckgzm.exe"), ("ihearts", "hrtzzm.exe"), ("ispades", "shvlzm.exe"),
                  ("icheckers", "chkrzm.exe"), ("ireversi", "rvsezm.exe"), ("zone", "zclientm.exe"),
@@ -41,7 +41,7 @@ MODULE_IMAGES = [("programs.tv.", "furtv.exe"), ("helpctr", "helpctr.exe"), ("to
                  ("claudeai", "claudeai.exe"), ("claudeaim", "aim.exe"), ("irc", "mirc32.exe"),
                  ("muck", "claudemuck.exe"), ("defrag", "dfrgntfs.exe"), ("antivirus", "claudeshield.exe"),
                  ("updates", "wuauclt.exe"), ("printing", "spoolsv.exe")]
-MEM = {"furtv.exe": 21480, "helpctr.exe": 12400, "tourstart.exe": 9800, "rstrui.exe": 6100, "charmap.exe": 3360, "msinfo32.exe": 7720, "sndrec32.exe": 3410, "pinball.exe": 11260, "msimn.exe": 9140, "wordpad.exe": 5480, "bckgzm.exe": 7900, "hrtzzm.exe": 8120, "shvlzm.exe": 8040,
+MEM = {"furtv.exe": 21480, "furcomix.exe": 16920, "helpctr.exe": 12400, "tourstart.exe": 9800, "rstrui.exe": 6100, "charmap.exe": 3360, "msinfo32.exe": 7720, "sndrec32.exe": 3410, "pinball.exe": 11260, "msimn.exe": 9140, "wordpad.exe": 5480, "bckgzm.exe": 7900, "hrtzzm.exe": 8120, "shvlzm.exe": 8040,
        "chkrzm.exe": 7420, "rvsezm.exe": 7064, "zclientm.exe": 6900, "wmplayer.exe": 18260, "mspaint.exe": 6840,
        "notepad.exe": 2964, "calc.exe": 3108, "cmd.exe": 1468, "taskmgr.exe": 4072, "freecell.exe": 3256,
        "sol.exe": 3920, "spider.exe": 4484, "winmine.exe": 2440, "mshearts.exe": 3672, "netscape.exe": 21336,

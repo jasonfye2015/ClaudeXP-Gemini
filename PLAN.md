@@ -228,6 +228,16 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   (subtitle tracks), SAP (audio tracks; RiffTrax riff track chosen automatically), keys, right-click menu.
   guide.py: TV Guide Channel-style grid, 3 hours at a time, up to a week ahead, details + Watch.
   Dates after 2001 (air dates, movie years) are hidden.
+- **FurComix Reader** (`programs/comix/`): reads E:\Furry Media Archive…\Comic Scans… (user's archive, not in
+  git). Never indexes: each shelf is one os.scandir; covers are decoded (scaled while decoding) on a thread pool
+  only when their tile scrolls into view, cached in data/comix_thumbs. A comic = folder of images or
+  .cbz/.zip (zipfile), .cbr/.rar/.cb7/.7z (7-Zip if installed, else a friendly message) or .pdf (QtPdf, UI thread
+  only); single-folder wrappers are looked through; an archive next to a same-named folder is hidden (already
+  extracted). The user's own RAR/CBR/ZIP comics were extracted beside their archives with 7-Zip (2026-10-08;
+  originals kept; AOI's zips are password-protected site downloads, its comix/ folder already has the pages).
+  Library grid (series draw as stacks, read-progress bars, Continue Reading row, filter), CDisplay-style viewer
+  (Fit Page/Fit Width/two-page spreads, filmstrip, preloads 3 pages, wheel/Space scroll tall pages then turn),
+  progress in data/comix.json. Portfolios get their own bespoke program later.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
