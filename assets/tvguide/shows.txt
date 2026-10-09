@@ -153,3 +153,13 @@ MOVIE|Total Recall|1990|R|A construction worker's trip to a memory-implant compa
 REN|S3|Stimpy's First Fart|1993|Stimpy proudly welcomes his very first fart into the world and treats it like his own child, much to Ren's horror.
 REN|S3|To Salve and Not to Salve|11/20/1993|Ren works to stop Stimpy from wasting money on worthless junk from a sinister salesman.
 ATHF|S4E3|Star Studded Xmas Spectacular|12/2005|The Aqua Teens put on a holiday variety special that goes wrong in every way a holiday special can. (Part 1 of 2)
+COMEDY|SHOW|Comedy|2001|Stand-up specials and half hours around the clock on KHAH 13.
+COMEDY|SP|George Carlin: You Are All Diseased|1999|Carlin's twelfth HBO special, taped at the Beacon Theatre in New York: airport security, the Ten Commandments, and why we're all germ-phobic wimps.
+COMEDY|SP|George Carlin: Complaints and Grievances|2001|Carlin's HBO special from the Beacon Theatre, a long list of everything that's wrong with everything, from the Ten Commandments to fake life-saving warnings.
+COMEDY|SP|Mitch Hedberg|2001|Mitch Hedberg's deadpan one-liners about escalators, hotel rooms, ducks and doughnuts.
+COMEDY|SP|Dave Chappelle: Killing them softly|2000|Chappelle's first HBO hour, taped in Washington, D.C., about police, the drug game and growing up.
+COMEDY|SP|Dave Chappelle: For what it's worth|2004|Chappelle at the Fillmore in San Francisco, at the height of his fame.
+COMEDY|SP|Doug Stanhope Oslo Burning the Bridge to Nowhere|2011|Doug Stanhope takes his bleakest, booziest material to Norway.
+COMEDY|SP|Jim Norton American Degenerate|2013|Jim Norton confesses everything, whether you wanted to hear it or not.
+COMEDY|SP|Louis Ck Beacon|2011|Louis C.K. live at the Beacon Theater: parenting, getting older and being terrible.
+COMEDY|SP|Lewis Black Taxed Beyond Belief|2003|Lewis Black loses his temper at taxes, politicians and pretty much everything else.

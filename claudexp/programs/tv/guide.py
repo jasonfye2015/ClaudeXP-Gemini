@@ -44,6 +44,7 @@ class Grid(QWidget):
 
     def set_view(self, channels, start):
         self.channels, self.start = channels, start
+        self.setMinimumHeight(HEAD_H + max(5, len(channels)) * ROW_H + 2)      # every channel gets its row
         self.update()
 
     def _x(self, t):
@@ -309,7 +310,7 @@ def open_guide(desktop, tuner=None):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = Guide(desktop, tuner)
-        win = XPWindow(desktop, "TV Guide - FurTV 2000", body, tv_icon(), (720, 470))
+        win = XPWindow(desktop, "TV Guide - FurTV 2000", body, tv_icon(), (720, 520))
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)

@@ -99,6 +99,31 @@ def _mkv(f):
     return val * scale / 1e9
 
 
+def _scr(b):
+    """System clock (90 kHz) from the bytes after an MPEG pack start code."""
+    if len(b) < 5:
+        return None
+    if b[0] >> 6 == 1:                                     # MPEG-2
+        return ((b[0] >> 3) & 7) << 30 | (b[0] & 3) << 28 | b[1] << 20 | (b[2] >> 3) << 15 | \
+            (b[2] & 3) << 13 | b[3] << 5 | b[4] >> 3
+    if b[0] >> 4 == 2:                                     # MPEG-1
+        return ((b[0] >> 1) & 7) << 30 | b[1] << 22 | (b[2] >> 1) << 15 | b[3] << 7 | b[4] >> 1
+    return None
+
+
+def _mpeg_ps(f, size):
+    head = f.read(512 * 1024)
+    f.seek(max(0, size - 512 * 1024))
+    tail = f.read()
+    i, j = head.find(b"\x00\x00\x01\xba"), tail.rfind(b"\x00\x00\x01\xba")
+    if i < 0 or j < 0:
+        return None
+    first, last = _scr(head[i + 4:i + 10]), _scr(tail[j + 4:j + 10])
+    if first is None or last is None or last <= first:
+        return None
+    return (last - first) / 90000
+
+
 def running_time(path):
     ext = path.suffix.lower()
     try:
@@ -109,6 +134,8 @@ def running_time(path):
                 return _mkv(f)
             if ext in (".mp4", ".mov", ".m4v"):
                 return _mvhd(f, path.stat().st_size)
+            if ext in (".mpg", ".mpeg"):
+                return _mpeg_ps(f, path.stat().st_size)
     except (OSError, struct.error, ValueError):
         pass
     return None
@@ -164,7 +191,7 @@ def read_episode_guide(folder):
     return out
 
 
-SHOW_KEYS = [("aqua teen", "ATHF"), ("ren and stimpy", "REN"), ("ren stimpy", "REN"), ("mongrels", "MONGRELS")]
+SHOW_KEYS = [("comedy", "COMEDY"), ("aqua teen", "ATHF"), ("ren and stimpy", "REN"), ("ren stimpy", "REN"), ("mongrels", "MONGRELS")]
 
 
 def show_key(name):
@@ -209,6 +236,46 @@ def _match_title(title, titles):
         if s > score:
             best, score = v, s
     return best if score >= 0.8 else None
+
+
+RELEASE_JUNK = re.compile(r"\b(dvdrip|xvid|divx|mp3|ac3|hdtv|pdtv|x264|webrip|trg|valkyria|kroimpa|\d{3,4}x\d{3,4}(-\d)?)\b.*$",
+                          re.I)
+
+
+COMEDY_TITLES = {"louis ck beacon": "Louis C.K.: Live at the Beacon Theater",
+                 "jim norton american degenerate": "Jim Norton: American Degenerate",
+                 "doug stanhope oslo burning the bridge to nowhere": "Doug Stanhope: Oslo, Burning the Bridge to Nowhere",
+                 "lewis black taxed beyond belief": "Lewis Black: Taxed Beyond Belief",
+                 "dave chappelle killing them softly": "Dave Chappelle: Killing Them Softly",
+                 "dave chappelle for what it s worth": "Dave Chappelle: For What It's Worth",
+                 "mitch hedberg": "Mitch Hedberg: Stand-Up"}
+
+
+def _comedy_info(path, show_dir):
+    """(show, title, episode, year) for a file in the Comedy folder."""
+    rel = path.relative_to(show_dir)
+    stem = re.sub(r"[._]+", " ", path.stem)
+    year = ""
+    m = re.search(r"\(?((?:19|20)\d\d)\)?", stem)
+    if m:
+        year = m.group(1)
+    title = re.sub(r"\(?(?:19|20)\d\d\)?", " ", stem)
+    title = RELEASE_JUNK.sub("", title)
+    title = re.sub(r"^\s*comedy\s*-\s*stand-?up\s*-\s*", "", title, flags=re.I)
+    title = re.sub(r"\s{2,}", " ", title).strip(" -")
+    folder = rel.parts[0] if len(rel.parts) > 1 else ""
+    m = re.match(r"(.+?)\s+-\s+(\d+)\s+-\s+(.+)", title)
+    if m:                                                      # 'The Maria Bamford Show - 01 - Dropout'
+        return m.group(1), m.group(3), int(m.group(2)), year
+    m = re.match(r"comedy central presents\s*-?\s*(.+)", title, re.I)
+    if m:
+        return "Comedy Central Presents", m.group(1).strip(), "", year
+    if folder.lower().startswith("comedy central presents") and "presents" not in title.lower():
+        return "Comedy Central Presents", title, "", year
+    m = re.match(r"(.+?)\s+-\s+(.+)", title)                  # 'George Carlin - You Are All Diseased'
+    if m:
+        return "", f"{m.group(1)}: {m.group(2)}", "", year
+    return "", title, "", year
 
 
 def _match_movie(stem, movies):
@@ -303,6 +370,19 @@ def scan(base, progress=None):
             for p in videos(show_dir):
                 secs = secs_for(p)
                 if not secs:
+                    continue
+                if key == "COMEDY":
+                    show, title, episode, year = _comedy_info(p, show_dir)
+                    info = guide["TITLE"].get((key, norm(title))) or {}
+                    desc = info.get("desc") or (
+                        (f"A half hour of stand-up from {title}, taped for Comedy Central Presents." if secs > 15 * 60
+                         else f"A short stand-up set from {title}.")
+                        if show == "Comedy Central Presents" else
+                        "Maria Bamford plays herself, her family and everyone in her hometown after she moves back in "
+                        "with her parents." if "Maria Bamford" in show else "A stand-up comedy special.")
+                    title = COMEDY_TITLES.get(norm(title), title)
+                    out.append(Media(p, "episode", secs, show=show, show_key=key, episode=episode or "",
+                                     title=title, desc=desc, aired=info.get("aired") or year))
                     continue
                 season, episode, title = _episode_info(p.stem)
                 extra = "extra" in norm(str(p.relative_to(show_dir))) or "deleted scene" in norm(p.stem) \

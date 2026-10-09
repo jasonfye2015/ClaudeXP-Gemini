@@ -228,6 +228,10 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   (subtitle tracks), SAP (audio tracks; RiffTrax riff track chosen automatically), keys, right-click menu.
   guide.py: TV Guide Channel-style grid, 3 hours at a time, up to a week ahead, details + Watch.
   Dates after 2001 (air dates, movie years) are hidden.
+  KHAH 13 'Ha-Ha 13' (added 2026-10-09): everything in TV Series/Comedy (stand-up specials, Comedy Central
+  Presents, The Maria Bamford Show; ~23 h) all day on 5-minute starts with ads between programs. library._comedy_info
+  cleans the messy names (COMEDY_TITLES for the specials); MPEG-1/2 .mpg running times come from the first/last
+  pack clock (_mpeg_ps). The guide grows a row per channel.
 - **FurComix Reader** (`programs/comix/`): reads E:\Furry Media Archive…\Comic Scans… (user's archive, not in
   git). Never indexes: each shelf is one os.scandir; covers are decoded (scaled while decoding) on a thread pool
   only when their tile scrolls into view, cached in data/comix_thumbs. A comic = folder of images or

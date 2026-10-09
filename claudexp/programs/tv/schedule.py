@@ -194,7 +194,7 @@ def seconds(when):
 
 
 def build_channels(items):
-    """The lineup: WAGG 4 (cartoons and comedy), KPAW 9 (movies), and three channels with nothing on them."""
+    """The lineup: WAGG 4 (cartoons), KPAW 9 (movies), KHAH 13 (stand-up comedy), and three dead channels."""
     by = {}
     for m in items:
         by.setdefault((m.kind, m.show_key), []).append(m)
@@ -206,7 +206,7 @@ def build_channels(items):
     movies = by.get(("movie", ""), []) + [m for m in athf_specials if m.secs > 60 * 60 and "theater" in m.title.lower()]
     other_shows = {}
     for (kind, key), ms in by.items():
-        if kind in ("episode", "special") and key not in ("REN", "ATHF", "MONGRELS"):
+        if kind in ("episode", "special") and key not in ("REN", "ATHF", "MONGRELS", "COMEDY"):
             other_shows.setdefault("other", []).extend(ms)
     promos = by.get(("promo", "ATHF"), [])
     wagg = Channel(4, "WAGG", "Cartoons & Comedy, Day and Night", blocks=[
@@ -218,5 +218,8 @@ def build_channels(items):
         grid=15 * 60, fine=5 * 60, grids={"mongrels": 30 * 60})
     kpaw = Channel(9, "KPAW", "Paw Pictures: Movies All Day", blocks=[(0, 24, "movies", "Paw Pictures Presents")],
                    pools={"movies": movies}, ads=ads, grid=30 * 60, fine=5 * 60)
+    comedy = by.get(("episode", "COMEDY"), [])
+    khah = Channel(13, "KHAH", "Ha-Ha 13: Comedy Around the Clock", blocks=[(0, 24, "comedy", "Ha-Ha 13 Comedy")],
+                   pools={"comedy": comedy}, ads=ads, grid=30 * 60, fine=5 * 60)
     dead = [Channel(n, "", "", dead=True) for n in (2, 7, 11)]
-    return sorted([wagg, kpaw] + dead, key=lambda c: c.number)
+    return sorted([wagg, kpaw, khah] + dead, key=lambda c: c.number)
