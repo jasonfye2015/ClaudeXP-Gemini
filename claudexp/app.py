@@ -150,6 +150,11 @@ class ClaudeXP(QMainWindow):
                          handle=chosen.get("handle"), linked_=chosen.get("linked", True),
                          windows_password=chosen.get("windows_password"),
                          online_password_=chosen.get("online_password"))
+        if chosen.get("fursona"):
+            from . import fursonas
+            preset = fursonas.get(chosen["fursona"])
+            if preset is not None:
+                fursonas.apply(preset)
         setup.finished()
         self._offer_tour = True              # XP's 'Take a tour of Windows XP' balloon after the first logon
         self._after_boot = self.show_welcome

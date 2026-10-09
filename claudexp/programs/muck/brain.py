@@ -110,6 +110,9 @@ class Brain:
         if c.contact is not None:
             from ...life import get as life
             base += life().context(c.contact.screen_name) if life() else ""
+        else:
+            from ... import fursonas
+            base += fursonas.knowledge(c.name, player)
         return base + extra
 
     def act(self, c, room, log_lines, nudge, callback, priority=0):

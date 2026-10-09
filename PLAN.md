@@ -404,6 +404,19 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   Header rows are full-width non-selectable list items drawn by _GalleryDelegate; filter by tier or by system.
   Desktop program folders now have their own version (state["folders"], FOLDERS) so adding a shortcut no longer
   needs a LAYOUT bump that reflows the icons.
+- **User fursonas** (fursonas.py; presets in Program Files/The Fur Directory/user fursonas/<Name>/ with
+  profile.json, account.*, buddy_icon.*, photos/<album>/ + captions.txt; README there). Setup's OOBE has a
+  'Choose your fursona' page (after registration) with the presets plus 'Be unique'. A preset fixes the account name
+  (read-only), picture ('fursona:<id>', drawn initial tile until an image exists) and linked online handle; after
+  the account is made, fursonas.apply() stores data/user.json["fursona"], copies photos into My Pictures albums and
+  sets AIM's buddy_icon (full path) and away message in ClaudeAIM's settings. The MUCK character is created with the
+  preset's muck_desc; IRC's Full Name defaults to irc_realname. User Accounts' name/picture/online-name pages are
+  locked (msgbox: reinstall Windows) with a 'View my fursona's card' link. Only Setup clears it (user.json is wiped).
+  Residents know you: fursonas.knowledge(name) by the preset's "knows" closeness - close (life, real name, job,
+  hours, personality, favourites, relationship), friend (fursona, age, sex, location, fursuit, cons), acquaintance or
+  unlisted (only the fursona) - with he/she/they from the preset's sex. It's added to life.context() (so AIM gets it
+  through hosting.extra_context, no ClaudeAIM change) and to IRC/MUCK prompts for the regulars.
+  The Fur Directory lists the presets first as 'User Fursonas', the chosen one marked THIS IS YOU.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

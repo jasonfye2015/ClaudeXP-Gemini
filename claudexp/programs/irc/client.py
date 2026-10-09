@@ -366,8 +366,9 @@ class IrcClient(QWidget):
         from ... import user
         if not user.linked():
             return
-        s = dict(self.settings or {"realname": user.user_name(), "email": user.email_address(),
-                                   "autojoin": []})
+        from ... import fursonas
+        s = dict(self.settings or {"realname": fursonas.irc_realname() or user.user_name(),
+                                   "email": user.email_address(), "autojoin": []})
         s["nick"] = user.irc_nick()
         s["alt"] = user.irc_nick() + "_"
         if s != self.settings:

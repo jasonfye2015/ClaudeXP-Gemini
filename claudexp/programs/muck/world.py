@@ -497,7 +497,8 @@ class World(QObject):
                 elif self.find_person(name, online_only=False) or (self.player and self.player["name"].lower() == name.lower()):
                     self.out("system", "There is already a player with that name.")
                 else:
-                    self.player = {"name": name, "password": password, "desc": "", "doing": "",
+                    from ... import fursonas
+                    self.player = {"name": name, "password": password, "desc": fursonas.muck_desc(), "doing": "",
                                    "room": self.start_room, "autologin": True}
                     self._save_player()
                     self.out("system", f"Character {name} created. Welcome to {WORLD_NAME}!")

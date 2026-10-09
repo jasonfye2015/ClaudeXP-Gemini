@@ -99,6 +99,9 @@ class Brain:
         if p.contact is not None:
             from ...life import get as life
             memory = life().context(p.contact.screen_name) if life() else ""
+        else:
+            from ... import fursonas
+            memory = fursonas.knowledge(p.nick, player)
         return BASE.format(nick=p.nick, now=timefmt.now_text(tz), persona=p.persona or "(none)",
                            relationship=relationship) + memory + extra
 

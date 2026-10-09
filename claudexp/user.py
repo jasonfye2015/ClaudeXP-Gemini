@@ -275,6 +275,12 @@ def _picture():
     pic_id = picture_id()
     if pic_id == CUSTOM:
         path = find_image("userpic")
+    elif pic_id.startswith("fursona:"):                 # a Setup fursona's own picture
+        from .fursonas import get, picture_path, preset_pixmap
+        path = picture_path(pic_id)
+        preset = get(pic_id[len("fursona:"):])
+        if path is None and preset is not None:
+            return preset_pixmap(preset, 96)           # its stand-in tile until a picture is added
     else:
         path = PICTURES_DIR / pic_id
         if not path.exists():

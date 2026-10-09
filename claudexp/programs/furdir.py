@@ -37,7 +37,8 @@ GROUPS = [("all", "Everyone"), ("aim", "AIM buddies"), ("irc", "FurNet IRC regul
           ("muck", "MUCK regulars"), ("background", "Background characters")]
 # The gallery's sections. A record's "tier" decides; otherwise: an AIM account = main; a regular who chats (or is on
 # more than one system) = support; staff, bots, idlers and lurkers who rarely talk to you = background.
-TIERS = [("main", "Main Furs", "They have their own instant-messenger accounts and talk to you directly."),
+TIERS = [("user", "User Fursonas", "The fursonas offered when Windows is set up. Yours is marked."),
+         ("main", "Main Furs", "They have their own instant-messenger accounts and talk to you directly."),
          ("support", "Support Furs", "Regulars you meet around FurNet IRC and the MUCK."),
          ("background", "Background Furs", "Admins, bots and the crowd in the background - they rarely talk to you.")]
 TIER_NAMES = {k: label for k, label, _d in TIERS}
@@ -93,6 +94,8 @@ class Resident:
         self.irc = None             # {"nick", "realname", "channels", "hours", "persona", "bot"}
         self.muck = None            # {"name", "species", "desc", "doing", "hours", "persona", "haunts"}
         self.record = {}
+        self.preset = None          # a Setup fursona (fursonas.Preset)
+        self.is_you = False
 
     @property
     def systems(self):
@@ -103,6 +106,8 @@ class Resident:
 
     @property
     def tier(self):
+        if self.preset is not None:
+            return "user"
         by_hand = str(self.record.get("tier", "")).lower()
         if by_hand in TIER_NAMES:
             return by_hand
@@ -117,6 +122,8 @@ class Resident:
 
     @property
     def icon_path(self):
+        if self.preset is not None:
+            return self.preset.account_picture
         if self.aim and self.aim.get("icon"):
             p = AIM_DIR / "assets" / "icons" / self.aim["icon"]
             if p.exists():
@@ -176,6 +183,12 @@ def residents():
         r.record = _load(RECORDS / f"{r.id}.json", {})
         if r.record.get("fur_name"):
             r.name = r.record["fur_name"]
+    from .. import fursonas
+    mine = fursonas.chosen()
+    for pr in fursonas.presets():                               # the Setup fursonas, at the top
+        r = Resident(slug("user-" + pr.id), pr.name, "user")
+        r.preset, r.record, r.is_you = pr, pr.data, mine is not None and mine.id == pr.id
+        out.append(r)
     order = [k for k, _l, _d in TIERS]
     out.sort(key=lambda r: order.index(r.tier))                 # stable: keeps the order within each tier
     return out
@@ -185,6 +198,9 @@ def residents():
 
 def avatar(r, size=64):
     """The AIM buddy icon, the record's own picture, or a drawn initial."""
+    if r.preset is not None:                                    # the same tile Setup shows
+        from ..fursonas import preset_pixmap
+        return preset_pixmap(r.preset, size).toImage()
     p_ = r.icon_path
     if p_ is not None:
         img = QImage(str(p_))
@@ -224,6 +240,8 @@ def pictures(r):
         for f in sorted(r.aim_dir.iterdir()):
             if f.suffix.lower() in PICTURE_EXTS:
                 out.append((f, caps.get(f.name, "")))
+    if r.preset is not None:
+        out += [(path, cap or album) for album, path, cap in r.preset.photos()]
     for item in r.record.get("files", []):
         path = Path(item.get("path", "")) if isinstance(item, dict) else Path(item)
         if not path.is_absolute():
@@ -326,20 +344,30 @@ class Card:
         aim, irc, muck = r.aim or {}, r.irc or {}, r.muck or {}
         icon = self._img(f"avatar:{r.id}", avatar(r, 96))
         where = {"aim": "AIM buddy - also on FurNet IRC and the MUCK", "irc": "FurNet IRC regular",
-                 "muck": "MUCK regular", "background": "Background character on FurNet IRC"}[r.group]
+                 "muck": "MUCK regular", "background": "Background character on FurNet IRC",
+                 "user": "A fursona you can choose when Windows is set up"}[r.group]
         if irc.get("bot"):
             where += " (a bot)"
         if muck.get("wizard"):
             where += " (MUCK wizard)"
         where = f"{TIER_NAMES[r.tier][:-1]}  -  {where}"
+        you = ('<div style="margin-top:4px"><span style="background:#C8501C; color:white; font-weight:bold;'
+               ' padding:2px 6px;">&nbsp;THIS IS YOU&nbsp;</span></div>') if r.is_you else ""
         out = [f"<html><head><style>{self.CSS}</style></head><body>",
                f'<table cellspacing=0 cellpadding=0><tr><td><img src="{icon}" width=96 height=96></td>'
                f'<td style="padding-left:14px; vertical-align:middle"><h1>{_e(r.name)}</h1>'
-               f'<div>{_e(where)}</div>'
+               f'<div>{_e(where)}</div>{you}'
                + (f'<div style="margin-top:6px"><i>"{_e(aim["profile"])}"</i></div>' if aim.get("profile") else "")
                + "</td></tr></table>"]
         # screen names
-        names = rec.get("screen_names", {})
+        names = dict(rec.get("screen_names", {}))
+        if r.preset is not None:                                 # a fursona's accounts follow its handle
+            from ..user import aim_name, email_address, irc_nick, muck_name
+            h = r.preset.handle
+            aim = {"screen_name": aim_name(h), "profile": r.preset.get("summary")}
+            irc = {"nick": irc_nick(h)}
+            muck = {"name": muck_name(h), "desc": r.preset.get("online", "muck_desc")}
+            names["email"] = names.get("email") or email_address(h)
         out.append(self._section("Screen names", [
             self._row("AIM", names.get("aim"), aim.get("screen_name", "")),
             self._row("FurNet IRC", names.get("irc"),
@@ -377,6 +405,9 @@ class Card:
             self._row("Clothing", sona.get("clothing")),
             *[self._row(k.replace("_", " ").title(), v) for k, v in sona.items()
               if k not in ("species", "colors", "markings", "clothing", "description")]]))
+        for key, label in (("fursuit", "Fursuit"), ("conventions", "Conventions")):
+            if rec.get(key):
+                out.append(self._text(label, rec[key]))
         if sona.get("description") or muck.get("desc"):
             out.append(self._text("Description", sona.get("description"), muck.get("desc", "")))
         # personality
@@ -435,7 +466,8 @@ class Card:
             out.append(self._text("Notes", rec["notes"]))
         for key, value in rec.items():                           # anything we add later gets shown too
             if key in ("id", "fur_name", "tier", "icon", "screen_names", "personal", "favorites", "fursona",
-                       "personality", "relationship", "friends", "relationships", "files", "webpages", "notes"):
+                       "personality", "relationship", "friends", "relationships", "files", "webpages", "notes",
+                       "handle", "summary", "online", "knows", "fursuit", "conventions"):
                 continue
             if isinstance(value, dict):
                 out.append(self._section(key.replace("_", " ").title(),
@@ -617,7 +649,7 @@ class FurDirectory(QWidget):
             for i, r in members:
                 item = QListWidgetItem(QIcon(QPixmap.fromImage(avatar(r, 64))), r.name)
                 item.setSizeHint(QSize(100, 96))
-                item.setToolTip(f"{label[:-1]} - {dict(GROUPS)[r.group]}")
+                item.setToolTip(f"{label[:-1]} - {dict(GROUPS).get(r.group, 'a Setup fursona')}")
                 self.grid.addItem(item)
                 self.rows.append(i)
         self.grid.fit_headers()
@@ -687,7 +719,7 @@ class FurDirectory(QWidget):
 _open = {}
 
 
-def open_furdir(desktop):
+def open_furdir(desktop, show_me=False):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = FurDirectory(desktop)
@@ -695,4 +727,10 @@ def open_furdir(desktop):
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)
+    if show_me:                                                  # User Accounts' 'View my fursona's card'
+        body = win.content
+        body.filter.setCurrentIndex(0)
+        for i, r in enumerate(body.shown):
+            if r.is_you:
+                body.show_card(i)
     return win

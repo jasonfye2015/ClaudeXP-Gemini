@@ -183,12 +183,15 @@ class LifeSim(QObject):
         """What a buddy remembers: their recent journal, for any program's prompt."""
         if name not in self.buddies:
             return ""
+        from .. import fursonas
+        about = fursonas.knowledge(name, self.user)
         entries = self.journal.entries(name)[-CONTEXT_ENTRIES:]
         if not entries:
-            return ""
+            return about
         lines = "\n".join(f"- {e['date']}: {e['text']}" for e in entries)
-        return (f"\n\nYour recent diary notes, including things you talked about with {self.user} on AIM, "
-                f"IRC, the MUCK or email (use them naturally if they come up; don't recite them):\n{lines}")
+        return about + (f"\n\nYour recent diary notes, including things you talked about with {self.user} on "
+                        f"AIM, IRC, the MUCK or email (use them naturally if they come up; don't recite them):"
+                        f"\n{lines}")
 
     # ---- model helpers ----------------------------------------------------------------------
     def _model(self, contact):

@@ -1057,8 +1057,24 @@ class UserAccounts(QWidget):
             b.clicked.connect(lambda _c=False, i=idx: self._go(i))
             v.addWidget(b)
             self.links[key] = b
+        from . import fursonas
+        if fursonas.locked():
+            b = QPushButton("▸  View my fursona's card in The Fur Directory")
+            b.setStyleSheet(LINK)
+            b.setCursor(Qt.PointingHandCursor)
+            b.clicked.connect(self._my_card)
+            v.addWidget(b)
+            note = QLabel(f"Your name, picture and online name belong to your fursona, "
+                          f"{fursonas.chosen().name}. To choose a different fursona, reinstall Windows.")
+            note.setWordWrap(True)
+            note.setStyleSheet("color: #505050; font-family: Tahoma; font-size: 11px; margin-top: 8px;")
+            v.addWidget(note)
         v.addStretch()
         return page
+
+    def _my_card(self):
+        from .programs import furdir
+        furdir.open_furdir(self.desktop, show_me=True)
 
     def _page_shell(self, title_text):
         page = QWidget()
@@ -1214,6 +1230,13 @@ class UserAccounts(QWidget):
         return page
 
     def _go(self, index):
+        from . import fursonas
+        if index in (1, 2, 3) and fursonas.locked():
+            from .explorer.dialogs import msgbox
+            msgbox(self.desktop, "User Accounts", f"Your name, picture and online name come with your fursona, "
+                   f"{fursonas.chosen().name}.\n\nTo choose a different fursona, you need to reinstall Windows.",
+                   "info")
+            index = 0
         if index == 1:
             for i in range(self.grid.count()):
                 if self.grid.item(i).data(Qt.UserRole) == user.picture_id():

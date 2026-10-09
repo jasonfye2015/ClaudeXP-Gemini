@@ -1,0 +1,61 @@
+{
+  "fur_name": "Kithylin",
+  "handle": "Kithylin",
+  "summary": "A 21-year-old angelic husky from New York who's online a lot and friendly with everyone.",
+  "screen_names": {
+    "aim": "",
+    "irc": "",
+    "muck": "",
+    "email": ""
+  },
+  "personal": {
+    "real_name": "",
+    "location": "New York",
+    "sex": "Male",
+    "age": "21",
+    "dob": "",
+    "job": "None",
+    "work_hours": "",
+    "sleep_hours": "",
+    "online_hours": "Online a lot"
+  },
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "fursona": {
+    "species": "anthro angelic husky",
+    "colors": "Typical husky black and white fur",
+    "markings": "",
+    "clothing": "",
+    "description": "An anthro husky with typical black and white fur, white feathery angelic wings and a halo over his head."
+  },
+  "fursuit": "He owns a husky fursuit",
+  "conventions": "He has been to several furry conventions",
+  "personality": "Friendly with all of his contacts.",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "online": {
+    "away_message": "",
+    "irc_realname": "",
+    "muck_desc": "A young anthro husky stands here, his thick fur the classic husky black and white: dark across his back, ears and the top of his head, bright white on his muzzle, chest and belly. A pair of white, feathery angelic wings fold neatly against his back, and a soft golden halo floats just above his ears, bobbing whenever his tail wags - which is often. His pale blue eyes are friendly and curious, and he looks like he's always up for a chat."
+  },
+  "knows": [
+    {"name": "ArcticFox", "closeness": "friend", "how_met": ""},
+    {"name": "CyberianHusky", "closeness": "friend", "how_met": ""},
+    {"name": "KittyKat", "closeness": "friend", "how_met": ""},
+    {"name": "LazyFox", "closeness": "friend", "how_met": ""},
+    {"name": "MushTheHusky", "closeness": "friend", "how_met": ""},
+    {"name": "RedFawks", "closeness": "friend", "how_met": ""},
+    {"name": "Renamon", "closeness": "friend", "how_met": ""},
+    {"name": "WinterDragon", "closeness": "friend", "how_met": ""},
+    {"name": "XavierPup", "closeness": "friend", "how_met": ""}
+  ],
+  "friends": [],
+  "files": [],
+  "webpages": [],
+  "notes": ""
+}

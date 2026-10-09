@@ -1,8 +1,12 @@
 """Welcome to Microsoft Windows (the first-boot 'OOBE'): the intro music, a welcome page, registration,
-'Who will use this computer?' (your account name), and 'Thank you!'."""
+'Choose your fursona' (a ready-made identity, or 'Be unique'), 'Who will use this computer?' (your account name),
+and 'Thank you!'."""
 from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPalette, QPen, QRadialGradient
-from PySide6.QtWidgets import QButtonGroup, QLabel, QLineEdit, QRadioButton, QVBoxLayout, QWidget
+from PySide6.QtCore import QSize
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (QButtonGroup, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+                               QRadioButton, QVBoxLayout, QWidget)
 
 from .. import sound
 from ..paths import pixmap
@@ -10,7 +14,8 @@ from . import ms
 from .gui import draw_cover
 
 TOP, BOTTOM = 77 / 766, 671 / 766        # the dark bands of the background, as fractions of its height
-PAGES = ["welcome", "register", "users", "online", "passwords", "thanks"]
+PAGES = ["welcome", "register", "fursona", "users", "online", "passwords", "thanks"]
+UNIQUE = "__unique__"
 
 
 class NavButton(QWidget):
@@ -124,6 +129,38 @@ class Oobe(QWidget):
         self.reg_yes.toggled.connect(lambda on: self.reg_note.setText(
             "Registration needs an Internet connection. You can register later from Help and Support." if on else ""))
         form.addWidget(self.reg)
+        # choose your fursona
+        from .. import fursonas
+        self.presets = fursonas.presets()
+        self.preset = None
+        self.sona = QWidget()
+        sv = QHBoxLayout(self.sona)
+        sv.setContentsMargins(0, 0, 0, 0)
+        self.sona_list = QListWidget()
+        self.sona_list.setViewMode(QListWidget.IconMode)
+        self.sona_list.setIconSize(QSize(72, 72))
+        self.sona_list.setGridSize(QSize(104, 104))
+        self.sona_list.setMovement(QListWidget.Static)
+        self.sona_list.setResizeMode(QListWidget.Adjust)
+        self.sona_list.setWordWrap(True)
+        self.sona_list.setStyleSheet("QListWidget { color: white; font-family: Tahoma; font-size: 12px; }")
+        for pr in self.presets:
+            item = QListWidgetItem(QIcon(fursonas.preset_pixmap(pr, 72)), pr.name)
+            item.setData(Qt.UserRole, pr.id)
+            self.sona_list.addItem(item)
+        unique = QListWidgetItem(QIcon(fursonas.unique_pixmap(72)), "Be unique")
+        unique.setData(Qt.UserRole, UNIQUE)
+        self.sona_list.addItem(unique)
+        self.sona_list.setCurrentItem(unique)
+        sv.addWidget(self.sona_list, 3)
+        self.sona_info = QLabel()
+        self.sona_info.setWordWrap(True)
+        self.sona_info.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.sona_info.setTextFormat(Qt.RichText)
+        sv.addWidget(self.sona_info, 2)
+        self.sona_list.currentItemChanged.connect(self._sona_chosen)
+        self.sona_list.itemDoubleClicked.connect(lambda _i: self._go(1))
+        form.addWidget(self.sona)
         # who will use this computer
         self.users = QWidget()
         uv = QVBoxLayout(self.users)
@@ -136,13 +173,17 @@ class Oobe(QWidget):
         uv.addWidget(lab)
         uv.addWidget(self.name)
         uv.addSpacing(10)
-        uv.addWidget(QLabel("Pick a picture for your account:"))
+        self.pic_label = QLabel("Pick a picture for your account:")
+        uv.addWidget(self.pic_label)
         from ..accounts import OnlineNameForm, PasswordForm, PicturePicker, PRETEND_NOTE
         self.pictures = PicturePicker(40)
         self.pictures.setFixedHeight(120)
         if self.pictures.count():
             self.pictures.setCurrentRow(0)
         uv.addWidget(self.pictures)
+        self.sona_pic = QLabel()
+        self.sona_pic.hide()
+        uv.addWidget(self.sona_pic)
         uv.addStretch()
         form.addWidget(self.users)
         self.name.textChanged.connect(self._update_buttons)
@@ -188,7 +229,9 @@ class Oobe(QWidget):
     def start(self, suggested_name=""):
         self.page = 0
         self.fade = 0.0
+        self.suggested = suggested_name
         self.name.setText(suggested_name)
+        self._sona_chosen(self.sona_list.currentItem())
         self.player = sound.play_file("oobe_music.mp3")
         self.fade_timer.start(30)
         self._layout()
@@ -209,11 +252,49 @@ class Oobe(QWidget):
         self.page = max(0, min(len(PAGES) - 1, self.page + step))
         self._layout()
 
+    def _sona_chosen(self, item, _prev=None):
+        """A fursona fixes the name, picture and online name; 'Be unique' leaves them to you."""
+        from .. import fursonas
+        pid = item.data(Qt.UserRole) if item is not None else UNIQUE
+        was = self.preset
+        self.preset = fursonas.get(pid) if pid != UNIQUE else None
+        pr = self.preset
+        if pr is None:
+            self.sona_info.setText("<b style='font-size:16px'>Be unique</b><br><br>Make up your own name and pick "
+                                   "your own picture. Your buddies will get to know you as you chat.")
+            if was is not None:
+                self.name.setText(self.suggested)
+        else:
+            sona, pers = pr.get("fursona", default={}), pr.get("personal", default={})
+            facts = [v for v in (pers.get("age") and f"{pers['age']}-year-old", pers.get("sex", "").lower(),
+                                 sona.get("species")) if v]
+            where = pers.get("location", "")
+            self.sona_info.setText(
+                f"<b style='font-size:16px'>{pr.name}</b><br>{' '.join(facts)}"
+                + (f"<br>{where}" if where else "")
+                + (f"<br><br>{pr.get('summary')}" if pr.get("summary") else "")
+                + "<br><br><i>A fursona comes with its own name, picture, profile, photos and online accounts. "
+                  "It can only be changed by reinstalling Windows.</i>")
+            self.name.setText(pr.name)
+        locked = pr is not None
+        self.name.setReadOnly(locked)
+        self.pictures.setVisible(not locked)
+        self.pic_label.setText("Your account picture comes with your fursona:" if locked
+                               else "Pick a picture for your account:")
+        self.sona_pic.setVisible(locked)
+        if locked:
+            self.sona_pic.setPixmap(fursonas.preset_pixmap(pr, 64))
+        self.online.setEnabled(not locked)
+        if locked:
+            self.online.set_values(pr.handle, True)
+
     def _finish(self):
         name = self.name.text().strip()
-        result = {"name": name, "picture": self.pictures.selected(), "handle": self.online.value() or name,
-                  "linked": self.online.linked(), "windows_password": self.win_pw.value(),
-                  "online_password": self.online_pw.value()}
+        pr = self.preset
+        result = {"name": name, "picture": f"fursona:{pr.id}" if pr else self.pictures.selected(),
+                  "handle": pr.handle if pr else (self.online.value() or name),
+                  "linked": True if pr else self.online.linked(), "windows_password": self.win_pw.value(),
+                  "online_password": self.online_pw.value(), "fursona": pr.id if pr else None}
         player = self.player
         self.player = None
         if player is not None:
@@ -244,10 +325,11 @@ class Oobe(QWidget):
         page = PAGES[self.page]
         w, h = self.width(), self.height()
         self.reg.setVisible(page == "register")
+        self.sona.setVisible(page == "fursona")
         self.users.setVisible(page == "users")
         self.online.setVisible(page == "online")
         self.passwords.setVisible(page == "passwords")
-        self.form.setVisible(page in ("register", "users", "online", "passwords"))
+        self.form.setVisible(page in ("register", "fursona", "users", "online", "passwords"))
         if page == "register":
             self.form.setGeometry(int(w * 0.12), int(h * 0.42), int(w * 0.6), int(h * 0.3))
         else:
@@ -288,6 +370,9 @@ class Oobe(QWidget):
         "register": ("Ready to register with Microsoft?",
                      "Registering lets Microsoft tell you about product updates and special offers. Registration is "
                      "optional."),
+        "fursona": ("Choose your fursona",
+                    "Pick a ready-made fursona - with its own name, profile, photos and online accounts - or "
+                    "choose Be unique and create your own."),
         "users": ("Who will use this computer?",
                   "Type your name and pick a picture. Windows will create a user account for you, so your desktop, "
                   "documents and settings are your own."),
