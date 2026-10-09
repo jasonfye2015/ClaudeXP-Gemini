@@ -320,6 +320,8 @@ class Card:
         self.doc = doc
         self.by_id = {r.id: r for r in everyone}
         self.by_name = {r.name.lower(): r for r in everyone}
+        self.files = []             # the card's "open:<n>" links (a path in the link itself gets mangled: Qt
+                                    # percent-encodes the backslashes when the link is clicked)
 
     def _img(self, key, img):
         self.doc.addResource(QTextDocument.ImageResource, QUrl(key), img)
@@ -451,13 +453,15 @@ class Card:
         if pics:
             cells = []
             for i, (path, cap) in enumerate(pics):
+                self.files.append(path)
+                link = f"open:{len(self.files) - 1}"
                 thumb = QImage(str(path))
                 if thumb.isNull():
-                    cells.append(f'<td width=120 align=center><a href="open:{_e(path)}">{_e(path.name)}</a></td>')
+                    cells.append(f'<td width=120 align=center><a href="{link}">{_e(path.name)}</a></td>')
                     continue
                 key = self._img(f"thumb:{r.id}:{i}", thumb.scaled(110, 84, Qt.KeepAspectRatio,
                                                                   Qt.SmoothTransformation))
-                cells.append(f'<td width=120 align=center valign=top><a href="open:{_e(path)}">'
+                cells.append(f'<td width=120 align=center valign=top><a href="{link}">'
                              f'<img src="{key}"></a><br><span class=sys>{_e(cap or path.name)}</span></td>')
             rows = ["<tr>" + "".join(cells[i:i + 5]) + "</tr>" for i in range(0, len(cells), 5)]
             out.append(f"<table cellspacing=6>{''.join(rows)}</table>")
@@ -692,7 +696,9 @@ class FurDirectory(QWidget):
         r = self.shown[self.index]
         doc = self.page.document()
         doc.clear()
-        self.page.setHtml(Card(doc, self.everyone).build(r))
+        card = Card(doc, self.everyone)
+        self.page.setHtml(card.build(r))
+        self.card_files = card.files
         self.page.verticalScrollBar().setValue(0)
         self.where.setText(f"{self.index + 1} of {len(self.shown)}")
         self.stack.setCurrentIndex(1)
@@ -713,7 +719,9 @@ class FurDirectory(QWidget):
                     self.show_card(i)
         elif kind == "open":
             from ..explorer import viewers
-            viewers.open_file(self.desktop, Path(html.unescape(value)))
+            files = getattr(self, "card_files", [])
+            if value.isdigit() and int(value) < len(files):
+                viewers.open_file(self.desktop, files[int(value)])
         elif kind == "web":
             from . import navigator
             navigator.launch(self.desktop, url=html.unescape(value))
