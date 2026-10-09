@@ -7,7 +7,11 @@ Program Files/ClaudeMUCK/data/
 Program Files/ClaudeIRC/data/
 Program Files/Netscape/data/
 Local Stoage/
-Local Storage/
+# the media archive (a separate download); only its README is part of ClaudeXP
+Local Storage/*
+!Local Storage/README.txt
+# the user's own screenshots
+screenshots/
 Recovery Backups/
 # the original (86 MB) of assets/sounds/oobe_music.mp3
 OOBE_intro_music.wav

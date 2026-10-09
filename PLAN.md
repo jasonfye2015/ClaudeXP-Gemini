@@ -429,6 +429,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
 - **Archives are self-contained**: 7-Zip 26.03's 7z.exe + 7z.dll + License.txt ship in assets/tools/7-Zip (README in
   assets/tools). comix.library.seven_zip() prefers it over an installed 7-Zip, so RAR/CBR (RAR5 too), 7z/CB7 and
   LZH/LHA open on any PC; ZIP/CBZ use zipfile and the CD viewers' TAR uses tarfile (extractall filter="data").
+- **Fresh downloads**: a clone has no data/ (ignored), so app.py marks the very first start (no data/user.json,
+  no Setup stage) as setup stage 'oobe' with fresh=True: BIOS -> XP boot -> 'Welcome to Microsoft Windows' (no
+  'boot from CD' prompt), i.e. registration, Choose your fursona, name, passwords. The media archive is a separate
+  download into Local Storage/ (ignored except its README.txt, which lists the expected folders); screenshots/ is
+  ignored; requirements.txt pins PySide6 6.11.2, ollama 0.6.3, tzdata 2026.5 (tested on Python 3.14).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

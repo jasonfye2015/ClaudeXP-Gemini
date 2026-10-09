@@ -17,6 +17,11 @@ class ClaudeXP(QMainWindow):
         self.resize(1024, 768)
         self.setMinimumSize(800, 600)
         self._shutting_down = False
+        from . import setup, user
+        if not user.USER_FILE.exists() and setup.stage() is None:
+            # A brand-new install (nothing in data/ yet): like a new PC out of the box, the first boot goes to
+            # 'Welcome to Microsoft Windows' - registration, choose your fursona, your name and passwords.
+            setup.set_stage("oobe", fresh=True)
 
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
@@ -84,7 +89,7 @@ class ClaudeXP(QMainWindow):
         if self.bios.recovery_requested:
             self.recovery_menu.reset()
             self._show_screen(self.recovery_menu)
-        elif setup.stage() in ("gui", "oobe"):
+        elif setup.stage() in ("gui", "oobe") and not setup.info().get("fresh"):
             # The recovery CD is still in the drive: pressing a key now would start Setup over.
             self._prompt_boot_cd()
         else:
