@@ -237,7 +237,22 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   originals kept; AOI's zips are password-protected site downloads, its comix/ folder already has the pages).
   Library grid (series draw as stacks, read-progress bars, Continue Reading row, filter), CDisplay-style viewer
   (Fit Page/Fit Width/two-page spreads, filmstrip, preloads 3 pages, wheel/Space scroll tall pages then turn),
-  progress in data/comix.json. Portfolios get their own bespoke program later.
+  progress in data/comix.json.
+- **FurFolio Reader** (`programs/folio/gallery.py`): E:\Furry Media Archive…\Portfolios… as an art gallery
+  (artists -> folios -> pieces; ~6,500 images, never indexed). Artists hang as matted prints, folios as portfolio
+  cases, a folio is a wall of thumbnails of every piece (lazy, cached in data/folio_thumbs; a cover skips damaged
+  files, e.g. Brain O'Connell's Cover.jpg is really MPEG data). One-folio artists open straight into it; folio names
+  lose the artist prefix; a folio's Info.txt shows under its heading. Viewer: piece matted + framed on a charcoal
+  wall with a brass caption plate, slideshow, Actual Size with drag-to-pan, filmstrip, My Favorites (data/folio.json).
+  Reuses FurComix's Loader and name helpers. Start menu: Programs > FurFolio Reader (both readers).
+- **FurStory Reader** (`programs/folio/stories.py`, installed with FurFolio): E:\…\Authors and Stories… as a
+  bookshelf (217 leather spines on wooden shelves, from names only). Opening a book walks that folder: every
+  readable file is a chapter, grouped by sub-folder (index/contents files first). Reads HTML (pictures kept,
+  colours/fonts/scripts stripped, links between its own pages turn chapters), TXT (hard-wrapped lines reflowed,
+  scene breaks kept), RTF (WordPad's from_rtf), PDF text (QtPdf), Word .doc/.wri (best-effort text runs),
+  WordPerfect (.wpd document-pointer parser, ~22/29), and anything inside .zip/.gz; .cbr chapters open in FurComix.
+  ~5,300 chapters, ~100% open. Reading: centred serif column, Paper/Sepia/Night, text size, chapter nav, place
+  remembered (data/stories.json), Continue button on the shelf, red ribbon on books in progress.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses
