@@ -359,6 +359,8 @@ class Card:
                  "muck": "MUCK regular", "background": "Background character on FurNet IRC",
                  "user": "A fursona you can choose when Windows is set up",
                  "directory": "No accounts yet"}[r.group]
+        if r.group in ("irc", "muck") and {"irc", "muck"} <= r.systems:
+            where = "FurNet IRC and MUCK regular"
         if irc.get("bot"):
             where += " (a bot)"
         if muck.get("wizard"):

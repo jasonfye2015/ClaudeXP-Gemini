@@ -11,8 +11,9 @@ their life journal. Anything written here wins over the system's value.
 
 A record for someone with no AIM, IRC or MUCK account yet still gets a card ("No accounts yet"); give them a
 screen name here once they join a system. The 60 background furs from ClaudeXP Profiles\Background Furry Profiles
-were transcribed this way (tier "background", with "summary", "mannerisms", "interests", "roleplay_hooks" and
-"roleplay_notes" sections).
+were transcribed into records (tier "background", with "summary", "mannerisms", "interests", "roleplay_hooks" and
+"roleplay_notes" sections), and are also FurNet IRC and MUCK regulars (Program Files\ClaudeIRC\regulars.json and
+ClaudeMUCK\world\regulars.json), online during waking hours that follow their profile's sleep schedule.
 
 Fields
 ------

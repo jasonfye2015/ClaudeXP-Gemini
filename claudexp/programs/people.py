@@ -4,6 +4,7 @@ The cast is ClaudeAIM's buddies plus each program's own regulars. A buddy can ha
 per-program section in their AIM contact file (e.g. "muck": {...} or "irc": {...}).
 """
 import json
+import re
 
 from .aim import ensure_aim_path
 
@@ -27,6 +28,15 @@ def save_json(path, data):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     tmp.replace(path)
+
+
+def mentions(name, text, prefix=False):
+    """Does text name this person as a word ('Ink' isn't in 'think')? prefix=True also counts the first five
+    letters of a long name ('Tessel' for Tessellate)."""
+    low, name = text.lower(), name.lower()
+    if re.search(rf"(?<![a-z0-9]){re.escape(name)}(?![a-z0-9])", low):
+        return True
+    return prefix and len(name) > 4 and re.search(rf"(?<![a-z0-9]){re.escape(name[:5])}", low) is not None
 
 
 def clock_minutes(text):

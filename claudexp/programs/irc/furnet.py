@@ -14,7 +14,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 
 from ... import clock
 from ...paths import ROOT
-from ..people import aim_screen_name, available, load_buddies, load_json, parse_hours, save_json
+from ..people import aim_screen_name, available, load_buddies, load_json, mentions, parse_hours, save_json
 from .brain import PRIORITY_CHATTER, PRIORITY_REPLY, Brain
 
 IRC_DIR = ROOT / "Program Files" / "ClaudeIRC"
@@ -423,12 +423,12 @@ class FurNet(QObject):
         if kind == "action":
             self._chan_out(chan, "action", f"* {p.nick} {text}")
         else:
-            highlight = self.nick and self.nick.lower() in text.lower()
+            highlight = self.nick and mentions(self.nick, text)
             self._chan_out(chan, "highlight" if highlight else "msg", f"<{p.nick}> {text}")
         self._bot_command(chan, p.nick, text)
         others = [o for o in self.members(chan.name) if o is not p and o.talks]
-        addressed = [o for o in others if o.nick.lower() in text.lower()]
-        if self.nick.lower() in text.lower():
+        addressed = [o for o in others if mentions(o.nick, text)]
+        if mentions(self.nick, text):
             pass  # they talked to you: your turn to answer
         elif addressed and random.random() < 0.85:
             self._ask_channel(addressed[0], chan, f"{p.nick} just said something to you. Answer if it makes sense, or PASS.")
@@ -437,9 +437,7 @@ class FurNet(QObject):
 
     def _player_said(self, chan, text):
         present = [p for p in self.members(chan.name) if p.talks]
-        lowered = text.lower()
-        addressed = [p for p in present if p.nick.lower() in lowered
-                     or (len(p.nick) > 4 and p.nick.lower()[:5] in lowered)]
+        addressed = [p for p in present if mentions(p.nick, text, prefix=True)]
         if addressed:
             responders = addressed[:2]
         else:

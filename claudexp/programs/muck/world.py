@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from ...paths import ROOT
-from ..people import aim_screen_name, available, load_buddies, parse_hours
+from ..people import aim_screen_name, available, load_buddies, mentions, parse_hours
 from ..people import load_json as _load_json
 from ..people import save_json as _save_json
 from .brain import WORLD_NAME, Brain
@@ -413,7 +413,7 @@ class World(QObject):
             self.next_ambient = max(self.next_ambient, _now() + random.uniform(*AMBIENT_SECONDS) / 2)
             # Sometimes someone else answers them.
             others = [o for o in self.people_in(room_id) if o is not p and not o.idle_only]
-            addressed = [o for o in others if o.name.lower() in text.lower()]
+            addressed = [o for o in others if mentions(o.name, text)]
             if addressed:
                 self._ask(addressed[0], f"{p.name} just said something to you. Respond if it makes sense, or PASS.", 5)
             elif others and random.random() < 0.2:
@@ -430,9 +430,7 @@ class World(QObject):
         present = [p for p in self.people_in(self.player_room) if not p.idle_only]
         if not present:
             return
-        lowered = text.lower()
-        addressed = [p for p in present if p.name.lower() in lowered
-                     or (len(p.name) > 4 and p.name.lower()[:5] in lowered)]
+        addressed = [p for p in present if mentions(p.name, text, prefix=True)]
         if addressed:
             responders = addressed[:2]
         else:
