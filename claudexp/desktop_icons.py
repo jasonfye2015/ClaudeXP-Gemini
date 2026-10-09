@@ -31,9 +31,9 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
                    # the desktop Games folder mirrors Start > Programs > Games
                    "Games": [p.key for p in programs.PROGRAMS if p.group == "Games"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Furry Programs": 9, "Emulation": 3, "Games": 7}
+FOLDERS_SINCE = {"Furry Programs": 9, "Emulation": 3, "Games": 10}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 9
+FOLDERS = 10
 
 
 def std(which):
@@ -53,6 +53,7 @@ def builtins():
         ("prog:claudeamp", "ClaudeAmp", lambda: programs.get("claudeamp").icon()),
         ("prog:flash", "Flash Player", lambda: programs.get("flash").icon()),
         ("prog:torrent", "ClaudeTorrent", lambda: programs.get("torrent").icon()),
+        ("prog:rpg", "ClaudeRPG", lambda: programs.get("rpg").icon()),
         ("prog:navigator", "Netscape Navigator", lambda: programs.get("navigator").icon()),
         ("prog:claudeai", "ClaudeAI", lambda: programs.get("claudeai").icon()),
         ("prog:aim", "ClaudeAIM", lambda: programs.get("aim").icon()),
@@ -753,6 +754,7 @@ class IconManager(QObject):
                       "flash": r"C:\Program Files\Macromedia\Flash Player\FlashPla.exe",
                       "claudeamp": r"C:\Program Files\ClaudeAmp\ClaudeAmp.exe",
                       "torrent": r"C:\Program Files\ClaudeTorrent\ClaudeTorrent.exe",
+                      "rpg": r"C:\Program Files\ClaudeRPG\ClaudeRPG.exe",
                       "nes": r"C:\Program Files\FCE Ultra\fceu.exe",
                       "snes": r"C:\Program Files\Snes9x\snes9x.exe",
                       "gb": r"C:\Program Files\Gambatte\gambatte.exe",

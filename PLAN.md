@@ -417,6 +417,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   unlisted (only the fursona) - with he/she/they from the preset's sex. It's added to life.context() (so AIM gets it
   through hosting.extra_context, no ClaudeAIM change) and to IRC/MUCK prompts for the regulars.
   The Fur Directory lists the presets first as 'User Fursonas', the chosen one marked THIS IS YOU.
+- **ClaudeRPG** (programs/rpg.py; Start > Games + desktop Games folder + desktop icon; clauderpg.exe): the
+  standalone browser roguelike's ClaudeXP release copy in Program Files/ClaudeRPG/ (the newest 'ClaudeRPG v*.html'
+  runs; v15.5 shipped). QWebEngineView with a named persistent profile in data/clauderpg (localStorage saves keep
+  their file:// origin), audio muted with ClaudeXP, MouseLock granted (permissionRequested, else
+  featurePermissionRequested), opens maximized; closing loads about:blank first so the game saves on unload.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

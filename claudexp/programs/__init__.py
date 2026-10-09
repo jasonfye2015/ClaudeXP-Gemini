@@ -213,6 +213,8 @@ PROGRAMS = [
     # Start > Programs > Games: the id/Raven shooters (Doom-engine ones run on PrBoom, Heretic/Hexen on Chocolate)
     *[Program(key, name, blurb, _lazy(".nes.emulator", f"{key}_icon"), _lazy(".nes.emulator", f"open_{key}"),
               _lazy(".nes.emulator", f"shutdown_{key}"), group="Games") for key, name, blurb in DOOM_GAMES],
+    Program("rpg", "ClaudeRPG", "A cozy, endless dungeon adventure", _lazy("rpg", "rpg_icon"),
+            _lazy("rpg", "open_rpg"), _lazy("rpg", "shutdown"), group="Games"),
     Program("heretic", "Heretic", "Raven's dark fantasy shooter", _lazy(".doom.native", "heretic_icon"),
             _lazy(".doom.native", "open_heretic"), _lazy(".doom.native", "shutdown_heretic"), group="Games"),
     Program("hexen", "Hexen", "Beyond Heretic", _lazy(".doom.native", "hexen_icon"),
