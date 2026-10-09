@@ -184,10 +184,12 @@ def ensure_started():
                 "--models-preset", str(_write_presets(want)), "--models-max", str(max(1, want["max_loaded"]))]
         if want["idle"] > 0:
             args += ["--sleep-idle-seconds", str(want["idle"] * 60)]
-        log = open(DATA / "llama-server.log", "w", encoding="utf-8", errors="replace")
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        _proc = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                 cwd=str(find_engine().parent), creationflags=flags)
+        with open(DATA / "llama-server.log", "w", encoding="utf-8", errors="replace") as log:
+            # (closed again here at once: the server keeps its own copy, and an open handle in ClaudeXP would
+            # stop Setup moving data\ away when Windows is reinstalled)
+            _proc = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                     cwd=str(find_engine().parent), creationflags=flags)
         _kill_with_us(_proc)
         deadline = time.monotonic() + START_TIMEOUT
         while time.monotonic() < deadline:
@@ -279,6 +281,12 @@ def stop():
             except Exception:
                 _proc.kill()
         _proc = None
+        if _job is not None:                       # and the per-model processes the router started
+            try:
+                import ctypes
+                ctypes.WinDLL("kernel32").TerminateJobObject(ctypes.c_void_p(_job), 0)
+            except Exception:
+                pass
 
 
 def post(path, body, stream=False, timeout=LOAD_TIMEOUT + 300):

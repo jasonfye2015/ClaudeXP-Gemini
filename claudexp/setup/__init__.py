@@ -97,13 +97,17 @@ def reboot(app, action=None):
 def finish_reboot():
     """Called by main.py after the event loop stops: run pending actions, do the pending wipe (and mark GUI
     Setup next)."""
+    from .. import llm_server
+    llm_server.stop()                              # the language model engine keeps files open in data/
     while _after_stop:
         _after_stop.pop(0)()
     if _pending_wipe is None:
         return
     w = _pending_wipe
-    wipe(format_drive=w["format"], program_history=w["programs"], memories=w["memories"])
-    set_stage("gui", formatted=w["format"])
+    try:
+        wipe(format_drive=w["format"], program_history=w["programs"], memories=w["memories"])
+    finally:
+        set_stage("gui", formatted=w["format"])   # Setup carries on even if something couldn't be moved
 
 
 def wipe(format_drive=True, program_history=True, memories=True):
@@ -133,6 +137,9 @@ def wipe(format_drive=True, program_history=True, memories=True):
     for path in targets:
         dest = backup / path.relative_to(ROOT)
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(path), str(dest))
+        try:
+            shutil.move(str(path), str(dest))
+        except OSError:
+            pass                                   # in use: keep going, so the rest is still erased
     DATA.mkdir(parents=True, exist_ok=True)
     return backup
