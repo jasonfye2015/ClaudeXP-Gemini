@@ -27,7 +27,7 @@ def _special(name):
     """Control Panel bits that aren't in the program list."""
     from .. import controlpanel
     return {"control": controlpanel.control_panel, "desk.cpl": controlpanel.display_properties,
-            "nusrmgr.cpl": controlpanel.user_accounts}.get(name)
+            "nusrmgr.cpl": controlpanel.user_accounts, "aimodels.cpl": controlpanel._ai_models}.get(name)
 
 
 def resolve(desktop, text, cwd=None):

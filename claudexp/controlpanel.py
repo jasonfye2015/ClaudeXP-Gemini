@@ -1303,6 +1303,16 @@ def user_accounts(desktop, page=0):
 
 # ---- Control Panel -------------------------------------------------------------------------------------------
 
+def _ai_icon():
+    from .aimodels_cpl import ai_icon
+    return ai_icon(32)
+
+
+def _ai_models(desktop):
+    from .aimodels_cpl import ai_models_properties
+    return ai_models_properties(desktop)
+
+
 def _printer_icon():
     from .printing import printer_icon
     return QIcon(printer_icon(32))
@@ -1354,6 +1364,7 @@ def control_panel(desktop):
             ("Date and Time", std(QStyle.SP_FileDialogInfoView), not_here("Date and Time")),
             ("Sounds and Audio Devices", std(QStyle.SP_MediaVolume), lambda: sound_properties(desktop)),
             ("Mouse", std(QStyle.SP_ArrowUp), lambda: mouse_properties(desktop)),
+            ("AI Models", QIcon(_ai_icon()), lambda: _ai_models(desktop)),
             ("Internet Options", std(QStyle.SP_BrowserReload), not_here("Internet Options")),
             ("Printers and Faxes", _printer_icon(), lambda: _printers(desktop)),
             ("Scheduled Tasks", std(QStyle.SP_FileDialogDetailedView), not_here("Scheduled Tasks")),

@@ -80,14 +80,15 @@ class Brain:
         from ... import broker
         return broker.get().foreground_waiting()
 
-    def _model(self, c):
-        if c.contact is not None:
-            if c.contact.model:
-                return c.contact.model
-            override = self.settings["model_overrides"].get(c.contact.id)
-            if override:
-                return override
-        return self.settings["default_model"]
+    def _model(self, c, priority=10):
+        """Control Panel > AI Models: pages and anything aimed at you use the conversation model (or this
+        character's own); ambient acting in rooms uses the background model."""
+        from ...ai_models import model_for
+        if priority < 5:
+            return model_for("background")
+        if c.contact is not None and c.contact.model:
+            return c.contact.model
+        return model_for("conversation", c.contact.screen_name if c.contact is not None else c.name)
 
     def _options(self, c):
         return {"temperature": c.temperature, "num_ctx": int(self.settings["context_size"])}  # same as AIM, so the model never reloads
@@ -126,7 +127,7 @@ class Brain:
         messages = [{"role": "system", "content": self._system(c, extra)},
                     {"role": "user", "content": f"What just happened in {room.name} (most recent last):\n"
                                                 f"{log}\n\n{nudge}"}]
-        self.llm.chat(self._model(c), messages, self._options(c),
+        self.llm.chat(self._model(c, priority), messages, self._options(c),
                       lambda text, err: callback(None if err else parse_action(text, c.name)), priority, think=False)
 
     def page(self, c, text, callback):

@@ -345,8 +345,8 @@ class ClaudeAI(QWidget):
         except Exception:
             models = []
         try:
-            from claudeaim.storage import Settings as AimSettings
-            default = AimSettings()["default_model"]
+            from ... import ai_models
+            default = ai_models.model_for("assistant")             # Control Panel > AI Models
             if default in models:
                 models.remove(default)
                 models.insert(0, default)

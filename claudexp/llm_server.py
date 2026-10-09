@@ -1,16 +1,16 @@
-"""ClaudeXP's own language-model engine: llama.cpp's llama-server, run from Local Storage/LLM Models.
+"""ClaudeXP's own language-model engine: llama.cpp's llama-server in router mode, run from Local Storage/LLM Models.
 
   Local Storage/LLM Models/
     llama.cpp/vulkan/llama-server.exe    the engine (any GPU via Vulkan, else the CPU)
-    llama.cpp/cuda/llama-server.exe      optional: NVIDIA's CUDA build, used when engine.txt says 'cuda'
-    engine.txt                           optional: 'vulkan' (the default) or 'cuda'
-    <model>.gguf                         the model (gemma-3-4b-it-Q4_K_M.gguf)
-    mmproj-<...>.gguf                    optional: its picture 'projector', so the model can see images
+    llama.cpp/cuda/llama-server.exe      optional: NVIDIA's CUDA build (chosen in Control Panel > AI Models)
+    models/<name>/                       one folder per model: its .gguf, an optional mmproj-*.gguf (pictures)
+                                         and an optional info.json (see ai_models.py)
 
-The server is started quietly on 127.0.0.1 the first time it's needed (or at log on), with a context as large as
-any program asks for, and it dies with ClaudeXP - even if ClaudeXP crashes - because it lives in a Windows job
-object that closes with us. Nothing here needs Ollama or the Internet. Everything copes with the engine or the
-model being missing: status() says what's wrong and requests fail at once with a plain message."""
+One router server runs quietly on 127.0.0.1. ClaudeXP writes its model list (data/llm_models.ini) from the
+models folder; the router loads a model the first time a request names it, keeps up to 'max_loaded' of them in
+memory and unloads the least recently used. The whole family of processes lives in a Windows job object that closes
+with ClaudeXP, so nothing is left holding the graphics card - even after a crash. Without the engine or any model,
+status() says what's missing and every request fails at once with a plain message."""
 import json
 import os
 import socket
@@ -18,18 +18,18 @@ import subprocess
 import threading
 import time
 import urllib.request
-from pathlib import Path
 
 from .paths import DATA
 
 MODELS_DIR_NAME = "LLM Models"
 DEFAULT_CTX = 16384
-START_TIMEOUT = 180            # seconds to load a model (slow disks, CPU-only PCs)
+START_TIMEOUT = 60             # seconds for the router itself to come up (models load on demand)
+LOAD_TIMEOUT = 300             # seconds a request may wait while a big model loads
 
 _lock = threading.RLock()
 _proc = None
 _port = None
-_ctx = 0
+_settings = None               # the settings the router was started with
 _error = ""
 _job = None
 
@@ -39,52 +39,38 @@ def models_dir():
     return local_storage() / MODELS_DIR_NAME
 
 
-def find_engine():
-    """llama-server.exe: the build named in LLM Models/engine.txt ('vulkan' or 'cuda'), else Vulkan - measured
-    faster than CUDA on a GTX 1080 Ti - else whichever build is there."""
+def engines():
+    """{'vulkan': exe, 'cuda': exe, ...} for the builds that are installed."""
     base = models_dir() / "llama.cpp"
-    try:
-        chosen = (models_dir() / "engine.txt").read_text(encoding="utf-8").strip().lower()
-    except OSError:
-        chosen = ""
-    order = ([chosen] if chosen in ("vulkan", "cuda", "cpu") else []) + ["vulkan", "cuda", "cpu"]
-    for flavour in order:
-        exe = base / flavour / "llama-server.exe"
-        if exe.exists():
-            return exe
+    return {f: base / f / "llama-server.exe" for f in ("vulkan", "cuda", "cpu")
+            if (base / f / "llama-server.exe").exists()}
+
+
+def find_engine():
+    """The chosen build (AI Models > Engine; the old engine.txt still counts), else Vulkan - measured faster than
+    CUDA on a GTX 1080 Ti - else whichever build is there."""
+    from . import ai_models
+    have = engines()
+    chosen = ai_models.config().get("engine") or ""
+    if not chosen:
+        try:
+            chosen = (models_dir() / "engine.txt").read_text(encoding="utf-8").strip().lower()
+        except OSError:
+            chosen = ""
+    for flavour in ([chosen] if chosen else []) + ["vulkan", "cuda", "cpu"]:
+        if flavour in have:
+            return have[flavour]
     return None
 
 
-def find_model():
-    d = models_dir()
-    if not d.is_dir():
-        return None
-    models = [f for f in sorted(d.glob("*.gguf")) if not f.name.lower().startswith("mmproj")]
-    return models[0] if models else None
-
-
-def find_projector():
-    d = models_dir()
-    return next(iter(sorted(d.glob("mmproj*.gguf"))), None) if d.is_dir() else None
-
-
-def model_name():
-    """'gemma-3-4b-it-Q4_K_M.gguf' -> 'gemma3:4b' (the name the programs show and ask for)."""
-    import re
-    m = find_model()
-    if m is None:
-        return ""
-    hit = re.match(r"([a-z]+)-?(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?[bm])", m.stem.lower())
-    return f"{hit.group(1)}{hit.group(2)}:{hit.group(3)}" if hit else m.stem
-
-
 def status():
-    """'' when a model can run, otherwise what's missing (for messages and the tray)."""
+    """'' when models can run, otherwise what's missing (for messages and the tray)."""
+    from . import ai_models
     if find_engine() is None:
         return ("The language model engine (llama.cpp) isn't installed. Put it in "
                 f"E:\\{MODELS_DIR_NAME}\\llama.cpp\\vulkan.")
-    if find_model() is None:
-        return f"No language model is installed. Put the model (.gguf) in E:\\{MODELS_DIR_NAME}."
+    if not ai_models.installed():
+        return f"No language model is installed. Put a model's folder in E:\\{MODELS_DIR_NAME}\\models."
     return _error
 
 
@@ -92,7 +78,7 @@ def available():
     return status() == ""
 
 
-# ---- running the server ---------------------------------------------------------------------------------------
+# ---- running the router ---------------------------------------------------------------------------------------
 
 def _free_port():
     with socket.socket() as s:
@@ -138,32 +124,66 @@ def _kill_with_us(proc):
         pass
 
 
+def _get(path, timeout=3):
+    with urllib.request.urlopen(f"http://127.0.0.1:{_port}{path}", timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
 def _healthy():
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{_port}/health", timeout=2) as r:
-            return r.status == 200
+        _get("/models", 2)
+        return True
     except Exception:
         return False
 
 
-def ensure_started(ctx=None):
-    """Start (or restart, for a bigger context) the server and wait until the model is loaded.
-    Returns the base URL; raises RuntimeError with a plain message when it can't run."""
-    global _proc, _port, _ctx, _error
-    want = max(2048, min(131072, int(ctx or DEFAULT_CTX)))
+def _wanted():
+    """What the router should be started with, from AI Models' settings and the models folder."""
+    from . import ai_models
+    cfg = ai_models.config()
+    return {"engine": str(find_engine()), "max_loaded": int(cfg["max_loaded"]), "context": int(cfg["context"]),
+            "idle": int(cfg["idle_minutes"]), "compact": bool(cfg.get("compact_cache", True)),
+            "models": [(m.id, str(m.path), str(m.mmproj or ""), str(m.info.get("chat_template") or ""))
+                       for m in ai_models.installed()]}
+
+
+def _write_presets(settings):
+    lines = []
+    for model_id, path, mmproj, template in settings["models"]:
+        lines += [f"[{model_id}]", f"model = {path}"]
+        if mmproj:
+            lines.append(f"mmproj = {mmproj}")
+        if template:                                # a model whose file has no chat template (info.json)
+            lines.append(f"chat-template = {template}")
+        # no n-gpu-layers: llama.cpp's --fit (on by default) puts as much on the GPU as the free memory allows,
+        # so a second model still loads (partly on the CPU) when the first is using most of the card
+        lines += [f"ctx-size = {settings['context']}", "parallel = 1", "jinja = true"]
+        if settings.get("compact", True):           # an 8-bit context cache: half the memory, so two models fit
+            lines += ["flash-attn = on", "cache-type-k = q8_0", "cache-type-v = q8_0"]
+        lines.append("")
+    path = DATA / "llm_models.ini"
+    DATA.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
+
+
+def ensure_started():
+    """Start the router (or restart it if the models or settings changed). Returns the base URL; raises
+    RuntimeError with a plain message when it can't run."""
+    global _proc, _port, _settings, _error
     with _lock:
-        if find_engine() is None or find_model() is None:
+        if find_engine() is None or not _wanted()["models"]:
             raise RuntimeError(status())
-        if _proc is not None and _proc.poll() is None and want <= _ctx:
+        want = _wanted()
+        if _proc is not None and _proc.poll() is None and want == _settings:
             return f"http://127.0.0.1:{_port}"
         stop()
         _error = ""
-        _port, _ctx = _free_port(), max(want, DEFAULT_CTX)
-        args = [str(find_engine()), "-m", str(find_model()), "--host", "127.0.0.1", "--port", str(_port),
-                "-c", str(_ctx), "-ngl", "999", "-np", "1", "--jinja"]
-        if find_projector() is not None:
-            args += ["--mmproj", str(find_projector())]
-        DATA.mkdir(parents=True, exist_ok=True)
+        _port, _settings = _free_port(), want
+        args = [want["engine"], "--host", "127.0.0.1", "--port", str(_port),
+                "--models-preset", str(_write_presets(want)), "--models-max", str(max(1, want["max_loaded"]))]
+        if want["idle"] > 0:
+            args += ["--sleep-idle-seconds", str(want["idle"] * 60)]
         log = open(DATA / "llama-server.log", "w", encoding="utf-8", errors="replace")
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
         _proc = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
@@ -172,20 +192,139 @@ def ensure_started(ctx=None):
         deadline = time.monotonic() + START_TIMEOUT
         while time.monotonic() < deadline:
             if _proc.poll() is not None:
-                _error = ("The language model engine stopped while loading the model "
-                          "(see data\\llama-server.log).")
+                _error = "The language model engine stopped while starting (see data\\llama-server.log)."
                 _proc = None
                 raise RuntimeError(_error)
             if _healthy():
                 return f"http://127.0.0.1:{_port}"
             time.sleep(0.25)
         stop()
-        _error = "The language model took too long to load."
+        _error = "The language model engine took too long to start."
         raise RuntimeError(_error)
+
+
+def restart():
+    stop()
+    return ensure_started()
+
+
+def running():
+    return _proc is not None and _proc.poll() is None
+
+
+def model_states():
+    """{model id: 'loaded' | 'loading' | 'unloaded'} from the router (empty when it isn't running)."""
+    if not running():
+        return {}
+    try:
+        return {m["id"]: (m.get("status") or {}).get("value", "") for m in _get("/models").get("data", [])}
+    except Exception:
+        return {}
+
+
+def load(model_id, wait=False):
+    """Load a model now (the AI Models 'Load' button, and warming the conversation model at log on)."""
+    base = ensure_started()
+    req = urllib.request.Request(base + "/models/load", data=json.dumps({"model": model_id}).encode("utf-8"),
+                                 headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req, timeout=10).close()
+    except Exception:
+        pass
+    deadline = time.monotonic() + (LOAD_TIMEOUT if wait else 0)
+    while wait and time.monotonic() < deadline:
+        if model_states().get(model_id) == "loaded":
+            return True
+        time.sleep(0.5)
+    return model_states().get(model_id) == "loaded"
+
+
+def unload(model_id):
+    if not running():
+        return
+    req = urllib.request.Request(f"http://127.0.0.1:{_port}/models/unload",
+                                 data=json.dumps({"model": model_id}).encode("utf-8"),
+                                 headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req, timeout=10).close()
+    except Exception:
+        pass
+
+
+def start_in_background():
+    """Start the router and load the conversation model ahead of time (at log on) so the first reply is quick."""
+    if available():
+        from . import ai_models
+
+        def warm():
+            ensure_started()
+            load(ai_models.model_for("conversation"))
+        threading.Thread(target=lambda: _quiet(warm), daemon=True, name="llm-start").start()
+
+
+def _quiet(fn):
+    try:
+        fn()
+    except Exception:
+        pass
+
+
+def stop():
+    global _proc
+    with _lock:
+        if _proc is not None and _proc.poll() is None:
+            _proc.terminate()
+            try:
+                _proc.wait(5)
+            except Exception:
+                _proc.kill()
+        _proc = None
+
+
+def post(path, body, stream=False, timeout=LOAD_TIMEOUT + 300):
+    """POST JSON to the router; returns the open response (for streaming) or the parsed JSON."""
+    base = ensure_started()
+    req = urllib.request.Request(base + path, data=json.dumps(body).encode("utf-8"),
+                                 headers={"Content-Type": "application/json"})
+    resp = urllib.request.urlopen(req, timeout=timeout)
+    if stream:
+        return resp
+    with resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def train_context(model_id):
+    """A model's own maximum context, from its router entry (or a safe guess)."""
+    try:
+        ensure_started()
+        for m in _get("/models").get("data", []):
+            if m["id"] == model_id:
+                meta = m.get("meta") or {}
+                if meta.get("n_ctx_train"):
+                    return int(meta["n_ctx_train"])
+    except Exception:
+        pass
+    return 131072 if model_id.startswith(("gemma3", "gemma4")) else 32768
+
+
+def devices():
+    """The graphics devices the engine can use, e.g. ['Vulkan0: NVIDIA GeForce GTX 1080 Ti (11320 MiB, ...)']."""
+    exe = find_engine()
+    if exe is None:
+        return []
+    try:
+        out = subprocess.run([str(exe), "--list-devices"], capture_output=True, text=True, timeout=30,
+                             cwd=str(exe.parent), creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+        return [line.strip() for line in (out.stdout + out.stderr).splitlines() if ":" in line and "(" in line
+                and not line.strip().lower().startswith("available")]
+    except Exception:
+        return []
 
 
 def at_logon(desktop):
     """Load the model now (so the first reply is quick), or put up a warning by the clock if it can't run."""
+    from . import ai_models
+    ai_models.sync_aim()                       # ClaudeAIM's model settings follow Control Panel > AI Models
     if available():
         start_in_background()
         return
@@ -213,53 +352,3 @@ def at_logon(desktop):
     tray.messageClicked.connect(explain)
 
 
-def start_in_background():
-    """Load the model ahead of time (at log on) so the first reply isn't slow."""
-    if available():
-        threading.Thread(target=lambda: _quiet(ensure_started), daemon=True, name="llm-start").start()
-
-
-def _quiet(fn):
-    try:
-        fn()
-    except Exception:
-        pass
-
-
-def stop():
-    global _proc
-    with _lock:
-        if _proc is not None and _proc.poll() is None:
-            _proc.terminate()
-            try:
-                _proc.wait(5)
-            except Exception:
-                _proc.kill()
-        _proc = None
-
-
-def context_size():
-    return _ctx or DEFAULT_CTX
-
-
-def post(path, body, stream=False, timeout=600):
-    """POST JSON to the running server; returns the open response (for streaming) or the parsed JSON."""
-    base = ensure_started(body.pop("_ctx", None))
-    req = urllib.request.Request(base + path, data=json.dumps(body).encode("utf-8"),
-                                 headers={"Content-Type": "application/json"})
-    resp = urllib.request.urlopen(req, timeout=timeout)
-    if stream:
-        return resp
-    with resp:
-        return json.loads(resp.read().decode("utf-8"))
-
-
-def train_context():
-    """The model's own maximum context (from the server), or a safe guess."""
-    try:
-        base = ensure_started()
-        with urllib.request.urlopen(base + "/v1/models", timeout=5) as r:
-            data = json.loads(r.read().decode("utf-8"))
-        return int(data["data"][0]["meta"]["n_ctx_train"])
-    except Exception:
-        return 131072 if "gemma3" in model_name() else 8192

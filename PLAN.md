@@ -445,6 +445,22 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   SSE, images as data: URLs, think=False -> enable_thinking false); any model name maps to the one model
   ('gemma3:4b'). With no engine or model every call fails at once with a plain message, and at log on a warning
   tray icon + balloon explains it (everything else works). The ollama package left requirements.txt.
+- **Several models + Control Panel > AI Models** (ai_models.py, aimodels_cpl.py; also aimodels.cpl in Run):
+  models live in LLM Models/models/<id>/ (gguf + optional mmproj + info.json); llm_server runs llama-server in
+  router mode with data/llm_models.ini (one section per model: model, mmproj, ctx-size, n-gpu-layers 999,
+  parallel 1, jinja) and --models-max N, restarting when the folder or settings change; /models gives load state,
+  /models/load and /models/unload. Jobs: conversation (AIM via synced AIM settings; IRC/MUCK priority >= reply),
+  background (life sim; ambient IRC/MUCK chatter), assistant (ClaudeAI default), pictures (used when a message has
+  images and the model has no mmproj). Per-resident overrides (main + support tiers) for conversations. Config in
+  data/ai_models.json (engine, max_loaded, context, idle_minutes, assign, overrides); ai_models.sync_aim() writes
+  AIM's default_model / model_overrides / context_size so ClaudeAIM stays untouched. The stand-in records each
+  reply's timings for the Activity tab. Tabs: Models (Load/Unload/Test/Properties/Open folder), Assignments,
+  Engine (Vulkan/CUDA, device, models kept loaded, context, idle unload, lighter 8-bit cache, Start/Stop/Restart/
+  View Log), Activity. Presets leave n-gpu-layers unset so llama.cpp's --fit sizes each model to free VRAM, and (by
+  default) use flash-attn + q8_0 K/V cache so a 12B and the 1B fit together. info.json can set chat_template (a
+  built-in name) and stop words: NemoMix's GGUF has no template -> chatml + <|im_end|>. Installed models and default
+  jobs: gemma3-1b background, nemomix-unleashed-12b conversation, gemma4-12b assistant (thinking), gemma3-4b
+  pictures, mag-mell-12b spare (no licence stated - personal use).
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

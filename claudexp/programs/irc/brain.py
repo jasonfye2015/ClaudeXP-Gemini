@@ -70,16 +70,17 @@ class Brain:
             self.pending -= 1
             callback(text, err)
 
-        self.llm.chat(self._model(p), messages, self._options(p), done, priority, think=False)
+        self.llm.chat(self._model(p, priority), messages, self._options(p), done, priority, think=False)
 
-    def _model(self, p):
-        if p.contact is not None:
-            if p.contact.model:
-                return p.contact.model
-            override = self.settings["model_overrides"].get(p.contact.id)
-            if override:
-                return override
-        return self.settings["default_model"]
+    def _model(self, p, priority=PRIORITY_CHATTER):
+        """Control Panel > AI Models: talking to you uses the conversation model (or this person's own);
+        ambient channel chatter uses the background model."""
+        from ...ai_models import model_for
+        if priority < PRIORITY_REPLY:
+            return model_for("background")
+        if p.contact is not None and p.contact.model:
+            return p.contact.model
+        return model_for("conversation", p.contact.screen_name if p.contact is not None else p.nick)
 
     def _options(self, p):
         return {"temperature": p.temperature, "num_ctx": int(self.settings["context_size"])}  # same as AIM, so the model never reloads

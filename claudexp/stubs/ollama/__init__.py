@@ -2,12 +2,14 @@
 
 ClaudeAIM (left exactly as it is), the model broker and ClaudeAI all `import ollama`. ClaudeXP puts this folder
 first on sys.path, so they get this module instead: the same few calls - list(), show() and chat() (plain or
-streamed, with pictures) - answered by ClaudeXP's own llama.cpp server (claudexp/llm_server.py) and the model in
-Local Storage/LLM Models. There is one model, so whatever model name a program asks for, it gets that one.
-Without an engine or a model, every call fails at once with a plain message instead of hanging."""
+streamed, with pictures) - answered by ClaudeXP's own llama.cpp router (claudexp/llm_server.py) and the models in
+Local Storage/LLM Models/models. Model names are matched to the installed models (ai_models.resolve: 'gemma3:4b'
+finds the gemma3-4b folder; unknown names get the job's model). A message with a picture goes to the Pictures model
+when the chosen one can't see. Without an engine or a model, every call fails at once with a plain message."""
 import base64
 import builtins
 import json
+import time
 from types import SimpleNamespace
 
 __version__ = "claudexp"
@@ -22,22 +24,28 @@ def _server():
     return llm_server
 
 
+def _models():
+    from claudexp import ai_models
+    return ai_models
+
+
 # ---- list / show ------------------------------------------------------------------------------------------------
 
 def list():  # noqa: A001 - same name as ollama's
-    srv = _server()
-    name = srv.model_name()
-    models = [SimpleNamespace(model=name, name=name)] if srv.available() and name else []
-    return SimpleNamespace(models=models)
+    srv, am = _server(), _models()
+    if not srv.available():
+        return SimpleNamespace(models=[])
+    return SimpleNamespace(models=[SimpleNamespace(model=m.id, name=m.id, size=m.size) for m in am.installed()])
 
 
 def show(model=None):
-    srv = _server()
+    srv, am = _server(), _models()
     if not srv.available():
         raise ResponseError(srv.status())
-    caps = ["completion"] + (["vision"] if srv.find_projector() is not None else [])
-    family = srv.model_name().split(":")[0] or "llama"
-    return SimpleNamespace(capabilities=caps, modelinfo={f"{family}.context_length": srv.train_context()},
+    m = am.get(am.resolve(model))
+    caps = ["completion"] + (["vision"] if m.vision else []) + (["thinking"] if m.thinking else [])
+    family = m.id.split("-")[0]
+    return SimpleNamespace(capabilities=caps, modelinfo={f"{family}.context_length": srv.train_context(m.id)},
                            details=SimpleNamespace(family=family))
 
 
@@ -62,10 +70,10 @@ def _content(message):
     return {"role": message.get("role", "user"), "content": parts}
 
 
-def _body(messages, options, stream, think):
+def _body(model_id, messages, options, stream, think):
     options = options or {}
-    body = {"messages": [_content(m) for m in messages], "stream": bool(stream), "cache_prompt": True,
-            "_ctx": options.get("num_ctx")}
+    body = {"model": model_id, "messages": [_content(m) for m in messages], "stream": bool(stream),
+            "cache_prompt": True}
     for ours, theirs in (("temperature", "temperature"), ("top_p", "top_p"), ("top_k", "top_k"),
                          ("num_predict", "max_tokens"), ("stop", "stop"), ("repeat_penalty", "repeat_penalty"),
                          ("seed", "seed"), ("min_p", "min_p")):
@@ -73,6 +81,8 @@ def _body(messages, options, stream, think):
             body[theirs] = options[ours]
     if think is False:
         body["chat_template_kwargs"] = {"enable_thinking": False}
+    if stream:
+        body["stream_options"] = {"include_usage": True}
     return body
 
 
@@ -81,25 +91,42 @@ def _message(content="", thinking=""):
                            done=True)
 
 
+def _note(model_id, timings, started):
+    timings = timings or {}
+    _models().record(model_id, int(timings.get("predicted_n") or 0), float(timings.get("predicted_per_second") or 0),
+                     time.time() - started)
+
+
 def chat(model=None, messages=(), options=None, stream=False, think=None, keep_alive=None, **_ignored):
-    srv = _server()
+    srv, am = _server(), _models()
     if not srv.available():
         raise ResponseError(srv.status())
-    body = _body(builtins.list(messages), options, stream, think)
+    messages = builtins.list(messages)
+    model_id = am.resolve(model)
+    if any(m.get("images") for m in messages) and not am.get(model_id).vision:
+        model_id = am.vision_model()                           # it can't see: let the Pictures model look
+    body = _body(model_id, messages, options, stream, think)
+    extra_stop = am.get(model_id).info.get("stop") or []      # e.g. ChatML's <|im_end|> for a model that types it
+    if extra_stop:
+        stops = body.get("stop") or []
+        body["stop"] = ([stops] if isinstance(stops, str) else builtins.list(stops)) + builtins.list(extra_stop)
+    started = time.time()
     try:
         if not stream:
             data = srv.post("/v1/chat/completions", body)
             msg = (data.get("choices") or [{}])[0].get("message") or {}
+            _note(model_id, data.get("timings"), started)
             return _message(msg.get("content") or "", msg.get("reasoning_content") or "")
-        return _stream(srv.post("/v1/chat/completions", body, stream=True))
+        return _stream(srv.post("/v1/chat/completions", body, stream=True), model_id, started)
     except RuntimeError as e:
         raise ResponseError(str(e)) from None
     except OSError as e:
         raise ResponseError(f"The language model isn't answering ({e}).") from None
 
 
-def _stream(resp):
+def _stream(resp, model_id, started):
     """Server-sent events -> ollama-style parts (each carrying only the new text)."""
+    timings = None
     with resp:
         for raw in resp:
             line = raw.decode("utf-8", "replace").strip()
@@ -109,12 +136,14 @@ def _stream(resp):
             if payload == "[DONE]":
                 break
             try:
-                delta = (json.loads(payload).get("choices") or [{}])[0].get("delta") or {}
+                data = json.loads(payload)
             except ValueError:
                 continue
+            timings = data.get("timings") or timings
+            delta = (data.get("choices") or [{}])[0].get("delta") or {}
             content, thinking = delta.get("content") or "", delta.get("reasoning_content") or ""
             if content or thinking:
                 part = _message(content, thinking)
                 part.done = False
                 yield part
-
+    _note(model_id, timings, started)

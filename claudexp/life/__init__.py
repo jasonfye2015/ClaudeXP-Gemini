@@ -195,9 +195,9 @@ class LifeSim(QObject):
 
     # ---- model helpers ----------------------------------------------------------------------
     def _model(self, contact):
-        from claudeaim.storage import Settings
-        s = Settings()
-        return contact.model or s["model_overrides"].get(contact.id) or s["default_model"], int(s["context_size"])
+        """The life sim's journals, e-mail and catch-up run on AI Models' background model."""
+        from .. import ai_models
+        return ai_models.model_for("background"), int(ai_models.config()["context"])
 
     def _ask(self, contact, prompt, callback, priority=broker.BACKGROUND):
         model, ctx = self._model(contact)
