@@ -242,6 +242,7 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   Library grid (series draw as stacks, read-progress bars, Continue Reading row, filter), CDisplay-style viewer
   (Fit Page/Fit Width/two-page spreads, filmstrip, preloads 3 pages, wheel/Space scroll tall pages then turn),
   progress in data/comix.json.
+  An archive is also hidden when its pages already lie loose beside it (a packaged copy, e.g. Hit The Showers).
 - **FurFolio Reader** (`programs/folio/gallery.py`): E:\Furry Media Archive…\Portfolios… as an art gallery
   (artists -> folios -> pieces; ~6,500 images, never indexed). Artists hang as matted prints, folios as portfolio
   cases, a folio is a wall of thumbnails of every piece (lazy, cached in data/folio_thumbs; a cover skips damaged
@@ -318,6 +319,8 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   Shortcut]' + Program=key or Target=path); Explorer hides '.lnk', shows the target's icon, type 'Shortcut'; opening
   one launches it. desktop_icons LAYOUT=3 makes 'Furry Programs' (the six furry programs) and 'Emulation' (the nine
   emulators) desktop folders once and drops those loose icons; the folders sit right after the E: folder links.
+  LAYOUT=4 adds a 'Games' folder (Doom, Doom II, Wolfenstein 3D, Heretic, Hexen); FOLDERS_SINCE says which layout
+  version introduced each folder so upgrades only create the new ones.
   The archive folders lost their '(xx.xgb)' size suffixes; programs already matched by name prefix, and saved paths
   in data/comix.json, stories.json and tv_index.json were rewritten to the new names.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.

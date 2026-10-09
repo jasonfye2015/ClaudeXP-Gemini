@@ -24,10 +24,12 @@ MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family
               " QMenu::item { padding: 4px 24px 4px 20px; } QMenu::item:selected { background: #316AC5; color: white; }"
               " QMenu::item:disabled { color: #ACA899; }")
 SORTS = ("Name", "Size", "Type", "Modified")
-LAYOUT = 3                  # bump when builtins() changes order
+LAYOUT = 4                  # bump when builtins() changes order
 # Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
 PROGRAM_FOLDERS = {"Furry Programs": ["tv", "comix", "folio", "stories", "cdviewer", "furcon"],
-                   "Emulation": ["nes", "snes", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"]}
+                   "Emulation": ["nes", "snes", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
+                   "Games": ["doom", "doom2", "wolf3d", "heretic", "hexen"]}
+FOLDERS_SINCE = {"Furry Programs": 3, "Emulation": 3, "Games": 4}    # the layout version that added each folder
 
 
 def std(which):
@@ -48,11 +50,6 @@ def builtins():
         ("prog:aim", "ClaudeAIM", lambda: programs.get("aim").icon()),
         ("prog:irc", "ClaudeIRC", lambda: programs.get("irc").icon()),
         ("prog:muck", "ClaudeMUCK", lambda: programs.get("muck").icon()),
-        ("prog:doom", "Doom", lambda: programs.get("doom").icon()),
-        ("prog:doom2", "Doom II", lambda: programs.get("doom2").icon()),
-        ("prog:wolf3d", "Wolfenstein 3D", lambda: programs.get("wolf3d").icon()),
-        ("prog:heretic", "Heretic", lambda: programs.get("heretic").icon()),
-        ("prog:hexen", "Hexen", lambda: programs.get("hexen").icon()),
     ]
 
 
@@ -120,8 +117,8 @@ class IconManager(QObject):
             pass
         if self.state.get("layout", 1) < LAYOUT:
             # The built-in shortcuts were reordered: let them flow into the new order once (files keep their spots).
-            if self.state.get("layout", 1) < 3:
-                self._make_program_folders()
+            old = self.state.get("layout", 1)
+            self._make_program_folders([n for n, v in FOLDERS_SINCE.items() if old < v])
             self.state["positions"] = {k: v for k, v in self.state["positions"].items()
                                        if not k.startswith(("sys:", "prog:"))
                                        and k[5:] not in PROGRAM_FOLDERS}
@@ -141,13 +138,14 @@ class IconManager(QObject):
         desktop.setAcceptDrops(True)
 
     # ---- the Desktop folder -------------------------------------------------------------
-    def _make_program_folders(self):
+    def _make_program_folders(self, names):
         """Desktop folders holding shortcuts to the furry programs and the emulators."""
         from .explorer import shortcuts, vfs
         from . import programs
         vfs.setup_c()
         desk = vfs.user_home() / "Desktop"
-        for name, keys in PROGRAM_FOLDERS.items():
+        for name in names:
+            keys = PROGRAM_FOLDERS[name]
             folder = desk / name
             folder.mkdir(parents=True, exist_ok=True)
             for key in keys:
