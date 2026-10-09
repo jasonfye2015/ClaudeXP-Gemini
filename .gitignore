@@ -11,3 +11,5 @@ Local Storage/
 Recovery Backups/
 # the original (86 MB) of assets/sounds/oobe_music.mp3
 OOBE_intro_music.wav
+# written by the AppleWin emulator core
+AppleWin.log
