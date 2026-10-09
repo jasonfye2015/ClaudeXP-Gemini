@@ -33,23 +33,30 @@ def _my_computer(desktop):
     explorer.launch(desktop)
 
 
-def media_archive():
-    """The 'Furry Media Archive ...' folder on E: (Local Storage), or None if the user hasn't put one there."""
+# Desktop shortcuts to the user's own archive folders on E: (Local Storage): key -> (label, folder name prefix).
+FOLDER_SHORTCUTS = {"mediaarchive": ("Furry Media Archive", "furry media archive"),
+                    "tvmovies": ("TV and Movies", "tv and movies")}
+
+
+def archive_folder(key):
+    """The E: folder a folder shortcut points at, or None if the user hasn't put one there."""
     from ..explorer.vfs import local_storage
-    root = local_storage()
-    return next((d for d in sorted(root.iterdir()) if d.is_dir() and d.name.lower().startswith("furry media archive")),
+    prefix = FOLDER_SHORTCUTS[key][1]
+    return next((d for d in sorted(local_storage().iterdir()) if d.is_dir() and d.name.lower().startswith(prefix)),
                 None)
 
 
-def _media_archive(desktop):
-    from .. import explorer
-    folder = media_archive()
-    if folder is None:
-        from ..explorer.dialogs import msgbox
-        msgbox(desktop, "Problem with Shortcut", "The drive or network connection that the shortcut "
-               "'Furry Media Archive' refers to is unavailable.", "error")
-        return
-    explorer.launch(desktop, folder)
+def _open_folder_shortcut(key):
+    def run(desktop):
+        from .. import explorer
+        folder = archive_folder(key)
+        if folder is None:
+            from ..explorer.dialogs import msgbox
+            msgbox(desktop, "Problem with Shortcut", "The drive or network connection that the shortcut "
+                   f"'{FOLDER_SHORTCUTS[key][0]}' refers to is unavailable.", "error")
+            return
+        explorer.launch(desktop, folder)
+    return run
 
 
 def _connect(desktop):
@@ -167,8 +174,8 @@ PROGRAMS = [
     Program("tv", "FurTV 2000", "Watch TV", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.tuner", "open_tv"),
             _lazy(".tv.tuner", "shutdown"), group="Accessories/Entertainment"),
     Program("tvguide", "TV Guide", "", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.guide", "open_guide"), listed=False),
-    Program("mediaarchive", "Furry Media Archive", "", lambda: std_icon(QStyle.SP_DirIcon), _media_archive,
-            listed=False),
+    *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), listed=False)
+      for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
     Program("defrag", "Disk Defragmenter", "", _defrag_icon, _defrag, group="Accessories/System Tools"),
     Program("antivirus", "ClaudeShield AntiVirus", "", _av_icon, _antivirus),
     Program("connect", "Connect to the Internet", "", lambda: QIcon(pixmap("aol_icon.png")), _connect,
