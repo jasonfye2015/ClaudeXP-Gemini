@@ -381,6 +381,15 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   run (clock), 5-second nag on start, 'Patch uxtheme.dll' (+ a Windows File Protection warning), random reminder on
   apply; after expiry the third-party style falls back to Luna at log on with an 'expired' nag. Register always
   fails (no key server in 2001). State in data/stylexp.json.
+- **ClaudeTorrent 0.9 beta** (programs/torrent.py; Start > ClaudeTorrent + desktop icon; claudetorrent.exe): a
+  show-only BitTorrent client. Six multi-GB torrents (Red Hat 7.2 ISOs, TV-rip video, SHN/MP3 music, game demos,
+  public-domain cartoons) at saved progress in data/claudetorrent.json. The Engine (1 s tick) polls
+  network.is_connected(): offline = 'Waiting for connection', online = 'Connecting to tracker...' then ~1.2-5.4 kB/s
+  of 56k shared between running torrents, drifting seeds/peers (0 seeds = 'Stalled'); a finished torrent goes
+  'Checking' and restarts from 0. Window: toolbar/menus/context menu Start, Stop, Start All, Stop All (no Remove),
+  list with progress bars, General (pieces bar from a seeded piece order), Files, Peers, Speed graph tabs.
+  Tray icon (green/red arrows blink with traffic, grey offline, speed tooltip; Open / Start All / Stop All / Load at
+  Startup / Exit) loads at logon (app.py) unless Preferences turns it off; X tucks into the tray, Exit quits.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

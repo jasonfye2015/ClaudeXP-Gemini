@@ -185,6 +185,8 @@ class ClaudeXP(QMainWindow):
         QTimer.singleShot(3000, lambda: credits.maybe_show(self.desktop))
         from .programs import claudeai
         QTimer.singleShot(2000, lambda: claudeai.start_at_logon(self.desktop))
+        from .programs import torrent
+        QTimer.singleShot(2600, lambda: torrent.start_at_logon(self.desktop))
         if getattr(self, "_offer_tour", False):
             self._offer_tour = False
             from .programs.tour import offer_tour
