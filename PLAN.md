@@ -276,6 +276,14 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   'startup', default on; also a checkbox in ClaudeAI Settings) puts it in the tray at logon without a window
   (app.show_desktop -> claudeai.start_at_logon). X tucks the window into the tray (one-time balloon); Exit quits.
   store.Settings.set now merges with the file so the tray and the window don't overwrite each other.
+- **NES Emulator** (`programs/nes/`, shown as FCE Ultra): libretro.py is our own ctypes libretro front end
+  (environment/video/audio/input callbacks, SRAM, serialize); fceu.py is the window. Core:
+  assets/emulators/fceumm_libretro.dll (GPL-2, see README there; runs ~2,800 fps headless). ROMs are the user's,
+  from E:\Emulation\NES… (not in git). Game list with cleaned titles, 1x/2x/3x (steps down to fit the screen),
+  pixel-sharp or 4:3 TV aspect, QAudioSink sound at the core's rate, battery saves (data/nes/saves), 10 save
+  state slots (data/nes/states), pause when inactive, recent games. Keys: arrows, X=A, Z=B, Enter=Start,
+  Space/Shift=Select, F5/F7 states, 0-9 slot, P pause, F1 reset, Esc list. Start > Games and the desktop.
+  Note: grabbing the XPWindow alone renders the screen white; grab the main window for screenshots.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

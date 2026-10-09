@@ -188,6 +188,8 @@ PROGRAMS = [
             _lazy(".folio.furcon", "open_furcon"), _lazy(".folio.furcon", "shutdown"), group=FURRY),
     *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)
       for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
+    Program("nes", "NES Emulator", "Play NES games", _lazy(".nes.fceu", "nes_icon"), _lazy(".nes.fceu", "open_nes"),
+            _lazy(".nes.fceu", "shutdown"), group="Games"),
     Program("tvguide", "TV Guide", "", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.guide", "open_guide"), listed=False),
     Program("defrag", "Disk Defragmenter", "", _defrag_icon, _defrag, group="Accessories/System Tools"),
     Program("antivirus", "ClaudeShield AntiVirus", "", _av_icon, _antivirus),
