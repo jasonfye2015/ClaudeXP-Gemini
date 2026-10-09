@@ -332,6 +332,12 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   atom-free regions flood-fill, 75% clears the level (level n: n+1 atoms and lives), time bonus; best score saved.
   Desktop 'Games' folder mirrors Start > Games (PROGRAM_FOLDERS['Games'] is built from the Games group; LAYOUT=6
   adds missing shortcuts and never removes any).
+- **More Entertainment Pack games** (Start > Games + desktop Games folder, LAYOUT=7): Taipei (games/taipei.py; the
+  144-tile turtle in tile units with half-step end/top tiles; deals made by removing random free pairs from the full
+  layout, so the deal order is a solution; hint, undo), Rodent's Revenge (games/rodent.py; 23x23, push rows of blocks,
+  trapped cats -> cheese, waves, 3 lives, stones from level 2), Blockfall (games/blockfall.py; falling blocks with
+  7-bag, wall kicks, ghost, next preview, levels every 10 lines), TriPeaks and Golf (games/peaks.py, using cards.py's
+  faces on Solitaire's felt). Best scores in games.json.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

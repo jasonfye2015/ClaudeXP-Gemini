@@ -16,7 +16,8 @@ NAMES = {
     "tourstart": "tour", "claudetv": "tv", "furtv": "tv", "furcomix": "comix", "furfolio": "folio", "furstory": "stories", "furcd": "cdviewer", "furcon": "furcon", "fceu": "nes", "fceultra": "nes", "snes9x": "snes", "gambatte": "gb",
     "gambatte_gbc": "gbc", "mgba": "gba", "picodrive": "gen", "gpgx": "sms", "gearsystem": "gg", "applewin": "apple2",
     "doom": "doom", "doom2": "doom2", "wolf3d": "wolf3d", "heretic": "heretic", "hexen": "hexen",
-    "ski": "skifree", "skifree": "skifree", "jezzball": "jezzball", "tvguide": "tvguide",
+    "ski": "skifree", "skifree": "skifree", "jezzball": "jezzball",
+    "taipei": "taipei", "rodent": "rodent", "blockfall": "blockfall", "tripeaks": "tripeaks", "golf": "golf", "tvguide": "tvguide",
     "pinball": "pinball", "wmplayer": "wmp", "mplayer2": "wmp", "msimn": "outlook", "wab": "wab",
     "bckgzm": "ibackgammon", "hrtzzm": "ihearts", "shvlzm": "ispades", "chkrzm": "icheckers", "rvsezm": "ireversi",
 }

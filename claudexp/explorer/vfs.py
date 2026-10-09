@@ -127,6 +127,8 @@ EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "gambatte_gbc.exe": "gbc", "mgba.exe": "gba", "picodrive.exe": "gen", "gpgx.exe": "sms", "gearsystem.exe": "gg", "applewin.exe": "apple2",
     "doom.exe": "doom", "doom2.exe": "doom2", "wolf3d.exe": "wolf3d", "heretic.exe": "heretic", "hexen.exe": "hexen",
     "ski.exe": "skifree", "jezzball.exe": "jezzball",
+    "taipei.exe": "taipei", "rodent.exe": "rodent", "blockfall.exe": "blockfall", "tripeaks.exe": "tripeaks",
+    "golf.exe": "golf",
 }
 SYSTEM32 = ["advapi32.dll", "comctl32.dll", "comdlg32.dll", "gdi32.dll", "kernel32.dll", "mshtml.dll",
             "msvcrt.dll", "ole32.dll", "oleaut32.dll", "rpcrt4.dll", "shell32.dll", "shlwapi.dll", "user32.dll",
@@ -209,7 +211,9 @@ def setup_c():
                 "Gambatte/gambatte.exe", "Gambatte/gambatte_gbc.exe", "mGBA/mgba.exe", "PicoDrive/picodrive.exe",
                 "Genesis Plus/gpgx.exe", "Gearsystem/gearsystem.exe", "AppleWin/applewin.exe",
                 "Doom/doom.exe", "Doom II/doom2.exe", "Wolfenstein 3D/wolf3d.exe", "Heretic/heretic.exe",
-                "Hexen/hexen.exe", "Entertainment Pack/ski.exe", "Entertainment Pack/jezzball.exe"):
+                "Hexen/hexen.exe", "Entertainment Pack/ski.exe", "Entertainment Pack/jezzball.exe",
+                "Entertainment Pack/taipei.exe", "Entertainment Pack/rodent.exe", "Entertainment Pack/blockfall.exe",
+                "Entertainment Pack/tripeaks.exe", "Entertainment Pack/golf.exe"):
         _fake(pf / rel, 200, 900)
     (pf / "Common Files").mkdir(parents=True, exist_ok=True)
     win = DRIVE_C / "WINDOWS"
