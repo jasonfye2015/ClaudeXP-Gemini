@@ -1,4 +1,4 @@
 # Tested with Python 3.14. Pinned to the versions ClaudeXP is known to work with.
+# The language model needs no Python package: ClaudeXP runs llama.cpp itself (see Local Storage/README.txt).
 PySide6==6.11.2
-ollama==0.6.3
 tzdata==2026.5

@@ -434,6 +434,16 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   'boot from CD' prompt), i.e. registration, Choose your fursona, name, passwords. The media archive is a separate
   download into Local Storage/ (ignored except its README.txt, which lists the expected folders); screenshots/ is
   ignored; requirements.txt pins PySide6 6.11.2, ollama 0.6.3, tzdata 2026.5 (tested on Python 3.14).
+- **Own LLM engine, no Ollama** (llm_server.py, stubs/ollama): Local Storage/LLM Models holds llama.cpp b11533
+  (llama.cpp/vulkan, plus Microsoft's VC++ runtime DLLs app-local; an optional llama.cpp/cuda 12.4 build wins when
+  present) and gemma-3-4b-it-Q4_K_M.gguf + mmproj-model-f16.gguf (vision). llm_server starts llama-server hidden on
+  127.0.0.1:<free port> (-c = the largest num_ctx asked, min 16384; -ngl 999; -np 1; --jinja; --mmproj), waits for
+  /health, logs to data/llama-server.log, and puts it in a kill-on-close Windows job object so it dies with
+  ClaudeXP. claudexp/__init__ puts claudexp/stubs first on sys.path, so `import ollama` (ClaudeAIM untouched, the
+  broker, ClaudeAI) gets the stand-in: list() / show() (capabilities, context_length) / chat() (plain, streamed via
+  SSE, images as data: URLs, think=False -> enable_thinking false); any model name maps to the one model
+  ('gemma3:4b'). With no engine or model every call fails at once with a plain message, and at log on a warning
+  tray icon + balloon explains it (everything else works). The ollama package left requirements.txt.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

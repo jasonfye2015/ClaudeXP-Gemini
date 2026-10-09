@@ -1,4 +1,4 @@
-"""Ollama prompts for FurNet IRC characters: chatting in channels and in private messages."""
+"""Language-model prompts for FurNet IRC characters: chatting in channels and in private messages."""
 from ..aim import ensure_aim_path
 
 ensure_aim_path()
@@ -82,7 +82,7 @@ class Brain:
         return self.settings["default_model"]
 
     def _options(self, p):
-        return {"temperature": p.temperature, "num_ctx": int(self.settings["context_size"])}  # same as AIM, so Ollama never reloads
+        return {"temperature": p.temperature, "num_ctx": int(self.settings["context_size"])}  # same as AIM, so the model never reloads
 
     def _system(self, p, extra):
         player = self.net.nick

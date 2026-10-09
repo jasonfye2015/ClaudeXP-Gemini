@@ -15,8 +15,8 @@ from ..wm import XPWindow
 ARTICLES = {
     "welcome": ("Welcome to Windows XP", "new", """
 <p>This computer is a Windows XP machine from 2001, complete with dial-up Internet and friends who are always
-around. Everything here runs on this one computer; your buddies are characters played by a language model running
-on the real PC (through Ollama).</p>
+around. Everything here runs on this one computer; your buddies are characters played by a language model that comes with
+ClaudeXP and runs on the real PC's graphics card.</p>
 <p>New to XP? <a href="launch:tour">Take a tour of Windows XP</a>, or browse the topics on the
 <a href="help:home">Help and Support home page</a>.</p>"""),
     "startmenu": ("Using the Start menu", "new", """
@@ -100,8 +100,10 @@ installs; you can make your own too, and every restore can be undone.</p>"""),
 memories of you. Nothing is truly lost: everything erased is moved to the 'Recovery Backups' folder on the real
 computer. Files on the external drive (E:) are never touched.</p>"""),
     "slow-buddies": ("My buddies don't answer", "fix", """
-<p>Your buddies are played by a language model through <b>Ollama</b> on the real computer.</p>
-<ul><li>Make sure Ollama is running, and that the model ClaudeAIM uses is installed.</li>
+<p>Your buddies are played by a language model that ClaudeXP runs itself (llama.cpp, on the real PC).</p>
+<ul><li>The model lives on the external drive, in <b>E:\\LLM Models</b>. If it's missing, a warning sign
+appears by the clock; put the LLM Models download there and log on again.</li>
+<li>The first reply after logging on takes a few extra seconds while the model loads.</li>
 <li>Replies can take a few seconds; the hard disk light by the clock flickers while the model is working.</li>
 <li>Buddies keep their own hours: someone asleep won't be online, and answers e-mail after they wake up.</li>
 <li>Windows Update or a virus scan in the tray can mean the model is busy catching up on everyone's lives.</li></ul>"""),

@@ -1,10 +1,16 @@
 Local Storage - ClaudeXP's drive E: (the External Drive)
 ========================================================
 
-ClaudeXP runs fine with this folder empty. Put the media archive (the separate download) here to give its
-programs something to show. Unpack it so the folders sit directly in this one:
+ClaudeXP runs fine with this folder empty. Two separate downloads go here:
+
+  * LLM Models (about 3.3 GB) - the language model that plays your buddies and everyone else. Without it,
+    everything except the talking still works.
+  * The media archive - it gives the media programs something to show.
+
+Unpack them so the folders sit directly in this one:
 
   Local Storage\
+    LLM Models\               the language model and its engine (see the README inside)
     Furry Media Archive ...   FurComix Reader, FurFolio, FurStory, Fur CD Viewer, Furry Con CD Viewer,
                               Furry Video Browser, The Fur Directory's pictures
       Art CDs and DVDs ...      (Fur CD Viewer)

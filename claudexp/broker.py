@@ -1,4 +1,5 @@
-"""The model broker: every program's Ollama requests go through one queue, one at a time.
+"""The model broker: every program's language-model requests go through one queue, one at a time.
+(`ollama` here is ClaudeXP's stand-in, claudexp/stubs/ollama, answered by the bundled llama.cpp engine.)
 
 There's one GPU, so requests run in priority order:
   FOREGROUND  something you're waiting on (an IM reply, a page, a private message)

@@ -1,6 +1,6 @@
-"""Ollama prompts for MUCK characters: acting in a room, answering pages, describing themselves.
+"""Language-model prompts for MUCK characters: acting in a room, answering pages, describing themselves.
 
-Uses ClaudeAIM's Ollama helper and model settings, so buddies use the same models as on AIM.
+Uses ClaudeAIM's model helper and settings, so buddies use the same models as on AIM.
 """
 import re
 
@@ -90,7 +90,7 @@ class Brain:
         return self.settings["default_model"]
 
     def _options(self, c):
-        return {"temperature": c.temperature, "num_ctx": int(self.settings["context_size"])}  # same as AIM, so Ollama never reloads
+        return {"temperature": c.temperature, "num_ctx": int(self.settings["context_size"])}  # same as AIM, so the model never reloads
 
     def _system(self, c, extra):
         player = self.world.player_name
