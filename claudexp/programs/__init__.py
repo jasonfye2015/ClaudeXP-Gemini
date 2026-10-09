@@ -204,6 +204,8 @@ PROGRAMS = [
             _lazy(".folio.cdviewer", "open_cdviewer"), _lazy(".folio.cdviewer", "shutdown"), group=FURRY),
     Program("furcon", "Furry Con CD Viewer", "Convention recap discs", _lazy(".folio.furcon", "con_icon"),
             _lazy(".folio.furcon", "open_furcon"), _lazy(".folio.furcon", "shutdown"), group=FURRY),
+    Program("furdir", "The Fur Directory", "Who's who among the residents", _lazy("furdir", "dir_icon"),
+            _lazy("furdir", "open_furdir"), group=FURRY),
     Program("furvideo", "Furry Video Browser", "Browse the video archive", _lazy(".folio.videos", "video_icon"),
             _lazy(".folio.videos", "open_videos"), _lazy(".folio.videos", "shutdown"), group=FURRY),
     *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)

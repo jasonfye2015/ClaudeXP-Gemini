@@ -1,0 +1,40 @@
+{
+  "fur_name": "KittyKat",
+  "screen_names": {
+    "aim": "",
+    "irc": "",
+    "muck": "",
+    "email": ""
+  },
+  "personal": {
+    "real_name": "",
+    "location": "",
+    "sex": "",
+    "age": "",
+    "dob": "",
+    "job": "",
+    "work_hours": "",
+    "sleep_hours": ""
+  },
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "fursona": {
+    "species": "",
+    "colors": "",
+    "markings": "",
+    "clothing": "",
+    "description": ""
+  },
+  "personality": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "files": [],
+  "webpages": [],
+  "notes": ""
+}

@@ -390,6 +390,17 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   list with progress bars, General (pieces bar from a seeded piece order), Files, Peers, Speed graph tabs.
   Tray icon (green/red arrows blink with traffic, grey offline, speed tooltip; Open / Start All / Stop All / Load at
   Startup / Exit) loads at logon (app.py) unless Preferences turns it off; X tucks into the tray, Exit quits.
+- **The Fur Directory** (programs/furdir.py; Furry Stuff + desktop Furry Programs folder; furdir.exe): read-only
+  cards for every character the AI plays - 9 AIM buddies, 5 IRC regulars, 5 MUCK regulars, 36 IRC lurkers
+  (base nick, e.g. 'Kodiak|zzz' -> Kodiak). Details are hand-written records in Program Files/The Fur Directory/
+  residents/<Name>.json (schema in its README.txt; blank skeletons committed; never LLM-generated, never edited in
+  the OS). System facts are read live and shown '(from the system)' when a record is blank: screen names, AIM icon/
+  profile/persona, e-mail (life.email_address), sleep hours from the AIM schedule, IRC/MUCK hours, MUCK species/desc,
+  AIM contact-folder pictures with captions.txt, recent life journal. Unknown top-level record keys render as new
+  sections. Gallery (filter by group) with the fictional-characters disclaimer; card has Back/Gallery/Forward,
+  friend/partner names link to cards, files open in their viewers, web pages in Navigator.
+  Desktop program folders now have their own version (state["folders"], FOLDERS) so adding a shortcut no longer
+  needs a LAYOUT bump that reflows the icons.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

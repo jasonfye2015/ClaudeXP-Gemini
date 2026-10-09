@@ -26,12 +26,14 @@ MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family
 SORTS = ("Name", "Size", "Type", "Modified")
 LAYOUT = 8                  # bump when builtins() changes order
 # Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
-PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon", "furvideo"],
+PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon", "furvideo", "furdir"],
                    "Emulation": ["nes", "snes", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
                    # the desktop Games folder mirrors Start > Programs > Games
                    "Games": [p.key for p in programs.PROGRAMS if p.group == "Games"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Furry Programs": 8, "Emulation": 3, "Games": 7}
+FOLDERS_SINCE = {"Furry Programs": 9, "Emulation": 3, "Games": 7}
+# Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
+FOLDERS = 9
 
 
 def std(which):
@@ -134,6 +136,11 @@ class IconManager(QObject):
                                        if not k.startswith(("sys:", "prog:"))
                                        and k[5:] not in PROGRAM_FOLDERS}
             self.state["layout"] = LAYOUT
+            self.state["folders"] = FOLDERS
+        folders = self.state.get("folders", self.state.get("layout", 1))
+        if folders < FOLDERS:
+            self._make_program_folders([n for n, v in FOLDERS_SINCE.items() if folders < v])
+            self.state["folders"] = FOLDERS
         self.icons = []
         self.press = None          # (global pos, {icon: start pos}) while dragging
         self.dragging = False
