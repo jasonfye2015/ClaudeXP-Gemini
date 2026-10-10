@@ -18,6 +18,7 @@ NAMES = {
     "doom": "doom", "doom2": "doom2", "wolf3d": "wolf3d", "heretic": "heretic", "hexen": "hexen",
     "ski": "skifree", "skifree": "skifree", "jezzball": "jezzball",
     "taipei": "taipei", "rodent": "rodent", "blockfall": "blockfall", "tripeaks": "tripeaks", "golf": "golf", "tvguide": "tvguide",
+    "clippy": "clippy", "clippit": "clippy",
     "pinball": "pinball", "wmplayer": "wmp", "mplayer2": "wmp", "msimn": "outlook", "wab": "wab",
     "bckgzm": "ibackgammon", "hrtzzm": "ihearts", "shvlzm": "ispades", "chkrzm": "icheckers", "rvsezm": "ireversi",
 }

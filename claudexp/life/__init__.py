@@ -210,6 +210,9 @@ class LifeSim(QObject):
         """A line of conversation involving a buddy (speaker is their name or the user's)."""
         if name not in self.buddies or not text:
             return
+        from .. import clippy
+        if clippy.get() is not None:
+            clippy.get().heard(program, name, speaker, text)
         talk = self.talks.setdefault((name, program), {"lines": [], "last": 0.0, "user_spoke": False})
         talk["lines"].append(f"{speaker}: {text}")
         del talk["lines"][:-30]

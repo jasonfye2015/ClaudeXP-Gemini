@@ -10,13 +10,27 @@ There's one GPU, so requests run in priority order:
 Background jobs are counted as a 'batch' so maintenance programs (Windows Update, the virus
 scanner, Disk Defragmenter) can show real progress while the model works.
 """
+import sys
 import threading
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
 
 FOREGROUND, AIM, REPLY, CHATTER, BACKGROUND = 10, 8, 5, 0, -10
+PRIORITY_NAMES = {FOREGROUND: "FOREGROUND", AIM: "AIM", REPLY: "REPLY", CHATTER: "CHATTER",
+                  BACKGROUND: "BACKGROUND"}
 
 _thinking_cache = {}
+
+
+def _caller():
+    """The module that asked the broker for a reply (for the Furry Log)."""
+    try:
+        frame = sys._getframe(1)
+        while frame is not None and frame.f_globals.get("__name__") == __name__:
+            frame = frame.f_back
+        return frame.f_globals.get("__name__", "unknown") if frame is not None else "unknown"
+    except Exception:
+        return "unknown"
 
 
 def _supports_thinking(model):
@@ -48,6 +62,7 @@ class Job(QRunnable):
         self.on_done, self.on_chunk = on_done, on_chunk
         self.prepare = images
         self.stop_flag = threading.Event()
+        self.source = _caller()
 
     def stop(self):
         """Cancel: a queued job is skipped, a streaming one ends early."""
@@ -60,6 +75,8 @@ class Job(QRunnable):
             return
         em.started.emit(self)
         text, reasoning, err = "", "", ""
+        from . import furlog
+        furlog.context.info = {"source": self.source, "priority": PRIORITY_NAMES.get(self.priority, self.priority)}
         try:
             import ollama
             messages = self.prepare(self.model, self.messages) if self.prepare else self.messages
@@ -84,6 +101,7 @@ class Job(QRunnable):
                 text = resp.message.content or ""
         except Exception as e:
             err = str(e) or e.__class__.__name__
+        furlog.context.info = None
         em.done.emit(self, text, err)
 
 

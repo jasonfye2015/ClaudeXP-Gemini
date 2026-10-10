@@ -1313,6 +1313,16 @@ def _ai_models(desktop):
     return ai_models_properties(desktop)
 
 
+def _clippy_icon():
+    from .clippy.art import icon_pixmap
+    return icon_pixmap(32)
+
+
+def _office_assistant(desktop):
+    from .clippy.options import office_assistant_properties
+    return office_assistant_properties(desktop)
+
+
 def _printer_icon():
     from .printing import printer_icon
     return QIcon(printer_icon(32))
@@ -1365,6 +1375,7 @@ def control_panel(desktop):
             ("Sounds and Audio Devices", std(QStyle.SP_MediaVolume), lambda: sound_properties(desktop)),
             ("Mouse", std(QStyle.SP_ArrowUp), lambda: mouse_properties(desktop)),
             ("AI Models", QIcon(_ai_icon()), lambda: _ai_models(desktop)),
+            ("Office Assistant", QIcon(_clippy_icon()), lambda: _office_assistant(desktop)),
             ("Internet Options", std(QStyle.SP_BrowserReload), not_here("Internet Options")),
             ("Printers and Faxes", _printer_icon(), lambda: _printers(desktop)),
             ("Scheduled Tasks", std(QStyle.SP_FileDialogDetailedView), not_here("Scheduled Tasks")),

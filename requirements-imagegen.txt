@@ -1,0 +1,8 @@
+# Optional local image-generation runtime for Copilot Image Creator.
+# PyTorch 2.7 supports Pascal (compute capability 6.1, GTX 1080 Ti).
+torch==2.7.1+cu128
+diffusers==0.35.2
+transformers==4.57.6
+accelerate
+safetensors
+huggingface_hub<1

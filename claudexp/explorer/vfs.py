@@ -50,12 +50,21 @@ class Drive:
 
 
 def drives():
-    return [
+    cd_root = DATA / "virtual_disc_d" if (DATA / "virtual_disc_d").exists() and any((DATA / "virtual_disc_d").iterdir()) else None
+    drvs = [
         Drive("B", "3½ Floppy", "floppy"),
         Drive("C", "Local Disk", "hdd", DRIVE_C),
-        Drive("D", "CD Drive", "cd"),
+        Drive("D", "CD Drive", "cd", cd_root),
         Drive("E", "External Drive", "external", local_storage()),
     ]
+    try:
+        from ..programs.alcohol import virtual_drive
+        vd = virtual_drive()
+        if vd:
+            drvs.append(vd)
+    except Exception:
+        pass
+    return drvs
 
 
 def drive(letter):
@@ -122,6 +131,11 @@ EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "mspaint.exe": "paint", "calc.exe": "calc", "cmd.exe": "cmd", "taskmgr.exe": "taskmgr",
     "dfrgntfs.exe": "defrag", "wupdmgr.exe": "winupdate", "isignup.exe": "connect", "wmplayer.exe": "wmp",
     "wordpad.exe": "wordpad", "msimn.exe": "outlook", "wab.exe": "wab", "charmap.exe": "charmap",
+    "geminiword.exe": "gemini_word", "geminiexcel.exe": "gemini_excel",
+    "geminipowerpoint.exe": "gemini_powerpoint", "geminioutlook.exe": "gemini_outlook",
+    "geminiaccess.exe": "gemini_access", "geminipublisher.exe": "gemini_publisher",
+    "geminiphoto.exe": "gemini_photo", "geminidraw.exe": "gemini_draw", "geminiacrobat.exe": "gemini_acrobat",
+    "geminidistiller.exe": "gemini_distiller",
     "cleanmgr.exe": "cleanmgr", "sndrec32.exe": "sndrec", "pinball.exe": "pinball",
     "claudetv.exe": "tv", "furtv.exe": "tv", "furcomix.exe": "comix", "furfolio.exe": "folio", "furstory.exe": "stories", "furcd.exe": "cdviewer", "furcon.exe": "furcon", "fceu.exe": "nes", "snes9x.exe": "snes", "gambatte.exe": "gb",
     "gambatte_gbc.exe": "gbc", "mgba.exe": "gba", "picodrive.exe": "gen", "gpgx.exe": "sms", "gearsystem.exe": "gg", "applewin.exe": "apple2",
@@ -130,6 +144,8 @@ EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "taipei.exe": "taipei", "rodent.exe": "rodent", "blockfall.exe": "blockfall", "tripeaks.exe": "tripeaks",
     "golf.exe": "golf", "flashpla.exe": "flash", "claudeamp.exe": "claudeamp", "winamp.exe": "claudeamp",
     "furvideo.exe": "furvideo", "stylexp.exe": "stylexp", "claudetorrent.exe": "torrent", "furdir.exe": "furdir", "clauderpg.exe": "rpg",
+    "nero.exe": "nero", "alcohol.exe": "alcohol120", "alcohol120.exe": "alcohol120",
+    "winrar.exe": "winrar", "winzip.exe": "winzip", "winzip32.exe": "winzip",
 }
 SYSTEM32 = ["advapi32.dll", "comctl32.dll", "comdlg32.dll", "gdi32.dll", "kernel32.dll", "mshtml.dll",
             "msvcrt.dll", "ole32.dll", "oleaut32.dll", "rpcrt4.dll", "shell32.dll", "shlwapi.dll", "user32.dll",
@@ -198,6 +214,23 @@ def _ensure_themes():
 def setup_c():
     """Create the XP hard drive the first time (and keep adding anything missing)."""
     DRIVE_C.mkdir(parents=True, exist_ok=True)
+    office = DRIVE_C / "Program Files" / "Gemini Office"
+    for name in ("GeminiWord.exe", "GeminiExcel.exe", "GeminiPowerPoint.exe", "GeminiOutlook.exe",
+                 "GeminiAccess.exe", "GeminiPublisher.exe"):
+        executable = office / name
+        if not executable.exists():
+            _fake(executable, 200, 900)
+    adobe = DRIVE_C / "Program Files" / "GeminiAdobe"
+    for name in ("GeminiPhoto.exe", "GeminiDraw.exe", "GeminiAcrobat.exe", "GeminiDistiller.exe"):
+        executable = adobe / name
+        if not executable.exists():
+            _fake(executable, 200, 900)
+    for extra_exe in (DRIVE_C / "Program Files" / "Ahead" / "Nero" / "nero.exe",
+                      DRIVE_C / "Program Files" / "Alcohol Soft" / "Alcohol 120" / "Alcohol.exe",
+                      DRIVE_C / "Program Files" / "WinRAR" / "WinRAR.exe",
+                      DRIVE_C / "Program Files" / "WinZip" / "winzip32.exe"):
+        if not extra_exe.exists():
+            _fake(extra_exe, 200, 900)
     if (DRIVE_C / MARKER).exists():
         _ensure_wallpapers()
         _ensure_themes()
@@ -318,9 +351,10 @@ def restore(stored):
 
 def empty_recycle_bin():
     """Delete everything in the Recycle Bin for good."""
-    from .. import sound
+    from .. import clippy, sound
     if recycled():
         sound.play("recycle")
+        clippy.notify("recycle", count=len(recycled()))
     for stored, _orig, _when in recycled():
         if stored.is_dir():
             shutil.rmtree(stored, ignore_errors=True)

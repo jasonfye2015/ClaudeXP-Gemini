@@ -42,6 +42,7 @@ class Notepad(QWidget):
         bar = QMenuBar()
         bar.triggered.connect(lambda _action: sound.play("menu"))
         self.edit = QPlainTextEdit()
+        self.edit.setProperty("nospell", True)
         self.edit.setFont(QFont("Lucida Console", 10))
         self.edit.setStyleSheet("QPlainTextEdit { border: 1px solid #7F9DB9; background: white; color: black; }")
         layout.addWidget(bar)

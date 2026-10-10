@@ -1,0 +1,36 @@
+Needing work:
+
+in /ClaudeXP/ClaudeXP Profiles/Background Furry Profiles/, 60 have been added (#61 - #120)
+in /ClaudeXP/ClaudeXP Profiles/Support Furry Profiles/, 60 have been added (#121 - #180)
+Please add both sets to The Furry Directory, and add all users to both IRC and MUCK. Give them all disperse awake/sleep/online times to help balance the user counts. 
+---
+in /ClaudeXP/Program Files/ClaudeAIM/contacts/ 25 have been added.
+Please add all 25 as contacts in AIM, as well as in the furry directory. They will have images and icons to mind as well. any details missing for them please generate.
+---
+in /ClaudeXP/User Profiles/ several new user profiles have been added: AquaVixen, Foxy, Quake, Sheppie, MochaLion. Please add them to the User profile options at windows setup.
+
+
+Feature complete and functional:
+
+What Gemini added:
+Gemini Office- Word, Excel, Powerpoint, Outlook, Access, Publisher
+Gemini Creative Suite- Photo, Draw, Layout, PDF, Audio, Video, Motion and Webtools
+Nero BurningROM, Alcohol 120%, WinRAR, WinZIP
+---
+What Copilot added:
+Stable Diffusion 1.5, and SDXL for Copilot Image Creator
+Copilot Neko upgrades (The Classic Desktop Cat)
+TTS and STT
+CopilotAI (TTS, STT, Image geg add ons)
+Copilot Desktop Widgets (Calendar, Clock, TV Guide, Weather, Sticky Notes, System Monitor)
+"Furry Proximity Locator"
+screen saver: The matrix falling code.
+CLippy upgrades
+Copilot Python Studio + updates/code repo/helpers
+
+
+
+
+
+
+

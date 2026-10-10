@@ -10,6 +10,8 @@ Jobs (roles):
   background    the life sim (journals, e-mail, catch-up) and ambient IRC / MUCK chatter
   assistant     ClaudeAI's default model
   pictures      used instead whenever a message carries a picture and the chosen model can't see
+  clippy        the Office Assistant's tips and 'help'
+  coding        Copilot Python Studio's AI Helper
 Per-resident overrides give one buddy or regular their own model. The choices live in data/ai_models.json, and
 ClaudeAIM's own settings (default model, per-buddy overrides, context size) are kept in step with them, so ClaudeAIM
 itself never needs changing."""
@@ -24,7 +26,9 @@ CONFIG = DATA / "ai_models.json"
 ROLES = [("conversation", "Buddy conversations", "AIM, and when buddies and regulars talk to you on IRC and the MUCK"),
          ("background", "Background life", "journals, e-mail, catch-up and ambient IRC / MUCK chatter"),
          ("assistant", "ClaudeAI", "the default model in ClaudeAI"),
-         ("pictures", "Pictures", "used when a message has a picture the chosen model can't see")]
+         ("pictures", "Pictures", "used when a message has a picture the chosen model can't see"),
+         ("clippy", "Clippy", "the Office Assistant's tips and 'help'"),
+         ("coding", "Python Studio", "the AI Helper that writes and explains code in Copilot Python Studio")]
 DEFAULTS = {"engine": "", "max_loaded": 2, "context": 16384, "idle_minutes": 0, "compact_cache": True, "assign": {},
             "overrides": {}}
 _lock = threading.RLock()
@@ -103,6 +107,11 @@ def default_for(role, models=None):
     hinted = [m for m in models if role in (m.info.get("suggested") or [])]
     if hinted:
         return hinted[0].id
+    if role == "clippy":
+        return default_for("conversation", models)              # small models make a poor Clippy
+    if role == "coding":
+        coders = [m for m in models if "coder" in m.id.lower()]
+        return (coders or models)[-1].id                        # the biggest coder, else the biggest model
     if role == "background":
         return models[0].id                                     # the smallest
     if role == "pictures":

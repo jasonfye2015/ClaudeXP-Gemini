@@ -67,7 +67,7 @@ def _rtf_escape(text):
     return "".join(out)
 
 
-def to_rtf(doc):
+def to_rtf(doc, generator="ClaudeXP WordPad 5.1.2600"):
     fonts, colors = [], ["#000000"]
     parts = []
     block = doc.begin()
@@ -102,7 +102,7 @@ def to_rtf(doc):
     font_table = "".join(f"{{\\f{i}\\fnil\\fcharset0 {name};}}" for i, name in enumerate(fonts or ["Arial"]))
     color_table = "".join(f"\\red{int(c[1:3], 16)}\\green{int(c[3:5], 16)}\\blue{int(c[5:7], 16)};" for c in colors)
     return ("{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033{\\fonttbl" + font_table + "}\n{\\colortbl ;"
-            + color_table + "}\n{\\*\\generator ClaudeXP WordPad 5.1.2600;}\\viewkind4\\uc1\n" + "".join(parts) + "}\n")
+            + color_table + f"}}\n{{\\*\\generator {generator};}}\\viewkind4\\uc1\n" + "".join(parts) + "}\n")
 
 
 def from_rtf(text, doc):
@@ -279,12 +279,14 @@ class Ruler(QWidget):
 
 
 class WordPad(QWidget):
-    def __init__(self, desktop, path=None):
+    def __init__(self, desktop, path=None, product_name="WordPad", app_icon=None):
         super().__init__()
         self.desktop = desktop
         self.frame = None
         self.path = None
         self.kind = "rtf"
+        self.product_name = product_name
+        self.app_icon = app_icon or wordpad_icon()
         self.closing = False
         self.setObjectName("wordpad")
         self.setAttribute(Qt.WA_StyledBackground, True)
@@ -446,7 +448,10 @@ class WordPad(QWidget):
         o.addAction("Bullet &Style", self.toggle_bullets)
         o.addAction("&Paragraph...", lambda: self.set_align("left"))
         h = m.addMenu("&Help")
-        h.addAction("&About WordPad", lambda: self._message("About WordPad", "Windows WordPad\nVersion 5.1 (Build 2600)"))
+        about = ("Windows WordPad\nVersion 5.1 (Build 2600)" if self.product_name == "WordPad"
+                 else f"{self.product_name}\nVersion 1.0")
+        h.addAction(f"&About {self.product_name}",
+                    lambda: self._message(f"About {self.product_name}", about))
 
     # ---- formatting ------------------------------------------------------------------------------------------------
     def _merge(self, family=None, size=None, bold=None, italic=None, underline=None, color=None):
@@ -577,7 +582,7 @@ class WordPad(QWidget):
             return self.find_dialog()
         flags = QTextDocument.FindCaseSensitively if getattr(self, "last_case", False) else QTextDocument.FindFlag(0)
         if not self.edit.find(text, flags):
-            self._message("WordPad", "WordPad has finished searching the document.", "info")
+            self._message(self.product_name, f"{self.product_name} has finished searching the document.", "info")
 
     # ---- files ------------------------------------------------------------------------------------------------------------
     def name(self):
@@ -585,7 +590,7 @@ class WordPad(QWidget):
 
     def update_title(self):
         if self.frame is not None:
-            self.frame.set_title(f"{self.name()} - WordPad")
+            self.frame.set_title(f"{self.name()} - {self.product_name}")
 
     def new(self):
         from .paint import _dialog
@@ -611,7 +616,7 @@ class WordPad(QWidget):
         try:
             raw = _read(path)
         except OSError:
-            return self._message("WordPad", f"Cannot open {path.name}.", "error")
+            return self._message(self.product_name, f"Cannot open {path.name}.", "error")
         if raw.lstrip().startswith("{\\rtf"):
             from_rtf(raw, self.edit.document())
             self.kind = "rtf"
@@ -627,11 +632,12 @@ class WordPad(QWidget):
             return self.save_as(then)
         try:
             if self.path.suffix.lower() == ".rtf":
-                self.path.write_text(to_rtf(self.edit.document()), encoding="cp1252", errors="replace")
+                self.path.write_text(to_rtf(self.edit.document(), f"ClaudeXP {self.product_name}"),
+                                     encoding="cp1252", errors="replace")
             else:
                 self.path.write_text(self.edit.toPlainText(), encoding="utf-8")
         except OSError as e:
-            return self._message("WordPad", f"Cannot save {self.path.name}.\n{e.strerror}", "error")
+            return self._message(self.product_name, f"Cannot save {self.path.name}.\n{e.strerror}", "error")
         self.edit.document().setModified(False)
         self.update_title()
         if callable(then):
@@ -687,7 +693,7 @@ class WordPad(QWidget):
                 return False
             self.load(item.data(Qt.UserRole))
         win = _dialog(self.desktop, "Open", body, accept)
-        win.icon = wordpad_icon()
+        win.icon = self.app_icon
         files.itemDoubleClicked.connect(lambda _i: accept() is not False and self.desktop.close_window(win))
 
     def print_(self):
@@ -703,7 +709,8 @@ class WordPad(QWidget):
                 self.save(proceed)
             elif button == "No":
                 proceed()
-        self._message("WordPad", f"Save changes to {self.name()}?", "warning", ("Yes", "No", "Cancel"), answer)
+        self._message(self.product_name, f"Save changes to {self.name()}?", "warning",
+                       ("Yes", "No", "Cancel"), answer)
 
     def closeEvent(self, event):
         if self.closing or not self.edit.document().isModified():
@@ -722,9 +729,10 @@ class WordPad(QWidget):
         return msgbox(self.desktop, title, text, icon, buttons, on_button)
 
 
-def open_wordpad(desktop, path=None):
-    body = WordPad(desktop, path)
-    win = XPWindow(desktop, f"{body.name()} - WordPad", body, wordpad_icon(), (680, 500))
+def open_wordpad(desktop, path=None, product_name="WordPad", app_icon=None):
+    icon = app_icon or wordpad_icon()
+    body = WordPad(desktop, path, product_name, icon)
+    win = XPWindow(desktop, f"{body.name()} - {product_name}", body, icon, (680, 500))
     body.frame = win
     desktop.open_window(win)
     body.edit.setFocus()

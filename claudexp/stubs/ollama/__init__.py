@@ -97,9 +97,20 @@ def _note(model_id, timings, started):
                      time.time() - started)
 
 
+def _furlog():
+    try:
+        from claudexp import furlog
+        return furlog
+    except Exception:
+        return None
+
+
 def chat(model=None, messages=(), options=None, stream=False, think=None, keep_alive=None, **_ignored):
     srv, am = _server(), _models()
+    log = _furlog()
     if not srv.available():
+        if log is not None:
+            log.event("MODEL UNAVAILABLE", srv.status(), asked=model)
         raise ResponseError(srv.status())
     messages = builtins.list(messages)
     model_id = am.resolve(model)
@@ -110,21 +121,50 @@ def chat(model=None, messages=(), options=None, stream=False, think=None, keep_a
     if extra_stop:
         stops = body.get("stop") or []
         body["stop"] = ([stops] if isinstance(stops, str) else builtins.list(stops)) + builtins.list(extra_stop)
+    rid = log.request(model, model_id, messages, options, stream, think) if log is not None else None
     started = time.time()
     try:
         if not stream:
             data = srv.post("/v1/chat/completions", body)
             msg = (data.get("choices") or [{}])[0].get("message") or {}
             _note(model_id, data.get("timings"), started)
+            if log is not None:
+                log.response(rid, msg.get("content") or "", msg.get("reasoning_content") or "",
+                             time.time() - started, timings=data.get("timings"))
             return _message(msg.get("content") or "", msg.get("reasoning_content") or "")
-        return _stream(srv.post("/v1/chat/completions", body, stream=True), model_id, started)
+        info = {}
+        return _logged_stream(_stream(srv.post("/v1/chat/completions", body, stream=True), model_id, started, info),
+                              log, rid, started, info)
     except RuntimeError as e:
+        if log is not None:
+            log.response(rid, "", "", time.time() - started, str(e))
         raise ResponseError(str(e)) from None
     except OSError as e:
+        if log is not None:
+            log.response(rid, "", "", time.time() - started, f"The language model isn't answering ({e}).")
         raise ResponseError(f"The language model isn't answering ({e}).") from None
 
 
-def _stream(resp, model_id, started):
+def _logged_stream(parts, log, rid, started, info):
+    """Pass the streamed parts through, then log the whole reply once the stream ends (or is cut off)."""
+    text, thinking, error = [], [], ""
+    try:
+        for part in parts:
+            text.append(part.message.content or "")
+            thinking.append(part.message.thinking or "")
+            yield part
+    except GeneratorExit:
+        error = "stopped before the reply finished"
+        raise
+    except Exception as e:
+        error = str(e) or e.__class__.__name__
+        raise
+    finally:
+        if log is not None:
+            log.response(rid, "".join(text), "".join(thinking), time.time() - started, error, info.get("timings"))
+
+
+def _stream(resp, model_id, started, info=None):
     """Server-sent events -> ollama-style parts (each carrying only the new text)."""
     timings = None
     with resp:
@@ -146,4 +186,6 @@ def _stream(resp, model_id, started):
                 part = _message(content, thinking)
                 part.done = False
                 yield part
+    if info is not None:
+        info["timings"] = timings
     _note(model_id, timings, started)

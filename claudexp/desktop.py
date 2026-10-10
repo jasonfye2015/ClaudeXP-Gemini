@@ -42,7 +42,13 @@ class Desktop(QWidget):
         self.maintenance = maintenance.install(self)
         from . import life
         self.life = life.install(self)
+        from . import clippy
+        self.clippy = clippy.install(self)
         self.start_menu = StartMenu(self)
+        from .programs import neko
+        self.neko = neko.install(self)
+        if self.neko is not None:
+            self.neko.raise_()
         from . import menus
         menus.install(self)              # pop-up menus stay inside the XP screen
         QApplication.instance().installEventFilter(self)
@@ -59,6 +65,8 @@ class Desktop(QWidget):
         self.taskbar.update()
         self.start_menu.update()
         self.update()
+        from . import clippy
+        clippy.notify("theme")
 
     # ---- layout -------------------------------------------------------------
     def work_area(self):
@@ -73,6 +81,10 @@ class Desktop(QWidget):
             self.icons.layout()
         self.taskbar.setGeometry(0, self.height() - TASKBAR_H, self.width(), TASKBAR_H)
         self.start_menu.move(0, self.height() - TASKBAR_H - self.start_menu.height())
+        if hasattr(self, "neko") and self.neko is not None:
+            self.neko._place_default()
+        from .programs import copilot_widgets
+        copilot_widgets.on_resize(self)
         for win in self.windows:
             if win.maximized:
                 win.setGeometry(self.work_area())
@@ -144,6 +156,9 @@ class Desktop(QWidget):
             self.task_order.append(win)
         win.show()
         self.activate(win)
+        if win.on_taskbar and "min" in win.buttons:                # programs, not dialogs and message boxes
+            from . import clippy
+            clippy.notify("program", title=win.title)
 
     def withdraw(self, win):
         """The program hid this window: take it off the screen and the taskbar, but keep it."""
@@ -175,6 +190,7 @@ class Desktop(QWidget):
             win.flashing = False
         self.taskbar.raise_()
         self.balloon.raise_()
+        self.clippy.raise_all()
         self.start_menu.raise_()
         changed = win is not self.active
         self.active = win

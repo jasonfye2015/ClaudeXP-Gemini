@@ -1,5 +1,5 @@
 """Screen savers: Windows XP, Starfield, Mystify, Beziers, 3D Pipes, Marquee, My Pictures Slideshow, Blank,
-and After Dark's Flying Toasters (a looped video clip).
+Copilot Matrix Rain (falling green code), and After Dark's Flying Toasters (a looped video clip).
 
 Each saver is a QWidget that animates at any size (full screen, or the little monitor in Display
 Properties). The manager watches for idle time and covers the whole PC screen with the chosen saver;
@@ -572,7 +572,78 @@ class DaVinci(_PlusSaver):
                 p.drawPath(path)
 
 
+class MatrixRain(Saver):
+    """Falling green code: each column has a bright head and a fading trail of glyphs that keep changing."""
+    FPS = 30
+    KATAKANA = [chr(c) for c in range(0xFF66, 0xFF9E)]
+    SYMBOLS = list("0123456789:.=*+-<>|Z")
+    FAMILIES = ("MS Gothic", "Yu Gothic", "Meiryo", "MS Mincho", "SimSun")
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.size_key = None
+        self.columns = []
+        self.font = QFont(self.FAMILIES[0])
+        self.font.setStyleStrategy(QFont.PreferAntialias)
+        self.glyphs = self.SYMBOLS + self.SYMBOLS                 # no Japanese font installed: digits and symbols only
+        for family in self.FAMILIES:
+            font = QFont(family)
+            font.setPixelSize(16)
+            if QFontMetrics(font).inFontUcs4(0xFF76):
+                self.font.setFamily(family)
+                self.glyphs = self.KATAKANA * 2 + self.SYMBOLS
+                break
+
+    def _build(self):
+        self.size_key = (self.width(), self.height())
+        self.cell = max(7, int(16 * self.s()))
+        self.font.setPixelSize(self.cell)
+        self.rows = self.height() // self.cell + 2
+        self.columns = []
+        for i in range(self.width() // self.cell + 1):
+            col = {"x": i * self.cell, "chars": [random.choice(self.glyphs) for _ in range(self.rows)]}
+            self._restart(col, scattered=True)
+            self.columns.append(col)
+
+    def _restart(self, col, scattered=False):
+        col["length"] = random.randint(8, max(10, self.rows * 2 // 3))
+        col["speed"] = random.uniform(0.25, 0.9)
+        col["head"] = random.uniform(-self.rows, self.rows) if scattered else -random.uniform(0, self.rows * 0.6)
+
+    def step(self):
+        if self.size_key != (self.width(), self.height()):
+            self._build()
+        for col in self.columns:
+            col["head"] += col["speed"]
+            if col["head"] - col["length"] > self.rows:
+                self._restart(col)
+            chars = col["chars"]
+            for _ in range(2):
+                chars[random.randrange(self.rows)] = random.choice(self.glyphs)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.fillRect(self.rect(), QColor(0, 6, 0))
+        if not self.columns:
+            return
+        p.setFont(self.font)
+        cell = self.cell
+        for col in self.columns:
+            head, length, chars = int(col["head"]), col["length"], col["chars"]
+            for i in range(length):
+                row = head - i
+                if not 0 <= row < self.rows:
+                    continue
+                if i == 0:
+                    p.setPen(QColor(215, 255, 215))
+                else:
+                    fade = 1 - i / length
+                    p.setPen(QColor(0, int(40 + 215 * fade * fade), int(25 * fade)))
+                p.drawText(col["x"], (row + 1) * cell - cell // 5, chars[row])
+
+
 SAVERS = {"(None)": None, "Windows XP": WindowsXP, "3D Pipes": Pipes, "Beziers": Beziers, "Blank": Blank,
+          "Copilot Matrix Rain": MatrixRain,
           "Flying Toasters": FlyingToasters, "Marquee": Marquee, "My Pictures Slideshow": Slideshow,
           "Mystify": Mystify, "Starfield": Starfield, "Aquarium": Aquarium, "Da Vinci": DaVinci, "Nature": Nature,
           "Space": Space}

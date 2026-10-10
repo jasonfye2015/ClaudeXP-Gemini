@@ -1,0 +1,302 @@
+{
+ "revision": "v1.0.0",
+ "voices": [
+  {
+   "id": "en_GB-alba-medium",
+   "path": "en/en_GB/alba/medium",
+   "name": "Alba",
+   "accent": "UK",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "female",
+   "license": "https://creativecommons.org/licenses/by/4.0/"
+  },
+  {
+   "id": "en_US-amy-low",
+   "path": "en/en_US/amy/low",
+   "name": "Amy",
+   "accent": "US",
+   "quality": "low",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "female",
+   "license": "See URL"
+  },
+  {
+   "id": "en_US-amy-medium",
+   "path": "en/en_US/amy/medium",
+   "name": "Amy",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "female",
+   "license": "See URL"
+  },
+  {
+   "id": "en_US-arctic-medium",
+   "path": "en/en_US/arctic/medium",
+   "name": "Arctic",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 18,
+   "mb": 73,
+   "gender": "mixed",
+   "license": "See LICENSE file"
+  },
+  {
+   "id": "en_US-bryce-medium",
+   "path": "en/en_US/bryce/medium",
+   "name": "Bryce",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 61,
+   "gender": "male",
+   "license": "public domain"
+  },
+  {
+   "id": "en_US-danny-low",
+   "path": "en/en_US/danny/low",
+   "name": "Danny",
+   "accent": "US",
+   "quality": "low",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "male",
+   "license": "See URL"
+  },
+  {
+   "id": "en_US-hfc_female-medium",
+   "path": "en/en_US/hfc_female/medium",
+   "name": "HFC Female",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "female",
+   "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en"
+  },
+  {
+   "id": "en_US-hfc_male-medium",
+   "path": "en/en_US/hfc_male/medium",
+   "name": "HFC Male",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "male",
+   "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en"
+  },
+  {
+   "id": "en_US-joe-medium",
+   "path": "en/en_US/joe/medium",
+   "name": "Joe",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "male",
+   "license": "CC0"
+  },
+  {
+   "id": "en_US-john-medium",
+   "path": "en/en_US/john/medium",
+   "name": "John",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 61,
+   "gender": "male",
+   "license": "public domain"
+  },
+  {
+   "id": "en_US-kathleen-low",
+   "path": "en/en_US/kathleen/low",
+   "name": "Kathleen",
+   "accent": "US",
+   "quality": "low",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "female",
+   "license": "CC0"
+  },
+  {
+   "id": "en_US-kristin-medium",
+   "path": "en/en_US/kristin/medium",
+   "name": "Kristin",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 61,
+   "gender": "female",
+   "license": "public domain"
+  },
+  {
+   "id": "en_US-kusal-medium",
+   "path": "en/en_US/kusal/medium",
+   "name": "Kusal",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "male",
+   "license": "See URL"
+  },
+  {
+   "id": "en_US-l2arctic-medium",
+   "path": "en/en_US/l2arctic/medium",
+   "name": "L2-Arctic",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 24,
+   "mb": 73,
+   "gender": "mixed",
+   "license": "https://creativecommons.org/licenses/by-nc/4.0/"
+  },
+  {
+   "id": "en_US-lessac-high",
+   "path": "en/en_US/lessac/high",
+   "name": "Lessac",
+   "accent": "US",
+   "quality": "high",
+   "speakers": 1,
+   "mb": 109,
+   "gender": "female",
+   "license": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html"
+  },
+  {
+   "id": "en_US-lessac-low",
+   "path": "en/en_US/lessac/low",
+   "name": "Lessac",
+   "accent": "US",
+   "quality": "low",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "female",
+   "license": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html"
+  },
+  {
+   "id": "en_US-lessac-medium",
+   "path": "en/en_US/lessac/medium",
+   "name": "Lessac",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "female",
+   "license": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html"
+  },
+  {
+   "id": "en_US-libritts-high",
+   "path": "en/en_US/libritts/high",
+   "name": "LibriTTS",
+   "accent": "US",
+   "quality": "high",
+   "speakers": 904,
+   "mb": 130,
+   "gender": "mixed",
+   "license": "CC BY 4.0"
+  },
+  {
+   "id": "en_US-libritts_r-medium",
+   "path": "en/en_US/libritts_r/medium",
+   "name": "LibriTTS-R",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 904,
+   "mb": 75,
+   "gender": "mixed",
+   "license": "CC BY 4.0"
+  },
+  {
+   "id": "en_US-ljspeech-high",
+   "path": "en/en_US/ljspeech/high",
+   "name": "LJ Speech",
+   "accent": "US",
+   "quality": "high",
+   "speakers": 1,
+   "mb": 109,
+   "gender": "female",
+   "license": "public domain"
+  },
+  {
+   "id": "en_US-ljspeech-medium",
+   "path": "en/en_US/ljspeech/medium",
+   "name": "LJ Speech",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 61,
+   "gender": "female",
+   "license": "public domain"
+  },
+  {
+   "id": "en_US-norman-medium",
+   "path": "en/en_US/norman/medium",
+   "name": "Norman",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 61,
+   "gender": "male",
+   "license": "public domain"
+  },
+  {
+   "id": "en_US-reza_ibrahim-medium",
+   "path": "en/en_US/reza_ibrahim/medium",
+   "name": "Reza Ibrahim",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 61,
+   "gender": "male",
+   "license": "CC0"
+  },
+  {
+   "id": "en_US-ryan-high",
+   "path": "en/en_US/ryan/high",
+   "name": "Ryan",
+   "accent": "US",
+   "quality": "high",
+   "speakers": 1,
+   "mb": 115,
+   "gender": "male",
+   "license": "CC BY-NC-SA 4.0"
+  },
+  {
+   "id": "en_US-ryan-low",
+   "path": "en/en_US/ryan/low",
+   "name": "Ryan",
+   "accent": "US",
+   "quality": "low",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "male",
+   "license": "CC BY-NC-SA 4.0"
+  },
+  {
+   "id": "en_US-ryan-medium",
+   "path": "en/en_US/ryan/medium",
+   "name": "Ryan",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "male",
+   "license": "CC BY-NC-SA 4.0"
+  },
+  {
+   "id": "en_US-sam-medium",
+   "path": "en/en_US/sam/medium",
+   "name": "Sam",
+   "accent": "US",
+   "quality": "medium",
+   "speakers": 1,
+   "mb": 60,
+   "gender": "nonbinary",
+   "license": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+  }
+ ]
+}

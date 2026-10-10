@@ -88,6 +88,55 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   (Star, Rename, Delete). Streaming Markdown replies via the broker (FOREGROUND), Stop, Copy, Retry,
   Extended thinking (broker.stream on_thinking -> collapsible 'Thought process'), model picker,
   auto titles, Settings (default model, temperature, custom instructions). Saved in data/claudeai.
+- **Copilot Image Creator** (`claudexp/programs/imagegen.py`): a local prompt-to-image application with
+  Stable Diffusion 1.5 and SDXL choices, negative prompts, dimensions, steps, guidance and seed controls.
+  Its isolated CUDA/Diffusers runtime and downloaded model files live under
+  `Local Storage/LLM Models/image-gen/`; generated PNGs go to My Pictures.
+- **Copilot Neko** (`claudexp/programs/neko.py`): a configurable desktop cat with a paw-print tray menu,
+  launch-at-logon, fur-color, visibility and chat-bubble options.
+- **Copilot Voice** (`claudexp/programs/copilot_voice.py`): push-to-talk local English transcription with
+  Whisper, local AI conversation, and spoken replies from Piper. Speech runtime and models are installed
+  separately under `Local Storage/LLM Models/voice/` after license acknowledgment.
+- **CopilotAI** (`claudexp/programs/copilotai/`): a separate local-model chat application with searchable,
+  pinnable conversation history, streaming Markdown replies, per-chat actions, model and response settings,
+  push-to-talk and optional automatic listening, and local speech playback. Its conversations and settings
+  are stored independently in `data/copilotai/`; it reuses the optional local speech runtime under
+  `Local Storage/LLM Models/voice/`.
+- **Copilot Desktop Widgets** (`claudexp/programs/copilot_widgets/`): floating translucent desktop widgets
+  (digital clock, calendar with holidays, weather, TV guide, sun and moon, system monitor, sticky note) with a
+  tray icon whose menu locks/unlocks dragging, picks widgets, opacity, units and climate. Weather is generated
+  locally from the ClaudeXP date and season (`weather.py`, seeded and deterministic; nothing is downloaded).
+  The TV guide reads ClaudeTV's own schedule (`programs/tv/lineup.py`), so "on now" always matches the tuner.
+  Settings and positions are stored in `data/copilot_widgets.json`. The Sticky Notes widget is a real in-place
+  editor: resizable (corner grip, size remembered), scrolls, autosaves to `data/sticky_note.txt`, and Save / Load
+  keep named notes in `data/sticky_notes/`. It stays clickable while the other widgets are locked click-through.
+  The System Monitor also shows network up/down with a graph, disk read/write rates (IOCTL_DISK_PERFORMANCE),
+  blinking Image gen and LLM lights (`imagegen.generating()`, `broker.busy()`), a workload meter (CPU or queued
+  LLM jobs) and uptime. All read through ctypes, no extra packages.
+- **Furry Log** (`claudexp/furlog.py`, `programs/furrylog.py`): a plain-text diary of everything the language
+  model does. The ollama stub's `chat()` is the single chokepoint, so ClaudeAIM, ClaudeAI, CopilotAI and
+  anything else is logged with prompt, thinking, raw output, model asked vs used, source module, priority,
+  timings and errors (streams are logged whole, even if cut off). Image Creator and Copilot Voice add events.
+  One file per day in `data/furry_log/`; viewer has day picker, filter, live follow, and recording/full-text/
+  retention settings (`data/furry_log.json`). Logging never raises.
+- **Furry Proximity Locator** (`programs/furlocator.py`, `furlocator_places.py`, `furlocator_world.json`): a
+  world map (Natural Earth 110m country outlines, public domain, stored locally) with a pin dropped where each
+  Fur Directory resident lives. Only the record's hand-written `personal.location` is used (or exact
+  `personal.latitude`/`longitude`), matched against an offline gazetteer; nothing is guessed, unknown places are
+  listed as "couldn't place". Pan/zoom, clustering, side list, and Open Card jumps to the Fur Directory card.
+- **CopilotAI image creation** (`programs/copilotai/imagetool.py`, `app.py`): the chat model can make pictures
+  through the local Stable Diffusion engine from Copilot Image Creator. Ask for a picture and the model
+  replies with a short line plus an `<image>` tag, which is stripped from view and rendered inline (saved to
+  My Pictures as `CopilotAI ...png`; Open / Save as / New variation). The Image button and `/image` skip the
+  model's decision and have it write only the SD prompt. Settings: on/off, model, steps, unload chat model
+  while drawing. Stop cancels.
+- **Clippy upgrade** (`claudexp/clippy/`): moods (`moods.py`: happy / sad / angsty / snarky / moody-drifting) change
+  the LLM persona (`brain.py`), the face and idle gags (`art.py`), balloon colours (`widget.py`) and the stock
+  lines used with no model (`lines.py`). Tray icon (wears his mood) with a full menu; Chat with Clippy window
+  (`chat.py`, history in `data/clippy_chat.json`, `/remind N text`); repetition avoidance (recent-lines memory,
+  random angle, similarity retry, stock lines never repeat back to back); wire colours, hats, sizes, reminders,
+  break reminders, snooze, wander mode, "Ask Clippy to..." (joke, tip, compliment, roast, haiku, fortune).
+  Settings in `data/clippy.json`; Control Panel > Office Assistant has the new Personality and looks group.
 - **Power** (`claudexp/power.py`): power-on runs an AMIBIOS POST (ami_bios_logo.png, memory test,
   POST beep post_beep1/2.wav (generated square waves), floppy seek, drive detection matching My
   Computer, hard drive spin-up sound) before the XP boot screen. Turn Off Computer -> shutdown sound
@@ -433,7 +482,48 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   no Setup stage) as setup stage 'oobe' with fresh=True: BIOS -> XP boot -> 'Welcome to Microsoft Windows' (no
   'boot from CD' prompt), i.e. registration, Choose your fursona, name, passwords. The media archive is a separate
   download into Local Storage/ (ignored except its README.txt, which lists the expected folders); screenshots/ is
-  ignored; requirements.txt pins PySide6 6.11.2, ollama 0.6.3, tzdata 2026.5 (tested on Python 3.14).
+  ignored; requirements.txt pins PySide6 6.11.2, ollama 0.6.3, tzdata 2026.5, pyspellchecker 0.8.3 (tested on Python 3.14).
+- **Speech page in first-boot Setup** (`claudexp/setup/speechcheck.py`, page "speech" in `setup/oobe.py`, after passwords):
+  shows the speech licenses (voice terms are read from each voice's `MODEL_CARD` in `Local Storage/LLM Models/voice/models`),
+  needs the agree box, sets the engine up if missing, then speaks a sentence with Piper and transcribes it with Whisper;
+  Next unlocks only when the words match (or "Skip this step" is ticked). Agreement is kept in `data/speech_license.json`
+  and pre-ticks the box in Copilot Voice. Image generation is not part of this page.
+- **Voice catalog** (`programs/piper_voices.json`, `programs/voicecatalog.py`): 27 offline Piper voices (all 26 US + Alba) in
+  `Local Storage/LLM Models/voice/models`. The worker and CopilotAI both read the catalog; the CopilotAI voice picker is grouped
+  Female / Male / Non-binary / Multi-speaker, sorted by name then quality. Gender comes from voice pitch plus model cards.
+  Multi-speaker voices (Arctic, L2-Arctic, LibriTTS) always use speaker 0.
+- **Copilot Python Studio** (`programs/pystudio/`; desktop icon + Start > Programs > Accessories): offline Python editor and
+  runner. Own relocatable Python 3.12.10 (NuGet build plus tkinter) in `Local Storage/Python Studio/python312`, with
+  numpy, Pillow and requests installed and their wheels in `wheels/` (Tools > Install Package from Offline Wheels; pip runs
+  with PIP_NO_INDEX). Editor: tabs, line numbers, Python highlighting, auto-indent, bracket pairing, comment/indent,
+  find/replace, go to line, zoom; pyflakes lint (red = error, amber = warning) in a Problems tab; jedi completions (Ctrl+Space
+  or after ".") and call signatures, run on a background thread against the studio runtime. Run (F5) saves and starts the
+  program with live Console output (stderr in red), an input box for stdin, Stop, exit code/time; double-click a traceback
+  line to jump to it; Python Prompt (REPL). Programs live in My Documents\Python Programs (hello.py sample).
+    Pre-installed (light, wheels kept): numpy, Pillow, requests, pygame, matplotlib, rich, tqdm, click, colorama, bs4, pyyaml,
+    dateutil, tabulate, pygments, flask, jinja2, sympy, qrcode, pyperclip, psutil, openpyxl, fpdf2, markdown, tinydb,
+    pytest, pyserial, cryptography, pyinstaller; game set: pymunk (physics), pytmx (Tiled maps), pygame-menu, pyglet,
+  opensimplex (noise), pathfinding, networkx, imageio, soundfile, sounddevice, pydub (needs ffmpeg, not bundled), mido (MIDI); pandas/scipy/PySide6 skipped as heavy). Run > Build Executable (F9, also a
+    toolbar button): lints, saves, runs PyInstaller (one-file/one-folder, windowed/console) into Python Programs\Built Programs;
+    exes run without Python (22-38 MB, ~30-40 s build). AI Helper (F6; `pystudio/assistant.py`): a chat panel on the right
+  that streams from the local llama.cpp router (new "coding" job in AI Models, default = the biggest "coder" model). Ask for
+  programs, or Explain / Fix errors / Improve / Add comments on the open file (optionally with the console output); Insert
+  code / Replace file / Copy code take the last answer's code block. Models: Qwen2.5 Coder 1.5B, Qwen3 4B Instruct 2507,
+  Qwen2.5 Coder 7B (all Apache 2.0). Helper extras: yellow "Ask AI Helper to fix this" bar after a crashing run; coloured
+  diff preview + pyflakes lint before Insert/Replace (`diffview.py`); selection-aware and "All open files" context; an API
+  cheat sheet of real signatures (`apiref.py`, built from the installed packages) fed into prompts; ghost-text autocomplete
+  (Tab accepts; `ghost.py`, fill-in-the-middle with the smallest coder model; View > AI Autocomplete); automatic backups in
+  `.history` next to each program + File > Restore Previous Version (`backups.py`); File > New from Template (8 runnable
+  game starters, `templates.py`); Tools > Python & pygame Manuals (F1, offline docs from `Local Storage/Python Studio/docs`,
+  `docs.py`); Tools > Game Assets (Kenney CC0 packs unpacked into My Documents\Python Programs\Assets, sprite/sound
+  browser, retro sound-effect maker, `assets.py`); Debug menu (F8 continue, F10 over, F11 into, Shift+F11 out, Ctrl+B / gutter
+  click breakpoints, variables/call stack/evaluate; `dbg_runner.py` + `debugger.py`, only steps through the user's own files).
+  Assets and docs are CC0 (Kenney) / PSF licensed and live in the gitignored `Local Storage/Python Studio`.
+- **Spell check** (`claudexp/spellcheck.py`, installed in `main.py`): one app-wide event filter that gives every editable
+  QPlainTextEdit / QTextEdit a red wavy underline and a right-click menu (suggestions, Add to Dictionary, Ignore All,
+  "Check Spelling as I Type"). Offline English list from pyspellchecker; custom words in `data/spell_custom.txt`, the
+  on/off switch in `data/spellcheck.json`. Read-only boxes are skipped; opt out with `edit.setProperty("nospell", True)`
+  (Notepad and Paint's text box do). Single-line boxes (QLineEdit) are not checked.
 - **Own LLM engine, no Ollama** (llm_server.py, stubs/ollama): Local Storage/LLM Models holds llama.cpp b11533
   (llama.cpp/vulkan, plus Microsoft's VC++ runtime DLLs app-local; an optional llama.cpp/cuda 12.4 build + cudart,
   used only when LLM Models/engine.txt says 'cuda' - Vulkan measured faster on the GTX 1080 Ti: 76 vs 60 tok/s)
@@ -461,6 +551,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   built-in name) and stop words: NemoMix's GGUF has no template -> chatml + <|im_end|>. Installed models and default
   jobs: gemma3-1b background, nemomix-unleashed-12b conversation, gemma4-12b assistant (thinking), gemma3-4b
   pictures, mag-mell-12b spare (no licence stated - personal use).
+- **Gemini Office (in progress)**: Gemini Word, Gemini Excel, Gemini PowerPoint, Gemini Outlook, Gemini Access, and Gemini Publisher are listed under Start > Programs > Gemini Office. Word reuses the existing rich-text editor, XP file dialogs, and print spooler; it opens/saves RTF and plain-text files (not native DOC/DOCX). Excel supports multi-sheet workbooks, basic arithmetic and SUM/AVERAGE/MIN/MAX/COUNT formulas with cell references and ranges, sorting a selected range, category/value bar charts, CSV import/export, and printing. Its `.gwb` JSON workbook format is Gemini-specific, not XLS/XLSX. PowerPoint provides draggable/editable text and image objects, slide reordering, a keyboard/button-controlled slideshow, and printing. Its self-contained `.gpp` JSON format embeds images and is Gemini-specific, not PPT/PPTX. Outlook combines ClaudeXP's simulated mail delivery and buddy contacts with personal contacts, calendar appointments, and tasks; the new personal data is stored in `data/gemini_outlook.json`. Access supports multiple tables, field design (text, number, date, and Yes/No types), record entry/edit/deletion, filtering, sorting, and printing; `.gdb` files are Gemini-specific JSON databases. Publisher supports multi-page letter-sized layouts with movable text, image, and rectangle objects, per-page background colors, embedded images, and printing; its `.gpub` JSON format is Gemini-specific, not PUB/PUBLISHER files. The core suite is implemented.
+- **GeminiAdobe creative suite (in progress)**: Start > Programs > GeminiAdobe and the desktop GeminiAdobe folder contain shortcuts to creative apps. Gemini Photo reuses ClaudeXP Paint's raster canvas, selection/editing tools, drawing, image adjustments, and standard image formats, and adds crop-to-selection, grayscale, brighten, darken, multi-layer visibility/order/opacity, and editable layer names. Layered projects save as `.gphoto` JSON with embedded PNG layers; standard image saves and printing flatten the visible layers. Gemini Draw provides editable vector text, rectangles, ellipses, lines, and freehand paths, fill and stroke colors, stroke width, z-order controls, PNG export, and printing. Projects use the Gemini-specific `.gdraw` format. Gemini Acrobat opens and renders PDF pages with page navigation, zoom controls, and current-page printing. Gemini Distiller creates PDFs from text, RTF, HTML, CSV, Markdown, and common image files. Photoshop, Illustrator, Acrobat Professional, and Acrobat Distiller icons are assigned to those apps; the supplied InDesign, ImageReady, and GoLive icons remain available for future apps. The desktop GeminiOffice folder contains shortcuts to the six Gemini Office apps. Planned next: Gemini InDesign-inspired page layout, then other remaining creative-suite apps as capabilities allow.
+- **Nero Burning ROM**: (`claudexp/programs/nero.py`, `nero_icon`): Classic Nero 6 disc burning suite with compilation wizard (CD-ROM ISO, Audio CD, CD Copy, Video CD, DVD-ROM ISO), dual-pane layout (compilation tree and file browser), bottom capacity meter/ruler with 650 MB (74 min) yellow line and 700 MB red overburn markers, disc erasing, recorder/speed selection, and the iconic Burn Progress window with read/recorder buffer levels, real-time logging, and burning to ClaudeXP's virtual CD disc drive D:.
+- **Alcohol 120%**: (`claudexp/programs/alcohol.py`, `alcohol_icon`): CD/DVD burning and virtual drive emulation suite with signature blue task sidebar (Image Making Wizard, Image Burning Wizard, Copy Wizard, Image Finder, CD/DVD Manager, Erase Wizard), image file list, physical drive D: and virtual SCSI drive F:. Mounting disc images extracts/maps them into ClaudeXP's virtual drive F: (`vfs.Drive("F", ...)`), allowing full browsing from My Computer and Explorer. Image Finder scans system and external drives for `.iso`, `.cue`, `.bin`, `.nrg`, `.mdf`, `.mds`.
+- **WinRAR & WinZip**: (`claudexp/programs/winrar.py`, `claudexp/programs/winzip.py`): Authentic retro archive utilities. WinRAR features iconic stacked book toolbar (Add, Extract To, Test, View, Delete, Find, Wizard, Info, VirusScan), address navigation bar, archive inspection for RAR, ZIP, 7Z, TAR, CBZ, and CBR (via ClaudeXP's bundled 7-Zip engine and python zipfile), file extraction/execution, new archive creation, archive integrity testing, and the classic 40-day evaluation notice dialog. WinZip features classic yellow filing cabinet styling, table view with compression ratios, Zip archive creation/extraction, and the classic WinZip Tip of the Day startup dialog.
 - Shared helpers for simulated casts: `claudexp/programs/people.py`.
 - Speed: gemma4 is a *thinking* model (~30s of hidden reasoning per reply). MUCK and IRC pass
   think=False (0.5s replies) via AIM's llm.LLM.chat(think=..., priority=...); AIM itself still uses

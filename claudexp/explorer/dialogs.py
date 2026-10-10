@@ -56,6 +56,9 @@ def msgbox(desktop, title, text, icon="error", buttons=("OK",), on_button=None, 
     holder["win"] = win
     desktop.open_window(win)
     sound.play(SOUNDS[icon])
+    if icon in ("error", "warning"):
+        from .. import clippy
+        clippy.notify("error", title=title, text=text)
     return win
 
 

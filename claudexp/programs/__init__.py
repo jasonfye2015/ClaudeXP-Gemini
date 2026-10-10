@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication, QStyle
 from .. import network, sound
 from ..paths import pixmap
 from . import aim, claudeai, irc, muck, navigator
+from . import neko
 from .notepad import open_notepad
 from .placeholder import open_placeholder
 
@@ -165,7 +166,52 @@ PROGRAMS = [
     Program("calc", "Calculator", "", _lazy("calc", "calc_icon"), _lazy("calc", "open_calc"), group="Accessories"),
     Program("wordpad", "WordPad", "", _lazy("wordpad", "wordpad_icon"), _lazy("wordpad", "open_wordpad"),
             group="Accessories"),
+    Program("gemini_word", "Gemini Word", "Create and format documents",
+            _lazy("gemini_word", "gemini_word_icon"), _lazy("gemini_word", "open_gemini_word"),
+            group="Gemini Office"),
+    Program("gemini_excel", "Gemini Excel", "Create spreadsheets and workbooks",
+            _lazy("gemini_excel", "gemini_excel_icon"), _lazy("gemini_excel", "open_gemini_excel"),
+            group="Gemini Office"),
+    Program("gemini_powerpoint", "Gemini PowerPoint", "Create and present slide shows",
+            _lazy("gemini_powerpoint", "gemini_powerpoint_icon"),
+            _lazy("gemini_powerpoint", "open_gemini_powerpoint"), group="Gemini Office"),
+    Program("gemini_outlook", "Gemini Outlook", "Mail, calendar, tasks, and contacts",
+            _lazy("gemini_outlook", "gemini_outlook_icon"),
+            _lazy("gemini_outlook", "open_gemini_outlook"), group="Gemini Office"),
+    Program("gemini_access", "Gemini Access", "Create and manage databases",
+            _lazy("gemini_access", "gemini_access_icon"),
+            _lazy("gemini_access", "open_gemini_access"), group="Gemini Office"),
+    Program("gemini_publisher", "Gemini Publisher", "Design flyers and page-layout publications",
+            _lazy("gemini_publisher", "gemini_publisher_icon"),
+            _lazy("gemini_publisher", "open_gemini_publisher"), group="Gemini Office"),
+    Program("gemini_photo", "Gemini Photo", "Edit and retouch pictures",
+            _lazy("gemini_photo", "gemini_photo_icon"),
+            _lazy("gemini_photo", "open_gemini_photo"), group="GeminiAdobe"),
+    Program("gemini_draw", "Gemini Draw", "Create and edit vector illustrations",
+            _lazy("gemini_draw", "gemini_draw_icon"),
+            _lazy("gemini_draw", "open_gemini_draw"), group="GeminiAdobe"),
+    Program("gemini_acrobat", "Gemini Acrobat", "View and print PDF documents",
+            _lazy("gemini_acrobat", "gemini_acrobat_icon"),
+            _lazy("gemini_acrobat", "open_gemini_acrobat"), group="GeminiAdobe"),
+    Program("gemini_distiller", "Gemini Distiller", "Create PDF files from documents and images",
+            _lazy("gemini_distiller", "gemini_distiller_icon"),
+            _lazy("gemini_distiller", "open_gemini_distiller"), group="GeminiAdobe"),
     Program("paint", "Paint", "", _lazy("paint", "paint_icon"), _lazy("paint", "open_paint"), group="Accessories"),
+    Program("imagecreator", "Copilot Image Creator", "Generate images locally",
+            _lazy("imagegen", "imagegen_icon"), _lazy("imagegen", "open_imagegen"),
+            _lazy("imagegen", "shutdown"), group="Accessories"),
+    Program("copilotvoice", "Copilot Voice", "Talk with your local AI using speech",
+            _lazy("copilot_voice", "voice_icon"), _lazy("copilot_voice", "open_copilot_voice"),
+            _lazy("copilot_voice", "shutdown"), group="Accessories"),
+    Program("copilotai", "CopilotAI", "Chat with local models using text or voice",
+            _lazy("copilotai", "copilotai_icon"), _lazy("copilotai", "launch"),
+            _lazy("copilotai", "shutdown"), group="Accessories"),
+    Program("copilotwidgets", "Copilot Widgets", "Clock, calendar, weather, TV guide and more",
+            _lazy("copilot_widgets", "widgets_icon"), _lazy("copilot_widgets", "launch"),
+            _lazy("copilot_widgets", "shutdown"), group="Accessories"),
+    Program("pystudio", "Copilot Python Studio", "Write and run Python programs offline",
+            _lazy("pystudio", "studio_icon"), _lazy("pystudio", "launch"),
+            _lazy("pystudio", "shutdown"), group="Accessories"),
     Program("cmd", "Command Prompt", "", _lazy("cmd", "cmd_icon"), _lazy("cmd", "open_cmd"), group="Accessories"),
     Program("taskmgr", "Windows Task Manager", "", _lazy("taskmgr", "taskmgr_icon"), _lazy("taskmgr", "open_taskmgr"),
             listed=False),
@@ -175,6 +221,10 @@ PROGRAMS = [
             group="Accessories/System Tools"),
     Program("msinfo", "System Information", "", _lazy("msinfo", "msinfo_icon"), _lazy("msinfo", "open_msinfo"),
             group="Accessories/System Tools"),
+    Program("clippy", "Office Assistant", "Clippy, at your service", _lazy("..clippy.program", "clippy_icon"),
+            _lazy("..clippy.program", "summon"), _lazy("..clippy.program", "shutdown"), group="Accessories"),
+    Program("neko", "Copilot Neko", "The Classic Desktop Cat", neko.neko_icon, neko.launch, neko.shutdown,
+            group="Accessories"),
     Program("tour", "Tour Windows XP", "", _lazy("tour", "tour_icon"), _lazy("tour", "open_tour"), group="Accessories"),
     Program("search", "Search", "", _lazy("search", "search_icon"), _lazy("search", "open_search"), listed=False),
     Program("helpctr", "Help and Support", "", _lazy("helpctr", "help_icon"), _lazy("helpctr", "open_help"),
@@ -189,6 +239,14 @@ PROGRAMS = [
             _lazy("stylexp", "open_stylexp"), group="StyleXP"),
     Program("torrent", "ClaudeTorrent", "Download with BitTorrent", _lazy("torrent", "torrent_icon"),
             _lazy("torrent", "open_torrent"), _lazy("torrent", "shutdown"), group="ClaudeTorrent"),
+    Program("nero", "Nero Burning ROM", "CD and DVD burning software",
+            _lazy("utility_icons", "nero_icon"), _lazy("nero", "open_nero"), group="Nero"),
+    Program("alcohol120", "Alcohol 120%", "CD/DVD burning and emulation",
+            _lazy("utility_icons", "alcohol_icon"), _lazy("alcohol", "open_alcohol"), group="Alcohol 120%"),
+    Program("winrar", "WinRAR", "Archive manager",
+            _lazy("utility_icons", "winrar_icon"), _lazy("winrar", "open_winrar"), group="WinRAR"),
+    Program("winzip", "WinZip", "The Zip File Utility",
+            _lazy("utility_icons", "winzip_icon"), _lazy("winzip", "open_winzip"), group="WinZip"),
     Program("claudeamp", "ClaudeAmp", "It really whips the llama's ass", _lazy("amp", "amp_icon"),
             _lazy("amp", "open_amp"), _lazy("amp", "shutdown"), group="ClaudeAmp"),
     Program("tv", "ClaudeTV", "Watch TV", _lazy(".tv.tuner", "tv_icon"), _lazy(".tv.tuner", "open_tv"),
@@ -206,6 +264,10 @@ PROGRAMS = [
             _lazy(".folio.furcon", "open_furcon"), _lazy(".folio.furcon", "shutdown"), group=FURRY),
     Program("furdir", "The Fur Directory", "Who's who among the residents", _lazy("furdir", "dir_icon"),
             _lazy("furdir", "open_furdir"), group=FURRY),
+    Program("furlog", "Furry Log", "A diary of everything the language model does", _lazy("furrylog", "furlog_icon"),
+            _lazy("furrylog", "open_furlog"), group=FURRY),
+    Program("furlocator", "Furry Proximity Locator", "A world map with a pin where each Fur Directory resident lives",
+            _lazy("furlocator", "locator_icon"), _lazy("furlocator", "open_furlocator"), group=FURRY),
     Program("furvideo", "Furry Video Browser", "Browse the video archive", _lazy(".folio.videos", "video_icon"),
             _lazy(".folio.videos", "open_videos"), _lazy(".folio.videos", "shutdown"), group=FURRY),
     *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)
@@ -270,8 +332,19 @@ def get(key):
     return next(p for p in PROGRAMS if p.key == key)
 
 
+MFU_SLOTS = 7
+PINNED = ("navigator",)
+recent = ["aim", "irc", "muck", "claudeai", "connect", "notepad", "mycomputer"]
+
+
 def launch(desktop, key):
-    get(key).run(desktop)
+    program = get(key)
+    if program.listed and key not in PINNED:
+        if key in recent:
+            recent.remove(key)
+        recent.insert(0, key)
+        del recent[MFU_SLOTS:]
+    program.run(desktop)
 
 
 def shutdown_all():

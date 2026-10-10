@@ -36,6 +36,27 @@ def open_file(desktop, path):
     elif ext in (".rtf", ".wri"):
         from ..programs.wordpad import open_wordpad
         open_wordpad(desktop, path)
+    elif ext in (".gwb", ".csv"):
+        from ..programs.gemini_excel import open_gemini_excel
+        open_gemini_excel(desktop, path)
+    elif ext == ".gpp":
+        from ..programs.gemini_powerpoint import open_gemini_powerpoint
+        open_gemini_powerpoint(desktop, path)
+    elif ext == ".gdb":
+        from ..programs.gemini_access import open_gemini_access
+        open_gemini_access(desktop, path)
+    elif ext == ".gpub":
+        from ..programs.gemini_publisher import open_gemini_publisher
+        open_gemini_publisher(desktop, path)
+    elif ext == ".gdraw":
+        from ..programs.gemini_draw import open_gemini_draw
+        open_gemini_draw(desktop, path)
+    elif ext == ".gphoto":
+        from ..programs.gemini_photo import open_gemini_photo
+        open_gemini_photo(desktop, path)
+    elif ext == ".pdf":
+        from ..programs.gemini_acrobat import open_gemini_acrobat
+        open_gemini_acrobat(desktop, path)
     elif ext in TEXT:
         from ..programs.notepad import open_notepad
         open_notepad(desktop, path)
@@ -56,6 +77,15 @@ def open_file(desktop, path):
     elif ext in WEB:
         from ..programs import navigator
         navigator.launch(desktop, url=QUrl.fromLocalFile(str(path)).toString())
+    elif ext in (".rar", ".cbr", ".7z", ".cb7", ".tar", ".gz", ".tgz", ".bz2"):
+        from ..programs.winrar import open_winrar
+        open_winrar(desktop, path)
+    elif ext in (".zip", ".cbz"):
+        from ..programs.winrar import open_winrar
+        open_winrar(desktop, path)
+    elif ext in (".iso", ".bin", ".cue", ".nrg", ".mdf", ".mds", ".ccd", ".img"):
+        from ..programs.alcohol import open_alcohol
+        open_alcohol(desktop)
     else:
         msgbox(desktop, "Windows", f"Windows cannot open this file:\n\nFile: {path.name}\n\n"
                                    "To open this file, Windows needs to know what program created it.", "info")

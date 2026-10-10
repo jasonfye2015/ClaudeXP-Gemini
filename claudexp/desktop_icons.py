@@ -26,14 +26,19 @@ MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family
 SORTS = ("Name", "Size", "Type", "Modified")
 LAYOUT = 8                  # bump when builtins() changes order
 # Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
-PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon", "furvideo", "furdir"],
+PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon", "furvideo", "furdir", "furlog", "furlocator"],
                    "Emulation": ["nes", "snes", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
                    # the desktop Games folder mirrors Start > Programs > Games
-                   "Games": [p.key for p in programs.PROGRAMS if p.group == "Games"]}
+                   "Games": [p.key for p in programs.PROGRAMS if p.group == "Games"],
+                   "GeminiOffice": [p.key for p in programs.PROGRAMS if p.group == "Gemini Office"],
+                   "GeminiAdobe": [p.key for p in programs.PROGRAMS if p.group == "GeminiAdobe"],
+                   "Disc Tools": ["nero", "alcohol120"],
+                   "Archive Tools": ["winrar", "winzip"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Furry Programs": 9, "Emulation": 3, "Games": 10}
+FOLDERS_SINCE = {"Furry Programs": 18, "Emulation": 3, "Games": 10,
+                 "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 10
+FOLDERS = 18
 
 
 def std(which):
@@ -56,9 +61,14 @@ def builtins():
         ("prog:rpg", "ClaudeRPG", lambda: programs.get("rpg").icon()),
         ("prog:navigator", "Netscape Navigator", lambda: programs.get("navigator").icon()),
         ("prog:claudeai", "ClaudeAI", lambda: programs.get("claudeai").icon()),
+        ("prog:copilotai", "CopilotAI", lambda: programs.get("copilotai").icon()),
+        ("prog:imagecreator", "Copilot Image Creator", lambda: programs.get("imagecreator").icon()),
+        ("prog:neko", "Copilot Neko", lambda: programs.get("neko").icon()),
+        ("prog:copilotwidgets", "Copilot Widgets", lambda: programs.get("copilotwidgets").icon()),
         ("prog:aim", "ClaudeAIM", lambda: programs.get("aim").icon()),
         ("prog:irc", "ClaudeIRC", lambda: programs.get("irc").icon()),
         ("prog:muck", "ClaudeMUCK", lambda: programs.get("muck").icon()),
+        ("prog:pystudio", "Copilot Python Studio", lambda: programs.get("pystudio").icon()),
     ]
 
 
@@ -158,13 +168,15 @@ class IconManager(QObject):
 
     # ---- the Desktop folder -------------------------------------------------------------
     def _make_program_folders(self, names):
-        """Desktop folders holding shortcuts to the furry programs and the emulators."""
+        """Desktop folders holding shortcuts to grouped programs."""
         from .explorer import shortcuts, vfs
         from . import programs
         vfs.setup_c()
         desk = vfs.user_home() / "Desktop"
         for name in names:
-            keys = PROGRAM_FOLDERS[name]
+            keys = PROGRAM_FOLDERS.get(name)
+            if keys is None:
+                continue
             folder = desk / name
             folder.mkdir(parents=True, exist_ok=True)
             for key in keys:

@@ -514,6 +514,7 @@ class Canvas(QWidget):
     def start_text(self, rect):
         self.commit_text()
         edit = QPlainTextEdit(self)
+        edit.setProperty("nospell", True)
         edit.setFrameStyle(0)
         edit.setFont(self.paint.text_font())
         edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -786,7 +787,9 @@ class Canvas(QWidget):
         p = QPainter(self)
         z = self.zoom
         w, h = self.image.width() * z, self.image.height() * z
-        p.drawImage(QRect(0, 0, w, h), self.image)
+        display_image = getattr(self.paint, "display_image", None)
+        image = display_image() if callable(display_image) else self.image
+        p.drawImage(QRect(0, 0, w, h), image)
         p.save()
         p.scale(z, z)
         d = self.drag
@@ -988,11 +991,13 @@ class ColorBox(QWidget):
 # ---- the window ------------------------------------------------------------------------------------------------------------------
 
 class Paint(QWidget):
-    def __init__(self, desktop, path=None):
+    def __init__(self, desktop, path=None, app_name="Paint", app_icon=None):
         super().__init__()
         self.desktop = desktop
         self.frame = None
         self.path = None
+        self.app_name = app_name
+        self.app_icon = app_icon or paint_icon()
         self.modified = False
         self.closing = False
         self.tool, self.previous_tool = "pencil", "pencil"
@@ -1139,9 +1144,10 @@ class Paint(QWidget):
         c = m.addMenu("&Colors")
         c.addAction("&Edit Colors...", lambda: self.edit_colors(None))
         h = m.addMenu("&Help")
-        h.addAction("&Help Topics", lambda: self._message("Paint", HELP_TEXT))
+        h.addAction("&Help Topics", lambda: self._message(self.app_name, HELP_TEXT))
         h.addSeparator()
-        h.addAction("&About Paint", lambda: self._message("About Paint", "Microsoft Paint\nVersion 5.1 (Build 2600)"))
+        h.addAction(f"&About {self.app_name}",
+                    lambda: self._message(f"About {self.app_name}", f"{self.app_name}\nVersion 1.0"))
 
     def _font_bar(self):
         bar = QWidget()
@@ -1263,7 +1269,7 @@ class Paint(QWidget):
 
     def update_title(self):
         if self.frame is not None:
-            self.frame.set_title(f"{self.name()} - Paint")
+            self.frame.set_title(f"{self.name()} - {self.app_name}")
 
     def new(self):
         img = QImage(480, 360, QImage.Format_RGB32)
@@ -1443,6 +1449,7 @@ class Paint(QWidget):
 
     def _message(self, title, text, icon="info", buttons=("OK",), on_button=None):
         from ..explorer.dialogs import msgbox
+        title = title.replace("Paint", self.app_name)
         return msgbox(self.desktop, title, text, icon, buttons, on_button)
 
 

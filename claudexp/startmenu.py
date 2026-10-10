@@ -50,8 +50,7 @@ class StartMenu(QWidget):
         self.setMouseTracking(True)
         from .user import account
         account().changed.connect(self.update)
-        self.pinned = ["navigator"]   # XP's pinned 'Internet' spot
-        self.recent = ["aim", "irc", "muck", "claudeai", "connect", "notepad", "mycomputer"]
+        self.pinned = list(programs.PINNED)   # XP's pinned 'Internet' spot
         self.hover = None
         self.hide()
 
@@ -62,7 +61,7 @@ class StartMenu(QWidget):
         for key in self.pinned:
             items.append((("prog", key), QRect(4, PINNED_TOP, 182, 42)))
         y = MFU_TOP
-        for key in self.recent:
+        for key in programs.recent:
             items.append((("prog", key), QRect(4, y, 182, 38)))
             y += 38
         items.append((("all", None), ALL_PROGRAMS))

@@ -199,6 +199,11 @@ class ClaudeXP(QMainWindow):
         QTimer.singleShot(1200, lambda: llm_server.at_logon(self.desktop))
         from .programs import torrent
         QTimer.singleShot(2600, lambda: torrent.start_at_logon(self.desktop))
+        from .programs import neko
+        neko.start_at_logon(self.desktop)
+        from .programs import copilot_widgets
+        QTimer.singleShot(1800, lambda: copilot_widgets.start_at_logon(self.desktop))
+        QTimer.singleShot(6000, lambda: self.desktop.clippy.start() if self.desktop.isVisible() else None)
         if getattr(self, "_offer_tour", False):
             self._offer_tour = False
             from .programs.tour import offer_tour

@@ -14,7 +14,7 @@ from . import ms
 from .gui import draw_cover
 
 TOP, BOTTOM = 77 / 766, 671 / 766        # the dark bands of the background, as fractions of its height
-PAGES = ["welcome", "register", "fursona", "users", "online", "passwords", "thanks"]
+PAGES = ["welcome", "register", "fursona", "users", "online", "passwords", "speech", "thanks"]
 UNIQUE = "__unique__"
 
 
@@ -208,6 +208,41 @@ class Oobe(QWidget):
         pv.addWidget(note)
         pv.addStretch()
         form.addWidget(self.passwords)
+        # speech and voice: licences, set up, test
+        from PySide6.QtWidgets import QCheckBox, QProgressBar, QPushButton, QTextBrowser
+        self.speech = QWidget()
+        sp = QVBoxLayout(self.speech)
+        sp.setContentsMargins(0, 0, 0, 0)
+        self.speech_terms = QTextBrowser()
+        self.speech_terms.setOpenExternalLinks(True)
+        self.speech_terms.setStyleSheet("QTextBrowser { background: white; color: black; font-family: Tahoma; "
+                                        "font-size: 12px; border: 1px solid #7F9DB9; }")
+        sp.addWidget(self.speech_terms, 1)
+        self.speech_agree = QCheckBox("I reviewed these licenses and agree to follow their terms.")
+        sp.addWidget(self.speech_agree)
+        buttons = QHBoxLayout()
+        self.speech_run = QPushButton("Set up and test speech")
+        self.speech_run.setStyleSheet("QPushButton { font-family: Tahoma; font-size: 12px; padding: 4px 12px; }")
+        buttons.addWidget(self.speech_run)
+        buttons.addStretch()
+        sp.addLayout(buttons)
+        self.speech_bar = QProgressBar()
+        self.speech_bar.setRange(0, 0)
+        self.speech_bar.setFixedHeight(10)
+        self.speech_bar.setTextVisible(False)
+        self.speech_bar.hide()
+        sp.addWidget(self.speech_bar)
+        self.speech_status = QLabel("")
+        self.speech_status.setWordWrap(True)
+        sp.addWidget(self.speech_status)
+        self.speech_skip = QCheckBox("Skip this step (speech can be set up later in Copilot Voice)")
+        sp.addWidget(self.speech_skip)
+        self.speech_state = "idle"          # idle, running, passed
+        self.speech_task = None
+        self.speech_agree.toggled.connect(self._speech_changed)
+        self.speech_skip.toggled.connect(self._speech_changed)
+        self.speech_run.clicked.connect(self._speech_start)
+        form.addWidget(self.speech)
         # white text for radio buttons and checkboxes, without restyling (and hiding) their check marks
         from PySide6.QtWidgets import QCheckBox
         for box in self.form.findChildren(QRadioButton) + self.form.findChildren(QCheckBox):
@@ -294,7 +329,8 @@ class Oobe(QWidget):
         result = {"name": name, "picture": f"fursona:{pr.id}" if pr else self.pictures.selected(),
                   "handle": pr.handle if pr else (self.online.value() or name),
                   "linked": True if pr else self.online.linked(), "windows_password": self.win_pw.value(),
-                  "online_password": self.online_pw.value(), "fursona": pr.id if pr else None}
+                  "online_password": self.online_pw.value(), "fursona": pr.id if pr else None,
+                  "speech": self.speech_state == "passed"}
         player = self.player
         self.player = None
         if player is not None:
@@ -329,7 +365,10 @@ class Oobe(QWidget):
         self.users.setVisible(page == "users")
         self.online.setVisible(page == "online")
         self.passwords.setVisible(page == "passwords")
-        self.form.setVisible(page in ("register", "fursona", "users", "online", "passwords"))
+        self.speech.setVisible(page == "speech")
+        self.form.setVisible(page in ("register", "fursona", "users", "online", "passwords", "speech"))
+        if page == "speech" and self.speech_state == "idle":
+            self._speech_show()
         if page == "register":
             self.form.setGeometry(int(w * 0.12), int(h * 0.42), int(w * 0.6), int(h * 0.3))
         else:
@@ -351,9 +390,53 @@ class Oobe(QWidget):
     def _update_buttons(self):
         page = PAGES[self.page]
         ok = {"users": bool(self.name.text().strip()), "online": self.online.valid(),
-              "passwords": self.win_pw.valid() and self.online_pw.valid()}.get(page, True)
+              "passwords": self.win_pw.valid() and self.online_pw.valid(),
+              "speech": self.speech_state == "passed" or (self.speech_skip.isChecked()
+                                                          and self.speech_state != "running")}.get(page, True)
         self.next.setEnabled(ok)
         self.next.update()
+
+    # ---- speech and voice ---------------------------------------------------------------------------------
+    def _speech_show(self):
+        from . import speechcheck
+        self.speech_terms.setHtml(speechcheck.license_html())
+        if speechcheck.accepted():
+            self.speech_agree.setChecked(True)
+        self._speech_changed()
+
+    def _speech_changed(self, *_):
+        running = self.speech_state == "running"
+        self.speech_run.setEnabled(self.speech_agree.isChecked() and not running and self.speech_state != "passed")
+        self.speech_skip.setEnabled(not running and self.speech_state != "passed")
+        self._update_buttons()
+
+    def _speech_start(self):
+        from . import speechcheck
+        speechcheck.set_accepted(True)
+        self.speech_state = "running"
+        self.speech_bar.show()
+        self.speech_status.setText("Starting...")
+        task = speechcheck.SpeechSetup()
+        self.speech_task = task
+        task.message.connect(self.speech_status.setText)
+        task.passed.connect(self._speech_passed)
+        task.failed.connect(self._speech_failed)
+        task.finished.connect(self._speech_finished)
+        self._speech_changed()
+        task.start()
+
+    def _speech_passed(self, heard):
+        self.speech_state = "passed"
+        self.speech_status.setText(f"Speech works. Windows said a test sentence and heard it back: \"{heard}\"")
+
+    def _speech_failed(self, error):
+        self.speech_state = "idle"
+        self.speech_status.setText(f"Speech setup did not finish: {error}\nYou can try again, or skip this step.")
+
+    def _speech_finished(self):
+        self.speech_bar.hide()
+        self.speech_task = None
+        self._speech_changed()
 
     def resizeEvent(self, event):
         self._layout()
@@ -382,6 +465,9 @@ class Oobe(QWidget):
         "passwords": ("Do you want to use passwords?",
                       "Passwords are optional. A Windows password is asked for on the Welcome screen; an online "
                       "password is filled in for you when you sign on."),
+        "speech": ("Speech and voice",
+                   "Windows can talk and listen using speech models that run on this computer. Review their "
+                   "licenses, then Windows will set them up and test them before moving on."),
         "thanks": ("Thank you!",
                    "Congratulations, your computer is ready to use Windows XP.\n\nTo begin, click Finish."),
     }

@@ -743,7 +743,7 @@ class FurDirectory(QWidget):
 _open = {}
 
 
-def open_furdir(desktop, show_me=False):
+def open_furdir(desktop, show_me=False, rid=None):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = FurDirectory(desktop)
@@ -751,6 +751,8 @@ def open_furdir(desktop, show_me=False):
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)
+    if rid:                                                      # the Furry Proximity Locator: open this card
+        win.content._link(QUrl(f"card:{rid}"))
     if show_me:                                                  # User Accounts' 'View my fursona's card'
         body = win.content
         body.filter.setCurrentIndex(0)

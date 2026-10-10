@@ -2,3 +2,6 @@
 # The language model needs no Python package: ClaudeXP runs llama.cpp itself (see Local Storage/README.txt).
 PySide6==6.11.2
 tzdata==2026.5
+pyspellchecker==0.8.3
+jedi==0.20.0
+pyflakes==4.0.3

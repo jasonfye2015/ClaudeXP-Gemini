@@ -6,7 +6,7 @@ import sys
 from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtWidgets import QApplication
 
-from claudexp import setup, sound, style
+from claudexp import setup, sound, spellcheck, style
 from claudexp.app import ClaudeXP
 
 
@@ -15,6 +15,7 @@ def main():
     qapp = QApplication(sys.argv)
     qapp.setApplicationName("ClaudeXP")
     style.apply(qapp)
+    spellcheck.install(qapp)
     sound.preload()
     app = ClaudeXP()
     app.start()
