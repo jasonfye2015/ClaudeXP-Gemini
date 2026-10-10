@@ -567,6 +567,7 @@ class PythonStudio(QWidget):
         m = self.menubar.addMenu("&Tools")
         self._action(m, "Game &Assets, Sprites and Sound Maker...", self.open_assets)
         self._action(m, "Sprite Sheets, &Tile Maps and Pixel Art...", self.open_gametools)
+        self._action(m, "Audio and &Video Converter (ffmpeg)...", self.open_media)
         self._action(m, "Learn Python and pygame (&Lessons)...", self.open_lessons)
         self._action(m, "Python && pygame &Manuals...", self.open_docs, "F1")
         m.addSeparator()
@@ -765,6 +766,16 @@ class PythonStudio(QWidget):
         ed = self._new_editor(None, code)
         ed.title = "lesson_" + re.sub(r"\W+", "_", title.split(".", 1)[-1].strip().lower()).strip("_") + ".py"
         self._add_tab(ed)
+
+    def open_media(self):
+        from . import mediaview
+
+        def insert(text):
+            ed = self.editor()
+            if ed is not None:
+                ed.textCursor().insertText(text)
+                ed.setFocus() "Audio and Video Converter", lambda: mediaview.MediaConverter(
+            insert, self._ask_from_tool), (640, 420))
 
     def open_snippets(self):
         from . import snippets

@@ -552,6 +552,10 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   current file's folder, stored in `.checkpoints\`. The window lists them, shows what changed since (changed / deleted /
   new) with a diff, and restores the whole project or selected files. Restoring first saves an automatic checkpoint
   (last 8 kept) so a rollback can itself be undone, and open tabs reload.
+  Audio/video converter (`media.py` + `mediaview.py`; Tools > Audio and Video Converter): bundled ffmpeg 9.0.2
+  (`Local Storage\Python Studio\ffmpeg\ffmpeg.exe`, gitignored, ~100 MB from gyan.dev "essentials"). Presets: WAV, OGG,
+  MP3, shrink (mono OGG), trim, fade, even out volume, repeat, audio from video, video to PNG frames, video to GIF.
+  Output goes to Assets\My Sounds / My Sprites, never overwrites, and "Insert code to use it" adds the pygame line.
   Lessons (`lessons.py` + `tutorialview.py`; Tools > Learn Python and pygame): 10 offline lessons (print, variables, if,
   loops, lists/dicts, functions, classes, a pygame window, keyboard movement, collisions). "Open lesson in editor" gives
   a starter file; "Check my work" runs the learner's code in the runtime against hidden tests (pygame lessons check the
