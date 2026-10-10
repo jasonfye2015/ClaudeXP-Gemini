@@ -537,6 +537,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   map of the other .py files in the file's folder (classes, methods, function signatures, constants), a summary of the
   asset files, and the full text of up to 4 files that the current file imports or that match the question. Skips
   .history/Assets/build folders and huge files; the system prompt tells the model to reuse existing names.
+  FPS overlay + profiler (`prof_runner.py`, `profview.py`; Run > Run with FPS Overlay Ctrl+F6, Run with Profiler
+  Ctrl+Shift+F6): the runner patches pygame.display.flip/update to time frames, optionally draws a live FPS/ms/graph
+  readout on the game window, and optionally runs cProfile. It rewrites a JSON report every 3 s so Stop still gives one.
+  The Profiler Report window shows a verdict, avg FPS / 1% low / worst frame, a frame-time graph, and the slowest
+  functions ("Only my code" filter, double-click jumps to the line, "Ask the AI how to speed this up").
 - **Spell check** (`claudexp/spellcheck.py`, installed in `main.py`): one app-wide event filter that gives every editable
   QPlainTextEdit / QTextEdit a red wavy underline and a right-click menu (suggestions, Add to Dictionary, Ignore All,
   "Check Spelling as I Type"). Offline English list from pyspellchecker; custom words in `data/spell_custom.txt`, the

@@ -539,6 +539,8 @@ class PythonStudio(QWidget):
         m = self.menubar.addMenu("&Run")
         self._action(m, "&Run Program", self.run_current, "F5")
         self._action(m, "Run and &Auto-Fix Errors", lambda: self.assistant.autofix(), "Ctrl+F5")
+        self._action(m, "Run with &FPS Overlay", lambda: self.run_profiled("overlay"), "Ctrl+F6")
+        self._action(m, "Run with Pro&filer (find slow code)", lambda: self.run_profiled("both"), "Ctrl+Shift+F6")
         self._action(m, "&Stop", self.stop, "Shift+F5")
         self._action(m, "&Check Syntax", self.check_syntax, "F7")
         self._action(m, "&Build Executable (.exe)...", self.build_exe, "F9")
@@ -1069,6 +1071,53 @@ class PythonStudio(QWidget):
         backups.snapshot(ed.path, ed.toPlainText(), "run")
         self.console.write(f"\n>>> Running {path.name}\n", "#316AC5", bold=True)
         self._start(["-u", str(path)], path.parent)
+
+    def run_profiled(self, mode):
+        """Run the open program through prof_runner.py: an FPS readout on the game window ("overlay"), cProfile
+        ("profile") or both. The report window opens when the program ends or is stopped."""
+        ed = self.editor()
+        if ed is None or self._busy() or not self._runtime_ok():
+            return
+        if not ed.path and not self.save_as(ed):
+            return
+        self.save_all()
+        if ed.document().isModified() or not Path(ed.path).exists():
+            self.save(ed)
+        if any(p[1].startswith("Syntax error") for p in ed.problems):
+            self.bottom.setCurrentIndex(1)
+            self.status.setText("Fix the syntax error first.")
+            return
+        path = Path(ed.path)
+        report = Path(tempfile.mkdtemp(prefix="pystudio-prof-")) / "report.json"
+        runner = str(Path(__file__).with_name("prof_runner.py"))
+        label = "FPS overlay" if mode == "overlay" else "profiler"
+        self.console.write(f"\n>>> Running {path.name} with the {label} (close the game or press Stop for the report)\n",
+                           "#316AC5", bold=True)
+        self._start(["-u", runner, mode, str(report), str(path)], path.parent)
+        self.on_run_end = lambda _code, _stopped, _out: self.show_profile(report)
+
+    def show_profile(self, report_path):
+        from . import profview
+        report = profview.load(str(report_path))
+        shutil.rmtree(Path(report_path).parent, ignore_errors=True)
+        if report is None:
+            self.status.setText("No profiler report was produced.")
+            return None
+        view = self._tool_window("profile", "Profiler Report", lambda: profview.ProfileReport(
+            self._ask_from_tool, self.open_at_line), (760, 560))
+        view.show_report(report)
+        return report
+
+    def _ask_from_tool(self, text):
+        self.show_helper()
+        self.assistant.ask(text)
+
+    def open_at_line(self, path, line):
+        self.open_path(path)
+        ed = self.editor()
+        if ed is not None:
+            ed.goto_line(line)
+            ed.setFocus()
 
     def run_repl(self):
         if self._busy() or not self._runtime_ok():
