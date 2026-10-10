@@ -45,6 +45,6 @@ def versions(path):
         except ValueError:
             when = parts[0]
         reason = {"ai": "before an AI change", "run": "when run", "save": "when saved", "debug": "when debugged",
-                  "restore": "before a restore"}.get(parts[1] if len(parts) > 2 else "", "")
+                  "restore": "before a restore", "tidy": "before tidying"}.get(parts[1] if len(parts) > 2 else "", "")
         out.append((f, f"{when}   {reason}".strip()))
     return out

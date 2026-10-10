@@ -527,6 +527,10 @@ class PythonStudio(QWidget):
         self._action(m, "Co&mment / Uncomment", lambda: self._ed("toggle_comment"), "Ctrl+/")
         self._action(m, "&Indent", lambda: self._ed("indent_selection", True))
         self._action(m, "&Dedent", lambda: self._ed("indent_selection", False))
+        m.addSeparator()
+        self._action(m, "&Format Code (tidy spacing and layout)", lambda: self.tidy("format"), "Ctrl+Shift+F")
+        self._action(m, "Tidy &Imports (sort, remove unused)", lambda: self.tidy("imports"), "Ctrl+Shift+I")
+        self._action(m, "Re&name Symbol...", self.rename_symbol, "F2")
         m = self.menubar.addMenu("&Snippets")
         self._action(m, "Snippet &Library (search and preview)...", self.open_snippets, "Ctrl+J")
         m.addSeparator()
@@ -1240,6 +1244,81 @@ class PythonStudio(QWidget):
             f"Write pytest tests for the functions and classes in this file. Put them in one file named "
             f"test_{stem}.py that starts with `from {stem} import ...`. Cover normal use and edge cases, keep each "
             f"test small, and do not open windows or need a display (no pygame.display or input).", force_file=True)
+
+    def _apply_text(self, ed, title, new, prompt, reason):
+        """Show a diff of the whole-file change and apply it as one undo step if accepted."""
+        from .diffview import DiffDialog
+        old = ed.toPlainText()
+        if new == old:
+            self.status.setText("Nothing to change.")
+            return False
+        if not DiffDialog.ask(self, title, old, new, lint(new), "Apply", prompt):
+            return False
+        if ed.path:
+            backups.snapshot(ed.path, old, reason)
+        pos = ed.textCursor().position()
+        cur = QTextCursor(ed.document())
+        cur.beginEditBlock()
+        cur.select(QTextCursor.Document)
+        cur.insertText(new)
+        cur.endEditBlock()
+        cur = ed.textCursor()
+        cur.setPosition(min(pos, len(new)))
+        ed.setTextCursor(cur)
+        return True
+
+    def tidy(self, kind):
+        from . import tidy
+        ed = self.editor()
+        if ed is None:
+            return
+        if not self._runtime_ok():
+            return
+        py = python_exe()
+        try:
+            if kind == "format":
+                new, title = tidy.format_code(py, ed.toPlainText()), "Format Code"
+                prompt = "Only spacing and layout change. Nothing about what the program does:"
+            else:
+                new, title = tidy.tidy_imports(py, ed.toPlainText()), "Tidy Imports"
+                prompt = "Imports are sorted and ones the program never uses are removed:"
+        except tidy.TidyError as e:
+            self.bottom.setCurrentIndex(1)
+            self.status.setText(str(e))
+            return
+        if self._apply_text(ed, title, new, prompt, "tidy"):
+            self.status.setText(f"{title} done. Ctrl+Z undoes it.")
+
+    def rename_symbol(self, new_name=None):
+        """Rename the variable, function, class or parameter under the cursor everywhere in this file."""
+        from . import tidy
+        ed = self.editor()
+        if ed is None:
+            return False
+        text = ed.toPlainText()
+        old = ed.textCursor().selectedText().strip() or tidy.identifier_at(text, ed.textCursor().position())
+        if not old or not tidy.valid_name(old):
+            self.status.setText("Put the cursor on a name (a variable, function or class) first.")
+            return False
+        if new_name is None:
+            new_name, ok = QInputDialog.getText(self, "Rename Symbol",
+                                                f"Rename \"{old}\" ({tidy.count_uses(text, old)} uses in this file) to:",
+                                                text=old)
+            new_name = new_name.strip()
+            if not ok or not new_name or new_name == old:
+                return False
+        try:
+            new, count = tidy.rename(text, old, new_name)
+        except tidy.TidyError as e:
+            self.status.setText(str(e))
+            return False
+        prompt = (f"{count} place(s) change. Names inside quotes, comments and obj.attribute are left alone.")
+        if tidy.clashes(text, new_name):
+            prompt = f"Careful: \"{new_name}\" is already used in this file. " + prompt
+        if self._apply_text(ed, f"Rename {old} to {new_name}", new, prompt, "tidy"):
+            self.status.setText(f"Renamed {old} to {new_name} ({count} places). Ctrl+Z undoes it.")
+            return True
+        return False
 
     def run_repl(self):
         if self._busy() or not self._runtime_ok():

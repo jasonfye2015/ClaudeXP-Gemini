@@ -552,6 +552,12 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   current file's folder, stored in `.checkpoints\`. The window lists them, shows what changed since (changed / deleted /
   new) with a diff, and restores the whole project or selected files. Restoring first saves an automatic checkpoint
   (last 8 kept) so a rollback can itself be undone, and open tabs reload.
+  Format / tidy / rename (`tidy.py`; Edit > Format Code Ctrl+Shift+F, Tidy Imports Ctrl+Shift+I, Rename Symbol F2): uses
+  the offline `ruff` (wheel kept in Python Studio\wheels, installed in the runtime) for Black-style formatting and for
+  sorting + removing unused imports (the only lint fixes applied, so behaviour never changes). Rename uses Python's
+  tokenizer: renames a variable/function/class/parameter everywhere in the file but leaves strings, comments and
+  obj.attribute alone. Every change shows the diff first, is one Ctrl+Z, and takes a "before tidying" backup. Files
+  with a syntax error get a clear "fix line N first" message.
 - **Spell check** (`claudexp/spellcheck.py`, installed in `main.py`): one app-wide event filter that gives every editable
   QPlainTextEdit / QTextEdit a red wavy underline and a right-click menu (suggestions, Add to Dictionary, Ignore All,
   "Check Spelling as I Type"). Offline English list from pyspellchecker; custom words in `data/spell_custom.txt`, the
