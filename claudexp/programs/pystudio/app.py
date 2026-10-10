@@ -282,6 +282,7 @@ class PythonStudio(QWidget):
         self.frame = None
         self.closing = False
         self.process = None
+        self.on_run_end = None                 # called with (exit code, stopped, output) when a run ends
         self.started = 0.0
         self._work = None
         self._done = None
@@ -340,6 +341,10 @@ class PythonStudio(QWidget):
         fix_button = QPushButton("\u2728 Ask AI Helper to fix this")
         fix_button.clicked.connect(self.fix_with_helper)
         fix_row.addWidget(fix_button)
+        auto_button = QPushButton("\U0001F501 Auto-fix and re-run")
+        auto_button.setToolTip("The AI Helper fixes it, you approve each change, and it runs again (up to 3 tries)")
+        auto_button.clicked.connect(lambda: self.assistant.autofix(first_output=self._last_run_output()))
+        fix_row.addWidget(auto_button)
         fix_row.addStretch()
         self.fix_bar.setStyleSheet("QWidget { background: #FFF4C8; }")
         self.fix_bar.hide()
@@ -522,6 +527,7 @@ class PythonStudio(QWidget):
         self._action(m, "&Dedent", lambda: self._ed("indent_selection", False))
         m = self.menubar.addMenu("&Run")
         self._action(m, "&Run Program", self.run_current, "F5")
+        self._action(m, "Run and &Auto-Fix Errors", lambda: self.assistant.autofix(), "Ctrl+F5")
         self._action(m, "&Stop", self.stop, "Shift+F5")
         self._action(m, "&Check Syntax", self.check_syntax, "F7")
         self._action(m, "&Build Executable (.exe)...", self.build_exe, "F9")
@@ -1107,6 +1113,9 @@ class PythonStudio(QWidget):
         if proc is self.process and err == QProcess.FailedToStart:
             self.console.write("The program could not be started.\n", "#C00000")
             self._cleanup(proc)
+            hook, self.on_run_end = self.on_run_end, None
+            if hook is not None:
+                hook(-1, True, "")
 
     def _finished(self, proc, code, status):
         if proc is not self.process:
@@ -1123,6 +1132,9 @@ class PythonStudio(QWidget):
             self.fix_bar.show()
         if code == 0 and not stopped and done is not None:
             done()
+        hook, self.on_run_end = self.on_run_end, None
+        if hook is not None:
+            hook(code, stopped, self._last_run_output())
 
     def _cleanup(self, proc):
         self._done = None

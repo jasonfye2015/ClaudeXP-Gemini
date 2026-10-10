@@ -21,6 +21,7 @@ QUICK = [("Explain", "Explain what this code does, step by step, in plain langua
 FILE_LIMIT = 12000
 CONSOLE_LIMIT = 3000
 HISTORY_TURNS = 8
+AUTOFIX_TRIES = 3
 CODE = re.compile(r"```[\w+-]*[ \t]*\r?\n(.*?)```", re.S)
 
 
@@ -97,7 +98,10 @@ class AssistantPanel(QWidget):
         self.history = []                      # [(role, text)] as typed, without the attached file
         self.worker = None
         self.reply = ""
-        self.setObjectName("aihelper")
+        self.fixing = False                    # an auto-fix loop is in progress
+        self.fix_path = None
+        self.fix_tries = 0
+        self._on_answer = None
 
         root = QVBoxLayout(self)
         root.setContentsMargins(4, 4, 4, 4)
@@ -127,6 +131,12 @@ class AssistantPanel(QWidget):
             b.setText(label)
             b.clicked.connect(lambda _c=False, p=prompt: self.ask(p, force_file=True))
             quick.addWidget(b)
+        self.auto_button = QToolButton()
+        self.auto_button.setText("Run + auto-fix")
+        self.auto_button.setToolTip("Run the program; if it crashes, fix it, show you the change, and run it again "
+                                    f"(up to {AUTOFIX_TRIES} tries)  Ctrl+F5")
+        self.auto_button.clicked.connect(lambda _c=False: self.autofix())
+        quick.addWidget(self.auto_button)
         quick.addStretch()
         root.addLayout(quick)
 
@@ -328,11 +338,13 @@ class AssistantPanel(QWidget):
 
     def _done(self):
         worker, self.worker = self.worker, None
+        answered = False
         if worker is not None:
             if self.reply.strip():
                 self.history.append(("assistant", self.reply))
                 speed = f"  ({worker.tps:.0f} tokens/s)" if worker.tps else ""
                 self.note.setText(("Stopped." if worker.cancelled else "Done.") + speed)
+                answered = not worker.cancelled
             elif not self.note.text().startswith("The AI Helper"):
                 self.history.pop()                   # nothing came back: drop the question so it can be asked again
                 self.note.setText("No answer came back.")
@@ -342,6 +354,137 @@ class AssistantPanel(QWidget):
         self.reply = ""
         self._render()
         self._update_buttons()
+        hook, self._on_answer = self._on_answer, None
+        if self.fixing:
+            if answered and hook is not None:
+                hook()
+            else:
+                self._autofix_stop("Auto-fix stopped: " + self.note.text())
+
+    # ---- run, fix, approve, run again -------------------------------------------------------------
+    def autofix(self, first_output=None):
+        """Run the open program; when it crashes, ask the model for a corrected file, show the diff for approval,
+        apply it and run again, up to AUTOFIX_TRIES times. first_output: a crash that just happened (skip the run)."""
+        if self.fixing:
+            self._autofix_stop("Auto-fix stopped.")
+            return
+        if self.worker is not None or self.studio.process is not None:
+            self.note.setText("Wait for the current job to finish (or stop it) first.")
+            return
+        ed = self.studio.editor()
+        if ed is None:
+            return
+        if not self.models.currentData():
+            QMessageBox.information(self, "AI Helper", self.note.text() or "No language model is available.")
+            return
+        if not ed.path and not self.studio.save_as(ed):
+            return
+        self.fixing, self.fix_path, self.fix_tries = True, ed.path, 0
+        self.auto_button.setText("Stop auto-fix")
+        self.studio.show_helper()
+        if first_output is not None:
+            self.studio.fix_bar.hide()
+            self._autofix_ran(1, False, first_output)
+        else:
+            self._autofix_run()
+
+    def _autofix_stop(self, message):
+        self.fixing = False
+        self._on_answer = None
+        self.studio.on_run_end = None
+        self.auto_button.setText("Run + auto-fix")
+        self.note.setText(message)
+        self.studio.status.setText(message[:80])
+
+    def _fix_editor(self):
+        ed = self.studio.editor()
+        if ed is None or ed.path != self.fix_path:
+            self._autofix_stop("Auto-fix stopped: the file being fixed is no longer the open tab.")
+            return None
+        return ed
+
+    def _autofix_run(self):
+        ed = self._fix_editor()
+        if ed is None:
+            return
+        self.note.setText(f"Auto-fix: running the program (fix {self.fix_tries} of {AUTOFIX_TRIES} used)...")
+        studio = self.studio
+        studio.on_run_end = self._autofix_ran
+        studio.run_current()
+        if studio.process is None:                   # it could not start: a syntax error, most likely
+            studio.on_run_end = None
+            syntax = [m for _n, m in ed.problems if m.startswith("Syntax error")]
+            if syntax:
+                self._autofix_ran(1, False, "Traceback (most recent call last):\n" + syntax[0])
+            else:
+                self._autofix_stop("Auto-fix stopped: the program could not be started.")
+
+    def _autofix_ran(self, code, stopped, output):
+        if not self.fixing:
+            return
+        if stopped:
+            self._autofix_stop("Auto-fix stopped: the program was stopped.")
+            return
+        if code == 0:
+            used = self.fix_tries
+            self._autofix_stop("The program ran without errors" +
+                               (f" after {used} fix{'es' if used != 1 else ''}." if used else "."))
+            return
+        marker = output.rfind("Traceback (most recent call last)")
+        if marker < 0:
+            self._autofix_stop(f"The program ended with exit code {code} but showed no error to fix.")
+            return
+        if self.fix_tries >= AUTOFIX_TRIES:
+            self._autofix_stop(f"Still failing after {AUTOFIX_TRIES} fixes. The last error is in the console; "
+                               "try 'Fix errors' with a hint, or a bigger model.")
+            return
+        error = output[marker:][-CONSOLE_LIMIT:]
+        if self.fix_tries == 0:
+            ask = ("My program crashed with this error. Find the cause and give the COMPLETE corrected file in one "
+                   "python block.\n\nError:\n```\n" + error + "\n```")
+        else:
+            ask = ("That fix did not work: the program now fails with this error. Look at the current file again "
+                   "and give the COMPLETE corrected file in one python block.\n\nError:\n```\n" + error + "\n```")
+        self._autofix_ask(ask)
+
+    def _autofix_ask(self, text):
+        self.fix_tries += 1
+        self.note.setText(f"Auto-fix: asking the AI Helper (fix {self.fix_tries} of {AUTOFIX_TRIES})...")
+        self._on_answer = self._autofix_answered
+        self.ask(text, force_file=True)
+        if self.worker is None:                      # ask() refused to start
+            self._autofix_stop("Auto-fix stopped: the AI Helper is not available.")
+
+    def _autofix_answered(self):
+        ed = self._fix_editor()
+        if ed is None:
+            return
+        code = self._last_code()
+        if code is None:
+            self._autofix_stop("Auto-fix stopped: the answer had no code in it.")
+            return
+        problems = self._lint(code)
+        syntax = [m for _n, m in problems if m.startswith("Syntax error")]
+        if syntax:
+            if self.fix_tries >= AUTOFIX_TRIES:
+                self._autofix_stop("Auto-fix stopped: the model's code has a syntax error and the tries are used up.")
+            else:
+                self._autofix_ask("That code has a " + syntax[0] + ". Give the COMPLETE corrected file in one python block.")
+            return
+        from . import backups
+        from .diffview import DiffDialog
+        old = ed.toPlainText()
+        if not DiffDialog.ask(self, f"Auto-fix: fix {self.fix_tries} of {AUTOFIX_TRIES}", old, code, problems,
+                              "Apply and run again", "The AI Helper suggests this change. Apply it and run the program again?"):
+            self._autofix_stop("Auto-fix stopped: you declined the change. Nothing was changed.")
+            return
+        backups.snapshot(ed.path or "untitled", old, "ai")
+        cur = QTextCursor(ed.document())
+        cur.beginEditBlock()
+        cur.select(QTextCursor.Document)
+        cur.insertText(code)
+        cur.endEditBlock()
+        QTimer.singleShot(150, self._autofix_run)
 
     # ---- using the answer -------------------------------------------------------------------------
     def fix_error(self, traceback_text):

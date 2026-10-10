@@ -519,6 +519,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   browser, retro sound-effect maker, `assets.py`); Debug menu (F8 continue, F10 over, F11 into, Shift+F11 out, Ctrl+B / gutter
   click breakpoints, variables/call stack/evaluate; `dbg_runner.py` + `debugger.py`, only steps through the user's own files).
   Assets and docs are CC0 (Kenney) / PSF licensed and live in the gitignored `Local Storage/Python Studio`.
+  Run > Run and Auto-Fix Errors (Ctrl+F5, or "Run + auto-fix" in the helper, or "Auto-fix and re-run" on the yellow bar):
+  runs the program, and on a crash asks the model for the complete corrected file, shows the diff for approval,
+  applies it (with a backup) and runs again, up to 3 fixes (`AssistantPanel.autofix`); stops when it runs clean, on a
+  declined diff, on Stop, or when the tries run out. The 14B coder (Qwen2.5 Coder 14B, ~15 tok/s on a GTX 1080 Ti)
+  is the default "coding" model.
 - **Spell check** (`claudexp/spellcheck.py`, installed in `main.py`): one app-wide event filter that gives every editable
   QPlainTextEdit / QTextEdit a red wavy underline and a right-click menu (suggestions, Add to Dictionary, Ignore All,
   "Check Spelling as I Type"). Offline English list from pyspellchecker; custom words in `data/spell_custom.txt`, the
