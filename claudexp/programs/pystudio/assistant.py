@@ -13,7 +13,9 @@ SYSTEM = ("You are the AI Helper inside Copilot Python Studio, an offline Python
           "pygame-menu, pyglet, opensimplex, pathfinding, networkx, imageio, soundfile, sounddevice, pydub, mido, "
           "matplotlib, requests, rich, flask, sympy and tkinter. Never suggest installing anything. "
           "Be concise. When you write code, give the complete working program or function in ONE ```python block, "
-          "with a one or two sentence explanation outside it.")
+          "with a one or two sentence explanation outside it. If you are shown other files from the user's project, "
+          "reuse their existing classes, functions and asset names instead of writing new ones, and import them "
+          "from the right module.")
 QUICK = [("Explain", "Explain what this code does, step by step, in plain language."),
          ("Fix errors", "Find and fix the bugs or errors in this code. Show the corrected code."),
          ("Improve", "Improve this code: make it cleaner and faster without changing what it does."),
@@ -146,9 +148,14 @@ class AssistantPanel(QWidget):
         self.with_console = QCheckBox("Send console output")
         self.with_all = QCheckBox("All open files")
         self.with_all.setToolTip("Also send the other open tabs so the answer fits your whole project")
+        self.with_project = QCheckBox("Project map")
+        self.with_project.setChecked(True)
+        self.with_project.setToolTip("Tell the AI what the other files in this folder define (and send the ones that "
+                                     "look relevant), so it reuses your classes and functions")
         opts.addWidget(self.with_file)
         opts.addWidget(self.with_console)
         opts.addWidget(self.with_all)
+        opts.addWidget(self.with_project)
         opts.addStretch()
         root.addLayout(opts)
 
@@ -287,6 +294,18 @@ class AssistantPanel(QWidget):
                 budget -= len(code)
                 name = other.path.rsplit("\\", 1)[-1] if other.path else "untitled.py"
                 out.append(f"Other open file ({name}):\n```python\n{code}\n```")
+        if self.with_project.isChecked():
+            try:
+                from . import projectmap
+                from .app import projects_dir
+                path = ed.path if ed is not None and ed.path else None
+                root = projectmap.project_root(path, getattr(self.studio, "folder", projects_dir()))
+                shown = {o.path for o in self.studio.open_editors() if o.path} if self.with_all.isChecked() else set()
+                info = projectmap.build_context(root, path, text + "\n" + selected, skip=shown)
+                if info:
+                    out.append(info)
+            except Exception:
+                pass
         if self.with_console.isChecked():
             console = self.studio.console.toPlainText().strip()
             if console:
