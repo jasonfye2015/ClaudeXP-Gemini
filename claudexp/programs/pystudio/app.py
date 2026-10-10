@@ -591,6 +591,7 @@ class PythonStudio(QWidget):
         self._action(m, "Sprite Sheets, &Tile Maps and Pixel Art...", self.open_gametools)
         self._action(m, "Audio and &Video Converter (ffmpeg)...", self.open_media)
         self._action(m, "Learn Python and pygame (&Lessons)...", self.open_lessons)
+        self._action(m, "Make a &Game from a Description (AI)...", self.make_game)
         self._action(m, "Python && pygame &Manuals...", self.open_docs, "F1")
         m.addSeparator()
         self._action(m, "&Installed Packages", self.list_packages)
@@ -788,6 +789,44 @@ class PythonStudio(QWidget):
         ed = self._new_editor(None, code)
         ed.title = "lesson_" + re.sub(r"\W+", "_", title.split(".", 1)[-1].strip().lower()).strip("_") + ".py"
         self._add_tab(ed)
+
+    def make_game(self):
+        from . import gamemaker
+        genre, ok = QInputDialog.getItem(self, "Make a Game", "What kind of game?", list(gamemaker.GENRES), 0, False)
+        if not ok:
+            return
+        text, ok = QInputDialog.getMultiLineText(
+            self, "Make a Game", "Describe your game (who you play, what you do, what goes wrong):",
+            "A spaceship that dodges falling asteroids and collects stars.")
+        if not ok or not text.strip():
+            return
+        test = QMessageBox.question(
+            self, "Make a Game", "When the game is written, run it and let the AI fix any crash automatically?"
+        ) == QMessageBox.Yes
+        self.start_game_request(text, genre, test)
+
+    def start_game_request(self, description, genre, test):
+        from . import gamemaker
+        self.show_helper()
+        if self.assistant.worker is not None:
+            self.status.setText("The AI Helper is busy; try again when it is done.")
+            return
+
+        def got(reply):
+            code = gamemaker.pick_code(reply)
+            if code is None:
+                self.status.setText("The AI answered, but there was no game code in it. Try again with more detail.")
+                return
+            path = gamemaker.save_game(projects_dir(), description, code)
+            ed = self._new_editor(path, code)
+            self._add_tab(ed)
+            self.status.setText(f"Your game was saved as {path}")
+            if test:
+                QTimer.singleShot(0, self.assistant.autofix)
+        self.assistant._on_reply = got
+        self.assistant.ask(gamemaker.build_prompt(description, genre))
+        if self.assistant.worker is None:
+            self.assistant._on_reply = None
 
     def open_media(self):
         from . import mediaview

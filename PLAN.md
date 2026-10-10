@@ -567,6 +567,10 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   a starter file; "Check my work" runs the learner's code in the runtime against hidden tests (pygame lessons check the
   required code is present and that it runs without crashing); Hint, Show solution, and "Ask the AI to explain" (never
   gives the answer). Progress saved in pystudio_lessons.json.
+  Make a Game from a Description (`gamemaker.py`; Tools menu): pick a style, describe the game; the local model writes
+  one pygame file (shapes only, no asset files), saved as Projects\<name>\main.py and opened in a tab; optionally runs
+  it and lets auto-fix repair a crash. Autocomplete no longer loads a second model beside a >6 GB one (the 14B plus the
+  1.5B filled the 1080 Ti and made long prompts 2x slower).
   Format / tidy / rename (`tidy.py`; Edit > Format Code Ctrl+Shift+F, Tidy Imports Ctrl+Shift+I, Rename Symbol F2): uses
   the offline `ruff` (wheel kept in Python Studio\wheels, installed in the runtime) for Black-style formatting and for
   sorting + removing unused imports (the only lint fixes applied, so behaviour never changes). Rename uses Python's

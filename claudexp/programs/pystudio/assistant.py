@@ -104,6 +104,7 @@ class AssistantPanel(QWidget):
         self.fix_path = None
         self.fix_tries = 0
         self._on_answer = None
+        self._on_reply = None                  # one-shot: called with the full text of the next finished answer
 
         root = QVBoxLayout(self)
         root.setContentsMargins(4, 4, 4, 4)
@@ -370,9 +371,12 @@ class AssistantPanel(QWidget):
             else:
                 self.history.pop()
             worker.deleteLater()
-        self.reply = ""
+        full, self.reply = self.reply, ""
         self._render()
         self._update_buttons()
+        reply_hook, self._on_reply = self._on_reply, None
+        if reply_hook is not None and answered:
+            reply_hook(full)
         hook, self._on_answer = self._on_answer, None
         if self.fixing:
             if answered and hook is not None:
