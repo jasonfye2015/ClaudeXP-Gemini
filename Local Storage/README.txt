@@ -13,7 +13,9 @@ ClaudeXP runs fine with this folder empty. Two separate downloads go here:
 
   Copilot Python Studio runs your programs with its own Python 3.12 under Python Studio\ (python312\ is the
   interpreter, wheels\ holds ~60 offline wheels: numpy, Pillow, pygame, matplotlib, flask, sympy, rich, PyInstaller
-  and more; Run > Build Executable makes standalone .exe files). Nothing there needs a network;
+  and more; Run > Build Executable makes standalone .exe files). Python Studio\ffmpeg\ffmpeg.exe (about 100 MB)
+  powers Tools > Audio and Video Converter, and Python Studio\docs\ holds the offline manuals. The code
+  formatter (ruff) and pytest are installed in python312\ and also kept in wheels\. Nothing there needs a network;
   to add a package later, put its .whl files in wheels\ and use Tools > Install Package from Offline Wheels.
 
 Unpack them so the folders sit directly in this one:

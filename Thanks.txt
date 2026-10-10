@@ -3,6 +3,6 @@ Thanks to:
 Concept and Design: Claude, Gemini, Copilot and Kithylin
 Coding: Claude, Gemini, Copilot and Kithylin
 Icons: ChatGPT and Gemini
-LLM Support: Google and Mistral
+LLM Support: Google, Mistral and Alibaba (Qwen)
 Photos and Art: ChatGPT, Gemini, Grok
-Special thanks to: Arctic Fox, Cyberian Husky, Kadin, LazyFox, Mush Husky, Redfox, Renamon, Winter Dragon, Xavier
+Open-source software: Python, pygame, Qt for Python (PySide6), llama.cpp, FFmpeg, Ruff (Astral), pytestSpecial thanks to: Arctic Fox, Cyberian Husky, Kadin, LazyFox, Mush Husky, Redfox, Renamon, Winter Dragon, Xavier
