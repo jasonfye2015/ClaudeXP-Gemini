@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QHBoxLayout
                                QToolButton, QVBoxLayout, QWidget)
 
 from ...paths import DATA
-from . import backups
+from . import backups, runhistory
 from .assistant import AssistantPanel
 from .debugger import DebugPanel, DebugSession
 from .editor import CodeEditor, is_warning
@@ -128,6 +128,7 @@ class Console(QPlainTextEdit):
     def __init__(self, on_jump):
         super().__init__()
         self.on_jump = on_jump
+        self.menu_hook = None
         self.setProperty("nospell", True)
         self.setReadOnly(True)
         self.setFont(QFont("Consolas", 10))
@@ -147,6 +148,16 @@ class Console(QPlainTextEdit):
         cursor.insertText(text, fmt)
         if stick:
             scroll.setValue(scroll.maximum())
+
+    def build_menu(self, pos):
+        menu = self.createStandardContextMenu()
+        if self.menu_hook is not None:
+            menu.addSeparator()
+            self.menu_hook(menu, self, pos)
+        return menu
+
+    def contextMenuEvent(self, event):
+        self.build_menu(event.pos()).exec(event.globalPos())
 
     def mouseDoubleClickEvent(self, event):
         line = self.cursorForPosition(event.position().toPoint()).block().text()
@@ -313,6 +324,7 @@ class PythonStudio(QWidget):
         box.addWidget(self.find_bar)
 
         self.console = Console(self.jump)
+        self.console.menu_hook = self._console_menu
         self.problems = QListWidget()
         self.problems.itemActivated.connect(self._problem_clicked)
         self.problems.itemClicked.connect(self._problem_clicked)
@@ -331,6 +343,10 @@ class PythonStudio(QWidget):
         self.bottom.addTab(self.problems, "Problems")
         self.debug_panel = DebugPanel(self.debug_eval, self.debug_show_frame)
         self.bottom.addTab(self.debug_panel, "Debug")
+        from .historyview import HistoryPanel
+        self.run_info = None                   # what the current run is, so it can be remembered when it ends
+        self.history_panel = HistoryPanel(self._version_tab, self._ask_from_tool, self._open_source_of)
+        self.bottom.addTab(self.history_panel, "History")
         self.session = None
         self.tools = {}
         self.ghost = GhostCompleter(busy=lambda: self.assistant.worker is not None)
@@ -345,6 +361,10 @@ class PythonStudio(QWidget):
         auto_button.setToolTip("The AI Helper fixes it, you approve each change, and it runs again (up to 3 tries)")
         auto_button.clicked.connect(lambda: self.assistant.autofix(first_output=self._last_run_output()))
         fix_row.addWidget(auto_button)
+        explain_button = QPushButton("What does this mean?")
+        explain_button.setToolTip("The AI Helper explains the error in plain words (it changes nothing)")
+        explain_button.clicked.connect(lambda: self.explain_error())
+        fix_row.addWidget(explain_button)
         fix_row.addStretch()
         self.fix_bar.setStyleSheet("QWidget { background: #FFF4C8; }")
         self.fix_bar.hide()
@@ -531,6 +551,7 @@ class PythonStudio(QWidget):
         self._action(m, "&Format Code (tidy spacing and layout)", lambda: self.tidy("format"), "Ctrl+Shift+F")
         self._action(m, "Tidy &Imports (sort, remove unused)", lambda: self.tidy("imports"), "Ctrl+Shift+I")
         self._action(m, "Re&name Symbol...", self.rename_symbol, "F2")
+        self._action(m, "&Explain Selection or Function (AI)", lambda: self.explain_code(), "Ctrl+Shift+E")
         m = self.menubar.addMenu("&Snippets")
         self._action(m, "Snippet &Library (search and preview)...", self.open_snippets, "Ctrl+J")
         m.addSeparator()
@@ -550,6 +571,7 @@ class PythonStudio(QWidget):
         self._action(m, "Run &Tests (pytest)", self.run_tests, "Ctrl+F7")
         self._action(m, "Write Tests for This File with &AI", self.ai_write_tests)
         self._action(m, "&Stop", self.stop, "Shift+F5")
+        self._action(m, "Explain the Last &Error (AI)", lambda: self.explain_error())
         self._action(m, "&Check Syntax", self.check_syntax, "F7")
         self._action(m, "&Build Executable (.exe)...", self.build_exe, "F9")
         m.addSeparator()
@@ -774,7 +796,8 @@ class PythonStudio(QWidget):
             ed = self.editor()
             if ed is not None:
                 ed.textCursor().insertText(text)
-                ed.setFocus() "Audio and Video Converter", lambda: mediaview.MediaConverter(
+                ed.setFocus()
+        return self._tool_window("media", "Audio and Video Converter", lambda: mediaview.MediaConverter(
             insert, self._ask_from_tool), (640, 420))
 
     def open_snippets(self):
@@ -950,6 +973,7 @@ class PythonStudio(QWidget):
         ed.signature_changed.connect(self.signature.setText)
         ed.cursor_info.connect(lambda ln, col: self.position.setText(f"Ln {ln}, Col {col}"))
         ed.ghost_enabled = self.settings.get("ghost", True)
+        ed.menu_hook = self._editor_menu
         ed.ghost_wanted.connect(lambda e=ed: self.ghost.request(e))
         ed.breakpoints_changed.connect(lambda line, on, e=ed: self._breakpoint_edited(e, line, on))
         return ed
@@ -1174,6 +1198,7 @@ class PythonStudio(QWidget):
         backups.snapshot(ed.path, ed.toPlainText(), "run")
         self.console.write(f"\n>>> Running {path.name}\n", "#316AC5", bold=True)
         self._start(["-u", str(path)], path.parent)
+        self.run_info = {"file": str(path), "kind": "Run", "source": ed.toPlainText()}
 
     def run_profiled(self, mode):
         """Run the open program through prof_runner.py: an FPS readout on the game window ("overlay"), cProfile
@@ -1197,6 +1222,8 @@ class PythonStudio(QWidget):
         self.console.write(f"\n>>> Running {path.name} with the {label} (close the game or press Stop for the report)\n",
                            "#316AC5", bold=True)
         self._start(["-u", runner, mode, str(report), str(path)], path.parent)
+        self.run_info = {"file": str(path), "kind": "FPS overlay" if mode == "overlay" else "Profile",
+                         "source": ed.toPlainText()}
         self.on_run_end = lambda _code, _stopped, _out: self.show_profile(report)
 
     def show_profile(self, report_path):
@@ -1214,6 +1241,91 @@ class PythonStudio(QWidget):
     def _ask_from_tool(self, text):
         self.show_helper()
         self.assistant.ask(text)
+
+    # ---- explain (the AI explains, never edits) ------------------------------------------------------------
+    def _read_source(self, path):
+        for ed in self.open_editors():
+            if ed.path and str(ed.path) == str(path):
+                return ed.toPlainText()
+        try:
+            return Path(path).read_text(encoding="utf-8")
+        except (OSError, ValueError):
+            return None
+
+    def _open_source_of(self, path):
+        return self._read_source(path)
+
+    def _version_tab(self, title, code):
+        self.untitled += 1
+        ed = self._new_editor(None, code)
+        stem = Path(title.split(" (")[0]).stem or "old"
+        ed.title = f"{stem}_old.py"
+        self._add_tab(ed)
+
+    def explain_code(self, ed=None, line=None, use_selection=None):
+        from . import explain
+        ed = ed or self.editor()
+        if ed is None or not ed.toPlainText().strip():
+            self.status.setText("Open a program first.")
+            return None
+        source = ed.toPlainText()
+        cur = ed.textCursor()
+        name = Path(ed.path).name if ed.path else "my program"
+        doc = ed.document()
+        if (cur.hasSelection() if use_selection is None else use_selection and cur.hasSelection()):
+            text = cur.selection().toPlainText().replace("\u2029", "\n")
+            first = doc.findBlock(cur.selectionStart()).blockNumber() + 1
+            end = cur.selectionEnd()
+            last = doc.findBlock(max(cur.selectionStart(), end - (1 if text.endswith("\n") else 0))).blockNumber() + 1
+        else:
+            first, last = explain.scope_at(source, line or cur.blockNumber() + 1)
+            text = "\n".join(source.split("\n")[first - 1:last])
+        rows = text.split("\n")
+        if len(rows) > 150:
+            text, last = "\n".join(rows[:150]), first + 149
+        if not text.strip():
+            self.status.setText("Put the cursor on some code first.")
+            return None
+        prompt = explain.code_prompt(text, name, first, last)
+        self._ask_from_tool(prompt)
+        return prompt
+
+    def explain_error(self, line_index=None):
+        from . import explain
+        selected = self.console.textCursor().selectedText().replace("\u2029", "\n").strip()
+        trace = selected or explain.traceback_at(self.console.toPlainText(), line_index)
+        if not trace:
+            self.status.setText("There is no error in the console to explain.")
+            return None
+        prompt = explain.error_prompt(trace, self._read_source)
+        self.fix_bar.hide()
+        self._ask_from_tool(prompt)
+        return prompt
+
+    def _editor_menu(self, menu, ed, pos):
+        click = ed.cursorForPosition(pos)
+        line = click.blockNumber() + 1
+        sel = ed.textCursor()
+        inside = sel.hasSelection() and sel.selectionStart() <= click.position() <= sel.selectionEnd()
+        text = "\u2728 Explain this selection" if inside else "\u2728 Explain this code"
+        menu.addAction(text).triggered.connect(lambda _c=False: self.explain_code(ed, line, inside))
+        for problem_line, message in ed.problems:
+            if problem_line == line:
+                menu.addAction("\u2728 Explain the problem on this line").triggered.connect(
+                    lambda _c=False, m=message: self._explain_problem(ed, line, m))
+                break
+
+    def _explain_problem(self, ed, line, message):
+        from . import explain
+        rows = ed.toPlainText().split("\n")
+        code = rows[line - 1] if 0 < line <= len(rows) else ""
+        prompt = explain.problem_prompt(code, message, Path(ed.path).name if ed.path else "my program", line)
+        self._ask_from_tool(prompt)
+        return prompt
+
+    def _console_menu(self, menu, console, pos):
+        index = console.cursorForPosition(pos).blockNumber()
+        menu.addAction("\u2728 Explain this error").triggered.connect(lambda _c=False: self.explain_error(index))
 
     def open_at_line(self, path, line):
         self.open_path(path)
@@ -1428,6 +1540,7 @@ class PythonStudio(QWidget):
         proc.finished.connect(lambda code, status, p=proc: self._finished(p, code, status))
         proc.errorOccurred.connect(lambda err, p=proc: self._error(p, err))
         self.process = proc
+        self.run_info = None
         self.fix_bar.hide()
         self.run_mark = len(self.console.toPlainText())
         self.started = time.monotonic()
@@ -1442,6 +1555,7 @@ class PythonStudio(QWidget):
         if proc is self.process and err == QProcess.FailedToStart:
             self.console.write("The program could not be started.\n", "#C00000")
             self._cleanup(proc)
+            self.run_info = None
             hook, self.on_run_end = self.on_run_end, None
             if hook is not None:
                 hook(-1, True, "")
@@ -1461,6 +1575,11 @@ class PythonStudio(QWidget):
             self.fix_bar.show()
         if code == 0 and not stopped and done is not None:
             done()
+        info, self.run_info = self.run_info, None
+        if info:
+            runhistory.add(info["file"], info["kind"], code, stopped, elapsed, self._last_run_output(),
+                           info["source"])
+            self.history_panel.refresh()
         hook, self.on_run_end = self.on_run_end, None
         if hook is not None:
             hook(code, stopped, self._last_run_output())

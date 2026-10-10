@@ -98,6 +98,7 @@ class CodeEditor(QPlainTextEdit):
         self.setStyleSheet("QPlainTextEdit { background: white; color: black; border: 1px solid #7F9DB9; }")
         self.highlighter = PythonHighlighter(self.document())
         self.path = None
+        self.menu_hook = None              # called with (menu, editor, click position) to add menu items
         self.problems = []                 # [(line, message)]
         self.debug_line = None
         self.ghost, self.ghost_at = "", -1
@@ -138,6 +139,16 @@ class CodeEditor(QPlainTextEdit):
 
     def gutter_width(self):
         return 28 + self.fontMetrics().horizontalAdvance("9") * max(3, len(str(self.blockCount())))
+
+    def build_menu(self, pos):
+        menu = self.createStandardContextMenu()
+        if self.menu_hook is not None:
+            menu.addSeparator()
+            self.menu_hook(menu, self, pos)
+        return menu
+
+    def contextMenuEvent(self, event):
+        self.build_menu(event.pos()).exec(event.globalPos())
 
     def _update_gutter_width(self, *_):
         self.setViewportMargins(self.gutter_width(), 0, 0, 0)

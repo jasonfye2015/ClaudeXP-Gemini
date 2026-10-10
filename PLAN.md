@@ -552,6 +552,12 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   current file's folder, stored in `.checkpoints\`. The window lists them, shows what changed since (changed / deleted /
   new) with a diff, and restores the whole project or selected files. Restoring first saves an automatic checkpoint
   (last 8 kept) so a rollback can itself be undone, and open tabs reload.
+  Explain + history (`explain.py`, `runhistory.py`, `historyview.py`): right-click code (or Edit > Explain Selection or
+  Function, Ctrl+Shift+E) or a console error (right-click, Run > Explain the Last Error, or the "What does this mean?"
+  button) and the AI Helper explains it in beginner words without editing anything; the question includes the code near
+  the failing line. Each run (Run, FPS overlay, Profile) is remembered (last 20, pystudio_runs.json) with its output
+  and the code that ran, shown in the bottom History tab: output, code changes since the previous run, changes
+  compared with now, Open code (old version in a new tab), and "Why?" (asks the AI what changed since it last worked).
   Audio/video converter (`media.py` + `mediaview.py`; Tools > Audio and Video Converter): bundled ffmpeg 9.0.2
   (`Local Storage\Python Studio\ffmpeg\ffmpeg.exe`, gitignored, ~100 MB from gyan.dev "essentials"). Presets: WAV, OGG,
   MP3, shrink (mono OGG), trim, fade, even out volume, repeat, audio from video, video to PNG frames, video to GIF.
