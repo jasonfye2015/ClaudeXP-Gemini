@@ -4,5 +4,6 @@ Concept and Design: Claude, Gemini, Copilot and Kithylin
 Coding: Claude, Gemini, Copilot and Kithylin
 Icons: ChatGPT and Gemini
 LLM Support: Google, Mistral and Alibaba (Qwen)
+Community model authors: inflatebot (Mag-Mell), MarinaraSpaghetti (NemoMix Unleashed), bartowski and unsloth (GGUF conversions)
 Photos and Art: ChatGPT, Gemini, Grok
 Open-source software: Python, pygame, Qt for Python (PySide6), llama.cpp, FFmpeg, Ruff (Astral), pytestSpecial thanks to: Arctic Fox, Cyberian Husky, Kadin, LazyFox, Mush Husky, Redfox, Renamon, Winter Dragon, Xavier
