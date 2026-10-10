@@ -567,6 +567,9 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   a starter file; "Check my work" runs the learner's code in the runtime against hidden tests (pygame lessons check the
   required code is present and that it runs without crashing); Hint, Show solution, and "Ask the AI to explain" (never
   gives the answer). Progress saved in pystudio_lessons.json.
+  Add Docstrings and Type Hints (`docwriter.py`; Edit menu, AI): documents the selection, else the function/class at
+  the cursor, else the whole file. The reply is only applied if an AST comparison shows nothing but docstrings,
+  annotations and imports changed (otherwise it is rejected with a message); the diff is shown first, one Ctrl+Z.
   Make a Game from a Description (`gamemaker.py`; Tools menu): pick a style, describe the game; the local model writes
   one pygame file (shapes only, no asset files), saved as Projects\<name>\main.py and opened in a tab; optionally runs
   it and lets auto-fix repair a crash. Autocomplete no longer loads a second model beside a >6 GB one (the 14B plus the

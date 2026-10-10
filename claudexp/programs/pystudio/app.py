@@ -552,6 +552,7 @@ class PythonStudio(QWidget):
         self._action(m, "Tidy &Imports (sort, remove unused)", lambda: self.tidy("imports"), "Ctrl+Shift+I")
         self._action(m, "Re&name Symbol...", self.rename_symbol, "F2")
         self._action(m, "&Explain Selection or Function (AI)", lambda: self.explain_code(), "Ctrl+Shift+E")
+        self._action(m, "Add &Docstrings and Type Hints (AI)", self.document_code)
         m = self.menubar.addMenu("&Snippets")
         self._action(m, "Snippet &Library (search and preview)...", self.open_snippets, "Ctrl+J")
         m.addSeparator()
@@ -1444,6 +1445,54 @@ class PythonStudio(QWidget):
         cur.setPosition(min(pos, len(new)))
         ed.setTextCursor(cur)
         return True
+
+    def document_code(self):
+        from . import docwriter
+        ed = self.editor()
+        if ed is None or not ed.toPlainText().strip():
+            self.status.setText("Open a program first.")
+            return None
+        if self.assistant.worker is not None:
+            self.status.setText("The AI Helper is busy; try again when it is done.")
+            return None
+        source = ed.toPlainText()
+        cur = ed.textCursor()
+        doc = ed.document()
+        selection = None
+        if cur.hasSelection():
+            end = cur.selectionEnd()
+            text = cur.selection().toPlainText()
+            selection = (doc.findBlock(cur.selectionStart()).blockNumber() + 1,
+                         doc.findBlock(max(cur.selectionStart(), end - (1 if text.endswith("\u2029") else 0))).blockNumber() + 1)
+        first, last, whole = docwriter.region(source, cur.blockNumber() + 1, selection)
+        if last - first > 250:
+            self.status.setText("That is too much for one go: select a function or class, or put the cursor in one.")
+            return None
+        piece = "\n".join(source.split("\n")[first - 1:last])
+        ask = docwriter.prompt(piece, whole)
+
+        def got(reply):
+            from .assistant import code_blocks
+            blocks = code_blocks(reply)
+            if not blocks:
+                self.status.setText("The AI answered without any code; nothing was changed.")
+                return
+            new_piece = max(blocks, key=len)
+            if not docwriter.same_behaviour(piece, new_piece):
+                self.status.setText("The AI changed more than docstrings and type hints, so it was not applied. "
+                                    "Try again, or use a bigger model.")
+                return
+            if self.editor() is not ed or ed.toPlainText() != source:
+                self.status.setText("The file changed while the AI was working; nothing was applied.")
+                return
+            new, _old = docwriter.splice(source, first, last, new_piece)
+            self._apply_text(ed, "Docstrings and Type Hints", new, ask, "before AI docstrings")
+        self.assistant._on_reply = got
+        self.show_helper()
+        self.assistant.ask(ask)
+        if self.assistant.worker is None:
+            self.assistant._on_reply = None
+        return ask
 
     def tidy(self, kind):
         from . import tidy
