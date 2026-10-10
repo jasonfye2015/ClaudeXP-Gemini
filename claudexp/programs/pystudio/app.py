@@ -541,6 +541,8 @@ class PythonStudio(QWidget):
         self._action(m, "Run and &Auto-Fix Errors", lambda: self.assistant.autofix(), "Ctrl+F5")
         self._action(m, "Run with &FPS Overlay", lambda: self.run_profiled("overlay"), "Ctrl+F6")
         self._action(m, "Run with Pro&filer (find slow code)", lambda: self.run_profiled("both"), "Ctrl+Shift+F6")
+        self._action(m, "Run &Tests (pytest)", self.run_tests, "Ctrl+F7")
+        self._action(m, "Write Tests for This File with &AI", self.ai_write_tests)
         self._action(m, "&Stop", self.stop, "Shift+F5")
         self._action(m, "&Check Syntax", self.check_syntax, "F7")
         self._action(m, "&Build Executable (.exe)...", self.build_exe, "F9")
@@ -1118,6 +1120,56 @@ class PythonStudio(QWidget):
         if ed is not None:
             ed.goto_line(line)
             ed.setFocus()
+
+    def run_tests(self):
+        """Run pytest on the open file when it is a test file, otherwise on every test in its folder."""
+        ed = self.editor()
+        if ed is None or self._busy() or not self._runtime_ok():
+            return
+        if not ed.path and not self.save_as(ed):
+            return
+        self.save_all()
+        if ed.document().isModified() or not Path(ed.path).exists():
+            self.save(ed)
+        path = Path(ed.path)
+        is_test = path.name.startswith("test_") or path.stem.endswith("_test")
+        target = [str(path)] if is_test else []
+        xml = Path(tempfile.mkdtemp(prefix="pystudio-test-")) / "results.xml"
+        self.console.write(f"\n>>> Running tests ({path.name if is_test else 'all tests in ' + path.parent.name})\n",
+                           "#316AC5", bold=True)
+        self._start(["-u", "-m", "pytest", "-q", "--tb=short", "-p", "no:cacheprovider",
+                     "--continue-on-collection-errors", "--junitxml", str(xml)] + target, path.parent)
+        self.on_run_end = lambda code, stopped, _out: self.show_test_results(xml, path.parent, code, stopped)
+
+    def show_test_results(self, xml, folder, code, stopped):
+        from . import testview
+        tests = testview.parse(str(xml))
+        shutil.rmtree(Path(xml).parent, ignore_errors=True)
+        note = ""
+        if stopped:
+            note = "The run was stopped, so these results may be incomplete."
+        elif tests is None or (not tests and code != 0):
+            note = ("pytest found no tests. Test files are named test_something.py and contain functions named "
+                    "test_something(). Use Run > Write Tests for This File with AI to get started."
+                    if code == 5 else "pytest could not finish. Check the console for the reason.")
+        if tests is None and not stopped and code not in (5,):
+            self.status.setText("Tests did not produce a report.")
+        view = self._tool_window("tests", "Test Results", lambda: testview.TestResults(
+            self.run_tests, self.open_at_line, self._ask_from_tool), (680, 520))
+        view.show_results(tests or [], str(folder), note)
+        return tests
+
+    def ai_write_tests(self):
+        ed = self.editor()
+        if ed is None or not ed.toPlainText().strip():
+            self.status.setText("Open a program first.")
+            return
+        stem = Path(ed.path).stem if ed.path else "my_program"
+        self.show_helper()
+        self.assistant.ask(
+            f"Write pytest tests for the functions and classes in this file. Put them in one file named "
+            f"test_{stem}.py that starts with `from {stem} import ...`. Cover normal use and edge cases, keep each "
+            f"test small, and do not open windows or need a display (no pygame.display or input).", force_file=True)
 
     def run_repl(self):
         if self._busy() or not self._runtime_ok():

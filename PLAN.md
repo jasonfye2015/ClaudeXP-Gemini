@@ -542,6 +542,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   readout on the game window, and optionally runs cProfile. It rewrites a JSON report every 3 s so Stop still gives one.
   The Profiler Report window shows a verdict, avg FPS / 1% low / worst frame, a frame-time graph, and the slowest
   functions ("Only my code" filter, double-click jumps to the line, "Ask the AI how to speed this up").
+  Test runner (`testview.py`; Run > Run Tests (pytest) Ctrl+F7): runs pytest from the program's folder (the open file if
+  it's a test_*.py / *_test.py, else every test there) with --junitxml, then shows a Test Results window: pass/fail/skip
+  per test (failures first), the traceback, double-click to jump to the failing line, Run again, and "Ask the AI to fix
+  the failures". A broken test file doesn't hide the others. Run > Write Tests for This File with AI asks the Helper
+  for a test_<name>.py. Uses the pytest already in the studio runtime (offline).
 - **Spell check** (`claudexp/spellcheck.py`, installed in `main.py`): one app-wide event filter that gives every editable
   QPlainTextEdit / QTextEdit a red wavy underline and a right-click menu (suggestions, Add to Dictionary, Ignore All,
   "Check Spelling as I Type"). Offline English list from pyspellchecker; custom words in `data/spell_custom.txt`, the
