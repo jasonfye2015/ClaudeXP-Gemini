@@ -529,6 +529,10 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   PNGs); (2) tile-map editor (paint/erase/fill, undo, resize, saves `Assets\Maps\name.csv` + `.json`, inserts `load_map` /
   `draw_map` code); (3) pixel-art editor (pencil, eraser, fill, colour picker, mirror, flips, undo, saves PNGs in
   `Assets\My Sprites`, inserts a load line). Inserted code was run headless to verify it.
+  Snippets menu / Snippet Library (Ctrl+J, `snippets.py`): 21 tested, offline game snippets in 9 categories (save/load,
+  high scores, scenes, timers, camera, shake, particles, fade, dialogue, button, controls, collisions, enemy AI, A*
+  pathfinding, sounds, parallax, tint/flash, inventory). Inserting adds any missing imports at the top and the code
+  after the cursor line, as one undo step.
 - **Spell check** (`claudexp/spellcheck.py`, installed in `main.py`): one app-wide event filter that gives every editable
   QPlainTextEdit / QTextEdit a red wavy underline and a right-click menu (suggestions, Add to Dictionary, Ignore All,
   "Check Spelling as I Type"). Offline English list from pyspellchecker; custom words in `data/spell_custom.txt`, the

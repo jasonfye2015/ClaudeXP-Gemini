@@ -525,6 +525,17 @@ class PythonStudio(QWidget):
         self._action(m, "Co&mment / Uncomment", lambda: self._ed("toggle_comment"), "Ctrl+/")
         self._action(m, "&Indent", lambda: self._ed("indent_selection", True))
         self._action(m, "&Dedent", lambda: self._ed("indent_selection", False))
+        m = self.menubar.addMenu("&Snippets")
+        self._action(m, "Snippet &Library (search and preview)...", self.open_snippets, "Ctrl+J")
+        m.addSeparator()
+        from .snippets import by_category
+        for category, items in by_category():
+            sub = m.addMenu(category)
+            for item in items:
+                act = sub.addAction(item[1])
+                act.setStatusTip(item[2])
+                act.setToolTip(item[2])
+                act.triggered.connect(lambda _c=False, s=item: self.insert_snippet(s))
         m = self.menubar.addMenu("&Run")
         self._action(m, "&Run Program", self.run_current, "F5")
         self._action(m, "Run and &Auto-Fix Errors", lambda: self.assistant.autofix(), "Ctrl+F5")
@@ -660,6 +671,34 @@ class PythonStudio(QWidget):
                 ed.setFocus()
         self._tool_window("assets", "Game Assets", lambda: assets.AssetBrowser(python_exe(), insert, projects_dir),
                           (760, 560))
+
+    def open_snippets(self):
+        from . import snippets
+        return self._tool_window("snippets", "Snippet Library", lambda: snippets.SnippetLibrary(self.insert_snippet),
+                                 (800, 560))
+
+    def insert_snippet(self, item):
+        """item: (category, name, about, imports, code). Adds missing imports at the top and the code after the
+        cursor's line; one Ctrl+Z undoes it."""
+        from . import snippets
+        ed = self.editor()
+        if ed is None:
+            self.status.setText("Open a program first.")
+            return
+        _cat, name, _about, imports, code = item
+        old = ed.toPlainText()
+        new, started = snippets.insert_into(old, imports, code, ed.textCursor().position())
+        cur = QTextCursor(ed.document())
+        cur.beginEditBlock()
+        cur.select(QTextCursor.Document)
+        cur.insertText(new)
+        cur.endEditBlock()
+        cur = ed.textCursor()
+        cur.setPosition(min(started, len(new)))
+        ed.setTextCursor(cur)
+        ed.centerCursor()
+        ed.setFocus()
+        self.status.setText(f"Inserted \"{name}\". Ctrl+Z undoes it.")
 
     def open_gametools(self):
         from . import assets, gametools
