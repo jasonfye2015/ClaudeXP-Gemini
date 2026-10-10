@@ -11,7 +11,19 @@ def pick_model():
     try:
         from ... import ai_models
         coders = [m for m in ai_models.installed() if "coder" in m.id.lower()]
-        return min(coders, key=lambda m: m.size).id if coders else None
+        if not coders:
+            return None
+        small = min(coders, key=lambda m: m.size)
+        # a big model on a small GPU slows to a crawl if a second model is loaded beside it
+        try:
+            from ... import llm_server
+            states = llm_server.model_states()
+            big_loaded = any(m.size > 6e9 and states.get(m.id) == "loaded" for m in ai_models.installed())
+            if big_loaded and states.get(small.id) != "loaded":
+                return None
+        except Exception:
+            pass
+        return small.id
     except Exception:
         return None
 
