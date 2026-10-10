@@ -547,6 +547,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   per test (failures first), the traceback, double-click to jump to the failing line, Run again, and "Ask the AI to fix
   the failures". A broken test file doesn't hide the others. Run > Write Tests for This File with AI asks the Helper
   for a test_<name>.py. Uses the pytest already in the studio runtime (offline).
+  Project checkpoints (`checkpoints.py`, `checkpointview.py`; File > Save Project Checkpoint Ctrl+Shift+K, File >
+  Project Checkpoints): a named copy of every .py/.json/.csv/.txt/.tmx/.md file (<=1 MB, plus Assets\Maps) in the
+  current file's folder, stored in `.checkpoints\`. The window lists them, shows what changed since (changed / deleted /
+  new) with a diff, and restores the whole project or selected files. Restoring first saves an automatic checkpoint
+  (last 8 kept) so a rollback can itself be undone, and open tabs reload.
 - **Spell check** (`claudexp/spellcheck.py`, installed in `main.py`): one app-wide event filter that gives every editable
   QPlainTextEdit / QTextEdit a red wavy underline and a right-click menu (suggestions, Add to Dictionary, Ignore All,
   "Check Spelling as I Type"). Offline English list from pyspellchecker; custom words in `data/spell_custom.txt`, the

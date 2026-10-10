@@ -506,6 +506,8 @@ class PythonStudio(QWidget):
         self._action(m, "Save &As...", self.save_as, "Ctrl+Shift+S")
         self._action(m, "Save A&ll", self.save_all)
         self._action(m, "&Restore Previous Version...", self.restore_version)
+        self._action(m, "Save Project Chec&kpoint...", self.save_checkpoint, "Ctrl+Shift+K")
+        self._action(m, "Project Checkpoints (&roll back)...", self.open_checkpoints)
         m.addSeparator()
         self._action(m, "&Close Tab", lambda: self.close_tab(self.tabs.currentIndex()), "Ctrl+W")
         self._action(m, "E&xit", lambda: self.frame.request_close() if self.frame else None)
@@ -633,6 +635,74 @@ class PythonStudio(QWidget):
             cur.select(QTextCursor.Document)
             cur.insertText(new)
             cur.endEditBlock()
+
+    def root(self):
+        """The project folder: where the current file lives, or the studio's programs folder."""
+        ed = self.editor()
+        if ed is not None and ed.path and Path(ed.path).parent.is_dir():
+            return Path(ed.path).parent
+        return Path(self.folder)
+
+    def save_checkpoint(self, name=None, auto=False):
+        """Save every program in the project folder under a name. Returns the checkpoint info, or None if cancelled."""
+        from . import checkpoints
+        self.save_all()
+        if name is None:
+            name, ok = QInputDialog.getText(self, "Save Project Checkpoint",
+                                            "Name this checkpoint (for example: before adding enemies):")
+            if not ok:
+                return None
+        try:
+            made = checkpoints.create(self.root(), name, auto=auto)
+        except OSError as e:
+            QMessageBox.warning(self, "Checkpoint", f"Could not save the checkpoint: {e.strerror}")
+            return None
+        self.status.setText(f"Checkpoint \"{made['name']}\" saved ({len(made['files'])} files).")
+        view = self._open_tool_content("checkpoints")
+        if view is not None:
+            view.refresh(select=made["id"])
+        return made
+
+    def _open_tool_content(self, key):
+        from shiboken6 import isValid
+        frame = self.tools.get(key)
+        return frame.content if frame is not None and isValid(frame) else None
+
+    def open_checkpoints(self):
+        from . import checkpointview
+        view = self._tool_window("checkpoints", "Project Checkpoints", lambda: checkpointview.CheckpointWindow(self),
+                                 (760, 520))
+        view.refresh()
+        return view
+
+    def restore_checkpoint(self, cid, only=None, remove_new=False):
+        """Roll files back to a checkpoint (after saving an automatic one), and refresh any open tabs."""
+        from . import checkpoints
+        root = self.root()
+        self.save_all()
+        checkpoints.create(root, "Before restoring a checkpoint", auto=True)
+        done = checkpoints.restore(root, cid, only, remove_new)
+        for ed in self.open_editors():
+            if not ed.path:
+                continue
+            try:
+                rel = Path(ed.path).relative_to(root).as_posix()
+            except ValueError:
+                continue
+            if rel not in done:
+                continue
+            target = Path(ed.path)
+            text = target.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n") if target.exists() else ""
+            if text != ed.toPlainText():
+                cur = QTextCursor(ed.document())
+                cur.beginEditBlock()
+                cur.select(QTextCursor.Document)
+                cur.insertText(text)
+                cur.endEditBlock()
+            ed.document().setModified(False)
+        self.refresh_files()
+        self.status.setText(f"Restored {len(done)} file(s) from the checkpoint.")
+        return done
 
     def _tool_window(self, key, title, factory, size):
         from shiboken6 import isValid
