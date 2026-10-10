@@ -545,6 +545,7 @@ class PythonStudio(QWidget):
         self._action(m, "&Remove All Breakpoints", self.clear_breakpoints)
         m = self.menubar.addMenu("&Tools")
         self._action(m, "Game &Assets, Sprites and Sound Maker...", self.open_assets)
+        self._action(m, "Sprite Sheets, &Tile Maps and Pixel Art...", self.open_gametools)
         self._action(m, "Python && pygame &Manuals...", self.open_docs, "F1")
         m.addSeparator()
         self._action(m, "&Installed Packages", self.list_packages)
@@ -659,6 +660,18 @@ class PythonStudio(QWidget):
                 ed.setFocus()
         self._tool_window("assets", "Game Assets", lambda: assets.AssetBrowser(python_exe(), insert, projects_dir),
                           (760, 560))
+
+    def open_gametools(self):
+        from . import assets, gametools
+        assets.install()
+
+        def insert(text):
+            ed = self.editor()
+            if ed is not None:
+                ed.textCursor().insertText(text)
+                ed.setFocus()
+        return self._tool_window("gametools", "Sprite Sheets, Tile Maps and Pixel Art",
+                                 lambda: gametools.GameTools(insert), (980, 640))
 
     # ---- fix-this-error --------------------------------------------------------------------------------------
     def _last_run_output(self):

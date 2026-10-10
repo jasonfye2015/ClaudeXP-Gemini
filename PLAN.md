@@ -524,6 +524,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   applies it (with a backup) and runs again, up to 3 fixes (`AssistantPanel.autofix`); stops when it runs clean, on a
   declined diff, on Stop, or when the tries run out. The 14B coder (Qwen2.5 Coder 14B, ~15 tok/s on a GTX 1080 Ti)
   is the default "coding" model.
+  Tools > Sprite Sheets, Tile Maps and Pixel Art (`gametools.py`): (1) sprite-sheet slicer (auto-guesses the frame size,
+  click frames to build an animation with live preview, inserts a `load_frames` + `Animation` helper, or saves frames as
+  PNGs); (2) tile-map editor (paint/erase/fill, undo, resize, saves `Assets\Maps\name.csv` + `.json`, inserts `load_map` /
+  `draw_map` code); (3) pixel-art editor (pencil, eraser, fill, colour picker, mirror, flips, undo, saves PNGs in
+  `Assets\My Sprites`, inserts a load line). Inserted code was run headless to verify it.
 - **Spell check** (`claudexp/spellcheck.py`, installed in `main.py`): one app-wide event filter that gives every editable
   QPlainTextEdit / QTextEdit a red wavy underline and a right-click menu (suggestions, Add to Dictionary, Ignore All,
   "Check Spelling as I Type"). Offline English list from pyspellchecker; custom words in `data/spell_custom.txt`, the
