@@ -567,6 +567,7 @@ class PythonStudio(QWidget):
         m = self.menubar.addMenu("&Tools")
         self._action(m, "Game &Assets, Sprites and Sound Maker...", self.open_assets)
         self._action(m, "Sprite Sheets, &Tile Maps and Pixel Art...", self.open_gametools)
+        self._action(m, "Learn Python and pygame (&Lessons)...", self.open_lessons)
         self._action(m, "Python && pygame &Manuals...", self.open_docs, "F1")
         m.addSeparator()
         self._action(m, "&Installed Packages", self.list_packages)
@@ -749,6 +750,21 @@ class PythonStudio(QWidget):
                 ed.setFocus()
         self._tool_window("assets", "Game Assets", lambda: assets.AssetBrowser(python_exe(), insert, projects_dir),
                           (760, 560))
+
+    def open_lessons(self):
+        from . import tutorialview
+
+        def get_code():
+            ed = self.editor()
+            return ed.toPlainText() if ed is not None else ""
+        return self._tool_window("lessons", "Python Lessons", lambda: tutorialview.LessonWindow(
+            self._lesson_tab, get_code, self._ask_from_tool, python_exe), (900, 560))
+
+    def _lesson_tab(self, title, code):
+        self.untitled += 1
+        ed = self._new_editor(None, code)
+        ed.title = "lesson_" + re.sub(r"\W+", "_", title.split(".", 1)[-1].strip().lower()).strip("_") + ".py"
+        self._add_tab(ed)
 
     def open_snippets(self):
         from . import snippets

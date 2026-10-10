@@ -552,6 +552,11 @@ Run: `ClaudeXP.bat`, or `main.py` with `.venv` in Thonny. F11 = fullscreen, clic
   current file's folder, stored in `.checkpoints\`. The window lists them, shows what changed since (changed / deleted /
   new) with a diff, and restores the whole project or selected files. Restoring first saves an automatic checkpoint
   (last 8 kept) so a rollback can itself be undone, and open tabs reload.
+  Lessons (`lessons.py` + `tutorialview.py`; Tools > Learn Python and pygame): 10 offline lessons (print, variables, if,
+  loops, lists/dicts, functions, classes, a pygame window, keyboard movement, collisions). "Open lesson in editor" gives
+  a starter file; "Check my work" runs the learner's code in the runtime against hidden tests (pygame lessons check the
+  required code is present and that it runs without crashing); Hint, Show solution, and "Ask the AI to explain" (never
+  gives the answer). Progress saved in pystudio_lessons.json.
   Format / tidy / rename (`tidy.py`; Edit > Format Code Ctrl+Shift+F, Tidy Imports Ctrl+Shift+I, Rename Symbol F2): uses
   the offline `ruff` (wheel kept in Python Studio\wheels, installed in the runtime) for Black-style formatting and for
   sorting + removing unused imports (the only lint fixes applied, so behaviour never changes). Rename uses Python's
