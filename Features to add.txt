@@ -9,4 +9,5 @@ tweakui
 windowblinds
 RealPlayer
 MacroMedia Dreamweaver & Fireworks
-he system is. (like tasks piled up for LLM to work on, or back ground task load)
+
+Kiwix - Wikipedia offline browser
