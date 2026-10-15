@@ -21,6 +21,4 @@ Proposed Desktop Computers:
 ---
 Comprehensive help section, outlining all the added features.
 ---
-Other chat clients: MSN, YIM, Skype, ICQ, Trillian, KIK
----
 Kiwix - Wikipedia offline browser
