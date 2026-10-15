@@ -76,7 +76,7 @@ def open_file(desktop, path):
         open_flash(desktop, path)
     elif ext in WEB:
         from ..programs import navigator
-        navigator.launch(desktop, url=QUrl.fromLocalFile(str(path)).toString())
+        navigator.open_url(desktop, url=QUrl.fromLocalFile(str(path)).toString())
     elif ext in (".rar", ".cbr", ".7z", ".cb7", ".tar", ".gz", ".tgz", ".bz2"):
         from ..programs.winrar import open_winrar
         open_winrar(desktop, path)

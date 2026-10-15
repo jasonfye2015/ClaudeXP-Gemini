@@ -419,7 +419,7 @@ class SearchCompanion(QWidget):
         from . import navigator
         q = self.web.text().strip()
         if q:
-            navigator.launch(self.desktop, f"http://www.altavista.com/web/results?q={quote_plus(q)}")
+            navigator.open_url(self.desktop, f"http://www.altavista.com/web/results?q={quote_plus(q)}")
 
     def _toggle_rover(self):
         on = not self.rover.isVisible()

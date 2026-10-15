@@ -45,8 +45,9 @@ the desktop, or choose <a href="launch:connect">Connect to the Internet</a>, the
 handshake; the connection icon appears by the clock. To hang up, right-click that icon and choose Disconnect.</p>
 <p>Programs that need the Internet (Netscape, the Zone games, Windows Update, Outlook Express's Send/Recv) offer to
 connect for you.</p>"""),
-    "netscape": ("Browsing the Web with Netscape Navigator", "web", """
-<p><a href="launch:navigator">Netscape Navigator</a> shows the Web of 2001. Pages are written on the fly the
+    "netscape": ("Browsing the Web", "web", """
+<p><a href="launch:iexplore">Internet Explorer</a> and <a href="launch:navigator">Netscape Navigator</a> show
+the same Web of 2001; Internet Explorer is the default, so links from other programs open there. Pages are written on the fly the
 first time you visit them and kept in the cache afterwards (<a href="launch:cleanmgr">Disk Cleanup</a> can clear
 it). WebMail on the Netscape home page shows the same e-mail as Outlook Express.</p>"""),
     "email": ("Sending and receiving e-mail", "web", """
@@ -309,7 +310,7 @@ class HelpCenter(QWidget):
             launch(self.desktop, target[7:])
         elif target.startswith(("http://", "https://")):
             from . import navigator
-            navigator.launch(self.desktop, target)
+            navigator.open_url(self.desktop, target)
         else:
             self.show_page(target)
 

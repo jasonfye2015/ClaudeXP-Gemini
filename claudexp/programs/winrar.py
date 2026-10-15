@@ -100,7 +100,7 @@ class WinRAREvalDialog(QWidget):
 
     def _buy(self):
         from . import navigator
-        navigator.launch(self.desktop, url="https://www.rarlab.com")
+        navigator.open_url(self.desktop, url="https://www.rarlab.com")
         self._close()
 
     def _how(self):

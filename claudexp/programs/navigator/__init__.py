@@ -22,6 +22,12 @@ def nav_icon():
     return icon()
 
 
+def open_url(desktop, url=None):
+    """Open a link from another program in the default browser, Internet Explorer."""
+    from .iexplore import launch as ie
+    ie(desktop, url)
+
+
 def launch(desktop, url=None):
     global _splash
     if _frame is not None and isValid(_frame):

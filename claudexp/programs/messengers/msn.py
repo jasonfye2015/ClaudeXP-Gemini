@@ -258,7 +258,7 @@ class MSNMain(QWidget):
             self.add_contact()
         else:
             from .. import navigator
-            navigator.launch(self.client.desktop, "http://home.netscape.com/webmail/")
+            navigator.open_url(self.client.desktop, "http://home.netscape.com/webmail/")
 
     def send_im(self):
         item = self.tree.currentItem() if self.network.signed_in else None

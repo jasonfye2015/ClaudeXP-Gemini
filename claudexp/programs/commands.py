@@ -42,7 +42,7 @@ def resolve(desktop, text, cwd=None):
     if low.startswith(("http://", "https://", "www.")):
         from . import navigator
         url = text if "://" in text else "http://" + text
-        return lambda: navigator.launch(desktop, url)
+        return lambda: navigator.open_url(desktop, url)
     name = low[:-4] if low.endswith(".exe") else low
     if name == "explorer":
         from .taskmgr import explorer_running, start_explorer

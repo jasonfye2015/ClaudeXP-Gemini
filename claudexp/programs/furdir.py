@@ -724,7 +724,7 @@ class FurDirectory(QWidget):
                 viewers.open_file(self.desktop, files[int(value)])
         elif kind == "web":
             from . import navigator
-            navigator.launch(self.desktop, url=html.unescape(value))
+            navigator.open_url(self.desktop, url=html.unescape(value))
 
     def keyPressEvent(self, event):
         if self.stack.currentIndex() == 1:
