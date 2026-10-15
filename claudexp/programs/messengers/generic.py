@@ -52,8 +52,11 @@ class Theme:
     line_style: str = "name"         # 'name' (name: text), 'stamp' (name (time): text), 'bubble' (chat bubbles)
     main_size: tuple = (240, 470)
     convo_size: tuple = (460, 400)
-    message_sound: str = "notify"
+    message_sound: str = "notify"      # a file in assets/sounds, or a Windows sound event
     signin_sound: str = "ding"
+    signoff_sound: str = ""
+    login_sound: str = ""            # when you sign in yourself
+    button_sounds: dict = field(default_factory=dict)    # toolbar word -> sound (Skype's Call rings)
     toast: tuple = ("#FFFFFF", "#DDDDDD", "#808080", "#000000")
     label: object = None             # (buddy) -> list text; default: screen name
     tag: object = None               # (buddy) -> text shown after the name, e.g. the network on Trillian
@@ -70,7 +73,7 @@ class ThemedNetwork(Network):
 
 
 class ThemedSkin:
-    send_sound, login_sound = False, False
+    send_sound = False
 
     def __init__(self, network):
         self.network = network
@@ -78,6 +81,7 @@ class ThemedSkin:
         self.title = t.title
         self.main_size, self.convo_size = t.main_size, t.convo_size
         self.message_sound, self.signin_sound = t.message_sound, t.signin_sound
+        self.signoff_sound, self.login_sound = t.signoff_sound, t.login_sound
         self.toast_colors = t.toast
         self.send_label = "Send"
         self.send_size = QSize(64, 28)
@@ -115,10 +119,19 @@ class ThemedSkin:
             b.setStyleSheet(f"QToolButton {{ border: none; background: transparent; color: {self.t.head_text}; "
                             f"font-family: {self.t.font}; font-size: 11px; }} QToolButton:hover {{ text-decoration: "
                             "underline; }")
-            b.clicked.connect(lambda _c=False, w=text: conv.status.setText(f"{w} isn't available right now."))
+            b.clicked.connect(lambda _c=False, w=text: self._button(conv, w))
             row.addWidget(b)
         row.addStretch()
         return bar
+
+    def _button(self, conv, word):
+        ring = self.t.button_sounds.get(word)
+        if ring:
+            from .client import play
+            play(ring)
+            conv.status.setText(f"{word}: no answer.")
+        else:
+            conv.status.setText(f"{word} isn't available right now.")
 
     def header(self, conv, b):
         tag = f" &nbsp;<span style='color:#808080'>({e(self.t.tag(b))})</span>" if self.t.tag else ""

@@ -8,6 +8,16 @@ from ...wm import XPWindow
 from .ui import Conversation, Toast
 
 
+def play(name):
+    """A messenger sound: a file in assets/sounds (the programs' own sounds) or one of Windows' sound events."""
+    if not name:
+        return
+    if name.lower().endswith((".mp3", ".wav")):
+        sound.play_file(name)
+    else:
+        sound.play(name)
+
+
 class Client:
     """network: the Network; skin: the look (see msn.py). One per messenger, created on first launch."""
 
@@ -35,7 +45,7 @@ class Client:
     def signed_in(self):
         self.network.sign_in()
         self.was_online = {bid: b.presence for bid, b in self.network.buddies.items()}
-        sound.play("logon") if self.skin.login_sound else None
+        play(self.skin.login_sound)
 
     def sign_out(self):
         self.network.sign_out()
@@ -88,7 +98,7 @@ class Client:
         b = self.network.buddies.get(bid)
         open_and_front = win is not None and isValid(win) and self.desktop.is_active(win)
         if not open_and_front:
-            sound.play(self.skin.message_sound)
+            play(self.skin.message_sound)
             self.open_convo(bid, activate=False)
             self.toast(f"{self.skin.display(b)} says:", entry["text"][:80], bid)
 
@@ -96,8 +106,10 @@ class Client:
         b = self.network.buddies.get(bid)
         before = self.was_online.get(bid)
         self.was_online[bid] = b.presence
+        if self.network.signed_in and before not in (None, "offline") and b.presence == "offline":
+            play(getattr(self.skin, "signoff_sound", None))
         if self.network.signed_in and before == "offline" and b.presence == "online":
-            sound.play(self.skin.signin_sound)
+            play(self.skin.signin_sound)
             self.toast(self.skin.title, f"{self.skin.display(b)} has just signed in.", bid)
 
     def toast(self, title, text, bid):

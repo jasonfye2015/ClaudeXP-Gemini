@@ -38,7 +38,8 @@ class Skin:
     main_size = (250, 470)
     convo_size = (470, 400)
     send_label, send_size, send_sound = "Send", QSize(64, 64), False
-    message_sound, signin_sound, login_sound = "notify", "balloon", False
+    message_sound = signin_sound = "MSN_Messenger_Notification_Sound.mp3"
+    login_sound = None
     toast_colors = ("#FFFFFF", "#C9DCF7", "#5A7EC0", "#0A246A")
     window_style = "QWidget#convo { background: #EEF3FB; }"
     transcript_style = ("QTextBrowser { background: white; border: 1px solid #7F9DB9; " + TAHOMA +

@@ -26,6 +26,7 @@ ICQ = Theme(
     subtitle="I Seek You", signin_title="Log in to ICQ", signin_field="ICQ# (UIN):", signin_button="Connect",
     buttons=["Send File", "Chat", "Add Contact", "History", "Info"], footer=["Main", "Services", "My ICQ"],
     me_color="#2244AA", them_color="#AA2222", line_style="stamp", main_size=(220, 470),
+    message_sound="ICQ_Messenger_Notification_Sound.wav", signin_sound="ICQ_User_Online_Login_Sound.wav",
     toast=("#FFFFFF", "#CDE9C4", "#2E9A1E", "#1A4A10"),
     label=lambda b: b.name,
 )
@@ -42,6 +43,7 @@ TRILLIAN = Theme(
     signin_field="Screen name:", signin_button="Connect All",
     buttons=["Profile", "Send File", "Logging"], footer=["Trillian", "Connections"],
     me_color="#1F5FA8", them_color="#A8401F", line_style="stamp", main_size=(230, 470),
+    message_sound="trillian_Messenger_Notification_Sound.mp3", signin_sound="trillian_Messenger_Notification_Sound.mp3",
     toast=("#4E6A86", "#22344A", "#0E1A26", "#E6F0FA"),
     label=lambda b: b.name,
     tag=lambda b: ("AIM", "ICQ", "MSN", "Yahoo!")[int(hashlib.md5(b.contact.id.encode()).hexdigest(), 16) % 4],
@@ -60,6 +62,9 @@ SKYPE = Theme(
     signin_field="Skype Name:", signin_button="Sign In",
     buttons=["Call", "Send File", "Add to Chat", "Block"], footer=["Contacts", "Dial", "Call List"],
     me_color="#00558A", them_color="#3A3A3A", line_style="stamp", main_size=(240, 470),
+    message_sound="Skype_Message received.mp3", signin_sound="Skype Go online.mp3",
+    signoff_sound="Skype Go offline.mp3", login_sound="Skype Go online.mp3",
+    button_sounds={"Call": "Skype Phone ring.mp3", "Add to Chat": "Skype Knocking.mp3"},
     toast=("#FFFFFF", "#C9EBFA", "#00AFF0", "#00558A"),
 )
 

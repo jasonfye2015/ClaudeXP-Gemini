@@ -36,7 +36,8 @@ class Skin:
     main_size = (240, 470)
     convo_size = (470, 400)
     send_label, send_size, send_sound = "Send", QSize(60, 26), False
-    message_sound, signin_sound, login_sound = "notify", "ding", False
+    message_sound = signin_sound = "Yahoo_Messenger_Notification_Sound.mp3"
+    login_sound = None
     toast_colors = ("#FFF7C2", "#FFE24A", DARK, "#3A0A5A")
     window_style = "QWidget#convo { background: #EDE6F5; }"
     transcript_style = ("QTextBrowser { background: white; border: 1px solid #9A86B8; font-family: Arial; "
