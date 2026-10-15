@@ -1,13 +1,52 @@
+Fixs needed currently 10/14/2026:
+Resizing hard crashes related to widgets(When widgets are running).
+TV Guide not showing all channels.
+TV Guide not showing fully in widgets.
+---
+Needing work:
+in /ClaudeXP/ClaudeXP Profiles/Background Furry Profiles/, 60 have been added (#61 - #120)
+in /ClaudeXP/ClaudeXP Profiles/Support Furry Profiles/, 60 have been added (#121 - #180)
+Please add both sets to The Furry Directory, and add all users to both IRC and MUCK. Give them all disperse awake/sleep/online times to help balance the user counts. 
+---
+in /ClaudeXP/Program Files/ClaudeAIM/contacts/ 25 have been added.
+Please add all 25 as contacts in AIM, as well as in the furry directory. They will have images and icons to mind as well. any details missing for them please generate.
+---
+in /ClaudeXP/User Profiles/ several new user profiles have been added: AquaVixen, Foxy, Quake, Sheppie, MochaLion. Please add them to the User profile options at windows setup.
+---
+More medias has been added to archive, needs indexing and TV guide creation.
+---
+Check AIM contacts, to see why they offer images very soon and for no reason.
+---
+N64 Roms - have been added, as Nintendo 46 was out in 2001, need an emulator for this system, and to have that placed in the appropriate folders.
+---
+Mac System Compatibility? (Discuss late)
+---
+Flash dive portability? (Entire project readable from drive 256gb drive?)
+---
+Multisystem scope widening, with centralized archive/media/contacts?  
+
+Tentative name: ClaudeTimeline
+
+Proposed Cellphone Devices:
+2001: Nokia 9210 Communicator (Symbian OS)
+2011: Motorola Droid 3 (Android 2.3.6)
+2025: iPhone 17 Pro Max (iOS 26)
+
+Proposed Mobile Devices:
+2001: CLIÉ personal digital assistant (PDA with PEGA-WL100 Wifi card)
+2011: Samsung Galaxy Tab 10.1 (LTE Verizon I905) 
+2025: iPad 11-inch (A16 - Wifi +Cellular, 128gb)
+
+Proposed Desktop Computers:
+2001: Windows XP Home Edition (Intel Pentium III) (<--We are here)
+2011: Windows 7 Home Premium (Intel Core i5-2500K)
+2025: Windows 11 Home (AMD Ryzen 7)
+---
+Older to-do items:
 The web rips need to be integrated into the "internet" that exists on this OS. The "FurAffinity" is a social site and has 700+ pages already inside of it, with media content. The furries that "live inside" of this OS, should each also have there own pages, and occasionally add posts, shout on other pages, favorite art. Some are more active than others, and have larger or smaller pages. "clubstrips", "hardblush", "houepets", "Jay Naylor" , "Sexyfur", "yiffstar" are all stand alone websites that host content for the user to browse. the furries living inside can some times add link to some or all of the websites being added. All websites, should be linked on the "home page" in Netscape. If no websites are present, or the archive has not been installed by the user, then missing websites should have a 404 page. Please also create a generalized 404 Webpage missing error page.
 ---
 Comprehensive help section, outlining all the added features.
 ---
 Other chat clients: MSN, YIM, Skype, ICQ, Trillian, KIK
 ---
-powertoys for xp
-tweakui
-windowblinds
-RealPlayer
-MacroMedia Dreamweaver & Fireworks
-
 Kiwix - Wikipedia offline browser
