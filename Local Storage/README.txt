@@ -30,6 +30,9 @@ Unpack them so the folders sit directly in this one:
       FurCon CDs ...            (Furry Con CD Viewer)
       Portfolios ...            (FurFolio Reader)
       Video ...                 (Furry Video Browser)
+      Website Rips\             (Netscape's Furry Web: FurAffinity, HousePets, Hardblush, Jay Naylor, SexyFur,
+                                YiffStar and clubstripes, each a folder named exactly that, served at their own
+                                addresses; a missing one shows a 404 page)
     TV and Movies ...         ClaudeTV
     Emulation\                the Game Emulation programs (NES, SNES, Game Boy, Genesis, Apple ][ ...)
     WADs\                     Doom, Doom II, Wolfenstein 3D, Heretic and Hexen

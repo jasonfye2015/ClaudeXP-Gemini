@@ -204,6 +204,8 @@ class ClaudeXP(QMainWindow):
         from .programs import copilot_widgets
         QTimer.singleShot(1800, lambda: copilot_widgets.start_at_logon(self.desktop))
         QTimer.singleShot(6000, lambda: self.desktop.clippy.start() if self.desktop.isVisible() else None)
+        from .programs.navigator.sites import activity as furry_web_activity
+        QTimer.singleShot(15000, lambda: furry_web_activity.start(self.desktop))   # the residents on FurAffinity
         if getattr(self, "_offer_tour", False):
             self._offer_tour = False
             from .programs.tour import offer_tour

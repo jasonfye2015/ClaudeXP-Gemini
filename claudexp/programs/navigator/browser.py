@@ -8,13 +8,13 @@ from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, QUrl
 from PySide6.QtGui import (QAction, QColor, QFont, QIcon, QKeySequence, QLinearGradient, QPainter, QPixmap,
                            QImageReader, QPolygonF, QTextDocument)
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QMenuBar, QPlainTextEdit, QProgressBar, QSizePolicy,
-                               QStyle, QTextBrowser, QToolBar, QToolButton, QVBoxLayout, QWidget)
+                               QStackedWidget, QStyle, QTextBrowser, QToolBar, QToolButton, QVBoxLayout, QWidget)
 
 from ... import network, sound
 from ...paths import IMAGES, pixmap
 from ...wm import XPWindow
 from ..people import load_json, save_json
-from . import web
+from . import sites, web
 
 BOOKMARKS_FILE = web.DATA_DIR / "bookmarks.json"
 DEFAULT_BOOKMARKS = [
@@ -176,8 +176,8 @@ class Browser(QWidget):
         file_menu.addSeparator()
         file_menu.addAction("&Close", lambda: self.frame.request_close() if self.frame else self.close())
         edit_menu = bar.addMenu("&Edit")
-        edit_menu.addAction("&Copy", lambda: self.view.copy())
-        edit_menu.addAction("Select &All", lambda: self.view.selectAll())
+        edit_menu.addAction("&Copy", lambda: self._page_action("Copy", self.view.copy))
+        edit_menu.addAction("Select &All", lambda: self._page_action("SelectAll", self.view.selectAll))
         view_menu = bar.addMenu("&View")
         view_menu.addAction("&Reload", self.reload, QKeySequence("Ctrl+R"))
         view_menu.addAction("Re&generate Page", lambda: self.reload(regenerate=True))
@@ -239,6 +239,9 @@ class Browser(QWidget):
 
         # ---- page + status bar ----
         self.view = PageView(self)
+        self.site_view = None                 # the real web engine, made the first time a furry-web site is visited
+        self.pages = QStackedWidget()
+        self.pages.addWidget(self.view)
         status = QWidget()
         status.setObjectName("statusbar")
         status.setAttribute(Qt.WA_StyledBackground, True)
@@ -264,7 +267,7 @@ class Browser(QWidget):
         root.setMenuBar(bar)
         root.addWidget(nav)
         root.addWidget(loc)
-        root.addWidget(self.view, 1)
+        root.addWidget(self.pages, 1)
         root.addWidget(status)
 
         self.throb_timer = QTimer(self)
@@ -318,6 +321,18 @@ class Browser(QWidget):
         if url == "about:blank":
             self._show("<html><head><title></title></head><body></body></html>", url)
             return
+        site = sites.site_for(url)
+        if site is not None:                  # one of the furry web's real sites (from the archive on E:)
+            if not network.is_connected():
+                self.status.setText("Dialing your Internet connection...")
+                network.connect(self.desktop, then=lambda: self.navigate(url, referrer, regenerate, push=False))
+                QTimer.singleShot(300, lambda: self._check_offline(url))
+                return
+            if not site.installed():
+                self._show(sites.not_found_page(url, site), url)
+                return
+            self._show_site(url)
+            return
         cached = None if regenerate else self.cache.get(url)
         person = self.knowledge.person_in(url)
         if cached is not None and person and person[2] and web.life_updated_since(person[0], self.cache.mtime(url)):
@@ -333,6 +348,80 @@ class Browser(QWidget):
             QTimer.singleShot(400, lambda: self._finish_cached(url, cached))
             return
         self._load(url, referrer)
+
+    # ---- the furry web's real sites ----------------------------------------------------------------------
+    def _site_view(self):
+        if self.site_view is None:
+            from .webview import SiteView
+            v = self.site_view = SiteView()
+            v.setStyleSheet("border: 1px solid #7F9DB9;")
+            v.link_followed.connect(lambda url: self.navigate(url, referrer=(self.url, v.title(), url)))
+            v.flash_requested.connect(self._play_flash)
+            v.page().linkHovered.connect(lambda u: self.status.setText(sites.logical_url(u) if u else "Document: Done"))
+            v.loadStarted.connect(lambda: (self._start_throbber(), self.progress.setRange(0, 100)))
+            v.loadProgress.connect(lambda n: (self.progress.setValue(n),
+                                              self.status.setText(f"Document: Received {n}%") if n < 100 else None))
+            v.loadFinished.connect(self._site_loaded)
+            v.titleChanged.connect(self._site_title)
+            v.urlChanged.connect(self._site_url_changed)
+            self.pages.addWidget(v)
+        return self.site_view
+
+    def _show_site(self, url):
+        v = self._site_view()
+        self.page = ""
+        self.links = {}
+        self.status.setText(f"Contacting host: {urlparse(url).netloc}...")
+        self.pages.setCurrentWidget(v)
+        v.open(url)
+
+    def _site_loaded(self, ok):
+        if self.site_view is not None:
+            self._site_url_changed(self.site_view.url())     # (a redirect back to the same page sends no urlChanged)
+        self._stop_throbber()
+        self.progress.setValue(0)
+        self.status.setText("Document: Done" if ok else "Transfer interrupted!")
+
+    def _site_title(self, title):
+        if self.frame is not None and self.pages.currentWidget() is self.site_view:
+            self.frame.set_title(f"Netscape: {title}" if title else "Netscape Navigator")
+
+    def _site_url_changed(self, qurl):
+        """A redirect inside a site (e.g. after 'Add to Favorites'): keep the address bar and history honest."""
+        url = sites.logical_url(qurl.toString())
+        if self.pages.currentWidget() is self.site_view and url != self.url and sites.site_for(url):
+            self.url = url
+            self.location.setText(url)
+            if 0 <= self.index < len(self.history):
+                if self.index > 0 and self.history[self.index - 1] == url:
+                    del self.history[self.index]               # back where we were: no duplicate in Back
+                    self.index -= 1
+                else:
+                    self.history[self.index] = url
+            self._update_buttons()
+
+    def _play_flash(self, local):
+        """A .swf link on a site: play it in ClaudeXP's Flash Player (it's a file in the archive)."""
+        import urllib.request
+        from pathlib import Path
+        from ...paths import DATA
+        try:
+            data = urllib.request.urlopen(local, timeout=20).read()
+        except OSError:
+            return
+        name = Path(urlparse(sites.logical_url(local)).path).name or "movie.swf"
+        target = DATA / "web_flash" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        from ..flash import open_flash
+        open_flash(self.desktop, target)
+
+    def _page_action(self, name, fallback):
+        if self.site_view is not None and self.pages.currentWidget() is self.site_view:
+            from PySide6.QtWebEngineCore import QWebEnginePage
+            self.site_view.triggerPageAction(getattr(QWebEnginePage.WebAction, name))
+        else:
+            fallback()
 
     def _local_file(self, url):
         """A page saved on C: or E: (opened from My Computer): shown as it is, no Internet needed."""
@@ -437,6 +526,7 @@ class Browser(QWidget):
         self._show(page, self.loading_url)
 
     def _show(self, page, url):
+        self.pages.setCurrentWidget(self.view)
         self.page = page
         self.links = {}
         for href, inner in re.findall(r'<a\s[^>]*href\s*=\s*"([^"]+)"[^>]*>(.*?)</a>', page, re.I | re.S):
@@ -454,6 +544,9 @@ class Browser(QWidget):
 
     def _error(self, url, why):
         self._stop_throbber()
+        self.pages.setCurrentWidget(self.view)
+        if self.frame is not None:
+            self.frame.set_title("Netscape Navigator")
         host = urlparse(url).netloc or url
         self.page = ""
         self.view.show_page(f"""<html><head><title>Unable to connect</title></head><body bgcolor="#FFFFFF">
@@ -467,6 +560,8 @@ class Browser(QWidget):
         sound.play("default")
 
     def stop(self, quiet=False):
+        if self.site_view is not None and self.pages.currentWidget() is self.site_view and not quiet:
+            self.site_view.stop()
         if self.loader is not None:
             self.loader.stop()
             if quiet:
@@ -549,17 +644,29 @@ class Browser(QWidget):
     def add_bookmark(self):
         if not self.url or any(b["url"] == self.url for b in self.bookmarks):
             return
-        self.bookmarks.append({"title": web.title_of(self.page) or self.url, "url": self.url})
+        on_site = self.site_view is not None and self.pages.currentWidget() is self.site_view
+        title = (self.site_view.title() if on_site else web.title_of(self.page)) or self.url
+        self.bookmarks.append({"title": title, "url": self.url})
         save_json(BOOKMARKS_FILE, self.bookmarks)
         self.status.setText("Bookmark added.")
 
     def print_page(self):
+        if self.site_view is not None and self.pages.currentWidget() is self.site_view:
+            self.status.setText("This page can't be printed from Netscape 4.79.")
+            sound.play("default")
+            return
         from ...printing import print_document
         title = web.title_of(self.page) or self.url or "Netscape"
         print_document(self.desktop, title, self.view.document())
 
     def view_source(self):
-        text = QPlainTextEdit(self.page or "")
+        if self.site_view is not None and self.pages.currentWidget() is self.site_view:
+            self.site_view.page().toHtml(self._show_source)
+            return
+        self._show_source(self.page or "")
+
+    def _show_source(self, source):
+        text = QPlainTextEdit(source)
         text.setReadOnly(True)
         text.setFont(QFont("Courier New", 9))
         text.setStyleSheet("QPlainTextEdit { background: white; color: black; }")

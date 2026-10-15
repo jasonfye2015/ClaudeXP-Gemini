@@ -404,6 +404,11 @@ def home_page(knowledge, unread=0):
     buddies = "".join(
         f'<li><a href="http://www.furrycities.com/{name}/">{html.escape(name)}\'s homepage</a></li>'
         for name in knowledge.buddy_names)
+    from . import sites
+    furry_web = "".join(
+        f'<li><a href="http://{s.host}/"><b>{html.escape(s.title)}</b></a> - {html.escape(s.blurb)}'
+        + ("" if s.installed() else ' <font color="#999999">(not on this computer)</font>') + "</li>"
+        for s in sites.sites())
     return f"""<html><head><title>Netscape Netcenter</title></head>
 <body bgcolor="#FFFFFF" text="#000000" link="#0000CC" vlink="#551A8B">
 <table width="100%" cellpadding="6" cellspacing="0" bgcolor="#003366"><tr>
@@ -437,6 +442,8 @@ def home_page(knowledge, unread=0):
 <li><a href="http://www.claudeaim.com/">ClaudeAIM - download &amp; buddy icons</a></li></ul></font></td>
 <td width="33%"><font face="Arial" size="3" color="#003366"><b>Your Buddies on the Web</b></font><font face="Arial" size="2">
 <ul>{buddies or "<li>(no buddies yet)</li>"}</ul></font></td></tr></table>
+<table width="100%" cellpadding="8"><tr><td bgcolor="#FFF4E0"><font face="Arial" size="3" color="#B35900"><b>The Furry Web</b></font>
+<font face="Arial" size="2"><ul>{furry_web}</ul></font></td></tr></table>
 <hr size="1"><center><font face="Arial" size="2"><b>Cool Sites:</b>
 <a href="http://www.homestarrunner.com/">Homestar Runner</a> |
 <a href="http://www.hampsterdance.com/">Hampster Dance</a> |
