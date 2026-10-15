@@ -401,9 +401,9 @@ def message_page(m):
 def home_page(knowledge, unread=0):
     now = clock.now()
     webmail = "WebMail" + (f" ({unread} new)" if unread else "")
-    buddies = "".join(
-        f'<li><a href="http://www.furrycities.com/{name}/">{html.escape(name)}\'s homepage</a></li>'
-        for name in knowledge.buddy_names)
+    buddies = " &middot; ".join(                       # one compact block, like the FurAffinity list
+        f'<a href="http://www.furrycities.com/{name}/">{html.escape(name)}</a>'
+        for name in sorted(knowledge.buddy_names, key=str.lower))
     from . import sites
     furry_web = "".join(
         f'<li><a href="http://{s.host}/"><b>{html.escape(s.title)}</b></a> - {html.escape(s.blurb)}'
@@ -458,7 +458,7 @@ def home_page(knowledge, unread=0):
 <li><a href="http://www.fursuitnation.com/">Fursuit Nation</a></li>
 <li><a href="http://www.claudeaim.com/">ClaudeAIM - download &amp; buddy icons</a></li></ul></font></td>
 <td width="33%"><font face="Arial" size="3" color="#003366"><b>Your Buddies on the Web</b></font><font face="Arial" size="2">
-<ul>{buddies or "<li>(no buddies yet)</li>"}</ul></font></td></tr></table>
+<br><font color="#666666">Their FurryCities homepages:</font><br>{buddies or "(no buddies yet)"}</font></td></tr></table>
 <hr size="1"><center><font face="Arial" size="2"><b>Cool Sites:</b>
 <a href="http://www.homestarrunner.com/">Homestar Runner</a> |
 <a href="http://www.hampsterdance.com/">Hampster Dance</a> |
