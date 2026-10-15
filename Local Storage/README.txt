@@ -36,6 +36,8 @@ Unpack them so the folders sit directly in this one:
     TV and Movies ...         ClaudeTV
     Emulation\                the Game Emulation programs (NES, SNES, Game Boy, Genesis, Apple ][ ...)
     WADs\                     Doom, Doom II, Wolfenstein 3D, Heretic and Hexen
+    Kiwix\                    Kiwix (offline Wikipedia): .zim files from download.kiwix.org, up to 15 GB in all.
+                              Kiwix's Get Content page downloads them; any .zim put here shows up in its Library.
 
 Folders are found by how their names begin, so "Furry Media Archive (2001)" works as well as
 "Furry Media Archive" (and "Emulation Archive" as well as "Emulation"). The one exception is WADs, which must be

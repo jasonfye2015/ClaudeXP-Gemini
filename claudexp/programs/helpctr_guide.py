@@ -51,6 +51,8 @@ CATALOG = {
     "outlook": ("web", "Outlook Express 6 - the same mailbox as Hotmail, with Bulk Mail, Sent Items and Drafts."),
     "wab": ("web", "The Windows Address Book: everyone you know."),
     "torrent": ("web", "ClaudeTorrent - download with BitTorrent."),
+    "kiwix": ("web", "Kiwix: Wikipedia offline. Read the real Wikipedia from E:\\Kiwix - search titles, random "
+                     "articles, tabs. Get Content downloads up to 15 GB of it."),
     # furry
     "furdir": ("furry", "The Fur Directory: a profile for every resident - main, support and background furs, and "
                         "the user fursonas - with pictures."),
@@ -398,6 +400,8 @@ def _storage_parts():
         ("Emulation games", any_dir("Emulation"), "The NES, SNES, Game Boy, Genesis, N64 and Apple ][ emulators",
          "E:\\Emulation\\<system> (Roms)"),
         ("WADs", any_dir("WADs"), "Doom, Doom II, Wolfenstein 3D, Heretic and Hexen", "E:\\WADs"),
+        ("Offline Wikipedia (Kiwix)", any((e / "Kiwix").glob("*.zim")) if (e / "Kiwix").is_dir() else False,
+         "Kiwix (its Get Content page downloads it)", "E:\\Kiwix"),
         ("Python runtime", (e / "Python Studio" / "python312" / "python.exe").is_file(),
          "Running programs in Copilot Python Studio", "E:\\Python Studio\\python312"),
         ("FFmpeg", (e / "Python Studio" / "ffmpeg" / "ffmpeg.exe").is_file(),

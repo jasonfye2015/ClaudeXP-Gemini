@@ -166,6 +166,8 @@ PROGRAMS = [
     Program("kik", "Kik", "Chat like on a phone", _lazy(".messengers.others", "kik_icon"),
             _lazy(".messengers.others", "launch_kik"), _lazy(".messengers.others", "shutdown_kik")),
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown),
+    Program("kiwix", "Kiwix", "Wikipedia, offline", _lazy(".kiwix", "kiwix_icon"), _lazy(".kiwix", "launch"),
+            _lazy(".kiwix", "shutdown"), group="Kiwix"),
     Program("realplayer", "RealPlayer", "Play audio and video", _lazy("players", "real_icon"),
             _lazy("players", "open_realplayer"), _lazy("players", "shutdown_realplayer"), group="Real"),
     Program("quicktime", "QuickTime Player", "Play movies", _lazy("players", "qt_icon"),

@@ -203,6 +203,19 @@ class Installer(QObject):
         self.cancel = threading.Event()
         self.thread = None
 
+    # what to download and where (Kiwix's downloader overrides these)
+    def item(self, key):
+        return item(key)
+
+    def target_dir(self, it):
+        return target_dir(it)
+
+    def target(self, it, f):
+        return self.target_dir(it) / f["name"]
+
+    def installed(self, it):
+        return installed(it)
+
     def busy(self):
         return self.thread is not None and self.thread.is_alive()
 
@@ -232,8 +245,8 @@ class Installer(QObject):
             for key in keys:
                 if self.cancel.is_set():
                     break
-                it = item(key)
-                if installed(it):
+                it = self.item(key)
+                if self.installed(it):
                     self.item_done.emit(key, True, "")
                     continue
                 try:
@@ -245,11 +258,11 @@ class Installer(QObject):
         return self._run(work)
 
     def _download_item(self, it, urls):
-        target_dir(it).mkdir(parents=True, exist_ok=True)
+        self.target_dir(it).mkdir(parents=True, exist_ok=True)
         total = size(it)
         base = 0
         for f in it["files"]:
-            dest = target(it, f)
+            dest = self.target(it, f)
             if dest.is_file() and dest.stat().st_size == f["size"]:
                 base += f["size"]
                 continue
@@ -326,12 +339,12 @@ class Installer(QObject):
         if it["kind"] == "engine":
             self._unpack_engine(it)
         else:
-            info = target_dir(it) / "info.json"
+            info = self.target_dir(it) / "info.json"
             if not info.exists() and it.get("info"):
                 info.write_text(json.dumps(it["info"], indent=2), encoding="utf-8")
 
     def _unpack_engine(self, it):
-        z = target(it, it["files"][0])
+        z = self.target(it, it["files"][0])
         dest = root() / "llama.cpp" / "vulkan"
         dest.mkdir(parents=True, exist_ok=True)
         self.status.emit(it["key"], "Unpacking the engine...")
@@ -361,9 +374,9 @@ class Installer(QObject):
     def use_files(self, key, chosen):
         """chosen: {file name in the manifest: path on this computer}. Each is checked, then linked or copied in."""
         def work():
-            it = item(key)
+            it = self.item(key)
             try:
-                target_dir(it).mkdir(parents=True, exist_ok=True)
+                self.target_dir(it).mkdir(parents=True, exist_ok=True)
                 for f in it["files"]:
                     src = chosen.get(f["name"])
                     if src is None:
@@ -373,9 +386,9 @@ class Installer(QObject):
                         raise RuntimeError(f"{src.name} isn't the right file ({fmt(src.stat().st_size)}, expected "
                                            f"{fmt(f['size'])})")
                     self._verify_existing(key, src, f)
-                    self._bring_in(key, src, target(it, f))
+                    self._bring_in(key, src, self.target(it, f))
                 self._finish(it)
-                self.item_done.emit(key, installed(it), "" if installed(it) else "Some of its files are still "
+                self.item_done.emit(key, self.installed(it), "" if self.installed(it) else "Some of its files are still "
                                                                                  "missing.")
             except Exception as e:                           # noqa: BLE001
                 self.item_done.emit(key, False, str(e) or e.__class__.__name__)
