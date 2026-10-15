@@ -1,11 +1,13 @@
 """Help and Support Center: Windows XP's blue home page (Pick a Help topic, Ask for assistance, Pick a task, Did you
 know?), an Index, Search, Back/Forward/Home, and articles that are a real guide to ClaudeXP. Links can open
-programs (launch:key), other articles (help:id) or web pages (opened in Netscape)."""
+programs (launch:key), other articles (help:id) or web pages (opened in the default browser). ClaudeXP's own
+pages - the program catalog and the residents - are in helpctr_guide.py."""
 import random
 import re
 
 from PySide6.QtCore import QRectF, Qt, QUrl
 from PySide6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPen, QPixmap
+from PySide6.QtGui import QTextDocument
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QPushButton, QTextBrowser, QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
@@ -17,8 +19,9 @@ ARTICLES = {
 <p>This computer is a Windows XP machine from 2001, complete with dial-up Internet and friends who are always
 around. Everything here runs on this one computer; your buddies are characters played by a language model that comes with
 ClaudeXP and runs on the real PC's graphics card.</p>
-<p>New to XP? <a href="launch:tour">Take a tour of Windows XP</a>, or browse the topics on the
-<a href="help:home">Help and Support home page</a>.</p>"""),
+<p>Start with <a href="help:claudexp-about">About ClaudeXP</a>, see <a href="help:claudexp-catalog">every program
+on this computer</a>, or meet <a href="help:people">the people who live here</a>. New to XP?
+<a href="launch:tour">Take a tour of Windows XP</a>.</p>"""),
     "startmenu": ("Using the Start menu", "new", """
 <p>Click <b>start</b> to see your programs. Your most-used programs are listed on the left;
 <b>All Programs</b> holds everything, sorted into folders like <b>Accessories</b> and <b>Games</b>.
@@ -51,10 +54,11 @@ the same Web of 2001; Internet Explorer is the default, so links from other prog
 first time you visit them and kept in the cache afterwards (<a href="launch:cleanmgr">Disk Cleanup</a> can clear
 it). WebMail on the Netscape home page shows the same e-mail as Outlook Express.</p>"""),
     "email": ("Sending and receiving e-mail", "web", """
-<p><a href="launch:outlook">Outlook Express</a> holds the e-mail your buddies send you. Click <b>Create Mail</b>,
-pick someone from <b>Addresses</b>, and send. Your buddy answers a few minutes later in their own words (if
-they're asleep, when they wake up). Mail written offline waits in the Outbox until you press <b>Send/Recv</b>.
-Mail to an address nobody uses comes back from the Mail Delivery Subsystem.</p>"""),
+<p>Your mailbox is on <a href="launch:hotmail">MSN Hotmail</a>; <a href="launch:outlook">Outlook Express</a> shows
+the same mail. Everyone you know has an address @hotmail.com - pick them from the Address Book. They answer a few
+minutes later in their own words (if they're asleep, when they wake up). In Outlook Express, mail written offline
+waits in the Outbox until you press <b>Send/Recv</b>. Mail to an address nobody uses comes back from the Mail
+Delivery Subsystem. See <a href="help:people-mail">E-mail with the residents</a>.</p>"""),
     "buddies": ("Your buddies", "web", """
 <p>The people on <a href="launch:aim">ClaudeAIM</a>, FurNet <a href="launch:irc">IRC</a> and PawPrints
 <a href="launch:muck">MUCK</a> lead lives of their own. They keep diaries, remember what you talked about in any
@@ -112,7 +116,8 @@ appears by the clock; put the LLM Models download there and log on again.</li>
 <p>Click the speaker by the clock to turn sound back on (a red circle means it's muted). Windows Media Player has
 its own volume and Mute button too.</p>"""),
 }
-TOPICS = [("new", "What's new in Windows XP"), ("media", "Music, video, games, and photos"),
+TOPICS = [("claudexp", "Welcome to ClaudeXP"), ("people", "The people who live here"),
+          ("new", "What's new in Windows XP"), ("media", "Music, video, games, and photos"),
           ("web", "Networking and the Web"), ("custom", "Customizing your computer"),
           ("access", "Accessibility"), ("print", "Printing and faxing"), ("perf", "Performance and maintenance"),
           ("fix", "Fixing a problem")]
@@ -121,7 +126,23 @@ TIPS = ["You can drag icons around the desktop, and right-click it to arrange th
         "In Minesweeper, click a number with both mouse buttons to uncover all the squares around it.",
         "FreeCell game #11982 is the only one of the 32,000 that can't be won.",
         "Type 'explorer' into Run... (or File > New Task in Task Manager) if your taskbar ever disappears.",
-        "Your buddies remember games you played with them on the Zone, and might bring them up later."]
+        "Your buddies remember games you played with them on the Zone, and might bring them up later.",
+        "Everyone you know has a Hotmail address - try e-mailing one of the IRC regulars.",
+        "Post in your LiveJournal and a few buddies will come by to comment.",
+        "The Furry Log shows everything the language model is doing, as it happens.",
+        "Press any key during the disk check's countdown to skip it.",
+        "Neko chases your mouse pointer. Keep it still and Neko curls up for a nap."]
+
+from .helpctr_guide import GUIDE, guide_article  # noqa: E402
+
+ARTICLES.update(GUIDE)
+ARTICLES["claudexp-catalog"] = ("Programs on this computer", "claudexp",
+                                "Every program on this computer, by kind: messengers, Internet, furry stuff, office, "
+                                "music and video, games, emulators, AI helpers, system tools.")
+ARTICLES["people"] = ("The people who live here", "people",
+                      "AIM buddies main furs support furs background furs regulars IRC MUCK accounts personas "
+                      "schedules diaries e-mail Hotmail LiveJournal FurAffinity Fur Directory")
+LIVE = {"claudexp-catalog", "people"} | set(GUIDE)
 
 PAGE_STYLE = """
 <style>
@@ -156,7 +177,13 @@ def help_icon():
 
 def home_page():
     topics = "".join(f'<p><a href="topic:{key}">\u25B8 {name}</a></p>' for key, name in TOPICS)
-    return f"""{PAGE_STYLE}<body><table width="100%" cellspacing="8"><tr>
+    return f"""{PAGE_STYLE}<body><table width="100%" cellspacing="8"><tr><td colspan="2" class="box">
+<b>Welcome to ClaudeXP</b> - a Windows XP computer from 2001, lived in by characters a language model plays.<br>
+<a href="help:claudexp-about">About ClaudeXP</a> &nbsp;&middot;&nbsp;
+<a href="help:claudexp-catalog">Programs on this computer</a> &nbsp;&middot;&nbsp;
+<a href="help:people">The people who live here</a> &nbsp;&middot;&nbsp;
+<a href="help:claudexp-ai">How the language models work</a> &nbsp;&middot;&nbsp;
+<a href="help:claudexp-nags">The 2001 nags</a></td></tr><tr>
 <td width="50%" valign="top"><h2>Pick a Help topic</h2>{topics}</td>
 <td width="50%" valign="top">
 <h2>Ask for assistance</h2>
@@ -180,6 +207,10 @@ def topic_page(key):
 
 
 def article_page(aid):
+    if aid in LIVE:
+        title, body = guide_article(aid)
+        return f"{PAGE_STYLE}<body>{'' if body.lstrip().startswith('<h1>') else f'<h1>{title}</h1>'}{body}" \
+               "<p><br><a href='help:home'>Help and Support home</a></p></body>"
     title, _topic, body = ARTICLES[aid]
     return f"{PAGE_STYLE}<body><h1>{title}</h1>{body}<p><br><a href='help:home'>Help and Support home</a></p></body>"
 
@@ -202,6 +233,20 @@ def search_page(query):
     items = "".join(f'<p><a href="help:{aid}">{title}</a></p>' for _s, aid, title in scored)
     return (f"{PAGE_STYLE}<body><h1>Search Results</h1><p>{len(scored)} results for <b>{query}</b>.</p>"
             f"{items or '<p>No topics were found. Try different words.</p>'}</body>")
+
+
+class _Page(QTextBrowser):
+    """The article view; 'icon:<program>' images are the programs' own icons."""
+
+    def loadResource(self, kind, url):
+        if kind == QTextDocument.ImageResource and url.scheme() == "icon":
+            from .. import programs
+            key = url.path() or url.toString()[5:]
+            try:
+                return programs.get(key).icon().pixmap(24, 24)
+            except StopIteration:
+                return None
+        return super().loadResource(kind, url)
 
 
 class Header(QWidget):
@@ -261,7 +306,7 @@ class HelpCenter(QWidget):
         h.addWidget(self.query)
         h.addWidget(go)
         v.addWidget(nav)
-        self.view = QTextBrowser()
+        self.view = _Page()
         self.view.setOpenLinks(False)
         self.view.anchorClicked.connect(self._link)
         v.addWidget(self.view, 1)
@@ -287,7 +332,12 @@ class HelpCenter(QWidget):
         return home_page()
 
     def show_page(self, target, record=True):
+        anchor = ""
+        if "#" in target and not target.startswith("search:"):
+            target, anchor = target.split("#", 1)
         self.view.setHtml(self._render(target))
+        if anchor:
+            self.view.scrollToAnchor(anchor)
         if record:
             del self.history[self.pos + 1:]
             self.history.append(target)
@@ -311,6 +361,8 @@ class HelpCenter(QWidget):
         elif target.startswith(("http://", "https://")):
             from . import navigator
             navigator.open_url(self.desktop, target)
+        elif target.startswith("#"):
+            self.view.scrollToAnchor(target[1:])
         else:
             self.show_page(target)
 
@@ -330,6 +382,12 @@ def launch(desktop, key):
     if key == "search":
         from .search import open_search
         return open_search(desktop)
+    if key == "thanks":
+        from .. import credits
+        return credits.show(desktop)
+    if key == "aimodels":
+        from ..controlpanel import _ai_models
+        return _ai_models(desktop)
     if any(p.key == key for p in programs.PROGRAMS):
         programs.launch(desktop, key)
 
