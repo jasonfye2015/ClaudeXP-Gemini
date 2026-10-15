@@ -258,6 +258,8 @@ PROGRAMS = [
             _lazy("utility_icons", "nero_icon"), _lazy("nero", "open_nero"), group="Nero"),
     Program("alcohol120", "Alcohol 120%", "CD/DVD burning and emulation",
             _lazy("utility_icons", "alcohol_icon"), _lazy("alcohol", "open_alcohol"), group="Alcohol 120%"),
+    Program("adaware", "Ad-aware", "Find and remove spyware", _lazy("..maintenance.adaware", "aa_icon"),
+            _lazy("..maintenance.adaware", "launch"), group="Lavasoft Ad-aware 5.6"),
     Program("winrar", "WinRAR", "Archive manager",
             _lazy("utility_icons", "winrar_icon"), _lazy("winrar", "open_winrar"), group="WinRAR"),
     Program("winzip", "WinZip", "The Zip File Utility",

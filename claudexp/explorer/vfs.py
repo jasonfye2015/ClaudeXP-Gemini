@@ -127,7 +127,7 @@ def shared_documents():
 
 EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "claudeaim.exe": "aim", "claudeirc.exe": "irc", "claudemuck.exe": "muck", "netscape.exe": "navigator", "iexplore.exe": "iexplore",
-    "notepad.exe": "notepad", "explorer.exe": "mycomputer", "claudeshield.exe": "antivirus",
+    "notepad.exe": "notepad", "explorer.exe": "mycomputer", "claudeshield.exe": "antivirus", "ad-aware.exe": "adaware",
     "mspaint.exe": "paint", "calc.exe": "calc", "cmd.exe": "cmd", "taskmgr.exe": "taskmgr",
     "dfrgntfs.exe": "defrag", "wupdmgr.exe": "winupdate", "isignup.exe": "connect", "wmplayer.exe": "wmp",
     "wordpad.exe": "wordpad", "msimn.exe": "outlook", "wab.exe": "wab", "charmap.exe": "charmap",
@@ -230,7 +230,9 @@ def setup_c():
     for extra_exe in (DRIVE_C / "Program Files" / "Ahead" / "Nero" / "nero.exe",
                       DRIVE_C / "Program Files" / "Alcohol Soft" / "Alcohol 120" / "Alcohol.exe",
                       DRIVE_C / "Program Files" / "WinRAR" / "WinRAR.exe",
-                      DRIVE_C / "Program Files" / "WinZip" / "winzip32.exe"):
+                      DRIVE_C / "Program Files" / "WinZip" / "winzip32.exe",
+                      DRIVE_C / "Program Files" / "Internet Explorer" / "IEXPLORE.EXE",
+                      DRIVE_C / "Program Files" / "Lavasoft" / "Ad-aware 5.6" / "Ad-aware.exe"):
         if not extra_exe.exists():
             _fake(extra_exe, 200, 900)
     if (DRIVE_C / MARKER).exists():
@@ -248,7 +250,7 @@ def setup_c():
     (DRIVE_C / "Documents and Settings" / "All Users" / "Documents" / "Shared Pictures").mkdir(parents=True, exist_ok=True)
     pf = DRIVE_C / "Program Files"
     for rel in ("ClaudeAIM/ClaudeAIM.exe", "ClaudeIRC/ClaudeIRC.exe", "ClaudeMUCK/ClaudeMUCK.exe",
-                "Netscape/Navigator/netscape.exe", "Internet Explorer/IEXPLORE.EXE", "ClaudeShield AntiVirus/ClaudeShield.exe",
+                "Netscape/Navigator/netscape.exe", "ClaudeShield AntiVirus/ClaudeShield.exe",
                 "America Online/isignup.exe", "Windows Media Player/wmplayer.exe", "Outlook Express/msimn.exe",
                 "ClaudeTV/ClaudeTV.exe", "FurComix Reader/FurComix.exe",
                 "FurFolio Reader/FurFolio.exe", "FurFolio Reader/FurStory.exe",

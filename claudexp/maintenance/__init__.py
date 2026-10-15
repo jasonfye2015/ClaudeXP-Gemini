@@ -1,4 +1,4 @@
-"""System maintenance that 'buys time' for the model: Windows Update, the virus scanner and
+"""System maintenance that 'buys time' for the model: Windows Update, the virus scanner, Ad-aware and
 Disk Defragmenter.
 
 Each task runs for at least a minimum time and never finishes while the model broker still has
@@ -52,7 +52,8 @@ class Maintenance(QObject):
         return self.desktop.isVisible()
 
     def busy(self):
-        return self.updates.busy() or self.antivirus.busy() or self._defrag_running()
+        from . import adaware
+        return self.updates.busy() or self.antivirus.busy() or adaware.running() or self._defrag_running()
 
     def _defrag_running(self):
         from . import defrag
@@ -70,7 +71,7 @@ class Maintenance(QObject):
         options = []
         if network.is_connected():
             options += ["updates", "liveupdate"]
-        options += ["scan"]
+        options += ["scan", "adaware"]
         if time.monotonic() - self.desktop.last_input >= IDLE_FOR_DEFRAG:
             options.append("defrag")
         kind = kind or random.choice(options)
@@ -81,6 +82,9 @@ class Maintenance(QObject):
             self.antivirus.live_update(automatic=True)
         elif kind == "scan":
             self.antivirus.scan(automatic=True)
+        elif kind == "adaware":
+            from . import adaware
+            adaware.get(self.desktop).scan(automatic=True)
         elif kind == "defrag":
             from . import defrag
             defrag.launch(self.desktop, automatic=True)
