@@ -1,14 +1,3 @@
-Fixs needed currently 10/14/2026:
-Resizing hard crashes related to widgets(When widgets are running).
-TV Guide not showing all channels.
-TV Guide not showing fully in widgets.
----
-More medias has been added to archive, needs indexing and TV guide creation.
----
-Check AIM contacts, to see why they offer images very soon and for no reason.
----
-N64 Roms - have been added, as Nintendo 46 was out in 2001, need an emulator for this system, and to have that placed in the appropriate folders.
----
 Mac System Compatibility? (Discuss late)
 ---
 Flash dive portability? (Entire project readable from drive 256gb drive?)
