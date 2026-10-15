@@ -20,10 +20,11 @@ class BuddyTree(QTreeWidget):
     """Groups of buddies. groups: [(title format, test)] e.g. [("Online ({n})", lambda b: b.presence != OFFLINE)]."""
     open_buddy = Signal(str)
 
-    def __init__(self, network, groups, icons, style, label=None):
+    def __init__(self, network, groups, icons, style, label=None, order=None):
         super().__init__()
         self.network, self.groups, self.icons = network, groups, icons
         self.label = label or (lambda b: b.name)
+        self.order = order or (lambda b: self.label(b).lower())
         self.setHeaderHidden(True)
         self.setRootIsDecorated(True)
         self.setIndentation(14)
@@ -41,7 +42,7 @@ class BuddyTree(QTreeWidget):
             it = self.topLevelItem(i)
             self.expanded[it.data(0, Qt.UserRole + 1)] = it.isExpanded()
         self.clear()
-        buddies = sorted(self.network.buddies.values(), key=lambda b: self.label(b).lower())
+        buddies = sorted(self.network.buddies.values(), key=self.order)
         for title, test in self.groups:
             members = [b for b in buddies if test(b)]
             head = QTreeWidgetItem([title.format(n=len(members))])

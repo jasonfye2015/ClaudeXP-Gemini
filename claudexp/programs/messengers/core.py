@@ -19,7 +19,6 @@ from ..aim import ensure_aim_path
 
 ensure_aim_path()
 from claudeaim import timefmt  # noqa: E402
-from claudeaim.contacts import load_contacts  # noqa: E402
 from claudeaim.llm import clean_reply  # noqa: E402
 
 PROMPT = """You are {name}, chatting with your buddy "{user}" on {network}.
@@ -88,7 +87,10 @@ class Network(QObject):
 
     # ---- the people ----------------------------------------------------------------------------------------
     def reload(self):
-        contacts, _errors = load_contacts()
+        from ..people import load_buddies
+        pairs, _errors = load_buddies(self.key)          # each contact file may have an "msn" / "yim" section
+        contacts = [c for c, _sec in pairs]
+        self.sections = {c.id: sec or {} for c, sec in pairs}
         old = self.buddies
         self.buddies = {c.id: old.get(c.id) or Buddy(c, self) for c in contacts}
         for b in self.buddies.values():

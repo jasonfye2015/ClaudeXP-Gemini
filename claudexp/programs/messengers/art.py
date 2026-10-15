@@ -9,8 +9,14 @@ ART = IMAGES / "messengers"
 _cache = {}
 
 
+# the program icons the user supplied (assets/images/MSN.png, YIM.png)
+SUPPLIED = {"msn_logo": IMAGES / "MSN.png", "yim_logo": IMAGES / "YIM.png"}
+
+
 def _custom(name, size):
     path = ART / f"{name}.png"
+    if not path.is_file() and name in SUPPLIED:
+        path = SUPPLIED[name]
     if path.is_file():
         pm = QPixmap(str(path))
         if not pm.isNull():
@@ -174,6 +180,7 @@ def yahoo_wordmark(height=28, color="#FFFFFF"):
 
 DRAW = {
     "msn_butterfly": _butterfly,
+    "msn_logo": _butterfly,
     "msn_online": _msn_person("#3DAA35", "#2B6DD9"),
     "msn_offline": _msn_person("#D9483B", "#A33A30"),
     "msn_away": _msn_away,
