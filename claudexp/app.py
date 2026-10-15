@@ -207,6 +207,8 @@ class ClaudeXP(QMainWindow):
         from .programs import claudeai
         QTimer.singleShot(2000, lambda: claudeai.start_at_logon(self.desktop))
         from . import llm_server
+        from . import llm_loading
+        llm_loading.start(self.desktop)          # the "Loading AI Model" box, first load of each model
         QTimer.singleShot(1200, lambda: llm_server.at_logon(self.desktop))
         from .programs import torrent
         QTimer.singleShot(2600, lambda: torrent.start_at_logon(self.desktop))
