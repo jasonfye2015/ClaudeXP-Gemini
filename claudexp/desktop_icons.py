@@ -26,7 +26,9 @@ MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family
 SORTS = ("Name", "Size", "Type", "Modified")
 LAYOUT = 8                  # bump when builtins() changes order
 # Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
-PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon", "furvideo", "furdir", "furlog", "furlocator"],
+PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon", "furvideo", "furdir", "furlog", "furlocator",
+                                      "mediaarchive"],
+                   "TV and Movies": ["tv", "tvmovies"],          # ClaudeTV beside the link to E:\TV and Movies
                    "Emulation": ["nes", "snes", "n64", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
                    # the desktop Games folder mirrors Start > Programs > Games
                    "Games": [p.key for p in programs.PROGRAMS if p.group == "Games"],
@@ -35,10 +37,12 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
                    "Disc Tools": ["nero", "alcohol120"],
                    "Archive Tools": ["winrar", "winzip"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Furry Programs": 18, "Emulation": 19, "Games": 10,
+FOLDERS_SINCE = {"Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Games": 10,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 19
+FOLDERS = 20
+# shortcuts that now live in one of those folders instead of loose on the desktop
+IN_FOLDERS = {"prog:mediaarchive": "Furry Programs", "prog:tvmovies": "TV and Movies", "prog:tv": "TV and Movies"}
 
 
 def std(which):
@@ -48,13 +52,13 @@ def std(which):
 def builtins():
     """The icons Windows puts on the desktop: system icons and program shortcuts. (key, label, icon getter)"""
     folders = [(f"prog:{key}", label, lambda: std(QStyle.SP_DirIcon))
-               for key, (label, _prefix) in programs.FOLDER_SHORTCUTS.items() if programs.archive_folder(key)]
+               for key, (label, _prefix) in programs.FOLDER_SHORTCUTS.items()
+               if programs.archive_folder(key) and f"prog:{key}" not in IN_FOLDERS]
     return [
         ("sys:recycle", "Recycle Bin", lambda: std(QStyle.SP_TrashIcon)),
         ("sys:mycomputer", "My Computer", lambda: std(QStyle.SP_ComputerIcon)),
         ("prog:connect", "America Online", lambda: QIcon(pixmap("aol_icon.png"))),
     ] + folders + [
-        ("prog:tv", "ClaudeTV", lambda: programs.get("tv").icon()),
         ("prog:claudeamp", "ClaudeAmp", lambda: programs.get("claudeamp").icon()),
         ("prog:flash", "Flash Player", lambda: programs.get("flash").icon()),
         ("prog:torrent", "ClaudeTorrent", lambda: programs.get("torrent").icon()),
@@ -157,6 +161,18 @@ class IconManager(QObject):
         folders = self.state.get("folders", self.state.get("layout", 1))
         if folders < FOLDERS:
             self._make_program_folders([n for n, v in FOLDERS_SINCE.items() if folders < v])
+            if folders < 20:
+                # the Furry Media Archive link moves into Furry Programs (only that one is added: shortcuts you
+                # deleted from the folder stay deleted), and the TV and Movies folder takes the old link's spot
+                from .explorer import shortcuts, vfs
+                furry = vfs.user_home() / "Desktop" / "Furry Programs"
+                link = furry / f"{programs.get('mediaarchive').name}.lnk"
+                if furry.is_dir() and not link.exists():
+                    shortcuts.make(link, program="mediaarchive")
+                pos = self.state["positions"]
+                old = pos.get("prog:tvmovies") or pos.get("prog:tv")
+                if old and "file:TV and Movies" not in pos:
+                    pos["file:TV and Movies"] = old
             self.state["folders"] = FOLDERS
         self.icons = []
         self.press = None          # (global pos, {icon: start pos}) while dragging
