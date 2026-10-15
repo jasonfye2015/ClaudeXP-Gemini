@@ -427,6 +427,7 @@ def _home_links(knowledge):
 
 FANDOM_LINKS = [("http://www.furnet.irc/", "FurNet IRC Network"), ("http://www.pawprintsmuck.com/", "PawPrints MUCK"),
                 ("http://www.furrycities.com/", "FurryCities - free furry homepages"),
+                ("http://www.livejournal.com/", "LiveJournal - your friends' journals"),
                 ("http://www.furryconventions.com/", "Convention listings 2001-2002"),
                 ("http://www.fursuitnation.com/", "Fursuit Nation"),
                 ("http://www.claudeaim.com/", "ClaudeAIM - download &amp; buddy icons")]

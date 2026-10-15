@@ -177,6 +177,7 @@ class Browser(QWidget):
         self.loading_url = ""
         self.throb_frame = 0
         self.bookmarks = load_json(self.BOOKMARKS, None) or list(self.DEFAULT_BOOKMARKS)
+        sites.services()                      # Hotmail and LiveJournal are made here, on the main thread
         self.view = PageView(self)
         self.site_view = None                 # the real web engine, made the first time a furry-web site is visited
         self.pages = QStackedWidget()

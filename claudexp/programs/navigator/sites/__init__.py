@@ -104,11 +104,11 @@ _services = None
 
 
 def services():
-    """Sites that aren't from the archive but live on the same server: MSN Hotmail."""
+    """Sites that aren't from the archive but live on the same server: MSN Hotmail and LiveJournal."""
     global _services
     if _services is None:
-        from . import hotmail
-        _services = [hotmail.Hotmail()]
+        from . import hotmail, livejournal
+        _services = [hotmail.Hotmail(), livejournal.LiveJournal()]
     return _services
 
 

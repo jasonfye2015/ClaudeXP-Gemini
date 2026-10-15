@@ -377,8 +377,9 @@ class LifeSim(QObject):
         self.state["last_running"] = datetime.now().astimezone().isoformat(timespec="seconds")
         self._deliver_mail()
         if not self.powered_off:
-            from . import mail_extras
+            from . import lj, mail_extras
             mail_extras.tick(self)
+            lj.tick(self)
         save_json(STATE_FILE, self.state)
         self._summarise_quiet_talks()
         if time.monotonic() >= self.next_story and (self.desktop.isVisible() or self.powered_off):
