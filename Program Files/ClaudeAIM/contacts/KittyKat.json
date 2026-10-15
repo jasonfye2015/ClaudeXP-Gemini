@@ -43,8 +43,8 @@
     },
     {
       "on": "idle",
-      "minutes": 35,
-      "chance": 0.5,
+      "minutes": 75,
+      "chance": 0.3,
       "share_picture": true,
       "prompt": "Still quiet, so you share some silly pictures of yourself in your suit."
     },

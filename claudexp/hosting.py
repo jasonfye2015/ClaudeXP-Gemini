@@ -13,6 +13,7 @@ from . import theme
 from .wm import BORDER, TITLE_H, XPWindow
 
 DEFAULT_SIZE = QSize(400, 300)
+PICTURE_WARMUP = 12          # lines into a chat before a buddy brings up their pictures without being asked
 
 
 class AppHost:
@@ -103,7 +104,23 @@ class AppHost:
     # ---- the rest of the system ------------------------------------------------
     def extra_context(self, name):
         from . import life
-        return life.get().context(name) if life.get() else ""
+        sim = life.get()
+        return (sim.context(name) if sim else "") + self._picture_pacing(name, sim)
+
+    @staticmethod
+    def _picture_pacing(name, sim):
+        """Early in a chat, buddies with pictures shouldn't lead with them ("hi! want to see my pics?")."""
+        if sim is None or sim.aim_world is None:
+            return ""
+        buddy = next((b for b in sim.aim_world.buddies.values() if b.name == name), None)
+        if buddy is None or not buddy.contact.pictures:
+            return ""
+        talk = sim.talks.get((name, "AIM"))
+        if talk and len(talk["lines"]) >= PICTURE_WARMUP:
+            return ""
+        return ("\n\nYou've only just started chatting this time, so don't bring up, offer or mention your pictures "
+                "yet, unless your buddy asks to see some, the conversation is already about what they show, or "
+                "you've just been told to share one.")
 
     def world_started(self, world):
         from . import life
