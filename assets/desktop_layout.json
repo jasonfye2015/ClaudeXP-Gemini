@@ -1,0 +1,116 @@
+{
+  "_help": "The desktop a new install (or a reinstall) starts with: icon positions (pixels, top-left), hidden built-in icons, and the Arrange Icons options. Made from the user's own arrangement, 2026-10-15.",
+  "positions": {
+    "sys:recycle": [
+      6,
+      6
+    ],
+    "sys:mycomputer": [
+      6,
+      84
+    ],
+    "prog:connect": [
+      6,
+      162
+    ],
+    "file:Furry Programs": [
+      6,
+      396
+    ],
+    "file:Emulation": [
+      6,
+      318
+    ],
+    "file:Games": [
+      6,
+      474
+    ],
+    "file:GeminiOffice": [
+      6,
+      552
+    ],
+    "prog:claudeamp": [
+      166,
+      162
+    ],
+    "prog:rpg": [
+      166,
+      240
+    ],
+    "prog:navigator": [
+      6,
+      240
+    ],
+    "prog:claudeai": [
+      166,
+      6
+    ],
+    "prog:copilotai": [
+      166,
+      84
+    ],
+    "prog:imagecreator": [
+      166,
+      318
+    ],
+    "prog:aim": [
+      86,
+      474
+    ],
+    "prog:irc": [
+      86,
+      630
+    ],
+    "prog:muck": [
+      86,
+      552
+    ],
+    "prog:pystudio": [
+      166,
+      396
+    ],
+    "prog:msn": [
+      86,
+      396
+    ],
+    "prog:yim": [
+      86,
+      162
+    ],
+    "prog:icq": [
+      86,
+      240
+    ],
+    "prog:trillian": [
+      86,
+      84
+    ],
+    "prog:skype": [
+      86,
+      6
+    ],
+    "prog:kik": [
+      86,
+      318
+    ],
+    "file:TV and Movies": [
+      6,
+      630
+    ]
+  },
+  "hidden": [
+    "prog:neko",
+    "prog:copilotwidgets",
+    "prog:flash",
+    "prog:torrent"
+  ],
+  "auto_arrange": true,
+  "align_grid": true,
+  "folders": [
+    "Emulation",
+    "Furry Programs",
+    "Games",
+    "GeminiOffice",
+    "TV and Movies"
+  ]
+}

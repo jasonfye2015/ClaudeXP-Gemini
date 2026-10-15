@@ -15,9 +15,10 @@ from PySide6.QtWidgets import QApplication, QFileIconProvider, QLineEdit, QMenu,
 from shiboken6 import isValid
 
 from . import programs, sound
-from .paths import DATA, pixmap
+from .paths import DATA, ROOT, pixmap
 
 STATE_FILE = DATA / "desktop.json"
+DEFAULT_LAYOUT = ROOT / "assets" / "desktop_layout.json"     # where the icons sit on a new install
 CELL_W, CELL_H = 80, 78
 ORIGIN = QPoint(6, 6)
 MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family: Tahoma; font-size: 11px; }"
@@ -143,7 +144,7 @@ class IconManager(QObject):
             with open(STATE_FILE, encoding="utf-8") as f:
                 self.state.update(json.load(f))
         except (OSError, ValueError):
-            pass
+            self._fresh_desktop()
         if self.state.get("layout", 1) < LAYOUT:
             # The built-in shortcuts were reordered: let them flow into the new order once (files keep their spots).
             old = self.state.get("layout", 1)
@@ -187,6 +188,18 @@ class IconManager(QObject):
         self.rescan_timer.timeout.connect(self.rescan)
         self.watcher.directoryChanged.connect(lambda _p: self.rescan_timer.start(300))
         desktop.setAcceptDrops(True)
+
+    def _fresh_desktop(self):
+        """A new install or a reinstall: the default arrangement (assets/desktop_layout.json) and its folders."""
+        try:
+            default = json.loads(DEFAULT_LAYOUT.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return                                      # no default: the icons flow into place as before
+        self._make_program_folders([f for f in default.get("folders", []) if f in PROGRAM_FOLDERS])
+        for key in ("positions", "hidden", "auto_arrange", "align_grid"):
+            if key in default:
+                self.state[key] = default[key]
+        self.state["layout"], self.state["folders"] = LAYOUT, FOLDERS
 
     # ---- the Desktop folder -------------------------------------------------------------
     def _make_program_folders(self, names):
