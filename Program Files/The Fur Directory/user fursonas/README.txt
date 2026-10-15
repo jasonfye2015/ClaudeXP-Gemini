@@ -31,6 +31,7 @@ What residents know about you comes from "knows": close friends know your life (
 personality, favourites, relationship status); friends know your fursona, age, where you live, fursuit and cons;
 acquaintances and anyone not listed only know what they can see (your fursona).
 
-The five here (Alpha, Beep, Kithylin, OceanDragon, SnowMEW) were made from the source material in the ClaudeXP
+The ten here (Alpha, AquaVixen, Beep, Foxy, Kithylin, MochaLion, OceanDragon, Quake, Sheppie, SnowMEW) were made from the source material in the ClaudeXP
 folder's "User Profiles" (Details.txt, MUCK char desc.txt and pictures): account.jpg is the profile picture cropped
-square (256px), buddy_icon.jpg the icon (128px), and photos\Fursuit and photos\Fursona Art the rest (max 1024px).
+square (256px), buddy_icon.jpg the icon (128px), and photos\Fursuit, photos\Con Photos and photos\Fursona Art
+the rest (max 1024px).

@@ -1,0 +1,107 @@
+{
+  "fur_name": "AquaVixen",
+  "handle": "AquaVixen",
+  "summary": "A slim, graceful blue vixen with bright aqua eyes and a silver pendant. Observant, curious and playful, with a taste for clever banter.",
+  "screen_names": {
+    "aim": "",
+    "irc": "",
+    "muck": "",
+    "email": ""
+  },
+  "personal": {
+    "real_name": "Jasper Canis",
+    "location": "Texas, USA",
+    "sex": "Female",
+    "pronouns": "she/her",
+    "age": "",
+    "dob": "4/22/1975",
+    "job": "",
+    "work_hours": "",
+    "sleep_hours": "3am-10am",
+    "online_hours": "",
+    "home": "Wherever curiosity or a new opportunity takes her"
+  },
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "fursona": {
+    "species": "Anthropomorphic Fox",
+    "colors": "Blue fur, with lighter accents on her muzzle, chest, and tail tip",
+    "markings": "A long, expressive tail and large, alert ears that often give away what she’s thinking",
+    "clothing": "",
+    "description": "A slim blue vixen with lighter fur on her muzzle, chest and tail tip, bright aqua eyes, big alert ears and a simple silver pendant.",
+    "eyes": "Bright aqua",
+    "height": "5 ft 10 in",
+    "build": "Slim and nimble, with a graceful, foxlike posture",
+    "accessories": "A simple silver pendant"
+  },
+  "fursuit": "She owns a blue fox fursuit",
+  "personality": "AquaVixen is observant, curious, and self-possessed. She tends to take in a room before deciding where she fits into it, noticing small details and picking up on the mood around her. She enjoys meeting new people, though she usually prefers a little conversation before treating someone like an old friend.\n\nShe has a playful streak and likes clever banter, gentle teasing, and unexpected turns in a conversation. Her confidence doesn’t mean she always needs to be in charge; she’s happy to follow someone else’s lead when their idea interests her.\n\nAqua values sincerity and independence. She’s willing to share her thoughts, but opens up at her own pace. When she cares about someone, she shows it through attention, loyalty, and making time for them.",
+  "mannerisms": "• The tail: Her tail sways when she’s relaxed, flicks when she’s impatient, and gives an enthusiastic wag when she forgets to hide her excitement.\n• The ears: They turn toward interesting sounds and angle back when she’s amused, skeptical, or caught off guard.\n• The gaze: She tends to notice details others miss, sometimes pausing to study an object or expression before responding.\n• The smile: A small, knowing grin often appears when she’s about to make a playful remark.\n• Personal space: She’s friendly but attentive to other people’s comfort, letting trust and closeness develop naturally.",
+  "interests": "Aqua enjoys exploring places at her own pace, especially neighborhoods, shops, and trails with something unexpected around the corner. She likes discovering new music, collecting small keepsakes, and finding favorite cafés or quiet spots to return to.\n\nShe appreciates conversations that mix humor with genuine curiosity. A casual outing can be just as enjoyable as a bigger adventure, particularly when she has good company and room to follow an interesting idea.\n\nShe also values time to herself. A peaceful evening, a favorite playlist, and a chance to unwind can be as satisfying as a busy day out.",
+  "roleplay_hooks": "AquaVixen is open-ended, with plenty of ways for others to meet and get to know her.\n\n• A chance encounter: She might strike up a conversation after noticing something unusual or interesting nearby.\n• A local guide: She knows a favorite place and is happy to show it to someone new.\n• A playful challenge: Friendly competition or clever banter can quickly catch her attention.\n• A quiet confidante: Someone who earns her trust may find her thoughtful and attentive.\n• A shared discovery: A strange clue, unfamiliar place, or unexpected invitation could lead her into an adventure.\n• A story still unfolding: Her past and ambitions can develop through roleplay rather than being fixed in advance.",
+  "roleplay_notes": "AquaVixen is meant to be a collaborative character. She can start conversations and make choices, while leaving room for others to shape the scene and her relationships.\n\nHer confidence and perceptiveness don’t make her all-knowing. She can misread situations, change her mind, and learn from the people she meets. Trust and affection develop through shared experiences, at a pace that feels natural to everyone involved.\n\nIn short: AquaVixen is a blue, aqua-eyed vixen with a curious nature, a playful streak, and an independent spirit. She enjoys discovering new places and people, and is happy to see where a conversation leads.\n\nI treated the physical and personality details I added as suggestions, since the sheet doesn’t specify them yet.",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "online": {
+    "away_message": "",
+    "irc_realname": "",
+    "muck_desc": "Standing confidently on two legs, AquaVixen is an unmistakable vixen, with a smooth blue coat, bright aqua eyes, and a long, flowing tail. Lighter fur softens her muzzle and chest, while her large, alert ears seem to catch every interesting sound. She has a slim, graceful build and moves with an easy, nimble confidence.\n\nA simple silver pendant rests against her chest, catching the light when she turns. AquaVixen wears no clothing, her body naturally covered in soft fur. Her expressive ears and tail often reveal her mood: a flick when she’s impatient, a sway when she’s relaxed, and the occasional enthusiastic wag when something delights her.\n\nShe carries herself with quiet self-assurance, equally comfortable exploring somewhere new or settling into a peaceful corner. Curious and observant, she often notices the little details around her—and the people who might otherwise go unnoticed.\n\nThere’s a playful glint in her aqua eyes and a knowing smile not far away. AquaVixen enjoys clever conversation and a bit of gentle mischief, but beneath her independent spirit is someone sincere, attentive, and happy to see where a new connection might lead."
+  },
+  "knows": [
+    {
+      "name": "ArcticFox",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "CyberianHusky",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "KittyKat",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "LazyFox",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "MushTheHusky",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "RedFawks",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "Renamon",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "WinterDragon",
+      "closeness": "friend",
+      "how_met": ""
+    },
+    {
+      "name": "XavierPup",
+      "closeness": "friend",
+      "how_met": ""
+    }
+  ],
+  "friends": [],
+  "files": [],
+  "webpages": [],
+  "notes": "",
+  "conventions": "She has been to several furry conventions"
+}

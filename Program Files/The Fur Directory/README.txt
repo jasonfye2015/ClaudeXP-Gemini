@@ -10,10 +10,14 @@ persona text the AI plays them from; sleep hours from the AIM schedule; pictures
 their life journal. Anything written here wins over the system's value.
 
 A record for someone with no AIM, IRC or MUCK account yet still gets a card ("No accounts yet"); give them a
-screen name here once they join a system. The 60 background furs from ClaudeXP Profiles\Background Furry Profiles
-were transcribed into records (tier "background", with "summary", "mannerisms", "interests", "roleplay_hooks" and
-"roleplay_notes" sections), and are also FurNet IRC and MUCK regulars (Program Files\ClaudeIRC\regulars.json and
-ClaudeMUCK\world\regulars.json), online during waking hours that follow their profile's sleep schedule.
+screen name here once they join a system. The furs in ClaudeXP Profiles\Background Furry Profiles (#1-120) and
+Support Furry Profiles (#121-180) were transcribed into records (the folder gives the tier, plus "summary",
+"mannerisms", "interests", "roleplay_hooks" and "roleplay_notes" sections), and are also FurNet IRC and MUCK
+regulars (Program Files\ClaudeIRC\regulars.json and ClaudeMUCK\world\regulars.json), online during waking hours
+that follow their sleep schedule. To cover the early morning, 40 of #61-180 whose profile only had the stock
+"Usually sleeps from..." line were given a later night-shift sleep (going to bed between 6 and 11 a.m.) in their
+record. #65 Tessellate (a pangolin) is online as "Tessa", because the MUCK wizard Tessellate already has that name.
+The AIM buddies from Program Files\ClaudeAIM\contacts\<Name>.txt have records too (as Main Furs).
 
 Fields
 ------
