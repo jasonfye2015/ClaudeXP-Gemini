@@ -7,10 +7,31 @@ from ...paths import IMAGES
 
 ART = IMAGES / "messengers"
 _cache = {}
+_trimmed = {}
 
 
 # the program icons the user supplied (assets/images/MSN.png, YIM.png)
-SUPPLIED = {"msn_logo": IMAGES / "MSN.png", "yim_logo": IMAGES / "YIM.png"}
+SUPPLIED = {"msn_logo": IMAGES / "MSN.png", "yim_logo": IMAGES / "YIM.png", "icq_logo": IMAGES / "ICQ.png",
+            "kik_logo": IMAGES / "KIK.png", "skype_logo": IMAGES / "Skyoe.png", "trillian_logo": IMAGES / "Trillian.png"}
+
+
+def _trim(img):
+    """Cut away empty transparent margins (an icon drawn in the middle of a big canvas)."""
+    if not img.hasAlphaChannel():
+        return img
+    small = img.scaled(min(img.width(), 256), min(img.height(), 256), Qt.KeepAspectRatio)
+    xs, ys = [], []
+    for y in range(small.height()):
+        for x in range(small.width()):
+            if small.pixelColor(x, y).alpha() > 16:
+                xs.append(x)
+                ys.append(y)
+    if not xs:
+        return img
+    fx, fy = img.width() / small.width(), img.height() / small.height()
+    x0, y0 = int(min(xs) * fx), int(min(ys) * fy)
+    x1, y1 = int((max(xs) + 1) * fx), int((max(ys) + 1) * fy)
+    return img.copy(x0, y0, x1 - x0, y1 - y0)
 
 
 def _custom(name, size):
@@ -18,9 +39,14 @@ def _custom(name, size):
     if not path.is_file() and name in SUPPLIED:
         path = SUPPLIED[name]
     if path.is_file():
-        pm = QPixmap(str(path))
-        if not pm.isNull():
-            return pm.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        from PySide6.QtGui import QImage
+        img = QImage(str(path))
+        if not img.isNull():
+            key = str(path)
+            if key not in _trimmed:
+                _trimmed[key] = _trim(img)
+            img = _trimmed[key].scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            return QPixmap.fromImage(img)
     return None
 
 
@@ -189,3 +215,70 @@ DRAW = {
     "yim_offline": _smiley("#C8C8C8", "#8A8A8A"),
     "yim_away": _yim_away,
 }
+
+
+# ---- ICQ, Skype, Trillian, KIK -----------------------------------------------------------------------------------
+
+def _flower(petal, centre="#FFE000", odd=None):
+    """ICQ's flower: eight petals around a yellow middle (offline: all red)."""
+    def draw(size):
+        pm, p = _canvas(size)
+        import math
+        for i in range(8):
+            a = math.radians(i * 45)
+            cx, cy = 32 + 17 * math.cos(a), 32 + 17 * math.sin(a)
+            p.setBrush(QColor(odd if odd and i == 3 else petal))
+            p.setPen(QPen(QColor("#1A1A1A"), 2))
+            p.save()
+            p.translate(cx, cy)
+            p.rotate(i * 45)
+            p.drawEllipse(QRectF(-11, -8, 22, 16))
+            p.restore()
+        p.setBrush(QColor(centre))
+        p.drawEllipse(QRectF(22, 22, 20, 20))
+        p.end()
+        return pm
+    return draw
+
+
+def _disc(fill, mark=None):
+    """A round status light: green with a tick, grey, or yellow with a clock."""
+    def draw(size):
+        pm, p = _canvas(size)
+        g = QRadialGradient(QPointF(24, 22), 34)
+        g.setColorAt(0, QColor(fill).lighter(150))
+        g.setColorAt(1, QColor(fill))
+        p.setBrush(g)
+        p.setPen(QPen(QColor(fill).darker(150), 3))
+        p.drawEllipse(QRectF(6, 6, 52, 52))
+        p.setPen(QPen(QColor("#FFFFFF"), 6, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        if mark == "tick":
+            path = QPainterPath()
+            path.moveTo(19, 33)
+            path.lineTo(28, 42)
+            path.lineTo(45, 22)
+            p.setBrush(Qt.NoBrush)
+            p.drawPath(path)
+        elif mark == "clock":
+            p.drawLine(QPointF(32, 32), QPointF(32, 18))
+            p.drawLine(QPointF(32, 32), QPointF(42, 38))
+        p.end()
+        return pm
+    return draw
+
+
+DRAW.update({
+    "icq_logo": _flower("#3DCC2B", odd="#E8281E"),
+    "icq_online": _flower("#3DCC2B"),
+    "icq_offline": _flower("#E8281E"),
+    "icq_away": _flower("#3DCC2B", centre="#FFFFFF"),
+    "skype_logo": _disc("#00AFF0"),
+    "skype_online": _disc("#3CB43C", "tick"),
+    "skype_offline": _disc("#B0B0B0"),
+    "skype_away": _disc("#F2C200", "clock"),
+    "trillian_logo": _disc("#2E8BA8"),
+    "kik_logo": _disc("#82BC23"),
+    "dot_online": _disc("#3CB43C"),
+    "dot_offline": _disc("#B0B0B0"),
+    "dot_away": _disc("#F2C200"),
+})

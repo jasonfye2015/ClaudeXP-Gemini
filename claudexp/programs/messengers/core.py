@@ -31,6 +31,8 @@ About you:
 Status: {status}{memory}"""
 
 OFFLINE, ONLINE, AWAY, BUSY = "offline", "online", "away", "busy"
+NETWORK_TITLES = {"msn": "MSN Messenger", "yim": "Yahoo! Messenger", "icq": "ICQ", "trillian": "Trillian",
+                  "skype": "Skype", "kik": "Kik"}
 CHECK_MS = 30000                # how often presence is re-read
 
 
@@ -195,7 +197,7 @@ class Network(QObject):
                     f"{user if m['kind'] == 'user' else b.name}: {m.get('text', '')}" for m in aim))
         except Exception:
             pass
-        for other in ("msn", "yim"):
+        for other, net in NETWORK_TITLES.items():
             if other == self.key:
                 continue
             path = DATA / "messengers" / other / f"{b.contact.id}.json"
@@ -205,7 +207,6 @@ class Network(QObject):
             except (OSError, ValueError):
                 msgs = []
             if msgs:
-                net = "MSN Messenger" if other == "msn" else "Yahoo! Messenger"
                 parts.append(f"\n\nThe end of your last chat with them on {net}:\n" + "\n".join(
                     f"{user if m['kind'] == 'user' else b.name}: {m.get('text', '')}" for m in msgs))
         return "".join(parts)
