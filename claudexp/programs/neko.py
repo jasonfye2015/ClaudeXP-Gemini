@@ -54,22 +54,38 @@ class NekoWidget(QWidget):
                 if isinstance(w, QWidget) and w.isVisible() and w not in skip and not isinstance(w, XPWindow)
                 and (isinstance(w, DesktopIcon) or w.width() < self.desktop.width() // 2)]
 
+    def _clippy_rect(self):
+        """Where Clippy stands (or would stand: his saved spot, else the bottom-right corner)."""
+        c = getattr(self.desktop, "clippy", None)
+        if c is not None and c.widget.isVisible():
+            return c.widget.geometry()
+        from ..clippy import art as clippy_art, settings
+        area = self.desktop.work_area()
+        w, h = clippy_art.W, clippy_art.H
+        pos = settings().get("pos")
+        x, y = pos if pos else (area.width() - w - 24, area.height() - h - 10)
+        return QRect(int(x), int(y), w, h)
+
     def _place_default(self):
-        """Bottom left, or the first free spot to the right of it (unless you've moved Neko yourself)."""
+        """Just left of Clippy, sitting on the same line (or the nearest free spot further left), unless you've
+        moved Neko yourself."""
         rect = self.desktop.work_area()
         if self._moved_by_user:
             self.move(max(0, min(self.x(), rect.right() - self.width())),
                       max(0, min(self.y(), rect.bottom() - self.height())))
             return
-        y = max(0, rect.bottom() - self.height() - 18)
-        taken = [g.adjusted(-6, -6, 6, 6) for g in self._obstacles()]
-        x = start = max(0, rect.left() + 24)
-        while x + self.width() <= rect.right():
+        clip = self._clippy_rect()
+        y = max(0, min(rect.bottom() - self.height(), clip.bottom() - self.height() - 2))
+        clippy = getattr(self.desktop, "clippy", None)
+        mine = {clippy.widget.geometry(), clippy.balloon.geometry()} if clippy is not None else set()
+        taken = [g.adjusted(-6, -6, 6, 6) for g in self._obstacles() if g not in mine]
+        x = start = max(0, clip.left() - self.width() + 6)
+        while x >= 0:
             if not any(QRect(x, y, self.width(), self.height()).intersects(g) for g in taken):
                 break
-            x += 8
+            x -= 8
         else:
-            x = start                                          # nowhere free: back to the corner
+            x = start                                          # nowhere free: next to Clippy anyway
         self.move(x, y)
 
     def _tick(self):
