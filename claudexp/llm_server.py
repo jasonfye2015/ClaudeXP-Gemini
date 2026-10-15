@@ -368,12 +368,14 @@ def devices():
         return []
 
 
-def at_logon(desktop):
-    """Load the model now (so the first reply is quick), or put up a warning by the clock if it can't run."""
+def at_logon(desktop, warm=True):
+    """Load the model now (so the first reply is quick), or put up a warning by the clock if it can't run.
+    warm=False (msconfig's 'llama-server' startup item unchecked): the model loads on first use instead."""
     from . import ai_models
     ai_models.sync_aim()                       # ClaudeAIM's model settings follow Control Panel > AI Models
     if available():
-        start_in_background()
+        if warm:
+            start_in_background()
         return
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QApplication, QStyle, QSystemTrayIcon

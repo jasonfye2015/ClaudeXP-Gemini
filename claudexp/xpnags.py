@@ -92,10 +92,14 @@ def activated():
 def at_logon(desktop):
     for name, delay in (("activation", 6000), ("cleanup", 20000)):
         QTimer.singleShot(delay, lambda name=name: _safely(name, desktop))
+    from .startup import enabled
     from .programs.messengers import winmsgr
-    QTimer.singleShot(3000, lambda: winmsgr.start_at_logon(desktop))
+    if enabled("msmsgs"):
+        QTimer.singleShot(3000, lambda: winmsgr.start_at_logon(desktop))
     from .programs import players
-    QTimer.singleShot(12000, lambda: desktop.isVisible() and players.at_logon(desktop))   # RealTray and qttask
+    real, qt = enabled("realsched"), enabled("qttask")
+    if real or qt:                                                    # RealTray and qttask
+        QTimer.singleShot(12000, lambda: desktop.isVisible() and players.at_logon(desktop, real=real, qt=qt))
 
 
 def _safely(name, desktop):

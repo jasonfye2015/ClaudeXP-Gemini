@@ -19,6 +19,7 @@ class Desktop(QWidget):
     shutdown_requested = Signal()
     restart_requested = Signal()
     logoff_requested = Signal()
+    switch_user_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -266,7 +267,9 @@ class Desktop(QWidget):
             self.taskbar.update()
 
     def log_off(self):
-        self.logoff_requested.emit()
+        """Start > Log Off: XP's 'Log Off Windows' box with Switch User and Log Off."""
+        from . import logoff
+        logoff.ask(self)
 
     def turn_off(self):
         self.shutdown_requested.emit()

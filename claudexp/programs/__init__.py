@@ -266,6 +266,8 @@ PROGRAMS = [
     Program("search", "Search", "", _lazy("search", "search_icon"), _lazy("search", "open_search"), listed=False),
     Program("helpctr", "Help and Support", "", _lazy("helpctr", "help_icon"), _lazy("helpctr", "open_help"),
             listed=False),
+    Program("msconfig", "System Configuration Utility", "", _lazy("msconfig", "msconfig_icon"),
+            _lazy("msconfig", "open_msconfig"), listed=False),
     Program("sysrestore", "System Restore", "", _lazy("sysrestore", "restore_icon"), _lazy("sysrestore", "open_wizard"),
             group="Accessories/System Tools"),
     Program("sndrec", "Sound Recorder", "", _lazy("sndrec", "sndrec_icon"), _lazy("sndrec", "open_sndrec"),

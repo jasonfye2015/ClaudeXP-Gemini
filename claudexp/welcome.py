@@ -40,8 +40,10 @@ class WelcomeScreen(QWidget):
         self.go.clicked.connect(self._submit)
         self.pw.hide()
         self.go.hide()
+        self.status_lines = []
 
     def reset(self):
+        self.status_lines = []           # 'N programs running' after Switch User
         self.loading = False
         self.hover = None
         self.prompting = False
@@ -247,6 +249,14 @@ class WelcomeScreen(QWidget):
             p.setPen(QColor("#D6E2FF"))
             p.drawText(QRect(text_x, r.center().y() + 4, r.right() - text_x, 20),
                        Qt.AlignTop | Qt.AlignLeft, "Loading your personal settings...")
+        elif self.status_lines:
+            p.drawText(QRect(text_x, r.y() + 2, r.right() - text_x, r.height() // 2 - 2),
+                       Qt.AlignBottom | Qt.AlignLeft, user_name())
+            p.setFont(QFont("Tahoma", 8))
+            p.setPen(QColor("#D6E2FF"))
+            for i, line in enumerate(self.status_lines[:2]):
+                p.drawText(QRect(text_x, r.center().y() + 2 + i * 14, r.right() - text_x, 14),
+                           Qt.AlignTop | Qt.AlignLeft, line)
         else:
             p.drawText(QRect(text_x, r.y(), r.right() - text_x, r.height()),
                        Qt.AlignVCenter | Qt.AlignLeft, user_name())

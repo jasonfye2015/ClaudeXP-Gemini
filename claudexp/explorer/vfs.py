@@ -127,7 +127,7 @@ def shared_documents():
 
 EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "claudeaim.exe": "aim", "claudeirc.exe": "irc", "claudemuck.exe": "muck", "netscape.exe": "navigator", "iexplore.exe": "iexplore",
-    "notepad.exe": "notepad", "explorer.exe": "mycomputer", "claudeshield.exe": "antivirus", "msmsgs.exe": "winmsgr", "realplay.exe": "realplayer", "kiwix-desktop.exe": "kiwix", "claudecraft.exe": "claudecraft", "claudecadia.exe": "furcadia", "quicktimeplayer.exe": "quicktime",
+    "notepad.exe": "notepad", "explorer.exe": "mycomputer", "claudeshield.exe": "antivirus", "msmsgs.exe": "winmsgr", "realplay.exe": "realplayer", "kiwix-desktop.exe": "kiwix", "claudecraft.exe": "claudecraft", "msconfig.exe": "msconfig", "claudecadia.exe": "furcadia", "quicktimeplayer.exe": "quicktime",
     "moviemk.exe": "moviemaker", "msoobe.exe": "activate", "ad-aware.exe": "adaware",
     "mspaint.exe": "paint", "calc.exe": "calc", "cmd.exe": "cmd", "taskmgr.exe": "taskmgr",
     "dfrgntfs.exe": "defrag", "wupdmgr.exe": "winupdate", "isignup.exe": "connect", "wmplayer.exe": "wmp",
@@ -237,6 +237,7 @@ def setup_c():
                       DRIVE_C / "Program Files" / "Real" / "RealPlayer" / "realplay.exe",
                       DRIVE_C / "Program Files" / "Kiwix" / "kiwix-desktop.exe",
                       DRIVE_C / "Program Files" / "ClaudeCraft" / "ClaudeCraft.exe",
+                      DRIVE_C / "WINDOWS" / "pchealth" / "helpctr" / "binaries" / "msconfig.exe",
                       DRIVE_C / "Program Files" / "Claudecadia" / "Claudecadia.exe",
                       DRIVE_C / "Program Files" / "QuickTime" / "QuickTimePlayer.exe",
                       DRIVE_C / "Program Files" / "Movie Maker" / "moviemk.exe",

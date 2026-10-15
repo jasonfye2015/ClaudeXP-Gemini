@@ -126,6 +126,8 @@ CATALOG = {
     "defrag": ("system", "Disk Defragmenter."),
     "cleanmgr": ("system", "Disk Cleanup."),
     "sysrestore": ("system", "System Restore: put Windows' settings back the way they were."),
+    "msconfig": ("system", "System Configuration Utility (type msconfig in Run): choose what starts with Windows on "
+                           "the Startup tab, and boot options like /NOGUIBOOT and /SOS."),
     "activate": ("system", "Activate Windows - makes the key in the notification area go away."),
     "stylexp": ("system", "StyleXP: visual styles for Windows XP (and a trial that nags)."),
     "nero": ("system", "Nero Burning ROM."),

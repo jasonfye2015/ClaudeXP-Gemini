@@ -605,13 +605,13 @@ def shutdown_quicktime():
 
 # ---- the tray helpers they install ------------------------------------------------------------------------------
 
-def at_logon(desktop):
-    """RealTray and qttask: both start with Windows and sit in the notification area."""
+def at_logon(desktop, real=True, qt=True):
+    """RealTray and qttask: both start with Windows and sit in the notification area (unless msconfig says no)."""
     from . import installed
     from ..tray import TrayIcon
     from PySide6.QtWidgets import QMenu, QSystemTrayIcon
     from .. import defaults
-    if not installed.is_removed("realplayer") and "real" not in _trays:
+    if real and not installed.is_removed("realplayer") and "real" not in _trays:
         t = _trays["real"] = TrayIcon(desktop, QIcon(real_pixmap(16)), desktop)
         t.setToolTip("RealPlayer")
         m = QMenu(desktop)
@@ -626,7 +626,7 @@ def at_logon(desktop):
         if random.random() < 0.3:
             QTimer.singleShot(45000, lambda: t.showMessage("RealPlayer", "The new RealOne Player is here! Click to "
                                                            "find out more.", None, 8000))
-    if not installed.is_removed("quicktime") and "qt" not in _trays:
+    if qt and not installed.is_removed("quicktime") and "qt" not in _trays:
         t2 = _trays["qt"] = TrayIcon(desktop, QIcon(qt_pixmap(16)), desktop)
         t2.setToolTip("QuickTime")
         m2 = QMenu(desktop)

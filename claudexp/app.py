@@ -69,11 +69,14 @@ class ClaudeXP(QMainWindow):
         self.welcome.turn_off.connect(self.shut_down)
         self.desktop.shutdown_requested.connect(self.shut_down)
         self.desktop.logoff_requested.connect(self.log_off)
+        self.desktop.switch_user_requested.connect(self.lock)
         self.desktop.restart_requested.connect(self.restart)
         QShortcut(QKeySequence("F11"), self, self.toggle_fullscreen)
         # Task Manager: the real Ctrl+Alt+Del / Ctrl+Shift+Esc go to the host Windows, so (like Remote
         # Desktop) Ctrl+Alt+End stands in for them.
         QShortcut(QKeySequence("Ctrl+Alt+End"), self, self._task_manager)
+        from . import alttab
+        self.alttab = alttab.install(self)         # XP's Alt+Tab while fullscreen (a keyboard hook)
         from .screensaver import ScreenSaverManager
         self.locked = False
         self.screensaver = ScreenSaverManager(self)
@@ -185,6 +188,16 @@ class ClaudeXP(QMainWindow):
         self.locked = True
         self.desktop.hide_start_menu()
         self.welcome.reset()
+        # like XP's Fast User Switching: the Welcome screen says what's still open (and any unread mail)
+        n = len([w for w in self.desktop.windows if w.on_taskbar])
+        lines = [f"{n} program{'s' if n != 1 else ''} running"] if n else []
+        try:
+            mail = self.desktop.mailtray._unread()
+            if mail:
+                lines.append(f"{mail} unread e-mail message{'s' if mail != 1 else ''}")
+        except Exception:
+            pass
+        self.welcome.status_lines = lines
         self.stack.setCurrentWidget(self.welcome)
 
     def show_desktop(self):
@@ -204,21 +217,30 @@ class ClaudeXP(QMainWindow):
         QTimer.singleShot(8000, sysrestore.auto_checkpoint)
         from . import credits
         QTimer.singleShot(3000, lambda: credits.maybe_show(self.desktop))
+        # what starts with Windows: msconfig's Startup tab can switch any of these off (startup.py)
+        from .startup import enabled
         from .programs import claudeai
-        QTimer.singleShot(2000, lambda: claudeai.start_at_logon(self.desktop))
+        if enabled("claudeai"):
+            QTimer.singleShot(2000, lambda: claudeai.start_at_logon(self.desktop))
         from . import llm_server
         from . import llm_loading
         llm_loading.start(self.desktop)          # the "Loading AI Model" box, first load of each model
-        QTimer.singleShot(1200, lambda: llm_server.at_logon(self.desktop))
+        QTimer.singleShot(1200, lambda: llm_server.at_logon(self.desktop, warm=enabled("llm")))
         from .programs import torrent
-        QTimer.singleShot(2600, lambda: torrent.start_at_logon(self.desktop))
+        if enabled("torrent"):
+            QTimer.singleShot(2600, lambda: torrent.start_at_logon(self.desktop))
         from .programs import neko
-        neko.start_at_logon(self.desktop)
+        if enabled("neko"):
+            neko.start_at_logon(self.desktop)
         from . import xpnags
         xpnags.at_logon(self.desktop)            # activation, Desktop Cleanup, Windows Messenger
         from .programs import copilot_widgets
-        QTimer.singleShot(1800, lambda: copilot_widgets.start_at_logon(self.desktop))
-        QTimer.singleShot(6000, lambda: self.desktop.clippy.start() if self.desktop.isVisible() else None)
+        if enabled("widgets"):
+            QTimer.singleShot(1800, lambda: copilot_widgets.start_at_logon(self.desktop))
+        if enabled("osa"):
+            QTimer.singleShot(6000, lambda: self.desktop.clippy.start() if self.desktop.isVisible() else None)
+        from .programs import msconfig
+        QTimer.singleShot(4500, lambda: self.desktop.isVisible() and msconfig.at_logon(self.desktop))
         from .programs.navigator.sites import activity as furry_web_activity
         QTimer.singleShot(15000, lambda: furry_web_activity.start(self.desktop))   # the residents on FurAffinity
         if getattr(self, "_offer_tour", False):
