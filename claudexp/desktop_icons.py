@@ -27,7 +27,7 @@ SORTS = ("Name", "Size", "Type", "Modified")
 LAYOUT = 8                  # bump when builtins() changes order
 # Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
 PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon", "furvideo", "furdir", "furlog", "furlocator"],
-                   "Emulation": ["nes", "snes", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
+                   "Emulation": ["nes", "snes", "n64", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
                    # the desktop Games folder mirrors Start > Programs > Games
                    "Games": [p.key for p in programs.PROGRAMS if p.group == "Games"],
                    "GeminiOffice": [p.key for p in programs.PROGRAMS if p.group == "Gemini Office"],
@@ -35,10 +35,10 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
                    "Disc Tools": ["nero", "alcohol120"],
                    "Archive Tools": ["winrar", "winzip"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Furry Programs": 18, "Emulation": 3, "Games": 10,
+FOLDERS_SINCE = {"Furry Programs": 18, "Emulation": 19, "Games": 10,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 18
+FOLDERS = 19
 
 
 def std(which):
@@ -774,6 +774,7 @@ class IconManager(QObject):
                       "gba": r"C:\Program Files\mGBA\mgba.exe", "gen": r"C:\Program Files\PicoDrive\picodrive.exe",
                       "sms": r"C:\Program Files\Genesis Plus\gpgx.exe",
                       "gg": r"C:\Program Files\Gearsystem\gearsystem.exe",
+                      "n64": r"C:\Program Files\Mupen64Plus\mupen64plus.exe",
                       "apple2": r"C:\Program Files\AppleWin\applewin.exe",
                       "doom": r"C:\Program Files\Doom\doom.exe", "doom2": r"C:\Program Files\Doom II\doom2.exe",
                       "wolf3d": r"C:\Program Files\Wolfenstein 3D\wolf3d.exe",

@@ -1,7 +1,8 @@
 """A small libretro front end in plain Python (ctypes): loads an emulator core DLL, feeds it a game, and hands back
 each frame as a QImage, the sound as 16-bit stereo samples, and asks us which buttons are held.
 
-Only what a NES core needs is implemented. Cores keep global state, so only one Core may be loaded at a time."""
+Only what ClaudeXP's cores need is implemented (software video, joypads, analog sticks, keyboards, core options).
+Cores keep global state, so only one Core per DLL may be loaded at a time."""
 import ctypes
 from ctypes import (CFUNCTYPE, POINTER, Structure, c_bool, c_char_p, c_double, c_float, c_int16, c_size_t, c_uint,
                     c_void_p)
@@ -22,6 +23,8 @@ ENV_GET_LOG_INTERFACE = 27
 PIXEL_0RGB1555, PIXEL_XRGB8888, PIXEL_RGB565 = 0, 1, 2
 DEVICE_JOYPAD = 1
 DEVICE_KEYBOARD = 3
+DEVICE_ANALOG = 5
+ANALOG_LEFT, ANALOG_RIGHT, ANALOG_X, ANALOG_Y = 0, 1, 0, 1
 MEMORY_SAVE_RAM = 0
 
 # joypad button ids
@@ -68,7 +71,7 @@ KEYBOARD_CB = CFUNCTYPE(None, c_bool, c_uint, ctypes.c_uint32, ctypes.c_uint16)
 class Core:
     """One loaded core. buttons: a set of joypad ids held on port 0 (the owner updates it)."""
 
-    def __init__(self, dll_path, system_dir, save_dir):
+    def __init__(self, dll_path, system_dir, save_dir, options=None):
         self.dll = ctypes.CDLL(str(dll_path))
         self.system_dir = str(system_dir).encode("mbcs", "replace")
         self.save_dir = str(save_dir).encode("mbcs", "replace")
@@ -84,6 +87,10 @@ class Core:
         self.log = []                         # the core's log messages (format strings), newest last
         self._log_cb = LOG_CB(self._log_message)
         self.game = None                      # keeps the ROM bytes alive while loaded
+        # core options (key -> value); the core keeps the value pointers, so the buffers live as long as it does
+        self._options = {k.encode(): ctypes.create_string_buffer(v.encode()) for k, v in (options or {}).items()}
+        self.analog = {}                      # (stick, axis) -> -32768..32767, analog sticks on port 0
+        self.analog_keys = set()              # the keyboard keys steering them (the owner keeps this)
         d = self.dll
         d.retro_get_system_av_info.argtypes = [POINTER(AVInfo)]
         d.retro_get_system_info.argtypes = [POINTER(SystemInfo)]
@@ -190,6 +197,8 @@ class Core:
         for k in list(self.keys_down):
             self.key_event(False, k)
         self.buttons.clear()
+        self.analog.clear()
+        self.analog_keys.clear()
 
     # ---- callbacks from the core ----------------------------------------------------------------------------
     def _environment(self, cmd, data):
@@ -211,8 +220,13 @@ class Core:
                 ctypes.cast(data, POINTER(c_void_p))[0] = ctypes.addressof(self._save_buf)
                 return True
             if cmd == ENV_GET_VARIABLE:
-                ctypes.cast(data, POINTER(Variable))[0].value = None
-                return False
+                var = ctypes.cast(data, POINTER(Variable))[0]
+                buf = self._options.get(var.key)
+                if buf is None:
+                    var.value = None
+                    return False
+                var.value = ctypes.cast(buf, c_char_p).value
+                return True
             if cmd == ENV_GET_VARIABLE_UPDATE:
                 ctypes.cast(data, POINTER(c_bool))[0] = False
                 return True
@@ -254,6 +268,8 @@ class Core:
     def _input(self, port, device, index, button):
         if port == 0 and device == DEVICE_JOYPAD:
             return 1 if button in self.buttons else 0
+        if port == 0 and device == DEVICE_ANALOG:
+            return self.analog.get((index, button), 0)
         if device == DEVICE_KEYBOARD:
             return 1 if button in self.keys_down else 0
         return 0

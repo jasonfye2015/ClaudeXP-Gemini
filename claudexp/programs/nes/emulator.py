@@ -3,6 +3,7 @@
   NES      - FCE Ultra (FCEUmm)          GB   - Gambatte            GBA - mGBA
   SNES     - Snes9x                      GBC  - Gambatte (own copy of the DLL, so GB and GBC can run together)
   Genesis  - PicoDrive (Genesis + 32X)   SMS  - Genesis Plus GX
+  N64      - Mupen64Plus-Next (software 'Angrylion' renderer, so it needs no 3D graphics set-up)
 
 ROMs come from the matching folder under E:\\Emulation (e.g. 'SNES (33 Roms)').
 
@@ -58,6 +59,9 @@ class System:
     noun: str = "game"           # 'disk' for the Apple II
     top: str = ""                # a folder right on E: (e.g. 'WADs') instead of one under E:\Emulation
     games: dict = field(default_factory=dict)      # file name (lower case) -> title; only these are listed
+    dpad: bool = True            # arrows = D-pad, Enter = Start, Space/Shift = Select (the N64 uses its own keys)
+    analog: dict = field(default_factory=dict)     # Qt key -> (stick, axis, -1 or +1): keys that push a stick
+    options: dict = field(default_factory=dict)    # libretro core options
 
 
 SYSTEMS = {
@@ -110,6 +114,24 @@ SYSTEMS = {
                      keyboard=True, noun="disk"),
 }
 
+N64_KEYS = {Qt.Key_X: L.B, Qt.Key_Z: L.Y, Qt.Key_Space: L.L2, Qt.Key_Q: L.L, Qt.Key_E: L.R,
+            Qt.Key_Return: L.START, Qt.Key_Enter: L.START,
+            Qt.Key_T: L.UP, Qt.Key_G: L.DOWN, Qt.Key_F: L.LEFT, Qt.Key_H: L.RIGHT}
+N64_STICKS = {Qt.Key_Up: (L.ANALOG_LEFT, L.ANALOG_Y, -1), Qt.Key_Down: (L.ANALOG_LEFT, L.ANALOG_Y, 1),
+              Qt.Key_Left: (L.ANALOG_LEFT, L.ANALOG_X, -1), Qt.Key_Right: (L.ANALOG_LEFT, L.ANALOG_X, 1),
+              Qt.Key_I: (L.ANALOG_RIGHT, L.ANALOG_Y, -1), Qt.Key_K: (L.ANALOG_RIGHT, L.ANALOG_Y, 1),
+              Qt.Key_J: (L.ANALOG_RIGHT, L.ANALOG_X, -1), Qt.Key_L: (L.ANALOG_RIGHT, L.ANALOG_X, 1)}
+SYSTEMS["n64"] = System(
+    "n64", "N64", "Mupen64Plus", "mupen64plus_next_libretro.dll", r"(n64|nintendo ?64)\b", {".z64", ".v64", ".n64"},
+    "n64_icon.png", 320, 240, N64_KEYS,
+    "Control Stick:  Arrow keys\nA:  X        B:  Z\nZ Trigger:  Space\nL / R:  Q / E\nStart:  Enter\n"
+    "C Buttons:  I / J / K / L (up, left, down, right)\nD-pad:  T / F / G / H\n\n"
+    "Save state:  F5\nLoad state:  F7\nState slot:  0 - 9\nPause:  P or Pause\nReset:  F1\nGame list:  Esc",
+    "Mupen64Plus-Next by the Mupen64Plus team and the libretro project, with the Angrylion RDP renderer. "
+    "Free software under the GNU GPL v2.", process="mupen64plus.exe", dpad=False, analog=N64_STICKS,
+    options={"mupen64plus-rdp-plugin": "angrylion", "mupen64plus-cpucore": "dynamic_recompiler",
+             "mupen64plus-pak1": "memory"})
+
 DOOM_KEYS = {Qt.Key_Control: L.X, Qt.Key_Space: L.A, Qt.Key_Return: L.A, Qt.Key_Enter: L.A,
                  Qt.Key_Shift: L.Y, Qt.Key_Comma: L.L, Qt.Key_Period: L.R, Qt.Key_PageUp: L.L2, Qt.Key_PageDown: L.R2,
                  Qt.Key_Tab: L.SELECT, Qt.Key_Escape: L.START, Qt.Key_Backspace: L.B}
@@ -156,7 +178,7 @@ def core(system):
         base = DATA / system.key
         (base / "system").mkdir(parents=True, exist_ok=True)
         (base / "saves").mkdir(parents=True, exist_ok=True)
-        _cores[system.key] = L.Core(EMULATORS / system.core, base / "system", base / "saves")
+        _cores[system.key] = L.Core(EMULATORS / system.core, base / "system", base / "saves", system.options)
     return _cores[system.key]
 
 
@@ -260,7 +282,7 @@ class Emulator(QWidget):
         self.desktop = desktop
         self.system = system
         self.process_image = system.process                        # for Task Manager
-        self.keys = {**DPAD, **system.buttons}
+        self.keys = {**(DPAD if system.dpad else {}), **system.buttons}
         self.data = DATA / system.key
         self.settings_file = self.data / "settings.json"
         self.frame = None
@@ -506,8 +528,11 @@ class Emulator(QWidget):
         if self.system.keyboard:
             return self.computer_key(event, down)
         if event.isAutoRepeat():
-            return event.key() in self.keys
+            return event.key() in self.keys or event.key() in self.system.analog
         k = event.key()
+        if k in self.system.analog:
+            self._stick(k, down)
+            return True
         if k in self.keys:
             (self.core.buttons.add if down else self.core.buttons.discard)(self.keys[k])
             return True
@@ -522,6 +547,17 @@ class Emulator(QWidget):
         else:
             return False
         return True
+
+    def _stick(self, key, down):
+        """Keys pushing an analog stick all the way (two opposite keys cancel out)."""
+        c = self.core
+        (c.analog_keys.add if down else c.analog_keys.discard)(key)
+        c.analog.clear()
+        for k in c.analog_keys:
+            stick, axis, sign = self.system.analog[k]
+            c.analog[(stick, axis)] = c.analog.get((stick, axis), 0) + sign * 32767
+        for pos, value in c.analog.items():
+            c.analog[pos] = max(-32767, min(32767, value))
 
     def computer_key(self, event, down):
         """Computers (the Apple II): every key goes to the machine; only F-keys and Pause stay ours."""

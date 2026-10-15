@@ -44,6 +44,7 @@ EMULATORS = [("nes", "NES Emulator", "Play NES games"), ("snes", "SNES Emulator"
              ("gen", "Genesis Emulator", "Play Sega Genesis and 32X games"),
              ("sms", "Master System Emulator", "Play Sega Master System games"),
              ("gg", "Game Gear Emulator", "Play Sega Game Gear games"),
+             ("n64", "N64 Emulator", "Play Nintendo 64 games"),
              ("apple2", "Apple ][ Emulator", "Boot Apple ][ disks")]
 
 # Desktop shortcuts to the user's own archive folders on E: (Local Storage): key -> (label, folder name prefix).

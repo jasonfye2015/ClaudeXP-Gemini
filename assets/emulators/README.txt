@@ -36,3 +36,15 @@ applewin_libretro.dll      Apple ][. AppleWin, GNU GPL v2. https://github.com/au
 prboom_libretro.dll        Doom (and copies prboom_doom2_libretro.dll / prboom_wolf3d_libretro.dll so Doom, Doom II and
                            the Wolfenstein 3D conversion can run at once). PrBoom, GNU GPL v2.
                            https://github.com/libretro/libretro-prboom
+
+mupen64plus_next_libretro.dll
+-----------------------------
+The Nintendo 64 core used by ClaudeXP's N64 Emulator.
+
+Mupen64Plus-Next, libretro build for Windows x86_64, downloaded 2026-10-14 from
+https://buildbot.libretro.com/nightly/windows/x86_64/latest/mupen64plus_next_libretro.dll.zip
+(zip SHA-256 ee0c5ccc91fcc1d4c2e39ffdfeeee46555b0e3e98c9e7124f80dab53bdcf5dc5)
+
+ClaudeXP runs it with the Angrylion software renderer and the dynamic recompiler, so it needs no OpenGL set-up.
+Mupen64Plus-Next is free software licensed under the GNU General Public License, version 2.
+Source code: https://github.com/libretro/mupen64plus-libretro-nx
