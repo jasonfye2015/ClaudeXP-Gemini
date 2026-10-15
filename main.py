@@ -3,14 +3,48 @@ import os
 import subprocess
 import sys
 
-from PySide6.QtCore import QCoreApplication, Qt
+from PySide6.QtCore import QCoreApplication, Qt, QtMsgType, qInstallMessageHandler
 from PySide6.QtWidgets import QApplication
 
 from claudexp import setup, sound, spellcheck, style
 from claudexp.app import ClaudeXP
 
+_crash_log = None
+
+
+def _log_crashes():
+    """If ClaudeXP ever crashes outright, logs/crash.log says where: the Python stack of every thread, and Qt's
+    last serious complaint. (Kept outside data/, which Setup moves away while ClaudeXP is still running.)"""
+    global _crash_log
+    import faulthandler
+    import time
+    try:
+        folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+        os.makedirs(folder, exist_ok=True)
+        _crash_log = open(os.path.join(folder, "crash.log"), "a", encoding="utf-8")
+        _crash_log.write(f"\n=== ClaudeXP started {time.strftime('%Y-%m-%d %H:%M:%S')} (pid {os.getpid()}) ===\n")
+        _crash_log.flush()
+        faulthandler.enable(file=_crash_log, all_threads=True)
+    except OSError:
+        return
+
+    def qt_message(kind, context, message):
+        if kind in (QtMsgType.QtCriticalMsg, QtMsgType.QtFatalMsg):
+            try:
+                _crash_log.write(f"{time.strftime('%H:%M:%S')} Qt {kind.name}: {message}\n")
+                _crash_log.flush()
+            except (OSError, ValueError):
+                pass
+        if sys.stderr is not None:                       # (none under pythonw)
+            try:
+                sys.stderr.write(message + "\n")
+            except (OSError, ValueError):
+                pass
+    qInstallMessageHandler(qt_message)
+
 
 def main():
+    _log_crashes()
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)     # before the app exists, for the Flash Player's web view
     qapp = QApplication(sys.argv)
     qapp.setApplicationName("ClaudeXP")

@@ -149,6 +149,13 @@ class Desktop(QWidget):
                 self._cascade = 0
                 x, y = 90, 40
             self._cascade = (self._cascade + 1) % 8
+            # A window bigger than the screen shrinks to fit (as far as its contents allow), and nothing opens
+            # hanging off the right or bottom edge.
+            if win.resizable and (win.width() > area.width() or win.height() > area.height()):
+                win.resize(max(win.minimumSizeHint().width(), min(win.width(), area.width())),
+                           max(win.minimumSizeHint().height(), min(win.height(), area.height())))
+            x = max(0, min(x, area.right() + 1 - win.width()))
+            y = max(0, min(y, area.bottom() + 1 - win.height()))
             win.move(x, y)
             win.placed = True
         self.windows.append(win)
