@@ -4,7 +4,7 @@ import random
 import time
 import warnings
 
-from PySide6.QtCore import QPoint, Qt, QTimer
+from PySide6.QtCore import QPoint, QRect, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QMenu, QMessageBox, QSystemTrayIcon, QToolTip, QWidget
 
@@ -31,6 +31,7 @@ class NekoWidget(QWidget):
         self._frame = 0
         self._frame_tick = 0
         self._dragging = False
+        self._moved_by_user = False
         self._drag_offset = QPoint()
         self._idle_since = time.monotonic()
         self._last_balloon = 0.0
@@ -41,11 +42,34 @@ class NekoWidget(QWidget):
         self._timer.start(240)
         self._place_default()
         self.show()
+        QTimer.singleShot(1500, self._place_default)          # again once the desktop icons have been laid out
+
+    def _obstacles(self):
+        """What Neko shouldn't sit on: desktop icons, Clippy, the desktop widgets (not windows or the taskbar)."""
+        from ..desktop_icons import DesktopIcon
+        from ..wm import XPWindow
+        skip = {self, getattr(self.desktop, "taskbar", None), getattr(self.desktop, "start_menu", None),
+                getattr(self.desktop, "balloon", None), getattr(self.desktop, "hdd", None)}
+        return [w.geometry() for w in self.desktop.children()
+                if isinstance(w, QWidget) and w.isVisible() and w not in skip and not isinstance(w, XPWindow)
+                and (isinstance(w, DesktopIcon) or w.width() < self.desktop.width() // 2)]
 
     def _place_default(self):
+        """Bottom left, or the first free spot to the right of it (unless you've moved Neko yourself)."""
         rect = self.desktop.work_area()
-        x = max(0, rect.left() + 24)
+        if self._moved_by_user:
+            self.move(max(0, min(self.x(), rect.right() - self.width())),
+                      max(0, min(self.y(), rect.bottom() - self.height())))
+            return
         y = max(0, rect.bottom() - self.height() - 18)
+        taken = [g.adjusted(-6, -6, 6, 6) for g in self._obstacles()]
+        x = start = max(0, rect.left() + 24)
+        while x + self.width() <= rect.right():
+            if not any(QRect(x, y, self.width(), self.height()).intersects(g) for g in taken):
+                break
+            x += 8
+        else:
+            x = start                                          # nowhere free: back to the corner
         self.move(x, y)
 
     def _tick(self):
@@ -99,6 +123,7 @@ class NekoWidget(QWidget):
     def mouseReleaseEvent(self, event):
         if self._dragging:
             self._dragging = False
+            self._moved_by_user = True
             self._pose = "pet"
             self._idle_since = time.monotonic()
             self.update()

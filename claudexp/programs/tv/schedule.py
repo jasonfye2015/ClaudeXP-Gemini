@@ -73,16 +73,25 @@ def _units(items):
     return out
 
 
+def _bundle(items, n):
+    """Very short episodes air n at a time, in order, back to back (one break per bundle, not per episode)."""
+    ordered = sorted(items, key=lambda m: (str(m.season), int(m.episode) if str(m.episode).isdigit() else 0,
+                                           str(m.path)))
+    return [ordered[i:i + n] for i in range(0, len(ordered), n)]
+
+
 class Channel:
     """number, call letters, slogan; blocks = [(hour from, hour to, pool name, block title)] in local time.
     pools = {name: [Media]}. promos = [Media] that may fill gaps in a block (by pool name)."""
 
     def __init__(self, number, call, slogan, blocks=(), pools=None, promos=None, ads=(), grid=15 * 60,
-                 fine=None, grids=None, dead=False):
+                 fine=None, grids=None, dead=False, bundles=None):
         self.number, self.call, self.slogan, self.dead = number, call, slogan, dead
         self.blocks = list(blocks)
         self.grid, self.fine, self.grids = grid, fine or grid, grids or {}
-        self.decks = {name: Deck(f"{call}:{name}", _units(items)) for name, items in (pools or {}).items()}
+        bundles = bundles or {}
+        self.decks = {name: Deck(f"{call}:{name}", _bundle(items, bundles[name]) if name in bundles else _units(items))
+                      for name, items in (pools or {}).items()}
         self.promos = {name: Deck(f"{call}:{name}:promo", [[m] for m in items])
                        for name, items in (promos or {}).items()}
         self.ads = Deck(f"{call}:ads", [[m] for m in ads if m.secs >= MIN_AD])
@@ -193,8 +202,12 @@ def seconds(when):
     return int((when - EPOCH).total_seconds())
 
 
+KFUR_SHOWS = ("FOTP", "WOLFSRAIN", "DAMEKKO")
+
+
 def build_channels(items):
-    """The lineup: WAGG 4 (cartoons), KPAW 9 (movies), KHAH 13 (stand-up comedy), and three dead channels."""
+    """The lineup: WAGG 4 (cartoons), KFUR 7 (animals and anime), KPAW 9 (movies), KHAH 13 (stand-up comedy), and
+    two dead channels."""
     by = {}
     for m in items:
         by.setdefault((m.kind, m.show_key), []).append(m)
@@ -206,7 +219,7 @@ def build_channels(items):
     movies = by.get(("movie", ""), []) + [m for m in athf_specials if m.secs > 60 * 60 and "theater" in m.title.lower()]
     other_shows = {}
     for (kind, key), ms in by.items():
-        if kind in ("episode", "special") and key not in ("REN", "ATHF", "MONGRELS", "COMEDY"):
+        if kind in ("episode", "special") and key not in ("REN", "ATHF", "MONGRELS", "COMEDY") + KFUR_SHOWS:
             other_shows.setdefault("other", []).extend(ms)
     promos = by.get(("promo", "ATHF"), [])
     wagg = Channel(4, "WAGG", "Cartoons & Comedy, Day and Night", blocks=[
@@ -221,5 +234,20 @@ def build_channels(items):
     comedy = by.get(("episode", "COMEDY"), [])
     khah = Channel(13, "KHAH", "Ha-Ha 13: Comedy Around the Clock", blocks=[(0, 24, "comedy", "Ha-Ha 13 Comedy")],
                    pools={"comedy": comedy}, ads=ads, grid=30 * 60, fine=5 * 60)
-    dead = [Channel(n, "", "", dead=True) for n in (2, 7, 11)]
-    return sorted([wagg, kpaw, khah] + dead, key=lambda c: c.number)
+    family = [m for m in movies if m.rating in ("G", "PG")]           # the animated features also air on KFUR
+    shorts = by.get(("episode", "DAMEKKO"), [])
+    kfur = Channel(7, "KFUR", "Fur & Feather TV: Animals, Anime and Animated Features", blocks=[
+        (6, 8, "damekko", "Useless Wolf Morning Shorts"),
+        (8, 20, "family", "Fur & Feather Features"),
+        (20, 23, "fotp", "Father of the Pride"),
+        (23, 6, "wolfsrain", "Wolf's Rain After Dark"),
+    ], pools={"damekko": shorts, "family": family, "fotp": by.get(("episode", "FOTP"), []),
+              "wolfsrain": by.get(("episode", "WOLFSRAIN"), [])},
+        promos={"damekko": by.get(("promo", "DAMEKKO"), [])}, ads=ads, grid=30 * 60, fine=5 * 60,
+        grids={"damekko": 15 * 60}, bundles={"damekko": 3})
+    channels = [wagg, kpaw, khah]
+    if kfur.decks and any(kfur.decks.values()):
+        channels.append(kfur)
+    taken = {c.number for c in channels}
+    dead = [Channel(n, "", "", dead=True) for n in (2, 7, 11) if n not in taken]
+    return sorted(channels + dead, key=lambda c: c.number)

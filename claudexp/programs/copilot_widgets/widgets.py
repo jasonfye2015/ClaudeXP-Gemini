@@ -320,14 +320,16 @@ def _program_title(slot):
 
 class TVGuideWidget(WidgetBase):
     """What's on right now, straight from ClaudeTV's own schedule (the same one the tuner and TV Guide use)."""
-    KEY, TITLE, SIZE, REFRESH_MS = "tv", "TV Guide", (320, 96), 15000
-    ROW = 64
+    KEY, TITLE, SIZE, REFRESH_MS = "tv", "TV Guide", (400, 96), 15000
+    ROW = 64                # a channel's row: what's on, its time and progress bar, and what's next
+    SLIM_ROW = 46           # without the 'Next' line, when every channel wouldn't fit on the screen otherwise
     HEAD = 30
 
     def __init__(self, controller):
         super().__init__(controller)
         self.channels = None
         self.rows = []
+        self.row = self.ROW
         self._asked = False
         self._hits = []
 
@@ -359,7 +361,10 @@ class TVGuideWidget(WidgetBase):
                     nxt = progs[0]
                 rows.append((ch, cur, nxt, t))
             self.rows = rows
-            height = self.HEAD + max(1, len(rows)) * self.ROW + 8
+            room = self.c.desktop.work_area().height() - 32
+            n = max(1, len(rows))
+            self.row = self.ROW if self.HEAD + n * self.ROW + 8 <= room else self.SLIM_ROW
+            height = self.HEAD + n * self.row + 8
             if height != self.height():
                 self.resize(self.width(), height)
                 self.c.place_all()
@@ -377,8 +382,8 @@ class TVGuideWidget(WidgetBase):
                   "video archive.", 11, SOFT, elide=False)
             return
         for i, (ch, cur, nxt, t) in enumerate(self.rows):
-            y = self.HEAD + i * self.ROW
-            self._hits.append((QRectF(0, y, r.width(), self.ROW), ch))
+            y = self.HEAD + i * self.row
+            self._hits.append((QRectF(0, y, r.width(), self.row), ch))
             p.setPen(QPen(QColor(255, 255, 255, 45), 1))
             p.drawLine(12, y, int(r.width() - 12), y)
             _text(p, 14, y + 4, 80, 16, ch.label(), 12, GOLD, True)
@@ -389,7 +394,7 @@ class TVGuideWidget(WidgetBase):
                       10, SOFT)
                 _bar(p, QRectF(90, y + 37, r.width() - 104, 5), (t - cur.start) / max(1, cur.end - cur.start),
                      QColor("#7DFF9A"))
-                if nxt is not None:
+                if nxt is not None and self.row >= self.ROW:
                     _text(p, 90, y + 45, r.width() - 102, 14, f"Next: {_program_title(nxt)} ({_clock_text(nxt.when())})",
                           10, DIM)
             elif nxt is not None:

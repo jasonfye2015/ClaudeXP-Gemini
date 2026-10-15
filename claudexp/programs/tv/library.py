@@ -88,15 +88,18 @@ def _mvhd(f, size):
 def _mkv(f):
     d = f.read(2 * 2 ** 20)
     scale = 1_000_000
-    m = re.search(rb"\x2a\xd7\xb1(.)", d, re.S)
-    if m:
+    for m in re.finditer(rb"\x2a\xd7\xb1([\x81-\x88])", d[:256 * 1024]):     # TimecodeScale (1-8 bytes)
         ln = m.group(1)[0] & 0x7F
-        scale = int.from_bytes(d[m.end():m.end() + ln], "big") or scale
-    m = re.search(rb"\x44\x89\x88(.{8})|\x44\x89\x84(.{4})", d, re.S)
-    if not m:
-        return None
-    val = struct.unpack(">d", m.group(1))[0] if m.group(1) else struct.unpack(">f", m.group(2))[0]
-    return val * scale / 1e9
+        value = int.from_bytes(d[m.end():m.end() + ln], "big")
+        if 1_000 <= value <= 1_000_000_000:             # a real one; the bytes also occur by chance in video
+            scale = value
+            break
+    for m in re.finditer(rb"\x44\x89\x88(.{8})|\x44\x89\x84(.{4})", d, re.S):
+        val = struct.unpack(">d", m.group(1))[0] if m.group(1) else struct.unpack(">f", m.group(2))[0]
+        secs = val * scale / 1e9
+        if 1 <= secs <= 12 * 3600:          # the same bytes can turn up by chance before the real Duration
+            return secs
+    return None
 
 
 def _scr(b):
@@ -191,7 +194,9 @@ def read_episode_guide(folder):
     return out
 
 
-SHOW_KEYS = [("comedy", "COMEDY"), ("aqua teen", "ATHF"), ("ren and stimpy", "REN"), ("ren stimpy", "REN"), ("mongrels", "MONGRELS")]
+SHOW_KEYS = [("comedy", "COMEDY"), ("aqua teen", "ATHF"), ("ren and stimpy", "REN"), ("ren stimpy", "REN"), ("mongrels", "MONGRELS"),
+             ("father of the pride", "FOTP"), ("wolfs rain", "WOLFSRAIN"), ("wolf s rain", "WOLFSRAIN"),
+             ("damekko", "DAMEKKO")]
 
 
 def show_key(name):
@@ -213,11 +218,14 @@ def _episode_info(stem):
         if not title:
             rest = stem[m.end():]
             rest = re.sub(r"^[._]*(?:ws[._])?(?:pdtv[._]|hdtv[._])?xvid-[a-z0-9]+[._]", "", rest, flags=re.I)
-            title = rest
+            title = re.sub(r"(?:^|[._ -])(?:hdtv|pdtv|dvdrip|xvid|divx|x264|webrip)\b.*$", "", rest, flags=re.I)
         return int(m.group(1)), int(m.group(2)), re.sub(r"[._]+", " ", title).strip(" -")
     m = re.match(r"(\d+)e(\d+)([ab]?)-(.+)", stem)
     if m:
         return int(m.group(1)), int(m.group(2)), re.sub(r"\s*\(.*?\)\s*", " ", m.group(4)).strip()
+    m = re.search(r"[\s_-](\d{1,3})\s*$", re.sub(r"[\[(][^\])]*[\])]", "", stem).strip(" _"))
+    if m:                                                    # '[a4e]Wolf's_Rain_01[divx5]', '..._Doubutsu_-_01[CRC]'
+        return 1, int(m.group(1)), ""
     return None, None, _clean_title(stem)
 
 
@@ -336,7 +344,7 @@ def scan(base, progress=None):
         st = p.stat()
         key = str(p)
         hit = cache.get(key)
-        if hit and hit[0] == st.st_size and hit[1] == int(st.st_mtime):
+        if hit and hit[0] == st.st_size and hit[1] == int(st.st_mtime) and (hit[2] or 0) <= 12 * 3600:
             fresh[key] = hit
             return hit[2]
         secs = running_time(p)
@@ -345,15 +353,31 @@ def scan(base, progress=None):
             progress(p.name)
         return secs
 
-    def videos(folder):
-        for dirpath, _d, files in os.walk(folder):
+    def videos(folder, deep=True):
+        for dirpath, dirs, files in os.walk(folder):
+            names = set(files)
             for name in sorted(files):
                 p = Path(dirpath) / name
-                if p.suffix.lower() in VIDEO_EXTS and not SKIP.search(name):
-                    yield p
+                if p.suffix.lower() not in VIDEO_EXTS or SKIP.search(name):
+                    continue
+                if p.stem.lower().endswith(".ia") and p.stem[:-3] + p.suffix in names:
+                    continue                        # 'X.ia.mp4' is the Internet Archive's copy of 'X.mp4'
+                yield p
+            if not deep:
+                dirs[:] = []
+
+    # A 'Movies...' folder can hold whole series and commercials too ('Movies and TV part 2'): loose files in it
+    # are movies, a sub-folder with 'commercial' in its name holds ads, and any other sub-folder is a show.
+    show_dirs, ad_dirs = [], list(roots["ads"])
+    for root in roots["tv"]:
+        show_dirs += sorted(d for d in root.iterdir() if d.is_dir())
+    for root in roots["movies"]:
+        for d in sorted(d for d in root.iterdir() if d.is_dir()):
+            ad = "commercial" in d.name.lower() or d.name.lower().startswith(("ads", "adverts"))
+            (ad_dirs if ad else show_dirs).append(d)
 
     for root in roots["movies"]:
-        for p in videos(root):
+        for p in videos(root, deep=False):
             secs = secs_for(p)
             if not secs:
                 continue
@@ -362,49 +386,50 @@ def scan(base, progress=None):
                 out.append(Media(p, "movie", secs, title=m["title"], year=m["year"], rating=m["rating"], desc=m["desc"]))
             else:
                 out.append(Media(p, "movie", secs, title=_clean_title(p.stem)))
-    for root in roots["tv"]:
-        for show_dir in sorted(d for d in root.iterdir() if d.is_dir()):
-            key = show_key(show_dir.name)
-            show_title = guide["SHOW"].get(key, (re.sub(r"\s*[-(].*$", "", show_dir.name).strip(), ""))[0]
-            own = read_episode_guide(show_dir)
-            for p in videos(show_dir):
-                secs = secs_for(p)
-                if not secs:
-                    continue
-                if key == "COMEDY":
-                    show, title, episode, year = _comedy_info(p, show_dir)
-                    info = guide["TITLE"].get((key, norm(title))) or {}
-                    desc = info.get("desc") or (
-                        (f"A half hour of stand-up from {title}, taped for Comedy Central Presents." if secs > 15 * 60
-                         else f"A short stand-up set from {title}.")
-                        if show == "Comedy Central Presents" else
-                        "Maria Bamford plays herself, her family and everyone in her hometown after she moves back in "
-                        "with her parents." if "Maria Bamford" in show else "A stand-up comedy special.")
-                    title = COMEDY_TITLES.get(norm(title), title)
-                    out.append(Media(p, "episode", secs, show=show, show_key=key, episode=episode or "",
-                                     title=title, desc=desc, aired=info.get("aired") or year))
-                    continue
-                season, episode, title = _episode_info(p.stem)
-                extra = "extra" in norm(str(p.relative_to(show_dir))) or "deleted scene" in norm(p.stem) \
-                    or "promo" in norm(p.stem)
-                if extra and secs < PROMO_MAX_SECS:
-                    title = re.sub(r"^.*?(extras|deleted scene)\s*-\s*", "", title, flags=re.I)
-                    out.append(Media(p, "promo", secs, show=show_title, show_key=key, title=title))
-                    continue
-                info = None
-                if season and episode:
-                    info = guide["EP"].get((key, f"S{season}E{episode}"))
-                if info is None:
-                    titles = dict(own)
-                    titles.update((tt, v) for (k, tt), v in guide["TITLE"].items() if k == key)
-                    info = _match_title(title, titles)
-                if extra:
-                    title = re.sub(r"^.*?(extras|deleted scene)\s*-\s*", "", title, flags=re.I)
-                out.append(Media(p, "special" if extra else "episode", secs, show=show_title, show_key=key,
-                                 season=season or "", episode=episode or "",
-                                 title=(info or {}).get("title") or title, desc=(info or {}).get("desc", ""),
-                                 aired=(info or {}).get("aired", "")))
-    for root in roots["ads"]:
+    for show_dir in show_dirs:
+        key = show_key(show_dir.name)
+        show_title = guide["SHOW"].get(key, (re.sub(r"\s*[-(].*$", "", show_dir.name).strip(), ""))[0]
+        own = read_episode_guide(show_dir)
+        for p in videos(show_dir):
+            secs = secs_for(p)
+            if not secs:
+                continue
+            if key == "COMEDY":
+                show, title, episode, year = _comedy_info(p, show_dir)
+                info = guide["TITLE"].get((key, norm(title))) or {}
+                desc = info.get("desc") or (
+                    (f"A half hour of stand-up from {title}, taped for Comedy Central Presents." if secs > 15 * 60
+                     else f"A short stand-up set from {title}.")
+                    if show == "Comedy Central Presents" else
+                    "Maria Bamford plays herself, her family and everyone in her hometown after she moves back in "
+                    "with her parents." if "Maria Bamford" in show else "A stand-up comedy special.")
+                title = COMEDY_TITLES.get(norm(title), title)
+                out.append(Media(p, "episode", secs, show=show, show_key=key, episode=episode or "",
+                                 title=title, desc=desc, aired=info.get("aired") or year))
+                continue
+            season, episode, title = _episode_info(p.stem)
+            extra = "extra" in norm(str(p.relative_to(show_dir))) or "deleted scene" in norm(p.stem) \
+                or "promo" in norm(p.stem) or (not episode and secs < PROMO_MAX_SECS)     # e.g. an ending theme
+            if extra and secs < PROMO_MAX_SECS:
+                title = re.sub(r"^.*?(extras|deleted scene)\s*-\s*", "", title, flags=re.I)
+                out.append(Media(p, "promo", secs, show=show_title, show_key=key, title=title))
+                continue
+            info = None
+            if season and episode:
+                info = guide["EP"].get((key, f"S{season}E{episode}"))
+            if info is None and title:
+                titles = dict(own)
+                titles.update((tt, v) for (k, tt), v in guide["TITLE"].items() if k == key)
+                info = _match_title(title, titles)
+            if extra:
+                title = re.sub(r"^.*?(extras|deleted scene)\s*-\s*", "", title, flags=re.I)
+            if not title and not info and episode:
+                title = f"Episode {episode}"
+            out.append(Media(p, "special" if extra else "episode", secs, show=show_title, show_key=key,
+                             season=season or "", episode=episode or "",
+                             title=(info or {}).get("title") or title, desc=(info or {}).get("desc", ""),
+                             aired=(info or {}).get("aired", "")))
+    for root in ad_dirs:
         for p in videos(root):
             secs = secs_for(p)
             if not secs:

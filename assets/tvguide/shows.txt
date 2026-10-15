@@ -163,3 +163,58 @@ COMEDY|SP|Doug Stanhope Oslo Burning the Bridge to Nowhere|2011|Doug Stanhope ta
 COMEDY|SP|Jim Norton American Degenerate|2013|Jim Norton confesses everything, whether you wanted to hear it or not.
 COMEDY|SP|Louis Ck Beacon|2011|Louis C.K. live at the Beacon Theater: parenting, getting older and being terrible.
 COMEDY|SP|Lewis Black Taxed Beyond Belief|2003|Lewis Black loses his temper at taxes, politicians and pretty much everything else.
+# Added Oct 14, 2026 for "Movies and TV part 2": KFUR 7's shows and the family animated features.
+FOTP|SHOW|Father of the Pride|2004|A family of white lions who star in Siegfried & Roy's Las Vegas show deal with fame, family and their neighbours behind the scenes.
+WOLFSRAIN|SHOW|Wolf's Rain|2003|In a dying world where wolves pass as humans, four wolves follow the scent of a girl made from flowers in search of a legendary Paradise.
+DAMEKKO|SHOW|Damekko Doubutsu (Useless Wolf)|2005|Five-minute comedy shorts about animal misfits in a forest for the hopeless, led by a timid wolf and a short-tempered rabbit.
+FOTP|S1E1|What's Black, White and Depressed All Over?|8/31/2004|Siegfried and Roy bring in a panda named Nelson, and Larry and Kate's matchmaking backfires when he falls for Kate instead.
+FOTP|S1E2|Larry's Debut and Sweet Darryl Hannah Too|9/7/2004|Larry fumbles his big live TV debut, then plots revenge with Sarmoti once he learns Blake sabotaged the trick.
+FOTP|S1E3|Catnip and Trust|9/14/2004|Larry and Kate suspect Sierra of hiding catnip, then end up high themselves after a rave, and the family has to rebuild its trust.
+FOTP|S1E4|Donkey|9/21/2004|Larry and his friends kidnap Donkey's stunt double for Hunter's career day, until the real Donkey turns up.
+FOTP|S1E5|And the Revolution Continues|9/28/2004|Sierra befriends an activist lobster that Larry wants gone, and a dinner with Barbra Streisand turns into a rescue mission.
+FOTP|S1E6|Possession|10/12/2004|A tiger party sparks a feud of thefts and neighbourhood-watch mix-ups, while Hunter's fight with an antelope gets out of hand.
+FOTP|S1E7|One Man's Meat Is Another Man's Girlfriend|10/26/2004|On a forced meatless diet, Larry starts seeing Snack's girlfriend as dinner, and confessing it hurts their friendship.
+FOTP|S1E8|Rehabilitation|12/21/2004|Larry fakes an injury, the lions get hooked on painkillers, and their stay at a rehab centre goes badly wrong.
+FOTP|S1E9|Sarmoti Moves In|12/28/2004|Sarmoti moves in with Larry and Kate, and after Kate ruins his zebra rug the family scrambles to replace it.
+FOTP|S1E10|The Thanksgiving Episode|12/28/2004|Kate's run for PTA president collapses after one careless remark, until she wins votes by blaming a turkey for a stolen watch.
+FOTP|S1E11|Road Trip|12/28/2004|Larry forgets an anniversary, and his trip to make amends leaves him and Sarmoti lost in the desert with a coyote for a guide.
+WOLFSRAIN|S1E1|City of Howls|1/6/2003|A white wolf named Kiba is captured in Freeze City, escapes with a wolf named Hige, and declares he is heading for Paradise.
+WOLFSRAIN|S1E2|Toboe, Who Doesn't Howl|1/13/2003|Young Toboe befriends a girl and accidentally kills her falcon, while Kiba and Hige get themselves arrested to reach Cheza.
+WOLFSRAIN|S1E3|Bad Fellow|1/20/2003|Darcia carries Cheza off in his airship, Hubb digs into the Book of the Moon, and the wolves, now joined by Tsume, flee the city.
+WOLFSRAIN|S1E4|Scars in the Wasteland|1/27/2003|A blizzard and a military machine in a ruined city nearly finish the wolves, until Kiba buries it under an avalanche.
+WOLFSRAIN|S1E5|Fallen Wolves|2/3/2003|On a dying island the wolves find an old pack forced to haul cargo like sled dogs, and Kiba is beaten for challenging them.
+WOLFSRAIN|S1E6|The Successors|2/24/2003|An old wolf tells of his failed journey, Hige is caught in a trap, and the pack sets him free.
+WOLFSRAIN|S1E7|The Flower Maiden|3/3/2003|Kiba and Cheza sense each other during an airship battle, and she slips away from her captors to lead the wolves onward.
+WOLFSRAIN|S1E8|Song of Sleep|3/10/2003|Cheza soothes the wolves with her song, and a dying, imperfect flower maiden warns her against the journey.
+WOLFSRAIN|S1E9|Misgivings|3/17/2003|Blue is shot and left behind by Quent, and the wolves prepare to cross the Forest of Death, where machines fail.
+WOLFSRAIN|S1E10|Moon's Doom|4/7/2003|The wolves survive giant insects and a riddling owl in the Forest of Death, as Darcia learns Cheza has little time left.
+WOLFSRAIN|S1E11|Vanishing Point|4/14/2003|Jaguara's army strikes, Lunar Flowers briefly open a path to Paradise, and Darcia's attack leaves the wolves wounded.
+WOLFSRAIN|S1E12|Don't Make Me Blue|4/21/2003|Jaguara's troops attack Darcia's keep, the wolves free Blue from slavers, and Hubb and Quent share a drink.
+WOLFSRAIN|S1E13|Men's Lament|4/28/2003|Hubb and Quent drive toward Darcia's keep remembering the past, and Quent learns that Blue is part wolf.
+WOLFSRAIN|S1E14|The Fallen Keep|5/5/2003|Kiba reaches Cheza as Darcia's keep collapses, and Jaguara's airships capture Blue, Cher and Hubb.
+WOLFSRAIN|S1E15|Grey Wolf|5/12/2003|The journey so far, retold through Tsume's eyes.
+WOLFSRAIN|S1E16|Dream Journey|5/19/2003|The journey so far, retold through Toboe's eyes.
+WOLFSRAIN|S1E17|Scent of a Flower, Blood of a Wolf|5/26/2003|The journey so far, retold through Hige's eyes.
+WOLFSRAIN|S1E18|Men, Wolves, and the Book of the Moon|6/2/2003|The story so far from Hubb's side, with a new look at Quent's past.
+WOLFSRAIN|S1E19|A Dream of an Oasis|6/9/2003|Toboe recovers with a mountain tribe, while Kiba falls into a false paradise.
+WOLFSRAIN|S1E20|Consciously|6/16/2003|Kiba wakes from the false paradise, Hige and Tsume fight Jaguara's troops, and Toboe resolves to stop running.
+WOLFSRAIN|S1E21|Battle's Red Glare|6/23/2003|The wolves join the last of Orkham's forces against Jaguara's army and learn where Cheza has been taken.
+WOLFSRAIN|S1E22|Pieces of a Shooting Star|6/30/2003|A desperate fight on the drift ice, as Quent and Hubb press on toward Jaguara's city.
+WOLFSRAIN|S1E23|Heartbeat of the Black City|7/7/2003|The wolves reach Jaguara's sealed city, and Hige's collar turns out to be a tracker.
+WOLFSRAIN|S1E24|Scent of a Trap|7/14/2003|Tsume uncovers the secret of Hige's past, Kiba fights through a room of soldiers, and Blue and Cher are captured.
+WOLFSRAIN|S1E25|False Memories|7/21/2003|Kiba finds Cheza only to be bound by Jaguara, and Hige chooses to stay with Blue.
+WOLFSRAIN|S1E26|Moonlight Crucible|7/28/2003|Darcia confronts Jaguara, Kiba strikes the final blow, and Darcia leaves saying that Paradise is calling.
+WOLFSRAIN|S1E27|Where the Soul Goes|9/25/2003|Cheza heals Hige, Quent saves Blue, and Hubb vows to reach Paradise with the wolves after losing Cher.
+WOLFSRAIN|S1E28|Gunshot of Remorse|10/2/2003|Quent turns away from Blue, who leaves with Hige, and Darcia's confrontation with Quent and Toboe turns deadly.
+WOLFSRAIN|S1E29|High Tide, High Time|10/9/2003|Toboe throws off Darcia's aim at a terrible cost, and Darcia returns in the form of a wolf.
+WOLFSRAIN|S1E30|Wolf's Rain|10/16/2003|The final battle at the gates of Paradise, and an ending that reaches far beyond it.
+MOVIE|Alpha and Omega|2010|PG|Two wolves from opposite ends of the pack, a by-the-rules alpha and a carefree omega, are relocated to Idaho and must make the long trip home together.
+MOVIE|Bolt|2008|PG|A dog who stars in a TV action show, and believes his superpowers are real, gets lost in New York and crosses the country with a cat and a hamster.
+MOVIE|How to Train Your Dragon|2010|PG|A scrawny Viking teenager befriends the injured dragon he was meant to kill, and changes how his whole village sees dragons.
+MOVIE|How to Train Your Dragon 2|2014|PG|Hiccup and Toothless find a hidden ice cave full of wild dragons and face a warlord building a dragon army.
+MOVIE|Oliver & Company|1988|G|An orphaned kitten falls in with a gang of streetwise dogs in New York City, in Disney's take on Oliver Twist.
+MOVIE|Rio|2011|G|A pampered blue macaw from Minnesota travels to Rio de Janeiro to meet the last female of his kind, and has to learn to fly.
+MOVIE|The Last Unicorn|1982|G|A unicorn who learns she may be the last of her kind sets out with a bumbling magician to find the others.
+MOVIE|The Lion King|1994|G|A young lion prince flees his kingdom after his father's death and must return to take it back from his treacherous uncle.
+MOVIE|WALL-E|2008|G|A lonely trash-compacting robot left behind on an abandoned Earth falls for a sleek probe robot and follows her into space.
+MOVIE|Zootopia|2016|PG|A rookie bunny cop and a con-artist fox team up to uncover a conspiracy in a city run by mammals.
