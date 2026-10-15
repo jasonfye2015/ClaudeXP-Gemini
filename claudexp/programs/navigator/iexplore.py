@@ -328,7 +328,12 @@ def _about_banner():
 class IEBrowser(Browser):
     APP = "Microsoft Internet Explorer"
     TITLE = "{} - Microsoft Internet Explorer"
-    HOME = web.MSN_URL
+
+    @property
+    def HOME(self):                       # Control Panel > Internet Options > Home page
+        from ...cpl_extra import ie_home
+        return ie_home()
+
     SEARCH = web.MSN_SEARCH_URL
     DONE = "Done"
     ABOUT = ABOUT_PAGE
@@ -530,11 +535,8 @@ class IEBrowser(Browser):
         return (self.site_view.title() if on_site else web.title_of(self.page)) or self.url
 
     def _options(self):
-        from ...explorer.dialogs import msgbox
-        msgbox(self.desktop, "Internet Options",
-               f"Home page: {self.HOME}\n\nTemporary Internet files: every page you visit is kept, so it opens "
-               "instantly next time. Use View > Rewrite Page to have a page written fresh.",
-               icon="info", window_icon=ie_icon())
+        from ...cpl_extra import internet_options
+        internet_options(self.desktop)
 
     def _fill_bookmarks(self):
         m = self.bookmarks_menu

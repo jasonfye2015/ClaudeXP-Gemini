@@ -19,6 +19,30 @@ VIDEO = {".avi", ".mpg", ".mpeg", ".mp4", ".m4v", ".wmv", ".asf", ".mov", ".qt",
 FLASH = {".swf"}
 
 
+def _play(desktop, path, ext):
+    """Music and video go to the default media player (Set Program Access and Defaults); RealMedia always goes to
+    RealPlayer and QuickTime movies to QuickTime, if they're installed."""
+    from .. import defaults
+    from ..programs import installed, players
+    if ext in (".rm", ".ram", ".rmvb") and not installed.is_removed("realplayer"):
+        players.open_realplayer(desktop, path)
+        return
+    if ext in (".mov", ".qt") and not installed.is_removed("quicktime"):
+        players.open_quicktime(desktop, path)
+        return
+    chosen = defaults.get("media")
+    if chosen == "realplayer":
+        players.open_realplayer(desktop, path)
+    elif chosen == "quicktime":
+        players.open_quicktime(desktop, path)
+    elif ext in AUDIO:
+        from ..programs.wmp import open_wmp
+        open_wmp(desktop, path)
+    else:
+        from ..programs.amp import open_amp
+        open_amp(desktop, path)
+
+
 def open_file(desktop, path):
     path = Path(path)
     ext = path.suffix.lower()
@@ -62,12 +86,8 @@ def open_file(desktop, path):
         open_notepad(desktop, path)
     elif ext in IMAGES:
         PictureViewer.open(desktop, path)
-    elif ext in AUDIO:
-        from ..programs.wmp import open_wmp
-        open_wmp(desktop, path)
-    elif ext in VIDEO:
-        from ..programs.amp import open_amp
-        open_amp(desktop, path)
+    elif ext in AUDIO or ext in VIDEO:
+        _play(desktop, path, ext)
     elif ext == ".theme":
         from ..controlpanel import display_properties
         display_properties(desktop, theme_file=path)

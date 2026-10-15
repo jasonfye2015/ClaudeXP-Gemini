@@ -44,6 +44,8 @@ class Desktop(QWidget):
         self.life = life.install(self)
         from . import mailtray
         self.mailtray = mailtray.install(self)          # MSN Hotmail's new-mail envelope
+        from . import cpl_extra
+        cpl_extra.apply_blink()                         # Control Panel > Keyboard > Cursor blink rate
         from . import clippy
         self.clippy = clippy.install(self)
         self.start_menu = StartMenu(self)

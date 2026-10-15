@@ -166,6 +166,18 @@ PROGRAMS = [
     Program("kik", "Kik", "Chat like on a phone", _lazy(".messengers.others", "kik_icon"),
             _lazy(".messengers.others", "launch_kik"), _lazy(".messengers.others", "shutdown_kik")),
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown),
+    Program("realplayer", "RealPlayer", "Play audio and video", _lazy("players", "real_icon"),
+            _lazy("players", "open_realplayer"), _lazy("players", "shutdown_realplayer"), group="Real"),
+    Program("quicktime", "QuickTime Player", "Play movies", _lazy("players", "qt_icon"),
+            _lazy("players", "open_quicktime"), _lazy("players", "shutdown_quicktime"), group="QuickTime"),
+    Program("moviemaker", "Windows Movie Maker", "Make home movies", _lazy("moviemaker", "mm_icon"),
+            _lazy("moviemaker", "open_moviemaker"), _lazy("moviemaker", "shutdown"), group="Accessories"),
+    Program("winmsgr", "Windows Messenger", "Instant messages with .NET Passport",
+            _lazy(".messengers.winmsgr", "winmsgr_icon"), _lazy(".messengers.winmsgr", "launch"),
+            _lazy(".messengers.winmsgr", "shutdown")),
+    Program("activate", "Activate Windows", "", _lazy("..xpnags", "activation_icon"),
+            _lazy("..xpnags", "launch_activation"), group="Accessories/System Tools"),
+    Program("arp", "Add or Remove Programs", "", _lazy("arp", "arp_qicon"), _lazy("arp", "open_arp"), listed=False),
     Program("livejournal", "LiveJournal", "Your friends' online journals",
             _lazy(".navigator.sites.livejournal", "lj_icon"), _lazy(".navigator.sites.livejournal", "open_livejournal")),
     Program("hotmail", "MSN Hotmail", "Free web-based e-mail", _lazy("..mailtray", "hotmail_icon"),
@@ -360,6 +372,13 @@ recent = ["aim", "irc", "muck", "claudeai", "connect", "notepad", "mycomputer"]
 
 def launch(desktop, key):
     program = get(key)
+    from . import installed
+    if installed.is_removed(key):
+        from ..explorer.dialogs import msgbox
+        msgbox(desktop, program.name, f"{program.name} is not installed.\n\nTo use it again, reinstall it from "
+               "Control Panel > Add or Remove Programs > Add New Programs.", "warning")
+        return
+    installed.record(key)
     if program.listed and key not in PINNED:
         if key in recent:
             recent.remove(key)

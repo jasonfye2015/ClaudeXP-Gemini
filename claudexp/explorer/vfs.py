@@ -127,7 +127,8 @@ def shared_documents():
 
 EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "claudeaim.exe": "aim", "claudeirc.exe": "irc", "claudemuck.exe": "muck", "netscape.exe": "navigator", "iexplore.exe": "iexplore",
-    "notepad.exe": "notepad", "explorer.exe": "mycomputer", "claudeshield.exe": "antivirus", "ad-aware.exe": "adaware",
+    "notepad.exe": "notepad", "explorer.exe": "mycomputer", "claudeshield.exe": "antivirus", "msmsgs.exe": "winmsgr", "realplay.exe": "realplayer", "quicktimeplayer.exe": "quicktime",
+    "moviemk.exe": "moviemaker", "msoobe.exe": "activate", "ad-aware.exe": "adaware",
     "mspaint.exe": "paint", "calc.exe": "calc", "cmd.exe": "cmd", "taskmgr.exe": "taskmgr",
     "dfrgntfs.exe": "defrag", "wupdmgr.exe": "winupdate", "isignup.exe": "connect", "wmplayer.exe": "wmp",
     "wordpad.exe": "wordpad", "msimn.exe": "outlook", "wab.exe": "wab", "charmap.exe": "charmap",
@@ -232,6 +233,10 @@ def setup_c():
                       DRIVE_C / "Program Files" / "WinRAR" / "WinRAR.exe",
                       DRIVE_C / "Program Files" / "WinZip" / "winzip32.exe",
                       DRIVE_C / "Program Files" / "Internet Explorer" / "IEXPLORE.EXE",
+                      DRIVE_C / "Program Files" / "Messenger" / "msmsgs.exe",
+                      DRIVE_C / "Program Files" / "Real" / "RealPlayer" / "realplay.exe",
+                      DRIVE_C / "Program Files" / "QuickTime" / "QuickTimePlayer.exe",
+                      DRIVE_C / "Program Files" / "Movie Maker" / "moviemk.exe",
                       DRIVE_C / "Program Files" / "Lavasoft" / "Ad-aware 5.6" / "Ad-aware.exe"):
         if not extra_exe.exists():
             _fake(extra_exe, 200, 900)

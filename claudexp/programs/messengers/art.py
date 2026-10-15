@@ -282,3 +282,17 @@ DRAW.update({
     "dot_offline": _disc("#B0B0B0"),
     "dot_away": _disc("#F2C200"),
 })
+
+
+def _two_people(size):
+    """Windows Messenger: a green buddy in front of a blue one."""
+    back = _msn_person("#3B7FD9", "#2B5FB8")(size)
+    front = _msn_person("#3DAA35", "#2E9A28")(size)
+    pm, p = _canvas(size)                       # (64 x 64 units)
+    p.drawPixmap(QRectF(16, 0, 48, 48), back, QRectF(back.rect()))
+    p.drawPixmap(QRectF(0, 16, 48, 48), front, QRectF(front.rect()))
+    p.end()
+    return pm
+
+
+DRAW["wm_logo"] = _two_people

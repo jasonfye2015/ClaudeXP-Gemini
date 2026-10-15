@@ -67,6 +67,8 @@ def builtins():
         ("prog:iexplore", "Internet Explorer", lambda: programs.get("iexplore").icon()),
         ("prog:hotmail", "MSN Hotmail", lambda: programs.get("hotmail").icon()),
         ("prog:livejournal", "LiveJournal", lambda: programs.get("livejournal").icon()),
+        ("prog:realplayer", "RealPlayer", lambda: programs.get("realplayer").icon()),
+        ("prog:quicktime", "QuickTime Player", lambda: programs.get("quicktime").icon()),
         ("prog:adaware", "Ad-aware 5.6", lambda: programs.get("adaware").icon()),
         ("prog:navigator", "Netscape Navigator", lambda: programs.get("navigator").icon()),
         ("prog:claudeai", "ClaudeAI", lambda: programs.get("claudeai").icon()),
@@ -245,8 +247,10 @@ class IconManager(QObject):
                     or self.icon_provider.icon(QFileInfo(str(f))), f)
         folder_links = {f"prog:{k}" for k in programs.FOLDER_SHORTCUTS}
         program_folders = [desk / n for n in PROGRAM_FOLDERS if (desk / n).is_dir()]
+        from .programs import installed
+        gone = {f"prog:{k}" for k in installed.removed()}
         for key, label, icon in builtins():
-            if key not in self.state["hidden"]:
+            if key not in self.state["hidden"] and key not in gone:
                 wanted.append((key, self.state["labels"].get(key, label), icon, None))
         # the program folders go right after the last E: folder link (or after America Online)
         keys = [w[0] for w in wanted]
@@ -794,6 +798,8 @@ class IconManager(QObject):
                       "iexplore": r"C:\Program Files\Internet Explorer\IEXPLORE.EXE",
                       "hotmail": "http://www.hotmail.com/",
                       "livejournal": "http://www.livejournal.com/",
+                      "realplayer": r"C:\Program Files\Real\RealPlayer\realplay.exe",
+                      "quicktime": r"C:\Program Files\QuickTime\QuickTimePlayer.exe",
                       "adaware": r"C:\Program Files\Lavasoft\Ad-aware 5.6\Ad-aware.exe",
                       "claudeai": r"C:\Program Files\ClaudeAI\claudeai.exe",
                       "aim": r"C:\Program Files\ClaudeAIM\ClaudeAIM.exe",

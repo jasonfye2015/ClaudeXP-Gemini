@@ -881,6 +881,17 @@ def customize_desktop(desktop):
         g.addWidget(box)
         boxes[key] = box
     v.addWidget(group)
+    from . import xpnags
+    clean = QGroupBox("Desktop cleanup")
+    cg = QVBoxLayout(clean)
+    cg.addWidget(QLabel("Desktop cleanup moves unused desktop items to a folder."))
+    every = QCheckBox("Run Desktop Cleanup Wizard every 60 days")
+    every.setChecked(not xpnags.cleanup_settings()["off"])
+    cg.addWidget(every)
+    now_btn = QPushButton("Clean Desktop Now")
+    now_btn.setFixedWidth(130)
+    cg.addWidget(now_btn)
+    v.addWidget(clean)
     row = QHBoxLayout()
     restore = QPushButton("Restore Default")
     row.addWidget(restore)
@@ -899,7 +910,10 @@ def customize_desktop(desktop):
 
     def accept():
         mgr.set_hidden([k for k, b in boxes.items() if not b.isChecked()])
+        xpnags.set_cleanup_every_60_days(every.isChecked())
         close()
+
+    now_btn.clicked.connect(lambda: (close(), xpnags.open_cleanup(desktop)))
 
     restore.clicked.connect(lambda: [b.setChecked(True) for b in boxes.values()])
     ok.clicked.connect(accept)
@@ -1364,23 +1378,35 @@ def control_panel(desktop):
             from .explorer.dialogs import system_info
             system_info(desktop)
 
+        from . import cpl_extra as cx
         items = [
+            ("Accessibility Options", std(QStyle.SP_MessageBoxInformation), lambda: cx.accessibility(desktop)),
+            ("Administrative Tools", std(QStyle.SP_DirIcon), lambda: cx.admin_tools(desktop)),
             ("Display", QIcon(monitor_icon(32)), lambda: display_properties(desktop)),
             ("User Accounts", QIcon(accounts_icon(32)), lambda: user_accounts(desktop)),
             ("Network Connections", programs.get("connect").icon(), lambda: programs.launch(desktop, "connect")),
             ("System", std(QStyle.SP_ComputerIcon), system),
             ("Windows Update", programs.get("winupdate").icon(), lambda: programs.launch(desktop, "winupdate")),
-            ("Add or Remove Programs", std(QStyle.SP_DialogApplyButton), not_here("Add or Remove Programs")),
-            ("Date and Time", std(QStyle.SP_FileDialogInfoView), not_here("Date and Time")),
+            ("Add or Remove Programs", programs.get("arp").icon(), lambda: programs.launch(desktop, "arp")),
+            ("Date and Time", std(QStyle.SP_FileDialogInfoView), lambda: cx.date_and_time(desktop)),
+            ("Folder Options", std(QStyle.SP_DirIcon), lambda: cx.folder_options(desktop)),
+            ("Game Controllers", std(QStyle.SP_MediaPlay), lambda: cx.game_controllers(desktop)),
+            ("Keyboard", std(QStyle.SP_ComputerIcon), lambda: cx.keyboard(desktop)),
+            ("Phone and Modem Options", std(QStyle.SP_DriveNetIcon), lambda: cx.phone_modem(desktop)),
+            ("Power Options", std(QStyle.SP_BrowserStop), lambda: cx.power_options(desktop)),
+            ("Regional and Language Options", std(QStyle.SP_DriveNetIcon), lambda: cx.regional(desktop)),
+            ("Speech", std(QStyle.SP_MediaVolume), lambda: cx.speech(desktop)),
+            ("Taskbar and Start Menu", std(QStyle.SP_TitleBarMenuButton), lambda: cx.taskbar_start(desktop)),
             ("Sounds and Audio Devices", std(QStyle.SP_MediaVolume), lambda: sound_properties(desktop)),
             ("Mouse", std(QStyle.SP_ArrowUp), lambda: mouse_properties(desktop)),
             ("AI Models", QIcon(_ai_icon()), lambda: _ai_models(desktop)),
             ("Office Assistant", QIcon(_clippy_icon()), lambda: _office_assistant(desktop)),
-            ("Internet Options", std(QStyle.SP_BrowserReload), not_here("Internet Options")),
+            ("Internet Options", std(QStyle.SP_BrowserReload), lambda: cx.internet_options(desktop)),
             ("Printers and Faxes", _printer_icon(), lambda: _printers(desktop)),
-            ("Scheduled Tasks", std(QStyle.SP_FileDialogDetailedView), not_here("Scheduled Tasks")),
-            ("Fonts", std(QStyle.SP_FileDialogListView), not_here("Fonts")),
+            ("Scheduled Tasks", std(QStyle.SP_FileDialogDetailedView), lambda: cx.scheduled_tasks(desktop)),
+            ("Fonts", std(QStyle.SP_FileDialogListView), lambda: cx.fonts(desktop)),
         ]
+        items.sort(key=lambda it: it[0].lower())
         actions = {}
         for name, icon, action in items:
             it = QListWidgetItem(icon, name)
@@ -1388,7 +1414,7 @@ def control_panel(desktop):
             actions[name] = action
         grid.itemActivated.connect(lambda it: actions[it.text()]())
         v.addWidget(grid, 1)
-        win = XPWindow(desktop, "Control Panel", body, std(QStyle.SP_DesktopIcon), size=(620, 420))
+        win = XPWindow(desktop, "Control Panel", body, std(QStyle.SP_DesktopIcon), size=(680, 480))
         desktop.open_window(win)
         sound.play("navigate")
         return win

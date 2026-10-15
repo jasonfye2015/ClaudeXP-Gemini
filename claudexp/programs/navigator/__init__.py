@@ -23,7 +23,11 @@ def nav_icon():
 
 
 def open_url(desktop, url=None):
-    """Open a link from another program in the default browser, Internet Explorer."""
+    """Open a link from another program in the default browser (Internet Explorer unless you chose Netscape)."""
+    from ... import defaults
+    if defaults.get("browser") == "navigator":
+        launch(desktop, url)
+        return
     from .iexplore import launch as ie
     ie(desktop, url)
 

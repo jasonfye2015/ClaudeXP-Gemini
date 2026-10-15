@@ -212,6 +212,8 @@ class ClaudeXP(QMainWindow):
         QTimer.singleShot(2600, lambda: torrent.start_at_logon(self.desktop))
         from .programs import neko
         neko.start_at_logon(self.desktop)
+        from . import xpnags
+        xpnags.at_logon(self.desktop)            # activation, Desktop Cleanup, Windows Messenger
         from .programs import copilot_widgets
         QTimer.singleShot(1800, lambda: copilot_widgets.start_at_logon(self.desktop))
         QTimer.singleShot(6000, lambda: self.desktop.clippy.start() if self.desktop.isVisible() else None)
