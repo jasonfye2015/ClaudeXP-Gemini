@@ -166,6 +166,8 @@ PROGRAMS = [
     Program("kik", "Kik", "Chat like on a phone", _lazy(".messengers.others", "kik_icon"),
             _lazy(".messengers.others", "launch_kik"), _lazy(".messengers.others", "shutdown_kik")),
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown),
+    Program("iexplore", "Internet Explorer", "Browse the Web", _lazy(".navigator.iexplore", "ie_icon"),
+            _lazy(".navigator.iexplore", "launch"), _lazy(".navigator.iexplore", "shutdown")),
     Program("navigator", "Netscape Navigator", "Browse the Web", navigator.nav_icon, navigator.launch,
             navigator.shutdown),
     Program("claudeai", "ClaudeAI", "Chat with your local AI", claudeai.claudeai_icon, claudeai.launch,
@@ -346,7 +348,7 @@ def get(key):
 
 
 MFU_SLOTS = 7
-PINNED = ("navigator",)
+PINNED = ("iexplore",)          # XP's pinned 'Internet' spot
 recent = ["aim", "irc", "muck", "claudeai", "connect", "notepad", "mycomputer"]
 
 

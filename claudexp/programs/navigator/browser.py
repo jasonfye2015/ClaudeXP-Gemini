@@ -126,7 +126,7 @@ class PageView(QTextBrowser):
 
     def loadResource(self, kind, url):
         if kind == QTextDocument.ImageResource and url.toString() == "about:logo":
-            return pixmap("netscape_about.jpg")
+            return self.browser.about_logo()
         if kind == QTextDocument.ImageResource:
             return web.image_for(self.browser.resolve(url.toString()))
         return None
@@ -146,6 +146,16 @@ class PageView(QTextBrowser):
 
 
 class Browser(QWidget):
+    """Netscape's window. Internet Explorer (iexplore.py) is the same browser with its own chrome and branding."""
+    APP = "Netscape Navigator"
+    TITLE = "Netscape: {}"
+    HOME = web.HOME_URL
+    SEARCH = web.SEARCH_URL
+    DONE = "Document: Done"
+    ABOUT = ABOUT_PAGE
+    BOOKMARKS = BOOKMARKS_FILE
+    DEFAULT_BOOKMARKS = DEFAULT_BOOKMARKS
+
     def __init__(self, desktop):
         super().__init__()
         self.desktop = desktop
@@ -166,7 +176,31 @@ class Browser(QWidget):
         self.partial = ""
         self.loading_url = ""
         self.throb_frame = 0
-        self.bookmarks = load_json(BOOKMARKS_FILE, None) or list(DEFAULT_BOOKMARKS)
+        self.bookmarks = load_json(self.BOOKMARKS, None) or list(self.DEFAULT_BOOKMARKS)
+        self.view = PageView(self)
+        self.site_view = None                 # the real web engine, made the first time a furry-web site is visited
+        self.pages = QStackedWidget()
+        self.pages.addWidget(self.view)
+        bar, toolbars, status = self._build_chrome()
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.setMenuBar(bar)
+        for tb in toolbars:
+            root.addWidget(tb)
+        root.addWidget(self.pages, 1)
+        root.addWidget(status)
+
+        self.throb_timer = QTimer(self)
+        self.throb_timer.timeout.connect(self._throb)
+        self.render_timer = QTimer(self)
+        self.render_timer.timeout.connect(self._render_partial)
+        self._update_buttons()
+
+    def _build_chrome(self):
+        """-> (menu bar, toolbars, status bar). Sets back_act, fwd_act, stop_act, throbber, location, status,
+        progress, go_menu and bookmarks_menu."""
         self.setStyleSheet(STYLE)
 
         # ---- menus ----
@@ -215,8 +249,8 @@ class Browser(QWidget):
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         nav.addWidget(spacer)
         self.throbber = QToolButton()
-        self.throbber.setIcon(QIcon(throbber_frames()[0]))
-        self.throbber.setIconSize(throbber_frames()[0].size())
+        self.throbber.setIcon(QIcon(self.throbber_frames()[0]))
+        self.throbber.setIconSize(self.throbber_frames()[0].size())
         self.throbber.setToolTip("Go to the Netscape Netcenter")
         self.throbber.clicked.connect(self.home)
         nav.addWidget(self.throbber)
@@ -234,14 +268,10 @@ class Browser(QWidget):
         self.location = QLineEdit()
         self.location.setStyleSheet("QLineEdit { background: white; border: 1px solid #7F9DB9; padding: 1px; "
                                     "font-family: Tahoma; font-size: 11px; }")
-        self.location.returnPressed.connect(lambda: self.navigate(web.normalize(self.location.text())))
+        self.location.returnPressed.connect(self._go_typed)
         loc.addWidget(self.location)
 
-        # ---- page + status bar ----
-        self.view = PageView(self)
-        self.site_view = None                 # the real web engine, made the first time a furry-web site is visited
-        self.pages = QStackedWidget()
-        self.pages.addWidget(self.view)
+        # ---- status bar ----
         status = QWidget()
         status.setObjectName("statusbar")
         status.setAttribute(Qt.WA_StyledBackground, True)
@@ -250,7 +280,7 @@ class Browser(QWidget):
         self.lock = QLabel()
         self.lock.setPixmap(style.standardIcon(QStyle.SP_DialogNoButton).pixmap(14, 14))
         self.lock.setToolTip("This page is not secure")
-        self.status = QLabel("Document: Done")
+        self.status = QLabel(self.DONE)
         self.status.setObjectName("status")
         self.progress = QProgressBar()
         self.progress.setFixedSize(120, 12)
@@ -260,42 +290,48 @@ class Browser(QWidget):
         srow.addWidget(self.lock)
         srow.addWidget(self.status, 1)
         srow.addWidget(self.progress)
+        return bar, [nav, loc], status
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
-        root.setMenuBar(bar)
-        root.addWidget(nav)
-        root.addWidget(loc)
-        root.addWidget(self.pages, 1)
-        root.addWidget(status)
+    def _set_title(self, title):
+        if self.frame is not None:
+            self.frame.set_title(self.TITLE.format(title) if title else self.APP)
 
-        self.throb_timer = QTimer(self)
-        self.throb_timer.timeout.connect(self._throb)
-        self.render_timer = QTimer(self)
-        self.render_timer.timeout.connect(self._render_partial)
-        self._update_buttons()
+    def throbber_frames(self):
+        return throbber_frames()
+
+    def app_icon(self):
+        return nav_icon()
+
+    def about_logo(self):
+        return pixmap("netscape_about.jpg")
+
+    def _mailto(self, url):
+        self.status.setText("Netscape Mail isn't installed on this computer.")
+        sound.play("default")
+
+    def _go_typed(self):
+        self.navigate(web.normalize(self.location.text(), self.HOME, self.SEARCH))
 
     # ---- navigation ------------------------------------------------------------------
     def resolve(self, href):
-        return QUrl(self.url or web.HOME_URL).resolved(QUrl(href)).toString()
+        return QUrl(self.url or self.HOME).resolved(QUrl(href)).toString()
 
     def link_clicked(self, qurl):
         href = qurl.toString()
         url = self.resolve(href)
         if url.startswith("mailto:"):
-            self.status.setText("Netscape Mail isn't installed on this computer.")
-            sound.play("default")
+            self._mailto(url)
             return
         text = self.links.get(href) or self.links.get(url) or href
         self.navigate(url, referrer=(self.url, web.title_of(self.page), text))
 
     def link_hovered(self, qurl):
         self.status.setText(self.resolve(qurl.toString()) if qurl.toString() else
-                            ("Document: Done" if self.loader is None else self.status.text()))
+                            (self.DONE if self.loader is None else self.status.text()))
 
     def navigate(self, url, referrer=None, regenerate=False, push=True):
-        url = web.normalize(url) if not url.startswith(("http://", "https://", "about:", "file:")) else url
+        if not url.startswith(("http://", "https://", "about:", "file:")):
+            url = web.normalize(url, self.HOME, self.SEARCH)
         self.stop(quiet=True)
         if push:
             del self.history[self.index + 1:]
@@ -309,14 +345,17 @@ class Browser(QWidget):
             box = self._mailbox()
             self._show(web.home_page(self.knowledge, len(box.unread()) if box else 0), url)
             return
+        if url == web.MSN_URL:
+            self._show(web.msn_page(self.knowledge), url)
+            return
         if url.startswith(web.WEBMAIL_URL):
             self._webmail(url)
             return
         if url.startswith("file:"):
             self._local_file(url)
             return
-        if url in ("about:", "about:netscape"):
-            self._show(ABOUT_PAGE, url)
+        if url in ("about:", "about:netscape", "about:ie"):
+            self._show(self.ABOUT, url)
             return
         if url == "about:blank":
             self._show("<html><head><title></title></head><body></body></html>", url)
@@ -357,7 +396,7 @@ class Browser(QWidget):
             v.setStyleSheet("border: 1px solid #7F9DB9;")
             v.link_followed.connect(lambda url: self.navigate(url, referrer=(self.url, v.title(), url)))
             v.flash_requested.connect(self._play_flash)
-            v.page().linkHovered.connect(lambda u: self.status.setText(sites.logical_url(u) if u else "Document: Done"))
+            v.page().linkHovered.connect(lambda u: self.status.setText(sites.logical_url(u) if u else self.DONE))
             v.loadStarted.connect(lambda: (self._start_throbber(), self.progress.setRange(0, 100)))
             v.loadProgress.connect(lambda n: (self.progress.setValue(n),
                                               self.status.setText(f"Document: Received {n}%") if n < 100 else None))
@@ -380,11 +419,11 @@ class Browser(QWidget):
             self._site_url_changed(self.site_view.url())     # (a redirect back to the same page sends no urlChanged)
         self._stop_throbber()
         self.progress.setValue(0)
-        self.status.setText("Document: Done" if ok else "Transfer interrupted!")
+        self.status.setText(self.DONE if ok else "Transfer interrupted!")
 
     def _site_title(self, title):
-        if self.frame is not None and self.pages.currentWidget() is self.site_view:
-            self.frame.set_title(f"Netscape: {title}" if title else "Netscape Navigator")
+        if self.pages.currentWidget() is self.site_view:
+            self._set_title(title)
 
     def _site_url_changed(self, qurl):
         """A redirect inside a site (e.g. after 'Add to Favorites'): keep the address bar and history honest."""
@@ -535,29 +574,29 @@ class Browser(QWidget):
                 self.links[href] = text
         self.view.show_page(page)
         self.view.verticalScrollBar().setValue(0)
-        title = web.title_of(page)
-        if self.frame is not None:
-            self.frame.set_title(f"Netscape: {title}" if title else "Netscape Navigator")
-        self.status.setText("Document: Done")
+        self._set_title(web.title_of(page))
+        self.status.setText(self.DONE)
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
 
     def _error(self, url, why):
         self._stop_throbber()
         self.pages.setCurrentWidget(self.view)
-        if self.frame is not None:
-            self.frame.set_title("Netscape Navigator")
+        self._set_title("")
         host = urlparse(url).netloc or url
         self.page = ""
-        self.view.show_page(f"""<html><head><title>Unable to connect</title></head><body bgcolor="#FFFFFF">
+        self.view.show_page(self._error_page(host, why))
+        self.status.setText(self.DONE)
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        sound.play("default")
+
+    def _error_page(self, host, why):
+        return (f"""<html><head><title>Unable to connect</title></head><body bgcolor="#FFFFFF">
 <br><table width="90%" align="center" cellpadding="10" border="1" bgcolor="#F0F0F0"><tr><td>
 <font face="Arial" size="3"><b>Netscape is unable to connect to {html.escape(host)}.</b></font><br><br>
 <font face="Arial" size="2">{html.escape(why)}<br><br>Check your connection and try again with the
 <b>Reload</b> button.</font></td></tr></table></body></html>""")
-        self.status.setText("Document: Done")
-        self.progress.setRange(0, 100)
-        self.progress.setValue(0)
-        sound.play("default")
 
     def stop(self, quiet=False):
         if self.site_view is not None and self.pages.currentWidget() is self.site_view and not quiet:
@@ -584,11 +623,12 @@ class Browser(QWidget):
             self.navigate(self.history[self.index], push=False)
 
     def home(self):
-        self.navigate(web.HOME_URL)
+        self.navigate(self.HOME)
 
     def _search(self):
         self._focus_location()
-        self.status.setText("Type what you're looking for in the Location box and press Enter.")
+        self.status.setText(f"Type what you're looking for in the {self.loc_label.text().strip(' :')} box "
+                            "and press Enter.")
 
     def _focus_location(self):
         self.location.setFocus()
@@ -608,10 +648,10 @@ class Browser(QWidget):
         self.throb_timer.stop()
         self.stop_act.setEnabled(False)
         self.throb_frame = 0
-        self.throbber.setIcon(QIcon(throbber_frames()[0]))
+        self.throbber.setIcon(QIcon(self.throbber_frames()[0]))
 
     def _throb(self):
-        frames = throbber_frames()
+        frames = self.throbber_frames()
         self.throb_frame = (self.throb_frame + 1) % len(frames)
         self.throbber.setIcon(QIcon(frames[self.throb_frame]))
 
@@ -647,16 +687,16 @@ class Browser(QWidget):
         on_site = self.site_view is not None and self.pages.currentWidget() is self.site_view
         title = (self.site_view.title() if on_site else web.title_of(self.page)) or self.url
         self.bookmarks.append({"title": title, "url": self.url})
-        save_json(BOOKMARKS_FILE, self.bookmarks)
+        save_json(self.BOOKMARKS, self.bookmarks)
         self.status.setText("Bookmark added.")
 
     def print_page(self):
         if self.site_view is not None and self.pages.currentWidget() is self.site_view:
-            self.status.setText("This page can't be printed from Netscape 4.79.")
+            self.status.setText(f"This page can't be printed from {self.APP}.")
             sound.play("default")
             return
         from ...printing import print_document
-        title = web.title_of(self.page) or self.url or "Netscape"
+        title = web.title_of(self.page) or self.url or self.APP
         print_document(self.desktop, title, self.view.document())
 
     def view_source(self):
@@ -670,7 +710,7 @@ class Browser(QWidget):
         text.setReadOnly(True)
         text.setFont(QFont("Courier New", 9))
         text.setStyleSheet("QPlainTextEdit { background: white; color: black; }")
-        win = XPWindow(self.desktop, f"Source of: {self.url}", text, nav_icon(), size=(640, 460))
+        win = XPWindow(self.desktop, f"Source of: {self.url}", text, self.app_icon(), size=(640, 460))
         self.desktop.open_window(win)
 
     def _about(self):

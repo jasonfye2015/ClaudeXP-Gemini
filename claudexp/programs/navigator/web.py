@@ -1,5 +1,5 @@
 """The 2001 World Wide Web, written by the model: prompts, streaming page loads, the page cache,
-built-in images, and the Netcenter home page."""
+built-in images, and the home pages (Netscape's Netcenter, and MSN for Internet Explorer)."""
 import hashlib
 import html
 import random
@@ -18,6 +18,8 @@ DATA_DIR = NAV_DIR / "data"
 CACHE_DIR = DATA_DIR / "cache"
 HOME_URL = "http://home.netscape.com/"
 SEARCH_URL = "http://search.netscape.com/search?q="
+MSN_URL = "http://www.msn.com/"
+MSN_SEARCH_URL = "http://search.msn.com/results.asp?q="
 MAX_TOKENS = 3500
 
 PROMPT = """You are the World Wide Web on {date}. Given a URL, you write the complete HTML page that web server would send back, exactly as it would have looked in October 2001.
@@ -38,7 +40,7 @@ Rules:
 - Include 6 to 15 links: relative links to other pages on the same site, and full http:// links to other plausible sites. Link text should say clearly what's there.
 - Keep the page between one and three screens long."""
 
-SEARCH_EXTRA = """This is a Netscape Search results page for the query "{q}". Show the search box area as plain text (no forms), then 8 to 10 results: each with a linked title (a full http:// URL to a plausible 2001 website about the query), a one or two line description, and the URL in green. Add 'Result Page: 1 2 3 Next' links at the bottom (links to the same search with &page=2 etc)."""
+SEARCH_EXTRA = """This is a {engine} results page for the query "{q}". Show the search box area as plain text (no forms), then 8 to 10 results: each with a linked title (a full http:// URL to a plausible 2001 website about the query), a one or two line description, and the URL in green. Add 'Result Page: 1 2 3 Next' links at the bottom (links to the same search with &page=2 etc)."""
 
 BUDDY_EXTRA = """This is the personal homepage of {name}. Here is who they are (write the page as they would, in their own voice, reflecting their personality, interests and how they type):
 {persona}
@@ -47,15 +49,15 @@ BUDDY_EXTRA = """This is the personal homepage of {name}. Here is who they are (
 
 # ---- URLs -------------------------------------------------------------------------------
 
-def normalize(text):
+def normalize(text, home=HOME_URL, search=SEARCH_URL):
     """What the user typed into Location -> a URL (plain words become a search)."""
     text = text.strip()
     if not text:
-        return HOME_URL
+        return home
     if text.startswith(("about:", "http://", "https://")):
         url = text
     elif " " in text or "." not in text:
-        return SEARCH_URL + quote_plus(text)
+        return search + quote_plus(text)
     else:
         url = "http://" + text
     parts = urlparse(url)
@@ -145,9 +147,10 @@ class WebKnowledge:
             if news:
                 notes.append("What's been going on in their life lately (a personal page would often have a "
                              f"'What's New' or 'Updates' section mentioning some of it):\n{news}")
-        if host.startswith("search.netscape.com"):
+        if host.startswith(("search.netscape.com", "search.msn.com")):
             q = parse_qs(parts.query).get("q", [""])[0]
-            notes.append(SEARCH_EXTRA.format(q=q))
+            engine = "MSN Search" if host.startswith("search.msn.com") else "Netscape Search"
+            notes.append(SEARCH_EXTRA.format(engine=engine, q=q))
         return "\n\n".join(notes)
 
 
@@ -398,9 +401,8 @@ def message_page(m):
     return _mail_frame(f"Netscape WebMail - {m['subject']}", inner)
 
 
-def home_page(knowledge, unread=0):
-    now = clock.now()
-    webmail = "WebMail" + (f" ({unread} new)" if unread else "")
+def _home_links(knowledge):
+    """The links both home pages carry: the Furry Web's sites, your buddies on FurAffinity and on FurryCities."""
     buddies = " &middot; ".join(                       # one compact block, like the FurAffinity list
         f'<a href="http://www.furrycities.com/{name}/">{html.escape(name)}</a>'
         for name in sorted(knowledge.buddy_names, key=str.lower))
@@ -420,7 +422,25 @@ def home_page(knowledge, unread=0):
             for name in sorted(knowledge.buddy_names, key=str.lower)) if knowledge.buddy_names or me else ""
     else:
         fa_buddies = '<font color="#999999">FurAffinity is not on this computer.</font>'
-    fa_buddies = fa_buddies or "(no buddies yet)"
+    return furry_web, fa_buddies or "(no buddies yet)", buddies or "(no buddies yet)"
+
+
+FANDOM_LINKS = [("http://www.furnet.irc/", "FurNet IRC Network"), ("http://www.pawprintsmuck.com/", "PawPrints MUCK"),
+                ("http://www.furrycities.com/", "FurryCities - free furry homepages"),
+                ("http://www.furryconventions.com/", "Convention listings 2001-2002"),
+                ("http://www.fursuitnation.com/", "Fursuit Nation"),
+                ("http://www.claudeaim.com/", "ClaudeAIM - download &amp; buddy icons")]
+COOL_SITES = [("http://www.homestarrunner.com/", "Homestar Runner"), ("http://www.hampsterdance.com/", "Hampster Dance"),
+              ("http://www.zombo.com/", "Zombo.com"), ("http://www.slashdot.org/", "Slashdot"),
+              ("http://www.penny-arcade.com/", "Penny Arcade")]
+
+
+def home_page(knowledge, unread=0):
+    now = clock.now()
+    webmail = "WebMail" + (f" ({unread} new)" if unread else "")
+    furry_web, fa_buddies, buddies = _home_links(knowledge)
+    fandom = "".join(f'<li><a href="{u}">{t}</a></li>' for u, t in FANDOM_LINKS)
+    cool = " |\n".join(f'<a href="{u}">{t}</a>' for u, t in COOL_SITES)
     return f"""<html><head><title>Netscape Netcenter</title></head>
 <body bgcolor="#FFFFFF" text="#000000" link="#0000CC" vlink="#551A8B">
 <table width="100%" cellpadding="6" cellspacing="0" bgcolor="#003366"><tr>
@@ -451,20 +471,72 @@ def home_page(knowledge, unread=0):
 <li><a href="http://horoscopes.netscape.com/">Horoscopes</a></li>
 <li><a href="http://shopping.netscape.com/">Shopping</a></li></ul></font></td>
 <td width="34%"><font face="Arial" size="3" color="#003366"><b>Furry Fandom</b></font><font face="Arial" size="2">
-<ul><li><a href="http://www.furnet.irc/">FurNet IRC Network</a></li>
-<li><a href="http://www.pawprintsmuck.com/">PawPrints MUCK</a></li>
-<li><a href="http://www.furrycities.com/">FurryCities - free furry homepages</a></li>
-<li><a href="http://www.furryconventions.com/">Convention listings 2001-2002</a></li>
-<li><a href="http://www.fursuitnation.com/">Fursuit Nation</a></li>
-<li><a href="http://www.claudeaim.com/">ClaudeAIM - download &amp; buddy icons</a></li></ul></font></td>
+<ul>{fandom}</ul></font></td>
 <td width="33%"><font face="Arial" size="3" color="#003366"><b>Your Buddies on the Web</b></font><font face="Arial" size="2">
-<br><font color="#666666">Their FurryCities homepages:</font><br>{buddies or "(no buddies yet)"}</font></td></tr></table>
+<br><font color="#666666">Their FurryCities homepages:</font><br>{buddies}</font></td></tr></table>
 <hr size="1"><center><font face="Arial" size="2"><b>Cool Sites:</b>
-<a href="http://www.homestarrunner.com/">Homestar Runner</a> |
-<a href="http://www.hampsterdance.com/">Hampster Dance</a> |
-<a href="http://www.zombo.com/">Zombo.com</a> |
-<a href="http://www.slashdot.org/">Slashdot</a> |
-<a href="http://www.penny-arcade.com/">Penny Arcade</a></font><br><br>
+{cool}</font><br><br>
 <font face="Arial" size="1" color="#808080">Copyright &copy; 2001 Netscape Communications Corp. All rights reserved.
 Best viewed with Netscape Navigator 4.79.</font></center>
+</body></html>"""
+
+
+def msn_page(knowledge):
+    """MSN.com as it looked in late 2001: Internet Explorer's home page, with the same links as the Netcenter."""
+    now = clock.now()
+    furry_web, fa_buddies, buddies = _home_links(knowledge)
+    fandom = "".join(f'<a href="{u}">{t}</a><br>' for u, t in FANDOM_LINKS)
+    cool = " &middot;\n".join(f'<a href="{u}">{t}</a>' for u, t in COOL_SITES)
+    tabs = " | ".join(f'<a href="http://{h}/"><font color="#FFFFFF">{t}</font></a>' for h, t in (
+        ("www.hotmail.com", "Hotmail"), ("search.msn.com", "Search"), ("shopping.msn.com", "Shopping"),
+        ("moneycentral.msn.com", "Money"), ("communities.msn.com", "People &amp; Chat")))
+    channels = "".join(f'<a href="http://{h}/">{t}</a><br>' for h, t in (
+        ("autos.msn.com", "Autos"), ("careers.msn.com", "Careers"), ("encarta.msn.com", "Encarta"),
+        ("entertainment.msn.com", "Entertainment"), ("zone.msn.com", "Games"), ("health.msn.com", "Health"),
+        ("house.msn.com", "House &amp; Home"), ("moneycentral.msn.com", "Money"), ("msnbc.com", "News"),
+        ("msn.espn.go.com", "Sports"), ("tech.msn.com", "Tech &amp; Gadgets"), ("travel.msn.com", "Travel"),
+        ("weather.msn.com", "Weather"), ("women.msn.com", "Women")))
+    news = "".join(f'<li><a href="http://www.msnbc.com/news/{slug}.asp">{t}</a></li>' for slug, t in (
+        ("windowsxp_launch", "Windows XP arrives: what you need to know"),
+        ("xbox_preview", "Xbox launches next month - hands-on preview"),
+        ("ipod_apple", "Apple unveils a '1,000 songs in your pocket' music player"),
+        ("napster_court", "Napster still offline as court battle drags on")))
+    q = MSN_SEARCH_URL
+    return f"""<html><head><title>MSN.com</title></head>
+<body bgcolor="#FFFFFF" text="#000000" link="#0033CC" vlink="#663399">
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+<td width="150" bgcolor="#FFFFFF"><font face="Verdana" size="6" color="#3366CC"><b>msn</b></font><font face="Verdana" size="4" color="#FF9900"><b>.</b></font>
+<font face="Verdana" size="1" color="#666666">&nbsp;{now:%A, %B} {now.day}</font></td>
+<td align="right" valign="bottom"><font face="Verdana" size="1"><a href="http://www.msn.com/">MSN Home</a> |
+<a href="http://www.hotmail.com/">Hotmail</a> | <a href="http://search.msn.com/">Search</a> |
+<a href="http://shopping.msn.com/">Shopping</a> | <a href="http://moneycentral.msn.com/">Money</a> |
+<a href="http://communities.msn.com/">People &amp; Chat</a></font></td></tr></table>
+<table width="100%" cellpadding="3" cellspacing="0" bgcolor="#3366CC"><tr><td><font face="Verdana" size="2" color="#FFFFFF">
+<b>Search the Web</b> - type your words in the <b>Address</b> bar above and press Enter &nbsp;|&nbsp; {tabs}</font></td></tr></table>
+<table width="100%" cellpadding="3" cellspacing="0" bgcolor="#DDE7F7"><tr><td><font face="Verdana" size="1">
+Popular searches: <a href="{q}furry+conventions+2002">furry conventions 2002</a> &middot;
+<a href="{q}windows+xp+review">Windows XP review</a> &middot; <a href="{q}napster+alternatives">Napster alternatives</a> &middot;
+<a href="{q}free+aim+buddy+icons">free AIM buddy icons</a></font></td></tr></table>
+<table width="100%" cellpadding="6" cellspacing="0"><tr valign="top">
+<td width="120" bgcolor="#EEF2FB"><font face="Verdana" size="1" color="#3366CC"><b>MSN CHANNELS</b></font><br>
+<font face="Verdana" size="1">{channels}</font><br>
+<font face="Verdana" size="1" color="#3366CC"><b>FURRY FANDOM</b></font><br>
+<font face="Verdana" size="1">{fandom}</font></td>
+<td><table width="100%" cellpadding="4" cellspacing="0" bgcolor="#FFF4E0"><tr><td>
+<font face="Verdana" size="2" color="#CC6600"><b>The Furry Web</b></font>
+<font face="Verdana" size="1"><ul>{furry_web}</ul></font></td></tr>
+<tr><td><font face="Verdana" size="2" color="#CC6600"><b>Your Buddies on FurAffinity</b></font><br>
+<font face="Verdana" size="1">{fa_buddies}</font></td></tr></table>
+<br><font face="Verdana" size="2" color="#3366CC"><b>Today on MSN</b></font>
+<font face="Verdana" size="1"><ul>{news}</ul></font></td>
+<td width="190" bgcolor="#EEF2FB"><font face="Verdana" size="2" color="#3366CC"><b>Your Buddies on the Web</b></font><br>
+<font face="Verdana" size="1" color="#666666">Their FurryCities homepages:</font><br>
+<font face="Verdana" size="1">{buddies}</font><br><br>
+<font face="Verdana" size="2" color="#3366CC"><b>Cool Sites</b></font><br><font face="Verdana" size="1">{cool}</font><br><br>
+<font face="Verdana" size="1"><a href="http://messenger.msn.com/">Get MSN Messenger</a><br>
+<a href="http://www.microsoft.com/windows/ie/">Internet Explorer 6</a><br>
+<a href="http://windowsupdate.microsoft.com/">Windows Update</a></font></td></tr></table>
+<hr size="1" color="#3366CC"><center><font face="Verdana" size="1" color="#808080">
+&copy; 2001 Microsoft Corporation. All rights reserved. <a href="http://privacy.msn.com/">Privacy</a> |
+<a href="http://www.msn.com/help/">Help</a></font></center>
 </body></html>"""

@@ -64,6 +64,7 @@ def builtins():
         ("prog:flash", "Flash Player", lambda: programs.get("flash").icon()),
         ("prog:torrent", "ClaudeTorrent", lambda: programs.get("torrent").icon()),
         ("prog:rpg", "ClaudeRPG", lambda: programs.get("rpg").icon()),
+        ("prog:iexplore", "Internet Explorer", lambda: programs.get("iexplore").icon()),
         ("prog:navigator", "Netscape Navigator", lambda: programs.get("navigator").icon()),
         ("prog:claudeai", "ClaudeAI", lambda: programs.get("claudeai").icon()),
         ("prog:copilotai", "CopilotAI", lambda: programs.get("copilotai").icon()),
@@ -787,6 +788,7 @@ class IconManager(QObject):
         if icon.path is None:
             target = {"notepad": r"C:\WINDOWS\notepad.exe", "connect": r"C:\Program Files\America Online\isignup.exe",
                       "navigator": r"C:\Program Files\Netscape\Navigator\netscape.exe",
+                      "iexplore": r"C:\Program Files\Internet Explorer\IEXPLORE.EXE",
                       "claudeai": r"C:\Program Files\ClaudeAI\claudeai.exe",
                       "aim": r"C:\Program Files\ClaudeAIM\ClaudeAIM.exe",
                       "msn": r"C:\Program Files\MSN Messenger\msnmsgr.exe",

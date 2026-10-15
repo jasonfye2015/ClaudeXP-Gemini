@@ -126,7 +126,7 @@ def shared_documents():
 # ---- building C: ---------------------------------------------------------------------------------------
 
 EXECUTABLES = {   # file name -> ClaudeXP program it launches
-    "claudeaim.exe": "aim", "claudeirc.exe": "irc", "claudemuck.exe": "muck", "netscape.exe": "navigator",
+    "claudeaim.exe": "aim", "claudeirc.exe": "irc", "claudemuck.exe": "muck", "netscape.exe": "navigator", "iexplore.exe": "iexplore",
     "notepad.exe": "notepad", "explorer.exe": "mycomputer", "claudeshield.exe": "antivirus",
     "mspaint.exe": "paint", "calc.exe": "calc", "cmd.exe": "cmd", "taskmgr.exe": "taskmgr",
     "dfrgntfs.exe": "defrag", "wupdmgr.exe": "winupdate", "isignup.exe": "connect", "wmplayer.exe": "wmp",
@@ -248,7 +248,7 @@ def setup_c():
     (DRIVE_C / "Documents and Settings" / "All Users" / "Documents" / "Shared Pictures").mkdir(parents=True, exist_ok=True)
     pf = DRIVE_C / "Program Files"
     for rel in ("ClaudeAIM/ClaudeAIM.exe", "ClaudeIRC/ClaudeIRC.exe", "ClaudeMUCK/ClaudeMUCK.exe",
-                "Netscape/Navigator/netscape.exe", "ClaudeShield AntiVirus/ClaudeShield.exe",
+                "Netscape/Navigator/netscape.exe", "Internet Explorer/IEXPLORE.EXE", "ClaudeShield AntiVirus/ClaudeShield.exe",
                 "America Online/isignup.exe", "Windows Media Player/wmplayer.exe", "Outlook Express/msimn.exe",
                 "ClaudeTV/ClaudeTV.exe", "FurComix Reader/FurComix.exe",
                 "FurFolio Reader/FurFolio.exe", "FurFolio Reader/FurStory.exe",

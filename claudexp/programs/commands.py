@@ -9,7 +9,7 @@ NAMES = {
     "notepad": "notepad", "calc": "calc", "cmd": "cmd", "command": "cmd", "taskmgr": "taskmgr",
     "explorer": "mycomputer", "winmine": "minesweeper", "freecell": "freecell", "sol": "solitaire",
     "spider": "spider", "mshearts": "hearts", "dfrg.msc": "defrag", "dfrgntfs": "defrag", "wupdmgr": "winupdate",
-    "netscape": "navigator", "claudeaim": "aim", "aim": "aim", "claudeirc": "irc", "mirc32": "irc", "mirc": "irc",
+    "netscape": "navigator", "iexplore": "iexplore", "claudeaim": "aim", "aim": "aim", "claudeirc": "irc", "mirc32": "irc", "mirc": "irc",
     "claudemuck": "muck", "claudeai": "claudeai", "claudeshield": "antivirus", "isignup": "connect",
     "mspaint": "paint", "pbrush": "paint", "wordpad": "wordpad", "write": "wordpad",
     "charmap": "charmap", "cleanmgr": "cleanmgr", "msinfo32": "msinfo", "sndrec32": "sndrec", "rstrui": "sysrestore", "helpctr": "helpctr",
