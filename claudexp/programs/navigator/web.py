@@ -409,6 +409,18 @@ def home_page(knowledge, unread=0):
         f'<li><a href="http://{s.host}/"><b>{html.escape(s.title)}</b></a> - {html.escape(s.blurb)}'
         + ("" if s.installed() else ' <font color="#999999">(not on this computer)</font>') + "</li>"
         for s in sites.sites())
+    fa = sites.site_for("www.furaffinity.net")
+    if fa is not None and fa.installed():
+        from ... import user
+        me = user.online_handle() or user.user_name() or ""
+        mine = (f'<a href="http://www.furaffinity.net/user/{quote_plus(me)}/"><b>Your userpage</b></a> &middot; '
+                if me else "")
+        fa_buddies = mine + " &middot; ".join(
+            f'<a href="http://www.furaffinity.net/user/{quote_plus(name)}/">{html.escape(name)}</a>'
+            for name in sorted(knowledge.buddy_names, key=str.lower)) if knowledge.buddy_names or me else ""
+    else:
+        fa_buddies = '<font color="#999999">FurAffinity is not on this computer.</font>'
+    fa_buddies = fa_buddies or "(no buddies yet)"
     return f"""<html><head><title>Netscape Netcenter</title></head>
 <body bgcolor="#FFFFFF" text="#000000" link="#0000CC" vlink="#551A8B">
 <table width="100%" cellpadding="6" cellspacing="0" bgcolor="#003366"><tr>
@@ -423,6 +435,11 @@ def home_page(knowledge, unread=0):
 <a href="{SEARCH_URL}windows+xp+review">Windows XP review</a>,
 <a href="{SEARCH_URL}napster+alternatives">Napster alternatives</a>,
 <a href="{SEARCH_URL}free+aim+buddy+icons">free AIM buddy icons</a></font></td></tr></table>
+<table width="100%" cellpadding="8" cellspacing="0" bgcolor="#FFF4E0"><tr valign="top">
+<td width="45%"><font face="Arial" size="3" color="#B35900"><b>The Furry Web</b></font>
+<font face="Arial" size="2"><ul>{furry_web}</ul></font></td>
+<td><font face="Arial" size="3" color="#B35900"><b>Your Buddies on FurAffinity</b></font><font face="Arial" size="2">
+<br>{fa_buddies}</font></td></tr></table>
 <table width="100%" cellpadding="8"><tr valign="top">
 <td width="33%"><font face="Arial" size="3" color="#003366"><b>Channels</b></font><font face="Arial" size="2">
 <ul><li><a href="http://news.netscape.com/">News</a></li>
@@ -442,8 +459,6 @@ def home_page(knowledge, unread=0):
 <li><a href="http://www.claudeaim.com/">ClaudeAIM - download &amp; buddy icons</a></li></ul></font></td>
 <td width="33%"><font face="Arial" size="3" color="#003366"><b>Your Buddies on the Web</b></font><font face="Arial" size="2">
 <ul>{buddies or "<li>(no buddies yet)</li>"}</ul></font></td></tr></table>
-<table width="100%" cellpadding="8"><tr><td bgcolor="#FFF4E0"><font face="Arial" size="3" color="#B35900"><b>The Furry Web</b></font>
-<font face="Arial" size="2"><ul>{furry_web}</ul></font></td></tr></table>
 <hr size="1"><center><font face="Arial" size="2"><b>Cool Sites:</b>
 <a href="http://www.homestarrunner.com/">Homestar Runner</a> |
 <a href="http://www.hampsterdance.com/">Hampster Dance</a> |
