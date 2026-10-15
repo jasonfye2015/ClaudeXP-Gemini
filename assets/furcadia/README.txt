@@ -1,10 +1,10 @@
-Furcadia art overrides
-======================
+Claudecadia art overrides
+=========================
 
-Furcadia draws all of its own art. Put a PNG here and it's used instead (restart Furcadia to see it).
+Claudecadia draws all of its own art. Put a PNG here and it's used instead (restart Claudecadia to see it).
 Anything missing stays hand-drawn, so you can replace one picture at a time.
 
-splash.png                      The picture shown while connecting (about 640 x 340).
+splash.png or splash.jpg        The title screen, shown above the Enter... button (about 1024 x 674).
 
 tiles\<name>.png                Floor tiles: 64 x 32 diamonds, transparent outside the diamond.
                                 grass, flowers, darkgrass, dirt, cobble, flagstone, wood, boardwalk, sand, rug,

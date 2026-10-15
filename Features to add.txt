@@ -1,9 +1,10 @@
 Mac System Compatibility? (Discuss late)
 ---
-Furcadia clone - BUILT (Start > Games > Furcadia, and on the desktop). Dream editor: revisit later.
+Furcadia clone - BUILT as Claudecadia (Start > Games, and on the desktop). Dream editor: revisit later.
+  Decided: keep the hand-drawn style as it is. The art below is optional, only if ever wanted.
 
-  All of Furcadia's art is currently drawn by the program itself. Any picture can be swapped for a real one
-  just by dropping a PNG into the right folder (no code changes, it's picked up the next time Furcadia starts).
+  All of Claudecadia's art is currently drawn by the program itself. Any picture can be swapped for a real one
+  just by dropping a PNG into the right folder (no code changes, it's picked up the next time Claudecadia starts).
   Everything goes under:  ClaudeXP\assets\furcadia\   (full details in the README.txt there)
 
   Art I'd love to have, most useful first:
@@ -35,8 +36,8 @@ Furcadia clone - BUILT (Start > Games > Furcadia, and on the desktop). Dream edi
             crate, counter, lantern, plant, shell
      (Replacing an animated one - portal, campfire, fountain, lantern, fireplace - makes it a still picture.)
 
-  5. A title / splash picture shown while connecting (around 640 x 340).
-       -> assets\furcadia\splash.png
+  5. A title / splash picture - DONE: the Claudecadia dragon, shown with an Enter... button.
+       -> assets\furcadia\splash.jpg (or splash.png)
 
   Per-buddy looks: a buddy's AIM contact file can carry a "furcadia" section to set their species type,
   colours, description and favourite dreams exactly; otherwise it's worked out from their persona.

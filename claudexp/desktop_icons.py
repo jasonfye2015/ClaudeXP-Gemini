@@ -41,7 +41,7 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
 FOLDERS_SINCE = {"Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Games": 22,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 22
+FOLDERS = 23
 # shortcuts that now live in one of those folders instead of loose on the desktop
 IN_FOLDERS = {"prog:mediaarchive": "Furry Programs", "prog:tvmovies": "TV and Movies", "prog:tv": "TV and Movies"}
 
@@ -69,7 +69,7 @@ def builtins():
         ("prog:livejournal", "LiveJournal", lambda: programs.get("livejournal").icon()),
         ("prog:kiwix", "Kiwix", lambda: programs.get("kiwix").icon()),
         ("prog:claudecraft", "ClaudeCraft", lambda: programs.get("claudecraft").icon()),
-        ("prog:furcadia", "Furcadia", lambda: programs.get("furcadia").icon()),
+        ("prog:furcadia", "Claudecadia", lambda: programs.get("furcadia").icon()),
         ("prog:realplayer", "RealPlayer", lambda: programs.get("realplayer").icon()),
         ("prog:quicktime", "QuickTime Player", lambda: programs.get("quicktime").icon()),
         ("prog:adaware", "Ad-aware 5.6", lambda: programs.get("adaware").icon()),
@@ -183,6 +183,17 @@ class IconManager(QObject):
                 old = pos.get("prog:tvmovies") or pos.get("prog:tv")
                 if old and "file:TV and Movies" not in pos:
                     pos["file:TV and Movies"] = old
+            if folders < 23:
+                # Furcadia was renamed Claudecadia: rename its Games shortcut and drop the old Program Files stub
+                from .explorer import vfs
+                games = vfs.user_home() / "Desktop" / "Games"
+                old_link, new_link = games / "Furcadia.lnk", games / f"{programs.get('furcadia').name}.lnk"
+                if old_link.exists() and not new_link.exists():
+                    old_link.rename(new_link)
+                stub = vfs.DRIVE_C / "Program Files" / "Furcadia"
+                if stub.is_dir() and [f.name for f in stub.iterdir()] == ["Furcadia.exe"]:
+                    (stub / "Furcadia.exe").unlink()
+                    stub.rmdir()
             self.state["folders"] = FOLDERS
         self.icons = []
         self.press = None          # (global pos, {icon: start pos}) while dragging
@@ -804,7 +815,7 @@ class IconManager(QObject):
                       "realplayer": r"C:\Program Files\Real\RealPlayer\realplay.exe",
                       "kiwix": r"C:\Program Files\Kiwix\kiwix-desktop.exe",
                       "claudecraft": r"C:\Program Files\ClaudeCraft\ClaudeCraft.exe",
-                      "furcadia": r"C:\Program Files\Furcadia\Furcadia.exe",
+                      "furcadia": r"C:\Program Files\Claudecadia\Claudecadia.exe",
                       "quicktime": r"C:\Program Files\QuickTime\QuickTimePlayer.exe",
                       "adaware": r"C:\Program Files\Lavasoft\Ad-aware 5.6\Ad-aware.exe",
                       "claudeai": r"C:\Program Files\ClaudeAI\claudeai.exe",

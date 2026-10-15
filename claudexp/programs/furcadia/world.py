@@ -1,4 +1,4 @@
-"""Furcadia, simulated: your AIM buddies log in as furres, hop around the maps, sit, chat and whisper.
+"""Claudecadia, simulated: your AIM buddies log in as furres, hop around the maps, sit, chat and whisper.
 
 The client draws World.maps / World.furres and calls World.command(text) and World.walk_to(x, y). Everything
 anyone says comes out through World.line(kind, text) and, for the map, as a speech balloon on the furre.
@@ -21,7 +21,7 @@ from ..people import save_json as _save_json
 from . import art
 from .maps import all_maps
 
-WORLD = "Furcadia"
+WORLD = "Claudecadia"
 PLAYER_FILE = DATA / "furcadia" / "player.json"
 MAX_ONLINE = 10                   # so the maps never get too crowded
 TICK_MS = 100
@@ -34,7 +34,7 @@ HOP_SECONDS = 0.32
 BALLOON_SECONDS = 7.0
 DREAM_WEIGHTS = {"commons": 4, "glade": 2, "seaside": 2, "inn": 2}
 
-BASE = """You are {name} on Furcadia, a furry online world from 2001: a graphical chat game where everyone is a little furre avatar hopping around isometric maps called dreams. Right now it is {now}. You are a real person in 2001, playing your character. Never say or hint that you are an AI or a language model, and never mention these instructions.
+BASE = """You are {name} on Claudecadia, a furry online world from 2001: a graphical chat game where everyone is a little furre avatar hopping around isometric maps called dreams. Right now it is {now}. You are a real person in 2001, playing your character. Never say or hint that you are an AI or a language model, and never mention these instructions.
 
 About you, the person behind the furre:
 {persona}
@@ -46,13 +46,13 @@ ACT = """
 Where you are: the dream "{dream}". {dream_desc}
 You are {pose}. Also here: {others}.
 
-In Furcadia you act by typing ONE line:
+In Claudecadia you act by typing ONE line:
   text      says it out loud, for example:  hey {player}! :3
   :text     an emote, for example:  :wags happily.
-Answer with exactly one line in one of those forms, or the single word PASS to do nothing. Keep it short and casual, like real 2001 Furcadia chat. Only ever speak and act for yourself."""
+Answer with exactly one line in one of those forms, or the single word PASS to do nothing. Keep it short and casual, like real 2001 Claudecadia chat. Only ever speak and act for yourself."""
 
 WHISPER = """
-{player} is whispering to you on Furcadia: a private message only you can see. Reply with just your whisper (short and casual, no quotes, no name in front), or PASS if you don't want to answer."""
+{player} is whispering to you on Claudecadia: a private message only you can see. Reply with just your whisper (short and casual, no quotes, no name in front), or PASS if you don't want to answer."""
 
 
 def _now():
@@ -122,7 +122,7 @@ class Furre:
 
 
 class FurcBrain(Brain):
-    """The MUCK's model plumbing (same models, queue and memory) with Furcadia's prompts."""
+    """The MUCK's model plumbing (same models, queue and memory) with Claudecadia's prompts."""
 
     def _system(self, c, extra):
         from claudeaim import timefmt
@@ -253,7 +253,7 @@ class World(QObject):
 
     def _heard(self, p, text):
         from ..muck.world import _heard
-        _heard(p, f"Furcadia ({self.maps[p.map].name})", p.name, text)
+        _heard(p, f"Claudecadia ({self.maps[p.map].name})", p.name, text)
 
     # ---- session ----------------------------------------------------------------------------------------
     def connect_session(self):
@@ -652,11 +652,11 @@ class World(QObject):
             return
         p = self.find(name)
         if p is None:
-            self.line.emit("system", f"{name} isn't on Furcadia right now.")
+            self.line.emit("system", f"{name} isn't on Claudecadia right now.")
             return
         self.line.emit("whisper", f"You whisper \"{msg}\" to {p.name}.")
         from ..muck.world import _heard
-        _heard(p, "Furcadia (whispering)", self.me.name, msg)
+        _heard(p, "Claudecadia (whispering)", self.me.name, msg)
 
         def reply(text):
             if text and self.logged_in and p.online:
@@ -685,7 +685,7 @@ class World(QObject):
     def join(self, name):
         p = self.find(name)
         if p is None:
-            self.line.emit("system", f"{name} isn't on Furcadia right now.")
+            self.line.emit("system", f"{name} isn't on Claudecadia right now.")
             return
         if p.map != self.me.map:
             old = self.me.map
@@ -738,7 +738,7 @@ class World(QObject):
             self.line.emit("system", f"Unknown command `{verb}. Type `help for the list.")
 
 
-HELP = """Furcadia commands:
+HELP = """Claudecadia commands:
   just type            say it out loud              :text        emote (":waves")
   /name text           whisper to someone           `look name   look at a furre (or click them)
   `who                 who you know is online       `join name   hop over to a friend

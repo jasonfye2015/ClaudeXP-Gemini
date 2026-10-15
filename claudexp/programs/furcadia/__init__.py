@@ -1,4 +1,4 @@
-"""Furcadia: the furry graphical chat world of 2001, simulated, with your AIM buddies as the other players.
+"""Claudecadia (a Furcadia clone): the furry graphical chat world of 2001, simulated, with your AIM buddies as the other players.
 
 Isometric maps (Willowmere Commons and three dreams through its portals), furres painted in code and recoloured
 from each buddy's description, hopping, sitting, speech balloons, emotes and whispers. Art can be swapped for your
@@ -10,7 +10,7 @@ import time
 import traceback
 
 from PySide6.QtCore import QPointF, QRect, QRectF, Qt, QTimer
-from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QLinearGradient, QPainter, QPen, QPixmap,
+from PySide6.QtGui import (QBrush, QColor, QCursor, QFont, QFontMetrics, QLinearGradient, QPainter, QPen, QPixmap,
                            QRadialGradient, QTextCharFormat, QTextCursor)
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenuBar,
                                QPushButton, QTextBrowser, QTextEdit, QToolButton, QVBoxLayout, QWidget)
@@ -21,7 +21,7 @@ from ...wm import XPWindow
 from ..placeholder import open_placeholder
 from . import art
 
-HOST, PORT = "lightbringer.furcadia.com", 6500
+HOST, PORT = "lightbringer.claudecadia.com", 6500
 CHAT = {
     "say": ("#F0F0F0", False, False), "me": ("#FFE9A0", False, False), "emote": ("#9AE89A", False, True),
     "whisper": ("#8AD8FF", False, True), "system": ("#E8C860", False, False), "arrive": ("#A0A0B0", False, True),
@@ -262,9 +262,11 @@ class MapView(QWidget):
         g.setColorAt(0, QColor("#2A1A5A"))
         g.setColorAt(1, QColor("#0A0618"))
         p.fillRect(self.rect(), QBrush(g))
-        pm = art.splash_pixmap(self.width(), self.height())
+        strip = 54                                   # room for the Enter... button
+        pm = art.splash_pixmap(self.width(), self.height() - strip)
         if pm is not None:
-            p.drawPixmap((self.width() - pm.width()) // 2, (self.height() - pm.height()) // 2, pm)
+            p.fillRect(self.rect(), QColor("#000000"))
+            p.drawPixmap((self.width() - pm.width()) // 2, (self.height() - strip - pm.height()) // 2, pm)
         else:
             p.setRenderHint(QPainter.Antialiasing)
             rnd = random.Random(7)
@@ -275,9 +277,9 @@ class MapView(QWidget):
             p.setFont(QFont("Georgia", 40, QFont.Bold, True))
             r = QRect(0, self.height() // 2 - 90, self.width(), 60)
             p.setPen(QColor("#120830"))
-            p.drawText(r.translated(3, 3), Qt.AlignCenter, "Furcadia")
+            p.drawText(r.translated(3, 3), Qt.AlignCenter, "Claudecadia")
             p.setPen(QColor("#E8C8FF"))
-            p.drawText(r, Qt.AlignCenter, "Furcadia")
+            p.drawText(r, Qt.AlignCenter, "Claudecadia")
             p.setFont(QFont("Georgia", 11, QFont.Normal, True))
             p.setPen(QColor("#B8A0E0"))
             p.drawText(QRect(0, self.height() // 2 - 30, self.width(), 20), Qt.AlignCenter,
@@ -287,9 +289,31 @@ class MapView(QWidget):
                                               (art.Look("feline", "#7A7A88", "#F2F0EA", "#5EA040"), art.SW))):
                 p.drawPixmap(self.width() // 2 - 70 + i * 92, self.height() // 2 + 4, self.furres.get(lk, "stand",
                                                                                                     facing))
-        p.setFont(QFont("Tahoma", 9))
-        p.setPen(QColor("#E0D8F0"))
-        p.drawText(QRect(0, self.height() - 60, self.width(), 40), Qt.AlignCenter, self.client.status_text())
+        self._enter_button(p, strip)
+
+    def _enter_button(self, p, strip):
+        """The 'Enter...' button under the title picture (or what's happening, once you've clicked it)."""
+        p.setRenderHint(QPainter.Antialiasing)
+        busy = self.client.connecting
+        r = QRectF(self.width() / 2 - 80, self.height() - strip + 9, 160, 34)
+        self.enter_rect = None if busy else r
+        hot = not busy and self.underMouse() and r.contains(QPointF(self.mapFromGlobal(QCursor.pos())))
+        g = QLinearGradient(r.topLeft(), r.bottomLeft())
+        g.setColorAt(0, QColor("#B49CF0" if hot else "#9A82D8"))
+        g.setColorAt(1, QColor("#4A3488" if hot else "#3A2870"))
+        p.setPen(QPen(QColor("#E8DCFF"), 1.5))
+        p.setBrush(QBrush(g))
+        p.drawRoundedRect(r, 16, 16)
+        p.setFont(QFont("Georgia", 13, QFont.Bold, True))
+        p.setPen(QColor("#1A1030"))
+        p.drawText(r.translated(1, 1), Qt.AlignCenter, "Connecting..." if busy else "Enter...")
+        p.setPen(QColor("#F6F0FF"))
+        p.drawText(r, Qt.AlignCenter, "Connecting..." if busy else "Enter...")
+        p.setFont(QFont("Tahoma", 8))
+        p.setPen(QColor("#B8A8D8"))
+        status = self.client.status_text()
+        p.drawText(QRectF(r.right() + 14, r.top(), self.width() - r.right() - 20, r.height()),
+                   Qt.AlignVCenter | Qt.AlignLeft | Qt.TextWordWrap, status)
 
     # ---- the mouse -------------------------------------------------------------------------------------------
     def _furre_at(self, pos):
@@ -309,7 +333,9 @@ class MapView(QWidget):
     def mousePressEvent(self, e):
         w = self.world
         if w is None or not w.logged_in:
-            if e.button() == Qt.LeftButton:
+            r = getattr(self, "enter_rect", None)
+            if e.button() == Qt.LeftButton and r is not None and r.contains(e.position()):
+                sound.play("menu")
                 self.client.connect_world()
             return
         f = self._furre_at(e.position())
@@ -333,7 +359,7 @@ class MapView(QWidget):
 
 
 class FurreEditor(QWidget):
-    """Furcadia's character editor: name, species, colours, description, with a live preview."""
+    """Claudecadia's character editor: name, species, colours, description, with a live preview."""
 
     def __init__(self, data, on_done):
         super().__init__()
@@ -482,7 +508,7 @@ class FurcClient(QWidget):
         go.addAction("Go to &Willowmere Commons", lambda: self.world.go_home() if self.world.logged_in else None)
         help_menu = bar.addMenu("&Help")
         help_menu.addAction("&Commands", lambda: self.world._command("help", ""))
-        help_menu.addAction("&About Furcadia", self._about)
+        help_menu.addAction("&About Claudecadia", self._about)
         bar.triggered.connect(lambda _a: sound.play("menu"))
 
         self.view = MapView(self)
@@ -611,6 +637,8 @@ class FurcClient(QWidget):
         text = self.input.text()
         self.input.clear()
         if not text.strip():
+            if not self.connected:
+                self.connect_world()           # Enter on the title screen goes in
             return
         if not self.connected:
             self.note("You aren't connected. (File > Connect)")
@@ -624,11 +652,10 @@ class FurcClient(QWidget):
     def status_text(self):
         if self.connecting:
             return self.status or "Connecting..."
-        return self.status or "Click here (or File > Connect) to enter Furcadia."
+        return self.status or ""
 
     def start(self):
-        self.note("Welcome to Furcadia! Connecting to the Dreaming...")
-        self.connect_world()
+        self.note("Welcome to Claudecadia! Click Enter... (or press Enter) to connect to the Dreaming.")
 
     def connect_world(self):
         if self.connected or self.connecting:
@@ -644,7 +671,7 @@ class FurcClient(QWidget):
         net = network.get(self.desktop)
         if self.connecting and not net.connected and net.connect_win is None and net.progress_win is None:
             self.connecting = False
-            self.status = "Couldn't connect: no Internet connection. Click to try again."
+            self.status = "Couldn't connect: no Internet connection. Click Enter... to try again."
         elif self.connecting and not net.connected:
             QTimer.singleShot(500, self._check_dial_cancelled)
 
@@ -690,7 +717,7 @@ class FurcClient(QWidget):
                 self._logged_in()
 
         body = FurreEditor(data, done)
-        win = XPWindow(self.desktop, "Furcadia - Edit Furre", body, furc_icon(), size=(470, 400))
+        win = XPWindow(self.desktop, "Claudecadia - Edit Furre", body, furc_icon(), size=(470, 400))
         body.frame = win
         self.editor = win
         self.desktop.open_window(win)
@@ -702,8 +729,8 @@ class FurcClient(QWidget):
         if self.connected:
             self.world.disconnect_session()
             self.connected = False
-            self.status = "Disconnected. Click to reconnect."
-            self.note("Disconnected from Furcadia.")
+            self.status = "Disconnected. Click Enter... to go back in."
+            self.note("Disconnected from Claudecadia.")
 
     def network_lost(self):
         if self.connected:
@@ -714,7 +741,7 @@ class FurcClient(QWidget):
         self.connecting = False
 
     def _about(self):
-        self.note("Furcadia for ClaudeXP - the furry graphical chat world, with your AIM buddies dreaming along. "
+        self.note("Claudecadia for ClaudeXP - the furry graphical chat world, with your AIM buddies dreaming along. "
                   "Art is drawn by the program; your own can go in assets\\furcadia.")
 
     def shutdown(self):
@@ -740,13 +767,13 @@ def launch(desktop):
     try:
         client = FurcClient(desktop)
     except Exception:
-        open_placeholder(desktop, "Furcadia", furc_icon(),
-                         "Furcadia couldn't start.\n\n" + traceback.format_exc(limit=3), sound_event="error")
+        open_placeholder(desktop, "Claudecadia", furc_icon(),
+                         "Claudecadia couldn't start.\n\n" + traceback.format_exc(limit=3), sound_event="error")
         return None
     if not _listening:
         network.on_disconnect(desktop, _network_lost)
         _listening = True
-    _frame = XPWindow(desktop, "Furcadia", client, furc_icon(), size=(800, 600))
+    _frame = XPWindow(desktop, "Claudecadia", client, furc_icon(), size=(800, 600))
     client.frame = _frame
     _frame.destroyed.connect(_forget)
     desktop.open_window(_frame)

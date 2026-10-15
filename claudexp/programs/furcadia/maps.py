@@ -1,4 +1,4 @@
-"""Furcadia's maps: Willowmere Commons (the town everyone starts in) and three dreams reached through its portals.
+"""Claudecadia's maps: Willowmere Commons (the town everyone starts in) and three dreams reached through its portals.
 
 Grid coordinates: x runs down-right on screen, y down-left. Each map is built in code with a few drawing helpers,
 from a fixed seed, so it's the same every time.

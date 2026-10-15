@@ -1,4 +1,4 @@
-"""Furcadia's art, painted in code: isometric floor tiles, objects, and furres recoloured from a look.
+"""Claudecadia's art, painted in code: isometric floor tiles, objects, and furres recoloured from a look.
 
 Every picture can be replaced by a file in assets/furcadia/ (see 'Features to add.txt' and the README there):
   tiles/<floor>.png               a 64 x 32 diamond floor tile
@@ -6,7 +6,7 @@ Every picture can be replaced by a file in assets/furcadia/ (see 'Features to ad
   furres/<kind>/<pose>_<facing>.png   48 x 64, feet at (24, 58); pure key colours are recoloured per furre:
                                   #FF00FF fur, #00FFFF markings, #FFFF00 eyes, #00FF00 clothes (darker shades of
                                   each key colour are kept darker)
-  splash.png                      shown while connecting
+  splash.png / splash.jpg         the title screen, with an Enter... button under it
 """
 import random
 from dataclasses import dataclass
@@ -25,7 +25,7 @@ FW, FH, FOOT = 48, 64, 58             # a furre's canvas and where its feet are
 SE, SW, NE, NW = 0, 1, 2, 3
 STEP = {NE: (0, -1), SE: (1, 0), SW: (0, 1), NW: (-1, 0)}
 
-# ---- the colour palette (Furcadia gave every furre a few remappable colours) --------------------------------
+# ---- the colour palette (Claudecadia gave every furre a few remappable colours) --------------------------------
 PALETTE = {
     "fur": ["#C8642E", "#E8A050", "#8A5A32", "#5A3A22", "#2E2420", "#F2F0EA", "#B8B8B8", "#6E6E74", "#E8D6A8",
             "#D9B23A", "#4A70B8", "#7AA8D8", "#5E8A3A", "#3E7A6E", "#9A4AA0", "#C04A5A", "#F0A8C0", "#2A3C66"],
@@ -1165,8 +1165,17 @@ def icon():
     return ic
 
 
+_splash = {}
+
+
 def splash_pixmap(w, h):
-    pm = _override(ART / "splash.png")
-    if pm is not None:
-        return pm.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-    return None
+    """assets/furcadia/splash.png (or .jpg), fitted into w x h; None if there isn't one."""
+    if "src" not in _splash:
+        _splash["src"] = _override(ART / "splash.png") or _override(ART / "splash.jpg")
+    src = _splash["src"]
+    if src is None or w < 2 or h < 2:
+        return None
+    if _splash.get("size") != (w, h):
+        _splash["size"] = (w, h)
+        _splash["scaled"] = src.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    return _splash["scaled"]
