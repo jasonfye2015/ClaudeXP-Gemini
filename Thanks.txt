@@ -1,9 +1,29 @@
 Thanks to:
 
+[The Team]
 Concept, Design and Code: Claude, Gemini, Copilot and Kithylin
 Icons: ChatGPT and Gemini
-LLM Support: Google, Mistral and Alibaba
-Community model authors: inflatebot (Mag-Mell), MarinaraSpaghetti (NemoMix Unleashed), bartowski and unsloth (GGUF conversions)
 Photos and Art: ChatGPT, Gemini, Grok
-Open-source software: Python, pygame, Qt for Python (PySide6), llama.cpp, FFmpeg, Ruff (Astral), pytest
 Special thanks to: Arctic Fox, Cyberian Husky, Kadin, LazyFox, Mush Husky, Redfox, Renamon, Winter Dragon, Xavier
+
+[AI Models]
+LLM Support: Google, Mistral and Alibaba
+Language models: Gemma 3 1B and 4B, Gemma 4 12B (Google); Qwen2.5 Coder 1.5B, 7B and 14B, Qwen3 4B Instruct (Alibaba); Mistral Nemo, the base of the community models (Mistral AI and NVIDIA)
+Community model authors: inflatebot (Mag-Mell); MarinaraSpaghetti (NemoMix Unleashed); bartowski, unsloth and ggml-org (GGUF conversions)
+Picture models: Stable Diffusion 1.5 (Runway and CompVis); Stable Diffusion XL (Stability AI)
+Speech: Whisper (OpenAI) through faster-whisper (SYSTRAN); Piper voices (Rhasspy and the Open Home Foundation)
+
+[Classic Software Recreated]
+Neko: neko.com for the NEC PC-9801; Neko DA by Kenji Gotoh (1989); IBM Cat and Mouse for OS/2
+Neko's sprites: webneko.net, via desktopPet by Adriano Petrucci (github.com/Adrianotiger/desktopPet, MIT licence)
+Inspired by: Windows XP, Clippy and Microsoft Office XP, Internet Explorer, Netscape Navigator, AOL Instant Messenger, ICQ, MSN and Yahoo! Messenger, Trillian, Skype, Kik, mIRC, Winamp, Ad-aware, StyleXP, Nero, WinRAR and WinZip - the programs we remember
+
+[Open-Source Software]
+Open-source software: Python; Qt for Python (PySide6, with Qt WebEngine and Qt Multimedia); llama.cpp (ggml-org); FFmpeg; Ruffle, the Flash Player emulator; 7-Zip (Igor Pavlov); Chocolate Doom (Heretic and Hexen); pygame; PyTorch; Hugging Face diffusers and transformers; faster-whisper; piper-tts; pyspellchecker; jedi; pyflakes; tzdata; Ruff (Astral); pytest
+Emulators (libretro cores): FCEUmm (NES); Snes9x (SNES); Gambatte (Game Boy and Color); mGBA (Game Boy Advance); PicoDrive (Genesis); Genesis Plus GX (Master System); Gearsystem (Game Gear); Mupen64Plus-Next with Angrylion (N64); AppleWin (Apple II); PrBoom (Doom)
+
+[Art and Sounds]
+Furry art: every picture, comic and story on The Furry Web and in the Furry Media Archive belongs to its artist or author - thank you for the art that made the furry web of 2001
+Sounds: Windows XP sounds (Microsoft); the messengers' own sounds (AOL, ICQ, Microsoft, Yahoo!, Skype, Trillian); the Winamp intro (Nullsoft)
+
+ClaudeXP is a fan-made homage for personal use. Windows, Internet Explorer and the other names above are trademarks of their owners; ClaudeXP is not affiliated with or endorsed by any of them.

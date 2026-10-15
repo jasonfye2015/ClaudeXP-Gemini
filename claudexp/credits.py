@@ -36,31 +36,49 @@ def _read():
         return ""
 
 
+def _value(value):
+    """A list split by ';' (or a plain list of more than three names split by ',') goes one item per line."""
+    if ";" in value:
+        items = value.split(";")
+    else:
+        items = value.split(",") if len(value.split(",")) > 3 else [value]
+    return "<br>".join(html.escape(i.strip()) for i in items if i.strip())
+
+
 def to_html(text):
-    """'Label: value' lines become a two-column list; a comma list of names is wrapped nicely."""
+    """The first line is the title; '[Section]' lines start a section; 'Label: value' lines become a two-column
+    list; any other line is a paragraph."""
     lines = [line.strip() for line in text.splitlines()]
     title = lines[0] if lines else ""
-    rows, extra = [], []
+    out, rows = [], []
+
+    def flush():
+        if rows:
+            out.append("<table cellspacing='0' width='100%'>" + "".join(
+                f"<tr><td valign='top' width='1%' style='padding: 3px 14px 3px 0; color: #1C3D91; "
+                f"white-space: nowrap;'><b>{html.escape(label)}</b></td>"
+                f"<td valign='top' style='padding: 3px 0;'>{value}</td></tr>" for label, value in rows) + "</table>")
+            rows.clear()
+
     for line in lines[1:]:
         if not line:
             continue
+        if line.startswith("[") and line.endswith("]"):
+            flush()
+            out.append(f"<p style='margin: 14px 0 4px 0; font-family: \"Trebuchet MS\"; font-size: 13px; "
+                       f"color: #E06A00;'><b>{html.escape(line[1:-1])}</b></p>"
+                       "<hr style='margin: 0 0 4px 0; border: none; background: #F99736; height: 1px;'>")
+            continue
         label, sep, value = line.partition(":")
-        if sep and value.strip():
-            names = [n.strip() for n in value.split(",") if n.strip()]
-            if len(names) > 3:
-                rows.append((label.strip(), "<br>".join(html.escape(n) for n in names)))
-            else:
-                rows.append((label.strip(), html.escape(value.strip())))
+        if sep and value.strip() and len(label) < 40 and "//" not in label:
+            rows.append((label.strip(), _value(value.strip())))
         else:
-            extra.append(html.escape(line))
-    table = "".join(
-        f"<tr><td valign='top' style='padding: 4px 14px 4px 0; color: #1C3D91; white-space: nowrap;'>"
-        f"<b>{html.escape(label)}</b></td><td valign='top' style='padding: 4px 0;'>{value}</td></tr>"
-        for label, value in rows)
-    more = "".join(f"<p>{line}</p>" for line in extra)
+            flush()
+            out.append(f"<p style='margin-top: 12px; color: #555555; font-size: 11px;'>{html.escape(line)}</p>")
+    flush()
     return (f"<div style='font-family: Tahoma; font-size: 12px;'>"
             f"<p style='font-family: \"Trebuchet MS\"; font-size: 15px; color: #1C3D91;'><b>{html.escape(title)}</b></p>"
-            f"<table cellspacing='0'>{table}</table>{more}</div>")
+            + "".join(out) + "</div>")
 
 
 class Banner(QWidget):
@@ -132,7 +150,7 @@ def show(desktop):
     row.addStretch()
     row.addWidget(ok)
     v.addWidget(bottom)
-    win = XPWindow(desktop, "Thanks", body, credits_icon(), (440, 420), buttons=("close",))
+    win = XPWindow(desktop, "Thanks", body, credits_icon(), (560, 520), buttons=("close",))
     body.frame = win
 
     def close():

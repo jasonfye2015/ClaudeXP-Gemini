@@ -22,3 +22,8 @@ Proposed Desktop Computers:
 Comprehensive help section, outlining all the added features.
 ---
 Kiwix - Wikipedia offline browser
+---
+Email solution?
+---
+Neko better emulation:
+https://github.com/Adrianotiger/desktopPet
