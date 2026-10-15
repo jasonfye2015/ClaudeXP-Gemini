@@ -207,7 +207,8 @@ class Network:
         form.setHorizontalSpacing(10)
         form.setVerticalSpacing(8)
         user = QLineEdit(settings["user"])
-        password = QLineEdit(settings["password"] if settings["save_password"] else "")
+        # The password isn't checked by anything; a filled-in box just looks right (type over it if you like).
+        password = QLineEdit((settings["password"] if settings["save_password"] else "") or "********")
         password.setEchoMode(QLineEdit.Password)
         save = QCheckBox("Save this user name and password")
         save.setChecked(settings["save_password"])

@@ -355,18 +355,12 @@ class LiveJournal(Site):
         err = f'<p style="color:#CC0000"><b>{html.escape(error)}</b></p>' if error else ""
         inner = f"""<h3>Log in</h3>{err}<form method="post" action="/login.bml"><table cellpadding="4">
 <tr><td>Username:</td><td><input class="text" name="user" value="{html.escape(_me())}"></td></tr>
-<tr><td>Password:</td><td><input class="text" type="password" name="password"></td></tr>
-<tr><td></td><td><input type="submit" class="btn" value="Log in"></td></tr></table></form>
-<p class="foot">Your password is your ClaudeXP online password (Control Panel &gt; User Accounts); if you haven't
-set one, just click Log in.</p>"""
+<tr><td>Password:</td><td><input class="text" type="password" name="password" value="********"></td></tr>
+<tr><td></td><td><input type="submit" class="btn" value="Log in"></td></tr></table></form>"""
         return _page("Log in", inner)
 
     def _do_login(self, f):
-        from .... import user
-        wanted = user.online_password()
-        if wanted and f.get("password", "") != wanted:
-            return Response(self._login("Bad password."))
-        _session["signed_in"] = True
+        _session["signed_in"] = True                   # (the password box is for show: anything logs in)
         return redirect(f"{_u(_me())}friends")
 
     def _directory(self):

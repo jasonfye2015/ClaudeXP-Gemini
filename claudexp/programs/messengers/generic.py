@@ -256,7 +256,7 @@ class ThemedMain(QWidget):
         v.addWidget(QLabel(f"<b style='font-size:13px'>{e(self.t.signin_title)}</b>"))
         form = QFormLayout()
         form.addRow(self.t.signin_field, QLineEdit(self.t.my_handle(self.network.my_handle())))
-        pw = QLineEdit("password")
+        pw = QLineEdit("********")
         pw.setEchoMode(QLineEdit.Password)
         form.addRow("Password:", pw)
         v.addLayout(form)

@@ -167,6 +167,8 @@ def sync_aim():
         overrides = {by_name[n.lower()]: m for n, m in cfg["overrides"].items() if n.lower() in by_name and m in ids}
         want = {"default_model": model_for("conversation") or s["default_model"], "model_overrides": overrides,
                 "context_size": int(cfg["context"])}
+        if not s["password"]:                  # AIM never checks it; a filled-in box just looks right
+            want["password"] = "********"
         if any(s[k] != v for k, v in want.items()):
             s.update(**want)
     except Exception:

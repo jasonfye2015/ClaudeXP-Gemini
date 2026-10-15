@@ -170,7 +170,7 @@ class YIMMain(QWidget):
         v.addWidget(QLabel("<b style='color:#4A0D72; font-size:13px'>Sign In</b>"))
         form = QFormLayout()
         self.id_edit = QLineEdit(yahoo_id(self.network.my_handle()))
-        pw = QLineEdit("password")
+        pw = QLineEdit("********")
         pw.setEchoMode(QLineEdit.Password)
         form.addRow("Yahoo! ID:", self.id_edit)
         form.addRow("Password:", pw)

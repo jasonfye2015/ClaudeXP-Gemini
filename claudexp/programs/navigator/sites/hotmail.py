@@ -261,19 +261,14 @@ Get your FREE e-mail account that you can use from any computer connected to the
 <font size="3" color="#003399"><b>Sign In</b></font>{err}
 <form method="post" action="/cgi-bin/dologin">
 Sign-In Name<br><input class="text" name="login" value="{html.escape(handle.lower())}" size="18"> @hotmail.com<br><br>
-Password<br><input class="text" type="password" name="passwd" size="18"><br><br>
+Password<br><input class="text" type="password" name="passwd" value="********" size="18"><br><br>
 <input type="checkbox" name="remember" checked> Keep me signed in<br><br>
 <input type="submit" class="btn" value="Sign In"></form>
-<span class="foot">Forgot your password? Sign in with your ClaudeXP online password (Control Panel &gt; User
-Accounts). If you haven't set one, just click Sign In.</span></td></tr></table></td></tr></table>
+<span class="foot"><a href="/cgi-bin/help">Forgot your password?</a></span></td></tr></table></td></tr></table>
 <center class="foot">&copy; 2001 Microsoft Corporation. All rights reserved.</center></body></html>"""
 
     def _do_login(self, f):
-        from .... import user
-        wanted = user.online_password()
-        if wanted and f.get("passwd", "") != wanted:
-            return Response(self._login("The password you entered is incorrect. Please try again."))
-        _session["signed_in"] = True
+        _session["signed_in"] = True                   # (the password box is for show: anything signs in)
         self.bridge.signed_in.emit()
         return redirect("/cgi-bin/hmhome?f=inbox&summary=1")
 
