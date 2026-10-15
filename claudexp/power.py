@@ -3,13 +3,91 @@ your computer' after shutting down (the PC stays 'on' there, so the world keeps 
 import random
 
 from PySide6.QtCore import QRectF, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QImage, QPainter, QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
 from . import sound
-from .paths import pixmap
+from .paths import IMAGES, pixmap
 
 GREY = QColor("#AAAAAA")
+# The row of logos along the bottom of the self test: the models ClaudeXP runs, and who helped build it.
+LOGO_DIR = IMAGES / "Bios Logos"
+LOGO_GROUPS = [("Internal LLMs:", ["LLM-Qwen-Logo.png", "LLM-Mistral Logos.png", "LLM-Gemma-logo.png"]),
+               ("Help from:", ["Claude-Logo.png", "ChatGPT-Logo.png", "Copilot-Logo.png", "gemini-star-logo.jpg",
+                               "Grok-Logo.png"])]
+LOGO_START_MS = 1200          # the first logo shows up this long after power on
+LOGO_EVERY_MS = 420           # then one more every this often
+_logos = None
+
+
+INVERT = {"ChatGPT-Logo.png"}          # a dark mark on a light tile: becomes a light mark like the rest
+LOGO_BOX = 128                        # every logo is fitted into a square this size, then scaled to the row
+
+
+def _load_logo(name):
+    """A logo standardised for the black screen: its black (or, for ChatGPT, light) square taken away, trimmed to
+    what's drawn, brightened so its brightest part is full brightness, and centred in a square."""
+    img = QImage(str(LOGO_DIR / name))
+    if img.isNull():
+        return None
+    img = img.convertToFormat(QImage.Format_ARGB32)
+    w, h = img.width(), img.height()
+    invert = name in INVERT
+    outside = set()
+    if invert:                                            # the black around the tile (flood fill from the edges)
+        def dark(x, y):
+            c = img.pixelColor(x, y)
+            return 0.3 * c.red() + 0.59 * c.green() + 0.11 * c.blue() < 100
+        todo = [(x, y) for x in range(w) for y in (0, h - 1)] + [(x, y) for y in range(h) for x in (0, w - 1)]
+        while todo:
+            x, y = todo.pop()
+            if (x, y) in outside or not (0 <= x < w and 0 <= y < h) or not dark(x, y):
+                continue
+            outside.add((x, y))
+            todo += [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+        for _ in range(2):                                # and the tile's soft edge
+            outside |= {(x + dx, y + dy) for x, y in outside for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+    left, top, right, bottom, brightest = w, h, -1, -1, 1
+    for y in range(h):
+        for x in range(w):
+            c = img.pixelColor(x, y)
+            lum = 0.3 * c.red() + 0.59 * c.green() + 0.11 * c.blue()
+            if invert:                                    # tile -> clear, mark -> white
+                a = 0.0 if (x, y) in outside else max(0.0, min(1.0, (170 - lum) / 120)) * c.alphaF()
+                c = QColor(255, 255, 255, int(a * 255))
+            else:                                         # black -> clear, with a soft edge
+                fade = max(0.0, min(1.0, (lum - 22) / 40))
+                c.setAlphaF(c.alphaF() * fade)
+            img.setPixelColor(x, y, c)
+            if c.alpha() > 40:
+                left, top, right, bottom = min(left, x), min(top, y), max(right, x), max(bottom, y)
+                brightest = max(brightest, c.red(), c.green(), c.blue())
+    if right < 0:
+        return None
+    gain = 255 / brightest
+    if gain > 1.05:
+        for y in range(top, bottom + 1):
+            for x in range(left, right + 1):
+                c = img.pixelColor(x, y)
+                img.setPixelColor(x, y, QColor(min(255, int(c.red() * gain)), min(255, int(c.green() * gain)),
+                                               min(255, int(c.blue() * gain)), c.alpha()))
+    img = img.copy(left, top, right - left + 1, bottom - top + 1)
+    img = img.scaled(LOGO_BOX, LOGO_BOX, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    square = QImage(LOGO_BOX, LOGO_BOX, QImage.Format_ARGB32)
+    square.fill(Qt.transparent)
+    p = QPainter(square)
+    p.drawImage((LOGO_BOX - img.width()) // 2, (LOGO_BOX - img.height()) // 2, img)
+    p.end()
+    return QPixmap.fromImage(square)
+
+
+def bios_logos():
+    """[(label, [pixmaps])] - whatever of the logos are there."""
+    global _logos
+    if _logos is None:
+        _logos = [(label, [pm for pm in (_load_logo(n) for n in names) if pm is not None])
+                  for label, names in LOGO_GROUPS]
+    return _logos
 WHITE = QColor("#FFFFFF")
 MEMORY_KB = 262144
 
@@ -39,6 +117,10 @@ class BiosScreen(QWidget):
         self.count_timer.timeout.connect(self._count)
         self._done = True
         self.recovery_requested = False    # SPACE pressed: show the System Recovery menu after the test
+        self.shown_logos = 0               # how many of the bottom row's logos have appeared
+        self.logo_fade = 1.0
+        self.logo_timer = QTimer(self)
+        self.logo_timer.timeout.connect(self._reveal)
 
     # ---- the script -------------------------------------------------------------------
     def start(self, recovery=False):
@@ -63,6 +145,24 @@ class BiosScreen(QWidget):
         ]
         self.footer = "62-0101-001199-00101111-071595-VIA_K7-P3V133-00"
         self.timer.start(200)
+        self.shown_logos, self.logo_fade = 0, 1.0
+        QTimer.singleShot(LOGO_START_MS, lambda: None if self._done else self.logo_timer.start(40))
+        self.update()
+
+    def _reveal(self):
+        """Fade the next logo in; when it's in, wait a little and start the next one."""
+        total = sum(len(pms) for _l, pms in bios_logos())
+        if self.shown_logos >= total and self.logo_fade >= 1.0:
+            self.logo_timer.stop()
+            return
+        if self.logo_fade >= 1.0:
+            self.shown_logos += 1
+            self.logo_fade = 0.0
+        self.logo_fade = min(1.0, self.logo_fade + 40 / 260)
+        if self.logo_fade >= 1.0:
+            self.logo_timer.start(LOGO_EVERY_MS)
+        else:
+            self.logo_timer.start(40)
         self.update()
 
     def _next(self):
@@ -122,6 +222,7 @@ class BiosScreen(QWidget):
         self._done = True
         self.timer.stop()
         self.count_timer.stop()
+        self.logo_timer.stop()
         self.finished.emit()
 
     def mousePressEvent(self, event):
@@ -157,9 +258,33 @@ class BiosScreen(QWidget):
             p.setPen(color)
             p.drawText(margin, y, text)
             y += line_h
-        if self.footer:
+        icon_h = int(line_h * 1.7)
+        if self.footer:                    # the serial-number line, just above the row of logos
             p.setPen(GREY)
-            p.drawText(margin, self.height() - margin, self.footer)
+            p.drawText(margin, self.height() - margin - icon_h - line_h // 2, self.footer)
+        self._draw_logos(p, margin, self.height() - margin - icon_h, icon_h)
+
+    def _draw_logos(self, p, x, top, icon_h):
+        p.setRenderHint(QPainter.SmoothPixmapTransform)
+        fm = p.fontMetrics()
+        n = 0
+        for label, pms in bios_logos():
+            if n >= self.shown_logos or not pms:
+                break
+            p.setOpacity(1.0)
+            p.setPen(WHITE)
+            p.drawText(x, top + icon_h // 2 + fm.ascent() // 2 - 1, label)
+            x += fm.horizontalAdvance(label) + icon_h // 3
+            for pm in pms:
+                if n >= self.shown_logos:
+                    break
+                n += 1
+                p.setOpacity(self.logo_fade if n == self.shown_logos else 1.0)
+                w = icon_h * pm.width() / max(1, pm.height())
+                p.drawPixmap(QRectF(x, top, w, icon_h), pm, QRectF(pm.rect()))
+                x += w + icon_h // 3
+            x += icon_h // 2
+        p.setOpacity(1.0)
 
 
 class SafeOffScreen(QWidget):
