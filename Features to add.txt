@@ -3,9 +3,7 @@ Mac System Compatibility? (Discuss late)
 Flash dive portability? (Entire project readable from drive 256gb drive?)
 ---
 Multisystem scope widening, with centralized archive/media/contacts?  
-
 Tentative name: ClaudeTimeline
-
 Proposed Cellphone Devices:
 2001: Nokia 9210 Communicator (Symbian OS)
 2011: Motorola Droid 3 (Android 2.3.6)
@@ -20,9 +18,6 @@ Proposed Desktop Computers:
 2001: Windows XP Home Edition (Intel Pentium III) (<--We are here)
 2011: Windows 7 Home Premium (Intel Core i5-2500K)
 2025: Windows 11 Home (AMD Ryzen 7)
----
-Older to-do items:
-The web rips need to be integrated into the "internet" that exists on this OS. The "FurAffinity" is a social site and has 700+ pages already inside of it, with media content. The furries that "live inside" of this OS, should each also have there own pages, and occasionally add posts, shout on other pages, favorite art. Some are more active than others, and have larger or smaller pages. "clubstrips", "hardblush", "houepets", "Jay Naylor" , "Sexyfur", "yiffstar" are all stand alone websites that host content for the user to browse. the furries living inside can some times add link to some or all of the websites being added. All websites, should be linked on the "home page" in Netscape. If no websites are present, or the archive has not been installed by the user, then missing websites should have a 404 page. Please also create a generalized 404 Webpage missing error page.
 ---
 Comprehensive help section, outlining all the added features.
 ---
