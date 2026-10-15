@@ -166,10 +166,11 @@ def queue_comments_on(data, entry, friends):
 
 
 def request_backfill(data, name, count):
-    """Someone looked at a nearly empty journal: its owner writes a few older entries (once)."""
+    """Someone looked at a nearly empty journal: its owner writes a few older entries (once it worked)."""
     if count >= BACKFILL_ENTRIES or name in data["backfilled"]:
         return False
-    data["backfilled"].append(name)
+    if any(q["kind"] == "backfill" and q["who"] == name for q in data["queue"]):
+        return False
     data["queue"].append({"kind": "backfill", "who": name, "item": 0, "due": time.time()})
     return True
 
@@ -185,6 +186,9 @@ def _now_text():
 
 
 def tick(sim):
+    from .. import llm_server
+    if not llm_server.ready():                    # comments and backfills wait for a model
+        return
     with lock:
         data = load()
         now = time.time()
@@ -220,7 +224,8 @@ def _backfill(sim, person):
                  if line.strip().startswith(("-", "*")) or line.strip()[:2].rstrip(".").isdigit()]
         notes = [x for x in notes if len(x) > 12][:n]
         if not notes:
-            return
+            return                                # not marked done: the next visit asks again
+        update(lambda d: d["backfilled"].append(person.name) if person.name not in d["backfilled"] else None)
         from . import _date_text
         journal = sim.journal
         entries = journal.entries(person.name)

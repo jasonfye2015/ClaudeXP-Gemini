@@ -152,10 +152,14 @@ class Network(QObject):
     def refresh(self):
         if not self.signed_in:
             return
+        from ... import llm_server
+        no_model = not llm_server.ready()
         for b in self.buddies.values():
             p = self._aim_presence(b)
             if p is None:
                 p = self._own_presence(b)
+            if no_model and p == ONLINE:
+                p = AWAY                          # nobody can answer without a model: say so
             if p != b.presence:
                 b.presence = p
                 self.presence_changed.emit(b.contact.id)
@@ -168,6 +172,18 @@ class Network(QObject):
         if b.presence == OFFLINE:
             e2 = b.add("system", f"{self._display(b)} is offline and may not reply.")
             self.message_added.emit(b.contact.id, e2)
+            return
+        from ... import llm_server
+        if not llm_server.ready():
+            import time as _t
+            if _t.monotonic() - getattr(b, "auto_replied", -9999) > 600:      # an away message, now and then
+                b.auto_replied = _t.monotonic()
+
+                def auto():
+                    e3 = b.add("system", f"Auto-reply from {self._display(b)}: I'm away from my computer right "
+                                         "now. I'll get back to you!")
+                    self.message_added.emit(b.contact.id, e3)
+                QTimer.singleShot(1200, auto)
             return
         delay = random.uniform(1.5, 5) if b.presence == ONLINE else random.uniform(30, 120)
         QTimer.singleShot(int(delay * 1000), lambda: self._reply(b))

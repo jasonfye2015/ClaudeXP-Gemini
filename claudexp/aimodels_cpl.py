@@ -7,6 +7,7 @@
   Engine       Vulkan or CUDA, the graphics device, how many models stay loaded, context size, unloading when
                idle, and Start / Stop / Restart / View Log
   Activity     the request queue and recent replies (tokens per second), with a little graph
+  Setup        the AI Model Setup Assistant: download and install what's missing (aimodels_setup.py)
 
 Settings are saved in data/ai_models.json (see ai_models.py); ClaudeAIM's own model settings follow along."""
 import threading
@@ -111,7 +112,7 @@ class SpeedGraph(QWidget):
 class AIModels(QWidget):
     found_devices = Signal(list)
 
-    def __init__(self, desktop, close):
+    def __init__(self, desktop, close, setup=False):
         super().__init__()
         self.desktop = desktop
         self.close_window = close
@@ -124,6 +125,13 @@ class AIModels(QWidget):
         self.tabs.addTab(self._assign_tab(), "Assignments")
         self.tabs.addTab(self._engine_tab(), "Engine")
         self.tabs.addTab(self._activity_tab(), "Activity")
+        from .aimodels_setup import SetupTab
+        from . import llm_setup
+        missing = bool(llm_setup.essentials_missing())
+        self.setup_tab = SetupTab(desktop, on_installed=self._installed, auto=missing)
+        self.tabs.addTab(self.setup_tab, "Setup")
+        if setup or missing:
+            self.tabs.setCurrentWidget(self.setup_tab)
         v.addWidget(self.tabs)
         row = QHBoxLayout()
         row.addStretch()
@@ -136,7 +144,7 @@ class AIModels(QWidget):
         cancel.clicked.connect(close)
         self.apply_btn.clicked.connect(self.apply)
         self.apply_btn.setEnabled(False)
-        self.setFixedWidth(500)
+        self.setFixedWidth(540)
         self.timer = QTimer(self, interval=1500, timeout=self.refresh)
         self.timer.start()
         self.found_devices.connect(self._show_devices)
@@ -486,18 +494,30 @@ class AIModels(QWidget):
             self._background(llm_server.restart)                # the router picks the new settings up
         self.apply_btn.setEnabled(False)
 
+    def _installed(self):
+        """Models arrived: show them everywhere in this window."""
+        try:
+            self._fill_models()
+        except Exception:
+            pass
+        self.refresh()
+
     def closeEvent(self, event):
         self.timer.stop()
+        self.setup_tab.shutdown()
         event.accept()
 
 
 _open = {}
 
 
-def ai_models_properties(desktop):
+def ai_models_properties(desktop, setup=False):
     win = _open.get("win")
     if win is not None and isValid(win):
         desktop.open_window(win)
+        if setup:
+            panel = win.content.findChild(AIModels)
+            panel.tabs.setCurrentWidget(panel.setup_tab)
         return win
     from .network import DialogBody, _fixed_window
     body = DialogBody()
@@ -508,9 +528,11 @@ def ai_models_properties(desktop):
     def close():
         w = holder.pop("win", None)
         if w is not None and isValid(w):
-            w.content.findChild(AIModels).timer.stop()
+            panel = w.content.findChild(AIModels)
+            panel.timer.stop()
+            panel.setup_tab.shutdown()
             desktop.close_window(w)
-    lay.addWidget(AIModels(desktop, close))
+    lay.addWidget(AIModels(desktop, close, setup))
     win = _fixed_window(desktop, "AI Models", body, close)
     win.icon = QIcon(ai_icon(16))
     holder["win"] = win

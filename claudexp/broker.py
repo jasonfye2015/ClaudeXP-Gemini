@@ -135,6 +135,12 @@ class Broker(QObject):
 
     def _submit(self, model, messages, options, priority, think, stream, on_done, on_chunk, images, on_thinking=None):
         job = Job(self, model, messages, options, priority, think, stream, on_done, on_chunk, images, on_thinking)
+        from . import llm_server
+        if not llm_server.ready():
+            # Nothing to run it on: answer 'no model' straight away (later, on the UI thread, like a real reply).
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(0, lambda: on_done and on_done("", "no model"))
+            return job
         self.jobs.add(job)
         if priority <= BACKGROUND:
             if self.bg_done >= self.bg_total:     # a new batch starts

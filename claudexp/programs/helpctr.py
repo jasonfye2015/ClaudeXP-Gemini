@@ -106,8 +106,9 @@ memories of you. Nothing is truly lost: everything erased is moved to the 'Recov
 computer. Files on the external drive (E:) are never touched.</p>"""),
     "slow-buddies": ("My buddies don't answer", "fix", """
 <p>Your buddies are played by a language model that ClaudeXP runs itself (llama.cpp, on the real PC).</p>
-<ul><li>The model lives on the external drive, in <b>E:\\LLM Models</b>. If it's missing, a warning sign
-appears by the clock; put the LLM Models download there and log on again.</li>
+<ul><li>The models live on the external drive, in <b>E:\\LLM Models</b>. If they're missing, a warning sign
+appears by the clock and your buddies show as Away: click the sign (or open
+<a href="launch:aimodels-setup">the AI Model Setup Assistant</a>) to download them.</li>
 <li>The first reply after logging on takes a few extra seconds while the model loads.</li>
 <li>Replies can take a few seconds; the hard disk light by the clock flickers while the model is working.</li>
 <li>Buddies keep their own hours: someone asleep won't be online, and answers e-mail after they wake up.</li>
@@ -139,10 +140,13 @@ ARTICLES.update(GUIDE)
 ARTICLES["claudexp-catalog"] = ("Programs on this computer", "claudexp",
                                 "Every program on this computer, by kind: messengers, Internet, furry stuff, office, "
                                 "music and video, games, emulators, AI helpers, system tools.")
+ARTICLES["claudexp-storage"] = ("What's on drive E:", "claudexp",
+                                "Local Storage external drive missing language models download install AI Model Setup "
+                                "Assistant archive TV movies emulation WADs Python FFmpeg voices pictures")
 ARTICLES["people"] = ("The people who live here", "people",
                       "AIM buddies main furs support furs background furs regulars IRC MUCK accounts personas "
                       "schedules diaries e-mail Hotmail LiveJournal FurAffinity Fur Directory")
-LIVE = {"claudexp-catalog", "people"} | set(GUIDE)
+LIVE = {"claudexp-catalog", "people", "claudexp-storage"} | set(GUIDE)
 
 PAGE_STYLE = """
 <style>
@@ -388,6 +392,9 @@ def launch(desktop, key):
     if key == "aimodels":
         from ..controlpanel import _ai_models
         return _ai_models(desktop)
+    if key == "aimodels-setup":
+        from ..aimodels_cpl import ai_models_properties
+        return ai_models_properties(desktop, setup=True)
     if any(p.key == key for p in programs.PROGRAMS):
         programs.launch(desktop, key)
 

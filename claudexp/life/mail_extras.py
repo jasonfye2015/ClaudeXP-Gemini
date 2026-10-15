@@ -230,6 +230,11 @@ def tick(sim):
             if m.get("folder") == "bulk" and m.get("ts", time.time()) < old:
                 sim.mailbox.purge(m["id"])
 
+    from .. import llm_server
+    if not llm_server.ready():                    # the model-written ones wait for a model
+        if changed:
+            save_json(_state_file(), sim.state)
+        return
     if _due(st, "next_forward", FORWARD_MINUTES):
         _forward(sim, me, email_address)
         changed = True

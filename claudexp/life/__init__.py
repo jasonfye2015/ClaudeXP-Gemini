@@ -375,7 +375,9 @@ class LifeSim(QObject):
 
     def _tick(self):
         self.state["last_running"] = datetime.now().astimezone().isoformat(timespec="seconds")
-        self._deliver_mail()
+        from .. import llm_server
+        if llm_server.ready():                   # without a model, replies wait (they're not lost)
+            self._deliver_mail()
         if not self.powered_off:
             from . import lj, mail_extras
             mail_extras.tick(self)

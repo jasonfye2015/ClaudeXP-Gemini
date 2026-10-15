@@ -78,6 +78,45 @@ def available():
     return status() == ""
 
 
+_ready = {"t": 0.0, "ok": False}
+
+
+def ready():
+    """available(), remembered for a few seconds - cheap enough to ask before every request."""
+    import time as _t
+    if _t.monotonic() - _ready["t"] > 8:
+        _ready["ok"], _ready["t"] = available(), _t.monotonic()
+    return _ready["ok"]
+
+
+def recheck(desktop=None):
+    """Look again now (after models were installed): if they can run, take the warning down and start the engine."""
+    import time as _t
+    was = _ready["ok"]
+    _ready["ok"], _ready["t"] = available(), _t.monotonic()
+    if _ready["ok"]:
+        running = _proc is not None and _proc.poll() is None
+        if running:
+            threading.Thread(target=lambda: _quiet(restart), daemon=True).start()   # so the router sees new models
+        else:
+            start_in_background()
+        if desktop is not None:
+            tray = getattr(desktop, "_llm_tray", None)
+            if tray is not None:
+                tray.hide()
+                desktop._llm_tray = None
+                if not was:
+                    from .tray import TrayIcon
+                    from PySide6.QtWidgets import QApplication, QStyle
+                    ok = TrayIcon(desktop, QApplication.style().standardIcon(QStyle.SP_DialogApplyButton))
+                    ok.show()
+                    ok.showMessage("Your buddies can talk again", "ClaudeXP's language models are installed.", None,
+                                   8000)
+                    from PySide6.QtCore import QTimer
+                    QTimer.singleShot(12000, ok.hide)
+    return _ready["ok"]
+
+
 # ---- running the router ---------------------------------------------------------------------------------------
 
 def _free_port():
@@ -347,16 +386,17 @@ def at_logon(desktop):
     desktop._llm_tray = tray
 
     def explain(*_):
-        from .explorer.dialogs import msgbox
-        msgbox(desktop, "Language model", status() + "\n\nEverything else in ClaudeXP works as usual. Your "
-               "buddies, IRC, the MUCK and ClaudeAI need the model to talk; once it's in place, log off and on "
-               "again.", "warning")
+        from .aimodels_cpl import ai_models_properties
+        ai_models_properties(desktop, setup=True)          # the AI Model Setup Assistant
     tray.activated.connect(lambda reason: explain() if reason in (QSystemTrayIcon.Trigger,
                                                                     QSystemTrayIcon.DoubleClick) else None)
     tray.show()
     QTimer.singleShot(1500, lambda: tray.showMessage(
-        "Your buddies can't talk", "ClaudeXP's language model isn't installed (E:\\LLM Models). Everything else "
-        "works. Click here for details."))
+        "Your buddies can't talk", "ClaudeXP's language models aren't installed (E:\\LLM Models). Everything else "
+        "works. Click here to download them."))
     tray.messageClicked.connect(explain)
+    check = QTimer(tray)                      # models put in place by hand are noticed within a minute
+    check.timeout.connect(lambda: recheck(desktop) and check.stop())
+    check.start(60000)
 
 

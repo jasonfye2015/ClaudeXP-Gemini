@@ -238,6 +238,7 @@ this computer. Nothing goes to the real Internet.</p>
 &#9656; <a href="help:claudexp-ai">How the language models work</a> - and what to do if nobody answers.<br>
 &#9656; <a href="help:claudexp-nags">The 2001 nags</a> - activation, cleanup, upgrade offers, and how to quiet them.<br>
 &#9656; <a href="help:claudexp-files">Where things are kept</a><br>
+&#9656; <a href="help:claudexp-storage">What's on drive E:</a> - check what's installed, and get the language models.<br>
 &#9656; <a href="launch:thanks">Thanks</a> - who made ClaudeXP, and the software and models it's built on.</p>
 <h2>Drives</h2>
 <p><b>C:</b> is Windows and your documents. <b>E:</b> is the external drive (Local Storage on the real computer):
@@ -263,9 +264,12 @@ day - Windows plays along: <a href="launch:winupdate">Windows Update</a>, a
 <h2>Watching it work</h2>
 <p><a href="launch:furlog">The Furry Log</a> lists every request the model handles: who asked, what for, how long it
 took.</p>
-<h2>If nobody answers</h2>
-<p>See <a href="help:slow-buddies">My buddies don't answer</a>. ClaudeXP works without models too - only the
-residents, the made-up Web and the AI helpers go quiet, and a warning sign by the clock says so.</p>"""),
+<h2>Without models</h2>
+<p>ClaudeXP works without models too. A warning sign by the clock says they're missing - click it to download them.
+Meanwhile your buddies show as <b>Away</b> and send an away message, IRC regulars are 'away from keyboard', MUCK
+players are idle, and model work (e-mail replies, LiveJournal comments, diaries) waits instead of failing; it picks
+up again by itself once models are in place - no need to log off. See
+<a href="help:claudexp-storage">What's on drive E:</a> and <a href="help:slow-buddies">My buddies don't answer</a>.</p>"""),
     "claudexp-nags": ("The 2001 nags (and how to quiet them)", "claudexp", """
 <p>Windows XP in 2001 came with a lot of software that wanted your attention. ClaudeXP keeps the nostalgia - and
 lets you turn each one off:</p>
@@ -371,8 +375,71 @@ card.</li>
 }
 
 
+def _storage_parts():
+    """(name, present?, what uses it, where it goes) for each part of drive E: (Local Storage)."""
+    from ..explorer.vfs import local_storage
+    from .. import llm_server, llm_setup
+    e = local_storage()
+
+    def any_dir(*names):
+        return any((e / n).is_dir() and any((e / n).iterdir()) for n in names)
+    models = [it for it in llm_setup.MANIFEST if it["kind"] == "model"]
+    have = [it for it in models if llm_setup.installed(it)]
+    engine = llm_server.find_engine() is not None
+    lm = e / "LLM Models"
+    return [
+        ("Language model engine (llama.cpp)", engine, "Everything that talks: buddies, IRC, the MUCK, the made-up Web, "
+         "ClaudeAI, Clippy's chat", "E:\\LLM Models\\llama.cpp\\vulkan"),
+        (f"Language models ({len(have)} of {len(models)} known)", bool(have), "The residents' voices, their diaries, "
+         "e-mail replies, LiveJournal, the AI helpers", "E:\\LLM Models\\models"),
+        ("Furry Media Archive", any_dir("Furry Media Archive"), "FurComix, FurFolio, the story reader, the CD viewers, "
+         "the Furry Video Browser, and the Furry Web's real sites (Website Rips)", "E:\\Furry Media Archive"),
+        ("TV and Movies", any_dir("TV and Movies"), "ClaudeTV and the TV Guide", "E:\\TV and Movies"),
+        ("Emulation games", any_dir("Emulation"), "The NES, SNES, Game Boy, Genesis, N64 and Apple ][ emulators",
+         "E:\\Emulation\\<system> (Roms)"),
+        ("WADs", any_dir("WADs"), "Doom, Doom II, Wolfenstein 3D, Heretic and Hexen", "E:\\WADs"),
+        ("Python runtime", (e / "Python Studio" / "python312" / "python.exe").is_file(),
+         "Running programs in Copilot Python Studio", "E:\\Python Studio\\python312"),
+        ("FFmpeg", (e / "Python Studio" / "ffmpeg" / "ffmpeg.exe").is_file(),
+         "Saving movies in Windows Movie Maker; converting media in Python Studio", "E:\\Python Studio\\ffmpeg"),
+        ("Picture generator", (lm / "image-gen" / "models").is_dir() and any((lm / "image-gen" / "models").iterdir())
+         if (lm / "image-gen" / "models").is_dir() else False, "Copilot Image Creator",
+         "E:\\LLM Models\\image-gen"),
+        ("Voices", (lm / "voice" / "models").is_dir() and any((lm / "voice" / "models").iterdir())
+         if (lm / "voice" / "models").is_dir() else False, "Copilot Voice (speech in and out)",
+         "E:\\LLM Models\\voice"),
+    ]
+
+
+def storage_page():
+    rows = []
+    missing = 0
+    for name, ok, uses, where in _storage_parts():
+        missing += not ok
+        mark = "<font color='#207020'><b>Installed</b></font>" if ok else "<font color='#C02010'><b>Missing</b></font>"
+        rows.append(f"<tr><td valign='top'><b>{html.escape(name)}</b><br><font color='#666'>{html.escape(where)}"
+                    f"</font></td><td valign='top'>{mark}</td><td valign='top'>{html.escape(uses)}</td></tr>")
+    summary = ("Everything is in place." if not missing else
+               f"{missing} part{'s are' if missing != 1 else ' is'} missing. ClaudeXP still runs; only the programs "
+               "listed beside each missing part are affected.")
+    return f"""<h1>What's on drive E:</h1>
+<p>Drive E: is the external drive - the <b>Local Storage</b> folder beside ClaudeXP on the real computer. It holds the
+big things: the language models, your media archive and game files. {summary}</p>
+<table cellpadding="4" width="100%"><tr><th align="left">Part</th><th align="left">Status</th>
+<th align="left">Used by</th></tr>{"".join(rows)}</table>
+<h2>Getting the language models</h2>
+<p><a href="launch:aimodels-setup">Open the AI Model Setup Assistant</a> (Control Panel &gt; AI Models &gt; Setup). It
+downloads the engine and models and installs them, resuming if interrupted and checking every file. If a download
+doesn't work, point it at copies you already have, or give it another web address.</p>
+<h2>Everything else</h2>
+<p>The archive, TV and movies, games and WADs are your own files: copy them into the folders shown above on the
+real computer (Local Storage\\README.txt describes each one). Programs notice them the next time they open.</p>"""
+
+
 def guide_article(aid):
     """(title, html) for a guide article, filling in anything live."""
+    if aid == "claudexp-storage":
+        return "What's on drive E:", storage_page()
     if aid == "claudexp-catalog":
         return "Programs on this computer", catalog_page()
     if aid == "people":

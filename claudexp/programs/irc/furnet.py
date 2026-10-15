@@ -515,6 +515,10 @@ class FurNet(QObject):
             return
         self._remember(p, "user", f"/me {text}" if action else text)
         _heard(p, "IRC (private messages)", self.nick, text)
+        from ... import llm_server
+        if not llm_server.ready():                # 301 RPL_AWAY, as a real server would send
+            self.out(window, "info", f"{p.nick} is away: Away from keyboard")
+            return
         self._ask_query(p)
 
     # ---- FurBot --------------------------------------------------------------------------------

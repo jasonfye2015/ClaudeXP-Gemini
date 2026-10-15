@@ -603,6 +603,10 @@ class World(QObject):
             self.out("page", f'You page, "{msg}" to {p.name}.')
         if p.idle_only:
             return
+        from ... import llm_server
+        if not llm_server.ready():
+            self.out("system", f"{p.name} is idle and doesn't seem to be at the keyboard.")
+            return
         if p.thinking:
             QTimer.singleShot(4000, lambda: self._answer_page(p, msg))
         else:
@@ -635,6 +639,10 @@ class World(QObject):
             self.out("system", "I don't see that player here.")
             return
         self.out("page", f'You whisper, "{msg}" to {p.name}.')
+        from ... import llm_server
+        if not llm_server.ready():
+            self.out("system", f"{p.name} is idle and doesn't seem to notice.")
+            return
         if not p.idle_only:
             self._answer_page(p, f"(whispered to you in person) {msg}")
 
