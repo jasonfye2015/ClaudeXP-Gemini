@@ -3,16 +3,6 @@ Resizing hard crashes related to widgets(When widgets are running).
 TV Guide not showing all channels.
 TV Guide not showing fully in widgets.
 ---
-Needing work:
-in /ClaudeXP/ClaudeXP Profiles/Background Furry Profiles/, 60 have been added (#61 - #120)
-in /ClaudeXP/ClaudeXP Profiles/Support Furry Profiles/, 60 have been added (#121 - #180)
-Please add both sets to The Furry Directory, and add all users to both IRC and MUCK. Give them all disperse awake/sleep/online times to help balance the user counts. 
----
-in /ClaudeXP/Program Files/ClaudeAIM/contacts/ 25 have been added.
-Please add all 25 as contacts in AIM, as well as in the furry directory. They will have images and icons to mind as well. any details missing for them please generate.
----
-in /ClaudeXP/User Profiles/ several new user profiles have been added: AquaVixen, Foxy, Quake, Sheppie, MochaLion. Please add them to the User profile options at windows setup.
----
 More medias has been added to archive, needs indexing and TV guide creation.
 ---
 Check AIM contacts, to see why they offer images very soon and for no reason.
