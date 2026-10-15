@@ -166,6 +166,8 @@ PROGRAMS = [
     Program("kik", "Kik", "Chat like on a phone", _lazy(".messengers.others", "kik_icon"),
             _lazy(".messengers.others", "launch_kik"), _lazy(".messengers.others", "shutdown_kik")),
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown),
+    Program("hotmail", "MSN Hotmail", "Free web-based e-mail", _lazy("..mailtray", "hotmail_icon"),
+            _lazy("..mailtray", "open_hotmail")),
     Program("iexplore", "Internet Explorer", "Browse the Web", _lazy(".navigator.iexplore", "ie_icon"),
             _lazy(".navigator.iexplore", "launch"), _lazy(".navigator.iexplore", "shutdown")),
     Program("navigator", "Netscape Navigator", "Browse the Web", navigator.nav_icon, navigator.launch,

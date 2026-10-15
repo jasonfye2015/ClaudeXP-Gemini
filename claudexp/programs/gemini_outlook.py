@@ -625,7 +625,7 @@ class GeminiOutlook(QWidget):
         entries = []
         if sim is not None:
             entries.extend(({"name": name, "email": email_address(name), "phone": "", "type": "Buddy"}
-                            for name in sim.buddies))
+                            for name in sim.people))
         entries.extend(dict(contact, type="Personal") for contact in _data()["contacts"])
         for contact in sorted(entries, key=lambda entry: entry.get("name", "").casefold()):
             item = QTreeWidgetItem([contact.get("name", ""), contact.get("email", ""),
@@ -720,7 +720,7 @@ class GeminiCompose(Compose):
         from ..life import email_address
         sim = _life()
         contacts = [{"name": name, "email": email_address(name)}
-                    for name in sim.buddies] if sim is not None else []
+                    for name in sim.people] if sim is not None else []
         contacts.extend(_data()["contacts"])
         items = sorted({(c.get("name", ""), c.get("email", "")) for c in contacts},
                        key=lambda pair: pair[0].casefold())

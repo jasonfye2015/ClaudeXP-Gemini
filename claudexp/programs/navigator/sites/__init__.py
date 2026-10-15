@@ -12,7 +12,7 @@ import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 RIPS_FOLDER = "Website Rips"
 
@@ -48,6 +48,10 @@ class Site:
 
     def handle(self, path, query):
         """path: '/view/12/' (decoded); query: the raw query string. -> Response or None for 'not found'."""
+        return None
+
+    def handle_post(self, path, query, form):
+        """A form sent with POST; form: {name: [values]}. -> Response (usually a redirect) or None."""
         return None
 
 
@@ -96,6 +100,18 @@ def sites():
     return _sites
 
 
+_services = None
+
+
+def services():
+    """Sites that aren't from the archive but live on the same server: MSN Hotmail."""
+    global _services
+    if _services is None:
+        from . import hotmail
+        _services = [hotmail.Hotmail()]
+    return _services
+
+
 def _bare(host):
     host = (host or "").lower().split(":")[0]
     return host[4:] if host.startswith("www.") else host
@@ -105,7 +121,7 @@ def site_for(url_or_host):
     """The Site an address belongs to (installed or not), or None for the rest of the web."""
     host = urlparse(url_or_host).netloc if "://" in url_or_host else url_or_host
     bare = _bare(host)
-    for s in sites():
+    for s in sites() + services():
         if bare == _bare(s.host) or bare in (_bare(a) for a in s.aliases):
             return s
     return None
@@ -142,7 +158,15 @@ class _Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
-    def do_GET(self):
+    def do_POST(self):
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            form = parse_qs(self.rfile.read(length).decode("utf-8", errors="replace"), keep_blank_values=True)
+        except (OSError, ValueError):
+            form = {}
+        self.do_GET(form)
+
+    def do_GET(self, form=None):
         parts = urlparse(self.path)
         segments = parts.path.lstrip("/").split("/", 1)
         site = site_for(segments[0]) if segments and segments[0] else None
@@ -157,7 +181,12 @@ class _Handler(BaseHTTPRequestHandler):
             return
         path = "/" + (unquote(segments[1], errors="replace") if len(segments) > 1 else "")
         try:
-            resp = site.handle(path, parts.query) if site.installed() else None
+            if not site.installed():
+                resp = None
+            elif form is not None:
+                resp = site.handle_post(path, parts.query, form)
+            else:
+                resp = site.handle(path, parts.query)
             if isinstance(resp, str):                           # a built page
                 resp = Response(resp)
         except Exception as e:                                  # a broken page shouldn't take the server down

@@ -13,7 +13,9 @@ All model work here runs at the broker's BACKGROUND priority.
 """
 import random
 import re
+import threading
 import time
+from collections import namedtuple
 from datetime import datetime, timedelta
 
 from PySide6.QtCore import QObject, QTimer, Signal
@@ -75,7 +77,11 @@ MAIL_REPLY_MINUTES = (2, 9)      # how long a buddy takes to answer an email (wh
 REACH_OUT = ("Message {user} first to tell them about something that just happened in your life: {topic} "
              "Keep it natural and short, like an IM between friends.")
 
-DOMAINS = ["aol.com", "hotmail.com", "yahoo.com", "earthlink.net", "juno.com", "msn.com", "mindspring.com"]
+MAIL_DOMAIN = "hotmail.com"     # everyone's on MSN Hotmail
+mail_lock = threading.RLock()    # the mailbox is also used by the Hotmail web server's thread
+
+# Anyone who can get email: AIM buddies (contact set) and the IRC/MUCK regulars (hours = their waking window).
+Person = namedtuple("Person", "name persona hours contact")
 
 
 def _slug(name):
@@ -88,7 +94,15 @@ def _date_text(when=None):
 
 
 def email_address(name):
-    return f"{re.sub(r'[^a-z0-9]', '', name.lower())}@{DOMAINS[sum(map(ord, name)) % len(DOMAINS)]}"
+    return f"{re.sub(r'[^a-z0-9]', '', name.lower()) or 'user'}@{MAIL_DOMAIN}"
+
+
+def _minutes(text):
+    h, _, m = str(text).partition(":")
+    try:
+        return int(h) * 60 + int(m or 0)
+    except ValueError:
+        return None
 
 
 class Journal:
@@ -118,37 +132,54 @@ class Journal:
 
 
 class Mailbox:
-    def messages(self):
-        return load_json(MAIL_FILE, [])
+    """Your Hotmail inbox (data/mail.json). Folders: 'inbox', 'bulk' (Bulk Mail) and 'deleted'."""
 
-    def add(self, sender, subject, body):
-        msgs = self.messages()
-        now = clock.now()
-        msgs.append({"id": (msgs[-1]["id"] + 1) if msgs else 1, "from": sender, "addr": email_address(sender),
-                     "subject": subject, "body": body, "date": f"{now:%a, %b} {now.day} {now.year} {clock.time_text(now)}",
-                     "read": False})
-        save_json(MAIL_FILE, msgs)
+    def messages(self):
+        with mail_lock:
+            return load_json(MAIL_FILE, [])
+
+    def add(self, sender, subject, body, folder="inbox", addr=None, to=None, cc=None, kind=None):
+        """to/cc: lists of addresses when it wasn't just to you; kind: 'spam', 'notice', 'forward', 'group'..."""
+        with mail_lock:
+            msgs = self.messages()
+            now = clock.now()
+            m = {"id": (msgs[-1]["id"] + 1) if msgs else 1, "from": sender, "addr": addr or email_address(sender),
+                 "subject": subject, "body": body,
+                 "date": f"{now:%a, %b} {now.day} {now.year} {clock.time_text(now)}", "read": False,
+                 "ts": int(time.time())}
+            if folder != "inbox":
+                m["folder"] = folder
+            if to:
+                m["to"] = to
+            if cc:
+                m["cc"] = cc
+            if kind:
+                m["kind"] = kind
+            msgs.append(m)
+            save_json(MAIL_FILE, msgs)
+            return m
 
     def unread(self):
         return [m for m in self.messages() if not m["read"] and m.get("folder", "inbox") == "inbox"]
 
+    def _update(self, msg_id, **fields):
+        with mail_lock:
+            msgs = self.messages()
+            for m in msgs:
+                if m["id"] == msg_id:
+                    m.update(fields)
+            save_json(MAIL_FILE, msgs)
+
     def mark_read(self, msg_id, read=True):
-        msgs = self.messages()
-        for m in msgs:
-            if m["id"] == msg_id:
-                m["read"] = read
-        save_json(MAIL_FILE, msgs)
+        self._update(msg_id, read=read)
 
     def move(self, msg_id, folder):
-        """Outlook Express folders: 'inbox' or 'deleted'."""
-        msgs = self.messages()
-        for m in msgs:
-            if m["id"] == msg_id:
-                m["folder"] = folder
-        save_json(MAIL_FILE, msgs)
+        """'inbox', 'bulk' or 'deleted'."""
+        self._update(msg_id, folder=folder)
 
     def purge(self, msg_id):
-        save_json(MAIL_FILE, [m for m in self.messages() if m["id"] != msg_id])
+        with mail_lock:
+            save_json(MAIL_FILE, [m for m in self.messages() if m["id"] != msg_id])
 
 
 class LifeSim(QObject):
@@ -162,6 +193,7 @@ class LifeSim(QObject):
         self.broker = broker.get()
         buddies, _errors = load_buddies("life")
         self.buddies = {c.screen_name: c for c, _section in buddies}
+        self._people = None
         self.talks = {}            # (name, program) -> {"lines": [...], "last": t, "user_spoke": bool}
         self.aim_world = None
         self.irc = None            # the FurNet object while ClaudeIRC is connected
@@ -193,6 +225,33 @@ class LifeSim(QObject):
                         f"AIM, IRC, the MUCK or email (use them naturally if they come up; don't recite them):"
                         f"\n{lines}")
 
+    # ---- everyone with an email address ------------------------------------------------------------
+    @property
+    def people(self):
+        """name -> Person: the AIM buddies, then every IRC and MUCK regular."""
+        if self._people is None:
+            from ..paths import ROOT
+            people = {name: Person(name, c.persona, None, c) for name, c in self.buddies.items()}
+            for path, key in ((ROOT / "Program Files" / "ClaudeIRC" / "regulars.json", "nick"),
+                              (ROOT / "Program Files" / "ClaudeMUCK" / "world" / "regulars.json", "name")):
+                for r in load_json(path, {}).get("regulars", []):
+                    name = r.get(key)
+                    if not name or not r.get("persona") or name in people:
+                        continue
+                    hours = r.get("hours") or []
+                    span = tuple(_minutes(h) for h in hours[:2]) if len(hours) >= 2 else None
+                    people[name] = Person(name, r["persona"], span if span and None not in span else None, None)
+            self._people = people
+        return self._people
+
+    def person_by_address(self, addr):
+        addr = addr.strip().lower()
+        return next((p for name, p in self.people.items() if email_address(name) == addr), None)
+
+    def awake(self, person):
+        from ..programs.people import available
+        return available(person.contact) if person.contact is not None else available(hours=person.hours)
+
     # ---- model helpers ----------------------------------------------------------------------
     def _model(self, contact):
         """The life sim's journals, e-mail and catch-up run on AI Models' background model."""
@@ -200,9 +259,11 @@ class LifeSim(QObject):
         return ai_models.model_for("background"), int(ai_models.config()["context"])
 
     def _ask(self, contact, prompt, callback, priority=broker.BACKGROUND):
+        """contact: a buddy (for their temperature), or None for anyone else."""
         model, ctx = self._model(contact)
+        temperature = getattr(contact, "temperature", None) or 0.85
         self.broker.chat(model, [{"role": "user", "content": prompt}],
-                         {"num_ctx": ctx, "temperature": contact.temperature}, lambda text, err: callback(
+                         {"num_ctx": ctx, "temperature": temperature}, lambda text, err: callback(
                              None if err else (text or "").strip()), priority, think=False)
 
     # ---- conversations -------------------------------------------------------------------------
@@ -254,8 +315,8 @@ class LifeSim(QObject):
     def receive_email(self, to_addr, subject, body):
         """The user sent an email. Buddies answer a few minutes later (once they're awake); an address
         nobody has bounces back from the Mail Delivery Subsystem."""
-        addr = to_addr.strip().lower()
-        name = next((n for n in self.buddies if email_address(n) == addr), None)
+        person = self.person_by_address(to_addr)
+        name = person.name if person is not None else None
         if name is not None:
             self.journal.add(name, f'Got an email from {self.user}, "{subject}": {body.strip()[:300]}', "talk")
         delay = random.uniform(*MAIL_REPLY_MINUTES) * 60 if name else random.uniform(40, 90)
@@ -270,7 +331,6 @@ class LifeSim(QObject):
         due = [q for q in queue if q["due"] <= now]
         if not due:
             return
-        from ..programs.people import available
         for item in due:
             queue.remove(item)
             name = item["name"]
@@ -282,20 +342,20 @@ class LifeSim(QObject):
                 self.mail_arrived.emit()
                 self._announce_mail()
                 continue
-            contact = self.buddies.get(name)
-            if contact is None:
+            person = self.people.get(name)
+            if person is None:
                 continue
-            if not available(contact):
+            if not self.awake(person):
                 item["due"] = now + 20 * 60         # asleep: they'll answer when they're up
                 queue.append(item)
                 continue
-            self._reply_email(contact, name, item)
+            self._reply_email(person, name, item)
         save_json(STATE_FILE, self.state)
 
-    def _reply_email(self, contact, name, item):
+    def _reply_email(self, person, name, item):
         now = clock.now()
         prompt = REPLY_PROMPT.format(name=name, user=self.user, now=f"{now:%A, %B} {now.day}, {now.year}",
-                                     persona=contact.persona, notes=self.journal.notes(name),
+                                     persona=person.persona, notes=self.journal.notes(name),
                                      subject=item["subject"], body=item["body"].strip()[:3000])
 
         def done(text):
@@ -311,11 +371,14 @@ class LifeSim(QObject):
             self.mail_arrived.emit()
             self._announce_mail()
 
-        self._ask(contact, prompt, done)
+        self._ask(person.contact, prompt, done)
 
     def _tick(self):
         self.state["last_running"] = datetime.now().astimezone().isoformat(timespec="seconds")
         self._deliver_mail()
+        if not self.powered_off:
+            from . import mail_extras
+            mail_extras.tick(self)
         save_json(STATE_FILE, self.state)
         self._summarise_quiet_talks()
         if time.monotonic() >= self.next_story and (self.desktop.isVisible() or self.powered_off):
@@ -388,13 +451,20 @@ class LifeSim(QObject):
     def _announce_mail(self):
         if not network.is_connected():
             return   # they'll hear about it when they next connect
-        net = network.get(self.desktop)
         unread = self.mailbox.unread()
-        if net.tray is not None and unread:
-            sound.play_file("gotmail.wav")
-            last = unread[-1]
-            net.tray.showMessage("You've got mail!", f"{last['from']}: {last['subject']}"
-                                 + (f"  (+{len(unread) - 1} more)" if len(unread) > 1 else ""), None, 8000)
+        if not unread:
+            return
+        sound.play_file("gotmail.wav")
+        last = unread[-1]
+        text = f"{last['from']}: {last['subject']}" + (f"  (+{len(unread) - 1} more)" if len(unread) > 1 else "")
+        from .. import mailtray
+        tray = mailtray.get()
+        if tray is not None:                       # the balloon comes from MSN Hotmail's envelope
+            tray.notify("You've got mail!", text + "\nClick here to open MSN Hotmail.")
+            return
+        net = network.get(self.desktop)
+        if net.tray is not None:
+            net.tray.showMessage("You've got mail!", text, None, 8000)
 
     def connected(self):
         """Just dialed up: mention any mail that came in while offline."""

@@ -444,7 +444,7 @@ class IrcClient(QWidget):
         fields = {}
         for row, (key, label, default) in enumerate([
             ("realname", "&Full Name:", s.get("realname", user_name())),
-            ("email", "&Email Address:", s.get("email", f"{user_name().lower()}@aol.com")),
+            ("email", "&Email Address:", s.get("email", f"{user_name().lower()}@hotmail.com")),
             ("nick", "&Nickname:", s.get("nick", default_nick)),
             ("alt", "A&lternative:", s.get("alt", default_nick + "_")),
             ("autojoin", "&Join channels:", ", ".join(s.get("autojoin") or self.net.default_autojoin)),

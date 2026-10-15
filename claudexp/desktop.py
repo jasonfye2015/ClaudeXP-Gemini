@@ -42,6 +42,8 @@ class Desktop(QWidget):
         self.maintenance = maintenance.install(self)
         from . import life
         self.life = life.install(self)
+        from . import mailtray
+        self.mailtray = mailtray.install(self)          # MSN Hotmail's new-mail envelope
         from . import clippy
         self.clippy = clippy.install(self)
         self.start_menu = StartMenu(self)

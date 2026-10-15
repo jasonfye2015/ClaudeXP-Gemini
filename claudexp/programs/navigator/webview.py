@@ -45,6 +45,8 @@ class _Page(QWebEnginePage):
         if not main_frame or kind == QWebEnginePage.NavigationType.NavigationTypeRedirect:
             return True                                      # (a site's own redirect, e.g. after a favourite)
         target = url.toString()
+        if kind == QWebEnginePage.NavigationType.NavigationTypeFormSubmitted and sites.is_local(target):
+            return True                                      # a form on one of our own sites (Hotmail's Send)
         if self.view.expected and target == self.view.expected:
             self.view.expected = ""
             return True                                      # the load Netscape itself asked for

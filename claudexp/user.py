@@ -174,7 +174,7 @@ def muck_name(handle=None):
 
 def email_address(handle=None):
     slug = "".join(ch for ch in (handle or online_handle()).lower() if ch.isalnum())
-    return f"{slug or 'me'}@aol.com"
+    return f"{slug or 'me'}@hotmail.com"
 
 
 def known_as():

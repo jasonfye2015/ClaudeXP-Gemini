@@ -1,7 +1,7 @@
-"""Outlook Express 6 and the Windows Address Book. The Inbox is the living world's mailbox (buddies' emails,
-the same mail Netscape WebMail shows); you can write to buddies, reply and forward, and they answer a few minutes
-later (written by the model, in character). Mail written offline waits in the Outbox until Send/Recv. Folders:
-Inbox, Outbox, Sent Items, Deleted Items, Drafts. The Address Book lists every buddy's email address."""
+"""Outlook Express 6 and the Windows Address Book. The Inbox is your MSN Hotmail mailbox (the same mail the
+Hotmail web site and Netscape WebMail show); you can write to anyone you know, reply and forward, and they answer a
+few minutes later (written by the model, in character). Mail written offline waits in the Outbox until Send/Recv.
+Folders: Inbox, Bulk Mail, Outbox, Sent Items, Deleted Items, Drafts. The Address Book lists everyone's address."""
 import re
 
 from PySide6.QtCore import QRectF, QSize, Qt, QTimer
@@ -18,7 +18,7 @@ from .notepad import MENU_STYLE
 from .people import load_json, save_json
 
 STORE = DATA / "outlook.json"
-FOLDERS = [("inbox", "Inbox"), ("outbox", "Outbox"), ("sent", "Sent Items"), ("deleted", "Deleted Items"),
+FOLDERS = [("inbox", "Inbox"), ("bulk", "Bulk Mail"), ("outbox", "Outbox"), ("sent", "Sent Items"), ("deleted", "Deleted Items"),
            ("drafts", "Drafts")]
 STYLE = MENU_STYLE + """
 QWidget#oe { background: #ECE9D8; }
@@ -114,7 +114,7 @@ def resolve_address(text):
         return text
     sim = _life()
     if sim is not None:
-        for name in sim.buddies:
+        for name in sim.people:
             if name.lower() == text.lower():
                 return email_address(name)
     return text
@@ -365,7 +365,7 @@ class OutlookExpress(QWidget):
     # ---- data -------------------------------------------------------------------------------------------------
     def messages(self, folder):
         sim = _life()
-        if folder in ("inbox", "deleted"):
+        if folder in ("inbox", "deleted", "bulk"):
             box = sim.mailbox.messages() if sim is not None else []
             return [dict(m, kind="in") for m in box if m.get("folder", "inbox") == folder][::-1]
         return [dict(m, kind=folder) for m in _store()[folder]][::-1]
@@ -418,7 +418,7 @@ class OutlookExpress(QWidget):
         selected = self.list.currentItem().data(0, Qt.UserRole)["id"] if self.list.currentItem() else None
         self.list.blockSignals(True)
         self.list.clear()
-        incoming = self.folder in ("inbox", "deleted")
+        incoming = self.folder in ("inbox", "deleted", "bulk")
         self.list.setHeaderLabels(["From" if incoming else "To", "Subject", "Received" if incoming else "Sent"])
         for m in self.messages(self.folder):
             who = m["from"] if m["kind"] == "in" else m["to"]
@@ -607,7 +607,7 @@ def open_outlook(desktop):
 # ---- the Windows Address Book ----------------------------------------------------------------------------------------
 
 def open_address_book(desktop, on_pick=None):
-    """Every buddy and their email address. Double-click (or Select) to address a message."""
+    """Everyone you know and their email address. Double-click (or Select) to address a message."""
     from ..life import email_address
     sim = _life()
     body = QWidget()
@@ -623,7 +623,7 @@ def open_address_book(desktop, on_pick=None):
     tree.setRootIsDecorated(False)
     tree.setHeaderLabels(["Name", "E-Mail Address", "Home Phone"])
     tree.header().setSectionResizeMode(1, QHeaderView.Stretch)
-    names = sorted(sim.buddies, key=str.lower) if sim is not None else []
+    names = sorted(sim.people, key=str.lower) if sim is not None else []
     for name in names:
         item = QTreeWidgetItem([name, email_address(name), ""])
         item.setIcon(0, book_icon())

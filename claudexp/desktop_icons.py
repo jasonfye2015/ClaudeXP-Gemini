@@ -65,6 +65,7 @@ def builtins():
         ("prog:torrent", "ClaudeTorrent", lambda: programs.get("torrent").icon()),
         ("prog:rpg", "ClaudeRPG", lambda: programs.get("rpg").icon()),
         ("prog:iexplore", "Internet Explorer", lambda: programs.get("iexplore").icon()),
+        ("prog:hotmail", "MSN Hotmail", lambda: programs.get("hotmail").icon()),
         ("prog:adaware", "Ad-aware 5.6", lambda: programs.get("adaware").icon()),
         ("prog:navigator", "Netscape Navigator", lambda: programs.get("navigator").icon()),
         ("prog:claudeai", "ClaudeAI", lambda: programs.get("claudeai").icon()),
@@ -790,6 +791,7 @@ class IconManager(QObject):
             target = {"notepad": r"C:\WINDOWS\notepad.exe", "connect": r"C:\Program Files\America Online\isignup.exe",
                       "navigator": r"C:\Program Files\Netscape\Navigator\netscape.exe",
                       "iexplore": r"C:\Program Files\Internet Explorer\IEXPLORE.EXE",
+                      "hotmail": "http://www.hotmail.com/",
                       "adaware": r"C:\Program Files\Lavasoft\Ad-aware 5.6\Ad-aware.exe",
                       "claudeai": r"C:\Program Files\ClaudeAI\claudeai.exe",
                       "aim": r"C:\Program Files\ClaudeAIM\ClaudeAIM.exe",
@@ -824,6 +826,10 @@ class IconManager(QObject):
                       "doom": r"C:\Program Files\Doom\doom.exe", "doom2": r"C:\Program Files\Doom II\doom2.exe",
                       "wolf3d": r"C:\Program Files\Wolfenstein 3D\wolf3d.exe",
                       "heretic": r"C:\Program Files\Heretic\heretic.exe", "hexen": r"C:\Program Files\Hexen\hexen.exe"}.get(icon.key.split(":", 1)[1], "")
+            if target.startswith("http://"):          # an Internet Shortcut
+                properties(self.desktop, icon.label, [("Target type:", "Internet Shortcut"), ("URL:", target),
+                                                      ("-", ""), ("Opens with:", "Internet Explorer")], icon=icon.icon)
+                return
             properties(self.desktop, icon.label, [("Target type:", "Application"), ("Target:", target),
                                                   ("-", ""), ("Start in:", str(Path(target).parent))], icon=icon.icon)
             return
