@@ -430,14 +430,17 @@ def scan(base, progress=None):
                              title=(info or {}).get("title") or title, desc=(info or {}).get("desc", ""),
                              aired=(info or {}).get("aired", "")))
     for root in ad_dirs:
+        # a brand's own folder ('Commercials Orangina') keeps its ads apart: they air on their own channel
+        ad_key = "ORANGINA" if "orangina" in root.name.lower() else ""
         for p in videos(root):
             secs = secs_for(p)
             if not secs:
                 continue
             m = re.match(r"((?:19|20)\d\d)\s+(.+)", p.stem)
             title = m.group(2) if m else p.stem
+            title = re.sub(r"_\d{3,4}p$", "", title)                      # 'Orangina Bear_1080p'
             title = re.sub(r"\s*(full\s+)?(commercial|ad|promo)\s*$", "", title, flags=re.I).strip() or title
-            out.append(Media(p, "ad", secs, title=title, year=m.group(1) if m else ""))
+            out.append(Media(p, "ad", secs, title=title, year=m.group(1) if m else "", show_key=ad_key))
     try:
         INDEX_FILE.parent.mkdir(parents=True, exist_ok=True)
         INDEX_FILE.write_text(json.dumps(fresh), encoding="utf-8")

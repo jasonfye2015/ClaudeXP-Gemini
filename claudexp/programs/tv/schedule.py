@@ -206,8 +206,8 @@ KFUR_SHOWS = ("FOTP", "WOLFSRAIN", "DAMEKKO")
 
 
 def build_channels(items):
-    """The lineup: WAGG 4 (cartoons), KFUR 7 (animals and anime), KPAW 9 (movies), KHAH 13 (stand-up comedy), and
-    two dead channels."""
+    """The lineup: WAGG 4 (cartoons), KFUR 7 (animals and anime), KPAW 9 (movies), KANI 11 (anime, with the
+    Orangina commercials), KHAH 13 (stand-up comedy), and dead channels in the gaps."""
     by = {}
     for m in items:
         by.setdefault((m.kind, m.show_key), []).append(m)
@@ -245,9 +245,19 @@ def build_channels(items):
               "wolfsrain": by.get(("episode", "WOLFSRAIN"), [])},
         promos={"damekko": by.get(("promo", "DAMEKKO"), [])}, ads=ads, grid=30 * 60, fine=5 * 60,
         grids={"damekko": 15 * 60}, bundles={"damekko": 3})
+    kani = Channel(11, "KANI", "Anime 11: Japanese Animation Around the Clock", blocks=[
+        (6, 10, "damekko", "Useless Wolf Mornings"),
+        (10, 16, "wolfsrain", "Wolf's Rain Marathon"),
+        (16, 19, "damekko", "Useless Wolf After School"),
+        (19, 6, "wolfsrain", "Wolf's Rain Nights"),
+    ], pools={"damekko": shorts, "wolfsrain": by.get(("episode", "WOLFSRAIN"), [])},
+        promos={"damekko": by.get(("promo", "DAMEKKO"), []), "wolfsrain": by.get(("promo", "WOLFSRAIN"), [])},
+        ads=by.get(("ad", "ORANGINA"), []) or ads, grid=30 * 60, fine=5 * 60,
+        grids={"damekko": 15 * 60}, bundles={"damekko": 3})
     channels = [wagg, kpaw, khah]
-    if kfur.decks and any(kfur.decks.values()):
-        channels.append(kfur)
+    for ch in (kfur, kani):
+        if ch.decks and any(ch.decks.values()):
+            channels.append(ch)
     taken = {c.number for c in channels}
     dead = [Channel(n, "", "", dead=True) for n in (2, 7, 11) if n not in taken]
     return sorted(channels + dead, key=lambda c: c.number)
