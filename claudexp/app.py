@@ -3,7 +3,7 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 
-from . import programs, sound
+from . import chkdsk, programs, sound
 from .boot import BootScreen, ShutdownScreen
 from .power import BiosScreen, SafeOffScreen
 from .desktop import Desktop
@@ -29,6 +29,7 @@ class ClaudeXP(QMainWindow):
         self.welcome = WelcomeScreen()
         self.desktop = Desktop()
         self.shutdown_screen = ShutdownScreen()
+        self.chkdsk = chkdsk.ChkdskScreen()
         self.bios = BiosScreen()
         self.safe_off = SafeOffScreen()
         self.stack.addWidget(self.bios)
@@ -37,6 +38,8 @@ class ClaudeXP(QMainWindow):
         self.stack.addWidget(self.welcome)
         self.stack.addWidget(self.desktop)
         self.stack.addWidget(self.shutdown_screen)
+        self.stack.addWidget(self.chkdsk)
+        self.chkdsk.finished.connect(lambda: self._boot_hard_disk(checked=True))
         from .setup.gui import GuiSetup
         from .setup.oobe import Oobe
         from .setup.textmode import BootFromCD, RecoveryMenu, TextSetup
@@ -99,10 +102,17 @@ class ClaudeXP(QMainWindow):
         self.stack.setCurrentWidget(screen)
         screen.setFocus()
 
-    def _boot_hard_disk(self):
-        """The Windows XP boot screen, then whatever comes next (Setup, OOBE or the Welcome screen)."""
+    def _boot_hard_disk(self, checked=False):
+        """The Windows XP boot screen, then whatever comes next (Setup, OOBE or the Welcome screen).
+        After an unclean shutdown, the disk check comes first."""
         from . import setup
         stage = setup.stage()
+        if stage is None and not checked and chkdsk.needed():
+            self._show_screen(self.chkdsk)
+            self.chkdsk.start()
+            return
+        if stage is None:
+            chkdsk.mark_running()
         self._after_boot = {"gui": self._start_gui_setup, "oobe": self._start_oobe}.get(stage, self.show_welcome)
         self._show_screen(self.boot)
         self.boot.start()
@@ -120,6 +130,7 @@ class ClaudeXP(QMainWindow):
     def _setup_reboot(self, format_drive, program_history, memories):
         """The end of text-mode Setup: restart ClaudeXP for real (main.py wipes C: first)."""
         from . import setup
+        chkdsk.mark_clean()
         programs.shutdown_all()
         setup.reboot_into_gui_setup(QApplication.instance(), format_drive, program_history, memories)
 
@@ -228,6 +239,7 @@ class ClaudeXP(QMainWindow):
             return
         self._shutting_down = True
         self.locked = False
+        chkdsk.mark_clean()
         programs.shutdown_all()
         self.desktop.hide_start_menu()
         for win in list(self.desktop.windows):
@@ -246,6 +258,7 @@ class ClaudeXP(QMainWindow):
     def _exit(self):
         """Closing the real ClaudeXP window: shut down quickly and quit."""
         self._exiting = True
+        chkdsk.mark_clean()
         if self.stack.currentWidget() is self.safe_off:
             QApplication.quit()
             return
@@ -261,6 +274,7 @@ class ClaudeXP(QMainWindow):
         if self._shutting_down:
             return
         self._shutting_down = True
+        chkdsk.mark_clean()
         programs.shutdown_all()
         self.desktop.hide_start_menu()
         for win in list(self.desktop.windows):
