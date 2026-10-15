@@ -96,7 +96,8 @@ CATALOG = {
     "claudecraft": ("games", "ClaudeCraft: a block-building world in 3D. Walk, fly, break and place blocks; your world "
                              "is saved."),
     "furcadia": ("games", "Claudecadia: a Furcadia-style furry graphical chat world. Your AIM buddies log in as furres; hop around "
-                          "Willowmere Commons and three dreams, sit, chat, emote and whisper (/name message)."),
+                          "Willowmere Commons and 13 dreams to discover, sit, chat, emote, whisper (/name message) and open treasure "
+                          "chests."),
     "doom": ("games", "Doom (bring your own WAD)."),
     "doom2": ("games", "Doom II."),
     "wolf3d": ("games", "Wolfenstein 3D."),

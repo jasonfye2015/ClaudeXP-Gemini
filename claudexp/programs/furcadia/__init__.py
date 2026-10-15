@@ -1,6 +1,6 @@
 """Claudecadia (a Furcadia clone): the furry graphical chat world of 2001, simulated, with your AIM buddies as the other players.
 
-Isometric maps (Willowmere Commons and three dreams through its portals), furres painted in code and recoloured
+Isometric maps (Willowmere Commons and 13 dreams to discover through portals), furres painted in code and recoloured
 from each buddy's description, hopping, sitting, speech balloons, emotes and whispers. Art can be swapped for your
 own files in assets/furcadia/ (see art.py). Needs the Internet connection, like the MUCK and IRC.
 """
@@ -25,7 +25,7 @@ HOST, PORT = "lightbringer.claudecadia.com", 6500
 CHAT = {
     "say": ("#F0F0F0", False, False), "me": ("#FFE9A0", False, False), "emote": ("#9AE89A", False, True),
     "whisper": ("#8AD8FF", False, True), "system": ("#E8C860", False, False), "arrive": ("#A0A0B0", False, True),
-    "dream": ("#D8A8FF", True, False), "look": ("#F0D0A0", False, False), "note": ("#80C0FF", False, False),
+    "dream": ("#D8A8FF", True, False), "look": ("#F0D0A0", False, False), "found": ("#FFE070", True, False), "note": ("#80C0FF", False, False),
 }
 MENU_STYLE = """
 QMenuBar { background: #ECE9D8; font-family: Tahoma; font-size: 11px; }
@@ -158,8 +158,8 @@ class MapView(QWidget):
                 p.drawPixmap(top, pm)
                 boxes.append((QRectF(top.x() + 8, top.y() + 4, art.FW - 16, art.FOOT - 2), f))
         self.boxes = boxes
-        if m.night:
-            self._night(p, m, ox, oy)
+        if m.tint or m.particles:
+            self._ambience(p, m, ox, oy)
         # names on hover, then balloons on top of everything
         if self.hover is not None:
             for r, f in boxes:
@@ -187,29 +187,55 @@ class MapView(QWidget):
                         k2 = (t // 5 + x * 7 + y) % 14
                         p.drawLine(QPointF(sx + 2 - k2 * 0.6, sy + 5), QPointF(sx + 8 - k2 * 0.6, sy + 5))
 
-    def _night(self, p, m, ox, oy):
-        p.fillRect(self.rect(), QColor(10, 16, 60, 120))
-        p.setCompositionMode(QPainter.CompositionMode_Plus)
+    def _ambience(self, p, m, ox, oy):
+        """Night, cave dark or underwater blue over the map, glowing lights, and drifting particles."""
         p.setPen(Qt.NoPen)
-        for (x, y), name in m.obj.items():
-            if name in ("campfire", "lantern", "lamp"):
+        if m.tint:
+            p.fillRect(self.rect(), QColor(*m.tint))
+            p.setCompositionMode(QPainter.CompositionMode_Plus)
+            for (x, y), name in m.obj.items():
+                if name not in art.LIGHTS:
+                    continue
                 cx, cy = _centre(x, y)
-                r = 90 if name == "campfire" else 40
-                flick = (math.sin(self.frame * 0.4 + x) * 4) if name == "campfire" else 0
-                g = QRadialGradient(QPointF(ox + cx, oy + cy - 10), r + flick)
-                g.setColorAt(0, QColor(120, 70, 20, 150))
+                sx, sy = ox + cx, oy + cy - 10
+                r, (cr, cg, cb) = art.LIGHTS[name]
+                if not (-r < sx < self.width() + r and -r < sy < self.height() + r):
+                    continue
+                r += math.sin(self.frame * 0.4 + x) * 4 if name in ("campfire", "torch", "fireplace") else 0
+                g = QRadialGradient(QPointF(sx, sy), r)
+                g.setColorAt(0, QColor(cr, cg, cb, 150))
                 g.setColorAt(1, QColor(0, 0, 0, 0))
                 p.setBrush(QBrush(g))
-                p.drawEllipse(QPointF(ox + cx, oy + cy - 10), r + flick, (r + flick) * 0.7)
-        p.setCompositionMode(QPainter.CompositionMode_SourceOver)
+                p.drawEllipse(QPointF(sx, sy), r, r * 0.7)
+            p.setCompositionMode(QPainter.CompositionMode_SourceOver)
         t = self.frame * 0.05
+        kind = m.particles
+        w, h = max(1, self.width()), max(1, self.height())
         for fx, fy, ph in self.fireflies:
-            x = (fx * self.width() + math.sin(t + ph) * 30) % self.width()
-            y = (fy * self.height() + math.cos(t * 0.7 + ph) * 20) % self.height()
-            a = int(120 + 120 * math.sin(t * 3 + ph * 2))
-            if a > 40:
-                p.setBrush(QColor(230, 255, 140, max(0, min(255, a))))
-                p.drawEllipse(QPointF(x, y), 1.8, 1.8)
+            if kind == "fireflies":
+                x = (fx * w + math.sin(t + ph) * 30) % w
+                y = (fy * h + math.cos(t * 0.7 + ph) * 20) % h
+                a = int(120 + 120 * math.sin(t * 3 + ph * 2))
+                if a > 40:
+                    p.setBrush(QColor(230, 255, 140, max(0, min(255, a))))
+                    p.drawEllipse(QPointF(x, y), 1.8, 1.8)
+            elif kind == "snow":
+                x = (fx * w + math.sin(t * 0.8 + ph) * 18 + t * 8) % w
+                y = (fy * h + t * (30 + ph * 6)) % h
+                p.setBrush(QColor(255, 255, 255, 220))
+                p.drawEllipse(QPointF(x, y), 1.6 + ph % 1.2, 1.6 + ph % 1.2)
+            elif kind == "bubbles":
+                x = (fx * w + math.sin(t * 1.5 + ph) * 8) % w
+                y = h - (fy * h + t * (25 + ph * 5)) % h
+                p.setPen(QPen(QColor(220, 240, 255, 160), 1))
+                p.setBrush(QColor(255, 255, 255, 40))
+                p.drawEllipse(QPointF(x, y), 2 + ph % 2.5, 2 + ph % 2.5)
+                p.setPen(Qt.NoPen)
+            elif kind == "stars":
+                x, y = fx * w, fy * h * 0.45
+                a = int(140 + 110 * math.sin(t * 2 + ph * 3))
+                p.setBrush(QColor(255, 250, 220, max(0, min(255, a))))
+                p.drawEllipse(QPointF(x, y), 1.3, 1.3)
 
     def _name_tag(self, p, r, name):
         p.setFont(QFont("Tahoma", 8, QFont.Bold))
@@ -351,6 +377,8 @@ class MapView(QWidget):
         x, y = round(gx), round(gy)
         if w.here.signs.get((x, y)) and w.read_sign((x, y)):
             return
+        if w.here.obj.get((x, y)) == "chest" and w.open_chest((x, y)):
+            return
         w.walk_to(x, y)
         self.client.input.setFocus()
 
@@ -490,6 +518,7 @@ class FurcClient(QWidget):
         self.setStyleSheet(MENU_STYLE + PANEL_STYLE)
         self.world.line.connect(self.show_line)
         self.world.moved.connect(self._moved)
+        self.world.discovered.connect(lambda _mid: sound.play("ding"))
 
         bar = QMenuBar()
         file_menu = bar.addMenu("&File")
@@ -505,6 +534,7 @@ class FurcClient(QWidget):
             furre.addAction(label, lambda pose=pose: self.world.set_pose(pose))
         go = bar.addMenu("&Dreams")
         go.addAction("&Who's Online", lambda: self.world.who())
+        go.addAction("Dreams &Discovered", lambda: self.world.list_dreams() if self.world.logged_in else None)
         go.addAction("Go to &Willowmere Commons", lambda: self.world.go_home() if self.world.logged_in else None)
         help_menu = bar.addMenu("&Help")
         help_menu.addAction("&Commands", lambda: self.world._command("help", ""))
@@ -519,6 +549,8 @@ class FurcClient(QWidget):
         row = QHBoxLayout(panel)
         row.setContentsMargins(6, 6, 6, 6)
         row.setSpacing(8)
+        picture = art.sidebar_pixmap()
+        self.sidebar = Sidebar(self, picture) if picture is not None else None
         pad = QGridLayout()
         pad.setSpacing(2)
         for (r, c), facing, text in (((0, 0), art.NW, "↖"), ((0, 2), art.NE, "↗"),
@@ -536,7 +568,8 @@ class FurcClient(QWidget):
         turn.setFixedSize(30, 26)
         turn.clicked.connect(lambda: self.world.turn())
         pad.addWidget(turn, 1, 1)
-        row.addLayout(pad)
+        if self.sidebar is None:                  # no sidebar picture: the plain buttons instead
+            row.addLayout(pad)
         acts = QGridLayout()
         acts.setSpacing(3)
         for i, (label, slot) in enumerate((("Sit", lambda: self.world.set_pose("sit")),
@@ -551,7 +584,13 @@ class FurcClient(QWidget):
             b.clicked.connect(slot)
             b.clicked.connect(lambda: self.input.setFocus())
             acts.addWidget(b, i // 2, i % 2)
-        row.addLayout(acts)
+        if self.sidebar is None:
+            row.addLayout(acts)
+        else:
+            for i in range(pad.count()):
+                pad.itemAt(i).widget().hide()
+            for i in range(acts.count()):
+                acts.itemAt(i).widget().hide()
         chat = QVBoxLayout()
         chat.setSpacing(3)
         self.output = QTextBrowser()
@@ -569,9 +608,20 @@ class FurcClient(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
         root.setMenuBar(bar)
-        root.addWidget(self.view, 1)
-        root.addWidget(panel)
+        body = QHBoxLayout()
+        body.setSpacing(0)
+        left = QVBoxLayout()
+        left.setSpacing(0)
+        left.addWidget(self.view, 1)
+        left.addWidget(panel)
+        body.addLayout(left, 1)
+        if self.sidebar is not None:
+            body.addWidget(self.sidebar)
+        root.addLayout(body, 1)
         self.status = ""
+        self.side_timer = QTimer(self)                 # keep the name plate and pose highlight current
+        self.side_timer.timeout.connect(lambda: self.sidebar.update() if self.sidebar is not None else None)
+        self.side_timer.start(400)
 
     # ---- keys: arrows and the keypad move, even while typing ------------------------------------------------
     def eventFilter(self, obj, e):
@@ -598,6 +648,10 @@ class FurcClient(QWidget):
             return True
         if k == Qt.Key_F4:
             self.world.set_pose("lie")
+            return True
+        if e.modifiers() & Qt.ControlModifier and k in (Qt.Key_L, Qt.Key_U, Qt.Key_G):
+            {Qt.Key_L: lambda: self.world.set_pose("lie"), Qt.Key_U: self.world.use,
+             Qt.Key_G: self.world.get}[k]()
             return True
         return False
 
@@ -749,10 +803,206 @@ class FurcClient(QWidget):
             self.world.disconnect_session()
         self.connected = self.connecting = False
         self.view.timer.stop()
+        self.side_timer.stop()
 
     def closeEvent(self, e):
         self.shutdown()
         e.accept()
+
+
+# The sidebar picture's clickable spots, in the picture's own pixels (392 x 1024).
+HOTSPOTS = {
+    "help": ((148, 148, 104, 96), "Help!"),
+    "name": ((38, 277, 327, 33), "Your furre"),
+    "portrait": ((27, 345, 207, 206), "Your AIM buddy icon"),
+    "tab_b": ((82, 592, 72, 58), "Who's online"),
+    "tab_c": ((158, 592, 72, 58), "Dreams discovered"),
+    "tab_d": ((234, 592, 72, 58), "Edit your furre"),
+    "tab_e": ((312, 592, 74, 58), "Commands"),
+    "stand": ((18, 660, 72, 160), "Stand"),
+    "sit": ((92, 705, 70, 115), "Sit (F3)"),
+    "lie": ((20, 840, 140, 80), "Lie down (Ctrl+L)"),
+    "n7": ((170, 665, 85, 85), "Move up-left (7)"),
+    "n9": ((282, 665, 85, 85), "Move up-right (9)"),
+    "n1": ((170, 765, 85, 85), "Move down-left (1)"),
+    "n3": ((282, 765, 85, 85), "Move down-right (3)"),
+    "use": ((162, 902, 96, 96), "Use what's beside you (Ctrl+U)"),
+    "get": ((288, 898, 90, 104), "Get / pick up (Ctrl+G)"),
+    "exit": ((12, 958, 92, 54), "Exit to the title screen"),
+}
+SIDEBAR_W, SIDEBAR_H = 392, 1024
+
+
+class Sidebar(QWidget):
+    """Claudecadia's side panel: the sidebar picture (assets/furcadia/sidebar.jpg) with live parts painted on - your
+    furre's name on the name plate and your AIM buddy icon in the portrait frame - and every button clickable."""
+
+    def __init__(self, client, picture):
+        super().__init__()
+        self.client = client
+        self.picture = picture
+        self.scaled = None
+        self.hover = self.pressed = None
+        self.icon = None
+        self.setMouseTracking(True)
+        self.setMinimumHeight(420)
+        self.repeat = QTimer(self)
+        self.repeat.setInterval(330)
+        self.repeat.timeout.connect(lambda: self._act(self.pressed) if self.pressed in MOVES else None)
+
+    def sizeHint(self):
+        from PySide6.QtCore import QSize
+        return QSize(int(self.height() * SIDEBAR_W / SIDEBAR_H) or 210, 560)
+
+    def resizeEvent(self, e):
+        self.setFixedWidth(max(160, int(self.height() * SIDEBAR_W / SIDEBAR_H)))
+        self.scaled = None
+        super().resizeEvent(e)
+
+    def _scale(self):
+        return self.height() / SIDEBAR_H
+
+    def _rect(self, key):
+        (x, y, w, h), _tip = HOTSPOTS[key]
+        s = self._scale()
+        return QRectF(x * s, y * s, w * s, h * s)
+
+    def _at(self, pos):
+        for key in HOTSPOTS:
+            if self._rect(key).contains(QPointF(pos)):
+                return key
+        return None
+
+    def buddy_icon(self):
+        if self.icon is None:
+            pm = QPixmap()
+            try:
+                from ..aim import ensure_aim_path
+                ensure_aim_path()
+                from claudeaim import paths as aim_paths
+                from claudeaim.storage import Settings
+                path = aim_paths.resolve_icon(Settings()["buddy_icon"])
+                if path:
+                    pm = QPixmap(str(path))
+            except Exception:
+                pm = QPixmap()
+            if pm.isNull():
+                from ... import user
+                pm = user.picture_pixmap()
+            self.icon = pm
+        return self.icon
+
+    def paintEvent(self, _e):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.SmoothPixmapTransform)
+        if self.scaled is None or self.scaled.height() != self.height():
+            self.scaled = self.picture.scaled(self.width(), self.height(), Qt.IgnoreAspectRatio,
+                                              Qt.SmoothTransformation)
+        p.drawPixmap(0, 0, self.scaled)
+        # the portrait: your AIM buddy icon
+        r = self._rect("portrait")
+        icon = self.buddy_icon()
+        if icon is not None and not icon.isNull():
+            fit = icon.scaled(int(r.width()), int(r.height()), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            p.fillRect(r, QColor("#FFFFFF"))
+            p.drawPixmap(QPointF(r.center().x() - fit.width() / 2, r.center().y() - fit.height() / 2), fit)
+        # the name plate
+        world = self.client.world
+        name = world.me.name if world.me is not None else (world.player_data or {}).get("name", "")
+        if name:
+            r = self._rect("name")
+            font = QFont("Georgia", max(7, int(r.height() * 0.5)), QFont.Bold)
+            p.setFont(font)
+            p.setPen(QColor(255, 255, 255, 120))
+            p.drawText(r.translated(1, 1), Qt.AlignCenter, name)
+            p.setPen(QColor("#2A1450"))
+            p.drawText(r, Qt.AlignCenter, name)
+        # the pose you're in, and whatever the mouse is over
+        p.setRenderHint(QPainter.Antialiasing)
+        if world.me is not None and world.logged_in:
+            pose = world.me.pose
+            r = self._rect(pose if pose in ("stand", "sit", "lie") else "stand")
+            p.setPen(QPen(QColor(255, 240, 160, 200), 2))
+            p.setBrush(QColor(255, 240, 160, 40))
+            p.drawRoundedRect(r.adjusted(2, 2, -2, -2), 8, 8)
+        if self.hover and self.hover not in ("name", "portrait"):
+            r = self._rect(self.hover)
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(0, 0, 0, 60) if self.pressed == self.hover else QColor(255, 255, 255, 45))
+            p.drawRoundedRect(r.adjusted(3, 3, -3, -3), 10, 10)
+        p.end()
+
+    def event(self, e):
+        from PySide6.QtCore import QEvent
+        from PySide6.QtWidgets import QToolTip
+        if e.type() == QEvent.ToolTip:
+            key = self._at(e.pos())
+            if key:
+                QToolTip.showText(e.globalPos(), HOTSPOTS[key][1], self)
+            else:
+                QToolTip.hideText()
+            return True
+        return super().event(e)
+
+    def mouseMoveEvent(self, e):
+        key = self._at(e.position())
+        if key != self.hover:
+            self.hover = key
+            self.setCursor(Qt.PointingHandCursor if key and key not in ("name",) else Qt.ArrowCursor)
+            self.update()
+
+    def leaveEvent(self, _e):
+        self.hover = None
+        self.update()
+
+    def mousePressEvent(self, e):
+        if e.button() != Qt.LeftButton:
+            return
+        self.pressed = self._at(e.position())
+        if self.pressed:
+            sound.play("menu") if self.pressed not in MOVES else None
+            self._act(self.pressed)
+            if self.pressed in MOVES:
+                self.repeat.start()
+        self.update()
+
+    def mouseReleaseEvent(self, _e):
+        self.pressed = None
+        self.repeat.stop()
+        self.update()
+
+    def _act(self, key):
+        c, w = self.client, self.client.world
+        if key in MOVES:
+            w.step(MOVES[key])
+        elif key in ("stand", "sit", "lie"):
+            if w.me is not None:
+                w.me.path = []
+                w.me.pose = key
+        elif key == "help":
+            w._command("help", "")
+        elif key == "portrait":
+            if w.me is not None:
+                w.look_at(w.me)
+        elif key == "tab_b":
+            w.who()
+        elif key == "tab_c":
+            w.list_dreams() if w.logged_in else None
+        elif key == "tab_d":
+            c.edit_furre()
+        elif key == "tab_e":
+            w._command("help", "")
+        elif key == "use":
+            w.use()
+        elif key == "get":
+            w.get()
+        elif key == "exit":
+            c.disconnect_world()
+        c.input.setFocus()
+        self.update()
+
+
+MOVES = {"n7": art.NW, "n9": art.NE, "n1": art.SW, "n3": art.SE}
 
 
 _frame = None
@@ -773,7 +1023,7 @@ def launch(desktop):
     if not _listening:
         network.on_disconnect(desktop, _network_lost)
         _listening = True
-    _frame = XPWindow(desktop, "Claudecadia", client, furc_icon(), size=(800, 600))
+    _frame = XPWindow(desktop, "Claudecadia", client, furc_icon(), size=(900, 620))
     client.frame = _frame
     _frame.destroyed.connect(_forget)
     desktop.open_window(_frame)

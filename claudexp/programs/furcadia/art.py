@@ -233,6 +233,16 @@ FLOORS = {
     "water": ("#3A78C0", ["#4A88D0", "#2E6AB0", "#5A98DC"], False),
     "deepwater": ("#2A5A9C", ["#3468AA", "#224E8C"], False),
     "void": ("#000000", [], False),
+    "snow": ("#EEF2F8", ["#FFFFFF", "#DCE4F0", "#D0DAEA"], True),
+    "ice": ("#B8DCF0", ["#D0ECFA", "#A0CCE8"], True),
+    "cave": ("#5A5048", ["#4A4038", "#6A6058", "#504640"], True),
+    "marble": ("#E8E4DC", ["#D8D2C8", "#F4F0EA"], True),
+    "cloud": ("#F4F6FF", ["#FFFFFF", "#E0E6F8"], True),
+    "sky": ("#9CC8F0", ["#B0D4F4", "#8ABCE8"], False),
+    "wheat": ("#D8B850", ["#C8A840", "#E8C860", "#B89838"], True),
+    "seafloor": ("#C8B88A", ["#B8A87A", "#D8C89A", "#E0D0A8"], True),
+    "rainbow": ("#E04040", [], True),
+    "mud": ("#6A5A3A", ["#5A4A2E", "#7A6A48"], True),
 }
 
 
@@ -284,6 +294,49 @@ class Tiles:
                 p.setPen(QColor(c))
                 for _ in range(30):
                     p.drawPoint(rnd.randrange(TW), rnd.randrange(TH))
+        elif name == "ice":
+            p.setPen(QPen(QColor(255, 255, 255, 150), 1))
+            for _ in range(5):
+                x, y = rnd.uniform(0, TW), rnd.uniform(0, TH)
+                p.drawLine(QPointF(x, y), QPointF(x + rnd.uniform(6, 14), y - rnd.uniform(2, 6)))
+            p.setPen(QColor(specks[1]))
+            for _ in range(30):
+                p.drawPoint(rnd.randrange(TW), rnd.randrange(TH))
+        elif name == "marble":
+            p.setPen(QPen(QColor(150, 140, 130, 110), 1))
+            for _ in range(3):
+                path = QPainterPath(QPointF(rnd.uniform(0, TW), rnd.uniform(0, TH)))
+                path.cubicTo(QPointF(rnd.uniform(0, TW), rnd.uniform(0, TH)),
+                             QPointF(rnd.uniform(0, TW), rnd.uniform(0, TH)),
+                             QPointF(rnd.uniform(0, TW), rnd.uniform(0, TH)))
+                p.drawPath(path)
+            p.setPen(QPen(QColor(120, 110, 100, 90), 1))
+            p.setBrush(Qt.NoBrush)
+            p.drawPolygon(_diamond(TW - 2, TH - 1, 1, 0.5))
+        elif name == "cloud":
+            p.setPen(Qt.NoPen)
+            for _ in range(10):
+                p.setBrush(QColor(rnd.choice(["#FFFFFF", "#E8ECFA", "#F8FAFF"])))
+                p.drawEllipse(QPointF(rnd.uniform(0, TW), rnd.uniform(0, TH)), rnd.uniform(5, 11), rnd.uniform(3, 6))
+        elif name == "sky":
+            p.setPen(Qt.NoPen)
+            for _ in range(2):
+                p.setBrush(QColor(255, 255, 255, 90))
+                p.drawEllipse(QPointF(rnd.uniform(8, TW - 8), rnd.uniform(6, TH - 6)), rnd.uniform(8, 14), 3)
+        elif name == "wheat":
+            for _ in range(70):
+                x, y = rnd.randrange(TW), rnd.randrange(2, TH)
+                p.setPen(QColor(rnd.choice(specks)))
+                p.drawLine(x, y, x + rnd.choice((-1, 0, 1)), y - 4)
+        elif name == "rainbow":
+            bands = ["#E04040", "#F08A30", "#F0D040", "#50B850", "#4A80D8", "#8A50C8"]
+            for i, c in enumerate(bands):
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor(c))
+                off = i * TW / len(bands) / 2
+                p.drawPolygon(QPolygonF([QPointF(off, TH / 2 + off / 2), QPointF(TW / 2 + off, off / 2),
+                                         QPointF(TW / 2 + off + TW / 12, off / 2 + TW / 24),
+                                         QPointF(off + TW / 12, TH / 2 + off / 2 + TW / 24)]))
         else:
             for _ in range(140):
                 p.setPen(QColor(rnd.choice(specks)) if specks else Qt.NoPen)
@@ -324,7 +377,17 @@ OBJECTS = {
     "wall": (False, False), "woodwall": (False, False), "barrel": (False, False), "crate": (False, False),
     "stool": (True, True), "lantern": (False, False), "counter": (False, False), "plant": (False, False),
     "cushion": (True, True), "shell": (True, False), "bigtree": (False, False),
+    "snowpine": (False, False), "snowman": (False, False), "crystal": (False, False),
+    "stalagmite": (False, False), "column": (False, False), "ruin": (False, False), "statue": (False, False),
+    "telescope": (False, False), "cactus": (False, False), "tent": (False, False), "hay": (True, True),
+    "scarecrow": (False, False), "sunflower": (False, False), "lilypad": (True, False), "reeds": (False, False),
+    "coral": (False, False), "kelp": (False, False), "stall": (False, False), "torch": (False, False),
+    "chest": (False, False),
 }
+# things that glow in the dark dreams: name -> (radius, colour)
+LIGHTS = {"campfire": (90, (120, 70, 20)), "lantern": (40, (120, 80, 30)), "lamp": (44, (110, 90, 40)),
+          "torch": (60, (130, 70, 20)), "crystal": (52, (60, 80, 140)), "stall": (56, (120, 80, 30)),
+          "fireplace": (80, (120, 60, 20))}
 
 
 def obj_walkable(name):
@@ -342,7 +405,7 @@ class Objects:
         self.cache = {}
 
     def get(self, name, frame=0, variant=0):
-        animated = name in ("portal", "campfire", "fountain", "lantern", "fireplace")
+        animated = name in ("portal", "campfire", "fountain", "lantern", "fireplace", "crystal", "torch", "kelp")
         key = (name, frame % 4 if animated else 0, variant % 3)
         if key not in self.cache:
             pm = _override(ART / "objects" / f"{name}.png")
@@ -746,6 +809,290 @@ class Objects:
             p.setPen(QPen(QColor("#1E5A2A"), 1))
             p.setBrush(QColor("#3A8A3A"))
             p.drawEllipse(QPointF(cx + dx, cy + dy), 6, 4)
+
+    def _snowpine(self, p, cx, cy, frame, rnd):
+        self._pine(p, cx, cy, frame, rnd)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(255, 255, 255, 230))
+        for y, hw in ((-14, 22), (-34, 18), (-52, 14), (-68, 9)):
+            p.drawPolygon(QPolygonF([QPointF(cx - hw * 0.55, cy + y - 12), QPointF(cx + hw * 0.55, cy + y - 12),
+                                     QPointF(cx, cy + y - 30)]))
+            p.drawEllipse(QPointF(cx - hw * 0.6, cy + y - 2), 4, 2)
+            p.drawEllipse(QPointF(cx + hw * 0.5, cy + y - 3), 4, 2)
+
+    def _snowman(self, p, cx, cy, frame, rnd):
+        self._shadow(p, cx, cy, 14, 5)
+        p.setPen(QPen(QColor("#A0B0C8"), 1))
+        p.setBrush(QColor("#FAFCFF"))
+        for y, r in ((-10, 12), (-30, 9), (-45, 7)):
+            p.drawEllipse(QPointF(cx, cy + y), r, r)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor("#202020"))
+        p.drawEllipse(QPointF(cx - 2.5, cy - 47), 1.2, 1.2)
+        p.drawEllipse(QPointF(cx + 2.5, cy - 47), 1.2, 1.2)
+        for y in (-34, -29, -24):
+            p.drawEllipse(QPointF(cx, cy + y), 1.2, 1.2)
+        p.setBrush(QColor("#F08020"))
+        p.drawPolygon(QPolygonF([QPointF(cx, cy - 45), QPointF(cx + 8, cy - 44), QPointF(cx, cy - 43)]))
+        p.setBrush(QColor("#C03030"))
+        p.drawRect(QRectF(cx - 8, cy - 40, 16, 3))
+        p.drawRect(QRectF(cx + 3, cy - 40, 3, 9))
+        p.setBrush(QColor("#202024"))
+        p.drawRect(QRectF(cx - 6, cy - 60, 12, 9))
+        p.drawRect(QRectF(cx - 9, cy - 52, 18, 2))
+        p.setPen(QPen(QColor("#5A3A22"), 1.5))
+        p.drawLine(QPointF(cx - 9, cy - 30), QPointF(cx - 18, cy - 38))
+        p.drawLine(QPointF(cx + 9, cy - 30), QPointF(cx + 18, cy - 36))
+
+    def _crystal(self, p, cx, cy, frame, rnd):
+        glow = QRadialGradient(QPointF(cx, cy - 18), 30)
+        a = 90 + [0, 30, 50, 30][frame % 4]
+        hue = rnd.choice(["#80C8FF", "#C890FF", "#80FFD0"])
+        g = QColor(hue)
+        glow.setColorAt(0, QColor(g.red(), g.green(), g.blue(), a))
+        glow.setColorAt(1, QColor(g.red(), g.green(), g.blue(), 0))
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(glow))
+        p.drawEllipse(QPointF(cx, cy - 18), 30, 24)
+        for dx, hgt, w in ((-8, 26, 6), (6, 34, 7), (0, 44, 8), (12, 20, 5), (-14, 16, 5)):
+            p.setPen(QPen(_shade(hue, 0.5), 1))
+            p.setBrush(_shade(hue, 0.85))
+            p.drawPolygon(QPolygonF([QPointF(cx + dx - w, cy), QPointF(cx + dx - w * 0.7, cy - hgt * 0.8),
+                                     QPointF(cx + dx, cy - hgt), QPointF(cx + dx + w * 0.7, cy - hgt * 0.8),
+                                     QPointF(cx + dx + w, cy)]))
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(255, 255, 255, 120))
+            p.drawPolygon(QPolygonF([QPointF(cx + dx - w * 0.5, cy - 2), QPointF(cx + dx - w * 0.4, cy - hgt * 0.75),
+                                     QPointF(cx + dx, cy - hgt * 0.95), QPointF(cx + dx - w * 0.1, cy - 2)]))
+
+    def _stalagmite(self, p, cx, cy, frame, rnd):
+        self._shadow(p, cx, cy, 14, 5)
+        for dx, hgt, w in ((-6, 30, 9), (7, 20, 7), (0, 42, 8)):
+            p.setPen(QPen(QColor("#3A3028"), 1))
+            p.setBrush(QColor("#7A6A5A"))
+            p.drawPolygon(QPolygonF([QPointF(cx + dx - w, cy), QPointF(cx + dx, cy - hgt), QPointF(cx + dx + w, cy)]))
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(255, 255, 255, 35))
+            p.drawPolygon(QPolygonF([QPointF(cx + dx - w * 0.6, cy - 2), QPointF(cx + dx, cy - hgt),
+                                     QPointF(cx + dx - w * 0.1, cy - 2)]))
+
+    def _column(self, p, cx, cy, frame, rnd, broken=False):
+        self._shadow(p, cx, cy, 16, 6)
+        height = rnd.choice((30, 40, 24)) if broken else 70
+        self._box(p, cx, cy, 14, 7, 6, "#E8E4DC", "#C8C2B8", "#B8B2A8")
+        g = QLinearGradient(cx - 9, 0, cx + 9, 0)
+        g.setColorAt(0, QColor("#C8C2B8"))
+        g.setColorAt(0.4, QColor("#F4F0EA"))
+        g.setColorAt(1, QColor("#A8A298"))
+        p.setPen(QPen(QColor("#8A847A"), 1))
+        p.setBrush(QBrush(g))
+        p.drawRect(QRectF(cx - 9, cy - 6 - height, 18, height))
+        p.setPen(QPen(QColor(0, 0, 0, 40), 1))
+        for dx in (-5, 0, 5):
+            p.drawLine(QPointF(cx + dx, cy - 6), QPointF(cx + dx, cy - 6 - height))
+        if broken:
+            p.setPen(QPen(QColor("#8A847A"), 1))
+            p.setBrush(QColor("#D8D2C8"))
+            top = cy - 6 - height
+            p.drawPolygon(QPolygonF([QPointF(cx - 9, top), QPointF(cx - 3, top - 6), QPointF(cx + 2, top - 1),
+                                     QPointF(cx + 9, top - 5), QPointF(cx + 9, top + 2), QPointF(cx - 9, top + 2)]))
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor("#4A8A3A"))
+            for _ in range(5):
+                p.drawEllipse(QPointF(cx + rnd.uniform(-9, 9), cy - rnd.uniform(6, height)), 2.5, 2)
+        else:
+            self._box(p, cx, cy - 6 - height, 14, 7, 6, "#F0ECE4", "#D0CAC0", "#C0BAB0")
+
+    def _ruin(self, p, cx, cy, frame, rnd):
+        self._column(p, cx, cy, frame, rnd, broken=True)
+
+    def _statue(self, p, cx, cy, frame, rnd):
+        self._box(p, cx, cy, 16, 8, 14, "#C8C2B8", "#A8A298", "#989288")
+        stone = Look(rnd.choice(["canine", "feline", "dragon", "avian"]), "#B8B4AC", "#D0CCC4", "#8A867E")
+        pm = QPixmap(FW * 2, FH * 2)
+        pm.fill(Qt.transparent)
+        q = QPainter(pm)
+        q.setRenderHint(QPainter.Antialiasing)
+        q.scale(2, 2)
+        draw_furre(q, stone, "sit")
+        q.end()
+        pm.setDevicePixelRatio(2)
+        p.drawPixmap(QPointF(cx - FW / 2 * 1.2, cy - 14 - FOOT * 1.2), pm.scaled(int(FW * 2.4), int(FH * 2.4)))
+
+    def _telescope(self, p, cx, cy, frame, rnd):
+        self._shadow(p, cx, cy, 14, 5)
+        p.setPen(QPen(QColor("#3A2A18"), 2))
+        for dx, dy in ((-10, 4), (10, 4), (0, -6)):
+            p.drawLine(QPointF(cx, cy - 26), QPointF(cx + dx, cy + dy))
+        p.setPen(QPen(QColor("#5A4210"), 1))
+        g = QLinearGradient(0, cy - 50, 0, cy - 30)
+        g.setColorAt(0, QColor("#E8C860"))
+        g.setColorAt(1, QColor("#A07820"))
+        p.setBrush(QBrush(g))
+        tube = QPolygonF([QPointF(cx - 14, cy - 22), QPointF(cx + 16, cy - 46), QPointF(cx + 20, cy - 40),
+                          QPointF(cx - 10, cy - 16)])
+        p.drawPolygon(tube)
+        p.setBrush(QColor("#2A2A40"))
+        p.drawEllipse(QPointF(cx + 18, cy - 43), 3, 4)
+
+    def _cactus(self, p, cx, cy, frame, rnd):
+        self._shadow(p, cx, cy, 10, 4)
+        p.setPen(QPen(QColor("#2A5A2A"), 1))
+        p.setBrush(QColor("#4A8A3A"))
+        p.drawRoundedRect(QRectF(cx - 6, cy - 48, 12, 48), 6, 6)
+        p.drawRoundedRect(QRectF(cx - 18, cy - 34, 8, 18), 4, 4)
+        p.drawRect(QRectF(cx - 14, cy - 20, 10, 6))
+        p.drawRoundedRect(QRectF(cx + 9, cy - 40, 8, 20), 4, 4)
+        p.drawRect(QRectF(cx + 4, cy - 26, 9, 6))
+        p.setPen(QPen(QColor(255, 255, 255, 90), 1))
+        for y in range(-44, -4, 7):
+            p.drawPoint(QPointF(cx - 3, cy + y))
+            p.drawPoint(QPointF(cx + 3, cy + y + 3))
+        if rnd.random() < 0.5:
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor("#F070A0"))
+            p.drawEllipse(QPointF(cx, cy - 49), 3, 2.5)
+
+    def _tent(self, p, cx, cy, frame, rnd):
+        self._shadow(p, cx, cy, 30, 12)
+        col = rnd.choice(["#C8A060", "#B05040", "#E0D0B0"])
+        p.setPen(QPen(_shade(col, 0.5), 1))
+        p.setBrush(_shade(col, 0.8))
+        p.drawPolygon(QPolygonF([QPointF(cx - 30, cy), QPointF(cx, cy + 14), QPointF(cx, cy - 40)]))
+        p.setBrush(QColor(col))
+        p.drawPolygon(QPolygonF([QPointF(cx, cy + 14), QPointF(cx + 30, cy), QPointF(cx, cy - 40)]))
+        p.setBrush(QColor("#2A1A10"))
+        p.drawPolygon(QPolygonF([QPointF(cx + 4, cy + 12), QPointF(cx + 16, cy + 6), QPointF(cx + 6, cy - 16)]))
+        p.setPen(QPen(QColor("#5A3A22"), 2))
+        p.drawLine(QPointF(cx, cy - 40), QPointF(cx, cy - 48))
+
+    def _hay(self, p, cx, cy, frame, rnd):
+        self._box(p, cx, cy, 16, 8, 14, "#E8C860", "#C8A040", "#B89030")
+        p.setPen(QPen(QColor("#8A6A20"), 1))
+        for i in range(1, 4):
+            p.drawLine(QPointF(cx - 16, cy - i * 3.5), QPointF(cx, cy + 8 - i * 3.5))
+
+    def _scarecrow(self, p, cx, cy, frame, rnd):
+        self._shadow(p, cx, cy, 10, 4)
+        p.setPen(QPen(QColor("#5A3A22"), 3))
+        p.drawLine(QPointF(cx, cy), QPointF(cx, cy - 56))
+        p.drawLine(QPointF(cx - 18, cy - 40), QPointF(cx + 18, cy - 40))
+        p.setPen(QPen(QColor("#4A3018"), 1))
+        p.setBrush(QColor("#4A70B8"))
+        p.drawRect(QRectF(cx - 10, cy - 44, 20, 22))
+        p.setBrush(QColor("#E8D090"))
+        p.drawEllipse(QPointF(cx, cy - 52), 7, 7)
+        p.setBrush(QColor("#8A5A22"))
+        p.drawPolygon(QPolygonF([QPointF(cx - 12, cy - 56), QPointF(cx + 12, cy - 56), QPointF(cx, cy - 68)]))
+        p.setPen(QPen(QColor("#E8C860"), 1))
+        for dx in (-18, -15, 15, 18):
+            p.drawLine(QPointF(cx + dx, cy - 40), QPointF(cx + dx * 1.1, cy - 34))
+
+    def _sunflower(self, p, cx, cy, frame, rnd):
+        for dx, h in ((-8, 40), (6, 48), (0, 34)):
+            p.setPen(QPen(QColor("#3A7A2A"), 2))
+            p.drawLine(QPointF(cx + dx, cy), QPointF(cx + dx, cy - h))
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor("#4A9A3A"))
+            p.drawEllipse(QPointF(cx + dx + 4, cy - h * 0.5), 4, 2)
+            p.setBrush(QColor("#F0C020"))
+            for i in range(10):
+                from math import cos, radians, sin
+                a = radians(i * 36)
+                p.drawEllipse(QPointF(cx + dx + cos(a) * 5, cy - h + sin(a) * 5), 3, 2)
+            p.setBrush(QColor("#5A3A12"))
+            p.drawEllipse(QPointF(cx + dx, cy - h), 3.5, 3.5)
+
+    def _lilypad(self, p, cx, cy, frame, rnd):
+        p.setPen(QPen(QColor("#1E5A22"), 1))
+        p.setBrush(QColor("#3A9A3A"))
+        p.drawPie(QRectF(cx - 18, cy - 9, 36, 18), 20 * 16, 320 * 16)
+        p.drawPie(QRectF(cx - 10, cy - 1, 18, 9), 200 * 16, 300 * 16)
+        if rnd.random() < 0.5:
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor("#F8C0D8"))
+            for i in range(6):
+                from math import cos, radians, sin
+                a = radians(i * 60)
+                p.drawEllipse(QPointF(cx + 4 + cos(a) * 3, cy - 4 + sin(a) * 1.6), 2.5, 1.5)
+            p.setBrush(QColor("#F8E040"))
+            p.drawEllipse(QPointF(cx + 4, cy - 4), 1.4, 1)
+
+    def _reeds(self, p, cx, cy, frame, rnd):
+        for i in range(9):
+            x = cx + rnd.uniform(-14, 14)
+            h = rnd.uniform(18, 36)
+            p.setPen(QPen(QColor("#5A8A3A"), 1.5))
+            p.drawLine(QPointF(x, cy + rnd.uniform(-4, 4)), QPointF(x + rnd.uniform(-3, 3), cy - h))
+            if i % 3 == 0:
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor("#6A4626"))
+                p.drawRoundedRect(QRectF(x - 2, cy - h - 2, 4, 10), 2, 2)
+
+    def _coral(self, p, cx, cy, frame, rnd):
+        col = rnd.choice(["#F07890", "#F0A040", "#C060E0", "#F05050"])
+        p.setPen(QPen(_shade(col, 0.6), 4, Qt.SolidLine, Qt.RoundCap))
+        for dx, dy, tx, ty in ((0, 0, -4, -24), (-4, -14, -14, -28), (-2, -18, 4, -34), (2, -8, 14, -22),
+                               (12, -18, 16, -30)):
+            p.drawLine(QPointF(cx + dx, cy + dy), QPointF(cx + tx, cy + ty))
+        p.setPen(QPen(QColor(col), 2.5, Qt.SolidLine, Qt.RoundCap))
+        for dx, dy, tx, ty in ((0, 0, -4, -24), (-4, -14, -14, -28), (-2, -18, 4, -34), (2, -8, 14, -22),
+                               (12, -18, 16, -30)):
+            p.drawLine(QPointF(cx + dx, cy + dy), QPointF(cx + tx, cy + ty))
+
+    def _kelp(self, p, cx, cy, frame, rnd):
+        sway = [0, 2, 3, 2][frame % 4]
+        for dx in (-6, 3, 9):
+            path = QPainterPath(QPointF(cx + dx, cy))
+            path.cubicTo(QPointF(cx + dx - 6 + sway, cy - 20), QPointF(cx + dx + 6 + sway, cy - 40),
+                         QPointF(cx + dx + sway * 2, cy - 60))
+            p.setPen(QPen(QColor("#2E6A3A"), 4, Qt.SolidLine, Qt.RoundCap))
+            p.drawPath(path)
+            p.setPen(QPen(QColor("#4A9A4A"), 2, Qt.SolidLine, Qt.RoundCap))
+            p.drawPath(path)
+
+    def _stall(self, p, cx, cy, frame, rnd):
+        self._box(p, cx, cy, 26, 13, 20, "#A87A48", "#7A5230", "#6A4626")
+        p.setPen(QPen(QColor("#4A3018"), 2))
+        for dx, dy in ((-24, -1), (24, -1), (0, 12), (0, -12)):
+            p.drawLine(QPointF(cx + dx, cy + dy - 20), QPointF(cx + dx, cy + dy - 46))
+        cols = rnd.choice([("#C03030", "#F8F0E0"), ("#3050B0", "#F8F0E0"), ("#2A8A4A", "#F8E040")])
+        for i in range(6):
+            t0, t1 = i / 6, (i + 1) / 6
+            a = QPointF(cx - 28 + 28 * t0, cy - 46 + 14 * t0)
+            b = QPointF(cx - 28 + 28 * t1, cy - 46 + 14 * t1)
+            c = QPointF(b.x() + 28, b.y() - 14 - 0)
+            d = QPointF(a.x() + 28, a.y() - 14)
+            p.setPen(QPen(QColor(0, 0, 0, 70), 1))
+            p.setBrush(QColor(cols[i % 2]))
+            p.drawPolygon(QPolygonF([a, b, c, d]))
+        for i in range(4):
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(rnd.choice(["#F04040", "#F0A030", "#F0E060", "#80C040", "#A060E0"])))
+            p.drawEllipse(QPointF(cx - 14 + i * 9, cy - 22 + i * 2), 3.5, 3)
+        p.setBrush(QColor("#FFD070"))
+        p.drawEllipse(QPointF(cx - 26, cy - 44), 3, 3)
+
+    def _torch(self, p, cx, cy, frame, rnd):
+        p.setPen(QPen(QColor("#4A3018"), 3))
+        p.drawLine(QPointF(cx, cy), QPointF(cx, cy - 36))
+        p.setPen(QPen(QColor("#2A2A30"), 1))
+        p.setBrush(QColor("#3A3A40"))
+        p.drawRect(QRectF(cx - 4, cy - 42, 8, 6))
+        flick = [0, 3, 1, 4][frame % 4]
+        for col, sc in (("#E0401A", 1.0), ("#F8A020", 0.65), ("#FFE070", 0.35)):
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(col))
+            p.drawEllipse(QPointF(cx + (flick - 2) * 0.3, cy - 48 - flick * 0.5), 5 * sc, (10 + flick) * sc)
+
+    def _chest(self, p, cx, cy, frame, rnd):
+        self._box(p, cx, cy, 14, 7, 14, "#A8702E", "#8A5A22", "#7A4A1A")
+        p.setPen(QPen(QColor("#E8C040"), 1.5))
+        p.drawLine(QPointF(cx - 14, cy - 8), QPointF(cx, cy - 1))
+        p.drawLine(QPointF(cx, cy - 1), QPointF(cx + 14, cy - 8))
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor("#F8D040"))
+        p.drawRect(QRectF(cx - 2, cy - 5, 4, 4))
 
     def _shell(self, p, cx, cy, frame, rnd):
         p.setPen(QPen(QColor("#B08070"), 1))
@@ -1166,6 +1513,11 @@ def icon():
 
 
 _splash = {}
+
+
+def sidebar_pixmap():
+    """assets/furcadia/sidebar.jpg (or .png), the side panel picture; None if there isn't one."""
+    return _override(ART / "sidebar.png") or _override(ART / "sidebar.jpg")
 
 
 def splash_pixmap(w, h):

@@ -6,6 +6,10 @@ Anything missing stays hand-drawn, so you can replace one picture at a time.
 
 splash.png or splash.jpg        The title screen, shown above the Enter... button (about 1024 x 674).
 
+sidebar.png or sidebar.jpg      The side panel (392 x 1024): its buttons are clickable, the name plate shows your
+                                furre's name and the white portrait frame shows your AIM buddy icon. If it's
+                                missing, plain buttons appear under the map instead.
+
 tiles\<name>.png                Floor tiles: 64 x 32 diamonds, transparent outside the diamond.
                                 grass, flowers, darkgrass, dirt, cobble, flagstone, wood, boardwalk, sand, rug,
                                 water, deepwater

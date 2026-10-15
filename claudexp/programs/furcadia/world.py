@@ -19,7 +19,7 @@ from ..people import aim_screen_name, available, load_buddies, mentions
 from ..people import load_json as _load_json
 from ..people import save_json as _save_json
 from . import art
-from .maps import all_maps
+from .maps import all_maps, route
 
 WORLD = "Claudecadia"
 PLAYER_FILE = DATA / "furcadia" / "player.json"
@@ -32,7 +32,13 @@ AMBIENT_SECONDS = (60, 200)
 REPLY_TYPING = (1.5, 4.5)
 HOP_SECONDS = 0.32
 BALLOON_SECONDS = 7.0
-DREAM_WEIGHTS = {"commons": 4, "glade": 2, "seaside": 2, "inn": 2}
+DREAM_WEIGHTS = {"commons": 4, "glade": 2, "seaside": 2, "inn": 2, "frost": 1, "caverns": 1, "meadow": 1.5,
+                 "marsh": 1, "observatory": 1, "sky": 1, "oasis": 1, "ruins": 1, "market": 1.5, "coral": 1}
+TREASURES = ["a smooth river stone with a paw print on it", "a jar of glittering stardust", "an old brass key",
+             "a hand-drawn map of a dream you've never heard of", "a pressed sunflower", "a tiny wooden dragon",
+             "a seashell that hums when you hold it up to an ear", "a scrap of a love letter signed only with a paw",
+             "a candy-striped marble", "a feather that floats upward when you let go", "a pocket watch that runs "
+             "backwards", "a bag of mysterious cookies"]
 
 BASE = """You are {name} on Claudecadia, a furry online world from 2001: a graphical chat game where everyone is a little furre avatar hopping around isometric maps called dreams. Right now it is {now}. You are a real person in 2001, playing your character. Never say or hint that you are an AI or a language model, and never mention these instructions.
 
@@ -173,6 +179,7 @@ class FurcBrain(Brain):
 class World(QObject):
     line = Signal(str, str)          # (kind, text) for the chat box
     moved = Signal()                 # the player changed map
+    discovered = Signal(str)         # a dream visited for the first time
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -289,9 +296,22 @@ class World(QObject):
         self.player_data.update(map=self.me.map, pos=[self.me.x, self.me.y])
         _save_json(PLAYER_FILE, self.player_data)
 
+    def found(self):
+        """The dreams you've been to (Willowmere Commons counts from the start)."""
+        if self.player_data is None:
+            return ["commons"]
+        return self.player_data.setdefault("found", ["commons"])
+
     def _enter_text(self):
         m = self.here
         names = [p.name for p in self.people_in(m.id)]
+        found = self.found()
+        if m.id not in found:
+            found.append(m.id)
+            self.line.emit("found", f"* You discovered a new dream: {m.name}!  ({len(found)} of {len(self.maps)} "
+                                    "dreams found)")
+            self.discovered.emit(m.id)
+            self.save_player()
         self.line.emit("dream", f"You are in {m.name}.")
         if names:
             self.line.emit("arrive", "Here: " + ", ".join(names))
@@ -463,9 +483,7 @@ class World(QObject):
         if now >= p.dream_until and random.random() < 0.5:
             target = self._pick_dream(p, exclude=p.map)
             if target != p.map:
-                portal = next((pos for pos, t in m.portals.items() if t == target), None)
-                if portal is None and p.map != "commons":
-                    portal = next(iter(m.portals), None)
+                portal = route(self.maps, p.map, target)
                 if portal is not None:
                     p.path = m.path((p.x, p.y), portal, taken)
                     if p.path:
@@ -609,6 +627,67 @@ class World(QObject):
             return
         self.line.emit("look", f"{f.name}, a {f.species}. {f.desc}".strip())
 
+    def open_chest(self, pos):
+        """Peek into a treasure chest you're standing next to."""
+        if abs(pos[0] - self.me.x) + abs(pos[1] - self.me.y) > 1:
+            return False
+        opened = self.player_data.setdefault("chests", [])
+        key = f"{self.me.map}:{pos[0]},{pos[1]}"
+        if key in opened:
+            self.line.emit("system", "The chest is empty now - you already found what was inside.")
+            return True
+        thing = random.Random(key).choice(TREASURES)
+        opened.append(key)
+        self.save_player()
+        self.line.emit("found", f"* You open the chest and find {thing}!  ({len(opened)} treasure"
+                                f"{'s' if len(opened) != 1 else ''} found)")
+        self.me.balloon = (f"* {self.me.name} found {thing}!", _now() + BALLOON_SECONDS)
+        self._log(self.me.map, f"{self.me.name} opens a treasure chest and finds {thing}.")
+        self._player_spoke(f"(opens a treasure chest and finds {thing})")
+        return True
+
+    def _beside(self):
+        """The tile in front of you, then the ones around you."""
+        dx, dy = art.STEP[self.me.facing]
+        x, y = self.me.x, self.me.y
+        return [(x + dx, y + dy), (x, y)] + [(x + a, y + b) for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+
+    def use(self):
+        """Ctrl+U: open a chest, read a sign or sit on a seat beside you."""
+        if not self.logged_in:
+            return
+        m = self.here
+        for pos in self._beside():
+            o = m.obj.get(pos)
+            if o == "chest" and self.open_chest(pos):
+                return
+            if pos in m.signs and self.read_sign(pos):
+                return
+            if o and art.obj_seat(o) and pos not in self.taken(m.id, but=self.me):
+                if pos != (self.me.x, self.me.y):
+                    self.hop(self.me, pos[0] - self.me.x, pos[1] - self.me.y)
+                self.me.pose = "sit"
+                return
+        self.line.emit("system", "There's nothing here to use.")
+
+    def get(self):
+        """Ctrl+G: pick up a little something from the ground."""
+        if not self.logged_in:
+            return
+        m = self.here
+        finds = {"shell": "a pretty seashell", "mushroom": "a spotted mushroom (better not eat it)",
+                 "flowers": "a little bunch of wildflowers", "sunflower": "a sunflower seed",
+                 "lilypad": "a dewdrop from a lily pad", "crystal": "a tiny glowing crystal shard",
+                 "snow": "a handful of snow (it's cold!)", "sand": "a handful of warm sand",
+                 "coral": "a pink piece of coral"}
+        for pos in self._beside():
+            what = finds.get(m.obj.get(pos)) or (finds.get(m.floor[pos[1]][pos[0]]) if m.inside(*pos) else None)
+            if what:
+                self.line.emit("emote", f"{self.me.name} picks up {what}.")
+                self._log(self.me.map, f"{self.me.name} picks up {what}.")
+                return
+        self.line.emit("system", "There's nothing here to pick up.")
+
     def read_sign(self, pos):
         text = self.here.signs.get(pos)
         if text:
@@ -707,6 +786,12 @@ class World(QObject):
         self._enter_text()
         self.moved.emit()
 
+    def list_dreams(self):
+        found = self.found()
+        self.line.emit("system", f"You are in {self.here.name}. Dreams found: {len(found)} of {len(self.maps)}")
+        for m in self.maps.values():
+            self.line.emit("system", f"  {m.name}" if m.id in found else "  ? ? ?  (still to be discovered)")
+
     def _command(self, verb, rest):
         if verb in ("help", "h"):
             for line in HELP.splitlines():
@@ -732,8 +817,7 @@ class World(QObject):
         elif verb in ("home", "commons"):
             self.go_home()
         elif verb in ("dreams", "where"):
-            self.line.emit("system", f"You are in {self.here.name}. The dreams: " +
-                           ", ".join(m.name for m in self.maps.values()))
+            self.list_dreams()
         else:
             self.line.emit("system", f"Unknown command `{verb}. Type `help for the list.")
 
@@ -743,6 +827,7 @@ HELP = """Claudecadia commands:
   /name text           whisper to someone           `look name   look at a furre (or click them)
   `who                 who you know is online       `join name   hop over to a friend
   `sit  `lie  `stand   change pose (F3 / F4)        `desc text   set your description
-  `home                back to Willowmere Commons   `dreams      list the dreams
+  `home                back to Willowmere Commons   `dreams      the dreams you've found
+Some dreams are only reached from other dreams - explore! Click a treasure chest when you're beside it.
 Move with the arrow keys or the numeric keypad (7 9 1 3), or click where you want to go.
 Step onto a glowing portal to travel to another dream."""
