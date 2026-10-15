@@ -1,29 +1,42 @@
 Mac System Compatibility? (Discuss late)
 ---
-Flash dive portability? (Entire project readable from drive 256gb drive?)
----
-Multisystem scope widening, with centralized archive/media/contacts?  
-Tentative name: ClaudeTimeline
-Proposed Cellphone Devices:
-2001: Nokia 9210 Communicator (Symbian OS)
-2011: Motorola Droid 3 (Android 2.3.6)
-2025: iPhone 17 Pro Max (iOS 26)
+Furcadia clone - BUILT (Start > Games > Furcadia, and on the desktop). Dream editor: revisit later.
 
-Proposed Mobile Devices:
-2001: CLIÉ personal digital assistant (PDA with PEGA-WL100 Wifi card)
-2011: Samsung Galaxy Tab 10.1 (LTE Verizon I905) 
-2025: iPad 11-inch (A16 - Wifi +Cellular, 128gb)
+  All of Furcadia's art is currently drawn by the program itself. Any picture can be swapped for a real one
+  just by dropping a PNG into the right folder (no code changes, it's picked up the next time Furcadia starts).
+  Everything goes under:  ClaudeXP\assets\furcadia\   (full details in the README.txt there)
 
-Proposed Desktop Computers:
-2001: Windows XP Home Edition (Intel Pentium III) (<--We are here)
-2011: Windows 7 Home Premium (Intel Core i5-2500K)
-2025: Windows 11 Home (AMD Ryzen 7)
----
-Comprehensive help section, outlining all the added features.
----
-Kiwix - Wikipedia offline browser
----
-Email solution?
----
-Neko better emulation:
-https://github.com/Adrianotiger/desktopPet
+  Art I'd love to have, most useful first:
+
+  1. Reference screenshots of the real Furcadia client (2000-2002 era): the main window, the bottom button
+     bar, the character/colour editor, a busy map. These aren't loaded by the program - they're for me to
+     match the layout, colours and fonts more closely.
+       -> assets\furcadia\reference\   (any names, .png or .jpg)
+
+  2. Furre sprites - the part that would make the biggest difference. For each species type, 12 PNGs:
+     3 poses (stand, sit, lie) x 4 facings (0 = facing down-right, 1 = down-left, 2 = up-right, 3 = up-left).
+     Each 48 x 64 pixels, transparent background, feet at pixel (24, 58).
+     Paint the parts that change colour in these pure "key" colours (darker shades of them are fine, they
+     keep their shading): fur #FF00FF, markings #00FFFF, eyes #FFFF00, clothes #00FF00.
+       -> assets\furcadia\furres\<type>\stand_0.png ... lie_3.png
+     Types: canine, feline, lapine, rodent, mustelid, ursine, avian, dragon, equine, bovine, cervine,
+            reptile, aquatic, insect, other
+     (Even just canine and feline would cover a lot of buddies; missing ones stay hand-drawn.)
+
+  3. Floor tiles: 64 x 32 diamonds, transparent outside the diamond.
+       -> assets\furcadia\tiles\<name>.png
+     Names: grass, flowers, darkgrass, dirt, cobble, flagstone, wood, boardwalk, sand, rug, water, deepwater
+
+  4. Objects (trees, furniture...): any size, transparent; the object's base sits 16 px above the bottom
+     edge of the picture, centred left-to-right.
+       -> assets\furcadia\objects\<name>.png
+     Names: tree, bigtree, pine, palm, bush, rock, bench, lamp, fountain, fence, sign, portal, campfire, log,
+            mushroom, table, chair, stool, cushion, umbrella, bookshelf, fireplace, wall, woodwall, barrel,
+            crate, counter, lantern, plant, shell
+     (Replacing an animated one - portal, campfire, fountain, lantern, fireplace - makes it a still picture.)
+
+  5. A title / splash picture shown while connecting (around 640 x 340).
+       -> assets\furcadia\splash.png
+
+  Per-buddy looks: a buddy's AIM contact file can carry a "furcadia" section to set their species type,
+  colours, description and favourite dreams exactly; otherwise it's worked out from their persona.
