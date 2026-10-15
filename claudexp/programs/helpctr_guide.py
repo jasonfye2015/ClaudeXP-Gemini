@@ -90,6 +90,8 @@ CATALOG = {
     "realplayer": ("media", "RealPlayer 8 Basic. Plays your files; the Radio Tuner's streams buffer forever."),
     "quicktime": ("media", "QuickTime Player 5. Plays your files, and asks you to upgrade to Pro every time."),
     "flash": ("media", "Macromedia Flash Player: plays .swf movies and games."),
+    "sndvol": ("media", "Volume Control: ClaudeXP's volume and balance (they really set its level in Windows' "
+                              "mixer), plus Wave for the system sounds. Click the tray speaker for a quick slider."),
     "sndrec": ("media", "Sound Recorder."),
     # games
     "rpg": ("games", "ClaudeRPG: a cozy, endless dungeon adventure."),

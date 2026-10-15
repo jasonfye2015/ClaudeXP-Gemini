@@ -1,8 +1,48 @@
-"""Notification-area icons for hosted programs, and XP's yellow balloon tips."""
+"""Notification-area icons for hosted programs, XP's yellow balloon tips, and hiding inactive icons.
+
+Each icon has a name (its tooltip when it first appears) and a behaviour from Customize Notifications: 'auto'
+(hide when inactive - not clicked for a few minutes), 'hide' (always hide) or 'show' (always show). Hidden icons
+wait behind the chevron button. The choices, and the names seen before (XP's 'Past Items'), are in data/tray.json.
+"""
+import time
+
 from PySide6.QtCore import QObject, QPointF, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import QSystemTrayIcon, QWidget
 from shiboken6 import isValid
+
+from .paths import DATA
+
+TRAY_FILE = DATA / "tray.json"
+INACTIVE_SECONDS = 300          # an icon not clicked for this long hides (when 'Hide inactive icons' is on)
+BEHAVIOURS = [("auto", "Hide when inactive"), ("hide", "Always hide"), ("show", "Always show")]
+DEFAULT_BEHAVIOURS = {"Hard disk": "show"}        # the activity light is no use hidden
+
+
+def tray_settings():
+    from .programs.people import load_json          # (here, not at the top: programs imports this module)
+    data = load_json(TRAY_FILE, {})
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("behaviours", {})
+    data.setdefault("seen", [])
+    return data
+
+
+def save_tray_settings(data):
+    from .programs.people import save_json
+    save_json(TRAY_FILE, data)
+
+
+def behaviour(key, data=None):
+    return (data or tray_settings())["behaviours"].get(key, DEFAULT_BEHAVIOURS.get(key, "auto"))
+
+
+def remember(key):
+    data = tray_settings()
+    if key not in data["seen"]:
+        data["seen"].append(key)
+        save_tray_settings(data)
 
 
 class TrayIcon(QObject):
@@ -17,6 +57,8 @@ class TrayIcon(QObject):
         self._tooltip = ""
         self._menu = None
         self._visible = False
+        self.key = None                  # its name in Customize Notifications (the first tooltip it showed)
+        self.last_used = time.monotonic()
         self.destroyed.connect(lambda *_: desktop.taskbar.remove_tray_icon(self)
                                if isValid(desktop.taskbar) else None)
 
@@ -41,7 +83,16 @@ class TrayIcon(QObject):
 
     def show(self):
         self._visible = True
+        if self.key is None:
+            self.key = (self._tooltip or "Program").split("\n")[0].split(" - ")[0].split(":")[0].strip()[:60]
+            remember(self.key)
+        self.last_used = time.monotonic()
         self.desktop.taskbar.add_tray_icon(self)
+
+    def touch(self):
+        """Clicked, or showing a balloon: it counts as active (and comes out from behind the chevron)."""
+        self.last_used = time.monotonic()
+        self.desktop.taskbar.update()
 
     def hide(self):
         self._visible = False
@@ -56,6 +107,7 @@ class TrayIcon(QObject):
 
     def showMessage(self, title, message, icon=None, msecs=10000):
         if self._visible:
+            self.touch()
             self.desktop.balloon.pop(self, title, message, msecs)
 
 
@@ -157,3 +209,86 @@ class Balloon(QWidget):
         p.setPen(QPen(QColor("#4D4D4D"), 1.5))
         p.drawLine(c.x() + 4, c.y() + 4, c.right() - 3, c.bottom() - 3)
         p.drawLine(c.right() - 3, c.y() + 4, c.x() + 4, c.bottom() - 3)
+
+
+def customize_notifications(desktop):
+    """Taskbar and Start Menu Properties > Customize...: a behaviour for every icon, current and past."""
+    from PySide6.QtWidgets import QComboBox, QHBoxLayout, QHeaderView, QLabel, QPushButton, QTreeWidget, \
+        QTreeWidgetItem, QVBoxLayout
+    from .network import DialogBody, _fixed_window
+    data = tray_settings()
+    current = []
+    for icon in desktop.taskbar._live_tray_icons():
+        if icon.key and icon.key not in [k for k, _ in current]:
+            current.append((icon.key, icon.icon()))
+    past = [k for k in data["seen"] if k not in [c for c, _ in current]]
+    body = DialogBody()
+    v = QVBoxLayout(body)
+    intro = QLabel("Windows displays icons for active and urgent notifications, and hides inactive ones. You can "
+                   "change this behavior for items in the list below.")
+    intro.setWordWrap(True)
+    v.addWidget(intro)
+    v.addWidget(QLabel("Select an item, then choose its notification behavior:"))
+    tree = QTreeWidget()
+    tree.setHeaderLabels(["Name", "Behavior"])
+    tree.setRootIsDecorated(False)
+    tree.setStyleSheet("QTreeWidget { background: white; font-family: Tahoma; font-size: 11px; }")
+    tree.header().setSectionResizeMode(0, QHeaderView.Stretch)
+    tree.setColumnWidth(1, 140)
+    tree.setMinimumSize(380, 220)
+    combos = {}
+
+    def add_header(text):
+        it = QTreeWidgetItem([text, ""])
+        f = it.font(0)
+        f.setBold(True)
+        it.setFont(0, f)
+        it.setFlags(Qt.NoItemFlags)
+        tree.addTopLevelItem(it)
+
+    def add_row(key, icon=None):
+        it = QTreeWidgetItem([key, ""])
+        if icon is not None:
+            it.setIcon(0, icon)
+        tree.addTopLevelItem(it)
+        box = QComboBox()
+        for code, label in BEHAVIOURS:
+            box.addItem(label, code)
+        box.setCurrentIndex([c for c, _ in BEHAVIOURS].index(behaviour(key, data)))
+        tree.setItemWidget(it, 1, box)
+        combos[key] = box
+
+    add_header("Current Items")
+    for key, icon in current:
+        add_row(key, icon)
+    if past:
+        add_header("Past Items")
+        for key in past:
+            add_row(key)
+    v.addWidget(tree)
+    row = QHBoxLayout()
+    defaults = QPushButton("Restore Defaults")
+    row.addWidget(defaults)
+    row.addStretch()
+    ok, cancel = QPushButton("OK"), QPushButton("Cancel")
+    for b in (ok, cancel):
+        b.setFixedSize(75, 23)
+        row.addWidget(b)
+    v.addLayout(row)
+    holder = {}
+
+    def close():
+        desktop.close_window(holder["win"])
+
+    def save():
+        d = tray_settings()
+        d["behaviours"] = {k: b.currentData() for k, b in combos.items()}
+        save_tray_settings(d)
+        desktop.taskbar.update()
+        close()
+    defaults.clicked.connect(lambda: [b.setCurrentIndex([c for c, _ in BEHAVIOURS].index(
+        DEFAULT_BEHAVIOURS.get(k, "auto"))) for k, b in combos.items()])
+    ok.clicked.connect(save)
+    cancel.clicked.connect(close)
+    holder["win"] = _fixed_window(desktop, "Customize Notifications", body, close)
+    desktop.open_window(holder["win"])

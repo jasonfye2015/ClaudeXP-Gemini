@@ -206,6 +206,8 @@ class ClaudeXP(QMainWindow):
             self.stack.setCurrentWidget(self.desktop)
             return
         self.stack.setCurrentWidget(self.desktop)
+        from . import volume
+        volume.apply()                           # Volume Control's levels (ClaudeXP's volume in Windows' mixer)
         # XP: the Startup sound for the first logon after starting up, the Logon chime after a Log Off
         sound.play("logon" if getattr(self, "_logged_off", False) else "startup")
         self._logged_off = False

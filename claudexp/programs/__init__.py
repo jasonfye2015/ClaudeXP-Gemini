@@ -270,6 +270,8 @@ PROGRAMS = [
             _lazy("msconfig", "open_msconfig"), listed=False),
     Program("sysrestore", "System Restore", "", _lazy("sysrestore", "restore_icon"), _lazy("sysrestore", "open_wizard"),
             group="Accessories/System Tools"),
+    Program("sndvol", "Volume Control", "", _lazy("..volume", "volume_icon"), _lazy("..volume", "open_volume_control"),
+            group="Accessories/Entertainment"),
     Program("sndrec", "Sound Recorder", "", _lazy("sndrec", "sndrec_icon"), _lazy("sndrec", "open_sndrec"),
             group="Accessories/Entertainment"),
     Program("flash", "Macromedia Flash Player", "Play Shockwave Flash movies", _lazy("flash", "flash_icon"),

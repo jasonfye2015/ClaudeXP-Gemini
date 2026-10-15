@@ -137,7 +137,7 @@ EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "geminiaccess.exe": "gemini_access", "geminipublisher.exe": "gemini_publisher",
     "geminiphoto.exe": "gemini_photo", "geminidraw.exe": "gemini_draw", "geminiacrobat.exe": "gemini_acrobat",
     "geminidistiller.exe": "gemini_distiller",
-    "cleanmgr.exe": "cleanmgr", "sndrec32.exe": "sndrec", "pinball.exe": "pinball",
+    "cleanmgr.exe": "cleanmgr", "sndrec32.exe": "sndrec", "sndvol32.exe": "sndvol", "pinball.exe": "pinball",
     "claudetv.exe": "tv", "furtv.exe": "tv", "furcomix.exe": "comix", "furfolio.exe": "folio", "furstory.exe": "stories", "furcd.exe": "cdviewer", "furcon.exe": "furcon", "fceu.exe": "nes", "snes9x.exe": "snes", "gambatte.exe": "gb",
     "gambatte_gbc.exe": "gbc", "mgba.exe": "gba", "picodrive.exe": "gen", "gpgx.exe": "sms", "gearsystem.exe": "gg", "applewin.exe": "apple2", "mupen64plus.exe": "n64",
     "msnmsgr.exe": "msn", "msmsgs.exe": "msn", "ypager.exe": "yim", "icq.exe": "icq", "trillian.exe": "trillian",
@@ -153,7 +153,7 @@ EXECUTABLES = {   # file name -> ClaudeXP program it launches
 SYSTEM32 = ["advapi32.dll", "comctl32.dll", "comdlg32.dll", "gdi32.dll", "kernel32.dll", "mshtml.dll",
             "msvcrt.dll", "ole32.dll", "oleaut32.dll", "rpcrt4.dll", "shell32.dll", "shlwapi.dll", "user32.dll",
             "wininet.dll", "winmm.dll", "ws2_32.dll", "ntdll.dll", "urlmon.dll", "svchost.exe", "winlogon.exe",
-            "services.exe", "lsass.exe", "msiexec.exe", "calc.exe", "mspaint.exe", "sndrec32.exe",
+            "services.exe", "lsass.exe", "msiexec.exe", "calc.exe", "mspaint.exe", "sndrec32.exe", "sndvol32.exe",
             "wupdmgr.exe", "dfrgntfs.exe", "taskmgr.exe", "cmd.exe", "regedt32.exe"]
 FONTS = ["tahoma.ttf", "tahomabd.ttf", "arial.ttf", "arialbd.ttf", "times.ttf", "cour.ttf", "verdana.ttf",
          "trebuc.ttf", "georgia.ttf", "comic.ttf", "impact.ttf", "lucon.ttf", "marlett.ttf", "webdings.ttf"]

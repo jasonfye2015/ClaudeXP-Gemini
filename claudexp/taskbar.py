@@ -11,6 +11,8 @@ BUTTON_W = 160
 BUTTON_H = 26
 TRAY_SLOT = 22     # width per tray icon (16px icon + gap)
 CLOCK_W = 70
+CHEVRON_W = 16     # the 'show hidden icons' button at the left of the tray
+COLLAPSE_SECONDS = 6
 FLASHES = 8        # taskbar button blinks this many times, then stays orange
 
 
@@ -26,6 +28,22 @@ class Taskbar(QWidget):
         self.clock.start(1000)
         self.flasher = QTimer(self)
         self.flasher.timeout.connect(self._flash_tick)
+        self.expanded = False          # hidden tray icons shown (the chevron was clicked)
+        self.expanded_until = 0.0
+        self._cpl_cache = (0.0, {})
+        self._hinted = False
+        self.setMouseTracking(True)
+
+    # ---- settings from Taskbar and Start Menu Properties (re-read every couple of seconds) ----
+    def _setting(self, key, default):
+        import time
+        stamp, data = self._cpl_cache
+        if time.monotonic() - stamp > 2:
+            from .cpl_extra import SETTINGS
+            from .programs.people import load_json
+            data = load_json(SETTINGS, {})
+            self._cpl_cache = (time.monotonic(), data)
+        return data.get(key, default)
 
     # ---- tray icons -----------------------------------------------------------
     def add_tray_icon(self, icon):
@@ -41,13 +59,80 @@ class Taskbar(QWidget):
     def _live_tray_icons(self):
         return [i for i in self.tray_icons if isValid(i)]
 
+    def _hidden(self, icon, data, now):
+        from .tray import INACTIVE_SECONDS, behaviour
+        mode = behaviour(icon.key, data) if icon.key else "auto"
+        if mode == "show" or self.desktop.balloon.isVisible() and self.desktop.balloon.owner is icon:
+            return False
+        if mode == "hide":
+            return True
+        return self._setting("tb_hideinactive", True) and now - icon.last_used > INACTIVE_SECONDS
+
+    def _tray_split(self):
+        """(icons on show, number hidden behind the chevron)."""
+        import time
+        from .tray import tray_settings
+        icons = self._live_tray_icons()
+        if not icons:
+            return [], 0
+        now = time.monotonic()
+        if self.expanded and now > self.expanded_until and not self.underMouse():
+            self.expanded = False
+        data = tray_settings() if not hasattr(self, "_tray_data") or now - self._tray_data[0] > 2 else \
+            self._tray_data[1]
+        self._tray_data = (now, data)
+        hidden = [i for i in icons if self._hidden(i, data, now)]
+        if hidden and not self._hinted:
+            self._hint_hidden()
+        if self.expanded:
+            return icons, len(hidden)
+        return [i for i in icons if i not in hidden], len(hidden)
+
+    def _shown_tray_icons(self):
+        return self._tray_split()[0]
+
+    def chevron_rect(self):
+        if not self._tray_split()[1]:
+            return QRect()
+        tray = self.tray_rect()
+        return QRect(tray.left() + 4, (TASKBAR_H - 16) // 2, 14, 16)
+
+    def _chevron_w(self):
+        return CHEVRON_W if self._tray_split()[1] else 0
+
     def tray_icon_rects(self):
         tray = self.tray_rect()
         y = (TASKBAR_H - 16) // 2
-        return [(icon, QRect(tray.left() + 8 + i * TRAY_SLOT, y, 16, 16))
-                for i, icon in enumerate(self._live_tray_icons())]
+        x0 = tray.left() + 8 + self._chevron_w()
+        return [(icon, QRect(x0 + i * TRAY_SLOT, y, 16, 16)) for i, icon in enumerate(self._shown_tray_icons())]
+
+    def _hint_hidden(self):
+        """The first time icons go behind the chevron, a balloon says so (once, ever)."""
+        from .tray import save_tray_settings, tray_settings, TrayIcon
+        self._hinted = True
+        data = tray_settings()
+        if data.get("hint_shown"):
+            return
+        data["hint_shown"] = True
+        save_tray_settings(data)
+        from PySide6.QtWidgets import QApplication, QStyle
+        owner = self._chevron_owner = TrayIcon(self.desktop, QApplication.style().standardIcon(
+            QStyle.SP_MessageBoxInformation), self)
+        owner._visible = True
+
+        def pop():
+            if self.chevron_rect().isNull():
+                return
+            self.desktop.balloon.pop(owner, "Inactive icons hidden",
+                                     "To keep the notification area tidy, icons you haven't clicked in a while are "
+                                     "hidden. Click the arrow to see them, or right-click the taskbar and choose "
+                                     "Properties to change this.", 12000)
+        QTimer.singleShot(500, pop)
 
     def tray_icon_center(self, icon):
+        if icon is getattr(self, "_chevron_owner", None):
+            r = self.chevron_rect()
+            return self.mapToParent(r.center()) if not r.isNull() else None
         for i, rect in self.tray_icon_rects():
             if i is icon:
                 return self.mapToParent(rect.center())
@@ -80,16 +165,23 @@ class Taskbar(QWidget):
     def start_rect(self):
         return QRect(0, 0, theme.current().start_width(), TASKBAR_H)
 
+    def _clock_w(self):
+        return CLOCK_W if self._setting("tb_clock", True) else 6
+
     def tray_rect(self):
-        width = 10 + TRAY_SLOT * (len(self._live_tray_icons()) + 1) + CLOCK_W
+        shown, hidden = self._tray_split()
+        width = 10 + (CHEVRON_W if hidden else 0) + TRAY_SLOT * (len(shown) + 1) + self._clock_w()
         return QRect(self.width() - width, 0, width, TASKBAR_H)
 
     def speaker_rect(self):
         tray = self.tray_rect()
-        return QRect(tray.left() + 8 + TRAY_SLOT * len(self._live_tray_icons()), (TASKBAR_H - 16) // 2, 16, 16)
+        return QRect(tray.left() + 8 + self._chevron_w() + TRAY_SLOT * len(self._shown_tray_icons()),
+                     (TASKBAR_H - 16) // 2, 16, 16)
 
     def clock_rect(self):
         tray = self.tray_rect()
+        if not self._setting("tb_clock", True):
+            return QRect()
         return QRect(tray.right() - CLOCK_W + 1, 0, CLOCK_W, TASKBAR_H)
 
     def button_rects(self):
@@ -108,8 +200,12 @@ class Taskbar(QWidget):
             icon = self._tray_icon_at(event.pos())
             if icon is not None and icon.toolTip():
                 QToolTip.showText(event.globalPos(), icon.toolTip(), self)
-            elif self.clock_rect().contains(event.pos()):
+            elif not self.clock_rect().isNull() and self.clock_rect().contains(event.pos()):
                 QToolTip.showText(event.globalPos(), clock.long_date_text(), self)
+            elif self.speaker_rect().contains(event.pos()):
+                QToolTip.showText(event.globalPos(), "Volume" + (" (muted)" if sound.is_muted() else ""), self)
+            elif not self.chevron_rect().isNull() and self.chevron_rect().contains(event.pos()):
+                QToolTip.showText(event.globalPos(), "Hide" if self.expanded else "Show hidden icons", self)
             else:
                 QToolTip.hideText()
             return True
@@ -119,6 +215,7 @@ class Taskbar(QWidget):
         pos = event.position().toPoint()
         icon = self._tray_icon_at(pos)
         if icon is not None:
+            icon.touch()
             if event.button() == Qt.RightButton:
                 icon.activated.emit(QSystemTrayIcon.Context)
                 menu = icon.contextMenu()
@@ -127,31 +224,65 @@ class Taskbar(QWidget):
             elif event.button() == Qt.LeftButton:
                 icon.activated.emit(QSystemTrayIcon.Trigger)
             return
+        if event.button() == Qt.RightButton and self.speaker_rect().contains(pos):
+            self._speaker_menu(event.globalPosition().toPoint())
+            return
         if event.button() == Qt.RightButton and not self.start_rect().contains(pos):
-            self._context_menu(event.globalPosition().toPoint())
+            self._context_menu(event.globalPosition().toPoint(), on_clock=self.clock_rect().contains(pos))
             return
         if event.button() != Qt.LeftButton:
             return
         if self.start_rect().contains(pos):
             self.desktop.toggle_start_menu()
             return
-        if self.speaker_rect().contains(pos):
-            sound.set_muted(not sound.is_muted())
-            sound.play("default")
+        if not self.chevron_rect().isNull() and self.chevron_rect().contains(pos):
+            import time
+            self.expanded = not self.expanded
+            self.expanded_until = time.monotonic() + COLLAPSE_SECONDS
+            self.desktop.balloon.dismiss(getattr(self, "_chevron_owner", None))
             self.update()
+            return
+        if self.speaker_rect().contains(pos):
+            # a single click: the Volume slider (a double click opens Volume Control, below)
+            self._speaker_click = QTimer.singleShot(260, self._volume_popup) if not getattr(
+                self, "_double", False) else None
             return
         for win, rect in self.button_rects():
             if rect.contains(pos):
                 self.desktop.taskbar_clicked(win)
                 return
 
-    def _context_menu(self, global_pos):
+    def _volume_popup(self):
+        if getattr(self, "_double", False):
+            self._double = False
+            return
+        from .volume import VolumePopup
+        self._vol = VolumePopup(self)
+        self._vol.show_at(self.mapToGlobal(self.speaker_rect().center()))
+
+    def _speaker_menu(self, global_pos):
+        from PySide6.QtWidgets import QMenu
+        from .volume import open_volume_control
+        menu = QMenu(self)
+        menu.setStyleSheet(theme.current().menu_css())
+        menu.addAction("&Open Volume Control", lambda: open_volume_control(self.desktop))
+        menu.addAction("&Adjust Audio Properties", lambda: __import__(
+            "claudexp.controlpanel", fromlist=["sound_properties"]).sound_properties(self.desktop))
+        menu.popup(global_pos - QPoint(0, menu.sizeHint().height()))
+
+    def _context_menu(self, global_pos, on_clock=False):
         """XP's taskbar menu: arrange windows, Show the Desktop, Task Manager."""
         from PySide6.QtWidgets import QMenu
         from . import programs
         d = self.desktop
         menu = QMenu(self)
         menu.setStyleSheet(theme.current().menu_css())
+        from . import cpl_extra
+        if on_clock:
+            menu.addAction("&Adjust Date/Time", lambda: cpl_extra.date_and_time(d))
+            menu.addAction("&Customize Notifications...", lambda: __import__(
+                "claudexp.tray", fromlist=["customize_notifications"]).customize_notifications(d))
+            menu.addSeparator()
         menu.addAction("&Toolbars").setEnabled(False)
         menu.addSeparator()
         menu.addAction("Ca&scade Windows", lambda: self._arrange("cascade"))
@@ -165,7 +296,7 @@ class Taskbar(QWidget):
         lock.setCheckable(True)
         lock.setChecked(True)
         lock.setEnabled(False)
-        menu.addAction("P&roperties").setEnabled(False)
+        menu.addAction("P&roperties", lambda: cpl_extra.taskbar_start(d))
         menu.popup(global_pos - QPoint(0, menu.sizeHint().height()))
 
     def _visible_windows(self):
@@ -200,9 +331,20 @@ class Taskbar(QWidget):
         self.raise_()
 
     def mouseDoubleClickEvent(self, event):
-        icon = self._tray_icon_at(event.position().toPoint())
+        pos = event.position().toPoint()
+        icon = self._tray_icon_at(pos)
         if icon is not None and event.button() == Qt.LeftButton:
+            icon.touch()
             icon.activated.emit(QSystemTrayIcon.DoubleClick)
+            return
+        if event.button() == Qt.LeftButton and self.speaker_rect().contains(pos):
+            self._double = True                      # cancels the pending single-click slider
+            from .volume import open_volume_control
+            open_volume_control(self.desktop)
+            return
+        if event.button() == Qt.LeftButton and not self.clock_rect().isNull() and self.clock_rect().contains(pos):
+            from . import cpl_extra
+            cpl_extra.date_and_time(self.desktop)
             return
         self.mousePressEvent(event)
 
@@ -238,6 +380,9 @@ class Taskbar(QWidget):
         for icon, rect in self.tray_icon_rects():
             p.drawPixmap(rect, icon.icon().pixmap(16, 16))
         self._draw_speaker(p, self.speaker_rect())
+        self._draw_chevron(p, st)
+        if self.clock_rect().isNull():
+            return
 
         p.setPen(QColor(st.tray_text))
         now = clock.now()
@@ -247,6 +392,32 @@ class Taskbar(QWidget):
         text = self.clock_rect().adjusted(0, 2, 0, -2)
         p.drawText(text.adjusted(0, 0, 0, -text.height() // 2), Qt.AlignHCenter | Qt.AlignBottom, clock.time_text(now))
         p.drawText(text.adjusted(0, text.height() // 2, 0, 0), Qt.AlignHCenter | Qt.AlignTop, clock.date_text(now))
+
+    def _draw_chevron(self, p, st):
+        r = self.chevron_rect()
+        if r.isNull():
+            return
+        p.save()
+        p.setRenderHint(QPainter.Antialiasing)
+        hover = self.underMouse() and r.contains(self.mapFromGlobal(__import__(
+            "PySide6.QtGui", fromlist=["QCursor"]).QCursor.pos()))
+        p.setPen(QPen(QColor(255, 255, 255, 150 if hover else 90), 1))
+        p.setBrush(QColor(255, 255, 255, 70 if hover else 30))
+        p.drawEllipse(QRectF(r.x() + 0.5, r.y() + 1.5, 13, 13))
+        p.setPen(QPen(QColor(st.tray_text), 1.6, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        cx, cy = r.x() + 7, r.y() + 8
+        d = -1 if self.expanded else 1               # '<<' to show, '>>' to hide again
+        for off in (-2, 2):
+            p.drawPolyline(QPolygonF([QPointF(cx + off + 1.5 * d, cy - 3), QPointF(cx + off - 1.5 * d, cy),
+                                      QPointF(cx + off + 1.5 * d, cy + 3)]))
+        p.restore()
+
+    def mouseMoveEvent(self, event):
+        if not self.chevron_rect().isNull():
+            self.update(self.chevron_rect().adjusted(-2, -2, 2, 2))
+        if self.expanded:
+            import time
+            self.expanded_until = time.monotonic() + COLLAPSE_SECONDS
 
     def _draw_speaker(self, p, r):
         p.save()

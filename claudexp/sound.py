@@ -38,6 +38,7 @@ class Sounds(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.muted = False
+        self.wave = 1.0                 # Volume Control's 'Wave' level for these sounds
         self._effects = {}
         self.scheme = None              # event -> path (or None for silence) from a theme's sound scheme
 
@@ -56,6 +57,7 @@ class Sounds(QObject):
         if event not in self._effects:
             effect = QSoundEffect(self)
             effect.setSource(QUrl.fromLocalFile(str(self.path(event))))
+            effect.setVolume(self.wave)
             self._effects[event] = effect
         return self._effects[event]
 
@@ -159,3 +161,11 @@ def is_muted():
 
 def set_muted(muted):
     _instance().muted = muted
+
+
+def set_wave_volume(level):
+    """The XP system sounds' level (Volume Control's Wave slider), 0..1."""
+    s = _instance()
+    s.wave = max(0.0, min(1.0, level))
+    for effect in s._effects.values():
+        effect.setVolume(s.wave)
