@@ -93,6 +93,8 @@ CATALOG = {
     "sndrec": ("media", "Sound Recorder."),
     # games
     "rpg": ("games", "ClaudeRPG: a cozy, endless dungeon adventure."),
+    "claudecraft": ("games", "ClaudeCraft: a block-building world in 3D. Walk, fly, break and place blocks; your world "
+                             "is saved."),
     "doom": ("games", "Doom (bring your own WAD)."),
     "doom2": ("games", "Doom II."),
     "wolf3d": ("games", "Wolfenstein 3D."),
