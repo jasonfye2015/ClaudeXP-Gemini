@@ -38,6 +38,7 @@ RIGHT_ITEMS = [
     ("Search", QRect(192, 329, 180, 28)),
     ("Run...", QRect(192, 359, 180, 28)),
     ("Help and Support", QRect(192, 389, 180, 28)),     # not in the artwork; drawn by _draw_help_item
+    ("Thanks!", QRect(192, 419, 180, 28)),              # the credits window (also drawn by _draw_help_item)
 ]
 
 
@@ -127,6 +128,9 @@ class StartMenu(QWidget):
             elif value == "Help and Support":
                 from .programs.helpctr import open_help
                 open_help(self.desktop)
+            elif value == "Thanks!":
+                from . import credits
+                credits.show(self.desktop)
             elif value == "Run...":
                 from .programs.run import open_run
                 open_run(self.desktop)
@@ -217,6 +221,10 @@ class StartMenu(QWidget):
         p.setFont(QFont("Tahoma", 8))
         p.setPen(QColor("black"))
         p.drawText(r.adjusted(32, 0, 0, 0), Qt.AlignVCenter | Qt.AlignLeft, "Help and Support")
+        from .credits import credits_icon
+        r = dict(RIGHT_ITEMS)["Thanks!"]
+        p.drawPixmap(r.x() + 6, r.center().y() - 11, credits_icon().pixmap(22, 22))
+        p.drawText(r.adjusted(32, 0, 0, 0), Qt.AlignVCenter | Qt.AlignLeft, "Thanks!")
 
     def _draw_control_panel_item(self, p):
         # The image only has Control Panel highlighted; repaint it un-highlighted.

@@ -406,13 +406,18 @@ class LunaStyle(Style):
 
 RIGHT_ICONS = {"My Documents": "docs", "My Recent Documents": "recent", "My Pictures": "pics", "My Music": "music",
                "My Computer": "computer", "Control Panel": "panel", "Set Program Access and Defaults": "access",
-               "Printers and Faxes": "printer", "Search": "search", "Run...": "run", "Help and Support": "help"}
+               "Printers and Faxes": "printer", "Search": "search", "Run...": "run", "Help and Support": "help",
+               "Thanks!": "thanks"}
 BOLD_RIGHT = {"My Documents", "My Pictures", "My Music", "My Computer"}
 
 
 def _right_icon(p, kind, r):
     """Small drawn icons for the Start menu's right column."""
     from PySide6.QtWidgets import QApplication, QStyle
+    if kind == "thanks":
+        from .credits import credits_icon
+        p.drawPixmap(r, credits_icon().pixmap(r.size()))
+        return
     st = QApplication.style()
     which = {"docs": QStyle.SP_DirIcon, "recent": QStyle.SP_DirIcon, "pics": QStyle.SP_DirIcon,
              "music": QStyle.SP_DirIcon, "computer": QStyle.SP_ComputerIcon, "panel": QStyle.SP_DesktopIcon,
