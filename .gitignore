@@ -9,3 +9,6 @@ __pycache__/
 # Personal: the user's identity and the launcher's per-machine settings
 Profile/*
 ClaudeLauncher/settings.json
+# Claude7 seed: the Windows 7 art and sound library and the old simulator's runtime data stay local
+Claude7/seed/Windows 7 Parts/
+Claude7/seed/win7_2011/Storage/

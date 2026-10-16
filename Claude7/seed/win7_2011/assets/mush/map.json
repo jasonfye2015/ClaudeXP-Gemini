@@ -1,0 +1,93 @@
+{
+  "_help": "Rooms of PawPrints MUCK. Exit names are 'name;alias;alias' (the first is shown). 'public': false keeps characters from wandering in. 'popularity' (default 1) makes characters more likely to hang out there.",
+  "start": "welcome",
+  "rooms": {
+    "welcome": {
+      "name": "Welcome Center",
+      "desc": "A cozy lobby with a paw-print carpet worn thin by a thousand newbies. A huge corkboard is covered in flyers for fur-meets, roleplay groups and someone's lost plushie. A hand-painted sign over the desk reads: NEW HERE? TYPE 'help' -- AND BE NICE! The double doors lead out to the Town Square.",
+      "exits": {
+        "out;o;square": "square"
+      },
+      "popularity": 1
+    },
+    "square": {
+      "name": "Town Square",
+      "desc": "The heart of PawPrints. A big stone fountain splashes in the middle, topped by a bronze statue of a fox and a wolf sharing a laugh. Benches circle the fountain, and the smell of coffee drifts over from the cafe. Paths lead north to the park, east to the Tail-Wag Cafe, south to the boardwalk and west to the library. The arcade's neon sign buzzes nearby, and the Welcome Center is just behind you.",
+      "exits": {
+        "north;n;park": "park",
+        "east;e;cafe": "cafe",
+        "south;s;boardwalk": "boardwalk",
+        "west;w;library": "library",
+        "arcade;a": "arcade",
+        "welcome;wc": "welcome"
+      },
+      "popularity": 4
+    },
+    "cafe": {
+      "name": "The Tail-Wag Cafe",
+      "desc": "Overstuffed couches crowd around a crackling fireplace, and the espresso machine hisses like an angry cat. A chalkboard menu lists 'Mocha Mousse', 'Pupuccino' and 'Dragon Fire Chai'. A beat-up jukebox in the corner is stuck on Smash Mouth. The door west leads back to the square.",
+      "exits": {
+        "west;w;out;o": "square"
+      },
+      "popularity": 3
+    },
+    "library": {
+      "name": "Fluffington Library",
+      "desc": "Tall wooden shelves stretch up into the dim, and the air smells of old paper and lemon polish. A reading nook with beanbags sits under a round window. A small brass sign on the desk says: PLEASE PAGE, DON'T SHOUT. The exit east leads back to the square.",
+      "exits": {
+        "east;e;out;o": "square"
+      },
+      "popularity": 1
+    },
+    "park": {
+      "name": "Pine Hollow Park",
+      "desc": "Tall pines shade winding dirt paths, and a pond full of very spoiled ducks glitters in the middle. Picnic tables sit under the trees, one of them with a forgotten frisbee on it. A rope ladder dangles from a big old oak by the trail. The path south leads back to the square.",
+      "exits": {
+        "south;s;square": "square",
+        "trail;t;treehouse;up;u": "treehouse"
+      },
+      "popularity": 1.5
+    },
+    "treehouse": {
+      "name": "Treehouse Lookout",
+      "desc": "A creaky wooden platform high in the old oak, with a blanket fort, a stack of comic books and a pair of binoculars on a nail. From up here you can see the whole town, all the way to the ocean. The rope ladder leads back down.",
+      "exits": {
+        "down;d;ladder": "park"
+      },
+      "popularity": 0.5
+    },
+    "boardwalk": {
+      "name": "Seaside Boardwalk",
+      "desc": "Weathered planks run along the shore. Seagulls wheel overhead, eyeing the ice cream stand with criminal intent. A row of coin-op binoculars faces the waves, and wooden stairs lead down to the beach. The square is back to the north.",
+      "exits": {
+        "north;n;square": "square",
+        "beach;down;d;stairs": "beach"
+      },
+      "popularity": 1.5
+    },
+    "beach": {
+      "name": "Sunset Beach",
+      "desc": "Warm sand and gentle waves. A ring of logs circles a bonfire pit, and somebody has built a lopsided sandcastle with a flag that reads 'OTTER KINGDOM'. The stairs lead back up to the boardwalk.",
+      "exits": {
+        "up;u;boardwalk;stairs": "boardwalk"
+      },
+      "popularity": 2
+    },
+    "arcade": {
+      "name": "Pixel Paws Arcade",
+      "desc": "Dark, loud and glowing. Rows of cabinets blink and beep: Street Fighter Alpha 3, Galaga, a Dance Dance Revolution machine with scuffed arrows, and a claw machine full of plushies nobody has ever won. The prize counter sells pencil toppers for an outrageous number of tickets. The exit leads back to the square.",
+      "exits": {
+        "out;o;square": "square"
+      },
+      "popularity": 1.5
+    },
+    "home": {
+      "name": "{player}'s Den",
+      "desc": "Your own little room on the MUCK: a beanbag, a lava lamp and a poster of your favorite band. It's quiet here. (Use '@describe here=...' to change this description.) The door leads out to the Town Square.",
+      "exits": {
+        "out;o;square": "square"
+      },
+      "public": false
+    }
+  }
+}
