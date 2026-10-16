@@ -10,6 +10,9 @@ A shared program never imports an OS's own modules. It asks the host instead:
     host.local_storage()          # the shared Local Storage (drive E: on XP)
     host.user_name()              # the user's name as the world knows them
     host.muted()                  # is this computer's sound muted?
+    host.message(desktop, title, text, "info")   # a message box in this OS's style
+    host.menu_style()             # a stylesheet for menus that look like this OS's
+    host.in_front(desktop, win)   # is that the window the user is looking at?
     host.era()                    # 2001, 2011 or 2025
 
 Each OS registers its host once at startup (ClaudeXP: claudexp/xphost.py) with register(), or register_factory() so
@@ -51,6 +54,19 @@ class Host:
 
     def muted(self):
         return False
+
+    def message(self, desktop, title, text, icon="info"):
+        """A message box in this OS's style; icon is "info", "warning" or "error"."""
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.information(None, title, text)
+
+    def menu_style(self):
+        """A Qt stylesheet that makes menus look like this OS's."""
+        return ""
+
+    def in_front(self, desktop, frame):
+        """Is this window the one the user is looking at, with nothing (menus, the Start menu) over it?"""
+        return frame is not None and frame.isVisible()
 
 
 def register(h):
@@ -119,3 +135,15 @@ def muted():
         return bool(get().muted())
     except Exception:
         return False
+
+
+def message(desktop, title, text, icon="info"):
+    return get().message(desktop, title, text, icon)
+
+
+def menu_style():
+    return get().menu_style()
+
+
+def in_front(desktop, frame):
+    return get().in_front(desktop, frame)

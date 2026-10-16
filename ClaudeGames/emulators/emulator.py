@@ -12,6 +12,7 @@ in data/<system>/saves, save states in data/<system>/states (ten slots).
 
 Common keys: arrows = D-pad, Enter = Start, Space or Shift = Select (see each system for the face buttons).
 F5 save state, F7 load state, 0-9 pick a slot, P or Pause to pause, F1 reset, Esc back to the game list."""
+import json
 import os
 import re
 import time
@@ -19,19 +20,42 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QElapsedTimer, QRectF, Qt, QTimer
-from PySide6.QtGui import QActionGroup, QColor, QFont, QIcon, QImage, QKeySequence, QPainter
+from PySide6.QtGui import QPixmap, QActionGroup, QColor, QFont, QIcon, QImage, QKeySequence, QPainter
 from PySide6.QtMultimedia import QAudioFormat, QAudioSink, QMediaDevices
 from PySide6.QtWidgets import (QAbstractItemView, QLabel, QListWidget, QListWidgetItem, QMenuBar, QStackedWidget,
                                QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
-from ... import sound
-from ...paths import DATA, ROOT, pixmap
-from ...wm import XPWindow
-from ..people import load_json, save_json
+from claudecore import host
+
+HERE = Path(__file__).resolve().parent
+_pixmaps = {}
+
+
+def pixmap(name):
+    """One of this package's icons (cached)."""
+    if name not in _pixmaps:
+        _pixmaps[name] = QPixmap(str(HERE / "icons" / name))
+    return _pixmaps[name]
+
+
+def load_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def save_json(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    tmp.replace(path)
 from . import libretro as L
 
-EMULATORS = ROOT / "assets" / "emulators"
+EMULATORS = HERE / "cores"
 DPAD = {Qt.Key_Up: L.UP, Qt.Key_Down: L.DOWN, Qt.Key_Left: L.LEFT, Qt.Key_Right: L.RIGHT,
         Qt.Key_Return: L.START, Qt.Key_Enter: L.START, Qt.Key_Space: L.SELECT, Qt.Key_Shift: L.SELECT}
 SHARED_HELP = ("D-pad:  Arrow keys\nStart:  Enter\nSelect:  Space or Shift\n\n"
@@ -175,7 +199,7 @@ _cores = {}                      # system key -> Core (each core DLL keeps globa
 
 def core(system):
     if system.key not in _cores:
-        base = DATA / system.key
+        base = host.saves(system.key)                  # SRAM saves and BIOS files, shared by every era
         (base / "system").mkdir(parents=True, exist_ok=True)
         (base / "saves").mkdir(parents=True, exist_ok=True)
         _cores[system.key] = L.Core(EMULATORS / system.core, base / "system", base / "saves", system.options)
@@ -189,7 +213,7 @@ def icon_for(system):
 
 def rom_folders(system):
     """This system's folders under E:\\Emulation (e.g. 'SNES (33 Roms)'), or its own folder on E: (WADs)."""
-    from ...explorer.vfs import local_storage
+    local_storage = host.local_storage
     if system.top:
         return [d for d in local_storage().iterdir() if d.is_dir() and d.name.lower() == system.top.lower()]
     emu = next((d for d in local_storage().iterdir() if d.is_dir() and d.name.lower().startswith("emulat")), None)
@@ -283,7 +307,7 @@ class Emulator(QWidget):
         self.system = system
         self.process_image = system.process                        # for Task Manager
         self.keys = {**(DPAD if system.dpad else {}), **system.buttons}
-        self.data = DATA / system.key
+        self.data = host.saves(system.key)
         self.settings_file = self.data / "settings.json"
         self.frame = None
         self.state = load_json(self.settings_file, {"scale": system.scale, "sound": True, "tv_aspect": False,
@@ -332,7 +356,7 @@ class Emulator(QWidget):
 
     # ---- menus --------------------------------------------------------------------------------------------
     def _menus(self):
-        from ..notepad import MENU_STYLE
+        MENU_STYLE = host.menu_style()
         bar = QMenuBar()
         bar.setStyleSheet(MENU_STYLE)
         f = bar.addMenu("&File")
@@ -445,8 +469,7 @@ class Emulator(QWidget):
         self.close_game()
         c = self.core
         if not c.load(path):
-            from ...explorer.dialogs import msgbox
-            msgbox(self.desktop, self.system.title, f"{path.name} couldn't be loaded. It may be damaged or use a "
+            host.message(self.desktop, self.system.title, f"{path.name} couldn't be loaded. It may be damaged or use a "
                    "cartridge type this emulator doesn't support.", "error")
             return
         self.game = path
@@ -493,7 +516,7 @@ class Emulator(QWidget):
         if self.game is None:
             return
         active = self.frame is not None and self.frame.isVisible() and (
-            not self.state.get("pause_inactive") or self.desktop.is_active(self.frame))
+            not self.state.get("pause_inactive") or host.in_front(self.desktop, self.frame))
         if not active and not self.auto_paused and not self.paused:
             self.auto_paused = True
             self.core.release_keys()
@@ -696,20 +719,18 @@ class Emulator(QWidget):
 
     def _apply_volume(self):
         if self.audio_out is not None:
-            self.audio_out.setVolume(0.0 if (not self.state.get("sound", True) or sound.is_muted()) else 0.8)
+            self.audio_out.setVolume(0.0 if (not self.state.get("sound", True) or host.muted()) else 0.8)
 
     def _save_settings(self):
         save_json(self.settings_file, self.state)
 
     # ---- help ---------------------------------------------------------------------------------------------
     def show_controls(self):
-        from ...explorer.dialogs import msgbox
-        msgbox(self.desktop, "Controls", self.system.help + SHARED_HELP, "info")
+        host.message(self.desktop, "Controls", self.system.help + SHARED_HELP, "info")
 
     def about(self):
-        from ...explorer.dialogs import msgbox
         c = self.core
-        msgbox(self.desktop, f"About {self.system.title}",
+        host.message(self.desktop, f"About {self.system.title}",
                f"{self.system.title} {self.system.console} Emulator\n\nEmulation core: {c.name} {c.version}\n"
                + self.system.credits, "info")
 
@@ -727,12 +748,11 @@ def open_system(desktop, key):
     win = _open.get(key)
     if win is None or not isValid(win):
         if not (EMULATORS / system.core).exists():
-            from ...explorer.dialogs import msgbox
-            msgbox(desktop, system.title, f"The emulator core ({system.core}) is missing from assets\\emulators.",
+            host.message(desktop, system.title, f"The emulator core ({system.core}) is missing from ClaudeGames\\emulators\\cores.",
                    "error")
             return None
         body = Emulator(desktop, system)
-        win = XPWindow(desktop, system.title, body, icon_for(system),
+        win = host.window(desktop, system.title, body, icon_for(system),
                        (system.width * system.scale + 16, system.height * system.scale + 90))
         body.frame = win
         _open[key] = win

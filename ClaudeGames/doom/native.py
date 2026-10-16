@@ -17,14 +17,23 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QImage, QKeySequence, QPixmap, QWindow
-from PySide6.QtWidgets import (QApplication, QLabel, QListWidget, QListWidgetItem, QMenu, QMenuBar, QStackedWidget,
+from PySide6.QtWidgets import (QLabel, QListWidget, QListWidgetItem, QMenuBar, QStackedWidget,
                                QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
-from ...paths import DATA, ROOT, pixmap
-from ...wm import XPWindow
+from claudecore import host
 
-ENGINES = ROOT / "assets" / "engines" / "chocolate"
+HERE = Path(__file__).resolve().parent
+_pixmaps = {}
+
+
+def pixmap(name):
+    """One of this package's icons (cached)."""
+    if name not in _pixmaps:
+        _pixmaps[name] = QPixmap(str(HERE / "icons" / name))
+    return _pixmaps[name]
+
+ENGINES = HERE / "engines"
 GAMES = {
     "heretic": {"title": "Heretic", "exe": "chocolate-heretic.exe", "icon": "heretic_icon.png", "process": "heretic.exe",
                 "wads": {"heretic.wad": "Heretic", "heretic1.wad": "Heretic (Shareware)"},
@@ -56,7 +65,7 @@ def icon_for(key):
 
 
 def wads_folder():
-    from ...explorer.vfs import local_storage
+    local_storage = host.local_storage
     return next((d for d in local_storage().iterdir() if d.is_dir() and d.name.lower() == "wads"), None)
 
 
@@ -142,7 +151,7 @@ class NativeGame(QWidget):
         self.game = GAMES[key]
         self.process_image = self.game["process"]               # for Task Manager
         self.frame = None
-        self.data = DATA / key
+        self.data = host.saves(key)                       # save games, shared by every era
         self.proc = None
         self.hwnd = None
         self.container = None
@@ -179,7 +188,7 @@ class NativeGame(QWidget):
         self.fill()
 
     def _menus(self):
-        from ..notepad import MENU_STYLE
+        MENU_STYLE = host.menu_style()
         bar = QMenuBar()
         bar.setStyleSheet(MENU_STYLE)
         f = bar.addMenu("&File")
@@ -193,8 +202,7 @@ class NativeGame(QWidget):
         return bar
 
     def _msg(self, title, text):
-        from ...explorer.dialogs import msgbox
-        msgbox(self.desktop, title, text, "info")
+        host.message(self.desktop, title, text, "info")
 
     def fill(self):
         self.list.clear()
@@ -277,11 +285,7 @@ class NativeGame(QWidget):
 
     def _in_front(self):
         """Is this window the one the user is looking at, with nothing (menus, Start menu) over it?"""
-        if self.frame is None or not self.frame.isVisible() or self.desktop.active is not self.frame:
-            return False
-        if self.desktop.start_menu.isVisible():
-            return False
-        return not any(isinstance(w, QMenu) and w.isVisible() for w in QApplication.topLevelWidgets())
+        return self.frame is not None and self.frame.isVisible() and host.in_front(self.desktop, self.frame)
 
     def _watch(self):
         if self.proc is None:
@@ -359,7 +363,7 @@ def open_game(desktop, key):
     win = _open.get(key)
     if win is None or not isValid(win):
         body = NativeGame(desktop, key)
-        win = XPWindow(desktop, GAMES[key]["title"], body, icon_for(key), (GAME_W + 16, GAME_H + 90))
+        win = host.window(desktop, GAMES[key]["title"], body, icon_for(key), (GAME_W + 16, GAME_H + 90))
         body.frame = win
         _open[key] = win
     desktop.open_window(win)

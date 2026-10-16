@@ -28,3 +28,19 @@ class XPHost(Host):
 
     def muted(self):
         return sound.is_muted()
+
+    def message(self, desktop, title, text, icon="info"):
+        from .explorer.dialogs import msgbox
+        return msgbox(desktop, title, text, icon)
+
+    def menu_style(self):
+        from .programs.notepad import MENU_STYLE
+        return MENU_STYLE
+
+    def in_front(self, desktop, frame):
+        from PySide6.QtWidgets import QApplication, QMenu
+        if frame is None or not frame.isVisible() or desktop.active is not frame:
+            return False
+        if desktop.start_menu.isVisible():
+            return False
+        return not any(isinstance(w, QMenu) and w.isVisible() for w in QApplication.topLevelWidgets())
