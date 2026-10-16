@@ -103,7 +103,7 @@ class Entry:
     def _length(self):
         try:
             if self.video:
-                from .tv.library import running_time
+                from claudetv.library import running_time
                 return float(running_time(self.path) or 0)
             from .wmp import _length
             return float(_length(self.path) or 0)

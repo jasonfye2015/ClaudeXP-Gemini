@@ -21,17 +21,16 @@ from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QSl
                                QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
-from ...paths import DATA
-from ...wm import XPWindow
-from ..comix.library import IMAGE_EXTS, natural_key, nice_name
-from ..comix.reader import Loader
+from comix.library import IMAGE_EXTS, natural_key, nice_name
+from comix.reader import Loader
 from .gallery import THUMB, THUMBS, TILE, Node, Viewer, Wall, make_thumb, piece_title
+from claudecore import host
 
 VIDEO_EXTS = {".avi", ".mpg", ".mpeg", ".vob", ".mp4", ".wmv", ".mov", ".m4v", ".mkv", ".asf", ".rm", ".ram"}
 SHOW_IMAGES = IMAGE_EXTS | {".svg", ".jpe"} | {".pcx", ".iff", ".lbm", ".ilbm", ".ham", ".ham6", ".ham8", ".iff24"}
 SOUND_EXTS = {".wav", ".mp3", ".mid", ".midi", ".rmi", ".snd", ".au", ".aif", ".aiff", ".wma", ".ogg"}
 ARCHIVE_EXTS = {".zip", ".lzh", ".lha", ".tar"}              # opened like folders (via a cache in data/)
-ARCHIVE_CACHE = DATA / "cd_archives"
+ARCHIVE_CACHE = host.data("cdviewer") / "archives"   # unpacked disc images
 SKIP_DIRS = {"thumbnails", "thumbnail", "thumbs", "thumb", "tn", "_vti_cnf", "_vti_pvt", "audio_ts", "autorun",
              "__macosx", "_notes", "cgi-bin"}
 COVER_WORDS = ("cover", "front", "title", "large", "info", "disc", "cd", "dvd", "logo")
@@ -63,7 +62,7 @@ def cd_icon():
 
 
 def discs_root():
-    from .. import archive_folder
+    from archivepaths import archive_folder
     archive = archive_folder("mediaarchive")
     if archive is None:
         return None
@@ -151,7 +150,7 @@ def open_archive(path):
             with tarfile.open(path) as t:
                 t.extractall(dest, filter="data")                  # 'data' refuses paths that escape the cache
         else:
-            from ..comix.library import _no_window, seven_zip
+            from comix.library import _no_window, seven_zip
             exe = seven_zip()
             if exe is None:
                 return None
@@ -805,15 +804,13 @@ class CDViewer(QWidget):
             if self.frame is not None:
                 self.frame.set_title(f"{node.name} - {self.TITLE}")
         elif node.kind == "flash":
-            from ..flash import open_flash
-            open_flash(self.desktop, node.path)
+            host.open_flash(self.desktop, node.path)
         elif node.kind == "archive":
             self.status.setText(f"Opening {node.path.name}...")
             QApplication.processEvents()
             folder = open_archive(node.path)
             if folder is None:
-                from ...explorer.dialogs import msgbox
-                msgbox(self.desktop, self.TITLE, f"{node.path.name} couldn't be opened.", "error")
+                host.message(self.desktop, self.TITLE, f"{node.path.name} couldn't be opened.", "error")
                 return
             self.archive_sources[folder] = node.path
             self.show_folder(folder)
@@ -946,7 +943,7 @@ def open_cdviewer(desktop):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = CDViewer(desktop)
-        win = XPWindow(desktop, "Fur CD Viewer", body, cd_icon(), (840, 610))
+        win = host.window(desktop, "Fur CD Viewer", body, cd_icon(), (840, 610))
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)

@@ -13,10 +13,10 @@ from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
 from shiboken6 import isValid
 
-from ...wm import XPWindow
-from ..comix.library import natural_key
+from comix.library import natural_key
 from .cdviewer import CDViewer, listing
 from .gallery import TILE, Node, piece_title
+from claudecore import host
 
 # Known conventions: (match, proper name, badge colour, accent).
 CONS = [("anthrocon", "Anthrocon", "#1E4AA0", "#F2C230"),
@@ -48,7 +48,7 @@ def con_icon():
 
 
 def cons_root():
-    from .. import archive_folder
+    from archivepaths import archive_folder
     archive = archive_folder("mediaarchive")
     if archive is None:
         return None
@@ -240,7 +240,7 @@ def open_furcon(desktop):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = ConViewer(desktop)
-        win = XPWindow(desktop, ConViewer.TITLE, body, con_icon(), (840, 610))
+        win = host.window(desktop, ConViewer.TITLE, body, con_icon(), (840, 610))
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)

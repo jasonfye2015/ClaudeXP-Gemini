@@ -15,8 +15,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QHBoxLayout, QLabel, QLineEdit
                                QListWidgetItem, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
-from ...wm import XPWindow
 from . import library as L
+from claudecore import host
 
 TILE = QSize(132, 186)
 STRIP = QSize(60, 84)
@@ -834,7 +834,7 @@ def open_comix(desktop):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = ComixReader(desktop)
-        win = XPWindow(desktop, "FurComix Reader", body, comix_icon(), (800, 580))
+        win = host.window(desktop, "FurComix Reader", body, comix_icon(), (800, 580))
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)

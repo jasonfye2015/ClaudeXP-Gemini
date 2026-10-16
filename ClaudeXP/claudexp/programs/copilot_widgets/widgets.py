@@ -312,7 +312,7 @@ def _clock_text(dt):
 
 def _program_title(slot):
     try:
-        from ..tv.tuner import describe
+        from claudetv.tuner import describe
         return describe(slot)[0]
     except Exception:
         return slot.media.label()
@@ -339,7 +339,7 @@ class TVGuideWidget(WidgetBase):
         super().start()
         if not self._asked:
             self._asked = True
-            from ..tv import lineup
+            from claudetv import lineup
             lineup.get(self._lineup)
 
     def _lineup(self, channels):
@@ -348,7 +348,7 @@ class TVGuideWidget(WidgetBase):
 
     def refresh(self):
         if self.channels is not None:
-            from ..tv import schedule
+            from claudetv import schedule
             t = (clock.now() - schedule.EPOCH).total_seconds()
             rows = []
             for ch in self.channels:
@@ -410,7 +410,7 @@ class TVGuideWidget(WidgetBase):
         for rect, ch in self._hits:
             if rect.contains(pos):
                 try:
-                    from ..tv import guide, tuner
+                    from claudetv import guide, tuner
                     if ch is None:
                         guide.open_guide(self.c.desktop)
                     else:

@@ -19,22 +19,22 @@ from pathlib import Path
 
 from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QSize, Qt
 from PySide6.QtGui import QImage, QImageReader, QPainter
+from claudecore import host
 
-from ...paths import DATA
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".jfif", ".png", ".gif", ".bmp", ".tif", ".tiff", ".webp"}
 ZIP_EXTS = {".cbz", ".zip"}
 SEVEN_EXTS = {".cbr", ".rar", ".cb7", ".7z"}
 PDF_EXTS = {".pdf"}
 ARCHIVE_EXTS = ZIP_EXTS | SEVEN_EXTS | PDF_EXTS
-THUMBS = DATA / "comix_thumbs"
-STATE_FILE = DATA / "comix.json"
+THUMBS = host.data("comix") / "thumbs"          # this computer's cache
+STATE_FILE = host.data("comix") / "comix.json"
 THUMB = QSize(120, 170)
 
 
 def comics_root():
     """The Comic Scans folder, or None if the user hasn't put the archive on E:."""
-    from .. import archive_folder
+    from archivepaths import archive_folder
     archive = archive_folder("mediaarchive")
     if archive is None:
         return None
@@ -58,8 +58,7 @@ def nice_name(name):
 
 def seven_zip():
     """7z.exe for RAR, 7z, LZH and friends: ClaudeXP's own copy (assets/tools/7-Zip), else the PC's 7-Zip."""
-    from ...paths import ROOT
-    for p in (str(ROOT / "assets" / "tools" / "7-Zip" / "7z.exe"), r"C:\Program Files\7-Zip\7z.exe",
+    for p in (str(Path(__file__).resolve().parent.parent / "tools" / "7-Zip" / "7z.exe"), r"C:\Program Files\7-Zip\7z.exe",
               r"C:\Program Files (x86)\7-Zip\7z.exe"):
         if os.path.exists(p):
             return p

@@ -27,11 +27,10 @@ from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QListWidget, QLis
                                QStackedWidget, QTextBrowser, QToolButton, QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
-from ...paths import DATA
-from ...wm import XPWindow
-from ..comix.library import natural_key, nice_name
+from comix.library import natural_key, nice_name
+from claudecore import host
 
-STATE_FILE = DATA / "stories.json"
+STATE_FILE = host.data("stories") / "stories.json"
 TEXT_EXTS = {".txt", ".text", ".asc", ".nfo", ".me", ".1st"}
 HTML_EXTS = {".htm", ".html", ".shtml", ".xhtml", ".wastestate"}
 WORD_EXTS = {".doc", ".wpd", ".wri", ".wps"}
@@ -78,7 +77,7 @@ def story_icon():
 
 
 def stories_root():
-    from .. import archive_folder
+    from archivepaths import archive_folder
     archive = archive_folder("mediaarchive")
     if archive is None:
         return None
@@ -338,7 +337,7 @@ def render(ch):
                 title = t
         return _tame_html(src), ch.base, title
     if ext == ".rtf":
-        from ..wordpad import from_rtf
+        from claudecore.rtf import from_rtf
         doc = QTextDocument()
         try:
             from_rtf(_decode(data), doc)
@@ -795,8 +794,8 @@ class StoryReader(QWidget):
         sb.setValue(int(sb.maximum() * frac))
 
     def _open_comic(self, ch):
-        from ..comix import library as CL
-        from ..comix.reader import open_comix
+        from comix import library as CL
+        from comix.reader import open_comix
         win = open_comix(self.desktop)
         source = "zip" if ch.path.suffix.lower() == ".cbz" else "7z"
         win.content.open_entry(CL.Entry(ch.path, "comic", source))
@@ -942,7 +941,7 @@ def open_stories(desktop):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = StoryReader(desktop)
-        win = XPWindow(desktop, "FurStory Reader", body, story_icon(), (820, 600))
+        win = host.window(desktop, "FurStory Reader", body, story_icon(), (820, 600))
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)

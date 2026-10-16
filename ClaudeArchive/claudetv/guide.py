@@ -7,10 +7,9 @@ from PySide6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPen
 from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 from shiboken6 import isValid
 
-from ... import clock
-from ...wm import XPWindow
 from . import lineup, schedule
 from .tuner import _not_future, _time, describe, now_secs, tv_icon
+from claudecore import host
 
 SPAN = 3 * 3600
 COL = 1800
@@ -244,13 +243,13 @@ class Guide(QWidget):
 
     def _fill_days(self):
         self.day.clear()
-        today = clock.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = host.now().replace(hour=0, minute=0, second=0, microsecond=0)
         for i in range(7):
             d = today + timedelta(days=i)
             self.day.addItem("Today" if i == 0 else ("Tomorrow" if i == 1 else f"{d:%A}, {d:%b} {d.day}"), i)
 
     def _pick_day(self, index):
-        today = clock.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = host.now().replace(hour=0, minute=0, second=0, microsecond=0)
         hour = (schedule.EPOCH + timedelta(seconds=self.start)).hour if self.start else 18
         target = today + timedelta(days=index, hours=max(hour, 6) if index else hour)
         self.set_start(schedule.seconds(target))
@@ -267,7 +266,7 @@ class Guide(QWidget):
         start = max(now - now % COL - 6 * 3600, min(start, now + 7 * 86400))
         self.start = start - start % COL
         self.grid.set_view(self.channels, self.start)
-        days = (schedule.EPOCH + timedelta(seconds=self.start)).date() - clock.now().date()
+        days = (schedule.EPOCH + timedelta(seconds=self.start)).date() - host.now().date()
         if 0 <= days.days < self.day.count():
             self.day.setCurrentIndex(days.days)
 
@@ -310,7 +309,7 @@ def open_guide(desktop, tuner=None):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = Guide(desktop, tuner)
-        win = XPWindow(desktop, "TV Guide - ClaudeTV", body, tv_icon(), (720, 520))
+        win = host.window(desktop, "TV Guide - ClaudeTV", body, tv_icon(), (720, 520))
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)

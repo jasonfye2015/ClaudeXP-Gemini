@@ -37,6 +37,22 @@ class XPHost(Host):
         from .programs.notepad import MENU_STYLE
         return MENU_STYLE
 
+    def now(self):
+        from . import clock
+        return clock.now()
+
+    def open_flash(self, desktop, path):
+        from .programs.flash import open_flash
+        open_flash(desktop, path)
+        return True
+
+    def open_media(self, desktop, path):
+        from .programs.amp import MEDIA_EXTS, open_amp
+        if path.suffix.lower() not in MEDIA_EXTS:
+            return False
+        open_amp(desktop, path)
+        return True
+
     def in_front(self, desktop, frame):
         from PySide6.QtWidgets import QApplication, QMenu
         if frame is None or not frame.isVisible() or desktop.active is not frame:

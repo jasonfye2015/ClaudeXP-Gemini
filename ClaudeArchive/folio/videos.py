@@ -12,10 +12,10 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
 from shiboken6 import isValid
 
-from ...wm import XPWindow
-from ..comix.library import natural_key, nice_name
+from comix.library import natural_key, nice_name
 from .cdviewer import VIDEO_EXTS, CDViewer, listing
 from .gallery import TILE, Node, piece_title
+from claudecore import host
 
 FLASH_EXTS = {".swf"}
 
@@ -45,7 +45,7 @@ def video_icon():
 
 
 def videos_root():
-    from .. import archive_folder
+    from archivepaths import archive_folder
     archive = archive_folder("mediaarchive")
     if archive is None:
         return None
@@ -202,15 +202,10 @@ class VideoBrowser(CDViewer):
             return self._archive_crumbs(folder)
 
     def open_node(self, node):
-        if node.kind == "flash":
-            from ..flash import open_flash
-            open_flash(self.desktop, node.path)
+        if node.kind == "flash" and host.open_flash(self.desktop, node.path):
             return
-        if node.kind in ("video", "sound"):
-            from ..amp import MEDIA_EXTS, open_amp
-            if node.path.suffix.lower() in MEDIA_EXTS:
-                open_amp(self.desktop, node.path)
-                return
+        if node.kind in ("video", "sound") and host.open_media(self.desktop, node.path):
+            return                                       # this computer's media player plays it
         super().open_node(node)
 
     # ---- tiles ------------------------------------------------------------------------------------------------
@@ -256,7 +251,7 @@ def open_videos(desktop):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = VideoBrowser(desktop)
-        win = XPWindow(desktop, VideoBrowser.TITLE, body, video_icon(), (840, 610))
+        win = host.window(desktop, VideoBrowser.TITLE, body, video_icon(), (840, 610))
         body.frame = win
         _open["win"] = win
         if body.root is not None:

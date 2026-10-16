@@ -21,13 +21,12 @@ from PySide6.QtWidgets import (QAbstractItemView, QHBoxLayout, QLabel, QLineEdit
                                QListWidgetItem, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
-from ...paths import DATA
-from ...wm import XPWindow
-from ..comix.library import IMAGE_EXTS, natural_key, nice_name
-from ..comix.reader import Loader
+from comix.library import IMAGE_EXTS, natural_key, nice_name
+from comix.reader import Loader
+from claudecore import host
 
-THUMBS = DATA / "folio_thumbs"
-STATE_FILE = DATA / "folio.json"
+THUMBS = host.data("folio") / "thumbs"          # this computer's cache
+STATE_FILE = host.data("folio") / "folio.json"
 THUMB = QSize(150, 150)                 # thumbnails are made to fit this
 TILE = QSize(170, 170)                  # a matted tile on a wall
 FAVORITES = "★ My Favorites"
@@ -60,7 +59,7 @@ def folio_icon():
 
 
 def portfolios_root():
-    from .. import archive_folder
+    from archivepaths import archive_folder
     archive = archive_folder("mediaarchive")
     if archive is None:
         return None
@@ -899,8 +898,7 @@ class FolioReader(QWidget):
         node = self.viewer.current() if self.stack.currentWidget() is self.viewer else self.here
         text = self.info_for(node) if node is not None else None
         if text:
-            from ...explorer.dialogs import msgbox
-            msgbox(self.desktop, "About this folio", text[:1500], "info")
+            host.message(self.desktop, "About this folio", text[:1500], "info")
 
     def is_favorite(self, node):
         return str(node.path) in self.state.get("favorites", {})
@@ -971,7 +969,7 @@ def open_folio(desktop):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = FolioReader(desktop)
-        win = XPWindow(desktop, "FurFolio Reader", body, folio_icon(), (820, 600))
+        win = host.window(desktop, "FurFolio Reader", body, folio_icon(), (820, 600))
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)

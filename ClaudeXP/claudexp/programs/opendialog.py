@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QLabel, QListWidget, QListWidgetItem, QStyle,
                                QWidget)
 
-from .comix.library import natural_key
+from comix.library import natural_key
 
 
 def places():

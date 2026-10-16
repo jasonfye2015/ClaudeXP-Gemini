@@ -8,12 +8,12 @@ import re
 import struct
 import unicodedata
 from pathlib import Path
+from claudecore import host
 
-from ...paths import DATA, ROOT
 
 VIDEO_EXTS = {".avi", ".mp4", ".mkv", ".mov", ".m4v", ".mpg", ".mpeg"}
-INDEX_FILE = DATA / "tv_index.json"
-GUIDE_FILE = ROOT / "assets" / "tvguide" / "shows.txt"
+INDEX_FILE = host.data("claudetv") / "tv_index.json"     # this computer's scan of the archive
+GUIDE_FILE = Path(__file__).resolve().parent / "assets" / "shows.txt"
 PROMO_MAX_SECS = 180            # extras shorter than this air as promos between shows
 SKIP = re.compile(r"kablam", re.I)          # release-group adverts that came with some files
 

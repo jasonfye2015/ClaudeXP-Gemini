@@ -21,7 +21,7 @@ from .. import sound
 from ..explorer import dialogs, vfs
 from ..paths import DATA, ROOT
 from ..wm import XPWindow
-from .comix.library import seven_zip
+from comix.library import seven_zip
 from .notepad import MENU_STYLE
 from .utility_icons import alcohol_icon, burn_icon, virtual_drive_icon
 

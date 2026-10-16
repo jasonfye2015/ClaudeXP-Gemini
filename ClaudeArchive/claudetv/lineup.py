@@ -4,6 +4,7 @@ import threading
 from PySide6.QtCore import QObject, Signal
 
 from . import library, schedule
+from claudecore import host
 
 _state = {"channels": None, "loading": False, "waiting": []}
 
@@ -16,8 +17,7 @@ _notifier = None
 
 
 def base():
-    from ...explorer.vfs import local_storage
-    return local_storage()
+    return host.local_storage()
 
 
 def get(callback):

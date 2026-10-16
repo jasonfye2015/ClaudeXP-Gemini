@@ -13,6 +13,8 @@ A shared program never imports an OS's own modules. It asks the host instead:
     host.message(desktop, title, text, "info")   # a message box in this OS's style
     host.menu_style()             # a stylesheet for menus that look like this OS's
     host.in_front(desktop, win)   # is that the window the user is looking at?
+    host.now()                    # the computer's clock (the real date and time, in the era's year)
+    host.open_flash(desktop, path), host.open_media(desktop, path)   # hand a file to this OS's players
     host.era()                    # 2001, 2011 or 2025
 
 Each OS registers its host once at startup (ClaudeXP: claudexp/xphost.py) with register(), or register_factory() so
@@ -67,6 +69,20 @@ class Host:
     def in_front(self, desktop, frame):
         """Is this window the one the user is looking at, with nothing (menus, the Start menu) over it?"""
         return frame is not None and frame.isVisible()
+
+    def now(self):
+        """The computer's clock: the real date and time, in the era's year."""
+        from datetime import datetime
+        real = datetime.now()
+        return real.replace(year=self.year, day=28 if (real.month, real.day) == (2, 29) else real.day)
+
+    def open_flash(self, desktop, path):
+        """Play a Flash movie (.swf) in this OS's Flash player. Returns False if there isn't one."""
+        return False
+
+    def open_media(self, desktop, path):
+        """Play a sound or video in this OS's media player. Returns False if it can't play that kind of file."""
+        return False
 
 
 def register(h):
@@ -147,3 +163,15 @@ def menu_style():
 
 def in_front(desktop, frame):
     return get().in_front(desktop, frame)
+
+
+def now():
+    return get().now()
+
+
+def open_flash(desktop, path):
+    return get().open_flash(desktop, path)
+
+
+def open_media(desktop, path):
+    return get().open_media(desktop, path)

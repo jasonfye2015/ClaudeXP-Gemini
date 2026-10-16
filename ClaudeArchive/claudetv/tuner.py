@@ -7,6 +7,7 @@ static, and if a scheduled file has gone missing from the archive that channel s
 Keys: Up/Down or PgUp/PgDn change channel, digits enter a channel, +/- volume, M mute, I info, G guide, C captions,
 S second audio (SAP; the RiffTrax movies have the riff track there), double-click for full screen."""
 import os
+from pathlib import Path
 import random
 import re
 from datetime import timedelta
@@ -18,14 +19,16 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaMetaData, QMediaPlayer, QVi
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMenu, QPushButton, QSlider, QVBoxLayout, QWidget
 from shiboken6 import isValid
 
-from ... import clock, sound
-from ...paths import DATA, ROOT
-from ...wm import XPWindow
-from ..people import load_json, save_json
+from claudecore.jsonfile import load_json, save_json
 from . import lineup, schedule
+from claudecore import host
 
-STATE_FILE = DATA / "tv.json"
-STATIC = [ROOT / "assets" / "video" / f"static{n}.mp4" for n in (1, 2, 3, 4)]
+STATE_FILE = host.data("claudetv") / "tv.json"
+STATIC = [Path(__file__).resolve().parent / "assets" / f"static{n}.mp4" for n in (1, 2, 3, 4)]
+
+def _clock_text(t):
+    return t.strftime("%I:%M %p").lstrip("0")
+
 DEAD_STATIC = {2: 0, 7: 1, 11: 3}           # which clip each empty channel shows
 TUNE_MS = 450                                 # snow while the tuner locks on
 OSD_MS = 4000
@@ -72,13 +75,13 @@ def _time(dt):
 
 
 def now_secs():
-    return (clock.now() - schedule.EPOCH).total_seconds()
+    return (host.now() - schedule.EPOCH).total_seconds()
 
 
 def _not_future(date_text):
     """Air dates and years after 2001 would give the game away on a PC where it's always 2001."""
     years = [int(y) for y in re.findall(r"(?:19|20)\d\d", date_text or "")]
-    return not years or max(years) <= clock.YEAR
+    return not years or max(years) <= host.era()
 
 
 def describe(slot):
@@ -224,7 +227,7 @@ class Screen(QWidget):
         p.setPen(QColor("#8090C0"))
         p.setFont(QFont("Arial", max(7, h // 34)))
         p.drawText(QRectF(0, h * 0.9, r.width() - 10, h * 0.08), Qt.AlignRight | Qt.AlignVCenter,
-                   clock.time_text())
+                   _clock_text(host.now()))
 
     def _paint_caption(self, p):
         f = QFont("Courier New", max(9, self.height() // 24), QFont.Bold)
@@ -394,7 +397,7 @@ class Tuner(QWidget):
         self.screen.show_osd(self.channel_text(), message=f"VOLUME {'|' * (value // 5)}", ms=1500)
 
     def _apply_volume(self):
-        self.audio.setVolume(0.0 if (self.muted or sound.is_muted()) else self.volume)
+        self.audio.setVolume(0.0 if (self.muted or host.muted()) else self.volume)
 
     def toggle_mute(self):
         self.muted = not self.muted
@@ -434,8 +437,7 @@ class Tuner(QWidget):
         menu.exec(pos)
 
     def about(self):
-        from ...explorer.dialogs import msgbox
-        msgbox(self.desktop, "About ClaudeTV", "ClaudeTV for Windows\nVersion 2.1 (Build 2117)\n\n"
+        host.message(self.desktop, "About ClaudeTV", "ClaudeTV for Windows\nVersion 2.1 (Build 2117)\n\n"
                "Analog TV tuner software. Channels found: "
                f"{sum(not c.dead for c in self.channels)}", "info")
 
@@ -726,7 +728,7 @@ def open_tv(desktop):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = Tuner(desktop)
-        win = XPWindow(desktop, "ClaudeTV", body, tv_icon(), (560, 500))
+        win = host.window(desktop, "ClaudeTV", body, tv_icon(), (560, 500))
         body.frame = win
         _open["win"] = win
     desktop.open_window(win)
