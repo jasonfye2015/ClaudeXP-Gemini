@@ -53,7 +53,10 @@ def std(which):
 
 
 def builtins():
-    """The icons Windows puts on the desktop: system icons and program shortcuts. (key, label, icon getter)"""
+    """The icons Windows puts on the desktop: system icons and program shortcuts. (key, label, icon getter)
+
+    New games don't get one: group="Games" puts them in Start > Games and the desktop Games folder, which is enough.
+    """
     folders = [(f"prog:{key}", label, lambda: std(QStyle.SP_DirIcon))
                for key, (label, _prefix) in programs.FOLDER_SHORTCUTS.items()
                if programs.archive_folder(key) and f"prog:{key}" not in IN_FOLDERS]

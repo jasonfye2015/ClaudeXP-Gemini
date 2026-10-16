@@ -1,5 +1,5 @@
 {
-  "_help": "The desktop a new install (or a reinstall) starts with: icon positions (pixels, top-left), hidden built-in icons, and the Arrange Icons options. Made from the user's own arrangement, 2026-10-15.",
+  "_help": "The desktop a new install (or a reinstall) starts with: icon positions (pixels, top-left), hidden built-in icons, and the Arrange Icons options. Made from the user's own arrangement, 2026-10-16.",
   "positions": {
     "sys:recycle": [
       6,
@@ -13,6 +13,14 @@
       6,
       162
     ],
+    "prog:mediaarchive": [
+      6,
+      552
+    ],
+    "prog:tvmovies": [
+      6,
+      630
+    ],
     "file:Furry Programs": [
       6,
       396
@@ -25,37 +33,33 @@
       6,
       552
     ],
-    "prog:claudeamp": [
-      166,
-      162
-    ],
-    "prog:rpg": [
-      166,
-      240
+    "prog:tv": [
+      86,
+      552
     ],
     "prog:navigator": [
       6,
-      240
+      318
     ],
     "prog:claudeai": [
       166,
-      6
+      240
     ],
     "prog:copilotai": [
       166,
-      84
+      318
     ],
     "prog:imagecreator": [
       166,
-      318
+      396
     ],
     "prog:aim": [
       86,
       474
     ],
     "prog:irc": [
-      86,
-      630
+      166,
+      162
     ],
     "prog:muck": [
       86,
@@ -63,7 +67,7 @@
     ],
     "prog:pystudio": [
       166,
-      396
+      474
     ],
     "prog:msn": [
       86,
@@ -71,7 +75,7 @@
     ],
     "prog:yim": [
       86,
-      162
+      6
     ],
     "prog:icq": [
       86,
@@ -83,7 +87,7 @@
     ],
     "prog:skype": [
       86,
-      6
+      162
     ],
     "prog:kik": [
       86,
@@ -92,13 +96,45 @@
     "file:TV and Movies": [
       6,
       630
+    ],
+    "prog:iexplore": [
+      6,
+      240
+    ],
+    "prog:hotmail": [
+      166,
+      6
+    ],
+    "prog:livejournal": [
+      166,
+      84
+    ],
+    "prog:kiwix": [
+      166,
+      552
+    ],
+    "prog:furcadia": [
+      86,
+      630
     ]
   },
   "hidden": [
     "prog:neko",
     "prog:copilotwidgets",
     "prog:flash",
-    "prog:torrent"
+    "prog:torrent",
+    "prog:claudeablo",
+    "prog:claudequest",
+    "prog:rpg",
+    "prog:claudecity",
+    "prog:claudecraft",
+    "prog:scorched",
+    "prog:claudeamp",
+    "prog:adaware",
+    "prog:realplayer",
+    "prog:quicktime",
+    "prog:claudejeweled",
+    "prog:claudeggle"
   ],
   "auto_arrange": true,
   "align_grid": true,
