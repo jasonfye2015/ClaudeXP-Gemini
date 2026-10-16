@@ -38,10 +38,10 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
                    "Disc Tools": ["nero", "alcohol120"],
                    "Archive Tools": ["winrar", "winzip"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Games": 28,
+FOLDERS_SINCE = {"Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Games": 30,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 29
+FOLDERS = 30
 # folders that live inside another folder rather than loose on the desktop
 NESTED = {"Emulation": "Games/Emulation"}
 # shortcuts that now live in one of those folders instead of loose on the desktop
@@ -77,6 +77,7 @@ def builtins():
         ("prog:claudecity", "ClaudeCity", lambda: programs.get("claudecity").icon()),
         ("prog:scorched", "Scorched Claude", lambda: programs.get("scorched").icon()),
         ("prog:claudejeweled", "Claudejeweled", lambda: programs.get("claudejeweled").icon()),
+        ("prog:claudeggle", "Claudeggle", lambda: programs.get("claudeggle").icon()),
         ("prog:realplayer", "RealPlayer", lambda: programs.get("realplayer").icon()),
         ("prog:quicktime", "QuickTime Player", lambda: programs.get("quicktime").icon()),
         ("prog:adaware", "Ad-aware 5.6", lambda: programs.get("adaware").icon()),
@@ -841,6 +842,7 @@ class IconManager(QObject):
                       "claudecity": r"C:\Program Files\ClaudeCity\ClaudeCity.exe",
                       "scorched": r"C:\Program Files\Scorched Claude\scorch.exe",
                       "claudejeweled": r"C:\Program Files\Claudejeweled\Claudejeweled.exe",
+                      "claudeggle": r"C:\Program Files\Claudeggle\Claudeggle.exe",
                       "quicktime": r"C:\Program Files\QuickTime\QuickTimePlayer.exe",
                       "adaware": r"C:\Program Files\Lavasoft\Ad-aware 5.6\Ad-aware.exe",
                       "claudeai": r"C:\Program Files\ClaudeAI\claudeai.exe",

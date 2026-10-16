@@ -171,6 +171,8 @@ PROGRAMS = [
             _lazy(".messengers.others", "launch_kik"), _lazy(".messengers.others", "shutdown_kik"),
             group="Social Networking"),
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown, group="Social Networking"),
+    Program("claudeggle", "Claudeggle", "Aim, shoot, clear the orange pegs", _lazy(".claudeggle", "peggle_icon"),
+            _lazy(".claudeggle", "launch"), _lazy(".claudeggle", "shutdown"), group="Games"),
     Program("claudejeweled", "Claudejeweled", "Swap gems, line up three", _lazy(".claudejeweled", "jeweled_icon"),
             _lazy(".claudejeweled", "launch"), _lazy(".claudejeweled", "shutdown"), group="Games"),
     Program("scorched", "Scorched Claude", "Tanks, nukes and very angry physics", _lazy(".scorched", "scorched_icon"),
