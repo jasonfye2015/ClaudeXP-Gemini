@@ -2,7 +2,7 @@
   "name": "Pixel",
   "fur_name": "Pixel",
   "tier": "support",
-  "born": "1980-11-15",
+  "born": "1981-11-15",
   "born_source": "persona",
   "identity": {
     "real_name": "",
@@ -37,9 +37,7 @@
   },
   "friends": [],
   "relationships": [],
-  "notes": "",
+  "notes": "Aged up to a 19-year-old college student for the Timeline (2026-10-17).",
   "history": [],
-  "flags": [
-    "minor-in-persona: their 2001 text says 16; given an adult birth date instead"
-  ]
+  "flags": []
 }

@@ -2,7 +2,7 @@
   "name": "Zeph",
   "fur_name": "Zeph",
   "tier": "support",
-  "born": "1982-10-24",
+  "born": "1982-04-24",
   "born_source": "persona",
   "identity": {
     "real_name": "",
@@ -37,9 +37,7 @@
   },
   "friends": [],
   "relationships": [],
-  "notes": "",
+  "notes": "Aged up to a 19-year-old college student for the Timeline (2026-10-17).",
   "history": [],
-  "flags": [
-    "minor-in-persona: their 2001 text says 17; given an adult birth date instead"
-  ]
+  "flags": []
 }

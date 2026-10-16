@@ -15,7 +15,7 @@ def _make(root):
     (r / "media" / "2025").mkdir(parents=True)
     (r / "resident.json").write_text(json.dumps({
         "name": "Redfawks", "tier": "main", "born": "1978-02-12",
-        "history": [{"from": 1999, "text": "Met the user on a furry forum"},
+        "history": [{"at": 1999, "text": "Met the user on a furry forum"},
                     {"from": 2001, "to": 2025, "text": "Met up with the user at conventions"},
                     {"from": 2017, "to": 2023, "text": "Was in a relationship with the user"}]}), "utf-8")
     (r / "eras" / "2001.json").write_text(json.dumps({"year": 2001, "persona": "2001 me",
@@ -33,6 +33,8 @@ def run():
         assert r01.age == 23 and r01.persona == "2001 me" and r01.used_to == []
         assert [h["text"] for h in r01.history] == ["Met the user on a furry forum", "Met up with the user at conventions"]
         assert "to" not in r01.history[1]                       # ongoing in 2001: no end date yet
+        assert r01.history_lines() == ["Met the user on a furry forum (in 1999).",
+                                       "Met up with the user at conventions (since 2001)."]
         assert [p.name for p in r01.media] == ["2001"]          # no 2025 photos in 2001
         opened, real = [], residents._load
         residents._load = lambda p: (opened.append(Path(p).name), real(p))[1]

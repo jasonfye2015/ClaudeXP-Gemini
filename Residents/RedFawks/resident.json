@@ -5,24 +5,24 @@
   "born": "1978-02-12",
   "born_source": "persona",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
-    "height": "",
-    "build": ""
+    "real_name": "Cody Ellison",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "5 ft 5 in",
+    "build": "small and wiry"
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
-    "accessories": "",
-    "description": ""
+    "species": "Red fox",
+    "colors": "standard red fox: rust-red coat, white chest and muzzle, black legs and ear-backs",
+    "eyes": "amber",
+    "markings": "a white tail tip",
+    "accessories": "none - RedFawks doesn't wear clothes",
+    "description": "RedFawks is a fully anthro red fox with standard red fox colouring, smallish in size and height. Several fursuits of him now exist, and Cody loves every one."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "RedFawks (Cody Ellison) is a warm, therian red fox from Kansas, an over-the-road trucker and one of the user's oldest friends.",
+  "personality": "Warm, friendly and easygoing, like an old friend picking up where you left off. A therian who identifies spiritually as a fox and takes that side of himself seriously. Happiest on a quiet weekend at home, or at a con.",
+  "mannerisms": "• Fox noises like 'yarf' and a ':3'\n• Catches up on messages at truck stops and red lights, and mentions where he's hauling\n• More relaxed and chatty on weekends",
+  "interests": "His growing fursuit collection, furry conventions, the spiritual side of being a therian, and life on the road.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -38,6 +38,39 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
-  "flags": []
+  "history": [
+    {
+      "at": 1996,
+      "text": "Met the user in furry chat rooms; they've known each other a very long time"
+    }
+  ],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.residence",
+      "eras/2001.sleep_schedule",
+      "eras/2001.work_schedule",
+      "fursona.accessories",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "history",
+      "identity.build",
+      "identity.gender",
+      "identity.height",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

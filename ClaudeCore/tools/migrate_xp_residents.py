@@ -32,7 +32,7 @@ TODAY = "2026-10-17"
 
 HEADER = re.compile(r"^\*\*(.+?):\*\*\s*(.*?)\s*$")
 SECTION = re.compile(r"^##\s+(.+?)\s*$")
-AGE = re.compile(r"\b(\d{2})[- ](?:year[- ]old|yo\b|y/o)", re.I)
+AGE = re.compile(r"\b(\d{2})\s*(?:-?\s*year[- ]old|yo\b|y/o|years old)|\byou'?re (\d{2})\b", re.I)
 MET = re.compile(r"[^.]*\b(?:met|know|known)\b[^.]*\b(?:buddy|the user|you)\b[^.]*\.|[^.]*\byour buddy\b[^.]*\bmet\b[^.]*\.",
                  re.I)
 
@@ -70,9 +70,10 @@ def stable_rng(name):
 
 
 def born_date(name, year):
+    """A birthday in `year` that has already passed by the mid-October snapshot, so the age comes out right."""
     rnd = stable_rng(name + ":day")
-    month = rnd.randint(1, 12)
-    return date(year, month, rnd.randint(1, 28)).isoformat()
+    month = rnd.randint(1, 10)
+    return date(year, month, rnd.randint(1, 15 if month == 10 else 28)).isoformat()
 
 
 def section(sections, *names):
@@ -117,7 +118,8 @@ def main(force=False):
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", dob):
             born, source = dob, "profile"
         else:
-            ages = [int(m.group(1)) for t in personas for m in AGE.finditer(t)]
+            texts = personas + [(aim or {}).get("profile", "")]
+            ages = [int(next(g for g in m.groups() if g)) for t in texts for m in AGE.finditer(t)]
             if ages:
                 age = ages[0]
                 if age < 18:

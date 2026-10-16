@@ -2,27 +2,27 @@
   "name": "WinterDragon",
   "fur_name": "WinterDragon",
   "tier": "main",
-  "born": "1980-02-14",
-  "born_source": "assigned",
+  "born": "1979-02-14",
+  "born_source": "persona",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
-    "height": "",
-    "build": ""
+    "real_name": "Evan Marsh",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "6 ft 1 in",
+    "build": "tall and broad-shouldered"
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Dragon",
+    "colors": "black and white fur",
+    "eyes": "golden",
+    "markings": "curved white horns and a glowing gem on his forehead",
     "accessories": "",
-    "description": ""
+    "description": "A black and white furred dragon with curved white horns, golden eyes and a glowing gem on his forehead."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "WinterDragon (Evan Marsh) is a friendly, plain-spoken dragon from the central USA who hopes to meet the user in person some day.",
+  "personality": "Friendly and affectionate, but plain-spoken: he says what he means and keeps it simple. Loyal to his friends, and always up for a chat.",
+  "mannerisms": "• Talks plainly, only rarely using emotes like *hugs*\n• Short, cheerful messages",
+  "interests": "His dragon fursuit, local cons, and chatting online.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -38,6 +38,38 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
-  "flags": []
+  "history": [
+    {
+      "at": 1998,
+      "text": "Met the user in online furry chat rooms"
+    }
+  ],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.residence",
+      "eras/2001.sleep_schedule",
+      "eras/2001.work_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "history",
+      "identity.build",
+      "identity.gender",
+      "identity.height",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

@@ -30,8 +30,10 @@ resident.json
   "how_met"       how they met the user (from their persona), if known
   "relationship", "friends", "relationships", "notes"   as in The Fur Directory
   "history"       dated facts about their life and their life with the user:
-                    [ {"from": 1999, "text": "Met the user on a furry forum"},
+                    [ {"at": 1999, "text": "Met the user on a furry forum"},
+                      {"from": 2001, "to": 2025, "text": "Met up with the user at conventions"},
                       {"from": 2017, "to": 2023, "text": "Was in a relationship with the user"} ]
+                  "at" is a one-time event; "from"/"to" something that lasted (no "to": still going on).
                   An era sees only what has started by its year: an ongoing fact has no end yet, and a finished
                   one is told in the past tense.
   "flags"         notes for the user to review (e.g. "minor-in-persona": their 2001 text gave an under-18 age)

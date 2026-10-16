@@ -87,7 +87,9 @@ class Resident:
         """The visible history as plain sentences for a prompt."""
         out = []
         for h in self.history:
-            if h.get("to") is not None:
+            if h.get("at") is not None:
+                out.append(f"{h['text']} (in {h['at']}).")
+            elif h.get("to") is not None:
                 out.append(f"{h['text']} ({h['from']}-{h['to']}).")
             else:
                 out.append(f"{h['text']} (since {h['from']}).")
@@ -97,7 +99,7 @@ class Resident:
 def _visible_history(items, year):
     out = []
     for h in items or []:
-        start = h.get("from")
+        start = h.get("at", h.get("from"))          # "at": a one-time event; "from"/"to": something that lasted
         if not isinstance(start, int) or start > year:
             continue                             # hasn't happened yet
         end = h.get("to")
