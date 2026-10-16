@@ -20,7 +20,11 @@ C_TOTAL, C_FREE = int(19.53 * 2**30), int(7.21 * 2**30)
 def local_storage():
     """The real folder behind E:. Inside the Claude Timeline it's the shared Local Storage beside ClaudeXP, which
     every era uses; a ClaudeXP on its own keeps it inside (the folder's original 'Local Stoage' spelling works too)."""
-    timeline = (ROOT.parent / "ClaudeLauncher").is_dir()
+    from .. import timeline as tl
+    chosen = tl.setting("local_storage")                 # the launcher's Config can point E: somewhere else
+    if chosen and Path(chosen).is_dir():
+        return Path(chosen)
+    timeline = tl.active()
     for base in ((ROOT.parent, ROOT) if timeline else (ROOT,)):
         for name in ("Local Storage", "Local Stoage"):
             if (base / name).is_dir():

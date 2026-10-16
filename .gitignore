@@ -6,3 +6,6 @@ Local Storage/*
 Python/
 __pycache__/
 *.pyc
+# Personal: the user's identity and the launcher's per-machine settings
+Profile/*
+ClaudeLauncher/settings.json

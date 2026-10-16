@@ -15,6 +15,8 @@ from .gui import draw_cover
 
 TOP, BOTTOM = 77 / 766, 671 / 766        # the dark bands of the background, as fractions of its height
 PAGES = ["welcome", "register", "fursona", "users", "online", "passwords", "speech", "thanks"]
+# In the Claude Timeline the launcher already knows who you are: no fursona, account or password pages.
+TIMELINE_PAGES = ["welcome", "register", "speech", "thanks"]
 UNIQUE = "__unique__"
 
 
@@ -104,6 +106,8 @@ class Oobe(QWidget):
         self.bg_logo = pixmap("setup_background.png")
         self.bg = pixmap("setup_background_nologo.png")
         self.page = 0
+        self.pages = PAGES
+        self.identity = None
         self.fade = 0.0
         self.player = None
         self.form = QWidget(self)
@@ -262,6 +266,9 @@ class Oobe(QWidget):
 
     # ---- flow ---------------------------------------------------------------------------------------------
     def start(self, suggested_name=""):
+        from .. import timeline
+        self.identity = timeline.profile()
+        self.pages = TIMELINE_PAGES if self.identity else PAGES
         self.page = 0
         self.fade = 0.0
         self.suggested = suggested_name
@@ -281,10 +288,10 @@ class Oobe(QWidget):
     def _go(self, step):
         if step > 0 and not self.next.isEnabled():
             return
-        if PAGES[self.page] == "thanks" and step > 0:
+        if self.pages[self.page] == "thanks" and step > 0:
             self._finish()
             return
-        self.page = max(0, min(len(PAGES) - 1, self.page + step))
+        self.page = max(0, min(len(self.pages) - 1, self.page + step))
         self._layout()
 
     def _sona_chosen(self, item, _prev=None):
@@ -324,6 +331,15 @@ class Oobe(QWidget):
             self.online.set_values(pr.handle, True)
 
     def _finish(self):
+        if self.identity:
+            me = self.identity
+            fursona = me.get("fursona") or None
+            result = {"name": me["name"], "picture": me.get("picture") or (f"fursona:{fursona}" if fursona else None),
+                      "handle": me.get("handle") or me["name"], "linked": True, "windows_password": "",
+                      "online_password": "", "fursona": fursona, "speech": self.speech_state == "passed"}
+            self._fade_music()
+            self.finished.emit(result)
+            return
         name = self.name.text().strip()
         pr = self.preset
         result = {"name": name, "picture": f"fursona:{pr.id}" if pr else self.pictures.selected(),
@@ -331,6 +347,10 @@ class Oobe(QWidget):
                   "linked": True if pr else self.online.linked(), "windows_password": self.win_pw.value(),
                   "online_password": self.online_pw.value(), "fursona": pr.id if pr else None,
                   "speech": self.speech_state == "passed"}
+        self._fade_music()
+        self.finished.emit(result)
+
+    def _fade_music(self):
         player = self.player
         self.player = None
         if player is not None:
@@ -348,7 +368,6 @@ class Oobe(QWidget):
                 else:
                     QTimer.singleShot(60, fade_out)
             fade_out()
-        self.finished.emit(result)
 
     def stop_music(self):
         if self.player is not None:
@@ -358,7 +377,7 @@ class Oobe(QWidget):
             self.player = None
 
     def _layout(self):
-        page = PAGES[self.page]
+        page = self.pages[self.page]
         w, h = self.width(), self.height()
         self.reg.setVisible(page == "register")
         self.sona.setVisible(page == "fursona")
@@ -379,7 +398,7 @@ class Oobe(QWidget):
         self.next.text = "Finish" if page == "thanks" else "Next"
         self.next.move(int(w * 0.97 - self.next.width()), int(band_mid - self.next.height() / 2))
         self.back.move(int(w * 0.97 - self.next.width() - self.back.width() - 10), int(band_mid - self.back.height() / 2))
-        self.back.setVisible(0 < self.page < len(PAGES) - 1)
+        self.back.setVisible(0 < self.page < len(self.pages) - 1)
         self._update_buttons()
         if page == "users":
             self.name.setFocus()
@@ -388,7 +407,7 @@ class Oobe(QWidget):
         self.update()
 
     def _update_buttons(self):
-        page = PAGES[self.page]
+        page = self.pages[self.page]
         ok = {"users": bool(self.name.text().strip()), "online": self.online.valid(),
               "passwords": self.win_pw.valid() and self.online_pw.valid(),
               "speech": self.speech_state == "passed" or (self.speech_skip.isChecked()
@@ -477,7 +496,7 @@ class Oobe(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         p.setRenderHint(QPainter.SmoothPixmapTransform)
         w, h = self.width(), self.height()
-        page = PAGES[self.page]
+        page = self.pages[self.page]
         draw_cover(p, self.rect(), self.bg_logo if page == "welcome" else self.bg)
         title, body = self.TEXT[page]
         tf = QFont("Franklin Gothic Medium")

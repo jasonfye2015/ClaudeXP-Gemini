@@ -52,7 +52,8 @@ def main():
     spellcheck.install(qapp)
     sound.preload()
     app = ClaudeXP()
-    app.start()
+    from claudexp import timeline
+    app.start(recovery=timeline.format_requested())      # the Claude Timeline launcher's 'Load and Format'
     code = qapp.exec()
     if code == setup.RESTART:
         # Windows Setup is rebooting the PC: erase C: now that nothing is running, then start again.
