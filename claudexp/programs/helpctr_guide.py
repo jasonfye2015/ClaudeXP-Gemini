@@ -100,6 +100,8 @@ CATALOG = {
     "furcadia": ("games", "Claudecadia: a Furcadia-style furry graphical chat world. Your AIM buddies log in as furres; hop around "
                           "Willowmere Commons and 13 dreams to discover, sit, chat, emote, whisper (/name message) and open treasure "
                           "chests."),
+    "claudejeweled": ("games", "Claudejeweled: a Bejeweled-style gem matcher - Classic, Action and Zen modes, "
+                               "Flame and Star Gems and Hypercubes. H shows a hint, P pauses."),
     "scorched": ("games", "Scorched Claude: a Scorched Earth-style artillery game for 2-10 tanks, people or "
                           "computer players. Arrows aim, Space fires, Tab picks a weapon; shop between rounds."),
     "claudecity": ("games", "ClaudeCity: build a city in the spirit of SimCity Classic - zones, power, traffic, "

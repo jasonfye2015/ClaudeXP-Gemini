@@ -166,6 +166,8 @@ PROGRAMS = [
     Program("kik", "Kik", "Chat like on a phone", _lazy(".messengers.others", "kik_icon"),
             _lazy(".messengers.others", "launch_kik"), _lazy(".messengers.others", "shutdown_kik")),
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown),
+    Program("claudejeweled", "Claudejeweled", "Swap gems, line up three", _lazy(".claudejeweled", "jeweled_icon"),
+            _lazy(".claudejeweled", "launch"), _lazy(".claudejeweled", "shutdown"), group="Games"),
     Program("scorched", "Scorched Claude", "Tanks, nukes and very angry physics", _lazy(".scorched", "scorched_icon"),
             _lazy(".scorched", "launch"), _lazy(".scorched", "shutdown"), group="Games"),
     Program("claudecity", "ClaudeCity", "Build a city from dust to Megalopolis", _lazy(".claudecity", "city_icon"),
