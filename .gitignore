@@ -1,21 +1,8 @@
-.venv/
-__pycache__/
-*.pyc
-data/
-Program Files/ClaudeAIM/data/
-Program Files/ClaudeMUCK/data/
-Program Files/ClaudeIRC/data/
-Program Files/Netscape/data/
-Local Stoage/
-# the media archive (a separate download); only its README is part of ClaudeXP
+# Claude Timeline
+# The shared external drive (models, media, ROMs, website rips): only its README is part of the project.
 Local Storage/*
 !Local Storage/README.txt
-# the user's own screenshots
-screenshots/
-Recovery Backups/
-# the original (86 MB) of assets/sounds/oobe_music.mp3
-OOBE_intro_music.wav
-# written by the AppleWin emulator core
-AppleWin.log
-# crash reports (logs/crash.log)
-logs/
+# The portable Python runtime is installed, not committed.
+Python/
+__pycache__/
+*.pyc

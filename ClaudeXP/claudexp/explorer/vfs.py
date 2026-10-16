@@ -18,11 +18,14 @@ C_TOTAL, C_FREE = int(19.53 * 2**30), int(7.21 * 2**30)
 
 
 def local_storage():
-    """The real folder behind E: (accepts the folder's original 'Local Stoage' spelling too)."""
-    for name in ("Local Storage", "Local Stoage"):
-        if (ROOT / name).is_dir():
-            return ROOT / name
-    path = ROOT / "Local Storage"
+    """The real folder behind E:. Inside the Claude Timeline it's the shared Local Storage beside ClaudeXP, which
+    every era uses; a ClaudeXP on its own keeps it inside (the folder's original 'Local Stoage' spelling works too)."""
+    timeline = (ROOT.parent / "ClaudeLauncher").is_dir()
+    for base in ((ROOT.parent, ROOT) if timeline else (ROOT,)):
+        for name in ("Local Storage", "Local Stoage"):
+            if (base / name).is_dir():
+                return base / name
+    path = (ROOT.parent if timeline else ROOT) / "Local Storage"
     path.mkdir(exist_ok=True)
     return path
 
