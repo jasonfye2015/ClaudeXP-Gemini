@@ -1,0 +1,43 @@
+{
+  "name": "Vulpine",
+  "fur_name": "Vulpine",
+  "tier": "background",
+  "born": "1966-04-04",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "",
+    "gender": "",
+    "pronouns": "",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "",
+    "colors": "",
+    "eyes": "",
+    "markings": "",
+    "accessories": "",
+    "description": ""
+  },
+  "summary": "",
+  "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": []
+}

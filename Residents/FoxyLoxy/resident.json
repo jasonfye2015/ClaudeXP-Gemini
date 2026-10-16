@@ -1,0 +1,43 @@
+{
+  "name": "FoxyLoxy",
+  "fur_name": "FoxyLoxy",
+  "tier": "background",
+  "born": "1978-09-25",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "",
+    "gender": "",
+    "pronouns": "",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "",
+    "colors": "",
+    "eyes": "",
+    "markings": "",
+    "accessories": "",
+    "description": ""
+  },
+  "summary": "",
+  "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": []
+}

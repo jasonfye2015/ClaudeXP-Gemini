@@ -1,0 +1,43 @@
+{
+  "name": "Renamon",
+  "fur_name": "Renamon",
+  "tier": "main",
+  "born": "1980-08-13",
+  "born_source": "persona",
+  "identity": {
+    "real_name": "",
+    "gender": "",
+    "pronouns": "",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "",
+    "colors": "",
+    "eyes": "",
+    "markings": "",
+    "accessories": "",
+    "description": ""
+  },
+  "summary": "",
+  "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "You and your buddy are good friends who met in online furry chat rooms years back, and they're one of the people you're closest to.",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": []
+}

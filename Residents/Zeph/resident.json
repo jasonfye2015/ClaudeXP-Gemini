@@ -1,0 +1,45 @@
+{
+  "name": "Zeph",
+  "fur_name": "Zeph",
+  "tier": "support",
+  "born": "1982-10-24",
+  "born_source": "persona",
+  "identity": {
+    "real_name": "",
+    "gender": "",
+    "pronouns": "",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "",
+    "colors": "",
+    "eyes": "",
+    "markings": "",
+    "accessories": "",
+    "description": ""
+  },
+  "summary": "",
+  "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [
+    "minor-in-persona: their 2001 text says 17; given an adult birth date instead"
+  ]
+}

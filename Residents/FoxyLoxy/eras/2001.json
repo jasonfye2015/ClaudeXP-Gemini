@@ -1,0 +1,20 @@
+{
+  "year": 2001,
+  "persona": "",
+  "occupation": "",
+  "work_schedule": "",
+  "sleep_schedule": "",
+  "residence": "",
+  "location": "",
+  "timezone": "",
+  "services": {
+    "directory": {
+      "screen_names": {
+        "aim": "",
+        "irc": "",
+        "muck": "",
+        "email": ""
+      }
+    }
+  }
+}
