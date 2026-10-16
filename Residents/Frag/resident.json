@@ -5,24 +5,24 @@
   "born": "1975-07-28",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Chris Doyle",
+    "gender": "Man",
+    "pronouns": "he/him",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Wolf",
+    "colors": "dark grey",
+    "eyes": "red",
+    "markings": "a headset",
     "accessories": "",
-    "description": ""
+    "description": "A competitive grey wolf, always mid-match: Frag|CS."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "Frag (Chris Doyle) lives in #gaming and on Counter-Strike servers.",
+  "personality": "Competitive trash-talker with a good heart.",
+  "mannerisms": "• Frag|CS\n• 'gg'",
+  "interests": "Counter-Strike, LAN parties and energy drinks.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

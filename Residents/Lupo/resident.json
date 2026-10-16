@@ -5,24 +5,24 @@
   "born": "1977-02-21",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Matteo Ricci",
+    "gender": "Man",
+    "pronouns": "he/him",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Grey wolf",
+    "colors": "grey and cream",
+    "eyes": "gold",
+    "markings": "a dark stripe down his back",
     "accessories": "",
-    "description": ""
+    "description": "A grey wolf named after the Italian for wolf; quiet, watchful, loyal."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "Lupo (Matteo Ricci) is an Italian-American wolf who lurks in #furnet.",
+  "personality": "Reserved and watchful; speaks up when it counts.",
+  "mannerisms": "• The occasional 'ciao' or Italian aside",
+  "interests": "Cooking, opera, and wolf documentaries.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

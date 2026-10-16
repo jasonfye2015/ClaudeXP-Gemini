@@ -5,24 +5,24 @@
   "born": "1980-01-02",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Ada Kingsley",
+    "gender": "Woman",
+    "pronouns": "she/her",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Raven",
+    "colors": "glossy black feathers with a blue sheen",
+    "eyes": "black",
+    "markings": "a silver feather behind one ear",
     "accessories": "",
-    "description": ""
+    "description": "A sharp-eyed raven who collects shiny things and other people's secrets."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "Corvid (Ada Kingsley) watches #furnet more than she talks in it.",
+  "personality": "Clever, observant and a little mysterious.",
+  "mannerisms": "• Rare, well-timed one-liners",
+  "interests": "Goth music, tarot and birdwatching.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

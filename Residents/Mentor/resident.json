@@ -5,24 +5,24 @@
   "born": "1973-11-23",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Gail Whitman",
+    "gender": "Woman",
+    "pronouns": "she/her",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Owl",
+    "colors": "brown and white speckled feathers",
+    "eyes": "amber",
+    "markings": "reading glasses",
     "accessories": "",
-    "description": ""
+    "description": "A patient old owl who answers the same question for the hundredth time as kindly as the first."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "Mentor (Gail Whitman) volunteers in #help - when she isn't away.",
+  "personality": "Patient, kind and endlessly helpful.",
+  "mannerisms": "• Mentor|away\n• Step-by-step answers",
+  "interests": "Teaching, computers and helping newcomers.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

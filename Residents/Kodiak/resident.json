@@ -5,24 +5,24 @@
   "born": "1964-04-17",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Grant Haugen",
+    "gender": "Man",
+    "pronouns": "he/him",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Kodiak bear",
+    "colors": "deep brown",
+    "eyes": "dark brown",
+    "markings": "a greying muzzle",
     "accessories": "",
-    "description": ""
+    "description": "A huge, gentle brown bear, almost always asleep in at least one channel."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "Kodiak (Grant Haugen) idles in #furnet and #fursuiters, usually tagged zzz.",
+  "personality": "Big-hearted and slow to anger; a bear-hug kind of fur when he's awake.",
+  "mannerisms": "• Leaves his client running and falls asleep: Kodiak|zzz",
+  "interests": "Fishing, camping and bear suits at cons.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

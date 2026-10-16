@@ -5,24 +5,24 @@
   "born": "1969-07-19",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Amy Sutton",
+    "gender": "Woman",
+    "pronouns": "she/her",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Squirrel",
+    "colors": "red-brown with a cream belly",
+    "eyes": "dark brown",
+    "markings": "an enormous fluffy tail",
     "accessories": "",
-    "description": ""
+    "description": "A squirrel whose tail is bigger than she is, in her art and in her suit."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "FluffyTail (Amy Sutton) is building her first fursuit, with help from #fursuiters.",
+  "personality": "Enthusiastic and crafty.",
+  "mannerisms": "• Asks suit-building questions",
+  "interests": "Sewing, crafts and squirrels.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

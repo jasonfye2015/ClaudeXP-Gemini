@@ -12,15 +12,15 @@
     "build": ""
   },
   "fursona": {
-    "species": "",
+    "species": "IRC bot",
     "colors": "",
     "eyes": "",
     "markings": "",
     "accessories": "",
-    "description": ""
+    "description": "FurNet's channel bot v2.3, an mIRC script: keeps the channels open, greets newcomers and answers !help and !time."
   },
-  "summary": "",
-  "personality": "",
+  "summary": "FurBot is FurNet's channel bot, opped in every main channel.",
+  "personality": "A bot.",
   "mannerisms": "",
   "interests": "",
   "roleplay_hooks": "",
@@ -37,7 +37,19 @@
   },
   "friends": [],
   "relationships": [],
-  "notes": "",
+  "notes": "Not a person.",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "fursona.description",
+      "fursona.species",
+      "notes",
+      "personality",
+      "summary"
+    ]
+  }
 }

@@ -5,24 +5,24 @@
   "born": "1980-06-18",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Lily Morgan",
+    "gender": "Woman",
+    "pronouns": "she/her",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Fennec fox",
+    "colors": "cream with huge ears",
+    "eyes": "brown",
+    "markings": "a pencil tucked behind one ear",
     "accessories": "",
-    "description": ""
+    "description": "A fennec with a pencil behind her ear and a sketchbook under her arm."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "Pencilfox (Lily Morgan) is an art student who lurks in #furry-artists.",
+  "personality": "Earnest and hard-working.",
+  "mannerisms": "• Asks for critique",
+  "interests": "Life drawing and animation.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

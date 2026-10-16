@@ -5,24 +5,24 @@
   "born": "1974-02-02",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Mia Fenwick",
+    "gender": "Woman",
+    "pronouns": "she/her",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Brushtail possum",
+    "colors": "silver-grey",
+    "eyes": "dark brown",
+    "markings": "a bushy black tail",
     "accessories": "",
-    "description": ""
+    "description": "An Australian brushtail possum who paints in watercolour."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "Brushtail (Mia Fenwick) shares watercolours in #furry-artists.",
+  "personality": "Gentle and encouraging.",
+  "mannerisms": "• Aussie spelling; praises other artists' work",
+  "interests": "Watercolour, nature and native Australian animals.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

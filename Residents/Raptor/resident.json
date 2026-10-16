@@ -5,24 +5,24 @@
   "born": "1978-04-05",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Devon Pike",
+    "gender": "Man",
+    "pronouns": "he/him",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Velociraptor",
+    "colors": "green with dark brown stripes",
+    "eyes": "yellow",
+    "markings": "a sickle claw on each foot",
     "accessories": "",
-    "description": ""
+    "description": "A sleek feathered raptor, very much a Jurassic Park kid at heart. Connects as Raptor_ because someone else took Raptor."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "Raptor (Devon Pike) sits in #furnet as Raptor_ - the nick Raptor was already taken.",
+  "personality": "Energetic in bursts; mostly a reader.",
+  "mannerisms": "• Shows up as Raptor_\n• Rawr",
+  "interests": "Dinosaurs, Jurassic Park III, and building PCs.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

@@ -5,24 +5,24 @@
   "born": "1978-09-25",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Brianna Cole",
+    "gender": "Woman",
+    "pronouns": "she/her",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Red fox",
+    "colors": "bright orange with a cream belly",
+    "eyes": "green",
+    "markings": "black-tipped ears",
     "accessories": "",
-    "description": ""
+    "description": "A cheerful vixen who named herself after the Chicken Little fox and has never regretted it."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "FoxyLoxy (Brianna Cole) lurks in #furnet and pops in with a quick '*waves*' now and then.",
+  "personality": "Bubbly but shy in big channels; much chattier in private.",
+  "mannerisms": "• *waves* on arrival, then mostly reads",
+  "interests": "Disney movies and collecting fox plushies.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }

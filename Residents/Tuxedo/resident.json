@@ -5,24 +5,24 @@
   "born": "1968-05-21",
   "born_source": "assigned",
   "identity": {
-    "real_name": "",
-    "gender": "",
-    "pronouns": "",
+    "real_name": "Owen Pryce",
+    "gender": "Man",
+    "pronouns": "he/him",
     "height": "",
     "build": ""
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "eyes": "",
-    "markings": "",
+    "species": "Tuxedo cat",
+    "colors": "black with a white chest, chin and paws",
+    "eyes": "yellow",
+    "markings": "a white bib like a dress shirt",
     "accessories": "",
-    "description": ""
+    "description": "A dapper black-and-white tuxedo cat who looks permanently dressed for a party he's late to."
   },
-  "summary": "",
-  "personality": "",
-  "mannerisms": "",
-  "interests": "",
+  "summary": "Tuxedo (Owen Pryce) is a #furnet regular who's 'away' far more often than he's here.",
+  "personality": "Easygoing and polite; turns up, says hi to everyone, then wanders off.",
+  "mannerisms": "• Sets |away and forgets about it for hours",
+  "interests": "Old movies and late-night radio.",
   "roleplay_hooks": "",
   "roleplay_notes": "",
   "favorites": {
@@ -39,5 +39,27 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  }
 }
