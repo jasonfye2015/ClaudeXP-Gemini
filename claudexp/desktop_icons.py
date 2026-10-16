@@ -33,17 +33,18 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
                    "Emulation": ["nes", "snes", "n64", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
                    # the desktop Games folder mirrors Start > Programs > Games
                    "Games": [p.key for p in programs.PROGRAMS if p.group == "Games"],
+                   "Windows Games": [p.key for p in programs.PROGRAMS if p.group == "Games/Windows Games"],
                    "GeminiOffice": [p.key for p in programs.PROGRAMS if p.group == "Gemini Office"],
                    "GeminiAdobe": [p.key for p in programs.PROGRAMS if p.group == "GeminiAdobe"],
                    "Disc Tools": ["nero", "alcohol120"],
                    "Archive Tools": ["winrar", "winzip"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Games": 30,
+FOLDERS_SINCE = {"Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 30,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 30
+FOLDERS = 32
 # folders that live inside another folder rather than loose on the desktop
-NESTED = {"Emulation": "Games/Emulation"}
+NESTED = {"Emulation": "Games/Emulation", "Windows Games": "Games/Windows Games"}
 # shortcuts that now live in one of those folders instead of loose on the desktop
 IN_FOLDERS = {"prog:mediaarchive": "Furry Programs", "prog:tvmovies": "TV and Movies", "prog:tv": "TV and Movies"}
 
@@ -167,6 +168,8 @@ class IconManager(QObject):
             self._fresh_desktop()
         if self.state.get("folders", self.state.get("layout", 1)) < 29:
             self._nest_emulation()
+        if self.state.get("folders", self.state.get("layout", 1)) < 32:
+            self._nest_windows_games()
         if self.state.get("layout", 1) < LAYOUT:
             # The built-in shortcuts were reordered: let them flow into the new order once (files keep their spots).
             old = self.state.get("layout", 1)
@@ -244,6 +247,21 @@ class IconManager(QObject):
             new_dir.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(old_dir), str(new_dir))
         self.state["positions"].pop("file:Emulation", None)
+
+    def _nest_windows_games(self):
+        """Folders version 31-32: Windows' own games moved from Games into Games\\Windows Games. Only the shortcuts
+        that are there move - ones you deleted stay deleted."""
+        from .explorer import vfs
+        vfs.setup_c()
+        games = vfs.user_home() / "Desktop" / "Games"
+        if not games.is_dir():
+            return
+        target = games / "Windows Games"
+        target.mkdir(exist_ok=True)
+        for key in PROGRAM_FOLDERS["Windows Games"]:
+            link = games / f"{programs.get(key).name}.lnk"
+            if link.exists() and not (target / link.name).exists():
+                shutil.move(str(link), str(target / link.name))
 
     # ---- the Desktop folder -------------------------------------------------------------
     def _make_program_folders(self, names):

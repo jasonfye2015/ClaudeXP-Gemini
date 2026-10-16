@@ -81,13 +81,15 @@ from your microphone.</p>"""),
 My Pictures and choose <b>Edit</b> to open it in Paint, or <b>Set as Desktop Background</b>.</p>"""),
     "games": ("Games", "media", """
 <p>Every game is in <b>Start &gt; All Programs &gt; Games</b> and in the <b>Games</b> folder on the desktop, which
-also holds the <b>Emulation</b> folder of console emulators. Besides Windows' own, ClaudeXP has games of its own:
+also holds <b>Windows Games</b> and the console emulators (<b>Game Emulation</b> on the Start menu,
+<b>Emulation</b> on the desktop). Besides Windows' own, ClaudeXP has games of its own:
 <a href="launch:claudecraft">ClaudeCraft</a>, <a href="launch:furcadia">Claudecadia</a>,
 <a href="launch:claudequest">ClaudeQuest</a>, <a href="launch:claudeablo">Claudeablo</a>,
 <a href="launch:claudecity">ClaudeCity</a>, <a href="launch:scorched">Scorched Claude</a>,
 <a href="launch:claudejeweled">Claudejeweled</a> and <a href="launch:claudeggle">Claudeggle</a> - see
 <a href="help:claudexp-games">ClaudeXP's own games</a>.</p>
-<p>Windows' games: <a href="launch:solitaire">Solitaire</a>,
+<p>Windows' own games are in the <b>Windows Games</b> folder inside Games (Start menu and desktop alike):
+<a href="launch:solitaire">Solitaire</a>,
 <a href="launch:freecell">FreeCell</a>, <a href="launch:spider">Spider Solitaire</a>,
 <a href="launch:minesweeper">Minesweeper</a>, <a href="launch:hearts">Hearts</a> and
 <a href="launch:pinball">3D Pinball</a>. The <b>Internet</b> games (Backgammon, Checkers, Hearts, Reversi,

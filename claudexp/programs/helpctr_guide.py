@@ -18,8 +18,8 @@ SECTIONS = [
     ("office", "Office and creativity", "Documents, pictures, movies and code."),
     ("media", "Music and video", ""),
     ("games", "Games", "All in Start > Games and the desktop's Games folder."),
-    ("emu", "Game emulation", "Old consoles; you bring the game files (E:\\Emulation). On the desktop they're in "
-                              "Games > Emulation."),
+    ("emu", "Game emulation", "Old consoles; you bring the game files (E:\\Emulation). They're in Start > Games > "
+                              "Game Emulation, and Games > Emulation on the desktop."),
     ("ai", "Your AI helpers", "Assistants you talk to directly - not characters with lives of their own."),
     ("system", "System tools and utilities", ""),
     ("other", "Other programs", ""),
@@ -286,7 +286,9 @@ the language models, the Furry Media Archive, TV and Movies, emulation games and
 <h2>On the desktop and Start menu</h2>
 <ul><li><b>Start &gt; All Programs &gt; Social Networking</b> holds every messenger, ClaudeIRC, ClaudeMUCK and
 LiveJournal.</li>
-<li>The desktop's <b>Emulation</b> folder now lives inside <b>Games</b>.</li>
+<li><b>Games</b> now holds a <b>Windows Games</b> folder (Solitaire, FreeCell, Minesweeper, Pinball,
+JezzBall, Rodent's Revenge, the Internet games and the rest) and the emulators - <b>Game Emulation</b> on the Start menu, <b>Emulation</b> on the
+desktop.</li>
 <li>The notification area hides icons you haven't used - see <a href="help:taskbar">The notification area and
 taskbar</a> - and the speaker has a volume slider and the <a href="launch:sndvol">Volume Control</a> mixer.</li>
 <li><b>Alt+Tab</b> switches windows while ClaudeXP is full screen.</li>
