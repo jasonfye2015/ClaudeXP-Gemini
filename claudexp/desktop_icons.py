@@ -41,7 +41,9 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
 FOLDERS_SINCE = {"Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Games": 28,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 28
+FOLDERS = 29
+# folders that live inside another folder rather than loose on the desktop
+NESTED = {"Emulation": "Games/Emulation"}
 # shortcuts that now live in one of those folders instead of loose on the desktop
 IN_FOLDERS = {"prog:mediaarchive": "Furry Programs", "prog:tvmovies": "TV and Movies", "prog:tv": "TV and Movies"}
 
@@ -159,6 +161,8 @@ class IconManager(QObject):
                 self.state.update(json.load(f))
         except (OSError, ValueError):
             self._fresh_desktop()
+        if self.state.get("folders", self.state.get("layout", 1)) < 29:
+            self._nest_emulation()
         if self.state.get("layout", 1) < LAYOUT:
             # The built-in shortcuts were reordered: let them flow into the new order once (files keep their spots).
             old = self.state.get("layout", 1)
@@ -226,6 +230,17 @@ class IconManager(QObject):
                 self.state[key] = default[key]
         self.state["layout"], self.state["folders"] = LAYOUT, FOLDERS
 
+    def _nest_emulation(self):
+        """Folders version 29: the desktop's Emulation folder moved into Games (shortcuts and all)."""
+        from .explorer import vfs
+        vfs.setup_c()
+        desk = vfs.user_home() / "Desktop"
+        old_dir, new_dir = desk / "Emulation", desk / NESTED["Emulation"]
+        if old_dir.is_dir() and not new_dir.exists():
+            new_dir.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(old_dir), str(new_dir))
+        self.state["positions"].pop("file:Emulation", None)
+
     # ---- the Desktop folder -------------------------------------------------------------
     def _make_program_folders(self, names):
         """Desktop folders holding shortcuts to grouped programs."""
@@ -237,7 +252,7 @@ class IconManager(QObject):
             keys = PROGRAM_FOLDERS.get(name)
             if keys is None:
                 continue
-            folder = desk / name
+            folder = desk / NESTED.get(name, name)
             folder.mkdir(parents=True, exist_ok=True)
             for key in keys:
                 prog = next((p for p in programs.PROGRAMS if p.key == key), None)
@@ -265,7 +280,7 @@ class IconManager(QObject):
                     else (shortcuts.icon(f) if shortcuts.is_shortcut(f) else None)
                     or self.icon_provider.icon(QFileInfo(str(f))), f)
         folder_links = {f"prog:{k}" for k in programs.FOLDER_SHORTCUTS}
-        program_folders = [desk / n for n in PROGRAM_FOLDERS if (desk / n).is_dir()]
+        program_folders = [desk / n for n in PROGRAM_FOLDERS if n not in NESTED and (desk / n).is_dir()]
         from .programs import installed
         gone = {f"prog:{k}" for k in installed.removed()}
         for key, label, icon in builtins():
