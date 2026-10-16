@@ -42,7 +42,7 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
 FOLDERS_SINCE = {"Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 30,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 32
+FOLDERS = 33
 # folders that live inside another folder rather than loose on the desktop
 NESTED = {"Emulation": "Games/Emulation", "Windows Games": "Games/Windows Games"}
 # shortcuts that now live in one of those folders instead of loose on the desktop
@@ -170,6 +170,8 @@ class IconManager(QObject):
             self._nest_emulation()
         if self.state.get("folders", self.state.get("layout", 1)) < 32:
             self._nest_windows_games()
+        if self.state.get("folders", self.state.get("layout", 1)) < 33:
+            self._claudecadia_out_of_games()
         if self.state.get("layout", 1) < LAYOUT:
             # The built-in shortcuts were reordered: let them flow into the new order once (files keep their spots).
             old = self.state.get("layout", 1)
@@ -262,6 +264,15 @@ class IconManager(QObject):
             link = games / f"{programs.get(key).name}.lnk"
             if link.exists() and not (target / link.name).exists():
                 shutil.move(str(link), str(target / link.name))
+
+    def _claudecadia_out_of_games(self):
+        """Folders version 33: Claudecadia is a chat world (Start > Social Networking), not a game - its shortcut
+        leaves the desktop's Games folder."""
+        from .explorer import vfs
+        vfs.setup_c()
+        link = vfs.user_home() / "Desktop" / "Games" / f"{programs.get('furcadia').name}.lnk"
+        if link.is_file():
+            link.unlink()
 
     # ---- the Desktop folder -------------------------------------------------------------
     def _make_program_folders(self, names):

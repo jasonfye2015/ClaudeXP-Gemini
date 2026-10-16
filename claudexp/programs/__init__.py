@@ -184,7 +184,7 @@ PROGRAMS = [
     Program("claudequest", "ClaudeQuest", "The pack is calling", _lazy(".claudequest", "quest_icon"),
             _lazy(".claudequest", "launch"), _lazy(".claudequest", "shutdown"), group="Games"),
     Program("furcadia", "Claudecadia", "Let your imagination soar: a furry graphical chat world", _lazy(".furcadia", "furc_icon"),
-            _lazy(".furcadia", "launch"), _lazy(".furcadia", "shutdown"), group="Games"),
+            _lazy(".furcadia", "launch"), _lazy(".furcadia", "shutdown"), group="Social Networking"),
     Program("claudecraft", "ClaudeCraft", "Build anything, block by block", _lazy(".claudecraft", "craft_icon"),
             _lazy(".claudecraft", "launch"), _lazy(".claudecraft", "shutdown"), group="Games"),
     Program("kiwix", "Kiwix", "Wikipedia, offline", _lazy(".kiwix", "kiwix_icon"), _lazy(".kiwix", "launch"),

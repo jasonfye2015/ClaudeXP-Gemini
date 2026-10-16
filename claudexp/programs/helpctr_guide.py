@@ -100,7 +100,7 @@ CATALOG = {
     "rpg": ("games", "ClaudeRPG: a cozy, endless dungeon adventure."),
     "claudecraft": ("games", "ClaudeCraft: a block-building world in 3D. Walk, fly, break and place blocks; your world "
                              "is saved."),
-    "furcadia": ("games", "Claudecadia: a Furcadia-style furry graphical chat world. Your AIM buddies log in as furres; hop around "
+    "furcadia": ("talk", "Claudecadia: a Furcadia-style furry graphical chat world. Your AIM buddies log in as furres; hop around "
                           "Willowmere Commons and 13 dreams to discover, sit, chat, emote, whisper (/name message) and open treasure "
                           "chests."),
     "claudeggle": ("games", "Claudeggle: a Peggle-style ball-and-peg game - twelve levels, clear the orange pegs in ten "
@@ -281,11 +281,11 @@ the language models, the Furry Media Archive, TV and Movies, emulation games and
 <a href="launch:scorched">Scorched Claude</a> (tanks and very angry physics),
 <a href="launch:claudecity">ClaudeCity</a> (build a city),
 <a href="launch:claudeablo">Claudeablo</a> (fifty levels down to Diablo),
-<a href="launch:claudequest">ClaudeQuest</a> (lead a wolf pack) and
-<a href="launch:furcadia">Claudecadia</a> (a furry graphical chat world).</p>
+<a href="launch:claudequest">ClaudeQuest</a> (lead a wolf pack).</p>
+<p>And <a href="launch:furcadia">Claudecadia</a>, a furry graphical chat world, in <b>Social Networking</b>.</p>
 <h2>On the desktop and Start menu</h2>
 <ul><li><b>Start &gt; All Programs &gt; Social Networking</b> holds every messenger, ClaudeIRC, ClaudeMUCK and
-LiveJournal.</li>
+LiveJournal - and Claudecadia.</li>
 <li><b>Games</b> now holds a <b>Windows Games</b> folder (Solitaire, FreeCell, Minesweeper, Pinball,
 JezzBall, Rodent's Revenge, the Internet games and the rest) and the emulators - <b>Game Emulation</b> on the Start menu, <b>Emulation</b> on the
 desktop.</li>
@@ -316,9 +316,6 @@ zone, power, roads and rails, budgets, disasters and six scenarios.</td></tr>
 random levels down to Diablo, loot, spells, town portals and shops. F1 for the controls.</td></tr>
 <tr><td valign="top"><a href="launch:claudequest"><b>ClaudeQuest</b></a></td><td>Lead a wolf pack through the
 seasons: hunt, raise pups, mark territory, survive rivals and winter. F1 for the keys.</td></tr>
-<tr><td valign="top"><a href="launch:furcadia"><b>Claudecadia</b></a></td><td>A Furcadia-style furry chat world: your
-AIM buddies log in as furres. Explore Willowmere Commons and 13 dreams, chat, emote, whisper and open treasure
-chests.</td></tr>
 <tr><td valign="top"><a href="launch:claudecraft"><b>ClaudeCraft</b></a></td><td>Block building in 3D: walk, fly,
 break and place blocks. Your world is saved.</td></tr>
 <tr><td valign="top"><a href="launch:rpg"><b>ClaudeRPG</b></a></td><td>A cozy, endless dungeon adventure.</td></tr>
