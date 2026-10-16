@@ -134,7 +134,7 @@ CATALOG = {
     "clippy": ("ai", "Clippy, back from the dead - and with a language model behind him, more helpful (and more "
                      "annoying) than ever. He has a real off switch."),
     "neko": ("ai", "Neko, the classic desktop cat: chases your mouse pointer and naps when it catches it."),
-    "copilotwidgets": ("ai", "Desktop widgets: clock, calendar, weather, TV guide and more."),
+    "copilotwidgets": ("ai", "Desktop widgets: clock, calendar, weather, TV guide, your Hotmail inbox and more."),
     # system
     "antivirus": ("system", "ClaudeShield AntiVirus: Auto-Protect, scans and LiveUpdate."),
     "adaware": ("system", "Ad-aware 5.62: finds the spyware that crept in, and the tracking cookies from your "

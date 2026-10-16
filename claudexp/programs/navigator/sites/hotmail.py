@@ -212,14 +212,16 @@ class Hotmail(Site):
     def handle(self, path, query):
         q = {k: v[0] for k, v in parse_qs(query, keep_blank_values=True).items()}
         if path in ("/", "/index.html", "/cgi-bin/login"):
-            return redirect("/cgi-bin/hmhome?f=inbox") if _session["signed_in"] else self._login()
+            return redirect("/cgi-bin/hmhome?f=inbox") if _session["signed_in"] else self._login(after=q.get("next", ""))
         if path == "/cgi-bin/logout":
             _session["signed_in"] = False
             return self._signed_out()
         if path == "/cgi-bin/help":
             return self._help()
         if not _session["signed_in"]:
-            return redirect("/cgi-bin/login")
+            # sign in first, then on to the page that was asked for (a message clicked in the desktop widget)
+            wanted = path + (f"?{query}" if query else "")
+            return redirect("/cgi-bin/login?" + urlencode({"next": wanted}))
         if path == "/cgi-bin/hmhome":
             return self._folder(q.get("f", "inbox"), int(q.get("page", "0") or 0), q.get("note", ""))
         if path == "/cgi-bin/getmsg":
@@ -244,7 +246,7 @@ class Hotmail(Site):
         return None
 
     # ---- signing in ----
-    def _login(self, error=""):
+    def _login(self, error="", after=""):
         _me_addr, handle = _me()
         err = f'<p style="color:#CC0000"><b>{html.escape(error)}</b></p>' if error else ""
         return f"""<html><head><title>Welcome to MSN Hotmail</title><style>{CSS}</style></head><body>
@@ -259,7 +261,7 @@ Get your FREE e-mail account that you can use from any computer connected to the
 <div class="ad"><b>New to Hotmail?</b> <a href="/cgi-bin/help">Sign up now</a> - it's free!</div></td>
 <td><table cellpadding="10" style="border:1px solid #6688BB; background:#EEF2FA" width="100%"><tr><td>
 <font size="3" color="#003399"><b>Sign In</b></font>{err}
-<form method="post" action="/cgi-bin/dologin">
+<form method="post" action="/cgi-bin/dologin"><input type="hidden" name="next" value="{html.escape(after)}">
 Sign-In Name<br><input class="text" name="login" value="{html.escape(handle.lower())}" size="18"> @hotmail.com<br><br>
 Password<br><input class="text" type="password" name="passwd" value="********" size="18"><br><br>
 <input type="checkbox" name="remember" checked> Keep me signed in<br><br>
@@ -270,6 +272,9 @@ Password<br><input class="text" type="password" name="passwd" value="********" s
     def _do_login(self, f):
         _session["signed_in"] = True                   # (the password box is for show: anything signs in)
         self.bridge.signed_in.emit()
+        after = f.get("next", "")
+        if after.startswith("/cgi-bin/") and not any(c in after for c in "\r\n"):
+            return redirect(after)
         return redirect("/cgi-bin/hmhome?f=inbox&summary=1")
 
     def _signed_out(self):

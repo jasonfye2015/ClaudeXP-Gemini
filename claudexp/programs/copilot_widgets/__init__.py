@@ -1,4 +1,4 @@
-"""Copilot Desktop Widgets: a clock, calendar, weather, TV guide and more floating on the desktop."""
+"""Copilot Desktop Widgets: a clock, calendar, weather, TV guide, Hotmail inbox and more floating on the desktop."""
 import json
 import warnings
 
@@ -14,7 +14,7 @@ from . import art, weather as wx
 from .widgets import WIDGETS
 
 SETTINGS_FILE = DATA / "copilot_widgets.json"
-DEFAULT_ON = {"clock", "weather", "calendar", "tv"}
+DEFAULT_ON = {"clock", "weather", "calendar", "tv", "mail"}
 DEFAULTS = {
     "visible": True, "locked": True, "click_through": True, "start_at_logon": True, "opacity": 80,
     "fahrenheit": True, "clock_24h": False, "climate": "Temperate", "hemisphere": "Northern",
@@ -146,15 +146,25 @@ class WidgetsController(QObject):
         """Saved positions are kept; the rest flow down the right edge, then leftwards in more columns."""
         area = self.desktop.work_area()
         x_right, y, col_w = area.right() - 16, area.top() + 16, 0
+        shown = {k: w for k, w in self.widgets.items() if not w.isHidden()}
+        positions = self.settings["positions"]
         for cls in WIDGETS:
-            w = self.widgets.get(cls.KEY)
-            if w is None or w.isHidden():
+            w = shown.get(cls.KEY)
+            if w is None:
                 continue
-            saved = self.settings["positions"].get(cls.KEY)
+            saved = positions.get(cls.KEY)
             if saved:
                 w.move(self.clamp(w, QPoint(*saved)))
                 continue
-            if y + w.height() > area.bottom() - 90 and col_w:
+            under = shown.get(getattr(cls, "UNDER", ""))
+            if under is not None and cls.UNDER in positions:
+                # the one it belongs under was put somewhere by hand: follow it there
+                w.move(self.clamp(w, QPoint(under.x(), under.y() + under.height() + 12)))
+                continue
+            # a widget and the ones that sit under it stay together in a column
+            need = w.height() + sum(f.height() + 12 for f in shown.values()
+                                    if getattr(f, "UNDER", "") == cls.KEY and f.KEY not in positions)
+            if y + need > area.bottom() - 90 and col_w:
                 x_right -= col_w + 12
                 y, col_w = area.top() + 16, 0
             w.move(self.clamp(w, QPoint(x_right - w.width() + 1, y)))

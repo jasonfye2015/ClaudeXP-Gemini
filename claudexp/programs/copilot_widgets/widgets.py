@@ -1,4 +1,4 @@
-"""The desktop widgets: Clock, Calendar, Weather, TV Guide, Almanac, System Monitor and Sticky Note."""
+"""The desktop widgets: Clock, Calendar, Weather, TV Guide, Hotmail Inbox, Almanac, System Monitor and Sticky Note."""
 import calendar
 import ctypes
 import os
@@ -419,6 +419,136 @@ class TVGuideWidget(WidgetBase):
                 except Exception as exc:
                     self.c.say("TV Guide", f"Could not open ClaudeTV: {exc}")
                 return
+
+
+# ---- Hotmail inbox -----------------------------------------------------------------------------------------
+HOTMAIL_MSG = "http://www.hotmail.com/cgi-bin/getmsg?f=inbox&id={}"
+HOTMAIL_INBOX = "http://www.hotmail.com/cgi-bin/hmhome?f=inbox"
+
+
+def _mail_when(m):
+    """'3:42pm' for today's mail, 'Oct 14' for older."""
+    ts = m.get("ts")
+    if not ts:
+        return ""
+    try:
+        when = datetime.fromtimestamp(ts) + (clock.now() - datetime.now())
+    except (OverflowError, OSError, ValueError):
+        return ""
+    return _clock_text(when) if when.date() == clock.now().date() else f"{when:%b} {when.day}"
+
+
+class HotmailWidget(WidgetBase):
+    """The newest mail in your MSN Hotmail inbox. Click one to read it in Internet Explorer - and if you're not
+    online, America Online dials first."""
+    KEY, TITLE, SIZE, REFRESH_MS = "mail", "Hotmail Inbox", (400, 236), 5000
+    INTERACTIVE = True                      # it's a list to click, even when the widgets pass clicks through
+    UNDER = "tv"                            # sits right under the TV Guide
+    SHOWN = 5
+    HEAD, ROW, WARN = 30, 36, 26
+
+    def __init__(self, controller):
+        super().__init__(controller)
+        self.msgs = []
+        self.unread = 0
+        self.online = False
+        self._hits = []
+        self._hover = None
+        self._hooked = False
+        self.setMouseTracking(True)
+
+    def start(self):
+        super().start()
+        if not self._hooked:
+            from ... import life
+            sim = life.get()
+            if sim is not None:
+                sim.mail_arrived.connect(self.refresh)
+                self._hooked = True
+
+    def refresh(self):
+        from ... import life, network
+        sim = life.get()
+        box = sim.mailbox.messages() if sim is not None else []
+        inbox = [m for m in box if m.get("folder", "inbox") == "inbox"]
+        self.msgs = inbox[::-1][:self.SHOWN]
+        self.unread = sum(1 for m in inbox if not m.get("read"))
+        self.online = network.is_connected()
+        height = self.HEAD + (0 if self.online else self.WARN) + max(1, len(self.msgs)) * self.ROW + 8
+        if height != self.height():
+            self.resize(self.width(), height)
+            self.c.place_all()
+        self.update()
+
+    def draw(self, p, r):
+        from ...mailtray import hotmail_pixmap
+        p.drawPixmap(12, 6, hotmail_pixmap(18, new=bool(self.unread)))
+        _text(p, 36, 6, 200, 20, "MSN Hotmail – Inbox", 14, WHITE, True)
+        _text(p, r.width() - 132, 6, 120, 20, f"{self.unread} new" if self.unread else "No new mail", 12,
+              GOLD if self.unread else SOFT, True, Qt.AlignRight | Qt.AlignVCenter)
+        self._hits = [(QRectF(0, 0, r.width(), self.HEAD), None)]
+        y = self.HEAD
+        if not self.online:
+            warn = QRectF(10, y + 1, r.width() - 20, self.WARN - 4)
+            p.setPen(QPen(QColor(255, 220, 120, 160), 1))
+            p.setBrush(QColor(200, 110, 0, 150))
+            p.drawRoundedRect(warn, 5, 5)
+            _text(p, warn.x() + 8, warn.y(), warn.width() - 16, warn.height(),
+                  "⚠ You are not online. Click a message to sign on with AOL.", 11, WHITE, True)
+            self._hits.append((warn, "connect"))
+            y += self.WARN
+        if not self.msgs:
+            _text(p, 14, y + 4, r.width() - 28, self.ROW - 8, "Your Inbox is empty.", 12, SOFT)
+            return
+        for m in self.msgs:
+            row = QRectF(6, y, r.width() - 12, self.ROW)
+            self._hits.append((row, m["id"]))
+            if self._hover == m["id"]:
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor(255, 255, 255, 40))
+                p.drawRoundedRect(row.adjusted(0, 1, 0, -1), 5, 5)
+            p.setPen(QPen(QColor(255, 255, 255, 45), 1))
+            p.drawLine(12, int(y), int(r.width() - 12), int(y))
+            new = not m.get("read")
+            if new:
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor("#FFE070"))
+                p.drawEllipse(QPointF(17, y + 11), 3.5, 3.5)
+            _text(p, 26, y + 3, r.width() - 120, 16, m.get("from") or m.get("addr", ""), 12,
+                  WHITE, new)
+            _text(p, r.width() - 92, y + 3, 80, 16, _mail_when(m), 10, SOFT, False, Qt.AlignRight | Qt.AlignVCenter)
+            _text(p, 26, y + 18, r.width() - 40, 15, m.get("subject") or "(no subject)", 11,
+                  GOLD if new else SOFT, new)
+            y += self.ROW
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        hover = next((key for rect, key in self._hits if isinstance(key, int) and rect.contains(event.position())),
+                     None)
+        if hover != self._hover:
+            self._hover = hover
+            self.setCursor(Qt.PointingHandCursor if hover is not None else Qt.ArrowCursor)
+            self.update()
+
+    def leaveEvent(self, event):
+        self._hover = None
+        self.update()
+
+    def clicked(self, pos):
+        for rect, key in reversed(self._hits):
+            if rect.contains(pos):
+                url = HOTMAIL_MSG.format(key) if isinstance(key, int) else HOTMAIL_INBOX
+                self._open(url)
+                return
+
+    def _open(self, url):
+        from ... import network
+        from .. import navigator
+        desktop = self.c.desktop
+        if network.is_connected():
+            navigator.open_url(desktop, url)
+        else:
+            network.connect(desktop, then=lambda: navigator.open_url(desktop, url))
 
 
 # ---- almanac -----------------------------------------------------------------------------------------------
@@ -947,4 +1077,5 @@ class NoteWidget(WidgetBase):
         _text(p, 10, 4, r.width() - 110, 20, self.status or "Sticky Note", 11, QColor("#7A5F00"), bold=not self.status)
 
 
-WIDGETS = (ClockWidget, CalendarWidget, WeatherWidget, TVGuideWidget, AlmanacWidget, SystemWidget, NoteWidget)
+WIDGETS = (ClockWidget, CalendarWidget, WeatherWidget, TVGuideWidget, HotmailWidget, AlmanacWidget, SystemWidget,
+           NoteWidget)
