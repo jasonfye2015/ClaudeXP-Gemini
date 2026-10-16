@@ -24,10 +24,14 @@ on this computer</a>, or meet <a href="help:people">the people who live here</a>
 <a href="launch:tour">Take a tour of Windows XP</a>.</p>"""),
     "startmenu": ("Using the Start menu", "new", """
 <p>Click <b>start</b> to see your programs. Your most-used programs are listed on the left;
-<b>All Programs</b> holds everything, sorted into folders like <b>Accessories</b> and <b>Games</b>.
+<b>All Programs</b> holds everything, sorted into folders like <b>Accessories</b>, <b>Games</b> and
+<b>Social Networking</b> (every messenger, ClaudeIRC, ClaudeMUCK and LiveJournal).
 The right side opens My Documents, My Pictures, My Music, My Computer, the Control Panel, Printers and Faxes,
 <a href="launch:search">Search</a>, <a href="launch:run">Run...</a> and this Help and Support Center.</p>
-<p>Right-click the taskbar for Cascade, Tile, Show the Desktop and <a href="launch:taskmgr">Task Manager</a>.</p>"""),
+<p>Right-click the taskbar for Cascade, Tile, Show the Desktop, <a href="launch:taskmgr">Task Manager</a> and
+<b>Properties</b>. <b>Log Off</b> at the bottom of the Start menu offers <b>Switch User</b> (your programs stay open
+while you're at the Welcome screen) or <b>Log Off</b> (everything closes). See also
+<a href="help:taskbar">The notification area and taskbar</a>.</p>"""),
     "shutdown": ("Turning off the computer", "new", """
 <p>Click <b>start</b>, then <b>Turn Off Computer</b>. When Windows says <i>It's now safe to turn off your
 computer</i>, the PC is still on: your buddies' lives carry on, and you can choose <b>Turn off</b>,
@@ -36,11 +40,14 @@ computer</i>, the PC is still on: your buddies' lives carry on, and you can choo
 <table cellpadding="3">
 <tr><td><b>Ctrl+Alt+End</b></td><td>Windows Task Manager (your real PC keeps Ctrl+Alt+Del for itself)</td></tr>
 <tr><td><b>F11</b></td><td>Full screen on or off</td></tr>
+<tr><td><b>Alt+Tab</b></td><td>Switch between windows (while ClaudeXP is full screen; in a window, Alt+Tab belongs
+to your real PC). Hold Alt and keep pressing Tab; Shift goes backwards, Esc cancels.</td></tr>
 <tr><td><b>F2</b></td><td>Rename a desktop icon or file; new game in the games</td></tr>
 <tr><td><b>F5</b></td><td>Refresh the desktop</td></tr>
 <tr><td><b>Ctrl+C / Ctrl+V</b></td><td>Copy and paste</td></tr>
 <tr><td><b>Space</b> at startup</td><td>System Recovery (reinstall Windows)</td></tr>
 <tr><td><b>Z</b> and <b>/</b></td><td>Pinball flippers (Space launches the ball)</td></tr>
+<tr><td><b>F1</b></td><td>The controls, in ClaudeQuest and Claudeablo</td></tr>
 </table>"""),
     "connect": ("Connecting to the Internet", "web", """
 <p>This computer reaches the Internet with a 56K modem and America Online. Double-click <b>America Online</b> on
@@ -73,7 +80,14 @@ from your microphone.</p>"""),
 <p><a href="launch:paint">Paint</a> draws and edits pictures (.bmp, .png, .jpg, .gif). Right-click a picture in
 My Pictures and choose <b>Edit</b> to open it in Paint, or <b>Set as Desktop Background</b>.</p>"""),
     "games": ("Games", "media", """
-<p>Start &gt; All Programs &gt; Games has <a href="launch:solitaire">Solitaire</a>,
+<p>Every game is in <b>Start &gt; All Programs &gt; Games</b> and in the <b>Games</b> folder on the desktop, which
+also holds the <b>Emulation</b> folder of console emulators. Besides Windows' own, ClaudeXP has games of its own:
+<a href="launch:claudecraft">ClaudeCraft</a>, <a href="launch:furcadia">Claudecadia</a>,
+<a href="launch:claudequest">ClaudeQuest</a>, <a href="launch:claudeablo">Claudeablo</a>,
+<a href="launch:claudecity">ClaudeCity</a>, <a href="launch:scorched">Scorched Claude</a>,
+<a href="launch:claudejeweled">Claudejeweled</a> and <a href="launch:claudeggle">Claudeggle</a> - see
+<a href="help:claudexp-games">ClaudeXP's own games</a>.</p>
+<p>Windows' games: <a href="launch:solitaire">Solitaire</a>,
 <a href="launch:freecell">FreeCell</a>, <a href="launch:spider">Spider Solitaire</a>,
 <a href="launch:minesweeper">Minesweeper</a>, <a href="launch:hearts">Hearts</a> and
 <a href="launch:pinball">3D Pinball</a>. The <b>Internet</b> games (Backgammon, Checkers, Hearts, Reversi,
@@ -109,13 +123,30 @@ computer. Files on the external drive (E:) are never touched.</p>"""),
 <ul><li>The models live on the external drive, in <b>E:\\LLM Models</b>. If they're missing, a warning sign
 appears by the clock and your buddies show as Away: click the sign (or open
 <a href="launch:aimodels-setup">the AI Model Setup Assistant</a>) to download them.</li>
-<li>The first reply after logging on takes a few extra seconds while the model loads.</li>
+<li>The first reply after logging on takes a few extra seconds while the model loads - a small <b>Loading AI
+Model</b> box shows how far along it is.</li>
 <li>Replies can take a few seconds; the hard disk light by the clock flickers while the model is working.</li>
 <li>Buddies keep their own hours: someone asleep won't be online, and answers e-mail after they wake up.</li>
 <li>Windows Update or a virus scan in the tray can mean the model is busy catching up on everyone's lives.</li></ul>"""),
     "no-sound": ("I can't hear anything", "fix", """
-<p>Click the speaker by the clock to turn sound back on (a red circle means it's muted). Windows Media Player has
-its own volume and Mute button too.</p>"""),
+<p>Click the speaker by the clock for the volume slider and its Mute box (a red circle on the speaker means
+it's muted). Double-click the speaker for <a href="launch:sndvol">Volume Control</a>, where the master Volume and
+Balance really set ClaudeXP's level in your PC's own mixer, and <b>Wave</b> sets the system sounds. Windows Media
+Player has its own volume and Mute button too.</p>"""),
+    "taskbar": ("The notification area and taskbar", "custom", """
+<p>The icons by the clock are the <b>notification area</b>. Icons you haven't clicked for a few minutes tuck away
+behind the <b>&laquo;</b> button; click it to see them all. Right-click the clock (or open taskbar
+<b>Properties</b> &gt; Customize...) and choose <b>Customize Notifications</b> to set each icon to <i>Hide when
+inactive</i>, <i>Always hide</i> or <i>Always show</i> - icons from programs that have closed are listed under
+Past Items.</p>
+<p>Double-click the clock for Date and Time. Right-click the taskbar and choose <b>Properties</b> for Taskbar and
+Start Menu Properties: auto-hide, grouping, Quick Launch, the clock, and turning off <b>Hide inactive icons</b>.</p>
+<p>When a language model is loaded for the first time in a session, a small <b>Loading AI Model</b> box shows its
+progress.</p>"""),
+    "startup-items": ("Choosing what starts with Windows", "perf", """
+<p>Type <b>msconfig</b> in <a href="launch:run">Run...</a> to open the <a href="launch:msconfig">System
+Configuration Utility</a>. Its <b>Startup</b> tab lists the programs that start when you log on - untick one to stop
+it. Changes take effect the next time Windows starts.</p>"""),
 }
 TOPICS = [("claudexp", "Welcome to ClaudeXP"), ("people", "The people who live here"),
           ("new", "What's new in Windows XP"), ("media", "Music, video, games, and photos"),
@@ -132,7 +163,11 @@ TIPS = ["You can drag icons around the desktop, and right-click it to arrange th
         "Post in your LiveJournal and a few buddies will come by to comment.",
         "The Furry Log shows everything the language model is doing, as it happens.",
         "Press any key during the disk check's countdown to skip it.",
-        "Neko chases your mouse pointer. Keep it still and Neko curls up for a nap."]
+        "Neko chases your mouse pointer. Keep it still and Neko curls up for a nap.",
+        "In full screen, Alt+Tab switches between ClaudeXP's windows.",
+        "Switch User keeps your programs open while you're at the Welcome screen.",
+        "In Claudeggle, the bucket at the bottom gives your ball back if it catches it.",
+        "Claudejeweled: line up four for a Flame Gem, five for a Hypercube."]
 
 from .helpctr_guide import GUIDE, guide_article  # noqa: E402
 

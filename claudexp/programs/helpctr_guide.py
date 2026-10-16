@@ -17,8 +17,9 @@ SECTIONS = [
      "The furry media of the time, from your archive on E:, and the residents' own directory."),
     ("office", "Office and creativity", "Documents, pictures, movies and code."),
     ("media", "Music and video", ""),
-    ("games", "Games", ""),
-    ("emu", "Game emulation", "Old consoles; you bring the game files (E:\\Emulation)."),
+    ("games", "Games", "All in Start > Games and the desktop's Games folder."),
+    ("emu", "Game emulation", "Old consoles; you bring the game files (E:\\Emulation). On the desktop they're in "
+                              "Games > Emulation."),
     ("ai", "Your AI helpers", "Assistants you talk to directly - not characters with lives of their own."),
     ("system", "System tools and utilities", ""),
     ("other", "Other programs", ""),
@@ -66,7 +67,9 @@ CATALOG = {
     "furvideo": ("furry", "Browses the video archive."),
     "mediaarchive": ("furry", "The Furry Media Archive folder on E:."),
     "tvmovies": ("furry", "Your TV and Movies folder on E:."),
-    "tv": ("media", "ClaudeTV: channels made from your TV and movie files, with a TV Guide."),
+    "tv": ("media", "ClaudeTV: channels made from your TV and movie files - WAGG 4 cartoons, KFUR 7 animals and "
+                    "anime, KPAW 9 movies, KANI 11 anime with the Orangina commercials, KHAH 13 comedy - with a TV "
+                    "Guide."),
     # office
     "gemini_word": ("office", "Word processing, Office XP style."),
     "gemini_excel": ("office", "Spreadsheets with formulas."),
@@ -256,7 +259,9 @@ nags - with one difference: it's lived in. Your buddies on AIM, the regulars on 
 the people writing LiveJournals and posting on FurAffinity are characters played by a language model that runs on
 this computer. Nothing goes to the real Internet.</p>
 <h2>Start here</h2>
-<p>&#9656; <a href="help:claudexp-catalog">Programs on this computer</a> - everything there is, by kind.<br>
+<p>&#9656; <a href="help:claudexp-new">Recently added</a> - the newest games and features.<br>
+&#9656; <a href="help:claudexp-catalog">Programs on this computer</a> - everything there is, by kind.<br>
+&#9656; <a href="help:claudexp-games">ClaudeXP's own games</a> - what each one is and how to play.<br>
 &#9656; <a href="help:people">The people who live here</a> - who they are and how they work.<br>
 &#9656; <a href="help:claudexp-ai">How the language models work</a> - and what to do if nobody answers.<br>
 &#9656; <a href="help:claudexp-nags">The 2001 nags</a> - activation, cleanup, upgrade offers, and how to quiet them.<br>
@@ -267,6 +272,55 @@ this computer. Nothing goes to the real Internet.</p>
 <p><b>C:</b> is Windows and your documents. <b>E:</b> is the external drive (Local Storage on the real computer):
 the language models, the Furry Media Archive, TV and Movies, emulation games and WADs. Printing goes to
 <b>E:\\Printed</b> as PDF files.</p>"""),
+    "claudexp-new": ("Recently added", "claudexp", """
+<h2>New games</h2>
+<p>All in <b>Start &gt; Games</b> and the desktop's <b>Games</b> folder (see
+<a href="help:claudexp-games">ClaudeXP's own games</a>):
+<a href="launch:claudeggle">Claudeggle</a> (aim, shoot, clear the orange pegs),
+<a href="launch:claudejeweled">Claudejeweled</a> (swap gems, line up three),
+<a href="launch:scorched">Scorched Claude</a> (tanks and very angry physics),
+<a href="launch:claudecity">ClaudeCity</a> (build a city),
+<a href="launch:claudeablo">Claudeablo</a> (fifty levels down to Diablo),
+<a href="launch:claudequest">ClaudeQuest</a> (lead a wolf pack) and
+<a href="launch:furcadia">Claudecadia</a> (a furry graphical chat world).</p>
+<h2>On the desktop and Start menu</h2>
+<ul><li><b>Start &gt; All Programs &gt; Social Networking</b> holds every messenger, ClaudeIRC, ClaudeMUCK and
+LiveJournal.</li>
+<li>The desktop's <b>Emulation</b> folder now lives inside <b>Games</b>.</li>
+<li>The notification area hides icons you haven't used - see <a href="help:taskbar">The notification area and
+taskbar</a> - and the speaker has a volume slider and the <a href="launch:sndvol">Volume Control</a> mixer.</li>
+<li><b>Alt+Tab</b> switches windows while ClaudeXP is full screen.</li>
+<li><b>Log Off</b> offers <b>Switch User</b>, which keeps your programs open.</li>
+<li><a href="launch:msconfig">msconfig</a> chooses what starts with Windows.</li>
+<li>A <b>Loading AI Model</b> box shows progress the first time a model loads.</li>
+<li><a href="launch:tv">ClaudeTV</a> has <b>KANI 11</b>, an anime channel with the Orangina commercials.</li></ul>"""),
+    "claudexp-games": ("ClaudeXP's own games", "claudexp", """
+<p>Games made for ClaudeXP, in the spirit of the classics. They're in <b>Start &gt; Games</b> and the desktop's
+<b>Games</b> folder; most remember your progress or best scores.</p>
+<table cellpadding="4">
+<tr><td valign="top"><a href="launch:claudeggle"><b>Claudeggle</b></a></td><td>Peggle-style. Aim the launcher with
+the mouse and click to shoot; clear every orange peg in ten balls. Green pegs set off the level's power (Super
+Guide, Multiball, Fireball, Spooky Ball, Zap), the purple peg is worth 500, the moving bucket gives the ball back,
+and the last orange peg sets off Extreme Fever. Twelve levels.</td></tr>
+<tr><td valign="top"><a href="launch:claudejeweled"><b>Claudejeweled</b></a></td><td>Bejeweled-style. Swap two
+neighbouring gems to line up three or more. Four makes a Flame Gem, an L or T a Star Gem, five a Hypercube.
+Classic, Action (a draining bar) and Zen modes. H for a hint, P to pause.</td></tr>
+<tr><td valign="top"><a href="launch:scorched"><b>Scorched Claude</b></a></td><td>Scorched Earth-style artillery for
+2-10 tanks, people or computer players. Left/Right aim, Up/Down power, Tab picks a weapon, Space fires, A/D drive
+with fuel; shop for nukes, MIRVs, napalm and shields between rounds.</td></tr>
+<tr><td valign="top"><a href="launch:claudecity"><b>ClaudeCity</b></a></td><td>SimCity Classic-style city building:
+zone, power, roads and rails, budgets, disasters and six scenarios.</td></tr>
+<tr><td valign="top"><a href="launch:claudeablo"><b>Claudeablo</b></a></td><td>A Diablo-style dungeon crawler - fifty
+random levels down to Diablo, loot, spells, town portals and shops. F1 for the controls.</td></tr>
+<tr><td valign="top"><a href="launch:claudequest"><b>ClaudeQuest</b></a></td><td>Lead a wolf pack through the
+seasons: hunt, raise pups, mark territory, survive rivals and winter. F1 for the keys.</td></tr>
+<tr><td valign="top"><a href="launch:furcadia"><b>Claudecadia</b></a></td><td>A Furcadia-style furry chat world: your
+AIM buddies log in as furres. Explore Willowmere Commons and 13 dreams, chat, emote, whisper and open treasure
+chests.</td></tr>
+<tr><td valign="top"><a href="launch:claudecraft"><b>ClaudeCraft</b></a></td><td>Block building in 3D: walk, fly,
+break and place blocks. Your world is saved.</td></tr>
+<tr><td valign="top"><a href="launch:rpg"><b>ClaudeRPG</b></a></td><td>A cozy, endless dungeon adventure.</td></tr>
+</table>"""),
     "claudexp-ai": ("How the language models work", "claudexp", """
 <p>Everyone's words come from language models that ClaudeXP runs itself with <b>llama.cpp</b> on the real
 computer's graphics card - no Ollama, nothing online. The models live in <b>E:\\LLM Models</b>.</p>
