@@ -1,6 +1,7 @@
 {
   "fur_name": "Kodiak",
-  "tier": "",
+  "tier": "background",
+  "summary": "Kodiak (Grant Haugen) idles in #furnet and #fursuiters, usually tagged zzz.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Grant Haugen",
+    "location": "Alaska, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "4/17/1964",
+    "height": "",
+    "job": "Forklift operator at a warehouse",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Early: 9 p.m. to 5 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Kodiak bear",
+    "colors": "deep brown",
+    "eyes": "dark brown",
+    "build": "",
+    "markings": "a greying muzzle",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A huge, gentle brown bear, almost always asleep in at least one channel."
   },
-  "personality": "",
+  "personality": "Big-hearted and slow to anger; a bear-hug kind of fur when he's awake.",
+  "mannerisms": "• Leaves his client running and falls asleep: Kodiak|zzz",
+  "interests": "Fishing, camping and bear suits at cons.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

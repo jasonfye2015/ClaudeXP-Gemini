@@ -1,6 +1,7 @@
 {
   "fur_name": "Pixelpup",
-  "tier": "",
+  "tier": "background",
+  "summary": "Pixelpup (Alex Turner) makes pixel art and hangs out in #gaming.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Alex Turner",
+    "location": "Washington, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "10/16/1978",
+    "height": "",
+    "job": "Junior web developer",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 1 a.m. to 9 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Corgi",
+    "colors": "red and white",
+    "eyes": "brown",
+    "build": "",
+    "markings": "pixel-art bandana",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A corgi who draws himself in 16-bit sprites."
   },
-  "personality": "",
+  "personality": "Cheerful and nerdy.",
+  "mannerisms": "• Talks about sprites and SNES games",
+  "interests": "Pixel art, retro games and emulators.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

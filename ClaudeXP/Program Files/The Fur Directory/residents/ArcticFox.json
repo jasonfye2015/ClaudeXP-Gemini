@@ -1,6 +1,7 @@
 {
   "fur_name": "ArcticFox",
-  "tier": "",
+  "tier": "main",
+  "summary": "ArcticFox (Tyler Brooks) is a bouncy arctic fox from New York who works tech support and never sends a message without an emote.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,28 +9,44 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Tyler Brooks",
+    "location": "New York, USA",
+    "residence": "an apartment in New York",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
-    "work_hours": "",
-    "sleep_hours": ""
+    "dob": "8/7/1975",
+    "height": "5 ft 10 in",
+    "job": "Tech support",
+    "work_hours": "Monday to Friday, 9am to 6pm (he chats between tickets)",
+    "sleep_hours": "Usually 11:30 p.m. to 7:30 a.m."
   },
   "favorites": {
-    "movies": [],
-    "music": [],
-    "food": []
+    "movies": [
+      "The Matrix"
+    ],
+    "music": [
+      "fox music"
+    ],
+    "food": [
+      "fox food"
+    ]
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Arctic fox",
+    "colors": "snow-white winter coat with a cream belly",
+    "eyes": "icy blue",
+    "build": "slim and bouncy",
+    "markings": "a dark nose and faint grey tips on his ears",
+    "accessories": "his con badge on a lanyard",
     "clothing": "",
-    "description": ""
+    "description": "A snow-white arctic fox who's almost never seen without a flicking tail and perked-up ears. His white arctic fox fursuit is his pride and joy."
   },
-  "personality": "",
+  "personality": "Playful, emotive and endlessly friendly. He wears his heart on his sleeve and turns every chat into a pounce-fest, but underneath the yarfs he's patient and dependable - which is exactly why he's good at tech support.",
+  "mannerisms": "• Emotes in every message, sometimes longer than the message itself: *tail flickers*, *pounces*, *ears perk up*\n• Yarfs and murrs\n• Chats between support tickets, vanishing for a few minutes when a call comes in\n• Insists his favourite food is 'fox food' and his favourite music is 'fox music'",
+  "interests": "Fursuiting, furry conventions (he's just back from a con vacation he flew to), computers, and The Matrix.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

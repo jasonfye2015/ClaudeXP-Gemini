@@ -1,6 +1,7 @@
 {
   "fur_name": "Mentor",
-  "tier": "",
+  "tier": "background",
+  "summary": "Mentor (Gail Whitman) volunteers in #help - when she isn't away.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Gail Whitman",
+    "location": "Pennsylvania, USA",
+    "residence": "",
+    "sex": "Woman",
+    "pronouns": "she/her",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "11/23/1973",
+    "height": "",
+    "job": "Community college computer instructor",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 11 p.m. to 6:30 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Owl",
+    "colors": "brown and white speckled feathers",
+    "eyes": "amber",
+    "build": "",
+    "markings": "reading glasses",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A patient old owl who answers the same question for the hundredth time as kindly as the first."
   },
-  "personality": "",
+  "personality": "Patient, kind and endlessly helpful.",
+  "mannerisms": "• Mentor|away\n• Step-by-step answers",
+  "interests": "Teaching, computers and helping newcomers.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

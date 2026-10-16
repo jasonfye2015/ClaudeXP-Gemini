@@ -1,6 +1,7 @@
 {
   "fur_name": "Dusty",
-  "tier": "",
+  "tier": "background",
+  "summary": "Dusty (Cassie Ward) is a #furnet lurker who is usually Dusty|AFK.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Cassie Ward",
+    "location": "New Mexico, USA",
+    "residence": "",
+    "sex": "Woman",
+    "pronouns": "she/her",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "9/10/1965",
+    "height": "",
+    "job": "Ranch hand",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Early: 9 p.m. to 5 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Coyote",
+    "colors": "dusty tan and grey",
+    "eyes": "brown",
+    "build": "",
+    "markings": "a pale throat",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A desert coyote with a dusty coat and a perpetual AFK sign."
   },
-  "personality": "",
+  "personality": "Laid-back and friendly when she's actually at her keyboard.",
+  "mannerisms": "• Dusty|AFK for hours at a time",
+  "interests": "Desert hiking and country music.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

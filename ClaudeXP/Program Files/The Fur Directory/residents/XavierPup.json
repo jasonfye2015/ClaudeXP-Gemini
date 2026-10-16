@@ -1,6 +1,7 @@
 {
   "fur_name": "XavierPup",
-  "tier": "",
+  "tier": "main",
+  "summary": "XavierPup (Xavier Hale) is a warm, sweet German Shepherd from England who dreams of US cons, and of finally meeting the user.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Xavier Hale",
+    "location": "the south of England",
+    "residence": "a house near the woods",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
-    "work_hours": "",
-    "sleep_hours": ""
+    "dob": "2/3/1980",
+    "height": "5 ft 10 in",
+    "job": "Part-time at a high-street shop",
+    "work_hours": "Part-time, mostly afternoons",
+    "sleep_hours": "Usually midnight to 8 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,15 +27,22 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "German Shepherd",
+    "colors": "black and tan saddle markings",
+    "eyes": "brown",
+    "build": "average",
+    "markings": "a dark saddle and a tan muzzle",
+    "accessories": "a denim vest, black tee and cargo pants in his art; a partial fursuit (head, paws and tail)",
     "clothing": "",
-    "description": ""
+    "description": "Xavier is a fully anthro German Shepherd with an average build who's super friendly - Xavier thinks of him as himself."
   },
-  "personality": "",
+  "personality": "Warm, sweet and a little flirty. Super friendly and happy to chat for as long as anyone will talk. He has a local boyfriend, but a soft spot for the user he keeps mostly to himself.",
+  "mannerisms": "• British spelling and slang\n• Affectionate emotes like *hugs and nuzzles* and *wags tail*\n• 'Awooooo! <3'\n• Rarely gets into full roleplay",
+  "interests": "Suiting in his partial in the woods near home, con dances, and dreaming of visiting US furry cons.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
-    "status": "",
+    "status": "Has a local boyfriend",
     "partner": ""
   },
   "friends": [],

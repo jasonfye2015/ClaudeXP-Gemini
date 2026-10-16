@@ -1,6 +1,7 @@
 {
   "fur_name": "Rusty",
-  "tier": "",
+  "tier": "support",
+  "summary": "",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -10,9 +11,12 @@
   "personal": {
     "real_name": "",
     "location": "",
+    "residence": "",
     "sex": "",
+    "pronouns": "",
     "age": "",
-    "dob": "",
+    "dob": "8/11/1966",
+    "height": "",
     "job": "",
     "work_hours": "",
     "sleep_hours": ""
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
+    "species": "Red panda",
     "colors": "",
+    "eyes": "",
+    "build": "",
     "markings": "",
+    "accessories": "",
     "clothing": "",
     "description": ""
   },
   "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

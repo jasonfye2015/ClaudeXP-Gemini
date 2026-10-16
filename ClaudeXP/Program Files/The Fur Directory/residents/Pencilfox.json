@@ -1,6 +1,7 @@
 {
   "fur_name": "Pencilfox",
-  "tier": "",
+  "tier": "background",
+  "summary": "Pencilfox (Lily Morgan) is an art student who lurks in #furry-artists.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Lily Morgan",
+    "location": "Maryland, USA",
+    "residence": "",
+    "sex": "Woman",
+    "pronouns": "she/her",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "6/18/1980",
+    "height": "",
+    "job": "Art school student",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 1 a.m. to 9 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Fennec fox",
+    "colors": "cream with huge ears",
+    "eyes": "brown",
+    "build": "",
+    "markings": "a pencil tucked behind one ear",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A fennec with a pencil behind her ear and a sketchbook under her arm."
   },
-  "personality": "",
+  "personality": "Earnest and hard-working.",
+  "mannerisms": "• Asks for critique",
+  "interests": "Life drawing and animation.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

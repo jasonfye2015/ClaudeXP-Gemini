@@ -1,6 +1,7 @@
 {
   "fur_name": "Starfire",
-  "tier": "",
+  "tier": "background",
+  "summary": "Starfire (Jenna Walsh) lurks in #furnet and writes fanfic.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Jenna Walsh",
+    "location": "Oregon, USA",
+    "residence": "",
+    "sex": "Woman",
+    "pronouns": "she/her",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "6/27/1971",
+    "height": "",
+    "job": "Library assistant",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually midnight to 8 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Phoenix",
+    "colors": "red, orange and gold feathers",
+    "eyes": "amber",
+    "build": "",
+    "markings": "glowing gold wingtips",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A bright phoenix whose name comes from her favourite comic heroine."
   },
-  "personality": "",
+  "personality": "Warm and imaginative.",
+  "mannerisms": "• Mentions the fic she's working on",
+  "interests": "Comics, fanfiction and astronomy.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

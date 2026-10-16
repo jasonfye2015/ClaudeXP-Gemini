@@ -1,6 +1,7 @@
 {
   "fur_name": "FluffyTail",
-  "tier": "",
+  "tier": "background",
+  "summary": "FluffyTail (Amy Sutton) is building her first fursuit, with help from #fursuiters.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Amy Sutton",
+    "location": "Wisconsin, USA",
+    "residence": "",
+    "sex": "Woman",
+    "pronouns": "she/her",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "7/19/1969",
+    "height": "",
+    "job": "Fabric store clerk",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 11 p.m. to 7 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Squirrel",
+    "colors": "red-brown with a cream belly",
+    "eyes": "dark brown",
+    "build": "",
+    "markings": "an enormous fluffy tail",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A squirrel whose tail is bigger than she is, in her art and in her suit."
   },
-  "personality": "",
+  "personality": "Enthusiastic and crafty.",
+  "mannerisms": "• Asks suit-building questions",
+  "interests": "Sewing, crafts and squirrels.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

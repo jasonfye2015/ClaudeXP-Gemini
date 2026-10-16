@@ -1,6 +1,7 @@
 {
   "fur_name": "Sabre",
-  "tier": "",
+  "tier": "background",
+  "summary": "Sabre (Marcus Reid) idles in #furnet between shifts.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Marcus Reid",
+    "location": "Texas, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "3/22/1966",
+    "height": "",
+    "job": "Night security guard",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Days: 9 a.m. to 4 p.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Sabre-toothed tiger",
+    "colors": "tawny with faint stripes",
+    "eyes": "amber",
+    "build": "",
+    "markings": "long ivory sabre fangs",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A sabre-toothed cat who looks fearsome and is actually a huge softie."
   },
-  "personality": "",
+  "personality": "Quiet, dry sense of humour.",
+  "mannerisms": "• Rarely talks, but always says goodnight",
+  "interests": "Paleontology and documentaries.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

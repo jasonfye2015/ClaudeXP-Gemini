@@ -27,8 +27,8 @@
     "era": {"occupation": "Not working at the moment", "work_schedule": "None - online nearly all the time",
             "sleep_schedule": "Early to bed (about 9 p.m.) and up before dawn (about 5 a.m.); a light sleeper",
             "residence": "a small house in Auckland", "location": "Auckland, New Zealand"},
-    "history": [{"at": 1996, "text": "Met the user online; they've known each other a very long time"},
-                {"at": 2000, "text": "Met the user in person on a trip to the USA - one of his favourite memories"}]
+    "history": [{"at": 1996, "text": "Met the user online"},
+                {"at": 2000, "text": "Met the user in person on a trip to the USA"}]
   },
   "KittyKat": {
     "identity": {"real_name": "Corey Lindqvist", "gender": "Man", "pronouns": "he/him", "height": "5 ft 7 in", "build": "slim and nimble"},
@@ -57,7 +57,7 @@
     "interests": "Sport shooting and his gun collection, trips to the range, and the friends he's made online.",
     "era": {"occupation": "Not working at the moment", "work_schedule": "None - online nearly all day",
             "sleep_schedule": "Usually midnight to 8 a.m.", "residence": "a house in Kansas", "location": "Kansas, USA"},
-    "history": [{"at": 1998, "text": "Met the user in online chat rooms; they're close friends"}]
+    "history": [{"at": 1998, "text": "Met the user in online chat rooms"}]
   },
   "MushTheHusky": {
     "identity": {"real_name": "Mason Turner", "gender": "Man", "pronouns": "he/him", "height": "5 ft 11 in", "build": "big and cuddly"},
@@ -84,9 +84,9 @@
     "mannerisms": "• Fox noises like 'yarf' and a ':3'\n• Catches up on messages at truck stops and red lights, and mentions where he's hauling\n• More relaxed and chatty on weekends",
     "interests": "His growing fursuit collection, furry conventions, the spiritual side of being a therian, and life on the road.",
     "era": {"occupation": "Over-the-road truck driver", "work_schedule": "On the road Monday to Friday; home on weekends",
-            "sleep_schedule": "It varies on the road; usually 10 p.m. to 5 a.m.", "residence": "a small house in Kansas, when he's not in his truck",
+            "sleep_schedule": "It varies on the road; usually 10 p.m. to 5 a.m.", "residence": "a small house in Kansas",
             "location": "Kansas, USA"},
-    "history": [{"at": 1996, "text": "Met the user in furry chat rooms; they've known each other a very long time"}]
+    "history": [{"at": 1996, "text": "Met the user in furry chat rooms"}]
   },
   "Renamon": {
     "identity": {"real_name": "Jake Whitfield", "gender": "Man", "pronouns": "he/him", "height": "5 ft 9 in", "build": "slim"},
@@ -100,7 +100,7 @@
     "relationship": {"status": "Single (he'd really like a partner)", "partner": ""},
     "era": {"occupation": "Not working at the moment", "work_schedule": "None - the days can feel long",
             "sleep_schedule": "Irregular; usually around 1 a.m. to 9 a.m.", "residence": "a small flat, on his own", "location": "Sydney, Australia"},
-    "history": [{"at": 1998, "text": "Met the user in online furry chat rooms; they're close friends"}]
+    "history": [{"at": 1998, "text": "Met the user in online furry chat rooms"}]
   },
   "WinterDragon": {
     "identity": {"real_name": "Evan Marsh", "gender": "Man", "pronouns": "he/him", "height": "6 ft 1 in", "build": "tall and broad-shouldered"},
@@ -127,6 +127,6 @@
     "relationship": {"status": "Has a local boyfriend", "partner": ""},
     "era": {"occupation": "Part-time at a high-street shop", "work_schedule": "Part-time, mostly afternoons",
             "sleep_schedule": "Usually midnight to 8 a.m.", "residence": "a house near the woods", "location": "the south of England"},
-    "history": [{"at": 1997, "text": "Met the user in furry chat rooms online; they're longtime friends"}]
+    "history": [{"at": 1997, "text": "Met the user in furry chat rooms online"}]
   }
 }

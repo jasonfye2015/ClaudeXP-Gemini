@@ -1,6 +1,7 @@
 {
   "fur_name": "Rosco",
-  "tier": "",
+  "tier": "background",
+  "summary": "Rosco (Ross Delaney) lurks in #furnet.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Ross Delaney",
+    "location": "Tennessee, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "12/3/1965",
+    "height": "",
+    "job": "Auto mechanic",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 10 p.m. to 6 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Bloodhound",
+    "colors": "red-brown",
+    "eyes": "brown",
+    "build": "",
+    "markings": "long droopy ears",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A droopy bloodhound with a deep 'arooo' and a good nose for drama."
   },
-  "personality": "",
+  "personality": "Laid-back, homespun humour.",
+  "mannerisms": "• Southern sayings",
+  "interests": "Hunting dogs, barbecue and bluegrass.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

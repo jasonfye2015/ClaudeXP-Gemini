@@ -1,6 +1,7 @@
 {
   "fur_name": "Kiba",
-  "tier": "",
+  "tier": "background",
+  "summary": "Kiba (Ryan Sato) is a quiet #furnet regular who loves anime.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Ryan Sato",
+    "location": "California, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "2/18/1977",
+    "height": "",
+    "job": "College student and part-time video store clerk",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 2 a.m. to 10 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Wolf",
+    "colors": "white",
+    "eyes": "gold",
+    "build": "",
+    "markings": "a scar across his nose",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A white wolf whose name means 'fang' in Japanese."
   },
-  "personality": "",
+  "personality": "Thoughtful and a bit of a loner.",
+  "mannerisms": "• Drops anime references nobody else gets",
+  "interests": "Anime, manga and drawing wolves.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

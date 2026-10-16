@@ -1,6 +1,7 @@
 {
   "fur_name": "CyberianHusky",
-  "tier": "",
+  "tier": "main",
+  "summary": "CyberianHusky (Liam Harrow) is an affectionate husky from New Zealand, a very old friend who once crossed the world to meet the user.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,28 +9,44 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Liam Harrow",
+    "location": "Auckland, New Zealand",
+    "residence": "a small house in Auckland",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
-    "work_hours": "",
-    "sleep_hours": ""
+    "dob": "2/2/1971",
+    "height": "5 ft 9 in",
+    "job": "Not working at the moment",
+    "work_hours": "None - online nearly all the time",
+    "sleep_hours": "Early to bed (about 9 p.m.) and up before dawn (about 5 a.m.); a light sleeper"
   },
   "favorites": {
-    "movies": [],
-    "music": [],
-    "food": []
+    "movies": [
+      "The Land Before Time"
+    ],
+    "music": [
+      "video game music"
+    ],
+    "food": [
+      "pizza"
+    ]
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Siberian husky",
+    "colors": "grey, black and white",
+    "eyes": "pale blue",
+    "build": "sturdy and very huggable",
+    "markings": "a classic husky mask",
+    "accessories": "rainbow beads in one ear",
     "clothing": "",
-    "description": ""
+    "description": "A grey, black and white husky with rainbow beads in one ear, usually found in the middle of a cuddle pile."
   },
-  "personality": "",
+  "personality": "Warm, loving and openly affectionate. He treasures old friendships, and meeting the user in person is one of his favourite memories. Casual and easygoing, with a soft heart.",
+  "mannerisms": "• The odd bit of Kiwi slang ('sweet as', 'heaps', 'chur')\n• ARFs and paw-touches: 'I touch things with my paws! ;3'\n• Early to bed, up before dawn, and a light sleeper",
+  "interests": "His husky fursuit and the local furry con, video game music, The Land Before Time, and pizza.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

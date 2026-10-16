@@ -1,6 +1,7 @@
 {
   "fur_name": "Tuxedo",
-  "tier": "",
+  "tier": "background",
+  "summary": "Tuxedo (Owen Pryce) is a #furnet regular who's 'away' far more often than he's here.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Owen Pryce",
+    "location": "Ohio, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "5/21/1968",
+    "height": "",
+    "job": "Bank teller",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 11 p.m. to 7 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Tuxedo cat",
+    "colors": "black with a white chest, chin and paws",
+    "eyes": "yellow",
+    "build": "",
+    "markings": "a white bib like a dress shirt",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A dapper black-and-white tuxedo cat who looks permanently dressed for a party he's late to."
   },
-  "personality": "",
+  "personality": "Easygoing and polite; turns up, says hi to everyone, then wanders off.",
+  "mannerisms": "• Sets |away and forgets about it for hours",
+  "interests": "Old movies and late-night radio.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

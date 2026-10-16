@@ -1,6 +1,7 @@
 {
   "fur_name": "Brushtail",
-  "tier": "",
+  "tier": "background",
+  "summary": "Brushtail (Mia Fenwick) shares watercolours in #furry-artists.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Mia Fenwick",
+    "location": "Brisbane, Australia",
+    "residence": "",
+    "sex": "Woman",
+    "pronouns": "she/her",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "2/2/1974",
+    "height": "",
+    "job": "Art supply shop assistant",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually midnight to 8 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Brushtail possum",
+    "colors": "silver-grey",
+    "eyes": "dark brown",
+    "build": "",
+    "markings": "a bushy black tail",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "An Australian brushtail possum who paints in watercolour."
   },
-  "personality": "",
+  "personality": "Gentle and encouraging.",
+  "mannerisms": "• Aussie spelling; praises other artists' work",
+  "interests": "Watercolour, nature and native Australian animals.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

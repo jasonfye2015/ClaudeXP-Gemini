@@ -1,6 +1,7 @@
 {
   "fur_name": "Frag",
-  "tier": "",
+  "tier": "background",
+  "summary": "Frag (Chris Doyle) lives in #gaming and on Counter-Strike servers.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Chris Doyle",
+    "location": "Texas, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "7/28/1975",
+    "height": "",
+    "job": "Computer lab assistant",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 3 a.m. to 11 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Wolf",
+    "colors": "dark grey",
+    "eyes": "red",
+    "build": "",
+    "markings": "a headset",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A competitive grey wolf, always mid-match: Frag|CS."
   },
-  "personality": "",
+  "personality": "Competitive trash-talker with a good heart.",
+  "mannerisms": "• Frag|CS\n• 'gg'",
+  "interests": "Counter-Strike, LAN parties and energy drinks.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

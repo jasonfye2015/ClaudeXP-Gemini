@@ -1,6 +1,7 @@
 {
   "fur_name": "Chester",
-  "tier": "",
+  "tier": "background",
+  "summary": "Chester (Chester Boyd) idles in #furnet.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Chester Boyd",
+    "location": "Pennsylvania, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "4/16/1980",
+    "height": "",
+    "job": "Postal worker",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Early: 9:30 p.m. to 5 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Red panda",
+    "colors": "russet with a ringed tail",
+    "eyes": "dark brown",
+    "build": "",
+    "markings": "white face markings",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A round, sleepy red panda who uses his real first name as his nick."
   },
-  "personality": "",
+  "personality": "Cosy and agreeable.",
+  "mannerisms": "• Says 'heh' a lot",
+  "interests": "Tea, puzzles and naps.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

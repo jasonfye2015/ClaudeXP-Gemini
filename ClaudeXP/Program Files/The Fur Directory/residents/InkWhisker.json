@@ -1,6 +1,7 @@
 {
   "fur_name": "InkWhisker",
-  "tier": "",
+  "tier": "support",
+  "summary": "",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -10,9 +11,12 @@
   "personal": {
     "real_name": "",
     "location": "",
+    "residence": "",
     "sex": "",
+    "pronouns": "",
     "age": "",
-    "dob": "",
+    "dob": "7/20/1977",
+    "height": "",
     "job": "",
     "work_hours": "",
     "sleep_hours": ""
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
+    "species": "Tabby cat",
     "colors": "",
+    "eyes": "",
+    "build": "",
     "markings": "",
+    "accessories": "",
     "clothing": "",
     "description": ""
   },
   "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

@@ -1,6 +1,7 @@
 {
   "fur_name": "Lupo",
-  "tier": "",
+  "tier": "background",
+  "summary": "Lupo (Matteo Ricci) is an Italian-American wolf who lurks in #furnet.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Matteo Ricci",
+    "location": "New Jersey, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "2/21/1977",
+    "height": "",
+    "job": "Line cook",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 2 a.m. to 10 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Grey wolf",
+    "colors": "grey and cream",
+    "eyes": "gold",
+    "build": "",
+    "markings": "a dark stripe down his back",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A grey wolf named after the Italian for wolf; quiet, watchful, loyal."
   },
-  "personality": "",
+  "personality": "Reserved and watchful; speaks up when it counts.",
+  "mannerisms": "• The occasional 'ciao' or Italian aside",
+  "interests": "Cooking, opera, and wolf documentaries.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

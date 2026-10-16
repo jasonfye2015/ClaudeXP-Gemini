@@ -1,6 +1,10 @@
 The Fur Directory - resident records
 ====================================
 
+IN THE CLAUDE TIMELINE: these records, the AIM contacts and the IRC/MUCK regulars are made from the shared
+Residents folder (Claude Timeline\Residents) every time ClaudeXP starts - edit a resident there, not here, or
+the change is replaced. A ClaudeXP on its own still uses the files here, as described below.
+
 One file per resident in residents\<Name>.json. These are written and kept by hand (never generated, never
 editable inside ClaudeXP). Every field is optional: leave anything unknown as "" or [] and the card shows a dash.
 

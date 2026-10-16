@@ -1,6 +1,7 @@
 {
   "fur_name": "Corvid",
-  "tier": "",
+  "tier": "background",
+  "summary": "Corvid (Ada Kingsley) watches #furnet more than she talks in it.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Ada Kingsley",
+    "location": "Washington, D.C., USA",
+    "residence": "",
+    "sex": "Woman",
+    "pronouns": "she/her",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "1/2/1980",
+    "height": "",
+    "job": "Record store clerk",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 3 a.m. to 11 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Raven",
+    "colors": "glossy black feathers with a blue sheen",
+    "eyes": "black",
+    "build": "",
+    "markings": "a silver feather behind one ear",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A sharp-eyed raven who collects shiny things and other people's secrets."
   },
-  "personality": "",
+  "personality": "Clever, observant and a little mysterious.",
+  "mannerisms": "• Rare, well-timed one-liners",
+  "interests": "Goth music, tarot and birdwatching.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

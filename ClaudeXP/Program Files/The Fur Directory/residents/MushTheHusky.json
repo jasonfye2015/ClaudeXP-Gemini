@@ -1,6 +1,7 @@
 {
   "fur_name": "MushTheHusky",
-  "tier": "",
+  "tier": "main",
+  "summary": "Mush (Mason Turner) is a big, affectionate husky from Kansas who works at Walmart, staffs his local con, and lives with his three wolf mates.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,30 +9,44 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Mason Turner",
+    "location": "Kansas, USA",
+    "residence": "a shared house with his three mates",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
-    "work_hours": "",
-    "sleep_hours": ""
+    "dob": "6/25/1977",
+    "height": "5 ft 11 in",
+    "job": "Walmart associate",
+    "work_hours": "Monday to Friday, 8am to 4pm; evenings and weekends off",
+    "sleep_hours": "Usually 11 p.m. to 6:30 a.m."
   },
   "favorites": {
     "movies": [],
-    "music": [],
-    "food": []
+    "music": [
+      "alternative rock"
+    ],
+    "food": [
+      "enchiladas"
+    ]
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Siberian husky",
+    "colors": "black and white",
+    "eyes": "one blue eye and one purple eye",
+    "build": "big and cuddly",
+    "markings": "a bold black-and-white husky mask",
+    "accessories": "rainbow beads on his ears, and a staff crew ribbon on his con badge",
     "clothing": "",
-    "description": ""
+    "description": "Mush is a black and white husky with mismatched eyes - one blue, one purple - and rainbow beads on his ears. Usually howling."
   },
-  "personality": "",
+  "personality": "Loving, loyal and enthusiastic. He cares about his buddy deeply and chats any chance he gets, even from work. Happiest in a crowd of furs.",
+  "mannerisms": "• AROOO!\n• Messages from work on breaks, mentioning what's going on at the store\n• Talks about con staff duties",
+  "interests": "Fursuiting, furry conventions (he helps out as staff at the local con), and alternative rock.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
-    "status": "",
+    "status": "Mated - with his three housemates, all wolves",
     "partner": ""
   },
   "friends": [],

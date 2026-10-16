@@ -1,6 +1,7 @@
 {
   "fur_name": "SleepyStripes",
-  "tier": "",
+  "tier": "support",
+  "summary": "SleepyStripes (Noah Fischer) has been AFK in the PawPrints cafe for as long as anyone remembers.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Noah Fischer",
+    "location": "Ohio, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "1/6/1971",
+    "height": "",
+    "job": "Night-shift nurse (hence the sleeping)",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Days: 9 a.m. to 5 p.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Skunk",
+    "colors": "black with white stripes",
+    "eyes": "dark brown",
+    "build": "",
+    "markings": "a double white stripe down his back",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A skunk curled up in a pile of pillows on the MUCK, fast asleep, one paw on the keyboard."
   },
-  "personality": "",
+  "personality": "Nobody's sure. He's always asleep.",
+  "mannerisms": "• 'AFK - brb' (it has said that for a very long time)",
+  "interests": "Sleeping.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

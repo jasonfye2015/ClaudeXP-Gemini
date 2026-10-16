@@ -1,6 +1,7 @@
 {
   "fur_name": "Inkpaw",
-  "tier": "",
+  "tier": "background",
+  "summary": "Inkpaw (Jordan Hale) draws while he idles in #furry-artists.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Jordan Hale",
+    "location": "Oregon, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "1/23/1977",
+    "height": "",
+    "job": "Tattoo apprentice",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 2 a.m. to 10 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Black cat",
+    "colors": "black",
+    "eyes": "green",
+    "build": "",
+    "markings": "ink-stained paws",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A black cat with permanently inky paws, usually Inkpaw|drawing."
   },
-  "personality": "",
+  "personality": "Focused and quiet.",
+  "mannerisms": "• Inkpaw|drawing",
+  "interests": "Ink work, manga and tattoo design.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

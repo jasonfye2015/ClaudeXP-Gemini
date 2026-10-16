@@ -1,6 +1,7 @@
 {
   "fur_name": "Sly",
-  "tier": "",
+  "tier": "background",
+  "summary": "Sly (Nate Corbin) idles in #furnet.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Nate Corbin",
+    "location": "Florida, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "6/15/1980",
+    "height": "",
+    "job": "Pizza delivery driver",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 2 a.m. to 10 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Raccoon",
+    "colors": "grey with a black mask",
+    "eyes": "dark brown",
+    "build": "",
+    "markings": "a ringed tail",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A sly raccoon with a thief's mask and a gamer's grin."
   },
-  "personality": "",
+  "personality": "Mischievous and quick-witted.",
+  "mannerisms": "• Teases people, gently",
+  "interests": "Heist movies and stealth games.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

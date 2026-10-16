@@ -1,6 +1,7 @@
 {
   "fur_name": "ottermatic",
-  "tier": "",
+  "tier": "background",
+  "summary": "ottermatic (Paul Lindgren) lurks in #furnet, always in lowercase.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Paul Lindgren",
+    "location": "Minnesota, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "8/6/1966",
+    "height": "",
+    "job": "Lifeguard at a community pool",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually midnight to 8 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "River otter",
+    "colors": "glossy brown with a pale throat",
+    "eyes": "dark brown",
+    "build": "",
+    "markings": "long whiskers",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A playful river otter who types everything in lowercase, including his name."
   },
-  "personality": "",
+  "personality": "Playful and upbeat.",
+  "mannerisms": "• all lowercase, always",
+  "interests": "Swimming, kayaking and techno.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

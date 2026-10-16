@@ -1,6 +1,7 @@
 {
   "fur_name": "Vulpine",
-  "tier": "",
+  "tier": "background",
+  "summary": "Vulpine (Sean Galloway) idles in #furnet.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Sean Galloway",
+    "location": "Massachusetts, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "4/4/1966",
+    "height": "",
+    "job": "Lab technician",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 11 p.m. to 7 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Grey fox",
+    "colors": "silver-grey with rust sides",
+    "eyes": "amber",
+    "build": "",
+    "markings": "a black stripe along his tail",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A grey fox who picked the most fox name possible."
   },
-  "personality": "",
+  "personality": "Curious and a little sardonic.",
+  "mannerisms": "• Corrects people's fox facts",
+  "interests": "Biology and science fiction.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

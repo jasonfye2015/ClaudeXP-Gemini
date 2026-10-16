@@ -1,6 +1,7 @@
 {
   "fur_name": "HelpBot",
-  "tier": "",
+  "tier": "background",
+  "summary": "HelpBot is the #help channel's FAQ bot (an mIRC script).",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -10,9 +11,12 @@
   "personal": {
     "real_name": "",
     "location": "",
+    "residence": "",
     "sex": "",
+    "pronouns": "",
     "age": "",
-    "dob": "",
+    "dob": "4/10/1977",
+    "height": "",
     "job": "",
     "work_hours": "",
     "sleep_hours": ""
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
+    "species": "IRC bot",
     "colors": "",
+    "eyes": "",
+    "build": "",
     "markings": "",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "FurNet's #help bot: answers !help with the network's FAQ and points people at the ops."
   },
-  "personality": "",
+  "personality": "A bot. Answers !help and nothing else.",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""
@@ -37,5 +48,5 @@
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": ""
+  "notes": "Not a person."
 }

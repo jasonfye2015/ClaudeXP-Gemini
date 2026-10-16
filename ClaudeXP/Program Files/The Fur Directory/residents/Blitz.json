@@ -1,6 +1,7 @@
 {
   "fur_name": "Blitz",
-  "tier": "",
+  "tier": "background",
+  "summary": "Blitz (Kyle Brenner) zips in and out of #furnet.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Kyle Brenner",
+    "location": "Illinois, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "2/12/1963",
+    "height": "",
+    "job": "Courier",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually midnight to 7 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Cheetah",
+    "colors": "golden with black spots",
+    "eyes": "amber",
+    "build": "",
+    "markings": "black tear lines",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A cheetah who types fast, talks fast and leaves fast."
   },
-  "personality": "",
+  "personality": "Hyper and impatient, but good-natured.",
+  "mannerisms": "• Joins, says something quick, leaves",
+  "interests": "Running, cars and drum and bass.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

@@ -1,6 +1,7 @@
 {
   "fur_name": "Plush",
-  "tier": "",
+  "tier": "background",
+  "summary": "Plush (Hannah Price) lurks in #fursuiters, usually away.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Hannah Price",
+    "location": "Vermont, USA",
+    "residence": "",
+    "sex": "Woman",
+    "pronouns": "she/her",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "9/22/1961",
+    "height": "",
+    "job": "Toy store assistant",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 11 p.m. to 7 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Teddy bear",
+    "colors": "honey brown",
+    "eyes": "button black",
+    "build": "",
+    "markings": "a stitched heart on her chest",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A living teddy bear, as soft as she looks."
   },
-  "personality": "",
+  "personality": "Sweet and soft-spoken.",
+  "mannerisms": "• Plush|away",
+  "interests": "Plushies, toy collecting and cuddles.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

@@ -1,6 +1,7 @@
 {
   "fur_name": "Nimbus",
-  "tier": "",
+  "tier": "background",
+  "summary": "Nimbus (Leo Harrington) lurks in #furnet, often away.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Leo Harrington",
+    "location": "Colorado, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "12/12/1971",
+    "height": "",
+    "job": "Weather station technician",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually midnight to 8 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Cloud dragon",
+    "colors": "white and pale blue",
+    "eyes": "silver",
+    "build": "",
+    "markings": "wisps of cloud along his back",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A fluffy cloud dragon, head always in the clouds."
   },
-  "personality": "",
+  "personality": "Dreamy and gentle.",
+  "mannerisms": "• Nimbus|away",
+  "interests": "Weather, flight simulators and ambient music.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

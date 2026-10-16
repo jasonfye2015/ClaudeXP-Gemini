@@ -45,6 +45,12 @@ def _log_crashes():
 
 def main():
     _log_crashes()
+    try:
+        from claudexp import residents_sync
+        residents_sync.sync()          # in the Claude Timeline, the cast comes from Residents/
+    except Exception as exc:           # never stop ClaudeXP from starting over it
+        if sys.stderr is not None:
+            sys.stderr.write(f"Residents sync failed: {exc}\n")
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)     # before the app exists, for the Flash Player's web view
     qapp = QApplication(sys.argv)
     qapp.setApplicationName("ClaudeXP")

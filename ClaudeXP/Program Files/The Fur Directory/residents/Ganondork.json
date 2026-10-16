@@ -1,6 +1,7 @@
 {
   "fur_name": "Ganondork",
-  "tier": "",
+  "tier": "background",
+  "summary": "Ganondork (Jason Mills) argues about Zelda in #gaming.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Jason Mills",
+    "location": "Utah, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "9/22/1968",
+    "height": "",
+    "job": "Video game store clerk",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 2 a.m. to 10 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Boar",
+    "colors": "dark brown bristles",
+    "eyes": "red",
+    "build": "",
+    "markings": "tusks",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A boar who named himself after Zelda's villain and thinks it's the best pun ever."
   },
-  "personality": "",
+  "personality": "Opinionated and funny.",
+  "mannerisms": "• Zelda puns",
+  "interests": "The Legend of Zelda, Nintendo and speedruns.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

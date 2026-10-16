@@ -1,6 +1,7 @@
 {
   "fur_name": "Zeke",
-  "tier": "",
+  "tier": "background",
+  "summary": "Zeke (Ezekiel Moore) is a #furnet lurker who falls asleep with his client open.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Ezekiel Moore",
+    "location": "Iowa, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "10/11/1980",
+    "height": "",
+    "job": "Farmhand",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Early: 9 p.m. to 4:30 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Border collie",
+    "colors": "black and white",
+    "eyes": "blue",
+    "build": "",
+    "markings": "a white blaze down his face",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A border collie who's usually tagged Zeke|sleep."
   },
-  "personality": "",
+  "personality": "Friendly, energetic in the mornings.",
+  "mannerisms": "• Zeke|sleep",
+  "interests": "Frisbee, dog sports and farm life.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

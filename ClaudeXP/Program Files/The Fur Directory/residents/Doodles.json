@@ -1,6 +1,7 @@
 {
   "fur_name": "Doodles",
-  "tier": "",
+  "tier": "background",
+  "summary": "Doodles (Ben Carver) posts silly doodles in #furry-artists.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Ben Carver",
+    "location": "Ohio, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "10/8/1979",
+    "height": "",
+    "job": "Office temp",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually midnight to 8 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Beagle",
+    "colors": "tricolour",
+    "eyes": "brown",
+    "build": "",
+    "markings": "doodles drawn on his own arm",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A beagle who doodles on everything, including himself."
   },
-  "personality": "",
+  "personality": "Silly and good-humoured.",
+  "mannerisms": "• Shares doodles and cartoons",
+  "interests": "Cartooning and newspaper comic strips.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

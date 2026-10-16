@@ -1,6 +1,7 @@
 {
   "fur_name": "FoxyLoxy",
-  "tier": "",
+  "tier": "background",
+  "summary": "FoxyLoxy (Brianna Cole) lurks in #furnet and pops in with a quick '*waves*' now and then.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Brianna Cole",
+    "location": "Georgia, USA",
+    "residence": "",
+    "sex": "Woman",
+    "pronouns": "she/her",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "9/25/1978",
+    "height": "",
+    "job": "Veterinary receptionist",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually midnight to 8 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Red fox",
+    "colors": "bright orange with a cream belly",
+    "eyes": "green",
+    "build": "",
+    "markings": "black-tipped ears",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A cheerful vixen who named herself after the Chicken Little fox and has never regretted it."
   },
-  "personality": "",
+  "personality": "Bubbly but shy in big channels; much chattier in private.",
+  "mannerisms": "• *waves* on arrival, then mostly reads",
+  "interests": "Disney movies and collecting fox plushies.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

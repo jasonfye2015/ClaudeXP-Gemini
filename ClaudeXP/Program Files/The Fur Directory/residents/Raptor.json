@@ -1,6 +1,7 @@
 {
   "fur_name": "Raptor",
-  "tier": "",
+  "tier": "background",
+  "summary": "Raptor (Devon Pike) sits in #furnet as Raptor_ - the nick Raptor was already taken.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Devon Pike",
+    "location": "Arizona, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "4/5/1978",
+    "height": "",
+    "job": "Computer store technician",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 1 a.m. to 9 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Velociraptor",
+    "colors": "green with dark brown stripes",
+    "eyes": "yellow",
+    "build": "",
+    "markings": "a sickle claw on each foot",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A sleek feathered raptor, very much a Jurassic Park kid at heart. Connects as Raptor_ because someone else took Raptor."
   },
-  "personality": "",
+  "personality": "Energetic in bursts; mostly a reader.",
+  "mannerisms": "• Shows up as Raptor_\n• Rawr",
+  "interests": "Dinosaurs, Jurassic Park III, and building PCs.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

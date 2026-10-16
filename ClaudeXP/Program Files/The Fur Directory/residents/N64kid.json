@@ -1,6 +1,7 @@
 {
   "fur_name": "N64kid",
-  "tier": "",
+  "tier": "background",
+  "summary": "N64kid (Sam Ortiz) is a Nintendo 64 diehard in #gaming.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Sam Ortiz",
+    "location": "California, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "4/19/1971",
+    "height": "",
+    "job": "Warehouse worker",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually midnight to 8 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Raccoon dog (tanuki)",
+    "colors": "brown and black",
+    "eyes": "dark brown",
+    "build": "",
+    "markings": "a tanuki mask",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A tanuki who picked his nick in college and never changed it."
   },
-  "personality": "",
+  "personality": "Nostalgic and loyal to his console.",
+  "mannerisms": "• Defends the N64 in every console war",
+  "interests": "Nintendo 64, GoldenEye and Mario Kart.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

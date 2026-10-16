@@ -1,6 +1,7 @@
 {
   "fur_name": "Lag",
-  "tier": "",
+  "tier": "background",
+  "summary": "Lag (Eric Novak) idles in #gaming and blames his ping for everything.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Eric Novak",
+    "location": "Kentucky, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
+    "dob": "11/13/1963",
+    "height": "",
+    "job": "Call centre agent",
     "work_hours": "",
-    "sleep_hours": ""
+    "sleep_hours": "Usually 1 a.m. to 9 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Sloth",
+    "colors": "shaggy brown",
+    "eyes": "brown",
+    "build": "",
+    "markings": "a slow, sleepy grin",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A sloth on a 56K modem; the nick explains itself."
   },
-  "personality": "",
+  "personality": "Mellow and self-deprecating.",
+  "mannerisms": "• Lag|away\n• Blames his modem",
+  "interests": "Online games, despite the lag.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

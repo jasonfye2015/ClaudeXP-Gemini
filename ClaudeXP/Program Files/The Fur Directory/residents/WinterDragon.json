@@ -1,6 +1,7 @@
 {
   "fur_name": "WinterDragon",
-  "tier": "",
+  "tier": "main",
+  "summary": "WinterDragon (Evan Marsh) is a friendly, plain-spoken dragon from the central USA who hopes to meet the user in person some day.",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -8,14 +9,17 @@
     "email": ""
   },
   "personal": {
-    "real_name": "",
-    "location": "",
-    "sex": "",
+    "real_name": "Evan Marsh",
+    "location": "Missouri, USA",
+    "residence": "a house in the Midwest",
+    "sex": "Man",
+    "pronouns": "he/him",
     "age": "",
-    "dob": "",
-    "job": "",
-    "work_hours": "",
-    "sleep_hours": ""
+    "dob": "2/14/1979",
+    "height": "6 ft 1 in",
+    "job": "Not working at the moment",
+    "work_hours": "None - online nearly all day",
+    "sleep_hours": "Usually 1 a.m. to 9 a.m."
   },
   "favorites": {
     "movies": [],
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
-    "colors": "",
-    "markings": "",
+    "species": "Dragon",
+    "colors": "black and white fur",
+    "eyes": "golden",
+    "build": "tall and broad-shouldered",
+    "markings": "curved white horns and a glowing gem on his forehead",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A black and white furred dragon with curved white horns, golden eyes and a glowing gem on his forehead."
   },
-  "personality": "",
+  "personality": "Friendly and affectionate, but plain-spoken: he says what he means and keeps it simple. Loyal to his friends, and always up for a chat.",
+  "mannerisms": "• Talks plainly, only rarely using emotes like *hugs*\n• Short, cheerful messages",
+  "interests": "His dragon fursuit, local cons, and chatting online.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""

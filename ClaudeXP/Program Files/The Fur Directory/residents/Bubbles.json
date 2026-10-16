@@ -1,6 +1,7 @@
 {
   "fur_name": "Bubbles",
-  "tier": "",
+  "tier": "support",
+  "summary": "",
   "screen_names": {
     "aim": "",
     "irc": "",
@@ -10,9 +11,12 @@
   "personal": {
     "real_name": "",
     "location": "",
+    "residence": "",
     "sex": "",
+    "pronouns": "",
     "age": "",
-    "dob": "",
+    "dob": "2/13/1982",
+    "height": "",
     "job": "",
     "work_hours": "",
     "sleep_hours": ""
@@ -23,13 +27,20 @@
     "food": []
   },
   "fursona": {
-    "species": "",
+    "species": "River otter",
     "colors": "",
+    "eyes": "",
+    "build": "",
     "markings": "",
+    "accessories": "",
     "clothing": "",
-    "description": ""
+    "description": "A small, sleek river otter with glossy brown fur that is always a little damp. He wears neon-green swim trunks, a puka shell necklace and an enormous grin. He is usually holding a smooth pebble he refuses to explain."
   },
   "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
   "relationship": {
     "status": "",
     "partner": ""
