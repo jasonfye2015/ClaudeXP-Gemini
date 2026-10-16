@@ -17,8 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QIcon, QLinearGr
 from PySide6.QtWidgets import QWidget
 from shiboken6 import isValid
 
-from ... import sound
-from ...wm import XPWindow
+from claudecore import host
 from . import game as G
 
 HUD_H = 64
@@ -200,7 +199,7 @@ class Scorched(QWidget):
         self.setFocus()
         for rect, action in reversed(self.buttons):
             if rect.contains(e.position()):
-                sound.play("menu")
+                host.sound("menu")
                 action()
                 return
 
@@ -292,7 +291,7 @@ class Scorched(QWidget):
             t.cash -= price
             t.inventory[name] = t.inventory.get(name, 0) + qty
         else:
-            sound.play("default")
+            host.sound("default")
 
     # ---- painting --------------------------------------------------------------------------------------------
     def paintEvent(self, _e):
@@ -739,7 +738,7 @@ def launch(desktop):
         desktop.open_window(win)
         return win
     body = Scorched(desktop)
-    win = XPWindow(desktop, "Scorched Claude", body, scorched_icon(), size=(G.W + 20, G.H + HUD_H + 40))
+    win = host.window(desktop, "Scorched Claude", body, scorched_icon(), size=(G.W + 20, G.H + HUD_H + 40))
     body.frame = win
     _open["win"] = win
     desktop.open_window(win)

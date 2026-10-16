@@ -1,9 +1,9 @@
 """ClaudeRPG: the standalone browser roguelike, in its ClaudeXP 'release state'.
 
-The game is one HTML file copied into Program Files/ClaudeRPG/ (the newest 'ClaudeRPG v*.html' there is the one that
+The game is one HTML file in ClaudeGames/clauderpg/game/ (the newest 'ClaudeRPG v*.html' there is the one that
 runs - drop a newer version in to update it). It plays in a Qt WebEngine view with its own permanent browser profile
-in data/clauderpg, loaded straight from the file so the page's address (and so its localStorage saves) never
-changes. Sound follows ClaudeXP's mute, mouse capture (the first-person view) is allowed, and the window opens
+in ClaudeGames/Saves/clauderpg (shared by every era), loaded straight from the file so the page's address (and so its localStorage saves) never
+changes. Sound follows the computer's mute, mouse capture (the first-person view) is allowed, and the window opens
 maximized. Saves made in a normal browser stay there; the game's own backup text can carry them across."""
 import re
 
@@ -12,12 +12,12 @@ from PySide6.QtGui import QColor, QIcon, QLinearGradient, QPainter, QPainterPath
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 from shiboken6 import isValid
 
-from .. import sound
-from ..paths import DATA, ROOT
-from ..wm import XPWindow
+from pathlib import Path
 
-GAME_DIR = ROOT / "Program Files" / "ClaudeRPG"
-PROFILE_DIR = DATA / "clauderpg"
+from claudecore import host
+
+GAME_DIR = Path(__file__).resolve().parent / "game"
+PROFILE_DIR = host.saves("clauderpg")
 TITLE = "ClaudeRPG"
 
 
@@ -142,8 +142,8 @@ class RPGWindow(QWidget):
                                        else QWebEnginePage.PermissionPolicy.PermissionDeniedByUser)
 
     def _sync_mute(self):
-        if self.view is not None and self.page.isAudioMuted() != sound.is_muted():
-            self.page.setAudioMuted(sound.is_muted())
+        if self.view is not None and self.page.isAudioMuted() != host.muted():
+            self.page.setAudioMuted(host.muted())
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -171,7 +171,7 @@ def open_rpg(desktop):
         desktop.open_window(win)
         return win
     body = RPGWindow(desktop)
-    win = XPWindow(desktop, TITLE, body, rpg_icon(), (980, 700))
+    win = host.window(desktop, TITLE, body, rpg_icon(), (980, 700))
     body.frame = win
     _open["win"] = win
     desktop.open_window(win)

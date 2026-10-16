@@ -11,6 +11,7 @@ and the map overlays show power, traffic, pollution, crime, land value and polic
 Cities are saved in data/claudecity/cities/.
 """
 import math
+from pathlib import Path
 import re
 import time
 
@@ -21,14 +22,12 @@ from PySide6.QtWidgets import (QCheckBox, QGridLayout, QHBoxLayout, QLabel, QLin
                                QSpinBox, QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
-from ... import sound
-from ...paths import DATA, ROOT
-from ...wm import XPWindow
+from claudecore import host
 from . import art
 from . import sim as S
 
-CITIES = DATA / "claudecity" / "cities"
-TITLE = ROOT / "assets" / "claudecity" / "title.jpg"
+CITIES = host.saves("claudecity") / "cities"           # shared by every era
+TITLE = Path(__file__).resolve().parent / "assets" / "title.jpg"
 TOP_H = 34
 PALETTE_W = 66
 SIGN_BUTTONS = {"new": (367, 407, 628, 442), "load": (640, 407, 843, 442), "scenario": (465, 457, 746, 492)}
@@ -135,7 +134,7 @@ class CityGame(QWidget):
                 self.msg_index = len(c.messages)
                 kind = c.messages[-1][1]
                 if kind == "bad":
-                    sound.play("exclamation")
+                    host.sound("exclamation")
             self._keyscroll(dt)
         self.update()
 
@@ -191,7 +190,7 @@ class CityGame(QWidget):
         h.addAction("&About ClaudeCity", lambda: self._message(
             "About ClaudeCity", "ClaudeCity for ClaudeXP - build a city from dust to Megalopolis. Inspired by "
                                 "SimCity Classic."))
-        mb.triggered.connect(lambda _a: sound.play("menu"))
+        mb.triggered.connect(lambda _a: host.sound("menu"))
 
     def _sync_menus(self):
         c = self.city
@@ -311,7 +310,7 @@ class CityGame(QWidget):
         row.addWidget(ok)
         row.addWidget(cancel)
         v.addLayout(row)
-        win = XPWindow(self.desktop, "Save City As", body, city_icon(), size=(320, 130))
+        win = host.window(self.desktop, "Save City As", body, city_icon(), size=(320, 130))
 
         def go():
             name = re.sub(r"[^\w '\-]", "", edit.text()).strip() or self.city.name
@@ -434,7 +433,7 @@ class CityGame(QWidget):
         for rect, action in reversed(self.buttons):
             if rect.contains(pos):
                 if e.button() == Qt.LeftButton:
-                    sound.play("menu")
+                    host.sound("menu")
                     action()
                 return
         if self.state != "play":
@@ -465,7 +464,7 @@ class CityGame(QWidget):
         err = c.apply(self.tool, x, y)
         if err:
             if err == "Insufficient funds.":
-                sound.play("default")
+                host.sound("default")
             c.say(err, "advice")
         else:
             self.minimap = None
@@ -978,7 +977,7 @@ class CityGame(QWidget):
         if old is not None and isValid(old):
             self.desktop.open_window(old)
             return old
-        win = XPWindow(self.desktop, title, body, city_icon(), size=size)
+        win = host.window(self.desktop, title, body, city_icon(), size=size)
         body.frame = win
         self.windows[key] = win
         self.desktop.open_window(win)
@@ -1001,7 +1000,7 @@ class CityGame(QWidget):
         row.addWidget(ok)
         row.addStretch()
         v.addLayout(row)
-        win = XPWindow(self.desktop, "ClaudeCity", body, city_icon(), size=(420, 260))
+        win = host.window(self.desktop, "ClaudeCity", body, city_icon(), size=(420, 260))
         ok.clicked.connect(lambda: self.desktop.close_window(win))
         self.desktop.open_window(win)
 
@@ -1228,7 +1227,7 @@ def launch(desktop):
         desktop.open_window(win)
         return win
     body = CityGame(desktop)
-    win = XPWindow(desktop, "ClaudeCity", body, city_icon(), size=(1000, 720))
+    win = host.window(desktop, "ClaudeCity", body, city_icon(), size=(1000, 720))
     body.frame = win
     _open["win"] = win
     desktop.open_window(win)

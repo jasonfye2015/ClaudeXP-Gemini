@@ -18,12 +18,11 @@ from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QIcon, QLinearGr
 from PySide6.QtWidgets import QLineEdit, QWidget
 from shiboken6 import isValid
 
-from ...paths import DATA
-from ...wm import XPWindow
+from claudecore import host
 from . import art
 from . import world as W
 
-SAVE = DATA / "claudequest" / "save.json"
+SAVE = host.saves("claudequest") / "save.json"         # shared by every era
 CHUNK = 8                       # tiles per terrain chunk
 GOLD = QColor("#F2C12E")
 
@@ -79,8 +78,7 @@ class Game(QWidget):
 
     def _default_name(self):
         try:
-            from ... import user
-            return (user.muck_name() if user.linked() else user.user_name())[:14] or "Shadow"
+            return host.user_name()[:14] or "Shadow"
         except Exception:
             return "Shadow"
 
@@ -830,7 +828,7 @@ def launch(desktop):
         desktop.open_window(win)
         return win
     body = Game(desktop)
-    win = XPWindow(desktop, "ClaudeQuest", body, quest_icon(), size=(980, 700))
+    win = host.window(desktop, "ClaudeQuest", body, quest_icon(), size=(980, 700))
     body.frame = win
     _open["win"] = win
     desktop.open_window(win)

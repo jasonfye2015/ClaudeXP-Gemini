@@ -18,11 +18,10 @@ from PySide6.QtOpenGL import QOpenGLBuffer, QOpenGLShaderProgram, QOpenGLShader,
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from shiboken6 import isValid
 
-from ...paths import DATA
-from ...wm import XPWindow
+from claudecore import host
 from . import world as W
 
-SAVE = DATA / "claudecraft" / "world.json"
+SAVE = host.saves("claudecraft") / "world.json"        # shared by every era
 GL_DEPTH_TEST, GL_BLEND, GL_CULL_FACE = 0x0B71, 0x0BE2, 0x0B44
 GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA = 0x0302, 0x0303
 GL_TRIANGLES, GL_LINES, GL_FLOAT = 0x0004, 0x0001, 0x1406
@@ -623,7 +622,7 @@ def launch(desktop):
         desktop.open_window(win)
         return win
     body = Game(desktop)
-    win = XPWindow(desktop, "ClaudeCraft", body, craft_icon(), size=(880, 540))
+    win = host.window(desktop, "ClaudeCraft", body, craft_icon(), size=(880, 540))
     body.frame = win
     _open["win"] = win
     desktop.open_window(win)

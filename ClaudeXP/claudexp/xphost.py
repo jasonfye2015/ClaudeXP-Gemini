@@ -21,3 +21,10 @@ class XPHost(Host):
     def local_storage(self):
         from .explorer import vfs
         return vfs.local_storage()
+
+    def user_name(self):
+        from . import user
+        return user.muck_name() if user.linked() else user.user_name()
+
+    def muted(self):
+        return sound.is_muted()

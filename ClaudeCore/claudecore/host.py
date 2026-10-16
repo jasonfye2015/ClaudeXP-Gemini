@@ -8,11 +8,14 @@ A shared program never imports an OS's own modules. It asks the host instead:
     host.saves("claudeggle")      # Claude Timeline/ClaudeGames/Saves/claudeggle - shared by every era
     host.data("claudeai")         # this computer's own data folder for that program
     host.local_storage()          # the shared Local Storage (drive E: on XP)
+    host.user_name()              # the user's name as the world knows them
+    host.muted()                  # is this computer's sound muted?
     host.era()                    # 2001, 2011 or 2025
 
 Each OS registers its host once at startup (ClaudeXP: claudexp/xphost.py) with register(), or register_factory() so
 nothing heavy is imported until a program first asks. The window it returns is that OS's own window class, with at
-least .content (the body) and request_close().
+least .content (the body) and request_close(). The `desktop` a program is given is the OS's own desktop, with
+open_window(win) and close_window(win) for any dialogs it opens.
 
 Sound events are the shared names: "menu", "default", "ding", "notify", "exclamation", "critical", "error". An OS
 plays its own sound for each, or nothing.
@@ -41,6 +44,13 @@ class Host:
 
     def local_storage(self):
         return TIMELINE / "Local Storage"
+
+    def user_name(self):
+        """The user's name as the world knows them (their online handle, or their account name)."""
+        return ""
+
+    def muted(self):
+        return False
 
 
 def register(h):
@@ -95,3 +105,17 @@ def local_storage():
 
 def era():
     return get().year
+
+
+def user_name():
+    try:
+        return get().user_name() or ""
+    except Exception:
+        return ""
+
+
+def muted():
+    try:
+        return bool(get().muted())
+    except Exception:
+        return False

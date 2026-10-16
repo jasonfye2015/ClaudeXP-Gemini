@@ -10,9 +10,9 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, QPolygonF, \
     QRadialGradient
 
-from ...paths import ROOT
+from pathlib import Path
 
-TITLE = ROOT / "assets" / "claudequest" / "title.jpg"
+TITLE = Path(__file__).resolve().parent / "assets" / "title.jpg"
 TILE = 40
 
 # coat: (base, saddle/back, belly/light, legs)

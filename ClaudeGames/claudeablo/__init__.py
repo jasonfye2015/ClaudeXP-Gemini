@@ -10,6 +10,7 @@ names, F1 help, Esc menu. Saved in data/claudeablo/save.json.
 """
 import json
 import math
+from pathlib import Path
 import random
 import time
 
@@ -19,14 +20,13 @@ from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QLinearGradient,
 from PySide6.QtWidgets import QLineEdit, QWidget
 from shiboken6 import isValid
 
-from ...paths import DATA
-from ...wm import XPWindow
+from claudecore import host
 from . import art
 from . import dungeon as D
 from . import items as I
 from . import world as W
 
-SAVE = DATA / "claudeablo" / "save.json"
+SAVE = host.saves("claudeablo") / "save.json"          # shared by every era
 PANEL_H = 104
 GOLD = QColor("#D8B060")
 CELL = 30
@@ -1478,8 +1478,7 @@ class Game(QWidget):
         key = ("title", self.width(), self.height())
         if key not in self.cache:
             from PySide6.QtGui import QPixmap
-            from ...paths import ROOT
-            pm = QPixmap(str(ROOT / "assets" / "claudeablo" / "title.jpg"))
+            pm = QPixmap(str(Path(__file__).resolve().parent / "assets" / "title.jpg"))
             self.cache[key] = None if pm.isNull() else pm.scaled(self.width(), self.height(), Qt.KeepAspectRatio,
                                                                   Qt.SmoothTransformation)
         return self.cache[key]
@@ -1579,7 +1578,7 @@ def launch(desktop):
         desktop.open_window(win)
         return win
     body = Game(desktop)
-    win = XPWindow(desktop, "Claudeablo", body, ablo_icon(), size=(1020, 740))
+    win = host.window(desktop, "Claudeablo", body, ablo_icon(), size=(1020, 740))
     body.frame = win
     _open["win"] = win
     desktop.open_window(win)

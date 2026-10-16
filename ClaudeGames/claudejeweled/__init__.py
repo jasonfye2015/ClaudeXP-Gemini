@@ -17,12 +17,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QFont, QIcon, QLine
 from PySide6.QtWidgets import QWidget
 from shiboken6 import isValid
 
-from ... import sound
-from ...paths import DATA
-from ...wm import XPWindow
+from claudecore import host
 from . import board as B
 
-SCORES = DATA / "claudejeweled" / "scores.json"
+SCORES = host.saves("claudejeweled") / "scores.json"    # shared by every era
 MODES = ["Classic", "Action", "Zen"]
 BLURBS = {"Classic": "Play until you run out of moves.", "Action": "Race the draining bar!",
           "Zen": "No timer, no game over. Just gems."}
@@ -248,14 +246,14 @@ class Jeweled(QWidget):
         self.bar = 0.55
         self.banner = [f"Level {self.level}!", 0.0]
         self.score += 500 * self.level
-        sound.play("notify")
+        host.sound("notify")
         self.levelup_pending = True
 
     def _game_over(self, why):
         self.state = "over"
         self.over_why = why
         self.sel = None
-        sound.play("critical" if self.mode == "Action" else "exclamation")
+        host.sound("critical" if self.mode == "Action" else "exclamation")
         if not self.saved and self.score > 0:
             self.saved = True
             s = sorted(self.scores[self.mode] + [{"score": self.score, "level": self.level,
@@ -329,7 +327,7 @@ class Jeweled(QWidget):
             if self.board.productive(a, b2):
                 self.phase = "clear"
             else:
-                sound.play("default")
+                host.sound("default")
                 self._slide(a, b2)
                 self.phase = "unswap"
         elif self.phase == "unswap" and not moving:
@@ -393,7 +391,7 @@ class Jeweled(QWidget):
         for src, cells in info["zaps"]:
             self.rays.append(["zap", (src, cells), 0.0])
         if info["blasts"] or info["zaps"]:
-            sound.play("ding")
+            host.sound("ding")
         xs = [self._centre(c) for c, _g in info["cleared"]]
         cx = sum(p.x() for p in xs) / len(xs)
         cy = sum(p.y() for p in xs) / len(xs)
@@ -433,7 +431,7 @@ class Jeweled(QWidget):
         pos = e.position()
         for rect, action in reversed(self.buttons):
             if rect.contains(pos):
-                sound.play("menu")
+                host.sound("menu")
                 action()
                 return
         if self.state == "play" and e.button() == Qt.LeftButton:
@@ -867,7 +865,7 @@ def launch(desktop):
         desktop.open_window(win)
         return win
     body = Jeweled(desktop)
-    win = XPWindow(desktop, "Claudejeweled", body, jeweled_icon(), size=(820, 600))
+    win = host.window(desktop, "Claudejeweled", body, jeweled_icon(), size=(820, 600))
     body.frame = win
     _open["win"] = win
     desktop.open_window(win)
