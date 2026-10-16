@@ -16,12 +16,13 @@ from PySide6.QtGui import (QBrush, QColor, QFont, QIcon, QLinearGradient, QPaint
 from PySide6.QtWidgets import QWidget
 from shiboken6 import isValid
 
-from ... import sound
-from ...paths import DATA
-from ...wm import XPWindow
+from claudecore import host
+
 from . import game as G
 
-PROGRESS = DATA / "claudeggle" / "progress.json"
+
+def _progress_file():
+    return host.saves("claudeggle") / "progress.json"      # shared by every era
 VW, VH = 980, 640                        # the whole screen in logical pixels
 FX, FY = 110, 32                         # where the field sits in it
 PEG_RGB = {"blue": "#2C7CF4", "orange": "#FF8A1C", "green": "#36CC4C", "purple": "#B24CF0"}
@@ -99,7 +100,7 @@ def _ball(p, c, r, fire=False, spooky=False):
 
 def load_progress():
     try:
-        d = json.loads(PROGRESS.read_text(encoding="utf-8"))
+        d = json.loads(_progress_file().read_text(encoding="utf-8"))
         return {"unlocked": int(d.get("unlocked", 1)), "best": {int(k): v for k, v in d.get("best", {}).items()}}
     except (OSError, ValueError):
         return {"unlocked": 1, "best": {}}
@@ -160,12 +161,11 @@ class Peggle(QWidget):
             self.progress["unlocked"] = max(self.progress["unlocked"], min(len(G.LEVELS), g.index + 2))
             if g.score > self.progress["best"].get(g.index, 0):
                 self.progress["best"][g.index] = g.score
-            sound.play("notify")
+            host.sound("notify")
         else:
-            sound.play("exclamation")
+            host.sound("exclamation")
         try:
-            PROGRESS.parent.mkdir(parents=True, exist_ok=True)
-            PROGRESS.write_text(json.dumps({"unlocked": self.progress["unlocked"],
+            _progress_file().write_text(json.dumps({"unlocked": self.progress["unlocked"],
                                             "best": {str(k): v for k, v in self.progress["best"].items()}}),
                                 encoding="utf-8")
         except OSError:
@@ -220,10 +220,10 @@ class Peggle(QWidget):
                                        QColor(PEG_RGB[p.colour]).lighter(140), random.uniform(1.5, 3)])
         elif kind == "free":
             self.banner = [e[1], 0.0, "#80FF80"]
-            sound.play("ding")
+            host.sound("ding")
         elif kind == "fever":
             self.banner = ["EXTREME FEVER!", 0.0, "#FFE040"]
-            sound.play("notify")
+            host.sound("notify")
         elif kind == "power":
             name = G.POWERS[e[1]][0]
             self.popups.append([e[2], e[3] - 24, name + "!", 0.0, "#60FF70", 15])
@@ -254,7 +254,7 @@ class Peggle(QWidget):
         self.mouse = pos
         for rect, action in reversed(self.buttons):
             if rect.contains(pos):
-                sound.play("menu")
+                host.sound("menu")
                 action()
                 return
         if self.state == "play" and e.button() == Qt.LeftButton:
@@ -702,7 +702,7 @@ def launch(desktop):
         desktop.open_window(win)
         return win
     body = Peggle(desktop)
-    win = XPWindow(desktop, "Claudeggle", body, peggle_icon(), size=(VW + 10, VH + 36))
+    win = host.window(desktop, "Claudeggle", body, peggle_icon(), (VW + 10, VH + 36))
     body.frame = win
     _open["win"] = win
     desktop.open_window(win)

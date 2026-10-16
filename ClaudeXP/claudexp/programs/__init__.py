@@ -128,6 +128,14 @@ def _lazy(module, func):
     return call
 
 
+def _shared(module, func):
+    """A program from the Claude Timeline's shared folders (ClaudeGames, ClaudeArchive, ClaudeApps), imported on first use."""
+    def call(*args):
+        import importlib
+        return getattr(importlib.import_module(module), func)(*args)
+    return call
+
+
 def _game(module, func):
     def run(desktop):
         import importlib
@@ -171,8 +179,8 @@ PROGRAMS = [
             _lazy(".messengers.others", "launch_kik"), _lazy(".messengers.others", "shutdown_kik"),
             group="Social Networking"),
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown, group="Social Networking"),
-    Program("claudeggle", "Claudeggle", "Aim, shoot, clear the orange pegs", _lazy(".claudeggle", "peggle_icon"),
-            _lazy(".claudeggle", "launch"), _lazy(".claudeggle", "shutdown"), group="Games"),
+    Program("claudeggle", "Claudeggle", "Aim, shoot, clear the orange pegs", _shared("claudeggle", "peggle_icon"),
+            _shared("claudeggle", "launch"), _shared("claudeggle", "shutdown"), group="Games"),
     Program("claudejeweled", "Claudejeweled", "Swap gems, line up three", _lazy(".claudejeweled", "jeweled_icon"),
             _lazy(".claudejeweled", "launch"), _lazy(".claudejeweled", "shutdown"), group="Games"),
     Program("scorched", "Scorched Claude", "Tanks, nukes and very angry physics", _lazy(".scorched", "scorched_icon"),
