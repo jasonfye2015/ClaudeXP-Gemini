@@ -100,6 +100,8 @@ CATALOG = {
     "furcadia": ("games", "Claudecadia: a Furcadia-style furry graphical chat world. Your AIM buddies log in as furres; hop around "
                           "Willowmere Commons and 13 dreams to discover, sit, chat, emote, whisper (/name message) and open treasure "
                           "chests."),
+    "claudecity": ("games", "ClaudeCity: build a city in the spirit of SimCity Classic - zones, power, traffic, "
+                            "budgets, disasters and six scenarios."),
     "claudeablo": ("games", "Claudeablo: a Diablo-style dungeon crawler - fifty random levels down to Diablo, with "
                             "loot, spells, town portals and shops. F1 in the game explains the controls."),
     "claudequest": ("games", "ClaudeQuest: lead a wolf pack through the seasons - hunt, raise pups, mark your territory, "

@@ -127,7 +127,7 @@ def shared_documents():
 
 EXECUTABLES = {   # file name -> ClaudeXP program it launches
     "claudeaim.exe": "aim", "claudeirc.exe": "irc", "claudemuck.exe": "muck", "netscape.exe": "navigator", "iexplore.exe": "iexplore",
-    "notepad.exe": "notepad", "explorer.exe": "mycomputer", "claudeshield.exe": "antivirus", "msmsgs.exe": "winmsgr", "realplay.exe": "realplayer", "kiwix-desktop.exe": "kiwix", "claudecraft.exe": "claudecraft", "msconfig.exe": "msconfig", "claudecadia.exe": "furcadia", "claudequest.exe": "claudequest", "claudeablo.exe": "claudeablo", "quicktimeplayer.exe": "quicktime",
+    "notepad.exe": "notepad", "explorer.exe": "mycomputer", "claudeshield.exe": "antivirus", "msmsgs.exe": "winmsgr", "realplay.exe": "realplayer", "kiwix-desktop.exe": "kiwix", "claudecraft.exe": "claudecraft", "msconfig.exe": "msconfig", "claudecadia.exe": "furcadia", "claudequest.exe": "claudequest", "claudeablo.exe": "claudeablo", "claudecity.exe": "claudecity", "quicktimeplayer.exe": "quicktime",
     "moviemk.exe": "moviemaker", "msoobe.exe": "activate", "ad-aware.exe": "adaware",
     "mspaint.exe": "paint", "calc.exe": "calc", "cmd.exe": "cmd", "taskmgr.exe": "taskmgr",
     "dfrgntfs.exe": "defrag", "wupdmgr.exe": "winupdate", "isignup.exe": "connect", "wmplayer.exe": "wmp",
@@ -241,6 +241,7 @@ def setup_c():
                       DRIVE_C / "Program Files" / "Claudecadia" / "Claudecadia.exe",
                       DRIVE_C / "Program Files" / "ClaudeQuest" / "ClaudeQuest.exe",
                       DRIVE_C / "Program Files" / "Claudeablo" / "Claudeablo.exe",
+                      DRIVE_C / "Program Files" / "ClaudeCity" / "ClaudeCity.exe",
                       DRIVE_C / "Program Files" / "QuickTime" / "QuickTimePlayer.exe",
                       DRIVE_C / "Program Files" / "Movie Maker" / "moviemk.exe",
                       DRIVE_C / "Program Files" / "Lavasoft" / "Ad-aware 5.6" / "Ad-aware.exe"):
