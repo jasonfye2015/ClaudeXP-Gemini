@@ -321,6 +321,7 @@ def _program_title(slot):
 class TVGuideWidget(WidgetBase):
     """What's on right now, straight from ClaudeTV's own schedule (the same one the tuner and TV Guide use)."""
     KEY, TITLE, SIZE, REFRESH_MS = "tv", "TV Guide", (400, 96), 15000
+    INTERACTIVE = True      # click a channel to watch it in ClaudeTV (or the heading for the full TV Guide)
     ROW = 64                # a channel's row: what's on, its time and progress bar, and what's next
     SLIM_ROW = 46           # without the 'Next' line, when every channel wouldn't fit on the screen otherwise
     HEAD = 30
@@ -332,6 +333,7 @@ class TVGuideWidget(WidgetBase):
         self.row = self.ROW
         self._asked = False
         self._hits = []
+        self.setCursor(Qt.PointingHandCursor)
 
     def start(self):
         super().start()
