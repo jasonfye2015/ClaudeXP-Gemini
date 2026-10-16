@@ -1,6 +1,6 @@
-"""ClaudeXP's stand-in for the 'ollama' Python package.
+"""The Claude Timeline's stand-in for the 'ollama' Python package.
 
-ClaudeAIM (left exactly as it is), the model broker and ClaudeAI all `import ollama`. ClaudeXP puts this folder
+ClaudeAIM (left exactly as it is), the model broker and ClaudeAI all `import ollama`. ClaudeCore (claudecore.ai) puts this folder
 first on sys.path, so they get this module instead: the same few calls - list(), show() and chat() (plain or
 streamed, with pictures) - answered by ClaudeXP's own llama.cpp router (claudexp/llm_server.py) and the models in
 Local Storage/LLM Models/models. Model names are matched to the installed models (ai_models.resolve: 'gemma3:4b'
@@ -12,7 +12,7 @@ import json
 import time
 from types import SimpleNamespace
 
-__version__ = "claudexp"
+__version__ = "claudecore"
 
 
 class ResponseError(Exception):
@@ -20,12 +20,12 @@ class ResponseError(Exception):
 
 
 def _server():
-    from claudexp import llm_server
+    from claudecore.ai import llm_server
     return llm_server
 
 
 def _models():
-    from claudexp import ai_models
+    from claudecore.ai import ai_models
     return ai_models
 
 
@@ -99,7 +99,7 @@ def _note(model_id, timings, started):
 
 def _furlog():
     try:
-        from claudexp import furlog
+        from claudecore.ai import llmlog as furlog
         return furlog
     except Exception:
         return None

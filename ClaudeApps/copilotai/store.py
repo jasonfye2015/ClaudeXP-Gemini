@@ -2,10 +2,10 @@
 import time
 import uuid
 
-from ...paths import DATA
-from ..people import load_json, save_json
+from claudecore.jsonfile import load_json, save_json
+from claudecore import host
 
-STORE_DIR = DATA / "copilotai"
+STORE_DIR = host.data("copilotai")         # this computer's chats
 CHATS_FILE = STORE_DIR / "chats.json"
 SETTINGS_FILE = STORE_DIR / "settings.json"
 

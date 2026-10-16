@@ -1,4 +1,4 @@
-"""ClaudeXP's own language-model engine: llama.cpp's llama-server in router mode, run from Local Storage/LLM Models.
+"""The Claude Timeline's language-model engine (ClaudeXP's, shared by every era): llama.cpp's llama-server in router mode, run from Local Storage/LLM Models.
 
   Local Storage/LLM Models/
     llama.cpp/vulkan/llama-server.exe    the engine (any GPU via Vulkan, else the CPU)
@@ -19,7 +19,11 @@ import threading
 import time
 import urllib.request
 
-from .paths import DATA
+from pathlib import Path
+
+from claudecore import host
+
+DATA = Path(host.get().data_dir())       # this computer's data folder
 
 MODELS_DIR_NAME = "LLM Models"
 DEFAULT_CTX = 16384
@@ -35,8 +39,7 @@ _job = None
 
 
 def models_dir():
-    from .explorer.vfs import local_storage
-    return local_storage() / MODELS_DIR_NAME
+    return host.local_storage() / MODELS_DIR_NAME
 
 
 def engines():
@@ -366,39 +369,3 @@ def devices():
                 and not line.strip().lower().startswith("available")]
     except Exception:
         return []
-
-
-def at_logon(desktop, warm=True):
-    """Load the model now (so the first reply is quick), or put up a warning by the clock if it can't run.
-    warm=False (msconfig's 'llama-server' startup item unchecked): the model loads on first use instead."""
-    from . import ai_models
-    ai_models.sync_aim()                       # ClaudeAIM's model settings follow Control Panel > AI Models
-    if available():
-        if warm:
-            start_in_background()
-        return
-    from PySide6.QtCore import QTimer
-    from PySide6.QtWidgets import QApplication, QStyle, QSystemTrayIcon
-    from .tray import TrayIcon
-    old = getattr(desktop, "_llm_tray", None)
-    if old is not None:
-        old.hide()
-    tray = TrayIcon(desktop, QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning))
-    tray.setToolTip("Language model missing - your buddies can't talk")
-    desktop._llm_tray = tray
-
-    def explain(*_):
-        from .aimodels_cpl import ai_models_properties
-        ai_models_properties(desktop, setup=True)          # the AI Model Setup Assistant
-    tray.activated.connect(lambda reason: explain() if reason in (QSystemTrayIcon.Trigger,
-                                                                    QSystemTrayIcon.DoubleClick) else None)
-    tray.show()
-    QTimer.singleShot(1500, lambda: tray.showMessage(
-        "Your buddies can't talk", "ClaudeXP's language models aren't installed (E:\\LLM Models). Everything else "
-        "works. Click here to download them."))
-    tray.messageClicked.connect(explain)
-    check = QTimer(tray)                      # models put in place by hand are noticed within a minute
-    check.timeout.connect(lambda: recheck(desktop) and check.stop())
-    check.start(60000)
-
-

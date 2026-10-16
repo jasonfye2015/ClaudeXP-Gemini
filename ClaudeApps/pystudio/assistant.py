@@ -52,7 +52,7 @@ class _Stream(QThread):
 
     def run(self):
         try:
-            from ... import ai_models, llm_server
+            from claudecore.ai import ai_models, llm_server
             body = {"model": self.model, "messages": self.messages, "stream": True, "temperature": 0.3,
                     "cache_prompt": True, "max_tokens": 3000, "chat_template_kwargs": {"enable_thinking": False}}
             begun = time.time()
@@ -196,7 +196,7 @@ class AssistantPanel(QWidget):
     def _fill_models(self):
         self.models.clear()
         try:
-            from ... import ai_models, llm_server
+            from claudecore.ai import ai_models, llm_server
             installed = ai_models.installed()
             if not llm_server.available() or not installed:
                 self.note.setText(llm_server.status() if hasattr(llm_server, "status") else "No language models found.")

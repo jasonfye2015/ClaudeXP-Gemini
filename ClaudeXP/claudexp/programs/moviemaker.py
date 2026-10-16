@@ -46,7 +46,7 @@ QLabel#pane { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #3A6EA5
 
 
 def ffmpeg_exe():
-    from .pystudio.media import ffmpeg_exe as exe
+    from pystudio.media import ffmpeg_exe as exe
     return exe()
 
 

@@ -1,6 +1,6 @@
 """Furry Log's recorder: a plain-text diary of everything the language model does, for debugging and curiosity.
 
-Every request any program makes goes through the `ollama` stand-in (claudexp/stubs/ollama), which reports here:
+Every request any program makes goes through the `ollama` stand-in (ClaudeCore/stubs/ollama), which reports here:
 the exact prompt (all messages), the options, which model was asked for and which one really answered, then the
 raw reply (and any reasoning), how long it took, and any error. Image generation and speech jobs add a line each.
 One file per day in data/furry_log/, with real wall-clock times (not ClaudeXP's 2001 clock), so the files read well
@@ -10,7 +10,11 @@ import json
 import threading
 from datetime import date, datetime, timedelta
 
-from .paths import DATA
+from pathlib import Path
+
+from claudecore import host
+
+DATA = Path(host.get().data_dir())       # this computer's data folder
 
 LOG_DIR = DATA / "furry_log"
 SETTINGS_FILE = DATA / "furry_log.json"

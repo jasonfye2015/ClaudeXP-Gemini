@@ -20,9 +20,14 @@ import re
 import threading
 from pathlib import Path
 
-from .paths import DATA
+from pathlib import Path
+
+from claudecore import host
+
+DATA = Path(host.get().data_dir())       # this computer's data folder
 
 CONFIG = DATA / "ai_models.json"
+changed_hooks = []           # called after the choices are saved
 ROLES = [("conversation", "Buddy conversations", "AIM, and when buddies and regulars talk to you on IRC and the MUCK"),
          ("background", "Background life", "journals, e-mail, catch-up and ambient IRC / MUCK chatter"),
          ("assistant", "ClaudeAI", "the default model in ClaudeAI"),
@@ -96,7 +101,11 @@ def save(data):
     with _lock:
         CONFIG.parent.mkdir(parents=True, exist_ok=True)
         CONFIG.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    sync_aim()
+    for hook in changed_hooks:              # e.g. ClaudeXP keeping ClaudeAIM's settings in step
+        try:
+            hook()
+        except Exception:
+            pass
 
 
 def default_for(role, models=None):
@@ -150,29 +159,7 @@ def vision_model():
     return model_for("pictures")
 
 
-# ---- keeping ClaudeAIM's settings in step --------------------------------------------------------------------
 
-def sync_aim():
-    """Write the conversation model, per-buddy overrides and context size into ClaudeAIM's settings."""
-    try:
-        from .programs.aim import ensure_aim_path
-        ensure_aim_path()
-        from claudeaim.contacts import load_contacts
-        from claudeaim.storage import Settings
-        s = Settings()
-        cfg = config()
-        contacts, _errors = load_contacts()
-        by_name = {c.screen_name.lower(): c.id for c in contacts}
-        ids = {m.id for m in installed()}
-        overrides = {by_name[n.lower()]: m for n, m in cfg["overrides"].items() if n.lower() in by_name and m in ids}
-        want = {"default_model": model_for("conversation") or s["default_model"], "model_overrides": overrides,
-                "context_size": int(cfg["context"])}
-        if not s["password"]:                  # AIM never checks it; a filled-in box just looks right
-            want["password"] = "********"
-        if any(s[k] != v for k, v in want.items()):
-            s.update(**want)
-    except Exception:
-        pass
 
 
 # ---- what's been happening (for the Activity tab) -----------------------------------------------------------

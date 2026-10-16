@@ -668,7 +668,7 @@ def _uptime(seconds):
 
 def _image_generating():
     try:
-        from .. import imagegen
+        import imagegen
         return imagegen.generating()
     except Exception:
         return False
@@ -989,7 +989,7 @@ class NoteWidget(WidgetBase):
             return []
 
     def save_as(self):
-        from ..claudeai.app import ask_text
+        from claudeai.app import ask_text
         first = next((ln.strip() for ln in self.edit.toPlainText().splitlines() if ln.strip()), "")
         ask_text(self.c.desktop, "Save sticky note", "Save this note as:", self._safe(first)[:30] or "My note",
                  self._save_named)

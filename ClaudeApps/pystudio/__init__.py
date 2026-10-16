@@ -1,38 +1,35 @@
-"""CopilotAI, a general-purpose local chat assistant."""
+"""Copilot Python Studio: an offline Python editor and runner."""
 import traceback
 
 from shiboken6 import isValid
-
-from ...wm import XPWindow
-from ..placeholder import open_placeholder
+from claudecore import host
 
 _frame = None
 
 
-def copilotai_icon():
+def studio_icon():
     from .app import app_icon
     return app_icon()
 
 
-def launch(desktop, new_chat=False):
+def launch(desktop):
     global _frame
     if _frame is not None and isValid(_frame):
         desktop.open_window(_frame)
-        if new_chat:
-            _frame.content.new_chat()
         return _frame
     try:
-        from .app import CopilotAI
-        content = CopilotAI(desktop)
+        from .app import PythonStudio
+        content = PythonStudio(desktop)
     except Exception:
-        open_placeholder(desktop, "CopilotAI", copilotai_icon(),
-                         "CopilotAI couldn't start.\n\n" + traceback.format_exc(limit=3), sound_event="error")
+        host.placeholder(desktop, "Copilot Python Studio", studio_icon(),
+                         "Copilot Python Studio couldn't start.\n\n" + traceback.format_exc(limit=3),
+                         sound_event="error")
         return None
-    _frame = XPWindow(desktop, "CopilotAI", content, copilotai_icon(), size=(1000, 700))
+    _frame = host.window(desktop, "Copilot Python Studio", content, studio_icon(), size=(900, 640))
     content.frame = _frame
     _frame.destroyed.connect(_forget)
     desktop.open_window(_frame)
-    content.prompt.setFocus()
+    content.editor().setFocus()
     return _frame
 
 

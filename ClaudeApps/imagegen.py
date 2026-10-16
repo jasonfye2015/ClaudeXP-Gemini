@@ -14,10 +14,8 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QGridLayout, QGroupBox, QHB
                                QPlainTextEdit, QProgressBar, QPushButton, QSpinBox, QDoubleSpinBox,
                                QVBoxLayout, QWidget)
 
-from ..explorer import vfs
-from ..llm_server import models_dir
-from ..paths import ROOT
-from ..wm import XPWindow
+from claudecore.ai.llm_server import models_dir
+from claudecore import host
 
 MODEL_INFO = {
     "sd15": ("Stable Diffusion 1.5", "stable-diffusion-v1-5/stable-diffusion-v1-5",
@@ -34,7 +32,7 @@ PYTHON_INSTALLER_URL = "https://www.python.org/ftp/python/3.12.10/python-3.12.10
 RUNTIME = IMAGEGEN_ROOT / "runtime312"
 RUNTIME_READY = RUNTIME / ".claudexp-ready"
 WORKER = Path(__file__).with_name("imagegen_worker.py")
-REQUIREMENTS = ROOT / "requirements-imagegen.txt"
+REQUIREMENTS = Path(__file__).with_name("requirements-imagegen.txt")
 CUDA_INDEX = "https://download.pytorch.org/whl/cu128"
 _window = None
 
@@ -455,9 +453,9 @@ class ImageCreator(QWidget):
         if not _installed(key):
             QMessageBox.warning(self, "Image Creator", "Install the selected model first.")
             return
-        vfs.my_pictures().mkdir(parents=True, exist_ok=True)
-        output = vfs.my_pictures() / f"Image Creator {time.strftime('%Y%m%d-%H%M%S')}.png"
-        from .. import furlog
+        host.my_pictures().mkdir(parents=True, exist_ok=True)
+        output = host.my_pictures() / f"Image Creator {time.strftime('%Y%m%d-%H%M%S')}.png"
+        from claudecore.ai import llmlog as furlog
         furlog.event("IMAGE REQUEST", prompt, model=key, size=f"{self.width.value()}x{self.height.value()}",
                      steps=self.steps.value(), guidance=self.guidance.value(), seed=self.seed.value(),
                      negative=self.negative.toPlainText().strip(), output=output.name)
@@ -543,7 +541,7 @@ def open_imagegen(desktop):
         desktop.activate(_window)
         return _window
     body = ImageCreator(desktop)
-    _window = XPWindow(desktop, "Copilot Image Creator", body, imagegen_icon(), (760, 620))
+    _window = host.window(desktop, "Copilot Image Creator", body, imagegen_icon(), (760, 620))
     body.frame = _window
     desktop.open_window(_window)
     return _window

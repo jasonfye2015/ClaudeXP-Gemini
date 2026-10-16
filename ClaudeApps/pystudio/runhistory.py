@@ -3,10 +3,10 @@ import difflib
 import json
 import time
 from pathlib import Path
+from claudecore import host
 
-from ...paths import DATA
 
-FILE = DATA / "pystudio_runs.json"
+FILE = host.data("pystudio") / "pystudio_runs.json"
 KEEP = 20
 MAX_OUTPUT = 30000
 MAX_SOURCE = 200000

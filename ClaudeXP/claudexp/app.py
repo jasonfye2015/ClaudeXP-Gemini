@@ -221,13 +221,13 @@ class ClaudeXP(QMainWindow):
         QTimer.singleShot(3000, lambda: credits.maybe_show(self.desktop))
         # what starts with Windows: msconfig's Startup tab can switch any of these off (startup.py)
         from .startup import enabled
-        from .programs import claudeai
+        import claudeai
         if enabled("claudeai"):
             QTimer.singleShot(2000, lambda: claudeai.start_at_logon(self.desktop))
-        from . import llm_server
+        from . import llm_logon, llm_server  # noqa: F401
         from . import llm_loading
         llm_loading.start(self.desktop)          # the "Loading AI Model" box, first load of each model
-        QTimer.singleShot(1200, lambda: llm_server.at_logon(self.desktop, warm=enabled("llm")))
+        QTimer.singleShot(1200, lambda: llm_logon.at_logon(self.desktop, warm=enabled("llm")))
         from .programs import torrent
         if enabled("torrent"):
             QTimer.singleShot(2600, lambda: torrent.start_at_logon(self.desktop))

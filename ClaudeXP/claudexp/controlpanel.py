@@ -832,7 +832,7 @@ def _saver_tab(desktop, on_change):
     def open_settings():
         from .explorer.dialogs import msgbox
         if combo.currentText() == "Marquee":
-            from .programs.claudeai.app import ask_text
+            from claudeai.app import ask_text
 
             def set_text(text):
                 if text.strip():

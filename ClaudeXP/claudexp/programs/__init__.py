@@ -7,7 +7,9 @@ from PySide6.QtWidgets import QApplication, QStyle
 
 from .. import network, sound
 from ..paths import pixmap
-from . import aim, claudeai, irc, muck, navigator
+import claudeai
+
+from . import aim, irc, muck, navigator
 from . import neko
 from .notepad import open_notepad
 from .placeholder import open_placeholder
@@ -261,20 +263,20 @@ PROGRAMS = [
             _lazy("gemini_distiller", "open_gemini_distiller"), group="GeminiAdobe"),
     Program("paint", "Paint", "", _lazy("paint", "paint_icon"), _lazy("paint", "open_paint"), group="Accessories"),
     Program("imagecreator", "Copilot Image Creator", "Generate images locally",
-            _lazy("imagegen", "imagegen_icon"), _lazy("imagegen", "open_imagegen"),
-            _lazy("imagegen", "shutdown"), group="Accessories"),
+            _shared("imagegen", "imagegen_icon"), _shared("imagegen", "open_imagegen"),
+            _shared("imagegen", "shutdown"), group="Accessories"),
     Program("copilotvoice", "Copilot Voice", "Talk with your local AI using speech",
-            _lazy("copilot_voice", "voice_icon"), _lazy("copilot_voice", "open_copilot_voice"),
-            _lazy("copilot_voice", "shutdown"), group="Accessories"),
+            _shared("copilot_voice", "voice_icon"), _shared("copilot_voice", "open_copilot_voice"),
+            _shared("copilot_voice", "shutdown"), group="Accessories"),
     Program("copilotai", "CopilotAI", "Chat with local models using text or voice",
-            _lazy("copilotai", "copilotai_icon"), _lazy("copilotai", "launch"),
-            _lazy("copilotai", "shutdown"), group="Accessories"),
+            _shared("copilotai", "copilotai_icon"), _shared("copilotai", "launch"),
+            _shared("copilotai", "shutdown"), group="Accessories"),
     Program("copilotwidgets", "Copilot Widgets", "Clock, calendar, weather, TV guide and more",
             _lazy("copilot_widgets", "widgets_icon"), _lazy("copilot_widgets", "launch"),
             _lazy("copilot_widgets", "shutdown"), group="Accessories"),
     Program("pystudio", "Copilot Python Studio", "Write and run Python programs offline",
-            _lazy("pystudio", "studio_icon"), _lazy("pystudio", "launch"),
-            _lazy("pystudio", "shutdown"), group="Accessories"),
+            _shared("pystudio", "studio_icon"), _shared("pystudio", "launch"),
+            _shared("pystudio", "shutdown"), group="Accessories"),
     Program("cmd", "Command Prompt", "", _lazy("cmd", "cmd_icon"), _lazy("cmd", "open_cmd"), group="Accessories"),
     Program("taskmgr", "Windows Task Manager", "", _lazy("taskmgr", "taskmgr_icon"), _lazy("taskmgr", "open_taskmgr"),
             listed=False),

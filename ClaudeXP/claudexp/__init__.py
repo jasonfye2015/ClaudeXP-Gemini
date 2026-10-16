@@ -1,12 +1,12 @@
-"""ClaudeXP. Importing the package puts claudexp/stubs first on sys.path, so `import ollama` anywhere (ClaudeAIM
-included) gets ClaudeXP's own stand-in, backed by the bundled llama.cpp engine (see llm_server.py)."""
+"""ClaudeXP. Importing the package puts the Claude Timeline's ClaudeCore/stubs first on sys.path, so `import ollama`
+anywhere (ClaudeAIM included) gets the Timeline's own stand-in, backed by its llama.cpp engine (claudecore/ai)."""
 import sys
 from pathlib import Path
 
-_STUBS = str(Path(__file__).resolve().parent / "stubs")
+_STUBS = str(Path(__file__).resolve().parent.parent.parent / "ClaudeCore" / "stubs")
 if _STUBS not in sys.path:
     sys.path.insert(0, _STUBS)
-if "ollama" in sys.modules and getattr(sys.modules["ollama"], "__version__", "") != "claudexp":
+if "ollama" in sys.modules and getattr(sys.modules["ollama"], "__version__", "") != "claudecore":
     del sys.modules["ollama"]          # the real package was imported first somehow: use ours from now on
 
 # The Claude Timeline's shared folders (beside ClaudeXP): ClaudeCore, and the programs every era shares.

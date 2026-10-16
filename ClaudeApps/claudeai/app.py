@@ -15,9 +15,9 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBo
                                QPushButton, QSizePolicy, QTextBrowser, QToolButton, QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
-from ... import broker, clock
-from ...user import user_name
+from claudecore.ai import broker
 from .store import DEFAULT_INSTRUCTIONS, Chats, Settings
+from claudecore import host
 
 BG, SIDEBAR, BORDER = "#FAF9F5", "#F0EEE6", "#E3DFD3"
 TEXT, MUTED, ACCENT, USER_BUBBLE = "#3D3929", "#8B877C", "#D97757", "#EDEAE0"
@@ -212,13 +212,13 @@ class ClaudeAI(QWidget):
         self.list.customContextMenuRequested.connect(self._list_menu)
         sv.addWidget(self.list, 1)
         bottom = QHBoxLayout()
-        avatar = QLabel(user_name()[:1].upper())
+        avatar = QLabel(host.account_name()[:1].upper())
         avatar.setFixedSize(28, 28)
         avatar.setAlignment(Qt.AlignCenter)
         avatar.setStyleSheet(f"background: #3D3929; color: #FAF9F5; border-radius: 14px; font-weight: bold;")
         self.avatar = avatar
         bottom.addWidget(avatar)
-        self.user_label = QLabel(user_name())
+        self.user_label = QLabel(host.account_name())
         self.user_label.setStyleSheet("font-size: 12px; font-weight: 600;")
         bottom.addWidget(self.user_label, 1)
         self.gear = QToolButton()
@@ -316,8 +316,7 @@ class ClaudeAI(QWidget):
         QShortcut(QKeySequence("Ctrl+Shift+O"), self, self.new_chat)
         QShortcut(QKeySequence("Ctrl+B"), self, self.toggle_sidebar)
         QShortcut(QKeySequence("Ctrl+P"), self, lambda: self.current and self.print_chat(self.current))
-        from ...user import account
-        account().changed.connect(self._account_changed)
+        host.on_account_changed(self._account_changed)
         self.render_timer = QTimer(self)
         self.render_timer.setSingleShot(True)
         self.render_timer.timeout.connect(self.render)
@@ -327,8 +326,8 @@ class ClaudeAI(QWidget):
         self.render()
 
     def _account_changed(self):
-        self.avatar.setText(user_name()[:1].upper())
-        self.user_label.setText(user_name())
+        self.avatar.setText(host.account_name()[:1].upper())
+        self.user_label.setText(host.account_name())
         self.render()
 
     # ---- models -----------------------------------------------------------------------------
@@ -345,7 +344,7 @@ class ClaudeAI(QWidget):
         except Exception:
             models = []
         try:
-            from ... import ai_models
+            from claudecore.ai import ai_models
             default = ai_models.model_for("assistant")             # Control Panel > AI Models
             if default in models:
                 models.remove(default)
@@ -414,10 +413,9 @@ class ClaudeAI(QWidget):
         menu.exec(pos)
 
     def print_chat(self, chat):
-        from ...printing import print_document
         if chat is not self.current:
             self.open_chat(chat)
-        print_document(self.desktop, chat["title"], self.view.document())
+        host.print_document(self.desktop, chat["title"], self.view.document())
 
     def toggle_pin(self, chat):
         chat["pinned"] = not chat["pinned"]
@@ -438,7 +436,6 @@ class ClaudeAI(QWidget):
             self._update_header()
 
     def delete(self, chat):
-        from ...explorer.dialogs import msgbox
 
         def answer(button):
             if button == "Delete":
@@ -449,7 +446,7 @@ class ClaudeAI(QWidget):
                 self.refresh_sidebar()
                 self.render()
 
-        msgbox(self.desktop, "Delete chat", f"Are you sure you want to delete \"{chat['title']}\"?\n\n"
+        host.message(self.desktop, "Delete chat", f"Are you sure you want to delete \"{chat['title']}\"?\n\n"
                                             "This can't be undone.", "warning", ("Delete", "Cancel"), answer)
 
     # ---- chats -------------------------------------------------------------------------------------
@@ -493,11 +490,11 @@ class ClaudeAI(QWidget):
         chat = self.current
         if chat is None or not chat["messages"]:
             self.prompt.setPlaceholderText("How can I help you today?")
-            hour = clock.now().hour
+            hour = host.now().hour
             part = "morning" if 5 <= hour < 12 else "afternoon" if hour < 17 else "evening"
             self.view.setHtml(f"""<table width="100%" height="100%"><tr><td align="center" valign="middle">
                 <br><br><br><br><br><img src="spark:big" width="40" height="40"><br><br>
-                <span style="font-family:'{SERIF}'; font-size:28px; color:{TEXT};">Good {part}, {html.escape(user_name())}</span>
+                <span style="font-family:'{SERIF}'; font-size:28px; color:{TEXT};">Good {part}, {html.escape(host.account_name())}</span>
                 </td></tr></table>""")
             return
         self.prompt.setPlaceholderText("Reply to ClaudeAI...")
@@ -510,7 +507,7 @@ class ClaudeAI(QWidget):
                 text = html.escape(m["content"]).replace("\n", "<br>")
                 parts.append(f"""<table width="100%" cellspacing="0" cellpadding="0" style="margin-top:14px;"><tr>
                     <td width="34" valign="top"><table cellpadding="5" bgcolor="#3D3929"><tr><td>
-                    <span style="color:#FAF9F5; font-weight:bold; font-family:'{UI_FONT}';">{html.escape(user_name()[:1].upper())}</span>
+                    <span style="color:#FAF9F5; font-weight:bold; font-family:'{UI_FONT}';">{html.escape(host.account_name()[:1].upper())}</span>
                     </td></tr></table></td>
                     <td><table width="100%" cellpadding="10" bgcolor="{USER_BUBBLE}"><tr><td>
                     <span style="font-family:'{UI_FONT}'; font-size:14px; color:{TEXT};">{text}</span>
@@ -679,8 +676,8 @@ class ClaudeAI(QWidget):
 
     def _ctx(self):
         try:
-            from claudeaim.storage import Settings as AimSettings
-            return int(AimSettings()["context_size"])
+            from claudecore.ai import ai_models
+            return int(ai_models.config()["context"])       # Control Panel > AI Models' context size
         except Exception:
             return 8192
 
@@ -709,8 +706,7 @@ class ClaudeAI(QWidget):
 
     # ---- settings ---------------------------------------------------------------------------------------
     def open_settings(self):
-        from ...network import DialogBody, _fixed_window
-        body = DialogBody()
+        body = host.dialog_body()
         grid = QGridLayout(body)
         grid.setContentsMargins(14, 12, 14, 12)
         grid.addWidget(QLabel("<b>Settings</b>"), 0, 0, 1, 2)
@@ -760,7 +756,7 @@ class ClaudeAI(QWidget):
 
         save.clicked.connect(apply)
         cancel.clicked.connect(close)
-        holder["win"] = _fixed_window(self.desktop, "ClaudeAI Settings", body, close)
+        holder["win"] = host.fixed_window(self.desktop, "ClaudeAI Settings", body, close)
         holder["win"].icon = app_icon()
         self.desktop.open_window(holder["win"])
 
@@ -781,8 +777,7 @@ class ClaudeAI(QWidget):
 
 def ask_text(desktop, title, label, default, on_ok):
     """A small 'type a name' dialog."""
-    from ...network import DialogBody, _fixed_window
-    body = DialogBody()
+    body = host.dialog_body()
     v = QVBoxLayout(body)
     v.setContentsMargins(14, 12, 14, 12)
     v.addWidget(QLabel(label))
@@ -810,7 +805,7 @@ def ask_text(desktop, title, label, default, on_ok):
     ok.clicked.connect(accept)
     edit.returnPressed.connect(accept)
     cancel.clicked.connect(close)
-    holder["win"] = _fixed_window(desktop, title, body, close)
+    holder["win"] = host.fixed_window(desktop, title, body, close)
     desktop.open_window(holder["win"])
     edit.setFocus()
     edit.selectAll()

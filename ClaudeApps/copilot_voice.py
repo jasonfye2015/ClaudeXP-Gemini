@@ -14,9 +14,8 @@ from PySide6.QtMultimedia import QAudio, QAudioFormat, QAudioOutput, QAudioSourc
 from PySide6.QtWidgets import (QCheckBox, QHBoxLayout, QLabel, QMessageBox, QPlainTextEdit, QPushButton,
                                QProgressBar, QVBoxLayout, QWidget)
 
-from .. import ai_models, broker, llm_server, sound
-from ..paths import DATA, ROOT
-from ..wm import XPWindow
+from claudecore.ai import ai_models, broker, llm_server
+from claudecore import host
 
 VOICE_ROOT = llm_server.models_dir() / "voice"
 MODELS_ROOT = VOICE_ROOT / "models"
@@ -28,7 +27,7 @@ PYTHON_INSTALLER_URL = "https://www.python.org/ftp/python/3.12.10/python-3.12.10
 RUNTIME = VOICE_ROOT / "runtime312"
 RUNTIME_READY = RUNTIME / ".claudexp-ready"
 WORKER = Path(__file__).with_name("copilot_voice_worker.py")
-REQUIREMENTS = ROOT / "requirements-voice.txt"
+REQUIREMENTS = Path(__file__).with_name("requirements-voice.txt")
 WHISPER_DIR = MODELS_ROOT / "whisper-base.en"
 PIPER_DIR = MODELS_ROOT / "en_US-lessac-medium"
 _window = None
@@ -157,7 +156,7 @@ class VoiceTask(QThread):
                         command.extend(["--length-scale", str(self.options["length_scale"])])
                 result = self._command(command)
                 if result is not None:
-                    from .. import furlog
+                    from claudecore.ai import llmlog as furlog
                     if self.operation == "transcribe":
                         furlog.event("SPEECH HEARD (Whisper)", str(result))
                     elif self.operation == "speak":
@@ -291,8 +290,7 @@ class CopilotVoice(QWidget):
         layout.addWidget(self.license_link)
         self.license_ack = QCheckBox("I reviewed the model and voice licenses and agree to follow their terms.")
         layout.addWidget(self.license_ack)
-        from ..setup import speechcheck
-        self.license_ack.setChecked(speechcheck.accepted())
+        self.license_ack.setChecked(host.voice_license_accepted())
         self.setup_button = QPushButton("Set Up Local Voice (downloads models)")
         self.setup_button.clicked.connect(self.setup_voice)
         layout.addWidget(self.setup_button)
@@ -483,7 +481,7 @@ class CopilotVoice(QWidget):
             self.status.setText("Preparing local speech...")
             if answer:
                 self.speech_path = _temporary_audio_path()
-                self.audio_output.setVolume(0.0 if sound.is_muted() else 1.0)
+                self.audio_output.setVolume(0.0 if host.muted() else 1.0)
                 self._start_task("speak", text=answer, output=self.speech_path)
             else:
                 self.status.setText("The local AI returned an empty reply.")
@@ -613,7 +611,7 @@ def open_copilot_voice(desktop):
         desktop.activate(_window)
         return _window
     body = CopilotVoice(desktop)
-    _window = XPWindow(desktop, "Copilot Voice", body, voice_icon(), (620, 480))
+    _window = host.window(desktop, "Copilot Voice", body, voice_icon(), (620, 480))
     body.frame = _window
     desktop.open_window(_window)
     return _window

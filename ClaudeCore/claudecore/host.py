@@ -10,7 +10,7 @@ A shared program never imports an OS's own modules. It asks the host instead:
     host.local_storage()          # the shared Local Storage (drive E: on XP)
     host.user_name()              # the user's name as the world knows them
     host.muted()                  # is this computer's sound muted?
-    host.message(desktop, title, text, "info")   # a message box in this OS's style
+    host.message(desktop, title, text, "info", buttons, on_button)   # a message box in this OS's style
     host.menu_style()             # a stylesheet for menus that look like this OS's
     host.in_front(desktop, win)   # is that the window the user is looking at?
     host.now()                    # the computer's clock (the real date and time, in the era's year)
@@ -57,10 +57,16 @@ class Host:
     def muted(self):
         return False
 
-    def message(self, desktop, title, text, icon="info"):
-        """A message box in this OS's style; icon is "info", "warning" or "error"."""
+    def message(self, desktop, title, text, icon="info", buttons=("OK",), on_button=None):
+        """A message box in this OS's style; icon is "info", "warning" or "error". on_button(label) is called with
+        the button pressed (or "Cancel" if it's closed)."""
         from PySide6.QtWidgets import QMessageBox
-        QMessageBox.information(None, title, text)
+        box = QMessageBox(QMessageBox.Information, title, text)
+        made = [box.addButton(b, QMessageBox.AcceptRole) for b in buttons]
+        box.exec()
+        if on_button is not None:
+            clicked = box.clickedButton()
+            on_button(buttons[made.index(clicked)] if clicked in made else "Cancel")
 
     def menu_style(self):
         """A Qt stylesheet that makes menus look like this OS's."""
@@ -83,6 +89,54 @@ class Host:
     def open_media(self, desktop, path):
         """Play a sound or video in this OS's media player. Returns False if it can't play that kind of file."""
         return False
+
+    # ---- for the apps (ClaudeApps) ----
+    def account_name(self):
+        """The name on this computer's user account."""
+        return self.user_name()
+
+    def on_account_changed(self, callback):
+        """Call callback() when the user changes their account name or picture."""
+
+    def print_document(self, desktop, title, document):
+        """Print a QTextDocument on this OS's printer."""
+
+    def dialog_body(self):
+        """An empty widget styled as this OS's dialog background, to lay a small dialog out on."""
+        from PySide6.QtWidgets import QWidget
+        return QWidget()
+
+    def fixed_window(self, desktop, title, body, closer):
+        """A small fixed-size dialog window around body; closer() runs when it's closed."""
+        return self.window(desktop, title, body, None, (body.sizeHint().width(), body.sizeHint().height()))
+
+    def tray_icon(self, desktop, icon):
+        """An icon in this OS's notification area (a QSystemTrayIcon-like object)."""
+        from PySide6.QtWidgets import QSystemTrayIcon
+        return QSystemTrayIcon(icon)
+
+    def open_file(self, desktop, path):
+        """Open a file the way this OS would (a picture in its picture viewer, and so on)."""
+
+    def open_dialog(self, desktop, title, exts, on_open, icon=None, start=None):
+        """This OS's Open dialog; on_open(path) is called with the chosen file."""
+
+    def open_folder(self, desktop, path):
+        """Show a folder in this OS's file manager."""
+
+    def my_pictures(self):
+        raise NotImplementedError
+
+    def my_documents(self):
+        raise NotImplementedError
+
+    def voice_license_accepted(self):
+        """Did the user already accept the speech models' licences (e.g. in this OS's Setup)?"""
+        return False
+
+    def placeholder(self, desktop, title, icon, message, sound_event="default"):
+        """A window explaining that something isn't available (or couldn't start)."""
+        self.message(desktop, title, message, "error")
 
 
 def register(h):
@@ -153,8 +207,8 @@ def muted():
         return False
 
 
-def message(desktop, title, text, icon="info"):
-    return get().message(desktop, title, text, icon)
+def message(desktop, title, text, icon="info", buttons=("OK",), on_button=None):
+    return get().message(desktop, title, text, icon, buttons, on_button)
 
 
 def menu_style():
@@ -175,3 +229,61 @@ def open_flash(desktop, path):
 
 def open_media(desktop, path):
     return get().open_media(desktop, path)
+
+
+def account_name():
+    try:
+        return get().account_name() or ""
+    except Exception:
+        return ""
+
+
+def on_account_changed(callback):
+    return get().on_account_changed(callback)
+
+
+def print_document(desktop, title, document):
+    return get().print_document(desktop, title, document)
+
+
+def dialog_body():
+    return get().dialog_body()
+
+
+def fixed_window(desktop, title, body, closer):
+    return get().fixed_window(desktop, title, body, closer)
+
+
+def tray_icon(desktop, icon):
+    return get().tray_icon(desktop, icon)
+
+
+def open_file(desktop, path):
+    return get().open_file(desktop, path)
+
+
+def open_dialog(desktop, title, exts, on_open, icon=None, start=None):
+    return get().open_dialog(desktop, title, exts, on_open, icon, start)
+
+
+def open_folder(desktop, path):
+    return get().open_folder(desktop, path)
+
+
+def my_pictures():
+    return Path(get().my_pictures())
+
+
+def my_documents():
+    return Path(get().my_documents())
+
+
+def voice_license_accepted():
+    try:
+        return bool(get().voice_license_accepted())
+    except Exception:
+        return False
+
+
+def placeholder(desktop, title, icon, message, sound_event="default"):
+    return get().placeholder(desktop, title, icon, message, sound_event)

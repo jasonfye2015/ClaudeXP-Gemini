@@ -29,9 +29,9 @@ class XPHost(Host):
     def muted(self):
         return sound.is_muted()
 
-    def message(self, desktop, title, text, icon="info"):
+    def message(self, desktop, title, text, icon="info", buttons=("OK",), on_button=None):
         from .explorer.dialogs import msgbox
-        return msgbox(desktop, title, text, icon)
+        return msgbox(desktop, title, text, icon, buttons=buttons, on_button=on_button)
 
     def menu_style(self):
         from .programs.notepad import MENU_STYLE
@@ -52,6 +52,59 @@ class XPHost(Host):
             return False
         open_amp(desktop, path)
         return True
+
+    # ---- for the apps ----
+    def account_name(self):
+        from .user import user_name
+        return user_name()
+
+    def on_account_changed(self, callback):
+        from .user import account
+        account().changed.connect(callback)
+
+    def print_document(self, desktop, title, document):
+        from .printing import print_document
+        return print_document(desktop, title, document)
+
+    def dialog_body(self):
+        from .network import DialogBody
+        return DialogBody()
+
+    def fixed_window(self, desktop, title, body, closer):
+        from .network import _fixed_window
+        return _fixed_window(desktop, title, body, closer)
+
+    def tray_icon(self, desktop, icon):
+        from .tray import TrayIcon
+        return TrayIcon(desktop, icon)
+
+    def open_file(self, desktop, path):
+        from .explorer import viewers
+        return viewers.open_file(desktop, path)
+
+    def open_dialog(self, desktop, title, exts, on_open, icon=None, start=None):
+        from .programs.opendialog import open_dialog
+        return open_dialog(desktop, title, exts, on_open, icon, start=start)
+
+    def open_folder(self, desktop, path):
+        from . import explorer
+        return explorer.launch(desktop, path)
+
+    def my_pictures(self):
+        from .explorer import vfs
+        return vfs.my_pictures()
+
+    def my_documents(self):
+        from .explorer import vfs
+        return vfs.my_documents()
+
+    def voice_license_accepted(self):
+        from .setup import speechcheck
+        return speechcheck.accepted()
+
+    def placeholder(self, desktop, title, icon, message, sound_event="default"):
+        from .programs.placeholder import open_placeholder
+        return open_placeholder(desktop, title, icon, message, sound_event=sound_event)
 
     def in_front(self, desktop, frame):
         from PySide6.QtWidgets import QApplication, QMenu

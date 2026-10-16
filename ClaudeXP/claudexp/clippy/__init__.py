@@ -601,7 +601,7 @@ class Clippy(QObject):
         save(self.cfg)
 
     def remind_dialog(self):
-        from ..programs.claudeai.app import ask_text
+        from claudeai.app import ask_text
 
         def ok(value):
             parts = value.strip().split(None, 1)

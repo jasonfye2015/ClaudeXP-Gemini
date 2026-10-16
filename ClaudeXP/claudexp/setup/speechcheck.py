@@ -7,7 +7,7 @@ from html import escape
 from PySide6.QtCore import QThread, Signal
 
 from ..paths import DATA
-from ..programs import copilot_voice as cv
+import copilot_voice as cv
 
 ACCEPT_FILE = DATA / "speech_license.json"
 TEST_SENTENCE = "The quick brown fox jumps over the lazy dog."

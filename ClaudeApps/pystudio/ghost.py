@@ -9,14 +9,14 @@ STOPS = ["<|fim_pad|>", "<|endoftext|>", "<|file_sep|>", "<|fim_prefix|>", "<|fi
 def pick_model():
     """The smallest installed model with 'coder' in its id (fast enough to answer while you type)."""
     try:
-        from ... import ai_models
+        from claudecore.ai import ai_models
         coders = [m for m in ai_models.installed() if "coder" in m.id.lower()]
         if not coders:
             return None
         small = min(coders, key=lambda m: m.size)
         # a big model on a small GPU slows to a crawl if a second model is loaded beside it
         try:
-            from ... import llm_server
+            from claudecore.ai import llm_server
             states = llm_server.model_states()
             big_loaded = any(m.size > 6e9 and states.get(m.id) == "loaded" for m in ai_models.installed())
             if big_loaded and states.get(small.id) != "loaded":
@@ -51,7 +51,7 @@ class _Ask(QThread):
     def run(self):
         text = ""
         try:
-            from ... import llm_server
+            from claudecore.ai import llm_server
             body = {"model": self.model, "prompt": FIM.format(self.before, self.after), "max_tokens": 64,
                     "temperature": 0.1, "stop": STOPS, "cache_prompt": True}
             reply = llm_server.post("/v1/completions", body, timeout=20)

@@ -18,14 +18,13 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
                                QSplitter, QTextBrowser, QToolButton, QVBoxLayout, QWidget)
 from shiboken6 import isValid
 
-from ... import ai_models, broker, clock, llm_server, sound
-from ...user import user_name
-from ...wm import XPWindow
-from ..copilot_voice import (MODELS_ROOT, VoiceTask, _engine_ready, _models_ready,
+from claudecore.ai import ai_models, broker, llm_server
+from copilot_voice import (MODELS_ROOT, VoiceTask, _engine_ready, _models_ready,
                              _temporary_audio_path)
 from .store import DEFAULT_INSTRUCTIONS, Chats, Settings
 from . import imagetool
-from .. import voicecatalog
+import voicecatalog
+from claudecore import host
 
 BG, SIDEBAR, BORDER = "#FAF9F5", "#F0EEE6", "#E3DFD3"
 TEXT, MUTED, ACCENT = "#3D3929", "#8B877C", "#D97757"
@@ -214,12 +213,12 @@ class CopilotAI(QWidget):
         self.chat_list.customContextMenuRequested.connect(self._chat_context)
         layout.addWidget(self.chat_list, 1)
         bottom = QHBoxLayout()
-        self.user_avatar = QLabel(user_name()[:1].upper())
+        self.user_avatar = QLabel(host.account_name()[:1].upper())
         self.user_avatar.setFixedSize(28, 28)
         self.user_avatar.setAlignment(Qt.AlignCenter)
         self.user_avatar.setStyleSheet("background:#3D3929;color:#FAF9F5;border-radius:14px;font-weight:bold;")
         bottom.addWidget(self.user_avatar)
-        bottom.addWidget(QLabel(user_name()), 1)
+        bottom.addWidget(QLabel(host.account_name()), 1)
         self.settings_button = QToolButton()
         self.settings_button.setText("⚙")
         self.settings_button.setStyleSheet("font-size:18px;")
@@ -411,7 +410,7 @@ class CopilotAI(QWidget):
         self._update_header()
 
     def rename_chat(self, chat):
-        from ..claudeai.app import ask_text
+        from claudeai.app import ask_text
         ask_text(self.desktop, "Rename chat", "Chat name:", chat["title"],
                  lambda title: self._renamed(chat, title))
 
@@ -481,9 +480,9 @@ class CopilotAI(QWidget):
         self._update_header()
         chat = self.current
         if chat is None or not chat.get("messages"):
-            hour = clock.now().hour
+            hour = host.now().hour
             greeting = "morning" if 5 <= hour < 12 else "afternoon" if hour < 17 else "evening"
-            name = html.escape(user_name())
+            name = html.escape(host.account_name())
             self.conversation.setHtml(
                 f"<html><body style='font-family:Segoe UI;color:{TEXT};'><div align='center' "
                 f"style='margin-top:100px'><span style='font-size:27px;font-family:Georgia'>"
@@ -495,7 +494,7 @@ class CopilotAI(QWidget):
             role = message.get("role")
             content = message.get("content", "")
             if role == "user":
-                parts.append(f"<p style='margin-top:20px'><b>{html.escape(user_name())}</b></p>"
+                parts.append(f"<p style='margin-top:20px'><b>{html.escape(host.account_name())}</b></p>"
                              f"<div style='background:#EDEAE0;padding:10px;border-radius:8px'>"
                              f"{html.escape(content).replace(chr(10), '<br>')}</div>")
             elif role == "assistant":
@@ -550,7 +549,7 @@ class CopilotAI(QWidget):
     # ---- the image tool ------------------------------------------------------------------------------
     def _image_engine(self):
         """(model key, '') when pictures can be made, else (None, why not)."""
-        from .. import imagegen
+        import imagegen
         if not imagegen._engine_ready():
             return None, ("The local image engine isn't set up yet. Open Copilot Image Creator, then choose "
                           "Set Up Image Engine.")
@@ -591,9 +590,8 @@ class CopilotAI(QWidget):
 
     def _run_image(self, reply, prompt, shape):
         """Start the local image engine for this reply (the chat model steps aside to free graphics memory)."""
-        from ... import furlog
-        from .. import imagegen
-        from ...explorer import vfs
+        from claudecore.ai import llmlog as furlog
+        import imagegen
         key, why = self._image_engine()
         if key is None:
             reply.pop("streaming", None)
@@ -605,8 +603,8 @@ class CopilotAI(QWidget):
                 if state == "loaded":
                     llm_server.unload(model_id)
         width, height = imagetool.SIZES[key][shape]
-        vfs.my_pictures().mkdir(parents=True, exist_ok=True)
-        output = vfs.my_pictures() / f"CopilotAI {time.strftime('%Y%m%d-%H%M%S')}.png"
+        host.my_pictures().mkdir(parents=True, exist_ok=True)
+        output = host.my_pictures() / f"CopilotAI {time.strftime('%Y%m%d-%H%M%S')}.png"
         seed = random.randint(1, 2 ** 31 - 1)
         furlog.event("IMAGE REQUEST (CopilotAI)", prompt, model=key, size=f"{width}x{height}",
                      steps=int(self.settings["image_steps"]), seed=seed, output=output.name)
@@ -679,8 +677,7 @@ class CopilotAI(QWidget):
             return
         path = Path(item["path"])
         if action == "open" and path.is_file():
-            from ...explorer import viewers
-            viewers.open_file(self.desktop, path)
+            host.open_file(self.desktop, path)
         elif action == "save" and path.is_file():
             from PySide6.QtWidgets import QFileDialog
             target, _ = QFileDialog.getSaveFileName(self, "Save picture", path.name, "PNG image (*.png)")
@@ -962,7 +959,7 @@ class CopilotAI(QWidget):
         auto_title.setChecked(bool(self.settings["auto_title"]))
         form.addRow("Chat history:", auto_title)
 
-        from .. import imagegen
+        import imagegen
         image_tool = QCheckBox("Let the model create pictures when asked")
         image_tool.setChecked(bool(self.settings["image_tool"]))
         form.addRow("Images:", image_tool)
@@ -1317,7 +1314,7 @@ class CopilotAI(QWidget):
                 self._resume_auto_listen()
         elif operation == "speak":
             self._reply_audio = Path(result)
-            self.audio_output.setVolume(0.0 if sound.is_muted() else 1.0)
+            self.audio_output.setVolume(0.0 if host.muted() else 1.0)
             self.player.setSource(QUrl.fromLocalFile(result))
             self.speaking = True
             self.player.play()

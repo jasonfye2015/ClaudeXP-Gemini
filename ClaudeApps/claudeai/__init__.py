@@ -8,9 +8,7 @@ import traceback
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 from shiboken6 import isValid
-
-from ...wm import XPWindow
-from ..placeholder import open_placeholder
+from claudecore import host
 
 _frame = None
 _tray = None
@@ -30,15 +28,13 @@ def launch(desktop, new_chat=False):
             _frame.content.new_chat()
         return
     try:
-        from ..aim import ensure_aim_path
-        ensure_aim_path()
         from .app import ClaudeAI
         content = ClaudeAI(desktop)
     except Exception:
-        open_placeholder(desktop, "ClaudeAI", claudeai_icon(),
+        host.placeholder(desktop, "ClaudeAI", claudeai_icon(),
                          "ClaudeAI couldn't start.\n\n" + traceback.format_exc(limit=3), sound_event="error")
         return
-    _frame = XPWindow(desktop, "ClaudeAI", content, claudeai_icon(), size=(900, 640))
+    _frame = host.window(desktop, "ClaudeAI", content, claudeai_icon(), size=(900, 640))
     content.frame = _frame
     _frame.destroyed.connect(_forget)
     desktop.open_window(_frame)
@@ -76,8 +72,7 @@ def ensure_tray(desktop):
     global _tray
     if _tray is not None and isValid(_tray) and _tray.desktop is desktop:
         return _tray
-    from ...tray import TrayIcon
-    _tray = TrayIcon(desktop, claudeai_icon())
+    _tray = host.tray_icon(desktop, claudeai_icon())
     _tray.setToolTip("ClaudeAI")
     menu = QMenu()
     open_action = menu.addAction("&Open ClaudeAI", lambda: launch(desktop))

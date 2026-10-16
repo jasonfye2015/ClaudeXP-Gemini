@@ -1,5 +1,5 @@
 """The model broker: every program's language-model requests go through one queue, one at a time.
-(`ollama` here is ClaudeXP's stand-in, claudexp/stubs/ollama, answered by the bundled llama.cpp engine.)
+(`ollama` here is ClaudeXP's stand-in, ClaudeCore/stubs/ollama, answered by the bundled llama.cpp engine.)
 
 There's one GPU, so requests run in priority order:
   FOREGROUND  something you're waiting on (an IM reply, a page, a private message)
@@ -75,7 +75,7 @@ class Job(QRunnable):
             return
         em.started.emit(self)
         text, reasoning, err = "", "", ""
-        from . import furlog
+        from . import llmlog as furlog
         furlog.context.info = {"source": self.source, "priority": PRIORITY_NAMES.get(self.priority, self.priority)}
         try:
             import ollama

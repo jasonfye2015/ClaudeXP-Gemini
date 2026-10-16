@@ -6,10 +6,10 @@ from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton, QSplitter,
                                QTextBrowser, QVBoxLayout, QWidget)
 
-from ...paths import DATA
 from . import lessons
+from claudecore import host
 
-PROGRESS = DATA / "pystudio_lessons.json"
+PROGRESS = host.data("pystudio") / "pystudio_lessons.json"
 
 
 def load_progress():

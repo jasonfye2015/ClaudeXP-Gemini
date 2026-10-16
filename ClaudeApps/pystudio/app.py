@@ -14,14 +14,15 @@ from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QHBoxLayout
                                QMenuBar, QMessageBox, QPlainTextEdit, QPushButton, QSplitter, QTabWidget,
                                QToolButton, QVBoxLayout, QWidget)
 
-from ...paths import DATA
+from claudecore import host
+
 from . import backups, runhistory
 from .assistant import AssistantPanel
 from .debugger import DebugPanel, DebugSession
 from .editor import CodeEditor, is_warning
 from .ghost import GhostCompleter
 
-SETTINGS_FILE = DATA / "pystudio.json"
+SETTINGS_FILE = host.data("pystudio") / "pystudio.json"
 STUDIO_DIR = "Python Studio"
 TRACE = re.compile(r'File "([^"]+)", line (\d+)')
 PLAIN = re.compile(r"^(.+?):(\d+)(?::\d+)?: ")
@@ -62,8 +63,7 @@ print("Your lucky dice roll is", total)
 
 
 def studio_root():
-    from ...explorer import vfs
-    return vfs.local_storage() / STUDIO_DIR
+    return host.local_storage() / STUDIO_DIR
 
 
 def python_exe():
@@ -75,8 +75,7 @@ def wheels_dir():
 
 
 def projects_dir():
-    from ...explorer import vfs
-    folder = vfs.my_documents() / "Python Programs"
+    folder = host.my_documents() / "Python Programs"
     if not folder.exists():
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "hello.py").write_text(SAMPLE, encoding="utf-8")
@@ -736,13 +735,12 @@ class PythonStudio(QWidget):
 
     def _tool_window(self, key, title, factory, size):
         from shiboken6 import isValid
-        from ...wm import XPWindow
         frame = self.tools.get(key)
         if frame is not None and isValid(frame):
             self.desktop.open_window(frame)
             return frame.content
         content = factory()
-        frame = XPWindow(self.desktop, title, content, app_icon(16), size=size)
+        frame = host.window(self.desktop, title, content, app_icon(16), size=size)
         self.tools[key] = frame
         self.desktop.open_window(frame)
         return content
@@ -1040,8 +1038,7 @@ class PythonStudio(QWidget):
         self._add_tab(ed)
 
     def open_dialog(self):
-        from ..opendialog import open_dialog
-        open_dialog(self.desktop, "Open Python Program", {".py", ".pyw", ".txt"}, self.open_path, app_icon(16),
+        host.open_dialog(self.desktop, "Open Python Program", {".py", ".pyw", ".txt"}, self.open_path, app_icon(16),
                     start=self.folder)
 
     def open_path(self, path):
@@ -1168,8 +1165,7 @@ class PythonStudio(QWidget):
             ed.goto_line(number)
 
     def show_folder(self):
-        from ... import explorer
-        explorer.launch(self.desktop, self.folder)
+        host.open_folder(self.desktop, self.folder)
 
     # ---- lint ----------------------------------------------------------------------------------
     def _run_lint(self):
