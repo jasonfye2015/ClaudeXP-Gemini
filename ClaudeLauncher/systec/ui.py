@@ -9,6 +9,7 @@ import os
 import random
 import subprocess
 import time
+from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QIcon, QImage, QLinearGradient, QPainter,
@@ -17,7 +18,7 @@ from PySide6.QtWidgets import (QDialog, QFileDialog, QHBoxLayout, QLabel, QLineE
                                QMessageBox, QPushButton, QVBoxLayout, QWidget)
 
 from . import profile as prof
-from .systems import SYSTEMS, TIMELINE
+from .systems import PORTABLE_PYTHON, SYSTEMS, TIMELINE
 
 VW, VH = 1408, 768
 VERSION = "v1.50"
@@ -462,10 +463,13 @@ class Systec(QWidget):
             if ok.exec() != QMessageBox.Yes:
                 return
         env = dict(os.environ, CLAUDE_TIMELINE="1")
+        python = system.python()
+        if PORTABLE_PYTHON in python.parents:
+            env["PYTHONNOUSERSITE"] = "1"          # only the Timeline's own packages, not this PC's
         if format_drive:
             env["CLAUDE_TIMELINE_FORMAT"] = "1"
         try:
-            self.process = subprocess.Popen([str(system.python()), str(system.path / "main.py")],
+            self.process = subprocess.Popen([str(python), str(system.path / "main.py")],
                                             cwd=str(system.path), env=env)
         except OSError as exc:
             QMessageBox.critical(self, "SYSTEC", f"Could not start {system.key}:\n{exc}")
@@ -622,13 +626,18 @@ class ConfigDialog(QDialog):
 
     @staticmethod
     def _current():
-        return prof.setting("local_storage") or str(TIMELINE / "Local Storage")
+        chosen = prof.setting("local_storage")
+        return str(TIMELINE / chosen) if chosen else str(TIMELINE / "Local Storage")     # (relative: inside the Timeline)
 
     def _browse(self):
         folder = QFileDialog.getExistingDirectory(self, "Where is Local Storage?", self._current())
         if folder:
-            prof.set_setting("local_storage", folder)
-            self.path.setText(folder)
+            try:                         # inside the Timeline: keep it relative, so it moves with the drive
+                stored = str(Path(folder).resolve().relative_to(TIMELINE))
+            except ValueError:
+                stored = folder
+            prof.set_setting("local_storage", stored)
+            self.path.setText(self._current())
 
     def _reset(self):
         prof.set_setting("local_storage", None)

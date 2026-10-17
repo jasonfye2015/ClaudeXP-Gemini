@@ -32,12 +32,31 @@ class System:
         return IMAGES / name
 
     def python(self):
-        """The interpreter that runs this computer: its own .venv, else the Timeline's portable Python."""
+        """The interpreter that runs this computer: its own .venv when this PC has the Python it was made from (the
+        development PC), else the Timeline's portable Python (on the external SSD, on any PC)."""
         windowed = "pythonw.exe" if os.name == "nt" else "python"
-        for candidate in (self.path / ".venv" / "Scripts" / windowed, TIMELINE / "Python" / windowed):
-            if candidate.is_file():
-                return candidate
+        venv = self.path / ".venv" / "Scripts" / windowed
+        if venv.is_file() and venv_usable(self.path / ".venv"):
+            return venv
+        portable = TIMELINE / "Python" / windowed
+        if portable.is_file():
+            return portable
         return Path(sys.executable)
+
+
+PORTABLE_PYTHON = TIMELINE / "Python"
+
+
+def venv_usable(venv):
+    """A .venv only works where the Python it was made from (pyvenv.cfg's 'home') is installed."""
+    try:
+        for line in (venv / "pyvenv.cfg").read_text(encoding="utf-8").splitlines():
+            key, _, value = line.partition("=")
+            if key.strip() == "home":
+                return Path(value.strip()).is_dir()
+    except OSError:
+        pass
+    return False
 
 
 SYSTEMS = [

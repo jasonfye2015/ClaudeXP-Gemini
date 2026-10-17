@@ -22,8 +22,8 @@ def local_storage():
     every era uses; a ClaudeXP on its own keeps it inside (the folder's original 'Local Stoage' spelling works too)."""
     from .. import timeline as tl
     chosen = tl.setting("local_storage")                 # the launcher's Config can point E: somewhere else
-    if chosen and Path(chosen).is_dir():
-        return Path(chosen)
+    if chosen and (tl.TIMELINE / chosen).is_dir():       # (a relative one is inside the Timeline)
+        return tl.TIMELINE / chosen
     timeline = tl.active()
     for base in ((ROOT.parent, ROOT) if timeline else (ROOT,)):
         for name in ("Local Storage", "Local Stoage"):

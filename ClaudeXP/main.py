@@ -46,6 +46,13 @@ def _log_crashes():
 def main():
     _log_crashes()
     try:
+        from claudecore import relocate
+        from claudexp.paths import DATA
+        relocate.fix(DATA)             # the Timeline moved (e.g. onto the external SSD): saved paths follow it
+    except Exception as exc:
+        if sys.stderr is not None:
+            sys.stderr.write(f"Relocation check failed: {exc}\n")
+    try:
         from claudexp import residents_sync
         residents_sync.sync()          # in the Claude Timeline, the cast comes from Residents/
     except Exception as exc:           # never stop ClaudeXP from starting over it
