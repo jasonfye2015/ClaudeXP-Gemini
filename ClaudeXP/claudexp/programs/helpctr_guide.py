@@ -116,6 +116,8 @@ CATALOG = {
                           "chests."),
     "claudeggle": ("games", "Claudeggle: a Peggle-style ball-and-peg game - twelve levels, clear the orange pegs in ten "
                             "balls, with green-peg powers, a free-ball bucket and Extreme Fever."),
+    "fractals": ("games", "Claude Fractal Generator: Mandelbrot, Julia, Burning Ship, Tricorn, Multibrot and Newton "
+                          "fractals with palettes and click-to-zoom; Save Image puts them in E:\\Created Files."),
     "terrain": ("games", "Claude Terrain Generator: fractal landscapes like VistaPro - roughness, mountains, water, "
                          "snow line, forests, sky and camera; Save Image puts them in E:\\Created Files."),
     "claudejeweled": ("games", "Claudejeweled: a Bejeweled-style gem matcher - Classic, Action and Zen modes, "
