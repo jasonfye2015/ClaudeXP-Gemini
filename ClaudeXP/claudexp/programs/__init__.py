@@ -51,7 +51,8 @@ EMULATORS = [("nes", "NES Emulator", "Play NES games"), ("snes", "SNES Emulator"
 
 # Desktop shortcuts to the user's own archive folders on E: (Local Storage): key -> (label, folder name prefix).
 FOLDER_SHORTCUTS = {"mediaarchive": ("Furry Media Archive", "furry media archive"),
-                    "tvmovies": ("TV and Movies", "tv and movies")}
+                    "tvmovies": ("TV and Movies", "tv and movies"),
+                    "miscimages": ("Misc Personal Image Folders", "misc personal image folders")}
 
 
 def archive_folder(key):
@@ -341,6 +342,9 @@ PROGRAMS = [
             _lazy("furlocator", "locator_icon"), _lazy("furlocator", "open_furlocator"), group=FURRY),
     Program("furvideo", "Furry Video Browser", "Browse the video archive", _shared("folio.videos", "video_icon"),
             _shared("folio.videos", "open_videos"), _shared("folio.videos", "shutdown"), group=FURRY),
+    Program("photos", "Personal Image Gallery", "Browse your own pictures and videos",
+            _shared("folio.photos", "photos_icon"), _shared("folio.photos", "open_photos"),
+            _shared("folio.photos", "shutdown"), group=FURRY),
     *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)
       for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
     # Start > Programs > Games: the id/Raven shooters (Doom-engine ones run on PrBoom, Heretic/Hexen on Chocolate)

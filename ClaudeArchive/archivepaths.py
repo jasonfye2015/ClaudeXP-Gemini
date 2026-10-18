@@ -1,7 +1,8 @@
 """Where the archive is: the folders in the shared Local Storage that the archive tools read."""
 from claudecore import host
 
-FOLDERS = {"mediaarchive": "furry media archive", "tvmovies": "tv and movies"}
+FOLDERS = {"mediaarchive": "furry media archive", "tvmovies": "tv and movies",
+           "miscimages": "misc personal image folders"}
 
 
 def archive_folder(key):
