@@ -52,7 +52,8 @@ EMULATORS = [("nes", "NES Emulator", "Play NES games"), ("snes", "SNES Emulator"
 # Desktop shortcuts to the user's own archive folders on E: (Local Storage): key -> (label, folder name prefix).
 FOLDER_SHORTCUTS = {"mediaarchive": ("Furry Media Archive", "furry media archive"),
                     "tvmovies": ("TV and Movies", "tv and movies"),
-                    "miscimages": ("Misc Personal Image Folders", "misc personal image folders")}
+                    "miscimages": ("Misc Personal Image Folders", "misc personal image folders"),
+                    "personaldocs": ("Personal Text and Documents", "personal text")}
 
 
 def archive_folder(key):
@@ -348,6 +349,12 @@ PROGRAMS = [
     Program("miscfurry", "Misc Furry Image Viewer", "Browse the numbered albums of assorted furry pictures",
             _shared("folio.miscfurry", "misc_icon"), _shared("folio.miscfurry", "open_miscfurry"),
             _shared("folio.miscfurry", "shutdown"), group=FURRY),
+    Program("documents", "Personal Document Gallery", "Browse your own texts and documents",
+            _shared("folio.documents", "docs_icon"), _shared("folio.documents", "open_documents"),
+            _shared("folio.documents", "shutdown"), group=FURRY),
+    Program("camroll", "Camera Roll Archive", "Every camera roll photo and video, by year and month",
+            _shared("folio.camroll", "camroll_icon"), _shared("folio.camroll", "open_camroll"),
+            _shared("folio.camroll", "shutdown"), group=FURRY),
     *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)
       for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
     # Start > Programs > Games: the id/Raven shooters (Doom-engine ones run on PrBoom, Heretic/Hexen on Chocolate)

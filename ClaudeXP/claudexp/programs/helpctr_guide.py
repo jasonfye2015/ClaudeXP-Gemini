@@ -70,6 +70,11 @@ CATALOG = {
                            "as Thumbnails or Extra Large Thumbnails."),
     "mediaarchive": ("furry", "The Furry Media Archive folder on E:."),
     "miscimages": ("furry", "Your Misc Personal Image Folders folder on E:."),
+    "documents": ("furry", "A gallery of your own texts and documents in Personal Texts and Docs on E:, with a "
+                           "reading pane for text, web pages, Word, WordPad and PDF files."),
+    "personaldocs": ("furry", "Your Personal Texts and Docs folder on E:."),
+    "camroll": ("furry", "Every photo and video in Camera Rolls on E:, by year and month in the order they were "
+                         "taken, whichever backup folder they're in."),
     "tvmovies": ("furry", "Your TV and Movies folder on E:."),
     "tv": ("media", "ClaudeTV: channels made from your TV and movie files - WAGG 4 cartoons, KFUR 7 animals and "
                     "anime, KPAW 9 movies, KANI 11 anime with the Orangina commercials, KHAH 13 comedy - with a TV "
@@ -477,6 +482,8 @@ def _storage_parts():
         ("TV and Movies", any_dir("TV and Movies"), "ClaudeTV and the TV Guide", "E:\\TV and Movies"),
         ("Misc Personal Image Folders", any_dir("Misc Personal Image Folders"), "The Personal Image Gallery",
          "E:\\Misc Personal Image Folders"),
+        ("Personal Texts and Docs", any_dir("Personal Texts and Docs"), "The Personal Document Gallery",
+         "E:\\Personal Texts and Docs"),
         ("Emulation games", any_dir("Emulation"), "The NES, SNES, Game Boy, Genesis, N64 and Apple ][ emulators",
          "E:\\Emulation\\<system> (Roms)"),
         ("WADs", any_dir("WADs"), "Doom, Doom II, Wolfenstein 3D, Heretic and Hexen", "E:\\WADs"),

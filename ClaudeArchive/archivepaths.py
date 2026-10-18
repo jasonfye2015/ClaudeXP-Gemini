@@ -2,7 +2,7 @@
 from claudecore import host
 
 FOLDERS = {"mediaarchive": "furry media archive", "tvmovies": "tv and movies",
-           "miscimages": "misc personal image folders"}
+           "miscimages": "misc personal image folders", "personaldocs": "personal text"}
 
 
 def archive_folder(key):
