@@ -73,6 +73,8 @@ CATALOG = {
     "documents": ("furry", "A gallery of your own texts and documents in Personal Texts and Docs on E:, with a "
                            "reading pane for text, web pages, Word, WordPad and PDF files."),
     "personaldocs": ("furry", "Your Personal Texts and Docs folder on E:."),
+    "stickers": ("furry", "Sticker Manager: the sticker packs in E:\\Sticker Packs - give each sticker an emoji and a "
+                          "meaning (or let Suggest with AI fill a pack in), so contacts can send and understand them."),
     "chatlogs": ("furry", "Years of chat logs - AIM, Yahoo!, MSN, ICQ, IRC, Second Life and more, from Gaim, Pidgin, "
                           "Trillian, Digsby and the rest - collated by service, account and buddy, with a search."),
     "camroll": ("furry", "Every photo and video in Camera Rolls on E:, by year and month in the order they were "

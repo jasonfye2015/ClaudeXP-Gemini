@@ -28,7 +28,7 @@ SORTS = ("Name", "Size", "Type", "Modified")
 LAYOUT = 8                  # bump when builtins() changes order
 # Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
 PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon", "furvideo", "furdir", "furlog", "furlocator",
-                                      "mediaarchive", "photos", "miscimages", "miscfurry", "documents", "personaldocs", "camroll", "chatlogs"],
+                                      "mediaarchive", "photos", "miscimages", "miscfurry", "documents", "personaldocs", "camroll", "chatlogs", "stickers"],
                    "TV and Movies": ["tv", "tvmovies"],          # ClaudeTV beside the link to E:\TV and Movies
                    "Emulation": ["nes", "snes", "n64", "gb", "gbc", "gba", "gen", "sms", "gg", "apple2"],
                    # the desktop Games folder mirrors Start > Programs > Games
@@ -42,7 +42,7 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
 FOLDERS_SINCE = {"Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 30,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 42
+FOLDERS = 43
 # folders that live inside another folder rather than loose on the desktop
 NESTED = {"Emulation": "Games/Emulation", "Windows Games": "Games/Windows Games"}
 # shortcuts that now live in one of those folders instead of loose on the desktop
@@ -243,6 +243,13 @@ class IconManager(QObject):
                 link = furry / f"{programs.get('camroll').name}.lnk"
                 if furry.is_dir() and not link.exists():
                     shortcuts.make(link, program="camroll")
+            if folders < 43:
+                # Sticker Manager joins Furry Programs
+                from .explorer import shortcuts, vfs
+                furry = vfs.user_home() / "Desktop" / "Furry Programs"
+                link = furry / f"{programs.get('stickers').name}.lnk"
+                if furry.is_dir() and not link.exists():
+                    shortcuts.make(link, program="stickers")
             if folders < 42:
                 # Claude and Magic joins the Games folder
                 from .explorer import shortcuts, vfs

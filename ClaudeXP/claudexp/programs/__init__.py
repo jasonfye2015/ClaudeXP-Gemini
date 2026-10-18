@@ -364,6 +364,8 @@ PROGRAMS = [
     Program("camroll", "Camera Roll Archive", "Every camera roll photo and video, by year and month",
             _shared("folio.camroll", "camroll_icon"), _shared("folio.camroll", "open_camroll"),
             _shared("folio.camroll", "shutdown"), group=FURRY),
+    Program("stickers", "Sticker Manager", "Give each sticker an emoji and a meaning", _shared("stickers.manager", "stickers_icon"),
+            _shared("stickers.manager", "open_stickers"), _shared("stickers.manager", "shutdown"), group=FURRY),
     Program("chatlogs", "Furry Chat Logs", "Years of chat logs by service, account and buddy",
             _shared("chatlogs.viewer", "chat_icon"), _shared("chatlogs.viewer", "open_chatlogs"),
             _shared("chatlogs.viewer", "shutdown"), group=FURRY),
