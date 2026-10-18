@@ -12,7 +12,7 @@ from shiboken6 import isValid
 
 from .. import sound
 from ..wm import XPWindow
-from . import shortcuts, vfs
+from . import shortcuts, thumbs, vfs
 from .dialogs import date_2001, msgbox, properties, short_date_2001, size_text
 from .viewers import open_file
 
@@ -88,6 +88,9 @@ class FileProxy(QSortFilterProxyModel):
         super().__init__()
         self.setSourceModel(model)
         self.fs = model
+        self.thumb_size = 0                     # the Thumbnails views: their picture size (0 = plain icons)
+        self.thumbs = None
+        self.framed = {}                        # (icon, size) -> a file's own icon in a thumbnail frame
 
     def filterAcceptsRow(self, row, parent):
         index = self.fs.index(row, 0, parent)
@@ -101,7 +104,13 @@ class FileProxy(QSortFilterProxyModel):
                     return Path(path).stem
                 icon = shortcuts.icon(path)
                 if icon is not None:
-                    return icon
+                    return self._framed(icon) if self.thumb_size else icon
+            elif role == Qt.DecorationRole and self.thumb_size and self.thumbs is not None:
+                plain = super().data(index, role)
+                is_dir = self.fs.isDir(self.mapToSource(index))
+                if is_dir or thumbs.is_picture(path):
+                    return self.thumbs.icon(path, self.thumb_size, is_dir, plain)
+                return self._framed(plain)
         if role == Qt.DisplayRole and index.column() in (1, 2, 3):
             src = self.mapToSource(index)
             info = self.fs.fileInfo(src)
@@ -111,6 +120,14 @@ class FileProxy(QSortFilterProxyModel):
                 return xp_type(info.fileName(), info.isDir())
             return short_date_2001(info.lastModified().toSecsSinceEpoch())
         return super().data(index, role)
+
+    def _framed(self, icon):
+        if not isinstance(icon, QIcon):
+            return icon
+        key = (icon.cacheKey(), self.thumb_size)
+        if key not in self.framed:
+            self.framed[key] = QIcon(thumbs.frame(self.thumb_size, None, icon, False))
+        return self.framed[key]
 
     def flags(self, index):
         flags = super().flags(index)
@@ -254,7 +271,7 @@ class Explorer(QWidget):
         edit_menu.addSeparator()
         edit_menu.addAction("Select &All", lambda: self.active_view().selectAll(), QKeySequence.SelectAll)
         view_menu = bar.addMenu("&View")
-        for label, mode in (("Ic&ons", "icons"), ("&List", "list"), ("&Details", "details")):
+        for mode, label, _size in thumbs.VIEWS:
             view_menu.addAction(label, lambda m=mode: self.set_view(m))
         view_menu.addSeparator()
         view_menu.addAction("&Refresh", self.refresh, QKeySequence("F5"))
@@ -280,8 +297,8 @@ class Explorer(QWidget):
         views.setIcon(std(QStyle.SP_FileDialogListView))
         views.setPopupMode(QToolButton.InstantPopup)
         vmenu = QMenu(views)
-        for label, mode in (("Icons", "icons"), ("List", "list"), ("Details", "details")):
-            vmenu.addAction(label, lambda m=mode: self.set_view(m))
+        for mode, label, _size in thumbs.VIEWS:
+            vmenu.addAction(label.replace("&", ""), lambda m=mode: self.set_view(m))
         views.setMenu(vmenu)
         tb.addWidget(views)
 
@@ -310,6 +327,9 @@ class Explorer(QWidget):
         self.fs.setFilter(QDir.AllEntries | QDir.NoDotAndDotDot | QDir.System)
         self.fs.setRootPath(str(vfs.DRIVE_C.parent))
         self.proxy = FileProxy(self.fs)
+        self.thumbs = thumbs.Thumbnails(self)
+        self.proxy.thumbs = self.thumbs
+        self.thumbs.ready.connect(self._thumb_ready)
         self.proxy.setDynamicSortFilter(True)
         self.proxy.sort(0)
 
@@ -503,7 +523,8 @@ class Explorer(QWidget):
             root = self.proxy.mapFromSource(src)
             for view in (self.icon_view, self.detail_view):
                 view.setRootIndex(root)
-            self.set_view(self.view_mode)
+            self.thumbs.clear()
+            self.set_view(thumbs.view_for(location), remember=False)
         self.address.setEditText(self.address_text())
         self.back_act.setEnabled(bool(self.back_stack))
         self.fwd_act.setEnabled(bool(self.fwd_stack))
@@ -623,15 +644,31 @@ class Explorer(QWidget):
         self._update_tasks()
 
     # ---- views -------------------------------------------------------------------------------------------
-    def set_view(self, mode):
+    def set_view(self, mode, remember=True):
+        """Show the folder as Thumbnails, Extra Large Thumbnails, Icons, List or Details. A choice the user makes is
+        remembered for this folder (and the folders inside it that have no choice of their own)."""
         self.view_mode = mode
-        if self.current_folder() is None:
+        folder = self.current_folder()
+        if folder is None:
             return
+        if remember:
+            thumbs.remember_view(folder, mode)
+        size = thumbs.SIZES.get(mode, 0)
+        if self.proxy.thumb_size != size:
+            self.proxy.thumb_size = size
+            self.proxy.framed.clear()
         if mode == "details":
             self.stack.setCurrentWidget(self.detail_view)
             return
         v = self.icon_view
-        if mode == "icons":
+        if size:
+            v.setViewMode(QListView.IconMode)
+            v.setIconSize(QSize(size, size))
+            v.setGridSize(thumbs.tile_size(size))
+            v.setWordWrap(True)
+            v.setFlow(QListView.LeftToRight)
+            v.setWrapping(True)
+        elif mode == "icons":
             v.setViewMode(QListView.IconMode)
             v.setIconSize(QSize(32, 32))
             v.setGridSize(QSize(90, 72))
@@ -647,6 +684,13 @@ class Explorer(QWidget):
         v.setResizeMode(QListView.Adjust)
         v.setMovement(QListView.Static)
         self.stack.setCurrentWidget(v)
+
+    def _thumb_ready(self, path):
+        src = self.fs.index(path)
+        if src.isValid():
+            idx = self.proxy.mapFromSource(src)
+            if idx.isValid():
+                self.proxy.dataChanged.emit(idx, idx, [Qt.DecorationRole])
 
     def active_view(self):
         return self.detail_view if self.view_mode == "details" else self.icon_view
@@ -951,7 +995,7 @@ class Explorer(QWidget):
         else:
             view.clearSelection()
             vm = menu.addMenu("&View")
-            for label, mode in (("Ic&ons", "icons"), ("&List", "list"), ("&Details", "details")):
+            for mode, label, _size in thumbs.VIEWS:
                 vm.addAction(label, lambda m=mode: self.set_view(m))
             menu.addAction("R&efresh", self.refresh)
             menu.addSeparator()
