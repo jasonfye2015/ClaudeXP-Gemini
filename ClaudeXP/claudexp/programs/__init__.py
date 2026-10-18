@@ -190,6 +190,8 @@ PROGRAMS = [
             _shared("fractals", "shutdown"), group="Games"),
     Program("terrain", "Claude Terrain Generator", "Fractal landscapes, VistaPro style", _shared("terrain", "terrain_icon"),
             _shared("terrain", "open_terrain"), group="Games"),
+    Program("claudemagic", "Claude and Magic", "Twenty floors down, the Lich King waits", _shared("claudemagic", "magic_icon"),
+            _shared("claudemagic", "launch"), _shared("claudemagic", "shutdown"), group="Games"),
     Program("claudeanoid", "Claudeanoid", "Break all the blocks - 40 rounds", _shared("claudeanoid", "claudeanoid_icon"),
             _shared("claudeanoid", "launch"), _shared("claudeanoid", "shutdown"), group="Games"),
     Program("claudejeweled", "Claudejeweled", "Swap gems, line up three", _shared("claudejeweled", "jeweled_icon"),
