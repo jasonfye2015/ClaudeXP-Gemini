@@ -92,39 +92,45 @@ def favorite_pack(contact, data=None):
 
 
 def menu_for(contact):
-    """[(emoji, meaning, path)] the contact can send (their favourite pack, one sticker per emoji)."""
+    """[(emoji, [(meaning, path), ...])] the contact can send from their favourite pack: each emoji once, with every
+    sticker that wears it (most-used emojis first)."""
     data = load()
     pack = favorite_pack(contact, data)
     save(data)
     if pack is None:
         return []
     folder = root() / pack
-    seen, out = set(), []
+    groups = {}
     for name, info in sorted(assigned(data, pack).items()):
-        if info["emoji"] not in seen and (folder / name).exists():
-            seen.add(info["emoji"])
-            out.append((info["emoji"], info.get("meaning", ""), folder / name))
-    return out
+        if (folder / name).exists():
+            groups.setdefault(info["emoji"], []).append((info.get("meaning", ""), folder / name))
+    return sorted(groups.items(), key=lambda g: -len(g[1]))
 
 
 def prompt_lines(contact):
-    """What to tell a resident about their stickers (empty when they have none)."""
+    """What to tell a resident about their stickers (empty when they have none): each emoji once, with up to two of
+    its stickers' meanings as a hint."""
     menu = menu_for(contact)
     if not menu:
         return ""
-    choices = ", ".join(f"{e} ({m})" if m else e for e, m, _p in menu)
+    choices = []
+    for emoji, stickers in menu:
+        meanings = list(dict.fromkeys(m for m, _p in stickers if m))[:2]
+        choices.append(f"{emoji} ({' / '.join(meanings)})" if meanings else emoji)
     return ("You can send a sticker now and then: put ONE of these emojis at the very start or the very end of your "
-            f"message and it shows up as a sticker - {choices}. Don't overdo it. When the user sends you a sticker "
-            "it arrives as [sticker: emoji meaning].")
+            f"message and it shows up as a sticker - {', '.join(choices)}. Don't overdo it. When the user sends you a "
+            "sticker it arrives as [sticker: emoji meaning].")
 
 
 def sticker_in(contact, text):
-    """(path, emoji, meaning) when a message starts or ends with one of the contact's sticker emojis, else None."""
+    """(path, emoji, meaning) when a message starts or ends with one of the contact's sticker emojis - one of that
+    emoji's stickers at random, so the same emoji doesn't always bring the same picture - else None."""
     stripped = (text or "").strip()
     if not stripped:
         return None
-    for emoji, meaning, path in sorted(menu_for(contact), key=lambda m: -len(m[0])):
+    for emoji, stickers in sorted(menu_for(contact), key=lambda g: -len(g[0])):
         if stripped.startswith(emoji) or stripped.endswith(emoji):
+            meaning, path = random.choice(stickers)
             return path, emoji, meaning
     return None
 
