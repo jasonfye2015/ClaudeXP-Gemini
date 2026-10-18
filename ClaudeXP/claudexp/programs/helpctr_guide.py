@@ -66,6 +66,8 @@ CATALOG = {
     "furcon": ("furry", "Convention recap discs."),
     "furvideo": ("furry", "Browses the video archive."),
     "photos": ("furry", "A gallery of your own pictures and videos in Misc Personal Image Folders on E:."),
+    "miscfurry": ("furry", "The numbered albums of assorted furry pictures (Furry Media Archive\\Misc Furry Images), "
+                           "as Thumbnails or Extra Large Thumbnails."),
     "mediaarchive": ("furry", "The Furry Media Archive folder on E:."),
     "miscimages": ("furry", "Your Misc Personal Image Folders folder on E:."),
     "tvmovies": ("furry", "Your TV and Movies folder on E:."),

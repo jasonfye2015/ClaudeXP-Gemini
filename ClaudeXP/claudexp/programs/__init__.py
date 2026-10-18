@@ -345,6 +345,9 @@ PROGRAMS = [
     Program("photos", "Personal Image Gallery", "Browse your own pictures and videos",
             _shared("folio.photos", "photos_icon"), _shared("folio.photos", "open_photos"),
             _shared("folio.photos", "shutdown"), group=FURRY),
+    Program("miscfurry", "Misc Furry Image Viewer", "Browse the numbered albums of assorted furry pictures",
+            _shared("folio.miscfurry", "misc_icon"), _shared("folio.miscfurry", "open_miscfurry"),
+            _shared("folio.miscfurry", "shutdown"), group=FURRY),
     *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)
       for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
     # Start > Programs > Games: the id/Raven shooters (Doom-engine ones run on PrBoom, Heretic/Hexen on Chocolate)
