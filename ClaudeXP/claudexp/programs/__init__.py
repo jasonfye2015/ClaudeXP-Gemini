@@ -185,6 +185,8 @@ PROGRAMS = [
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown, group="Social Networking"),
     Program("claudeggle", "Claudeggle", "Aim, shoot, clear the orange pegs", _shared("claudeggle", "peggle_icon"),
             _shared("claudeggle", "launch"), _shared("claudeggle", "shutdown"), group="Games"),
+    Program("terrain", "Claude Terrain Generator", "Fractal landscapes, VistaPro style", _shared("terrain", "terrain_icon"),
+            _shared("terrain", "open_terrain"), group="Games"),
     Program("claudejeweled", "Claudejeweled", "Swap gems, line up three", _shared("claudejeweled", "jeweled_icon"),
             _shared("claudejeweled", "launch"), _shared("claudejeweled", "shutdown"), group="Games"),
     Program("scorched", "Scorched Claude", "Tanks, nukes and very angry physics", _shared("scorched", "scorched_icon"),

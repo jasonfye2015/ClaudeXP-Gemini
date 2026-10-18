@@ -116,6 +116,8 @@ CATALOG = {
                           "chests."),
     "claudeggle": ("games", "Claudeggle: a Peggle-style ball-and-peg game - twelve levels, clear the orange pegs in ten "
                             "balls, with green-peg powers, a free-ball bucket and Extreme Fever."),
+    "terrain": ("games", "Claude Terrain Generator: fractal landscapes like VistaPro - roughness, mountains, water, "
+                         "snow line, forests, sky and camera; Save Image puts them in E:\\Created Files."),
     "claudejeweled": ("games", "Claudejeweled: a Bejeweled-style gem matcher - Classic, Action and Zen modes, "
                                "Flame and Star Gems and Hypercubes. H shows a hint, P pauses."),
     "scorched": ("games", "Scorched Claude: a Scorched Earth-style artillery game for 2-10 tanks, people or "
