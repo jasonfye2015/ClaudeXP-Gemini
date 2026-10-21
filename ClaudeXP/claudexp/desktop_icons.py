@@ -70,6 +70,7 @@ def builtins():
         ("sys:recycle", "Recycle Bin", lambda: std(QStyle.SP_TrashIcon)),
         ("sys:mycomputer", "My Computer", lambda: std(QStyle.SP_ComputerIcon)),
         ("prog:connect", "America Online", lambda: QIcon(pixmap("aol_icon.png"))),
+        ("prog:dsl", "DSL Broadband", lambda: programs.get("dsl").icon()),
     ] + folders + [
         ("prog:claudeamp", "ClaudeAmp", lambda: programs.get("claudeamp").icon()),
         ("prog:flash", "Flash Player", lambda: programs.get("flash").icon()),
@@ -425,7 +426,7 @@ class IconManager(QObject):
         # the program folders go right after the last E: folder link (or after America Online)
         keys = [w[0] for w in wanted]
         after = max((keys.index(k) for k in folder_links if k in keys),
-                    default=keys.index("prog:connect") if "prog:connect" in keys else len(keys) - 1)
+                    default=max((keys.index(k) for k in ("prog:connect", "prog:dsl") if k in keys), default=len(keys) - 1))
         for i, f in enumerate(program_folders):
             wanted.insert(after + 1 + i, file_entry(f))
         for f in sorted(desk.iterdir(), key=lambda p: p.name.lower()):
@@ -964,6 +965,7 @@ class IconManager(QObject):
             return
         if icon.path is None:
             target = {"notepad": r"C:\WINDOWS\notepad.exe", "connect": r"C:\Program Files\America Online\isignup.exe",
+                      "dsl": r"C:\WINDOWS\system32\rasphone.exe",
                       "navigator": r"C:\Program Files\Netscape\Navigator\netscape.exe",
                       "iexplore": r"C:\Program Files\Internet Explorer\IEXPLORE.EXE",
                       "hotmail": "http://www.hotmail.com/",

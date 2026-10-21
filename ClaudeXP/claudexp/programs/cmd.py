@@ -435,8 +435,9 @@ class CommandPrompt(QPlainTextEdit):
     def do_ipconfig(self, rest):
         self.println("\nWindows IP Configuration\n")
         if network.is_connected():
-            self.println("PPP adapter America Online:\n")
-            self.println("        Connection-specific DNS Suffix  . : aol.com")
+            dsl = network.is_broadband()
+            self.println(f"PPP adapter {network.connection_name()}:\n")
+            self.println(f"        Connection-specific DNS Suffix  . : {'dsl.net' if dsl else 'aol.com'}")
             self.println(f"        IP Address. . . . . . . . . . . . : {self._ip()}")
             self.println("        Subnet Mask . . . . . . . . . . . : 255.255.255.255")
             self.println(f"        Default Gateway . . . . . . . . . : {self._ip()}")
@@ -470,7 +471,7 @@ class CommandPrompt(QPlainTextEdit):
                 self.busy = False
                 self.prompt()
                 return
-            t = random.randint(120, 290)          # 56k dial-up
+            t = random.randint(18, 45) if network.is_broadband() else random.randint(120, 290)   # DSL or 56k
             times.append(t)
             self.println(f"Reply from {ip}: bytes=32 time={t}ms TTL=49")
             QTimer.singleShot(1000, lambda: reply(n + 1))

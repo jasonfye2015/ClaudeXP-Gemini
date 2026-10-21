@@ -15,59 +15,63 @@
     ],
     "file:Furry Programs": [
       6,
-      240
+      318
     ],
     "file:Games": [
       6,
-      318
+      396
     ],
     "file:GeminiOffice": [
       6,
-      396
+      474
     ],
     "file:Projects": [
       6,
-      474
+      552
     ],
     "file:Social Programs": [
       6,
-      552
+      630
     ],
     "file:TV and Movies": [
       6,
-      630
+      708
     ],
     "prog:telegram": [
-      6,
-      708
+      86,
+      6
     ],
     "prog:iexplore": [
       86,
-      84
+      162
     ],
     "prog:kiwix": [
       86,
-      162
+      240
     ],
     "prog:claudeai": [
       86,
-      240
+      318
     ],
     "prog:copilotai": [
       86,
-      318
+      396
     ],
     "prog:imagecreator": [
       86,
-      396
+      474
     ],
     "prog:pystudio": [
       86,
-      474
+      552
     ],
     "prog:discord": [
       86,
-      6
+      84
+    ],
+    "prog:dsl": [
+      6,
+      240
     ]
   },
   "hidden": [

@@ -86,13 +86,17 @@ def _open_folder_shortcut(key):
     return run
 
 
-def _connect(desktop):
+def _connect(desktop, kind="aol"):
     net = network.get(desktop)
     if net.connected:
         net._show_status()
     else:
         sound.play("navigate")
-        net.connect()
+        net.connect(kind=kind)
+
+
+def _connect_dsl(desktop):
+    _connect(desktop, "dsl")
 
 
 def _windows_update(desktop):
@@ -415,6 +419,8 @@ PROGRAMS = [
     Program("defrag", "Disk Defragmenter", "", _defrag_icon, _defrag, group="Accessories/System Tools"),
     Program("antivirus", "ClaudeShield AntiVirus", "", _av_icon, _antivirus),
     Program("connect", "Connect to the Internet", "", lambda: QIcon(pixmap("aol_icon.png")), _connect,
+            lambda: network.disconnect(quiet=True)),
+    Program("dsl", "DSL Broadband", "Always-on, high-speed Internet", lambda: network.dsl_icon(), _connect_dsl,
             lambda: network.disconnect(quiet=True)),
     Program("freecell", "FreeCell", "", _game_icon("card_icon", "H", "#D00000"), _game("freecell", "open_freecell"),
             group="Games/Windows Games"),

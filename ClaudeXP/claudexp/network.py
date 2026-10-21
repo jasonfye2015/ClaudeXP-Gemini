@@ -1,4 +1,5 @@
-"""Dial-up networking: 'Connect America Online', the modem, and the two-monitors tray icon.
+"""Networking: 'Connect America Online' (the modem) or DSL Broadband (fast, no dialing), and the two-monitors
+tray icon.
 
 Other programs ask for the Internet with network.connect(desktop, then=callback) and
 hear about hang-ups through network.on_disconnect(callback).
@@ -8,7 +9,7 @@ import random
 import time
 
 from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
                                QLabel, QLineEdit, QMenu, QPushButton, QVBoxLayout, QWidget)
 from shiboken6 import isValid
@@ -21,6 +22,10 @@ from .wm import XPWindow
 
 CONNECTION = "America Online"
 SPEED = "53.3 Kbps"
+DSL = "DSL Broadband"
+DSL_SPEED = "1.5 Mbps"
+CONNECTIONS = {"aol": (CONNECTION, SPEED), "dsl": (DSL, DSL_SPEED)}
+DSL_STEPS_MS = (1200, 2400, 3600)    # DSL: verifying, registering, connected
 SETTINGS_FILE = DATA / "network.json"
 VERIFY_AT, REGISTER_AT = 0.45, 0.8    # fractions of the modem sound for each stage
 NO_SOUND_MS = 8000                    # how long to pretend when the sound is off
@@ -62,6 +67,49 @@ def network_pixmap(size=16, lit=(False, False)):
     return pm
 
 
+def dsl_pixmap(size=32):
+    """A DSL modem: a dark box with green lights, and the Internet's blue globe behind it."""
+    pm = QPixmap(size, size)
+    pm.fill(Qt.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.Antialiasing)
+    s = size / 32.0
+    globe = QRectF(12 * s, 1 * s, 19 * s, 19 * s)
+    p.setPen(QPen(QColor("#1B4F9C"), max(1.0, s)))
+    p.setBrush(QColor("#3C8DE0"))
+    p.drawEllipse(globe)
+    p.setPen(QPen(QColor("#BFE0FF"), max(0.8, s * 0.8)))
+    p.setBrush(Qt.NoBrush)
+    p.drawEllipse(globe.adjusted(5 * s, 0, -5 * s, 0))
+    p.drawLine(QPointF(globe.left(), globe.center().y()), QPointF(globe.right(), globe.center().y()))
+    p.setPen(Qt.NoPen)
+    p.setBrush(QColor("#4CAF50"))
+    p.drawEllipse(QRectF(15 * s, 5 * s, 6 * s, 4 * s))
+    p.drawEllipse(QRectF(22 * s, 10 * s, 5 * s, 5 * s))
+    box = QRectF(1 * s, 16 * s, 26 * s, 12 * s)
+    p.setPen(QPen(QColor("#1A1A1A"), max(1.0, s)))
+    p.setBrush(QColor("#3A3D42"))
+    p.drawRoundedRect(box, 3 * s, 3 * s)
+    p.setPen(Qt.NoPen)
+    p.setBrush(QColor("#5A5E66"))
+    p.drawRect(QRectF(box.left() + 2 * s, box.top() + 1.5 * s, box.width() - 4 * s, 2 * s))
+    for i in range(4):
+        p.setBrush(QColor("#7CFF6B") if i != 2 else QColor("#FFC93C"))
+        p.drawEllipse(QRectF(box.left() + (4 + i * 5) * s, box.top() + 6.5 * s, 2.6 * s, 2.6 * s))
+    p.setBrush(QColor("#2B2B2B"))
+    p.drawRect(QRectF(4 * s, 28 * s, 3 * s, 2 * s))
+    p.drawRect(QRectF(21 * s, 28 * s, 3 * s, 2 * s))
+    p.end()
+    return pm
+
+
+def dsl_icon():
+    icon = QIcon()
+    for size in (16, 32, 48):
+        icon.addPixmap(dsl_pixmap(size))
+    return icon
+
+
 def network_icon():
     icon = QIcon()
     for size in (16, 32):
@@ -81,6 +129,9 @@ def _load():
     data.setdefault("password", "")
     data.setdefault("save_password", True)
     data.setdefault("number", "555-0142")
+    data.setdefault("dsl_user", data["user"])
+    data.setdefault("dsl_password", "")
+    data.setdefault("last", "aol")                # the connection programs use when they need the Internet
     from . import user
     if user.linked():
         # one online identity: AOL signs on with the shared handle and (saved) online password
@@ -117,15 +168,37 @@ class DialogBody(QWidget):
             self.on_close()
 
 
+def _dsl_banner(w, h):
+    """The DSL Connect dialog's banner: the modem and globe on XP blue, with the service's name."""
+    pm = QPixmap(w, h)
+    pm.fill(Qt.transparent)                     # (the blue is the banner's own background, so it fills the width)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.Antialiasing)
+    p.drawPixmap(18, (h - 64) // 2, dsl_pixmap(64))
+    p.setPen(QColor("white"))
+    f = QFont("Tahoma")
+    f.setPixelSize(22)
+    f.setBold(True)
+    p.setFont(f)
+    p.drawText(QRectF(98, 18, w - 110, 34), Qt.AlignLeft | Qt.AlignVCenter, DSL)
+    f.setPixelSize(12)
+    f.setBold(False)
+    p.setFont(f)
+    p.setPen(QColor("#CFE0FF"))
+    p.drawText(QRectF(98, 54, w - 110, 20), Qt.AlignLeft | Qt.AlignVCenter, f"Always on - up to {DSL_SPEED}")
+    p.end()
+    return pm
+
+
 def _dialog_body():
     return DialogBody()
 
 
-def _fixed_window(desktop, title, body, closer):
+def _fixed_window(desktop, title, body, closer, icon=None):
     """An XP dialog frame around body; closer() runs when the X is clicked."""
     body.setFixedSize(body.sizeHint().expandedTo(body.minimumSize()))
     body.on_close = closer
-    win = XPWindow(desktop, title, body, network_icon(), buttons=("close",))
+    win = XPWindow(desktop, title, body, icon or network_icon(), buttons=("close",))
     win.fit_fixed_content()
     area = desktop.work_area()
     win.move(area.center() - win.rect().center())
@@ -139,6 +212,8 @@ class Network:
     def __init__(self, desktop):
         self.desktop = desktop
         self.connected = False
+        last = _load()["last"]
+        self.kind = last if last in CONNECTIONS else "aol"
         self.connected_at = None
         self.sent = self.received = 0
         self.waiting = []          # callbacks for when we're online
@@ -153,16 +228,28 @@ class Network:
         self.traffic.timeout.connect(self._traffic_tick)
 
     # ---- public ------------------------------------------------------------
-    def connect(self, then=None):
+    @property
+    def name(self):
+        return CONNECTIONS[self.kind][0]
+
+    @property
+    def speed(self):
+        return CONNECTIONS[self.kind][1]
+
+    def connect(self, then=None, kind=None):
+        """Get online; kind ('aol' or 'dsl') picks the connection, otherwise it's the one used last."""
         if then:
             self.waiting.append(then)
         if self.connected:
             self._run_waiting()
         elif self.progress_win is not None:
             self.desktop.activate(self.progress_win)
-        elif self.connect_win is not None:
+        elif self.connect_win is not None and (kind is None or kind == self.kind):
             self.desktop.activate(self.connect_win)
         else:
+            self._close_connect()
+            if kind in CONNECTIONS:
+                self.kind = kind
             self._show_connect()
 
     def disconnect(self, quiet=False):
@@ -193,12 +280,15 @@ class Network:
         root.setContentsMargins(0, 0, 0, 10)
         root.setSpacing(8)
 
+        dsl = self.kind == "dsl"
         banner = QLabel()
         banner.setAlignment(Qt.AlignCenter)
-        banner.setStyleSheet("background: white; border-bottom: 1px solid #ACA899;")
-        logo = pixmap("aol_logo.png")
+        banner.setStyleSheet("background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #0A246A, stop:1 #3A6EA5);"
+                             " border-bottom: 1px solid #ACA899;" if dsl else
+                             "background: white; border-bottom: 1px solid #ACA899;")
+        logo = _dsl_banner(340, 100) if dsl else pixmap("aol_logo.png")
         if not logo.isNull():
-            banner.setPixmap(logo.scaledToHeight(84, Qt.SmoothTransformation))
+            banner.setPixmap(logo if dsl else logo.scaledToHeight(84, Qt.SmoothTransformation))
         banner.setFixedHeight(100)
         root.addWidget(banner)
 
@@ -206,17 +296,20 @@ class Network:
         form.setContentsMargins(14, 4, 14, 0)
         form.setHorizontalSpacing(10)
         form.setVerticalSpacing(8)
-        user = QLineEdit(settings["user"])
+        user = QLineEdit(settings["dsl_user" if dsl else "user"])
         # The password isn't checked by anything; a filled-in box just looks right (type over it if you like).
-        password = QLineEdit((settings["password"] if settings["save_password"] else "") or "********")
+        saved = settings["dsl_password" if dsl else "password"]
+        password = QLineEdit((saved if settings["save_password"] else "") or "********")
         password.setEchoMode(QLineEdit.Password)
         save = QCheckBox("Save this user name and password")
         save.setChecked(settings["save_password"])
         number = QComboBox()
         number.setEditable(True)
         number.addItem(settings["number"])
-        for row, (text, field) in enumerate([("&User name:", user), ("&Password:", password),
-                                             (None, save), ("D&ial:", number)]):
+        fields = [("&User name:", user), ("&Password:", password), (None, save)]
+        if not dsl:
+            fields.append(("D&ial:", number))           # (DSL is always there: nothing to dial)
+        for row, (text, field) in enumerate(fields):
             if text is None:
                 form.addWidget(field, row, 0, 1, 2)
                 continue
@@ -228,7 +321,7 @@ class Network:
 
         buttons = QHBoxLayout()
         buttons.setContentsMargins(14, 6, 14, 0)
-        dial = QPushButton("&Dial")
+        dial = QPushButton("&Connect" if dsl else "&Dial")
         dial.setDefault(True)
         cancel = QPushButton("Cancel")
         props = QPushButton("Pr&operties")
@@ -240,9 +333,13 @@ class Network:
         body.setFixedWidth(340)
 
         def do_dial():
-            settings.update(user=user.text().strip(), save_password=save.isChecked(),
-                            password=password.text() if save.isChecked() else "",
-                            number=number.currentText().strip() or settings["number"])
+            pw = password.text() if save.isChecked() else ""
+            if dsl:
+                settings.update(dsl_user=user.text().strip(), dsl_password=pw)
+            else:
+                settings.update(user=user.text().strip(), password=pw,
+                                number=number.currentText().strip() or settings["number"])
+            settings.update(save_password=save.isChecked(), last=self.kind)
             _save(settings)
             self._close_connect()
             self._start_dialing(settings["number"])
@@ -254,7 +351,8 @@ class Network:
         props.clicked.connect(lambda: sound.play("default"))
         help_btn.clicked.connect(lambda: sound.play("default"))
 
-        self.connect_win = _fixed_window(self.desktop, f"Connect {CONNECTION}", body, self._cancel_connect)
+        self.connect_win = _fixed_window(self.desktop, f"Connect {self.name}", body, self._cancel_connect,
+                                         dsl_icon() if dsl else None)
         self.desktop.open_window(self.connect_win)
         (password if not password.text() else dial).setFocus()
 
@@ -274,11 +372,12 @@ class Network:
         layout.setContentsMargins(14, 14, 14, 12)
         layout.setSpacing(12)
         pic = QLabel()
-        pic.setPixmap(network_pixmap(32))
+        pic.setPixmap(dsl_pixmap(32) if self.kind == "dsl" else network_pixmap(32))
         pic.setAlignment(Qt.AlignTop)
         layout.addWidget(pic)
         col = QVBoxLayout()
-        self.status_label = QLabel(f"Dialing {number}...")
+        self.status_label = QLabel(f"Connecting to {self.name} using WAN Miniport (PPPOE)..."
+                                   if self.kind == "dsl" else f"Dialing {number}...")
         self.status_label.setMinimumWidth(260)
         col.addWidget(self.status_label)
         col.addStretch()
@@ -292,10 +391,16 @@ class Network:
         layout.addLayout(col)
         body.setFixedHeight(96)
 
-        self.progress_win = _fixed_window(self.desktop, f"Connecting {CONNECTION}...", body,
-                                          self._user_cancelled_dial)
+        self.progress_win = _fixed_window(self.desktop, f"Connecting {self.name}...", body,
+                                          self._user_cancelled_dial, dsl_icon() if self.kind == "dsl" else None)
         self.desktop.open_window(self.progress_win)
         self.stage = 0
+        if self.kind == "dsl":                         # no modem: a few seconds of PPPoE and it's up
+            verify, register, done = DSL_STEPS_MS
+            QTimer.singleShot(verify, lambda: self._set_stage(1))
+            QTimer.singleShot(register, lambda: self._set_stage(2))
+            QTimer.singleShot(done, self._dial_finished)
+            return
         self.player = sound.play_file("modem.mp3", on_finished=self._dial_finished)
         if self.player is None:
             QTimer.singleShot(int(NO_SOUND_MS * VERIFY_AT), lambda: self._set_stage(1))
@@ -358,7 +463,7 @@ class Network:
         self.tray.activated.connect(self._tray_activated)
         self._update_tooltip()
         self.tray.show()
-        self.tray.showMessage(f"{CONNECTION} is now connected", f"Speed: {SPEED}", None, 6000)
+        self.tray.showMessage(f"{self.name} is now connected", f"Speed: {self.speed}", None, 6000)
         self.traffic.start(350)
         from . import life
         if life.get() is not None:
@@ -387,7 +492,7 @@ class Network:
         self._update_tooltip()
 
     def _update_tooltip(self):
-        self.tray.setToolTip(f"{CONNECTION}\nSpeed: {SPEED}\nSent: {self.sent:,} bytes\n"
+        self.tray.setToolTip(f"{self.name}\nSpeed: {self.speed}\nSent: {self.sent:,} bytes\n"
                              f"Received: {self.received:,} bytes")
 
     def _duration_text(self):
@@ -404,7 +509,7 @@ class Network:
         root.setContentsMargins(12, 12, 12, 12)
         conn = QGroupBox("Connection")
         cform = QFormLayout(conn)
-        status, duration, speed = QLabel("Connected"), QLabel(), QLabel(SPEED)
+        status, duration, speed = QLabel("Connected"), QLabel(), QLabel(self.speed)
         cform.addRow("Status:", status)
         cform.addRow("Duration:", duration)
         cform.addRow("Speed:", speed)
@@ -448,7 +553,7 @@ class Network:
 
         hang_up.clicked.connect(lambda: self.disconnect())
         close.clicked.connect(close_status)
-        self.status_win = _fixed_window(self.desktop, f"{CONNECTION} Status", body, close_status)
+        self.status_win = _fixed_window(self.desktop, f"{self.name} Status", body, close_status)
         self.desktop.open_window(self.status_win)
 
 
@@ -470,6 +575,15 @@ def connect(desktop, then=None):
 
 def is_connected():
     return _network is not None and _network.connected
+
+
+def is_broadband():
+    """Online through DSL (fast) rather than the modem."""
+    return is_connected() and _network.kind == "dsl"
+
+
+def connection_name():
+    return _network.name if _network is not None else CONNECTION
 
 
 def disconnect(quiet=False):
