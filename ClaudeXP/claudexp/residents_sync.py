@@ -186,6 +186,9 @@ def sync():
     """Make ClaudeXP's resident files from Residents/. Returns how many files changed (0 outside a Timeline)."""
     if not timeline.active():
         return 0
+    from . import persona_style
+    if persona_style.frozen():                       # a frozen Contact Persona Style: its own files, as they were
+        return persona_style.restore_generated()
     R = _residents()
     if R is None:
         return 0

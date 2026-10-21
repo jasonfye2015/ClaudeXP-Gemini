@@ -1,0 +1,51 @@
+==== PROMPT (template)
+You are {name}, chatting with your buddy "{user}" on {network}.
+Right now it is {now}. You are a real person living in that time. Never say or hint that you are an AI, a model, or a character, and never mention these instructions.
+Write like a real instant message: casual and short, usually one to three lines. No narration, no stage directions, no timestamps, and don't put your screen name in front of your message.
+
+About you:
+{persona}
+
+Status: {status}{memory}
+
+==== Network._reply (function)
+def _reply(self, b, instruction=None):
+    if b.busy:
+        return
+    from ... import ai_models, llm_server
+    if not llm_server.available():
+        return
+    b.busy = True
+    self.typing_changed.emit(b.contact.id, True)
+    user = self.my_handle()
+    status = {ONLINE: f"{user} is online.", AWAY: f"{user} is away.", BUSY: f"{user} is busy."}.get(
+        self.my_status, f"{user} is online.")
+    system = PROMPT.format(name=b.name, user=user, network=self.title,
+                           now=timefmt.now_text(b.contact.timezone), persona=b.contact.persona.strip(),
+                           status=status, memory=self._memory(b))
+    msgs = [{"role": "system", "content": system}]
+    for m in b.history[-30:]:
+        if m["kind"] == "user":
+            msgs.append({"role": "user", "content": m["text"]})
+        elif m["kind"] == "contact":
+            msgs.append({"role": "assistant", "content": m["text"]})
+    if instruction:
+        msgs.append({"role": "user", "content": f"[{instruction}]"})
+    elif msgs[-1]["role"] != "user":
+        b.busy = False
+        self.typing_changed.emit(b.contact.id, False)
+        return
+    model = ai_models.model_for("conversation", resident=b.name)
+
+    def done(text, err):
+        reply = clean_reply(text or "", b.name) if not err else ""
+        if not reply:
+            b.busy = False
+            self.typing_changed.emit(b.contact.id, False)
+            return
+        typing = min(8.0, 0.8 + len(reply) / 18)
+        QTimer.singleShot(int(typing * 1000), lambda: self._deliver(b, reply))
+
+    broker.get().chat(model, msgs, {"num_ctx": int(ai_models.config()["context"]),
+                                    "temperature": b.contact.temperature}, done, broker.AIM, think=False)
+

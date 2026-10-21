@@ -1,0 +1,69 @@
+{
+  "name": "Sabre",
+  "fur_name": "Sabre",
+  "tier": "background",
+  "born": "1966-03-22",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "Marcus Reid",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "Sabre-toothed tiger",
+    "colors": "tawny with faint stripes",
+    "eyes": "amber",
+    "markings": "long ivory sabre fangs",
+    "accessories": "",
+    "description": "A sabre-toothed cat who looks fearsome and is actually a huge softie."
+  },
+  "summary": "Sabre (Marcus Reid) idles in #furnet between shifts.",
+  "personality": "Quiet, dry sense of humour.",
+  "mannerisms": "• Rarely talks, but always says goodnight",
+  "interests": "Paleontology and documentaries.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  },
+  "codes": {
+    "furcode": "FFT3ars A C+ D- H++ M+ P- R T- V W RLGP a+ c+m e- f- g+ h+++ i+f j+ m p- Smg smg",
+    "yiffcode": "YIFF 3.0 M hom P No T *tiger* Pr S Cu V-te *-* Ne H-fu-ro Pr WIXXX:10,14,15,31,36"
+  }
+}

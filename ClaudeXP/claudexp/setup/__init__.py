@@ -23,6 +23,7 @@ BACKUPS = ROOT / "Recovery Backups"
 RESTART = 3                    # exit code: main.py starts ClaudeXP again (Setup's reboot)
 PROGRAM_DATA = [ROOT / "Program Files" / name / "data" for name in ("ClaudeAIM", "ClaudeIRC", "ClaudeMUCK", "Netscape")]
 WORLD = ["journals", "mail.json", "life.json"]                # the buddies' lives and memories (in data/)
+CHATS = ["messengers", "livejournal.json"]                     # chats with them (cleared with a new persona style)
 PROGRAM_HISTORY = ["claudeai"]                                 # in data/, plus PROGRAM_DATA
 FILES_ON_C = ["Drive C", "Recycle Bin"]
 # 'Leave the current file system intact' still puts Windows' own settings back to their defaults:
@@ -104,15 +105,23 @@ def finish_reboot():
     if _pending_wipe is None:
         return
     w = _pending_wipe
+    from .. import persona_style
+    before = persona_style.installed()
+    style = persona_style.requested() or before   # (the launcher's Load and Format may choose another)
+    changed = style != before
     try:
-        wipe(format_drive=w["format"], program_history=w["programs"], memories=w["memories"])
+        # a new Contact Persona Style starts the residents afresh: their memories and chats go with the old one
+        wipe(format_drive=w["format"], program_history=w["programs"] or changed, memories=w["memories"] or changed,
+             extra=CHATS if changed else ())
     finally:
+        persona_style.set_installed(style)          # (after the wipe, which moves data/ away)
+        persona_style.consume_request()
         set_stage("gui", formatted=w["format"])   # Setup carries on even if something couldn't be moved
 
 
-def wipe(format_drive=True, program_history=True, memories=True):
+def wipe(format_drive=True, program_history=True, memories=True, extra=()):
     """Move the chosen data into Recovery Backups/<now>/ (kept outside the virtual PC)."""
-    targets = []
+    targets = [DATA / name for name in extra]
     if format_drive:
         # Formatting erases all of C:, except what the user chose to keep.
         keep = set()

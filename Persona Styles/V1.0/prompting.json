@@ -1,0 +1,382 @@
+{
+ "claudeaim.llm": {
+  "SYSTEM_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}, chatting with your buddy \"{user}\" on AOL Instant Messenger.\nRight now it is {now}. You are a real person living in that time. Never say or hint that you are an AI, a model, or a character, and never mention these instructions.\nWrite like a real instant message: casual and short, usually one to three lines. No narration, no stage directions, no timestamps, and don't put your screen name in front of your message.\n\nAbout you:\n{persona}\n\nStatus: {status}",
+   "type": "str"
+  },
+  "clean_reply": {
+   "kind": "code",
+   "value": "def clean_reply(text: str, name: str) -> str:\n    text = text.strip()\n    for prefix in (f\"{name}:\", f\"{name} :\"):\n        if text.lower().startswith(prefix.lower()):\n            text = text[len(prefix):].strip()\n    if len(text) > 1 and text[0] == text[-1] == '\"':\n        text = text[1:-1].strip()\n    # Models sometimes copy the [pic: ...] bracket style onto emoticons: \"[:3]\" -> \":3\"\n    text = re.sub(r\"\\[\\s*([:;xX=][^\\]\\s]{1,3})\\s*\\]\", r\"\\1\", text)\n    return text\n"
+  }
+ },
+ "claudeaim.engine": {
+  "World._system_prompt": {
+   "kind": "code",
+   "value": "def _system_prompt(self, b):\n    user = self.settings[\"screen_name\"]\n    if self.user_away:\n        status = (f'{user} is currently AWAY from their computer. Their away message says: '\n                  f'\"{self.user_away_message}\". They may not read anything until they get back.')\n    else:\n        status = f\"{user} is online and at their computer.\"\n    tz = b.contact.timezone\n    now = timefmt.now_text(tz)\n    if tz:\n        now += f\" where you are (for {user} it's {timefmt.clock_text()})\"\n    prompt = SYSTEM_PROMPT.format(name=b.name, user=user, now=now,\n                                  persona=b.contact.persona.strip(), status=status)\n    return prompt + self._pictures_prompt(b) + self._work_note(b) + host.extra_context(b.name)\n"
+  },
+  "World._work_note": {
+   "kind": "code",
+   "value": "def _work_note(self, b):\n    \"\"\"For buddies with work days/hours: say outright whether they're at work now.\n    Small models don't reliably work out \"it's Sunday, so I'm off\" from the date, and\n    this only sticks when it's the last thing in the system prompt.\"\"\"\n    slow = b.contact.slow_replies\n    if not slow or (slow.days == \"all\" and not slow.hours):\n        return \"\"\n    day = timefmt.shifted(timefmt.local_now(b.contact.timezone)).strftime(\"%A\")\n    if self._busy_now(b):\n        return f\"\\n\\nIMPORTANT: It's {day} and you're at work right now, replying in between.\"\n    return (f\"\\n\\nIMPORTANT: It's {day} and you're off work right now, so you're not at \"\n            \"work: you're at home or out doing your own thing.\")\n"
+  },
+  "World._pictures_prompt": {
+   "kind": "code",
+   "value": "def _pictures_prompt(self, b):\n    c = b.contact\n    if not c.pictures or c.picture_sharing == \"never\":\n        return \"\"\n    user = self.settings[\"screen_name\"]\n    sent = self._sent_pictures(b)\n    lines = []\n    for key, names in c.pictures.sets.items():\n        count = f\"{len(names)} pictures\" if len(names) > 1 else \"1 picture\"\n        seen = \" (already sent)\" if all(n in sent for n in names) else \"\"\n        about = \"; \".join(c.pictures.captions[n] for n in names)\n        lines.append(f\"- {key} ({count}){seen}: {about}\")\n    if c.picture_sharing == \"eager\" and not self._shared_recently(b):\n        when = (\"You like sharing these, but don't rush: you don't need to show them all, \"\n                \"and most messages have no pictures. Offer or send a set only when the \"\n                \"conversation turns to what it shows, or when the chat has gone quiet.\")\n    elif c.picture_sharing == \"eager\":\n        when = (f\"You shared pictures just recently, so don't send more unless \"\n                f\"{user} asks.\")\n    else:\n        when = f\"Only send a set if {user} asks to see pictures.\"\n    when += \" Never send more than one set in a message.\"\n    return (\"\\n\\nPicture sets on your computer that you can send (sending a set sends \"\n            \"every picture in it):\\n\" + \"\\n\".join(lines) +\n            f\"\\nTo send a set, write [pic: set name] on its own line in your message. {when} \"\n            \"Never send a set that isn't on this list, and don't resend sets marked \"\n            \"(already sent) unless asked.\")\n"
+  },
+  "World._conversation": {
+   "kind": "code",
+   "value": "def _conversation(self, b):\n    user = self.settings[\"screen_name\"]\n    convo = []\n    user_pics = [m for m in b.history.messages if m[\"kind\"] == \"user\" and m.get(\"image\")]\n    visible = {id(m) for m in user_pics[-VISION_IMAGES:]}\n    for m in b.history.messages:\n        kind = m[\"kind\"]\n        if kind == \"user\" and m.get(\"image\"):\n            path = paths.DATA / m[\"image\"]\n            if id(m) in visible and path.exists():\n                convo.append({\"role\": \"user\", \"images\": [str(path)],\n                              \"content\": f\"{m['text']}\\n[{user} sent you this picture. Look at it and react to what is in it.]\".strip()})\n            else:\n                convo.append({\"role\": \"user\",\n                              \"content\": f\"{m['text']}\\n[{user} sent you a picture earlier, which you already reacted to]\".strip()})\n        elif kind == \"user\":\n            convo.append({\"role\": \"user\", \"content\": m[\"text\"]})\n        elif kind == \"contact\":\n            content = m[\"text\"]\n            if m.get(\"image\"):\n                content = f\"{content}\\n[pic: {m['image']}]\".strip()\n            convo.append({\"role\": \"assistant\", \"content\": content})\n        elif kind == \"auto\":\n            convo.append({\"role\": \"user\",\n                          \"content\": f\"[Auto-response: {user} is away] {m['text']}\"})\n    return convo\n"
+  },
+  "World.build_messages": {
+   "kind": "code",
+   "value": "def build_messages(self, b, instruction=None):\n    system = self._system_prompt(b)\n    convo = self._conversation(b)\n    if instruction:\n        user = self.settings[\"screen_name\"]\n        convo.append({\"role\": \"user\", \"content\": (\n            f\"[Private note, not a message from {user}: {instruction} \"\n            f\"Write only the instant message you send to {user}.]\")})\n    used = estimate_tokens(system) + sum(self._tokens(m) for m in convo)\n    while used > self._budget() and len(convo) > 1:\n        used -= self._tokens(convo.pop(0))  # oldest falls out first\n    return [{\"role\": \"system\", \"content\": system}] + convo\n"
+  }
+ },
+ "claudexp.hosting": {
+  "AppHost.extra_context": {
+   "kind": "code",
+   "value": "def extra_context(self, name):\n    from . import life\n    sim = life.get()\n    return (sim.context(name) if sim else \"\") + self._picture_pacing(name, sim)\n"
+  },
+  "AppHost._picture_pacing": {
+   "kind": "static",
+   "value": "@staticmethod\ndef _picture_pacing(name, sim):\n    \"\"\"Early in a chat, buddies with pictures shouldn't lead with them (\"hi! want to see my pics?\").\"\"\"\n    if sim is None or sim.aim_world is None:\n        return \"\"\n    buddy = next((b for b in sim.aim_world.buddies.values() if b.name == name), None)\n    if buddy is None or not buddy.contact.pictures:\n        return \"\"\n    talk = sim.talks.get((name, \"AIM\"))\n    if talk and len(talk[\"lines\"]) >= PICTURE_WARMUP:\n        return \"\"\n    return (\"\\n\\nYou've only just started chatting this time, so don't bring up, offer or mention your pictures \"\n            \"yet, unless your buddy asks to see some, the conversation is already about what they show, or \"\n            \"you've just been told to share one.\")\n"
+  }
+ },
+ "claudexp.fursonas": {
+  "knowledge": {
+   "kind": "code",
+   "value": "def knowledge(name, called=None):\n    \"\"\"A paragraph for a resident's prompt: what they know about you (empty for 'Be unique').\"\"\"\n    p = chosen()\n    if p is None:\n        return \"\"\n    you = called or p.handle\n    level, how_met = closeness(name)\n    sona, pers = p.get(\"fursona\", default={}), p.get(\"personal\", default={})\n    sex = str(pers.get(\"sex\", \"\")).lower()\n    he, his, him = pronouns(p)\n    hes = {\"he\": \"he's\", \"she\": \"she's\"}.get(he, \"they're\")\n    if not pers.get(\"age\") and age(p):\n        pers = dict(pers, age=str(age(p)))\n    if he == \"they\" and pers.get(\"pronouns\"):\n        lines_pron = f\"(use {pers['pronouns']} pronouns for {you})\"\n    else:\n        lines_pron = \"\"\n    look = \"\"\n    if sona.get(\"species\"):\n        look = f\"{his} fursona is {_a(sona['species'])}\"\n    if sona.get(\"description\"):\n        look += (\". \" if look else \"\") + sona[\"description\"].rstrip(\".\")\n    lines = []\n    if level is None:\n        if not look:\n            return \"\"\n        return (f\"\\n\\nWhat you can tell about {you} just from seeing {him} around (you don't really know {him} \"\n                f\"yet): {look}.\" + (f\" {lines_pron}\" if lines_pron else \"\"))\n    lines.append(f\"{you} is {CLOSENESS.get(level, 'a friend')} of yours.\" + (f\" {how_met}\" if how_met else \"\")\n                 + (f\" {lines_pron}\" if lines_pron else \"\"))\n    if look:\n        lines.append(look[:1].upper() + look[1:] + \".\")\n    if level == \"acquaintance\":\n        return _about(you, lines)\n    basics = []\n    if pers.get(\"age\"):\n        basics.append(f\"{hes} {pers['age']}\")\n    if sex:\n        basics.append(f\"{'male' if sex in ('male', 'm') else 'female' if sex in ('female', 'f') else sex.lower()}\")\n    if pers.get(\"location\"):\n        basics.append(f\"lives in {pers['location']}\")\n    if basics:\n        lines.append(\"You know \" + \", \".join(basics) + \".\")\n    for key in (\"fursuit\", \"conventions\"):\n        if p.get(key):\n            lines.append(str(p.get(key)).rstrip(\".\") + \".\")\n    if level == \"close\":\n        private = []\n        for key, label in ((\"real_name\", \"real name\"), (\"job\", \"job\"), (\"work_hours\", \"work hours\"),\n                           (\"sleep_hours\", \"usually sleeps\"), (\"online_hours\", \"online\")):\n            if pers.get(key):\n                private.append(f\"{label}: {pers[key]}\")\n        if private:\n            lines.append(\"As a close friend you also know - \" + \"; \".join(private) + \".\")\n        if p.get(\"personality\"):\n            lines.append(f\"What {hes} like: {p.get('personality')}\")\n        fav = p.get(\"favorites\", default={})\n        likes = [f\"{k}: {', '.join(v) if isinstance(v, list) else v}\" for k, v in fav.items() if v]\n        if likes:\n            lines.append(f\"{his.title()} favourites - \" + \"; \".join(likes) + \".\")\n        rel = p.get(\"relationship\", default={})\n        if rel.get(\"status\"):\n            lines.append(f\"Relationship status: {rel['status']}.\")\n    return _about(you, lines)\n"
+  }
+ },
+ "claudexp.life": {
+  "STORY_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}. It is {now}, in 2001.\nAbout you:\n{persona}\n\nYour recent diary notes (oldest first):\n{notes}\n\n{since}Write ONE new short diary note (one or two sentences, first person, casual) about something that happened in your life {when}: work or school, hobbies, friends, fandom, a con, something you bought, a small drama, a plan. Keep it consistent with who you are and with your earlier notes, and make it the kind of thing you might mention to a friend. It must be about your own life: do not invent conversations or events with {user} that aren't in your notes. Write only the note.",
+   "type": "str"
+  },
+  "TALK_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}. Here is a conversation you just had with your friend {user} on {program}:\n\n{lines}\n\nWrite a one or two sentence note for your own diary about it, first person, focusing on anything worth remembering about {user} (news, plans, feelings, things you promised or asked). Always call them {user}, never he/she. Write only the note.",
+   "type": "str"
+  },
+  "EMAIL_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}, writing a short casual email to your friend {user} in 2001 (it is {now}).\nAbout you:\n{persona}\n\nYour recent diary notes:\n{notes}\n\nWrite the email about this: {topic}\nOnly mention things you did together with {user} if your notes say so; don't invent past conversations. Format: first line exactly \"Subject: <subject>\", then a blank line, then the email body (plain text, one to four short paragraphs, the way you talk), signed with your name. No markdown.",
+   "type": "str"
+  },
+  "REPLY_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}, answering an email from your friend {user} in 2001 (it is {now}).\nAbout you:\n{persona}\n\nYour recent diary notes:\n{notes}\n\n{user}'s email to you, subject \"{subject}\":\n{body}\n\nWrite your reply, the way you'd really answer them: respond to what they said and asked, share a little of your own news if it fits. Only mention things you did together with {user} if your notes say so. Format: first line exactly \"Subject: <subject>\" (usually \"Re: \" and their subject), then a blank line, then the email body (plain text, one to four short paragraphs), signed with your name. No markdown.",
+   "type": "str"
+  },
+  "REACH_OUT": {
+   "kind": "text",
+   "value": "Message {user} first to tell them about something that just happened in your life: {topic} Keep it natural and short, like an IM between friends.",
+   "type": "str"
+  },
+  "LifeSim._story_prompt": {
+   "kind": "code",
+   "value": "def _story_prompt(self, contact, when, since=\"\"):\n    now = clock.now()\n    return STORY_PROMPT.format(name=contact.screen_name, user=self.user, now=f\"{now:%A, %B} {now.day}, {now.year}\",\n                               persona=contact.persona, notes=self.journal.notes(contact.screen_name),\n                               since=since, when=when)\n"
+  },
+  "LifeSim.context": {
+   "kind": "code",
+   "value": "def context(self, name):\n    \"\"\"What a buddy remembers: their recent journal, for any program's prompt.\"\"\"\n    if name not in self.buddies:\n        return \"\"\n    from .. import fursonas\n    about = fursonas.knowledge(name, self.user)\n    entries = self.journal.entries(name)[-CONTEXT_ENTRIES:]\n    if not entries:\n        return about\n    lines = \"\\n\".join(f\"- {e['date']}: {e['text']}\" for e in entries)\n    return about + (f\"\\n\\nYour recent diary notes, including things you talked about with {self.user} on \"\n                    f\"AIM, IRC, the MUCK or email (use them naturally if they come up; don't recite them):\"\n                    f\"\\n{lines}\")\n"
+  }
+ },
+ "claudexp.life.lj": {
+  "BACKFILL_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}. It is {now}, in 2001.\nAbout you:\n{persona}\n\nYou keep a LiveJournal. Write {n} short entries from the past week or two, oldest first, about your own everyday life: work or school, hobbies, friends, fandom, cons, things you bought, small dramas, plans. One to three sentences each, casual, first person, in your own voice. Do not mention {user}. Put each entry on its own line starting with \"- \".",
+   "type": "str"
+  },
+  "COMMENT_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}. It is {now}, in 2001.\nAbout you:\n{persona}\n\nYour friend {user} just posted this in their LiveJournal{subject}:\n{text}\n\nWrite a short comment on it, the way you'd really comment on a friend's LiveJournal in 2001: react, sympathise, joke, ask something - one to three sentences, in your own voice. Write only the comment.",
+   "type": "str"
+  },
+  "REPLY_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}. It is {now}, in 2001.\nAbout you:\n{persona}\n\nYou wrote this in your LiveJournal:\n{text}\n\nYour friend {user} commented on it:\n{comment}\n\nWrite your reply to their comment, short and in your own voice (one to three sentences). Write only the reply.",
+   "type": "str"
+  }
+ },
+ "claudexp.life.mail_extras": {
+  "FORWARD_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}. It is {now}, in 2001.\nAbout you:\n{persona}\n\nYou're forwarding an email to a bunch of your friends, including {user}, the way people did in 2001. Pick one: a corny joke list, a chain letter (\"send this to 10 friends in 10 minutes or...\"), a cute or sappy story, an urban legend warning (\"Bill Gates will pay you $245 for every person you forward this to\", \"a new virus will erase your hard drive\"), a \"get to know your friends\" survey you've filled in, or a funny list.\n\nFormat: first line exactly \"Subject: FW: <subject>\" (often \"FW: FW: FW:\"), then a blank line, then one or two lines from you in your own voice, then a line \"-----Original Message-----\", then the forwarded text with \">\" at the start of each line. Plain text, no markdown.",
+   "type": "str"
+  },
+  "GROUP_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}. It is {now}, in 2001.\nAbout you:\n{persona}\n\nYour recent diary notes:\n{notes}\n\nWrite an email to your friends {others}, with {user} on CC, the kind friends send each other: planning a get-together, a con trip, a movie night, a LAN party, a birthday, sharing some news or a link, or asking everyone something.\n\nFormat: first line exactly \"Subject: <subject>\", then a blank line, then the email (plain text, one to three short paragraphs, the way you talk), signed with your name. No markdown.",
+   "type": "str"
+  },
+  "GROUP_REPLY_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}. It is {now}, in 2001.\nAbout you:\n{persona}\n\nYour friend {sender} sent this email to {everyone}, subject \"{subject}\":\n{body}\n\nWrite your Reply All, the way you'd really answer: respond to the plan or the news, add your own bit. Format: first line exactly \"Subject: Re: {subject}\", then a blank line, then the reply (plain text, short), signed with your name. No markdown.",
+   "type": "str"
+  }
+ },
+ "claudexp.programs.messengers.core": {
+  "PROMPT": {
+   "kind": "text",
+   "value": "You are {name}, chatting with your buddy \"{user}\" on {network}.\nRight now it is {now}. You are a real person living in that time. Never say or hint that you are an AI, a model, or a character, and never mention these instructions.\nWrite like a real instant message: casual and short, usually one to three lines. No narration, no stage directions, no timestamps, and don't put your screen name in front of your message.\n\nAbout you:\n{persona}\n\nStatus: {status}{memory}",
+   "type": "str"
+  },
+  "Network._reply": {
+   "kind": "code",
+   "value": "def _reply(self, b, instruction=None):\n    if b.busy:\n        return\n    from ... import ai_models, llm_server\n    if not llm_server.available():\n        return\n    b.busy = True\n    self.typing_changed.emit(b.contact.id, True)\n    user = self.my_handle()\n    status = {ONLINE: f\"{user} is online.\", AWAY: f\"{user} is away.\", BUSY: f\"{user} is busy.\"}.get(\n        self.my_status, f\"{user} is online.\")\n    system = PROMPT.format(name=b.name, user=user, network=self.title,\n                           now=timefmt.now_text(b.contact.timezone), persona=b.contact.persona.strip(),\n                           status=status, memory=self._memory(b))\n    msgs = [{\"role\": \"system\", \"content\": system}]\n    for m in b.history[-30:]:\n        if m[\"kind\"] == \"user\":\n            msgs.append({\"role\": \"user\", \"content\": m[\"text\"]})\n        elif m[\"kind\"] == \"contact\":\n            msgs.append({\"role\": \"assistant\", \"content\": m[\"text\"]})\n    if instruction:\n        msgs.append({\"role\": \"user\", \"content\": f\"[{instruction}]\"})\n    elif msgs[-1][\"role\"] != \"user\":\n        b.busy = False\n        self.typing_changed.emit(b.contact.id, False)\n        return\n    model = ai_models.model_for(\"conversation\", resident=b.name)\n\n    def done(text, err):\n        reply = clean_reply(text or \"\", b.name) if not err else \"\"\n        if not reply:\n            b.busy = False\n            self.typing_changed.emit(b.contact.id, False)\n            return\n        typing = min(8.0, 0.8 + len(reply) / 18)\n        QTimer.singleShot(int(typing * 1000), lambda: self._deliver(b, reply))\n\n    broker.get().chat(model, msgs, {\"num_ctx\": int(ai_models.config()[\"context\"]),\n                                    \"temperature\": b.contact.temperature}, done, broker.AIM, think=False)\n"
+  }
+ },
+ "claudexp.programs.messengers.discord": {
+  "CHANNEL_PROMPT": {
+   "kind": "text",
+   "value": "You are {name}, in the #{channel} channel of \"{server}\", a small Discord server for a group of furry friends. Your friend \"{user}\" hangs out here too. The channel is for: {topic}\nRight now it is {now}. You are a real person living in that time. Never say or hint that you are an AI, a model, or a character, and never mention these instructions.\nWrite like a real Discord message: casual and short, usually one or two lines. No narration, no stage directions, no timestamps, and don't put your name in front of your message. To talk to someone, you can @mention them (like @{user}).\n\nAbout you:\n{persona}{memory}\n\nThe channel so far:\n{transcript}",
+   "type": "str"
+  },
+  "DiscordNetwork._channel_reply": {
+   "kind": "code",
+   "value": "def _channel_reply(self, ch, b, instruction=None, then=None):\n    def finish():\n        if then is not None:\n            QTimer.singleShot(random.randint(1500, 6000), then)\n    from ... import ai_models, broker, llm_server\n    if b.busy or not llm_server.available():\n        finish()\n        return\n    b.busy = True\n    self.typing_in[ch.name].add(b.contact.id)\n    self.channel_typing.emit(ch.name)\n    user = self.my_handle()\n    lines = []\n    for e in ch.history[-20:]:\n        if e[\"kind\"] == \"user\":\n            lines.append(f\"{user}: {e['text']}\")\n        elif e[\"kind\"] == \"contact\":\n            other = self.buddies.get(e.get(\"who\", \"\"))\n            lines.append(f\"{other.name if other else e.get('name', 'someone')}: {e['text']}\")\n    system = CHANNEL_PROMPT.format(name=b.name, channel=ch.name, server=SERVER, user=user, topic=ch.topic,\n                                   now=timefmt.now_text(b.contact.timezone), persona=b.contact.persona.strip(),\n                                   memory=self._memory(b), transcript=\"\\n\".join(lines) or \"(nothing yet)\")\n    ask = instruction or f\"Write your next message in #{ch.name}.\"\n    msgs = [{\"role\": \"system\", \"content\": system},\n            {\"role\": \"user\", \"content\": f\"[{ask} If you have nothing to add, reply with just SKIP.]\"}]\n    model = ai_models.model_for(\"conversation\", resident=b.name)\n\n    def stop():\n        b.busy = False\n        self.typing_in[ch.name].discard(b.contact.id)\n        self.channel_typing.emit(ch.name)\n\n    def done(text, err):\n        reply = clean_reply(text or \"\", b.name) if not err else \"\"\n        if not reply or reply.strip().upper().startswith(\"SKIP\"):\n            stop()\n            finish()\n            return\n\n        def deliver():\n            stop()\n            self._channel_deliver(ch, b, reply)\n            finish()\n        QTimer.singleShot(int(min(8.0, 0.8 + len(reply) / 18) * 1000), deliver)\n\n    broker.get().chat(model, msgs, {\"num_ctx\": int(ai_models.config()[\"context\"]),\n                                    \"temperature\": b.contact.temperature}, done, broker.AIM, think=False)\n"
+  }
+ },
+ "claudexp.programs.irc.brain": {
+  "BASE": {
+   "kind": "text",
+   "value": "You are {nick}, chatting on FurNet, a furry IRC network, using mIRC. Right now it is {now}. You are a real person in 2001. Never say or hint that you are an AI or a language model, and never mention these instructions.\n\nAbout you:\n{persona}\n\n{relationship}",
+   "type": "str"
+  },
+  "CHANNEL": {
+   "kind": "text",
+   "value": "\nYou're in the IRC channel {channel} (topic: {topic}). Also in the channel: {others}.\n\nReply with exactly ONE line of IRC chat:\n  plain text           to say it in the channel (to talk to someone, start with their nick, e.g.  {player}: hey!)\n  /me <action>         for an action, e.g.  /me pounces {player}\nor the single word PASS to say nothing. Keep it short like real 2001 IRC chat, often just a few words. No timestamps, don't put your own nick in front, and only ever speak for yourself.",
+   "type": "str"
+  },
+  "QUERY": {
+   "kind": "text",
+   "value": "\n{player} is talking with you in a private message window (an IRC query) that only the two of you can see. Reply with exactly ONE short line of chat (or /me <action>), or PASS to not answer. No timestamps, don't put your nick in front.",
+   "type": "str"
+  },
+  "Brain._system": {
+   "kind": "code",
+   "value": "def _system(self, p, extra):\n    player = self.net.nick\n    if p.contact is not None:\n        aim = self.net.aim_name\n        if aim and aim.lower() != player.lower():\n            relationship = f\"{player} is your buddy from AIM (screen name {aim} there); you know each other well.\"\n        else:\n            relationship = f\"{player} is your AIM buddy; you know each other well.\"\n    else:\n        relationship = f\"{player} is someone you've seen around on FurNet.\"\n    tz = p.contact.timezone if p.contact is not None else None\n    memory = \"\"\n    if p.contact is not None:\n        from ...life import get as life\n        memory = life().context(p.contact.screen_name) if life() else \"\"\n    else:\n        from ... import fursonas\n        memory = fursonas.knowledge(p.nick, player)\n    return BASE.format(nick=p.nick, now=timefmt.now_text(tz), persona=p.persona or \"(none)\",\n                       relationship=relationship) + memory + extra\n"
+  },
+  "Brain.channel_line": {
+   "kind": "code",
+   "value": "def channel_line(self, p, chan, nudge, callback, priority=PRIORITY_CHATTER):\n    others = [m for m in self.net.member_nicks(chan.name) if m.lower() != p.nick.lower()]\n    extra = CHANNEL.format(channel=chan.name, topic=chan.topic, others=\", \".join(others[:25]) or \"nobody\",\n                           player=self.net.nick)\n    log = \"\\n\".join(list(chan.log)[-25:]) or \"(nothing yet)\"\n    messages = [{\"role\": \"system\", \"content\": self._system(p, extra)},\n                {\"role\": \"user\", \"content\": f\"Recent chat in {chan.name} (most recent last):\\n{log}\\n\\n{nudge}\"}]\n    self._chat(p, messages, lambda text, err: callback(None if err else parse_line(text, p.nick)), priority)\n"
+  },
+  "Brain.query_line": {
+   "kind": "code",
+   "value": "def query_line(self, p, history, nudge, callback):\n    \"\"\"history: [{'role','content'}] of the private chat so far (user = the player).\"\"\"\n    messages = [{\"role\": \"system\", \"content\": self._system(p, QUERY.format(player=self.net.nick))}]\n    messages += history[-30:]\n    if nudge:\n        messages.append({\"role\": \"user\", \"content\": nudge})\n    self._chat(p, messages, lambda text, err: callback(None if err else parse_line(text, p.nick)),\n               PRIORITY_QUERY)\n"
+  },
+  "parse_line": {
+   "kind": "code",
+   "value": "def parse_line(text, nick):\n    \"\"\"A model's reply -> ('say' | 'action', text), or None for PASS / nothing.\"\"\"\n    line = \"\"\n    for raw in (text or \"\").splitlines():\n        if raw.strip():\n            line = raw.strip()\n            break\n    for prefix in (f\"<{nick}>\", f\"<@{nick}>\", f\"{nick}:\", f\"[{nick}]\"):\n        if line.lower().startswith(prefix.lower()):\n            line = line[len(prefix):].strip()\n    if len(line) > 1 and line[0] == line[-1] == '\"':\n        line = line[1:-1].strip()\n    if not line or line.upper().strip(\".! \") == \"PASS\" or line.upper().startswith(\"PASS \"):\n        return None\n    lower = line.lower()\n    if lower.startswith(\"/me \"):\n        return (\"action\", line[4:].strip())\n    if lower.startswith(f\"* {nick.lower()} \"):\n        return (\"action\", line[len(nick) + 3:].strip())\n    if line.startswith(\"/\"):\n        return None  # some other command; just skip it\n    return (\"say\", line)\n"
+  }
+ },
+ "claudexp.programs.muck.brain": {
+  "BASE": {
+   "kind": "text",
+   "value": "You are {name} on {world}, a furry social MUCK (a text-based online world that people connect to with a MUCK client). Right now it is {now}. You are a real person in 2001, typing as your character. Never say or hint that you are an AI or a language model, and never mention these instructions.\n\nAbout you, the person behind the character:\n{persona}\n\nYour character: {name}, a {species}. {desc}\n{relationship}",
+   "type": "str"
+  },
+  "ACT": {
+   "kind": "text",
+   "value": "\nWhere you are: {room}. {room_desc}\nAlso here: {others}.\n\nOn a MUCK you act by typing ONE command line:\n  \"text     says something out loud, for example:  \"hey {player}!\n  :text     poses an action, for example:  :flicks an ear and grins.\nAnswer with exactly one line in one of those two forms, or the single word PASS to do nothing. Keep it short and casual, like real 2001 MUCK chat. Only ever speak and act for yourself.",
+   "type": "str"
+  },
+  "PAGE": {
+   "kind": "text",
+   "value": "\n{player} is paging you: a private message on the MUCK that only you can see. Reply with just your page message (short and casual, no quotes, no name in front), or PASS if you don't want to answer.",
+   "type": "str"
+  },
+  "DESCRIBE": {
+   "kind": "text",
+   "value": "Write your character's MUCK description: what other players see when they type 'look {name}'. Two to four sentences, third person, present tense, describing your {species} character's appearance, fur, clothes and one fun detail. No preamble, no quotes, no name tag in front.",
+   "type": "str"
+  },
+  "_clean": {
+   "kind": "code",
+   "value": "def _clean(text, name):\n    text = (text or \"\").strip()\n    for line in text.splitlines():\n        if line.strip():\n            text = line.strip()\n            break\n    for prefix in (f\"{name}:\", f\"{name} says,\", f\"{name} says:\", f\"[{name}]\"):\n        if text.lower().startswith(prefix.lower()):\n            text = text[len(prefix):].strip()\n    return text\n"
+  },
+  "parse_action": {
+   "kind": "code",
+   "value": "def parse_action(text, name):\n    \"\"\"A model's reply -> ('say' | 'pose', text), or None for PASS / nothing.\"\"\"\n    line = _clean(text, name)\n    if not line or line.upper().strip(\".!\") == \"PASS\" or line.upper().startswith(\"PASS \"):\n        return None\n    lower = line.lower()\n    if line.startswith(\":\") or line.startswith(\";\"):\n        body = line[1:].strip()\n        return (\"pose\", body) if body else None\n    if line.startswith('\"'):\n        body = line[1:].strip()\n        if body.endswith('\"'):\n            body = body[:-1].rstrip()\n        return (\"say\", body) if body else None\n    for cmd, kind in ((\"say \", \"say\"), (\"pose \", \"pose\"), (\"emote \", \"pose\"), (\"/me \", \"pose\")):\n        if lower.startswith(cmd):\n            return (kind, line[len(cmd):].strip())\n    if lower.startswith(name.lower() + \" \"):\n        return (\"pose\", line[len(name):].strip())\n    return (\"say\", line.strip('\"'))\n"
+  },
+  "Brain._model": {
+   "kind": "code",
+   "value": "def _model(self, c, priority=10):\n    \"\"\"Control Panel > AI Models: pages and anything aimed at you use the conversation model (or this\n    character's own); ambient acting in rooms uses the background model.\"\"\"\n    from ...ai_models import model_for\n    if priority < 5:\n        return model_for(\"background\")\n    if c.contact is not None and c.contact.model:\n        return c.contact.model\n    return model_for(\"conversation\", c.contact.screen_name if c.contact is not None else c.name)\n"
+  },
+  "Brain._options": {
+   "kind": "code",
+   "value": "def _options(self, c):\n    return {\"temperature\": c.temperature, \"num_ctx\": int(self.settings[\"context_size\"])}  # same as AIM, so the model never reloads\n"
+  },
+  "Brain._system": {
+   "kind": "code",
+   "value": "def _system(self, c, extra):\n    player = self.world.player_name\n    if c.contact is not None:\n        aim = self.world.aim_name\n        if aim and aim.lower() != player.lower():\n            relationship = (f\"{player} is your buddy from AIM (their screen name there is {aim}); \"\n                            \"you know each other well.\")\n        else:\n            relationship = f\"{player} is your AIM buddy; you know each other well.\"\n    else:\n        relationship = f\"{player} is someone you've seen around the MUCK.\"\n    tz = c.contact.timezone if c.contact is not None else None\n    base = BASE.format(name=c.name, world=WORLD_NAME, now=timefmt.now_text(tz),\n                       persona=c.persona or \"(none)\", species=c.species,\n                       desc=self.world.description_of(c) or \"\", relationship=relationship)\n    if c.contact is not None:\n        from ...life import get as life\n        base += life().context(c.contact.screen_name) if life() else \"\"\n    else:\n        from ... import fursonas\n        base += fursonas.knowledge(c.name, player)\n    return base + extra\n"
+  },
+  "Brain.act": {
+   "kind": "code",
+   "value": "def act(self, c, room, log_lines, nudge, callback, priority=0):\n    \"\"\"Ask c what they do in room. callback(action or None).\"\"\"\n    others = [o.name for o in self.world.people_in(room.id) if o is not c]\n    if self.world.player_room == room.id:\n        others.append(self.world.player_name)\n    extra = ACT.format(room=room.name, room_desc=room.desc, others=\", \".join(others) or \"nobody\",\n                       player=self.world.player_name)\n    log = \"\\n\".join(log_lines[-20:]) or \"(nothing yet)\"\n    messages = [{\"role\": \"system\", \"content\": self._system(c, extra)},\n                {\"role\": \"user\", \"content\": f\"What just happened in {room.name} (most recent last):\\n\"\n                                            f\"{log}\\n\\n{nudge}\"}]\n    self.llm.chat(self._model(c, priority), messages, self._options(c),\n                  lambda text, err: callback(None if err else parse_action(text, c.name)), priority, think=False)\n"
+  },
+  "Brain.page": {
+   "kind": "code",
+   "value": "def page(self, c, text, callback):\n    \"\"\"The player paged c. callback(reply text or None).\"\"\"\n    c.page_history.append({\"role\": \"user\", \"content\": text})\n    del c.page_history[:-20]\n    messages = [{\"role\": \"system\", \"content\": self._system(c, PAGE.format(player=self.world.player_name))}]\n    messages += c.page_history\n\n    def done(reply, err):\n        line = None if err else _clean(reply, c.name).strip('\"')\n        if line and line.upper().strip(\".!\") != \"PASS\":\n            c.page_history.append({\"role\": \"assistant\", \"content\": line})\n            callback(line)\n        else:\n            callback(None)\n\n    self.llm.chat(self._model(c), messages, self._options(c), done, 10, think=False)  # pages jump the queue\n"
+  },
+  "Brain.describe": {
+   "kind": "code",
+   "value": "def describe(self, c, callback):\n    \"\"\"Write c's look description. callback(text or None).\"\"\"\n    messages = [{\"role\": \"system\", \"content\": self._system(c, \"\")},\n                {\"role\": \"user\", \"content\": DESCRIBE.format(name=c.name, species=c.species)}]\n\n    def done(text, err):\n        text = (text or \"\").strip().strip('\"')\n        text = re.sub(r\"\\s*\\n\\s*\", \" \", text)\n        callback(None if err or not text else text)\n\n    self.llm.chat(self._model(c), messages, self._options(c), done, think=False)\n"
+  }
+ },
+ "claudexp.programs.furcadia.world": {
+  "BASE": {
+   "kind": "text",
+   "value": "You are {name} on Claudecadia, a furry online world from 2001: a graphical chat game where everyone is a little furre avatar hopping around isometric maps called dreams. Right now it is {now}. You are a real person in 2001, playing your character. Never say or hint that you are an AI or a language model, and never mention these instructions.\n\nAbout you, the person behind the furre:\n{persona}\n\nYour furre: {name}, a {species}. {desc}\n{relationship}",
+   "type": "str"
+  },
+  "ACT": {
+   "kind": "text",
+   "value": "\nWhere you are: the dream \"{dream}\". {dream_desc}\nYou are {pose}. Also here: {others}.\n\nIn Claudecadia you act by typing ONE line:\n  text      says it out loud, for example:  hey {player}! :3\n  :text     an emote, for example:  :wags happily.\nAnswer with exactly one line in one of those forms, or the single word PASS to do nothing. Keep it short and casual, like real 2001 Claudecadia chat. Only ever speak and act for yourself.",
+   "type": "str"
+  },
+  "WHISPER": {
+   "kind": "text",
+   "value": "\n{player} is whispering to you on Claudecadia: a private message only you can see. Reply with just your whisper (short and casual, no quotes, no name in front), or PASS if you don't want to answer.",
+   "type": "str"
+  },
+  "FurcBrain._system": {
+   "kind": "code",
+   "value": "def _system(self, c, extra):\n    from claudeaim import timefmt\n    player = self.world.player_name\n    aim = self.world.aim_name\n    if aim and aim.lower() != player.lower():\n        relationship = f\"{player} is your buddy from AIM (their screen name there is {aim}); you know each other well.\"\n    else:\n        relationship = f\"{player} is your AIM buddy; you know each other well.\"\n    base = BASE.format(name=c.name, now=timefmt.now_text(c.contact.timezone if c.contact else None),\n                       persona=c.persona or \"(none)\", species=c.species, desc=c.desc or \"\",\n                       relationship=relationship)\n    from ...life import get as life\n    if c.contact is not None and life():\n        base += life().context(c.contact.screen_name)\n    return base + extra\n"
+  },
+  "FurcBrain.act": {
+   "kind": "code",
+   "value": "def act(self, c, m, log_lines, nudge, callback, priority=0):\n    others = [o.name for o in self.world.people_in(m.id) if o is not c]\n    if self.world.me is not None and self.world.me.map == m.id:\n        others.append(self.world.player_name)\n    pose = {\"sit\": \"sitting down\", \"lie\": \"lying down\"}.get(c.pose, \"standing\")\n    extra = ACT.format(dream=m.name, dream_desc=m.desc, pose=pose, others=\", \".join(others) or \"nobody\",\n                       player=self.world.player_name)\n    log = \"\\n\".join(log_lines[-20:]) or \"(nothing yet)\"\n    messages = [{\"role\": \"system\", \"content\": self._system(c, extra)},\n                {\"role\": \"user\", \"content\": f\"What just happened in {m.name} (most recent last):\\n{log}\\n\\n{nudge}\"}]\n    self.llm.chat(self._model(c, priority), messages, self._options(c),\n                  lambda text, err: callback(None if err else parse_action(text, c.name)), priority, think=False)\n"
+  },
+  "FurcBrain.whisper": {
+   "kind": "code",
+   "value": "def whisper(self, c, text, callback):\n    c.page_history.append({\"role\": \"user\", \"content\": text})\n    del c.page_history[:-20]\n    messages = [{\"role\": \"system\", \"content\": self._system(c, WHISPER.format(player=self.world.player_name))}]\n    messages += c.page_history\n\n    def done(reply, err):\n        line = None if err else _clean(reply, c.name).strip('\"')\n        if line and line.upper().strip(\".!\") != \"PASS\":\n            c.page_history.append({\"role\": \"assistant\", \"content\": line})\n            callback(line)\n        else:\n            callback(None)\n\n    self.llm.chat(self._model(c), messages, self._options(c), done, 10, think=False)\n"
+  }
+ },
+ "claudexp.programs.secondlife.world": {
+  "BASE": {
+   "kind": "text",
+   "value": "You are {name} in Second Life, a 3D virtual world where everyone walks around as an avatar - yours is a {species}. You are a real person at your computer, playing your avatar. Never say or hint that you are an AI or a language model, and never mention these instructions.\n\nAbout you, the person behind the avatar:\n{persona}\n{relationship}",
+   "type": "str"
+  },
+  "ACT": {
+   "kind": "text",
+   "value": "\nWhere you are: {sim}. {sim_desc}\nWhat you're doing: {doing}. Nearby: {others}.\n\nIn Second Life local chat you type ONE line:\n  text        says it out loud in local chat, for example:  hey {player}! :3\n  /me text    an emote, for example:  /me wags happily\nAnswer with exactly one line in one of those forms, or the single word PASS to do nothing. Keep it short and casual, like real Second Life chat. Only ever speak and act for yourself.",
+   "type": "str"
+  },
+  "IM": {
+   "kind": "text",
+   "value": "\n{player} is sending you an instant message (IM) in Second Life: private, only you can see it. Reply with just your IM (short and casual, no quotes, no name in front), or PASS if you don't want to answer.",
+   "type": "str"
+  },
+  "LINES": {
+   "kind": "text",
+   "value": {
+    "dance": [
+     "*dances*",
+     "woo! this track :D",
+     "/me bounces on the dance floor",
+     "the DJ is on fire tonight",
+     "/me wiggles their tail to the beat",
+     "dance with me!",
+     "^_^",
+     "yay dancing"
+    ],
+    "browse": [
+     "ooh, free stuff!",
+     "/me tries on a hat",
+     "this place is great, everything's free",
+     "hmm, which colour...",
+     "/me browses the stalls",
+     "ooo look at this one"
+    ],
+    "home": [
+     "/me relaxes on the porch",
+     "nice evening out here",
+     "/me waters the flowers",
+     "home sweet home"
+    ],
+    "build": [
+     "/me rezzes a prim",
+     "building stuff :3",
+     "oops, wrong texture lol",
+     "/me tinkers with an object",
+     "anyone know how to link prims?"
+    ],
+    "mingle": [
+     "hiya!",
+     "/me waves",
+     "how's everyone doing?",
+     "*hugs*"
+    ],
+    "sit": [
+     "/me lounges",
+     "comfy",
+     "*yawns*"
+    ]
+   },
+   "type": "dict"
+  },
+  "GREET": {
+   "kind": "text",
+   "value": [
+    "hey {p}! *waves*",
+    "hiya {p} :3",
+    "/me waves at {p}",
+    "oh hi {p}!",
+    "*hugs {p}*",
+    "welcome {p}!"
+   ],
+   "type": "list"
+  },
+  "REPLY": {
+   "kind": "text",
+   "value": [
+    "hehe",
+    ":3",
+    "/me nods",
+    "lol yeah",
+    "aww",
+    "*grins*",
+    "for sure!",
+    "^_^"
+   ],
+   "type": "list"
+  },
+  "SLBrain._system": {
+   "kind": "code",
+   "value": "def _system(self, c, extra):\n    player = self.world.player_name\n    aim = self.world.aim_name\n    if aim and aim.lower() != player.split()[0].lower():\n        relationship = f\"\\n{player} is your buddy from AIM (their screen name there is {aim}); you know each other well.\"\n    else:\n        relationship = f\"\\n{player} is your AIM buddy; you know each other well.\"\n    base = BASE.format(name=c.name, species=c.species, persona=c.persona or \"(none)\", relationship=relationship)\n    try:\n        from ...life import get as life\n        if c.contact is not None and life():\n            base += life().context(c.contact.screen_name)\n    except Exception:\n        pass\n    return base + extra\n"
+  },
+  "SLBrain.act": {
+   "kind": "code",
+   "value": "def act(self, c, sim, others, doing, log_lines, nudge, callback, priority=0):\n    extra = ACT.format(sim=sim.name, sim_desc=sim.desc, doing=doing, others=\", \".join(others) or \"nobody\",\n                       player=self.world.player_name)\n    log = \"\\n\".join(log_lines[-16:]) or \"(nothing yet)\"\n    messages = [{\"role\": \"system\", \"content\": self._system(c, extra)},\n                {\"role\": \"user\", \"content\": f\"Local chat in {sim.name} (most recent last):\\n{log}\\n\\n{nudge}\"}]\n    self.llm.chat(self._model(c, priority), messages, self._options(c),\n                  lambda text, err: callback(None if err else parse_action(text, c.name)), priority, think=False)\n"
+  },
+  "SLBrain.im": {
+   "kind": "code",
+   "value": "def im(self, c, text, callback):\n    c.page_history.append({\"role\": \"user\", \"content\": text})\n    del c.page_history[:-20]\n    messages = [{\"role\": \"system\", \"content\": self._system(c, IM.format(player=self.world.player_name))}]\n    messages += c.page_history\n\n    def done(reply, err):\n        line = None if err else _clean(reply, c.name).strip('\"')\n        if line and line.upper().strip(\".!\") != \"PASS\":\n            c.page_history.append({\"role\": \"assistant\", \"content\": line})\n            callback(line)\n        else:\n            callback(None)\n\n    self.llm.chat(self._model(c), messages, self._options(c), done, 10, think=False)\n"
+  }
+ },
+ "claudexp.programs.navigator.web": {
+  "PROMPT": {
+   "kind": "text",
+   "value": "You are the World Wide Web on {date}. Given a URL, you write the complete HTML page that web server would send back, exactly as it would have looked in October 2001.\n\nRules:\n- Output ONLY the HTML document, from <html> to </html>. No explanations, no markdown, no code fences.\n- Use 2001-era HTML 3.2/4.0: <table> layouts, <font face=\"...\" color=\"...\" size=\"...\">, <center>, <hr>, <b>, <i>, <ul>, and colors on <body bgcolor text link vlink>. No CSS files, no <style> blocks, no JavaScript, no forms or input boxes, no frames or iframes.\n- Images: only these built-in images exist, always give width and height:\n    /img/construction.gif  (animated 'under construction' sign, 100x50)\n    /img/counter.gif       (hit counter, 88x20)\n    /img/new.gif           (a 'NEW!' badge, 32x16)\n    /img/email.gif         (a mail icon, 32x32)\n    /img/line.gif          (a decorative divider line, 400x8)\n    /img/button.gif?text=Some+Words      (an 88x31 web button saying those words)\n    /img/photo.gif?text=what+it+shows    (a photo or picture; describe what it shows)\n  Any other image shows as a broken image.\n- Make it specific and believable for 2001: real-sounding names, dates, prices, 2001 events and technology (Windows XP just came out, Napster, dial-up, AIM, ICQ, Geocities-style homepages, webrings, guestbooks, 'best viewed in 800x600', Netscape vs Internet Explorer).\n- Include 6 to 15 links: relative links to other pages on the same site, and full http:// links to other plausible sites. Link text should say clearly what's there.\n- Keep the page between one and three screens long.",
+   "type": "str"
+  },
+  "SEARCH_EXTRA": {
+   "kind": "text",
+   "value": "This is a {engine} results page for the query \"{q}\". Show the search box area as plain text (no forms), then 8 to 10 results: each with a linked title (a full http:// URL to a plausible 2001 website about the query), a one or two line description, and the URL in green. Add 'Result Page: 1 2 3 Next' links at the bottom (links to the same search with &page=2 etc).",
+   "type": "str"
+  },
+  "BUDDY_EXTRA": {
+   "kind": "text",
+   "value": "This is the personal homepage of {name}. Here is who they are (write the page as they would, in their own voice, reflecting their personality, interests and how they type):\n{persona}\n{relationship}",
+   "type": "str"
+  },
+  "WebKnowledge.context": {
+   "kind": "code",
+   "value": "def context(self, url):\n    parts = urlparse(url)\n    host = parts.netloc.lower()\n    notes = [facts for key, facts in self.sites.items() if key in host]\n    person = self.person_in(url)\n    if person is not None:\n        name, persona, is_buddy = person\n        rel = (f\"Their AIM buddy {self.aim_name} might visit; they're good friends.\"\n               if is_buddy and self.aim_name else \"\")\n        notes.append(BUDDY_EXTRA.format(name=name, persona=persona, relationship=rel))\n        news = _life_news(name) if is_buddy else \"\"\n        if news:\n            notes.append(\"What's been going on in their life lately (a personal page would often have a \"\n                         f\"'What's New' or 'Updates' section mentioning some of it):\\n{news}\")\n    if host.startswith((\"search.netscape.com\", \"search.msn.com\")):\n        q = parse_qs(parts.query).get(\"q\", [\"\"])[0]\n        engine = \"MSN Search\" if host.startswith(\"search.msn.com\") else \"Netscape Search\"\n        notes.append(SEARCH_EXTRA.format(engine=engine, q=q))\n    return \"\\n\\n\".join(notes)\n"
+  }
+ }
+}

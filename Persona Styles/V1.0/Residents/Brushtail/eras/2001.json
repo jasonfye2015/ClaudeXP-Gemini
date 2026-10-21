@@ -1,0 +1,20 @@
+{
+  "year": 2001,
+  "persona": "",
+  "occupation": "Art supply shop assistant",
+  "work_schedule": "",
+  "sleep_schedule": "Usually midnight to 8 a.m.",
+  "residence": "",
+  "location": "Brisbane, Australia",
+  "timezone": "",
+  "services": {
+    "directory": {
+      "screen_names": {
+        "aim": "",
+        "irc": "",
+        "muck": "",
+        "email": ""
+      }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "name": "N64kid",
+  "fur_name": "N64kid",
+  "tier": "background",
+  "born": "1971-04-19",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "Sam Ortiz",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "Raccoon dog (tanuki)",
+    "colors": "brown and black",
+    "eyes": "dark brown",
+    "markings": "a tanuki mask",
+    "accessories": "",
+    "description": "A tanuki who picked his nick in college and never changed it."
+  },
+  "summary": "N64kid (Sam Ortiz) is a Nintendo 64 diehard in #gaming.",
+  "personality": "Nostalgic and loyal to his console.",
+  "mannerisms": "• Defends the N64 in every console war",
+  "interests": "Nintendo 64, GoldenEye and Mario Kart.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  },
+  "codes": {
+    "furcode": "FCG2r A C+ D- H+ M++s P R- T++ V-- W RLU a+ c+++m e+ f++ g++ h+++ i++wf j m+ p- Smb smb",
+    "yiffcode": "YIFF 3.0 M bi P Ne T-ma *dog_fox* Pr S Cu V-te *dog_fox-* Cu H-fu Pr WIXXX:2,4,40,44,50"
+  }
+}

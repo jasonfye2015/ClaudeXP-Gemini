@@ -15,8 +15,8 @@ from pathlib import Path
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QIcon, QImage, QLinearGradient, QPainter,
                            QPainterPath, QPen, QPixmap, QPolygonF, QTransform)
-from PySide6.QtWidgets import (QDialog, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-                               QMessageBox, QPushButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QListWidget,
+                               QListWidgetItem, QMessageBox, QPushButton, QVBoxLayout, QWidget)
 
 from . import profile as prof
 from .systems import PORTABLE_PYTHON, SYSTEMS, TIMELINE
@@ -495,21 +495,20 @@ class Systec(QWidget):
             self.edit_profile(first=True)
             if prof.load() is None:
                 return
+        style = None
         if format_drive:
-            ok = QMessageBox(QMessageBox.Warning, "Load and Format",
-                             f"Start {system.key} in System Recovery?\n\nReinstalling Windows erases this computer's "
-                             "own files: its mail, the residents' memories of you there, and its settings (they're "
-                             "moved to Recovery Backups, not deleted).\n\nYour Timeline identity and game saves are "
-                             "kept.", QMessageBox.Yes | QMessageBox.Cancel, self)
-            ok.setStyleSheet(DIALOG_CSS)
-            if ok.exec() != QMessageBox.Yes:
+            box = FormatDialog(self, system)
+            if box.exec() != QDialog.Accepted:
                 return
+            style = box.style()
         env = dict(os.environ, CLAUDE_TIMELINE="1")
         python = system.python()
         if PORTABLE_PYTHON in python.parents:
             env["PYTHONNOUSERSITE"] = "1"          # only the Timeline's own packages, not this PC's
         if format_drive:
             env["CLAUDE_TIMELINE_FORMAT"] = "1"
+            if style:
+                env["CLAUDE_TIMELINE_PERSONA_STYLE"] = style
         try:
             self.process = subprocess.Popen([str(python), str(system.path / "main.py")],
                                             cwd=str(system.path), env=env)
@@ -695,6 +694,98 @@ class CodesDialog(QDialog):
 def _codes_text(codes):
     fc, yc = (codes or {}).get("furcode", ""), (codes or {}).get("yiffcode", "")
     return f"{fc or '(no Furry Code)'}\n{yc or '(no YIFF Code)'}"
+
+
+class FormatDialog(QDialog):
+    """Load and Format: are you sure - and, for a computer with styles, which Contact Persona Style to install."""
+
+    def __init__(self, parent, system):
+        super().__init__(parent)
+        self.setWindowTitle("Load and Format")
+        self.setStyleSheet(DIALOG_CSS)
+        self.setMinimumWidth(560)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(24, 20, 24, 20)
+        title = QLabel(f"Start {system.key} in System Recovery?")
+        title.setObjectName("title")
+        lay.addWidget(title)
+        note = QLabel("Reinstalling Windows erases this computer's own files: its mail, the residents' memories of "
+                      "you there, and its settings (they're moved to Recovery Backups, not deleted).\n\nYour "
+                      "Timeline identity and game saves are kept.")
+        note.setWordWrap(True)
+        lay.addWidget(note)
+        self.combo = None
+        styles = persona_styles(system)
+        if styles:
+            lay.addSpacing(10)
+            head = QLabel("CONTACT PERSONA STYLE")
+            head.setObjectName("title")
+            lay.addWidget(head)
+            self.combo = QComboBox()
+            current = installed_style(system)
+            for s_ in styles:
+                label = s_["name"] + ("   (installed now)" if s_["id"] == current else "")
+                self.combo.addItem(label, s_["id"])
+                if s_["id"] == current:
+                    self.combo.setCurrentIndex(self.combo.count() - 1)
+            lay.addWidget(self.combo)
+            self.about = QLabel()
+            self.about.setObjectName("dim")
+            self.about.setWordWrap(True)
+            lay.addWidget(self.about)
+            self.styles = {s_["id"]: s_ for s_ in styles}
+            self.combo.currentIndexChanged.connect(self._describe)
+            self._describe()
+        end = QHBoxLayout()
+        end.addStretch(1)
+        cancel = QPushButton("CANCEL")
+        cancel.clicked.connect(self.reject)
+        go = QPushButton("FORMAT")
+        go.clicked.connect(self.accept)
+        end.addWidget(cancel)
+        end.addWidget(go)
+        lay.addSpacing(8)
+        lay.addLayout(end)
+
+    def _describe(self):
+        s_ = self.styles.get(self.combo.currentData(), {})
+        text = s_.get("description", "")
+        if s_.get("created"):
+            text += f"  (made {s_['created']})"
+        text += ("\n\nHow the residents are made and prompted stays this way until the next format. Choosing a "
+                 "different style than the one installed now also starts the residents' memories afresh.")
+        self.about.setText(text)
+
+    def style(self):
+        return self.combo.currentData() if self.combo is not None else None
+
+
+def persona_styles(system):
+    """The Contact Persona Styles a computer can be set up with (only ClaudeXP has them so far)."""
+    if system.year != 2001:
+        return []
+    base = TIMELINE / "Persona Styles"
+    out = []
+
+    def key(p):
+        try:
+            return tuple(int(x) for x in p.name[1:].split("."))
+        except ValueError:
+            return (9999,)
+    for d in sorted(base.iterdir(), key=key) if base.is_dir() else []:
+        meta = prof._load(d / "style.json")
+        if meta.get("id"):
+            out.append(meta)
+    if not out:
+        return []
+    out.append({"id": "dev", "name": "Development (latest changes)",
+                "description": "Whatever the residents and the prompting are right now - where new work happens."})
+    return out
+
+
+def installed_style(system):
+    sid = prof._load(system.path / "data" / "persona_style.json").get("style")
+    return sid or "1.0"
 
 
 class ConfigDialog(QDialog):

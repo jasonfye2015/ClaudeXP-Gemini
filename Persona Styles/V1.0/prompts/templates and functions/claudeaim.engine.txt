@@ -1,0 +1,105 @@
+==== World._system_prompt (function)
+def _system_prompt(self, b):
+    user = self.settings["screen_name"]
+    if self.user_away:
+        status = (f'{user} is currently AWAY from their computer. Their away message says: '
+                  f'"{self.user_away_message}". They may not read anything until they get back.')
+    else:
+        status = f"{user} is online and at their computer."
+    tz = b.contact.timezone
+    now = timefmt.now_text(tz)
+    if tz:
+        now += f" where you are (for {user} it's {timefmt.clock_text()})"
+    prompt = SYSTEM_PROMPT.format(name=b.name, user=user, now=now,
+                                  persona=b.contact.persona.strip(), status=status)
+    return prompt + self._pictures_prompt(b) + self._work_note(b) + host.extra_context(b.name)
+
+
+==== World._work_note (function)
+def _work_note(self, b):
+    """For buddies with work days/hours: say outright whether they're at work now.
+    Small models don't reliably work out "it's Sunday, so I'm off" from the date, and
+    this only sticks when it's the last thing in the system prompt."""
+    slow = b.contact.slow_replies
+    if not slow or (slow.days == "all" and not slow.hours):
+        return ""
+    day = timefmt.shifted(timefmt.local_now(b.contact.timezone)).strftime("%A")
+    if self._busy_now(b):
+        return f"\n\nIMPORTANT: It's {day} and you're at work right now, replying in between."
+    return (f"\n\nIMPORTANT: It's {day} and you're off work right now, so you're not at "
+            "work: you're at home or out doing your own thing.")
+
+
+==== World._pictures_prompt (function)
+def _pictures_prompt(self, b):
+    c = b.contact
+    if not c.pictures or c.picture_sharing == "never":
+        return ""
+    user = self.settings["screen_name"]
+    sent = self._sent_pictures(b)
+    lines = []
+    for key, names in c.pictures.sets.items():
+        count = f"{len(names)} pictures" if len(names) > 1 else "1 picture"
+        seen = " (already sent)" if all(n in sent for n in names) else ""
+        about = "; ".join(c.pictures.captions[n] for n in names)
+        lines.append(f"- {key} ({count}){seen}: {about}")
+    if c.picture_sharing == "eager" and not self._shared_recently(b):
+        when = ("You like sharing these, but don't rush: you don't need to show them all, "
+                "and most messages have no pictures. Offer or send a set only when the "
+                "conversation turns to what it shows, or when the chat has gone quiet.")
+    elif c.picture_sharing == "eager":
+        when = (f"You shared pictures just recently, so don't send more unless "
+                f"{user} asks.")
+    else:
+        when = f"Only send a set if {user} asks to see pictures."
+    when += " Never send more than one set in a message."
+    return ("\n\nPicture sets on your computer that you can send (sending a set sends "
+            "every picture in it):\n" + "\n".join(lines) +
+            f"\nTo send a set, write [pic: set name] on its own line in your message. {when} "
+            "Never send a set that isn't on this list, and don't resend sets marked "
+            "(already sent) unless asked.")
+
+
+==== World._conversation (function)
+def _conversation(self, b):
+    user = self.settings["screen_name"]
+    convo = []
+    user_pics = [m for m in b.history.messages if m["kind"] == "user" and m.get("image")]
+    visible = {id(m) for m in user_pics[-VISION_IMAGES:]}
+    for m in b.history.messages:
+        kind = m["kind"]
+        if kind == "user" and m.get("image"):
+            path = paths.DATA / m["image"]
+            if id(m) in visible and path.exists():
+                convo.append({"role": "user", "images": [str(path)],
+                              "content": f"{m['text']}\n[{user} sent you this picture. Look at it and react to what is in it.]".strip()})
+            else:
+                convo.append({"role": "user",
+                              "content": f"{m['text']}\n[{user} sent you a picture earlier, which you already reacted to]".strip()})
+        elif kind == "user":
+            convo.append({"role": "user", "content": m["text"]})
+        elif kind == "contact":
+            content = m["text"]
+            if m.get("image"):
+                content = f"{content}\n[pic: {m['image']}]".strip()
+            convo.append({"role": "assistant", "content": content})
+        elif kind == "auto":
+            convo.append({"role": "user",
+                          "content": f"[Auto-response: {user} is away] {m['text']}"})
+    return convo
+
+
+==== World.build_messages (function)
+def build_messages(self, b, instruction=None):
+    system = self._system_prompt(b)
+    convo = self._conversation(b)
+    if instruction:
+        user = self.settings["screen_name"]
+        convo.append({"role": "user", "content": (
+            f"[Private note, not a message from {user}: {instruction} "
+            f"Write only the instant message you send to {user}.]")})
+    used = estimate_tokens(system) + sum(self._tokens(m) for m in convo)
+    while used > self._budget() and len(convo) > 1:
+        used -= self._tokens(convo.pop(0))  # oldest falls out first
+    return [{"role": "system", "content": system}] + convo
+

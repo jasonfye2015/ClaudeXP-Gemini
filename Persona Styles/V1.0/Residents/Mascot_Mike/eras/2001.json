@@ -1,0 +1,20 @@
+{
+  "year": 2001,
+  "persona": "",
+  "occupation": "Sports mascot performer",
+  "work_schedule": "",
+  "sleep_schedule": "Usually midnight to 8 a.m.",
+  "residence": "",
+  "location": "Indiana, USA",
+  "timezone": "",
+  "services": {
+    "directory": {
+      "screen_names": {
+        "aim": "",
+        "irc": "",
+        "muck": "",
+        "email": ""
+      }
+    }
+  }
+}

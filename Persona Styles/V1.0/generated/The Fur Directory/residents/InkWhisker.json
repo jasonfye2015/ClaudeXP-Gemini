@@ -1,0 +1,57 @@
+{
+  "fur_name": "InkWhisker",
+  "tier": "support",
+  "summary": "",
+  "screen_names": {
+    "aim": "",
+    "irc": "",
+    "muck": "",
+    "email": ""
+  },
+  "personal": {
+    "real_name": "",
+    "location": "",
+    "residence": "",
+    "sex": "",
+    "pronouns": "",
+    "age": "",
+    "dob": "7/20/1977",
+    "height": "",
+    "job": "",
+    "work_hours": "",
+    "sleep_hours": ""
+  },
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "fursona": {
+    "species": "Tabby cat",
+    "colors": "",
+    "eyes": "",
+    "build": "",
+    "markings": "",
+    "accessories": "",
+    "clothing": "",
+    "description": ""
+  },
+  "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "files": [],
+  "webpages": [],
+  "notes": "",
+  "codes": {
+    "furcode": "FFD3adr A+++ C- D H++ M++tls P++ R+ T V- W- RLAT a c+lw e++ f+++ g h++ i++f j- m p- Sno sno",
+    "yiffcode": "YIFF 3.0 N trans P No T-an *cat-bear-wolf* Pr S Ne V-te *-* Pr H-fu Pr WIXXX:10,16,21,27,31,32,36,50,52,57",
+    "yiff_public": false
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "year": 2001,
+  "persona": "",
+  "occupation": "Night-shift nurse (hence the sleeping)",
+  "work_schedule": "",
+  "sleep_schedule": "Days: 9 a.m. to 5 p.m.",
+  "residence": "",
+  "location": "Ohio, USA",
+  "timezone": "",
+  "services": {
+    "muck": {
+      "name": "SleepyStripes",
+      "species": "skunk",
+      "desc": "A skunk curled up in a pile of pillows, fast asleep, one paw still resting on a keyboard. A sign taped to the pillow pile reads 'AFK - brb'. It has said that for a very long time.",
+      "persona": "",
+      "haunts": [
+        "cafe"
+      ],
+      "hours": [
+        "00:00",
+        "24:00"
+      ],
+      "start_chance": 1.0,
+      "idle_only": true,
+      "moves": false,
+      "doing": "zzz"
+    },
+    "directory": {
+      "screen_names": {
+        "aim": "",
+        "irc": "",
+        "muck": "",
+        "email": ""
+      }
+    }
+  }
+}

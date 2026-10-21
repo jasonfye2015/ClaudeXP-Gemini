@@ -64,6 +64,12 @@ def main():
     style.apply(qapp)
     spellcheck.install(qapp)
     sound.preload()
+    try:
+        from claudexp import persona_style
+        persona_style.apply()          # a frozen Contact Persona Style prompts the way it always did
+    except Exception as exc:
+        if sys.stderr is not None:
+            sys.stderr.write(f"Persona style failed: {exc}\n")
     app = ClaudeXP()
     from claudexp import timeline
     app.start(recovery=timeline.format_requested())      # the Claude Timeline launcher's 'Load and Format'

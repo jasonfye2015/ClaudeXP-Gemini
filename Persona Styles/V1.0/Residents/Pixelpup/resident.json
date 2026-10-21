@@ -1,0 +1,69 @@
+{
+  "name": "Pixelpup",
+  "fur_name": "Pixelpup",
+  "tier": "background",
+  "born": "1978-10-16",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "Alex Turner",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "Corgi",
+    "colors": "red and white",
+    "eyes": "brown",
+    "markings": "pixel-art bandana",
+    "accessories": "",
+    "description": "A corgi who draws himself in 16-bit sprites."
+  },
+  "summary": "Pixelpup (Alex Turner) makes pixel art and hangs out in #gaming.",
+  "personality": "Cheerful and nerdy.",
+  "mannerisms": "• Talks about sprites and SNES games",
+  "interests": "Pixel art, retro games and emulators.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  },
+  "codes": {
+    "furcode": "FCG3adr A+ C-- D- H+ M+ts P++ R- T- V W RLU a c+w e+ f- g+++ h+++ i++ j+ m p- Smg smg",
+    "yiffcode": "YIFF 3.0 M kinsey-5 P Cu T-an *corgi* Pr S-fu Ne V-te *corgi-rabbit-cat* Cu H-ro Pr WIXXX:2,10,12,16,21,36,39,40,44,50,53"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "name": "Huskydoo",
+  "fur_name": "Huskydoo",
+  "tier": "background",
+  "born": "1962-05-16",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "Tom Bradley",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "Husky",
+    "colors": "red and white",
+    "eyes": "blue",
+    "markings": "a red husky mask",
+    "accessories": "",
+    "description": "A goofy red husky who loves a good fursuit photo shoot."
+  },
+  "summary": "Huskydoo (Tom Bradley) idles in #fursuiters.",
+  "personality": "Goofy and friendly.",
+  "mannerisms": "• Scooby-Doo jokes",
+  "interests": "Fursuit photography and cartoons.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  },
+  "codes": {
+    "furcode": "FCG3acr A C D++ H++ M+s P- R T++ V W- RLE a+ c++w e++ f-- g+ h+++ i++ j m p^^ Smb smb",
+    "yiffcode": "YIFF 3.0 M bi P No T Rp S Pr V-te *husky-rabbit-lion-* Ne H-fu-ro Cu WIXXX:16,31,45,50,52"
+  }
+}

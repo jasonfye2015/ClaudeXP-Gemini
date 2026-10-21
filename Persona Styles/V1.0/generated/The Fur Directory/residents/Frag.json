@@ -1,0 +1,57 @@
+{
+  "fur_name": "Frag",
+  "tier": "background",
+  "summary": "Frag (Chris Doyle) lives in #gaming and on Counter-Strike servers.",
+  "screen_names": {
+    "aim": "",
+    "irc": "",
+    "muck": "",
+    "email": ""
+  },
+  "personal": {
+    "real_name": "Chris Doyle",
+    "location": "Texas, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
+    "age": "",
+    "dob": "7/28/1975",
+    "height": "",
+    "job": "Computer lab assistant",
+    "work_hours": "",
+    "sleep_hours": "Usually 3 a.m. to 11 a.m."
+  },
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "fursona": {
+    "species": "Wolf",
+    "colors": "dark grey",
+    "eyes": "red",
+    "build": "",
+    "markings": "a headset",
+    "accessories": "",
+    "clothing": "",
+    "description": "A competitive grey wolf, always mid-match: Frag|CS."
+  },
+  "personality": "Competitive trash-talker with a good heart.",
+  "mannerisms": "• Frag|CS\n• 'gg'",
+  "interests": "Counter-Strike, LAN parties and energy drinks.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "files": [],
+  "webpages": [],
+  "notes": "",
+  "codes": {
+    "furcode": "FCW3ar A-- C- D H+ M- P+ R T V- W RLCT a c++w e+ f+ g++ h+++ i+w j m p Smg smg",
+    "yiffcode": "YIFF 3.0 M hom P No T *wolf_dog* Pr S-ct Ne V-te *wolf-dog-skunk* Pr H-fu-ro-lo Po WIXXX:12,21,31,35,39,50",
+    "yiff_public": false
+  }
+}

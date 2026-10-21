@@ -1,0 +1,66 @@
+==== knowledge (function)
+def knowledge(name, called=None):
+    """A paragraph for a resident's prompt: what they know about you (empty for 'Be unique')."""
+    p = chosen()
+    if p is None:
+        return ""
+    you = called or p.handle
+    level, how_met = closeness(name)
+    sona, pers = p.get("fursona", default={}), p.get("personal", default={})
+    sex = str(pers.get("sex", "")).lower()
+    he, his, him = pronouns(p)
+    hes = {"he": "he's", "she": "she's"}.get(he, "they're")
+    if not pers.get("age") and age(p):
+        pers = dict(pers, age=str(age(p)))
+    if he == "they" and pers.get("pronouns"):
+        lines_pron = f"(use {pers['pronouns']} pronouns for {you})"
+    else:
+        lines_pron = ""
+    look = ""
+    if sona.get("species"):
+        look = f"{his} fursona is {_a(sona['species'])}"
+    if sona.get("description"):
+        look += (". " if look else "") + sona["description"].rstrip(".")
+    lines = []
+    if level is None:
+        if not look:
+            return ""
+        return (f"\n\nWhat you can tell about {you} just from seeing {him} around (you don't really know {him} "
+                f"yet): {look}." + (f" {lines_pron}" if lines_pron else ""))
+    lines.append(f"{you} is {CLOSENESS.get(level, 'a friend')} of yours." + (f" {how_met}" if how_met else "")
+                 + (f" {lines_pron}" if lines_pron else ""))
+    if look:
+        lines.append(look[:1].upper() + look[1:] + ".")
+    if level == "acquaintance":
+        return _about(you, lines)
+    basics = []
+    if pers.get("age"):
+        basics.append(f"{hes} {pers['age']}")
+    if sex:
+        basics.append(f"{'male' if sex in ('male', 'm') else 'female' if sex in ('female', 'f') else sex.lower()}")
+    if pers.get("location"):
+        basics.append(f"lives in {pers['location']}")
+    if basics:
+        lines.append("You know " + ", ".join(basics) + ".")
+    for key in ("fursuit", "conventions"):
+        if p.get(key):
+            lines.append(str(p.get(key)).rstrip(".") + ".")
+    if level == "close":
+        private = []
+        for key, label in (("real_name", "real name"), ("job", "job"), ("work_hours", "work hours"),
+                           ("sleep_hours", "usually sleeps"), ("online_hours", "online")):
+            if pers.get(key):
+                private.append(f"{label}: {pers[key]}")
+        if private:
+            lines.append("As a close friend you also know - " + "; ".join(private) + ".")
+        if p.get("personality"):
+            lines.append(f"What {hes} like: {p.get('personality')}")
+        fav = p.get("favorites", default={})
+        likes = [f"{k}: {', '.join(v) if isinstance(v, list) else v}" for k, v in fav.items() if v]
+        if likes:
+            lines.append(f"{his.title()} favourites - " + "; ".join(likes) + ".")
+        rel = p.get("relationship", default={})
+        if rel.get("status"):
+            lines.append(f"Relationship status: {rel['status']}.")
+    return _about(you, lines)
+

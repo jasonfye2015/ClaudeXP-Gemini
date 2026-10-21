@@ -1,0 +1,45 @@
+{
+  "year": 2001,
+  "persona": "",
+  "occupation": "",
+  "work_schedule": "",
+  "sleep_schedule": "",
+  "residence": "",
+  "location": "",
+  "timezone": "",
+  "services": {
+    "irc": {
+      "nick": "FurBot",
+      "realname": "FurNet channel bot v2.3 (mIRC script)",
+      "ident": "furbot",
+      "bot": true,
+      "channels": [
+        "#furnet",
+        "#fursuiters",
+        "#furry-artists",
+        "#gaming",
+        "#help"
+      ],
+      "ops": [
+        "#furnet",
+        "#fursuiters",
+        "#furry-artists",
+        "#gaming",
+        "#help"
+      ],
+      "hours": [
+        "00:00",
+        "24:00"
+      ],
+      "start_chance": 1.0
+    },
+    "directory": {
+      "screen_names": {
+        "aim": "",
+        "irc": "",
+        "muck": "",
+        "email": ""
+      }
+    }
+  }
+}

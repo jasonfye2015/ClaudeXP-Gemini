@@ -1,0 +1,57 @@
+{
+  "fur_name": "Rusty",
+  "tier": "support",
+  "summary": "",
+  "screen_names": {
+    "aim": "",
+    "irc": "",
+    "muck": "",
+    "email": ""
+  },
+  "personal": {
+    "real_name": "",
+    "location": "",
+    "residence": "",
+    "sex": "",
+    "pronouns": "",
+    "age": "",
+    "dob": "8/11/1966",
+    "height": "",
+    "job": "",
+    "work_hours": "",
+    "sleep_hours": ""
+  },
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "fursona": {
+    "species": "Red panda",
+    "colors": "",
+    "eyes": "",
+    "build": "",
+    "markings": "",
+    "accessories": "",
+    "clothing": "",
+    "description": ""
+  },
+  "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "files": [],
+  "webpages": [],
+  "notes": "",
+  "codes": {
+    "furcode": "F[Red panda]2ars A-- C D H+ M+s P+ R T++ V- W RLR a+ c++w e f g h+++ i+w j m p- Snb snb",
+    "yiffcode": "YIFF 3.0 N bi P Cu T-ma *panda-wolf-rabbit* Cu S Ne V-te *panda-* Pr H Pr WIXXX:10,14,16,32,35,39,50,52",
+    "yiff_public": false
+  }
+}

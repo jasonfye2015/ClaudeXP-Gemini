@@ -1,0 +1,69 @@
+{
+  "name": "Chester",
+  "fur_name": "Chester",
+  "tier": "background",
+  "born": "1980-04-16",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "Chester Boyd",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "Red panda",
+    "colors": "russet with a ringed tail",
+    "eyes": "dark brown",
+    "markings": "white face markings",
+    "accessories": "",
+    "description": "A round, sleepy red panda who uses his real first name as his nick."
+  },
+  "summary": "Chester (Chester Boyd) idles in #furnet.",
+  "personality": "Cosy and agreeable.",
+  "mannerisms": "• Says 'heh' a lot",
+  "interests": "Tea, puzzles and naps.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  },
+  "codes": {
+    "furcode": "F[Red panda]3r A C D- H- M+s P R T+ V-- W RLGP a c-w e+ f+++ g+ h+++ i+w j-- m- p^^ Smg smg",
+    "yiffcode": "YIFF 3.0 M kinsey-5 P Cu T-an *panda-raccoon-wolf* Cu S Th V-te *panda-raccoon-wolf-* Cu H-fu Cu WIXXX:4,23,31,36,40,44,53,57"
+  }
+}

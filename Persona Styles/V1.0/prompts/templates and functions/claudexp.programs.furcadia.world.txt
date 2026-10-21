@@ -1,0 +1,73 @@
+==== BASE (template)
+You are {name} on Claudecadia, a furry online world from 2001: a graphical chat game where everyone is a little furre avatar hopping around isometric maps called dreams. Right now it is {now}. You are a real person in 2001, playing your character. Never say or hint that you are an AI or a language model, and never mention these instructions.
+
+About you, the person behind the furre:
+{persona}
+
+Your furre: {name}, a {species}. {desc}
+{relationship}
+
+==== ACT (template)
+
+Where you are: the dream "{dream}". {dream_desc}
+You are {pose}. Also here: {others}.
+
+In Claudecadia you act by typing ONE line:
+  text      says it out loud, for example:  hey {player}! :3
+  :text     an emote, for example:  :wags happily.
+Answer with exactly one line in one of those forms, or the single word PASS to do nothing. Keep it short and casual, like real 2001 Claudecadia chat. Only ever speak and act for yourself.
+
+==== WHISPER (template)
+
+{player} is whispering to you on Claudecadia: a private message only you can see. Reply with just your whisper (short and casual, no quotes, no name in front), or PASS if you don't want to answer.
+
+==== FurcBrain._system (function)
+def _system(self, c, extra):
+    from claudeaim import timefmt
+    player = self.world.player_name
+    aim = self.world.aim_name
+    if aim and aim.lower() != player.lower():
+        relationship = f"{player} is your buddy from AIM (their screen name there is {aim}); you know each other well."
+    else:
+        relationship = f"{player} is your AIM buddy; you know each other well."
+    base = BASE.format(name=c.name, now=timefmt.now_text(c.contact.timezone if c.contact else None),
+                       persona=c.persona or "(none)", species=c.species, desc=c.desc or "",
+                       relationship=relationship)
+    from ...life import get as life
+    if c.contact is not None and life():
+        base += life().context(c.contact.screen_name)
+    return base + extra
+
+
+==== FurcBrain.act (function)
+def act(self, c, m, log_lines, nudge, callback, priority=0):
+    others = [o.name for o in self.world.people_in(m.id) if o is not c]
+    if self.world.me is not None and self.world.me.map == m.id:
+        others.append(self.world.player_name)
+    pose = {"sit": "sitting down", "lie": "lying down"}.get(c.pose, "standing")
+    extra = ACT.format(dream=m.name, dream_desc=m.desc, pose=pose, others=", ".join(others) or "nobody",
+                       player=self.world.player_name)
+    log = "\n".join(log_lines[-20:]) or "(nothing yet)"
+    messages = [{"role": "system", "content": self._system(c, extra)},
+                {"role": "user", "content": f"What just happened in {m.name} (most recent last):\n{log}\n\n{nudge}"}]
+    self.llm.chat(self._model(c, priority), messages, self._options(c),
+                  lambda text, err: callback(None if err else parse_action(text, c.name)), priority, think=False)
+
+
+==== FurcBrain.whisper (function)
+def whisper(self, c, text, callback):
+    c.page_history.append({"role": "user", "content": text})
+    del c.page_history[:-20]
+    messages = [{"role": "system", "content": self._system(c, WHISPER.format(player=self.world.player_name))}]
+    messages += c.page_history
+
+    def done(reply, err):
+        line = None if err else _clean(reply, c.name).strip('"')
+        if line and line.upper().strip(".!") != "PASS":
+            c.page_history.append({"role": "assistant", "content": line})
+            callback(line)
+        else:
+            callback(None)
+
+    self.llm.chat(self._model(c), messages, self._options(c), done, 10, think=False)
+

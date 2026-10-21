@@ -1,0 +1,57 @@
+{
+  "fur_name": "Grimsby",
+  "tier": "support",
+  "summary": "",
+  "screen_names": {
+    "aim": "",
+    "irc": "",
+    "muck": "",
+    "email": ""
+  },
+  "personal": {
+    "real_name": "",
+    "location": "",
+    "residence": "",
+    "sex": "",
+    "pronouns": "",
+    "age": "",
+    "dob": "3/4/1956",
+    "height": "",
+    "job": "",
+    "work_hours": "",
+    "sleep_hours": ""
+  },
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "fursona": {
+    "species": "Dragon",
+    "colors": "",
+    "eyes": "",
+    "build": "",
+    "markings": "",
+    "accessories": "",
+    "clothing": "",
+    "description": "An old green dragon, scales dulled to the color of moss, curled up so that he takes up far more of the room than strictly necessary. A pair of half-moon reading glasses perch on his snout, and a worn paperback is balanced on one claw. Wisps of smoke curl from his nostrils whenever he sighs, which is often."
+  },
+  "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "files": [],
+  "webpages": [],
+  "notes": "",
+  "codes": {
+    "furcode": "FDD3r A- C+ D- H+ M++s P++ R+ T+++ V W RLR a++ cw e f+ g- h+++ i++w j++ m- p Snb snb",
+    "yiffcode": "YIFF 3.0 N bi P Th T *dragon* Cu S Ne V-te *dragon_bear* Cu H-fu No WIXXX:9,12,15,16,31,34,36,40,43,44",
+    "yiff_public": false
+  }
+}
