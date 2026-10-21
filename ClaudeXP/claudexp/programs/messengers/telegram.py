@@ -140,6 +140,28 @@ def emoji_picture(emoji, size):
     return pm
 
 
+def tray_picture(count, size=16):
+    """Telegram's logo for the notification area, with a red badge and the number of unread messages."""
+    pm = QPixmap(logo(size))
+    if count:
+        p = QPainter(pm)
+        p.setRenderHint(QPainter.Antialiasing)
+        text = str(count) if count < 100 else "99+"
+        w = max(size * 0.62, size * (0.36 + 0.2 * len(text)))
+        badge = QRectF(size - w, size * 0.42, w, size * 0.58)
+        p.setPen(QPen(QColor("white"), 1))
+        p.setBrush(QColor("#E53935"))
+        p.drawRoundedRect(badge, badge.height() / 2, badge.height() / 2)
+        p.setPen(QColor("white"))
+        f = QFont("Tahoma")
+        f.setPixelSize(max(6, int(size * 0.46)))
+        f.setBold(True)
+        p.setFont(f)
+        p.drawText(badge, Qt.AlignCenter, text)
+        p.end()
+    return pm
+
+
 _avatar_cache = {}
 
 
@@ -628,6 +650,7 @@ class Telegram(QWidget):
         self.colours = DARK if self.settings.get("night") else LIGHT
         self.current = None
         self.unread = {}
+        self.tray = None
         self.pages = QStackedWidget()
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -813,6 +836,7 @@ class Telegram(QWidget):
         self.pages.setCurrentIndex(1)
         if not self.network.signed_in:
             self.network.sign_in()
+        self._tray_on()
         self._refresh_list()
 
     # ---- the list ------------------------------------------------------------------------------------------
@@ -841,8 +865,10 @@ class Telegram(QWidget):
         buddies = [b for b in self.network.buddies.values() if not wanted or wanted in b.name.lower()]
 
         def order(b):
+            """Who'll answer first: online, then away, then offline; most recent chats first within each."""
+            here = {ONLINE: 0, BUSY: 0, AWAY: 1}.get(b.presence, 2)
             e = self.last_entry(b)
-            return (0, -_when(e).timestamp()) if e is not None else (1, b.name.lower())
+            return (here, 0, -_when(e).timestamp(), "") if e is not None else (here, 1, 0, b.name.lower())
         buddies.sort(key=order)
         self.chats.blockSignals(True)
         self.chats.clear()
@@ -868,6 +894,7 @@ class Telegram(QWidget):
         self.current = bid
         self.unread.pop(bid, None)
         b.unread = False
+        self._update_tray()
         self._show_empty(False)
         self.chat_name.setText(b.name)
         self._update_status(b)
@@ -918,6 +945,7 @@ class Telegram(QWidget):
             looking = bid == self.current and self.frame is not None and self.desktop.active is self.frame
             if not looking:
                 self.unread[bid] = self.unread.get(bid, 0) + 1
+                self._update_tray()
                 if bid not in self.settings.get("muted", []):
                     if sound.play_file(NOTIFY_SOUND) is None and not sound.is_muted():
                         sound.play("notify")                  # (the sound file is missing: Windows' own)
@@ -1013,7 +1041,46 @@ class Telegram(QWidget):
                      "stickers. Your stickers come from E:\\Sticker Packs; give them meanings in the Sticker Manager.",
                      "info")
 
+    # ---- the notification area ---------------------------------------------------------------------------------
+    def _tray_on(self):
+        if self.tray is not None:
+            return
+        try:
+            from ...tray import TrayIcon
+            self.tray = TrayIcon(self.desktop, QIcon(tray_picture(0)), self.desktop)
+        except Exception:
+            self.tray = None                               # (no notification area to put it in)
+            return
+        menu = QMenu()
+        menu.addAction("Open Telegram", self._bring_forward)
+        self.tray.setContextMenu(menu)
+        self.tray.activated.connect(lambda *_a: self._bring_forward())
+        self._update_tray()
+        self.tray.show()
+
+    def _update_tray(self):
+        if self.tray is None:
+            return
+        count = sum(self.unread.values())
+        self.tray.setIcon(QIcon(tray_picture(count)))
+        self.tray.setToolTip(f"Telegram - {count} unread message{'s' if count != 1 else ''}" if count else "Telegram")
+
+    def _bring_forward(self):
+        if self.frame is not None and isValid(self.frame):
+            self.desktop.open_window(self.frame)
+            waiting = next(iter(self.unread), None)           # straight to a chat with something new
+            if waiting is not None and waiting != self.current:
+                self.open_chat(waiting)
+                self._refresh_list()
+
+    def _tray_off(self):
+        if self.tray is not None:
+            self.tray.hide()
+            self.tray.deleteLater()
+            self.tray = None
+
     def closeEvent(self, event):
+        self._tray_off()
         for movie in self.view.movies:
             movie.stop()
         self.network.sign_out()
@@ -1042,4 +1109,5 @@ def launch(desktop):
 def shutdown():
     win = _holder.get("win")
     if win is not None and isValid(win):
+        win.content._tray_off()
         win.content.network.sign_out()
