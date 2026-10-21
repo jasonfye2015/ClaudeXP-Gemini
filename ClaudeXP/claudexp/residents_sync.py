@@ -182,6 +182,15 @@ def _regulars(path, key, entries):
     return _write_json(path, data)
 
 
+def aim_contact(r):
+    """A resident's AIM contact file (their persona with the 'About you' block), or None if they aren't on AIM."""
+    aim = r.service("aim")
+    if not aim:
+        return None
+    return dict(aim, persona=(aim.get("persona") or r.persona) + about_you(r, buddy=True),
+                profile=_profile_with_codes(aim.get("profile", ""), r))
+
+
 def sync():
     """Make ClaudeXP's resident files from Residents/. Returns how many files changed (0 outside a Timeline)."""
     if not timeline.active():
@@ -199,10 +208,8 @@ def sync():
         if r is None:
             continue
         changed += _write_json(RECORDS / f"{name}.json", _record(r))
-        aim = r.service("aim")
+        aim = aim_contact(r)
         if aim:
-            aim = dict(aim, persona=(aim.get("persona") or r.persona) + about_you(r, buddy=True),
-                       profile=_profile_with_codes(aim.get("profile", ""), r))
             changed += _write_json(AIM / f"{name}.json", aim)
             for folder in r.media[:1]:                  # this era's photos, captions and buddy icon
                 for f in folder.iterdir() if folder.is_dir() else []:

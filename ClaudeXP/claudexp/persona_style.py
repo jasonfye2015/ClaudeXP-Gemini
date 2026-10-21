@@ -322,11 +322,12 @@ def restore_generated():
     return changed
 
 
-def apply():
+def apply(sid=None):
     """Load a frozen style's prompting back over the live code. Returns [names replaced]."""
-    if not frozen():
+    sid = sid or installed()
+    if sid == DEV:
         return []
-    prompting = _load(folder(installed()) / "prompting.json")
+    prompting = _load(folder(sid) / "prompting.json")
     if not prompting:
         return []
     _ready()
@@ -356,7 +357,7 @@ def apply():
                 if same:
                     continue                          # (the live code still matches the style)
                 ns = {}
-                exec(compile(v["value"], f"<{installed()} {modname}.{n}>", "exec"), mod.__dict__, ns)
+                exec(compile(v["value"], f"<{sid} {modname}.{n}>", "exec"), mod.__dict__, ns)
                 new = ns[parts[-1]]
                 inner = new.__func__ if isinstance(new, (staticmethod, classmethod)) else new
                 inner.__persona_source__ = v["value"]
