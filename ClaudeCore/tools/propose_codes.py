@@ -7,7 +7,7 @@
 The codes come from what's written about them (an artist draws, a fursuiter suits, a con-goer goes to cons, a stated
 partner or orientation is kept) and, where nothing is said, seeded chances: most male furs gay or male-leaning, most
 female furs straight, everyone else varied, and nearly everyone up for roleplay. Every resident is an adult. Nobody is
-given zoophilia, ageplay, infantilism, incest or snuff. Bots get no codes. The same name always gets the same codes,
+given ageplay, infantilism, incest or snuff. Bots get no codes. The same name always gets the same codes,
 so running this again gives the same proposal (edit codes_proposal.json by hand before baking if you like)."""
 import argparse
 import json

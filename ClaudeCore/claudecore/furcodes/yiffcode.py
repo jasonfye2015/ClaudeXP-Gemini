@@ -4,7 +4,7 @@
   gender       M F H N G O
   orientation  het (left out when het) kinsey-1 kinsey-2 bi kinsey-4 kinsey-5 hom trans pan ace demi
   category     <letter>[-mod-mod...] [orientation exception] [*species*] <qualifier>
-               P plush, Z real animals, T toons/anthros, S fursuits, V virtual (online), H human (real life)
+               P plush, T toons/anthros, S fursuits, V virtual (online), H human (real life)
   species      *wolf_fox* (equal), *fox-wolf* (in order), *dog-* / *-* (then everything else)
   WIXXX        WIXXX:2,10,31 - numbered interests (58 of them), *custom* ones too
 Version 2.5 codes read the same way (their WIXXX two-letter list is kept as written).
@@ -19,19 +19,17 @@ ORIENTATIONS = {"het": "Heterosexual", "kinsey-1": "Mostly heterosexual (Kinsey 
                 "kinsey-4": "Homosexual, more than incidentally heterosexual (Kinsey 4)",
                 "kinsey-5": "Mostly homosexual (Kinsey 5)", "hom": "Homosexual", "trans": "Into trans partners",
                 "pan": "Pansexual", "ace": "Asexual", "demi": "Demisexual"}
-CATEGORIES = {"P": "Plushophilia (plush animals)", "Z": "Zoophilia (real animals)",
-              "T": "Toonophilia (toons and anthros)", "S": "Fursuitophilia (fursuits)",
+CATEGORIES = {"P": "Plushophilia (plush animals)", "T": "Toonophilia (toons and anthros)", "S": "Fursuitophilia (fursuits)",
               "V": "Virtual sex (online / TinySex)", "H": "Human (real-life sex)"}
 ORDER = list(CATEGORIES)
 QUALIFIERS = {"Pr": "Practicing", "Th": "Thinking about it", "Cu": "Curious", "Tr": "Tried it, not for me",
               "Ne": "Never tried, no intention", "Ce": "Celibate for personal reasons", "No": "No comment",
               "Ns": "Not sure"}
-SPECIAL_QUALIFIERS = {"P": {"Co": "Collector only", "En": "Enthusiast"}, "Z": {"Rp": "Roleplay only",
-                      "Fa": "Fantasy only"}, "T": {"Rp": "Roleplay only", "Ar": "Art only"},
+SPECIAL_QUALIFIERS = {"P": {"Co": "Collector only", "En": "Enthusiast"}, "T": {"Rp": "Roleplay only",
+                      "Ar": "Art only"},
                       "S": {"Ma": "Maker", "Pe": "Performer"}, "V": {"Ca": "Casual", "Lo": "Long-term only"},
                       "H": {"Mo": "Monogamous only", "Po": "Polyamorous"}}
 MODIFIERS = {"P": {"ma": "macro", "mi": "micro", "ve": "vintage / antique", "po": "Pokemon", "di": "Disney"},
-             "Z": {"ex": "exotic only", "do": "domestic only", "fa": "fantasy only"},
              "T": {"ma": "macro", "mi": "micro", "fe": "feral", "an": "anthro", "di": "Disney", "po": "Pokemon"},
              "S": {"fu": "full suits only", "pa": "partials only", "ke": "kemono style", "re": "realistic style",
                    "ct": "cartoon style"},
@@ -52,7 +50,6 @@ WIXXX = {1: "Ageplaying", 2: "Bondable", 3: "Clued-in", 4: "Dominant", 5: "Humil
          56: "Degradation", 57: "Petplay", 58: "Hypnosis"}
 # never part of anyone's play here, whatever a code says (and never given to a resident)
 OFF_LIMITS_FLAGS = {1, 19, 25, 46}
-OFF_LIMITS_CATEGORIES = {"Z"}
 
 
 def species_words(spec):
@@ -104,7 +101,8 @@ def parts(code):
         m = re.match(r"^([PZTSVH])((?:-[a-z]{2})*)$", t)
         if m and (cur is None or cur.get("q")):
             cur = {"mods": [x for x in m.group(2).split("-") if x], "oe": "", "species": "", "q": ""}
-            out["categories"][m.group(1)] = cur
+            if m.group(1) != "Z":                     # (not a category here: an old code's Z section is dropped)
+                out["categories"][m.group(1)] = cur
             continue
         if cur is not None and not cur["q"]:
             if t in EXCEPTIONS and not cur["species"]:
