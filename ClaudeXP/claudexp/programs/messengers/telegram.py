@@ -27,6 +27,7 @@ from ...paths import DATA
 from .core import AWAY, BUSY, OFFLINE, ONLINE, Network
 
 SETTINGS = DATA / "telegram.json"
+NOTIFY_SOUND = "telegram_notification.mp3"            # assets/sounds: Telegram's own incoming-message sound
 LOGO = "Telegram Details/Telegram Logo.png"            # in Local Storage, the user's own copy of the logo
 EMOJI_FONT = "Segoe UI Emoji"
 EMOJIS = ("😂 😘 ❤️ 😍 😊 😁 👍 ☺️ 😔 😄 😭 💋 😒 😳 😜 🙈 😉 😃 😢 😝 😱 😡 😏 😞 😅 😚 🙊 😌 😀 😋 😆 👌 😐 😕 "
@@ -122,6 +123,21 @@ def telegram_icon():
     for size in (16, 32, 48):
         icon.addPixmap(logo(size))
     return icon
+
+
+def emoji_picture(emoji, size):
+    """An emoji drawn in colour (Segoe UI Emoji), as a picture."""
+    pm = QPixmap(size, size)
+    pm.fill(Qt.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.Antialiasing)
+    p.setRenderHint(QPainter.TextAntialiasing)
+    f = QFont(EMOJI_FONT)
+    f.setPixelSize(int(size * 0.82))
+    p.setFont(f)
+    p.drawText(QRectF(0, 0, size, size), Qt.AlignCenter, emoji)
+    p.end()
+    return pm
 
 
 _avatar_cache = {}
@@ -458,13 +474,16 @@ class EmojiStickers(QWidget):
         lay.addWidget(self.pages, 1)
         self.emoji = QListWidget()
         self.emoji.setViewMode(QListView.IconMode)
-        self.emoji.setGridSize(QSize(38, 38))
+        self.emoji.setIconSize(QSize(28, 28))
+        self.emoji.setGridSize(QSize(40, 40))
         self.emoji.setResizeMode(QListView.Adjust)
         self.emoji.setMovement(QListView.Static)
-        self.emoji.setFont(QFont(EMOJI_FONT, 18))
-        for e in EMOJIS:
-            QListWidgetItem(e, self.emoji)
-        self.emoji.itemClicked.connect(lambda item: app.insert_emoji(item.text()))
+        for e in EMOJIS:                       # drawn as pictures: as item text, icon view squeezes them to '...'
+            item = QListWidgetItem(QIcon(emoji_picture(e, 28)), "")
+            item.setData(Qt.UserRole, e)
+            item.setToolTip(e)
+            self.emoji.addItem(item)
+        self.emoji.itemClicked.connect(lambda item: app.insert_emoji(item.data(Qt.UserRole)))
         self.pages.addWidget(self.emoji)
         stickers = QWidget()
         sl = QVBoxLayout(stickers)
@@ -900,7 +919,8 @@ class Telegram(QWidget):
             if not looking:
                 self.unread[bid] = self.unread.get(bid, 0) + 1
                 if bid not in self.settings.get("muted", []):
-                    sound.play("notify")
+                    if sound.play_file(NOTIFY_SOUND) is None and not sound.is_muted():
+                        sound.play("notify")                  # (the sound file is missing: Windows' own)
                     if self.frame is not None:
                         self.frame.flash()
         self._refresh_list()
