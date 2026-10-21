@@ -1,0 +1,47 @@
+{
+  "name": "Rusty",
+  "fur_name": "Rusty",
+  "tier": "support",
+  "born": "1966-08-11",
+  "born_source": "persona",
+  "identity": {
+    "real_name": "",
+    "gender": "",
+    "pronouns": "",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "Red panda",
+    "colors": "",
+    "eyes": "",
+    "markings": "",
+    "accessories": "",
+    "description": ""
+  },
+  "summary": "",
+  "personality": "",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [],
+  "codes": {
+    "furcode": "F[Red panda]2ars A-- C D H+ M+s P+ R T++ V- W RLR a+ c++w e f g h+++ i+w j m p- Snb snb",
+    "yiffcode": "YIFF 3.0 N bi P Cu T-ma *panda-wolf-rabbit* Cu S Ne V-te *panda-* Pr H Pr WIXXX:10,14,16,32,35,39,50,52"
+  }
+}

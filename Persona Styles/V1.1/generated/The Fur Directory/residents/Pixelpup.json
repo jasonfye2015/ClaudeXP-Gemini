@@ -1,0 +1,57 @@
+{
+  "fur_name": "Pixelpup",
+  "tier": "background",
+  "summary": "Pixelpup (Alex Turner) makes pixel art and hangs out in #gaming.",
+  "screen_names": {
+    "aim": "",
+    "irc": "",
+    "muck": "",
+    "email": ""
+  },
+  "personal": {
+    "real_name": "Alex Turner",
+    "location": "Washington, USA",
+    "residence": "",
+    "sex": "Man",
+    "pronouns": "he/him",
+    "age": "",
+    "dob": "10/16/1978",
+    "height": "",
+    "job": "Junior web developer",
+    "work_hours": "",
+    "sleep_hours": "Usually 1 a.m. to 9 a.m."
+  },
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "fursona": {
+    "species": "Corgi",
+    "colors": "red and white",
+    "eyes": "brown",
+    "build": "",
+    "markings": "pixel-art bandana",
+    "accessories": "",
+    "clothing": "",
+    "description": "A corgi who draws himself in 16-bit sprites."
+  },
+  "personality": "Cheerful and nerdy.",
+  "mannerisms": "• Talks about sprites and SNES games",
+  "interests": "Pixel art, retro games and emulators.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "files": [],
+  "webpages": [],
+  "notes": "",
+  "codes": {
+    "furcode": "FCG3adr A+ C-- D- H+ M+ts P++ R- T- V W RLU a c+w e+ f- g+++ h+++ i++ j+ m p- Smg smg",
+    "yiffcode": "YIFF 3.0 M kinsey-5 P Cu T-an *corgi* Pr S-fu Ne V-te *corgi-rabbit-cat* Cu H-ro Pr WIXXX:2,10,12,16,21,36,39,40,44,50,53",
+    "yiff_public": false
+  }
+}

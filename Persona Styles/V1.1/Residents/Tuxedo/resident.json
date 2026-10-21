@@ -1,0 +1,69 @@
+{
+  "name": "Tuxedo",
+  "fur_name": "Tuxedo",
+  "tier": "background",
+  "born": "1968-05-21",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "Owen Pryce",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "Tuxedo cat",
+    "colors": "black with a white chest, chin and paws",
+    "eyes": "yellow",
+    "markings": "a white bib like a dress shirt",
+    "accessories": "",
+    "description": "A dapper black-and-white tuxedo cat who looks permanently dressed for a party he's late to."
+  },
+  "summary": "Tuxedo (Owen Pryce) is a #furnet regular who's 'away' far more often than he's here.",
+  "personality": "Easygoing and polite; turns up, says hi to everyone, then wanders off.",
+  "mannerisms": "• Sets |away and forgets about it for hours",
+  "interests": "Old movies and late-night radio.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  },
+  "codes": {
+    "furcode": "FFD3r A-- C+ D- H++ M++s P R- T+++ V-- W- RLFB a+ c+++w e+++ f+ g+ h+++ i+ j m p^^ Smg smg",
+    "yiffcode": "YIFF 3.0 M kinsey-5 P No T-an *cat-raccoon-dog* Cu S-ct No V-te *-* Pr H-fu-lo No WIXXX:10,11,12,15,32,49,53,57,58"
+  }
+}

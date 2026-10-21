@@ -1,0 +1,20 @@
+{
+  "year": 2001,
+  "persona": "",
+  "occupation": "Pizza delivery driver",
+  "work_schedule": "",
+  "sleep_schedule": "Usually 2 a.m. to 10 a.m.",
+  "residence": "",
+  "location": "Florida, USA",
+  "timezone": "",
+  "services": {
+    "directory": {
+      "screen_names": {
+        "aim": "",
+        "irc": "",
+        "muck": "",
+        "email": ""
+      }
+    }
+  }
+}

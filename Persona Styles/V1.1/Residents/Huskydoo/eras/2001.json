@@ -1,0 +1,20 @@
+{
+  "year": 2001,
+  "persona": "",
+  "occupation": "Photo lab technician",
+  "work_schedule": "",
+  "sleep_schedule": "Usually midnight to 8 a.m.",
+  "residence": "",
+  "location": "Michigan, USA",
+  "timezone": "",
+  "services": {
+    "directory": {
+      "screen_names": {
+        "aim": "",
+        "irc": "",
+        "muck": "",
+        "email": ""
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "1.1",
+  "name": "Contact Persona Style V1.1",
+  "description": "V1.0's residents with typing voices: each resident types like one of the kinds of people found in real chat logs (their own greetings, emoticons and slang), told how at the end of their prompt; replies come as a few quick IMs, with stock openers, tacked-on questions and long answers trimmed. The AIM prompt asks for shorter messages that react rather than interview.",
+  "era": 2001,
+  "created": "2026-10-21 16:47",
+  "resident_files": 517,
+  "generated_files": 319,
+  "features": [
+    "voice"
+  ]
+}

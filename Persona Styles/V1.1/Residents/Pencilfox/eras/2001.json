@@ -1,0 +1,20 @@
+{
+  "year": 2001,
+  "persona": "",
+  "occupation": "Art school student",
+  "work_schedule": "",
+  "sleep_schedule": "Usually 1 a.m. to 9 a.m.",
+  "residence": "",
+  "location": "Maryland, USA",
+  "timezone": "",
+  "services": {
+    "directory": {
+      "screen_names": {
+        "aim": "",
+        "irc": "",
+        "muck": "",
+        "email": ""
+      }
+    }
+  }
+}

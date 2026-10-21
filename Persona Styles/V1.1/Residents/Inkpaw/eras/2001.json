@@ -1,0 +1,20 @@
+{
+  "year": 2001,
+  "persona": "",
+  "occupation": "Tattoo apprentice",
+  "work_schedule": "",
+  "sleep_schedule": "Usually 2 a.m. to 10 a.m.",
+  "residence": "",
+  "location": "Oregon, USA",
+  "timezone": "",
+  "services": {
+    "directory": {
+      "screen_names": {
+        "aim": "",
+        "irc": "",
+        "muck": "",
+        "email": ""
+      }
+    }
+  }
+}

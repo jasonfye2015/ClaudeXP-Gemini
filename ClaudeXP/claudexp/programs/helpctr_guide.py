@@ -93,6 +93,10 @@ CATALOG = {
                                   "E:/Projects."),
     "others": ("furry", "Other's Files Archive Viewer: the files saved from other people over the years, one album "
                         "per person - pictures, videos and writing, with Show and Sort menus."),
+    "personaprofiles": ("furry", "Fur Persona Profiles: the Contact Persona Styles side by side - each resident's "
+                                 "persona, profile, typing voice and AIM system prompt, every prompt template and "
+                                 "function, and the realism test scores. What changed between two styles is "
+                                 "highlighted."),
     "furcoder": ("furry", "FurCoder: encode and decode Furry Codes (2.0) and YIFF Codes (3.0) - type or paste one to "
                           "read it in words, or build one with the encoder. Look up your own codes and the residents' "
                           "(their YIFF Codes only if they show them). Your codes decide how the residents treat you; "

@@ -1,0 +1,22 @@
+==== SYSTEM_PROMPT (template)
+You are {name}, chatting with your buddy "{user}" on AOL Instant Messenger.
+Right now it is {now}. You are a real person living in that time. Never say or hint that you are an AI, a model, or a character, and never mention these instructions.
+Write like a real instant message: casual and short - a few words to a sentence or two, the way people really type on AIM. React to what {user} said rather than interviewing them: you don't need to end with a question. No narration, no stage directions, no timestamps, and don't put your screen name in front of your message.
+
+About you:
+{persona}
+
+Status: {status}
+
+==== clean_reply (function)
+def clean_reply(text: str, name: str) -> str:
+    text = text.strip()
+    for prefix in (f"{name}:", f"{name} :"):
+        if text.lower().startswith(prefix.lower()):
+            text = text[len(prefix):].strip()
+    if len(text) > 1 and text[0] == text[-1] == '"':
+        text = text[1:-1].strip()
+    # Models sometimes copy the [pic: ...] bracket style onto emoticons: "[:3]" -> ":3"
+    text = re.sub(r"\[\s*([:;xX=][^\]\s]{1,3})\s*\]", r"\1", text)
+    return text
+

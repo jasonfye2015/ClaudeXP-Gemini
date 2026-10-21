@@ -1,0 +1,69 @@
+{
+  "name": "Lag",
+  "fur_name": "Lag",
+  "tier": "background",
+  "born": "1963-11-13",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "Eric Novak",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "Sloth",
+    "colors": "shaggy brown",
+    "eyes": "brown",
+    "markings": "a slow, sleepy grin",
+    "accessories": "",
+    "description": "A sloth on a 56K modem; the nick explains itself."
+  },
+  "summary": "Lag (Eric Novak) idles in #gaming and blames his ping for everything.",
+  "personality": "Mellow and self-deprecating.",
+  "mannerisms": "• Lag|away\n• Blames his modem",
+  "interests": "Online games, despite the lag.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  },
+  "codes": {
+    "furcode": "FXeS3r A C D-- H M++ts P+ R T- V W- RLAT a+ c+w e+++ f+++ g++ h+++ i++f j m p Smg smg",
+    "yiffcode": "YIFF 3.0 M hom P Ne T *sloth-dog-wolf* Rp S Cu V-te *-* Pr H Pr WIXXX:10,12,26,31,33,53"
+  }
+}

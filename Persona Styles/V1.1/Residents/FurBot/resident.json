@@ -1,0 +1,55 @@
+{
+  "name": "FurBot",
+  "fur_name": "FurBot",
+  "tier": "background",
+  "born": "1961-04-17",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "",
+    "gender": "",
+    "pronouns": "",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "IRC bot",
+    "colors": "",
+    "eyes": "",
+    "markings": "",
+    "accessories": "",
+    "description": "FurNet's channel bot v2.3, an mIRC script: keeps the channels open, greets newcomers and answers !help and !time."
+  },
+  "summary": "FurBot is FurNet's channel bot, opped in every main channel.",
+  "personality": "A bot.",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "Not a person.",
+  "history": [],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "fursona.description",
+      "fursona.species",
+      "notes",
+      "personality",
+      "summary"
+    ]
+  }
+}

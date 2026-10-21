@@ -71,6 +71,18 @@ def extra_context(name):
     return _host.extra_context(name) if _host else ""
 
 
+def polish(name, text, user=""):
+    """The host may retype a reply in the buddy's own voice and split it into a few IMs: a list of texts."""
+    if _host and hasattr(_host, "polish"):
+        try:
+            out = _host.polish(name, text, user)
+        except Exception:
+            out = None
+        if out:
+            return out
+    return [text]
+
+
 def world_started(world):
     """Tell the host the buddy list is up (it may listen to conversations, or start some)."""
     if _host:

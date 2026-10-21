@@ -421,6 +421,8 @@ PROGRAMS = [
             _shared("stickers.manager", "open_stickers"), _shared("stickers.manager", "shutdown"), group=FURRY),
     Program("furcoder", "FurCoder", "Encode and decode Furry Codes and YIFF Codes", _shared("furcoder", "furcoder_icon"),
             _shared("furcoder", "launch"), group=FURRY),
+    Program("personaprofiles", "Fur Persona Profiles", "The Contact Persona Styles side by side: residents, prompts, tests",
+            _lazy("personaprofiles", "profiles_icon"), _lazy("personaprofiles", "open_profiles"), group=FURRY),
     Program("chatlogs", "Furry Chat Logs", "Years of chat logs by service, account and buddy",
             _shared("chatlogs.viewer", "chat_icon"), _shared("chatlogs.viewer", "open_chatlogs"),
             _shared("chatlogs.viewer", "shutdown"), group=FURRY),

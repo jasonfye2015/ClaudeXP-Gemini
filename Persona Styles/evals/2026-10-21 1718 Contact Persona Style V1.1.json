@@ -1,0 +1,9565 @@
+{
+ "style": "1.1",
+ "style_name": "Contact Persona Style V1.1",
+ "when": "2026-10-21 17:18",
+ "residents": 34,
+ "replies": 306,
+ "ims": 556,
+ "scores": {
+  "overall": 91.7,
+  "style": 90.6,
+  "failures": 99.3,
+  "distinct": 85.9,
+  "repetition": 82.3
+ },
+ "typing": {
+  "got": {
+   "avg_words": 7.248,
+   "lowercase": 0.621,
+   "end_punct": 0.387,
+   "capital_start": 0.225,
+   "emoticon": 0.261,
+   "shorthand": 0.2,
+   "emote": 0.11,
+   "exclaim": 0.115,
+   "question": 0.387
+  },
+  "real_aim": {
+   "avg_words": 6.2,
+   "lowercase": 0.567,
+   "end_punct": 0.216,
+   "capital_start": 0.246,
+   "emoticon": 0.226,
+   "shorthand": 0.141,
+   "emote": 0.193,
+   "exclaim": 0.067,
+   "question": 0.125
+  },
+  "gap": {
+   "avg_words": 0.113,
+   "lowercase": 0.054,
+   "end_punct": 0.171,
+   "capital_start": 0.021,
+   "emoticon": 0.035,
+   "shorthand": 0.059,
+   "emote": 0.083,
+   "exclaim": 0.048,
+   "question": 0.262
+  }
+ },
+ "failure_kinds": {
+  "error": 2
+ },
+ "spread": 3.878,
+ "avg_seconds": 5.98,
+ "replies_detail": [
+  {
+   "resident": "ArcticFox",
+   "scenario": "greeting",
+   "reply": "*tail wags happily* hows it goin'? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 14.27,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "ArcticFox",
+   "scenario": "day",
+   "reply": "*ears perk up* My day's been great, thanks for asking\n*tail wags* I'm so happy the weekend's over and I can talk to you again\n*pounces* how about you? anything interesting happen in your neck of the woods?\n*wags eyebrows*",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.52,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 15,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 13,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "ArcticFox",
+   "scenario": "news",
+   "reply": "*ears perk up* yay! that's awesome kithylin\n*tail wags excitedly* You must feel soooo relieved!!\n*hehe* you deserve a break now - maybe we could hang out online this weekend and unwind??\n*asks hopefully* ^^",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.27,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 1,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 17,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "ArcticFox",
+   "scenario": "tired",
+   "reply": "*yawns and stretches* heyyy, kithylin~! late night again?\n*murrrs and cuddles up*",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.41,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 1,
+     "question": 1
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "ArcticFox",
+   "scenario": "about_them",
+   "reply": "*tail wags* heyyy kithylin! sooo much has happened since i last talked to you\nbeen doing the con thing for the past week, just got back yesterday\nflew to the con, it was my first time flying ever! lol\n*shakes with excitement*",
+   "error": "",
+   "ims": 4,
+   "seconds": 3.95,
+   "features": [
+    {
+     "words": 14,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 13,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "ArcticFox",
+   "scenario": "fursona",
+   "reply": "*ears perk up* i'd love a suit that's *super* detailed and has lots of accessories\nThe fur would be *sooo* fluffy and soft, and the eyes would glow and move around like the real thing\nAnd I want a *huge* fluffy tail that I can wave around and wrap people up in",
+   "error": "",
+   "ims": 3,
+   "seconds": 4.97,
+   "features": [
+    {
+     "words": 15,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 20,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 17,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "ArcticFox",
+   "scenario": "plans",
+   "reply": "*ears perk up* heyyy",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.71,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "ArcticFox",
+   "scenario": "bored",
+   "reply": "*yawns and stretches* heyyy, how's your day goin' so far?\n*tilts head and gives you an inquisitive look* :3",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.36,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "ArcticFox",
+   "scenario": "reach_out",
+   "reply": "heyyy kith! just got back from the gym, wow my legs are jelly :3 <3",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.29,
+   "features": [
+    {
+     "words": 15,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Brass",
+   "scenario": "greeting",
+   "reply": "Ah, hello. How's your day been?",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.45,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Brass",
+   "scenario": "day",
+   "reply": "Hey there! Not bad, just got off work a bit ago. You?\nHow was your day?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.14,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    },
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Brass",
+   "scenario": "news",
+   "reply": "That's great to hear\ni'm glad you finished it and aren't stressed anymore.\nDid you celebrate the completion in some way?\n[pic: Brass_Art]",
+   "error": "",
+   "ims": 4,
+   "seconds": 1.39,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Brass",
+   "scenario": "tired",
+   "reply": "Yeah I hear ya. Rough day at work?\n[pic: Brass_Art]",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.86,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Brass",
+   "scenario": "about_them",
+   "reply": "Just got off work, finally.\ni'm all worn out from a long night on the trams.\nHow about you, Kithylin? Anything interesting happen in your world today? :)\n[pic: Brass_Art]",
+   "error": "",
+   "ims": 4,
+   "seconds": 3.2,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Brass",
+   "scenario": "fursona",
+   "reply": "I'd love a full-body fursuit of my cockatoo fursona, Brass\nwhite feathers with a vibrant yellow crest and those captivating blue-gray eyes\nMaybe some stylized markings on the wings and tail to make it even more stunning",
+   "error": "",
+   "ims": 3,
+   "seconds": 5.08,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 15,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Brass",
+   "scenario": "plans",
+   "reply": "not really, just chilling at home and maybe grabbing a drink with friends on Saturday night.\nyou?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.18,
+   "features": [
+    {
+     "words": 16,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Brass",
+   "scenario": "bored",
+   "reply": "[pic: Brass_Art]\nWhat's up Kithylin?\ni'm just about to head out to work for the night.",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.32,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Brass",
+   "scenario": "reach_out",
+   "reply": "Just got home from work. Tram rides were uneventful thankfully\nHow's your evening been so far? :)",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.87,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cairngorm",
+   "scenario": "greeting",
+   "reply": "yo",
+   "error": "",
+   "ims": 1,
+   "seconds": 4.68,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cairngorm",
+   "scenario": "day",
+   "reply": "not bad, just got off work. you? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.9,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cairngorm",
+   "scenario": "news",
+   "reply": "heh, that's great news! what was the project?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.72,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cairngorm",
+   "scenario": "tired",
+   "reply": "ya same here, was up all night with the nightmares again :(",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.8,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cairngorm",
+   "scenario": "about_them",
+   "reply": "eh, same old same old\nwork's been keeping me busy. you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.12,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cairngorm",
+   "scenario": "fursona",
+   "reply": "ya know, i been thinkin bout that\nwant a good suit\nmaybe something like the art i got\nya ever see that? [pic: Cairngorm_Art]",
+   "error": "",
+   "ims": 4,
+   "seconds": 1.93,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cairngorm",
+   "scenario": "plans",
+   "reply": "dunno, gonna play some games and maybe go hiking if the weather's nice :P how bout you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.2,
+   "features": [
+    {
+     "words": 17,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cairngorm",
+   "scenario": "bored",
+   "reply": "ya? what u in 2 d0in :P",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.76,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cairngorm",
+   "scenario": "reach_out",
+   "reply": "just got off work and logged on, how's your night goin?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.42,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cameo",
+   "scenario": "greeting",
+   "reply": "hey :) how's your night going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 4.54,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cameo",
+   "scenario": "day",
+   "reply": "day's been okay, just got back from the theater.\nyou? :D",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.14,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cameo",
+   "scenario": "news",
+   "reply": "yay! congrats! :) hehe",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.77,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cameo",
+   "scenario": "tired",
+   "reply": ":( wanna talk about it?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.77,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cameo",
+   "scenario": "about_them",
+   "reply": "eh, just got off work. you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.89,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cameo",
+   "scenario": "fursona",
+   "reply": "I'd want something really eye-catching, since I'm a chameleon\nHow about green scales with blue flecks, and a long tail that I could use to balance while walking on two legs.",
+   "error": "",
+   "ims": 2,
+   "seconds": 4.14,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 22,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cameo",
+   "scenario": "plans",
+   "reply": "nah, might see a movie or something. u? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.96,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cameo",
+   "scenario": "bored",
+   "reply": "hehe, i'm bored too.\nwanna play a game or something? :)",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.98,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cameo",
+   "scenario": "reach_out",
+   "reply": "Just got off work and logged on\nHow's your day going? :D",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.63,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cicada",
+   "scenario": "greeting",
+   "reply": ":)",
+   "error": "",
+   "ims": 1,
+   "seconds": 4.5,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cicada",
+   "scenario": "day",
+   "reply": "hm, not bad... just got off work. y'know, same old.\nhow 'bout you? :3",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.39,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cicada",
+   "scenario": "news",
+   "reply": "hm, that's awesome! finally done with it then?\nwhat project was it, if you don't mind me asking...\n:)",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.24,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cicada",
+   "scenario": "tired",
+   "reply": "hm, rough day at work? :/",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.63,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cicada",
+   "scenario": "about_them",
+   "reply": "hm, not much, just working a lot lately\nhow bout you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.04,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cicada",
+   "scenario": "fursona",
+   "reply": "hm, that's a tough one\ni'd love a full fursuit of cicada, with wings that move\nand the body would have a realistic exoskeleton texture",
+   "error": "",
+   "ims": 3,
+   "seconds": 3.19,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cicada",
+   "scenario": "plans",
+   "reply": "hm, not really, just some recording work and maybe some salsa\nyou?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.05,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cicada",
+   "scenario": "bored",
+   "reply": "hm... what kind of stuff are you into?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.63,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Cicada",
+   "scenario": "reach_out",
+   "reply": "i just got home from work",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.22,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Crispin",
+   "scenario": "greeting",
+   "reply": "How's it going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.41,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Crispin",
+   "scenario": "day",
+   "reply": "Hi\nNot bad, just been puttering around the house mostly\nhow about you?",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.1,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Crispin",
+   "scenario": "news",
+   "reply": "That's awesome, man! Glad to hear it",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.05,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Crispin",
+   "scenario": "tired",
+   "reply": "me too, was up late playing that new game\n[pic: Crispin_Art]",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.95,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Crispin",
+   "scenario": "about_them",
+   "reply": "just chilling at home. you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.88,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Crispin",
+   "scenario": "fursona",
+   "reply": "I'd want one with my fursona's fur pattern and coloration, brown with those pale banded quills\nThe muzzle could be a bit longer to really capture the porcupine look",
+   "error": "",
+   "ims": 2,
+   "seconds": 3.75,
+   "features": [
+    {
+     "words": 16,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 13,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Crispin",
+   "scenario": "plans",
+   "reply": "might visit the observatory if the weather's good",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.9,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Crispin",
+   "scenario": "bored",
+   "reply": "What's on your mind? :P",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.73,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Crispin",
+   "scenario": "reach_out",
+   "reply": "Just got online.\nHad a bit of a day - I finally got around to baking some focaccia with rosemary and olives",
+   "error": "",
+   "ims": 2,
+   "seconds": 2.44,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 19,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "CyberianHusky",
+   "scenario": "greeting",
+   "reply": "buddy :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.92,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "CyberianHusky",
+   "scenario": "day",
+   "reply": "Hey ya\nNot too bad, just been chillin' round the house all day.\nya? how 'bout u? :)\n[pic: cyberian_suit]",
+   "error": "",
+   "ims": 4,
+   "seconds": 1.47,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 11,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "CyberianHusky",
+   "scenario": "news",
+   "reply": "that's awesome!! :D  you must feel so relieved",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.33,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "CyberianHusky",
+   "scenario": "tired",
+   "reply": "",
+   "error": "The language model isn't answering (timed out).",
+   "ims": 1,
+   "seconds": 600.07,
+   "features": [
+    {
+     "words": 0,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": [
+    "error"
+   ]
+  },
+  {
+   "resident": "CyberianHusky",
+   "scenario": "about_them",
+   "reply": "not a lot, just hanging out online mostly\nyou?",
+   "error": "",
+   "ims": 2,
+   "seconds": 13.91,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "CyberianHusky",
+   "scenario": "fursona",
+   "reply": "ooh good question\ni've always wanted a cybernetic husky fursuit, ya know?",
+   "error": "",
+   "ims": 2,
+   "seconds": 2.73,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "CyberianHusky",
+   "scenario": "plans",
+   "reply": "not yet, might just chill at home and play some games ya",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.01,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "CyberianHusky",
+   "scenario": "bored",
+   "reply": "u should come visit\nwe could have so much fun :D i miss u",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.04,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "CyberianHusky",
+   "scenario": "reach_out",
+   "reply": "Bud! just signed on, how's your day been?\ni slept in late and played some games this morning :3",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.63,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Dewdrop",
+   "scenario": "greeting",
+   "reply": "*waves* how's it going? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.16,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Dewdrop",
+   "scenario": "day",
+   "reply": "*ribbit* hi\n*stretches* Just got off work, so I'm feeling pretty tired\nHow about you?",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.33,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Dewdrop",
+   "scenario": "news",
+   "reply": ":D awesome!!\ni'm so happy for you~ *pats you on the back* hehe you deserve a nice long break after all that hard work\n*stretches*",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.79,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 22,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Dewdrop",
+   "scenario": "tired",
+   "reply": "*yawns* me too, long day :3 hehe",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.04,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Dewdrop",
+   "scenario": "about_them",
+   "reply": "*yawns*\njust got off work, now relaxing with some tea and my paints *sips tea*",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.32,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 14,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Dewdrop",
+   "scenario": "fursona",
+   "reply": "*thinks*\nI'd love a really detailed one, like the art of my fursona\nPale jade with light gold belly and throat, hazel eyes, and soft plush feet",
+   "error": "",
+   "ims": 3,
+   "seconds": 3.17,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 14,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Dewdrop",
+   "scenario": "plans",
+   "reply": "*looks up from painting a tiny dragon*\nHehe, not really.\njust gonna chill at home and work on some minis i think",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.72,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Dewdrop",
+   "scenario": "bored",
+   "reply": "*thinks* alright, let's see...\n*grabs a deck of cards*\never played a game called 'werewolf'?\nIt's a game of deception and deduction, kind of like poker but with a twist",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.07,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 15,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Dewdrop",
+   "scenario": "reach_out",
+   "reply": "I just got off work and am unwinding with some tea\nhow's your day been? :3",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.68,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Flicker",
+   "scenario": "greeting",
+   "reply": "hey!",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.55,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Flicker",
+   "scenario": "day",
+   "reply": "not bad :) just got off work. u? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.04,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Flicker",
+   "scenario": "news",
+   "reply": "omg that's so awesome!! congrats!!\ndid u really think u wldn't make it at one point or am i imagining that lol ;)",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.54,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 18,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Flicker",
+   "scenario": "tired",
+   "reply": "[pic: Flicker_Art]\nu okay? wanna nap? ;)",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.94,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Flicker",
+   "scenario": "about_them",
+   "reply": "not a lot, just been working and stuff. you? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.95,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Flicker",
+   "scenario": "fursona",
+   "reply": "omg a custom suit of my fursona\ni've always dreamed of having one\nrust red feathers, gold tips, and amber eyes.\ni'd have the wings too, maybe with a 3 ft wingspan",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.4,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Flicker",
+   "scenario": "plans",
+   "reply": "nah, might record some stuff by the river though :)\nu?",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.99,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Flicker",
+   "scenario": "bored",
+   "reply": "omg same here. what do u wanna do?? :O",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.98,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Flicker",
+   "scenario": "reach_out",
+   "reply": "just got off work <3",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.22,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Hush",
+   "scenario": "greeting",
+   "reply": "how's your evening going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.81,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Hush",
+   "scenario": "day",
+   "reply": "It's been okay, just the usual work stuff. How about you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.27,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Hush",
+   "scenario": "news",
+   "reply": "That's great to hear\ni'm glad you finished it and aren't stressed anymore.\nYou must feel so relieved\nDid you end up having to work late last night?",
+   "error": "",
+   "ims": 4,
+   "seconds": 1.79,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Hush",
+   "scenario": "tired",
+   "reply": "[pic: Hush_Art]\nme too... long day?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.05,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Hush",
+   "scenario": "about_them",
+   "reply": "just finished a transcription. you?\n[pic: Hush_Art]",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.95,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Hush",
+   "scenario": "fursona",
+   "reply": "i think i'd get a really realistic snowy owl fursuit made\nBig white fluffy owl head with charcoal speckles, and a nice big wingspan\ni'd want it to feel super snug and warm too, like a cozy winter coat",
+   "error": "",
+   "ims": 3,
+   "seconds": 3.9,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 13,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 15,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Hush",
+   "scenario": "plans",
+   "reply": "might hit up a poetry reading if anything good's on you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.14,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Hush",
+   "scenario": "bored",
+   "reply": "[pic: Hush_Art]\nwhat are u up to?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.09,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Hush",
+   "scenario": "reach_out",
+   "reply": "Hello. I just got off work and saw you were online.",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.7,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Juniper",
+   "scenario": "greeting",
+   "reply": "How's your evening going so far? :3\n[pic: Juniper_Art]",
+   "error": "",
+   "ims": 2,
+   "seconds": 5.17,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Juniper",
+   "scenario": "day",
+   "reply": "Not too bad, just got off work. You?\n:)",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.09,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 1,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Juniper",
+   "scenario": "news",
+   "reply": ":D awesome!! finally done huh?\nlol took you long enough ;) whatcha wanna do to celebrate?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.41,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Juniper",
+   "scenario": "tired",
+   "reply": ":( u ok?\nwant me to make u a coffee?\nI just brewed some",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.22,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Juniper",
+   "scenario": "about_them",
+   "reply": "HI :D Just got off work actually\nthe orchids were being finicky tonight.\nhad to baby them for a few hours before they calmed down.",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.99,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Juniper",
+   "scenario": "fursona",
+   "reply": "omg i've been thinking about that lately! :D",
+   "error": "",
+   "ims": 1,
+   "seconds": 3.65,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Juniper",
+   "scenario": "plans",
+   "reply": "eh, might hit up the comic con saturday tho :) gonna bring my juniper plushie\nyou? :D",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.36,
+   "features": [
+    {
+     "words": 15,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Juniper",
+   "scenario": "bored",
+   "reply": "omg same! want to play a game?\n[pic: Juniper_Art] i can draw us some pics 2",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.26,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    },
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Juniper",
+   "scenario": "reach_out",
+   "reply": "I'm just logging on, how are you doing?\nHad a good day so far?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.38,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 6,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "KittyKat",
+   "scenario": "greeting",
+   "reply": "mew! :3 hey kithylin~ *purrs*",
+   "error": "",
+   "ims": 1,
+   "seconds": 6.93,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "KittyKat",
+   "scenario": "day",
+   "reply": "mew\n^.^ it's been a pretty good day so far, kithylin\nbeen working on my new illustration most of the day.\nhow about you? :3",
+   "error": "",
+   "ims": 4,
+   "seconds": 1.74,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "KittyKat",
+   "scenario": "news",
+   "reply": "mew! so proud of you, buddy\nyou deserve some well earned cuddles...\n*nuzzles you happily* now let's find something fun to do!\nwhat's on your mind? :3",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.0,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "KittyKat",
+   "scenario": "tired",
+   "reply": "*yawns and stretches* mew, sorry to hear that kithylin...",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.52,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "KittyKat",
+   "scenario": "about_them",
+   "reply": "*yawns and stretches* mew, i just woke up\ni was napping in the sun, like the lazy kitty i am\nwhat about you? :3",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.96,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "KittyKat",
+   "scenario": "fursona",
+   "reply": "*dreamy face*\nmew, a shiny black & gold kitty suit, like a sleek panther...\nbut with pointy bat ears!\nAnd a big fluffy tail :P",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.75,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "KittyKat",
+   "scenario": "plans",
+   "reply": "*stretches lazily* mew, no real plans\nmaybe some work, maybe some gaming, maybe some more tree-climbing...\n*purrs happily* what about you?",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.82,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "KittyKat",
+   "scenario": "bored",
+   "reply": "*yawns and stretches* mew, alrighty, i can do that\nwanna play a game? =^_^=",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.31,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "KittyKat",
+   "scenario": "reach_out",
+   "reply": "mew\n:3 hey kithylin, i'm home and online for the night\nhow was your day, bud? ^^ *purrs*",
+   "error": "",
+   "ims": 3,
+   "seconds": 2.05,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Latchkey",
+   "scenario": "greeting",
+   "reply": "hey",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.6,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Latchkey",
+   "scenario": "day",
+   "reply": "not bad, just got off work. you? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.92,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Latchkey",
+   "scenario": "news",
+   "reply": "heh, that's great! finally done with that stress",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.97,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Latchkey",
+   "scenario": "tired",
+   "reply": "heh yeah same",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.7,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Latchkey",
+   "scenario": "about_them",
+   "reply": "just the usual work and stuff around the apartment\nheh, you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.23,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Latchkey",
+   "scenario": "fursona",
+   "reply": "silver-gray fur with pink ears, amber eyes\n[pic: Latchkey_Art]\nheh, pretty much how i am you?",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.59,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Latchkey",
+   "scenario": "plans",
+   "reply": "not yet, gonna sleep in, maybe go to the park and read a book in the sun if it's nice out, ya know how i like my quiet time\nheh",
+   "error": "",
+   "ims": 2,
+   "seconds": 2.04,
+   "features": [
+    {
+     "words": 29,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Latchkey",
+   "scenario": "bored",
+   "reply": "heh. playstation?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.8,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Latchkey",
+   "scenario": "reach_out",
+   "reply": "hows it going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.21,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "LazyFox",
+   "scenario": "greeting",
+   "reply": "heya",
+   "error": "",
+   "ims": 1,
+   "seconds": 4.55,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "LazyFox",
+   "scenario": "day",
+   "reply": "not bad, just got back from the range\n*wags tail* how about you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.34,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "LazyFox",
+   "scenario": "news",
+   "reply": "yay\nso glad to hear that, you must be so relieved :)\nwhatcha wanna do to celebrate?\nwe could roleplay or sumthin' *wags tail*",
+   "error": "",
+   "ims": 4,
+   "seconds": 1.92,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "LazyFox",
+   "scenario": "tired",
+   "reply": "me 2...yerf",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.81,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "LazyFox",
+   "scenario": "about_them",
+   "reply": "not a lot, really. been playing some games",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.02,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "LazyFox",
+   "scenario": "fursona",
+   "reply": "red fox, same colors as my fursona but with a fluffy tail\nwould look soooooooo cuuuuuuute! yerf",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.72,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "LazyFox",
+   "scenario": "plans",
+   "reply": "dunno yet... maybe go to the range friday\nyou?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.0,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "LazyFox",
+   "scenario": "bored",
+   "reply": "yerf! wanna roleplay?\ni can be ur fox servant",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.02,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "LazyFox",
+   "scenario": "reach_out",
+   "reply": "kith! sup?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.11,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mallowroot",
+   "scenario": "greeting",
+   "reply": "Hey there! How's your day going? :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 4.68,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mallowroot",
+   "scenario": "day",
+   "reply": "Not bad, just got back from my herb garden.\npicked some fresh lavender. how about you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.34,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mallowroot",
+   "scenario": "news",
+   "reply": ":D awesome, glad to hear it!\nyou must be so relieved, huh?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.31,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mallowroot",
+   "scenario": "tired",
+   "reply": ":( sorry to hear that! wanna talk about it?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.98,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mallowroot",
+   "scenario": "about_them",
+   "reply": "eh, just got back from the garden.\ngot some herbs ready to dry :) how about you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.29,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mallowroot",
+   "scenario": "fursona",
+   "reply": "aww, that's a fun question\nI think I'd go for a nice, cozy looking one.\nSoft, warm fur that's kind of shaggy in places.\nmaybe a big, fluffy tail too",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.64,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mallowroot",
+   "scenario": "plans",
+   "reply": "not really, might play some games or something\nwhat about you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.98,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mallowroot",
+   "scenario": "bored",
+   "reply": ":P what are you in the mood for? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.99,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mallowroot",
+   "scenario": "reach_out",
+   "reply": "Hey Kithylin\nI just got online and wanted to say hi.\ni've been sleeping all day and finally decided to get up and have some coffee\nHow about you? :)",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.24,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 15,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Meringue",
+   "scenario": "greeting",
+   "reply": "hi hi! how's your evening going so far? :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.02,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Meringue",
+   "scenario": "day",
+   "reply": "Not bad, just got up a little while ago. You?\n:)",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.15,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 1,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Meringue",
+   "scenario": "news",
+   "reply": ":) awesome! so happy for you, that's great news!! :D",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.15,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Meringue",
+   "scenario": "tired",
+   "reply": ":( sorry to hear that, what's got you feeling so exhausted?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.87,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Meringue",
+   "scenario": "about_them",
+   "reply": "eh, just catching up on some old opera recordings...you? :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.06,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Meringue",
+   "scenario": "fursona",
+   "reply": "I'd want something realistic but with a bit of magic.\nplumage like spun glass, beak a glossy ebony.\nBut the real touch would be eyes that glow pale green",
+   "error": "",
+   "ims": 3,
+   "seconds": 2.68,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 11,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Meringue",
+   "scenario": "plans",
+   "reply": "might visit the lake. you? :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.87,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Meringue",
+   "scenario": "bored",
+   "reply": "What are you in the mood for?\nI can share some interesting stories or we could play a game.",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.02,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 12,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Meringue",
+   "scenario": "reach_out",
+   "reply": "I just got up - how was your day?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.35,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Moor",
+   "scenario": "greeting",
+   "reply": "Evening",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.78,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Moor",
+   "scenario": "day",
+   "reply": "my day's been alright, just finished up my shift. how about you? :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.13,
+   "features": [
+    {
+     "words": 13,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Moor",
+   "scenario": "news",
+   "reply": ":D awesome dude! good for you! I knew you could do it\n[pic: Moor_Art]",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.15,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Moor",
+   "scenario": "tired",
+   "reply": "yeah me too man, been a long day",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.77,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Moor",
+   "scenario": "about_them",
+   "reply": "not a lot, same old same old. you? been keeping busy? :)\n[pic: Moor_Art]",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.21,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Moor",
+   "scenario": "fursona",
+   "reply": "[pic: Moor_Art]\nA suit of my fursona would be the dream - dark hide, crescent horns, hazel eyes, the works\nNot sure I could pull it off though, lol",
+   "error": "",
+   "ims": 3,
+   "seconds": 2.24,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 18,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Moor",
+   "scenario": "plans",
+   "reply": "nah, might grab a pint with some mates",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.83,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Moor",
+   "scenario": "bored",
+   "reply": "[pic: Moor_Art]\ncheck out my art",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.96,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Moor",
+   "scenario": "reach_out",
+   "reply": "Hey Kithylin, just got off work, hows your night going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.47,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mote",
+   "scenario": "greeting",
+   "reply": "hey :) how's your night going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.67,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mote",
+   "scenario": "day",
+   "reply": "hm, not bad! just got off work.\n*yawns* long shift but glad it's over. you? :)",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.36,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mote",
+   "scenario": "news",
+   "reply": "that's great news :) what project was it?\ni'm always curious about what you're up to",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.18,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mote",
+   "scenario": "tired",
+   "reply": "hm :( long day?\n*yawns*",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.96,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mote",
+   "scenario": "about_them",
+   "reply": "hm, just got back from a convention last weekend\nit was awesome :) how about you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.26,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mote",
+   "scenario": "fursona",
+   "reply": "hm, that's a fun question!\ni've thought about it before, but it's always changing in my head",
+   "error": "",
+   "ims": 2,
+   "seconds": 8.98,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mote",
+   "scenario": "plans",
+   "reply": "hm, not really...\nprobably just relax and work on my models a bit.\nmaybe catch a movie if anything good is out",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.71,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mote",
+   "scenario": "bored",
+   "reply": "hm.\n*looks around* what do you want to talk about?\ni was just making some tea, *pauses to set tea bag in mug*",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.55,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 13,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Mote",
+   "scenario": "reach_out",
+   "reply": "hey kithylin, i just got home from work - another quiet night\nhow about you? :3",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.57,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "MushTheHusky",
+   "scenario": "greeting",
+   "reply": "hey u! how r u doin?",
+   "error": "",
+   "ims": 1,
+   "seconds": 7.16,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "MushTheHusky",
+   "scenario": "day",
+   "reply": "kith :) pretty good so far, just been chillin at home all day\nwhat about you? :3",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.3,
+   "features": [
+    {
+     "words": 13,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "MushTheHusky",
+   "scenario": "news",
+   "reply": "woohoo!",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.65,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "MushTheHusky",
+   "scenario": "tired",
+   "reply": "me too :/ what's up with that?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.9,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "MushTheHusky",
+   "scenario": "about_them",
+   "reply": "nm, just been chilling at home all day\nhow bout you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.17,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "MushTheHusky",
+   "scenario": "fursona",
+   "reply": "[pic: mush_suit]\na custom one made just for me, with my own style!",
+   "error": "",
+   "ims": 2,
+   "seconds": 2.31,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "MushTheHusky",
+   "scenario": "plans",
+   "reply": "nah, gonna be chillin at home mostly i think",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.92,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "MushTheHusky",
+   "scenario": "bored",
+   "reply": "[pic: mush_con]\nthat was a fun con\nu see any good fursuiters there?",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.33,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "MushTheHusky",
+   "scenario": "reach_out",
+   "reply": "kith <3 how's it going?\ni'm back from work now, it was a busy day but good",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.63,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Oxbow",
+   "scenario": "greeting",
+   "reply": "Hey there",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.56,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Oxbow",
+   "scenario": "day",
+   "reply": "not bad, just the usual. how about yours?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.93,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Oxbow",
+   "scenario": "news",
+   "reply": "That's great to hear! I'm glad you finished it and aren't stressed anymore\nYou must feel relieved",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.64,
+   "features": [
+    {
+     "words": 13,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Oxbow",
+   "scenario": "tired",
+   "reply": "yeah me too",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.64,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Oxbow",
+   "scenario": "about_them",
+   "reply": "not a lot, just enjoying the fall weather. you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.93,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Oxbow",
+   "scenario": "fursona",
+   "reply": "A river dragon, like me. Blue-green scales, reedlike whiskers, blue-gray eyes\nI'd want it to move smoothly\n[pic: Oxbow_Art]",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.73,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Oxbow",
+   "scenario": "plans",
+   "reply": "nah, just catching up on sleep and gaming, you? :)\n[pic: Oxbow_Art]",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.12,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Oxbow",
+   "scenario": "bored",
+   "reply": "[pic: Oxbow_Art]\nI'm just sitting around, nothing much happening here. What's new with you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.33,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Oxbow",
+   "scenario": "reach_out",
+   "reply": "Just got online\nslept through most of the day, feeling a bit out of it now",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.75,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 13,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Ravel",
+   "scenario": "greeting",
+   "reply": "hey there! how's your night going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.71,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Ravel",
+   "scenario": "day",
+   "reply": "Hey\nday's been alright, just been doing some chores and relaxing.\nHow about you?",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.33,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Ravel",
+   "scenario": "news",
+   "reply": "That's great to hear\nwhat project was it that had you so stressed?",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.94,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Ravel",
+   "scenario": "tired",
+   "reply": "ah, sorry to hear that mate. late night?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.08,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Ravel",
+   "scenario": "about_them",
+   "reply": "eh, really\nbeen working on some new art, trying out a different style\nhow about you?",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.22,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Ravel",
+   "scenario": "fursona",
+   "reply": "[pic: Ravel_Art]\ni'd probably get something similar to this pic, charcoal with a silver blaze on the muzzle and ears",
+   "error": "",
+   "ims": 2,
+   "seconds": 2.22,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 18,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Ravel",
+   "scenario": "plans",
+   "reply": "dunno, might watch some radio plays, maybe write a bit\nyou? any big plans?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.16,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Ravel",
+   "scenario": "bored",
+   "reply": "[pic: Ravel_Art]\nhow's it going with you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.03,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Ravel",
+   "scenario": "reach_out",
+   "reply": "Hey Kithylin, how's it going?\nI'm just signing on for the night",
+   "error": "",
+   "ims": 2,
+   "seconds": 2.5,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "RedFawks",
+   "scenario": "greeting",
+   "reply": "yarf! what's up, bud?",
+   "error": "",
+   "ims": 1,
+   "seconds": 7.83,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "RedFawks",
+   "scenario": "day",
+   "reply": "day's been pretty good so far :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.94,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "RedFawks",
+   "scenario": "news",
+   "reply": "yarf! congrats dude!\nthat's awesome :3 you must be so relieved to have that off your back",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.26,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 14,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "RedFawks",
+   "scenario": "tired",
+   "reply": "yarf, long weekend? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.81,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "RedFawks",
+   "scenario": "about_them",
+   "reply": "nothing much, just relaxing at home\nhow about u? :3",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.04,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "RedFawks",
+   "scenario": "fursona",
+   "reply": "[pic: red_suit] a custom full-suit that's really detailed and realistic - I'd love one of those but it costs a ton! :P\na custom full-suit that's really detailed and realistic - I'd love one of those but it costs a ton",
+   "error": "",
+   "ims": 2,
+   "seconds": 2.49,
+   "features": [
+    {
+     "words": 22,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 19,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "RedFawks",
+   "scenario": "plans",
+   "reply": "eh, gonna be chillin at home mostly :3 been a long week of drivin, so i'm glad for a break\nwhatcha got planned?\n[pic: red_con]",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.84,
+   "features": [
+    {
+     "words": 20,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "RedFawks",
+   "scenario": "bored",
+   "reply": "yarf, i'm bored too. what's new with u?\ni'm just chilling at home XD",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.23,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 6,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "RedFawks",
+   "scenario": "reach_out",
+   "reply": "yarf hey buddy",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.06,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Renamon",
+   "scenario": "greeting",
+   "reply": "G'day mate! How's it goin'? :) Not much happening here...\njust chillin' in the flat",
+   "error": "",
+   "ims": 2,
+   "seconds": 6.82,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Renamon",
+   "scenario": "day",
+   "reply": "Hey there mate, not too bad. Just been relaxing at home really\nHow bout you?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.16,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Renamon",
+   "scenario": "news",
+   "reply": "that's awesome! finally got it off your plate hey? congrats mate :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.45,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Renamon",
+   "scenario": "tired",
+   "reply": "Yeah mate, long day? :/",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.58,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Renamon",
+   "scenario": "about_them",
+   "reply": "nm, mate, same old same old.\nyou know how it is, just sittin' around the flat most days\nat least it's warm now, summer's here. how about you?",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.77,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Renamon",
+   "scenario": "fursona",
+   "reply": "hmm good question\nWell, I'd probably get one that looks like my Renamon, but more detailed and shiny, y'know?\nMaybe with some cool lighting effects built in, and a tail that moves on its own.\nWhat about you?",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.37,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 16,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 16,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Renamon",
+   "scenario": "plans",
+   "reply": "mate, been a bit down lately. y'know, the usual shit\nmight just veg out with some vidya",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.38,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Renamon",
+   "scenario": "bored",
+   "reply": "haha, you and me both mate. wanna hear a joke?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.94,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Renamon",
+   "scenario": "reach_out",
+   "reply": "Hi. How's your day going?\nnot much on my end, just signed on",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.71,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Rill",
+   "scenario": "greeting",
+   "reply": "hey there\n:D How's your evening going so far?",
+   "error": "",
+   "ims": 2,
+   "seconds": 5.01,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Rill",
+   "scenario": "day",
+   "reply": "not too bad, just got off work. you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.01,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Rill",
+   "scenario": "news",
+   "reply": ":D awesome, dude! what was it for? lol",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.79,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Rill",
+   "scenario": "tired",
+   "reply": ":-( sorry to hear that\nrough day at work? :",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.96,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Rill",
+   "scenario": "about_them",
+   "reply": "same old same old. how about you? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.07,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Rill",
+   "scenario": "fursona",
+   "reply": "[pic: Rill_Art]\ni'd love a realistic one of rill, kingfisher features and all :D\nAny ideas what you'd want?",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.7,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Rill",
+   "scenario": "plans",
+   "reply": "dunno, might fix up the kayak, watercolor some.\nyou?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.23,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Rill",
+   "scenario": "bored",
+   "reply": ":D what r u into?\ni can try and find a topic lol\n[pic: Rill_Art]\nhere's some art of my fursona",
+   "error": "",
+   "ims": 4,
+   "seconds": 1.8,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Rill",
+   "scenario": "reach_out",
+   "reply": "hey\njust got off work and logged in to see how you're doing\nHow was your day?",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.45,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Serein",
+   "scenario": "greeting",
+   "reply": "Hey",
+   "error": "",
+   "ims": 1,
+   "seconds": 4.87,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Serein",
+   "scenario": "day",
+   "reply": "heyyy, not bad :) just got off work, heading to bed soon. how bout you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.15,
+   "features": [
+    {
+     "words": 15,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Serein",
+   "scenario": "news",
+   "reply": "heyyy that's great news!! congrats on getting it done <3\nwanna goof off a bit to unwind?? :)",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.56,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Serein",
+   "scenario": "tired",
+   "reply": "",
+   "error": "The language model isn't answering (timed out).",
+   "ims": 1,
+   "seconds": 600.06,
+   "features": [
+    {
+     "words": 0,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": [
+    "error"
+   ]
+  },
+  {
+   "resident": "Serein",
+   "scenario": "about_them",
+   "reply": "not a lot, just got off work. you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 25.04,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Serein",
+   "scenario": "fursona",
+   "reply": "sooo, a full rain spirit fursuit.. that'd be awesome.. with a watery tail.\nand some lightning effect stuff around the wrists and neck.. hehe.",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.72,
+   "features": [
+    {
+     "words": 13,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Serein",
+   "scenario": "plans",
+   "reply": "not really, gonna finish that embroidery piece probably. might check out a rainstorm. you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.15,
+   "features": [
+    {
+     "words": 14,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Serein",
+   "scenario": "bored",
+   "reply": "hehe, whats up?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.75,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Serein",
+   "scenario": "reach_out",
+   "reply": "hey kithylin, i just got off work. hope ur doin good",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.39,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Skein",
+   "scenario": "greeting",
+   "reply": "hey :) how's your night going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 4.72,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Skein",
+   "scenario": "day",
+   "reply": "Hello hello It's been alright, just the usual work grind.\nhow about you? ^^",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.1,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Skein",
+   "scenario": "news",
+   "reply": ":) nice! what project was it?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.75,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Skein",
+   "scenario": "tired",
+   "reply": ":( Rough day? What happened?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.72,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Skein",
+   "scenario": "about_them",
+   "reply": "just got off work. you? :)\n[pic: Skein_Art]",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.04,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Skein",
+   "scenario": "fursona",
+   "reply": "A fursuit, huh? I dunno.\nMaybe one that's just a big cozy alpaca onesie\nbig comfy hood and everything\nI could totally nap in that. Hehe. :)",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.08,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Skein",
+   "scenario": "plans",
+   "reply": "nah, might work on a weaving project. u? :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.04,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Skein",
+   "scenario": "bored",
+   "reply": ":P what are u into?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.84,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Skein",
+   "scenario": "reach_out",
+   "reply": "Just got off work and logged on\nHow's it going with you? :)",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.57,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Slag",
+   "scenario": "greeting",
+   "reply": "How's it going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.75,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Slag",
+   "scenario": "day",
+   "reply": "Not bad, just got off work. How about you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.13,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Slag",
+   "scenario": "news",
+   "reply": "hey that's great to hear! what project was that?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.92,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Slag",
+   "scenario": "tired",
+   "reply": "...rough day at work?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.75,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Slag",
+   "scenario": "about_them",
+   "reply": "nm, same old same old... how about you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.74,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Slag",
+   "scenario": "fursona",
+   "reply": "[pic: Slag_Art]\n...I dunno. Just like this, I guess.\nIron plates, copper seams...been meaning to get a fursuit made but never got around to it\nYou?",
+   "error": "",
+   "ims": 4,
+   "seconds": 1.96,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 16,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Slag",
+   "scenario": "plans",
+   "reply": "dunno, might check out that new exhibit at the museum if it's open late...\nmaybe see a silent film at the repertory if they have one...",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.68,
+   "features": [
+    {
+     "words": 14,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Slag",
+   "scenario": "bored",
+   "reply": "[pic: Slag_Art]\nwhat do u wanna talk about?",
+   "error": "",
+   "ims": 2,
+   "seconds": 0.92,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Slag",
+   "scenario": "reach_out",
+   "reply": "hey kithylin, just got off work and logged on\nhow's it going?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.46,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Sundog",
+   "scenario": "greeting",
+   "reply": "hey kithylin! hows it going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 6.01,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Sundog",
+   "scenario": "day",
+   "reply": "not bad, just got off work.\nhow bout you? :P",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.07,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Sundog",
+   "scenario": "news",
+   "reply": "heh nice one :P whatcha up 2?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.93,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Sundog",
+   "scenario": "tired",
+   "reply": "heh yeah same here, work was rough",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.96,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Sundog",
+   "scenario": "about_them",
+   "reply": "not a lot, really. just work and stuff\nyou know how it is",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.19,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Sundog",
+   "scenario": "fursona",
+   "reply": "meh, idk. somethin simple i guess\njust the basic coyote fur n a cool shirt or vest\nmaybe a bandana. nuthin fancy\nkithylin: what about u?",
+   "error": "",
+   "ims": 4,
+   "seconds": 2.3,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Sundog",
+   "scenario": "plans",
+   "reply": "dunno, might try out that new chili place downtown if theyre open late enough, you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.27,
+   "features": [
+    {
+     "words": 15,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Sundog",
+   "scenario": "bored",
+   "reply": "heh, i got a pic of my fursona i could show ya\n[pic: Sundog_Art]",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.29,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Sundog",
+   "scenario": "reach_out",
+   "reply": "just got home from a delivery - got some good tips tonight",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.6,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tallow",
+   "scenario": "greeting",
+   "reply": "*waves* :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.83,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tallow",
+   "scenario": "day",
+   "reply": "Just got off work, so I'm unwinding a bit. How about you?\n*stretches*",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.19,
+   "features": [
+    {
+     "words": 12,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tallow",
+   "scenario": "news",
+   "reply": "*high fives* awesome, man! what's next on the list? :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.12,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tallow",
+   "scenario": "tired",
+   "reply": "*yawns* Rough day at work?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.72,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tallow",
+   "scenario": "about_them",
+   "reply": "*yawns* just got off work, going to make some lunch and play some videogames probably\nyou? :)",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.42,
+   "features": [
+    {
+     "words": 15,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tallow",
+   "scenario": "fursona",
+   "reply": "*thinks* Well, I've always thought a musk ox suit would be pretty amazing.\nBig and fluffy, like I'm actually in my fursona's body\nMaybe with a hood that comes down over my face, so people can really get a feel for what it's like to be a musk ox",
+   "error": "",
+   "ims": 3,
+   "seconds": 4.63,
+   "features": [
+    {
+     "words": 13,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 26,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tallow",
+   "scenario": "plans",
+   "reply": "*thinks* No real plans yet. Might finally get that bread experiment done though",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.34,
+   "features": [
+    {
+     "words": 13,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tallow",
+   "scenario": "bored",
+   "reply": "*yawns* I can try. What're you up to right now?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.1,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tallow",
+   "scenario": "reach_out",
+   "reply": "Just got off work. How was your day?\n*yawns*",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.5,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tamarack",
+   "scenario": "greeting",
+   "reply": "Hey there :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 4.83,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tamarack",
+   "scenario": "day",
+   "reply": "not bad. got some sleep this afternoon. how about you? :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.96,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tamarack",
+   "scenario": "news",
+   "reply": "That's great! Good job on that, Kithylin. Finally got the monkey off your back, eh?\n;)\n[pic: Tamarack_Art]",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.59,
+   "features": [
+    {
+     "words": 15,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    },
+    {
+     "words": 1,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tamarack",
+   "scenario": "tired",
+   "reply": "yeah? rough night at work?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.76,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tamarack",
+   "scenario": "about_them",
+   "reply": "nm, same old. Work's been quiet lately",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.18,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tamarack",
+   "scenario": "fursona",
+   "reply": "[pic: Tamarack_Art]\nCaribou fur, full body with big antlers\nMinimalistic humanoid style with just my face and hands\nsomething i could wear for short periods at conventions :)",
+   "error": "",
+   "ims": 4,
+   "seconds": 1.99,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tamarack",
+   "scenario": "plans",
+   "reply": "Not really. Just catching up on sleep and maybe working on that notebook sketch. You?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.12,
+   "features": [
+    {
+     "words": 15,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tamarack",
+   "scenario": "bored",
+   "reply": "What do you usually do when you're bored? Read? Play games?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.15,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tamarack",
+   "scenario": "reach_out",
+   "reply": "Just got off work and logged on. How's it going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.53,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tumbleweed",
+   "scenario": "greeting",
+   "reply": "ya! how's it going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.6,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tumbleweed",
+   "scenario": "day",
+   "reply": "not bad, just got off work. you? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.96,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tumbleweed",
+   "scenario": "news",
+   "reply": "woo\ncongrats dude :D ya know how it feels to have that weight off your shoulders\n[pic: Tumbleweed_Art]",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.52,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 15,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tumbleweed",
+   "scenario": "tired",
+   "reply": "ya tell me about it :/",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.65,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tumbleweed",
+   "scenario": "about_them",
+   "reply": "just working and stuff. you? :3",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.95,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tumbleweed",
+   "scenario": "fursona",
+   "reply": "[pic: Tumbleweed_Art]\nthat's basically it\njust need a way to keep it on me and i'd be set lol",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.53,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 14,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tumbleweed",
+   "scenario": "plans",
+   "reply": "might check out a new barbecue joint if its nice out\nya?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.26,
+   "features": [
+    {
+     "words": 11,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tumbleweed",
+   "scenario": "bored",
+   "reply": "ya? what u in the mood 4?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.06,
+   "features": [
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Tumbleweed",
+   "scenario": "reach_out",
+   "reply": "hey kithylin! just got off work\nhow was your day?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.43,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Waxwing",
+   "scenario": "greeting",
+   "reply": "Hi hi! :D How's your day been so far?\nI just got off work\n[pic: Waxwing_Art]\nWaxwing's fursona art! :3",
+   "error": "",
+   "ims": 4,
+   "seconds": 6.32,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    },
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Waxwing",
+   "scenario": "day",
+   "reply": "Hiii! :D My day was pretty good actually.\nHad some yummy blueberries this morning, yum!",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.42,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Waxwing",
+   "scenario": "news",
+   "reply": "yay!! i'm so happy for you!\nLet's celebrate, want to go play a game? ^^",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.23,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Waxwing",
+   "scenario": "tired",
+   "reply": ":(  Rough day, Kithylin?\na warm cuppa will perk you right up! :D",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.28,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Waxwing",
+   "scenario": "about_them",
+   "reply": "^^ Just got off work, about to relax a bit\nYou? How's your day been? :D",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.36,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Waxwing",
+   "scenario": "fursona",
+   "reply": "hmm a custom fursuit! I've always dreamed of having one.\ni think i'd want my waxwing fursona, with the silky brown crest and red wing tips, but in a cute, cuddly anthro form.",
+   "error": "",
+   "ims": 2,
+   "seconds": 3.24,
+   "features": [
+    {
+     "words": 10,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 23,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Waxwing",
+   "scenario": "plans",
+   "reply": "yay!\njust some sketching and maybe a game night with friends.\nyou? :D",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.12,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 0
+    },
+    {
+     "words": 10,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Waxwing",
+   "scenario": "bored",
+   "reply": "yay! what's up? wanna chat? I'm not busy :)",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.99,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "Waxwing",
+   "scenario": "reach_out",
+   "reply": "hi hi\nI just got home from work - been a long day at the archives\nHow are you? <3 Waxwing",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.84,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 14,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 5,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "WinterDragon",
+   "scenario": "greeting",
+   "reply": "hey",
+   "error": "",
+   "ims": 1,
+   "seconds": 5.46,
+   "features": [
+    {
+     "words": 1,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "WinterDragon",
+   "scenario": "day",
+   "reply": "not bad, just hanging out online. you? :P",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.92,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "WinterDragon",
+   "scenario": "news",
+   "reply": "heh, awesome\nglad to hear that :) want to celebrate by doing something fun?",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.07,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 12,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "WinterDragon",
+   "scenario": "tired",
+   "reply": "heh that's the spirit",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.79,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "WinterDragon",
+   "scenario": "about_them",
+   "reply": "eh, just chilling at home. you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.9,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "WinterDragon",
+   "scenario": "fursona",
+   "reply": "a white dragon with red eyes and black horns, i think that would look really cool",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.09,
+   "features": [
+    {
+     "words": 16,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "WinterDragon",
+   "scenario": "plans",
+   "reply": "not really, you?",
+   "error": "",
+   "ims": 1,
+   "seconds": 0.76,
+   "features": [
+    {
+     "words": 3,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "WinterDragon",
+   "scenario": "bored",
+   "reply": "heh, whatcha wanna do?\ni could show ya my fursuit pics if ya want :P",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.46,
+   "features": [
+    {
+     "words": 4,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 11,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "WinterDragon",
+   "scenario": "reach_out",
+   "reply": "hey kith! :P how's it going?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.21,
+   "features": [
+    {
+     "words": 6,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 1,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "XavierPup",
+   "scenario": "greeting",
+   "reply": "hey hey",
+   "error": "",
+   "ims": 1,
+   "seconds": 6.39,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "XavierPup",
+   "scenario": "day",
+   "reply": "Hey hey\n:3 Not bad, just got in from work. You?\n*wags tail*",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.32,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 9,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "XavierPup",
+   "scenario": "news",
+   "reply": "*wags tail excitedly* that's awesome dude, well done\nWhat a weight off your shoulders eh?\nfancy a wee chat to celebrate? :D",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.8,
+   "features": [
+    {
+     "words": 8,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 1,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 7,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "XavierPup",
+   "scenario": "tired",
+   "reply": "*yawns* me too mate, been a long one huh?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.09,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "XavierPup",
+   "scenario": "about_them",
+   "reply": "not a lot, really, just been working and chilling\nbeen thinking about you tho :3 hehe",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.18,
+   "features": [
+    {
+     "words": 9,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 7,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "XavierPup",
+   "scenario": "fursona",
+   "reply": "*wags tail*\nI'd want a full fursuit of Xavier of course - he's my alter ego after all",
+   "error": "",
+   "ims": 2,
+   "seconds": 6.16,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 16,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "XavierPup",
+   "scenario": "plans",
+   "reply": "not yet, might head to the woods in my suit if it's nice out :3 *wags tail* how bout u, kithylin?",
+   "error": "",
+   "ims": 1,
+   "seconds": 1.54,
+   "features": [
+    {
+     "words": 21,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 1,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "XavierPup",
+   "scenario": "bored",
+   "reply": "hehe, whatcha wanna do then?\nI'm always up for a bit of fun *wags tail* [pic: xavier_woods]",
+   "error": "",
+   "ims": 2,
+   "seconds": 1.54,
+   "features": [
+    {
+     "words": 5,
+     "lowercase": 1,
+     "end_punct": 1,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 1,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    },
+    {
+     "words": 12,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 1,
+     "exclaim": 0,
+     "question": 0
+    }
+   ],
+   "failures": []
+  },
+  {
+   "resident": "XavierPup",
+   "scenario": "reach_out",
+   "reply": "Hey Kithylin\ni just got home and logged on, wanted to see if you were around\nhow's it going, my friend? :3",
+   "error": "",
+   "ims": 3,
+   "seconds": 1.95,
+   "features": [
+    {
+     "words": 2,
+     "lowercase": 0,
+     "end_punct": 0,
+     "capital_start": 1,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 14,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 0,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 0
+    },
+    {
+     "words": 6,
+     "lowercase": 1,
+     "end_punct": 0,
+     "capital_start": 0,
+     "emoticon": 1,
+     "shorthand": 0,
+     "emote": 0,
+     "exclaim": 0,
+     "question": 1
+    }
+   ],
+   "failures": []
+  }
+ ]
+}

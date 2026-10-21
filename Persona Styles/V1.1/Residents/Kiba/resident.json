@@ -1,0 +1,69 @@
+{
+  "name": "Kiba",
+  "fur_name": "Kiba",
+  "tier": "background",
+  "born": "1977-02-18",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "Ryan Sato",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "Wolf",
+    "colors": "white",
+    "eyes": "gold",
+    "markings": "a scar across his nose",
+    "accessories": "",
+    "description": "A white wolf whose name means 'fang' in Japanese."
+  },
+  "summary": "Kiba (Ryan Sato) is a quiet #furnet regular who loves anime.",
+  "personality": "Thoughtful and a bit of a loner.",
+  "mannerisms": "• Drops anime references nobody else gets",
+  "interests": "Anime, manga and drawing wolves.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  },
+  "codes": {
+    "furcode": "FCW3adr A+ C D H++ M++ts P+ R T++ V W- RLGP a c+lw e++ f-- g+ h+++ i++ j++ m p Smb smb",
+    "yiffcode": "YIFF 3.0 M bi P Co T-an *wolf* Pr S-fu No V-te *wolf-skunk-rabbit-* Cu H-ca Cu WIXXX:31,37,40,47,49"
+  }
+}

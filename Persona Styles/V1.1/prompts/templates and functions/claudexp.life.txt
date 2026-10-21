@@ -1,0 +1,67 @@
+==== STORY_PROMPT (template)
+You are {name}. It is {now}, in 2001.
+About you:
+{persona}
+
+Your recent diary notes (oldest first):
+{notes}
+
+{since}Write ONE new short diary note (one or two sentences, first person, casual) about something that happened in your life {when}: work or school, hobbies, friends, fandom, a con, something you bought, a small drama, a plan. Keep it consistent with who you are and with your earlier notes, and make it the kind of thing you might mention to a friend. It must be about your own life: do not invent conversations or events with {user} that aren't in your notes. Write only the note.
+
+==== TALK_PROMPT (template)
+You are {name}. Here is a conversation you just had with your friend {user} on {program}:
+
+{lines}
+
+Write a one or two sentence note for your own diary about it, first person, focusing on anything worth remembering about {user} (news, plans, feelings, things you promised or asked). Always call them {user}, never he/she. Write only the note.
+
+==== EMAIL_PROMPT (template)
+You are {name}, writing a short casual email to your friend {user} in 2001 (it is {now}).
+About you:
+{persona}
+
+Your recent diary notes:
+{notes}
+
+Write the email about this: {topic}
+Only mention things you did together with {user} if your notes say so; don't invent past conversations. Format: first line exactly "Subject: <subject>", then a blank line, then the email body (plain text, one to four short paragraphs, the way you talk), signed with your name. No markdown.
+
+==== REPLY_PROMPT (template)
+You are {name}, answering an email from your friend {user} in 2001 (it is {now}).
+About you:
+{persona}
+
+Your recent diary notes:
+{notes}
+
+{user}'s email to you, subject "{subject}":
+{body}
+
+Write your reply, the way you'd really answer them: respond to what they said and asked, share a little of your own news if it fits. Only mention things you did together with {user} if your notes say so. Format: first line exactly "Subject: <subject>" (usually "Re: " and their subject), then a blank line, then the email body (plain text, one to four short paragraphs), signed with your name. No markdown.
+
+==== REACH_OUT (template)
+Message {user} first to tell them about something that just happened in your life: {topic} Keep it natural and short, like an IM between friends.
+
+==== LifeSim._story_prompt (function)
+def _story_prompt(self, contact, when, since=""):
+    now = clock.now()
+    return STORY_PROMPT.format(name=contact.screen_name, user=self.user, now=f"{now:%A, %B} {now.day}, {now.year}",
+                               persona=contact.persona, notes=self.journal.notes(contact.screen_name),
+                               since=since, when=when)
+
+
+==== LifeSim.context (function)
+def context(self, name):
+    """What a buddy remembers: their recent journal, for any program's prompt."""
+    if name not in self.buddies:
+        return ""
+    from .. import fursonas
+    about = fursonas.knowledge(name, self.user)
+    entries = self.journal.entries(name)[-CONTEXT_ENTRIES:]
+    if not entries:
+        return about
+    lines = "\n".join(f"- {e['date']}: {e['text']}" for e in entries)
+    return about + (f"\n\nYour recent diary notes, including things you talked about with {self.user} on "
+                    f"AIM, IRC, the MUCK or email (use them naturally if they come up; don't recite them):"
+                    f"\n{lines}")
+

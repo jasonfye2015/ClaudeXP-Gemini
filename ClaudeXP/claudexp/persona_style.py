@@ -81,7 +81,26 @@ def name(sid=None):
 
 
 def frozen():
-    return installed() != DEV
+    return (_testing or installed()) != DEV
+
+
+_testing = None
+
+
+def testing(sid):
+    """Make uses() answer for this style (the realism test runs a style other than the installed one)."""
+    global _testing
+    _testing = sid
+
+
+def uses(feature):
+    """Does this computer's style have a feature that came after the styles recorded so far? New behaviour that
+    isn't in a recorded prompt function (a reply post-processor, say) asks this first. The Development style has
+    everything; a frozen style only what its style.json lists under "features" (V1.0 lists none)."""
+    sid = _testing or installed()
+    if sid == DEV:
+        return True
+    return feature in (_load(folder(sid) / "style.json").get("features") or [])
 
 
 def _load(path):
@@ -120,6 +139,8 @@ PROMPTING = [
                                             "SLBrain.act", "SLBrain.im"]),
     ("claudexp.programs.navigator.web", ["PROMPT", "SEARCH_EXTRA", "BUDDY_EXTRA", "WebKnowledge.context"]),
 ]
+# whole modules recorded as they are (from V1.1): the residents' typing voices and how replies are retyped
+MODULES = ["claudexp.voices"]
 # kept for reading only: how the personas were put together (the generated files are what's actually used)
 REFERENCE = ["claudexp.residents_sync", "claudecore.furcodes.steering"]
 
@@ -185,13 +206,20 @@ def capture():
                 except (OSError, TypeError) as exc:       # (no source to read: it can't match a recording)
                     entry[n] = {"kind": kind, "value": f"<no source: {exc}>"}
         out[modname] = entry
+    for modname in MODULES:
+        mod = _import(modname)
+        src = getattr(mod, "__persona_source__", None) or inspect.getsource(mod)
+        out.setdefault(modname, {})["<module>"] = {"kind": "module", "value": src}
     return out
 
 
 # ---- making a style ----------------------------------------------------------------------------------------
-def record(sid, title, description=""):
-    """Freeze everything as it is now into Persona Styles/V<sid>/."""
+def record(sid, title, description="", features=()):
+    """Freeze everything as it is now into Persona Styles/V<sid>/. features: what uses() should say yes to."""
     from . import timeline
+    testing(DEV)                                        # (the live code is what's being recorded)
+    from . import residents_sync
+    residents_sync.sync()                               # (this computer may hold a frozen style's files: make them anew)
     dest = folder(sid)
     if dest.exists():
         raise FileExistsError(f"{dest} already exists")
@@ -220,7 +248,16 @@ def record(sid, title, description=""):
     _write_readable(dest, prompting)
     meta = {"id": sid, "name": title, "description": description, "era": ERA,
             "created": time.strftime("%Y-%m-%d %H:%M"), "resident_files": count, "generated_files": gen}
+    if features:
+        meta["features"] = list(features)
+    if "voice" in features:
+        from . import voices
+        people = {f.stem for f in (dest / "generated" / "ClaudeAIM" / "contacts").glob("*.json")}
+        (dest / "voices.json").write_text(json.dumps({n: voices.describe(n) for n in sorted(people)}, indent=1,
+                                                     ensure_ascii=False), encoding="utf-8")
     (dest / "style.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    testing(None)
+    restore_generated()                                 # (and back to this computer's own style's files)
     return meta
 
 
@@ -249,8 +286,9 @@ def _write_readable(dest, prompting):
         (samples / f"{name_}.txt").write_text(text, encoding="utf-8")
 
 
-def sample_aim_prompts(user="Kithylin"):
-    """What each AIM contact's system prompt looks like (at a fixed moment, before any chats or diaries)."""
+def sample_aim_prompts(user="Kithylin", contacts=None):
+    """What each AIM contact's system prompt looks like (at a fixed moment, before any chats or diaries).
+    contacts: [Contact] to use instead of the ones in Program Files."""
     _ready()
     from types import SimpleNamespace
 
@@ -267,9 +305,13 @@ def sample_aim_prompts(user="Kithylin"):
     timefmt.shifted = lambda d: d
     try:
         if hasattr(engine, "host"):
-            engine.host.extra_context = lambda name: "\n\n[...then their diary notes and what they know about you]"
-        loaded = aim_contacts.load_contacts()
-        contact_list = loaded[0] if isinstance(loaded, tuple) else loaded
+            from .hosting import AppHost
+            engine.host.extra_context = lambda name: ("\n\n[...then their diary notes and what they know about you]"
+                                                      + AppHost._voice_note(name))
+        if contacts is None:
+            loaded = aim_contacts.load_contacts()
+            contacts = loaded[0] if isinstance(loaded, tuple) else loaded
+        contact_list = contacts
         fake = SimpleNamespace(settings={"screen_name": user}, user_away=False, user_away_message="")
         fake._pictures_prompt = lambda b: engine.World._pictures_prompt(fake, b)
         fake._work_note = lambda b: engine.World._work_note(fake, b)
@@ -340,6 +382,16 @@ def apply(sid=None):
             print(f"Persona style: can't load {modname}: {exc}", file=sys.stderr)
             continue
         for n, v in entry.items():
+            if v["kind"] == "module":                 # a whole module: run the recorded one in its place
+                live = getattr(mod, "__persona_source__", None) or inspect.getsource(mod)
+                if live != v["value"]:
+                    try:
+                        exec(compile(v["value"], f"<{sid} {modname}>", "exec"), mod.__dict__)
+                        mod.__persona_source__ = v["value"]
+                        replaced.append(modname)
+                    except Exception as exc:
+                        print(f"Persona style: couldn't restore {modname}: {exc}", file=sys.stderr)
+                continue
             parts = n.split(".")
             try:
                 owner = _get(mod, ".".join(parts[:-1])) if len(parts) > 1 else mod

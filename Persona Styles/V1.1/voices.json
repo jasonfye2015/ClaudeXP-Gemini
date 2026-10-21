@@ -1,0 +1,863 @@
+{
+ "ArcticFox": {
+  "archetype": "A08",
+  "label": "roleplay emotes, stretched words (sooo, heyyy), emoticons",
+  "greetings": [
+   "*pounces* heyyy",
+   "yarf!",
+   "*tail flickers* hiii"
+  ],
+  "emoticons": [
+   ":3",
+   "^^",
+   "<3"
+  ],
+  "shorthand": [
+   "hehe",
+   "yay"
+  ],
+  "habits": {
+   "words": 10.6,
+   "lowercase": 0.52,
+   "end_punct": 0.28,
+   "emoticon": 0.23,
+   "shorthand": 0.12,
+   "emote": 0.39,
+   "exclaim": 0.07,
+   "question": 0.13
+  },
+  "note": "How you type: roleplay emotes, stretched words (sooo, heyyy), emoticons; emoticons like :3 ^^ <3; you say 'hehe', 'yay'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Brass": {
+  "archetype": "A06",
+  "label": "tidy sentences with capitals and full stops, sometimes trails off...",
+  "greetings": [
+   "Hello!",
+   "Ah, hello."
+  ],
+  "emoticons": [
+   ":)"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 7.9,
+   "lowercase": 0.16,
+   "end_punct": 0.67,
+   "emoticon": 0.07,
+   "shorthand": 0.07,
+   "emote": 0.03,
+   "exclaim": 0.06,
+   "question": 0.12
+  },
+  "note": "How you type: tidy sentences with capitals and full stops, sometimes trails off...; emoticons like :). Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Cairngorm": {
+  "archetype": "A01",
+  "label": "all lowercase, hardly any punctuation",
+  "greetings": [
+   "hey",
+   "yo"
+  ],
+  "emoticons": [
+   ":P"
+  ],
+  "shorthand": [
+   "heh",
+   "ya"
+  ],
+  "habits": {
+   "words": 5.5,
+   "lowercase": 0.7,
+   "end_punct": 0.13,
+   "emoticon": 0.09,
+   "shorthand": 0.1,
+   "emote": 0.04,
+   "exclaim": 0.03,
+   "question": 0.07
+  },
+  "note": "How you type: all lowercase, hardly any punctuation; emoticons like :P; you say 'heh', 'ya'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Cameo": {
+  "archetype": "A03",
+  "label": "emoticons in lots of messages",
+  "greetings": [
+   "hiii :)",
+   "heya!"
+  ],
+  "emoticons": [
+   ":)",
+   ":D",
+   "^^"
+  ],
+  "shorthand": [
+   "hehe"
+  ],
+  "habits": {
+   "words": 5.9,
+   "lowercase": 0.46,
+   "end_punct": 0.18,
+   "emoticon": 0.34,
+   "shorthand": 0.16,
+   "emote": 0.07,
+   "exclaim": 0.07,
+   "question": 0.12
+  },
+  "note": "How you type: emoticons in lots of messages; emoticons like :) :D ^^; you say 'hehe'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Cicada": {
+  "archetype": "A02",
+  "label": "all lowercase, curious, asks things now and then",
+  "greetings": [
+   "hi",
+   "hey you"
+  ],
+  "emoticons": [
+   ":)"
+  ],
+  "shorthand": [
+   "hm"
+  ],
+  "habits": {
+   "words": 6.5,
+   "lowercase": 0.74,
+   "end_punct": 0.24,
+   "emoticon": 0.08,
+   "shorthand": 0.11,
+   "emote": 0.1,
+   "exclaim": 0.04,
+   "question": 0.17
+  },
+  "note": "How you type: all lowercase, curious, asks things now and then; emoticons like :); you say 'hm'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Crispin": {
+  "archetype": "A05",
+  "label": "capitalises properly, spells words out",
+  "greetings": [
+   "Hey.",
+   "Hi!"
+  ],
+  "emoticons": [
+   ":P"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 5.7,
+   "lowercase": 0.19,
+   "end_punct": 0.22,
+   "emoticon": 0.1,
+   "shorthand": 0.08,
+   "emote": 0.03,
+   "exclaim": 0.04,
+   "question": 0.09
+  },
+  "note": "How you type: capitalises properly, spells words out; emoticons like :P. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "CyberianHusky": {
+  "archetype": "A04",
+  "label": "lowercase and full of chat shorthand",
+  "greetings": [
+   "sup",
+   "yo",
+   "heya"
+  ],
+  "emoticons": [
+   ":D",
+   "XD"
+  ],
+  "shorthand": [
+   "lol",
+   "u",
+   "ya"
+  ],
+  "habits": {
+   "words": 5.5,
+   "lowercase": 0.67,
+   "end_punct": 0.18,
+   "emoticon": 0.17,
+   "shorthand": 0.25,
+   "emote": 0.06,
+   "exclaim": 0.05,
+   "question": 0.11
+  },
+  "note": "How you type: lowercase and full of chat shorthand; emoticons like :D XD; you say 'lol', 'u', 'ya'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Dewdrop": {
+  "archetype": "A03",
+  "label": "emoticons in lots of messages",
+  "greetings": [
+   "hiya :3",
+   "*ribbit* hi"
+  ],
+  "emoticons": [
+   ":3",
+   "^^"
+  ],
+  "shorthand": [
+   "hehe",
+   "x3"
+  ],
+  "habits": {
+   "words": 5.9,
+   "lowercase": 0.46,
+   "end_punct": 0.18,
+   "emoticon": 0.34,
+   "shorthand": 0.16,
+   "emote": 0.07,
+   "exclaim": 0.07,
+   "question": 0.12
+  },
+  "note": "How you type: emoticons in lots of messages; emoticons like :3 ^^; you say 'hehe', 'x3'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Flicker": {
+  "archetype": "A10",
+  "label": "bubbly - exclamation marks and stretched words",
+  "greetings": [
+   "heyyy!",
+   "Hiya!"
+  ],
+  "emoticons": [
+   ":D",
+   ";)"
+  ],
+  "shorthand": [
+   "omg"
+  ],
+  "habits": {
+   "words": 6.7,
+   "lowercase": 0.2,
+   "end_punct": 0.46,
+   "emoticon": 0.2,
+   "shorthand": 0.11,
+   "emote": 0.14,
+   "exclaim": 0.25,
+   "question": 0.15
+  },
+  "note": "How you type: bubbly - exclamation marks and stretched words; emoticons like :D ;); you say 'omg'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Hush": {
+  "archetype": "A06",
+  "label": "tidy sentences with capitals and full stops, sometimes trails off...",
+  "greetings": [
+   "Hello.",
+   "Evening."
+  ],
+  "emoticons": [
+   ":)"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 7.9,
+   "lowercase": 0.16,
+   "end_punct": 0.67,
+   "emoticon": 0.07,
+   "shorthand": 0.07,
+   "emote": 0.03,
+   "exclaim": 0.06,
+   "question": 0.12
+  },
+  "note": "How you type: tidy sentences with capitals and full stops, sometimes trails off...; emoticons like :). Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Juniper": {
+  "archetype": "A11",
+  "label": "rapid bursts of short messages, CAPS now and then",
+  "greetings": [
+   "hey!",
+   "HI"
+  ],
+  "emoticons": [
+   ":D"
+  ],
+  "shorthand": [
+   "omg",
+   "lol"
+  ],
+  "habits": {
+   "words": 5.0,
+   "lowercase": 0.37,
+   "end_punct": 0.3,
+   "emoticon": 0.1,
+   "shorthand": 0.1,
+   "emote": 0.02,
+   "exclaim": 0.06,
+   "question": 0.09
+  },
+  "note": "How you type: rapid bursts of short messages, CAPS now and then; emoticons like :D; you say 'omg', 'lol'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "KittyKat": {
+  "archetype": "A03",
+  "label": "emoticons in lots of messages",
+  "greetings": [
+   "*mew*",
+   "hai :3"
+  ],
+  "emoticons": [
+   ":3",
+   "^^",
+   ":P"
+  ],
+  "shorthand": [
+   "x3",
+   "hehe"
+  ],
+  "habits": {
+   "words": 5.9,
+   "lowercase": 0.46,
+   "end_punct": 0.18,
+   "emoticon": 0.34,
+   "shorthand": 0.16,
+   "emote": 0.07,
+   "exclaim": 0.07,
+   "question": 0.12
+  },
+  "note": "How you type: emoticons in lots of messages; emoticons like :3 ^^ :P; you say 'x3', 'hehe'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Latchkey": {
+  "archetype": "A01",
+  "label": "all lowercase, hardly any punctuation",
+  "greetings": [
+   "hey",
+   "o/"
+  ],
+  "emoticons": [
+   ":P"
+  ],
+  "shorthand": [
+   "heh"
+  ],
+  "habits": {
+   "words": 5.5,
+   "lowercase": 0.7,
+   "end_punct": 0.13,
+   "emoticon": 0.09,
+   "shorthand": 0.1,
+   "emote": 0.04,
+   "exclaim": 0.03,
+   "question": 0.07
+  },
+  "note": "How you type: all lowercase, hardly any punctuation; emoticons like :P; you say 'heh'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "LazyFox": {
+  "archetype": "A01",
+  "label": "all lowercase, hardly any punctuation",
+  "greetings": [
+   "sup",
+   "heya"
+  ],
+  "emoticons": [
+   ":P"
+  ],
+  "shorthand": [
+   "lol",
+   "dunno"
+  ],
+  "habits": {
+   "words": 5.5,
+   "lowercase": 0.7,
+   "end_punct": 0.13,
+   "emoticon": 0.09,
+   "shorthand": 0.1,
+   "emote": 0.04,
+   "exclaim": 0.03,
+   "question": 0.07
+  },
+  "note": "How you type: all lowercase, hardly any punctuation; emoticons like :P; you say 'lol', 'dunno'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Mallowroot": {
+  "archetype": "A07",
+  "label": "tidy and friendly, asks questions",
+  "greetings": [
+   "Hi! :)",
+   "Hey!"
+  ],
+  "emoticons": [
+   ":)",
+   "^^"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 7.0,
+   "lowercase": 0.19,
+   "end_punct": 0.46,
+   "emoticon": 0.15,
+   "shorthand": 0.09,
+   "emote": 0.07,
+   "exclaim": 0.06,
+   "question": 0.19
+  },
+  "note": "How you type: tidy and friendly, asks questions; emoticons like :) ^^. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Meringue": {
+  "archetype": "A07",
+  "label": "tidy and friendly, asks questions",
+  "greetings": [
+   "Hello!",
+   "Hi hi!"
+  ],
+  "emoticons": [
+   ":)",
+   ";)"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 7.0,
+   "lowercase": 0.19,
+   "end_punct": 0.46,
+   "emoticon": 0.15,
+   "shorthand": 0.09,
+   "emote": 0.07,
+   "exclaim": 0.06,
+   "question": 0.19
+  },
+  "note": "How you type: tidy and friendly, asks questions; emoticons like :) ;). Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Moor": {
+  "archetype": "A09",
+  "label": "longer messages with capitals, rarely asks questions",
+  "greetings": [
+   "Hey.",
+   "Evening."
+  ],
+  "emoticons": [
+   ":)"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 10.0,
+   "lowercase": 0.13,
+   "end_punct": 0.13,
+   "emoticon": 0.21,
+   "shorthand": 0.05,
+   "emote": 0.03,
+   "exclaim": 0.04,
+   "question": 0.04
+  },
+  "note": "How you type: longer messages with capitals, rarely asks questions; emoticons like :). Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Mote": {
+  "archetype": "A02",
+  "label": "all lowercase, curious, asks things now and then",
+  "greetings": [
+   "hey",
+   "*glows* hi"
+  ],
+  "emoticons": [
+   ":)",
+   "o.o"
+  ],
+  "shorthand": [
+   "hm"
+  ],
+  "habits": {
+   "words": 6.5,
+   "lowercase": 0.74,
+   "end_punct": 0.24,
+   "emoticon": 0.08,
+   "shorthand": 0.11,
+   "emote": 0.1,
+   "exclaim": 0.04,
+   "question": 0.17
+  },
+  "note": "How you type: all lowercase, curious, asks things now and then; emoticons like :) o.o; you say 'hm'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "MushTheHusky": {
+  "archetype": "A04",
+  "label": "lowercase and full of chat shorthand",
+  "greetings": [
+   "arf!",
+   "*tackle hugs*",
+   "heyy"
+  ],
+  "emoticons": [
+   ":D",
+   "^^",
+   "<3"
+  ],
+  "shorthand": [
+   "lol",
+   "u",
+   "omg"
+  ],
+  "habits": {
+   "words": 5.5,
+   "lowercase": 0.67,
+   "end_punct": 0.18,
+   "emoticon": 0.17,
+   "shorthand": 0.25,
+   "emote": 0.06,
+   "exclaim": 0.05,
+   "question": 0.11
+  },
+  "note": "How you type: lowercase and full of chat shorthand; emoticons like :D ^^ <3; you say 'lol', 'u', 'omg'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Oxbow": {
+  "archetype": "A09",
+  "label": "longer messages with capitals, rarely asks questions",
+  "greetings": [
+   "Evening.",
+   "Hey."
+  ],
+  "emoticons": [
+   ":)"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 10.0,
+   "lowercase": 0.13,
+   "end_punct": 0.13,
+   "emoticon": 0.21,
+   "shorthand": 0.05,
+   "emote": 0.03,
+   "exclaim": 0.04,
+   "question": 0.04
+  },
+  "note": "How you type: longer messages with capitals, rarely asks questions; emoticons like :). Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Ravel": {
+  "archetype": "A05",
+  "label": "capitalises properly, spells words out",
+  "greetings": [
+   "Hey.",
+   "Hello."
+  ],
+  "emoticons": [
+   ":P"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 5.7,
+   "lowercase": 0.19,
+   "end_punct": 0.22,
+   "emoticon": 0.1,
+   "shorthand": 0.08,
+   "emote": 0.03,
+   "exclaim": 0.04,
+   "question": 0.09
+  },
+  "note": "How you type: capitalises properly, spells words out; emoticons like :P. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "RedFawks": {
+  "archetype": "A04",
+  "label": "lowercase and full of chat shorthand",
+  "greetings": [
+   "yip!",
+   "hey",
+   "sup"
+  ],
+  "emoticons": [
+   ":P",
+   "XD"
+  ],
+  "shorthand": [
+   "lol",
+   "u"
+  ],
+  "habits": {
+   "words": 5.5,
+   "lowercase": 0.67,
+   "end_punct": 0.18,
+   "emoticon": 0.17,
+   "shorthand": 0.25,
+   "emote": 0.06,
+   "exclaim": 0.05,
+   "question": 0.11
+  },
+  "note": "How you type: lowercase and full of chat shorthand; emoticons like :P XD; you say 'lol', 'u'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Renamon": {
+  "archetype": "A06",
+  "label": "tidy sentences with capitals and full stops, sometimes trails off...",
+  "greetings": [
+   "Hello.",
+   "Hi."
+  ],
+  "emoticons": [
+   ":)"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 7.9,
+   "lowercase": 0.16,
+   "end_punct": 0.67,
+   "emoticon": 0.07,
+   "shorthand": 0.07,
+   "emote": 0.03,
+   "exclaim": 0.06,
+   "question": 0.12
+  },
+  "note": "How you type: tidy sentences with capitals and full stops, sometimes trails off...; emoticons like :). Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Rill": {
+  "archetype": "A11",
+  "label": "rapid bursts of short messages, CAPS now and then",
+  "greetings": [
+   "hey!",
+   "HEY"
+  ],
+  "emoticons": [
+   ":D"
+  ],
+  "shorthand": [
+   "lol"
+  ],
+  "habits": {
+   "words": 5.0,
+   "lowercase": 0.37,
+   "end_punct": 0.3,
+   "emoticon": 0.1,
+   "shorthand": 0.1,
+   "emote": 0.02,
+   "exclaim": 0.06,
+   "question": 0.09
+  },
+  "note": "How you type: rapid bursts of short messages, CAPS now and then; emoticons like :D; you say 'lol'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Serein": {
+  "archetype": "A08",
+  "label": "roleplay emotes, stretched words (sooo, heyyy), emoticons",
+  "greetings": [
+   "*drizzles* hi",
+   "hiii"
+  ],
+  "emoticons": [
+   "^^",
+   ":)"
+  ],
+  "shorthand": [
+   "hehe"
+  ],
+  "habits": {
+   "words": 10.6,
+   "lowercase": 0.52,
+   "end_punct": 0.28,
+   "emoticon": 0.23,
+   "shorthand": 0.12,
+   "emote": 0.39,
+   "exclaim": 0.07,
+   "question": 0.13
+  },
+  "note": "How you type: roleplay emotes, stretched words (sooo, heyyy), emoticons; emoticons like ^^ :); you say 'hehe'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Skein": {
+  "archetype": "A07",
+  "label": "tidy and friendly, asks questions",
+  "greetings": [
+   "Hi! :)",
+   "Hello hello"
+  ],
+  "emoticons": [
+   ":)",
+   "^^"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 7.0,
+   "lowercase": 0.19,
+   "end_punct": 0.46,
+   "emoticon": 0.15,
+   "shorthand": 0.09,
+   "emote": 0.07,
+   "exclaim": 0.06,
+   "question": 0.19
+  },
+  "note": "How you type: tidy and friendly, asks questions; emoticons like :) ^^. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Slag": {
+  "archetype": "A05",
+  "label": "capitalises properly, spells words out",
+  "greetings": [
+   "Hey.",
+   "Hm. Hi."
+  ],
+  "emoticons": [],
+  "shorthand": [],
+  "habits": {
+   "words": 5.7,
+   "lowercase": 0.19,
+   "end_punct": 0.22,
+   "emoticon": 0.1,
+   "shorthand": 0.08,
+   "emote": 0.03,
+   "exclaim": 0.04,
+   "question": 0.09
+  },
+  "note": "How you type: capitalises properly, spells words out. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Sundog": {
+  "archetype": "A01",
+  "label": "all lowercase, hardly any punctuation",
+  "greetings": [
+   "howdy",
+   "hey"
+  ],
+  "emoticons": [
+   ":P"
+  ],
+  "shorthand": [
+   "heh"
+  ],
+  "habits": {
+   "words": 5.5,
+   "lowercase": 0.7,
+   "end_punct": 0.13,
+   "emoticon": 0.09,
+   "shorthand": 0.1,
+   "emote": 0.04,
+   "exclaim": 0.03,
+   "question": 0.07
+  },
+  "note": "How you type: all lowercase, hardly any punctuation; emoticons like :P; you say 'heh'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Tallow": {
+  "archetype": "A09",
+  "label": "longer messages with capitals, rarely asks questions",
+  "greetings": [
+   "Evening.",
+   "Hey."
+  ],
+  "emoticons": [
+   ":)"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 10.0,
+   "lowercase": 0.13,
+   "end_punct": 0.13,
+   "emoticon": 0.21,
+   "shorthand": 0.05,
+   "emote": 0.03,
+   "exclaim": 0.04,
+   "question": 0.04
+  },
+  "note": "How you type: longer messages with capitals, rarely asks questions; emoticons like :). Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Tamarack": {
+  "archetype": "A09",
+  "label": "longer messages with capitals, rarely asks questions",
+  "greetings": [
+   "Hey.",
+   "Hi."
+  ],
+  "emoticons": [
+   ":)"
+  ],
+  "shorthand": [],
+  "habits": {
+   "words": 10.0,
+   "lowercase": 0.13,
+   "end_punct": 0.13,
+   "emoticon": 0.21,
+   "shorthand": 0.05,
+   "emote": 0.03,
+   "exclaim": 0.04,
+   "question": 0.04
+  },
+  "note": "How you type: longer messages with capitals, rarely asks questions; emoticons like :). Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Tumbleweed": {
+  "archetype": "A04",
+  "label": "lowercase and full of chat shorthand",
+  "greetings": [
+   "g'day",
+   "heya",
+   "oi"
+  ],
+  "emoticons": [
+   ":D",
+   "XD"
+  ],
+  "shorthand": [
+   "lol",
+   "ya"
+  ],
+  "habits": {
+   "words": 5.5,
+   "lowercase": 0.67,
+   "end_punct": 0.18,
+   "emoticon": 0.17,
+   "shorthand": 0.25,
+   "emote": 0.06,
+   "exclaim": 0.05,
+   "question": 0.11
+  },
+  "note": "How you type: lowercase and full of chat shorthand; emoticons like :D XD; you say 'lol', 'ya'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "Waxwing": {
+  "archetype": "A10",
+  "label": "bubbly - exclamation marks and stretched words",
+  "greetings": [
+   "Hiii!",
+   "Hi hi!"
+  ],
+  "emoticons": [
+   ":D",
+   "^^"
+  ],
+  "shorthand": [
+   "yay"
+  ],
+  "habits": {
+   "words": 6.7,
+   "lowercase": 0.2,
+   "end_punct": 0.46,
+   "emoticon": 0.2,
+   "shorthand": 0.11,
+   "emote": 0.14,
+   "exclaim": 0.25,
+   "question": 0.15
+  },
+  "note": "How you type: bubbly - exclamation marks and stretched words; emoticons like :D ^^; you say 'yay'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "WinterDragon": {
+  "archetype": "A02",
+  "label": "all lowercase, curious, asks things now and then",
+  "greetings": [
+   "hey",
+   "rawr"
+  ],
+  "emoticons": [
+   ":P",
+   "^^"
+  ],
+  "shorthand": [
+   "heh"
+  ],
+  "habits": {
+   "words": 6.5,
+   "lowercase": 0.74,
+   "end_punct": 0.24,
+   "emoticon": 0.08,
+   "shorthand": 0.11,
+   "emote": 0.1,
+   "exclaim": 0.04,
+   "question": 0.17
+  },
+  "note": "How you type: all lowercase, curious, asks things now and then; emoticons like :P ^^; you say 'heh'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ },
+ "XavierPup": {
+  "archetype": "A03",
+  "label": "emoticons in lots of messages",
+  "greetings": [
+   "woof! :D",
+   "hiya"
+  ],
+  "emoticons": [
+   ":D",
+   ":3"
+  ],
+  "shorthand": [
+   "hehe",
+   "lol"
+  ],
+  "habits": {
+   "words": 5.9,
+   "lowercase": 0.46,
+   "end_punct": 0.18,
+   "emoticon": 0.34,
+   "shorthand": 0.16,
+   "emote": 0.07,
+   "exclaim": 0.07,
+   "question": 0.12
+  },
+  "note": "How you type: emoticons in lots of messages; emoticons like :D :3; you say 'hehe', 'lol'. Most of your IMs are only a few words - you send two or three quick ones rather than one long one, even about something you could go on about. You don't have to ask your buddy a question back; usually you just react, and you only ask when you really want to know. Don't start every message with a greeting."
+ }
+}

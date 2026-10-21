@@ -105,7 +105,18 @@ class AppHost:
     def extra_context(self, name):
         from . import life
         sim = life.get()
-        return (sim.context(name) if sim else "") + self._picture_pacing(name, sim)
+        return (sim.context(name) if sim else "") + self._picture_pacing(name, sim) + self._voice_note(name)
+
+    @staticmethod
+    def _voice_note(name):
+        """How they type, last of all in the prompt (from the Development style on; see voices.py)."""
+        from . import persona_style, voices
+        return voices.note(name) if persona_style.uses("voice") else ""
+
+    def polish(self, name, text, user=""):
+        """A reply retyped in the buddy's own voice, as a few quick IMs (from the Development style on)."""
+        from . import persona_style, voices
+        return voices.polish(name, text, user) if persona_style.uses("voice") else [text]
 
     @staticmethod
     def _picture_pacing(name, sim):

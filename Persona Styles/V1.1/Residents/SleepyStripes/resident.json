@@ -1,0 +1,69 @@
+{
+  "name": "SleepyStripes",
+  "fur_name": "SleepyStripes",
+  "tier": "support",
+  "born": "1971-01-06",
+  "born_source": "assigned",
+  "identity": {
+    "real_name": "Noah Fischer",
+    "gender": "Man",
+    "pronouns": "he/him",
+    "height": "",
+    "build": ""
+  },
+  "fursona": {
+    "species": "Skunk",
+    "colors": "black with white stripes",
+    "eyes": "dark brown",
+    "markings": "a double white stripe down his back",
+    "accessories": "",
+    "description": "A skunk curled up in a pile of pillows on the MUCK, fast asleep, one paw on the keyboard."
+  },
+  "summary": "SleepyStripes (Noah Fischer) has been AFK in the PawPrints cafe for as long as anyone remembers.",
+  "personality": "Nobody's sure. He's always asleep.",
+  "mannerisms": "• 'AFK - brb' (it has said that for a very long time)",
+  "interests": "Sleeping.",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "how_met": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "relationships": [],
+  "notes": "",
+  "history": [],
+  "flags": [
+    "drafted-details: some details were drafted, please review (see \"drafted\")"
+  ],
+  "drafted": {
+    "date": "2026-10-16",
+    "fields": [
+      "eras/2001.location",
+      "eras/2001.occupation",
+      "eras/2001.sleep_schedule",
+      "fursona.colors",
+      "fursona.description",
+      "fursona.eyes",
+      "fursona.markings",
+      "fursona.species",
+      "identity.gender",
+      "identity.pronouns",
+      "identity.real_name",
+      "interests",
+      "mannerisms",
+      "personality",
+      "summary"
+    ]
+  },
+  "codes": {
+    "furcode": "FMS3r A- C D- H- M++s P+ R T V- W-- RLMH a+ c++w e f+++ g+ h++ i+ j-- m p- Smg smg",
+    "yiffcode": "YIFF 3.0 M kinsey-5 P Cu T *skunk-hyena-raccoon* Pr S Th V-te *skunk-hyena-raccoon-* Pr H-lo Po WIXXX:4,10,15,36,37,39,40,44,49,53,58"
+  }
+}

@@ -1,0 +1,266 @@
+"""How each resident types (the Development persona style, from V1.1 on): a voice built on one of the voice
+archetypes the Log Distiller found in real chat (each the average of dozens of people), with the resident's own
+greetings and favourite emoticons and shorthand.
+
+It's used twice: a short "how you type" note at the end of their system prompt (where small models follow it
+best), and polish() on every reply - taking off chat-log stamps and name tags, trimming the reflexive "how about
+you?", varying stock greetings, splitting a long reply into a few quick IMs, and typing each one in the resident's
+voice (lowercase or not, full stops or not, how many exclamations). Code does what code can; the model does the
+talking."""
+import hashlib
+import random
+import re
+
+# the archetypes' averages (from Text Logs/_Distilled/archetypes.json - shares of messages, and words per message)
+ARCHETYPES = {
+    "A01": dict(words=5.5, lowercase=0.70, end_punct=0.13, emoticon=0.09, shorthand=0.10, emote=0.04, exclaim=0.03,
+                question=0.07, label="all lowercase, hardly any punctuation"),
+    "A02": dict(words=6.5, lowercase=0.74, end_punct=0.24, emoticon=0.08, shorthand=0.11, emote=0.10, exclaim=0.04,
+                question=0.17, label="all lowercase, curious, asks things now and then"),
+    "A03": dict(words=5.9, lowercase=0.46, end_punct=0.18, emoticon=0.34, shorthand=0.16, emote=0.07, exclaim=0.07,
+                question=0.12, label="emoticons in lots of messages"),
+    "A04": dict(words=5.5, lowercase=0.67, end_punct=0.18, emoticon=0.17, shorthand=0.25, emote=0.06, exclaim=0.05,
+                question=0.11, label="lowercase and full of chat shorthand"),
+    "A05": dict(words=5.7, lowercase=0.19, end_punct=0.22, emoticon=0.10, shorthand=0.08, emote=0.03, exclaim=0.04,
+                question=0.09, label="capitalises properly, spells words out"),
+    "A06": dict(words=7.9, lowercase=0.16, end_punct=0.67, emoticon=0.07, shorthand=0.07, emote=0.03, exclaim=0.06,
+                question=0.12, label="tidy sentences with capitals and full stops, sometimes trails off..."),
+    "A07": dict(words=7.0, lowercase=0.19, end_punct=0.46, emoticon=0.15, shorthand=0.09, emote=0.07, exclaim=0.06,
+                question=0.19, label="tidy and friendly, asks questions"),
+    "A08": dict(words=10.6, lowercase=0.52, end_punct=0.28, emoticon=0.23, shorthand=0.12, emote=0.39, exclaim=0.07,
+                question=0.13, label="roleplay emotes, stretched words (sooo, heyyy), emoticons"),
+    "A09": dict(words=10.0, lowercase=0.13, end_punct=0.13, emoticon=0.21, shorthand=0.05, emote=0.03, exclaim=0.04,
+                question=0.04, label="longer messages with capitals, rarely asks questions"),
+    "A10": dict(words=6.7, lowercase=0.20, end_punct=0.46, emoticon=0.20, shorthand=0.11, emote=0.14, exclaim=0.25,
+                question=0.15, label="bubbly - exclamation marks and stretched words"),
+    "A11": dict(words=5.0, lowercase=0.37, end_punct=0.30, emoticon=0.10, shorthand=0.10, emote=0.02, exclaim=0.06,
+                question=0.09, label="rapid bursts of short messages, CAPS now and then"),
+}
+
+# the residents are fictional: these voices are made up to suit them, built on the archetypes
+# name: (archetype, greetings, favourite emoticons, favourite shorthand)
+VOICES = {
+    "ArcticFox": ("A08", ["*pounces* heyyy", "yarf!", "*tail flickers* hiii"], [":3", "^^", "<3"], ["hehe", "yay"]),
+    "Brass": ("A06", ["Hello!", "Ah, hello."], [":)"], []),
+    "Cairngorm": ("A01", ["hey", "yo"], [":P"], ["heh", "ya"]),
+    "Cameo": ("A03", ["hiii :)", "heya!"], [":)", ":D", "^^"], ["hehe"]),
+    "Cicada": ("A02", ["hi", "hey you"], [":)"], ["hm"]),
+    "Crispin": ("A05", ["Hey.", "Hi!"], [":P"], []),
+    "CyberianHusky": ("A04", ["sup", "yo", "heya"], [":D", "XD"], ["lol", "u", "ya"]),
+    "Dewdrop": ("A03", ["hiya :3", "*ribbit* hi"], [":3", "^^"], ["hehe", "x3"]),
+    "Flicker": ("A10", ["heyyy!", "Hiya!"], [":D", ";)"], ["omg"]),
+    "Hush": ("A06", ["Hello.", "Evening."], [":)"], []),
+    "Juniper": ("A11", ["hey!", "HI"], [":D"], ["omg", "lol"]),
+    "KittyKat": ("A03", ["*mew*", "hai :3"], [":3", "^^", ":P"], ["x3", "hehe"]),
+    "Latchkey": ("A01", ["hey", "o/"], [":P"], ["heh"]),
+    "LazyFox": ("A01", ["sup", "heya"], [":P"], ["lol", "dunno"]),
+    "Mallowroot": ("A07", ["Hi! :)", "Hey!"], [":)", "^^"], []),
+    "Meringue": ("A07", ["Hello!", "Hi hi!"], [":)", ";)"], []),
+    "Moor": ("A09", ["Hey.", "Evening."], [":)"], []),
+    "Mote": ("A02", ["hey", "*glows* hi"], [":)", "o.o"], ["hm"]),
+    "MushTheHusky": ("A04", ["arf!", "*tackle hugs*", "heyy"], [":D", "^^", "<3"], ["lol", "u", "omg"]),
+    "Oxbow": ("A09", ["Evening.", "Hey."], [":)"], []),
+    "Ravel": ("A05", ["Hey.", "Hello."], [":P"], []),
+    "RedFawks": ("A04", ["yip!", "hey", "sup"], [":P", "XD"], ["lol", "u"]),
+    "Renamon": ("A06", ["Hello.", "Hi."], [":)"], []),
+    "Rill": ("A11", ["hey!", "HEY"], [":D"], ["lol"]),
+    "Serein": ("A08", ["*drizzles* hi", "hiii"], ["^^", ":)"], ["hehe"]),
+    "Skein": ("A07", ["Hi! :)", "Hello hello"], [":)", "^^"], []),
+    "Slag": ("A05", ["Hey.", "Hm. Hi."], [], []),
+    "Sundog": ("A01", ["howdy", "hey"], [":P"], ["heh"]),
+    "Tallow": ("A09", ["Evening.", "Hey."], [":)"], []),
+    "Tamarack": ("A09", ["Hey.", "Hi."], [":)"], []),
+    "Tumbleweed": ("A04", ["g'day", "heya", "oi"], [":D", "XD"], ["lol", "ya"]),
+    "Waxwing": ("A10", ["Hiii!", "Hi hi!"], [":D", "^^"], ["yay"]),
+    "WinterDragon": ("A02", ["hey", "rawr"], [":P", "^^"], ["heh"]),
+    "XavierPup": ("A03", ["woof! :D", "hiya"], [":D", ":3"], ["hehe", "lol"]),
+}
+DEFAULT = ("A03", ["hey", "hi"], [":)"], ["lol"])
+
+STAMP = re.compile(r"^\s*\[\d{1,2}:\d\d(:\d\d)?\s*(AM|PM)?\]\s*", re.I | re.M)
+ASK_BACK = re.compile(r"[\s,.!-]*(how about (you|u)|what about (you|u)|and (you|u)|you|u|how('?s| is| was) your "
+                      r"(day|night|evening|weekend)( going| been)?( so far)?|what (have|did) (you|u) (been up to|do)|"
+                      r"what'?s (new|up) with (you|u)|how are (you|u)( doing)?|what do (you|u) have in mind)"
+                      r"[\s,]*(buddy|hun|man|dude)?\s*\?+\s*(:\)|:D|\^\^|:3)?\s*$", re.I)
+STOCK_GREETING = re.compile(r"^\s*(hey|hi|hello)( there)?[!,.]*\s+", re.I)
+LEAD_EMOTE = re.compile(r"^\s*\*[^*]{1,40}\*\s*")
+WORD = re.compile(r"(?<![:;=8^>xX<])\b[A-Za-z][A-Za-z']*")
+KEEP_CAPS = {"XD", "AIM", "TV", "DVD", "CD", "OK"}             # (shouting and acronyms stay as they are)
+# what a small model opens with every time, and what people actually typed instead
+STOCK_OPENERS = [
+    (re.compile(r"^not really,?\s+", re.I), ["nah, ", "not yet, ", "eh, ", "dunno, ", "", "not really, "]),
+    (re.compile(r"^not much,?\s+", re.I), ["nm, ", "eh, ", "not a lot, ", "", "nothing much, "]),
+    (re.compile(r"^(ooh|oh),?\s+that'?s a (fun|good|tough|great) (one|question)[.!]*\s*", re.I),
+     ["hmm ", "ooh ", "", "heh ", "oh man "]),
+    (re.compile(r"^(hmm+|ooh+)[.,!]*\s+(that'?s a (fun|good|tough|great) (one|question)[.!]*\s*)?", re.I),
+     ["hmm ", "", "ooh ", "eh "]),
+]
+SENTENCE = re.compile(r"(?<=[.!?])\s+(?=\S)|(?<=\.\.\.)\s+")
+
+
+def voice(name):
+    arch, greetings, emo, short = VOICES.get(name, DEFAULT)
+    return ARCHETYPES[arch], greetings, emo, short
+
+
+def describe(name):
+    """Their voice, for reading (Fur Persona Profiles)."""
+    arch, greetings, emo, short = VOICES.get(name, DEFAULT)
+    a = ARCHETYPES[arch]
+    return {"archetype": arch, "label": a["label"], "greetings": greetings, "emoticons": emo, "shorthand": short,
+            "habits": {k: v for k, v in a.items() if k != "label"}, "note": note(name).strip()}
+
+
+def note(name, user="your buddy"):
+    """The 'how you type' line for the end of the system prompt."""
+    a, greetings, emo, short = voice(name)
+    bits = [a["label"]]
+    if emo:
+        bits.append("emoticons like " + " ".join(emo))
+    if short:
+        bits.append("you say " + ", ".join(f"'{s}'" for s in short))
+    return ("\n\nHow you type: " + "; ".join(bits) + ". Most of your IMs are only a few words - you send two or three "
+            f"quick ones rather than one long one, even about something you could go on about. You don't have to ask "
+            f"{user} a question back; usually you just react, and you only ask when you really want to know. Don't "
+            "start every message with a greeting.")
+
+
+def _rng(name, text):
+    return random.Random(int(hashlib.md5(f"{name}|{text}".encode()).hexdigest()[:12], 16))
+
+
+def _lower(piece):
+    return WORD.sub(lambda m: m.group(0) if m.group(0) in KEEP_CAPS else m.group(0).lower(), piece)
+
+
+def _sentences(text):
+    out = []
+    for line in [ln.strip() for ln in text.splitlines() if ln.strip()]:
+        if line.startswith("[pic:"):
+            out.append(line)
+            continue
+        out += [s for s in SENTENCE.split(line) if s.strip()]
+    return out
+
+
+def _group(sentences, target):
+    """Sentences into IMs of about `target` words (an emote line is its own IM)."""
+    pieces, cur = [], []
+    for s in sentences:
+        if s.startswith("[pic:"):
+            if cur:
+                pieces.append(" ".join(cur))
+                cur = []
+            pieces.append(s)
+            continue
+        words = len(s.split())
+        if cur and (sum(len(c.split()) for c in cur) + words > target or s.startswith("*")):
+            pieces.append(" ".join(cur))
+            cur = []
+        cur.append(s)
+    if cur:
+        pieces.append(" ".join(cur))
+    if len(pieces) > 4:                                 # (nobody sends seven IMs in a row)
+        pieces = pieces[:3] + [" ".join(pieces[3:])]
+    return pieces
+
+
+def _type(piece, a, rng):
+    if piece.startswith("[pic:"):
+        return piece
+    if rng.random() < a["lowercase"] + 0.1:
+        piece = _lower(piece)
+    stripped = piece.rstrip()
+    if stripped.endswith(".") and not stripped.endswith("...") and rng.random() > a["end_punct"]:
+        piece = stripped[:-1]
+    stripped = piece.rstrip()
+    if stripped.endswith("!") and rng.random() > a["exclaim"] * 3:
+        piece = stripped.rstrip("!")
+        if not piece.rstrip() or piece.rstrip()[-1:] in ":;(":
+            piece = stripped                            # (keep it if it was all there was, or part of a smiley)
+    return piece.strip()
+
+
+def polish(name, text, user=""):
+    """A reply, typed the way this resident types: a list of one to four IMs."""
+    a, greetings, emo, short = voice(name)
+    rng = _rng(name, text)
+    text = STAMP.sub("", text)
+    text = re.sub(rf"^\s*\[?{re.escape(name)}\]?\s*:\s*", "", text, flags=re.I | re.M).strip()
+    if not text:
+        return []
+    # the reflexive question back
+    sentences = _sentences(text)
+    m = ASK_BACK.search(sentences[-1]) if sentences else None
+    if m and rng.random() < 0.7:
+        before = sentences[-1][:m.start()].rstrip(" ,-")
+        if before and not before.endswith("*"):
+            sentences[-1] = before
+        elif len(sentences) > 1:
+            sentences = sentences[:-1]
+    # stock greetings ("Hey there! ..."), even after an emote: their own, or none
+    lead = LEAD_EMOTE.match(sentences[0]) if sentences else None
+    if lead and sentences[0][lead.end():].strip():
+        sentences = [lead.group(0).strip(), sentences[0][lead.end():].strip()] + sentences[1:]
+    if sentences:
+        if lead and len(sentences) > 1:                 # (the emote stays; the greeting after it is the one to vary)
+            sentences = sentences[:1] + _greeting(sentences[1:], user, greetings, rng)
+        else:
+            sentences = _greeting(sentences, user, greetings, rng)
+    sentences = _opener(sentences, rng)
+    # a question tacked on the end of an answer that already says plenty (people mostly just answered)
+    if len(sentences) > 2 and sentences[-1].rstrip().endswith("?") and rng.random() < 0.5:
+        sentences = sentences[:-1]
+    # long answers: what fits in a few quick IMs (whole sentences, never fewer than two)
+    budget, kept, used = max(25, round(a["words"] * 5)), [], 0
+    for s in sentences:
+        used += len(s.split())
+        if len(kept) >= 2 and used > budget:
+            break
+        kept.append(s)
+    sentences = kept
+    target = max(5, round(a["words"] * 1.5))
+    pieces = [_type(p, a, rng) for p in _group(sentences, target)]
+    pieces = [p for p in pieces if p]
+    # an emoticon now and then, if they'd use one and there isn't one
+    if pieces and emo and rng.random() < max(0.0, a["emoticon"] - 0.12):
+        last = pieces[-1]
+        if not re.search(r"[:;=^][)(DPp3^]|<3|\^\^", last) and not last.startswith("[pic:"):
+            pieces[-1] = f"{last} {rng.choice(emo)}"
+    return pieces
+
+
+def _opener(sentences, rng):
+    """'not really, ...', 'ooh, that's a fun question': the same opening from everybody, varied."""
+    i = 1 if sentences and LEAD_EMOTE.fullmatch(sentences[0]) and len(sentences) > 1 else 0
+    if not sentences:
+        return sentences
+    for pat, swaps in STOCK_OPENERS:
+        m = pat.match(sentences[i])
+        if m:
+            rest = sentences[i][m.end():]
+            sentences = list(sentences)
+            if rest.strip():
+                sentences[i] = rng.choice(swaps) + rest
+            elif len(sentences) > i + 1 and rng.random() < 0.7:
+                del sentences[i]                        # ("Hmm, that's a fun question." on its own, before the answer)
+            break
+    return sentences
+
+
+def _greeting(sentences, user, greetings, rng):
+    """A stock "Hey there!" opening: dropped, or swapped for one of their own greetings."""
+    sentences = list(sentences)
+    first = sentences[0] + " "
+    named = re.compile(rf"^\s*(hey|hi|hello)( there)?,? {re.escape(user)}[!,.]*\s*", re.I) if user else None
+    m = (named and named.match(first)) or STOCK_GREETING.match(first)
+    if not m:
+        return sentences
+    rest = first[m.end():].strip()
+    if rest and rng.random() < 0.65:
+        sentences[0] = rest[:1].upper() + rest[1:] if rest[:1].isalpha() else rest
+    elif not rest and len(sentences) > 1 and rng.random() < 0.6:
+        sentences = sentences[1:]                       # a bare "Hey there!" before the real answer
+    elif not rest and rng.random() < 0.7:
+        sentences[0] = rng.choice(greetings)
+    return sentences

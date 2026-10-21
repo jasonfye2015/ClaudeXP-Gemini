@@ -172,9 +172,11 @@ def run(sid, residents=None, scenarios=None, log=lambda m: print(m, flush=True))
     from claudeaim.llm import clean_reply
     from claudeaim.storage import Settings
 
-    from . import persona_style
+    from . import persona_style, voices
     from .ai_models import config, model_for
+    from .hosting import AppHost
     goal = targets()
+    persona_style.testing(sid)                          # (what uses() answers: the style under test)
     replaced = persona_style.apply(sid) if sid != persona_style.DEV else []
     if replaced:
         log(f"  V{sid}'s prompting in place of the live code for {len(replaced)} pieces")
@@ -183,7 +185,7 @@ def run(sid, residents=None, scenarios=None, log=lambda m: print(m, flush=True))
     import datetime
     timefmt.local_now = lambda tz=None: datetime.datetime(2001, 10, 15, 19, 30)
     timefmt.shifted = lambda d: d
-    host.extra_context = lambda name: ""                # (no diaries: every style starts from the same place)
+    host.extra_context = AppHost._voice_note            # (no diaries: every style starts from the same place)
     user = Settings()["screen_name"] or "Kithylin"
     fake = _fake_world(user, engine)
     people = contacts_for(sid)
@@ -212,8 +214,10 @@ def run(sid, residents=None, scenarios=None, log=lambda m: print(m, flush=True))
             except Exception as exc:
                 raw, err = "", str(exc)
             text = clean_reply(raw or "", c.screen_name)
-            replies.append({"resident": name, "scenario": key, "reply": text, "error": err,
-                            "seconds": round(time.time() - t0, 2), "features": reply_features(text),
+            pieces = (voices.polish(c.screen_name, text, user) if persona_style.uses("voice") else [text]) or [text]
+            text = "\n".join(pieces)                    # (each piece an IM of its own: scored one by one)
+            replies.append({"resident": name, "scenario": key, "reply": text, "error": err, "ims": len(pieces),
+                            "seconds": round(time.time() - t0, 2), "features": [reply_features(p) for p in pieces],
                             "failures": failures(text, c.screen_name) if not err else ["error"]})
         log(f"  {name}: done ({len(replies)} replies, {time.time() - started:.0f}s)")
     return score(sid, replies, goal)
@@ -222,10 +226,14 @@ def run(sid, residents=None, scenarios=None, log=lambda m: print(m, flush=True))
 def score(sid, replies, goal):
     from . import persona_style
     good = [r for r in replies if "error" not in r["failures"]]
+
+    def ims(r):                                         # a reply's IMs' features (older runs: one per reply)
+        return r["features"] if isinstance(r["features"], list) else [r["features"]]
+    every = [f for r in good for f in ims(r)]
     got = {}
     for f in FEATURES:
         key = "words" if f == "avg_words" else f
-        got[f] = round(mean(r["features"][key] for r in good), 3) if good else None
+        got[f] = round(mean(x[key] for x in every), 3) if every else None
     gaps = {}                                           # 0 = types just like real AIM, 1 = nothing like it
     for f in FEATURES:
         if got[f] is None:
@@ -241,7 +249,7 @@ def score(sid, replies, goal):
     # distinct: how far apart the residents' habits are (standardised)
     by_person = {}
     for r in good:
-        by_person.setdefault(r["resident"], []).append(r["features"])
+        by_person.setdefault(r["resident"], []).extend(ims(r))
     keys = ["words", "lowercase", "end_punct", "capital_start", "emoticon", "shorthand", "emote", "exclaim"]
     vecs = {p: [mean(x[k] for x in fs) for k in keys] for p, fs in by_person.items()}
     sds = [pstdev([v[i] for v in vecs.values()]) or 1.0 for i in range(len(keys))] if vecs else []
@@ -266,7 +274,7 @@ def score(sid, replies, goal):
     repetition = 100 * (1 - mean(reps)) if reps else 0.0
     overall = 0.35 * style + 0.35 * fail_score + 0.15 * distinct + 0.15 * repetition
     return {"style": sid, "style_name": persona_style.name(sid), "when": time.strftime("%Y-%m-%d %H:%M"),
-            "residents": len(by_person), "replies": len(replies),
+            "residents": len(by_person), "replies": len(replies), "ims": len(every),
             "scores": {"overall": round(overall, 1), "style": round(style, 1), "failures": round(fail_score, 1),
                        "distinct": round(distinct, 1), "repetition": round(repetition, 1)},
             "typing": {"got": got, "real_aim": goal, "gap": gaps}, "failure_kinds": dict(kinds),

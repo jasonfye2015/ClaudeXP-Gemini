@@ -1,0 +1,23 @@
+==== AppHost.extra_context (function)
+def extra_context(self, name):
+    from . import life
+    sim = life.get()
+    return (sim.context(name) if sim else "") + self._picture_pacing(name, sim) + self._voice_note(name)
+
+
+==== AppHost._picture_pacing (function)
+@staticmethod
+def _picture_pacing(name, sim):
+    """Early in a chat, buddies with pictures shouldn't lead with them ("hi! want to see my pics?")."""
+    if sim is None or sim.aim_world is None:
+        return ""
+    buddy = next((b for b in sim.aim_world.buddies.values() if b.name == name), None)
+    if buddy is None or not buddy.contact.pictures:
+        return ""
+    talk = sim.talks.get((name, "AIM"))
+    if talk and len(talk["lines"]) >= PICTURE_WARMUP:
+        return ""
+    return ("\n\nYou've only just started chatting this time, so don't bring up, offer or mention your pictures "
+            "yet, unless your buddy asks to see some, the conversation is already about what they show, or "
+            "you've just been told to share one.")
+

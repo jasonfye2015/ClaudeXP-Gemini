@@ -1,0 +1,52 @@
+{
+  "fur_name": "FurBot",
+  "tier": "background",
+  "summary": "FurBot is FurNet's channel bot, opped in every main channel.",
+  "screen_names": {
+    "aim": "",
+    "irc": "",
+    "muck": "",
+    "email": ""
+  },
+  "personal": {
+    "real_name": "",
+    "location": "",
+    "residence": "",
+    "sex": "",
+    "pronouns": "",
+    "age": "",
+    "dob": "4/17/1961",
+    "height": "",
+    "job": "",
+    "work_hours": "",
+    "sleep_hours": ""
+  },
+  "favorites": {
+    "movies": [],
+    "music": [],
+    "food": []
+  },
+  "fursona": {
+    "species": "IRC bot",
+    "colors": "",
+    "eyes": "",
+    "build": "",
+    "markings": "",
+    "accessories": "",
+    "clothing": "",
+    "description": "FurNet's channel bot v2.3, an mIRC script: keeps the channels open, greets newcomers and answers !help and !time."
+  },
+  "personality": "A bot.",
+  "mannerisms": "",
+  "interests": "",
+  "roleplay_hooks": "",
+  "roleplay_notes": "",
+  "relationship": {
+    "status": "",
+    "partner": ""
+  },
+  "friends": [],
+  "files": [],
+  "webpages": [],
+  "notes": "Not a person."
+}

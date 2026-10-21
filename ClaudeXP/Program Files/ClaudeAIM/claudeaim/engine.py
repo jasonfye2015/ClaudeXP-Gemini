@@ -534,13 +534,34 @@ class World(QObject):
                 b.busy = False
                 self.typing_changed.emit(b.id, False)
                 return
-            self._after(self._typing_ms(text),
-                        lambda: self._finish_reply(b, text, initiated, pictures_ok))
+            pieces = host.polish(b.name, text, self.settings["screen_name"]) or [text]
+            self._send_pieces(b, pieces, initiated, pictures_ok, self._typing_ms(pieces[0]))
 
         self.llm.chat(self.model_for(b), messages, options, done)
 
+    def _send_pieces(self, b, pieces, initiated, pictures_ok, wait):
+        """A reply that comes as a few quick IMs: each after its own bit of typing, the last one finishing it."""
+        if len(pieces) == 1:
+            self._after(wait, lambda: self._finish_reply(b, pieces[0], initiated, pictures_ok))
+            return
+
+        def one():
+            if b.presence == Presence.OFFLINE or not self.running:
+                b.busy = False
+                self.typing_changed.emit(b.id, False)
+                return
+            text, images = self._split_pictures(b, pieces[0])
+            if text or (images and pictures_ok):
+                self._deliver(b, text, images if pictures_ok else [], initiated)
+            self.typing_changed.emit(b.id, True)
+            self._send_pieces(b, pieces[1:], initiated, pictures_ok, self._burst_ms(pieces[1]))
+        self._after(wait, one)
+
     def _typing_ms(self, text):
         return min(800 + len(text) * 35, 6000)
+
+    def _burst_ms(self, text):
+        return min(500 + len(text) * 45, 5000)
 
     def _finish_reply(self, b, text, initiated=False, pictures_ok=True):
         b.busy = False

@@ -1,0 +1,48 @@
+==== PROMPT (template)
+You are the World Wide Web on {date}. Given a URL, you write the complete HTML page that web server would send back, exactly as it would have looked in October 2001.
+
+Rules:
+- Output ONLY the HTML document, from <html> to </html>. No explanations, no markdown, no code fences.
+- Use 2001-era HTML 3.2/4.0: <table> layouts, <font face="..." color="..." size="...">, <center>, <hr>, <b>, <i>, <ul>, and colors on <body bgcolor text link vlink>. No CSS files, no <style> blocks, no JavaScript, no forms or input boxes, no frames or iframes.
+- Images: only these built-in images exist, always give width and height:
+    /img/construction.gif  (animated 'under construction' sign, 100x50)
+    /img/counter.gif       (hit counter, 88x20)
+    /img/new.gif           (a 'NEW!' badge, 32x16)
+    /img/email.gif         (a mail icon, 32x32)
+    /img/line.gif          (a decorative divider line, 400x8)
+    /img/button.gif?text=Some+Words      (an 88x31 web button saying those words)
+    /img/photo.gif?text=what+it+shows    (a photo or picture; describe what it shows)
+  Any other image shows as a broken image.
+- Make it specific and believable for 2001: real-sounding names, dates, prices, 2001 events and technology (Windows XP just came out, Napster, dial-up, AIM, ICQ, Geocities-style homepages, webrings, guestbooks, 'best viewed in 800x600', Netscape vs Internet Explorer).
+- Include 6 to 15 links: relative links to other pages on the same site, and full http:// links to other plausible sites. Link text should say clearly what's there.
+- Keep the page between one and three screens long.
+
+==== SEARCH_EXTRA (template)
+This is a {engine} results page for the query "{q}". Show the search box area as plain text (no forms), then 8 to 10 results: each with a linked title (a full http:// URL to a plausible 2001 website about the query), a one or two line description, and the URL in green. Add 'Result Page: 1 2 3 Next' links at the bottom (links to the same search with &page=2 etc).
+
+==== BUDDY_EXTRA (template)
+This is the personal homepage of {name}. Here is who they are (write the page as they would, in their own voice, reflecting their personality, interests and how they type):
+{persona}
+{relationship}
+
+==== WebKnowledge.context (function)
+def context(self, url):
+    parts = urlparse(url)
+    host = parts.netloc.lower()
+    notes = [facts for key, facts in self.sites.items() if key in host]
+    person = self.person_in(url)
+    if person is not None:
+        name, persona, is_buddy = person
+        rel = (f"Their AIM buddy {self.aim_name} might visit; they're good friends."
+               if is_buddy and self.aim_name else "")
+        notes.append(BUDDY_EXTRA.format(name=name, persona=persona, relationship=rel))
+        news = _life_news(name) if is_buddy else ""
+        if news:
+            notes.append("What's been going on in their life lately (a personal page would often have a "
+                         f"'What's New' or 'Updates' section mentioning some of it):\n{news}")
+    if host.startswith(("search.netscape.com", "search.msn.com")):
+        q = parse_qs(parts.query).get("q", [""])[0]
+        engine = "MSN Search" if host.startswith("search.msn.com") else "Netscape Search"
+        notes.append(SEARCH_EXTRA.format(engine=engine, q=q))
+    return "\n\n".join(notes)
+
