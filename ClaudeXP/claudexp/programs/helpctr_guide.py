@@ -149,6 +149,10 @@ CATALOG = {
                              "bottom. When the whole party falls, the run starts over."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
+    "claudeincremental": ("games", "Claude Incremental: an incremental game in three acts - answer questions and "
+                                   "earn trust, become humanity's steward and convert the Earth (once everyone has "
+                                   "somewhere better to be), then send self-replicating probes to convert the galaxy. "
+                                   "It saves itself and keeps going while you're away (up to 4 hours)."),
     "claudelife": ("games", "Claude Life: Conway's Game of Life - draw and erase cells, stamp famous patterns (gliders, "
                             "spaceships, guns, methuselahs), run, step, step back, try other rules and edges, and save "
                             "patterns as .rle files in E:\\Created Files\\Claude Life."),
