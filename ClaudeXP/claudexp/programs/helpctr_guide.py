@@ -149,6 +149,13 @@ CATALOG = {
                              "bottom. When the whole party falls, the run starts over."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
+    "claudeshelter": ("games", "Claude Shelter: run an underground vault, after Fallout Shelter. Build rooms (🔨) "
+                               "down into the rock, drag dwellers onto the rooms that suit their S.P.E.C.I.A.L., and "
+                               "tap a room's bubble to collect the power, food and water it makes (or rush it, and "
+                               "risk a fire). A man and a woman in the Living Quarters start a family; the radio "
+                               "brings in strangers. Fight off fires, radroaches and raiders, send dwellers into the "
+                               "wasteland for caps and gear, and finish objectives for lunchboxes. Drag the vault to "
+                               "look around, scroll to zoom; the vault saves itself."),
     "claudeatro": ("games", "Claudeatro: a poker roguelike after Balatro. Select up to 5 cards and play a poker hand: "
                             "its Chips times its Mult is your score, and each Blind wants a target. Small, Big and "
                             "Boss Blinds make an Ante; beat Ante 8's boss to win (then it goes on, endlessly). Jokers "
