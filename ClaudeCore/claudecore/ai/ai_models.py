@@ -2,7 +2,9 @@
 
 Models live in Local Storage/LLM Models/models/<name>/ - the model's .gguf, an optional mmproj-*.gguf (so it can see
 pictures) and an optional info.json ({"title", "source", "licence", "notes", "suggested": ["conversation", ...],
-"thinking": true, "chat_template": "chatml"} - the last for models whose file has no chat template; any of
+"thinking": true, "chat_template": "chatml", "embedding": true} - chat_template for models whose file has no chat
+template, embedding for an embedding model (nomic-embed-text: it turns text into vectors for other programs and is
+never offered for chat); any of
 llama.cpp's built-in names: chatml, mistral-v3-tekken, mistral-v7, llama3, gemma...). The folder name is the model's name everywhere.
 
 Jobs (roles):
@@ -61,23 +63,31 @@ class Model:
     def thinking(self):
         return bool(self.info.get("thinking"))
 
+    @property
+    def embedding(self):
+        return bool(self.info.get("embedding"))
+
 
 def models_root():
     from .llm_server import models_dir
     return models_dir() / "models"
 
 
-def installed():
-    """Every usable model (a folder with a .gguf), smallest first."""
+def installed(embeddings=False):
+    """Every usable chat model (a folder with a .gguf), smallest first; embeddings=True includes embedding models."""
     root = models_root()
     if not root.is_dir():
         return []
     found = [Model(d) for d in sorted(root.iterdir()) if d.is_dir()]
-    return sorted((m for m in found if m.path is not None), key=lambda m: m.size)
+    return sorted((m for m in found if m.path is not None and (embeddings or not m.embedding)), key=lambda m: m.size)
+
+
+def embedders():
+    return [m for m in installed(embeddings=True) if m.embedding]
 
 
 def get(model_id):
-    return next((m for m in installed() if m.id == model_id), None)
+    return next((m for m in installed(embeddings=True) if m.id == model_id), None)
 
 
 def _norm(name):

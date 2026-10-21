@@ -185,14 +185,17 @@ def _wanted():
     cfg = ai_models.config()
     return {"engine": str(find_engine()), "max_loaded": int(cfg["max_loaded"]), "context": int(cfg["context"]),
             "idle": int(cfg["idle_minutes"]), "compact": bool(cfg.get("compact_cache", True)),
-            "models": [(m.id, str(m.path), str(m.mmproj or ""), str(m.info.get("chat_template") or ""))
-                       for m in ai_models.installed()]}
+            "models": [(m.id, str(m.path), str(m.mmproj or ""), str(m.info.get("chat_template") or ""), m.embedding)
+                       for m in ai_models.installed(embeddings=True)]}
 
 
 def _write_presets(settings):
     lines = []
-    for model_id, path, mmproj, template in settings["models"]:
+    for model_id, path, mmproj, template, embedding in settings["models"]:
         lines += [f"[{model_id}]", f"model = {path}"]
+        if embedding:                               # an embedding model (other programs' /api/embed): small and plain
+            lines += ["embeddings = true", "ctx-size = 2048", "parallel = 1", ""]
+            continue
         if mmproj:
             lines.append(f"mmproj = {mmproj}")
         if template:                                # a model whose file has no chat template (info.json)

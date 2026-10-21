@@ -38,17 +38,18 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
                    "GeminiAdobe": [p.key for p in programs.PROGRAMS if p.group == "GeminiAdobe"],
                    "Social Programs": ["yim", "trillian", "skype", "icq", "kik", "msn", "aim", "furcadia", "hotmail",
                                        "livejournal", "irc", "navigator", "muck"],
+                   "Projects": ["virtualpet", "flymind", "flymind1", "flybrainviewer", "flybraindungeon", "localprojects"],
                    "Disc Tools": ["nero", "alcohol120"],
                    "Archive Tools": ["winrar", "winzip"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Social Programs": 45, "Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 30,
+FOLDERS_SINCE = {"Projects": 46, "Social Programs": 45, "Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 30,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 45
+FOLDERS = 46
 # folders that live inside another folder rather than loose on the desktop
 NESTED = {"Emulation": "Games/Emulation", "Windows Games": "Games/Windows Games"}
 # shortcuts that now live in one of those folders instead of loose on the desktop
-IN_FOLDERS = {"prog:mediaarchive": "Furry Programs", "prog:miscimages": "Furry Programs", "prog:personaldocs": "Furry Programs", "prog:tvmovies": "TV and Movies", "prog:tv": "TV and Movies"}
+IN_FOLDERS = {"prog:mediaarchive": "Furry Programs", "prog:miscimages": "Furry Programs", "prog:personaldocs": "Furry Programs", "prog:localprojects": "Projects", "prog:tvmovies": "TV and Movies", "prog:tv": "TV and Movies"}
 
 
 def std(which):
@@ -303,7 +304,8 @@ class IconManager(QObject):
         self.band = QRubberBand(QRubberBand.Rectangle, desktop)
         self.band_origin = None
         self.editor = None
-        self.icon_provider = QFileIconProvider()
+        from .explorer.fileicons import XPIconProvider
+        self.icon_provider = XPIconProvider()
         self.watcher = QFileSystemWatcher(self)
         self.rescan_timer = QTimer(self)
         self.rescan_timer.setSingleShot(True)

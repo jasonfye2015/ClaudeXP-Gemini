@@ -53,15 +53,24 @@ EMULATORS = [("nes", "NES Emulator", "Play NES games"), ("snes", "SNES Emulator"
 FOLDER_SHORTCUTS = {"mediaarchive": ("Furry Media Archive", "furry media archive"),
                     "tvmovies": ("TV and Movies", "tv and movies"),
                     "miscimages": ("Misc Personal Image Folders", "misc personal image folders"),
-                    "personaldocs": ("Personal Text and Documents", "personal text")}
+                    "personaldocs": ("Personal Text and Documents", "personal text"),
+                    "localprojects": ("Local Projects", "projects/local projects")}
+SHORTCUT_GROUPS = {"localprojects": "Projects"}        # the rest are in Furry Stuff
 
 
 def archive_folder(key):
     """The E: folder a folder shortcut points at, or None if the user hasn't put one there."""
     from ..explorer.vfs import local_storage
-    prefix = FOLDER_SHORTCUTS[key][1]
-    return next((d for d in sorted(local_storage().iterdir()) if d.is_dir() and d.name.lower().startswith(prefix)),
-                None)
+    folder = local_storage()
+    for prefix in FOLDER_SHORTCUTS[key][1].split("/"):       # ('projects/local projects': a folder inside one)
+        try:
+            folder = next((d for d in sorted(folder.iterdir()) if d.is_dir() and d.name.lower().startswith(prefix)),
+                          None)
+        except OSError:
+            folder = None
+        if folder is None:
+            return None
+    return folder
 
 
 def _open_folder_shortcut(key):
@@ -138,6 +147,15 @@ def _shared(module, func):
         import importlib
         return getattr(importlib.import_module(module), func)(*args)
     return call
+
+
+def _project_icon(key):
+    return lambda: __import__("projects").icon(key)
+
+
+def _project_launch(key):
+    """One of the Projects (ClaudeApps/projects): its own program, in its own window."""
+    return lambda desktop: __import__("projects").launch(desktop, key)
 
 
 def _game(module, func):
@@ -372,8 +390,11 @@ PROGRAMS = [
     Program("chatlogs", "Furry Chat Logs", "Years of chat logs by service, account and buddy",
             _shared("chatlogs.viewer", "chat_icon"), _shared("chatlogs.viewer", "open_chatlogs"),
             _shared("chatlogs.viewer", "shutdown"), group=FURRY),
-    *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key), group=FURRY)
-      for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
+    *[Program(key, label, "", lambda: std_icon(QStyle.SP_DirIcon), _open_folder_shortcut(key),
+              group=SHORTCUT_GROUPS.get(key, FURRY)) for key, (label, _prefix) in FOLDER_SHORTCUTS.items()],
+    # Start > Programs > Projects: the user's own programs (E:\Projects), and Python Studio's Local Projects
+    *[Program(key, name, blurb, _project_icon(key), _project_launch(key), group="Projects")
+      for key, (name, blurb, _rel, _how, _llm) in __import__("projects").PROJECTS.items()],
     # Start > Programs > Games: the id/Raven shooters (Doom-engine ones run on PrBoom, Heretic/Hexen on Chocolate)
     *[Program(key, name, blurb, _shared("emulators.emulator", f"{key}_icon"), _shared("emulators.emulator", f"open_{key}"),
               _shared("emulators.emulator", f"shutdown_{key}"), group="Games") for key, name, blurb in DOOM_GAMES],

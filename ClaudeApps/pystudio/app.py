@@ -75,7 +75,8 @@ def wheels_dir():
 
 
 def projects_dir():
-    folder = host.my_documents() / "Python Programs"
+    """Local Projects, beside the other Projects on E: (Local Storage), so every era's Python Studio shares them."""
+    folder = host.local_storage() / "Projects" / "Local Projects"
     if not folder.exists():
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "hello.py").write_text(SAMPLE, encoding="utf-8")
@@ -377,7 +378,7 @@ class PythonStudio(QWidget):
         sbox = QVBoxLayout(side)
         sbox.setContentsMargins(0, 0, 0, 0)
         sbox.setSpacing(2)
-        sbox.addWidget(QLabel(" My Python Programs"))
+        sbox.addWidget(QLabel(" Local Projects"))
         sbox.addWidget(self.files, 1)
 
         right = QSplitter(Qt.Vertical)
@@ -413,6 +414,9 @@ class PythonStudio(QWidget):
         self._build_menus()
         self.lint_timer = QTimer(self, singleShot=True, interval=700)
         self.lint_timer.timeout.connect(self._run_lint)
+        self.autosave_timer = QTimer(self, interval=60 * 1000)          # quietly, once a minute
+        self.autosave_timer.timeout.connect(self.autosave)
+        self.autosave_timer.start()
         self._refresh_runtime_label()
         self.refresh_files()
         self._restore()
@@ -434,7 +438,7 @@ class PythonStudio(QWidget):
             from . import assets
             if assets.install():
                 self.refresh_files()
-                self.status.setText("Game assets installed in Python Programs\\Assets")
+                self.status.setText("Game assets installed in Local Projects\\Assets")
         except Exception:
             pass
         if python_exe().exists():
@@ -596,7 +600,7 @@ class PythonStudio(QWidget):
         m.addSeparator()
         self._action(m, "&Installed Packages", self.list_packages)
         self._action(m, "Install Package from &Offline Wheels...", self.install_package)
-        self._action(m, "Open Python Programs &Folder", self.show_folder)
+        self._action(m, "Open Local Projects &Folder", self.show_folder)
         m = self.menubar.addMenu("&View")
         self.wrap_action = QAction("&Word Wrap", self, checkable=True, checked=self.settings.get("wrap", False))
         self.wrap_action.toggled.connect(self._apply_wrap)
@@ -1085,6 +1089,30 @@ class PythonStudio(QWidget):
         self.status.setText(f"Saved {Path(ed.path).name}")
         self.refresh_files()
         return True
+
+    def autosave(self):
+        """Save every changed program that has a file; keep a recovery copy of changed Untitled tabs in
+        Local Projects\\Auto-Saved (the tab itself stays untitled until you Save As)."""
+        saved = 0
+        for ed in self.open_editors():
+            if not ed.document().isModified():
+                continue
+            try:
+                if ed.path:
+                    Path(ed.path).write_text(ed.toPlainText(), encoding="utf-8", newline="\n")
+                    backups.snapshot(ed.path, ed.toPlainText(), "autosave")
+                    ed.document().setModified(False)
+                    self._retitle(ed)
+                elif ed.toPlainText().strip():
+                    spare = projects_dir() / "Auto-Saved"
+                    spare.mkdir(exist_ok=True)
+                    (spare / ed.title).write_text(ed.toPlainText(), encoding="utf-8", newline="\n")
+                saved += 1
+            except OSError:
+                continue
+        if saved:
+            self.status.setText(f"Auto-saved {saved} program{'s' if saved != 1 else ''}")
+            self.refresh_files()
 
     def save_as(self, ed=None):
         ed = ed if isinstance(ed, CodeEditor) else self.editor()

@@ -25,37 +25,41 @@
       6,
       396
     ],
-    "file:Social Programs": [
+    "file:Projects": [
       6,
       474
     ],
-    "file:TV and Movies": [
+    "file:Social Programs": [
       6,
       552
     ],
-    "prog:iexplore": [
+    "file:TV and Movies": [
       6,
       630
     ],
-    "prog:kiwix": [
+    "prog:iexplore": [
       6,
       708
     ],
-    "prog:claudeai": [
+    "prog:kiwix": [
       86,
       6
     ],
-    "prog:copilotai": [
+    "prog:claudeai": [
       86,
       84
     ],
-    "prog:imagecreator": [
+    "prog:copilotai": [
       86,
       162
     ],
-    "prog:pystudio": [
+    "prog:imagecreator": [
       86,
       240
+    ],
+    "prog:pystudio": [
+      86,
+      318
     ]
   },
   "hidden": [
@@ -83,6 +87,7 @@
     "Furry Programs",
     "Games",
     "GeminiOffice",
+    "Projects",
     "Social Programs",
     "TV and Movies",
     "Windows Games"

@@ -15,6 +15,9 @@ SECTIONS = [
      "Dial up, browse the 2001 Web, read your mail and your friends' journals."),
     ("furry", "Furry Stuff",
      "The furry media of the time, from your archive on E:, and the residents' own directory."),
+    ("projects", "Projects", "Your own programs from E:\\Projects, each in its own window, and the Local Projects "
+                             "Python Studio saves into. The ones that talk use the same language models as everything "
+                             "else."),
     ("office", "Office and creativity", "Documents, pictures, movies and code."),
     ("media", "Music and video", ""),
     ("games", "Games", "All in Start > Games and the desktop's Games folder."),
@@ -73,6 +76,16 @@ CATALOG = {
     "documents": ("furry", "A gallery of your own texts and documents in Personal Texts and Docs on E:, with a "
                            "reading pane for text, web pages, Word, WordPad and PDF files."),
     "personaldocs": ("furry", "Your Personal Texts and Docs folder on E:."),
+    "virtualpet": ("projects", "Virtual Pet 27.0: a desktop pet that talks with you through the language models."),
+    "flymind": ("projects", "Fly Mind: a companion whose feelings and memories come from a real fruit fly's mushroom "
+                            "body (5,191 neurons), with a language model as its voice."),
+    "flymind1": ("projects", "FlyMind v1.0: the FlyMind companion that has been living here, with everything it remembers."),
+    "flybrainviewer": ("projects", "Fly Brain Viewer: a live 3D map of a male fruit fly's nervous system, and a chat "
+                                   "with a character whose body is that brain."),
+    "flybraindungeon": ("projects", "Fly Brain Dungeon: a retro dungeon crawler whose monster is driven by 4,501 real "
+                                    "mushroom-body neurons, learning from dopamine as it hunts you."),
+    "localprojects": ("projects", "Local Projects: where Copilot Python Studio saves (and auto-saves) your programs, in "
+                                  "E:/Projects."),
     "others": ("furry", "Other's Files Archive Viewer: the files saved from other people over the years, one album "
                         "per person - pictures, videos and writing, with Show and Sort menus."),
     "stickers": ("furry", "Sticker Manager: the sticker packs in E:\\Sticker Packs - give each sticker an emoji and a "

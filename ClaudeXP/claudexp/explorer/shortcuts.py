@@ -56,10 +56,10 @@ def icon(path):
                 return None
     if info.get("target"):
         from PySide6.QtCore import QFileInfo
-        from PySide6.QtWidgets import QFileIconProvider
+        from .fileicons import XPIconProvider
         target = Path(info["target"])
         if target.exists():
-            return QFileIconProvider().icon(QFileInfo(str(target)))
+            return XPIconProvider().icon(QFileInfo(str(target)))
     return None
 
 

@@ -250,7 +250,9 @@ class Explorer(QWidget):
         self.view_mode = "icons"
         self.setStyleSheet(STYLE)
         vfs.setup_c()
-        self.icons = QFileIconProvider()
+        from .fileicons import XPIconProvider
+        self.icons = XPIconProvider()               # (.py files get ClaudeXP's own Python icon)
+        self._icon_provider = self.icons
 
         # ---- menus ----
         bar = QMenuBar()
@@ -323,6 +325,7 @@ class Explorer(QWidget):
 
         # ---- views ----
         self.fs = QFileSystemModel(self)
+        self.fs.setIconProvider(self._icon_provider)
         self.fs.setReadOnly(False)
         self.fs.setFilter(QDir.AllEntries | QDir.NoDotAndDotDot | QDir.System)
         self.fs.setRootPath(str(vfs.DRIVE_C.parent))
