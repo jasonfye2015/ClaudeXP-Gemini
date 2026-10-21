@@ -149,6 +149,11 @@ CATALOG = {
                              "bottom. When the whole party falls, the run starts over."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
+    "claudeita": ("games", "Claudeita: a Noita-like descent through five biomes of falling sand, water, lava, acid and "
+                           "fire. Find wands and spells and arrange them in the wand editor (Tab); beat each biome's "
+                           "boss to reach its Sanctuary (a healing fountain and a shop), and the Unmaker at the bottom. "
+                           "Death makes a new world. A/D move, W/Space jump and levitate, mouse to aim and cast, 1-4 "
+                           "wands, E pick up or buy."),
     "claudeaquarium": ("games", "Claude Aquarium: a living fish tank - in a window, full screen, or as a little "
                                 "desktop pet above the taskbar. Feed eight kinds of fish (or right-click the water), "
                                 "keep the water clean, treat Ich, Fin Rot and Swim Bladder with the right medicine, "

@@ -45,7 +45,7 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
 FOLDERS_SINCE = {"Projects": 46, "Social Programs": 45, "Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 30,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 52
+FOLDERS = 53
 # folders that live inside another folder rather than loose on the desktop
 NESTED = {"Emulation": "Games/Emulation", "Windows Games": "Games/Windows Games"}
 # shortcuts that now live in one of those folders instead of loose on the desktop
@@ -252,6 +252,13 @@ class IconManager(QObject):
                 link = furry / f"{programs.get('camroll').name}.lnk"
                 if furry.is_dir() and not link.exists():
                     shortcuts.make(link, program="camroll")
+            if folders < 53:
+                # Claudeita joins the Games folder
+                from .explorer import shortcuts, vfs
+                games = vfs.user_home() / "Desktop" / "Games"
+                link = games / f"{programs.get('claudeita').name}.lnk"
+                if games.is_dir() and not link.exists():
+                    shortcuts.make(link, program="claudeita")
             if folders < 52:
                 # Claude Aquarium joins the Games folder
                 from .explorer import shortcuts, vfs
