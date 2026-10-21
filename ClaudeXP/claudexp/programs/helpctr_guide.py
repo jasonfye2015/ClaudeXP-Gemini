@@ -149,6 +149,11 @@ CATALOG = {
                              "bottom. When the whole party falls, the run starts over."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
+    "claudeaquarium": ("games", "Claude Aquarium: a living fish tank - in a window, full screen, or as a little "
+                                "desktop pet above the taskbar. Feed eight kinds of fish (or right-click the water), "
+                                "keep the water clean, treat Ich, Fin Rot and Swim Bladder with the right medicine, "
+                                "and watch them grow and breed - fry can carry mutations. Put fish in stasis, pause "
+                                "the tank as a display, and keep tanks in three save slots."),
     "claudeincremental": ("games", "Claude Incremental: an incremental game in three acts - answer questions and "
                                    "earn trust, become humanity's steward and convert the Earth (once everyone has "
                                    "somewhere better to be), then send self-replicating probes to convert the galaxy. "
