@@ -29,7 +29,7 @@ from shiboken6 import isValid
 
 from ... import sound
 from ...paths import DATA
-from .core import AWAY, BUSY, OFFLINE, ONLINE, clean_reply, timefmt
+from .core import AWAY, BUSY, OFFLINE, ONLINE, clean_reply, codes_for, decode_in_furcoder, timefmt
 from .telegram import EMOJI_FONT, EmojiStickers, TelegramNetwork, _clock, _when, avatar, emoji_picture
 
 SETTINGS = DATA / "discord.json"
@@ -892,6 +892,8 @@ class UserPanel(QWidget):
             self.app.toggle_setting("deafened")
         elif hit == "gear":
             self.app.settings_menu(self.mapToGlobal(self._buttons()["gear"].topLeft().toPoint()))
+        elif event.position().x() < self.width() - 110:          # your picture and name: your profile
+            self.app.show_profile("", self.mapToGlobal(self.rect().topLeft()))
         self.update()
 
     def paintEvent(self, event):
@@ -940,6 +942,102 @@ class UserPanel(QWidget):
             if off:
                 p.setPen(QPen(QColor(C["red"]), 2.4))
                 p.drawLine(QPointF(cx - 9, cy - 9), QPointF(cx + 9, cy + 9))
+
+
+# ---- a profile popout --------------------------------------------------------------------------------------------------
+class ProfileCard(QFrame):
+    """Discord's profile popout: banner, picture and status, name, what they're playing, About Me, and their codes."""
+
+    def __init__(self, app, bid):
+        super().__init__(app, Qt.Popup)
+        self.app = app
+        self.bid = bid
+        self.setFixedWidth(320)
+        self.setObjectName("card")
+        self.setStyleSheet(f"QFrame#card {{ background: {C['panel']}; border: 1px solid {C['rail']}; }}"
+                           f"QLabel {{ color: {C['text']}; background: transparent; }}")
+        b = app.network.buddies.get(bid) if bid else None
+        if bid and b is None:
+            return
+        if b is None:                              # you
+            name, pic, presence, colour = app.my_name(), my_avatar(80), ONLINE, C["blurple"]
+            act = app.network.activity if app.network.show_activity else None
+            game = (act["name"], act["key"]) if act else None
+            from ... import timeline
+            codes = timeline.user_codes()
+            about = ""
+            tag = f"{app.my_name()}#{app.tag()}"
+        else:
+            name, pic, presence, colour = b.name, avatar(b, 80), b.presence, role_colour(bid)
+            game = app.network.friend_activity(b)
+            codes = codes_for(b)
+            about = "\n".join(line for line in (b.contact.profile or "").splitlines()
+                              if not line.startswith(("Furry Code", "YIFF "))).strip()
+            tag = app.network.handle_for(b.contact)
+        self.banner_colour, self.pic, self.presence = colour, pic, presence
+        col = QVBoxLayout(self)
+        col.setContentsMargins(16, 104, 16, 16)
+        col.setSpacing(4)
+        title = QLabel(f"<span style='font-size:15pt; font-weight:700; color:white'>{html.escape(name)}</span><br>"
+                       f"<span style='color:{C['muted']}'>{html.escape(tag)}</span>")
+        col.addWidget(title)
+        line = QFrame()
+        line.setFixedHeight(1)
+        line.setStyleSheet(f"QFrame {{ background: {C['hover']}; }}")
+        col.addSpacing(6)
+        col.addWidget(line)
+
+        def section(head, body, mono=False):
+            h = QLabel(head)
+            h.setStyleSheet(f"QLabel {{ color: {C['header']}; font: bold 8pt 'Segoe UI'; padding-top: 6px; }}")
+            col.addWidget(h)
+            t = QLabel(html.escape(body).replace("\n", "<br>"))
+            t.setTextFormat(Qt.RichText)
+            t.setWordWrap(True)
+            t.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            t.setStyleSheet("QLabel { font: 9pt 'Consolas'; }" if mono else "QLabel { font: 10pt 'Segoe UI'; }")
+            col.addWidget(t)
+
+        if game:
+            section("PLAYING A GAME", game[0])
+        if about:
+            section("ABOUT ME", about)
+        if codes.get("furcode"):
+            section("FURRY CODE", codes["furcode"], mono=True)
+        if codes.get("yiffcode"):
+            section("YIFF CODE", codes["yiffcode"], mono=True)
+        if codes.get("furcode") or codes.get("yiffcode"):
+            link = QLabel("<a href='x' style='color:#00AFF4'>Decode in FurCoder</a>")
+            link.linkActivated.connect(lambda _l: (self.close(), decode_in_furcoder(app.desktop, bid or "__mine__")))
+            col.addWidget(link)
+        if b is not None:
+            msg = QPushButton(f"Message @{name}")
+            msg.setStyleSheet(f"QPushButton {{ background: {C['blurple']}; color: white; border: none; border-radius: 3px;"
+                              " padding: 7px; font: bold 10pt 'Segoe UI'; margin-top: 8px; }")
+            msg.clicked.connect(lambda: (self.close(), app.open_target(("dm", bid))))
+            col.addWidget(msg)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.fillRect(QRectF(1, 1, self.width() - 2, 60), QColor(getattr(self, "banner_colour", C["blurple"])))
+        if getattr(self, "pic", None) is not None:
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(C["panel"]))
+            p.drawEllipse(QRectF(10, 14, 92, 92))
+            p.drawPixmap(16, 20, self.pic)
+            draw_status(p, 86, 90, 8, self.presence, C["panel"])
+
+    def show_at(self, global_pos):
+        self.adjustSize()
+        screen = self.app.window().geometry() if self.app.window() else None
+        x, y = global_pos.x(), global_pos.y()
+        if screen is not None:
+            x = min(x, screen.right() - self.width() - 8)
+            y = min(y, screen.bottom() - self.height() - 8)
+        self.move(max(0, x), max(0, y))
+        self.show()
 
 
 # ---- the messages ------------------------------------------------------------------------------------------------------
@@ -1252,6 +1350,12 @@ class Discord(QWidget):
         self.members_btn.setChecked(self.settings.get("members", True))
         self.members_btn.clicked.connect(self._toggle_members)
         hl.addWidget(self.members_btn)
+        self.profile_btn = QToolButton()
+        self.profile_btn.setIcon(QIcon(emoji_picture("👤", 22)))
+        self.profile_btn.setToolTip("View Profile")
+        self.profile_btn.clicked.connect(lambda: self.where[0] == "dm" and self.show_profile(
+            self.where[1], self.profile_btn.mapToGlobal(self.profile_btn.rect().bottomLeft())))
+        hl.addWidget(self.profile_btn)
         col.addWidget(self.header)
         self.pages = QStackedWidget()
         col.addWidget(self.pages, 1)
@@ -1268,6 +1372,8 @@ class Discord(QWidget):
         self.friend_list.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.friend_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.friend_list.itemClicked.connect(self._friend_clicked)
+        self.friend_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.friend_list.customContextMenuRequested.connect(self._friend_menu)
         fr.addWidget(self.friend_list, 1)
         self.active_now = ActiveNow(self)
         fr.addWidget(self.active_now)
@@ -1444,6 +1550,7 @@ class Discord(QWidget):
         _save_settings(self.settings)
         self.tabs.setVisible(kind == "friends")
         self.members_btn.setVisible(kind == "channel")
+        self.profile_btn.setVisible(kind == "dm")
         self.head_bar.setVisible(kind != "dm")
         if kind == "friends":
             self.head_icon.setPixmap(emoji_picture("👥", 22))
@@ -1610,13 +1717,26 @@ class Discord(QWidget):
 
     def _member_clicked(self, item):
         row = item.data(Qt.UserRole)
-        if row[0] == "member" and row[1]:
-            menu = QMenu(self)
-            menu.addAction("Message", lambda: self.open_target(("dm", row[1])))
-            b = self.network.buddies.get(row[1])
-            if b is not None:
-                menu.addAction(f"Mention @{b.name}", lambda: self.insert_emoji(f"@{b.name} "))
-            menu.exec(self.cursor().pos())
+        if row[0] == "member":
+            self.show_profile(row[1], self.cursor().pos())
+
+    def show_profile(self, bid, where=None):
+        """bid: a buddy's id, or '' for your own profile."""
+        from PySide6.QtGui import QCursor
+        ProfileCard(self, bid).show_at(where or QCursor.pos())
+
+    def _friend_menu(self, pos):
+        item = self.friend_list.itemAt(pos)
+        row = item.data(Qt.UserRole) if item else None
+        if not row or row[0] != "friend":
+            return
+        b = self.network.buddies.get(row[1])
+        menu = QMenu(self)
+        menu.addAction("Profile", lambda: self.show_profile(row[1]))
+        menu.addAction("Message", lambda: self.open_target(("dm", row[1])))
+        if b is not None:
+            menu.addAction("Decode their codes in FurCoder", lambda: decode_in_furcoder(self.desktop, row[1]))
+        menu.exec(self.friend_list.viewport().mapToGlobal(pos))
 
     def channel_unread_total(self):
         return sum(self.channel_unread.values())
@@ -1772,6 +1892,8 @@ class Discord(QWidget):
             muted = self.where[1] in self.settings.get("muted", [])
             menu.addAction("Unmute this conversation" if muted else "Mute this conversation", self._toggle_mute)
         menu.addSeparator()
+        menu.addAction("My Profile", lambda: self.show_profile(""))
+        menu.addAction("FurCoder (Furry Code / YIFF Code)...", lambda: decode_in_furcoder(self.desktop, "__mine__"))
         menu.addAction("Sticker Manager...", self._open_sticker_manager)
         menu.addAction("About Discord", self._about)
         menu.exec(where)

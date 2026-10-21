@@ -48,5 +48,10 @@
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": ""
+  "notes": "",
+  "codes": {
+    "furcode": "F[Cedar waxwing]w3dr A+ C- D H+ M+s P R T++ V-- W-- RLS a+ c+w e f++ g+ h+++ i+++f j- m p^^ Sfb sfb",
+    "yiffcode": "YIFF 3.0 F bi P Ne T-mi *waxwing_rabbit* Cu S Ne V-te *-* Pr H-ca Pr WIXXX:12,15,24,31,51,53",
+    "yiff_public": false
+  }
 }

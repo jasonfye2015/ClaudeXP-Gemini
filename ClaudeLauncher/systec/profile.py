@@ -36,11 +36,34 @@ def load():
     return data if data.get("name") else None
 
 
-def save(name, fursona=None, handle=None):
+def save(name, fursona=None, handle=None, codes=None):
+    """codes: {"furcode", "yiffcode"} - the user's own; None keeps the ones already saved."""
+    old = _load(PROFILE_FILE)
     data = {"name": name.strip(), "fursona": fursona or None, "handle": (handle or name).strip(),
             "picture": f"fursona:{fursona}" if fursona else None}
+    codes = old.get("codes") if codes is None else codes
+    if codes and (codes.get("furcode") or codes.get("yiffcode")):
+        data["codes"] = {"furcode": codes.get("furcode", ""), "yiffcode": codes.get("yiffcode", "")}
     _save(PROFILE_FILE, data)
     return data
+
+
+def save_codes(codes):
+    data = _load(PROFILE_FILE)
+    if not data.get("name"):
+        return
+    data["codes"] = {"furcode": codes.get("furcode", ""), "yiffcode": codes.get("yiffcode", "")}
+    _save(PROFILE_FILE, data)
+
+
+def codes(me=None):
+    """The user's codes: their own, or else their fursona preset's defaults."""
+    me = me if me is not None else (load() or {})
+    own = me.get("codes") or {}
+    if own.get("furcode") or own.get("yiffcode"):
+        return dict(own)
+    pr = preset(me.get("fursona")) if me.get("fursona") else None
+    return dict(pr.codes) if pr else {}
 
 
 def suggestion():
@@ -62,6 +85,7 @@ class Preset:
         sona = data.get("fursona") or {}
         self.summary = data.get("summary") or sona.get("description") or ""
         self.species = sona.get("species", "")
+        self.codes = data.get("codes") or {}            # its default Furry Code and YIFF Code
 
     def picture(self):
         for stem in ("account", "buddy_icon"):

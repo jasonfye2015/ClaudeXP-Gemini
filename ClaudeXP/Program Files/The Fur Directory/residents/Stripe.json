@@ -48,5 +48,10 @@
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": ""
+  "notes": "",
+  "codes": {
+    "furcode": "FFT2ar A- C+ D- H+ M+ts P R-- T V W+ RLET a+ c+++w e++ f+++ g++ h+++ i+++ j+ m- p Sfo sfo",
+    "yiffcode": "YIFF 3.0 F pan P Ne T-an-ma *tiger* Pr S-fu Cu V-te-ga *tiger-* Pr H-fu Mo WIXXX:12,16,40,42,54",
+    "yiff_public": true
+  }
 }

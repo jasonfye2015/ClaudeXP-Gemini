@@ -48,5 +48,10 @@
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": ""
+  "notes": "",
+  "codes": {
+    "furcode": "F[Minotaur]3ar A-- C- D H+ M P+ R T+++ V- W RLGP a++ c+w e f++ g h+++ i+ j-- m p- Smo smo",
+    "yiffcode": "YIFF 3.0 M pan P No T-an-fe *minotaur-wolf-tiger* Pr S No V-te-ga *minotaur-wolf-tiger-* Pr H Cu WIXXX:15,20,24,31",
+    "yiff_public": true
+  }
 }

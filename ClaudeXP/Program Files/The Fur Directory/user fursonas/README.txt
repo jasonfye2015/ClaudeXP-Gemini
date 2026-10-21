@@ -26,6 +26,8 @@ profile.json uses the same fields as a resident record (see ..\README.txt), plus
                   the card as its own section
   "knows"         [ { "name": "<resident>", "closeness": "close" | "friend" | "acquaintance",
                       "how_met": "Met at Anthrocon 2000." }, ... ]
+  "codes"         { "furcode": ..., "yiffcode": ... } - this fursona's default Furry Code and YIFF Code. Choosing
+                  it in the launcher gives you these; change them there (CODES) or in FurCoder.
 
 What residents know about you comes from "knows": close friends know your life (real name, job, hours,
 personality, favourites, relationship status); friends know your fursona, age, where you live, fursuit and cons;

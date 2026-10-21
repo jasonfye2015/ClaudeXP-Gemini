@@ -48,5 +48,10 @@
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": "Profile name: Tessellate. Online as Tessa, because the MUCK wizard Tessellate (a snow leopard) already uses that name."
+  "notes": "Profile name: Tessellate. Online as Tessa, because the MUCK wizard Tessellate (a snow leopard) already uses that name.",
+  "codes": {
+    "furcode": "F[Pangolin]3r A-- C- D- H++ M++ P++ R T+++ V W+ RLGP a c+lw e f- g- h+++ i+++w j- m p Snb snb",
+    "yiffcode": "YIFF 3.0 N bi P Th T-fe Pr S No V-te *pangolin-* Th H-fu Mo WIXXX:2,10,31,36,44,49,52",
+    "yiff_public": false
+  }
 }

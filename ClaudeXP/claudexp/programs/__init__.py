@@ -398,6 +398,8 @@ PROGRAMS = [
             _shared("folio.others", "shutdown"), group=FURRY),
     Program("stickers", "Sticker Manager", "Give each sticker an emoji and a meaning", _shared("stickers.manager", "stickers_icon"),
             _shared("stickers.manager", "open_stickers"), _shared("stickers.manager", "shutdown"), group=FURRY),
+    Program("furcoder", "FurCoder", "Encode and decode Furry Codes and YIFF Codes", _shared("furcoder", "furcoder_icon"),
+            _shared("furcoder", "launch"), group=FURRY),
     Program("chatlogs", "Furry Chat Logs", "Years of chat logs by service, account and buddy",
             _shared("chatlogs.viewer", "chat_icon"), _shared("chatlogs.viewer", "open_chatlogs"),
             _shared("chatlogs.viewer", "shutdown"), group=FURRY),

@@ -8,6 +8,7 @@ Info panel and Night Mode.
 Stickers (Local Storage/Sticker Packs, given meanings in the Sticker Manager): each buddy has a favourite pack, and
 their prompt lists its emojis. A reply that starts or ends with one arrives as one of that emoji's stickers (picked at
 random). A sticker you send reaches them as '[sticker: 😊 happy tail wag]'. The other messengers stay sticker-free."""
+import html
 import json
 import random
 import re
@@ -24,7 +25,7 @@ from shiboken6 import isValid
 
 from ... import sound
 from ...paths import DATA
-from .core import AWAY, BUSY, OFFLINE, ONLINE, Network
+from .core import AWAY, BUSY, OFFLINE, ONLINE, Network, codes_for, decode_in_furcoder
 
 SETTINGS = DATA / "telegram.json"
 NOTIFY_SOUND = "telegram_notification.mp3"            # assets/sounds: Telegram's own incoming-message sound
@@ -612,6 +613,9 @@ class UserInfo(QWidget):
         self.details = QLabel()
         self.details.setWordWrap(True)
         self.details.setTextFormat(Qt.RichText)
+        self.buddy = None
+        self.details.linkActivated.connect(lambda _l: self.buddy is not None and
+                                           decode_in_furcoder(app.desktop, self.buddy.contact.id))
         lay.addWidget(self.details)
         self.notify = QPushButton()
         self.notify.setObjectName("panel")
@@ -633,8 +637,17 @@ class UserInfo(QWidget):
             pack = library.favorite_pack(b.name) or "(none yet)"
         except Exception:
             pack = "(none)"
+        codes = codes_for(b)
+        extra = ""
+        for key, title in (("furcode", "Furry Code"), ("yiffcode", "YIFF Code")):
+            if codes.get(key):
+                extra += (f"<br><br><span style='color:{c['dim']}'>{title}</span><br>"
+                          f"<span style='font-family:Consolas'>{html.escape(codes[key])}</span>")
+        if extra:
+            extra += f"<br><a href='decode' style='color:{c['accent']}'>Decode in FurCoder</a>"
         self.details.setText(f"<span style='color:{c['dim']}'>Username</span><br>{self.app.network.handle_for(b.contact)}"
-                             f"<br><br><span style='color:{c['dim']}'>Favourite stickers</span><br>{pack}")
+                             f"<br><br><span style='color:{c['dim']}'>Favourite stickers</span><br>{pack}{extra}")
+        self.buddy = b
         muted = b.contact.id in self.app.settings.get("muted", [])
         self.notify.setText("Notifications: Off (turn on)" if muted else "Notifications: On (turn off)")
 

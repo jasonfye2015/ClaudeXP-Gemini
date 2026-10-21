@@ -48,5 +48,10 @@
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": ""
+  "notes": "",
+  "codes": {
+    "furcode": "F[Mudskipper]3r A- C D- H+ M+ P R T V W-- RLR a+ cw e+ f+++ g h+++ i++ j-- m- p Sfh sfh",
+    "yiffcode": "YIFF 3.0 F P Ne T-an-fe *mudskipper-fox-raccoon* Pr S-fu No V-te *-* Cu H No WIXXX:3,8,10,20,24,27,31,49,56",
+    "yiff_public": true
+  }
 }

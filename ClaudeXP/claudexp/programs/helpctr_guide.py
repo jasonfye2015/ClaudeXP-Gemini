@@ -93,6 +93,10 @@ CATALOG = {
                                   "E:/Projects."),
     "others": ("furry", "Other's Files Archive Viewer: the files saved from other people over the years, one album "
                         "per person - pictures, videos and writing, with Show and Sort menus."),
+    "furcoder": ("furry", "FurCoder: encode and decode Furry Codes (2.0) and YIFF Codes (3.0) - type or paste one to "
+                          "read it in words, or build one with the encoder. Look up your own codes and the residents' "
+                          "(their YIFF Codes only if they show them). Your codes decide how the residents treat you; "
+                          "'Make these my codes' changes them from the next time Windows starts."),
     "stickers": ("furry", "Sticker Manager: the sticker packs in E:\\Sticker Packs - give each sticker an emoji and a "
                           "meaning (or let Suggest with AI fill a pack in), so contacts can send and understand them."),
     "chatlogs": ("furry", "Years of chat logs - AIM, Yahoo!, MSN, ICQ, IRC, Second Life and more, from Gaim, Pidgin, "

@@ -89,9 +89,44 @@ def about_you(r, buddy=True):
     who = "your buddy" if buddy else "the user"
     for h in r.history_lines():
         lines.append(h.replace("the user", who))
-    if not lines:
+    block = "\n\nAbout you (keep consistent with this):\n- " + "\n- ".join(lines) if lines else ""
+    return block + codes_block(r)
+
+
+# ---- Furry Code and YIFF Code ------------------------------------------------------------------------------------
+def codes(r):
+    """The resident's codes as this era has them (the Furry Code's age bracket worked out for the era), or {}."""
+    c = dict(r.core.get("codes") or {})
+    if c.get("furcode"):
+        from claudecore.furcodes import furcode
+        c["furcode"] = furcode.with_age(c["furcode"], r.age)
+    return c
+
+
+def codes_block(r):
+    """What their codes and the user's mean for how they get along (see claudecore.furcodes.steering)."""
+    c = codes(r)
+    if not c:
         return ""
-    return "\n\nAbout you (keep consistent with this):\n- " + "\n- ".join(lines)
+    from claudecore.furcodes import steering
+    me = timeline.profile() or {}
+    return steering.about(c, timeline.user_codes(), user=me.get("handle") or me.get("name") or "your buddy")
+
+
+def shows_yiff(r):
+    """Some residents put their YIFF Code in their profiles too (the ones who don't keep it private)."""
+    from claudecore.furcodes import yiff_public
+    return yiff_public(r.name, codes(r).get("yiffcode", ""))
+
+
+def _profile_with_codes(profile, r):
+    c = codes(r)
+    if not c.get("furcode"):
+        return profile
+    extra = f"\n\nFurry Code 2.0: {c['furcode']}"
+    if shows_yiff(r):
+        extra += f"\n{c['yiffcode']}"
+    return (profile or "").rstrip() + extra
 
 
 # ---- the Fur Directory card --------------------------------------------------------------------------------
@@ -130,6 +165,9 @@ def _record(r):
     }
     if directory.get("icon"):
         rec["icon"] = directory["icon"]
+    if codes(r):
+        rec["codes"] = codes(r)
+        rec["codes"]["yiff_public"] = shows_yiff(r)
     if not rec["relationships"]:
         del rec["relationships"]
     return rec
@@ -160,7 +198,8 @@ def sync():
         changed += _write_json(RECORDS / f"{name}.json", _record(r))
         aim = r.service("aim")
         if aim:
-            aim = dict(aim, persona=(aim.get("persona") or r.persona) + about_you(r, buddy=True))
+            aim = dict(aim, persona=(aim.get("persona") or r.persona) + about_you(r, buddy=True),
+                       profile=_profile_with_codes(aim.get("profile", ""), r))
             changed += _write_json(AIM / f"{name}.json", aim)
             for folder in r.media[:1]:                  # this era's photos, captions and buddy icon
                 for f in folder.iterdir() if folder.is_dir() else []:

@@ -36,6 +36,28 @@ NETWORK_TITLES = {"msn": "MSN Messenger", "yim": "Yahoo! Messenger", "icq": "ICQ
 CHECK_MS = 30000                # how often presence is re-read
 
 
+def codes_for(b):
+    """A buddy's Furry Code and YIFF Code as their Fur Directory card shows them: {"furcode", "yiffcode"} (the YIFF
+    Code only if they make it public), or {}."""
+    from ...paths import ROOT
+    try:
+        rec = json.loads((ROOT / "Program Files" / "The Fur Directory" / "residents" /
+                          f"{b.contact.id}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    c = rec.get("codes") or {}
+    return {"furcode": c.get("furcode", ""), "yiffcode": c.get("yiffcode", "") if c.get("yiff_public") else ""}
+
+
+def decode_in_furcoder(desktop, name):
+    """Open FurCoder on someone's codes."""
+    try:
+        from furcoder import launch
+        launch(desktop, select=name)
+    except Exception:
+        pass
+
+
 def _slug(text):
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 

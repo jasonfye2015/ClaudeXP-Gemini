@@ -194,6 +194,11 @@ def residents():
     for pr in fursonas.presets():                               # the Setup fursonas, at the top
         r = Resident(slug("user-" + pr.id), pr.name, "user")
         r.preset, r.record, r.is_you = pr, pr.data, mine is not None and mine.id == pr.id
+        if r.is_you:                                            # your own codes, if you've changed them
+            from .. import timeline
+            mine_codes = timeline.user_codes()
+            if mine_codes:
+                r.record = dict(pr.data, codes=mine_codes)
         out.append(r)
     order = [k for k, _l, _d in TIERS]
     out.sort(key=lambda r: order.index(r.tier))                 # stable: keeps the order within each tier
@@ -340,6 +345,25 @@ class Card:
     def _section(self, title, rows):
         return f"<h2>{title}</h2><table cellspacing=2>{''.join(rows)}</table>"
 
+    def _codes(self, codes):
+        """Their Furry Code (and YIFF Code, if they show it), with what each says."""
+        from claudecore.furcodes import furcode, yiffcode
+        out = ["<h2>Furry Code and YIFF Code</h2>"]
+        shown = [("Furry Code 2.0", codes.get("furcode"), furcode.describe)]
+        if codes.get("yiff_public", True):
+            shown.append(("YIFF Code 3.0", codes.get("yiffcode"), yiffcode.describe))
+        for title, code, describe in shown:
+            if not code:
+                continue
+            try:
+                rows = describe(code)
+            except Exception:
+                rows = []
+            out.append(f"<p><b>{title}</b><br><tt>{_e(code)}</tt></p><table cellspacing=1>" + "".join(
+                f"<tr><td class=k>{_e(name)}</td><td>{_e(words)}</td></tr>" for _side, name, words in rows) +
+                "</table>")
+        return "".join(out)
+
     def _text(self, title, text, system=""):
         if text:
             return f"<h2>{title}</h2><p>{_e(text)}</p>"
@@ -430,6 +454,9 @@ class Card:
             out.append(self._text("Description", sona.get("description"), muck.get("desc", "")))
         # personality
         out.append(self._text("Personality", rec.get("personality"), ""))
+        codes = rec.get("codes") or {}
+        if codes.get("furcode") or codes.get("yiffcode"):
+            out.append(self._codes(codes))
         persona = aim.get("persona") or irc.get("persona") or muck.get("persona")
         if persona:
             out.append(f"<h2>How the system plays them</h2><p>{_e(persona)}</p>")
@@ -487,7 +514,7 @@ class Card:
         for key, value in rec.items():                           # anything we add later gets shown too
             if key in ("id", "fur_name", "tier", "icon", "screen_names", "personal", "favorites", "fursona",
                        "personality", "relationship", "friends", "relationships", "files", "webpages", "notes",
-                       "handle", "summary", "online", "knows", "fursuit", "conventions"):
+                       "handle", "summary", "online", "knows", "fursuit", "conventions", "codes"):
                 continue
             if isinstance(value, dict):
                 out.append(self._section(key.replace("_", " ").title(),

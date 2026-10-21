@@ -48,5 +48,10 @@
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": ""
+  "notes": "",
+  "codes": {
+    "furcode": "F[Pronghorn]4r A- C- D- H+ M-- P R-- T++ V-- W++ RLR a+ cw e+ f- g+ h+++ i+++f j+ m- p++ Sfb sfb",
+    "yiffcode": "YIFF 3.0 F bi P No T-an-fe-ma Pr S-fu No V-te-vo *pronghorn* Pr H-fu-ro-lo Mo WIXXX:15,34,39,40,42,50,57",
+    "yiff_public": false
+  }
 }

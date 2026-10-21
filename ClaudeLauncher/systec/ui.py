@@ -8,6 +8,7 @@ import math
 import os
 import random
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -19,6 +20,9 @@ from PySide6.QtWidgets import (QDialog, QFileDialog, QHBoxLayout, QLabel, QLineE
 
 from . import profile as prof
 from .systems import PORTABLE_PYTHON, SYSTEMS, TIMELINE
+
+if str(TIMELINE / "ClaudeCore") not in sys.path:          # the shared Furry Code / YIFF Code editor
+    sys.path.insert(0, str(TIMELINE / "ClaudeCore"))
 
 VW, VH = 1408, 768
 VERSION = "v1.50"
@@ -42,6 +46,21 @@ QPushButton:hover { border-color: #8FB4FF; background: #263042; }
 QPushButton:default { border-color: #5A8CFF; }
 QMessageBox { background: #15181E; }
 """
+CODES_CSS = DIALOG_CSS + """
+QTabWidget::pane { border: 1px solid #3A4250; background: #101318; }
+QTabBar::tab { background: #1E232C; color: #C8CED8; padding: 7px 16px; border: 1px solid #3A4250;
+               font-family: 'Segoe UI'; font-size: 13px; }
+QTabBar::tab:selected { background: #24324A; color: #FFFFFF; border-color: #5A8CFF; }
+QWidget { color: #E8ECF2; font-family: 'Segoe UI'; font-size: 12px; }
+QScrollArea, QScrollArea > QWidget > QWidget { background: #101318; border: none; }
+QGroupBox { border: 1px solid #3A4250; border-radius: 4px; margin-top: 14px; padding-top: 6px; }
+QGroupBox::title { subcontrol-origin: margin; left: 8px; color: #8FB4FF; letter-spacing: 1px; }
+QComboBox { background: #0C0E12; border: 1px solid #3A4250; border-radius: 3px; padding: 3px 6px; }
+QComboBox QAbstractItemView { background: #0C0E12; selection-background-color: #24324A; }
+QCheckBox { spacing: 5px; }
+QTextBrowser { background: #0C0E12; border: 1px solid #3A4250; }
+"""
+CODES_LABEL_CSS = "QLabel { font-family: Consolas, 'Courier New'; font-size: 12px; color: #C8D8FF; }"
 
 
 def _font(px, weight=QFont.Normal, spacing=0.0):
@@ -371,7 +390,7 @@ class Systec(QWidget):
     def _footer(self, p):
         # who's signed in
         me = prof.load()
-        chip = QRectF(52, VH - 62, 320, 44)
+        chip = QRectF(52, VH - 62, 440, 44)
         p.setPen(QPen(QColor("#3A4250"), 1.2))
         p.setBrush(QColor(14, 16, 20, 225))
         p.drawRoundedRect(chip, 6, 6)
@@ -389,10 +408,21 @@ class Systec(QWidget):
         p.setFont(_font(15, QFont.DemiBold))
         p.setPen(TEXT)
         p.drawText(QRectF(chip.x() + 48, chip.y() + 3, 260, 20), Qt.AlignVCenter, me["name"] if me else "No profile yet")
-        p.setFont(_font(11, QFont.Normal, 0.5))
-        p.setPen(DIM)
-        p.drawText(QRectF(chip.x() + 48, chip.y() + 22, 260, 16), Qt.AlignVCenter, "TIMELINE IDENTITY - click to change")
         self.buttons.append((chip, self.edit_profile))
+        line = QRectF(chip.x() + 48, chip.y() + 22, chip.width() - 126, 16)
+        if me:                                      # your Furry Code under your name, and a button for both codes
+            code = prof.codes(me).get("furcode") or "No Furry Code yet - click CODES to make one"
+            mono = QFont("Consolas")
+            mono.setPixelSize(11)
+            p.setFont(mono)
+            p.setPen(QColor("#C8D8FF"))
+            p.drawText(line, Qt.AlignVCenter, QFontMetrics(mono).elidedText(code, Qt.ElideRight, int(line.width())))
+            self._button(p, QRectF(chip.right() - 72, chip.y() + 9, 64, 26), "CODES", self.edit_codes, "#8FB4FF",
+                         small=True)
+        else:
+            p.setFont(_font(11, QFont.Normal, 0.5))
+            p.setPen(DIM)
+            p.drawText(line, Qt.AlignVCenter, "TIMELINE IDENTITY - click to change")
         # the centre buttons, on a trapezoid
         cx, w = VW / 2, 340
         tray = QPolygonF([QPointF(cx - w / 2 - 24, VH), QPointF(cx - w / 2, VH - 52), QPointF(cx + w / 2, VH - 52),
@@ -428,6 +458,16 @@ class Systec(QWidget):
         dlg.exec()
         self.update()
 
+    def edit_codes(self):
+        me = prof.load()
+        if me is None:
+            return
+        pr = prof.preset(me.get("fursona")) if me.get("fursona") else None
+        dlg = CodesDialog(self, prof.codes(me), pr.codes if pr else None)
+        if dlg.exec():
+            prof.save_codes(dlg.codes())
+        self.update()
+
     def help(self):
         box = QMessageBox(self)
         box.setWindowTitle("SYSTEC Help")
@@ -440,7 +480,9 @@ class Systec(QWidget):
             "<b>Config</b> shows the machine's specs and where its Local Storage (drive E:) is - point it at your "
             "external drive to use the full archive.<br><br>"
             "<b>Profile</b> is who you are in every era: your name and fursona. Each computer's Setup takes it from "
-            "here.<br><br>Keys: arrows pick a computer, Enter loads it, F11 full screen, Esc goes back.")
+            "here.<br><br><b>Your codes</b> (the Furry / YIFF panel above your name - click it) decide how the "
+            "residents get along with you: attraction, roleplay, what you have in common. A fursona comes with "
+            "defaults; change them any time.<br><br>Keys: arrows pick a computer, Enter loads it, F11 full screen, Esc goes back.")
         box.exec()
 
     def config(self, system):
@@ -542,6 +584,19 @@ class ProfileDialog(QDialog):
         self.handle = QLineEdit(current.get("handle", ""))
         row.addWidget(self.handle, 1)
         lay.addLayout(row)
+        self.codes = prof.codes(current)
+        own = current.get("codes") or {}
+        self.codes_edited = bool(own.get("furcode") or own.get("yiffcode"))
+        codes_row = QHBoxLayout()
+        self.codes_label = QLabel(_codes_text(self.codes))
+        self.codes_label.setWordWrap(True)
+        self.codes_label.setStyleSheet(CODES_LABEL_CSS)
+        codes_row.addWidget(self.codes_label, 1)
+        edit_codes = QPushButton("CODES...")
+        edit_codes.setToolTip("Your Furry Code and YIFF Code: encode, decode, change")
+        edit_codes.clicked.connect(self._edit_codes)
+        codes_row.addWidget(edit_codes)
+        lay.addLayout(codes_row)
         buttons = QHBoxLayout()
         buttons.addStretch(1)
         cancel = QPushButton("CANCEL")
@@ -567,6 +622,18 @@ class ProfileDialog(QDialog):
         if pr is not None:
             self.name.setText(pr.name)
             self.handle.setText(pr.handle)
+            if not self.codes_edited:                   # a fursona comes with its own codes
+                self.codes = dict(pr.codes)
+                self.codes_label.setText(_codes_text(self.codes))
+
+    def _edit_codes(self):
+        item = self.list.currentItem()
+        pr = prof.preset(item.data(Qt.UserRole)) if item else None
+        dlg = CodesDialog(self, self.codes, pr.codes if pr else None)
+        if dlg.exec():
+            self.codes = dlg.codes()
+            self.codes_edited = True
+            self.codes_label.setText(_codes_text(self.codes))
 
     def _save(self):
         name = self.name.text().strip()
@@ -575,8 +642,59 @@ class ProfileDialog(QDialog):
             return
         item = self.list.currentItem()
         pid = item.data(Qt.UserRole) if item else self.UNIQUE
-        prof.save(name, None if pid == self.UNIQUE else pid, self.handle.text().strip() or name)
+        prof.save(name, None if pid == self.UNIQUE else pid, self.handle.text().strip() or name,
+                  self.codes if self.codes_edited else {})
         self.accept()
+
+
+class CodesDialog(QDialog):
+    """Your Furry Code and YIFF Code: type or paste them, or build them in the encoder; the decoder says them in
+    words. They decide how the residents get along with you (see ClaudeCore/claudecore/furcodes/steering.py)."""
+
+    def __init__(self, parent, codes, defaults=None):
+        super().__init__(parent)
+        from claudecore.furcodes.editor import CodesEditor
+        self.setWindowTitle("Furry Code and YIFF Code")
+        self.setStyleSheet(CODES_CSS)
+        self.resize(1080, 720)
+        self.defaults = defaults or {}
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(20, 16, 20, 16)
+        title = QLabel("FURRY CODE AND YIFF CODE")
+        title.setObjectName("title")
+        lay.addWidget(title)
+        note = QLabel("These codes are you, as far as the residents are concerned: who's attracted to you and who's "
+                      "just a friend, who's up for roleplay (and how far), what you have in common. Change them and "
+                      "they treat you differently from the next time a computer starts - whatever your history "
+                      "together says.")
+        note.setObjectName("dim")
+        note.setWordWrap(True)
+        lay.addWidget(note)
+        self.editor = CodesEditor(codes.get("furcode", ""), codes.get("yiffcode", ""))
+        lay.addWidget(self.editor, 1)
+        buttons = QHBoxLayout()
+        if self.defaults:
+            reset = QPushButton("FURSONA DEFAULTS")
+            reset.setToolTip("Put back the codes that came with your fursona")
+            reset.clicked.connect(lambda: self.editor.set_codes(self.defaults))
+            buttons.addWidget(reset)
+        buttons.addStretch(1)
+        cancel = QPushButton("CANCEL")
+        cancel.clicked.connect(self.reject)
+        save = QPushButton("SAVE")
+        save.setDefault(True)
+        save.clicked.connect(self.accept)
+        buttons.addWidget(cancel)
+        buttons.addWidget(save)
+        lay.addLayout(buttons)
+
+    def codes(self):
+        return self.editor.codes()
+
+
+def _codes_text(codes):
+    fc, yc = (codes or {}).get("furcode", ""), (codes or {}).get("yiffcode", "")
+    return f"{fc or '(no Furry Code)'}\n{yc or '(no YIFF Code)'}"
 
 
 class ConfigDialog(QDialog):

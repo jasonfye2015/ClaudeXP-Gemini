@@ -48,5 +48,10 @@
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": ""
+  "notes": "",
+  "codes": {
+    "furcode": "F[Magpie]3r A-- C D H++ M+ts P R++ T+ V-- W-- RLU a++ c+m e+ f+++ g+ h+++ i++ j+ m p+ Snb snb",
+    "yiffcode": "YIFF 3.0 N bi P Cu T *magpie_cat* Pr S Cu V-te *-* Pr H-fu No WIXXX:17,22,28,31,33,39,40,49,52",
+    "yiff_public": false
+  }
 }

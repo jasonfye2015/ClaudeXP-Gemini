@@ -37,6 +37,11 @@ resident.json
                   An era sees only what has started by its year: an ongoing fact has no end yet, and a finished
                   one is told in the past tense.
   "flags"         notes for the user to review (e.g. "minor-in-persona": their 2001 text gave an under-18 age)
+  "codes"         { "furcode": Furry Code 2.0, "yiffcode": YIFF Code 3.0 }. They steer how the resident gets along
+                  with the user (attraction, roleplay, common ground; ClaudeCore/claudecore/furcodes/steering.py), going
+                  forward even where their history says otherwise, and show on their cards and profiles. Each era works
+                  out the Furry Code's age bracket from "born". Proposed by ClaudeCore/tools/propose_codes.py (see
+                  codes_proposal.json and 'Proposed Codes.md'); edit them here by hand freely.
 
 eras/<year>.json
 ----------------

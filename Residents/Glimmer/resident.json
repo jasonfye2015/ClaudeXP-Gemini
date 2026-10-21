@@ -39,5 +39,9 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [],
+  "codes": {
+    "furcode": "F[Firefly]3ar A- C D H M+s P R T++ V-- W-- RLS a+ c+lw e++ f g+ h++ i++w j m p+ Sno sno",
+    "yiffcode": "YIFF 3.0 N pan P No T *firefly-rabbit-lion* No S-fu No V-te *firefly-* No H-fu-lo No WIXXX:24,31"
+  }
 }

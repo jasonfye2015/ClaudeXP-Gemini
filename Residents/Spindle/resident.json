@@ -39,5 +39,9 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [],
+  "codes": {
+    "furcode": "FXC2ars A-- C-- D-- H++ M++s P++ R- T++ V W+ RLAT a+ c+++w e- f+++ g h+++ i+++ j m+ p Smg smg",
+    "yiffcode": "YIFF 3.0 M kinsey-5 P No T-ma *manticore* Rp S-fu Cu V-te-vo *manticore-dog-bear* Pr H-fu-ro Pr WIXXX:4,10,13,21,24,32,34,39,44,53"
+  }
 }

@@ -48,5 +48,10 @@
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": ""
+  "notes": "",
+  "codes": {
+    "furcode": "F[Marmot]3r A-- C D H++ M- P++ R+ T V W- RLU a++ c++w e f++ g h++ i+++w j+ m p+ Sfh sfh",
+    "yiffcode": "YIFF 3.0 F P Cu T-an *marmot* Pr S Cu V-te *marmot_dog* Pr H-fu Pr WIXXX:2,10,12,15,16,24,27,32,39,40,47,53",
+    "yiff_public": false
+  }
 }

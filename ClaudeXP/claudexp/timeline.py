@@ -41,6 +41,19 @@ def profile():
     return data if data.get("name") else None
 
 
+def user_codes():
+    """The user's Furry Code and YIFF Code ({"furcode", "yiffcode"}): their own from the launcher, or else their
+    fursona preset's defaults. {} when there are none."""
+    p = profile() or {}
+    if (p.get("codes") or {}).get("furcode") or (p.get("codes") or {}).get("yiffcode"):
+        return dict(p["codes"])
+    if p.get("fursona"):
+        preset = _load(TIMELINE / "ClaudeXP" / "Program Files" / "The Fur Directory" / "user fursonas" /
+                       p["fursona"] / "profile.json")
+        return dict(preset.get("codes") or {})
+    return {}
+
+
 def setting(key, default=None):
     return _load(SETTINGS_FILE).get(key, default) if active() else default
 

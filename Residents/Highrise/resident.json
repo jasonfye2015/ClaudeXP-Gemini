@@ -39,5 +39,9 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [],
+  "codes": {
+    "furcode": "F[Giraffe]3ar A- C+ D-- H++ M++s P+ R T++ V W RLE a c+w e f+ g++ h+++ i+w j- m p Sfb sfb",
+    "yiffcode": "YIFF 3.0 F bi P Cu T-an Pr S Ne V-te *giraffe_wolf-* Ca H-fu-ro-lo No WIXXX:2,4,10,24,32,36,38,44,49"
+  }
 }

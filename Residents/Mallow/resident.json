@@ -39,5 +39,9 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [],
+  "codes": {
+    "furcode": "F[Capybara]4r A- C D H M++s P R-- T+ V W RL- a c+w e+ f++ g+ h+++ i+f j- m+ p^ Sfh sfh",
+    "yiffcode": "YIFF 3.0 F P Ne T-fe *capybara* Th S-fu Cu V-te *capybara_rabbit-* Pr H-fu Pr WIXXX:2,10,14,30,33,37,39,52,57"
+  }
 }

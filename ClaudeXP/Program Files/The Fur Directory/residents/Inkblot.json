@@ -48,5 +48,10 @@
   "friends": [],
   "files": [],
   "webpages": [],
-  "notes": ""
+  "notes": "",
+  "codes": {
+    "furcode": "F[Cuttlefish]3r A- C- D H M++s P+ R- T- V W+ RLS a c+++w e++ f- g++ h+++ i+f j+ m+ p+ Snb snb",
+    "yiffcode": "YIFF 3.0 N bi P Ne T-an-ma-mi *cuttlefish* Pr S-ct Ne V-te *cuttlefish-* Pr H-fu-lo No WIXXX:4,14,36,57",
+    "yiff_public": false
+  }
 }

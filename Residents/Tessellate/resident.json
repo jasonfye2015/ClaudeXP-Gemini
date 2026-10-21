@@ -39,5 +39,9 @@
   "relationships": [],
   "notes": "",
   "history": [],
-  "flags": []
+  "flags": [],
+  "codes": {
+    "furcode": "F[Pangolin]3ar A- C- D-- H M+ P R T++ V- W++ RLGP a c+++lw e+++ f++ g+ h+++ i+w j+ m+ p++ Sno sno",
+    "yiffcode": "YIFF 3.0 N pan P Ne T *pangolin_bear* Cu S Cu V-te *pangolin_bear* Pr H Mo WIXXX:4,22,35,39,53"
+  }
 }
