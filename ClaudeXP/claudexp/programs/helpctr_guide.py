@@ -76,6 +76,8 @@ CATALOG = {
     "documents": ("furry", "A gallery of your own texts and documents in Personal Texts and Docs on E:, with a "
                            "reading pane for text, web pages, Word, WordPad and PDF files."),
     "personaldocs": ("furry", "Your Personal Texts and Docs folder on E:."),
+    "telegram": ("talk", "Telegram: the messenger with stickers - the same buddies, a chat list with pictures, bubbles, "
+                         "night mode, and an Emoji | Stickers panel; buddies send stickers from their favourite pack."),
     "virtualpet": ("projects", "Virtual Pet 27.0: a desktop pet that talks with you through the language models."),
     "flymind": ("projects", "Fly Mind: a companion whose feelings and memories come from a real fruit fly's mushroom "
                             "body (5,191 neurons), with a language model as its voice."),

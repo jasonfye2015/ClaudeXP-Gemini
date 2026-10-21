@@ -37,29 +37,33 @@
       6,
       630
     ],
-    "prog:iexplore": [
+    "prog:telegram": [
       6,
       708
     ],
-    "prog:kiwix": [
+    "prog:iexplore": [
       86,
       6
     ],
-    "prog:claudeai": [
+    "prog:kiwix": [
       86,
       84
     ],
-    "prog:copilotai": [
+    "prog:claudeai": [
       86,
       162
     ],
-    "prog:imagecreator": [
+    "prog:copilotai": [
       86,
       240
     ],
-    "prog:pystudio": [
+    "prog:imagecreator": [
       86,
       318
+    ],
+    "prog:pystudio": [
+      86,
+      396
     ]
   },
   "hidden": [

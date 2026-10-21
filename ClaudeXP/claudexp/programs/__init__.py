@@ -200,6 +200,8 @@ PROGRAMS = [
     Program("kik", "Kik", "Chat like on a phone", _lazy(".messengers.others", "kik_icon"),
             _lazy(".messengers.others", "launch_kik"), _lazy(".messengers.others", "shutdown_kik"),
             group="Social Programs"),
+    Program("telegram", "Telegram", "Fast, secure messaging - with stickers", _lazy(".messengers.telegram", "telegram_icon"),
+            _lazy(".messengers.telegram", "launch"), _lazy(".messengers.telegram", "shutdown"), group="Social Programs"),
     Program("irc", "ClaudeIRC", "Chat on FurNet", irc.irc_icon, irc.launch, irc.shutdown, group="Social Programs"),
     Program("claudeggle", "Claudeggle", "Aim, shoot, clear the orange pegs", _shared("claudeggle", "peggle_icon"),
             _shared("claudeggle", "launch"), _shared("claudeggle", "shutdown"), group="Games"),

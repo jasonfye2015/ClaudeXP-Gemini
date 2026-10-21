@@ -32,7 +32,7 @@ Status: {status}{memory}"""
 
 OFFLINE, ONLINE, AWAY, BUSY = "offline", "online", "away", "busy"
 NETWORK_TITLES = {"msn": "MSN Messenger", "yim": "Yahoo! Messenger", "icq": "ICQ", "trillian": "Trillian",
-                  "skype": "Skype", "kik": "Kik"}
+                  "skype": "Skype", "kik": "Kik", "telegram": "Telegram"}
 CHECK_MS = 30000                # how often presence is re-read
 
 
@@ -62,8 +62,9 @@ class Buddy:
     def handle(self):
         return self.network.handle_for(self.contact)
 
-    def add(self, kind, text):
-        entry = {"kind": kind, "text": text, "ts": datetime.now().astimezone().isoformat(timespec="seconds")}
+    def add(self, kind, text, **extra):
+        """A line of the conversation; extra fields ride along (Telegram's "sticker": the picture's path)."""
+        entry = {"kind": kind, "text": text, "ts": datetime.now().astimezone().isoformat(timespec="seconds"), **extra}
         self.history.append(entry)
         del self.history[:-400]
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -165,8 +166,8 @@ class Network(QObject):
                 self.presence_changed.emit(b.contact.id)
 
     # ---- talking ---------------------------------------------------------------------------------------------
-    def send(self, b, text):
-        e = b.add("user", text)
+    def send(self, b, text, **extra):
+        e = b.add("user", text, **extra)
         self.message_added.emit(b.contact.id, e)
         self._heard(b, self.my_handle(), text)
         if b.presence == OFFLINE:
