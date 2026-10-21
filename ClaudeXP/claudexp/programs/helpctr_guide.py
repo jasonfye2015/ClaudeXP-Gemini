@@ -145,6 +145,9 @@ CATALOG = {
                              "bottom. When the whole party falls, the run starts over."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
+    "claudelife": ("games", "Claude Life: Conway's Game of Life - draw and erase cells, stamp famous patterns (gliders, "
+                            "spaceships, guns, methuselahs), run, step, step back, try other rules and edges, and save "
+                            "patterns as .rle files in E:\\Created Files\\Claude Life."),
     "fractals": ("games", "Claude Fractal Generator: Mandelbrot, Julia, Burning Ship, Tricorn, Multibrot and Newton "
                           "fractals with palettes and click-to-zoom; Save Image puts them in E:\\Created Files."),
     "terrain": ("games", "Claude Terrain Generator: fractal landscapes like VistaPro - roughness, mountains, water, "
