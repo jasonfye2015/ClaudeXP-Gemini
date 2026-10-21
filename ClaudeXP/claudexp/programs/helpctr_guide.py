@@ -78,6 +78,9 @@ CATALOG = {
     "personaldocs": ("furry", "Your Personal Texts and Docs folder on E:."),
     "telegram": ("talk", "Telegram: the messenger with stickers - the same buddies, a chat list with pictures, bubbles, "
                          "night mode, and an Emoji | Stickers panel; buddies send stickers from their favourite pack."),
+    "discord": ("talk", "Discord: your buddies as friends, direct messages with stickers, and The Den - a server whose "
+                        "channels your friends chat in. While a game is open your friends see what you're playing; for "
+                        "the Internet games one may offer to be your player 2 (Accept seats them at your Zone table)."),
     "virtualpet": ("projects", "Virtual Pet 27.0: a desktop pet that talks with you through the language models."),
     "flymind": ("projects", "Fly Mind: a companion whose feelings and memories come from a real fruit fly's mushroom "
                             "body (5,191 neurons), with a language model as its voice."),

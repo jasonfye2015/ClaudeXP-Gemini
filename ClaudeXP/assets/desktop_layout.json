@@ -43,27 +43,31 @@
     ],
     "prog:iexplore": [
       86,
-      6
+      84
     ],
     "prog:kiwix": [
       86,
-      84
+      162
     ],
     "prog:claudeai": [
       86,
-      162
+      240
     ],
     "prog:copilotai": [
       86,
-      240
+      318
     ],
     "prog:imagecreator": [
       86,
-      318
+      396
     ],
     "prog:pystudio": [
       86,
-      396
+      474
+    ],
+    "prog:discord": [
+      86,
+      6
     ]
   },
   "hidden": [

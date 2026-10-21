@@ -32,7 +32,7 @@ Status: {status}{memory}"""
 
 OFFLINE, ONLINE, AWAY, BUSY = "offline", "online", "away", "busy"
 NETWORK_TITLES = {"msn": "MSN Messenger", "yim": "Yahoo! Messenger", "icq": "ICQ", "trillian": "Trillian",
-                  "skype": "Skype", "kik": "Kik", "telegram": "Telegram"}
+                  "skype": "Skype", "kik": "Kik", "telegram": "Telegram", "discord": "Discord"}
 CHECK_MS = 30000                # how often presence is re-read
 
 

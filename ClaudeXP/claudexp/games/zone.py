@@ -28,6 +28,27 @@ REPLIES = {"Hello": ["Hello", "Hi, how are you?"], "Hi, how are you?": ["Hello",
 STRANGERS = ["zonemaster88", "CheckMate2k1", "Player_4471", "sk8rboi_99", "GrandmaJoan", "TheProfessor",
              "Kellyxoxo", "DarkKnight77", "QuietStorm", "Pianoman_01", "AceOfSpades", "lucky_7", "MsPacFan"]
 SKILLS = ["Beginner", "Intermediate", "Expert"]
+INVITE_SECONDS = 15 * 60
+_invites = {}                       # buddy name -> when the invitation runs out (a friend offered to play, on Discord)
+_panels = []                        # the Zone windows that are open
+
+
+def invite(name):
+    """A buddy will be your opponent: the next match-up seats them (and an open Zone game looks again now)."""
+    import time
+    _invites[name] = time.time() + INVITE_SECONDS
+    for panel in list(_panels):
+        if isValid(panel) and not (panel.playing and any(o.name == name for o in panel.opponents)):
+            panel.find_opponent(forfeit=False)
+            break
+
+
+def _take_invites():
+    import time
+    now = time.time()
+    names = [n for n, until in _invites.items() if until > now]
+    _invites.clear()
+    return names
 
 
 class ZoneBoard(QWidget):
@@ -98,6 +119,8 @@ class ZonePanel(QWidget):
         self.ai_timer = QTimer(self)
         self.ai_timer.setSingleShot(True)
         self.ai_timer.timeout.connect(self._ai_turn)
+        _panels.append(self)
+        self.destroyed.connect(lambda *_a, me=self: _panels.remove(me) if me in _panels else None)
         h = QHBoxLayout(self)
         h.setContentsMargins(6, 6, 6, 6)
         h.addWidget(board, 1)
@@ -403,7 +426,9 @@ def pick_opponents(n):
     sim = life.get()
     awake = [name for name, c in sim.buddies.items() if available(c)] if sim is not None else []
     random.shuffle(awake)
-    out = []
+    out = [(name, True) for name in _take_invites()[:n]]      # a friend who offered on Discord sits down first
+    awake = [a for a in awake if a not in (o for o, _b in out)]
+    n -= len(out)
     for _ in range(n):
         if awake and random.random() < 0.85:
             out.append((awake.pop(), True))

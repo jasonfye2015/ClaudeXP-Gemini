@@ -36,7 +36,7 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
                    "Windows Games": [p.key for p in programs.PROGRAMS if p.group == "Games/Windows Games"],
                    "GeminiOffice": [p.key for p in programs.PROGRAMS if p.group == "Gemini Office"],
                    "GeminiAdobe": [p.key for p in programs.PROGRAMS if p.group == "GeminiAdobe"],
-                   "Social Programs": ["telegram", "yim", "trillian", "skype", "icq", "kik", "msn", "aim", "furcadia",
+                   "Social Programs": ["telegram", "discord", "yim", "trillian", "skype", "icq", "kik", "msn", "aim", "furcadia",
                                        "hotmail", "livejournal", "irc", "navigator", "muck"],
                    "Projects": ["virtualpet", "flymind", "flymind1", "flybrainviewer", "flybraindungeon", "localprojects"],
                    "Disc Tools": ["nero", "alcohol120"],
@@ -45,7 +45,7 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
 FOLDERS_SINCE = {"Projects": 46, "Social Programs": 45, "Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 30,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 47
+FOLDERS = 48
 # folders that live inside another folder rather than loose on the desktop
 NESTED = {"Emulation": "Games/Emulation", "Windows Games": "Games/Windows Games"}
 # shortcuts that now live in one of those folders instead of loose on the desktop
@@ -61,8 +61,8 @@ def builtins():
 
     New games don't get one: group="Games" puts them in Start > Games and the desktop Games folder, which is enough.
     """
-    in_folder = {f"prog:{key}" for key in PROGRAM_FOLDERS["Social Programs"]} - {"prog:telegram"}  # (in that folder;
-    # Telegram, the main messenger, is on the desktop too)
+    in_folder = {f"prog:{key}" for key in PROGRAM_FOLDERS["Social Programs"]} - {"prog:telegram", "prog:discord"}
+    # (in that folder; Telegram and Discord, the main messengers, are on the desktop too)
     folders = [(f"prog:{key}", label, lambda: std(QStyle.SP_DirIcon))
                for key, (label, _prefix) in programs.FOLDER_SHORTCUTS.items()
                if programs.archive_folder(key) and f"prog:{key}" not in IN_FOLDERS]
@@ -97,6 +97,7 @@ def builtins():
         ("prog:neko", "Copilot Neko", lambda: programs.get("neko").icon()),
         ("prog:copilotwidgets", "Copilot Widgets", lambda: programs.get("copilotwidgets").icon()),
         ("prog:telegram", "Telegram", lambda: programs.get("telegram").icon()),
+        ("prog:discord", "Discord", lambda: programs.get("discord").icon()),
         ("prog:aim", "ClaudeAIM", lambda: programs.get("aim").icon()),
         ("prog:msn", "MSN Messenger", lambda: programs.get("msn").icon()),
         ("prog:yim", "Yahoo! Messenger", lambda: programs.get("yim").icon()),
@@ -250,6 +251,13 @@ class IconManager(QObject):
                 link = furry / f"{programs.get('camroll').name}.lnk"
                 if furry.is_dir() and not link.exists():
                     shortcuts.make(link, program="camroll")
+            if folders < 48:
+                # Discord joins the Social Programs folder
+                from .explorer import shortcuts, vfs
+                social = vfs.user_home() / "Desktop" / "Social Programs"
+                link = social / f"{programs.get('discord').name}.lnk"
+                if social.is_dir() and not link.exists():
+                    shortcuts.make(link, program="discord")
             if folders < 47:
                 # Telegram joins the Social Programs folder (its own icon is on the desktop as well)
                 from .explorer import shortcuts, vfs
