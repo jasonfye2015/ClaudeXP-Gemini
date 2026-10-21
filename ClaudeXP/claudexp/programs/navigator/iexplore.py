@@ -2,10 +2,11 @@
 toolbars, Address bar, Favorites, the waving Windows flag, and MSN.com for a home page."""
 import html
 import math
+import random
 import traceback
 from urllib.parse import unquote, urlparse
 
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (QAction, QColor, QFont, QIcon, QKeySequence, QLinearGradient, QPainter, QPainterPath,
                            QPen, QPixmap, QPolygonF, QRadialGradient)
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QLineEdit, QMenu, QMenuBar, QProgressBar, QToolBar,
@@ -330,11 +331,21 @@ class IEBrowser(Browser):
     TITLE = "{} - Microsoft Internet Explorer"
 
     @property
-    def HOME(self):                       # Control Panel > Internet Options > Home page
+    def HOME(self):                       # Control Panel > Internet Options > Home page (unless a toolbar hijacked it)
         from ...cpl_extra import ie_home
-        return ie_home()
+        from ...maintenance import toolbars
+        return toolbars.home_hijack() or ie_home()
 
-    SEARCH = web.MSN_SEARCH_URL
+    @property
+    def SEARCH(self):                     # MSN Search, or wherever a hijacking toolbar sends your searches
+        from ...maintenance import toolbars
+        return toolbars.search_hijack() or web.MSN_SEARCH_URL
+
+    def navigate(self, url, *args, **kwargs):
+        super().navigate(url, *args, **kwargs)
+        if network.is_connected():        # browsing is how the toolbars get in (a 'free' download, a pop-up...)
+            from ...maintenance import toolbars
+            QTimer.singleShot(random.randint(3000, 9000), toolbars.maybe_install)
     DONE = "Done"
     ABOUT = ABOUT_PAGE
     BOOKMARKS = FAVORITES_FILE
@@ -497,7 +508,9 @@ class IEBrowser(Browser):
         zone = QLabel("Internet")
         zone.setObjectName("status")
         panel(globe, zone, width=150)
-        return bar, [nav, loc], status
+        from ...maintenance.toolbars import AdBars
+        self.adbars = AdBars(self)                 # toolbars that installed themselves (Ad-aware removes them)
+        return bar, [nav, loc, self.adbars], status
 
     # ---- IE's own bits ----------------------------------------------------------------------------------------------
     def throbber_frames(self):

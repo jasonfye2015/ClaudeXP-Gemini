@@ -292,6 +292,12 @@ class AdAware:
             cat, comment, _r, objs = SPYWARE[vendor]
             cleared = self.state["cleared"].get(vendor, [])
             rows += [(vendor, kind, cat, obj, comment) for kind, obj in objs if obj not in cleared]
+        from . import toolbars
+        for key in toolbars.installed():                # Internet Explorer toolbars that installed themselves
+            tb = toolbars.TOOLBARS[key]
+            cleared = self.state["cleared"].get(tb["vendor"], [])
+            rows += [(tb["vendor"], kind, tb["category"], obj, tb["comment"]) for kind, obj in tb["objects"]
+                     if obj not in cleared]
         for host in self.state["cookies"]:
             rows.append((host.split(".")[0].title() if host != "ads.x10.com" else "X10", "Cookie",
                          "Tracking Cookie", f"Cookie:{user}@{host}/", "Tracks you from site to site"))
@@ -601,6 +607,8 @@ class AdAware:
                                                      "Lavasoft\\Ad-aware 5.6\\Ad-aware.exe")]
         procs += [o for v in self.state["present"] for k, o in SPYWARE.get(v, ("", "", None, []))[3]
                   if k == "Process"]
+        from . import toolbars
+        procs += [o for key in toolbars.installed() for k, o in toolbars.TOOLBARS[key]["objects"] if k == "Process"]
         return procs
 
     def stop_scan(self):
@@ -687,13 +695,17 @@ class AdAware:
         st = self.state
         cookies = {obj.split("@", 1)[1].rstrip("/") for _v, kind, obj in chosen if kind == "Cookie"}
         st["cookies"] = [c for c in st["cookies"] if c not in cookies]
+        from . import toolbars
         for vendor in {v for v, kind, _o in chosen if kind != "Cookie"}:
-            objs = SPYWARE.get(vendor, ("", "", None, []))[3]
+            bar = toolbars.by_vendor(vendor)
+            objs = toolbars.TOOLBARS[bar]["objects"] if bar else SPYWARE.get(vendor, ("", "", None, []))[3]
             cleared = st["cleared"].setdefault(vendor, [])
             cleared += [o for v, _k, o in chosen if v == vendor and o not in cleared]
             if all(o in cleared for _k, o in objs):         # all of it gone: the vendor's gone
                 st["present"].pop(vendor, None)
                 st["cleared"].pop(vendor, None)
+                if bar:
+                    toolbars.remove(bar)                     # (and its toolbar leaves Internet Explorer)
         now = clock.now()
         st["quarantine"].insert(0, {"date": f"{now.month}/{now.day}/{now.year} {clock.time_text(now)}",
                                     "count": len(chosen),
