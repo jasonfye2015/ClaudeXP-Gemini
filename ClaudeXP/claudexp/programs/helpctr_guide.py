@@ -159,6 +159,13 @@ CATALOG = {
                              "bottom. When the whole party falls, the run starts over."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
+    "claudepit": ("games", "ClaudePit: a slot machine roguelike after CloverPit. Buy spins with the coins in your "
+                           "pocket and pull the lever (Space): matching symbols in rows, columns, diagonals, the zig, "
+                           "the zag and bigger shapes pay out, and patterns stack. Deposit coins in the ATM (D) - only "
+                           "those count toward the debt, they earn interest, and they're safe from 6-6-6, which "
+                           "empties your pocket. Miss a deadline and the trapdoor opens. Clover Tickets buy charms; "
+                           "the phone rings after each deadline with a holy, evil or ordinary ability. Pay ten "
+                           "deadlines to climb out. Music and sounds can each be switched off."),
     "claudeshelter": ("games", "Claude Shelter: run an underground vault, after Fallout Shelter. Build rooms (🔨) "
                                "down into the rock, drag dwellers onto the rooms that suit their S.P.E.C.I.A.L., and "
                                "tap a room's bubble to collect the power, food and water it makes (or rush it, and "
