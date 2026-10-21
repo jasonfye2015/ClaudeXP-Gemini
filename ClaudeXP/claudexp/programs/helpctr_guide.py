@@ -149,6 +149,12 @@ CATALOG = {
                              "bottom. When the whole party falls, the run starts over."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
+    "claudeatro": ("games", "Claudeatro: a poker roguelike after Balatro. Select up to 5 cards and play a poker hand: "
+                            "its Chips times its Mult is your score, and each Blind wants a target. Small, Big and "
+                            "Boss Blinds make an Ante; beat Ante 8's boss to win (then it goes on, endlessly). Jokers "
+                            "change the scoring - order matters, so drag them about. Planet cards level up hands; "
+                            "Tarot cards change the cards in your deck. Skipping a Blind earns a tag. Right-click "
+                            "clears a selection; hover over anything to see what it does."),
     "claudescryption": ("games", "Claudescryption: a card game after the first act of Inscryption. Draw a card (your "
                                  "deck or a squirrel), sacrifice creatures for blood or spend bones to play others, "
                                  "then ring the bell to attack; tip the scale five teeth your way to win. Walk the map "
