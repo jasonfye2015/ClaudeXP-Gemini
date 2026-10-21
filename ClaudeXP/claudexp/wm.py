@@ -54,6 +54,10 @@ class XPWindow(QWidget):
         layout.setContentsMargins(st.border, st.title_h, st.border, st.border)
         layout.setSpacing(0)
         layout.addWidget(content)
+        if not content.testAttribute(Qt.WA_SetCursor):
+            # the frame shows resize arrows near its edges; without its own cursor, the content would inherit them
+            # (the frame stops hearing the mouse once it's over the content, so it can't put the arrow back)
+            content.setCursor(Qt.ArrowCursor)
         self.resize(size[0] + 2 * (st.border - BORDER), size[1] + st.title_h - TITLE_H)
         if not self.skinned and st.palette() is not None:
             self.setPalette(st.palette())
@@ -262,6 +266,8 @@ class XPWindow(QWidget):
             self.toggle_maximize()
 
     def leaveEvent(self, event):
+        if self._resize is None:
+            self.unsetCursor()
         if self._hover_btn:
             self._hover_btn = None
             self.update()
