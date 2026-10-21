@@ -218,3 +218,63 @@ MOVIE|The Last Unicorn|1982|G|A unicorn who learns she may be the last of her ki
 MOVIE|The Lion King|1994|G|A young lion prince flees his kingdom after his father's death and must return to take it back from his treacherous uncle.
 MOVIE|WALL-E|2008|G|A lonely trash-compacting robot left behind on an abandoned Earth falls for a sleek probe robot and follows her into space.
 MOVIE|Zootopia|2016|PG|A rookie bunny cop and a con-artist fox team up to uncover a conspiracy in a city run by mammals.
+# Movies and TV part 3 (added Oct 2026): the new series, the local news archives and the feature movies.
+# A MOVIE line may end with |aliases: compact spellings of file names that don't share the title's words.
+KNUK|SHOW|Ramsay's Kitchen Nightmares|2004|Chef Gordon Ramsay spends a week turning around failing British restaurants, fixing the menu, the kitchen and the people running them.
+KNUS|SHOW|Kitchen Nightmares|2007|Gordon Ramsay brings his restaurant rescue to America, confronting stubborn owners, filthy kitchens and empty dining rooms.
+HOTELHELL|SHOW|Hotel Hell|2012|Gordon Ramsay checks into struggling American hotels and inns, sleeping in the rooms and tasting the food before shaking things up.
+COOKALONG|SHOW|Gordon Ramsay's Cookalong Live|2008|Gordon Ramsay cooks a three-course meal live, with viewers following along in their own kitchens at home.
+TOPGEAR|SHOW|Top Gear|2002|Jeremy Clarkson, Richard Hammond and James May test supercars, race across countries and attempt ambitious motoring challenges.
+WHEELER|SHOW|Wheeler Dealers|2003|Car dealer Mike Brewer buys a classic in need of help, mechanic Edd China fixes it on a budget, and they try to sell it at a profit.
+NEWSCBS|SHOW|CBS News Archive|1993|Local and network news broadcasts preserved from CBS stations, complete with the anchors, weather and stories of the day.
+NEWSABC|SHOW|ABC News Archive|1983|Local news and programming preserved from ABC stations, as it originally aired.
+NEWSWNBC|SHOW|WNBC News Archive|1993|Broadcasts from WNBC New York, including Today in New York and the local evening news, as they originally aired.
+MOVIE|Alien|1979|R|A towing ship's crew answers a distress call on a distant moon and brings aboard a creature that hunts them one by one.
+MOVIE|Alien 3|1992|R|Ripley crash-lands on a bleak prison planet and discovers she did not arrive alone.
+MOVIE|A Scanner Darkly|2006|R|In a near-future California, an undercover narcotics agent loses track of who he is while spying on his own friends.
+MOVIE|Alice in Wonderland|2010|PG|A grown-up Alice tumbles back into Underland, where she is destined to face the Jabberwocky.
+MOVIE|Being John Malkovich|1999|R|A puppeteer finds a hidden portal that puts people inside actor John Malkovich's head for fifteen minutes at a time.
+MOVIE|Bubba Ho-Tep|2002|R|An aging Elvis and a man who believes he is JFK take on a mummy stalking their Texas nursing home.
+MOVIE|Chappie|2015|R|A police robot is reprogrammed to think and feel, then raised by a pair of small-time criminals.
+MOVIE|Dave Made a Maze|2017|NR|Dave's cardboard fort in the living room turns out to be a dangerous labyrinth that is much bigger on the inside.
+MOVIE|Death Race 2050|2017|R|In a satirical future America, drivers score points for every pedestrian they run down in a cross-country race.
+MOVIE|Die Hard|1988|R|New York cop John McClane battles a gang of thieves who have seized a Los Angeles skyscraper on Christmas Eve.
+MOVIE|District 9|2009|R|A bureaucrat evicting stranded aliens from a Johannesburg slum begins turning into one of them.
+MOVIE|Dogma|1999|R|Two fallen angels find a loophole to get back into Heaven, and a reluctant woman is sent to stop them before it unmakes existence.
+MOVIE|Edge of Tomorrow|2014|PG-13|A soldier caught in a time loop relives the same alien battle every time he dies, getting a little better each round.
+MOVIE|Equilibrium|2002|R|In a future where feelings are outlawed, an elite enforcer skips his daily dose and starts to feel.
+MOVIE|Gravity|2013|PG-13|Two astronauts are left adrift in orbit after debris tears their shuttle apart.
+MOVIE|Groundhog Day|1993|PG|A cynical weatherman relives the same day in Punxsutawney over and over until he gets it right.
+MOVIE|Idiocracy|2006|R|A perfectly average man wakes from a hibernation experiment 500 years later and finds he is the smartest person alive.
+MOVIE|Inception|2010|PG-13|A thief who steals secrets from dreams is hired to plant an idea in someone's mind instead.
+MOVIE|Indiana Jones and the Last Crusade|1989|PG-13|Indy teams up with his father to find the Holy Grail before the Nazis can.
+MOVIE|Raiders of the Lost Ark|1981|PG|Archaeologist Indiana Jones races the Nazis to find the lost Ark of the Covenant.
+MOVIE|Indiana Jones and the Temple of Doom|1984|PG|Indy, a nightclub singer and a young sidekick uncover a cult in India stealing sacred stones and children.
+MOVIE|Indiana Jones and the Kingdom of the Crystal Skull|2008|PG-13|In 1957, an older Indy races Soviet agents to a mysterious crystal skull in the jungles of Peru.
+MOVIE|Interstellar|2014|PG-13|With Earth's crops failing, a former pilot leads a mission through a wormhole to find humanity a new home.
+MOVIE|John Wick|2014|R|A retired hitman comes back for the men who killed the puppy his late wife left him.
+MOVIE|Kick-Ass|2010|R|An ordinary teenager decides to become a real-life superhero and quickly finds himself in over his head.
+MOVIE|Limitless|2011|PG-13|A struggling writer takes an experimental pill that unlocks every part of his mind.
+MOVIE|Minority Report|2002|PG-13|In 2054, a police chief who arrests murderers before they kill is accused of a future murder himself.
+MOVIE|Pi|1998|R|A reclusive mathematician hunts for the hidden number pattern behind the stock market, and maybe everything else.
+MOVIE|Pirates of the Caribbean: The Curse of the Black Pearl|2003|PG-13|A blacksmith joins roguish pirate Jack Sparrow to rescue the governor's daughter from a crew of cursed pirates.
+MOVIE|Pirates of the Caribbean: Dead Man's Chest|2006|PG-13|Jack Sparrow owes a blood debt to the fearsome Davy Jones, and Will and Elizabeth are caught up in paying it.
+MOVIE|Pirates of the Caribbean: At World's End|2007|PG-13|Will and Elizabeth sail to the ends of the earth to bring Jack back and face the East India Company.
+MOVIE|Repo! The Genetic Opera|2008|R|A gothic rock opera set in a future where new organs are bought on credit and repossessed when the payments stop.
+MOVIE|Resident Evil|2002|R|Commandos and an amnesiac security officer fight through an underground lab overrun by the undead.
+MOVIE|Riddick|2013|R|Left for dead on a sun-scorched planet, Riddick battles alien predators and two crews of bounty hunters.
+MOVIE|RoboCop|2014|PG-13|A gravely injured Detroit cop is rebuilt as a cyborg and becomes the city's new kind of law enforcement.
+MOVIE|Room|2015|R|A young boy and his mother escape the single room where they were held captive, and he discovers the world.
+MOVIE|Scott Pilgrim vs. the World|2010|PG-13|To date the girl of his dreams, Scott must defeat her seven evil exes in video game style battles.
+MOVIE|Shaun of the Dead|2004|R|A slacker tries to get his life in order, and his mum and girlfriend to safety, during a zombie outbreak in London.
+MOVIE|Snowpiercer|2013|R|The last survivors of a frozen Earth ride a train that never stops, divided by class from the tail to the engine.
+MOVIE|The Wizard of Oz|1939|G|A Kansas girl is swept away by a tornado to Oz and follows the yellow brick road in search of a way home.
+MOVIE|The Big Lebowski|1998|R|A laid-back bowler called the Dude is mistaken for a millionaire and pulled into a botched kidnapping scheme.
+MOVIE|Tron|1982|PG|A programmer is pulled inside the computer world he helped build and must fight in its games to escape.
+MOVIE|V for Vendetta|2005|R|A masked freedom fighter wages a one-man war against a totalitarian British government.
+MOVIE|Zombieland|2009|R|Four survivors with a strict set of rules road-trip across a zombie-overrun America toward an amusement park.
+MOVIE|Zombieworld|2015|NR|Short horror films from around the world, tied together by a news broadcast covering the zombie apocalypse.
+MOVIE|Evil Dead|2013|R|Five friends at a remote cabin unleash a demon while one of them tries to quit drugs cold turkey.
+MOVIE|Jackass 3.5|2011|R|Never-before-seen stunts, pranks and outtakes from the making of Jackass 3D.
+MOVIE|Kill Bill: Vol. 1|2003|R|A former assassin wakes from a coma and begins hunting down the squad that left her for dead.|killbill1
+MOVIE|Kill Bill: Vol. 2|2004|R|The Bride continues her revenge, working her way through the last of the squad toward Bill himself.|killbill2

@@ -29,7 +29,7 @@ STATIC = [Path(__file__).resolve().parent / "assets" / f"static{n}.mp4" for n in
 def _clock_text(t):
     return t.strftime("%I:%M %p").lstrip("0")
 
-DEAD_STATIC = {2: 0, 7: 1, 11: 3}           # which clip each empty channel shows
+DEAD_STATIC = {7: 0, 12: 1, 13: 3}          # which clip each empty channel shows (schedule.DEAD)
 TUNE_MS = 450                                 # snow while the tuner locks on
 OSD_MS = 4000
 GREEN = QColor("#3CFF5A")
@@ -494,7 +494,7 @@ class Tuner(QWidget):
         if not isValid(self):
             return
         self.channels = channels
-        last = self.state.get("channel", 4)
+        last = self.state.get("channel", 5)
         ch = next((c for c in channels if c.number == last), None) or next(
             (c for c in channels if not c.dead), channels[0] if channels else None)
         if ch is not None:

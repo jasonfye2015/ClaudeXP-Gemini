@@ -14,7 +14,7 @@ class ClaudeXP(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ClaudeXP")
-        self.resize(1024, 768)
+        self.resize(1152, 864)          # the step up from 1024 x 768 on XP's Display slider: room for widgets
         self.setMinimumSize(800, 600)
         self._shutting_down = False
         from . import setup, user

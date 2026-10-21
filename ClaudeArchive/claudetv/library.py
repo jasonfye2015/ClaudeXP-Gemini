@@ -159,7 +159,8 @@ def load_guide():
         parts = line.split("|")
         key = parts[0]
         if key == "MOVIE" and len(parts) >= 5:
-            g["MOVIE"].append({"title": parts[1], "year": parts[2], "rating": parts[3], "desc": parts[4]})
+            g["MOVIE"].append({"title": parts[1], "year": parts[2], "rating": parts[3], "desc": parts[4],
+                               "aliases": [a.strip() for a in parts[5].split(",") if a.strip()] if len(parts) > 5 else []})
         elif len(parts) >= 5 and parts[1] == "SHOW":
             g["SHOW"][key] = (parts[2], parts[4])
         elif len(parts) >= 5:
@@ -194,7 +195,10 @@ def read_episode_guide(folder):
     return out
 
 
-SHOW_KEYS = [("comedy", "COMEDY"), ("aqua teen", "ATHF"), ("ren and stimpy", "REN"), ("ren stimpy", "REN"), ("mongrels", "MONGRELS"),
+SHOW_KEYS = [("ramsay s kitchen", "KNUK"), ("kitchen nightmares", "KNUS"), ("hotel hell", "HOTELHELL"),
+             ("cookalong", "COOKALONG"), ("top gear", "TOPGEAR"), ("wheeler dealer", "WHEELER"),
+             ("localnewsarchive cbs", "NEWSCBS"), ("localnewsarchive abc", "NEWSABC"),
+             ("localnewsarchive wnbc", "NEWSWNBC"), ("comedy", "COMEDY"), ("aqua teen", "ATHF"), ("ren and stimpy", "REN"), ("ren stimpy", "REN"), ("mongrels", "MONGRELS"),
              ("father of the pride", "FOTP"), ("wolfs rain", "WOLFSRAIN"), ("wolf s rain", "WOLFSRAIN"),
              ("damekko", "DAMEKKO")]
 
@@ -212,14 +216,22 @@ def _clean_title(stem):
 
 def _episode_info(stem):
     """(season, episode, title) from 'S03E05 - eDork', '1e01a-Stimpy's Big Day', 'Mongrels.s01e02...Title'."""
-    m = re.search(r"[sS](\d+)[eE](\d+)(?:\s*-\s*(.+))?", stem)
+    m = re.search(r"(?:^|[ ._-])(\d{1,2})x(\d{1,2})\s*-\s*(.+)$", stem)      # 'Ramsays Kitchen Nightmares - 01x02 - The Glass House'
+    if m:
+        return int(m.group(1)), int(m.group(2)), re.sub(r"\s*\[.*?\]\s*", " ", m.group(3)).strip()
+    m = re.search(r"[sS](\d+)[eE](\d+)(?:-\d+)?(?:\s*-\s*(.+))?", stem)     # ('S01E01-02': a double episode)
     if m:
         title = m.group(3) or ""
         if not title:
             rest = stem[m.end():]
             rest = re.sub(r"^[._]*(?:ws[._])?(?:pdtv[._]|hdtv[._])?xvid-[a-z0-9]+[._]", "", rest, flags=re.I)
-            title = re.sub(r"(?:^|[._ -])(?:hdtv|pdtv|dvdrip|xvid|divx|x264|webrip)\b.*$", "", rest, flags=re.I)
-        return int(m.group(1)), int(m.group(2)), re.sub(r"[._]+", " ", title).strip(" -")
+            title = re.sub(r"(?:^|[._ -])(?:ws[._ ])?(?:hdtv|pdtv|dvdrip|xvid|divx|x264|webrip)\b.*$", "", rest,
+                           flags=re.I)
+        title = RELEASE_JUNK.sub("", re.sub(r"[._]+", " ", title)).strip(" -")
+        return int(m.group(1)), int(m.group(2)), title
+    m = re.match(r"[a-z.]+\.(\d)(\d\d)\.(?:hdtv|pdtv)", stem, re.I)          # 'hotel.hell.101.hdtv-lol'
+    if m:
+        return int(m.group(1)), int(m.group(2)), ""
     m = re.match(r"(\d+)e(\d+)([ab]?)-(.+)", stem)
     if m:
         return int(m.group(1)), int(m.group(2)), re.sub(r"\s*\(.*?\)\s*", " ", m.group(4)).strip()
@@ -246,7 +258,8 @@ def _match_title(title, titles):
     return best if score >= 0.8 else None
 
 
-RELEASE_JUNK = re.compile(r"\b(dvdrip|xvid|divx|mp3|ac3|hdtv|pdtv|x264|webrip|trg|valkyria|kroimpa|\d{3,4}x\d{3,4}(-\d)?)\b.*$",
+RELEASE_JUNK = re.compile(r"\b(dvdrip|xvid|divx|mp3|ac3|hdtv|pdtv|x264|webrip|trg|valkyria|kroimpa|subbed|proper|repack|"
+                          r"480p|720p|1080p|\d{3,4}x\d{3,4}(-\d)?)\b.*$",
                           re.I)
 
 
@@ -287,6 +300,10 @@ def _comedy_info(path, show_dir):
 
 
 def _match_movie(stem, movies):
+    compact = re.sub(r"[^a-z0-9]", "", stem.lower())
+    for m in movies:                                   # 'killbill1.divx.vice': spellings that share no words
+        if any(a in compact for a in m.get("aliases", [])):
+            return m
     words = set(norm(_clean_title(stem)).split())
     year = re.search(r"(19|20)\d\d", stem)
     best, score = None, 0.0
@@ -298,6 +315,47 @@ def _match_movie(stem, movies):
         if s > score:
             best, score = m, s
     return best if score >= 0.75 else None
+
+
+MONTHS = "january february march april may june july august september october november december".split()
+
+
+def _air_date(text):
+    """The broadcast date in a news clip's name: 'September_25_1993' -> 9/25/1993, '10_12_83' -> 10/12/1983,
+    '10_93' -> 10/1993."""
+    t = text.replace("_", " ").replace(".", " ")
+    m = re.search(r"(" + "|".join(MONTHS) + r")\s+(\d{1,2}),?\s+((?:19|20)\d\d)", t, re.I)
+    if m:
+        return f"{MONTHS.index(m.group(1).lower()) + 1}/{int(m.group(2))}/{m.group(3)}"
+    m = re.search(r"(?<!\d)(\d{1,2})\s(\d{1,2})\s(\d{2})(?!\d)", t)
+    if m and 1 <= int(m.group(1)) <= 12 and 1 <= int(m.group(2)) <= 31:
+        return f"{int(m.group(1))}/{int(m.group(2))}/{1900 + int(m.group(3)) if int(m.group(3)) > 30 else 2000 + int(m.group(3))}"
+    m = re.search(r"(?<!\d)(\d{1,2})\s(\d{2})(?!\d)", t)
+    if m and 1 <= int(m.group(1)) <= 12:
+        return f"{int(m.group(1))}/{1900 + int(m.group(2)) if int(m.group(2)) > 30 else 2000 + int(m.group(2))}"
+    m = re.search(r"(?<!\d)((?:19|20)\d\d)(?!\d)", t)
+    return m.group(1) if m else ""
+
+
+def _news_item(p, secs, key, show_title):
+    """A news archive clip, with the title and description from the info file that came with it."""
+    info = {}
+    try:
+        info = json.loads((p.parent / (p.stem + ".info.json")).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    title = (info.get("title") or "").strip() or re.sub(r"[-_]+", " ", re.sub(r"-[A-Za-z0-9_-]{11}$", "", p.stem))
+    title = title.replace("_", " ")
+    title = re.sub(r"^(?:WNBC|NBC|CBS|ABC)(?:[\s-]+NY)?(?:[\s-]+NEWS)?\s*[-:]\s*", "", title, flags=re.I).strip()
+    if sum(c.isupper() for c in title) > 0.6 * max(1, sum(c.isalpha() for c in title)):     # SHOUTING -> Title Case
+        keep = {"CBS", "ABC", "NBC", "WNBC", "NY", "NYC", "TV", "US", "USA", "UK", "II", "III", "AM", "PM", "DC", "LA"}
+        title = " ".join(w if w.strip("().,:-'") in keep else w.capitalize() for w in title.split())
+    title = title or "News"
+    desc = " ".join((info.get("description") or "").split())
+    if len(desc) > 240:
+        desc = desc[:237].rsplit(" ", 1)[0] + "..."
+    return Media(p, "episode", secs, show=show_title, show_key=key, title=title, desc=desc,
+                 aired=_air_date(p.stem))
 
 
 # ---- scanning -------------------------------------------------------------------------------------------------
@@ -368,31 +426,57 @@ def scan(base, progress=None):
 
     # A 'Movies...' folder can hold whole series and commercials too ('Movies and TV part 2'): loose files in it
     # are movies, a sub-folder with 'commercial' in its name holds ads, and any other sub-folder is a show.
-    show_dirs, ad_dirs = [], list(roots["ads"])
+    # ...and inside one, a folder called 'Movies' holds feature films (the feature movie channels), and one called
+    # 'News' holds a news archive per station.
+    show_dirs, ad_dirs, feature_dirs = [], list(roots["ads"]), []
     for root in roots["tv"]:
         show_dirs += sorted(d for d in root.iterdir() if d.is_dir())
     for root in roots["movies"]:
         for d in sorted(d for d in root.iterdir() if d.is_dir()):
-            ad = "commercial" in d.name.lower() or d.name.lower().startswith(("ads", "adverts"))
-            (ad_dirs if ad else show_dirs).append(d)
+            low = d.name.lower()
+            if "commercial" in low or low.startswith(("ads", "adverts")):
+                ad_dirs.append(d)
+            elif low == "movies":
+                feature_dirs.append(d)
+            elif low == "news":
+                show_dirs += sorted(x for x in d.iterdir() if x.is_dir())
+            else:
+                show_dirs.append(d)
+
+    def movie(p, key=""):
+        secs = secs_for(p)
+        if not secs:
+            return
+        m = _match_movie(p.stem, guide["MOVIE"])
+        if m:
+            out.append(Media(p, "movie", secs, title=m["title"], year=m["year"], rating=m["rating"], desc=m["desc"],
+                             show_key=key))
+        else:
+            out.append(Media(p, "movie", secs, title=_clean_title(p.stem), show_key=key))
 
     for root in roots["movies"]:
         for p in videos(root, deep=False):
+            movie(p)
+    for root in feature_dirs:
+        for p in videos(root, deep=False):
+            movie(p, "FEATURE")
+    for show_dir in show_dirs:
+        base_key = show_key(show_dir.name)
+        own = read_episode_guide(show_dir)
+        for p in videos(show_dir):
+            key = base_key
+            if key == "KNUK" and "nightmares us" in norm(p.stem):      # US episodes in a UK season folder
+                key = "KNUS"
+            show_title = guide["SHOW"].get(key, (re.sub(r"\s*[-(].*$", "", show_dir.name).strip(), ""))[0]
             secs = secs_for(p)
             if not secs:
                 continue
-            m = _match_movie(p.stem, guide["MOVIE"])
-            if m:
-                out.append(Media(p, "movie", secs, title=m["title"], year=m["year"], rating=m["rating"], desc=m["desc"]))
-            else:
-                out.append(Media(p, "movie", secs, title=_clean_title(p.stem)))
-    for show_dir in show_dirs:
-        key = show_key(show_dir.name)
-        show_title = guide["SHOW"].get(key, (re.sub(r"\s*[-(].*$", "", show_dir.name).strip(), ""))[0]
-        own = read_episode_guide(show_dir)
-        for p in videos(show_dir):
-            secs = secs_for(p)
-            if not secs:
+            if key.startswith("NEWS"):
+                out.append(_news_item(p, secs, key, show_title))
+                continue
+            if "training video" in norm(str(p.relative_to(show_dir))) and secs < 15 * 60:
+                out.append(Media(p, "promo", secs, show=show_title, show_key=key,         # Gordon's how-to clips
+                                 title=re.sub(r"^\d+\s*-\s*", "", _clean_title(p.stem))))
                 continue
             if key == "COMEDY":
                 show, title, episode, year = _comedy_info(p, show_dir)
@@ -423,6 +507,8 @@ def scan(base, progress=None):
                 info = _match_title(title, titles)
             if extra:
                 title = re.sub(r"^.*?(extras|deleted scene)\s*-\s*", "", title, flags=re.I)
+            if key == "COOKALONG" and episode:
+                episode = episode % 100                                  # 'Cookalong Live - 104' is episode 4
             if not title and not info and episode:
                 title = f"Episode {episode}"
             out.append(Media(p, "special" if extra else "episode", secs, show=show_title, show_key=key,
@@ -437,10 +523,12 @@ def scan(base, progress=None):
             if not secs:
                 continue
             m = re.match(r"((?:19|20)\d\d)\s+(.+)", p.stem)
-            title = m.group(2) if m else p.stem
+            title = m.group(2) if m else re.sub(r"^\d{1,4}\s*-\s*", "", p.stem)        # ('022 - Pokemon Stadium 2')
+            folder_year = next((part for part in p.relative_to(root).parts[:-1]          # 'Commercials/2004/...'
+                                if re.fullmatch(r"(?:19|20)\d\d", part)), "")
             title = re.sub(r"_\d{3,4}p$", "", title)                      # 'Orangina Bear_1080p'
             title = re.sub(r"\s*(full\s+)?(commercial|ad|promo)\s*$", "", title, flags=re.I).strip() or title
-            out.append(Media(p, "ad", secs, title=title, year=m.group(1) if m else "", show_key=ad_key))
+            out.append(Media(p, "ad", secs, title=title, year=folder_year or (m.group(1) if m else ""), show_key=ad_key))
     try:
         INDEX_FILE.parent.mkdir(parents=True, exist_ok=True)
         INDEX_FILE.write_text(json.dumps(fresh), encoding="utf-8")

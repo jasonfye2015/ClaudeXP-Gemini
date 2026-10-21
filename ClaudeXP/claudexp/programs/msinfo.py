@@ -91,7 +91,7 @@ SECTIONS = {
                                                                            "NVIDIA RIVA TNT2 Model 64"),
                                           ("0xFFFE0000-0xFFFFFFFF", "System board")],
     "Components/Display": lambda: [("Name", "NVIDIA RIVA TNT2 Model 64"), ("Adapter RAM", "32.00 MB (33,554,432 bytes)"),
-                                   ("Driver Version", "6.13.10.2832"), ("Resolution", "1024 x 768 x 60 hertz"),
+                                   ("Driver Version", "6.13.10.2832"), ("Resolution", "1152 x 864 x 60 hertz"),
                                    ("Bits/Pixel", "32")],
     "Components/Sound Device": lambda: [("Name", "Creative SB Live! (WDM)"), ("Manufacturer", "Creative Technology Ltd."),
                                         ("Status", "OK")],

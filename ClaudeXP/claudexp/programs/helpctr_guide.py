@@ -80,9 +80,11 @@ CATALOG = {
     "camroll": ("furry", "Every photo and video in Camera Rolls on E:, by year and month in the order they were "
                          "taken, whichever backup folder they're in."),
     "tvmovies": ("furry", "Your TV and Movies folder on E:."),
-    "tv": ("media", "ClaudeTV: channels made from your TV and movie files - WAGG 4 cartoons, KFUR 7 animals and "
-                    "anime, KPAW 9 movies, KANI 11 anime with the Orangina commercials, KHAH 13 comedy - with a TV "
-                    "Guide."),
+    "tv": ("media", "ClaudeTV: channels made from your TV and movie files, numbered like cable - local news "
+                    "archives on WCBS 2, WABC 3 and WNBC 4; WAGG 5 cartoons, KFUR 6 animals and anime, KANI 8 anime "
+                    "with the Orangina commercials, KHAH 9 comedy, GRTV 10 Gordon Ramsay, TGTV 11 Top Gear, WDTV 14 "
+                    "Wheeler Dealers; movies on KPAW 30 and the feature channels CINE 31, REEL 32 and FLIK 33 - "
+                    "with commercials from 2000-2001, and a TV Guide."),
     # office
     "gemini_word": ("office", "Word processing, Office XP style."),
     "gemini_excel": ("office", "Spreadsheets with formulas."),
@@ -317,7 +319,7 @@ taskbar</a> - and the speaker has a volume slider and the <a href="launch:sndvol
 <li><b>Log Off</b> offers <b>Switch User</b>, which keeps your programs open.</li>
 <li><a href="launch:msconfig">msconfig</a> chooses what starts with Windows.</li>
 <li>A <b>Loading AI Model</b> box shows progress the first time a model loads.</li>
-<li><a href="launch:tv">ClaudeTV</a> has <b>KANI 11</b>, an anime channel with the Orangina commercials.</li></ul>"""),
+<li><a href="launch:tv">ClaudeTV</a> has <b>KANI 8</b>, an anime channel with the Orangina commercials.</li></ul>"""),
     "claudexp-games": ("ClaudeXP's own games", "claudexp", """
 <p>Games made for ClaudeXP, in the spirit of the classics. They're in <b>Start &gt; Games</b> and the desktop's
 <b>Games</b> folder; most remember your progress or best scores.</p>

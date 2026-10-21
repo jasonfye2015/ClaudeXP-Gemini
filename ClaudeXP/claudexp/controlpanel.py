@@ -203,7 +203,7 @@ def _make_display(desktop, theme_file=None, tab=None):
     look_tab, look_choice, refresh_look = _appearance_tab(lambda: mark("appearance"))
     tabs.addTab(look_tab, "Appearance")
     tabs.addTab(_info_page("Display:  Plug and Play Monitor on NVIDIA GeForce2 MX\n\nScreen resolution:  "
-                           "1024 by 768 pixels\nColor quality:  Highest (32 bit)"), "Settings")
+                           "1152 by 864 pixels\nColor quality:  Highest (32 bit)"), "Settings")
     tabs.setCurrentIndex({"themes": 0, "appearance": 3}.get(tab, 0 if theme_file else 1))
     root.addWidget(tabs)
     buttons = QHBoxLayout()

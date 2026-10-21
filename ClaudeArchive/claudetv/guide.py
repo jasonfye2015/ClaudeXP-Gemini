@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPen
-from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 from shiboken6 import isValid
 
 from . import lineup, schedule
@@ -215,7 +215,13 @@ class Guide(QWidget):
         self.grid = Grid()
         self.grid.selected.connect(self.show_detail)
         self.grid.activated.connect(self.tune)
-        lay.addWidget(self.grid, 1)
+        scroll = QScrollArea()                       # every channel has a row; there are more than fit on screen
+        scroll.setWidget(self.grid)
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setStyleSheet("QScrollArea { background: #14277A; border: none; }")
+        lay.addWidget(scroll, 1)
 
         self.start = 0
         self.picked = None

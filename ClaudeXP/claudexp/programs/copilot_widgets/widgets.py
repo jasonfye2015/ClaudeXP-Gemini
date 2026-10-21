@@ -323,7 +323,7 @@ class TVGuideWidget(WidgetBase):
     KEY, TITLE, SIZE, REFRESH_MS = "tv", "TV Guide", (400, 96), 15000
     INTERACTIVE = True      # click a channel to watch it in ClaudeTV (or the heading for the full TV Guide)
     ROW = 64                # a channel's row: what's on, its time and progress bar, and what's next
-    SLIM_ROW = 46           # without the 'Next' line, when every channel wouldn't fit on the screen otherwise
+    SHOWN = 6               # rows at once; the rest scroll (mouse wheel, or the arrows in the heading)
     HEAD = 30
 
     def __init__(self, controller):
@@ -331,6 +331,8 @@ class TVGuideWidget(WidgetBase):
         self.channels = None
         self.rows = []
         self.row = self.ROW
+        self.offset = 0                     # the first channel row showing
+        self.shown = self.SHOWN
         self._asked = False
         self._hits = []
         self.setCursor(Qt.PointingHandCursor)
@@ -364,9 +366,10 @@ class TVGuideWidget(WidgetBase):
                 rows.append((ch, cur, nxt, t))
             self.rows = rows
             room = self.c.desktop.work_area().height() - 32
-            n = max(1, len(rows))
-            self.row = self.ROW if self.HEAD + n * self.ROW + 8 <= room else self.SLIM_ROW
-            height = self.HEAD + n * self.row + 8
+            fits = max(2, (room - self.HEAD - 8) // self.ROW)
+            self.shown = max(1, min(len(rows), self.SHOWN, fits))
+            self.offset = max(0, min(self.offset, len(rows) - self.shown))
+            height = self.HEAD + self.shown * self.row + 8
             if height != self.height():
                 self.resize(self.width(), height)
                 self.c.place_all()
@@ -375,7 +378,15 @@ class TVGuideWidget(WidgetBase):
     def draw(self, p, r):
         _text(p, 14, 6, 190, 22, "TV Guide \u2013 On Now", 14, WHITE, True)
         _text(p, r.width() - 94, 6, 82, 22, clock.time_text(), 12, GOLD, True, Qt.AlignRight | Qt.AlignVCenter)
-        self._hits = [(QRectF(0, 0, r.width(), self.HEAD), None)]
+        self._hits = []
+        if len(self.rows) > self.shown:                     # more channels than rows: scroll arrows
+            for i, (arrow, way, ok) in enumerate((("▲", -1, self.offset > 0),
+                                                  ("▼", 1, self.offset + self.shown < len(self.rows)))):
+                box = QRectF(r.width() - 160 + i * 26, 6, 22, 20)
+                _text(p, box.x(), box.y(), box.width(), box.height(), arrow, 12, GOLD if ok else DIM, True,
+                      Qt.AlignCenter)
+                self._hits.append((box, way))
+        self._hits.append((QRectF(0, 0, r.width(), self.HEAD), None))
         if self.channels is None:
             _text(p, 14, 36, r.width() - 28, 40, "Reading the channel lineup\u2026", 12, SOFT)
             return
@@ -383,7 +394,7 @@ class TVGuideWidget(WidgetBase):
             _text(p, 14, 36, r.width() - 28, 40, "No channels are on the air. Open ClaudeTV to set up the "
                   "video archive.", 11, SOFT, elide=False)
             return
-        for i, (ch, cur, nxt, t) in enumerate(self.rows):
+        for i, (ch, cur, nxt, t) in enumerate(self.rows[self.offset:self.offset + self.shown]):
             y = self.HEAD + i * self.row
             self._hits.append((QRectF(0, y, r.width(), self.row), ch))
             p.setPen(QPen(QColor(255, 255, 255, 45), 1))
@@ -396,7 +407,7 @@ class TVGuideWidget(WidgetBase):
                       10, SOFT)
                 _bar(p, QRectF(90, y + 37, r.width() - 104, 5), (t - cur.start) / max(1, cur.end - cur.start),
                      QColor("#7DFF9A"))
-                if nxt is not None and self.row >= self.ROW:
+                if nxt is not None:
                     _text(p, 90, y + 45, r.width() - 102, 14, f"Next: {_program_title(nxt)} ({_clock_text(nxt.when())})",
                           10, DIM)
             elif nxt is not None:
@@ -406,9 +417,21 @@ class TVGuideWidget(WidgetBase):
             else:
                 _text(p, 90, y + 4, r.width() - 102, 16, "Off the air", 12, DIM)
 
+    def scroll(self, way):
+        self.offset = max(0, min(self.offset + way, len(self.rows) - self.shown))
+        self.update()
+
+    def wheelEvent(self, event):
+        if len(self.rows) > self.shown:
+            self.scroll(-1 if event.angleDelta().y() > 0 else 1)
+            event.accept()
+
     def clicked(self, pos):
         for rect, ch in self._hits:
             if rect.contains(pos):
+                if isinstance(ch, int):                     # a scroll arrow
+                    self.scroll(ch)
+                    return
                 try:
                     from claudetv import guide, tuner
                     if ch is None:
