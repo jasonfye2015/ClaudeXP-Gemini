@@ -163,6 +163,11 @@ def set_muted(muted):
     _instance().muted = muted
 
 
+def wave_volume():
+    """Volume Control's 'Wave' level, 0..1 (for programs that play their own sound effects)."""
+    return _instance().wave
+
+
 def set_wave_volume(level):
     """The XP system sounds' level (Volume Control's Wave slider), 0..1."""
     s = _instance()

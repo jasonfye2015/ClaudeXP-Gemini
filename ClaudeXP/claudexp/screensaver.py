@@ -1,4 +1,4 @@
-"""Screen savers: Windows XP, Starfield, Mystify, Beziers, 3D Pipes, Marquee, My Pictures Slideshow, Blank,
+"""Screen savers: Super Claude Bros (the Super Mario Bros. clock, the default; supercb.py), Windows XP, Starfield, Mystify, Beziers, 3D Pipes, Marquee, My Pictures Slideshow, Blank,
 Copilot Matrix Rain (falling green code), and After Dark's Flying Toasters (a looped video clip).
 
 Each saver is a QWidget that animates at any size (full screen, or the little monitor in Display
@@ -17,7 +17,7 @@ from PySide6.QtWidgets import QWidget
 from . import display
 from .paths import ROOT, pixmap
 
-DEFAULTS = {"saver": "Windows XP", "wait": 10, "resume_welcome": False, "marquee": "Windows XP"}
+DEFAULTS = {"saver": "Super Claude Bros", "wait": 10, "resume_welcome": False, "marquee": "Windows XP"}
 
 
 def settings():
@@ -642,7 +642,12 @@ class MatrixRain(Saver):
                 p.drawText(col["x"], (row + 1) * cell - cell // 5, chars[row])
 
 
-SAVERS = {"(None)": None, "Windows XP": WindowsXP, "3D Pipes": Pipes, "Beziers": Beziers, "Blank": Blank,
+from .supercb import make_saver_class  # noqa: E402
+
+SuperClaudeBros = make_saver_class(Saver)     # the Super Mario Bros. clock (supercb.py)
+
+SAVERS = {"(None)": None, "Super Claude Bros": SuperClaudeBros, "Windows XP": WindowsXP, "3D Pipes": Pipes,
+          "Beziers": Beziers, "Blank": Blank,
           "Copilot Matrix Rain": MatrixRain,
           "Flying Toasters": FlyingToasters, "Marquee": Marquee, "My Pictures Slideshow": Slideshow,
           "Mystify": Mystify, "Starfield": Starfield, "Aquarium": Aquarium, "Da Vinci": DaVinci, "Nature": Nature,

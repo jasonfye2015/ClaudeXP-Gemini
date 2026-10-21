@@ -26,7 +26,7 @@ RATE = 22050
 # name -> settings. wallpaper: None = keep, "" = none, "bliss", or a generated Plus! picture's name.
 THEMES = {
     "Windows XP": dict(style="luna", scheme="blue", wallpaper="bliss", position="Stretch", color="#004E98",
-                       sounds="Windows Default", cursors="Windows Default", saver="Windows XP"),
+                       sounds="Windows Default", cursors="Windows Default", saver="Super Claude Bros"),
     "Windows Classic": dict(style="classic", scheme="Windows Classic", wallpaper="", position="Center",
                             color="#3A6EA5", sounds="Windows Default", cursors="Windows Default", saver=None),
     "Plus! Aquarium": dict(style="luna", scheme="blue", wallpaper="Aquarium", position="Stretch", color="#0A3A5A",
