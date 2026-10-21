@@ -149,6 +149,13 @@ CATALOG = {
                              "bottom. When the whole party falls, the run starts over."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
+    "claudescryption": ("games", "Claudescryption: a card game after the first act of Inscryption. Draw a card (your "
+                                 "deck or a squirrel), sacrifice creatures for blood or spend bones to play others, "
+                                 "then ring the bell to attack; tip the scale five teeth your way to win. Walk the map "
+                                 "through the Woodlands, Wetlands and Snow Line - new cards, the campfire, the "
+                                 "sacrifice stones, the mycologists - past the Prospector, the Angler and the Trapper "
+                                 "to Leshy and the Moon. Two candles: lose both and you leave a Deathcard behind. "
+                                 "Right-click cancels a selection."),
     "claudeita": ("games", "Claudeita: a Noita-like descent through five biomes of falling sand, water, lava, acid and "
                            "fire. Find wands and spells and arrange them in the wand editor (Tab); beat each biome's "
                            "boss to reach its Sanctuary (a healing fountain and a shop), and the Unmaker at the bottom. "
