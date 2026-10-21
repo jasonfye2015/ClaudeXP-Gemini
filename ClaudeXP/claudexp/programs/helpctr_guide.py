@@ -139,6 +139,12 @@ CATALOG = {
     "rpg": ("games", "ClaudeRPG: a cozy, endless dungeon adventure."),
     "claudecraft": ("games", "ClaudeCraft: a block-building world in 3D. Walk, fly, break and place blocks; your world "
                              "is saved."),
+    "secondlife": ("talk", "Second Life: a 3D virtual world in four regions - the Furry Bazaar (free bodies, "
+                           "clothes and things), the Neon Paws Club, Pawprint Estates (claim a free lot and build on "
+                           "it) and Sandbox Isle. Your AIM buddies log in as furry avatars to dance, shop, chat and "
+                           "build. Walk with W/S and the arrow keys, F to fly, Enter to chat; click people for "
+                           "their profile (with their Furry Code), dance balls to dance, seats to sit. Inventory, "
+                           "Appearance, Friends, IM, Map and Build are on the bottom bar."),
     "furcadia": ("talk", "Claudecadia: a Furcadia-style furry graphical chat world. Your AIM buddies log in as furres; hop around "
                           "Willowmere Commons and 13 dreams to discover, sit, chat, emote, whisper (/name message) and open treasure "
                           "chests."),
