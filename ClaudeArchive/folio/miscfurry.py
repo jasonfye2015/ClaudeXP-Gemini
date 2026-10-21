@@ -200,7 +200,7 @@ def _album_tile(node, img, size):
     p.drawRoundedRect(label, 3 * k, 3 * k)
     p.setPen(QColor("#3A2410"))
     p.setFont(QFont("Georgia", max(7, int(11 * k)), QFont.Bold))
-    p.drawText(label, Qt.AlignCenter, node.name)
+    p.drawText(label, Qt.AlignCenter, p.fontMetrics().elidedText(node.name, Qt.ElideRight, int(label.width() - 6)))
     p.end()
     return pm
 
