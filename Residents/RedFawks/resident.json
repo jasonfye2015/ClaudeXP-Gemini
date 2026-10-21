@@ -75,6 +75,7 @@
   },
   "codes": {
     "furcode": "FCF3cr A C+++ D++ H+ M+s P++ R- T++ V W-- RLTI a c++w e f++ g++ h+++ i++ j- m p Smb smb",
-    "yiffcode": "YIFF 3.0 M kinsey-4 P Ne T *fox_raccoon* Pr S-fu-ct Cu V-te *fox-raccoon-lion-* Pr H-fu-ro No WIXXX:10,13,40"
+    "yiffcode": "YIFF 3.0 M kinsey-4 P Ne T *fox_raccoon* Pr S-fu-ct Cu V-te *fox-raccoon-lion-* Pr H-fu-ro Cu WIXXX:2,10,13,15,24,35,39,40,50",
+    "show_yiff": true
   }
 }

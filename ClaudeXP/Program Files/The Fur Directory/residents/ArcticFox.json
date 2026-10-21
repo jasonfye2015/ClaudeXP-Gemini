@@ -57,7 +57,8 @@
   "notes": "",
   "codes": {
     "furcode": "FCA3acr A C+ D+ H+++ M++ts P+ R T+++ V-- W-- RLCT a c++lw e f++ g+ h+++ i++ j m p+ Smg smg",
-    "yiffcode": "YIFF 3.0 M hom P Th T Pr S Cu V-te *-* Pr H-ro Cu WIXXX:14,24,36,44,47,58",
+    "yiffcode": "YIFF 3.0 M hom P Th T Pr S Cu V-te *-* Pr H-ro Cu WIXXX:10,14,24,36,44,47,58",
+    "show_yiff": true,
     "yiff_public": true
   }
 }

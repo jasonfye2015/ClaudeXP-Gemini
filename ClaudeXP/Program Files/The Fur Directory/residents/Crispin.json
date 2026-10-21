@@ -51,7 +51,8 @@
   "notes": "",
   "codes": {
     "furcode": "FRP3ar A- C-- D- H- M+s P R T+++ V W-- RL- a+ c+m e++ f++ g+ h++ i+f j+ m p Smo smo",
-    "yiffcode": "YIFF 3.0 M pan P No T-an *porcupine* No S No V-te *porcupine_tiger* No H-ro-ca No WIXXX:31",
-    "yiff_public": false
+    "yiffcode": "YIFF 3.0 M pan P No T-an *porcupine* Cu S Cu V-te *porcupine_tiger* Pr H-ro-ca Mo WIXXX:10,24,31,40,44,48",
+    "show_yiff": true,
+    "yiff_public": true
   }
 }

@@ -52,6 +52,7 @@
   "codes": {
     "furcode": "FMaK3r A- C- D H+ M++s P R T-- V- W- RLTI a c-w e+ f- g+ h+++ i+ j m p Smg smg",
     "yiffcode": "YIFF 3.0 M hom P Ne T-an *kangaroo* Pr S Cu V-te *kangaroo-skunk-hyena-* Pr H-fu-ro Cu WIXXX:10,12,23,49,53",
-    "yiff_public": false
+    "show_yiff": true,
+    "yiff_public": true
   }
 }

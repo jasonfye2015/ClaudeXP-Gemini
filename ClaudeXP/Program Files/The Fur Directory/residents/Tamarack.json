@@ -51,7 +51,8 @@
   "notes": "",
   "codes": {
     "furcode": "F[Caribou]2r A C+ D-- H++ M++ts P+ R+ T- V+ W- RLF a c+w e f+ g- h+++ i++ j+ m p^^ Smh smh",
-    "yiffcode": "YIFF 3.0 M P En T-an Pr S Ne V-te-vo *caribou_tiger* Pr H-ro Pr WIXXX:10,29,31",
+    "yiffcode": "YIFF 3.0 M P En T-an Pr S Ne V-te-vo *caribou_tiger* Pr H-ro Pr WIXXX:10,29,31,32,36,43,49",
+    "show_yiff": true,
     "yiff_public": true
   }
 }

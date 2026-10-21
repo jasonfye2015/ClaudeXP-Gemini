@@ -363,6 +363,46 @@ def propose_one(name, gender, species, text, job, age, relationship, sona=""):
                                          partnered=partnered)}
 
 
+OPEN = {"Pr", "Cu", "Th", "Ca", "Lo"}
+
+
+def open_to_rp(name, codes):
+    """The main furs (the IM contacts): into roleplay with NSFW okay, open to adult roleplay online, nothing kept
+    private, and they show their YIFF Code."""
+    rng = random.Random(f"open:{name}")
+    fp = furcode.parts(codes["furcode"])
+    m = fp["levels"].setdefault("M", {"level": "", "subs": "", "custom": ""})
+    if m.get("level") not in ("+", "++"):
+        m["level"] = _pick(rng, [("++", 3), ("+", 2)])
+    if "s" not in m.get("subs", ""):
+        m["subs"] = "".join(ch for ch in "tls" if ch in m.get("subs", "") + "s")
+    yp = yiffcode.parts(codes["yiffcode"])
+    cats = yp["categories"]
+    v = cats.setdefault("V", {"mods": ["te"], "oe": "", "species": "", "q": "Pr"})
+    if v.get("q") not in OPEN:
+        v["q"] = "Pr"
+    if "te" not in v.get("mods", []):
+        v["mods"] = ["te"] + v.get("mods", [])
+    t = cats.get("T")
+    if t is not None and t.get("q") in ("No", "Ne", "Tr", "Ce"):
+        t["q"] = _pick(rng, [("Pr", 3), ("Rp", 2), ("Cu", 1)])
+    h = cats.get("H")
+    if h is not None and h.get("q") == "No":                # (nothing kept private)
+        h["q"] = _pick(rng, [("Pr", 3), ("Cu", 2), ("Mo", 2)])
+    s = cats.get("S")
+    if s is not None and s.get("q") == "No":
+        s["q"] = _pick(rng, [("Cu", 3), ("Pr", 2), ("Th", 1)])
+    flags = set(yp["wixxx"]) | {10}                            # role playing
+    if len(flags) < 4:                                         # the ones who kept it private: some real interests
+        pool = {k: w for k, w in FLAG_WEIGHTS.items() if k not in flags}
+        for _ in range(rng.randint(3, 6)):
+            pick = _pick(rng, list(pool.items()))
+            flags.add(pick)
+            pool.pop(pick, None)
+    yp["wixxx"] = sorted(f for f in flags if f not in yiffcode.OFF_LIMITS_FLAGS and f != 41)   # (not 'uninterested')
+    return dict(codes, furcode=furcode.encode(fp), yiffcode=yiffcode.encode(yp), show_yiff=True)
+
+
 def build():
     out = {"residents": {}, "presets": {}, "skipped": []}
     for folder, core, era in residents():
@@ -376,6 +416,8 @@ def build():
                      core.get("notes"), core.get("fursona"), era.get("persona"))
         codes = propose_one(folder.name, gender, (core.get("fursona") or {}).get("species", ""), text,
                             era.get("occupation", ""), _age(core.get("born")), rel, _text(core.get("fursona")))
+        if core.get("tier") == "main":
+            codes = open_to_rp(folder.name, codes)
         codes.update(tier=core.get("tier", ""), gender=gender, species=(core.get("fursona") or {}).get("species", ""))
         out["residents"][folder.name] = codes
     for folder in sorted(PRESETS.iterdir()) if PRESETS.is_dir() else []:
@@ -440,6 +482,8 @@ def bake(force=False):
         if core is None or (core.get("codes") and not force):
             continue
         core["codes"] = {"furcode": c["furcode"], "yiffcode": c["yiffcode"]}
+        if c.get("show_yiff"):
+            core["codes"]["show_yiff"] = True
         path.write_text(json.dumps(core, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         done += 1
     for name, c in data["presets"].items():

@@ -53,7 +53,7 @@ def _residents():
         if not codes.get("furcode") and not codes.get("yiffcode"):
             continue
         codes["furcode"] = furcode.with_age(codes.get("furcode", ""), r.age)
-        if not yiff_public(name, codes.get("yiffcode", "")):
+        if not yiff_public(name, codes.get("yiffcode", ""), codes.get("show_yiff")):
             codes["yiffcode"] = ""                     # (they keep it to themselves)
         out.append((r.core.get("fur_name") or name, r.tier, codes, name))
     order = {"main": 0, "support": 1, "background": 2}

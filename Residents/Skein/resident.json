@@ -42,6 +42,7 @@
   "flags": [],
   "codes": {
     "furcode": "F[Alpaca]5ar A- C+ D-- H M+s P++ R-- T- V-- W RLC a cw e f- g+ h+++ i+ j+ m+ p^ Sfh sfh",
-    "yiffcode": "YIFF 3.0 F P En T *alpaca* Cu S Cu V-te *alpaca_cat-* Pr H-fu-ro Pr WIXXX:24,29,48"
+    "yiffcode": "YIFF 3.0 F P En T *alpaca* Cu S Cu V-te *alpaca_cat-* Pr H-fu-ro Pr WIXXX:10,24,29,48",
+    "show_yiff": true
   }
 }

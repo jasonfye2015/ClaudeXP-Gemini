@@ -42,6 +42,7 @@
   "flags": [],
   "codes": {
     "furcode": "FCC3ar A-- C- D H+ M+ts P- R- T++ V-- W-- RLTI a++ c+w e++ f+++ g+ h+++ i+++w j+ m- p^^ Smg smg",
-    "yiffcode": "YIFF 3.0 M kinsey-5 P En T-an *coyote-tiger-skunk* Ar S-ct Cu V-te *coyote_tiger* Pr H Mo WIXXX:2,5,11,13,14,31,36,49"
+    "yiffcode": "YIFF 3.0 M kinsey-5 P En T-an *coyote-tiger-skunk* Ar S-ct Cu V-te *coyote_tiger* Pr H Mo WIXXX:2,5,10,11,13,14,31,36,49",
+    "show_yiff": true
   }
 }

@@ -57,7 +57,8 @@
   "notes": "",
   "codes": {
     "furcode": "FCG3cr A- C+ D++ H++ M+s P+ R-- T+++ V W- RL- a+ c++w e+ f+++ g++ h++ i++ j-- m p^^ Smb smb",
-    "yiffcode": "YIFF 3.0 M bi P Cu T *husky* Cu S-fu-ke Pr V-te *husky-husky-rabbit-* Pr H-ca Mo WIXXX:12,15,31,40,45,53",
+    "yiffcode": "YIFF 3.0 M bi P Cu T *husky* Cu S-fu-ke Pr V-te *husky-husky-rabbit-* Pr H-ca Mo WIXXX:10,12,15,31,40,45,53",
+    "show_yiff": true,
     "yiff_public": true
   }
 }

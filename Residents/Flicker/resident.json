@@ -42,6 +42,7 @@
   "flags": [],
   "codes": {
     "furcode": "F[Phoenix]w2ars A-- C- D H+ M++ls P R+ T+++ V W RLMC a c+m e+ f++ g+ h+++ i++ j m p- Snb snb",
-    "yiffcode": "YIFF 3.0 N kinsey-4 P Ne T *phoenix* Cu S-fu No V-te *phoenix-bear-hyena-* Cu H-ro-ca Pr WIXXX:10,21,37,38,44,50"
+    "yiffcode": "YIFF 3.0 N kinsey-4 P Ne T *phoenix* Cu S-fu Cu V-te *phoenix-bear-hyena-* Cu H-ro-ca Pr WIXXX:10,21,37,38,44,50",
+    "show_yiff": true
   }
 }

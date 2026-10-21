@@ -52,6 +52,7 @@
   "codes": {
     "furcode": "F[Renamon]3acr A-- C+ D++ H+ M+ts P++ R T V W- RL- a c++w e+ f+++ g+ h i++ j++ m- p Smb smb",
     "yiffcode": "YIFF 3.0 M bi P Cu T-an-mi *renamon_skunk* Rp S-fu Pr V-te-ga *renamon_skunk-* Ca H-ro Cu WIXXX:10,15,31,36,37,40,49",
-    "yiff_public": false
+    "show_yiff": true,
+    "yiff_public": true
   }
 }

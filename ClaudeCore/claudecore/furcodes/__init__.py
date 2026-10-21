@@ -44,10 +44,13 @@ def save_user_codes(codes):
     return True
 
 
-def yiff_public(name, yiffcode_text):
-    """Does this resident show their YIFF Code in their profiles? About a third of those who don't keep it private."""
+def yiff_public(name, yiffcode_text, show=None):
+    """Does this resident show their YIFF Code in their profiles? show: their own choice ("show_yiff" in their codes;
+    the main furs all do). Otherwise about a third of those who don't keep it private."""
     if not yiffcode_text:
         return False
+    if show is not None:
+        return bool(show)
     from . import yiffcode
     v = yiffcode.parts(yiffcode_text)["categories"].get("V") or {}
     return v.get("q") not in (None, "No", "Ne", "Ce", "Tr") and random.Random(f"yiff-public:{name}").random() < 0.3

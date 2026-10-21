@@ -9,7 +9,8 @@
   },
   "ArcticFox": {
    "furcode": "FCA3acr A C+ D+ H+++ M++ts P+ R T+++ V-- W-- RLCT a c++lw e f++ g+ h+++ i++ j m p+ Smg smg",
-   "yiffcode": "YIFF 3.0 M hom P Th T Pr S Cu V-te *-* Pr H-ro Cu WIXXX:14,24,36,44,47,58",
+   "yiffcode": "YIFF 3.0 M hom P Th T Pr S Cu V-te *-* Pr H-ro Cu WIXXX:10,14,24,36,44,47,58",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Arctic fox"
@@ -92,8 +93,9 @@
    "species": "Anthro wild boar"
   },
   "Brass": {
-   "furcode": "F[Cockatoo]3r A- C D- H+ M+ P+ R- T+++ V+ W- RLTI a c++w e f+++ g+ h+++ i++f j+ m p+ Smg smg",
-   "yiffcode": "YIFF 3.0 M hom P Ne T-fe *cockatoo_hyena* Pr S-ct Cu V-te *cockatoo-hyena-tiger-* Pr H-fu No WIXXX:2,10,17,26,27,36,58",
+   "furcode": "F[Cockatoo]3r A- C D- H+ M+s P+ R- T+++ V+ W- RLTI a c++w e f+++ g+ h+++ i++f j+ m p+ Smg smg",
+   "yiffcode": "YIFF 3.0 M hom P Ne T-fe *cockatoo_hyena* Pr S-ct Cu V-te *cockatoo-hyena-tiger-* Pr H-fu Mo WIXXX:2,10,17,26,27,36,58",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Anthro cockatoo"
@@ -170,14 +172,16 @@
   },
   "Cairngorm": {
    "furcode": "FFM3ars A C D H- M+s P R T V-- W RLAT a c+w e f g++ h++ i++w j+ m- p- Smg smg",
-   "yiffcode": "YIFF 3.0 M hom P En T-ma *lion_dog* Th S Cu V-te-ga *-* Pr H-ro Pr WIXXX:12,21,39,58",
+   "yiffcode": "YIFF 3.0 M hom P En T-ma *lion_dog* Th S Cu V-te-ga *-* Pr H-ro Pr WIXXX:10,12,21,39,58",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Anthro mountain lion"
   },
   "Cameo": {
    "furcode": "FDL3adr A+ C D H+ M++ts P R T V-- W RLTH a c-w e++ f g+ h+++ i++w j m- p Sfh sfh",
-   "yiffcode": "YIFF 3.0 F P Ne T-an *chameleon_otter* Rp S Cu V-te *chameleon-otter-husky-* Pr H-fu-ro No WIXXX:6,12,24,31,53",
+   "yiffcode": "YIFF 3.0 F P Ne T-an *chameleon_otter* Rp S Cu V-te *chameleon-otter-husky-* Pr H-fu-ro Cu WIXXX:6,10,12,24,31,53",
+   "show_yiff": true,
    "tier": "main",
    "gender": "F",
    "species": "Anthro chameleon"
@@ -220,6 +224,7 @@
   "Cicada": {
    "furcode": "F[Cicada]w3r A- C D- H+ M+s P+ R- T++ V W- RLF a c-w e+ f+++ g++ h+++ i+++ j+ m p Sfh sfh",
    "yiffcode": "YIFF 3.0 F P Ne T-ma *cicada* Cu S-ct Th V-te *cicada-hyena-skunk-* Pr H-fu Pr WIXXX:2,10,14,16,24,31,36,49,52,55",
+   "show_yiff": true,
    "tier": "main",
    "gender": "F",
    "species": "Anthro cicada"
@@ -275,14 +280,16 @@
   },
   "Crispin": {
    "furcode": "FRP3ar A- C-- D- H- M+s P R T+++ V W-- RL- a+ c+m e++ f++ g+ h++ i+f j+ m p Smo smo",
-   "yiffcode": "YIFF 3.0 M pan P No T-an *porcupine* No S No V-te *porcupine_tiger* No H-ro-ca No WIXXX:31",
+   "yiffcode": "YIFF 3.0 M pan P No T-an *porcupine* Cu S Cu V-te *porcupine_tiger* Pr H-ro-ca Mo WIXXX:10,24,31,40,44,48",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Anthro porcupine"
   },
   "CyberianHusky": {
    "furcode": "FCG3cr A- C+ D++ H++ M+s P+ R-- T+++ V W- RL- a+ c++w e+ f+++ g++ h++ i++ j-- m p^^ Smb smb",
-   "yiffcode": "YIFF 3.0 M bi P Cu T *husky* Cu S-fu-ke Pr V-te *husky-husky-rabbit-* Pr H-ca Mo WIXXX:12,15,31,40,45,53",
+   "yiffcode": "YIFF 3.0 M bi P Cu T *husky* Cu S-fu-ke Pr V-te *husky-husky-rabbit-* Pr H-ca Mo WIXXX:10,12,15,31,40,45,53",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Siberian husky"
@@ -303,7 +310,8 @@
   },
   "Dewdrop": {
    "furcode": "F[Tree frog]3ar A+ C- D H++ M+tls P R- T+ V W-- RLMH a+ c++w e+ f++ g h+++ i+ j m+ p^^ Sfb sfb",
-   "yiffcode": "YIFF 3.0 F bi P Th T-fe-mi *frog* Rp S Ne V-te *frog-bear-otter-* Pr H Po WIXXX:3,4,24,31,53",
+   "yiffcode": "YIFF 3.0 F bi P Th T-fe-mi *frog* Rp S Ne V-te *frog-bear-otter-* Pr H Po WIXXX:3,4,10,24,31,53",
+   "show_yiff": true,
    "tier": "main",
    "gender": "F",
    "species": "Anthro tree frog"
@@ -408,7 +416,8 @@
   },
   "Flicker": {
    "furcode": "F[Phoenix]w2ars A-- C- D H+ M++ls P R+ T+++ V W RLMC a c+m e+ f++ g+ h+++ i++ j m p- Snb snb",
-   "yiffcode": "YIFF 3.0 N kinsey-4 P Ne T *phoenix* Cu S-fu No V-te *phoenix-bear-hyena-* Cu H-ro-ca Pr WIXXX:10,21,37,38,44,50",
+   "yiffcode": "YIFF 3.0 N kinsey-4 P Ne T *phoenix* Cu S-fu Cu V-te *phoenix-bear-hyena-* Cu H-ro-ca Pr WIXXX:10,21,37,38,44,50",
+   "show_yiff": true,
    "tier": "main",
    "gender": "N",
    "species": "Anthro phoenix"
@@ -561,8 +570,9 @@
    "species": "Anthro Pronghorn"
   },
   "Hush": {
-   "furcode": "FAO4ar A- C D H++ M+t P++ R++ T V W+ RLL a+ c+w e++ f++ g- h+++ i+ j- m+ p^ Sno sno",
-   "yiffcode": "YIFF 3.0 N pan P Th T-an *owl* Th S Cu V-te *owl-* Ne H-ro Pr WIXXX:12,35,36,40,44,50",
+   "furcode": "FAO4ar A- C D H++ M+ts P++ R++ T V W+ RLL a+ c+w e++ f++ g- h+++ i+ j- m+ p^ Sno sno",
+   "yiffcode": "YIFF 3.0 N pan P Th T-an *owl* Th S Cu V-te *owl-* Pr H-ro Pr WIXXX:10,12,35,36,40,44,50",
+   "show_yiff": true,
    "tier": "main",
    "gender": "N",
    "species": "Anthro snowy owl"
@@ -626,6 +636,7 @@
   "Juniper": {
    "furcode": "FFX3r A-- C+ D H M+s P+ R T++ V W-- RLAT a+ c+w e+++ f++ g h+++ i+f j++ m p Sfl sfl",
    "yiffcode": "YIFF 3.0 F hom P No T-ma *lynx-cat-tiger* Ar S Cu V-te *lynx-cat-tiger* Pr H-ro-lo Pr WIXXX:4,10,14,15,24,27,36,40,49,53",
+   "show_yiff": true,
    "tier": "main",
    "gender": "F",
    "species": "Anthro lynx"
@@ -680,8 +691,9 @@
    "species": "Anthro Caracal"
   },
   "KittyKat": {
-   "furcode": "FFD3acr A C- D+++ H+++ M++ P R++ T+ V- W RLU a c++w e+++ f+ g+ h++ i+ j m p- Smb smb",
-   "yiffcode": "YIFF 3.0 M kinsey-4 P No T-an Pr S-fu-ct Pr V-te-ga *cat-rabbit-fox-* Pr H-ro Po WIXXX:9,21,31,35,39,49",
+   "furcode": "FFD3acr A C- D+++ H+++ M++s P R++ T+ V- W RLU a c++w e+++ f+ g+ h++ i+ j m p- Smb smb",
+   "yiffcode": "YIFF 3.0 M kinsey-4 P No T-an Pr S-fu-ct Pr V-te-ga *cat-rabbit-fox-* Pr H-ro Po WIXXX:9,10,21,31,35,39,49",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Calico cat"
@@ -729,8 +741,9 @@
    "species": "Anthro Beaver"
   },
   "Latchkey": {
-   "furcode": "FMaP2ar A--- C+ D H++ M+tl P+ R T+ V W-- RLR a++ cw e+ f+ g+ h+++ i++ j m- p++ Snb snb",
-   "yiffcode": "YIFF 3.0 N bi P Th T *opossum-horse-dragon* Ar S No V-te *opossum-* Th H-ca Po WIXXX:10,13,16,22,31,39,40,47,48,52",
+   "furcode": "FMaP2ar A--- C+ D H++ M+tls P+ R T+ V W-- RLR a++ cw e+ f+ g+ h+++ i++ j m- p++ Snb snb",
+   "yiffcode": "YIFF 3.0 N bi P Th T *opossum-horse-dragon* Ar S Cu V-te *opossum-* Th H-ca Po WIXXX:10,13,16,22,31,39,40,47,48,52",
+   "show_yiff": true,
    "tier": "main",
    "gender": "N",
    "species": "Anthro opossum"
@@ -738,6 +751,7 @@
   "LazyFox": {
    "furcode": "FCF4cdr A+ C- D+++m H M++s P+ R++ T V-- W- RL- a c++w e f+ g+ h++ i+++w j+ m p Smb smb",
    "yiffcode": "YIFF 3.0 M bi P Ne T *fox* Pr S Pr V-te-vo *fox_dragon* Th H-fu Cu WIXXX:8,10,20,44,49",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Red fox"
@@ -793,7 +807,8 @@
   },
   "Mallowroot": {
    "furcode": "FLR3r A--- C-- D- H+ M++s P+ R-- T++ V W RL- a c++m e- f g+ h+++ i+w j m- p^ Sfh sfh",
-   "yiffcode": "YIFF 3.0 F P Ne T-ma *rabbit_husky* Pr S-fu Ne V-te *-* Pr H No WIXXX:10,11,22,27,31,39,40,49",
+   "yiffcode": "YIFF 3.0 F P Ne T-ma *rabbit_husky* Pr S-fu Ne V-te *-* Pr H Cu WIXXX:10,11,22,27,31,39,40,49",
+   "show_yiff": true,
    "tier": "main",
    "gender": "F",
    "species": "Anthro rabbit"
@@ -828,7 +843,8 @@
   },
   "Meringue": {
    "furcode": "F[Swan]3ar A--- C- D H- M++ts P R T+ V W RLR a+ c+w e f+++ g++ h+++ i++wf j m p+ Sfl sfl",
-   "yiffcode": "YIFF 3.0 F hom P No T *swan* Th S Ne V-te *swan_fox* Pr H Mo WIXXX:2,15,16,20,21,29,31,40,45,50,52",
+   "yiffcode": "YIFF 3.0 F hom P No T *swan* Th S Ne V-te *swan_fox* Pr H Mo WIXXX:2,10,15,16,20,21,29,31,40,45,50,52",
+   "show_yiff": true,
    "tier": "main",
    "gender": "F",
    "species": "Anthro swan"
@@ -885,6 +901,7 @@
   "Moor": {
    "furcode": "FArB3ar A-- C+ D- H+ M+s P R T+++ V W RLE a+ c++m e f- g+ h++ i++f j+ m p^ Smb smb",
    "yiffcode": "YIFF 3.0 M kinsey-2 P Co T-ma *buffalo-rabbit-cat* Cu S Ne V-te-ga *-* Pr H-fu-ro Ce WIXXX:10,24,27,36,40,57,58",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Anthro water buffalo"
@@ -912,7 +929,8 @@
   },
   "Mote": {
    "furcode": "F[Anglerfish]3r A- C+ D H M+tls P R T++ V-- W- RLS a c++lw e f++ g+ h+++ i++ j- m p- Snb snb",
-   "yiffcode": "YIFF 3.0 N bi P Cu T-an *anglerfish-horse-tiger* Rp S-fu-ke Cu V-te *anglerfish-* Ca H-fu Cu WIXXX:2,5,16,31,32,33,37,52",
+   "yiffcode": "YIFF 3.0 N bi P Cu T-an *anglerfish-horse-tiger* Rp S-fu-ke Cu V-te *anglerfish-* Ca H-fu Cu WIXXX:2,5,10,16,31,32,33,37,52",
+   "show_yiff": true,
    "tier": "main",
    "gender": "N",
    "species": "Anthro anglerfish"
@@ -925,8 +943,9 @@
    "species": "Anthro barn owl"
   },
   "MushTheHusky": {
-   "furcode": "FCG3acr A- C+++ D+ H+++ M P- R+ T++ V- W-- RLU a c+++lw e++ f++ g- h+++ i++ j-- m p Smb smb",
+   "furcode": "FCG3acr A- C+++ D+ H+++ M++s P- R+ T++ V- W-- RLU a c+++lw e++ f++ g- h+++ i++ j-- m p Smb smb",
    "yiffcode": "YIFF 3.0 M kinsey-4 P Cu T *husky-bear-lion* Cu S-fu Th V-te *husky-bear-lion-* Pr H Cu WIXXX:4,10,15,21,24,31,32,34,38,47,53",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Siberian husky"
@@ -982,7 +1001,8 @@
   },
   "Oxbow": {
    "furcode": "FDD3ar A-- C D- H- M+s P++ R T++ V-- W RL- a c+w e f++ g++ h+++ i++f j- m+ p+ Snb snb",
-   "yiffcode": "YIFF 3.0 N bi P Cu T *dragon* Pr S-ke Cu V-te *-* Pr H-lo Ce WIXXX:15,21,24,26,37,39,40,58",
+   "yiffcode": "YIFF 3.0 N bi P Cu T *dragon* Pr S-ke Cu V-te *-* Pr H-lo Ce WIXXX:10,15,21,24,26,37,39,40,58",
+   "show_yiff": true,
    "tier": "main",
    "gender": "N",
    "species": "Anthro river dragon"
@@ -1150,7 +1170,8 @@
   },
   "Ravel": {
    "furcode": "FMB3r A- C- D- H+ M++s P+ R++ T++ V W RL- a+ c+w e- f+ g h+++ i++f j+ m p^^ Smb smb",
-   "yiffcode": "YIFF 3.0 M kinsey-4 P En T-an *badger-wolf-rabbit* Pr S-fu No V-te *badger-wolf-rabbit-* Th H-ca Cu WIXXX:11,16,24,26,34,37,52",
+   "yiffcode": "YIFF 3.0 M kinsey-4 P En T-an *badger-wolf-rabbit* Pr S-fu Th V-te *badger-wolf-rabbit-* Th H-ca Cu WIXXX:10,11,16,24,26,34,37,52",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Anthro badger"
@@ -1164,7 +1185,8 @@
   },
   "RedFawks": {
    "furcode": "FCF3cr A C+++ D++ H+ M+s P++ R- T++ V W-- RLTI a c++w e f++ g++ h+++ i++ j- m p Smb smb",
-   "yiffcode": "YIFF 3.0 M kinsey-4 P Ne T *fox_raccoon* Pr S-fu-ct Cu V-te *fox-raccoon-lion-* Pr H-fu-ro No WIXXX:10,13,40",
+   "yiffcode": "YIFF 3.0 M kinsey-4 P Ne T *fox_raccoon* Pr S-fu-ct Cu V-te *fox-raccoon-lion-* Pr H-fu-ro Cu WIXXX:2,10,13,15,24,35,39,40,50",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Red fox"
@@ -1186,6 +1208,7 @@
   "Renamon": {
    "furcode": "F[Renamon]3acr A-- C+ D++ H+ M+ts P++ R T V W- RL- a c++w e+ f+++ g+ h i++ j++ m- p Smb smb",
    "yiffcode": "YIFF 3.0 M bi P Cu T-an-mi *renamon_skunk* Rp S-fu Pr V-te-ga *renamon_skunk-* Ca H-ro Cu WIXXX:10,15,31,36,37,40,49",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Renamon"
@@ -1206,7 +1229,8 @@
   },
   "Rill": {
    "furcode": "F[Kingfisher]1ars A- C- D- H+ M+s P- R T+ V+ W- RLR a+ cw e f++ g+ h+++ i++w j m- p Sna sna",
-   "yiffcode": "YIFF 3.0 N ace P Th T-an Ce S Ne V-te *kingfisher* Ce H-lo Ce WIXXX:24,31,40,41",
+   "yiffcode": "YIFF 3.0 N ace P Th T-an Rp S Ne V-te *kingfisher* Pr H-lo Ce WIXXX:10,24,31,40",
+   "show_yiff": true,
    "tier": "main",
    "gender": "N",
    "species": "Anthro kingfisher"
@@ -1318,7 +1342,8 @@
   },
   "Serein": {
    "furcode": "F[Rain spirit]3ar A C D H+ M+s P+ R+ T++ V- W- RLAT a++ c+w e++ f+ g+ h+++ i++wf j+ m- p++ Sfb sfb",
-   "yiffcode": "YIFF 3.0 F bi P Cu T *spirit_skunk* Cu S Cu V-te *spirit-skunk-fox-* Th H-ro-ca Po WIXXX:24,40,48,58",
+   "yiffcode": "YIFF 3.0 F bi P Cu T *spirit_skunk* Cu S Cu V-te *spirit-skunk-fox-* Th H-ro-ca Po WIXXX:10,24,40,48,58",
+   "show_yiff": true,
    "tier": "main",
    "gender": "F",
    "species": "Anthro rain spirit"
@@ -1367,7 +1392,8 @@
   },
   "Skein": {
    "furcode": "F[Alpaca]5ar A- C+ D-- H M+s P++ R-- T- V-- W RLC a cw e f- g+ h+++ i+ j+ m+ p^ Sfh sfh",
-   "yiffcode": "YIFF 3.0 F P En T *alpaca* Cu S Cu V-te *alpaca_cat-* Pr H-fu-ro Pr WIXXX:24,29,48",
+   "yiffcode": "YIFF 3.0 F P En T *alpaca* Cu S Cu V-te *alpaca_cat-* Pr H-fu-ro Pr WIXXX:10,24,29,48",
+   "show_yiff": true,
    "tier": "main",
    "gender": "F",
    "species": "Anthro alpaca"
@@ -1387,8 +1413,9 @@
    "species": "Anthro Stoat"
   },
   "Slag": {
-   "furcode": "F[Iron golem]3ar A- C+ D- H M-- P++ R T V W-- RLS a+ c++w e- f+ g+ h+++ i++ j++ m p++ Smb smb",
-   "yiffcode": "YIFF 3.0 M kinsey-4 P Co T-an *golem-horse-hyena* Rp S Th V-te-vo *golem_horse* Cu H Po WIXXX:3,5,16,36,40,42,44,47,49,52",
+   "furcode": "F[Iron golem]3ar A- C+ D- H M++s P++ R T V W-- RLS a+ c++w e- f+ g+ h+++ i++ j++ m p++ Smb smb",
+   "yiffcode": "YIFF 3.0 M kinsey-4 P Co T-an *golem-horse-hyena* Rp S Th V-te-vo *golem_horse* Cu H Po WIXXX:3,5,10,16,36,40,42,44,47,49,52",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Anthro iron golem"
@@ -1521,7 +1548,8 @@
   },
   "Sundog": {
    "furcode": "FCC3ar A-- C- D H+ M+ts P- R- T++ V-- W-- RLTI a++ c+w e++ f+++ g+ h+++ i+++w j+ m- p^^ Smg smg",
-   "yiffcode": "YIFF 3.0 M kinsey-5 P En T-an *coyote-tiger-skunk* Ar S-ct Cu V-te *coyote_tiger* Pr H Mo WIXXX:2,5,11,13,14,31,36,49",
+   "yiffcode": "YIFF 3.0 M kinsey-5 P En T-an *coyote-tiger-skunk* Ar S-ct Cu V-te *coyote_tiger* Pr H Mo WIXXX:2,5,10,11,13,14,31,36,49",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Anthro coyote"
@@ -1541,8 +1569,9 @@
    "species": "Anthro sugar glider"
   },
   "Tallow": {
-   "furcode": "F[Musk ox]3r A- C- D-- H+ M++tl P++ R T++ V+ W RLR a c++w e+ f++ g++ h++ i++w j m+ p+ Smb smb",
-   "yiffcode": "YIFF 3.0 M bi P No T-an *ox_bear* Rp S-ke Cu V-te *-* Pr H-ro Cu WIXXX:15,16,24,40,48,52",
+   "furcode": "F[Musk ox]3r A- C- D-- H+ M++tls P++ R T++ V+ W RLR a c++w e+ f++ g++ h++ i++w j m+ p+ Smb smb",
+   "yiffcode": "YIFF 3.0 M bi P No T-an *ox_bear* Rp S-ke Cu V-te *-* Pr H-ro Cu WIXXX:10,15,16,24,40,48,52",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Anthro musk ox"
@@ -1563,7 +1592,8 @@
   },
   "Tamarack": {
    "furcode": "F[Caribou]2r A C+ D-- H++ M++ts P+ R+ T- V+ W- RLF a c+w e f+ g- h+++ i++ j+ m p^^ Smh smh",
-   "yiffcode": "YIFF 3.0 M P En T-an Pr S Ne V-te-vo *caribou_tiger* Pr H-ro Pr WIXXX:10,29,31",
+   "yiffcode": "YIFF 3.0 M P En T-an Pr S Ne V-te-vo *caribou_tiger* Pr H-ro Pr WIXXX:10,29,31,32,36,43,49",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Anthro caribou"
@@ -1620,6 +1650,7 @@
   "Tumbleweed": {
    "furcode": "FMaK3r A- C- D H+ M++s P R T-- V- W- RLTI a c-w e+ f- g+ h+++ i+ j m p Smg smg",
    "yiffcode": "YIFF 3.0 M hom P Ne T-an *kangaroo* Pr S Cu V-te *kangaroo-skunk-hyena-* Pr H-fu-ro Cu WIXXX:10,12,23,49,53",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Anthro kangaroo"
@@ -1703,7 +1734,8 @@
   },
   "Waxwing": {
    "furcode": "F[Cedar waxwing]w3dr A+ C- D H+ M+s P R T++ V-- W-- RLS a+ c+w e f++ g+ h+++ i+++f j- m p^^ Sfb sfb",
-   "yiffcode": "YIFF 3.0 F bi P Ne T-mi *waxwing_rabbit* Cu S Ne V-te *-* Pr H-ca Pr WIXXX:12,15,24,31,51,53",
+   "yiffcode": "YIFF 3.0 F bi P Ne T-mi *waxwing_rabbit* Cu S Ne V-te *-* Pr H-ca Pr WIXXX:10,12,15,24,31,51,53",
+   "show_yiff": true,
    "tier": "main",
    "gender": "F",
    "species": "Anthro cedar waxwing"
@@ -1725,6 +1757,7 @@
   "WinterDragon": {
    "furcode": "FDD3cr A-- C+ D++ H++ M+ts P R- T-- V- W RL- a c+++w e++ f++ g+ h++ i++ j- m- p- Smg smg",
    "yiffcode": "YIFF 3.0 M kinsey-5 P En T-an Pr S-fu Cu V-te *dragon-otter-horse-* Pr H-fu Cu WIXXX:2,10,15,17,36,40,49",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "Dragon"
@@ -1738,7 +1771,8 @@
   },
   "XavierPup": {
    "furcode": "FCG3cr A C++ D++m H++ M++s P R T++ V W-- RLF a c++lw e+ f-- g+ h+++ i+ j++ m p- Smg smg",
-   "yiffcode": "YIFF 3.0 M hom P No T-an *shepherd-wolf-hyena* Ar S-ct Pr V-te *shepherd* Pr H-fu-lo No WIXXX:4,11,15,31,49",
+   "yiffcode": "YIFF 3.0 M hom P No T-an *shepherd-wolf-hyena* Ar S-ct Pr V-te *shepherd* Pr H-fu-lo Pr WIXXX:4,10,11,15,31,49",
+   "show_yiff": true,
    "tier": "main",
    "gender": "M",
    "species": "German Shepherd"

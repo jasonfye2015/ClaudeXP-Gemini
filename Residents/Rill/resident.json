@@ -42,6 +42,7 @@
   "flags": [],
   "codes": {
     "furcode": "F[Kingfisher]1ars A- C- D- H+ M+s P- R T+ V+ W- RLR a+ cw e f++ g+ h+++ i++w j m- p Sna sna",
-    "yiffcode": "YIFF 3.0 N ace P Th T-an Ce S Ne V-te *kingfisher* Ce H-lo Ce WIXXX:24,31,40,41"
+    "yiffcode": "YIFF 3.0 N ace P Th T-an Rp S Ne V-te *kingfisher* Pr H-lo Ce WIXXX:10,24,31,40",
+    "show_yiff": true
   }
 }

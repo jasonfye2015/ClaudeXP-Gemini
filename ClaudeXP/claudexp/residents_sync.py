@@ -116,7 +116,7 @@ def codes_block(r):
 def shows_yiff(r):
     """Some residents put their YIFF Code in their profiles too (the ones who don't keep it private)."""
     from claudecore.furcodes import yiff_public
-    return yiff_public(r.name, codes(r).get("yiffcode", ""))
+    return yiff_public(r.name, codes(r).get("yiffcode", ""), codes(r).get("show_yiff"))
 
 
 def _profile_with_codes(profile, r):

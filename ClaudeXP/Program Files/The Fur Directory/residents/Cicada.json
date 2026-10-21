@@ -52,6 +52,7 @@
   "codes": {
     "furcode": "F[Cicada]w3r A- C D- H+ M+s P+ R- T++ V W- RLF a c-w e+ f+++ g++ h+++ i+++ j+ m p Sfh sfh",
     "yiffcode": "YIFF 3.0 F P Ne T-ma *cicada* Cu S-ct Th V-te *cicada-hyena-skunk-* Pr H-fu Pr WIXXX:2,10,14,16,24,31,36,49,52,55",
-    "yiff_public": false
+    "show_yiff": true,
+    "yiff_public": true
   }
 }

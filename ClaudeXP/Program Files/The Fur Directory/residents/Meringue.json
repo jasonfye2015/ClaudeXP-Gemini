@@ -51,7 +51,8 @@
   "notes": "",
   "codes": {
     "furcode": "F[Swan]3ar A--- C- D H- M++ts P R T+ V W RLR a+ c+w e f+++ g++ h+++ i++wf j m p+ Sfl sfl",
-    "yiffcode": "YIFF 3.0 F hom P No T *swan* Th S Ne V-te *swan_fox* Pr H Mo WIXXX:2,15,16,20,21,29,31,40,45,50,52",
-    "yiff_public": false
+    "yiffcode": "YIFF 3.0 F hom P No T *swan* Th S Ne V-te *swan_fox* Pr H Mo WIXXX:2,10,15,16,20,21,29,31,40,45,50,52",
+    "show_yiff": true,
+    "yiff_public": true
   }
 }

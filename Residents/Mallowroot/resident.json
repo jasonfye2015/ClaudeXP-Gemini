@@ -42,6 +42,7 @@
   "flags": [],
   "codes": {
     "furcode": "FLR3r A--- C-- D- H+ M++s P+ R-- T++ V W RL- a c++m e- f g+ h+++ i+w j m- p^ Sfh sfh",
-    "yiffcode": "YIFF 3.0 F P Ne T-ma *rabbit_husky* Pr S-fu Ne V-te *-* Pr H No WIXXX:10,11,22,27,31,39,40,49"
+    "yiffcode": "YIFF 3.0 F P Ne T-ma *rabbit_husky* Pr S-fu Ne V-te *-* Pr H Cu WIXXX:10,11,22,27,31,39,40,49",
+    "show_yiff": true
   }
 }
