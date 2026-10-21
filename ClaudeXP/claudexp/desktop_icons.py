@@ -36,13 +36,15 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
                    "Windows Games": [p.key for p in programs.PROGRAMS if p.group == "Games/Windows Games"],
                    "GeminiOffice": [p.key for p in programs.PROGRAMS if p.group == "Gemini Office"],
                    "GeminiAdobe": [p.key for p in programs.PROGRAMS if p.group == "GeminiAdobe"],
+                   "Social Programs": ["yim", "trillian", "skype", "icq", "kik", "msn", "aim", "furcadia", "hotmail",
+                                       "livejournal", "irc", "navigator", "muck"],
                    "Disc Tools": ["nero", "alcohol120"],
                    "Archive Tools": ["winrar", "winzip"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 30,
+FOLDERS_SINCE = {"Social Programs": 45, "Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 30,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 44
+FOLDERS = 45
 # folders that live inside another folder rather than loose on the desktop
 NESTED = {"Emulation": "Games/Emulation", "Windows Games": "Games/Windows Games"}
 # shortcuts that now live in one of those folders instead of loose on the desktop
@@ -58,10 +60,11 @@ def builtins():
 
     New games don't get one: group="Games" puts them in Start > Games and the desktop Games folder, which is enough.
     """
+    in_folder = {f"prog:{key}" for key in PROGRAM_FOLDERS["Social Programs"]}     # (they live in that folder now)
     folders = [(f"prog:{key}", label, lambda: std(QStyle.SP_DirIcon))
                for key, (label, _prefix) in programs.FOLDER_SHORTCUTS.items()
                if programs.archive_folder(key) and f"prog:{key}" not in IN_FOLDERS]
-    return [
+    icons = [
         ("sys:recycle", "Recycle Bin", lambda: std(QStyle.SP_TrashIcon)),
         ("sys:mycomputer", "My Computer", lambda: std(QStyle.SP_ComputerIcon)),
         ("prog:connect", "America Online", lambda: QIcon(pixmap("aol_icon.png"))),
@@ -73,7 +76,7 @@ def builtins():
         ("prog:iexplore", "Internet Explorer", lambda: programs.get("iexplore").icon()),
         ("prog:hotmail", "MSN Hotmail", lambda: programs.get("hotmail").icon()),
         ("prog:livejournal", "LiveJournal", lambda: programs.get("livejournal").icon()),
-        ("prog:kiwix", "Kiwix", lambda: programs.get("kiwix").icon()),
+        ("prog:kiwix", "Kiwix Wiki Reader", lambda: programs.get("kiwix").icon()),
         ("prog:claudecraft", "ClaudeCraft", lambda: programs.get("claudecraft").icon()),
         ("prog:furcadia", "Claudecadia", lambda: programs.get("furcadia").icon()),
         ("prog:claudequest", "ClaudeQuest", lambda: programs.get("claudequest").icon()),
@@ -102,6 +105,7 @@ def builtins():
         ("prog:muck", "ClaudeMUCK", lambda: programs.get("muck").icon()),
         ("prog:pystudio", "Copilot Python Studio", lambda: programs.get("pystudio").icon()),
     ]
+    return [icon for icon in icons if icon[0] not in in_folder]
 
 
 class DesktopIcon(QWidget):
@@ -346,7 +350,7 @@ class IconManager(QObject):
                 shutil.move(str(link), str(target / link.name))
 
     def _claudecadia_out_of_games(self):
-        """Folders version 33: Claudecadia is a chat world (Start > Social Networking), not a game - its shortcut
+        """Folders version 33: Claudecadia is a chat world (Start > Social Programs), not a game - its shortcut
         leaves the desktop's Games folder."""
         from .explorer import vfs
         vfs.setup_c()

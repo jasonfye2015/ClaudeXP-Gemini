@@ -308,9 +308,9 @@ the language models, the Furry Media Archive, TV and Movies, emulation games and
 <a href="launch:claudecity">ClaudeCity</a> (build a city),
 <a href="launch:claudeablo">Claudeablo</a> (fifty levels down to Diablo),
 <a href="launch:claudequest">ClaudeQuest</a> (lead a wolf pack).</p>
-<p>And <a href="launch:furcadia">Claudecadia</a>, a furry graphical chat world, in <b>Social Networking</b>.</p>
+<p>And <a href="launch:furcadia">Claudecadia</a>, a furry graphical chat world, in <b>Social Programs</b>.</p>
 <h2>On the desktop and Start menu</h2>
-<ul><li><b>Start &gt; All Programs &gt; Social Networking</b> holds every messenger, ClaudeIRC, ClaudeMUCK and
+<ul><li><b>Start &gt; All Programs &gt; Social Programs</b> holds every messenger, ClaudeIRC, ClaudeMUCK and
 LiveJournal - and Claudecadia.</li>
 <li><b>Games</b> now holds a <b>Windows Games</b> folder (Solitaire, FreeCell, Minesweeper, Pinball,
 JezzBall, Rodent's Revenge, the Internet games and the rest) and the emulators - <b>Game Emulation</b> on the Start menu, <b>Emulation</b> on the

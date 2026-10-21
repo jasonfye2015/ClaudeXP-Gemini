@@ -1,5 +1,5 @@
 {
-  "_help": "The desktop a new install (or a reinstall) starts with: icon positions (pixels, top-left), hidden built-in icons, and the Arrange Icons options. Made from the user's own arrangement, 2026-10-16.",
+  "_help": "The desktop a new install (or a reinstall) starts with: icon positions (pixels, top-left), hidden built-in icons, and the Arrange Icons options. The folders sit together in the first column (2026-10-21).",
   "positions": {
     "sys:recycle": [
       6,
@@ -13,109 +13,49 @@
       6,
       162
     ],
-    "prog:mediaarchive": [
-      6,
-      552
-    ],
-    "prog:tvmovies": [
-      6,
-      630
-    ],
     "file:Furry Programs": [
       6,
-      396
+      240
     ],
     "file:Games": [
       6,
-      474
+      318
     ],
     "file:GeminiOffice": [
       6,
-      552
+      396
     ],
-    "prog:tv": [
-      86,
-      552
-    ],
-    "prog:navigator": [
+    "file:Social Programs": [
       6,
-      318
-    ],
-    "prog:claudeai": [
-      166,
-      240
-    ],
-    "prog:copilotai": [
-      166,
-      318
-    ],
-    "prog:imagecreator": [
-      166,
-      396
-    ],
-    "prog:aim": [
-      86,
       474
-    ],
-    "prog:irc": [
-      166,
-      162
-    ],
-    "prog:muck": [
-      86,
-      552
-    ],
-    "prog:pystudio": [
-      166,
-      474
-    ],
-    "prog:msn": [
-      86,
-      396
-    ],
-    "prog:yim": [
-      86,
-      6
-    ],
-    "prog:icq": [
-      86,
-      240
-    ],
-    "prog:trillian": [
-      86,
-      84
-    ],
-    "prog:skype": [
-      86,
-      162
-    ],
-    "prog:kik": [
-      86,
-      318
     ],
     "file:TV and Movies": [
       6,
-      630
+      552
     ],
     "prog:iexplore": [
       6,
-      240
-    ],
-    "prog:hotmail": [
-      166,
-      6
-    ],
-    "prog:livejournal": [
-      166,
-      84
+      630
     ],
     "prog:kiwix": [
-      166,
-      552
+      6,
+      708
     ],
-    "prog:furcadia": [
+    "prog:claudeai": [
       86,
-      630
+      6
+    ],
+    "prog:copilotai": [
+      86,
+      84
+    ],
+    "prog:imagecreator": [
+      86,
+      162
+    ],
+    "prog:pystudio": [
+      86,
+      240
     ]
   },
   "hidden": [
@@ -143,6 +83,7 @@
     "Furry Programs",
     "Games",
     "GeminiOffice",
+    "Social Programs",
     "TV and Movies",
     "Windows Games"
   ]

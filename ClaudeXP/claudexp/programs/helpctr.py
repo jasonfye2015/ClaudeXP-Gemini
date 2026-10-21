@@ -25,7 +25,7 @@ on this computer</a>, or meet <a href="help:people">the people who live here</a>
     "startmenu": ("Using the Start menu", "new", """
 <p>Click <b>start</b> to see your programs. Your most-used programs are listed on the left;
 <b>All Programs</b> holds everything, sorted into folders like <b>Accessories</b>, <b>Games</b> and
-<b>Social Networking</b> (every messenger, ClaudeIRC, ClaudeMUCK, LiveJournal and Claudecadia).
+<b>Social Programs</b> (every messenger, ClaudeIRC, ClaudeMUCK, LiveJournal and Claudecadia).
 The right side opens My Documents, My Pictures, My Music, My Computer, the Control Panel, Printers and Faxes,
 <a href="launch:search">Search</a>, <a href="launch:run">Run...</a> and this Help and Support Center.</p>
 <p>Right-click the taskbar for Cascade, Tile, Show the Desktop, <a href="launch:taskmgr">Task Manager</a> and
