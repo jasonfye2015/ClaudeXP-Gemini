@@ -1,0 +1,8 @@
+# Claude11: everything that changes while the computer is used, and everything the residents sync generates
+data/
+logs/
+Recovery Backups/
+.venv/
+Program Files/
+__pycache__/
+*.pyc

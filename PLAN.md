@@ -172,4 +172,17 @@ anachronisms (Skype, Kik, Copilot) and all.
      Facebook on the Furry Web (claude7/sites/facebook.py) are in (2026-10-22). The residents' 2011 lives were
      drafted from 2001 by ClaudeCore/tools/draft_2011_eras.py; the 34 main residents have hand-written 2011 lives
      (drafts/main_2011_2026-10-22.json), the rest each carry their own 2011 paragraph (--vary). Chess Titans is in.
-6. **Claude11**, the same way. Then maybe mobile devices.
+6. **Claude11**, the same way.
+   - First milestone, started 2026-10-22: the shell and every program. The ASUS UEFI splash (the user's picture)
+     with Windows 11's spinning dots, the UEFI BIOS Utility (DEL/F2) and the recovery environment (F8), the lock
+     screen and sign-in, the Mica desktop with Snap layouts, the centered taskbar with Quick Settings, the
+     notification center and the Widgets board, the Start menu, Settings, File Explorer's 2025 face, Microsoft
+     Edge and Firefox 144, Outlook, Tips, and every XP program that still existed in 2025 through
+     claude11/xpcompat.py (AIM, MSN, Yahoo!, ICQ and Skype are gone). The wallpapers, lock pictures and sounds
+     come from the real PC's Windows 11 (see Claude11/README.md). 144 of 145 programs launch offscreen.
+   - The residents' 2025 lives (2026-10-22): ClaudeCore/tools/draft_2025_eras.py drafts eras/2025.json from 2011
+     for all 258 (ages +14, Skype gone, Telegram/Discord/Bluesky handles for the mains, a 2025 paragraph each with
+     --vary); the 34 main residents have hand-written 2025 lives (drafts/main_2025_2026-10-22.json: retirements,
+     marriages, children, businesses, the pandemic years). 2001 and 2011 see none of it.
+   - Next: the 2025 community faces (Bluesky and Facebook's 2025 look on the Furry Web, Discord and Telegram),
+     the 2025 TV channels. Then maybe mobile devices.
