@@ -63,8 +63,27 @@ class Bridge:
         self.wander = QTimer()
         self.wander.timeout.connect(self._tick)
         self.cast = self._cast()
+        self.looks = self._looks()
 
     # ---- who's around ----
+    def _looks(self):
+        """resident name -> the notecard asset of the furry avatar they picked (wardrobe.json), for the looks the
+        Tailor has saved in this world (world.json "outfits")."""
+        import json
+        from opensim_world import HERE, world_file
+        try:
+            picks = json.loads((HERE / "wardrobe.json").read_text(encoding="utf-8"))["picks"]
+            saved = json.loads(world_file().read_text(encoding="utf-8")).get("outfits", {})
+        except (OSError, ValueError, KeyError):
+            return {}
+        try:                                    # each resident's own whole look, clothes and all (tailor.py)
+            dressed = json.loads(world_file().read_text(encoding="utf-8")).get("dressed", {})
+        except (OSError, ValueError):
+            dressed = {}
+        looks = {name: saved[look]["notecard"] for name, look in picks.items()
+                 if look in saved and saved[look].get("notecard", "").strip("0-")}
+        looks.update({name: card for name, card in dressed.items() if card.strip("0-")})
+        return looks
     def _cast(self):
         """The main residents who exist in this era: (resident name, first name, last name)."""
         out = []
@@ -193,7 +212,7 @@ class Bridge:
             y = max(5, min(250, uy + math.sin(angle) * rnd.uniform(4, 9)))
             self.present[first] = name
             self.where[first] = region
-            line = f"spawn|{first}|{last}|{x:.1f}|{y:.1f}|{uz:.1f}"
+            line = f"spawn|{first}|{last}|{x:.1f}|{y:.1f}|{uz:.1f}|{self.looks.get(name, '')}"
             with self.lock:
                 self.pending[first] = (region, line)
             self._send(region, line)

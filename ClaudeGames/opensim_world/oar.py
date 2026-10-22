@@ -26,14 +26,14 @@ def _vec(tag, x, y, z):
     return f"<{tag}><X>{x}</X><Y>{y}</Y><Z>{z}</Z></{tag}>"
 
 
-def keeper_xml(owner, script_asset, region, pos=(128.0, 128.0, 22.5)):
+def keeper_xml(owner, script_asset, region, pos=(128.0, 128.0, 22.5), name="Hollow Keeper"):
     KEEPER_ID, SCRIPT_ITEM = keeper_ids(region)
     now = int(time.time())
     item = (f"<TaskInventoryItem>{_uuid('AssetID', script_asset)}<BasePermissions>{FULL}</BasePermissions>"
             f"<CreationDate>{now}</CreationDate>{_uuid('CreatorID', owner)}<Description>The residents</Description>"
             f"<EveryonePermissions>0</EveryonePermissions><Flags>0</Flags>{_uuid('GroupID', '00000000-0000-0000-0000-000000000000')}"
             f"<GroupPermissions>0</GroupPermissions><InvType>10</InvType>{_uuid('ItemID', SCRIPT_ITEM)}"
-            f"{_uuid('OldItemID', SCRIPT_ITEM)}{_uuid('LastOwnerID', owner)}<Name>Hollow Keeper</Name>"
+            f"{_uuid('OldItemID', SCRIPT_ITEM)}{_uuid('LastOwnerID', owner)}<Name>{escape(name)}</Name>"
             f"<NextPermissions>{FULL}</NextPermissions>{_uuid('OwnerID', owner)}<CurrentPermissions>{FULL}</CurrentPermissions>"
             f"{_uuid('ParentID', KEEPER_ID)}{_uuid('ParentPartID', KEEPER_ID)}"
             f"{_uuid('PermsGranter', '00000000-0000-0000-0000-000000000000')}<PermsMask>0</PermsMask><Type>10</Type>"
@@ -48,7 +48,7 @@ def keeper_xml(owner, script_asset, region, pos=(128.0, 128.0, 22.5)):
     part = (f'<SceneObjectPart xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
             f'xmlns:xsd="http://www.w3.org/2001/XMLSchema"><AllowedDrop>false</AllowedDrop>{_uuid("CreatorID", owner)}'
             f'{_uuid("FolderID", KEEPER_ID)}<InventorySerial>1</InventorySerial><TaskInventory>{item}</TaskInventory>'
-            f'{_uuid("UUID", KEEPER_ID)}<LocalId>0</LocalId><Name>Hollow Keeper</Name><Material>0</Material>'
+            f'{_uuid("UUID", KEEPER_ID)}<LocalId>0</LocalId><Name>{escape(name)}</Name><Material>0</Material>'
             f'<PassTouches>false</PassTouches><RegionHandle>0</RegionHandle><ScriptAccessPin>0</ScriptAccessPin>'
             + _vec("GroupPosition", *pos) + _vec("OffsetPosition", 0, 0, 0)
             + "<RotationOffset><X>0</X><Y>0</Y><Z>0</Z><W>1</W></RotationOffset>"
@@ -66,18 +66,21 @@ def keeper_xml(owner, script_asset, region, pos=(128.0, 128.0, 22.5)):
     return f"<SceneObjectGroup><RootPart>{part}</RootPart><OtherParts /></SceneObjectGroup>"
 
 
-def write(path, owner, region):
-    """The OAR file for one region's Keeper, owned by `owner` (the avatar's account UUID)."""
+def write(path, owner, region, script=None, name="Hollow Keeper", pos=(128.0, 128.0, 22.5)):
+    """The OAR file for one region's Keeper (or another scripted object: `script` text, `name`), owned by `owner`
+    (an account UUID)."""
     # each region gets its own copy (its own asset): the script engine compiling one shared asset for four regions at
     # once trips over itself
-    script = (HERE / "keeper.lsl").read_bytes() + f"\n// {region}\n".encode("utf-8")
+    script = (HERE / "keeper.lsl").read_text(encoding="utf-8") if script is None else script
+    script = (script + f"\n// {region}\n").encode("utf-8")
     import hashlib
     script_asset = str(uuid.uuid5(uuid.NAMESPACE_URL, "claude-timeline/keeper/" + hashlib.md5(script).hexdigest()))
     archive = ('<?xml version="1.0" encoding="utf-16"?><archive major_version="0" minor_version="8">'
                f'<creation_info><datetime>{int(time.time())}</datetime><id>{uuid.uuid4()}</id></creation_info>'
                '<assets_included>True</assets_included></archive>')
     files = {"archive.xml": archive.encode("utf-8"),
-             f"objects/Hollow_Keeper__{keeper_ids(region)[0]}.xml": keeper_xml(owner, script_asset, region).encode("utf-8"),
+             f"objects/{name.replace(' ', '_')}__{keeper_ids(region)[0]}.xml":
+                 keeper_xml(owner, script_asset, region, pos, name).encode("utf-8"),
              f"assets/{script_asset}_script.lsl": script}
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -179,13 +179,30 @@ def clear_keepers():
         return 0
     con = sqlite3.connect(str(db))
     try:
-        ids = [r[0] for r in con.execute("SELECT UUID FROM prims WHERE Name = 'Hollow Keeper'")]
+        ids = [r[0] for r in con.execute("SELECT UUID FROM prims WHERE Name IN ('Hollow Keeper', 'Fitting Room')")]
         for table, column in (("primitems", "primID"), ("primshapes", "UUID"), ("prims", "UUID")):
             con.executemany(f"DELETE FROM {table} WHERE {column} = ?", [(i,) for i in ids])
         con.commit()
         return len(ids)
     except sqlite3.Error:
         return 0
+    finally:
+        con.close()
+
+
+def _logged_out():
+    """Nobody is in the world while the server is down: a server that was stopped hard leaves its avatars marked
+    online, and the next login would be refused as 'already logged in'."""
+    import sqlite3
+    db = opensim_bin() / "griduser.db"
+    if not db.exists():
+        return
+    con = sqlite3.connect(str(db))
+    try:
+        con.execute("UPDATE GridUser SET Online = 'False' WHERE Online <> 'False'")
+        con.commit()
+    except sqlite3.Error:
+        pass
     finally:
         con.close()
 
@@ -202,6 +219,7 @@ class Server:
         if self.running():
             return
         clear_keepers()
+        _logged_out()
         b = opensim_bin()
         for compiled in (b / "ScriptEngines").rglob("*.yobj"):   # compiled scripts are cached by their text; a bad
             try:                                                   # compile would otherwise be reused for good

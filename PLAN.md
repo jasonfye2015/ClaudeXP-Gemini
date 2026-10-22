@@ -205,4 +205,15 @@ anachronisms (Skype, Kik, Copilot) and all.
 - Furnished once from Linda Kellie's CC0 collection on Zadaroo (`content.py`): Mountain Retreat, Lake House, Tiki
   Summer and the Freebie Mall as the four regions' builds, and the furry avatars, full avatars, hair, animals,
   animations, furniture and houses packs in the avatar's inventory.
-- Next: dressing each resident in their own furry avatar (saved appearance notecards), IMs.
+- The residents' own furry avatars (2026-10-22): `tailor.py` has a helper avatar, Hollow Tailor, try on each of the
+  21 looks in the furry avatars pack in a second Cool VL Viewer (RestrainedLove, switched on only for that run) on a
+  Fitting Room platform in the sky; each look is saved as an appearance notecard and photographed
+  (Local Storage/SecondLife/outfits). `wardrobe.json` holds each main resident's pick, by species and colouring; the
+  bridge dresses them by the notecard's asset ID. Rerun with `python -m opensim_world.tailor [looks] [seconds]`.
+- Clothes (2026-10-22): `wardrobe.json` "clothes" gives each resident a top and bottom (shirt, pants and jacket
+  layers) from Linda Kellie's men's and women's clothing packs (CC0), picked from their fursona notes; RedFawks
+  wears none, per his fursona, and Renamon keeps the Digimon's look. `dress.py` packs each resident's avatar and
+  clothes into #RLV/residents/<name> for the Tailor; `python -m opensim_world.tailor residents [names] [seconds]`
+  saves their whole looks (world.json "dressed"), which the bridge prefers. Changing someone's clothes: edit
+  wardrobe.json, clear "residents_pack" in world.json, refit them.
+- Next: IMs, and more avatars for species the pack doesn't have (birds, reptiles, hoofed animals).

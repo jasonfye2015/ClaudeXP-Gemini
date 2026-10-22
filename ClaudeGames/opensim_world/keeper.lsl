@@ -28,14 +28,15 @@ post(string path, string body) {
 do_line(string line) {
     list f = llParseStringKeepNulls(line, ["|"], []);
     string cmd = llList2String(f, 0);
-    if (cmd == "spawn") {                           // spawn|First|Last|x|y|z
+    if (cmd == "spawn") {                           // spawn|First|Last|x|y|z[|look]
         string first = llList2String(f, 1);
         key have = npc_named(first);
         if (have != NULL_KEY) {                     // already here: the bridge missed hearing so (a dropped request)
             post("/spawned", llGetRegionName() + "|" + first + "|" + (string)have);
             return;
         }
-        string look = appearance();
+        string look = llList2String(f, 6);          // the resident's own avatar (a saved look's notecard asset)
+        if (look == "") look = appearance();
         if (look == "") return;                     // nobody to copy yet: the bridge asks again later
         vector at = <(float)llList2String(f, 3), (float)llList2String(f, 4), (float)llList2String(f, 5)>;
         key k = osNpcCreate(first, llList2String(f, 2), at, look, OS_NPC_SENSE_AS_AGENT);
