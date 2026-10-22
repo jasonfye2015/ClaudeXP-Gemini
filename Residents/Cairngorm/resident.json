@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2007,
+      "text": "Hiked the Arizona Trail in sections"
+    },
+    {
+      "at": 2010,
+      "text": "Bought a small adobe house in Tucson"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "FFM3ars A C D H- M+s P R T V-- W RLAT a c+w e f g++ h++ i++w j+ m- p- Smg smg",

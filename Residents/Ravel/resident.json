@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "from": 2004,
+      "text": "Restores pianos in his own workshop in Fitzroy"
+    },
+    {
+      "from": 2010,
+      "text": "Makes a radio-play podcast with friends"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "FMB3r A- C- D- H+ M++s P+ R++ T++ V W RL- a+ c+w e- f+ g h+++ i++f j+ m p^^ Smb smb",

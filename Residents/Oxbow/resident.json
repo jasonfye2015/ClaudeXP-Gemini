@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "from": 2005,
+      "text": "Makes and sells puzzle boxes online"
+    },
+    {
+      "at": 2009,
+      "text": "Moved to a flat by the canal in Haga"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "FDD3ar A-- C D- H- M+s P++ R T++ V-- W RL- a c+w e f++ g++ h+++ i++f j- m+ p+ Snb snb",

@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2004,
+      "text": "Became a full-time park ranger"
+    },
+    {
+      "at": 2008,
+      "text": "Moved to a cabin outside Nederland, Colorado"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "F[Caribou]2r A C+ D-- H++ M++ts P+ R+ T- V+ W- RLF a c+w e f+ g- h+++ i++ j+ m p^^ Smh smh",

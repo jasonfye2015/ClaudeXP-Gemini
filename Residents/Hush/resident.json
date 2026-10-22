@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2007,
+      "text": "Went freelance as a transcript editor"
+    },
+    {
+      "at": 2010,
+      "text": "Read at a poetry open mic for the first time"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "FAO4ar A- C D H++ M+ts P++ R++ T V W+ RLL a+ c+w e++ f++ g- h+++ i+ j- m+ p^ Sno sno",

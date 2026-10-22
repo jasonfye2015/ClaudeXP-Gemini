@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "from": 2006,
+      "text": "Runs her own alterations shop in Lawrenceville"
+    },
+    {
+      "from": 2009,
+      "text": "Sews fursuit bodysuits for friends"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "F[Alpaca]5ar A- C+ D-- H M+s P++ R-- T- V-- W RLC a cw e f- g+ h+++ i+ j+ m+ p^ Sfh sfh",

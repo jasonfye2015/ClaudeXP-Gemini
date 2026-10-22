@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2006,
+      "text": "Became night operations manager at the freight terminal"
+    },
+    {
+      "from": 2009,
+      "text": "Coaches a Saturday beginners' class at a boxing gym"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "FMaK3r A- C- D H+ M++s P R T-- V- W- RLTI a c-w e+ f- g+ h+++ i+ j m p Smg smg",

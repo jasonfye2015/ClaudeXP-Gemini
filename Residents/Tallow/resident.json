@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2005,
+      "text": "Became head baker"
+    },
+    {
+      "at": 2009,
+      "text": "Won a local sourdough contest"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "F[Musk ox]3r A- C- D-- H+ M++tls P++ R T++ V+ W RLR a c++w e+ f++ g++ h++ i++w j m+ p+ Smb smb",

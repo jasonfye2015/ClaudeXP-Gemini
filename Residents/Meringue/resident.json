@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2006,
+      "text": "Moved from Manchester to a cottage near Windermere"
+    },
+    {
+      "from": 2009,
+      "text": "Teaches a weekly pastry class"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "F[Swan]3ar A--- C- D H- M++ts P R T+ V W RLR a+ c+w e f+++ g++ h+++ i++wf j m p+ Sfl sfl",

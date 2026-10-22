@@ -52,6 +52,14 @@
     {
       "at": 2000,
       "text": "Met the user in person on a trip to the USA"
+    },
+    {
+      "at": 2007,
+      "text": "Flew to the USA for a convention and met the user in person again"
+    },
+    {
+      "from": 2008,
+      "text": "Works part-time at a pet shop and helps on the local con's volunteer crew"
     }
   ],
   "flags": [

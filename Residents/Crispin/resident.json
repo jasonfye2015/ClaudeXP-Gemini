@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "from": 2005,
+      "text": "Runs a home bread subscription"
+    },
+    {
+      "from": 2010,
+      "text": "Volunteers at the astronomy club's star parties"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "FRP3ar A- C-- D- H- M+s P R T+++ V W-- RL- a+ c+m e++ f++ g+ h++ i+f j+ m p Smo smo",

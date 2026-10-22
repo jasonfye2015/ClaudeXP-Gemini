@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2004,
+      "text": "Became curator at the city conservatory"
+    },
+    {
+      "from": 2009,
+      "text": "Plays cello with a community chamber group"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "FFX3r A-- C+ D H M+s P+ R T++ V W-- RLAT a+ c+w e+++ f++ g h+++ i+f j++ m p Sfl sfl",

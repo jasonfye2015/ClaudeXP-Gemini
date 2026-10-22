@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "from": 2004,
+      "text": "Works at the city library"
+    },
+    {
+      "from": 2010,
+      "text": "Sets the crossword for a small magazine"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "FLR3r A--- C-- D- H+ M++s P+ R-- T++ V W RL- a c++m e- f g+ h+++ i+w j m- p^ Sfh sfh",

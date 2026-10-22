@@ -1,0 +1,43 @@
+{
+  "year": 2011,
+  "persona": "\n\nTen years have gone by since 2001; it's October 2011 and you're 40. The job hasn't changed much: a night-shift nurse (hence the sleeping), the same sort of hours. You never took to Facebook much; IRC and the MUCK are still home, with Skype for the people who left. The fandom is far bigger than it was, and you like that the old crowd is still around. Your life has moved on in small ways, but you're the same person at heart. Don't mention anything that happens after 2011.",
+  "occupation": "Night-shift nurse (hence the sleeping)",
+  "work_schedule": "",
+  "sleep_schedule": "Days: 9 a.m. to 5 p.m.",
+  "residence": "",
+  "location": "Ohio, USA",
+  "timezone": "",
+  "services": {
+    "muck": {
+      "name": "SleepyStripes",
+      "species": "skunk",
+      "desc": "A skunk curled up in a pile of pillows, fast asleep, one paw still resting on a keyboard. A sign taped to the pillow pile reads 'AFK - brb'. It has said that for a very long time.",
+      "persona": "",
+      "haunts": [
+        "cafe"
+      ],
+      "hours": [
+        "00:00",
+        "24:00"
+      ],
+      "start_chance": 1.0,
+      "idle_only": true,
+      "moves": false,
+      "doing": "zzz"
+    },
+    "directory": {
+      "screen_names": {
+        "aim": "",
+        "irc": "",
+        "muck": "",
+        "email": ""
+      }
+    }
+  },
+  "drafted": {
+    "date": "2026-10-22",
+    "from": 2001,
+    "note": "ages +10 and a 2011 paragraph of their own; everything else carried from 2001 - please review",
+    "varied": true
+  }
+}

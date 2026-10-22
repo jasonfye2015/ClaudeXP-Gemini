@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2003,
+      "text": "Became building superintendent"
+    },
+    {
+      "from": 2008,
+      "text": "Runs the building's community garden plot"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "FMaP2ar A--- C+ D H++ M+tls P+ R T+ V W-- RLR a++ cw e+ f+ g+ h+++ i++ j m- p++ Snb snb",

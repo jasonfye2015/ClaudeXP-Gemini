@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2006,
+      "text": "Released an album of field recordings online"
+    },
+    {
+      "from": 2009,
+      "text": "Lives with her partner, Dani"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "F[Cicada]w3r A- C D- H+ M+s P+ R- T++ V W- RLF a c-w e+ f+++ g++ h+++ i+++ j+ m p Sfh sfh",

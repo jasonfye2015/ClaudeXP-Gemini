@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2007,
+      "text": "Bought the laundromat from its retiring owner"
+    },
+    {
+      "from": 2010,
+      "text": "Sells embroidery on Etsy"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "F[Rain spirit]3ar A C D H+ M+s P+ R+ T++ V- W- RLAT a++ c+w e++ f+ g+ h+++ i++wf j+ m- p++ Sfb sfb",

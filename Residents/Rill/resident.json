@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "from": 2005,
+      "text": "Lives on a houseboat on the Oudegracht"
+    },
+    {
+      "at": 2009,
+      "text": "Had a watercolor show at a local cafe"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "F[Kingfisher]1ars A- C- D- H+ M+s P- R T+ V+ W- RLR a+ cw e f++ g+ h+++ i++w j m- p Sna sna",

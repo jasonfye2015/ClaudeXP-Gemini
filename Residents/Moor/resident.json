@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "from": 2005,
+      "text": "Married to Aoife"
+    },
+    {
+      "at": 2008,
+      "text": "Became quality manager at the dairy"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "FArB3ar A-- C+ D- H+ M+s P R T+++ V W RLE a+ c++m e f- g+ h++ i++f j+ m p^ Smb smb",

@@ -38,7 +38,16 @@
   "friends": [],
   "relationships": [],
   "notes": "",
-  "history": [],
+  "history": [
+    {
+      "at": 2005,
+      "text": "Got their own overnight show on community radio"
+    },
+    {
+      "from": 2008,
+      "text": "Makes a late-night folklore podcast"
+    }
+  ],
   "flags": [],
   "codes": {
     "furcode": "F[Phoenix]w2ars A-- C- D H+ M++ls P R+ T+++ V W RLMC a c+m e+ f++ g+ h+++ i++ j m p- Snb snb",
