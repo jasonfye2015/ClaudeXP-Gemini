@@ -409,6 +409,9 @@ PROGRAMS = [
             _lazy("furrylog", "open_furlog"), group=FURRY),
     Program("furlocator", "Furry Proximity Locator", "A world map with a pin where each Fur Directory resident lives",
             _lazy("furlocator", "locator_icon"), _lazy("furlocator", "open_furlocator"), group=FURRY),
+    Program("slstudio", "Furry SL Persona Studio", "Who the residents are in Second Life: their hours, homes, habits "
+            "and looks", _shared("opensim_world.studio", "studio_icon"), _shared("opensim_world.studio", "open_studio"),
+            group=FURRY),
     Program("furvideo", "Furry Video Browser", "Browse the video archive", _shared("folio.videos", "video_icon"),
             _shared("folio.videos", "open_videos"), _shared("folio.videos", "shutdown"), group=FURRY),
     Program("photos", "Personal Image Gallery", "Browse your own pictures and videos",

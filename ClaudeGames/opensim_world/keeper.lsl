@@ -49,6 +49,7 @@ do_line(string line) {
         if (look == "") look = appearance();
         if (look == "") return;                     // nobody to copy yet: the bridge asks again later
         vector at = <(float)llList2String(f, 3), (float)llList2String(f, 4), (float)llList2String(f, 5)>;
+        if (at.z <= 0.0) at.z = llGround(at - llGetPos()) + 1.0;    // z 0: on the ground, wherever that is here
         key k = osNpcCreate(first, llList2String(f, 2), at, look, OS_NPC_SENSE_AS_AGENT);
         if (k != NULL_KEY) {
             npcs += [first, k];

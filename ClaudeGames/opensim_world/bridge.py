@@ -1,15 +1,19 @@
 """The bridge between the Furry Hollow's regions and the Timeline: a small web server on 127.0.0.1 that every region's
 Hollow Keeper (the script in it) polls every few seconds.
 
-    GET  /poll?region=..&here=1&x=..&y=..&z=..   a Keeper asks what to do: lines like spawn|ArcticFox|Furlong|130|126|22
+    GET  /poll?region=..&here=1&x=..&y=..&z=..[&seat=..&seatname=..]   a Keeper asks what to do; lines come back:
+         spawn|First|Last|x|y|z|look   say|First|text   move|First|x|y|z   face|First|x|y|z   remove|First
+         sit|First|object   stand|First   dance|First|animation   still|First
     POST /heard    region|name|x|y|z|text           someone said something in that region's local chat
     POST /spawned  region|first|key                 an NPC is in the world
 
-The first time the user's avatar is in a region, a few residents are already about there; each region gets its own
-crowd, and they stay put when the user moves on. Whoever is spoken to by name (or was last talking with the user)
-answers, written by the language model from that resident's own persona for this computer's year - the same people
-and the same memories as on the messengers. Now and then they wander, and when the user has been quiet a while
-someone nearby says something of their own."""
+The residents come and go by their Second Life personas (personas.py, edited in the Persona Studio): whoever is
+online by their own schedule is in the world, each in a region their habits draw them to, roaming between regions
+now and then, drawn to or away from company as they are. Whoever is spoken to by name (or was last talking with the
+user) answers, written by the language model from that resident's own persona for this computer's year - the same
+people and the same memories as on the messengers - and coloured by how they are in the world. An invitation to
+sit, cuddle or dance is taken up or turned down by how receptive they are; the adults' regions and what happens
+there follow each one's adult settings."""
 import math
 import random
 import re
@@ -20,16 +24,18 @@ from urllib.parse import parse_qs, urlparse
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from opensim_world import BRIDGE_PORT, REGION
+from opensim_world import BRIDGE_PORT, REGION, REGIONS, personas
 
-PRESENT = 5                       # residents in each region
+CAP = 7                           # residents in one region at most
+HISTORY = 12                      # lines of local chat each reply sees
+IDLE_SECONDS = 150                # quiet this long and someone starts a conversation
+WANDER_SECONDS = 40               # a little wander this often, on average
+ROAM_SECONDS = 2400               # a change of region this often, on average, per resident
+TICK = 5
 # what the user says that's an invitation (checked on lines addressed to a resident, or to whoever's nearest)
 JOIN = re.compile(r"\b(join|sit|come|lie|lay|cuddle|snuggle|hop|climb|get)\b.*\b(me|with|here|over)\b|\bjoin me\b", re.I)
 DANCE = re.compile(r"\bdanc(e|ing)\b", re.I)
 STOP = re.compile(r"\b(stand up|get up|stop dancing|stop|let'?s go|that'?s enough|enough)\b", re.I)
-HISTORY = 12                      # lines of local chat each reply sees
-IDLE_SECONDS = 150                # quiet this long and someone starts a conversation
-WANDER_SECONDS = 40
 
 
 class _Signals(QObject):
@@ -51,7 +57,6 @@ class Bridge:
         self.outbox = {}                       # region -> lines for its Keeper
         self.present = {}                      # first name -> resident name
         self.where = {}                        # first name -> region
-        self.populated = set()                 # regions that have their crowd
         self.spawned = set()
         self.pending = {}                      # first -> (region, spawn line) not confirmed yet (sent until it is)
         self.chat = {}                         # region -> [(speaker, text)]
@@ -63,37 +68,38 @@ class Bridge:
         self.seat = None                       # (object key, its name) the user's sitting on, or None
         self.joined = {}                       # first name -> the seat they took with the user
         self.dancing = set()
+        self.rnd = random.Random()
         self.signals = _Signals()
         self.signals.heard.connect(self._heard)
-        self.signals.arrived.connect(self._populate)
+        self.signals.arrived.connect(self._user_arrived)
         self.signals.stood.connect(self._user_stood)
         self.signals.status.connect(on_status or (lambda text: None))
         self.on_status = self.signals.status.emit
         self.server = None
         self.wander = QTimer()
         self.wander.timeout.connect(self._tick)
-        self.cast = self._cast()
+        self.cast = self._cast()               # [(resident name, first, last)]
+        self.personas = {name: self._load_persona(name) for name, _f, _l in self.cast}
         self.looks = self._looks()
+        self.ticks = 0
 
     # ---- who's around ----
     def _looks(self):
-        """resident name -> the notecard asset of the furry avatar they picked (wardrobe.json), for the looks the
-        Tailor has saved in this world (world.json "outfits")."""
+        """resident name -> the notecard asset of the look they wear: their whole fitted look (clothes and all) if the
+        Tailor has saved one, else their furry avatar's."""
         import json
         from opensim_world import HERE, world_file
         try:
             picks = json.loads((HERE / "wardrobe.json").read_text(encoding="utf-8"))["picks"]
-            saved = json.loads(world_file().read_text(encoding="utf-8")).get("outfits", {})
+            world = json.loads(world_file().read_text(encoding="utf-8"))
         except (OSError, ValueError, KeyError):
             return {}
-        try:                                    # each resident's own whole look, clothes and all (tailor.py)
-            dressed = json.loads(world_file().read_text(encoding="utf-8")).get("dressed", {})
-        except (OSError, ValueError):
-            dressed = {}
+        saved, dressed = world.get("outfits", {}), world.get("dressed", {})
         looks = {name: saved[look]["notecard"] for name, look in picks.items()
                  if look in saved and saved[look].get("notecard", "").strip("0-")}
         looks.update({name: card for name, card in dressed.items() if card.strip("0-")})
         return looks
+
     def _cast(self):
         """The main residents who exist in this era: (resident name, first name, last name)."""
         out = []
@@ -104,15 +110,23 @@ class Bridge:
             names = []
         for name in names:
             first = "".join(ch for ch in name if ch.isalnum())[:31]
-            try:
-                from claudexp.programs.secondlife.residents import surname
-                last = surname(name)
-            except Exception:
-                last = "Resident"
-            out.append((name, first, last))
+            out.append((name, first, personas.surname(name)))
         return out
 
-    def _persona(self, name):
+    def _load_persona(self, name):
+        try:
+            import residents
+            r = residents.load(name, self.era)
+        except Exception:
+            r = None
+        try:
+            from opensim_world import dress
+            wardrobe = dress.wardrobe()
+        except Exception:
+            wardrobe = None
+        return personas.get(name, r, wardrobe)
+
+    def _persona_text(self, name):
         try:
             import residents
             r = residents.load(name, self.era)
@@ -129,6 +143,9 @@ class Bridge:
     def near_user(self):
         """The residents in the region the user is in."""
         return [f for f, r in self.where.items() if r == self.user_region]
+
+    def crowd(self, region):
+        return sum(1 for r in self.where.values() if r == region) + (1 if region == self.user_region else 0)
 
     # ---- the web server ----
     def start(self):
@@ -177,7 +194,8 @@ class Bridge:
 
         self.server = ThreadingHTTPServer(("127.0.0.1", BRIDGE_PORT), Handler)
         threading.Thread(target=self.server.serve_forever, name="hollow-bridge", daemon=True).start()
-        self.wander.start(5000)
+        self.wander.start(TICK * 1000)
+        self.log_on_off()
 
     def stop(self):
         self.wander.stop()
@@ -209,30 +227,98 @@ class Bridge:
             lines, self.outbox[region] = box[:20], box[20:]
         return "\n".join(lines)
 
-    def _populate(self, region):
-        """The user just came into a region: the first time, a handful of residents are already about there."""
-        if region in self.populated or not self.cast:
+    # ---- coming and going ----
+    def _spawn(self, name, first, last, region, near=None):
+        """Put a resident in a region: by the user if they're there, else somewhere around the region's middle
+        (z 0: the Keeper sets them down on the ground)."""
+        if near is not None:
+            ux, uy, uz = near
+            angle = self.rnd.uniform(0, 6.283)
+            x = max(5, min(250, ux + math.cos(angle) * self.rnd.uniform(4, 9)))
+            y = max(5, min(250, uy + math.sin(angle) * self.rnd.uniform(4, 9)))
+            z = uz
+        else:
+            x, y, z = self.rnd.uniform(110, 146), self.rnd.uniform(110, 146), 0
+        self.present[first] = name
+        self.where[first] = region
+        line = f"spawn|{first}|{last}|{x:.1f}|{y:.1f}|{z:.1f}|{self.looks.get(name, '')}"
+        with self.lock:
+            self.pending[first] = (region, line)
+        self._send(region, line)
+
+    def _despawn(self, first):
+        region = self.where.pop(first, None)
+        self.present.pop(first, None)
+        self.spawned.discard(first)
+        self.joined.pop(first, None)
+        self.dancing.discard(first)
+        with self.lock:
+            self.pending.pop(first, None)
+        if region:
+            self._send(region, f"remove|{first}")
+
+    def _room(self, persona, avoid=None):
+        """A region for them with room in it, by their persona."""
+        for _ in range(6):
+            region = personas.pick_region(persona, self.rnd)
+            if region != avoid and self.crowd(region) < CAP:
+                return region
+        return None
+
+    def log_on_off(self):
+        """Whoever's online by their schedule is in the world; whoever isn't, isn't."""
+        came, went = [], []
+        for name, first, last in self.cast:
+            on = personas.online(self.personas[name], name)
+            if on and first not in self.present:
+                region = self._room(self.personas[name])
+                if region:
+                    self._spawn(name, first, last, region)
+                    came.append((name, region))
+            elif not on and first in self.present:
+                self._despawn(first)
+                went.append(name)
+        if came:
+            self.on_status("Logged on: " + ", ".join(f"{n} ({r})" for n, r in came) + ".")
+        if went:
+            self.on_status("Logged off: " + ", ".join(went) + ".")
+
+    def _roam(self):
+        """Now and then someone moves to another region, as their habits take them; the sociable drift towards
+        company (the user), the solitary leave a crowd."""
+        if not self.present:
             return
-        self.populated.add(region)
-        free = [c for c in self.cast if c[1] not in self.present]
-        if not free:
+        first = self.rnd.choice(list(self.present))
+        if first in self.joined or first in self.busy:
             return
-        rnd = random.Random()
-        chosen = rnd.sample(free, k=min(PRESENT, len(free)))
-        ux, uy, uz = self.user_at
-        for i, (name, first, last) in enumerate(chosen):
-            angle = i * (6.283 / max(1, len(chosen)))
-            x = max(5, min(250, ux + math.cos(angle) * rnd.uniform(4, 9)))
-            y = max(5, min(250, uy + math.sin(angle) * rnd.uniform(4, 9)))
-            self.present[first] = name
-            self.where[first] = region
-            line = f"spawn|{first}|{last}|{x:.1f}|{y:.1f}|{uz:.1f}|{self.looks.get(name, '')}"
-            with self.lock:
-                self.pending[first] = (region, line)
-            self._send(region, line)
-        self.on_status(", ".join(n for n, _f, _l in chosen) + " " + ("are" if len(chosen) > 1 else "is") +
-                       f" in {region}.")
-        QTimer.singleShot(9000, lambda: self._greet(chosen[0][1]))
+        name, here = self.present[first], self.where[first]
+        p = self.personas[name]
+        crowds = p.get("social", {}).get("crowds", 0)
+        chance = TICK / ROAM_SECONDS * len(self.present)
+        target = None
+        if crowds > 0.3 and self.user_region and here != self.user_region and self.rnd.random() < chance * 2:
+            if self.user_region in personas.allowed_regions(p) and self.crowd(self.user_region) < CAP:
+                target = self.user_region
+        elif crowds < -0.3 and self.crowd(here) > 3 and self.rnd.random() < chance * 2:
+            target = self._room(p, avoid=here)
+        elif self.rnd.random() < chance:
+            target = self._room(p, avoid=here)
+        if target and target != here:
+            last = next(l for n, _f, l in self.cast if n == name)
+            self._despawn(first)
+            near = self.user_at if target == self.user_region else None
+            self._spawn(name, first, last, target, near)
+            self.on_status(f"{name} went to {target}.")
+
+    def _user_arrived(self, region):
+        """The user came into a region: someone there who starts conversations says hello."""
+        here = [f for f, r in self.where.items() if r == region]
+        if not here:
+            return
+        starters = sorted(here, key=lambda f: -self.personas[self.present[f]].get("social", {}).get("initiates", 0.5))
+        first = starters[0]
+        if self.personas[self.present[first]].get("social", {}).get("initiates", 0.5) >= 0.35:
+            QTimer.singleShot(9000, lambda: self._greet(first))
 
     # ---- sitting and dancing together ----
     @staticmethod
@@ -242,10 +328,12 @@ class Bridge:
         return re.sub(r"\s+", " ", words).strip().lower() or "a seat"
 
     def _act(self, first, text):
-        """The user's line to a resident might be an invitation: do it, and return the situation for their reply."""
+        """The user's line to a resident might be an invitation: take it up (or not, as they are) and return the
+        situation for their reply."""
         region = self.where.get(first)
         if region != self.user_region:
             return None
+        p = self.personas.get(self.present.get(first, ""), {})
         if STOP.search(text) and (first in self.joined or first in self.dancing):
             self._send(region, f"stand|{first}" if first in self.joined else f"still|{first}")
             self.joined.pop(first, None)
@@ -253,17 +341,25 @@ class Bridge:
             return f"{self.user_first} said: \"{text}\" - and you've stopped and stood up. Reply in character."
         if JOIN.search(text) and self.seat and first not in self.joined:
             key, name = self.seat
-            self.joined[first] = key
-            self._send(region, f"sit|{first}|{key}")
-            return (f"{self.user_first} is sitting on {self.seat_words(name)!r} (a poseball set for two, or a seat) and "
-                    f"said: \"{text}\". You accepted and joined them - the animation for it is playing on both of you "
-                    "now. Reply in character, as yourself, to being there with them.")
+            adult = personas.is_adult_seat(name)
+            if personas.accepts(p, "adult" if adult else "sit", rnd=self.rnd):
+                self.joined[first] = key
+                self._send(region, f"sit|{first}|{key}")
+                return (f"{self.user_first} is sitting on {self.seat_words(name)!r} (a poseball set for two, or a seat) "
+                        f"and said: \"{text}\". You accepted and joined them - the animation for it is playing on both "
+                        "of you now. Reply in character, as yourself, to being there with them.")
+            return (f"{self.user_first} is sitting on {self.seat_words(name)!r} and said: \"{text}\", asking you to "
+                    f"join them. You'd rather not{' - that is more than you do with them' if adult else ' right now'}. "
+                    "Turn it down kindly, in character, in one line.")
         if DANCE.search(text):
-            from opensim_world.oar import DANCES
-            self._send(region, f"dance|{first}|{random.choice(DANCES)}")
-            self.dancing.add(first)
-            return (f"{self.user_first} said: \"{text}\" - and you're dancing with them now. Reply in character, "
-                    "as yourself, while you dance.")
+            if personas.accepts(p, "dance", rnd=self.rnd):
+                from opensim_world.oar import DANCES
+                self._send(region, f"dance|{first}|{self.rnd.choice(DANCES)}")
+                self.dancing.add(first)
+                return (f"{self.user_first} said: \"{text}\" - and you're dancing with them now. Reply in character, "
+                        "as yourself, while you dance.")
+            return (f"{self.user_first} said: \"{text}\", asking you to dance. You're not in the mood for dancing; "
+                    "say so kindly, in character, in one line.")
         return None
 
     def _user_stood(self):
@@ -293,7 +389,7 @@ class Bridge:
         addressed = [f for f in near if f.lower() in low or self.present[f].lower() in low]
         responders = addressed or ([self.last_partner] if self.last_partner in near else [])
         if not responders and near:
-            responders = [random.choice(near)]
+            responders = [self._talker(near)]
         for first in responders[:2]:
             self.last_partner = first
             self._ask(first, self._act(first, text))
@@ -304,6 +400,11 @@ class Bridge:
                 sim.heard(self.present[responders[0]], "Second Life", self.user_first, text)
         except Exception:
             pass
+
+    def _talker(self, firsts):
+        """Of these, who speaks up: the chatty more often."""
+        weights = [0.1 + self.personas[self.present[f]].get("social", {}).get("chattiness", 0.5) for f in firsts]
+        return self.rnd.choices(firsts, weights)[0]
 
     def _ask(self, first, situation):
         if first in self.busy:
@@ -317,10 +418,11 @@ class Bridge:
         others = ", ".join(self.present[f] for f, r in self.where.items() if r == region and f != first)
         here = (f"{self.user_first} (your buddy) and {others or 'nobody else'} nearby"
                 if region == self.user_region else f"{others or 'nobody else'} nearby")
-        system = (self._persona(name) + f"\n\nRight now you're in Second Life, standing in a region called "
+        system = (self._persona_text(name) + f"\n\nRight now you're in Second Life, standing in a region called "
                   f"{region}, with {here}. This is local chat: everyone near you sees it. Reply with ONE short chat "
                   "line as yourself (no name prefix, no quotation marks, no stage directions longer than a quick "
-                  "*emote*). Keep it natural and brief.")
+                  "*emote*). Keep it natural and brief.\n\nHow you are in the world:\n"
+                  + personas.flavour(self.personas.get(name, {}), region))
         prompt = situation or ("Here's the local chat so far:\n" + log + "\n\nWrite your next line in the chat.")
         try:
             from claudecore.ai import ai_models, broker
@@ -358,24 +460,30 @@ class Bridge:
             self.on_status(f"The residents can't talk right now: {exc}")
 
     def _tick(self):
-        """Every few seconds: unconfirmed residents are asked for again, someone near the user wanders a little, and
-        after a long quiet someone starts talking."""
+        """Every few seconds: unconfirmed residents are asked for again; someone near the user wanders a little;
+        someone may move to another region; after a long quiet someone chatty starts talking; and every few minutes
+        the schedules are checked for who's logged on or off."""
+        self.ticks += 1
         with self.lock:
             retry = list(self.pending.values())
-        self._resend = getattr(self, "_resend", 0) + 1
-        if retry and self._resend % 3 == 0:            # every 15 seconds until each one is in
+        if retry and self.ticks % 3 == 0:              # every 15 seconds until each one is in
             for region, line in retry:
                 self._send(region, line)
+        if self.ticks % (300 // TICK) == 0:
+            self.log_on_off()
+        self._roam()
         near = self.near_user()
         if not near:
             return
-        if random.random() < 5 / WANDER_SECONDS:
-            first = random.choice(near)
-            ux, uy, uz = self.user_at
-            self._send(self.user_region, f"move|{first}|{max(5, min(250, ux + random.uniform(-10, 10))):.1f}|"
-                                         f"{max(5, min(250, uy + random.uniform(-10, 10))):.1f}|{uz:.1f}")
+        if self.rnd.random() < TICK / WANDER_SECONDS:
+            first = self.rnd.choice([f for f in near if f not in self.joined] or near)
+            if first not in self.joined:
+                ux, uy, uz = self.user_at
+                self._send(self.user_region, f"move|{first}|{max(5, min(250, ux + self.rnd.uniform(-10, 10))):.1f}|"
+                                             f"{max(5, min(250, uy + self.rnd.uniform(-10, 10))):.1f}|{uz:.1f}")
         if time.time() - self.last_user_line > IDLE_SECONDS and not self.busy:
             self.last_user_line = time.time()
-            first = random.choice(near)
-            self._ask(first, f"It's gone quiet in {self.user_region}. Say something to {self.user_first} or the "
-                             "others - about your day, something you're up to, or something you can see around you.")
+            first = self._talker(near)
+            if self.rnd.random() < 0.3 + self.personas[self.present[first]].get("social", {}).get("chattiness", 0.5):
+                self._ask(first, f"It's gone quiet in {self.user_region}. Say something to {self.user_first} or the "
+                                 "others - about your day, something you're up to, or something you can see around you.")

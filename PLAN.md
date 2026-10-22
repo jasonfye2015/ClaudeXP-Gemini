@@ -227,4 +227,18 @@ anachronisms (Skype, Kik, Copilot) and all.
   the other ball of a couples or adult set from the LK animations pack, or any seat), and their reply is written
   knowing what they're doing; "dance" plays one of the Keeper's dances on them; "stand up" / "let's go" stops it,
   and when the user gets up, whoever joined gets up too.
-- Next: IMs, and more avatars for species the pack doesn't have (birds, reptiles, hoofed animals).
+- Furry SL Persona Studio (2026-10-22, Start > Furry Stuff, `opensim_world/studio.py`): each main resident's
+  Second Life persona in `personas.json` (see `personas.py`): account (name, display name, profile, partner, groups,
+  maturity), home region, online schedule (days a week, hours in their own time zone, session length), what they
+  usually and sometimes do (activities, which decide the regions they go to), favourite and avoided regions,
+  sociability (crowds, chattiness, IMs over local, roleplay and how receptive, invitations, who starts talking),
+  adult settings (whether they visit the adults' regions, what they're open to, with whom, with the user), notes,
+  and their look (body and clothes, from galleries). Defaults come from each Residents record. `catalog.py` indexes
+  the bodies (with the Tailor's photos), 1,900 garments (thumbnails from their textures) and the hair into
+  Local Storage/SecondLife/catalog. "Fit changed looks" runs the Tailor for the residents whose look changed.
+- The bridge follows the personas: whoever is online by their schedule is in the world, placed in a region their
+  habits draw them to (at most 7 a region), roaming between regions now and then (the sociable drift to the user,
+  the solitary leave crowds), logging on and off as the hours pass; invitations are taken up by how receptive they
+  are (adult seats only by their adult settings); replies are coloured by how they are in the world.
+- Next: IMs (the residents who prefer them), more avatars for species the pack doesn't have (birds, reptiles,
+  hoofed animals), and photographing the human bodies and the hair for the galleries.
