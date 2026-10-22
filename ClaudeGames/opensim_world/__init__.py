@@ -21,9 +21,12 @@ import time
 import uuid
 from pathlib import Path
 
-REGION = "Furry Hollow"
-REGION_UUID = "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e01"
-REGION_XY = (1000, 1000)
+# the four regions, a 2x2 block you can walk across: (name, region UUID, map position, UDP port)
+REGIONS = [("Furry Hollow", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e01", (1000, 1000), 9000),
+           ("Whisker Falls", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e02", (1001, 1000), 9001),
+           ("Tailwind Beach", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e03", (1000, 1001), 9002),
+           ("Lantern Market", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e04", (1001, 1001), 9003)]
+REGION = REGIONS[0][0]                       # where you arrive
 GRID_PORT = 9000
 BRIDGE_PORT = 9180
 GRID_NAME = "Claude Timeline Grid"
@@ -160,10 +163,31 @@ def configure():
         _set_ini(common, "LoginService", "WelcomeMessage", '"Welcome to the Furry Hollow!"')
     regions = b / "Regions" / "Regions.ini"
     regions.parent.mkdir(exist_ok=True)
-    regions.write_text(f"[{REGION}]\nRegionUUID = {REGION_UUID}\nLocation = {REGION_XY[0]},{REGION_XY[1]}\n"
-                       f"InternalAddress = 0.0.0.0\nInternalPort = {GRID_PORT}\nAllowAlternatePorts = False\n"
-                       f"ExternalHostName = 127.0.0.1\n", encoding="utf-8")
+    regions.write_text("".join(
+        f"[{name}]\nRegionUUID = {rid}\nLocation = {x},{y}\nInternalAddress = 0.0.0.0\nInternalPort = {port}\n"
+        f"AllowAlternatePorts = False\nExternalHostName = 127.0.0.1\n\n"
+        for name, rid, (x, y), port in REGIONS), encoding="utf-8")
     return me
+
+
+def clear_keepers():
+    """Take the Keepers out of the region database before the server starts: loading an OAR gives its objects new
+    IDs, so without this every launch would add another Keeper (and another set of residents) to each region."""
+    import sqlite3
+    db = opensim_bin() / "OpenSim.db"
+    if not db.exists():
+        return 0
+    con = sqlite3.connect(str(db))
+    try:
+        ids = [r[0] for r in con.execute("SELECT UUID FROM prims WHERE Name = 'Hollow Keeper'")]
+        for table, column in (("primitems", "primID"), ("primshapes", "UUID"), ("prims", "UUID")):
+            con.executemany(f"DELETE FROM {table} WHERE {column} = ?", [(i,) for i in ids])
+        con.commit()
+        return len(ids)
+    except sqlite3.Error:
+        return 0
+    finally:
+        con.close()
 
 
 # ---- the server ---------------------------------------------------------------------------------------------------
@@ -177,7 +201,13 @@ class Server:
     def start(self):
         if self.running():
             return
+        clear_keepers()
         b = opensim_bin()
+        for compiled in (b / "ScriptEngines").rglob("*.yobj"):   # compiled scripts are cached by their text; a bad
+            try:                                                   # compile would otherwise be reused for good
+                compiled.unlink()
+            except OSError:
+                pass
         self.log_path = b / "console.log"
         env = dict(os.environ, DOTNET_ROOT=str(dotnet().parent), DOTNET_MULTILEVEL_LOOKUP="0")
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -195,7 +225,8 @@ class Server:
             return ""
 
     def ready(self):
-        return "LOGINS ENABLED" in self.log() or "Logins are enabled" in self.log()
+        """Every region is up and taking logins."""
+        return self.log().count("LOGINS ENABLED") >= len(REGIONS)
 
     def command(self, text):
         if self.running():
@@ -242,7 +273,7 @@ def account_id(server, first, last, seconds=10):
 
 
 def place_keeper(server):
-    """Make the user's avatar the estate owner and (re)load the Hollow Keeper into the region."""
+    """Make the user's avatar the estate owner and (re)load a Hollow Keeper into every region."""
     from . import oar
     me = avatar()
     owner = account_id(server, me["first"], me["last"])
@@ -252,8 +283,16 @@ def place_keeper(server):
         me["uuid"] = owner
         world_file().write_text(json.dumps(me, indent=2), encoding="utf-8")
     server.command(f"estate set owner 101 {me['first']} {me['last']}")
-    path = oar.write(root() / "keeper.oar", owner)
-    server.command(f'load oar --merge "{path}"')
+    for name, *_rest in REGIONS:             # a Keeper in every region, each its own object
+        path = oar.write(root() / "keepers" / f"{name}.oar", owner, name)
+        done = server.log().count("Start scripts done")
+        server.command(f"change region {name}")
+        server.command(f'load oar --merge "{path}"')
+        end = time.time() + 30               # one at a time: the script engine's first start in each region isn't
+        while time.time() < end and server.log().count("Start scripts done") <= done:   # safe to run in parallel
+            time.sleep(0.25)
+        time.sleep(1)
+    server.command("change region root")
     return True
 
 

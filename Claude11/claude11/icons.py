@@ -27,6 +27,9 @@ PROGRAM_FOLDERS = {"Games": ["Games"], "Games/Solitaire & Casual Games": ["Games
 # loose shortcuts on a fresh desktop
 DESKTOP_SHORTCUTS = ["iexplore", "firefox", "telegram", "discord", "claudeai", "copilotai", "wmp", "kiwix",
                      "claudecraft", "tv", "secondlife", "furdir", "claudeamp", "torrent", "pystudio"]
+# programs that also get a loose desktop icon of their own, besides the one in their folder (added once, even on a
+# desktop made before they existed)
+LOOSE_TOO = ["hollow"]
 
 
 def std(which):
@@ -165,6 +168,18 @@ class IconManager(QObject):
                 except Exception:
                     continue
             linked.add(prog.key)
+            changed = True
+        for key in LOOSE_TOO:
+            prog = next((p for p in programs.PROGRAMS if p.key == key), None)
+            if prog is None or key in gone or f"{key}@desktop" in linked:
+                continue
+            link = desktop / f"{prog.name}.lnk"
+            if not link.exists():
+                try:
+                    shortcuts.make(link, program=key)
+                except Exception:
+                    continue
+            linked.add(f"{key}@desktop")
             changed = True
         if changed:
             self.state["links"] = sorted(linked)

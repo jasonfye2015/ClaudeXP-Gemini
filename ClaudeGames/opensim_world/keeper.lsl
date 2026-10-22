@@ -1,5 +1,5 @@
 // The Hollow Keeper: a small stone in the Furry Hollow that brings the residents to life.
-// It asks the bridge (the computer that launched the world) what to do every few seconds, creates and moves the
+// There's one in each region. It asks the bridge (the computer that launched the world) what to do every few seconds, creates and moves the
 // residents' NPCs, says their lines, and passes on what it hears in local chat.
 string BRIDGE = "http://127.0.0.1:9180";
 list npcs;                       // [first name, key, first name, key, ...]
@@ -30,14 +30,18 @@ do_line(string line) {
     string cmd = llList2String(f, 0);
     if (cmd == "spawn") {                           // spawn|First|Last|x|y|z
         string first = llList2String(f, 1);
-        if (npc_named(first) != NULL_KEY) return;
+        key have = npc_named(first);
+        if (have != NULL_KEY) {                     // already here: the bridge missed hearing so (a dropped request)
+            post("/spawned", llGetRegionName() + "|" + first + "|" + (string)have);
+            return;
+        }
         string look = appearance();
         if (look == "") return;                     // nobody to copy yet: the bridge asks again later
         vector at = <(float)llList2String(f, 3), (float)llList2String(f, 4), (float)llList2String(f, 5)>;
         key k = osNpcCreate(first, llList2String(f, 2), at, look, OS_NPC_SENSE_AS_AGENT);
         if (k != NULL_KEY) {
             npcs += [first, k];
-            post("/spawned", first + "|" + (string)k);
+            post("/spawned", llGetRegionName() + "|" + first + "|" + (string)k);
         }
     } else if (cmd == "say") {                      // say|First|text
         key k = npc_named(llList2String(f, 1));
@@ -76,7 +80,7 @@ default {
     listen(integer channel, string name, key id, string message) {
         if (osIsNpc(id)) return;                    // the residents' own lines
         vector at = llList2Vector(llGetObjectDetails(id, [OBJECT_POS]), 0);
-        post("/heard", name + "|" + (string)at.x + "|" + (string)at.y + "|" + (string)at.z + "|" + message);
+        post("/heard", llGetRegionName() + "|" + name + "|" + (string)at.x + "|" + (string)at.y + "|" + (string)at.z + "|" + message);
     }
 
     timer() {
@@ -87,7 +91,7 @@ default {
             here = "1";
             at = llList2Vector(llGetObjectDetails(owner, [OBJECT_POS]), 0);
         }
-        llHTTPRequest(BRIDGE + "/poll?here=" + here + "&x=" + (string)at.x + "&y=" + (string)at.y + "&z=" +
+        llHTTPRequest(BRIDGE + "/poll?region=" + llEscapeURL(llGetRegionName()) + "&here=" + here + "&x=" + (string)at.x + "&y=" + (string)at.y + "&z=" +
                       (string)at.z, [HTTP_METHOD, "GET", HTTP_BODY_MAXLENGTH, 16384], "");
     }
 

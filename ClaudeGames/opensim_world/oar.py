@@ -9,8 +9,12 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 HERE = Path(__file__).resolve().parent
-KEEPER_ID = "6d1e0c2a-6a4b-4b8e-9f21-3c7d5a1b2e01"            # the same object every time (merging replaces it)
-SCRIPT_ITEM = "6d1e0c2a-6a4b-4b8e-9f21-3c7d5a1b2e02"
+KEEPER_NS = uuid.UUID("6d1e0c2a-6a4b-4b8e-9f21-3c7d5a1b2e01")
+
+
+def keeper_ids(region):
+    """The region's Keeper object and its script: the same every time (merging replaces it), different per region."""
+    return (str(uuid.uuid5(KEEPER_NS, "keeper/" + region)), str(uuid.uuid5(KEEPER_NS, "script/" + region)))
 FULL = 2147483647
 
 
@@ -22,7 +26,8 @@ def _vec(tag, x, y, z):
     return f"<{tag}><X>{x}</X><Y>{y}</Y><Z>{z}</Z></{tag}>"
 
 
-def keeper_xml(owner, script_asset, pos=(128.0, 128.0, 22.5)):
+def keeper_xml(owner, script_asset, region, pos=(128.0, 128.0, 22.5)):
+    KEEPER_ID, SCRIPT_ITEM = keeper_ids(region)
     now = int(time.time())
     item = (f"<TaskInventoryItem>{_uuid('AssetID', script_asset)}<BasePermissions>{FULL}</BasePermissions>"
             f"<CreationDate>{now}</CreationDate>{_uuid('CreatorID', owner)}<Description>The residents</Description>"
@@ -61,18 +66,21 @@ def keeper_xml(owner, script_asset, pos=(128.0, 128.0, 22.5)):
     return f"<SceneObjectGroup><RootPart>{part}</RootPart><OtherParts /></SceneObjectGroup>"
 
 
-def write(path, owner):
-    """The OAR file for the Keeper, owned by `owner` (the avatar's account UUID)."""
-    script = (HERE / "keeper.lsl").read_bytes()
+def write(path, owner, region):
+    """The OAR file for one region's Keeper, owned by `owner` (the avatar's account UUID)."""
+    # each region gets its own copy (its own asset): the script engine compiling one shared asset for four regions at
+    # once trips over itself
+    script = (HERE / "keeper.lsl").read_bytes() + f"\n// {region}\n".encode("utf-8")
     import hashlib
     script_asset = str(uuid.uuid5(uuid.NAMESPACE_URL, "claude-timeline/keeper/" + hashlib.md5(script).hexdigest()))
     archive = ('<?xml version="1.0" encoding="utf-16"?><archive major_version="0" minor_version="8">'
                f'<creation_info><datetime>{int(time.time())}</datetime><id>{uuid.uuid4()}</id></creation_info>'
                '<assets_included>True</assets_included></archive>')
     files = {"archive.xml": archive.encode("utf-8"),
-             f"objects/Hollow_Keeper__{KEEPER_ID}.xml": keeper_xml(owner, script_asset).encode("utf-8"),
+             f"objects/Hollow_Keeper__{keeper_ids(region)[0]}.xml": keeper_xml(owner, script_asset, region).encode("utf-8"),
              f"assets/{script_asset}_script.lsl": script}
     path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
     with tarfile.open(path, "w:gz") as tar:
         for name, data in files.items():
             info = tarfile.TarInfo(name)

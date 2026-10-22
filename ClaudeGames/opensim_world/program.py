@@ -92,8 +92,19 @@ class HollowBody(QWidget):
             if self.started % 15 == 0:
                 self.say("Still starting...")
             return
+        if getattr(self, "furnishing", None) is None:
+            from opensim_world import content
+            self.say(f"The {len(world.REGIONS)} regions are up.")
+            self.furnishing = content.furnish(server)
+        try:                                     # the first time: each region's build and the inventory packs
+            news = next(self.furnishing)
+            if news:
+                self.say(news)
+            return
+        except StopIteration:
+            pass
         self.timer.stop()
-        self.say("The region is up. Placing the Hollow Keeper...")
+        self.say("Placing a Hollow Keeper in each region...")
         if not world.place_keeper(server):
             self.say("Couldn't find your avatar's account on the server.")
             return

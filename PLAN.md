@@ -200,4 +200,9 @@ anachronisms (Skype, Kik, Copilot) and all.
   passes local chat to the bridge (`bridge.py`, a small web server on 127.0.0.1:9180 inside the computer that
   launched the world) and says the replies, which the language model writes from each resident's own persona for
   that era.
-- Next: avatars for the residents (they wear a copy of the user's avatar for now), IMs, and more of the region.
+- Four regions in a 2x2 block (2026-10-22): the Furry Hollow, Whisker Falls, Tailwind Beach and Lantern Market,
+  each with its own Keeper and its own crowd of five residents, who appear the first time the user arrives there.
+- Furnished once from Linda Kellie's CC0 collection on Zadaroo (`content.py`): Mountain Retreat, Lake House, Tiki
+  Summer and the Freebie Mall as the four regions' builds, and the furry avatars, full avatars, hair, animals,
+  animations, furniture and houses packs in the avatar's inventory.
+- Next: dressing each resident in their own furry avatar (saved appearance notecards), IMs.
