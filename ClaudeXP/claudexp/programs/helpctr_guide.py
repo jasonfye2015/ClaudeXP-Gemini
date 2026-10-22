@@ -159,6 +159,19 @@ CATALOG = {
                              "bottom. When the whole party falls, the run starts over."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
+    "claudeout": ("games", "Claudeout 4: a first-person game after the opening of Fallout 4, in two parts. Part "
+                           "One: you wake in a cryo pod in Vault 111; find the way out through the vault's rooms, "
+                           "fighting the radroaches with your fists, then a security baton and a 10mm pistol. "
+                           "Terminals unlock the Overseer's office and the exit corridor; the skeleton by the vault "
+                           "door has the Pip-Boy (Tab) that opens the great gear door, and the elevator takes you up. "
+                           "Part Two: down the hill to Serenity Hills, the old cul-de-sac 210 years after the bombs - "
+                           "find your house, talk to Rustworth the robot, see off the pests in the neighbourhood and "
+                           "head for the bridge. WASD and the mouse to move and look (click to capture the mouse, Esc "
+                           "to let go), left click attacks, E uses, picks up, loots a corpse or talks, Q uses a "
+                           "stimpak, 1-3 pick a weapon. Meat and Nuka-Cola heal but give you rads, which cut your top "
+                           "health until RadAway clears them; eat from the Pip-Boy's INV tab. Three save slots: it "
+                           "saves as you go, and the pause menu saves and loads. Music and sounds can each be switched "
+                           "off."),
     "claudepit": ("games", "ClaudePit: a slot machine roguelike after CloverPit. Buy spins with the coins in your "
                            "pocket and pull the lever (Space): matching symbols in rows, columns, diagonals, the zig, "
                            "the zag and bigger shapes pay out, and patterns stack. Deposit coins in the ATM (D) - only "
