@@ -15,6 +15,7 @@ from shiboken6 import isValid
 from .. import clock, sound
 from ..paths import DATA
 from ..wm import MicaWindow
+from .. import theme11 as T
 
 WIDGETS_FILE = DATA / "widgets.json"
 CARD_W, SMALL_H, LARGE_H, GAP = 300, 150, 316, 16
@@ -99,20 +100,20 @@ class Card(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         r = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
-        p.setPen(QPen(QColor(0, 0, 0, 26), 1))
-        p.setBrush(QColor(255, 255, 255, 236))
+        p.setPen(QPen(T.hover(26), 1))
+        p.setBrush(T.card(236))
         p.drawRoundedRect(r, 8, 8)
         p.drawPixmap(14, 10, self.icon_pixmap(16))
         p.setFont(_font(12, bold=True))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRect(38, 6, self.width() - 80, 24), Qt.AlignVCenter | Qt.AlignLeft, self.NAME)
         mr = self._menu_rect()
         if self.hover_menu:
             p.setPen(Qt.NoPen)
-            p.setBrush(QColor(0, 0, 0, 16))
+            p.setBrush(T.hover(16))
             p.drawRoundedRect(QRectF(mr), 4, 4)
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor("#5C5C5C"))
+        p.setBrush(T.text2())
         for dx in (-5, 0, 5):
             p.drawEllipse(QPointF(mr.center().x() + dx, mr.center().y()), 1.5, 1.5)
         p.save()
@@ -160,11 +161,11 @@ class ClockCard(Card):
         f.setPixelSize(34)
         f.setWeight(QFont.Light)
         p.setFont(f)
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRectF(face.right() + 16, r.y() + 10, r.width() - face.right() - 20, 44), Qt.AlignLeft | Qt.AlignVCenter,
                    clock.time_text(now))
         p.setFont(_font(12))
-        p.setPen(QColor("#5C5C5C"))
+        p.setPen(T.text2())
         p.drawText(QRectF(face.right() + 18, r.y() + 56, r.width() - face.right() - 20, 20), Qt.AlignLeft,
                    clock.long_date_text(now))
 
@@ -179,14 +180,14 @@ class CalendarCard(Card):
         import calendar
         now = clock.now()
         p.setFont(_font(13, bold=True))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRectF(r.x() + 16, r.y() + 2, r.width() - 32, 24), Qt.AlignLeft | Qt.AlignVCenter,
                    f"{now:%A, %B} {now.day}")
         cell_w = (r.width() - 32) / 7
         y = r.y() + 34
         p.setFont(_font(11))
         for i, d in enumerate(("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa")):
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(QRectF(r.x() + 16 + i * cell_w, y, cell_w, 18), Qt.AlignCenter, d)
         first = now.replace(day=1)
         start_col = (first.weekday() + 1) % 7
@@ -205,10 +206,10 @@ class CalendarCard(Card):
                 p.drawEllipse(cell.center(), 14, 14)
                 p.setPen(QColor("white"))
             else:
-                p.setPen(QColor("#1A1A1A"))
+                p.setPen(T.text())
             p.drawText(cell, Qt.AlignCenter, str(day))
         p.setFont(_font(11))
-        p.setPen(QColor("#5C5C5C"))
+        p.setPen(T.text2())
         p.drawText(QRectF(r.x() + 16, r.bottom() - 26, r.width() - 32, 18), Qt.AlignLeft | Qt.AlignVCenter,
                    p.fontMetrics().elidedText("No events today. Sign in to Outlook to see your calendar.",
                                               Qt.ElideRight, int(r.width() - 32)))
@@ -239,19 +240,19 @@ class PerformanceCard(Card):
             cx = r.x() + 70 + i * 150
             cy = r.center().y() + 2
             rad = 38
-            p.setPen(QPen(QColor(0, 0, 0, 20), 7))
+            p.setPen(QPen(T.hover(20), 7))
             p.setBrush(Qt.NoBrush)
             p.drawArc(QRectF(cx - rad, cy - rad, 2 * rad, 2 * rad), 225 * 16, -270 * 16)
             p.setPen(QPen(colour, 7, Qt.SolidLine, Qt.RoundCap))
             p.drawArc(QRectF(cx - rad, cy - rad, 2 * rad, 2 * rad), 225 * 16, int(-270 * 16 * value / 100))
             p.setFont(_font(16, bold=True))
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             p.drawText(QRectF(cx - rad, cy - 12, 2 * rad, 24), Qt.AlignCenter, f"{int(value)}%")
             p.setFont(_font(11))
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(QRectF(cx - rad, cy + 14, 2 * rad, 16), Qt.AlignCenter, label)
         p.setFont(_font(11))
-        p.setPen(QColor("#5C5C5C"))
+        p.setPen(T.text2())
         p.drawText(QRectF(r.x() + 16, r.bottom() - 22, r.width() - 32, 16), Qt.AlignLeft,
                    "Ryzen 7 7800X3D  ·  32 GB DDR5")
 
@@ -325,7 +326,7 @@ class PhotosCard(Card):
         inner = r.adjusted(12, 4, -12, -12)
         if not pics:
             p.setFont(_font(12))
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(inner, Qt.AlignCenter | Qt.TextWordWrap, "Your Pictures library is empty. Add pictures and "
                        "they show up here, one at a time.")
             return
@@ -377,21 +378,21 @@ class FeedCard(Card):
         y = r.y() + 4
         if not self.items:
             p.setFont(_font(12))
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(QRectF(r.x() + 16, y + 8, r.width() - 32, 60), Qt.TextWordWrap,
                        "Nothing new yet. Your friends' posts appear here as they write them.")
             return
         for _id, name, text in self.items:
             row = QRectF(r.x() + 12, y, r.width() - 24, 38)
             p.setFont(_font(12, bold=True))
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             p.drawText(QRectF(row.x() + 4, row.y(), row.width() - 8, 18), Qt.AlignLeft | Qt.AlignVCenter, name)
             p.setFont(_font(11))
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             line = text.strip().splitlines()[0] if text.strip() else ""
             p.drawText(QRectF(row.x() + 4, row.y() + 18, row.width() - 8, 16), Qt.AlignLeft | Qt.AlignVCenter,
                        p.fontMetrics().elidedText(line, Qt.ElideRight, int(row.width() - 8)))
-            p.setPen(QPen(QColor(0, 0, 0, 16), 1))
+            p.setPen(QPen(T.hover(16), 1))
             p.drawLine(QPointF(row.x(), row.bottom() + 1), QPointF(row.right(), row.bottom() + 1))
             y += 40
             if y + 36 > r.bottom():
@@ -476,13 +477,13 @@ class MailCard(Card):
         if self.data["_ticks"] % 2 == 0:
             self._refresh()
         p.setFont(_font(11))
-        p.setPen(QColor("#5C5C5C"))
+        p.setPen(T.text2())
         p.drawText(QRectF(r.x() + 16, r.y() - 2, r.width() - 32, 18), Qt.AlignLeft | Qt.AlignVCenter,
                    f"Inbox  ·  {self.unread} unread" if self.unread else "Inbox  ·  no new mail")
         self._hits = []
         y = r.y() + 18
         if not self.items:
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(QRectF(r.x() + 16, y + 10, r.width() - 32, 60), Qt.TextWordWrap,
                        "Your inbox is empty. Mail from your friends shows up here - click to open Outlook.")
             return
@@ -496,7 +497,7 @@ class MailCard(Card):
                 p.setBrush(display.get().accent())
                 p.drawRoundedRect(QRectF(row.x(), row.y() + 7, 3, row.height() - 14), 1.5, 1.5)
             p.setFont(_font(12, bold=unread))
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             sender = p.fontMetrics().elidedText(str(m.get("from", "")), Qt.ElideRight, 100)
             p.drawText(QRectF(row.x() + 10, row.y(), 104, row.height()), Qt.AlignLeft | Qt.AlignVCenter, sender)
             p.setFont(_font(11))
@@ -609,12 +610,12 @@ class TVCard(Card):
         y = r.y() + 2
         if self.channels is None:
             p.setFont(_font(12))
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(QRectF(r.x() + 16, y + 8, r.width() - 32, 40), Qt.TextWordWrap, "Reading the channel lineup…")
             return
         if not self.rows:
             p.setFont(_font(12))
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(QRectF(r.x() + 16, y + 8, r.width() - 32, 60), Qt.TextWordWrap,
                        "No channels are on the air. Open ClaudeTV to set up the video archive.")
             return
@@ -623,32 +624,32 @@ class TVCard(Card):
         for ch, cur, nxt, t in self.rows[self.offset:self.offset + self._shown()]:
             row = QRectF(r.x() + 10, y, r.width() - 20, self.ROW)
             self._hits.append((row, ch))
-            p.setPen(QPen(QColor(0, 0, 0, 16), 1))
+            p.setPen(QPen(T.hover(16), 1))
             p.drawLine(QPointF(row.x(), row.y()), QPointF(row.right(), row.y()))
             p.setFont(_font(12, bold=True))
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             p.drawText(QRectF(row.x() + 4, row.y() + 4, 64, 18), Qt.AlignLeft | Qt.AlignVCenter,
                        p.fontMetrics().elidedText(ch.label(), Qt.ElideRight, 62))
             w = int(row.width() - 80)
             p.setFont(_font(12))
             if cur is not None:
-                p.setPen(QColor("#1A1A1A"))
+                p.setPen(T.text())
                 p.drawText(QRectF(row.x() + 74, row.y() + 4, w, 18), Qt.AlignLeft | Qt.AlignVCenter,
                            p.fontMetrics().elidedText(_program_title(cur), Qt.ElideRight, w))
                 bar = QRectF(row.x() + 74, row.y() + 25, w, 3)
                 p.setPen(Qt.NoPen)
-                p.setBrush(QColor(0, 0, 0, 24))
+                p.setBrush(T.hover(24))
                 p.drawRoundedRect(bar, 1.5, 1.5)
                 done = max(0.0, min(1.0, (t - cur.start) / max(1, cur.end - cur.start)))
                 p.setBrush(accent)
                 p.drawRoundedRect(QRectF(bar.x(), bar.y(), bar.width() * done, bar.height()), 1.5, 1.5)
                 p.setFont(_font(10))
-                p.setPen(QColor("#5C5C5C"))
+                p.setPen(T.text2())
                 nxt_text = f"   Next: {_program_title(nxt)}" if nxt is not None else ""
                 p.drawText(QRectF(row.x() + 74, row.y() + 29, w, 14), Qt.AlignLeft | Qt.AlignVCenter,
                            p.fontMetrics().elidedText(f"until {_tv_clock(cur.until())}" + nxt_text, Qt.ElideRight, w))
             elif nxt is not None:
-                p.setPen(QColor("#1A1A1A"))
+                p.setPen(T.text())
                 p.drawText(QRectF(row.x() + 74, row.y() + 4, w, 18), Qt.AlignLeft | Qt.AlignVCenter,
                            p.fontMetrics().elidedText(f"Up next: {_program_title(nxt)}", Qt.ElideRight, w))
                 p.setFont(_font(10))
@@ -681,7 +682,7 @@ def kind_pixmap(kind, size=16):
     f.setBold(True)
     p.setFont(f)
     light = colour.lightness() > 170
-    p.setPen(QColor("#1A1A1A") if light else QColor("white"))
+    p.setPen(T.text() if light else QColor("white"))
     p.drawText(pm.rect(), Qt.AlignCenter, kind[0])
     p.end()
     return pm
@@ -763,14 +764,14 @@ class Board(QWidget):
         from ..user import draw_user_picture, user_name
         draw_user_picture(p, QRect(24, 20, 32, 32), circle=True)
         p.setFont(_font(16, bold=True))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRect(68, 20, 300, 32), Qt.AlignVCenter | Qt.AlignLeft, f"{greeting}, {user_name()}")
         ar = self._add_rect()
-        p.setPen(QPen(QColor(0, 0, 0, 30), 1))
-        p.setBrush(QColor(255, 255, 255, 220 if self.hover_add else 160))
+        p.setPen(QPen(T.hover(30), 1))
+        p.setBrush(T.field(220 if self.hover_add else 160))
         p.drawRoundedRect(QRectF(ar).adjusted(0.5, 0.5, -0.5, -0.5), 4, 4)
         p.setFont(_font(12))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(ar, Qt.AlignCenter, "+  Add widgets")
 
 
@@ -916,17 +917,17 @@ def open_gallery(desktop):
         return
     ctl = _get(desktop)
     body = QWidget()
-    body.setStyleSheet("background: #F3F3F3;")
+    body.setStyleSheet(T.qss("background: #F3F3F3;"))
     v = QVBoxLayout(body)
     v.setContentsMargins(16, 12, 16, 12)
     head = QLabel("Add widgets")
-    head.setStyleSheet("font-family: 'Segoe UI Variable Text', 'Segoe UI'; font-size: 18px; font-weight: 600;")
+    head.setStyleSheet(T.qss("font-family: 'Segoe UI Variable Text', 'Segoe UI'; font-size: 18px; font-weight: 600; color: #1A1A1A;"))
     v.addWidget(head)
     lst = QListWidget()
     lst.setIconSize(QSize(32, 32))
-    lst.setStyleSheet("QListWidget { border: none; background: white; border-radius: 6px; font-family: 'Segoe UI'; "
-                      "font-size: 13px; } QListWidget::item { height: 44px; padding-left: 6px; }"
-                      "QListWidget::item:selected { background: #E5E5E5; color: #1A1A1A; }")
+    lst.setStyleSheet(T.qss("QListWidget { border: none; background: #FFFFFF; border-radius: 6px; font-family: 'Segoe UI'; "
+                            "font-size: 13px; color: #1A1A1A; } QListWidget::item { height: 44px; padding-left: 6px; }"
+                            "QListWidget::item:selected { background: #E5E5E5; color: #1A1A1A; }"))
     for kind in KINDS:
         it = QListWidgetItem(QIcon(kind_pixmap(kind, 32)), kind + ("   (pinned)" if kind in ctl.kinds() else ""))
         it.setData(Qt.UserRole, kind)
@@ -934,10 +935,10 @@ def open_gallery(desktop):
     v.addWidget(lst, 1)
     row = QHBoxLayout()
     hint = QLabel("Pick a widget, then Add or Remove it from the board.")
-    hint.setStyleSheet("font-family: 'Segoe UI'; font-size: 12px; color: #5C5C5C;")
+    hint.setStyleSheet(T.qss("font-family: 'Segoe UI'; font-size: 12px; color: #5C5C5C;"))
     row.addWidget(hint, 1)
-    css = ("QPushButton { font-family: 'Segoe UI'; font-size: 12px; padding: 5px 18px; border-radius: 4px; "
-           "background: #FBFBFB; border: 1px solid #D0D0D0; } QPushButton:hover { background: #F0F0F0; }")
+    css = T.qss("QPushButton { font-family: 'Segoe UI'; font-size: 12px; padding: 5px 18px; border-radius: 4px; "
+                "background: #FBFBFB; border: 1px solid #D0D0D0; color: #1A1A1A; } QPushButton:hover { background: #F0F0F0; }")
     add, remove = QPushButton("Add"), QPushButton("Remove")
     for b in (add, remove):
         b.setStyleSheet(css)

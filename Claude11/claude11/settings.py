@@ -11,8 +11,9 @@ from PySide6.QtWidgets import (QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit
 from shiboken6 import isValid
 
 from . import clock, display, sound, user
-from .paths import DATA, lock_images
+from .paths import DATA, lock_images, pretty_label
 from .wm import MicaWindow
+from . import theme11 as T
 
 CPL_FILE = DATA / "cpl.json"
 CATEGORIES = [("system", "System", "#0067C0"), ("bluetooth", "Bluetooth & devices", "#0F6CBD"),
@@ -97,13 +98,13 @@ class Toggle(QWidget):
             p.setBrush(QColor("white"))
             p.drawEllipse(QRectF(pill.right() - 17, 4, 14, 14))
         else:
-            p.setPen(QPen(QColor("#8A8A8A"), 1))
-            p.setBrush(QColor(0, 0, 0, 10))
+            p.setPen(QPen(T.text2(), 1))
+            p.setBrush(T.hover(10))
             p.drawRoundedRect(pill, 10, 10)
             p.setPen(Qt.NoPen)
-            p.setBrush(QColor("#5C5C5C"))
+            p.setBrush(T.text2())
             p.drawEllipse(QRectF(pill.left() + 4, 5, 12, 12))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         from .style import font
         p.setFont(font(12))
         p.drawText(QRectF(0, 0, self.width() - 50, self.height()), Qt.AlignRight | Qt.AlignVCenter, "On" if self.on else "Off")
@@ -131,7 +132,7 @@ class SettingsBody(QWidget):
         self.desktop = desktop
         self.setObjectName("settings")
         self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setStyleSheet(STYLE)
+        self.setStyleSheet(T.qss(STYLE))
         self.frame = None
         root = QHBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -178,10 +179,10 @@ class SettingsBody(QWidget):
         user.draw_user_picture(p, QRectF(4, 4, 56, 56).toRect(), circle=True)
         from .style import font
         p.setFont(font(14, 600))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRectF(72, 10, w.width() - 72, 22), Qt.AlignLeft | Qt.AlignVCenter, user.user_name())
         p.setFont(font(11))
-        p.setPen(QColor("#5C5C5C"))
+        p.setPen(T.text2())
         p.drawText(QRectF(72, 34, w.width() - 72, 18), Qt.AlignLeft | Qt.AlignVCenter, user.email_address())
         p.end()
 
@@ -401,6 +402,8 @@ class SettingsBody(QWidget):
         self._card(v, "Background", "Background image, color, slideshow",
                    slot=self._cpl("display_properties", tab="background"))
         self._section(v, "Colors")
+        self._card(v, "Choose your mode", "Changes the colors that appear in Windows and your apps",
+                   control=self._mode_combo())
         self._colour_grid(v)
         self._card(v, "Themes", "Install, create, manage", slot=self._cpl("display_properties"))
         self._card(v, "Lock screen", "Lock screen images, apps, animations", control=self._lock_combo())
@@ -418,6 +421,25 @@ class SettingsBody(QWidget):
         self._card(v, "Start", "Which programs are pinned: right-click one in Start to pin or unpin it")
         self._card(v, "Screen saver", "Bubbles, Ribbons, Mystify, Photos...",
                    slot=self._cpl("display_properties", tab="saver"))
+
+    def _mode_combo(self):
+        combo = QComboBox()
+        combo.addItem("Light", "light")
+        combo.addItem("Dark", "dark")
+        combo.setCurrentIndex(1 if T.dark() else 0)
+        combo.currentIndexChanged.connect(lambda i: self._set_mode(combo.itemData(i)))
+        return combo
+
+    def _set_mode(self, mode):
+        d = self.desktop.display
+        if d.data.get("theme") == mode:
+            return
+        d.set_theme(mode)
+        T.refresh(self.desktop)
+        self.setStyleSheet(T.qss(STYLE))
+        for page in self.pages.values():
+            page.widget().update()
+        sound.play("default")
 
     def _taskbar_set(self, **changes):
         save_cpl(**changes)
@@ -437,7 +459,8 @@ class SettingsBody(QWidget):
         images = lock_images()
         current = str(self.desktop.display.lock_image() or "")
         for i, path in enumerate(images):
-            combo.addItem(f"Windows spotlight {i + 1}" if "Screen" in str(path.parent) else path.stem, str(path))
+            combo.addItem(f"Windows spotlight {i + 1}" if "Screen" in str(path.parent) else pretty_label(path.stem),
+                          str(path))
             if str(path) == current:
                 combo.setCurrentIndex(i)
         combo.currentIndexChanged.connect(lambda i: self.desktop.display.set_lock_image(combo.itemData(i)))
@@ -455,7 +478,7 @@ class SettingsBody(QWidget):
             b.setFixedSize(34, 34)
             b.setToolTip(name)
             b.setStyleSheet(f"QPushButton {{ background: {colour}; border: 2px solid "
-                            f"{'#1A1A1A' if d.accent().name().lower() == colour.lower() else 'transparent'}; "
+                            f"{T.text().name() if d.accent().name().lower() == colour.lower() else 'transparent'}; "
                             f"border-radius: 4px; }} QPushButton:hover {{ border: 2px solid #5C5C5C; }}")
             b.clicked.connect(lambda _c=False, col=colour: self._pick_accent(col))
             g.addWidget(b, i // 12, i % 12)
@@ -473,7 +496,7 @@ class SettingsBody(QWidget):
             if b.toolTip() in dict(display.ACCENT_COLORS):
                 col = dict(display.ACCENT_COLORS)[b.toolTip()]
                 b.setStyleSheet(f"QPushButton {{ background: {col}; border: 2px solid "
-                                f"{'#1A1A1A' if col.lower() == colour.lower() else 'transparent'}; border-radius: 4px; }}"
+                                f"{T.text().name() if col.lower() == colour.lower() else 'transparent'}; border-radius: 4px; }}"
                                 f" QPushButton:hover {{ border: 2px solid #5C5C5C; }}")
 
     # ---- Apps ----

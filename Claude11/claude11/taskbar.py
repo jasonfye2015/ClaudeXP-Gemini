@@ -12,6 +12,7 @@ from shiboken6 import isValid
 
 from . import clock, sound
 from .paths import DATA
+from . import theme11 as T
 
 TASKBAR_H = 48
 BTN = 40
@@ -71,7 +72,7 @@ def _panel_colour(alpha=236):
 def draw_panel(p, rect, radius=8, alpha=245):
     """A Windows 11 flyout's surface: light Mica, a hairline border, rounded corners."""
     r = QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5)
-    p.setPen(QPen(QColor(0, 0, 0, 40), 1))
+    p.setPen(QPen(T.hover(40), 1))
     p.setBrush(_panel_colour(alpha))
     p.drawRoundedRect(r, radius, radius)
 
@@ -203,7 +204,7 @@ class Thumbnail(QWidget):
         if win is None or not isValid(win):
             return
         p.setFont(_font(12))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         x = 12
         if not win.icon.isNull():
             p.drawPixmap(x, 12, win.icon.pixmap(16, 16))
@@ -213,15 +214,15 @@ class Thumbnail(QWidget):
         c = self._close_rect()
         if self.hover_close:
             p.setPen(Qt.NoPen)
-            p.setBrush(QColor(0, 0, 0, 18))
+            p.setBrush(T.hover(18))
             p.drawRoundedRect(QRectF(c), 4, 4)
-        p.setPen(QPen(QColor("#1A1A1A"), 1.2))
+        p.setPen(QPen(T.text(), 1.2))
         p.drawLine(c.x() + 8, c.y() + 8, c.right() - 7, c.bottom() - 7)
         p.drawLine(c.right() - 7, c.y() + 8, c.x() + 8, c.bottom() - 7)
         shot = win.grab() if win.isVisible() else QPixmap()
         box = QRect(12, 40, self.width() - 24, self.height() - 52)
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor(0, 0, 0, 12))
+        p.setBrush(T.hover(12))
         p.drawRoundedRect(QRectF(box), 4, 4)
         if shot.isNull():
             return
@@ -278,7 +279,7 @@ class Flyout(QWidget):
 
 SLIDER_CSS = """
 QSlider { background: transparent; }
-QSlider::groove:horizontal { height: 4px; background: #BDBDBD; border-radius: 2px; }
+QSlider::groove:horizontal { height: 4px; background: #8A8A8A; border-radius: 2px; }
 QSlider::sub-page:horizontal { background: %s; border-radius: 2px; }
 QSlider::handle:horizontal { width: 10px; height: 10px; margin: -8px 0; border-radius: 10px; background: white;
                              border: 5px solid %s; }
@@ -300,7 +301,7 @@ class QuickSettings(Flyout):
         self.volume = QSlider(Qt.Horizontal, self)
         self.volume.setRange(0, 100)
         for s in (self.brightness, self.volume):
-            s.setStyleSheet(SLIDER_CSS % (accent, accent))
+            s.setStyleSheet(T.qss(SLIDER_CSS % (accent, accent)))
         self.volume.valueChanged.connect(self._volume_changed)
         self._placing = False
 
@@ -308,7 +309,7 @@ class QuickSettings(Flyout):
         from . import volume
         accent = _accent().name()
         for s in (self.brightness, self.volume):
-            s.setStyleSheet(SLIDER_CSS % (accent, accent))
+            s.setStyleSheet(T.qss(SLIDER_CSS % (accent, accent)))
         self._placing = True
         self.volume.setValue(int(round(volume.levels()["master"] * 100)))
         self._placing = False
@@ -375,13 +376,13 @@ class QuickSettings(Flyout):
         for name, r in self._tile_rects():
             on = self.state.get(name, False)
             hot = self.hover == name
-            p.setPen(QPen(QColor(0, 0, 0, 30), 1))
+            p.setPen(QPen(T.hover(30), 1))
             if on:
                 p.setBrush(accent.lighter(105) if hot else accent)
             else:
-                p.setBrush(QColor(255, 255, 255, 230 if hot else 190))
+                p.setBrush(T.field(230 if hot else 190))
             p.drawRoundedRect(QRectF(r).adjusted(0.5, 0.5, -0.5, -0.5), 6, 6)
-            colour = QColor("white") if on else QColor("#1A1A1A")
+            colour = QColor("white") if on else T.text()
             cx, cy = r.center().x(), r.y() + 20
             if name == "Wi-Fi":
                 wifi_glyph(p, cx, cy, colour)
@@ -425,7 +426,7 @@ class QuickSettings(Flyout):
             p.drawText(QRect(r.x(), r.y() + 34, r.width(), 18), Qt.AlignCenter,
                        p.fontMetrics().elidedText(name, Qt.ElideRight, r.width() - 8))
         # the sliders' glyphs
-        colour = QColor("#1A1A1A")
+        colour = T.text()
         p.setPen(QPen(colour, 1.5))
         p.setBrush(Qt.NoBrush)
         p.drawEllipse(QPointF(36, 208), 5, 5)
@@ -436,7 +437,7 @@ class QuickSettings(Flyout):
         from . import volume
         speaker_glyph(p, 36, 252, colour, sound.is_muted(), volume.levels()["master"])
         # the footer
-        p.setPen(QPen(QColor(0, 0, 0, 20), 1))
+        p.setPen(QPen(T.hover(20), 1))
         p.drawLine(0, self.height() - 56, self.width(), self.height() - 56)
         foot = self._footer_rects()
         for name, r in foot.items():
@@ -444,7 +445,7 @@ class QuickSettings(Flyout):
                 continue
             if self.hover == name:
                 p.setPen(Qt.NoPen)
-                p.setBrush(QColor(0, 0, 0, 16))
+                p.setBrush(T.hover(16))
                 p.drawRoundedRect(QRectF(r), 4, 4)
             p.setPen(QPen(colour, 1.4))
             p.setBrush(Qt.NoBrush)
@@ -455,7 +456,7 @@ class QuickSettings(Flyout):
             else:
                 p.drawEllipse(QPointF(c.x(), c.y()), 3, 3)
                 p.drawEllipse(QPointF(c.x(), c.y()), 7, 7)
-        p.setPen(QColor("#5C5C5C"))
+        p.setPen(T.text2())
         p.setFont(_font(11))
         p.drawText(QRect(60, self.height() - 48, self.width() - 120, 32), Qt.AlignCenter, "Workstation-2025 · Plugged in")
 
@@ -523,16 +524,16 @@ class NotificationCenter(Flyout):
     def draw(self, p):
         notes = self.desktop.notifications
         p.setFont(_font(14, bold=True))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRect(16, 12, 200, 28), Qt.AlignVCenter | Qt.AlignLeft, "Notifications")
         if notes:
             cr = self._clear_rect()
             if self.hover == "clear":
                 p.setPen(Qt.NoPen)
-                p.setBrush(QColor(0, 0, 0, 16))
+                p.setBrush(T.hover(16))
                 p.drawRoundedRect(QRectF(cr), 4, 4)
             p.setFont(_font(12))
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             p.drawText(cr, Qt.AlignCenter, "Clear all")
         y = 48
         if not notes:
@@ -548,28 +549,28 @@ class NotificationCenter(Flyout):
             p.drawPath(path)
             p.drawLine(QPointF(cx - 3, y + 34), QPointF(cx + 3, y + 34))
             p.setFont(_font(12))
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(QRect(0, y + 44, self.width(), 24), Qt.AlignCenter, "No new notifications")
         else:
             for note in notes[:4]:
                 r = QRect(12, y, self.width() - 24, 62)
-                p.setPen(QPen(QColor(0, 0, 0, 22), 1))
-                p.setBrush(QColor(255, 255, 255, 200))
+                p.setPen(QPen(T.hover(22), 1))
+                p.setBrush(T.card(200))
                 p.drawRoundedRect(QRectF(r).adjusted(0.5, 0.5, -0.5, -0.5), 6, 6)
                 x = r.x() + 12
                 icon = note.get("icon")
                 if icon is not None and not icon.isNull():
                     p.drawPixmap(x, r.y() + 10, icon.pixmap(16, 16))
                 p.setFont(_font(11))
-                p.setPen(QColor("#5C5C5C"))
+                p.setPen(T.text2())
                 p.drawText(QRect(x + 22, r.y() + 6, r.width() - 110, 20), Qt.AlignVCenter | Qt.AlignLeft, note["app"])
                 p.drawText(QRect(r.right() - 70, r.y() + 6, 60, 20), Qt.AlignVCenter | Qt.AlignRight, note["time"])
                 p.setFont(_font(12, bold=True))
-                p.setPen(QColor("#1A1A1A"))
+                p.setPen(T.text())
                 p.drawText(QRect(x, r.y() + 26, r.width() - 24, 18), Qt.AlignVCenter | Qt.AlignLeft,
                            p.fontMetrics().elidedText(note["title"], Qt.ElideRight, r.width() - 24))
                 p.setFont(_font(11))
-                p.setPen(QColor("#5C5C5C"))
+                p.setPen(T.text2())
                 p.drawText(QRect(x, r.y() + 42, r.width() - 24, 16), Qt.AlignVCenter | Qt.AlignLeft,
                            p.fontMetrics().elidedText(note["message"].replace("\n", " "), Qt.ElideRight, r.width() - 24))
                 y += 70
@@ -580,27 +581,27 @@ class NotificationCenter(Flyout):
         import datetime
         now = clock.now()
         y, m = self.month or (now.year, now.month)
-        p.setPen(QPen(QColor(0, 0, 0, 22), 1))
-        p.setBrush(QColor(255, 255, 255, 200))
+        p.setPen(QPen(T.hover(22), 1))
+        p.setBrush(T.card(200))
         p.drawRoundedRect(QRectF(r).adjusted(0.5, 0.5, -0.5, -0.5), 8, 8)
         p.setFont(_font(13, bold=True))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRect(r.x() + 16, r.y() + 8, r.width() - 100, 24), Qt.AlignVCenter | Qt.AlignLeft,
                    f"{now:%A, %B} {now.day}" if self.month is None else datetime.date(y, m, 1).strftime("%B %Y"))
         for name, dx, glyph in (("prev", 60, "∧"), ("next", 32, "∨")):
             br = QRect(r.right() - dx, r.y() + 8, 24, 24)
             if self.hover == name:
                 p.setPen(Qt.NoPen)
-                p.setBrush(QColor(0, 0, 0, 16))
+                p.setBrush(T.hover(16))
                 p.drawRoundedRect(QRectF(br), 4, 4)
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             p.setFont(_font(11))
             p.drawText(br, Qt.AlignCenter, glyph)
         cell_w = (r.width() - 24) / 7
         top = r.y() + 44
         p.setFont(_font(11))
         for i, d in enumerate(("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa")):
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(QRectF(r.x() + 12 + i * cell_w, top, cell_w, 18), Qt.AlignCenter, d)
         first = datetime.date(y, m, 1)
         start_col = (first.weekday() + 1) % 7
@@ -620,7 +621,7 @@ class NotificationCenter(Flyout):
                 p.drawEllipse(QPointF(cell.center().x(), cell.center().y()), d / 2, d / 2)
                 p.setPen(QColor("white"))
             else:
-                p.setPen(QColor("#1A1A1A"))
+                p.setPen(T.text())
             p.drawText(cell, Qt.AlignCenter, str(day))
 
 
@@ -681,7 +682,7 @@ class HiddenIcons(Flyout):
         for ic, r in self._cells():
             if self.hover == id(ic):
                 p.setPen(Qt.NoPen)
-                p.setBrush(QColor(0, 0, 0, 16))
+                p.setBrush(T.hover(16))
                 p.drawRoundedRect(QRectF(r).adjusted(2, 2, -2, -2), 4, 4)
             p.drawPixmap(r.x() + 12, r.y() + 12, ic.icon().pixmap(16, 16))
 
@@ -1151,7 +1152,7 @@ class Taskbar(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         w, h = self.width(), self.height()
         p.fillRect(self.rect(), _panel_colour(236))
-        p.setPen(QPen(QColor(0, 0, 0, 24), 1))
+        p.setPen(QPen(T.hover(24), 1))
         p.drawLine(0, 0, w, 0)
         accent = _accent()
         # the Widgets weather button
@@ -1161,10 +1162,10 @@ class Taskbar(QWidget):
             temp, cond = _weather()
             weather_glyph(p, QRect(wr.x() + 8, (h - 32) // 2, 32, 32), cond)
             p.setFont(_font(13))
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             p.drawText(QRect(wr.x() + 46, 8, wr.width() - 50, 18), Qt.AlignVCenter | Qt.AlignLeft, f"{temp}°F")
             p.setFont(_font(11))
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(QRect(wr.x() + 46, 25, wr.width() - 50, 16), Qt.AlignVCenter | Qt.AlignLeft, cond)
         # the centre group
         menu_open = self.desktop.start_menu.isVisible()
@@ -1178,7 +1179,7 @@ class Taskbar(QWidget):
             elif kind == "taskview":
                 self._hover_bg(p, rect, self.hover == ("taskview", id(None)))
                 c = rect.center()
-                p.setPen(QPen(QColor("#1A1A1A"), 1.4))
+                p.setPen(QPen(T.text(), 1.4))
                 p.setBrush(Qt.NoBrush)
                 p.drawRoundedRect(QRectF(c.x() - 8, c.y() - 4, 12, 10), 2, 2)
                 p.setBrush(_panel_colour(255))
@@ -1189,50 +1190,50 @@ class Taskbar(QWidget):
         chev = self.chevron_rect()
         if chev.isValid():
             self._hover_bg(p, chev, self.hover == ("chevron", 0), radius=4)
-            p.setPen(QPen(QColor("#1A1A1A"), 1.3))
+            p.setPen(QPen(T.text(), 1.3))
             cx, cy = chev.center().x(), chev.center().y()
             p.drawPolyline([QPointF(cx - 3.5, cy + 2), QPointF(cx, cy - 1.5), QPointF(cx + 3.5, cy + 2)])
         for icon, rect in self.tray_icon_rects():
             p.drawPixmap(rect, icon.icon().pixmap(16, 16))
         sr = self.system_rect()
         self._hover_bg(p, sr, self.hover == ("system", 0))
-        wifi_glyph(p, sr.x() + 20, sr.center().y() - 2, QColor("#1A1A1A"))
+        wifi_glyph(p, sr.x() + 20, sr.center().y() - 2, T.text())
         from . import volume
-        speaker_glyph(p, sr.x() + 46, sr.center().y(), QColor("#1A1A1A"), sound.is_muted(), volume.levels()["master"])
+        speaker_glyph(p, sr.x() + 46, sr.center().y(), T.text(), sound.is_muted(), volume.levels()["master"])
         # the clock
         cr = self.clock_rect()
         self._hover_bg(p, QRect(cr.x(), (h - BTN) // 2, cr.width() - 4, BTN), self.hover == ("clock", 0) or
                        self.center.isVisible())
         p.setFont(_font(12))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRect(cr.x(), 7, cr.width() - 12, 17), Qt.AlignVCenter | Qt.AlignRight, clock.time_text())
         p.drawText(QRect(cr.x(), 24, cr.width() - 12, 17), Qt.AlignVCenter | Qt.AlignRight, clock.date_text())
         # Show desktop
         sd = self.show_desktop_rect()
         if self.hover == ("sliver", 0):
-            p.setPen(QPen(QColor(0, 0, 0, 90), 1))
+            p.setPen(QPen(T.hover(90), 1))
             p.drawLine(sd.left(), 8, sd.left(), h - 8)
 
     def _hover_bg(self, p, rect, on, radius=6):
         if not on:
             return
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor(0, 0, 0, 20))
+        p.setBrush(T.hover(20))
         p.drawRoundedRect(QRectF(rect), radius, radius)
 
     def _draw_search(self, p, rect):
         r = QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5)
         hot = self.hover == ("search", id(None))
-        p.setPen(QPen(QColor(0, 0, 0, 36), 1))
-        p.setBrush(QColor(255, 255, 255, 235 if hot else 200))
+        p.setPen(QPen(T.hover(36), 1))
+        p.setBrush(T.field(235 if hot else 200))
         p.drawRoundedRect(r, 16, 16)
         c = QPointF(rect.x() + 20, rect.center().y())
-        p.setPen(QPen(QColor("#1A1A1A"), 1.5))
+        p.setPen(QPen(T.text(), 1.5))
         p.setBrush(Qt.NoBrush)
         p.drawEllipse(QPointF(c.x() - 1, c.y() - 1), 5, 5)
         p.drawLine(QPointF(c.x() + 3, c.y() + 3), QPointF(c.x() + 6.5, c.y() + 6.5))
         p.setFont(_font(12))
-        p.setPen(QColor("#5C5C5C"))
+        p.setPen(T.text2())
         p.drawText(QRect(rect.x() + 36, rect.y(), rect.width() - 44, rect.height()), Qt.AlignVCenter | Qt.AlignLeft,
                    "Search")
 

@@ -50,6 +50,19 @@ def _default_wallpaper():
     return ""
 
 
+def _dark_wallpaper():
+    """The dark Bloom: the collection's official dark-mode Bloom, else Windows 11's own img19, else the light one."""
+    walls = [(label, p) for label, p in wallpapers() if p is not None]
+    for key in ("dark-mode-blue-stock-official", "dark-mode-stock-official-dark", "img19", "windows-11-dark-3840"):
+        for _label, p in walls:
+            if key in p.stem.lower():
+                return str(p)
+    for _label, p in walls:
+        if "dark" in p.stem.lower():
+            return str(p)
+    return _default_wallpaper()
+
+
 def wallpapers():
     """[(label, path or None)]: solid colour, your own pictures in assets/backgrounds, the Windows 11 Media
     collection on Local Storage, then the ones the real PC ships with."""
@@ -115,6 +128,16 @@ class Display(QObject):
         self._save()
 
     set_aero = set_accent
+
+    def set_theme(self, mode):
+        """Light or dark; the default Bloom follows the mode (the dark Bloom for dark) when it is the wallpaper."""
+        old = self.data.get("theme", "light")
+        self.data["theme"] = mode
+        current = self.data.get("wallpaper") or ""
+        defaults = {"light": _default_wallpaper(), "dark": _dark_wallpaper()}
+        if current and current == defaults.get(old) and defaults.get(mode):
+            self.data["wallpaper"] = defaults[mode]
+        self._save()
 
     def set_lock_image(self, path):
         self.data["lock"] = str(path) if path else ""

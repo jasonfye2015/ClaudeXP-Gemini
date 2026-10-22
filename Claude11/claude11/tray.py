@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QSystemTrayIcon, QWidget
 from shiboken6 import isValid
 
 from .paths import DATA
+from . import theme11 as T
 
 SETTINGS_FILE = DATA / "tray.json"
 INACTIVE_SECONDS = 60
@@ -198,8 +199,8 @@ class Balloon(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         box = QRectF(0.5, 0.5, self.width() - 1, self.height() - 1)
-        p.setPen(QPen(QColor(0, 0, 0, 40), 1))
-        p.setBrush(QColor(249, 249, 249, 248))
+        p.setPen(QPen(T.hover(40), 1))
+        p.setBrush(T.card(248))
         p.drawRoundedRect(box, 8, 8)
         title_font, body_font = self._fonts()
         icon = self.owner.icon() if self.owner is not None and isValid(self.owner) else QIcon()
@@ -209,14 +210,14 @@ class Balloon(QWidget):
         if not icon.isNull():
             p.drawPixmap(x, self.PAD, icon.pixmap(16, 16))
             x += 24
-        p.setPen(QColor("#5C5C5C"))
+        p.setPen(T.text2())
         p.drawText(QRect(x, self.PAD - 2, self.width() - x - 60, 20), Qt.AlignVCenter | Qt.AlignLeft, self.app_name)
         c = self._close_rect()
         if self.hover_close:
             p.setPen(Qt.NoPen)
-            p.setBrush(QColor(0, 0, 0, 18))
+            p.setBrush(T.hover(18))
             p.drawRoundedRect(QRectF(c), 4, 4)
-        p.setPen(QPen(QColor("#1A1A1A"), 1.2))
+        p.setPen(QPen(T.text(), 1.2))
         p.drawLine(c.x() + 7, c.y() + 7, c.right() - 6, c.bottom() - 6)
         p.drawLine(c.right() - 6, c.y() + 7, c.x() + 7, c.bottom() - 6)
         y = self.PAD + 22 + 8
@@ -226,10 +227,10 @@ class Balloon(QWidget):
             x += 44
         text_w = self.width() - x - self.PAD
         p.setFont(title_font)
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRect(x, y, text_w, self.title_h), Qt.TextWordWrap, self.title)
         p.setFont(body_font)
-        p.setPen(QColor("#5C5C5C"))
+        p.setPen(T.text2())
         p.drawText(QRect(x, y + self.title_h + 4, text_w, self.height() - y - self.title_h - 4 - self.PAD),
                    Qt.TextWordWrap, self.message)
 

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QLineEdit, QMenu, QStyle, QTreeWidget, QTreeWidget
 from . import sound
 from .paths import DATA
 from .user import draw_user_picture, user_name
+from . import theme11 as T
 
 WIDTH, HEIGHT = 640, 690
 MARGIN = 32
@@ -107,7 +108,8 @@ class StartMenu(QWidget):
     def _layout(self):
         from . import display
         accent = display.get().accent().name()
-        self.search.setStyleSheet(SEARCH_CSS % accent)
+        self.search.setStyleSheet(T.qss(SEARCH_CSS % accent))
+        self.tree.setStyleSheet(T.qss(TREE_CSS))
         self.search.setGeometry(MARGIN, 20, WIDTH - 2 * MARGIN, 38)
         self.tree.setGeometry(MARGIN, 112, WIDTH - 2 * MARGIN, self.height() - 112 - FOOT_H - 12)
 
@@ -236,7 +238,7 @@ class StartMenu(QWidget):
         head.setFlags(Qt.ItemIsEnabled)
         f = _font(12, bold=True)
         head.setFont(0, f)
-        head.setForeground(0, QColor("#1A1A1A"))
+        head.setForeground(0, T.text())
         return head
 
     def _fill_tree(self, query=""):
@@ -464,7 +466,7 @@ class StartMenu(QWidget):
         # the search box's magnifier
         sr = self.search.geometry()
         c = QPointF(sr.x() + 20, sr.center().y())
-        p.setPen(QPen(QColor("#5C5C5C"), 1.5))
+        p.setPen(QPen(T.text2(), 1.5))
         p.setBrush(Qt.NoBrush)
         p.drawEllipse(QPointF(c.x() - 1, c.y() - 1), 5.5, 5.5)
         p.drawLine(QPointF(c.x() + 3, c.y() + 3), QPointF(c.x() + 7, c.y() + 7))
@@ -472,7 +474,7 @@ class StartMenu(QWidget):
             self._draw_main(p, programs)
         else:
             p.setFont(_font(13, bold=True))
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             p.drawText(QRect(MARGIN + 4, 76, 300, 28), Qt.AlignVCenter | Qt.AlignLeft,
                        "All" if self.mode == "all" else "Search results")
             self._small_button(p, self._back_rect(), "‹  Back", self.hover == ("back", None))
@@ -480,16 +482,16 @@ class StartMenu(QWidget):
 
     def _small_button(self, p, rect, text, hot):
         r = QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5)
-        p.setPen(QPen(QColor(0, 0, 0, 30), 1))
-        p.setBrush(QColor(255, 255, 255, 200 if hot else 140))
+        p.setPen(QPen(T.hover(30), 1))
+        p.setBrush(T.field(200 if hot else 140))
         p.drawRoundedRect(r, 4, 4)
         p.setFont(_font(11))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(rect, Qt.AlignCenter, text)
 
     def _draw_main(self, p, programs):
         p.setFont(_font(13, bold=True))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRect(MARGIN + 4, 76, 300, 28), Qt.AlignVCenter | Qt.AlignLeft, "Pinned")
         self._small_button(p, self._all_rect(), "All  ›", self.hover == ("all", None))
         for key, rect in self._pinned_cells():
@@ -499,12 +501,12 @@ class StartMenu(QWidget):
                 continue
             if self.hover == ("pin", key):
                 p.setPen(Qt.NoPen)
-                p.setBrush(QColor(0, 0, 0, 14))
+                p.setBrush(T.hover(14))
                 p.drawRoundedRect(QRectF(rect).adjusted(2, 2, -2, -2), 6, 6)
             pm = prog.icon().pixmap(32, 32)
             p.drawPixmap(rect.x() + (rect.width() - pm.width()) // 2, rect.y() + 12 + (32 - pm.height()) // 2, pm)
             p.setFont(_font(11))
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             tr = QRect(rect.x() + 4, rect.y() + 50, rect.width() - 8, 30)
             text = prog.name
             fm = p.fontMetrics()
@@ -513,13 +515,13 @@ class StartMenu(QWidget):
             p.drawText(tr, Qt.AlignHCenter | Qt.AlignTop | Qt.TextWordWrap, text)
         hy = self._rec_header_y()
         p.setFont(_font(13, bold=True))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRect(MARGIN + 4, hy - 4, 300, 28), Qt.AlignVCenter | Qt.AlignLeft, "Recommended")
         self._small_button(p, self._more_rect(), "More  ›", self.hover == ("more", None))
         recs = self._recommended()
         if not recs:
             p.setFont(_font(12))
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(self._rec_rect().adjusted(8, 0, 0, 0), Qt.AlignLeft | Qt.AlignTop | Qt.TextWordWrap,
                        "The programs and files you open show up here, so you can get back to them quickly.")
         for i, (key, rect) in enumerate(recs):
@@ -529,46 +531,46 @@ class StartMenu(QWidget):
                 continue
             if self.hover == ("rec", key):
                 p.setPen(Qt.NoPen)
-                p.setBrush(QColor(0, 0, 0, 14))
+                p.setBrush(T.hover(14))
                 p.drawRoundedRect(QRectF(rect).adjusted(0, 2, -8, -2), 6, 6)
             pm = prog.icon().pixmap(28, 28)
             p.drawPixmap(rect.x() + 12, rect.y() + (rect.height() - pm.height()) // 2, pm)
             p.setFont(_font(12))
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             p.drawText(QRect(rect.x() + 52, rect.y() + 10, rect.width() - 64, 18), Qt.AlignVCenter | Qt.AlignLeft,
                        p.fontMetrics().elidedText(prog.name, Qt.ElideRight, rect.width() - 70))
             p.setFont(_font(11))
-            p.setPen(QColor("#5C5C5C"))
+            p.setPen(T.text2())
             p.drawText(QRect(rect.x() + 52, rect.y() + 29, rect.width() - 64, 16), Qt.AlignVCenter | Qt.AlignLeft,
                        "Recently used" if i else "Just now")
 
     def _draw_footer(self, p):
         fr = self._footer_rect()
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor(0, 0, 0, 10))
+        p.setBrush(T.hover(10))
         from PySide6.QtGui import QPainterPath
         path = QPainterPath()
         path.addRoundedRect(QRectF(fr).adjusted(0.5, 0, -0.5, -0.5), 8, 8)
         path.addRect(QRectF(fr.x() + 0.5, fr.y(), fr.width() - 1, 10))
         p.drawPath(path.simplified())
-        p.setPen(QPen(QColor(0, 0, 0, 16), 1))
+        p.setPen(QPen(T.hover(16), 1))
         p.drawLine(fr.x() + 1, fr.y(), fr.right(), fr.y())
         ur = self._user_rect()
         if self.hover == ("user", None):
             p.setPen(Qt.NoPen)
-            p.setBrush(QColor(0, 0, 0, 14))
+            p.setBrush(T.hover(14))
             p.drawRoundedRect(QRectF(ur).adjusted(-8, 0, 8, 0), 6, 6)
         draw_user_picture(p, QRect(ur.x(), ur.y() + 4, 32, 32), circle=True)
         p.setFont(_font(12))
-        p.setPen(QColor("#1A1A1A"))
+        p.setPen(T.text())
         p.drawText(QRect(ur.x() + 44, ur.y(), ur.width() - 44, ur.height()), Qt.AlignVCenter | Qt.AlignLeft, user_name())
         pr = self._power_rect()
         if self.hover == ("power", None):
             p.setPen(Qt.NoPen)
-            p.setBrush(QColor(0, 0, 0, 14))
+            p.setBrush(T.hover(14))
             p.drawRoundedRect(QRectF(pr), 6, 6)
         c = pr.center()
-        pen = QPen(QColor("#1A1A1A"), 1.6)
+        pen = QPen(T.text(), 1.6)
         pen.setCapStyle(Qt.RoundCap)
         p.setPen(pen)
         p.setBrush(Qt.NoBrush)

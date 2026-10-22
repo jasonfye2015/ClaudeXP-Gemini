@@ -12,6 +12,7 @@ from PySide6.QtCore import QEvent, QPoint, QRect, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPainterPath, QPalette, QPen, QRegion
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 from shiboken6 import isValid
+from . import theme11 as T
 
 SHADOW = 10
 TITLE_H = 32
@@ -58,7 +59,7 @@ def _tint(active):
         wall = display.get().mica_tint()
     except Exception:
         wall = QColor("#F3F3F3")
-    base = QColor(CLIENT)
+    base = QColor(T.base())
     k = 0.08 if active else 0.04
     return QColor(int(base.red() * (1 - k) + wall.red() * k), int(base.green() * (1 - k) + wall.green() * k),
                   int(base.blue() * (1 - k) + wall.blue() * k))
@@ -135,15 +136,15 @@ class SnapLayouts(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         r = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
-        p.setPen(QPen(QColor(0, 0, 0, 40), 1))
-        p.setBrush(QColor(249, 249, 249, 245))
+        p.setPen(QPen(T.hover(40), 1))
+        p.setBrush(T.card(245))
         p.drawRoundedRect(r, 8, 8)
         accent = _accent()
         for cell, zones in self._cells():
             for key, zr in zones:
                 hot = self.hover == key
                 p.setPen(QPen(QColor(0, 0, 0, 30), 1))
-                p.setBrush(accent if hot else QColor(0, 0, 0, 22))
+                p.setBrush(accent if hot else T.hover(22))
                 p.drawRoundedRect(QRectF(zr), 3, 3)
 
 
@@ -535,7 +536,7 @@ class MicaWindow(QWidget):
         p.fillRect(client, self.palette().window())
         p.restore()
         # the frame's outline
-        p.setPen(QPen(QColor(0, 0, 0, 70 if active else 45), 1))
+        p.setPen(QPen(T.hover(70 if active else 45) if not T.dark() else T.hover(50 if active else 30), 1))
         p.setBrush(Qt.NoBrush)
         if self.maximized:
             p.drawRect(QRectF(fr).adjusted(0.5, 0.5, -0.5, -0.5))
@@ -551,7 +552,7 @@ class MicaWindow(QWidget):
         p.setFont(_font(12))
         fm = p.fontMetrics()
         text = fm.elidedText(self.title, Qt.ElideRight, max(10, right - x))
-        p.setPen(QColor("#1A1A1A") if active else QColor("#8A8A8A"))
+        p.setPen(T.text() if active else T.text2())
         p.drawText(QRect(x, fr.top(), right - x, TITLE_H), Qt.AlignVCenter | Qt.AlignLeft, text)
         for kind, r in rects.items():
             self._paint_button(p, r, kind, active)
@@ -572,11 +573,11 @@ class MicaWindow(QWidget):
                 p.drawPath(path)
         elif hot or down:
             p.setPen(Qt.NoPen)
-            p.setBrush(QColor(0, 0, 0, 24 if down else 16))
+            p.setBrush(T.hover(24 if down else 16))
             p.drawRect(rr)
         c = rr.center()
         colour = QColor("#FFFFFF") if (kind == "close" and (hot or down)) else \
-            QColor("#1A1A1A") if active else QColor("#9D9D9D")
+            T.text() if active else T.text2()
         pen = QPen(colour, 1)
         pen.setCapStyle(Qt.FlatCap)
         p.setPen(pen)

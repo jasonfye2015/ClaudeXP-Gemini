@@ -7,6 +7,7 @@ from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QApplication, QStyle, QWidget
 
 from . import sound
+from . import theme11 as T
 
 CELL_W, CELL_H, COLS = 232, 180, 5
 
@@ -84,8 +85,8 @@ class AltTab(QWidget):
         from . import display
         accent = display.get().accent()
         r = QRectF(0.5, 0.5, self.width() - 1, self.height() - 1)
-        p.setPen(QPen(QColor(0, 0, 0, 50), 1))
-        p.setBrush(QColor(243, 243, 243, 240))
+        p.setPen(QPen(T.hover(50), 1))
+        p.setBrush(T.base_alpha(240))
         p.drawRoundedRect(r, 10, 10)
         from .style import font
         f = font(12)
@@ -99,23 +100,23 @@ class AltTab(QWidget):
             cell = QRect(x0 + c * CELL_W, 24 + r_ * CELL_H, CELL_W, CELL_H)
             if i == self.index:
                 p.setPen(Qt.NoPen)
-                p.setBrush(QColor(0, 0, 0, 14))
+                p.setBrush(T.hover(14))
                 p.drawRoundedRect(QRectF(cell).adjusted(4, 4, -4, -4), 8, 8)
             icon = win.icon if not win.icon.isNull() else fallback
             p.drawPixmap(cell.x() + 16, cell.y() + 14, icon.pixmap(16, 16))
-            p.setPen(QColor("#1A1A1A"))
+            p.setPen(T.text())
             p.drawText(QRect(cell.x() + 40, cell.y() + 12, CELL_W - 56, 20), Qt.AlignVCenter | Qt.AlignLeft,
                        QFontMetrics(f).elidedText(win.title, Qt.ElideRight, CELL_W - 60))
             box = cell.adjusted(16, 40, -16, -16)
             shot = self.shots.get(id(win))
-            p.setPen(QPen(accent if i == self.index else QColor(0, 0, 0, 30), 2 if i == self.index else 1))
-            p.setBrush(QColor(255, 255, 255))
+            p.setPen(QPen(accent if i == self.index else T.hover(30), 2 if i == self.index else 1))
+            p.setBrush(T.card(255))
             p.drawRoundedRect(QRectF(box).adjusted(-3, -3, 3, 3), 6, 6)
             if shot is not None and not shot.isNull():
                 s = shot.scaled(box.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 p.drawPixmap(box.x() + (box.width() - s.width()) // 2, box.y() + (box.height() - s.height()) // 2, s)
             else:
-                p.fillRect(box, QColor(0, 0, 0, 20))
+                p.fillRect(box, T.hover(20))
                 p.drawPixmap(box.center().x() - 16, box.center().y() - 16, icon.pixmap(32, 32))
 
 

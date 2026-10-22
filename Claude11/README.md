@@ -23,8 +23,11 @@ python main.py
 - **The Start menu:** the search box, the Pinned grid with All (the alphabetical list, folders for the groups), the
   Recommended programs, your name and the power button.
 - **Settings:** System (About, Display, Sound, Notifications, Power, Recovery), Bluetooth & devices, Network &
-  internet, Personalization (background, accent colours, lock screen, themes, taskbar), Apps, Accounts, Time &
-  language, Gaming, Accessibility, Privacy & security, Windows Update. The Control Panel is still there too.
+  internet, Personalization (background, light or dark mode, accent colours, lock screen, themes, taskbar), Apps,
+  Accounts, Time & language, Gaming, Accessibility, Privacy & security, Windows Update. The Control Panel is still
+  there too. Dark mode darkens the shell - taskbar, Start, flyouts, window frames, Widgets, toasts, Settings - and
+  swaps the Bloom for its dark twin; the period programs' windows stay light under a dark title bar, as old
+  programs do.
 - **Windows 11's own programs:** File Explorer's 2025 face over XP's file manager, Microsoft Edge and Firefox 144 on
   XP's web engine, the Widgets board (Weather, Calendar, Outlook, TV Guide, Top stories, Photos, Performance,
   Clock), Sticky Notes, the Snipping Tool, Tips.
@@ -44,7 +47,7 @@ python main.py
 | `claude11/logon.py` | The lock screen and sign-in |
 | `claude11/desktop.py`, `icons.py`, `taskbar.py`, `startmenu.py`, `wm.py` | The desktop, its icons, the centered taskbar and its flyouts (Quick Settings, the notification center, hidden icons, thumbnails), the Start menu, Mica windows with Snap layouts |
 | `claude11/tray.py`, `network.py`, `volume.py`, `display.py` | Toasts and tray icons, the always-on Wi-Fi, the volume mixer, Personalization data (the real PC's wallpapers and lock screen pictures, accent colours) |
-| `claude11/settings.py`, `controlpanel.py` | The Settings app; the classic Control Panel and its dialogs |
+| `claude11/settings.py`, `controlpanel.py`, `theme11.py` | The Settings app; the classic Control Panel and its dialogs; the light and dark mode colours every shell surface asks for |
 | `claude11/explorer11.py` | File Explorer's 2025 face over XP's file manager |
 | `claude11/programs/` | The registry for 2025 (`__init__.py`), Edge and Firefox (`browsers.py`), the Widgets board (`widgets.py`), Sticky Notes, the Snipping Tool, Tips (`helpctr.py`) |
 | `claude11/web2025.py`, `xpfaces.py`, `sites/` | MSN and Outlook.com in 2025, the small 2025 faces on XP pieces (Outlook, the AI loading box, LiveJournal), Facebook (2025 look) and Bluesky on the Furry Web |
