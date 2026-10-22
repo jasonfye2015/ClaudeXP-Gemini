@@ -186,3 +186,18 @@ anachronisms (Skype, Kik, Copilot) and all.
      marriages, children, businesses, the pandemic years). 2001 and 2011 see none of it.
    - Next: the 2025 community faces (Bluesky and Facebook's 2025 look on the Furry Web, Discord and Telegram),
      the 2025 TV channels. Then maybe mobile devices.
+
+## The Furry Hollow (Second Life on this PC, started 2026-10-22)
+
+- `ClaudeGames/opensim_world`, in every era's Social Programs as "Furry Hollow". Nothing is installed on Windows:
+  everything lives in `Local Storage/SecondLife` (gitignored).
+  - `dotnet/`: a portable .NET 8 runtime. `opensim/`: OpenSimulator 0.9.3.0 as a standalone grid on
+    127.0.0.1:9000 with one region, the Furry Hollow, owned by the user's avatar (named from Profile/).
+  - `viewer/coolvl/`: the Cool VL Viewer, unpacked from its InstallJammer installer by `opensim_world/unjammer.py`.
+    A Firestorm unpacked into `viewer/` is preferred if the user adds one. Alchemy can't be used: its Windows builds
+    are compiled with Havok, which removes every grid but Second Life's.
+- The Hollow Keeper (`keeper.lsl`, loaded from an OAR that `oar.py` writes) creates the main residents as NPCs,
+  passes local chat to the bridge (`bridge.py`, a small web server on 127.0.0.1:9180 inside the computer that
+  launched the world) and says the replies, which the language model writes from each resident's own persona for
+  that era.
+- Next: avatars for the residents (they wear a copy of the user's avatar for now), IMs, and more of the region.

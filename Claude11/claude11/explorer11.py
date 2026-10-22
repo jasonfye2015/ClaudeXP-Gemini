@@ -461,6 +461,21 @@ def install():
     win = _window()
     pkg.launch = launch
     win.launch = launch
+    # while E: spins up the window has no folder yet (location None): the skin asks for its title meanwhile
+    cls = win.Explorer
+    if not getattr(cls, "_waking_guard", False):
+        def guarded(name, fallback):
+            original = getattr(cls, name)
+
+            def call(self, *a, **kw):
+                if getattr(self, "location", None) is None:
+                    return fallback()
+                return original(self, *a, **kw)
+            setattr(cls, name, call)
+        guarded("title_text", lambda: "Opening...")
+        guarded("address_text", lambda: "")
+        guarded("title_icon", lambda: std(QStyle.SP_DirOpenIcon))
+        cls._waking_guard = True
     proxy = win.FileProxy
     if not getattr(proxy, "_eleven", False):
         original = proxy.filterAcceptsRow

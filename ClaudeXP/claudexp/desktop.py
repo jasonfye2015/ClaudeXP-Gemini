@@ -116,8 +116,18 @@ class Desktop(QWidget):
         self.icons.desktop_released(event)
 
     def keyPressEvent(self, event):
-        if not self.icons.key_pressed(event):
+        # A key a window's control didn't use (a chat box passes Enter on after sending) bubbles up to here, since
+        # every window lives inside the desktop: only keys pressed on the desktop itself are the icons' business.
+        if self._key_from_window() or not self.icons.key_pressed(event):
             super().keyPressEvent(event)
+
+    def _key_from_window(self):
+        w = QApplication.focusWidget()
+        while w is not None and w is not self:
+            if hasattr(w, "on_taskbar") and hasattr(w, "content"):
+                return True
+            w = w.parentWidget()
+        return False
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():

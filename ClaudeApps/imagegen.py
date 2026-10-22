@@ -52,6 +52,8 @@ def _installed(key):
 
 
 def _runtime_python():
+    from claudecore.relocate import fix_venv
+    fix_venv(RUNTIME, BASE_PYTHON)          # (made where the Timeline used to be: point it at the Python here)
     return RUNTIME / "Scripts" / "python.exe"
 
 

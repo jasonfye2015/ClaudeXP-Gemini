@@ -79,3 +79,39 @@ def fix(data_dir, timeline=TIMELINE):
         except OSError:
             pass
     return changed
+
+
+def fix_venv(runtime, *base_pythons):
+    """A Python environment (runtime/pyvenv.cfg) made where the Timeline used to be still names that old Python and
+    won't start ('No Python at ...'). Point it at the first of base_pythons that exists, if its own home is gone.
+    Returns True when it changed anything."""
+    cfg = Path(runtime) / "pyvenv.cfg"
+    try:
+        lines = cfg.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    values = {}
+    for line in lines:
+        key, sep, value = line.partition("=")
+        if sep:
+            values[key.strip().lower()] = value.strip()
+    if values.get("home") and Path(values["home"]).is_dir():
+        return False
+    base = next((Path(p) for p in base_pythons if p and Path(p).is_file()), None)
+    if base is None:
+        return False
+    out = []
+    for line in lines:
+        key = line.partition("=")[0].strip().lower()
+        if key == "home":
+            line = f"home = {base.parent}"
+        elif key == "executable":
+            line = f"executable = {base}"
+        elif key == "command":
+            line = f"command = {base} -m venv {Path(runtime)}"
+        out.append(line)
+    try:
+        cfg.write_text("\n".join(out) + "\n", encoding="utf-8")
+    except OSError:
+        return False
+    return True

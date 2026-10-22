@@ -45,6 +45,8 @@ def _temporary_audio_path():
 
 
 def _runtime_python():
+    from claudecore.relocate import fix_venv
+    fix_venv(RUNTIME, BASE_PYTHON, SHARED_PYTHON)          # (made where the Timeline used to be: point it at the Python here)
     return RUNTIME / "Scripts" / "python.exe"
 
 

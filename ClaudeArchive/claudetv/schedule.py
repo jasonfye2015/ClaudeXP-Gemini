@@ -262,18 +262,23 @@ def _ad_year(m):
     return int(m.year) if str(m.year).isdigit() else None
 
 
-def era_ads(ads, era, at_least=40):
-    """Each computer's own commercials: ClaudeXP the undated ones and everything up to 2001, Claude7 2002-2011,
-    Claude11 2012 onward (every channel shows the same programs in every era - only the breaks age). When an era's
-    own years are thin, the window opens backwards a few years at a time rather than falling back to everything."""
+# each later era: (its own years, how many times each of its ads goes into the rotation), then the earlier years
+# that fill the breaks out once each - so the era's own commercials come up most, with older ones still airing
+ERA_ADS = {2011: ((2002, 2011), 2, (2000, 2001)),
+           2025: ((2012, 9999), 3, (2005, 2011))}
+
+
+def era_ads(ads, era):
+    """Each computer's commercials. ClaudeXP: the undated reels and everything up to 2001. Claude7: 2002-2011 (twice
+    as likely) plus 2000-2001. Claude11: 2012 onward (three times as likely) plus 2005-2011. Every channel shows the
+    same programs in every era - only the breaks age."""
     if era <= ARCHIVE_YEAR:
         mine = [m for m in ads if _ad_year(m) is None or _ad_year(m) <= ARCHIVE_YEAR]
         return mine or ads
-    windows = ((2002, 2011), (1996, 2011)) if era < 2012 else ((2012, 9999), (2008, 9999), (2002, 9999))
-    for lo, hi in windows:
-        mine = [m for m in ads if _ad_year(m) is not None and lo <= _ad_year(m) <= hi]
-        if len(mine) >= at_least:
-            return mine
+    (lo, hi), weight, (back_lo, back_hi) = ERA_ADS[2011 if era < 2012 else 2025]
+    own = [m for m in ads if _ad_year(m) is not None and lo <= _ad_year(m) <= hi]
+    back = [m for m in ads if _ad_year(m) is not None and back_lo <= _ad_year(m) <= back_hi]
+    mine = own * weight + back
     return mine or ads
 
 
