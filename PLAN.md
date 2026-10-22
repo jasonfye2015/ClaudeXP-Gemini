@@ -216,4 +216,15 @@ anachronisms (Skype, Kik, Copilot) and all.
   clothes into #RLV/residents/<name> for the Tailor; `python -m opensim_world.tailor residents [names] [seconds]`
   saves their whole looks (world.json "dressed"), which the bridge prefers. Changing someone's clothes: edit
   wardrobe.json, clear "residents_pack" in world.json, refit them.
+- Eight regions (2026-10-22): the first four, then Love Island (Avia Bonne, CC BY-NC) and Fantasy Island
+  (Linda Kellie, CC0) south of the block, and an adults' pair off to the east, reached by teleport: Whitewood
+  (ADULT WhiteWood) and Castle LoveGlo, both by PcTek CyberStar (CC-BY), from the Outworldz free library. Outworldz's
+  WhiteWood archive is cut short at the source; content.py repacks what's readable. Big builds save at a few objects
+  a second, so furnishing waits until each region's objects are all in the database, and stopping the server backs
+  everything up and allows five minutes.
+- Residents at the poseballs (2026-10-22): the Keeper reports what the user is sitting on; a line to a nearby
+  resident that's an invitation ("come sit with me", "join me", "cuddle") has them take the free seat in it (osNpcSit -
+  the other ball of a couples or adult set from the LK animations pack, or any seat), and their reply is written
+  knowing what they're doing; "dance" plays one of the Keeper's dances on them; "stand up" / "let's go" stops it,
+  and when the user gets up, whoever joined gets up too.
 - Next: IMs, and more avatars for species the pack doesn't have (birds, reptiles, hoofed animals).

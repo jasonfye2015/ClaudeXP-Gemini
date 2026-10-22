@@ -12,6 +12,7 @@ and the same memories as on the messengers. Now and then they wander, and when t
 someone nearby says something of their own."""
 import math
 import random
+import re
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -22,6 +23,10 @@ from PySide6.QtCore import QObject, QTimer, Signal
 from opensim_world import BRIDGE_PORT, REGION
 
 PRESENT = 5                       # residents in each region
+# what the user says that's an invitation (checked on lines addressed to a resident, or to whoever's nearest)
+JOIN = re.compile(r"\b(join|sit|come|lie|lay|cuddle|snuggle|hop|climb|get)\b.*\b(me|with|here|over)\b|\bjoin me\b", re.I)
+DANCE = re.compile(r"\bdanc(e|ing)\b", re.I)
+STOP = re.compile(r"\b(stand up|get up|stop dancing|stop|let'?s go|that'?s enough|enough)\b", re.I)
 HISTORY = 12                      # lines of local chat each reply sees
 IDLE_SECONDS = 150                # quiet this long and someone starts a conversation
 WANDER_SECONDS = 40
@@ -31,6 +36,7 @@ class _Signals(QObject):
     """The web server runs on its own thread: everything it starts happens on the Qt thread through these."""
     heard = Signal(str, str, float, float, float, str)
     arrived = Signal(str)
+    stood = Signal()
     status = Signal(str)
 
 
@@ -54,9 +60,13 @@ class Bridge:
         self.user_region = None
         self.user_at = (128.0, 128.0, 22.0)
         self.busy = set()
+        self.seat = None                       # (object key, its name) the user's sitting on, or None
+        self.joined = {}                       # first name -> the seat they took with the user
+        self.dancing = set()
         self.signals = _Signals()
         self.signals.heard.connect(self._heard)
         self.signals.arrived.connect(self._populate)
+        self.signals.stood.connect(self._user_stood)
         self.signals.status.connect(on_status or (lambda text: None))
         self.on_status = self.signals.status.emit
         self.server = None
@@ -190,6 +200,10 @@ class Bridge:
             if region != self.user_region:
                 self.user_region = region
                 self.signals.arrived.emit(region)
+            seat = (q["seat"], q.get("seatname", "")) if q.get("seat") else None
+            if self.seat and not seat:
+                self.signals.stood.emit()
+            self.seat = seat
         with self.lock:
             box = self.outbox.get(region, [])
             lines, self.outbox[region] = box[:20], box[20:]
@@ -220,6 +234,46 @@ class Bridge:
                        f" in {region}.")
         QTimer.singleShot(9000, lambda: self._greet(chosen[0][1]))
 
+    # ---- sitting and dancing together ----
+    @staticmethod
+    def seat_words(name):
+        """What the user's sitting on, in words: "missionary1-m" -> "missionary", "Sofa Snuggle (FP)" -> "sofa snuggle"."""
+        words = re.sub(r"\(.*?\)|full ?perm\w*|poseball|pose ?ball|[-_]?[mf]\b|\d+|[-_#]", " ", name, flags=re.I)
+        return re.sub(r"\s+", " ", words).strip().lower() or "a seat"
+
+    def _act(self, first, text):
+        """The user's line to a resident might be an invitation: do it, and return the situation for their reply."""
+        region = self.where.get(first)
+        if region != self.user_region:
+            return None
+        if STOP.search(text) and (first in self.joined or first in self.dancing):
+            self._send(region, f"stand|{first}" if first in self.joined else f"still|{first}")
+            self.joined.pop(first, None)
+            self.dancing.discard(first)
+            return f"{self.user_first} said: \"{text}\" - and you've stopped and stood up. Reply in character."
+        if JOIN.search(text) and self.seat and first not in self.joined:
+            key, name = self.seat
+            self.joined[first] = key
+            self._send(region, f"sit|{first}|{key}")
+            return (f"{self.user_first} is sitting on {self.seat_words(name)!r} (a poseball set for two, or a seat) and "
+                    f"said: \"{text}\". You accepted and joined them - the animation for it is playing on both of you "
+                    "now. Reply in character, as yourself, to being there with them.")
+        if DANCE.search(text):
+            from opensim_world.oar import DANCES
+            self._send(region, f"dance|{first}|{random.choice(DANCES)}")
+            self.dancing.add(first)
+            return (f"{self.user_first} said: \"{text}\" - and you're dancing with them now. Reply in character, "
+                    "as yourself, while you dance.")
+        return None
+
+    def _user_stood(self):
+        """The user got up: whoever joined them gets up too."""
+        for first in list(self.joined):
+            region = self.where.get(first)
+            if region:
+                self._send(region, f"stand|{first}")
+        self.joined.clear()
+
     # ---- conversation ----
     def _greet(self, first):
         region = self.where.get(first)
@@ -242,7 +296,7 @@ class Bridge:
             responders = [random.choice(near)]
         for first in responders[:2]:
             self.last_partner = first
-            self._ask(first, None)
+            self._ask(first, self._act(first, text))
         try:
             from claudexp.life import get
             sim = get()

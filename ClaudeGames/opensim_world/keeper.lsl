@@ -1,8 +1,11 @@
 // The Hollow Keeper: a small stone in the Furry Hollow that brings the residents to life.
 // There's one in each region. It asks the bridge (the computer that launched the world) what to do every few seconds, creates and moves the
-// residents' NPCs, says their lines, and passes on what it hears in local chat.
+// residents' NPCs, says their lines, and passes on what it hears in local chat. When the owner sits on something
+// (a poseball set, a sofa) it says what; a resident invited to join takes the free seat in it, and residents can
+// dance to the animations in its contents.
 string BRIDGE = "http://127.0.0.1:9180";
 list npcs;                       // [first name, key, first name, key, ...]
+list dancing;                    // [first name, animation, ...]: who's dancing, to what
 
 key npc_named(string first) {
     integer i = llListFindList(npcs, [first]);
@@ -23,6 +26,13 @@ string appearance() {
 post(string path, string body) {
     llHTTPRequest(BRIDGE + path, [HTTP_METHOD, "POST", HTTP_MIMETYPE, "text/plain;charset=utf-8",
                                   HTTP_BODY_MAXLENGTH, 16384], body);
+}
+
+stop_dance(string first, key k) {
+    integer i = llListFindList(dancing, [first]);
+    if (i < 0) return;
+    if (k != NULL_KEY) osNpcStopAnimation(k, llList2String(dancing, i + 1));
+    dancing = llDeleteSubList(dancing, i, i + 1);
 }
 
 do_line(string line) {
@@ -58,6 +68,30 @@ do_line(string line) {
             vector to = <(float)llList2String(f, 2), (float)llList2String(f, 3), me.z>;
             osNpcSetRot(k, llRotBetween(<1, 0, 0>, llVecNorm(to - me)));
         }
+    } else if (cmd == "sit") {                      // sit|First|object: take a free seat in it (the other poseball)
+        key k = npc_named(llList2String(f, 1));
+        if (k != NULL_KEY) {
+            stop_dance(llList2String(f, 1), k);
+            osNpcSit(k, (key)llList2String(f, 2), OS_NPC_SIT_NOW);
+        }
+    } else if (cmd == "stand") {                    // stand|First
+        key k = npc_named(llList2String(f, 1));
+        if (k != NULL_KEY) {
+            stop_dance(llList2String(f, 1), k);
+            osNpcStand(k);
+        }
+    } else if (cmd == "dance") {                    // dance|First|animation (one in this object's contents)
+        string first = llList2String(f, 1);
+        string anim = llList2String(f, 2);
+        key k = npc_named(first);
+        if (k != NULL_KEY && llGetInventoryType(anim) == INVENTORY_ANIMATION) {
+            stop_dance(first, k);
+            osNpcPlayAnimation(k, anim);
+            dancing += [first, anim];
+        }
+    } else if (cmd == "still") {                    // still|First: stop dancing
+        string first = llList2String(f, 1);
+        stop_dance(first, npc_named(first));
     } else if (cmd == "remove") {                   // remove|First
         string first = llList2String(f, 1);
         key k = npc_named(first);
@@ -88,12 +122,17 @@ default {
         key owner = llGetOwner();
         string here = "0";
         vector at = ZERO_VECTOR;
+        string seat = "";
         if (llGetAgentSize(owner) != ZERO_VECTOR) {
             here = "1";
-            at = llList2Vector(llGetObjectDetails(owner, [OBJECT_POS]), 0);
+            list d = llGetObjectDetails(owner, [OBJECT_POS, OBJECT_ROOT]);
+            at = llList2Vector(d, 0);
+            key root = llList2Key(d, 1);            // what they're sitting on (themselves when standing)
+            if (root != owner && root != NULL_KEY)
+                seat = "&seat=" + (string)root + "&seatname=" + llEscapeURL(llKey2Name(root));
         }
-        llHTTPRequest(BRIDGE + "/poll?region=" + llEscapeURL(llGetRegionName()) + "&here=" + here + "&x=" + (string)at.x + "&y=" + (string)at.y + "&z=" +
-                      (string)at.z, [HTTP_METHOD, "GET", HTTP_BODY_MAXLENGTH, 16384], "");
+        llHTTPRequest(BRIDGE + "/poll?region=" + llEscapeURL(llGetRegionName()) + "&here=" + here + "&x=" + (string)at.x +
+                      "&y=" + (string)at.y + "&z=" + (string)at.z + seat, [HTTP_METHOD, "GET", HTTP_BODY_MAXLENGTH, 16384], "");
     }
 
     http_response(key request, integer status, list meta, string body) {

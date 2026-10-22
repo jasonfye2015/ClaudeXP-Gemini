@@ -21,11 +21,17 @@ import time
 import uuid
 from pathlib import Path
 
-# the four regions, a 2x2 block you can walk across: (name, region UUID, map position, UDP port)
+# the regions: (name, region UUID, map position, UDP port)
 REGIONS = [("Furry Hollow", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e01", (1000, 1000), 9000),
            ("Whisker Falls", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e02", (1001, 1000), 9001),
            ("Tailwind Beach", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e03", (1000, 1001), 9002),
-           ("Lantern Market", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e04", (1001, 1001), 9003)]
+           ("Lantern Market", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e04", (1001, 1001), 9003),
+           # south of the block, walkable from it
+           ("Love Island", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e05", (1000, 1002), 9004),
+           ("Fantasy Island", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e06", (1001, 1002), 9005),
+           # the adults' pair, off on their own to the east: reached by teleport, not by walking
+           ("Whitewood", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e07", (1004, 1000), 9006),
+           ("Castle LoveGlo", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e08", (1005, 1000), 9007)]
 REGION = REGIONS[0][0]                       # where you arrive
 GRID_PORT = 9000
 BRIDGE_PORT = 9180
@@ -262,9 +268,12 @@ class Server:
             time.sleep(1)
         return self.ready()
 
-    def stop(self, seconds=30):
+    def stop(self, seconds=300):
+        """Save every region, then shut down cleanly. A big region takes a while to write out, and killing the
+        server before it has would lose what was built or loaded since the last save, so it gets five minutes."""
         if not self.running():
             return
+        self.command("backup")
         self.command("shutdown")
         try:
             self.proc.wait(seconds)
