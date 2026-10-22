@@ -246,6 +246,18 @@ def patch_outlook(m):
             pass
         return win
     m.open_outlook = open_outlook
+    original_refresh = m.OutlookExpress.refresh
+
+    def refresh(self):                      # the folder tree is rebuilt on every refresh, root and all
+        original_refresh(self)
+        try:
+            for i in range(self.folders.topLevelItemCount()):
+                item = self.folders.topLevelItem(i)
+                if item.text(0) == "Outlook Express":
+                    item.setText(0, "Windows Live Mail")
+        except Exception:
+            pass
+    m.OutlookExpress.refresh = refresh
     original_message = getattr(m.OutlookExpress, "_message", None)
     if original_message is not None:
         def _message(self, title, text, *args, **kwargs):
@@ -253,3 +265,87 @@ def patch_outlook(m):
                                     text.replace("Microsoft Outlook Express 6\nVersion 6.00.2600.0000",
                                                  "Windows Live Mail 2011\nVersion 15.4.3555.0308"), *args, **kwargs)
         m.OutlookExpress._message = _message
+
+
+# ---- the inbox extras in 2011: Windows Live Hotmail's welcome, warnings and newsletters ------------------------------
+HOTMAIL_2011 = (("MSN Hotmail", "Windows Live Hotmail"), ("Hotmail Staff", "Windows Live Hotmail Team"),
+                ("MSN Messenger", "Windows Live Messenger"))
+
+WELCOME_2011 = """Welcome to Windows Live Hotmail!
+
+Your new e-mail address is: {addr}
+
+With Hotmail you can:
+  * Read your e-mail from any computer, or from your phone
+  * Keep everyone you know in your contacts, and see when they are online in Messenger
+  * Let the junk e-mail filter and SmartScreen keep the spam out
+  * Clean up your inbox with Sweep, and keep it tidy with instant actions
+  * Store and share your photos and documents on SkyDrive - 25 GB free
+
+Remember: sign in at least once every 270 days to keep your account active.
+
+Thank you for choosing Windows Live Hotmail.
+
+The Windows Live Hotmail Team
+http://www.hotmail.com"""
+
+INACTIVE_2011 = """Dear Windows Live Hotmail Member,
+
+Our records show that you have not signed in to your Hotmail account ({addr}) for some time.
+
+To keep your account active, you must sign in at least once every 270 days. Accounts that remain inactive
+may be closed, and the messages stored in them deleted.
+
+To sign in, go to http://www.hotmail.com
+
+Sincerely,
+Windows Live Hotmail Member Services"""
+
+NEWSLETTERS_2011 = [
+    ("Windows Live Newsletter: Messenger 2011 is here",
+     "This month on Windows Live:\n\n  * Windows Live Messenger 2011 brings your Facebook news and HD video calls. "
+     "Get it free at http://explore.live.com/messenger\n  * Hotmail now has Sweep: clear out a sender's mail in one "
+     "click\n  * SkyDrive gives you 25 GB of free online storage for photos and documents\n\nTip of the month: type a "
+     "name in the search box above your inbox to find every message from that person.\n\nYou are receiving this "
+     "newsletter because you are a Windows Live Hotmail member."),
+    ("Windows Live Newsletter: Hotmail on your phone",
+     "Take your inbox with you:\n\n  * Set up Hotmail on Windows Phone, iPhone or Android with Exchange ActiveSync and "
+     "your mail, calendar and contacts stay in sync\n  * Windows Phone 7.5 (Mango) arrives this fall\n  * Office Web "
+     "Apps open Word and Excel attachments right in Hotmail\n\nTip of the month: instant actions appear when you "
+     "point at a message - flag it, delete it or sweep it without opening it."),
+    ("Windows Live Newsletter: Keep your account safe",
+     "Hotmail blocks billions of junk messages a day, and you can help:\n\n  * Never reply to junk e-mail - it tells "
+     "the sender your address works\n  * Add a trusted PC and a mobile number so you can always get back in\n  * Watch "
+     "for phishing: Hotmail will never ask for your password by e-mail\n\nAlso this month: Bing Maps, Xbox LIVE on "
+     "Windows Phone and the new MSN homepage."),
+    ("Windows Live Newsletter: What's new on Windows Live",
+     "  * Photo Gallery and Movie Maker 2011 - fix your photos and make a movie in minutes\n  * Windows Live Mail 2011 "
+     "reads your Hotmail, Gmail and Yahoo! accounts in one place\n  * Play Bing games with your Messenger friends\n\n"
+     "Tip of the month: Hotmail works from any browser - your mail goes where you go."),
+]
+
+
+def patch_mail_extras(m):
+    """claudexp.life.mail_extras in 2011: the Windows Live Hotmail Team writes, and nothing says MSN Hotmail."""
+    m.STAFF = ("Windows Live Hotmail Team", "staff@hotmail.com")
+    m.MEMBER = ("Windows Live Hotmail", "member_services@hotmail.com")
+    m.WELCOME = WELCOME_2011
+    m.INACTIVE = INACTIVE_2011
+    m.NEWSLETTERS = NEWSLETTERS_2011
+    original_tick = m.tick
+
+    def tick(sim):
+        box = sim.mailbox
+        original_add = box.add
+
+        def add(sender, subject, body, *args, **kwargs):
+            for old, new in HOTMAIL_2011:
+                sender, subject, body = sender.replace(old, new), subject.replace(old, new), body.replace(old, new)
+            return original_add(sender, subject, body, *args, **kwargs)
+        box.add = add
+        try:
+            return original_tick(sim)
+        finally:
+            if "add" in vars(box):
+                del box.add
+    m.tick = tick

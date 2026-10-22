@@ -1,6 +1,7 @@
-"""Desktop gadgets, Windows 7 style: the clock, the calendar, the CPU meter, the weather and a slide show, sitting
-on the desktop under the windows. Drag them anywhere; the close button shows when you point at one. The Desktop
-Gadget Gallery adds them, and they come back where you left them (data/gadgets.json)."""
+"""Desktop gadgets, Windows 7 style: the clock, the calendar, the CPU meter, the weather, a slide show, Feed
+Headlines, your e-mail inbox and the TV Guide, sitting on the desktop under the windows. Drag them anywhere; the
+close button shows when you point at one. The Desktop Gadget Gallery adds them, and they come back where you left
+them (data/gadgets.json)."""
 import datetime
 import json
 import math
@@ -370,8 +371,383 @@ class FeedGadget(Gadget):
                 break
 
 
+class MailGadget(Gadget):
+    """E-mail: your inbox at a glance - the unread count and the latest messages. Click one to read it in
+    Windows Live Mail."""
+    SIZE = (220, 160)
+    NAME = "E-mail"
+    TICK = 15000
+    HEAD = 26
+    ROW = 31
+
+    def __init__(self, gadgets, data):
+        super().__init__(gadgets, data)
+        self.items = []
+        self.unread = 0
+        self._hits = []
+        self._listening = False
+        self.setCursor(Qt.PointingHandCursor)
+        self._refresh()
+
+    def _sim(self):
+        try:
+            from claudexp.life import get
+            return get()
+        except Exception:
+            return None
+
+    def _refresh(self):
+        sim = self._sim()
+        if sim is None:
+            self.items, self.unread = [], 0
+            return
+        if not self._listening:
+            try:
+                sim.mail_arrived.connect(self._arrived)
+                self._listening = True
+            except Exception:
+                pass
+        try:
+            msgs = [m for m in sim.mailbox.messages() if m.get("folder", "inbox") == "inbox"]
+        except Exception:
+            msgs = []
+        msgs.sort(key=lambda m: (m.get("ts", 0), m.get("id", 0)), reverse=True)
+        self.unread = sum(1 for m in msgs if not m.get("read"))
+        self.items = msgs[:4]
+
+    def _arrived(self):
+        if isValid(self):
+            self._refresh()
+            self.update()
+
+    def _open(self, message=None):
+        desktop = self.gadgets.desktop
+        try:
+            from claudexp.programs import outlook
+            win = outlook.open_outlook(desktop)
+        except Exception:
+            return
+        if message is None or win is None:
+            return
+
+        def select():
+            body = getattr(win, "content", None)
+            lst = getattr(body, "list", None)
+            if body is None or lst is None or not isValid(lst):
+                return
+            for i in range(lst.topLevelItemCount()):
+                item = lst.topLevelItem(i)
+                m = item.data(0, Qt.UserRole)
+                if isinstance(m, dict) and m.get("kind") == "in" and m.get("id") == message.get("id"):
+                    lst.setCurrentItem(item)
+                    return
+        QTimer.singleShot(0, select)
+
+    def mousePressEvent(self, event):
+        pos = event.position().toPoint()
+        if event.button() == Qt.LeftButton and not self._x_rect().contains(pos) and self.drag is None:
+            for rect, message in self._hits:
+                if rect.contains(pos):
+                    self._open(message)
+                    return
+        super().mousePressEvent(event)
+
+    def draw(self, p):
+        self.data["_ticks"] = self.data.get("_ticks", 0) + 1
+        if self.data["_ticks"] % 2 == 0:
+            self._refresh()
+        r = QRectF(self.rect()).adjusted(2, 2, -2, -2)
+        self.glass(p, r)
+        head = QRectF(r.x() + 1, r.y() + 1, r.width() - 2, self.HEAD)
+        g = QLinearGradient(head.topLeft(), head.bottomLeft())
+        g.setColorAt(0, QColor("#4C8ED9"))
+        g.setColorAt(1, QColor("#2E6DB8"))
+        p.setPen(Qt.NoPen)
+        p.setBrush(g)
+        p.drawRoundedRect(head, 7, 7)
+        p.drawRect(QRectF(head.x(), head.y() + 12, head.width(), head.height() - 12))
+        # the envelope
+        ex, ey = head.x() + 10, head.y() + 7
+        p.setPen(QPen(QColor("#24497A"), 1))
+        p.setBrush(QColor("#FFF6D0"))
+        p.drawRect(QRectF(ex, ey, 16, 11))
+        p.setBrush(Qt.NoBrush)
+        p.drawLine(QPointF(ex, ey), QPointF(ex + 8, ey + 6.5))
+        p.drawLine(QPointF(ex + 16, ey), QPointF(ex + 8, ey + 6.5))
+        f = QFont("Segoe UI")
+        f.setPixelSize(12)
+        f.setBold(True)
+        p.setFont(f)
+        p.setPen(QColor("white"))
+        p.drawText(QRectF(head.x() + 32, head.y(), 100, head.height()), Qt.AlignLeft | Qt.AlignVCenter, "Inbox")
+        f.setBold(False)
+        f.setPixelSize(11)
+        p.setFont(f)
+        count = f"{self.unread} unread" if self.unread else "No new mail"
+        p.drawText(QRectF(head.x(), head.y(), head.width() - 22, head.height()), Qt.AlignRight | Qt.AlignVCenter,
+                   count)
+        self._hits = [(QRectF(r.x(), r.y(), r.width(), self.HEAD + 2), None)]
+        y = r.y() + self.HEAD + 4
+        if not self.items:
+            p.setPen(QColor("#6D6D6D"))
+            p.drawText(QRectF(r.x() + 10, y + 6, r.width() - 20, 60), Qt.TextWordWrap,
+                       "Your inbox is empty. Mail from your friends shows up here - click to open Windows Live Mail.")
+            self._hits.append((QRectF(r.x(), y, r.width(), r.height() - self.HEAD), None))
+            return
+        fm_w = int(r.width() - 24)
+        for m in self.items:
+            row = QRectF(r.x() + 4, y, r.width() - 8, self.ROW)
+            self._hits.append((row, m))
+            unread = not m.get("read")
+            if unread:
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor("#FFF4C2"))
+                p.drawRoundedRect(row.adjusted(2, 0, -2, -2), 3, 3)
+            f.setBold(unread)
+            f.setPixelSize(11)
+            p.setFont(f)
+            fm = p.fontMetrics()
+            p.setPen(QColor("#1E1E1E"))
+            sender = fm.elidedText(str(m.get("from", "")), Qt.ElideRight, fm_w - 46)
+            p.drawText(QRectF(row.x() + 8, row.y() + 1, fm_w - 46, 15), Qt.AlignLeft | Qt.AlignVCenter, sender)
+            f.setBold(False)
+            f.setPixelSize(9)
+            p.setFont(f)
+            p.setPen(QColor("#6D6D6D"))
+            p.drawText(QRectF(row.right() - 50, row.y() + 2, 42, 13), Qt.AlignRight | Qt.AlignVCenter,
+                       _mail_when(m))
+            f.setPixelSize(10)
+            p.setFont(f)
+            fm = p.fontMetrics()
+            p.setPen(QColor("#1E1E1E" if unread else "#55606E"))
+            subject = fm.elidedText(str(m.get("subject", "")) or "(no subject)", Qt.ElideRight, fm_w)
+            p.drawText(QRectF(row.x() + 8, row.y() + 15, fm_w, 14), Qt.AlignLeft | Qt.AlignVCenter, subject)
+            y += self.ROW
+            if y + self.ROW > r.bottom():
+                break
+
+
+def _mail_when(m):
+    """Mail from today shows its time, older mail its day (like the Received column)."""
+    try:
+        when = datetime.datetime.fromtimestamp(int(m.get("ts", 0)))
+        now = datetime.datetime.now()
+        when = when.replace(year=clock.YEAR)
+        if (when.month, when.day) == (now.month, now.day):
+            return clock.time_text(when)
+        return f"{when.month}/{when.day}"
+    except (ValueError, OSError, OverflowError):
+        return ""
+
+
+def _program_title(slot):
+    try:
+        from claudetv.tuner import describe
+        return describe(slot)[0]
+    except Exception:
+        try:
+            return slot.media.label()
+        except Exception:
+            return "Program"
+
+
+def _tv_clock(dt):
+    suffix = "am" if dt.hour < 12 else "pm"
+    return f"{dt.hour % 12 or 12}:{dt.minute:02d}{suffix}"
+
+
+class TVGadget(Gadget):
+    """TV Guide: what's on each ClaudeTV channel right now and what's next. Click a channel to watch it, or the
+    heading for the full TV Guide. The wheel (or the arrows) scrolls through the channels."""
+    SIZE = (220, 170)
+    NAME = "TV Guide"
+    TICK = 15000
+    HEAD = 26
+    ROW = 34
+
+    def __init__(self, gadgets, data):
+        super().__init__(gadgets, data)
+        self.channels = None
+        self.rows = []
+        self.offset = 0
+        self._hits = []
+        self._asked = False
+        self.setCursor(Qt.PointingHandCursor)
+        self._ask()
+
+    def _ask(self):
+        if self._asked:
+            return
+        self._asked = True
+        try:
+            from claudetv import lineup
+            lineup.get(self._lineup)
+        except Exception:
+            self.channels = []
+
+    def _lineup(self, channels):
+        if not isValid(self):
+            return
+        self.channels = [ch for ch in channels if not getattr(ch, "dead", False)]
+        self._refresh()
+        self.update()
+
+    def _shown(self):
+        return max(1, int((self.height() - self.HEAD - 10) // self.ROW))
+
+    def _refresh(self):
+        if self.channels is None:
+            return
+        try:
+            from claudetv import schedule
+            t = (clock.now() - schedule.EPOCH).total_seconds()
+        except Exception:
+            self.rows = []
+            return
+        rows = []
+        for ch in self.channels:
+            try:
+                progs = ch.programs(t, t + 6 * 3600)
+            except Exception:
+                progs = []
+            cur = nxt = None
+            if progs and progs[0].start <= t:
+                cur, nxt = progs[0], (progs[1] if len(progs) > 1 else None)
+            elif progs:
+                nxt = progs[0]
+            rows.append((ch, cur, nxt, t))
+        self.rows = rows
+        self.offset = max(0, min(self.offset, len(rows) - self._shown()))
+
+    def scroll(self, way):
+        self.offset = max(0, min(self.offset + way, len(self.rows) - self._shown()))
+        self.update()
+
+    def wheelEvent(self, event):
+        if len(self.rows) > self._shown():
+            self.scroll(-1 if event.angleDelta().y() > 0 else 1)
+            event.accept()
+
+    def _open(self, target):
+        desktop = self.gadgets.desktop
+        try:
+            from claudetv import guide, tuner
+            if target is None:
+                guide.open_guide(desktop)
+            else:
+                tuner.open_tv(desktop)
+                body = tuner.current()
+                if body is not None:
+                    body.tune(target)
+        except Exception:
+            pass
+
+    def mousePressEvent(self, event):
+        pos = event.position().toPoint()
+        if event.button() == Qt.LeftButton and not self._x_rect().contains(pos) and self.drag is None:
+            for rect, target in self._hits:
+                if rect.contains(pos):
+                    if isinstance(target, int):
+                        self.scroll(target)
+                    else:
+                        self._open(target)
+                    return
+        super().mousePressEvent(event)
+
+    def draw(self, p):
+        self._refresh()
+        r = QRectF(self.rect()).adjusted(2, 2, -2, -2)
+        self.glass(p, r, dark=True)
+        f = QFont("Segoe UI")
+        f.setPixelSize(12)
+        f.setBold(True)
+        p.setFont(f)
+        p.setPen(QColor("#FFD35C"))
+        p.drawText(QRectF(r.x() + 10, r.y() + 5, 120, 18), Qt.AlignLeft | Qt.AlignVCenter, "TV Guide")
+        f.setBold(False)
+        f.setPixelSize(10)
+        p.setFont(f)
+        p.setPen(QColor("#CCCCCC"))
+        self._hits = []
+        shown = self._shown()
+        if len(self.rows) > shown:
+            arrows = (("▲", -1, self.offset > 0), ("▼", 1, self.offset + shown < len(self.rows)))
+            for i, (arrow, way, ok) in enumerate(arrows):
+                box = QRectF(r.right() - 60 + i * 20, r.y() + 5, 18, 18)
+                p.setPen(QColor("#FFD35C" if ok else "#777777"))
+                p.drawText(box, Qt.AlignCenter, arrow)
+                self._hits.append((box, way))
+        else:
+            p.drawText(QRectF(r.x() + 10, r.y() + 5, r.width() - 32, 18), Qt.AlignRight | Qt.AlignVCenter,
+                       clock.time_text())
+        self._hits.append((QRectF(r.x(), r.y(), r.width(), self.HEAD), None))
+        y = r.y() + self.HEAD + 2
+        f.setPixelSize(11)
+        p.setFont(f)
+        if self.channels is None:
+            p.setPen(QColor("#CCCCCC"))
+            p.drawText(QRectF(r.x() + 10, y + 6, r.width() - 20, 40), Qt.TextWordWrap, "Reading the channel lineup…")
+            return
+        if not self.rows:
+            p.setPen(QColor("#CCCCCC"))
+            p.drawText(QRectF(r.x() + 10, y + 6, r.width() - 20, 60), Qt.TextWordWrap,
+                       "No channels are on the air. Open ClaudeTV to set up the video archive.")
+            self._hits.append((QRectF(r.x(), y, r.width(), r.height() - self.HEAD), None))
+            return
+        for ch, cur, nxt, t in self.rows[self.offset:self.offset + shown]:
+            row = QRectF(r.x() + 4, y, r.width() - 8, self.ROW)
+            self._hits.append((row, ch))
+            p.setPen(QPen(QColor(255, 255, 255, 40), 1))
+            p.drawLine(QPointF(row.x() + 4, row.y()), QPointF(row.right() - 4, row.y()))
+            f.setBold(True)
+            f.setPixelSize(11)
+            p.setFont(f)
+            p.setPen(QColor("#FFD35C"))
+            label = p.fontMetrics().elidedText(ch.label(), Qt.ElideRight, 54)
+            p.drawText(QRectF(row.x() + 6, row.y() + 3, 54, 15), Qt.AlignLeft | Qt.AlignVCenter, label)
+            f.setBold(False)
+            p.setFont(f)
+            fm = p.fontMetrics()
+            w = int(row.width() - 70)
+            if cur is not None:
+                p.setPen(QColor("#FFFFFF"))
+                p.drawText(QRectF(row.x() + 64, row.y() + 3, w, 15), Qt.AlignLeft | Qt.AlignVCenter,
+                           fm.elidedText(_program_title(cur), Qt.ElideRight, w))
+                bar = QRectF(row.x() + 64, row.y() + 19, w, 3)
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor(255, 255, 255, 50))
+                p.drawRoundedRect(bar, 1.5, 1.5)
+                done = max(0.0, min(1.0, (t - cur.start) / max(1, cur.end - cur.start)))
+                p.setBrush(QColor("#7DFF9A"))
+                p.drawRoundedRect(QRectF(bar.x(), bar.y(), bar.width() * done, bar.height()), 1.5, 1.5)
+                f.setPixelSize(9)
+                p.setFont(f)
+                fm = p.fontMetrics()
+                until = f"until {_tv_clock(cur.until())}"
+                nxt_text = f"   Next: {_program_title(nxt)}" if nxt is not None else ""
+                p.setPen(QColor("#BBBBBB"))
+                p.drawText(QRectF(row.x() + 64, row.y() + 22, w, 12), Qt.AlignLeft | Qt.AlignVCenter,
+                           fm.elidedText(until + nxt_text, Qt.ElideRight, w))
+            elif nxt is not None:
+                p.setPen(QColor("#FFFFFF"))
+                p.drawText(QRectF(row.x() + 64, row.y() + 3, w, 15), Qt.AlignLeft | Qt.AlignVCenter,
+                           fm.elidedText(f"Up next: {_program_title(nxt)}", Qt.ElideRight, w))
+                f.setPixelSize(9)
+                p.setFont(f)
+                p.setPen(QColor("#FFB27A"))
+                p.drawText(QRectF(row.x() + 64, row.y() + 19, w, 13), Qt.AlignLeft | Qt.AlignVCenter,
+                           f"Commercial break – starts {_tv_clock(nxt.when())}")
+            else:
+                p.setPen(QColor("#888888"))
+                p.drawText(QRectF(row.x() + 64, row.y() + 3, w, 15), Qt.AlignLeft | Qt.AlignVCenter, "Off the air")
+            f.setPixelSize(11)
+            p.setFont(f)
+            y += self.ROW
+
+
 KINDS = {"Clock": ClockGadget, "Calendar": CalendarGadget, "CPU Meter": CpuGadget, "Weather": WeatherGadget,
-         "Slide Show": SlideShowGadget, "Feed Headlines": FeedGadget}
+         "Slide Show": SlideShowGadget, "Feed Headlines": FeedGadget, "E-mail": MailGadget,
+         "TV Guide": TVGadget}
 
 
 class Gadgets:
@@ -405,14 +781,26 @@ class Gadgets:
         self.gadgets = [g for g in self.gadgets if isValid(g)]
         return self.gadgets
 
+    def spot(self, size):
+        """The first free place for a gadget of this size: down the right-hand column, then the next column left."""
+        area = self.desktop.work_area()
+        w, h = size
+        x = area.width() - w - 20
+        while x >= 0:
+            column = sorted((g for g in self.live() if g.x() < x + w and g.x() + g.width() > x), key=lambda g: g.y())
+            y = 20
+            for g in column:
+                if y + h <= g.y():
+                    break
+                y = max(y, g.y() + g.height() + 12)
+            if y + h <= area.height() - 8:
+                return x, y
+            x -= w + 20
+        return 20, 20
+
     def add(self, kind):
         cls = KINDS[kind]
-        area = self.desktop.work_area()
-        x = area.width() - cls.SIZE[0] - 20
-        y = 20 + sum(g.height() + 12 for g in self.live())
-        if y + cls.SIZE[1] > area.height():
-            y = 20
-            x -= cls.SIZE[0] + 20
+        x, y = self.spot(cls.SIZE)
         g = cls(self, {"kind": kind, "x": x, "y": y})
         self.gadgets.append(g)
         g.show()
@@ -485,14 +873,15 @@ def gadget_pixmap(kind, size=64):
     p = QPainter(pm)
     p.setRenderHint(QPainter.Antialiasing)
     colours = {"Clock": "#E6ECF4", "Calendar": "#C0392B", "CPU Meter": "#2E2E2E", "Weather": "#58A6E8",
-               "Slide Show": "#F5F5F5", "Feed Headlines": "#3A3A3A"}
+               "Slide Show": "#F5F5F5", "Feed Headlines": "#3A3A3A", "E-mail": "#3B78C9", "TV Guide": "#1B2A41"}
     p.setPen(QPen(QColor(0, 0, 0, 90), 1))
     p.setBrush(QColor(colours.get(kind, "#CCCCCC")))
     p.drawRoundedRect(QRectF(4, 8, size - 8, size - 16), 8, 8)
     f = QFont("Segoe UI")
     f.setPixelSize(11)
     p.setFont(f)
-    p.setPen(QColor("white" if kind in ("Calendar", "CPU Meter", "Weather", "Feed Headlines") else "#1E1E1E"))
+    white = ("Calendar", "CPU Meter", "Weather", "Feed Headlines", "E-mail", "TV Guide")
+    p.setPen(QColor("white" if kind in white else "#1E1E1E"))
     p.drawText(QRectF(4, 8, size - 8, size - 16), Qt.AlignCenter | Qt.TextWordWrap, kind)
     p.end()
     return pm

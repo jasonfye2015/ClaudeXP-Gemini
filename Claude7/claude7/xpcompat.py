@@ -130,6 +130,11 @@ def _patch_messengers_core(m):
     m.codes_for = codes_for
 
 
+def _patch_mail_extras(m):
+    from . import xpfaces
+    xpfaces.patch_mail_extras(m)
+
+
 def _patch_life(m):
     """The life simulation's cast: the regulars from this computer's Program Files."""
     from claudexp.programs.people import load_json
@@ -170,6 +175,7 @@ PATCHES = {
     "claudexp.programs.secondlife.residents": _patch_secondlife,
     "claudexp.programs.messengers.core": _patch_messengers_core,
     "claudexp.life": _patch_life,
+    "claudexp.life.mail_extras": _patch_mail_extras,
 }
 
 

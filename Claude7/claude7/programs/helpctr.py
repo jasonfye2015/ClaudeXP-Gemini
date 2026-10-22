@@ -35,6 +35,7 @@ TIPS = ["Drag a window to the top of the screen to maximize it, or to a side to 
         "Sticky Notes stay on the desktop between log-ons: right-click one to change its colour.",
         "The Snipping Tool captures any part of the screen: drag around it, then draw on it or save it.",
         "Gadgets (right-click the desktop > Gadgets) sit on the desktop under your windows.",
+        "The E-mail gadget keeps your Inbox on the desktop; the TV Guide gadget shows what is on ClaudeTV.",
         "In full screen (F11), Alt+Tab switches between windows with thumbnails.",
         "Lock the computer from the Start menu's Shut down arrow: your programs stay open.",
         "Press F8 during the self test for Advanced Boot Options, including Repair Your Computer.",
@@ -109,9 +110,12 @@ your own pictures and documents. The Furry Stuff programs read it from there.</p
 <p>Deleted files go to the Recycle Bin on the desktop until you empty it.</p>"""),
     "gadgets": ("Desktop gadgets", "programs", """
 <p>Gadgets are the little programs that sit on the desktop: a clock, a calendar, a CPU meter, the weather, a slide
-show. Right-click the desktop and choose <b>Gadgets</b>, or open <b>Desktop Gadget Gallery</b> from the Start menu,
-then double-click a gadget to add it. Drag gadgets anywhere; the close button appears when you point at one. They
-come back where you left them when you log on.</p>"""),
+show, Feed Headlines, your e-mail and the TV Guide. Right-click the desktop and choose <b>Gadgets</b>, or open
+<b>Desktop Gadget Gallery</b> from the Start menu, then double-click a gadget to add it. Drag gadgets anywhere; the
+close button appears when you point at one. They come back where you left them when you log on.</p>
+<p>The <b>E-mail</b> gadget shows your Inbox and how much of it is unread; click a message to read it in Windows Live
+Mail. The <b>TV Guide</b> gadget shows what is on every ClaudeTV channel right now and what is next: click a channel
+to watch it, the heading for the full guide, and use the wheel to scroll through the channels.</p>"""),
     "stickynotes": ("Sticky Notes", "programs", """
 <p>Sticky Notes (Start &gt; All Programs &gt; Accessories) puts a yellow note on the desktop. Click + at its top left
 for another note, x at the top right to delete it, drag the top strip to move it, and the corner to resize it.

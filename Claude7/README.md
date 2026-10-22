@@ -42,7 +42,7 @@ accessories (Sticky Notes, Snipping Tool, Desktop Gadget Gallery, Help and Suppo
 | `desktop.py`, `icons.py`, `taskbar.py`, `startmenu.py`, `wm.py` | The Aero desktop: Snap, Peek (rest on the Show desktop sliver), thumbnails, the orb, pinned programs, the Start menu with search |
 | `tray.py`, `network.py`, `volume.py`, `display.py` | Notifications, the always-on Wi-Fi, the Volume Mixer, Personalization data |
 | `controlpanel.py` | Control Panel (categories and icons), Personalization, User Accounts, Default Programs |
-| `programs/` | Sticky Notes, Snipping Tool, gadgets (clock, calendar, CPU meter, weather, slide show, feed headlines), Chess Titans, Help and Support |
+| `programs/` | Sticky Notes, Snipping Tool, gadgets (clock, calendar, CPU meter, weather, slide show, feed headlines, e-mail inbox, TV guide), Chess Titans, Help and Support |
 | `screensaver.py`, `alttab.py` | Bubbles, Ribbons and friends; Alt+Tab with thumbnails |
 | `explorer7.py` | Windows Explorer's 2011 face (navigation pane, breadcrumb, command bar, details pane) over XP's file manager |
 | `programs/browsers.py`, `web2011.py` | Internet Explorer 9 and Mozilla Firefox 7 on XP's web engine; MSN.com, Hotmail and the pages' years in 2011 |
