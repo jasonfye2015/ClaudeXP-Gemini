@@ -11,8 +11,9 @@ version can replace it later; nothing already there is overwritten unless --forc
     python draft_2025_eras.py --vary     give everyone with the generic 2025 paragraph one of their own
     python draft_2025_eras.py --apply drafts/main_2025_2026-10-22.json
         a drafts file: {name: {"era": {occupation, work_schedule, sleep_schedule, residence, location, timezone},
-        "persona": the whole 2025 persona, "profile": the messenger profile, "history": [...]}} - the era fields and
-        the persona go into eras/2025.json (every service's persona too), the history into resident.json
+        "persona": the whole 2025 persona, "summary": the one-line 2025 bio, "profile": the messenger profile,
+        "history": [...]}} - the era fields, the persona and the summary go into eras/2025.json (every service's
+        persona too), the history into resident.json
 """
 import copy
 import hashlib
@@ -138,6 +139,8 @@ def apply_drafts(path):
             for svc in (era.get("services") or {}).values():
                 if isinstance(svc, dict) and svc.get("persona"):
                     svc["persona"] = persona
+        if d.get("summary"):
+            era["summary"] = d["summary"]
         profile = d.get("profile")
         aim = (era.get("services") or {}).get("aim")
         if profile and isinstance(aim, dict):

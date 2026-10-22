@@ -138,7 +138,7 @@ def _record(r):
     rec = {
         "fur_name": core.get("fur_name") or r.name,
         "tier": core.get("tier", ""),
-        "summary": core.get("summary", ""),
+        "summary": era.get("summary") or core.get("summary", ""),
         "screen_names": directory.get("screen_names") or {"aim": "", "irc": "", "muck": "", "email": ""},
         "personal": {"real_name": ident.get("real_name", ""), "location": era.get("location", ""),
                      "residence": era.get("residence", ""), "sex": ident.get("gender", ""),
