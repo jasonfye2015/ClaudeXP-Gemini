@@ -165,6 +165,11 @@ anachronisms (Skype, Kik, Copilot) and all.
 4. **Shared code.** ClaudeCore, then ClaudeArchive, ClaudeGames and ClaudeApps, pulled out of ClaudeXP one piece at
    a time, with XP working at every step.
 5. **Claude7.**
-   - First milestone: the shell plus the whole archive, games and apps.
-   - Then the 2011 community: Windows Live Messenger, Skype, Facebook-era web, residents' 2011 lives.
+   - First milestone: the shell plus the whole archive, games and apps. Done 2026-10-22: BIOS, Starting Windows,
+     the logon screen, the Aero desktop, Explorer, IE9 and Firefox, Sticky Notes, Snipping Tool, gadgets, Control
+     Panel, Help, Setup, and every XP program through claude7/xpcompat.py (see Claude7/README.md).
+   - Then the 2011 community: Windows Live Messenger 2011, Skype 5, Yahoo! Messenger 11, Windows Live Hotmail and
+     Facebook on the Furry Web (claude7/sites/facebook.py) are in (2026-10-22). The residents' 2011 lives were
+     drafted from 2001 by ClaudeCore/tools/draft_2011_eras.py; the 34 main residents have hand-written 2011 lives
+     (drafts/main_2011_2026-10-22.json), the rest each carry their own 2011 paragraph (--vary). Chess Titans is in.
 6. **Claude11**, the same way. Then maybe mobile devices.
