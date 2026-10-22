@@ -88,7 +88,7 @@ def about_you(r, buddy=True):
         lines.append(f"Your fursona: {looks}.")
     who = "your buddy" if buddy else "the user"
     for h in r.history_lines():
-        lines.append(h.replace("the user", who))
+        lines.append(h.replace("The user", who[:1].upper() + who[1:]).replace("the user", who))
     block = "\n\nAbout you (keep consistent with this):\n- " + "\n- ".join(lines) if lines else ""
     return block + codes_block(r)
 

@@ -8,7 +8,9 @@ nothing from a later era can reach an earlier one.
   Residents/<Name>/
     resident.json        who they are in any era
     eras/2001.json       their life and accounts in October 2001
-    eras/2011.json       the same in October 2011 (drafted by ClaudeCore/tools/draft_2011_eras.py; 2025.json comes later)
+    eras/2011.json       the same in October 2011 (drafted by ClaudeCore/tools/draft_2011_eras.py)
+    eras/2025.json       the same in October 2025 (drafted by ClaudeCore/tools/draft_2025_eras.py: Skype gone,
+                         Telegram, Discord and Bluesky handles for the main residents)
     media/2001/          their buddy icon, photos (with captions.txt) and files they can share in that era
     sources/             the original files they were made from (for reference; never read by the eras)
 

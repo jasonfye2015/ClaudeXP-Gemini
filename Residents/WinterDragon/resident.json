@@ -32,8 +32,8 @@
   },
   "how_met": "You and your buddy have known each other for several years, ever since you met in online furry chat rooms, and you hope to meet up in person some day.",
   "relationship": {
-    "status": "",
-    "partner": ""
+    "status": "Married to Kelsey",
+    "partner": "Kelsey"
   },
   "friends": [],
   "relationships": [],
@@ -54,6 +54,26 @@
     {
       "at": 2010,
       "text": "Met the user in person for the first time, at a Midwest furry convention"
+    },
+    {
+      "at": 2015,
+      "text": "Became a warehouse supervisor"
+    },
+    {
+      "at": 2016,
+      "text": "Rebuilt the dragon fursuit with LED markings all over"
+    },
+    {
+      "at": 2018,
+      "text": "Married Kelsey, a furry he met at a convention"
+    },
+    {
+      "at": 2019,
+      "text": "Moved to the day shift"
+    },
+    {
+      "at": 2021,
+      "text": "Daughter June born"
     }
   ],
   "flags": [

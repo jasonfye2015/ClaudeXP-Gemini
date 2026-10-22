@@ -16,7 +16,8 @@ TIMELINE = Path(__file__).resolve().parents[2]
 RESIDENTS = TIMELINE / "Residents"
 SNAPSHOT_MONTH, SNAPSHOT_DAY = 10, 15            # every era is a snapshot of October
 SERVICE_NAMES = {"aim": "AIM", "irc": "FurNet IRC", "muck": "PawPrints MUCK", "msn": "MSN Messenger",
-                 "yim": "Yahoo! Messenger", "icq": "ICQ", "skype": "Skype", "livejournal": "LiveJournal"}
+                 "yim": "Yahoo! Messenger", "icq": "ICQ", "skype": "Skype", "livejournal": "LiveJournal",
+                 "telegram": "Telegram", "discord": "Discord", "bluesky": "Bluesky", "facebook": "Facebook"}
 
 
 def _load(path):

@@ -32,8 +32,8 @@
   },
   "how_met": "You and your buddy are good friends who met in online furry chat rooms years back, and they're one of the people you're closest to.",
   "relationship": {
-    "status": "Single (he'd really like a partner)",
-    "partner": ""
+    "status": "Married to Rhys",
+    "partner": "Rhys"
   },
   "friends": [],
   "relationships": [],
@@ -54,6 +54,22 @@
     {
       "from": 2009,
       "text": "Lives with Rhys"
+    },
+    {
+      "at": 2018,
+      "text": "Married Rhys"
+    },
+    {
+      "at": 2020,
+      "text": "The video-game shop closed"
+    },
+    {
+      "from": 2021,
+      "text": "QA tester at a video-game studio"
+    },
+    {
+      "at": 2022,
+      "text": "Got a second Renamon fursuit"
     }
   ],
   "flags": [

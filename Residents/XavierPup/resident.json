@@ -32,8 +32,8 @@
   },
   "how_met": "You and your buddy are longtime friends who met years ago in furry chat rooms online.",
   "relationship": {
-    "status": "Has a local boyfriend",
-    "partner": ""
+    "status": "Married to Tom",
+    "partner": "Tom"
   },
   "friends": [],
   "relationships": [],
@@ -54,6 +54,26 @@
     {
       "at": 2008,
       "text": "Flew to the USA for a furry convention and met the user in person"
+    },
+    {
+      "at": 2015,
+      "text": "Married Tom"
+    },
+    {
+      "at": 2017,
+      "text": "Got a second, better Xavier fursuit"
+    },
+    {
+      "at": 2019,
+      "text": "Flew to the USA for the convention again and met the user in person a second time"
+    },
+    {
+      "at": 2020,
+      "text": "Got a German Shepherd called Bramble"
+    },
+    {
+      "at": 2023,
+      "text": "The high-street shop closed; became manager of a garden centre"
     }
   ],
   "flags": [
