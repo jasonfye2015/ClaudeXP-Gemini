@@ -255,18 +255,31 @@ OWN_CHANNEL = ("REN", "ATHF", "MONGRELS", "COMEDY", "TOPGEAR", "WHEELER") + KFUR
 DEAD = (7, 12, 13)                     # no station: snow (the tuner's DEAD_STATIC picks each one's clip)
 
 
-def era_ads(ads, era):
-    """Each computer's own commercials: ClaudeXP the older ones and 2000-2001, Claude7 2002-2011, Claude11 2012
-    onward (every channel shows the same programs in every era - only the ads change)."""
-    def year(m):
-        return int(m.year) if str(m.year).isdigit() else None
-    if era < 2002:
-        mine = [m for m in ads if year(m) is None or year(m) <= 2001]
-    elif era < 2012:
-        mine = [m for m in ads if year(m) is not None and 2002 <= year(m) <= 2011]
-    else:
-        mine = [m for m in ads if year(m) is not None and year(m) >= 2012]
+ARCHIVE_YEAR = 2001                    # the local news archives are old broadcasts: their breaks stay old too
+
+
+def _ad_year(m):
+    return int(m.year) if str(m.year).isdigit() else None
+
+
+def era_ads(ads, era, at_least=40):
+    """Each computer's own commercials: ClaudeXP the undated ones and everything up to 2001, Claude7 2002-2011,
+    Claude11 2012 onward (every channel shows the same programs in every era - only the breaks age). When an era's
+    own years are thin, the window opens backwards a few years at a time rather than falling back to everything."""
+    if era <= ARCHIVE_YEAR:
+        mine = [m for m in ads if _ad_year(m) is None or _ad_year(m) <= ARCHIVE_YEAR]
+        return mine or ads
+    windows = ((2002, 2011), (1996, 2011)) if era < 2012 else ((2012, 9999), (2008, 9999), (2002, 9999))
+    for lo, hi in windows:
+        mine = [m for m in ads if _ad_year(m) is not None and lo <= _ad_year(m) <= hi]
+        if len(mine) >= at_least:
+            return mine
     return mine or ads
+
+
+def archive_ads(ads):
+    """The breaks for the news archives, whatever the era: the old commercials that match the old broadcasts."""
+    return era_ads(ads, ARCHIVE_YEAR)
 
 
 def _one_each(movies):
@@ -288,7 +301,9 @@ def build_channels(items, era=None):
     by = {}
     for m in items:
         by.setdefault((m.kind, m.show_key), []).append(m)
-    ads = era_ads(by.get(("ad", ""), []), era)
+    all_ads = by.get(("ad", ""), [])
+    ads = era_ads(all_ads, era)
+    news_ads = archive_ads(all_ads)
 
     def shows(*keys):
         return [m for k in keys for kind in ("episode", "special") for m in by.get((kind, k), [])]
@@ -306,7 +321,7 @@ def build_channels(items, era=None):
     channels = []
     for key, number, call, slogan, title in NEWS:
         channels.append(Channel(number, call, slogan, blocks=[(0, 24, "news", title)],
-                                pools={"news": shows(key)}, ads=ads, grid=30 * 60, fine=5 * 60, fill=True))
+                                pools={"news": shows(key)}, ads=news_ads, grid=30 * 60, fine=5 * 60, fill=True))
     channels.append(Channel(5, "WAGG", "Cartoons & Comedy, Day and Night", blocks=[
         (6, 19, "ren", "Ren & Stimpy Marathon"),
         (19, 23, "mongrels", "Mongrels Prime Time"),
