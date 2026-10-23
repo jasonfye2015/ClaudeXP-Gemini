@@ -14,3 +14,7 @@ Claude7/seed/Windows 7 Parts/
 Claude7/seed/win7_2011/Storage/
 # Game saves and high scores, shared by every era (personal)
 ClaudeGames/Saves/
+# Kithylin AI keeps its own art, models and chats in its folder (personal, and large)
+ClaudeApps/kithylinai/Art/
+ClaudeApps/kithylinai/Models/
+ClaudeApps/kithylinai/Data/

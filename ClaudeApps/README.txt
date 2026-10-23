@@ -2,6 +2,10 @@ ClaudeApps - the AI apps and Python Studio, on every computer
 ==============================================================
 
   claudeai/          ClaudeAI - chat with the local models (pictures, thinking)
+  kithylinai/        Kithylin AI - chat with Kithylin, played by your own fine-tuned models, over Kithylin's art;
+                     codes encoder/decoder, gallery, editable system prompts. Keeps its art, models and chats in
+                     its own folder so it can be lifted out as a standalone program (see its README)
+  selfmodel/         training a model of you from your chat logs: export.py, train.py, make_model.py
   copilotai/         CopilotAI - chat by text or voice, with pictures from Image Creator
   copilot_voice.py   Copilot Voice - speech in and out (Whisper and Piper; copilot_voice_worker.py runs them)
   imagegen.py        Copilot Image Creator - pictures from a description (imagegen_worker.py runs Stable Diffusion)

@@ -292,6 +292,8 @@ PROGRAMS = [
             navigator.shutdown, group="Social Programs"),
     Program("claudeai", "ClaudeAI", "Chat with your local AI", claudeai.claudeai_icon, claudeai.launch,
             claudeai.shutdown),
+    Program("kithylinai", "Kithylin AI", "Chat with Kithylin the Angelic Husky, played by your own fine-tuned models",
+            _shared("kithylinai", "kithylin_icon"), _shared("kithylinai", "launch"), _shared("kithylinai", "shutdown")),
     Program("outlook", "Outlook Express", "E-mail", _lazy("outlook", "oe_icon"), _lazy("outlook", "open_outlook")),
     Program("wab", "Address Book", "", _lazy("outlook", "book_icon"), _lazy("outlook", "open_address_book"),
             group="Accessories"),
