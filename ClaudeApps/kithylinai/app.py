@@ -72,7 +72,7 @@ class KithylinAI(QWidget):
         self.reply = None
         self._render_timer = QTimer(self)
         self._render_timer.setSingleShot(True)
-        self._render_timer.timeout.connect(lambda: self.view.render(self.chat.messages, streaming=True))
+        self._render_timer.timeout.connect(lambda: self.view.render(self.visible_messages()))
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)

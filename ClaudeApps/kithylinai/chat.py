@@ -71,10 +71,21 @@ class ChatView(QTextBrowser):
         self.setStyleSheet("QTextBrowser#chatview { background: transparent; border: none; }")
         self.text_size = 11
         self.user_name = "You"
-        self._pending = False
+        self._stick = True          # follow new text to the bottom
+        self._keep = 0              # else: where the reader was
+        # the text is laid out after setHtml, a bit at a time: keep re-applying the scroll position as it grows
+        self.verticalScrollBar().rangeChanged.connect(lambda *_: self._apply_scroll())
+
+    def _apply_scroll(self):
+        sb = self.verticalScrollBar()
+        sb.setValue(sb.maximum() if self._stick else min(self._keep, sb.maximum()))
 
     def render(self, messages, streaming=False):
-        at_bottom = self.verticalScrollBar().value() >= self.verticalScrollBar().maximum() - 40
+        """streaming=True: jump to the bottom whatever (you've just sent something). Otherwise follow the new text
+        only if you were already at the bottom, and keep your place if you'd scrolled up to read."""
+        sb = self.verticalScrollBar()
+        self._stick = streaming or sb.value() >= sb.maximum() - 40
+        self._keep = sb.value()
         parts = [f"<div style=\"font-family:'{FONT}'; font-size:{self.text_size}pt; color:{USER}\">"]
         for m in messages:
             stamp = time.strftime("%H:%M", time.localtime(m.get("time", time.time())))
@@ -95,9 +106,8 @@ class ChatView(QTextBrowser):
                          f"{stamp}</span> &nbsp;<b>{html.escape(who)}:</b> {body}{cursor}{stopped}</p>")
         parts.append("</div>")
         self.setHtml("".join(parts))
-        if at_bottom or streaming:
-            self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
-            QTimer.singleShot(0, lambda: self.verticalScrollBar().setValue(self.verticalScrollBar().maximum()))
+        self._apply_scroll()
+        QTimer.singleShot(0, self._apply_scroll)
 
 
 class Composer(QPlainTextEdit):
