@@ -93,6 +93,7 @@ def builtins():
         ("prog:adaware", "Ad-aware 5.6", lambda: programs.get("adaware").icon()),
         ("prog:navigator", "Netscape Navigator", lambda: programs.get("navigator").icon()),
         ("prog:claudeai", "ClaudeAI", lambda: programs.get("claudeai").icon()),
+        ("prog:kithylinai", "Kithylin AI", lambda: programs.get("kithylinai").icon()),
         ("prog:copilotai", "CopilotAI", lambda: programs.get("copilotai").icon()),
         ("prog:imagecreator", "Copilot Image Creator", lambda: programs.get("imagecreator").icon()),
         ("prog:neko", "Copilot Neko", lambda: programs.get("neko").icon()),
