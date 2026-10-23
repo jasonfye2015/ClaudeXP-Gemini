@@ -69,8 +69,16 @@ class Settings:
             self.values[k] = fresh[k]
         save_json(SETTINGS_FILE, self.values)
 
+    def filled(self, key):
+        """A prompt setting with {name} replaced by your chat name ('a friend' if it's still 'You')."""
+        name = (self.values.get("user_name") or "").strip()
+        name = name if name and name.lower() != "you" else "a friend"
+        return self.values[key].replace("{name}", name)
+
     def system_prompt(self):
-        parts = [self.values["character"].strip(), self.values["codes_prompt"].strip()]
+        """The two prompts together. {name} in them becomes your chat name (the trained models learned to expect
+        who they're talking to, as in 'chatting on AIM with ... in 2007')."""
+        parts = [self.filled("character").strip(), self.filled("codes_prompt").strip()]
         return "\n\n".join(p for p in parts if p)
 
 

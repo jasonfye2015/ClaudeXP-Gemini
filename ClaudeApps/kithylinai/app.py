@@ -326,8 +326,8 @@ class KithylinAI(QWidget):
 
     def echo_prompts(self):
         c = self.settings["codes"]
-        self.system("System prompt, part 1 (who Kithylin is):\n" + self.settings["character"])
-        self.system("System prompt, part 2 (his codes):\n" + self.settings["codes_prompt"])
+        self.system("System prompt, part 1 (who Kithylin is):\n" + self.settings.filled("character"))
+        self.system("System prompt, part 2 (his codes):\n" + self.settings.filled("codes_prompt"))
         self.system(f"Codes supplied: Furry Code {c.get('furcode') or '(none)'}  |  YIFF Code {c.get('yiffcode') or '(none)'}")
 
     # ---- models ------------------------------------------------------------------------------------------------------
@@ -509,7 +509,7 @@ class KithylinAI(QWidget):
 
     def _apply_character(self):
         self.settings.set("character", self.character_edit.toPlainText())
-        self.system("System prompt, part 1 (who Kithylin is), updated:\n" + self.settings["character"])
+        self.system("System prompt, part 1 (who Kithylin is), updated:\n" + self.settings.filled("character"))
 
     def _reset_character(self):
         self.character_edit.setPlainText(defaults.DEFAULT_CHARACTER)
@@ -517,7 +517,7 @@ class KithylinAI(QWidget):
 
     def _apply_codes_prompt(self):
         self.settings.set("codes_prompt", self.codes_edit.toPlainText())
-        self.system("System prompt, part 2 (his codes), updated:\n" + self.settings["codes_prompt"])
+        self.system("System prompt, part 2 (his codes), updated:\n" + self.settings.filled("codes_prompt"))
 
     def _use_codes(self, codes):
         codes = {"furcode": codes.get("furcode", ""), "yiffcode": codes.get("yiffcode", "")}

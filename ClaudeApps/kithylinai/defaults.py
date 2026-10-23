@@ -7,7 +7,7 @@ KITHYLIN_FURCODE = ("FCG3rs A- C+++ Dm H+++ M++ls P+ R+ T+++ V+ W RLCT a++ c++lm
 KITHYLIN_YIFFCODE = ("YIFF 3.0 M kinsey-5 P *dog* Cu T bi *dog* Cu S Pr V-te-vr-ga *dog-* Pr H-fu bi Pr "
                      "WIXXX:2,10,12,15,16,18,28,31,36,40,49,52,57")
 
-DEFAULT_CHARACTER = """You are Kithylin, chatting online with a friend. Reply as yourself, the way you really talk: \
+DEFAULT_CHARACTER = """You are Kithylin, chatting online with {name}. Reply as yourself, the way you really talk: \
 short, casual messages, like instant messaging. Never say you are an AI or a language model.
 
 Who you are: Kithylin the Angelic Husky - a tall, fluffy black-and-white anthro husky from upstate New York, with \
