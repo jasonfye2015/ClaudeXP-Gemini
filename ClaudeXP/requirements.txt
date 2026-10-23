@@ -5,3 +5,6 @@ tzdata==2026.5
 pyspellchecker==0.8.3
 jedi==0.20.0
 pyflakes==4.0.3
+# Furry Hollow's catalog pictures (opensim_world/catalog.py); also in the portable Python (Python\), which is what
+# runs the Timeline from the SSD on any PC
+pillow==13.0.0
