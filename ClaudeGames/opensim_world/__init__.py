@@ -31,7 +31,13 @@ REGIONS = [("Furry Hollow", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e01", (1000, 1000)
            ("Fantasy Island", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e06", (1001, 1002), 9005),
            # the adults' pair, off on their own to the east: reached by teleport, not by walking
            ("Whitewood", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e07", (1004, 1000), 9006),
-           ("Castle LoveGlo", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e08", (1005, 1000), 9007)]
+           ("Castle LoveGlo", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e08", (1005, 1000), 9007),
+           # west of the block: the residents' homes
+           ("Maple Row", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e09", (999, 1000), 9008),
+           ("Heartland", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e0a", (999, 1001), 9009),
+           # between the block and the adults' pair: the meeting places
+           ("The Commons", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e0b", (1002, 1000), 9010),
+           ("Hollow Hall", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e0c", (1002, 1001), 9011)]
 REGION = REGIONS[0][0]                       # where you arrive
 GRID_PORT = 9000
 BRIDGE_PORT = 9180
@@ -226,6 +232,11 @@ class Server:
             return
         clear_keepers()
         _logged_out()
+        try:
+            from . import lots
+            lots.cut_homes()                     # the homes regions into lots, once they're built
+        except Exception:
+            pass
         b = opensim_bin()
         for compiled in (b / "ScriptEngines").rglob("*.yobj"):   # compiled scripts are cached by their text; a bad
             try:                                                   # compile would otherwise be reused for good

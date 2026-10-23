@@ -35,7 +35,12 @@ REGION_ROLES = {"Furry Hollow": ["local chat", "cafe", "music", "quiet spots", "
                 "Love Island": ["cuddling", "quiet spots", "dancing", "gardening"],
                 "Fantasy Island": ["exploring", "roleplay", "parties", "art"],
                 "Whitewood": ["adult", "roleplay", "parties"],
-                "Castle LoveGlo": ["adult", "cuddling", "dancing"]}
+                "Castle LoveGlo": ["adult", "cuddling", "dancing"],
+                "Maple Row": ["local chat", "IMs", "quiet spots", "cafe"],
+                "Heartland": ["quiet spots", "cuddling", "gardening", "IMs"],
+                "The Commons": ["shopping", "local chat", "parties", "art"],
+                "Hollow Hall": ["local chat", "parties", "music", "roleplay"]}
+HOME_REGIONS = ["Maple Row", "Heartland"]            # where the residents' own homes are
 ADULT_REGIONS = {"Whitewood", "Castle LoveGlo"}
 ADULT_ACTS = ["flirting", "cuddling", "dancing close", "adult poseballs", "sub/dom poses", "watching", "exhibition"]
 MATURITY = ["General", "Moderate", "Adult"]
@@ -120,10 +125,12 @@ def defaults(name, resident=None, wardrobe=None):
     rnd = random.Random(name)
     scores = {r: sum(3 for a in usually if a in REGION_ROLES[r] and a != "local chat") +
               sum(1 for a in sometimes if a in REGION_ROLES[r] and a != "local chat")
-              for r in REGION_ROLES if r not in ADULT_REGIONS}
-    best = max(scores.values())
-    tied = [r for r, v in scores.items() if v == best]
-    home = rnd.choice(tied) if best >= 3 else rnd.choice(list(scores))     # nothing drawing them anywhere: spread out
+              for r in REGION_ROLES if r not in ADULT_REGIONS and r not in HOME_REGIONS}
+    hangouts = sorted(scores, key=lambda r: (-scores[r], rnd.random()))[:3]
+    # their home: a cottage in Heartland for the quiet and homely, a house on Maple Row for the rest
+    homely = any(a in usually for a in ("gardening", "quiet spots", "cuddling", "cafe"))
+    home = HOME_REGIONS[1] if HOME_REGIONS[1:] and rnd.random() < (0.65 if homely else 0.3) else HOME_REGIONS[0]
+    home_parcel = _assign_parcel(name, home)
     partner = (core.get("relationship") or {}).get("partner", "")
     codes = core.get("codes") or {}
     adult_ok = bool(codes.get("show_yiff")) and bool(codes.get("yiffcode"))
@@ -138,11 +145,11 @@ def defaults(name, resident=None, wardrobe=None):
         "partner": partner, "groups": ["Furry Hollow Residents"],
         "maturity": "Adult" if adult_ok else "Moderate",
         "gender": gender,
-        "home": {"region": home, "spot": None},
+        "home": {"region": home, "parcel": home_parcel[0] if home_parcel else None,
+                 "spot": home_parcel[1] if home_parcel else None},
         "schedule": _schedule(resident),
         "usually": usually, "sometimes": sometimes,
-        "favourite_regions": [home] + [r for r in REGION_ROLES if r != home and r not in ADULT_REGIONS and
-                                       any(a in REGION_ROLES[r] for a in usually)][:2],
+        "favourite_regions": hangouts,
         "avoids_regions": [] if adult_ok else sorted(ADULT_REGIONS),
         "social": {"crowds": crowds, "chattiness": chat, "im_over_local": 0.6 if crowds < 0 else 0.3,
                    "roleplay": True, "rp_receptive": 0.7, "invites_receptive": 0.7 if crowds >= 0 else 0.5,
@@ -164,6 +171,56 @@ def get(name, resident=None, wardrobe=None):
             for kk, vv in v.items():
                 data[k].setdefault(kk, vv)
     return data
+
+
+# ---- parcels: the homes regions are cut into lots, one per resident -----------------------------------------------
+def parcels(region_name):
+    """[(parcel name, (x, y), area)] in a region, from the world's land table (the server's database; fine to read
+    while it runs). The spot is the middle of the parcel's land."""
+    import sqlite3
+    from . import opensim_bin
+    rid = next((r[1] for r in REGIONS if r[0] == region_name), None)
+    db = opensim_bin() / "OpenSim.db" if opensim_bin() else None
+    if not rid or db is None or not db.exists():
+        return []
+    out = []
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=5)
+        try:
+            for name, bitmap, area, local_id in con.execute(
+                    "SELECT Name, Bitmap, Area, LocalLandID FROM land WHERE RegionUUID = ? ORDER BY LocalLandID", (rid,)):
+                xs, ys = [], []
+                bitmap = bitmap or b""
+                for i in range(min(len(bitmap), 512) * 8):          # 64x64 cells of 4 m
+                    if bitmap[i // 8] >> (i % 8) & 1:
+                        xs.append((i % 64) * 4 + 2)
+                        ys.append((i // 64) * 4 + 2)
+                if xs:
+                    out.append((name or f"Parcel {local_id}", (sum(xs) / len(xs), sum(ys) / len(ys)), area))
+        finally:
+            con.close()
+    except Exception:
+        return []
+    return out
+
+
+def _assign_parcel(name, region):
+    """A resident's own lot in their home region: the main residents take the region's parcels in turn (a stable
+    order), skipping the region-sized one that means it hasn't been cut up."""
+    lots = [p for p in parcels(region) if p[2] < 60000]
+    if not lots:
+        return None
+    try:
+        import residents
+        order = list(residents.names(2025, tier="main"))
+    except Exception:
+        order = [name]
+    saved = load_all()
+    same_home = [n for n in order if n == name or
+                 (saved.get(n, {}).get("home", {}).get("region") or region) == region]
+    i = same_home.index(name) if name in same_home else 0
+    lot = lots[i % len(lots)]
+    return lot[0], [round(lot[1][0], 1), round(lot[1][1], 1)]
 
 
 # ---- what the persona means for the world --------------------------------------------------------------------
@@ -218,7 +275,7 @@ def region_weights(persona):
     for region in allowed_regions(persona):
         w = 1.0
         if region == persona.get("home", {}).get("region"):
-            w += 6
+            w += 4
         if region in persona.get("favourite_regions", []):
             w += 3
         roles = REGION_ROLES.get(region, [])

@@ -247,5 +247,16 @@ anachronisms (Skype, Kik, Copilot) and all.
 - The Tailor can try on the human avatars too (`python -m opensim_world.tailor human`), for the galleries.
 - The human avatars (Linda Kellie's full avatars) come out white in the Tailor's viewer even after their textures
   bake, so they're listed in the Studio's Bodies gallery without pictures and aren't offered as saved looks.
+- Twelve regions (2026-10-22): + Maple Row (Shirl Taintedangel's Urban Neighborhood, CC BY-NC) and Heartland (her
+  heart-shaped cottages) west of the block as the residents' homes, and The Commons (Linda Kellie's Avatar Center,
+  CC0) and Hollow Hall (her Conference Center, CC0) between the block and the adults' pair as meeting places.
+  `lots.py` cuts each homes region into 20 lots (written to the land table before the server starts, once the build
+  is in); personas give every resident a lot of their own (home.parcel / home.spot), the bridge spawns them there,
+  and the Studio's Home parcel list offers the lots.
+- `boxes.py` pulls the furry avatars out of the Avatar Center's mannequins that the furry pack lacks (brown spotted
+  puppy, tan bunny, cyber dragon, white wolf, male brown bear, male gray mouse) into downloads/commons/
+  furry-commons.iar, a Tailor pack ("commons") and catalogue entries.
+- Adult attachments: nothing redistributable was found on Outworldz or Zadaroo (only the adult poseball sets and the
+  latex and lingerie clothing); Kitely Market needs an account.
 - Next: more avatars for species the pack doesn't have (birds, reptiles, hoofed animals); the human avatars and the
   hair for the galleries.

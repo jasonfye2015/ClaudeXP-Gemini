@@ -336,6 +336,8 @@ class StudioBody(QWidget):
         self.maturity.addItems(personas.MATURITY)
         self.home = QComboBox()
         self.home.addItems([r[0] for r in REGIONS])
+        self.home.currentTextChanged.connect(self._parcels)
+        self.parcel = QComboBox()
         self.days = QSpinBox()
         self.days.setRange(0, 7)
         self.hours = QLineEdit()
@@ -357,12 +359,25 @@ class StudioBody(QWidget):
         f.addRow("Groups", self.groups)
         f.addRow("Maturity rating", self.maturity)
         f.addRow("Home region", self.home)
+        f.addRow("Home parcel", self.parcel)
         f.addRow("Days online a week", self.days)
         f.addRow("Typical hours", self.hours)
         f.addRow("Hours per session", self.session)
         f.addRow("Time zone", self.tz)
         f.addRow("Notes", self.notes)
         return w
+
+    def _parcels(self, region):
+        """The parcels of the chosen home region (from the world's land table), as the home-parcel choices."""
+        current = self.parcel.currentText()
+        self.parcel.blockSignals(True)
+        self.parcel.clear()
+        self.parcel.addItem("(anywhere)", None)
+        for name, spot, area in personas.parcels(region):
+            if area < 60000:
+                self.parcel.addItem(f"{name}  ({int(area)} sq m)", spot)
+        self.parcel.setCurrentText(current)
+        self.parcel.blockSignals(False)
 
     def _habits_tab(self):
         w, f = self._form()
@@ -474,6 +489,12 @@ class StudioBody(QWidget):
         self.groups.setText(", ".join(p.get("groups", [])))
         self.maturity.setCurrentText(p.get("maturity", "Moderate"))
         self.home.setCurrentText(p["home"]["region"])
+        self._parcels(p["home"]["region"])
+        want = p["home"].get("parcel") or "(anywhere)"
+        for i in range(self.parcel.count()):
+            if self.parcel.itemText(i).split("  (")[0] == want:
+                self.parcel.setCurrentIndex(i)
+                break
         s = p["schedule"]
         self.days.setValue(int(s.get("days_per_week", 5)))
         self.hours.setText(_hours_text(s.get("hours", [[19, 23]])))
@@ -531,6 +552,9 @@ class StudioBody(QWidget):
         p["groups"] = [g.strip() for g in self.groups.text().split(",") if g.strip()]
         p["maturity"] = self.maturity.currentText()
         p["home"]["region"] = self.home.currentText()
+        lot = self.parcel.currentData()
+        p["home"]["parcel"] = self.parcel.currentText().split("  (")[0] if lot else None
+        p["home"]["spot"] = [round(lot[0], 1), round(lot[1], 1)] if lot else None
         p["schedule"].update(days_per_week=self.days.value(), hours=_parse_hours(self.hours.text()),
                              session_hours=self.session.value(), timezone=self.tz.currentText().strip())
         p["notes"] = self.notes.toPlainText().strip()

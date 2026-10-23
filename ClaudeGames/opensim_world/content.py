@@ -4,8 +4,9 @@ once (and a region whose build was loaded keeps everything built in it since).
 
 Most of it is Linda Kellie's collection as kept by Zadaroo (https://www.zadaroo.com), released CC0 - free for any
 use. The newer regions come from the Outworldz free library (https://outworldz.com/cgi/freesculpts.plx?q=OAR):
-Love Island by Avia Bonne (CC BY-NC: personal use, credit her), Fantasy Island by Linda Kellie (CC0), and WhiteWood
-and Castle LoveGlo by PcTek CyberStar (CC-BY: credit them). Files go in Local Storage/SecondLife/downloads/<source>
+Love Island by Avia Bonne (CC BY-NC: personal use, credit her), Fantasy Island by Linda Kellie (CC0), WhiteWood
+and Castle LoveGlo by PcTek CyberStar (CC-BY: credit them), Urban Neighborhood and Heartland by Shirl Taintedangel
+(CC BY-NC: personal use, credit her), and the Avatar Center and Conference Center by Linda Kellie (CC0). Files go in Local Storage/SecondLife/downloads/<source>
 (download_all() fetches them)."""
 import json
 import time
@@ -22,7 +23,11 @@ REGION_BUILDS = {"Furry Hollow": "oars/LK-MountainRetreat.tgz",      # a forest 
                  "Love Island": "outworldz:OAR-Love_Island(1X1).tgz",          # a romantic fantasy island
                  "Fantasy Island": "outworldz:OAR-Fantasy_Island(1X1).tgz",    # castles and fairy lights
                  "Whitewood": "outworldz:OAR-ADULT-WhiteWood(1X1).tgz",        # adults: a castle in the woods
-                 "Castle LoveGlo": "outworldz:OAR-Castle_LoveGlo(1X1).tgz"}    # adults: a castle by the sea
+                 "Castle LoveGlo": "outworldz:OAR-Castle_LoveGlo(1X1).tgz",    # adults: a castle by the sea
+                 "Maple Row": "outworldz:OAR-Urban Neighborhood(1x1).tgz",       # a street of houses: homes
+                 "Heartland": "outworldz:OAR-Heartland(1X1).tgz",                 # heart-shaped cottages: homes
+                 "The Commons": "outworldz:OAR-Avatar Center(1X1).tgz",           # Linda Kellie's avatar centre
+                 "Hollow Hall": "outworldz:OAR-Conference_Center(1X1).tgz"}       # a hall to meet in
 PACKS = ["iars/furry-avatars.iar", "iars/FULLAVATARS.zip", "iars/AVATARHAIR.zip", "iars/LK-ANIMALS.zip",
          "iars/LK-ANIMATIONS.zip", "iars/LK-FURNITURE.zip", "iars/LK-HOUSES.zip"]
 

@@ -241,7 +241,12 @@ class Bridge:
             y = max(5, min(250, uy + math.sin(angle) * self.rnd.uniform(4, 9)))
             z = uz
         else:
-            x, y, z = self.rnd.uniform(110, 146), self.rnd.uniform(110, 146), 0
+            home = self.personas.get(name, {}).get("home", {})
+            if region == home.get("region") and home.get("spot"):      # at their own place
+                x, y = home["spot"][0] + self.rnd.uniform(-3, 3), home["spot"][1] + self.rnd.uniform(-3, 3)
+            else:
+                x, y = self.rnd.uniform(110, 146), self.rnd.uniform(110, 146)
+            x, y, z = max(4, min(251, x)), max(4, min(251, y)), 0
         self.present[first] = name
         self.where[first] = region
         line = f"spawn|{first}|{last}|{x:.1f}|{y:.1f}|{z:.1f}|{self.looks.get(name, '')}"

@@ -10,6 +10,7 @@ look picked for them (wardrobe.json), by that asset ID, in any region. The user'
     python -m opensim_world.tailor [looks] [seconds]             the 21 looks (with the server not running)
     python -m opensim_world.tailor residents [names] [seconds]   each resident's look, clothes and all
     python -m opensim_world.tailor human [looks] [seconds]       the 18 human avatars (Linda Kellie's full avatars)
+    python -m opensim_world.tailor commons [looks] [seconds]     the furry avatars from the Avatar Center (boxes.py)
     (after changing wardrobe.json, set "residents_pack" to false in world.json so the residents' folder is rebuilt)
 """
 import ctypes
@@ -32,7 +33,16 @@ from . import oar
 
 TAILOR = ("Hollow", "Tailor")
 PACK = "furry-avatars.iar"
-PACKS = {"furry": PACK, "human": "FULLAVATARS.iar"}        # the body packs the Tailor can try on
+PACKS = {"furry": PACK, "human": "FULLAVATARS.iar", "commons": "furry-commons.iar"}   # the body packs it can try on
+
+
+def pack_path(name):
+    """Where a body pack is: Zadaroo's downloads, their iars/ folder, or the commons pack boxes.py writes."""
+    for folder in (root() / "downloads" / "zadaroo", root() / "downloads" / "zadaroo" / "iars",
+                   root() / "downloads" / "commons"):
+        if (folder / PACKS[name]).exists():
+            return folder / PACKS[name]
+    return root() / "downloads" / "zadaroo" / PACKS[name]
 SECONDS_PER_LOOK = 35            # long enough for the attachments to rez and the skin to bake
 HERE = Path(__file__).resolve().parent
 
@@ -152,8 +162,9 @@ def window_of(pid):
 
 
 def photograph(pid, path):
-    """A picture of the Tailor's viewer window, asked of the window itself (PrintWindow), so whatever else is on the
-    screen never ends up in it - even when the viewer is behind other windows."""
+    """A picture of the Tailor's viewer window. Asked of the window itself first (PrintWindow), so whatever else is
+    on the screen never ends up in it; if Windows hands back a blank (it does for some OpenGL windows), the viewer
+    is brought to the front and the screen is read only once it really is the foreground window."""
     try:
         from PySide6.QtGui import QImage
         hwnd = window_of(pid)
@@ -165,6 +176,8 @@ def photograph(pid, path):
         _user32.GetDC.argtypes = [wintypes.HWND]
         _user32.ReleaseDC.argtypes = [wintypes.HWND, vp]
         _user32.PrintWindow.argtypes = [wintypes.HWND, vp, wintypes.UINT]
+        _user32.GetForegroundWindow.restype = wintypes.HWND
+        _user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
         gdi.CreateCompatibleDC.restype = vp
         gdi.CreateCompatibleDC.argtypes = [vp]
         gdi.CreateCompatibleBitmap.restype = vp
@@ -172,6 +185,8 @@ def photograph(pid, path):
         gdi.SelectObject.restype = vp
         gdi.SelectObject.argtypes = [vp, vp]
         gdi.GetDIBits.argtypes = [vp, vp, wintypes.UINT, wintypes.UINT, vp, vp, wintypes.UINT]
+        gdi.BitBlt.argtypes = [vp, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, vp, ctypes.c_int,
+                               ctypes.c_int, wintypes.DWORD]
         gdi.DeleteObject.argtypes = [vp]
         gdi.DeleteDC.argtypes = [vp]
         rect = wintypes.RECT()
@@ -183,7 +198,6 @@ def photograph(pid, path):
         mem = gdi.CreateCompatibleDC(hdc)
         bmp = gdi.CreateCompatibleBitmap(hdc, w, h)
         gdi.SelectObject(mem, bmp)
-        ok = _user32.PrintWindow(hwnd, mem, 3)          # client area only, full content (works for OpenGL)
 
         class BITMAPINFOHEADER(ctypes.Structure):
             _fields_ = [("biSize", wintypes.DWORD), ("biWidth", wintypes.LONG), ("biHeight", wintypes.LONG),
@@ -193,11 +207,29 @@ def photograph(pid, path):
                         ("biClrUsed", wintypes.DWORD), ("biClrImportant", wintypes.DWORD)]
         info = BITMAPINFOHEADER(ctypes.sizeof(BITMAPINFOHEADER), w, -h, 1, 32, 0, 0, 0, 0, 0, 0)
         buf = ctypes.create_string_buffer(w * h * 4)
-        gdi.GetDIBits(mem, bmp, 0, h, buf, ctypes.byref(info), 0)
+
+        def grab():
+            gdi.GetDIBits(mem, bmp, 0, h, buf, ctypes.byref(info), 0)
+            return bool(buf.raw.strip(b"\x00\xff"))          # something other than plain black or white
+
+        got = _user32.PrintWindow(hwnd, mem, 3) and grab()    # the window's full content (OpenGL included)
+        if not got:
+            got = _user32.PrintWindow(hwnd, mem, 1) and grab()
+        if not got:                                           # the screen, only with the viewer in front
+            _user32.ShowWindow(hwnd, 9)
+            _user32.SetForegroundWindow(hwnd)
+            time.sleep(0.7)
+            if _user32.GetForegroundWindow() == hwnd:
+                pt = wintypes.POINT(0, 0)
+                _user32.ClientToScreen(hwnd, ctypes.byref(pt))
+                screen = _user32.GetDC(None)
+                gdi.BitBlt(mem, 0, 0, w, h, screen, pt.x, pt.y, 0x00CC0020)
+                _user32.ReleaseDC(None, screen)
+                got = grab()
         gdi.DeleteObject(bmp)
         gdi.DeleteDC(mem)
         _user32.ReleaseDC(hwnd, hdc)
-        if not ok or not buf.raw.strip(b"\x00\xff"):     # nothing drawn
+        if not got:
             return False
         return QImage(buf.raw, w, h, w * 4, QImage.Format_RGB32).copy().save(str(path))
     except Exception:
@@ -245,9 +277,7 @@ def run(server, progress=print, photos=None, only=None, seconds=SECONDS_PER_LOOK
     dress.py into #RLV/residents/<name> - and keeps them in world.json "dressed" by resident name."""
     data = _world()
     pack_name = pack
-    pack = root() / "downloads" / "zadaroo" / PACKS[pack_name]
-    if not pack.exists():
-        pack = root() / "downloads" / "zadaroo" / "iars" / PACKS[pack_name]
+    pack = pack_path(pack_name)
     if residents:
         from . import dress
         by_slug = {dress.slug(r): r for r in dress.wardrobe()["picks"]}
@@ -376,8 +406,8 @@ if __name__ == "__main__":
     shots = root() / "outfits"
     shots.mkdir(exist_ok=True)
     try:
-        pack = "human" if "human" in sys.argv[1:] else "furry"
-        args = [a for a in sys.argv[1:] if a not in ("residents", "human")]
+        pack = next((a for a in sys.argv[1:] if a in PACKS and a != "furry"), "furry")
+        args = [a for a in sys.argv[1:] if a not in ("residents",) and a not in PACKS]
         only = [a for a in args if not a.isdigit()] or None
         secs = next((int(a) for a in args if a.isdigit()), SECONDS_PER_LOOK)
         result = run(s, photos=shots, only=only, seconds=secs, residents="residents" in sys.argv[1:], pack=pack)

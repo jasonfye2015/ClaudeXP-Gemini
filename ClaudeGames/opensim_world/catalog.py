@@ -19,7 +19,8 @@ from . import root
 
 LAYERS = {0: "shape", 1: "skin", 2: "hair", 3: "eyes", 4: "shirt", 5: "pants", 6: "shoes", 7: "socks", 8: "jacket",
           9: "gloves", 10: "undershirt", 11: "underpants", 12: "skirt", 13: "alpha", 14: "tattoo", 15: "physics"}
-PACKS = {"furry-avatars.iar": ("bodies", "furry"), "FULLAVATARS.iar": ("bodies", "human"),
+PACKS = {"furry-avatars.iar": ("bodies", "furry"), "furry-commons.iar": ("bodies", "furry"),
+         "FULLAVATARS.iar": ("bodies", "human"),
          "LK-MENS-CLOTHING.iar": ("clothes", "men"), "LK-WOMENS-CLOTHING.iar": ("clothes", "women"),
          "LK-ACCESSORIES.iar": ("clothes", "accessories"), "AVATARHAIR.iar": ("hair", "hair")}
 FEMALE = re.compile(r"\b(she|female|lady|girl|women|candi|celeste|dot|chara|lyra|rana|venus)\b|kitty-prim|pink and black kitty",
@@ -72,7 +73,8 @@ def build(progress=print):
     index = {"bodies": [], "clothes": [], "hair": []}
     photos = root() / "outfits"
     for iar, (section, kind) in PACKS.items():
-        path = base / iar if (base / iar).exists() else base / "iars" / iar
+        path = next((d / iar for d in (base, base / "iars", root() / "downloads" / "commons") if (d / iar).exists()),
+                    base / iar)
         if not path.exists():
             progress(f"(no {iar})")
             continue
