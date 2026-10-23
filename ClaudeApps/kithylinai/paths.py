@@ -7,6 +7,7 @@
       Engine/     optional: a llama.cpp build of its own (llama-server.exe and DLLs) for running standalone
       Data/       settings, the chat history and saved chats, the engine log
 The Timeline's own engine builds and models (Local Storage/LLM Models) are used when they're there too."""
+import os
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -15,7 +16,7 @@ ASSETS = HERE / "assets"
 ART = HERE / "Art"
 MODELS = HERE / "Models"
 ENGINE = HERE / "Engine"
-DATA = HERE / "Data"
+DATA = Path(os.environ.get("KITHYLINAI_DATA") or HERE / "Data")   # tests set KITHYLINAI_DATA: Data\ is the user's
 ICON = ASSETS / "kithylin.jpg"
 
 LLM = TIMELINE / "Local Storage" / "LLM Models"
