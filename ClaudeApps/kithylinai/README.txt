@@ -10,6 +10,10 @@ prompt and codes the model was given, and what the engine is doing ("Now loading
   Kithylin's Art  the gallery: folders, thumbnails, a viewer (arrow keys, Esc), "Use as chat background".
   Codes           the Furry Code 2.0 / YIFF Code 3.0 encoder and decoder. "Use these codes for Kithylin" rewrites
                   the codes part of the system prompt; "Decode into the chat" writes out what a code says.
+  Model Details   the card for the model picked at the top: what it learned from (general chatting, roleplay,
+                  adult - by share of the text), which years, services and people, how the training went, and
+                  snippets of the training conversations (the adult ones behind a tick box). Kithylin models get
+                  a card.json from selfmodel.make_model (or python -m selfmodel.card MODEL_FOLDER).
   Settings        the model engine, context and temperature; the look (your name, text size, background slideshow);
                   the two editable system prompts - who Kithylin is, and his codes - each with a default to go
                   back to; and Reset.

@@ -94,6 +94,8 @@ def main(argv=None):
     ap.add_argument("--keep", action="store_true", help="keep the merged model and 16-bit GGUF in work/")
     ap.add_argument("--install-timeline", action="store_true", help="also copy it into Local Storage/LLM Models/models")
     ap.add_argument("--skip-merge", action="store_true", help="reuse work/<name>/merged from an earlier run")
+    ap.add_argument("--data", type=Path, default=ROOT / "data", help="the training data it was trained on (for the card)")
+    ap.add_argument("--notes", default="", help="a line for the details card, e.g. what this model is for")
     args = ap.parse_args(argv)
 
     adapter = args.adapter.resolve()
@@ -121,6 +123,12 @@ def main(argv=None):
     quantize(gguf16, out, args.quant)
     write_info(out_dir, args.name, adapter, args.quant, steps)
     say(f"made {out} ({out.stat().st_size / 2**30:.2f} GB)")
+    try:
+        from . import card
+        card.build(out_dir, args.data, adapter, notes=args.notes, settings={"quant": args.quant})
+        say("wrote the model details card (card.json)")
+    except Exception as e:                                # the model is fine without one
+        say(f"couldn't write the details card: {e}")
 
     if args.install_timeline:
         dest = TIMELINE_MODELS / args.name

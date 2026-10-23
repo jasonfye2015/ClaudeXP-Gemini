@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QF
 from . import defaults, engine as engine_mod, store
 from .chat import Backdrop, ChatView, Composer, FormatBar, Slideshow
 from .codes import CodesPage
+from .details import ModelDetails
 from .gallery import Gallery, load_index
 from .paths import ART, ICON, hosted
 
@@ -86,6 +87,8 @@ class KithylinAI(QWidget):
         self.codes_page.codes_chosen.connect(self._use_codes)
         self.codes_page.decode_to_chat.connect(self.system)
         self.tabs.addTab(self.codes_page, "Codes")
+        self.details = ModelDetails(self.settings)
+        self.tabs.addTab(self.details, "Model Details")
         self.tabs.addTab(self._settings_page(), "Settings")
         root.addWidget(self.tabs, 1)
 
@@ -116,6 +119,7 @@ class KithylinAI(QWidget):
         row.addWidget(QLabel("Model:"))
         self.model_box = QComboBox()
         self.model_box.setMinimumWidth(300)
+        self.model_box.currentIndexChanged.connect(lambda _i: self._show_details())
         row.addWidget(self.model_box)
         self.browse_btn = QPushButton("Browse...")
         self.browse_btn.setToolTip("Pick any .gguf model file")
@@ -340,9 +344,16 @@ class KithylinAI(QWidget):
         i = self.model_box.findData(current)
         self.model_box.setCurrentIndex(i if i >= 0 else 0)
         self.model_box.blockSignals(False)
+        self._show_details()
         if not self.model_box.count():
             self.system("No models found. Train one with ClaudeApps\\selfmodel (it lands in kithylinai\\Models), or "
                         "Browse... to a .gguf file.")
+
+    def _show_details(self):
+        if getattr(self, "details", None) is None:
+            return
+        key = self.model_box.currentData()
+        self.details.show_model(engine_mod.find(key) if key else None)
 
     def browse_model(self):
         path, _ = QFileDialog.getOpenFileName(self, "Choose a model", str(ART.parent / "Models"), "Models (*.gguf)")
