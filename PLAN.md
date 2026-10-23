@@ -240,5 +240,12 @@ anachronisms (Skype, Kik, Copilot) and all.
   habits draw them to (at most 7 a region), roaming between regions now and then (the sociable drift to the user,
   the solitary leave crowds), logging on and off as the hours pass; invitations are taken up by how receptive they
   are (adult seats only by their adult settings); replies are coloured by how they are in the world.
-- Next: IMs (the residents who prefer them), more avatars for species the pack doesn't have (birds, reptiles,
-  hoofed animals), and photographing the human bodies and the hair for the galleries.
+- IMs (2026-10-22): a line in local chat naming a resident who's online elsewhere is an IM to them; their reply
+  arrives as an IM from them (the Keeper where the user is sends it under their name). A nearby resident who prefers
+  IMs answers group chat by IM, and every few minutes one of the IM-preferrers elsewhere may IM the user out of the
+  blue. The user answers by naming them in local chat (an object's IMs can't be replied to in the viewer).
+- The Tailor can try on the human avatars too (`python -m opensim_world.tailor human`), for the galleries.
+- The human avatars (Linda Kellie's full avatars) come out white in the Tailor's viewer even after their textures
+  bake, so they're listed in the Studio's Bodies gallery without pictures and aren't offered as saved looks.
+- Next: more avatars for species the pack doesn't have (birds, reptiles, hoofed animals); the human avatars and the
+  hair for the galleries.

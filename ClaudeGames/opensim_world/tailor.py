@@ -9,6 +9,7 @@ look picked for them (wardrobe.json), by that asset ID, in any region. The user'
 
     python -m opensim_world.tailor [looks] [seconds]             the 21 looks (with the server not running)
     python -m opensim_world.tailor residents [names] [seconds]   each resident's look, clothes and all
+    python -m opensim_world.tailor human [looks] [seconds]       the 18 human avatars (Linda Kellie's full avatars)
     (after changing wardrobe.json, set "residents_pack" to false in world.json so the residents' folder is rebuilt)
 """
 import ctypes
@@ -31,6 +32,7 @@ from . import oar
 
 TAILOR = ("Hollow", "Tailor")
 PACK = "furry-avatars.iar"
+PACKS = {"furry": PACK, "human": "FULLAVATARS.iar"}        # the body packs the Tailor can try on
 SECONDS_PER_LOOK = 35            # long enough for the attachments to rez and the skin to bake
 HERE = Path(__file__).resolve().parent
 
@@ -235,14 +237,17 @@ def clear_residents_folder():
 
 
 # ---- the fitting ----
-def run(server, progress=print, photos=None, only=None, seconds=SECONDS_PER_LOOK, residents=False):
+def run(server, progress=print, photos=None, only=None, seconds=SECONDS_PER_LOOK, residents=False, pack="furry"):
     """Try every look on the Tailor and save each one. The world's server must be running; the bridge must not be
     (this listens on its port). Returns {look: {"name", "notecard"}}.
 
     residents=True fits each main resident's whole look instead - their furry avatar and their clothes, gathered by
     dress.py into #RLV/residents/<name> - and keeps them in world.json "dressed" by resident name."""
     data = _world()
-    pack = root() / "downloads" / "zadaroo" / PACK
+    pack_name = pack
+    pack = root() / "downloads" / "zadaroo" / PACKS[pack_name]
+    if not pack.exists():
+        pack = root() / "downloads" / "zadaroo" / "iars" / PACKS[pack_name]
     if residents:
         from . import dress
         by_slug = {dress.slug(r): r for r in dress.wardrobe()["picks"]}
@@ -261,15 +266,16 @@ def run(server, progress=print, photos=None, only=None, seconds=SECONDS_PER_LOOK
     if tailor.get("id") != tid:
         tailor["id"] = tid
         _save_world(data)
-    if not tailor.get("dressed_pack"):
-        progress("Giving the Tailor the furry avatars...")
-        path = tailor_iar(pack, root() / "keepers" / "tailor.iar")
+    flag = "dressed_pack" if pack_name == "furry" else f"dressed_pack_{pack_name}"
+    if not tailor.get(flag):
+        progress(f"Giving the Tailor the {pack_name} avatars...")
+        path = tailor_iar(pack, root() / "keepers" / f"tailor_{pack_name}.iar")
         mark = len(server.log())
         server.command(f'load iar {TAILOR[0]} {TAILOR[1]} / "{tailor["password"]}" "{path}"')
         end = time.time() + 300
         while "items from archive" not in server.log()[mark:] and time.time() < end:
             time.sleep(1)
-        tailor["dressed_pack"] = True
+        tailor[flag] = True
         _save_world(data)
     if residents and not tailor.get("residents_pack"):
         from . import dress
@@ -370,10 +376,11 @@ if __name__ == "__main__":
     shots = root() / "outfits"
     shots.mkdir(exist_ok=True)
     try:
-        args = [a for a in sys.argv[1:] if a != "residents"]
+        pack = "human" if "human" in sys.argv[1:] else "furry"
+        args = [a for a in sys.argv[1:] if a not in ("residents", "human")]
         only = [a for a in args if not a.isdigit()] or None
         secs = next((int(a) for a in args if a.isdigit()), SECONDS_PER_LOOK)
-        result = run(s, photos=shots, only=only, seconds=secs, residents="residents" in sys.argv[1:])
+        result = run(s, photos=shots, only=only, seconds=secs, residents="residents" in sys.argv[1:], pack=pack)
         print(len(result), "looks saved")
     finally:
         s.stop()

@@ -93,6 +93,10 @@ do_line(string line) {
     } else if (cmd == "still") {                    // still|First: stop dancing
         string first = llList2String(f, 1);
         stop_dance(first, npc_named(first));
+    } else if (cmd == "im") {                       // im|First|text: an IM to the owner, as from that resident
+        llSetObjectName(llList2String(f, 1));
+        llInstantMessage(llGetOwner(), llDumpList2String(llList2List(f, 2, -1), "|"));
+        llSetObjectName("Hollow Keeper");
     } else if (cmd == "remove") {                   // remove|First
         string first = llList2String(f, 1);
         key k = npc_named(first);

@@ -3,7 +3,7 @@ Hollow Keeper (the script in it) polls every few seconds.
 
     GET  /poll?region=..&here=1&x=..&y=..&z=..[&seat=..&seatname=..]   a Keeper asks what to do; lines come back:
          spawn|First|Last|x|y|z|look   say|First|text   move|First|x|y|z   face|First|x|y|z   remove|First
-         sit|First|object   stand|First   dance|First|animation   still|First
+         sit|First|object   stand|First   dance|First|animation   still|First   im|First|text
     POST /heard    region|name|x|y|z|text           someone said something in that region's local chat
     POST /spawned  region|first|key                 an NPC is in the world
 
@@ -13,7 +13,9 @@ now and then, drawn to or away from company as they are. Whoever is spoken to by
 user) answers, written by the language model from that resident's own persona for this computer's year - the same
 people and the same memories as on the messengers - and coloured by how they are in the world. An invitation to
 sit, cuddle or dance is taken up or turned down by how receptive they are; the adults' regions and what happens
-there follow each one's adult settings."""
+there follow each one's adult settings. The residents who'd rather IM than talk in local chat do: a line addressed
+by name to someone online elsewhere in the world is an IM conversation (their reply arrives as an IM from them),
+an IM-preferrer nearby answers group chat by IM, and now and then one of them IMs the user from wherever they are."""
 import math
 import random
 import re
@@ -60,6 +62,7 @@ class Bridge:
         self.spawned = set()
         self.pending = {}                      # first -> (region, spawn line) not confirmed yet (sent until it is)
         self.chat = {}                         # region -> [(speaker, text)]
+        self.ims = {}                          # first name -> [(speaker, text)]: IM conversations with the user
         self.last_partner = None
         self.last_user_line = time.time()
         self.user_region = None
@@ -386,13 +389,21 @@ class Bridge:
         self.last_user_line = time.time()
         near = [f for f, r in self.where.items() if r == region]
         low = text.lower()
-        addressed = [f for f in near if f.lower() in low or self.present[f].lower() in low]
+        named = [f for f in self.present if re.search(r"\b" + re.escape(f.lower()) + r"\b", low) or
+                 re.search(r"\b" + re.escape(self.present[f].lower()) + r"\b", low)]
+        addressed = [f for f in named if f in near]
+        for first in [f for f in named if f not in near][:2]:      # someone online elsewhere: that's an IM to them
+            self.ims.setdefault(first, []).append((speaker, text))
+            del self.ims[first][:-HISTORY]
+            self._ask(first, None, via="im")
         responders = addressed or ([self.last_partner] if self.last_partner in near else [])
-        if not responders and near:
+        if not responders and near and not named:
             responders = [self._talker(near)]
         for first in responders[:2]:
             self.last_partner = first
-            self._ask(first, self._act(first, text))
+            prefers_im = (first not in addressed and
+                          self.personas[self.present[first]].get("social", {}).get("im_over_local", 0) > 0.6)
+            self._ask(first, self._act(first, text), via="im" if prefers_im else "local")
         try:
             from claudexp.life import get
             sim = get()
@@ -401,12 +412,26 @@ class Bridge:
         except Exception:
             pass
 
+    def _im_out_of_the_blue(self):
+        """Every few minutes, maybe: someone online elsewhere who likes IMs and starts conversations sends the user one."""
+        if not self.user_region or self.busy:
+            return
+        far = [f for f, r in self.where.items() if r != self.user_region]
+        keen = [f for f in far if self.personas[self.present[f]].get("social", {}).get("im_over_local", 0) > 0.5]
+        if not keen:
+            return
+        first = self.rnd.choice(keen)
+        if self.rnd.random() < 0.15 + 0.5 * self.personas[self.present[first]].get("social", {}).get("initiates", 0.5):
+            self._ask(first, f"Send {self.user_first} a short IM out of the blue: what you're up to over in "
+                             f"{self.where[first]}, or asking how they are, or inviting them over.", via="im")
+
     def _talker(self, firsts):
         """Of these, who speaks up: the chatty more often."""
         weights = [0.1 + self.personas[self.present[f]].get("social", {}).get("chattiness", 0.5) for f in firsts]
         return self.rnd.choices(firsts, weights)[0]
 
-    def _ask(self, first, situation):
+    def _ask(self, first, situation, via="local"):
+        """Have a resident write their next line: in local chat, or (via="im") as an IM to the user."""
         if first in self.busy:
             return
         name = self.present.get(first)
@@ -418,19 +443,31 @@ class Bridge:
         others = ", ".join(self.present[f] for f, r in self.where.items() if r == region and f != first)
         here = (f"{self.user_first} (your buddy) and {others or 'nobody else'} nearby"
                 if region == self.user_region else f"{others or 'nobody else'} nearby")
-        system = (self._persona_text(name) + f"\n\nRight now you're in Second Life, standing in a region called "
-                  f"{region}, with {here}. This is local chat: everyone near you sees it. Reply with ONE short chat "
-                  "line as yourself (no name prefix, no quotation marks, no stage directions longer than a quick "
-                  "*emote*). Keep it natural and brief.\n\nHow you are in the world:\n"
-                  + personas.flavour(self.personas.get(name, {}), region))
-        prompt = situation or ("Here's the local chat so far:\n" + log + "\n\nWrite your next line in the chat.")
+        flavour = personas.flavour(self.personas.get(name, {}), region)
+        if via == "im":
+            ims = "\n".join(f"{s}: {t}" for s, t in self.ims.get(first, [])[-HISTORY:]) or "(nothing yet)"
+            where_user = (f"{self.user_first} is over in {self.user_region}" if self.user_region and
+                          self.user_region != region else f"{self.user_first} is nearby, but you two are IMing")
+            system = (self._persona_text(name) + f"\n\nRight now you're in Second Life, in a region called {region}, "
+                      f"with {others or 'nobody else'} nearby; {where_user}. You're writing an IM (a private instant "
+                      f"message) to {self.user_first}. Reply with ONE short IM as yourself (no name prefix, no quotation "
+                      "marks). Keep it natural and brief.\n\nHow you are in the world:\n" + flavour)
+            heard = ("\n\nWhat they just said in local chat, which you'd rather answer by IM:\n" + log.splitlines()[-1]
+                     if self.user_region == region and chat else "")
+            prompt = situation or ("Your IMs with them so far:\n" + ims + heard + "\n\nWrite your next IM.")
+        else:
+            system = (self._persona_text(name) + f"\n\nRight now you're in Second Life, standing in a region called "
+                      f"{region}, with {here}. This is local chat: everyone near you sees it. Reply with ONE short chat "
+                      "line as yourself (no name prefix, no quotation marks, no stage directions longer than a quick "
+                      "*emote*). Keep it natural and brief.\n\nHow you are in the world:\n" + flavour)
+            prompt = situation or ("Here's the local chat so far:\n" + log + "\n\nWrite your next line in the chat.")
         try:
             from claudecore.ai import ai_models, broker
             model = ai_models.model_for("conversation", resident=name)
             ctx = int(ai_models.config()["context"])
             self.busy.add(first)
 
-            def done(reply, err, first=first, name=name, region=region):
+            def done(reply, err, first=first, name=name, region=region, via=via):
                 self.busy.discard(first)
                 if err or not reply:
                     return
@@ -438,6 +475,14 @@ class Bridge:
                 if line.lower().startswith(first.lower() + ":"):
                     line = line.split(":", 1)[1].strip()
                 if not line:
+                    return
+                if via == "im":
+                    ims = self.ims.setdefault(first, [])
+                    ims.append((name, line))
+                    del ims[:-HISTORY]
+                    if self.user_region:                    # the Keeper where the user is delivers it, as from them
+                        self._send(self.user_region, f"im|{first}|{line[:900]}")
+                    self.on_status(f"IM from {name}: {line[:80]}")
                     return
                 log = self.chat.setdefault(region, [])
                 log.append((name, line))
@@ -471,6 +516,7 @@ class Bridge:
                 self._send(region, line)
         if self.ticks % (300 // TICK) == 0:
             self.log_on_off()
+            self._im_out_of_the_blue()
         self._roam()
         near = self.near_user()
         if not near:
