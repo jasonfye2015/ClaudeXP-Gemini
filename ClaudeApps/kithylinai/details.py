@@ -108,8 +108,9 @@ class ModelDetails(QWidget):
                  ("Text", f"{d.get('tokens', 0):,} tokens"),
                  ("Years", ", ".join(f"{y}: {n:,}" for y, n in years.items()) or _e(d.get("years", "all"))),
                  ("Services", ", ".join(f"{s} {n:,}" for s, n in services.items())),
-                 ("People", f"{d.get('contacts', 0):,} different contacts; most: "
-                            + ", ".join(f"{n} ({k})" for n, k in d.get("top_contacts", [])[:8])),
+                 ("People", f"{d.get('contacts', 0):,} different contacts"
+                            + ("; most: " + ", ".join(f"{n} ({k})" for n, k in d["top_contacts"][:8])
+                               if d.get("top_contacts") else " (names hidden)")),
                  ("Group rooms", "included" if d.get("rooms") else "one-to-one chats only")]
         out.append(self._table(facts))
 
@@ -140,7 +141,8 @@ class ModelDetails(QWidget):
                     continue
                 out.append(f"<p><b style='color:{MIX_COLOURS.get(k, USER)}'>{_e(label)}</b></p>")
                 for s in items:
-                    head = f"{_e(s.get('service', ''))} with {_e(s.get('contact', ''))}, {_e(s.get('year', ''))}"
+                    head = _e(s.get("service", "")) + (f" with {_e(s['contact'])}" if s.get("contact") else "") \
+                        + f", {_e(s.get('year', ''))}"
                     lines = "".join(
                         f"<div style='color:{KITHY if who == 'Kithylin' else USER}; margin:1px 0'>"
                         f"<b>{_e(who)}:</b> {_e(text).replace(chr(10), '<br>')}</div>" for who, text in s.get("turns", []))

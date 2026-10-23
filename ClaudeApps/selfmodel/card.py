@@ -9,6 +9,7 @@ so like the model it's personal: it stays in kithylinai/Models (not in git)."""
 import argparse
 import json
 import random
+import re
 import time
 from collections import Counter
 from pathlib import Path
@@ -26,10 +27,39 @@ def _rows(data):
         return [json.loads(line) for line in f]
 
 
-def _snippet(row, rng):
-    """A run of up to SNIPPET_TURNS turns from the conversation, as [(who, text)]."""
+def _name_pattern(rows):
+    """A regex for every contact's name in the data: the full screen name, and the parts of it people actually
+    call someone ('Aesar' for Aesar19, 'Snowpaw' for Woof Snowpaw, 'fluffyroo' for fluffyroo@mac.com). A part that's
+    an everyday word in the chats (woof, puppy, wolf...) is left alone, so the snippets stay readable."""
+    names, parts = set(), {}
+    for r in rows:
+        contact = ((r.get("meta") or {}).get("contact") or "").strip()
+        if not contact:
+            continue
+        names.add(contact.lower())
+        local = contact.split("@")[0]
+        names.add(local.lower())
+        for part in re.findall(r"[A-Za-z]{4,}", local):
+            parts.setdefault(part.lower(), set()).add(contact)
+    # how many conversations use each part, other than those with its owner: a common word is in lots of them
+    common = Counter()
+    word = re.compile(r"[a-z]{4,}")
+    for r in rows:
+        contact = ((r.get("meta") or {}).get("contact") or "")
+        seen = set(word.findall(" ".join(m["content"].lower() for m in r["messages"] if m["role"] != "system")))
+        for w in seen & parts.keys():
+            if contact not in parts[w]:
+                common[w] += 1
+    names |= {p for p in parts if common[p] < 15}
+    names = sorted((n for n in names if len(n) >= 3), key=len, reverse=True)
+    return re.compile(r"(?<![\w@.])(" + "|".join(re.escape(n) for n in names) + r")(?![\w@])", re.I) if names else None
+
+
+def _snippet(row, rng, hide=None):
+    """A run of up to SNIPPET_TURNS turns from the conversation, as [(who, text)]. hide: a pattern of names to
+    replace with [name] (and the other person is called 'Them')."""
     meta = row.get("meta") or {}
-    who = meta.get("contact") or "them"
+    who = "Them" if hide else (meta.get("contact") or "them")
     turns = [m for m in row["messages"] if m["role"] in ("user", "assistant")
              and not (m["role"] == "user" and m["content"].endswith("is online.)"))]
     if len(turns) > SNIPPET_TURNS:
@@ -40,8 +70,10 @@ def _snippet(row, rng):
         text = m["content"].strip()
         if len(text) > SNIPPET_CHARS:
             text = text[:SNIPPET_CHARS].rstrip() + "…"
+        if hide is not None:
+            text = hide.sub("[name]", text)
         out.append(["Kithylin" if m["role"] == "assistant" else who, text])
-    return {"service": meta.get("service", ""), "contact": who, "year": meta.get("year"), "turns": out}
+    return {"service": meta.get("service", ""), "contact": "" if hide else who, "year": meta.get("year"), "turns": out}
 
 
 def _training(log_path, adapter):
@@ -86,7 +118,7 @@ def _training(log_path, adapter):
 
 
 def build(model_dir, data=ROOT / "data", adapter=ROOT / "adapter", log=ROOT / "train_log.jsonl", notes="",
-          base="Gemma 3 4B instruct (unsloth/gemma-3-4b-it, Google's Gemma 3)", settings=None):
+          base="Gemma 3 4B instruct (unsloth/gemma-3-4b-it, Google's Gemma 3)", settings=None, keep_names=False):
     model_dir, data, adapter = Path(model_dir), Path(data), Path(adapter)
     rows = _rows(data)
     stats = json.loads((data / "stats.json").read_text(encoding="utf-8")) if (data / "stats.json").exists() else {}
@@ -103,11 +135,12 @@ def build(model_dir, data=ROOT / "data", adapter=ROOT / "adapter", log=ROOT / "t
         lengths.append(meta.get("tokens", 0))
     total_tokens = sum(tokens.values()) or 1
     rng = random.Random(f"{model_dir.name}")
+    hide = None if keep_names else _name_pattern(rows)
     snippets = {}
     for k, pool in by_kind.items():
         good = [r for r in pool if 6 <= len(r["messages"]) and (r.get("meta") or {}).get("tokens", 0) <= 900]
         rng.shuffle(good)
-        snippets[k] = [_snippet(r, rng) for r in good[:SNIPPETS_PER_KIND]]
+        snippets[k] = [_snippet(r, rng, hide) for r in good[:SNIPPETS_PER_KIND]]
     lengths.sort()
     card = {
         "name": model_dir.name, "made": time.strftime("%Y-%m-%d %H:%M"), "base": base, "notes": notes,
@@ -117,7 +150,8 @@ def build(model_dir, data=ROOT / "data", adapter=ROOT / "adapter", log=ROOT / "t
                  "per_contact": stats.get("per_contact"), "exported": stats.get("built"),
                  "by_service": stats.get("by_service", {}), "by_year": stats.get("by_year", {}),
                  "contacts": len({(r.get("meta") or {}).get("contact") for r in rows}),
-                 "top_contacts": stats.get("top_contacts", [])[:12],
+                 "top_contacts": stats.get("top_contacts", [])[:12] if keep_names else [],
+                 "names_hidden": not keep_names,
                  "median_tokens": lengths[len(lengths) // 2] if lengths else 0},
         "mix": {k: {"label": content.LABELS[k], "conversations": kinds[k], "tokens": tokens[k], "your_turns": turns[k],
                     "share_tokens": round(100 * tokens[k] / total_tokens, 1),
@@ -138,8 +172,9 @@ def main(argv=None):
     ap.add_argument("--adapter", type=Path, default=ROOT / "adapter")
     ap.add_argument("--log", type=Path, default=ROOT / "train_log.jsonl")
     ap.add_argument("--notes", default="")
+    ap.add_argument("--keep-names", action="store_true", help="keep other people's names in the card (hidden by default)")
     args = ap.parse_args(argv)
-    card = build(args.model_dir, args.data, args.adapter, args.log, args.notes)
+    card = build(args.model_dir, args.data, args.adapter, args.log, args.notes, keep_names=args.keep_names)
     mix = ", ".join(f"{v['label']} {v['share_tokens']}%" for v in card["mix"].values())
     print(f"wrote {args.model_dir / 'card.json'}: {card['data']['conversations']} conversations; {mix}")
 
