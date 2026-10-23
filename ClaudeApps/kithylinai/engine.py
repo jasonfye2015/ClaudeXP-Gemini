@@ -46,6 +46,8 @@ def models():
                 if folder.is_dir() else ([folder] if folder.suffix.lower() == ".gguf" else [])
             for f in files:
                 info = _info(folder) if folder.is_dir() else {}
+                if info.get("lora_base") and f.name == info.get("lora_base_file"):
+                    continue                        # the base an add-on goes on, copied in beside it
                 out.append(ModelEntry(f"own:{f}", info.get("title") or folder.stem, f, "Kithylin AI", info))
     if TIMELINE_MODELS.is_dir():
         for folder in sorted(TIMELINE_MODELS.iterdir()):
@@ -70,6 +72,21 @@ def find(key):
         p = Path(key[4:])
         return ModelEntry(key, p.stem, p, "file")
     return None
+
+
+def lora_base(model):
+    """For an add-on model (info.json "lora_base"): the base .gguf it goes on - a copy in its own folder (when the
+    program has been lifted out of the Timeline), else the Timeline's models folder. None if it isn't one, or the
+    base can't be found."""
+    if not model.info.get("lora_base"):
+        return None
+    name = model.info.get("lora_base_file") or ""
+    for folder in (model.path.parent, TIMELINE_MODELS / model.info["lora_base"]):
+        if name and (folder / name).exists():
+            return folder / name
+    folder = TIMELINE_MODELS / model.info["lora_base"]
+    found = sorted(f for f in folder.glob("*.gguf") if not f.name.lower().startswith("mmproj")) if folder.is_dir() else []
+    return found[0] if found else None
 
 
 def engine_exe(choice):
@@ -121,7 +138,12 @@ class _Server:
             return
         self.stop()
         self.port = _free_port()
-        args = [str(exe), "--host", "127.0.0.1", "--port", str(self.port), "-m", str(model.path),
+        base = lora_base(model)
+        if model.info.get("lora_base") and base is None:
+            raise RuntimeError(f"This model is an add-on for {model.info.get('lora_base_file') or model.info['lora_base']}, "
+                               "which isn't here: put that .gguf in its folder or in the Timeline's models.")
+        model_args = ["-m", str(base), "--lora", str(model.path)] if base else ["-m", str(model.path)]
+        args = [str(exe), "--host", "127.0.0.1", "--port", str(self.port)] + model_args + [
                 "-c", str(int(context)), "--jinja", "--parallel", "1", "--flash-attn", "on",
                 "--cache-type-k", "q8_0", "--cache-type-v", "q8_0"]
         if engine_choice == "cpu":
@@ -260,7 +282,12 @@ class Engine(QObject):
         self.stop()
         self.model, self.ready = model, False
         self.loaded.emit(False)
-        self.status.emit(f"Now loading {model.title} ({model.path.name}, {model.path.stat().st_size / 2**30:.1f} GB)...")
+        base = lora_base(model)
+        if base is not None:
+            self.status.emit(f"Now loading {model.title}: {base.name} ({base.stat().st_size / 2**30:.1f} GB) with the "
+                             f"add-on {model.path.name} ({model.path.stat().st_size / 2**20:.0f} MB)...")
+        else:
+            self.status.emit(f"Now loading {model.title} ({model.path.name}, {model.path.stat().st_size / 2**30:.1f} GB)...")
         self._loader = _Loader(model, engine_choice, context, lambda s: self.status.emit(s))
         self._loader.finished_with.connect(self._loaded)
         self._loader.start()
@@ -302,6 +329,8 @@ class Engine(QObject):
             url, name = _server.url(), self.model.path.stem
         body = {"model": name, "messages": messages, "stream": True, "temperature": float(temperature),
                 "max_tokens": int(max_tokens), "cache_prompt": True}
+        if self.model.info.get("stop"):
+            body["stop"] = list(self.model.info["stop"])
         self._streamer = _Streamer(url, body)
         self._streamer.chunk.connect(self.chunk)
         self._streamer.done.connect(self._done)

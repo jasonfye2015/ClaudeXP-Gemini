@@ -17,6 +17,14 @@ runs out, it quietly spills into system RAM and everything runs ~30x slower. So 
 128, each recomputed in the backward pass, instead of holding scores over the whole vocabulary at once.
 
 Writes to Local Storage/LLM Models/selfmodel/: adapter/ (the LoRA weights, the result), checkpoints/, train_log.jsonl.
+
+Another base model and data set, kept in a run folder of its own (runs/<name>/adapter, checkpoints, train_log.jsonl):
+
+    python -m selfmodel.train --run nemomix-adult --base base-nemomix --data data-adult --embed-cpu --optim adamw8bit
+
+Mistral-family models (NemoMix and friends) are trained in ChatML, the format they're run with; Gemma in its own.
+--embed-cpu keeps the vocabulary table in system memory, where looking a word up costs nothing, and quantizes the
+output layer to 4-bit like the rest: what lets a 12B fit on an 11 GB card.
 """
 import argparse
 import json
@@ -34,6 +42,41 @@ OUT = ROOT / "adapter"
 CKPT = ROOT / "checkpoints"
 LOG = ROOT / "train_log.jsonl"
 TARGETS = r".*language_model.*\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)$"
+TARGETS_TEXT = r".*layers\.\d+\..*\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)$"   # Mistral, Llama...
+
+
+class SlicedHead:
+    """An output layer kept as several 4-bit slices of the vocabulary (see --embed-cpu). Built lazily as a torch
+    module the first time it's made, so importing this file doesn't need torch."""
+
+    def __new__(cls, weight, parts):
+        import bitsandbytes as bnb
+        import torch
+
+        class _SlicedHead(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.in_features, self.out_features = weight.shape[1], weight.shape[0]
+                self.slices = torch.nn.ModuleList()
+                for chunk in torch.chunk(weight, parts, dim=0):
+                    q = bnb.nn.Linear4bit(chunk.shape[1], chunk.shape[0], bias=False, compute_dtype=torch.float32,
+                                          quant_type="nf4", compress_statistics=True)
+                    q.weight = bnb.nn.Params4bit(chunk.contiguous(), requires_grad=False, quant_type="nf4",
+                                                 compress_statistics=True)
+                    self.slices.append(q.to("cuda"))
+
+            def forward(self, h):
+                return torch.cat([s(h) for s in self.slices], dim=-1)
+
+        return _SlicedHead()
+
+
+def use_run(name):
+    """Point the outputs at runs/<name>/ (or the top folder when no run is named, as the first model was)."""
+    global OUT, CKPT, LOG
+    folder = ROOT / "runs" / name if name else ROOT
+    folder.mkdir(parents=True, exist_ok=True)
+    OUT, CKPT, LOG = folder / "adapter", folder / "checkpoints", folder / "train_log.jsonl"
 
 
 def log(entry):
@@ -43,9 +86,11 @@ def log(entry):
         f.write(json.dumps(entry) + "\n")
 
 
-def encode(tok, messages, max_len):
-    """Gemma's chat format, token by token: (input ids, labels) with labels only on your replies (and the
-    <end_of_turn> that closes each, so the model learns where you stop)."""
+def encode(tok, messages, max_len, fmt="gemma"):
+    """The chat format, token by token: (input ids, labels) with labels only on your replies (and the end-of-turn
+    marker that closes each, so the model learns where you stop). fmt: "gemma" or "chatml"."""
+    if fmt == "chatml":
+        return encode_chatml(tok, messages, max_len)
     system = ""
     ids, labels = [tok.bos_token_id], [-100]
     first_user = True
@@ -68,14 +113,36 @@ def encode(tok, messages, max_len):
     return ids, labels
 
 
-def load(path, tok, max_len, limit=None, seed=0):
+def encode_chatml(tok, messages, max_len):
+    """ChatML: <|im_start|>role\n...<|im_end|>\n, with the "<|im_start|>assistant\n" header after each of their
+    turns as context, and your reply plus its <|im_end|> as what's learned."""
+    ids = [tok.bos_token_id] if tok.bos_token_id is not None else []
+    labels = [-100] * len(ids)
+    for m in messages:
+        if m["role"] in ("system", "user"):
+            part = f"<|im_start|>{m['role']}\n{m['content']}<|im_end|>\n"
+            if m["role"] == "user":
+                part += "<|im_start|>assistant\n"
+            got = tok(part, add_special_tokens=False)["input_ids"]
+            ids += got
+            labels += [-100] * len(got)
+        else:
+            got = tok(f"{m['content']}<|im_end|>\n", add_special_tokens=False)["input_ids"]
+            ids += got
+            labels += got
+    if len(ids) > max_len:
+        ids, labels = ids[:max_len], labels[:max_len]
+    return ids, labels
+
+
+def load(path, tok, max_len, limit=None, seed=0, fmt="gemma"):
     rows = [json.loads(line) for line in open(path, encoding="utf-8")]
     random.Random(seed).shuffle(rows)
     if limit:
         rows = rows[:limit]
     out = []
     for r in rows:
-        ids, labels = encode(tok, r["messages"], max_len)
+        ids, labels = encode(tok, r["messages"], max_len, fmt)
         if any(l != -100 for l in labels):
             out.append((ids, labels))
     return out
@@ -93,7 +160,15 @@ def main(argv=None):
     ap.add_argument("--max-len", type=int, default=1280)
     ap.add_argument("--eval-every", type=int, default=150, help="optimiser steps between validation checks")
     ap.add_argument("--save-minutes", type=float, default=30)
+    ap.add_argument("--run", default="", help="keep this run's adapter, checkpoints and log in runs/<name>/")
+    ap.add_argument("--base", default="base", help="the base model's folder in selfmodel/ (e.g. base-nemomix)")
+    ap.add_argument("--data", default="data", help="the training data's folder in selfmodel/ (e.g. data-adult)")
+    ap.add_argument("--format", default="auto", choices=["auto", "gemma", "chatml"])
+    ap.add_argument("--embed-cpu", action="store_true", help="vocabulary table in system memory, output layer 4-bit")
+    ap.add_argument("--optim", default="adamw", choices=["adamw", "adamw8bit"])
     args = ap.parse_args(argv)
+    use_run(args.run)
+    base_dir, data_dir = ROOT / args.base, ROOT / args.data
 
     import torch
     from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
@@ -101,14 +176,39 @@ def main(argv=None):
 
     torch.backends.cuda.matmul.allow_tf32 = False
     ROOT.mkdir(parents=True, exist_ok=True)
-    if not (BASE / "config.json").exists():
-        sys.exit(f"No base model in {BASE}: run selfmodel.fetch first.")
-    tok = AutoTokenizer.from_pretrained(BASE)
+    if not (base_dir / "config.json").exists():
+        sys.exit(f"No base model in {base_dir}: run selfmodel.fetch first.")
+    model_type = json.loads((base_dir / "config.json").read_text()).get("model_type", "")
+    fmt = args.format if args.format != "auto" else ("gemma" if model_type.startswith("gemma") else "chatml")
+    tok = AutoTokenizer.from_pretrained(base_dir)
+    # the output layer: 32-bit for Gemma (as the first model was made), 4-bit with --embed-cpu
+    skip = ["vision_tower", "multi_modal_projector"] + ([] if args.embed_cpu else ["lm_head"])
     quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_use_double_quant=True,
-                               bnb_4bit_compute_dtype=torch.float32,
-                               llm_int8_skip_modules=["vision_tower", "multi_modal_projector", "lm_head"])
-    model = AutoModelForCausalLM.from_pretrained(BASE, quantization_config=quant, dtype=torch.float32,
-                                                 device_map={"": 0}, attn_implementation="eager")
+                               bnb_4bit_compute_dtype=torch.float32, llm_int8_skip_modules=skip)
+    model = AutoModelForCausalLM.from_pretrained(base_dir, quantization_config=quant,
+                                                 dtype=torch.float16 if args.embed_cpu else torch.float32,
+                                                 device_map={"": 0},
+                                                 attn_implementation="eager" if fmt == "gemma" else "sdpa")
+    if args.embed_cpu:
+        import bitsandbytes as bnb
+        embed = model.get_input_embeddings()
+        embed.to("cpu", dtype=torch.float32)
+        embed.register_forward_pre_hook(lambda _m, inputs: tuple(x.to("cpu") for x in inputs))
+        embed.register_forward_hook(lambda _m, _inputs, output: output.to("cuda"))
+        # the output layer in 8 slices of the vocabulary, each 4-bit: a 4-bit layer is unpacked to 32-bit whole every
+        # time it's used, which for 131k words x 5120 is 2.7 GB at once - in slices it's a few hundred MB at a time
+        head = model.get_output_embeddings()
+        if isinstance(head, bnb.nn.Linear4bit):
+            full = bnb.functional.dequantize_4bit(head.weight.data, head.weight.quant_state).to("cpu", torch.float16)
+        else:
+            full = head.weight.data.to("cpu", torch.float16)
+        del head
+        model.set_output_embeddings(SlicedHead(full, 8))
+        del full
+        torch.cuda.empty_cache()
+        print(f"vocabulary table: {embed.weight.device} {embed.weight.dtype}; output layer: "
+              f"{type(model.get_output_embeddings()).__name__}; graphics memory after loading: "
+              f"{torch.cuda.memory_allocated() / 2**30:.2f} GB", flush=True)
     for name in ("vision_tower", "multi_modal_projector"):        # text only: the image side isn't needed
         holder = model.model if hasattr(model.model, name) else model
         if getattr(holder, name, None) is not None:
@@ -121,7 +221,7 @@ def main(argv=None):
         state = json.loads((CKPT / "latest" / "state.json").read_text())
     else:
         model = get_peft_model(model, LoraConfig(r=args.rank, lora_alpha=args.rank * 2, lora_dropout=0.05,
-                                                 target_modules=TARGETS, task_type="CAUSAL_LM"))
+                                                 target_modules=TARGETS if fmt == "gemma" else TARGETS_TEXT, task_type="CAUSAL_LM"))
         state = {"step": 0, "seen": 0, "tokens": 0}
     model.print_trainable_parameters()
 
@@ -155,11 +255,15 @@ def main(argv=None):
                 total = total + chunk_loss(h[a:a + 128], target[a:a + 128])
         return total, int(keep.sum())
 
-    train = load(DATA / "train.jsonl", tok, args.max_len, limit=30 if args.bench else None)
-    val = load(DATA / "val.jsonl", tok, args.max_len, limit=60, seed=1)
+    train = load(data_dir / "train.jsonl", tok, args.max_len, limit=30 if args.bench else None, fmt=fmt)
+    val = load(data_dir / "val.jsonl", tok, args.max_len, limit=60, seed=1, fmt=fmt)
     total_steps = max(1, math.ceil(len(train) * args.epochs / args.accum))
     params = [p for p in model.parameters() if p.requires_grad]
-    opt = torch.optim.AdamW(params, lr=args.lr, weight_decay=0.0)
+    if args.optim == "adamw8bit":
+        import bitsandbytes as bnb
+        opt = bnb.optim.AdamW8bit(params, lr=args.lr, weight_decay=0.0)
+    else:
+        opt = torch.optim.AdamW(params, lr=args.lr, weight_decay=0.0)
     sched = get_cosine_schedule_with_warmup(opt, min(50, total_steps // 10 + 1), total_steps)
     if args.resume and (CKPT / "latest" / "optimizer.pt").exists():
         opt.load_state_dict(torch.load(CKPT / "latest" / "optimizer.pt"))
@@ -185,7 +289,7 @@ def main(argv=None):
         (where / "state.json").write_text(json.dumps(state))
 
     log({"event": "start", "train": len(train), "val": len(val), "steps": total_steps, "resume_at": state["step"],
-         "bench": args.bench})
+         "bench": args.bench, "base": args.base, "data": args.data, "format": fmt, "max_len": args.max_len})
     if not args.bench:
         log({"event": "eval", "step": state["step"], "val_loss": round(evaluate(), 4)})
     model.train()
@@ -232,7 +336,7 @@ def main(argv=None):
             log({"event": "time_up", "step": state["step"], "hours": round(elapsed / 3600, 2)})
             break
     if args.bench:
-        all_tokens = sum(len(x[0]) for x in load(DATA / "train.jsonl", tok, args.max_len))
+        all_tokens = sum(len(x[0]) for x in load(data_dir / "train.jsonl", tok, args.max_len, fmt=fmt))
         speed = run_tokens / max(1e-6, time.time() - started)
         log({"event": "bench", "tok_per_s": round(speed, 1), "gpu_peak_gb": round(torch.cuda.max_memory_allocated() / 2**30, 2),
              "dataset_tokens": all_tokens, "hours_for_one_epoch": round(all_tokens / speed / 3600, 1),
