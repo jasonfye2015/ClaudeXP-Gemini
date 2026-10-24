@@ -18,7 +18,8 @@ from ..paths import icon as asset_icon
 # gone by 2011 (or ClaudeXP's own): Netscape, Windows Messenger, activation, the XP tour, StyleXP, Clippy, dial-up
 DROPPED = {"navigator", "winmsgr", "activate", "tour", "stylexp", "clippy", "connect", "dsl", "search", "helpctr",
            "personaprofiles"}
-RENAMED = {"msn": ("Windows Live Messenger", "Chat with your contacts on Windows Live"),
+RENAMED = {"backup": ("Backup and Restore", "Back up and restore your saves, computers' data and profile"),
+           "msn": ("Windows Live Messenger", "Chat with your contacts on Windows Live"),
            "hotmail": ("Windows Live Hotmail", "Free web-based e-mail"),
            "outlook": ("Windows Live Mail", "E-mail"),
            "moviemaker": ("Windows Live Movie Maker", "Make home movies"),
@@ -29,7 +30,7 @@ RENAMED = {"msn": ("Windows Live Messenger", "Chat with your contacts on Windows
            "wmp": ("Windows Media Player", "Play music and video"),
            "aim": ("AIM", "Instant messenger"),
            "antivirus": ("ClaudeShield AntiVirus", ""), "adaware": ("Ad-Aware Free", "Find and remove spyware")}
-REGROUPED = {"msn": "Windows Live", "hotmail": "Windows Live", "outlook": "Windows Live", "moviemaker": "Windows Live",
+REGROUPED = {"backup": "Maintenance", "msn": "Windows Live", "hotmail": "Windows Live", "outlook": "Windows Live", "moviemaker": "Windows Live",
              "livejournal": "Social Programs", "sndvol": "Accessories", "sndrec": "Accessories",
              "flash": "Adobe", "adaware": "Lavasoft", "neko": "Accessories", "copilotwidgets": "Accessories",
              "winupdate": "", "defrag": "Accessories/System Tools", "sysrestore": "Accessories/System Tools"}

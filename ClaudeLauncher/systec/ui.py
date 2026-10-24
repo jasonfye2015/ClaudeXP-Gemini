@@ -29,6 +29,17 @@ VERSION = "v1.50"
 FONT = "Segoe UI"
 TEXT = QColor("#E8ECF2")
 DIM = QColor("#8A94A6")
+BACKUP_CSS = """
+QGroupBox { color: #8FB4FF; font-family: 'Segoe UI'; font-size: 12px; font-weight: 600; border: 1px solid #3A4250;
+            border-radius: 6px; margin-top: 10px; padding-top: 8px; }
+QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; }
+QCheckBox { color: #E8ECF2; font-family: 'Segoe UI'; font-size: 13px; }
+QListWidget { background: #0E1116; color: #E8ECF2; border: 1px solid #3A4250; font-family: 'Segoe UI'; font-size: 12px; }
+QListWidget::item:selected { background: #2A3A5A; }
+QSpinBox { background: #0E1116; color: #E8ECF2; border: 1px solid #3A4250; padding: 2px; }
+QProgressBar { background: #0E1116; border: 1px solid #3A4250; border-radius: 3px; height: 10px; }
+QProgressBar::chunk { background: #8FB4FF; }
+"""
 DIALOG_CSS = """
 QDialog { background: #15181E; }
 QLabel { color: #E8ECF2; font-family: 'Segoe UI'; font-size: 13px; }
@@ -424,15 +435,15 @@ class Systec(QWidget):
             p.setPen(DIM)
             p.drawText(line, Qt.AlignVCenter, "TIMELINE IDENTITY - click to change")
         # the centre buttons, on a trapezoid
-        cx, w = VW / 2, 340
+        cx, w = VW / 2, 420
         tray = QPolygonF([QPointF(cx - w / 2 - 24, VH), QPointF(cx - w / 2, VH - 52), QPointF(cx + w / 2, VH - 52),
                           QPointF(cx + w / 2 + 24, VH)])
         p.setPen(QPen(QColor("#3A4250"), 1.2))
         p.setBrush(QColor(14, 16, 20, 230))
         p.drawPolygon(tray)
         for i, (text, action) in enumerate((("HELP", self.help), ("PROFILE", self.edit_profile),
-                                            ("POWER OFF", self.close))):
-            self._button(p, QRectF(cx - 152 + i * 104, VH - 40, 96, 28), text, action, "#8FB4FF", small=True)
+                                            ("BACKUP", self.backups), ("POWER OFF", self.close))):
+            self._button(p, QRectF(cx - 196 + i * 98, VH - 40, 90, 28), text, action, "#8FB4FF", small=True)
         # date and time
         box = QRectF(VW - 300, VH - 50, 300, 50)
         path = QPainterPath(QPointF(box.x(), box.bottom()))
@@ -519,12 +530,50 @@ class Systec(QWidget):
         self.watch.start(1000)
         QTimer.singleShot(1500, self.showMinimized)
 
+    def backups(self):
+        from claudecore import backup as B
+        from claudecore.backup_ui import BackupPanel
+        running = self.running if self.process is not None and self.process.poll() is None else None
+        blocked = {B.ERA_PART.get(running.year)} - {None} if running is not None else set()
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Backup and Restore")
+        dlg.setStyleSheet(DIALOG_CSS + BACKUP_CSS)
+        dlg.setMinimumSize(640, 720)
+        lay = QVBoxLayout(dlg)
+        title = QLabel("BACKUP AND RESTORE")
+        title.setObjectName("title")
+        lay.addWidget(title)
+        lay.addWidget(BackupPanel(blocked=blocked), 1)
+        close = QPushButton("CLOSE")
+        close.clicked.connect(dlg.accept)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        row.addWidget(close)
+        lay.addLayout(row)
+        dlg.exec()
+
+    def _auto_backup(self):
+        """After a computer shuts down: a quiet backup of the ticked parts, if that's switched on."""
+        from claudecore import backup as B
+        cfg = B.settings()
+        if not cfg.get("auto") or not cfg.get("parts"):
+            return
+        import threading
+
+        def work():
+            try:
+                B.create(cfg["parts"], auto=True)
+            except Exception:
+                pass                       # a failed automatic backup never gets in the way
+        threading.Thread(target=work, daemon=True).start()
+
     def _check_process(self):
         if self.process is None or self.process.poll() is None:
             return
         self.process = None
         self.running = None
         self.watch.stop()
+        self._auto_backup()
         self.showNormal()
         self.raise_()
         self.activateWindow()

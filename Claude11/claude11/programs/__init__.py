@@ -22,7 +22,8 @@ from ..paths import icon as asset_icon
 DROPPED = {"navigator", "winmsgr", "activate", "tour", "stylexp", "clippy", "connect", "dsl", "search", "helpctr",
            "personaprofiles", "aim", "msn", "yim", "icq", "skype", "quicktime", "adaware",
            "ibackgammon", "icheckers", "ihearts", "ireversi", "ispades"}
-RENAMED = {"iexplore": ("Microsoft Edge", "Browse the web"),
+RENAMED = {"backup": ("Windows Backup", "Back up and restore your saves, computers' data and profile"),
+           "iexplore": ("Microsoft Edge", "Browse the web"),
            "hotmail": ("Outlook.com", "Your mail on the web"),
            "outlook": ("Outlook", "Mail and calendar"),
            "moviemaker": ("Clipchamp", "Make videos"),
@@ -39,7 +40,7 @@ RENAMED = {"iexplore": ("Microsoft Edge", "Browse the web"),
            "spider": ("Spider", "Microsoft Solitaire Collection"), "freecell": ("FreeCell", "Microsoft Solitaire Collection"),
            "tripeaks": ("TriPeaks", "Microsoft Solitaire Collection"), "minesweeper": ("Microsoft Minesweeper", ""),
            "livejournal": ("LiveJournal", "Journals, still going")}
-REGROUPED = {"livejournal": "Social Programs", "hotmail": "Social Programs", "outlook": "", "wab": "", "moviemaker": "",
+REGROUPED = {"backup": "Windows Tools", "livejournal": "Social Programs", "hotmail": "Social Programs", "outlook": "", "wab": "", "moviemaker": "",
              "sndvol": "Windows Tools", "sndrec": "", "flash": "Ruffle", "neko": "", "copilotwidgets": "Copilot",
              "copilotai": "Copilot", "copilotvoice": "Copilot", "imagecreator": "Copilot", "pystudio": "Copilot",
              "winupdate": "", "defrag": "Windows Tools", "sysrestore": "Windows Tools", "charmap": "Windows Tools",
