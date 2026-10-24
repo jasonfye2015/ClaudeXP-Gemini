@@ -31,7 +31,7 @@ def read(path):
     return out
 
 
-BAD = '<>:"/\|?*'
+BAD = set(r'<>:"/\|?*')                # the characters Windows doesn't allow in a file name
 
 
 def safe_name(name):

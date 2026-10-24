@@ -62,6 +62,11 @@ def main():
     qapp = QApplication(sys.argv)
     qapp.setApplicationName("ClaudeXP")
     try:
+        from claudecore import selfcheck
+        selfcheck.at_start("xp")    # quick start-up self-check: logs\selfcheck.log
+    except Exception:
+        pass
+    try:
         from claudecore import macfonts
         macfonts.apply()               # on a Mac: Mac fonts for the Windows ones
     except ImportError:

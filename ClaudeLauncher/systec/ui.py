@@ -138,6 +138,8 @@ class Systec(QWidget):
         self.process = None
         self.running = None
         self.bg = None
+        self.checks = None                 # the self-check's findings, once it has run
+        self._start_selfcheck()
         self.art = {}
         self.t = 0.0
         self.timer = QTimer(self)
@@ -444,6 +446,7 @@ class Systec(QWidget):
         for i, (text, action) in enumerate((("HELP", self.help), ("PROFILE", self.edit_profile),
                                             ("BACKUP", self.backups), ("POWER OFF", self.close))):
             self._button(p, QRectF(cx - 196 + i * 98, VH - 40, 90, 28), text, action, "#8FB4FF", small=True)
+        self._selfcheck_chip(p)
         # date and time
         box = QRectF(VW - 300, VH - 50, 300, 50)
         path = QPainterPath(QPointF(box.x(), box.bottom()))
@@ -502,6 +505,8 @@ class Systec(QWidget):
     def load(self, system, format_drive=False):
         if self.process is not None or not system.installed:
             return
+        if not self._clear_to_boot(system):
+            return
         if prof.load() is None:
             self.edit_profile(first=True)
             if prof.load() is None:
@@ -529,6 +534,96 @@ class Systec(QWidget):
         self.running = system
         self.watch.start(1000)
         QTimer.singleShot(1500, self.showMinimized)
+
+    # ---- the self-check -----------------------------------------------------------------------------------------
+    def _start_selfcheck(self):
+        import threading
+        from claudecore import selfcheck
+
+        def work():
+            try:
+                self.checks = selfcheck.run()
+            except Exception:
+                self.checks = []
+        threading.Thread(target=work, daemon=True).start()
+
+    def _selfcheck_chip(self, p):
+        r = QRectF(VW - 300, VH - 82, 300, 26)
+        if self.checks is None:
+            text, colour = "SELF-CHECK  ...", DIM
+        else:
+            errors = sum(1 for f in self.checks if f.level == "error")
+            warnings = sum(1 for f in self.checks if f.level == "warning")
+            if errors:
+                text, colour = f"SELF-CHECK  {errors} PROBLEM{'S' if errors > 1 else ''}", QColor("#FF6A6A")
+            elif warnings:
+                text, colour = f"SELF-CHECK  {warnings} WARNING{'S' if warnings > 1 else ''}", QColor("#FFC86A")
+            else:
+                text, colour = "SELF-CHECK  OK", QColor("#7AE0A0")
+        p.setFont(_font(12, QFont.Medium, 1.0))
+        p.setPen(QColor(colour) if not isinstance(colour, QColor) else colour)
+        p.drawText(r.adjusted(0, 0, -18, 0), Qt.AlignRight | Qt.AlignVCenter, text)
+        if self.checks is not None:
+            self.buttons.append((r, self.show_selfcheck))
+
+    def show_selfcheck(self, findings=None, ask_for=None):
+        """The findings in a dialog. ask_for: a computer about to boot - then it's 'boot anyway?'. Returns True to boot."""
+        from claudecore import selfcheck
+        findings = self.checks if findings is None else findings
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Self-check")
+        dlg.setStyleSheet(DIALOG_CSS)
+        dlg.setMinimumWidth(620)
+        lay = QVBoxLayout(dlg)
+        title = QLabel("SELF-CHECK" if ask_for is None else f"{ask_for.key} HAS A PROBLEM")
+        title.setObjectName("title")
+        lay.addWidget(title)
+        colours = {"error": "#FF6A6A", "warning": "#FFC86A", "info": "#8FB4FF"}
+        rows = "".join(f"<p><b style='color:{colours.get(f.level, '#E8ECF2')}'>{f.level.upper()}</b>&nbsp; {f.message}"
+                       + (f"<br><span style='color:#8A94A6'>{f.advice}</span>" if f.advice else "") + "</p>"
+                       for f in (findings or []))
+        body = QLabel(rows or "<p>Everything checks out.</p>")
+        body.setWordWrap(True)
+        body.setTextFormat(Qt.RichText)
+        lay.addWidget(body)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        go = None
+        if ask_for is not None:
+            go = QPushButton("BOOT ANYWAY")
+            go.clicked.connect(dlg.accept)
+            row.addWidget(go)
+        again = QPushButton("CHECK AGAIN")
+        again.clicked.connect(lambda: (dlg.reject(), self._recheck()))
+        row.addWidget(again)
+        close = QPushButton("CANCEL" if ask_for is not None else "CLOSE")
+        close.clicked.connect(dlg.reject)
+        row.addWidget(close)
+        lay.addLayout(row)
+        return dlg.exec() == QDialog.Accepted and ask_for is not None
+
+    def _recheck(self):
+        self.checks = None
+        self._start_selfcheck()
+        self.update()
+
+    def _clear_to_boot(self, system):
+        """Before booting: the quick checks again (things may have changed since start-up) plus the code check's
+        result; anything that would stop this computer is shown first."""
+        from claudecore import backup as B
+        from claudecore import selfcheck
+        area = B.ERA_PART.get(system.year)
+        if area is None:
+            return True
+        findings = selfcheck.run(quick=True)
+        if self.checks is not None:                      # keep the code errors the full check found
+            findings += [f for f in self.checks if f.message.startswith("A code error")]
+        else:
+            findings += selfcheck.check_code()
+        stops = selfcheck.blocking(findings, area)
+        if not stops:
+            return True
+        return self.show_selfcheck(stops, ask_for=system)
 
     def backups(self):
         from claudecore import backup as B
@@ -574,6 +669,7 @@ class Systec(QWidget):
         self.running = None
         self.watch.stop()
         self._auto_backup()
+        self._recheck()
         self.showNormal()
         self.raise_()
         self.activateWindow()
