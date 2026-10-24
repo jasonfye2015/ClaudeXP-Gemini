@@ -18,7 +18,10 @@ ClaudeCore's host (ClaudeCore/claudecore/host.py):
 Each OS lists the games in its own Start menu and desktop folders; ClaudeXP imports them with programs._shared().
 
 Moved here so far: claudeggle, claudecraft, clauderpg (with its game files in clauderpg/game), claudequest,
-claudeablo, claudecity, scorched and claudejeweled. Their art lives in each game's own assets/ folder.
+claudeablo, claudecity, scorched and claudejeweled.
+Their art lives in each game's own assets/ folder.
+Newer: claudemmings (Lemmings, on your media in Local Storage\Lemmings) and claudualties (Casualties: Unknown, on
+your media in Local Storage\casualties unknown; the sound is synthesized).
 emulators/ (the NES, SNES, Game Boy, Genesis, N64 and Apple ][ emulators, plus Doom, Doom II and Wolfenstein 3D,
 with the libretro cores in emulators/cores) and doom/ (Heretic and Hexen on Chocolate Doom, in doom/engines). They
 find their games in Local Storage: Emulation\<system> and WADs.

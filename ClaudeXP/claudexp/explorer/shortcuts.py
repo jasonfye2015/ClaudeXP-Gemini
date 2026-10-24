@@ -31,7 +31,19 @@ def read(path):
     return out
 
 
+BAD = '<>:"/\|?*'
+
+
+def safe_name(name):
+    """A file name Windows accepts: the characters it forbids become dashes ("Claudualties: Unknown" ->
+    "Claudualties - Unknown")."""
+    out = name.replace(": ", " - ")
+    return "".join("-" if ch in BAD else ch for ch in out).strip(" .") or "Shortcut"
+
+
 def make(path, program=None, target=None):
+    path = Path(path)
+    path = path.with_name(safe_name(path.stem) + path.suffix)
     lines = [HEADER]
     if program:
         lines.append(f"Program={program}")
