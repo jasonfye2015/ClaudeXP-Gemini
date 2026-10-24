@@ -79,6 +79,32 @@ def use_run(name):
     OUT, CKPT, LOG = folder / "adapter", folder / "checkpoints", folder / "train_log.jsonl"
 
 
+def stay_awake(folder):
+    """While training runs: ask Windows not to sleep, and touch a tiny file in `folder` every minute. Once the model is
+    loaded, training hardly touches the drive, and Windows' USB selective suspend can put an external SSD to sleep -
+    some don't wake up again, and the drive drops off ("surprise removed") mid-run. Changes no settings; it all
+    stops when the process ends."""
+    import threading
+    if os.name == "nt":
+        try:
+            import ctypes
+            ES_CONTINUOUS, ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
+            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)
+        except Exception:
+            pass
+    beat = Path(folder) / ".keepawake"
+
+    def touch():
+        while True:
+            try:
+                beat.write_text(time.strftime("%Y-%m-%d %H:%M:%S"), encoding="utf-8")
+                os.listdir(folder)
+            except OSError:
+                pass
+            time.sleep(60)
+    threading.Thread(target=touch, daemon=True).start()
+
+
 def log(entry):
     entry["time"] = time.strftime("%Y-%m-%d %H:%M:%S")
     print(json.dumps(entry), flush=True)
@@ -168,6 +194,7 @@ def main(argv=None):
     ap.add_argument("--optim", default="adamw", choices=["adamw", "adamw8bit"])
     args = ap.parse_args(argv)
     use_run(args.run)
+    stay_awake(LOG.parent)                  # keep Windows and the external drive from dozing off mid-run
     base_dir, data_dir = ROOT / args.base, ROOT / args.data
 
     import torch
