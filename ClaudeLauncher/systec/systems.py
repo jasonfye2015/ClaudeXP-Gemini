@@ -34,6 +34,9 @@ class System:
     def python(self):
         """The interpreter that runs this computer: its own .venv when this PC has the Python it was made from (the
         development PC), else the Timeline's portable Python (on the external SSD, on any PC)."""
+        if sys.platform == "darwin":                     # a Mac: the Timeline's Mac Python (Python-mac on the SSD)
+            mac = TIMELINE / "Python-mac" / "bin" / "python3"
+            return mac if mac.is_file() else Path(sys.executable)
         windowed = "pythonw.exe" if os.name == "nt" else "python"
         venv = self.path / ".venv" / "Scripts" / windowed
         if venv.is_file() and venv_usable(self.path / ".venv"):
@@ -45,6 +48,7 @@ class System:
 
 
 PORTABLE_PYTHON = TIMELINE / "Python"
+PORTABLE_PYTHONS = (PORTABLE_PYTHON, TIMELINE / "Python-mac")
 
 
 def venv_usable(venv):

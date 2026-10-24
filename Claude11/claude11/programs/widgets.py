@@ -335,7 +335,7 @@ class PhotosCard(Card):
         path = QPainterPath()
         path.addRoundedRect(inner, 6, 6)
         p.setClipPath(path)
-        p.drawPixmap(int(inner.x() + (inner.width() - pm.width()) / 2), int(inner.y() + (inner.height() - pm.height()) / 2), pm)
+        p.drawPixmap(int(inner.x() + (inner.width() - int(pm.deviceIndependentSize().width())) / 2), int(inner.y() + (inner.height() - int(pm.deviceIndependentSize().height())) / 2), pm)
 
 
 class FeedCard(Card):

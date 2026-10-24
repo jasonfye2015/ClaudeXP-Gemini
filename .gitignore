@@ -2,8 +2,9 @@
 # The shared external drive (models, media, ROMs, website rips): only its README is part of the project.
 Local Storage/*
 !Local Storage/README.txt
-# The portable Python runtime is installed, not committed.
+# The portable Python runtimes (Windows, and Mac for Apple silicon) are installed, not committed.
 Python/
+Python-mac/
 __pycache__/
 *.pyc
 # Personal: the user's identity and the launcher's per-machine settings
@@ -18,3 +19,9 @@ ClaudeGames/Saves/
 ClaudeApps/kithylinai/Art/
 ClaudeApps/kithylinai/Models/
 ClaudeApps/kithylinai/Data/
+# Files macOS leaves on the drive
+._*
+.DS_Store
+.Spotlight-V100/
+.fseventsd/
+.Trashes/

@@ -12,6 +12,11 @@ def main():
     from PySide6.QtWidgets import QApplication, QMainWindow
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Kithylin AI")
+    try:
+        from claudecore import macfonts
+        macfonts.apply()               # on a Mac: Mac fonts for the Windows ones
+    except ImportError:
+        pass
     from kithylinai.app import KithylinAI, app_icon
     win = QMainWindow()
     win.setWindowTitle("Kithylin AI")

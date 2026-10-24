@@ -1262,7 +1262,7 @@ class Taskbar(QWidget):
             self._hover_bg(p, rect, hovered)
         if icon is not None:
             pm = icon.pixmap(ICON, ICON)
-            p.drawPixmap(rect.x() + (rect.width() - pm.width()) // 2, rect.y() + (rect.height() - pm.height()) // 2 - 1,
+            p.drawPixmap(rect.x() + (rect.width() - int(pm.deviceIndependentSize().width())) // 2, rect.y() + (rect.height() - int(pm.deviceIndependentSize().height())) // 2 - 1,
                          pm)
         if kind == "win":
             p.setPen(Qt.NoPen)

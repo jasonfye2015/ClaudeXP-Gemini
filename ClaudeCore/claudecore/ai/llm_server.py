@@ -45,8 +45,9 @@ def models_dir():
 def engines():
     """{'vulkan': exe, 'cuda': exe, ...} for the builds that are installed."""
     base = models_dir() / "llama.cpp"
-    return {f: base / f / "llama-server.exe" for f in ("vulkan", "cuda", "cpu")
-            if (base / f / "llama-server.exe").exists()}
+    exe = "llama-server.exe" if os.name == "nt" else "llama-server"
+    flavours = ("vulkan", "cuda", "cpu") if os.name == "nt" else ("macos",)     # a Mac: the Apple-silicon (Metal) build
+    return {f: base / f / exe for f in flavours if (base / f / exe).exists()}
 
 
 def find_engine():
@@ -60,7 +61,7 @@ def find_engine():
             chosen = (models_dir() / "engine.txt").read_text(encoding="utf-8").strip().lower()
         except OSError:
             chosen = ""
-    for flavour in ([chosen] if chosen else []) + ["vulkan", "cuda", "cpu"]:
+    for flavour in ([chosen] if chosen else []) + ["vulkan", "cuda", "cpu", "macos"]:
         if flavour in have:
             return have[flavour]
     return None

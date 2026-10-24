@@ -73,13 +73,29 @@ def models_root():
     return models_dir() / "models"
 
 
+def memory_limit():
+    """On a Mac (one pool of memory shared by everything): the biggest model file worth offering, half the memory, so
+    an 8 GB MacBook keeps the 1B-4B models and never tries a 12B. Elsewhere None: the graphics card decides."""
+    import sys
+    if sys.platform != "darwin":
+        return None
+    try:
+        import os
+        return os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 2
+    except (ValueError, OSError, AttributeError):
+        return None
+
+
 def installed(embeddings=False):
-    """Every usable chat model (a folder with a .gguf), smallest first; embeddings=True includes embedding models."""
+    """Every usable chat model (a folder with a .gguf), smallest first; embeddings=True includes embedding models.
+    On a Mac, models too big for its memory are left out (memory_limit)."""
     root = models_root()
     if not root.is_dir():
         return []
     found = [Model(d) for d in sorted(root.iterdir()) if d.is_dir()]
-    return sorted((m for m in found if m.path is not None and (embeddings or not m.embedding)), key=lambda m: m.size)
+    limit = memory_limit()
+    return sorted((m for m in found if m.path is not None and (embeddings or not m.embedding)
+                   and (limit is None or m.size <= limit)), key=lambda m: m.size)
 
 
 def embedders():

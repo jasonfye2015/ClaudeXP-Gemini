@@ -16,7 +16,7 @@ import urllib.request
 
 from PySide6.QtCore import QObject, QThread, Signal
 
-from .paths import DATA, ENGINE, MODELS, TIMELINE_ENGINES, TIMELINE_MODELS, hosted
+from .paths import DATA, ENGINE, MODELS, SERVER, TIMELINE_ENGINES, TIMELINE_MODELS, hosted
 
 START_TIMEOUT = 240
 
@@ -37,8 +37,33 @@ def _info(folder):
         return {}
 
 
+def memory_limit():
+    """On a Mac (one pool of memory for everything): the biggest model worth offering, half the memory - an 8 GB
+    MacBook runs the 4B Kithylins, not the 12B ones. Elsewhere None."""
+    import sys
+    if sys.platform != "darwin":
+        return None
+    try:
+        return os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 2
+    except (ValueError, OSError, AttributeError):
+        return None
+
+
+def _fits(entry):
+    limit = memory_limit()
+    if limit is None:
+        return True
+    base = lora_base(entry)
+    size = entry.path.stat().st_size + (base.stat().st_size if base is not None else 0)
+    return size <= limit
+
+
 def models():
-    """Every model Kithylin AI can run, Kithylin's own first."""
+    """Every model Kithylin AI can run on this computer, Kithylin's own first."""
+    return [m for m in _all_models() if _fits(m)]
+
+
+def _all_models():
     out = []
     if MODELS.is_dir():
         for folder in sorted(MODELS.iterdir()):
@@ -91,10 +116,10 @@ def lora_base(model):
 
 def engine_exe(choice):
     """llama-server.exe for the chosen engine ("auto", "vulkan", "cuda" or "cpu"), or None."""
-    order = {"auto": ["vulkan", "cuda"], "cpu": ["vulkan", "cuda"]}.get(choice, [choice])
+    order = {"auto": ["vulkan", "cuda", "macos"], "cpu": ["vulkan", "cuda", "macos"]}.get(choice, [choice])
     dirs = [ENGINE] + [TIMELINE_ENGINES[k] for k in order if k in TIMELINE_ENGINES]
     for d in dirs:
-        exe = d / "llama-server.exe"
+        exe = d / SERVER
         if exe.exists():
             return exe
     return None

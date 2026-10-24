@@ -7,7 +7,11 @@ ClaudeXP is the active program.
 """
 import ctypes
 import os
-from ctypes import wintypes
+
+if os.name == "nt":                 # Windows' own types: the keyboard hook is Windows-only (a Mac has its own Alt+Tab)
+    from ctypes import wintypes
+else:
+    wintypes = None
 
 from PySide6.QtCore import QRect, QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QLinearGradient, QPainter, QPen
@@ -125,8 +129,8 @@ VK_MASK = 0xFF                 # a key that does nothing: stops a lone Alt relea
 
 
 class KBDLLHOOKSTRUCT(ctypes.Structure):
-    _fields_ = [("vkCode", wintypes.DWORD), ("scanCode", wintypes.DWORD), ("flags", wintypes.DWORD),
-                ("time", wintypes.DWORD), ("dwExtraInfo", ctypes.c_size_t)]
+    _fields_ = [("vkCode", ctypes.c_uint32), ("scanCode", ctypes.c_uint32), ("flags", ctypes.c_uint32),
+                ("time", ctypes.c_uint32), ("dwExtraInfo", ctypes.c_size_t)]       # DWORDs
 
 
 class KeyHook:

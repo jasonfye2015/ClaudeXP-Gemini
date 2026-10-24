@@ -9,6 +9,11 @@ from systec.ui import Systec
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("SYSTEC Multi-Boot Manager")
+    try:
+        from claudecore import macfonts
+        macfonts.apply()               # on a Mac: Mac fonts for the Windows ones
+    except ImportError:
+        pass
     win = Systec()
     win.resize(1408, 768)
     win.show()

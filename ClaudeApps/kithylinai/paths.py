@@ -21,7 +21,9 @@ ICON = ASSETS / "kithylin.jpg"
 
 LLM = TIMELINE / "Local Storage" / "LLM Models"
 TIMELINE_MODELS = LLM / "models"
-TIMELINE_ENGINES = {"vulkan": LLM / "llama.cpp" / "vulkan", "cuda": LLM / "llama.cpp" / "cuda"}
+TIMELINE_ENGINES = {"vulkan": LLM / "llama.cpp" / "vulkan", "cuda": LLM / "llama.cpp" / "cuda",
+                    "macos": LLM / "llama.cpp" / "macos"}
+SERVER = "llama-server.exe" if os.name == "nt" else "llama-server"
 
 
 def hosted():

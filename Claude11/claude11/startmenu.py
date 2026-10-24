@@ -504,7 +504,7 @@ class StartMenu(QWidget):
                 p.setBrush(T.hover(14))
                 p.drawRoundedRect(QRectF(rect).adjusted(2, 2, -2, -2), 6, 6)
             pm = prog.icon().pixmap(32, 32)
-            p.drawPixmap(rect.x() + (rect.width() - pm.width()) // 2, rect.y() + 12 + (32 - pm.height()) // 2, pm)
+            p.drawPixmap(rect.x() + (rect.width() - int(pm.deviceIndependentSize().width())) // 2, rect.y() + 12 + (32 - int(pm.deviceIndependentSize().height())) // 2, pm)
             p.setFont(_font(11))
             p.setPen(T.text())
             tr = QRect(rect.x() + 4, rect.y() + 50, rect.width() - 8, 30)
@@ -534,7 +534,7 @@ class StartMenu(QWidget):
                 p.setBrush(T.hover(14))
                 p.drawRoundedRect(QRectF(rect).adjusted(0, 2, -8, -2), 6, 6)
             pm = prog.icon().pixmap(28, 28)
-            p.drawPixmap(rect.x() + 12, rect.y() + (rect.height() - pm.height()) // 2, pm)
+            p.drawPixmap(rect.x() + 12, rect.y() + (rect.height() - int(pm.deviceIndependentSize().height())) // 2, pm)
             p.setFont(_font(12))
             p.setPen(T.text())
             p.drawText(QRect(rect.x() + 52, rect.y() + 10, rect.width() - 64, 18), Qt.AlignVCenter | Qt.AlignLeft,

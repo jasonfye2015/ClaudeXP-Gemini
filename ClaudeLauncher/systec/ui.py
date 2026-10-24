@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QHBoxLayout, QLa
                                QListWidgetItem, QMessageBox, QPushButton, QVBoxLayout, QWidget)
 
 from . import profile as prof
-from .systems import PORTABLE_PYTHON, SYSTEMS, TIMELINE
+from .systems import PORTABLE_PYTHON, PORTABLE_PYTHONS, SYSTEMS, TIMELINE
 
 if str(TIMELINE / "ClaudeCore") not in sys.path:          # the shared Furry Code / YIFF Code editor
     sys.path.insert(0, str(TIMELINE / "ClaudeCore"))
@@ -503,7 +503,7 @@ class Systec(QWidget):
             style = box.style()
         env = dict(os.environ, CLAUDE_TIMELINE="1")
         python = system.python()
-        if PORTABLE_PYTHON in python.parents:
+        if any(folder in python.parents for folder in PORTABLE_PYTHONS):
             env["PYTHONNOUSERSITE"] = "1"          # only the Timeline's own packages, not this PC's
         if format_drive:
             env["CLAUDE_TIMELINE_FORMAT"] = "1"

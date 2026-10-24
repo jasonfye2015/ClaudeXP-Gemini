@@ -64,6 +64,11 @@ def main():
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     qapp = QApplication(sys.argv)
     qapp.setApplicationName("Claude11")
+    try:
+        from claudecore import macfonts
+        macfonts.apply()               # on a Mac: Mac fonts for the Windows ones
+    except ImportError:
+        pass
     from . import setup, sound, style
     style.apply(qapp)
     try:

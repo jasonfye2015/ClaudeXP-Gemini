@@ -300,7 +300,7 @@ class SlideShowGadget(Gadget):
             return
         self.index = (self.index + 1) % len(pics)
         pm = pics[self.index].scaled(inner.size().toSize(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        p.drawPixmap(int(inner.x() + (inner.width() - pm.width()) / 2), int(inner.y() + (inner.height() - pm.height()) / 2), pm)
+        p.drawPixmap(int(inner.x() + (inner.width() - int(pm.deviceIndependentSize().width())) / 2), int(inner.y() + (inner.height() - int(pm.deviceIndependentSize().height())) / 2), pm)
 
 
 class FeedGadget(Gadget):

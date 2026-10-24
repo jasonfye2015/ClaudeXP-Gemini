@@ -86,7 +86,7 @@ class DesktopIcon(QWidget):
             p.setBrush(g)
             p.drawRoundedRect(r, 3, 3)
         pm = self.icon.pixmap(size, size)
-        p.drawPixmap((self.width() - pm.width()) // 2, 6 + (size - pm.height()) // 2, pm)
+        p.drawPixmap((self.width() - int(pm.deviceIndependentSize().width())) // 2, 6 + (size - int(pm.deviceIndependentSize().height())) // 2, pm)
         f = QFont("Segoe UI")
         f.setPixelSize(12)
         p.setFont(f)

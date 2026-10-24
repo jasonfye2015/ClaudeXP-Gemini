@@ -61,6 +61,11 @@ def main():
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)     # before the app exists, for the Flash Player's web view
     qapp = QApplication(sys.argv)
     qapp.setApplicationName("ClaudeXP")
+    try:
+        from claudecore import macfonts
+        macfonts.apply()               # on a Mac: Mac fonts for the Windows ones
+    except ImportError:
+        pass
     style.apply(qapp)
     spellcheck.install(qapp)
     sound.preload()
