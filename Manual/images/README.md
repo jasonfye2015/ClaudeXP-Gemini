@@ -15,4 +15,6 @@ the pages pick it up. A page whose picture is missing shows "Screenshot: ... (no
 | `claudetv.png` | ClaudeTV with its TV Guide (XP) | 05-archive |
 | `selfcheck.png` | The launcher's self-check, all clear | 11-troubleshooting |
 
+| `autopilot.png` | Kithylin Autopilot running on XP: the glow, the banner, his cursor in an IM window | 16-autopilot |
+
 Not taken: the Furry Hollow (it needs OpenSimulator and the viewer running).

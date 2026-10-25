@@ -144,6 +144,12 @@ class IconManager(QObject):
         from claudexp.explorer import shortcuts
         from claudexp.programs import installed
         desktop = self.folder()
+        renamed = desktop / "Claude Timeline Manual.lnk"           # (the manual's shortcut before it was renamed)
+        if renamed.exists() and not (desktop / "Claude Manual.lnk").exists():
+            try:
+                renamed.rename(desktop / "Claude Manual.lnk")
+            except OSError:
+                pass
         linked = set(self.state["links"])
         gone = installed.removed()
         groups = {}

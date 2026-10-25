@@ -15,7 +15,7 @@ from shiboken6 import isValid
 
 TIMELINE = Path(__file__).resolve().parents[2]
 MANUAL = TIMELINE / "Manual"
-TITLE = "Claude Timeline Manual"
+TITLE = "Claude Manual"
 HOME = "index.md"
 IMAGE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)\)")
 LINK = re.compile(r"\[([^\]]+)\]\(([0-9A-Za-z_-]+\.md)\)")

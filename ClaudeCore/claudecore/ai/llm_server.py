@@ -180,20 +180,68 @@ def _healthy():
         return False
 
 
+ADDON_FOLDERS = [Path(__file__).resolve().parents[3] / "ClaudeApps" / "kithylinai" / "Models"]
+
+
+def addons(model_id=None):
+    """The LoRA add-ons that go on the Timeline's models - Kithylin's, made by selfmodel.make_model --lora-on: each
+    folder's info.json names its base ("lora_base") and the folder holds the add-on .gguf. [(index, name, path,
+    base_id)], in the order the router loads them on that base; a request switches one on with
+    options={"lora": [{"id": index, "scale": 1.0}]} (they're loaded at scale 0, so nothing else is affected)."""
+    out = {}
+    for root in ADDON_FOLDERS:
+        if not root.is_dir():
+            continue
+        for folder in sorted(root.iterdir()):
+            info_path = folder / "info.json"
+            if not folder.is_dir() or not info_path.is_file():
+                continue
+            try:
+                info = json.loads(info_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            base = info.get("lora_base")
+            if not base:
+                continue
+            files = [f for f in sorted(folder.glob("*.gguf")) if f.name != info.get("lora_base_file")]
+            if files:
+                out.setdefault(base, []).append((folder.name, files[0]))
+    result = []
+    for base, items in out.items():
+        for i, (name, path) in enumerate(items):
+            result.append((i, name, path, base))
+    return [a for a in result if model_id is None or a[3] == model_id]
+
+
+def _relative_to_engine(path):
+    """llama-server's lora-scaled takes FNAME:SCALE, so a Windows drive letter's colon breaks it: the path is given
+    relative to the engine's folder (the router's working directory), with forward slashes."""
+    engine = find_engine()
+    try:
+        rel = os.path.relpath(str(path), str(engine.parent)) if engine is not None else str(path)
+    except ValueError:                                  # another drive: no relative path exists
+        rel = str(path)
+    return rel.replace("\\", "/")
+
+
 def _wanted():
     """What the router should be started with, from AI Models' settings and the models folder."""
     from . import ai_models
     cfg = ai_models.config()
     return {"engine": str(find_engine()), "max_loaded": int(cfg["max_loaded"]), "context": int(cfg["context"]),
             "idle": int(cfg["idle_minutes"]), "compact": bool(cfg.get("compact_cache", True)),
-            "models": [(m.id, str(m.path), str(m.mmproj or ""), str(m.info.get("chat_template") or ""), m.embedding)
+            "models": [(m.id, str(m.path), str(m.mmproj or ""), str(m.info.get("chat_template") or ""), m.embedding,
+                        tuple(_relative_to_engine(a[2]) for a in addons(m.id)))
                        for m in ai_models.installed(embeddings=True)]}
 
 
 def _write_presets(settings):
     lines = []
-    for model_id, path, mmproj, template, embedding in settings["models"]:
+    for model_id, path, mmproj, template, embedding, *rest in settings["models"]:
+        lora = rest[0] if rest else ()
         lines += [f"[{model_id}]", f"model = {path}"]
+        if lora:                                    # Kithylin's add-ons, loaded at scale 0 (see addons())
+            lines.append("lora-scaled = " + ",".join(f"{p}:0.0" for p in lora))
         if embedding:                               # an embedding model (other programs' /api/embed): small and plain
             lines += ["embeddings = true", "ctx-size = 2048", "parallel = 1", ""]
             continue

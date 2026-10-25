@@ -62,3 +62,5 @@ recent one is you as you talk now. [Training](09-training.md) has how they were 
   a Python with PySide6, and a llama.cpp build into `Engine\`.
 
 **Don't run it while a model is training**: both want the graphics card.
+
+To watch Kithylin use the computer himself - IMs, mail, the Web, TV, games - see [Kithylin Autopilot](16-autopilot.md).

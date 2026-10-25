@@ -511,7 +511,7 @@ class Systec(QWidget):
         win = getattr(self, "_manual", None)
         if win is None or not win.isVisible():
             win = ManualView()
-            win.setWindowTitle("Claude Timeline Manual")
+            win.setWindowTitle("Claude Manual")
             win.setWindowIcon(manual_icon())
             win.resize(1120, 740)
             self._manual = win

@@ -16,7 +16,7 @@ from .. import wm, xpcompat
 from ..paths import icon as asset_icon
 
 # gone by 2011 (or ClaudeXP's own): Netscape, Windows Messenger, activation, the XP tour, StyleXP, Clippy, dial-up
-DROPPED = {"navigator", "winmsgr", "activate", "tour", "stylexp", "clippy", "connect", "dsl", "search", "helpctr",
+DROPPED = {"navigator", "winmsgr", "activate", "tour", "stylexp", "clippy", "connect", "dsl", "search", "helpctr", "autopilot",
            "personaprofiles"}
 RENAMED = {"backup": ("Backup and Restore", "Back up and restore your saves, computers' data and profile"),
            "msn": ("Windows Live Messenger", "Chat with your contacts on Windows Live"),

@@ -25,7 +25,7 @@ MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family
               " QMenu::item { padding: 4px 24px 4px 20px; } QMenu::item:selected { background: #316AC5; color: white; }"
               " QMenu::item:disabled { color: #ACA899; }")
 SORTS = ("Name", "Size", "Type", "Modified")
-LAYOUT = 9                  # bump when builtins() changes order (9: the Claude Timeline Manual)
+LAYOUT = 9                  # bump when builtins() changes order (9: the manual; a new icon at the end takes a free cell)
 # Desktop folders of program shortcuts, made once (layout 3); they sit right after the E: folder links.
 PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "furcon", "furvideo", "furdir", "furlog", "furlocator",
                                       "mediaarchive", "photos", "miscimages", "miscfurry", "documents", "personaldocs", "camroll", "chatlogs", "stickers", "others", "furcoder", "personaprofiles"],
@@ -94,7 +94,8 @@ def builtins():
         ("prog:navigator", "Netscape Navigator", lambda: programs.get("navigator").icon()),
         ("prog:claudeai", "ClaudeAI", lambda: programs.get("claudeai").icon()),
         ("prog:kithylinai", "Kithylin AI", lambda: programs.get("kithylinai").icon()),
-        ("prog:manual", "Claude Timeline Manual", lambda: programs.get("manual").icon()),
+        ("prog:manual", "Claude Manual", lambda: programs.get("manual").icon()),
+        ("prog:autopilot", "Kithylin Autopilot", lambda: programs.get("autopilot").icon()),
         ("prog:copilotai", "CopilotAI", lambda: programs.get("copilotai").icon()),
         ("prog:imagecreator", "Copilot Image Creator", lambda: programs.get("imagecreator").icon()),
         ("prog:neko", "Copilot Neko", lambda: programs.get("neko").icon()),

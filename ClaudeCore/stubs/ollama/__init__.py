@@ -79,6 +79,8 @@ def _body(model_id, messages, options, stream, think):
                          ("seed", "seed"), ("min_p", "min_p")):
         if options.get(ours) is not None:
             body[theirs] = options[ours]
+    if options.get("lora"):                 # an add-on loaded on the model at scale 0, switched on for this request
+        body["lora"] = options["lora"]      # ([{"id": 0, "scale": 1.0}]; see llm_server.addons)
     if think is False:
         body["chat_template_kwargs"] = {"enable_thinking": False}
     if stream:

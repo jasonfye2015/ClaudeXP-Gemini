@@ -19,7 +19,7 @@ ARTICLES = {
 <p>This computer is a Windows XP machine from 2001, complete with dial-up Internet and friends who are always
 around. Everything here runs on this one computer; your buddies are characters played by a language model that comes with
 ClaudeXP and runs on the real PC's graphics card.</p>
-<p>The <a href="launch:manual">Claude Timeline Manual</a> covers all three computers: starting them, the archive,
+<p>The <a href="launch:manual">Claude Manual</a> covers all three computers: starting them, the archive,
 the games, the language models, Kithylin, backups and what to do when something breaks.</p>
 <p>Start with <a href="help:claudexp-about">About ClaudeXP</a>, see <a href="help:claudexp-catalog">every program
 on this computer</a>, or meet <a href="help:people">the people who live here</a>. New to XP?

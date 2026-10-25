@@ -1,6 +1,6 @@
 # 15. Every program
 
-Read from the three computers' registries on 25 October 2026: 170 programs in all, 161 on EPOCH-2001, 157 on SYSTEM-2011 and 147 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
+Read from the three computers' registries on 25 October 2026: 171 programs in all, 162 on EPOCH-2001, 157 on SYSTEM-2011 and 147 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
 
 ## Talking with your buddies
 
@@ -241,4 +241,5 @@ Assistants you talk to directly - not characters with lives of their own.
 
 | Program | What it is | 2001 | 2011 | 2025 |
 |---|---|:-:|:-:|:-:|
-| **Claude Timeline Manual** | How the three computers, the archive, the games and Kithylin fit together | yes | yes | yes |
+| **Claude Manual** | How the three computers, the archive, the games and Kithylin fit together | yes | yes | yes |
+| **Kithylin Autopilot** | Let Kithylin take over the computer: IMs, mail, the Web, TV, games, comics and art | yes | - | - |
