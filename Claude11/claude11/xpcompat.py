@@ -65,6 +65,14 @@ def _patch_hotmail(m):
     web2025.patch_hotmail(m)
 
 
+def _patch_mailtray(m):
+    m.MAIL_NAME = "Outlook.com"
+
+
+def _patch_antivirus(m):
+    m.NAME = "ClaudeShield Antivirus"                      # (XP's is "ClaudeShield AntiVirus 2002")
+
+
 def _patch_furaffinity(m):
     from . import web2025
     web2025.patch_furaffinity(m)
@@ -155,6 +163,8 @@ PATCHES = {
     "claudexp.programs.navigator.iexplore": _patch_iexplore,
     "claudexp.programs.navigator.sites": _patch_sites,
     "claudexp.programs.navigator.sites.hotmail": _patch_hotmail,
+    "claudexp.mailtray": _patch_mailtray,
+    "claudexp.maintenance.antivirus": _patch_antivirus,
     "claudexp.programs.messengers.others": _patch_others,
     "claudexp.programs.outlook": _patch_outlook,
     "claudexp.life.lj": _patch_lj,

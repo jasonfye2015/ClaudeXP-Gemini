@@ -1,9 +1,9 @@
 """Kithylin's Art: the gallery. Folders down the left, thumbnails in the middle, and a viewer with Previous and
-Next. Videos show as film tiles and open in the computer's player. Reads Art/index.json (build_art.py)."""
+Next. Videos show a frame with a play button (or a plain tile) and open in the computer's player. Reads Art/index.json (build_art.py)."""
 import json
 
-from PySide6.QtCore import QSize, Qt, QUrl, Signal
-from PySide6.QtGui import QColor, QDesktopServices, QIcon, QPainter, QPixmap
+from PySide6.QtCore import QPointF, QSize, Qt, QUrl, Signal
+from PySide6.QtGui import QColor, QDesktopServices, QIcon, QPainter, QPixmap, QPolygonF
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton, QSizePolicy,
                                QSplitter, QStackedWidget, QVBoxLayout, QWidget)
 
@@ -21,12 +21,28 @@ def load_index():
         return {"folders": []}
 
 
-def film_tile(name):
-    pm = QPixmap(TILE, int(TILE * 0.62))
-    pm.fill(QColor("#2a2a3a"))
+def film_tile(name, thumb=None):
+    """A video's tile: a frame from it (build_art.py takes one with ffmpeg) with a play button, or just its name."""
+    frame = QPixmap(str(thumb)) if thumb is not None and thumb.exists() else QPixmap()
+    if frame.isNull():
+        pm = QPixmap(TILE, int(TILE * 0.62))
+        pm.fill(QColor("#2a2a3a"))
+        p = QPainter(pm)
+        p.setPen(QColor("#9FD3FF"))
+        p.drawText(pm.rect().adjusted(8, 8, -8, -8), Qt.AlignCenter | Qt.TextWordWrap, "▶  " + name)
+        p.end()
+        return pm
+    pm = frame
     p = QPainter(pm)
-    p.setPen(QColor("#9FD3FF"))
-    p.drawText(pm.rect().adjusted(8, 8, -8, -8), Qt.AlignCenter | Qt.TextWordWrap, "▶  " + name)
+    p.setRenderHint(QPainter.Antialiasing)
+    r = min(pm.width(), pm.height()) * 0.14
+    c = QPointF(pm.width() / 2, pm.height() / 2)
+    p.setPen(Qt.NoPen)
+    p.setBrush(QColor(0, 0, 0, 150))
+    p.drawEllipse(c, r, r)
+    p.setBrush(QColor(255, 255, 255, 230))
+    p.drawPolygon(QPolygonF([QPointF(c.x() - r * 0.35, c.y() - r * 0.5), QPointF(c.x() - r * 0.35, c.y() + r * 0.5),
+                             QPointF(c.x() + r * 0.55, c.y())]))
     p.end()
     return pm
 
@@ -152,7 +168,7 @@ class Gallery(QWidget):
                 thumb = THUMBS / name / (it["file"].rsplit(".", 1)[0] + ".jpg")
                 icon = QIcon(str(thumb)) if thumb.exists() else QIcon()
             else:
-                icon = QIcon(film_tile(it["file"]))
+                icon = QIcon(film_tile(it["file"], THUMBS / name / (it["file"].rsplit(".", 1)[0] + ".jpg")))
             label = it["file"] if len(it["file"]) <= 26 else it["file"][:23] + "…"
             item = QListWidgetItem(icon, label)
             item.setToolTip(it["file"])

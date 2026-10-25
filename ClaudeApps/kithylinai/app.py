@@ -255,7 +255,13 @@ class KithylinAI(QWidget):
         self.bg_adult = QCheckBox("Leave the adult folders out of the slideshow")
         self.bg_adult.setChecked(bool(s["background"]["skip_adult"]))
         self.bg_adult.toggled.connect(self._bg_changed)
-        form.addRow("", self.bg_adult)
+        adult_row = QHBoxLayout()
+        adult_row.addWidget(self.bg_adult)
+        pick = QPushButton("Which folders are adult...")
+        pick.clicked.connect(self._pick_adult_folders)
+        adult_row.addWidget(pick)
+        adult_row.addStretch(1)
+        form.addRow("", adult_row)
         self.show_sys = QCheckBox("Show system messages (purple) in the chat")
         self.show_sys.setChecked(bool(s["show_system"]))
         self.show_sys.toggled.connect(lambda on: (s.set("show_system", bool(on)), self.view.render(self.visible_messages())))
@@ -498,6 +504,39 @@ class KithylinAI(QWidget):
         bg.update(mode=self.bg_mode.currentData(), folder=self.bg_folder.currentData() or "",
                   minutes=int(self.bg_minutes.value()), dim=self.bg_dim.value() / 100.0,
                   skip_adult=self.bg_adult.isChecked())
+        self.settings.set("background", bg)
+        self.slideshow.apply()
+
+    def _pick_adult_folders(self):
+        """Tick the art folders the slideshow should leave out (a folder's name doesn't always say)."""
+        from PySide6.QtWidgets import QDialogButtonBox, QLabel, QListWidget, QListWidgetItem
+        from .chat import adult_folders
+        names = [f["name"] for f in load_index().get("folders", [])]
+        adult = adult_folders(self.settings, names)
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Adult folders")
+        lay = QVBoxLayout(dlg)
+        note = QLabel("Ticked folders are left out of the background slideshow while \"Leave the adult folders out\" "
+                      "is on. They stay in Kithylin's Art.")
+        note.setWordWrap(True)
+        lay.addWidget(note)
+        box = QListWidget()
+        for n in names:
+            it = QListWidgetItem(n)
+            it.setFlags(it.flags() | Qt.ItemIsUserCheckable)
+            it.setCheckState(Qt.Checked if n in adult else Qt.Unchecked)
+            box.addItem(it)
+        lay.addWidget(box)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        lay.addWidget(buttons)
+        dlg.resize(380, 480)
+        if dlg.exec() != QDialog.Accepted:
+            return
+        bg = dict(self.settings["background"])
+        bg["adult_folders"] = [box.item(i).text() for i in range(box.count())
+                               if box.item(i).checkState() == Qt.Checked]
         self.settings.set("background", bg)
         self.slideshow.apply()
 

@@ -61,6 +61,9 @@ def open_hotmail(desktop):
     navigator.open_url(desktop, HOTMAIL_URL)
 
 
+MAIL_NAME = "MSN Hotmail"           # the later computers set their own (Windows Live Hotmail, Outlook.com)
+
+
 class MailTray:
     def __init__(self, desktop):
         from .tray import TrayIcon
@@ -98,12 +101,12 @@ class MailTray:
         self.count = n
         if n:
             self.tray.setIcon(QIcon(hotmail_pixmap(16, new=True, count=n)))
-            self.tray.setToolTip(f"MSN Hotmail\nYou have {n} new e-mail message{'s' if n != 1 else ''}")
+            self.tray.setToolTip(f"{MAIL_NAME}\nYou have {n} new e-mail message{'s' if n != 1 else ''}")
             if grew:
                 self.hidden_until_new = False
         else:
             self.tray.setIcon(QIcon(hotmail_pixmap(16)))
-            self.tray.setToolTip("MSN Hotmail\nNo new e-mail")
+            self.tray.setToolTip(f"{MAIL_NAME}\nNo new e-mail")
         self.tray.setVisible(not self.hidden_until_new)
 
     def notify(self, title, text):

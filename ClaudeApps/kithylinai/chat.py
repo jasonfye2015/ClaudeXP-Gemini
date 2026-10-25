@@ -10,6 +10,16 @@ from PySide6.QtGui import QColor, QKeySequence, QPainter, QPixmap, QShortcut, QT
 from PySide6.QtWidgets import QHBoxLayout, QPlainTextEdit, QTextBrowser, QToolButton, QVBoxLayout, QWidget
 
 USER, KITHY, SYSTEM, MUTED = "#FFFFFF", "#9FD3FF", "#CDA4FF", "#B8B4C4"
+ADULT_WORDS = ("porn", "nsfw", "adult", "yiff", "lewd", "explicit", "hyper", "nude", "xxx")
+
+
+def adult_folders(settings, names):
+    """Which of these art folders the slideshow leaves out: the ones chosen in Settings, or until a choice is made,
+    the folders whose names say so (Kithy Porn, Kithy Porn Hyper...)."""
+    chosen = settings["background"].get("adult_folders")
+    if isinstance(chosen, list):
+        return set(chosen) & set(names)
+    return {n for n in names if any(w in n.lower() for w in ADULT_WORDS)}
 FONT = "Segoe UI"
 
 
@@ -178,7 +188,8 @@ class Slideshow:
         if bg["mode"] == "folder" and bg.get("folder"):
             folders = [f for f in folders if f["name"] == bg["folder"]]
         elif bg.get("skip_adult", True):
-            folders = [f for f in folders if "porn" not in f["name"].lower()]
+            adult = adult_folders(self.settings, [f["name"] for f in folders])
+            folders = [f for f in folders if f["name"] not in adult]
         return [self.art / f["name"] / i["file"] for f in folders for i in f["items"] if i["kind"] == "image"]
 
     def apply(self):

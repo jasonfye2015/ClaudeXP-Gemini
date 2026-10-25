@@ -5,7 +5,8 @@ again only to pick up a new folder).
     Python\\python.exe ClaudeApps\\kithylinai\\build_art.py [SOURCE]
 
 SOURCE defaults to Local Storage/Misc Personal Image Folders/AI Kithy. Pictures (jpg, png, webp, gif) get a
-thumbnail in Art/.thumbs/<folder>/<name>.jpg; videos (mp4) are listed and open in the computer's player.
+thumbnail in Art/.thumbs/<folder>/<name>.jpg; videos (mp4) are listed and open in the computer's player, and get
+a thumbnail too - a frame from a second in - when ffmpeg is around (Python Studio's, Enginefmpeg.exe, or on PATH).
 Any text files kept with the pictures (the prompts they were made from) come along too, unlisted.
 """
 import json
@@ -25,6 +26,31 @@ DEFAULT_SOURCE = HERE.parents[1] / "Local Storage" / "Misc Personal Image Folder
 PICTURES = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
 VIDEOS = {".mp4", ".webm", ".mov", ".m4v"}
 THUMB = 360
+
+
+def find_ffmpeg():
+    exe = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+    for cand in (HERE / "Engine" / exe, HERE.parents[1] / "Local Storage" / "Python Studio" / "ffmpeg" / exe):
+        if cand.is_file():
+            return str(cand)
+    return shutil.which("ffmpeg")
+
+
+def video_thumb(ffmpeg, src, thumb):
+    """A frame from about a second into the video, scaled to fit THUMB x THUMB. True if it was made."""
+    import subprocess
+    thumb.parent.mkdir(parents=True, exist_ok=True)
+    for at in ("1", "0"):                      # (a clip shorter than a second: its first frame)
+        try:
+            subprocess.run([ffmpeg, "-v", "error", "-y", "-ss", at, "-i", str(src), "-frames:v", "1",
+                            "-vf", f"scale={THUMB}:{THUMB}:force_original_aspect_ratio=decrease", "-q:v", "4",
+                            str(thumb)], capture_output=True, timeout=60,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except (OSError, subprocess.SubprocessError):
+            return False
+        if thumb.exists() and thumb.stat().st_size:
+            return True
+    return False
 
 
 def copy_tree(src, dst):
@@ -54,6 +80,9 @@ def main():
     print(f"  {copy_tree(src, ART)} files copied", flush=True)
 
     folders, made = [], 0
+    ffmpeg = find_ffmpeg()
+    if not ffmpeg:
+        print("  (no ffmpeg found: videos get a plain tile)", flush=True)
     for folder in sorted(p for p in ART.iterdir() if p.is_dir() and not p.name.startswith(".")):
         items = []
         for f in sorted(folder.iterdir(), key=lambda p: p.name.lower()):
@@ -76,9 +105,13 @@ def main():
                     made += 1
                 items.append({"file": f.name, "kind": "image", "w": w, "h": h})
             elif ext in VIDEOS:
+                thumb = THUMBS / folder.name / (f.stem + ".jpg")
+                if ffmpeg and not thumb.exists() and video_thumb(ffmpeg, f, thumb):
+                    made += 1
                 items.append({"file": f.name, "kind": "video", "size": f.stat().st_size})
         if items:
-            cover = next((i["file"] for i in items if i["kind"] == "image"), "")
+            cover = next((i["file"] for i in items if i["kind"] == "image"), "") or next(     # a videos-only folder:
+                (i["file"] for i in items if (THUMBS / folder.name / (Path(i["file"]).stem + ".jpg")).exists()), "")   # a frame
             folders.append({"name": folder.name, "count": len(items), "cover": cover,
                             "pictures": sum(1 for i in items if i["kind"] == "image"),
                             "videos": sum(1 for i in items if i["kind"] == "video"), "items": items})

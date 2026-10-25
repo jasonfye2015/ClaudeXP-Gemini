@@ -463,7 +463,7 @@ class LifeSim(QObject):
         from .. import mailtray
         tray = mailtray.get()
         if tray is not None:                       # the balloon comes from MSN Hotmail's envelope
-            tray.notify("You've got mail!", text + "\nClick here to open MSN Hotmail.")
+            tray.notify("You've got mail!", text + f"\nClick here to open {mailtray.MAIL_NAME}.")
             return
         net = network.get(self.desktop)
         if net.tray is not None:
