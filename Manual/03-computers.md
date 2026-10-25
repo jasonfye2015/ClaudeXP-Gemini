@@ -28,7 +28,8 @@ archive viewers and your galleries), **Social Programs** (the messengers), **Gam
 **Windows Games** inside), **TV and Movies**, **Projects**, **GeminiOffice**, **GeminiAdobe**, **Disc Tools** and
 **Archive Tools**. The main messengers, ClaudeAI, Kithylin AI, the Copilot programs, the browsers and a few games
 sit loose on the desktop, and this manual's icon is there too. The Start menu's **All Programs** has the same
-programs, grouped the XP way; folders first, alphabetically.
+programs, grouped the XP way; folders first, alphabetically. A folder window opens big enough to show
+everything in it (on all three computers), as far as the screen allows; a folder too big for that scrolls.
 
 **What only this computer has:** the 2001 lineup - ClaudeAIM, MSN Messenger, Yahoo! Messenger, ICQ, Windows
 Messenger, Netscape Navigator and Internet Explorer 6 on the model-written 2001 Web, MSN Hotmail, Outlook Express,

@@ -1,4 +1,5 @@
 """Windows Explorer: My Computer, folders on C: and E:, and the Recycle Bin."""
+import os
 import shutil
 from pathlib import Path
 
@@ -1074,11 +1075,66 @@ class Explorer(QWidget):
                f"{self.frame.title if self.frame else ''}", "info")
 
 
+def fit_to_contents(desktop, frame, content, most=120):
+    """Once a folder's window is on screen, grow it until everything in the folder shows without scrolling: wider
+    first (keeping it a landscape shape), then taller, as far as the desktop allows, and back on screen if it grew
+    past an edge. Never made smaller than it opened. A folder too big to show whole (more than `most` items, or more
+    than fits the desktop) is left as it opened, since it scrolls either way. Used by all three Explorers."""
+    def fit():
+        if not isValid(frame) or not isinstance(content.location, Path) or content.view_mode == "list":
+            return
+        try:
+            n = sum(1 for e in os.scandir(content.location) if not vfs.hidden(e.path))
+        except OSError:
+            return
+        view = content.active_view()
+        port = view.viewport()
+        if not n or n > most or port.width() <= 0:
+            return
+        area = desktop.work_area()
+        extra_w, extra_h = frame.width() - port.width(), frame.height() - port.height()
+        max_w, max_h = area.width() - 24 - extra_w, area.height() - 24 - extra_h
+        if content.view_mode == "details":
+            w, need = port.width(), n * max(18, view.sizeHintForRow(0)) + 6
+        else:
+            grid, gap = view.gridSize(), view.spacing()
+            cell_w, cell_h = grid.width() + gap, grid.height() + gap
+            w = port.width()
+            while True:
+                rows = -(-n // max(1, (w - 8) // cell_w))
+                need = rows * cell_h + 12
+                if need <= min(max_h, max(port.height(), w * 0.8)) or w + cell_w > max_w:
+                    break
+                w += cell_w
+        if need > max_h:
+            return
+        place(max(frame.width(), w + extra_w), max(frame.height(), need + extra_h))
+        QTimer.singleShot(80, lambda: settle(5))
+
+    def place(width, height):
+        area = desktop.work_area()
+        width, height = min(width, area.width()), min(height, area.height())
+        frame.resize(width, height)
+        frame.move(max(area.left(), min(frame.x(), area.right() + 1 - width)),
+                   max(area.top(), min(frame.y(), area.bottom() + 1 - height)))
+
+    def settle(tries):
+        """The estimate is close; the view's own scroll range says exactly how much is still hidden."""
+        if not isValid(frame) or tries <= 0:
+            return
+        hidden = content.active_view().verticalScrollBar().maximum()
+        if hidden > 0 and frame.height() < desktop.work_area().height():
+            place(frame.width(), frame.height() + hidden + 4)
+        QTimer.singleShot(80, lambda: settle(tries - 1))      # again: the view may not have laid out yet
+    QTimer.singleShot(60, fit)
+
+
 def launch(desktop, location=MY_COMPUTER):
     """Open an Explorer window at My Computer, the Recycle Bin, or a real folder path."""
     content = Explorer(desktop, location)
     frame = XPWindow(desktop, content.title_text(), content, content.title_icon(), size=(760, 520))
     content.frame = frame
     desktop.open_window(frame)
+    fit_to_contents(desktop, frame, content)
     sound.play("navigate")
     return frame

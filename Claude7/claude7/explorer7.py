@@ -405,6 +405,7 @@ def launch(desktop, location=None):
     frame = AeroWindow(desktop, title, content, icon, size=(820, 560))
     content.frame = frame
     desktop.open_window(frame)
+    win.fit_to_contents(desktop, frame, content)
     sound.play("navigate")
     return frame
 

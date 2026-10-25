@@ -451,6 +451,7 @@ def launch(desktop, location=None):
     frame = MicaWindow(desktop, title, content, icon, size=(900, 600))
     content.frame = frame
     desktop.open_window(frame)
+    win.fit_to_contents(desktop, frame, content)
     sound.play("navigate")
     return frame
 
