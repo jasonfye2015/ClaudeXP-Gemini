@@ -6,7 +6,7 @@ from shiboken6 import isValid
 
 from ...wm import XPWindow
 from . import art, weather as wx
-from .widgets import WIDGETS
+from .widgets import THEMES, WIDGETS
 
 _open = {}
 
@@ -47,6 +47,10 @@ class Panel(QWidget):
         self.opacity.setRange(20, 100)
         self.opacity.valueChanged.connect(lambda v: self.c.set("opacity", v))
         form.addRow("Opacity", self.opacity)
+        self.theme = QComboBox()
+        self.theme.addItems(list(THEMES))
+        self.theme.currentTextChanged.connect(lambda t: self.c.set("theme", t) if t else None)
+        form.addRow("Theme", self.theme)
         self.climate = QComboBox()
         self.climate.addItems(list(wx.CLIMATES))
         self.climate.currentTextChanged.connect(lambda t: self.c.set("climate", t) if t else None)
@@ -115,7 +119,7 @@ class Panel(QWidget):
             control.blockSignals(True)
             control.setValue(value)
             control.blockSignals(False)
-        for combo, value in ((self.climate, s["climate"]), (self.hemisphere, s["hemisphere"])):
+        for combo, value in ((self.climate, s["climate"]), (self.hemisphere, s["hemisphere"]), (self.theme, s["theme"])):
             combo.blockSignals(True)
             combo.setCurrentText(value)
             combo.blockSignals(False)

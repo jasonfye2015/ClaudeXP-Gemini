@@ -12,14 +12,14 @@ from ..people import load_json
 from ...paths import DATA
 from ...tray import TrayIcon
 from . import art, weather as wx
-from .widgets import WIDGETS
+from .widgets import DEFAULT_THEME, THEMES, WIDGETS, set_theme
 
 SETTINGS_FILE = DATA / "copilot_widgets.json"
 DEFAULT_ON = {"clock", "weather", "calendar", "tv", "mail", "sky"}
 DEFAULTS = {
     "visible": True, "locked": True, "click_through": True, "start_at_logon": True, "opacity": 80,
     "fahrenheit": True, "clock_24h": False, "climate": "Temperate", "hemisphere": "Northern",
-    "latitude": 40.0, "longitude": -74.0, "real_moon": True, "note": "",
+    "latitude": 40.0, "longitude": -74.0, "real_moon": True, "note": "", "theme": DEFAULT_THEME,
 }
 FLOAT_RANGE = {"latitude": (-66.0, 66.0), "longitude": (-180.0, 180.0)}
 MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family: Tahoma; font-size: 11px; }"
@@ -73,6 +73,8 @@ class WidgetsController(QObject):
             s["climate"] = DEFAULTS["climate"]
         if s["hemisphere"] not in wx.HEMISPHERES:
             s["hemisphere"] = DEFAULTS["hemisphere"]
+        if s["theme"] not in THEMES:
+            s["theme"] = DEFAULT_THEME
         enabled = data.get("enabled")
         if isinstance(enabled, dict):
             for key in s["enabled"]:
@@ -116,6 +118,7 @@ class WidgetsController(QObject):
     # ---- widgets ------------------------------------------------------------------------------------------
     def apply(self):
         s = self.settings
+        set_theme(s["theme"])
         passthrough = s["locked"] and s["click_through"]
         for cls in WIDGETS:
             want = s["visible"] and s["enabled"][cls.KEY]
@@ -220,6 +223,9 @@ class WidgetsController(QObject):
         shown = menu.addMenu("Widgets")
         for cls in WIDGETS:
             self._check(shown, cls.TITLE, s["enabled"][cls.KEY], lambda on, k=cls.KEY: self.set_enabled(k, on))
+        theme = menu.addMenu("Theme")
+        for name in THEMES:
+            self._check(theme, name, s["theme"] == name, lambda _on, v=name: self.set("theme", v))
         opacity = menu.addMenu("Opacity")
         for pct in (100, 90, 80, 70, 60, 50, 40):
             self._check(opacity, f"{pct}%", s["opacity"] == pct, lambda _on, v=pct: self.set("opacity", v))

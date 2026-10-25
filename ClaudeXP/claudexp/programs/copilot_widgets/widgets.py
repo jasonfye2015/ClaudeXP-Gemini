@@ -1,5 +1,5 @@
-"""The desktop widgets: Clock, Calendar, Weather, Day and Night, TV Guide, Hotmail Inbox, Almanac, System Monitor and
-Sticky Note."""
+"""The desktop widgets: Clock, Calendar, Weather, Day and Night, TV Guide, Hotmail Inbox, Almanac, System Monitor,
+Network Traffic, LLM Activity and Sticky Note - in one of several colour themes."""
 import calendar
 import ctypes
 import math
@@ -16,10 +16,43 @@ from ... import clock
 from ...paths import DATA
 from . import art, weather as wx
 
-WHITE = QColor("white")
-GOLD = QColor("#FFE070")
-SOFT = QColor("#C9DAFF")
-DIM = QColor("#93AAD8")
+# Widget themes: the panel's gradient (top, bottom), its edge, and the four text colours every widget draws with -
+# text (WHITE), accent (GOLD), soft and dim. The Sticky Note keeps its own yellow whatever the theme.
+THEMES = {
+    "Luna Blue": {"top": "#2E65D6", "bottom": "#0E2E80", "edge": "#FFFFFF",
+                  "text": "#FFFFFF", "accent": "#FFE070", "soft": "#C9DAFF", "dim": "#93AAD8"},
+    "Olive Green": {"top": "#97A85E", "bottom": "#4E5C23", "edge": "#F4F7E4",
+                    "text": "#FFFFFF", "accent": "#FFF1A0", "soft": "#E8EECF", "dim": "#C2CC9C"},
+    "Silver": {"top": "#F1F1F6", "bottom": "#B4B7C8", "edge": "#5A6078",
+               "text": "#1B2440", "accent": "#8A4B00", "soft": "#2F3B5C", "dim": "#5E6680",
+               "in": "#D42A2A", "out": "#178A3A"},
+    "Midnight": {"top": "#262A40", "bottom": "#0B0C15", "edge": "#8FB4FF",
+                 "text": "#EDEFF7", "accent": "#8FB4FF", "soft": "#B8C2DE", "dim": "#7A84A3"},
+    "Plum": {"top": "#7A479C", "bottom": "#2E1442", "edge": "#F3DDFF",
+             "text": "#FFFFFF", "accent": "#FFC8F0", "soft": "#E6D2F4", "dim": "#B898CF"},
+    "Ember": {"top": "#C4552D", "bottom": "#561709", "edge": "#FFE2D2",
+              "text": "#FFFFFF", "accent": "#FFE070", "soft": "#FFD9C6", "dim": "#E2A88F"},
+    "Teal": {"top": "#2A9D9A", "bottom": "#0B4A4F", "edge": "#DDFBF7",
+             "text": "#FFFFFF", "accent": "#FFE9A0", "soft": "#CDEFEB", "dim": "#8FC9C3"},
+}
+DEFAULT_THEME = "Luna Blue"
+THEME = THEMES[DEFAULT_THEME]
+WHITE = QColor(THEME["text"])
+GOLD = QColor(THEME["accent"])
+SOFT = QColor(THEME["soft"])
+DIM = QColor(THEME["dim"])
+IN_RED = QColor("#FF5E5E")              # the two graph widgets' lines: red and green in every theme (a darker pair
+OUT_GREEN = QColor("#5EE88A")            # on a light one, where the bright pair wouldn't show)
+
+
+def set_theme(name):
+    """Every widget draws with the chosen theme's colours from its next repaint."""
+    global THEME, WHITE, GOLD, SOFT, DIM, IN_RED, OUT_GREEN
+    THEME = THEMES.get(name, THEMES[DEFAULT_THEME])
+    WHITE, GOLD, SOFT, DIM = (QColor(THEME[k]) for k in ("text", "accent", "soft", "dim"))
+    IN_RED, OUT_GREEN = QColor(THEME.get("in", "#FF5E5E")), QColor(THEME.get("out", "#5EE88A"))
+
+
 MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family: Tahoma; font-size: 11px; }"
               "QMenu::item { padding: 4px 24px 4px 20px; }"
               "QMenu::item:selected { background: #316AC5; color: white; }")
@@ -32,9 +65,9 @@ def _font(px, bold=False):
     return f
 
 
-def _text(p, x, y, w, h, text, px, color=WHITE, bold=False, align=Qt.AlignLeft | Qt.AlignVCenter, elide=True):
+def _text(p, x, y, w, h, text, px, color=None, bold=False, align=Qt.AlignLeft | Qt.AlignVCenter, elide=True):
     p.setFont(_font(px, bold))
-    p.setPen(color)
+    p.setPen(WHITE if color is None else color)
     if elide:
         text = QFontMetrics(p.font()).elidedText(text, Qt.ElideRight, int(w))
     p.drawText(QRectF(x, y, w, h), align, text)
@@ -89,9 +122,13 @@ class WidgetBase(QWidget):
     def background(self, p, r):
         a = self.alpha()
         grad = QLinearGradient(r.topLeft(), r.bottomLeft())
-        grad.setColorAt(0, QColor(46, 101, 214, a))
-        grad.setColorAt(1, QColor(14, 46, 128, a))
-        p.setPen(QPen(QColor(255, 255, 255, min(255, a // 2 + 50)), 1))
+        top, bottom, edge = QColor(THEME["top"]), QColor(THEME["bottom"]), QColor(THEME["edge"])
+        top.setAlpha(a)
+        bottom.setAlpha(a)
+        edge.setAlpha(min(255, a // 2 + 50))
+        grad.setColorAt(0, top)
+        grad.setColorAt(1, bottom)
+        p.setPen(QPen(edge, 1))
         p.setBrush(grad)
         p.drawRoundedRect(r, 10, 10)
 
@@ -1041,6 +1078,175 @@ NOTE_FILE = DATA / "sticky_note.txt"
 NOTE_MIN = (160, 110)
 
 
+# ---- compact line graphs -------------------------------------------------------------------------------------
+def _value(p, x, y, w, h, text, colour, align=Qt.AlignRight | Qt.AlignVCenter):
+    """A coloured reading with a soft shadow, so red and green stay legible on any theme's panel."""
+    light = QColor(THEME["top"]).lightness() > 160
+    _text(p, x + 1, y + 1, w, h, text, 11, QColor(255, 255, 255, 150) if light else QColor(0, 0, 0, 160), True, align)
+    _text(p, x, y, w, h, text, 11, colour, True, align)
+
+
+def _legend(p, x, y, items):
+    """Coloured dots with their labels: [(label, colour)]."""
+    for label, colour in items:
+        p.setPen(Qt.NoPen)
+        p.setBrush(colour)
+        p.drawEllipse(QRectF(x, y + 4, 7, 7))
+        _text(p, x + 10, y, 60, 14, label, 9, DIM)
+        x += 18 + QFontMetrics(_font(9)).horizontalAdvance(label)
+
+
+class _LineGraphWidget(WidgetBase):
+    """A small widget with a minute of two values as lines: red and green, newest on the right, scaled to the biggest
+    value in view. Subclasses sample() a (red, green) pair each second and say what the numbers are."""
+    SIZE, REFRESH_MS, GRAPH = (250, 100), 1000, 60
+    FLOOR = 1.0                       # the scale never goes below this, so a quiet minute stays near the bottom
+
+    def __init__(self, controller):
+        super().__init__(controller)
+        self.history = []
+
+    def sample(self):
+        return 0.0, 0.0
+
+    def refresh(self):
+        self.history.append(self.sample())
+        del self.history[:-self.GRAPH]
+        self.update()
+
+    def scale(self):
+        return max([self.FLOOR] + [max(a, b) for a, b in self.history])
+
+    def plot(self, p, rect):
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(0, 0, 0, 80))
+        p.drawRoundedRect(rect, 4, 4)
+        p.setPen(QPen(QColor(255, 255, 255, 28), 1))
+        for i in (1, 2, 3):
+            y = rect.top() + rect.height() * i / 4
+            p.drawLine(QPointF(rect.left() + 3, y), QPointF(rect.right() - 3, y))
+        if len(self.history) < 2:
+            return
+        top = self.scale()
+        inner = rect.adjusted(2, 3, -2, -2)
+        step = inner.width() / (self.GRAPH - 1)
+        x0 = inner.right() - step * (len(self.history) - 1)
+        p.save()
+        p.setClipRect(rect)
+        for series, colour in ((1, OUT_GREEN), (0, IN_RED)):           # red drawn last, on top
+            line = QPainterPath()
+            for i, pair in enumerate(self.history):
+                pt = QPointF(x0 + i * step, inner.bottom() - inner.height() * min(1.0, pair[series] / top))
+                line.moveTo(pt) if i == 0 else line.lineTo(pt)
+            fill = QPainterPath(line)
+            fill.lineTo(QPointF(inner.right(), inner.bottom()))
+            fill.lineTo(QPointF(x0, inner.bottom()))
+            fill.closeSubpath()
+            shade = QColor(colour)
+            shade.setAlpha(40)
+            p.setPen(Qt.NoPen)
+            p.setBrush(shade)
+            p.drawPath(fill)
+            p.setPen(QPen(colour, 1.6))
+            p.setBrush(Qt.NoBrush)
+            p.drawPath(line)
+        p.restore()
+
+
+class NetworkWidget(_LineGraphWidget):
+    """Data in (red) and out (green) across the real PC's network adapters, the last minute as a line graph."""
+    KEY, TITLE = "net", "Network Traffic"
+    FLOOR = 8 * 1024
+
+    def __init__(self, controller):
+        super().__init__(controller)
+        self._net, self._stamp, self.link = None, None, 0
+        self.down = self.up = 0.0
+
+    def sample(self):
+        now = monotonic()
+        net, self.link = _net_counters()
+        if self._net is not None and now > self._stamp:
+            dt, wrap = now - self._stamp, 1 << 32
+            self.down = sum((v[0] - self._net[k][0]) % wrap for k, v in net.items() if k in self._net) / dt
+            self.up = sum((v[1] - self._net[k][1]) % wrap for k, v in net.items() if k in self._net) / dt
+        self._net, self._stamp = net, now
+        return self.down, self.up
+
+    def draw(self, p, r):
+        w = r.width()
+        _text(p, 12, 5, 110, 18, "Network", 12, WHITE, True)
+        _value(p, 92, 5, (w - 104) / 2, 18, "\u2193 " + _rate(self.down), IN_RED)
+        _value(p, 92 + (w - 104) / 2, 5, (w - 104) / 2, 18, "\u2191 " + _rate(self.up), OUT_GREEN)
+        self.plot(p, QRectF(12, 26, w - 24, r.height() - 46))
+        _legend(p, 12, r.height() - 19, (("in", IN_RED), ("out", OUT_GREEN)))
+        speed = (f"{self.link / 1e9:g} Gbps" if self.link >= 1e9 else f"{self.link / 1e6:.0f} Mbps") if self.link else ""
+        link = f"peak {_rate(self.scale())}  \u00B7  " + (speed or "offline")
+        _text(p, w / 2 - 30, r.height() - 19, w / 2 + 18, 14, link, 9, DIM, align=Qt.AlignRight | Qt.AlignVCenter)
+
+
+class LLMWidget(_LineGraphWidget):
+    """The language models over the last minute: requests the engine is working on or has queued (red) and models
+    being loaded onto the graphics card (green). Which models are loaded is asked of the engine on a thread of its
+    own every two seconds, so a slow answer never holds up the desktop."""
+    KEY, TITLE = "llm", "LLM Activity"
+    FLOOR = 2
+
+    def __init__(self, controller):
+        super().__init__(controller)
+        self.working = 0
+        self.loading, self.loaded, self.engine_on = [], [], False
+        self._stop = None
+
+    def start(self):
+        import threading
+        self._stop = threading.Event()
+        threading.Thread(target=self._watch, args=(self._stop,), daemon=True).start()
+        super().start()
+
+    def stop(self):
+        if self._stop is not None:
+            self._stop.set()
+        super().stop()
+
+    def _watch(self, stop):
+        try:
+            from ... import llm_server
+        except Exception:
+            return
+        while not stop.is_set():
+            try:
+                states = llm_server.model_states()
+                self.engine_on = llm_server.running()
+            except Exception:
+                states, self.engine_on = {}, False
+            self.loading = sorted(m for m, v in states.items() if v == "loading")
+            self.loaded = sorted(m for m, v in states.items() if v == "loaded")
+            stop.wait(2.0)
+
+    def sample(self):
+        try:
+            from ... import broker
+            self.working = broker.get().pending()
+        except Exception:
+            self.working = 0
+        return float(self.working), float(len(self.loading))
+
+    def draw(self, p, r):
+        w = r.width()
+        _text(p, 12, 5, 110, 18, "LLM Activity", 12, WHITE, True)
+        _value(p, 100, 5, (w - 112) / 2, 18, f"{self.working} in use", IN_RED)
+        _value(p, 100 + (w - 112) / 2, 5, (w - 112) / 2, 18, f"{len(self.loading)} loading", OUT_GREEN)
+        self.plot(p, QRectF(12, 26, w - 24, r.height() - 46))
+        if self.loading:
+            foot = "Loading " + ", ".join(self.loading)
+        elif self.loaded:
+            foot = "Loaded: " + ", ".join(self.loaded)
+        else:
+            foot = "Engine running, no model loaded" if self.engine_on else "Engine not running"
+        _text(p, 12, r.height() - 19, w - 24, 14, foot, 9, DIM)
+
+
 class _Grip(QWidget):
     """The little resize corner (QSizeGrip would resize the whole desktop window, so this does it by hand)."""
 
@@ -1258,4 +1464,4 @@ class NoteWidget(WidgetBase):
 
 
 WIDGETS = (ClockWidget, CalendarWidget, WeatherWidget, SkyWidget, TVGuideWidget, HotmailWidget, AlmanacWidget,
-           SystemWidget, NoteWidget)
+           SystemWidget, NetworkWidget, LLMWidget, NoteWidget)
