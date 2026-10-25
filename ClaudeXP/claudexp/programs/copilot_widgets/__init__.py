@@ -1,4 +1,5 @@
-"""Copilot Desktop Widgets: a clock, calendar, weather, TV guide, Hotmail inbox and more floating on the desktop."""
+"""Copilot Desktop Widgets: a clock, calendar, weather, the day and night sky, TV guide, Hotmail inbox and more
+floating on the desktop."""
 import json
 import warnings
 
@@ -14,12 +15,13 @@ from . import art, weather as wx
 from .widgets import WIDGETS
 
 SETTINGS_FILE = DATA / "copilot_widgets.json"
-DEFAULT_ON = {"clock", "weather", "calendar", "tv", "mail"}
+DEFAULT_ON = {"clock", "weather", "calendar", "tv", "mail", "sky"}
 DEFAULTS = {
     "visible": True, "locked": True, "click_through": True, "start_at_logon": True, "opacity": 80,
     "fahrenheit": True, "clock_24h": False, "climate": "Temperate", "hemisphere": "Northern",
-    "latitude": 40.0, "note": "",
+    "latitude": 40.0, "longitude": -74.0, "real_moon": True, "note": "",
 }
+FLOAT_RANGE = {"latitude": (-66.0, 66.0), "longitude": (-180.0, 180.0)}
 MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family: Tahoma; font-size: 11px; }"
               "QMenu::item { padding: 4px 24px 4px 20px; }"
               "QMenu::item:selected { background: #316AC5; color: white; }")
@@ -60,7 +62,8 @@ class WidgetsController(QObject):
                     s[key] = value
             elif isinstance(default, float):
                 if isinstance(value, (int, float)) and not isinstance(value, bool):
-                    s[key] = max(-66.0, min(66.0, float(value)))
+                    lo, hi = FLOAT_RANGE.get(key, (-66.0, 66.0))
+                    s[key] = max(lo, min(hi, float(value)))
             elif isinstance(default, int):
                 if isinstance(value, int) and not isinstance(value, bool):
                     s[key] = max(20, min(100, value))

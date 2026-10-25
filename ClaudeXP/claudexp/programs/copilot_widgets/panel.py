@@ -60,6 +60,19 @@ class Panel(QWidget):
         self.latitude.setSuffix("\u00B0")
         self.latitude.valueChanged.connect(lambda v: self.c.set("latitude", float(v)))
         form.addRow("Latitude (sunrise/sunset)", self.latitude)
+        self.longitude = QDoubleSpinBox()
+        self.longitude.setRange(-180, 180)
+        self.longitude.setSuffix("\u00B0")
+        self.longitude.setToolTip("West is negative: New York is about -74, London 0, Sydney 151. With it, sunrise "
+                                  "and sunset land at the right clock time for your time zone.")
+        self.longitude.valueChanged.connect(lambda v: self.c.set("longitude", float(v)))
+        form.addRow("Longitude (sunrise/sunset)", self.longitude)
+        self.real_moon = QCheckBox("Tonight's real moon, not the moon of this computer's year")
+        self.real_moon.setToolTip("The sun's times barely change from year to year, but the moon's phase does: "
+                                  "ticked, the Day and Night and Sun and Moon widgets show the moon as it is outside "
+                                  "your window tonight.")
+        self.real_moon.toggled.connect(lambda on: self.c.set("real_moon", on))
+        form.addRow("Moon", self.real_moon)
         self.fahrenheit = QCheckBox("Fahrenheit and mph")
         self.fahrenheit.toggled.connect(lambda on: self.c.set("fahrenheit", on))
         form.addRow("Units", self.fahrenheit)
@@ -91,12 +104,14 @@ class Panel(QWidget):
         s = self.c.settings
         pairs = ((self.lock, s["locked"]), (self.visible, s["visible"]), (self.fahrenheit, s["fahrenheit"]),
                  (self.h24, s["clock_24h"]), (self.through, s["click_through"]), (self.logon, s["start_at_logon"]),
+                 (self.real_moon, s["real_moon"]),
                  *((box, s["enabled"][key]) for key, box in self.boxes.items()))
         for box, value in pairs:
             box.blockSignals(True)
             box.setChecked(value)
             box.blockSignals(False)
-        for control, value in ((self.opacity, s["opacity"]), (self.latitude, s["latitude"])):
+        for control, value in ((self.opacity, s["opacity"]), (self.latitude, s["latitude"]),
+                               (self.longitude, s["longitude"])):
             control.blockSignals(True)
             control.setValue(value)
             control.blockSignals(False)

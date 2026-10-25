@@ -1,13 +1,15 @@
-"""The desktop widgets: Clock, Calendar, Weather, TV Guide, Hotmail Inbox, Almanac, System Monitor and Sticky Note."""
+"""The desktop widgets: Clock, Calendar, Weather, Day and Night, TV Guide, Hotmail Inbox, Almanac, System Monitor and
+Sticky Note."""
 import calendar
 import ctypes
+import math
 import os
 import shutil
 from datetime import date, datetime, timedelta
 from time import monotonic
 
 from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QLinearGradient, QPainter, QPen
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QLinearGradient, QPainter, QPainterPath, QPen, QRadialGradient
 from PySide6.QtWidgets import QMenu, QPlainTextEdit, QPushButton, QWidget
 
 from ... import clock
@@ -576,6 +578,158 @@ class HotmailWidget(WidgetBase):
             network.connect(desktop, then=lambda: navigator.open_url(desktop, url))
 
 
+# ---- the sky -----------------------------------------------------------------------------------------------
+def _moon(settings, now):
+    """The moon for the widgets: tonight's real one (the phase depends on the year, and 2001's isn't 2026's) unless
+    the setting asks for the moon of this computer's own year."""
+    return wx.moon(datetime.now() if settings.get("real_moon", True) else now)
+
+
+def _mix(a, b, t):
+    t = max(0.0, min(1.0, t))
+    return QColor(round(a.red() + (b.red() - a.red()) * t), round(a.green() + (b.green() - a.green()) * t),
+                  round(a.blue() + (b.blue() - a.blue()) * t))
+
+
+class SkyWidget(WidgetBase):
+    """Today from midnight to midnight: the sun's arc over the horizon with the sun where it is now (or below the
+    horizon at night), sunrise and sunset marked with their times, the sky coloured for the hour, and the moon with
+    tonight's phase riding its own arc, about 50 minutes behind the sun for each day of its age."""
+    KEY, TITLE, SIZE, REFRESH_MS = "sky", "Day and Night", (330, 190), 60000
+    NIGHT, DUSK, DAY = QColor("#0B1A3F"), QColor("#E8864A"), QColor("#5FA8E8")
+
+    def draw(self, p, r):
+        s = self.c.settings
+        now = clock.now()
+        hour = now.hour + now.minute / 60
+        rise, sset = wx.sun_times(now, s["latitude"], s["longitude"])
+        mname, mlit, mage = _moon(s, now)
+        mrise, mset = wx.moon_times(now, s["latitude"], s["longitude"], mage)
+        left, right, top, horizon = 16, r.width() - 16, 30, 104
+        width = right - left
+
+        def x_of(h):
+            return left + (h % 24) / 24 * width
+
+        # the sky, coloured for the hour: night, then a warm band an hour either side of sunrise and sunset
+        twilight = min(abs(hour - rise), abs(hour - sset))
+        if rise <= hour <= sset:
+            sky = _mix(self.DUSK, self.DAY, twilight / 1.2)
+        else:
+            sky = _mix(self.DUSK, self.NIGHT, twilight / 1.5)
+        box = QRectF(left, top, width, horizon - top)
+        grad = QLinearGradient(box.topLeft(), box.bottomLeft())
+        grad.setColorAt(0, sky.darker(130))
+        grad.setColorAt(1, sky)
+        p.setPen(Qt.NoPen)
+        p.setBrush(grad)
+        p.drawRoundedRect(box, 4, 4)
+        if hour < rise or hour > sset:                       # stars at night
+            for i in range(30):                             # scattered the same way every night
+                seed = (i * 2654435761) & 0xFFFFFFFF
+                sx = left + 4 + (seed % 1000) / 1000 * (width - 8)
+                sy = top + 4 + ((seed >> 10) % 1000) / 1000 * (horizon - top - 24)
+                p.setBrush(QColor(255, 255, 255, 90 + (seed >> 20) % 130))
+                p.drawEllipse(QPointF(sx, sy), 0.9, 0.9)
+        # the ground
+        p.setBrush(QColor(20, 40, 24, 200))
+        p.drawRect(QRectF(left, horizon, width, 10))
+        p.setPen(QPen(QColor(255, 255, 255, 140), 1))
+        p.drawLine(QPointF(left, horizon), QPointF(right, horizon))
+
+        # the arcs: the sun's from sunrise to sunset, the moon's from moonrise to moonset (it may cross midnight,
+        # so it's sampled around the clock and lifted where it's up); below the horizon a body sits just under the
+        # ground at its hour, dimmed
+        peak = top + 8
+
+        def is_up(h, rise_h, set_h):
+            return (h - rise_h) % 24 <= (set_h - rise_h) % 24
+
+        def arc_point(h, rise_h, set_h):
+            if not is_up(h, rise_h, set_h):
+                return QPointF(x_of(h), horizon + 6)
+            span = (set_h - rise_h) % 24 or 24
+            frac = ((h - rise_h) % 24) / span
+            return QPointF(x_of(h), horizon - math.sin(math.pi * frac) * (horizon - peak))
+
+        def draw_arc(rise_h, set_h, colour):
+            path = QPainterPath()
+            steps = 120
+            was_up = False
+            for i in range(steps + 1):
+                h = min(i / steps * 24, 23.999)
+                up = is_up(h, rise_h, set_h)
+                if not up:
+                    was_up = False
+                    continue
+                pt = arc_point(h, rise_h, set_h)
+                if was_up:
+                    path.lineTo(pt)
+                else:
+                    path.moveTo(pt)
+                was_up = True
+            p.setBrush(Qt.NoBrush)
+            p.setPen(QPen(colour, 1.6))
+            p.drawPath(path)
+
+        p.save()
+        p.setClipRect(QRectF(left, top, width, horizon - top + 10))
+        draw_arc(mrise, mset, QColor(201, 212, 242, 170))
+        draw_arc(rise, sset, GOLD)
+        # the moon, with its phase, where it is on its arc
+        moon_up = is_up(hour, mrise, mset)
+        mpt = arc_point(hour, mrise, mset)
+        p.setOpacity(1.0 if moon_up else 0.45)
+        art.draw_moon(p, mpt.x(), mpt.y(), 9, mage, s["hemisphere"])
+        p.setOpacity(1.0)
+        # the sun
+        sun_up = rise <= hour <= sset
+        spt = arc_point(hour, rise, sset)
+        if sun_up:
+            glow = QRadialGradient(spt, 22)
+            glow.setColorAt(0, QColor(255, 230, 120, 150))
+            glow.setColorAt(1, QColor(255, 230, 120, 0))
+            p.setPen(Qt.NoPen)
+            p.setBrush(glow)
+            p.drawEllipse(spt, 22, 22)
+        p.setPen(QPen(QColor("#F2B134") if sun_up else QColor(242, 177, 52, 120), 1))
+        p.setBrush(QColor("#FFD84A") if sun_up else QColor(255, 216, 74, 90))
+        p.drawEllipse(spt, 8, 8)
+        p.restore()
+
+        # sunrise and sunset ticks with their times, the hour marks, and where now is
+        p.setPen(QPen(QColor(255, 255, 255, 90), 1))
+        for h in (0, 6, 12, 18, 24):
+            p.drawLine(QPointF(x_of(h if h < 24 else 23.999), horizon + 10), QPointF(x_of(h if h < 24 else 23.999), horizon + 14))
+        for h, label in ((0, "12am"), (6, "6am"), (12, "noon"), (18, "6pm")):
+            _text(p, x_of(h) - 18, horizon + 14, 36, 12, label, 9, DIM, align=Qt.AlignHCenter)
+        for h, colour in ((rise, GOLD), (sset, GOLD)):
+            p.setPen(QPen(colour, 1.4))
+            p.drawLine(QPointF(x_of(h), horizon - 4), QPointF(x_of(h), horizon + 10))
+        p.setPen(QPen(WHITE, 1.4))
+        p.drawLine(QPointF(x_of(hour), top), QPointF(x_of(hour), horizon + 10))
+        _text(p, 14, 8, 160, 18, "Day and Night", 13, WHITE, True)
+        length = (sset - rise) % 24
+        _text(p, 150, 8, r.width() - 164, 18, f"Daylight {int(length)}h {round((length % 1) * 60):02d}m", 11, GOLD,
+              True, Qt.AlignRight | Qt.AlignVCenter)
+        y = horizon + 30
+        _text(p, 14, y, 150, 14, f"Sunrise {wx.hours_text(rise)}", 11, SOFT)
+        _text(p, 150, y, r.width() - 164, 14, f"Sunset {wx.hours_text(sset)}", 11, SOFT, align=Qt.AlignRight)
+        _text(p, 14, y + 16, 190, 14, f"{mname}, {round(mlit * 100)}% lit", 11, SOFT)
+        _text(p, 150, y + 16, r.width() - 164, 14,
+              f"Moon {'up' if moon_up else 'rises'} {wx.hours_text(mrise) if not moon_up else 'sets ' + wx.hours_text(mset)}",
+              11, SOFT, align=Qt.AlignRight)
+        _text(p, 14, y + 32, r.width() - 28, 12,
+              ("Tonight's real moon" if s.get("real_moon", True) else f"The moon of {now.year}") +
+              f"  \u00B7  {abs(s['latitude']):.0f}\u00B0{'N' if s['latitude'] >= 0 else 'S'} "
+              f"{abs(s['longitude']):.0f}\u00B0{'E' if s['longitude'] >= 0 else 'W'}", 9, DIM)
+
+    def clicked(self, pos):
+        self.c.settings["real_moon"] = not self.c.settings.get("real_moon", True)
+        self.c.save()
+        self.update()
+
+
 # ---- almanac -----------------------------------------------------------------------------------------------
 class AlmanacWidget(WidgetBase):
     KEY, TITLE, SIZE, REFRESH_MS = "almanac", "Sun and Moon", (250, 142), 60000
@@ -583,8 +737,8 @@ class AlmanacWidget(WidgetBase):
     def draw(self, p, r):
         s = self.c.settings
         now = clock.now()
-        name, lit, age = wx.moon(now)
-        rise, sset = wx.sun_times(now, s["latitude"])
+        name, lit, age = _moon(s, now)
+        rise, sset = wx.sun_times(now, s["latitude"], s["longitude"])
         length = sset - rise
         art.draw_moon(p, 40, 52, 24, age, s["hemisphere"])
         _text(p, 14, 82, 56, 14, f"{round(lit * 100)}% lit", 10, SOFT, align=Qt.AlignHCenter)
@@ -1102,5 +1256,5 @@ class NoteWidget(WidgetBase):
         _text(p, 10, 4, r.width() - 110, 20, self.status or "Sticky Note", 11, QColor("#7A5F00"), bold=not self.status)
 
 
-WIDGETS = (ClockWidget, CalendarWidget, WeatherWidget, TVGuideWidget, HotmailWidget, AlmanacWidget, SystemWidget,
-           NoteWidget)
+WIDGETS = (ClockWidget, CalendarWidget, WeatherWidget, SkyWidget, TVGuideWidget, HotmailWidget, AlmanacWidget,
+           SystemWidget, NoteWidget)

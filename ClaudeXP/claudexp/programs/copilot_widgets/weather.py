@@ -92,12 +92,44 @@ def season(when, hemisphere="Northern"):
     return name
 
 
-def sun_times(when, latitude=40.0):
-    """(sunrise, sunset) in local hours, from the day's solar declination."""
-    decl = math.radians(23.44) * math.sin(2 * math.pi * (when.timetuple().tm_yday - 81) / 365)
-    arg = -math.tan(math.radians(latitude)) * math.tan(decl)
+def sun_times(when, latitude=40.0, longitude=None):
+    """(sunrise, sunset) in local clock hours, from the day's solar declination. With a longitude the times are
+    placed properly in the time zone (solar noon isn't 12:00) and corrected for the equation of time and the
+    refraction at the horizon: within a few minutes of the almanac. Without one, solar noon is taken as 12:00."""
+    n = when.timetuple().tm_yday
+    decl = math.radians(23.44) * math.sin(2 * math.pi * (n - 81) / 365)
+    if longitude is None:
+        arg = -math.tan(math.radians(latitude)) * math.tan(decl)
+        noon = 12.0
+    else:
+        lat = math.radians(latitude)
+        arg = (math.cos(math.radians(90.833)) - math.sin(lat) * math.sin(decl)) / (math.cos(lat) * math.cos(decl))
+        b = 2 * math.pi * (n - 81) / 364
+        eot = 9.87 * math.sin(2 * b) - 7.53 * math.cos(b) - 1.5 * math.sin(b)       # minutes, sundial ahead of clock
+        noon = 12 + utc_offset_hours(when) - longitude / 15 - eot / 60
     half = math.degrees(math.acos(max(-1.0, min(1.0, arg)))) / 15
-    return 12 - half, 12 + half
+    return noon - half, noon + half
+
+
+def utc_offset_hours(when):
+    """The real PC's offset from UTC, in hours, for that month and day (daylight saving follows the real calendar)."""
+    import time as _time
+    try:
+        stamp = _time.mktime(when.replace(year=_time.localtime().tm_year).timetuple())
+        return _time.localtime(stamp).tm_gmtoff / 3600
+    except (OverflowError, ValueError, AttributeError):
+        return -_time.timezone / 3600
+
+
+def moon_times(when, latitude=40.0, longitude=None, age=None):
+    """(moonrise, moonset) in local hours, roughly: the moon follows the sun's path about 50 minutes later each day
+    of its age, so its rise and set are the sun's shifted by that. Good to about half an hour; a widget's worth.
+    `age` is the moon's age in days (from moon()); without it, the moon of `when` is used."""
+    if age is None:
+        _name, _lit, age = moon(when)
+    rise, sset = sun_times(when, latitude, longitude)
+    shift = age / 29.530588853 * 24
+    return (rise + shift) % 24, (sset + shift) % 24
 
 
 def hours_text(h):
