@@ -579,10 +579,11 @@ class HotmailWidget(WidgetBase):
 
 
 # ---- the sky -----------------------------------------------------------------------------------------------
-def _moon(settings, now):
-    """The moon for the widgets: tonight's real one (the phase depends on the year, and 2001's isn't 2026's) unless
-    the setting asks for the moon of this computer's own year."""
-    return wx.moon(datetime.now() if settings.get("real_moon", True) else now)
+def sky_time(settings):
+    """The moment the sky widgets show: real time - today's real date, year and all - unless the setting asks for this
+    computer's own year. The time of day is the same either way (the computer's clock is the real one, with the year
+    fixed); the year moves the moon's phase a long way, and the sun's times by a minute or so."""
+    return datetime.now() if settings.get("real_moon", True) else clock.now()
 
 
 def _mix(a, b, t):
@@ -600,10 +601,10 @@ class SkyWidget(WidgetBase):
 
     def draw(self, p, r):
         s = self.c.settings
-        now = clock.now()
+        now = sky_time(s)
         hour = now.hour + now.minute / 60
         rise, sset = wx.sun_times(now, s["latitude"], s["longitude"])
-        mname, mlit, mage = _moon(s, now)
+        mname, mlit, mage = wx.moon(now)
         mrise, mset = wx.moon_times(now, s["latitude"], s["longitude"], mage)
         left, right, top, horizon = 16, r.width() - 16, 30, 104
         width = right - left
@@ -720,7 +721,7 @@ class SkyWidget(WidgetBase):
               f"Moon {'up' if moon_up else 'rises'} {wx.hours_text(mrise) if not moon_up else 'sets ' + wx.hours_text(mset)}",
               11, SOFT, align=Qt.AlignRight)
         _text(p, 14, y + 32, r.width() - 28, 12,
-              ("Tonight's real moon" if s.get("real_moon", True) else f"The moon of {now.year}") +
+              (f"Real time, {now:%b} {now.day} {now.year}" if s.get("real_moon", True) else f"The sky of {now.year}") +
               f"  \u00B7  {abs(s['latitude']):.0f}\u00B0{'N' if s['latitude'] >= 0 else 'S'} "
               f"{abs(s['longitude']):.0f}\u00B0{'E' if s['longitude'] >= 0 else 'W'}", 9, DIM)
 
@@ -736,8 +737,8 @@ class AlmanacWidget(WidgetBase):
 
     def draw(self, p, r):
         s = self.c.settings
-        now = clock.now()
-        name, lit, age = _moon(s, now)
+        now = sky_time(s)
+        name, lit, age = wx.moon(now)
         rise, sset = wx.sun_times(now, s["latitude"], s["longitude"])
         length = sset - rise
         art.draw_moon(p, 40, 52, 24, age, s["hemisphere"])

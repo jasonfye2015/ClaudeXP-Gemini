@@ -67,12 +67,12 @@ class Panel(QWidget):
                                   "and sunset land at the right clock time for your time zone.")
         self.longitude.valueChanged.connect(lambda v: self.c.set("longitude", float(v)))
         form.addRow("Longitude (sunrise/sunset)", self.longitude)
-        self.real_moon = QCheckBox("Tonight's real moon, not the moon of this computer's year")
-        self.real_moon.setToolTip("The sun's times barely change from year to year, but the moon's phase does: "
-                                  "ticked, the Day and Night and Sun and Moon widgets show the moon as it is outside "
-                                  "your window tonight.")
+        self.real_moon = QCheckBox("Real time (today's date and year), not this computer's year")
+        self.real_moon.setToolTip("Ticked, the Day and Night and Sun and Moon widgets show the sky outside your "
+                                  "window right now. Unticked, the same day and hour in this computer's own year: the "
+                                  "sun barely changes, but the moon's phase can be quite different.")
         self.real_moon.toggled.connect(lambda on: self.c.set("real_moon", on))
-        form.addRow("Moon", self.real_moon)
+        form.addRow("Sky widgets", self.real_moon)
         self.fahrenheit = QCheckBox("Fahrenheit and mph")
         self.fahrenheit.toggled.connect(lambda on: self.c.set("fahrenheit", on))
         form.addRow("Units", self.fahrenheit)
