@@ -36,6 +36,8 @@ GitHub.
 12. [On a Mac](12-mac.md) - what works on the MacBook, how it's wired, and what's different
 13. [Under the hood](13-under-the-hood.md) - for whoever changes it next: how programs are registered, how shared
     programs talk to a computer, adding a game, the portable Python, the launcher .exe, git
+14. [What's in Local Storage](14-local-storage.md) - the inventory of the drive: every folder with its file count,
+    size and what kinds of files are in it. The project isn't meant to run without this
 
 ## The short version
 

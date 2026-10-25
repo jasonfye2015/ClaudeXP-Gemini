@@ -46,7 +46,7 @@ click **Restore the ticked parts from this backup...**.
 
 ## What a backup doesn't cover
 
-- **Local Storage** (205 GB): the models, the archive, TV, ROMs, the Furry Hollow, your text logs. The cold copy on
+- **Local Storage** (746 GB): the models, the archive, TV, ROMs, the Furry Hollow, your text logs. The cold copy on
   the 4 TB drive is its backup. Refresh it now and then; the text logs and the AI Kithy pictures change.
 - **The code** is in git, pushed to GitHub. A fresh clone plus `Local Storage` plus a backup zip is a complete
   Timeline.

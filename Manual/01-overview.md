@@ -88,12 +88,15 @@ The period programs' data (the IRC regulars, the browsers' caches, the Fur Direc
 | The code, the art the computers draw with, the residents | everything else | yes |
 
 "Not in git" means a fresh clone of the repository won't have it. The [backup](10-backup.md) covers the first five
-rows and, if you tick them, the models and the training results. `Local Storage` is too big for that (about 205 GB:
-TV and Movies 75, the Furry Media Archive 64, the models 60); its safety is the cold copy on the 4 TB drive.
+rows and, if you tick them, the models and the training results. `Local Storage` is too big for that (about 746 GB:
+TV and Movies 292, Camera Rolls 160, the models and their training files 98, the Furry Media Archive 87, your pictures
+61; [chapter 14](14-local-storage.md) has the whole inventory); its safety is the cold copy on the 4 TB drive.
 
 ## The drive
 
 The whole Timeline lives on a 1 TB external SSD formatted exFAT, so the same drive runs on a Windows PC and a Mac.
+In October 2026 it held 916 GB with 17 GB free: a training run's base weights (24 GB) or a new TV season needs room
+made first, and the self-check warns when space gets low.
 exFAT with 256 KB clusters means every tiny file takes a quarter of a megabyte, which is why the Mac Python was
 slimmed to 1.8 GB and why Python's compiled-code cache goes on the Mac's own disk.
 

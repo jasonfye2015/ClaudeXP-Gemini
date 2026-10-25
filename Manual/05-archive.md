@@ -3,7 +3,7 @@
 `Local Storage` is the Timeline's external drive: drive **E:** inside every computer. It holds everything that isn't
 code and isn't yours-and-small: the language models, the furry media archive, the TV and movies, the ROMs and WADs,
 the website rips, the offline Wikipedia, your own pictures and documents, and your chat logs. Git ignores all of it
-except its README. About 205 GB.
+except its README. About 746 GB in 736,000 files; [chapter 14](14-local-storage.md) is the folder-by-folder inventory.
 
 The computers run fine with it empty; only the talking and the media go quiet.
 
