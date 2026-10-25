@@ -16,6 +16,8 @@ instead of a computer that won't load:
 - **The Python runtime, each computer and the language-model engine being where they should be.**
 - **How long since the last backup.**
 
+![The self-check, all clear](images/selfcheck.png)
+
 The chip at the bottom right says **SELF-CHECK OK**, or counts **WARNINGS** (it may misbehave) or **PROBLEMS** (it
 won't start, or will lose something). Click it for the list, each with a line of advice. **CHECK AGAIN** reruns it.
 

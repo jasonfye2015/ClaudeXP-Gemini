@@ -22,6 +22,22 @@ DEFAULTS = {
     "latitude": 40.0, "longitude": -74.0, "real_moon": True, "note": "", "theme": DEFAULT_THEME,
 }
 FLOAT_RANGE = {"latitude": (-66.0, 66.0), "longitude": (-180.0, 180.0)}
+# Where the widgets go on XP until you move them: the user's own arrangement on the 1560-wide windowed desktop
+# (October 2026). On a wider or narrower desktop they keep their distance from the right edge. Widgets not listed
+# here, and the later computers' widgets, flow down the right edge as before.
+DEFAULT_PLACES = {"width": 1559, "era": 2001, "positions": {
+    "clock": (1293, 16), "calendar": (1303, 132), "weather": (1243, 376), "almanac": (1282, 624),
+    "tv": (830, 12), "mail": (830, 445), "system": (559, 16), "net": (561, 355), "llm": (564, 672),
+    "sky": (487, 464)}}
+XP_ALSO_ON = {"almanac", "system", "net", "llm"}         # shown by default on XP, as in that arrangement
+
+
+def _era():
+    try:
+        from claudecore import host
+        return host.era()
+    except Exception:
+        return None
 MENU_STYLE = ("QMenu { background: white; border: 1px solid #ACA899; font-family: Tahoma; font-size: 11px; }"
               "QMenu::item { padding: 4px 24px 4px 20px; }"
               "QMenu::item:selected { background: #316AC5; color: white; }")
@@ -35,7 +51,8 @@ class WidgetsController(QObject):
         super().__init__(desktop)
         self.desktop = desktop
         self.settings = dict(DEFAULTS)
-        self.settings["enabled"] = {cls.KEY: cls.KEY in DEFAULT_ON for cls in WIDGETS}
+        on = DEFAULT_ON | (XP_ALSO_ON if _era() == DEFAULT_PLACES["era"] else set())
+        self.settings["enabled"] = {cls.KEY: cls.KEY in on for cls in WIDGETS}
         self.settings["positions"] = {}
         self._load()
         self.widgets = {}
@@ -158,7 +175,7 @@ class WidgetsController(QObject):
             w = shown.get(cls.KEY)
             if w is None:
                 continue
-            saved = positions.get(cls.KEY)
+            saved = positions.get(cls.KEY) or self._default_place(cls.KEY, area)
             if saved:
                 w.move(self.clamp(w, QPoint(*saved)))
                 continue
@@ -176,6 +193,15 @@ class WidgetsController(QObject):
             w.move(self.clamp(w, QPoint(x_right - w.width() + 1, y)))
             y += w.height() + 12
             col_w = max(col_w, w.width())
+
+    def _default_place(self, key, area):
+        """This widget's place in the default arrangement, on this desktop, or None."""
+        if _era() != DEFAULT_PLACES["era"]:
+            return None
+        pos = DEFAULT_PLACES["positions"].get(key)
+        if pos is None:
+            return None
+        return [pos[0] + area.width() - DEFAULT_PLACES["width"], pos[1]]
 
     def remember(self, widget):
         """Dragging one widget pins every shown widget where it is, so the others don't shuffle."""

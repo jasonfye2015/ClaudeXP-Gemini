@@ -14,7 +14,11 @@ class ClaudeXP(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ClaudeXP")
-        self.resize(1152, 864)          # the step up from 1024 x 768 on XP's Display slider: room for widgets
+        # 1560 x 864 in a window: the desktop icons, the program windows and the Copilot Widgets side by side (the
+        # widgets' default places are set for this width); narrower on a screen that can't fit it
+        screen = QApplication.primaryScreen()
+        room = screen.availableGeometry().width() - 40 if screen is not None else 1560
+        self.resize(max(1024, min(1560, room)), 864)
         self.setMinimumSize(800, 600)
         self._shutting_down = False
         from . import setup, user

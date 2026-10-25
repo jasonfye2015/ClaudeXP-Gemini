@@ -71,6 +71,8 @@ Ruffle emulator in 2025).
 
 ## ClaudeTV
 
+![ClaudeTV with its TV Guide](images/claudetv.png)
+
 **ClaudeTV** (TV and Movies) is an over-the-air tuner card's viewer, the kind that came with a Hauppauge card. What's
 on is decided by the clock: turning the TV on joins a programme partway through, and changing channel shows a burst
 of snow while the tuner locks on. The channels are built from `TV and Movies`; channels 2, 7 and 11 are static, and a

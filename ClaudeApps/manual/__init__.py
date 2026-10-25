@@ -7,8 +7,8 @@ The pages themselves are plain Markdown, so they read fine in any editor too."""
 import re
 from pathlib import Path
 
-from PySide6.QtCore import QRectF, Qt, QUrl
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap, QTextDocument
+from PySide6.QtCore import QRectF, Qt, QTimer, QUrl
+from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPainter, QPen, QPixmap, QTextCursor, QTextDocument
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPushButton, QSplitter, QTextBrowser, QVBoxLayout, QWidget)
 from shiboken6 import isValid
@@ -133,6 +133,8 @@ class ManualView(QWidget):
         self.view.anchorClicked.connect(self._link)
         self.view.document().setDefaultStyleSheet(PAGE_CSS)
         self.view.document().setDocumentMargin(14)
+        self.view.viewport().installEventFilter(self)
+        self._pictures = {}                     # picture -> the full-size image
         split.addWidget(self.view)
         split.setStretchFactor(1, 1)
         split.setSizes([230, 800])
@@ -161,7 +163,44 @@ class ManualView(QWidget):
         doc = self.view.document()
         doc.setBaseUrl(base)
         doc.setMarkdown(prepare(markdown), QTextDocument.MarkdownDialectGitHub)
+        self._fit_pictures()
         self.view.verticalScrollBar().setValue(0)
+        QTimer.singleShot(0, lambda: self.view.verticalScrollBar().setValue(0))   # again once the pictures are laid out
+
+    def _fit_pictures(self):
+        """Screenshots are bigger than the page: show each at the page's width (never larger than it really is)."""
+        doc = self.view.document()
+        room = max(200, self.view.viewport().width() - 2 * int(doc.documentMargin()) - 12)
+        block = doc.begin()
+        while block.isValid():
+            it = block.begin()
+            while not it.atEnd():
+                frag = it.fragment()
+                fmt = frag.charFormat()
+                if frag.isValid() and fmt.isImageFormat():
+                    img = fmt.toImageFormat()
+                    name = img.name()
+                    if name not in self._pictures:
+                        self._pictures[name] = QImage(str(MANUAL / name))
+                    full = self._pictures[name]
+                    if not full.isNull():
+                        width = min(full.width(), room)
+                        shown = full if width == full.width() else full.scaledToWidth(width, Qt.SmoothTransformation)
+                        for key in (QUrl(name), doc.baseUrl().resolved(QUrl(name))):   # smooth, not the view's own scaling
+                            doc.addResource(QTextDocument.ImageResource, key, shown)
+                        img.setWidth(shown.width())
+                        img.setHeight(shown.height())
+                        cur = QTextCursor(doc)
+                        cur.setPosition(frag.position())
+                        cur.setPosition(frag.position() + frag.length(), QTextCursor.KeepAnchor)
+                        cur.setCharFormat(img)
+                it += 1
+            block = block.next()
+
+    def eventFilter(self, obj, event):
+        if obj is self.view.viewport() and event.type() == event.Type.Resize:
+            QTimer.singleShot(0, self._fit_pictures)
+        return False
 
     def _step(self, d):
         at = self.at + d

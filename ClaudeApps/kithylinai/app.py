@@ -119,7 +119,9 @@ class KithylinAI(QWidget):
         row.addWidget(QLabel("Model:"))
         self.model_box = QComboBox()
         self.model_box.setMinimumWidth(300)
-        self.model_box.currentIndexChanged.connect(lambda _i: self._show_details())
+        # (after the list has closed: building the details card while it was still closing left the empty drop-down
+        # frame floating on screen on Windows)
+        self.model_box.currentIndexChanged.connect(lambda _i: QTimer.singleShot(0, self._show_details))
         row.addWidget(self.model_box)
         self.browse_btn = QPushButton("Browse...")
         self.browse_btn.setToolTip("Pick any .gguf model file")
@@ -350,6 +352,9 @@ class KithylinAI(QWidget):
                         "Browse... to a .gguf file.")
 
     def _show_details(self):
+        popup = self.model_box.view().window()
+        if popup is not self.window() and popup.isVisible():
+            popup.hide()                                   # a drop-down frame left behind with nothing in it
         if getattr(self, "details", None) is None:
             return
         key = self.model_box.currentData()
