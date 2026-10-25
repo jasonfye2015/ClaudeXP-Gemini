@@ -38,6 +38,8 @@ GitHub.
     programs talk to a computer, adding a game, the portable Python, the launcher .exe, git
 14. [What's in Local Storage](14-local-storage.md) - the inventory of the drive: every folder with its file count,
     size and what kinds of files are in it. The project isn't meant to run without this
+15. [Every program](15-programs.md) - all 170, by kind, with what each is and which computer has it under which
+    name
 
 ## The short version
 
