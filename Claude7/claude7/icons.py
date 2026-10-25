@@ -25,7 +25,7 @@ PROGRAM_FOLDERS = {"Games": ["Games"], "Games/Windows Games": ["Games/Windows Ga
                    "Disc Tools": ["Nero", "Alcohol 120%", "WinRAR", "WinZip"], "Copilot": ["Copilot"],
                    "Windows Live": ["Windows Live"]}
 # loose shortcuts on a fresh desktop
-DESKTOP_SHORTCUTS = ["iexplore", "firefox", "msn", "aim", "claudeai", "kithylinai", "copilotai", "wmp", "kiwix", "claudecraft", "tv",
+DESKTOP_SHORTCUTS = ["iexplore", "firefox", "msn", "aim", "claudeai", "kithylinai", "manual", "copilotai", "wmp", "kiwix", "claudecraft", "tv",
                      "secondlife", "furdir", "claudeamp", "torrent", "pystudio"]
 
 

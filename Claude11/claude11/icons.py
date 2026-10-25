@@ -25,7 +25,7 @@ PROGRAM_FOLDERS = {"Games": ["Games"], "Games/Solitaire & Casual Games": ["Games
                    "Disc Tools": ["Nero", "Alcohol 120%", "WinRAR", "WinZip"], "Copilot": ["Copilot"],
                    "Windows Tools": ["Windows Tools"]}
 # loose shortcuts on a fresh desktop
-DESKTOP_SHORTCUTS = ["iexplore", "firefox", "telegram", "discord", "claudeai", "kithylinai", "copilotai", "wmp", "kiwix",
+DESKTOP_SHORTCUTS = ["iexplore", "firefox", "telegram", "discord", "claudeai", "kithylinai", "manual", "copilotai", "wmp", "kiwix",
                      "claudecraft", "tv", "secondlife", "furdir", "claudeamp", "torrent", "pystudio"]
 # programs that also get a loose desktop icon of their own, besides the one in their folder (added once, even on a
 # desktop made before they existed)

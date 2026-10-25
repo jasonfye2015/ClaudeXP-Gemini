@@ -1,7 +1,8 @@
 """SYSTEC Multi-Boot Manager: the Claude Timeline's system selection screen.
 
 A card per computer (EPOCH-2001, SYSTEM-2011, WORKSTATION-2025). Click one for Load This Computer, Load and Format
-and Config; double-click to load. The bottom bar has Help, Profile and Power Off, and the real date and time.
+and Config; double-click to load. The bottom bar has Help, Profile, Backup, the Manual and Power Off, and the real
+date and time.
 While a computer runs, the launcher steps aside, and comes back when it shuts down.
 """
 import math
@@ -23,6 +24,8 @@ from .systems import PORTABLE_PYTHON, PORTABLE_PYTHONS, SYSTEMS, TIMELINE
 
 if str(TIMELINE / "ClaudeCore") not in sys.path:          # the shared Furry Code / YIFF Code editor
     sys.path.insert(0, str(TIMELINE / "ClaudeCore"))
+if str(TIMELINE / "ClaudeApps") not in sys.path:          # the manual's viewer
+    sys.path.append(str(TIMELINE / "ClaudeApps"))
 
 VW, VH = 1408, 768
 VERSION = "v1.50"
@@ -403,7 +406,7 @@ class Systec(QWidget):
     def _footer(self, p):
         # who's signed in
         me = prof.load()
-        chip = QRectF(52, VH - 62, 440, 44)
+        chip = QRectF(52, VH - 62, 370, 44)
         p.setPen(QPen(QColor("#3A4250"), 1.2))
         p.setBrush(QColor(14, 16, 20, 225))
         p.drawRoundedRect(chip, 6, 6)
@@ -437,15 +440,16 @@ class Systec(QWidget):
             p.setPen(DIM)
             p.drawText(line, Qt.AlignVCenter, "TIMELINE IDENTITY - click to change")
         # the centre buttons, on a trapezoid
-        cx, w = VW / 2, 420
+        cx, w = VW / 2, 500
         tray = QPolygonF([QPointF(cx - w / 2 - 24, VH), QPointF(cx - w / 2, VH - 52), QPointF(cx + w / 2, VH - 52),
                           QPointF(cx + w / 2 + 24, VH)])
         p.setPen(QPen(QColor("#3A4250"), 1.2))
         p.setBrush(QColor(14, 16, 20, 230))
         p.drawPolygon(tray)
         for i, (text, action) in enumerate((("HELP", self.help), ("PROFILE", self.edit_profile),
-                                            ("BACKUP", self.backups), ("POWER OFF", self.close))):
-            self._button(p, QRectF(cx - 196 + i * 98, VH - 40, 90, 28), text, action, "#8FB4FF", small=True)
+                                            ("BACKUP", self.backups), ("MANUAL", self.manual),
+                                            ("POWER OFF", self.close))):
+            self._button(p, QRectF(cx - 240 + i * 96, VH - 40, 88, 28), text, action, "#8FB4FF", small=True)
         self._selfcheck_chip(p)
         # date and time
         box = QRectF(VW - 300, VH - 50, 300, 50)
@@ -496,8 +500,24 @@ class Systec(QWidget):
             "<b>Profile</b> is who you are in every era: your name and fursona. Each computer's Setup takes it from "
             "here.<br><br><b>Your codes</b> (the Furry / YIFF panel above your name - click it) decide how the "
             "residents get along with you: attraction, roleplay, what you have in common. A fursona comes with "
-            "defaults; change them any time.<br><br>Keys: arrows pick a computer, Enter loads it, F11 full screen, Esc goes back.")
+            "defaults; change them any time.<br><br><b>Backup</b> saves your saves, each computer's data, your profile and "
+            "your Kithylin chats into one zip, and restores them. <b>Manual</b> is the whole guide to the Timeline.<br><br>"
+            "Keys: arrows pick a computer, Enter loads it, F11 full screen, Esc goes back.")
         box.exec()
+
+    def manual(self):
+        """The Claude Timeline Manual (the Manual folder's pages) in a window of its own."""
+        from manual import ManualView, manual_icon
+        win = getattr(self, "_manual", None)
+        if win is None or not win.isVisible():
+            win = ManualView()
+            win.setWindowTitle("Claude Timeline Manual")
+            win.setWindowIcon(manual_icon())
+            win.resize(1120, 740)
+            self._manual = win
+        win.show()
+        win.raise_()
+        win.activateWindow()
 
     def config(self, system):
         ConfigDialog(self, system).exec()

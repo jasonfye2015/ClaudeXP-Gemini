@@ -154,9 +154,14 @@ def main(argv=None):
         out_dir = KITHYLIN_MODELS / args.name
         started = time.time()
         out, base_gguf, base_info = make_lora(adapter, ROOT / args.base, out_dir, args.name, args.lora_on)
+        base_title = base_info.get("title", args.lora_on)
         extra = {"lora_base": args.lora_on, "lora_base_file": base_gguf.name,
                  "chat_template": base_info.get("chat_template", ""), "stop": base_info.get("stop", []),
-                 "notes": f"A model of you: a LoRA add-on applied to {base_info.get('title', args.lora_on)} at load "
+                 "source": f"{base_title} fine-tuned on your own chat logs with ClaudeApps/selfmodel ({adapter.name}"
+                           + (f", step {steps}" if steps else "") + "): a LoRA add-on, applied to the base at load time",
+                 "licence": (base_info.get("licence") or "the base model's") + "; the fine-tune is personal - it was "
+                            "made from your private conversations, so keep it to yourself",
+                 "notes": f"A model of you: a LoRA add-on applied to {base_title} at load "
                           f"time. Made {time.strftime('%Y-%m-%d')}."}
         write_info(out_dir, args.name, adapter, "LoRA add-on (f16)", steps, extra)
         say(f"made {out} ({out.stat().st_size / 2**20:.0f} MB), on top of {base_gguf}")

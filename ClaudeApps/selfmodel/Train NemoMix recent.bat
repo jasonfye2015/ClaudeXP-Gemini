@@ -1,7 +1,7 @@
 @echo off
 rem Fine-tunes NemoMix Unleashed 12B on your 2022-2026 Telegram chats (about 19 hours on a GTX 1080 Ti).
 rem Close the Timeline computers and Kithylin AI first: training needs the graphics card to itself.
-rem It saves progress every 30 minutes; if it stops, run "Resume NemoMix adult.bat".
+rem It saves progress every 30 minutes; if it stops, run "Resume NemoMix recent.bat".
 rem When it finishes, it makes the Kithylin AI add-on and deletes NemoMix's 24 GB of full weights.
 title Training Kithylin on NemoMix (recent Telegram chats)
 cd /d "%~dp0.."
@@ -15,5 +15,5 @@ pause
 exit /b
 :failed
 echo.
-echo Training stopped with an error (see above). Run "Resume NemoMix adult.bat" to carry on from the last save.
+echo Training stopped with an error (see above). Run "Resume NemoMix recent.bat" to carry on from the last save.
 pause

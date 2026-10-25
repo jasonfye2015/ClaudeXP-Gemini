@@ -303,6 +303,8 @@ PROGRAMS = [
             claudeai.shutdown),
     Program("kithylinai", "Kithylin AI", "Chat with Kithylin the Angelic Husky, played by your own fine-tuned models",
             _shared("kithylinai", "kithylin_icon"), _shared("kithylinai", "launch"), _shared("kithylinai", "shutdown")),
+    Program("manual", "Claude Timeline Manual", "How the three computers, the archive, the games and Kithylin fit together",
+            _shared("manual", "manual_icon"), _shared("manual", "launch")),
     Program("outlook", "Outlook Express", "E-mail", _lazy("outlook", "oe_icon"), _lazy("outlook", "open_outlook")),
     Program("wab", "Address Book", "", _lazy("outlook", "book_icon"), _lazy("outlook", "open_address_book"),
             group="Accessories"),
