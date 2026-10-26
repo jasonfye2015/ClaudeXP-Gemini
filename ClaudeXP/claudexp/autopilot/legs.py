@@ -67,6 +67,59 @@ def ensure_online(ctx):
     yield (lambda: network.is_connected(), 150)
 
 
+def _covered(rect, others):
+    total = 0
+    for r in others:
+        both = rect.intersected(r)
+        if both.isValid():
+            total += both.width() * both.height()
+    return total
+
+
+def free_spot(area, size, others, gap=6):
+    """The top-left for a window of `size` in `area` covering as little of `others` (QRects) as it can - tried on a
+    grid from the top right (where IM windows sit) leftwards, then down, so IM windows tile beside each other."""
+    from PySide6.QtCore import QRect
+    w, h = size.width(), size.height()
+    step_x, step_y = max(40, w // 4), max(40, h // 4)
+    best, best_cover = None, None
+    y = area.top() + gap
+    while y + h <= area.bottom() + 1 or best is None:
+        x = area.right() + 1 - w - gap
+        while x >= area.left():
+            cover = _covered(QRect(x, y, w, h), others)
+            if best_cover is None or cover < best_cover:
+                best, best_cover = QPoint(x, y), cover
+                if cover == 0:
+                    return best
+            x -= step_x
+        y += step_y
+        if y + h > area.bottom() + 1:
+            break
+    return best if best is not None else QPoint(area.left(), area.top())
+
+
+def background_windows():
+    """The windows a person keeps clear of IMs: the TV, the game, the MUCK - when they're up."""
+    out = []
+    try:
+        from claudetv import tuner
+        out.append(tuner._open.get("win"))
+    except Exception:
+        pass
+    try:
+        import clauderpg
+        out.append(clauderpg._open.get("win"))
+    except Exception:
+        pass
+    try:
+        from ..programs import muck
+        out.append(muck._frame)
+    except Exception:
+        pass
+    return [w for w in out if w is not None and isValid(w) and w.isVisible() and not getattr(w, "maximized", False)]
+
+
 def send_button(widget, text="Send"):
     for b in widget.findChildren(QToolButton):
         if b.text().strip().lower() == text.lower():
@@ -185,6 +238,7 @@ class Messengers(Leg):
             win = app.im_windows.get(bid)
             frame = getattr(win, "_xp_frame", None) if win is not None else None
             yield from focus(ctx, frame)
+            yield from self.tidy(ctx, app, frame)
             ctx.status(f"Reading {b.name}'s IM")
             yield random.uniform(2, 6) * ctx.pace
             history = []
@@ -238,6 +292,24 @@ class Messengers(Leg):
             elif bid in app.im_windows:
                 greeted.add(bid)                         # already talking
         return out[:1]
+
+    def tidy(self, ctx, app, frame):
+        """If this IM window sits on the TV, the game or another IM, move it - by its title bar - to the spot that
+        covers least, the IM windows tiling from the top right instead of piling up."""
+        if frame is None or not isValid(frame) or not frame.isVisible() or getattr(frame, "maximized", False):
+            return
+        ims = [getattr(w, "_xp_frame", None) for w in app.im_windows.values()]
+        others = [w.geometry() for w in ims + background_windows()
+                  if w is not None and w is not frame and isValid(w) and w.isVisible()]
+        mine = frame.geometry()
+        covered = _covered(mine, others)
+        if covered < 0.08 * mine.width() * mine.height():
+            return
+        spot = free_spot(ctx.desktop.work_area(), mine.size(), others)
+        if _covered(mine.translated(spot - mine.topLeft()), others) > covered * 0.6:
+            return                                          # nowhere much better: leave it be
+        ctx.status("Moving the IM window out of the way")
+        yield from ctx.hands.drag_window(frame, spot)
 
     def close_im(self, ctx, app, bid):
         """Close a conversation's IM window, the pointer going to its close box."""
@@ -550,7 +622,13 @@ class TV(Leg):
             if not options:
                 ctx.note("Nothing much on.")
                 return
-            ch, slot, remaining, movie = random.choice(options)
+            prefs = ctx.day.data.get("tv_channels", {}) if ctx.day is not None else {}   # (the Media tab)
+            liked = lambda o: float(prefs.get(str(o[0].number), 1.0))
+            options = [o for o in options if liked(o) > 0]
+            if not options:
+                ctx.note("Nothing on his channels.")
+                return
+            ch, slot, remaining, movie = random.choices(options, weights=[liked(o) for o in options])[0]
             yield from ctx.hands.click((win, QPoint(60, win.height() - 30)), action=lambda: t.tune(ch))
             title, _sub, _desc = tuner.describe(slot)
             until = slot.until()

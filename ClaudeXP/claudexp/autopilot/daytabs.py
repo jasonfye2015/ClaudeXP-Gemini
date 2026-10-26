@@ -1238,3 +1238,80 @@ class RPTracksTab(QWidget):
         self.fill()
         return f"Done: {added} new track{'s' if added != 1 else ''}."
 
+
+
+# ---- media --------------------------------------------------------------------------------------------------------
+TV_LIKES = [("Favourite", 4.0), ("Likes it", 2.0), ("Normal", 1.0), ("Rarely", 0.3), ("Never", 0.0)]
+
+
+class MediaTab(QWidget):
+    """What he likes to watch: how much he likes each ClaudeTV channel, which the TV leg's pick follows."""
+
+    def __init__(self, day):
+        super().__init__()
+        self.day = day
+        col = QVBoxLayout(self)
+        intro = QLabel("His channels on ClaudeTV. When he turns the TV on he picks from what's on, his favourites "
+                       "far more often and the ones set to Never not at all. (Whole movies, and how often he watches "
+                       "at all, are on the What he does and Day tabs.)")
+        intro.setWordWrap(True)
+        col.addWidget(intro)
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels(["Channel", "Station", "What's on it", "How much he likes it"])
+        self.tree.setRootIsDecorated(False)
+        self.tree.setAlternatingRowColors(True)
+        for c, w in enumerate((60, 70, 390)):
+            self.tree.setColumnWidth(c, w)
+        col.addWidget(self.tree, 1)
+        row = QHBoxLayout()
+        self.status = QLabel("Reading the channel lineup...")
+        row.addWidget(self.status, 1)
+        reset = QPushButton("All normal")
+        reset.clicked.connect(self._reset)
+        row.addWidget(reset)
+        col.addLayout(row)
+        self.boxes = {}
+        try:
+            from claudetv import lineup
+            lineup.get(self._fill)
+        except Exception as e:
+            self.status.setText(f"ClaudeTV's lineup isn't available here ({e.__class__.__name__}).")
+
+    def _fill(self, channels):
+        from shiboken6 import isValid
+        if not isValid(self):
+            return
+        self.tree.clear()
+        self.boxes = {}
+        prefs = self.day.data.get("tv_channels", {})
+        live = [c for c in channels if not c.dead]
+        for ch in sorted(live, key=lambda c: c.number):
+            item = QTreeWidgetItem([str(ch.number), ch.call or "", ch.slogan or ""])
+            item.setToolTip(2, ch.slogan or "")
+            self.tree.addTopLevelItem(item)
+            box = QComboBox()
+            for label, v in TV_LIKES:
+                box.addItem(label, v)
+            box.setCurrentIndex(_nearest(TV_LIKES, prefs.get(str(ch.number), 1.0)))
+            box.currentIndexChanged.connect(lambda _i, n=ch.number, b=box: self._set(n, b.currentData()))
+            self.tree.setItemWidget(item, 3, box)
+            self.boxes[ch.number] = box
+        favs = sum(1 for v in prefs.values() if float(v) >= 2)
+        self.status.setText(f"{len(live)} channels" + (f", {favs} he especially likes" if favs else "")
+                            + (" (the lineup comes from the shows and movies in Local Storage)" if not live else ""))
+
+    def _set(self, number, value):
+        prefs = self.day.data.setdefault("tv_channels", {})
+        if abs(float(value) - 1.0) < 1e-6:
+            prefs.pop(str(number), None)
+        else:
+            prefs[str(number)] = value
+        self.day.save()
+
+    def _reset(self):
+        self.day.data["tv_channels"] = {}
+        self.day.save()
+        for box in self.boxes.values():
+            box.blockSignals(True)
+            box.setCurrentIndex(_nearest(TV_LIKES, 1.0))
+            box.blockSignals(False)

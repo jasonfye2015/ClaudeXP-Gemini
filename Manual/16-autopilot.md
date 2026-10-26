@@ -13,7 +13,7 @@ what the autopilot's **Help** button opens.
 
 ## Starting him
 
-The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Programs). The window has six tabs:
+The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Programs). The window has seven tabs:
 
 - **What he does** - tick what he may do (hover over one for what it is), choose how long he stays, his pace and
   his voice, and click **Let Kithylin take over**. The window minimises itself out of his way.
@@ -25,6 +25,7 @@ The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Progra
 - **Threads** - the stories and bits of his life he brings up, and his style card (see *Threads* below).
 - **Interests** - who he talks to most (see *Interests* below).
 - **RP Tracks** - roleplay scenes from your own logs that he follows, and leads (see *RP Tracks* below).
+- **Media** - how much he likes each ClaudeTV channel; the TV leg picks from what's on accordingly.
 
 Activities you add later come in ticked; anything you untick stays unticked.
 
@@ -73,7 +74,9 @@ and each reply checked; and his love interests and close acquaintances already r
 - Whatever he's doing in front comes to the front when he acts in it - a game or an IM won't
   cover the comic he's reading. Between actions his hands are free, so an IM gets answered in
   the middle of a story and he goes back to it.
-- He keeps at most three IM windows open, closing a conversation when he lets it rest.
+- He keeps at most three IM windows open, closing a conversation when he lets it rest, and keeps them tidy: one
+  that covers the TV, the game, the MUCK or another IM is dragged by its title bar to a clear spot, the IM windows
+  tiling from the top right.
 - The screen saver stays away while he's using the computer.
 
 ## His day

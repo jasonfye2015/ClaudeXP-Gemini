@@ -24,6 +24,7 @@ the pages pick it up. A page whose picture is missing shows "Screenshot: ... (no
 | `autopilot-tab-threads.png` | The Threads tab: a life arc being edited, and the style card | 16-autopilot-guide |
 | `autopilot-tab-interests.png` | The Interests tab: love interests, close acquaintances, friends | 16-autopilot-guide |
 | `autopilot-tab-rptracks.png` | The RP Tracks tab, with made-up sample tracks: Cabin in the Snow being edited | 16-autopilot-guide |
+| `autopilot-tab-media.png` | The Media tab: the ClaudeTV channels and how much he likes each | 16-autopilot-guide |
 
 Not taken: the Furry Hollow (it needs OpenSimulator and the viewer running).
 

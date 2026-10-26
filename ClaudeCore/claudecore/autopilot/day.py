@@ -231,7 +231,8 @@ class Day:
         d.setdefault("check_replies", True)
         d.setdefault("people", {})
         d.setdefault("memories", [])            # [{date, mood, summary, people: {name: note}}], from his journal
-        for key, value in (("mood_odds", dict(MOOD_ODDS)), ("diary", True), ("diary_security", "public")):
+        for key, value in (("mood_odds", dict(MOOD_ODDS)), ("diary", True), ("diary_security", "public"),
+                           ("tv_channels", {})):            # channel number -> how much he likes it (Media tab)
             if key not in d:
                 d[key] = json.loads(json.dumps(self.defaults.get(key, value)))
         d.setdefault("interests", {})            # contact id -> "love" | "close" | "friend" (friend if unset)

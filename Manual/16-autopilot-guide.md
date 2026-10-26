@@ -17,7 +17,7 @@ is what the **Help** button in the autopilot opens. For everything in more depth
 
 ## The window
 
-Six tabs, and along the bottom:
+Seven tabs, and along the bottom:
 
 - **Let Kithylin take over** starts him. While he's at the computer it says **Stop**.
 - **Pause** stops him where he is; it says **Resume** while he's paused.
@@ -32,6 +32,7 @@ Six tabs, and along the bottom:
 | **Threads** | The stories he brings up, and the style card from your chats |
 | **Interests** | Who he talks to most |
 | **RP Tracks** | Roleplay scenes from your logs that he follows and leads |
+| **Media** | The ClaudeTV channels he likes |
 
 Most settings are saved the moment you change them. What he does and how (the first tab) can only be changed while
 he isn't at the computer. Everything on the other tabs can be changed while he's running, and he follows it at once.
@@ -194,11 +195,28 @@ beat by beat to its end. Every track comes from one of your own scenes.
 - **New track** writes one from scratch. **Delete** removes one for good.
 - **Used** counts how often he's played each track; the least used come up first.
 
+## 7. Media
+
+![The Media tab](images/autopilot-tab-media.png)
+
+His ClaudeTV channels. For each one, choose how much he likes it:
+- **Favourite** and **Likes it**: picked far more often.
+- **Normal**: as before.
+- **Rarely**: picked now and then.
+- **Never**: never picked.
+
+When he turns the TV on, he chooses from what's showing, weighted by these. **All normal** puts every channel back.
+Whole movies, and how often he watches TV at all, are on the What he does and Day tabs.
+
 ## While he's at it
 
 - **The banner** at the top says how long he's been there, what's open and what he's doing, with **Pause** and
   **Stop**.
 - **His cursor** is a sky-blue pointer that goes to whatever he's using. Your own mouse stays yours.
+- **He keeps IM windows tidy.** If an IM window sits on the TV, the game, the MUCK or another IM, he drags it by its
+  title bar to a clear spot before he answers. The IM windows tile from the top right of the screen, side by side
+  and then a row below, instead of piling up on each other. A page or picture viewer that fills the screen is left
+  alone: there's nowhere clear to go.
 - **Touching your mouse or keyboard** pauses him (the banner says "you took the mouse"). **Resume** carries on.
 - **Asleep or out**, the glow turns night blue and the banner says when he'll be back.
 - **The log** on the autopilot window, and the Furry Log (under `AUTOPILOT`), record everything he does.

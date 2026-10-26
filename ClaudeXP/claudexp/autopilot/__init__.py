@@ -152,9 +152,10 @@ def pilot():
 
 
 class Panel(QWidget):
-    """Six tabs: what he may do and how (the settings); the Legs - every activity he knows, to start one now; his
+    """Seven tabs: what he may do and how (the settings); the Legs - every activity he knows, to start one now; his
     Day - the week's schedule, today, right now; the Threads he brings up, with his style card; his Interests -
-    who he talks to most; and the RP Tracks he follows in a roleplay."""
+    who he talks to most; the RP Tracks he follows in a roleplay; and his Media - the
+    TV channels he likes."""
 
     def __init__(self, desktop):
         super().__init__()
@@ -171,11 +172,12 @@ class Panel(QWidget):
         self.tabs = QTabWidget()
         self.tabs.addTab(self._settings_tab(), "What he does")
         self.tabs.addTab(self._legs_tab(), "Legs")
-        from .daytabs import DayTab, InterestsTab, RPTracksTab, ThreadsTab
+        from .daytabs import DayTab, InterestsTab, MediaTab, RPTracksTab, ThreadsTab
         self.tabs.addTab(DayTab(day(), leg_classes(), pilot), "Day")
         self.tabs.addTab(ThreadsTab(day(), leg_classes(), pilot), "Threads")
         self.tabs.addTab(InterestsTab(day(), aim_contacts()), "Interests")
         self.tabs.addTab(RPTracksTab(day(), pilot), "RP Tracks")
+        self.tabs.addTab(MediaTab(day()), "Media")
         root.addWidget(self.tabs, 1)
         row = QHBoxLayout()
         self.go = QPushButton("Let Kithylin take over")

@@ -237,6 +237,31 @@ class Hands:
             pass
         yield random.uniform(0.2, 0.5) * self.pace
 
+    def drag_window(self, frame, to):
+        """Move a window by its title bar, the way a person tidies the screen: the pointer goes to the title, presses,
+        and the window travels with it to `to` (the frame's new top-left, in the desktop)."""
+        grip = QPointF(min(frame.width() // 2, 140), 12)
+        yield from self.move_to((frame, grip.toPoint()))
+        yield random.uniform(0.1, 0.25) * self.pace
+        self.cursor.pressed = True
+        self.cursor.update()
+        start = QPointF(frame.pos())
+        end = QPointF(to)
+        dist = math.hypot(end.x() - start.x(), end.y() - start.y())
+        steps = max(6, int(min(1.2, 0.3 + dist / 1100) * max(self.pace, 0.05) / 0.03))
+        for i in range(1, steps + 1):
+            t = i / steps
+            e = t * t * (3 - 2 * t)
+            pos = start + (end - start) * e
+            frame.move(pos.toPoint())
+            self.cursor.set_pos(pos + grip)
+            yield 0.03
+        frame.move(end.toPoint())
+        self.cursor.set_pos(end + grip)
+        self.cursor.pressed = False
+        self.cursor.update()
+        yield random.uniform(0.2, 0.4) * self.pace
+
     def type_into(self, editor, text, speed=9.0):
         """Type text into a QLineEdit / QTextEdit / QPlainTextEdit a few characters at a time, with pauses at spaces
         and punctuation. speed: characters a second, before the pace."""
