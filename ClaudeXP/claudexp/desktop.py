@@ -45,6 +45,8 @@ class Desktop(QWidget):
         self.life = life.install(self)
         from . import mailtray
         self.mailtray = mailtray.install(self)          # MSN Hotmail's new-mail envelope
+        from . import bskytray
+        self.bsky = bskytray.install(self)              # Local Storage/Bsky-Kithy kept in step with Bluesky
         from . import cpl_extra
         cpl_extra.apply_blink()                         # Control Panel > Keyboard > Cursor blink rate
         from . import clippy

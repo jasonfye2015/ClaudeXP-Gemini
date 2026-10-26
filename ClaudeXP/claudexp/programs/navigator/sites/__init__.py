@@ -94,9 +94,9 @@ _sites = None
 def sites():
     global _sites
     if _sites is None:
-        from . import comics, furaffinity, rips
-        _sites = [furaffinity.FurAffinity(), comics.HousePets(), comics.Hardblush(), comics.JayNaylor(),
-                  rips.YiffStar(), rips.SexyFur(), rips.ClubStripes()]
+        from . import bluesky, comics, furaffinity, rips
+        _sites = [bluesky.Bluesky(), furaffinity.FurAffinity(), comics.HousePets(), comics.Hardblush(),
+                  comics.JayNaylor(), rips.YiffStar(), rips.SexyFur(), rips.ClubStripes()]
     return _sites
 
 

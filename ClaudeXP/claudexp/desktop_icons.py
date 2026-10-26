@@ -112,6 +112,7 @@ def builtins():
         ("prog:irc", "ClaudeIRC", lambda: programs.get("irc").icon()),
         ("prog:muck", "ClaudeMUCK", lambda: programs.get("muck").icon()),
         ("prog:pystudio", "Copilot Python Studio", lambda: programs.get("pystudio").icon()),
+        ("prog:bluesky", "Kithy on Bluesky", lambda: programs.get("bluesky").icon()),
     ]
     return [icon for icon in icons if icon[0] not in in_folder]
 
@@ -1057,6 +1058,7 @@ class IconManager(QObject):
                       "iexplore": r"C:\Program Files\Internet Explorer\IEXPLORE.EXE",
                       "hotmail": "http://www.hotmail.com/",
                       "livejournal": "http://www.livejournal.com/",
+                      "bluesky": "http://bsky.app/profile/kithy.bsky.social",
                       "realplayer": r"C:\Program Files\Real\RealPlayer\realplay.exe",
                       "kiwix": r"C:\Program Files\Kiwix\kiwix-desktop.exe",
                       "claudecraft": r"C:\Program Files\ClaudeCraft\ClaudeCraft.exe",

@@ -81,6 +81,11 @@ class Desktop(QWidget):
             self.mailtray = mailtray.install(self)
         except Exception:
             self.mailtray = None
+        try:
+            from claudexp import bskytray
+            bskytray.install(self)              # Local Storage/Bsky-Kithy kept in step with Bluesky
+        except Exception:
+            pass
         self.start_menu = StartMenu(self)
         try:
             from claudexp.programs import neko

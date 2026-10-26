@@ -295,6 +295,8 @@ PROGRAMS = [
             group="Social Programs"),
     Program("hotmail", "MSN Hotmail", "Free web-based e-mail", _lazy("..mailtray", "hotmail_icon"),
             _lazy("..mailtray", "open_hotmail"), group="Social Programs"),
+    Program("bluesky", "Kithy on Bluesky", "Your Bluesky posts, kept on this computer",
+            _lazy("..bskytray", "bsky_icon"), _lazy("..bskytray", "open_site"), group="Social Programs"),
     Program("iexplore", "Internet Explorer", "Browse the Web", _lazy(".navigator.iexplore", "ie_icon"),
             _lazy(".navigator.iexplore", "launch"), _lazy(".navigator.iexplore", "shutdown")),
     Program("navigator", "Netscape Navigator", "Browse the Web", navigator.nav_icon, navigator.launch,

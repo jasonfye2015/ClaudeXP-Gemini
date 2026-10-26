@@ -397,6 +397,7 @@ class Browser(QWidget):
             v.setStyleSheet("border: 1px solid #7F9DB9;")
             v.link_followed.connect(lambda url: self.navigate(url, referrer=(self.url, v.title(), url)))
             v.flash_requested.connect(self._play_flash)
+            v.video_requested.connect(self._play_video)
             v.page().linkHovered.connect(lambda u: self.status.setText(sites.logical_url(u) if u else self.DONE))
             v.loadStarted.connect(lambda: (self._start_throbber(), self.progress.setRange(0, 100)))
             v.loadProgress.connect(lambda n: (self.progress.setValue(n),
@@ -455,6 +456,29 @@ class Browser(QWidget):
         target.write_bytes(data)
         from ..flash import open_flash
         open_flash(self.desktop, target)
+
+    def _play_video(self, local):
+        """A video on a site (a Bluesky post's .mp4): played in QuickTime Player, which can play what the page can't.
+        Bluesky's videos are already on this computer; anything else is fetched from the site first."""
+        import urllib.request
+        from pathlib import Path
+        from ...paths import DATA
+        logical = urlparse(sites.logical_url(local))
+        name = Path(logical.path).name or "video.mp4"
+        target = None
+        if logical.netloc == "bsky.app" and logical.path.startswith("/media/"):
+            from ... import bsky
+            target = bsky.folder() / "media" / name
+        if target is None or not target.is_file():
+            try:
+                data = urllib.request.urlopen(local, timeout=60).read()
+            except OSError:
+                return
+            target = DATA / "web_video" / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+        from ..players import open_quicktime
+        open_quicktime(self.desktop, str(target))
 
     def _page_action(self, name, fallback):
         if self.site_view is not None and self.pages.currentWidget() is self.site_view:

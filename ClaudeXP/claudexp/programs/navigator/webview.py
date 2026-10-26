@@ -10,6 +10,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from . import sites
 
 _profile = None
+VIDEO_EXTS = (".mp4", ".m4v", ".mov")
 
 
 class _OfflineOnly(QWebEngineUrlRequestInterceptor):
@@ -55,6 +56,8 @@ class _Page(QWebEnginePage):
         # the engine is still deciding about this one crashes it
         if logical.lower().endswith(".swf"):
             QTimer.singleShot(0, lambda: self.view.flash_requested.emit(target))
+        elif logical.lower().endswith(VIDEO_EXTS):          # (H.264 the engine can't play: the video player can)
+            QTimer.singleShot(0, lambda: self.view.video_requested.emit(target))
         else:
             QTimer.singleShot(0, lambda: self.view.link_followed.emit(logical))
         return False
@@ -68,6 +71,7 @@ class _Page(QWebEnginePage):
 
 class SiteView(QWebEngineView):
     link_followed = Signal(str)        # a link was clicked: the address it goes to (as Netscape shows it)
+    video_requested = Signal(str)      # a video (.mp4) was clicked: its (local) address
     flash_requested = Signal(str)      # a .swf was clicked: its (local) address
 
     def __init__(self, parent=None):
