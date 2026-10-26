@@ -131,9 +131,15 @@ His LiveJournal is his diary, and his memory.
     he feels.
   - **The entry itself** says how he woke up and what the day holds, and goes into his prompt for the rest of the
     day.
-- **Updates.** The Journal activity adds to the same entry ("update (3:40 pm): ...") from what really happened since
-  he last wrote: his day's events, including **who he talked to and about what**. When any conversation goes quiet,
-  the life sim notes it for him ("talked with Renamon about my coffee habit"), whether it was him or you chatting.
+- **Updates.** Every couple of hours, when at least three things have happened since he last wrote, he adds an update
+  to the same entry ("update (3:40 pm): ...") by himself; the Journal activity adds one too when it comes up. They're
+  written from what really happened: his day's events, including **who he talked to and about what**. When any
+  conversation goes quiet, the life sim notes it for him ("talked with Renamon about my coffee habit"), whether it was
+  him or you chatting.
+- **Posts, not IMs.** Every entry is written with his whole day in front of him (mood, what's happened, what he's
+  told people, the last few days) and told it's for all his friends: no greeting one person, no pet names, no
+  *actions*. The morning entry is three to five sentences on how he slept, how he feels and what the day holds; one
+  that still comes out like an IM ("Mornings kitty!") is written again, and a pet name aimed at someone is taken out.
 - **Bedtime.** When his sleep block starts he adds a last line ("night (11:02 pm): ..."), and the day is boiled down
   into a **memory**: a few sentences, his mood, and a note on each person in it. Those memories are private, kept
   only in his day file, never posted. If the day didn't end with him at the computer, it's remembered the next

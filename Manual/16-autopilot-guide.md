@@ -106,7 +106,8 @@ or not the autopilot is running. On days XP isn't on, there's simply no entry.
 - **Mood today** lets you choose the mood yourself for today.
 - **The mood changes him**: how often he IMs people first, how fast he answers, what he feels like doing, and his
   tone.
-- **Through the day** his Journal activity adds **updates** to that entry from what really happened: who he talked
+- **Through the day** he adds **updates** to that entry every couple of hours (and when his Journal activity comes
+  up), from what really happened: who he talked
   to and about what, what he watched or played.
 - **At bedtime** he adds a last line, and the day goes into his memory.
 - **Keep his diary in LiveJournal** switches it all off. **Public / Friends only / Private** sets who can read the

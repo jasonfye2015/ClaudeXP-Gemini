@@ -55,6 +55,15 @@ def note(name, species):
             "'kitty' is just for cats, 'foxy' for foxes, 'wolfy' for wolves, 'pup' for dogs.")
 
 
+VOCATIVE = re.compile(r"(?:\s*,)?\s+\b(?:" + "|".join(WORDS.values()) + r"|hun|hunny|babe|cutie|sweetie)\b"
+                      r"(?=\s*(?:[!?.,~:;)*]|<3|❤|:3|$))", re.I)
+
+
+def unaddress(text):
+    """A post for everyone (his diary): no pet names aimed at one person ("Mornings kitty!" -> "Mornings!")."""
+    return VOCATIVE.sub("", text or "")
+
+
 def fit(text, species, rng=random):
     """Swap a species pet name that doesn't fit this buddy for one that does (or 'hun')."""
     fam = family(species)

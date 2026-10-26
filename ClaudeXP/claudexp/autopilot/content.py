@@ -864,6 +864,7 @@ class Journal(Leg):
                                 diary.UPDATE_NOTE.format(year=clock.now().year), [{"role": "user", "content": notes}],
                                 "Write the update.", max_tokens=160, thread_ok=False, check=False)
         _subject, body = diary._split_subject(text)
+        body = diary.post_text(body)
         if not body:
             return False
         yield min(60, 4 + len(body) / 12) * ctx.pace           # typing it out

@@ -17,18 +17,27 @@ from claudecore.autopilot.voice import Voice, persona
 
 from .. import clock
 
-MORNING_NOTE = ("\n\nYou're writing the first LiveJournal entry of your day, for your friends to read, in {year}. "
-                "Casual, the way you really post: two to four short sentences on how you woke up and feel, and what "
-                "today holds. First line: 'Subject: ...'. Then the entry. No mood line.")
+POST_RULES = ("This is a journal post that all your friends read - not a message to one person: don't greet anyone, "
+              "don't call anyone 'kitty', 'hun' or any pet name, and no *actions* in asterisks. Write in the first "
+              "person, casual and honest, the way you really post.")
+MORNING_NOTE = ("\n\nYou're writing the first LiveJournal entry of your day, in {year}. " + POST_RULES + " Three to "
+                "five sentences: how you slept and woke up, how you feel today and why, and what the day holds "
+                "(work, plans, what you're looking forward to or dreading). First line: 'Subject: ...' - a few words "
+                "about your day. Then the entry. No mood line.")
+MORNING_AGAIN = ("That reads like an instant message. Write a real journal entry instead: at least three full "
+                 "sentences about your morning, your mood and your day ahead, for all your friends to read - no "
+                 "greeting, no pet names. First line 'Subject: ...'.")
 MORNING_CONTEXT = """It's {weekday}, {time}.
 Your mood today: {mood}. {how}
 {plan}
 {yesterday}{override}"""
-UPDATE_NOTE = ("\n\nYou're adding an update to today's LiveJournal entry, for your friends to read, in {year}. One "
-               "to three short casual sentences about what's happened since you last wrote - who you talked to and "
-               "about what, what you did. Only what really happened. No subject, no mood line.")
-NIGHT_NOTE = ("\n\nYou're heading to bed and adding a last line to today's LiveJournal entry, in {year}: how the day "
-              "ended and how you feel, one or two short sentences. No subject.")
+UPDATE_NOTE = ("\n\nYou're adding an update to today's LiveJournal entry, in {year}. " + POST_RULES + " Two to "
+               "four sentences about what's happened since you last wrote - who you talked to and about what, what "
+               "you did, watched or read, how your mood is now. Only what really happened. No subject, no mood line.")
+NIGHT_NOTE = ("\n\nYou're heading to bed and adding a last line to today's LiveJournal entry, in {year}. "
+              + POST_RULES + " One or two sentences: how the day ended and how you feel. No subject.")
+UPDATE_EVERY = 2 * 60 * 60      # seconds between updates he writes by himself (the Journal leg can add more)
+UPDATE_MIN_EVENTS = 3           # ... and only with this much to say
 MEMORY_PROMPT = """Here is a day in the life of {me}.
 
 His mood: {mood}
@@ -46,7 +55,7 @@ Write JSON for his own memory of the day:
 "people": {{"<name>": "a few words: what you talked about or did together"}} for each person in it, using their
 names exactly as written above}}"""
 
-_busy = set()                   # the jobs in flight: "morning", "wrap", "memory"
+_busy = set()                   # the jobs in flight: "morning", "update", "wrap", "memory"
 _retry = {}                     # job -> time.time() before which it isn't tried again (the model gave nothing)
 
 
@@ -92,6 +101,11 @@ def tick(force=False):
     if (d.block() == "sleep" and d.data.get("follow_schedule", True) and not today.get("wrapped")
             and "wrap" not in _busy):
         _wrap_up(d)
+        return
+    if ("update" not in _busy and not d.asleep() and _awake(d) and not today.get("wrapped")
+            and time.time() - float(today.get("last_written") or 0) >= UPDATE_EVERY
+            and len(today.get("events", [])) - int(today.get("update_mark") or 0) >= UPDATE_MIN_EVENTS):
+        _update(d)
 
 
 # ---- LiveJournal ----------------------------------------------------------------------------------------------------
@@ -134,6 +148,7 @@ def append(d, text, label="update"):
     if not lj.update(change):
         return False
     d.today["update_mark"] = len(d.today.get("events", []))
+    d.today["last_written"] = time.time()
     d.today.setdefault("updates", []).append(d.now().strftime("%H:%M"))
     d.save()
     return True
@@ -152,6 +167,24 @@ def since_last(d):
     if claims:
         out += "\nThings you said today: " + "; ".join(c["text"] for c in claims)
     return out
+
+
+def _system(d, note):
+    """His diary prompt: who he is, his day (mood, what's happened, what he's said), the last few days from his
+    journal - the same picture his IMs get - and what to write."""
+    system, _tid = d.prompt(persona("your friends"), note, who=None, thread_ok=False)
+    return system
+
+
+def post_text(text):
+    """A diary post as it goes up: no pet names aimed at one person."""
+    from .petnames import unaddress
+    return unaddress(text).strip()
+
+
+def _thin(body):
+    """An instant message, not a post: too short, or hardly a sentence."""
+    return len(body.split()) < 18 or body.count(".") + body.count("!") + body.count("?") < 2
 
 
 def _split_subject(text):
@@ -190,23 +223,58 @@ def _morning(d):
         plan=plan, yesterday=("Yesterday, from your journal: " + yesterday[0][2:] + "\n") if yesterday else "",
         override=f"Today: {d.today['override']}\n" if d.today.get("override") else "")
 
+    system = _system(d, MORNING_NOTE.format(year=clock.now().year))
+    history = [{"role": "user", "content": context}]
+    tries = {"n": 0}
+
     def done(text):
+        finished = True
         try:
             subject, body = _split_subject(text)
+            body = post_text(body)
+            if body and _thin(body) and tries["n"] == 0:
+                tries["n"] += 1                                  # an IM, not a post: once more, firmly
+                finished = False
+                _voice().say(system, history + [{"role": "assistant", "content": text},
+                                                {"role": "user", "content": MORNING_AGAIN}],
+                             done, instruction="Write the journal entry.", max_tokens=300, priority=broker.CHATTER)
+                return
             if not body:
                 _retry["morning"] = time.time() + 10 * 60       # (tried again in a while)
                 return
-            entry_id = _post(subject, body, mood, d.data.get("diary_security", "public"))
+            entry_id = _post(subject or f"{DAY_NAMES[now.weekday()]} morning", body, mood,
+                             d.data.get("diary_security", "public"))
             d.today["journal_entry"] = entry_id
             d.today["mood_line"] = body
             d.today["update_mark"] = len(d.today.get("events", []))
+            d.today["last_written"] = time.time()
             d.save()
             _log(f"Morning entry in LiveJournal (mood: {mood}): {subject or body[:50]}")
         finally:
-            _busy.discard("morning")
-    _voice().say(persona("your friends") + MORNING_NOTE.format(year=clock.now().year),
-                 [{"role": "user", "content": context}], done, instruction="Write the entry.", max_tokens=220,
-                 priority=broker.CHATTER)
+            if finished:
+                _busy.discard("morning")
+    _voice().say(system, history, done, instruction="Write the entry.", max_tokens=300, priority=broker.CHATTER)
+
+
+def _update(d):
+    """An update to today's entry, written by himself every couple of hours when there's enough to say."""
+    from claudecore.ai import broker
+    _busy.add("update")
+    notes = since_last(d)
+
+    def done(text):
+        try:
+            _subject, body = _split_subject(text)
+            body = post_text(body)
+            if body and append(d, body):
+                _log(f"Updated today's LiveJournal entry: {body[:60]}")
+            else:
+                d.today["last_written"] = time.time() - UPDATE_EVERY / 2     # (nothing came: try in an hour)
+                d.save()
+        finally:
+            _busy.discard("update")
+    _voice().say(_system(d, UPDATE_NOTE.format(year=clock.now().year)), [{"role": "user", "content": notes}], done,
+                 instruction="Write the update.", max_tokens=220, priority=broker.CHATTER)
 
 
 def _wrap_up(d):
@@ -218,6 +286,7 @@ def _wrap_up(d):
     def done(text):
         try:
             _subject, body = _split_subject(text)
+            body = post_text(body)
             if body:
                 append(d, body, "night")
             d.today["wrapped"] = True
@@ -226,9 +295,8 @@ def _wrap_up(d):
                                                        "journal_entry")})
         finally:
             _busy.discard("wrap")
-    _voice().say(persona("your friends") + NIGHT_NOTE.format(year=clock.now().year),
-                 [{"role": "user", "content": context}], done, instruction="Write the last line.", max_tokens=120,
-                 priority=broker.CHATTER)
+    _voice().say(_system(d, NIGHT_NOTE.format(year=clock.now().year)), [{"role": "user", "content": context}], done,
+                 instruction="Write the last line.", max_tokens=120, priority=broker.CHATTER)
 
 
 def _remember(d, day):
