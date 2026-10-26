@@ -70,6 +70,38 @@ TIERS = {
 }
 TIER_ORDER = ["love", "close", "friend"]
 
+# His mood: picked each morning (or set on the Day tab) from LiveJournal's own moods, in five groups. The odds are
+# nudged by the day ahead (a workday leans tired or grumpy, a free day bright) and by how yesterday went. A mood
+# changes how often he IMs first, how quickly he answers, which legs he's drawn to, and a line in his prompt.
+MOOD_GROUPS = {
+    "bright": ["cheerful", "chipper", "happy", "bouncy", "energetic", "optimistic", "giddy", "hyper"],
+    "content": ["content", "mellow", "calm", "relaxed", "good", "pleased", "awake"],
+    "tired": ["tired", "sleepy", "drained", "exhausted", "blah", "lazy"],
+    "grumpy": ["grumpy", "cranky", "stressed", "restless"],
+    "low": ["lonely", "pensive", "contemplative", "nostalgic", "crushed"],
+}
+MOOD_ORDER = ["bright", "content", "tired", "grumpy", "low"]
+MOOD_TITLES = {"bright": "Bright", "content": "Content", "tired": "Tired", "grumpy": "Grumpy", "low": "Down"}
+MOOD_ODDS = {"bright": 20, "content": 35, "tired": 20, "grumpy": 15, "low": 10}
+MOOD_EFFECTS = {
+    "bright": {"hello": 1.4, "reply": 0.85, "legs": {"roleplay": 1.4, "muck": 1.3, "browse": 1.2},
+               "how": "You're in a great mood: chatty, playful and quick to reach out to people."},
+    "content": {"hello": 1.0, "reply": 1.0, "legs": {},
+                "how": "You're in an easy, even mood."},
+    "tired": {"hello": 0.7, "reply": 1.25, "legs": {"tv": 1.4, "music": 1.3, "idle": 1.5, "roleplay": 0.7},
+              "how": "You're tired: lower energy, shorter replies, the odd yawn."},
+    "grumpy": {"hello": 0.6, "reply": 1.2, "legs": {"music": 1.3, "rpg": 1.3, "roleplay": 0.6},
+               "how": "You're a bit grumpy today: shorter and a little sarcastic, though never mean to friends - "
+                      "good company can cheer you up."},
+    "low": {"hello": 0.6, "reply": 1.3, "legs": {"stories": 1.4, "music": 1.4, "chatlogs": 1.3, "roleplay": 0.8},
+            "how": "You're feeling a bit down today: quieter, and glad when someone reaches out to you."},
+}
+MAX_MEMORIES = 60                           # days of his journal he remembers
+
+
+def mood_group(mood):
+    return next((g for g, words in MOOD_GROUPS.items() if mood in words), "content")
+
 BLOCKS = {
     "free": {"title": "Free time", "colour": "#DDEFFC",
              "scene": "You're at home with your free time, at your computer.",
@@ -198,6 +230,10 @@ class Day:
         d.setdefault("use_style", False)
         d.setdefault("check_replies", True)
         d.setdefault("people", {})
+        d.setdefault("memories", [])            # [{date, mood, summary, people: {name: note}}], from his journal
+        for key, value in (("mood_odds", dict(MOOD_ODDS)), ("diary", True), ("diary_security", "public")):
+            if key not in d:
+                d[key] = json.loads(json.dumps(self.defaults.get(key, value)))
         d.setdefault("interests", {})            # contact id -> "love" | "close" | "friend" (friend if unset)
         for key, value in (("rp_tracks", []), ("rp_use_tracks", True), ("rp_adult", True), ("dismissed_tracks", [])):
             if key not in d:
@@ -237,6 +273,9 @@ class Day:
         key = self.today_key()
         today = d.get("today") or {}
         if today.get("date") != key:
+            if today.get("date") and (today.get("events") or today.get("claims") or today.get("mood")) \
+                    and not any(m.get("date") == today["date"] for m in d.get("memories", [])):
+                d["yesterday"] = {k: today.get(k) for k in ("date", "mood", "mood_line", "events", "claims")}
             d["today"] = {"date": key, "override": "", "day_off": False, "events": [], "claims": []}
             self.offered.clear()
             d["threads"] = [t for t in d.get("threads", [])
@@ -278,14 +317,93 @@ class Day:
         return bool(self.block_info().get("asleep"))
 
     def reply_pace(self):
-        return float(self.block_info().get("reply_pace", 1.0) or 1.0)
+        return float(self.block_info().get("reply_pace", 1.0) or 1.0) * self.mood_effect()["reply"]
+
+    def hello_factor(self):
+        """How much more (or less) often than usual he IMs people first, today."""
+        return self.mood_effect()["hello"]
 
     def leg_weight(self, key):
-        """How well a leg suits the block he's in, times a boost if an active thread asks for it."""
+        """How well a leg suits the block he's in, times his mood's leaning and a boost if an active thread asks
+        for it."""
         w = float(self.block_info().get("legs", {}).get(key, 1.0))
+        if w > 0:
+            w *= self.mood_effect()["legs"].get(key, 1.0)
         if w > 0 and any(key in t.get("legs", []) for t in self.active_threads()):
             w *= 1.6
         return w
+
+    # ---- his mood ------------------------------------------------------------------------------------------------
+    def mood(self):
+        return self.today.get("mood", "")
+
+    def mood_effect(self):
+        return MOOD_EFFECTS[mood_group(self.mood())] if self.mood() else MOOD_EFFECTS["content"]
+
+    def workday(self):
+        """Whether today has work in it (and isn't a day off)."""
+        now = self.now() - datetime.timedelta(hours=DAY_STARTS)
+        return (self.data.get("follow_schedule", True) and not self.today.get("day_off")
+                and "w" in self.data["schedule"][DAYS[now.weekday()]])
+
+    def roll_mood(self):
+        """Today's mood, picked once: the odds (the Day tab's, or the standard ones), leaning tired or grumpy on a
+        workday and bright on a free one, and towards how he ended yesterday."""
+        today = self.today
+        if today.get("mood"):
+            return today["mood"]
+        odds = {g: float(self.data.get("mood_odds", {}).get(g, MOOD_ODDS[g])) for g in MOOD_ORDER}
+        if self.workday():
+            odds["tired"] *= 1.4
+            odds["grumpy"] *= 1.4
+        else:
+            odds["bright"] *= 1.5
+            odds["content"] *= 1.2
+        last = (self.data.get("memories") or [{}])[-1].get("mood") or (self.data.get("yesterday") or {}).get("mood")
+        if last:
+            odds[mood_group(last)] *= 1.8
+        groups = [g for g in MOOD_ORDER if odds[g] > 0] or ["content"]
+        group = random.choices(groups, weights=[odds[g] for g in groups])[0]
+        today["mood"] = random.choice(MOOD_GROUPS[group])
+        self._dirty = True
+        return today["mood"]
+
+    def set_mood(self, mood):
+        self.today["mood"] = mood
+        self.save()
+
+    # ---- what he remembers -----------------------------------------------------------------------------------------
+    def remember(self, date, mood, summary, people):
+        """One day kept in his memory (from the day's journal): the summary and a note on each person in it."""
+        mem = self.data.setdefault("memories", [])
+        mem[:] = [m for m in mem if m.get("date") != date]
+        mem.append({"date": date, "mood": mood or "", "summary": summary.strip(),
+                    "people": {k: str(v).strip() for k, v in (people or {}).items() if str(v).strip()}})
+        mem.sort(key=lambda m: m["date"])
+        del mem[:-MAX_MEMORIES]
+        if (self.data.get("yesterday") or {}).get("date") == date:
+            self.data.pop("yesterday", None)
+        self.save()
+
+    def memory_lines(self, days=3):
+        """The last few days from his journal, newest last, for every prompt."""
+        out = []
+        for m in [m for m in self.data.get("memories", []) if m.get("date") != self.today_key()][-days:]:
+            when = datetime.date.fromisoformat(m["date"])
+            out.append(f"- {DAY_NAMES[when.weekday()]} {when.day} {when:%b}"
+                       + (f" ({m['mood']})" if m.get("mood") else "") + f": {m['summary']}")
+        return out
+
+    def person_lines(self, who, days=2):
+        """What he remembers about someone: their last days in his journal, and today so far."""
+        out = []
+        for m in [m for m in self.data.get("memories", []) if who in m.get("people", {})][-days:]:
+            when = datetime.date.fromisoformat(m["date"])
+            out.append(f"{DAY_NAMES[when.weekday()]} {when.day} {when:%b}: {m['people'][who]}")
+        today = [e["text"] for e in self.today.get("events", []) if e.get("who") == who][-2:]
+        if today:
+            out.append("Earlier today: " + "; ".join(today))
+        return out
 
     # ---- interests ---------------------------------------------------------------------------------------------
     def tier(self, who):
@@ -307,10 +425,11 @@ class Day:
     def done(self, key):
         self.doing_now.pop(key, None)
 
-    def event(self, text, share=False, legs=()):
-        """Something that happened today. share: also a small thread he might mention, for a day or two."""
+    def event(self, text, share=False, legs=(), who=None):
+        """Something that happened today. share: also a small thread he might mention, for a day or two. who: the
+        person it was with (a conversation), so he remembers it with them."""
         ev = self.today["events"]
-        ev.append({"t": self.now().strftime("%H:%M"), "text": text})
+        ev.append({"t": self.now().strftime("%H:%M"), "text": text, **({"who": who} if who else {})})
         del ev[:-MAX_EVENTS]
         if share:
             autos = [t for t in self.data["threads"] if t.get("source") == "auto"]
@@ -526,6 +645,10 @@ class Day:
         now = self.now()
         info = self.block_info()
         lines = [f"It's {DAY_NAMES[now.weekday()]} {part_of_day(now.hour)}, {time_text(now.time())}."]
+        if self.mood():
+            lines.append(f"Your mood today: {self.mood()}. {self.mood_effect()['how']}")
+        if self.today.get("mood_line"):
+            lines.append(f"This morning you wrote in your LiveJournal: \"{self.today['mood_line'][:300]}\"")
         scene = info.get("scene", "")
         if scene:
             ends = self.block_ends()
@@ -590,6 +713,9 @@ class Day:
         if claims:
             today += ["Things you've already told people today (stay consistent with them):"] + claims
         parts.append("\n".join(today))
+        memories = self.memory_lines()
+        if memories:
+            parts.append("The last few days, from your journal (you remember them):\n" + "\n".join(memories))
         tid = ""
         if who:
             person = []
@@ -598,6 +724,9 @@ class Day:
             last = self.last_talked.get(who) or self.data["people"].get(who, {}).get("last")
             if last:
                 person.append(f"You last talked to {who} {ago_text(time.time() - float(last))}.")
+            remembered = self.person_lines(who)
+            if remembered:
+                person.append(f"What you remember with {who} (from your journal): " + " / ".join(remembered))
             known = [t["title"] for t in self.data["threads"] if who in t.get("told", {})][-4:]
             if known:
                 person.append(f"{who} already knows about: " + "; ".join(known) + ".")

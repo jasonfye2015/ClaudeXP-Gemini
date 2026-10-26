@@ -55,7 +55,7 @@ and each reply checked; and his love interests and close acquaintances already r
 | **Exploring drive E:** | My Computer, drive E: (it spins up), down a few folders, a picture opened in the Picture and Fax Viewer and the ones beside it |
 | **Reading Wikipedia** | Kiwix: a random article, scrolled through at reading speed, then a link that caught his eye |
 | **Music in ClaudeAmp** | A shuffled playlist of the music found on drive E:, behind everything else (the list is found once and kept) |
-| **Writing in LiveJournal** | Writes an entry about his day (what he's been doing comes into it) and posts it; his friends comment on it later |
+| **Writing in LiveJournal** | Adds an update to today's diary entry from what's happened since he last wrote (see *His diary and memory*); his friends comment on it later |
 
 **For how long:** until you stop him, or half an hour to eight hours. **His pace:** Relaxed, Normal or Quick.
 **His voice:** which Kithylin model speaks for him (see below).
@@ -106,6 +106,36 @@ next that he's off to walk the dog.
 - **Check each reply against today's story.** Before a reply is typed, the residents' model compares it with
   today's facts and what he's already said. If it clashes ("omw to the beach" while he's at work), he writes it
   again, once. The Furry Log notes each one ("Kept to today's story").
+
+## His diary and memory
+
+His LiveJournal is his diary, and his memory.
+
+- **The morning entry.** Every day XP is on, once he's out of his sleep block (or from 7 am with the schedule off),
+  he posts the day's first entry. It happens whether the autopilot is running or not: the life sim checks once a
+  minute, and the autopilot checks when it starts. A day XP isn't on is just a day with no entry.
+- **Today's mood.** It's one of LiveJournal's own moods, in five groups: bright, content, tired, grumpy and down.
+  - **How it's picked:** by the odds on the Day tab (the standard ones are 20 / 35 / 20 / 15 / 10). A workday leans
+    tired or grumpy, a free day leans bright, and how yesterday ended counts too. Or you choose it under
+    *Mood today*.
+  - **What it changes:** how often he IMs first, how quickly he answers, which activities he's drawn to (tired: TV,
+    music, breaks; down: stories and music; bright: roleplay, the MUCK, the Web), and a line in his prompt about how
+    he feels.
+  - **The entry itself** says how he woke up and what the day holds, and goes into his prompt for the rest of the
+    day.
+- **Updates.** The Journal activity adds to the same entry ("update (3:40 pm): ...") from what really happened since
+  he last wrote: his day's events, including **who he talked to and about what**. When any conversation goes quiet,
+  the life sim notes it for him ("talked with Renamon about my coffee habit"), whether it was him or you chatting.
+- **Bedtime.** When his sleep block starts he adds a last line ("night (11:02 pm): ..."), and the day is boiled down
+  into a **memory**: a few sentences, his mood, and a note on each person in it. Those memories are private, kept
+  only in his day file, never posted. If the day didn't end with him at the computer, it's remembered the next
+  morning instead, from what was noted.
+- **Remembering.** Every prompt has the last three days from his journal. When he's talking to someone, it also
+  has his last days with them ("Monday: talked about my coffee habit"), so he can follow up: "ok I've cut down to
+  3 cups lol". The Day tab lists what he remembers, and **Forget this day** removes a day.
+- **Who reads it.** The entries are **Public** as standard, so his friends comment on his mornings. **Friends
+  only** and **Private** are on the Day tab; friends don't comment on private entries. Untick **Keep his diary in
+  LiveJournal** to stop it all; the Journal activity then writes standalone entries as before.
 
 ## Threads
 
@@ -218,7 +248,8 @@ or a condition to wait for) and keeps two to four going - the messengers always,
 foreground leg; `hud.py` is the glow, the banner and the cursor; `voice.py` asks the broker for his words with the
 add-on switched on; `day.py` is his day - the schedule, today's facts, claims and threads, the layered prompt, and
 `speak()`, which asks the voice, checks the reply and rewrites it once on a clash. XP keeps the day in
-`data\autopilot_day.json`; the Day and Threads tabs are `ClaudeXP\claudexp\autopilot\daytabs.py`. `ClaudeXP\claudexp\autopilot\legs.py` (the messengers, mail, the Web, TV, games, the MUCK)
+`data\autopilot_day.json`; the Day and Threads tabs are `ClaudeXP\claudexp\autopilot\daytabs.py`, and his
+diary (the morning entry, updates, the bedtime wrap-up, the memories) is `ClaudeXP\claudexp\autopilot\diary.py`. `ClaudeXP\claudexp\autopilot\legs.py` (the messengers, mail, the Web, TV, games, the MUCK)
 and `content.py` (Local Storage: comics, galleries, stories, chat logs, Explorer, Kiwix, music, LiveJournal) are
 what he knows how to do on XP: one class per activity, each with a title, a line for the Legs tab and how long a
 stretch lasts.

@@ -93,6 +93,24 @@ the next that he's out walking the dog.
 - **Check each reply against today's story**: keep this ticked. Before a reply is sent, it's compared with the day
   and with what he's already said, and written again if it doesn't fit.
 
+![The Day tab: his mood and his diary](images/autopilot-day-mood.png)
+
+**His mood and his diary.** Every day XP is on, once he's up, he posts the day's first LiveJournal entry, whether
+or not the autopilot is running. On days XP isn't on, there's simply no entry.
+- **Today's mood** is set with LJ's Mood field, along with how he woke up and what the day holds ("Woke up tired,
+  and it's work again. Coffee first..."). His day picks the mood each morning:
+  - mostly by the **Odds**;
+  - leaning tired or grumpy on a workday and brighter on a free day;
+  - leaning towards how yesterday ended.
+- **Mood today** lets you choose the mood yourself for today.
+- **The mood changes him**: how often he IMs people first, how fast he answers, what he feels like doing, and his
+  tone.
+- **Through the day** his Journal activity adds **updates** to that entry from what really happened: who he talked
+  to and about what, what he watched or played.
+- **At bedtime** he adds a last line, and the day goes into his memory.
+- **Keep his diary in LiveJournal** switches it all off. **Public / Friends only / Private** sets who can read the
+  entries; friends don't comment on private ones. **Write today's first entry now** posts it straight away.
+
 **Right now.** This is what goes into his prompt at this moment:
 - the time, the block, what he's doing in each activity, and what has happened today;
 - **what he's told people today**, picked out of his replies as he goes.
@@ -100,8 +118,18 @@ the next that he's out walking the dog.
 If he's told someone something you don't want him held to, double-click it to edit it, or Remove it. **Add** puts in
 something that should be true ("I'm going to the movies tonight"). Today's lists clear themselves at 4 am.
 
+**What he remembers.** At the bottom of the tab, one line per day, boiled down from his journal. Each day has:
+- what the day was like;
+- his mood;
+- who was in it, each with a note ("Renamon: talked about my coffee habit").
+
+The last three days come into everything he says. When he talks to someone, his last days with them come back
+too, so he can ask how it went. **Forget this day** removes one.
+
 **To do this...**
 - **Give him a day off:** tick *A day off*.
+- **Make it a bad day (or a great one):** pick it in *Mood today*.
+- **Make him a sunnier person in general:** raise *Bright* and *Content* in the odds, and lower *Grumpy* and *Down*.
 - **Have him away for the evening:** paint the evening with **Out** and set its away message.
 - **Change his hours:** paint the week. For example, paint Fridays with **Free time** to give him a four-day week.
 
@@ -183,6 +211,8 @@ beat by beat to its end. Every track comes from one of your own scenes.
 | His replies are slow | It's a work block (answers are slower at work), or the buddy is a Friend; see Interests |
 | He says something that isn't true today | Edit or remove it in **Right now**, or add what is true |
 | He keeps bringing up the same thing | Pause that thread, or click *Forget who's heard it* |
+| He remembers something wrong | *Forget this day* in What he remembers |
+| No diary entry today | Is *Keep his diary* ticked, and the language model running? *Write today's first entry now* |
 | A roleplay goes somewhere you don't want | Untick that track, or change who it's **For** |
 | *Look through my logs* says "Stop Kithylin first" | It needs the graphics card: stop him, run it, start him again |
 | Everything's set up wrong | Close XP and delete `data\autopilot.json` and `data\autopilot_day.json`; he comes back with the standard set-up |

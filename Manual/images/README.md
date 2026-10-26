@@ -17,7 +17,8 @@ the pages pick it up. A page whose picture is missing shows "Screenshot: ... (no
 
 | `autopilot.png` | Kithylin Autopilot on XP, 15 minutes in: typing to Cairngorm on AIM with his own cursor, ClaudeRPG on its autopilot and ClaudeAmp behind, the banner at the top | 16-autopilot |
 | `autopilot-day.png` | The autopilot's Day tab: the week painted with work, lunch and sleep, and what the At work block means | 16-autopilot, 16-autopilot-guide |
-| `autopilot-day-now.png` | The Day tab scrolled down: Today, and Right now - what he's doing, what he's told people, what's happened | 16-autopilot-guide |
+| `autopilot-day-now.png` | The Day tab scrolled to the bottom: what he's told people, what's happened, and what he remembers from his journal | 16-autopilot-guide |
+| `autopilot-day-mood.png` | The Day tab's Today section: the day off, the reply check, today's mood and its odds, his LiveJournal diary | 16-autopilot-guide |
 | `autopilot-tab-settings.png` | The autopilot's What he does tab: the activities, movies and adult Web, how long, pace, voice | 16-autopilot-guide |
 | `autopilot-tab-legs.png` | The Legs tab: every activity, where and how long, Do this now | 16-autopilot-guide |
 | `autopilot-tab-threads.png` | The Threads tab: a life arc being edited, and the style card | 16-autopilot-guide |

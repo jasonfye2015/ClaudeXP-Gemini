@@ -334,6 +334,8 @@ class Panel(QWidget):
             _pilot = Autopilot(self.desktop, XPAdapter(self.desktop), self.settings)
             _pilot.changed.connect(self._refresh)
             _pilot.start()
+            from . import diary
+            diary.tick()                                    # the first run of the day: today's first entry
         except Exception:
             self.status.setText("Couldn't start: " + traceback.format_exc(limit=1).strip().splitlines()[-1])
             _pilot = None

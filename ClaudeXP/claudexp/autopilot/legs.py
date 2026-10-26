@@ -165,7 +165,8 @@ class Messengers(Leg):
                         budget[bid] = [1, random.randint(*self.tier(ctx, bid)["exchanges"])]
                         last_used[bid] = time.monotonic()
                 if now >= next_hello:
-                    next_hello = now + random.uniform(12, 30) * 60 * ctx.pace * slow
+                    chatty = ctx.day.hello_factor() if ctx.day is not None else 1.0      # (his mood)
+                    next_hello = now + random.uniform(12, 30) * 60 * ctx.pace * slow / chatty
                     yield from self.say_hello(ctx, app, pending)
                 yield 1
         finally:

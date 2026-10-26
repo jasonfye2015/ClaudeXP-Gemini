@@ -17,8 +17,8 @@ from PySide6.QtCore import QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QCheckBox, QComboBox, QFormLayout, QFrame, QGroupBox,
                                QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListView, QListWidget, QListWidgetItem,
-                               QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSplitter, QTableWidget,
-                               QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+                               QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSpinBox, QSplitter,
+                               QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from claudecore.autopilot import day as dayc
 
@@ -232,6 +232,48 @@ class DayTab(QScrollArea):
         self.check.setChecked(bool(day.data.get("check_replies", True)))
         self.check.toggled.connect(lambda on: (day.data.__setitem__("check_replies", on), day.save()))
         tl.addRow("", self.check)
+        moods = QHBoxLayout()
+        self.mood = QComboBox()
+        self.mood.addItem("Let his day decide", "")
+        for group in dayc.MOOD_ORDER:
+            for word in dayc.MOOD_GROUPS[group]:
+                self.mood.addItem(f"{word}  ({dayc.MOOD_TITLES[group].lower()})", word)
+        self.mood.setToolTip("Today's mood (LiveJournal's moods). Picked each morning unless you choose one; it "
+                             "changes how chatty he is, how fast he answers, what he feels like doing, and his tone.")
+        self.mood.currentIndexChanged.connect(self._set_mood)
+        moods.addWidget(self.mood, 1)
+        moods.addWidget(QLabel("Odds:"))
+        self.odds = {}
+        for group in dayc.MOOD_ORDER:
+            box = QSpinBox()
+            box.setRange(0, 100)
+            box.setPrefix(dayc.MOOD_TITLES[group] + " ")
+            box.setValue(int(day.data.get("mood_odds", {}).get(group, dayc.MOOD_ODDS[group])))
+            box.setToolTip("How likely a morning in this mood is (before a workday or yesterday nudge it)")
+            box.valueChanged.connect(lambda v, g=group: self._set_odds(g, v))
+            self.odds[group] = box
+            moods.addWidget(box)
+        tl.addRow("Mood today:", moods)
+        diary_row = QHBoxLayout()
+        self.diary_on = QCheckBox("Keep his diary in LiveJournal")
+        self.diary_on.setToolTip("A morning entry each day XP is on (his mood, how he woke up), updates through the "
+                                 "day, a last line at bedtime - and the day remembered for later")
+        self.diary_on.setChecked(bool(day.data.get("diary", True)))
+        self.diary_on.toggled.connect(lambda on: (day.data.__setitem__("diary", on), day.save()))
+        diary_row.addWidget(self.diary_on)
+        self.security = QComboBox()
+        for label, value in (("Public", "public"), ("Friends only", "friends"), ("Private", "private")):
+            self.security.addItem(label, value)
+        self.security.setCurrentIndex(max(0, self.security.findData(day.data.get("diary_security", "public"))))
+        self.security.setToolTip("Who can read his diary entries (private ones get no comments from friends)")
+        self.security.currentIndexChanged.connect(
+            lambda _i: (day.data.__setitem__("diary_security", self.security.currentData()), day.save()))
+        diary_row.addWidget(self.security)
+        diary_row.addStretch(1)
+        self.write_now = QPushButton("Write today's first entry now")
+        self.write_now.clicked.connect(self._write_now)
+        diary_row.addWidget(self.write_now)
+        tl.addRow("", diary_row)
         col.addWidget(today)
 
         # right now
@@ -249,6 +291,26 @@ class DayTab(QScrollArea):
                                           self._add_event, self._remove_event, lists)
         nl.addLayout(lists)
         col.addWidget(now)
+
+        # what he remembers
+        memory = QGroupBox("What he remembers (from his LiveJournal, a day at a time)")
+        ml = QVBoxLayout(memory)
+        self.memories = QTreeWidget()
+        self.memories.setHeaderLabels(["Day", "Mood", "What he remembers", "With"])
+        self.memories.setRootIsDecorated(False)
+        self.memories.setMinimumHeight(130)
+        for c, w in enumerate((80, 80, 400)):
+            self.memories.setColumnWidth(c, w)
+        ml.addWidget(self.memories)
+        mrow = QHBoxLayout()
+        mrow.addWidget(QLabel("The last three days come into everything he says; a day with someone comes back "
+                              "when he talks to them."))
+        mrow.addStretch(1)
+        forget = QPushButton("Forget this day")
+        forget.clicked.connect(self._forget_day)
+        mrow.addWidget(forget)
+        ml.addLayout(mrow)
+        col.addWidget(memory)
         col.addStretch(1)
         self.setWidget(page)
         self._sig = None
@@ -337,7 +399,59 @@ class DayTab(QScrollArea):
         self._loading = True
         self.override.setText(t.get("override", ""))
         self.day_off.setChecked(bool(t.get("day_off")))
+        self.mood.setCurrentIndex(max(0, self.mood.findData(t.get("mood", ""))))
         self._loading = False
+
+    def _set_mood(self, _i):
+        if getattr(self, "_loading", False):
+            return
+        mood = self.mood.currentData()
+        if mood:
+            self.day.set_mood(mood)
+        else:
+            self.day.today.pop("mood", None)
+            if not self.day.today.get("journal_entry"):
+                self.day.save()
+            else:
+                self.day.roll_mood()                      # (already up and posted: his day picks one now)
+                self.day.save()
+                self._loading = True
+                self.mood.setCurrentIndex(max(0, self.mood.findData(self.day.mood())))
+                self._loading = False
+        self._refresh_now()
+
+    def _set_odds(self, group, value):
+        self.day.data.setdefault("mood_odds", dict(dayc.MOOD_ODDS))[group] = value
+        self.day.save()
+
+    def _write_now(self):
+        from . import diary
+        if self.day.today.get("journal_entry"):
+            self.write_now.setText("Today's entry is already up")
+            return
+        diary.tick(force=True)
+        self.write_now.setText("Writing it..." if diary.busy("morning") else "Needs the language model running")
+
+    def _forget_day(self):
+        item = self.memories.currentItem()
+        if item is None:
+            return
+        date = item.data(0, Qt.UserRole)
+        self.day.data["memories"] = [m for m in self.day.data.get("memories", []) if m.get("date") != date]
+        self.day.save()
+        self.refresh(force=True)
+
+    def _fill_memories(self):
+        import datetime as _dt
+        self.memories.clear()
+        for m in reversed(self.day.data.get("memories", [])):
+            when = _dt.date.fromisoformat(m["date"])
+            item = QTreeWidgetItem([f"{when:%a} {when.day} {when:%b}", m.get("mood", ""), m.get("summary", ""),
+                                    ", ".join(sorted(m.get("people", {})))])
+            item.setData(0, Qt.UserRole, m["date"])
+            item.setToolTip(2, m.get("summary", ""))
+            item.setToolTip(3, "\n".join(f"{k}: {v}" for k, v in sorted(m.get("people", {}).items())))
+            self.memories.addTopLevelItem(item)
 
     def _set_override(self, text):
         self.day.today["override"] = text.strip()
@@ -415,6 +529,15 @@ class DayTab(QScrollArea):
             return
         self._refresh_now()
         t = self.day.today
+        mems = self.day.data.get("memories", [])
+        mem_sig = (len(mems), mems[-1]["date"] if mems else "", mems[-1].get("summary", "") if mems else "")
+        if force or mem_sig != getattr(self, "_mem_sig", None):
+            self._mem_sig = mem_sig
+            self._fill_memories()
+        if self.mood.currentData() != t.get("mood", "") and not self.mood.view().isVisible():
+            self._loading = True                            # (his day picked one: the morning entry)
+            self.mood.setCurrentIndex(max(0, self.mood.findData(t.get("mood", ""))))
+            self._loading = False
         sig = (t.get("date"), len(t["claims"]), len(t["events"]),
                t["claims"][-1]["text"] if t["claims"] else "", t["events"][-1]["text"] if t["events"] else "")
         editing = self.claims.state() == QAbstractItemView.EditingState or \

@@ -780,11 +780,13 @@ LJ_NOTE = ("\n\nYou're writing an entry in your LiveJournal in {year}, for your 
 
 
 class Journal(Leg):
-    """LiveJournal: opens his journal, writes an entry about his day, posts it; his friends comment on it later."""
+    """LiveJournal: opens his journal and adds to today's entry - his diary (diary.py) - from what's happened since
+    he last wrote, or writes the day's first entry if there isn't one yet; his friends comment on it later. With
+    the diary switched off, a standalone entry about his day."""
     key, title, kind = "journal", "Writing in LiveJournal", FOREGROUND
     doing = "writing in his LiveJournal"
-    minutes, weight, cooldown = (6, 12), 0.5, 3 * 60 * 60
-    blurb = "write a LiveJournal entry about his day"
+    minutes, weight, cooldown = (4, 10), 0.8, 2 * 60 * 60
+    blurb = "add an update to today's LiveJournal entry"
 
     def run(self, ctx):
         from ..life import get as life
@@ -807,6 +809,12 @@ class Journal(Leg):
         finally:
             ctx.hands.release(self.key)
         yield random.uniform(10, 25) * ctx.pace                 # reading the friends page
+        d = ctx.day
+        if d is not None and d.data.get("diary", True):
+            posted = yield from self.diary_update(ctx, d)
+            if posted:
+                yield from self.admire(ctx, frame, site)
+            return
         doing = [t.leg.title for t in ctx.engine.tasks.values() if t.leg.key != self.key]
         context = (f"Today you've been: {', '.join(doing) or 'around the house'}. It's "
                    f"{clock.now():%A, %B} {clock.now().day}, {clock.time_text()}.")
@@ -836,6 +844,36 @@ class Journal(Leg):
         lj.update(change)
         ctx.note(f"Posted to LiveJournal: {subject or entry_text[:40]}")
         ctx.event(f"posted in his LiveJournal" + (f" (\"{subject}\")" if subject else ""))
+        yield from self.admire(ctx, frame, site)
+
+    def diary_update(self, ctx, d):
+        """His diary (diary.py): today's first entry if there isn't one yet, else an update to it from what's
+        happened since he last wrote. True if something was posted."""
+        from . import diary
+        if not d.today.get("journal_entry"):
+            ctx.status("Writing today's first journal entry")
+            diary.tick(force=True)
+            yield (lambda: d.today.get("journal_entry") or not diary.busy("morning"), 240)
+            return bool(d.today.get("journal_entry"))
+        notes = diary.since_last(d)
+        if not notes:
+            ctx.note("Nothing new for the journal yet.")
+            return False
+        ctx.status("Adding an update to today's journal entry")
+        text = yield from speak(ctx, "your LiveJournal", persona("your friends"),
+                                diary.UPDATE_NOTE.format(year=clock.now().year), [{"role": "user", "content": notes}],
+                                "Write the update.", max_tokens=160, thread_ok=False, check=False)
+        _subject, body = diary._split_subject(text)
+        if not body:
+            return False
+        yield min(60, 4 + len(body) / 12) * ctx.pace           # typing it out
+        if diary.append(d, body):
+            ctx.note(f"Updated today's LiveJournal entry: {body[:50]}")
+            return True
+        return False
+
+    def admire(self, ctx, frame, site):
+        """His journal page, read over, then (usually) closed."""
         if frame is not None and isValid(frame):
             yield from acting(ctx, self.key, frame)
             try:

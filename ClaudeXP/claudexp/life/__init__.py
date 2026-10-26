@@ -50,6 +50,22 @@ TALK_PROMPT = """You are {name}. Here is a conversation you just had with your f
 
 Write a one or two sentence note for your own diary about it, first person, focusing on anything worth remembering about {user} (news, plans, feelings, things you promised or asked). Always call them {user}, never he/she. Write only the note."""
 
+MY_TALK_PROMPT = """Here is a conversation between {user} and {name} on {program}:
+
+{lines}
+
+In under fifteen words, note what they talked about, for {user}'s own day log, first person, starting "talked with {name} about". Write only the note."""
+
+
+def _my_diary(name, note):
+    """The conversation, for Kithylin's own day (his diary and memory: claudexp.autopilot.diary)."""
+    try:
+        from ..autopilot import diary
+        diary.talked(name, note.splitlines()[0])
+    except Exception:
+        pass
+
+
 EMAIL_PROMPT = """You are {name}, writing a short casual email to your friend {user} in 2001 (it is {now}).
 About you:
 {persona}
@@ -292,6 +308,8 @@ class LifeSim(QObject):
                 continue
             prompt = TALK_PROMPT.format(name=name, user=self.user, program=program, lines="\n".join(talk["lines"]))
             self._ask(self.buddies[name], prompt, lambda note, name=name: note and self.journal.add(name, note, "talk"))
+            mine = MY_TALK_PROMPT.format(name=name, user=self.user, program=program, lines="\n".join(talk["lines"]))
+            self._ask(None, mine, lambda note, name=name: note and _my_diary(name, note))
 
     def watch_aim(self, world):
         """ClaudeAIM signed on: listen to its IMs."""
@@ -382,6 +400,11 @@ class LifeSim(QObject):
             from . import lj, mail_extras
             mail_extras.tick(self)
             lj.tick(self)
+            try:
+                from ..autopilot import diary            # Kithylin's diary: today's first entry, the bedtime wrap-up
+                diary.tick()
+            except Exception:
+                pass
         save_json(STATE_FILE, self.state)
         self._summarise_quiet_talks()
         if time.monotonic() >= self.next_story and (self.desktop.isVisible() or self.powered_off):
