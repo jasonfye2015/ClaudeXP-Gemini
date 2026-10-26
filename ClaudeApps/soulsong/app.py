@@ -511,6 +511,11 @@ class SoulAndSong(QWidget):
             return
         from .companion import _write
         _write(companions() / "app.json", {"last": folder})
+        if self.comp is not None:                       # the one before stops where it is (its lines stay its own)
+            self.comp.queue.clear()
+            self.comp.on_line = self.comp.on_stream = lambda *a: None
+            self.comp.on_changed = lambda: None
+            self.brain.stop()
         self.comp = C.Companion(folder, self.brain)
         self.comp.on_line = self._line
         self.comp.on_stream = lambda t: self.typing.setText(f"{self.comp.name} is writing: {t[-400:]}")
@@ -536,18 +541,32 @@ class SoulAndSong(QWidget):
         if model is None:
             self._line("system", "No local models found (Local Storage\\LLM Models, or Kithylin AI's Models folder).")
             return
-        if self.loaded_key == (model.key, self.comp.cfg.get("engine"), self.comp.cfg.get("context")) \
-                and self.brain.engine.ready:
+        want = (model.key, self.comp.cfg.get("engine"), self.comp.cfg.get("context"))
+        self.comp.cfg["model"] = model.key
+        self.comp.save()
+        self.wanted = (model, want)
+        if self.loaded_key == want and self.brain.engine.ready:
             self._substrate(model)
             self.comp.start()
             return
-        self.comp.cfg["model"] = model.key
-        self.comp.save()
-        self.loaded_key = (model.key, self.comp.cfg.get("engine"), self.comp.cfg.get("context"))
+        if self.brain.engine._loader is not None and self.brain.engine._loader.isRunning():
+            # another model is still loading: this one waits for it, then loads (see _ready) - a Companion never
+            # starts on a model that isn't its own
+            self._line("system", f"Waiting for the last model to finish loading, then loading {model.title}...")
+            return
+        self._load(model, want)
+
+    def _load(self, model, want):
+        self.loaded_key = want
         self.brain.load(model, self.comp.cfg.get("engine", "auto"), int(self.comp.cfg.get("context", 32768)))
 
     def _ready(self, ok):
-        if ok and self.comp is not None:
+        model, want = getattr(self, "wanted", (None, None))
+        if model is not None and want != self.loaded_key:
+            self._load(model, want)                    # (it was asked for while another was loading)
+            return
+        if ok and self.comp is not None and self.brain.engine.model is not None \
+                and self.brain.engine.model.key == self.comp.cfg.get("model"):
             self._substrate(self.brain.engine.model)
             self.comp.start()
         self.refresh_panel()
