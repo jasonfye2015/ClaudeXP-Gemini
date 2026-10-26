@@ -124,7 +124,8 @@ def main():
         code = _run_again()
     # Exit right away: everything is saved as it happens, and a buddy's model may still be
     # mid-reply in a background thread, which would otherwise keep the process alive.
-    sys.stdout.flush()
+    if sys.stdout is not None:                       # (none under pythonw)
+        sys.stdout.flush()
     os._exit(code)
 
 

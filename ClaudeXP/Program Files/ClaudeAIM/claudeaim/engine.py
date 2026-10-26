@@ -8,7 +8,7 @@ from enum import Enum
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from . import host, paths, timefmt
-from .llm import LLM, SYSTEM_PROMPT, clean_reply, estimate_tokens, is_echo
+from .llm import LLM, SYSTEM_PROMPT, clean_reply, estimate_tokens, is_echo, tidy_reply  # noqa: F401
 from .pictures import strip_tags
 from .storage import History
 
@@ -547,7 +547,7 @@ class World(QObject):
                 self._add(b, "system", f"(Couldn't reach Ollama: {err})")
                 return
             raw = text
-            text = clean_reply(text, b.name, user, said)
+            text = tidy_reply(text, b.name, user, said)
             if not text and raw.strip() and tries["n"] == 0:
                 tries["n"] += 1                            # it only said the user's message back: once more
                 again = messages + [{"role": "user", "content": (
@@ -748,7 +748,7 @@ class World(QObject):
                 # (an old reply that slipped into transcript style is shown to the model cleaned up, and a pure
                 # echo of the user's line left out, so one bad reply doesn't teach every reply after it)
                 said = convo[-1]["content"] if convo and convo[-1]["role"] == "user" else ""
-                content = clean_reply(m["text"], b.name, user, said) if m["text"] else ""
+                content = tidy_reply(m["text"], b.name, user, said) if m["text"] else ""
                 if not content and not m.get("image"):
                     continue
                 if m.get("image"):

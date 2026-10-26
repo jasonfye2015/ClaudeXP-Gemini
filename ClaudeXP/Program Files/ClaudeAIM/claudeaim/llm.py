@@ -71,6 +71,17 @@ def clean_reply(text: str, name: str, user: str = "", last_user: str = "") -> st
     return text
 
 
+def tidy_reply(text: str, name: str, user: str = "", last_user: str = "") -> str:
+    """clean_reply, called the way the loaded one takes it: with the user's name and last message (the echo guard)
+    when it can, or just the buddy's name under a frozen Contact Persona Style, whose clean_reply is the old one."""
+    import inspect
+    try:
+        full = len(inspect.signature(clean_reply).parameters) >= 4
+    except (TypeError, ValueError):
+        full = False
+    return clean_reply(text, name, user, last_user) if full else clean_reply(text, name)
+
+
 _vision_cache = {}
 _thinking_cache = {}
 

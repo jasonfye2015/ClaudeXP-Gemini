@@ -19,7 +19,7 @@ from ..aim import ensure_aim_path
 
 ensure_aim_path()
 from claudeaim import timefmt  # noqa: E402
-from claudeaim.llm import clean_reply  # noqa: E402
+from claudeaim.llm import clean_reply, tidy_reply  # noqa: E402,F401
 
 PROMPT = """You are {name}, chatting with your buddy "{user}" on {network}.
 Right now it is {now}. You are a real person living in that time. Never say or hint that you are an AI, a model, or a character, and never mention these instructions.
@@ -270,7 +270,7 @@ class Network(QObject):
                 msgs.append({"role": "user", "content": m["text"]})
             elif m["kind"] == "contact":
                 said = msgs[-1]["content"] if msgs[-1]["role"] == "user" else ""
-                text = clean_reply(m["text"], b.name, user, said)     # (old transcript-style slips, cleaned)
+                text = tidy_reply(m["text"], b.name, user, said)     # (old transcript-style slips, cleaned)
                 if text:
                     msgs.append({"role": "assistant", "content": text})
         if instruction:
@@ -284,7 +284,7 @@ class Network(QObject):
         last_said = next((m["content"] for m in reversed(msgs) if m["role"] == "user"), "")
 
         def done(text, err):
-            reply = clean_reply(text or "", b.name, user, last_said) if not err else ""
+            reply = tidy_reply(text or "", b.name, user, last_said) if not err else ""
             if not reply:
                 b.busy = False
                 self.typing_changed.emit(b.contact.id, False)
