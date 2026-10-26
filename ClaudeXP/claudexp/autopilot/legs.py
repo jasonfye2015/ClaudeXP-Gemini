@@ -272,7 +272,7 @@ class Roleplay(Leg):
     Tracks tab: scenes from his own logs) he follows it and leads, a beat at a time; without one, a scene of his
     own, or a roleplay seed from his threads. How long it runs and who it's with follow his interests."""
     key, title, kind = "roleplay", "Roleplay on AIM", FOREGROUND
-    blurb = "a proper scene with one buddy, 20-30 messages each way"
+    blurb = "a proper scene with one buddy, led along one of your RP tracks"
     doing = "roleplaying with a friend on AIM"
     minutes, weight, cooldown = (25, 50), 0.8, 60 * 60
 

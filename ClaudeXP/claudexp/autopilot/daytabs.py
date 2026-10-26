@@ -15,7 +15,7 @@ import sys
 
 from PySide6.QtCore import QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
-from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QCheckBox, QComboBox, QFormLayout, QGroupBox,
+from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QCheckBox, QComboBox, QFormLayout, QFrame, QGroupBox,
                                QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListView, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSplitter, QTableWidget,
                                QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
@@ -25,6 +25,15 @@ from claudecore.autopilot import day as dayc
 BLOCK_ORDER = ["free", "work", "lunch", "sleep", "out"]
 WEIGHTS = [("Never", 0.0), ("Less", 0.4), ("Normal", 1.0), ("More", 1.6)]
 PACES = [("Quickly", 0.7), ("Normally", 1.0), ("A bit slower", 1.5), ("Slowly", 2.2), ("Very slowly", 3.5)]
+
+
+def _scrolling(widget):
+    """A box that scrolls rather than squeezing its fields on top of each other when there's little room."""
+    area = QScrollArea()
+    area.setWidgetResizable(True)
+    area.setFrameShape(QFrame.NoFrame)
+    area.setWidget(widget)
+    return area
 
 
 def _nearest(options, value):
@@ -585,7 +594,7 @@ class ThreadsTab(QWidget):
         told.addWidget(forget)
         form.addRow("Heard it:", told)
         self.editor = edit
-        split.addWidget(edit)
+        split.addWidget(_scrolling(edit))
 
         style = QGroupBox("His style card (from your recent Telegram chats)")
         sl = QVBoxLayout(style)
@@ -608,7 +617,7 @@ class ThreadsTab(QWidget):
         self.mine_status = QLabel()
         sl.addWidget(self.mine_status)
         split.addWidget(style)
-        split.setSizes([260, 260, 120])
+        split.setSizes([190, 300, 150])
         col.addWidget(split, 1)
         self._current = None
         self.fill()
@@ -992,8 +1001,8 @@ class RPTracksTab(QWidget):
         self.lines.textChanged.connect(lambda: self._set("lines", self._lines(self.lines)))
         form.addRow("His lines:", self.lines)
         self.editor = edit
-        split.addWidget(edit)
-        split.setSizes([230, 420])
+        split.addWidget(_scrolling(edit))
+        split.setSizes([250, 400])
         col.addWidget(split, 1)
         self._current = None
         self.runner = MinerRun(self, "selfmodel.rptracks", dayc.TRACKS_FILE.with_name("rptracks.log"),

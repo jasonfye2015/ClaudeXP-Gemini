@@ -16,6 +16,15 @@ the pages pick it up. A page whose picture is missing shows "Screenshot: ... (no
 | `selfcheck.png` | The launcher's self-check, all clear | 11-troubleshooting |
 
 | `autopilot.png` | Kithylin Autopilot on XP, 15 minutes in: typing to Cairngorm on AIM with his own cursor, ClaudeRPG on its autopilot and ClaudeAmp behind, the banner at the top | 16-autopilot |
-| `autopilot-day.png` | The autopilot's Day tab: the week painted with work, lunch and sleep, the At work block's scene and legs, Today, and Right now (sample data) | 16-autopilot |
+| `autopilot-day.png` | The autopilot's Day tab: the week painted with work, lunch and sleep, and what the At work block means | 16-autopilot, 16-autopilot-guide |
+| `autopilot-day-now.png` | The Day tab scrolled down: Today, and Right now - what he's doing, what he's told people, what's happened | 16-autopilot-guide |
+| `autopilot-tab-settings.png` | The autopilot's What he does tab: the activities, movies and adult Web, how long, pace, voice | 16-autopilot-guide |
+| `autopilot-tab-legs.png` | The Legs tab: every activity, where and how long, Do this now | 16-autopilot-guide |
+| `autopilot-tab-threads.png` | The Threads tab: a life arc being edited, and the style card | 16-autopilot-guide |
+| `autopilot-tab-interests.png` | The Interests tab: love interests, close acquaintances, friends | 16-autopilot-guide |
+| `autopilot-tab-rptracks.png` | The RP Tracks tab, with made-up sample tracks: Cabin in the Snow being edited | 16-autopilot-guide |
 
 Not taken: the Furry Hollow (it needs OpenSimulator and the viewer running).
+
+The autopilot tab pictures are the real panel rendered in XP's style with made-up sample data: none of your own
+threads, tracks or chats are in them.

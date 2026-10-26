@@ -41,7 +41,8 @@ GitHub.
 15. [Every program](15-programs.md) - all the programs, by kind, with what each is and which computer has it under
     which name
 16. [Kithylin Autopilot](16-autopilot.md) - let Kithylin take over the XP computer: what he does, the glow and his
-    cursor, pausing and stopping, which model speaks for him
+    cursor, pausing and stopping, which model speaks for him; and [Kithylin Autopilot, step by
+    step](16-autopilot-guide.md), the illustrated guide its Help button opens
 
 ## The short version
 

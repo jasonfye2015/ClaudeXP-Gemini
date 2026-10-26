@@ -27,9 +27,11 @@ HOURS = [("Until I stop him", 0), ("Half an hour", 0.5), ("An hour", 1), ("Two h
          ("Eight hours", 8)]
 PACES = [("Relaxed", 1.4), ("Normal", 1.0), ("Quick", 0.7)]
 KINDS = {"always": "Always on", "background": "In the background", "foreground": "In front"}
+HELP_PAGE = "16-autopilot-guide.md"
 _pilot = None
 _frame = None
 _day = None
+_help = None
 
 
 def leg_classes():
@@ -181,8 +183,12 @@ class Panel(QWidget):
         self.go.clicked.connect(self._toggle)
         self.pause_btn = QPushButton("Pause")
         self.pause_btn.clicked.connect(lambda: _pilot and _pilot.toggle_pause())
+        self.help_btn = QPushButton("Help")
+        self.help_btn.setToolTip("How to use and set up Kithylin Autopilot, tab by tab, with pictures")
+        self.help_btn.clicked.connect(lambda: open_help(self.desktop))
         row.addWidget(self.go, 1)
         row.addWidget(self.pause_btn)
+        row.addWidget(self.help_btn)
         root.addLayout(row)
         self.status = QLabel("Kithylin isn't at the computer.")
         root.addWidget(self.status)
@@ -373,6 +379,20 @@ def launch(desktop):
     _frame = XPWindow(desktop, TITLE, body, autopilot_icon(), size=(780, 780))
     body.frame = _frame
     desktop.open_window(_frame)
+
+
+def open_help(desktop):
+    """The help window: the Claude Manual's step-by-step guide to the autopilot (Manual/16-autopilot-guide.md),
+    with the full chapter a link away."""
+    global _help
+    if _help is not None and isValid(_help):
+        _help.content.open(HELP_PAGE)
+        desktop.open_window(_help)
+        return
+    from manual import ManualView
+    body = ManualView(start=HELP_PAGE)
+    _help = XPWindow(desktop, f"{TITLE} Help", body, autopilot_icon(), size=(1000, 760))
+    desktop.open_window(_help)
 
 
 def shutdown():

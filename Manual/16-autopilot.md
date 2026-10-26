@@ -8,6 +8,9 @@ things going at once, for as long as you let him. Think of it as a screen saver 
 
 ![Kithylin at the computer](images/autopilot.png)
 
+New to it? [Kithylin Autopilot, step by step](16-autopilot-guide.md) walks through every tab with pictures; it's
+what the autopilot's **Help** button opens.
+
 ## Starting him
 
 The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Programs). The window has six tabs:
