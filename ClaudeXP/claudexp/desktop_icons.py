@@ -38,18 +38,18 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
                    "GeminiAdobe": [p.key for p in programs.PROGRAMS if p.group == "GeminiAdobe"],
                    "Social Programs": ["telegram", "discord", "yim", "trillian", "skype", "icq", "kik", "msn", "aim", "furcadia", "secondlife",
                                        "hotmail", "livejournal", "irc", "navigator", "muck"],
-                   "Projects": ["virtualpet", "flymind", "flymind1", "flybrainviewer", "flybraindungeon", "localprojects"],
+                   "Projects": ["virtualpet", "flymind", "flymind1", "flybrainviewer", "flybraindungeon", "localprojects", "aillmtxt"],
                    "Disc Tools": ["nero", "alcohol120"],
                    "Archive Tools": ["winrar", "winzip"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Projects": 46, "Social Programs": 45, "Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 62,
+FOLDERS_SINCE = {"Projects": 63, "Social Programs": 45, "Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 62,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 62                # 62: Claudualties joined the Games folder
+FOLDERS = 63                # 63: AI LLM Txt Files joined the Projects folder
 # folders that live inside another folder rather than loose on the desktop
 NESTED = {"Emulation": "Games/Emulation", "Windows Games": "Games/Windows Games"}
 # shortcuts that now live in one of those folders instead of loose on the desktop
-IN_FOLDERS = {"prog:mediaarchive": "Furry Programs", "prog:miscimages": "Furry Programs", "prog:personaldocs": "Furry Programs", "prog:localprojects": "Projects", "prog:tvmovies": "TV and Movies", "prog:tv": "TV and Movies"}
+IN_FOLDERS = {"prog:mediaarchive": "Furry Programs", "prog:miscimages": "Furry Programs", "prog:personaldocs": "Furry Programs", "prog:localprojects": "Projects", "prog:aillmtxt": "Projects", "prog:tvmovies": "TV and Movies", "prog:tv": "TV and Movies"}
 
 
 def std(which):
@@ -426,6 +426,17 @@ class IconManager(QObject):
         except (OSError, ValueError):
             return                                      # no default: the icons flow into place as before
         self._make_program_folders([f for f in default.get("folders", []) if f in PROGRAM_FOLDERS])
+        from .explorer import shortcuts, vfs
+        desk = vfs.user_home() / "Desktop"
+        for link in default.get("links", []):            # loose shortcuts of the user's own (ClaudeRPG.lnk ...)
+            target = desk / link["file"]
+            if not target.exists():
+                try:
+                    programs.get(link["program"])               # (a program that's gone gets no shortcut)
+                    desk.mkdir(parents=True, exist_ok=True)
+                    shortcuts.make(target, program=link["program"])
+                except Exception:
+                    pass
         for key in ("positions", "hidden", "auto_arrange", "align_grid"):
             if key in default:
                 self.state[key] = default[key]

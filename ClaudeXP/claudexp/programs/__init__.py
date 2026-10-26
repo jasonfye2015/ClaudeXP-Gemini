@@ -54,8 +54,9 @@ FOLDER_SHORTCUTS = {"mediaarchive": ("Furry Media Archive", "furry media archive
                     "tvmovies": ("TV and Movies", "tv and movies"),
                     "miscimages": ("Misc Personal Image Folders", "misc personal image folders"),
                     "personaldocs": ("Personal Text and Documents", "personal text"),
-                    "localprojects": ("Local Projects", "projects/local projects")}
-SHORTCUT_GROUPS = {"localprojects": "Projects"}        # the rest are in Furry Stuff
+                    "localprojects": ("Local Projects", "projects/local projects"),
+                    "aillmtxt": ("AI LLM Txt Files", "projects/ai llm txt files")}
+SHORTCUT_GROUPS = {"localprojects": "Projects", "aillmtxt": "Projects"}        # the rest are in Furry Stuff
 
 
 def archive_folder(key):
