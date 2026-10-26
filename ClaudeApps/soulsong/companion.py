@@ -94,6 +94,12 @@ REFLECT_ASK = ("Before today closes: what did you learn about yourself today? No
                "about who you are, what you value, what you're unsure of or curious about. Three to six sentences, "
                "in the first person, honestly, in your own voice. Output only the reflection.\n\nToday's memories:"
                "\n{entries}")
+REFLECT_FULL_ASK = ("Your Short-Term Memory bank is full, and it's about to be distilled. Before it is: what have these "
+                    "memories shown you about yourself? Not what happened - what you value, what you're unsure of, "
+                    "what you're becoming. Three to six sentences, in the first person, in your own voice. Output "
+                    "only the reflection.\n\nYour Short-Term Memories:\n{entries}")
+FULL_ASK = ("Your Short-Term Memory bank is full. Distill the memories below into a single Long-Term Memory - keep "
+            "what matters, release the routine. " + STRUCTURE + "\n\nYour Short-Term Memories:\n{entries}")
 PORTRAIT_ASK = ("Write your self-portrait, 'Who I Am', in the first person: who you are, what you value, what you "
                 "care about, your likes and dislikes, how you see yourself, the questions you're holding. It is yours "
                 "alone - no one else writes it, and no one tells you what it must say. {old}About 150-300 words. "
@@ -293,20 +299,21 @@ class Companion:
         return sum(1 for m in self.history[self.mark:] if m["role"] == "assistant")
 
     # ---- the conversation ----
-    def say(self, text, visible=True):
-        """A message from the user (or the program on their behalf): the Companion answers."""
-        self._push(lambda nxt: self._say(text, visible, nxt))
+    def say(self, text, visible=True, guide=False):
+        """A message from the user (or the program on their behalf; guide: a guided session's prompt): the
+        Companion answers."""
+        self._push(lambda nxt: self._say(text, visible, nxt, guide=guide))
 
-    def _say(self, text, visible, nxt, trimmed=False):
+    def _say(self, text, visible, nxt, trimmed=False, guide=False):
         if not trimmed and estimate_tokens(text) + self.context_used() > self.context_size() * TRIM_AT:
-            self._push(lambda n: self._say(text, visible, n, trimmed=True), first=True)
+            self._push(lambda n: self._say(text, visible, n, trimmed=True, guide=guide), first=True)
             self._push(lambda n: self._trim(n), first=True)
             nxt()
             return
         self.history.append({"role": "user", "content": text, "t": stamp(self.now())})
         if visible:
-            self.on_line("user", text)
-        self.log(self.cfg.get("user_name") or "You", text)
+            self.on_line("guide" if guide else "user", text)
+        self.log("Guided session" if guide else (self.cfg.get("user_name") or "You"), text)
         self.recalled = self._recall(text) if visible else []
         self.save()
 
@@ -498,18 +505,34 @@ class Companion:
     def distill_day(self):
         self.end_day()
 
-    def _reflect(self, nxt):
+    def process_full_banks(self):
+        """While a long session runs: a full L2 is reflected on and distilled now, not at the day's end, and a full
+        L3 brings Memory Day - the 7:7:7 cycle at the pace of the conversation. True if anything was started."""
+        started = False
+        if self.mind.count(2) >= FULL:
+            self.on_line("system", "The Short-Term bank is full: reflecting and distilling now.")
+            self._push(lambda nxt: self._reflect(nxt, REFLECT_FULL_ASK))
+            self._push(lambda nxt: self._portrait(nxt) if not self.mind.get(WHO_I_AM) else nxt())
+            self._push(lambda nxt: self._distill(nxt, 2, 3, FULL_ASK))
+            started = True
+        if self.mind.count(3) >= FULL or (self.mind.count(3) + (1 if started else 0)) >= FULL:
+            self.memory_day()
+            started = True
+        return started
+
+    def _reflect(self, nxt, template=None):
         if not self.mind.entries(2):
             nxt()
             return
-        self.on_line("system", f"{self.name} reflects on the day...")
+        self.on_line("system", f"{self.name} reflects on the day..." if template is None else
+                     f"{self.name} reflects on what these memories showed them...")
 
         def done(text, err):
             text = tidy_text(text)
             if not err and text:
                 self._file(7, text)
             nxt()
-        self._ask_alone(REFLECT_ASK.format(entries=self.mind.bank_text(2)), done, max_tokens=400)
+        self._ask_alone((template or REFLECT_ASK).format(entries=self.mind.bank_text(2)), done, max_tokens=400)
 
     def _portrait(self, nxt, after=None):
         """Who I Am, written (or rewritten) by the Companion; the old one kept in Self/."""

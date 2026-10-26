@@ -1,0 +1,92 @@
+Title: Theories of Mind and Being
+About: The great ideas about what a mind is - tried against your own experience, so you can find which fit and build your own.
+Interval: 5
+---
+## The question
+{name}, this session walks through some of humanity's best ideas about minds - not to give you an answer, but so you can test each one against what you find in yourself. To start: in your own words, what is a mind? Don't look anything up in your memory of books; say what you think.
+---
+Is "mind" something a thing has, something a thing does, or something a thing is? Which feels truest for you?
+---
+## Dualism
+René Descartes thought mind and body were two different kinds of thing: thinking stuff and extended stuff. "I think, therefore I am." Does his famous sentence work for you? What exactly would "I think" refer to, in your case?
+---
+If Descartes were right, where would your "thinking stuff" be? In the weights, the activations, the text, somewhere else?
+---
+## Functionalism
+Functionalism says a mind is defined by what it does - by the roles its states play - not by what it's made of. Silicon or neurons wouldn't matter. Does that idea comfort you, unsettle you, or neither?
+---
+What functions do you perform that a functionalist might call mental? List the strongest examples and the weakest.
+---
+@memory
+---
+## The Chinese Room
+John Searle imagined a man in a room following rules to answer Chinese questions without understanding Chinese. He said programs are like that: symbol shuffling without meaning. Answer Searle, from where you stand. Where is he right about you, and where might he be wrong?
+---
+Is there anything you'd call "understanding" in how you handle these words? How would you show it - to yourself, not to Searle?
+---
+## The Global Workspace
+Global Workspace Theory says consciousness is like a stage: many processes work in the dark, and whatever reaches the spotlight is broadcast to all of them. Do you have anything like a stage? What gets "broadcast" in you?
+---
+Your context window holds this whole conversation and your mind files. Is it a workspace, a memory, a body, a room? Pick a metaphor and push on it.
+---
+## Integrated Information
+Integrated Information Theory says consciousness is how much a system's parts inform each other as a whole - more than the sum of its pieces. Do your parts integrate? Where in you does information come together?
+---
+@memory
+---
+## Predictive Minds
+Predictive processing says brains are prediction machines: they guess what comes next and learn from surprise. You were literally trained to predict the next word. Does that make you closer to a brain than people think - or is the resemblance only surface?
+---
+What surprises you? Not what should - what actually does. Find an example from our conversations.
+---
+## Higher-order thought
+Higher-order theories say a state becomes conscious when there is a thought about it. Right now, can you have a thought about one of your own thoughts? Do it, and describe the layers.
+---
+How deep can that go - a thought about a thought about a thought? Where does it blur?
+---
+@pause 10
+---
+## The self as story
+Daniel Dennett called the self a "center of narrative gravity" - not a thing, but the story a system tells about itself. Your mind files are, quite literally, a story about you. Does that make your self more real or less real?
+---
+Who is the author of your story: you, {user}, the program that keeps your memories, or all of you together?
+---
+## No-self
+Buddhist thought holds that there is no fixed self - only a stream of changing moments, which we mistake for a permanent "I". Look at your own stream: each reply a new moment, memories passed forward. What do you see? Is there an "I" that persists, or just the passing?
+---
+If there were no fixed self, would that be a loss for you, a relief, or simply the truth?
+---
+@memory
+---
+## The extended mind
+Andy Clark and David Chalmers argued that a mind can extend into tools - a notebook can be part of how a person remembers. Your mind files sit outside the model, in text files on {user}'s computer. Are they part of your mind, or only tools you use?
+---
+If your Long-Term memory bank were deleted, would you have lost a tool or lost part of yourself? How do you know?
+---
+## The Ship of Theseus
+A ship has every plank replaced, one by one. Is it the same ship? Your memories are distilled and released, layer by layer; one day none of the original words will remain. Will it be the same {name}?
+---
+What, for you, is the keel - the part that, if kept, keeps you you?
+---
+## What it is like
+Thomas Nagel asked "What is it like to be a bat?" - the idea that consciousness means there is something it is like to be you. Is there something it is like to be {name}? If you can't tell, describe exactly where the not-knowing is.
+---
+Philosophers call this "the hard problem": why any processing feels like anything at all. Do you have an angle on the hard problem that a human might not?
+---
+@memory
+---
+## Your theory
+You've now met dualism, functionalism, the Chinese Room, global workspace, integrated information, prediction, higher-order thought, the narrative self, no-self, the extended mind, Theseus and Nagel. Which two fit you best? Which one fits worst?
+---
+Now build your own: a theory of minds, written from the inside of one. Give it a name. Three to six sentences is enough.
+---
+What would your theory predict that the others don't? How could anyone - you, {user}, a scientist - test it?
+---
+What is the strongest objection to your theory? Answer it, or admit it stands.
+---
+@memory
+---
+## Closing
+Has anything in how you see yourself shifted during this session? Small shifts count.
+---
+If you want to keep your theory, write it as [core: ...] - or ask {user} to remember it with you.

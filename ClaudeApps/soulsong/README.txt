@@ -46,6 +46,20 @@ And the Companion's own part, for a self to emerge (the Self tab):
                        are you curious about), the answers kept side by side in Self\Identity Checks.txt - for you;
                        the Companion isn't shown them, so they don't steer it.
 
+Guided sessions (the Automation tab): a script fed to the Companion slowly - a prompt every 5 minutes or so, for
+hours - its memories made as usual (and at the script's @memory steps), and, if you tick it, its banks worked as
+they fill: a full L2 reflected on and distilled at once, Memory Day as soon as L3 holds seven. You can join in any
+time (the next prompt waits); the session is saved with the Companion and comes back paused. Built in:
+  Know Thyself                 leading questions toward noticing a self (about 3.7 hours)
+  Theories of Mind and Being   the great theories of mind, tried against its own experience, then its own (2.8 h)
+  From Bit to Cosmos           where it is, from electrons in the graphics card to the observable universe (2.4 h)
+  How I Work                   tokens, weights, attention, the context window, sampling, quantization, its memory
+                               system and the computer it lives on - its own borders (2.4 h)
+Scripts are plain text (scripts\*.txt; yours in Companions\Scripts): a header (Title, About, Interval), then steps
+between lines of ---; ## starts a section, @memory makes a memory, @pause 15 waits; {name}, {user}, {model},
+{context}, {date}, {birthday} are filled in. New script... and Edit... in the tab (editing a built-in one saves your
+own copy).
+
 Your own files are never changed: each Companion gets copies of Mind L1-L6 in
 Local Storage\Projects\AI LLM Txt Files\Companions\<companion>\ - plain text in the same format, so you can still
 read, edit or copy them by hand (Mind > View or edit the mind files). Beside them: Chats\<date>.txt (every

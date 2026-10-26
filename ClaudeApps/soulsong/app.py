@@ -17,7 +17,7 @@ from . import companion as C
 from .mind import KINDS, LEVELS, Mind
 from .paths import companions, project
 
-COLOURS = {"user": "#1F4E99", "companion": "#5B2A86", "system": "#7A7A7A", "memory": "#6B5300", "request": "#9A9A9A"}
+COLOURS = {"guide": "#2E7D5B", "user": "#1F4E99", "companion": "#5B2A86", "system": "#7A7A7A", "memory": "#6B5300", "request": "#9A9A9A"}
 
 
 # ---- the model, through Kithylin AI's engine ----------------------------------------------------------------------
@@ -248,6 +248,7 @@ class SoulAndSong(QWidget):
         self.tabs.addTab(self._self_tab(), "Self")
         self.tabs.addTab(self._events_tab(), "Events")
         self.tabs.addTab(self._roadmaps_tab(), "Roadmaps")
+        self.tabs.addTab(self._automation_tab(), "Automation")
         self.tabs.addTab(self._settings_tab(), "Settings")
         self.tabs.setMinimumWidth(320)
         split.addWidget(self.tabs)
@@ -261,6 +262,12 @@ class SoulAndSong(QWidget):
         self.panel_timer = QTimer(self)
         self.panel_timer.timeout.connect(self.refresh_panel)
         self.panel_timer.start(2000)
+        from .automation import Runner
+        self.runner = Runner(lambda: self.comp, on_status=lambda s: self._line("system", s))
+        self.auto_timer = QTimer(self)
+        self.auto_timer.timeout.connect(self._auto_tick)
+        self.auto_timer.start(1000)
+        self._auto_fill()
         self.fill_companions()
 
     # ---- tabs ----
@@ -405,6 +412,192 @@ class SoulAndSong(QWidget):
         bb.rejected.connect(d.reject)
         v.addWidget(bb)
         d.exec()
+
+    def _automation_tab(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+        note = QLabel("Guided sessions: a script fed to your Companion slowly, a prompt every few minutes, for "
+                      "hours - its memories made, reflected on and distilled as they fill. You can join in any "
+                      "time; it waits for you.")
+        note.setWordWrap(True)
+        v.addWidget(note)
+        self.auto_list = QListWidget()
+        self.auto_list.setSelectionMode(QListWidget.ExtendedSelection)
+        self.auto_list.setWordWrap(True)
+        self.auto_list.currentItemChanged.connect(lambda *_: self._auto_about())
+        v.addWidget(self.auto_list, 2)
+        self.auto_about = QLabel()
+        self.auto_about.setWordWrap(True)
+        self.auto_about.setStyleSheet("color:#555")
+        v.addWidget(self.auto_about)
+        row = QHBoxLayout()
+        for label, slot in (("New script...", self._auto_new), ("Edit...", self._auto_edit),
+                            ("Open the scripts folder", self._auto_folder)):
+            b = QPushButton(label)
+            b.clicked.connect(slot)
+            row.addWidget(b)
+        v.addLayout(row)
+        f = QFormLayout()
+        self.auto_interval = QDoubleSpinBox()
+        self.auto_interval.setRange(0.5, 60)
+        self.auto_interval.setValue(5)
+        self.auto_interval.setSuffix(" minutes")
+        f.addRow("A prompt every:", self.auto_interval)
+        self.auto_process = QCheckBox("Work the memory banks as they fill (7:7:7)")
+        self.auto_process.setToolTip("Reflect and distil as soon as L2 holds seven memories, and hold Memory Day "
+                                     "as soon as L3 does - instead of waiting for the day to end.")
+        self.auto_process.setChecked(True)
+        f.addRow(self.auto_process)
+        v.addLayout(f)
+        row = QHBoxLayout()
+        self.auto_start = QPushButton("Start the selected")
+        self.auto_start.clicked.connect(self._auto_start)
+        self.auto_pause = QPushButton("Pause")
+        self.auto_pause.clicked.connect(self._auto_pause)
+        self.auto_stop = QPushButton("Stop")
+        self.auto_stop.clicked.connect(lambda: (self.runner.stop(), self._auto_refresh()))
+        row.addWidget(self.auto_start)
+        row.addWidget(self.auto_pause)
+        row.addWidget(self.auto_stop)
+        v.addLayout(row)
+        self.auto_state = QLabel("Nothing playing.")
+        self.auto_state.setWordWrap(True)
+        v.addWidget(self.auto_state)
+        self.auto_bar = QProgressBar()
+        self.auto_bar.setFormat("%v / %m steps")
+        v.addWidget(self.auto_bar)
+        return w
+
+    def _auto_fill(self):
+        from . import automation
+        keep = {i.data(Qt.UserRole) for i in self.auto_list.selectedItems()}
+        self.auto_list.clear()
+        interval = self.auto_interval.value()
+        for s in automation.scripts():
+            item = QListWidgetItem(f"{s.title}  -  {s.prompts()} prompts, about {s.hours(interval):.1f} hours"
+                                   + ("" if s.builtin else "  (yours)"))
+            item.setData(Qt.UserRole, str(s.path))
+            item.setToolTip(s.about)
+            self.auto_list.addItem(item)
+            item.setSelected(str(s.path) in keep)
+
+    def _auto_about(self):
+        item = self.auto_list.currentItem()
+        if item is None:
+            self.auto_about.clear()
+            return
+        from . import automation
+        try:
+            self.auto_about.setText(automation.Script(item.data(Qt.UserRole)).about)
+        except OSError:
+            self.auto_about.clear()
+
+    def _auto_start(self):
+        if self.comp is None or not self.brain.engine.ready:
+            self._line("system", "Load a model first: the session starts once your Companion is ready.")
+            return
+        paths = [i.data(Qt.UserRole) for i in self.auto_list.selectedItems()]
+        if not paths and self.auto_list.currentItem() is not None:
+            paths = [self.auto_list.currentItem().data(Qt.UserRole)]
+        if not paths:
+            self._line("system", "Pick a script (or several, with Ctrl) in the list first.")
+            return
+        order = [self.auto_list.item(i).data(Qt.UserRole) for i in range(self.auto_list.count())]
+        paths.sort(key=order.index)
+        self.runner.start(paths, self.auto_interval.value(), self.auto_process.isChecked())
+        self._auto_refresh()
+
+    def _auto_pause(self):
+        if self.runner.paused:
+            self.runner.resume()
+        else:
+            self.runner.pause()
+        self._auto_refresh()
+
+    def _auto_tick(self):
+        if self.comp is not None and self.brain.engine.ready:
+            self.runner.tick()
+        self._auto_refresh()
+
+    def _auto_refresh(self):
+        r = self.runner
+        self.auto_pause.setText("Resume" if r.paused else "Pause")
+        self.auto_pause.setEnabled(r.running)
+        self.auto_stop.setEnabled(r.running)
+        pr = r.progress() if r.running else None
+        if pr is None:
+            self.auto_state.setText("Nothing playing.")
+            self.auto_bar.setRange(0, 1)
+            self.auto_bar.setValue(0)
+            return
+        title, section, step, steps, n, total = pr
+        left = r.seconds_left()
+        when = ("paused" if r.paused else "waiting for your Companion" if self.comp and not self.comp.idle()
+                else f"next prompt in {left // 60}:{left % 60:02d}" if left is not None else "")
+        self.auto_state.setText(f"<b>{html.escape(title)}</b>" + (f" ({n} of {total})" if total > 1 else "")
+                                + (f" - {html.escape(section)}" if section else "") + f"<br>{when}")
+        self.auto_bar.setRange(0, max(1, steps))
+        self.auto_bar.setValue(min(step, steps))
+
+    def _auto_new(self):
+        from . import automation
+        folder = automation.user_scripts()
+        folder.mkdir(parents=True, exist_ok=True)
+        n = 1
+        while (folder / f"My script {n}.txt").exists():
+            n += 1
+        path = folder / f"My script {n}.txt"
+        path.write_text(automation.NEW_SCRIPT, encoding="utf-8")
+        self._auto_fill()
+        self._auto_editor(path)
+
+    def _auto_edit(self):
+        item = self.auto_list.currentItem()
+        if item is not None:
+            from pathlib import Path
+            self._auto_editor(Path(item.data(Qt.UserRole)))
+
+    def _auto_editor(self, path):
+        from . import automation
+        builtin = path.parent == automation.BUILT_IN
+        d = QDialog(self)
+        d.setWindowTitle(f"Script: {path.stem}")
+        d.resize(760, 600)
+        v = QVBoxLayout(d)
+        v.addWidget(QLabel("A header (Title, About, Interval), then steps separated by lines of three dashes (---). "
+                           "## starts a section; @memory makes a memory; @pause 15 waits 15 minutes. {name}, {user}, "
+                           "{model}, {context}, {date} and {birthday} are filled in."
+                           + ("<br><b>This is a built-in script: saving keeps your copy in your own scripts "
+                              "folder.</b>" if builtin else "")))
+        text = QPlainTextEdit(path.read_text(encoding="utf-8"))
+        text.setFont(QFont("Consolas", 10))
+        v.addWidget(text, 1)
+        bb = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+
+        def save():
+            target = path
+            if builtin:
+                folder = automation.user_scripts()
+                folder.mkdir(parents=True, exist_ok=True)
+                target = folder / f"{path.stem} (my copy).txt"
+            target.write_text(text.toPlainText(), encoding="utf-8")
+            d.accept()
+            self._auto_fill()
+        bb.accepted.connect(save)
+        bb.rejected.connect(d.reject)
+        v.addWidget(bb)
+        d.exec()
+
+    def _auto_folder(self):
+        from . import automation
+        folder = automation.user_scripts()
+        folder.mkdir(parents=True, exist_ok=True)
+        try:
+            from claudecore import host
+            host.open_folder(self.desktop, folder)
+        except Exception:
+            import os
+            os.startfile(str(folder)) if hasattr(os, "startfile") else None
 
     def _events_tab(self):
         w = QWidget()
@@ -577,6 +770,8 @@ class SoulAndSong(QWidget):
         self.refresh_roadmaps()
         self.refresh_panel()
         self.refresh_self()
+        self.runner.restore()
+        self._auto_refresh()
         self.load_model()
 
     def load_model(self):
@@ -648,13 +843,15 @@ class SoulAndSong(QWidget):
             self._line("system", "The model is still loading - one moment.")
             return
         self.composer.clear()
+        self.runner.user_spoke()
         self.comp.say(text)
 
     def _line(self, kind, text):
         self.typing.clear() if kind == "companion" else None
         who = ""
         if self.comp is not None:
-            who = (self.comp.cfg.get("user_name") or "You") if kind == "user" else self.comp.name
+            who = ("Guided session" if kind == "guide" else (self.comp.cfg.get("user_name") or "You")
+                   if kind == "user" else self.comp.name)
         self.chat.append(_html(kind, who, text))
         self.chat.verticalScrollBar().setValue(self.chat.verticalScrollBar().maximum())
         self.fill_names()
@@ -812,6 +1009,7 @@ class SoulAndSong(QWidget):
 
     def shutdown(self):
         self.ticker.stop()
+        self.auto_timer.stop()
         self.panel_timer.stop()
         self.brain.shutdown()
         from . import recall
