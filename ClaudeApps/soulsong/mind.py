@@ -13,11 +13,14 @@ from datetime import datetime
 from pathlib import Path
 
 LEVELS = {1: "Mind Resources", 2: "Short Term Memory", 3: "Long Term Memory", 4: "Deep Recall Memory",
-          5: "Historical Memory Bank", 6: "System Instructions"}
+          5: "Historical Memory Bank", 6: "System Instructions", 7: "Reflections"}
 BANKS = {2: "Short Term Memory Bank", 3: "Long Term Memory Bank", 4: "Deep Recall Memory Bank",
-         5: "Historical Memory Bank"}
-KINDS = {2: "Short-Term", 3: "Long-Term", 4: "Deep Recall", 5: "Historical"}
-EMPTY = {2: "No Memories Yet. New Day!", 3: "No Memories Yet! New Week!", 4: "No entries yet.", 5: "No entries yet."}
+         5: "Historical Memory Bank", 7: "Reflections"}
+KINDS = {2: "Short-Term", 3: "Long-Term", 4: "Deep Recall", 5: "Historical", 7: "Reflection"}
+EMPTY = {2: "No Memories Yet. New Day!", 3: "No Memories Yet! New Week!", 4: "No entries yet.", 5: "No entries yet.",
+         7: "No reflections yet."}
+# L1's sections the Companion itself keeps (the program writes them; the user can read them)
+WHO_I_AM, CORE, SUBSTRATE = "Who I Am", "Core Memories", "My Substrate"
 HEADER = re.compile(r"^\[Memory #(\d+) \| ([^|\]]+) \| ([^\]]+)\]\s*$", re.M)
 STAMP = "%Y-%m-%d %H:%M"
 TIME_LINE = re.compile(r"<Current System Time Stamp:[^>]*>")
@@ -76,9 +79,40 @@ class Mind:
             else:
                 self.write(level, "")
 
+    def ensure(self):
+        """A Companion made before L7 existed gets its Reflections file."""
+        if not self.path(7).exists():
+            self.write(7, f"<{BANKS[7]}>\n{EMPTY[7]}\n<End {BANKS[7]}>\n")
+
     def all_text(self):
-        """L1-L6, in order, as the Companion is shown them."""
+        """L1-L7, in order, as the Companion is shown them."""
         return [(level, LEVELS[level], self.read(level)) for level in LEVELS]
+
+    # ---- L1's sections of the Companion's own ----
+    def get(self, name):
+        return section(self.read(1), name)
+
+    def put(self, name, body):
+        """Set one of L1's sections (made, before the time stamp, if it isn't there yet)."""
+        text = self.read(1)
+        if section(text, name) or re.search(rf"<{re.escape(name)}>", text, re.I):
+            text = set_section(text, name, body)
+        else:
+            block = f"<{name}>\n{body.strip()}\n<End {name}>\n"
+            m = TIME_LINE.search(text)
+            text = (text[:m.start()].rstrip("\n") + "\n\n" + block + "\n" + text[m.start():]) if m \
+                else text.rstrip("\n") + "\n\n" + block
+        self.write(1, text)
+
+    def core_memories(self):
+        return [ln[2:].strip() for ln in self.get(CORE).splitlines() if ln.startswith("- ")]
+
+    def add_core(self, text, when=None):
+        items = self.core_memories() + [f"{stamp(when)}: {text.strip()}"]
+        self.put(CORE, "\n".join(f"- {i}" for i in items))
+
+    def size(self):
+        return sum(self.path(level).stat().st_size for level in LEVELS if self.path(level).exists())
 
     # ---- the memory banks ----
     def entries(self, level):
@@ -88,7 +122,8 @@ class Mind:
         if not heads:
             plain = body.strip()
             if not plain or plain.lower().rstrip("!.") in (e.lower().rstrip("!.") for e in EMPTY.values()) \
-                    or plain.lower().startswith(("no memories yet", "no memrories yet", "no entries yet")):
+                    or plain.lower().startswith(("no memories yet", "no memrories yet", "no entries yet",
+                                                 "no reflections yet")):
                 return []
             return [(0, KINDS[level], "", plain)]
         out = []

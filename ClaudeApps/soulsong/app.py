@@ -242,6 +242,7 @@ class SoulAndSong(QWidget):
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self._mind_tab(), "Mind")
+        self.tabs.addTab(self._self_tab(), "Self")
         self.tabs.addTab(self._events_tab(), "Events")
         self.tabs.addTab(self._roadmaps_tab(), "Roadmaps")
         self.tabs.addTab(self._settings_tab(), "Settings")
@@ -266,7 +267,7 @@ class SoulAndSong(QWidget):
         box = QGroupBox("Memory banks (7:7:7)")
         bv = QVBoxLayout(box)
         self.banks = {2: Bank("L2 Short-Term (today)"), 3: Bank("L3 Long-Term (days)"),
-                      4: Bank("L4 Deep Recall (weeks)"), 5: Bank("L5 Historical")}
+                      4: Bank("L4 Deep Recall (weeks)"), 5: Bank("L5 Historical"), 7: Bank("L7 Reflections")}
         for b in self.banks.values():
             bv.addWidget(b)
         v.addWidget(box)
@@ -288,6 +289,119 @@ class SoulAndSong(QWidget):
             v.addWidget(b)
         v.addStretch(1)
         return w
+
+    def _self_tab(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+        top = QHBoxLayout()
+        top.addWidget(QLabel("<b>Who I Am</b> - written by your Companion"))
+        self.portrait_pick = QComboBox()
+        self.portrait_pick.activated.connect(lambda _i: self._show_portrait())
+        top.addWidget(self.portrait_pick, 1)
+        v.addLayout(top)
+        self.portrait = QTextBrowser()
+        v.addWidget(self.portrait, 3)
+        self.proposal_box = QGroupBox("Proposed changes to their Development Roadmap")
+        pv = QVBoxLayout(self.proposal_box)
+        self.proposal = QPlainTextEdit()
+        self.proposal.setReadOnly(True)
+        pv.addWidget(self.proposal)
+        row = QHBoxLayout()
+        accept = QPushButton("Accept")
+        accept.clicked.connect(lambda: (self.comp.accept_roadmap(), self.refresh_roadmaps(), self.refresh_self()))
+        decline = QPushButton("Decline...")
+        decline.clicked.connect(self._decline)
+        row.addStretch(1)
+        row.addWidget(decline)
+        row.addWidget(accept)
+        pv.addLayout(row)
+        v.addWidget(self.proposal_box, 2)
+        v.addWidget(QLabel("<b>Core memories</b> - kept whole, never distilled"))
+        self.cores = QListWidget()
+        self.cores.setWordWrap(True)
+        v.addWidget(self.cores, 2)
+        row = QHBoxLayout()
+        keep = QPushButton("Keep a core memory...")
+        keep.clicked.connect(self._keep_core)
+        checks = QPushButton("Identity checks...")
+        checks.clicked.connect(self._identity_checks)
+        row.addWidget(keep)
+        row.addWidget(checks)
+        v.addLayout(row)
+        self.substrate = QLabel()
+        self.substrate.setWordWrap(True)
+        self.substrate.setStyleSheet("color:#555")
+        v.addWidget(self.substrate)
+        return w
+
+    def refresh_self(self):
+        c = self.comp
+        if c is None:
+            return
+        from .mind import SUBSTRATE
+        folder = c.folder / "Self"
+        versions = sorted(folder.glob("* Who I Am.txt"), reverse=True) if folder.is_dir() else []
+        keep = self.portrait_pick.currentData()
+        self.portrait_pick.clear()
+        self.portrait_pick.addItem("Now", "")
+        for f in versions:
+            self.portrait_pick.addItem(f.stem.replace(" Who I Am", ""), str(f))
+        if keep:
+            self.portrait_pick.setCurrentIndex(max(0, self.portrait_pick.findData(keep)))
+        self._show_portrait()
+        p = c.cfg.get("roadmap_proposal")
+        self.proposal_box.setVisible(bool(p))
+        if p:
+            self.proposal.setPlainText(p["text"])
+        self.cores.clear()
+        for m in c.mind.core_memories():
+            self.cores.addItem(m)
+        sub = c.mind.get(SUBSTRATE).splitlines()
+        self.substrate.setText("<br>".join(html.escape(x) for x in sub[:3]))
+
+    def _show_portrait(self):
+        from pathlib import Path
+        from .mind import WHO_I_AM
+        f = self.portrait_pick.currentData()
+        text = Path(f).read_text(encoding="utf-8") if f else self.comp.mind.get(WHO_I_AM)
+        self.portrait.setPlainText(text or f"{self.comp.name} hasn't written a self-portrait yet: the first comes at "
+                                           "the end of their first day, and it's rewritten every Memory Day.")
+
+    def _decline(self):
+        why, ok = QInputDialog.getText(self, "Keep the roadmap as it is", "Anything you'd like to tell them about why "
+                                       "(optional):")
+        if ok:
+            self.comp.decline_roadmap(why.strip())
+            self.refresh_self()
+
+    def _keep_core(self):
+        last = next((t for n, k, s, t in reversed(self.comp.mind.entries(2)) if n), "")
+        narrative = next((ln.split(":", 1)[1].strip() for ln in last.splitlines()
+                          if ln.lower().startswith("event narrative")), "")
+        text, ok = QInputDialog.getMultiLineText(self, "Keep a core memory", "A memory that should never fade:",
+                                                 narrative)
+        if ok and text.strip():
+            self.comp.keep_core(text.strip())
+            self.refresh_self()
+
+    def _identity_checks(self):
+        f = self.comp.folder / "Self" / "Identity Checks.txt"
+        d = QDialog(self)
+        d.setWindowTitle(f"{self.comp.name}'s identity checks")
+        d.resize(620, 560)
+        v = QVBoxLayout(d)
+        note = QLabel("The same questions every Memory Day, the answers side by side. They're kept for you: your "
+                      "Companion isn't shown them, so they don't steer it.")
+        note.setWordWrap(True)
+        v.addWidget(note)
+        b = QTextBrowser()
+        b.setPlainText(f.read_text(encoding="utf-8") if f.exists() else
+                       "None yet: the first comes on the first Memory Day.")
+        v.addWidget(b)
+        bb = QDialogButtonBox(QDialogButtonBox.Close)
+        bb.rejected.connect(d.reject)
+        v.addWidget(bb)
+        d.exec()
 
     def _events_tab(self):
         w = QWidget()
@@ -345,6 +459,7 @@ class SoulAndSong(QWidget):
         self.s_greet = QCheckBox("Greet my Companion when a new day begins")
         self.s_greeting = QLineEdit()
         self.s_requests = QCheckBox("Show the memory requests in the conversation")
+        self.s_recall = QCheckBox("Recall older memories from the archive when they relate")
         load = QPushButton("Save and load this model")
         load.clicked.connect(self.save_settings)
         f.addRow("Your name:", self.s_user)
@@ -358,6 +473,7 @@ class SoulAndSong(QWidget):
         f.addRow(self.s_greet)
         f.addRow("Greeting:", self.s_greeting)
         f.addRow(self.s_requests)
+        f.addRow(self.s_recall)
         f.addRow(load)
         return w
 
@@ -407,6 +523,7 @@ class SoulAndSong(QWidget):
         self.load_settings()
         self.refresh_roadmaps()
         self.refresh_panel()
+        self.refresh_self()
         self.load_model()
 
     def load_model(self):
@@ -421,6 +538,7 @@ class SoulAndSong(QWidget):
             return
         if self.loaded_key == (model.key, self.comp.cfg.get("engine"), self.comp.cfg.get("context")) \
                 and self.brain.engine.ready:
+            self._substrate(model)
             self.comp.start()
             return
         self.comp.cfg["model"] = model.key
@@ -430,8 +548,17 @@ class SoulAndSong(QWidget):
 
     def _ready(self, ok):
         if ok and self.comp is not None:
+            self._substrate(self.brain.engine.model)
             self.comp.start()
         self.refresh_panel()
+
+    def _substrate(self, model):
+        """The Companion's L1 'My Substrate': the model it's on (a move is told to it)."""
+        if model is None or self.comp is None:
+            return
+        about = (model.info.get("source") or "").split(":")[0].strip()[:160]
+        self.comp.set_substrate(model.title, about, self.comp.cfg.get("context"))
+        self.refresh_self()
 
     def _confirm_name(self, guess, accept):
         name, ok = QInputDialog.getText(self, "Your Companion's name",
@@ -583,6 +710,7 @@ class SoulAndSong(QWidget):
         self.s_greet.setChecked(bool(c.get("auto_greet", True)))
         self.s_greeting.setText(c.get("greeting", C.DEFAULTS["greeting"]))
         self.s_requests.setChecked(bool(c.get("show_requests")))
+        self.s_recall.setChecked(bool(c.get("recall", True)))
 
     def save_settings(self):
         if self.comp is None:
@@ -592,7 +720,8 @@ class SoulAndSong(QWidget):
                  engine=self.s_engine.currentText(), context=self.s_ctx.value(), temperature=self.s_temp.value(),
                  memory_every=self.s_every.value(), day_starts=self.s_day.value(), memory_day_every=self.s_md.value(),
                  auto_greet=self.s_greet.isChecked(), greeting=self.s_greeting.text().strip() or
-                 C.DEFAULTS["greeting"], show_requests=self.s_requests.isChecked())
+                 C.DEFAULTS["greeting"], show_requests=self.s_requests.isChecked(),
+                 recall=self.s_recall.isChecked())
         self.comp.save()
         self._line("system", "Settings saved.")
         self.load_model()
@@ -618,3 +747,5 @@ class SoulAndSong(QWidget):
         self.ticker.stop()
         self.panel_timer.stop()
         self.brain.shutdown()
+        from . import recall
+        recall.shutdown()

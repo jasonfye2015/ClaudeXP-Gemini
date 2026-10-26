@@ -25,6 +25,27 @@ does it for you:
   The model            any local model: Kithylin's own fine-tunes (Kithylin AI's Models folder) and the Timeline's
                        (Local Storage\LLM Models). Settings > Model, then Save and load this model.
 
+And the Companion's own part, for a self to emerge (the Self tab):
+
+  Who I Am             a self-portrait only the Companion writes (in L1): first at the end of its first day, then
+                       rewritten each Memory Day from its reflections and memories. Every version is kept in Self\.
+  Reflections (L7)     at each day's end: what it learned about itself - not what happened. Gathered into the
+                       portrait on Memory Day.
+  Its roadmap          on Memory Day it proposes changes to its Development Roadmap; you Accept or Decline (with a
+                       reason it's told, if you like).
+  Its own requests     a line in its reply: [remember this], [please don't remember this], [plan: YYYY-MM-DD HH:MM |
+                       what], [core: what] - the program carries them out and takes them out of the reply.
+  Core Memories        (L1) kept whole, never distilled. Its naming is the first; it can add more, and so can you.
+  Its substrate        (L1 My Substrate) the model it runs on, the context, the size of its mind, every move between
+                       models (it's told when it's moved); and how long it's been since you last spoke.
+  Recall               every memory it has ever had stays whole in an archive (recall.jsonl). When you say something
+                       that relates to an older memory no longer in its banks, that memory comes back into the
+                       conversation. Meanings come from nomic-embed-text, run on the processor (it never takes the
+                       graphics card); without it, recall matches words.
+  Identity checks      the same four questions each Memory Day (who are you, what matters, what has changed, what
+                       are you curious about), the answers kept side by side in Self\Identity Checks.txt - for you;
+                       the Companion isn't shown them, so they don't steer it.
+
 Your own files are never changed: each Companion gets copies of Mind L1-L6 in
 Local Storage\Projects\AI LLM Txt Files\Companions\<companion>\ - plain text in the same format, so you can still
 read, edit or copy them by hand (Mind > View or edit the mind files). Beside them: Chats\<date>.txt (every
