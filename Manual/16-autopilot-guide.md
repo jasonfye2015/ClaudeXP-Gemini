@@ -217,6 +217,10 @@ Whole movies, and how often he watches TV at all, are on the What he does and Da
   title bar to a clear spot before he answers. The IM windows tile from the top right of the screen, side by side
   and then a row below, instead of piling up on each other. A page or picture viewer that fills the screen is left
   alone: there's nowhere clear to go.
+- **The MUCK keeps off the TV too** (it may cover IM windows: those are the ones he moves).
+- **One message at a time.** He only answers when the last word in a conversation is theirs, so two IMs in a row
+  from someone get one answer, never a reply to himself. He won't start a new conversation with someone who
+  hasn't answered his last IM yet (for half an hour).
 - **Touching your mouse or keyboard** pauses him (the banner says "you took the mouse"). **Resume** carries on.
 - **Asleep or out**, the glow turns night blue and the banner says when he'll be back.
 - **The log** on the autopilot window, and the Furry Log (under `AUTOPILOT`), record everything he does.

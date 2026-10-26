@@ -99,6 +99,23 @@ def free_spot(area, size, others, gap=6):
     return best if best is not None else QPoint(area.left(), area.top())
 
 
+def keep_clear(ctx, frame, windows, why="Moving the window out of the way"):
+    """If `frame` sits on any of `windows`, drag it by its title bar to the spot that covers them least (when that's
+    clearly better)."""
+    if frame is None or not isValid(frame) or not frame.isVisible() or getattr(frame, "maximized", False):
+        return
+    others = [w.geometry() for w in windows if w is not None and w is not frame and isValid(w) and w.isVisible()]
+    mine = frame.geometry()
+    covered = _covered(mine, others)
+    if covered < 0.08 * mine.width() * mine.height():
+        return
+    spot = free_spot(ctx.desktop.work_area(), mine.size(), others)
+    if _covered(mine.translated(spot - mine.topLeft()), others) > covered * 0.6:
+        return                                              # nowhere much better: leave it be
+    ctx.status(why)
+    yield from ctx.hands.drag_window(frame, spot)
+
+
 def background_windows():
     """The windows a person keeps clear of IMs: the TV, the game, the MUCK - when they're up."""
     out = []
@@ -187,8 +204,8 @@ class Messengers(Leg):
                 for bid, when in list(pending.items()):
                     if now >= when:
                         del pending[bid]
-                        if bid not in world.buddies:
-                            continue
+                        if bid not in world.buddies or not self.owes_reply(world.buddies[bid]):
+                            continue                          # (already answered: nothing new from them)
                         used = budget.setdefault(bid, [0, random.randint(*self.tier(ctx, bid)["exchanges"])])
                         if used[0] >= used[1]:
                             rested[bid] = now + random.uniform(*self.tier(ctx, bid)["rest"]) * 60
@@ -212,7 +229,8 @@ class Messengers(Leg):
                     if now < when:
                         continue
                     del greet_at[bid]
-                    if bid in world.buddies and bid not in app.im_windows and bid not in pending:
+                    if (bid in world.buddies and bid not in app.im_windows and bid not in pending
+                            and not self.waiting_on(world.buddies[bid])):
                         yield from self.reply(ctx, app, bid, instruction=f"{world.buddies[bid].name} just came "
                                               "online. IM them first: one short, warm message, glad to see them.")
                         budget[bid] = [1, random.randint(*self.tier(ctx, bid)["exchanges"])]
@@ -241,6 +259,8 @@ class Messengers(Leg):
             yield from self.tidy(ctx, app, frame)
             ctx.status(f"Reading {b.name}'s IM")
             yield random.uniform(2, 6) * ctx.pace
+            if instruction is None and not self.owes_reply(b):
+                return                                      # nothing of theirs to answer: never reply to himself
             history = []
             for m in b.history.messages[-24:]:
                 if m.get("kind") == "user" and m.get("text"):
@@ -287,7 +307,7 @@ class Messengers(Leg):
             if rested.pop(bid, None) is not None:
                 greeted.discard(bid)                     # the rest is over: another conversation
             if (ctx.day.tier(bid) == "love" and bid not in greeted and bid not in pending
-                    and bid not in app.im_windows and bid not in ctx.engine.claims):
+                    and bid not in app.im_windows and bid not in ctx.engine.claims and not self.waiting_on(b)):
                 out.append(bid)
             elif bid in app.im_windows:
                 greeted.add(bid)                         # already talking
@@ -296,20 +316,33 @@ class Messengers(Leg):
     def tidy(self, ctx, app, frame):
         """If this IM window sits on the TV, the game or another IM, move it - by its title bar - to the spot that
         covers least, the IM windows tiling from the top right instead of piling up."""
-        if frame is None or not isValid(frame) or not frame.isVisible() or getattr(frame, "maximized", False):
-            return
         ims = [getattr(w, "_xp_frame", None) for w in app.im_windows.values()]
-        others = [w.geometry() for w in ims + background_windows()
-                  if w is not None and w is not frame and isValid(w) and w.isVisible()]
-        mine = frame.geometry()
-        covered = _covered(mine, others)
-        if covered < 0.08 * mine.width() * mine.height():
-            return
-        spot = free_spot(ctx.desktop.work_area(), mine.size(), others)
-        if _covered(mine.translated(spot - mine.topLeft()), others) > covered * 0.6:
-            return                                          # nowhere much better: leave it be
-        ctx.status("Moving the IM window out of the way")
-        yield from ctx.hands.drag_window(frame, spot)
+        yield from keep_clear(ctx, frame, ims + background_windows(), "Moving the IM window out of the way")
+
+    @staticmethod
+    def owes_reply(b):
+        """The last word in the conversation is theirs: an IM he hasn't answered yet."""
+        for m in reversed(b.history.messages):
+            if m.get("kind") == "contact":
+                return True
+            if m.get("kind") == "user":
+                return False
+        return False
+
+    @staticmethod
+    def waiting_on(b, minutes=30):
+        """He spoke last, within the last half hour, and they haven't answered: no second IM before they do."""
+        from datetime import datetime
+        for m in reversed(b.history.messages):
+            if m.get("kind") == "contact":
+                return False
+            if m.get("kind") == "user":
+                try:
+                    said = datetime.fromisoformat(m["ts"])
+                    return (datetime.now(said.tzinfo) - said).total_seconds() < minutes * 60
+                except (KeyError, ValueError, TypeError):
+                    return True
+        return False
 
     def close_im(self, ctx, app, bid):
         """Close a conversation's IM window, the pointer going to its close box."""
@@ -327,7 +360,7 @@ class Messengers(Leg):
         from claudeaim.engine import Presence
         world = app.world
         quiet = [b for b in world.buddies.values() if b.presence == Presence.ONLINE and b.id not in pending
-                 and b.id not in ctx.engine.claims and b.id not in app.im_windows]
+                 and b.id not in ctx.engine.claims and b.id not in app.im_windows and not self.waiting_on(b)]
         if not quiet:
             return
         weights = [self.tier(ctx, b.id)["hello"] for b in quiet]
@@ -803,6 +836,7 @@ class Muck(Leg):
                     yield from ctx.hands.take(self.key)
                     try:
                         yield from focus(ctx, frame)
+                        yield from keep_clear(ctx, frame, background_windows(), "Moving the MUCK off the TV")
                         if others:
                             room = world.room(world.player_room)
                             people = ", ".join(p.name for p in world.people_in(world.player_room)) or "nobody else"

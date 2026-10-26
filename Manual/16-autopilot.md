@@ -76,7 +76,8 @@ and each reply checked; and his love interests and close acquaintances already r
   the middle of a story and he goes back to it.
 - He keeps at most three IM windows open, closing a conversation when he lets it rest, and keeps them tidy: one
   that covers the TV, the game, the MUCK or another IM is dragged by its title bar to a clear spot, the IM windows
-  tiling from the top right.
+  tiling from the top right. The MUCK window is kept off the TV the same way. He answers only when the last word
+  in a conversation is theirs (never himself), and doesn't IM someone again who hasn't answered his last IM.
 - The screen saver stays away while he's using the computer.
 
 ## His day
