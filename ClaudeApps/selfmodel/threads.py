@@ -56,7 +56,8 @@ def say(msg):
 class Names:
     """Every contact's name, and the first word of it, for keeping names out of what's written."""
 
-    def __init__(self, names):
+    def __init__(self, names, keep=()):
+        """keep: names never hidden (yours - you're 'you', not 'a friend')."""
         words = set()
         for n in names:
             n = (n or "").strip()
@@ -65,7 +66,8 @@ class Names:
             first = re.split(r"[\s(|\-]", n)[0].strip()
             if len(first) >= 3 and first[:1].isupper():
                 words.add(first)
-        self.words = sorted(words, key=len, reverse=True)
+        kept = {k.lower() for k in keep}
+        self.words = sorted((w for w in words if w.lower() not in kept), key=len, reverse=True)
         self.pattern = re.compile("|".join(re.escape(w) for w in self.words)) if self.words else None
 
     def hide(self, text, as_="a friend"):
@@ -186,7 +188,7 @@ def _free_port():
 
 
 class Server:
-    def __init__(self, model, engine, parallel):
+    def __init__(self, model, engine, parallel, slot=8192):
         folder = LLM / "models" / model
         ggufs = sorted(f for f in folder.glob("*.gguf") if not f.name.lower().startswith(("mmproj", "mtp")))
         if not ggufs:
@@ -201,7 +203,15 @@ class Server:
             raise SystemExit("No llama-server found in Local Storage/LLM Models/llama.cpp")
         self.port = _free_port()
         args = [str(exe), "--host", "127.0.0.1", "--port", str(self.port), "-m", str(ggufs[0]), "-c",
-                str(8192 * parallel), "--parallel", str(parallel), "-ngl", "99", "--jinja", "--flash-attn", "on"]
+                str(slot * parallel), "--parallel", str(parallel), "-ngl", "99", "--jinja", "--flash-attn", "on",
+                "--cache-type-k", "q8_0", "--cache-type-v", "q8_0"]
+        try:
+            info = json.loads((folder / "info.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            info = {}
+        if info.get("chat_template"):              # a file without its own template (NemoMix: ChatML)
+            args += ["--chat-template", info["chat_template"]]
+        self.stop_words = list(info.get("stop") or [])
         say(f"Starting {model} on the {exe.parent.name} engine...")
         self.log = open(LOG, "w", encoding="utf-8", errors="replace")
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -224,6 +234,8 @@ class Server:
     def ask(self, system, user, max_tokens=400, temperature=0.2):
         body = {"messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
                 "temperature": temperature, "max_tokens": max_tokens, "response_format": {"type": "json_object"}}
+        if self.stop_words:
+            body["stop"] = self.stop_words
         req = urllib.request.Request(f"http://127.0.0.1:{self.port}/v1/chat/completions",
                                      data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
         try:
@@ -419,7 +431,7 @@ def main(argv=None):
     chats = [c for c in data.get("chats", {}).get("list", []) if c.get("type") == "personal_chat"]
     newest = max((int(m.get("date_unixtime") or 0) for c in chats for m in c.get("messages", [])[-1:]), default=0)
     since = newest - args.months * 30 * 86400
-    names = Names([c.get("name") for c in chats] + [me])
+    names = Names([c.get("name") for c in chats], keep=[me])
     convs = []
     for chat in chats:
         prev = None

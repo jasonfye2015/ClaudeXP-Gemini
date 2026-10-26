@@ -429,6 +429,62 @@ class DayTab(QScrollArea):
         self._filling = False
 
 
+# ---- a look through the logs ---------------------------------------------------------------------------------------
+class MinerRun:
+    """Runs one of the selfmodel look-throughs (python -m <module>) in the background - not while Kithylin is at the
+    computer, as it needs the graphics card - showing its last line of progress; done() says how it went."""
+
+    def __init__(self, parent, module, log, button, status, pilot, done):
+        self.module, self.log, self.button, self.status, self.pilot, self.done = (module, log, button, status, pilot,
+                                                                                  done)
+        self.proc = None
+        button.clicked.connect(self.start)
+        self.timer = QTimer(parent, interval=3000, timeout=self._poll)
+        self.timer.start()
+
+    def start(self):
+        p = self.pilot()
+        if p is not None and p.running:
+            self.status.setText("Stop Kithylin first: the look-through needs the graphics card to itself.")
+            return
+        if self.proc is not None and self.proc.poll() is None:
+            return
+        exe = sys.executable
+        if exe.lower().endswith("pythonw.exe"):
+            exe = exe[:-len("pythonw.exe")] + "python.exe"
+        try:
+            self.log.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.log, "w", encoding="utf-8") as out:
+                self.proc = subprocess.Popen([exe, "-m", self.module], cwd=str(dayc.TIMELINE / "ClaudeApps"),
+                                             stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                             creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+        except OSError as e:
+            self.status.setText(f"Couldn't start it: {e}")
+            return
+        self.button.setEnabled(False)
+        self.status.setText("Looking through your Telegram logs (this takes a while)...")
+
+    def _poll(self):
+        if self.proc is None:
+            return
+        try:
+            last = [ln for ln in self.log.read_text(encoding="utf-8", errors="replace").splitlines()
+                    if ln.strip()][-1:]
+        except OSError:
+            last = []
+        if self.proc.poll() is None:
+            if last:
+                self.status.setText(last[0][:140])
+            return
+        code, self.proc = self.proc.returncode, None
+        self.button.setEnabled(True)
+        if code != 0:
+            self.status.setText("It stopped: " + (last[0][:120] if last else f"exit code {code}")
+                                + f" (see {self.log.name})")
+            return
+        self.status.setText(self.done())
+
+
 # ---- threads ------------------------------------------------------------------------------------------------------
 class ThreadsTab(QWidget):
     """The threads list, one thread's editor, the mined suggestions and the style card."""
@@ -436,7 +492,6 @@ class ThreadsTab(QWidget):
     def __init__(self, day, legs, pilot):
         super().__init__()
         self.day, self.legs, self.pilot = day, legs, pilot
-        self.miner = None
         added = day.merge_mined()
         col = QVBoxLayout(self)
         intro = QLabel("The stories and bits of his life he brings up: at most one per conversation, and a follow-up "
@@ -548,7 +603,6 @@ class ThreadsTab(QWidget):
         self.mine_btn.setToolTip("Runs selfmodel.threads: reads the recent Telegram export, summarises conversations "
                                  "with a model on the graphics card and groups them into suggested threads and a "
                                  "style card. Takes a while; Kithylin shouldn't be at the computer meanwhile.")
-        self.mine_btn.clicked.connect(self._mine)
         row.addWidget(self.mine_btn)
         sl.addLayout(row)
         self.mine_status = QLabel()
@@ -561,8 +615,8 @@ class ThreadsTab(QWidget):
         self._show_style()
         if added:
             self.mine_status.setText(f"{added} new suggestion{'s' if added != 1 else ''} from your logs.")
-        self.timer = QTimer(self, interval=3000, timeout=self._poll)
-        self.timer.start()
+        self.runner = MinerRun(self, "selfmodel.threads", dayc.MINED_FILE.with_name("threads.log"), self.mine_btn,
+                               self.mine_status, pilot, self._mined)
 
     # ---- the list ---------------------------------------------------------------------------------------------------
     def fill(self, *_):
@@ -706,52 +760,11 @@ class ThreadsTab(QWidget):
                          + (f" (built {self.day.data.get('style_built')})" if self.day.data.get("style_built") else ""))
         self.style_text.setText("\n".join(lines))
 
-    def _mine(self):
-        p = self.pilot()
-        if p is not None and p.running:
-            self.mine_status.setText("Stop Kithylin first: the look-through needs the graphics card to itself.")
-            return
-        if self.miner is not None and self.miner.poll() is None:
-            return
-        apps = dayc.TIMELINE / "ClaudeApps"
-        log = dayc.MINED_FILE.with_name("threads.log")
-        exe = sys.executable
-        if exe.lower().endswith("pythonw.exe"):
-            exe = exe[:-len("pythonw.exe")] + "python.exe"
-        try:
-            log.parent.mkdir(parents=True, exist_ok=True)
-            with open(log, "w", encoding="utf-8") as out:
-                self.miner = subprocess.Popen([exe, "-m", "selfmodel.threads"], cwd=str(apps), stdout=out,
-                                              stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                              creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
-        except OSError as e:
-            self.mine_status.setText(f"Couldn't start it: {e}")
-            return
-        self.mine_btn.setEnabled(False)
-        self.mine_status.setText("Looking through your Telegram logs (this takes a while)...")
-
-    def _poll(self):
-        if self.miner is None:
-            return
-        log = dayc.MINED_FILE.with_name("threads.log")
-        try:
-            last = [ln for ln in log.read_text(encoding="utf-8", errors="replace").splitlines() if ln.strip()][-1:]
-        except OSError:
-            last = []
-        if self.miner.poll() is None:
-            if last:
-                self.mine_status.setText(last[0][:140])
-            return
-        code, self.miner = self.miner.returncode, None
-        self.mine_btn.setEnabled(True)
-        if code != 0:
-            self.mine_status.setText("It stopped: " + (last[0][:120] if last else f"exit code {code}")
-                                     + f" (see {log.name})")
-            return
+    def _mined(self):
         added = self.day.merge_mined()
         self.fill()
         self._show_style()
-        self.mine_status.setText(f"Done: {added} new suggestion{'s' if added != 1 else ''}.")
+        return f"Done: {added} new suggestion{'s' if added != 1 else ''}."
 
 
 # ---- interests ----------------------------------------------------------------------------------------------------
@@ -865,3 +878,231 @@ class InterestsTab(QWidget):
                 if target.item(k).data(Qt.UserRole) == cid:
                     target.setCurrentRow(k)
             return
+
+
+# ---- RP tracks ----------------------------------------------------------------------------------------------------
+class RPTracksTab(QWidget):
+    """The roleplay scenes from his own logs he follows - and leads - in a roleplay."""
+
+    def __init__(self, day, pilot):
+        super().__init__()
+        self.day, self.pilot = day, pilot
+        added = day.merge_tracks()
+        col = QVBoxLayout(self)
+        intro = QLabel("Scenes from your own roleplays, as tracks: a premise, who's who, and the beats from opening to "
+                       "wind-down. In a roleplay he follows one and leads it, a beat at a time, instead of waiting on "
+                       "his partner. Who gets which follows the Interests tab.")
+        intro.setWordWrap(True)
+        col.addWidget(intro)
+        opts = QHBoxLayout()
+        self.use = QCheckBox("Follow a track in roleplays")
+        self.use.setChecked(bool(day.data.get("rp_use_tracks", True)))
+        self.use.toggled.connect(lambda on: self._setting("rp_use_tracks", on))
+        opts.addWidget(self.use)
+        self.adult = QCheckBox("Adult tracks too")
+        self.adult.setChecked(bool(day.data.get("rp_adult", True)))
+        self.adult.toggled.connect(lambda on: self._setting("rp_adult", on))
+        opts.addWidget(self.adult)
+        opts.addStretch(1)
+        self.count = QLabel()
+        opts.addWidget(self.count)
+        col.addLayout(opts)
+        split = QSplitter(Qt.Vertical)
+        top = QWidget()
+        tv = QVBoxLayout(top)
+        tv.setContentsMargins(0, 0, 0, 0)
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels(["Track", "Kind", "For", "Beats", "Used"])
+        self.tree.setRootIsDecorated(False)
+        self.tree.setAlternatingRowColors(True)
+        for c, w in enumerate((300, 70, 110, 50)):
+            self.tree.setColumnWidth(c, w)
+        self.tree.currentItemChanged.connect(self._show)
+        self.tree.itemChanged.connect(self._ticked)
+        tv.addWidget(self.tree, 1)
+        buttons = QHBoxLayout()
+        for label, fn in (("New track", self._new), ("Delete", self._delete)):
+            b = QPushButton(label)
+            b.clicked.connect(fn)
+            buttons.addWidget(b)
+        buttons.addStretch(1)
+        self.mine_btn = QPushButton("Find tracks in my logs...")
+        self.mine_btn.setToolTip("Runs selfmodel.rptracks: picks the best roleplay and adult scenes from your Telegram "
+                                 "export and has a model on the graphics card write each one down as a track. "
+                                 "About ten minutes; Kithylin shouldn't be at the computer meanwhile.")
+        buttons.addWidget(self.mine_btn)
+        tv.addLayout(buttons)
+        self.mine_status = QLabel()
+        tv.addWidget(self.mine_status)
+        split.addWidget(top)
+
+        edit = QGroupBox("This track")
+        form = QFormLayout(edit)
+        self.title = QLineEdit()
+        self.title.textEdited.connect(lambda t: self._set("title", t))
+        form.addRow("Title:", self.title)
+        row = QHBoxLayout()
+        self.kind = QComboBox()
+        for k, label in dayc.TRACK_KINDS.items():
+            self.kind.addItem(label, k)
+        self.kind.currentIndexChanged.connect(lambda _i: self._set("kind", self.kind.currentData()))
+        row.addWidget(self.kind)
+        row.addWidget(QLabel("For:"))
+        self.for_ = QComboBox()
+        for k, label in dayc.TRACK_FOR.items():
+            self.for_.addItem(label, k)
+        self.for_.currentIndexChanged.connect(lambda _i: self._set("for", self.for_.currentData()))
+        row.addWidget(self.for_)
+        row.addWidget(QLabel("Tone:"))
+        self.tone = QLineEdit()
+        self.tone.textEdited.connect(lambda t: self._set("tone", t))
+        row.addWidget(self.tone, 1)
+        form.addRow("Kind:", row)
+        self.setting = QLineEdit()
+        self.setting.textEdited.connect(lambda t: self._set("setting", t))
+        form.addRow("Setting:", self.setting)
+        self.premise = QLineEdit()
+        self.premise.textEdited.connect(lambda t: self._set("premise", t))
+        form.addRow("Premise:", self.premise)
+        roles = QHBoxLayout()
+        self.his_role = QLineEdit()
+        self.his_role.setPlaceholderText("who he is")
+        self.his_role.textEdited.connect(lambda t: self._set("his_role", t))
+        self.their_role = QLineEdit()
+        self.their_role.setPlaceholderText("who they are")
+        self.their_role.textEdited.connect(lambda t: self._set("their_role", t))
+        roles.addWidget(self.his_role)
+        roles.addWidget(QLabel("and"))
+        roles.addWidget(self.their_role)
+        form.addRow("Roles:", roles)
+        self.beats = QPlainTextEdit()
+        self.beats.setPlaceholderText("One beat per line, from the opening to the wind-down; he leads toward each in "
+                                      "turn ('your partner' becomes their name)")
+        self.beats.setMinimumHeight(110)
+        self.beats.textChanged.connect(lambda: self._set("beats", self._lines(self.beats)))
+        form.addRow("Beats:", self.beats)
+        self.moves = QPlainTextEdit()
+        self.moves.setPlaceholderText("How he leads: one move per line")
+        self.moves.setFixedHeight(56)
+        self.moves.textChanged.connect(lambda: self._set("moves", self._lines(self.moves)))
+        form.addRow("His moves:", self.moves)
+        self.lines = QPlainTextEdit()
+        self.lines.setPlaceholderText("A few of his own lines from scenes like it, one per line")
+        self.lines.setFixedHeight(56)
+        self.lines.textChanged.connect(lambda: self._set("lines", self._lines(self.lines)))
+        form.addRow("His lines:", self.lines)
+        self.editor = edit
+        split.addWidget(edit)
+        split.setSizes([230, 420])
+        col.addWidget(split, 1)
+        self._current = None
+        self.runner = MinerRun(self, "selfmodel.rptracks", dayc.TRACKS_FILE.with_name("rptracks.log"),
+                               self.mine_btn, self.mine_status, pilot, self._mined)
+        self.fill()
+        if added:
+            self.mine_status.setText(f"{added} new track{'s' if added != 1 else ''} from your logs.")
+
+    @staticmethod
+    def _lines(edit):
+        return [ln.strip() for ln in edit.toPlainText().splitlines() if ln.strip()]
+
+    def _setting(self, key, value):
+        self.day.data[key] = value
+        self.day.save()
+
+    def fill(self):
+        keep = self._current
+        self.tree.blockSignals(True)
+        self.tree.clear()
+        pick = None
+        for t in self.day.data["rp_tracks"]:
+            item = QTreeWidgetItem([t.get("title", ""), dayc.TRACK_KINDS.get(t.get("kind"), t.get("kind", "")),
+                                    dayc.TRACK_FOR.get(t.get("for"), ""), str(len(t.get("beats", []))),
+                                    str(t.get("used") or 0)])
+            item.setData(0, Qt.UserRole, t["id"])
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(0, Qt.Checked if t.get("enabled", True) else Qt.Unchecked)
+            item.setToolTip(0, t.get("premise", ""))
+            self.tree.addTopLevelItem(item)
+            if t["id"] == keep:
+                pick = item
+        self.tree.blockSignals(False)
+        on = sum(1 for t in self.day.data["rp_tracks"] if t.get("enabled", True))
+        self.count.setText(f"{on} of {len(self.day.data['rp_tracks'])} switched on")
+        if pick is not None:
+            self.tree.setCurrentItem(pick)
+        elif self.tree.topLevelItemCount():
+            self.tree.setCurrentItem(self.tree.topLevelItem(0))
+        else:
+            self._show(None)
+
+    def _track(self):
+        return self.day.track(self._current) if self._current else None
+
+    def _show(self, item, *_):
+        self._current = item.data(0, Qt.UserRole) if item is not None else None
+        t = self._track()
+        self.editor.setEnabled(t is not None)
+        t = t or {}
+        self._loading = True
+        for w, key in ((self.title, "title"), (self.tone, "tone"), (self.setting, "setting"),
+                       (self.premise, "premise"), (self.his_role, "his_role"), (self.their_role, "their_role")):
+            w.setText(t.get(key, ""))
+            w.setCursorPosition(0)
+        self.kind.setCurrentIndex(max(0, self.kind.findData(t.get("kind", "roleplay"))))
+        self.for_.setCurrentIndex(max(0, self.for_.findData(t.get("for", "close"))))
+        self.beats.setPlainText("\n".join(t.get("beats", [])))
+        self.moves.setPlainText("\n".join(t.get("moves", [])))
+        self.lines.setPlainText("\n".join(t.get("lines", [])))
+        self._loading = False
+
+    def _set(self, field, value):
+        if getattr(self, "_loading", False):
+            return
+        t = self._track()
+        if t is None:
+            return
+        t[field] = value
+        self.day.save()
+        item = self.tree.currentItem()
+        if item is not None:
+            if field == "title":
+                item.setText(0, value)
+            elif field == "kind":
+                item.setText(1, dayc.TRACK_KINDS.get(value, value))
+            elif field == "for":
+                item.setText(2, dayc.TRACK_FOR.get(value, value))
+            elif field == "beats":
+                item.setText(3, str(len(value)))
+
+    def _ticked(self, item, column):
+        t = self.day.track(item.data(0, Qt.UserRole))
+        if t is not None and column == 0:
+            t["enabled"] = item.checkState(0) == Qt.Checked
+            self.day.save()
+            on = sum(1 for x in self.day.data["rp_tracks"] if x.get("enabled", True))
+            self.count.setText(f"{on} of {len(self.day.data['rp_tracks'])} switched on")
+
+    def _new(self):
+        import uuid
+        t = {"id": "you-" + uuid.uuid4().hex[:8], "title": "A new scene", "kind": "roleplay", "for": "close",
+             "setting": "", "premise": "", "his_role": "", "their_role": "", "beats": [], "moves": [], "tone": "",
+             "lines": [], "enabled": True, "used": 0, "source": "you"}
+        self.day.data["rp_tracks"].append(t)
+        self.day.save()
+        self._current = t["id"]
+        self.fill()
+        self.title.setFocus()
+        self.title.selectAll()
+
+    def _delete(self):
+        if self._current:
+            self.day.remove_track(self._current)
+            self._current = None
+            self.fill()
+
+    def _mined(self):
+        added = self.day.merge_tracks()
+        self.fill()
+        return f"Done: {added} new track{'s' if added != 1 else ''}."
+

@@ -13,6 +13,9 @@
 - Interests: who matters to him. Each contact is a love interest, a close acquaintance or a friend; the tier sets
   how quickly he answers them, how long a conversation runs, whether he IMs them first (a love interest at once when
   they come online), how likely a roleplay is, and a line in his prompt about who they are to him.
+- RP tracks: roleplay scenes from his own logs (selfmodel.rptracks), each a premise, two roles and the beats from
+  opening to wind-down. In a roleplay he follows one and leads it, a beat at a time, instead of waiting on his
+  partner; who gets which tracks follows his interests.
 - The style card: his openers, closers, reply lengths by time of day and habits, mined from his recent Telegram
   logs by selfmodel.threads, used once it has been ticked.
 
@@ -32,6 +35,9 @@ from pathlib import Path
 
 TIMELINE = Path(__file__).resolve().parents[3]
 MINED_FILE = TIMELINE / "Local Storage" / "LLM Models" / "selfmodel" / "threads.json"   # selfmodel.threads writes it
+TRACKS_FILE = MINED_FILE.with_name("rptracks.json")                                    # selfmodel.rptracks writes it
+TRACK_FOR = {"love": "Love interests", "close": "Close and love", "anyone": "Anyone"}
+TRACK_KINDS = {"adult": "Adult", "roleplay": "Roleplay"}
 DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 CELLS = 48                                  # half-hour cells in a day
@@ -193,6 +199,9 @@ class Day:
         d.setdefault("check_replies", True)
         d.setdefault("people", {})
         d.setdefault("interests", {})            # contact id -> "love" | "close" | "friend" (friend if unset)
+        for key, value in (("rp_tracks", []), ("rp_use_tracks", True), ("rp_adult", True), ("dismissed_tracks", [])):
+            if key not in d:
+                d[key] = json.loads(json.dumps(self.defaults.get(key, value)))
         d.setdefault("today", {})
         self.data = d
         self._roll_day()
@@ -400,6 +409,93 @@ class Day:
             self.save()
         return added
 
+    # ---- RP tracks ---------------------------------------------------------------------------------------------
+    def merge_tracks(self):
+        """Bring in the tracks selfmodel.rptracks found (switched on, for love interests if adult, else close
+        friends too); ones already here keep your edits, deleted ones stay gone. Returns how many are new."""
+        try:
+            found = json.loads(TRACKS_FILE.read_text(encoding="utf-8")).get("tracks", [])
+        except (OSError, ValueError, AttributeError):
+            return 0
+        have = {t.get("id") for t in self.data["rp_tracks"]} | set(self.data.get("dismissed_tracks", []))
+        settings = self.defaults.get("track_settings", {})
+        added = 0
+        for t in found:
+            if not t.get("id") or t["id"] in have:
+                continue
+            t = dict(t, used=0, last_used="")
+            t.setdefault("for", "love" if t.get("kind") == "adult" else "close")
+            t.setdefault("enabled", True)
+            t.update(settings.get(t["id"], {}))
+            self.data["rp_tracks"].append(t)
+            added += 1
+        if added:
+            self.save()
+        return added
+
+    def track(self, tid):
+        return next((t for t in self.data["rp_tracks"] if t.get("id") == tid), None)
+
+    def remove_track(self, tid):
+        t = self.track(tid)
+        if t is not None:
+            self.data.setdefault("dismissed_tracks", []).append(tid)
+            self.data["rp_tracks"].remove(t)
+            self.save()
+
+    def track_for(self, who):
+        """A track to follow in a roleplay with this person, or None: switched on, adult only if allowed, meant for
+        someone as close as they are; the less used, the likelier."""
+        if not self.data.get("rp_use_tracks", True):
+            return None
+        rank = {"love": 0, "close": 1, "friend": 2}[self.tier(who)]
+        reach = {"love": 0, "close": 1, "anyone": 2}
+        cands = [t for t in self.data["rp_tracks"] if t.get("enabled", True) and t.get("beats")
+                 and (self.data.get("rp_adult", True) or t.get("kind") != "adult")
+                 and rank <= reach.get(t.get("for"), 2)]
+        if not cands:
+            return None
+        return random.choices(cands, weights=[1.0 / (1 + int(t.get("used") or 0)) for t in cands])[0]
+
+    def track_used(self, tid):
+        t = self.track(tid)
+        if t is not None:
+            t["used"] = int(t.get("used") or 0) + 1
+            t["last_used"] = self.today_key()
+            self.save()
+
+    @staticmethod
+    def track_step(t, who, step, total):
+        """(note for his prompt, instruction for this turn) at one step of a scene `total` turns long."""
+        beats = [b for b in t.get("beats", []) if b.strip()]
+        i = min(len(beats) - 1, step * len(beats) // max(1, total))
+        lines = [f"You're playing a scene you know well, and YOU lead it: \"{t.get('title', '')}\"."]
+        if t.get("setting"):
+            lines.append(f"Setting: {t['setting']}")
+        if t.get("premise"):
+            lines.append(f"How it starts: {t['premise']}")
+        if t.get("his_role") or t.get("their_role"):
+            lines.append(f"You are {t.get('his_role') or 'yourself'}; {who} is {t.get('their_role') or 'your partner'}.")
+        lines.append("The scene, beat by beat: " + " / ".join(f"{n + 1}. {b}" for n, b in enumerate(beats)))
+        if t.get("moves"):
+            lines.append("How you lead: " + "; ".join(t["moves"]) + ".")
+        if t.get("tone"):
+            lines.append(f"Tone: {t['tone']}.")
+        if t.get("lines"):
+            lines.append("Lines you've written in scenes like this: " + " | ".join(t["lines"][:3]))
+        lines.append("Don't wait for them to decide what happens: move it forward yourself, one beat at a time, "
+                     "and react to what they do.")
+        note = "\n\n" + "\n".join(partner_is(ln, who) for ln in lines)
+        def said(text):
+            text = partner_is(text, who).strip()
+            return text if text[-1:] in ".!?" else text + "."
+        beat = said(beats[i])
+        if step >= total - 1:
+            return note, f"Bring the scene to its close: {said(beats[-1])}"
+        nxt = said(beats[min(i + 1, len(beats) - 1)])
+        return note, (f"Continue the roleplay - you lead. Now (beat {i + 1} of {len(beats)}): {beat}"
+                      + (f" Then steer toward: {nxt}" if nxt != beat else ""))
+
     def remove_thread(self, tid):
         t = self.thread(tid)
         if t is None:
@@ -558,6 +654,11 @@ REWRITE_NOTE = ("\n\n(Your first try said something that isn't true today: {why}
                 "today's facts.)")
 
 
+def partner_is(text, who):
+    """A track's partner ('your partner', 'his partner', "Kithylin's partner") as the buddy he's playing with."""
+    return re.sub(r"\b(?:your|his|Kithylin's) partner\b", who, text, flags=re.I)
+
+
 def _json_of(text):
     m = re.search(r"\{.*\}", text or "", re.S)
     if not m:
@@ -599,7 +700,7 @@ def polish(text):
 
 
 def speak(ctx, who, persona, note, history, instruction=None, max_tokens=140, max_lines=None, thread_ok=True,
-          temperature=0.9):
+          temperature=0.9, check=True):
     """Kithylin's next line as a generator step, kept to today: `text = yield from speak(...)`. The layered prompt,
     the voice, then (if the day says so) the check - one rewrite on a clash - and the claims and thread noted."""
     day = getattr(ctx.engine, "day", None)
@@ -610,7 +711,7 @@ def speak(ctx, who, persona, note, history, instruction=None, max_tokens=140, ma
     text = yield from _ask(ctx, system, history, instruction, max_tokens, max_lines, temperature)
     if not text or day is None:
         return text
-    if not day.data.get("check_replies", True):
+    if not check or not day.data.get("check_replies", True):        # (a roleplay line isn't a claim about today)
         day.talked(who)
         return polish(text)
     thread = day.thread(tid) if tid else None

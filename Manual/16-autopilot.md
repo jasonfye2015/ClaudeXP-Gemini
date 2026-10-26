@@ -10,7 +10,7 @@ things going at once, for as long as you let him. Think of it as a screen saver 
 
 ## Starting him
 
-The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Programs). The window has five tabs:
+The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Programs). The window has six tabs:
 
 - **What he does** - tick what he may do (hover over one for what it is), choose how long he stays, his pace and
   his voice, and click **Let Kithylin take over**. The window minimises itself out of his way.
@@ -21,6 +21,7 @@ The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Progra
 - **Day** - his week, today, and what's true right now (see *His day* below).
 - **Threads** - the stories and bits of his life he brings up, and his style card (see *Threads* below).
 - **Interests** - who he talks to most (see *Interests* below).
+- **RP Tracks** - roleplay scenes from your own logs that he follows, and leads (see *RP Tracks* below).
 
 Activities you add later come in ticked; anything you untick stays unticked.
 
@@ -33,7 +34,7 @@ and each reply checked; and his love interests and close acquaintances already r
 | Activity | What he does |
 |---|---|
 | **AIM** | Signs on (dialling up first if the modem's idle), answers IMs, now and then IMs someone who's online. A conversation runs its course: after a handful of exchanges he lets it rest for a while. Nearly always on |
-| **Roleplay sessions** | A proper scene with one buddy, 20-30 messages each way, in *asterisks* |
+| **Roleplay sessions** | A proper scene with one buddy, in *asterisks*, led along one of your RP tracks when one suits them; longer with a love interest |
 | **E-mail** | Opens Outlook Express, reads what's new, answers some of it, occasionally writes to someone out of the blue |
 | **The Web** | Internet Explorer: a link, a read, another link, a search now and then. The adult sites on the Furry Web only if you tick them |
 | **ClaudeTV** | Picks a channel with something on and watches to the end; whole movies if allowed |
@@ -151,6 +152,33 @@ His AIM buddies in three columns. Drag a buddy from one to another, or pick one 
 
 His schedule still comes first: at work every answer is slower, and asleep or out, the away message answers
 everyone.
+
+## RP Tracks
+
+Left to themselves, two models in a roleplay wait on each other: each reacts, neither leads. A **track** gives him the
+lead. It's one of your own scenes, written down as:
+
+- a premise and a setting;
+- who he is and who his partner is;
+- the **beats** from the opening to the wind-down, in order;
+- the moves he makes to lead it, the tone, and a few of his own lines from it for flavour.
+
+When a roleplay starts he picks a track that suits his partner. He opens the scene, and every reply after that is
+told where the scene is (beat 3 of 10) and where to steer it next. He leads toward each beat in turn, reacts to what
+his partner does, and brings the scene to its close at the end. The banner shows the track and how far in he is.
+
+- **Find tracks in my logs...** runs `selfmodel.rptracks` over your Telegram export. It picks the best roleplay and
+  adult scenes: long, full of *actions*, recent first, at most three from any one person, 36 in all. NemoMix
+  Unleashed (the residents' model) reads each one and writes it down as a track. Stop Kithylin first; it takes about
+  ten minutes. The tracks stay in `Local Storage\LLM Models\selfmodel\rptracks.json`, and the partner is never named
+  in them ("your partner" becomes whoever he's playing with).
+- **For**: who a track is for. **Love interests** only (adult tracks start here), **Close and love** (roleplay
+  tracks start here) or **Anyone**. Friends never get the love-interest tracks.
+- Tick or untick a track to switch it on or off. **Adult tracks too** switches all the adult ones off at once, and
+  **Follow a track in roleplays** turns tracks off altogether (he plays a scene of his own, as before).
+- Every field can be edited, beats one per line; **New track** writes one from scratch, and **Delete** removes one
+  for good (finding tracks again won't bring it back). **Used** counts how often he's played each; the least used
+  come up first.
 
 ## His voice
 

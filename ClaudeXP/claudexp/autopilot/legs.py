@@ -174,7 +174,8 @@ class Messengers(Leg):
             except Exception:
                 pass
 
-    def reply(self, ctx, app, bid, instruction=None, note=IM_NOTE, max_tokens=120, thread_ok=True):
+    def reply(self, ctx, app, bid, instruction=None, note=IM_NOTE, max_tokens=120, thread_ok=True, extra_note="",
+              check=True):
         world = app.world
         b = world.buddies[bid]
         yield from ctx.hands.take(self.key)
@@ -194,8 +195,9 @@ class Messengers(Leg):
             ctx.status(f"Replying to {b.name}")
         finally:
             ctx.hands.release(self.key)                 # thinking of what to say: the hands are free meanwhile
-        text = yield from speak(ctx, b.name, persona(b.name), note.format(year=year(), name=b.name), history,
-                                instruction, max_tokens=max_tokens, max_lines=3, thread_ok=thread_ok)
+        text = yield from speak(ctx, b.name, persona(b.name), note.format(year=year(), name=b.name) + extra_note,
+                                history, instruction, max_tokens=max_tokens, max_lines=3, thread_ok=thread_ok,
+                                check=check)
         if not text or win is None or not isValid(win):
             return
         yield from ctx.hands.take(self.key)
@@ -266,7 +268,9 @@ class Messengers(Leg):
 
 # ---- a roleplay session (foreground) ---------------------------------------------------------------------------
 class Roleplay(Leg):
-    """A proper scene with one buddy on AIM, 20-30 exchanges long, the messengers leg standing aside for them."""
+    """A proper scene with one buddy on AIM, the messengers leg standing aside for them. With an RP track (the RP
+    Tracks tab: scenes from his own logs) he follows it and leads, a beat at a time; without one, a scene of his
+    own, or a roleplay seed from his threads. How long it runs and who it's with follow his interests."""
     key, title, kind = "roleplay", "Roleplay on AIM", FOREGROUND
     blurb = "a proper scene with one buddy, 20-30 messages each way"
     doing = "roleplaying with a friend on AIM"
@@ -287,20 +291,30 @@ class Roleplay(Leg):
         b = random.choices(free, weights=[t["roleplay"] for t in tiers])[0]
         ctx.engine.claims = getattr(ctx.engine, "claims", set()) | {b.id}
         ctx.doing(f"roleplaying with {b.name} on AIM")
-        seed = ctx.day.roleplay_seed() if ctx.day is not None else None
-        opening = (f"Suggest a roleplay scene to {b.name} and open it - {seed['title']}: "
-                   f"{seed.get('facts') or ''} Set the place and what you're doing, in *asterisks*, two or three "
-                   "sentences." if seed else
-                   f"Suggest a roleplay scene to {b.name} and open it: set the place and what you're doing, in "
-                   "*asterisks*, two or three sentences.")
         turns = random.randint(*Messengers.tier(ctx, b.id)["turns"])
+        track = ctx.day.track_for(b.id) if ctx.day is not None else None
+        seed = ctx.day.roleplay_seed() if ctx.day is not None and track is None else None
+        if track is not None:
+            turns = max(turns, 2 * len(track.get("beats", [])))
+            note, _first = ctx.day.track_step(track, b.name, 0, turns)
+            opening = (f"Open the roleplay with {b.name}: set the scene ({track.get('setting') or track['title']}) "
+                       f"and the situation, in *asterisks*, two or three sentences, and draw them in.")
+            ctx.note(f"Roleplay with {b.name}, following the track \"{track['title']}\".")
+            ctx.day.track_used(track["id"])
+        else:
+            note = ""
+            opening = (f"Suggest a roleplay scene to {b.name} and open it - {seed['title']}: "
+                       f"{seed.get('facts') or ''} Set the place and what you're doing, in *asterisks*, two or three "
+                       "sentences." if seed else
+                       f"Suggest a roleplay scene to {b.name} and open it: set the place and what you're doing, in "
+                       "*asterisks*, two or three sentences.")
         helper = Messengers()
         helper.key = self.key
         try:
-            ctx.status(f"Starting a roleplay with {b.name}")
+            ctx.status(f"Starting a roleplay with {b.name}" + (f": {track['title']}" if track else ""))
             yield from helper.reply(ctx, app, b.id, note=RP_NOTE, max_tokens=220, instruction=opening,
-                                    thread_ok=False)
-            for _ in range(turns):
+                                    thread_ok=False, extra_note=note, check=False)
+            for step in range(1, turns + 1):
                 if ctx.time_left() <= 0 or ctx.stopping:
                     break
                 mark = len(b.history.messages)
@@ -309,12 +323,17 @@ class Roleplay(Leg):
                 if not (len(b.history.messages) > mark and b.history.messages[-1].get("kind") == "contact"):
                     break
                 yield random.uniform(6, 20) * ctx.pace
-                yield from helper.reply(ctx, app, b.id, note=RP_NOTE, max_tokens=220,
-                                        instruction="Continue the roleplay in character.", thread_ok=False)
+                if track is not None:
+                    note, instruction = ctx.day.track_step(track, b.name, step, turns)
+                    ctx.status(f"Roleplaying with {b.name}: {track['title']} ({step} of {turns})")
+                else:
+                    instruction = "Continue the roleplay in character."
+                yield from helper.reply(ctx, app, b.id, note=RP_NOTE, max_tokens=220, instruction=instruction,
+                                        thread_ok=False, extra_note=note, check=False)
             if not ctx.stopping:
                 yield from helper.reply(ctx, app, b.id, note=IM_NOTE, max_tokens=80,
                                         instruction="Wrap the scene up warmly in one or two lines and say you need "
-                                                    "to go do something for a bit.", thread_ok=False)
+                                                    "to go do something for a bit.", thread_ok=False, check=False)
                 ctx.event(f"roleplayed with {b.name}")
         finally:
             ctx.engine.claims.discard(b.id)
