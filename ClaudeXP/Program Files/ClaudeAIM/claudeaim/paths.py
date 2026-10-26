@@ -41,5 +41,11 @@ def resolve_icon(name: str | None) -> str:
             candidate = folder / name
             if candidate.exists():
                 return str(candidate)
+        moved = Path(name)
+        if moved.is_absolute() and "Program Files" in moved.parts:   # a full path from before the computer moved
+            i = len(moved.parts) - 1 - moved.parts[::-1].index("Program Files")
+            candidate = ROOT.parent.joinpath(*moved.parts[i + 1:])
+            if candidate.exists():
+                return str(candidate)
     icons = buddy_icons()
     return str(icons[0]) if icons else image("buddyicon.jpg")

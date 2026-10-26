@@ -1,6 +1,8 @@
 """EPOCH-2001's legs: what Kithylin does on the Windows XP computer. Each knows one program - ClaudeAIM, Outlook
 Express, Internet Explorer, ClaudeTV, ClaudeRPG, ClaudeMUCK - and drives it the way a person would: opens it, moves
-the cursor to the thing, reads for a while, types. The words come from the voice (claudecore.autopilot.voice)."""
+the cursor to the thing, reads for a while, types. The words come from the voice (claudecore.autopilot.voice),
+asked through his day (claudecore.autopilot.day.speak): the layered prompt with today's one story, then a check
+that the reply keeps to it."""
 import random
 import time
 
@@ -8,6 +10,7 @@ from PySide6.QtCore import QPoint, QPointF, QUrl
 from PySide6.QtWidgets import QToolButton
 from shiboken6 import isValid
 
+from claudecore.autopilot.day import speak
 from claudecore.autopilot.engine import ALWAYS, BACKGROUND, FOREGROUND, Leg
 from claudecore.autopilot.voice import persona
 
@@ -38,17 +41,6 @@ def focus(ctx, frame):
     yield from ctx.hands.move_to((frame, QPoint(min(frame.width() // 2, 220), 12)))
     ctx.desktop.activate(frame)
     yield random.uniform(0.3, 0.8) * ctx.pace
-
-
-def ask(ctx, system, history, instruction=None, max_tokens=140, max_lines=None):
-    """Kithylin's next line, as a generator step: `text = yield from ask(...)`."""
-    box = {}
-    ctx.voice.say(system, history, lambda text: box.__setitem__("text", text), instruction, max_tokens)
-    yield (lambda: "text" in box, 180)
-    text = box.get("text", "")
-    if max_lines:
-        text = "\n".join(text.splitlines()[:max_lines])
-    return text
 
 
 def year():
@@ -88,6 +80,7 @@ class Messengers(Leg):
     who's online. A conversation runs its course - after a handful of exchanges he lets it rest."""
     key, title, kind = "messengers", "AIM", ALWAYS
     blurb = "answer IMs, say hello to friends who are online (nearly always on)"
+    doing = "chatting on AIM"
 
     def run(self, ctx):
         from ..programs import aim
@@ -104,6 +97,8 @@ class Messengers(Leg):
             ctx.note("AIM didn't start.")
             return
         world = app.world
+        if ctx.engine.asleep and ctx.day is not None:      # he sat down asleep: AIM wasn't on to show it
+            world.set_user_away(True, ctx.day.block_info().get("away", ""))
         queue = []
         world.message_added.connect(lambda bid, entry: queue.append((bid, entry)))
         pending, budget, rested, last_used = {}, {}, {}, {}
@@ -113,6 +108,13 @@ class Messengers(Leg):
         try:
             while True:
                 now = time.monotonic()
+                if ctx.engine.asleep:                       # asleep or out: the away message answers for him
+                    queue.clear()
+                    pending.clear()
+                    next_hello = now + random.uniform(10, 30) * 60 * ctx.pace
+                    yield 2
+                    continue
+                slow = ctx.day.reply_pace() if ctx.day is not None else 1.0
                 while queue:
                     bid, entry = queue.pop(0)
                     if entry.get("kind") != "contact" or bid in ctx.engine.claims:
@@ -120,7 +122,7 @@ class Messengers(Leg):
                     if now < rested.get(bid, 0):
                         continue                                  # letting that conversation rest
                     busy = any(k in ctx.engine.tasks for k in ("tv", "rpg"))
-                    delay = random.uniform(5, 25) * ctx.pace + (random.uniform(10, 50) if busy else 0)
+                    delay = random.uniform(5, 25) * ctx.pace * slow + (random.uniform(10, 50) if busy else 0)
                     pending[bid] = max(pending.get(bid, 0), now + delay)
                 for bid, when in list(pending.items()):
                     if now >= when:
@@ -132,6 +134,8 @@ class Messengers(Leg):
                             rested[bid] = now + random.uniform(10, 35) * 60
                             budget.pop(bid, None)
                             ctx.note(f"Let the conversation with {world.buddies[bid].name} rest.")
+                            if ctx.day is not None:
+                                ctx.day.end_conversation(world.buddies[bid].name)
                             yield from self.close_im(ctx, app, bid)
                             continue
                         used[0] += 1
@@ -141,7 +145,7 @@ class Messengers(Leg):
                                           key=lambda b: last_used.get(b, 0))[:max(0, len(app.im_windows) - 3)]:
                             yield from self.close_im(ctx, app, old)     # no more than three IM windows open
                 if now >= next_hello:
-                    next_hello = now + random.uniform(12, 30) * 60 * ctx.pace
+                    next_hello = now + random.uniform(12, 30) * 60 * ctx.pace * slow
                     yield from self.say_hello(ctx, app, pending)
                 yield 1
         finally:
@@ -150,7 +154,7 @@ class Messengers(Leg):
             except Exception:
                 pass
 
-    def reply(self, ctx, app, bid, instruction=None, note=IM_NOTE, max_tokens=120):
+    def reply(self, ctx, app, bid, instruction=None, note=IM_NOTE, max_tokens=120, thread_ok=True):
         world = app.world
         b = world.buddies[bid]
         yield from ctx.hands.take(self.key)
@@ -167,11 +171,11 @@ class Messengers(Leg):
                     history.append({"role": "assistant", "content": m["text"]})
                 elif m.get("kind") in ("contact", "contact_auto") and m.get("text"):
                     history.append({"role": "user", "content": m["text"]})
-            system = persona(b.name) + note.format(year=year(), name=b.name)
             ctx.status(f"Replying to {b.name}")
         finally:
             ctx.hands.release(self.key)                 # thinking of what to say: the hands are free meanwhile
-        text = yield from ask(ctx, system, history, instruction, max_tokens=max_tokens, max_lines=3)
+        text = yield from speak(ctx, b.name, persona(b.name), note.format(year=year(), name=b.name), history,
+                                instruction, max_tokens=max_tokens, max_lines=3, thread_ok=thread_ok)
         if not text or win is None or not isValid(win):
             return
         yield from ctx.hands.take(self.key)
@@ -206,8 +210,10 @@ class Messengers(Leg):
             return
         b = random.choice(quiet)
         ctx.note(f"Saying hello to {b.name}.")
+        opener = ctx.day.opener() if ctx.day is not None else ""
         yield from self.reply(ctx, app, b.id, instruction=f"Start a conversation with {b.name}: one short, friendly "
-                                                          "IM, as if you just noticed them online.")
+                                                          "IM, as if you just noticed them online."
+                                                          + (f" The way you often start: {opener}" if opener else ""))
 
 
 # ---- a roleplay session (foreground) ---------------------------------------------------------------------------
@@ -215,6 +221,7 @@ class Roleplay(Leg):
     """A proper scene with one buddy on AIM, 20-30 exchanges long, the messengers leg standing aside for them."""
     key, title, kind = "roleplay", "Roleplay on AIM", FOREGROUND
     blurb = "a proper scene with one buddy, 20-30 messages each way"
+    doing = "roleplaying with a friend on AIM"
     minutes, weight, cooldown = (25, 50), 0.8, 60 * 60
 
     def run(self, ctx):
@@ -230,14 +237,20 @@ class Roleplay(Leg):
             return
         b = random.choice(free)
         ctx.engine.claims = getattr(ctx.engine, "claims", set()) | {b.id}
+        ctx.doing(f"roleplaying with {b.name} on AIM")
+        seed = ctx.day.roleplay_seed() if ctx.day is not None else None
+        opening = (f"Suggest a roleplay scene to {b.name} and open it - {seed['title']}: "
+                   f"{seed.get('facts') or ''} Set the place and what you're doing, in *asterisks*, two or three "
+                   "sentences." if seed else
+                   f"Suggest a roleplay scene to {b.name} and open it: set the place and what you're doing, in "
+                   "*asterisks*, two or three sentences.")
         turns = random.randint(20, 30)
         helper = Messengers()
         helper.key = self.key
         try:
             ctx.status(f"Starting a roleplay with {b.name}")
-            yield from helper.reply(ctx, app, b.id, note=RP_NOTE, max_tokens=220,
-                                    instruction=f"Suggest a roleplay scene to {b.name} and open it: set the place "
-                                                "and what you're doing, in *asterisks*, two or three sentences.")
+            yield from helper.reply(ctx, app, b.id, note=RP_NOTE, max_tokens=220, instruction=opening,
+                                    thread_ok=False)
             for _ in range(turns):
                 if ctx.time_left() <= 0 or ctx.stopping:
                     break
@@ -248,11 +261,12 @@ class Roleplay(Leg):
                     break
                 yield random.uniform(6, 20) * ctx.pace
                 yield from helper.reply(ctx, app, b.id, note=RP_NOTE, max_tokens=220,
-                                        instruction="Continue the roleplay in character.")
+                                        instruction="Continue the roleplay in character.", thread_ok=False)
             if not ctx.stopping:
                 yield from helper.reply(ctx, app, b.id, note=IM_NOTE, max_tokens=80,
                                         instruction="Wrap the scene up warmly in one or two lines and say you need "
-                                                    "to go do something for a bit.")
+                                                    "to go do something for a bit.", thread_ok=False)
+                ctx.event(f"roleplayed with {b.name}")
         finally:
             ctx.engine.claims.discard(b.id)
 
@@ -262,6 +276,7 @@ class Mail(Leg):
     """Outlook Express: read what's new, answer some of it, now and then write to someone unprompted."""
     key, title, kind = "mail", "E-mail", FOREGROUND
     blurb = "read what's new in Outlook Express and answer some of it"
+    doing = "catching up on e-mail"
     minutes, weight, cooldown = (8, 20), 1.0, 40 * 60
 
     def run(self, ctx):
@@ -326,10 +341,11 @@ class Mail(Leg):
         win = oe.compose(to=to, subject=subject)
         body_w = win.content
         yield from focus(ctx, win)
-        ctx.status(f"Writing to {to.split('<')[0].strip()}")
-        system = persona(to.split("<")[0].strip()) + MAIL_NOTE.format(year=year())
+        who = to.split("<")[0].strip()
+        ctx.status(f"Writing to {who}")
         ctx.hands.release(self.key)                     # working out what to write
-        text = yield from ask(ctx, system, [{"role": "user", "content": context}], instruction, max_tokens=320)
+        text = yield from speak(ctx, who, persona(who), MAIL_NOTE.format(year=year()),
+                                [{"role": "user", "content": context}], instruction, max_tokens=320)
         yield from ctx.hands.take(self.key)
         if not isValid(win):
             return
@@ -350,6 +366,7 @@ class Mail(Leg):
         button = send_button(body_w)
         yield from ctx.hands.click(button if button is not None else body_w.body, action=body_w.send)
         ctx.note(f"Sent an e-mail to {to}: {subject or '(new)'}")
+        ctx.event(f"e-mailed {who}")
 
 
 # ---- the Web (foreground) --------------------------------------------------------------------------------------
@@ -357,6 +374,7 @@ class Browse(Leg):
     """Internet Explorer: a wander through the 2001 Web - a link, a read, another link, a search now and then."""
     key, title, kind = "browse", "The Web", FOREGROUND
     blurb = "wander the 2001 Web in Internet Explorer"
+    doing = "browsing the Web"
     minutes, weight, cooldown = (10, 25), 1.2, 25 * 60
     SEARCHES = ["furry art", "husky plush", "furry conventions 2001", "anthro wolf art", "winamp skins", "furry comics",
                 "how to make a buddy icon", "furry webrings", "coffee roasting", "fursuit making", "angel wings costume",
@@ -405,6 +423,7 @@ class Browse(Leg):
                     yield from ctx.hands.type_into(browser.location, words)
                     browser._go_typed()
                     ctx.note(f"Searched for {words}")
+                    ctx.event(f"looked up {words} online", share=random.random() < 0.3)
                 else:
                     yield from ctx.hands.click(frame, action=browser.home)
             finally:
@@ -421,6 +440,7 @@ class Idle(Leg):
     def run(self, ctx):
         why = random.choice(["Getting coffee", "Stretching", "Looking out the window", "Away from the desk a minute"])
         ctx.status(why)
+        ctx.doing(why.lower().replace("away from the desk a minute", "away from the desk for a minute"))
         yield from ctx.hands.move_to(QPointF(ctx.desktop.width() - 60, ctx.desktop.height() - 90))
         while ctx.time_left() > 0 and not ctx.stopping:
             yield 2
@@ -431,6 +451,7 @@ class TV(Leg):
     """ClaudeTV: pick a channel with something on and watch it to the end - a whole movie if that's allowed."""
     key, title, kind = "tv", "ClaudeTV", BACKGROUND
     blurb = "watch whatever's on ClaudeTV, in the background"
+    doing = "watching TV"
     minutes, weight, cooldown = (30, 90), 1.0, 45 * 60
 
     def run(self, ctx):
@@ -466,12 +487,14 @@ class TV(Leg):
             until = slot.until()
             ctx.status(f"Watching {ch.label()}: {title} until {clock.time_text(until)}")
             ctx.note(f"Watching {title} on channel {ch.number}.")
+            ctx.doing(f"watching {title} on TV")
         finally:
             ctx.hands.release(self.key)
         end = time.monotonic() + (remaining if movie and ctx.settings.get("whole_movies", True)
                                   else min(remaining, ctx.time_left()))
         while time.monotonic() < end and not ctx.stopping and isValid(win):
             yield 5
+        ctx.event(f"watched {title} on TV", share=movie or random.random() < 0.3)
         if isValid(win) and not ctx.stopping:
             yield from ctx.hands.take(self.key)
             try:
@@ -488,6 +511,7 @@ class RPG(Leg):
     hero takes over."""
     key, title, kind = "rpg", "ClaudeRPG", BACKGROUND
     blurb = "let the hero play ClaudeRPG on the game's own autopilot"
+    doing = "playing ClaudeRPG"
     minutes, weight, cooldown = (30, 60), 0.9, 60 * 60
     # one step towards playing, whatever screen the game is on; returns the step taken, 'playing' or 'stuck'
     ADVANCE = """(function(){
@@ -583,6 +607,7 @@ class RPG(Leg):
             yield from ctx.hands.take(self.key)
             try:
                 yield from self.js(view, self.AUTO_OFF)
+                ctx.event("played some ClaudeRPG")
                 yield 1.5
                 yield from ctx.hands.click((win, QPoint(win.width() - 16, 12)), action=win.request_close)
                 ctx.note("Put ClaudeRPG away.")
@@ -595,6 +620,7 @@ class Muck(Leg):
     """PawPrints MUCK: logged on in the background, listening, saying something now and then, wandering."""
     key, title, kind = "muck", "The MUCK", BACKGROUND
     blurb = "log on to PawPrints MUCK and chat with whoever's there"
+    doing = "hanging out on the MUCK"
     minutes, weight, cooldown = (20, 45), 0.8, 40 * 60
 
     def run(self, ctx):
@@ -633,10 +659,12 @@ class Muck(Leg):
                         if others:
                             room = world.room(world.player_room)
                             people = ", ".join(p.name for p in world.people_in(world.player_room)) or "nobody else"
-                            system = persona("the people here") + MUCK_NOTE.format(year=year(), room=room.name, people=people)
                             history = [{"role": "user", "content": "\n".join(others[-12:])}]
                             ctx.hands.release(self.key)
-                            text = yield from ask(ctx, system, history, "Say your one line.", max_tokens=90, max_lines=1)
+                            text = yield from speak(ctx, "the MUCK", persona("the people here"),
+                                                    MUCK_NOTE.format(year=year(), room=room.name, people=people),
+                                                    history, "Say your one line.", max_tokens=90, max_lines=1,
+                                                    thread_ok=False)
                             yield from ctx.hands.take(self.key)
                             if isValid(frame) and ctx.desktop.active is not frame:
                                 yield from focus(ctx, frame)

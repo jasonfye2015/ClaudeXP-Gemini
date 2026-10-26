@@ -23,6 +23,7 @@ class Glow(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.phase = 0.0
         self.paused = False
+        self.dim = False                    # asleep or out: a low night-blue glow
         self.timer = QTimer(self, interval=50, timeout=self._tick)
 
     def start(self):
@@ -36,7 +37,7 @@ class Glow(QWidget):
         self.hide()
 
     def _tick(self):
-        self.phase += 0.05 if not self.paused else 0.015
+        self.phase += 0.015 if self.paused or self.dim else 0.05
         if self.geometry() != self.parentWidget().rect():
             self.setGeometry(self.parentWidget().rect())
         self.update()
@@ -45,9 +46,9 @@ class Glow(QWidget):
         p = QPainter(self)
         w, h = self.width(), self.height()
         breath = 0.65 + 0.35 * math.sin(self.phase)
-        alpha = int((70 if self.paused else 150) * breath)
+        alpha = int((70 if self.paused or self.dim else 150) * breath)
         depth = 34
-        colour = QColor(SKY) if not self.paused else QColor("#B8C8D8")
+        colour = QColor("#B8C8D8") if self.paused else QColor("#5E7FB0") if self.dim else QColor(SKY)
         for rect, start, end in ((QRectF(0, 0, w, depth), QPointF(0, 0), QPointF(0, depth)),
                                  (QRectF(0, h - depth, w, depth), QPointF(0, h), QPointF(0, h - depth)),
                                  (QRectF(0, 0, depth, h), QPointF(0, 0), QPointF(depth, 0)),

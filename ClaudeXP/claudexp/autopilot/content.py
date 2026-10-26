@@ -16,11 +16,12 @@ from pathlib import Path
 from PySide6.QtCore import QPoint, Qt
 from shiboken6 import isValid
 
+from claudecore.autopilot.day import speak
 from claudecore.autopilot.engine import BACKGROUND, FOREGROUND, Leg
 from claudecore.autopilot.voice import persona
 
 from .. import clock, programs
-from .legs import ask, focus
+from .legs import focus
 
 AUDIO = {".mp3", ".ogg", ".wav", ".wma", ".m4a", ".flac", ".mid", ".midi"}
 IMAGES = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
@@ -106,6 +107,7 @@ class Comics(Leg):
     """FurComix Reader: picks up a comic he was reading, or browses the shelves for one, and reads it a page at a time,
     scrolling down a tall page before turning it."""
     key, title, kind = "comics", "Reading comics", FOREGROUND
+    doing = "reading comics"
     minutes, weight, cooldown = (15, 40), 1.1, 35 * 60
     blurb = "read comics in FurComix Reader, a page at a time"
 
@@ -181,6 +183,7 @@ class Comics(Leg):
 
     def read(self, ctx, rd, entry):
         v = rd.viewer
+        ctx.doing(f"reading the comic {entry.name}")
         yield 2 * ctx.pace
         pages_read = 0
         while ctx.time_left() > 0 and not ctx.stopping and rd.reading is not None and v.book is not None:
@@ -201,6 +204,7 @@ class Comics(Leg):
                 yield random.uniform(6, 14) * ctx.pace
             if v.page + 1 >= n:
                 ctx.note(f"Finished {entry.name}.")
+                ctx.event(f"finished reading the comic {entry.name}", share=True)
                 yield from acting(ctx, self.key, rd.frame)
                 try:
                     v.next_page()                               # past the end: back to the shelf
@@ -302,6 +306,7 @@ class _Gallery(Leg):
         finally:
             ctx.hands.release(self.key)
         v = g.viewer
+        ctx.doing(f"looking through art in {self.app}")
         count = random.randint(6, 25)
         for _ in range(count):
             if ctx.time_left() <= 0 or ctx.stopping or g.stack.currentWidget() is not v:
@@ -357,6 +362,7 @@ class Stories(Leg):
     """FurStory Reader: carries on with a story, or takes one off the shelf, and reads it, scrolling at reading
     speed and on into the next chapter."""
     key, title, kind = "stories", "Reading a story", FOREGROUND
+    doing = "reading a story"
     minutes, weight, cooldown = (15, 45), 0.9, 40 * 60
     blurb = "read a story in FurStory Reader, scrolling at reading speed"
 
@@ -397,6 +403,7 @@ class Stories(Leg):
                 bar = r.page.verticalScrollBar()
                 title = r.chapter_label.text().split(":", 1)[-1].strip()[:50]
                 ctx.status(f"Reading {r.book.name[:40]}: {title}")
+                ctx.doing(f"reading the story {r.book.name[:60]}")
                 page_px = r.page.viewport().height()
                 yield read_secs(ctx, page_px * 0.85)
                 if bar.value() < bar.maximum():
@@ -415,6 +422,7 @@ class Stories(Leg):
                     yield 2 * ctx.pace
                 else:
                     ctx.note(f"Finished {r.book.name}.")
+                    ctx.event(f"finished reading the story {r.book.name[:60]}", share=True)
                     break
         finally:
             if isValid(win):
@@ -430,6 +438,7 @@ class ChatLogs(Leg):
     """Furry Chat Logs: down to an old conversation with someone and reading a year of it, scrolling slowly - the
     nostalgic kind of evening."""
     key, title, kind = "chatlogs", "Old chat logs", FOREGROUND
+    doing = "rereading old chat logs"
     minutes, weight, cooldown = (10, 25), 0.7, 45 * 60
     blurb = "reread old conversations in Furry Chat Logs"
 
@@ -514,6 +523,7 @@ class ExploreDrive(Leg):
     """My Computer > drive E: (Local Storage), down a few folders the way you poke around a backup drive, opening
     pictures in the Picture and Fax Viewer and stepping through the ones beside them."""
     key, title, kind = "explore", "Exploring drive E:", FOREGROUND
+    doing = "poking around old files on the computer"
     minutes, weight, cooldown = (8, 20), 0.8, 30 * 60
     blurb = "poke around drive E: in Explorer and open pictures"
     SKIP = {"llm models", "python studio", "secondlife", "_index", "__pycache__", "projects", "emulation", "wads"}
@@ -607,6 +617,7 @@ class ExploreDrive(Leg):
 class Wikipedia(Leg):
     """Kiwix: a random Wikipedia article, read and scrolled through, then a link that caught his eye, and so on."""
     key, title, kind = "wikipedia", "Reading Wikipedia", FOREGROUND
+    doing = "reading Wikipedia"
     minutes, weight, cooldown = (10, 25), 0.8, 35 * 60
     blurb = "wander Wikipedia offline in Kiwix"
 
@@ -639,6 +650,10 @@ class Wikipedia(Leg):
                     break
                 view = book.view
                 ctx.status(f"Reading {view.title()[:60] or 'Wikipedia'}")
+                if view.title():
+                    ctx.doing(f"reading about {view.title()[:60]} on Wikipedia")
+                    if random.random() < 0.25:
+                        ctx.event(f"read about {view.title()[:60]} on Wikipedia", share=True)
                 for _ in range(random.randint(2, 6)):
                     yield read_secs(ctx, view.height() * 0.8, words_per_line=14)
                     if ctx.time_left() <= 0 or ctx.stopping:
@@ -708,6 +723,7 @@ def find_songs(root, limit=600):
 class Music(Leg):
     """ClaudeAmp: a shuffled playlist of whatever music is on drive E:, playing behind everything else."""
     key, title, kind = "music", "Music in ClaudeAmp", BACKGROUND
+    doing = "listening to music"
     minutes, weight, cooldown = (20, 60), 0.9, 30 * 60
     blurb = "put on music in ClaudeAmp while he does other things"
 
@@ -766,6 +782,7 @@ LJ_NOTE = ("\n\nYou're writing an entry in your LiveJournal in {year}, for your 
 class Journal(Leg):
     """LiveJournal: opens his journal, writes an entry about his day, posts it; his friends comment on it later."""
     key, title, kind = "journal", "Writing in LiveJournal", FOREGROUND
+    doing = "writing in his LiveJournal"
     minutes, weight, cooldown = (6, 12), 0.5, 3 * 60 * 60
     blurb = "write a LiveJournal entry about his day"
 
@@ -793,9 +810,12 @@ class Journal(Leg):
         doing = [t.leg.title for t in ctx.engine.tasks.values() if t.leg.key != self.key]
         context = (f"Today you've been: {', '.join(doing) or 'around the house'}. It's "
                    f"{clock.now():%A, %B} {clock.now().day}, {clock.time_text()}.")
+        if ctx.day is not None:                             # his day has the real story: what happened, what he said
+            context = "Write about today: what happened, what you did and told people, how you feel about it."
         ctx.status("Writing a journal entry")
-        text = yield from ask(ctx, persona("your friends") + LJ_NOTE.format(year=clock.now().year),
-                              [{"role": "user", "content": context}], "Write today's entry.", max_tokens=380)
+        text = yield from speak(ctx, "your LiveJournal", persona("your friends"),
+                                LJ_NOTE.format(year=clock.now().year), [{"role": "user", "content": context}],
+                                "Write today's entry.", max_tokens=380, thread_ok=False)
         if not text:
             return
         lines = text.splitlines()
@@ -815,6 +835,7 @@ class Journal(Leg):
             lj.queue_comments_on(data, entry, friends)
         lj.update(change)
         ctx.note(f"Posted to LiveJournal: {subject or entry_text[:40]}")
+        ctx.event(f"posted in his LiveJournal" + (f" (\"{subject}\")" if subject else ""))
         if frame is not None and isValid(frame):
             yield from acting(ctx, self.key, frame)
             try:

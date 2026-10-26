@@ -269,7 +269,10 @@ class Network(QObject):
             if m["kind"] == "user":
                 msgs.append({"role": "user", "content": m["text"]})
             elif m["kind"] == "contact":
-                msgs.append({"role": "assistant", "content": m["text"]})
+                said = msgs[-1]["content"] if msgs[-1]["role"] == "user" else ""
+                text = clean_reply(m["text"], b.name, user, said)     # (old transcript-style slips, cleaned)
+                if text:
+                    msgs.append({"role": "assistant", "content": text})
         if instruction:
             msgs.append({"role": "user", "content": f"[{instruction}]"})
         elif msgs[-1]["role"] != "user":
@@ -278,8 +281,10 @@ class Network(QObject):
             return
         model = ai_models.model_for("conversation", resident=b.name)
 
+        last_said = next((m["content"] for m in reversed(msgs) if m["role"] == "user"), "")
+
         def done(text, err):
-            reply = clean_reply(text or "", b.name) if not err else ""
+            reply = clean_reply(text or "", b.name, user, last_said) if not err else ""
             if not reply:
                 b.busy = False
                 self.typing_changed.emit(b.contact.id, False)

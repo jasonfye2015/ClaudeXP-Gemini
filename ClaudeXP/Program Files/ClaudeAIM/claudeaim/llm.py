@@ -32,11 +32,38 @@ def estimate_tokens(text: str) -> int:
     return int(len(text) / 3.5) + 4
 
 
-def clean_reply(text: str, name: str) -> str:
+def is_echo(text: str, said: str) -> bool:
+    """A reply that just says back what the user said (the model slipping into writing a transcript)."""
+    import difflib
+    a, b = " ".join(text.lower().split()), " ".join((said or "").lower().split())
+    if not a or not b:
+        return False
+    return a == b or (len(b) >= 8 and difflib.SequenceMatcher(None, a, b).ratio() >= 0.8)
+
+
+def clean_reply(text: str, name: str, user: str = "", last_user: str = "") -> str:
+    """A reply as the buddy would type it. Models sometimes write a little transcript instead
+    ("Kithylin: <what you said>" / "You: <their line>"): lines speaking for the user are dropped, "You:" and the
+    buddy's own name come off the front of a line, and a reply that only repeats the user's message is refused
+    ("" - the caller asks again)."""
     text = text.strip()
     for prefix in (f"{name}:", f"{name} :"):
         if text.lower().startswith(prefix.lower()):
             text = text[len(prefix):].strip()
+    if user:
+        kept = []
+        for line in text.splitlines():
+            low = line.strip().lower()
+            if low.startswith((f"{user.lower()}:", f"{user.lower()} :")):
+                continue                                   # the model speaking for the user
+            for prefix in ("you:", "me:", f"{name.lower()}:"):
+                if low.startswith(prefix):
+                    line = line.strip()[len(prefix):].strip()
+                    break
+            kept.append(line)
+        text = "\n".join(kept).strip()
+    if last_user and is_echo(text, last_user):
+        return ""
     if len(text) > 1 and text[0] == text[-1] == '"':
         text = text[1:-1].strip()
     # Models sometimes copy the [pic: ...] bracket style onto emoticons: "[:3]" -> ":3"

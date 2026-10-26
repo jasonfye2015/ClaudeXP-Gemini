@@ -68,7 +68,17 @@ def apply_identity():
     ensure_aim_path()
     from claudeaim.storage import Settings
     password = user.online_password()
-    Settings().update(screen_name=user.aim_name(), password=password, save_password=True, auto_login=True)
+    settings = Settings()
+    changes = dict(screen_name=user.aim_name(), password=password, save_password=True, auto_login=True)
+    icon = settings["buddy_icon"]
+    from pathlib import Path
+    if icon and Path(icon).is_absolute() and not Path(icon).exists():
+        # a full path saved before the Timeline moved (to another drive): your fursona's icon where it is now
+        from .. import fursonas
+        preset = fursonas.get(user.account().data.get("fursona") or "")
+        if preset is not None and preset.buddy_icon is not None:
+            changes["buddy_icon"] = str(preset.buddy_icon)
+    settings.update(**changes)
 
 
 def _bring_forward(app):

@@ -1,8 +1,9 @@
 """Kithylin Autopilot on EPOCH-2001: the program with what Kithylin may do, how long he stays, his pace and his
 voice, the Start button, and a Legs tab to start any one activity now. The engine is claudecore.autopilot; this
 computer's legs are in legs.py (the messengers, mail, the Web, TV, games, the MUCK) and content.py (Local Storage:
-comics, portfolios, pictures, stories, old chat logs, Explorer, Kiwix, music, LiveJournal). While he's at it the screen has a sky-blue glow, his own cursor, and a banner with Pause and Stop; your own
-mouse or keyboard pauses him."""
+comics, portfolios, pictures, stories, old chat logs, Explorer, Kiwix, music, LiveJournal). While he's at it the
+screen has a sky-blue glow, his own cursor, and a banner with Pause and Stop; your own mouse or keyboard pauses him.
+The Day and Threads tabs (daytabs.py) steer his day: the week's schedule, today's story, and what he brings up."""
 import json
 import traceback
 
@@ -17,6 +18,7 @@ from ..paths import DATA
 from ..wm import XPWindow
 
 SETTINGS_FILE = DATA / "autopilot.json"
+DAY_FILE = DATA / "autopilot_day.json"
 TITLE = "Kithylin Autopilot"
 HOURS = [("Until I stop him", 0), ("Half an hour", 0.5), ("An hour", 1), ("Two hours", 2), ("Four hours", 4),
          ("Eight hours", 8)]
@@ -24,6 +26,7 @@ PACES = [("Relaxed", 1.4), ("Normal", 1.0), ("Quick", 0.7)]
 KINDS = {"always": "Always on", "background": "In the background", "foreground": "In front"}
 _pilot = None
 _frame = None
+_day = None
 
 
 def leg_classes():
@@ -31,6 +34,15 @@ def leg_classes():
     from .content import CONTENT_LEGS
     from .legs import LEGS
     return list(LEGS) + list(CONTENT_LEGS)
+
+
+def day():
+    """His day on this computer (claudecore.autopilot.day), shared by the engine and the panel."""
+    global _day
+    if _day is None:
+        from claudecore.autopilot.day import Day
+        _day = Day(DAY_FILE)
+    return _day
 
 
 def autopilot_icon():
@@ -87,13 +99,24 @@ class XPAdapter:
         import time
         self.desktop.last_input = time.monotonic()      # (the screen saver watches this)
 
+    def day(self):
+        return day()
+
+    def set_away(self, away, message=""):
+        """Asleep or out: his AIM away message (AIM answers IMs with it); back: away no longer."""
+        from ..programs import aim
+        app = aim._app
+        if app is not None and app.world is not None:
+            app.world.set_user_away(away, message)
+
 
 def pilot():
     return _pilot
 
 
 class Panel(QWidget):
-    """Two tabs: what he may do and how (the settings), and the Legs - every activity he knows, to start one now."""
+    """Four tabs: what he may do and how (the settings); the Legs - every activity he knows, to start one now; his
+    Day - the week's schedule, today, right now; and the Threads he brings up, with his style card."""
 
     def __init__(self, desktop):
         super().__init__()
@@ -110,6 +133,9 @@ class Panel(QWidget):
         self.tabs = QTabWidget()
         self.tabs.addTab(self._settings_tab(), "What he does")
         self.tabs.addTab(self._legs_tab(), "Legs")
+        from .daytabs import DayTab, ThreadsTab
+        self.tabs.addTab(DayTab(day(), leg_classes(), pilot), "Day")
+        self.tabs.addTab(ThreadsTab(day(), leg_classes(), pilot), "Threads")
         root.addWidget(self.tabs, 1)
         row = QHBoxLayout()
         self.go = QPushButton("Let Kithylin take over")
@@ -306,7 +332,7 @@ def launch(desktop):
         desktop.open_window(_frame)
         return
     body = Panel(desktop)
-    _frame = XPWindow(desktop, TITLE, body, autopilot_icon(), size=(660, 700))
+    _frame = XPWindow(desktop, TITLE, body, autopilot_icon(), size=(780, 780))
     body.frame = _frame
     desktop.open_window(_frame)
 

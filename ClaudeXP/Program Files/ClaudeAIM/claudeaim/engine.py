@@ -8,7 +8,7 @@ from enum import Enum
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from . import host, paths, timefmt
-from .llm import LLM, SYSTEM_PROMPT, clean_reply, estimate_tokens
+from .llm import LLM, SYSTEM_PROMPT, clean_reply, estimate_tokens, is_echo
 from .pictures import strip_tags
 from .storage import History
 
@@ -523,13 +523,25 @@ class World(QObject):
         options = {"num_ctx": int(self.settings["context_size"]),
                    "temperature": b.contact.temperature}
 
+        user = self.settings["screen_name"]
+        said = next((m["text"] for m in reversed(b.history.messages) if m["kind"] == "user"), "")
+        tries = {"n": 0}
+
         def done(text, err):
             if err:
                 b.busy = False
                 self.typing_changed.emit(b.id, False)
                 self._add(b, "system", f"(Couldn't reach Ollama: {err})")
                 return
-            text = clean_reply(text, b.name)
+            raw = text
+            text = clean_reply(text, b.name, user, said)
+            if not text and raw.strip() and tries["n"] == 0:
+                tries["n"] += 1                            # it only said the user's message back: once more
+                again = messages + [{"role": "user", "content": (
+                    f"[Private note, not a message from {user}: don't repeat what {user} said - answer it, in "
+                    f"your own words, as {b.name}. Write only your instant message.]")}]
+                self.llm.chat(self.model_for(b), again, options, done)
+                return
             if not text:
                 b.busy = False
                 self.typing_changed.emit(b.id, False)
@@ -720,7 +732,12 @@ class World(QObject):
             elif kind == "user":
                 convo.append({"role": "user", "content": m["text"]})
             elif kind == "contact":
-                content = m["text"]
+                # (an old reply that slipped into transcript style is shown to the model cleaned up, and a pure
+                # echo of the user's line left out, so one bad reply doesn't teach every reply after it)
+                said = convo[-1]["content"] if convo and convo[-1]["role"] == "user" else ""
+                content = clean_reply(m["text"], b.name, user, said) if m["text"] else ""
+                if not content and not m.get("image"):
+                    continue
                 if m.get("image"):
                     content = f"{content}\n[pic: {m['image']}]".strip()
                 convo.append({"role": "assistant", "content": content})

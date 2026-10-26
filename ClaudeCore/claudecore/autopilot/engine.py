@@ -16,6 +16,11 @@ it's true or a timeout passes), and it uses the shared hands and voice through i
 Kinds: ALWAYS (the messengers: open the whole session), BACKGROUND (TV, a game, the MUCK: long, up to two at once
 beside the messengers), FOREGROUND (mail, the Web, a roleplay, a break: one at a time, in front). An adapter (one
 per computer) hands the engine its legs; the engine knows nothing of the computer itself.
+
+His day (day.py, from the adapter) steers it: the block he's in on the real clock weights the legs (no TV at work)
+and puts legs that don't fit away when it changes; asleep or out, the legs wind down, the messengers show his away
+message and the glow dims until the block ends. Each leg says what he's doing in it (`doing`, or ctx.doing(...)),
+which is the "right now" in his prompt, and logs what happened (ctx.event(...)).
 """
 import random
 import time
@@ -45,6 +50,7 @@ class Leg:
     minutes = (15, 40)          # how long one stretch lasts, before the pace
     weight = 1.0                # how often it's picked, among its kind
     cooldown = 10 * 60          # seconds before the same leg can start again
+    doing = ""                  # what he's doing, for his day ("reading a comic"); the title if empty
 
     def run(self, ctx):
         yield 1
@@ -64,12 +70,24 @@ class Context:
         self.voice = engine.voice
         self.settings = engine.settings
         self.pace = engine.settings.get("pace", 1.0)
+        self.day = engine.day
+        self.key = ""
 
     def status(self, text):
         self.engine.set_status(text)
 
     def note(self, text):
         self.engine.log(text)
+
+    def doing(self, text):
+        """What he's doing in this leg right now, for his day ("watching Toy Story on TV")."""
+        if self.day is not None:
+            self.day.doing(self.key, text)
+
+    def event(self, text, share=False):
+        """Something that happened, for his day ("watched Toy Story"); share: he might mention it."""
+        if self.day is not None:
+            self.day.event(text, share=share, legs=[self.key])
 
     @property
     def stopping(self):
@@ -122,12 +140,17 @@ class Autopilot(QObject):
         self.legs = {leg.key: leg for leg in adapter.legs()}
         self.filter_on = False
         self.claims = set()                 # buddies a leg has to itself (a roleplay), for the others to leave be
+        self.day = adapter.day() if hasattr(adapter, "day") else None
+        self.block = None                   # the block of his day he's in
+        self.asleep = False
+        self.next_day_check = 0.0
 
     # ---- the session -----------------------------------------------------------------------------------------
     def start(self):
         if self.running:
             return
         self.running, self.paused, self.stopping = True, False, False
+        self.block, self.asleep, self.next_day_check = None, False, 0.0
         self.started_at = time.monotonic()
         hours = float(self.settings.get("hours") or 0)
         self.ends_at = self.started_at + hours * 3600 if hours > 0 else None
@@ -185,8 +208,13 @@ class Autopilot(QObject):
         for key in list(self.tasks):
             self._finish(key, closing=True)
         self.timer.stop()
+        if self.asleep:
+            self._wake_up(quiet=True)
         self.running = self.paused = False
         self.voice.stop()
+        if self.day is not None:
+            self.day.doing_now.clear()
+            self.day.flush()
         if self.filter_on:
             QApplication.instance().removeEventFilter(self)
             self.filter_on = False
@@ -247,6 +275,7 @@ class Autopilot(QObject):
             self.log("Time's up.")
             self.stop()
             return
+        self._follow_day(now)
         for key, task in list(self.tasks.items()):
             if task.waiting is not None:
                 pred, deadline = task.waiting
@@ -280,7 +309,7 @@ class Autopilot(QObject):
             task.wake = now + max(0.0, float(step or 0))
 
     def _plan(self, now):
-        if self.stopping:
+        if self.stopping or self.asleep:
             return
         allowed = set(self.settings.get("allowed", []))
         running_kinds = [t.leg.kind for t in self.tasks.values()]
@@ -299,12 +328,15 @@ class Autopilot(QObject):
     def _pick(self, kind, allowed, now):
         choices = [leg for leg in self.legs.values() if leg.kind == kind and leg.key in allowed
                    and leg.key not in self.tasks and now - self.last_run.get(leg.key, -1e9) >= leg.cooldown]
+        weights = [leg.weight * (self.day.leg_weight(leg.key) if self.day is not None else 1.0) for leg in choices]
+        choices = [(leg, w) for leg, w in zip(choices, weights) if w > 0]
         if not choices:
             return None
-        return random.choices(choices, weights=[leg.weight for leg in choices])[0]
+        return random.choices([c[0] for c in choices], weights=[c[1] for c in choices])[0]
 
     def _start_leg(self, leg):
         ctx = Context(self)
+        ctx.key = leg.key
         until = time.monotonic() + leg.duration(self.hands.pace) if leg.kind != ALWAYS else None
         ctx.time_left = lambda: max(0.0, (until or float("inf")) - time.monotonic())
         try:
@@ -313,6 +345,8 @@ class Autopilot(QObject):
             self.log(f"{leg.title} couldn't start: {traceback.format_exc(limit=1).strip().splitlines()[-1]}")
             return
         self.tasks[leg.key] = _Task(leg, gen, until)
+        if self.day is not None:
+            self.day.doing(leg.key, leg.doing or leg.title.lower())
         self.last_run[leg.key] = time.monotonic()
         self.log(f"Started: {leg.title}.")
 
@@ -321,6 +355,8 @@ class Autopilot(QObject):
         if task is None:
             return
         self._wind_down(key, task.gen)
+        if self.day is not None:
+            self.day.done(key)
         self.hands.release(key)
         self.last_run[key] = time.monotonic()
         if not closing:
@@ -348,6 +384,63 @@ class Autopilot(QObject):
                 pass
             self.hands.pace = pace
             self.hands.owner = held if held != key else None
+
+    # ---- his day ---------------------------------------------------------------------------------------------------
+    def _follow_day(self, now):
+        """Every few seconds: has the block of his day changed? Asleep or out, wind down; back, carry on; work,
+        put away what doesn't suit it."""
+        if self.day is None or now < self.next_day_check:
+            return
+        self.next_day_check = now + 15
+        block = self.day.block()
+        if block == self.block:
+            return
+        first, self.block = self.block is None, block
+        info = self.day.block_info(block)
+        if not first:
+            self.log(f"{info.get('title', block)} now.")
+        if info.get("asleep"):
+            if not self.asleep:
+                self._fall_asleep(info)
+            return
+        if self.asleep:
+            self._wake_up()
+        for key, task in list(self.tasks.items()):
+            if task.leg.kind != ALWAYS and self.day.leg_weight(key) <= 0:
+                self.log(f"Put {task.leg.title} away ({info.get('title', block).lower()}).")
+                self._finish(key)
+
+    def _fall_asleep(self, info):
+        from .day import time_text
+        self.asleep = True
+        for key, task in list(self.tasks.items()):
+            if task.leg.kind != ALWAYS:
+                self._finish(key)
+        away = getattr(self.adapter, "set_away", None)
+        if away is not None:
+            try:
+                away(True, info.get("away") or "")
+            except Exception:
+                pass
+        self.glow.dim = True
+        until = time_text(self.day.block_ends().time())
+        self.log(f"{info.get('title', 'Away')} until {until}.")
+        self.set_status(f"{info.get('title', 'Away')} until {until}")
+
+    def _wake_up(self, quiet=False):
+        self.asleep = False
+        self.glow.dim = False
+        away = getattr(self.adapter, "set_away", None)
+        if away is not None:
+            try:
+                away(False, "")
+            except Exception:
+                pass
+        if not quiet:
+            self.log("Back at the computer.")
+            self.set_status("Back at the computer")
+            self.next_foreground = time.monotonic() + random.uniform(1, 4) * 60 * self.hands.pace
+            self.next_background = time.monotonic() + random.uniform(1, 6) * 60 * self.hands.pace
 
     # ---- what he's doing -----------------------------------------------------------------------------------------
     def set_status(self, text):

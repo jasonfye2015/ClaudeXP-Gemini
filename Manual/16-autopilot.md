@@ -10,7 +10,7 @@ things going at once, for as long as you let him. Think of it as a screen saver 
 
 ## Starting him
 
-The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Programs). The window has two tabs:
+The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Programs). The window has four tabs:
 
 - **What he does** - tick what he may do (hover over one for what it is), choose how long he stays, his pace and
   his voice, and click **Let Kithylin take over**. The window minimises itself out of his way.
@@ -18,6 +18,8 @@ The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Progra
   how long a stretch usually lasts and what it is. Pick one and click **Do this now** (or double-click it): he
   takes over if he isn't already and starts it straight away; whatever was in front makes way. What he's doing
   right now shows in bold.
+- **Day** - his week, today, and what's true right now (see *His day* below).
+- **Threads** - the stories and bits of his life he brings up, and his style card (see *Threads* below).
 
 Activities you add later come in ticked; anything you untick stays unticked.
 
@@ -63,6 +65,72 @@ Activities you add later come in ticked; anything you untick stays unticked.
 - He keeps at most three IM windows open, closing a conversation when he lets it rest.
 - The screen saver stays away while he's using the computer.
 
+## His day
+
+He lives one day, and everyone he talks to hears the same one. Without it he'd tell one buddy he's at work and the
+next that he's off to walk the dog.
+
+![The Day tab](images/autopilot-day.png)
+
+- **The week.** Seven rows of half-hour cells on the real clock (your PC's, not 2001's), painted with five
+  blocks: **Free time**, **At work**, **Lunch break**, **Asleep** and **Out**. Pick a block under the grid and click
+  or drag to paint. The default is work Monday to Friday 9:30 am - 6:30 pm with lunch 2:30 - 3:30 pm, and asleep
+  11 pm - 7 am every night (**Default week** puts it back). A red line marks now. Untick **Follow his schedule**
+  and every hour is free time.
+- **What each block means.** Choose a block to edit:
+  - its **scene**, the line in his prompt saying where he is and how he's chatting ("at work, between tasks: a bit
+    slower and shorter")
+  - **how quickly he answers IMs** (work is slower)
+  - **which legs suit it**: Never, Less, Normal or More for each. At work there's no TV, no game, no roleplay and
+    less reading; lunch is for the Web and comics. When a block starts, whatever doesn't suit it is put away.
+  - **Away from the computer**, ticked for Asleep and Out. When it starts his legs wind down, AIM puts up the
+    block's **away message** (and answers IMs with it), and the glow dims to a night blue. When it ends he's back.
+- **Today.** A line that's true all day ("home sick with a cold", "Red's birthday dinner tonight"), and **A day
+  off** to skip work today. Both clear themselves at 4 am.
+- **Right now.** What his prompt says at this moment: the time and block, what he's doing in each running leg
+  ("reading the comic Housepets!", "watching Shrek on TV"), what has happened today, and **what he's told people
+  today**. After each reply a quick pass picks out the facts and plans he stated ("about to walk the dog", "working
+  until 6:30"), and they go into every later prompt so he keeps to them. Both lists can be edited: double-click a
+  line, or Add and Remove.
+- **Check each reply against today's story.** Before a reply is typed, the residents' model compares it with
+  today's facts and what he's already said. If it clashes ("omw to the beach" while he's at work), he writes it
+  again, once. The Furry Log notes each one ("Kept to today's story").
+
+## Threads
+
+The things he talks about: at most one suggestion per conversation, and only "if it fits naturally".
+
+| Kind | What it is |
+|---|---|
+| **Life arc** | Something going on in his life, with **beats**, one line per day ("found the flat", "packing", "moving day"). He's at the beat for today, counted from when it started |
+| **Daily opener** | How he starts a conversation ("good morning ❤️ awroooo"); used when he says hello |
+| **Recurring bit** | A running joke or routine he comes back to |
+| **Roleplay seed** | A scene he likes to start; the Roleplay leg opens with one |
+
+- **Heard it** shows who he's told and when. Someone who heard a life arc on an earlier day gets a **follow-up**
+  ("how the move's going") rather than the whole story again. **Forget who's heard it** starts over.
+- **Makes likelier**: legs that come up more while the thread is active (a thread about a new game makes ClaudeRPG
+  likelier).
+- **His day makes small threads too.** A movie he watched, a comic or story he finished, something he looked up:
+  for a day or two these are things he might mention ("From: His day").
+- **Status**: Active threads are used; Paused and Done aren't; **Suggested** ones (from your logs) wait for you.
+
+### From your Telegram logs
+
+**Look through my Telegram logs again...** runs `selfmodel.threads` over the last twelve months of your Telegram
+export (`Local Storage\Text Logs\telegram\result.json`, the same one his recent model was trained on). It needs
+the graphics card, so stop him first. It takes five to ten minutes; the tab shows progress.
+
+- **The style card**, from every conversation: the lines you open and close with, how long your messages run at each
+  time of day, your habits (laughs, smileys, *snugs*, lowercase, short bursts). Tick **Use my style card** and it
+  goes into his prompt.
+- **Suggested threads**: a few hundred of the longer conversations are summarised (how each opened, what it was
+  about, how it went, how it ended), then grouped into the threads that keep coming up. Each one lists how many
+  conversations it came from. None is used until you set it **Active**. Delete one and it won't be suggested again.
+
+No names leave the logs: the other person is "a friend" in everything the model reads, and contact names are filtered
+out of what it writes. The results stay in `Local Storage\LLM Models\selfmodel\threads.json`.
+
 ## His voice
 
 Kithylin's words come from a Kithylin model, chosen in the panel:
@@ -96,7 +164,9 @@ training, back up and format first, or read chapter 9.
 `ClaudeCore\claudecore\autopilot` is the engine: `engine.py` runs the legs (generators that yield seconds to wait
 or a condition to wait for) and keeps two to four going - the messengers always, up to two background legs, one
 foreground leg; `hud.py` is the glow, the banner and the cursor; `voice.py` asks the broker for his words with the
-add-on switched on. `ClaudeXP\claudexp\autopilot\legs.py` (the messengers, mail, the Web, TV, games, the MUCK)
+add-on switched on; `day.py` is his day - the schedule, today's facts, claims and threads, the layered prompt, and
+`speak()`, which asks the voice, checks the reply and rewrites it once on a clash. XP keeps the day in
+`data\autopilot_day.json`; the Day and Threads tabs are `ClaudeXP\claudexp\autopilot\daytabs.py`. `ClaudeXP\claudexp\autopilot\legs.py` (the messengers, mail, the Web, TV, games, the MUCK)
 and `content.py` (Local Storage: comics, galleries, stories, chat logs, Explorer, Kiwix, music, LiveJournal) are
 what he knows how to do on XP: one class per activity, each with a title, a line for the Legs tab and how long a
 stretch lasts.

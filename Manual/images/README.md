@@ -16,5 +16,6 @@ the pages pick it up. A page whose picture is missing shows "Screenshot: ... (no
 | `selfcheck.png` | The launcher's self-check, all clear | 11-troubleshooting |
 
 | `autopilot.png` | Kithylin Autopilot on XP, 15 minutes in: typing to Cairngorm on AIM with his own cursor, ClaudeRPG on its autopilot and ClaudeAmp behind, the banner at the top | 16-autopilot |
+| `autopilot-day.png` | The autopilot's Day tab: the week painted with work, lunch and sleep, the At work block's scene and legs, Today, and Right now (sample data) | 16-autopilot |
 
 Not taken: the Furry Hollow (it needs OpenSimulator and the viewer running).
