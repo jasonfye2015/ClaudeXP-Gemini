@@ -46,7 +46,7 @@ CODE_OF = {v: k for k, v in CODES.items()}
 DAY_STARTS = 4                              # "today" runs from 4 am to 4 am, so after midnight is still today
 THREAD_KINDS = {"life": "Life arc", "opener": "Daily opener", "bit": "Recurring bit", "roleplay": "Roleplay seed"}
 THREAD_STATUS = ["active", "paused", "done", "suggested"]
-MAX_EVENTS, MAX_CLAIMS, MAX_AUTO_THREADS = 40, 40, 5
+MAX_EVENTS, MAX_CLAIMS, MAX_AUTO_THREADS = 250, 120, 5     # a busy day: dozens of conversations an hour
 
 # Interests: who he talks to more. reply: seconds before he answers; exchanges: how many replies before he lets a
 # conversation rest, and rest: minutes it rests; hello: how often he IMs them first (love interests: as soon as they're
@@ -430,6 +430,7 @@ class Day:
         """Something that happened today. share: also a small thread he might mention, for a day or two. who: the
         person it was with (a conversation), so he remembers it with them."""
         ev = self.today["events"]
+        self.today["event_count"] = int(self.today.get("event_count", len(ev))) + 1     # all of today's, kept or not
         ev.append({"t": self.now().strftime("%H:%M"), "text": text, **({"who": who} if who else {})})
         del ev[:-MAX_EVENTS]
         if share:
@@ -444,6 +445,8 @@ class Day:
         self.save()
 
     def claim(self, who, text):
+        if not real_claim(text):
+            return
         cl = self.today["claims"]
         if any(c["text"].lower() == text.lower() for c in cl[-12:]):
             return
@@ -778,8 +781,19 @@ Answer with a JSON object:
 somewhere he isn't, doing something he isn't, or a plan that conflicts)? Small talk, feelings and roleplay actions
 in *asterisks* are not clashes,
 "why": "if it clashes, what is wrong, in a few words",
-"claims": ["each fact or plan he states about HIMSELF in the message, a few words each, e.g. 'about to walk the
-dog', 'had pizza for lunch'; [] if none"]{brought}}}"""
+"claims": ["each fact or plan he states about HIMSELF and his day or life - where he is, what he did, is doing or
+will do - a few words each, e.g. 'about to walk the dog', 'had pizza for lunch'. Not feelings or affection, not
+*actions*, greetings or thanks, and not what the other person said; [] if none"]{brought}}}"""
+_NOT_A_CLAIM = re.compile(r"^(?:kiss|lick|snug|nuzzl|hug|cuddl|squeez|wag|purr|giggl|blush|lov|feel|us(?:es|ing) "
+                          r"pet|thank|oh\b|yush|yay|aww|hehe|lol|hi\b|hey\b|hello)", re.I)
+
+
+def real_claim(text):
+    """A fact about his day worth holding him to - not an action, a feeling, a thank-you or a quoted line."""
+    t = (text or "").strip().strip("\"'")
+    if len(t.split()) < 2 or re.search(r"[:;]-?[)(DPp]|\^\^|<3|\bxd\b", t, re.I) or t.endswith(("!", "?")):
+        return False
+    return not _NOT_A_CLAIM.match(t)
 REWRITE_NOTE = ("\n\n(Your first try said something that isn't true today: {why}. Write it again, keeping to "
                 "today's facts.)")
 

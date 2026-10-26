@@ -277,16 +277,28 @@ class Messengers(Leg):
                                 + petnames.note(b.name, species) + extra_note, history, instruction,
                                 max_tokens=max_tokens, max_lines=3, thread_ok=thread_ok, check=check)
         text = petnames.fit(text or "", species)               # no "kitty" for a German Shepherd
-        if not text or win is None or not isValid(win):
+        if not text:
             return
         yield from ctx.hands.take(self.key)
         try:
-            if ctx.desktop.active is not frame:
-                yield from focus(ctx, frame)
-            yield from ctx.hands.type_into(win.input, text)
-            yield from ctx.hands.click((win.input, QPoint(win.input.width() - 20, win.input.height() - 12)),
-                                       action=win._send)
-            ctx.status(f"Chatting with {b.name}")
+            for _try in range(2):
+                win = app.im_windows.get(bid)
+                if win is None or not isValid(win) or not isValid(win.input):
+                    app.open_im(bid)                    # closed while he was thinking of what to say: open it again
+                    win = app.im_windows.get(bid)
+                    if win is None or not isValid(win):
+                        return
+                frame = getattr(win, "_xp_frame", None)
+                try:
+                    if ctx.desktop.active is not frame:
+                        yield from focus(ctx, frame)
+                    yield from ctx.hands.type_into(win.input, text)
+                    yield from ctx.hands.click((win.input, QPoint(win.input.width() - 20, win.input.height() - 12)),
+                                               action=win._send)
+                    ctx.status(f"Chatting with {b.name}")
+                    return
+                except RuntimeError:                    # the window went away mid-sentence: once more, in a new one
+                    ctx.note(f"The IM window with {b.name} closed while he was typing; opening it again.")
         finally:
             ctx.hands.release(self.key)
 

@@ -11,6 +11,7 @@ At bedtime he adds a last line, and the day is boiled down into a private memory
 each person in it. His prompts read those memories back (the last few days, and the last times with whoever he's
 talking to), so yesterday isn't forgotten. A day that ended without a wrap-up is remembered the next morning.
 """
+import re
 import time
 
 from claudecore.autopilot.voice import Voice, persona
@@ -104,7 +105,7 @@ def tick(force=False):
         return
     if ("update" not in _busy and not d.asleep() and _awake(d) and not today.get("wrapped")
             and time.time() - float(today.get("last_written") or 0) >= UPDATE_EVERY
-            and len(today.get("events", [])) - int(today.get("update_mark") or 0) >= UPDATE_MIN_EVENTS):
+            and event_count(today) - int(today.get("update_mark") or 0) >= UPDATE_MIN_EVENTS):
         _update(d)
 
 
@@ -147,18 +148,24 @@ def append(d, text, label="update"):
         return True
     if not lj.update(change):
         return False
-    d.today["update_mark"] = len(d.today.get("events", []))
+    d.today["update_mark"] = event_count(d.today)
     d.today["last_written"] = time.time()
     d.today.setdefault("updates", []).append(d.now().strftime("%H:%M"))
     d.save()
     return True
 
 
+def event_count(today):
+    """How many events today has had in all (the list itself keeps only the latest)."""
+    return int(today.get("event_count", len(today.get("events", []))))
+
+
 def since_last(d):
     """What's happened since the last update (or the morning post), as notes for writing the next one; '' if
     nothing has."""
     today = d.today
-    events = today.get("events", [])[int(today.get("update_mark") or 0):]
+    new = min(event_count(today) - int(today.get("update_mark") or 0), len(today.get("events", [])))
+    events = today.get("events", [])[-new:] if new > 0 else []
     claims = today.get("claims", [])[-6:]
     lines = [f"- {e['t']}: {e['text']}" for e in events]
     if not lines:
@@ -179,6 +186,8 @@ def _system(d, note):
 def post_text(text):
     """A diary post as it goes up: no pet names aimed at one person."""
     from .petnames import unaddress
+    text = re.sub(r"\*[^*\n]{1,80}\*", "", text)                 # no *wags and nuzzles* in a post
+    text = re.sub(r"[ \t]{2,}", " ", text)
     return unaddress(text).strip()
 
 
@@ -246,7 +255,7 @@ def _morning(d):
                              d.data.get("diary_security", "public"))
             d.today["journal_entry"] = entry_id
             d.today["mood_line"] = body
-            d.today["update_mark"] = len(d.today.get("events", []))
+            d.today["update_mark"] = event_count(d.today)
             d.today["last_written"] = time.time()
             d.save()
             _log(f"Morning entry in LiveJournal (mood: {mood}): {subject or body[:50]}")
@@ -274,7 +283,7 @@ def _update(d):
         finally:
             _busy.discard("update")
     _voice().say(_system(d, UPDATE_NOTE.format(year=clock.now().year)), [{"role": "user", "content": notes}], done,
-                 instruction="Write the update.", max_tokens=220, priority=broker.CHATTER)
+                 instruction="Write the update.", max_tokens=220, temperature=0.7, priority=broker.CHATTER)
 
 
 def _wrap_up(d):
@@ -313,7 +322,7 @@ def _remember(d, day):
     entry = entry_text(day.get("journal_entry")) if day.get("journal_entry") else (day.get("mood_line") or "")
     prompt = MEMORY_PROMPT.format(
         me="Kithylin", mood=day.get("mood") or "not noted", entry=entry or "(none)",
-        events="\n".join(f"- {e['t']}: {e['text']}" for e in events) or "(nothing noted)",
+        events="\n".join(f"- {e['t']}: {e['text']}" for e in events[-120:]) or "(nothing noted)",
         claims="\n".join(f"- to {c.get('who') or 'someone'}: {c['text']}" for c in claims) or "(nothing noted)")
 
     def fallback():
@@ -344,12 +353,25 @@ def _remember(d, day):
 
 
 # ---- from the life sim --------------------------------------------------------------------------------------------
+def talk_note(name, note):
+    """The life sim's summary of a conversation, said one way: "talked with <name> about ..."."""
+    note = (note or "").strip().strip('"').rstrip(".")
+    n = re.escape(name)
+    note = re.sub(rf"^{n}\s*:\s*", "", note, flags=re.I)                                 # "Cicada: Asked about..."
+    note = re.sub(rf"^Kithylin and {n} talked about\b", f"talked with {name} about", note, flags=re.I)
+    note = re.sub(rf"^{n} talked (?:with|to) Kithylin about\b", f"talked with {name} about", note, flags=re.I)
+    note = re.sub(r"^(?:Kithylin|I)\s+(?=talked|chatted)", "", note, flags=re.I)
+    if note and not re.match(r"(?i)(talked|chatted)\b", note):
+        note = f"talked with {name}: {note[:1].lower() + note[1:]}"
+    return note[:1].lower() + note[1:]
+
+
 def talked(name, note):
     """A conversation he had (summarised by the life sim when it went quiet): an event with that person."""
     d = _day()
-    note = (note or "").strip().strip('"').rstrip(".")
+    note = talk_note(name, note)
     if note and d.data.get("diary", True):
-        d.event(note[:1].lower() + note[1:], who=name)
+        d.event(note, who=name)
 
 
 def _log(text):
