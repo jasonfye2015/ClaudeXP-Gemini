@@ -172,7 +172,8 @@ class Messengers(Leg):
         if ctx.engine.asleep and ctx.day is not None:      # he sat down asleep: AIM wasn't on to show it
             world.set_user_away(True, ctx.day.block_info().get("away", ""))
         queue = []
-        world.message_added.connect(lambda bid, entry: queue.append((bid, entry)))
+        listen = lambda bid, entry: queue.append((bid, entry))          # noqa: E731
+        world.message_added.connect(listen)
         pending, budget, rested, last_used = {}, {}, {}, {}
         greeted = set()                                 # love interests he's IMed since they came online
         greet_at = {}                                   # ... and when he'll send that IM
@@ -242,7 +243,7 @@ class Messengers(Leg):
                 yield 1
         finally:
             try:
-                world.message_added.disconnect()
+                world.message_added.disconnect(listen)      # (only his: AIM's own windows keep theirs)
             except Exception:
                 pass
 
@@ -436,7 +437,7 @@ class Roleplay(Leg):
                     instruction = "Continue the roleplay in character."
                 yield from helper.reply(ctx, app, b.id, note=RP_NOTE, max_tokens=220, instruction=instruction,
                                         thread_ok=False, extra_note=note, check=False)
-            if not ctx.stopping:
+            if not ctx.stopping and Messengers.owes_reply(b):      # (they went quiet: nothing to sign off from)
                 yield from helper.reply(ctx, app, b.id, note=IM_NOTE, max_tokens=80,
                                         instruction="Wrap the scene up warmly in one or two lines and say you need "
                                                     "to go do something for a bit.", thread_ok=False, check=False)
@@ -823,7 +824,8 @@ class Muck(Leg):
             ctx.note("Couldn't get logged on to the MUCK.")
             return
         heard = []
-        world.line.connect(lambda kind, text: heard.append((kind, text)))
+        listen = lambda kind, text: heard.append((kind, text))          # noqa: E731
+        world.line.connect(listen)
         next_act = time.monotonic() + random.uniform(30, 90) * ctx.pace
         ctx.status("On the MUCK")
         try:
@@ -872,7 +874,7 @@ class Muck(Leg):
                 yield 2
         finally:
             try:
-                world.line.disconnect()
+                world.line.disconnect(listen)               # (only his: the MUCK window keeps its own)
             except Exception:
                 pass
             if isValid(frame) and not ctx.stopping:

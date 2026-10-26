@@ -16,6 +16,7 @@ DOOR_SECONDS = 60
 REPLY_DEBOUNCE_MS = 1500     # wait for the user to finish a burst of messages
 REPLY_RESERVE_TOKENS = 512   # room left in the context for the reply itself
 IDLE_CHECK_MS = 15000
+STUCK_REPLY_S = 180            # "typing" this long with nothing to show: the reply was lost, start over
 VISION_IMAGES = 2             # how many of the user's most recent pictures the model can see
 IMAGE_TOKENS = 260            # rough context cost of one attached picture
 PICTURE_COOLDOWN = 5          # user messages after a buddy shares pictures before they may again unasked
@@ -46,6 +47,7 @@ class Buddy:
         self.door_until = 0.0
         self.window_seen = False       # their IM window is open and in front of the user
         self.busy = False              # a reply is being generated or "typed"
+        self.busy_since = 0.0          # when it started (a reply that never comes is given up on)
         self.pending_reply = False     # user said something that still needs an answer
         self.last_activity = time.monotonic()
         self.last_user_message = 0.0
@@ -304,6 +306,15 @@ class World(QObject):
     def _check_idle(self):
         now = time.monotonic()
         for b in self.buddies.values():
+            if b.busy and b.busy_since and now - b.busy_since > STUCK_REPLY_S:
+                # A reply that never arrived (lost on the way): stop "typing", and answer afresh if they're owed one.
+                b.busy, b.busy_since = False, 0.0
+                self.typing_changed.emit(b.id, False)
+                owed = next((m["kind"] for m in reversed(b.history.messages)
+                             if m["kind"] in ("user", "contact")), "") == "user"
+                if owed and b.presence == Presence.ONLINE:
+                    self._schedule_reply(b)
+                continue
             if b.presence != Presence.ONLINE or b.busy:
                 continue
             quiet_ms = (now - b.last_activity) * 1000
@@ -362,6 +373,7 @@ class World(QObject):
         b.fired.add(idx)
         if trig.text:
             b.busy = True
+            b.busy_since = time.monotonic()
             self.typing_changed.emit(b.id, True)
             self._after(self._typing_ms(trig.text), lambda: self._finish_reply(b, trig.text, True))
         elif not b.busy:
@@ -517,6 +529,7 @@ class World(QObject):
         initiated = initiated and not b.pending_reply  # if the user just spoke, it's an answer
         pictures_ok = share_pictures or self._pictures_allowed(b)
         b.busy = True
+        b.busy_since = time.monotonic()
         b.pending_reply = False
         self.typing_changed.emit(b.id, True)
         messages = self.build_messages(b, instruction)

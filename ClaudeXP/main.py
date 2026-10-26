@@ -41,6 +41,36 @@ def _log_crashes():
             except (OSError, ValueError):
                 pass
     qInstallMessageHandler(qt_message)
+    _log_errors(folder)
+
+
+def _log_errors(folder):
+    """Every Python error that doesn't crash ClaudeXP - one in a Qt callback, a timer, a thread - goes to
+    logs/errors.log (and the Furry Log), instead of vanishing: under pythonw there's no console to print it to."""
+    import threading
+    import time
+    import traceback
+    path = os.path.join(folder, "errors.log")
+
+    def hook(kind, value, tb):
+        text = "".join(traceback.format_exception(kind, value, tb))
+        try:
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(f"\n{time.strftime('%Y-%m-%d %H:%M:%S')} (pid {os.getpid()})\n{text}")
+        except OSError:
+            pass
+        try:
+            from claudecore.ai import llmlog
+            llmlog.event("ERROR", text.strip().splitlines()[-1] + "\n" + text)
+        except Exception:
+            pass
+        if sys.stderr is not None:
+            try:
+                sys.stderr.write(text)
+            except (OSError, ValueError):
+                pass
+    sys.excepthook = hook
+    threading.excepthook = lambda a: hook(a.exc_type, a.exc_value, a.exc_traceback)
 
 
 def main():
