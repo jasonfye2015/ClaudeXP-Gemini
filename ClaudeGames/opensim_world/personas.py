@@ -21,7 +21,7 @@ import json
 import random
 import re
 
-from . import HERE, REGIONS
+from . import HERE, QUIET_REGIONS, REGIONS
 
 FILE = HERE / "personas.json"
 
@@ -260,7 +260,7 @@ def allowed_regions(persona):
     """The regions they'll go to at all."""
     out = []
     for region, *_r in REGIONS:
-        if region in persona.get("avoids_regions", []):
+        if region in QUIET_REGIONS or region in persona.get("avoids_regions", []):
             continue
         if region in ADULT_REGIONS and persona.get("adult", {}).get("visits", "never") == "never":
             continue

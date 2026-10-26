@@ -98,10 +98,22 @@ years.
 ## The Furry Hollow (Second Life on this PC)
 
 On every computer, **Furry Hollow** in Social Programs starts a Second Life of your own: an OpenSimulator grid running
-on this PC with twelve regions (the Furry Hollow, Whisker Falls, Tailwind Beach, Lantern Market, Love Island, Fantasy
-Island, Maple Row and Heartland where the residents live, The Commons and Hollow Hall, and two adults' regions off
-to the east), with the residents walking around in it as furry avatars, dressed from their fursonas, keeping their
-own hours. The viewer is the Cool VL Viewer (or a Firestorm if you unpack one into `Local Storage\SecondLife\viewer`).
+on this PC with thirteen regions (the Furry Hollow, Whisker Falls, Tailwind Beach, Lantern Market, Love Island, Fantasy
+Island, Maple Row and Heartland where the residents live, The Commons and Hollow Hall, two adults' regions off
+to the east, and Fox Valley), with the residents walking around in it as furry avatars, dressed from their fursonas,
+keeping their own hours.
+
+**Fox Valley**, east of Hollow Hall, is your own Second Life, brought home from the Firestorm backups in
+`Local Storage\Second Life Export`:
+- the Tavern, both FurPiled HQs, and the back deck and bridge;
+- the Valleys' maps and signs in a ring around the arrival plaza, with the residents' names on their plots;
+- your snapshots and textures hung on gallery walls to the south;
+- the boxes of notecards, scripts, sounds and avatars on tables in the archive vault to the west, with your
+  wearables on a table of their own. Take a box or a wearable into your inventory to use it.
+
+It's a museum: scripts don't run there, so twenty-year-old scripts stay quiet in their boxes, and the residents
+don't go there. Put more backups in the export folder and delete `Local Storage\SecondLife\downloads\archive` and the
+`"region:Fox Valley"` line in `world.json` to build it again. The viewer is the Cool VL Viewer (or a Firestorm if you unpack one into `Local Storage\SecondLife\viewer`).
 Local chat near a resident gets a reply from the language model in their voice; naming someone who's online elsewhere
 sends them an IM. The **Furry SL Persona Studio** (Furry Stuff) sets each resident's Second Life persona: hours,
 home, habits, adult settings, look.

@@ -7,7 +7,8 @@ use. The newer regions come from the Outworldz free library (https://outworldz.c
 Love Island by Avia Bonne (CC BY-NC: personal use, credit her), Fantasy Island by Linda Kellie (CC0), WhiteWood
 and Castle LoveGlo by PcTek CyberStar (CC-BY: credit them), Urban Neighborhood and Heartland by Shirl Taintedangel
 (CC BY-NC: personal use, credit her), and the Avatar Center and Conference Center by Linda Kellie (CC0). Files go in Local Storage/SecondLife/downloads/<source>
-(download_all() fetches them)."""
+(download_all() fetches them). Fox Valley is the user's own Second Life builds, made here from their Firestorm backups
+(slarchive.py) into downloads/archive."""
 import json
 import time
 import urllib.request
@@ -27,7 +28,8 @@ REGION_BUILDS = {"Furry Hollow": "oars/LK-MountainRetreat.tgz",      # a forest 
                  "Maple Row": "outworldz:OAR-Urban Neighborhood(1x1).tgz",       # a street of houses: homes
                  "Heartland": "outworldz:OAR-Heartland(1X1).tgz",                 # heart-shaped cottages: homes
                  "The Commons": "outworldz:OAR-Avatar Center(1X1).tgz",           # Linda Kellie's avatar centre
-                 "Hollow Hall": "outworldz:OAR-Conference_Center(1X1).tgz"}       # a hall to meet in
+                 "Hollow Hall": "outworldz:OAR-Conference_Center(1X1).tgz",       # a hall to meet in
+                 "Fox Valley": "archive:Fox Valley.tgz"}                           # the user's own SL builds
 PACKS = ["iars/furry-avatars.iar", "iars/FULLAVATARS.zip", "iars/AVATARHAIR.zip", "iars/LK-ANIMALS.zip",
          "iars/LK-ANIMATIONS.zip", "iars/LK-FURNITURE.zip", "iars/LK-HOUSES.zip"]
 
@@ -49,7 +51,7 @@ def local(rel):
 def download_all(progress=print):
     from urllib.parse import quote
     for rel in list(REGION_BUILDS.values()) + PACKS:
-        if not local(rel).exists():
+        if _split(rel)[0] in SOURCES and not local(rel).exists():
             source, path = _split(rel)
             progress(f"Downloading {path}...")
             local(rel).parent.mkdir(parents=True, exist_ok=True)
@@ -74,6 +76,13 @@ def _mark(item):
 def to_do():
     """(kind, name, file) still to load, for the files that are here."""
     done = set(_done())
+    if "region:Fox Valley" not in done:
+        try:
+            from . import slarchive
+            slarchive.ensure()                    # made from the user's Second Life export, if there is one
+        except Exception:
+            import traceback
+            traceback.print_exc()
     names = [r[0] for r in REGIONS]
     out = [("region", region, local(rel)) for region, rel in REGION_BUILDS.items()
            if region in names and f"region:{region}" not in done and local(rel).exists()]

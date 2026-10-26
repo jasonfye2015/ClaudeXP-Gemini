@@ -37,8 +37,11 @@ REGIONS = [("Furry Hollow", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e01", (1000, 1000)
            ("Heartland", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e0a", (999, 1001), 9009),
            # between the block and the adults' pair: the meeting places
            ("The Commons", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e0b", (1002, 1000), 9010),
-           ("Hollow Hall", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e0c", (1002, 1001), 9011)]
+           ("Hollow Hall", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e0c", (1002, 1001), 9011),
+           # east of the Hall: the user's own Second Life builds (slarchive.py), a museum with its scripts off
+           ("Fox Valley", "8a6b1d2e-4f7c-4c11-9d3e-2b5f7a9c1e0d", (1003, 1001), 9012)]
 REGION = REGIONS[0][0]                       # where you arrive
+QUIET_REGIONS = {"Fox Valley"}               # no Keeper and no residents: scripts don't run there
 GRID_PORT = 9000
 BRIDGE_PORT = 9180
 GRID_NAME = "Claude Timeline Grid"
@@ -322,6 +325,8 @@ def place_keeper(server):
         world_file().write_text(json.dumps(me, indent=2), encoding="utf-8")
     server.command(f"estate set owner 101 {me['first']} {me['last']}")
     for name, *_rest in REGIONS:             # a Keeper in every region, each its own object
+        if name in QUIET_REGIONS:
+            continue
         path = oar.write(root() / "keepers" / f"{name}.oar", owner, name)
         done = server.log().count("Start scripts done")
         server.command(f"change region {name}")

@@ -18,7 +18,9 @@ from shiboken6 import isValid
 
 from claudecore import host
 
-from . import HERE, REGIONS, catalog, dress, personas
+from . import HERE, QUIET_REGIONS, REGIONS, catalog, dress, personas
+
+LIVED_IN = [r[0] for r in REGIONS if r[0] not in QUIET_REGIONS]     # where residents go
 
 _state = {"frame": None}
 TIMEZONES = ["America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles",
@@ -335,7 +337,7 @@ class StudioBody(QWidget):
         self.maturity = QComboBox()
         self.maturity.addItems(personas.MATURITY)
         self.home = QComboBox()
-        self.home.addItems([r[0] for r in REGIONS])
+        self.home.addItems(LIVED_IN)
         self.home.currentTextChanged.connect(self._parcels)
         self.parcel = QComboBox()
         self.days = QSpinBox()
@@ -383,8 +385,8 @@ class StudioBody(QWidget):
         w, f = self._form()
         self.usually = _Checks(personas.ACTIVITIES)
         self.sometimes = _Checks(personas.ACTIVITIES)
-        self.favourites = _Checks([r[0] for r in REGIONS])
-        self.avoids = _Checks([r[0] for r in REGIONS])
+        self.favourites = _Checks(LIVED_IN)
+        self.avoids = _Checks(LIVED_IN)
         f.addRow("Usually does", self.usually)
         f.addRow("Sometimes does", self.sometimes)
         f.addRow("Favourite regions", self.favourites)
