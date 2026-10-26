@@ -38,14 +38,14 @@ PROGRAM_FOLDERS = {"Furry Programs": ["comix", "folio", "stories", "cdviewer", "
                    "GeminiAdobe": [p.key for p in programs.PROGRAMS if p.group == "GeminiAdobe"],
                    "Social Programs": ["telegram", "discord", "yim", "trillian", "skype", "icq", "kik", "msn", "aim", "furcadia", "secondlife",
                                        "hotmail", "livejournal", "irc", "navigator", "muck"],
-                   "Projects": ["virtualpet", "flymind", "flymind1", "flybrainviewer", "flybraindungeon", "localprojects", "aillmtxt"],
+                   "Projects": ["virtualpet", "flymind", "flymind1", "flybrainviewer", "flybraindungeon", "localprojects", "aillmtxt", "soulsong"],
                    "Disc Tools": ["nero", "alcohol120"],
                    "Archive Tools": ["winrar", "winzip"]}
 # the layout version that last changed each folder (an upgrade adds the shortcuts it's missing; it never removes)
-FOLDERS_SINCE = {"Projects": 63, "Social Programs": 45, "Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 62,
+FOLDERS_SINCE = {"Projects": 64, "Social Programs": 45, "Furry Programs": 18, "TV and Movies": 20, "Emulation": 19, "Windows Games": 19, "Games": 62,
                  "GeminiOffice": 11, "GeminiAdobe": 15, "Disc Tools": 16, "Archive Tools": 16}
 # Folder contents get their own version, so adding a shortcut doesn't reflow the desktop's icons (LAYOUT does).
-FOLDERS = 63                # 63: AI LLM Txt Files joined the Projects folder
+FOLDERS = 64                # 64: Soul and Song joined the Projects folder
 # folders that live inside another folder rather than loose on the desktop
 NESTED = {"Emulation": "Games/Emulation", "Windows Games": "Games/Windows Games"}
 # shortcuts that now live in one of those folders instead of loose on the desktop

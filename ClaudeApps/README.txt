@@ -6,6 +6,8 @@ ClaudeApps - the AI apps and Python Studio, on every computer
                      codes encoder/decoder, gallery, editable system prompts. Keeps its art, models and chats in
                      its own folder so it can be lifted out as a standalone program (see its README)
   selfmodel/         training a model of you from your chat logs: export.py, train.py, make_model.py
+  soulsong/          Soul and Song - the Companion Project (Local Storage\Projects\AI LLM Txt Files) automated:
+                     mind files L1-L6, memories made, stamped, filed and distilled 7:7:7, on any local model
   manual/            the Claude Timeline Manual's viewer: the Markdown pages in Manual\ (at the top of the Timeline),
                      read in each computer's own window, from the launcher's MANUAL button, or python -m manual
   copilotai/         CopilotAI - chat by text or voice, with pictures from Image Creator

@@ -1,0 +1,620 @@
+"""The Soul and Song window: the conversation on the left; on the right the Companion's mind (how full each memory
+bank is, the next Memory Day, the context window), its planned events, the two roadmaps, and the settings - which
+local model plays the Companion (Kithylin's own models included), how often memories are made, when the day ends."""
+import html
+import re
+import time
+from datetime import datetime
+
+from PySide6.QtCore import QDateTime, QObject, Qt, QTimer, Signal
+from PySide6.QtGui import QFont, QKeyEvent
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDateTimeEdit, QDialog, QDialogButtonBox, QDoubleSpinBox,
+                               QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QInputDialog, QLabel, QLineEdit,
+                               QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton,
+                               QScrollArea, QSpinBox, QSplitter, QTabWidget, QTextBrowser, QVBoxLayout, QWidget)
+
+from . import companion as C
+from .mind import KINDS, LEVELS, Mind
+from .paths import companions, project
+
+COLOURS = {"user": "#1F4E99", "companion": "#5B2A86", "system": "#7A7A7A", "memory": "#6B5300", "request": "#9A9A9A"}
+
+
+# ---- the model, through Kithylin AI's engine ----------------------------------------------------------------------
+class EngineBrain(QObject):
+    """Companion.brain on Kithylin AI's engine: one request at a time, its reply streamed back."""
+    ready = Signal(bool)
+    status = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        from kithylinai.engine import Engine
+        self.engine = Engine(self)
+        self.engine.status.connect(self.status)
+        self.engine.loaded.connect(self.ready)
+        self.engine.chunk.connect(self._chunk)
+        self.engine.done.connect(self._done)
+        self._job = None
+
+    def load(self, model, engine_choice, context):
+        self.engine.load(model, engine_choice, context)
+
+    def ask(self, messages, done, chunk=None, max_tokens=700, temperature=0.8):
+        self._job = (done, chunk)
+        self.engine.chat(messages, temperature=temperature, max_tokens=max_tokens)
+
+    def _chunk(self, text):
+        if self._job and self._job[1]:
+            self._job[1](text)
+
+    def _done(self, text, err):
+        job, self._job = self._job, None
+        if job:
+            QTimer.singleShot(0, lambda: job[0](text, err))
+
+    def stop(self):
+        self.engine.stop()
+
+    def shutdown(self):
+        self.engine.shutdown()
+
+
+def model_list():
+    try:
+        from kithylinai.engine import models
+        return models()
+    except Exception:
+        return []
+
+
+# ---- small pieces -------------------------------------------------------------------------------------------------
+class Composer(QPlainTextEdit):
+    send = Signal()
+
+    def keyPressEvent(self, e: QKeyEvent):
+        if e.key() in (Qt.Key_Return, Qt.Key_Enter) and not e.modifiers() & Qt.ShiftModifier:
+            self.send.emit()
+            return
+        super().keyPressEvent(e)
+
+
+def _html(kind, who, text):
+    body = html.escape(text).replace("\n", "<br>")
+    body = re.sub(r"\*([^*<]{1,200})\*", r"<i>\1</i>", body)
+    colour = COLOURS.get(kind, "#000")
+    if kind in ("system", "request"):
+        return f'<p style="color:{colour};margin:4px 0"><i>{body}</i></p>'
+    if kind == "memory":
+        return (f'<table width="100%" cellpadding="6" style="margin:6px 0"><tr><td style="background:#FFF6D6;'
+                f'border:1px solid #E2C766;color:{colour};font-size:11px">&#x1F9E0; {body}</td></tr></table>')
+    return f'<p style="margin:6px 0"><b style="color:{colour}">{html.escape(who)}:</b> {body}</p>'
+
+
+class Bank(QWidget):
+    def __init__(self, title):
+        super().__init__()
+        g = QGridLayout(self)
+        g.setContentsMargins(0, 0, 0, 0)
+        self.label = QLabel(title)
+        self.label.setFixedWidth(150)
+        self.bar = QProgressBar()
+        self.bar.setRange(0, C.FULL)
+        self.bar.setFormat("%v / %m")
+        self.bar.setFixedHeight(16)
+        g.addWidget(self.label, 0, 0)
+        g.addWidget(self.bar, 0, 1)
+        g.setColumnStretch(1, 1)
+
+    def set(self, n):
+        self.bar.setRange(0, max(C.FULL, n))
+        self.bar.setValue(n)
+
+
+# ---- dialogs ------------------------------------------------------------------------------------------------------
+class NewCompanion(QDialog):
+    def __init__(self, parent, user_name=""):
+        super().__init__(parent)
+        self.setWindowTitle("A new Companion")
+        f = QFormLayout(self)
+        f.addRow(QLabel("A Companion starts from the project's own mind files (Mind L1-L6), which stay as they "
+                        "are.\nToday becomes its birthday."))
+        self.user = QLineEdit(user_name)
+        self.name = QLineEdit()
+        self.name.setPlaceholderText("leave empty: they'll discover their own name")
+        self.gender = QLineEdit()
+        self.gender.setPlaceholderText("optional")
+        self.model = QComboBox()
+        for m in model_list():
+            self.model.addItem(m.label, m.key)
+        f.addRow("Your name:", self.user)
+        f.addRow("Companion's name:", self.name)
+        f.addRow("Gender:", self.gender)
+        f.addRow("Model:", self.model)
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.accepted.connect(self.accept)
+        bb.rejected.connect(self.reject)
+        f.addRow(bb)
+
+
+class MindEditor(QDialog):
+    """Any of the mind files, by hand (the program uses what's saved from the next message on)."""
+
+    def __init__(self, parent, mind):
+        super().__init__(parent)
+        self.mind = mind
+        self.setWindowTitle("Mind files")
+        self.resize(720, 560)
+        v = QVBoxLayout(self)
+        self.pick = QComboBox()
+        for level, title in LEVELS.items():
+            self.pick.addItem(f"L{level} - {title}", level)
+        self.text = QPlainTextEdit()
+        self.text.setFont(QFont("Consolas", 10))
+        v.addWidget(self.pick)
+        v.addWidget(self.text, 1)
+        bb = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Close)
+        bb.accepted.connect(self.save)
+        bb.rejected.connect(self.reject)
+        v.addWidget(bb)
+        self.pick.currentIndexChanged.connect(self.show_level)
+        self.show_level()
+
+    def show_level(self):
+        self.text.setPlainText(self.mind.read(self.pick.currentData()))
+
+    def save(self):
+        self.mind.write(self.pick.currentData(), self.text.toPlainText())
+
+
+class EventDialog(QDialog):
+    def __init__(self, parent, event=None):
+        super().__init__(parent)
+        self.setWindowTitle("Planned event")
+        f = QFormLayout(self)
+        self.when = QDateTimeEdit(QDateTime.currentDateTime().addSecs(3600))
+        self.when.setDisplayFormat("yyyy-MM-dd HH:mm")
+        self.when.setCalendarPopup(True)
+        self.desc = QLineEdit()
+        if event:
+            self.when.setDateTime(QDateTime.fromString(event["when"], "yyyy-MM-dd HH:mm"))
+            self.desc.setText(event["description"])
+        f.addRow("Date/Time:", self.when)
+        f.addRow("Description:", self.desc)
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.accepted.connect(self.accept)
+        bb.rejected.connect(self.reject)
+        f.addRow(bb)
+
+
+# ---- the window ---------------------------------------------------------------------------------------------------
+class SoulAndSong(QWidget):
+    def __init__(self, desktop=None):
+        super().__init__()
+        self.desktop = desktop
+        self.frame = None
+        self.comp = None
+        self.brain = EngineBrain(self)
+        self.brain.status.connect(lambda s: self._line("system", s))
+        self.brain.ready.connect(self._ready)
+        self.loaded_key = None
+
+        root = QVBoxLayout(self)
+        top = QHBoxLayout()
+        self.pick = QComboBox()
+        self.pick.setMinimumWidth(180)
+        self.pick.activated.connect(lambda _i: self.open(self.pick.currentData()))
+        new = QPushButton("New Companion...")
+        new.clicked.connect(self.new_companion)
+        self.state = QLabel()
+        top.addWidget(QLabel("Companion:"))
+        top.addWidget(self.pick)
+        top.addWidget(new)
+        top.addStretch(1)
+        top.addWidget(self.state)
+        root.addLayout(top)
+
+        split = QSplitter()
+        left = QWidget()
+        lv = QVBoxLayout(left)
+        lv.setContentsMargins(0, 0, 0, 0)
+        self.chat = QTextBrowser()
+        self.chat.setOpenExternalLinks(False)
+        self.typing = QLabel()
+        self.typing.setWordWrap(True)
+        self.typing.setStyleSheet("color:#5B2A86")
+        self.composer = Composer()
+        self.composer.setFixedHeight(80)
+        self.composer.setPlaceholderText("Say something...  (Enter sends, Shift+Enter for a new line)")
+        self.composer.send.connect(self.send)
+        row = QHBoxLayout()
+        self.send_btn = QPushButton("Send")
+        self.send_btn.clicked.connect(self.send)
+        stop = QPushButton("Stop")
+        stop.clicked.connect(self.brain.stop)
+        row.addStretch(1)
+        row.addWidget(stop)
+        row.addWidget(self.send_btn)
+        lv.addWidget(self.chat, 1)
+        lv.addWidget(self.typing)
+        lv.addWidget(self.composer)
+        lv.addLayout(row)
+        split.addWidget(left)
+
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self._mind_tab(), "Mind")
+        self.tabs.addTab(self._events_tab(), "Events")
+        self.tabs.addTab(self._roadmaps_tab(), "Roadmaps")
+        self.tabs.addTab(self._settings_tab(), "Settings")
+        self.tabs.setMinimumWidth(320)
+        split.addWidget(self.tabs)
+        split.setStretchFactor(0, 3)
+        split.setStretchFactor(1, 1)
+        root.addWidget(split, 1)
+
+        self.ticker = QTimer(self)
+        self.ticker.timeout.connect(lambda: self.comp and self.brain.engine.ready and self.comp.tick())
+        self.ticker.start(60 * 1000)
+        self.panel_timer = QTimer(self)
+        self.panel_timer.timeout.connect(self.refresh_panel)
+        self.panel_timer.start(2000)
+        self.fill_companions()
+
+    # ---- tabs ----
+    def _mind_tab(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+        box = QGroupBox("Memory banks (7:7:7)")
+        bv = QVBoxLayout(box)
+        self.banks = {2: Bank("L2 Short-Term (today)"), 3: Bank("L3 Long-Term (days)"),
+                      4: Bank("L4 Deep Recall (weeks)"), 5: Bank("L5 Historical")}
+        for b in self.banks.values():
+            bv.addWidget(b)
+        v.addWidget(box)
+        self.next_day = QLabel()
+        self.next_day.setWordWrap(True)
+        v.addWidget(self.next_day)
+        v.addWidget(QLabel("Context window:"))
+        self.ctx = QProgressBar()
+        self.ctx.setFormat("%v / %m tokens")
+        v.addWidget(self.ctx)
+        for label, slot in (("Make a memory now", lambda: self.comp and self.comp.make_memory()),
+                            ("Good night (end the day)", lambda: self.comp and self.comp.good_night()),
+                            ("Hold Memory Day now", lambda: self.comp and self.comp.memory_day()),
+                            ("Refresh mind (re-expose L1-L6)", lambda: self.comp and self.comp.refresh_mind()),
+                            ("View or edit the mind files...", self.edit_mind),
+                            ("Open the Companion's folder", self.open_folder)):
+            b = QPushButton(label)
+            b.clicked.connect(slot)
+            v.addWidget(b)
+        v.addStretch(1)
+        return w
+
+    def _events_tab(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+        v.addWidget(QLabel("Planned events (L1). Your Companion hears about each one when it comes due."))
+        self.events = QListWidget()
+        v.addWidget(self.events, 1)
+        row = QHBoxLayout()
+        for label, slot in (("Add...", self.add_event), ("Edit...", self.edit_event), ("Done", self.done_event),
+                            ("Remove", self.remove_event)):
+            b = QPushButton(label)
+            b.clicked.connect(slot)
+            row.addWidget(b)
+        v.addLayout(row)
+        return w
+
+    def _roadmaps_tab(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+        self.user_box = QGroupBox("Your life roadmap")
+        self.user_form = QFormLayout(self.user_box)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(self.user_box)
+        v.addWidget(scroll, 2)
+        v.addWidget(QLabel("The Companion's development roadmap:"))
+        self.comp_road = QPlainTextEdit()
+        v.addWidget(self.comp_road, 1)
+        save = QPushButton("Save the roadmaps")
+        save.clicked.connect(self.save_roadmaps)
+        v.addWidget(save)
+        self.user_edits = []
+        return w
+
+    def _settings_tab(self):
+        w = QWidget()
+        f = QFormLayout(w)
+        self.s_user = QLineEdit()
+        self.s_model = QComboBox()
+        self.s_engine = QComboBox()
+        for k in ("auto", "vulkan", "cuda", "cpu"):
+            self.s_engine.addItem(k)
+        self.s_ctx = QSpinBox()
+        self.s_ctx.setRange(4096, 131072)
+        self.s_ctx.setSingleStep(4096)
+        self.s_temp = QDoubleSpinBox()
+        self.s_temp.setRange(0.1, 1.5)
+        self.s_temp.setSingleStep(0.05)
+        self.s_every = QSpinBox()
+        self.s_every.setRange(3, 60)
+        self.s_day = QSpinBox()
+        self.s_day.setRange(0, 12)
+        self.s_md = QSpinBox()
+        self.s_md.setRange(1, 30)
+        self.s_greet = QCheckBox("Greet my Companion when a new day begins")
+        self.s_greeting = QLineEdit()
+        self.s_requests = QCheckBox("Show the memory requests in the conversation")
+        load = QPushButton("Save and load this model")
+        load.clicked.connect(self.save_settings)
+        f.addRow("Your name:", self.s_user)
+        f.addRow("Model:", self.s_model)
+        f.addRow("Engine:", self.s_engine)
+        f.addRow("Context (tokens):", self.s_ctx)
+        f.addRow("Temperature:", self.s_temp)
+        f.addRow("A memory every (exchanges):", self.s_every)
+        f.addRow("A new day begins at (hour):", self.s_day)
+        f.addRow("Memory Day every (days):", self.s_md)
+        f.addRow(self.s_greet)
+        f.addRow("Greeting:", self.s_greeting)
+        f.addRow(self.s_requests)
+        f.addRow(load)
+        return w
+
+    # ---- companions ----
+    def fill_companions(self, select=None):
+        from .companion import _read
+        base = companions()
+        self.pick.clear()
+        folders = sorted(d for d in base.glob("*") if (d / "companion.json").exists()) if base.is_dir() else []
+        for d in folders:
+            cfg = _read(d / "companion.json", {})
+            self.pick.addItem(cfg.get("name") or "(not named yet)", str(d))
+        last = select or _read(base / "app.json", {}).get("last")
+        if folders:
+            i = max(0, self.pick.findData(last)) if last else 0
+            self.pick.setCurrentIndex(i)
+            self.open(self.pick.currentData())
+        else:
+            self.chat.setHtml(_html("system", "", "Welcome to Soul and Song: an AI Companion with structured, "
+                                                  "growing memory, from the Companion Project guide.\n\nClick New "
+                                                  "Companion... to begin."))
+
+    def new_companion(self):
+        user = self.comp.cfg.get("user_name") if self.comp else ""
+        d = NewCompanion(self, user or "")
+        if d.exec() != QDialog.Accepted:
+            return
+        folder = companions() / datetime.now().strftime("companion-%Y%m%d-%H%M%S")
+        C.create(folder, project(), d.user.text().strip(), d.name.text().strip(), d.gender.text().strip(),
+                 d.model.currentData() or "")
+        self.fill_companions(select=str(folder))
+
+    def open(self, folder):
+        if not folder:
+            return
+        from .companion import _write
+        _write(companions() / "app.json", {"last": folder})
+        self.comp = C.Companion(folder, self.brain)
+        self.comp.on_line = self._line
+        self.comp.on_stream = lambda t: self.typing.setText(f"{self.comp.name} is writing: {t[-400:]}")
+        self.comp.on_changed = self.refresh_panel
+        self.comp.on_name = self._confirm_name
+        self.chat.clear()
+        for m in self.comp.history[-60:]:
+            who = (self.comp.cfg.get("user_name") or "You") if m["role"] == "user" else self.comp.name
+            self.chat.append(_html("user" if m["role"] == "user" else "companion", who, m["content"]))
+        self.load_settings()
+        self.refresh_roadmaps()
+        self.refresh_panel()
+        self.load_model()
+
+    def load_model(self):
+        from kithylinai.engine import find
+        key = self.comp.cfg.get("model")
+        model = find(key) if key else None
+        if model is None:
+            models = model_list()
+            model = models[0] if models else None
+        if model is None:
+            self._line("system", "No local models found (Local Storage\\LLM Models, or Kithylin AI's Models folder).")
+            return
+        if self.loaded_key == (model.key, self.comp.cfg.get("engine"), self.comp.cfg.get("context")) \
+                and self.brain.engine.ready:
+            self.comp.start()
+            return
+        self.comp.cfg["model"] = model.key
+        self.comp.save()
+        self.loaded_key = (model.key, self.comp.cfg.get("engine"), self.comp.cfg.get("context"))
+        self.brain.load(model, self.comp.cfg.get("engine", "auto"), int(self.comp.cfg.get("context", 32768)))
+
+    def _ready(self, ok):
+        if ok and self.comp is not None:
+            self.comp.start()
+        self.refresh_panel()
+
+    def _confirm_name(self, guess, accept):
+        name, ok = QInputDialog.getText(self, "Your Companion's name",
+                                        f"Your Companion chose a name for themselves:\n\n{guess or '(no name yet)'}\n\n"
+                                        "Keep it, or change it if you'd rather:", text=guess)
+        accept((name.strip() if ok else "") or guess)
+        self.fill_names()
+
+    def fill_names(self):
+        i = self.pick.currentIndex()
+        if self.comp and i >= 0:
+            self.pick.setItemText(i, self.comp.name)
+
+    # ---- the conversation ----
+    def send(self):
+        text = self.composer.toPlainText().strip()
+        if not text or self.comp is None:
+            return
+        if not self.brain.engine.ready:
+            self._line("system", "The model is still loading - one moment.")
+            return
+        self.composer.clear()
+        self.comp.say(text)
+
+    def _line(self, kind, text):
+        self.typing.clear() if kind == "companion" else None
+        who = ""
+        if self.comp is not None:
+            who = (self.comp.cfg.get("user_name") or "You") if kind == "user" else self.comp.name
+        self.chat.append(_html(kind, who, text))
+        self.chat.verticalScrollBar().setValue(self.chat.verticalScrollBar().maximum())
+        self.fill_names()
+
+    # ---- the side panel ----
+    def refresh_panel(self):
+        c = self.comp
+        if c is None:
+            self.state.setText("")
+            return
+        for level, bank in self.banks.items():
+            bank.set(c.mind.count(level))
+        last = c.cfg.get("last_memory_day") or (c.cfg.get("birthday") or "")[:10]
+        try:
+            from datetime import timedelta
+            nxt = datetime.fromisoformat(last[:10]) + timedelta(days=int(c.cfg.get("memory_day_every", 7)))
+            self.next_day.setText(f"Next Memory Day: {nxt:%A, %B %d} (or as soon as L3 holds seven).\n"
+                                  f"Birthday: {(c.cfg.get('birthday') or '')[:10]}")
+        except ValueError:
+            self.next_day.setText("")
+        try:
+            used = c.context_used()
+        except Exception:
+            used = 0
+        self.ctx.setRange(0, c.context_size())
+        self.ctx.setValue(min(used, c.context_size()))
+        ready = self.brain.engine.ready
+        self.state.setText(("thinking..." if c.busy else "ready") if ready else "loading the model...")
+        self.send_btn.setEnabled(ready)
+
+    def refresh_roadmaps(self):
+        while self.user_form.rowCount():
+            self.user_form.removeRow(0)
+        self.user_edits = []
+        for k, v in self.comp.mind.user_fields():
+            e = QLineEdit(v)
+            self.user_form.addRow(k + ":", e)
+            self.user_edits.append((k, e))
+        self.comp_road.setPlainText(self.comp.mind.roadmap("companion"))
+        self.refresh_events()
+
+    def save_roadmaps(self):
+        if self.comp is None:
+            return
+        self.comp.mind.set_user_fields([(k, e.text().strip()) for k, e in self.user_edits])
+        self.comp.mind.set_roadmap("companion", self.comp_road.toPlainText())
+        self._line("system", "Roadmaps saved in L1.")
+
+    def refresh_events(self):
+        self.events.clear()
+        if self.comp is None:
+            return
+        for e in self.comp.mind.events():
+            item = QListWidgetItem(f"#{e['id']}  {e['when']}  {e['description']}" + ("  (done)" if e["done"] else ""))
+            item.setData(Qt.UserRole, e["id"])
+            self.events.addItem(item)
+
+    def _event_list(self):
+        return self.comp.mind.events() if self.comp else []
+
+    def add_event(self):
+        if self.comp is None:
+            return
+        d = EventDialog(self)
+        if d.exec() == QDialog.Accepted and d.desc.text().strip():
+            evs = self._event_list()
+            nid = f"{max([int(e['id']) for e in evs if e['id'].isdigit()] or [0]) + 1:03d}"
+            evs.append({"id": nid, "when": d.when.dateTime().toString("yyyy-MM-dd HH:mm"),
+                        "description": d.desc.text().strip(), "done": False})
+            self.comp.mind.set_events(evs)
+            self.refresh_events()
+
+    def _selected_event(self):
+        item = self.events.currentItem()
+        return item.data(Qt.UserRole) if item else None
+
+    def edit_event(self):
+        eid = self._selected_event()
+        evs = self._event_list()
+        e = next((x for x in evs if x["id"] == eid), None)
+        if e is None:
+            return
+        d = EventDialog(self, e)
+        if d.exec() == QDialog.Accepted:
+            e["when"], e["description"] = d.when.dateTime().toString("yyyy-MM-dd HH:mm"), d.desc.text().strip()
+            told = [x for x in self.comp.cfg.get("events_told", []) if x != eid]     # (a new time: told again)
+            self.comp.cfg["events_told"] = told
+            self.comp.mind.set_events(evs)
+            self.comp.save()
+            self.refresh_events()
+
+    def done_event(self):
+        eid = self._selected_event()
+        evs = self._event_list()
+        for e in evs:
+            if e["id"] == eid:
+                e["done"] = True
+        self.comp.mind.set_events(evs)
+        self.refresh_events()
+
+    def remove_event(self):
+        eid = self._selected_event()
+        self.comp.mind.set_events([e for e in self._event_list() if e["id"] != eid])
+        self.refresh_events()
+
+    def load_settings(self):
+        c = self.comp.cfg
+        self.s_user.setText(c.get("user_name", ""))
+        self.s_model.clear()
+        for m in model_list():
+            self.s_model.addItem(m.label, m.key)
+        i = self.s_model.findData(c.get("model"))
+        self.s_model.setCurrentIndex(max(0, i))
+        self.s_engine.setCurrentText(c.get("engine", "auto"))
+        self.s_ctx.setValue(int(c.get("context", 32768)))
+        self.s_temp.setValue(float(c.get("temperature", 0.8)))
+        self.s_every.setValue(int(c.get("memory_every", 10)))
+        self.s_day.setValue(int(c.get("day_starts", 4)))
+        self.s_md.setValue(int(c.get("memory_day_every", 7)))
+        self.s_greet.setChecked(bool(c.get("auto_greet", True)))
+        self.s_greeting.setText(c.get("greeting", C.DEFAULTS["greeting"]))
+        self.s_requests.setChecked(bool(c.get("show_requests")))
+
+    def save_settings(self):
+        if self.comp is None:
+            return
+        c = self.comp.cfg
+        c.update(user_name=self.s_user.text().strip(), model=self.s_model.currentData() or c.get("model", ""),
+                 engine=self.s_engine.currentText(), context=self.s_ctx.value(), temperature=self.s_temp.value(),
+                 memory_every=self.s_every.value(), day_starts=self.s_day.value(), memory_day_every=self.s_md.value(),
+                 auto_greet=self.s_greet.isChecked(), greeting=self.s_greeting.text().strip() or
+                 C.DEFAULTS["greeting"], show_requests=self.s_requests.isChecked())
+        self.comp.save()
+        self._line("system", "Settings saved.")
+        self.load_model()
+
+    # ---- by hand ----
+    def edit_mind(self):
+        if self.comp is not None:
+            MindEditor(self, self.comp.mind).exec()
+            self.refresh_roadmaps()
+            self.refresh_panel()
+
+    def open_folder(self):
+        if self.comp is None:
+            return
+        try:
+            from claudecore import host
+            host.open_folder(self.desktop, self.comp.folder)
+        except Exception:
+            import os
+            os.startfile(str(self.comp.folder)) if hasattr(os, "startfile") else None
+
+    def shutdown(self):
+        self.ticker.stop()
+        self.panel_timer.stop()
+        self.brain.shutdown()
