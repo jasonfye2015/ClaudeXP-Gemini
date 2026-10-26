@@ -50,6 +50,7 @@ Your own files are never changed: each Companion gets copies of Mind L1-L6 in
 Local Storage\Projects\AI LLM Txt Files\Companions\<companion>\ - plain text in the same format, so you can still
 read, edit or copy them by hand (Mind > View or edit the mind files). Beside them: Chats\<date>.txt (every
 conversation), Archive\ (each bank as it was before a distillation emptied it), companion.json and session.json.
+Delete Companion... moves a Companion's whole folder to Companions\Deleted\ - move it back to bring them back.
 
 In the Timeline: Start > All Programs > Projects > Soul and Song (and the desktop's Projects folder).
 Standalone: "Soul and Song.bat", or  python -m soulsong  from ClaudeApps.

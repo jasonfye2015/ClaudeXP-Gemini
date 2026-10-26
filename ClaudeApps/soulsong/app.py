@@ -205,10 +205,13 @@ class SoulAndSong(QWidget):
         self.pick.activated.connect(lambda _i: self.open(self.pick.currentData()))
         new = QPushButton("New Companion...")
         new.clicked.connect(self.new_companion)
+        delete = QPushButton("Delete Companion...")
+        delete.clicked.connect(self.delete_companion)
         self.state = QLabel()
         top.addWidget(QLabel("Companion:"))
         top.addWidget(self.pick)
         top.addWidget(new)
+        top.addWidget(delete)
         top.addStretch(1)
         top.addWidget(self.state)
         root.addLayout(top)
@@ -492,9 +495,58 @@ class SoulAndSong(QWidget):
             self.pick.setCurrentIndex(i)
             self.open(self.pick.currentData())
         else:
+            self._detach()
+            self.comp = None
+            self.typing.clear()
+            self.events.clear()
+            self.cores.clear()
+            self.portrait.clear()
+            self.proposal_box.hide()
             self.chat.setHtml(_html("system", "", "Welcome to Soul and Song: an AI Companion with structured, "
                                                   "growing memory, from the Companion Project guide.\n\nClick New "
                                                   "Companion... to begin."))
+            self.refresh_panel()
+
+    def _detach(self):
+        """The open Companion stops where it is (its lines stay its own)."""
+        if self.comp is not None:
+            self.comp.queue.clear()
+            self.comp.on_line = self.comp.on_stream = lambda *a: None
+            self.comp.on_changed = lambda: None
+            self.brain.stop()
+
+    def delete_companion(self):
+        """Put the open Companion away: its folder moves to Companions\\Deleted (move it back to bring them back)."""
+        if self.comp is None:
+            return
+        c = self.comp
+        memories = sum(c.mind.count(level) for level in KINDS)
+        days = len(list((c.folder / "Chats").glob("*.txt"))) if (c.folder / "Chats").is_dir() else 0
+        box = QMessageBox(QMessageBox.Warning, "Delete Companion",
+                          f"Delete {c.name}?\n\nBorn {(c.cfg.get('birthday') or '')[:10]} - {memories} memories in "
+                          f"their banks, {len(c.recall.items)} in their archive, {days} day(s) of conversation.\n\n"
+                          f"Their folder moves to Companions\\Deleted, so nothing is lost for good: to bring {c.name} "
+                          "back, move it back into Companions.", QMessageBox.Yes | QMessageBox.No, self)
+        box.setDefaultButton(QMessageBox.No)
+        if box.exec() != QMessageBox.Yes:
+            return
+        import shutil
+        self._detach()
+        self.comp = None
+        gone = companions() / "Deleted"
+        gone.mkdir(parents=True, exist_ok=True)
+        safe = re.sub(r'[\\/:*?"<>|]', "", c.name).strip() or "Companion"
+        target = gone / f"{datetime.now():%Y-%m-%d %H%M} {safe} ({c.folder.name})"
+        try:
+            shutil.move(str(c.folder), str(target))
+        except OSError as e:
+            QMessageBox.warning(self, "Delete Companion", f"{c.name}'s folder couldn't be moved:\n{e}")
+            self.open(str(c.folder))
+            return
+        from .companion import _write
+        _write(companions() / "app.json", {"last": ""})
+        self.fill_companions()
+        self._line("system", f"{c.name} was deleted (kept in Companions\\Deleted\\{target.name}).")
 
     def new_companion(self):
         user = self.comp.cfg.get("user_name") if self.comp else ""
@@ -511,11 +563,7 @@ class SoulAndSong(QWidget):
             return
         from .companion import _write
         _write(companions() / "app.json", {"last": folder})
-        if self.comp is not None:                       # the one before stops where it is (its lines stay its own)
-            self.comp.queue.clear()
-            self.comp.on_line = self.comp.on_stream = lambda *a: None
-            self.comp.on_changed = lambda: None
-            self.brain.stop()
+        self._detach()                                  # the one before stops where it is
         self.comp = C.Companion(folder, self.brain)
         self.comp.on_line = self._line
         self.comp.on_stream = lambda t: self.typing.setText(f"{self.comp.name} is writing: {t[-400:]}")
