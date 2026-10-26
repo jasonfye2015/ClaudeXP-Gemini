@@ -10,7 +10,7 @@ things going at once, for as long as you let him. Think of it as a screen saver 
 
 ## Starting him
 
-The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Programs). The window has four tabs:
+The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Programs). The window has five tabs:
 
 - **What he does** - tick what he may do (hover over one for what it is), choose how long he stays, his pace and
   his voice, and click **Let Kithylin take over**. The window minimises itself out of his way.
@@ -20,6 +20,7 @@ The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Progra
   right now shows in bold.
 - **Day** - his week, today, and what's true right now (see *His day* below).
 - **Threads** - the stories and bits of his life he brings up, and his style card (see *Threads* below).
+- **Interests** - who he talks to most (see *Interests* below).
 
 Activities you add later come in ticked; anything you untick stays unticked.
 
@@ -130,6 +131,20 @@ the graphics card, so stop him first. It takes five to ten minutes; the tab show
 
 No names leave the logs: the other person is "a friend" in everything the model reads, and contact names are filtered
 out of what it writes. The results stay in `Local Storage\LLM Models\selfmodel\threads.json`.
+
+## Interests
+
+His AIM buddies in three columns. Drag a buddy from one to another, or pick one and click **▲ Closer** or
+**▼ Less close**. Everyone starts as a Friend.
+
+| Column | What it means |
+|---|---|
+| **Love interests** | He IMs them as soon as they come online (and again when they come back, or after a conversation has rested a few minutes). He answers within seconds, conversations run long (16-32 replies), and they're by far the likeliest partner for a roleplay, which runs 25-40 messages. His prompt says he's sweet on them: warm, affectionate, a little flirty |
+| **Close acquaintances** | He answers quickly, often IMs them first when he feels like saying hello, and chats for a good while (8-16 replies). Roleplays run 18-28 messages. His prompt says they're a close friend |
+| **Friends** | He may take a minute or so to answer, and conversations are shorter (3-7 replies) before he lets them rest for a while. He rarely starts one himself or roleplays with them |
+
+His schedule still comes first: at work every answer is slower, and asleep or out, the away message answers
+everyone.
 
 ## His voice
 

@@ -1,16 +1,19 @@
-"""The autopilot panel's Day and Threads tabs: the finer control over Kithylin's day (claudecore.autopilot.day).
+"""The autopilot panel's Day, Threads and Interests tabs: the finer control over Kithylin's day (claudecore.autopilot.day).
 
 Day: the week on the real clock, painted in half-hour cells (free time, work, lunch, asleep, out); what each block
 means for him - the scene in his prompt, the away message, how quickly he answers, which legs suit it; today's
 override and day off; and Right now - what he's doing, what's happened, and what he has told people, all editable.
 
 Threads: the stories he brings up - life arcs with a beat a day, daily openers, recurring bits, roleplay seeds - with
-who has heard each one; the suggestions mined from his Telegram logs, used once ticked; and his style card."""
+who has heard each one; the suggestions mined from his Telegram logs, used once ticked; and his style card.
+
+Interests: his buddies in three columns - love interests, close acquaintances, friends - which set how quickly he
+answers each, how long he chats, who he IMs first and who he roleplays with."""
 import os
 import subprocess
 import sys
 
-from PySide6.QtCore import QRectF, Qt, QTimer, Signal
+from PySide6.QtCore import QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QCheckBox, QComboBox, QFormLayout, QGroupBox,
                                QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListView, QListWidget, QListWidgetItem,
@@ -749,3 +752,116 @@ class ThreadsTab(QWidget):
         self.fill()
         self._show_style()
         self.mine_status.setText(f"Done: {added} new suggestion{'s' if added != 1 else ''}.")
+
+
+# ---- interests ----------------------------------------------------------------------------------------------------
+class _TierList(QListWidget):
+    """One column of contacts; contacts are dragged between columns."""
+
+    def __init__(self, tier, on_change):
+        super().__init__()
+        self.tier = tier
+        self.on_change = on_change
+        self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setDefaultDropAction(Qt.MoveAction)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setIconSize(QSize(32, 32))
+        self.setSpacing(1)
+        self.setSortingEnabled(True)
+
+    def dropEvent(self, e):
+        super().dropEvent(e)
+        self.on_change(self)                       # (the column it came from removes it by itself)
+
+
+class InterestsTab(QWidget):
+    """Who matters to him: his contacts in three columns - love interests, close acquaintances, friends."""
+
+    def __init__(self, day, contacts):
+        super().__init__()
+        self.day = day
+        self.contacts = contacts                    # [(id, screen name, icon path or "")]
+        col = QVBoxLayout(self)
+        intro = QLabel("Who he talks to most. Drag a buddy to another column (or pick one and use the buttons). "
+                       "It sets how quickly he answers them, how long he chats, who he IMs first and who he "
+                       "roleplays with, and his prompt says who they are to him.")
+        intro.setWordWrap(True)
+        col.addWidget(intro)
+        row = QHBoxLayout()
+        self.lists, self.counts = {}, {}
+        for tier in dayc.TIER_ORDER:
+            info = dayc.TIERS[tier]
+            box = QGroupBox(info["title"] + ("s" if not info["title"].endswith("s") else ""))
+            v = QVBoxLayout(box)
+            blurb = QLabel(info["blurb"][:1].upper() + info["blurb"][1:] + ".")
+            blurb.setWordWrap(True)
+            blurb.setMinimumHeight(34)
+            v.addWidget(blurb)
+            lst = _TierList(tier, self._sync)
+            lst.itemSelectionChanged.connect(lambda t=tier: self._selected(t))
+            v.addWidget(lst, 1)
+            self.counts[tier] = QLabel()
+            v.addWidget(self.counts[tier])
+            self.lists[tier] = lst
+            row.addWidget(box, 1)
+        col.addLayout(row, 1)
+        buttons = QHBoxLayout()
+        buttons.addStretch(1)
+        closer = QPushButton("▲ Closer")
+        closer.clicked.connect(lambda: self._move(-1))
+        further = QPushButton("▼ Less close")
+        further.clicked.connect(lambda: self._move(1))
+        buttons.addWidget(closer)
+        buttons.addWidget(further)
+        col.addLayout(buttons)
+        self.fill()
+
+    def fill(self):
+        from PySide6.QtGui import QIcon
+        for lst in self.lists.values():
+            lst.clear()
+        for cid, name, icon in self.contacts:
+            item = QListWidgetItem(name)
+            item.setData(Qt.UserRole, cid)
+            if icon:
+                item.setIcon(QIcon(icon))
+            self.lists[self.day.tier(cid)].addItem(item)
+        self._counts()
+
+    def _counts(self):
+        for tier, lst in self.lists.items():
+            n = lst.count()
+            self.counts[tier].setText(f"{n} {'buddy' if n == 1 else 'buddies'}")
+
+    def _sync(self, lst):
+        """Buddies dropped into a column take its tier."""
+        interests = self.day.data.setdefault("interests", {})
+        for i in range(lst.count()):
+            interests[lst.item(i).data(Qt.UserRole)] = lst.tier
+        self.day.save()
+        QTimer.singleShot(0, self._counts)
+
+    def _selected(self, tier):
+        if self.lists[tier].selectedItems():
+            for other, lst in self.lists.items():
+                if other != tier:
+                    lst.blockSignals(True)
+                    lst.clearSelection()
+                    lst.blockSignals(False)
+
+    def _move(self, step):
+        for i, tier in enumerate(dayc.TIER_ORDER):
+            items = self.lists[tier].selectedItems()
+            if not items:
+                continue
+            j = i + step
+            if not 0 <= j < len(dayc.TIER_ORDER):
+                return
+            cid = items[0].data(Qt.UserRole)
+            self.day.set_tier(cid, dayc.TIER_ORDER[j])
+            self.fill()
+            target = self.lists[dayc.TIER_ORDER[j]]
+            for k in range(target.count()):
+                if target.item(k).data(Qt.UserRole) == cid:
+                    target.setCurrentRow(k)
+            return

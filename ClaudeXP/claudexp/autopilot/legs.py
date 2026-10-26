@@ -77,7 +77,9 @@ def send_button(widget, text="Send"):
 # ---- the messengers (always) -----------------------------------------------------------------------------------
 class Messengers(Leg):
     """ClaudeAIM, open the whole session: Kithylin answers whoever IMs him, and now and then says hello to someone
-    who's online. A conversation runs its course - after a handful of exchanges he lets it rest."""
+    who's online. A conversation runs its course - after a handful of exchanges he lets it rest. How quickly he
+    answers, how long it runs and who he IMs first follow his interests (the Interests tab): a love interest gets an
+    IM as soon as they come online."""
     key, title, kind = "messengers", "AIM", ALWAYS
     blurb = "answer IMs, say hello to friends who are online (nearly always on)"
     doing = "chatting on AIM"
@@ -102,6 +104,8 @@ class Messengers(Leg):
         queue = []
         world.message_added.connect(lambda bid, entry: queue.append((bid, entry)))
         pending, budget, rested, last_used = {}, {}, {}, {}
+        greeted = set()                                 # love interests he's IMed since they came online
+        greet_at = {}                                   # ... and when he'll send that IM
         next_hello = time.monotonic() + random.uniform(4, 10) * 60 * ctx.pace
         ctx.engine.claims = getattr(ctx.engine, "claims", set())
         ctx.status("On AIM.")
@@ -111,6 +115,8 @@ class Messengers(Leg):
                 if ctx.engine.asleep:                       # asleep or out: the away message answers for him
                     queue.clear()
                     pending.clear()
+                    greet_at.clear()
+                    greeted.clear()                         # awake again: his love interests get a good morning
                     next_hello = now + random.uniform(10, 30) * 60 * ctx.pace
                     yield 2
                     continue
@@ -122,16 +128,17 @@ class Messengers(Leg):
                     if now < rested.get(bid, 0):
                         continue                                  # letting that conversation rest
                     busy = any(k in ctx.engine.tasks for k in ("tv", "rpg"))
-                    delay = random.uniform(5, 25) * ctx.pace * slow + (random.uniform(10, 50) if busy else 0)
+                    lo, hi = self.tier(ctx, bid)["reply"]
+                    delay = random.uniform(lo, hi) * ctx.pace * slow + (random.uniform(10, 50) if busy else 0)
                     pending[bid] = max(pending.get(bid, 0), now + delay)
                 for bid, when in list(pending.items()):
                     if now >= when:
                         del pending[bid]
                         if bid not in world.buddies:
                             continue
-                        used = budget.setdefault(bid, [0, random.randint(4, 12)])
+                        used = budget.setdefault(bid, [0, random.randint(*self.tier(ctx, bid)["exchanges"])])
                         if used[0] >= used[1]:
-                            rested[bid] = now + random.uniform(10, 35) * 60
+                            rested[bid] = now + random.uniform(*self.tier(ctx, bid)["rest"]) * 60
                             budget.pop(bid, None)
                             ctx.note(f"Let the conversation with {world.buddies[bid].name} rest.")
                             if ctx.day is not None:
@@ -144,6 +151,19 @@ class Messengers(Leg):
                         for old in sorted((b for b in app.im_windows if b not in pending and b != bid),
                                           key=lambda b: last_used.get(b, 0))[:max(0, len(app.im_windows) - 3)]:
                             yield from self.close_im(ctx, app, old)     # no more than three IM windows open
+                for bid in self.sweethearts(ctx, app, greeted, rested, pending, now):
+                    greeted.add(bid)
+                    greet_at[bid] = now + random.uniform(15, 60) * ctx.pace * slow
+                    ctx.note(f"{world.buddies[bid].name} is online - IMing them in a moment.")
+                for bid, when in list(greet_at.items()):
+                    if now < when:
+                        continue
+                    del greet_at[bid]
+                    if bid in world.buddies and bid not in app.im_windows and bid not in pending:
+                        yield from self.reply(ctx, app, bid, instruction=f"{world.buddies[bid].name} just came "
+                                              "online. IM them first: one short, warm message, glad to see them.")
+                        budget[bid] = [1, random.randint(*self.tier(ctx, bid)["exchanges"])]
+                        last_used[bid] = time.monotonic()
                 if now >= next_hello:
                     next_hello = now + random.uniform(12, 30) * 60 * ctx.pace * slow
                     yield from self.say_hello(ctx, app, pending)
@@ -189,6 +209,33 @@ class Messengers(Leg):
         finally:
             ctx.hands.release(self.key)
 
+    @staticmethod
+    def tier(ctx, bid):
+        from claudecore.autopilot.day import TIERS
+        return ctx.day.tier_info(bid) if ctx.day is not None else TIERS["close"]
+
+    def sweethearts(self, ctx, app, greeted, rested, pending, now):
+        """Love interests who are online and haven't had an IM from him since they came on (or since their last
+        conversation rested): he IMs them at once."""
+        from claudeaim.engine import Presence
+        if ctx.day is None:
+            return []
+        out = []
+        for bid, b in app.world.buddies.items():
+            online = b.presence == Presence.ONLINE
+            if not online or now < rested.get(bid, 0):
+                if not online:
+                    greeted.discard(bid)
+                continue
+            if rested.pop(bid, None) is not None:
+                greeted.discard(bid)                     # the rest is over: another conversation
+            if (ctx.day.tier(bid) == "love" and bid not in greeted and bid not in pending
+                    and bid not in app.im_windows and bid not in ctx.engine.claims):
+                out.append(bid)
+            elif bid in app.im_windows:
+                greeted.add(bid)                         # already talking
+        return out[:1]
+
     def close_im(self, ctx, app, bid):
         """Close a conversation's IM window, the pointer going to its close box."""
         win = app.im_windows.get(bid)
@@ -208,7 +255,8 @@ class Messengers(Leg):
                  and b.id not in ctx.engine.claims and b.id not in app.im_windows]
         if not quiet:
             return
-        b = random.choice(quiet)
+        weights = [self.tier(ctx, b.id)["hello"] for b in quiet]
+        b = random.choices(quiet, weights=weights)[0]
         ctx.note(f"Saying hello to {b.name}.")
         opener = ctx.day.opener() if ctx.day is not None else ""
         yield from self.reply(ctx, app, b.id, instruction=f"Start a conversation with {b.name}: one short, friendly "
@@ -235,7 +283,8 @@ class Roleplay(Leg):
                 and b.id not in getattr(ctx.engine, "claims", set())]
         if not free:
             return
-        b = random.choice(free)
+        tiers = [Messengers.tier(ctx, x.id) for x in free]
+        b = random.choices(free, weights=[t["roleplay"] for t in tiers])[0]
         ctx.engine.claims = getattr(ctx.engine, "claims", set()) | {b.id}
         ctx.doing(f"roleplaying with {b.name} on AIM")
         seed = ctx.day.roleplay_seed() if ctx.day is not None else None
@@ -244,7 +293,7 @@ class Roleplay(Leg):
                    "sentences." if seed else
                    f"Suggest a roleplay scene to {b.name} and open it: set the place and what you're doing, in "
                    "*asterisks*, two or three sentences.")
-        turns = random.randint(20, 30)
+        turns = random.randint(*Messengers.tier(ctx, b.id)["turns"])
         helper = Messengers()
         helper.key = self.key
         try:

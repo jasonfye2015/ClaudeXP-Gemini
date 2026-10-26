@@ -3,7 +3,8 @@ voice, the Start button, and a Legs tab to start any one activity now. The engin
 computer's legs are in legs.py (the messengers, mail, the Web, TV, games, the MUCK) and content.py (Local Storage:
 comics, portfolios, pictures, stories, old chat logs, Explorer, Kiwix, music, LiveJournal). While he's at it the
 screen has a sky-blue glow, his own cursor, and a banner with Pause and Stop; your own mouse or keyboard pauses him.
-The Day and Threads tabs (daytabs.py) steer his day: the week's schedule, today's story, and what he brings up."""
+The Day, Threads and Interests tabs (daytabs.py) steer his day: the week's schedule, today's story, what he
+brings up, and who he talks to most."""
 import json
 import traceback
 
@@ -43,6 +44,27 @@ def day():
         from claudecore.autopilot.day import Day
         _day = Day(DAY_FILE)
     return _day
+
+
+def aim_contacts():
+    """[(id, screen name, icon path)] of the AIM buddies, read from their files (AIM needn't be running)."""
+    from ..programs.aim import AIM_DIR
+    folder = AIM_DIR / "contacts"
+    out = []
+    for path in sorted(folder.glob("*.json"), key=lambda p: p.stem.lower()):
+        if path.name.startswith("_"):
+            continue
+        try:
+            d = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        icon = ""
+        for where in (folder, AIM_DIR / "assets" / "icons"):
+            if d.get("icon") and (where / d["icon"]).exists():
+                icon = str(where / d["icon"])
+                break
+        out.append((path.stem, d.get("screen_name") or path.stem, icon))
+    return out
 
 
 def autopilot_icon():
@@ -115,8 +137,9 @@ def pilot():
 
 
 class Panel(QWidget):
-    """Four tabs: what he may do and how (the settings); the Legs - every activity he knows, to start one now; his
-    Day - the week's schedule, today, right now; and the Threads he brings up, with his style card."""
+    """Five tabs: what he may do and how (the settings); the Legs - every activity he knows, to start one now; his
+    Day - the week's schedule, today, right now; the Threads he brings up, with his style card; and his Interests -
+    who he talks to most."""
 
     def __init__(self, desktop):
         super().__init__()
@@ -133,9 +156,10 @@ class Panel(QWidget):
         self.tabs = QTabWidget()
         self.tabs.addTab(self._settings_tab(), "What he does")
         self.tabs.addTab(self._legs_tab(), "Legs")
-        from .daytabs import DayTab, ThreadsTab
+        from .daytabs import DayTab, InterestsTab, ThreadsTab
         self.tabs.addTab(DayTab(day(), leg_classes(), pilot), "Day")
         self.tabs.addTab(ThreadsTab(day(), leg_classes(), pilot), "Threads")
+        self.tabs.addTab(InterestsTab(day(), aim_contacts()), "Interests")
         root.addWidget(self.tabs, 1)
         row = QHBoxLayout()
         self.go = QPushButton("Let Kithylin take over")

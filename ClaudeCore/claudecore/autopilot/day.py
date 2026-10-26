@@ -10,6 +10,9 @@
   are daily openers, recurring bits and roleplay seeds. He gets at most one suggestion per conversation, and a
   follow-up with someone who already heard the start. A thread can name legs it makes likelier, and a leg can start
   a small thread of its own (the movie he just watched).
+- Interests: who matters to him. Each contact is a love interest, a close acquaintance or a friend; the tier sets
+  how quickly he answers them, how long a conversation runs, whether he IMs them first (a love interest at once when
+  they come online), how likely a roleplay is, and a line in his prompt about who they are to him.
 - The style card: his openers, closers, reply lengths by time of day and habits, mined from his recent Telegram
   logs by selfmodel.threads, used once it has been ticked.
 
@@ -38,6 +41,28 @@ DAY_STARTS = 4                              # "today" runs from 4 am to 4 am, so
 THREAD_KINDS = {"life": "Life arc", "opener": "Daily opener", "bit": "Recurring bit", "roleplay": "Roleplay seed"}
 THREAD_STATUS = ["active", "paused", "done", "suggested"]
 MAX_EVENTS, MAX_CLAIMS, MAX_AUTO_THREADS = 40, 40, 5
+
+# Interests: who he talks to more. reply: seconds before he answers; exchanges: how many replies before he lets a
+# conversation rest, and rest: minutes it rests; hello: how often he IMs them first (love interests: as soon as they're
+# online); roleplay: how likely they're his roleplay partner, and turns: how long a scene runs.
+TIERS = {
+    "love": {"title": "Love interest", "reply": (2, 8), "exchanges": (16, 32), "rest": (4, 12), "hello": 6.0,
+             "roleplay": 6.0, "turns": (25, 40), "greet_at_once": True,
+             "line": "{who} is someone you're sweet on: you light up when they message, you're warm, affectionate and a "
+                     "little flirty with them, and you're happy to talk for a long time.",
+             "blurb": "IMs them as soon as they're online; answers at once; long conversations and roleplays"},
+    "close": {"title": "Close acquaintance", "reply": (4, 15), "exchanges": (8, 16), "rest": (10, 25), "hello": 3.0,
+              "roleplay": 2.0, "turns": (18, 28), "greet_at_once": False,
+              "line": "{who} is a close friend: easy and familiar, you're glad to hear from them and happy to chat a "
+                      "while.",
+              "blurb": "quick to answer; might IM them first; lengthy conversations"},
+    "friend": {"title": "Friend", "reply": (20, 90), "exchanges": (3, 7), "rest": (25, 60), "hello": 1.0,
+               "roleplay": 0.5, "turns": (10, 18), "greet_at_once": False,
+               "line": "{who} is a friend, but not someone you're especially close to: friendly, and you keep it "
+                       "lighter and shorter.",
+               "blurb": "may take a while to answer; shorter conversations"},
+}
+TIER_ORDER = ["love", "close", "friend"]
 
 BLOCKS = {
     "free": {"title": "Free time", "colour": "#DDEFFC",
@@ -161,6 +186,7 @@ class Day:
         d.setdefault("use_style", False)
         d.setdefault("check_replies", True)
         d.setdefault("people", {})
+        d.setdefault("interests", {})            # contact id -> "love" | "close" | "friend" (friend if unset)
         d.setdefault("today", {})
         self.data = d
         self._roll_day()
@@ -238,6 +264,19 @@ class Day:
         if w > 0 and any(key in t.get("legs", []) for t in self.active_threads()):
             w *= 1.6
         return w
+
+    # ---- interests ---------------------------------------------------------------------------------------------
+    def tier(self, who):
+        """'love', 'close' or 'friend' for a contact (by id or screen name)."""
+        t = self.data.get("interests", {}).get(who or "")
+        return t if t in TIERS else "friend"
+
+    def tier_info(self, who):
+        return TIERS[self.tier(who)]
+
+    def set_tier(self, who, tier):
+        self.data.setdefault("interests", {})[who] = tier if tier in TIERS else "friend"
+        self.save()
 
     # ---- what he's doing ----------------------------------------------------------------------------------------
     def doing(self, key, text):
@@ -444,6 +483,8 @@ class Day:
         tid = ""
         if who:
             person = []
+            if who in self.data.get("interests", {}):
+                person.append(TIERS[self.tier(who)]["line"].format(who=who))
             last = self.last_talked.get(who) or self.data["people"].get(who, {}).get("last")
             if last:
                 person.append(f"You last talked to {who} {ago_text(time.time() - float(last))}.")
