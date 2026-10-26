@@ -16,7 +16,7 @@
 - The style card: his openers, closers, reply lengths by time of day and habits, mined from his recent Telegram
   logs by selfmodel.threads, used once it has been ticked.
 
-    day = Day(path)
+    day = Day(path, defaults=...)                          # defaults: the computer's standard set-up
     system = day.prompt(persona, note, who="Renamon")      # the layered prompt
     text = yield from speak(ctx, "Renamon", note, history) # ask, check against today, rewrite once on a clash
 
@@ -154,9 +154,10 @@ def new_thread(title="", kind="life", facts="", beats=None, status="active", leg
 class Day:
     """The day file, and everything that reads and writes it. now() is the real clock (a test can replace it)."""
 
-    def __init__(self, path, now=None):
+    def __init__(self, path, now=None, defaults=None):
         self.path = path
         self.now = now or datetime.datetime.now
+        self.defaults = defaults or {}      # the computer's standard set-up, for whatever the file doesn't have
         self.doing_now = {}                 # leg key -> what he's doing in it ("reading a comic")
         self.offered = {}                   # who -> thread id offered in the current conversation ("" = none)
         self.last_talked = {}               # who -> time.time() of his last line to them
@@ -172,10 +173,15 @@ class Day:
                 d = {}
         except (OSError, ValueError):
             pass
+        for key in ("follow_schedule", "check_replies", "use_style", "schedule", "blocks", "interests", "dismissed"):
+            if key not in d and key in self.defaults:
+                d[key] = json.loads(json.dumps(self.defaults[key]))
+        if "threads" not in d:
+            d["threads"] = json.loads(json.dumps(self.defaults.get("threads", [])))
         d.setdefault("follow_schedule", True)
         sched = d.get("schedule")
         if not isinstance(sched, dict) or any(len(sched.get(k, "")) != CELLS for k in DAYS):
-            d["schedule"] = default_schedule()
+            d["schedule"] = self.standard_schedule()
         blocks = d.setdefault("blocks", {})
         for key, base in BLOCKS.items():
             b = blocks.setdefault(key, {})
@@ -191,6 +197,13 @@ class Day:
         self.data = d
         self._roll_day()
         return d
+
+    def standard_schedule(self):
+        """The computer's standard week, else the built-in one."""
+        sched = self.defaults.get("schedule")
+        if isinstance(sched, dict) and all(len(sched.get(k, "")) == CELLS for k in DAYS):
+            return dict(sched)
+        return default_schedule()
 
     def save(self):
         try:
@@ -375,8 +388,9 @@ class Day:
             mid = t.get("id")
             if not mid or mid in have or mid in dismissed or not t.get("title"):
                 continue
+            status = self.defaults.get("thread_status", {}).get(mid, "suggested")
             self.data["threads"].append(new_thread(t["title"], t.get("kind", "life"), t.get("facts", ""),
-                                                   t.get("beats"), status="suggested", source="mined", mined_id=mid,
+                                                   t.get("beats"), status=status, source="mined", mined_id=mid,
                                                    when=t.get("when", ""), support=t.get("support", 0)))
             added += 1
         if m.get("style"):

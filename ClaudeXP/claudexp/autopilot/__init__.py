@@ -7,6 +7,7 @@ The Day, Threads and Interests tabs (daytabs.py) steer his day: the week's sched
 brings up, and who he talks to most."""
 import json
 import traceback
+from pathlib import Path
 
 from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap, QPolygonF
@@ -20,6 +21,7 @@ from ..wm import XPWindow
 
 SETTINGS_FILE = DATA / "autopilot.json"
 DAY_FILE = DATA / "autopilot_day.json"
+DEFAULTS_FILE = Path(__file__).with_name("defaults.json")    # the standard set-up, for a computer without its own
 TITLE = "Kithylin Autopilot"
 HOURS = [("Until I stop him", 0), ("Half an hour", 0.5), ("An hour", 1), ("Two hours", 2), ("Four hours", 4),
          ("Eight hours", 8)]
@@ -37,12 +39,22 @@ def leg_classes():
     return list(LEGS) + list(CONTENT_LEGS)
 
 
+def defaults():
+    """The standard set-up: {"settings": ..., "day": ...} - what every tab starts as on a computer that hasn't been
+    set up yet (or whose data folder was cleared)."""
+    try:
+        d = json.loads(DEFAULTS_FILE.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
 def day():
     """His day on this computer (claudecore.autopilot.day), shared by the engine and the panel."""
     global _day
     if _day is None:
         from claudecore.autopilot.day import Day
-        _day = Day(DAY_FILE)
+        _day = Day(DAY_FILE, defaults=defaults().get("day"))
     return _day
 
 
@@ -87,6 +99,7 @@ def load_settings():
     """The saved settings; a leg added since they were saved is allowed by default (unticking it sticks)."""
     from claudecore.autopilot.engine import Autopilot
     s = dict(Autopilot.DEFAULTS)
+    s.update({k: v for k, v in defaults().get("settings", {}).items() if k in s})
     try:
         saved = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
         if isinstance(saved, dict):

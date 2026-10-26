@@ -1,0 +1,157 @@
+{
+ "settings": {
+  "allowed": [
+   "messengers",
+   "roleplay",
+   "mail",
+   "browse",
+   "idle",
+   "tv",
+   "rpg",
+   "muck",
+   "comics",
+   "portfolios",
+   "pictures",
+   "miscart",
+   "artcds",
+   "camroll",
+   "stories",
+   "chatlogs",
+   "explore",
+   "wikipedia",
+   "journal"
+  ],
+  "offered": [
+   "messengers",
+   "roleplay",
+   "mail",
+   "browse",
+   "idle",
+   "tv",
+   "rpg",
+   "muck",
+   "comics",
+   "portfolios",
+   "pictures",
+   "miscart",
+   "artcds",
+   "camroll",
+   "stories",
+   "chatlogs",
+   "explore",
+   "wikipedia",
+   "music",
+   "journal"
+  ],
+  "hours": 0,
+  "pace": 0.7,
+  "voice": "addon:kithylin-nemomix-recent",
+  "whole_movies": true,
+  "adult_web": true,
+  "pause_on_input": true,
+  "background_slots": 2
+ },
+ "day": {
+  "follow_schedule": false,
+  "check_replies": true,
+  "use_style": false,
+  "schedule": {
+   "mon": "ssssssssssssss.....wwwwwwwwwwllwwwwww.........ss",
+   "tue": "ssssssssssssss.....wwwwwwwwwwllwwwwww.........ss",
+   "wed": "ssssssssssssss.....wwwwwwwwwwllwwwwww.........ss",
+   "thu": "ssssssssssssss.....wwwwwwwwwwllwwwwww.........ss",
+   "fri": "ssssssssssssss.....wwwwwwwwwwllwwwwww.........ss",
+   "sat": "ssssssssssssss................................ss",
+   "sun": "ssssssssssssss................................ss"
+  },
+  "blocks": {
+   "free": {
+    "title": "Free time",
+    "colour": "#DDEFFC",
+    "scene": "You're at home with your free time, at your computer.",
+    "away": "",
+    "asleep": false,
+    "reply_pace": 1.0,
+    "legs": {}
+   },
+   "work": {
+    "title": "At work",
+    "colour": "#F6D88C",
+    "scene": "You're at work, chatting from your desk between tasks: you answer when you can, a bit slower and shorter, and you don't start anything long.",
+    "away": "",
+    "asleep": false,
+    "reply_pace": 2.2,
+    "legs": {
+     "tv": 0,
+     "rpg": 0,
+     "roleplay": 0,
+     "journal": 0,
+     "muck": 0.3,
+     "idle": 0.4,
+     "comics": 0.3,
+     "stories": 0.3,
+     "portfolios": 0.3,
+     "pictures": 0.2,
+     "miscart": 0.2,
+     "artcds": 0.2,
+     "camroll": 0.2,
+     "chatlogs": 0.2,
+     "explore": 0.3,
+     "wikipedia": 0.8,
+     "browse": 1.0,
+     "mail": 1.2,
+     "music": 1.0
+    }
+   },
+   "lunch": {
+    "title": "Lunch break",
+    "colour": "#BFE7B5",
+    "scene": "You're on your lunch break at work: eating, catching up with people, an hour to yourself.",
+    "away": "",
+    "asleep": false,
+    "reply_pace": 0.9,
+    "legs": {
+     "tv": 0,
+     "rpg": 0,
+     "roleplay": 0,
+     "journal": 0.5,
+     "browse": 1.5,
+     "comics": 1.3,
+     "wikipedia": 1.3
+    }
+   },
+   "sleep": {
+    "title": "Asleep",
+    "colour": "#9DA9C8",
+    "scene": "You're asleep.",
+    "away": "zzz... asleep! talk in the morning ❤️",
+    "asleep": true,
+    "reply_pace": 1.0,
+    "legs": {}
+   },
+   "out": {
+    "title": "Out",
+    "colour": "#E8B9D0",
+    "scene": "You're out, away from the computer.",
+    "away": "out and about, back in a bit!",
+    "asleep": true,
+    "reply_pace": 1.0,
+    "legs": {}
+   }
+  },
+  "interests": {
+   "ArcticFox": "close",
+   "CyberianHusky": "love",
+   "KittyKat": "love",
+   "LazyFox": "close",
+   "MushTheHusky": "close",
+   "RedFawks": "close",
+   "Renamon": "close",
+   "WinterDragon": "close",
+   "XavierPup": "love"
+  },
+  "thread_status": {},
+  "dismissed": [],
+  "threads": []
+ }
+}

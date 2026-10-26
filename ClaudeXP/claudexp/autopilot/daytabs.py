@@ -155,7 +155,7 @@ class DayTab(QScrollArea):
             brushes.addWidget(rb)
         brushes.addStretch(1)
         reset = QPushButton("Default week")
-        reset.setToolTip("Mon-Fri work 9:30 am - 6:30 pm, lunch 2:30 - 3:30 pm; asleep 11 pm - 7 am")
+        reset.setToolTip("The standard week: Mon-Fri work 9:30 am - 6:30 pm, lunch 2:30 - 3:30 pm; asleep 11 pm - 7 am")
         reset.clicked.connect(self._reset_week)
         brushes.addWidget(reset)
         col.addLayout(brushes)
@@ -282,7 +282,7 @@ class DayTab(QScrollArea):
         self._refresh_now()
 
     def _reset_week(self):
-        self.day.data["schedule"] = dayc.default_schedule()
+        self.day.data["schedule"] = self.day.standard_schedule()
         self.day.save()
         self.grid.update()
         self._refresh_now()

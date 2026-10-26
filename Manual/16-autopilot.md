@@ -24,6 +24,12 @@ The **Kithylin Autopilot** icon on the Windows XP desktop (or Start > All Progra
 
 Activities you add later come in ticked; anything you untick stays unticked.
 
+Every tab starts from a **standard set-up** (`ClaudeXP\claudexp\autopilot\defaults.json`) on a computer that
+hasn't been set up yet, or after its data folder is cleared: everything ticked but music, until you stop him, a quick
+pace, the recent Kithylin add-on, whole movies and the adult Web on; the standard week with the schedule switched off
+and each reply checked; and his love interests and close acquaintances already ranked. Your own changes are kept in
+`data\autopilot.json` and `data\autopilot_day.json` and win over it.
+
 | Activity | What he does |
 |---|---|
 | **AIM** | Signs on (dialling up first if the modem's idle), answers IMs, now and then IMs someone who's online. A conversation runs its course: after a handful of exchanges he lets it rest for a while. Nearly always on |
