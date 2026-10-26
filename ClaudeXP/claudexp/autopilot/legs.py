@@ -15,6 +15,7 @@ from claudecore.autopilot.engine import ALWAYS, BACKGROUND, FOREGROUND, Leg
 from claudecore.autopilot.voice import persona
 
 from .. import clock, programs
+from . import petnames
 
 IM_NOTE = ("\n\nYou're on AOL Instant Messenger on your Windows XP computer in {year}. Reply with one short IM: a line "
            "or two, casual, the way you really type. No narration, no name prefix.")
@@ -271,9 +272,11 @@ class Messengers(Leg):
             ctx.status(f"Replying to {b.name}")
         finally:
             ctx.hands.release(self.key)                 # thinking of what to say: the hands are free meanwhile
-        text = yield from speak(ctx, b.name, persona(b.name), note.format(year=year(), name=b.name) + extra_note,
-                                history, instruction, max_tokens=max_tokens, max_lines=3, thread_ok=thread_ok,
-                                check=check)
+        species = petnames.species_of(b.contact)
+        text = yield from speak(ctx, b.name, persona(b.name), note.format(year=year(), name=b.name)
+                                + petnames.note(b.name, species) + extra_note, history, instruction,
+                                max_tokens=max_tokens, max_lines=3, thread_ok=thread_ok, check=check)
+        text = petnames.fit(text or "", species)               # no "kitty" for a German Shepherd
         if not text or win is None or not isValid(win):
             return
         yield from ctx.hands.take(self.key)

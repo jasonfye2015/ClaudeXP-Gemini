@@ -78,6 +78,10 @@ and each reply checked; and his love interests and close acquaintances already r
   that covers the TV, the game, the MUCK or another IM is dragged by its title bar to a clear spot, the IM windows
   tiling from the top right. The MUCK window is kept off the TV the same way. He answers only when the last word
   in a conversation is theirs (never himself), and doesn't IM someone again who hasn't answered his last IM.
+- **Pet names that fit.** He calls people "kitty", "foxy", "wolfy" or "pup" because you do (it's in your
+  chats, mostly "kitty" for a few cats), but the model doesn't know who's what. His prompt now says each buddy's
+  species (from their persona) and that a species pet name is only for someone it fits; one that slips through
+  anyway ("kitty" to XavierPup, a German Shepherd) is swapped for one that fits ("pup"), or "hun".
 - The screen saver stays away while he's using the computer.
 
 ## His day
