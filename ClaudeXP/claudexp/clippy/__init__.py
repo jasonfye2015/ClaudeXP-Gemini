@@ -18,14 +18,14 @@ from PySide6.QtWidgets import QApplication, QMenu, QPlainTextEdit, QSystemTrayIc
 from shiboken6 import isValid
 
 from ..paths import DATA
-from . import art, brain, lines, moods
+from . import art, brain, lines, moods, rover
 from .widget import ClippyWidget, SpeechBalloon, context_menu
 
 SETTINGS = DATA / "clippy.json"
 DEFAULTS = {"enabled": True, "level": 3, "watch": {"desktop": True, "typing": True, "chats": True, "random": True},
             "sounds": True, "muted": [], "pos": None, "introduced": False,
             "mood": "happy", "wire": "silver", "accessory": "none", "size": "normal", "roam": False, "llm": True,
-            "breaks": 0, "reminders": [], "tray": True}
+            "breaks": 0, "reminders": [], "tray": True, "character": "clippy"}
 ASK_KINDS = [("joke", "Tell me a joke", "Tell {name} a short, groaningly bad joke (a pun about computers, paper or "
                                         "offices). Give the joke and the punchline."),
              ("tip", "Give me a tip", "Give {name} one genuinely useful tip about Windows XP, typing, or staying "
@@ -137,6 +137,40 @@ class Clippy(QObject):
     def _line(self, kind, **info):
         return lines.line(kind, mood=self.mood, **info)
 
+    @property
+    def rover_on(self):
+        """Is Rover the dog standing in for Clippy (rover.py)?"""
+        return rover.chosen(self.cfg)
+
+    @property
+    def who(self):
+        return "Rover" if self.rover_on else "Clippy"
+
+    def icon_pixmap(self, size=16):
+        if self.rover_on:
+            return rover.icon_pixmap(size)
+        return art.icon_pixmap(size, art.still_pose(self.mood, self.cfg.get("wire", "silver"),
+                                                    self.cfg.get("accessory", "none")))
+
+    def set_character(self, key):
+        """Clippy or Rover (Rover only with his sprite sheet in Local Storage\\Rover)."""
+        if key == "rover" and not rover.available():
+            from ..explorer.dialogs import msgbox
+            msgbox(self.desktop, "Office Assistant", "Rover needs his sprite sheet: put it in the Rover folder on "
+                   "drive E: (Local Storage\\Rover), the one Doggo uses.", icon="warning")
+            return
+        if key == self.cfg.get("character", "clippy"):
+            return
+        self.cfg["character"] = key
+        save(self.cfg)
+        self._apply_style()
+        if self.started and self.cfg["enabled"] and self.active:
+            self.balloon.hide()
+            self.widget.play("appear")
+            QTimer.singleShot(900, lambda: self.say(
+                "Woof! Rover here - I'll be helping you from now on!" if self.rover_on
+                else "Clippy's back! Did you miss me? Of course you did.", anim="wave"))
+
     def set_mood(self, key):
         if key != moods.MOODY and key not in moods.MOODS:
             return
@@ -154,11 +188,12 @@ class Clippy(QObject):
             self.widget.set_scale(size)
             if self.active:
                 self._place()
+        self.widget.set_character("rover" if self.rover_on else "clippy")
         self.widget.set_style(self.mood, self.cfg.get("wire", "silver"), self.cfg.get("accessory", "none"))
         self.balloon.set_theme(moods.mood_info(self.mood)["balloon"])
         if self.tray is not None:
-            self.tray.setIcon(QIcon(art.icon_pixmap(
-                16, art.still_pose(self.mood, self.cfg.get("wire", "silver"), self.cfg.get("accessory", "none")))))
+            self.tray.setIcon(QIcon(self.icon_pixmap(16)))
+            self.tray.setToolTip(f"{self.who} - click to chat, right-click for options")
         from . import chat
         body = chat.current()
         if body is not None:
@@ -268,6 +303,8 @@ class Clippy(QObject):
             return
         self._appear()
         self.last_spoke = time.monotonic()
+        if self.rover_on:                           # (the paperclip's lines, the way a dog says them)
+            text, options = rover.dog(text), [rover.dog(o) for o in options]
         brain.remember(text)
         self.balloon.say(text, options, ask=ask)
         self.balloon.place(self.widget)
@@ -451,16 +488,19 @@ class Clippy(QObject):
         office_assistant_properties(self.desktop)
 
     def _menu(self, pos):
+        dance = rover.ANIMATE if self.rover_on else ["wave", "tap", "jump", "spin", "look_around", "eyebrows"]
         context_menu(self.widget, pos, [
             ("&Hide", self.hide_him),
             None,
             ("&Options...", self.options),
-            ("&Animate!", lambda: self.widget.play(random.choice(["wave", "tap", "jump", "spin", "look_around",
-                                                                  "eyebrows"]))),
+            ("&Animate!", lambda: self.widget.play(random.choice(dance))),
             ("&What would you like to do?", self.summon),
-            ("&Chat with Clippy...", self.open_chat)] + [
+            (f"&Chat with {self.who}...", self.open_chat)] + [
             (f"Mood: {info['label']}", lambda _=False, k=key: self.set_mood(k))
-            for key, info in moods.MOODS.items()])
+            for key, info in moods.MOODS.items()] + [None] + [
+            (("\u2713 " if key == ("rover" if self.rover_on else "clippy") else "") + f"Character: {label}",
+             lambda _=False, k=key: self.set_character(k))
+            for key, label in rover.CHARACTERS if key != "rover" or rover.available()])
 
     # ---- the tray icon ---------------------------------------------------------------------------------------
     def _show_tray(self):
@@ -470,7 +510,7 @@ class Clippy(QObject):
                 self.tray.hide()
             return
         if self.tray is None:
-            self.tray = TrayIcon(self.desktop, QIcon(art.icon_pixmap(16)), self.desktop)
+            self.tray = TrayIcon(self.desktop, QIcon(self.icon_pixmap(16)), self.desktop)
             self.tray_menu = QMenu(self.desktop)
             self.tray_menu.setStyleSheet(
                 "QMenu { background: white; border: 1px solid #ACA899; font-family: Tahoma; font-size: 11px; }"
@@ -481,7 +521,6 @@ class Clippy(QObject):
             self.tray.setContextMenu(self.tray_menu)
             self.tray.activated.connect(self._tray_activated)
             self._build_tray_menu()
-        self.tray.setToolTip("Clippy - click to chat, right-click for options")
         self._apply_style()
         self.tray.show()
 
@@ -518,12 +557,14 @@ class Clippy(QObject):
         m = self.tray_menu
         m.clear()
         shown = self.active
-        act = m.addAction("Hide Clippy" if shown else "Show Clippy", self.hide_him if shown else self.summon)
+        act = m.addAction(f"Hide {self.who}" if shown else f"Show {self.who}", self.hide_him if shown else self.summon)
         font = act.font()
         font.setBold(True)
         act.setFont(font)
-        m.addAction("Chat with Clippy...", self.open_chat)
+        m.addAction(f"Chat with {self.who}...", self.open_chat)
         m.addSeparator()
+        self._radio(m, "Character", [(k, label) for k, label in rover.CHARACTERS if k != "rover" or rover.available()],
+                    "rover" if self.rover_on else "clippy", self.set_character)
         choices = [(k, f"{i['emoji']}  {i['label']}") for k, i in moods.MOODS.items()]
         choices.append((moods.MOODY, "🎲  Moody (changes by itself)"))
         self._radio(m, "Mood", choices, self.cfg.get("mood", "happy"), self.set_mood)
@@ -536,7 +577,7 @@ class Clippy(QObject):
                     lambda k: self._set("size", k))
         self._radio(m, "Chattiness", [(n, f"{n} - {LEVELS[n]}") for n in LEVELS], self.level,
                     lambda n: self._set("level", int(n)))
-        ask = m.addMenu("Ask Clippy to...")
+        ask = m.addMenu(f"Ask {self.who} to...")
         for kind, label, _event in ASK_KINDS:
             ask.addAction(label, lambda _=False, k=kind: self.ask_clippy(k))
         m.addSeparator()
@@ -642,7 +683,7 @@ class Clippy(QObject):
             self.widget.play({"happy": "jump", "sad": "sigh", "angsty": "eyeroll", "snarky": "eyeroll"}
                              [self.moody_now])
         if self.cfg.get("roam") and self.active and now >= self.next_roam and not self.balloon.isVisible() \
-                and self.widget.anim.name == "idle" and not (self.roam_anim and
+                and (self.widget.rover or self.widget.anim).name == "idle" and not (self.roam_anim and
                                                              self.roam_anim.state() == QPropertyAnimation.Running):
             self.next_roam = now + random.uniform(40, 120)
             self._roam()
@@ -656,6 +697,9 @@ class Clippy(QObject):
         anim.setEndValue(QPoint(x, y))
         anim.setEasingCurve(QEasingCurve.InOutQuad)
         anim.finished.connect(self._moved)
+        if self.widget.rover is not None:               # (a dog trots there)
+            anim.setEasingCurve(QEasingCurve.Linear)
+            self.widget.rover.walk(2.5, x > self.widget.x())
         self.roam_anim = anim
         anim.start()
 

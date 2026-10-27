@@ -24,6 +24,7 @@ class ClippyWidget(QWidget):
         self.setToolTip("Clippy - click me for help! (right-click for options)")
         self.anim = art.Animator()
         self.pose = art.Pose()
+        self.rover = None                   # Rover's animator, when he's the one on the desktop (rover.py)
         self._press = None
         self._dragged = False
         self.timer = QTimer(self)
@@ -40,12 +41,37 @@ class ClippyWidget(QWidget):
 
     def set_scale(self, scale):
         self.scale = scale
-        self.setFixedSize(int(art.W * scale), int(art.H * scale))
+        bottom = self.y() + self.height()
+        if self.rover is not None:
+            from . import rover
+            side = int(38 * rover.SCALE * scale)
+            self.setFixedSize(side, side + int(8 * scale))
+        else:
+            self.setFixedSize(int(art.W * scale), int(art.H * scale))
+        if self.isVisible():
+            self.move(self.x(), bottom - self.height())
+
+    def set_character(self, character):
+        """'clippy' or 'rover' (the dog, from Doggo's sprite sheet)."""
+        if (character == "rover") == (self.rover is not None):
+            return
+        if character == "rover":
+            from . import rover
+            self.rover = rover.Animator()
+            self.setToolTip("Rover - click me for help! (right-click for options)")
+        else:
+            self.rover = None
+            self.setToolTip("Clippy - click me for help! (right-click for options)")
+        self.set_scale(self.scale)
 
     def set_style(self, mood, wire, accessory):
         self.anim.set_style(mood, wire, accessory)
 
     def _tick(self):
+        if self.rover is not None:
+            self.rover.step(1 / FPS)
+            self.update()
+            return
         if self.anim.name == "idle" and not self.anim.busy():
             follow = self.anim.face["follow"]
             if follow > 0.5:
@@ -61,10 +87,22 @@ class ClippyWidget(QWidget):
         self.update()
 
     def play(self, name):
-        self.anim.play(name)
+        if self.rover is not None:
+            self.rover.play(name)
+        else:
+            self.anim.play(name)
+
+    def busy(self):
+        return self.rover.busy() if self.rover is not None else self.anim.busy()
 
     def paintEvent(self, event):
         p = QPainter(self)
+        if self.rover is not None:
+            from ..programs import doggo_art
+            from . import rover
+            pm = doggo_art.frame(self.rover.frame, rover.SCALE * self.scale, self.rover.mirrored)
+            p.drawPixmap((self.width() - pm.width()) // 2, self.height() - pm.height(), pm)
+            return
         art.paint(p, self.pose, QRectF(self.rect()))
 
     # dragging him around, clicking him

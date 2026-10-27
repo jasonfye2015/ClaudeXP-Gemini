@@ -12,7 +12,7 @@ from shiboken6 import isValid
 
 from ..paths import DATA
 from ..wm import XPWindow
-from . import art, brain, moods
+from . import brain, moods
 
 HISTORY = DATA / "clippy_chat.json"
 KEEP = 60
@@ -67,7 +67,7 @@ class ChatBody(QWidget):
         v.addWidget(self.view, 1)
         row = QHBoxLayout()
         self.edit = QLineEdit()
-        self.edit.setPlaceholderText("Say something to Clippy...   (/remind 10 stretch  sets a reminder)")
+        self.edit.setPlaceholderText(f"Say something to {clippy.who}...   (/remind 10 stretch  sets a reminder)")
         self.edit.returnPressed.connect(self.send)
         self.send_btn = QPushButton("Send")
         self.send_btn.clicked.connect(self._send_or_stop)
@@ -83,9 +83,12 @@ class ChatBody(QWidget):
         c = self.clippy
         mood = c.mood
         info = moods.mood_info(mood)
-        self.portrait.setPixmap(art.icon_pixmap(40, art.still_pose(mood, c.cfg.get("wire", "silver"),
-                                                                    c.cfg.get("accessory", "none"))))
-        self.title.setText(f"<b>Clippy</b><br><span style='color:#555'>feeling {info['label'].lower()}</span>")
+        self.portrait.setPixmap(c.icon_pixmap(40))
+        self.title.setText(f"<b>{c.who}</b><br><span style='color:#555'>feeling {info['label'].lower()}</span>")
+        self.edit.setPlaceholderText(f"Say something to {c.who}...   (/remind 10 stretch  sets a reminder)")
+        frame = getattr(self, "frame", None)
+        if frame is not None and isValid(frame):
+            frame.set_title(f"Chat with {c.who}")
         idx = self.mood.findData(c.cfg.get("mood", "happy"))
         if idx >= 0 and idx != self.mood.currentIndex():
             self.mood.setCurrentIndex(idx)
@@ -98,26 +101,28 @@ class ChatBody(QWidget):
     def render(self):
         fill, border, text, link = moods.mood_info(self.clippy.mood)["balloon"]
         parts = []
+        who = self.clippy.who
         for m in self.messages:
-            parts.append(self._bubble(m["role"], m["content"], fill, text))
+            parts.append(self._bubble(m["role"], m["content"], fill, text, who))
         if self.streaming:
-            parts.append(self._bubble("assistant", self.streaming, fill, text))
+            parts.append(self._bubble("assistant", self.streaming, fill, text, who))
         elif self.job is not None:
-            parts.append(self._bubble("assistant", "...", fill, text))
+            parts.append(self._bubble("assistant", "...", fill, text, who))
         if not parts:
-            parts.append("<p style='color:#777'>Say hello! Clippy has been waiting. A long time. Quietly.</p>")
+            parts.append(f"<p style='color:#777'>Say hello! {self.clippy.who} has been waiting. A long time. "
+                         "Quietly.</p>")
         self.view.setHtml("<body style='font-family:Tahoma;font-size:11px'>" + "".join(parts) + "</body>")
         bar = self.view.verticalScrollBar()
         bar.setValue(bar.maximum())
 
     @staticmethod
-    def _bubble(role, content, fill, text):
+    def _bubble(role, content, fill, text, who="Clippy"):
         body = html.escape(content).replace("\n", "<br>")
         if role == "user":
             return (f"<table width='100%'><tr><td align='right'><table><tr><td bgcolor='#D6E4FF' style='padding:5px'>"
                     f"<b>You</b><br>{body}</td></tr></table></td></tr></table>")
         return (f"<table width='100%'><tr><td align='left'><table><tr><td bgcolor='{fill}' style='padding:5px;"
-                f" color:{text}'><b>Clippy</b><br>{body}</td></tr></table></td></tr></table>")
+                f" color:{text}'><b>{who}</b><br>{body}</td></tr></table></td></tr></table>")
 
     def note(self, text):
         """A line from Clippy that didn't come from the model (reminders, errors)."""
@@ -184,7 +189,7 @@ class ChatBody(QWidget):
         reply = brain.clean_chat(text or self.streaming)
         self.streaming = ""
         if err or not reply:
-            reply = "(Clippy's language model isn't available right now. Try the Local Storage models, or " \
+            reply = f"({self.clippy.who}'s language model isn't available right now. Try the Local Storage models, or " \
                     "come back later!)" if err == "no model" else (reply or "Hmm. I lost my train of thought.")
             if err and err != "no model":
                 reply = f"{reply}\n({err})" if reply else f"({err})"
@@ -209,7 +214,7 @@ def open_chat(desktop, clippy):
     win = _open.get("win")
     if win is None or not isValid(win):
         body = ChatBody(desktop, clippy)
-        win = XPWindow(desktop, "Chat with Clippy", body, QIcon(art.icon_pixmap(16)), (440, 520))
+        win = XPWindow(desktop, f"Chat with {clippy.who}", body, QIcon(clippy.icon_pixmap(16)), (440, 520))
         body.frame = win
         _open["win"] = win
         _open["body"] = body

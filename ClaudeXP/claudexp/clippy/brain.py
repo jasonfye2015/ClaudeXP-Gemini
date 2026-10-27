@@ -88,17 +88,26 @@ def _now():
     return clock.now().strftime("%A, %B %d, 2001, %I:%M %p").replace(" 0", " ")
 
 
+def _rover():
+    from . import rover, settings
+    return rover.chosen(settings())
+
+
 def system(mood="happy", template=PERSONA, **extra):
     from .. import user
-    from . import moods
-    return template.format(name=user.user_name() or "the user", now=_now(),
+    from . import moods, rover
+    dog = _rover()
+    if dog and template is PERSONA:
+        template = rover.PERSONA
+    text = template.format(name=user.user_name() or "the user", now=_now(),
                            mood=moods.mood_info(mood)["prompt"], **extra)
+    return rover.dog(text) if dog else text           # (Rover, in his moods, as a puppy)
 
 
 def _clean(text):
     text = re.sub(r"[*_]+", "", text).strip()                  # markdown emphasis
     text = re.sub(r"^\[?\s*speech balloon\s*[:-]?\s*", "", text, flags=re.I).rstrip("]")
-    text = re.sub(r"^(Clippy|Clippit)\s*:\s*", "", text, flags=re.I)
+    text = re.sub(r"^(Clippy|Clippit|Rover)\s*:\s*", "", text, flags=re.I)
     return re.sub(r"\s+", " ", text).strip().strip('"').strip()
 
 
@@ -128,8 +137,10 @@ def parse(text):
 
 
 def _angle(name):
-    fresh = [a for a in ANGLES if a not in _angles_used]
-    choice = random.choice(fresh or ANGLES)
+    from . import rover
+    angles = rover.ANGLES if _rover() else ANGLES
+    fresh = [a for a in angles if a not in _angles_used]
+    choice = random.choice(fresh or angles)
     _angles_used.append(choice)
     return choice.format(name=name)
 
@@ -201,4 +212,4 @@ def chat(history, on_chunk, on_done, mood="happy", aware=""):
 def clean_chat(text):
     """A chat reply, tidied: no markdown emphasis or speaker prefix."""
     text = re.sub(r"\*\*|__", "", (text or "")).strip()
-    return re.sub(r"^(Clippy|Clippit)\s*:\s*", "", text, flags=re.I).strip()
+    return re.sub(r"^(Clippy|Clippit|Rover)\s*:\s*", "", text, flags=re.I).strip()
