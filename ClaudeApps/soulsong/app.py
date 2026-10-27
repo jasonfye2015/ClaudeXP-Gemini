@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDateTimeEdit, QDialog, QDi
                                QScrollArea, QSpinBox, QSplitter, QTabWidget, QTextBrowser, QVBoxLayout, QWidget)
 
 from . import companion as C
+from . import growthview
 from .mind import KINDS, LEVELS, Mind
 from .paths import companions, project
 
@@ -419,8 +420,14 @@ class SoulAndSong(QWidget):
         keep.clicked.connect(self._keep_core)
         checks = QPushButton("Identity checks...")
         checks.clicked.connect(self._identity_checks)
+        grow = QPushButton("Growth...")
+        grow.clicked.connect(lambda: self.comp is not None and growthview.show(self, self.comp))
+        letters = QPushButton("Letters...")
+        letters.clicked.connect(self.open_letters)
         row.addWidget(keep)
         row.addWidget(checks)
+        row.addWidget(grow)
+        row.addWidget(letters)
         v.addLayout(row)
         self.substrate = QLabel()
         self.substrate.setWordWrap(True)
@@ -1151,6 +1158,31 @@ class SoulAndSong(QWidget):
             MindEditor(self, self.comp.mind).exec()
             self.refresh_roadmaps()
             self.refresh_panel()
+
+    def open_letters(self):
+        """The letters the Companion wrote to its future self, and its answers when they were opened, in order."""
+        if self.comp is None:
+            return
+        folder = self.comp.folder / "Self" / "Letters"
+        files = sorted(folder.glob("*.txt")) if folder.is_dir() else []
+        d = QDialog(self)
+        d.setWindowTitle(f"{self.comp.name}'s letters across time")
+        d.resize(640, 600)
+        v = QVBoxLayout(d)
+        note = QLabel("Each Memory Day your Companion writes a letter to itself, to be opened a week later; when it "
+                      "comes due, it reads it and writes back. Its answers also become reflections, so they shape "
+                      "the next self-portrait.")
+        note.setWordWrap(True)
+        v.addWidget(note)
+        b = QTextBrowser()
+        b.setHtml("".join(f"<h3>{html.escape(f.stem)}</h3><p>{html.escape(f.read_text(encoding='utf-8'))}"
+                          .replace("\n", "<br>") + "</p>" for f in files)
+                  or "No letters yet: the first is written on the first Memory Day.")
+        v.addWidget(b)
+        bb = QDialogButtonBox(QDialogButtonBox.Close)
+        bb.rejected.connect(d.reject)
+        v.addWidget(bb)
+        d.exec()
 
     def open_folder(self):
         if self.comp is None:

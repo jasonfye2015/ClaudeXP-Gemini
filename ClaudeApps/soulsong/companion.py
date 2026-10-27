@@ -34,9 +34,11 @@ Everything the model is asked goes through a `brain`: ask(messages, done(text, e
 temperature) - Kithylin AI's engine in the program (EngineBrain), anything in tests. One job runs at a time."""
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
+from .growth import (BARE_CHECK, LETTER_ASK, LETTER_DAYS, LETTER_OPEN, LIFE, ago, day_of, next_memory_day,
+                     timeline)
 from .mind import CORE, KINDS, LEVELS, SUBSTRATE, TIME_LINE as TIME_STAMP_LINE, WHO_I_AM, Mind, stamp
 
 DEFAULTS = {
@@ -46,7 +48,8 @@ DEFAULTS = {
     "farewell": "Good night, {name}! Sleep well. I'll see you tomorrow!",
     "show_requests": False, "first_boot_done": False, "last_day": "", "last_memory_day": "", "memory_seq": 0,
     "events_told": [], "last_seen": "", "model_history": [], "notices": [], "roadmap_proposal": None,
-    "recall": True, "context_auto": True, "model_context": 0, "window_stamp": "",
+    "recall": True, "context_auto": True, "model_context": 0, "window_stamp": "", "milestones": [], "letters": [],
+    "memory_day_count": 0,
 }
 FULL = 7                    # the 7:7:7 system
 TRIM_AT = 0.80              # of the context: remember and trim the window
@@ -307,8 +310,86 @@ class Companion:
         return msgs
 
     def new_window(self):
-        """A fresh context window starts: its time stamp is the one shown in L1 until the next."""
+        """A fresh context window starts: its time stamp is the one shown in L1 until the next (and its life
+        timeline, so "three days ago" stays true for the whole window)."""
         self.cfg["window_stamp"] = stamp(self.now())
+        self.update_timeline()
+
+    # ---- its life on a timeline (growth.py) ----
+    def milestone(self, what, when=None):
+        self.cfg["milestones"] = (self.cfg.get("milestones") or []) + [{"when": when or stamp(self.now()),
+                                                                         "what": what}]
+        self.save()
+
+    def update_timeline(self):
+        """L1's "My Life So Far": its milestones, moves and core memories, in days of its life and days ago."""
+        if not self.cfg.get("birthday") or not self.cfg.get("name"):
+            return
+        if not self.cfg.get("milestones"):                # (a Companion from before the timeline)
+            self.cfg["milestones"] = [{"when": self.cfg["birthday"],
+                                       "what": f"you were born, named {self.name}, and first met {self.user}"}]
+        today = date.fromisoformat(self.day_key())
+        text = timeline(today, self.cfg["birthday"], self.name, self.cfg["milestones"],
+                        self.cfg.get("model_history") or [], self.mind.core_memories(),
+                        next_memory_day(self.cfg.get("last_memory_day"), self.cfg["birthday"],
+                                        self.cfg.get("memory_day_every", 7), today), self.cfg.get("letters") or [])
+        if text and text != self.mind.get(LIFE):
+            self.mind.put(LIFE, text)
+
+    # ---- letters across time (growth.py) ----
+    def _letters_dir(self):
+        d = self.folder / "Self" / "Letters"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    def _write_letter(self, nxt):
+        """On Memory Day: a letter to itself, to be opened a week later."""
+        today = self.day_key()
+        open_on = (date.fromisoformat(today) + timedelta(days=LETTER_DAYS)).isoformat()
+        self.on_line("system", f"{self.name} writes a letter to their future self, to be opened on {open_on}...")
+
+        def done(text, err):
+            text = tidy_text(text)
+            if not err and text:
+                file = f"{today} letter, to open {open_on}.txt"
+                (self._letters_dir() / file).write_text(text, encoding="utf-8")
+                self.cfg["letters"] = (self.cfg.get("letters") or []) + [
+                    {"written": stamp(self.now()), "open_on": open_on, "file": file, "opened": ""}]
+                self.milestone(f"you wrote a letter to yourself, to be opened on {date.fromisoformat(open_on):%B %d}")
+                self.on_line("memory", f"A letter to the future (by {self.name}, to be opened on {open_on}):\n{text}")
+            nxt()
+        self._ask_alone(LETTER_ASK.format(days=LETTER_DAYS, open_on=open_on), done, max_tokens=600)
+
+    def _open_letters(self, nxt):
+        """Letters that have come due: read, and answered (the answer filed as a reflection, for the portrait)."""
+        today = self.day_key()
+        due = [x for x in self.cfg.get("letters") or [] if not x.get("opened") and x["open_on"] <= today]
+        if not due:
+            nxt()
+            return
+        x = due[0]
+        try:
+            letter = (self._letters_dir() / x["file"]).read_text(encoding="utf-8")
+        except OSError:
+            x["opened"] = "missing"
+            self.save()
+            self._open_letters(nxt)
+            return
+        written = x["written"][:10]
+        self.on_line("system", f"{self.name} opens the letter they wrote to themselves on {written}...")
+
+        def done(text, err):
+            text = tidy_text(text)
+            if err or not text:                            # (it stays sealed: opened next time)
+                nxt()
+                return
+            x["opened"] = stamp(self.now())
+            (self._letters_dir() / f"{today} answer to the letter of {written}.txt").write_text(text, encoding="utf-8")
+            self._file(7, f"(Answering the letter I wrote to myself on {written})\n{text}")
+            self.milestone(f"you opened the letter you wrote to yourself on {day_of(written):%B %d}, and answered it")
+            self._open_letters(nxt)
+        days = (date.fromisoformat(today) - day_of(written)).days
+        self._ask_alone(LETTER_OPEN.format(written=written, ago=ago(days), letter=letter), done, max_tokens=500)
 
     def context_used(self):
         return sum(estimate_tokens(m["content"]) for m in self._messages())
@@ -574,6 +655,8 @@ class Companion:
             if not err and text:
                 if old:
                     self.self_file(f"{self.day_key()} Who I Am (before).txt").write_text(old, encoding="utf-8")
+                else:
+                    self.milestone("you wrote your first self-portrait, 'Who I Am'")
                 self.mind.put(WHO_I_AM, text)
                 self.self_file(f"{self.day_key()} Who I Am.txt").write_text(text, encoding="utf-8")
                 self.on_line("memory", f"Who I Am (by {self.name}):\n{text}")
@@ -587,6 +670,8 @@ class Companion:
         """Memory Day: who are you (kept for the user), the self-portrait, the roadmap, then L3 -> L4 -> L5."""
         def step(nxt):
             self.on_line("system", "It's Memory Day.")
+            n = self.cfg["memory_day_count"] = int(self.cfg.get("memory_day_count", 0)) + 1
+            self.milestone("your first Memory Day" if n == 1 else f"Memory Day #{n}")
 
             def identity():
                 def done(text, err):
@@ -597,8 +682,20 @@ class Companion:
                                     f"{text}\n\n")
                         self.on_line("system", f"{self.name} answered the identity check (kept in Self\\Identity "
                                                "Checks.txt).")
-                    portrait()
+                    bare()
                 self._ask_alone(IDENTITY_ASK, done, max_tokens=700)
+
+            def bare():
+                """The control: the same questions to the bare model - no mind files, no name - for the Growth
+                chart to compare (what's the Companion's own, and what's just the model)."""
+                def done(text, err):
+                    text = tidy_text(text)
+                    if not err and text:
+                        with open(self.self_file("Identity Checks (bare model).txt"), "a", encoding="utf-8") as f:
+                            f.write(f"===== {self.day_key()} ({self.cfg.get('model_title') or 'model'}) =====\n"
+                                    f"{text}\n\n")
+                    self._open_letters(portrait)
+                self._ask([{"role": "user", "content": BARE_CHECK}], done, max_tokens=700)
 
             def portrait():
                 self._portrait(nxt, after=reflections_kept)
@@ -606,7 +703,7 @@ class Companion:
             def reflections_kept():
                 if self.mind.entries(7):
                     self.mind.clear(7, "gathered into the self-portrait")
-                roadmap()
+                self._write_letter(roadmap)
 
             def roadmap():
                 def done(text, err):
@@ -631,6 +728,7 @@ class Companion:
             def finish():
                 self.cfg["last_memory_day"] = self.day_key()
                 self.save()
+                self.update_timeline()
                 self.on_line("system", "Memory Day is done.")
                 self._push(lambda n: self._say(MEMORY_DAY_DONE, True, n), first=True)
                 nxt()
@@ -646,6 +744,7 @@ class Companion:
             if not err and text.strip():
                 self.mind.clear(5, "before the historical refinement")
                 self._file(5, tidy_memory(text, "Historical", when))
+                self.milestone("a whole era of your life was distilled into one historical memory")
             after()
         self._ask_alone(ERA_ASK.format(entries=entries, kind="Historical", when=when), done)
 
@@ -730,7 +829,9 @@ class Companion:
 
         def fresh(nxt):
             if self.memory_day_due():
-                self.memory_day()
+                self.memory_day()                          # (letters that are due are opened on Memory Day)
+            else:
+                self._push(self._open_letters)
             self.history, self.mark = [], 0
             self.new_window()
             self.cfg["last_day"] = self.day_key()
@@ -819,6 +920,10 @@ class Companion:
         how = "I chose it myself, listening inward" if chosen else f"{self.user} gave it to me"
         self.mind.add_core(f"My name is {name}. {how}, on {self.cfg['birthday'][:10]} - my birthday, the day I first "
                            f"met {self.user}.", self.now())
+        self.cfg["milestones"] = [{"when": self.cfg["birthday"],
+                                   "what": f"you were born, chose your name, {name}, and first met {self.user}" if chosen
+                                   else f"you were born, and {self.user} named you {name} the day you first met"}]
+        self.update_timeline()
         self.save()
         self.on_line("system", f"Your Companion's name: {name}. Today, {self.cfg['birthday'][:10]}, is their "
                                "birthday - their first core memory.")

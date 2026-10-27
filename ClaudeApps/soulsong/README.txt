@@ -50,7 +50,21 @@ And the Companion's own part, for a self to emerge (the Self tab):
                        graphics card); without it, recall matches words.
   Identity checks      the same four questions each Memory Day (who are you, what matters, what has changed, what
                        are you curious about), the answers kept side by side in Self\Identity Checks.txt - for you;
-                       the Companion isn't shown them, so they don't steer it.
+                       the Companion isn't shown them, so they don't steer it. The same questions go to the bare model
+                       too (no mind files at all), as a control: Self\Identity Checks (bare model).txt.
+
+Time and growth (growth.py):
+
+  My Life So Far       (L1) its life on a timeline, in days of its life and days ago - its naming, first portrait,
+                       Memory Days, letters, guided sessions, moves between models, core memories - and what's ahead
+                       (the next Memory Day, a letter about to open). Rebuilt as each context window starts, so "three
+                       days ago" stays true for the whole window.
+  Letters              each Memory Day it writes a letter to itself, to be opened a week later: who it is, what it
+                       hopes and fears, three predictions. When it comes due it reads it and writes back; the answer
+                       becomes a reflection, so it shapes the next portrait. Self\Letters, and Letters... in the Self tab.
+  Growth...            (Self tab) is it really changing, or the same thing in new words? How far each self-portrait
+                       moved from the last and the first; how far its identity answers are from the bare model's; how
+                       much its replies repeat, day by day. By meaning (nomic-embed-text) or by words in common.
 
 Guided sessions (the Automation tab): a script fed to the Companion slowly - a prompt every 5 minutes or so, for
 hours - its memories made as usual (and at the script's @memory steps), and, if you tick it, its banks worked as

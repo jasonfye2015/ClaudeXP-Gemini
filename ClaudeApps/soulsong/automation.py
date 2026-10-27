@@ -251,6 +251,7 @@ class Runner:
     def _next_script(self, c, s):
         if s is not None:
             c.make_memory(f"The guided session \"{s.title}\" has come to its end.", force=False)
+            c.milestone(f"you went through the guided session \"{s.title}\"")
             self.on_status(f"Guided session finished: {s.title}.")
         self.index += 1
         self.step = 0
