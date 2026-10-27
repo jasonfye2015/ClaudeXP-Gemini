@@ -15,6 +15,7 @@ ClaudeApps - the AI apps and Python Studio, on every computer
   imagegen.py        Copilot Image Creator - pictures from a description (imagegen_worker.py runs Stable Diffusion)
   voicecatalog.py    the voices CopilotAI can speak with
   pystudio/          Copilot Python Studio - write, check, debug and run Python offline, with an AI Helper
+  cesscr/            the Claude Entertainment System as a real Windows screen saver (.scr) - see its README
   requirements-*.txt what the voice and picture engines install into their own Python in Local Storage
 
 They use the Timeline's shared AI engine (ClaudeCore/claudecore/ai) and talk to the computer only through

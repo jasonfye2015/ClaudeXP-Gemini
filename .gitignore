@@ -25,3 +25,7 @@ ClaudeApps/kithylinai/Data/
 .Spotlight-V100/
 .fseventsd/
 .Trashes/
+# The Claude Entertainment System .scr: its build Python, build folder and the built screen saver (sprites inside)
+ClaudeApps/cesscr/.venv-build/
+ClaudeApps/cesscr/build/
+ClaudeApps/cesscr/dist/
