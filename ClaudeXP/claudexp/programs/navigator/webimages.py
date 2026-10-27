@@ -7,7 +7,7 @@ browser's data folder (web_images/), so a page seen before has its pictures at o
 
 The engine runs as one worker (imagegen_worker.py serve) that loads the model once and closes after a few idle
 minutes, giving the graphics card back. Only when the Image Creator's engine and SD 1.5 are installed; pictures of
-anything adult stay placeholders."""
+anything adult stay placeholders. Control Panel > AI Models > Image Gen turns it off or lighter (settings())."""
 import hashlib
 import json
 import re
@@ -21,7 +21,9 @@ from PySide6.QtGui import QPixmap
 from .web import DATA_DIR
 
 CACHE = DATA_DIR / "web_images"
-IDLE_SECONDS = 300               # the worker goes (and the graphics card is free) after this long with nothing to do
+SETTINGS = {"enabled": True, "quality": "normal", "where": "auto", "idle_minutes": 5, "with_autopilot": True}
+QUALITY = {"quick": 10, "normal": 16, "fine": 25}          # steps
+WHERE = ("auto", "light", "cpu")
 MAX_WAITING = 16                 # older requests are dropped beyond this (the pages they were for are long gone)
 STYLE = "photograph, amateur digital camera photo from 2001, slightly low resolution"
 NEGATIVE = ("text, words, letters, watermark, logo, signature, frame, border, nsfw, nude, naked, sexual, explicit, "
@@ -47,6 +49,51 @@ def key(text, w=0, h=0):
     return hashlib.sha1(f"{text.strip().lower()}|{sw}x{sh}".encode("utf-8")).hexdigest()[:20]
 
 
+def settings():
+    """Control Panel > AI Models > Image Gen (kept in ai_models.json, under "web_images")."""
+    try:
+        from ... import ai_models
+        return {**SETTINGS, **(ai_models.config().get("web_images") or {})}
+    except Exception:
+        return dict(SETTINGS)
+
+
+def save_settings(values):
+    from ... import ai_models
+    cfg = ai_models.config()
+    cfg["web_images"] = {**settings(), **values}
+    ai_models.save(cfg)
+
+
+def active():
+    """Painting pictures right now? Off in the settings, or the autopilot's browsing when that's turned off: no."""
+    s = settings()
+    if not s["enabled"]:
+        return False
+    if not s["with_autopilot"]:
+        try:
+            from ...autopilot import pilot
+            p = pilot()
+            if p is not None and p.running:
+                return False
+        except Exception:
+            pass
+    return True
+
+
+def cache_size():
+    files = list(CACHE.glob("*.png")) if CACHE.is_dir() else []
+    return len(files), sum(f.stat().st_size for f in files)
+
+
+def empty_cache():
+    for f in CACHE.glob("*.png") if CACHE.is_dir() else []:
+        try:
+            f.unlink()
+        except OSError:
+            pass
+
+
 def allowed(text):
     return bool(text.strip()) and not ADULT.search(text)
 
@@ -62,6 +109,9 @@ class Painter(QObject):
         self.failed = set()
         self.event = threading.Event()
         self.thread = None
+        self.proc = None
+        self.mode = ""                     # where the worker that's running was asked to start
+        self.working = ""                  # the key being painted
 
     @staticmethod
     def engine():
@@ -82,7 +132,7 @@ class Painter(QObject):
             pm = QPixmap(str(f))
             if not pm.isNull():
                 return pm.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation) if w and h else pm
-        if allowed(text) and k not in self.failed:
+        if allowed(text) and k not in self.failed and active():
             self.want(k, text, w, h)
         return None
 
@@ -99,7 +149,7 @@ class Painter(QObject):
             sw, sh = size_for(w, h)
             seed = int(k[:8], 16)
             job = {"id": k, "prompt": f"{text.strip()}, {STYLE}", "negative_prompt": NEGATIVE, "width": sw,
-                   "height": sh, "steps": 16, "guidance": 7, "seed": seed, "output": str(CACHE / f"{k}.png")}
+                   "height": sh, "steps": QUALITY.get(settings()["quality"], 16), "guidance": 7, "seed": seed, "output": str(CACHE / f"{k}.png")}
             self.waiting.append((k, job))
             self.pending.add(k)
             while len(self.waiting) > MAX_WAITING:
@@ -122,7 +172,6 @@ class Painter(QObject):
         python, worker, model = eng
         CACHE.mkdir(parents=True, exist_ok=True)
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        proc = None
         try:
             import imagegen
         except Exception:
@@ -132,24 +181,35 @@ class Painter(QObject):
                 item = self._next()
                 if item is None:
                     self.event.clear()
-                    if not self.event.wait(IDLE_SECONDS):
+                    if not self.event.wait(float(settings()["idle_minutes"]) * 60):
                         with self.lock:
                             if not self.waiting:
                                 self.thread = None
                                 return
                     continue
                 k, job = item
-                if proc is None or proc.poll() is not None:
-                    proc = subprocess.Popen([str(python), str(worker), "serve", "--model", "sd15", "--model-path",
-                                             str(model)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                            stderr=subprocess.DEVNULL, text=True, encoding="utf-8",
-                                            creationflags=flags)
+                if not active():                           # (turned off, or the autopilot's browsing: let it go)
+                    with self.lock:
+                        self.pending.discard(k)
+                    continue
+                where = settings()["where"]
+                if self.proc is not None and self.proc.poll() is None and self.mode != where:
+                    self._close()                          # (where it runs was changed: start again there)
+                if self.proc is None or self.proc.poll() is not None:
+                    self.mode = where
+                    self.proc = subprocess.Popen([str(python), str(worker), "serve", "--model", "sd15", "--model-path",
+                                                  str(model), "--start-mode", where if where in WHERE else "auto"],
+                                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                 stderr=subprocess.DEVNULL, text=True, encoding="utf-8",
+                                                 creationflags=flags)
+                proc = self.proc
+                self.working = k
                 if imagegen is not None:
                     imagegen._active.add("web")                   # (the System Monitor shows it's at work)
+                ok = False
                 try:
                     proc.stdin.write(json.dumps(job) + "\n")
                     proc.stdin.flush()
-                    ok = False
                     for line in proc.stdout:
                         if line.startswith(f"IMAGE_READY:{k}"):
                             ok = True
@@ -159,21 +219,43 @@ class Painter(QObject):
                 except (OSError, ValueError):
                     ok = False
                 finally:
+                    self.working = ""
                     if imagegen is not None:
                         imagegen._active.discard("web")
                 with self.lock:
                     self.pending.discard(k)
-                    if not ok:
-                        self.failed.add(k)
+                    if not ok and proc.poll() is None:     # (a picture the engine couldn't paint isn't tried again;
+                        self.failed.add(k)                 # one cut short by Stop is)
                 if ok:
                     self.ready.emit(k)
         finally:
-            if proc is not None and proc.poll() is None:
-                try:
-                    proc.stdin.close()
-                    proc.wait(20)
-                except Exception:
-                    proc.kill()
+            self._close()
+
+    def _close(self):
+        proc, self.proc = self.proc, None
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.stdin.close()
+                proc.wait(20)
+            except Exception:
+                proc.kill()
+
+    def stop(self):
+        """Stop painting now: nothing waiting, the picture in hand dropped, the engine closed (the graphics card
+        free). Pages ask again when they're shown."""
+        with self.lock:
+            self.waiting.clear()
+            self.pending.clear()
+        proc = self.proc
+        if proc is not None and proc.poll() is None:
+            proc.kill()
+        self.event.set()
+
+    def status(self):
+        with self.lock:
+            waiting = len(self.waiting)
+        running = self.proc is not None and self.proc.poll() is None
+        return running, bool(self.working), waiting
 
 
 _painter = None

@@ -7,6 +7,9 @@
   Engine       Vulkan or CUDA, the graphics device, how many models stay loaded, context size, unloading when
                idle, and Start / Stop / Restart / View Log
   Activity     the request queue and recent replies (tokens per second), with a little graph
+  Image Gen    pictures for web pages (programs/navigator/webimages.py): on or off, also for the autopilot,
+               quality, where it runs (graphics card / lightly / processor), when the engine closes; its status,
+               Stop painting now, Empty picture cache
   Setup        the AI Model Setup Assistant: download and install what's missing (aimodels_setup.py)
 
 Settings are saved in data/ai_models.json (see ai_models.py); ClaudeAIM's own model settings follow along."""
@@ -125,6 +128,7 @@ class AIModels(QWidget):
         self.tabs.addTab(self._assign_tab(), "Assignments")
         self.tabs.addTab(self._engine_tab(), "Engine")
         self.tabs.addTab(self._activity_tab(), "Activity")
+        self.tabs.addTab(self._imagegen_tab(), "Image Gen")
         from .aimodels_setup import SetupTab
         from . import llm_setup
         missing = bool(llm_setup.essentials_missing())
@@ -435,10 +439,96 @@ class AIModels(QWidget):
         v.addWidget(self.recent, 1)
         return page
 
+    # ---- Image Gen: pictures for web pages ----------------------------------------------------------------
+    def _imagegen_tab(self):
+        from PySide6.QtWidgets import QCheckBox
+        from .programs.navigator import webimages
+        s = webimages.settings()
+        page = QWidget()
+        v = QVBoxLayout(page)
+        web = QGroupBox("Pictures on web pages")
+        g = QGridLayout(web)
+        about = QLabel("Pictures a web page in Netscape or Internet Explorer only describes are painted by the "
+                       "Copilot Image Creator's engine (Stable Diffusion 1.5), in the background, and kept. Each "
+                       "picture is work for the graphics card - turn it lighter or off if it's too much.")
+        about.setWordWrap(True)
+        g.addWidget(about, 0, 0, 1, 2)
+        self.web_on = QCheckBox("Paint pictures for web pages")
+        self.web_on.setChecked(bool(s["enabled"]))
+        g.addWidget(self.web_on, 1, 0, 1, 2)
+        self.web_pilot = QCheckBox("Also while the Kithylin Autopilot is running")
+        self.web_pilot.setChecked(bool(s["with_autopilot"]))
+        g.addWidget(self.web_pilot, 2, 0, 1, 2)
+        g.addWidget(QLabel("Quality:"), 3, 0)
+        self.web_quality = QComboBox()
+        for key, label in (("quick", "Quick - rougher, about twice as fast"), ("normal", "Normal"),
+                           ("fine", "Fine - more detail, slower")):
+            self.web_quality.addItem(label, key)
+        self.web_quality.setCurrentIndex(max(0, self.web_quality.findData(s["quality"])))
+        g.addWidget(self.web_quality, 3, 1)
+        g.addWidget(QLabel("Where it runs:"), 4, 0)
+        self.web_where = QComboBox()
+        for key, label in (("auto", "The graphics card, if there's room (fastest)"),
+                           ("light", "Lightly - under 1 GB of graphics memory (slower)"),
+                           ("cpu", "The processor only - leaves the graphics card alone (slowest)")):
+            self.web_where.addItem(label, key)
+        self.web_where.setCurrentIndex(max(0, self.web_where.findData(s["where"])))
+        g.addWidget(self.web_where, 4, 1)
+        g.addWidget(QLabel("Close the engine when idle:"), 5, 0)
+        self.web_idle = QComboBox()
+        for minutes, label in ((1, "After 1 minute"), (5, "After 5 minutes"), (15, "After 15 minutes"),
+                               (60, "After 1 hour")):
+            self.web_idle.addItem(label, minutes)
+        self.web_idle.setCurrentIndex(max(0, self.web_idle.findData(int(s["idle_minutes"]))))
+        g.addWidget(self.web_idle, 5, 1)
+        for w in (self.web_on, self.web_pilot):
+            w.toggled.connect(self.changed)
+        for w in (self.web_quality, self.web_where, self.web_idle):
+            w.currentIndexChanged.connect(self.changed)
+        follow = (self.web_pilot, self.web_quality, self.web_where, self.web_idle)
+        self.web_on.toggled.connect(lambda on: [w.setEnabled(on) for w in follow])
+        for w in follow:
+            w.setEnabled(self.web_on.isChecked())
+        v.addWidget(web)
+        st = QGroupBox("Status")
+        sv = QVBoxLayout(st)
+        self.web_status = QLabel()
+        self.web_status.setWordWrap(True)
+        sv.addWidget(self.web_status)
+        row = QHBoxLayout()
+        stop, empty = QPushButton("Stop painting now"), QPushButton("Empty picture cache")
+        stop.clicked.connect(lambda: (webimages.painter().stop(), self.refresh()))
+        empty.clicked.connect(lambda: (webimages.empty_cache(), self.refresh()))
+        row.addWidget(stop)
+        row.addWidget(empty)
+        row.addStretch()
+        sv.addLayout(row)
+        v.addWidget(st)
+        v.addStretch()
+        return page
+
+    def _imagegen_status(self):
+        from .programs.navigator import webimages
+        p = webimages.painter()
+        if p.engine() is None:
+            text = ("The Image Creator's engine or Stable Diffusion 1.5 isn't installed: web pages keep their "
+                    "placeholder pictures. (Accessories > Copilot Image Creator sets it up.)")
+        else:
+            running, busy, waiting = p.status()
+            where = {"auto": "", "light": " (lightly)", "cpu": " (on the processor)"}.get(p.mode, "")
+            text = (("Painting a picture" if busy else "Engine loaded, idle" if running else "Engine closed")
+                    + (where if running else "") + (f"; {waiting} waiting." if waiting else "."))
+        n, size = webimages.cache_size()
+        self.web_status.setText(f"{text}<br>Picture cache: {n} picture{'' if n == 1 else 's'}, {_size(size)}.")
+
     # ---- keeping it current ---------------------------------------------------------------------------------
     def refresh(self):
         if not isValid(self):
             return
+        try:
+            self._imagegen_status()
+        except Exception:
+            pass
         states = llm_server.model_states()
         for i in range(self.models.topLevelItemCount()):
             item = self.models.topLevelItem(i)
@@ -487,7 +577,13 @@ class AIModels(QWidget):
         cfg["context"] = self.context.currentData()
         cfg["idle_minutes"] = self.idle.currentData()
         cfg["compact_cache"] = self.compact.isChecked()
+        cfg["web_images"] = {"enabled": self.web_on.isChecked(), "with_autopilot": self.web_pilot.isChecked(),
+                             "quality": self.web_quality.currentData(), "where": self.web_where.currentData(),
+                             "idle_minutes": self.web_idle.currentData()}
         ai_models.save(cfg)
+        if not cfg["web_images"]["enabled"]:
+            from .programs.navigator import webimages
+            webimages.painter().stop()                          # (off: the engine goes now, not when idle)
         self.cfg = cfg
         if before != (cfg["engine"], cfg["max_loaded"], cfg["context"], cfg["idle_minutes"],
                        cfg["compact_cache"]) and llm_server.running():

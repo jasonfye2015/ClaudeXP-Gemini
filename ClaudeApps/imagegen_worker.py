@@ -106,6 +106,9 @@ def serve(args):
 
     model_path = Path(args.model_path)
     modes = ["gpu", "offload", "cpu"] if torch.cuda.is_available() else ["cpu"]
+    start = {"light": "offload", "cpu": "cpu"}.get(args.start_mode)     # (where to begin: AI Models > Image Gen)
+    if start in modes:
+        modes = modes[modes.index(start):]
     pipe = None
 
     def load(mode):
@@ -167,6 +170,7 @@ def main():
     parser.add_argument("--guidance", type=float, default=7.0)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--output", default="")
+    parser.add_argument("--start-mode", default="auto", choices=("auto", "light", "cpu"))
     args = parser.parse_args()
     try:
         if args.operation == "install":
