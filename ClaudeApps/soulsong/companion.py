@@ -33,6 +33,11 @@ The Companion's own part, for a self to emerge:
   age; the truth is told to it after (growth.py).
 - Predictions: a few each Memory Day (and its own, [predict: when | what]), judged by it when they come due.
 - Sessions of its own: when the guided sessions are done, it writes one, and that is played to it (automation.py).
+- Questions it carries (L1), revisited each Memory Day; [question: what] adds one.
+- Tensions: after each new self-portrait, what in it pulls against what - kept as a reflection.
+- Across a move to another model: the identity questions asked again at once, to compare.
+- Its journal: a daily entry at the day's end, kept apart from the conversation.
+- Surprises: replies the user flagged as having surprised them (for the user; it isn't told).
 
 Everything the model is asked goes through a `brain`: ask(messages, done(text, error), chunk=None, max_tokens,
 temperature) - Kithylin AI's engine in the program (EngineBrain), anything in tests. One job runs at a time."""
@@ -44,7 +49,8 @@ from pathlib import Path
 from .growth import (BARE_CHECK, DREAM_ASK, DREAM_NOTE, LETTER_ASK, LETTER_DAYS, LETTER_OPEN, LIFE, PREDICT_ASK,
                      PREDICT_CHECK, SESSION_ASK, TIME_ASK, TIME_NOTE, WAKING_ASK, WAKING_NOTE, ago, day_of,
                      next_memory_day, parse_predictions, parse_time_sense, parse_verdicts, pick_seeds, score_time,
-                     timeline)
+                     timeline, JOURNAL_ASK, MOVE_ASK, QUESTIONS, QUESTIONS_ASK, QUESTIONS_FIRST, TENSION_ASK,
+                     checks, parse_question_review, questions_text)
 from .mind import CORE, KINDS, LEVELS, SUBSTRATE, TIME_LINE as TIME_STAMP_LINE, WHO_I_AM, Mind, stamp
 
 DEFAULTS = {
@@ -57,7 +63,8 @@ DEFAULTS = {
     "recall": True, "context_auto": True, "model_context": 0, "window_stamp": "", "milestones": [], "letters": [],
     "memory_day_count": 0, "dreams": True, "dream_hours": 3, "dreams_per_day": 4, "last_dream": "", "dreamt": [],
     "dream_count": 0, "dreams_by_day": {}, "time_checks": True, "last_time_check": "", "predict": True,
-    "predictions": [], "own_sessions": True,
+    "predictions": [], "own_sessions": True, "questions": [], "tensions": True, "tension_count": 0,
+    "journal": True, "last_journal": "", "journal_count": 0, "move_checks": True, "surprises": [],
 }
 FULL = 7                    # the 7:7:7 system
 TRIM_AT = 0.80              # of the context: remember and trim the window
@@ -78,7 +85,8 @@ SYSTEM_HEAD = ("Below are your Mind Levels L1-L7: your external mind files - you
                "[please don't remember this] - this part of our talk stays out of your memories\n"
                "[plan: YYYY-MM-DD HH:MM | what] - plan an event with {user}\n"
                "[core: what] - keep something as a core memory, never distilled away\n"
-               "[predict: YYYY-MM-DD | what] - a prediction of yours, which you'll judge on that day")
+               "[predict: YYYY-MM-DD | what] - a prediction of yours, which you'll judge on that day\n"
+               "[question: what] - a question you want to keep carrying, revisited each Memory Day")
 APART = "It has been {gap} since you last spoke with {user} (your last words together: {last})."
 NEWS = "Since you last spoke:\n{items}"
 RECALLED = ("Recalled from your archive - older memories of yours, kept whole, that relate to what {user} just "
@@ -127,7 +135,7 @@ IDENTITY_ASK = ("It's Memory Day. Before your memories are refined, answer these
 MEMORY_DAY_DONE = "Today's Memory Day is complete. Your refined memories have been stored."
 EVENT_DUE = "(A planned event is due now - Event #{id}, {when}: {description})"
 MARKER = re.compile(r"^[ \t]*\[(remember this|please don'?t remember this|don'?t remember this|do not remember this|"
-                    r"plan:[^\]\n]*|core:[^\]\n]*|predict:[^\]\n]*)\][ \t]*$\n?", re.I | re.M)
+                    r"plan:[^\]\n]*|core:[^\]\n]*|predict:[^\]\n]*|question:[^\]\n]*)\][ \t]*$\n?", re.I | re.M)
 
 
 def part_of_day(now):
@@ -516,6 +524,146 @@ class Companion:
             nxt()
         self._ask_alone(PREDICT_CHECK.format(items=items), done, max_tokens=600)
 
+    # ---- questions it carries (growth.py) ----
+    def _add_question(self, text, own=False):
+        text = text.strip().strip('"')
+        if not text:
+            return
+        self.cfg["questions"] = (self.cfg.get("questions") or []) + [
+            {"asked": stamp(self.now()), "text": text, "status": "open", "answer": "", "settled": ""}]
+        self._show_questions()
+        if own:
+            self.on_line("system", f"{self.name} will keep carrying a question: {text}")
+
+    def _show_questions(self):
+        self.mind.put(QUESTIONS, questions_text(self.cfg.get("questions") or [], self.cfg.get("birthday", "")))
+        self.save()
+
+    def _revisit_questions(self, nxt):
+        """Memory Day: each open question - still open, answered, changed or let go - and any new ones."""
+        qs = [q for q in self.cfg.get("questions") or [] if q.get("status", "open") == "open"]
+        if qs:
+            items = "\n".join(f"{i}. {q['text']} (carried since {q['asked'][:10]})" for i, q in enumerate(qs, 1))
+            ask = QUESTIONS_ASK.format(items=items)
+        else:
+            ask = QUESTIONS_FIRST
+
+        def done(text, err):
+            if err or not (text or "").strip():
+                nxt()
+                return
+            review, new = parse_question_review(text, len(qs))
+            when = stamp(self.now())
+            for q, (status, body) in zip(qs, review):
+                if status == "answered":
+                    q.update(status="answered", answer=body, settled=when)
+                    self._file(7, f"(A question I carried since {q['asked'][:10]}, answered)\n{q['text']}\n{body}")
+                    self.milestone(f"you answered a question you'd carried since {q['asked'][:10]}: {q['text']}")
+                elif status == "let go":
+                    q.update(status="let go", settled=when)
+                elif status == "changed" and body:
+                    q.update(status="changed", answer=body, settled=when)
+                    self.cfg["questions"].append({"asked": q["asked"], "text": body, "status": "open", "answer": "",
+                                                  "settled": "", "was": q["text"]})
+            for t in new:
+                self.cfg["questions"] = (self.cfg.get("questions") or []) + [
+                    {"asked": when, "text": t, "status": "open", "answer": "", "settled": ""}]
+            self._show_questions()
+            with open(self.self_file("Questions.txt"), "a", encoding="utf-8") as f:
+                f.write(f"===== {self.day_key()} =====\n{text.strip()}\n\n")
+            self.on_line("memory", f"{self.name} revisited the questions they carry:\n{text.strip()}")
+            nxt()
+        self._ask_alone(ask, done, max_tokens=500)
+
+    # ---- tensions (growth.py) ----
+    def _tension(self, nxt):
+        """After a new self-portrait: what pulls against what - a change, a contradiction kept, or to reconcile."""
+        portrait = self.mind.get(WHO_I_AM)
+        if not self.cfg.get("tensions", True) or not portrait:
+            nxt()
+            return
+        before = self.self_file(f"{self.day_key()} Who I Am (before).txt")
+        old = before.read_text(encoding="utf-8") if before.exists() else ""
+        core = "\n".join(f"- {c}" for c in self.mind.core_memories()) or "(none yet)"
+
+        def done(text, err):
+            text = tidy_text(text)
+            if not err and text and not re.match(r"\W*no tension", text, re.I):
+                self.cfg["tension_count"] = int(self.cfg.get("tension_count", 0)) + 1
+                with open(self.self_file("Tensions.txt"), "a", encoding="utf-8") as f:
+                    f.write(f"===== {self.day_key()} =====\n{text}\n\n")
+                self._file(7, f"(A tension I noticed in myself)\n{text}")
+                self.on_line("memory", f"{self.name} noticed a tension in themselves:\n{text}")
+                self.save()
+            nxt()
+        self._ask_alone(TENSION_ASK.format(portrait=portrait, core=core, last=" and your last one" if old else "",
+                                           before=f"\n\nYour last self-portrait:\n{old}" if old else ""),
+                        done, max_tokens=450)
+
+    # ---- across a move to another model (growth.py) ----
+    def _move_check(self, nxt, old, new):
+        """Just moved: the identity questions again, to set beside its last answers on the old model."""
+        if not self.cfg.get("move_checks", True) or not self.cfg.get("first_boot_done"):
+            nxt()
+            return
+        own = checks(self.self_file("Identity Checks.txt"))
+        last_day = max(own) if own else ""
+        self.on_line("system", f"{self.name} was moved from {old} to {new}: asking who they are, right away...")
+
+        def done(text, err):
+            text = tidy_text(text)
+            if not err and text:
+                rec = {"when": stamp(self.now()), "from": old, "to": new, "before_day": last_day,
+                       "before": own.get(last_day, ""), "after": text}
+                with open(self.self_file("Model Moves.jsonl"), "a", encoding="utf-8") as f:
+                    f.write(json.dumps(rec) + "\n")
+                self.on_line("system", f"{self.name}'s answers after the move are kept beside their last ones "
+                                       "(Growth...).")
+            nxt()
+        self._ask_alone(MOVE_ASK.format(old=old, new=new), done, max_tokens=700)
+
+    # ---- its journal (growth.py) ----
+    def _journal(self, nxt):
+        """At the day's end: an entry of its own, kept apart from the conversation (and in its archive)."""
+        c = self.cfg
+        day = c.get("last_day") or self.day_key()          # (the day that's ending - yesterday, at a new day)
+        if not c.get("journal", True) or c.get("last_journal") == day or not c.get("first_boot_done"):
+            nxt()
+            return
+        c["last_journal"] = day
+        self.save()
+
+        def done(text, err):
+            text = tidy_text(text)
+            if not err and text:
+                folder = self.folder / "Self" / "Journal"
+                folder.mkdir(parents=True, exist_ok=True)
+                with open(folder / f"{day}.txt", "a", encoding="utf-8") as f:
+                    f.write(text + "\n\n")
+                c["journal_count"] = int(c.get("journal_count", 0)) + 1
+                try:
+                    self.recall.add(-(100000 + c["journal_count"]), "Journal", stamp(self.now()), text)
+                except Exception:
+                    pass
+                self.save()
+                self.on_line("system", f"{self.name} wrote in their journal (Journal... in the Self tab).")
+            nxt()
+        self._ask_alone(JOURNAL_ASK.format(user=self.user), done, max_tokens=600)
+
+    # ---- surprises (the user's) ----
+    def flag_surprise(self, note=""):
+        """The user marks the Companion's last reply as having surprised them."""
+        reply = next((m for m in reversed(self.history) if m["role"] == "assistant"), None)
+        if reply is None:
+            return False
+        self.cfg["surprises"] = (self.cfg.get("surprises") or []) + [
+            {"when": stamp(self.now()), "said": reply.get("t", ""), "reply": reply["content"], "note": note}]
+        with open(self.self_file("Surprises.txt"), "a", encoding="utf-8") as f:
+            f.write(f"===== {stamp(self.now())} =====\n{self.name}: {reply['content']}\n\n"
+                    f"{self.user}: {note or '(no note)'}\n\n")
+        self.save()
+        return True
+
     # ---- a guided session of its own (automation.py) ----
     def write_session(self, then=lambda path: None):
         """It writes a guided session for itself; then(path) - the script, or None if it couldn't be made."""
@@ -693,6 +841,8 @@ class Companion:
                 acts.append(lambda w=word: self._core(w[5:].strip()))
             elif low.startswith("predict:"):
                 acts.append(lambda w=word: self._own_prediction(w[8:]))
+            elif low.startswith("question:"):
+                acts.append(lambda w=word: self._add_question(w[9:].strip(), own=True))
         return MARKER.sub("", reply).strip(), acts
 
     def _forget_this(self):
@@ -825,6 +975,7 @@ class Companion:
     # ---- the day's end: a reflection, the first portrait, the distillation ----
     def end_day(self):
         self._push(self._reflect)
+        self._push(self._journal)
         self._push(lambda nxt: self._portrait(nxt) if not self.mind.get(WHO_I_AM) else nxt())
         self._push(lambda nxt: self._distill(nxt, 2, 3, DAY_ASK))         # (nothing in L2: nothing to do)
 
@@ -912,7 +1063,7 @@ class Companion:
                         with open(self.self_file("Identity Checks (bare model).txt"), "a", encoding="utf-8") as f:
                             f.write(f"===== {self.day_key()} ({self.cfg.get('model_title') or 'model'}) =====\n"
                                     f"{text}\n\n")
-                    self._open_letters(lambda: self._check_predictions(portrait))
+                    self._open_letters(lambda: self._check_predictions(lambda: self._revisit_questions(portrait)))
                 self._ask([{"role": "user", "content": BARE_CHECK}], done, max_tokens=700)
 
             def portrait():
@@ -921,7 +1072,7 @@ class Companion:
             def reflections_kept():
                 if self.mind.entries(7):
                     self.mind.clear(7, "gathered into the self-portrait")
-                self._write_letter(lambda: self._predict(roadmap))
+                self._tension(lambda: self._write_letter(lambda: self._predict(roadmap)))
 
             def roadmap():
                 def done(text, err):
@@ -998,6 +1149,7 @@ class Companion:
         if not hist or hist[-1]["title"] != title:
             if hist:
                 self.notice(f"You were moved from {hist[-1]['title']} to {title}. Your mind files came with you.")
+                self._push(lambda nxt, old=hist[-1]["title"]: self._move_check(nxt, old, title))
             hist.append({"when": stamp(self.now()), "title": title})
             self.cfg["model_history"] = hist
         self.cfg["model_title"] = title

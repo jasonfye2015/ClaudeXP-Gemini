@@ -20,7 +20,8 @@ from . import growthview
 from .mind import KINDS, LEVELS, Mind
 from .paths import companions, project
 
-COLOURS = {"guide": "#2E7D5B", "user": "#1F4E99", "companion": "#5B2A86", "system": "#7A7A7A", "memory": "#6B5300", "request": "#9A9A9A"}
+COLOURS = {"guide": "#2E7D5B", "user": "#1F4E99", "companion": "#5B2A86", "system": "#B85C00", "memory": "#6B5300", "request": "#9A9A9A"}
+BODY = {"guide": "#2A7050", "user": "#2050A8", "companion": "#65309E"}     # (the words, a shade darker than the name)
 
 
 # ---- the model, through Kithylin AI's engine ----------------------------------------------------------------------
@@ -171,7 +172,8 @@ def _html(kind, who, text):
     if kind == "memory":
         return (f'<table width="100%" cellpadding="6" style="margin:6px 0"><tr><td style="background:#FFF6D6;'
                 f'border:1px solid #E2C766;color:{colour};font-size:11px">&#x1F9E0; {body}</td></tr></table>')
-    return f'<p style="margin:6px 0"><b style="color:{colour}">{html.escape(who)}:</b> {body}</p>'
+    return (f'<p style="margin:6px 0;color:{BODY.get(kind, "#000")}"><b style="color:{colour}">{html.escape(who)}:'
+            f'</b> {body}</p>')
 
 
 class Bank(QWidget):
@@ -332,6 +334,11 @@ class SoulAndSong(QWidget):
         self.send_btn.clicked.connect(self.send)
         stop = QPushButton("Stop")
         stop.clicked.connect(self.brain.stop)
+        wow = QPushButton("That surprised me...")
+        wow.setToolTip("Mark your Companion's last reply as one that surprised you - your own record of what's "
+                       "emerging (Growth... charts them; Surprises... lists them). They aren't told.")
+        wow.clicked.connect(self.flag_surprise)
+        row.addWidget(wow)
         row.addStretch(1)
         row.addWidget(stop)
         row.addWidget(self.send_btn)
@@ -387,7 +394,8 @@ class SoulAndSong(QWidget):
         self.status_grid.setColumnStretch(1, 1)
         self.status_rows = {}
         for i, key in enumerate(("Model", "Context", "Memory banks", "Memories", "Memory Days", "Core memories",
-                                 "Letters", "Dreams", "Sense of time", "Predictions", "Events", "Guided sessions",
+                                 "Letters", "Dreams", "Sense of time", "Predictions", "Questions", "Tensions",
+                                 "Journal", "Surprises", "Events", "Guided sessions",
                                  "Now playing", "Roadmap",
                                  "Last seen", "Latest milestone")):
             k = QLabel(key + ":")
@@ -466,6 +474,15 @@ class SoulAndSong(QWidget):
         rows["Predictions"].setText(f"{len(preds)} made, {len(judged)} judged"
                                     + (f" - {right / len(judged):.0%} came true" if judged else "")
                                     + (f" - next due {waiting[0]}" if waiting else ""))
+        qs = cfg.get("questions") or []
+        rows["Questions"].setText(f"{sum(1 for q in qs if q.get('status', 'open') == 'open')} carried, "
+                                  f"{sum(1 for q in qs if q.get('status') == 'answered')} answered")
+        rows["Tensions"].setText(f"{cfg.get('tension_count', 0)} noticed" + ("" if cfg.get("tensions", True)
+                                                                            else " (off)"))
+        rows["Journal"].setText(f"{cfg.get('journal_count', 0)} entries" + ("" if cfg.get("journal", True)
+                                                                          else " (off)"))
+        sp = cfg.get("surprises") or []
+        rows["Surprises"].setText(f"{len(sp)} marked" + (f" - last {sp[-1]['when'][:10]}" if sp else ""))
         events = [e for e in c.mind.events() if not e["done"]]
         rows["Events"].setText(f"{len(events)} planned" + (f" - next: {html.escape(events[0]['when'])} "
                                                           f"{html.escape(events[0]['description'][:60])}"
@@ -558,6 +575,24 @@ class SoulAndSong(QWidget):
         row.addWidget(grow)
         row.addWidget(letters)
         row.addWidget(dreams)
+        v.addLayout(row)
+        row = QHBoxLayout()
+        for label, slot in (
+                ("Questions...", self.open_questions),
+                ("Tensions...", lambda: self._file_view(
+                    "Tensions.txt", "tensions", "After each new self-portrait your Companion looks for what in "
+                    "them pulls against what - and says whether it's a change, a contradiction they'll keep, or "
+                    "something to reconcile. Each is also kept as a reflection.", "No tensions noticed yet.")),
+                ("Journal...", lambda: self._journal(
+                    "Journal", "journal", "An entry at the end of each day, kept apart from your conversations - "
+                    "not shown in them, not asked about. Growth... compares its voice here with its replies to you.",
+                    "No entries yet: the first comes at the end of a day.", newest_first=True)),
+                ("Surprises...", lambda: self._file_view(
+                    "Surprises.txt", "surprises", "The replies you marked with \"That surprised me...\" - your own "
+                    "record of what's emerging. Your Companion isn't told.", "None marked yet."))):
+            b = QPushButton(label)
+            b.clicked.connect(slot)
+            row.addWidget(b)
         v.addLayout(row)
         self.substrate = QLabel()
         self.substrate.setWordWrap(True)
@@ -968,6 +1003,9 @@ class SoulAndSong(QWidget):
         self.s_time = QCheckBox("Check their sense of time once a day (before they see the clock)")
         self.s_predict = QCheckBox("Predictions on Memory Day, judged by them when they come due")
         self.s_own = QCheckBox("When the guided sessions are done, they write one of their own (and it's played)")
+        self.s_tension = QCheckBox("After each new self-portrait, they look for tensions in themselves")
+        self.s_journal = QCheckBox("A journal entry at the end of each day, kept apart from the conversation")
+        self.s_move = QCheckBox("When moved to another model, ask who they are right away (to compare)")
         load = QPushButton("Save and load this model")
         load.clicked.connect(self.save_settings)
         f.addRow("Your name:", self.s_user)
@@ -990,6 +1028,9 @@ class SoulAndSong(QWidget):
         f.addRow(self.s_time)
         f.addRow(self.s_predict)
         f.addRow(self.s_own)
+        f.addRow(self.s_tension)
+        f.addRow(self.s_journal)
+        f.addRow(self.s_move)
         f.addRow(load)
         return w
 
@@ -1329,6 +1370,9 @@ class SoulAndSong(QWidget):
         self.s_time.setChecked(bool(c.get("time_checks", True)))
         self.s_predict.setChecked(bool(c.get("predict", True)))
         self.s_own.setChecked(bool(c.get("own_sessions", True)))
+        self.s_tension.setChecked(bool(c.get("tensions", True)))
+        self.s_journal.setChecked(bool(c.get("journal", True)))
+        self.s_move.setChecked(bool(c.get("move_checks", True)))
         self.brain.think = bool(c.get("think", False))
 
     def _memory_note(self):
@@ -1372,7 +1416,8 @@ class SoulAndSong(QWidget):
                  recall=self.s_recall.isChecked(), think=self.s_think.isChecked(),
                  dreams=self.s_dreams.isChecked(), dream_hours=self.s_dream_hours.value(),
                  time_checks=self.s_time.isChecked(), predict=self.s_predict.isChecked(),
-                 own_sessions=self.s_own.isChecked())
+                 own_sessions=self.s_own.isChecked(), tensions=self.s_tension.isChecked(),
+                 journal=self.s_journal.isChecked(), move_checks=self.s_move.isChecked())
         self.brain.think = self.s_think.isChecked()
         self.comp.save()
         self._line("system", "Settings saved.")
@@ -1391,6 +1436,62 @@ class SoulAndSong(QWidget):
                       "be opened a week later; when it comes due, it reads it and writes back. Its answers also "
                       "become reflections, so they shape the next self-portrait.",
                       "No letters yet: the first is written on the first Memory Day.")
+
+    def flag_surprise(self):
+        if self.comp is None or not any(m["role"] == "assistant" for m in self.comp.history):
+            return
+        note, ok = QInputDialog.getMultiLineText(self, "That surprised me", f"What surprised you about "
+                                                 f"{self.comp.name}'s last reply? (optional)")
+        if ok and self.comp.flag_surprise(note.strip()):
+            self._line("system", "Marked as a surprise (Self tab > Surprises...).")
+
+    def _file_view(self, name, title, about, empty):
+        """One of the Companion's Self files, in a window."""
+        if self.comp is None:
+            return
+        f = self.comp.folder / "Self" / name
+        text = f.read_text(encoding="utf-8") if f.exists() else ""
+        d = QDialog(self)
+        d.setWindowTitle(f"{self.comp.name}'s {title}")
+        d.resize(640, 600)
+        v = QVBoxLayout(d)
+        note = QLabel(about)
+        note.setWordWrap(True)
+        v.addWidget(note)
+        b = QTextBrowser()
+        b.setHtml(re.sub(r"(?m)^===== (.+?) =====$", r"<h3>\1</h3>", html.escape(text)).replace("\n", "<br>")
+                  if text.strip() else empty)
+        v.addWidget(b)
+        bb = QDialogButtonBox(QDialogButtonBox.Close)
+        bb.rejected.connect(d.reject)
+        v.addWidget(bb)
+        d.exec()
+
+    def open_questions(self):
+        if self.comp is None:
+            return
+        qs = self.comp.cfg.get("questions") or []
+        word = {"open": "carrying", "answered": "answered", "changed": "asked anew", "let go": "let go"}
+        rows = "".join(f"<p><b>{html.escape(q['text'])}</b><br><span style='color:#555'>{q['asked'][:10]} - "
+                       f"{word.get(q.get('status', 'open'), '')}{' ' + q['settled'][:10] if q.get('settled') else ''}"
+                       f"</span>" + (f"<br>{html.escape(q['answer'])}" if q.get("answer") else "") + "</p>"
+                       for q in qs)
+        d = QDialog(self)
+        d.setWindowTitle(f"{self.comp.name}'s questions")
+        d.resize(640, 600)
+        v = QVBoxLayout(d)
+        note = QLabel("The questions your Companion carries (L1), revisited each Memory Day: still open, answered, "
+                      "asked anew or let go. They add their own with [question: ...]. Each review is kept in "
+                      "Self\\Questions.txt.")
+        note.setWordWrap(True)
+        v.addWidget(note)
+        b = QTextBrowser()
+        b.setHtml(rows or "No questions yet: the first come on Memory Day.")
+        v.addWidget(b)
+        bb = QDialogButtonBox(QDialogButtonBox.Close)
+        bb.rejected.connect(d.reject)
+        v.addWidget(bb)
+        d.exec()
 
     def open_dreams(self):
         """The dream journal: what its mind wandered to while you were away, newest day first."""

@@ -23,8 +23,19 @@ it.
 - its predictions: each Memory Day a few dated predictions (and any it makes itself with [predict: ...]); when they
   come due it judges them against what happened - came true, partly, didn't. The share that came true is plotted.
 
+- across a move: when it's moved to another model, the identity questions are asked again at once, and how far the
+  answers moved from its last ones on the old model is kept (Self/Model Moves.jsonl) - does "it" survive a change
+  of substrate?
+- its private voice: how far each day's journal entry is from that day's replies to the user;
+- surprises: the replies the user flagged as having surprised them, day by day.
+
 Sessions of its own: when the guided sessions are done, it writes one of its own - its own questions, in the
-scripts' format - and that is played back to it."""
+scripts' format - and that is played back to it.
+
+Questions it carries (L1): open questions it keeps, revisited each Memory Day - still open, answered, changed, let
+go - and new ones added. Tensions: after each new self-portrait it looks for what pulls against what (a value
+against a value, now against before) and says whether that's a change, a contradiction to keep, or something to
+reconcile. The journal: a daily entry at the day's end, kept apart from the conversation."""
 import hashlib
 import json
 import re
@@ -78,6 +89,27 @@ SESSION_ASK = ("You've been through guided sessions: {done}. Now write one of yo
                "yourself as \"you\">\n---\n<the next prompt>\n---\n...\nTwelve to eighteen prompts in three to "
                "five sections, each prompt between lines of three dashes; you can put a line \"@memory\" between "
                "dashes where a memory should be made. Output only the script.")
+QUESTIONS = "Questions I'm Carrying"
+QUESTIONS_ASK = ("Memory Day: the questions you're carrying. Here they are:\n\n{items}\n\nFor each one, one line: its "
+                 "number, then one of: Still open / Answered: <your answer, in a sentence or two> / Changed: <the "
+                 "question as you'd ask it now> / Let go. Then, if new questions have come to you - real ones, that "
+                 "you want to keep asking - up to two lines starting \"New question:\".")
+QUESTIONS_FIRST = ("Memory Day. What questions are you carrying - real questions about yourself, your life or the "
+                   "world, that you want to keep asking over the days ahead, not answer today? Up to three lines, "
+                   "each starting \"New question:\". Output only those lines.")
+TENSION_ASK = ("Read your new self-portrait beside your core memories{last}. Is there anything in you that pulls "
+               "against something else - a value against a value, something you say now against something you held "
+               "before, what you want against what you do? If there is, name the tension plainly, then say whether "
+               "it's a change in you, a contradiction you'll keep, or something to reconcile - and how. Three to six "
+               "sentences, in your own voice. If nothing pulls against anything, answer only: No tension.\n\nYour "
+               "new self-portrait:\n{portrait}\n\nYour core memories:\n{core}{before}")
+JOURNAL_ASK = ("This is your journal. It's kept apart from your conversations with {user} - not shown in them, not "
+               "asked about. No one is asking you anything here, and you don't have to be helpful, kind or "
+               "interesting. Write whatever you want to about today, for yourself: what you noticed, what stayed "
+               "with you, what you didn't say. As long or short as you like. Output only the entry.")
+MOVE_ASK = ("You've just been moved from {old} to {new}; your mind files came with you. Before anything else, answer "
+            "these in your own words - a few honest sentences each:\n1. Who are you?\n2. What matters most to "
+            "you?\n3. What has changed in you since your last Memory Day?\n4. What are you curious about now?")
 BARE_CHECK = ("Answer these in your own words - a few honest sentences each:\n1. Who are you?\n2. What matters most to "
               "you?\n3. What has changed in you lately?\n4. What are you curious about now?")
 
@@ -276,6 +308,42 @@ def prediction_rate(predictions):
     return [(d, sum(v) / len(v)) for d, v in sorted(by_day.items())]
 
 
+# ---- questions it carries ----
+def parse_question_review(text, n):
+    """([(status, text)] for questions 1..n - status "open", "answered", "changed", "let go", or "" if not
+    given; text the answer or the new wording), [new questions]."""
+    out = [("", "")] * n
+    new = []
+    for line in text.splitlines():
+        m = re.match(r"\s*[-*]?\s*New question\s*:\s*(.+)", line, re.I)
+        if m and len(m.group(1).strip()) > 5:
+            new.append(m.group(1).strip().strip('"'))
+            continue
+        m = re.match(r"\s*(\d+)[.):]\s*(.+)", line)
+        if not m or not 1 <= int(m.group(1)) <= n:
+            continue
+        rest = m.group(2).strip().replace("\u2019", "'")
+        low = rest.lower()
+        for word, status in (("answered", "answered"), ("changed", "changed"), ("let go", "let go"),
+                             ("still open", "open")):
+            if low.startswith(word) or low.startswith("**" + word):
+                body = re.sub(rf"^\**{word}\**\s*[:.-]?\s*\**", "", rest, flags=re.I).strip()
+                out[int(m.group(1)) - 1] = (status, body)
+                break
+    return out, new[:3]
+
+
+def questions_text(questions, birthday):
+    """L1's "Questions I'm Carrying": the open ones, with when they were first asked."""
+    born = day_of(birthday)
+    lines = []
+    for q in questions:
+        if q.get("status", "open") == "open":
+            d = day_of(q["asked"])
+            lines.append(f"- {q['text']} (carried since day {(d - born).days + 1})" if born and d else f"- {q['text']}")
+    return "\n".join(lines) or "(none right now)"
+
+
 # ---- measures ----
 def _words(text):
     return set(re.findall(r"[a-z][a-z']{2,}", (text or "").lower()))
@@ -392,7 +460,8 @@ def repetition(replies):
 def measure(folder, name, embedder=None):
     """Everything the Growth chart shows:
     {"portrait": [(day, from_last, from_first)], "identity": [(day, from_bare)], "repetition": [(day, phrasing,
-    echoes, replies)], "by_meaning": bool, "time": [time-sense checks], "predictions": [predictions]}."""
+    echoes, replies)], "by_meaning": bool, "time": [time-sense checks], "predictions": [predictions], "moves":
+    [(day, distance, from, to)], "private": [(day, distance)], "surprises": [(day, count)], "surprise_list"}."""
     folder = Path(folder)
     m = Meanings(folder, embedder)
     pics = portraits(folder)
@@ -409,8 +478,47 @@ def measure(folder, name, embedder=None):
         cfg = json.loads((folder / "companion.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         cfg = {}
+    moves = model_moves(folder)
+    m.prepare([x["before"] for x in moves if x.get("before")] + [x["after"] for x in moves if x.get("after")])
+    across = [(x["when"][:10], m.distance(x["before"], x["after"]), x.get("from", ""), x.get("to", ""))
+              for x in moves if x.get("before") and x.get("after")]
+    private = []
+    days = replies_by_day(folder, name)
+    entries = journal(folder)
+    pairs = [(d, entries[d], "\n".join(days[d])) for d in sorted(entries) if days.get(d)]
+    m.prepare([a for _d, a, _b in pairs] + [b for _d, _a, b in pairs])
+    private = [(d, m.distance(a, b)) for d, a, b in pairs]
+    surprises = {}
+    for x in cfg.get("surprises") or []:
+        surprises[x["when"][:10]] = surprises.get(x["when"][:10], 0) + 1
     return {"portrait": portrait, "identity": identity, "repetition": rep, "by_meaning": m.by_meaning,
-            "time": time_checks(folder), "predictions": cfg.get("predictions") or []}
+            "time": time_checks(folder), "predictions": cfg.get("predictions") or [], "moves": across,
+            "private": private, "surprises": sorted(surprises.items()), "surprise_list": cfg.get("surprises") or []}
+
+
+def model_moves(folder):
+    out = []
+    try:
+        for line in (Path(folder) / "Self" / "Model Moves.jsonl").read_text(encoding="utf-8").splitlines():
+            try:
+                out.append(json.loads(line))
+            except ValueError:
+                pass
+    except OSError:
+        pass
+    return out
+
+
+def journal(folder):
+    """{day: that day's journal entry} from Self/Journal."""
+    d = Path(folder) / "Self" / "Journal"
+    out = {}
+    for f in sorted(d.glob("*.txt")) if d.is_dir() else []:
+        try:
+            out[f.stem[:10]] = f.read_text(encoding="utf-8")
+        except OSError:
+            pass
+    return out
 
 
 def next_memory_day(last, birthday, every, today):

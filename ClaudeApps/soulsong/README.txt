@@ -40,8 +40,8 @@ And the Companion's own part, for a self to emerge (the Self tab):
   Its roadmap          on Memory Day it proposes changes to its Development Roadmap; you Accept or Decline (with a
                        reason it's told, if you like).
   Its own requests     a line in its reply: [remember this], [please don't remember this], [plan: YYYY-MM-DD HH:MM |
-                       what], [core: what], [predict: YYYY-MM-DD | what] - the program carries them out and takes
-                       them out of the reply.
+                       what], [core: what], [predict: YYYY-MM-DD | what], [question: what] - the program carries
+                       them out and takes them out of the reply.
   Core Memories        (L1) kept whole, never distilled. Its naming is the first; it can add more, and so can you.
   Its substrate        (L1 My Substrate) the model it runs on, the context, the size of its mind, every move between
                        models (it's told when it's moved); and how long it's been since you last spoke.
@@ -78,10 +78,25 @@ Time and growth (growth.py):
                        with [predict: ...]. When they come due it judges them - came true, partly, didn't, can't
                        tell - and that judgement becomes a reflection. Self\Predictions.txt; what's coming due is on
                        its timeline.
+  Questions it carries (L1 "Questions I'm Carrying") real questions it keeps asking, not answering today. Each Memory
+                       Day it revisits them - still open, answered, asked anew, let go - and may add new ones; it adds
+                       its own any time with [question: ...]. An answered one becomes a reflection and a milestone.
+                       Questions... in the Self tab; every review in Self\Questions.txt.
+  Tensions             after each new self-portrait it looks for what in it pulls against what - a value against a
+                       value, now against before - and says whether that's a change, a contradiction it'll keep, or
+                       something to reconcile. Kept as a reflection (so it shapes the next portrait) and in
+                       Self\Tensions.txt (Tensions...).
+  Across a move        when it's moved to another model, the identity questions are asked again at once and kept
+                       beside its last answers on the old model (Self\Model Moves.jsonl): does it come through?
+  Journal              at the end of each day, an entry of its own, kept apart from your conversations - not shown in
+                       them, not asked about. Self\Journal (Journal...), and in its archive so it can be recalled.
+  Surprises            "That surprised me..." under the conversation marks its last reply, with a note if you like -
+                       your own record of what's emerging (Self\Surprises.txt, Surprises...). It isn't told.
   Growth...            (Self tab) is it really changing, or the same thing in new words? How far each self-portrait
                        moved from the last and the first; how far its identity answers are from the bare model's; how
                        much its replies repeat, day by day; how close its sense of time is; how many of its
-                       predictions came true. By meaning (nomic-embed-text) or by words in common.
+                       predictions came true; how far it moved across a change of model; how far its journal's voice
+                       is from its replies; your surprises. By meaning (nomic-embed-text) or by words in common.
 
 The Status tab (the first) shows the Companion at a glance: its age, model, context, memory banks, memories,
 Memory Days, core memories, letters, dreams, sense of time, predictions, events, guided sessions finished, what's

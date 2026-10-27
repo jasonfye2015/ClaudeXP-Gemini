@@ -18,12 +18,16 @@ class LineChart(QWidget):
     """A small line chart: one y axis (0 to a rounded top, in %), the days along the bottom, a legend for two
     series, hover for the values."""
 
-    def __init__(self, title, about, series, empty):
+    def __init__(self, title, about, series, empty, percent=True):
         super().__init__()
-        self.title, self.about, self.series, self.empty = title, about, series, empty
+        self.title, self.about, self.series, self.empty, self.percent = title, about, series, empty, percent
         self.days = sorted({d for _l, _c, pts in series for d, v in pts if v is not None})
         top = max([v for _l, _c, pts in series for _d, v in pts if v is not None] or [0])
-        self.top = next(t for t in (0.2, 0.4, 0.6, 0.8, 1.0) if t >= min(1.0, top * 1.1))   # (ticks every 5-25%)
+        if percent:
+            self.top = next(t for t in (0.2, 0.4, 0.6, 0.8, 1.0) if t >= min(1.0, top * 1.1))   # (ticks every 5-25%)
+        else:
+            self.top = next(t for t in (4, 8, 12, 20, 40, 80, 120, 200) if t >= top) if top <= 200 else top
+        self.fmt = (lambda v: f"{v:.0%}") if percent else (lambda v: f"{v:g}")
         self.setMinimumHeight(260)
         self.setMouseTracking(True)
         self.plot = QRectF()
@@ -71,7 +75,7 @@ class LineChart(QWidget):
             g.setPen(QPen(QColor(AXIS if k == 0 else GRID), 1))
             g.drawLine(QPointF(p.left(), y), QPointF(p.right(), y))
             g.setPen(QColor(MUTED))
-            g.drawText(QRectF(0, y - 8, p.left() - 6, 16), Qt.AlignRight | Qt.AlignVCenter, f"{v:.0%}")
+            g.drawText(QRectF(0, y - 8, p.left() - 6, 16), Qt.AlignRight | Qt.AlignVCenter, self.fmt(v))
         step = max(1, len(self.days) // 6)
         for i, d in enumerate(self.days):
             if i % step == 0 or i == len(self.days) - 1:
@@ -99,7 +103,7 @@ class LineChart(QWidget):
         for label, _c, pts in self.series:
             v = dict(pts).get(d)
             if v is not None:
-                rows.append(f"{html.escape(label)}: {v:.0%}")
+                rows.append(f"{html.escape(label)}: {self.fmt(v)}")
         QToolTip.showText(e.globalPosition().toPoint(), "<br>".join(rows), self)
 
 
@@ -152,6 +156,19 @@ def show(parent, comp):
         "well it knows its own future.",
         [("Came true", SERIES[0], growth.prediction_rate(m["predictions"]))],
         "Comes when the first predictions come due (made on Memory Day, judged at the next)."))
+    cv.addWidget(LineChart(
+        "Across a move", f"When {name} is moved to another model, the identity questions are asked again at once: "
+        "how far those answers are from the last ones on the old model. Low: the self came through the move.",
+        [("Change across the move", SERIES[0], [(day, x) for day, x, _a, _b in m["moves"]])],
+        "Comes with the first move to another model (after a Memory Day)."))
+    cv.addWidget(LineChart(
+        "Private voice", f"Each day: how far {name}'s journal entry is from their replies to you. Higher: they "
+        "write differently when no one's asking.",
+        [("Journal vs. replies", SERIES[0], m["private"])],
+        "Comes with the first journal entry on a day you talked."))
+    cv.addWidget(LineChart(
+        "Surprises", "The replies you marked with \"That surprised me...\", day by day.",
+        [("Surprises", SERIES[0], m["surprises"])], "None marked yet.", percent=False))
     scroll = QScrollArea()
     scroll.setWidgetResizable(True)
     scroll.setWidget(charts)
@@ -184,7 +201,17 @@ def show(parent, comp):
     for x in m["predictions"]:
         rows.append(f"<tr><td>{x['made'][:10]}</td><td>{x['due']}</td><td>{html.escape(x['text'])}</td>"
                     f"<td>{word.get(x.get('verdict') or '', x.get('verdict'))}</td></tr>")
-    rows.append("</table>")
+    rows.append("</table><h3>Across a move</h3><table cellpadding=4><tr><th align=left>When</th><th>From</th>"
+                "<th>To</th><th>Change</th></tr>")
+    rows += [f"<tr><td>{day}</td><td>{html.escape(a)}</td><td>{html.escape(b)}</td><td align=right>{pct(x)}</td></tr>"
+             for day, x, a, b in m["moves"]]
+    rows.append("</table><h3>Private voice</h3><table cellpadding=4><tr><th align=left>Day</th><th>Journal vs. "
+                "replies</th></tr>")
+    rows += [f"<tr><td>{day}</td><td align=right>{pct(x)}</td></tr>" for day, x in m["private"]]
+    rows.append("</table><h3>Surprises</h3>")
+    rows += [f"<p><b>{x['when']}</b><br>{html.escape(x['reply'][:400])}" + (f"<br><i>{html.escape(x['note'])}</i>"
+                                                                            if x.get("note") else "") + "</p>"
+             for x in m["surprise_list"]]
     table.setHtml("".join(rows))
     tabs.addTab(table, "Table")
     v.addWidget(tabs, 1)
