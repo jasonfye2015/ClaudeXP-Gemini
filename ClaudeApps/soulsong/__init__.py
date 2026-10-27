@@ -71,7 +71,12 @@ def launch(desktop):
         host.placeholder(desktop, "Soul and Song", soulsong_icon(),
                          "Soul and Song couldn't start.\n\n" + traceback.format_exc(limit=3), sound_event="error")
         return
-    _frame = host.window(desktop, "Soul and Song", _content, soulsong_icon(), size=(1060, 720))
+    size = (1280, 820)                                  # (no bigger than the desktop it opens on)
+    try:
+        size = (min(size[0], desktop.width() - 20), min(size[1], desktop.height() - 60))
+    except Exception:
+        pass
+    _frame = host.window(desktop, "Soul and Song", _content, soulsong_icon(), size=size)
     _content.frame = _frame
     _frame.destroyed.connect(_forget)
     desktop.open_window(_frame)

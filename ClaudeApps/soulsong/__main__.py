@@ -20,7 +20,7 @@ def main():
     content = SoulAndSong(None)
     content.frame = win
     win.setCentralWidget(content)
-    win.resize(1100, 740)
+    win.resize(1300, 840)
     app.aboutToQuit.connect(content.shutdown)
     win.show()
     content.composer.setFocus()

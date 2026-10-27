@@ -37,7 +37,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .mind import CORE, KINDS, LEVELS, SUBSTRATE, WHO_I_AM, Mind, stamp
+from .mind import CORE, KINDS, LEVELS, SUBSTRATE, TIME_LINE as TIME_STAMP_LINE, WHO_I_AM, Mind, stamp
 
 DEFAULTS = {
     "name": "", "gender": "", "user_name": "", "birthday": "", "model": "", "engine": "auto", "context": 32768,
@@ -46,7 +46,7 @@ DEFAULTS = {
     "farewell": "Good night, {name}! Sleep well. I'll see you tomorrow!",
     "show_requests": False, "first_boot_done": False, "last_day": "", "last_memory_day": "", "memory_seq": 0,
     "events_told": [], "last_seen": "", "model_history": [], "notices": [], "roadmap_proposal": None,
-    "recall": True,
+    "recall": True, "context_auto": True, "model_context": 0, "window_stamp": "",
 }
 FULL = 7                    # the 7:7:7 system
 TRIM_AT = 0.80              # of the context: remember and trim the window
@@ -55,8 +55,9 @@ APART_HOURS = 3             # a gap this long is mentioned
 
 SYSTEM_HEAD = ("Below are your Mind Levels L1-L7: your external mind files - your systems, your roadmaps, your own "
                "self-portrait and core memories, your memory banks and your reflections. They are yours; read them "
-               "fully. The current local date and time is {now}. Each of {user}'s messages begins with its date and "
-               "time in [brackets].\n"
+               "fully. Each of {user}'s messages begins with its date and time in [brackets]; the newest one also "
+               "carries anything new for you - how long you've been apart, news, older memories recalled from your "
+               "archive.\n"
                "The program around you keeps your mind files for you: it stamps the time, files your memories and "
                "distils them. When it is time for a memory it will ask you - so don't write memories in your replies "
                "otherwise. Don't repeat the time stamps or {user}'s words back; just answer, in your own voice.\n"
@@ -265,35 +266,58 @@ class Companion:
                    {"role": "user", "content": ask}], done, max_tokens)
 
     # ---- what the Companion sees ----
+    # (the engine keeps what it has already read of a prompt and reads only what's new - so the front of the prompt
+    # stays the same from turn to turn: the mind files, the steadiest first, and the window's own time stamp in L1;
+    # what changes - the time, the news, the recalled memories - rides on the newest message)
+    ORDER = (6, 1, 5, 4, 3, 7, 2)
+
     def system_prompt(self, news=True):
-        self.mind.set_time_stamp(self.now())
-        parts = [SYSTEM_HEAD.format(now=stamp(self.now()), user=self.user)]
-        if news and self.gap:
-            parts.append(self.gap)
-        if news and self.cfg.get("notices"):
-            parts.append(NEWS.format(items="\n".join(f"- {n}" for n in self.cfg["notices"])))
-        for level, title, text in self.mind.all_text():
-            parts.append(f"===== Mind L{level} - {title} =====\n{text.strip()}")
-        if news and self.recalled:
-            parts.append(RECALLED.format(user=self.user, items="\n\n".join(
-                f"[{i['kind']} memory, {i['when']}]\n{i['text']}" for i in self.recalled)))
+        self.mind.set_time_stamp(self.now())           # (the file is always current; the prompt shows the window's)
+        parts = [SYSTEM_HEAD.format(user=self.user)]
+        shown = self.cfg.get("window_stamp") or stamp(self.now())
+        for level in self.ORDER:
+            text = self.mind.read(level)
+            if level == 1:
+                text = TIME_STAMP_LINE.sub(f"<Current System Time Stamp: {shown}>", text)
+            parts.append(f"===== Mind L{level} - {LEVELS[level]} =====\n{text.strip()}")
         return "\n\n".join(parts)
 
-    def _messages(self, history=None, extra=None):
+    def _now_note(self, news=True):
+        """What's new, for the newest message: the time, and (in conversation) time apart, news, recalled memories."""
+        bits = [f"[{stamp(self.now())}]"]
+        if news and self.gap:
+            bits.append(f"({self.gap})")
+        if news and self.cfg.get("notices"):
+            bits.append("(" + NEWS.format(items="\n".join(f"- {n}" for n in self.cfg["notices"])) + ")")
+        if news and self.recalled:
+            bits.append("(" + RECALLED.format(user=self.user, items="\n\n".join(
+                f"[{i['kind']} memory, {i['when']}]\n{i['text']}" for i in self.recalled)) + ")")
+        return "\n".join(bits)
+
+    def _messages(self, history=None, extra=None, news=True):
         msgs = [{"role": "system", "content": self.system_prompt()}]
         for m in (self.history if history is None else history):
             content = f"[{m['t']}] {m['content']}" if m["role"] == "user" and m.get("t") else m["content"]
             msgs.append({"role": m["role"], "content": content})
         if extra:
-            msgs.append({"role": "user", "content": f"[{stamp(self.now())}] {extra}"})
+            msgs.append({"role": "user", "content": f"{self._now_note(news=False)} {extra}"})
+        elif len(msgs) > 1 and msgs[-1]["role"] == "user":
+            last = (self.history if history is None else history)[-1]
+            msgs[-1] = {"role": "user", "content": f"{self._now_note(news)}\n{last['content']}"}
         return msgs
+
+    def new_window(self):
+        """A fresh context window starts: its time stamp is the one shown in L1 until the next."""
+        self.cfg["window_stamp"] = stamp(self.now())
 
     def context_used(self):
         return sum(estimate_tokens(m["content"]) for m in self._messages())
 
     def context_size(self):
-        """The window that's really there: the setting, or less if the engine runs the model smaller."""
-        size = int(self.cfg.get("context", 32768))
+        """The window that's really there: the model's full context (as much as fits the graphics card) or the
+        setting, and less if the engine runs the model smaller."""
+        size = int(self.cfg.get("model_context") or 0) if self.cfg.get("context_auto", True) else 0
+        size = size or int(self.cfg.get("context", 32768))
         engine = self.cfg.get("engine_context")
         return min(size, int(engine)) if engine else size
 
@@ -671,6 +695,8 @@ class Companion:
     def start(self):
         """The model is ready: first boot, or the day picked up where it is (a new day begins a new window)."""
         self._time_apart()
+        if not self.cfg.get("window_stamp"):
+            self.new_window()
         if not self.cfg.get("first_boot_done"):
             self.first_boot()
             return
@@ -706,6 +732,7 @@ class Companion:
             if self.memory_day_due():
                 self.memory_day()
             self.history, self.mark = [], 0
+            self.new_window()
             self.cfg["last_day"] = self.day_key()
             self.mind.set_time_stamp(self.now())
             self.save()
@@ -754,6 +781,7 @@ class Companion:
             self.cfg["birthday"] = stamp(self.now())
         self.cfg["last_day"] = self.day_key()
         self.mind.set_time_stamp(self.now())
+        self.new_window()
         self.save()
         self.on_line("system", "First boot: the Companion is given its Mind Levels L1-L7.")
         if self.cfg.get("name"):
@@ -810,6 +838,7 @@ class Companion:
 
         def fresh(nxt):
             self.history, self.mark = self.history[-2:], 0
+            self.new_window()
             self.on_line("system", "Mind files re-exposed: the Companion sees L1-L7 afresh, with the last exchange.")
             self.save()
             nxt()

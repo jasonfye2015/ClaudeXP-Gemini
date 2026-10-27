@@ -22,6 +22,12 @@ does it for you:
   Planned events       kept in L1 (Events tab); your Companion is told about each one when it comes due.
   First boot           the Mind Levels, the naming prompt (or the name you gave), your introduction, the first
                        memory. Today becomes the Companion's birthday (L1's Start Date).
+  Context              by default the model's full context, as much as fits the graphics card (Gemma 3 4B and
+                       Gemma 4 12B: 128k, about 4.6 and 8.9 GB; NemoMix-based models fit only 16k). Settings shows
+                       the figure and the memory it takes. In a Timeline computer, a model that wants more than the
+                       shared engine gives runs on Soul and Song's own. The front of the prompt stays the same from
+                       turn to turn (the time and news ride on the newest message), so the engine only reads what's
+                       new: a long window costs no more per reply than a short one.
   The model            any local model: Kithylin's own fine-tunes (Kithylin AI's Models folder) and the Timeline's
                        (Local Storage\LLM Models). Settings > Model, then Save and load this model.
 

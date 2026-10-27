@@ -215,14 +215,15 @@ atexit.register(_server.stop)
 class _Loader(QThread):
     finished_with = Signal(str, float)      # error ("" if fine), seconds
 
-    def __init__(self, model, engine_choice, context, status_cb):
+    def __init__(self, model, engine_choice, context, status_cb, shared=True):
         super().__init__()
         self.model, self.engine_choice, self.context, self.status_cb = model, engine_choice, context, status_cb
+        self.shared = shared
 
     def run(self):
         t = time.monotonic()
         try:
-            if self.model.key.startswith("timeline:") and hosted():
+            if self.shared and self.model.key.startswith("timeline:") and hosted():
                 from claudecore.ai import llm_server
                 llm_server.ensure_started()
                 llm_server.load(self.model.key.split(":", 1)[1], wait=True)
@@ -301,17 +302,22 @@ class Engine(QObject):
         super().__init__(parent)
         self.model = None
         self.ready = False
+        self.shared = True              # a Timeline model on the Timeline's shared engine (False: one of our own)
         self._loader = None
         self._streamer = None
         self._lock = threading.Lock()
 
     # ---- loading -----------------------------------------------------------------------------------------------
-    def load(self, model, engine_choice="auto", context=8192):
+    def load(self, model, engine_choice="auto", context=8192, shared=True):
+        """shared=False: even a Timeline model gets a llama-server of our own (its own context size), instead of the
+        Timeline's shared engine."""
         if self._loader is not None and self._loader.isRunning():
             self.status.emit("Still loading the last model - one moment.")
             return
         self.stop()
-        self.model, self.ready = model, False
+        if not self.shared and shared:
+            _server.stop()                      # (our own engine isn't needed any more)
+        self.model, self.ready, self.shared = model, False, shared
         self.loaded.emit(False)
         base = lora_base(model)
         if base is not None:
@@ -319,7 +325,7 @@ class Engine(QObject):
                              f"add-on {model.path.name} ({model.path.stat().st_size / 2**20:.0f} MB)...")
         else:
             self.status.emit(f"Now loading {model.title} ({model.path.name}, {model.path.stat().st_size / 2**30:.1f} GB)...")
-        self._loader = _Loader(model, engine_choice, context, lambda s: self.status.emit(s))
+        self._loader = _Loader(model, engine_choice, context, lambda s: self.status.emit(s), shared)
         self._loader.finished_with.connect(self._loaded)
         self._loader.start()
 
@@ -335,7 +341,7 @@ class Engine(QObject):
     def unload(self):
         self.stop()
         if self.model is not None:
-            if self.model.key.startswith("timeline:") and hosted():
+            if self.shared and self.model.key.startswith("timeline:") and hosted():
                 try:
                     from claudecore.ai import llm_server
                     llm_server.unload(self.model.key.split(":", 1)[1])
@@ -354,7 +360,7 @@ class Engine(QObject):
             self.done.emit("", "no model loaded")
             return
         self.stop()
-        if self.model.key.startswith("timeline:") and hosted():
+        if self.shared and self.model.key.startswith("timeline:") and hosted():
             from claudecore.ai import llm_server
             url, name = llm_server.ensure_started(), self.model.key.split(":", 1)[1]
         else:

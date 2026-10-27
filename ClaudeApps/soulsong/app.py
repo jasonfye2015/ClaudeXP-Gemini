@@ -39,8 +39,8 @@ class EngineBrain(QObject):
         self.think = False                  # let a thinking model think before it answers (Settings)
         self.on_thinking = lambda text: None
 
-    def load(self, model, engine_choice, context):
-        self.engine.load(model, engine_choice, context)
+    def load(self, model, engine_choice, context, shared=True):
+        self.engine.load(model, engine_choice, context, shared)
 
     def ask(self, messages, done, chunk=None, max_tokens=700, temperature=0.8):
         """A thinking model (Gemma 4, Qwen3...) spends its tokens thinking before it answers: with thinking off
@@ -275,7 +275,8 @@ class SoulAndSong(QWidget):
         self.tabs.addTab(self._roadmaps_tab(), "Roadmaps")
         self.tabs.addTab(self._automation_tab(), "Automation")
         self.tabs.addTab(self._settings_tab(), "Settings")
-        self.tabs.setMinimumWidth(320)
+        self.tabs.setUsesScrollButtons(False)            # every tab in sight, no arrows
+        self.tabs.setMinimumWidth(max(460, self.tabs.tabBar().sizeHint().width() + 16))
         split.addWidget(self.tabs)
         split.setStretchFactor(0, 3)
         split.setStretchFactor(1, 1)
@@ -668,6 +669,13 @@ class SoulAndSong(QWidget):
         self.s_ctx = QSpinBox()
         self.s_ctx.setRange(4096, 131072)
         self.s_ctx.setSingleStep(4096)
+        self.s_ctx_auto = QCheckBox("The model's full context (as much as fits the graphics card)")
+        self.s_ctx_auto.toggled.connect(lambda on: (self.s_ctx.setEnabled(not on), self._memory_note()))
+        self.s_ctx.valueChanged.connect(lambda _v: self._memory_note())
+        self.s_model.currentIndexChanged.connect(lambda _i: self._memory_note())
+        self.s_mem = QLabel()
+        self.s_mem.setWordWrap(True)
+        self.s_mem.setStyleSheet("color:#555")
         self.s_temp = QDoubleSpinBox()
         self.s_temp.setRange(0.1, 1.5)
         self.s_temp.setSingleStep(0.05)
@@ -681,13 +689,15 @@ class SoulAndSong(QWidget):
         self.s_greeting = QLineEdit()
         self.s_requests = QCheckBox("Show the memory requests in the conversation")
         self.s_recall = QCheckBox("Recall older memories from the archive when they relate")
-        self.s_think = QCheckBox("Let thinking models think before answering (slower; you see their thinking)")
+        self.s_think = QCheckBox("Let thinking models think first (slower; shows their thinking)")
         load = QPushButton("Save and load this model")
         load.clicked.connect(self.save_settings)
         f.addRow("Your name:", self.s_user)
         f.addRow("Model:", self.s_model)
         f.addRow("Engine:", self.s_engine)
+        f.addRow(self.s_ctx_auto)
         f.addRow("Context (tokens):", self.s_ctx)
+        f.addRow(self.s_mem)
         f.addRow("Temperature:", self.s_temp)
         f.addRow("A memory every (exchanges):", self.s_every)
         f.addRow("A new day begins at (hour):", self.s_day)
@@ -812,8 +822,9 @@ class SoulAndSong(QWidget):
         if model is None:
             self._line("system", "No local models found (Local Storage\\LLM Models, or Kithylin AI's Models folder).")
             return
-        want = (model.key, self.comp.cfg.get("engine"), self.comp.cfg.get("context"))
         self.comp.cfg["model"] = model.key
+        context, shared = self.plan(model)
+        want = (model.key, self.comp.cfg.get("engine"), context, shared)
         self.comp.save()
         self.wanted = (model, want)
         if self.loaded_key == want and self.brain.engine.ready:
@@ -829,7 +840,27 @@ class SoulAndSong(QWidget):
 
     def _load(self, model, want):
         self.loaded_key = want
-        self.brain.load(model, self.comp.cfg.get("engine", "auto"), int(self.comp.cfg.get("context", 32768)))
+        _key, engine, context, shared = want
+        if not shared:
+            self._line("system", f"{model.title} runs on Soul and Song's own engine here, with a {context:,}-token "
+                                 "context (the Timeline's shared engine runs models smaller).")
+        self.brain.load(model, engine or "auto", context, shared)
+
+    def plan(self, model):
+        """(context, shared): the context the Companion gets on this model - its full context, as much as fits the
+        graphics card, or the Settings figure - and whether the Timeline's shared engine runs it (only when that's
+        big enough; otherwise Soul and Song runs the model itself)."""
+        from kithylinai.engine import lora_base
+        from . import hardware
+        c = self.comp
+        base = lora_base(model)
+        c.cfg["model_context"] = hardware.full_context(base or model.path, model.path if base else None)
+        c.cfg["engine_context"] = None
+        context = c.context_size()
+        shared_ctx = engine_context(model)
+        shared = bool(shared_ctx) and context <= shared_ctx
+        c.cfg["engine_context"] = shared_ctx if shared else None
+        return context, shared
 
     def _ready(self, ok):
         model, want = getattr(self, "wanted", (None, None))
@@ -847,7 +878,6 @@ class SoulAndSong(QWidget):
         if model is None or self.comp is None:
             return
         about = (model.info.get("source") or "").split(":")[0].strip()[:160]
-        self.comp.cfg["engine_context"] = engine_context(model)
         self.comp.set_substrate(model.title, about, self.comp.context_size())
         self.refresh_self()
 
@@ -996,6 +1026,9 @@ class SoulAndSong(QWidget):
         self.s_model.setCurrentIndex(max(0, i))
         self.s_engine.setCurrentText(c.get("engine", "auto"))
         self.s_ctx.setValue(int(c.get("context", 32768)))
+        self.s_ctx_auto.setChecked(bool(c.get("context_auto", True)))
+        self.s_ctx.setEnabled(not self.s_ctx_auto.isChecked())
+        self._memory_note()
         self.s_temp.setValue(float(c.get("temperature", 0.8)))
         self.s_every.setValue(int(c.get("memory_every", 10)))
         self.s_day.setValue(int(c.get("day_starts", 4)))
@@ -1007,12 +1040,41 @@ class SoulAndSong(QWidget):
         self.s_think.setChecked(bool(c.get("think", False)))
         self.brain.think = bool(c.get("think", False))
 
+    def _memory_note(self):
+        """Settings: the context this model would get, and the graphics memory it needs."""
+        if not hasattr(self, "s_mem"):
+            return
+        from kithylinai.engine import find, lora_base
+        from . import hardware
+        model = find(self.s_model.currentData() or "")
+        if model is None:
+            self.s_mem.clear()
+            return
+        base = lora_base(model)
+        path, lora = (base, model.path) if base else (model.path, None)
+        full = hardware.full_context(path, lora)
+        ctx = full if self.s_ctx_auto.isChecked() else self.s_ctx.value()
+        if self.s_ctx_auto.isChecked():
+            self.s_ctx.blockSignals(True)
+            self.s_ctx.setValue(full)
+            self.s_ctx.blockSignals(False)
+        gb, card = hardware.memory_gb(path, ctx, lora), hardware.card_gb()
+        trained = hardware.model_facts(path).get("context") or 0
+        text = f"{model.title}: trained for {trained:,} tokens" if trained else model.title
+        if gb is not None:
+            text += f"; at {ctx:,} it needs about {gb:.1f} GB of graphics memory"
+            if card:
+                text += f" (your card has {card:.0f} GB" + (" - too much: lower the context" if gb > card * 0.95
+                                                             else "") + ")"
+        self.s_mem.setText(text + ".")
+
     def save_settings(self):
         if self.comp is None:
             return
         c = self.comp.cfg
         c.update(user_name=self.s_user.text().strip(), model=self.s_model.currentData() or c.get("model", ""),
                  engine=self.s_engine.currentText(), context=self.s_ctx.value(), temperature=self.s_temp.value(),
+                 context_auto=self.s_ctx_auto.isChecked(),
                  memory_every=self.s_every.value(), day_starts=self.s_day.value(), memory_day_every=self.s_md.value(),
                  auto_greet=self.s_greet.isChecked(), greeting=self.s_greeting.text().strip() or
                  C.DEFAULTS["greeting"], show_requests=self.s_requests.isChecked(),
