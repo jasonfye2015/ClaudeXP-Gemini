@@ -160,19 +160,29 @@ class Messengers(Leg):
     blurb = "answer IMs, say hello to friends who are online (nearly always on)"
     doing = "chatting on AIM"
 
-    def run(self, ctx):
+    # ---- the messenger he chats in: ClaudeAIM here (a computer without it gives the leg another - telegram.py) ----
+    def messenger(self):
+        """The running messenger app (with .world, .open_im, .im_windows), or None."""
         from ..programs import aim
+        return aim._app
+
+    def open_messenger(self, ctx):
+        """Start it and sign on (a generator: waits until it's on)."""
+        from ..programs import aim
+        ctx.status("Signing on to AIM...")
+        programs.launch(ctx.desktop, "aim")
+        yield (lambda: aim._app is not None and aim._app.world is not None and aim._app.world.running, 240)
+
+    def run(self, ctx):
         yield from ctx.hands.take(self.key)
         try:
             yield from ensure_online(ctx)
         finally:
             ctx.hands.release(self.key)
-        ctx.status("Signing on to AIM...")
-        programs.launch(ctx.desktop, "aim")
-        yield (lambda: aim._app is not None and aim._app.world is not None and aim._app.world.running, 240)
-        app = aim._app
+        yield from self.open_messenger(ctx)
+        app = self.messenger()
         if app is None or app.world is None:
-            ctx.note("AIM didn't start.")
+            ctx.note(f"{self.title} didn't start.")
             return
         world = app.world
         if ctx.engine.asleep and ctx.day is not None:      # he sat down asleep: AIM wasn't on to show it
@@ -185,7 +195,7 @@ class Messengers(Leg):
         greet_at = {}                                   # ... and when he'll send that IM
         next_hello = time.monotonic() + random.uniform(4, 10) * 60 * ctx.pace
         ctx.engine.claims = getattr(ctx.engine, "claims", set())
-        ctx.status("On AIM.")
+        ctx.status(f"On {self.title}.")
         try:
             while True:
                 now = time.monotonic()
@@ -253,9 +263,10 @@ class Messengers(Leg):
             except Exception:
                 pass
 
-    def reply(self, ctx, app, bid, instruction=None, note=IM_NOTE, max_tokens=120, thread_ok=True, extra_note="",
+    def reply(self, ctx, app, bid, instruction=None, note=None, max_tokens=120, thread_ok=True, extra_note="",
               check=True, since=None, max_lines=3):
         """since: only the conversation from that message on (a roleplay starts with a clean slate)."""
+        note = IM_NOTE if note is None else note           # (looked up now: a later computer re-words it)
         world = app.world
         b = world.buddies[bid]
         yield from ctx.hands.take(self.key)
@@ -404,10 +415,12 @@ class Roleplay(Leg):
     doing = "roleplaying with a friend on AIM"
     minutes, weight, cooldown = (25, 50), 0.8, 60 * 60
 
+    CHAT = None                                          # the chat leg whose messenger the scene is played in
+
     def run(self, ctx):
-        from ..programs import aim
         from claudeaim.engine import Presence
-        app = aim._app
+        helper = (self.CHAT or Messengers)()
+        app = helper.messenger()
         if app is None or app.world is None or not app.world.running:
             return
         world = app.world
@@ -418,7 +431,7 @@ class Roleplay(Leg):
         tiers = [Messengers.tier(ctx, x.id) for x in free]
         b = random.choices(free, weights=[t["roleplay"] for t in tiers])[0]
         ctx.engine.claims = getattr(ctx.engine, "claims", set()) | {b.id}
-        ctx.doing(f"roleplaying with {b.name} on AIM")
+        ctx.doing(f"roleplaying with {b.name} on {helper.title}")
         turns = random.randint(*Messengers.tier(ctx, b.id)["turns"])
         track = ctx.day.track_for(b.id) if ctx.day is not None else None
         seed = ctx.day.roleplay_seed() if ctx.day is not None and track is None else None
@@ -437,7 +450,6 @@ class Roleplay(Leg):
                        f"Suggest a roleplay scene to {b.name} and open it: set the place and what you're doing, in "
                        "*asterisks*, two or three sentences.")
         from .. import hosting
-        helper = Messengers()
         helper.key = self.key
         start = len(b.history.messages)                  # the scene starts here: what came before stays out of it
         user = world.settings["screen_name"]

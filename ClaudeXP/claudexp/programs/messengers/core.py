@@ -264,6 +264,8 @@ class Network(QObject):
         system = PROMPT.format(name=b.name, user=user, network=self.title,
                                now=timefmt.now_text(b.contact.timezone), persona=b.contact.persona.strip(),
                                status=status, memory=self._memory(b))
+        from ... import hosting
+        system += hosting.SCENES.get(b.name, "")          # (a roleplay scene the autopilot is playing with them)
         msgs = [{"role": "system", "content": system}]
         for m in b.history[-30:]:
             if m["kind"] == "user":

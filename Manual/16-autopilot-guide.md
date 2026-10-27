@@ -9,7 +9,8 @@ is what the **Help** button in the autopilot opens. For everything in more depth
 ## Quick start
 
 1. On the Windows XP desktop, double-click **Kithylin Autopilot** (or Start > All Programs > Kithylin Autopilot).
-   On Windows 7 it's Start > All Programs > Kithylin Autopilot.
+   On Windows 7 it's Start > All Programs > Kithylin Autopilot; on Windows 11, Start > All apps (or the desktop
+   icon on either) - on 11 he chats in Telegram rather than AIM.
 2. Leave everything as it is: the standard set-up is ready to go.
 3. Click **Let Kithylin take over**. The window gets out of his way, and the screen glows sky blue.
 4. Watch. He signs on to AIM, answers whoever IMs him, and starts on two or three other things.

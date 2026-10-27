@@ -253,8 +253,10 @@ training, back up and format first, or read chapter 9.
 - **Windows 7 has him too** (Start > All Programs > Kithylin Autopilot on SYSTEM-2011). It's the same program
   with every leg: AIM, Windows Live Mail, Internet Explorer 9 on the 2011 Web, ClaudeTV, ClaudeRPG, the MUCK and
   all of Local Storage, with his words set in 2011. SYSTEM-2011 keeps its own settings, day, diary and chat
-  histories (in `Claude7\data`), starting from the same standard set-up. **Windows 11** doesn't have him yet:
-  without AIM, his messenger leg needs a new home there.
+  histories (in `Claude7\data`), starting from the same standard set-up. **Windows 11 has him too**
+  (WORKSTATION-2025: Start > All apps, or his desktop icon). There's no AIM in 2025, so he chats and roleplays
+  in **Telegram** instead - the same buddies, his interests, his day and his RP tracks - and wanders the Web in
+  Microsoft Edge; everything else is as on the other two.
 - The Furry Log (chapter 4) records everything he does, line by line, under `AUTOPILOT`, and the panel shows the
   last of it.
 
@@ -272,4 +274,6 @@ what he knows how to do on XP: one class per activity, each with a title, a line
 stretch lasts.
 Adding an activity is one new class there; giving another computer the autopilot is an adapter with its own legs.
 On Windows 7 the same code runs through Claude7's compatibility layer (`Claude7\claude7\xpcompat.py`);
-`Claude7\claude7\autopilot7.py` holds what's different there (the Web leg's 2011 words and searches).
+`Claude7\claude7\autopilot7.py` holds what's different there (the Web leg's 2011 words and searches), and
+`Claude11\claude11\autopilot11.py` what's different on 11: the chat and roleplay legs played in Telegram
+(`ClaudeXP\claudexp\autopilot\telegram.py` shows them Telegram the way they know AIM), 2025's words, Edge.

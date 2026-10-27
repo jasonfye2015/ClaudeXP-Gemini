@@ -19,7 +19,7 @@ from ..paths import icon as asset_icon
 # gone by October 2025 (or ClaudeXP's own): AIM (2017), MSN/Windows Live Messenger (2013), Yahoo! Messenger (2018),
 # ICQ (June 2024), Skype (May 2025), QuickTime for Windows (2016), Ad-Aware, the MSN Gaming Zone games (2019),
 # Netscape, Windows Messenger, activation, the XP tour, StyleXP, Clippy, dial-up, XP's Help
-DROPPED = {"navigator", "winmsgr", "activate", "tour", "stylexp", "clippy", "connect", "dsl", "search", "helpctr", "autopilot",
+DROPPED = {"navigator", "winmsgr", "activate", "tour", "stylexp", "clippy", "connect", "dsl", "search", "helpctr",
            "personaprofiles", "aim", "msn", "yim", "icq", "skype", "quicktime", "adaware",
            "ibackgammon", "icheckers", "ihearts", "ireversi", "ispades"}
 RENAMED = {"backup": ("Windows Backup", "Back up and restore your saves, computers' data and profile"),
