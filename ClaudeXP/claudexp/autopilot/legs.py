@@ -462,6 +462,9 @@ class Roleplay(Leg):
 
 
 # ---- e-mail (foreground) ---------------------------------------------------------------------------------------
+NO_REPLY = {"spam", "newsletter", "notice", "bounce"}         # mail he reads but doesn't answer
+
+
 class Mail(Leg):
     """Outlook Express: read what's new, answer some of it, now and then write to someone unprompted."""
     key, title, kind = "mail", "E-mail", FOREGROUND
@@ -489,6 +492,8 @@ class Mail(Leg):
                 if ctx.time_left() <= 0 or ctx.stopping:
                     break
                 yield from self.read(ctx, oe, m)
+                if m.get("kind") in NO_REPLY or m["from"] == "Mail Delivery Subsystem":
+                    continue                                   # (nobody answers spam, newsletters or bounces)
                 if random.random() < 0.7:
                     yield from self.write(ctx, oe, sim, to=f"{m['from']} <{m.get('addr', '')}>",
                                           subject=m["subject"] if m["subject"].lower().startswith("re:")

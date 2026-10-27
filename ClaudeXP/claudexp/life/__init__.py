@@ -356,7 +356,7 @@ class LifeSim(QObject):
                 self.mailbox.add("Mail Delivery Subsystem", f"Undeliverable: {item['subject']}",
                                  f"Your message did not reach some or all of the intended recipients.\n\n"
                                  f"      Subject:  {item['subject']}\n\nThe following recipient(s) could not be "
-                                 f"reached:\n\n      {item['addr']}\n            550 User unknown\n")
+                                 f"reached:\n\n      {item['addr']}\n            550 User unknown\n", kind="bounce")
                 self.mail_arrived.emit()
                 self._announce_mail()
                 continue
