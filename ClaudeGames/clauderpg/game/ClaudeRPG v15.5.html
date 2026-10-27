@@ -3734,8 +3734,12 @@ const steerTo = (x, y) => { const dx = x - P.x, dy = y - P.y, d = Math.hypot(dx,
 function autoFollow() {
   while (AUTO.path && AUTO.path.length) {
     const n = AUTO.path[0], tx = (n % MW) * TILE + 16, ty = Math.floor(n / MW) * TILE + 16;
-    if (Math.hypot(tx - P.x, ty - P.y) < 9) { AUTO.path.shift(); continue; }
-    steerTo(tx, ty); return true;
+    const dx = tx - P.x, dy = ty - P.y;
+    // reached it - or stepped past it since last frame (a fast hero covers more than 9px a step): on to the next
+    if (Math.hypot(dx, dy) < 9 || (AUTO.wp === n && AUTO.wpDir && dx * AUTO.wpDir[0] + dy * AUTO.wpDir[1] < 0)) {
+      AUTO.path.shift(); AUTO.wp = null; continue;
+    }
+    steerTo(tx, ty); AUTO.wp = n; AUTO.wpDir = AUTO.move.slice(); return true;
   }
   return false;
 }
