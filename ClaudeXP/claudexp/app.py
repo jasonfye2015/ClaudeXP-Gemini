@@ -238,6 +238,9 @@ class ClaudeXP(QMainWindow):
         from .programs import neko
         if enabled("neko"):
             neko.start_at_logon(self.desktop)
+        from .programs import doggo
+        if enabled("doggo"):
+            QTimer.singleShot(3000, lambda: doggo.start_at_logon(self.desktop))
         from . import xpnags
         xpnags.at_logon(self.desktop)            # activation, Desktop Cleanup, Windows Messenger
         from .programs import copilot_widgets

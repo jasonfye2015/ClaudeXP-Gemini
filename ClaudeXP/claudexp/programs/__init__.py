@@ -10,7 +10,7 @@ from ..paths import pixmap
 import claudeai
 
 from . import aim, irc, muck, navigator
-from . import neko
+from . import doggo, neko
 from .notepad import open_notepad
 from .placeholder import open_placeholder
 
@@ -381,6 +381,8 @@ PROGRAMS = [
             _lazy("..clippy.program", "summon"), _lazy("..clippy.program", "shutdown"), group="Accessories"),
     Program("neko", "Copilot Neko", "The Classic Desktop Cat", neko.neko_icon, neko.launch, neko.shutdown,
             group="Accessories"),
+    Program("doggo", "Doggo", "A desktop dog: he follows you, plays, does tricks and naps", doggo.doggo_icon,
+            doggo.launch, doggo.shutdown, group="Accessories"),
     Program("tour", "Tour Windows XP", "", _lazy("tour", "tour_icon"), _lazy("tour", "open_tour"), group="Accessories"),
     Program("search", "Search", "", _lazy("search", "search_icon"), _lazy("search", "open_search"), listed=False),
     Program("helpctr", "Help and Support", "", _lazy("helpctr", "help_icon"), _lazy("helpctr", "open_help"),

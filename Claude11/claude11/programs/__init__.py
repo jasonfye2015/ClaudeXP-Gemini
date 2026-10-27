@@ -41,7 +41,7 @@ RENAMED = {"backup": ("Windows Backup", "Back up and restore your saves, compute
            "tripeaks": ("TriPeaks", "Microsoft Solitaire Collection"), "minesweeper": ("Microsoft Minesweeper", ""),
            "livejournal": ("LiveJournal", "Journals, still going")}
 REGROUPED = {"backup": "Windows Tools", "livejournal": "Social Programs", "hotmail": "Social Programs", "outlook": "", "wab": "", "moviemaker": "",
-             "sndvol": "Windows Tools", "sndrec": "", "flash": "Ruffle", "neko": "", "copilotwidgets": "Copilot",
+             "sndvol": "Windows Tools", "sndrec": "", "flash": "Ruffle", "neko": "", "doggo": "", "copilotwidgets": "Copilot",
              "copilotai": "Copilot", "copilotvoice": "Copilot", "imagecreator": "Copilot", "pystudio": "Copilot",
              "winupdate": "", "defrag": "Windows Tools", "sysrestore": "Windows Tools", "charmap": "Windows Tools",
              "cleanmgr": "Windows Tools", "msinfo": "Windows Tools", "cmd": "Windows Tools",

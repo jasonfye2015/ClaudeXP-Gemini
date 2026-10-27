@@ -1,6 +1,6 @@
 # 15. Every program
 
-Read from the three computers' registries on 25 October 2026: 171 programs in all, 162 on EPOCH-2001, 157 on SYSTEM-2011 and 147 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
+Read from the three computers' registries on 27 October 2026: 175 programs in all, 166 on EPOCH-2001, 162 on SYSTEM-2011 and 151 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
 
 ## Talking with your buddies
 
@@ -16,6 +16,7 @@ Instant messengers and chat. All of them reach the same people, who remember you
 | **Furry Hollow** | Second Life on your own PC (OpenSimulator), with the residents in it | yes | yes | yes |
 | **ICQ** | ICQ 2001b - everyone has a UIN, and the 'uh-oh!' is back. | yes | yes | - |
 | **Kik** | Kik, in a phone-sized window with chat bubbles. | yes | yes | yes |
+| **Kithy on Bluesky** | Your Bluesky posts, kept on this computer | yes | yes | yes |
 | **MSN Messenger** | MSN Messenger 4.6 - the same buddies on Microsoft's network, with their Hotmail addresses. | yes | as *Windows Live Messenger* | - |
 | **Second Life** | Second Life: a 3D virtual world in four regions - the Furry Bazaar (free bodies, clothes and things), the Neon Paws Club, Pawprint Estates (claim a free lot and build on it) and Sandbox Isle. Your AIM buddies log in as furry avatars to dance, shop, chat and build. Walk with W/S and the arrow keys, F to fly, Enter to chat; click people for their profile (with their Furry Code), dance balls to dance, seats to sit. Inventory, Appearance, Friends, IM, Map and Build are on the bottom bar. | yes | yes | yes |
 | **Skype** | Skype, styled as its first beta. The Call button rings and nobody picks up. | yes | yes | - |
@@ -78,11 +79,13 @@ Your own programs from E:\Projects, each in its own window, and the Local Projec
 
 | Program | What it is | 2001 | 2011 | 2025 |
 |---|---|:-:|:-:|:-:|
+| **AI LLM Txt Files** | A shortcut to that folder on drive E: | yes | yes | yes |
 | **Fly Brain Dungeon** | Fly Brain Dungeon: a retro dungeon crawler whose monster is driven by 4,501 real mushroom-body neurons, learning from dopamine as it hunts you. | yes | yes | yes |
 | **Fly Brain Viewer** | Fly Brain Viewer: a live 3D map of a male fruit fly's nervous system, and a chat with a character whose body is that brain. | yes | yes | yes |
 | **Fly Mind** | Fly Mind: a companion whose feelings and memories come from a real fruit fly's mushroom body (5,191 neurons), with a language model as its voice. | yes | yes | yes |
 | **FlyMind v1.0** | FlyMind v1.0: the FlyMind companion that has been living here, with everything it remembers. | yes | yes | yes |
 | **Local Projects** | Local Projects: where Copilot Python Studio saves (and auto-saves) your programs, in E:/Projects. | yes | yes | yes |
+| **Soul and Song** | Your AI Companion, with a memory that grows day by day (the Companion Project) | yes | yes | yes |
 | **Virtual Pet 27.0** | Virtual Pet 27.0: a desktop pet that talks with you through the language models. | yes | yes | yes |
 
 ## Office and creativity
@@ -224,6 +227,7 @@ Assistants you talk to directly - not characters with lives of their own.
 | **Desktop Gadget Gallery** | Clock, calendar, weather and more on the desktop | - | yes | - |
 | **Disk Cleanup** | Disk Cleanup. | yes | yes | yes |
 | **Disk Defragmenter** | Disk Defragmenter. | yes | yes | as *Defragment and Optimize Drives* |
+| **Doggo** | A desktop dog: he follows you, plays, does tricks and naps | yes | yes | yes |
 | **My Computer** | A Windows tool | yes | as *Computer* | as *File Explorer* |
 | **Nero Burning ROM** | Nero Burning ROM. | yes | yes | yes |
 | **Settings** | System, personalization, accounts, updates | - | - | yes |
@@ -242,4 +246,4 @@ Assistants you talk to directly - not characters with lives of their own.
 | Program | What it is | 2001 | 2011 | 2025 |
 |---|---|:-:|:-:|:-:|
 | **Claude Manual** | How the three computers, the archive, the games and Kithylin fit together | yes | yes | yes |
-| **Kithylin Autopilot** | Let Kithylin take over the computer: IMs, mail, the Web, TV, games, comics and art | yes | - | - |
+| **Kithylin Autopilot** | Let Kithylin take over the computer: IMs, mail, the Web, TV, games, comics and art | yes | yes | - |

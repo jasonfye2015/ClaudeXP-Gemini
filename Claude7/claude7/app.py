@@ -275,6 +275,12 @@ class Claude7(QMainWindow):
         except Exception:
             pass
         try:
+            from claudexp.programs import doggo
+            if enabled("doggo"):
+                QTimer.singleShot(3000, lambda: doggo.start_at_logon(self.desktop))
+        except Exception:
+            pass
+        try:
             from claudexp.programs import msconfig
             QTimer.singleShot(4500, lambda: self.desktop.isVisible() and msconfig.at_logon(self.desktop))
         except Exception:

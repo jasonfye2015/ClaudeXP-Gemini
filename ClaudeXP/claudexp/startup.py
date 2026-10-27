@@ -22,6 +22,7 @@ ITEMS = {
     "torrent": ("ClaudeTorrent", r'"C:\Program Files\ClaudeTorrent\ClaudeTorrent.exe" /minimized', RUN_USER),
     "widgets": ("Copilot Widgets", r'"C:\Program Files\Copilot\widgets.exe" /startup', RUN_USER),
     "neko": ("Copilot Neko", r"C:\Program Files\Copilot\neko.exe", COMMON_STARTUP),
+    "doggo": ("Doggo", r"C:\Program Files\Doggo\doggo.exe", COMMON_STARTUP),
     "osa": ("Office Startup", r"C:\PROGRA~1\GEMINI~1\Office\OSA.EXE -b -l", COMMON_STARTUP),
 }
 BOOT_FLAGS = ["SAFEBOOT", "NOGUIBOOT", "BOOTLOG", "BASEVIDEO", "SOS"]
