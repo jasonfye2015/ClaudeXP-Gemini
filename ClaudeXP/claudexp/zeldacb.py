@@ -244,29 +244,20 @@ class LegendOfClaude:
 
     @staticmethod
     def _grid(scr, cells):
-        """(free, free but for the blocks): where something 16 x 16 can stand with its corner at each cell, on
-        this screen with this clock (its plaza is walkable ground, its blocks aren't)."""
+        """Where something 16 x 16 can stand with its corner at each cell, on this screen with this clock: its
+        clearing is walkable ground, and so are its blocks - Link and the enemies walk over the time, not into it."""
         plaza = LegendOfClaude.plaza_of(cells)
         px0, py0 = plaza.left() // CELL, plaza.top() // CELL
         px1, py1 = (plaza.right() + 1) // CELL, (plaza.bottom() + 1) // CELL
         ground = [[scr.walk[y][x] or (px0 <= x < px1 and py0 <= y < py1) for x in range(GW)] for y in range(GH)]
-        blocked = [[False] * GW for _ in range(GH)]
-        for bx, by, _i in cells:
-            for y in range(by // CELL, by // CELL + 2):
-                for x in range(bx // CELL, bx // CELL + 2):
-                    if 0 <= x < GW and 0 <= y < GH:
-                        blocked[y][x] = True
-        loose = [[False] * GW for _ in range(GH)]
         free = [[False] * GW for _ in range(GH)]
         for y in range(GH - 1):
             for x in range(GW - 1):
-                if ground[y][x] and ground[y][x + 1] and ground[y + 1][x] and ground[y + 1][x + 1]:
-                    loose[y][x] = True
-                    free[y][x] = not (blocked[y][x] or blocked[y][x + 1] or blocked[y + 1][x] or blocked[y + 1][x + 1])
-        return free, loose
+                free[y][x] = ground[y][x] and ground[y][x + 1] and ground[y + 1][x] and ground[y + 1][x + 1]
+        return free
 
     def _grids(self, cells):
-        self.grid, self.loose = self._grid(self.scr, cells)
+        self.grid = self._grid(self.scr, cells)
 
     def clock_y(self, scr, text):
         """Where the clock stands on a screen: the height that keeps the screen's ways in and out joined up (a clock
@@ -277,7 +268,7 @@ class LegendOfClaude:
         best, best_score = 48, None
         for y0 in range(16, SH - 80 - 8 + 1, 8):
             cells = self.clock_cells(text, y0)
-            free, _loose = self._grid(scr, cells)
+            free = self._grid(scr, cells)
             score = (self._joined_edges(free), -sum(scr.walk[by // CELL][bx // CELL] for bx, by, _i in cells))
             if best_score is None or score > best_score:
                 best, best_score = y0, score
@@ -313,11 +304,11 @@ class LegendOfClaude:
                 best = max(best, len(edges))
         return best
 
-    def free(self, cx, cy, ignore_blocks=False):
+    def free(self, cx, cy):
         """Can something 16 x 16 stand with its corner at cell (cx, cy)?"""
         if cx < 0 or cy < 0 or cx + 1 >= GW or cy + 1 >= GH:
             return False
-        return (self.loose if ignore_blocks else self.grid)[cy][cx]
+        return self.grid[cy][cx]
 
     def bfs(self, start, goal):
         """Cells from start to the nearest goal(cell) cell, or None."""
@@ -386,7 +377,7 @@ class LegendOfClaude:
         if L.state == "hurt":
             if L.t < 12:
                 nx, ny = L.x + L.vx, L.y + L.vy
-                if self.free(int(nx // CELL), int(ny // CELL), True):
+                if self.free(int(nx // CELL), int(ny // CELL)):
                     L.x, L.y = nx, ny
                 return
             L.state, L.path = "walk", []
