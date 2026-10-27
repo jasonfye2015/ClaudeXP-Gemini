@@ -23,7 +23,7 @@ from ..paths import DATA
 from ..tray import TrayIcon
 
 SETTINGS_FILE = DATA / "deskmario.json"
-DEFAULT_SETTINGS = {"start_at_logon": False, "mode": "roam", "character": "Mario", "size": 3, "enemies": "some",
+DEFAULT_SETTINGS = {"start_at_logon": True, "mode": "roam", "character": "Mario", "size": 3, "enemies": "some",
                     "sound": True}
 CHARACTERS = list(smb.CHARACTERS)               # Mario, Luigi, Super Mario, Super Luigi, Fire Mario
 MUSHROOM = {"Mario": "Super Mario", "Luigi": "Super Luigi", "Super Mario": "Mario", "Super Luigi": "Luigi",

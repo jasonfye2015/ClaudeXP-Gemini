@@ -25,7 +25,7 @@ SETTINGS = DATA / "clippy.json"
 DEFAULTS = {"enabled": True, "level": 3, "watch": {"desktop": True, "typing": True, "chats": True, "random": True},
             "sounds": True, "muted": [], "pos": None, "introduced": False,
             "mood": "happy", "wire": "silver", "accessory": "none", "size": "normal", "roam": False, "llm": True,
-            "breaks": 0, "reminders": [], "tray": True, "character": "clippy"}
+            "breaks": 0, "reminders": [], "tray": True, "character": "rover"}
 ASK_KINDS = [("joke", "Tell me a joke", "Tell {name} a short, groaningly bad joke (a pun about computers, paper or "
                                         "offices). Give the joke and the punchline."),
              ("tip", "Give me a tip", "Give {name} one genuinely useful tip about Windows XP, typing, or staying "
