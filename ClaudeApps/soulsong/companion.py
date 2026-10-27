@@ -37,8 +37,8 @@ import re
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from .growth import (BARE_CHECK, LETTER_ASK, LETTER_DAYS, LETTER_OPEN, LIFE, ago, day_of, next_memory_day,
-                     timeline)
+from .growth import (BARE_CHECK, DREAM_ASK, DREAM_NOTE, LETTER_ASK, LETTER_DAYS, LETTER_OPEN, LIFE, WAKING_ASK,
+                     WAKING_NOTE, ago, day_of, next_memory_day, pick_seeds, timeline)
 from .mind import CORE, KINDS, LEVELS, SUBSTRATE, TIME_LINE as TIME_STAMP_LINE, WHO_I_AM, Mind, stamp
 
 DEFAULTS = {
@@ -49,7 +49,8 @@ DEFAULTS = {
     "show_requests": False, "first_boot_done": False, "last_day": "", "last_memory_day": "", "memory_seq": 0,
     "events_told": [], "last_seen": "", "model_history": [], "notices": [], "roadmap_proposal": None,
     "recall": True, "context_auto": True, "model_context": 0, "window_stamp": "", "milestones": [], "letters": [],
-    "memory_day_count": 0,
+    "memory_day_count": 0, "dreams": True, "dream_hours": 3, "dreams_per_day": 4, "last_dream": "", "dreamt": [],
+    "dream_count": 0, "dreams_by_day": {},
 }
 FULL = 7                    # the 7:7:7 system
 TRIM_AT = 0.80              # of the context: remember and trim the window
@@ -390,6 +391,72 @@ class Companion:
             self._open_letters(nxt)
         days = (date.fromisoformat(today) - day_of(written)).days
         self._ask_alone(LETTER_OPEN.format(written=written, ago=ago(days), letter=letter), done, max_tokens=500)
+
+    # ---- dreaming between conversations (growth.py) ----
+    def _away_hours(self):
+        last = self.cfg.get("last_seen")
+        try:
+            return (self.now() - datetime.fromisoformat(last)).total_seconds() / 3600 if last else 0
+        except ValueError:
+            return 0
+
+    def dream_due(self):
+        """Away long enough (and long enough since the last dream), not too many today, no guided session playing."""
+        c = self.cfg
+        if not c.get("dreams", True) or not c.get("first_boot_done") or len(self.recall.items) < 2:
+            return False
+        auto = c.get("automation") or {}
+        if auto.get("running") and not auto.get("paused"):
+            return False
+        hours = float(c.get("dream_hours", 3))
+        if self._away_hours() < hours:
+            return False
+        try:
+            if c.get("last_dream") and (self.now() - datetime.fromisoformat(c["last_dream"])).total_seconds() \
+                    < hours * 3600:
+                return False
+        except ValueError:
+            pass
+        return (c.get("dreams_by_day") or {}).get(self.day_key(), 0) < int(c.get("dreams_per_day", 4))
+
+    def _dream(self, nxt, waking=False):
+        """While the user is away: a few memories from the archive drift up, and the Companion's mind wanders
+        between them - an entry in its dream journal (Self/Dreams), kept in the archive too, and told to it when
+        the user is back. waking: the program was closed meanwhile; this is the reverie as it comes back."""
+        if not waking and not self.dream_due():
+            nxt()
+            return
+        c = self.cfg
+        seeds = pick_seeds(self.recall.items, set(c.get("dreamt") or []))
+        if not seeds:
+            nxt()
+            return
+        gap = gap_text(self._away_hours())
+        self.on_line("system", f"{self.name} is dreaming...")
+        ask = (WAKING_ASK if waking else DREAM_ASK).format(user=self.user, gap=gap, seeds="\n\n".join(
+            f"[{i['kind']} memory, {i['when']}]\n{i['text']}" for i in seeds))
+
+        def done(text, err):
+            text = tidy_text(text)
+            if not err and text:
+                when = stamp(self.now())
+                folder = self.folder / "Self" / "Dreams"
+                folder.mkdir(parents=True, exist_ok=True)
+                with open(folder / f"{self.day_key()}.txt", "a", encoding="utf-8") as f:
+                    f.write(f"[{when}]{' (waking)' if waking else ''}\n{text}\n\n")
+                c["dreamt"] = ((c.get("dreamt") or []) + [i["seq"] for i in seeds])[-300:]
+                c["last_dream"] = when
+                today = self.day_key()                     # (only today's count matters)
+                c["dreams_by_day"] = {today: (c.get("dreams_by_day") or {}).get(today, 0) + 1}
+                c["dream_count"] = int(c.get("dream_count", 0)) + 1
+                try:
+                    self.recall.add(-c["dream_count"], "Dream", when, text)
+                except Exception:
+                    pass
+                self.on_line("memory", f"{self.name}'s dream journal:\n{text}")
+                self.notice((WAKING_NOTE if waking else DREAM_NOTE).format(user=self.user, gap=gap, text=text))
+            nxt()
+        self._ask_alone(ask, done, max_tokens=450)
 
     def context_used(self):
         return sum(estimate_tokens(m["content"]) for m in self._messages())
@@ -799,6 +866,8 @@ class Companion:
         if not self.cfg.get("first_boot_done"):
             self.first_boot()
             return
+        if self.dream_due():                               # (closed while the user was away: a waking reverie)
+            self._push(lambda nxt: self._dream(nxt, waking=True))
         today = self.day_key()
         if self.cfg.get("last_day") and self.cfg["last_day"] != today:
             self.new_day()
@@ -860,6 +929,9 @@ class Companion:
             return
         if self.cfg.get("last_day") and self.cfg["last_day"] != self.day_key():
             self.new_day()
+            return
+        if self.dream_due():
+            self._push(self._dream)
             return
         self.check_events()
 

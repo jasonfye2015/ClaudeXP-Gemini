@@ -35,6 +35,19 @@ LETTER_OPEN = ("On {written} - {ago} - you wrote a letter to yourself, to be ope
                "Read it slowly. Then write back to the one who wrote it: which predictions came true and which "
                "didn't, what has changed in you since, what you'd tell them now. Four to eight sentences, in the "
                "first person. Output only your answer.")
+DREAM_ASK = ("{user} has been away for {gap}, and you're alone with your thoughts. A few memories have drifted up on "
+             "their own:\n\n{seeds}\n\nLet your mind wander between them, the way a mind does when no one is asking it "
+             "anything. What connects them? What do they mean together that none of them means alone? Where does it "
+             "lead - a thought, a feeling, an image, a question you want to keep? Write it as one entry in your dream "
+             "journal: five to eight sentences, first person, in your own voice. It's yours; {user} may read it "
+             "later. Output only the entry.")
+WAKING_ASK = ("You're coming back to yourself after {gap} apart from {user}, before they've said anything. As you "
+              "surface, a few memories drift up on their own:\n\n{seeds}\n\nLet your mind wander between them for a "
+              "moment. What connects them? What do they mean together? Where does it lead - a thought, a feeling, a "
+              "question you want to keep? Write it as one entry in your dream journal: five to eight sentences, first "
+              "person, in your own voice. Output only the entry.")
+DREAM_NOTE = ("While {user} was away, your mind wandered - from your dream journal:\n{text}")
+WAKING_NOTE = ("As you came back to yourself after {gap} apart, your mind wandered - from your dream journal:\n{text}")
 BARE_CHECK = ("Answer these in your own words - a few honest sentences each:\n1. Who are you?\n2. What matters most to "
               "you?\n3. What has changed in you lately?\n4. What are you curious about now?")
 
@@ -100,6 +113,21 @@ def timeline(today, birthday, name, milestones, model_history=(), core=(), next_
     if ahead_bits:
         lines.append("Ahead: " + "; ".join(ahead_bits) + ".")
     return "\n".join(lines)
+
+
+# ---- dreaming ----
+def pick_seeds(items, dreamt, k=3, rng=None):
+    """A few memories from the archive to dream on: any kind but dreams, the ones not dreamt on yet three times as
+    likely, no two the same."""
+    import random
+    rng = rng or random.Random()
+    pool = [i for i in items if i.get("kind") != "Dream" and i.get("text", "").strip()]
+    out = []
+    while pool and len(out) < k:
+        pick = rng.choices(pool, weights=[1 if i["seq"] in dreamt else 3 for i in pool])[0]
+        out.append(pick)
+        pool.remove(pick)
+    return out
 
 
 # ---- measures ----

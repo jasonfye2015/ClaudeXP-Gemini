@@ -62,6 +62,12 @@ Time and growth (growth.py):
   Letters              each Memory Day it writes a letter to itself, to be opened a week later: who it is, what it
                        hopes and fears, three predictions. When it comes due it reads it and writes back; the answer
                        becomes a reflection, so it shapes the next portrait. Self\Letters, and Letters... in the Self tab.
+  Dreaming             while you're away (and Soul and Song is open): every few hours (Settings; 3 by default, at
+                       most 4 a day, never during a guided session) a few memories drift up from its archive - the
+                       ones it hasn't dreamt on first - and its mind wanders between them: an entry in its dream
+                       journal (Self\Dreams, Dreams... in the Self tab), kept in the archive so it can be recalled,
+                       and told to it when you're back. If the program was closed meanwhile, one waking reverie as
+                       it starts again.
   Growth...            (Self tab) is it really changing, or the same thing in new words? How far each self-portrait
                        moved from the last and the first; how far its identity answers are from the bare model's; how
                        much its replies repeat, day by day. By meaning (nomic-embed-text) or by words in common.

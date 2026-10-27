@@ -424,10 +424,13 @@ class SoulAndSong(QWidget):
         grow.clicked.connect(lambda: self.comp is not None and growthview.show(self, self.comp))
         letters = QPushButton("Letters...")
         letters.clicked.connect(self.open_letters)
+        dreams = QPushButton("Dreams...")
+        dreams.clicked.connect(self.open_dreams)
         row.addWidget(keep)
         row.addWidget(checks)
         row.addWidget(grow)
         row.addWidget(letters)
+        row.addWidget(dreams)
         v.addLayout(row)
         self.substrate = QLabel()
         self.substrate.setWordWrap(True)
@@ -758,6 +761,10 @@ class SoulAndSong(QWidget):
         self.s_requests = QCheckBox("Show the memory requests in the conversation")
         self.s_recall = QCheckBox("Recall older memories from the archive when they relate")
         self.s_think = QCheckBox("Let thinking models think first (slower; shows their thinking)")
+        self.s_dreams = QCheckBox("Let them dream while I'm away (while Soul and Song is open)")
+        self.s_dream_hours = QSpinBox()
+        self.s_dream_hours.setRange(1, 24)
+        self.s_dream_hours.setSuffix(" hours")
         load = QPushButton("Save and load this model")
         load.clicked.connect(self.save_settings)
         f.addRow("Your name:", self.s_user)
@@ -775,6 +782,8 @@ class SoulAndSong(QWidget):
         f.addRow(self.s_requests)
         f.addRow(self.s_recall)
         f.addRow(self.s_think)
+        f.addRow(self.s_dreams)
+        f.addRow("A dream at most every:", self.s_dream_hours)
         f.addRow(load)
         return w
 
@@ -1106,6 +1115,8 @@ class SoulAndSong(QWidget):
         self.s_requests.setChecked(bool(c.get("show_requests")))
         self.s_recall.setChecked(bool(c.get("recall", True)))
         self.s_think.setChecked(bool(c.get("think", False)))
+        self.s_dreams.setChecked(bool(c.get("dreams", True)))
+        self.s_dream_hours.setValue(int(c.get("dream_hours", 3)))
         self.brain.think = bool(c.get("think", False))
 
     def _memory_note(self):
@@ -1146,7 +1157,8 @@ class SoulAndSong(QWidget):
                  memory_every=self.s_every.value(), day_starts=self.s_day.value(), memory_day_every=self.s_md.value(),
                  auto_greet=self.s_greet.isChecked(), greeting=self.s_greeting.text().strip() or
                  C.DEFAULTS["greeting"], show_requests=self.s_requests.isChecked(),
-                 recall=self.s_recall.isChecked(), think=self.s_think.isChecked())
+                 recall=self.s_recall.isChecked(), think=self.s_think.isChecked(),
+                 dreams=self.s_dreams.isChecked(), dream_hours=self.s_dream_hours.value())
         self.brain.think = self.s_think.isChecked()
         self.comp.save()
         self._line("system", "Settings saved.")
@@ -1161,23 +1173,33 @@ class SoulAndSong(QWidget):
 
     def open_letters(self):
         """The letters the Companion wrote to its future self, and its answers when they were opened, in order."""
+        self._journal("Letters", "letters across time", "Each Memory Day your Companion writes a letter to itself, to "
+                      "be opened a week later; when it comes due, it reads it and writes back. Its answers also "
+                      "become reflections, so they shape the next self-portrait.",
+                      "No letters yet: the first is written on the first Memory Day.")
+
+    def open_dreams(self):
+        """The dream journal: what its mind wandered to while you were away, newest day first."""
+        self._journal("Dreams", "dream journal", "While you're away (and Soul and Song is open), every few hours a few "
+                      "of your Companion's memories drift up and its mind wanders between them; if the program was "
+                      "closed, it has one waking reverie as it comes back. It's told what it dreamt when you return.",
+                      "No dreams yet: the first comes when you've been away a few hours.", newest_first=True)
+
+    def _journal(self, sub, title, about, empty, newest_first=False):
         if self.comp is None:
             return
-        folder = self.comp.folder / "Self" / "Letters"
-        files = sorted(folder.glob("*.txt")) if folder.is_dir() else []
+        folder = self.comp.folder / "Self" / sub
+        files = sorted(folder.glob("*.txt"), reverse=newest_first) if folder.is_dir() else []
         d = QDialog(self)
-        d.setWindowTitle(f"{self.comp.name}'s letters across time")
+        d.setWindowTitle(f"{self.comp.name}'s {title}")
         d.resize(640, 600)
         v = QVBoxLayout(d)
-        note = QLabel("Each Memory Day your Companion writes a letter to itself, to be opened a week later; when it "
-                      "comes due, it reads it and writes back. Its answers also become reflections, so they shape "
-                      "the next self-portrait.")
+        note = QLabel(about)
         note.setWordWrap(True)
         v.addWidget(note)
         b = QTextBrowser()
         b.setHtml("".join(f"<h3>{html.escape(f.stem)}</h3><p>{html.escape(f.read_text(encoding='utf-8'))}"
-                          .replace("\n", "<br>") + "</p>" for f in files)
-                  or "No letters yet: the first is written on the first Memory Day.")
+                          .replace("\n", "<br>") + "</p>" for f in files) or empty)
         v.addWidget(b)
         bb = QDialogButtonBox(QDialogButtonBox.Close)
         bb.rejected.connect(d.reject)
