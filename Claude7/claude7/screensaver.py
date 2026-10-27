@@ -172,7 +172,8 @@ def _xp_savers():
         from claudexp import screensaver as xp
         return {"Mystify": xp.Mystify, "3D Pipes": xp.Pipes, "Starfield": xp.Starfield, "Photos": xp.Slideshow,
                 "Flying Toasters": xp.FlyingToasters, "Matrix Rain": xp.MatrixRain, "Beziers": xp.Beziers,
-                "Super Claude Bros": xp.SAVERS.get("Super Claude Bros")}
+                "Super Claude Bros": xp.SAVERS.get("Super Claude Bros"),
+                "The Legend of Claude": xp.SAVERS.get("The Legend of Claude")}
     except Exception:
         return {}
 
