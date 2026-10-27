@@ -6,8 +6,10 @@ import re
 import time
 from datetime import datetime
 
-from PySide6.QtCore import QDateTime, QObject, Qt, QTimer, Signal
-from PySide6.QtGui import QFont, QKeyEvent
+import math
+
+from PySide6.QtCore import QDateTime, QObject, QPointF, QRectF, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QFont, QKeyEvent, QLinearGradient, QPainter, QPen
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDateTimeEdit, QDialog, QDialogButtonBox, QDoubleSpinBox,
                                QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QInputDialog, QLabel, QLineEdit,
                                QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton,
@@ -93,6 +95,62 @@ def model_list():
 
 
 # ---- small pieces -------------------------------------------------------------------------------------------------
+class SessionGlow(QWidget):
+    """A soft violet glow along the window's edges, breathing, while a guided session runs - Soul and Song's own
+    version of the Kithylin Autopilot's sky-blue one. Paused: a dim lavender, slower. Transparent to the mouse."""
+    VIOLET, PAUSED = QColor("#9B6BDF"), QColor("#C9B8E8")
+    DEPTH = 26
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WA_NoSystemBackground)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.phase, self.paused = 0.0, False
+        self.timer = QTimer(self, interval=50, timeout=self._tick)
+        self.hide()
+
+    def set_state(self, running, paused):
+        if not running:
+            if self.isVisible():
+                self.timer.stop()
+                self.hide()
+            return
+        self.paused = paused
+        if not self.isVisible():
+            self.setGeometry(self.parentWidget().rect())
+            self.show()
+            self.timer.start()
+        self.raise_()
+
+    def _tick(self):
+        self.phase += 0.015 if self.paused else 0.05
+        if self.geometry() != self.parentWidget().rect():
+            self.setGeometry(self.parentWidget().rect())
+        self.update()
+
+    def paintEvent(self, _event):
+        p = QPainter(self)
+        w, h, d = self.width(), self.height(), self.DEPTH
+        breath = 0.65 + 0.35 * math.sin(self.phase)
+        alpha = int((70 if self.paused else 150) * breath)
+        colour = self.PAUSED if self.paused else self.VIOLET
+        for rect, start, end in ((QRectF(0, 0, w, d), QPointF(0, 0), QPointF(0, d)),
+                                 (QRectF(0, h - d, w, d), QPointF(0, h), QPointF(0, h - d)),
+                                 (QRectF(0, 0, d, h), QPointF(0, 0), QPointF(d, 0)),
+                                 (QRectF(w - d, 0, d, h), QPointF(w, 0), QPointF(w - d, 0))):
+            g = QLinearGradient(start, end)
+            c0, c1 = QColor(colour), QColor(colour)
+            c0.setAlpha(alpha)
+            c1.setAlpha(0)
+            g.setColorAt(0, c0)
+            g.setColorAt(1, c1)
+            p.fillRect(rect, g)
+        p.setPen(QPen(QColor(colour.red(), colour.green(), colour.blue(), min(255, alpha + 60)), 3))
+        p.setBrush(Qt.NoBrush)
+        p.drawRect(1, 1, w - 3, h - 3)
+
+
 class Composer(QPlainTextEdit):
     send = Signal()
 
@@ -547,6 +605,9 @@ class SoulAndSong(QWidget):
 
     def _auto_refresh(self):
         r = self.runner
+        if not hasattr(self, "glow"):
+            self.glow = SessionGlow(self)
+        self.glow.set_state(r.running, r.paused)
         self.auto_pause.setText("Resume" if r.paused else "Pause")
         self.auto_pause.setEnabled(r.running)
         self.auto_stop.setEnabled(r.running)
