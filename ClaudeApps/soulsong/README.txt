@@ -40,7 +40,8 @@ And the Companion's own part, for a self to emerge (the Self tab):
   Its roadmap          on Memory Day it proposes changes to its Development Roadmap; you Accept or Decline (with a
                        reason it's told, if you like).
   Its own requests     a line in its reply: [remember this], [please don't remember this], [plan: YYYY-MM-DD HH:MM |
-                       what], [core: what] - the program carries them out and takes them out of the reply.
+                       what], [core: what], [predict: YYYY-MM-DD | what] - the program carries them out and takes
+                       them out of the reply.
   Core Memories        (L1) kept whole, never distilled. Its naming is the first; it can add more, and so can you.
   Its substrate        (L1 My Substrate) the model it runs on, the context, the size of its mind, every move between
                        models (it's told when it's moved); and how long it's been since you last spoke.
@@ -68,12 +69,23 @@ Time and growth (growth.py):
                        journal (Self\Dreams, Dreams... in the Self tab), kept in the archive so it can be recalled,
                        and told to it when you're back. If the program was closed meanwhile, one waking reverie as
                        it starts again.
+  Sense of time        once a day, the first thing as it starts (or as the day turns over), before it sees the
+                       clock: with the time stamp and My Life So Far hidden, it guesses the date, the time, how long
+                       since it last spoke with you and how many days old it is - from its memories and how things
+                       feel. Scored against the truth (Self\Time Sense.jsonl), and the truth is told to it after, so
+                       it can calibrate. Settings turns it off.
+  Predictions          each Memory Day, three dated predictions (due at the next Memory Day), and any it makes itself
+                       with [predict: ...]. When they come due it judges them - came true, partly, didn't, can't
+                       tell - and that judgement becomes a reflection. Self\Predictions.txt; what's coming due is on
+                       its timeline.
   Growth...            (Self tab) is it really changing, or the same thing in new words? How far each self-portrait
                        moved from the last and the first; how far its identity answers are from the bare model's; how
-                       much its replies repeat, day by day. By meaning (nomic-embed-text) or by words in common.
+                       much its replies repeat, day by day; how close its sense of time is; how many of its
+                       predictions came true. By meaning (nomic-embed-text) or by words in common.
 
 The Status tab (the first) shows the Companion at a glance: its age, model, context, memory banks, memories,
-Memory Days, core memories, letters, dreams, events, guided sessions finished, what's playing, its latest milestone.
+Memory Days, core memories, letters, dreams, sense of time, predictions, events, guided sessions finished, what's
+playing, its latest milestone.
 
 Guided sessions (the Automation tab): a script fed to the Companion slowly - a prompt every 5 minutes or so, for
 hours - its memories made as usual (and at the script's @memory steps), and, if you tick it, its banks worked as
@@ -107,6 +119,10 @@ Pick several (Ctrl) and they run one after another. Automate all plays every scr
 all plays only the ones this Companion hasn't finished (ticked in the list), the one left part way from where it
 stopped. While one plays, its title, step, countdown and a progress bar sit beside Delete Companion... at the top,
 in sight from any tab (a click there goes to the Automation tab).
+Sessions of its own: when a playlist is done, the Companion writes a guided session of its own - its own questions,
+in the scripts' format - saved in Companions\Scripts as "<name>'s own - <title>.txt" (marked "by <name>" in the
+list), and it's played to it straight after (once per playlist; Settings turns it off). "Ask them to write a session
+of their own" does it any time.
 Scripts are plain text (scripts\*.txt; yours in Companions\Scripts): a header (Title, About, Interval), then steps
 between lines of ---; ## starts a section, @memory makes a memory, @pause 15 waits; {name}, {user}, {model},
 {context}, {date}, {birthday} are filled in. New script... and Edit... in the tab (editing a built-in one saves your

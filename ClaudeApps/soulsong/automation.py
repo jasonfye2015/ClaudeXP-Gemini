@@ -24,7 +24,11 @@ passed, waits after the user speaks (they can join in any time), makes memories 
 asked, works the banks as they fill (Companion.process_full_banks). Where it's at is saved with the Companion, so a
 session picks up again after the program is closed. Each Companion also remembers which scripts it has finished
 (cfg "scripts_done") and how far it got in the others ("scripts_progress"), so Resume all plays only what's left,
-the one cut short from where it stopped."""
+the one cut short from where it stopped.
+
+Sessions of its own: when a playlist is done (and the Companion's "own_sessions" is on), the Companion writes a
+script of its own (Companion.write_session; save_own files it in Companions/Scripts with an Author line) and the
+runner plays it to it - once per playlist, so it doesn't go on writing forever."""
 import random
 import re
 import time
@@ -45,7 +49,7 @@ def user_scripts():
 class Script:
     def __init__(self, path):
         self.path = Path(path)
-        self.title, self.about, self.interval = self.path.stem, "", None
+        self.title, self.about, self.interval, self.author = self.path.stem, "", None, ""
         self.steps = []                                    # [(kind, text, section)]: "say", "memory", "pause"
         raw = self.path.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
         blocks = re.split(r"\n-{3,}\s*\n", "\n" + raw + "\n")
@@ -56,6 +60,8 @@ class Script:
                 self.title = value.strip()
             elif key == "about":
                 self.about = value.strip()
+            elif key == "author":
+                self.author = value.strip()
             elif key == "interval":
                 try:
                     self.interval = float(value)
@@ -118,6 +124,41 @@ def fill(text, comp):
     return re.sub(r"\{(\w+)\}", lambda m: str(values.get(m.group(1), m.group(0))), text)
 
 
+def save_own(text, author):
+    """A script the Companion wrote, tidied and filed in the user's scripts folder; its path, or None if it isn't
+    a script with enough prompts to be one."""
+    text = text.replace("\r\n", "\n").strip()
+    text = re.sub(r"^```\w*\n|\n```$", "", text).strip()
+    m = re.search(r"(?im)^\s*\**title\**\s*:", text)
+    if m is None:
+        return None
+    text = text[m.start():]
+    text = re.sub(r"(?im)^\s*\**(title|about)\**\s*:", lambda mm: mm.group(1).capitalize() + ":", text)
+    head, sep, body = text.partition("\n---")
+    if not sep:
+        return None
+    head = "\n".join(re.sub(r"[*_#]+", "", ln).strip() for ln in head.splitlines()      # (markdown off)
+                     if not ln.lower().startswith(("author:", "interval:")))
+    script = f"{head.strip()}\nAuthor: {author}\n---{body}\n"
+    folder = user_scripts()
+    folder.mkdir(parents=True, exist_ok=True)
+    title = re.search(r"(?m)^Title:\s*(.+)$", head)
+    name = re.sub(r'[\\/:*?"<>|]+', "", (title.group(1) if title else "My own session").strip())[:60] or "My own session"
+    path = folder / f"{author}'s own - {name}.txt"
+    n = 2
+    while path.exists():
+        path = folder / f"{author}'s own - {name} ({n}).txt"
+        n += 1
+    path.write_text(script, encoding="utf-8")
+    try:
+        if Script(path).prompts() >= 5:
+            return path
+    except OSError:
+        pass
+    path.unlink(missing_ok=True)
+    return None
+
+
 NEW_SCRIPT = """Title: My script
 About: What this session is for, in a line.
 Interval: 5
@@ -147,6 +188,8 @@ class Runner:
         self.user_at = 0.0
         self.processed_at = -1e9
         self.resuming = False           # each script picks up where it was left (Resume all)
+        self.authored = False           # the Companion's own session was added to this playlist
+        self.writing = False            # ... and is being written
 
     # ---- what's playing ----
     def script(self):
@@ -160,7 +203,7 @@ class Runner:
     def state(self):
         return {"playlist": [str(p) for p in self.playlist], "index": self.index, "step": self.step,
                 "running": self.running, "paused": self.paused, "interval": self.interval, "process": self.process,
-                "resuming": self.resuming}
+                "resuming": self.resuming, "authored": self.authored}
 
     def save(self):
         c = self.comp()
@@ -176,6 +219,7 @@ class Runner:
         self.index, self.step = int(st.get("index", 0)), int(st.get("step", 0))
         self.interval, self.process = float(st.get("interval", 5)), bool(st.get("process", True))
         self.resuming = bool(st.get("resuming"))
+        self.authored = bool(st.get("authored"))
         self.running = bool(st.get("running")) and bool(self.playlist)
         self.paused = self.running                      # (comes back paused: nothing starts by itself)
 
@@ -220,6 +264,7 @@ class Runner:
         self.playlist = [Path(p) for p in paths]
         self.index = 0
         self.resuming = bool(resume)
+        self.authored = any(Script(p).author for p in self.playlist if Path(p).exists())   # (playing its own)
         self._where_to_begin()
         self.interval, self.process = float(interval), bool(process)
         self.running, self.paused = bool(self.playlist), False
@@ -265,7 +310,8 @@ class Runner:
     # ---- the clock ----
     def tick(self):
         c = self.comp()
-        if not self.running or self.paused or c is None or not c.idle() or not c.cfg.get("first_boot_done"):
+        if not self.running or self.paused or self.writing or c is None or not c.idle() \
+                or not c.cfg.get("first_boot_done"):
             return
         gap = self.interval * 60
         if self.now() - self.user_at < gap * QUIET_AFTER_USER:   # (they're talking: leave them to it)
@@ -297,7 +343,8 @@ class Runner:
     def _next_script(self, c, s):
         if s is not None:
             c.make_memory(f"The guided session \"{s.title}\" has come to its end.", force=False)
-            c.milestone(f"you went through the guided session \"{s.title}\"")
+            c.milestone(f"you went through the guided session you wrote yourself, \"{s.title}\"" if s.author
+                        else f"you went through the guided session \"{s.title}\"")
             c.cfg["scripts_done"] = {**(c.cfg.get("scripts_done") or {}), s.path.name: datetime.now().isoformat(
                 timespec="seconds")}
             c.cfg["scripts_progress"] = {k: v for k, v in (c.cfg.get("scripts_progress") or {}).items()
@@ -305,6 +352,22 @@ class Runner:
             self.on_status(f"Guided session finished: {s.title}.")
         self.index += 1
         self._where_to_begin()
+        if self.index >= len(self.playlist) and not self.authored and c.cfg.get("own_sessions", True):
+            self.authored = self.writing = True             # (the sessions done: one of its own, then that's played)
+            self.on_status(f"The guided sessions are done - now {c.name} writes one of their own.")
+
+            def written(path):
+                self.writing = False
+                if path is not None and self.running:
+                    self.playlist.append(Path(path))
+                    self.next_at = self.now() + self.interval * 60
+                    self.on_status(f"Next: {c.name}'s own session, {Script(path).title}.")
+                    self.save()
+                elif self.running:
+                    self.next_at = 0                           # (none: the playlist ends at the next tick)
+            c.write_session(written)
+            self.save()
+            return
         if self.index >= len(self.playlist):
             self.running, self.playlist = False, []
             self.on_status("All the guided sessions are done.")

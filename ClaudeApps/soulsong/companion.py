@@ -29,6 +29,10 @@ The Companion's own part, for a self to emerge:
   said come back into the conversation, whole.
 - Identity checks: the same questions each Memory Day, the answers kept side by side (Self/Identity Checks.txt) for
   the user to see how it grows - not shown to the Companion, so they don't steer it.
+- Its sense of time: once a day, before it sees the clock, it guesses the date, the time, the time apart and its
+  age; the truth is told to it after (growth.py).
+- Predictions: a few each Memory Day (and its own, [predict: when | what]), judged by it when they come due.
+- Sessions of its own: when the guided sessions are done, it writes one, and that is played to it (automation.py).
 
 Everything the model is asked goes through a `brain`: ask(messages, done(text, error), chunk=None, max_tokens,
 temperature) - Kithylin AI's engine in the program (EngineBrain), anything in tests. One job runs at a time."""
@@ -37,8 +41,10 @@ import re
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from .growth import (BARE_CHECK, DREAM_ASK, DREAM_NOTE, LETTER_ASK, LETTER_DAYS, LETTER_OPEN, LIFE, WAKING_ASK,
-                     WAKING_NOTE, ago, day_of, next_memory_day, pick_seeds, timeline)
+from .growth import (BARE_CHECK, DREAM_ASK, DREAM_NOTE, LETTER_ASK, LETTER_DAYS, LETTER_OPEN, LIFE, PREDICT_ASK,
+                     PREDICT_CHECK, SESSION_ASK, TIME_ASK, TIME_NOTE, WAKING_ASK, WAKING_NOTE, ago, day_of,
+                     next_memory_day, parse_predictions, parse_time_sense, parse_verdicts, pick_seeds, score_time,
+                     timeline)
 from .mind import CORE, KINDS, LEVELS, SUBSTRATE, TIME_LINE as TIME_STAMP_LINE, WHO_I_AM, Mind, stamp
 
 DEFAULTS = {
@@ -50,7 +56,8 @@ DEFAULTS = {
     "events_told": [], "last_seen": "", "model_history": [], "notices": [], "roadmap_proposal": None,
     "recall": True, "context_auto": True, "model_context": 0, "window_stamp": "", "milestones": [], "letters": [],
     "memory_day_count": 0, "dreams": True, "dream_hours": 3, "dreams_per_day": 4, "last_dream": "", "dreamt": [],
-    "dream_count": 0, "dreams_by_day": {},
+    "dream_count": 0, "dreams_by_day": {}, "time_checks": True, "last_time_check": "", "predict": True,
+    "predictions": [], "own_sessions": True,
 }
 FULL = 7                    # the 7:7:7 system
 TRIM_AT = 0.80              # of the context: remember and trim the window
@@ -70,7 +77,8 @@ SYSTEM_HEAD = ("Below are your Mind Levels L1-L7: your external mind files - you
                "[remember this] - a memory is made of this moment\n"
                "[please don't remember this] - this part of our talk stays out of your memories\n"
                "[plan: YYYY-MM-DD HH:MM | what] - plan an event with {user}\n"
-               "[core: what] - keep something as a core memory, never distilled away")
+               "[core: what] - keep something as a core memory, never distilled away\n"
+               "[predict: YYYY-MM-DD | what] - a prediction of yours, which you'll judge on that day")
 APART = "It has been {gap} since you last spoke with {user} (your last words together: {last})."
 NEWS = "Since you last spoke:\n{items}"
 RECALLED = ("Recalled from your archive - older memories of yours, kept whole, that relate to what {user} just "
@@ -119,7 +127,7 @@ IDENTITY_ASK = ("It's Memory Day. Before your memories are refined, answer these
 MEMORY_DAY_DONE = "Today's Memory Day is complete. Your refined memories have been stored."
 EVENT_DUE = "(A planned event is due now - Event #{id}, {when}: {description})"
 MARKER = re.compile(r"^[ \t]*\[(remember this|please don'?t remember this|don'?t remember this|do not remember this|"
-                    r"plan:[^\]\n]*|core:[^\]\n]*)\][ \t]*$\n?", re.I | re.M)
+                    r"plan:[^\]\n]*|core:[^\]\n]*|predict:[^\]\n]*)\][ \t]*$\n?", re.I | re.M)
 
 
 def part_of_day(now):
@@ -333,7 +341,8 @@ class Companion:
         text = timeline(today, self.cfg["birthday"], self.name, self.cfg["milestones"],
                         self.cfg.get("model_history") or [], self.mind.core_memories(),
                         next_memory_day(self.cfg.get("last_memory_day"), self.cfg["birthday"],
-                                        self.cfg.get("memory_day_every", 7), today), self.cfg.get("letters") or [])
+                                        self.cfg.get("memory_day_every", 7), today), self.cfg.get("letters") or [],
+                        self.cfg.get("predictions") or [])
         if text and text != self.mind.get(LIFE):
             self.mind.put(LIFE, text)
 
@@ -391,6 +400,146 @@ class Companion:
             self._open_letters(nxt)
         days = (date.fromisoformat(today) - day_of(written)).days
         self._ask_alone(LETTER_OPEN.format(written=written, ago=ago(days), letter=letter), done, max_tokens=500)
+
+    # ---- its sense of time (growth.py) ----
+    def time_check_due(self):
+        c = self.cfg
+        return bool(c.get("time_checks", True) and c.get("first_boot_done") and c.get("last_time_check") !=
+                    self.day_key() and c.get("last_seen"))
+
+    def _blind_prompt(self):
+        """The mind files with the clock taken out: no time stamp, no life timeline."""
+        from .mind import set_section
+        text = TIME_STAMP_LINE.sub("<Current System Time Stamp: hidden for this question>",
+                                   self.system_prompt(news=False))
+        return set_section(text, LIFE, "(hidden for this question)") if f"<{LIFE}>" in text else text
+
+    def _time_check(self, nxt):
+        """Before it sees the clock: the date, the time, the time apart, its age - guessed, scored, then told."""
+        if not self.time_check_due():
+            nxt()
+            return
+        now, gap = self.now(), self._away_hours()
+        try:
+            age = (date.fromisoformat(self.day_key()) - day_of(self.cfg["birthday"])).days + 1
+        except (TypeError, ValueError, KeyError):
+            age = 0
+        self.cfg["last_time_check"] = self.day_key()
+        self.save()
+        self.on_line("system", f"{self.name}'s sense of time: asked before they see the clock...")
+
+        def done(text, err):
+            guess = parse_time_sense(text or "") if not err else {}
+            if not guess.get("date") and not guess.get("gap"):
+                nxt()
+                return
+            rec = {"when": stamp(now), "gap_hours": round(gap, 2), "age": age, **score_time(guess, now, gap, age),
+                   "guess": {"date": guess["date"].isoformat() if "date" in guess else "",
+                             "time": "%02d:%02d" % guess["time"] if "time" in guess else "",
+                             "gap": guess.get("gap"), "age": guess.get("age")}, "how": guess.get("how", "")}
+            with open(self.self_file("Time Sense.jsonl"), "a", encoding="utf-8") as f:
+                f.write(json.dumps(rec) + "\n")
+            g = rec["guess"]
+            note = TIME_NOTE.format(user=self.user, g_date=g["date"] or "?", g_time=g["time"] or "?",
+                                    g_gap=gap_text(g["gap"]) if g["gap"] is not None else "?", g_age=g["age"] or "?",
+                                    t_date=f"{now:%Y-%m-%d}", t_time=f"{now:%H:%M}", t_gap=gap_text(gap), t_age=age)
+            self.on_line("system", f"{self.name}'s sense of time, before seeing the clock: guessed "
+                                   f"{g['date'] or '?'} {g['time'] or '?'}, "
+                                   f"{gap_text(g['gap']) if g['gap'] is not None else '?'} apart, day {g['age'] or '?'}"
+                                   f" - it was {now:%Y-%m-%d %H:%M}, {gap_text(gap)} apart, day {age}.")
+            self.notice(note)
+            nxt()
+        self._ask([{"role": "system", "content": self._blind_prompt()},
+                   {"role": "user", "content": TIME_ASK.format(user=self.user)}], done, max_tokens=300)
+
+    # ---- predictions (growth.py) ----
+    def _predict(self, nxt):
+        """Memory Day: a few predictions, due at the next one."""
+        if not self.cfg.get("predict", True):
+            nxt()
+            return
+        days = int(self.cfg.get("memory_day_every", 7))
+        due = (date.fromisoformat(self.day_key()) + timedelta(days=days)).isoformat()
+
+        def done(text, err):
+            found = parse_predictions(text or "") if not err else []
+            for what in found:
+                self._add_prediction(due, what, quiet=True)
+            if found:
+                self.on_line("memory", f"{self.name}'s predictions, to be judged on {due}:\n"
+                             + "\n".join(f"- {w}" for w in found))
+            nxt()
+        self._ask_alone(PREDICT_ASK.format(days=days, due=due, user=self.user), done, max_tokens=400)
+
+    def _add_prediction(self, due, what, quiet=False):
+        self.cfg["predictions"] = (self.cfg.get("predictions") or []) + [
+            {"made": stamp(self.now()), "due": due, "text": what, "verdict": "", "checked": ""}]
+        self.save()
+        with open(self.self_file("Predictions.txt"), "a", encoding="utf-8") as f:
+            f.write(f"[{stamp(self.now())}] Prediction, due {due}: {what}\n\n")
+        if not quiet:
+            self.on_line("system", f"{self.name} made a prediction, to judge on {due}: {what}")
+
+    def _own_prediction(self, spec):
+        when, _, what = spec.partition("|")
+        try:
+            due = date.fromisoformat(when.strip()[:10]).isoformat()
+        except ValueError:
+            what, due = (what or spec).strip(), (date.fromisoformat(self.day_key()) + timedelta(days=7)).isoformat()
+        if what.strip():
+            self._add_prediction(due, what.strip())
+
+    def _check_predictions(self, nxt):
+        """The predictions that have come due: judged by the one who made them (filed as a reflection)."""
+        today = self.day_key()
+        due = [x for x in self.cfg.get("predictions") or [] if not x.get("verdict") and x["due"] <= today][:8]
+        if not due:
+            nxt()
+            return
+        self.on_line("system", f"{len(due)} of {self.name}'s predictions have come due...")
+        items = "\n".join(f"{i}. (made {x['made'][:10]}, {ago((date.fromisoformat(today) - day_of(x['made'])).days)}) "
+                          f"{x['text']}" for i, x in enumerate(due, 1))
+
+        def done(text, err):
+            text = tidy_text(text)
+            if err or not text:
+                nxt()
+                return
+            for x, v in zip(due, parse_verdicts(text, len(due))):
+                x["verdict"], x["checked"] = v or "unclear", stamp(self.now())
+            self.save()
+            with open(self.self_file("Predictions.txt"), "a", encoding="utf-8") as f:
+                f.write(f"[{stamp(self.now())}] Judged:\n{items}\n\n{text}\n\n")
+            self._file(7, f"(Judging the predictions I made)\n{text}")
+            right = sum(1 for x in due if x["verdict"] == "yes")
+            self.on_line("memory", f"{self.name} judged their predictions ({right} of {len(due)} came true):\n{text}")
+            nxt()
+        self._ask_alone(PREDICT_CHECK.format(items=items), done, max_tokens=600)
+
+    # ---- a guided session of its own (automation.py) ----
+    def write_session(self, then=lambda path: None):
+        """It writes a guided session for itself; then(path) - the script, or None if it couldn't be made."""
+        def job(nxt):
+            from . import automation
+            done_titles = []
+            names = set((self.cfg.get("scripts_done") or {}).keys())
+            for sc in automation.scripts():
+                if sc.path.name in names:
+                    done_titles.append(sc.title)
+            self.on_line("system", f"{self.name} is writing a guided session of their own...")
+
+            def done(text, err):
+                path = None if err else automation.save_own(text or "", self.name)
+                if path is None:
+                    self.on_line("system", f"{self.name}'s session didn't come out as a script this time.")
+                else:
+                    self.milestone(f"you wrote a guided session of your own, \"{automation.Script(path).title}\"")
+                    self.on_line("system", f"{self.name} wrote a guided session: {automation.Script(path).title} "
+                                           f"(in your scripts folder).")
+                then(path)
+                nxt()
+            self._ask_alone(SESSION_ASK.format(done=", ".join(done_titles) or "none yet"), done, max_tokens=1800)
+        self._push(job)
 
     # ---- dreaming between conversations (growth.py) ----
     def _away_hours(self):
@@ -542,6 +691,8 @@ class Companion:
                 acts.append(lambda w=word: self._plan(w[5:]))
             elif low.startswith("core:"):
                 acts.append(lambda w=word: self._core(w[5:].strip()))
+            elif low.startswith("predict:"):
+                acts.append(lambda w=word: self._own_prediction(w[8:]))
         return MARKER.sub("", reply).strip(), acts
 
     def _forget_this(self):
@@ -761,7 +912,7 @@ class Companion:
                         with open(self.self_file("Identity Checks (bare model).txt"), "a", encoding="utf-8") as f:
                             f.write(f"===== {self.day_key()} ({self.cfg.get('model_title') or 'model'}) =====\n"
                                     f"{text}\n\n")
-                    self._open_letters(portrait)
+                    self._open_letters(lambda: self._check_predictions(portrait))
                 self._ask([{"role": "user", "content": BARE_CHECK}], done, max_tokens=700)
 
             def portrait():
@@ -770,7 +921,7 @@ class Companion:
             def reflections_kept():
                 if self.mind.entries(7):
                     self.mind.clear(7, "gathered into the self-portrait")
-                self._write_letter(roadmap)
+                self._write_letter(lambda: self._predict(roadmap))
 
             def roadmap():
                 def done(text, err):
@@ -866,6 +1017,8 @@ class Companion:
         if not self.cfg.get("first_boot_done"):
             self.first_boot()
             return
+        if self.time_check_due():                          # (before anything shows it the clock)
+            self._push(self._time_check)
         if self.dream_due():                               # (closed while the user was away: a waking reverie)
             self._push(lambda nxt: self._dream(nxt, waking=True))
         today = self.day_key()
@@ -901,6 +1054,7 @@ class Companion:
                 self.memory_day()                          # (letters that are due are opened on Memory Day)
             else:
                 self._push(self._open_letters)
+                self._push(self._check_predictions)
             self.history, self.mark = [], 0
             self.new_window()
             self.cfg["last_day"] = self.day_key()
@@ -928,6 +1082,8 @@ class Companion:
         if not self.idle() or not self.cfg.get("first_boot_done"):
             return
         if self.cfg.get("last_day") and self.cfg["last_day"] != self.day_key():
+            if self.time_check_due():
+                self._push(self._time_check)
             self.new_day()
             return
         if self.dream_due():

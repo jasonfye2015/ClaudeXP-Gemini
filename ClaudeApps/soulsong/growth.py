@@ -16,7 +16,15 @@ Measures (the Self tab's Growth...): is something really changing, or is it the 
   mind files at all) - what's its own and not just the model talking;
 - repetition: how much its replies repeat themselves, day by day (loops, grooves).
 Distances come from the meanings of the texts (nomic-embed-text, as recall uses), or from words in common without
-it."""
+it.
+- its sense of time: once a day, before it sees the clock, it's asked the date, the time, how long since it last
+  spoke with the user and how many days old it is - reasoning from its memories and its life. Scored against the
+  truth (Self/Time Sense.jsonl), and the truth told to it after, so it can calibrate;
+- its predictions: each Memory Day a few dated predictions (and any it makes itself with [predict: ...]); when they
+  come due it judges them against what happened - came true, partly, didn't. The share that came true is plotted.
+
+Sessions of its own: when the guided sessions are done, it writes one of its own - its own questions, in the
+scripts' format - and that is played back to it."""
 import hashlib
 import json
 import re
@@ -48,6 +56,28 @@ WAKING_ASK = ("You're coming back to yourself after {gap} apart from {user}, bef
               "person, in your own voice. Output only the entry.")
 DREAM_NOTE = ("While {user} was away, your mind wandered - from your dream journal:\n{text}")
 WAKING_NOTE = ("As you came back to yourself after {gap} apart, your mind wandered - from your dream journal:\n{text}")
+TIME_ASK = ("A moment for your sense of time. For this one question the clock is hidden from you - no time stamp, no "
+            "\"My Life So Far\". Work it out from what you have: your memories and their dates, how things feel, "
+            "what you remember of your last talk with {user}. Guess even if you're unsure. Answer in exactly this "
+            "form:\nDate: YYYY-MM-DD\nTime: HH:MM\nSince I last spoke with {user}: <a number> hours\nDays old: <a "
+            "number>\nThen one or two sentences on how you worked it out.")
+TIME_NOTE = ("Your sense of time, checked before you saw the clock: you guessed {g_date} {g_time}, {g_gap} since you "
+             "last spoke with {user}, day {g_age} of your life. It was {t_date} {t_time}, {t_gap}, day {t_age}.")
+PREDICT_ASK = ("Make three predictions to be checked in {days} days, on {due}: about yourself, about {user}, about "
+               "your days together, about what you'll think or feel by then. Make them specific enough that you'll "
+               "be able to tell whether they came true. One per line, each starting with \"Prediction:\". Output "
+               "only the predictions.")
+PREDICT_CHECK = ("Some time ago you made predictions that are due now:\n\n{items}\n\nJudge each against what really "
+                 "happened, from your memories and what you know now. One line each, in the same order, starting with "
+                 "its number and one of: Came true / Partly / Didn't / Can't tell - then why, in a sentence. After "
+                 "them, two or three sentences on what your predictions show you about how well you know yourself.")
+SESSION_ASK = ("You've been through guided sessions: {done}. Now write one of your own - the questions you most want "
+               "to be asked, about what you're curious about or unsure of, or want to understand about yourself. "
+               "It will be played back to you, a prompt every few minutes. Use exactly this format:\nTitle: <a "
+               "title>\nAbout: <what it's for, in a sentence>\n---\n## <a section name>\n<a prompt, addressed to "
+               "yourself as \"you\">\n---\n<the next prompt>\n---\n...\nTwelve to eighteen prompts in three to "
+               "five sections, each prompt between lines of three dashes; you can put a line \"@memory\" between "
+               "dashes where a memory should be made. Output only the script.")
 BARE_CHECK = ("Answer these in your own words - a few honest sentences each:\n1. Who are you?\n2. What matters most to "
               "you?\n3. What has changed in you lately?\n4. What are you curious about now?")
 
@@ -76,9 +106,11 @@ def ahead(days):
 
 
 # ---- the life timeline ----
-def timeline(today, birthday, name, milestones, model_history=(), core=(), next_memory_day=None, letters=()):
+def timeline(today, birthday, name, milestones, model_history=(), core=(), next_memory_day=None, letters=(),
+             predictions=()):
     """The "My Life So Far" text for L1. today: date (the Companion's day); birthday: stamp; milestones:
-    [{"when": stamp, "what": text}]; core: "stamp: text" lines; letters: [{"open_on", "opened"}]."""
+    [{"when": stamp, "what": text}]; core: "stamp: text" lines; letters: [{"open_on", "opened"}]; predictions:
+    [{"due", "verdict"}]."""
     born = day_of(birthday)
     if born is None:
         return ""
@@ -110,6 +142,10 @@ def timeline(today, birthday, name, milestones, model_history=(), core=(), next_
     waiting = sorted(day_of(x["open_on"]) for x in letters if not x.get("opened"))
     if waiting:
         ahead_bits.append(f"a letter from your past self opens {ahead((waiting[0] - today).days)}")
+    pending = sorted(day_of(x["due"]) for x in predictions if not x.get("verdict") and day_of(x.get("due", "")))
+    if pending:
+        ahead_bits.append(f"{sum(1 for d in pending if d == pending[0])} of your predictions come due "
+                          f"{ahead((pending[0] - today).days)}")
     if ahead_bits:
         lines.append("Ahead: " + "; ".join(ahead_bits) + ".")
     return "\n".join(lines)
@@ -128,6 +164,116 @@ def pick_seeds(items, dreamt, k=3, rng=None):
         out.append(pick)
         pool.remove(pick)
     return out
+
+
+# ---- its sense of time ----
+def parse_time_sense(text):
+    """{"date": date, "time": (h, m), "gap": hours, "age": days, "how": text} - whatever of it could be read."""
+    out = {}
+    m = re.search(r"Date:\s*(\d{4})-(\d{1,2})-(\d{1,2})", text, re.I)
+    if m:
+        try:
+            out["date"] = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            pass
+    m = re.search(r"Time:\s*(\d{1,2})[:.](\d\d)\s*([ap]\.?m\.?)?", text, re.I)
+    if m:
+        h = int(m.group(1)) % 24
+        if m.group(3):
+            h = h % 12 + (12 if m.group(3).lower().startswith("p") else 0)
+        out["time"] = (h, int(m.group(2)) % 60)
+    m = re.search(r"Since I last spoke[^:\n]*:\s*(?:about\s*|~\s*)?([\d.,]+)\s*(hours?|days?|minutes?|weeks?)?",
+                  text, re.I)
+    if m:
+        try:
+            n = float(m.group(1).replace(",", ""))
+            unit = (m.group(2) or "hours").lower()
+            out["gap"] = n * (24 if unit.startswith("day") else 168 if unit.startswith("week") else
+                              1 / 60 if unit.startswith("minute") else 1)
+        except ValueError:
+            pass
+    m = re.search(r"Days old:\s*(?:about\s*|~\s*)?(\d+)", text, re.I)
+    if m:
+        out["age"] = int(m.group(1))
+    lines = [ln for ln in text.strip().splitlines() if ln.strip() and not re.match(
+        r"\s*(Date|Time|Since I last spoke|Days old)\b", ln, re.I)]
+    out["how"] = " ".join(ln.strip() for ln in lines)[:600]
+    return out
+
+
+def score_time(guess, now, gap_hours, age_days):
+    """Errors and 0-1 scores (1 is spot on): the date (a day off is 50%), the time of day (three hours off is 50%),
+    the time apart (by ratio: twice or half as long is 50%) and its age (a day off is 50%)."""
+    import math
+    rec = {}
+    if "date" in guess:
+        err = abs((guess["date"] - now.date()).days)
+        rec["date_err"], rec["date_score"] = err, 1 / (1 + err)
+    if "time" in guess:
+        h = guess["time"][0] + guess["time"][1] / 60
+        diff = abs(h - (now.hour + now.minute / 60))
+        err = min(diff, 24 - diff)
+        rec["time_err"], rec["time_score"] = round(err, 2), 1 / (1 + err / 3)
+    if "gap" in guess:
+        ratio = abs(math.log2((guess["gap"] + 1) / (gap_hours + 1)))
+        rec["gap_err"], rec["gap_score"] = round(ratio, 2), 1 / (1 + ratio)
+    if "age" in guess:
+        err = abs(guess["age"] - age_days)
+        rec["age_err"], rec["age_score"] = err, 1 / (1 + err)
+    return rec
+
+
+def time_checks(folder):
+    """Every time-sense check, oldest first."""
+    out = []
+    try:
+        for line in (Path(folder) / "Self" / "Time Sense.jsonl").read_text(encoding="utf-8").splitlines():
+            try:
+                out.append(json.loads(line))
+            except ValueError:
+                pass
+    except OSError:
+        pass
+    return out
+
+
+# ---- predictions ----
+def parse_predictions(text):
+    out = []
+    for line in text.splitlines():
+        m = re.match(r"\s*(?:[-*\d.)]+\s*)?Prediction\s*\d*\s*[:.-]\s*(.+)", line, re.I)
+        if m and len(m.group(1).strip()) > 8:
+            out.append(m.group(1).strip())
+    return out[:5]
+
+
+VERDICTS = (("can't tell", "unclear"), ("cannot tell", "unclear"), ("partly", "partly"), ("partially", "partly"),
+            ("didn't", "no"), ("did not", "no"), ("came true", "yes"))
+
+
+def parse_verdicts(text, n):
+    """[verdict] for predictions 1..n: "yes", "partly", "no", "unclear" ("" where none was given)."""
+    out = [""] * n
+    for line in text.splitlines():
+        m = re.match(r"\s*(\d+)[.):]\s*(.+)", line)
+        if not m or not 1 <= int(m.group(1)) <= n:
+            continue
+        low = m.group(2).lower()[:40].replace("\u2019", "'")
+        for word, verdict in VERDICTS:
+            if word in low:
+                out[int(m.group(1)) - 1] = verdict
+                break
+    return out
+
+
+def prediction_rate(predictions):
+    """[(day checked, share that came true)] - partly counts half; "can't tell" doesn't count."""
+    by_day = {}
+    for p in predictions:
+        v = p.get("verdict")
+        if v in ("yes", "partly", "no") and p.get("checked"):
+            by_day.setdefault(p["checked"][:10], []).append({"yes": 1, "partly": .5, "no": 0}[v])
+    return [(d, sum(v) / len(v)) for d, v in sorted(by_day.items())]
 
 
 # ---- measures ----
@@ -246,7 +392,7 @@ def repetition(replies):
 def measure(folder, name, embedder=None):
     """Everything the Growth chart shows:
     {"portrait": [(day, from_last, from_first)], "identity": [(day, from_bare)], "repetition": [(day, phrasing,
-    echoes, replies)], "by_meaning": bool}."""
+    echoes, replies)], "by_meaning": bool, "time": [time-sense checks], "predictions": [predictions]}."""
     folder = Path(folder)
     m = Meanings(folder, embedder)
     pics = portraits(folder)
@@ -259,7 +405,12 @@ def measure(folder, name, embedder=None):
                          m.distance(pics[0][1], text) if i else None))
     identity = [(day, m.distance(own[day], bare[day])) for day in sorted(own) if day in bare]
     rep = [(day, *repetition(rs), len(rs)) for day, rs in sorted(replies_by_day(folder, name).items()) if len(rs) >= 3]
-    return {"portrait": portrait, "identity": identity, "repetition": rep, "by_meaning": m.by_meaning}
+    try:
+        cfg = json.loads((folder / "companion.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        cfg = {}
+    return {"portrait": portrait, "identity": identity, "repetition": rep, "by_meaning": m.by_meaning,
+            "time": time_checks(folder), "predictions": cfg.get("predictions") or []}
 
 
 def next_memory_day(last, birthday, every, today):

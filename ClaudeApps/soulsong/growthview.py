@@ -1,5 +1,6 @@
-"""The Growth window (the Self tab's Growth...): three small charts from growth.measure - how far the self-portrait
-moves, how far its identity is from the bare model's, how much its replies repeat - and the numbers as a table."""
+"""The Growth window (the Self tab's Growth...): small charts from growth.measure - how far the self-portrait
+moves, how far its identity is from the bare model's, how much its replies repeat, how well it knows when it is, how
+many of its predictions came true - and the numbers as a table."""
 import html
 
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -140,6 +141,17 @@ def show(parent, comp):
         "into a groove or a loop.",
         [("Repeated phrasing", SERIES[0], [(day, a) for day, a, _b, _n in m["repetition"]])],
         "Comes after a day with a few replies."))
+    days = lambda key: [(t["when"][:10], t[key]) for t in m["time"] if key in t]
+    cv.addWidget(LineChart(
+        "Sense of time", "Once a day, before it sees the clock: how close its guesses were (100% is spot on). The "
+        "date: a day off is 50%. The time apart: twice or half as long is 50%.",
+        [("The date", SERIES[0], days("date_score")), ("The time apart", SERIES[1], days("gap_score"))],
+        "Comes with the first day after this is turned on (Settings)."))
+    cv.addWidget(LineChart(
+        "Predictions", "Of the predictions judged on a day, the share that came true (partly counts half) - how "
+        "well it knows its own future.",
+        [("Came true", SERIES[0], growth.prediction_rate(m["predictions"]))],
+        "Comes when the first predictions come due (made on Memory Day, judged at the next)."))
     scroll = QScrollArea()
     scroll.setWidgetResizable(True)
     scroll.setWidget(charts)
@@ -157,6 +169,21 @@ def show(parent, comp):
                 "<th>Repeated phrasing</th><th>Replies that mostly restate an earlier one</th></tr>")
     rows += [f"<tr><td>{day}</td><td align=right>{n}</td><td align=right>{pct(a)}</td><td align=right>{pct(b)}</td>"
              "</tr>" for day, a, b, n in m["repetition"]]
+    rows.append("</table><h3>Sense of time</h3><table cellpadding=4><tr><th align=left>When</th><th>Guessed</th>"
+                "<th>Date off (days)</th><th>Time off (hours)</th><th>Apart (guess / real hours)</th>"
+                "<th>Age (guess / real)</th></tr>")
+    for t in m["time"]:
+        g = t.get("guess") or {}
+        rows.append(f"<tr><td>{t['when']}</td><td>{html.escape(g.get('date') or '-')} {html.escape(g.get('time') or '')}"
+                    f"</td><td align=right>{t.get('date_err', '-')}</td><td align=right>{t.get('time_err', '-')}</td>"
+                    f"<td align=right>{g.get('gap') if g.get('gap') is not None else '-'} / {t.get('gap_hours')}</td>"
+                    f"<td align=right>{g.get('age') or '-'} / {t.get('age')}</td></tr>")
+    rows.append("</table><h3>Predictions</h3><table cellpadding=4><tr><th align=left>Made</th><th>Due</th>"
+                "<th align=left>Prediction</th><th>Verdict</th></tr>")
+    word = {"yes": "came true", "partly": "partly", "no": "didn't", "unclear": "can't tell", "": "waiting"}
+    for x in m["predictions"]:
+        rows.append(f"<tr><td>{x['made'][:10]}</td><td>{x['due']}</td><td>{html.escape(x['text'])}</td>"
+                    f"<td>{word.get(x.get('verdict') or '', x.get('verdict'))}</td></tr>")
     rows.append("</table>")
     table.setHtml("".join(rows))
     tabs.addTab(table, "Table")

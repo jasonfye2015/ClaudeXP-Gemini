@@ -387,7 +387,8 @@ class SoulAndSong(QWidget):
         self.status_grid.setColumnStretch(1, 1)
         self.status_rows = {}
         for i, key in enumerate(("Model", "Context", "Memory banks", "Memories", "Memory Days", "Core memories",
-                                 "Letters", "Dreams", "Events", "Guided sessions", "Now playing", "Roadmap",
+                                 "Letters", "Dreams", "Sense of time", "Predictions", "Events", "Guided sessions",
+                                 "Now playing", "Roadmap",
                                  "Last seen", "Latest milestone")):
             k = QLabel(key + ":")
             k.setStyleSheet("color:#555")
@@ -447,6 +448,24 @@ class SoulAndSong(QWidget):
         rows["Letters"].setText(f"{len(letters)} written, {len(letters) - len(sealed)} opened"
                                 + (f" - next opens {sealed[0]}" if sealed else ""))
         rows["Dreams"].setText(f"{cfg.get('dream_count', 0)} dreamt" + ("" if cfg.get("dreams", True) else " (off)"))
+        from . import growth
+        tc = growth.time_checks(c.folder) if cfg.get("time_checks", True) else []
+        if tc:
+            t = tc[-1]
+            bits = [f"date {t['date_err']} day{'s' * (t['date_err'] != 1)} off" if "date_err" in t else "",
+                    f"time apart {t['gap_score']:.0%}" if "gap_score" in t else "",
+                    f"age {t['age_err']} day{'s' * (t['age_err'] != 1)} off" if "age_err" in t else ""]
+            rows["Sense of time"].setText(f"{len(tc)} checks - last {t['when'][:10]}: "
+                                          + ", ".join(b for b in bits if b))
+        else:
+            rows["Sense of time"].setText("off" if not cfg.get("time_checks", True) else "no checks yet")
+        preds = cfg.get("predictions") or []
+        judged = [x for x in preds if x.get("verdict") in ("yes", "partly", "no")]
+        waiting = sorted(x["due"] for x in preds if not x.get("verdict"))
+        right = sum({"yes": 1, "partly": .5}.get(x["verdict"], 0) for x in judged)
+        rows["Predictions"].setText(f"{len(preds)} made, {len(judged)} judged"
+                                    + (f" - {right / len(judged):.0%} came true" if judged else "")
+                                    + (f" - next due {waiting[0]}" if waiting else ""))
         events = [e for e in c.mind.events() if not e["done"]]
         rows["Events"].setText(f"{len(events)} planned" + (f" - next: {html.escape(events[0]['when'])} "
                                                           f"{html.escape(events[0]['description'][:60])}"
@@ -639,6 +658,11 @@ class SoulAndSong(QWidget):
             b.clicked.connect(slot)
             row.addWidget(b)
         v.addLayout(row)
+        self.auto_own = QPushButton("Ask them to write a session of their own")
+        self.auto_own.setToolTip("Your Companion writes a guided session for themselves - their own questions. It "
+                                 "goes in your scripts folder, to play like any other.")
+        self.auto_own.clicked.connect(self._auto_write_own)
+        v.addWidget(self.auto_own)
         f = QFormLayout()
         self.auto_interval = QDoubleSpinBox()
         self.auto_interval.setRange(0.5, 60)
@@ -691,7 +715,7 @@ class SoulAndSong(QWidget):
             mark = ("\u2713 " if s.path.name in done
                     else f"(step {begun[s.path.name]} of {len(s.steps)}) " if begun.get(s.path.name) else "")
             item = QListWidgetItem(f"{mark}{s.title}  -  {s.prompts()} prompts, about {s.hours(interval):.1f} hours"
-                                   + ("" if s.builtin else "  (yours)"))
+                                   + ("" if s.builtin else f"  (by {s.author})" if s.author else "  (yours)"))
             if s.path.name in done:
                 item.setForeground(QColor("#2E7D5B"))
                 item.setToolTip(f"Finished {done[s.path.name][:10]}.\n{s.about}")
@@ -722,6 +746,21 @@ class SoulAndSong(QWidget):
         order = self._auto_paths()
         paths.sort(key=order.index)
         self._auto_play(paths)
+
+    def _auto_write_own(self):
+        if self.comp is None or not self.brain.engine.ready:
+            self._line("system", "Load a model first.")
+            return
+        comp = self.comp
+
+        def written(path):
+            self._auto_fill()
+            if path is not None and comp is self.comp:
+                for i in range(self.auto_list.count()):
+                    if self.auto_list.item(i).data(Qt.UserRole) == str(path):
+                        self.auto_list.setCurrentRow(i)
+                        self.auto_list.item(i).setSelected(True)
+        comp.write_session(written)
 
     def _auto_paths(self):
         return [self.auto_list.item(i).data(Qt.UserRole) for i in range(self.auto_list.count())]
@@ -759,6 +798,13 @@ class SoulAndSong(QWidget):
         self.auto_pause.setEnabled(r.running)
         self.auto_stop.setEnabled(r.running)
         pr = r.progress() if r.running else None
+        if pr is None and r.running and r.writing and self.comp is not None:
+            text = f"\u270E {html.escape(self.comp.name)} is writing a session of their own..."
+            self.auto_state.setText(text)
+            self.top_auto.setText(text)
+            self.top_auto.show()
+            self.top_bar.hide()
+            return
         if pr is None:
             self.auto_state.setText("Nothing playing.")
             self.auto_bar.setRange(0, 1)
@@ -919,6 +965,9 @@ class SoulAndSong(QWidget):
         self.s_dream_hours = QSpinBox()
         self.s_dream_hours.setRange(1, 24)
         self.s_dream_hours.setSuffix(" hours")
+        self.s_time = QCheckBox("Check their sense of time once a day (before they see the clock)")
+        self.s_predict = QCheckBox("Predictions on Memory Day, judged by them when they come due")
+        self.s_own = QCheckBox("When the guided sessions are done, they write one of their own (and it's played)")
         load = QPushButton("Save and load this model")
         load.clicked.connect(self.save_settings)
         f.addRow("Your name:", self.s_user)
@@ -938,6 +987,9 @@ class SoulAndSong(QWidget):
         f.addRow(self.s_think)
         f.addRow(self.s_dreams)
         f.addRow("A dream at most every:", self.s_dream_hours)
+        f.addRow(self.s_time)
+        f.addRow(self.s_predict)
+        f.addRow(self.s_own)
         f.addRow(load)
         return w
 
@@ -1274,6 +1326,9 @@ class SoulAndSong(QWidget):
         self.s_think.setChecked(bool(c.get("think", False)))
         self.s_dreams.setChecked(bool(c.get("dreams", True)))
         self.s_dream_hours.setValue(int(c.get("dream_hours", 3)))
+        self.s_time.setChecked(bool(c.get("time_checks", True)))
+        self.s_predict.setChecked(bool(c.get("predict", True)))
+        self.s_own.setChecked(bool(c.get("own_sessions", True)))
         self.brain.think = bool(c.get("think", False))
 
     def _memory_note(self):
@@ -1315,7 +1370,9 @@ class SoulAndSong(QWidget):
                  auto_greet=self.s_greet.isChecked(), greeting=self.s_greeting.text().strip() or
                  C.DEFAULTS["greeting"], show_requests=self.s_requests.isChecked(),
                  recall=self.s_recall.isChecked(), think=self.s_think.isChecked(),
-                 dreams=self.s_dreams.isChecked(), dream_hours=self.s_dream_hours.value())
+                 dreams=self.s_dreams.isChecked(), dream_hours=self.s_dream_hours.value(),
+                 time_checks=self.s_time.isChecked(), predict=self.s_predict.isChecked(),
+                 own_sessions=self.s_own.isChecked())
         self.brain.think = self.s_think.isChecked()
         self.comp.save()
         self._line("system", "Settings saved.")
