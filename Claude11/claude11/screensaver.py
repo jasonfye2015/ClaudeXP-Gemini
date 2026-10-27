@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QWidget
 
 from . import display
 
-DEFAULTS = {"saver": "Bubbles", "wait": 10, "resume_welcome": False}
+DEFAULTS = {"saver": "Claude Entertainment System", "wait": 10, "resume_welcome": False}
 
 
 def settings():
@@ -176,7 +176,8 @@ def _xp_savers():
                 "Super Claude Bros. 3": xp.SAVERS.get("Super Claude Bros. 3"),
                 "The Legend of Claude": xp.SAVERS.get("The Legend of Claude"),
                 "Zelda II: The Adventure of Claude": xp.SAVERS.get("Zelda II: The Adventure of Claude"),
-                "Metroid: Claude's Mission": xp.SAVERS.get("Metroid: Claude's Mission")}
+                "Metroid: Claude's Mission": xp.SAVERS.get("Metroid: Claude's Mission"),
+                "Claude Entertainment System": xp.SAVERS.get("Claude Entertainment System")}
     except Exception:
         return {}
 

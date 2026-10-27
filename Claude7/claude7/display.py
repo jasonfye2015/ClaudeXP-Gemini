@@ -17,7 +17,7 @@ AERO_COLORS = [("Sky", "#6BA4D9"), ("Twilight", "#4A6FA5"), ("Sea", "#3D8FA6"), 
                ("Taupe", "#8C8277"), ("Chocolate", "#6E4F3A"), ("Slate", "#4E5A66"), ("Frost", "#A8BBCC")]
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".gif"}
 DEFAULTS = {"wallpaper": str(BACKGROUNDS / "Harmony.jpg"), "position": "Fill", "color": "#000000",
-            "aero": "#6BA4D9", "aero_intensity": 0.75, "saver": "Bubbles", "wait": 10, "resume_welcome": False}
+            "aero": "#6BA4D9", "aero_intensity": 0.75, "saver": "Claude Entertainment System", "wait": 10, "resume_welcome": False}
 
 
 def _captured():

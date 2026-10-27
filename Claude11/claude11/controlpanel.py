@@ -572,6 +572,23 @@ def display_properties(desktop, theme_file=None, tab=None):
         pv.addLayout(rowy)
         rowz = QHBoxLayout()
         rowz.addWidget(_button("Preview", lambda: desktop.window().screensaver.start(saver.currentText())))
+
+        def saver_settings():
+            name = saver.currentText()
+            if name == "Claude Entertainment System":
+                from claudexp.ces import settings_dialog
+                settings_dialog(desktop)
+            elif name == "Super Claude Bros":
+                from claudexp.supercb import settings_dialog
+                settings_dialog(desktop)
+            else:
+                from .dialogs import msgbox
+                msgbox(desktop, "Screen Saver Settings", "This screen saver has no options that you can set.", "info")
+        settings_btn = _button("Settings...", saver_settings)
+        settings_btn.setEnabled(saver.currentText() in ("Claude Entertainment System", "Super Claude Bros"))
+        saver.currentTextChanged.connect(
+            lambda n: settings_btn.setEnabled(n in ("Claude Entertainment System", "Super Claude Bros")))
+        rowz.addWidget(settings_btn)
         rowz.addStretch()
         pv.addLayout(rowz)
         pv.addStretch()

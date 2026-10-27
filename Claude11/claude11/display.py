@@ -77,7 +77,7 @@ def wallpapers():
 
 
 DEFAULTS = {"wallpaper": None, "position": "Fill", "color": "#0067C0", "accent": "#0067C0", "aero_intensity": 1.0,
-            "theme": "light", "lock": "", "saver": "(None)", "wait": 10, "resume_welcome": False}
+            "theme": "light", "lock": "", "saver": "Claude Entertainment System", "wait": 10, "resume_welcome": False}
 
 
 def bloom(width, height):

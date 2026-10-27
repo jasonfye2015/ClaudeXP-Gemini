@@ -843,6 +843,9 @@ def _saver_tab(desktop, on_change):
         elif combo.currentText() == "Super Claude Bros":
             from .supercb import settings_dialog
             settings_dialog(desktop, on_done=lambda: monitor.show_saver(combo.currentText()))
+        elif combo.currentText() == "Claude Entertainment System":
+            from .ces import settings_dialog
+            settings_dialog(desktop, on_done=lambda: monitor.show_saver(combo.currentText()))
         else:
             msgbox(desktop, "Display Properties", "This screen saver has no options that you can set.", "info")
 

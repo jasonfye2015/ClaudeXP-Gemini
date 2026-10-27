@@ -1,6 +1,7 @@
-"""Screen savers: Super Claude Bros (the Super Mario Bros. clock, the default; supercb.py), Super Claude Bros. 3 (the same game
+"""Screen savers: Super Claude Bros (the Super Mario Bros. clock; supercb.py), Super Claude Bros. 3 (the same game
 in Super Mario Bros. 3's clothes; smb3cb.py), The Legend of Claude (the Legend of Zelda clock; zeldacb.py), Zelda II: The Adventure of Claude (its sequel's side-on
-clock; zelda2cb.py), Metroid: Claude's Mission (Samus's clock; metroidcb.py), Windows XP, Starfield, Mystify, Beziers, 3D Pipes, Marquee, My Pictures Slideshow, Blank,
+clock; zelda2cb.py), Metroid: Claude's Mission (Samus's clock; metroidcb.py), the Claude Entertainment System
+(all of those NES games in turn, the default; ces.py), Windows XP, Starfield, Mystify, Beziers, 3D Pipes, Marquee, My Pictures Slideshow, Blank,
 Copilot Matrix Rain (falling green code), and After Dark's Flying Toasters (a looped video clip).
 
 Each saver is a QWidget that animates at any size (full screen, or the little monitor in Display
@@ -19,7 +20,7 @@ from PySide6.QtWidgets import QWidget
 from . import display
 from .paths import ROOT, pixmap
 
-DEFAULTS = {"saver": "Super Claude Bros", "wait": 10, "resume_welcome": False, "marquee": "Windows XP"}
+DEFAULTS = {"saver": "Claude Entertainment System", "wait": 10, "resume_welcome": False, "marquee": "Windows XP"}
 
 
 def settings():
@@ -663,12 +664,17 @@ ClaudesMission = metroidcb.make_saver_class(Saver)   # the Metroid clock (metroi
 SAVERS = {"(None)": None, "Super Claude Bros": SuperClaudeBros, "Super Claude Bros. 3": SuperClaudeBros3,
           "The Legend of Claude": LegendOfClaude, "Zelda II: The Adventure of Claude": AdventureOfClaude,
           "Metroid: Claude's Mission": ClaudesMission,
+          "Claude Entertainment System": None,
           "Windows XP": WindowsXP, "3D Pipes": Pipes,
           "Beziers": Beziers, "Blank": Blank,
           "Copilot Matrix Rain": MatrixRain,
           "Flying Toasters": FlyingToasters, "Marquee": Marquee, "My Pictures Slideshow": Slideshow,
           "Mystify": Mystify, "Starfield": Starfield, "Aquarium": Aquarium, "Da Vinci": DaVinci, "Nature": Nature,
           "Space": Space}
+
+from . import ces  # noqa: E402
+
+SAVERS["Claude Entertainment System"] = ces.make_saver_class(Saver, SAVERS)   # all the NES games in turn (ces.py)
 
 
 def make(name, parent=None):
