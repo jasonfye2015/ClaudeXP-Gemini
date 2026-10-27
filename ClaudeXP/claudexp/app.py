@@ -241,6 +241,9 @@ class ClaudeXP(QMainWindow):
         from .programs import doggo
         if enabled("doggo"):
             QTimer.singleShot(3000, lambda: doggo.start_at_logon(self.desktop))
+        if enabled("deskmario"):
+            from .programs import deskmario
+            QTimer.singleShot(3500, lambda: deskmario.start_at_logon(self.desktop))
         from . import xpnags
         xpnags.at_logon(self.desktop)            # activation, Desktop Cleanup, Windows Messenger
         from .programs import copilot_widgets

@@ -278,6 +278,9 @@ class Claude7(QMainWindow):
             from claudexp.programs import doggo
             if enabled("doggo"):
                 QTimer.singleShot(3000, lambda: doggo.start_at_logon(self.desktop))
+            if enabled("deskmario"):
+                from claudexp.programs import deskmario
+                QTimer.singleShot(3500, lambda: deskmario.start_at_logon(self.desktop))
         except Exception:
             pass
         try:

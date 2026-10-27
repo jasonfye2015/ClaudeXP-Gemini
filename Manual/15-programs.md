@@ -1,6 +1,6 @@
 # 15. Every program
 
-Read from the three computers' registries on 27 October 2026: 175 programs in all, 166 on EPOCH-2001, 162 on SYSTEM-2011 and 151 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
+Read from the three computers' registries on 27 October 2026: 176 programs in all, 167 on EPOCH-2001, 163 on SYSTEM-2011 and 152 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
 
 ## Talking with your buddies
 
@@ -225,6 +225,7 @@ Assistants you talk to directly - not characters with lives of their own.
 | **Command Prompt** | A Windows tool | yes | yes | as *Terminal* |
 | **Control Panel** | A Windows tool | - | yes | yes |
 | **Desktop Gadget Gallery** | Clock, calendar, weather and more on the desktop | - | yes | - |
+| **Desktop Mario** | Mario on your desktop: he runs about the taskbar and stomps Goombas | yes | yes | yes |
 | **Disk Cleanup** | Disk Cleanup. | yes | yes | yes |
 | **Disk Defragmenter** | Disk Defragmenter. | yes | yes | as *Defragment and Optimize Drives* |
 | **Doggo** | A desktop dog: he follows you, plays, does tricks and naps | yes | yes | yes |
