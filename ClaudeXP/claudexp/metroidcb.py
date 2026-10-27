@@ -40,6 +40,7 @@ GRAVITY, FALL, RUN = 0.2, 5.0, 1.5
 JUMPS = (-3.6, -4.8, -5.8)                         # a hop, a jump and a full jump (2, 3½ and 5 tiles up)
 DRIFTS = (1.5, 0.75, -0.75, -1.5)
 JUMP_COST = 30                                     # frames: what a jump 'costs' over running
+TURN_COST = 40                                     # and turning back: only when there's no way on without it
 BODY_W, BODY_H = 12, 30                            # her box: 6 either side of x, 30 up from her feet
 
 # Samus (faces right on the sheet)
@@ -141,6 +142,21 @@ def cut(key, x, y, w=16, h=16, flip=False, clear=True):
             img = img.mirrored(True, False)
         _cache[k] = img
     return _cache[k]
+
+
+_anchors = {}
+
+
+def anchor(frame, flip=False):
+    """Where her helmet's middle is across a frame of Samus: the frames are cut to different widths (a leg out
+    behind, the cannon out in front), so they're lined up on the helmet or she'd judder as she runs."""
+    k = (frame, flip)
+    if k not in _anchors:
+        img = cut("samus", *frame, flip=flip)
+        h = img.height()
+        cols = [x for x in range(img.width()) for y in range(max(0, h - 32), h - 25) if img.pixel(x, y) >> 24]
+        _anchors[k] = (min(cols) + max(cols)) / 2 if cols else img.width() / 2
+    return _anchors[k]
 
 
 # ---- a corridor -----------------------------------------------------------------------------------------------------
@@ -246,9 +262,12 @@ class Strip:
                     return None
                 pts.append((x, y, True))
                 continue
-            pts.append((x, y, False))
             if target is not None and (x - target) * (vx or 1) >= 0:
+                if (x - vx - target) * (vx or 1) < 0:     # (reached it this frame: to the middle of the tile
+                    x = float(target)                   # exactly, so the next step doesn't start behind her)
+                pts.append((x, y, False))
                 return pts
+            pts.append((x, y, False))
         return None
 
     def standing(self, tx, y):
@@ -282,10 +301,14 @@ class Strip:
         return self.settle(pts) if pts else (None, None)
 
     def settle(self, pts):
-        """Where a move ends up as a standing node: the tile she landed on, walking to its middle."""
+        """Where a move ends up as a standing node: the middle of a tile she landed on - the one ahead of her if
+        there's floor there, so she runs on into it rather than stepping back."""
         x, y, _air = pts[-1]
         tx = int(x) // TILE
-        for c in (tx, tx + (1 if x % TILE >= TILE // 2 else -1), tx - (1 if x % TILE >= TILE // 2 else -1)):
+        d = 1 if x >= pts[0][0] else -1
+        here = tx * TILE + TILE // 2
+        ahead = tx if (here - x) * d >= 0 else tx + d
+        for c in dict.fromkeys((ahead, ahead - d, ahead + d)):
             if self.standing(c, y):
                 cx = c * TILE + TILE // 2
                 if abs(cx - x) < 0.5:
@@ -310,7 +333,7 @@ class Strip:
                 to, path = self.settle(pts)
                 if to is None:
                     continue
-                c = cost + len(path) + (0 if code in "rl" else JUMP_COST)
+                c = cost + len(path) + (0 if code in "rl" else JUMP_COST) + (TURN_COST if self._back(code) else 0)
                 if c < best.get(to, 1 << 30):
                     best[to], prev[to] = c, (node, code)
                     n += 1
@@ -321,6 +344,11 @@ class Strip:
             nd, code = prev[nd]
             codes = code + codes
         return start, end, codes
+
+    @staticmethod
+    def _back(code):
+        """Whether a move heads left (back the way she came)."""
+        return code == "l" or (code not in "r" and DRIFTS[(ord(code) - 97) % 4] < 0)
 
     def replay(self, start, codes):
         """The positions along a route, frame by frame, as (x, y, how): 0 on the ground, 1 in the air, 2 in a
@@ -347,87 +375,80 @@ class Strip:
 
 # the corridors, solved: (area, map row, first screen, last screen, where she starts, her moves)
 CORRIDORS = [
-    ('brinstar', 1, 4, 10, (0, 128), 'rrrrrrrrriirrrrrrairrrrrrrrreirrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrrrrirrrr'),
-    ('brinstar', 1, 15, 19, (0, 128), 'rrrrrrrrrrrrraerrrrrrraerrrrrrrrairrrrrrrrr'),
-    ('brinstar', 2, 17, 24, (0, 208), 'rrrrrrrrrjrrrraiirrrrrrjrrjrrrrrrrrrrrrrrrrerrlerrlerrrrrrlerrleiirirrrarr'),
-    ('brinstar', 2, 26, 29, (0, 160), 'aiirrrrlerrlerraiirrrrrrrirrrr'),
-    ('brinstar', 4, 7, 10, (0, 128), 'rrrrrrrrrrrrraerrrrrrrrairrrrrrrrrrrrirrrr'),
-    ('brinstar', 4, 25, 29, (0, 128), 'rrrrrrrrrrrrraerrrrrrraerrrrrrrrairrrrrrrrrrrrirrrr'),
+    ('brinstar', 1, 4, 10, (0, 128), 'rrrrrrrrrirrirriirrrrrriirrrrrrrrrrrrrrrrrrrrrirrrrrrrrrrirrrr'),
+    ('brinstar', 1, 15, 19, (0, 128), 'rrrrrrrrrriirriirrriirrrrrrrrr'),
+    ('brinstar', 2, 17, 24, (0, 208), 'rrrrrrrrrjrrrrbairrrrrrrjrrjrrrrrrrrrrrrrreajaarrrrrajaaairirrrjrr'),
+    ('brinstar', 2, 26, 29, (0, 160), 'aierajaarrrbairrrrrrrrirrrr'),
+    ('brinstar', 4, 7, 10, (0, 128), 'rrrrrrrrrriirrriirrrrrrrrrrrrirrrr'),
+    ('brinstar', 4, 25, 29, (0, 128), 'rrrrrrrrrriirriirrriirrrrrrrrrrrrirrrr'),
     ('brinstar', 6, 10, 29, (0, 128), (
-        'rrrrrirrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrrrrrrrrrarrrirrrrrrrrrrirrarrrriirrrrrrrrrrrrrrrrrrrrrrrrrrrra'
-        'rririrrrriirrrrrrrrrrrrrrrrrrrrrrrrrrrrarrrirrarriiiarrrirrrrirrarrrarrrirrrriirrrrrrrrirrrr'
+        'rrrrirrrrrrrrrrrrrrrrrrrrrrrrerrrrrrrrrrrririrrrrrrrrrirririirrrrrrrrrrrrrrrrrrrrrrrrriirirrrriirrrr'
+        'rrrrrrrrrrrrrrrrrrrrriririiieiirrrrirriiirrrriirrrrrrrirrrr'
     )),
-    ('brinstar', 8, 19, 21, (0, 128), 'rrrrrrrrrrrrrrairrrrrrrrrrrrirrrr'),
+    ('brinstar', 8, 19, 21, (0, 128), 'rrrrrrrrrrriirrrrrrrrrrrrirrrr'),
     ('brinstar', 10, 12, 21, (0, 128), (
-        'rrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrriirrrrrrrrrrrrrrrrrriirirrreieirrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrr'
-        'r'
+        'rrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrirrrrrrrrrrrrrriirirrriiiirrrrrrrrrirrrrrrrrrrrrrrrrrrrrr'
     )),
     ('brinstar', 13, 2, 8, (0, 208), (
-        'rrrrjrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrrerrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr'
+        'rrrrjrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrrerrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr'
     )),
-    ('norfair', 1, 14, 17, (0, 128), 'rirrririrrirrirrrarrrrrrrrrrrrrrrrrr'),
-    ('norfair', 2, 13, 17, (0, 128), 'rirrririrrririrrirrirrrarrrrrrrrr'),
+    ('norfair', 1, 14, 17, (0, 128), 'rirriririrrriirrrrrrrrrrrrrrrrr'),
+    ('norfair', 2, 13, 17, (0, 128), 'rirririrriririrrriirrrrrrrr'),
     ('norfair', 5, 4, 17, (0, 144), (
-        'rrrarierirrirrrrarrrirrrarrrrrrarrrraerrrrrrrrrrrrrrrrrrrrrrrerrrrrirrrarrrrrrrirrrarrrrirrrarrreirr'
-        'rrfrarrrarrrairrrarrrrrrrrr'
+        'rrreerairirrrirriirrriierrrrrrrrrrrrrrrrrrrrrrerrrrrerrarrrrrerrrerrerrrerreirrrfrarrrerrieirrrrrrrr'
     )),
-    ('norfair', 6, 11, 17, (0, 160), (
-        'rirrrririrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrarrrrrrrrrrrrrrrrrr'
-    )),
-    ('norfair', 7, 3, 5, (0, 128), 'rrrerrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrr'),
+    ('norfair', 6, 11, 17, (0, 160), 'rirrriirrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrriirrrrrrrrrrrrrrrrr'),
+    ('norfair', 7, 3, 5, (0, 128), 'rrrirrrrrrrrrrrrirrrrrrrrrrrrrrrrrrr'),
     ('norfair', 8, 0, 12, (2, 48), (
-        'rrrrerrrrrrriirrrirrrrrrrrrrirrrrrrrrrreirrrrrrrrrrrrrrrrrrrrrriirrrirrrrrrrjerirrrrrrrrrrrrrrrrrrrr'
-        'rrrrrrrrrrrraejrriejrre'
+        'rrrrerrrrrrriirrrrirrrrrrrrrrirrrrrrrriirrrrrrrrrrrrrrrrrrrrrriirrrrirrrrrrjiirrrrrrrrrrrrrrrrrrrrrr'
+        'rrrrrrrrrarfjrrifjrre'
     )),
-    ('norfair', 8, 15, 17, (0, 128), 'rrrerrrrrrrrrrrrrrirrrrrrrrrr'),
+    ('norfair', 8, 15, 17, (0, 128), 'rrrirrrrrrrrrrrrirrrrrrrrrr'),
     ('norfair', 9, 0, 11, (0, 128), (
-        'rrrrrrrrrrrrrrrrrrrriirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrarreirrrrrrrrrrrrrrrrrrrrrrierrirarrrrrrirarrrrr'
-        'rirairrrirarrrrrrrrrrrrrrr'
+        'rrrrrrrrrrrrrrrrrrrriirrrrrrrrrrrrrrrrrrrrrrrrrrrrrariirrrrrrrrrrrrrrrrrrrrrrierirarrrrrrirarrrrrrir'
+        'airrrrrrrrjrrrrrrrrrrrrrr'
     )),
-    ('norfair', 9, 13, 16, (0, 80), 'aarrrrrrrrrrrrrrrrrrrrrrrarreirrrrrrrrrrrrr'),
-    ('norfair', 10, 14, 17, (0, 144), 'rrrirrrrrrrrrreirrrrrrrrrrrrrrrrrrrrrrrrrir'),
-    ('norfair', 11, 3, 10, (0, 176), 'arriirrrrrrrrrrrrrrrrrrrrrrreijrrijaarriirrrrrrrrrrrrrrrrrrrrrrrearrrrrr'),
-    ('norfair', 12, 6, 8, (0, 128), 'rrrerrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrr'),
-    ('norfair', 12, 11, 17, (2, 48), 'rrrrerrrrrrreirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrirriirrrrrrrrr'),
-    ('norfair', 13, 4, 7, (2, 48), 'rrrrerrrrrrrerlirirrririrrrrrr'),
-    ('kraid', 1, 7, 10, (2, 96), 'rrrrirrrrrrrrrrrrrerrrrrrrrirrrrrajir'),
-    ('kraid', 5, 5, 10, (0, 208), 'rrrrrrrrirrrrrrrjrrrrrrrrrrrrrrrrrrreieerrrrrrrrirrrrrajir'),
+    ('norfair', 9, 13, 16, (0, 80), 'aarrrrrrrrrrrrrrrrrrrrrrariirrrrrrrrrrrrr'),
+    ('norfair', 10, 14, 17, (0, 144), 'rrrrirrrrrrrriirrrrrrrrrrrrrrrrrrrrrrrrir'),
+    ('norfair', 11, 3, 10, (0, 176), 'eiarrrrrrrrrrrrrrrrrrrrrreijrrijaeiarrrrrrrrrrrrrrrrrrrrrreerrrrrr'),
+    ('norfair', 12, 6, 8, (0, 128), 'rrrirrrrrrrrrrrrirrrrrrrrrrrrrrrrrrr'),
+    ('norfair', 12, 11, 17, (2, 48), 'rrrrerrrrrrreirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrriiriarrrrrrrr'),
+    ('norfair', 13, 4, 7, (2, 48), 'rrrrerrrrrrreaiirririrrrr'),
+    ('kraid', 1, 7, 10, (2, 96), 'rrrrirrrrrrrrrrrrirrrrrrirrrrrajir'),
+    ('kraid', 5, 5, 10, (0, 208), 'rrrrrrrrirrrrrrrjrrrrrrrrrrrrrrrreieerrrrrrrirrrrrajir'),
     ('kraid', 6, 0, 7, (0, 128), (
-        'rjrljrrerrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrjrrrrrrrrrrrrrrrr'
-        'rrre'
+        'rjjiirrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrjrrrrrrrrrrrrrrrre'
     )),
-    ('kraid', 8, 7, 11, (0, 128), 'rrrrrrrrrrerrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrajir'),
-    ('kraid', 9, 9, 11, (1, 176), 'ieerrrrrrrrirrrrae'),
-    ('kraid', 10, 4, 6, (0, 128), 'rrrrrrrrrrerrrrrrrrirrrrrrrrrr'),
+    ('kraid', 8, 7, 11, (0, 128), 'rrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrajir'),
+    ('kraid', 9, 9, 11, (1, 176), 'ieerrrrrrrirrrrae'),
+    ('kraid', 10, 4, 6, (0, 128), 'rrrrrrrrrrirrrrrrirrrrrrrrrr'),
     ('kraid', 11, 1, 8, (0, 128), (
-        'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrreieerrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrirrrrrrrrrr'
+        'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrreieerrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrirrrrrrrrrr'
     )),
     ('kraid', 12, 2, 11, (0, 128), (
-        'rirlirrrrrrrrrrrrrrrrrrrrirrrrrrrrrirrrrrrrrrirrrrrrrrrrairrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr'
-        'rrrrrrrrra'
+        'rrjrjrrrrrrrrrrrrrrrrrrrrirrrrrrrrrirrrrrrrrrirrrrrrrrrairrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr'
+        'rrrrrrrra'
     )),
-    ('kraid', 13, 7, 11, (0, 128), 'rrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrerrrrrrrrirrrrrajir'),
-    ('ridley', 1, 4, 9, (0, 176), 'rrrrrrrrrirrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrlirrrrrrr'),
+    ('kraid', 13, 7, 11, (0, 128), 'rrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrirrrrrajir'),
+    ('ridley', 1, 4, 9, (0, 176), 'rrrrrrrrrirrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrijrrrrrrr'),
     ('ridley', 2, 5, 16, (0, 192), (
-        'rrrirrrrrrrrrrirrrrrrrrrrirrrrrrrrearrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrrririierrreirrr'
-        'iererrrrrrrrraer'
+        'rrrirrrrrrrrrirrrrrrrrrirrrrrrreaerrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrrriiiirriririererrrr'
+        'rrrraer'
     )),
     ('ridley', 4, 1, 8, (0, 128), (
-        'rrrrrrlirrrrearrirrrrrrirrrrrrrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrr'
+        'rrrrrlirrreaerrrrrrirrrrrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrr'
     )),
-    ('ridley', 4, 11, 16, (1, 192), 'rreerrrerrerrrrerrerrrrerrerrrrrrrrrrrrlirrrrrrrrraer'),
-    ('ridley', 6, 10, 16, (0, 160), (
-        'rirrrrjrrrirrrrjrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrearrirrrrrrrraer'
-    )),
+    ('ridley', 4, 11, 16, (1, 192), 'riirririirriirrirrrrrrrijrrrrrrrrraer'),
+    ('ridley', 6, 10, 16, (0, 160), 'rirrrjrrirrrjrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrreaerrrrrrrraer'),
     ('ridley', 7, 0, 16, (0, 128), (
-        'rrrrrrrrrrrrrrrrrrrrrerrrrrrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrirrrrrr'
-        'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr'
-        'rrrrrrrrrrrrrrrrrrrrrrrrlirrrrrrrrrrrrrrrrrrr'
+        'rrrrrrrrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrirrrrrrrrr'
+        'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr'
+        'rrrrrrrrrrrrrrrrijrrrrrrrrrrrrrrrrrrr'
     )),
     ('tourian', 4, 2, 9, (0, 128), (
-        'rrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrririrrirrirrrrrrrrrrrrrrrrrrrrrirrrrrrrrrrr'
+        'rrrrrrirrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrririrrirrirrrrrrrrrrrrrrrrrrrrirrrrrrrrrrr'
     )),
-    ('tourian', 8, 4, 9, (0, 128), 'arrrrrrarrrrrrjerrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrriirrrrrrrirrrrr'),
+    ('tourian', 8, 4, 9, (0, 128), 'arrrrrrarrrrrrjarrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrierrrrrrrirrrr'),
 ]
 
 
@@ -471,7 +492,7 @@ class ClaudesMission:
         self.coming = None                              # the next time, once the changed blocks have crumbled
         self.crumbled = set()
         self.last_minute = self.now().minute
-        self.cam = 0.0
+        self.cam = 0
         self.passed = 0
         self._next_corridor()
 
@@ -514,7 +535,8 @@ class ClaudesMission:
         self.energy = min(99, self.energy + 20)
 
     def _cam_for(self, x):
-        return max(0.0, min(float(self.strip.w - self.W), x - self.W * 0.4))
+        """Whole pixels, from her whole-pixel x: she and the corridor then move together, never a pixel apart."""
+        return max(0, min(self.strip.w - self.W, int(x) - int(self.W * 0.4)))
 
     def _open(self, door):
         """Shoot a bubble door: its caps (the 8-pixel crescents either side of the tube) go."""
@@ -587,7 +609,8 @@ class ClaudesMission:
         self._enemies()
         self._shots()
         self._bits()
-        self.cam += (self._cam_for(self.samus.x) - self.cam) * 0.25
+        d = self._cam_for(self.samus.x) - self.cam        # (catching up, a few pixels a frame, after a door)
+        self.cam += max(-4, min(4, d))
         if self.i >= len(self.path) and not self.hold:
             self.fade = 40                                # the end of the corridor: through the door
 
@@ -609,11 +632,14 @@ class ClaudesMission:
         if self.i < len(self.path):
             x, y, how = self.path[self.i]
             self.i += 1
-            if x != S.x:
-                self.facing = 1 if x > S.x else -1
-            S.vx, S.vy = x - S.x, y - S.y
+            ahead = self.path[min(self.i + 8, len(self.path) - 1)][0] - x
+            if x != S.x and ahead and (ahead > 0) == (x > S.x):
+                self.facing = 1 if x > S.x else -1      # (she turns only when she's going that way for a while:
+            S.vx, S.vy = x - S.x, y - S.y               # a few pixels' settling back after a landing is a skid)
             S.x, S.y = x, y
-            S.state = ("spin" if how == 2 and self.aim is None else "air") if how else ("run" if S.vx else "stand")
+            back = S.vx and (S.vx > 0) != (self.facing > 0)
+            S.state = ("spin" if how == 2 and self.aim is None else "air") if how else \
+                ("stand" if back or not S.vx else "run")
         else:
             S.vx = S.vy = 0.0
             S.state = "stand"
@@ -909,12 +935,12 @@ class ClaudesMission:
         else:
             frame = SAMUS["shoot"] if self.aim == "ahead" else SAMUS["up"] if self.aim == "up" else SAMUS["stand"]
         img = cut("samus", *frame, flip=flip)
+        sx = int(S.x) - cam
         if st == "spin":
-            x, y = int(S.x) - img.width() // 2, int(S.y) - 20 - img.height() // 2
+            x, y = sx - img.width() // 2, int(S.y) - 20 - img.height() // 2
         else:
-            x = int(S.x) - 8 if not flip else int(S.x) + 8 - img.width()
-            y = int(S.y) - img.height()
-        p.drawImage(x - cam, y, img)
+            x, y = sx - int(anchor(frame, flip) + 0.5), int(S.y) - img.height()
+        p.drawImage(x, y, img)
 
     def _draw_enemy(self, p, e, cam):
         if e.state == "burst":

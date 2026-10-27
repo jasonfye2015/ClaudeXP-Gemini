@@ -35,13 +35,25 @@ class Saver(QWidget):
         super().__init__(parent)
         self.setAttribute(Qt.WA_OpaquePaintEvent)
         self.timer = QTimer(self)
+        self.timer.setTimerType(Qt.PreciseTimer)    # (Windows' coarse timers tick late: 16 ms becomes 31)
         self.timer.timeout.connect(self._tick)
         self.timer.start(int(1000 / self.FPS))
         self.t = 0.0
+        self._last = time.monotonic()
+        self._owed = 0.0
 
     def _tick(self):
-        self.t += 1 / self.FPS
-        self.step()
+        """As many steps as the time since the last tick calls for (up to 4), then one paint - so a late or busy
+        tick doesn't slow the animation down, it just skips a frame."""
+        now = time.monotonic()
+        self._owed = min(4.0, self._owed + (now - self._last) * self.FPS)
+        self._last = now
+        if self._owed < 1.0:
+            return
+        while self._owed >= 1.0:
+            self._owed -= 1.0
+            self.t += 1 / self.FPS
+            self.step()
         self.update()
 
     def step(self):
