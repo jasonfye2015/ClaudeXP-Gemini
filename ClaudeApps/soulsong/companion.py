@@ -292,7 +292,10 @@ class Companion:
         return sum(estimate_tokens(m["content"]) for m in self._messages())
 
     def context_size(self):
-        return int(self.cfg.get("context", 32768))
+        """The window that's really there: the setting, or less if the engine runs the model smaller."""
+        size = int(self.cfg.get("context", 32768))
+        engine = self.cfg.get("engine_context")
+        return min(size, int(engine)) if engine else size
 
     def unremembered(self):
         """Exchanges in this window that no memory covers yet."""
@@ -757,8 +760,18 @@ class Companion:
             self._named(self.cfg["name"], INTRO_NAMED, chosen=False)
             return
         self.say(NAMING)
+        tries = {"n": 0}
 
         def ask_name(nxt):
+            answered = bool(self.history) and self.history[-1]["role"] == "assistant"
+            if not answered and tries["n"] < 1:          # no answer to the naming question: it's asked once more
+                tries["n"] += 1
+                self.on_line("system", "No answer yet - asking the naming question once more.")
+                self._push(lambda n: self._say(NAMING, True, n), first=True)
+                self._push(ask_name)
+                nxt()
+                return
+
             def done(text, err):
                 guess = re.sub(r"[^\w' -]", "", (text or "").strip().splitlines()[0] if text.strip() else "")[:40].strip()
 

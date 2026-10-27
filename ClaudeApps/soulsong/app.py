@@ -33,15 +33,27 @@ class EngineBrain(QObject):
         self.engine.status.connect(self.status)
         self.engine.loaded.connect(self.ready)
         self.engine.chunk.connect(self._chunk)
+        self.engine.thinking.connect(lambda text: self.on_thinking(text))
         self.engine.done.connect(self._done)
         self._job = None
+        self.think = False                  # let a thinking model think before it answers (Settings)
+        self.on_thinking = lambda text: None
 
     def load(self, model, engine_choice, context):
         self.engine.load(model, engine_choice, context)
 
     def ask(self, messages, done, chunk=None, max_tokens=700, temperature=0.8):
+        """A thinking model (Gemma 4, Qwen3...) spends its tokens thinking before it answers: with thinking off
+        it answers straight away; with it on, it gets room to think (and its thinking is shown as it comes)."""
         self._job = (done, chunk)
-        self.engine.chat(messages, temperature=temperature, max_tokens=max_tokens)
+        extra = None
+        model = self.engine.model
+        if model is not None and model.info.get("thinking"):
+            if self.think:
+                max_tokens += 3000
+            else:
+                extra = {"chat_template_kwargs": {"enable_thinking": False}}
+        self.engine.chat(messages, temperature=temperature, max_tokens=max_tokens, extra=extra)
 
     def _chunk(self, text):
         if self._job and self._job[1]:
@@ -57,6 +69,19 @@ class EngineBrain(QObject):
 
     def shutdown(self):
         self.engine.shutdown()
+
+
+def engine_context(model):
+    """The context the model really runs with: in a Timeline computer, a Timeline model runs on the shared engine
+    at its own context size (AI Models' settings); otherwise the Companion's setting decides (None)."""
+    try:
+        from kithylinai.paths import hosted
+        if model.key.startswith("timeline:") and hosted():
+            from claudecore.ai import ai_models
+            return int(ai_models.config()["context"])
+    except Exception:
+        pass
+    return None
 
 
 def model_list():
@@ -656,6 +681,7 @@ class SoulAndSong(QWidget):
         self.s_greeting = QLineEdit()
         self.s_requests = QCheckBox("Show the memory requests in the conversation")
         self.s_recall = QCheckBox("Recall older memories from the archive when they relate")
+        self.s_think = QCheckBox("Let thinking models think before answering (slower; you see their thinking)")
         load = QPushButton("Save and load this model")
         load.clicked.connect(self.save_settings)
         f.addRow("Your name:", self.s_user)
@@ -670,6 +696,7 @@ class SoulAndSong(QWidget):
         f.addRow("Greeting:", self.s_greeting)
         f.addRow(self.s_requests)
         f.addRow(self.s_recall)
+        f.addRow(self.s_think)
         f.addRow(load)
         return w
 
@@ -760,6 +787,7 @@ class SoulAndSong(QWidget):
         self.comp = C.Companion(folder, self.brain)
         self.comp.on_line = self._line
         self.comp.on_stream = lambda t: self.typing.setText(f"{self.comp.name} is writing: {t[-400:]}")
+        self.brain.on_thinking = lambda t: self.typing.setText(f"{self.comp.name} is thinking: {t[-400:]}")
         self.comp.on_changed = self.refresh_panel
         self.comp.on_name = self._confirm_name
         self.chat.clear()
@@ -819,7 +847,8 @@ class SoulAndSong(QWidget):
         if model is None or self.comp is None:
             return
         about = (model.info.get("source") or "").split(":")[0].strip()[:160]
-        self.comp.set_substrate(model.title, about, self.comp.cfg.get("context"))
+        self.comp.cfg["engine_context"] = engine_context(model)
+        self.comp.set_substrate(model.title, about, self.comp.context_size())
         self.refresh_self()
 
     def _confirm_name(self, guess, accept):
@@ -975,6 +1004,8 @@ class SoulAndSong(QWidget):
         self.s_greeting.setText(c.get("greeting", C.DEFAULTS["greeting"]))
         self.s_requests.setChecked(bool(c.get("show_requests")))
         self.s_recall.setChecked(bool(c.get("recall", True)))
+        self.s_think.setChecked(bool(c.get("think", False)))
+        self.brain.think = bool(c.get("think", False))
 
     def save_settings(self):
         if self.comp is None:
@@ -985,7 +1016,8 @@ class SoulAndSong(QWidget):
                  memory_every=self.s_every.value(), day_starts=self.s_day.value(), memory_day_every=self.s_md.value(),
                  auto_greet=self.s_greet.isChecked(), greeting=self.s_greeting.text().strip() or
                  C.DEFAULTS["greeting"], show_requests=self.s_requests.isChecked(),
-                 recall=self.s_recall.isChecked())
+                 recall=self.s_recall.isChecked(), think=self.s_think.isChecked())
+        self.brain.think = self.s_think.isChecked()
         self.comp.save()
         self._line("system", "Settings saved.")
         self.load_model()

@@ -235,6 +235,7 @@ class _Loader(QThread):
 
 class _Streamer(QThread):
     chunk = Signal(str)
+    thinking = Signal(str)          # a thinking model's reasoning so far (before its answer)
     done = Signal(str, str)
 
     def __init__(self, url, body):
@@ -252,7 +253,7 @@ class _Streamer(QThread):
             pass
 
     def run(self):
-        text = ""
+        text = reasoning = ""
         try:
             req = urllib.request.Request(self.url + "/v1/chat/completions", data=json.dumps(self.body).encode(),
                                          headers={"Content-Type": "application/json"})
@@ -274,6 +275,10 @@ class _Streamer(QThread):
                 if piece:
                     text += piece
                     self.chunk.emit(text)
+                thought = delta.get("reasoning_content")
+                if thought:
+                    reasoning += thought
+                    self.thinking.emit(reasoning)
             self.done.emit(text, "stopped" if self._stop else "")
         except urllib.error.HTTPError as e:
             try:
@@ -289,6 +294,7 @@ class Engine(QObject):
     status = Signal(str)            # a line for the chat, in purple
     loaded = Signal(bool)           # is a model ready?
     chunk = Signal(str)             # the reply so far
+    thinking = Signal(str)          # a thinking model's reasoning so far
     done = Signal(str, str)         # the reply, error
 
     def __init__(self, parent=None):
@@ -342,7 +348,8 @@ class Engine(QObject):
         self.loaded.emit(False)
 
     # ---- talking ------------------------------------------------------------------------------------------------
-    def chat(self, messages, temperature=0.9, max_tokens=600):
+    def chat(self, messages, temperature=0.9, max_tokens=600, extra=None):
+        """extra: more for llama-server's request (e.g. {"chat_template_kwargs": {"enable_thinking": False}})."""
         if not self.ready or self.model is None:
             self.done.emit("", "no model loaded")
             return
@@ -356,8 +363,10 @@ class Engine(QObject):
                 "max_tokens": int(max_tokens), "cache_prompt": True}
         if self.model.info.get("stop"):
             body["stop"] = list(self.model.info["stop"])
+        body.update(extra or {})
         self._streamer = _Streamer(url, body)
         self._streamer.chunk.connect(self.chunk)
+        self._streamer.thinking.connect(self.thinking)
         self._streamer.done.connect(self._done)
         self._streamer.start()
 
