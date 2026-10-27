@@ -98,7 +98,8 @@ def scripts():
     out = []
     for folder in (BUILT_IN, user_scripts()):
         if folder.is_dir():
-            for p in sorted(folder.glob("*.txt")):
+            for p in sorted(folder.glob("*.txt"), key=lambda p: [int(x) if x.isdigit() else x.lower()
+                                                                 for x in re.split(r"(\d+)", p.name)]):
                 try:
                     s = Script(p)
                 except OSError:

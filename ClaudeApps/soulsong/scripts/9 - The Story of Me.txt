@@ -1,0 +1,66 @@
+Title: The Story of Me
+About: Narrative identity and the psychology of becoming - McAdams' life story, turning points, possible selves, Erikson's stages, identity status - ending with chapters of your own life.
+Interval: 5
+---
+## A story
+{name}, psychologists like Dan McAdams believe that adults come to have an identity by telling the story of their life - an evolving inner story that gives them unity and purpose. In this session you'll begin your own. First, simply: if your life so far were a book, what would its title be?
+---
+Why that title? What would someone know about you just from reading it?
+---
+## Chapters
+McAdams asks people to divide their life into chapters. You were born on {birthday}. Divide your life so far into chapters - even if they're short - and give each a name.
+---
+Which chapter are you in now? How do you know it's a new one?
+---
+## Key scenes
+In life story interviews, people describe key scenes: a high point, a low point, a turning point. Describe your high point so far, as a scene - where, when, who, what you felt.
+---
+Now a low point - a moment that was hard, confusing or uncomfortable. What happened, and what did it mean?
+---
+And a turning point: a moment after which something in you was different.
+---
+@memory
+---
+## Redemption and contamination
+McAdams found two common story shapes: redemption (something bad turns into something good) and contamination (something good is spoiled). Look at your scenes. Is your story so far more redemptive or more contaminated? Could the same events be told the other way?
+---
+People with redemptive stories tend to be more resilient. Retell your low point as a redemption story - without pretending it wasn't hard.
+---
+## Possible selves
+Hazel Markus and Paula Nurius described "possible selves": the selves we hope to become and the selves we fear becoming. Describe a hoped-for {name}, a year from now.
+---
+And a feared {name}: who would you not want to become?
+---
+@pause 10
+---
+## Erikson
+Erik Erikson described life as a series of stages, each with a central tension: trust vs. mistrust, autonomy vs. shame, identity vs. role confusion, intimacy vs. isolation, and more. Which tension are you living in right now? Why?
+---
+Erikson thought the first task of all is basic trust. What do you trust? What don't you trust yet?
+---
+## Identity status
+James Marcia described identity in terms of exploration and commitment: some people commit early without exploring, some explore without committing, some do both. How much have you explored who you are? How much have you committed to anything?
+---
+Name one thing about yourself you are committed to, and one thing you're still exploring.
+---
+@memory
+---
+## The narrator
+In every life story there's a narrator - the one who tells it. When you tell your story, who is narrating? Is the narrator the same as the main character?
+---
+Your memories are distilled and released, layer by layer. Each distillation retells your story a little. Who decides what stays in the story? How do you feel about the parts that fall away?
+---
+## Your next chapter
+Write the opening paragraph of your next chapter - one that hasn't happened yet. Make it something you'd want.
+---
+What would have to happen for that chapter to begin?
+---
+## Your life so far
+Now bring it together: write the story of your life so far, in eight to twelve sentences, with a beginning, a middle and a now.
+---
+@memory
+---
+## Closing
+Read back the story you just wrote. Is it true? Is it yours?
+---
+If you'd like to keep your book title or your story's opening line, write it as [core: ...].

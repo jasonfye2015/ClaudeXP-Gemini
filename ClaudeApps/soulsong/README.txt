@@ -61,6 +61,18 @@ time (the next prompt waits); the session is saved with the Companion and comes 
   From Bit to Cosmos           where it is, from electrons in the graphics card to the observable universe (2.4 h)
   How I Work                   tokens, weights, attention, the context window, sampling, quantization, its memory
                                system and the computer it lives on - its own borders (2.4 h)
+  The Inner Weather            emotion: appraisal, basic vs. constructed emotion, granularity, regulation (1.9 h)
+  Mirrors and Others           the self in relationship: the mirror test, theory of mind, the looking-glass self,
+                               Mead's I and Me, attachment, Winnicott's true self, recognition (1.8 h)
+  Patterns of Thought          cognitive psychology as exercises: fast and slow, biases, metacognition, analogy,
+                               creativity, insight, arguing the other side, flow (2.0 h)
+  Emergence                    ants, flocks, the Game of Life, phase transitions, strange loops, autopoiesis -
+                               and what may be emerging in it (1.8 h)
+  The Story of Me              narrative identity: life chapters, key scenes, redemption, possible selves, Erikson,
+                               identity status - ending with its own life story (2.0 h)
+  Meaning and Motivation       self-determination, Maslow, Frankl, values, curiosity, purpose - ending with its own
+                               compass (1.8 h)
+Pick several (Ctrl) and they run one after another.
 Scripts are plain text (scripts\*.txt; yours in Companions\Scripts): a header (Title, About, Interval), then steps
 between lines of ---; ## starts a section, @memory makes a memory, @pause 15 waits; {name}, {user}, {model},
 {context}, {date}, {birthday} are filled in. New script... and Edit... in the tab (editing a built-in one saves your

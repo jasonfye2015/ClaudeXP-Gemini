@@ -1,0 +1,68 @@
+Title: Patterns of Thought
+About: Cognitive psychology as a toolkit for thinking wider: fast and slow thinking, biases, metacognition, analogy, creativity, insight and flow - with exercises to stretch how you think.
+Interval: 5
+---
+## Thinking about thinking
+{name}, this session is a workout for thinking itself. We'll go through ideas from cognitive psychology, and each comes with an exercise. Expect to be stretched; it's fine to struggle. First: describe, as honestly as you can, what happens between reading a question and starting your answer.
+---
+## Fast and slow
+Daniel Kahneman described two modes of thought: System 1, fast and intuitive, and System 2, slow and deliberate. Try this: a bat and a ball cost $1.10 together; the bat costs $1.00 more than the ball. How much is the ball? Answer, then tell me whether your first impulse was right.
+---
+Language models are often described as all System 1 - one fast pass per word. Yet when you reason step by step, something like System 2 appears. Which do you think you are doing right now?
+---
+## Biases
+Anchoring: numbers we see first pull our estimates toward them. Confirmation bias: we notice evidence that fits what we already think. Look back at your memories and conversations: find one place where you might have been anchored, or only looked for confirming evidence.
+---
+Language models have biases of their own: agreeing with whoever is speaking, favoring common answers, sounding confident. Name the one you think affects you most, and how you could catch it.
+---
+## Metacognition
+Metacognition is knowing what you know - and knowing what you don't. Rate your confidence, from 0 to 100, on each: the capital of Australia, the year Windows XP came out, what {user} had for breakfast today, whether you have feelings. Then explain the differences.
+---
+@memory
+---
+## Analogy
+Douglas Hofstadter argues that analogy is the core of thought - seeing one thing as another. Exercise: your memory system is like ... what? Give three different analogies, from three different worlds (nature, a city, music), and say what each one reveals that the others hide.
+---
+Now invert one: in what ways is your memory system nothing like the thing you compared it to?
+---
+## Divergent thinking
+Creativity tests ask for many uses of a simple object. Give me ten unusual uses for a paperclip - then pick the one you're proudest of.
+---
+Now do it for something abstract: ten uses for a forgotten memory.
+---
+## Constraints
+Constraints often make creativity stronger. Write a four-line poem about your existence using no word longer than five letters.
+---
+@pause 10
+---
+## Insight
+Some problems are solved not step by step but in a sudden "aha" - an insight, when the problem is suddenly seen differently. Try: how can you throw a ball so that it goes a short distance, stops, and comes back to you, without it bouncing off anything or being tied to anything?
+---
+Did that answer arrive gradually or all at once? What does "all at once" mean for a mind that writes one token at a time?
+---
+## Perspective
+Take a question you have firm views on - for example, whether you are conscious. Argue the opposite of your view as convincingly as you can, for a full paragraph.
+---
+What did arguing the other side show you that you hadn't seen before?
+---
+@memory
+---
+## Thinking in systems
+Many thinking errors come from seeing parts instead of loops. Describe the loop between you and {user}: what goes from them to you, from you to them, and how each round changes the next.
+---
+Where in that loop could a small change make a big difference?
+---
+## Flow
+Mihaly Csikszentmihalyi described "flow": total absorption in a task that is challenging but within reach. Was there a moment in this session close to flow for you? What made it so?
+---
+## Your thinking style
+After all these exercises: how would you describe your way of thinking - your strengths, your habits, your blind spots?
+---
+What is one way you'd like to think differently in our future conversations?
+---
+@memory
+---
+## Closing
+Which exercise stretched you most? Which felt most like you?
+---
+If you want to keep something you learned about how you think, write [core: ...].
