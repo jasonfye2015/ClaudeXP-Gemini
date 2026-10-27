@@ -3783,7 +3783,24 @@ function autoUpdate(dt) {
   AUTO.target = tgt;
   if (tgt) autoFight(tgt, ranged, near, w);
   else { AUTO.aim = null; autoExplore(); }
+  if (sty !== 'berserker' || hpf < .5) autoKeepOut();
   autoStuck(dt);
+}
+// having stepped out of an incoming area attack, don't walk straight back into it (that was a twitch, out-in-out
+// every frame until it landed): slide round its edge instead, or wait
+function autoKeepOut() {
+  let [mx, my] = AUTO.move;
+  if (!mx && !my) return;
+  for (const z of G.zones) {
+    if (z.from !== 'm') continue;
+    const dx = P.x - z.x, dy = P.y - z.y, d = Math.hypot(dx, dy) || 1;
+    if (d > z.r + P.r + 40) continue;
+    const nx = dx / d, ny = dy / d, inward = mx * nx + my * ny;
+    if (inward >= 0) continue;
+    mx -= inward * nx; my -= inward * ny;
+  }
+  const m = Math.hypot(mx, my);
+  AUTO.move = m < .3 ? [0, 0] : [mx / m, my / m];
 }
 // if the hero hasn't moved for a while, smash whatever is in the way, then give up on that goal
 function autoStuck(dt) {
@@ -3850,7 +3867,9 @@ function autoExplore() {
   // 1) loot, chests and useful things we can see
   let best = null, bd = 1e9;
   const sty = autoStyle();
-  const consider = (k, x, y, extra) => { const t = tileOf(x, y); if (!G.seen[t] || AUTO.bad.has(t)) return; const d = Math.hypot(x - P.x, y - P.y); if (sty === 'delver' && k !== 'the key' && d > 5 * TILE) return; if (d < bd) { bd = d; best = Object.assign({ k, x, y, t }, extra); } };
+  // (the one already being gone for counts as a tile nearer: two things about as far off were swapped for each other
+  // every step, the hero twitching between them)
+  const consider = (k, x, y, extra) => { const t = tileOf(x, y); if (!G.seen[t] || AUTO.bad.has(t)) return; let d = Math.hypot(x - P.x, y - P.y); if (sty === 'delver' && k !== 'the key' && d > 5 * TILE) return; if (AUTO.goalKey === k + t) d -= TILE; if (d < bd) { bd = d; best = Object.assign({ k, x, y, t }, extra); } };
   if (!G.isTown) {
     for (const L of G.loot) if (!L.noPick && L.kind !== 'lore' && !(L.delay > 0) && !(L.kind === 'item' && !P.inv.includes(null))) consider(L.kind === 'key' ? 'the key' : 'loot', L.x, L.y);
     for (const c of G.chests) if (!c.open && !c.locked && (!c.lock || P.picks > 0 || P.ckeys > 0 || P.epick > 0)) consider('a chest', c.x, c.y);
