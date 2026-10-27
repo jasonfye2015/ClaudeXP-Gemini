@@ -109,6 +109,16 @@ def _patch_lj(m):
     xpfaces.patch_lj(m)
 
 
+def _patch_autopilot(m):
+    from . import autopilot7
+    autopilot7.patch_panel(m)
+
+
+def _patch_autopilot_legs(m):
+    from . import autopilot7
+    autopilot7.patch_legs(m)
+
+
 def _patch_sites(m):
     from . import xpfaces
     xpfaces.patch_sites(m)
@@ -186,6 +196,8 @@ PATCHES = {
     "claudexp.programs.messengers.core": _patch_messengers_core,
     "claudexp.life": _patch_life,
     "claudexp.life.mail_extras": _patch_mail_extras,
+    "claudexp.autopilot": _patch_autopilot,
+    "claudexp.autopilot.legs": _patch_autopilot_legs,
 }
 
 

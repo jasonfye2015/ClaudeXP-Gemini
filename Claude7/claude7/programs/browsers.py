@@ -473,6 +473,10 @@ def _launch(desktop, key, make, name, icon, url=None, size=(900, 650)):
     browser.frame = frame
     frame.destroyed.connect(lambda *_: _open.pop(key, None))
     _open[key] = frame
+    if key == "ie":                                    # (XP code that looks for IE's window - the autopilot - finds it)
+        ie = _ie_base()
+        ie._frame = frame
+        frame.destroyed.connect(lambda *_: setattr(ie, "_frame", None))
     desktop.open_window(frame)
     browser.start(url)
 

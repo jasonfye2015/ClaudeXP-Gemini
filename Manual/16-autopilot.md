@@ -250,8 +250,11 @@ training, back up and format first, or read chapter 9.
   the buddies' histories, the MUCK logs it, his hero's progress is saved. The residents treat him exactly as they
   treat you, because to them he is you.
 - Several buddies tend to IM him the moment he signs on. He answers them one at a time, a few seconds apart.
-- **Windows 7 and 11** don't have him yet: their messengers, mail and browsers need their own legs. XP has the
-  most to do and was built first.
+- **Windows 7 has him too** (Start > All Programs > Kithylin Autopilot on SYSTEM-2011). It's the same program
+  with every leg: AIM, Windows Live Mail, Internet Explorer 9 on the 2011 Web, ClaudeTV, ClaudeRPG, the MUCK and
+  all of Local Storage, with his words set in 2011. SYSTEM-2011 keeps its own settings, day, diary and chat
+  histories (in `Claude7\data`), starting from the same standard set-up. **Windows 11** doesn't have him yet:
+  without AIM, his messenger leg needs a new home there.
 - The Furry Log (chapter 4) records everything he does, line by line, under `AUTOPILOT`, and the panel shows the
   last of it.
 
@@ -268,3 +271,5 @@ and `content.py` (Local Storage: comics, galleries, stories, chat logs, Explorer
 what he knows how to do on XP: one class per activity, each with a title, a line for the Legs tab and how long a
 stretch lasts.
 Adding an activity is one new class there; giving another computer the autopilot is an adapter with its own legs.
+On Windows 7 the same code runs through Claude7's compatibility layer (`Claude7\claude7\xpcompat.py`);
+`Claude7\claude7\autopilot7.py` holds what's different there (the Web leg's 2011 words and searches).

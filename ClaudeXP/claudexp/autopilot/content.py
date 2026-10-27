@@ -356,6 +356,16 @@ class CameraRoll(_Gallery):
     blurb = "flip through a month of old phone photos"
     weight = 0.5
 
+    def find_pictures(self, ctx, g, seen):
+        # (on a computer that hasn't opened it before, the archive dates every photo first: the shelves are empty
+        # until it has - wait for it, the way a person would, rather than finding nothing and leaving)
+        if getattr(g, "items", "") is None:
+            ctx.status(f"{self.app}: waiting while it looks through the camera rolls")
+            yield (lambda: g.items is not None, 900)
+            if g.items is None:
+                return False
+        return (yield from super().find_pictures(ctx, g, seen))
+
 
 # ---- FurStory Reader -------------------------------------------------------------------------------------------
 class Stories(Leg):
