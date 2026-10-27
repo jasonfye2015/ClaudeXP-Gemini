@@ -104,6 +104,10 @@
   "file:Kithylin Autopilot.lnk": [
    3,
    4
+  ],
+  "file:Claude QBasic Studio.lnk": [
+   3,
+   5
   ]
  },
  "hidden": [],
@@ -115,6 +119,10 @@
   {
    "file": "Claude Manual.lnk",
    "program": "manual"
+  },
+  {
+   "file": "Claude QBasic Studio.lnk",
+   "program": "qbstudio"
   },
   {
    "file": "ClaudeAI.lnk",

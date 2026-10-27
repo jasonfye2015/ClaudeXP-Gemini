@@ -112,6 +112,7 @@ def builtins():
         ("prog:irc", "ClaudeIRC", lambda: programs.get("irc").icon()),
         ("prog:muck", "ClaudeMUCK", lambda: programs.get("muck").icon()),
         ("prog:pystudio", "Copilot Python Studio", lambda: programs.get("pystudio").icon()),
+        ("prog:qbstudio", "Claude QBasic Studio", lambda: programs.get("qbstudio").icon()),
         ("prog:bluesky", "Kithy on Bluesky", lambda: programs.get("bluesky").icon()),
     ]
     return [icon for icon in icons if icon[0] not in in_folder]

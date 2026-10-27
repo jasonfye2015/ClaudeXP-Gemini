@@ -130,6 +130,8 @@ CATALOG = {
     "moviemaker": ("office", "Windows Movie Maker 1.1: storyboard your clips and pictures, add music, and save a "
                              "real .wmv movie."),
     "pystudio": ("office", "Copilot Python Studio: write and run Python offline, with an AI Helper."),
+    "qbstudio": ("office", "Claude QBasic Studio: write and run QBasic programs - or describe one and let the AI "
+                           "vibe-code it, running and fixing it until it works."),
     # media
     "wmp": ("media", "Windows Media Player 8 with visualizations, a Media Library and skins."),
     "claudeamp": ("media", "ClaudeAmp - it really whips the llama's ass. Plays music and video."),

@@ -26,10 +26,11 @@ PROGRAM_FOLDERS = {"Games": ["Games"], "Games/Solitaire & Casual Games": ["Games
                    "Windows Tools": ["Windows Tools"]}
 # loose shortcuts on a fresh desktop
 DESKTOP_SHORTCUTS = ["iexplore", "firefox", "telegram", "discord", "claudeai", "kithylinai", "manual", "copilotai", "wmp", "kiwix",
-                     "claudecraft", "tv", "secondlife", "furdir", "claudeamp", "torrent", "pystudio"]
+                     "claudecraft", "tv", "secondlife", "furdir", "claudeamp", "torrent", "pystudio",
+                     "qbstudio"]
 # programs that also get a loose desktop icon of their own, besides the one in their folder (added once, even on a
 # desktop made before they existed)
-LOOSE_TOO = ["hollow", "bluesky", "autopilot"]
+LOOSE_TOO = ["hollow", "bluesky", "autopilot", "qbstudio"]
 
 
 def std(which):

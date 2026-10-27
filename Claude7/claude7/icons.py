@@ -31,7 +31,7 @@ if default_layout().get("shortcuts"):                    # (the captured desktop
     DESKTOP_SHORTCUTS = list(dict.fromkeys(s["program"] for s in default_layout()["shortcuts"]))
 # programs that also get a loose desktop icon of their own, besides the one in their folder (added once, even on a
 # desktop made before they existed)
-LOOSE_TOO = ["bluesky", "autopilot"]
+LOOSE_TOO = ["bluesky", "autopilot", "qbstudio"]
 
 
 def std(which):

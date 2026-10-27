@@ -16,6 +16,9 @@ ClaudeApps - the AI apps and Python Studio, on every computer
   voicecatalog.py    the voices CopilotAI can speak with
   pystudio/          Copilot Python Studio - write, check, debug and run Python offline, with an AI Helper
   cesscr/            the Claude Entertainment System as a real Windows screen saver (.scr) - see its README
+  qbstudio/          Claude QBasic Studio - QBasic 1.1 (its own interpreter: text and graphics screens, sound,
+                     files), an editor and debugger, and a Vibe Coder that writes programs from a description,
+                     runs them and fixes them until they work. Programs in Local Storage\Projects\QBasic Projects
   requirements-*.txt what the voice and picture engines install into their own Python in Local Storage
 
 They use the Timeline's shared AI engine (ClaudeCore/claudecore/ai) and talk to the computer only through
