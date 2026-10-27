@@ -340,6 +340,13 @@ def _remember(d, day):
                     notes = out.get("people") if isinstance(out.get("people"), dict) else {}
                 except ValueError:
                     pass
+            if not err and not summary and text:              # (cut off mid-way: keep what was finished)
+                s = re.search(r'"summary"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
+                if s:
+                    summary = json.loads(f'"{s.group(1)}"').strip()
+                    tail = text[text.find('"people"'):] if '"people"' in text else ""
+                    notes = {k: json.loads(f'"{v}"') for k, v in
+                             re.findall(r'"([^"\\]+)"\s*:\s*"((?:[^"\\]|\\.)*)"', tail) if k in people}
             if not summary:
                 summary, notes = fallback()
             for p in people:                                  # everyone he talked with is remembered
@@ -349,7 +356,7 @@ def _remember(d, day):
         finally:
             _busy.discard("memory")
     broker.get().chat(ai_models.model_for("conversation"), [{"role": "user", "content": prompt}],
-                      {"temperature": 0.3, "num_predict": 300}, done, broker.BACKGROUND, think=False)
+                      {"temperature": 0.3, "num_predict": 300 + 40 * len(people)}, done, broker.BACKGROUND, think=False)
 
 
 # ---- from the life sim --------------------------------------------------------------------------------------------
