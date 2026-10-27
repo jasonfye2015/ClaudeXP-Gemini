@@ -1,6 +1,10 @@
 """Widgets, Windows 11 style: the board that slides in from the left (the weather button at the taskbar's left
 corner, or Win+W) with its cards - Weather, Calendar, Outlook (your inbox), the TV Guide, Top stories (your friends'
-posts), Photos, Performance and a Clock. 'Add widgets' picks which cards you keep (data/widgets.json)."""
+posts), Photos, Performance and a Clock - and XP's own Day and Night, Sun and Moon, System Monitor, Network and LLM
+Activity. 'Add widgets' picks which cards you keep (data/widgets.json).
+
+Pin to desktop (a card's '...' menu) puts a card on the desktop itself, always showing: above the icons, under the
+windows, dragged by its top, back where you left it. A new desktop starts with a few pinned."""
 import datetime
 import json
 import math
@@ -20,6 +24,7 @@ from .. import theme11 as T
 WIDGETS_FILE = DATA / "widgets.json"
 CARD_W, SMALL_H, LARGE_H, GAP = 300, 150, 316, 16
 DEFAULT_CARDS = ["Weather", "Calendar", "Outlook", "TV Guide", "Top stories", "Photos"]
+DEFAULT_DESKTOP = ["Clock", "Weather", "Calendar", "System Monitor"]      # pinned to a new desktop, down the right
 _controller = None
 CONDITIONS = ["Sunny", "Partly Cloudy", "Cloudy", "Showers", "Clear"]
 
@@ -50,6 +55,8 @@ class Card(QWidget):
         super().__init__()
         self.board = board
         self.data = data
+        self.floating = False                   # pinned to the desktop (not on the board)
+        self.drag = None
         self.hover_menu = False
         self.setMouseTracking(True)
         self.setFixedSize(CARD_W, LARGE_H if self.LARGE else SMALL_H)
@@ -71,10 +78,21 @@ class Card(QWidget):
         return kind_pixmap(self.NAME, size)
 
     def mouseMoveEvent(self, event):
+        if self.drag is not None:
+            area = self.desktop.work_area()
+            pt = event.globalPosition().toPoint() - self.drag
+            self.move(max(0, min(pt.x(), area.width() - self.width())), max(0, min(pt.y(), area.height() - self.height())))
+            return
         hot = self._menu_rect().contains(event.position().toPoint())
         if hot != self.hover_menu:
             self.hover_menu = hot
             self.update()
+
+    def mouseReleaseEvent(self, event):
+        if self.drag is not None:
+            self.drag = None
+            self.data.update(x=self.x(), y=self.y())
+            self.board.save()
 
     def leaveEvent(self, event):
         self.hover_menu = False
@@ -86,9 +104,16 @@ class Card(QWidget):
             from ..shims import MENU_CSS
             menu = QMenu(self)
             menu.setStyleSheet(MENU_CSS)
-            menu.addAction("Unpin widget", lambda: self.board.remove(self))
+            if self.floating:
+                menu.addAction("Remove from desktop", lambda: self.board.unpin(self))
+            else:
+                menu.addAction("Unpin widget", lambda: self.board.remove(self))
+                menu.addAction("Pin to desktop", lambda: self.board.widgets.pin(self.NAME))
             menu.addAction("Add widgets...", lambda: open_gallery(self.desktop))
             menu.popup(event.globalPosition().toPoint())
+            return
+        if self.floating and event.button() == Qt.LeftButton and pos.y() < 36:     # (dragged by its top)
+            self.drag = event.globalPosition().toPoint() - self.pos()
             return
         if event.button() == Qt.LeftButton and self.body_rect().contains(QPointF(pos)):
             self.clicked(pos)
@@ -662,8 +687,136 @@ class TVCard(Card):
             y += self.ROW
 
 
+# ---- XP's Copilot Widgets as cards ----------------------------------------------------------------------------------
+# The same widgets as XP's (claudexp.programs.copilot_widgets.widgets), readings and drawing: a hidden XP widget keeps
+# sampling and the card draws it, scaled into the card, in 11's colours (light or dark) - put in the XP widgets' module
+# only while it draws, so XP's own Copilot Widgets on this computer keep their theme.
+ELEVEN = {
+    False: {"top": "#FBFBFB", "bottom": "#F0F0F0", "edge": "#D0D0D0", "text": "#1A1A1A", "accent": "#005FB8",
+            "soft": "#3A3A3A", "dim": "#6B6B6B", "in": "#C42B1C", "out": "#0F7B0F"},
+    True: {"top": "#2C2C2C", "bottom": "#202020", "edge": "#3A3A3A", "text": "#FFFFFF", "accent": "#60CDFF",
+           "soft": "#D6D6D6", "dim": "#9D9D9D", "in": "#FF8A80", "out": "#6CCB5F"}}
+_COLOURS = ("THEME", "WHITE", "GOLD", "SOFT", "DIM", "IN_RED", "OUT_GREEN")
+
+
+class _WidgetHost:
+    """What an XP widget asks of its controller: a parent, the settings (Copilot Widgets' own on this computer -
+    where you are, the hemisphere - with the card's few choices on top), and saving them."""
+
+    def __init__(self, card):
+        from claudexp.programs.copilot_widgets import DEFAULTS, SETTINGS_FILE
+        from claudexp.programs.people import load_json
+        self.card = card
+        self.desktop = card                        # (the XP widget's parent: it goes when the card does)
+        saved = load_json(SETTINGS_FILE, {})
+        self.settings = {**DEFAULTS, **{k: v for k, v in (saved if isinstance(saved, dict) else {}).items()
+                                        if k in DEFAULTS}}
+        self.settings.update(locked=True, opacity=100, **(card.data.get("settings") or {}))
+
+    def save(self):
+        self.card.data["settings"] = {"real_moon": self.settings.get("real_moon", True)}
+        self.card.board.widgets.save()
+
+    def clamp(self, widget, pos):
+        return pos
+
+    def remember(self, widget):
+        pass
+
+    def widget_menu(self, widget, pos):
+        pass
+
+
+class XPCard(Card):
+    XP = ""                                        # the XP widget's class in copilot_widgets.widgets
+    XP_SIZE = (250, 100)
+    ALWAYS_DARK = False                            # (one whose own colours are made for a dark panel)
+
+    def __init__(self, board, data):
+        super().__init__(board, data)
+        from claudexp.programs.copilot_widgets import widgets as W
+        self.W = W
+        self.host = _WidgetHost(self)
+        self.inner = getattr(W, self.XP)(self.host)
+        self.inner.hide()                          # (it samples; the card shows it)
+        self.inner.start()
+
+    def deleteLater(self):                         # (gone: its sampling stops - the LLM widget's thread too)
+        if isValid(self.inner):
+            self.inner.stop()
+        super().deleteLater()
+
+    def _fit(self):
+        """Where the XP widget is drawn in the card, and how big: (x, y, scale)."""
+        xw, xh = self.XP_SIZE
+        scale = min((self.width() - 8) / xw, (self.height() - 8) / xh)
+        return (self.width() - xw * scale) / 2, (self.height() - xh * scale) / 2, scale
+
+    def paintEvent(self, event):
+        W = self.W
+        dark = self.ALWAYS_DARK or T.dark()
+        colours = ELEVEN[dark]
+        before = {k: getattr(W, k) for k in _COLOURS}
+        W.THEME = colours
+        W.WHITE, W.GOLD, W.SOFT, W.DIM = (QColor(colours[k]) for k in ("text", "accent", "soft", "dim"))
+        W.IN_RED, W.OUT_GREEN = QColor(colours["in"]), QColor(colours["out"])
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        try:
+            r = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+            p.setPen(QPen(T.hover(26), 1))
+            p.setBrush(QColor(32, 32, 32, 240) if dark and not T.dark() else T.card(236))
+            p.drawRoundedRect(r, 8, 8)
+            x, y, scale = self._fit()
+            p.save()
+            p.translate(x, y)
+            p.scale(scale, scale)
+            self.inner.draw(p, QRectF(0, 0, *self.XP_SIZE))
+            p.restore()
+        finally:
+            for k, v in before.items():
+                setattr(W, k, v)
+        mr = self._menu_rect()                     # the '...' menu, on a little pill so it reads over the widget
+        p.setPen(Qt.NoPen)
+        p.setBrush(T.hover(30 if self.hover_menu else 12))
+        p.drawRoundedRect(QRectF(mr), 4, 4)
+        p.setBrush(T.text2())
+        for dx in (-5, 0, 5):
+            p.drawEllipse(QPointF(mr.center().x() + dx, mr.center().y()), 1.5, 1.5)
+
+    def body_rect(self):
+        return QRectF(self.rect())
+
+    def clicked(self, pos):
+        self.inner.clicked(pos)
+        self.update()
+
+
+class SkyCard(XPCard):
+    NAME, XP, XP_SIZE, LARGE, TICK, COLOUR = "Day and Night", "SkyWidget", (330, 190), True, 30000, "#1F3A6E"
+
+
+class AlmanacCard(XPCard):
+    NAME, XP, XP_SIZE, TICK, COLOUR = "Sun and Moon", "AlmanacWidget", (250, 142), 60000, "#2B2B44"
+
+
+class SystemCard(XPCard):
+    NAME, XP, XP_SIZE, LARGE, COLOUR = "System Monitor", "SystemWidget", (260, 330), True, "#2A2A2A"
+    ALWAYS_DARK = True
+
+
+class NetworkCard(XPCard):
+    NAME, XP, XP_SIZE, COLOUR = "Network", "NetworkWidget", (250, 100), "#22313A"
+
+
+class LLMCard(XPCard):
+    NAME, XP, XP_SIZE, COLOUR = "LLM Activity", "LLMWidget", (250, 100), "#33263F"
+
+
 KINDS = {"Weather": WeatherCard, "Calendar": CalendarCard, "Outlook": MailCard, "TV Guide": TVCard,
-         "Top stories": FeedCard, "Photos": PhotosCard, "Performance": PerformanceCard, "Clock": ClockCard}
+         "Top stories": FeedCard, "Photos": PhotosCard, "Performance": PerformanceCard, "Clock": ClockCard,
+         "Day and Night": SkyCard, "Sun and Moon": AlmanacCard, "System Monitor": SystemCard, "Network": NetworkCard,
+         "LLM Activity": LLMCard}
 
 
 def kind_pixmap(kind, size=16):
@@ -775,12 +928,31 @@ class Board(QWidget):
         p.drawText(ar, Qt.AlignCenter, "+  Add widgets")
 
 
+class _Desktop:
+    """The pinned cards' 'board': the desktop itself."""
+
+    def __init__(self, widgets):
+        self.widgets = widgets
+        self.desktop = widgets.desktop
+
+    def save(self):
+        self.widgets.save()
+
+    def unpin(self, card):
+        self.widgets.unpin(card)
+
+    def remove(self, card):
+        self.widgets.unpin(card)
+
+
 class Widgets:
     def __init__(self, desktop):
         self.desktop = desktop
         self.cards = []
+        self.pinned = []                        # cards on the desktop itself
         self.board = None
         self.loaded = False
+        self.on_desktop = _Desktop(self)
 
     def _ensure_board(self):
         if self.board is None:
@@ -802,11 +974,21 @@ class Widgets:
             if cls is not None:
                 self.cards.append(cls(self.board, {"kind": kind}))
         self.board.relayout()
+        if "desktop" in data:
+            for d in data["desktop"]:
+                if d.get("kind") in KINDS:
+                    self._float(d)
+        else:                                      # a new desktop: a few, down the right edge
+            for kind in DEFAULT_DESKTOP:
+                self.pin(kind, quiet=True)
+        self.restack()
 
     def save(self):
         try:
             WIDGETS_FILE.parent.mkdir(parents=True, exist_ok=True)
-            WIDGETS_FILE.write_text(json.dumps({"cards": [c.NAME for c in self.live()]}, indent=2), encoding="utf-8")
+            WIDGETS_FILE.write_text(json.dumps({"cards": [c.NAME for c in self.live()],
+                                                "desktop": [c.data for c in self.live_pinned()]}, indent=2),
+                                    encoding="utf-8")
         except OSError:
             pass
 
@@ -816,6 +998,59 @@ class Widgets:
 
     def kinds(self):
         return [c.NAME for c in self.live()]
+
+    # ---- pinned to the desktop ----
+    def live_pinned(self):
+        self.pinned = [c for c in self.pinned if isValid(c)]
+        return self.pinned
+
+    def _float(self, data):
+        cls = KINDS[data["kind"]]
+        card = cls(self.on_desktop, data)
+        card.floating = True
+        card.setParent(self.desktop)
+        card.setAttribute(Qt.WA_TranslucentBackground)
+        area = self.desktop.work_area()
+        card.move(max(0, min(int(data.get("x", 40)), area.width() - card.width())),
+                  max(0, min(int(data.get("y", 40)), area.height() - card.height())))
+        self.pinned.append(card)
+        card.show()
+        return card
+
+    def _spot(self, size):
+        """Down the desktop's right edge, then the next column left, clear of the cards already there."""
+        from PySide6.QtCore import QRect
+        area = self.desktop.work_area()
+        taken = [c.geometry().adjusted(-8, -8, 8, 8) for c in self.live_pinned()]
+        x = area.width() - size.width() - 16
+        while x > 0:
+            y = 16
+            while y + size.height() <= area.height():
+                rect = QRect(x, y, size.width(), size.height())
+                if not any(rect.intersects(t) for t in taken):
+                    return x, y
+                y += 16
+            x -= size.width() + GAP
+        return 40, 40
+
+    def pin(self, kind, quiet=False):
+        """A card on the desktop itself (one of each)."""
+        if kind not in KINDS or any(c.NAME == kind for c in self.live_pinned()):
+            return
+        cls = KINDS[kind]
+        x, y = self._spot(QSize(CARD_W, LARGE_H if cls.LARGE else SMALL_H))
+        self._float({"kind": kind, "x": x, "y": y})
+        self.restack()
+        self.save()
+        if not quiet:
+            sound.play("default")
+
+    def unpin(self, card):
+        if card in self.pinned:
+            self.pinned.remove(card)
+        card.hide()
+        card.deleteLater()
+        self.save()
 
     def add(self, kind):
         cls = KINDS[kind]
@@ -858,6 +1093,12 @@ class Widgets:
             self.desktop.taskbar.update()
 
     def raise_all(self):
+        """The board over everything when it's out; pinned cards over the icons and under every window."""
+        for c in self.live_pinned():
+            c.lower()
+        icons = getattr(self.desktop, "icons", None)
+        if icons is not None:
+            icons.stack_below_windows()
         if self.board is not None and self.board.isVisible():
             self.board.raise_()
 
@@ -866,12 +1107,20 @@ class Widgets:
     def on_resize(self):
         if self.board is not None and self.board.isVisible():
             self.board.place()
+        area = self.desktop.work_area()
+        for c in self.live_pinned():
+            c.move(max(0, min(c.x(), area.width() - c.width())), max(0, min(c.y(), area.height() - c.height())))
 
     def show_all(self):
         self.load()
+        for c in self.live_pinned():
+            c.show()
+        self.restack()
 
     def hide_all(self):
         self.hide_board()
+        for c in self.live_pinned():
+            c.hide()
 
 
 def install(desktop):
