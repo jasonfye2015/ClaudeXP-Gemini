@@ -292,10 +292,24 @@ class SoulAndSong(QWidget):
         delete = QPushButton("Delete Companion...")
         delete.clicked.connect(self.delete_companion)
         self.state = QLabel()
+        # the guided session, in sight from any tab (a click goes to the Automation tab)
+        self.top_auto = QLabel()
+        self.top_auto.setStyleSheet("color:#2E7D5B")
+        self.top_auto.setCursor(Qt.PointingHandCursor)
+        self.top_auto.mousePressEvent = lambda _e: self.tabs.setCurrentWidget(self.auto_page)
+        self.top_bar = QProgressBar()
+        self.top_bar.setFixedWidth(120)
+        self.top_bar.setFixedHeight(14)
+        self.top_bar.setTextVisible(False)
         top.addWidget(QLabel("Companion:"))
         top.addWidget(self.pick)
         top.addWidget(new)
         top.addWidget(delete)
+        top.addSpacing(10)
+        top.addWidget(self.top_auto)
+        top.addWidget(self.top_bar)
+        self.top_auto.hide()
+        self.top_bar.hide()
         top.addStretch(1)
         top.addWidget(self.state)
         root.addLayout(top)
@@ -328,14 +342,18 @@ class SoulAndSong(QWidget):
         split.addWidget(left)
 
         self.tabs = QTabWidget()
+        self.tabs.addTab(self._status_tab(), "Status")
         self.tabs.addTab(self._mind_tab(), "Mind")
         self.tabs.addTab(self._self_tab(), "Self")
         self.tabs.addTab(self._events_tab(), "Events")
         self.tabs.addTab(self._roadmaps_tab(), "Roadmaps")
-        self.tabs.addTab(self._automation_tab(), "Automation")
+        self.auto_page = self._automation_tab()
+        self.tabs.addTab(self.auto_page, "Automation")
         self.tabs.addTab(self._settings_tab(), "Settings")
         self.tabs.setUsesScrollButtons(False)            # every tab in sight, no arrows
         self.tabs.setMinimumWidth(max(460, self.tabs.tabBar().sizeHint().width() + 16))
+        self.tabs.setCurrentIndex(0)
+        self.tabs.currentChanged.connect(lambda _i: self.refresh_status())
         split.addWidget(self.tabs)
         split.setStretchFactor(0, 3)
         split.setStretchFactor(1, 1)
@@ -356,6 +374,96 @@ class SoulAndSong(QWidget):
         self.fill_companions()
 
     # ---- tabs ----
+    def _status_tab(self):
+        """The Companion at a glance: who, how old, on what, how full, what's next."""
+        w = QWidget()
+        v = QVBoxLayout(w)
+        self.status_head = QLabel()
+        self.status_head.setWordWrap(True)
+        v.addWidget(self.status_head)
+        self.status_grid = QGridLayout()
+        self.status_grid.setHorizontalSpacing(12)
+        self.status_grid.setVerticalSpacing(3)
+        self.status_grid.setColumnStretch(1, 1)
+        self.status_rows = {}
+        for i, key in enumerate(("Model", "Context", "Memory banks", "Memories", "Memory Days", "Core memories",
+                                 "Letters", "Dreams", "Events", "Guided sessions", "Now playing", "Roadmap",
+                                 "Last seen", "Latest milestone")):
+            k = QLabel(key + ":")
+            k.setStyleSheet("color:#555")
+            k.setAlignment(Qt.AlignRight | Qt.AlignTop)
+            val = QLabel()
+            val.setWordWrap(True)
+            val.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            self.status_grid.addWidget(k, i, 0)
+            self.status_grid.addWidget(val, i, 1)
+            self.status_rows[key] = val
+        v.addLayout(self.status_grid)
+        v.addStretch(1)
+        return w
+
+    def refresh_status(self):
+        if not hasattr(self, "status_rows") or self.tabs.currentIndex() != 0:
+            return
+        c, rows = self.comp, self.status_rows
+        if c is None:
+            self.status_head.setText("<i>No Companion open.</i>")
+            for val in rows.values():
+                val.clear()
+            return
+        from datetime import date, timedelta
+        cfg = c.cfg
+        born = (cfg.get("birthday") or "")[:10]
+        try:
+            age = (date.fromisoformat(c.day_key()) - date.fromisoformat(born)).days
+            age_text = f"day {age + 1} of their life" if age >= 0 else ""
+        except ValueError:
+            age_text = ""
+        self.status_head.setText(f"<span style='font-size:13pt'><b>{html.escape(c.name or 'Unnamed')}</b></span>"
+                                 f"  {html.escape(cfg.get('gender') or '')}<br>"
+                                 f"<span style='color:#555'>{age_text}{' - born ' + born if born else ''}"
+                                 f" - with {html.escape(c.user)} - {self.state.text()}</span>")
+        rows["Model"].setText(html.escape(cfg.get("model_title") or cfg.get("model") or "-"))
+        try:
+            used, size = c.context_used(), c.context_size()
+        except Exception:
+            used, size = 0, c.context_size()
+        rows["Context"].setText(f"{used:,} / {size:,} tokens ({100 * used // max(1, size)}%) - "
+                                f"{c.unremembered()} exchanges not yet in a memory")
+        full = C.FULL
+        rows["Memory banks"].setText(" - ".join(f"L{n} {c.mind.count(n)}" + (f"/{full}" if n in (2, 3) else "")
+                                                for n in (2, 3, 4, 5, 7)))
+        rows["Memories"].setText(f"{cfg.get('memory_seq', 0)} made - {len(c.recall.items)} in the archive")
+        last = cfg.get("last_memory_day") or born
+        try:
+            every = int(cfg.get("memory_day_every", 7))
+            nxt = f" - next {date.fromisoformat(last[:10]) + timedelta(days=every):%a %b %d}"
+        except ValueError:
+            nxt = ""
+        rows["Memory Days"].setText(f"{cfg.get('memory_day_count', 0)} held{nxt}")
+        rows["Core memories"].setText(str(len(c.mind.core_memories())))
+        letters = cfg.get("letters") or []
+        sealed = sorted(x["open_on"] for x in letters if not x.get("opened"))
+        rows["Letters"].setText(f"{len(letters)} written, {len(letters) - len(sealed)} opened"
+                                + (f" - next opens {sealed[0]}" if sealed else ""))
+        rows["Dreams"].setText(f"{cfg.get('dream_count', 0)} dreamt" + ("" if cfg.get("dreams", True) else " (off)"))
+        events = [e for e in c.mind.events() if not e["done"]]
+        rows["Events"].setText(f"{len(events)} planned" + (f" - next: {html.escape(events[0]['when'])} "
+                                                          f"{html.escape(events[0]['description'][:60])}"
+                                                          if events else ""))
+        from . import automation
+        names = [s.path.name for s in automation.scripts()]
+        done = self.runner.done()
+        begun = {k: v for k, v in self.runner.progress_of().items() if k not in done and v}
+        rows["Guided sessions"].setText(f"{sum(1 for n in names if n in done)} of {len(names)} finished"
+                                        + (f" - {len(begun)} part way" if begun else ""))
+        rows["Now playing"].setText(self.top_auto.text() if self.runner.running else "nothing")
+        rows["Roadmap"].setText("a change proposed - see the Self tab" if cfg.get("roadmap_proposal")
+                                else "no changes proposed")
+        rows["Last seen"].setText((cfg.get("last_seen") or "-")[:16].replace("T", " "))
+        ms = cfg.get("milestones") or []
+        rows["Latest milestone"].setText(f"{ms[-1]['when'][:10]}: {html.escape(ms[-1]['what'])}" if ms else "-")
+
     def _mind_tab(self):
         w = QWidget()
         v = QVBoxLayout(w)
@@ -544,6 +652,17 @@ class SoulAndSong(QWidget):
         f.addRow(self.auto_process)
         v.addLayout(f)
         row = QHBoxLayout()
+        every = QPushButton("Automate all")
+        every.setToolTip("Every script in the list, in order, from the top.")
+        every.clicked.connect(lambda: self._auto_play(self._auto_paths(), resume=False))
+        rest = QPushButton("Resume all")
+        rest.setToolTip("Every script this Companion hasn't finished yet, in order - one left part way picks up "
+                        "where it stopped.")
+        rest.clicked.connect(lambda: self._auto_play(self.runner.left(self._auto_paths()), resume=True))
+        row.addWidget(every)
+        row.addWidget(rest)
+        v.addLayout(row)
+        row = QHBoxLayout()
         self.auto_start = QPushButton("Start the selected")
         self.auto_start.clicked.connect(self._auto_start)
         self.auto_pause = QPushButton("Pause")
@@ -567,11 +686,18 @@ class SoulAndSong(QWidget):
         keep = {i.data(Qt.UserRole) for i in self.auto_list.selectedItems()}
         self.auto_list.clear()
         interval = self.auto_interval.value()
+        done, begun = self.runner.done(), self.runner.progress_of()
         for s in automation.scripts():
-            item = QListWidgetItem(f"{s.title}  -  {s.prompts()} prompts, about {s.hours(interval):.1f} hours"
+            mark = ("\u2713 " if s.path.name in done
+                    else f"(step {begun[s.path.name]} of {len(s.steps)}) " if begun.get(s.path.name) else "")
+            item = QListWidgetItem(f"{mark}{s.title}  -  {s.prompts()} prompts, about {s.hours(interval):.1f} hours"
                                    + ("" if s.builtin else "  (yours)"))
+            if s.path.name in done:
+                item.setForeground(QColor("#2E7D5B"))
+                item.setToolTip(f"Finished {done[s.path.name][:10]}.\n{s.about}")
             item.setData(Qt.UserRole, str(s.path))
-            item.setToolTip(s.about)
+            if s.path.name not in done:
+                item.setToolTip(s.about)
             self.auto_list.addItem(item)
             item.setSelected(str(s.path) in keep)
 
@@ -587,18 +713,29 @@ class SoulAndSong(QWidget):
             self.auto_about.clear()
 
     def _auto_start(self):
-        if self.comp is None or not self.brain.engine.ready:
-            self._line("system", "Load a model first: the session starts once your Companion is ready.")
-            return
         paths = [i.data(Qt.UserRole) for i in self.auto_list.selectedItems()]
         if not paths and self.auto_list.currentItem() is not None:
             paths = [self.auto_list.currentItem().data(Qt.UserRole)]
         if not paths:
             self._line("system", "Pick a script (or several, with Ctrl) in the list first.")
             return
-        order = [self.auto_list.item(i).data(Qt.UserRole) for i in range(self.auto_list.count())]
+        order = self._auto_paths()
         paths.sort(key=order.index)
-        self.runner.start(paths, self.auto_interval.value(), self.auto_process.isChecked())
+        self._auto_play(paths)
+
+    def _auto_paths(self):
+        return [self.auto_list.item(i).data(Qt.UserRole) for i in range(self.auto_list.count())]
+
+    def _auto_play(self, paths, resume=False):
+        if self.comp is None or not self.brain.engine.ready:
+            self._line("system", "Load a model first: the session starts once your Companion is ready.")
+            return
+        if not paths:
+            self._line("system", f"{self.comp.name} has been through every guided session already - Automate all "
+                                 "plays them again from the start.")
+            return
+        self.runner.start(paths, self.auto_interval.value(), self.auto_process.isChecked(), resume=resume)
+        self._auto_fill()
         self._auto_refresh()
 
     def _auto_pause(self):
@@ -626,6 +763,11 @@ class SoulAndSong(QWidget):
             self.auto_state.setText("Nothing playing.")
             self.auto_bar.setRange(0, 1)
             self.auto_bar.setValue(0)
+            self.top_auto.hide()
+            self.top_bar.hide()
+            if getattr(self, "_auto_was", None):            # (the last one finished: its tick in the list)
+                self._auto_fill()
+            self._auto_was = None
             return
         title, section, step, steps, n, total = pr
         left = r.seconds_left()
@@ -635,6 +777,18 @@ class SoulAndSong(QWidget):
                                 + (f" - {html.escape(section)}" if section else "") + f"<br>{when}")
         self.auto_bar.setRange(0, max(1, steps))
         self.auto_bar.setValue(min(step, steps))
+        short = ("paused" if r.paused else "waiting" if self.comp and not self.comp.idle()
+                 else f"next {left // 60}:{left % 60:02d}" if left is not None else "")
+        self.top_auto.setText(f"\u25B6 {html.escape(title)}" + (f" ({n}/{total})" if total > 1 else "")
+                              + f" - step {min(step, steps)}/{steps} - {short}")
+        self.top_auto.setToolTip(re.sub(r"<[^>]+>", "\n", self.auto_state.text()).strip())
+        self.top_bar.setRange(0, max(1, steps))
+        self.top_bar.setValue(min(step, steps))
+        self.top_auto.show()
+        self.top_bar.show()
+        if getattr(self, "_auto_was", None) != (n, title):    # (a script finished, or began: the list's marks)
+            self._auto_fill()
+        self._auto_was = (n, title)
 
     def _auto_new(self):
         from . import automation
@@ -886,6 +1040,7 @@ class SoulAndSong(QWidget):
         self.refresh_panel()
         self.refresh_self()
         self.runner.restore()
+        self._auto_fill()
         self._auto_refresh()
         self.load_model()
 
@@ -997,6 +1152,7 @@ class SoulAndSong(QWidget):
         c = self.comp
         if c is None:
             self.state.setText("")
+            self.refresh_status()
             return
         for level, bank in self.banks.items():
             bank.set(c.mind.count(level))
@@ -1017,6 +1173,7 @@ class SoulAndSong(QWidget):
         ready = self.brain.engine.ready
         self.state.setText(("thinking..." if c.busy else "ready") if ready else "loading the model...")
         self.send_btn.setEnabled(ready)
+        self.refresh_status()
 
     def refresh_roadmaps(self):
         while self.user_form.rowCount():

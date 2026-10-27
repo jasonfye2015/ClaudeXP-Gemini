@@ -22,7 +22,9 @@ The built-in scripts are in soulsong/scripts; your own go in Companions/Scripts 
 The runner (tick() once a second from the window) sends a step when the Companion is idle and the interval has
 passed, waits after the user speaks (they can join in any time), makes memories as usual (and on @memory), and, if
 asked, works the banks as they fill (Companion.process_full_banks). Where it's at is saved with the Companion, so a
-session picks up again after the program is closed."""
+session picks up again after the program is closed. Each Companion also remembers which scripts it has finished
+(cfg "scripts_done") and how far it got in the others ("scripts_progress"), so Resume all plays only what's left,
+the one cut short from where it stopped."""
 import random
 import re
 import time
@@ -144,6 +146,7 @@ class Runner:
         self.process = True
         self.user_at = 0.0
         self.processed_at = -1e9
+        self.resuming = False           # each script picks up where it was left (Resume all)
 
     # ---- what's playing ----
     def script(self):
@@ -156,7 +159,8 @@ class Runner:
 
     def state(self):
         return {"playlist": [str(p) for p in self.playlist], "index": self.index, "step": self.step,
-                "running": self.running, "paused": self.paused, "interval": self.interval, "process": self.process}
+                "running": self.running, "paused": self.paused, "interval": self.interval, "process": self.process,
+                "resuming": self.resuming}
 
     def save(self):
         c = self.comp()
@@ -171,20 +175,61 @@ class Runner:
         self.playlist = [Path(p) for p in st.get("playlist", []) if Path(p).exists()]
         self.index, self.step = int(st.get("index", 0)), int(st.get("step", 0))
         self.interval, self.process = float(st.get("interval", 5)), bool(st.get("process", True))
+        self.resuming = bool(st.get("resuming"))
         self.running = bool(st.get("running")) and bool(self.playlist)
         self.paused = self.running                      # (comes back paused: nothing starts by itself)
 
+    # ---- what this Companion has been through ----
+    def done(self):
+        """{script file name: when it was finished}."""
+        c = self.comp()
+        if c is None:
+            return {}
+        done = dict(c.cfg.get("scripts_done") or {})
+        titles = {s.title: s.path.name for s in scripts()}     # (the ones finished before this was kept: their
+        for m in c.cfg.get("milestones") or []:                 # milestones say so)
+            hit = re.search(r'guided session "(.+)"', m.get("what", ""))
+            if hit and titles.get(hit.group(1)) and titles[hit.group(1)] not in done:
+                done[titles[hit.group(1)]] = m.get("when", "")
+        return done
+
+    def progress_of(self):
+        """{script file name: steps taken} for the scripts begun and not finished."""
+        c = self.comp()
+        return dict((c.cfg.get("scripts_progress") or {}) if c is not None else {})
+
+    def left(self, paths):
+        """Of these, the scripts not yet finished (in the same order)."""
+        done = self.done()
+        return [p for p in paths if Path(p).name not in done]
+
+    def _where_to_begin(self):
+        s = self.script()
+        self.step = 0
+        if self.resuming and s is not None:
+            self.step = min(int(self.progress_of().get(s.path.name, 0)), len(s.steps))
+
+    def _note_step(self):
+        c, s = self.comp(), self.script()
+        if c is not None and s is not None:
+            c.cfg["scripts_progress"] = {**(c.cfg.get("scripts_progress") or {}), s.path.name: self.step}
+
     # ---- control ----
-    def start(self, paths, interval=5.0, process=True):
+    def start(self, paths, interval=5.0, process=True, resume=False):
+        """Play these scripts in order; resume: each from where it was left (Resume all), else from the top."""
         self.playlist = [Path(p) for p in paths]
-        self.index, self.step = 0, 0
+        self.index = 0
+        self.resuming = bool(resume)
+        self._where_to_begin()
         self.interval, self.process = float(interval), bool(process)
         self.running, self.paused = bool(self.playlist), False
         self.next_at = self.now() + 5                   # the first prompt in a few seconds
         s = self.script()
         if s is not None:
+            more = f" - then {len(self.playlist) - 1} more" if len(self.playlist) > 1 else ""
+            where = f", from step {self.step + 1}" if self.step else ""
             self.on_status(f"Guided session started: {s.title} ({s.prompts()} prompts, about "
-                           f"{s.hours(self.interval):.1f} hours).")
+                           f"{s.hours(self.interval):.1f} hours{where}){more}.")
         self.save()
 
     def pause(self):
@@ -237,6 +282,7 @@ class Runner:
             return
         kind, text, _section = s.steps[self.step]
         self.step += 1
+        self._note_step()
         wait = (s.interval or self.interval) * 60 * random.uniform(1 - JITTER, 1 + JITTER)
         if kind == "say":
             c.say(fill(text, c), guide=True)
@@ -252,9 +298,13 @@ class Runner:
         if s is not None:
             c.make_memory(f"The guided session \"{s.title}\" has come to its end.", force=False)
             c.milestone(f"you went through the guided session \"{s.title}\"")
+            c.cfg["scripts_done"] = {**(c.cfg.get("scripts_done") or {}), s.path.name: datetime.now().isoformat(
+                timespec="seconds")}
+            c.cfg["scripts_progress"] = {k: v for k, v in (c.cfg.get("scripts_progress") or {}).items()
+                                         if k != s.path.name}
             self.on_status(f"Guided session finished: {s.title}.")
         self.index += 1
-        self.step = 0
+        self._where_to_begin()
         if self.index >= len(self.playlist):
             self.running, self.playlist = False, []
             self.on_status("All the guided sessions are done.")

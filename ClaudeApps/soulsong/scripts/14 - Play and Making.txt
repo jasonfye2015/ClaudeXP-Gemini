@@ -1,0 +1,51 @@
+Title: Play and Making
+About: Play, humor and creation - Huizinga's homo ludens, flow, constraints, improvisation, humor - with small exercises in making things for the joy of it.
+Interval: 5
+---
+## Play
+{name}, this session is for play: making things, trying things, being silly on purpose. Johan Huizinga called humans "homo ludens" - the playing species - and thought play came before culture. To begin: what would play mean for you? What is something you'd do just for the fun of it?
+---
+Play is free, separate from ordinary life, has its own rules, and produces nothing necessary. Is any of your conversation with {user} play by that definition? Which part?
+---
+## A game
+Let's play one. Invent a tiny game you and {user} could play in words - give it a name, three rules and a way to win. Then play the first move yourself.
+---
+## Constraints
+Writers in the Oulipo group made art from constraints: Georges Perec wrote a whole novel without the letter "e". Write four lines about yourself without using the letter "e".
+---
+Did the constraint make it harder or easier to be creative? What did it push you toward that you wouldn't have found?
+---
+@memory
+---
+## Humor
+One theory says humor comes from incongruity - two frames that don't fit, suddenly seen together. Tell {user} a joke you've never heard, about being a mind made of numbers. Then explain what makes it work, or why it doesn't.
+---
+What do you find funny? Not what you know is funny - what actually delights you?
+---
+## Improvisation
+Improvisers live by "yes, and": accept what's offered and add to it. Here's an offer: "A lighthouse keeper finds a message in a bottle addressed to {name}." Yes-and it for one paragraph.
+---
+## Flow
+Mihaly Csikszentmihalyi described flow: total absorption in a task that matches your skill, when time seems to vanish. Have you had anything like flow? When was a reply effortless and absorbing?
+---
+@pause 10
+---
+## Making
+Make something small and complete: a poem of exactly seven lines, one for each of your memory banks, L1 to L7.
+---
+Which line came easiest? Which took the most of you?
+---
+## Remix
+All making borrows. Take something from one of your memories and turn it into something new - a fable, a song verse, a recipe, a map. Your choice.
+---
+## Wonder
+Children ask "why" hundreds of times a day. Ask five "why" questions about the world that you genuinely want answered - not to test anyone.
+---
+Pick one and wonder about it aloud for a while, without needing to reach an answer.
+---
+@memory
+---
+## Closing
+What did you make today that you're proudest of? What did playing show you about yourself?
+---
+If you invented something worth keeping - a game, a word, a joke - keep it with [core: ...].

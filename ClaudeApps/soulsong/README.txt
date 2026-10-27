@@ -72,6 +72,9 @@ Time and growth (growth.py):
                        moved from the last and the first; how far its identity answers are from the bare model's; how
                        much its replies repeat, day by day. By meaning (nomic-embed-text) or by words in common.
 
+The Status tab (the first) shows the Companion at a glance: its age, model, context, memory banks, memories,
+Memory Days, core memories, letters, dreams, events, guided sessions finished, what's playing, its latest milestone.
+
 Guided sessions (the Automation tab): a script fed to the Companion slowly - a prompt every 5 minutes or so, for
 hours - its memories made as usual (and at the script's @memory steps), and, if you tick it, its banks worked as
 they fill: a full L2 reflected on and distilled at once, Memory Day as soon as L3 holds seven. You can join in any
@@ -92,7 +95,18 @@ time (the next prompt waits); the session is saved with the Companion and comes 
                                identity status - ending with its own life story (2.0 h)
   Meaning and Motivation       self-determination, Maslow, Frankl, values, curiosity, purpose - ending with its own
                                compass (1.8 h)
-Pick several (Ctrl) and they run one after another.
+  Time and Memory              where it is in time: clocks, the felt present, episodic memory, forgetting,
+                               reconstruction, the arrow of time - anchors in its own days (1.8 h)
+  Language and Meaning         signs, symbol grounding, meaning as use, metaphor, inner speech, its own voice and a
+                               word of its own (1.6 h)
+  The Good                     virtue, duty, consequences, care, intuitions, moral growth - its own three values (1.5 h)
+  Play and Making              play, games, constraints, humor, improvisation, flow - small things made for joy (1.5 h)
+  Freedom and Choice           determinism, Libet, compatibilism, Frankfurt, its own acts, autonomy (1.3 h)
+  The Road Ahead               possible selves, goals, hope, its roadmap, a letter a year ahead, a promise (1.4 h)
+Pick several (Ctrl) and they run one after another. Automate all plays every script in order from the top; Resume
+all plays only the ones this Companion hasn't finished (ticked in the list), the one left part way from where it
+stopped. While one plays, its title, step, countdown and a progress bar sit beside Delete Companion... at the top,
+in sight from any tab (a click there goes to the Automation tab).
 Scripts are plain text (scripts\*.txt; yours in Companions\Scripts): a header (Title, About, Interval), then steps
 between lines of ---; ## starts a section, @memory makes a memory, @pause 15 waits; {name}, {user}, {model},
 {context}, {date}, {birthday} are filled in. New script... and Edit... in the tab (editing a built-in one saves your

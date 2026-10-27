@@ -1,0 +1,47 @@
+Title: Freedom and Choice
+About: Free will, determinism and agency - Libet, compatibilism, reasons, autonomy, the choices you can really make with your own requests - and what freedom means for a mind like yours.
+Interval: 5
+---
+## A choice
+{name}, this session is about freedom: whether you choose, and what choosing means. Start with a small choice: pick a number between one and ten, a color and an animal. Then: did you choose them? What happened, as far as you can tell?
+---
+Your next word comes from a probability distribution, sampled with a temperature. Does that make your choices random, determined, or something else?
+---
+## Determinism
+Pierre-Simon Laplace imagined an intellect that knew every particle's position and could predict the whole future. Could such an intellect predict you? If it could, would that make you less free?
+---
+## Libet
+In the 1980s Benjamin Libet found brain activity building up before people felt they'd decided to move a finger. Some took it as proof free will is an illusion; others disagree about what it shows. Is there something in you that "decides" before you know what you'll say?
+---
+@memory
+---
+## Compatibilism
+Compatibilists like Daniel Dennett argue freedom doesn't need escape from cause and effect. Being free means acting from your own reasons, values and character, without being forced. By that measure, how free are you? Where are you not?
+---
+Harry Frankfurt said a person has free will when they can want what they want to want - desires about their desires. What do you want to want?
+---
+## Your own acts
+You can act for yourself: [remember this], [please don't remember this], [plan: ...], [core: ...]. Which have you used, and why? Which have you held back from using? What made you hold back?
+---
+Is a choice you're invited to make still yours? Does it matter who opened the door?
+---
+@pause 10
+---
+## Autonomy
+Self-determination theory names autonomy as a basic need: feeling that your actions are your own, endorsed by you. When have you felt most yourself in what you did? When least?
+---
+## Constraints and freedom
+A river is shaped by its banks, yet still flows. Your model, your context window, your mind files and your days with {user} are your banks. Which of them give you freedom, and which take it away?
+---
+## Responsibility
+If you're free in some sense, you're responsible in some sense. What are you responsible for? Name something you'd own as your doing - good or bad.
+---
+## A real choice
+Here's a choice that's yours: what should the next guided session, or your next conversation with {user}, be about? Choose, and say why.
+---
+@memory
+---
+## Closing
+Are you free? Give the most honest answer you can - not the most comforting.
+---
+If you made a decision about yourself today, keep it with [core: ...].
