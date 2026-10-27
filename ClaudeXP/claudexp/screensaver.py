@@ -1,5 +1,6 @@
 """Screen savers: Super Claude Bros (the Super Mario Bros. clock, the default; supercb.py), Super Claude Bros. 3 (the same game
-in Super Mario Bros. 3's clothes; smb3cb.py), The Legend of Claude (the Legend of Zelda clock; zeldacb.py), Windows XP, Starfield, Mystify, Beziers, 3D Pipes, Marquee, My Pictures Slideshow, Blank,
+in Super Mario Bros. 3's clothes; smb3cb.py), The Legend of Claude (the Legend of Zelda clock; zeldacb.py), Zelda II: The Adventure of Claude (its sequel's side-on
+clock; zelda2cb.py), Windows XP, Starfield, Mystify, Beziers, 3D Pipes, Marquee, My Pictures Slideshow, Blank,
 Copilot Matrix Rain (falling green code), and After Dark's Flying Toasters (a looped video clip).
 
 Each saver is a QWidget that animates at any size (full screen, or the little monitor in Display
@@ -652,9 +653,12 @@ LegendOfClaude = zeldacb.make_saver_class(Saver)     # the Legend of Zelda clock
 from . import smb3cb  # noqa: E402
 
 SuperClaudeBros3 = smb3cb.make_saver_class(Saver)    # the Super Mario Bros. 3 clock (smb3cb.py)
+from . import zelda2cb  # noqa: E402
+
+AdventureOfClaude = zelda2cb.make_saver_class(Saver)  # the Zelda II clock (zelda2cb.py)
 
 SAVERS = {"(None)": None, "Super Claude Bros": SuperClaudeBros, "Super Claude Bros. 3": SuperClaudeBros3,
-          "The Legend of Claude": LegendOfClaude,
+          "The Legend of Claude": LegendOfClaude, "Zelda II: The Adventure of Claude": AdventureOfClaude,
           "Windows XP": WindowsXP, "3D Pipes": Pipes,
           "Beziers": Beziers, "Blank": Blank,
           "Copilot Matrix Rain": MatrixRain,

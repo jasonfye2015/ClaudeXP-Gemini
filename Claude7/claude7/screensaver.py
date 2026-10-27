@@ -174,7 +174,8 @@ def _xp_savers():
                 "Flying Toasters": xp.FlyingToasters, "Matrix Rain": xp.MatrixRain, "Beziers": xp.Beziers,
                 "Super Claude Bros": xp.SAVERS.get("Super Claude Bros"),
                 "Super Claude Bros. 3": xp.SAVERS.get("Super Claude Bros. 3"),
-                "The Legend of Claude": xp.SAVERS.get("The Legend of Claude")}
+                "The Legend of Claude": xp.SAVERS.get("The Legend of Claude"),
+                "Zelda II: The Adventure of Claude": xp.SAVERS.get("Zelda II: The Adventure of Claude")}
     except Exception:
         return {}
 
