@@ -24,7 +24,7 @@ from ..tray import TrayIcon
 
 SETTINGS_FILE = DATA / "deskmario.json"
 DEFAULT_SETTINGS = {"start_at_logon": True, "mode": "roam", "character": "Mario", "size": 3, "enemies": "some",
-                    "sound": True}
+                    "sound": True, "version": 2}
 CHARACTERS = list(smb.CHARACTERS)               # Mario, Luigi, Super Mario, Super Luigi, Fire Mario
 MUSHROOM = {"Mario": "Super Mario", "Luigi": "Super Luigi", "Super Mario": "Mario", "Super Luigi": "Luigi",
             "Fire Mario": "Mario"}
@@ -637,6 +637,9 @@ class MarioController:
         if isinstance(data, dict):
             self.settings.update({k: v for k, v in data.items()
                                   if k in DEFAULT_SETTINGS and isinstance(v, type(DEFAULT_SETTINGS[k]))})
+            if data and data.get("version", 1) < 2:        # saved while starting at logon was off by default: on,
+                self.settings.update(start_at_logon=True, version=2)    # once (turned off from here, it stays off)
+                self._save()
         if self.settings["mode"] not in ("roam", "follow"):
             self.settings["mode"] = "roam"
         if self.settings["character"] not in CHARACTERS:

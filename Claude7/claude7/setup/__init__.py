@@ -27,7 +27,7 @@ PROGRAM_HISTORY = ["claudeai"]                                 # in data/, plus 
 FILES_ON_C = ["Drive C", "Recycle Bin"]
 WINDOWS_SETTINGS = ["user.json", "display.json", "desktop.json", "network.json", "updates.json", "antivirus.json",
                     "games.json", "run.json", "credits.json", "taskbar.json", "tray.json", "volume.json", "cpl.json",
-                    "gadgets.json", "stickynotes.json", "speech_license.json", "msconfig.json"]
+                    "gadgets.json", "stickynotes.json", "speech_license.json", "msconfig.json", "deskmario.json"]
 
 SPEED = max(0.01, float(os.environ.get("CLAUDE7_SETUP_SPEED") or os.environ.get("CLAUDEXP_SETUP_SPEED") or 1))
 _pending_wipe = None
