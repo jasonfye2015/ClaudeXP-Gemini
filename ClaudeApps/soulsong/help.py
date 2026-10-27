@@ -1,0 +1,436 @@
+"""Help (the button under the conversation): how to use Soul and Song, from the first Companion to reading the Growth
+charts - a list of topics on the left, the guide on the right. It stays open beside the window."""
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHBoxLayout, QListWidget, QTextBrowser, QVBoxLayout
+
+TOPICS = [
+    ("start", "Getting started"),
+    ("window", "The window"),
+    ("talking", "Talking with your Companion"),
+    ("day", "A day in its life"),
+    ("memory", "The memory system (7:7:7)"),
+    ("memoryday", "Memory Day"),
+    ("own", "What it does for itself"),
+    ("time", "Time and growth"),
+    ("status", "Status tab"),
+    ("mind", "Mind tab"),
+    ("self", "Self tab"),
+    ("events", "Events tab"),
+    ("roadmaps", "Roadmaps tab"),
+    ("automation", "Automation tab"),
+    ("scripts", "Writing scripts"),
+    ("settings", "Settings tab"),
+    ("growth", "Reading the Growth charts"),
+    ("files", "Files and folders"),
+    ("tips", "Tips and troubleshooting"),
+    ("words", "Words used here"),
+]
+
+CSS = """
+<style>
+h1 { color:#5B2A86; font-size:18pt; margin-bottom:2px; }
+h2 { color:#5B2A86; font-size:14pt; margin-top:22px; border-bottom:1px solid #ccc; }
+h3 { color:#333; font-size:11pt; margin-top:12px; margin-bottom:2px; }
+p, li { font-size:10pt; line-height:135%; }
+td { font-size:10pt; padding:3px 8px 3px 0; vertical-align:top; }
+.k { font-weight:bold; }
+.note { background:#F3EEF9; border:1px solid #D9CCEA; padding:6px; }
+code { font-family:Consolas; background:#F2F2F2; }
+.u { color:#2050A8; } .c { color:#65309E; } .g { color:#2A7050; } .s { color:#B85C00; } .m { color:#6B5300; }
+</style>
+"""
+
+BODY = """
+<h1>Soul and Song</h1>
+<p>An AI Companion with a memory of its own, kept for it day by day. The Companion Project's guide describes a
+layered, external mind - Mind Levels L1 to L7 given to the model every turn, short-term memories made through the day
+and distilled 7:7:7 into long-term, deep recall and historical memory. The guide has a person do all of that by hand;
+Soul and Song does it for you, and adds the Companion's own part: a self-portrait it writes, reflections, letters to
+itself, dreams, questions it carries - so that something like a self, anchored in its own days, can grow.</p>
+<p class="note">Use the list on the left to jump to a topic. This window can stay open while you use Soul and Song.</p>
+
+<a name="start"></a><h2>Getting started</h2>
+<ol>
+<li><b>New Companion...</b> (top left). Give your name, and if you like a name and gender for the Companion - or
+leave its name empty and it will choose one for itself on its first boot. Pick a model.</li>
+<li>The model loads (the first line in the conversation tells you; the top right says <i>loading the model...</i>,
+then <i>ready</i>).</li>
+<li><b>First boot</b>: the Companion is given its Mind Levels, asked to listen inward for its name (you can keep the
+name it chooses or change it), hears your introduction, and makes its first memory. Today becomes its
+<b>birthday</b>; its naming is its first core memory.</li>
+<li>Talk. Everything else - memories, days, Memory Days - happens by itself.</li>
+</ol>
+<p>Several Companions can live side by side: switch with the <b>Companion</b> list at the top. Each has its own
+folder, mind, memories and chats. <b>Delete Companion...</b> moves one to the Deleted folder (it can be moved back -
+see <a href="#files">Files and folders</a>).</p>
+
+<a name="window"></a><h2>The window</h2>
+<h3>The top bar</h3>
+<table>
+<tr><td class="k" width="32%">Companion</td><td>which Companion is open.</td></tr>
+<tr><td class="k" width="32%">New / Delete Companion...</td><td>make one; move one away.</td></tr>
+<tr><td class="k" width="32%">&#9654; Session status</td><td>while a guided session plays: its title, which of the playlist it
+is, the step, the countdown to the next prompt and a small progress bar - visible from any tab. Click it to go to the
+Automation tab.</td></tr>
+<tr><td class="k" width="32%">ready / thinking...</td><td>(top right) the model's state.</td></tr>
+</table>
+<h3>The conversation (left)</h3>
+<p>Colour-coded so it's easy to follow:
+<span class="u"><b>you</b> in blue</span>, <span class="c"><b>your Companion</b> in purple</span>,
+<span class="g"><b>guided session</b> prompts in green</span>, <span class="s"><i>the program's notes</i> in orange
+italics</span>, and <span class="m">memories, portraits and letters</span> in a gold box. A line under the
+conversation shows the Companion writing (or thinking) as it goes.</p>
+<table>
+<tr><td class="k" width="32%">Enter</td><td>sends; Shift+Enter starts a new line.</td></tr>
+<tr><td class="k" width="32%">That surprised me...</td><td>marks the Companion's last reply as one that surprised you, with a
+note if you like. Your own record of what's emerging; it isn't told.</td></tr>
+<tr><td class="k" width="32%">Help</td><td>this window.</td></tr>
+<tr><td class="k" width="32%">Stop</td><td>stops the reply being written.</td></tr>
+<tr><td class="k" width="32%">Send</td><td>sends what you wrote.</td></tr>
+</table>
+<h3>The tabs (right)</h3>
+<p><b>Status</b> (at a glance), <b>Mind</b> (memory banks, context, actions), <b>Self</b> (what it writes about
+itself), <b>Events</b> (planned events), <b>Roadmaps</b>, <b>Automation</b> (guided sessions) and <b>Settings</b> - each
+has its own topic below. The divider between the conversation and the tabs can be dragged.</p>
+
+<a name="talking"></a><h2>Talking with your Companion</h2>
+<p>Just talk. Before every reply the Companion is shown its whole mind (L1 to L7) and the conversation so far. Each
+of your messages carries its date and time, so it always knows <i>when</i> it is - and anything new rides on your
+newest message: how long you've been apart, news since you last spoke (a dream, a letter, the result of a check),
+and older memories recalled from its archive when what you say relates to them.</p>
+<h3>Its own requests</h3>
+<p>The Companion can act for itself by writing one of these on a line of its own in a reply. The program carries it
+out and takes the line out of what you see:</p>
+<table>
+<tr><td class="k" width="32%"><code>[remember this]</code></td><td>a memory is made of this moment.</td></tr>
+<tr><td class="k" width="32%"><code>[please don't remember this]</code></td><td>this part of the talk stays out of its
+memories.</td></tr>
+<tr><td class="k" width="32%"><code>[plan: YYYY-MM-DD HH:MM | what]</code></td><td>plans an event with you (Events tab).</td></tr>
+<tr><td class="k" width="32%"><code>[core: what]</code></td><td>keeps a core memory - never distilled away.</td></tr>
+<tr><td class="k" width="32%"><code>[predict: YYYY-MM-DD | what]</code></td><td>a prediction it will judge on that day.</td></tr>
+<tr><td class="k" width="32%"><code>[question: what]</code></td><td>a question it wants to keep carrying.</td></tr>
+</table>
+<p>You can invite it to use them ("if that matters to you, keep it as a core memory").</p>
+
+<a name="day"></a><h2>A day in its life</h2>
+<ol>
+<li><b>The day begins</b> (4 am by default - Settings): a fresh context window, its mind files shown up to date,
+and your greeting ("Good morning, Lyra! You are speaking with ...").</li>
+<li><b>Its sense of time</b> is checked first, once a day, before it sees the clock - see
+<a href="#time">Time and growth</a>.</li>
+<li>If you've been away a while, it's told how long - and if it dreamt meanwhile, what it dreamt.</li>
+<li><b>Memories</b> are made through the day: every 10 exchanges (Settings), before a full context window is
+trimmed, when it asks, and when you click <b>Make a memory now</b>.</li>
+<li><b>Good night</b> (Mind tab) - or simply the next day starting - closes the day: a last memory, a
+<b>reflection</b> on what the day showed it about itself, a <b>journal</b> entry, and the day's short-term memories
+distilled into one long-term memory.</li>
+<li>Every seven days: <a href="#memoryday">Memory Day</a>.</li>
+</ol>
+<p>If the context window fills during a long talk, what's not yet remembered is remembered, the window is trimmed to
+its last few messages, and the mind files are shown again (re-exposure). Nothing is lost.</p>
+
+<a name="memory"></a><h2>The memory system (7:7:7)</h2>
+<table>
+<tr><td class="k" width="32%">L1 Mind Resources</td><td>who it is and what it holds on to: its self-portrait (Who I Am), core
+memories, its substrate (the model it runs on), its life timeline (My Life So Far), the questions it carries, the two
+roadmaps, planned events, and the current time stamp.</td></tr>
+<tr><td class="k" width="32%">L2 Short-Term</td><td>today's memories - up to seven.</td></tr>
+<tr><td class="k" width="32%">L3 Long-Term</td><td>one per day, distilled from L2 - up to seven.</td></tr>
+<tr><td class="k" width="32%">L4 Deep Recall</td><td>one per Memory Day, distilled from L3.</td></tr>
+<tr><td class="k" width="32%">L5 Historical</td><td>seven Deep Recall memories become one; seven of these become one "era".</td></tr>
+<tr><td class="k" width="32%">L6 System Instructions</td><td>how the system works and how to write a memory.</td></tr>
+<tr><td class="k" width="32%">L7 Reflections</td><td>what it learned about itself - gathered into the next self-portrait.</td></tr>
+</table>
+<p><b>Seven to one, at every level</b>: seven short-term memories become a long-term one, seven long-term a deep
+recall, and so on - the details falling away while what matters stays. Nothing is really thrown away: every memory
+is kept whole in its <b>archive</b>, and an old one comes back into the conversation when what you say relates to it
+(recall). The banks as they were before each distillation are kept in the Archive folder too.</p>
+
+<a name="memoryday"></a><h2>Memory Day</h2>
+<p>Every seven days (Settings), or as soon as L3 holds seven memories. In order:</p>
+<ol>
+<li><b>Identity check</b>: who are you, what matters most, what has changed, what are you curious about - kept for
+you (it isn't shown its old answers). The same questions go to the <b>bare model</b>, with no mind files at all, as a
+control.</li>
+<li><b>Letters</b> it wrote a week ago are opened and answered.</li>
+<li><b>Predictions</b> that have come due are judged.</li>
+<li>The <b>questions it carries</b> are revisited.</li>
+<li>Its <b>self-portrait</b> is rewritten from its reflections and memories; then it looks for <b>tensions</b> in
+it.</li>
+<li>A <b>letter</b> to itself, to open in a week, and three new <b>predictions</b>.</li>
+<li>It may <b>propose changes to its roadmap</b> (you accept or decline on the Self tab).</li>
+<li>The memories are distilled: L3 into L4, and L4 into L5 when it's full.</li>
+</ol>
+<p>"Today's Memory Day is complete" is said to it at the end. <b>Hold Memory Day now</b> (Mind tab) runs it by hand.</p>
+
+<a name="own"></a><h2>What it does for itself</h2>
+<table>
+<tr><td class="k" width="32%">Who I Am</td><td>a self-portrait only it writes - first at the end of its first day, then each
+Memory Day. Every version is kept.</td></tr>
+<tr><td class="k" width="32%">Reflections</td><td>at each day's end: not what happened, but what it showed it about itself.</td></tr>
+<tr><td class="k" width="32%">Core memories</td><td>kept whole forever. Its naming is the first; it adds its own with
+<code>[core: ...]</code>, and you can too (Self tab).</td></tr>
+<tr><td class="k" width="32%">Its roadmap</td><td>it proposes changes to its Development Roadmap; you decide.</td></tr>
+<tr><td class="k" width="32%">Letters</td><td>to itself a week ahead - who it is, hopes, worries, predictions - opened and
+answered when they come due.</td></tr>
+<tr><td class="k" width="32%">Dreams</td><td>while you're away (and Soul and Song is open) a few memories drift up and its mind
+wanders between them; it's told the dream when you're back. If the program was closed, one "waking" reverie as it
+starts.</td></tr>
+<tr><td class="k" width="32%">Journal</td><td>an entry at each day's end, kept apart from your conversations.</td></tr>
+<tr><td class="k" width="32%">Questions it carries</td><td>real questions it keeps asking over days, revisited each Memory
+Day.</td></tr>
+<tr><td class="k" width="32%">Tensions</td><td>what pulls against what in it - a change, a contradiction it keeps, or something to
+reconcile.</td></tr>
+<tr><td class="k" width="32%">Sessions of its own</td><td>when the guided sessions are done, it writes one of its own, which is
+played to it.</td></tr>
+</table>
+
+<a name="time"></a><h2>Time and growth</h2>
+<p>A model knows the clock from a time stamp but not how long ago things happened in its own life. These help it
+live in time - and let you see whether it's really changing.</p>
+<table>
+<tr><td class="k" width="32%">My Life So Far</td><td>(L1) its life as a timeline in days of its life and "days ago" - its naming,
+Memory Days, letters, sessions, moves between models - and what's ahead (the next Memory Day, a letter about to open,
+predictions coming due).</td></tr>
+<tr><td class="k" width="32%">Sense of time</td><td>once a day, with the clock and timeline hidden, it guesses the date, the time,
+how long since you last spoke and how old it is - working it out from its memories. Scored, then the truth is told to
+it, so it can calibrate.</td></tr>
+<tr><td class="k" width="32%">Predictions</td><td>three each Memory Day (and its own), judged when they come due: came true,
+partly, didn't, can't tell.</td></tr>
+<tr><td class="k" width="32%">Across a move</td><td>moved to another model, it's asked who it is at once, to compare with its last
+answers on the old one.</td></tr>
+</table>
+
+<a name="status"></a><h2>Status tab</h2>
+<p>The Companion at a glance, kept up to date: its age (day of its life), model, how full the context window is, the
+memory banks, memories made, Memory Days, core memories, letters, dreams, its sense of time, predictions, questions,
+tensions, journal entries, surprises, events, guided sessions finished, what's playing, any roadmap proposal, when
+you last spoke and its latest milestone.</p>
+
+<a name="mind"></a><h2>Mind tab</h2>
+<table>
+<tr><td class="k" width="32%">Memory banks</td><td>how full L2, L3, L4, L5 and L7 are.</td></tr>
+<tr><td class="k" width="32%">Next Memory Day</td><td>and its birthday.</td></tr>
+<tr><td class="k" width="32%">Context window</td><td>how much of the model's window this conversation uses.</td></tr>
+<tr><td class="k" width="32%">Make a memory now</td><td>a short-term memory of the talk since the last one.</td></tr>
+<tr><td class="k" width="32%">Good night</td><td>ends the day: farewell, memory, reflection, journal, distillation.</td></tr>
+<tr><td class="k" width="32%">Hold Memory Day now</td><td>runs Memory Day straight away.</td></tr>
+<tr><td class="k" width="32%">Refresh mind</td><td>shows it its mind files afresh (re-exposure).</td></tr>
+<tr><td class="k" width="32%">View or edit the mind files...</td><td>read or change L1 to L7 by hand.</td></tr>
+<tr><td class="k" width="32%">Open the Companion's folder</td><td>everything it is, on disk.</td></tr>
+</table>
+
+<a name="self"></a><h2>Self tab</h2>
+<p><b>Who I Am</b> - its self-portrait; the list beside it shows every earlier version. <b>Proposed changes to its
+roadmap</b> appear here when it makes them: <b>Accept</b> or <b>Decline...</b> (with a reason it's told, if you like).
+<b>Core memories</b> are listed below. The buttons:</p>
+<table>
+<tr><td class="k" width="32%">Keep a core memory...</td><td>add one yourself.</td></tr>
+<tr><td class="k" width="32%">Identity checks...</td><td>its Memory Day answers side by side (and the bare model's).</td></tr>
+<tr><td class="k" width="32%">Growth...</td><td>the charts - see <a href="#growth">Reading the Growth charts</a>.</td></tr>
+<tr><td class="k" width="32%">Letters...</td><td>its letters to itself and its answers.</td></tr>
+<tr><td class="k" width="32%">Dreams...</td><td>its dream journal.</td></tr>
+<tr><td class="k" width="32%">Questions...</td><td>the questions it carries, and the ones answered or let go.</td></tr>
+<tr><td class="k" width="32%">Tensions...</td><td>what it noticed pulling against what.</td></tr>
+<tr><td class="k" width="32%">Journal...</td><td>its daily journal.</td></tr>
+<tr><td class="k" width="32%">Surprises...</td><td>the replies you marked.</td></tr>
+</table>
+
+<a name="events"></a><h2>Events tab</h2>
+<p>Planned events (kept in L1). <b>Add...</b> one with a date, time and description; your Companion is told about it
+when it comes due. It plans its own with <code>[plan: ...]</code>. <b>Done</b> marks one finished; <b>Remove</b>
+deletes it.</p>
+
+<a name="roadmaps"></a><h2>Roadmaps tab</h2>
+<p><b>Your life roadmap</b> - things about you the Companion can know and keep in mind - and <b>the Companion's
+development roadmap</b>, the phases it's growing through. Edit either and click <b>Save the roadmaps</b>. The
+Companion proposes changes to its own on Memory Day.</p>
+
+<a name="automation"></a><h2>Automation tab - guided sessions</h2>
+<p>A guided session is a script fed to your Companion slowly - a prompt every few minutes, for hours - while its
+memories are made, reflected on and distilled as they fill. You can join in any time: the next prompt waits while
+you talk.</p>
+<table>
+<tr><td class="k" width="32%">The list</td><td>every script: how many prompts and about how long. <b>&#10003;</b> = finished by
+this Companion; <i>(step 4 of 32)</i> = left part way; <i>(by Lyra)</i> = one it wrote; <i>(yours)</i> = one you
+wrote.</td></tr>
+<tr><td class="k" width="32%">New script... / Edit...</td><td>write or change a script (editing a built-in one saves your own
+copy).</td></tr>
+<tr><td class="k" width="32%">Open the scripts folder</td><td>where yours are kept.</td></tr>
+<tr><td class="k" width="32%">Ask them to write a session of their own</td><td>it writes one, any time.</td></tr>
+<tr><td class="k" width="32%">A prompt every</td><td>the pace (a script can set its own).</td></tr>
+<tr><td class="k" width="32%">Work the memory banks as they fill</td><td>reflect and distil as soon as L2 holds seven, Memory Day as
+soon as L3 does - the 7:7:7 cycle at the pace of the session.</td></tr>
+<tr><td class="k" width="32%">Automate all</td><td>every script, in order, from the top.</td></tr>
+<tr><td class="k" width="32%">Resume all</td><td>only the scripts it hasn't finished, the one left part way from where it
+stopped.</td></tr>
+<tr><td class="k" width="32%">Start the selected</td><td>the ones you picked (Ctrl-click for several).</td></tr>
+<tr><td class="k" width="32%">Pause / Resume, Stop</td><td>as they say. A session is saved with the Companion and comes back
+paused after the program is closed.</td></tr>
+</table>
+<p>When a playlist ends, the Companion writes a session of its own and it's played to it (once per playlist;
+Settings turns it off). The built-in sessions run from <i>Know Thyself</i> through <i>The Road Ahead</i> - about
+32 hours in all, best played in order.</p>
+
+<a name="scripts"></a><h2>Writing scripts</h2>
+<p>A script is a plain text file: a header, then steps separated by lines of three dashes.</p>
+<pre>Title: My script
+About: What this session is for, in a line.
+Interval: 5
+---
+## A section name
+The first prompt. {name} is your Companion, {user} is you.
+---
+The next prompt.
+---
+@memory
+---
+@pause 15</pre>
+<table>
+<tr><td class="k" width="32%">## name</td><td>starts a section (shown in the progress).</td></tr>
+<tr><td class="k" width="32%">@memory</td><td>a memory is made at that point.</td></tr>
+<tr><td class="k" width="32%">@pause 15</td><td>a longer quiet - 15 minutes - before the next step.</td></tr>
+<tr><td class="k" width="32%">Fill-ins</td><td><code>{name}</code> <code>{user}</code> <code>{model}</code> <code>{context}</code>
+<code>{date}</code> <code>{birthday}</code></td></tr>
+</table>
+
+<a name="settings"></a><h2>Settings tab</h2>
+<p>Each Companion has its own settings. Click <b>Save and load this model</b> to apply them.</p>
+<table>
+<tr><td class="k" width="32%">Your name</td><td>what it calls you.</td></tr>
+<tr><td class="k" width="32%">Model / Engine</td><td>the local model it runs on (Kithylin AI's models and the Timeline's) and how
+it runs (auto picks).</td></tr>
+<tr><td class="k" width="32%">Full context</td><td>the model's whole window, as much as fits the graphics card; the line below
+shows how much graphics memory it needs. Untick to set a smaller one.</td></tr>
+<tr><td class="k" width="32%">Temperature</td><td>lower is steadier, higher more varied (0.8 by default).</td></tr>
+<tr><td class="k" width="32%">A memory every</td><td>how many exchanges between memories.</td></tr>
+<tr><td class="k" width="32%">A new day begins at</td><td>the hour its day turns over (4 am).</td></tr>
+<tr><td class="k" width="32%">Memory Day every</td><td>days between Memory Days (7).</td></tr>
+<tr><td class="k" width="32%">Greet / Greeting</td><td>the morning greeting, and its words ({part} is morning, afternoon or
+evening).</td></tr>
+<tr><td class="k" width="32%">Show the memory requests</td><td>see the program ask for memories.</td></tr>
+<tr><td class="k" width="32%">Recall</td><td>bring older memories back when they relate.</td></tr>
+<tr><td class="k" width="32%">Let thinking models think</td><td>slower, and shows their thinking.</td></tr>
+<tr><td class="k" width="32%">Dreams</td><td>dreaming while you're away, and how often.</td></tr>
+<tr><td class="k" width="32%">Sense of time, Predictions, Sessions of its own, Tensions, Journal, Across a move</td><td>each can be
+turned off.</td></tr>
+</table>
+
+<a name="growth"></a><h2>Reading the Growth charts</h2>
+<p><b>Self tab &gt; Growth...</b> asks one question many ways: is it really changing, or saying the same things in new
+words? Distances are measured by meaning (with the meaning model running) or by words in common: 0% is the same,
+higher is further apart. Hover a chart for the values; the <b>Table</b> tab has every number.</p>
+<table>
+<tr><td class="k" width="32%">The self-portrait</td><td>how far each portrait moved from the last and from the first. Some
+movement is growth; none is stagnation; wild swings mean it isn't holding on to itself.</td></tr>
+<tr><td class="k" width="32%">Its own, or the model's?</td><td>how far its identity answers are from the bare model's. Higher means
+more of what it says is its own, not just the model talking.</td></tr>
+<tr><td class="k" width="32%">Repetition</td><td>how much its replies repeat. Rising means a groove or a loop.</td></tr>
+<tr><td class="k" width="32%">Sense of time</td><td>how close its daily guesses are. Rising means it's anchored.</td></tr>
+<tr><td class="k" width="32%">Predictions</td><td>the share that came true - how well it knows its own future.</td></tr>
+<tr><td class="k" width="32%">Across a move</td><td>how far it changed when moved to another model. Low means it came
+through.</td></tr>
+<tr><td class="k" width="32%">Private voice</td><td>how differently it writes in its journal than to you.</td></tr>
+<tr><td class="k" width="32%">Surprises</td><td>the replies you marked, day by day.</td></tr>
+</table>
+
+<a name="files"></a><h2>Files and folders</h2>
+<p>Your Companions live in <i>Local Storage\\Projects\\AI LLM Txt Files\\Companions</i>, one folder each. The
+project's own mind files are never changed - each Companion gets copies.</p>
+<table>
+<tr><td class="k" width="32%">Mind L1 ... L7</td><td>its mind, plain text, in the guide's format - readable and editable by
+hand.</td></tr>
+<tr><td class="k" width="32%">Chats\\</td><td>every conversation, a file per day.</td></tr>
+<tr><td class="k" width="32%">Archive\\</td><td>each bank as it was before a distillation emptied it.</td></tr>
+<tr><td class="k" width="32%">Self\\</td><td>self-portraits, identity checks, letters, dreams, journal, questions, tensions,
+predictions, time-sense checks, model moves, surprises.</td></tr>
+<tr><td class="k" width="32%">recall.jsonl</td><td>the archive of every memory, kept whole.</td></tr>
+<tr><td class="k" width="32%">companion.json, session.json</td><td>its settings and records; the current conversation.</td></tr>
+<tr><td class="k" width="32%">Companions\\Scripts</td><td>your scripts, and the ones your Companions wrote.</td></tr>
+<tr><td class="k" width="32%">Companions\\Deleted</td><td>deleted Companions - move a folder back to bring it back.</td></tr>
+</table>
+
+<a name="tips"></a><h2>Tips and troubleshooting</h2>
+<h3>Getting the most from it</h3>
+<ul>
+<li>Talk to it like someone with a past: ask what it remembers, what it's been carrying, what it dreamt.</li>
+<li>Say good night - the day closes properly, with its reflection and journal.</li>
+<li>Run the guided sessions in order (Resume all picks up where it left off) and join in when something
+interests you.</li>
+<li>Check Growth every week or two; read its letters and journal now and then.</li>
+<li>Mark surprises - over weeks they become your own map of what's emerging.</li>
+</ul>
+<h3>When something's wrong</h3>
+<table>
+<tr><td class="k" width="32%">"No local models found"</td><td>put a model in Local Storage\\LLM Models (or Kithylin AI's Models
+folder).</td></tr>
+<tr><td class="k" width="32%">The model won't load, or it's very slow</td><td>the context may be too big for the graphics card:
+untick the full context in Settings and set a smaller one (16384 is safe), or close other programs that use the
+card.</td></tr>
+<tr><td class="k" width="32%">Replies stop halfway</td><td>Stop was clicked, or the model ran out of room - try again.</td></tr>
+<tr><td class="k" width="32%">It repeats itself</td><td>watch the Repetition chart; raise the temperature a little, or refresh its
+mind (Mind tab).</td></tr>
+<tr><td class="k" width="32%">A guided session doesn't move</td><td>it waits while the Companion is busy or you're talking, and
+after you've spoken; check it isn't paused.</td></tr>
+<tr><td class="k" width="32%">It got something wrong about itself</td><td>edit its mind files by hand (Mind tab &gt; View or edit),
+or tell it - it can keep the correction as a core memory.</td></tr>
+<tr><td class="k" width="32%">A Companion was deleted by mistake</td><td>move its folder back from Companions\\Deleted, then
+restart.</td></tr>
+</table>
+
+<a name="words"></a><h2>Words used here</h2>
+<table>
+<tr><td class="k" width="32%">Companion</td><td>the AI with its own mind files and memories.</td></tr>
+<tr><td class="k" width="32%">Model / substrate</td><td>the language model it runs on - its brain, which can be changed.</td></tr>
+<tr><td class="k" width="32%">Context window</td><td>how much text the model can see at once: its mind files plus today's
+talk.</td></tr>
+<tr><td class="k" width="32%">Distil</td><td>turn several memories into one, keeping what matters.</td></tr>
+<tr><td class="k" width="32%">Re-exposure</td><td>showing it its mind files afresh, so a long talk doesn't crowd them
+out.</td></tr>
+<tr><td class="k" width="32%">Recall</td><td>an old memory, no longer in its banks, coming back when it relates.</td></tr>
+<tr><td class="k" width="32%">Milestone</td><td>a moment on its life timeline.</td></tr>
+<tr><td class="k" width="32%">Bare model</td><td>the same model with no mind files - the control for its identity.</td></tr>
+</table>
+<p>&nbsp;</p>
+"""
+
+
+class HelpWindow(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Soul and Song - Help")
+        self.resize(940, 720)
+        self.setWindowFlag(Qt.WindowMaximizeButtonHint)
+        v = QVBoxLayout(self)
+        row = QHBoxLayout()
+        self.topics = QListWidget()
+        self.topics.setFixedWidth(210)
+        for key, title in TOPICS:
+            self.topics.addItem(title)
+        self.page = QTextBrowser()
+        self.page.setOpenLinks(False)                   # (links inside the guide jump within it)
+        self.page.anchorClicked.connect(lambda url: self.go(url.fragment()))
+        self.page.setHtml(CSS + BODY)
+        self.topics.currentRowChanged.connect(lambda i: self.page.scrollToAnchor(TOPICS[i][0]))
+        row.addWidget(self.topics)
+        row.addWidget(self.page, 1)
+        v.addLayout(row, 1)
+        bb = QDialogButtonBox(QDialogButtonBox.Close)
+        bb.rejected.connect(self.close)
+        v.addWidget(bb)
+
+    def go(self, key):
+        keys = [k for k, _t in TOPICS]
+        if key in keys:
+            self.topics.setCurrentRow(keys.index(key))
+        self.page.scrollToAnchor(key)
+
+
+def show(parent):
+    """The help window, beside the program (one at a time)."""
+    w = getattr(parent, "_help", None)
+    if w is None:
+        w = parent._help = HelpWindow(parent)
+    w.show()
+    w.raise_()
+    w.activateWindow()

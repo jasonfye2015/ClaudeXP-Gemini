@@ -149,5 +149,8 @@ read, edit or copy them by hand (Mind > View or edit the mind files). Beside the
 conversation), Archive\ (each bank as it was before a distillation emptied it), companion.json and session.json.
 Delete Companion... moves a Companion's whole folder to Companions\Deleted\ - move it back to bring them back.
 
+Help (beside Stop, under the conversation) opens the whole guide to using it, by topic (help.py); it can stay open
+beside the window.
+
 In the Timeline: Start > All Programs > Projects > Soul and Song (and the desktop's Projects folder).
 Standalone: "Soul and Song.bat", or  python -m soulsong  from ClaudeApps.

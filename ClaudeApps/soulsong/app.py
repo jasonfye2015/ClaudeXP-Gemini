@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDateTimeEdit, QDialog, QDi
 
 from . import companion as C
 from . import growthview
+from . import help as helpwindow
 from .mind import KINDS, LEVELS, Mind
 from .paths import companions, project
 
@@ -341,6 +342,10 @@ class SoulAndSong(QWidget):
         row.addWidget(wow)
         row.addStretch(1)
         row.addWidget(stop)
+        guide = QPushButton("Help")
+        guide.setToolTip("How to use Soul and Song - everything, from the first Companion to the Growth charts.")
+        guide.clicked.connect(lambda: helpwindow.show(self))
+        row.addWidget(guide)
         row.addWidget(self.send_btn)
         lv.addWidget(self.chat, 1)
         lv.addWidget(self.typing)
