@@ -1,0 +1,244 @@
+{
+ "_help": "The desktop a new install (or a format) of SYSTEM-2011 starts with: icon grid positions (column, row), the view options, the loose shortcuts and the program folders on the desktop, the gadgets and where they sit (pixels), and the background (Personalization). Taken from the user's desktop, 2026-10-27, by tools/capture_desktop.py.",
+ "positions": {
+  "sys:computer": [
+   0,
+   0
+  ],
+  "sys:recycle": [
+   0,
+   1
+  ],
+  "sys:home": [
+   0,
+   2
+  ],
+  "sys:network": [
+   0,
+   3
+  ],
+  "file:Disc Tools": [
+   0,
+   4
+  ],
+  "file:Furry Programs": [
+   0,
+   5
+  ],
+  "file:Games": [
+   0,
+   6
+  ],
+  "file:Gemini Office": [
+   1,
+   0
+  ],
+  "file:GeminiAdobe": [
+   1,
+   1
+  ],
+  "file:Projects": [
+   1,
+   2
+  ],
+  "file:Social Programs": [
+   1,
+   3
+  ],
+  "file:Windows Live": [
+   1,
+   4
+  ],
+  "file:ClaudeAI.lnk": [
+   1,
+   5
+  ],
+  "file:ClaudeAmp.lnk": [
+   1,
+   6
+  ],
+  "file:ClaudeTorrent.lnk": [
+   2,
+   0
+  ],
+  "file:ClaudeTV.lnk": [
+   2,
+   1
+  ],
+  "file:Copilot Python Studio.lnk": [
+   2,
+   2
+  ],
+  "file:CopilotAI.lnk": [
+   2,
+   3
+  ],
+  "file:Internet Explorer.lnk": [
+   2,
+   4
+  ],
+  "file:Kiwix Wiki Reader.lnk": [
+   2,
+   5
+  ],
+  "file:Mozilla Firefox.lnk": [
+   2,
+   6
+  ],
+  "file:Windows Media Player.lnk": [
+   3,
+   0
+  ],
+  "file:Kithylin AI.lnk": [
+   3,
+   1
+  ],
+  "file:Claude Manual.lnk": [
+   3,
+   2
+  ],
+  "file:Kithy on Bluesky.lnk": [
+   3,
+   3
+  ],
+  "file:Kithylin Autopilot.lnk": [
+   3,
+   4
+  ]
+ },
+ "hidden": [],
+ "auto_arrange": false,
+ "align_grid": true,
+ "show_icons": true,
+ "size": "Medium icons",
+ "shortcuts": [
+  {
+   "file": "Claude Manual.lnk",
+   "program": "manual"
+  },
+  {
+   "file": "ClaudeAI.lnk",
+   "program": "claudeai"
+  },
+  {
+   "file": "ClaudeAmp.lnk",
+   "program": "claudeamp"
+  },
+  {
+   "file": "ClaudeTorrent.lnk",
+   "program": "torrent"
+  },
+  {
+   "file": "ClaudeTV.lnk",
+   "program": "tv"
+  },
+  {
+   "file": "Copilot Python Studio.lnk",
+   "program": "pystudio"
+  },
+  {
+   "file": "CopilotAI.lnk",
+   "program": "copilotai"
+  },
+  {
+   "file": "Internet Explorer.lnk",
+   "program": "iexplore"
+  },
+  {
+   "file": "Kithy on Bluesky.lnk",
+   "program": "bluesky"
+  },
+  {
+   "file": "Kithylin AI.lnk",
+   "program": "kithylinai"
+  },
+  {
+   "file": "Kithylin Autopilot.lnk",
+   "program": "autopilot"
+  },
+  {
+   "file": "Kiwix Wiki Reader.lnk",
+   "program": "kiwix"
+  },
+  {
+   "file": "Mozilla Firefox.lnk",
+   "program": "firefox"
+  },
+  {
+   "file": "Windows Media Player.lnk",
+   "program": "wmp"
+  }
+ ],
+ "folders": [
+  "Disc Tools",
+  "Furry Programs",
+  "Games",
+  "Gemini Office",
+  "GeminiAdobe",
+  "Projects",
+  "Social Programs",
+  "Windows Live"
+ ],
+ "gadgets": [
+  {
+   "kind": "TV Guide",
+   "x": 1137,
+   "y": 6
+  },
+  {
+   "kind": "E-mail",
+   "x": 1137,
+   "y": 179
+  },
+  {
+   "kind": "Weather",
+   "x": 1055,
+   "y": 495
+  },
+  {
+   "kind": "CPU Meter",
+   "x": 456,
+   "y": 11
+  },
+  {
+   "kind": "Calendar",
+   "x": 1208,
+   "y": 495
+  },
+  {
+   "kind": "Clock",
+   "x": 965,
+   "y": 349
+  },
+  {
+   "kind": "Sun and Moon",
+   "x": 1107,
+   "y": 348
+  },
+  {
+   "kind": "LLM Activity",
+   "x": 608,
+   "y": 115
+  },
+  {
+   "kind": "Network Meter",
+   "x": 609,
+   "y": 11
+  },
+  {
+   "kind": "System Monitor",
+   "x": 863,
+   "y": 13
+  }
+ ],
+ "display": {
+  "wallpaper": "assets/backgrounds/Harmony.jpg",
+  "position": "Fill",
+  "color": "#000000",
+  "aero": "#6BA4D9",
+  "aero_intensity": 0.75,
+  "saver": "Bubbles",
+  "wait": 10,
+  "resume_welcome": false
+ }
+}

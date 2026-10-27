@@ -20,6 +20,18 @@ DEFAULTS = {"wallpaper": str(BACKGROUNDS / "Harmony.jpg"), "position": "Fill", "
             "aero": "#6BA4D9", "aero_intensity": 0.75, "saver": "Bubbles", "wait": 10, "resume_welcome": False}
 
 
+def _captured():
+    """The captured desktop's background (assets/desktop_layout.json), over the defaults: a format brings it back."""
+    from .paths import ROOT, default_layout
+    shown = {k: v for k, v in (default_layout().get("display") or {}).items() if k in DEFAULTS}
+    if shown.get("wallpaper") and not Path(shown["wallpaper"]).is_absolute():
+        shown["wallpaper"] = str(ROOT / shown["wallpaper"])
+    return shown
+
+
+DEFAULTS.update(_captured())
+
+
 def wallpapers():
     """[(label, path or None)]: solid colour, then the Windows 7 wallpapers."""
     out = [("(Solid color)", None)]

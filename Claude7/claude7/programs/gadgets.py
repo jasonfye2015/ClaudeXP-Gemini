@@ -864,14 +864,24 @@ class Gadgets:
         if self.loaded:
             return
         self.loaded = True
+        fresh = not GADGETS_FILE.exists()
         try:
             data = json.loads(GADGETS_FILE.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             data = {}
+        if fresh:                                  # a new install or a format: the captured desktop's gadgets
+            from ..paths import default_layout
+            data = {"gadgets": [dict(g) for g in default_layout().get("gadgets", [])]}
+        area = self.desktop.work_area()
         for d in data.get("gadgets", []):
             cls = KINDS.get(d.get("kind"))
             if cls is not None:
+                if fresh:                          # (kept on a smaller screen)
+                    d["x"] = max(0, min(int(d.get("x", 40)), area.width() - cls.SIZE[0]))
+                    d["y"] = max(0, min(int(d.get("y", 40)), area.height() - cls.SIZE[1]))
                 self.gadgets.append(cls(self, d))
+        if fresh and self.gadgets:
+            self.save()
 
     def save(self):
         try:

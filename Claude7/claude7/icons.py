@@ -11,7 +11,7 @@ from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QLinearGradient, Q
 from PySide6.QtWidgets import QApplication, QInputDialog, QMenu, QRubberBand, QStyle, QWidget
 
 from . import sound
-from .paths import DATA, icon as asset_icon
+from .paths import DATA, default_layout, icon as asset_icon
 
 STATE_FILE = DATA / "desktop.json"
 CELL_W, CELL_H = 90, 94
@@ -27,6 +27,8 @@ PROGRAM_FOLDERS = {"Games": ["Games"], "Games/Windows Games": ["Games/Windows Ga
 # loose shortcuts on a fresh desktop
 DESKTOP_SHORTCUTS = ["iexplore", "firefox", "msn", "aim", "claudeai", "kithylinai", "manual", "copilotai", "wmp", "kiwix", "claudecraft", "tv",
                      "secondlife", "furdir", "claudeamp", "torrent", "pystudio"]
+if default_layout().get("shortcuts"):                    # (the captured desktop's, when there is one)
+    DESKTOP_SHORTCUTS = list(dict.fromkeys(s["program"] for s in default_layout()["shortcuts"]))
 # programs that also get a loose desktop icon of their own, besides the one in their folder (added once, even on a
 # desktop made before they existed)
 LOOSE_TOO = ["bluesky", "autopilot"]
@@ -114,11 +116,17 @@ class IconManager(QObject):
         self.desktop = desktop
         self.state = {"positions": {}, "hidden": [], "auto_arrange": False, "align_grid": True, "show_icons": True,
                       "size": "Medium icons", "links": [], "folders": 0}
+        self.fresh = not STATE_FILE.exists()           # a new install, or a format
         try:
             with open(STATE_FILE, encoding="utf-8") as f:
                 self.state.update(json.load(f))
         except (OSError, ValueError):
             pass
+        if self.fresh:
+            layout = default_layout()
+            for key in ("positions", "hidden", "auto_arrange", "align_grid", "show_icons", "size"):
+                if key in layout:
+                    self.state[key] = layout[key]
         self.icons = []
         self.press = None
         self.dragging = False
@@ -355,8 +363,25 @@ class IconManager(QObject):
             pass
 
     def ready(self):
+        if self.fresh:
+            self._fresh_shortcuts()
         self.ensure_program_folders()
         self.rescan()
+
+    def _fresh_shortcuts(self):
+        """A new desktop: the captured one's loose shortcuts (assets/desktop_layout.json), each where it was."""
+        from claudexp import programs
+        from claudexp.explorer import shortcuts
+        desktop = self.folder()
+        for link in default_layout().get("shortcuts", []):
+            target = desktop / link["file"]
+            if target.exists() or not any(p.key == link["program"] for p in programs.PROGRAMS):
+                continue
+            try:
+                shortcuts.make(target, program=link["program"])
+            except Exception:
+                pass
+        self.fresh = False
 
     # ---- selection and dragging ----
     def selected(self):

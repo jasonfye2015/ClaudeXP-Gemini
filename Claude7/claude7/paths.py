@@ -25,6 +25,18 @@ USER_PICTURES = ASSETS / "user_pictures"
 XP_ROOT = TIMELINE / "ClaudeXP"
 
 
+@lru_cache(maxsize=1)
+def default_layout():
+    """assets/desktop_layout.json: the desktop a new install or a format starts with - icons, gadgets, background
+    (captured from the user's own by tools/capture_desktop.py). {} if there's none."""
+    import json
+    try:
+        data = json.loads((ASSETS / "desktop_layout.json").read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
 @lru_cache(maxsize=None)
 def pixmap(name):
     """An image from assets/images (a sub-folder path is fine: 'logon/Logon_Template.png'). Null if missing."""
