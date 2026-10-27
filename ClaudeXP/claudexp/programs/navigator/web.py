@@ -235,9 +235,50 @@ def image_for(url):
     text = parse_qs(parts.query).get("text", [""])[0]
     if "/img/" not in parts.path:
         return _broken()
+    if name == "photo.gif" and text:                    # (painted by the Image Creator's engine, when it has been)
+        from . import webimages
+        q = parse_qs(parts.query)
+        w, h = (int(q.get(k, ["0"])[0] or 0) if q.get(k, ["0"])[0].isdigit() else 0 for k in ("w", "h"))
+        pm = webimages.painter().pixmap(text, w, h)
+        if pm is not None:
+            return pm
     return {"construction.gif": _construction, "counter.gif": lambda _t: _counter(url),
             "new.gif": _new, "email.gif": _email, "line.gif": _line,
             "button.gif": _button, "photo.gif": _photo}.get(name, lambda _t: _broken())(text)
+
+
+IMG_TAG = re.compile(r"<img\b[^>]*>", re.I)
+ATTR = re.compile(r"""\b(src|alt|title|width|height)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)""", re.I)
+PIC_EXT = re.compile(r"\.(jpe?g|gif|png|bmp)$", re.I)
+
+
+def fix_images(page):
+    """Pictures a page made up (/images/wolf_howling.jpg, someone else's site...) - which would show broken - become
+    photo pictures of what they show, from their alt text or their file name, painted when the engine is there;
+    and photo pictures get their size in the address, so they're painted in the right shape."""
+    def one(m):
+        tag = m.group(0)
+        attrs = {k.lower(): v.strip("\"'") for k, v in ATTR.findall(tag)}
+        src = attrs.get("src", "")
+        path = urlparse(src).path
+        if "/img/" in path and not path.lower().endswith("photo.gif"):
+            return tag                                     # (a built-in picture: a button, the counter...)
+        if path.lower().endswith("photo.gif"):
+            text = parse_qs(urlparse(src).query).get("text", [""])[0]
+        else:
+            stem = PIC_EXT.sub("", path.rsplit("/", 1)[-1])
+            words = " ".join(w for w in re.split(r"[\W_]+", stem) if w.isalpha() and len(w) > 1)
+            text = attrs.get("alt") or attrs.get("title") or words
+            text = re.sub(r"\s+", " ", text).strip()
+            if len(text) < 3 or text.lower() in ("image", "img", "pic", "picture", "photo", "spacer", "blank"):
+                return tag
+        if not text:
+            return tag
+        w, h = attrs.get("width", ""), attrs.get("height", "")
+        size = (f"&w={w}&h={h}" if w.isdigit() and h.isdigit() else "")
+        new = f"/img/photo.gif?text={quote_plus(text)}{size}"
+        return ATTR.sub(lambda a: f'src="{new}"' if a.group(1).lower() == "src" else a.group(0), tag, count=0)
+    return IMG_TAG.sub(one, page)
 
 
 def _canvas(w, h, color="#c0c0c0"):

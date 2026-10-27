@@ -141,7 +141,7 @@ class PageView(QTextBrowser):
         self.document().setDefaultStyleSheet(css)
         bar = self.verticalScrollBar()
         pos = bar.value()
-        self.setHtml(page)
+        self.setHtml(web.fix_images(page))
         bar.setValue(pos)
 
 
@@ -197,6 +197,12 @@ class Browser(QWidget):
         self.throb_timer.timeout.connect(self._throb)
         self.render_timer = QTimer(self)
         self.render_timer.timeout.connect(self._render_partial)
+        self.picture_timer = QTimer(self)            # (pictures painted for the page: shown again, a few at a time)
+        self.picture_timer.setSingleShot(True)
+        self.picture_timer.setInterval(700)
+        self.picture_timer.timeout.connect(self._pictures_arrived)
+        from . import webimages
+        webimages.painter().ready.connect(self._picture_ready)
         self._update_buttons()
 
     def _build_chrome(self):
@@ -603,6 +609,13 @@ class Browser(QWidget):
         self.status.setText(self.DONE)
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
+
+    def _picture_ready(self, _key):
+        self.picture_timer.start()
+
+    def _pictures_arrived(self):
+        if self.loader is None and self.page and self.pages.currentWidget() is self.view and "<img" in self.page.lower():
+            self.view.show_page(self.page)
 
     def _error(self, url, why):
         self._stop_throbber()

@@ -94,9 +94,68 @@ def generate(args):
     print(f"IMAGE_READY:{destination}", flush=True)
 
 
+def serve(args):
+    """One pipeline, loaded once, for many small pictures (the Web's): a job per line on stdin - JSON with id,
+    prompt, negative_prompt, width, height, steps, guidance, seed, output - answered IMAGE_READY:<id> or
+    ERROR:<id>:<why>. The cheapest way that works: the whole model on the graphics card; if it doesn't fit (the
+    language models are there too), only the piece at work on it (slower); else the processor. Ends when stdin
+    closes."""
+    import json
+    import torch
+    from diffusers import DiffusionPipeline
+
+    model_path = Path(args.model_path)
+    modes = ["gpu", "offload", "cpu"] if torch.cuda.is_available() else ["cpu"]
+    pipe = None
+
+    def load(mode):
+        p = DiffusionPipeline.from_pretrained(
+            str(model_path), torch_dtype=torch.float32 if mode == "cpu" else torch.float16, variant="fp16",
+            use_safetensors=True, local_files_only=True, safety_checker=None)
+        if mode == "gpu":
+            p.to("cuda")
+        elif mode == "offload":
+            p.enable_sequential_cpu_offload()
+        p.enable_attention_slicing()
+        p.set_progress_bar_config(disable=True)
+        return p
+
+    def out_of_memory(exc):
+        return isinstance(exc, getattr(torch.cuda, "OutOfMemoryError", ())) or "out of memory" in str(exc).lower()
+
+    print("SERVING", flush=True)
+    for line in sys.stdin:
+        if not line.strip():
+            continue
+        job = json.loads(line)
+        while True:
+            try:
+                if pipe is None:
+                    pipe = load(modes[0])
+                    print(f"LOADED:{modes[0]}", flush=True)
+                image = pipe(prompt=job["prompt"], negative_prompt=job.get("negative_prompt") or None,
+                             width=int(job.get("width", 512)), height=int(job.get("height", 512)),
+                             num_inference_steps=int(job.get("steps", 20)), guidance_scale=float(job.get("guidance", 7)),
+                             generator=torch.Generator("cpu").manual_seed(int(job.get("seed", 0)))).images[0]
+                destination = Path(job["output"])
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                image.save(destination)
+                print(f"IMAGE_READY:{job['id']}", flush=True)
+                break
+            except Exception as exc:
+                if out_of_memory(exc) and len(modes) > 1:
+                    pipe = None
+                    torch.cuda.empty_cache()
+                    modes.pop(0)
+                    print(f"FALLBACK:{modes[0]}", flush=True)
+                    continue
+                print(f"ERROR:{job.get('id')}:{type(exc).__name__}: {exc}".replace("\n", " "), flush=True)
+                break
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("operation", choices=("install", "generate"))
+    parser.add_argument("operation", choices=("install", "generate", "serve"))
     parser.add_argument("--model", choices=tuple(MODELS), required=True)
     parser.add_argument("--models-root", default="")
     parser.add_argument("--model-path", default="")
@@ -112,6 +171,8 @@ def main():
     try:
         if args.operation == "install":
             install(args.model, args.models_root)
+        elif args.operation == "serve":
+            serve(args)
         else:
             generate(args)
     except Exception as exc:
