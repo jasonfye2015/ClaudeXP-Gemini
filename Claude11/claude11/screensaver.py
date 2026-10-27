@@ -175,7 +175,8 @@ def _xp_savers():
                 "Super Claude Bros": xp.SAVERS.get("Super Claude Bros"),
                 "Super Claude Bros. 3": xp.SAVERS.get("Super Claude Bros. 3"),
                 "The Legend of Claude": xp.SAVERS.get("The Legend of Claude"),
-                "Zelda II: The Adventure of Claude": xp.SAVERS.get("Zelda II: The Adventure of Claude")}
+                "Zelda II: The Adventure of Claude": xp.SAVERS.get("Zelda II: The Adventure of Claude"),
+                "Metroid: Claude's Mission": xp.SAVERS.get("Metroid: Claude's Mission")}
     except Exception:
         return {}
 
