@@ -745,9 +745,113 @@ class TVGadget(Gadget):
             y += self.ROW
 
 
+# ---- XP's Copilot Widgets that 7 had no gadget for ------------------------------------------------------------------
+# The same widgets as XP's (claudexp.programs.copilot_widgets.widgets) - their readings and their drawing - each in a
+# gadget: a hidden XP widget keeps sampling, and the gadget draws it on Windows 7's dark glass in 7's colours (put in
+# the XP widgets' module only while it draws, so XP's own Copilot Widgets on this computer keep their theme).
+SEVEN = {"top": "#3C3C3C", "bottom": "#141414", "edge": "#FFFFFF", "text": "#FFFFFF", "accent": "#7FD0FF",
+         "soft": "#D6E2EE", "dim": "#9AA7B4", "in": "#FF6E6E", "out": "#6EE89A"}
+_COLOURS = ("THEME", "WHITE", "GOLD", "SOFT", "DIM", "IN_RED", "OUT_GREEN")
+
+
+class _WidgetHost:
+    """What an XP widget asks of its controller: the desktop, the settings (Copilot Widgets' own on this computer -
+    where you are, the hemisphere - with the gadget's few choices on top), and saving them."""
+
+    def __init__(self, gadget):
+        from claudexp.programs.copilot_widgets import DEFAULTS, SETTINGS_FILE
+        from claudexp.programs.people import load_json
+        self.gadget = gadget
+        self.desktop = gadget                      # (the XP widget's parent: it goes when the gadget does)
+        saved = load_json(SETTINGS_FILE, {})
+        self.settings = {**DEFAULTS, **{k: v for k, v in (saved if isinstance(saved, dict) else {}).items()
+                                        if k in DEFAULTS}}
+        self.settings.update(locked=True, opacity=100, **(gadget.data.get("settings") or {}))
+
+    def save(self):
+        self.gadget.data["settings"] = {"real_moon": self.settings.get("real_moon", True)}
+        self.gadget.gadgets.save()
+
+    def clamp(self, widget, pos):
+        return pos
+
+    def remember(self, widget):
+        pass
+
+    def widget_menu(self, widget, pos):
+        pass
+
+
+class XPWidgetGadget(Gadget):
+    XP = ""                                        # the XP widget's class name in copilot_widgets.widgets
+
+    def __init__(self, gadgets, data):
+        from claudexp.programs.copilot_widgets import widgets as W
+        super().__init__(gadgets, data)
+        self.W = W
+        self.host = _WidgetHost(self)
+        self.inner = getattr(W, self.XP)(self.host)
+        self.inner.hide()                          # (it samples; the gadget shows it)
+        self.inner.start()
+
+    def deleteLater(self):                         # (closed: its sampling stops - the AI widget's thread too)
+        if isValid(self.inner):
+            self.inner.stop()
+        super().deleteLater()
+
+    def draw(self, p):
+        W = self.W
+        before = {k: getattr(W, k) for k in _COLOURS}
+        W.THEME = SEVEN
+        W.WHITE, W.GOLD, W.SOFT, W.DIM = (QColor(SEVEN[k]) for k in ("text", "accent", "soft", "dim"))
+        W.IN_RED, W.OUT_GREEN = QColor(SEVEN["in"]), QColor(SEVEN["out"])
+        try:
+            r = QRectF(self.rect()).adjusted(1, 1, -1, -1)
+            self.glass(p, r, dark=True)
+            p.save()
+            self.inner.draw(p, QRectF(self.rect()))
+            p.restore()
+        finally:
+            for k, v in before.items():
+                setattr(W, k, v)
+
+    def mousePressEvent(self, event):
+        self._pressed_at = self.pos()
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        clicked = event.button() == Qt.LeftButton and self.drag is not None \
+            and self.pos() == getattr(self, "_pressed_at", None)
+        super().mouseReleaseEvent(event)
+        if clicked:                                 # (a click, not a drag: the widget's own click - the sky's year)
+            self.inner.clicked(event.position())
+            self.update()
+
+
+class SkyGadget(XPWidgetGadget):
+    NAME, XP, SIZE, TICK = "Day and Night", "SkyWidget", (330, 190), 30000
+
+
+class AlmanacGadget(XPWidgetGadget):
+    NAME, XP, SIZE, TICK = "Sun and Moon", "AlmanacWidget", (250, 142), 60000
+
+
+class SystemGadget(XPWidgetGadget):
+    NAME, XP, SIZE, TICK = "System Monitor", "SystemWidget", (260, 330), 1000
+
+
+class NetworkGadget(XPWidgetGadget):
+    NAME, XP, SIZE, TICK = "Network Meter", "NetworkWidget", (250, 100), 1000
+
+
+class AIGadget(XPWidgetGadget):
+    NAME, XP, SIZE, TICK = "LLM Activity", "LLMWidget", (250, 100), 1000
+
+
 KINDS = {"Clock": ClockGadget, "Calendar": CalendarGadget, "CPU Meter": CpuGadget, "Weather": WeatherGadget,
          "Slide Show": SlideShowGadget, "Feed Headlines": FeedGadget, "E-mail": MailGadget,
-         "TV Guide": TVGadget}
+         "TV Guide": TVGadget, "Day and Night": SkyGadget, "Sun and Moon": AlmanacGadget,
+         "System Monitor": SystemGadget, "Network Meter": NetworkGadget, "LLM Activity": AIGadget}
 
 
 class Gadgets:
@@ -873,14 +977,17 @@ def gadget_pixmap(kind, size=64):
     p = QPainter(pm)
     p.setRenderHint(QPainter.Antialiasing)
     colours = {"Clock": "#E6ECF4", "Calendar": "#C0392B", "CPU Meter": "#2E2E2E", "Weather": "#58A6E8",
-               "Slide Show": "#F5F5F5", "Feed Headlines": "#3A3A3A", "E-mail": "#3B78C9", "TV Guide": "#1B2A41"}
+               "Slide Show": "#F5F5F5", "Feed Headlines": "#3A3A3A", "E-mail": "#3B78C9", "TV Guide": "#1B2A41",
+               "Day and Night": "#1F3A6E", "Sun and Moon": "#2B2B44", "System Monitor": "#2A2A2A",
+               "Network Meter": "#22313A", "LLM Activity": "#33263F"}
     p.setPen(QPen(QColor(0, 0, 0, 90), 1))
     p.setBrush(QColor(colours.get(kind, "#CCCCCC")))
     p.drawRoundedRect(QRectF(4, 8, size - 8, size - 16), 8, 8)
     f = QFont("Segoe UI")
     f.setPixelSize(11)
     p.setFont(f)
-    white = ("Calendar", "CPU Meter", "Weather", "Feed Headlines", "E-mail", "TV Guide")
+    white = ("Calendar", "CPU Meter", "Weather", "Feed Headlines", "E-mail", "TV Guide", "Day and Night",
+             "Sun and Moon", "System Monitor", "Network Meter", "LLM Activity")
     p.setPen(QColor("white" if kind in white else "#1E1E1E"))
     p.drawText(QRectF(4, 8, size - 8, size - 16), Qt.AlignCenter | Qt.TextWordWrap, kind)
     p.end()
