@@ -173,6 +173,7 @@ def _xp_savers():
         return {"Mystify": xp.Mystify, "3D Pipes": xp.Pipes, "Starfield": xp.Starfield, "Photos": xp.Slideshow,
                 "Flying Toasters": xp.FlyingToasters, "Matrix Rain": xp.MatrixRain, "Beziers": xp.Beziers,
                 "Super Claude Bros": xp.SAVERS.get("Super Claude Bros"),
+                "Super Claude Bros. 3": xp.SAVERS.get("Super Claude Bros. 3"),
                 "The Legend of Claude": xp.SAVERS.get("The Legend of Claude")}
     except Exception:
         return {}
