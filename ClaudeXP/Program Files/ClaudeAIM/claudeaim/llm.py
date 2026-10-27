@@ -71,15 +71,40 @@ def clean_reply(text: str, name: str, user: str = "", last_user: str = "") -> st
     return text
 
 
+def transcript_guard(text: str, name: str, user: str, last_user: str = "") -> str:
+    """The safety net under any clean_reply (its own function: a Contact Persona Style swaps clean_reply's code in
+    place): lines the model wrote for the user dropped, "You:" / "Me:" / the buddy's name off the front of a line,
+    and "" for a reply that only says the user's message back."""
+    if not user:
+        return text
+    kept = []
+    for line in text.splitlines():
+        low = line.strip().lower()
+        if low.startswith((f"{user.lower()}:", f"{user.lower()} :")):
+            continue
+        for prefix in ("you:", "me:", f"{name.lower()}:"):
+            if low.startswith(prefix):
+                line = line.strip()[len(prefix):].strip()
+                break
+        kept.append(line)
+    text = "\n".join(kept).strip()
+    return "" if last_user and is_echo(text, last_user) else text
+
+
 def tidy_reply(text: str, name: str, user: str = "", last_user: str = "") -> str:
     """clean_reply, called the way the loaded one takes it: with the user's name and last message (the echo guard)
-    when it can, or just the buddy's name under a frozen Contact Persona Style, whose clean_reply is the old one."""
+    when it can, or just the buddy's name under a frozen Contact Persona Style, whose clean_reply is the old one -
+    and then this version's guards on top, as a safety net only: lines written for the user dropped, "You:" off the
+    front, and a reply that only says the user's message back refused. (A frozen style's old clean_reply let those
+    through, and one echo in the history taught every reply after it to echo too.)"""
     import inspect
     try:
         full = len(inspect.signature(clean_reply).parameters) >= 4
     except (TypeError, ValueError):
         full = False
-    return clean_reply(text, name, user, last_user) if full else clean_reply(text, name)
+    if full:
+        return clean_reply(text, name, user, last_user)
+    return transcript_guard(clean_reply(text, name), name, user, last_user)
 
 
 _vision_cache = {}
