@@ -14,6 +14,7 @@ from .wm import BORDER, TITLE_H, XPWindow
 
 DEFAULT_SIZE = QSize(400, 300)
 PICTURE_WARMUP = 12          # lines into a chat before a buddy brings up their pictures without being asked
+SCENES = {}                  # buddy name -> the roleplay the autopilot is playing with them (a note for their prompt)
 
 
 class AppHost:
@@ -105,7 +106,8 @@ class AppHost:
     def extra_context(self, name):
         from . import life
         sim = life.get()
-        return (sim.context(name) if sim else "") + self._picture_pacing(name, sim) + self._voice_note(name)
+        return ((sim.context(name) if sim else "") + self._picture_pacing(name, sim) + self._voice_note(name)
+                + SCENES.get(name, ""))                     # (a scene under way outranks the short-IM habit: last)
 
     @staticmethod
     def _voice_note(name):
@@ -116,6 +118,8 @@ class AppHost:
     def polish(self, name, text, user=""):
         """A reply retyped in the buddy's own voice, as a few quick IMs (from the Development style on)."""
         from . import persona_style, voices
+        if name in SCENES:
+            return [text]                                   # (a roleplay post stays whole, not a run of quick IMs)
         return voices.polish(name, text, user) if persona_style.uses("voice") else [text]
 
     @staticmethod

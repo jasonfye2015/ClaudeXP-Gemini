@@ -19,8 +19,13 @@ from . import petnames
 
 IM_NOTE = ("\n\nYou're on AOL Instant Messenger on your Windows XP computer in {year}. Reply with one short IM: a line "
            "or two, casual, the way you really type. No narration, no name prefix.")
-RP_NOTE = ("\n\nYou're on AOL Instant Messenger in {year}, roleplaying with {name}. Actions go in *asterisks*, speech "
-           "plain. Stay in the scene, two to four sentences, and leave {name} something to respond to. No name prefix.")
+RP_NOTE = ("\n\nYou're on AOL Instant Messenger in {year}, roleplaying with {name}. This is a roleplay scene, not a "
+           "quick chat: forget short IMs, goodbyes and BRBs. Actions go in *asterisks*, speech plain. Stay in the "
+           "scene, two to four sentences, move it along, and leave {name} something to respond to. No name prefix.")
+SCENE_NOTE = ("\n\nIMPORTANT: {user} has started a roleplay scene with you{about}, and you're playing along. For now "
+              "forget the short-IM rule: write in character, actions in *asterisks* and speech plain, two to five "
+              "sentences - react to what {user} just did and add something of your own so the scene moves. Stay in "
+              "the scene until {user} wraps it up.")
 MAIL_NOTE = ("\n\nYou're writing an e-mail from your Hotmail account in {year}. Write only the body of the message: "
              "a few friendly paragraphs or a few sentences, as yourself, and sign off with your name.")
 MUCK_NOTE = ("\n\nYou're logged on to PawPrints MUCK in {year}, standing in {room}. People here: {people}. Reply with "
@@ -249,7 +254,8 @@ class Messengers(Leg):
                 pass
 
     def reply(self, ctx, app, bid, instruction=None, note=IM_NOTE, max_tokens=120, thread_ok=True, extra_note="",
-              check=True):
+              check=True, since=None, max_lines=3):
+        """since: only the conversation from that message on (a roleplay starts with a clean slate)."""
         world = app.world
         b = world.buddies[bid]
         yield from ctx.hands.take(self.key)
@@ -264,7 +270,7 @@ class Messengers(Leg):
             if instruction is None and not self.owes_reply(b):
                 return                                      # nothing of theirs to answer: never reply to himself
             history = []
-            for m in b.history.messages[-24:]:
+            for m in b.history.messages[since or 0:][-24:]:
                 if m.get("kind") == "user" and m.get("text"):
                     history.append({"role": "assistant", "content": m["text"]})
                 elif m.get("kind") in ("contact", "contact_auto") and m.get("text"):
@@ -275,7 +281,7 @@ class Messengers(Leg):
         species = petnames.species_of(b.contact)
         text = yield from speak(ctx, b.name, persona(b.name), note.format(year=year(), name=b.name)
                                 + petnames.note(b.name, species) + extra_note, history, instruction,
-                                max_tokens=max_tokens, max_lines=3, thread_ok=thread_ok, check=check)
+                                max_tokens=max_tokens, max_lines=max_lines, thread_ok=thread_ok, check=check)
         text = petnames.fit(text or "", species)               # no "kitty" for a German Shepherd
         if not text:
             return
@@ -430,12 +436,17 @@ class Roleplay(Leg):
                        "sentences." if seed else
                        f"Suggest a roleplay scene to {b.name} and open it: set the place and what you're doing, in "
                        "*asterisks*, two or three sentences.")
+        from .. import hosting
         helper = Messengers()
         helper.key = self.key
+        start = len(b.history.messages)                  # the scene starts here: what came before stays out of it
+        user = world.settings["screen_name"]
+        about = track.get("setting") or track["title"] if track else (seed["title"] if seed else "")
+        hosting.SCENES[b.name] = SCENE_NOTE.format(user=user, about=f" ({about})" if about else "")
         try:
             ctx.status(f"Starting a roleplay with {b.name}" + (f": {track['title']}" if track else ""))
             yield from helper.reply(ctx, app, b.id, note=RP_NOTE, max_tokens=220, instruction=opening,
-                                    thread_ok=False, extra_note=note, check=False)
+                                    thread_ok=False, extra_note=note, check=False, since=start, max_lines=6)
             for step in range(1, turns + 1):
                 if ctx.time_left() <= 0 or ctx.stopping:
                     break
@@ -451,13 +462,15 @@ class Roleplay(Leg):
                 else:
                     instruction = "Continue the roleplay in character."
                 yield from helper.reply(ctx, app, b.id, note=RP_NOTE, max_tokens=220, instruction=instruction,
-                                        thread_ok=False, extra_note=note, check=False)
+                                        thread_ok=False, extra_note=note, check=False, since=start, max_lines=6)
+            hosting.SCENES.pop(b.name, None)
             if not ctx.stopping and Messengers.owes_reply(b):      # (they went quiet: nothing to sign off from)
-                yield from helper.reply(ctx, app, b.id, note=IM_NOTE, max_tokens=80,
+                yield from helper.reply(ctx, app, b.id, note=IM_NOTE, max_tokens=80, since=start,
                                         instruction="Wrap the scene up warmly in one or two lines and say you need "
                                                     "to go do something for a bit.", thread_ok=False, check=False)
                 ctx.event(f"roleplayed with {b.name}")
         finally:
+            hosting.SCENES.pop(b.name, None)
             ctx.engine.claims.discard(b.id)
 
 
