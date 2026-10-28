@@ -28,7 +28,7 @@ GROUP_SECTION = {"Social Programs": "talk", "Furry Stuff": "furry", "Projects": 
                  "Kiwix": "web", "ClaudeTorrent": "web", "Nero": "system", "Alcohol 120%": "system", "WinRAR": "system",
                  "WinZip": "system", "Lavasoft Ad-aware 5.6": "system", "StyleXP": "system"}
 KEY_SECTION = {"claudeai": "ai", "kithylinai": "ai", "copilotai": "ai", "copilotvoice": "ai", "imagecreator": "ai",
-               "pystudio": "ai", "copilotwidgets": "ai", "neko": "ai", "clippy": "ai", "manual": "other",
+               "pystudio": "ai", "qbstudio": "ai", "soulsong": "ai", "copilotwidgets": "ai", "neko": "ai", "clippy": "ai", "manual": "other",
                "backup": "system", "tv": "media", "tvguide": "media", "wmp": "media", "moviemaker": "office",
                "flash": "media", "paint": "office", "notepad": "office", "wordpad": "office", "calc": "system",
                "mycomputer": "system", "winupdate": "system", "antivirus": "system", "defrag": "system",

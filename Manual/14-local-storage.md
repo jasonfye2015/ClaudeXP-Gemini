@@ -1,31 +1,39 @@
 # 14. What's in Local Storage
 
-Scanned 25 October 2026 from `F:\Claude Timeline\Local Storage`. This is the inventory of the drive the Timeline is built around; the project is not meant to run without it. Sizes are the files' own, not the space they take on the exFAT drive, where small files round up to 256 KB. Regenerate with `python -m manual.inventory` from `ClaudeApps` after the archive changes.
+Scanned 28 October 2026 from `F:\Claude Timeline\Local Storage`. This is the inventory of the drive the Timeline is built around; the project is not meant to run without it. Sizes are the files' own, not the space they take on the exFAT drive, where small files round up to 256 KB. Regenerate with `python -m manual.inventory` from `ClaudeApps` after the archive changes.
 
-**In all: 735,952 files in 39,030 folders, 745.8 GB.**
+**In all: 738,548 files in 39,071 folders, 740.7 GB.**
 
 | Folder | Files | Folders | Size | Mostly |
 |---|---:|---:|---:|---|
 | **TV and Movies** | 3,949 | 99 | 291.5 GB | video 3,356, pictures 289, other (.description, .sqlite, .db) 152 |
 | **Camera Rolls** | 32,727 | 185 | 160.3 GB | pictures 30,667, video 2,000, other (no extension, .asec, .db) 43 |
-| **LLM Models** | 70,012 | 7,227 | 97.6 GB | other (.pyc, .h, no extension) 45,634, programs 23,108, web pages 699 |
+| **LLM Models** | 70,021 | 7,229 | 91.4 GB | other (.pyc, .h, no extension) 45,634, programs 23,108, web pages 707 |
 | **Furry Media Archive** | 309,930 | 7,541 | 86.9 GB | pictures 266,049, web pages 26,815, text and documents 7,469 |
 | **Misc Personal Image Folders** | 45,764 | 964 | 60.9 GB | pictures 43,982, video 689, other (.db, .lnk, .url) 528 |
 | **Emulation** | 7,778 | 10 | 14.9 GB | ROMs and WADs 6,484, archives 948, other (.do, .nib, .po) 336 |
 | **Others Files Archived** | 9,814 | 843 | 11.0 GB | pictures 7,394, other (.db, .denofwolf, no extension) 839, web pages 494 |
-| **SecondLife** | 49,722 | 4,609 | 10.2 GB | other (no extension, .state, .glsl) 46,332, pictures 2,143, programs 722 |
-| **Projects** | 89,552 | 7,959 | 6.6 GB | other (.pyc, no extension, .qml) 47,332, programs 34,801, pictures 4,816 |
+| **SecondLife** | 51,321 | 4,612 | 10.4 GB | other (no extension, .state, .glsl) 47,930, pictures 2,144, programs 722 |
+| **Projects** | 89,633 | 7,979 | 6.6 GB | other (.pyc, no extension, .qml) 47,341, programs 34,801, pictures 4,816 |
 | **Text Logs** | 84,228 | 5,732 | 3.5 GB | web pages 59,989, text and documents 21,592, other (.dat, no extension, .ini) 2,405 |
 | **Personal Texts and Docs** | 10,661 | 2,069 | 888.7 MB | other (.dat, .layout, .skeleton) 5,262, web pages 2,565, pictures 2,085 |
 | **Python Studio** | 20,685 | 1,746 | 659.9 MB | other (.pyc, no extension, .pyi) 10,603, programs 8,376, text and documents 740 |
+| **Bsky-Kithy** | 682 | 2 | 636.4 MB | pictures 530, web pages 131, video 21 |
 | **Kiwix** | 1 | 0 | 318.0 MB | models and Kiwix |
 | **Windows 11 media** | 131 | 2 | 237.6 MB | audio 72, pictures 59 |
 | **WADs** | 20 | 0 | 157.9 MB | ROMs and WADs 14, pictures 5, other (.dls) 1 |
 | **Lemmings** | 71 | 4 | 151.0 MB | audio 53, pictures 18 |
-| **Project Snapshots** | 105 | 0 | 42.7 MB | pictures |
+| **Second Life Export** | 88 | 6 | 76.0 MB | other (.oxp) 87, text and documents 1 |
+| **Project Snapshots** | 144 | 0 | 58.4 MB | pictures |
+| **Windows Screen saver** | 1 | 0 | 37.8 MB | other (.scr) |
 | **Sticker Packs** | 689 | 13 | 26.0 MB | pictures 688, web pages 1 |
 | **SMB Clock** | 33 | 1 | 5.0 MB | audio 23, pictures 10 |
+| **Zelda2 - Sprites** | 29 | 0 | 2.6 MB | pictures |
+| **Mertoid - Sprites** | 13 | 0 | 2.4 MB | pictures |
+| **SMB3 - Sprites** | 31 | 0 | 2.1 MB | pictures |
+| **Rover** | 1 | 0 | 1.8 MB | pictures |
 | **casualties unknown** | 77 | 3 | 1.3 MB | pictures |
+| **LOZ Sprites** | 23 | 0 | 1.3 MB | pictures |
 | **SecondLife Details** | 2 | 0 | 79 KB | pictures |
 | **Created Files** | 0 | 1 | 0 B |  |
 
@@ -212,11 +220,12 @@ Each top folder, with what's inside it. Counts and sizes include everything bene
 
 ### LLM Models
 
-70,012 files, 7,227 folders, 97.6 GB; other (.pyc, .h, no extension) 45,634, programs 23,108, web pages 699, text and documents 388, pictures 78
+70,021 files, 7,229 folders, 91.4 GB; other (.pyc, .h, no extension) 45,634, programs 23,108, web pages 707, text and documents 392, pictures 78
 
 | Folder | Files | Folders | Size | Mostly |
 |---|---:|---:|---:|---|
-| models | 22 | 10 | 40.8 GB | models and Kiwix 12, web pages 10 |
+| models | 24 | 11 | 57.2 GB | models and Kiwix 13, web pages 11 |
+| &nbsp;&nbsp;&nbsp;&nbsp;qwen3-coder-30b-a3b | 2 | 0 | 16.5 GB | web pages 1, models and Kiwix 1 |
 | &nbsp;&nbsp;&nbsp;&nbsp;qwen25-coder-14b | 2 | 0 | 8.4 GB | web pages 1, models and Kiwix 1 |
 | &nbsp;&nbsp;&nbsp;&nbsp;mag-mell-12b | 2 | 0 | 7.0 GB | web pages 1, models and Kiwix 1 |
 | &nbsp;&nbsp;&nbsp;&nbsp;nemomix-unleashed-12b | 2 | 0 | 7.0 GB | web pages 1, models and Kiwix 1 |
@@ -227,21 +236,21 @@ Each top folder, with what's inside it. Counts and sizes include everything bene
 | &nbsp;&nbsp;&nbsp;&nbsp;qwen25-coder-1.5b | 2 | 0 | 940.4 MB | web pages 1, models and Kiwix 1 |
 | &nbsp;&nbsp;&nbsp;&nbsp;gemma3-1b | 2 | 0 | 768.7 MB | models and Kiwix 1, web pages 1 |
 | &nbsp;&nbsp;&nbsp;&nbsp;nomic-embed-text | 2 | 0 | 139.4 MB | models and Kiwix 1, web pages 1 |
-| selfmodel | 32,859 | 3,442 | 37.6 GB | other (.pyc, .h, no extension) 21,842, programs 10,754, text and documents 157 |
-| &nbsp;&nbsp;&nbsp;&nbsp;base-nemomix | 21 | 3 | 22.8 GB | other (.metadata, no extension) 11, web pages 5, models and Kiwix 5 |
+| image-gen | 31,856 | 3,184 | 15.0 GB | other (.pyc, .h, no extension) 20,806, programs 10,239, web pages 594 |
+| &nbsp;&nbsp;&nbsp;&nbsp;models | 76 | 42 | 9.2 GB | other (.metadata, no extension) 39, web pages 25, models and Kiwix 9 |
+| &nbsp;&nbsp;&nbsp;&nbsp;runtime312 | 27,772 | 2,857 | 5.8 GB | other (.pyc, .h, .pyi) 18,621, programs 9,015, text and documents 108 |
+| &nbsp;&nbsp;&nbsp;&nbsp;python312 | 4,008 | 282 | 116.8 MB | other (.pyc, no extension, .tcl) 2,146, programs 1,224, web pages 560 |
+| selfmodel | 32,866 | 3,443 | 15.0 GB | other (.pyc, .h, no extension) 21,842, programs 10,754, text and documents 161 |
 | &nbsp;&nbsp;&nbsp;&nbsp;base | 29 | 3 | 8.0 GB | other (.metadata, no extension, .jinja) 17, web pages 10, models and Kiwix 2 |
 | &nbsp;&nbsp;&nbsp;&nbsp;env | 32,751 | 3,418 | 5.2 GB | other (.pyc, .h, no extension) 21,801, programs 10,754, text and documents 151 |
-| &nbsp;&nbsp;&nbsp;&nbsp;runs | 26 | 7 | 924.3 MB | web pages 14, models and Kiwix 7, text and documents 3 |
+| &nbsp;&nbsp;&nbsp;&nbsp;runs | 32 | 8 | 1.1 GB | web pages 18, models and Kiwix 8, text and documents 4 |
 | &nbsp;&nbsp;&nbsp;&nbsp;checkpoints | 12 | 1 | 379.0 MB | web pages 6, models and Kiwix 3, other (.jinja, .model) 2 |
 | &nbsp;&nbsp;&nbsp;&nbsp;adapter | 9 | 0 | 151.2 MB | web pages 5, other (.jinja, .model) 2, text and documents 1 |
 | &nbsp;&nbsp;&nbsp;&nbsp;data | 3 | 0 | 19.5 MB | other (.jsonl) 2, web pages 1 |
 | &nbsp;&nbsp;&nbsp;&nbsp;data-telegram | 3 | 0 | 16.3 MB | other (.jsonl) 2, web pages 1 |
 | &nbsp;&nbsp;&nbsp;&nbsp;data-adult | 3 | 0 | 10.7 MB | other (.jsonl) 2, web pages 1 |
+| &nbsp;&nbsp;&nbsp;&nbsp;base-nemomix | 16 | 3 | 9.0 MB | other (.metadata, no extension) 11, web pages 5 |
 | &nbsp;&nbsp;&nbsp;&nbsp;work | 0 | 0 | 0 B |  |
-| image-gen | 31,856 | 3,184 | 15.0 GB | other (.pyc, .h, no extension) 20,806, programs 10,239, web pages 594 |
-| &nbsp;&nbsp;&nbsp;&nbsp;models | 76 | 42 | 9.2 GB | other (.metadata, no extension) 39, web pages 25, models and Kiwix 9 |
-| &nbsp;&nbsp;&nbsp;&nbsp;runtime312 | 27,772 | 2,857 | 5.8 GB | other (.pyc, .h, .pyi) 18,621, programs 9,015, text and documents 108 |
-| &nbsp;&nbsp;&nbsp;&nbsp;python312 | 4,008 | 282 | 116.8 MB | other (.pyc, no extension, .tcl) 2,146, programs 1,224, web pages 560 |
 | voice | 4,846 | 573 | 2.3 GB | other (.pyc, no extension, .pyi) 2,849, programs 1,840, text and documents 86 |
 | &nbsp;&nbsp;&nbsp;&nbsp;models | 91 | 31 | 2.0 GB | other (no extension, .metadata) 32, web pages 29, models and Kiwix 27 |
 | &nbsp;&nbsp;&nbsp;&nbsp;runtime312 | 4,755 | 540 | 294.7 MB | other (.pyc, no extension, .pyi) 2,817, programs 1,840, text and documents 84 |
@@ -1950,20 +1959,21 @@ Each top folder, with what's inside it. Counts and sizes include everything bene
 
 ### SecondLife
 
-49,722 files, 4,609 folders, 10.2 GB; other (no extension, .state, .glsl) 46,332, pictures 2,143, programs 722, web pages 360, audio 77
+51,321 files, 4,612 folders, 10.4 GB; other (no extension, .state, .glsl) 47,930, pictures 2,144, programs 722, web pages 360, audio 77
 
 | Folder | Files | Folders | Size | Mostly |
 |---|---:|---:|---:|---|
-| opensim | 45,694 | 4,490 | 4.6 GB | other (no extension, .state, .dat) 45,284, programs 135, pictures 86 |
-| &nbsp;&nbsp;&nbsp;&nbsp;bin | 45,647 | 4,483 | 4.6 GB | other (no extension, .state, .dat) 45,276, programs 135, pictures 86 |
+| opensim | 47,292 | 4,492 | 4.7 GB | other (no extension, .state, .yobj) 46,881, programs 135, pictures 87 |
+| &nbsp;&nbsp;&nbsp;&nbsp;bin | 47,245 | 4,485 | 4.7 GB | other (no extension, .state, .yobj) 46,873, programs 135, pictures 87 |
 | &nbsp;&nbsp;&nbsp;&nbsp;ThirdPartyLicenses | 33 | 0 | 92 KB | text and documents 32, other (no extension) 1 |
 | &nbsp;&nbsp;&nbsp;&nbsp;share | 8 | 2 | 11 KB | other (.crt, .key, .srl) 4, text and documents 3, web pages 1 |
 | &nbsp;&nbsp;&nbsp;&nbsp;doc | 2 | 0 | 11 KB | other (.conf, no extension) |
 | &nbsp;&nbsp;&nbsp;&nbsp;addon-modules | 1 | 0 | 60 B | other (no extension) |
-| downloads | 38 | 4 | 4.4 GB | other (.tgz, .iar) 24, archives 12, programs 2 |
+| downloads | 39 | 5 | 4.4 GB | other (.tgz, .iar) 25, archives 12, programs 2 |
 | &nbsp;&nbsp;&nbsp;&nbsp;outworldz | 9 | 0 | 2.1 GB | other (.tgz) |
 | &nbsp;&nbsp;&nbsp;&nbsp;zadaroo | 23 | 1 | 1.5 GB | other (.iar, .tgz) 14, archives 9 |
 | &nbsp;&nbsp;&nbsp;&nbsp;commons | 1 | 0 | 354.5 MB | other (.iar) |
+| &nbsp;&nbsp;&nbsp;&nbsp;archive | 1 | 0 | 75.0 MB | other (.tgz) |
 | viewer | 2,658 | 97 | 628.5 MB | other (.glsl, .pak, .j2c) 1,006, pictures 943, programs 401 |
 | &nbsp;&nbsp;&nbsp;&nbsp;coolvl | 2,658 | 96 | 628.5 MB | other (.glsl, .pak, .j2c) 1,006, pictures 943, programs 401 |
 | keepers | 17 | 0 | 522.7 MB | other (.oar, .iar) |
@@ -1978,7 +1988,7 @@ Each top folder, with what's inside it. Counts and sizes include everything bene
 
 ### Projects
 
-89,552 files, 7,959 folders, 6.6 GB; other (.pyc, no extension, .qml) 47,332, programs 34,801, pictures 4,816, text and documents 1,269, web pages 855
+89,633 files, 7,979 folders, 6.6 GB; other (.pyc, no extension, .qml) 47,341, programs 34,801, pictures 4,816, text and documents 1,328, web pages 868
 
 | Folder | Files | Folders | Size | Mostly |
 |---|---:|---:|---:|---|
@@ -2010,6 +2020,9 @@ Each top folder, with what's inside it. Counts and sizes include everything bene
 | &nbsp;&nbsp;&nbsp;&nbsp;Images | 24 | 0 | 62.2 MB | pictures 23, web pages 1 |
 | Local Projects | 1,370 | 39 | 4.2 MB | pictures 1,040, audio 293, other (no extension, .tmx, .tsx) 19 |
 | &nbsp;&nbsp;&nbsp;&nbsp;Assets | 1,370 | 38 | 4.2 MB | pictures 1,040, audio 293, other (no extension, .tmx, .tsx) 19 |
+| AI LLM Txt Files | 80 | 18 | 530 KB | text and documents 59, web pages 13, other (.jsonl) 8 |
+| &nbsp;&nbsp;&nbsp;&nbsp;Companions | 72 | 17 | 445 KB | text and documents 51, web pages 13, other (.jsonl) 8 |
+| QBasic Projects | 1 | 0 | 9 KB | other (.bas) |
 
 ### Text Logs
 
@@ -2150,6 +2163,15 @@ Each top folder, with what's inside it. Counts and sizes include everything bene
 | wheels | 72 | 0 | 75.8 MB | other (.whl) |
 | assets | 8 | 0 | 3.9 MB | archives |
 
+### Bsky-Kithy
+
+682 files, 2 folders, 636.4 MB; pictures 530, web pages 131, video 21
+
+| Folder | Files | Folders | Size | Mostly |
+|---|---:|---:|---:|---|
+| media | 551 | 0 | 635.8 MB | pictures 530, video 21 |
+| posts | 129 | 0 | 554 KB | web pages |
+
 ### Kiwix
 
 1 files, 0 folders, 318.0 MB; models and Kiwix
@@ -2180,9 +2202,27 @@ Each top folder, with what's inside it. Counts and sizes include everything bene
 | sound effects | 24 | 0 | 78 KB | audio |
 | background Images | 12 | 0 | 73 KB | pictures |
 
+### Second Life Export
+
+88 files, 6 folders, 76.0 MB; other (.oxp) 87, text and documents 1
+
+| Folder | Files | Folders | Size | Mostly |
+|---|---:|---:|---:|---|
+| Kithylin's Snapshots | 11 | 0 | 38.4 MB | other (.oxp) |
+| Kithylin's Textures and Objects | 18 | 0 | 29.0 MB | other (.oxp) |
+| Kithylin's Avatars and Parts | 10 | 0 | 6.8 MB | other (.oxp) |
+| FurFree Packs | 5 | 0 | 1.3 MB | other (.oxp) |
+| Fox-Wolf Valley Archive | 36 | 0 | 438 KB | other (.oxp) |
+| FurFree - White Fox | 7 | 0 | 20 KB | other (.oxp) |
+
 ### Project Snapshots
 
-105 files, 0 folders, 42.7 MB; pictures
+144 files, 0 folders, 58.4 MB; pictures
+
+
+### Windows Screen saver
+
+1 files, 0 folders, 37.8 MB; other (.scr)
 
 
 ### Sticker Packs
@@ -2213,6 +2253,26 @@ Each top folder, with what's inside it. Counts and sizes include everything bene
 |---|---:|---:|---:|---|
 | Sounds | 23 | 0 | 4.5 MB | audio |
 
+### Zelda2 - Sprites
+
+29 files, 0 folders, 2.6 MB; pictures
+
+
+### Mertoid - Sprites
+
+13 files, 0 folders, 2.4 MB; pictures
+
+
+### SMB3 - Sprites
+
+31 files, 0 folders, 2.1 MB; pictures
+
+
+### Rover
+
+1 files, 0 folders, 1.8 MB; pictures
+
+
 ### casualties unknown
 
 77 files, 3 folders, 1.3 MB; pictures
@@ -2222,6 +2282,11 @@ Each top folder, with what's inside it. Counts and sizes include everything bene
 | Sprites - Various | 6 | 0 | 682 KB | pictures |
 | Sprites - Main Character | 35 | 0 | 13 KB | pictures |
 | Sprites - Other characters | 27 | 0 | 12 KB | pictures |
+
+### LOZ Sprites
+
+23 files, 0 folders, 1.3 MB; pictures
+
 
 ### SecondLife Details
 
@@ -2240,15 +2305,15 @@ Each top folder, with what's inside it. Counts and sizes include everything bene
 
 | Kind | Files |
 |---|---:|
-| pictures | 358,931 |
-| other | 165,610 |
-| web pages | 92,635 |
+| pictures | 359,598 |
+| other | 167,305 |
+| web pages | 92,787 |
 | programs | 67,395 |
-| text and documents | 32,935 |
-| video | 7,613 |
+| text and documents | 32,999 |
+| video | 7,634 |
 | ROMs and WADs | 6,547 |
 | archives | 1,734 |
 | audio | 1,374 |
 | Flash | 1,036 |
-| models and Kiwix | 81 |
+| models and Kiwix | 78 |
 | comics | 60 |

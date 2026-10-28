@@ -28,7 +28,8 @@ Claude Timeline/
 ├── ClaudeArchive/    the archive tools: FurComix, FurFolio, story reader, Fur CD Viewer, FurCon,
 │                     Furry Video Browser, ClaudeTV and the TV Guide
 ├── ClaudeGames/      the user's games, emulators, Doom-style games, Claudecadia; Saves/ is shared by every era
-├── ClaudeApps/       ClaudeAI, CopilotAI, Copilot Voice, Image Creator, Python Studio
+├── ClaudeApps/       ClaudeAI, CopilotAI, Copilot Voice, Image Creator, Python Studio, QBasic Studio, Kithylin AI,
+│                     Soul and Song, the Manual viewer, the CES .scr build, selfmodel (training)
 ├── Residents/        the cast (see below)
 ├── Profile/          the user's identity across the eras
 ├── Local Storage/    the shared "external drive": LLM Models, media, ROMs, WADs, Kiwix, website rips

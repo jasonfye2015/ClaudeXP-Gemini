@@ -17,6 +17,7 @@ different clothes.
 | **WORKSTATION-2025 (Windows 11)** | `Claude11\data` | yes |
 | **Your profile** | `Profile` and the launcher's settings: your identity, codes, these settings | yes |
 | **Kithylin AI chats** | `ClaudeApps\kithylinai\Data`: its chats and settings | yes |
+| **Soul and Song Companions** | `Local Storage\Projects\AI LLM Txt Files\Companions`: their minds, memories, chats and logs. Not restored while a computer runs (Soul and Song may have them open) | yes |
 | **Kithylin models (large)** | `ClaudeApps\kithylinai\Models`: the trained Kithylins, about 2.5 GB | no |
 | **Training results (large)** | the adapters and logs in `LLM Models\selfmodel`, about 700 MB | no |
 

@@ -43,6 +43,8 @@ GitHub.
 16. [Kithylin Autopilot](16-autopilot.md) - let Kithylin take over the XP computer: what he does, the glow and his
     cursor, pausing and stopping, which model speaks for him; and [Kithylin Autopilot, step by
     step](16-autopilot-guide.md), the illustrated guide its Help button opens
+17. [Soul and Song](17-soulsong.md) - an AI Companion with a memory that grows day by day: the memory banks, Memory
+    Day, guided sessions, two Companions together, the raw logs, and where it all lives
 
 ## The short version
 

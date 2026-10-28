@@ -40,7 +40,8 @@ Claude Timeline\
 │                             to, backup, the self-check, the Furry Code tables, Mac fonts
 ├── ClaudeArchive\            the archive viewers: FurComix, FurFolio, stories, CD viewers, video, ClaudeTV, chat logs
 ├── ClaudeGames\              every game, the emulators, Doom; Saves\ is your progress (shared by all three)
-├── ClaudeApps\               ClaudeAI, Kithylin AI, the Copilot programs, Python Studio, selfmodel (training)
+├── ClaudeApps\               ClaudeAI, Kithylin AI, Soul and Song, the Copilot programs, Python Studio, QBasic
+│                             Studio, the Claude Entertainment System .scr, selfmodel (training)
 ├── Residents\                the cast: one folder per character, with a file for each era they lived in
 ├── Profile\                  who you are in the Timeline, your codes, the backup and self-check settings
 ├── Persona Styles\           frozen versions of how the residents are prompted (chosen at Load and Format)

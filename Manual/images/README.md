@@ -14,6 +14,7 @@ the pages pick it up. A page whose picture is missing shows "Screenshot: ... (no
 | `ai-models.png` | Control Panel > AI Models, the Assignments tab (XP) | 07-ai |
 | `claudetv.png` | ClaudeTV with its TV Guide (XP) | 05-archive |
 | `selfcheck.png` | The launcher's self-check, all clear | 11-troubleshooting |
+| `soulsong.png` | Soul and Song's Mind tab: a made-up test Companion's banks filling against their share of a 32k context (taken offscreen, 28 October) | 17-soulsong |
 
 | `autopilot.png` | Kithylin Autopilot on XP, 15 minutes in: typing to Cairngorm on AIM with his own cursor, ClaudeRPG on its autopilot and ClaudeAmp behind, the banner at the top | 16-autopilot |
 | `autopilot-day.png` | The autopilot's Day tab: the week painted with work, lunch and sleep, and what the At work block means | 16-autopilot, 16-autopilot-guide |

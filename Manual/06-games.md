@@ -78,6 +78,28 @@ find their WADs in `Local Storage\WADs`.
 - **2025:** the Microsoft Solitaire Collection (Solitaire, Spider, FreeCell, TriPeaks, Minesweeper), the classic
   games, 3D Pinball Space Cadet. The Internet games are gone.
 
+## The screen savers
+
+**Display Properties > Screen Saver** (Control Panel > Personalization on 7 and 11) has each era's classics - 3D
+Pipes, Mystify, Starfield, Flying Toasters, Marquee, My Pictures Slideshow and the rest - and five NES clock games
+built from the sprite sheets in `Local Storage`. Each plays itself, and its clock tells the real time:
+
+| Screen saver | Sprites from |
+|---|---|
+| **Super Claude Bros** (Settings: character and world) | `SMB Clock` |
+| **Super Claude Bros. 3** | `SMB3 - Sprites` |
+| **The Legend of Claude** | `LOZ Sprites` |
+| **Zelda II: The Adventure of Claude** | `Zelda2 - Sprites` |
+| **Metroid: Claude's Mission** | `Mertoid - Sprites` |
+
+The **Claude Entertainment System**, the default on all three computers (a format keeps it), plays them all in turn,
+with a title card between cartridges. **Settings** picks which games are in, how long each plays (5 minutes by
+default) and whether they go in order or shuffled. A game whose sprite sheets aren't there is skipped.
+
+It's also a real Windows screen saver: `Local Storage\Windows Screen saver\Claude Entertainment System.scr` (one
+38 MB file with the sprites inside). Right-click it and choose **Install**. It's built from the same games by
+`ClaudeApps\cesscr\build_scr.bat`, so after changing a game, build it again; its README says how.
+
 ## Adding a game
 
 A game is a Python package in `ClaudeGames` that asks the computer for a window through the host

@@ -1,6 +1,6 @@
 # 15. Every program
 
-Read from the three computers' registries on 27 October 2026: 176 programs in all, 167 on EPOCH-2001, 163 on SYSTEM-2011 and 152 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
+Read from the three computers' registries on 28 October 2026: 177 programs in all, 168 on EPOCH-2001, 164 on SYSTEM-2011 and 154 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
 
 ## Talking with your buddies
 
@@ -85,7 +85,6 @@ Your own programs from E:\Projects, each in its own window, and the Local Projec
 | **Fly Mind** | Fly Mind: a companion whose feelings and memories come from a real fruit fly's mushroom body (5,191 neurons), with a language model as its voice. | yes | yes | yes |
 | **FlyMind v1.0** | FlyMind v1.0: the FlyMind companion that has been living here, with everything it remembers. | yes | yes | yes |
 | **Local Projects** | Local Projects: where Copilot Python Studio saves (and auto-saves) your programs, in E:/Projects. | yes | yes | yes |
-| **Soul and Song** | Your AI Companion, with a memory that grows day by day (the Companion Project) | yes | yes | yes |
 | **Virtual Pet 27.0** | Virtual Pet 27.0: a desktop pet that talks with you through the language models. | yes | yes | yes |
 
 ## Office and creativity
@@ -94,6 +93,7 @@ Documents, pictures, movies and code.
 
 | Program | What it is | 2001 | 2011 | 2025 |
 |---|---|:-:|:-:|:-:|
+| **Claude QBasic Studio** | Claude QBasic Studio: write and run QBasic programs - or describe one and let the AI vibe-code it, running and fixing it until it works. | yes | yes | yes |
 | **Copilot Python Studio** | Copilot Python Studio: write and run Python offline, with an AI Helper. | yes | yes | yes |
 | **Gemini Access** | Databases. | yes | yes | yes |
 | **Gemini Acrobat** | Reads and prints PDF files. | yes | yes | yes |
@@ -210,6 +210,7 @@ Assistants you talk to directly - not characters with lives of their own.
 | **CopilotAI** | CopilotAI: chat with the local models by text or voice. | yes | yes | yes |
 | **Kithylin AI** | Chat with Kithylin the Angelic Husky, played by your own fine-tuned models | yes | yes | yes |
 | **Office Assistant** | Clippy, back from the dead - and with a language model behind him, more helpful (and more annoying) than ever. He has a real off switch. | yes | - | - |
+| **Soul and Song** | Your AI Companion, with a memory that grows day by day (the Companion Project) | yes | yes | yes |
 
 ## System tools and utilities
 
@@ -247,4 +248,4 @@ Assistants you talk to directly - not characters with lives of their own.
 | Program | What it is | 2001 | 2011 | 2025 |
 |---|---|:-:|:-:|:-:|
 | **Claude Manual** | How the three computers, the archive, the games and Kithylin fit together | yes | yes | yes |
-| **Kithylin Autopilot** | Let Kithylin take over the computer: IMs, mail, the Web, TV, games, comics and art | yes | yes | - |
+| **Kithylin Autopilot** | Let Kithylin take over the computer: IMs, mail, the Web, TV, games, comics and art | yes | yes | yes |

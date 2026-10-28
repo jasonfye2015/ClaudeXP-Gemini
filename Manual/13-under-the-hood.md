@@ -96,6 +96,15 @@ were tested that way (every program launched offscreen). **Never run tests again
 computers, and never against `ClaudeApps\kithylinai\Data`: Kithylin AI honours a `KITHYLINAI_DATA` environment
 variable for a scratch folder.
 
+## Background threads
+
+A `QThread` that's thrown away while it's still running doesn't raise an error: it ends the whole computer on the
+spot, leaving only `QThread: Destroyed while thread '' is still running` in `logs\crash.log`. That's easy to do by
+accident - a window closed mid-reply, a stop that waits a few seconds and then lets go, a "done" signal handled before
+the thread has really returned. So threads that talk to a model are kept alive until they've finished, whoever lets
+go of them first: `kithylinai.engine._Kept` (Kithylin AI and Soul and Song) and `pystudio.threads.Kept` (both code
+studios). Build a new one on those, or on `QThreadPool` and `QRunnable`, which can't be dropped that way.
+
 ## The runtimes and the launcher
 
 - **`Python\`** is a portable CPython 3.14 for Windows with every package the Timeline needs; the launcher sets
