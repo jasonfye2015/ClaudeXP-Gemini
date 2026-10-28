@@ -115,6 +115,22 @@ def lora_base(model):
     return found[0] if found else None
 
 
+def mmproj_for(model):
+    """The model's vision add-on - an mmproj-*.gguf in its folder, or beside the base an add-on model goes on - or
+    None. Loaded with it, the model can see pictures."""
+    if model is None:
+        return None
+    folders = [model.path.parent] if model.path.parent != MODELS else []     # (a loose .gguf has no folder of its own)
+    base = lora_base(model)
+    if base is not None:
+        folders.append(base.parent)
+    for folder in folders:
+        found = sorted(folder.glob("mmproj*.gguf"))
+        if found:
+            return found[0]
+    return None
+
+
 def engine_exe(choice):
     """llama-server.exe for the chosen engine ("auto", "vulkan", "cuda" or "cpu"), or None."""
     order = {"auto": ["vulkan", "cuda", "macos"], "cpu": ["vulkan", "cuda", "macos"]}.get(choice, [choice])
@@ -140,6 +156,7 @@ class _Server:
         self.port = None
         self.model = None
         self.settings = None
+        self.vision = False             # (started with the model's vision add-on: it sees pictures)
 
     def url(self):
         return f"http://127.0.0.1:{self.port}"
@@ -154,12 +171,14 @@ class _Server:
         except Exception:
             return False
 
-    def start(self, model, engine_choice, context, status):
+    def start(self, model, engine_choice, context, status, vision=False):
+        """vision: load the model's vision add-on too, if it has one (it takes more of the graphics card)."""
         exe = engine_exe(engine_choice)
         if exe is None:
             raise RuntimeError("No llama-server.exe found: put a llama.cpp build in kithylinai\\Engine\\ (or keep the "
                                "Timeline's in Local Storage\\LLM Models\\llama.cpp).")
-        want = (str(model.path), engine_choice, int(context))
+        proj = mmproj_for(model) if vision else None
+        want = (str(model.path), engine_choice, int(context), str(proj or ""))
         if self.running() and self.settings == want and self.healthy():
             return
         self.stop()
@@ -174,6 +193,8 @@ class _Server:
                 "--cache-type-k", "q8_0", "--cache-type-v", "q8_0"]
         if engine_choice == "cpu":
             args += ["--device", "none", "-ngl", "0"]      # the graphics card isn't touched at all
+        if proj is not None:
+            args += ["--mmproj", str(proj)] + (["--no-mmproj-offload"] if engine_choice == "cpu" else [])
         if model.info.get("chat_template"):
             args += ["--chat-template", model.info["chat_template"]]
         DATA.mkdir(parents=True, exist_ok=True)
@@ -182,7 +203,7 @@ class _Server:
         with open(DATA / "llama-server.log", "w", encoding="utf-8", errors="replace") as log:
             self.proc = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
                                          cwd=str(exe.parent), creationflags=flags)
-        self.model, self.settings = model, want
+        self.model, self.settings, self.vision = model, want, proj is not None
         deadline = time.monotonic() + START_TIMEOUT
         while time.monotonic() < deadline:
             if self.proc.poll() is not None:
@@ -207,6 +228,7 @@ class _Server:
         self.proc = None
         self.model = None
         self.settings = None
+        self.vision = False
 
 
 _server = _Server()
@@ -231,10 +253,11 @@ class _Kept(QThread):
 class _Loader(_Kept):
     finished_with = Signal(str, float)      # error ("" if fine), seconds
 
-    def __init__(self, model, engine_choice, context, status_cb, shared=True):
+    def __init__(self, model, engine_choice, context, status_cb, shared=True, vision=False):
         super().__init__()
         self.model, self.engine_choice, self.context, self.status_cb = model, engine_choice, context, status_cb
-        self.shared = shared
+        self.shared, self.vision = shared, vision
+        self.sees = False                   # (loaded with its vision add-on)
 
     def run(self):
         t = time.monotonic()
@@ -243,8 +266,10 @@ class _Loader(_Kept):
                 from claudecore.ai import llm_server
                 llm_server.ensure_started()
                 llm_server.load(self.model.key.split(":", 1)[1], wait=True)
+                self.sees = mmproj_for(self.model) is not None      # (the shared engine loads it when there is one)
             else:
-                _server.start(self.model, self.engine_choice, self.context, self.status_cb)
+                _server.start(self.model, self.engine_choice, self.context, self.status_cb, self.vision)
+                self.sees = _server.vision
             self.finished_with.emit("", time.monotonic() - t)
         except Exception as e:
             self.finished_with.emit(str(e) or e.__class__.__name__, time.monotonic() - t)
@@ -320,22 +345,24 @@ class Engine(QObject):
         super().__init__(parent)
         self.model = None
         self.ready = False
+        self.vision = False             # the model loaded can see pictures (its vision add-on is loaded too)
         self.shared = True              # a Timeline model on the Timeline's shared engine (False: one of our own)
         self._loader = None
         self._streamer = None
         self._lock = threading.Lock()
 
     # ---- loading -----------------------------------------------------------------------------------------------
-    def load(self, model, engine_choice="auto", context=8192, shared=True):
+    def load(self, model, engine_choice="auto", context=8192, shared=True, vision=False):
         """shared=False: even a Timeline model gets a llama-server of our own (its own context size), instead of the
-        Timeline's shared engine."""
+        Timeline's shared engine. vision: with the model's vision add-on, if it has one (about a gigabyte more of
+        the graphics card for Gemma 3 4B) - for a program that sends pictures."""
         if self._loader is not None and self._loader.isRunning():
             self.status.emit("Still loading the last model - one moment.")
             return
         self.stop()
         if not self.shared and shared:
             _server.stop()                      # (our own engine isn't needed any more)
-        self.model, self.ready, self.shared = model, False, shared
+        self.model, self.ready, self.shared, self.vision = model, False, shared, False
         self.loaded.emit(False)
         base = lora_base(model)
         if base is not None:
@@ -343,16 +370,17 @@ class Engine(QObject):
                              f"add-on {model.path.name} ({model.path.stat().st_size / 2**20:.0f} MB)...")
         else:
             self.status.emit(f"Now loading {model.title} ({model.path.name}, {model.path.stat().st_size / 2**30:.1f} GB)...")
-        self._loader = _Loader(model, engine_choice, context, lambda s: self.status.emit(s), shared)
+        self._loader = _Loader(model, engine_choice, context, lambda s: self.status.emit(s), shared, vision)
         self._loader.finished_with.connect(self._loaded)
         self._loader.start()
 
     def _loaded(self, err, seconds):
         if err:
-            self.model, self.ready = None, False
+            self.model, self.ready, self.vision = None, False, False
             self.status.emit(f"Couldn't load the model: {err}")
         else:
             self.ready = True
+            self.vision = bool(getattr(self.sender(), "sees", False))
             self.status.emit(f"{self.model.title} is loaded and ready ({seconds:.0f}s).")
         self.loaded.emit(self.ready)
 
@@ -368,7 +396,7 @@ class Engine(QObject):
             else:
                 _server.stop()
             self.status.emit(f"{self.model.title} unloaded.")
-        self.model, self.ready = None, False
+        self.model, self.ready, self.vision = None, False, False
         self.loaded.emit(False)
 
     # ---- talking ------------------------------------------------------------------------------------------------

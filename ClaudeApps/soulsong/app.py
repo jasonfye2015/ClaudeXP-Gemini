@@ -5,16 +5,18 @@ import html
 import re
 import time
 from datetime import datetime
+from pathlib import Path
 
 import math
 
-from PySide6.QtCore import QDateTime, QObject, QPointF, QRectF, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QKeyEvent, QLinearGradient, QPainter, QPen
+from PySide6.QtCore import QDateTime, QObject, QPointF, QRectF, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import (QColor, QFont, QImage, QImageReader, QKeyEvent, QLinearGradient, QPainter, QPen,
+                           QPixmap)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, QDialog, QDialogButtonBox,
-                               QDoubleSpinBox, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QInputDialog, QLabel,
-                               QLineEdit, QListWidget, QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit,
-                               QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QSystemTrayIcon,
-                               QTabWidget, QTextBrowser, QVBoxLayout, QWidget)
+                               QDoubleSpinBox, QFileDialog, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
+                               QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMenu, QMessageBox,
+                               QPlainTextEdit, QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter,
+                               QSystemTrayIcon, QTabWidget, QTextBrowser, QVBoxLayout, QWidget)
 
 from . import companion as C
 from . import growthview
@@ -28,6 +30,9 @@ COLOURS = {"guide": "#2E7D5B", "user": "#455A64", "companion": BLUE, "companion2
            "memory": "#6B5300", "request": "#9A9A9A", "guest": "#6A1B9A"}
 BODY = {"guide": "#2A7050", "user": "#37474F", "companion": "#2050A8", "companion2": "#A52A2A",
         "guest": "#5B2C83"}                                                                    # (the words)
+PICTURE_MAX = 1280              # a picture is kept at most this many pixels across (as a JPEG, in Pictures)
+PICTURE_SHOWN = 240             # and shown this wide in the conversation
+PICTURE_TYPES = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp")
 
 
 # ---- the model, through Kithylin AI's engine ----------------------------------------------------------------------
@@ -49,8 +54,8 @@ class EngineBrain(QObject):
         self.think = False                  # let a thinking model think before it answers (Settings)
         self.on_thinking = lambda text: None
 
-    def load(self, model, engine_choice, context, shared=True):
-        self.engine.load(model, engine_choice, context, shared)
+    def load(self, model, engine_choice, context, shared=True, vision=False):
+        self.engine.load(model, engine_choice, context, shared, vision)
 
     def ask(self, messages, done, chunk=None, max_tokens=700, temperature=0.8):
         """A thinking model (Gemma 4, Qwen3...) spends its tokens thinking before it answers: with thinking off
@@ -193,6 +198,7 @@ class SessionGlow(QWidget):
 
 class Composer(QPlainTextEdit):
     send = Signal()
+    picture = Signal(object)            # a picture pasted or dropped in (a QImage, or a file's path)
 
     def keyPressEvent(self, e: QKeyEvent):
         if e.key() in (Qt.Key_Return, Qt.Key_Enter) and not e.modifiers() & Qt.ShiftModifier:
@@ -200,11 +206,44 @@ class Composer(QPlainTextEdit):
             return
         super().keyPressEvent(e)
 
+    @staticmethod
+    def _picture_files(source):
+        return [u.toLocalFile() for u in (source.urls() if source.hasUrls() else [])
+                if u.isLocalFile() and u.toLocalFile().lower().endswith(PICTURE_TYPES)]
+
+    def canInsertFromMimeData(self, source):
+        return source.hasImage() or bool(self._picture_files(source)) or super().canInsertFromMimeData(source)
+
+    def insertFromMimeData(self, source):
+        files = self._picture_files(source)
+        if files:
+            self.picture.emit(files[0])
+        elif source.hasImage():
+            self.picture.emit(source.imageData())
+        else:
+            super().insertFromMimeData(source)
+
 
 def _dur(seconds):
     """'about 1 h 5 min' as words."""
     minutes = max(1, int(round((seconds or 0) / 60)))
     return f"{minutes // 60} h {minutes % 60} min" if minutes >= 60 else f"{minutes} min"
+
+
+def _img(path, width=PICTURE_SHOWN):
+    """A picture for the conversation (or the raw log): no wider than width, or than it really is."""
+    size = QImageReader(str(path)).size()
+    w = min(width, size.width()) if size.isValid() and size.width() > 0 else width
+    return f'<img src="{QUrl.fromLocalFile(str(path)).toString()}" width="{w}">'
+
+
+def _picture_html(kind, who, path, text=""):
+    """A message with a picture: who, the picture, and the words that came with it."""
+    words = ""
+    if text:
+        words = f'<br><span style="color:{BODY.get(kind, "#000")}">{html.escape(text).replace(chr(10), "<br>")}</span>'
+    return (f'<p style="margin:6px 0"><b style="color:{COLOURS.get(kind, "#000")}">{html.escape(who)}:</b><br>'
+            f'{_img(path)}{words}</p>')
 
 
 def _html(kind, who, text):
@@ -339,6 +378,7 @@ class SoulAndSong(QWidget):
         self._tg_stop = threading.Event()
         self._tg_thread = None
         self._tg_waiting = []                # (messages that came before the model was ready)
+        self._tg_line, self._tg_fetching = [], False     # (messages in the order they came: a picture fetched first)
         self._tray = None
         self._quitting = False
         QTimer.singleShot(400, self._tg_start)
@@ -397,6 +437,21 @@ class SoulAndSong(QWidget):
         self.composer.setFixedHeight(80)
         self.composer.setPlaceholderText("Say something...  (Enter sends, Shift+Enter for a new line)")
         self.composer.send.connect(self.send)
+        self.composer.picture.connect(self._attach)
+        self._picture = None                 # a picture waiting to go with the next message (a QImage)
+        self.attach_bar = QWidget()
+        ab = QHBoxLayout(self.attach_bar)
+        ab.setContentsMargins(0, 0, 0, 0)
+        self.attach_thumb = QLabel()
+        self.attach_text = QLabel()
+        self.attach_text.setStyleSheet("color:#555")
+        unattach = QPushButton("Remove")
+        unattach.clicked.connect(self._clear_picture)
+        ab.addWidget(self.attach_thumb)
+        ab.addWidget(self.attach_text)
+        ab.addWidget(unattach)
+        ab.addStretch(1)
+        self.attach_bar.hide()
         row = QHBoxLayout()
         self.send_btn = QPushButton("Send")
         self.send_btn.clicked.connect(self.send)
@@ -413,9 +468,15 @@ class SoulAndSong(QWidget):
         guide.setToolTip("How to use Soul and Song - everything, from the first Companion to the Growth charts.")
         guide.clicked.connect(lambda: helpwindow.show(self))
         row.addWidget(guide)
+        picture_btn = QPushButton("Add picture...")
+        picture_btn.setToolTip("A picture to go with your next message - or paste one into the box, or drop one on "
+                               "it. Your Companion sees it if their model can see pictures.")
+        picture_btn.clicked.connect(self._pick_picture)
+        row.addWidget(picture_btn)
         row.addWidget(self.send_btn)
         lv.addWidget(self.chat, 1)
         lv.addWidget(self.typing)
+        lv.addWidget(self.attach_bar)
         lv.addWidget(self.composer)
         lv.addLayout(row)
         split.addWidget(left)
@@ -459,8 +520,9 @@ class SoulAndSong(QWidget):
         self.fill_companions()
 
     # ---- tabs ----
-    STATUS_ROWS = ("Model", "Context", "Memory banks", "Memories", "Memory Days", "Core memories", "Letters", "Dreams",
-                   "Free time", "Beliefs", "Own rules", "Sense of time", "Predictions", "Questions", "Tensions", "Journal", "Surprises", "Events",
+    STATUS_ROWS = ("Model", "Context", "Pictures", "Memory banks", "Memories", "Memory Days", "Core memories",
+                   "Letters", "Dreams", "Free time", "Beliefs", "Own rules", "Sense of time", "Predictions",
+                   "Questions", "Tensions", "Journal", "Surprises", "Events",
                    "Guided sessions", "Now playing", "Roadmap", "Last seen", "Latest milestone")
 
     def _status_tab(self):
@@ -539,6 +601,9 @@ class SoulAndSong(QWidget):
             used, size = 0, c.context_size()
         rows["Context"].setText(f"{used:,} / {size:,} tokens ({100 * used // max(1, size)}%) - "
                                 f"{c.unremembered()} exchanges not yet in a memory")
+        brain = self.brain2 if c is self.comp2 and self.brain2 is not None else self.brain
+        rows["Pictures"].setText("sees them" if c.can_see() else "off (Settings)" if not cfg.get("pictures", True)
+                                 else "their model can't see them" if brain.engine.ready else "-")
         if c.memory_mode() == "classic":
             rows["Memory banks"].setText("7:7:7 - " + " - ".join(
                 f"L{n} {c.mind.count(n)}" + (f"/{C.FULL}" if n in (2, 3) else "") for n in (2, 3, 4, 5, 7)))
@@ -1277,7 +1342,7 @@ class SoulAndSong(QWidget):
             self._line("system", f"{self.comp.name}'s model is still loading - one moment.")
             return
         self.send_home()
-        from kithylinai.engine import find, lora_base
+        from kithylinai.engine import find, lora_base, mmproj_for
         from . import hardware
         from .interlink import Lane
         comp = C.Companion(folder, None)
@@ -1287,7 +1352,8 @@ class SoulAndSong(QWidget):
             self._line("system", f"{comp.name}'s model isn't here - give them one in their Settings first.")
             return
         base = lora_base(model)
-        comp.cfg["model_context"] = hardware.full_context(base or model.path, model.path if base else None)
+        proj = self._vision(model, comp)
+        comp.cfg["model_context"] = hardware.full_context(base or model.path, model.path if base else None, proj)
         loaded = self.loaded_key
         if loaded and loaded[0] == model.key:            # the same model: they share it, taking turns
             comp.cfg["engine_context"] = loaded[2] if loaded[2] < comp.context_size() else None
@@ -1297,15 +1363,16 @@ class SoulAndSong(QWidget):
         else:
             m1 = self.brain.engine.model
             b1 = lora_base(m1) if m1 is not None else None
-            used = (hardware.memory_gb(b1 or m1.path, loaded[2], m1.path if b1 else None) or 0) if m1 else 0
+            used = (hardware.memory_gb(b1 or m1.path, loaded[2], m1.path if b1 else None,
+                                       mmproj_for(m1) if self.brain.engine.vision else None) or 0) if m1 else 0
             card = hardware.card_gb()
             ctx = comp.cfg["model_context"]
             if card:
                 room = card * 0.92 - used
-                while ctx > 8192 and (hardware.memory_gb(base or model.path, ctx, model.path if base else None)
-                                      or 0) > room:
+                while ctx > 8192 and (hardware.memory_gb(base or model.path, ctx, model.path if base else None,
+                                                         proj) or 0) > room:
                     ctx //= 2
-                if (hardware.memory_gb(base or model.path, ctx, model.path if base else None) or 0) > room:
+                if (hardware.memory_gb(base or model.path, ctx, model.path if base else None, proj) or 0) > room:
                     self._line("system", f"{comp.name}'s model ({model.title}) won't fit on the graphics card beside "
                                          f"{self.comp.name}'s. Give them the same model (they'll share it), or a "
                                          "smaller one, in their Settings.")
@@ -1315,12 +1382,14 @@ class SoulAndSong(QWidget):
             self.brain2.status.connect(lambda t: self._line("system", t, self.comp2))
             self.brain2.ready.connect(self._ready2)
             self.lane2 = Lane(self.brain2, on_active=self._active)
-            self.brain2.load(model, comp.cfg.get("engine") or "auto", ctx, shared=False)
+            self.brain2.load(model, comp.cfg.get("engine") or "auto", ctx, shared=False, vision=bool(proj))
             ready = False
             how = f"on {model.title} beside {self.comp.name}'s model, with a {ctx:,}-token context"
         self.hand2 = self.lane2.handle(RED, lambda: self.comp2.name if self.comp2 else "")
         comp.brain = self.hand2
         comp.on_line = lambda kind, text: self._line(kind, text, self.comp2)
+        comp.on_picture = lambda path, kind, text: self._picture_line(self.comp2, path, kind, text)
+        comp.can_see = lambda: self._sees(self.brain2 or self.brain)
         comp.on_raw = lambda _kind, c=comp: self._raw_logged(c)
         comp.on_stream = lambda t: self._typing(self.comp2, "writing", t)
         self.hand2.on_thinking = lambda t: self._typing(self.comp2, "thinking", t)
@@ -1627,6 +1696,8 @@ class SoulAndSong(QWidget):
             elif kind in ("system", "request", "error"):
                 out.append(f'<p style="margin:3px 0;color:{colour}">{stamp_html}<i>{body}</i></p>')
             else:
+                if e.get("picture") and c is not None and (c.folder / e["picture"]).is_file():
+                    body = f"{_img(c.folder / e['picture'], 200)}<br>{body}"
                 out.append(f'<p style="margin:5px 0">{stamp_html}<b style="color:{colour}">{who}:</b> '
                            f'<span style="color:{colour}">{body}</span></p>')
         return "".join(out)
@@ -1801,8 +1872,40 @@ class SoulAndSong(QWidget):
         self._tg_talk(info)
 
     def _tg_talk(self, info):
+        """A message for the open Companion: they go to it in the order they came, a picture fetched first."""
+        self._tg_line.append(info)
+        self._tg_next()
+
+    def _tg_next(self):
+        from . import telegram
+        while self._tg_line and not self._tg_fetching:
+            info = self._tg_line.pop(0)
+            if info.get("other") and not info["text"] and not info.get("picture"):
+                self._tg_send(info["chat"], telegram.CANT.format(what=info["other"]))
+                continue
+            if not info.get("picture"):
+                self._tg_say(info, None)
+                continue
+            self._tg_fetching = True
+            tg, c, file_id = self.tg, self.comp, info["picture"]["file_id"]
+
+            def got(data, info=info, c=c):
+                self._tg_fetching = False
+                path = self._keep_picture(c, data, "Telegram") if data and c is self.comp else None
+                if path is None and not info["text"]:
+                    self._tg_send(info["chat"], "(The picture didn't come through - try sending it again.)")
+                else:
+                    if path is None:
+                        c.notice("A picture came with the next message, but it didn't come through.")
+                    self._tg_say(info, path)
+                self._tg_next()
+            self.later.run(lambda: tg.download(file_id), got)
+
+    def _tg_say(self, info, picture):
         """The user, or someone they invited, talking with the open Companion - its reply goes back to Telegram."""
         c, chat, tg = self.comp, info["chat"], self.tg
+        if c is None:
+            return
         self.later.run(lambda: tg.typing(chat), lambda _r: None)
         minutes = (time.time() - (info.get("date") or time.time())) / 60
 
@@ -1816,16 +1919,20 @@ class SoulAndSong(QWidget):
             if c.cfg.get("channel") != "telegram":
                 c.notice(f"{c.user} is writing to you on Telegram, from their phone - your replies go there.")
                 c.cfg["channel"] = "telegram"
-            c.say(info["text"], then=reply)
+            c.say(info["text"], then=reply, picture=picture)
         else:
             met = c.cfg.setdefault("guests_met", [])
             if info["user"] not in met:
                 c.notice(f"{info['name']}, someone {c.user} invited, is writing to you on Telegram. They know you're "
                          f"an AI, and that {c.user} can read your conversation.")
                 met.append(info["user"])
-            self.chat.append(_html("guest", f"{info['name']} (on Telegram)", info["text"]))
-            self.chat.verticalScrollBar().setValue(self.chat.verticalScrollBar().maximum())
-            c.hear(info["text"], speaker=f"{info['name']} (on Telegram)", respond=True, then=reply)
+            who = f"{info['name']} (on Telegram)"
+            if picture is not None:
+                self._picture_line(c, picture, "guest", info["text"], who=who)
+            else:
+                self.chat.append(_html("guest", who, info["text"]))
+                self.chat.verticalScrollBar().setValue(self.chat.verticalScrollBar().maximum())
+            c.hear(info["text"], speaker=who, respond=True, then=reply, picture=picture)
 
     def _tg_dialog(self):
         from . import telegram
@@ -2403,6 +2510,9 @@ class SoulAndSong(QWidget):
         self.s_ctx_auto.toggled.connect(lambda on: (self.s_ctx.setEnabled(not on), self._memory_note()))
         self.s_ctx.valueChanged.connect(lambda _v: self._memory_note())
         self.s_model.currentIndexChanged.connect(lambda _i: self._memory_note())
+        self.s_pictures = QCheckBox("Let them see pictures you send (the model's vision add-on, if it has one: more "
+                                    "of the graphics card)")
+        self.s_pictures.toggled.connect(lambda _on: self._memory_note())
         self.s_mem = QLabel()
         self.s_mem.setWordWrap(True)
         self.s_mem.setStyleSheet("color:#555")
@@ -2477,6 +2587,7 @@ class SoulAndSong(QWidget):
         f.addRow("Engine:", self.s_engine)
         f.addRow(self.s_ctx_auto)
         f.addRow("Context (tokens):", self.s_ctx)
+        f.addRow(self.s_pictures)
         f.addRow(self.s_mem)
         f.addRow("Temperature:", self.s_temp)
         f.addRow("A memory every (exchanges):", self.s_every)
@@ -2610,11 +2721,21 @@ class SoulAndSong(QWidget):
         self.comp.on_changed = self.refresh_panel
         self.comp.on_name = self._confirm_name
         self.comp.on_memory_day = self._retrain_after_memory_day
+        self.comp.on_picture = lambda path, kind, text, c=self.comp: self._picture_line(c, path, kind, text)
+        self.comp.can_see = lambda: self._sees(self.brain)
         self._tg_wire(announce=True)
         self.chat.clear()
         for m in self.comp.history[-60:]:
-            who = (self.comp.cfg.get("user_name") or "You") if m["role"] == "user" else self.comp.name
-            self.chat.append(_html("user" if m["role"] == "user" else "companion", who, m["content"]))
+            if m["role"] == "user":
+                who = m.get("from") or self.comp.cfg.get("user_name") or "You"
+                kind = "guest" if who.endswith("(on Telegram)") else "user"
+            else:
+                who, kind = self.comp.name, "companion"
+            path = self.comp.folder / m["picture"] if m.get("picture") else None
+            if path is not None and path.is_file():
+                self.chat.append(_picture_html(kind, who, path, m["content"]))
+            else:
+                self.chat.append(_html(kind, who, m["content"] or ("(a picture)" if m.get("picture") else "")))
         self.load_settings()
         self.refresh_roadmaps()
         self.refresh_panel()
@@ -2640,7 +2761,7 @@ class SoulAndSong(QWidget):
             return
         self.comp.cfg["model"] = model.key
         context, shared = self.plan(model)
-        want = (model.key, self.comp.cfg.get("engine"), context, shared)
+        want = (model.key, self.comp.cfg.get("engine"), context, shared, bool(self._vision(model, self.comp)))
         self.comp.save()
         self.wanted = (model, want)
         if self.loaded_key == want and self.brain.engine.ready:
@@ -2656,11 +2777,11 @@ class SoulAndSong(QWidget):
 
     def _load(self, model, want):
         self.loaded_key = want
-        _key, engine, context, shared = want
+        _key, engine, context, shared, vision = want
         if not shared:
             self._line("system", f"{model.title} runs on Soul and Song's own engine here, with a {context:,}-token "
                                  "context (the Timeline's shared engine runs models smaller).")
-        self.brain.load(model, engine or "auto", context, shared)
+        self.brain.load(model, engine or "auto", context, shared, vision)
 
     def plan(self, model):
         """(context, shared): the context the Companion gets on this model - its full context, as much as fits the
@@ -2670,7 +2791,8 @@ class SoulAndSong(QWidget):
         from . import hardware
         c = self.comp
         base = lora_base(model)
-        c.cfg["model_context"] = hardware.full_context(base or model.path, model.path if base else None)
+        c.cfg["model_context"] = hardware.full_context(base or model.path, model.path if base else None,
+                                                       self._vision(model, c))
         c.cfg["engine_context"] = None
         context = c.context_size()
         shared_ctx = engine_context(model)
@@ -2718,21 +2840,105 @@ class SoulAndSong(QWidget):
     # ---- the conversation ----
     def send(self):
         text = self.composer.toPlainText().strip()
-        if not text or self.comp is None:
+        picture = self._picture
+        if (not text and picture is None) or self.comp is None:
             return
         if not self.brain.engine.ready:
             self._line("system", "The model is still loading - one moment.")
+            return
+        interlink = self.session is not None and self.session.running
+        if interlink and not text:
+            self._line("system", "In an Interlink only words go - the picture waits here for after.")
             return
         self.composer.clear()
         if self.comp.cfg.get("channel") == "telegram":
             self.comp.notice(f"{self.comp.user} is back at the computer, in Soul and Song's window.")
             self.comp.cfg["channel"] = "window"
-        if self.session is not None and self.session.running:
-            self._line("user", text)                       # (Interlink: both of them hear it)
+        if interlink:
+            self._line("user", text)                       # (Interlink: both of them hear it; a picture waits)
             self.session.user_says(text)
             return
+        path = None
+        if picture is not None:
+            path = self._keep_picture(self.comp, picture)
+            self._clear_picture()
+            if path is None:
+                self._line("system", "That picture couldn't be kept, so it didn't go.")
+                if not text:
+                    return
         self.runner.user_spoke()
-        self.comp.say(text)
+        self.comp.say(text, picture=path)
+
+    # ---- pictures ----
+    def _pick_picture(self):
+        from PySide6.QtCore import QStandardPaths
+        start = QStandardPaths.writableLocation(QStandardPaths.PicturesLocation)
+        path, _f = QFileDialog.getOpenFileName(self, "Add a picture", start,
+                                               "Pictures (" + " ".join("*" + t for t in PICTURE_TYPES) + ")")
+        if path:
+            self._attach(path)
+
+    def _attach(self, picture):
+        """A picture to go with the next message: chosen, pasted or dropped in."""
+        if isinstance(picture, QPixmap):
+            picture = picture.toImage()
+        img = QImage(str(picture)) if isinstance(picture, (str, Path)) else QImage(picture)
+        if img.isNull():
+            self._line("system", "That isn't a picture Soul and Song can read.")
+            return
+        self._picture = img
+        self.attach_thumb.setPixmap(QPixmap.fromImage(img.scaled(96, 64, Qt.KeepAspectRatio,
+                                                                 Qt.SmoothTransformation)))
+        self.attach_text.setText(f"A picture ({img.width()} x {img.height()}) goes with your next message.")
+        self.attach_bar.show()
+        self.composer.setFocus()
+
+    def _clear_picture(self):
+        self._picture = None
+        self.attach_thumb.clear()
+        self.attach_bar.hide()
+
+    def _keep_picture(self, comp, picture, source=""):
+        """A picture into the Companion's Pictures folder - a JPEG, at most PICTURE_MAX across. The path, or None."""
+        if isinstance(picture, (bytes, bytearray)):
+            img = QImage.fromData(bytes(picture))
+        else:
+            img = QImage(str(picture)) if isinstance(picture, (str, Path)) else QImage(picture)
+        if img.isNull():
+            return None
+        if max(img.width(), img.height()) > PICTURE_MAX:
+            img = img.scaled(PICTURE_MAX, PICTURE_MAX, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        if img.hasAlphaChannel():                         # (a JPEG has no see-through: on white)
+            flat = QImage(img.size(), QImage.Format_RGB32)
+            flat.fill(Qt.white)
+            p = QPainter(flat)
+            p.drawImage(0, 0, img)
+            p.end()
+            img = flat
+        folder = Path(comp.folder) / "Pictures"
+        folder.mkdir(parents=True, exist_ok=True)
+        name = comp.now().strftime("%Y-%m-%d %H-%M-%S") + (f" {source}" if source else "")
+        path, n = folder / f"{name}.jpg", 2
+        while path.exists():
+            path, n = folder / f"{name} ({n}).jpg", n + 1
+        return path if img.save(str(path), "JPG", 88) else None
+
+    def _picture_line(self, comp, path, kind, text, who=None):
+        """A message with a picture, in the conversation."""
+        comp = comp or self.comp
+        if who is None:
+            who = "Guided session" if kind == "guide" else (comp.cfg.get("user_name") or "You")
+        self.chat.append(_picture_html(kind, who, path, text))
+        self.chat.verticalScrollBar().setValue(self.chat.verticalScrollBar().maximum())
+
+    def _vision(self, model, comp):
+        """The model's vision add-on, if the Companion may see pictures and the model has one (else None)."""
+        from kithylinai.engine import mmproj_for
+        return mmproj_for(model) if comp is not None and comp.cfg.get("pictures", True) else None
+
+    @staticmethod
+    def _sees(brain):
+        return bool(brain.engine.ready and brain.engine.vision)
 
     def _line(self, kind, text, comp=None):
         """A line in the conversation. With two Companions, the second's are red, and notes and memories say whose
@@ -2892,6 +3098,7 @@ class SoulAndSong(QWidget):
         self.s_ctx.setValue(int(c.get("context", 32768)))
         self.s_ctx_auto.setChecked(bool(c.get("context_auto", True)))
         self.s_ctx.setEnabled(not self.s_ctx_auto.isChecked())
+        self.s_pictures.setChecked(bool(c.get("pictures", True)))
         self._memory_note()
         self.s_temp.setValue(float(c.get("temperature", 0.8)))
         self.s_every.setValue(int(c.get("memory_every", 10)))
@@ -2928,7 +3135,7 @@ class SoulAndSong(QWidget):
         """Settings: the context this model would get, and the graphics memory it needs."""
         if not hasattr(self, "s_mem"):
             return
-        from kithylinai.engine import find, lora_base
+        from kithylinai.engine import find, lora_base, mmproj_for
         from . import hardware
         model = find(self.s_model.currentData() or "")
         if model is None:
@@ -2936,13 +3143,15 @@ class SoulAndSong(QWidget):
             return
         base = lora_base(model)
         path, lora = (base, model.path) if base else (model.path, None)
-        full = hardware.full_context(path, lora)
+        pictures = getattr(self, "s_pictures", None)
+        proj = mmproj_for(model) if pictures is not None and pictures.isChecked() else None
+        full = hardware.full_context(path, lora, proj)
         ctx = full if self.s_ctx_auto.isChecked() else self.s_ctx.value()
         if self.s_ctx_auto.isChecked():
             self.s_ctx.blockSignals(True)
             self.s_ctx.setValue(full)
             self.s_ctx.blockSignals(False)
-        gb, card = hardware.memory_gb(path, ctx, lora), hardware.card_gb()
+        gb, card = hardware.memory_gb(path, ctx, lora, proj), hardware.card_gb()
         trained = hardware.model_facts(path).get("context") or 0
         text = f"{model.title}: trained for {trained:,} tokens" if trained else model.title
         if gb is not None:
@@ -2950,6 +3159,9 @@ class SoulAndSong(QWidget):
             if card:
                 text += f" (your card has {card:.0f} GB" + (" - too much: lower the context" if gb > card * 0.95
                                                              else "") + ")"
+        if pictures is not None and pictures.isChecked():
+            text += ("; it sees pictures (its vision add-on is counted)" if proj
+                     else "; it can't see pictures (it has no vision add-on)")
         self.s_mem.setText(text + ".")
 
     def _budget_note(self):
@@ -2985,6 +3197,7 @@ class SoulAndSong(QWidget):
                  auto_greet=self.s_greet.isChecked(), greeting=self.s_greeting.text().strip() or
                  C.DEFAULTS["greeting"], show_requests=self.s_requests.isChecked(),
                  recall=self.s_recall.isChecked(), think=self.s_think.isChecked(),
+                 pictures=self.s_pictures.isChecked(),
                  dreams=self.s_dreams.isChecked(), dream_hours=self.s_dream_hours.value(),
                  free_time=self.s_free.isChecked(), free_minutes=self.s_free_minutes.value(),
                  web_reading=self.s_web.isChecked(),

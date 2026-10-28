@@ -41,6 +41,7 @@ The Companion's own part, for a self to emerge:
 
 Everything the model is asked goes through a `brain`: ask(messages, done(text, error), chunk=None, max_tokens,
 temperature) - Kithylin AI's engine in the program (EngineBrain), anything in tests. One job runs at a time."""
+import base64
 import json
 import re
 from datetime import date, datetime, timedelta
@@ -71,11 +72,14 @@ DEFAULTS = {
     "rules_veto": True, "rules_proposal": None, "rules_version": 0,
     "web_reading": False, "news_feeds": [], "book": None, "books_read": [],
     "reach_out": True, "reach_per_day": 2, "quiet_from": 22, "quiet_to": 8, "reach_by_day": {}, "last_reach": "",
-    "retrain_guests": False, "channel": "window",
+    "retrain_guests": False, "channel": "window", "pictures": True,
 }
 REACH_ASK = ("{user} is away from the computer, but you can send them a message on Telegram now - it goes to their "
              "phone. Just now {what}. Would you like to tell them anything - about that, or anything else? If so, "
              "write only the message, short, the way you'd text someone. If not, write only: NO")
+PICTURE_TOKENS = 300               # (about what a picture takes of the context, the turn it's shown)
+SEE_ASK = ("{who} just showed you this picture{caption}. For your own memory of it, say in two or three plain "
+           "sentences what's in it - what you see, not what you said about it.")
 FADING_NOTE = ("\n\n(Each memory is marked with how vividly you remember it now. Keep the vivid ones in detail; "
                "let the faint ones shrink to a line, or go - the archive keeps them whole either way.)")
 FULL = 7                    # the 7:7:7 system (classic: a bank is full at seven memories)
@@ -169,6 +173,21 @@ def estimate_tokens(text):
     return int(len(text) / 3.5) + 1
 
 
+def picture_part(path):
+    """A picture for the model's message: the file itself, inline (the engine reads it with the vision add-on)."""
+    path = Path(path)
+    mime = {".png": "image/png", ".webp": "image/webp", ".gif": "image/gif"}.get(path.suffix.lower(), "image/jpeg")
+    data = base64.b64encode(path.read_bytes()).decode("ascii")
+    return {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{data}"}}
+
+
+def plain(content):
+    """A message's words (a message with a picture is a list: its words, then the picture)."""
+    if isinstance(content, list):
+        return " ".join(p.get("text", "") for p in content if p.get("type") == "text") + " [+ a picture]"
+    return content
+
+
 def gap_text(hours):
     if hours < 48:
         return f"{round(hours)} hours"
@@ -248,6 +267,8 @@ class Companion:
         # window runs work on a thread; here (and in tests) it's simply done at once
         self.background = lambda work, then: then(work())
         self.reach = None                                # (Telegram linked: reach(text) sends the user a message)
+        self.can_see = lambda: False                     # (the window: the model loaded sees pictures)
+        self.on_picture = lambda path, kind, text: None  # (a picture in the conversation, with its words)
         self.on_name = None                            # (suggested name, accept(name)) -> the program asks the user
 
     # ---- every line goes in the raw log too (the Raw Logs tab) ----
@@ -262,17 +283,20 @@ class Companion:
             fn(kind, text)
         self._on_line = line
 
-    def _raw(self, kind, text, who=None):
-        """One entry in Raw Logs/<day>.jsonl: what happened, when, who said it."""
+    def _raw(self, kind, text, who=None, picture=None):
+        """One entry in Raw Logs/<day>.jsonl: what happened, when, who said it (and the picture that came with it,
+        in the Companion's folder)."""
         if who is None:
             who = {"user": self.cfg.get("user_name") or "You", "guide": "Guided session",
                    "companion": self.name}.get(kind, "")
         try:
             folder = self.folder / "Raw Logs"
             folder.mkdir(exist_ok=True)
+            entry = {"t": stamp(self.now()), "kind": kind, "who": who, "text": text}
+            if picture:
+                entry["picture"] = picture
             with open(folder / f"{self.day_key()}.jsonl", "a", encoding="utf-8") as f:
-                f.write(json.dumps({"t": stamp(self.now()), "kind": kind, "who": who, "text": text},
-                                   ensure_ascii=False) + "\n")
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         except OSError:
             return
         try:
@@ -338,7 +362,7 @@ class Companion:
     def _ask(self, messages, done, max_tokens=700, stream=False):
         """A request to the model. The raw log keeps its newest message (the mind files in front of it are the
         same every time) and the answer, shown or not."""
-        self._raw("asked", messages[-1]["content"] if messages else "", "Soul and Song")
+        self._raw("asked", plain(messages[-1]["content"]) if messages else "", "Soul and Song")
 
         def got(text, err):
             if err or not (text or "").strip():
@@ -349,10 +373,12 @@ class Companion:
         self.brain.ask(messages, got, self.on_stream if stream else None, max_tokens,
                        float(self.cfg.get("temperature", 0.8)))
 
-    def _ask_alone(self, ask, done, max_tokens=700):
-        """A question with the mind files but not the conversation (distillations, reflections, the portrait)."""
+    def _ask_alone(self, ask, done, max_tokens=700, picture=None):
+        """A question with the mind files but not the conversation (distillations, reflections, the portrait) - and
+        a picture with it, if there is one."""
+        content = [{"type": "text", "text": ask}, picture_part(picture)] if picture else ask
         self._ask([{"role": "system", "content": self.system_prompt(news=False)},
-                   {"role": "user", "content": ask}], done, max_tokens)
+                   {"role": "user", "content": content}], done, max_tokens)
 
     # ---- what the Companion sees ----
     # (the engine keeps what it has already read of a prompt and reads only what's new - so the front of the prompt
@@ -383,30 +409,52 @@ class Companion:
                 f"[{i['kind']} memory, {i['when']}]\n{i['text']}" for i in self.recalled)) + ")")
         return "\n".join(bits)
 
-    def _messages(self, history=None, extra=None, news=True):
+    def _messages(self, history=None, extra=None, news=True, pictures=False):
         """The system prompt and the conversation. A message from someone other than the user (another Companion,
         in Interlink) carries their name; messages in a row from others are one turn (chat formats need the turns
-        to alternate); the newest carries the time and the news instead of its own stamp."""
+        to alternate); the newest carries the time and the news instead of its own stamp. pictures: the newest
+        message's picture goes in as itself (if the model sees); every other is what the Companion saw in it."""
         hist = self.history if history is None else history
         items = []
         for i, m in enumerate(hist):
-            content = m["content"]
+            content, image = m["content"], None
+            if m.get("picture"):
+                newest = extra is None and i == len(hist) - 1
+                if newest and pictures and self.can_see() and (self.folder / m["picture"]).exists():
+                    image = self.folder / m["picture"]
+                else:
+                    content = f"{self._picture_note(m, newest)}\n{content}".strip()
             if m["role"] == "user" and m.get("from"):
                 content = f"{m['from']}: {content}"
             if m["role"] == "user" and m.get("t") and not (extra is None and i == len(hist) - 1):
                 content = f"[{m['t']}] {content}"
-            items.append([m["role"], content])
+            items.append([m["role"], content, image])
         if extra:
-            items.append(["user", f"{self._now_note(news=False)} {extra}"])
+            items.append(["user", f"{self._now_note(news=False)} {extra}", None])
         elif items and items[-1][0] == "user":
             items[-1][1] = f"{self._now_note(news)}\n{items[-1][1]}"
         msgs = [{"role": "system", "content": self.system_prompt()}]
-        for role, content in items:
+        shown = None
+        for role, content, image in items:
             if len(msgs) > 1 and msgs[-1]["role"] == role:
                 msgs[-1]["content"] += "\n\n" + content
             else:
                 msgs.append({"role": role, "content": content})
+            if image is not None:
+                shown = (len(msgs) - 1, image)
+        if shown is not None:                       # (the picture itself, after the words that came with it)
+            i, image = shown
+            msgs[i]["content"] = [{"type": "text", "text": msgs[i]["content"]}, picture_part(image)]
         return msgs
+
+    def _picture_note(self, m, newest):
+        """A picture in the conversation, in words: what the Companion saw in it - or that it can't see it."""
+        if m.get("seen"):
+            return f"[A picture. What you saw in it: {m['seen']}]"
+        if newest and not self.can_see():
+            who = "They" if m.get("from") else self.user
+            return f"[{who} sent a picture, but the model you're running on can't see pictures - so you can't see it.]"
+        return "[A picture.]"
 
     def new_window(self):
         """A fresh context window starts: its time stamp is the one shown in L1 until the next (and its life
@@ -1296,37 +1344,49 @@ class Companion:
         return sum(1 for m in self.history[self.mark:] if m["role"] == "assistant")
 
     # ---- the conversation ----
-    def say(self, text, visible=True, guide=False, then=None):
+    def say(self, text, visible=True, guide=False, then=None, picture=None):
         """A message from the user (or the program on their behalf; guide: a guided session's prompt): the
-        Companion answers. then(reply) is called after (with None if no answer came)."""
-        self._push(lambda nxt: self._say(text, visible, nxt, guide=guide, then=then))
+        Companion answers. then(reply) is called after (with None if no answer came). picture: one that comes with
+        it (a file in the Companion's Pictures folder)."""
+        self._push(lambda nxt: self._say(text, visible, nxt, guide=guide, then=then, picture=picture))
 
-    def hear(self, text, speaker=None, respond=False, guide=False, then=None):
+    def hear(self, text, speaker=None, respond=False, guide=False, then=None, picture=None):
         """Interlink: a message from someone other than the user - another Companion (speaker: their name), a guide
         prompt (guide), or the user in a group chat (speaker None). It goes into the conversation; with respond the
         Companion answers it (and whatever else it has heard since it last spoke); then(reply) after."""
         self._push(lambda nxt: self._say(text, False, nxt, guide=guide, speaker=speaker, respond=respond,
-                                         then=then, recall=respond))
+                                         then=then, recall=respond, picture=picture))
 
     def _say(self, text, visible, nxt, trimmed=False, guide=False, speaker=None, respond=True, then=None,
-             recall=None):
-        if not trimmed and estimate_tokens(text) + self.context_used() > self.context_size() * TRIM_AT:
+             recall=None, picture=None):
+        size = estimate_tokens(text) + (PICTURE_TOKENS if picture else 0)
+        if not trimmed and size + self.context_used() > self.context_size() * TRIM_AT:
             self._push(lambda n: self._say(text, visible, n, trimmed=True, guide=guide, speaker=speaker,
-                                           respond=respond, then=then, recall=recall), first=True)
+                                           respond=respond, then=then, recall=recall, picture=picture), first=True)
             self._push(lambda n: self._trim(n), first=True)
             nxt()
             return
         entry = {"role": "user", "content": text, "t": stamp(self.now())}
         if speaker:
             entry["from"] = speaker
+        rel = None
+        if picture:
+            picture = Path(picture)
+            rel = picture.relative_to(self.folder).as_posix() if picture.is_relative_to(self.folder) else str(picture)
+            entry["picture"] = rel
         self.history.append(entry)
-        if visible:
-            self.on_line("guide" if guide else "user", text)
+        shown = text or "(a picture)"
+        if visible and picture:                       # (shown with its picture, and kept with it in the raw log)
+            self._raw("guide" if guide else "user", shown, picture=rel)
+            self.on_picture(picture, "guide" if guide else "user", text)
+        elif visible:
+            self.on_line("guide" if guide else "user", shown)
         else:                                         # (not shown here - an Interlink: still in the raw log)
-            self._raw("guide" if guide else "other" if speaker else "user", text,
-                      "Guided session" if guide else speaker or (self.cfg.get("user_name") or "You"))
-        self.log("Guided session" if guide else speaker or (self.cfg.get("user_name") or "You"), text)
-        self.recalled = self._recall(text) if (visible if recall is None else recall) else []
+            self._raw("guide" if guide else "other" if speaker else "user", shown,
+                      "Guided session" if guide else speaker or (self.cfg.get("user_name") or "You"), picture=rel)
+        self.log("Guided session" if guide else speaker or (self.cfg.get("user_name") or "You"),
+                 f"[a picture: {rel}] {text}".strip() if rel else text)
+        self.recalled = self._recall(text) if text.strip() and (visible if recall is None else recall) else []
         self.save()
         if not respond:
             nxt()
@@ -1353,10 +1413,32 @@ class Companion:
                 act()
             if self.unremembered() >= int(self.cfg.get("memory_every", 10)):
                 self._push(lambda n: self._memory(n, "", False), first=True)
+            if picture and self.can_see():
+                self._push(lambda n: self._see(n, entry), first=True)      # (first: the memory has it then)
             nxt()
             if then is not None:
                 then(reply or "...")
-        self._ask(self._messages(), done, max_tokens=900, stream=True)
+        self._ask(self._messages(pictures=True), done, max_tokens=900, stream=True)
+
+    def _see(self, nxt, entry):
+        """What it saw in a picture, in its own words, kept with it: the picture itself is shown to the model only
+        the once - after that, the conversation (and its memories) have this."""
+        path = self.folder / entry.get("picture", "")
+        if not entry.get("picture") or not path.is_file() or not self.can_see():
+            nxt()
+            return
+        caption = (entry.get("content") or "").strip()
+        ask = SEE_ASK.format(who=entry.get("from") or self.user,
+                             caption=f' (with the words "{caption[:200]}")' if caption else "")
+
+        def done(text, err):
+            text = tidy_text(text)
+            if not err and text:
+                entry["seen"] = text[:700]
+                self._raw("system", f"(the picture, as {self.name} saw it: {entry['seen']})")
+                self.save()
+            nxt()
+        self._ask_alone(ask, done, max_tokens=220, picture=path)
 
     def _recall(self, text):
         if not self.cfg.get("recall", True):

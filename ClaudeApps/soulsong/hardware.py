@@ -12,6 +12,7 @@ from pathlib import Path
 MAX_CONTEXT = 131072            # 128k: the most a Companion is given, even if its model could take more
 CACHE_BYTES = 1.0625            # q8_0: a byte a value, plus its scales
 OVERHEAD_GB = 0.9               # the engine's working buffers, roughly
+VISION_GB = 0.3                 # a vision add-on's working memory, besides its own file
 _SCALARS = {0: 1, 1: 1, 2: 2, 3: 2, 4: 4, 5: 4, 6: 4, 7: 1, 10: 8, 11: 8, 12: 8}
 _FMT = {0: "<B", 1: "<b", 2: "<H", 3: "<h", 4: "<I", 5: "<i", 6: "<f", 7: "<?", 10: "<Q", 11: "<q", 12: "<d"}
 _cache = {}
@@ -93,20 +94,22 @@ def model_facts(path):
     return _cache[key]
 
 
-def full_context(path, lora=None):
+def full_context(path, lora=None, mmproj=None):
     """The context a Companion on this model gets by default: the model's own, up to 128k - or, if that wouldn't fit
-    on the graphics card, the biggest that does (halving from 128k, no lower than 8k)."""
+    on the graphics card, the biggest that does (halving from 128k, no lower than 8k). mmproj: its vision add-on,
+    loaded too."""
     c = model_facts(path).get("context") or 0
     ctx = min(c, MAX_CONTEXT) if c else 32768
     card = card_gb()
     if card:
-        while ctx > 8192 and (memory_gb(path, ctx, lora) or 0) > card * 0.92:
+        while ctx > 8192 and (memory_gb(path, ctx, lora, mmproj) or 0) > card * 0.92:
             ctx //= 2
     return ctx
 
 
-def memory_gb(path, context, lora=None):
-    """Roughly how much graphics memory the model takes at this context (None if the file can't be read)."""
+def memory_gb(path, context, lora=None, mmproj=None):
+    """Roughly how much graphics memory the model takes at this context (None if the file can't be read) - with its
+    vision add-on (mmproj), if that's loaded too."""
     f = model_facts(path)
     if not f.get("layers"):
         return None
@@ -117,6 +120,8 @@ def memory_gb(path, context, lora=None):
         head = f["key_swa"] if swa else f["key"]
         values += 2 * f["kv"][i] * head * tokens
     extra = Path(lora).stat().st_size / 2**30 if lora and Path(lora).exists() else 0
+    if mmproj and Path(mmproj).exists():
+        extra += Path(mmproj).stat().st_size / 2**30 + VISION_GB
     return f["file_gb"] + extra + values * CACHE_BYTES / 2**30 + OVERHEAD_GB
 
 

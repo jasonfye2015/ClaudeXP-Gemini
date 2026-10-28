@@ -134,6 +134,15 @@ new version of the Companion, made with the same tools as the Kithylin models ([
 Every version is trained fresh on the whole life so far, so nothing compounds and nothing old is forgotten. The banks
 stay as they are.
 
+## Pictures
+
+**Add picture...** (beside Send) puts a picture with your next message, or paste one into the box, or drop a picture
+file on it. Your Companion sees it if its model can: Gemma 3 4B and Gemma 4 12B can, with their vision add-on
+(**Settings > Let them see pictures**, on by default; on Gemma 3 4B it takes about a gigabyte more of the graphics
+card). It looks at a picture once, then keeps what it saw in its own words, so it can talk about it later and it goes
+into its memories. A model that can't see pictures is told one came, so it can say so. Pictures are kept in the
+Companion's `Pictures` folder, no more than 1,280 pixels across, and they show in the conversation and the raw log.
+
 ## On Telegram: from your phone
 
 **Telegram...** in the top bar gives Soul and Song a Telegram bot of its own, so you can talk with your Companion from
@@ -155,6 +164,8 @@ Then:
 
 - **Talking.** Write to the bot and the open Companion answers; it's told whether you're on your phone or back at the
   window. It's one conversation, with the same memories, either way.
+- **Pictures** go too: a photo (with words or without), a picture sent as a file, a sticker. Voice messages and
+  videos get a note that it can't take them yet.
 - **While it's closed**, Telegram keeps your messages for a day; they're answered when Soul and Song opens.
 - **It writes first** after free time or a dream, when you've been away an hour or more: at most twice a day (you
   choose), three hours apart, never in your quiet hours (22:00 to 8:00 unless you change them).
@@ -183,6 +194,7 @@ Local Storage\Projects\AI LLM Txt Files\
     │   ├── Chats\<date>.txt      every conversation
     │   ├── Raw Logs\<date>.jsonl everything (the Raw Logs tab)
     │   ├── Self\                 every self-portrait, Letters\, Journal\, Dreams\, identity checks, predictions
+    │   ├── Pictures\             every picture it's been shown
     │   ├── Retraining\           the training package, and each version's training script
     │   └── Archive\              the banks before each distillation
     ├── Scripts\                  your own guided sessions, and the ones the Companions write

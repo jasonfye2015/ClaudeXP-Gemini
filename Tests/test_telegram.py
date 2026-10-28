@@ -42,6 +42,8 @@ class FakeTelegram:
                 raise telegram.TelegramError("Bad Gateway")
             time.sleep(0.02)                            # (a long poll, very short)
             return [u for u in list(self.inbox) if u["update_id"] >= params.get("offset", 0)]
+        if method == "getFile":
+            return {"file_id": params["file_id"], "file_path": f"photos/{params['file_id']}.jpg"}
         if method == "sendMessage":
             assert len(params["text"]) <= 4096, "a message longer than Telegram takes"
             self.sent.append((params["chat_id"], params["text"]))
@@ -52,6 +54,32 @@ class FakeTelegram:
 
 
 _ids = [100]
+
+
+def jpeg(colour="tomato", size=(320, 240)):
+    """A picture as Telegram's file server would send it."""
+    support.qapp()
+    from PySide6.QtCore import QBuffer, QByteArray, QIODevice
+    from PySide6.QtGui import QColor, QImage
+    img = QImage(size[0], size[1], QImage.Format_RGB32)
+    img.fill(QColor(colour))
+    data = QByteArray()
+    buf = QBuffer(data)
+    buf.open(QIODevice.WriteOnly)
+    img.save(buf, "JPG")
+    buf.close()
+    return bytes(data)
+
+
+def photo(user, caption="", first="Jason"):
+    """A photo message: Telegram sends each size it has, smallest first."""
+    u = message(user, "", first)
+    del u["message"]["text"]
+    u["message"]["photo"] = [{"file_id": f"small-{u['update_id']}", "width": 90, "height": 60, "file_size": 900},
+                             {"file_id": f"big-{u['update_id']}", "width": 1280, "height": 853, "file_size": 99000}]
+    if caption:
+        u["message"]["caption"] = caption
+    return u
 
 
 def message(user, text, first="Jason", chat_type="private", date=None):
@@ -114,6 +142,41 @@ def test_who_may_talk():
     assert kind(photo) is None, "a message without words went to the Companion"
     link.remove_guest(GUEST)
     assert kind(message(GUEST, "Still here?")) == "stranger", "a removed guest could still talk"
+
+
+def test_pictures_and_other_things():
+    """Pictures: a photo (its biggest size) and its caption, a picture sent as a file, a sticker (a still one as a
+    picture); fetched from Telegram's file server; voice messages and the like get a note instead"""
+    fetched = []
+    link = telegram.Link(support.scratch("pictures"), api=FakeTelegram(),
+                         files=lambda url: fetched.append(url) or b"JPEG")
+    link.connect(TOKEN)
+    link.classify(message(OWNER, link.code("owner")))
+    seen = link.classify(photo(OWNER, "Look!"))
+    assert seen["kind"] == "owner" and seen["text"] == "Look!", seen
+    assert seen["picture"]["file_id"].startswith("big-") and seen["other"] is None, seen
+    assert link.classify(photo(OWNER))["text"] == "", "a photo without words"
+    doc = message(OWNER, "")
+    del doc["message"]["text"]
+    doc["message"]["document"] = {"file_id": "doc-1", "mime_type": "image/png", "file_size": 5000}
+    assert link.classify(doc)["picture"]["file_id"] == "doc-1"
+    doc["message"]["document"] = {"file_id": "doc-2", "mime_type": "application/pdf", "file_size": 5000}
+    assert link.classify(doc)["other"] == "files" and link.classify(doc)["picture"] is None
+    sticker = message(OWNER, "")
+    del sticker["message"]["text"]
+    sticker["message"]["sticker"] = {"file_id": "st-1", "emoji": "\U0001F431", "is_animated": False, "is_video": False}
+    still = link.classify(sticker)
+    assert still["picture"]["file_id"] == "st-1" and still["text"] == "(a sticker: \U0001F431)", still
+    sticker["message"]["sticker"]["is_animated"] = True
+    moving = link.classify(sticker)
+    assert moving["picture"] is None and moving["text"] == "(a sticker: \U0001F431)", moving
+    voice = message(OWNER, "")
+    del voice["message"]["text"]
+    voice["message"]["voice"] = {"file_id": "v-1", "duration": 3}
+    said = link.classify(voice)
+    assert said["kind"] == "owner" and said["other"] == "voice messages" and not said["picture"], said
+    assert link.download("big-1") == b"JPEG"
+    assert fetched == [f"https://api.telegram.org/file/bot{TOKEN}/photos/big-1.jpg"], fetched
 
 
 def test_listening_and_sending():
@@ -279,7 +342,9 @@ def test_the_window_on_telegram():
         QTimer.singleShot(10, lambda: done("I'm here, and glad you are too.", ""))
 
     w = A.SoulAndSong(None)
-    w.tg = telegram.Link(base, api=api)                # (before it starts listening: the stand-in Telegram)
+    fetched = []
+    w.tg = telegram.Link(base, api=api, files=lambda url: fetched.append(url) or jpeg())   # (the stand-in Telegram,
+    #                                                                                   before it starts listening)
     w.load_model = lambda *a, **k: None
     w.brain.ask = ask
     w.brain.engine.ready = True
@@ -336,12 +401,32 @@ def test_the_window_on_telegram():
     w.brain.engine.ready = True
     w._ready(True)
     assert answered(OWNER, 3) == "I'm here, and glad you are too." and not w._tg_waiting
+    # pictures: a photo with words, fetched and kept - and words sent right after it still come after it
+    w.brain.engine.vision = True                      # (as if its vision add-on were loaded)
+    n, before = len(api.to(OWNER)), len(asked)
+    api.inbox += [photo(OWNER, "Look at this!"), message(OWNER, "Isn't it red?")]
+    assert support.pump(10, until=lambda: len(api.to(OWNER)) >= n + 2 and w.comp.idle()), "the photo wasn't answered"
+    kept = list((folder / "Pictures").glob("* Telegram.jpg"))
+    assert len(kept) == 1 and len(fetched) == 1 and "/photos/big-" in fetched[0], (kept, fetched)
+    said = [m for m in w.comp.history if m["role"] == "user"][-2:]
+    assert said[0]["content"] == "Look at this!" and said[0].get("picture") and said[1]["content"] == "Isn't it red?"
+    assert isinstance(asked[before], list) and asked[before][1]["type"] == "image_url", "the model wasn't shown it"
+    assert "<img" in w.chat.toHtml()
+    # a voice message: a note back, and the Companion isn't bothered
+    n, before = len(api.to(OWNER)), len(asked)
+    voice = message(OWNER, "")
+    del voice["message"]["text"]
+    voice["message"]["voice"] = {"file_id": "v-1", "duration": 3}
+    api.inbox.append(voice)
+    assert answered(OWNER, n) == telegram.CANT.format(what="voice messages") and len(asked) == before
+    w.brain.engine.vision = False
     # writing first, and a new Companion announced
+    n = len(api.to(OWNER))
     w.comp.reach("A message from Lyra.")
-    assert answered(OWNER, 4) == "A message from Lyra."
+    assert answered(OWNER, n) == "A message from Lyra."
     w.tg.data["last_companion"] = "Brook"
     w._tg_wire(announce=True)
-    assert answered(OWNER, 5) == "(You're talking with Lyra now.)" and w.tg.data["last_companion"] == "Lyra"
+    assert answered(OWNER, n + 1) == "(You're talking with Lyra now.)" and w.tg.data["last_companion"] == "Lyra"
     # the settings
     seen = {}
 
@@ -374,8 +459,9 @@ def test_the_window_on_telegram():
     try:
         w.close()
         assert shown == [True] and not w.isVisible() and w._tg_thread.is_alive(), "it stopped listening"
+        n = len(api.to(OWNER))
         api.inbox.append(message(OWNER, "Still there?"))
-        answered(OWNER, 6)
+        answered(OWNER, n)
         w._tray_open()
         assert w.isVisible()
         w._inside_computer = lambda: True

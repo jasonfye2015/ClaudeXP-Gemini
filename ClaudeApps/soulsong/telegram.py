@@ -21,7 +21,13 @@ import urllib.request
 from pathlib import Path
 
 API = "https://api.telegram.org/bot{token}/{method}"
+FILE = "https://api.telegram.org/file/bot{token}/{path}"
 LIMIT = 4000                     # (Telegram's limit is 4096 characters a message)
+PICTURE_LIMIT = 20 * 2**20       # (the most a bot may download; a phone's photo is far less)
+OTHER = (("voice", "voice messages"), ("audio", "audio"), ("video_note", "video messages"), ("video", "videos"),
+         ("animation", "GIFs"), ("document", "files"), ("location", "locations"), ("contact", "contacts"),
+         ("poll", "polls"))
+CANT = "(Soul and Song reads words and sees pictures - it can't take {what} yet.)"
 DESCRIPTION = ("Soul and Song is an AI companion app. Everything written here is written by an AI language model, "
                "running on its owner's own computer - not by a person. It's private: it talks only with its owner, "
                "and with people they invite.")
@@ -44,7 +50,8 @@ whoever has it controls the bot. (If you like, send <b>/setuserpic</b> to give t
 Telegram, and sets the bot's description to say it's an AI.</li>
 <li>The window then shows your bot's address (t.me/...) and a six-figure code. Open the bot, press <b>Start</b> and
 send it the code. It answers "Linked."</li>
-<li>Now just write to it. To invite someone, click <b>Invite someone...</b> and give them the code it shows.</li>
+<li>Now just write to it - words, or pictures. To invite someone, click <b>Invite someone...</b> and give them
+the code it shows.</li>
 </ol>
 <p><b>Good to know:</b> only one Soul and Song can listen to a bot at a time - don't run it on its own and inside a
 computer together. To keep it listening with the window closed, run Soul and Song on its own (the launcher's
@@ -74,6 +81,30 @@ def call(token, method, params=None, timeout=20):
     return body.get("result")
 
 
+def fetch(url, timeout=60):
+    """A file from Telegram's file server, as bytes (a picture someone sent)."""
+    with urllib.request.urlopen(url, timeout=timeout) as r:
+        data = r.read(PICTURE_LIMIT + 1)
+    if len(data) > PICTURE_LIMIT:
+        raise TelegramError("too big")
+    return data
+
+
+def picture_of(m):
+    """A message's picture: {"file_id", "emoji"} - a photo (its biggest size), a picture sent as a file, or a
+    sticker that's a still picture - or None."""
+    if m.get("photo"):
+        biggest = max(m["photo"], key=lambda p: (p.get("width", 0) * p.get("height", 0), p.get("file_size", 0)))
+        return {"file_id": biggest["file_id"], "emoji": ""}
+    doc = m.get("document") or {}
+    if str(doc.get("mime_type", "")).startswith("image/") and doc.get("file_size", 0) <= PICTURE_LIMIT:
+        return {"file_id": doc["file_id"], "emoji": ""}
+    sticker = m.get("sticker") or {}
+    if sticker and not sticker.get("is_animated") and not sticker.get("is_video"):
+        return {"file_id": sticker["file_id"], "emoji": sticker.get("emoji", "")}
+    return None
+
+
 def chunks(text, limit=LIMIT):
     """A long reply in pieces Telegram takes, broken at paragraphs or lines where it can."""
     text = (text or "").strip()
@@ -90,9 +121,10 @@ def chunks(text, limit=LIMIT):
 class Link:
     """The bot and who's linked to it (telegram.json); polling, sending, and what each message is."""
 
-    def __init__(self, folder, api=None):
+    def __init__(self, folder, api=None, files=None):
         self.path = Path(folder) / "telegram.json"
         self.api = api or call
+        self.files = files or fetch
         self.lock = threading.RLock()            # (the listener's thread and the window's both write it)
         try:
             self.data = json.loads(self.path.read_text(encoding="utf-8"))
@@ -173,13 +205,22 @@ class Link:
 
     def _classify(self, update):
         m = update.get("message") or update.get("edited_message")
-        if not m or not m.get("text") or m.get("chat", {}).get("type") != "private":
+        if not m or m.get("chat", {}).get("type") != "private":
+            return None
+        text = (m.get("text") or m.get("caption") or "").strip()
+        picture = picture_of(m)
+        sticker = (m.get("sticker") or {}).get("emoji")
+        if not text and sticker is not None:
+            text = f"(a sticker: {sticker})" if sticker else "(a sticker)"
+        other = None if text or picture else next((what for key, what in OTHER if key in m), None)
+        if not text and not picture and not other:
             return None
         sender = m.get("from") or {}
-        uid, text = sender.get("id"), m["text"].strip()
+        uid = sender.get("id")
         name = " ".join(x for x in (sender.get("first_name"), sender.get("last_name")) if x) or \
             sender.get("username") or "someone"
-        out = {"chat": m["chat"]["id"], "user": uid, "name": name, "text": text, "date": m.get("date")}
+        out = {"chat": m["chat"]["id"], "user": uid, "name": name, "text": text, "date": m.get("date"),
+               "picture": picture, "other": other}
         word = text.split()[-1] if text.split() else ""
         code = self.data["codes"].get(word)
         if code and time.time() - code["made"] < 7 * 86400:
@@ -196,11 +237,12 @@ class Link:
             return dict(out, kind=kind)
         if text.startswith("/start") or text.startswith("/help"):
             text = ""
+        said = text or picture or other
         if self.owner and uid == self.owner["id"]:
-            return dict(out, kind="owner", text=text) if text else None
+            return dict(out, kind="owner", text=text) if said else None
         guest = next((g for g in self.data["guests"] if g["id"] == uid), None)
         if guest:
-            return dict(out, kind="guest", name=guest["name"], text=text) if text else None
+            return dict(out, kind="guest", name=guest["name"], text=text) if said else None
         if uid in self.data["told"]:
             return None
         self.data["told"] = (self.data["told"] + [uid])[-200:]
@@ -234,6 +276,13 @@ class Link:
     def send(self, chat, text):
         for piece in chunks(text):
             self.api(self.token, "sendMessage", {"chat_id": chat, "text": piece})
+
+    def download(self, file_id):
+        """A file someone sent (a picture), as bytes - asked of Telegram (getFile), then fetched."""
+        found = self.api(self.token, "getFile", {"file_id": file_id})
+        if not found or not found.get("file_path"):
+            raise TelegramError("Telegram didn't say where the file is")
+        return self.files(FILE.format(token=self.token, path=found["file_path"]))
 
     def typing(self, chat):
         try:

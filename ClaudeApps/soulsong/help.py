@@ -105,6 +105,13 @@ has its own topic below. The divider between the conversation and the tabs can b
 of your messages carries its date and time, so it always knows <i>when</i> it is - and anything new rides on your
 newest message: how long you've been apart, news since you last spoke (a dream, a letter, the result of a check),
 and older memories recalled from its archive when what you say relates to them.</p>
+<h3>Pictures</h3>
+<p><b>Add picture...</b> (beside Send) puts a picture with your next message - or paste one into the box, or drop a
+picture file on it. It's kept in the Companion's Pictures folder (no more than 1,280 pixels across) and shown in the
+conversation. Your Companion sees it if its model can see pictures (Gemma 3 4B and Gemma 4 12B can, with their vision
+add-on - Settings, <b>Let them see pictures</b>); it looks at a picture once, then keeps what it saw in its own words,
+so it can talk about it later and it goes into its memories. A model that can't see pictures is told one came, so
+it can say so. The Status tab says whether they see them.</p>
 <h3>Its own requests</h3>
 <p>The Companion can act for itself by writing one of these on a line of its own in a reply. The program carries it
 out and takes the line out of what you see:</p>
@@ -443,7 +450,8 @@ code the window shows. That links your own account: the bot answers "Linked."</l
 <table>
 <tr><td class="k" width="32%">Talking</td><td>write to the bot as you would to anyone: the open Companion answers, and is
 told you're on your phone. When you're back at the window it's told that too. It's one conversation, with the same
-memories, either way.</td></tr>
+memories, either way. Send it pictures too (a photo, with words or without, or a sticker): they're fetched, kept in
+its Pictures folder, and shown here. Voice messages and videos get a note that it can't take them yet.</td></tr>
 <tr><td class="k">When it's closed</td><td>Telegram keeps your messages for a day, and they're answered when Soul and
 Song opens (your Companion is told how long ago you sent them). Messages that come while its model is loading wait
 for it.</td></tr>
@@ -474,6 +482,8 @@ chats.</p>
 it runs (auto picks).</td></tr>
 <tr><td class="k" width="32%">Full context</td><td>the model's whole window, as much as fits the graphics card; the line below
 shows how much graphics memory it needs. Untick to set a smaller one.</td></tr>
+<tr><td class="k" width="32%">Let them see pictures</td><td>loads the model's vision add-on with it, if it has one - about a
+gigabyte more of the graphics card for Gemma 3 4B (the line below counts it). Untick to leave it out.</td></tr>
 <tr><td class="k" width="32%">Temperature</td><td>lower is steadier, higher more varied (0.8 by default).</td></tr>
 <tr><td class="k" width="32%">A memory every</td><td>how many exchanges between memories.</td></tr>
 <tr><td class="k" width="32%">A new day begins at</td><td>the hour its day turns over (4 am).</td></tr>
@@ -518,6 +528,7 @@ project's own mind files are never changed - each Companion gets copies.</p>
 hand.</td></tr>
 <tr><td class="k" width="32%">Chats\\</td><td>every conversation, a file per day.</td></tr>
 <tr><td class="k" width="32%">Archive\\</td><td>each bank as it was before a distillation emptied it.</td></tr>
+<tr><td class="k" width="32%">Pictures\\</td><td>every picture it's been shown (from the window or Telegram).</td></tr>
 <tr><td class="k" width="32%">Self\\</td><td>self-portraits, identity checks, letters, dreams, journal, questions, tensions,
 predictions, time-sense checks, model moves, surprises.</td></tr>
 <tr><td class="k" width="32%">recall.jsonl</td><td>the archive of every memory, kept whole.</td></tr>

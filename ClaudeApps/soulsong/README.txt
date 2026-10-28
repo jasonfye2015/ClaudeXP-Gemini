@@ -160,6 +160,15 @@ answered when it opens (with how long ago), ones that come while the model loads
 three hours apart, reach_per_day at most; it may answer NO. On its own (the launcher's APPS), closing the window keeps
 it listening from the notification area. One listener per bot.
 
+Pictures: Add picture... (or paste, or drop a file on the box) - and photos, picture files and still stickers on
+Telegram (getFile, then the file server; in the order they came) - are kept as JPEGs no more than 1,280 across in the
+Companion's Pictures folder; the history entry and raw log carry "picture" (its path in the folder). The newest
+message's picture goes to the model as itself (an image_url part, a data: URI) when the model sees - Kithylin's
+engine starts llama-server with --mmproj (engine.mmproj_for: beside the model, or its add-on's base) when asked
+(Settings "pictures", on by default; hardware.memory_gb counts it); the Timeline's shared engine loads it whenever
+the model has one. Then Companion._see asks what it saw, once, and that's "seen": every later turn and memory has
+those words instead of the picture. A model that can't see is told one came.
+
 Interlink (the Interlink tab): a second Companion brought in, and the two talk together - led by a script (Guided
 together), freely for a set number of messages (Open conversation), or with the user as a group (Group chat). The
 open Companion is blue, the second red (their words, their Status panels, and the window's glow while either is
