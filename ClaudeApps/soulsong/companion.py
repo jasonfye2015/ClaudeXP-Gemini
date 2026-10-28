@@ -216,10 +216,41 @@ class Companion:
         self.recall = Recall(self.folder, use_embedder=recall and self.cfg.get("recall", True))
         if not self.recall.items:
             self._index_existing()
+        self.on_raw = lambda kind: None                # (a raw log entry was written: the Raw Logs tab, if open)
         self.on_line = lambda kind, text: None        # "user", "companion", "system", "memory", "request"
         self.on_stream = lambda text: None
         self.on_changed = lambda: None
         self.on_name = None                            # (suggested name, accept(name)) -> the program asks the user
+
+    # ---- every line goes in the raw log too (the Raw Logs tab) ----
+    @property
+    def on_line(self):
+        return self._on_line
+
+    @on_line.setter
+    def on_line(self, fn):
+        def line(kind, text):
+            self._raw(kind, text)
+            fn(kind, text)
+        self._on_line = line
+
+    def _raw(self, kind, text, who=None):
+        """One entry in Raw Logs/<day>.jsonl: what happened, when, who said it."""
+        if who is None:
+            who = {"user": self.cfg.get("user_name") or "You", "guide": "Guided session",
+                   "companion": self.name}.get(kind, "")
+        try:
+            folder = self.folder / "Raw Logs"
+            folder.mkdir(exist_ok=True)
+            with open(folder / f"{self.day_key()}.jsonl", "a", encoding="utf-8") as f:
+                f.write(json.dumps({"t": stamp(self.now()), "kind": kind, "who": who, "text": text},
+                                   ensure_ascii=False) + "\n")
+        except OSError:
+            return
+        try:
+            self.on_raw(kind)
+        except Exception:
+            pass
 
     # ---- saving ----
     def save(self):
@@ -277,7 +308,17 @@ class Companion:
         return not self.busy and not self.queue
 
     def _ask(self, messages, done, max_tokens=700, stream=False):
-        self.brain.ask(messages, done, self.on_stream if stream else None, max_tokens,
+        """A request to the model. The raw log keeps its newest message (the mind files in front of it are the
+        same every time) and the answer, shown or not."""
+        self._raw("asked", messages[-1]["content"] if messages else "", "Soul and Song")
+
+        def got(text, err):
+            if err or not (text or "").strip():
+                self._raw("error", f"No answer from the model{': ' + err if err else ''}.", "Soul and Song")
+            else:
+                self._raw("answered", text, self.name)
+            done(text, err)
+        self.brain.ask(messages, got, self.on_stream if stream else None, max_tokens,
                        float(self.cfg.get("temperature", 0.8)))
 
     def _ask_alone(self, ask, done, max_tokens=700):
@@ -810,6 +851,9 @@ class Companion:
         self.history.append(entry)
         if visible:
             self.on_line("guide" if guide else "user", text)
+        else:                                         # (not shown here - an Interlink: still in the raw log)
+            self._raw("guide" if guide else "other" if speaker else "user", text,
+                      "Guided session" if guide else speaker or (self.cfg.get("user_name") or "You"))
         self.log("Guided session" if guide else speaker or (self.cfg.get("user_name") or "You"), text)
         self.recalled = self._recall(text) if (visible if recall is None else recall) else []
         self.save()

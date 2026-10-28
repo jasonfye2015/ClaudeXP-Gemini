@@ -20,6 +20,7 @@ TOPICS = [
     ("automation", "Automation tab"),
     ("scripts", "Writing scripts"),
     ("interlink", "Interlink tab - two Companions"),
+    ("rawlogs", "Raw Logs tab"),
     ("settings", "Settings tab"),
     ("growth", "Reading the Growth charts"),
     ("files", "Files and folders"),
@@ -324,6 +325,25 @@ said). They each keep their own side of it - their own history, memories and arc
 conversation's length); in a step, <b>@first A</b> or <b>@first B</b> says who answers first, and {A}, {B} and
 {user} are filled in with the names. Built-in ones are in soulsong\\scripts\\interlink; yours go in
 Companions\\Scripts\\Interlink.</p>
+
+<a name="rawlogs"></a><h2>Raw Logs tab</h2>
+<p>Everything your Companion has been through, day by day, from its first day - colour coded like the
+conversation: you in slate, your Companion in blue (red for a second Companion), the other Companion in an Interlink
+in the other colour, the guide in green, notes in orange, memories in their yellow boxes.</p>
+<table>
+<tr><td class="k" width="32%">The day</td><td>pick one from the list (newest first, with how many entries), or step
+with the arrows; <b>Today</b> comes back to now, and today's page follows along as things happen.</td></tr>
+<tr><td class="k">The filters</td><td>the conversation, guide prompts, notes, memories - and <b>Model in and out</b>:
+every request Soul and Song made of the model (its newest message - the mind files in front of it are the same
+each time) and the answer, word for word, including the ones you never see in the conversation: the journal,
+reflections, time checks, distillations.</td></tr>
+<tr><td class="k">Long days</td><td>are shown 300 entries at a time - <b>Earlier</b> and <b>Later</b> page
+through.</td></tr>
+<tr><td class="k">Search</td><td>looks through every day at once; click a result's date to go to that day.</td></tr>
+<tr><td class="k">With two Companions</td><td>a list at the top picks whose log you're reading.</td></tr>
+</table>
+<p>The log is kept in the Companion's folder, in Raw Logs (a file a day). Days from before it was kept come from the
+conversation logs (Chats) - what was said, without the notes or the model's side.</p>
 
 <a name="settings"></a><h2>Settings tab</h2>
 <p>Each Companion has its own settings. Click <b>Save and load this model</b> to apply them.</p>

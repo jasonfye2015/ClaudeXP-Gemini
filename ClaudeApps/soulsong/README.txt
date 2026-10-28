@@ -102,6 +102,12 @@ The Status tab (the first) shows the Companion at a glance: its age, model, cont
 Memory Days, core memories, letters, dreams, sense of time, predictions, events, guided sessions finished, what's
 playing, its latest milestone.
 
+Raw Logs (the Raw Logs tab): every Companion writes Raw Logs/<day>.jsonl - every line shown in the conversation,
+what it hears in an Interlink, and every request made of the model with the answer, shown or not (rawlog.py reads
+them; Companion._raw writes them). The tab shows any day from the first, colour coded like the conversation, with
+filters (conversation, guide, notes, memories, the model's raw side), 300 entries a page, search across every day,
+and today's page following along. Days from before the raw log was kept come from the conversation logs (Chats).
+
 Interlink (the Interlink tab): a second Companion brought in, and the two talk together - led by a script (Guided
 together), freely for a set number of messages (Open conversation), or with the user as a group (Group chat). The
 open Companion is blue, the second red (their words, their Status panels, and the window's glow while either is

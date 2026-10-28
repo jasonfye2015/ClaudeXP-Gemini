@@ -384,11 +384,13 @@ class SoulAndSong(QWidget):
         self.tabs.addTab(self.auto_page, "Automation")
         self.link_page = self._interlink_tab()
         self.tabs.addTab(self.link_page, "Interlink")
+        self.raw_page = self._raw_tab()
+        self.tabs.addTab(self.raw_page, "Raw Logs")
         self.tabs.addTab(self._settings_tab(), "Settings")
         self.tabs.setUsesScrollButtons(False)            # every tab in sight, no arrows
         self.tabs.setMinimumWidth(max(460, self.tabs.tabBar().sizeHint().width() + 16))
         self.tabs.setCurrentIndex(0)
-        self.tabs.currentChanged.connect(lambda _i: self.refresh_status())
+        self.tabs.currentChanged.connect(lambda _i: (self.refresh_status(), self._raw_shown()))
         split.addWidget(self.tabs)
         split.setStretchFactor(0, 3)
         split.setStretchFactor(1, 1)
@@ -1189,6 +1191,7 @@ class SoulAndSong(QWidget):
         self.hand2 = self.lane2.handle(RED, lambda: self.comp2.name if self.comp2 else "")
         comp.brain = self.hand2
         comp.on_line = lambda kind, text: self._line(kind, text, self.comp2)
+        comp.on_raw = lambda _kind, c=comp: self._raw_logged(c)
         comp.on_stream = lambda t: self._typing(self.comp2, "writing", t)
         self.hand2.on_thinking = lambda t: self._typing(self.comp2, "thinking", t)
         comp.on_changed = self.refresh_panel
@@ -1315,6 +1318,251 @@ class SoulAndSong(QWidget):
         self.top_bar.setRange(0, max(1, total))
         self.top_bar.setValue(min(n, total) if total else 0)
         self.top_bar.setVisible(bool(total))
+
+    # ---- Raw Logs: everything, day by day, from the start ----
+    RAW_PAGE = 300                       # entries on a page
+
+    def _raw_tab(self):
+        from . import rawlog
+        w = QWidget()
+        v = QVBoxLayout(w)
+        row = QHBoxLayout()
+        self.raw_who = QComboBox()
+        self.raw_who.setToolTip("Whose log (with a second Companion in, either of them)")
+        self.raw_who.activated.connect(lambda _i: self._raw_days(keep=False))
+        self.raw_day = QComboBox()
+        self.raw_day.setMinimumWidth(170)
+        self.raw_day.activated.connect(lambda _i: self._raw_show(page=0))
+        prev_day, next_day, today = QPushButton("\u25C0"), QPushButton("\u25B6"), QPushButton("Today")
+        prev_day.setToolTip("The day before")
+        next_day.setToolTip("The day after")
+        prev_day.clicked.connect(lambda: self._raw_step_day(-1))
+        next_day.clicked.connect(lambda: self._raw_step_day(1))
+        today.clicked.connect(lambda: self._raw_days(keep=False))
+        for b in (prev_day, next_day, today):
+            b.setFixedWidth(34 if b is not today else 56)
+        row.addWidget(self.raw_who)
+        row.addWidget(self.raw_day, 1)
+        row.addWidget(prev_day)
+        row.addWidget(next_day)
+        row.addWidget(today)
+        v.addLayout(row)
+        row = QHBoxLayout()
+        self.raw_filters = {}
+        for group, label in rawlog.GROUPS.items():
+            cb = QCheckBox(label.replace(" (raw)", ""))
+            cb.setChecked(group != "model")
+            cb.setToolTip({"model": "Every request Soul and Song made of the model (its newest message - the mind "
+                                    "files in front are the same each time) and the answer, shown or not: "
+                                    "journal, reflections, time checks, memories..."}.get(group, ""))
+            cb.toggled.connect(lambda _on: self._raw_show())
+            self.raw_filters[group] = cb
+            row.addWidget(cb)
+        row.addStretch(1)
+        v.addLayout(row)
+        row = QHBoxLayout()
+        self.raw_find = QLineEdit()
+        self.raw_find.setPlaceholderText("Search every day...")
+        self.raw_find.returnPressed.connect(self._raw_search)
+        find = QPushButton("Search")
+        find.clicked.connect(self._raw_search)
+        clear = QPushButton("Clear")
+        clear.clicked.connect(lambda: (self.raw_find.clear(), self._raw_show()))
+        row.addWidget(self.raw_find, 1)
+        row.addWidget(find)
+        row.addWidget(clear)
+        v.addLayout(row)
+        self.raw_view = QTextBrowser()
+        self.raw_view.setOpenLinks(False)
+        self.raw_view.anchorClicked.connect(self._raw_link)
+        v.addWidget(self.raw_view, 1)
+        row = QHBoxLayout()
+        self.raw_prev, self.raw_next = QPushButton("\u25C0 Earlier"), QPushButton("Later \u25B6")
+        self.raw_prev.clicked.connect(lambda: self._raw_show(page=self.raw_page_no - 1))
+        self.raw_next.clicked.connect(lambda: self._raw_show(page=self.raw_page_no + 1))
+        self.raw_info = QLabel()
+        self.raw_info.setStyleSheet("color:#555")
+        folder = QPushButton("Open the folder")
+        folder.clicked.connect(self._raw_folder)
+        row.addWidget(self.raw_prev)
+        row.addWidget(self.raw_info, 1)
+        row.addWidget(self.raw_next)
+        row.addWidget(folder)
+        v.addLayout(row)
+        self.raw_page_no = 0
+        self.raw_live = QTimer(self, singleShot=True, interval=600)
+        self.raw_live.timeout.connect(self._raw_live)
+        return w
+
+    def _raw_comp(self):
+        c2 = self.comp2 if self.raw_who.currentIndex() == 1 else None
+        return c2 or self.comp
+
+    def _raw_names(self, c):
+        return {"user": {c.cfg.get("user_name") or "You", "You"}, "self": {c.name, "Companion"}}
+
+    def _raw_shown(self):
+        """The tab came into view (or the Companions changed): the list of whose and which days."""
+        if not hasattr(self, "raw_who") or self.tabs.currentWidget() is not self.raw_page:
+            return
+        self.raw_who.clear()
+        if self.comp is not None:
+            self.raw_who.addItem(self.comp.name)
+        if self.comp2 is not None:
+            self.raw_who.addItem(self.comp2.name)
+        self.raw_who.setVisible(self.raw_who.count() > 1)
+        self._raw_days(keep=True)
+
+    def _raw_days(self, keep=True):
+        from . import rawlog
+        c = self._raw_comp()
+        current = self.raw_day.currentData() if keep else None
+        self.raw_day.clear()
+        if c is None:
+            self.raw_view.setHtml("<i>No Companion open.</i>")
+            return
+        for day, n in reversed(list(rawlog.days(c.folder).items())):
+            self.raw_day.addItem(f"{day}  ({n} entries)", day)
+        if self.raw_day.count() == 0:
+            self.raw_view.setHtml("<i>Nothing logged yet.</i>")
+            return
+        i = self.raw_day.findData(current) if current else 0
+        self.raw_day.setCurrentIndex(max(0, i))
+        self._raw_show(page=-1 if i <= 0 else 0)          # (today: its latest page)
+
+    def _raw_step_day(self, way):
+        i = self.raw_day.currentIndex() - way                # (newest first in the list)
+        if 0 <= i < self.raw_day.count():
+            self.raw_day.setCurrentIndex(i)
+            self._raw_show(page=0 if way > 0 else -1)
+
+    def _raw_entries(self):
+        from . import rawlog
+        c = self._raw_comp()
+        day = self.raw_day.currentData()
+        if c is None or not day:
+            return []
+        on = {g for g, cb in self.raw_filters.items() if cb.isChecked()}
+        return [e for e in rawlog.entries(c.folder, day, self._raw_names(c))
+                if rawlog.KINDS.get(e.get("kind"), ("", "notes"))[1] in on]
+
+    def _raw_show(self, page=None):
+        if not hasattr(self, "raw_view"):
+            return
+        items = self._raw_entries()
+        pages = max(1, (len(items) + self.RAW_PAGE - 1) // self.RAW_PAGE)
+        if page is None:
+            page = self.raw_page_no
+        if page < 0:
+            page = pages - 1
+        page = max(0, min(pages - 1, page))
+        self.raw_page_no = page
+        chunk = items[page * self.RAW_PAGE:(page + 1) * self.RAW_PAGE]
+        c = self._raw_comp()
+        self.raw_view.setHtml(self._raw_html(chunk, c) or "<i>Nothing here with these filters.</i>")
+        self.raw_prev.setEnabled(page > 0)
+        self.raw_next.setEnabled(page < pages - 1)
+        self.raw_info.setText(f"{self.raw_day.currentData() or ''} - {len(items)} entries"
+                              + (f" - page {page + 1} of {pages}" if pages > 1 else ""))
+        bar = self.raw_view.verticalScrollBar()                # today's latest page: at its newest; else the top
+        bar.setValue(bar.maximum() if page == pages - 1 and self.raw_day.currentIndex() == 0 else 0)
+
+    def _raw_html(self, chunk, c, with_day=False):
+        """Colour coded like the conversation: the user slate, this Companion blue (red for the second), the other
+        Companion the other colour, the guide green, notes orange, memories boxed, the model's raw side grey and
+        violet."""
+        mine = RED if c is not None and c is self.comp2 else BLUE
+        theirs = BLUE if mine == RED else RED
+        colours = {"user": COLOURS["user"], "companion": mine, "other": theirs, "guide": COLOURS["guide"],
+                   "system": COLOURS["system"], "request": "#8A8A8A", "error": "#C62828", "asked": "#7A7A7A",
+                   "answered": "#6A1B9A", "memory": COLOURS["memory"]}
+        out = []
+        for e in chunk:
+            kind = e.get("kind", "system")
+            colour = colours.get(kind, "#000")
+            when = html.escape(e.get("t", "")[11:16] if not with_day else e.get("t", ""))
+            day_link = (f'<a href="day:{e["day"]}" style="color:#999">{html.escape(e["day"])}</a> '
+                        if with_day and e.get("day") else "")
+            body = html.escape(e.get("text") or "").replace("\n", "<br>")
+            who = html.escape(e.get("who") or "")
+            stamp_html = f'<span style="color:#999;font-size:9pt">{day_link}{when}</span> '
+            if kind == "memory":
+                out.append(f'<table width="100%" cellpadding="5" style="margin:4px 0"><tr><td style="background:'
+                           f'#FFF6D6;border:1px solid #E2C766;color:{colour};font-size:10pt">{stamp_html}'
+                           f'&#x1F9E0; {body}</td></tr></table>')
+            elif kind in ("asked", "answered"):
+                label = "asked" if kind == "asked" else f"{who} answered"
+                out.append(f'<p style="margin:3px 0 3px 18px;color:{colour};font-family:Consolas;font-size:9pt">'
+                           f'{stamp_html}<b>[{label}]</b> {body}</p>')
+            elif kind in ("system", "request", "error"):
+                out.append(f'<p style="margin:3px 0;color:{colour}">{stamp_html}<i>{body}</i></p>')
+            else:
+                out.append(f'<p style="margin:5px 0">{stamp_html}<b style="color:{colour}">{who}:</b> '
+                           f'<span style="color:{colour}">{body}</span></p>')
+        return "".join(out)
+
+    def _raw_search(self):
+        from . import rawlog
+        text = self.raw_find.text().strip()
+        c = self._raw_comp()
+        if not text or c is None:
+            self._raw_show()
+            return
+        on = {g for g, cb in self.raw_filters.items() if cb.isChecked()}
+        hits = [e for e in rawlog.search(c.folder, text, self._raw_names(c))
+                if rawlog.KINDS.get(e.get("kind"), ("", "notes"))[1] in on]
+        found = self._raw_html(hits, c, with_day=True)
+        self.raw_view.setHtml(f"<p><b>{len(hits)} found{' (the first 400)' if len(hits) >= 400 else ''}</b> - click a "
+                              "day to go to it.</p>" + found)
+        self.raw_info.setText(f"Search: \u201c{text}\u201d")
+        self.raw_prev.setEnabled(False)
+        self.raw_next.setEnabled(False)
+
+    def _raw_link(self, url):
+        day = url.toString().split(":", 1)[-1]
+        i = self.raw_day.findData(day)
+        if i >= 0:
+            self.raw_find.clear()
+            self.raw_day.setCurrentIndex(i)
+            self._raw_show(page=0)
+
+    def _raw_folder(self):
+        c = self._raw_comp()
+        if c is None:
+            return
+        folder = c.folder / "Raw Logs"
+        folder.mkdir(exist_ok=True)
+        try:
+            if self.desktop is not None:
+                from claudecore import host
+                host.open_folder(self.desktop, folder)
+                return
+        except Exception:
+            pass
+        import os
+        os.startfile(str(folder))
+
+    def _raw_logged(self, comp):
+        """A Companion wrote to its raw log: today's page, if it's on the screen, follows along."""
+        if (hasattr(self, "raw_page") and self.tabs.currentWidget() is self.raw_page and comp is self._raw_comp()
+                and not self.raw_find.text().strip()):
+            self.raw_live.start()
+
+    def _raw_live(self):
+        from . import rawlog
+        c = self._raw_comp()
+        if c is None:
+            return
+        today = list(rawlog.days(c.folder))[-1:] or [None]
+        if self.raw_day.currentIndex() <= 0:
+            if self.raw_day.currentData() != today[0]:
+                self._raw_days(keep=False)                  # (a new day began)
+                return
+            at_end = self.raw_page_no >= 0 and not self.raw_next.isEnabled()
+            n = len(self._raw_entries())
+            self.raw_day.setItemText(0, f"{today[0]}  ({n} entries)")
+            if at_end:
+                self._raw_show(page=-1)
 
     def _events_tab(self):
         w = QWidget()
@@ -1509,6 +1757,7 @@ class SoulAndSong(QWidget):
             self.session.stop()
         self.comp = C.Companion(folder, self.hand)
         self.comp.on_line = self._line
+        self.comp.on_raw = lambda _kind, c=self.comp: self._raw_logged(c)
         self.comp.on_stream = lambda t: self._typing(self.comp, "writing", t)
         self.hand.on_thinking = lambda t: self._typing(self.comp, "thinking", t)
         self.comp.on_changed = self.refresh_panel
@@ -1523,6 +1772,7 @@ class SoulAndSong(QWidget):
         self.refresh_self()
         self._link_companions()
         self._link_refresh()
+        self._raw_shown()
         self.runner.restore()
         self._auto_fill()
         self._auto_refresh()
