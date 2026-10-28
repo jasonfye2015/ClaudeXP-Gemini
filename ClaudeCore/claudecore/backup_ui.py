@@ -111,9 +111,10 @@ class BackupPanel(QWidget):
         rl.addLayout(rrow)
         lay.addWidget(restore, 1)
         if self.blocked:
-            note = QLabel("This computer's own data can't be restored while it's running: restore it from the "
-                          "SYSTEC launcher, or from another computer." if in_computer else
-                          "A computer is running: its data can't be restored until it shuts down.")
+            note = QLabel("This computer's own data and Soul and Song's Companions can't be restored while it's "
+                          "running: restore them from the SYSTEC launcher." if in_computer else
+                          "A computer is running: its data and Soul and Song's Companions can't be restored until "
+                          "it shuts down.")
             note.setWordWrap(True)
             lay.addWidget(note)
         self._update_warning()
@@ -315,7 +316,7 @@ def launch(desktop):
         desktop.open_window(win)
         return win
     era = host.era()
-    blocked = {B.ERA_PART.get(era)} - {None}
+    blocked = ({B.ERA_PART.get(era)} - {None}) | B.SHARED
     body = BackupPanel(blocked=blocked, in_computer=True)
     title = {2001: "Backup Utility", 2011: "Backup and Restore", 2025: "Backup"}.get(era, "Backup")
     win = host.window(desktop, title, body, backup_icon(), (620, 700))

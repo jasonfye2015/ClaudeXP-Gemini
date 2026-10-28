@@ -649,7 +649,7 @@ class Systec(QWidget):
         from claudecore import backup as B
         from claudecore.backup_ui import BackupPanel
         running = self.running if self.process is not None and self.process.poll() is None else None
-        blocked = {B.ERA_PART.get(running.year)} - {None} if running is not None else set()
+        blocked = ({B.ERA_PART.get(running.year)} - {None}) | B.SHARED if running is not None else set()
         dlg = QDialog(self)
         dlg.setWindowTitle("Backup and Restore")
         dlg.setStyleSheet(DIALOG_CSS + BACKUP_CSS)

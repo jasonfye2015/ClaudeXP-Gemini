@@ -1,5 +1,5 @@
 """Backing up and restoring what's yours in the Timeline: the game saves, each computer's data, your profile, Kithylin
-AI's chats (and, if you want, its models and the training results).
+AI's chats, Soul and Song's Companions (and, if you want, Kithylin's models and the training results).
 
 A backup is one .zip with a manifest.json inside, named by date and time ("Claude Timeline backup 2026-10-24 1530.zip";
 automatic ones say "auto-backup"). Paths inside are relative to the Timeline folder, so a backup restores onto any copy
@@ -31,6 +31,8 @@ PARTS = {
     "w11": ("WORKSTATION-2025 (Windows 11)", ["Claude11/data"], True, "Its accounts, mail, chats, desktop and residents' activity"),
     "identity": ("Your profile", ["Profile", "ClaudeLauncher/settings.json"], True, "Your Timeline identity, codes and launcher settings"),
     "kithylin": ("Kithylin AI chats", ["ClaudeApps/kithylinai/Data"], True, "Its saved chats and settings"),
+    "companions": ("Soul and Song Companions", ["Local Storage/Projects/AI LLM Txt Files/Companions"], True,
+                   "Their minds, memories, chats and logs - they change every day"),
     "models": ("Kithylin models (large)", ["ClaudeApps/kithylinai/Models"], False, "The trained Kithylins, about 2.5 GB"),
     "training": ("Training results (large)", ["Local Storage/LLM Models/selfmodel/runs",
                                               "Local Storage/LLM Models/selfmodel/adapter",
@@ -39,6 +41,10 @@ PARTS = {
 }
 ORDER = list(PARTS)
 ERA_PART = {2001: "xp", 2011: "w7", 2025: "w11"}
+SHARED = {"companions"}         # in use by whichever computer is running (Soul and Song): not restored while one is
+# the parts there were before settings remembered which they'd seen - a newer part that's on by default is added
+# to settings saved before it existed
+FIRST_PARTS = ["saves", "xp", "w7", "w11", "identity", "kithylin", "models", "training"]
 SKIP_DIRS = {"__pycache__"}
 SKIP_SUFFIX = (".tmp", ".pyc")
 STORED = (".gguf", ".safetensors", ".zip", ".mp3", ".mp4", ".jpg", ".png", ".webp", ".pt")   # already compressed or huge
@@ -58,14 +64,16 @@ def settings():
         data = {}
     out = dict(DEFAULTS)
     out.update({k: v for k, v in data.items() if k in DEFAULTS})
-    out["parts"] = [p for p in out["parts"] if p in PARTS]
+    known = data.get("known", FIRST_PARTS)
+    out["parts"] = [p for p in out["parts"] if p in PARTS] + [
+        k for k, v in PARTS.items() if v[2] and k not in known and k not in out["parts"]]
     return out
 
 
 def save_settings(data):
     SETTINGS.parent.mkdir(parents=True, exist_ok=True)
     tmp = SETTINGS.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, indent=1), encoding="utf-8")
+    tmp.write_text(json.dumps({**data, "known": ORDER}, indent=1), encoding="utf-8")
     tmp.replace(SETTINGS)
 
 
