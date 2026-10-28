@@ -29,6 +29,19 @@ CRASHES = {0xC0000409: "Qt aborted it (often a QThread let go of while still run
            0xC0000005: "an access violation", 0xC00000FD: "a stack overflow", 3: "abort()"}
 
 
+def _servers():
+    """The language-model servers running now (their process ids) - a test must never start one."""
+    try:
+        if os.name == "nt":
+            out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq llama-server.exe", "/FO", "CSV", "/NH"],
+                                 capture_output=True, text=True, timeout=10).stdout
+            return {int(row.split('","')[1]) for row in out.splitlines() if row.startswith('"llama-server')}
+        out = subprocess.run(["pgrep", "-x", "llama-server"], capture_output=True, text=True, timeout=10).stdout
+        return {int(x) for x in out.split()}
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+        return set()
+
+
 def files(words):
     found = [p for folder in FOLDERS if folder.is_dir() for p in sorted(folder.glob("test_*.py"))]
     if words:
@@ -103,6 +116,13 @@ def main(argv):
         result, noise = None, []
         timer = threading.Timer(timeout, proc.kill)
         timer.start()
+        before, started_servers = _servers(), set()
+
+        def watch():                                     # (any model server that appears while it runs)
+            while proc.poll() is None:
+                started_servers.update(_servers() - before)
+                time.sleep(1)
+        threading.Thread(target=watch, daemon=True).start()
         t = time.monotonic()
         for line in proc.stdout:
             line = line.rstrip("\n")
@@ -115,6 +135,14 @@ def main(argv):
         code = proc.wait()
         timer.cancel()
         took = time.monotonic() - t
+        started_servers.update(_servers() - before)
+        if started_servers:
+            still = started_servers & _servers()
+            say(f"  FAIL   it started a language-model server (process {', '.join(map(str, sorted(started_servers)))})"
+                " - a test must never use the graphics card" + (f"; still running: {', '.join(map(str, still))}"
+                                                                 if still else ""))
+            totals["failed"] += 1
+            trouble.append(name)
         if result is None:
             why = ("timed out after %d s" % timeout if took >= timeout - 1 else
                    "crashed: " + CRASHES.get(code & 0xFFFFFFFF, f"exit code {code}"))

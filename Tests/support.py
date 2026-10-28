@@ -64,6 +64,10 @@ def slow():
     return os.environ.get("TIMELINE_TEST_SLOW") == "1"
 
 
+if not os.environ.get("KITHYLINAI_DATA"):           # (Kithylin AI's chats, settings and engine log are never a test's)
+    os.environ["KITHYLINAI_DATA"] = str(scratch("Kithylin AI data"))
+
+
 # ---- Qt ------------------------------------------------------------------------------------------------------------
 def qapp():
     from PySide6.QtCore import QCoreApplication, Qt
@@ -91,8 +95,12 @@ def pump(seconds=0.0, until=None):
 # ---- no language models ------------------------------------------------------------------------------------------
 def no_model_server():
     """Nothing starts a llama-server or loads a model: the computers act as if no models were installed (their
-    'no model' mode), so a test never uses the graphics card."""
-    from claudecore.ai import llm_server as L
+    'no model' mode), so a test never uses the graphics card. (With no computer's host registered there's no router
+    to start, and nothing to do.)"""
+    try:
+        from claudecore.ai import llm_server as L
+    except RuntimeError:
+        return
 
     def refuse(*_a, **_k):
         raise RuntimeError("no language models while testing")
@@ -104,6 +112,17 @@ def no_model_server():
     L.restart = refuse
     L.load = refuse
     L.start_in_background = lambda: None
+
+
+def no_engines():
+    """No model server of any kind: the computers' (no_model_server), Kithylin AI's and Soul and Song's own engine
+    (a model 'loads' without starting anything), and Soul and Song's recall embedder. Call it before opening a
+    window that might open a Companion - opening one loads its model."""
+    no_model_server()
+    from kithylinai import engine
+    engine.Engine.load = lambda self, *a, **k: self.status.emit("(no models while testing)")
+    from soulsong import recall
+    recall.Embedder.start = lambda self: setattr(self, "state", "unavailable")
 
 
 # ---- errors that don't raise ---------------------------------------------------------------------------------------
