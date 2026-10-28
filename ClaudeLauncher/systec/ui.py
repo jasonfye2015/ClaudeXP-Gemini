@@ -1,8 +1,8 @@
 """SYSTEC Multi-Boot Manager: the Claude Timeline's system selection screen.
 
 A card per computer (EPOCH-2001, SYSTEM-2011, WORKSTATION-2025). Click one for Load This Computer, Load and Format
-and Config; double-click to load. The bottom bar has Help, Profile, Backup, the Manual and Power Off, and the real
-date and time.
+and Config; double-click to load. The bottom bar has Help, Profile, Backup, Apps (the programs that also run on
+their own), the Manual and Power Off, and the real date and time.
 While a computer runs, the launcher steps aside, and comes back when it shuts down.
 """
 import math
@@ -16,8 +16,9 @@ from pathlib import Path
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QIcon, QImage, QLinearGradient, QPainter,
                            QPainterPath, QPen, QPixmap, QPolygonF, QTransform)
-from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-                               QListWidgetItem, QMessageBox, QPushButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
+                               QListWidget, QListWidgetItem, QMessageBox, QPushButton, QToolButton, QVBoxLayout,
+                               QWidget)
 
 from . import profile as prof
 from .systems import PORTABLE_PYTHON, PORTABLE_PYTHONS, SYSTEMS, TIMELINE
@@ -28,7 +29,7 @@ if str(TIMELINE / "ClaudeApps") not in sys.path:          # the manual's viewer
     sys.path.append(str(TIMELINE / "ClaudeApps"))
 
 VW, VH = 1408, 768
-VERSION = "v1.50"
+VERSION = "v1.60"
 FONT = "Segoe UI"
 TEXT = QColor("#E8ECF2")
 DIM = QColor("#8A94A6")
@@ -140,6 +141,7 @@ class Systec(QWidget):
         self.cards = []
         self.process = None
         self.running = None
+        self.apps = {}                     # the standalone apps started from APPS: key -> their process
         self.bg = None
         self.checks = None                 # the self-check's findings, once it has run
         self._start_selfcheck()
@@ -439,17 +441,17 @@ class Systec(QWidget):
             p.setFont(_font(11, QFont.Normal, 0.5))
             p.setPen(DIM)
             p.drawText(line, Qt.AlignVCenter, "TIMELINE IDENTITY - click to change")
-        # the centre buttons, on a trapezoid
-        cx, w = VW / 2, 500
+        # the centre buttons, on a trapezoid (a little right of centre: clear of the profile chip)
+        cx, w = VW / 2 + 20, 570
         tray = QPolygonF([QPointF(cx - w / 2 - 24, VH), QPointF(cx - w / 2, VH - 52), QPointF(cx + w / 2, VH - 52),
                           QPointF(cx + w / 2 + 24, VH)])
         p.setPen(QPen(QColor("#3A4250"), 1.2))
         p.setBrush(QColor(14, 16, 20, 230))
         p.drawPolygon(tray)
         for i, (text, action) in enumerate((("HELP", self.help), ("PROFILE", self.edit_profile),
-                                            ("BACKUP", self.backups), ("MANUAL", self.manual),
-                                            ("POWER OFF", self.close))):
-            self._button(p, QRectF(cx - 240 + i * 96, VH - 40, 88, 28), text, action, "#8FB4FF", small=True)
+                                            ("BACKUP", self.backups), ("APPS", self.apps_window),
+                                            ("MANUAL", self.manual), ("POWER OFF", self.close))):
+            self._button(p, QRectF(cx - 279 + i * 94, VH - 40, 88, 28), text, action, "#8FB4FF", small=True)
         self._selfcheck_chip(p)
         # date and time
         box = QRectF(VW - 300, VH - 50, 300, 50)
@@ -501,7 +503,9 @@ class Systec(QWidget):
             "here.<br><br><b>Your codes</b> (the Furry / YIFF panel above your name - click it) decide how the "
             "residents get along with you: attraction, roleplay, what you have in common. A fursona comes with "
             "defaults; change them any time.<br><br><b>Backup</b> saves your saves, each computer's data, your profile and "
-            "your Kithylin chats into one zip, and restores them. <b>Manual</b> is the whole guide to the Timeline.<br><br>"
+            "your Kithylin chats into one zip, and restores them. <b>Apps</b> runs Kithylin AI, Soul and Song, ClaudeRPG and "
+            "the two code studios on their own, without a computer around them. <b>Manual</b> is the whole guide to "
+            "the Timeline.<br><br>"
             "Keys: arrows pick a computer, Enter loads it, F11 full screen, Esc goes back.")
         box.exec()
 
@@ -522,9 +526,63 @@ class Systec(QWidget):
     def config(self, system):
         ConfigDialog(self, system).exec()
 
+    # ---- the standalone apps ------------------------------------------------------------------------------
+    def apps_window(self):
+        """APPS: programs that run on their own, without a computer around them."""
+        win = getattr(self, "_apps", None)
+        if win is None or not win.isVisible():
+            win = AppsWindow(self)
+            self._apps = win
+        win.show()
+        win.raise_()
+        win.activateWindow()
+
+    def app_running(self, key):
+        proc = self.apps.get(key)
+        return proc is not None and proc.poll() is None
+
+    def computer_running(self):
+        return self.process is not None and self.process.poll() is None
+
+    def start_app(self, key):
+        """Start one in a process of its own. Returns what to tell the user ('' when it's starting)."""
+        from claudecore import standalone as S
+        name = S.APPS[key][0]
+        if self.app_running(key):
+            return f"{name} is already open."
+        if key in S.SHARED_FILES and self.computer_running():
+            return (f"Not while {self.running.key} is running: {name} keeps the same files inside it. Shut the "
+                    "computer down first.")
+        python = SYSTEMS[0].python()                 # (the computers' Python: their packages, on any PC)
+        env = dict(os.environ)
+        if any(folder in python.parents for folder in PORTABLE_PYTHONS):
+            env["PYTHONNOUSERSITE"] = "1"
+        if key == "kithylinai":
+            args, cwd = [str(python), "-m", "kithylinai"], TIMELINE / "ClaudeApps"
+        else:
+            args, cwd = [str(python), "-m", "claudecore.standalone", key], TIMELINE / "ClaudeCore"
+        try:
+            self.apps[key] = subprocess.Popen(args, cwd=str(cwd), env=env)
+        except OSError as exc:
+            return f"{name} couldn't start: {exc}"
+        return ""
+
     def load(self, system, format_drive=False):
         if self.process is not None or not system.installed:
             return
+        from claudecore import standalone as S
+        open_alone = [S.APPS[k][0] for k in S.SHARED_FILES if self.app_running(k)]
+        if open_alone:
+            box = QMessageBox(QMessageBox.Question, "SYSTEC",
+                              f"{' and '.join(open_alone)} {'is' if len(open_alone) == 1 else 'are'} open on "
+                              f"{'its' if len(open_alone) == 1 else 'their'} own. Inside {system.key} the same "
+                              "files are used - close it first, or boot anyway?", parent=self)
+            boot = box.addButton("BOOT ANYWAY", QMessageBox.AcceptRole)
+            box.addButton("CANCEL", QMessageBox.RejectRole)
+            box.setStyleSheet(DIALOG_CSS)
+            box.exec()
+            if box.clickedButton() is not boot:
+                return
         if not self._clear_to_boot(system):
             return
         if prof.load() is None:
@@ -1016,3 +1074,180 @@ class ConfigDialog(QDialog):
     def _reset(self):
         prof.set_setting("local_storage", None)
         self.path.setText(self._current())
+
+
+APPS_CSS = DIALOG_CSS + """
+QToolButton { background: #1E232C; color: #E8ECF2; border: 1px solid #4A5466; border-radius: 6px; padding: 10px 4px;
+              font-family: 'Segoe UI'; font-size: 12px; }
+QToolButton:hover { border-color: #8FB4FF; background: #263042; }
+QToolButton:checked { border-color: #7AE0A0; }
+QComboBox { background: #0C0E12; color: #E8ECF2; border: 1px solid #3A4250; border-radius: 4px; padding: 5px 8px;
+            font-family: 'Segoe UI'; font-size: 13px; min-width: 300px; }
+QComboBox QAbstractItemView { background: #0C0E12; color: #E8ECF2; selection-background-color: #24324A; }
+"""
+
+
+class AppsWindow(QDialog):
+    """APPS: the programs that also run on their own - straight on this PC, without a computer around them, so they
+    start quickly and have the graphics card to themselves. Each starts in a process of its own
+    (claudecore.standalone; Kithylin AI with its own python -m kithylinai)."""
+
+    def __init__(self, launcher):
+        super().__init__(launcher)
+        from claudecore import standalone as S
+        self.launcher = launcher
+        self.setWindowTitle("Apps")
+        self.setStyleSheet(APPS_CSS)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(24, 20, 24, 18)
+        title = QLabel("APPS")
+        title.setObjectName("title")
+        lay.addWidget(title)
+        note = QLabel("These run on their own, straight on this PC: no computer around them, so they start quickly "
+                      "and have the graphics card to themselves. Your Companions, chats, programs and saves are "
+                      "the same ones the computers use.")
+        note.setObjectName("dim")
+        note.setWordWrap(True)
+        lay.addWidget(note)
+        lay.addSpacing(6)
+        row = QHBoxLayout()
+        row.setSpacing(10)
+        self.tiles = {}
+        for key, (name, _module, _open, _icon, what) in S.APPS.items():
+            tile = QToolButton()
+            tile.setText(name.replace("Copilot ", "Copilot\n").replace("Claude QBasic ", "Claude QBasic\n"))
+            tile.setIcon(S.icon(key, 56))
+            tile.setIconSize(QSize(56, 56))
+            tile.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+            tile.setFixedSize(132, 124)
+            tile.setCheckable(True)                    # (checked: it's open)
+            tile.setToolTip(what)
+            tile.setCursor(Qt.PointingHandCursor)
+            tile.clicked.connect(lambda _c=False, k=key: self.start(k))
+            tile.installEventFilter(self)
+            row.addWidget(tile)
+            self.tiles[key] = tile
+        lay.addLayout(row)
+        self.status = QLabel(" ")
+        self.status.setObjectName("dim")
+        self.status.setWordWrap(True)
+        self.status.setMinimumHeight(36)
+        lay.addWidget(self.status)
+        end = QHBoxLayout()
+        settings = QPushButton("SETTINGS")
+        settings.setToolTip("The language model the code studios use, and its engine")
+        settings.setAutoDefault(False)
+        settings.clicked.connect(lambda: AppsSettingsDialog(self).exec())
+        end.addWidget(settings)
+        end.addStretch(1)
+        close = QPushButton("CLOSE")
+        close.setDefault(True)
+        close.clicked.connect(self.close)
+        end.addWidget(close)
+        lay.addLayout(end)
+        self.watch = QTimer(self)
+        self.watch.timeout.connect(self._refresh)
+        self.watch.start(1000)
+        self._refresh()
+
+    def eventFilter(self, obj, event):
+        from PySide6.QtCore import QEvent
+        if event.type() == QEvent.Enter:
+            from claudecore import standalone as S
+            key = next((k for k, t in self.tiles.items() if t is obj), None)
+            if key is not None:
+                name, _m, _o, _i, what = S.APPS[key]
+                self.status.setText(f"<b>{name}</b> - {what}" + ("  (open)" if self.launcher.app_running(key) else ""))
+        return False
+
+    def start(self, key):
+        from claudecore import standalone as S
+        said = self.launcher.start_app(key)
+        self.status.setText(said or f"Starting {S.APPS[key][0]}...")
+        self._refresh()
+
+    def _refresh(self):
+        for key, tile in self.tiles.items():
+            tile.setChecked(self.launcher.app_running(key))
+
+
+class AppsSettingsDialog(QDialog):
+    """APPS > Settings: what the code studios' AI runs on when they run on their own (a computer's own choices are
+    in its Control Panel > AI Models). Kept in Profile/Standalone Apps."""
+    CONTEXTS = [8192, 16384, 32768, 65536]
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        from claudecore import standalone as S
+        S.install()                                    # (this process's own stand-in, for the model settings)
+        from claudecore.ai import ai_models, llm_server
+        self.ai_models = ai_models
+        self.setWindowTitle("Apps - Settings")
+        self.setStyleSheet(APPS_CSS)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(24, 20, 24, 18)
+        title = QLabel("APPS - SETTINGS")
+        title.setObjectName("title")
+        lay.addWidget(title)
+        note = QLabel("For Copilot Python Studio's AI Helper and Claude QBasic Studio's Vibe Coder when they run on "
+                      "their own. Soul and Song and Kithylin AI choose their models in their own Settings.")
+        note.setObjectName("dim")
+        note.setWordWrap(True)
+        lay.addWidget(note)
+        cfg = ai_models.config()
+        models = [m for m in ai_models.installed() if not m.embedding]
+        form = QFormLayout()
+        form.setVerticalSpacing(10)
+        self.model = QComboBox()
+        auto = ai_models.default_for("coding", models)
+        auto_title = next((m.title for m in models if m.id == auto), "none installed")
+        self.model.addItem(f"Automatic ({auto_title})", "")
+        for m in models:
+            self.model.addItem(f"{m.title}  ({m.size / 2**30:.1f} GB)", m.id)
+        self.model.setCurrentIndex(max(0, self.model.findData(cfg["assign"].get("coding", ""))))
+        form.addRow("Coding model", self.model)
+        self.engine = QComboBox()
+        self.engine.addItem("Automatic", "")
+        names = {"vulkan": "Vulkan (any graphics card)", "cuda": "CUDA (NVIDIA)", "cpu": "Processor only",
+                 "macos": "Metal (Mac)"}
+        for flavour in llm_server.engines():
+            self.engine.addItem(names.get(flavour, flavour), flavour)
+        self.engine.setCurrentIndex(max(0, self.engine.findData(cfg.get("engine") or "")))
+        form.addRow("Engine", self.engine)
+        self.context = QComboBox()
+        for n in self.CONTEXTS:
+            self.context.addItem(f"{n:,} tokens", n)
+        self.context.setCurrentIndex(max(0, self.context.findData(int(cfg.get("context") or 16384))))
+        form.addRow("Context", self.context)
+        lay.addLayout(form)
+        where = QHBoxLayout()
+        folder = QLabel(f"Their settings are kept in {S.DATA}")
+        folder.setObjectName("dim")
+        folder.setWordWrap(True)
+        where.addWidget(folder, 1)
+        show = QPushButton("OPEN")
+        show.clicked.connect(lambda: S.reveal(S.DATA.mkdir(parents=True, exist_ok=True) or S.DATA))
+        where.addWidget(show)
+        lay.addLayout(where)
+        end = QHBoxLayout()
+        end.addStretch(1)
+        cancel = QPushButton("CANCEL")
+        cancel.clicked.connect(self.reject)
+        save = QPushButton("SAVE")
+        save.setDefault(True)
+        save.clicked.connect(self._save)
+        end.addWidget(cancel)
+        end.addWidget(save)
+        lay.addLayout(end)
+
+    def _save(self):
+        cfg = self.ai_models.config()
+        chosen = self.model.currentData()
+        if chosen:
+            cfg["assign"]["coding"] = chosen
+        else:
+            cfg["assign"].pop("coding", None)
+        cfg["engine"] = self.engine.currentData() or ""
+        cfg["context"] = int(self.context.currentData())
+        self.ai_models.save(cfg)
+        self.accept()

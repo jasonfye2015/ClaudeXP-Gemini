@@ -27,10 +27,10 @@ SERVER = "llama-server.exe" if os.name == "nt" else "llama-server"
 
 
 def hosted():
-    """Running inside one of the Timeline's computers (a host is registered), or standalone?"""
+    """Running inside one of the Timeline's computers (a host is registered), or standalone? The launcher's stand-in
+    host (claudecore.standalone, the APPS window) counts as standalone: no computer's engine to share."""
     try:
         from claudecore import host
-        host.get()
-        return True
+        return not getattr(host.get(), "standalone", False)
     except Exception:
         return False

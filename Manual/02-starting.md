@@ -32,6 +32,7 @@ Along the bottom:
 - **HELP** - a short reminder of what the buttons do.
 - **PROFILE** - the same identity dialog.
 - **BACKUP** - [backup and restore](10-backup.md).
+- **APPS** - the programs that also run on their own (below).
 - **MANUAL** - this manual.
 - **POWER OFF** - closes the launcher.
 - **SELF-CHECK** (right) - `OK`, or how many warnings or problems it found. Click it for the list. See
@@ -40,6 +41,23 @@ Along the bottom:
 
 While a computer runs, the launcher minimises itself and comes back when the computer shuts down. If automatic
 backups are on, it quietly makes one then.
+
+## Apps: programs on their own
+
+**APPS** opens a small window of programs that also run straight on your PC, with no computer around them:
+**Kithylin AI**, **Soul and Song**, **ClaudeRPG**, **Copilot Python Studio** and **Claude QBasic Studio**. Click one
+to start it in a window of its own. With no residents, mail, web or desktop running behind it, it starts quickly and
+has the graphics card to itself. A tile outlined in green is already open.
+
+They use the same things the computers do: your Companions, Kithylin chats, game saves and the programs in
+`Local Storage\Projects`. So Soul and Song, Kithylin AI and ClaudeRPG won't start on their own while a computer is
+running (it may have the same files open), and booting a computer asks first if one of them is open on its own. The
+code studios can run alongside a computer.
+
+On their own, Soul and Song and Kithylin AI run their models on an engine of their own, at the context their own
+Settings choose. The code studios' AI uses the model, engine and context in **APPS > SETTINGS** (Automatic is the
+model marked for coding, Qwen3 Coder 30B). Their settings are kept in `Profile\Standalone Apps`, apart from every
+computer's.
 
 ## The first run: who are you in the Timeline?
 

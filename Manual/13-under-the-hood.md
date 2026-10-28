@@ -47,6 +47,12 @@ host.open_media(desktop, path), host.open_flash(desktop, path)
 Each OS registers its host at start-up (`claudexp\xphost.py`, `claude7\host7.py`, `claude11\host11.py`). The window
 the host returns is that OS's own window class with `.content` and `request_close()`.
 
+Outside the computers, `claudecore\standalone.py` stands in for one: the launcher's APPS window starts
+`python -m claudecore.standalone <app>` (from ClaudeCore), whose small host gives a program ordinary windows on the
+real desktop, the real Open dialog and file manager, the shared saves and Local Storage, and a data folder of its own
+(`Profile\Standalone Apps`). `--check` opens the app and closes it again. To offer another program there, add it to
+`APPS` in that file; it needs only what the host offers.
+
 ## How Claude7 and Claude11 run XP's programs
 
 Through a compatibility layer, `claude7\xpcompat.py` (and Claude11's): before any XP module loads, `claudexp.paths.DATA`

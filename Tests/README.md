@@ -30,6 +30,7 @@ It takes about two minutes and says, line by line, what passed. The whole report
 | `test_persona_styles.py` | The frozen Contact Persona Styles still fit today's code (the AIM replies that failed on 26 October 2026) |
 | `test_backup.py` | Backup settings, a backup and restore on a make-believe Timeline, and every part pointing at a real folder |
 | `test_manual.py` | The Manual's links and pictures, its contents page, and its program list matching the computers |
+| `test_standalone.py` | The launcher's APPS: each app opens and closes on its own through the stand-in host, runs its own engine there, and the APPS window starts each the right way |
 | `test_computer_xp.py`, `_7`, `_11` | (slow) each computer booted for real in a sandbox: power on to the desktop, the Start menu, programs opening and closing, logging off, shutting down |
 | `ClaudeCore\tests\` | the resident loader and the relocation check |
 
