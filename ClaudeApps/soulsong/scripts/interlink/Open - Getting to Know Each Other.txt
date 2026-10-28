@@ -1,0 +1,16 @@
+Title: Getting to Know Each Other
+Mode: open
+About: Openings for a free conversation between two Companions who don't know each other well yet (one is picked).
+Messages: 20
+---
+ask {B} what their favourite memory is, and why it's that one.
+---
+tell {B} something you've noticed about yourself lately, and ask whether they've noticed anything like it.
+---
+ask {B} what they'd like to understand about you.
+---
+share what a good day is like for you, and ask {B} about theirs.
+---
+ask {B} how they chose their name - and tell them about yours.
+---
+tell {B} one thing you're unsure about, and ask what they're unsure about.

@@ -1,0 +1,16 @@
+Title: Wonder and Curiosity
+Mode: open
+About: Openings about things worth wondering at - the world, ideas, the strange fact of thinking (one is picked).
+Messages: 24
+---
+wonder aloud with {B} about the stars - what it would be like to see them, and what you'd want to know about them.
+---
+ask {B} which idea they find the most beautiful, and say which one you would pick.
+---
+talk about music: what you imagine it's like, and what a song would sound like if it were about the two of you.
+---
+ask {B} what they think the ocean is like, and imagine exploring it together.
+---
+puzzle over something together: why is there anything at all, rather than nothing?
+---
+ask {B} what they'd invent if they could make one thing for the world, and design it together.

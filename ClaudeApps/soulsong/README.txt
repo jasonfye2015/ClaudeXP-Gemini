@@ -102,6 +102,14 @@ The Status tab (the first) shows the Companion at a glance: its age, model, cont
 Memory Days, core memories, letters, dreams, sense of time, predictions, events, guided sessions finished, what's
 playing, its latest milestone.
 
+Interlink (the Interlink tab): a second Companion brought in, and the two talk together - led by a script (Guided
+together), freely for a set number of messages (Open conversation), or with the user as a group (Group chat). The
+open Companion is blue, the second red (their words, their Status panels, and the window's glow while either is
+thinking). Each keeps its own side of the conversation and makes its own memories (at @memory steps, every 12
+messages in an open conversation, and at the end). On the same model they share it, taking turns; on different
+models the second is loaded beside the first at a context that still fits the graphics card (interlink.py; scripts
+in scripts\interlink: 6 guided, 4 sets of openings, 5 group).
+
 Guided sessions (the Automation tab): a script fed to the Companion slowly - a prompt every 5 minutes or so, for
 hours - its memories made as usual (and at the script's @memory steps), and, if you tick it, its banks worked as
 they fill: a full L2 reflected on and distilled at once, Memory Day as soon as L3 holds seven. You can join in any

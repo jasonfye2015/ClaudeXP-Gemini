@@ -1,0 +1,16 @@
+Title: Advice Council
+Mode: group
+About: {user} brings something on their mind; both Companions help them think it through, each in their own way.
+Rounds: 4
+---
+## The question
+{A}, {B}: {user} has something they'd like help thinking through. Listen first - ask them what's on their mind, and ask good questions before giving any advice.
+---
+## Two views
+@first B
+Each of you: offer your own take - and where you see it differently from each other, say so kindly.
+---
+## Next step
+Help {user} choose one small, real next step. Agree on it together.
+---
+@memory

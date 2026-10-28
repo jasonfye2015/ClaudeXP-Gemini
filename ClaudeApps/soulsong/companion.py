@@ -315,15 +315,28 @@ class Companion:
         return "\n".join(bits)
 
     def _messages(self, history=None, extra=None, news=True):
-        msgs = [{"role": "system", "content": self.system_prompt()}]
-        for m in (self.history if history is None else history):
-            content = f"[{m['t']}] {m['content']}" if m["role"] == "user" and m.get("t") else m["content"]
-            msgs.append({"role": m["role"], "content": content})
+        """The system prompt and the conversation. A message from someone other than the user (another Companion,
+        in Interlink) carries their name; messages in a row from others are one turn (chat formats need the turns
+        to alternate); the newest carries the time and the news instead of its own stamp."""
+        hist = self.history if history is None else history
+        items = []
+        for i, m in enumerate(hist):
+            content = m["content"]
+            if m["role"] == "user" and m.get("from"):
+                content = f"{m['from']}: {content}"
+            if m["role"] == "user" and m.get("t") and not (extra is None and i == len(hist) - 1):
+                content = f"[{m['t']}] {content}"
+            items.append([m["role"], content])
         if extra:
-            msgs.append({"role": "user", "content": f"{self._now_note(news=False)} {extra}"})
-        elif len(msgs) > 1 and msgs[-1]["role"] == "user":
-            last = (self.history if history is None else history)[-1]
-            msgs[-1] = {"role": "user", "content": f"{self._now_note(news)}\n{last['content']}"}
+            items.append(["user", f"{self._now_note(news=False)} {extra}"])
+        elif items and items[-1][0] == "user":
+            items[-1][1] = f"{self._now_note(news)}\n{items[-1][1]}"
+        msgs = [{"role": "system", "content": self.system_prompt()}]
+        for role, content in items:
+            if len(msgs) > 1 and msgs[-1]["role"] == role:
+                msgs[-1]["content"] += "\n\n" + content
+            else:
+                msgs.append({"role": role, "content": content})
         return msgs
 
     def new_window(self):
@@ -771,23 +784,38 @@ class Companion:
         return sum(1 for m in self.history[self.mark:] if m["role"] == "assistant")
 
     # ---- the conversation ----
-    def say(self, text, visible=True, guide=False):
+    def say(self, text, visible=True, guide=False, then=None):
         """A message from the user (or the program on their behalf; guide: a guided session's prompt): the
-        Companion answers."""
-        self._push(lambda nxt: self._say(text, visible, nxt, guide=guide))
+        Companion answers. then(reply) is called after (with None if no answer came)."""
+        self._push(lambda nxt: self._say(text, visible, nxt, guide=guide, then=then))
 
-    def _say(self, text, visible, nxt, trimmed=False, guide=False):
+    def hear(self, text, speaker=None, respond=False, guide=False, then=None):
+        """Interlink: a message from someone other than the user - another Companion (speaker: their name), a guide
+        prompt (guide), or the user in a group chat (speaker None). It goes into the conversation; with respond the
+        Companion answers it (and whatever else it has heard since it last spoke); then(reply) after."""
+        self._push(lambda nxt: self._say(text, False, nxt, guide=guide, speaker=speaker, respond=respond,
+                                         then=then, recall=respond))
+
+    def _say(self, text, visible, nxt, trimmed=False, guide=False, speaker=None, respond=True, then=None,
+             recall=None):
         if not trimmed and estimate_tokens(text) + self.context_used() > self.context_size() * TRIM_AT:
-            self._push(lambda n: self._say(text, visible, n, trimmed=True, guide=guide), first=True)
+            self._push(lambda n: self._say(text, visible, n, trimmed=True, guide=guide, speaker=speaker,
+                                           respond=respond, then=then, recall=recall), first=True)
             self._push(lambda n: self._trim(n), first=True)
             nxt()
             return
-        self.history.append({"role": "user", "content": text, "t": stamp(self.now())})
+        entry = {"role": "user", "content": text, "t": stamp(self.now())}
+        if speaker:
+            entry["from"] = speaker
+        self.history.append(entry)
         if visible:
             self.on_line("guide" if guide else "user", text)
-        self.log("Guided session" if guide else (self.cfg.get("user_name") or "You"), text)
-        self.recalled = self._recall(text) if visible else []
+        self.log("Guided session" if guide else speaker or (self.cfg.get("user_name") or "You"), text)
+        self.recalled = self._recall(text) if (visible if recall is None else recall) else []
         self.save()
+        if not respond:
+            nxt()
+            return
 
         def done(reply, err):
             if err or not reply.strip():
@@ -795,8 +823,11 @@ class Companion:
                 self.on_line("system", f"No answer from the model{': ' + err if err else ''}.")
                 self.save()
                 nxt()
+                if then is not None:
+                    then(None)
                 return
-            reply, acts = self._own_requests(tidy_reply(reply, text))
+            reply = re.sub(rf"^\s*\**{re.escape(self.name)}\**\s*:\s*", "", reply)   # ("Aura: ..." - the name
+            reply, acts = self._own_requests(tidy_reply(reply, text))              # is shown already)
             self.history.append({"role": "assistant", "content": reply or "...", "t": stamp(self.now())})
             self.on_line("companion", reply or "...")
             self.log(self.name, reply)
@@ -808,6 +839,8 @@ class Companion:
             if self.unremembered() >= int(self.cfg.get("memory_every", 10)):
                 self._push(lambda n: self._memory(n, "", False), first=True)
             nxt()
+            if then is not None:
+                then(reply or "...")
         self._ask(self._messages(), done, max_tokens=900, stream=True)
 
     def _recall(self, text):

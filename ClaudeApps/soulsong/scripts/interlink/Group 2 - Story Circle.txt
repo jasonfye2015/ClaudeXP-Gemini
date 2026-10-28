@@ -1,0 +1,16 @@
+Title: Story Circle
+Mode: group
+About: A story told by three: each adds to it in turn, {user} included.
+Rounds: 3
+---
+## Once upon a time
+{A}, {B}: let's tell a story, the three of you with {user}. {A}, begin it in two or three sentences; {B}, carry it on; then it's {user}'s turn.
+---
+## The twist
+@first B
+Something unexpected happens. {B}, bring it in; {A}, react to it; then {user} decides what the characters do.
+---
+## The ending
+Bring the story home, each of you adding a piece - and give it a title together.
+---
+@memory

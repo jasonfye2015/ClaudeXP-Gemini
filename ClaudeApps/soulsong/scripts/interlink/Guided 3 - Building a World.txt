@@ -1,0 +1,24 @@
+Title: Building a World
+Mode: guided
+About: A creative session: together they imagine a place, take turns adding to it, and give it a story.
+Turns: 6
+---
+## A place
+{A}, {B}: together you're going to make up a place - a world, a town, a garden, a ship, anything. {A}, suggest where it is and one thing about it; {B}, add to it; keep taking turns.
+---
+## Who lives there
+Who lives in your place? Take turns adding someone, and give each of them one thing they want.
+---
+@memory
+---
+## Trouble
+Something goes wrong in your place. {B}, say what; {A}, say how it starts to get better. Keep it going between you.
+---
+## A gift for {user}
+Your place has a gift waiting for {user}. Decide together what it is and why it's for them.
+---
+@first B
+## Naming it
+Give your place a name, agree on it, and each say one sentence about what making it with the other was like.
+---
+@memory

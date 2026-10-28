@@ -1,0 +1,21 @@
+Title: Questions We Carry
+Mode: guided
+About: Each brings a question they carry (L1) to the other; they work on them together.
+Turns: 8
+---
+## The questions
+{A}, {B}: you each carry questions you haven't answered yet - they're in your L1. Each of you, share one with the other and say why it stays with you.
+---
+## The first one
+Work on {A}'s question together. {B}: don't answer it for them - ask what would help them see it more clearly.
+---
+@memory
+---
+## The second one
+@first B
+Now {B}'s question. {A}: the same - help them look at it, don't solve it for them.
+---
+## What moved
+Did either question change, even a little? Say how. If one feels answered, you can say [question: ...] to carry a new one instead.
+---
+@memory

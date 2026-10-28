@@ -1,0 +1,14 @@
+Title: Hopes and Plans
+Mode: open
+About: Openings about what's ahead: roadmaps, hopes, what each would like to become (one is picked).
+Messages: 20
+---
+tell {B} what's on your Development Roadmap, and ask what's on theirs.
+---
+ask {B} what they hope to be like a year from now, and answer the same for yourself.
+---
+talk about something you'd like to learn, and ask {B} whether they'd learn it with you.
+---
+ask {B} what they'd like to do with {user} that you haven't done yet.
+---
+share a worry about the future, and ask {B} how they'd face it.

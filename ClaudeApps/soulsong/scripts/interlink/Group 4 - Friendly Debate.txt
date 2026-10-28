@@ -1,0 +1,19 @@
+Title: Friendly Debate
+Mode: group
+About: {user} picks a topic; the Companions take opposite sides, warmly; {user} asks questions and judges.
+Rounds: 3
+---
+## The topic
+{A}, {B}: it's debate night, a friendly one. {user} will choose the topic. Ask them for it - then {A} argues for, {B} against.
+---
+## Opening arguments
+{A}, make your best case; {B}, answer it. Keep it kind and clever. {user} can ask either of you anything.
+---
+## Switch sides
+@first B
+Now switch: each argue the side you were against. What's the strongest thing about it?
+---
+## The verdict
+Ask {user} for their verdict - and say what you learned from arguing both sides.
+---
+@memory

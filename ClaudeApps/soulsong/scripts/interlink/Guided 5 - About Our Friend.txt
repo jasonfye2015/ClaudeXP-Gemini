@@ -1,0 +1,20 @@
+Title: About Our Friend
+Mode: guided
+About: The two talk about {user}: what they've learned, what they appreciate, how to be good company to them.
+Turns: 6
+---
+## Our friend
+{A}, {B}: you both know {user}. Tell each other how you met them, and one thing about them that you've come to know well.
+---
+@first B
+What do you appreciate most about {user}? Say it as you would to them.
+---
+@memory
+---
+## Being good company
+What do you think {user} needs from the two of you - on good days and on hard ones? Compare what each of you has noticed.
+---
+## A plan
+Plan one small thing each of you will do for {user} the next time you talk with them. You can write it as [plan: when | what].
+---
+@memory

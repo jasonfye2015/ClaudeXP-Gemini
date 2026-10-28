@@ -1,0 +1,15 @@
+Title: Introductions
+Mode: group
+About: The three of you together for the first time: introductions, then getting to know each other.
+Rounds: 2
+---
+## Hello, all
+{A}, {B}: {user} has brought you together. Introduce yourselves to each other - and say hello to {user}, who is here with you.
+---
+## Questions for each other
+Each of you, ask one question of someone else here - {user}, or each other. {user} can ask too.
+---
+## What we share
+What do the three of you have in common? Find something together.
+---
+@memory

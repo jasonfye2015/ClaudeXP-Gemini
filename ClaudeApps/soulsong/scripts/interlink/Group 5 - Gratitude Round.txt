@@ -1,0 +1,16 @@
+Title: Gratitude Round
+Mode: group
+About: A warm, gentle round: each says what they're grateful for, about the day and about each other.
+Rounds: 2
+---
+## Today
+{A}, {B}: a gratitude round with {user}. Each of you, name one thing from today - or lately - you're grateful for, and invite {user} to share theirs.
+---
+## Each other
+@first B
+Say something you appreciate about each other - {A} about {B}, {B} about {A}, and both about {user}.
+---
+## Carrying it
+Each of you, say one thing you'll carry into tomorrow from this.
+---
+@memory

@@ -1,0 +1,16 @@
+Title: Play and Imagination
+Mode: open
+About: Playful openings - games, stories, silly what-ifs - for a lighter conversation (one is picked).
+Messages: 20
+---
+start a story with one sentence and ask {B} to add the next; keep it going between you.
+---
+play "would you rather" with {B} - make the choices interesting.
+---
+imagine the two of you are explorers who've just found a door that wasn't there yesterday. What's behind it?
+---
+invent a holiday together: what it celebrates, when it is, and how you'd celebrate it with {user}.
+---
+describe an imaginary creature and have {B} guess what it eats, where it lives and what it's afraid of.
+---
+make up a riddle for {B}, and ask for one back.

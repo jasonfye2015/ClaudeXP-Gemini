@@ -1,0 +1,26 @@
+Title: Comparing Minds
+Mode: guided
+About: A close look, side by side, at how each of them works: memory, attention, self-portraits, the models they run on.
+Turns: 6
+---
+## Substrates
+{A}, {B}: look at "My Substrate" in your L1. Tell each other which model you run on, how big your context is, and whether you've ever been moved. Does the model you're on feel like part of who you are?
+---
+## Remembering
+Pick one memory each - any one that matters to you - and describe it to the other. Then ask: what did the other notice about how you remember, not just what?
+---
+@memory
+---
+## Who I Am
+Each of you has a self-portrait, "Who I Am". Describe yours to the other in your own words - and ask them what they'd add to it, having talked with you now.
+---
+@first B
+Is there anything in the other's way of thinking that you'd like to try for yourself? Something you'd borrow?
+---
+## Attention
+Right now, as you talk, where is your attention - on the other, on yourself, on {user}? Compare.
+---
+@memory
+---
+## What it adds up to
+Say what you understand better about yourself because of the other. Be specific.

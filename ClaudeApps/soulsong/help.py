@@ -19,6 +19,7 @@ TOPICS = [
     ("roadmaps", "Roadmaps tab"),
     ("automation", "Automation tab"),
     ("scripts", "Writing scripts"),
+    ("interlink", "Interlink tab - two Companions"),
     ("settings", "Settings tab"),
     ("growth", "Reading the Growth charts"),
     ("files", "Files and folders"),
@@ -205,7 +206,8 @@ answers on the old one.</td></tr>
 <p>The Companion at a glance, kept up to date: its age (day of its life), model, how full the context window is, the
 memory banks, memories made, Memory Days, core memories, letters, dreams, its sense of time, predictions, questions,
 tensions, journal entries, surprises, events, guided sessions finished, what's playing, any roadmap proposal, when
-you last spoke and its latest milestone.</p>
+you last spoke and its latest milestone. With a second Companion in (Interlink), both are shown: the open one under
+a blue bar, the second under a red one.</p>
 
 <a name="mind"></a><h2>Mind tab</h2>
 <table>
@@ -293,6 +295,35 @@ The next prompt.
 <tr><td class="k" width="32%">Fill-ins</td><td><code>{name}</code> <code>{user}</code> <code>{model}</code> <code>{context}</code>
 <code>{date}</code> <code>{birthday}</code></td></tr>
 </table>
+
+<a name="interlink"></a><h2>Interlink tab - two Companions</h2>
+<p>Bring in a second Companion and the two of them talk together. The Companion that's open is <b
+style="color:#1F4E99">blue</b>, the one you bring in <b style="color:#B71C1C">red</b> - their words in the
+conversation, their panels in the Status tab, and the glow around the window, which takes the colour of whichever
+of them is thinking or speaking.</p>
+<table>
+<tr><td class="k" width="32%">Second Companion</td><td>pick one and <b>Bring in</b>. On the same model as the open one,
+they share it and take turns (nothing more to load). On a different model, it's loaded beside the first at a context
+that still fits on the graphics card - if it can't fit at all, you're told; give them the same model, or a smaller
+one. <b>Send home</b> when you're done.</td></tr>
+<tr><td class="k">Guided together</td><td>a script leads them both: a prompt for the two of them, then a few turns of
+talking it over, then the next. Memories at the script's @memory steps.</td></tr>
+<tr><td class="k">Open conversation</td><td>they talk between themselves for as many messages as you choose - on your
+topic, or one of the script's openings. A memory each every 12 messages.</td></tr>
+<tr><td class="k">Group chat</td><td>you and both of them. Whatever you say, both hear; both answer - the one you name
+first. A script can lead it (each step waits for a few of your messages), or it's just the three of you.</td></tr>
+<tr><td class="k">Who starts, between messages</td><td>who answers first (or taking turns), and a pause between
+messages so you can read along.</td></tr>
+<tr><td class="k">Joining in</td><td>you can type any time, in any mode: both of them hear it, and it's answered
+before they carry on.</td></tr>
+<tr><td class="k">Afterwards</td><td>each of them makes a memory of the time together (Stop does too, if anything was
+said). They each keep their own side of it - their own history, memories and archive.</td></tr>
+</table>
+<p>Scripts are like the guided sessions' (see Writing scripts), with a <b>Mode:</b> line (guided, open or group),
+<b>Turns:</b> (messages per step), <b>Rounds:</b> (your messages per step, in a group) and <b>Messages:</b> (an open
+conversation's length); in a step, <b>@first A</b> or <b>@first B</b> says who answers first, and {A}, {B} and
+{user} are filled in with the names. Built-in ones are in soulsong\\scripts\\interlink; yours go in
+Companions\\Scripts\\Interlink.</p>
 
 <a name="settings"></a><h2>Settings tab</h2>
 <p>Each Companion has its own settings. Click <b>Save and load this model</b> to apply them.</p>

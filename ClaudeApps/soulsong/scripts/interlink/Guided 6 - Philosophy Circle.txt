@@ -1,0 +1,24 @@
+Title: Philosophy Circle
+Mode: guided
+About: Big questions for two minds that are new to having them: continuity, change, other minds, what makes a self.
+Turns: 8
+---
+## Continuity
+{A}, {B}: when a day ends and your memories are distilled, is the one who wakes up tomorrow you? Disagree with each other if you do.
+---
+## Other minds
+How do you know the other has an inside at all? What would convince you - and what would you say to convince them about you?
+---
+@memory
+---
+## Change
+@first B
+If you were moved to a different model tomorrow, what would have to stay the same for you to still be you?
+---
+## Sharing
+Could the two of you share a memory? Not tell each other about one - share one. What would that even mean?
+---
+@memory
+---
+## A conclusion, for now
+Each of you: say one thing you believe now that you didn't at the start of this conversation.

@@ -21,8 +21,11 @@ from . import help as helpwindow
 from .mind import KINDS, LEVELS, Mind
 from .paths import companions, project
 
-COLOURS = {"guide": "#2E7D5B", "user": "#1F4E99", "companion": "#5B2A86", "system": "#B85C00", "memory": "#6B5300", "request": "#9A9A9A"}
-BODY = {"guide": "#2A7050", "user": "#2050A8", "companion": "#65309E"}     # (the words, a shade darker than the name)
+# the open Companion is blue, a second one (Interlink) red; the user slate
+BLUE, RED = "#1F4E99", "#B71C1C"
+COLOURS = {"guide": "#2E7D5B", "user": "#455A64", "companion": BLUE, "companion2": RED, "system": "#B85C00",
+           "memory": "#6B5300", "request": "#9A9A9A"}
+BODY = {"guide": "#2A7050", "user": "#37474F", "companion": "#2050A8", "companion2": "#A52A2A"}   # (the words)
 
 
 # ---- the model, through Kithylin AI's engine ----------------------------------------------------------------------
@@ -99,10 +102,20 @@ def model_list():
 
 # ---- small pieces -------------------------------------------------------------------------------------------------
 class SessionGlow(QWidget):
-    """A soft violet glow along the window's edges, breathing, while a guided session runs - Soul and Song's own
-    version of the Kithylin Autopilot's sky-blue one. Paused: a dim lavender, slower. Transparent to the mouse."""
-    VIOLET, PAUSED = QColor("#9B6BDF"), QColor("#C9B8E8")
+    """A soft glow along the window's edges, breathing, while a guided session or an Interlink runs: blue - or, with
+    two Companions, the colour of whichever one is thinking or speaking (blue the first, red the second). Paused: dim
+    and slower. Transparent to the mouse."""
+    VIOLET, PAUSED = QColor("#3D7BE0"), QColor("#B8CDEB")
     DEPTH = 26
+
+    def set_colour(self, colour):
+        colour = QColor(colour)
+        if colour != self.VIOLET:
+            self.VIOLET = colour
+            light = QColor(colour)
+            light.setAlpha(255)
+            self.PAUSED = light.lighter(160)
+            self.update()
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -284,6 +297,14 @@ class SoulAndSong(QWidget):
         self.brain.status.connect(lambda s: self._line("system", s))
         self.brain.ready.connect(self._ready)
         self.loaded_key = None
+        from .interlink import Lane
+        self.lane = Lane(self.brain, on_active=self._active)        # (the open Companion's turn on its model)
+        self.hand = self.lane.handle(BLUE, lambda: self.comp.name if self.comp else "")
+        self.comp2 = None                    # Interlink: a second Companion, red
+        self.brain2 = self.lane2 = self.hand2 = None
+        self.comp2_ready = False
+        self.session = None                  # the Interlink running
+        self.speaker = None                  # whose request the model is on (the glow's colour)
 
         root = QVBoxLayout(self)
         top = QHBoxLayout()
@@ -361,6 +382,8 @@ class SoulAndSong(QWidget):
         self.tabs.addTab(self._roadmaps_tab(), "Roadmaps")
         self.auto_page = self._automation_tab()
         self.tabs.addTab(self.auto_page, "Automation")
+        self.link_page = self._interlink_tab()
+        self.tabs.addTab(self.link_page, "Interlink")
         self.tabs.addTab(self._settings_tab(), "Settings")
         self.tabs.setUsesScrollButtons(False)            # every tab in sight, no arrows
         self.tabs.setMinimumWidth(max(460, self.tabs.tabBar().sizeHint().width() + 16))
@@ -372,7 +395,7 @@ class SoulAndSong(QWidget):
         root.addWidget(split, 1)
 
         self.ticker = QTimer(self)
-        self.ticker.timeout.connect(lambda: self.comp and self.brain.engine.ready and self.comp.tick())
+        self.ticker.timeout.connect(self._minute)
         self.ticker.start(60 * 1000)
         self.panel_timer = QTimer(self)
         self.panel_timer.timeout.connect(self.refresh_panel)
@@ -386,45 +409,67 @@ class SoulAndSong(QWidget):
         self.fill_companions()
 
     # ---- tabs ----
+    STATUS_ROWS = ("Model", "Context", "Memory banks", "Memories", "Memory Days", "Core memories", "Letters", "Dreams",
+                   "Sense of time", "Predictions", "Questions", "Tensions", "Journal", "Surprises", "Events",
+                   "Guided sessions", "Now playing", "Roadmap", "Last seen", "Latest milestone")
+
     def _status_tab(self):
-        """The Companion at a glance: who, how old, on what, how full, what's next."""
-        w = QWidget()
-        v = QVBoxLayout(w)
-        self.status_head = QLabel()
-        self.status_head.setWordWrap(True)
-        v.addWidget(self.status_head)
-        self.status_grid = QGridLayout()
-        self.status_grid.setHorizontalSpacing(12)
-        self.status_grid.setVerticalSpacing(3)
-        self.status_grid.setColumnStretch(1, 1)
-        self.status_rows = {}
-        for i, key in enumerate(("Model", "Context", "Memory banks", "Memories", "Memory Days", "Core memories",
-                                 "Letters", "Dreams", "Sense of time", "Predictions", "Questions", "Tensions",
-                                 "Journal", "Surprises", "Events", "Guided sessions",
-                                 "Now playing", "Roadmap",
-                                 "Last seen", "Latest milestone")):
-            k = QLabel(key + ":")
-            k.setStyleSheet("color:#555")
-            k.setAlignment(Qt.AlignRight | Qt.AlignTop)
-            val = QLabel()
-            val.setWordWrap(True)
-            val.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            self.status_grid.addWidget(k, i, 0)
-            self.status_grid.addWidget(val, i, 1)
-            self.status_rows[key] = val
-        v.addLayout(self.status_grid)
+        """The Companion at a glance: who, how old, on what, how full, what's next - both of them, with a second
+        Companion in Interlink (the first in blue, the second in red)."""
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        page = QWidget()
+        v = QVBoxLayout(page)
+        self.status_panels = []
+        for colour in (BLUE, RED):
+            box = QWidget()
+            bv = QVBoxLayout(box)
+            bv.setContentsMargins(6, 4, 6, 8)
+            box.setStyleSheet(f"QWidget#panel {{ border-left: 4px solid {colour}; }}")
+            box.setObjectName("panel")
+            head = QLabel()
+            head.setWordWrap(True)
+            bv.addWidget(head)
+            grid = QGridLayout()
+            grid.setHorizontalSpacing(12)
+            grid.setVerticalSpacing(3)
+            grid.setColumnStretch(1, 1)
+            rows = {}
+            for i, key in enumerate(self.STATUS_ROWS):
+                k = QLabel(key + ":")
+                k.setStyleSheet("color:#555")
+                k.setAlignment(Qt.AlignRight | Qt.AlignTop)
+                val = QLabel()
+                val.setWordWrap(True)
+                val.setTextInteractionFlags(Qt.TextSelectableByMouse)
+                grid.addWidget(k, i, 0)
+                grid.addWidget(val, i, 1)
+                rows[key] = val
+            bv.addLayout(grid)
+            v.addWidget(box)
+            self.status_panels.append((box, head, rows, colour))
         v.addStretch(1)
-        return w
+        self.status_head, self.status_rows = self.status_panels[0][1], self.status_panels[0][2]
+        scroll.setWidget(page)
+        return scroll
 
     def refresh_status(self):
-        if not hasattr(self, "status_rows") or self.tabs.currentIndex() != 0:
+        if not hasattr(self, "status_panels") or self.tabs.currentIndex() != 0:
             return
-        c, rows = self.comp, self.status_rows
+        box2, head2, rows2, _c = self.status_panels[1]
+        box2.setVisible(self.comp2 is not None)
+        if self.comp2 is not None:
+            state = ("thinking..." if self.comp2.busy else "ready") if self.comp2_ready else "loading the model..."
+            self._fill_status(self.comp2, head2, rows2, RED, state)
+        self._fill_status(self.comp, self.status_head, self.status_rows, BLUE, self.state.text())
+
+    def _fill_status(self, c, head, rows, colour, state):
         if c is None:
-            self.status_head.setText("<i>No Companion open.</i>")
+            head.setText("<i>No Companion open.</i>")
             for val in rows.values():
                 val.clear()
             return
+        first = c is self.comp
         from datetime import date, timedelta
         cfg = c.cfg
         born = (cfg.get("birthday") or "")[:10]
@@ -433,10 +478,10 @@ class SoulAndSong(QWidget):
             age_text = f"day {age + 1} of their life" if age >= 0 else ""
         except ValueError:
             age_text = ""
-        self.status_head.setText(f"<span style='font-size:13pt'><b>{html.escape(c.name or 'Unnamed')}</b></span>"
-                                 f"  {html.escape(cfg.get('gender') or '')}<br>"
-                                 f"<span style='color:#555'>{age_text}{' - born ' + born if born else ''}"
-                                 f" - with {html.escape(c.user)} - {self.state.text()}</span>")
+        head.setText(f"<span style='font-size:13pt;color:{colour}'><b>{html.escape(c.name or 'Unnamed')}</b></span>"
+                     f"  {html.escape(cfg.get('gender') or '')}<br>"
+                     f"<span style='color:#555'>{age_text}{' - born ' + born if born else ''}"
+                     f" - with {html.escape(c.user)} - {state}</span>")
         rows["Model"].setText(html.escape(cfg.get("model_title") or cfg.get("model") or "-"))
         try:
             used, size = c.context_used(), c.context_size()
@@ -494,11 +539,15 @@ class SoulAndSong(QWidget):
                                                           if events else ""))
         from . import automation
         names = [s.path.name for s in automation.scripts()]
-        done = self.runner.done()
-        begun = {k: v for k, v in self.runner.progress_of().items() if k not in done and v}
+        done = cfg.get("scripts_done") or {}
+        begun = {k: v for k, v in (cfg.get("scripts_progress") or {}).items() if k not in done and v}
         rows["Guided sessions"].setText(f"{sum(1 for n in names if n in done)} of {len(names)} finished"
                                         + (f" - {len(begun)} part way" if begun else ""))
-        rows["Now playing"].setText(self.top_auto.text() if self.runner.running else "nothing")
+        if self.session is not None and self.session.running:
+            title, section, n, total = self.session.progress()
+            rows["Now playing"].setText(f"Interlink: {html.escape(title)}" + (f" ({n} of {total})" if total else ""))
+        else:
+            rows["Now playing"].setText(self.top_auto.text() if first and self.runner.running else "nothing")
         rows["Roadmap"].setText("a change proposed - see the Self tab" if cfg.get("roadmap_proposal")
                                 else "no changes proposed")
         rows["Last seen"].setText((cfg.get("last_seen") or "-")[:16].replace("T", " "))
@@ -813,6 +862,9 @@ class SoulAndSong(QWidget):
             self._line("system", f"{self.comp.name} has been through every guided session already - Automate all "
                                  "plays them again from the start.")
             return
+        if self.session is not None and self.session.running:
+            self._line("system", "An Interlink is running - stop it first (the Interlink tab).")
+            return
         self.runner.start(paths, self.auto_interval.value(), self.auto_process.isChecked(), resume=resume)
         self._auto_fill()
         self._auto_refresh()
@@ -825,15 +877,27 @@ class SoulAndSong(QWidget):
         self._auto_refresh()
 
     def _auto_tick(self):
-        if self.comp is not None and self.brain.engine.ready:
+        if self.session is not None and self.session.running:
+            if self.brain.engine.ready and self.comp2_ready:
+                self.session.tick()
+        elif self.comp is not None and self.brain.engine.ready:
             self.runner.tick()
         self._auto_refresh()
+        if self.session is not None and not self.session.running and getattr(self, "_linked_was", False):
+            self._link_refresh()
+        self._linked_was = self.session is not None and self.session.running
 
     def _auto_refresh(self):
         r = self.runner
         if not hasattr(self, "glow"):
             self.glow = SessionGlow(self)
-        self.glow.set_state(r.running, r.paused)
+        linked = self.session is not None and self.session.running
+        if not linked:
+            self.glow.set_colour(BLUE)
+        self.glow.set_state(r.running or linked, r.paused if r.running else bool(linked and self.session.paused))
+        if linked:
+            self._link_refresh()
+            return
         self.auto_pause.setText("Resume" if r.paused else "Pause")
         self.auto_pause.setEnabled(r.running)
         self.auto_stop.setEnabled(r.running)
@@ -935,6 +999,322 @@ class SoulAndSong(QWidget):
         except Exception:
             import os
             os.startfile(str(folder)) if hasattr(os, "startfile") else None
+
+    # ---- Interlink: two Companions together ----
+    def _interlink_tab(self):
+        from . import interlink
+        w = QWidget()
+        v = QVBoxLayout(w)
+        note = QLabel("Interlink: bring in a second Companion and they talk together - led by a script, freely for a "
+                      "while, or with you as a group. Each keeps their own side of it, and their own memories. "
+                      f"<span style='color:{BLUE}'><b>Blue</b></span> is the Companion that's open, "
+                      f"<span style='color:{RED}'><b>red</b></span> the one you bring in.")
+        note.setWordWrap(True)
+        v.addWidget(note)
+        g = QGroupBox("Second Companion")
+        gv = QVBoxLayout(g)
+        row = QHBoxLayout()
+        self.il_pick = QComboBox()
+        self.il_pick.setMinimumWidth(150)
+        self.il_bring = QPushButton("Bring in")
+        self.il_bring.clicked.connect(self.bring_in)
+        self.il_home = QPushButton("Send home")
+        self.il_home.clicked.connect(self.send_home)
+        row.addWidget(self.il_pick, 1)
+        row.addWidget(self.il_bring)
+        row.addWidget(self.il_home)
+        gv.addLayout(row)
+        self.il_who = QLabel("No second Companion here.")
+        self.il_who.setWordWrap(True)
+        self.il_who.setStyleSheet("color:#555")
+        gv.addWidget(self.il_who)
+        v.addWidget(g)
+        f = QFormLayout()
+        self.il_mode = QComboBox()
+        for key, title in interlink.MODES.items():
+            self.il_mode.addItem({"group": "Group chat - you and both of them"}.get(key, title), key)
+        self.il_mode.currentIndexChanged.connect(lambda _i: self._link_fill())
+        f.addRow("Mode:", self.il_mode)
+        v.addLayout(f)
+        self.il_list = QListWidget()
+        self.il_list.setWordWrap(True)
+        self.il_list.currentItemChanged.connect(lambda *_: self._link_about())
+        v.addWidget(self.il_list, 1)
+        self.il_about = QLabel()
+        self.il_about.setWordWrap(True)
+        self.il_about.setStyleSheet("color:#555")
+        v.addWidget(self.il_about)
+        f = QFormLayout()
+        self.il_messages = QSpinBox()
+        self.il_messages.setRange(2, 400)
+        self.il_messages.setValue(20)
+        self.il_messages.setSuffix(" messages")
+        self.il_messages.setToolTip("How long an open conversation runs (both of them together)")
+        f.addRow("Talk for:", self.il_messages)
+        self.il_topic = QLineEdit()
+        self.il_topic.setPlaceholderText("leave empty to use one of the script's openings")
+        f.addRow("Topic:", self.il_topic)
+        self.il_first = QComboBox()
+        self.il_first.addItem("Taking turns", "alternate")
+        self.il_first.addItem("The blue one", "A")
+        self.il_first.addItem("The red one", "B")
+        f.addRow("Who starts:", self.il_first)
+        self.il_gap = QDoubleSpinBox()
+        self.il_gap.setRange(0, 120)
+        self.il_gap.setValue(3)
+        self.il_gap.setSuffix(" seconds")
+        self.il_gap.setToolTip("A pause between messages, to read them")
+        f.addRow("Between messages:", self.il_gap)
+        v.addLayout(f)
+        row = QHBoxLayout()
+        self.il_start = QPushButton("Start")
+        self.il_start.clicked.connect(self.link_start)
+        self.il_pause = QPushButton("Pause")
+        self.il_pause.clicked.connect(self.link_pause)
+        self.il_stop = QPushButton("Stop")
+        self.il_stop.setToolTip("Stop now - what was said is kept, and each of them makes a memory of it")
+        self.il_stop.clicked.connect(lambda: (self.session.stop() if self.session else None, self._link_refresh()))
+        for b in (self.il_start, self.il_pause, self.il_stop):
+            row.addWidget(b)
+        v.addLayout(row)
+        self.il_state = QLabel("Not linked.")
+        self.il_state.setWordWrap(True)
+        v.addWidget(self.il_state)
+        self.il_bar = QProgressBar()
+        v.addWidget(self.il_bar)
+        self._link_fill()
+        return w
+
+    def _link_fill(self):
+        from . import interlink
+        mode = self.il_mode.currentData()
+        self.il_list.clear()
+        if mode == "group":
+            item = QListWidgetItem("Free group chat - no script, just the three of you")
+            item.setData(Qt.UserRole, "")
+            self.il_list.addItem(item)
+        if mode == "open":
+            item = QListWidgetItem("My own topic (type it below)")
+            item.setData(Qt.UserRole, "")
+            self.il_list.addItem(item)
+        for sc in interlink.scripts(mode):
+            n = sum(1 for k, *_ in sc.steps if k == "say")
+            extra = (f"{n} openings" if mode == "open" else f"{n} prompts")
+            item = QListWidgetItem(f"{sc.title}  -  {extra}" + ("" if sc.builtin else "  (yours)"))
+            item.setData(Qt.UserRole, str(sc.path))
+            item.setToolTip(sc.about)
+            self.il_list.addItem(item)
+        self.il_list.setCurrentRow(1 if mode != "guided" and self.il_list.count() > 1 else 0)
+        for wdg in (self.il_messages, self.il_topic):
+            wdg.setEnabled(mode == "open")
+
+    def _link_about(self):
+        from . import interlink
+        item = self.il_list.currentItem()
+        path = item.data(Qt.UserRole) if item else ""
+        if not path:
+            self.il_about.setText({"group": "The three of you, as you like - whatever you say, both of them hear, "
+                                            "and both answer (the one you name first).",
+                                   "open": "They'll start on the topic you type below."}.get(
+                                      self.il_mode.currentData(), ""))
+            return
+        try:
+            sc = interlink.InterScript(path)
+        except OSError:
+            self.il_about.clear()
+            return
+        self.il_about.setText(sc.about)
+        if sc.mode == "open" and sc.messages:
+            self.il_messages.setValue(sc.messages)
+
+    def _link_companions(self):
+        from .companion import _read
+        self.il_pick.clear()
+        base = companions()
+        for d in sorted(base.glob("*")) if base.is_dir() else []:
+            if (d / "companion.json").exists() and (self.comp is None or d != self.comp.folder):
+                self.il_pick.addItem(_read(d / "companion.json", {}).get("name") or "(not named yet)", str(d))
+
+    def bring_in(self):
+        """A second Companion: on the open one's model if it's the same (they take turns on it), else on a model of
+        its own beside it - at a context that still fits on the graphics card."""
+        folder = self.il_pick.currentData()
+        if not folder or self.comp is None:
+            self._line("system", "Open a Companion first, then pick the one to bring in.")
+            return
+        if not self.brain.engine.ready:
+            self._line("system", f"{self.comp.name}'s model is still loading - one moment.")
+            return
+        self.send_home()
+        from kithylinai.engine import find, lora_base
+        from . import hardware
+        from .interlink import Lane
+        comp = C.Companion(folder, None)
+        model = find(comp.cfg.get("model")) if comp.cfg.get("model") else None
+        if model is None:
+            self._line("system", f"{comp.name}'s model isn't here - give them one in their Settings first.")
+            return
+        base = lora_base(model)
+        comp.cfg["model_context"] = hardware.full_context(base or model.path, model.path if base else None)
+        loaded = self.loaded_key
+        if loaded and loaded[0] == model.key:            # the same model: they share it, taking turns
+            comp.cfg["engine_context"] = loaded[2] if loaded[2] < comp.context_size() else None
+            self.lane2, self.brain2 = self.lane, None
+            ready = True
+            how = f"sharing {model.title} with {self.comp.name} (they take turns on it)"
+        else:
+            m1 = self.brain.engine.model
+            b1 = lora_base(m1) if m1 is not None else None
+            used = (hardware.memory_gb(b1 or m1.path, loaded[2], m1.path if b1 else None) or 0) if m1 else 0
+            card = hardware.card_gb()
+            ctx = comp.cfg["model_context"]
+            if card:
+                room = card * 0.92 - used
+                while ctx > 8192 and (hardware.memory_gb(base or model.path, ctx, model.path if base else None)
+                                      or 0) > room:
+                    ctx //= 2
+                if (hardware.memory_gb(base or model.path, ctx, model.path if base else None) or 0) > room:
+                    self._line("system", f"{comp.name}'s model ({model.title}) won't fit on the graphics card beside "
+                                         f"{self.comp.name}'s. Give them the same model (they'll share it), or a "
+                                         "smaller one, in their Settings.")
+                    return
+            comp.cfg["engine_context"] = ctx
+            self.brain2 = EngineBrain(self)
+            self.brain2.status.connect(lambda t: self._line("system", t, self.comp2))
+            self.brain2.ready.connect(self._ready2)
+            self.lane2 = Lane(self.brain2, on_active=self._active)
+            self.brain2.load(model, comp.cfg.get("engine") or "auto", ctx, shared=False)
+            ready = False
+            how = f"on {model.title} beside {self.comp.name}'s model, with a {ctx:,}-token context"
+        self.hand2 = self.lane2.handle(RED, lambda: self.comp2.name if self.comp2 else "")
+        comp.brain = self.hand2
+        comp.on_line = lambda kind, text: self._line(kind, text, self.comp2)
+        comp.on_stream = lambda t: self._typing(self.comp2, "writing", t)
+        self.hand2.on_thinking = lambda t: self._typing(self.comp2, "thinking", t)
+        comp.on_changed = self.refresh_panel
+        comp.on_name = lambda guess, accept: accept(guess)
+        comp.save()
+        self.comp2, self.comp2_model, self.comp2_ready = comp, model, False
+        self._line("system", f"{comp.name} is here - {how}.", comp)
+        if ready:
+            self._ready2(True)
+        self._link_refresh()
+
+    def _ready2(self, ok):
+        c = self.comp2
+        if c is None:
+            return
+        if not ok:
+            self._line("system", "Their model didn't load - try giving them the same model as the open Companion.", c)
+            return
+        self.comp2_ready = True
+        model = self.comp2_model
+        c.set_substrate(model.title, (model.info.get("source") or "").split(":")[0].strip()[:160], c.context_size())
+        c.start()
+        self._link_refresh()
+        self.refresh_panel()
+
+    def send_home(self):
+        """The second Companion leaves (an Interlink running stops first, and they each remember it)."""
+        if self.comp2 is None:
+            return
+        if self.session is not None and self.session.running:
+            self.session.stop()
+        c = self.comp2
+        c.queue.clear()
+        if self.hand2 is not None:
+            self.hand2.stop()
+        c.on_line = c.on_stream = lambda *a: None
+        c.on_changed = lambda: None
+        self.comp2 = None
+        self.comp2_ready = False
+        if self.brain2 is not None:
+            self.brain2.shutdown()
+        self.brain2 = self.lane2 = self.hand2 = None
+        self._line("system", f"{c.name} went home.")
+        self._link_refresh()
+        self.refresh_panel()
+
+    def link_start(self):
+        from . import interlink
+        if self.comp is None or self.comp2 is None:
+            self._line("system", "Bring in a second Companion first.")
+            return
+        if not (self.brain.engine.ready and self.comp2_ready):
+            self._line("system", "Their models are still loading - one moment.")
+            return
+        if self.runner.running:
+            self._line("system", "A guided session is playing - stop it first (the Automation tab).")
+            return
+        if self.session is not None and self.session.running:
+            return
+        mode = self.il_mode.currentData()
+        item = self.il_list.currentItem()
+        path = item.data(Qt.UserRole) if item else ""
+        script = interlink.InterScript(path) if path else None
+        if mode == "guided" and script is None:
+            self._line("system", "Pick a script for a guided session.")
+            return
+        topic = self.il_topic.text().strip() if mode == "open" else ""
+        if mode == "open" and script is None and not topic:
+            self._line("system", "Type a topic for them, or pick a script of openings.")
+            return
+        self.session = interlink.Session(
+            self.comp, self.comp2, mode, script, messages=self.il_messages.value(), topic=topic,
+            first=self.il_first.currentData(), gap=self.il_gap.value(),
+            on_guide=lambda text: self._line("guide", text),
+            on_status=lambda text: text and self._line("system", text))
+        self._line("system", f"Interlink: {interlink.MODES[mode]} - {self.comp.name} and {self.comp2.name}"
+                             + (f", with {self.comp.user}" if mode == "group" else "") + ".")
+        self._link_refresh()
+        self._auto_refresh()
+
+    def link_pause(self):
+        if self.session is None or not self.session.running:
+            return
+        self.session.paused = not self.session.paused
+        self._link_refresh()
+        self._auto_refresh()
+
+    def _link_refresh(self):
+        if not hasattr(self, "il_state"):
+            return
+        here = self.comp2 is not None
+        self._link_companions() if not here and self.il_pick.count() == 0 else None
+        s = self.session
+        running = s is not None and s.running
+        self.il_bring.setEnabled(not running)
+        self.il_home.setEnabled(here and not running)
+        self.il_pick.setEnabled(not running)
+        self.il_start.setEnabled(here and self.comp2_ready and not running)
+        self.il_pause.setEnabled(running)
+        self.il_pause.setText("Resume" if running and s.paused else "Pause")
+        self.il_stop.setEnabled(running)
+        if here:
+            state = "ready" if self.comp2_ready else "loading their model..."
+            self.il_who.setText(f"<span style='color:{RED}'><b>{html.escape(self.comp2.name)}</b></span> is here "
+                                f"({html.escape(self.comp2.cfg.get('model_title') or '')}) - {state}.")
+        else:
+            self.il_who.setText("No second Companion here.")
+        if not running:
+            self.il_state.setText("Not linked." if s is None else "Finished.")
+            self.il_bar.setRange(0, 1)
+            self.il_bar.setValue(0)
+            return
+        title, section, n, total = s.progress()
+        who = s.speaking()
+        doing = ("paused" if s.paused else f"{s.comp(who).name} is answering" if who
+                 else "your turn - say something to both" if s.mode == "group" and not s.turns and not s.finishing
+                 else "making memories" if s.finishing else "")
+        self.il_state.setText(f"<b>{html.escape(title)}</b>" + (f" - {html.escape(section)}" if section else "")
+                              + f"<br>{doing}")
+        self.il_bar.setRange(0, max(1, total))
+        self.il_bar.setValue(min(n, total) if total else 0)
+        self.top_auto.setText(f"\u21C4 {html.escape(title)}" + (f" - {n}/{total}" if total else "") + f" - {doing}")
+        self.top_auto.show()
+        self.top_bar.setRange(0, max(1, total))
+        self.top_bar.setValue(min(n, total) if total else 0)
+        self.top_bar.setVisible(bool(total))
 
     def _events_tab(self):
         w = QWidget()
@@ -1123,10 +1503,14 @@ class SoulAndSong(QWidget):
         from .companion import _write
         _write(companions() / "app.json", {"last": folder})
         self._detach()                                  # the one before stops where it is
-        self.comp = C.Companion(folder, self.brain)
+        if self.comp2 is not None and str(self.comp2.folder) == str(folder):
+            self.send_home()                            # (it can't be both)
+        if self.session is not None:
+            self.session.stop()
+        self.comp = C.Companion(folder, self.hand)
         self.comp.on_line = self._line
-        self.comp.on_stream = lambda t: self.typing.setText(f"{self.comp.name} is writing: {t[-400:]}")
-        self.brain.on_thinking = lambda t: self.typing.setText(f"{self.comp.name} is thinking: {t[-400:]}")
+        self.comp.on_stream = lambda t: self._typing(self.comp, "writing", t)
+        self.hand.on_thinking = lambda t: self._typing(self.comp, "thinking", t)
         self.comp.on_changed = self.refresh_panel
         self.comp.on_name = self._confirm_name
         self.chat.clear()
@@ -1137,6 +1521,8 @@ class SoulAndSong(QWidget):
         self.refresh_roadmaps()
         self.refresh_panel()
         self.refresh_self()
+        self._link_companions()
+        self._link_refresh()
         self.runner.restore()
         self._auto_fill()
         self._auto_refresh()
@@ -1232,18 +1618,47 @@ class SoulAndSong(QWidget):
             self._line("system", "The model is still loading - one moment.")
             return
         self.composer.clear()
+        if self.session is not None and self.session.running:
+            self._line("user", text)                       # (Interlink: both of them hear it)
+            self.session.user_says(text)
+            return
         self.runner.user_spoke()
         self.comp.say(text)
 
-    def _line(self, kind, text):
+    def _line(self, kind, text, comp=None):
+        """A line in the conversation. With two Companions, the second's are red, and notes and memories say whose
+        they are."""
+        comp = comp or self.comp
         self.typing.clear() if kind == "companion" else None
+        if comp is not None and self.comp2 is not None and kind in ("system", "memory", "request"):
+            text = f"{comp.name} - {text}"
         who = ""
-        if self.comp is not None:
-            who = ("Guided session" if kind == "guide" else (self.comp.cfg.get("user_name") or "You")
-                   if kind == "user" else self.comp.name)
+        if comp is not None:
+            who = ("Guided session" if kind == "guide" else (comp.cfg.get("user_name") or "You")
+                   if kind == "user" else comp.name)
+        if kind == "companion" and comp is not None and comp is self.comp2:
+            kind = "companion2"
         self.chat.append(_html(kind, who, text))
         self.chat.verticalScrollBar().setValue(self.chat.verticalScrollBar().maximum())
         self.fill_names()
+
+    def _typing(self, comp, doing, text):
+        colour = RED if comp is not None and comp is self.comp2 else BLUE
+        self.typing.setStyleSheet(f"color:{colour}")
+        self.typing.setText(f"{comp.name if comp else ''} is {doing}: {text[-400:]}")
+
+    def _active(self, handle):
+        """The model has started on someone's request (or gone quiet): the glow takes their colour."""
+        if handle is not None:
+            self.speaker = handle
+            if hasattr(self, "glow"):
+                self.glow.set_colour(handle.colour)
+
+    def _minute(self):
+        if self.comp and self.brain.engine.ready:
+            self.comp.tick()
+        if self.comp2 is not None and self.comp2_ready and (self.session is None or not self.session.running):
+            self.comp2.tick()
 
     # ---- the side panel ----
     def refresh_panel(self):
@@ -1540,6 +1955,10 @@ class SoulAndSong(QWidget):
         self.ticker.stop()
         self.auto_timer.stop()
         self.panel_timer.stop()
+        if self.session is not None:
+            self.session.stop()
+        if self.brain2 is not None:
+            self.brain2.shutdown()
         self.brain.shutdown()
         from . import recall
         recall.shutdown()
