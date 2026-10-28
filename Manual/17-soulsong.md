@@ -134,6 +134,41 @@ new version of the Companion, made with the same tools as the Kithylin models ([
 Every version is trained fresh on the whole life so far, so nothing compounds and nothing old is forgotten. The banks
 stay as they are.
 
+## On Telegram: from your phone
+
+**Telegram...** in the top bar gives Soul and Song a Telegram bot of its own, so you can talk with your Companion from
+your phone, and it can write to you. The bot is called **Soul and Song** whichever Companion or model is answering,
+and it's labelled an AI: in its description, and to anyone who writes to it.
+
+Setting it up, once (**How to connect...** in that window shows these steps too):
+
+1. In Telegram, search for **@BotFather** (the one with the blue tick) and press **Start**.
+2. Send `/newbot`. For the name, send **Soul and Song**; for the username, something unique ending in "bot"
+   (`SoulAndSongYourNameBot`, say).
+3. BotFather answers with a **token**. Copy it and keep it to yourself: whoever has it controls the bot.
+4. In Soul and Song, click **Telegram...**, paste the token and click **Link**. It checks the token and sets the bot's
+   description to say it's an AI.
+5. Open the bot in Telegram (`t.me/<its username>`), press **Start**, and send it the six-figure code the window
+   shows. That links your account.
+
+Then:
+
+- **Talking.** Write to the bot and the open Companion answers; it's told whether you're on your phone or back at the
+  window. It's one conversation, with the same memories, either way.
+- **While it's closed**, Telegram keeps your messages for a day; they're answered when Soul and Song opens.
+- **It writes first** after free time or a dream, when you've been away an hour or more: at most twice a day (you
+  choose), three hours apart, never in your quiet hours (22:00 to 8:00 unless you change them).
+- **Inviting someone.** **Invite someone...** makes a code for them. Before anything else they're told it's an AI
+  and that you can read the conversation. What they write shows in the window in purple. Conversations with them are
+  left out of retraining unless you say otherwise.
+- **Anyone else** is told once that it's a private AI companion, and nothing more.
+- **On its own** (the launcher's **APPS**), closing the window keeps it listening from an icon in the notification
+  area; right-click the icon to stop listening and quit. Inside a computer it listens while it's open.
+
+Only one Soul and Song can listen to a bot at a time, so don't run it on its own and inside a computer together. The
+token and who's linked are kept in `Companions\telegram.json`. Chats with a bot aren't end-to-end encrypted:
+Telegram's servers carry them, as with its ordinary chats.
+
 ## Where it keeps things
 
 ```
@@ -151,6 +186,7 @@ Local Storage\Projects\AI LLM Txt Files\
     │   ├── Retraining\           the training package, and each version's training script
     │   └── Archive\              the banks before each distillation
     ├── Scripts\                  your own guided sessions, and the ones the Companions write
+    ├── telegram.json             the Telegram bot's token (a secret) and who's linked to it
     └── Deleted\                  Delete Companion... moves a Companion here; move it back to bring them back
 ```
 

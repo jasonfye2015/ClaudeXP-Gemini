@@ -116,13 +116,18 @@ def no_model_server():
 
 def no_engines():
     """No model server of any kind: the computers' (no_model_server), Kithylin AI's and Soul and Song's own engine
-    (a model 'loads' without starting anything), and Soul and Song's recall embedder. Call it before opening a
-    window that might open a Companion - opening one loads its model."""
+    (a model 'loads' without starting anything), and Soul and Song's recall embedder - nor its Telegram link. Call it
+    before opening a window that might open a Companion - opening one loads its model."""
     no_model_server()
     from kithylinai import engine
     engine.Engine.load = lambda self, *a, **k: self.status.emit("(no models while testing)")
     from soulsong import recall
     recall.Embedder.start = lambda self: setattr(self, "state", "unavailable")
+    from soulsong import telegram                      # (and never the real Telegram)
+
+    def offline(*_a, **_k):
+        raise telegram.TelegramError("no Telegram while testing")
+    telegram.call = offline
 
 
 # ---- errors that don't raise ---------------------------------------------------------------------------------------

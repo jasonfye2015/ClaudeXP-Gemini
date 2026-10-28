@@ -126,7 +126,10 @@ def _sessions(comp):
                 current.append(("assistant", text))
             elif kind == "other":
                 current.append(("user", f"{e.get('who') or 'Another Companion'}: {text}"))
-                who.add(("other", e.get("who") or "another Companion"))
+                if (e.get("who") or "").endswith("(on Telegram)"):
+                    who.add(("guest", e["who"]))             # (someone the user invited on Telegram)
+                else:
+                    who.add(("other", e.get("who") or "another Companion"))
             elif kind == "guide":
                 current.append(("user", text))
                 who.add(("guide", "a guided session"))
@@ -176,7 +179,10 @@ def _source(who):
 def _talk(comp):
     """The conversations, as training conversations: [(source, day, messages)]."""
     out = []
+    keep_guests = bool(comp.cfg.get("retrain_guests"))
     for day, turns, who in _sessions(comp):
+        if any(k == "guest" for k, _n in who) and not keep_guests:
+            continue                                 # (other people's words: not trained on, unless allowed)
         turns = _merge(turns)
         if turns and turns[0][0] == "assistant":
             turns.insert(0, ("user", f"({comp.user} is here.)"))

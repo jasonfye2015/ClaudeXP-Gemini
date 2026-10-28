@@ -70,7 +70,12 @@ DEFAULTS = {
     "projects": [], "beliefs": True, "fading": True, "half_life": inner.HALF_LIFE, "own_rules": True,
     "rules_veto": True, "rules_proposal": None, "rules_version": 0,
     "web_reading": False, "news_feeds": [], "book": None, "books_read": [],
+    "reach_out": True, "reach_per_day": 2, "quiet_from": 22, "quiet_to": 8, "reach_by_day": {}, "last_reach": "",
+    "retrain_guests": False, "channel": "window",
 }
+REACH_ASK = ("{user} is away from the computer, but you can send them a message on Telegram now - it goes to their "
+             "phone. Just now {what}. Would you like to tell them anything - about that, or anything else? If so, "
+             "write only the message, short, the way you'd text someone. If not, write only: NO")
 FADING_NOTE = ("\n\n(Each memory is marked with how vividly you remember it now. Keep the vivid ones in detail; "
                "let the faint ones shrink to a line, or go - the archive keeps them whole either way.)")
 FULL = 7                    # the 7:7:7 system (classic: a bank is full at seven memories)
@@ -242,6 +247,7 @@ class Companion:
         # background(work, then): work() away from the window (it may wait on the web), then(result) back on it - the
         # window runs work on a thread; here (and in tests) it's simply done at once
         self.background = lambda work, then: then(work())
+        self.reach = None                                # (Telegram linked: reach(text) sends the user a message)
         self.on_name = None                            # (suggested name, accept(name)) -> the program asks the user
 
     # ---- every line goes in the raw log too (the Raw Logs tab) ----
@@ -828,6 +834,8 @@ class Companion:
                     pass
                 self.on_line("memory", f"{self.name}'s dream journal:\n{text}")
                 self.notice((WAKING_NOTE if waking else DREAM_NOTE).format(user=self.user, gap=gap, text=text))
+                if not waking and self.reach_ok():
+                    self._push(lambda n: self._reach_out(n, "you dreamt"), first=True)
             nxt()
         self._ask_alone(ask, done, max_tokens=450)
 
@@ -944,6 +952,8 @@ class Companion:
             self.notice(inner.FREE_NOTE.format(user=self.user, gap=gap, what=what + (
                 f" - and wrote: {text[:300]}{'...' if len(text) > 300 else ''}" if text else ".")))
             self.save()
+            if text and self.reach_ok():
+                self._push(lambda n: self._reach_out(n, what), first=True)
             nxt()
         self._ask_alone(ask, chosen, max_tokens=80)
 
@@ -1050,6 +1060,51 @@ class Companion:
                                                                            else "") + f"\n{source['text']}\n\n")
         except OSError:
             pass
+
+    # ---- writing first, on Telegram (the window's reach) ----
+    def reach_ok(self):
+        """Telegram linked, writing first allowed, the user away an hour, not too often today, not in quiet hours."""
+        c = self.cfg
+        if self.reach is None or not c.get("reach_out", True) or self._away_hours() < 1:
+            return False
+        now = self.now()
+        start, end = int(c.get("quiet_from", 22)), int(c.get("quiet_to", 8))
+        quiet = (start <= now.hour or now.hour < end) if start > end else (start <= now.hour < end)
+        if quiet and start != end:
+            return False
+        try:
+            if c.get("last_reach") and (now - datetime.fromisoformat(c["last_reach"])).total_seconds() < 3 * 3600:
+                return False
+        except ValueError:
+            pass
+        return (c.get("reach_by_day") or {}).get(self.day_key(), 0) < int(c.get("reach_per_day", 2))
+
+    def _reach_out(self, nxt, what):
+        """It decides whether to write to the user, and what: sent to their phone, and kept in the conversation."""
+        if not self.reach_ok():
+            nxt()
+            return
+
+        def done(text, err):
+            text = tidy_text(text)
+            if not err and text and not re.match(r"^\W*no\W*$", text, re.I):
+                when = stamp(self.now())
+                try:
+                    self.reach(text)
+                except Exception as e:
+                    self.on_line("system", f"Couldn't send it to Telegram: {e}")
+                    nxt()
+                    return
+                c = self.cfg
+                today = self.day_key()
+                c["reach_by_day"] = {today: (c.get("reach_by_day") or {}).get(today, 0) + 1}
+                c["last_reach"] = when
+                self.history.append({"role": "assistant", "content": text, "t": when})
+                self.on_line("system", f"{self.name} wrote to {self.user} on Telegram:")
+                self.on_line("companion", text)
+                self.save()
+            nxt()
+        self._ask_alone(REACH_ASK.format(user=self.user, what=what), done, max_tokens=200)
 
     def _free_log_tail(self):
         f = self.folder / "Self" / "Free Time.txt"

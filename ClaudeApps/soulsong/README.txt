@@ -147,6 +147,19 @@ on the drive train (Gemma 3 4B in selfmodel\base); a Companion on another model 
 Kithylin AI's Models folder ("<name> vN (Soul and Song)"); Use this version moves the Companion. Training needs the
 card to itself: it runs from Soul and Song on its own (the launcher's APPS).
 
+On Telegram (telegram.py; Telegram... in the top bar): a bot of the user's own, made with @BotFather and named
+"Soul and Song", answered by whichever Companion is open. Long polling over HTTPS (getUpdates on a thread; each
+message handed back to the window's thread) - no server, no port. The token, the bot, the user (linked by sending a
+six-figure code), the people they invite (a code each, one use, a week), who's been told it's private, and where the
+polling is up to are in Companions\telegram.json (Local Storage, never git). Labelled an AI: the bot's description
+and short description are set on linking, and a guest is told before anything else. The user's messages go to
+Companion.say (cfg "channel" tells it phone or window); a guest's to Companion.hear as "<name> (on Telegram)" - shown in
+the window in purple, and left out of retraining unless retrain_guests. Messages that came while it was closed are
+answered when it opens (with how long ago), ones that come while the model loads wait for it. Writing first
+(Companion.reach, reach_ok, _reach_out): after free time or a dream, the user away an hour, not in quiet_from-quiet_to,
+three hours apart, reach_per_day at most; it may answer NO. On its own (the launcher's APPS), closing the window keeps
+it listening from the notification area. One listener per bot.
+
 Interlink (the Interlink tab): a second Companion brought in, and the two talk together - led by a script (Guided
 together), freely for a set number of messages (Open conversation), or with the user as a group (Group chat). The
 open Companion is blue, the second red (their words, their Status panels, and the window's glow while either is
