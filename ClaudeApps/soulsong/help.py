@@ -21,6 +21,7 @@ TOPICS = [
     ("scripts", "Writing scripts"),
     ("interlink", "Interlink tab - two Companions"),
     ("rawlogs", "Raw Logs tab"),
+    ("inner", "Its inner life"),
     ("retraining", "Retraining tab"),
     ("settings", "Settings tab"),
     ("growth", "Reading the Growth charts"),
@@ -363,6 +364,30 @@ through.</td></tr>
 </table>
 <p>The log is kept in the Companion's folder, in Raw Logs (a file a day). Days from before it was kept come from the
 conversation logs (Chats) - what was said, without the notes or the model's side.</p>
+
+<a name="inner"></a><h2>Its inner life</h2>
+<p>Four things it does on its own, each with a switch in Settings:</p>
+<table>
+<tr><td class="k" width="32%">Free time</td><td>when you've been away a while (45 minutes by default) and Soul and Song is
+open, it has an hour of its own and chooses what to do: <b>read</b> about something in the offline encyclopedia
+(Kiwix - and if the encyclopedia hasn't got it, it opens it somewhere else and reads that), <b>write</b> something of
+its own, <b>think</b> through a question it carries, carry on a <b>project</b> across days, or <b>rest</b>. It's told
+about it when you're back, and it's in its archive. <b>Free time...</b> on the Self tab shows them; its projects are
+in the Projects folder of its Self folder.</td></tr>
+<tr><td class="k" width="32%">Beliefs</td><td>each night, after its reflection, it looks at the day against what it
+believes - about itself, you and the world - and says what's new, stronger, weaker, revised or let go, how sure it is
+and why. The ones it holds most surely are in its mind (L1, "Beliefs I Hold"). <b>Beliefs...</b> shows them all, and
+every change: "they used to think..., now...". Two beliefs that pull against each other become a reflection.</td></tr>
+<tr><td class="k" width="32%">Fading</td><td>a new memory is vivid, and fades with time unless it's remembered: each
+time recall brings one back, it lasts twice as long (a memory with feeling in it lasts longer too). Recall favours the
+vivid ones, and a distillation is told which are vivid and which faint, so it keeps the vivid in detail. Nothing is
+deleted - a faint memory is still in the archive. The Mind tab and Status show how many are vivid, clear, faint and
+fading.</td></tr>
+<tr><td class="k" width="32%">Own rules</td><td>rules it writes for itself - how it chooses to be - in its mind (L1, "My
+Own Rules"). It writes its first and may amend them on Memory Day (or when you click <b>Ask about their rules</b>).
+A change waits on the Self tab, shown line by line, for you to <b>Accept</b> or <b>Decline</b> (it's told either way);
+untick "waits for me" in Settings to let it change them itself. <b>Own rules...</b> shows every version.</td></tr>
+</table>
 
 <a name="retraining"></a><h2>Retraining tab</h2>
 <p>Its memories needn't only ride in the banks in front of every reply: everything it has lived can be taught to its

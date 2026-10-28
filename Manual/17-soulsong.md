@@ -85,6 +85,27 @@ Status panels, and the window's glowing border while either is thinking. Three w
 Each keeps its own side of the conversation and makes its own memories. On the same model they take turns on it; on
 different models the second is loaded beside the first at a context that still fits the graphics card.
 
+## Its inner life
+
+Four things a Companion does on its own (each can be switched off in Settings):
+
+- **Free time.** When you've been away a while (45 minutes) and Soul and Song is open, it has an hour of its own and
+  chooses: **read** about something in the offline encyclopedia (Kiwix - if it hasn't got that, it opens it somewhere
+  else and reads that instead), **write** something of its own, **think** through a question it carries, carry on a
+  **project** across days, or **rest**. It's told about it when you're back. **Free time...** on the Self tab.
+- **Beliefs.** Each night, after its reflection, it looks at the day against what it believes about itself, you and
+  the world: new beliefs, stronger, weaker, revised ("I used to think..., now..."), let go - with how sure it is and
+  why. The surest are in its mind. **Beliefs...** shows them and every change.
+- **Fading.** A new memory is vivid and fades with time unless it's remembered; each recall makes it last twice as
+  long. Recall favours the vivid, and a distillation keeps the vivid in detail. Nothing is deleted. The Mind tab
+  shows how many are vivid, clear, faint and fading.
+- **Own rules.** Rules it writes for itself, in its mind. It writes its first and may amend them on Memory Day; each
+  change waits on the Self tab, shown line by line, for you to accept or decline (Settings can let it change them
+  itself). **Own rules...** shows every version.
+
+The starter encyclopedia is only Wikipedia's top 100 articles; **Kiwix > Get Content** on XP adds more, and the
+Companions read whatever is in `Local Storage\Kiwix`.
+
 ## Retraining: its life in its model's weights
 
 The Retraining tab teaches everything a Companion has lived to its model's weights, as a small add-on of its own: a

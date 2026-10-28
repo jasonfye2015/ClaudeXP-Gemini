@@ -51,6 +51,7 @@ from .growth import (BARE_CHECK, DREAM_ASK, DREAM_NOTE, LETTER_ASK, LETTER_DAYS,
                      next_memory_day, parse_predictions, parse_time_sense, parse_verdicts, pick_seeds, score_time,
                      timeline, JOURNAL_ASK, MOVE_ASK, QUESTIONS, QUESTIONS_ASK, QUESTIONS_FIRST, TENSION_ASK,
                      checks, parse_question_review, questions_text)
+from . import inner
 from .mind import CORE, KINDS, LEVELS, SUBSTRATE, TIME_LINE as TIME_STAMP_LINE, WHO_I_AM, Mind, stamp
 
 DEFAULTS = {
@@ -65,7 +66,12 @@ DEFAULTS = {
     "dream_count": 0, "dreams_by_day": {}, "time_checks": True, "last_time_check": "", "predict": True,
     "predictions": [], "own_sessions": True, "questions": [], "tensions": True, "tension_count": 0,
     "journal": True, "last_journal": "", "journal_count": 0, "move_checks": True, "surprises": [],
+    "free_time": True, "free_minutes": 45, "free_per_day": 6, "last_free": "", "free_by_day": {}, "free_count": 0,
+    "projects": [], "beliefs": True, "fading": True, "half_life": inner.HALF_LIFE, "own_rules": True,
+    "rules_veto": True, "rules_proposal": None, "rules_version": 0,
 }
+FADING_NOTE = ("\n\n(Each memory is marked with how vividly you remember it now. Keep the vivid ones in detail; "
+               "let the faint ones shrink to a line, or go - the archive keeps them whole either way.)")
 FULL = 7                    # the 7:7:7 system (classic: a bank is full at seven memories)
 # Sized to the context (the default): the banks together may take this share of the Companion's context window -
 # they ride in front of every reply - split between them; a bank is distilled when it outgrows its share. A bigger
@@ -821,6 +827,221 @@ class Companion:
             nxt()
         self._ask_alone(ask, done, max_tokens=450)
 
+    # ---- free time: an hour of its own while the user is away (inner.py) ----
+    def free_time_due(self):
+        """Away long enough (and that long since the last free hour), not too many today, no session playing."""
+        c = self.cfg
+        if not c.get("free_time", True) or not c.get("first_boot_done"):
+            return False
+        auto = c.get("automation") or {}
+        if auto.get("running") and not auto.get("paused"):
+            return False
+        minutes = float(c.get("free_minutes", 45))
+        if self._away_hours() * 60 < minutes:
+            return False
+        try:
+            if c.get("last_free") and (self.now() - datetime.fromisoformat(c["last_free"])).total_seconds() \
+                    < minutes * 60:
+                return False
+        except ValueError:
+            pass
+        return (c.get("free_by_day") or {}).get(self.day_key(), 0) < int(c.get("free_per_day", 6))
+
+    def _free_time(self, nxt):
+        c = self.cfg
+        gap = gap_text(self._away_hours())
+        projects = c.get("projects") or []
+        recent = [ln for ln in self._free_log_tail().splitlines() if ln.startswith("[")][-3:]
+        ask = inner.FREE_ASK.format(
+            user=self.user, gap=gap, projects=", ".join(f"\"{p['title']}\"" for p in projects[-6:]) or "none yet",
+            questions="; ".join(q.get("text", "") for q in (c.get("questions") or [])[:5]) or "none yet",
+            recent="; ".join(r.split("] ", 1)[-1] for r in recent) or "nothing yet")
+        self.on_line("system", f"{self.name} has an hour of their own...")
+
+        def chosen(text, err):
+            kind, subject = inner.parse_choice("" if err else text)
+            if kind == "REST":
+                return finish(kind, subject, "")
+            if kind == "READ":
+                found = inner.encyclopedia(self._storage(), subject)
+                if found and found[2]:
+                    title, page, _exact = found
+                    task = inner.READ_ASK.format(subject=subject, title=title, text=page)
+                    subject = f"{subject} (\"{title}\")" if title.lower() != subject.lower() else title
+                elif found:
+                    title, page, _exact = found
+                    task = inner.WANDER_ASK.format(subject=subject, title=title, text=page)
+                    subject = f"{subject} - and, finding nothing on it, about \"{title}\" instead"
+                else:
+                    task = inner.NOT_FOUND_ASK.format(subject=subject)
+            elif kind == "WRITE":
+                task = inner.WRITE_ASK.format(subject=subject)
+            elif kind == "THINK":
+                task = inner.THINK_ASK.format(subject=subject)
+            else:
+                p = inner.find_project(projects, subject)
+                if p is None:
+                    p = {"title": subject[:60], "started": stamp(self.now()), "parts": 0}
+                    projects.append(p)
+                    c["projects"] = projects[-12:]
+                    task = inner.PROJECT_NEW_ASK.format(subject=p["title"])
+                else:
+                    f = inner.project_file(self.folder, p["title"])
+                    so_far = f.read_text(encoding="utf-8")[-1800:] if f.exists() else "(nothing written yet)"
+                    task = inner.PROJECT_GO_ASK.format(title=p["title"], started=p["started"][:10], so_far=so_far)
+                subject = p["title"]
+            self._ask_alone(task, lambda t, e: finish(kind, subject, "" if e else tidy_text(t)), max_tokens=900)
+
+        def finish(kind, subject, text):
+            when = stamp(self.now())
+            today = self.day_key()
+            c["last_free"] = when
+            c["free_by_day"] = {today: (c.get("free_by_day") or {}).get(today, 0) + 1}
+            c["free_count"] = int(c.get("free_count", 0)) + 1
+            what = inner.FREE_WORDS[kind].format(subject=subject)
+            folder = self.folder / "Self"
+            folder.mkdir(exist_ok=True)
+            with open(folder / "Free Time.txt", "a", encoding="utf-8") as f:
+                f.write(f"[{when}] {what[4:] if what.startswith('you ') else what}\n" + (f"{text}\n" if text else "")
+                        + "\n")
+            if kind == "PROJECT" and text:
+                p = inner.find_project(c.get("projects") or [], subject)
+                pf = inner.project_file(self.folder, subject)
+                pf.parent.mkdir(parents=True, exist_ok=True)
+                with open(pf, "a", encoding="utf-8") as f:
+                    f.write(f"[{when}]\n{text}\n\n")
+                if p is not None:
+                    p["parts"] = int(p.get("parts", 0)) + 1
+                    p["last"] = when
+            if text:
+                try:
+                    self.recall.add(-(300000 + c["free_count"]), "Free time", when, f"{what}:\n{text}")
+                except Exception:
+                    pass
+                self.on_line("memory", f"{self.name}'s free time - {what}:\n{text}")
+            else:
+                self.on_line("system", f"{self.name} rested.")
+            self.notice(inner.FREE_NOTE.format(user=self.user, gap=gap, what=what + (
+                f" - and wrote: {text[:300]}{'...' if len(text) > 300 else ''}" if text else ".")))
+            self.save()
+            nxt()
+        self._ask_alone(ask, chosen, max_tokens=80)
+
+    def _free_log_tail(self):
+        f = self.folder / "Self" / "Free Time.txt"
+        try:
+            return f.read_text(encoding="utf-8")[-3000:]
+        except OSError:
+            return ""
+
+    def _storage(self):
+        from .paths import project
+        return project().parents[1]
+
+    # ---- beliefs: what it holds, and how that changes (inner.py) ----
+    def _beliefs(self, nxt):
+        if not self.cfg.get("beliefs", True):
+            nxt()
+            return
+        today = "\n\n".join(x for x in (self.mind.bank_text(2), self.mind.bank_text(7)) if x.strip())
+        if not today.strip():
+            nxt()
+            return
+        b = inner.Beliefs(self.folder)
+        self.on_line("system", f"{self.name} looks at what they believe...")
+
+        def done(text, err):
+            if not err:
+                applied = b.apply(inner.parse_beliefs(text), stamp(self.now()))
+                b.save(self.user)
+                self.mind.put(inner.BELIEFS, b.mind_text(self.user))
+                for change, item, before in applied:
+                    if change == "revised":
+                        self.on_line("system", f"{self.name} changed their mind: they used to think \"{before}\" - "
+                                               f"now \"{item['text']}\".")
+                    elif change == "new":
+                        self.on_line("system", f"{self.name} believes something new: \"{item['text']}\" "
+                                               f"({inner.sure_words(item['sure'])}).")
+                    elif change == "dropped":
+                        self.on_line("system", f"{self.name} let go of a belief: \"{item['text']}\".")
+                    elif change == "tension":
+                        one, two = item
+                        self._file(7, f"Two of my beliefs pull against each other: \"{one['text']}\" and "
+                                      f"\"{two['text']}\". {before or ''}".strip())
+            nxt()
+        self._ask_alone(inner.BELIEFS_ASK.format(beliefs=b.listing(), today=today, user=self.user), done,
+                        max_tokens=700)
+
+    # ---- fading: vivid memories, faint ones (inner.py) ----
+    def vividness(self, item):
+        return inner.strength(item, self.now(), float(self.cfg.get("half_life") or inner.HALF_LIFE))
+
+    def memory_summary(self):
+        return inner.summary(self.recall.items, self.now(), float(self.cfg.get("half_life") or inner.HALF_LIFE))
+
+    def _vivid_bank_text(self, level):
+        """A bank with each memory marked with how vividly it's remembered now (for a distillation)."""
+        by_seq = {i["seq"]: i for i in self.recall.items}
+        out = []
+        for n, kind, when, text in self.mind.entries(level):
+            item = by_seq.get(n) or {"when": when, "text": text}
+            out.append(f"[Memory #{n} | {kind} | {when} | remembered {inner.label(self.vividness(item))}]\n"
+                       f"{text.strip()}" if n else text)
+        return "\n\n".join(out)
+
+    # ---- its own rules (inner.py): written by it, changed with the user's leave ----
+    def _rules_review(self, after):
+        if not self.cfg.get("own_rules", True):
+            after()
+            return
+        current = self.mind.get(inner.RULES).strip()
+        ask = (inner.RULES_ASK.format(rules=current) if current else inner.RULES_FIRST_ASK.format(user=self.user))
+        self.on_line("system", f"{self.name} looks at their own rules..." if current else
+                     f"{self.name} writes their own rules...")
+
+        def done(text, err):
+            text = tidy_text(text)
+            if not err and not inner.no_change(text) and text.strip() != current:
+                if self.cfg.get("rules_veto", True):
+                    self.cfg["rules_proposal"] = {"when": stamp(self.now()), "text": text, "before": current}
+                    self.on_line("system", f"{self.name} proposes {'changes to their' if current else 'their first'} "
+                                           "own rules - see the Self tab to accept or decline them.")
+                else:
+                    self._set_rules(text, current)
+                    self.on_line("system", f"{self.name} changed their own rules (the Self tab shows how).")
+                self.save()
+            after()
+        self._ask_alone(ask, done, max_tokens=600)
+
+    def ask_rules(self):
+        """On request: it looks at its own rules now (or writes its first)."""
+        self._push(lambda nxt: self._rules_review(nxt))
+
+    def _set_rules(self, text, before=""):
+        self.mind.put(inner.RULES, text)
+        self.cfg["rules_version"] = int(self.cfg.get("rules_version", 0)) + 1
+        folder = self.folder / "Self" / "Rules"
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / f"{self.day_key()} v{self.cfg['rules_version']}.txt").write_text(text, encoding="utf-8")
+        lines = [f"{self.name}'s own rules (version {self.cfg['rules_version']})", "", text.strip(), ""]
+        for f in sorted(folder.glob("* v*.txt"), reverse=True)[1:]:
+            lines += [f"--- before: {f.stem} ---", f.read_text(encoding="utf-8").strip(), ""]
+        (self.folder / "Self" / "Own Rules.txt").write_text("\n".join(lines), encoding="utf-8")
+
+    def accept_rules(self):
+        p = self.cfg.get("rules_proposal")
+        if p:
+            self._set_rules(p["text"], p.get("before", ""))
+            self.cfg["rules_proposal"] = None
+            self.notice(f"{self.user} accepted your {'new' if p.get('before') else 'first'} rules.")
+            self.save()
+
+    def decline_rules(self, why=""):
+        if self.cfg.get("rules_proposal"):
+            self.cfg["rules_proposal"] = None
+            self.notice(f"{self.user} kept your rules as they were, for now" + (f": {why}" if why else "."))
+            self.save()
+
     def context_used(self):
         return sum(estimate_tokens(m["content"]) for m in self._messages())
 
@@ -964,10 +1185,20 @@ class Companion:
         try:
             self.recall.backfill()                     # (meanings for memories filed before the embedder was up)
             in_banks = {n for level in KINDS for n, *_ in self.mind.entries(level)}
-            found = self.recall.search(text, exclude=in_banks)
+            fading = self.cfg.get("fading", True)
+            found = self.recall.search(text, exclude=in_banks,
+                                       weigh=(lambda i: 0.6 + 0.4 * self.vividness(i)) if fading else None)
         except Exception:
             return []
         if found:
+            when = stamp(self.now())
+            for i in found:                            # (remembered: it fades more slowly from now on)
+                i["recalled"] = int(i.get("recalled") or 0) + 1
+                i["last"] = when
+            try:
+                self.recall._save()
+            except Exception:
+                pass
             self.on_line("system", "Recalled from the archive: " + "; ".join(
                 f"{i['kind']} memory of {i['when'][:10]}" for i in found))
         return found
@@ -1099,12 +1330,13 @@ class Companion:
 
     def _distill(self, nxt, src, dst, template, after=None):
         """Bank `src` distilled into one memory in `dst`; src emptied (and archived)."""
-        entries = self.mind.bank_text(src)
+        fading = self.cfg.get("fading", True)
+        entries = self._vivid_bank_text(src) if fading else self.mind.bank_text(src)
         if not self.mind.entries(src):
             (after or nxt)()
             return
         when = stamp(self.now())
-        ask = template.format(entries=entries, kind=KINDS[dst], when=when)
+        ask = template.format(entries=entries, kind=KINDS[dst], when=when) + (FADING_NOTE if fading else "")
         n = len(self.mind.entries(src))
         if n > FULL:                                   # (a big bank: a fuller memory, so less is lost)
             ask += LONGER.format(n=n, s=min(15, 3 + n // 3))
@@ -1127,6 +1359,7 @@ class Companion:
     # ---- the day's end: a reflection, the first portrait, the distillation ----
     def end_day(self):
         self._push(self._reflect)
+        self._push(self._beliefs)
         self._push(self._journal)
         self._push(lambda nxt: self._portrait(nxt) if not self.mind.get(WHO_I_AM) else nxt())
         if self.memory_mode() == "classic":
@@ -1241,11 +1474,14 @@ class Companion:
                         self.on_line("system", f"{self.name} proposes changes to their Development Roadmap - see "
                                                "the Self tab to accept or decline them.")
                         self.save()
-                    if self.memory_mode() == "classic" or self.bank_full(3):
-                        self._distill(nxt, 3, 4, MEMORY_DAY_ASK, after=to_history)
-                    else:
-                        to_history()
+                    self._rules_review(rules_done)
                 self._ask_alone(ROADMAP_ASK.format(user=self.user, roadmap=self.mind.roadmap("companion")), done)
+
+            def rules_done():
+                if self.memory_mode() == "classic" or self.bank_full(3):
+                    self._distill(nxt, 3, 4, MEMORY_DAY_ASK, after=to_history)
+                else:
+                    to_history()
 
             def to_history():
                 if self.bank_full(4):
@@ -1409,6 +1645,9 @@ class Companion:
             return
         if self.dream_due():
             self._push(self._dream)
+            return
+        if self.free_time_due():
+            self._push(self._free_time)
             return
         self.check_events()
 

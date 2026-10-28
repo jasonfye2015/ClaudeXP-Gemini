@@ -25,6 +25,7 @@ It takes about two minutes and says, line by line, what passed. The whole report
 | `test_code.py` | Every Python file compiles without warnings; pyflakes finds no undefined names; the launcher's self-check finds nothing that would stop a computer |
 | `test_model_threads.py` | The crash of 27-28 October 2026 can't come back: the model threads behind Soul and Song, Kithylin AI and the code studios are never let go of while running |
 | `test_soulsong.py` | Soul and Song on a stand-in model: the memory banks sized to the context and classic 7:7:7 over weeks of made-up days, Interlink's three modes, and the window (talking, the raw log, the memory bars, Settings) |
+| `test_inner_life.py` | Soul and Song's inner life: free time (and the encyclopedia finding the right article), the beliefs record, fading memories, and their own rules changing only with your leave |
 | `test_qbasic.py` | QBasic Studio's interpreter: 34 programs and exactly what they print, the errors it should catch, its speed, and every built-in example |
 | `test_screensavers.py` | Every screen saver runs and paints; the Claude Entertainment System plays each NES game in turn, and is the default everywhere |
 | `test_persona_styles.py` | The frozen Contact Persona Styles still fit today's code (the AIM replies that failed on 26 October 2026) |

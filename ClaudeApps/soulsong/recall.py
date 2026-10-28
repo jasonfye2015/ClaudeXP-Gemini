@@ -170,8 +170,9 @@ class Recall:
             self._save()
         return len(todo)
 
-    def search(self, text, exclude=(), k=2):
-        """The older memories closest to `text`, not counting the ones in `exclude` (already in the banks)."""
+    def search(self, text, exclude=(), k=2, weigh=None):
+        """The older memories closest to `text`, not counting the ones in `exclude` (already in the banks).
+        weigh(item) -> a factor for its score (how vividly it's remembered: inner.py)."""
         pool = [i for i in self.items if i["seq"] not in set(exclude)]
         if not pool or len(text.strip()) < 12:
             return []
@@ -182,12 +183,12 @@ class Recall:
                 if "vec" in i:
                     s = _cos(q[0], i["vec"])
                     if s >= MIN_SCORE:
-                        scored.append((s, i))
+                        scored.append((s * (weigh(i) if weigh else 1), i))
         if not scored:                               # (no meanings yet: words in common)
             want = _words(text)
             for i in pool:
                 shared = want & _words(i["text"])
                 if len(shared) >= MIN_WORDS:
-                    scored.append((len(shared) / 10, i))
+                    scored.append((len(shared) / 10 * (weigh(i) if weigh else 1), i))
         scored.sort(key=lambda x: -x[0])
         return [i for _s, i in scored[:k]]

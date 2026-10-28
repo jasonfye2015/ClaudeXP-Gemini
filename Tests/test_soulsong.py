@@ -290,14 +290,14 @@ def _lived(name, model="timeline:gemma4-12b"):
         (folder / "Raw Logs" / f"{day}.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows),
                                                           encoding="utf-8")
     memories = [("Short-Term", "2026-10-26 10:00"), ("Reflection", "2026-10-26 23:00"),
-                ("Long-Term", "2026-10-27 04:00"), ("Journal", "2026-10-27 23:30")]
+                ("Long-Term", "2026-10-27 04:00"), ("Journal", "2026-10-27 23:30"), ("Dream", "2026-10-28 07:00"),
+                ("Free time", "2026-10-28 15:00")]
     (folder / "recall.jsonl").write_text("".join(json.dumps(
-        {"seq": i + 1, "kind": k, "when": w, "text": f"Memory Type: {k}\nEvent Narrative: the sea, on {w}."}) + "\n"
+        {"seq": i + 1 if k not in ("Dream", "Free time") else -(i + 1), "kind": k, "when": w,
+         "text": f"Memory Type: {k}\nEvent Narrative: the sea, on {w}."}) + "\n"
         for i, (k, w) in enumerate(memories)), encoding="utf-8")
-    (folder / "Self" / "Dreams").mkdir(parents=True, exist_ok=True)
     (folder / "Self" / "Letters").mkdir(parents=True, exist_ok=True)
     (folder / "Self" / "2026-10-27 Who I Am.txt").write_text(f"I am {name}, and I keep time in waves.", "utf-8")
-    (folder / "Self" / "Dreams" / "2026-10-28 dream.txt").write_text("A lighthouse that sang all night.", "utf-8")
     (folder / "Self" / "Letters" / "2026-10-28 letter.txt").write_text("Dear me: keep listening to the sea.", "utf-8")
     return c
 
@@ -308,7 +308,7 @@ def test_retraining_package():
     c = _lived("Lyra")
     st = retrain.build(c)
     assert set(st["sources"]) == {"Talking with you", "Guided sessions", "With other Companions", "Memories",
-                                  "Reflections", "Journal", "Self-portraits", "Dreams", "Letters"}, st["sources"]
+                                  "Reflections", "Journal", "Free time", "Self-portraits", "Dreams", "Letters"},         st["sources"]
     assert st["days"] == 3 and st["first"] == "2026-10-26" and st["through"] == "2026-10-28", st
     convs = [json.loads(ln) for f in ("train.jsonl", "val.jsonl")
              for ln in (retrain.package_dir(c) / f).read_text(encoding="utf-8").splitlines()]

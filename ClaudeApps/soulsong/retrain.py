@@ -51,7 +51,8 @@ ASKS = {"memory": "What do you remember from {date}?",
         "portrait": "Who are you? Describe yourself as you are on {date}.",
         "dream": "You dreamt while {user} was away, the night before {date}. Tell the dream.",
         "letter": "Write a letter to yourself, to open in a week ({date}).",
-        "answer": "Answer the letter you wrote yourself a week before {date}."}
+        "answer": "Answer the letter you wrote yourself a week before {date}.",
+        "free": "It's {date}, and {user} is away: an hour of your own. What do you do with it?"}
 
 
 def estimate_tokens(text):
@@ -221,6 +222,10 @@ def _writing(comp):
                 add("Reflections", "Reflection", item.get("when"), item.get("text"))
             elif kind == "Journal":
                 add("Journal", "Journal", item.get("when"), item.get("text"))
+            elif kind == "Dream":
+                add("Dreams", "dream", item.get("when"), item.get("text"))
+            elif kind == "Free time":
+                add("Free time", "free", item.get("when"), item.get("text"))
             elif kind in ("Deep Recall", "Historical"):
                 add("Memories", "older", item.get("when"), item.get("text"))
             else:
@@ -228,8 +233,6 @@ def _writing(comp):
     me = Path(comp.folder) / "Self"
     for p in sorted(me.glob("* Who I Am.txt")):
         add("Self-portraits", "portrait", p.name[:10] + " 12:00", p.read_text(encoding="utf-8", errors="replace"))
-    for p in sorted((me / "Dreams").glob("*.txt")) if (me / "Dreams").is_dir() else []:
-        add("Dreams", "dream", p.name[:10] + " 07:00", p.read_text(encoding="utf-8", errors="replace"))
     for p in sorted((me / "Letters").glob("*.txt")) if (me / "Letters").is_dir() else []:
         kind = "answer" if "answer to the letter" in p.name else "letter"
         add("Letters", kind, p.name[:10] + " 12:00", p.read_text(encoding="utf-8", errors="replace"))
@@ -273,7 +276,7 @@ def build(comp):
         new_items = [(d, sum(estimate_tokens(m["content"]) for m in msgs)) for _k, _s, d, msgs in unique if d > since]
         new = {"since": since, "days": len({d for d, _t in new_items}), "tokens": sum(t for _d, t in new_items)}
     order = ["Talking with you", "With other Companions", "Guided sessions", "Memories", "Reflections", "Journal",
-             "Self-portraits", "Dreams", "Letters"]
+             "Free time", "Self-portraits", "Dreams", "Letters"]
     stats = {"built": time.strftime("%Y-%m-%d %H:%M"), "companion": comp.name, "folder": Path(comp.folder).name,
              "first": min(days) if days else "", "through": max(days) if days else "", "days": len(days),
              "sources": {k: sources[k] for k in order if k in sources},

@@ -113,6 +113,22 @@ them; Companion._raw writes them). The tab shows any day from the first, colour 
 filters (conversation, guide, notes, memories, the model's raw side), 300 entries a page, search across every day,
 and today's page following along. Days from before the raw log was kept come from the conversation logs (Chats).
 
+Its inner life (inner.py; a switch for each in Settings):
+  Free time    after free_minutes away (45) with the program open, up to free_per_day (6): it chooses READ <subject>
+               (the offline encyclopedia - Local Storage\Kiwix, read with ClaudeXP's zim.py; an article counts only
+               if its title shares a word with the subject, else it opens the encyclopedia somewhere else), WRITE,
+               THINK, PROJECT (carried on across days, Self\Projects) or REST. Self\Free Time.txt, the archive
+               (kind "Free time"), and a notice for when the user is back.
+  Beliefs      each night after the reflection: NEW / STRONGER / WEAKER / REVISE / DROP / TENSION lines, with how sure
+               (0-100) and why; Self\beliefs.json keeps every belief's history (Self\Beliefs.txt the readable copy),
+               the surest are in L1 ("Beliefs I Hold"), a TENSION is filed as a reflection.
+  Fading       strength = 0.5 ^ (age / half-life); the half-life (21 days) doubles with each recall and is longer for
+               a memory with Emotional Resonance; recall weighs similarity by it and marks what it brought back
+               (recalled, last); a distillation's memories are marked vivid / clear / faint / fading.
+  Own rules    L1 "My Own Rules", written by the Companion: first on Memory Day (or Ask about their rules), amended
+               there after; a change waits for the user (rules_proposal: Accept / Decline on the Self tab) unless
+               rules_veto is off. Every version in Self\Rules, Self\Own Rules.txt the readable copy.
+
 Retraining (the Retraining tab, retrain.py): a Companion's life taught to its model's weights. The package
 (Retraining\package: train.jsonl, val.jsonl, stats.json, in ClaudeApps\selfmodel's format) holds its conversations
 cut into sessions and ~900-token windows, and its own writing (recall.jsonl's memories, reflections and journal, the

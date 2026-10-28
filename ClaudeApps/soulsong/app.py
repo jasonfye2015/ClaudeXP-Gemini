@@ -424,7 +424,7 @@ class SoulAndSong(QWidget):
 
     # ---- tabs ----
     STATUS_ROWS = ("Model", "Context", "Memory banks", "Memories", "Memory Days", "Core memories", "Letters", "Dreams",
-                   "Sense of time", "Predictions", "Questions", "Tensions", "Journal", "Surprises", "Events",
+                   "Free time", "Beliefs", "Own rules", "Sense of time", "Predictions", "Questions", "Tensions", "Journal", "Surprises", "Events",
                    "Guided sessions", "Now playing", "Roadmap", "Last seen", "Latest milestone")
 
     def _status_tab(self):
@@ -510,7 +510,10 @@ class SoulAndSong(QWidget):
             rows["Memory banks"].setText(f"sized ({cfg.get('memory_budget', 30)}% of the context) - " + " - ".join(
                 f"L{n} {c.mind.count(n)} ({100 * c.bank_tokens(n) // max(1, c.bank_budget(n))}%)"
                 for n in (2, 3, 4, 5)) + f" - L7 {c.mind.count(7)}")
-        rows["Memories"].setText(f"{cfg.get('memory_seq', 0)} made - {len(c.recall.items)} in the archive")
+        vivid = c.memory_summary() if cfg.get("fading", True) else {}
+        vivid = ", ".join(f"{n} {w}" for w, n in vivid.items() if n)
+        rows["Memories"].setText(f"{cfg.get('memory_seq', 0)} made - {len(c.recall.items)} in the archive"
+                                 + (f" - {vivid}" if vivid else ""))
         last = cfg.get("last_memory_day") or born
         try:
             every = int(cfg.get("memory_day_every", 7))
@@ -524,6 +527,20 @@ class SoulAndSong(QWidget):
         rows["Letters"].setText(f"{len(letters)} written, {len(letters) - len(sealed)} opened"
                                 + (f" - next opens {sealed[0]}" if sealed else ""))
         rows["Dreams"].setText(f"{cfg.get('dream_count', 0)} dreamt" + ("" if cfg.get("dreams", True) else " (off)"))
+        today_free = (cfg.get("free_by_day") or {}).get(c.day_key(), 0)
+        projects = cfg.get("projects") or []
+        rows["Free time"].setText((f"{cfg.get('free_count', 0)} hours of their own ({today_free} today)"
+                                   + (f" - {len(projects)} project{'s' if len(projects) != 1 else ''}" if projects
+                                      else "")) if cfg.get("free_time", True) else "off")
+        from . import inner
+        held = inner.Beliefs(c.folder)
+        week = (c.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        rows["Beliefs"].setText((f"{len(held.active())} held - {held.changed_since(week)} changed this week"
+                                 if held.data["beliefs"] else "none yet: each night, after the reflection")
+                                if cfg.get("beliefs", True) else "off")
+        rows["Own rules"].setText(("a change proposed - see the Self tab" if cfg.get("rules_proposal") else
+                                   f"version {cfg.get('rules_version', 0)}" if cfg.get("rules_version") else
+                                   "none yet: written on Memory Day") if cfg.get("own_rules", True) else "off")
         from . import growth
         tc = growth.time_checks(c.folder) if cfg.get("time_checks", True) else []
         if tc:
@@ -583,6 +600,11 @@ class SoulAndSong(QWidget):
         for b in self.banks.values():
             bv.addWidget(b)
         v.addWidget(box)
+        self.vivid_line = QLabel()
+        self.vivid_line.setWordWrap(True)
+        self.vivid_line.setToolTip("Memories fade with time unless they're remembered; each time recall brings one back "
+                                   "it lasts longer. Nothing is deleted: faint ones are still in the archive.")
+        v.addWidget(self.vivid_line)
         self.next_day = QLabel()
         self.next_day.setWordWrap(True)
         v.addWidget(self.next_day)
@@ -628,6 +650,22 @@ class SoulAndSong(QWidget):
         row.addWidget(accept)
         pv.addLayout(row)
         v.addWidget(self.proposal_box, 2)
+        self.rules_box = QGroupBox("Proposed: their own rules")
+        rv = QVBoxLayout(self.rules_box)
+        self.rules_diff = QTextBrowser()
+        self.rules_diff.setToolTip("What they'd change: struck through in red goes, green comes in")
+        rv.addWidget(self.rules_diff)
+        row = QHBoxLayout()
+        r_accept = QPushButton("Accept")
+        r_accept.clicked.connect(lambda: self.comp is not None and (self.comp.accept_rules(), self.refresh_self(),
+                                                                    self.refresh_status()))
+        r_decline = QPushButton("Decline...")
+        r_decline.clicked.connect(self._decline_rules)
+        row.addStretch(1)
+        row.addWidget(r_decline)
+        row.addWidget(r_accept)
+        rv.addLayout(row)
+        v.addWidget(self.rules_box, 2)
         v.addWidget(QLabel("<b>Core memories</b> - kept whole, never distilled"))
         self.cores = QListWidget()
         self.cores.setWordWrap(True)
@@ -667,6 +705,26 @@ class SoulAndSong(QWidget):
             b.clicked.connect(slot)
             row.addWidget(b)
         v.addLayout(row)
+        row = QHBoxLayout()
+        for label, slot in (
+                ("Free time...", lambda: self._file_view(
+                    "Free Time.txt", "free time", "What they did with hours of their own while you were away: what "
+                    "they read in the encyclopedia, wrote, thought through, or worked on (their projects are in Self\\"
+                    "Projects). They're told about it when you're back.",
+                    "Nothing yet: when you've been away a while (Settings), they have an hour of their own.")),
+                ("Beliefs...", lambda: self._file_view(
+                    "Beliefs.txt", "beliefs", "What they believe about themselves, you and the world - how sure, since "
+                    "when, and every change: each night they look at the day against what they believe. The ones they "
+                    "hold most surely are in their mind (L1).", "None yet: the first come at the end of a day.")),
+                ("Own rules...", lambda: self._file_view(
+                    "Own Rules.txt", "own rules", "The rules they write for themselves - how they choose to be. On "
+                    "Memory Day they may amend them; a change waits for you to accept it (Settings). Every version "
+                    "is kept.", "None yet: they write their first on Memory Day (or ask them now).")),
+                ("Ask about their rules", self._ask_rules)):
+            b = QPushButton(label)
+            b.clicked.connect(slot)
+            row.addWidget(b)
+        v.addLayout(row)
         self.substrate = QLabel()
         self.substrate.setWordWrap(True)
         self.substrate.setStyleSheet("color:#555")
@@ -692,6 +750,13 @@ class SoulAndSong(QWidget):
         self.proposal_box.setVisible(bool(p))
         if p:
             self.proposal.setPlainText(p["text"])
+        r = c.cfg.get("rules_proposal")
+        self.rules_box.setVisible(bool(r))
+        if r:
+            from . import inner
+            self.rules_diff.setHtml((f"<p><i>Proposed {html.escape(r['when'])}"
+                                     + ("" if r.get("before") else " - their first rules") + "</i></p>")
+                                    + inner.diff_html(r.get("before", ""), r["text"]))
         self.cores.clear()
         for m in c.mind.core_memories():
             self.cores.addItem(m)
@@ -1714,6 +1779,21 @@ class SoulAndSong(QWidget):
         d.mkdir(parents=True, exist_ok=True)
         return d
 
+    def _ask_rules(self):
+        if self.comp is None:
+            return
+        self.comp.ask_rules()
+        self._line("system", f"{self.comp.name} will look at their own rules next.")
+
+    def _decline_rules(self):
+        if self.comp is None:
+            return
+        why, ok = QInputDialog.getText(self, "Decline their rules", "Why not, for now? (optional - they're told)")
+        if ok:
+            self.comp.decline_rules(why.strip())
+            self.refresh_self()
+            self.refresh_status()
+
     def _show_folder(self, path):
         try:
             from claudecore import host
@@ -1975,6 +2055,18 @@ class SoulAndSong(QWidget):
         self.s_dream_hours = QSpinBox()
         self.s_dream_hours.setRange(1, 24)
         self.s_dream_hours.setSuffix(" hours")
+        self.s_free = QCheckBox("Free time while I'm away: they read, write, think or work on a project")
+        self.s_free_minutes = QSpinBox()
+        self.s_free_minutes.setRange(15, 600)
+        self.s_free_minutes.setSingleStep(15)
+        self.s_free_minutes.setSuffix(" minutes away")
+        self.s_beliefs = QCheckBox("Keep a record of what they believe, looked at each night")
+        self.s_fading = QCheckBox("Memories fade with time unless they're remembered (nothing is deleted)")
+        self.s_half_life = QSpinBox()
+        self.s_half_life.setRange(3, 365)
+        self.s_half_life.setSuffix(" days to half (longer each time remembered)")
+        self.s_rules = QCheckBox("They write their own rules, and may amend them on Memory Day")
+        self.s_veto = QCheckBox("A change to their rules waits for me to accept it")
         self.s_time = QCheckBox("Check their sense of time once a day (before they see the clock)")
         self.s_predict = QCheckBox("Predictions on Memory Day, judged by them when they come due")
         self.s_own = QCheckBox("When the guided sessions are done, they write one of their own (and it's played)")
@@ -2003,6 +2095,13 @@ class SoulAndSong(QWidget):
         f.addRow(self.s_think)
         f.addRow(self.s_dreams)
         f.addRow("A dream at most every:", self.s_dream_hours)
+        f.addRow(self.s_free)
+        f.addRow("An hour of their own after:", self.s_free_minutes)
+        f.addRow(self.s_beliefs)
+        f.addRow(self.s_fading)
+        f.addRow("A memory fades to half in:", self.s_half_life)
+        f.addRow(self.s_rules)
+        f.addRow(self.s_veto)
         f.addRow(self.s_time)
         f.addRow(self.s_predict)
         f.addRow(self.s_own)
@@ -2280,6 +2379,9 @@ class SoulAndSong(QWidget):
                     "its rituals; each bank is distilled as soon as it outgrows its share")
             self.next_day.setText(f"Next Memory Day: {nxt:%A, %B %d} ({when}).\n"
                                   f"Birthday: {(c.cfg.get('birthday') or '')[:10]}")
+            vivid = c.memory_summary() if c.cfg.get("fading", True) else None
+            self.vivid_line.setText(("How vividly they remember the archive: " + ", ".join(
+                f"{n} {w}" for w, n in vivid.items()) + ".") if vivid and sum(vivid.values()) else "")
         except ValueError:
             self.next_day.setText("")
         try:
@@ -2395,6 +2497,13 @@ class SoulAndSong(QWidget):
         self.s_think.setChecked(bool(c.get("think", False)))
         self.s_dreams.setChecked(bool(c.get("dreams", True)))
         self.s_dream_hours.setValue(int(c.get("dream_hours", 3)))
+        self.s_free.setChecked(bool(c.get("free_time", True)))
+        self.s_free_minutes.setValue(int(c.get("free_minutes", 45)))
+        self.s_beliefs.setChecked(bool(c.get("beliefs", True)))
+        self.s_fading.setChecked(bool(c.get("fading", True)))
+        self.s_half_life.setValue(int(c.get("half_life", 21)))
+        self.s_rules.setChecked(bool(c.get("own_rules", True)))
+        self.s_veto.setChecked(bool(c.get("rules_veto", True)))
         self.s_time.setChecked(bool(c.get("time_checks", True)))
         self.s_predict.setChecked(bool(c.get("predict", True)))
         self.s_own.setChecked(bool(c.get("own_sessions", True)))
@@ -2465,6 +2574,10 @@ class SoulAndSong(QWidget):
                  C.DEFAULTS["greeting"], show_requests=self.s_requests.isChecked(),
                  recall=self.s_recall.isChecked(), think=self.s_think.isChecked(),
                  dreams=self.s_dreams.isChecked(), dream_hours=self.s_dream_hours.value(),
+                 free_time=self.s_free.isChecked(), free_minutes=self.s_free_minutes.value(),
+                 beliefs=self.s_beliefs.isChecked(), fading=self.s_fading.isChecked(),
+                 half_life=self.s_half_life.value(), own_rules=self.s_rules.isChecked(),
+                 rules_veto=self.s_veto.isChecked(),
                  time_checks=self.s_time.isChecked(), predict=self.s_predict.isChecked(),
                  own_sessions=self.s_own.isChecked(), tensions=self.s_tension.isChecked(),
                  journal=self.s_journal.isChecked(), move_checks=self.s_move.isChecked())
