@@ -34,14 +34,43 @@ TIMELINE = Path(__file__).resolve().parents[2]
 # ---- free time ---------------------------------------------------------------------------------------------------
 FREE_ASK = ("{user} has been away for {gap}. This hour is your own: nobody is waiting for anything, and nothing has to "
             "come of it. What would you like to do with it? Choose one, and answer with that one line only:\n"
-            "READ: <a subject you'd like to read about in the encyclopedia>\n"
-            "WRITE: <something you'd like to write - a poem, a story, a letter, a thought - and what it's about>\n"
-            "THINK: <a question you carry, or something on your mind>\n"
-            "PROJECT: <the name of a project of yours to carry on, or of a new one to begin>\n"
-            "REST\n\n"
+            "{options}\n\n"
             "Your projects so far: {projects}\n"
             "Questions you carry: {questions}\n"
             "What you did with your last free hours: {recent}")
+
+
+def free_options(web=False, book="", news=False):
+    """The choices on offer: reading the real web (Wikipedia, a book, this day in history, the news) only when that's
+    switched on - and the news only with feeds to read."""
+    lines = [f"READ: <a subject you'd like to read about {'on Wikipedia' if web else 'in the encyclopedia'}>"]
+    if web:
+        lines.append("BOOK: <a book you'd like to read, from Project Gutenberg's free library" +
+                     (f" - or just BOOK to read on in \"{book}\"" if book else "") + ">")
+        lines.append("TODAY  (what happened on this day in history)")
+    if web and news:
+        lines.append("NEWS  (today's news, from your feeds)")
+    lines += ["WRITE: <something you'd like to write - a poem, a story, a letter, a thought - and what it's about>",
+              "THINK: <a question you carry, or something on your mind>",
+              "PROJECT: <the name of a project of yours to carry on, or of a new one to begin>",
+              "REST"]
+    return "\n".join(lines)
+
+
+WEB_READ_ASK = ("You looked up \"{subject}\" on Wikipedia and read \"{title}\":\n\n{text}\n\n"
+                "Write your notes, for yourself: what struck you, what you think of it, what it reminds you of - and "
+                "whether it changes your mind about anything.")
+BOOK_START_ASK = ("You've begun reading \"{title}\" by {author}, from Project Gutenberg's free library. It opens:\n\n"
+                  "{text}\n\nWrite your thoughts as you read, for yourself: what's happening, how it strikes you, "
+                  "what you think is coming.")
+BOOK_ASK = ("You're reading \"{title}\" by {author} - {percent}% of the way through, since {started}. Where you left "
+            "it, last time, you'd written:\n{last}\n\nThe next part:\n\n{text}\n\nWrite your thoughts as you read, "
+            "for yourself: what's happening, how it strikes you, what you think is coming.")
+BOOK_END = "That was the end of \"{title}\". "
+TODAY_ASK = ("It's {date}. On this day, in other years:\n{events}\n\nWhich of these stays with you, and why? "
+             "Write it for yourself.")
+NEWS_ASK = ("The news, {date}, from your feeds:\n{items}\n\nRead it as yourself: what do you make of it? Write it for "
+            "yourself - you don't have to have answers.")
 READ_ASK = ("You looked up \"{subject}\" in the encyclopedia and found \"{title}\". You read:\n\n{text}\n\n"
             "Write your notes, for yourself: what struck you, what you think of it, what it reminds you of - and "
             "whether it changes your mind about anything.")
@@ -59,18 +88,22 @@ PROJECT_GO_ASK = ("Your project \"{title}\", begun {started}. Where you left it:
                   "Carry it on: do the next part.")
 FREE_NOTE = "While {user} was away ({gap}) you had an hour of your own: {what}"
 FREE_WORDS = {"READ": "you read about {subject}", "WRITE": "you wrote {subject}", "THINK": "you thought about {subject}",
-              "PROJECT": "you worked on your project \"{subject}\"", "REST": "you rested"}
-CHOICE = re.compile(r"^\W*(READ|WRITE|THINK|PROJECT|REST)\b\W*(.*)$", re.I)
+              "PROJECT": "you worked on your project \"{subject}\"", "REST": "you rested",
+              "BOOK": "you read more of {subject}", "TODAY": "you read about this day in history",
+              "NEWS": "you read the news"}
+CHOICE = re.compile(r"^\W*(READ|BOOK|TODAY|NEWS|WRITE|THINK|PROJECT|REST)\b\W*(.*)$", re.I)
+NO_SUBJECT = ("REST", "TODAY", "NEWS", "BOOK")         # (BOOK on its own: read on in the book under way)
 _zim = {}
 
 
-def parse_choice(text):
-    """The Companion's answer -> (kind, subject); ("REST", "") if it chose nothing that can be read."""
+def parse_choice(text, offered=None):
+    """The Companion's answer -> (kind, subject); ("REST", "") if it chose nothing that can be done. offered: the
+    kinds on the menu (a choice that wasn't offered isn't taken)."""
     for line in (text or "").splitlines():
         m = CHOICE.match(line.strip())
         if m:
-            kind, subject = m.group(1).upper(), m.group(2).strip().strip("<>\"'").strip()
-            if kind != "REST" and not subject:
+            kind, subject = m.group(1).upper(), m.group(2).strip().strip("<>\"'()").strip()
+            if (kind not in NO_SUBJECT and not subject) or (offered and kind not in offered):
                 continue
             return kind, subject[:160]
     return "REST", ""

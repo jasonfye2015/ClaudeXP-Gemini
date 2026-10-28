@@ -93,6 +93,12 @@ Four things a Companion does on its own (each can be switched off in Settings):
   chooses: **read** about something in the offline encyclopedia (Kiwix - if it hasn't got that, it opens it somewhere
   else and reads that instead), **write** something of its own, **think** through a question it carries, carry on a
   **project** across days, or **rest**. It's told about it when you're back. **Free time...** on the Self tab.
+  With **the real web** switched on (Settings; off by default), reading comes from live Wikipedia instead, and three
+  more choices appear: a **book** from Project Gutenberg's free library (downloaded once into its Books folder and read
+  a part at a time, carried on across days to the end), **this day in history**, and **the news** from feeds you list.
+  Only the words it looks up go out - nothing about it or you - and everything it reads is kept whole in its folder
+  (**Reading...** on the Self tab), so it stays readable offline. If the web can't be reached, it reads the offline
+  encyclopedia, or thinks it through instead.
 - **Beliefs.** Each night, after its reflection, it looks at the day against what it believes about itself, you and
   the world: new beliefs, stronger, weaker, revised ("I used to think..., now..."), let go - with how sure it is and
   why. The surest are in its mind. **Beliefs...** shows them and every change.

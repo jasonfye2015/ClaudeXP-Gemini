@@ -373,7 +373,12 @@ open, it has an hour of its own and chooses what to do: <b>read</b> about someth
 (Kiwix - and if the encyclopedia hasn't got it, it opens it somewhere else and reads that), <b>write</b> something of
 its own, <b>think</b> through a question it carries, carry on a <b>project</b> across days, or <b>rest</b>. It's told
 about it when you're back, and it's in its archive. <b>Free time...</b> on the Self tab shows them; its projects are
-in the Projects folder of its Self folder.</td></tr>
+in the Projects folder of its Self folder.<br><br>
+<b>The real web</b> (Settings; off by default): reading comes from live Wikipedia, and three more choices appear - a
+<b>book</b> from Project Gutenberg's free library (downloaded once into its Books folder, read a part at a time across
+days, to the end), <b>this day in history</b>, and <b>the news</b> from the feeds you list. Only the words it looks
+up go out - nothing about it or you. Everything it reads is kept whole (<b>Reading...</b> on the Self tab), so it stays
+readable offline. If the web can't be reached it reads the offline encyclopedia, or thinks it through instead.</td></tr>
 <tr><td class="k" width="32%">Beliefs</td><td>each night, after its reflection, it looks at the day against what it
 believes - about itself, you and the world - and says what's new, stronger, weaker, revised or let go, how sure it is
 and why. The ones it holds most surely are in its mind (L1, "Beliefs I Hold"). <b>Beliefs...</b> shows them all, and

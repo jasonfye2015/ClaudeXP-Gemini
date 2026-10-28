@@ -51,7 +51,7 @@ from .growth import (BARE_CHECK, DREAM_ASK, DREAM_NOTE, LETTER_ASK, LETTER_DAYS,
                      next_memory_day, parse_predictions, parse_time_sense, parse_verdicts, pick_seeds, score_time,
                      timeline, JOURNAL_ASK, MOVE_ASK, QUESTIONS, QUESTIONS_ASK, QUESTIONS_FIRST, TENSION_ASK,
                      checks, parse_question_review, questions_text)
-from . import inner
+from . import inner, web
 from .mind import CORE, KINDS, LEVELS, SUBSTRATE, TIME_LINE as TIME_STAMP_LINE, WHO_I_AM, Mind, stamp
 
 DEFAULTS = {
@@ -69,6 +69,7 @@ DEFAULTS = {
     "free_time": True, "free_minutes": 45, "free_per_day": 6, "last_free": "", "free_by_day": {}, "free_count": 0,
     "projects": [], "beliefs": True, "fading": True, "half_life": inner.HALF_LIFE, "own_rules": True,
     "rules_veto": True, "rules_proposal": None, "rules_version": 0,
+    "web_reading": False, "news_feeds": [], "book": None, "books_read": [],
 }
 FADING_NOTE = ("\n\n(Each memory is marked with how vividly you remember it now. Keep the vivid ones in detail; "
                "let the faint ones shrink to a line, or go - the archive keeps them whole either way.)")
@@ -238,6 +239,9 @@ class Companion:
         self.on_stream = lambda text: None
         self.on_changed = lambda: None
         self.on_memory_day = lambda: None                # (after each Memory Day: the window's retraining package)
+        # background(work, then): work() away from the window (it may wait on the web), then(result) back on it - the
+        # window runs work on a thread; here (and in tests) it's simply done at once
+        self.background = lambda work, then: then(work())
         self.on_name = None                            # (suggested name, accept(name)) -> the program asks the user
 
     # ---- every line goes in the raw log too (the Raw Logs tab) ----
@@ -851,30 +855,27 @@ class Companion:
         c = self.cfg
         gap = gap_text(self._away_hours())
         projects = c.get("projects") or []
+        web_on = bool(c.get("web_reading"))
+        feeds = [f.strip() for f in (c.get("news_feeds") or []) if f.strip()]
+        book = (c.get("book") or {}).get("title", "")
+        offered = {"READ", "WRITE", "THINK", "PROJECT", "REST"} | ({"BOOK", "TODAY"} if web_on else set()) | (
+            {"NEWS"} if web_on and feeds else set())
         recent = [ln for ln in self._free_log_tail().splitlines() if ln.startswith("[")][-3:]
         ask = inner.FREE_ASK.format(
-            user=self.user, gap=gap, projects=", ".join(f"\"{p['title']}\"" for p in projects[-6:]) or "none yet",
+            user=self.user, gap=gap, options=inner.free_options(web_on, book, bool(feeds)),
+            projects=", ".join(f"\"{p['title']}\"" for p in projects[-6:]) or "none yet",
             questions="; ".join(q.get("text", "") for q in (c.get("questions") or [])[:5]) or "none yet",
             recent="; ".join(r.split("] ", 1)[-1] for r in recent) or "nothing yet")
         self.on_line("system", f"{self.name} has an hour of their own...")
 
         def chosen(text, err):
-            kind, subject = inner.parse_choice("" if err else text)
+            kind, subject = inner.parse_choice("" if err else text, offered)
             if kind == "REST":
                 return finish(kind, subject, "")
-            if kind == "READ":
-                found = inner.encyclopedia(self._storage(), subject)
-                if found and found[2]:
-                    title, page, _exact = found
-                    task = inner.READ_ASK.format(subject=subject, title=title, text=page)
-                    subject = f"{subject} (\"{title}\")" if title.lower() != subject.lower() else title
-                elif found:
-                    title, page, _exact = found
-                    task = inner.WANDER_ASK.format(subject=subject, title=title, text=page)
-                    subject = f"{subject} - and, finding nothing on it, about \"{title}\" instead"
-                else:
-                    task = inner.NOT_FOUND_ASK.format(subject=subject)
-            elif kind == "WRITE":
+            if kind in ("READ", "BOOK", "TODAY", "NEWS"):              # (it may wait on the web: in the background)
+                self.background(lambda: self._reading(kind, subject, web_on, feeds), read)
+                return
+            if kind == "WRITE":
                 task = inner.WRITE_ASK.format(subject=subject)
             elif kind == "THINK":
                 task = inner.THINK_ASK.format(subject=subject)
@@ -892,18 +893,37 @@ class Companion:
                 subject = p["title"]
             self._ask_alone(task, lambda t, e: finish(kind, subject, "" if e else tidy_text(t)), max_tokens=900)
 
-        def finish(kind, subject, text):
+        def read(r):
+            if not r:                                                  # (nothing came back at all: rest)
+                return finish("REST", "", "")
+            if r.get("book") is not None or r.get("finished"):
+                if r.get("finished"):
+                    c["book"] = None
+                    c["books_read"] = (c.get("books_read") or []) + [
+                        {"title": r["book"]["title"], "author": r["book"]["author"], "finished": stamp(self.now())}]
+                else:
+                    c["book"] = r["book"]
+            self._ask_alone(r["task"], lambda t, e: finish(r["kind"], r["subject"], "" if e else tidy_text(t), r),
+                            max_tokens=900)
+
+        def finish(kind, subject, text, reading=None):
             when = stamp(self.now())
             today = self.day_key()
             c["last_free"] = when
             c["free_by_day"] = {today: (c.get("free_by_day") or {}).get(today, 0) + 1}
             c["free_count"] = int(c.get("free_count", 0)) + 1
             what = inner.FREE_WORDS[kind].format(subject=subject)
+            if reading and reading.get("finished"):
+                what += ", to the end"
             folder = self.folder / "Self"
             folder.mkdir(exist_ok=True)
             with open(folder / "Free Time.txt", "a", encoding="utf-8") as f:
                 f.write(f"[{when}] {what[4:] if what.startswith('you ') else what}\n" + (f"{text}\n" if text else "")
                         + "\n")
+            if reading and reading.get("source"):
+                self._save_reading(reading["source"], when)
+            if kind == "BOOK" and text and c.get("book"):
+                c["book"]["last_note"] = text[:700]
             if kind == "PROJECT" and text:
                 p = inner.find_project(c.get("projects") or [], subject)
                 pf = inner.project_file(self.folder, subject)
@@ -926,6 +946,110 @@ class Companion:
             self.save()
             nxt()
         self._ask_alone(ask, chosen, max_tokens=80)
+
+    def _reading(self, kind, subject, web_on, feeds):
+        """(In the background: it may wait on the web.) What it reads, and the task: {"kind", "subject", "task",
+        "source", "book", "finished"}. When the web has nothing (or isn't on): the offline encyclopedia - or, for a
+        book, today or the news, thinking it through instead. Never raises."""
+        when = self.now()
+        date = f"{when:%A} {when.day} {when:%B %Y}"
+        try:
+            if kind == "READ" and web_on:
+                found = web.wikipedia(subject)
+                if found:
+                    title, text, url = found
+                    return {"kind": "READ", "task": inner.WEB_READ_ASK.format(subject=subject, title=title, text=text),
+                            "subject": title if title.lower() == subject.lower() else f"{subject} (\"{title}\")",
+                            "source": {"what": title, "from": "Wikipedia", "url": url, "text": text}}
+            elif kind == "TODAY":
+                events = web.on_this_day(when)
+                if events:
+                    lines = "\n".join(f"- {y}: {t}" for y, t in events)
+                    return {"kind": "TODAY", "subject": "", "task": inner.TODAY_ASK.format(date=date, events=lines),
+                            "source": {"what": f"On this day, {when:%B} {when.day}", "from": "Wikipedia",
+                                       "url": f"https://en.wikipedia.org/wiki/{when:%B}_{when.day}", "text": lines}}
+            elif kind == "NEWS" and feeds:
+                items = web.news(feeds)
+                if items:
+                    lines = "\n".join(f"- {i['title']} ({i['source']})" + (f": {i['summary']}" if i["summary"] else "")
+                                      for i in items)
+                    return {"kind": "NEWS", "subject": "", "task": inner.NEWS_ASK.format(date=date, items=lines),
+                            "source": {"what": "The news", "from": ", ".join(sorted({i["source"] for i in items})),
+                                       "url": "", "text": lines}}
+            elif kind == "BOOK":
+                got = self._book(subject)
+                if got:
+                    return got
+        except Exception:
+            pass
+        if kind == "READ":                                             # (the offline encyclopedia)
+            found = inner.encyclopedia(self._storage(), subject)
+            if found and found[2]:
+                title, page, _exact = found
+                return {"kind": "READ", "task": inner.READ_ASK.format(subject=subject, title=title, text=page),
+                        "subject": f"{subject} (\"{title}\")" if title.lower() != subject.lower() else title}
+            if found:
+                title, page, _exact = found
+                return {"kind": "READ", "task": inner.WANDER_ASK.format(subject=subject, title=title, text=page),
+                        "subject": f"{subject} - and, finding nothing on it, about \"{title}\" instead"}
+            return {"kind": "READ", "task": inner.NOT_FOUND_ASK.format(subject=subject), "subject": subject}
+        topic = {"BOOK": f"the book you wanted to read{': ' + subject if subject else ''} - the library couldn't be "
+                         "reached, so think about it instead",
+                 "TODAY": f"{date}: the day it is, and what it means to you",
+                 "NEWS": "what you'd like to know about the world today, and why"}[kind]
+        return {"kind": "THINK", "task": inner.THINK_ASK.format(subject=topic), "subject": topic}
+
+    def _book(self, subject):
+        """The next part of the book under way - or of a new one, found on Project Gutenberg and kept in Self/Books
+        (downloaded once). None if there's no book to read."""
+        cur = self.cfg.get("book")
+        low = (subject or "").lower()
+        carry_on = cur and (not low or low in ("carry on", "continue", "read on") or low in cur["title"].lower()
+                            or cur["title"].lower() in low)
+        books = self.folder / "Self" / "Books"
+        if carry_on:
+            book = dict(cur)
+        else:
+            if not low:
+                return None
+            found = web.find_book(subject)
+            if not found:
+                return None
+            name = re.sub(r'[\\/:*?"<>|]+', "", f"{found['id']} {found['title']}")[:80] + ".txt"
+            path = books / name
+            if not path.exists():
+                text = web.book_text(web.get(found["url"]))
+                if len(text) < 2000:
+                    return None
+                books.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+            book = {"id": found["id"], "title": found["title"], "author": found["author"], "file": name, "pos": 0,
+                    "started": stamp(self.now())}
+        text = (books / book["file"]).read_text(encoding="utf-8")
+        part, end = web.next_part(text, int(book.get("pos") or 0))
+        if not part:
+            return None
+        percent = int(100 * int(book.get("pos") or 0) / max(1, len(text)))
+        task = (inner.BOOK_START_ASK.format(title=book["title"], author=book["author"], text=part) if not book.get("pos")
+                else inner.BOOK_ASK.format(title=book["title"], author=book["author"], percent=percent,
+                                           started=book["started"][:10], last=book.get("last_note") or "(nothing yet)",
+                                           text=part))
+        finished = end >= len(text)
+        if finished:
+            task += "\n\n(" + inner.BOOK_END.format(title=book["title"]).strip() + ")"
+        return {"kind": "BOOK", "subject": f"\"{book['title']}\"", "task": task, "finished": finished,
+                "book": dict(book, pos=end, length=len(text)),
+                "source": {"what": f"{book['title']} by {book['author']}, from {percent}%", "from": "Project Gutenberg",
+                           "url": f"https://www.gutenberg.org/ebooks/{book['id']}", "text": part}}
+
+    def _save_reading(self, source, when):
+        """What it read, kept whole in Self/Reading.txt - readable offline, and part of its archive."""
+        try:
+            with open(self.folder / "Self" / "Reading.txt", "a", encoding="utf-8") as f:
+                f.write(f"[{when}] {source['what']} - {source['from']}" + (f" - {source['url']}" if source.get("url")
+                                                                           else "") + f"\n{source['text']}\n\n")
+        except OSError:
+            pass
 
     def _free_log_tail(self):
         f = self.folder / "Self" / "Free Time.txt"

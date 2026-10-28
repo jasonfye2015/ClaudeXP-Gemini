@@ -102,6 +102,27 @@ def model_list():
 
 
 # ---- small pieces -------------------------------------------------------------------------------------------------
+class Background(QObject):
+    """A Companion's background(work, then): work() on a thread of its own (it may wait on the web), then(result)
+    back on the window's thread."""
+    back = Signal(object)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.back.connect(lambda fn: fn())
+
+    def run(self, work, then):
+        import threading
+
+        def go():
+            try:
+                result = work()
+            except Exception:
+                result = None
+            self.back.emit(lambda: then(result))
+        threading.Thread(target=go, name="soulsong-background", daemon=True).start()
+
+
 class SessionGlow(QWidget):
     """A soft glow along the window's edges, breathing, while a guided session or an Interlink runs: blue - or, with
     two Companions, the colour of whichever one is thinking or speaking (blue the first, red the second). Paused: dim
@@ -310,6 +331,7 @@ class SoulAndSong(QWidget):
         from .interlink import Lane
         self.lane = Lane(self.brain, on_active=self._active)        # (the open Companion's turn on its model)
         self.hand = self.lane.handle(BLUE, lambda: self.comp.name if self.comp else "")
+        self.later = Background(self)        # (free time's reading: the web, away from the window)
         self.comp2 = None                    # Interlink: a second Companion, red
         self.brain2 = self.lane2 = self.hand2 = None
         self.comp2_ready = False
@@ -529,9 +551,14 @@ class SoulAndSong(QWidget):
         rows["Dreams"].setText(f"{cfg.get('dream_count', 0)} dreamt" + ("" if cfg.get("dreams", True) else " (off)"))
         today_free = (cfg.get("free_by_day") or {}).get(c.day_key(), 0)
         projects = cfg.get("projects") or []
+        book = cfg.get("book") or {}
         rows["Free time"].setText((f"{cfg.get('free_count', 0)} hours of their own ({today_free} today)"
                                    + (f" - {len(projects)} project{'s' if len(projects) != 1 else ''}" if projects
-                                      else "")) if cfg.get("free_time", True) else "off")
+                                      else "")
+                                   + (f" - reading \"{book['title']}\" ({100 * book.get('pos', 0) // max(1, book.get('length') or 1)}%)"
+                                      if book.get("title") else "")
+                                   + (" - reads the real web" if cfg.get("web_reading") else ""))
+                                  if cfg.get("free_time", True) else "off")
         from . import inner
         held = inner.Beliefs(c.folder)
         week = (c.now() - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -720,6 +747,11 @@ class SoulAndSong(QWidget):
                     "Own Rules.txt", "own rules", "The rules they write for themselves - how they choose to be. On "
                     "Memory Day they may amend them; a change waits for you to accept it (Settings). Every version "
                     "is kept.", "None yet: they write their first on Memory Day (or ask them now).")),
+                ("Reading...", lambda: self._file_view(
+                    "Reading.txt", "reading", "Everything they've read in their free time, kept whole with where it "
+                    "came from - the encyclopedia, Wikipedia, the book they're reading (all of it is in their Books "
+                    "folder), this day in history, the news - so it stays readable offline.",
+                    "Nothing read yet (or only the offline encyclopedia: its pages aren't copied).")),
                 ("Ask about their rules", self._ask_rules)):
             b = QPushButton(label)
             b.clicked.connect(slot)
@@ -1235,6 +1267,7 @@ class SoulAndSong(QWidget):
         from . import hardware
         from .interlink import Lane
         comp = C.Companion(folder, None)
+        comp.background = self.later.run
         model = find(comp.cfg.get("model")) if comp.cfg.get("model") else None
         if model is None:
             self._line("system", f"{comp.name}'s model isn't here - give them one in their Settings first.")
@@ -2060,6 +2093,17 @@ class SoulAndSong(QWidget):
         self.s_free_minutes.setRange(15, 600)
         self.s_free_minutes.setSingleStep(15)
         self.s_free_minutes.setSuffix(" minutes away")
+        self.s_web = QCheckBox("Let them read the real web in their free time: Wikipedia, Project Gutenberg's "
+                               "books, this day in history")
+        self.s_web.setToolTip("Only the words they look up go out - nothing about them or you. What they read is "
+                              "saved in their folder (the Self tab's Reading...), so it stays readable offline. Off: "
+                              "the offline encyclopedia only.")
+        self.s_feeds = QPlainTextEdit()
+        self.s_feeds.setPlaceholderText("News feeds they may read, one address a line (RSS or Atom), for example:\n"
+                                        "https://feeds.bbci.co.uk/news/world/rss.xml\n"
+                                        "https://feeds.npr.org/1001/rss.xml")
+        self.s_feeds.setMaximumHeight(68)
+        self.s_feeds.setToolTip("Empty: no news. With the real web on, they may choose to read these.")
         self.s_beliefs = QCheckBox("Keep a record of what they believe, looked at each night")
         self.s_fading = QCheckBox("Memories fade with time unless they're remembered (nothing is deleted)")
         self.s_half_life = QSpinBox()
@@ -2097,6 +2141,8 @@ class SoulAndSong(QWidget):
         f.addRow("A dream at most every:", self.s_dream_hours)
         f.addRow(self.s_free)
         f.addRow("An hour of their own after:", self.s_free_minutes)
+        f.addRow(self.s_web)
+        f.addRow("News feeds:", self.s_feeds)
         f.addRow(self.s_beliefs)
         f.addRow(self.s_fading)
         f.addRow("A memory fades to half in:", self.s_half_life)
@@ -2203,6 +2249,7 @@ class SoulAndSong(QWidget):
         if self.session is not None:
             self.session.stop()
         self.comp = C.Companion(folder, self.hand)
+        self.comp.background = self.later.run
         self.comp.on_line = self._line
         self.comp.on_raw = lambda _kind, c=self.comp: self._raw_logged(c)
         self.comp.on_stream = lambda t: self._typing(self.comp, "writing", t)
@@ -2499,6 +2546,8 @@ class SoulAndSong(QWidget):
         self.s_dream_hours.setValue(int(c.get("dream_hours", 3)))
         self.s_free.setChecked(bool(c.get("free_time", True)))
         self.s_free_minutes.setValue(int(c.get("free_minutes", 45)))
+        self.s_web.setChecked(bool(c.get("web_reading")))
+        self.s_feeds.setPlainText("\n".join(c.get("news_feeds") or []))
         self.s_beliefs.setChecked(bool(c.get("beliefs", True)))
         self.s_fading.setChecked(bool(c.get("fading", True)))
         self.s_half_life.setValue(int(c.get("half_life", 21)))
@@ -2575,6 +2624,8 @@ class SoulAndSong(QWidget):
                  recall=self.s_recall.isChecked(), think=self.s_think.isChecked(),
                  dreams=self.s_dreams.isChecked(), dream_hours=self.s_dream_hours.value(),
                  free_time=self.s_free.isChecked(), free_minutes=self.s_free_minutes.value(),
+                 web_reading=self.s_web.isChecked(),
+                 news_feeds=[ln.strip() for ln in self.s_feeds.toPlainText().splitlines() if ln.strip()],
                  beliefs=self.s_beliefs.isChecked(), fading=self.s_fading.isChecked(),
                  half_life=self.s_half_life.value(), own_rules=self.s_rules.isChecked(),
                  rules_veto=self.s_veto.isChecked(),

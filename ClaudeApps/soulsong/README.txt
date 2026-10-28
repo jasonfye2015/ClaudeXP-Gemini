@@ -119,6 +119,13 @@ Its inner life (inner.py; a switch for each in Settings):
                if its title shares a word with the subject, else it opens the encyclopedia somewhere else), WRITE,
                THINK, PROJECT (carried on across days, Self\Projects) or REST. Self\Free Time.txt, the archive
                (kind "Free time"), and a notice for when the user is back.
+               The real web (web.py; web_reading, off by default): READ from live Wikipedia (search, then the
+               article's plain text), BOOK from Project Gutenberg (Gutendex, or Gutenberg's own OPDS catalogue;
+               the book saved once in Self\Books, read ~3,500 characters at a time, cfg "book" keeps the place and
+               its last note), TODAY (Wikipedia's On this day, selected events), NEWS (the RSS/Atom feeds in
+               news_feeds). Fetching runs on a thread (Companion.background; the window's Background bridge);
+               everything read goes whole into Self\Reading.txt. Only the words looked up go out. No connection:
+               the offline encyclopedia, or THINK about it.
   Beliefs      each night after the reflection: NEW / STRONGER / WEAKER / REVISE / DROP / TENSION lines, with how sure
                (0-100) and why; Self\beliefs.json keeps every belief's history (Self\Beliefs.txt the readable copy),
                the surest are in L1 ("Beliefs I Hold"), a TENSION is filed as a reflection.
