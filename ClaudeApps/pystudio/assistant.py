@@ -35,9 +35,11 @@ class _Stream(QThread):
     chunk = Signal(str)
     failed = Signal(str)
 
-    def __init__(self, model, messages):
+    def __init__(self, model, messages, max_tokens=3000):
         super().__init__()
         self.model, self.messages = model, messages
+        self.max_tokens = max_tokens
+        self.finish = None                     # why the model stopped: "stop", or "length" when it ran out of room
         self.cancelled = False
         self.tokens, self.tps = 0, 0.0
         self._resp = None
@@ -54,7 +56,7 @@ class _Stream(QThread):
         try:
             from claudecore.ai import ai_models, llm_server
             body = {"model": self.model, "messages": self.messages, "stream": True, "temperature": 0.3,
-                    "cache_prompt": True, "max_tokens": 3000, "chat_template_kwargs": {"enable_thinking": False}}
+                    "cache_prompt": True, "max_tokens": self.max_tokens, "chat_template_kwargs": {"enable_thinking": False}}
             begun = time.time()
             self._resp = llm_server.post("/v1/chat/completions", body, stream=True)
             for raw in self._resp:
@@ -75,6 +77,8 @@ class _Stream(QThread):
                     self.tokens = int(timings.get("predicted_n") or 0)
                     self.tps = float(timings.get("predicted_per_second") or 0)
                 for choice in obj.get("choices") or []:
+                    if choice.get("finish_reason"):
+                        self.finish = choice["finish_reason"]
                     text = (choice.get("delta") or {}).get("content")
                     if text:
                         self.chunk.emit(text)

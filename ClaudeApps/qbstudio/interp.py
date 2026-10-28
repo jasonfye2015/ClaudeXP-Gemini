@@ -324,7 +324,8 @@ class Program:
 
 
 DEFAULT_SUFFIX = {"DEFINT": "%", "DEFLNG": "&", "DEFSNG": "!", "DEFDBL": "#", "DEFSTR": "$"}
-TYPE_SUFFIX = {"INTEGER": "%", "LONG": "&", "SINGLE": "!", "DOUBLE": "#", "STRING": "$"}
+TYPE_SUFFIX = {"INTEGER": "%", "LONG": "&", "SINGLE": "!", "DOUBLE": "#", "STRING": "$",
+               "BOOLEAN": "%", "_BYTE": "%", "_UNSIGNED": "%"}   # (QB64's names, which AI models often write)
 
 
 def compile_program(source):
@@ -2562,6 +2563,8 @@ BUILTINS = {
     "ENVIRON$": (lambda vm, s: os.environ.get(_need_str(s), "") if isinstance(s, str) else "", 1, 1, "s"),
     "COMMAND$": (lambda vm: "", 0, 0, "s"),
     "_PI": (lambda vm: math.pi, 0, 0, "n"),
+    "TRUE": (lambda vm: -1, 0, 0, "n"),            # (not QBasic's, but programs - and AI models - lean on them)
+    "FALSE": (lambda vm: 0, 0, 0, "n"),
 }
 
 

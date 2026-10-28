@@ -47,6 +47,11 @@ QUICK = [("Explain", "Explain what this program does, step by step, in plain lan
 CODE = re.compile(r"```[\w+-]*[ \t]*\r?\n(.*?)```", re.S)
 HISTORY_TURNS = 6
 SCREEN_LIMIT = 1500
+ANSWER_TOKENS = 8000            # room for a long program (the models' context is 16k)
+CONTINUES = 3                   # an answer cut off at that length: ask for the rest, up to this many times
+PLAN = ("Plan how to build this as 3 to 6 small steps. Step 1 makes a small program that already runs; each later "
+        "step adds one thing to it, and the program must still run after every step. Answer with ONLY a numbered "
+        "list, one short line per step - no code yet.")
 
 
 def code_blocks(text):
@@ -105,7 +110,11 @@ class VibePanel(QWidget):
         self.tries.setValue(4)
         self.tries.setPrefix("fix tries ")
         self.tries.setToolTip("How many times the AI may fix its own mistakes before it stops and asks you")
+        self.stepwise = QCheckBox("Step by step")
+        self.stepwise.setToolTip("For bigger programs (a puzzle game, an adventure): the AI plans a few small steps "
+                                 "and builds them one at a time, running and fixing after each")
         opts.addWidget(self.target, 1)
+        opts.addWidget(self.stepwise)
         opts.addWidget(self.autorun)
         opts.addWidget(self.tries)
         root.addLayout(opts)
@@ -262,8 +271,8 @@ class VibePanel(QWidget):
             sent += "\n\nThe program now:\n```qbasic\n" + ed.toPlainText() + "\n```"
         messages = [{"role": "system", "content": SYSTEM}]
         for role, body in self.history[-HISTORY_TURNS:]:
-            if role in ("user", "assistant"):
-                messages.append({"role": role, "content": body})
+            if role in ("user", "assistant"):              # (earlier versions of the program aren't sent again:
+                messages.append({"role": role, "content": CODE.sub(_EARLIER, body)})   # only the current one)
         messages.append({"role": "user", "content": sent})
         if not quiet:
             self.history.append(("user", shown or text))
@@ -272,7 +281,7 @@ class VibePanel(QWidget):
         self.reply = ""
         self.note.setText("Writing... (the first answer can take a while if the model has to load)")
         from pystudio.assistant import _Stream
-        self.worker = _Stream(model, messages)
+        self.worker = _Stream(model, messages, max_tokens=ANSWER_TOKENS)
         self.worker.chunk.connect(self._chunk)
         self.worker.failed.connect(lambda m: self.note.setText(f"The AI could not answer: {m}"))
         self.worker.finished.connect(lambda: self._done(then))
@@ -302,11 +311,36 @@ class VibePanel(QWidget):
                     self.note.setText("No answer came back.")
             worker.deleteLater()
         self._render()
+        if then is not None and answered and self.job is not None and \
+                (worker.finish == "length" or full.count("```") % 2 == 1):
+            if self._carry_on(full, then):                 # cut off mid-program: ask for the rest
+                self._update_buttons()
+                return
         if then is not None and answered:
-            then(full)
+            partial = self.job.pop("partial", "") if self.job is not None else ""
+            then(_join(partial, full) if partial else full)
         elif then is not None:
             self.job = None
         self._update_buttons()
+
+    def _carry_on(self, full, then):
+        """The answer stopped at the length limit inside the program: ask for the rest, to be joined on."""
+        job = self.job
+        job["continues"] = job.get("continues", 0) + 1
+        if job["continues"] > CONTINUES:
+            return False
+        so_far = job.get("partial", "")
+        text = _join(so_far, full) if so_far else full
+        lines = text.rstrip("\n").split("\n")
+        if not text.endswith("\n") and len(lines) > 1:
+            lines = lines[:-1]                              # (the half-written last line is written again)
+        job["partial"] = "\n".join(lines) + "\n"
+        last = next((ln for ln in reversed(lines) if ln.strip() and not ln.startswith("```")), "")
+        self.history.append(("system", "The answer was too long and got cut off - asking for the rest..."))
+        self._send(f"Your answer was cut off after this line:\n{last}\nContinue the program from the very next line - "
+                   "don't repeat anything - inside a ```qbasic block, and finish it.", with_code=False,
+                   then=then, quiet=True)
+        return True
 
     def apply_last(self):
         code = self._last_code()
@@ -319,14 +353,44 @@ class VibePanel(QWidget):
             not self.studio.editor().toPlainText().strip()
         self.job = {"tries": 0, "new": new, "request": text}
         self.status.emit("Vibe coding...")
+        if self.stepwise.isChecked() and shown is None:
+            self.job["steps"] = []
+            self._send(f"{text}\n\n{PLAN}", with_code=not new, then=self._planned, shown=text)
+            return
         prompt = text if not new else text + "\n\nWrite it as a new, complete program."
         self._send(prompt, with_code=not new, then=self._written, shown=shown or text)
+
+    def _planned(self, answer):
+        job = self.job
+        if job is None:
+            return
+        steps = [m.group(2).strip() for m in re.finditer(r"^\s*(\d+)[.):]\s*(.+)$", answer, re.M)][:8]
+        if not steps:                                        # no plan came back: just build it in one go
+            job.pop("steps", None)
+            prompt = job["request"] + ("\n\nWrite it as a new, complete program." if job["new"] else "")
+            self._send(prompt, with_code=not job["new"], then=self._written, quiet=True)
+            return
+        job["steps"], job["step"] = steps, 0
+        self._do_step()
+
+    def _do_step(self):
+        job = self.job
+        k, steps = job["step"], job["steps"]
+        job["tries"], job["continues"] = 0, 0
+        prompt = f"Step {k + 1} of {len(steps)}: {steps[k]}\n(The whole program will be: {job['request']})\n"
+        prompt += ("Write it as a new, complete program that runs." if job["new"] else
+                   "Change the program to add this step, keeping everything that works, and give the whole program.")
+        self.history.append(("system", f"Step {k + 1} of {len(steps)}: {steps[k]}"))
+        self._send(prompt, with_code=not job["new"], then=self._written, quiet=True)
 
     def _written(self, answer):
         job = self.job
         if job is None:
             return
         blocks = code_blocks(answer)
+        if not blocks and job.get("steps"):
+            self._finish("The AI says the program already does this step.")     # (on to the next one)
+            return
         if not blocks:
             self.history.append(("system", "No program came back - try saying it another way."))
             self.job = None
@@ -387,12 +451,29 @@ class VibePanel(QWidget):
         self._send(message, with_code=True, then=self._written, quiet=True)
 
     def _finish(self, message, ok=True):
+        job = self.job
+        if ok and job is not None and job.get("steps") and job["step"] < len(job["steps"]) - 1:
+            self.history.append(("system", f"\u2714 Step {job['step'] + 1} works."))
+            job["step"] += 1
+            self._render()
+            self._do_step()                                   # on to the next step
+            return
         self.job = None
         self.history.append(("system", ("✔ " if ok else "⚠ ") + message))
         self.note.setText(message)
         self.status.emit(message[:80])
         self._render()
         self._update_buttons()
+
+
+_EARLIER = "```qbasic\n' (an earlier version of the program - the current one is shown in full below)\n```"
+
+
+def _join(partial, more):
+    """An answer cut off mid-program and the rest of it: the rest's opening ```qbasic dropped, joined on."""
+    m = re.match(r"\s*```[\w+-]*[ \t]*\r?\n", more)
+    rest = more[m.end():] if m else more
+    return partial.rstrip("\n") + "\n" + rest
 
 
 def _shorten_code(text):
