@@ -91,10 +91,14 @@ set QT_QPA_PLATFORM=offscreen
 set QT_QPA_FONTDIR=C:\Windows\Fonts
 ```
 
-With those, a computer or a program can be imported and driven from a script with no window. Claude7 and Claude11
-were tested that way (every program launched offscreen). **Never run tests against the real `data` folders** of the
-computers, and never against `ClaudeApps\kithylinai\Data`: Kithylin AI honours a `KITHYLINAI_DATA` environment
-variable for a scratch folder.
+With those, a computer or a program can be imported and driven from a script with no window. **Never run tests
+against the real `data` folders** of the computers, and never against `ClaudeApps\kithylinai\Data`: Kithylin AI
+honours a `KITHYLINAI_DATA` environment variable for a scratch folder.
+
+The **`Tests`** folder does all of that for you: **Run All Tests.bat** (or `python Tests\run.py`) checks the code,
+the QBasic interpreter, Soul and Song, the screen savers, the Persona Styles, backups and the Manual in about two
+minutes, and `--slow` boots each computer in a sandbox and opens its programs. Nothing it does touches your real
+data. Run it after changing something; `Tests\README.md` says what each file checks and how to add a test.
 
 ## Background threads
 

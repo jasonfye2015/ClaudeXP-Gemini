@@ -31,6 +31,7 @@ Claude Timeline/
 ├── ClaudeApps/       ClaudeAI, CopilotAI, Copilot Voice, Image Creator, Python Studio, QBasic Studio, Kithylin AI,
 │                     Soul and Song, the Manual viewer, the CES .scr build, selfmodel (training)
 ├── Residents/        the cast (see below)
+├── Tests/            the test suite: Run All Tests.bat, or python Tests\run.py (--slow boots each computer)
 ├── Profile/          the user's identity across the eras
 ├── Local Storage/    the shared "external drive": LLM Models, media, ROMs, WADs, Kiwix, website rips
 ├── Python/           one portable Python runtime for everything

@@ -43,6 +43,7 @@ Claude Timeline\
 ├── ClaudeApps\               ClaudeAI, Kithylin AI, Soul and Song, the Copilot programs, Python Studio, QBasic
 │                             Studio, the Claude Entertainment System .scr, selfmodel (training)
 ├── Residents\                the cast: one folder per character, with a file for each era they lived in
+├── Tests\                    Run All Tests.bat: checks that everything still works (see under the hood)
 ├── Profile\                  who you are in the Timeline, your codes, the backup and self-check settings
 ├── Persona Styles\           frozen versions of how the residents are prompted (chosen at Load and Format)
 ├── Local Storage\            the "external drive": models, media, ROMs, WADs, TV, website rips, your text logs

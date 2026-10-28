@@ -29,3 +29,5 @@ ClaudeApps/kithylinai/Data/
 ClaudeApps/cesscr/.venv-build/
 ClaudeApps/cesscr/build/
 ClaudeApps/cesscr/dist/
+# The tests: the last run's report
+Tests/last run.txt
