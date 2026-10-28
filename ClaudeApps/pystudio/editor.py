@@ -1,11 +1,12 @@
 """The code editor widget: line numbers, auto-indent, bracket pairing, lint markers and completion popup."""
 import re
 
-from PySide6.QtCore import QObject, QPoint, QRect, QSize, Qt, QThread, QTimer, Signal
+from PySide6.QtCore import QObject, QPoint, QRect, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QTextBlockUserData, QTextCursor, QTextFormat
 from PySide6.QtWidgets import QListWidget, QListWidgetItem, QPlainTextEdit, QTextEdit, QWidget
 
 from .highlight import PythonHighlighter
+from .threads import Kept
 
 PAIRS = {"(": ")", "[": "]", "{": "}", '"': '"', "'": "'"}
 CLOSERS = set(PAIRS.values())
@@ -60,7 +61,7 @@ class _Completer(QObject):
         thread.start()
 
 
-class _JediThread(QThread):
+class _JediThread(Kept):
     def __init__(self, owner, serial, code, line, col, path):
         super().__init__()
         self.owner, self.serial, self.code, self.line, self.col, self.path = owner, serial, code, line, col, path

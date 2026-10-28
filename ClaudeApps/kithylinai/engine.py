@@ -211,8 +211,23 @@ class _Server:
 _server = _Server()
 atexit.register(_server.stop)
 
+# A QThread let go of while it still runs aborts the whole program ("QThread: Destroyed while thread is still
+# running") - a stream stopped while the model is still reading the prompt, or a window closed mid-load. Threads are
+# kept here from start until they've really finished, whoever lets go of them first.
+_running = set()
 
-class _Loader(QThread):
+
+class _Kept(QThread):
+    def start(self, *args):
+        _running.add(self)
+        self.finished.connect(self._release)
+        super().start(*args)
+
+    def _release(self):
+        _running.discard(self)
+
+
+class _Loader(_Kept):
     finished_with = Signal(str, float)      # error ("" if fine), seconds
 
     def __init__(self, model, engine_choice, context, status_cb, shared=True):
@@ -234,7 +249,7 @@ class _Loader(QThread):
             self.finished_with.emit(str(e) or e.__class__.__name__, time.monotonic() - t)
 
 
-class _Streamer(QThread):
+class _Streamer(_Kept):
     chunk = Signal(str)
     thinking = Signal(str)          # a thinking model's reasoning so far (before its answer)
     done = Signal(str, str)
@@ -244,6 +259,7 @@ class _Streamer(QThread):
         self.url, self.body = url, body
         self._stop = False
         self._resp = None
+        self.text = ""                  # the reply so far
 
     def stop(self):
         self._stop = True
@@ -275,6 +291,7 @@ class _Streamer(QThread):
                 piece = delta.get("content")
                 if piece:
                     text += piece
+                    self.text = text
                     self.chunk.emit(text)
                 thought = delta.get("reasoning_content")
                 if thought:
@@ -359,7 +376,7 @@ class Engine(QObject):
         if not self.ready or self.model is None:
             self.done.emit("", "no model loaded")
             return
-        self.stop()
+        self.stop(quiet=True)
         if self.shared and self.model.key.startswith("timeline:") and hosted():
             from claudecore.ai import llm_server
             url, name = llm_server.ensure_started(), self.model.key.split(":", 1)[1]
@@ -371,23 +388,41 @@ class Engine(QObject):
             body["stop"] = list(self.model.info["stop"])
         body.update(extra or {})
         self._streamer = _Streamer(url, body)
-        self._streamer.chunk.connect(self.chunk)
-        self._streamer.thinking.connect(self.thinking)
+        self._streamer.chunk.connect(self._chunk)
+        self._streamer.thinking.connect(self._thinking)
         self._streamer.done.connect(self._done)
         self._streamer.start()
 
+    # (a stream that was stopped can still be finishing - its last words aren't for the reply under way now)
+    def _mine(self):
+        return self._streamer is not None and self.sender() is self._streamer
+
+    def _chunk(self, text):
+        if self._mine():
+            self.chunk.emit(text)
+
+    def _thinking(self, text):
+        if self._mine():
+            self.thinking.emit(text)
+
     def _done(self, text, err):
+        if not self._mine():
+            return
         self._streamer = None
         self.done.emit(text, err)
 
     def busy(self):
         return self._streamer is not None and self._streamer.isRunning()
 
-    def stop(self):
-        if self._streamer is not None:
-            self._streamer.stop()
-            self._streamer.wait(3000)
-            self._streamer = None
+    def stop(self, quiet=False):
+        """The reply under way stops, and done says so ("stopped") right away - unless quiet (a new reply replaces
+        it: whoever asked has already moved on)."""
+        streamer, self._streamer = self._streamer, None
+        if streamer is not None:
+            streamer.stop()
+            streamer.wait(3000)                 # (still reading the prompt: it finishes on its own, kept till then)
+            if not quiet:
+                self.done.emit(streamer.text, "stopped")
 
     def shutdown(self):
         self.stop()

@@ -3,10 +3,12 @@ import json
 import re
 import time
 
-from PySide6.QtCore import QThread, QTimer, Signal, Qt
+from PySide6.QtCore import QTimer, Signal, Qt
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QHBoxLayout, QLabel, QMessageBox, QPlainTextEdit, QPushButton,
                                QTextBrowser, QToolButton, QVBoxLayout, QWidget)
+
+from .threads import Kept
 
 SYSTEM = ("You are the AI Helper inside Copilot Python Studio, an offline Python editor on a Windows PC with no "
           "internet. Programs run on Python 3.12. Installed packages include numpy, Pillow, pygame, pymunk, pytmx, "
@@ -31,7 +33,7 @@ def code_blocks(text):
     return [m.group(1).rstrip("\n") + "\n" for m in CODE.finditer(text)]
 
 
-class _Stream(QThread):
+class _Stream(Kept):
     chunk = Signal(str)
     failed = Signal(str)
 

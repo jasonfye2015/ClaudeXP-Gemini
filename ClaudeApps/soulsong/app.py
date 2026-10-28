@@ -53,6 +53,7 @@ class EngineBrain(QObject):
     def ask(self, messages, done, chunk=None, max_tokens=700, temperature=0.8):
         """A thinking model (Gemma 4, Qwen3...) spends its tokens thinking before it answers: with thinking off
         it answers straight away; with it on, it gets room to think (and its thinking is shown as it comes)."""
+        self.engine.stop()                  # (one still under way hears "stopped" - before this one takes its place)
         self._job = (done, chunk)
         extra = None
         model = self.engine.model

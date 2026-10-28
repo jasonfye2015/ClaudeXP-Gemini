@@ -1,6 +1,8 @@
 """Ghost-text autocomplete for Copilot Python Studio: a small local coding model suggests the next few lines
 (fill-in-the-middle). Press Tab to accept; any other key dismisses it."""
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, Signal
+
+from .threads import Kept
 
 FIM = "<|fim_prefix|>{}<|fim_suffix|>{}<|fim_middle|>"
 STOPS = ["<|fim_pad|>", "<|endoftext|>", "<|file_sep|>", "<|fim_prefix|>", "<|fim_suffix|>", "<|fim_middle|>", "\n\n\n"]
@@ -41,7 +43,7 @@ def clean(text, before, after):
     return "\n".join(lines[:4])
 
 
-class _Ask(QThread):
+class _Ask(Kept):
     done = Signal(int, str, int)
 
     def __init__(self, serial, model, before, after, position):
