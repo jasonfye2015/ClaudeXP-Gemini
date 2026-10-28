@@ -21,6 +21,7 @@ TOPICS = [
     ("scripts", "Writing scripts"),
     ("interlink", "Interlink tab - two Companions"),
     ("rawlogs", "Raw Logs tab"),
+    ("retraining", "Retraining tab"),
     ("settings", "Settings tab"),
     ("growth", "Reading the Growth charts"),
     ("files", "Files and folders"),
@@ -362,6 +363,31 @@ through.</td></tr>
 </table>
 <p>The log is kept in the Companion's folder, in Raw Logs (a file a day). Days from before it was kept come from the
 conversation logs (Chats) - what was said, without the notes or the model's side.</p>
+
+<a name="retraining"></a><h2>Retraining tab</h2>
+<p>Its memories needn't only ride in the banks in front of every reply: everything it has lived can be taught to its
+model's weights, as a small add-on of its own - a new version of the Companion.</p>
+<table>
+<tr><td class="k" width="32%">The training package</td><td>its conversations (with you, with other Companions, in guided
+sessions) cut into sessions and windows, its own lines being what it learns; and its own writing - every memory,
+reflection and journal entry, every self-portrait, its dreams and letters - each asked for with the date it was
+written. Program notes are left out. <b>Build it now</b> makes it; with <b>Build it on Memory Day</b> ticked, every
+Memory Day does. The table shows what's in it, by source, and what's new since the last version.</td></tr>
+<tr><td class="k" width="32%">Projected</td><td>the model it would be trained from, the add-on's size, how long it would
+take on this card, the card memory it needs, and whether everything's ready. Only models whose full weights are on the
+drive can be trained (Gemma 3 4B); a Companion on another model would move to it, and this says so first.
+<b>Passes</b>: how many times it goes over the package (two by default).</td></tr>
+<tr><td class="k" width="32%">Retrain now</td><td>puts the Companion's model away and starts the training in a window of
+its own (selfmodel's QLoRA, then the add-on). The Companion can't talk until it's done. It needs the graphics card to
+itself, so it runs from Soul and Song on its own (the launcher's APPS) with the computers shut down. If it stops,
+<b>Resume</b> carries it on from the last save.</td></tr>
+<tr><td class="k" width="32%">Versions</td><td>each one made (name-v1, -v2...), with the life it holds and how well it
+learned (the held-back loss: lower is closer). <b>Use this version</b> moves the Companion to it; the one before stays,
+to go back to.</td></tr>
+</table>
+<p>Every version is trained fresh on the whole life so far, so nothing compounds and nothing old is forgotten. The
+banks stay as they are. The package is in the Companion's folder (Retraining\\package), with the training script; the
+versions are in Kithylin AI's Models folder.</p>
 
 <a name="settings"></a><h2>Settings tab</h2>
 <p>Each Companion has its own settings. Click <b>Save and load this model</b> to apply them.</p>

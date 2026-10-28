@@ -113,6 +113,17 @@ them; Companion._raw writes them). The tab shows any day from the first, colour 
 filters (conversation, guide, notes, memories, the model's raw side), 300 entries a page, search across every day,
 and today's page following along. Days from before the raw log was kept come from the conversation logs (Chats).
 
+Retraining (the Retraining tab, retrain.py): a Companion's life taught to its model's weights. The package
+(Retraining\package: train.jsonl, val.jsonl, stats.json, in ClaudeApps\selfmodel's format) holds its conversations
+cut into sessions and ~900-token windows, and its own writing (recall.jsonl's memories, reflections and journal, the
+self-portraits, dreams and letters) asked for with their dates; Memory Day builds it (if ticked) or Build it now.
+The tab shows it by source, projects the run (base, add-on size, time at this card's measured speed, card memory,
+disk) and checks it's ready; Retrain now writes Retraining\<name>-vN.bat (selfmodel.train, then make_model --lora-on
+--companion) and starts it in its own window, after putting the Companion's model away. Only bases with full weights
+on the drive train (Gemma 3 4B in selfmodel\base); a Companion on another model would move to it. Versions land in
+Kithylin AI's Models folder ("<name> vN (Soul and Song)"); Use this version moves the Companion. Training needs the
+card to itself: it runs from Soul and Song on its own (the launcher's APPS).
+
 Interlink (the Interlink tab): a second Companion brought in, and the two talk together - led by a script (Guided
 together), freely for a set number of messages (Open conversation), or with the user as a group (Group chat). The
 open Companion is blue, the second red (their words, their Status panels, and the window's glow while either is

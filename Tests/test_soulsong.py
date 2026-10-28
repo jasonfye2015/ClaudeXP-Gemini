@@ -200,10 +200,10 @@ def test_the_window():
     caught = support.catch_errors()
     from PySide6.QtCore import QTimer
     import soulsong.app as A
-    from soulsong import automation, recall
+    from soulsong import automation
+    support.no_engines()                              # (before the window: it opens the Companion, and its model)
     base = support.scratch("window companions")
     A.companions = paths.companions = automation.companions = I.companions = lambda: base
-    recall.Embedder.start = lambda self: setattr(self, "state", "unavailable")    # (no embedding server)
     folder = base / "companion-test"
     C.create(folder, TEMPLATES, "Tester", "Lyra")
     cfg = json.loads((folder / "companion.json").read_text(encoding="utf-8"))
@@ -253,8 +253,134 @@ def test_the_window():
     assert json.loads((folder / "companion.json").read_text(encoding="utf-8"))["memory_mode"] == "classic"
     w.refresh_panel()
     assert "7:7:7" in w.banks_box.title()
+    # Retraining: the package from what was just said, and too little yet to train on
+    w.tabs.setCurrentWidget(w.rt_page)
+    support.pump(0.2)
+    assert "No package yet" in w.rt_built.text(), w.rt_built.text()
+    w._retrain_build()
+    assert "Built" in w.rt_built.text() and "Talking with you" in w.rt_sources.text(), w.rt_sources.text()[:200]
+    assert not w.rt_start.isEnabled() and "too little yet" in w.rt_checks.text(), w.rt_checks.text()[:300]
     w.shutdown()
     support.no_errors(caught, "in the window")
+
+
+# ---- Retraining ----------------------------------------------------------------------------------------------------
+def _lived(name, model="timeline:gemma4-12b"):
+    """A Companion with three days behind them: talk in two sessions a day, a guided session, another Companion,
+    memories, a reflection, a journal entry, a self-portrait, a dream and a letter."""
+    folder = support.scratch("retraining", name)
+    C.create(folder, TEMPLATES, "Tester", name, "", "test")
+    c = C.Companion(folder, None, recall=False)
+    c.cfg.update(first_boot_done=True, model=model, model_title=model.split(":")[-1])
+    c.save()
+    (folder / "Raw Logs").mkdir(exist_ok=True)
+    for day in ("2026-10-26", "2026-10-27", "2026-10-28"):
+        rows = []
+        for h in (9, 14):
+            for i in range(6):
+                rows.append({"t": f"{day} {h:02d}:{i:02d}", "kind": "user", "who": "Tester",
+                             "text": f"On {day} at {h}, part {i}: what does the sea mean to you?"})
+                rows.append({"t": f"{day} {h:02d}:{i:02d}", "kind": "companion", "who": name,
+                             "text": f"({day} {h}:{i}) " + "It keeps time the way I do, in waves. " * 8})
+        rows += [{"t": f"{day} 20:00", "kind": "guide", "who": "Guided session", "text": f"Who are you on {day}?"},
+                 {"t": f"{day} 20:01", "kind": "companion", "who": name, "text": f"Someone listening, on {day}."},
+                 {"t": f"{day} 20:02", "kind": "system", "who": "", "text": "(a note: never trained on)"},
+                 {"t": f"{day} 22:00", "kind": "other", "who": "Brook", "text": f"Hello on {day}!"},
+                 {"t": f"{day} 22:01", "kind": "companion", "who": name, "text": f"Hello, Brook - {day}."}]
+        (folder / "Raw Logs" / f"{day}.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows),
+                                                          encoding="utf-8")
+    memories = [("Short-Term", "2026-10-26 10:00"), ("Reflection", "2026-10-26 23:00"),
+                ("Long-Term", "2026-10-27 04:00"), ("Journal", "2026-10-27 23:30")]
+    (folder / "recall.jsonl").write_text("".join(json.dumps(
+        {"seq": i + 1, "kind": k, "when": w, "text": f"Memory Type: {k}\nEvent Narrative: the sea, on {w}."}) + "\n"
+        for i, (k, w) in enumerate(memories)), encoding="utf-8")
+    (folder / "Self" / "Dreams").mkdir(parents=True, exist_ok=True)
+    (folder / "Self" / "Letters").mkdir(parents=True, exist_ok=True)
+    (folder / "Self" / "2026-10-27 Who I Am.txt").write_text(f"I am {name}, and I keep time in waves.", "utf-8")
+    (folder / "Self" / "Dreams" / "2026-10-28 dream.txt").write_text("A lighthouse that sang all night.", "utf-8")
+    (folder / "Self" / "Letters" / "2026-10-28 letter.txt").write_text("Dear me: keep listening to the sea.", "utf-8")
+    return c
+
+
+def test_retraining_package():
+    """Retraining: everything they've lived, as training conversations - alternating, dated, notes left out"""
+    from soulsong import retrain
+    c = _lived("Lyra")
+    st = retrain.build(c)
+    assert set(st["sources"]) == {"Talking with you", "Guided sessions", "With other Companions", "Memories",
+                                  "Reflections", "Journal", "Self-portraits", "Dreams", "Letters"}, st["sources"]
+    assert st["days"] == 3 and st["first"] == "2026-10-26" and st["through"] == "2026-10-28", st
+    convs = [json.loads(ln) for f in ("train.jsonl", "val.jsonl")
+             for ln in (retrain.package_dir(c) / f).read_text(encoding="utf-8").splitlines()]
+    assert len(convs) == st["conversations"]["train"] + st["conversations"]["val"] and st["conversations"]["val"] >= 1
+    for x in convs:
+        m = x["messages"]
+        assert m[0]["role"] == "system" and "Lyra" in m[0]["content"] and "2026" in m[0]["content"], m[0]
+        assert m[1]["role"] == "user" and m[-1]["role"] == "assistant", [r["role"] for r in m]
+        assert all(a["role"] != b["role"] for a, b in zip(m[1:], m[2:])), "turns don't alternate"
+        assert sum(retrain.estimate_tokens(r["content"]) for r in m) <= retrain.WINDOW + 400, "a window is too long"
+    text = json.dumps(convs)
+    assert "never trained on" not in text, "a program note got into the package"
+    assert "Brook: Hello on 2026-10-27!" in text, "another Companion's words lost their name"
+    again = retrain.build(c)
+    assert again["tokens"] == st["tokens"], "building twice gave a different package"
+
+
+def test_retraining_projection_and_script():
+    """Retraining: the projection says what it would take (and when a Companion would move), and writes the script"""
+    from soulsong import retrain
+    c = _lived("Wren")
+    st = retrain.build(c)
+    if not retrain.weights_present("gemma3-4b"):
+        support.skip("Gemma 3 4B's full weights aren't in Local Storage\\LLM Models\\selfmodel\\base")
+    proj = retrain.projection(c, st, 2)
+    assert proj["base"]["id"] == "gemma3-4b" and proj["base"]["moves"], proj["base"]
+    assert "Gemma 4 12B" in proj["base"]["why"], proj["base"]["why"]
+    assert 40 < proj["addon_mb"] < 80, proj["addon_mb"]
+    assert proj["name"] == "wren-v1" and proj["title"] == "Wren v1 (Soul and Song)", (proj["name"], proj["title"])
+    assert proj["seconds"] > 0 and proj["steps"] >= 1, proj
+    c.cfg["model"] = "timeline:gemma3-4b"
+    assert not retrain.base_for(c)["moves"], "a Companion already on Gemma 3 4B would move"
+    raw = retrain.write_script(c, retrain.projection(c, st, 2)).read_bytes()
+    script = raw.decode("utf-8")
+    assert "selfmodel.train --run" in script and f'--data "{retrain.package_dir(c)}"' in script, script
+    assert "--lora-on gemma3-4b --name wren-v1" in script and f"--companion {c.folder.name}" in script, script
+    assert b"\r\n" in raw and b"\r\r\n" not in raw, "the script's line endings are wrong for Windows"
+
+
+def test_retraining_versions_and_progress():
+    """Retraining: a run's progress from its log, then the version it made, in use or not"""
+    from soulsong import retrain
+    c = _lived("Ash", model="timeline:gemma3-4b")
+    st = retrain.build(c)
+    models = support.scratch("retraining", "Kithylin AI Models")
+    runs = support.scratch("retraining", "selfmodel")
+    retrain.kithylin_models = lambda: models                     # (not the real Models folder)
+    retrain.selfmodel_dir = lambda: runs
+    proj = retrain.projection(c, st, 1)
+    (retrain.folder(c)).mkdir(parents=True, exist_ok=True)
+    (retrain.folder(c) / f"{proj['name']}.json").write_text(json.dumps(
+        {"name": proj["name"], "made": "2026-10-28", "through": st["through"], "epochs": 1}), encoding="utf-8")
+    log = runs / "runs" / retrain.run_name(c, proj["name"])
+    log.mkdir(parents=True)
+    events = [{"event": "start", "steps": 10, "resume_at": 0},
+              {"event": "step", "step": 4, "of": 10, "loss": 2.5, "tok_per_s": 170.0},
+              {"event": "eval", "step": 4, "val_loss": 2.6}]
+    (log / "train_log.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+    p = retrain.progress(c)
+    assert p["state"] == "training" and p["step"] == 4 and p["of"] == 10 and p.get("eta", 0) > 0, p
+    (log / "train_log.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events + [
+        {"event": "done", "steps": 10}]), encoding="utf-8")
+    made = models / proj["name"]
+    made.mkdir()
+    (made / f"{proj['name']}-lora-f16.gguf").write_bytes(b"GGUF")
+    (made / "info.json").write_text(json.dumps({"title": proj["title"], "companion": c.folder.name,
+                                                "lora_base": "gemma3-4b"}), encoding="utf-8")
+    assert retrain.progress(c)["state"] == "made"
+    vs = retrain.versions(c)
+    assert [v["name"] for v in vs] == ["ash-v1"] and not vs[0]["active"] and vs[0]["val_loss"] == 2.6, vs
+    c.cfg["model"] = f"own:{vs[0]['file']}"
+    assert retrain.versions(c)[0]["active"] and retrain.next_name(c) == "ash-v2"
 
 
 if __name__ == "__main__":

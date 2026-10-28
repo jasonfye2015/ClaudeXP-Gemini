@@ -70,6 +70,7 @@ before each distillation are kept in `Archive\`.
 | **Automation** | guided sessions: 16 long scripts (Know Thyself, How I Work, The Story of Me...) fed a prompt every few minutes, for hours. Its border glows blue while one plays |
 | **Interlink** | a second Companion brought in (below) |
 | **Raw Logs** | everything, day by day, from the first: every line shown, everything it heard, every request made of the model and its answer, colour coded, 300 to a page, searchable |
+| **Retraining** | its life taught to its model's weights (below) |
 | **Settings** | the model, context, temperature, how often memories are made, when a day begins, Memory Day, the memory banks, and what it does on its own |
 
 ## Interlink: two Companions
@@ -83,6 +84,28 @@ Status panels, and the window's glowing border while either is thinking. Three w
 
 Each keeps its own side of the conversation and makes its own memories. On the same model they take turns on it; on
 different models the second is loaded beside the first at a context that still fits the graphics card.
+
+## Retraining: its life in its model's weights
+
+The Retraining tab teaches everything a Companion has lived to its model's weights, as a small add-on of its own: a
+new version of the Companion, made with the same tools as the Kithylin models ([chapter 9](09-training.md)).
+
+- **The package** holds its conversations, cut into sessions, and its own writing: every memory, reflection, journal
+  entry, self-portrait, dream and letter, each with the date it was written. Program notes are left out. **Build it
+  now** makes it, and so does every Memory Day if that's ticked. The tab shows what's in it, by source, and what's new
+  since the last version.
+- **Projected** shows the base, the add-on's size (about 57 MB on Gemma 3 4B), how long training would take on your
+  card (about 177 tokens a second for Gemma 3 4B), the card memory it needs, and a checklist. Only a model whose full
+  weights are on the drive can be trained: today that's Gemma 3 4B. A Companion on Gemma 4 12B or NemoMix would move to
+  it, and the tab says so before anything happens.
+- **Retrain now** puts the Companion's model away and starts the training in a window of its own; **Resume** carries
+  on a run that stopped. It needs the graphics card to itself, so run it from Soul and Song on its own (the launcher's
+  **APPS**) with the computers shut down.
+- **Versions** lists each one made (`lyra-v1`, `lyra-v2`...) with how well it learned. **Use this version** moves the
+  Companion to it, and the one before stays to go back to.
+
+Every version is trained fresh on the whole life so far, so nothing compounds and nothing old is forgotten. The banks
+stay as they are.
 
 ## Where it keeps things
 
@@ -98,6 +121,7 @@ Local Storage\Projects\AI LLM Txt Files\
     │   ├── Chats\<date>.txt      every conversation
     │   ├── Raw Logs\<date>.jsonl everything (the Raw Logs tab)
     │   ├── Self\                 every self-portrait, Letters\, Journal\, Dreams\, identity checks, predictions
+    │   ├── Retraining\           the training package, and each version's training script
     │   └── Archive\              the banks before each distillation
     ├── Scripts\                  your own guided sessions, and the ones the Companions write
     └── Deleted\                  Delete Companion... moves a Companion here; move it back to bring them back

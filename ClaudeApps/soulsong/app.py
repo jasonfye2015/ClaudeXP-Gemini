@@ -178,6 +178,12 @@ class Composer(QPlainTextEdit):
         super().keyPressEvent(e)
 
 
+def _dur(seconds):
+    """'about 1 h 5 min' as words."""
+    minutes = max(1, int(round((seconds or 0) / 60)))
+    return f"{minutes // 60} h {minutes % 60} min" if minutes >= 60 else f"{minutes} min"
+
+
 def _html(kind, who, text):
     body = html.escape(text).replace("\n", "<br>")
     body = re.sub(r"\*([^*<]{1,200})\*", r"<i>\1</i>", body)
@@ -390,11 +396,13 @@ class SoulAndSong(QWidget):
         self.tabs.addTab(self.link_page, "Interlink")
         self.raw_page = self._raw_tab()
         self.tabs.addTab(self.raw_page, "Raw Logs")
+        self.rt_page = self._retrain_tab()
+        self.tabs.addTab(self.rt_page, "Retraining")
         self.tabs.addTab(self._settings_tab(), "Settings")
         self.tabs.setUsesScrollButtons(False)            # every tab in sight, no arrows
         self.tabs.setMinimumWidth(max(460, self.tabs.tabBar().sizeHint().width() + 16))
         self.tabs.setCurrentIndex(0)
-        self.tabs.currentChanged.connect(lambda _i: (self.refresh_status(), self._raw_shown()))
+        self.tabs.currentChanged.connect(lambda _i: (self.refresh_status(), self._raw_shown(), self._retrain_shown()))
         split.addWidget(self.tabs)
         split.setStretchFactor(0, 3)
         split.setStretchFactor(1, 1)
@@ -1607,6 +1615,313 @@ class SoulAndSong(QWidget):
         self.user_edits = []
         return w
 
+    # ---- Retraining: its life, into its model's weights (retrain.py) --------------------------------------------------
+    def _retrain_tab(self):
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        page = QWidget()
+        v = QVBoxLayout(page)
+        self.rt_intro = QLabel()
+        self.rt_intro.setWordWrap(True)
+        v.addWidget(self.rt_intro)
+        box = QGroupBox("The training package")
+        b = QVBoxLayout(box)
+        row = QHBoxLayout()
+        self.rt_built = QLabel()
+        self.rt_built.setWordWrap(True)
+        row.addWidget(self.rt_built, 1)
+        build = QPushButton("Build it now")
+        build.setToolTip("Gather everything so far into the package (a few seconds; nothing is trained yet)")
+        build.clicked.connect(self._retrain_build)
+        row.addWidget(build)
+        b.addLayout(row)
+        self.rt_sources = QLabel()
+        self.rt_sources.setTextFormat(Qt.RichText)
+        self.rt_sources.setWordWrap(True)
+        b.addWidget(self.rt_sources)
+        self.rt_weekly = QCheckBox("Build it on Memory Day, every week")
+        self.rt_weekly.setToolTip("Building the package is quick and changes nothing; training waits for you")
+        self.rt_weekly.toggled.connect(lambda on: self.comp is not None and (
+            self.comp.cfg.__setitem__("retrain_weekly", on), self.comp.save()))
+        b.addWidget(self.rt_weekly)
+        v.addWidget(box)
+        box = QGroupBox("Projected")
+        b = QVBoxLayout(box)
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Passes over the package:"))
+        self.rt_epochs = QSpinBox()
+        self.rt_epochs.setRange(1, 3)
+        self.rt_epochs.setValue(2)
+        self.rt_epochs.setToolTip("More passes learn it more closely (and take longer); too many and it starts to "
+                                  "recite instead of remember")
+        self.rt_epochs.valueChanged.connect(lambda n: self.comp is not None and (
+            self.comp.cfg.__setitem__("retrain_epochs", n), self._retrain_refresh()))
+        row.addWidget(self.rt_epochs)
+        row.addStretch(1)
+        b.addLayout(row)
+        self.rt_projection = QLabel()
+        self.rt_projection.setTextFormat(Qt.RichText)
+        self.rt_projection.setWordWrap(True)
+        b.addWidget(self.rt_projection)
+        self.rt_checks = QLabel()
+        self.rt_checks.setTextFormat(Qt.RichText)
+        self.rt_checks.setWordWrap(True)
+        b.addWidget(self.rt_checks)
+        row = QHBoxLayout()
+        self.rt_start = QPushButton("Retrain now")
+        self.rt_start.clicked.connect(lambda: self._retrain_start(resume=False))
+        self.rt_resume = QPushButton("Resume")
+        self.rt_resume.setToolTip("Carry a run that stopped on from its last save (every 30 minutes)")
+        self.rt_resume.clicked.connect(lambda: self._retrain_start(resume=True))
+        show = QPushButton("Open the folder")
+        show.clicked.connect(lambda: self.comp is not None and self._show_folder(self._retrain_folder()))
+        row.addWidget(self.rt_start)
+        row.addWidget(self.rt_resume)
+        row.addStretch(1)
+        row.addWidget(show)
+        b.addLayout(row)
+        self.rt_bar = QProgressBar()
+        self.rt_bar.hide()
+        b.addWidget(self.rt_bar)
+        self.rt_state = QLabel()
+        self.rt_state.setWordWrap(True)
+        b.addWidget(self.rt_state)
+        v.addWidget(box)
+        box = QGroupBox("Versions")
+        b = QVBoxLayout(box)
+        self.rt_versions = QListWidget()
+        self.rt_versions.setMinimumHeight(70)
+        b.addWidget(self.rt_versions)
+        row = QHBoxLayout()
+        use = QPushButton("Use this version")
+        use.setToolTip("Move the Companion to the version picked above (the one it's on now stays, to go back to)")
+        use.clicked.connect(self._retrain_use)
+        row.addStretch(1)
+        row.addWidget(use)
+        b.addLayout(row)
+        v.addWidget(box)
+        v.addStretch(1)
+        scroll.setWidget(page)
+        self.rt_timer = QTimer(self)
+        self.rt_timer.timeout.connect(self._retrain_tick)
+        self.rt_timer.start(5000)
+        self._rt_told = set()
+        return scroll
+
+    def _retrain_folder(self):
+        from . import retrain
+        d = retrain.folder(self.comp)
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    def _show_folder(self, path):
+        try:
+            from claudecore import host
+            host.open_folder(self.desktop, path)
+        except Exception:
+            import os
+            os.startfile(str(path)) if hasattr(os, "startfile") else None
+
+    def _retrain_shown(self):
+        if self.tabs.currentWidget() is getattr(self, "rt_page", None):
+            self._retrain_refresh()
+
+    def _retrain_tick(self):
+        """Every few seconds: the tab when it's in view, and a run's progress whenever one is going."""
+        if self.comp is None:
+            return
+        from . import retrain
+        p = retrain.progress(self.comp)
+        if p and p.get("state") == "made" and p["name"] not in self._rt_told:
+            self._rt_told.add(p["name"])
+            if not any(v["active"] for v in retrain.versions(self.comp) if v["name"] == p["name"]):
+                self._line("system", f"{self.comp.name}'s new version is ready ({p['name']}): the Retraining tab can "
+                                     f"move {self.comp.name} to it.")
+        if self.tabs.currentWidget() is self.rt_page or (p and p.get("state") == "training"):
+            self._retrain_refresh(p)
+
+    def _retrain_refresh(self, p=None):
+        from . import retrain
+        c = self.comp
+        on = c is not None
+        for w_ in (self.rt_start, self.rt_resume, self.rt_epochs, self.rt_weekly):
+            w_.setEnabled(on)
+        if not on:
+            self.rt_intro.setText("Open or make a Companion to retrain it.")
+            for lab in (self.rt_built, self.rt_sources, self.rt_projection, self.rt_checks, self.rt_state):
+                lab.setText("")
+            self.rt_versions.clear()
+            return
+        self.rt_intro.setText(
+            f"Once a week (Memory Day builds the package) or whenever you like, everything {c.name} has lived - "
+            "their conversations and their own writing - can be taught to their model's weights, as a small add-on of "
+            f"their own. Their memories then live in the model too, not only in the banks in front of every reply. "
+            "Each version is trained fresh on the whole life so far, and the ones before are kept.")
+        self.rt_weekly.blockSignals(True)
+        self.rt_weekly.setChecked(bool(c.cfg.get("retrain_weekly", True)))
+        self.rt_weekly.blockSignals(False)
+        self.rt_epochs.blockSignals(True)
+        self.rt_epochs.setValue(int(c.cfg.get("retrain_epochs", 2)))
+        self.rt_epochs.blockSignals(False)
+        st = retrain.stats(c)
+        if not st:
+            self.rt_built.setText("No package yet: Build it now gathers everything so far (nothing is trained).")
+            self.rt_sources.setText("")
+        else:
+            self.rt_built.setText(f"Built {st['built']} - {c.name}'s life from {st['first'] or '-'} to "
+                                  f"{st['through'] or '-'} ({st['days']} day{'s' if st['days'] != 1 else ''}).")
+            rows = "".join(
+                f"<tr><td>{html.escape(k)}</td><td align=right>{s['conversations']:,}</td>"
+                f"<td align=right>{s['replies']:,}</td><td align=right>{s['tokens']:,}</td>"
+                f"<td align=right>{s['own']:,}</td></tr>" for k, s in st["sources"].items())
+            conv = st["conversations"]
+            new = st.get("new")
+            banks = sum((st.get("banks") or {}).values())
+            self.rt_sources.setText(
+                "<table cellspacing=0 cellpadding=3><tr><th align=left>From</th><th>Conversations</th>"
+                f"<th>{html.escape(c.name)}'s replies</th><th>Tokens</th><th>Own words</th></tr>" + rows +
+                f"<tr><td><b>All</b></td><td align=right><b>{conv['train'] + conv['val']:,}</b></td>"
+                f"<td align=right><b>{st['replies']:,}</b></td><td align=right><b>{st['tokens']:,}</b></td>"
+                f"<td align=right><b>{st['own_tokens']:,}</b></td></tr></table>"
+                f"<p>{conv['train']:,} to learn from and {conv['val']:,} held back to measure how well it learned"
+                + (f"; {st['duplicates']:,} repeats left out" if st["duplicates"] else "") + ". "
+                + (f"New since the last version (life through {new['since']}): {new['tokens']:,} tokens over "
+                   f"{new['days']} day{'s' if new['days'] != 1 else ''}. " if new else "")
+                + f"{html.escape(c.name)}'s memory banks hold {banks:,} tokens now; they stay as they are, and "
+                  "all of it is in the package too.</p>")
+        proj = retrain.projection(c, st, int(c.cfg.get("retrain_epochs", 2)))
+        base = proj["base"]
+        warn = (f"<p style='color:#B26A00'>{html.escape(base['why'])}</p>" if base.get("moves") or not base["id"]
+                else (f"<p style='color:#555'>{html.escape(base['why'])}</p>" if base.get("why") else ""))
+        if base["id"] and st:
+            speed = retrain.TRAINABLE[base["id"]]["speed"]
+            self.rt_projection.setText(
+                f"<p><b>Now</b>: {html.escape(base['current'] or '-')}<br>"
+                f"<b>The new version</b>: {html.escape(proj['title'])} - an add-on of about {proj['addon_mb']:.0f} MB "
+                f"on {base['title']}'s model file<br>"
+                f"<b>Training</b>: {proj['epochs']} pass{'es' if proj['epochs'] != 1 else ''} over "
+                f"{st['tokens']:,} tokens - about {_dur(proj['seconds'])} on this card ({speed:.0f} tokens a "
+                f"second), {proj['steps']:,} steps<br>"
+                f"<b>Graphics card</b>: about {proj['gpu_gb']} GB, and it needs the card to itself<br>"
+                f"<b>Afterwards</b>: {c.name} stays on {html.escape(base['current'] or 'their model')} until you "
+                "choose the new version below.</p>" + warn)
+        else:
+            self.rt_projection.setText(warn or "<p>Build the package to see what training it would take.</p>")
+        hosted = self._inside_computer()
+        checks = list(proj["checks"]) + [(not hosted, "Soul and Song is running on its own" if not hosted else
+                                          "Training needs the graphics card to itself: open Soul and Song from the "
+                                          "launcher's APPS, with the computers shut down")]
+        self.rt_checks.setText("<p>" + "<br>".join(
+            f"<span style='color:{'#2E7D32' if ok else '#B71C1C'}'>{'&#10003;' if ok else '&#10007;'}</span> "
+            f"{html.escape(text)}" for ok, text in checks) + "</p>")
+        p = p if p is not None else retrain.progress(c)
+        training = bool(p) and p.get("state") == "training"
+        stopped = bool(p) and p.get("state") == "training" and p["name"] == proj["name"]
+        self.rt_start.setEnabled(all(ok for ok, _t in checks) and not training)
+        self.rt_resume.setVisible(bool(p) and p.get("state") == "training")
+        self.rt_resume.setEnabled(stopped and not hosted)
+        if training and p.get("of"):
+            self.rt_bar.show()
+            self.rt_bar.setRange(0, int(p["of"]))
+            self.rt_bar.setValue(int(p.get("step") or 0))
+            self.rt_state.setText(
+                f"Training {p['name']}: step {p.get('step') or 0} of {p['of']}"
+                + (f" - loss {p['loss']:.2f}" if p.get("loss") else "")
+                + (f", held back {p['val_loss']:.2f}" if p.get("val_loss") else "")
+                + (f" - about {_dur(p['eta'])} left" if p.get("eta") else "")
+                + ". (If its window was closed or the PC restarted, Resume carries it on.)")
+        else:
+            self.rt_bar.hide()
+            self.rt_state.setText(f"{p['name']} has trained: its add-on is being made..."
+                                  if p and p.get("state") == "trained" else "")
+        self.rt_versions.clear()
+        for ver in retrain.versions(c):
+            bits = [ver["title"]]
+            if ver.get("made"):
+                bits.append(f"made {ver['made']}")
+            if ver.get("through"):
+                bits.append(f"life through {ver['through']}")
+            if ver.get("val_loss"):
+                bits.append(f"held-back loss {ver['val_loss']:.2f}")
+            item = QListWidgetItem(" - ".join(bits) + ("   (in use)" if ver["active"] else ""))
+            item.setData(Qt.UserRole, ver["name"])
+            self.rt_versions.addItem(item)
+        if not retrain.versions(c):
+            self.rt_versions.addItem("None yet: the first one is made by Retrain now.")
+
+    def _inside_computer(self):
+        try:
+            from kithylinai.paths import hosted
+            return hosted()
+        except Exception:
+            return False
+
+    def _retrain_build(self):
+        if self.comp is None:
+            return
+        from . import retrain
+        st = retrain.build(self.comp)
+        self._retrain_refresh()
+        return st
+
+    def _retrain_after_memory_day(self):
+        """Memory Day is done: this week's package (when that's switched on)."""
+        if self.comp is None or not self.comp.cfg.get("retrain_weekly", True):
+            return
+
+        def build():
+            st = self._retrain_build()
+            if st:
+                self._line("system", f"This week's retraining package is ready: {st['tokens']:,} tokens of "
+                                     f"{self.comp.name}'s life (the Retraining tab).")
+        QTimer.singleShot(0, build)
+
+    def _retrain_start(self, resume=False):
+        from . import retrain
+        c = self.comp
+        if c is None:
+            return
+        proj = retrain.projection(c, None, int(c.cfg.get("retrain_epochs", 2)))
+        name = proj["name"]
+        script = retrain.folder(c) / f"{name}.bat"
+        if resume and not script.exists():
+            return
+        text = (f"Training {name} takes about {_dur(proj['seconds'])} and needs the graphics card to itself.\n\n"
+                f"Soul and Song puts {c.name}'s model away now and starts the training in a window of its own. "
+                f"{c.name} can't talk until it's done; when it is, this tab offers the new version.")
+        if resume:
+            text = f"Carry {name}'s training on from its last save?\n\n" + text
+        if QMessageBox.question(self, "Retraining", text) != QMessageBox.Yes:
+            return
+        if self.session is not None:
+            self.session.stop()
+        if self.runner.running and not self.runner.paused:
+            self.runner.pause()                         # (a guided session waits: it keeps its place)
+        self.brain.engine.unload()
+        if self.brain2 is not None:
+            self.brain2.engine.unload()
+        if not resume or not script.exists():
+            script = retrain.write_script(c, proj)
+        retrain.start(script, "resume" if resume else None)
+        self._line("system", f"Retraining {c.name}: {name} is training in its own window (about "
+                             f"{_dur(proj['seconds'])}).")
+        self._retrain_refresh()
+
+    def _retrain_use(self):
+        from . import retrain
+        c = self.comp
+        item = self.rt_versions.currentItem()
+        name = item.data(Qt.UserRole) if item is not None else None
+        ver = next((v for v in retrain.versions(c) if v["name"] == name), None) if c is not None else None
+        if ver is None or ver.get("file") is None or ver["active"]:
+            return
+        c.cfg["model"] = f"own:{ver['file']}"
+        c.cfg["model_title"] = ver["title"]
+        c.save()
+        self._line("system", f"{c.name} moves to {ver['title']}.")
+        self.load_model()
+        self._retrain_refresh()
+
     def _settings_tab(self):
         w = QWidget()
         f = QFormLayout(w)
@@ -1795,6 +2110,7 @@ class SoulAndSong(QWidget):
         self.hand.on_thinking = lambda t: self._typing(self.comp, "thinking", t)
         self.comp.on_changed = self.refresh_panel
         self.comp.on_name = self._confirm_name
+        self.comp.on_memory_day = self._retrain_after_memory_day
         self.chat.clear()
         for m in self.comp.history[-60:]:
             who = (self.comp.cfg.get("user_name") or "You") if m["role"] == "user" else self.comp.name
@@ -1806,6 +2122,7 @@ class SoulAndSong(QWidget):
         self._link_companions()
         self._link_refresh()
         self._raw_shown()
+        self._retrain_shown()
         self.runner.restore()
         self._auto_fill()
         self._auto_refresh()

@@ -128,6 +128,9 @@ def main(argv=None):
     ap.add_argument("--base", default="base", help="the base model's folder in selfmodel/ it was trained on")
     ap.add_argument("--lora-on", default="", help="make an add-on for this Timeline model instead of merging")
     ap.add_argument("--base-title", default="", help="the base model's name for the details card")
+    ap.add_argument("--title", default="", help="the model's name in the model lists (default: Kithylin (<name>))")
+    ap.add_argument("--companion", default="",
+                    help="a Soul and Song Companion's own version: its folder's name (its Retraining tab finds it so)")
     ap.add_argument("--delete-base-weights", action="store_true",
                     help="with --lora-on: delete the base's .safetensors once the add-on is made (frees ~24 GB for a 12B)")
     args = ap.parse_args(argv)
@@ -163,6 +166,16 @@ def main(argv=None):
                             "made from your private conversations, so keep it to yourself",
                  "notes": f"A model of you: a LoRA add-on applied to {base_title} at load "
                           f"time. Made {time.strftime('%Y-%m-%d')}."}
+        if args.companion:                         # (a Companion's own life, from Soul and Song's Retraining tab)
+            extra.update(companion=args.companion, kithylin=False,
+                         source=f"{base_title} fine-tuned on a Soul and Song Companion's own life ({adapter.name}"
+                                + (f", step {steps}" if steps else "") + "): a LoRA add-on, applied to the base at "
+                                "load time",
+                         licence=(base_info.get("licence") or "the base model's") + "; the fine-tune is personal - "
+                                 "it was made from a Companion's conversations with you",
+                         notes=(args.notes + " " if args.notes else "") + f"Made {time.strftime('%Y-%m-%d')}.")
+        if args.title:
+            extra["title"] = args.title
         write_info(out_dir, args.name, adapter, "LoRA add-on (f16)", steps, extra)
         say(f"made {out} ({out.stat().st_size / 2**20:.0f} MB), on top of {base_gguf}")
         try:

@@ -73,7 +73,8 @@ def _all_models():
                 info = _info(folder) if folder.is_dir() else {}
                 if info.get("lora_base") and f.name == info.get("lora_base_file"):
                     continue                        # the base an add-on goes on, copied in beside it
-                out.append(ModelEntry(f"own:{f}", info.get("title") or folder.stem, f, "Kithylin AI", info))
+                out.append(ModelEntry(f"own:{f}", info.get("title") or folder.stem, f,
+                                      "Soul and Song" if info.get("companion") else "Kithylin AI", info))
     if TIMELINE_MODELS.is_dir():
         for folder in sorted(TIMELINE_MODELS.iterdir()):
             if not folder.is_dir():

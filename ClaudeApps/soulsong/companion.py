@@ -231,6 +231,7 @@ class Companion:
         self.on_line = lambda kind, text: None        # "user", "companion", "system", "memory", "request"
         self.on_stream = lambda text: None
         self.on_changed = lambda: None
+        self.on_memory_day = lambda: None                # (after each Memory Day: the window's retraining package)
         self.on_name = None                            # (suggested name, accept(name)) -> the program asks the user
 
     # ---- every line goes in the raw log too (the Raw Logs tab) ----
@@ -1261,6 +1262,10 @@ class Companion:
                 self.update_timeline()
                 self.on_line("system", "Memory Day is done.")
                 self._push(lambda n: self._say(MEMORY_DAY_DONE, True, n), first=True)
+                try:
+                    self.on_memory_day()                    # (the window builds the retraining package)
+                except Exception:
+                    pass
                 nxt()
             identity()
         self._push(step)
