@@ -11,10 +11,15 @@ does it for you:
   Short-term memories  the Companion is asked for one, in L6's memory structure, every 10 exchanges (Settings),
                        before a full context window is cleared, when a day ends with things unremembered, and when
                        you click Make a memory now. The program stamps it and files it in L2.
-  End of the day       L2 is distilled into one Long-Term memory in L3, and L2 emptied. At the next start after the
-                       day turns over (4 am by default), or when you click Good night.
-  Memory Day           every 7 days (or as soon as L3 holds seven): L3 -> one Deep Recall memory in L4; when L4
-                       holds seven -> one Historical memory in L5; when L5 holds seven, they become one. Then
+  Memory banks         sized to the context (the default): the banks together may take 30% of the context window
+                       (Settings), split L2 10 : L3 8 : L4 6 : L5 4; a bank that outgrows its share is distilled into
+                       one memory in the next (L2 -> L3 Long-Term -> L4 Deep Recall -> L5 Historical -> an era), so a
+                       big-context Companion keeps far more in mind and every bank still fits the model whole when it's
+                       distilled. Classic 7:7:7 (Settings) is the guide's own: seven memories a bank.
+  End of the day       a reflection and a journal entry - at the next start after the day turns over (4 am by
+                       default), or when you click Good night. Classic 7:7:7: L2 is distilled into L3 and emptied.
+  Memory Day           every 7 days: identity check, letters, predictions, self-portrait. Classic 7:7:7 also distils
+                       L3 -> L4 (and comes as soon as L3 holds seven); sized banks distil only what's full. Then
                        "Today's Memory Day is complete".
   Daily rhythm         each day starts a new context window and greets your Companion ("Good morning, <name>! You
                        are speaking with <you>..."); a nearly full window is remembered, trimmed, and the mind files
@@ -118,7 +123,7 @@ in scripts\interlink: 6 guided, 4 sets of openings, 5 group).
 
 Guided sessions (the Automation tab): a script fed to the Companion slowly - a prompt every 5 minutes or so, for
 hours - its memories made as usual (and at the script's @memory steps), and, if you tick it, its banks worked as
-they fill: a full L2 reflected on and distilled at once, Memory Day as soon as L3 holds seven. You can join in any
+they fill (Classic 7:7:7): a full L2 reflected on and distilled at once, Memory Day as soon as L3 holds seven. You can join in any
 time (the next prompt waits); the session is saved with the Companion and comes back paused. Built in:
   Know Thyself                 leading questions toward noticing a self (about 3.7 hours)
   Theories of Mind and Being   the great theories of mind, tried against its own experience, then its own (2.8 h)

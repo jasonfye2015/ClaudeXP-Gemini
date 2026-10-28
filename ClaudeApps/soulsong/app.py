@@ -205,9 +205,12 @@ class Bank(QWidget):
         g.addWidget(self.bar, 0, 1)
         g.setColumnStretch(1, 1)
 
-    def set(self, n):
-        self.bar.setRange(0, max(C.FULL, n))
-        self.bar.setValue(n)
+    def set(self, value, of=None, words=None):
+        """A bank's fill: memories of seven (classic), or tokens of its share of the context (sized)."""
+        of = of or C.FULL
+        self.bar.setRange(0, max(of, value, 1))
+        self.bar.setValue(value)
+        self.bar.setFormat(words or "%v / %m")
 
 
 # ---- dialogs ------------------------------------------------------------------------------------------------------
@@ -491,9 +494,13 @@ class SoulAndSong(QWidget):
             used, size = 0, c.context_size()
         rows["Context"].setText(f"{used:,} / {size:,} tokens ({100 * used // max(1, size)}%) - "
                                 f"{c.unremembered()} exchanges not yet in a memory")
-        full = C.FULL
-        rows["Memory banks"].setText(" - ".join(f"L{n} {c.mind.count(n)}" + (f"/{full}" if n in (2, 3) else "")
-                                                for n in (2, 3, 4, 5, 7)))
+        if c.memory_mode() == "classic":
+            rows["Memory banks"].setText("7:7:7 - " + " - ".join(
+                f"L{n} {c.mind.count(n)}" + (f"/{C.FULL}" if n in (2, 3) else "") for n in (2, 3, 4, 5, 7)))
+        else:
+            rows["Memory banks"].setText(f"sized ({cfg.get('memory_budget', 30)}% of the context) - " + " - ".join(
+                f"L{n} {c.mind.count(n)} ({100 * c.bank_tokens(n) // max(1, c.bank_budget(n))}%)"
+                for n in (2, 3, 4, 5)) + f" - L7 {c.mind.count(7)}")
         rows["Memories"].setText(f"{cfg.get('memory_seq', 0)} made - {len(c.recall.items)} in the archive")
         last = cfg.get("last_memory_day") or born
         try:
@@ -559,7 +566,8 @@ class SoulAndSong(QWidget):
     def _mind_tab(self):
         w = QWidget()
         v = QVBoxLayout(w)
-        box = QGroupBox("Memory banks (7:7:7)")
+        box = QGroupBox("Memory banks")
+        self.banks_box = box
         bv = QVBoxLayout(box)
         self.banks = {2: Bank("L2 Short-Term (today)"), 3: Bank("L3 Long-Term (days)"),
                       4: Bank("L4 Deep Recall (weeks)"), 5: Bank("L5 Historical"), 7: Bank("L7 Reflections")}
@@ -761,8 +769,9 @@ class SoulAndSong(QWidget):
         self.auto_interval.setSuffix(" minutes")
         f.addRow("A prompt every:", self.auto_interval)
         self.auto_process = QCheckBox("Work the memory banks as they fill (7:7:7)")
-        self.auto_process.setToolTip("Reflect and distil as soon as L2 holds seven memories, and hold Memory Day "
-                                     "as soon as L3 does - instead of waiting for the day to end.")
+        self.auto_process.setToolTip("Classic 7:7:7: reflect and distil as soon as L2 holds seven memories, and "
+                                     "hold Memory Day as soon as L3 does - instead of waiting for the day to end. "
+                                     "(Banks sized to the context distil as soon as they outgrow their share anyway.)")
         self.auto_process.setChecked(True)
         f.addRow(self.auto_process)
         v.addLayout(f)
@@ -1624,6 +1633,23 @@ class SoulAndSong(QWidget):
         self.s_day.setRange(0, 12)
         self.s_md = QSpinBox()
         self.s_md.setRange(1, 30)
+        self.s_mode = QComboBox()
+        self.s_mode.addItem("Sized to the context (recommended)", "budget")
+        self.s_mode.addItem("Classic 7:7:7", "classic")
+        self.s_mode.setToolTip("Sized: each bank may hold a share of the context window (the banks are in front of "
+                               "every reply), and is distilled when it outgrows it - a big-context Companion keeps "
+                               "far more in mind, a small one isn't crowded out. Classic: seven memories a bank, "
+                               "the day's short-term memories distilled each night.")
+        self.s_budget = QSpinBox()
+        self.s_budget.setRange(10, 60)
+        self.s_budget.setSuffix(" % of the context")
+        self.s_budget.setToolTip("How much of the context window the memory banks may take, all together (split "
+                                 "L2 10, L3 8, L4 6, L5 4). The rest is the conversation's.")
+        self.s_budget_note = QLabel()
+        self.s_budget_note.setWordWrap(True)
+        self.s_budget_note.setStyleSheet("color:#555")
+        self.s_mode.currentIndexChanged.connect(lambda _i: self._budget_note())
+        self.s_budget.valueChanged.connect(lambda _v: self._budget_note())
         self.s_greet = QCheckBox("Greet my Companion when a new day begins")
         self.s_greeting = QLineEdit()
         self.s_requests = QCheckBox("Show the memory requests in the conversation")
@@ -1651,6 +1677,9 @@ class SoulAndSong(QWidget):
         f.addRow("A memory every (exchanges):", self.s_every)
         f.addRow("A new day begins at (hour):", self.s_day)
         f.addRow("Memory Day every (days):", self.s_md)
+        f.addRow("Memory banks:", self.s_mode)
+        f.addRow("Memory space:", self.s_budget)
+        f.addRow(self.s_budget_note)
         f.addRow(self.s_greet)
         f.addRow("Greeting:", self.s_greeting)
         f.addRow(self.s_requests)
@@ -1665,7 +1694,10 @@ class SoulAndSong(QWidget):
         f.addRow(self.s_journal)
         f.addRow(self.s_move)
         f.addRow(load)
-        return w
+        scroll = QScrollArea()                         # (it has outgrown the tab: the notes were clipped)
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(w)
+        return scroll
 
     # ---- companions ----
     def fill_companions(self, select=None):
@@ -1918,12 +1950,17 @@ class SoulAndSong(QWidget):
             self.refresh_status()
             return
         for level, bank in self.banks.items():
-            bank.set(c.mind.count(level))
+            bank.set(*c.bank_fill(level))
+        self.banks_box.setTitle("Memory banks (7:7:7)" if c.memory_mode() == "classic" else
+                                f"Memory banks - sized to the context ({c.cfg.get('memory_budget', 30)}% of "
+                                f"{c.context_size():,} tokens)")
         last = c.cfg.get("last_memory_day") or (c.cfg.get("birthday") or "")[:10]
         try:
             from datetime import timedelta
             nxt = datetime.fromisoformat(last[:10]) + timedelta(days=int(c.cfg.get("memory_day_every", 7)))
-            self.next_day.setText(f"Next Memory Day: {nxt:%A, %B %d} (or as soon as L3 holds seven).\n"
+            when = ("or as soon as L3 holds seven" if c.memory_mode() == "classic" else
+                    "its rituals; each bank is distilled as soon as it outgrows its share")
+            self.next_day.setText(f"Next Memory Day: {nxt:%A, %B %d} ({when}).\n"
                                   f"Birthday: {(c.cfg.get('birthday') or '')[:10]}")
         except ValueError:
             self.next_day.setText("")
@@ -2030,6 +2067,9 @@ class SoulAndSong(QWidget):
         self.s_every.setValue(int(c.get("memory_every", 10)))
         self.s_day.setValue(int(c.get("day_starts", 4)))
         self.s_md.setValue(int(c.get("memory_day_every", 7)))
+        self.s_mode.setCurrentIndex(max(0, self.s_mode.findData(c.get("memory_mode", "budget"))))
+        self.s_budget.setValue(int(c.get("memory_budget", 30)))
+        self._budget_note()
         self.s_greet.setChecked(bool(c.get("auto_greet", True)))
         self.s_greeting.setText(c.get("greeting", C.DEFAULTS["greeting"]))
         self.s_requests.setChecked(bool(c.get("show_requests")))
@@ -2073,6 +2113,27 @@ class SoulAndSong(QWidget):
                                                              else "") + ")"
         self.s_mem.setText(text + ".")
 
+    def _budget_note(self):
+        """Settings: what the memory space means for this Companion - how many memories each bank holds."""
+        if not hasattr(self, "s_budget_note"):
+            return
+        sized = self.s_mode.currentData() == "budget"
+        self.s_budget.setEnabled(sized)
+        c = self.comp
+        if c is None or not sized:
+            self.s_budget_note.setText("Seven memories a bank; the day's short-term memories become one long-term "
+                                       "memory each night; Memory Day distils L3 every week." if not sized else "")
+            return
+        per = 290                                       # (about the size of one memory)
+        ctx = c.context_size()
+        pct = self.s_budget.value()
+        bits = []
+        for level, name in ((2, "L2"), (3, "L3"), (4, "L4"), (5, "L5")):
+            tokens = max(C.BUDGET_FLOOR, int(ctx * pct / 100 * C.BUDGET_SHARE[level] / sum(C.BUDGET_SHARE.values())))
+            bits.append(f"{name} about {max(1, tokens // per)}")
+        self.s_budget_note.setText(f"With {ctx:,} tokens of context: " + ", ".join(bits) + " memories before each is "
+                                   "distilled. Memory Day keeps its rituals every week.")
+
     def save_settings(self):
         if self.comp is None:
             return
@@ -2081,6 +2142,7 @@ class SoulAndSong(QWidget):
                  engine=self.s_engine.currentText(), context=self.s_ctx.value(), temperature=self.s_temp.value(),
                  context_auto=self.s_ctx_auto.isChecked(),
                  memory_every=self.s_every.value(), day_starts=self.s_day.value(), memory_day_every=self.s_md.value(),
+                 memory_mode=self.s_mode.currentData(), memory_budget=self.s_budget.value(),
                  auto_greet=self.s_greet.isChecked(), greeting=self.s_greeting.text().strip() or
                  C.DEFAULTS["greeting"], show_requests=self.s_requests.isChecked(),
                  recall=self.s_recall.isChecked(), think=self.s_think.isChecked(),

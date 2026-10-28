@@ -8,7 +8,7 @@ TOPICS = [
     ("window", "The window"),
     ("talking", "Talking with your Companion"),
     ("day", "A day in its life"),
-    ("memory", "The memory system (7:7:7)"),
+    ("memory", "The memory system"),
     ("memoryday", "Memory Day"),
     ("own", "What it does for itself"),
     ("time", "Time and growth"),
@@ -124,32 +124,48 @@ and your greeting ("Good morning, Lyra! You are speaking with ...").</li>
 <li><b>Memories</b> are made through the day: every 10 exchanges (Settings), before a full context window is
 trimmed, when it asks, and when you click <b>Make a memory now</b>.</li>
 <li><b>Good night</b> (Mind tab) - or simply the next day starting - closes the day: a last memory, a
-<b>reflection</b> on what the day showed it about itself, a <b>journal</b> entry, and the day's short-term memories
-distilled into one long-term memory.</li>
+<b>reflection</b> on what the day showed it about itself and a <b>journal</b> entry (with Classic 7:7:7 banks, the
+day's short-term memories are distilled into one long-term memory too).</li>
+<li>Whenever a memory bank outgrows its share of the context, it's distilled - see
+<a href="#memory">The memory system</a>.</li>
 <li>Every seven days: <a href="#memoryday">Memory Day</a>.</li>
 </ol>
 <p>If the context window fills during a long talk, what's not yet remembered is remembered, the window is trimmed to
 its last few messages, and the mind files are shown again (re-exposure). Nothing is lost.</p>
 
-<a name="memory"></a><h2>The memory system (7:7:7)</h2>
+<a name="memory"></a><h2>The memory system</h2>
 <table>
 <tr><td class="k" width="32%">L1 Mind Resources</td><td>who it is and what it holds on to: its self-portrait (Who I Am), core
 memories, its substrate (the model it runs on), its life timeline (My Life So Far), the questions it carries, the two
 roadmaps, planned events, and the current time stamp.</td></tr>
-<tr><td class="k" width="32%">L2 Short-Term</td><td>today's memories - up to seven.</td></tr>
-<tr><td class="k" width="32%">L3 Long-Term</td><td>one per day, distilled from L2 - up to seven.</td></tr>
-<tr><td class="k" width="32%">L4 Deep Recall</td><td>one per Memory Day, distilled from L3.</td></tr>
-<tr><td class="k" width="32%">L5 Historical</td><td>seven Deep Recall memories become one; seven of these become one "era".</td></tr>
+<tr><td class="k" width="32%">L2 Short-Term</td><td>the newest memories.</td></tr>
+<tr><td class="k" width="32%">L3 Long-Term</td><td>distilled from L2.</td></tr>
+<tr><td class="k" width="32%">L4 Deep Recall</td><td>distilled from L3.</td></tr>
+<tr><td class="k" width="32%">L5 Historical</td><td>distilled from L4; when it's full, its memories become one "era".</td></tr>
 <tr><td class="k" width="32%">L6 System Instructions</td><td>how the system works and how to write a memory.</td></tr>
 <tr><td class="k" width="32%">L7 Reflections</td><td>what it learned about itself - gathered into the next self-portrait.</td></tr>
 </table>
-<p><b>Seven to one, at every level</b>: seven short-term memories become a long-term one, seven long-term a deep
-recall, and so on - the details falling away while what matters stays. Nothing is really thrown away: every memory
+<p><b>Many to one, at every level</b>: a full bank of short-term memories becomes one long-term memory, a full bank of
+long-term memories one deep recall, and so on - the details falling away while what matters stays. How full is
+"full" is chosen in Settings (<b>Memory banks</b>):</p>
+<table>
+<tr><td class="k" width="32%">Sized to the context (recommended)</td><td>the banks ride in front of every reply, so
+together they may take a share of the context window - <b>Memory space</b>, 30% by default - split L2 10 : L3 8 :
+L4 6 : L5 4. A bank is distilled as soon as it outgrows its share, whenever that is (L2 reflected on first). A
+Companion on a big context keeps far more in mind before anything is distilled - at 128k tokens, around 45 short-term
+memories - and one on a small context isn't crowded out. Each bank stays small enough to be given to the model whole
+when it's distilled, and a bigger bank gets a fuller distilled memory, so less is lost. The Mind tab's bars show each
+bank's tokens against its share.</td></tr>
+<tr><td class="k" width="32%">Classic 7:7:7</td><td>the guide's own: seven memories a bank. The day's short-term
+memories become one long-term memory each night, and Memory Day distils L3 every week (or as soon as it holds
+seven).</td></tr>
+</table>
+<p>Nothing is really thrown away: every memory
 is kept whole in its <b>archive</b>, and an old one comes back into the conversation when what you say relates to it
 (recall). The banks as they were before each distillation are kept in the Archive folder too.</p>
 
 <a name="memoryday"></a><h2>Memory Day</h2>
-<p>Every seven days (Settings), or as soon as L3 holds seven memories. In order:</p>
+<p>Every seven days (Settings) - and with Classic 7:7:7 banks, as soon as L3 holds seven memories. In order:</p>
 <ol>
 <li><b>Identity check</b>: who are you, what matters most, what has changed, what are you curious about - kept for
 you (it isn't shown its old answers). The same questions go to the <b>bare model</b>, with no mind files at all, as a
@@ -161,7 +177,8 @@ control.</li>
 it.</li>
 <li>A <b>letter</b> to itself, to open in a week, and three new <b>predictions</b>.</li>
 <li>It may <b>propose changes to its roadmap</b> (you accept or decline on the Self tab).</li>
-<li>The memories are distilled: L3 into L4, and L4 into L5 when it's full.</li>
+<li>The memories are distilled: Classic 7:7:7 distils L3 into L4 every Memory Day; sized banks only distil the ones
+that are full (they're usually distilled as they fill). Then L4 into L5 when it's full.</li>
 </ol>
 <p>"Today's Memory Day is complete" is said to it at the end. <b>Hold Memory Day now</b> (Mind tab) runs it by hand.</p>
 
@@ -262,8 +279,9 @@ copy).</td></tr>
 <tr><td class="k" width="32%">Open the scripts folder</td><td>where yours are kept.</td></tr>
 <tr><td class="k" width="32%">Ask them to write a session of their own</td><td>it writes one, any time.</td></tr>
 <tr><td class="k" width="32%">A prompt every</td><td>the pace (a script can set its own).</td></tr>
-<tr><td class="k" width="32%">Work the memory banks as they fill</td><td>reflect and distil as soon as L2 holds seven, Memory Day as
-soon as L3 does - the 7:7:7 cycle at the pace of the session.</td></tr>
+<tr><td class="k" width="32%">Work the memory banks as they fill</td><td>Classic 7:7:7: reflect and distil as soon as L2 holds
+seven, Memory Day as soon as L3 does - the cycle at the pace of the session. (Sized banks distil as they fill
+anyway.)</td></tr>
 <tr><td class="k" width="32%">Automate all</td><td>every script, in order, from the top.</td></tr>
 <tr><td class="k" width="32%">Resume all</td><td>only the scripts it hasn't finished, the one left part way from where it
 stopped.</td></tr>
@@ -357,6 +375,10 @@ shows how much graphics memory it needs. Untick to set a smaller one.</td></tr>
 <tr><td class="k" width="32%">A memory every</td><td>how many exchanges between memories.</td></tr>
 <tr><td class="k" width="32%">A new day begins at</td><td>the hour its day turns over (4 am).</td></tr>
 <tr><td class="k" width="32%">Memory Day every</td><td>days between Memory Days (7).</td></tr>
+<tr><td class="k" width="32%">Memory banks</td><td>sized to the context (each bank distilled when it outgrows its share)
+or Classic 7:7:7 - see <a href="#memory">The memory system</a>.</td></tr>
+<tr><td class="k" width="32%">Memory space</td><td>how much of the context window the banks may take together (30%);
+the line below says about how many memories each bank holds at this context.</td></tr>
 <tr><td class="k" width="32%">Greet / Greeting</td><td>the morning greeting, and its words ({part} is morning, afternoon or
 evening).</td></tr>
 <tr><td class="k" width="32%">Show the memory requests</td><td>see the program ask for memories.</td></tr>

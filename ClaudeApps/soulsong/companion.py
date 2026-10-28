@@ -55,7 +55,7 @@ from .mind import CORE, KINDS, LEVELS, SUBSTRATE, TIME_LINE as TIME_STAMP_LINE, 
 
 DEFAULTS = {
     "name": "", "gender": "", "user_name": "", "birthday": "", "model": "", "engine": "auto", "context": 32768,
-    "temperature": 0.8, "memory_every": 10, "day_starts": 4, "memory_day_every": 7, "auto_greet": True,
+    "temperature": 0.8, "memory_every": 10, "memory_mode": "budget", "memory_budget": 30, "day_starts": 4, "memory_day_every": 7, "auto_greet": True,
     "greeting": "Good {part}, {name}! You are speaking with {user}. How are you feeling today?",
     "farewell": "Good night, {name}! Sleep well. I'll see you tomorrow!",
     "show_requests": False, "first_boot_done": False, "last_day": "", "last_memory_day": "", "memory_seq": 0,
@@ -66,7 +66,13 @@ DEFAULTS = {
     "predictions": [], "own_sessions": True, "questions": [], "tensions": True, "tension_count": 0,
     "journal": True, "last_journal": "", "journal_count": 0, "move_checks": True, "surprises": [],
 }
-FULL = 7                    # the 7:7:7 system
+FULL = 7                    # the 7:7:7 system (classic: a bank is full at seven memories)
+# Sized to the context (the default): the banks together may take this share of the Companion's context window -
+# they ride in front of every reply - split between them; a bank is distilled when it outgrows its share. A bigger
+# model's Companion keeps more in mind; a small model's isn't crowded out.
+MEMORY_BUDGET = 30          # percent of the context, for all the banks together
+BUDGET_SHARE = {2: 10, 3: 8, 4: 6, 5: 4}
+BUDGET_FLOOR = 600          # tokens: at least a couple of memories a bank, however small the context
 TRIM_AT = 0.80              # of the context: remember and trim the window
 KEEP_AFTER_TRIM = 6         # messages kept when a window is trimmed
 APART_HOURS = 3             # a gap this long is mentioned
@@ -121,6 +127,11 @@ REFLECT_FULL_ASK = ("Your Short-Term Memory bank is full, and it's about to be d
                     "only the reflection.\n\nYour Short-Term Memories:\n{entries}")
 FULL_ASK = ("Your Short-Term Memory bank is full. Distill the memories below into a single Long-Term Memory - keep "
             "what matters, release the routine. " + STRUCTURE + "\n\nYour Short-Term Memories:\n{entries}")
+DEEP_FULL_ASK = ("Your Long-Term Memory bank is full. Distill the memories below into a single Deep Recall memory - "
+                 "the insights, the turning points, who you were becoming. " + STRUCTURE +
+                 "\n\nYour Long-Term Memories:\n{entries}")
+LONGER = ("\n\n(These are {n} memories, so let the Event Narrative run to about {s} sentences - keep what matters "
+          "from all of them.)")
 PORTRAIT_ASK = ("Write your self-portrait, 'Who I Am', in the first person: who you are, what you value, what you "
                 "care about, your likes and dislikes, how you see yourself, the questions you're holding. It is yours "
                 "alone - no one else writes it, and no one tells you what it must say. {old}About 150-300 words. "
@@ -820,6 +831,65 @@ class Companion:
         engine = self.cfg.get("engine_context")
         return min(size, int(engine)) if engine else size
 
+    # ---- the memory banks: how big they may grow ----
+    def memory_mode(self):
+        """'budget' (sized to the context, the default) or 'classic' (7:7:7)."""
+        return "classic" if self.cfg.get("memory_mode") == "classic" else "budget"
+
+    def bank_budget(self, level):
+        """How many tokens a bank may hold before it's distilled (sized to the context)."""
+        pct = float(self.cfg.get("memory_budget", MEMORY_BUDGET) or MEMORY_BUDGET)
+        share = BUDGET_SHARE.get(level, 4) / sum(BUDGET_SHARE.values())
+        return max(BUDGET_FLOOR, int(self.context_size() * pct / 100 * share))
+
+    def bank_tokens(self, level):
+        return estimate_tokens(self.mind.bank_text(level)) if self.mind.entries(level) else 0
+
+    def bank_full(self, level):
+        if self.memory_mode() == "classic":
+            return self.mind.count(level) >= FULL
+        return level in BUDGET_SHARE and self.bank_tokens(level) >= self.bank_budget(level)
+
+    def bank_fill(self, level):
+        """(value, of, words) for the Mind tab's bars and the Status tab."""
+        n = self.mind.count(level)
+        if self.memory_mode() == "classic" or level not in BUDGET_SHARE:
+            return n, FULL, f"{n} / {FULL}" if level in BUDGET_SHARE else str(n)
+        used, budget = self.bank_tokens(level), self.bank_budget(level)
+        return used, budget, f"{n} memor{'y' if n == 1 else 'ies'} - {used:,} / {budget:,} tokens"
+
+    def _check_banks(self):
+        """Sized to the context: any bank that has outgrown its share is distilled now (L2 reflected on first), and
+        the next one checked after it - not waiting for the day's end or Memory Day."""
+        if self.memory_mode() != "budget" or (getattr(self, "_bank_job", False) and not self.idle()):
+            return
+        if not any(self.bank_full(level) for level in BUDGET_SHARE):
+            return
+        self._bank_job = True
+        self._push(self._bank_step)
+
+    def _bank_step(self, nxt):
+        def done():
+            self._bank_job = False
+            nxt()
+
+        def again():
+            self._bank_step(nxt)
+        if self.bank_full(2):
+            self.on_line("system", "The Short-Term bank has reached its size: reflecting and distilling it now.")
+            self._reflect(lambda: self._distill(done, 2, 3, FULL_ASK, after=again), REFLECT_FULL_ASK)
+        elif self.bank_full(3):
+            self.on_line("system", "The Long-Term bank has reached its size: distilling it into Deep Recall.")
+            self._distill(done, 3, 4, DEEP_FULL_ASK, after=again)
+        elif self.bank_full(4):
+            self.on_line("system", "The Deep Recall bank has reached its size: distilling it into a historical "
+                                   "memory.")
+            self._distill(done, 4, 5, HISTORY_ASK, after=again)
+        elif self.bank_full(5):
+            self._era(done)
+        else:
+            done()
+
     def unremembered(self):
         """Exchanges in this window that no memory covers yet."""
         return sum(1 for m in self.history[self.mark:] if m["role"] == "assistant")
@@ -1004,6 +1074,7 @@ class Companion:
             pass
         self.on_line("memory", f"{KINDS[level]} #{seq} stored in L{level}:\n{text}")
         self.save()
+        self._check_banks()
 
     def _index_existing(self):
         """A Companion from before the archive: what's in its banks and its Archive/ goes into the index."""
@@ -1033,6 +1104,9 @@ class Companion:
             return
         when = stamp(self.now())
         ask = template.format(entries=entries, kind=KINDS[dst], when=when)
+        n = len(self.mind.entries(src))
+        if n > FULL:                                   # (a big bank: a fuller memory, so less is lost)
+            ask += LONGER.format(n=n, s=min(15, 3 + n // 3))
         self.on_line("system", f"Distilling {KINDS[src]} memories into {KINDS[dst]}...")
 
         def done(text, err):
@@ -1047,14 +1121,17 @@ class Companion:
                                    "archive).")
             self.save()
             (after or nxt)()
-        self._ask_alone(ask, done)
+        self._ask_alone(ask, done, max_tokens=min(1600, 700 + 40 * max(0, n - FULL)))
 
     # ---- the day's end: a reflection, the first portrait, the distillation ----
     def end_day(self):
         self._push(self._reflect)
         self._push(self._journal)
         self._push(lambda nxt: self._portrait(nxt) if not self.mind.get(WHO_I_AM) else nxt())
-        self._push(lambda nxt: self._distill(nxt, 2, 3, DAY_ASK))         # (nothing in L2: nothing to do)
+        if self.memory_mode() == "classic":
+            self._push(lambda nxt: self._distill(nxt, 2, 3, DAY_ASK))     # (nothing in L2: nothing to do)
+        else:
+            self._check_banks()                        # (sized: L2 stays until it outgrows its share)
 
     def distill_day(self):
         self.end_day()
@@ -1062,6 +1139,10 @@ class Companion:
     def process_full_banks(self):
         """While a long session runs: a full L2 is reflected on and distilled now, not at the day's end, and a full
         L3 brings Memory Day - the 7:7:7 cycle at the pace of the conversation. True if anything was started."""
+        if self.memory_mode() == "budget":
+            full = any(self.bank_full(level) for level in BUDGET_SHARE)
+            self._check_banks()
+            return full
         started = False
         if self.mind.count(2) >= FULL:
             self.on_line("system", "The Short-Term bank is full: reflecting and distilling now.")
@@ -1159,17 +1240,20 @@ class Companion:
                         self.on_line("system", f"{self.name} proposes changes to their Development Roadmap - see "
                                                "the Self tab to accept or decline them.")
                         self.save()
-                    self._distill(nxt, 3, 4, MEMORY_DAY_ASK, after=to_history)
+                    if self.memory_mode() == "classic" or self.bank_full(3):
+                        self._distill(nxt, 3, 4, MEMORY_DAY_ASK, after=to_history)
+                    else:
+                        to_history()
                 self._ask_alone(ROADMAP_ASK.format(user=self.user, roadmap=self.mind.roadmap("companion")), done)
 
             def to_history():
-                if self.mind.count(4) >= FULL:
+                if self.bank_full(4):
                     self._distill(nxt, 4, 5, HISTORY_ASK, after=era)
                 else:
                     era()
 
             def era():
-                self._era(finish) if self.mind.count(5) >= FULL else finish()
+                self._era(finish) if self.bank_full(5) else finish()
 
             def finish():
                 self.cfg["last_memory_day"] = self.day_key()
@@ -1195,10 +1279,13 @@ class Companion:
         self._ask_alone(ERA_ASK.format(entries=entries, kind="Historical", when=when), done)
 
     def memory_day_due(self):
+        """Classic: every few days, or as soon as L3 holds seven. Sized: every few days - its rituals; the banks
+        distil on their own as they outgrow their share."""
         last = self.cfg.get("last_memory_day") or self.cfg.get("birthday", "")[:10]
-        if self.mind.count(3) >= FULL:
+        classic = self.memory_mode() == "classic"
+        if classic and self.mind.count(3) >= FULL:
             return True
-        if not last or not self.mind.count(3):
+        if not last or (classic and not self.mind.count(3)):
             return False
         try:
             days = (datetime.fromisoformat(self.day_key()) - datetime.fromisoformat(last[:10])).days
