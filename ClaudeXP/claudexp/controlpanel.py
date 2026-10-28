@@ -112,15 +112,27 @@ def _thumb(path):
     return QIcon(out)
 
 
-def _found_pictures():
-    """Pictures in My Pictures, Shared Pictures and on the E: drive, for 'Browse...'."""
+def _found_pictures(limit=300):
+    """Pictures in My Pictures, Shared Pictures and on the E: drive, for 'Browse...' and the slideshow: the first
+    `limit` from each, in name order. The walk stops there - E: is the whole archive, and listing all of it froze the
+    computer for a quarter of a minute."""
+    import os
     from .explorer import vfs
     found = []
     for folder in (vfs.my_pictures(), vfs.shared_documents() / "Shared Pictures", vfs.local_storage()):
-        if folder.exists():
-            for f in sorted(folder.rglob("*"))[:300]:
-                if f.suffix.lower() in display.IMAGE_EXTS and f.is_file():
-                    found.append(f)
+        if not folder.exists():
+            continue
+        n = 0
+        for root, dirs, files in os.walk(folder):
+            dirs.sort()
+            for name in sorted(files):
+                if Path(name).suffix.lower() in display.IMAGE_EXTS:
+                    found.append(Path(root) / name)
+                    n += 1
+                    if n >= limit:
+                        break
+            if n >= limit:
+                break
     return found
 
 

@@ -101,9 +101,13 @@ def tucked_away(desktop):
     settings = Settings()
     if _tray is not None and isValid(_tray) and not settings["tray_tip_shown"]:
         settings.set("tray_tip_shown", True)
-        QTimer.singleShot(300, lambda: _tray.showMessage(
-            "ClaudeAI is still running", "ClaudeAI keeps running in the notification area. "
-            "Double-click its icon to open it again, or right-click it and choose Exit to close it."))
+
+        def tip():
+            if _tray is not None and isValid(_tray):         # (logged off or exited in the meantime: no tray)
+                _tray.showMessage("ClaudeAI is still running", "ClaudeAI keeps running in the notification area. "
+                                  "Double-click its icon to open it again, or right-click it and choose Exit to "
+                                  "close it.")
+        QTimer.singleShot(300, tip)
 
 
 def shutdown():

@@ -289,7 +289,7 @@ class QBasicStudio(QWidget):
             if p and Path(p).exists() and self.open_path(p) is not None:
                 opened += 1
         if not opened:
-            self.new_file(NEW_PROGRAM)
+            self.new_file()                            # (the starter program: closing it untouched asks nothing)
         cur = self.settings.get("current")
         for i in range(self.tabs.count()):
             if self.tabs.widget(i).path == cur:

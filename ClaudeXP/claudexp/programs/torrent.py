@@ -785,9 +785,13 @@ def tucked_away():
     if _tray is not None and isValid(_tray) and not st.get("tray_tip_shown"):
         st["tray_tip_shown"] = True
         save_json(STATE_FILE, st)
-        QTimer.singleShot(300, lambda: _tray.showMessage(
-            "ClaudeTorrent is still running", "Your torrents keep downloading in the background. Double-click the "
-            "arrows to open ClaudeTorrent, or right-click them and choose Exit to quit."))
+
+        def tip():
+            if _tray is not None and isValid(_tray):         # (logged off or exited in the meantime: no tray)
+                _tray.showMessage("ClaudeTorrent is still running", "Your torrents keep downloading in the "
+                                  "background. Double-click the arrows to open ClaudeTorrent, or right-click them "
+                                  "and choose Exit to quit.")
+        QTimer.singleShot(300, tip)
 
 
 def start_at_logon(desktop):

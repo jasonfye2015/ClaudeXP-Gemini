@@ -104,6 +104,7 @@ def main():
 
 
 def _run_again():
+    from . import setup
     env = dict(os.environ, CLAUDE7_RESTARTED="1")
     script = str(ROOT / "main.py")
     while True:
