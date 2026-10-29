@@ -198,6 +198,8 @@ CM.Renderer = class {
   }
 
   get busy() { return this.move !== null || this.turn !== null; }
+  shake(strength) { this.shakeT = Math.max(this.shakeT || 0, Math.min(1, strength)); }   // the view judders, and settles
+  punch() { this.punchT = 1; }                                                            // the party leans into a blow
 
   // where the camera is in grid terms (the cell it's heading for, while it steps)
   setSprites(list) { this.sprites = list; }
@@ -278,8 +280,12 @@ CM.Renderer = class {
     const unsteady = this.light < 0.6 ? 2.2 : 1;
     this.flicker = 0.92 + unsteady * (0.06 * Math.sin(this.time * 7.3) + 0.03 * Math.sin(this.time * 17.1 + 1.0) + 0.02 * Math.sin(this.time * 31.7));
     const gl = this.gl, aspect = this.canvas.width / this.canvas.height;
-    const eye = [this.eye[0], this.eye[1] + this.bob, this.eye[2]];
-    const fwd = [Math.sin(this.yaw), 0, -Math.cos(this.yaw)];
+    const fwd = [Math.sin(this.yaw), 0, -Math.cos(this.yaw)], right = [Math.cos(this.yaw), 0, Math.sin(this.yaw)];
+    this.shakeT = (this.shakeT || 0) * Math.pow(0.0005, dt);              // a shake dies away in about a second
+    if (this.shakeT < 0.01) this.shakeT = 0;
+    this.punchT = Math.max(0, (this.punchT || 0) - dt / 0.22);
+    const jx = Math.sin(this.time * 61) * this.shakeT * 0.06, jy = Math.sin(this.time * 47 + 1) * this.shakeT * 0.045, pk = Math.sin(this.punchT * Math.PI) * 0.1;
+    const eye = [this.eye[0] + right[0] * jx + fwd[0] * pk, this.eye[1] + this.bob + jy, this.eye[2] + right[2] * jx + fwd[2] * pk];
     const view = mat4LookAt(eye, [eye[0] + fwd[0], eye[1], eye[2] + fwd[2]], [0, 1, 0]);
     const proj = mat4Perspective(Math.PI / 3, aspect, 0.05, 80);
     this.viewProj = mat4Mul(proj, view);

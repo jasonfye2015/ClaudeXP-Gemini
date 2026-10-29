@@ -156,6 +156,15 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view .blink.on { opacity: 0.9; transition: none; }
 #view .fall { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; transition: opacity 0.6s; }
 #view .fall.on { opacity: 1; transition: opacity 0.12s; }
+#view .tint { position: absolute; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: screen; }
+.member.jolt { animation: jolt 0.45s ease-out; }
+@keyframes jolt { 0% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } 100% { transform: translateX(0); } }
+.member.glow-green { animation: glow-green 0.9s ease-out; }
+.member.glow-gold { animation: glow-gold 1.1s ease-out; }
+.member.glow-blue { animation: glow-blue 0.9s ease-out; }
+@keyframes glow-green { 0% { box-shadow: 0 0 0 rgba(120,230,120,0); } 25% { box-shadow: 0 0 18px 4px rgba(120,230,120,0.85); } 100% { box-shadow: 0 0 0 rgba(120,230,120,0); } }
+@keyframes glow-gold { 0% { box-shadow: 0 0 0 rgba(232,200,112,0); } 25% { box-shadow: 0 0 20px 5px rgba(232,200,112,0.9); } 100% { box-shadow: 0 0 0 rgba(232,200,112,0); } }
+@keyframes glow-blue { 0% { box-shadow: 0 0 0 rgba(120,170,255,0); } 25% { box-shadow: 0 0 18px 4px rgba(120,170,255,0.85); } 100% { box-shadow: 0 0 0 rgba(120,170,255,0); } }
 #side .light { font: 12px var(--serif); color: var(--dim); text-align: center; }
 #side .light.dark { color: #E06060; font-weight: bold; }
 #side { width: 296px; flex: 0 0 296px; display: flex; flex-direction: column; gap: 8px; }

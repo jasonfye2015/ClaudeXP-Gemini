@@ -45,7 +45,7 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div id="floats"></div><div class="hint"></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="hint"></div></div>
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div></div>
   </div>
   <div id="party"></div>
@@ -883,12 +883,41 @@ CM.UI = class {
     }
   }
 
+  // what the window itself shows of an event: the red flash and a jolted card for a blow, a glow for a mending
   fx(fx) {
-    if (fx.kind === "hurt") {
-      const flash = this.$("#view .hurt");
-      flash.classList.add("on");
-      setTimeout(() => flash.classList.remove("on"), 60);
+    const g = this.game, hold = CM.fx ? Math.max(0, CM.fx.holdUntil - performance.now()) : 0;
+    const later = (fn) => (hold > 0 ? setTimeout(fn, hold) : fn());                   // (while a bolt is in flight, the blow waits for it)
+    if (fx.kind === "hurt") later(() => { this.flash(".hurt", 60); this.cardFx(g.party.indexOf(fx.hero), "jolt", 500); });
+    else if (fx.kind === "levelup") this.cardFx(g.party.indexOf(fx.hero), "glow-gold", 1200);
+    else if (fx.kind === "potion") this.cardFx(fx.who, fx.item === "mana" ? "glow-blue" : fx.item === "revive" ? "glow-gold" : "glow-green", 900);
+    else if (fx.kind === "cast") {
+      const heals = ["heal", "mend", "lay", "cure", "lift", "regrowth", "raise", "healing"], wards = ["bless", "protection", "sanctuary", "song", "rally", "guard", "taunt"];
+      if (heals.includes(fx.id)) {
+        if (fx.ally) this.cardFx(g.party.indexOf(fx.ally), "glow-green", 900);
+        else g.party.forEach((h, i) => { if (h.hp > 0) this.cardFx(i, "glow-green", 900); });
+      } else if (wards.includes(fx.id)) {
+        const who = fx.ally ? [g.party.indexOf(fx.ally)] : fx.id === "taunt" ? [g.party.indexOf(fx.hero)] : g.party.map((h, i) => i);
+        for (const i of who) this.cardFx(i, fx.id === "protection" || fx.id === "sanctuary" ? "glow-blue" : "glow-gold", 900);
+      }
     }
+  }
+
+  // a wash of colour over the view that fades (a spell's light, a trap's gas)
+  tint(colour, ms = 260) {
+    const el = this.$("#view .tint");
+    clearTimeout(this.tintTimer);
+    el.style.transition = "none"; el.style.background = colour; el.style.opacity = "1";
+    this.tintTimer = setTimeout(() => { el.style.transition = `opacity ${ms}ms ease-out`; el.style.opacity = "0"; }, 40);
+  }
+
+  // a hero's card jolts or glows for a moment
+  cardFx(i, cls, ms = 700) {
+    const card = this.$("#party").children[i];
+    if (!card) return;
+    card.classList.remove(cls);
+    void card.offsetWidth;                                               // (so the animation starts again)
+    card.classList.add(cls);
+    setTimeout(() => card.classList.remove(cls), ms);
   }
 
   floatText(x, y, text, cls = "") {

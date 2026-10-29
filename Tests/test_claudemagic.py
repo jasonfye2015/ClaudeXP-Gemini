@@ -4,7 +4,8 @@ stocked, and the same from the same seed; the rules are the old game's (a fight 
 opens, the camp trades and rests, the run ends in the Hall of Fame); a run saves and comes back after the page
 reloads, and travels as text; the first-person view draws (WebGL, composited in software here); the music is written
 from a seed and follows the mode and the depth, every sound is in its place and the ending sums the run up; the three
-themes (drawn, Crawl's pixel tiles, photographed stone) ride inside the file, build every depth and switch at once; and
+themes (drawn, Crawl's pixel tiles, photographed stone) ride inside the file, build every depth and switch at once; the
+spectacle flies, bursts, shakes and glows for what the game announces, and the dungeon has its torches and water; and
 the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
 import importlib.util
 import json
@@ -903,6 +904,86 @@ def test_the_themes():
     assert ask("Object.keys(CM.game.floor.things)[0]") != still["key"] or ask("CM.game.mode") == "combat", "the monsters didn't stir once the sheet was closed"
     run("const sel = document.querySelector('#look'); sel.value = 'drawn'; sel.dispatchEvent(new Event('change'))")
     assert ask("CM.game.settings.look") == "drawn" and ask("CM.renderer.crisp") is False
+    said = [s for s in page().said if "Error" in s or "error" in s]
+    assert not said, f"the page's console: {said[:5]}"
+
+
+def test_the_spectacle():
+    """The second update's second phase - motion and spectacle: every theme's set has the effects' pictures, the torches
+    and the water; CM.Effects flies a projectile that lands and runs its then (and holds the blows until it does),
+    bursts sparks that fade, spreads a ring, hangs a flare, rains and drifts, all gone when their time is up; the game
+    announces what the window needs (a swing with its foe, a cast with its target, a monster's attack, a wand, a potion,
+    a trap); the window turns them into sprites in flight, a shake, a punch, a tint and a glowing card; the living
+    dungeon has torches on the walls (never over a lever) and water in the flooded vaults"""
+    run(PARSE)
+    got = ask(f"""(function(){{ const g = CM.game, out = {{}};
+      const need = ['fx:spark', 'fx:shard', 'fx:fire', 'fx:frost', 'fx:bolt', 'fx:force', 'fx:holy', 'fx:arrow', 'fx:leaf', 'fx:ring', 'torch0', 'torch1', 'torch2', 'water0', 'water1', 'water2'];
+      out.layers = ['drawn', 'pixel', 'stone'].every(look => {{ const b = CM.art.build(CM.THEMES[1], look); return need.every(n => b.index[n] !== undefined); }});
+      // the effects, on a clock of our own
+      const fx = new CM.Effects(); let landed = 0; const t0 = performance.now();
+      fx.projectile({{ from: [1, 0.4, 1], to: [3, 0.5, 1], ms: 300, then: () => landed++ }});
+      out.held = fx.holdUntil >= t0 + 299;
+      const mid = fx.sprites(t0 + 150);
+      out.flying = mid.length >= 1 && mid[0].layer === 'fx:fire' && mid[0].x > 1 && mid[0].x < 2.5 && mid[0].glow === 1;
+      fx.sprites(t0 + 200); const after = fx.sprites(t0 + 400);
+      out.landed = landed === 1 && !after.some(s => s.layer === 'fx:fire');
+      fx.clear(); fx.burst({{ at: [2, 0.5, 2], n: 10, ms: 600 }});
+      const b0 = fx.list[0].t0, b1 = fx.sprites(b0 + 100), b2 = fx.sprites(b0 + 500);
+      out.burst = b1.length === 10 && b2.length === 10 && b2[0].alpha < b1[0].alpha && fx.sprites(b0 + 700).length === 0 && fx.count === 0;
+      fx.ring({{ at: [2, 0, 2], ms: 400, to: 3 }});
+      const r0 = fx.list[0].t0, r1 = fx.sprites(r0 + 100)[0], r2 = fx.sprites(r0 + 300)[0];
+      out.ring = r1.flat === true && r2.w > r1.w && r2.alpha < r1.alpha && fx.sprites(r0 + 500).length === 0;
+      fx.flare({{ at: [2, 0.6, 2], ms: 200 }}); fx.rain({{ at: [2, 0, 2], ms: 300, n: 5 }}); fx.drift({{ at: [2, 0.8, 2], ms: 300, n: 4 }});
+      const f0 = fx.list[0].t0, many = fx.sprites(f0 + 150);
+      out.others = many.some(s => s.layer === 'fx:bolt') && many.some(s => s.layer === 'fx:frost') && many.some(s => s.layer === 'fx:spark') && fx.sprites(f0 + 1000).length === 0;
+      // what the game announces
+      const seen = []; g.on('fx', (e) => seen.push(e));
+      CM.store.remove('run'); g.lastRun = null; g.newGame({json.dumps(SEED)});
+      CM.useFloor(g, CM.testFloor(3, ['####', '#XM#', '####']));
+      const fixed = (hit) => ({{next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l}});
+      for (const h of g.party) {{ h.max = 400; h.hp = 400; h.mp = 50; h.maxmp = 50; h.level = 5; }}
+      g.rnd = fixed(() => false); g.move(0);
+      out.fight = g.mode === 'combat';
+      const mage = g.party[3], foe = g.foes[0];
+      foe.max = 900; foe.hp = 900;                                  // (it must outlast a blow, a bolt and a wand)
+      g.combat.order = []; g.combat.index = 0; g.combat.waiting = mage;
+      g.rnd = fixed(() => true);
+      g.strike(g.party[0], foe); out.swing = seen.some(e => e.kind === 'swing' && e.hero === g.party[0] && e.foe === foe);
+      g.useAbility(mage, 'firebolt', 0); out.cast = seen.some(e => e.kind === 'cast' && e.id === 'firebolt' && e.foe === foe && e.hero === mage);
+      g.monsterAct(foe); out.attack = seen.some(e => e.kind === 'attack' && e.foe === foe);
+      g.bag.push(CM.wand('fire', 3)); g.useMagicInBattle(mage, g.bag.length - 1, 0); out.wand = seen.some(e => e.kind === 'cast' && e.id === 'fire' && e.item === 'wand' && e.foe === foe);
+      g.party[1].hp = 5; g.bag.push({{name: 'Healing Potion', kind: 'heal', power: 20, value: 20}}); g.useItemInBattle(mage, {{row: g.bag.length - 1, who: 1}});
+      out.potion = seen.some(e => e.kind === 'potion' && e.who === 1);
+      g.springTrap('gas', '1,1'); out.trap = seen.some(e => e.kind === 'trap' && e.trap === 'gas');
+      // the window's answer
+      CM.fx.clear();
+      g.emit('fx', {{ kind: 'cast', id: 'fireball', hero: mage, foes: g.living() }});
+      out.inFlight = CM.fx.count > 0 && CM.fx.holdUntil > performance.now();
+      g.emit('fx', {{ kind: 'cast', id: 'lightning', hero: mage, foe }});
+      out.shaken = CM.renderer.shakeT > 0;
+      out.tinted = document.querySelector('#view .tint').style.opacity === '1';
+      g.emit('fx', {{ kind: 'swing', hero: g.party[0], foe }}); out.punched = CM.renderer.punchT === 1;
+      g.emit('fx', {{ kind: 'cast', id: 'heal', hero: g.party[2], ally: g.party[1] }});
+      out.glow = document.querySelector('#party').children[1].classList.contains('glow-green');
+      g.emit('fx', {{ kind: 'hurt', hero: g.party[0], amount: 200, foe }});
+      return out; }})()""")
+    for key in ("layers", "held", "flying", "landed", "burst", "ring", "others", "fight", "swing", "cast", "attack", "wand", "potion", "trap",
+                "inFlight", "shaken", "tinted", "punched", "glow"):
+        assert got[key] is True, (key, got)
+    support.pump(0.25)
+    assert ask("CM.renderer.sprites.filter(s => s.glow === 1).length") > 0, "nothing of the spectacle reached the renderer"
+    support.pump(1.6)
+    assert ask("CM.fx.count") == 0 and ask("document.querySelector('#party').children[0].classList.contains('jolt')") is False
+    # the living dungeon: torches on the walls and water on the floors of the flooded vaults
+    run(f"""const g = CM.game; g.combat = null; g.mode = 'explore';
+      const fl = CM.makeFloor(7, {json.dumps(SEED)}); g.floors[7] = fl; g.floor = fl; g.look(); g.emit('floor', fl); g.emit('change')""")
+    support.pump(0.3)
+    kinds = ask("""(function(){ const s = CM.renderer.sprites, t = s.filter(x => /^torch/.test(x.layer)), w = s.filter(x => /^water/.test(x.layer));
+      return { torch: t.length, water: w.length, face: t.every(x => x.face !== undefined && x.glow > 0.5), flat: w.every(x => x.flat === true) }; })()""")
+    assert kinds["torch"] > 0 and kinds["water"] > 0 and kinds["face"] and kinds["flat"], kinds
+    run("CM.useFloor(CM.game, CM.testFloor(3, ['#####', '#X/G#', '#####']))")
+    support.pump(0.3)
+    assert ask("CM.renderer.sprites.some(s => /^torch/.test(s.layer) && s.x === 2 && s.y === 1 && s.face === 0)") is False, "a torch over the lever"
     said = [s for s in page().said if "Error" in s or "error" in s]
     assert not said, f"the page's console: {said[:5]}"
 

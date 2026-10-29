@@ -166,7 +166,8 @@ CATALOG = {
                              "and the Lich King at the bottom - who rises again until his phylactery is found. "
                              "Music made as it plays, an ambience for each depth and a call for every monster, all in "
                              "code. Three looks to choose from, any time: drawn in code, Crawl's pixel tiles, or "
-                             "photographed stone. When the whole party falls, the run ends on a screen that tells how it went, and "
+                             "photographed stone. Fights that move: lunges, spells that fly and burst, sparks, a "
+                             "shaking view, torches on the walls and water underfoot. When the whole party falls, the run ends on a screen that tells how it went, and "
                              "starts over. One HTML file: it plays in a browser too, and on its own from the "
                              "launcher's APPS."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
