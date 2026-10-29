@@ -3,6 +3,9 @@
 
 CM.DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];              // north, east, south, west (x, y on the grid)
 CM.DIR_NAMES = "NESW";
+// a monster's name in a sentence: "the Orc", but "the Lich King" (whose name carries its own The)
+CM.the = (m) => { const n = typeof m === "string" ? m : m.name; return /^The /.test(n) ? "t" + n.slice(1) : "the " + n; };
+CM.The = (m) => { const n = typeof m === "string" ? m : m.name; return /^The /.test(n) ? n : "The " + n; };
 CM.LAST_FLOOR = 20;
 CM.CAMP_AFTER = [5, 10, 15];                               // a merchant's camp waits below these floors
 
@@ -220,10 +223,57 @@ CM.abilitiesFor = (hero) => Object.keys(CM.ABILITIES).filter((id) => {
 CM.LICH = { summonEvery: 3, summonMax: 4, coldFrom: 0.3, summonFrom: 0.6, riseTo: 0.4 };
 CM.BOSS = { name: "The Lich King", colour: "#A0E0FF", body: "tall", head: "skull", eyes: "#40F0FF", extras: ["crown", "staff", "robe"] };
 
+// ---- the guardians ---------------------------------------------------------------------------------------------------
+// On the floor above each camp something has made its lair over the shaft down, and the party must go through it. Each
+// has its look (painted like the monsters), its lair (a set piece with the shaft under its feet: B the guardian, # a
+// pillar, n a heap of bones and rags, t a throne, v an anvil, e embers in the floor, W a carving of its story; flood puts
+// water on every floor of it), two things it does in a fight, what it is weak to and what it shrugs off, the company it
+// keeps, a relic it leaves, and the wash of colour over the view when it falls.
+CM.GUARDIANS = {
+  rat: { floor: 5, name: "The Rat King", colour: "#6E5444", body: "beast", head: "snout", eyes: "#FF5040", extras: ["tail", "crown", "swarm"], speed: 13, size: 0.9,
+    hp: 150, atk: 15, df: 6, xp: 500, gold: 350, touch: { status: "poison", chance: 0.45 }, weak: "fire", resist: null, undead: false,
+    escorts: ["Giant Rat", "Giant Rat"], tint: "rgba(160,220,80,0.35)",
+    abilities: [["Call the swarm", "every third turn, rats pour out of the refuse (four at most)"],
+      ["Plague bite", "poisons more often than not, for longer, and bites a poisoned hero half again as hard"]],
+    intro: "The heap of bones and rags heaves, and something climbs out of it: a rat the size of a hound, a crown of knotted tails on its head. The Rat King.",
+    fall: "The Rat King shrieks once, and the swarm pours away into the walls. The nest is quiet.",
+    take: "Among the bones you find its crown - gold, under the filth - and the shaft the nest was heaped over.",
+    lore: "They fed the rats, so the rats would not feed on them. Then the rats learned to want. Here the feeding stopped.",
+    relic: { name: "Rat King's Crown", kind: "helm", slot: "helm", power: 3, value: 600, props: { relic: true, resist: "poison", stat: "luck" } },
+    lair: { name: "Rat King's Nest", lore: "g:rat", rows: ["####W####", "#n.....n#", "#..n.n..#", "#...B...#", "#.n...n.#", "#n.....n#", "###D#####"] } },
+  knight: { floor: 10, name: "The Drowned Knight", colour: "#3E6068", body: "tall", head: "helm", eyes: "#80E8D8", extras: ["sword", "shield", "weed"], speed: 8, size: 1.0,
+    hp: 280, atk: 26, df: 12, xp: 1400, gold: 1000, touch: null, weak: "holy", resist: "frost", undead: true, escorts: [], tint: "rgba(80,180,200,0.4)",
+    abilities: [["Drowning grasp", "every third turn, drags one of the party under: half again the blow, and a round lost gasping"],
+      ["Unquiet", "the water lifts him up again, once, at a third of his strength"]],
+    intro: "In the sunken hall a knight sits his throne under the water, and stands as you come in. Weed hangs from his helm; the water runs out of him and never stops. The Drowned Knight.",
+    fall: "The Drowned Knight sinks to one knee, and then into the water, and this time the water keeps him.",
+    take: "His shield floats where he fell, and under the throne the water drains away down the shaft.",
+    lore: "The captain of the lower town's watch would not leave his post when the water came. The water, in the end, agreed with him.",
+    relic: { name: "Shield of the Drowned", kind: "shield", slot: "offhand", power: 5, value: 900, props: { relic: true, resist: "paralysis", df: 2 } },
+    lair: { name: "Drowned Hall", lore: "g:knight", flood: true, rows: ["#####W#####", "#....t....#", "#.#.....#.#", "#....B....#", "#.#.....#.#", "#.........#", "#####D#####"] } },
+  forge: { floor: 15, name: "The Forge-Warden", colour: "#5C5450", body: "wide", head: "round", eyes: "#FFB030", extras: ["hammer", "glow"], skin: "stone", speed: 6, size: 1.08,
+    hp: 440, atk: 36, df: 20, xp: 2600, gold: 1800, touch: null, weak: "frost", resist: "fire", undead: false, escorts: [], tint: "rgba(255,150,40,0.4)",
+    abilities: [["Hammer slam", "every third turn, the hammer comes down on the whole front row, and some are knocked flat"],
+      ["Forge heat", "every blow struck on it sears the striker (arrows don't); fire does it little, frost bites deep"]],
+    intro: "The forge is lit. Between the anvils something of iron and stone, that the dwarves made to keep their door, turns its head; the light in its chest comes up like a bellows. The Forge-Warden.",
+    fall: "The Forge-Warden stops, the light in its chest going out an inch at a time, and the iron ticks as it cools.",
+    take: "Its hammer lies where it dropped it, still warm. Under the forge-floor, the shaft goes down.",
+    lore: "The dwarves made a warden for their door and went down to the deep halls without it, trusting it. It is still here. They are not.",
+    relic: { name: "Forge-Warden's Hammer", kind: "weapon", slot: "weapon", power: 10, value: 1400, props: { relic: true, element: "fire", twohanded: true, stun: 0.25 } },
+    lair: { name: "The Forge", lore: "g:forge", rows: ["#####W#####", "#e.v...v.e#", "#e#.....#e#", "#e...B...e#", "#e#.....#e#", "#e.v...v.e#", "#####D#####"] } },
+};
+CM.guardianFor = (floor) => Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === floor) || null;
+CM.unmoved = (m) => Boolean(m && (m.boss || m.guardian));          // the Lich King and the guardians: not held, not put to sleep, not routed
+// what a carving says: the floor's part of the story, an odd one, or a guardian's (text "g:<guardian>")
+CM.loreText = (text) => (typeof text === "string" && text.startsWith("g:") ? (CM.GUARDIANS[text.slice(2)] || {}).lore || ""
+  : text >= 0 ? CM.LORE[text] || CM.LORE[CM.LORE.length - 1] : CM.LORE_EXTRA[-text - 1] || CM.LORE_EXTRA[0]);
+
 // what a monster sounds like, by kind (the sounds are cooked in 50-audio.js)
 CM.roarFor = function (kind) {
   if (!kind) return "monster";
   if (kind === CM.BOSS.name) return "lich";
+  const g = Object.values(CM.GUARDIANS).find((G) => G.name === kind);
+  if (g) return g.undead ? "roar_undead" : g.body === "beast" ? "roar_beast" : "roar_big";
   const k = CM.monsterKind(kind), name = k ? k.name : kind;
   if (["Giant Rat", "Kobold", "Goblin", "Dark Elf"].includes(name)) return "roar_small";
   if (["Skeleton", "Zombie", "Ghoul", "Wraith", "Vampire"].includes(name)) return "roar_undead";

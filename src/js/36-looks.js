@@ -88,6 +88,9 @@ CM.art.buildPixel = function (theme) {
   for (const m of CM.MONSTERS) add(`monster:${m.name}`, sprite(`m.${m.name}`));
   add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`));
   const tileOr = (key, drawn) => (CM.packs.pixel.index[key] ? sprite(key) : CM.art.pixelate(drawn()));   // (the set's tile, or the drawn one made of pixels)
+  for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12)));
+  add("nest", CM.art.pixelate(CM.art.nest())); add("throne", CM.art.pixelate(CM.art.throne())); add("anvil", CM.art.pixelate(CM.art.anvil()));
+  add("ember", tileOr("ember", CM.art.ember));
   add("fx:spark", tileOr("fx.spark", CM.art.fxSpark)); add("fx:shard", tileOr("fx.shard", CM.art.fxShard)); add("fx:fire", tileOr("fx.fire", CM.art.fxFire));
   add("fx:frost", tileOr("fx.frost", CM.art.fxFrost)); add("fx:bolt", tileOr("fx.bolt", CM.art.fxBolt)); add("fx:force", tileOr("fx.force", CM.art.fxForce));
   add("fx:holy", tileOr("fx.holy", CM.art.fxHoly)); add("fx:arrow", tileOr("fx.arrow", CM.art.fxArrow)); add("fx:leaf", tileOr("fx.leaf", CM.art.fxLeaf));

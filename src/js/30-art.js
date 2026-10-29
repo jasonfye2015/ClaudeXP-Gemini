@@ -190,7 +190,7 @@ CM.art.monster = function (m, big = false) {
   const col = m.colour, dark = shaded(p, col, 0.65), light = shaded(p, col, 1.3);
   const bodies = { beast: [150, 70], small: [66, 76], biped: [84, 100], thin: [58, 100], wide: [130, 112], tall: [78, 140], ghost: [90, 140] };
   const [bw, bh] = bodies[m.body] || bodies.biped;
-  const scale = big ? 1.12 : 1;
+  const scale = big === true ? 1.12 : typeof big === "number" ? big : 1;
   p.translate(cx, ground); p.scale(scale, scale); p.translate(-cx, -ground);
   const bodyTop = ground - (m.body === "beast" ? 24 : 36) - bh, bodyBottom = bodyTop + bh;
   const headR = m.body === "small" ? 30 : m.body === "wide" ? 28 : m.body === "beast" ? 26 : 24;
@@ -298,6 +298,38 @@ CM.art.monster = function (m, big = false) {
       const g = p.createRadialGradient(hx + 4, bodyTop - 58, 0, hx + 4, bodyTop - 58, 22);
       g.addColorStop(0, m.eyes); g.addColorStop(0.5, shaded(p, m.eyes, 0.6)); g.addColorStop(1, "rgba(0,0,0,0)");
       p.fillStyle = g; p.beginPath(); p.arc(hx + 4, bodyTop - 58, 22, 0, Math.PI * 2); p.fill();
+    } else if (ex.includes("hammer")) {                                   // a maul: a long haft and a block of iron
+      p.strokeStyle = "#1A1410"; p.lineWidth = 11; p.beginPath(); p.moveTo(hx, hy); p.lineTo(hx + 10, hy - 96); p.stroke();
+      p.strokeStyle = "#4A3A2A"; p.lineWidth = 7; p.beginPath(); p.moveTo(hx, hy); p.lineTo(hx + 10, hy - 96); p.stroke();
+      outlined(p, () => { p.roundRect(hx - 16, hy - 112, 54, 30, 4); }, "#6A6E78", "#1A1410", 3);
+      p.fillStyle = "#9AA0AA"; p.fillRect(hx - 12, hy - 108, 46, 6);
+    }
+    if (ex.includes("shield")) {                                          // a kite shield on the other arm
+      const sx = cx - bw / 2 - armW / 2 - 2, sy = bodyTop + 30;
+      outlined(p, () => { p.moveTo(sx - 30, sy); p.lineTo(sx + 30, sy); p.lineTo(sx + 30, sy + 40); p.quadraticCurveTo(sx + 30, sy + 80, sx, sy + 96); p.quadraticCurveTo(sx - 30, sy + 80, sx - 30, sy + 40); }, "#4A5A64", "#1A1410", 4);
+      p.strokeStyle = "#8A9AA4"; p.lineWidth = 5; p.beginPath(); p.moveTo(sx, sy + 8); p.lineTo(sx, sy + 84); p.moveTo(sx - 24, sy + 30); p.lineTo(sx + 24, sy + 30); p.stroke();
+    }
+    if (ex.includes("glow")) {                                            // the forge in its chest, behind a grate
+      const fg = p.createRadialGradient(cx, bodyTop + bh * 0.45, 2, cx, bodyTop + bh * 0.45, bw * 0.34);
+      fg.addColorStop(0, "rgba(255,240,170,1)"); fg.addColorStop(0.35, "rgba(255,150,40,0.9)"); fg.addColorStop(1, "rgba(255,80,0,0)");
+      p.fillStyle = fg; p.fillRect(cx - bw / 2, bodyTop, bw, bh);
+      p.strokeStyle = "#1A1410"; p.lineWidth = 3;
+      for (let i = -2; i <= 2; i++) { p.beginPath(); p.moveTo(cx - bw * 0.3, bodyTop + bh * 0.3 + i * 10); p.lineTo(cx + bw * 0.3, bodyTop + bh * 0.3 + i * 10); p.stroke(); }
+    }
+  }
+  if (ex.includes("weed")) {                                              // weed down the shoulders, and water running off
+    p.strokeStyle = "#3A6A3A"; p.lineWidth = 5; p.lineCap = "round";
+    for (let i = 0; i < 7; i++) { const x = cx - bw / 2 + 6 + i * (bw - 12) / 6; p.beginPath(); p.moveTo(x, bodyTop + 2); p.quadraticCurveTo(x + (i % 2 ? 8 : -8), bodyTop + 30, x + (i % 2 ? -4 : 6), bodyTop + 40 + (i % 3) * 14); p.stroke(); }
+    p.fillStyle = "rgba(150,210,230,0.8)";
+    for (let i = 0; i < 6; i++) { p.beginPath(); p.ellipse(cx - bw / 2 + 10 + i * (bw - 20) / 5, bodyBottom + 10 + (i % 2) * 16, 3, 6, 0, 0, Math.PI * 2); p.fill(); }
+  }
+  if (ex.includes("swarm")) {                                             // small rats about its feet
+    for (let i = 0; i < 5; i++) {
+      const rx = cx - 90 + i * 45 + (i % 2) * 10, ry = ground - 8 - (i % 2) * 6;
+      outlined(p, () => { p.ellipse(rx, ry, 18, 9, 0, 0, Math.PI * 2); }, dark, "#1A1410", 2);
+      outlined(p, () => { p.ellipse(rx + 16, ry - 3, 8, 6, 0, 0, Math.PI * 2); }, dark, "#1A1410", 2);
+      p.fillStyle = m.eyes; p.beginPath(); p.arc(rx + 19, ry - 4, 1.6, 0, Math.PI * 2); p.fill();
+      p.strokeStyle = dark; p.lineWidth = 2; p.beginPath(); p.moveTo(rx - 16, ry); p.quadraticCurveTo(rx - 30, ry - 10, rx - 34, ry + 4); p.stroke();
     }
   }
   if (ex.includes("tail")) {
@@ -317,6 +349,11 @@ CM.art.monster = function (m, big = false) {
     if (m.head === "pale") outlined(p, () => { p.ellipse(hx2, hy2 - 6, headR + 4, headR, 0, Math.PI, Math.PI * 2); }, "#1A1014");
     outlined(p, () => { p.ellipse(hx2, hy2, headR, headR * (m.head === "skull" ? 1.05 : 0.95), 0, 0, Math.PI * 2); }, faceCol);
     if (m.head === "snout") outlined(p, () => { p.ellipse(hx2, hy2 + headR * 0.55, headR * 0.7, headR * 0.45, 0, 0, Math.PI * 2); }, light);
+    if (m.head === "helm") {                                            // a great helm: steel, a visor slit, the eyes behind it
+      outlined(p, () => { p.moveTo(hx2 - headR - 4, hy2 + headR * 0.95); p.lineTo(hx2 - headR - 4, hy2 - headR * 0.2); p.arc(hx2, hy2 - headR * 0.2, headR + 4, Math.PI, 0); p.lineTo(hx2 + headR + 4, hy2 + headR * 0.95); }, "#8A94A0", "#1A1410", 3);
+      p.fillStyle = "#1A1410"; p.fillRect(hx2 - headR * 0.8, hy2 - headR * 0.14, headR * 1.6, headR * 0.3);
+      p.fillStyle = "#6A7480"; p.fillRect(hx2 - 3, hy2 - headR * 0.9, 6, headR * 1.75);
+    }
     if (m.head === "tusks") for (const side of [-1, 1]) outlined(p, () => { p.moveTo(hx2 + side * headR * 0.5, hy2 + headR * 0.5); p.lineTo(hx2 + side * headR * 0.7, hy2 + headR * 1.05); p.lineTo(hx2 + side * headR * 0.25, hy2 + headR * 0.6); }, "#F0ECE0", "#1A1410", 2);
     if (m.head === "skull") {
       p.fillStyle = "#1A1410";
@@ -328,13 +365,13 @@ CM.art.monster = function (m, big = false) {
     }
   }
   // the eyes: they glow
-  const eyeY = m.head === "hood" ? hy2 + 2 : hy2 - (m.head === "snout" ? 6 : 2), eyeDX = headR * 0.42, eyeR = headR * (m.head === "skull" ? 0.18 : 0.14);
+  const eyeY = m.head === "hood" ? hy2 + 2 : m.head === "helm" ? hy2 + 1 : hy2 - (m.head === "snout" ? 6 : 2), eyeDX = headR * 0.42, eyeR = headR * (m.head === "skull" ? 0.18 : 0.14);
   p.save();
   p.shadowColor = m.eyes; p.shadowBlur = 14;
   p.fillStyle = m.eyes;
   for (const side of [-1, 1]) { p.beginPath(); p.arc(hx2 + side * eyeDX, eyeY, eyeR, 0, Math.PI * 2); p.fill(); }
   p.restore();
-  if (m.head !== "skull" && m.head !== "hood") {                        // brows drawn down, and a grim mouth
+  if (m.head !== "skull" && m.head !== "hood" && m.head !== "helm") {   // brows drawn down, and a grim mouth
     p.strokeStyle = "#1A1410"; p.lineWidth = 3; p.lineCap = "round";
     for (const side of [-1, 1]) { p.beginPath(); p.moveTo(hx2 + side * headR * 0.66, eyeY - headR * 0.36); p.lineTo(hx2 + side * headR * 0.2, eyeY - headR * 0.2); p.stroke(); }
     const my = m.head === "snout" ? hy2 + headR * 0.74 : hy2 + headR * 0.46, fangs = m.head === "pale";
@@ -702,6 +739,58 @@ CM.art.water = function (frame) {
   return c;
 };
 
+// ---- the guardians' lairs: a heap of bones and rags, a sunken throne, an anvil, embers in the forge-floor ---------------
+CM.art.nest = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(505);
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(128, S - 14, 110, 12, 0, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.moveTo(18, S - 16); p.quadraticCurveTo(60, S - 112, 128, S - 120); p.quadraticCurveTo(196, S - 112, 238, S - 16); }, "#5A4A38", "#1A1410", 4);
+  p.lineCap = "round";
+  for (let i = 0; i < 12; i++) {                                           // straw and rags
+    p.strokeStyle = i % 3 ? "#8A6A48" : "#3A2A1C"; p.lineWidth = 4;
+    const x = 40 + rnd.next() * 176, y = S - 30 - rnd.next() * 66;
+    p.beginPath(); p.moveTo(x - 14, y + 4); p.lineTo(x + 14, y - 4); p.stroke();
+  }
+  for (let i = 0; i < 7; i++) bone(p, rnd, 50 + rnd.next() * 156, S - 44 - rnd.next() * 60, rnd.next());
+  p.fillStyle = "#FF5040";
+  for (let i = 0; i < 3; i++) { const x = 60 + i * 70, y = S - 60 - (i % 2) * 20; p.beginPath(); p.arc(x, y, 2.5, 0, Math.PI * 2); p.arc(x + 9, y, 2.5, 0, Math.PI * 2); p.fill(); }   // eyes in the heap
+  return c;
+};
+CM.art.throne = function () {                                              // a stone seat, weeded, standing in water
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(128, S - 12, 90, 10, 0, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.roundRect(60, 30, 136, 190, 10); }, "#5A6A70", "#1A1410", 4);                            // the back
+  outlined(p, () => { p.roundRect(44, 130, 168, 60, 8); }, "#6A7A80", "#1A1410", 4);                             // the seat
+  for (const x of [44, 190]) outlined(p, () => { p.roundRect(x, 110, 22, 110, 6); }, "#4A5A60", "#1A1410", 3);     // the arms
+  p.fillStyle = "#7A8A90"; p.fillRect(74, 44, 108, 70);
+  p.strokeStyle = "#2A3A40"; p.lineWidth = 3;
+  for (let i = 0; i < 4; i++) { p.beginPath(); p.moveTo(80, 60 + i * 14); p.lineTo(176, 60 + i * 14); p.stroke(); }   // the carving on the back
+  p.strokeStyle = "#3A6A3A"; p.lineWidth = 5; p.lineCap = "round";
+  for (let i = 0; i < 6; i++) { const x = 70 + i * 24; p.beginPath(); p.moveTo(x, 34); p.quadraticCurveTo(x + 6, 70, x - 4, 90 + (i % 3) * 16); p.stroke(); }   // weed
+  p.fillStyle = "rgba(40,80,90,0.5)"; p.fillRect(0, S - 60, S, 60);                                               // the water it stands in
+  return c;
+};
+CM.art.anvil = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(128, S - 12, 86, 10, 0, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.rect(84, S - 60, 88, 48); }, "#4A3A2A", "#1A1410", 4);                                    // the stump
+  outlined(p, () => { p.moveTo(104, S - 60); p.lineTo(96, S - 100); p.lineTo(160, S - 100); p.lineTo(152, S - 60); }, "#5A5E66", "#1A1410", 4);   // the waist
+  outlined(p, () => { p.moveTo(40, S - 128); p.lineTo(200, S - 128); p.lineTo(236, S - 118); p.lineTo(206, S - 100); p.lineTo(60, S - 100); p.lineTo(60, S - 112); p.lineTo(40, S - 118); }, "#7A8088", "#1A1410", 4);   // the face and the horn
+  p.fillStyle = "#B0B6BE"; p.fillRect(66, S - 126, 134, 5);                                                        // the shine on the face
+  softDot(p, 150, S - 140, 22, "rgba(255,200,80,0.9)", "rgba(255,120,0,0)");                                       // a spark of the forge
+  return c;
+};
+CM.art.ember = function () {                                               // the forge-floor: fire in the cracks of dark stone
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(909);
+  p.fillStyle = "rgba(20,10,8,0.45)"; p.fillRect(0, 0, S, S);
+  for (let i = 0; i < 12; i++) { const x = rnd.next() * S, y = rnd.next() * S; softDot(p, x, y, 36 + rnd.next() * 34, "rgba(255,170,50,1)", "rgba(255,60,0,0)"); }
+  p.strokeStyle = "rgba(255,235,150,0.95)"; p.lineWidth = 5; p.lineCap = "round";
+  for (let i = 0; i < 9; i++) {
+    const x = rnd.next() * S, y = rnd.next() * S;
+    p.beginPath(); p.moveTo(x, y); p.lineTo(x + (rnd.next() - 0.5) * 70, y + (rnd.next() - 0.5) * 70); p.lineTo(x + (rnd.next() - 0.5) * 90, y + (rnd.next() - 0.5) * 90); p.stroke();
+  }
+  return c;
+};
+
 // the title's emblem: the Lich King's crown on his skull, over a crossed sword and staff, on a medallion of old gold
 CM.art.emblem = function (size = 160) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 160, cx = 80, cy = 82;
@@ -787,6 +876,8 @@ CM.art.buildDrawn = function (theme) {
   add("phylactery", CM.art.phylactery());
   for (const m of CM.MONSTERS) add(`monster:${m.name}`, CM.art.monster(m));
   add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
+  for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, CM.art.monster(G, G.size >= 1 ? 1.12 : 1.04));
+  add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
   add("fx:spark", CM.art.fxSpark()); add("fx:shard", CM.art.fxShard()); add("fx:fire", CM.art.fxFire()); add("fx:frost", CM.art.fxFrost());
   add("fx:bolt", CM.art.fxBolt()); add("fx:force", CM.art.fxForce()); add("fx:holy", CM.art.fxHoly()); add("fx:arrow", CM.art.fxArrow());
   add("fx:leaf", CM.art.fxLeaf()); add("fx:ring", CM.art.fxRing());

@@ -126,6 +126,8 @@ CM.audio = {
       roar_undead: () => this._mix(...[0, 0.08, 0.16, 0.26, 0.4].map((d) => this._after(d, N(0.05, 0.3, 0.9, 43 + Math.floor(d * 100)))), this._sweep(300, 200, 0.6, "sine", 0.04)),
       lich: () => this._mix(T([[55, 1.2]], "sine", 0.22), T([[82.4, 1.2]], "sine", 0.1), this._after(0.3, N(0.9, 0.08, 0.95, 47)), this._after(0.6, this._sweep(400, 180, 0.6, "sine", 0.05))),
       miss: () => this._mix(this._sweep(1200, 300, 0.12, "sine", 0.06), N(0.12, 0.15, 0.5, 61)),
+      toll: () => this._mix(T([[98, 1.4]], "sine", 0.26), T([[147, 1.1]], "sine", 0.12), T([[196, 0.9]], "triangle", 0.06), this._after(0.02, N(0.08, 0.3, 0.6, 73))),
+      slam: () => this._mix(N(0.3, 0.55, 0.25, 71), this._sweep(140, 40, 0.45, "sine", 0.35), this._after(0.25, N(0.4, 0.2, 0.1, 79))),
       fallen: () => T([[220, 0.15], [165, 0.2], [110, 0.45]], "square", 0.14),
       ailment: () => this._mix(T([[440, 0.35]], "sine", 0.1), T([[466, 0.35]], "sine", 0.1)),
       grind: () => this._mix(N(0.9, 0.35, 0.02, 67), this._sweep(90, 60, 0.9, "square", 0.04), this._after(0.85, T([[55, 0.15]], "square", 0.2))),

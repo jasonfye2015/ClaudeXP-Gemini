@@ -76,8 +76,13 @@ CM.itemLabel = function (item) {
   else if (item.kind === "amulet") bits.push(p.resist ? `proof against ${p.resist}` : `warding +${p.df}`);
   else if (item.kind === "scroll") bits.push(CM.SCROLLS[item.spell].what);
   else if (item.kind === "wand") bits.push(`${CM.WANDS[item.spell].what} ${CM.plural(item.charges, "charge")}.`);
+  if (p.stat && item.kind !== "ring") bits.push(`+${item.power} ${CM.STAT_NAMES[p.stat]}`);
+  if (p.resist && item.kind !== "amulet") bits.push(`proof against ${p.resist}`);
+  if (p.df && item.kind !== "amulet") bits.push(`warding +${p.df}`);
   if (p.element) bits.push(p.element);
+  if (p.stun) bits.push("a blow may leave the foe reeling");
   if (p.twohanded) bits.push("two-handed");
+  if (p.relic) bits.push("a guardian's relic");
   if (p.bow) bits.push("a bow: the Ranger's");
   if (p.cursed) bits.push("CURSED");
   return bits.filter(Boolean).join(", ");
@@ -136,6 +141,22 @@ CM.monsterGroup = function (floor, rnd) {
 CM.bossMonster = () => ({ name: CM.BOSS.name, kind: CM.BOSS.name, colour: CM.BOSS.colour, hp: 650, max: 650, atk: 46, df: 18, xp: 5000, gold: 5000,
   boss: true, speed: 12, undead: true, ability: null, touch: { status: "curse", chance: 0.2 } });
 CM.skeleton = (level, rnd) => CM.makeMonster(CM.MONSTERS[2], level, rnd);
+
+// a guardian (CM.GUARDIANS), ready to fight, with the company it keeps; and the relic it leaves behind
+CM.guardianMonster = function (id) {
+  const G = CM.GUARDIANS[id];
+  return { name: G.name, kind: G.name, colour: G.colour, hp: G.hp, max: G.hp, atk: G.atk, df: G.df, xp: G.xp, gold: G.gold, guardian: id, speed: G.speed,
+    undead: Boolean(G.undead), ability: null, touch: G.touch ? Object.assign({}, G.touch) : null, turns: 0 };
+};
+CM.guardianGroup = function (id, floor, rnd) {
+  const group = [CM.guardianMonster(id)];
+  for (const name of CM.GUARDIANS[id].escorts || []) group.push(CM.makeMonster(CM.monsterKind(name), floor, rnd));
+  return group;
+};
+CM.relic = function (id) {
+  const r = CM.GUARDIANS[id].relic;
+  return { name: r.name, kind: r.kind, slot: r.slot, power: r.power, value: r.value, props: Object.assign({}, r.props), unknown: false };
+};
 
 // ---- heroes: rolled, made, grown ---------------------------------------------------------------------------------------
 CM.rollStats = function (cls, rnd) {                                      // three dice a stat, and what the class brings
@@ -200,7 +221,7 @@ CM.heroStat = function (h, s) {
 
 // what the gear keeps off: armour and shield count double, a helm and a warding amulet once
 CM.gearDefence = (h) => (h.armor ? h.armor.power : 0) * 2 + (h.offhand ? h.offhand.power * 2 : 0) + (h.helm ? h.helm.power : 0)
-  + (h.amulet && h.amulet.props && h.amulet.props.df ? h.amulet.props.df : 0);
+  + CM.equipped(h).reduce((s, it) => s + ((it.props || {}).df || 0), 0);
 
 // may this hero wear or wield it? "" when they may, else why not
 CM.cantWear = function (h, item) {
@@ -421,7 +442,7 @@ CM.reachable = function (floor, from) {
   return reach;
 };
 
-CM.goalOf = (floor) => Object.keys(floor.things).find((k) => ["ladder", "boss"].includes(floor.things[k].type)) || null;
+CM.goalOf = (floor) => Object.keys(floor.things).find((k) => ["ladder", "boss", "guardian"].includes(floor.things[k].type)) || null;
 
 CM.solvable = function (floor, from) {
   const goal = CM.goalOf(floor);
@@ -434,32 +455,44 @@ CM.makeFloor = function (number, seed) {
   const size = Math.min(17 + Math.floor(number / 4) * 2, 27);
   const grid = [];
   for (let y = 0; y < size; y++) grid.push(new Array(size).fill(1));
-  const floor = { number, grid, pos: [1, 1], facing: 2, things: {}, features: {}, dark: [], seen: [], rooms: [] };
+  const floor = { number, grid, pos: [1, 1], facing: 2, things: {}, features: {}, dark: [], seen: [], rooms: [], decor: [] };
   const rooms = [];                            // {x0, y0, x1, y1 (interior, inclusive), template?, entrances: [[x,y,kind]]}
   const taken = (x0, y0, x1, y1) => rooms.some((r) => x0 <= r.x1 + 2 && x1 >= r.x0 - 2 && y0 <= r.y1 + 2 && y1 >= r.y0 - 2);
   const carve = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) grid[y][x] = 0; };
 
   // set pieces first (one or two, where they fit), then ordinary rooms
+  const guardian = CM.guardianFor(number), lair = guardian ? CM.GUARDIANS[guardian].lair : null;
   const wanted = CM.TEMPLATES.filter((t) => number >= t.min && !(number === CM.LAST_FLOOR && t.name === "Pit Room"));
   rnd.shuffle(wanted);
-  for (const tpl of wanted.slice(0, number >= 6 ? 2 : 1)) {
+  const chosen = wanted.slice(0, number >= 6 ? 2 : 1);
+  if (lair) chosen.unshift(lair);                                   // (the guardian's lair first, and away from the top left, where the party starts)
+  for (const tpl of chosen) {
     const h = tpl.rows.length - 2, w = tpl.rows[0].length - 2;
+    const spots = [];
+    if (tpl === lair) {
+      for (let i = 0; i <= Math.floor((size - 6 - w) / 2); i++) for (let j = 0; j <= Math.floor((size - 6 - h) / 2); j++) spots.push([3 + 2 * i, 3 + 2 * j]);
+      const reach = Math.max(...spots.map(([x, y]) => x + y));
+      spots.splice(0, spots.length, ...spots.filter(([x, y]) => x + y >= reach * 0.6));
+    }
     for (let tries = 0; tries < 40; tries++) {
-      const x0 = 3 + 2 * rnd.int(0, Math.floor((size - 6 - w) / 2)), y0 = 3 + 2 * rnd.int(0, Math.floor((size - 6 - h) / 2));
+      const [x0, y0] = tpl === lair ? rnd.pick(spots) : [3 + 2 * rnd.int(0, Math.floor((size - 6 - w) / 2)), 3 + 2 * rnd.int(0, Math.floor((size - 6 - h) / 2))];
       const x1 = x0 + w - 1, y1 = y0 + h - 1;
       if (x1 > size - 4 || y1 > size - 4 || taken(x0, y0, x1, y1)) continue;         // (room for the maze beyond every entrance)
-      const room = { x0, y0, x1, y1, template: tpl, entrances: [], fill: [] };
+      const room = { x0, y0, x1, y1, template: tpl, entrances: [], fill: [], pillars: [] };
       let fits = true;
       tpl.rows.forEach((row, ry) => [...row].forEach((c, rx) => {
         const x = x0 - 1 + rx, y = y0 - 1 + ry;
+        const onRing = ry === 0 || ry === tpl.rows.length - 1 || rx === 0 || rx === row.length - 1;
         if ("DLGS".includes(c)) {
           const onSide = ry === 0 || ry === tpl.rows.length - 1;
           if ((onSide && x % 2 === 0) || (!onSide && y % 2 === 0)) fits = false;      // (the maze won't come up to it)
           room.entrances.push([x, y, c]);
-        } else if (c !== "#" && c !== "W") room.fill.push([x, y, c]);
+        } else if (c === "#" && !onRing) room.pillars.push([x, y]);                  // (a pillar inside: on even coordinates, where the maze never goes)
+        else if (c !== "#" && c !== "W") room.fill.push([x, y, c]);
       }));
       if (!fits) continue;
       carve(x0, y0, x1, y1);
+      for (const [px, py] of room.pillars) grid[py][px] = 1;
       rooms.push(room);
       break;
     }
@@ -601,7 +634,7 @@ CM.makeFloor = function (number, seed) {
     const [x, y] = unkey(k);
     if (d > best && !inTemplate(x, y) && !floor.features[k]) { best = d; far = [x, y]; }
   }
-  floor.things[key(far[0], far[1])] = number === CM.LAST_FLOOR ? { type: "boss", group: [CM.bossMonster()] } : { type: "ladder" };
+  if (!lair) floor.things[key(far[0], far[1])] = number === CM.LAST_FLOOR ? { type: "boss", group: [CM.bossMonster()] } : { type: "ladder" };
   if (number > 1) floor.things[key(start[0], start[1])] = { type: "stairs_up" };
   const open = CM.openNeighbours(floor, start[0], start[1]);
   floor.facing = open.length ? CM.DIRS.indexOf(open[0]) : 2;
@@ -618,13 +651,18 @@ CM.makeFloor = function (number, seed) {
     else if (c === "P") floor.features[k] = { type: "pit" };
     else if (c === "K") floor.things[k] = { type: "key" };
     else if (c === "X") floor.dark.push(k);
+    else if (c === "B" && guardian) floor.things[k] = { type: "guardian", group: CM.guardianGroup(guardian, number, rnd) };
+    else if ("ntve".includes(c)) floor.decor.push({ x, y, kind: { n: "nest", t: "throne", v: "anvil", e: "ember" }[c] });
+  }
+  for (const r of rooms) if (r.template && r.template.flood) {                     // a flooded set piece: water on every floor of it
+    for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (grid[y][x] === 0) floor.decor.push({ x, y, kind: "water" });
   }
   for (const r of rooms) if (r.template) r.template.rows.forEach((row, ry) => [...row].forEach((c, rx) => {
     if (c !== "W") return;
     const x = r.x0 - 1 + rx, y = r.y0 - 1 + ry;
     const inside = CM.DIRS.map(([dx, dy], d) => [x + dx, y + dy, d]).find(([ix, iy]) => ix >= r.x0 && ix <= r.x1 && iy >= r.y0 && iy <= r.y1);
     if (inside && !floor.features[key(inside[0], inside[1])]) {
-      floor.features[key(inside[0], inside[1])] = { type: "carving", face: (inside[2] + 2) % 4, text: -(1 + rnd.int(0, CM.LORE_EXTRA.length - 1)), read: false };
+      floor.features[key(inside[0], inside[1])] = { type: "carving", face: (inside[2] + 2) % 4, text: r.template.lore || -(1 + rnd.int(0, CM.LORE_EXTRA.length - 1)), read: false };
     }
   }));
 
