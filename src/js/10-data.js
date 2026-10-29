@@ -76,8 +76,56 @@ CM.randomName = function (rnd) {
 
 CM.WEAPONS = ["Dagger", "Short Sword", "Mace", "Long Sword", "Battle Axe", "War Hammer", "Bastard Sword", "Rune Blade",
   "Flamberge", "Mithril Sword", "Dragonslayer", "Claudebrand"];
+CM.TWO_HANDED = ["Battle Axe", "War Hammer", "Flamberge", "Dragonslayer"];        // (no shield with these)
+CM.BOWS = ["Short Bow", "Hunting Bow", "Long Bow", "Elven Bow", "Dragonbone Bow"];  // the Ranger's, two-handed
 CM.ARMORS = ["Padded Vest", "Leather Armor", "Studded Leather", "Ring Mail", "Scale Mail", "Chain Mail", "Banded Mail",
   "Plate Mail", "Elven Mail", "Mithril Plate", "Dragon Scale", "Aegis of Claude"];
+CM.SHIELDS = ["Buckler", "Wooden Shield", "Iron Shield", "Kite Shield", "Tower Shield", "Mithril Shield"];
+CM.HELMS = ["Leather Cap", "Iron Cap", "Chain Coif", "Steel Helm", "Great Helm", "Mithril Helm"];
+CM.RINGS = { str: "Ring of Might", dex: "Ring of Grace", con: "Ring of Vigour", int: "Ring of Wit", wis: "Ring of Faith", luck: "Ring of Fortune" };
+CM.AMULETS = [
+  { name: "Amulet against Poison", resist: "poison" }, { name: "Amulet against Curses", resist: "curse" },
+  { name: "Amulet of the Stone's Bane", resist: "stone" }, { name: "Amulet of Clear Sight", resist: "blind" },
+  { name: "Amulet of Warding", df: 2 }, { name: "Amulet of Waking", resist: "sleep" },
+];
+// what a weapon may carry, deeper down: fire (trolls and the rotting fear it), frost (demons), holy (the undead)
+CM.ELEMENTS = { fire: { prefix: "Flaming", weak: ["Troll", "Zombie"] }, frost: { prefix: "Frost", weak: ["Demon", "Wyvern"] }, holy: { prefix: "Blessed", weak: null } };
+// armour by weight, and who can bear it: tiers 0-3 light, 4-7 medium, 8-11 heavy
+CM.ARMOR_WEIGHT = (tier) => (tier <= 3 ? "light" : tier <= 7 ? "medium" : "heavy");
+CM.BEARS = { Knight: "heavy", Paladin: "heavy", Rogue: "medium", Ranger: "medium", Cleric: "medium", Druid: "medium", Bard: "medium", Mage: "light" };
+CM.SHIELD_BEARERS = ["Knight", "Paladin", "Cleric", "Rogue", "Druid", "Bard"];
+CM.SLOTS = ["weapon", "offhand", "armor", "helm", "ring", "amulet"];
+CM.SLOT_NAMES = { weapon: "Weapon", offhand: "Off hand", armor: "Armour", helm: "Helm", ring: "Ring", amulet: "Amulet" };
+
+// scrolls (one reading) and wands (a few charges; anyone can wave one)
+CM.SCROLLS = {
+  identify: { name: "Scroll of Identify", outside: true, what: "Reveals what one unknown thing in the pack really is." },
+  mapping: { name: "Scroll of Mapping", outside: true, what: "The whole floor appears on the automap." },
+  teleport: { name: "Scroll of Teleport", outside: true, what: "The party is somewhere else on this floor. Somewhere." },
+  fire: { name: "Scroll of Fire", what: "Fire on every foe." },
+  frost: { name: "Scroll of Frost", what: "Cold on every foe; some are held fast." },
+  protection: { name: "Scroll of Protection", what: "Every blow on the party does less, for the fight." },
+};
+CM.WANDS = {
+  fire: { name: "Wand of Fire", what: "Fire at one foe." },
+  frost: { name: "Wand of Frost", what: "Cold on every foe." },
+  sleep: { name: "Wand of Sleep", what: "Every foe may fall asleep." },
+  healing: { name: "Wand of Healing", outside: true, what: "Mends one of the party." },
+};
+
+// what a chest may hold besides treasure
+CM.TRAPS = {
+  needle: "a poisoned needle", gas: "a breath of choking gas", blade: "a blade that springs from the lid", alarm: "a bell, and something that heard it",
+};
+
+// kits earned between runs: what the deepest run so far has unlocked
+CM.KITS = {
+  pauper: { name: "Pauper's kit", need: 0, what: "30 gold, two potions, two torches. Where everyone starts." },
+  veteran: { name: "Veteran's kit", need: 5, what: "60 gold more, and a lantern that never runs out." },
+  delver: { name: "Delver's kit", need: 10, what: "Two Scrolls of Mapping, three torches, two antidotes." },
+  heir: { name: "Heir's kit", need: 15, what: "Every hero's own weapon, well made: +2 to start." },
+  legend: { name: "Legend's kit", need: 21, what: "Every hero sets out at level 2, with a boon to choose. (For slaying the Lich King.)" },
+};
 
 // each monster, with how it's painted: body (beast, biped, small, wide, tall, ghost), head, eyes, and what it carries
 // Each monster: how it's painted; touch - what a hit from it may leave behind, and how often; speed - who moves first;

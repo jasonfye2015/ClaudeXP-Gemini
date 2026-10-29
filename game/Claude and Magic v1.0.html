@@ -92,8 +92,8 @@ table.stats tr.key td.hint { color: var(--gold); }
 #create .foot input { width: 170px; }
 
 /* ---- a hero's sheet ---- */
-.sheetbox { min-width: 620px; }
-.sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.sheetbox { min-width: 780px; }
+.sheet-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
 #sheet-left { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: start; }
 #sheet-left canvas { width: 96px; height: 96px; border: 1px solid var(--edge); border-radius: 3px; }
 #sheet-left .facts div { color: var(--ink); font-size: 13px; margin: 3px 0; }
@@ -112,6 +112,24 @@ table.stats tr.key td.hint { color: var(--gold); }
 .member .name i { color: #A06060; font-style: normal; font-size: 11px; }
 .boon-badge { background: var(--gold); color: #2A1A08; font: bold 9px Tahoma, Verdana, sans-serif; padding: 1px 5px; border-radius: 8px; vertical-align: middle; }
 .member .ail { color: #E0A0A0; font: 10px Tahoma, Verdana, sans-serif; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#fame h2.later { margin-top: 14px; }
+.unlock { margin: 4px 0; font-size: 12.5px; color: var(--dim); }
+.unlock b { color: var(--faint); font-weight: bold; }
+.unlock.got b { color: #8FD08F; }
+.unlock small { color: var(--dim); font-size: 11.5px; }
+.unlock small i { color: var(--faint); }
+#btn-daily.on { border-color: var(--gold); color: var(--gold); }
+.gear-list div { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: var(--ink); font-size: 12.5px; margin: 3px 0; }
+.gear-list .slot { flex: 0 0 72px; color: var(--dim); font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+.gear-list b { color: var(--gold); }
+.gear-list small { color: var(--dim); }
+.gear-list button { padding: 1px 7px; font-size: 11px; margin-left: 6px; }
+.recruit { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid #3A2C1C; }
+.recruit canvas { width: 40px; height: 40px; border: 1px solid var(--edge); border-radius: 3px; }
+.recruit b { color: var(--gold); }
+.recruit small { display: block; color: var(--dim); font-size: 11.5px; }
+.recruit .hire { display: flex; flex-direction: column; gap: 4px; }
+#create .foot select { background: var(--pit); color: var(--ink); border: 1px solid var(--edge); font: 13px var(--serif); padding: 4px 6px; border-radius: 3px; }
 #fame table { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
 #fame td { padding: 3px 4px; color: var(--ink); white-space: nowrap; }
 #fame td.won { color: var(--gold); }
@@ -362,8 +380,56 @@ CM.randomName = function (rnd) {
 
 CM.WEAPONS = ["Dagger", "Short Sword", "Mace", "Long Sword", "Battle Axe", "War Hammer", "Bastard Sword", "Rune Blade",
   "Flamberge", "Mithril Sword", "Dragonslayer", "Claudebrand"];
+CM.TWO_HANDED = ["Battle Axe", "War Hammer", "Flamberge", "Dragonslayer"];        // (no shield with these)
+CM.BOWS = ["Short Bow", "Hunting Bow", "Long Bow", "Elven Bow", "Dragonbone Bow"];  // the Ranger's, two-handed
 CM.ARMORS = ["Padded Vest", "Leather Armor", "Studded Leather", "Ring Mail", "Scale Mail", "Chain Mail", "Banded Mail",
   "Plate Mail", "Elven Mail", "Mithril Plate", "Dragon Scale", "Aegis of Claude"];
+CM.SHIELDS = ["Buckler", "Wooden Shield", "Iron Shield", "Kite Shield", "Tower Shield", "Mithril Shield"];
+CM.HELMS = ["Leather Cap", "Iron Cap", "Chain Coif", "Steel Helm", "Great Helm", "Mithril Helm"];
+CM.RINGS = { str: "Ring of Might", dex: "Ring of Grace", con: "Ring of Vigour", int: "Ring of Wit", wis: "Ring of Faith", luck: "Ring of Fortune" };
+CM.AMULETS = [
+  { name: "Amulet against Poison", resist: "poison" }, { name: "Amulet against Curses", resist: "curse" },
+  { name: "Amulet of the Stone's Bane", resist: "stone" }, { name: "Amulet of Clear Sight", resist: "blind" },
+  { name: "Amulet of Warding", df: 2 }, { name: "Amulet of Waking", resist: "sleep" },
+];
+// what a weapon may carry, deeper down: fire (trolls and the rotting fear it), frost (demons), holy (the undead)
+CM.ELEMENTS = { fire: { prefix: "Flaming", weak: ["Troll", "Zombie"] }, frost: { prefix: "Frost", weak: ["Demon", "Wyvern"] }, holy: { prefix: "Blessed", weak: null } };
+// armour by weight, and who can bear it: tiers 0-3 light, 4-7 medium, 8-11 heavy
+CM.ARMOR_WEIGHT = (tier) => (tier <= 3 ? "light" : tier <= 7 ? "medium" : "heavy");
+CM.BEARS = { Knight: "heavy", Paladin: "heavy", Rogue: "medium", Ranger: "medium", Cleric: "medium", Druid: "medium", Bard: "medium", Mage: "light" };
+CM.SHIELD_BEARERS = ["Knight", "Paladin", "Cleric", "Rogue", "Druid", "Bard"];
+CM.SLOTS = ["weapon", "offhand", "armor", "helm", "ring", "amulet"];
+CM.SLOT_NAMES = { weapon: "Weapon", offhand: "Off hand", armor: "Armour", helm: "Helm", ring: "Ring", amulet: "Amulet" };
+
+// scrolls (one reading) and wands (a few charges; anyone can wave one)
+CM.SCROLLS = {
+  identify: { name: "Scroll of Identify", outside: true, what: "Reveals what one unknown thing in the pack really is." },
+  mapping: { name: "Scroll of Mapping", outside: true, what: "The whole floor appears on the automap." },
+  teleport: { name: "Scroll of Teleport", outside: true, what: "The party is somewhere else on this floor. Somewhere." },
+  fire: { name: "Scroll of Fire", what: "Fire on every foe." },
+  frost: { name: "Scroll of Frost", what: "Cold on every foe; some are held fast." },
+  protection: { name: "Scroll of Protection", what: "Every blow on the party does less, for the fight." },
+};
+CM.WANDS = {
+  fire: { name: "Wand of Fire", what: "Fire at one foe." },
+  frost: { name: "Wand of Frost", what: "Cold on every foe." },
+  sleep: { name: "Wand of Sleep", what: "Every foe may fall asleep." },
+  healing: { name: "Wand of Healing", outside: true, what: "Mends one of the party." },
+};
+
+// what a chest may hold besides treasure
+CM.TRAPS = {
+  needle: "a poisoned needle", gas: "a breath of choking gas", blade: "a blade that springs from the lid", alarm: "a bell, and something that heard it",
+};
+
+// kits earned between runs: what the deepest run so far has unlocked
+CM.KITS = {
+  pauper: { name: "Pauper's kit", need: 0, what: "30 gold, two potions, two torches. Where everyone starts." },
+  veteran: { name: "Veteran's kit", need: 5, what: "60 gold more, and a lantern that never runs out." },
+  delver: { name: "Delver's kit", need: 10, what: "Two Scrolls of Mapping, three torches, two antidotes." },
+  heir: { name: "Heir's kit", need: 15, what: "Every hero's own weapon, well made: +2 to start." },
+  legend: { name: "Legend's kit", need: 21, what: "Every hero sets out at level 2, with a boon to choose. (For slaying the Lich King.)" },
+};
 
 // each monster, with how it's painted: body (beast, biped, small, wide, tall, ghost), head, eyes, and what it carries
 // Each monster: how it's painted; touch - what a hit from it may leave behind, and how often; speed - who moves first;
@@ -490,8 +556,44 @@ CM.KEYS_HELP = [
 // up where you arrive and the ladder down as far from them as the floor allows. Pure functions of a Random, so a seed
 // gives the same dungeon every time; CM.solvable proves each floor can be finished before it's handed over.
 
+// ---- the hoard ------------------------------------------------------------------------------------------------------
+// An item: {name, kind, power, value} and, for gear, slot and perhaps props {bonus, element, resist, stat, df, cursed,
+// twohanded, bow, weight}; found gear may be unknown (its props and bonus hidden) until it's worn or identified.
+CM.tierFor = (floor, rnd) => CM.clamp(Math.floor((floor + rnd.int(-2, 2)) * 12 / 21), 0, 11);
+
+CM.makeGear = function (kind, floor, rnd) {
+  const tier = CM.tierFor(floor, rnd), props = {};
+  let name, power, value, slot = kind;
+  if (kind === "weapon") {
+    if (rnd.chance(0.12)) { const bt = Math.min(CM.BOWS.length - 1, Math.floor(tier / 2.5)); name = CM.BOWS[bt]; props.bow = true; props.twohanded = true; power = (bt + 1) * 3 + 1 + rnd.int(0, 2); value = 20 * (bt + 1) * (bt + 1); }
+    else { name = CM.WEAPONS[tier]; power = (tier + 1) * 2 + rnd.int(0, 2); value = 15 * (tier + 1) * (tier + 1); if (CM.TWO_HANDED.includes(name)) props.twohanded = true; }
+    if (floor >= 3 && rnd.chance(0.2)) { props.element = rnd.pick(Object.keys(CM.ELEMENTS)); name = `${CM.ELEMENTS[props.element].prefix} ${name}`; value += 60; }
+  } else if (kind === "armor") {
+    name = CM.ARMORS[tier]; power = tier + 1 + rnd.int(0, 2); value = 15 * (tier + 1) * (tier + 1); props.weight = CM.ARMOR_WEIGHT(tier);
+  } else if (kind === "shield") {
+    const st = Math.min(CM.SHIELDS.length - 1, Math.floor(tier / 2)); name = CM.SHIELDS[st]; power = st + 1; value = 20 * (st + 1) * (st + 1); slot = "offhand";
+  } else if (kind === "helm") {
+    const ht = Math.min(CM.HELMS.length - 1, Math.floor(tier / 2)); name = CM.HELMS[ht]; power = ht + 1; value = 15 * (ht + 1) * (ht + 1);
+  } else if (kind === "ring") {
+    const stat = rnd.pick(CM.STATS); props.stat = stat; power = 1 + Math.floor(tier / 4); name = `${CM.RINGS[stat]} +${power}`; value = 80 * power * power;
+  } else if (kind === "amulet") {
+    const a = rnd.pick(CM.AMULETS); name = a.name; power = 0; value = 140;
+    if (a.resist) props.resist = a.resist;
+    if (a.df) { props.df = a.df; power = a.df; }
+  }
+  if ((kind === "weapon" || kind === "armor" || kind === "shield" || kind === "helm") && rnd.chance(0.15)) { props.bonus = 1; power += 2; value += 40; }
+  if (floor >= 4 && (kind === "weapon" || kind === "armor") && rnd.chance(0.08)) { props.cursed = true; power = Math.max(1, power - 3); value = Math.floor(value / 3); }
+  const item = { name, kind: slot === "offhand" ? "shield" : kind, slot, power, value, props };
+  if (floor >= 2 && rnd.chance(0.5)) item.unknown = true;
+  return item;
+};
+
+CM.scroll = (id) => ({ name: CM.SCROLLS[id].name, kind: "scroll", spell: id, power: 0, value: 40 });
+CM.wand = (id, charges) => ({ name: CM.WANDS[id].name, kind: "wand", spell: id, power: 0, charges, value: 90 });
+
 CM.makeItem = function (floor, rnd, kind) {
-  kind = kind || rnd.pick(["weapon", "weapon", "armor", "armor", "potion", "potion", "potion"]);
+  kind = kind || rnd.pick(["weapon", "weapon", "weapon", "armor", "armor", "armor", "potion", "potion", "potion", "potion", "potion",
+    "shield", "helm", "ring", "amulet", "scroll", "scroll", "wand"]);
   if (kind === "potion") {
     const roll = rnd.next();
     if (roll < 0.12) return { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 };
@@ -500,12 +602,35 @@ CM.makeItem = function (floor, rnd, kind) {
     if (roll < 0.62) return CM.antidote();
     return { name: "Healing Potion", kind: "heal", power: 20 + floor * 3, value: 20 };
   }
-  const tier = CM.clamp(Math.floor((floor + rnd.int(-2, 2)) * 12 / 21), 0, 11);
-  const names = kind === "weapon" ? CM.WEAPONS : CM.ARMORS;
-  const power = (tier + 1) * (kind === "weapon" ? 2 : 1) + rnd.int(0, 2);
-  const bonus = rnd.chance(0.15);
-  return { name: names[tier] + (bonus ? " +1" : ""), kind, power: power + (bonus ? 2 : 0),
-    value: 15 * (tier + 1) * (tier + 1) + (bonus ? 40 : 0) };
+  if (kind === "scroll") return CM.scroll(rnd.pick(Object.keys(CM.SCROLLS)));
+  if (kind === "wand") return CM.wand(rnd.pick(Object.keys(CM.WANDS)), rnd.int(3, 5));
+  return CM.makeGear(kind, floor, rnd);
+};
+
+// the base of a thing's name, as it looks before it's known: no prefix, no plus
+CM.baseName = function (item) {
+  let n = item.name.replace(/ \+\d+$/, "");
+  for (const e of Object.values(CM.ELEMENTS)) if (n.startsWith(e.prefix + " ")) n = n.slice(e.prefix.length + 1);
+  return n;
+};
+
+// what an item is, in words
+CM.itemLabel = function (item) {
+  if (item.unknown) return "unknown: wear it, read a Scroll of Identify, or ask the camp's scribe";
+  const p = item.props || {}, bits = [];
+  if (item.kind === "weapon") bits.push(`weapon +${item.power}`);
+  else if (item.kind === "armor") bits.push(`armour +${item.power}`, p.weight || "");
+  else if (item.kind === "shield") bits.push(`shield +${item.power}`);
+  else if (item.kind === "helm") bits.push(`helm +${item.power}`);
+  else if (item.kind === "ring") bits.push(`+${item.power} ${CM.STAT_NAMES[p.stat]}`);
+  else if (item.kind === "amulet") bits.push(p.resist ? `proof against ${p.resist}` : `warding +${p.df}`);
+  else if (item.kind === "scroll") bits.push(CM.SCROLLS[item.spell].what);
+  else if (item.kind === "wand") bits.push(`${CM.WANDS[item.spell].what} ${CM.plural(item.charges, "charge")}.`);
+  if (p.element) bits.push(p.element);
+  if (p.twohanded) bits.push("two-handed");
+  if (p.bow) bits.push("a bow: the Ranger's");
+  if (p.cursed) bits.push("CURSED");
+  return bits.filter(Boolean).join(", ");
 };
 
 CM.TORCH_STEPS = 400;                    // a torch burns this many steps
@@ -575,7 +700,8 @@ CM.xpForLevel = (level) => Math.ceil(60 * Math.pow(level - 1, 1.6));     // the 
 
 // the numbers a hero fights with, from class, level, stats and boons (health and magic stay where they were, within the new most)
 CM.recompute = function (h) {
-  const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight, s = h.stats, L = h.level - 1;
+  const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight, L = h.level - 1, s = {};
+  for (const st of CM.STATS) s[st] = CM.heroStat(h, st);                 // (rings count)
   const boons = h.boons || [];
   h.max = Math.max(1, c.hp + (s.con - 10) + L * (c.grow + CM.mod(s.con, 3)));
   h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : 0;
@@ -591,13 +717,15 @@ CM.makeHero = function (cls, name, stats, row) {
   const c = CM.CLASSES[cls];
   const h = { name: (name || "").trim() || cls, cls, level: 1, xp: 0, hp: 1, max: 1, mp: 0, maxmp: 0, atk: 1, df: 0,
     stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null,
-    weapon: { name: c.weapon, kind: "weapon", power: 1, value: 5 }, armor: { name: c.armor, kind: "armor", power: 0, value: 5 } };
+    weapon: { name: c.weapon, kind: "weapon", slot: "weapon", power: 1, value: 5, props: c.weapon === "Short Bow" ? { bow: true, twohanded: true } : {} },
+    armor: { name: c.armor, kind: "armor", slot: "armor", power: 0, value: 5, props: { weight: "light" } },
+    offhand: null, helm: null, ring: null, amulet: null };
   CM.recompute(h);
   h.hp = h.max; h.mp = h.maxmp;
   return h;
 };
 
-// a hero saved by an older version gets stats (middling, plus the class's), a row and the rest
+// a hero saved by an older version gets stats (middling, plus the class's), a row, the empty slots and the rest
 CM.upgradeHero = function (h) {
   const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight;
   if (!h.stats) { h.stats = {}; for (const s of CM.STATS) h.stats[s] = 10 + (c.bonus[s] || 0); }
@@ -606,12 +734,64 @@ CM.upgradeHero = function (h) {
   h.boons = h.boons || [];
   h.pending = h.pending || 0;
   h.offer = h.offer || null;
+  for (const slot of ["offhand", "helm", "ring", "amulet"]) if (h[slot] === undefined) h[slot] = null;
+  for (const slot of ["weapon", "armor"]) if (h[slot]) { h[slot].props = h[slot].props || {}; h[slot].slot = slot; }
   return h;
+};
+
+CM.equipped = (h) => CM.SLOTS.map((s) => h[s]).filter(Boolean);
+
+// a stat as it stands, rings and all
+CM.heroStat = function (h, s) {
+  let v = h.stats && h.stats[s] !== undefined ? h.stats[s] : 10;
+  for (const it of CM.equipped(h)) if (it.props && it.props.stat === s && !it.unknown) v += it.power;
+  return v;
+};
+
+// what the gear keeps off: armour and shield count double, a helm and a warding amulet once
+CM.gearDefence = (h) => (h.armor ? h.armor.power : 0) * 2 + (h.offhand ? h.offhand.power * 2 : 0) + (h.helm ? h.helm.power : 0)
+  + (h.amulet && h.amulet.props && h.amulet.props.df ? h.amulet.props.df : 0);
+
+// may this hero wear or wield it? "" when they may, else why not
+CM.cantWear = function (h, item) {
+  const p = item.props || {};
+  if (item.kind === "weapon" && p.bow && h.cls !== "Ranger") return `Only a Ranger draws a bow.`;
+  if (item.kind === "armor") {
+    const w = p.weight || CM.ARMOR_WEIGHT(Math.max(0, CM.ARMORS.indexOf(CM.baseName(item)))), rank = { light: 0, medium: 1, heavy: 2 };
+    if (rank[w] > rank[CM.BEARS[h.cls] || "light"]) return `${h.cls}s can't fight in ${w} armour.`;
+  }
+  if (item.kind === "shield") {
+    if (!CM.SHIELD_BEARERS.includes(h.cls)) return `${h.cls}s don't carry shields.`;
+    if (h.weapon && h.weapon.props && h.weapon.props.twohanded) return `${h.name}'s ${CM.baseName(h.weapon)} takes both hands.`;
+  }
+  return "";
 };
 
 CM.newParty = function (chosen) {                                         // chosen: [{cls, name, stats, row}] - else the classic four
   return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row));
 };
+
+// someone to hire at the camp: a calling, a name, a roll, a level a step behind the party's
+CM.makeRecruit = function (level, rnd) {
+  const cls = rnd.pick(CM.CLASS_ORDER), h = CM.makeHero(cls, CM.randomName(rnd), CM.rollStats(cls, rnd));
+  h.level = Math.max(1, level);
+  CM.recompute(h);
+  h.hp = h.max; h.mp = h.maxmp;
+  h.price = 20 + 40 * h.level;
+  return h;
+};
+
+// ---- between runs: what the deepest run so far has earned ------------------------------------------------------------
+CM.deepest = function (fame) {
+  let floor = 0, won = false;
+  for (const e of fame || []) { floor = Math.max(floor, e.floor || 0); if (e.won) won = true; }
+  return { floor, won };
+};
+CM.unlocked = function (fame) {
+  const d = CM.deepest(fame);
+  return Object.keys(CM.KITS).filter((id) => CM.KITS[id].need === 0 || (CM.KITS[id].need > 20 ? d.won : d.floor >= CM.KITS[id].need));
+};
+CM.dailySeed = (date) => { const d = date || new Date(); return `daily-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 // what the party could do with: a line or two of advice, and whether it's sound
 CM.partyAdvice = function (party) {
@@ -976,11 +1156,12 @@ CM.makeFloor = function (number, seed) {
   const open = CM.openNeighbours(floor, start[0], start[1]);
   floor.facing = open.length ? CM.DIRS.indexOf(open[0]) : 2;
 
-  // what the set pieces hold
+  // what the set pieces hold (a chest may be trapped, from the second floor down)
+  const trap = () => (number >= 2 && rnd.chance(0.3) ? rnd.pick(Object.keys(CM.TRAPS)) : null);
   const stillGroups = [];
   for (const r of rooms) if (r.template) for (const [x, y, c] of r.fill) {
     const k = key(x, y);
-    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd), CM.makeItem(number, rnd)] };
+    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd), CM.makeItem(number, rnd)], trap: trap() };
     else if (c === "M") { const g = CM.monsterGroup(number, rnd); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
     else if (c === "F") floor.features[k] = { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false };
     else if (c === "A") floor.features[k] = { type: "altar", used: false };
@@ -1081,7 +1262,7 @@ CM.makeFloor = function (number, seed) {
     const items = [];
     const n = rnd.int(1, 2);
     for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd));
-    floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items };
+    floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items, trap: trap() };
   }
   for (let i = 0; i < 5 + Math.floor(number / 2) && spare.length; i++) {
     const [x, y] = spare.pop();
@@ -2228,7 +2409,8 @@ CM.Game = class {
   saveRun() {
     if (!["explore", "camp"].includes(this.mode)) return;
     const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, floors: this.floors, light: this.light,
-      spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), mode: this.mode, seed: this.seed, saved: new Date().toISOString() };
+      spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed,
+      saved: new Date().toISOString() };
     this.lastRun = data;
     CM.store.set("run", data);
     this.dirty = false; this.sinceSave = 0;
@@ -2248,6 +2430,9 @@ CM.Game = class {
     this.spellLight = d.spellLight || 0;
     this.phylactery = Boolean(d.phylactery);
     this.combat = null;
+    this.recruits = null;
+    this.identifying = false;
+    this.kit = d.kit || "pauper";
     this.seed = d.seed || CM.randomSeed();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -2257,7 +2442,8 @@ CM.Game = class {
   }
 
   endRun(won) {
-    const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, date: CM.today(), seed: this.seed };
+    const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, date: CM.today(), seed: this.seed,
+      daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`) };
     this.fame.push(entry);
     this.sortFame();
     CM.store.set("fame", this.fame);
@@ -2310,10 +2496,13 @@ CM.Game = class {
   }
 
   // ---- starting, and the stairs between floors ----
-  newGame(seed, chosen) {                                                // chosen: the party made on the creation screen, or none for the classic four
+  newGame(seed, chosen, kit) {                                           // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned
     this.seed = (seed || "").trim() || CM.randomSeed();
     this.party = CM.newParty(chosen);
     this.steps = 0;
+    this.kit = CM.unlocked(this.fame).includes(kit) ? kit : "pauper";
+    this.recruits = null;
+    this.identifying = false;
     this.bag = CM.startingBag(this.seed);
     this.gold = 30;
     this.floors = {};
@@ -2323,8 +2512,12 @@ CM.Game = class {
     this.combat = null;
     this.messages = [];
     this.titleNote = "";
+    if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
+    else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
+    else if (this.kit === "heir") for (const h of this.party) { h.weapon.power += 2; h.weapon.name += " +1"; h.weapon.props = Object.assign({}, h.weapon.props, { bonus: 1 }); h.weapon.value = 45; }
+    else if (this.kit === "legend") for (const h of this.party) { h.level = 2; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; }
     this.enterFloor(1, "down");
-    this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs.");
+    this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : ""));
   }
 
   cellOf(fl, type) {
@@ -2598,11 +2791,24 @@ CM.Game = class {
       return;
     }
     if (thing && thing.type === "chest") {
+      if (thing.trap) {                                                   // a trapped lid: the Rogue may see to it
+        const rogue = this.alive().find((p) => p.cls === "Rogue" && this.canAct(p));
+        if (rogue && this.rnd.chance(CM.clamp(0.5 + rogue.level * 0.05 + CM.mod(this.stat(rogue, "dex")) * 0.1, 0.2, 0.95))) {
+          this.say(`${rogue.name} finds ${CM.TRAPS[thing.trap]} on the lid, and sees to it.`);
+          thing.trap = null;
+        } else {
+          this.sound("hurt");
+          this.say(`The lid was trapped: ${CM.TRAPS[thing.trap]}!`);
+          this.springTrap(thing.trap, k);
+          thing.trap = null;
+          if (this.mode !== "explore") return;                           // (an alarm: the fight is on, the chest waits)
+        }
+      }
       delete fl.things[k];
       this.gold += thing.gold;
       this.bag.push(...thing.items);
       this.sound("chest");
-      const found = thing.items.map((i) => i.name).join(", ");
+      const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : i.name)).join(", ");
       this.say(`The chest creaks open: ${thing.gold} gold` + (found ? `, ${found}.` : "."));
       this.saveRun();
       this.emit("change");
@@ -2645,6 +2851,28 @@ CM.Game = class {
     } else {
       this.say("There's nothing here to use.");
     }
+  }
+
+  // what a trapped chest does to whoever opens it
+  springTrap(trap, k) {
+    const opener = this.alive()[0];
+    if (trap === "needle" && opener) this.afflict(opener, "poison", "needle") || this.say(`${opener.name} snatches a hand back in time.`);
+    else if (trap === "gas") for (const p of this.alive()) p.hp = Math.max(1, p.hp - Math.max(1, Math.floor(p.max * 0.1)));
+    else if (trap === "blade" && opener) { opener.hp = Math.max(1, opener.hp - Math.max(2, Math.floor(opener.max * 0.15))); this.say(`The blade catches ${opener.name}.`); }
+    else if (trap === "alarm") {
+      const fl = this.floor, [x, y] = k.split(",").map(Number);
+      const spot = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([nx, ny]) => CM.passable(fl, nx, ny) && !fl.things[keyOf(nx, ny)] && !(nx === fl.pos[0] && ny === fl.pos[1]));
+      const group = CM.monsterGroup(fl.number, this.rnd);
+      if (spot) {
+        const sk = keyOf(spot[0], spot[1]);
+        fl.things[sk] = { type: "monsters", group };
+        this.startCombat(sk, fl.things[sk], true);
+      } else {
+        this.foes = group;
+        this.startCombat(k, { group }, true);
+      }
+    }
+    this.emit("change");
   }
 
   drink(f) {
@@ -2965,7 +3193,7 @@ CM.Game = class {
     const cursed = (h.status || {}).curse ? 2 : 0, bless = this.combat && this.combat.bless;
     return { atk: Math.max(1, h.atk - cursed + (this.song ? 2 : 0) + (bless ? 2 : 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0)) };
   }
-  stat(h, s) { return h.stats && h.stats[s] !== undefined ? h.stats[s] : 10; }
+  stat(h, s) { return CM.heroStat(h, s); }
   hitChance(h) {
     return CM.clamp(0.8 + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0), 0.25, 0.97);
   }
@@ -2978,6 +3206,8 @@ CM.Game = class {
   // an ailment settles on a hero, unless they shrug it off; it lasts this many rounds (curses and stone, until lifted)
   afflict(h, status, by) {
     if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
+    const charm = CM.equipped(h).find((it) => it.props && it.props.resist === status && !it.unknown);
+    if (charm) { this.say(`${h.name}'s ${CM.baseName(charm)} grows warm: the ${status === "stone" ? "gaze" : "touch"} finds no purchase.`); return false; }
     if (this.rnd.chance(this.resistChance(h))) { this.say(`${h.name} shrugs off the ${by}'s ${status === "stone" ? "gaze" : "touch"}.`); return false; }
     h.status = h.status || {};
     let turns = { poison: 8, paralysis: 2, sleep: 3, blind: 4, curse: 999, stone: 999 }[status];
@@ -3064,7 +3294,7 @@ CM.Game = class {
       const target = this.pickTarget(m);
       if (!target) break;
       if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1))) { this.say(`The ${m.name} misses ${target.name}.`); continue; }
-      let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + target.armor.power * 2), how = "";
+      let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), how = "";
       if (m.ability === "savage" && rnd.chance(0.2)) { dmg *= 2; how = " - a savage blow"; }
       if (m.ability === "charge" && !m.charged) { m.charged = true; dmg *= 2; how = " - it charges"; }
       const dealt = this.hurt(target, dmg, m, { how });
@@ -3100,7 +3330,7 @@ CM.Game = class {
     const target = this.pickTarget(m);
     if (!target) return;
     if (!this.rnd.chance(0.85)) { this.say(`The Lich King's hand closes on nothing: ${target.name} is too quick.`); return; }
-    this.hurt(target, this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + target.armor.power * 2), m, { how: " - a touch of grave-cold" });
+    this.hurt(target, this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), m, { how: " - a touch of grave-cold" });
   }
 
   summonSkeletons(n) {
@@ -3127,6 +3357,12 @@ CM.Game = class {
     else if (rnd.chance(this.critChance(hero))) { dmg *= 2; how = " - a weak spot"; }
     else if (back && !reaches) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
+    const el = hero.weapon && hero.weapon.props && !hero.weapon.unknown ? hero.weapon.props.element : null;
+    if (el) {                                                            // a flaming, frost or blessed blade
+      const weak = el === "holy" ? Boolean(target.undead) : (CM.ELEMENTS[el].weak || []).includes(target.kind || target.name);
+      if (weak) { dmg = Math.ceil(dmg * 1.5); how += ` - the ${el === "holy" ? "blessing" : el} bites deep`; }
+      else dmg += 2;
+    }
     if (opts.mult) dmg = Math.ceil(dmg * opts.mult);
     if (target.marked) dmg = Math.ceil(dmg * 1.25);
     target.hp -= dmg;
@@ -3318,6 +3554,7 @@ CM.Game = class {
   useItemInBattle(h, arg) {
     if (arg && typeof arg === "object" && arg.row !== undefined) {
       const item = this.bag[arg.row];
+      if (item && (item.kind === "scroll" || item.kind === "wand")) return this.useMagicInBattle(h, arg.row, arg.who);
       if (!item || !["heal", "mana", "antidote", "revive"].includes(item.kind)) { this.say("Not now."); return false; }
       const who = arg.who !== undefined ? arg.who : this.party.indexOf(this.allyAt(null, item.kind === "revive"));
       if (who < 0) return false;
@@ -3385,10 +3622,10 @@ CM.Game = class {
     this.shopping = shop;
     if (shop && !this.stock) {
       const rnd = this.rnd, depth = this.floor.number + 3;
-      this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor"].map((k) => CM.makeItem(depth, rnd, k));
+      this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor", "shield", "helm"].map((k) => { const it = CM.makeItem(depth, rnd, k); it.unknown = false; return it; });
       this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
-        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern());
+        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"));
     }
     this.emit("bag", true);
   }
@@ -3400,20 +3637,159 @@ CM.Game = class {
   }
 
   describe(item) {
-    return { weapon: `weapon +${item.power}`, armor: `armor +${item.power}`, heal: "heals", mana: "restores magic", revive: "raises the fallen",
-      torch: "light, for a while", lantern: "light that lasts", key: "opens a locked door",
-      antidote: "cures poison, sleep, paralysis and blindness" }[item.kind];
+    const plain = { heal: "heals", mana: "restores magic", revive: "raises the fallen", torch: "light, for a while", lantern: "light that lasts",
+      key: "opens a locked door", antidote: "cures poison, sleep, paralysis and blindness" }[item.kind];
+    return plain || CM.itemLabel(item);
+  }
+
+  // what the hero wears in that slot goes back to the pack - unless a curse holds it
+  takeOff(n, slot) {
+    const hero = this.party[n], item = hero && hero[slot];
+    if (!item) return "Nothing there.";
+    if (slot === "weapon" || slot === "armor") return "Swap it for another instead: no one goes bare-handed down here.";
+    if (item.props && item.props.cursed) return `${item.name} is cursed: it won't come off. The camp's temple can lift it.`;
+    hero[slot] = null;
+    this.bag.push(item);
+    CM.recompute(hero);
+    this.sound("chest");
+    this.emit("change");
+    return "";
+  }
+
+  // an unknown thing is known: its name, its bonus, its properties
+  reveal(item) {
+    if (!item.unknown) return false;
+    item.unknown = false;
+    return true;
+  }
+
+  identify(row) {
+    const item = this.bag[row];
+    if (!this.identifying || !item) return "Pick a thing from the pack.";
+    if (!item.unknown) return "That one is known already. Pick an unknown thing.";
+    const scroll = this.bag.findIndex((i) => i.kind === "scroll" && i.spell === "identify");
+    if (scroll < 0) { this.identifying = false; return "The scroll is gone."; }
+    this.reveal(item);
+    this.bag.splice(scroll, 1);
+    this.identifying = false;
+    this.sound("spell");
+    this.say(`The scroll crumbles: it's ${item.name} (${CM.itemLabel(item)}).`);
+    this.emit("change");
+    return "";
+  }
+
+  // a scroll read or a wand waved, between fights; "" when it worked, else why not
+  useMagicOutside(row, n) {
+    const item = this.bag[row], hero = this.party[n], fl = this.floor;
+    const spec = item.kind === "scroll" ? CM.SCROLLS[item.spell] : CM.WANDS[item.spell];
+    if (!spec.outside) return `${item.name} is for a fight.`;
+    if (item.spell === "identify") {
+      if (!this.bag.some((i) => i.unknown)) return "Nothing in the pack is unknown.";
+      this.identifying = true;
+      return "Now pick the unknown thing in the pack to identify.";
+    }
+    if (item.spell === "mapping") {
+      fl.seen = [];
+      for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]);
+      for (const f of Object.values(fl.features)) if ("known" in f) f.known = true;
+      this.say("The scroll crumbles, and the whole floor is drawn on the automap.");
+    } else if (item.spell === "teleport") {
+      const open = [];
+      for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) {
+        const k = keyOf(x, y), f = fl.features[k];
+        if (CM.passable(fl, x, y) && !fl.things[k] && !(f && ["pit", "trapdoor", "teleporter", "spinner"].includes(f.type))) open.push([x, y]);
+      }
+      if (!open.length) return "The scroll fizzles.";
+      fl.pos = this.rnd.pick(open);
+      this.look();
+      this.emit("teleported", fl.pos[0], fl.pos[1]);
+      this.say("The scroll crumbles - and the party is somewhere else on this floor.");
+    } else if (item.spell === "healing") {
+      if (!hero || hero.hp <= 0) return "Not on the fallen.";
+      const n2 = 15 + 3 * (this.floor ? Math.floor(this.floor.number / 2) : 1);
+      hero.hp = Math.min(hero.max, hero.hp + n2);
+      this.say(`${hero.name} is mended by the wand (+${n2}).`);
+    }
+    this.sound("spell");
+    if (item.kind === "scroll") this.bag.splice(row, 1);
+    else { item.charges -= 1; if (item.charges <= 0) { this.bag.splice(row, 1); this.say(`The ${item.name} is spent, and crumbles.`); } }
+    this.saveRun();
+    this.emit("change");
+    return "";
+  }
+
+  // a scroll or wand in the thick of it
+  useMagicInBattle(h, row, who) {
+    const item = this.bag[row], foes = this.living(), L = this.floor ? this.floor.number : 1;
+    const spec = item.kind === "scroll" ? CM.SCROLLS[item.spell] : CM.WANDS[item.spell];
+    if (spec.outside && item.spell !== "healing") { this.say(`${item.name} is for between fights.`); return false; }
+    this.sound("spell");
+    if (item.spell === "fire") {
+      if (item.kind === "wand") { const t = this.foeAt(who); this.spellHit(t, 10 + 2 * L, `${h.name}'s wand spits fire:`); }
+      else { const dmg = 10 + 2 * L; for (const m of foes) this.spellHit(m, dmg); this.say(`${h.name} reads the scroll: fire on every foe, ${dmg} each.`); }
+    } else if (item.spell === "frost") {
+      const dmg = 6 + 2 * L;
+      let held = 0;
+      for (const m of foes) { this.spellHit(m, dmg); if (m.hp > 0 && !m.boss && this.rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
+      this.say(`${h.name} ${item.kind === "wand" ? "waves the wand" : "reads the scroll"}: cold on every foe, ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}.`);
+    } else if (item.spell === "sleep") {
+      let asleep = 0;
+      for (const m of foes) if (!m.boss && this.rnd.chance(0.5)) { m.asleep = 3; asleep++; }
+      this.say(`${h.name} waves the wand: ${asleep ? CM.plural(asleep, "foe") + " slump where they stand" : "none of them so much as yawns"}.`);
+    } else if (item.spell === "protection") {
+      if (this.combat) this.combat.protect = true;
+      this.say(`${h.name} reads the scroll: every blow on the party does less, this fight.`);
+    } else if (item.spell === "healing") {
+      const ally = this.allyAt(who, false);
+      if (!ally) return false;
+      const n2 = 15 + 3 * Math.floor(L / 2);
+      ally.hp = Math.min(ally.max, ally.hp + n2);
+      this.say(`${h.name} touches ${ally.name} with the wand: +${n2}.`);
+    } else return false;
+    if (item.kind === "scroll") this.bag.splice(row, 1);
+    else { item.charges -= 1; if (item.charges <= 0) { this.bag.splice(row, 1); this.say(`The ${item.name} is spent, and crumbles.`); } }
+    this.emit("change");
+    return true;
+  }
+
+  // what the party wears: the thing in the slot goes back to the pack; wearing an unknown thing is how you learn it
+  equip(hero, row) {
+    const item = this.bag[row];
+    const why = CM.cantWear(hero, item);
+    if (why) return why;
+    const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind);
+    const old = hero[slot];
+    if (old && old.props && old.props.cursed) return `${hero.name}'s ${old.name} is cursed and won't come off. The camp's temple can lift it.`;
+    hero[slot] = item;
+    this.bag.splice(row, 1);
+    if (old) this.bag.push(old);
+    if (slot === "weapon" && item.props && item.props.twohanded && hero.offhand) {
+      if (hero.offhand.props && hero.offhand.props.cursed) { hero[slot] = old; this.bag.splice(row, 0, item); if (old) this.bag.pop(); return `${hero.name}'s shield is cursed to the arm: no room for a two-handed weapon.`; }
+      this.bag.push(hero.offhand);
+      this.say(`${hero.name} slings the shield: the ${CM.baseName(item)} takes both hands.`);
+      hero.offhand = null;
+    }
+    const learned = this.reveal(item);
+    const ratio = hero.hp / hero.max;
+    CM.recompute(hero);
+    hero.hp = Math.max(1, Math.round(hero.max * ratio));
+    this.sound("chest");
+    if (item.props && item.props.cursed) this.say(`${hero.name} takes up the ${CM.baseName(item)} - and it clings! It's cursed.`);
+    else if (learned) this.say(`${hero.name} tries the ${CM.baseName(item)}: it's ${item.name} (${CM.itemLabel(item)}).`);
+    this.emit("change");
+    return "";
   }
 
   give(row, n) {                                                        // returns a note for the bag screen, "" when it worked
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack first.";
     const item = this.bag[row], hero = this.party[n];
     if (item.kind === "key") return "Keys turn in locks, not in hands. Walk into the locked door.";
+    if (item.kind === "scroll" || item.kind === "wand") return this.useMagicOutside(row, n);
     if (item.kind === "torch") {
       this.bag.splice(row, 1);
       this.light = { kind: "torch", left: CM.TORCH_STEPS };
       this.sound("spell");
-      this.say(`The ${hero.cls} lights a fresh torch.`);
+      this.say(`${hero.name} lights a fresh torch.`);
       this.emit("change");
       return "";
     }
@@ -3421,7 +3797,7 @@ CM.Game = class {
       this.bag.splice(row, 1);
       this.light = { kind: "lantern", left: 0 };
       this.sound("spell");
-      this.say(`The ${hero.cls} lights the lantern. It won't run out.`);
+      this.say(`${hero.name} lights the lantern. It won't run out.`);
       this.emit("change");
       return "";
     }
@@ -3441,21 +3817,18 @@ CM.Game = class {
       this.bag.splice(row, 1);
       this.sound("heal");
     } else if (hero.hp <= 0) {
-      return `The ${hero.cls} has fallen. Raise them first.`;
+      return `${hero.name} has fallen. Raise them first.`;
     } else if (item.kind === "heal") {
       hero.hp = Math.min(hero.max, hero.hp + item.power);
       this.bag.splice(row, 1);
       this.sound("heal");
     } else if (item.kind === "mana") {
-      if (!hero.maxmp) return `The ${hero.cls} has no magic to restore.`;
+      if (!hero.maxmp) return `${hero.name} has no magic to restore.`;
       hero.mp = Math.min(hero.maxmp, hero.mp + item.power);
       this.bag.splice(row, 1);
       this.sound("heal");
     } else {
-      const old = hero[item.kind];
-      hero[item.kind] = item;
-      this.bag[row] = old;
-      this.sound("chest");
+      return this.equip(hero, row);
     }
     this.emit("change");
     return "";
@@ -3466,8 +3839,8 @@ CM.Game = class {
     const item = this.stock[row];
     if (this.gold < item.value) return "You can't afford that.";
     this.gold -= item.value;
-    this.bag.push(Object.assign({}, item));
-    if (["weapon", "armor", "lantern"].includes(item.kind)) this.stock.splice(row, 1);
+    this.bag.push(Object.assign({}, item, item.props ? { props: Object.assign({}, item.props) } : {}));
+    if (["weapon", "armor", "shield", "helm", "lantern"].includes(item.kind)) this.stock.splice(row, 1);
     this.sound("coin");
     this.emit("change");
     return "";
@@ -3476,7 +3849,7 @@ CM.Game = class {
   sell(row) {
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack to sell.";
     const item = this.bag.splice(row, 1)[0];
-    this.gold += Math.floor(item.value / 2);
+    this.gold += item.unknown ? 10 : Math.floor(item.value / 2);       // (the merchant pays a pittance for what no one can name)
     this.sound("coin");
     this.emit("change");
     return "";
@@ -3491,23 +3864,71 @@ CM.Game = class {
     this.saveRun();
   }
 
-  // the camp's temple: ailments cured, a curse lifted, stone made flesh - for a price
+  // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
     const cost = { cure: 30, uncurse: 60, unstone: 150 }[service];
     const which = service === "cure" ? CM.CURABLE : service === "uncurse" ? ["curse"] : ["stone"];
+    const cursedGear = service === "uncurse" ? this.party.flatMap((h) => CM.equipped(h).filter((it) => it.props && it.props.cursed)) : [];
     const who = this.party.filter((h) => which.some((s) => (h.status || {})[s]));
-    if (!who.length) {
-      this.say({ cure: "No one here is ailing.", uncurse: "No curse lies on the party.", unstone: "No one here is stone." }[service]);
+    if (!who.length && !cursedGear.length) {
+      this.say({ cure: "No one here is ailing.", uncurse: "No curse lies on the party, nor on what they carry.", unstone: "No one here is stone." }[service]);
       return false;
     }
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold for that.`); return false; }
     this.gold -= cost;
     for (const h of who) this.cure(h, which);
+    for (const it of cursedGear) { it.props.cursed = false; it.power += 3; }
     this.sound("heal");
-    this.say({ cure: "Herbs and prayers: the party's ailments pass.", uncurse: "The priest's chant lifts the curse.",
+    this.say({ cure: "Herbs and prayers: the party's ailments pass.",
+      uncurse: "The priest's chant lifts the curse" + (cursedGear.length ? `, and ${cursedGear.map((i) => i.name).join(", ")} can be put down at last.` : "."),
       unstone: `Stone becomes flesh again: ${who.map((h) => h.name).join(", ")} can move.` }[service]);
     this.saveRun();
     return true;
+  }
+
+  // the priest's scribe names everything unknown in the pack and on the party's backs
+  scribe() {
+    const unknown = [...this.bag, ...this.party.flatMap(CM.equipped)].filter((i) => i.unknown);
+    if (!unknown.length) { this.say("Nothing you carry is unknown to you."); return false; }
+    if (this.gold < 25) { this.say("The scribe asks 25 gold to name what you carry."); return false; }
+    this.gold -= 25;
+    for (const it of unknown) this.reveal(it);
+    this.sound("spell");
+    this.say(`The scribe squints and names them: ${unknown.map((i) => i.name).join(", ")}.`);
+    this.saveRun();
+    return true;
+  }
+
+  // the tavern: three who'd come along, for a price - one of them for a hero who has fallen
+  tavern() {
+    if (!this.recruits || this.recruits.floor !== this.floor.number) {
+      const level = Math.max(1, Math.round(this.party.reduce((s, h) => s + h.level, 0) / Math.max(1, this.party.length)) - 1);
+      const rnd = new CM.Random(CM.hashSeed(`${this.seed}:tavern:${this.floor.number}`));
+      this.recruits = { floor: this.floor.number, who: [0, 1, 2].map(() => CM.makeRecruit(level, rnd)) };
+    }
+    return this.recruits.who;
+  }
+
+  hire(i, replace) {
+    const recruit = this.tavern()[i];
+    if (!recruit) return "No one by that name.";
+    const fallen = this.party.map((h, idx) => idx).filter((idx) => this.party[idx].hp <= 0 || (this.party[idx].status || {}).stone);
+    if (!fallen.length) return "The party is whole. The recruits drink to that.";
+    const idx = replace === undefined ? fallen[0] : replace;
+    if (!fallen.includes(idx)) return `${this.party[idx].name} is still standing.`;
+    if (this.gold < recruit.price) return `${recruit.name} wants ${recruit.price} gold to come along.`;
+    this.gold -= recruit.price;
+    const gone = this.party[idx];
+    for (const slot of CM.SLOTS) if (gone[slot] && !(slot === "weapon" || slot === "armor")) this.bag.push(gone[slot]);   // (their trinkets stay with the party)
+    const h = Object.assign({}, recruit);
+    delete h.price;
+    this.party[idx] = h;
+    this.recruits.who.splice(i, 1);
+    this.sound("coin");
+    this.say(`${gone.name} is laid to rest by the fire. ${h.name} the ${h.cls} takes up their place.`);
+    this.saveRun();
+    this.emit("change");
+    return "";
   }
 
   // ---- a level earned is a boon chosen ----
@@ -3599,7 +4020,7 @@ CM.UI = class {
     <div class="card" id="expedition">
       <h2>Expedition</h2>
       <div class="row"><button id="btn-continue" class="primary">Continue</button><span id="continue-note" class="small"></span></div>
-      <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button></div>
+      <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button><button id="btn-daily" title="Today's dungeon: the same one for everyone, today">Today's</button></div>
       <p>The same seed lays out the same twenty floors, so a dungeon can be tried again - or handed to a friend. What
       the monsters do in a fight is up to the dice. The run saves as you go; when the whole party falls, it ends, and
       the deepest runs go in the Hall of Fame.</p>
@@ -3607,7 +4028,7 @@ CM.UI = class {
       <div id="classes"></div>
       <p id="start-with"></p>
     </div>
-    <div class="card" id="fame"><h2>Hall of Fame</h2><table></table></div>
+    <div class="card" id="fame"><h2>Hall of Fame</h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div></div>
     <div class="foot"><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button></div>
     <div class="version"></div>
   </div>
@@ -3620,6 +4041,7 @@ CM.UI = class {
     <div class="card" id="advice"><h2>Advice</h2><ul></ul></div>
     <div class="foot"><button id="btn-suggest">Suggest a party</button><button id="btn-reroll-all">Reroll everyone</button>
       <label for="create-seed">Seed</label><input id="create-seed" type="text" maxlength="40" spellcheck="false">
+      <label for="kit">Kit</label><select id="kit" title="What the deepest run so far has earned"></select>
       <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>
   </div>
 </div>
@@ -3666,6 +4088,12 @@ CM.UI = class {
   <div class="row"><label>Lift a curse</label><button data-service="uncurse">60 gold</button></div>
   <div class="row"><label>Stone to flesh</label><button data-service="unstone">150 gold</button></div>
   <div class="row"><label>Raise the fallen (100 gold a level)</label><button id="btn-temple-raise">Raise</button></div>
+  <div class="row"><label>The priest's scribe names everything unknown you carry</label><button id="btn-scribe">25 gold</button></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-tavern"><div class="box"><h2>The Tavern</h2>
+  <p class="small">Three who'd come along, for a price - to take the place of a hero who has fallen or turned to stone. What the fallen wore besides weapon and armour stays with the party.</p>
+  <div id="recruits"></div>
+  <div class="small" id="tavern-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
@@ -3684,6 +4112,8 @@ CM.UI = class {
       b.addEventListener("click", () => { game.temple(b.dataset.service); this.refresh(); });
     }
     this.$("#btn-temple-raise").addEventListener("click", () => { game.raiseDead(); this.refresh(); });
+    this.$("#btn-scribe").addEventListener("click", () => { game.scribe(); this.refresh(); });
+    this.$("#btn-daily").addEventListener("click", () => { this.$("#seed").value = CM.dailySeed(); this.refreshTitle(); });
     this.$("#btn-pause-settings").addEventListener("click", () => { this.closeDialogs(); this.openDialog("#dlg-settings"); });
     this.$("#btn-pause-title").addEventListener("click", () => { this.closeDialogs(); game.saveRun(); game.setMode("title"); });
     const keys = this.$("#dlg-keys table");
@@ -3745,11 +4175,13 @@ CM.UI = class {
     facts.innerHTML = `<div>${c.role}${c.cast ? `, casts <b>${CM.CASTS[c.cast]}</b>` : ""}</div>
       <div>Experience ${h.xp} / ${next} for level ${h.level + 1}</div>
       <div>Health ${Math.max(0, h.hp)} / ${h.max}${h.maxmp ? ` &nbsp; Magic ${h.mp} / ${h.maxmp}` : ""}</div>
-      <div>Attack ${eff.atk}${eff.atk !== h.atk ? ` (${h.atk})` : ""} &nbsp; Defence ${eff.df}${eff.df !== h.df ? ` (${h.df})` : ""} &nbsp; Hits ${Math.round(g.hitChance(h) * 100)}%</div>
-      <div>${this.esc(h.weapon.name)} (+${h.weapon.power}), ${this.esc(h.armor.name)} (+${h.armor.power})</div>
+      <div>Attack ${eff.atk}${eff.atk !== h.atk ? ` (${h.atk})` : ""} &nbsp; Defence ${eff.df}${eff.df !== h.df ? ` (${h.df})` : ""} + gear ${CM.gearDefence(h)} &nbsp; Hits ${Math.round(g.hitChance(h) * 100)}%</div>
       <div class="rowpick"><span>Row:</span><button data-row="front" class="${h.row === "front" ? "on" : ""}">Front</button><button data-row="back" class="${h.row === "back" ? "on" : ""}">Back</button>
-        <small>${g.mode === "combat" ? "not in a fight" : h.row === "front" ? "takes the blows" : h.cls === "Rogue" || h.cls === "Ranger" ? "strikes from safety" : "safer, hits for half"}</small></div>`;
+        <small>${g.mode === "combat" ? "not in a fight" : h.row === "front" ? "takes the blows" : h.cls === "Rogue" || h.cls === "Ranger" ? "strikes from safety" : "safer, hits for half"}</small></div>
+      <div class="list-title">Gear</div>
+      <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span> ${it ? `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
     for (const b of facts.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { if (g.setRow(h, b.dataset.row)) this.renderSheet(); });
+    for (const b of facts.querySelectorAll("button[data-off]")) b.addEventListener("click", () => { const note = g.takeOff(this.sheetOf, b.dataset.off); if (note) g.say(note); this.renderSheet(); });
     left.appendChild(facts);
     const right = this.$("#sheet-right");
     right.innerHTML = `<table class="stats">${CM.STATS.map((s) => `<tr class="${s === c.key ? "key" : ""}"><td>${CM.STAT_NAMES[s]}</td><td class="v">${g.stat(h, s)}</td><td class="hint">${s === c.key ? "their calling's stat" : CM.STAT_HINTS[s]}</td></tr>`).join("")}</table>
@@ -3865,6 +4297,7 @@ CM.UI = class {
     if (g.canContinue() && !window.confirm("A run is waiting to be continued. Start a new expedition and let it go?")) return;
     if (!this.slots.length) this.fillSlots(CM.CLASSIC);
     this.$("#create-seed").value = this.$("#seed").value;
+    this.refreshTitle();                                                 // (the kits on offer)
     this.show("create");
     this.renderCreate();
   }
@@ -3899,7 +4332,8 @@ CM.UI = class {
   setOut() {
     const g = this.game, seed = this.$("#create-seed").value;
     this.$("#seed").value = seed;
-    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })));
+    this.chosenKit = this.$("#kit").value || "pauper";
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit);
   }
 
   startNew() { this.openCreate(); }
@@ -3918,8 +4352,18 @@ CM.UI = class {
       + "a merchant's camp with a temple waits below floors 5, 10 and 15.";
     const table = this.$("#fame table");
     if (!g.fame.length) table.innerHTML = `<tr><td class="empty">No party has gone down yet.</td></tr>`;
-    else table.innerHTML = g.fame.map((e, i) => `<tr><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
-      + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold</td><td>${this.esc(e.date)}</td></tr>`).join("");
+    else table.innerHTML = g.fame.map((e, i) => `<tr title="${this.esc((e.party || []).join(", "))}${e.seed ? " - seed " + this.esc(e.seed) : ""}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
+      + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`).join("");
+    const have = CM.unlocked(g.fame), deep = CM.deepest(g.fame);
+    this.$("#unlocks").innerHTML = Object.entries(CM.KITS).map(([id, k]) => {
+      const got = have.includes(id), need = k.need > 20 ? "slay the Lich King" : `reach floor ${k.need}`;
+      return `<div class="unlock ${got ? "got" : ""}"><b>${got ? "✓" : "○"} ${k.name}</b> <small>${got ? k.what : `${k.what} <i>(${need}${deep.floor ? `; deepest so far: floor ${deep.floor}` : ""})</i>`}</small></div>`;
+    }).join("");
+    const kit = this.$("#kit");
+    kit.innerHTML = have.map((id) => `<option value="${id}">${CM.KITS[id].name}</option>`).join("");
+    if (this.chosenKit && have.includes(this.chosenKit)) kit.value = this.chosenKit;
+    const todays = this.$("#seed").value === CM.dailySeed();
+    this.$("#btn-daily").classList.toggle("on", todays);
   }
 
   esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
@@ -4039,8 +4483,8 @@ CM.UI = class {
         ["Use (Space)", () => g.use()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
-        ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()],
-        ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
+        ["Tavern", () => this.openTavern()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()],
+        ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
     if (box.dataset.mode === key) return;
@@ -4154,6 +4598,46 @@ CM.UI = class {
       targets.appendChild(b);
     });
     box.appendChild(targets);
+  }
+
+  // ---- the tavern ----
+  openTavern() {
+    this.renderTavern();
+    this.openDialog("#dlg-tavern");
+  }
+
+  renderTavern() {
+    const g = this.game, box = this.$("#recruits");
+    const fallen = g.party.map((h, i) => i).filter((i) => g.party[i].hp <= 0 || (g.party[i].status || {}).stone);
+    box.innerHTML = "";
+    g.tavern().forEach((r, i) => {
+      const div = document.createElement("div");
+      div.className = "recruit";
+      div.appendChild(this.portrait(r.cls, 40));
+      const text = document.createElement("div");
+      text.innerHTML = `<b>${this.esc(r.name)}</b> the ${r.cls}, level ${r.level} <small>${r.max} health${r.maxmp ? `, ${r.maxmp} magic` : ""}, attack ${r.atk}, defence ${r.df} - ${CM.STATS.map((s) => `${CM.STAT_NAMES[s].slice(0, 3)} ${r.stats[s]}`).join(" ")}</small>`;
+      div.appendChild(text);
+      const hire = document.createElement("div");
+      hire.className = "hire";
+      if (fallen.length <= 1) {
+        const b = document.createElement("button");
+        b.textContent = `Hire, ${r.price} gold`;
+        b.disabled = !fallen.length;
+        b.addEventListener("click", () => { const note = g.hire(i); this.$("#tavern-note").textContent = note || `${r.name} comes along.`; this.renderTavern(); this.refresh(); });
+        hire.appendChild(b);
+      } else {
+        for (const idx of fallen) {
+          const b = document.createElement("button");
+          b.textContent = `For ${g.party[idx].name}, ${r.price} gold`;
+          b.addEventListener("click", () => { const note = g.hire(i, idx); this.$("#tavern-note").textContent = note || `${r.name} comes along.`; this.renderTavern(); this.refresh(); });
+          hire.appendChild(b);
+        }
+      }
+      div.appendChild(hire);
+      box.appendChild(div);
+    });
+    if (!box.children.length) box.innerHTML = "<div class='small'>The benches are empty tonight.</div>";
+    this.$("#tavern-note").textContent = fallen.length ? "" : "The party is whole; the recruits drink to that.";
   }
 
   combatMenu(kind, data) { this.cmenu = Object.assign({ kind }, data || {}); this.renderCombat(); }
@@ -4334,19 +4818,23 @@ CM.UI = class {
       items.forEach((item, i) => {
         const row = document.createElement("div");
         row.className = "item" + (i === selected ? " sel" : "");
-        row.innerHTML = `${this.esc(item.name)} <span class="what">${describe(item)}</span>`;
+        row.innerHTML = `${this.esc(item.unknown ? CM.baseName(item) : item.name)} <span class="what">${describe(item)}</span>`;
         row.addEventListener("click", () => { onPick(i); this.fillBag(); });
         el.appendChild(row);
       });
     };
-    list(this.$("#bag-list"), "Your pack", g.bag, this.bagRow, (i) => `(${g.describe(i)}, worth ${Math.floor(i.value / 2)} gold)`, (i) => { this.bagRow = i; });
+    list(this.$("#bag-list"), g.identifying ? "Your pack - pick the unknown thing to identify" : "Your pack", g.bag, this.bagRow,
+      (i) => `(${g.describe(i)}, worth ${i.unknown ? 10 : Math.floor(i.value / 2)} gold)`,
+      (i) => { if (g.identifying) this.note(g.identify(i)); else this.bagRow = i; });
     if (shop) list(this.$("#shop-list"), "The merchant's wares", g.stock || [], this.shopRow,
       (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
+    const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
+    const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" ? "Read" : picked.kind === "wand" ? "Use on" : "Give to";
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
       const m = g.party[i];
-      b.textContent = `Give to ${m.name}` + (m.hp <= 0 ? " (fallen)" : "");
+      b.textContent = `${verb} ${m.name}` + (m.hp <= 0 ? " (fallen)" : "");
     });
-    const base = "Pick something from your pack, then who should equip or use it." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
+    const base = "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     this.$("#bag-note").dataset.base = base;
     if (!this.$("#bag-note").textContent) this.$("#bag-note").textContent = base;
   }
