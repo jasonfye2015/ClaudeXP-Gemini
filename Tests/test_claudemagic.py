@@ -6,8 +6,10 @@ reloads, and travels as text; the first-person view draws (WebGL, composited in 
 from a seed and follows the mode and the depth, every sound is in its place and the ending sums the run up; the three
 themes (drawn, Crawl's pixel tiles, photographed stone) ride inside the file, build every depth and switch at once; the
 spectacle flies, bursts, shakes and glows for what the game announces, and the dungeon has its torches and water; the
-guardians keep the shafts above the camps in lairs of their own, fight their own way, fall and leave their relics; and
-the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
+guardians keep the shafts above the camps in lairs of their own, fight their own way, fall and leave their relics; the
+dungeon's people (a ghost with a request, a hermit who identifies for stories, a lost adventurer) and its puzzles (riddle
+doors keyed to the carvings, pressure plates, a rope for pits, the flooded, dark and labyrinth floors) and the journal
+that keeps it all; and the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
 import importlib.util
 import json
 import os
@@ -132,7 +134,8 @@ def test_floors_are_solvable_and_stocked():
             if (!(ns || ew)) problems.push(ft.type + ' not in a doorway at ' + k);
           }
           if (ft.type === 'teleporter') { const to = f.features[ft.to[0] + ',' + ft.to[1]]; if (!to || to.type !== 'teleporter' || to.to[0] !== x || to.to[1] !== y) problems.push('teleporter unpaired at ' + k); }
-          if (ft.type === 'lever' && !(f.features[ft.gate] && f.features[ft.gate].type === 'gate')) problems.push('lever to nothing at ' + k);
+          if ((ft.type === 'lever' || (ft.type === 'plate' && ft.gate)) && !(f.features[ft.gate] && f.features[ft.gate].type === 'gate')) problems.push(ft.type + ' to nothing at ' + k);
+          if (ft.type === 'door' && ft.riddle !== undefined && (ft.locked || !CM.RIDDLES[ft.riddle] || CM.RIDDLES[ft.riddle].lore + 1 >= n)) problems.push('a riddle that could not have been read at ' + k);
           if ((ft.type === 'lever' || ft.type === 'carving') && grid[y + CM.DIRS[ft.face][1]][x + CM.DIRS[ft.face][0]] !== 1) problems.push(ft.type + ' not on a wall at ' + k);
           if ((ft.type === 'pit' || ft.type === 'trapdoor') && (n === 20 || (x === f.pos[0] && y === f.pos[1]))) problems.push(ft.type + ' where it must not be at ' + k);
           if (ft.type === 'secret' && grid[y][x] !== 1) problems.push('secret door in the open at ' + k);
@@ -142,7 +145,7 @@ def test_floors_are_solvable_and_stocked():
         out.push({n, seed, size: grid.length, ok: CM.solvable(f), chests: t.filter(x => x.type === 'chest').length,
           groups: t.filter(x => x.type === 'monsters').length, goal: t.some(x => x.type === (n === 20 ? 'boss' : CM.guardianFor(n) ? 'guardian' : 'ladder')), guard,
           start: grid[f.pos[1]][f.pos[0]] === 0 && (n === 1 || (f.things[f.pos[0] + ',' + f.pos[1]] || {}).type === 'stairs_up'),
-          roomsReached, problems, carving: F.some(([, ft]) => ft.type === 'carving' && ft.text === n - 1),
+          roomsReached, problems, carving: F.some(([, ft]) => ft.type === 'carving' && ft.text === n - 1), special: f.special,
           same: JSON.stringify(CM.makeFloor(n, seed)) === JSON.stringify(f)});
       }
       out.push({differ: JSON.stringify(CM.makeFloor(1, 'a').grid) !== JSON.stringify(CM.makeFloor(1, 'b').grid)});
@@ -158,7 +161,7 @@ def test_floors_are_solvable_and_stocked():
         assert r["same"], f"{where} isn't the same twice"
         assert r["carving"], f"{where} doesn't tell its part of the story"
         assert r["size"] == min(17 + (r["n"] // 4) * 2, 27), where
-        assert r["chests"] >= 3 + r["n"] // 4 and r["groups"] >= 5 + r["n"] // 2, (where, r["chests"], r["groups"])
+        assert r["chests"] >= 3 + r["n"] // 4 and (r["special"] == "maze" or r["groups"] >= 5 + r["n"] // 2), (where, r["chests"], r["groups"])
     totals = ask("""(function(){ const c = {}; for (const seed of ["ember-crypt-417", "iron-oath-9", "x", "candle-echo-461"]) for (let n = 1; n <= 20; n++)
       for (const f of Object.values(CM.makeFloor(n, seed).features)) c[f.type] = (c[f.type] || 0) + 1; return c; })()""")
     for kind in kinds:
@@ -196,7 +199,7 @@ def test_the_rules():
       const ladder = [lairKey];
       g.floor.pos = ladder[0].split(',').map(Number); g.use();
       out.camp = g.mode === 'camp';
-      g.openBag(true); out.stock = g.stock.length;
+      g.openBag(true); out.stock = g.stock.length;                     // (the merchant's table, rope included)
       out.lightSold = g.stock.some(i => i.kind === 'torch') && g.stock.some(i => i.kind === 'lantern');
       g.gold = 500;
       const potion = g.stock.findIndex(i => i.kind === 'heal');
@@ -222,7 +225,7 @@ def test_the_rules():
     for key in ("levelled", "chest", "camp", "bought", "poor", "cantAfford", "equipped", "sold", "rested", "tooPoorToRaise", "raised",
                 "deeper", "over"):
         assert got[key] is True, (key, got)
-    assert got["stock"] == 16 and got["lightSold"], got
+    assert got["stock"] == 17 and got["lightSold"], got
 
 
 PARSE = """
@@ -255,6 +258,13 @@ PARSE = """
       else if (c === '>') f.things[k] = { type: 'ladder' };
       else if (c === '<') f.things[k] = { type: 'stairs_up' };
       else if (c === 'M') f.things[k] = { type: 'monsters', group: CM.monsterGroup(n, new CM.Random(3)) };
+      else if (c === 'g') f.things[k] = { type: 'ghost', who: 0, request: 'bones', asked: false };
+      else if (c === 'b') f.things[k] = { type: 'bones', ghost: null };
+      else if (c === 'h') f.things[k] = { type: 'hermit', heard: 0, greeted: false };
+      else if (c === 'a') f.things[k] = { type: 'adventurer', hero: CM.makeRecruit(3, new CM.Random(5)), freed: false };
+      else if (c === 'R') f.features[k] = { type: 'door', open: false, locked: false, riddle: 1 };
+      else if (c === 'p') { f.features[k] = { type: 'plate', gate: null, pressed: false }; lever = k; }
+      else if (c === 't') f.features[k] = { type: 'plate', trap: 'gas', known: false, spent: false };
     }));
     if (lever && gate) f.features[lever].gate = gate;
     return f;
@@ -1132,6 +1142,157 @@ def test_the_guardians():
         for layer in layers:
             assert layer in shown["layers"], (n, layer, shown["layers"])
         assert shown["ember"], shown
+    said = [s for s in page().said if "Error" in s or "error" in s]
+    assert not said, f"the page's console: {said[:5]}"
+
+
+def test_the_people_and_puzzles():
+    """The second update's fourth phase - the dungeon's people and puzzles: the generator seats a ghost, a hermit or a
+    lost adventurer on some floors (never a guardian's), asks riddles at some doors from the carvings above, sinks plates
+    into the floor (some open gates, some are traps) and makes one floor in a run flooded, dark or a labyrinth with a
+    hunter in it, all floors still solvable; on hand-made floors: a carving read goes in the journal, the hermit names
+    an unknown thing for each story and points the way when there is nothing to name, the ghost asks for its bones and
+    rests when they come (a gift, a tale in the journal), the adventurer joins where a hero has fallen or goes to the
+    camp with a rope and a map left behind (and hires free), a riddle door burns a wrong answer and opens for the right
+    one, a plate opens its gate and a trap plate springs once, a rope turns a pit into a way down and back up, the water
+    guts torches, the dark blinds the automap unless a Light is up, the hunter comes from afar; the journal survives a
+    save; and the window draws the people and the plates, asks the riddle and shows the journal"""
+    run(PARSE)
+    got = ask(f"""(function(){{ const g = CM.game, out = {{}}, seen = [], talks = [], riddles = [];
+      g.on('fx', (e) => seen.push(e)); g.on('talk', (t) => talks.push(t)); g.on('riddle', (k) => riddles.push(k));
+      // what the generator makes of it, across seeds and floors
+      const count = {{ ghost: 0, hermit: 0, adventurer: 0, bones: 0, vengeance: 0, story: 0, plates: 0, traps: 0, riddles: 0, hunters: 0, special: {{}} }};
+      let solvable = true, specials = {{}};
+      for (let si = 0; si < 12; si++) {{ const seed = 'people-' + si;
+        for (let n = 1; n <= 20; n++) {{ const f = CM.makeFloor(n, seed);
+          if (!CM.solvable(f)) solvable = false;
+          for (const t of Object.values(f.things)) {{ if (count[t.type] !== undefined) count[t.type]++; if (t.type === 'ghost') count[t.request]++; if (t.hunter) count.hunters++;
+            if (CM.guardianFor(n) && ['ghost', 'hermit', 'adventurer'].includes(t.type)) solvable = false; }}
+          for (const ft of Object.values(f.features)) {{ if (ft.type === 'plate') {{ if (ft.gate) count.plates++; else count.traps++; }} if (ft.type === 'door' && ft.riddle !== undefined) count.riddles++; }}
+          if (f.special) {{ count.special[f.special] = (count.special[f.special] || 0) + 1; specials[f.special] = specials[f.special] || [seed, n]; }}
+        }} }}
+      out.count = count; out.solvable = solvable; out.specials = specials;
+      // the special floors, as laid
+      const sp = (kind) => CM.makeFloor(specials[kind][1], specials[kind][0]);
+      const wading = sp('wading'), dark = sp('dark'), maze = sp('maze');
+      const open = (f) => {{ let c = 0; for (const row of f.grid) for (const v of row) if (v === 0) c++; return c; }};
+      out.wading = wading.decor.filter(d => d.kind === 'water').length === open(wading) && CM.solvable(wading);
+      out.dark = dark.dark.length === open(dark) && CM.solvable(dark);
+      out.maze = maze.rooms.length <= 2 && Object.values(maze.things).some(t => t.hunter && t.group[0].name === 'Minotaur of the Labyrinth') && CM.solvable(maze)
+        && Object.values(maze.things).filter(t => t.type === 'monsters').length <= 4;
+      // the journal: a carving read
+      const fixed = (hit) => ({{next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l}});
+      CM.store.remove('run'); g.lastRun = null; g.newGame({json.dumps(SEED)});
+      for (const h of g.party) {{ h.max = 400; h.hp = 400; h.mp = 50; h.maxmp = 50; }}
+      let f = CM.useFloor(g, CM.testFloor(4, ['#####', '#XWh#', '#####']));
+      f.features['2,1'].face = 1; f.features['2,1'].text = 2;            // (the carving on the east wall... of the cell east of the party)
+      g.move(0); g.floor.facing = 0; f.features['2,1'].face = 0; g.use();
+      out.journal = (g.journal || []).length === 1 && g.journal[0].kind === 'carving' && g.journal[0].text === CM.LORE[2] && g.journal[0].floor === 4;
+      g.use(); out.journalOnce = g.journal.length === 1;
+      // the hermit: a story for a name, then a direction, then nothing left to tell
+      g.floor.facing = 1; g.move(0);
+      g.bag.push(Object.assign(CM.makeGear('ring', 6, new CM.Random(2)), {{ unknown: true }}));
+      const unknownBefore = g.bag.filter(i => i.unknown).length;
+      g.use(); out.hermitGreets = talks.length === 1 && talks[0].title === 'The hermit' && f.things['3,1'].greeted === true;
+      g.use(); out.hermitNames = g.bag.filter(i => i.unknown).length === unknownBefore - 1 && f.things['3,1'].heard === 1 && talks.length === 2;
+      g.use(); out.hermitDone = talks.length === 3 && talks[2].text === CM.HERMIT.noStory && f.things['3,1'].heard === 1;
+      g.remember('carving', CM.LORE[3]); g.use(); out.hermitPoints = talks.length === 4 && talks[3].text.includes('The way down lies') && f.things['3,1'].heard === 2;
+      // the ghost and its bones
+      f = CM.useFloor(g, CM.testFloor(5, ['######', '#Xg.b#', '######']));
+      g.move(0); g.use(); out.ghostAsks = talks[talks.length - 1].text.includes(CM.REQUESTS.bones.ask) && f.things['2,1'].asked === true;
+      g.use(); out.ghostWaits = talks[talks.length - 1].text.includes(CM.REQUESTS.bones.wait);
+      g.move(0); g.move(0); out.bonesTaken = g.bag.some(i => i.kind === 'bones') && !f.things['4,1'];
+      g.move(2); g.move(2); const bagBefore = g.bag.length, xpBefore = g.party[0].xp; g.use();
+      out.ghostRests = !f.things['2,1'] && !g.bag.some(i => i.kind === 'bones') && g.bag.length === bagBefore && g.party[0].xp === xpBefore + 150
+        && g.journal.some(e => e.kind === 'ghost' && e.text === CM.GHOSTS[0].tale) && talks[talks.length - 1].text.includes(CM.GHOSTS[0].tale) && seen.some(e => e.kind === 'sparkle');
+      // the ghost's vengeance, and its story
+      f = CM.useFloor(g, CM.testFloor(5, ['#####', '#XgM#', '#####']));
+      f.things['2,1'].request = 'vengeance'; f.things['3,1'].vengeance = '2,1';
+      g.move(0); g.use(); g.use(); out.vengeanceWaits = talks[talks.length - 1].text.includes(CM.REQUESTS.vengeance.wait);
+      g.rnd = fixed(() => false); g.move(0); for (const m of g.foes) m.hp = 0; g.afterBlows();
+      out.avenged = g.mode === 'explore' && f.avenged && f.avenged.includes('2,1');
+      f.pos = [1, 1]; g.move(0); g.use(); out.vengeanceDone = !f.things['2,1'] && talks[talks.length - 1].text.includes(CM.REQUESTS.vengeance.done);
+      f = CM.useFloor(g, CM.testFloor(6, ['#####', '#XgW#', '#####']));
+      f.things['2,1'].request = 'story'; f.features['3,1'].face = 1; f.features['3,1'].text = 5;
+      g.move(0); g.use(); g.use(); out.storyWaits = talks[talks.length - 1].text.includes(CM.REQUESTS.story.wait);
+      g.move(0); g.use(); g.move(2); g.use(); out.storyDone = !f.things['2,1'] && talks[talks.length - 1].text.includes(CM.REQUESTS.story.done);
+      // the lost adventurer: a place in the line, or the camp
+      f = CM.useFloor(g, CM.testFloor(6, ['####', '#Xa#', '####']));
+      const fallenName = g.party[1].name; g.party[1].hp = 0;
+      g.move(0); g.use(); out.adventurerFound = talks[talks.length - 1].text === CM.ADVENTURER.found && f.things['2,1'].freed === true;
+      const recruit = f.things['2,1'].hero.name; g.use();
+      out.adventurerJoins = !f.things['2,1'] && g.party[1].name === recruit && g.party[1].hp > 0 && g.messages[g.messages.length - 1].includes(fallenName);
+      f = CM.useFloor(g, CM.testFloor(7, ['####', '#Xa#', '####']));
+      const ropes = g.bag.filter(i => i.kind === 'rope').length; g.move(0); g.use(); g.use();
+      out.adventurerLeaves = !f.things['2,1'] && g.bag.filter(i => i.kind === 'rope').length === ropes + 1 && f.seen.length === 16 && (g.rescued || []).length === 1 && g.rescued[0].price === 0;
+      g.party[2].hp = 0; g.recruits = null; const who = g.tavern(); out.rescuedFirst = who.length === 4 && who[0].name === g.rescued[0].name && who[0].price === 0;
+      const gold = g.gold; out.hiredFree = g.hire(0) === '' && g.gold === gold && g.party[2].name === who[0].name && g.rescued.length === 0 && g.tavern().length === 3;
+      // a riddle at a door
+      f = CM.useFloor(g, CM.testFloor(8, ['#####', '#XR.#', '#####']));
+      g.move(0); out.riddleAsked = riddles.length === 1 && riddles[0] === '2,1' && !f.features['2,1'].open && g.floor.pos[0] === 1;
+      const r = CM.RIDDLES[1], hpBefore = g.party[0].hp;
+      out.riddleWrong = g.answerRiddle('2,1', r.wrong[0]) === false && !f.features['2,1'].open && g.party[0].hp === hpBefore - 6 && f.features['2,1'].tries === 1;
+      const xp0 = g.party[0].xp;
+      out.riddleRight = g.answerRiddle('2,1', r.a) === true && f.features['2,1'].open && g.party[0].xp === xp0 + 120 && g.journal.some(e => e.kind === 'riddle' && e.text.includes(r.q));
+      g.move(0); out.riddleWalked = g.floor.pos[0] === 2;
+      // plates: one opens the gate, one was a trap
+      f = CM.useFloor(g, CM.testFloor(6, ['########', '#Xp.Gt>#', '########']));
+      g.move(0); out.plateOpens = f.features['2,1'].pressed === true && f.features['4,1'].open === true && CM.solvable(f);
+      g.move(0); g.move(0); const hp1 = g.party.map(h => h.hp); g.rnd = fixed(() => false); g.move(0);
+      out.trapPlate = f.features['5,1'].known === true && f.features['5,1'].spent === true && g.party.every((h, i) => h.hp < hp1[i]) && seen.some(e => e.kind === 'trap' && e.trap === 'gas');
+      const hp2 = g.party.map(h => h.hp); g.move(2); g.move(0); out.trapOnce = g.party.every((h, i) => h.hp === hp2[i]);
+      // a rope down a pit, and back
+      g.floors = {{}}; f = CM.useFloor(g, CM.testFloor(6, ['#####', '#X.P#', '#####']));
+      g.bag = g.bag.filter(i => i.kind !== 'rope'); g.bag.push(CM.rope());
+      const hp3 = g.party.map(h => h.hp); g.move(0); g.move(0);
+      const below = g.floor, landing = below.pos.join(',');
+      out.roped = below.number === 7 && g.party.every((h, i) => h.hp === hp3[i]) && !g.bag.some(i => i.kind === 'rope') && f.features['3,1'].roped === true
+        && below.things[landing] && below.things[landing].type === 'rope' && below.things[landing].up.join() === '3,1';
+      g.use(); out.climbed = g.floor === f && f.pos.join() === '3,1';
+      f.pos = [2, 1]; f.facing = 1; g.move(0); out.ropedAgain = g.floor.number === 7 && g.party.every((h, i) => h.hp === hp3[i]);
+      // the water guts the torch; the dark blinds the map unless a Light is up; the hunter comes from afar
+      g.floors = {{}}; f = CM.useFloor(g, CM.testFloor(8, ['######', '#X...#', '######'])); f.special = 'wading';
+      g.light = {{ kind: 'torch', left: 100 }}; g.move(0); out.wadingBurn = g.light.left === 98;
+      f = CM.useFloor(g, CM.testFloor(8, ['#######', '#X....#', '#######'])); f.special = 'dark'; for (let x = 1; x <= 5; x++) f.dark.push(x + ',1'); f.seen = []; g.spellLight = 0; g.look();
+      out.blind = f.seen.length === 1;
+      g.spellLight = 50; g.look(); out.lightSees = f.seen.length > 3;
+      g.spellLight = 0; f = CM.useFloor(g, CM.testFloor(8, ['############', '#X........M#', '############']));
+      f.things['10,1'].hunter = true; g.rnd = new CM.Random(3); g.wander = 1.2; g.tick(0.01);
+      out.hunter = !f.things['10,1'] && f.things['9,1'] && f.things['9,1'].hunter === true;
+      // the journal and the rescued travel with a save
+      g.journal.push({{ kind: 'carving', text: 'test', floor: 1 }}); g.rescued = [CM.makeRecruit(2, new CM.Random(1))]; g.mode = 'explore'; g.saveRun();
+      const saved = JSON.parse(JSON.stringify(g.lastRun)); g.journal = []; g.rescued = []; g.lastRun = saved; g.continueRun();
+      out.saved = g.journal.some(e => e.text === 'test') && g.rescued.length === 1;
+      // the window
+      CM.ui.openJournal(); out.journalShown = document.querySelector('#dlg-journal').classList.contains('on') && document.querySelector('#journal-list').textContent.includes(CM.LORE[2]);
+      CM.ui.closeDialogs();
+      f = CM.useFloor(g, CM.testFloor(8, ['#####', '#XR.#', '#####'])); g.move(0);
+      out.riddleShown = document.querySelector('#dlg-riddle').classList.contains('on') && document.querySelectorAll('#riddle-answers button').length === 3
+        && document.querySelector('#riddle-q').textContent === CM.RIDDLES[1].q;
+      CM.ui.pickRiddle(1 + CM.ui.riddle.answers.indexOf(CM.RIDDLES[1].a)); out.riddlePicked = f.features['2,1'].open === true && !document.querySelector('#dlg-riddle').classList.contains('on');
+      out.layers = ['drawn', 'pixel', 'stone'].every(look => {{ const b = CM.art.build(CM.THEMES[0], look); return ['npc:ghost', 'npc:hermit', 'npc:adventurer', 'bones', 'rope', 'plate', 'plate_pressed', 'door_riddle'].every(n => b.index[n] !== undefined); }});
+      out.keysHelp = CM.KEYS_HELP.some(([k]) => k === 'J');
+      return out; }})()""")
+    c = got["count"]
+    assert got["solvable"], "a floor with people on it can't be finished, or a guardian shares its floor"
+    for key in ("ghost", "hermit", "adventurer", "bones", "vengeance", "story", "plates", "traps", "riddles", "hunters"):
+        assert c[key] > 0, (key, c)
+    for kind in ("wading", "dark", "maze"):
+        assert c["special"].get(kind, 0) > 0, (kind, c)
+    for key in ("wading", "dark", "maze", "journal", "journalOnce", "hermitGreets", "hermitNames", "hermitDone", "hermitPoints", "ghostAsks", "ghostWaits",
+                "bonesTaken", "ghostRests", "vengeanceWaits", "avenged", "vengeanceDone", "storyWaits", "storyDone", "adventurerFound", "adventurerJoins",
+                "adventurerLeaves", "rescuedFirst", "hiredFree", "riddleAsked", "riddleWrong", "riddleRight", "riddleWalked", "plateOpens", "trapPlate",
+                "trapOnce", "roped", "climbed", "ropedAgain", "wadingBurn", "blind", "lightSees", "hunter", "saved", "journalShown", "riddleShown",
+                "riddlePicked", "layers", "keysHelp"):
+        assert got[key] is True, (key, got)
+    # the view: the people, a plate and a riddle door drawn
+    run("""const g = CM.game; g.combat = null; g.mode = 'explore';
+      const f = CM.testFloor(8, ['#########', '#X.gh.a.#', '#########']); f.features['2,1'] = { type: 'plate', gate: '0,0', pressed: false };
+      f.features['7,1'] = { type: 'door', open: false, locked: false, riddle: 1 }; CM.useFloor(g, f); g.emit('change')""")
+    support.pump(0.3)
+    layers = ask("[...new Set(CM.renderer.sprites.map(s => s.layer))]")
+    for layer in ("npc:ghost", "npc:hermit", "npc:adventurer", "plate", "door_riddle"):
+        assert layer in layers, (layer, layers)
     said = [s for s in page().said if "Error" in s or "error" in s]
     assert not said, f"the page's console: {said[:5]}"
 

@@ -169,7 +169,9 @@ CATALOG = {
                              "photographed stone. Fights that move: lunges, spells that fly and burst, sparks, a "
                              "shaking view, torches on the walls and water underfoot. Guardians over the shafts to the camps - the Rat King, "
                              "the Drowned Knight, the Forge-Warden - each in a lair of its own, with two tricks, a weakness and a relic, "
-                             "and trophies kept between runs. When the whole party falls, the run ends on a screen that tells how it went, and "
+                             "and trophies kept between runs. Ghosts with requests, a hermit who identifies for stories, lost adventurers to "
+                             "rescue, riddle doors keyed to the carvings, pressure plates, a rope for pits, flooded, dark and labyrinth "
+                             "floors, and a journal of everything read and heard. When the whole party falls, the run ends on a screen that tells how it went, and "
                              "starts over. One HTML file: it plays in a browser too, and on its own from the "
                              "launcher's APPS."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "

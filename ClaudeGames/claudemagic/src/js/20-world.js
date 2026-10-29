@@ -94,6 +94,25 @@ CM.lantern = () => ({ name: "Lantern", kind: "lantern", power: 0, value: 150 });
 CM.key = () => ({ name: "Iron Key", kind: "key", power: 0, value: 0 });
 CM.antidote = () => ({ name: "Antidote", kind: "antidote", power: 0, value: 15 });
 
+// one floor in a run may be special - all water, or all dark, or a labyrinth with something in it - decided by the
+// seed, never on a guardian's floor nor near the top or the bottom
+CM.specialFor = function (number, seed) {
+  if (CM.guardianFor(number) || number <= 2 || number >= CM.LAST_FLOOR - 1) return null;
+  const h = (what, n) => CM.hashSeed(`${seed}:special:${what}:${n}`);
+  const wading = 7 + h("wading", 0) % 3, maze = 11 + h("maze", 0) % 4, dark = [3, 4, 12, 13, 14, 17, 18][h("dark", 0) % 7];
+  if (number === wading && h("wading", 1) % 10 < 7) return "wading";
+  if (number === maze && h("maze", 1) % 10 < 7) return "maze";
+  if (number === dark && dark !== maze && h("dark", 1) % 10 < 6) return "dark";
+  return null;
+};
+CM.SPECIALS = {
+  wading: { name: "a flooded floor", note: "The whole floor is under water, knee-deep and cold. You wade, and the torch gutters in the damp." },
+  dark: { name: "a dark floor", note: "No torch reaches far here: a dark lies over this whole floor like water. Only a conjured Light cuts through it." },
+  maze: { name: "a labyrinth", note: "No rooms, no doors: a labyrinth of narrow ways. Something in it has your scent." },
+};
+CM.rope = () => ({ name: "Rope", kind: "rope", power: 0, value: 30 });
+CM.bones = (ghost) => ({ name: "Someone's bones", kind: "bones", power: 0, value: 0, ghost });
+
 // one monster of a kind, at a depth - with what the kind does carried on it, so a save stands alone
 CM.makeMonster = function (kind, level, rnd) {
   return { name: kind.name, kind: kind.name, colour: kind.colour, hp: 8 + level * 6, max: 8 + level * 6, atk: 3 + level * 2, df: level,
@@ -427,7 +446,7 @@ CM.reachable = function (floor, from) {
       const t = floor.things[k];
       if (t && t.type === "key") keys++;
       const f = floor.features[k];
-      if (f && f.type === "lever" && !opened.has(f.gate)) { opened.add(f.gate); changed = true; }
+      if (f && (f.type === "lever" || (f.type === "plate" && f.gate)) && !opened.has(f.gate)) { opened.add(f.gate); changed = true; }
     }
     keys -= unlocked.size;                                   // (a key opens one door)
     for (const k of reach) {
@@ -455,7 +474,8 @@ CM.makeFloor = function (number, seed) {
   const size = Math.min(17 + Math.floor(number / 4) * 2, 27);
   const grid = [];
   for (let y = 0; y < size; y++) grid.push(new Array(size).fill(1));
-  const floor = { number, grid, pos: [1, 1], facing: 2, things: {}, features: {}, dark: [], seen: [], rooms: [], decor: [] };
+  const special = CM.specialFor(number, seed);
+  const floor = { number, grid, pos: [1, 1], facing: 2, things: {}, features: {}, dark: [], seen: [], rooms: [], decor: [], special };
   const rooms = [];                            // {x0, y0, x1, y1 (interior, inclusive), template?, entrances: [[x,y,kind]]}
   const taken = (x0, y0, x1, y1) => rooms.some((r) => x0 <= r.x1 + 2 && x1 >= r.x0 - 2 && y0 <= r.y1 + 2 && y1 >= r.y0 - 2);
   const carve = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) grid[y][x] = 0; };
@@ -464,7 +484,7 @@ CM.makeFloor = function (number, seed) {
   const guardian = CM.guardianFor(number), lair = guardian ? CM.GUARDIANS[guardian].lair : null;
   const wanted = CM.TEMPLATES.filter((t) => number >= t.min && !(number === CM.LAST_FLOOR && t.name === "Pit Room"));
   rnd.shuffle(wanted);
-  const chosen = wanted.slice(0, number >= 6 ? 2 : 1);
+  const chosen = special === "maze" ? [] : wanted.slice(0, number >= 6 ? 2 : 1);
   if (lair) chosen.unshift(lair);                                   // (the guardian's lair first, and away from the top left, where the party starts)
   for (const tpl of chosen) {
     const h = tpl.rows.length - 2, w = tpl.rows[0].length - 2;
@@ -497,9 +517,9 @@ CM.makeFloor = function (number, seed) {
       break;
     }
   }
-  const roomTries = 14 + number;
+  const roomTries = special === "maze" ? 2 : 14 + number;
   for (let i = 0; i < roomTries; i++) {
-    const w = 3 + 2 * rnd.int(0, 1 + Math.floor(number / 7)), h = 3 + 2 * rnd.int(0, 1);
+    const w = special === "maze" ? 3 : 3 + 2 * rnd.int(0, 1 + Math.floor(number / 7)), h = special === "maze" ? 3 : 3 + 2 * rnd.int(0, 1);
     const x0 = 1 + 2 * rnd.int(0, Math.floor((size - 2 - w) / 2)), y0 = 1 + 2 * rnd.int(0, Math.floor((size - 2 - h) / 2));
     const x1 = x0 + w - 1, y1 = y0 + h - 1;
     if (x1 >= size - 1 || y1 >= size - 1 || taken(x0, y0, x1, y1)) continue;
@@ -591,7 +611,7 @@ CM.makeFloor = function (number, seed) {
     }
     return out;
   };
-  const keepEnds = 3 + Math.floor(size / 6);
+  const keepEnds = special === "maze" ? 9999 : 3 + Math.floor(size / 6);
   for (let pass = 0; pass < 40; pass++) {
     const ends = deadEnds();
     if (ends.length <= keepEnds) break;
@@ -623,12 +643,16 @@ CM.makeFloor = function (number, seed) {
 
   // where the party arrives and where the ladder goes
   const plain = rooms.filter((r) => !r.template);
+  const inTemplate = (x, y) => rooms.some((r) => r.template && x >= r.x0 - 1 && x <= r.x1 + 1 && y >= r.y0 - 1 && y <= r.y1 + 1);
   const startRoom = plain.length ? plain.reduce((a, b) => (a.x0 + a.y0 <= b.x0 + b.y0 ? a : b)) : null;
-  const start = startRoom ? [Math.floor((startRoom.x0 + startRoom.x1) / 2), Math.floor((startRoom.y0 + startRoom.y1) / 2)] : [1, 1];
+  let start = startRoom ? [Math.floor((startRoom.x0 + startRoom.x1) / 2), Math.floor((startRoom.y0 + startRoom.y1) / 2)] : null;
+  if (!start) {                                                   // (no plain room at all: the corridor square nearest the top left)
+    for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !inTemplate(x, y) && (!start || x + y < start[0] + start[1])) start = [x, y];
+    start = start || [1, 1];
+  }
   if (grid[start[1]][start[0]] !== 0) { grid[start[1]][start[0]] = 0; }
   floor.pos = start.slice();
   const dist = CM.distances(grid, start);
-  const inTemplate = (x, y) => rooms.some((r) => r.template && x >= r.x0 - 1 && x <= r.x1 + 1 && y >= r.y0 - 1 && y <= r.y1 + 1);
   let far = start, best = -1;
   for (const [k, d] of dist) {
     const [x, y] = unkey(k);
@@ -728,7 +752,8 @@ CM.makeFloor = function (number, seed) {
     const spots = freeCells((x, y, k) => reach.has(k) && wallFace(x, y) >= 0);
     const spot = spots[0];
     if (!spot) { floor.features[gk].open = true; continue; }
-    floor.features[key(spot[0], spot[1])] = { type: "lever", face: wallFace(spot[0], spot[1]), gate: gk, pulled: false };
+    const plate = number >= 4 && CM.hashSeed(`${seed}:plate:${number}:${gk}`) % 5 < 2;
+    floor.features[key(spot[0], spot[1])] = plate ? { type: "plate", gate: gk, pressed: false } : { type: "lever", face: wallFace(spot[0], spot[1]), gate: gk, pulled: false };
     if (!CM.solvable(floor)) { delete floor.features[key(spot[0], spot[1])]; floor.features[gk].open = true; }
   }
   // the carving for this floor, on a wall the party can stand before
@@ -752,9 +777,15 @@ CM.makeFloor = function (number, seed) {
     for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd));
     floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items, trap: trap() };
   }
-  for (let i = 0; i < 5 + Math.floor(number / 2) && spare.length; i++) {
+  for (let i = 0; i < (special === "maze" ? 3 : 5 + Math.floor(number / 2)) && spare.length; i++) {
     const [x, y] = spare.pop();
     floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd) };
+  }
+  if (special === "maze" && spare.length) {                      // the thing in the labyrinth: a great minotaur that hunts the party wherever it goes
+    const [x, y] = spare.pop(), m = CM.makeMonster(CM.monsterKind("Minotaur"), number + 3, rnd);
+    Object.assign(m, { name: "Minotaur of the Labyrinth", elite: "hulking", max: Math.round(m.max * 1.5), atk: m.atk + 3, xp: m.xp * 3, gold: m.gold * 4 });
+    m.hp = m.max;
+    floor.things[key(x, y)] = { type: "monsters", group: [m], hunter: true };
   }
   if (!CM.solvable(floor)) {                                     // (it never comes to this, but a floor must be finishable)
     for (const [k, f] of Object.entries(floor.features)) if (["pit", "trapdoor", "gate"].includes(f.type) || (f.type === "door" && f.locked)) delete floor.features[k];
@@ -765,6 +796,47 @@ CM.makeFloor = function (number, seed) {
     const spot = spots[0];
     if (spot) floor.things[key(spot[0], spot[1])] = { type: "phylactery" };
   }
+  // a door that asks a riddle from the carvings above (never a locked one, never a set piece's)
+  if (number >= CM.RIDDLE_FROM) {
+    const asks = CM.RIDDLES.map((r, i) => i).filter((i) => CM.RIDDLES[i].lore + 1 < number);
+    const doors = Object.entries(floor.features).filter(([k, f]) => f.type === "door" && !f.locked && !inTemplate(...unkey(k)));
+    const pick = doors.filter(([k]) => CM.hashSeed(`${seed}:riddle:${number}:${k}`) % 10 < 3)[0];
+    if (pick && asks.length) pick[1].riddle = asks[CM.hashSeed(`${seed}:riddle:${number}`) % asks.length];
+  }
+  // plates in the floor that spring a trap, from the third floor down
+  if (number >= 3) for (const [x, y] of freeCells(corridor).slice(0, rnd.int(0, 2))) floor.features[key(x, y)] = { type: "plate", trap: rnd.pick(Object.keys(CM.TRAPS)), known: false, spent: false };
+  // the people: a ghost with a request, a hermit, a lost adventurer - one of them on a floor, now and then
+  if (number >= 2 && number < CM.LAST_FLOOR && !CM.guardianFor(number) && special !== "maze") {
+    const roll = rnd.next(), room = (x, y, k) => roomCells.has(k);
+    if (roll < 0.22) {
+      const spot = freeCells(room)[0];
+      if (spot) {
+        const who = rnd.int(0, CM.GHOSTS.length - 1), gk = key(spot[0], spot[1]);
+        const groups = Object.entries(floor.things).filter(([, t]) => t.type === "monsters" && !t.still && !t.hunter);
+        let request = rnd.pick(["bones", "vengeance", "story"]);
+        if (request === "vengeance" && !groups.length) request = "story";
+        floor.things[gk] = { type: "ghost", who, request, asked: false };
+        if (request === "bones") {
+          const far = freeCells((x, y, k) => Math.abs(x - spot[0]) + Math.abs(y - spot[1]) >= 6)[0] || freeCells()[0];
+          if (far) floor.things[key(far[0], far[1])] = { type: "bones", ghost: gk };
+          else floor.things[gk].request = "story";
+        } else if (request === "vengeance") {
+          const [, t] = rnd.pick(groups);
+          t.vengeance = gk;
+          const m = t.group[0];
+          if (!m.elite) { m.name = `Hulking ${m.name}`; m.elite = "hulking"; m.max = Math.round(m.max * 1.5); m.hp = m.max; m.atk += 2; m.xp = Math.round(m.xp * 1.5); m.gold *= 2; }
+        }
+      }
+    } else if (roll < 0.36 && number >= 3) {
+      const spot = freeCells((x, y) => CM.openNeighbours(floor, x, y).length === 1)[0] || freeCells(room)[0];
+      if (spot) floor.things[key(spot[0], spot[1])] = { type: "hermit", heard: 0, greeted: false };
+    } else if (roll < 0.5 && number >= 3) {
+      const spot = freeCells(room)[0];
+      if (spot) floor.things[key(spot[0], spot[1])] = { type: "adventurer", hero: CM.makeRecruit(Math.max(1, Math.floor(number / 2)), rnd), freed: false };
+    }
+  }
+  if (special === "wading") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0) floor.decor.push({ x, y, kind: "water" });
+  if (special === "dark") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !floor.dark.includes(key(x, y))) floor.dark.push(key(x, y));
   floor.rooms = rooms.map((r) => ({ x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, name: r.template ? r.template.name : "" }));
   return floor;
 };

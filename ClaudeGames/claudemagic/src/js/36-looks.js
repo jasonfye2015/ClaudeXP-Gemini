@@ -91,6 +91,13 @@ CM.art.buildPixel = function (theme) {
   for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12)));
   add("nest", CM.art.pixelate(CM.art.nest())); add("throne", CM.art.pixelate(CM.art.throne())); add("anvil", CM.art.pixelate(CM.art.anvil()));
   add("ember", tileOr("ember", CM.art.ember));
+  for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, tileOr(`npc.${who}`, () => CM.art.monster(row)));
+  add("bones", CM.art.pixelate(CM.art.bones())); add("rope", CM.art.pixelate(CM.art.rope()));
+  add("plate", tileOr("plate", () => CM.art.plate(false)));
+  const pressed = CM.packs.pixel.index.plate ? sprite("plate") : CM.art.pixelate(CM.art.plate(true));   // (the plate, sunk: the same tile, darkened)
+  if (CM.packs.pixel.index.plate) { const q = pressed.getContext("2d"); q.globalCompositeOperation = "source-atop"; q.fillStyle = "rgba(0,0,0,0.45)"; q.fillRect(0, 0, S, S); }
+  add("plate_pressed", pressed);
+  add("door_riddle", tileOr("door_riddle", () => CM.art.door("riddle")));
   add("fx:spark", tileOr("fx.spark", CM.art.fxSpark)); add("fx:shard", tileOr("fx.shard", CM.art.fxShard)); add("fx:fire", tileOr("fx.fire", CM.art.fxFire));
   add("fx:frost", tileOr("fx.frost", CM.art.fxFrost)); add("fx:bolt", tileOr("fx.bolt", CM.art.fxBolt)); add("fx:force", tileOr("fx.force", CM.art.fxForce));
   add("fx:holy", tileOr("fx.holy", CM.art.fxHoly)); add("fx:arrow", tileOr("fx.arrow", CM.art.fxArrow)); add("fx:leaf", tileOr("fx.leaf", CM.art.fxLeaf));
@@ -179,6 +186,8 @@ CM.art.itemKey = function (item) {
     case "torch": return "i.torch";
     case "lantern": return "i.lantern";
     case "key": return "i.key";
+    case "rope": return "i.rope";
+    case "bones": return "i.bones";
     case "weapon":
       if (item.props && item.props.bow) return has("Short Bow", "Hunting Bow") ? "i.bow" : "i.longbow";
       if (has("Dagger")) return "i.dagger";
@@ -227,6 +236,8 @@ CM.art.glyph = function (item, size = 24) {
     case "wand": line("#1A1410", 5); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); line("#8A6A30", 3); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); p.fillStyle = "#F0E060"; p.beginPath(); p.arc(18, 6, 3, 0, Math.PI * 2); p.fill(); break;
     case "torch": line("#1A1410", 5); p.beginPath(); p.moveTo(10, 21); p.lineTo(13, 11); p.stroke(); line("#7A5A30", 3); p.beginPath(); p.moveTo(10, 21); p.lineTo(13, 11); p.stroke(); outlined(p, () => { p.moveTo(13, 2); p.lineTo(18, 9); p.lineTo(13, 12); p.lineTo(8, 9); }, "#F0A030", "#A04010", 1.5); break;
     case "lantern": outlined(p, () => { p.rect(7, 7, 10, 12); }, "#F0D070", "#4A3A1A", 1.5); p.fillStyle = "#4A3A1A"; p.fillRect(6, 5, 12, 3); p.fillRect(11, 2, 2, 3); break;
+    case "rope": line("#1A1410", 6); for (let i = 0; i < 3; i++) { p.beginPath(); p.ellipse(12, 10 + i * 4, 8 - i, 3, 0, 0, Math.PI * 2); p.stroke(); } line("#A07840", 3); for (let i = 0; i < 3; i++) { p.beginPath(); p.ellipse(12, 10 + i * 4, 8 - i, 3, 0, 0, Math.PI * 2); p.stroke(); } break;
+    case "bones": line("#1A1410", 6); p.beginPath(); p.moveTo(5, 18); p.lineTo(19, 6); p.stroke(); line("#E8E0C8", 3.5); p.beginPath(); p.moveTo(5, 18); p.lineTo(19, 6); p.stroke(); p.fillStyle = "#E8E0C8"; for (const [x, y] of [[4, 16], [7, 20], [17, 4], [21, 8]]) { p.beginPath(); p.arc(x, y, 2.4, 0, Math.PI * 2); p.fill(); } break;
     case "key": line("#1A1410", 5); p.beginPath(); p.moveTo(8, 12); p.lineTo(20, 12); p.stroke(); line("#E0B840", 3); p.beginPath(); p.moveTo(8, 12); p.lineTo(20, 12); p.moveTo(17, 12); p.lineTo(17, 16); p.moveTo(20, 12); p.lineTo(20, 15); p.stroke(); outlined(p, () => { p.arc(7, 12, 4, 0, Math.PI * 2); }, "#E0B840", "#1A1410", 1.5); break;
     case "dagger": case "knife": blade(8, "#D8DCE8"); break;
     case "short_sword": blade(11, "#D8DCE8"); break;
@@ -253,7 +264,7 @@ CM.art.glyph = function (item, size = 24) {
   return c;
 };
 CM.art.itemIcon = function (item, size = 24, look = "drawn") {
-  if (look === "pixel" && CM.art.hasLook("pixel")) return CM.art.tile(CM.art.itemKey(item), size);
+  if (look === "pixel" && CM.art.hasLook("pixel") && CM.packs.pixel.index[CM.art.itemKey(item)]) return CM.art.tile(CM.art.itemKey(item), size);
   return CM.art.glyph(item, size);
 };
 // a spell's or skill's icon (the Pixel theme has them; the others go without)

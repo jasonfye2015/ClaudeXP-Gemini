@@ -214,6 +214,54 @@ CM.ABILITIES = {
 CM.PICK_LOCK_LEVEL = 2;
 CM.LIGHT_STEPS = 200;
 
+// ---- the dungeon's people and its puzzles ------------------------------------------------------------------------
+// Riddle doors ask about the carvings: `lore` is the carving (an index in CM.LORE, found on floor lore + 1) that holds
+// the answer, so a riddle is only ever asked below the floor where it could have been read.
+CM.RIDDLES = [
+  { lore: 1, q: "What came up the river in the king's twelfth year?", a: "The plague", wrong: ["A fleet of the dwarves", "The queen's brothers"] },
+  { lore: 2, q: "What did King Mordeth have taken down when the queen died?", a: "The bells", wrong: ["The gates", "The banners"] },
+  { lore: 5, q: "What did the stranger from the east leave behind him?", a: "A box he would not open", wrong: ["A sword", "A letter"] },
+  { lore: 6, q: "What did the court physician write that the king no longer does?", a: "Sleep", wrong: ["Eat", "Pray"] },
+  { lore: 7, q: "What did the dwarves' last letter ask?", a: "Why the king's coin was cold", wrong: ["For grain", "For a wife for their king"] },
+  { lore: 9, q: "What did the one page of the physician's notes that survived say?", a: "The heart may be kept apart", wrong: ["The king must sleep", "Burn the body"] },
+  { lore: 11, q: "What did the child's letters say not to do?", a: "Look at him", wrong: ["Ring the bells", "Go below"] },
+  { lore: 13, q: "Who did the king ask for by name, last of all?", a: "The captain of the guard", wrong: ["The physician", "The dwarf-king"] },
+  { lore: 15, q: "What are the palace's foundations made of?", a: "The masons' graves", wrong: ["The dwarves' stone", "River mud"] },
+  { lore: 18, q: "Where is the king's heart?", a: "Not in his chest", wrong: ["In the river", "With the queen"] },
+];
+CM.RIDDLE_FROM = 4;                                                      // the first floor a door may ask
+
+// the ghosts: each has a name, something it wants (bones brought to it, the thing that killed it slain, or this
+// floor's carving read and told to it), and a tale to tell when it has it
+CM.GHOSTS = [
+  { name: "Hal of the lower watch", tale: "Hal says: the water came in the night, and the captain stood in it to the chest and would not leave. We left him. He is down there still, I think, standing." },
+  { name: "Ysolde the king's cook", tale: "Ysolde says: in the twelfth year the king stopped eating, and the dogs would not eat what came back from his table either. I carved the bread recipe on a wall so something of mine would last." },
+  { name: "Brother Cael", tale: "Cael says: we rang the last bell ourselves, the night the queen died, before they came for it. He heard it. He has heard it ever since, I think. Good." },
+  { name: "Tamsin, who kept the tally", tale: "Tamsin says: I counted the dead for the king, a mark for each. When the marks stopped meaning anything to him I kept counting anyway. Someone had to." },
+  { name: "Aldous the Lesser", tale: "Aldous says: it was a good chair. Oak. I'd have liked them to remember the troll was already wounded, but no one carves that part." },
+  { name: "Mother Ennis", tale: "Mother Ennis says: I told the child not to look at him. I looked. That is all I will say about that, and I have had a long time to think of more." },
+];
+CM.REQUESTS = {
+  bones: { ask: "My bones lie somewhere on this floor, where they dragged me. Bring them here, and I'll rest - and tell you what I know.", wait: "You haven't found them. They're on this floor, somewhere the rats go.",
+    done: "You lay the bones down, and the ghost kneels to them like a mother. \"Thank you. Take this; I kept it a long time for nothing.\"" },
+  vengeance: { ask: "The thing that killed me still walks this floor. Kill it. Then come back, and I'll give you what I have.", wait: "It still walks. I can hear it.",
+    done: "\"It's dead? It's dead.\" The ghost stands a little taller. \"Then take this. I won't need it where I'm going.\"" },
+  story: { ask: "There's writing on this floor's wall. I can't read it any more - the letters swim. Read it, and come and tell me what it says.", wait: "You haven't read it yet. It's on a wall of this floor, where the light falls.",
+    done: "You tell the ghost what the wall says. It listens with its eyes shut. \"Yes. That was it. That was us.\" It presses something into your hand." },
+};
+// the hermit, who wants a story for his work; the lost adventurer, who owes you one
+CM.HERMIT = {
+  greet: "A hermit in a nest of rags looks up. \"I'll tell you what your things are - I know every make the dungeon ever swallowed - but I want paying in stories. Read the walls. Tell me what they say.\"",
+  told: ["\"Hm. Yes, I'd heard that.\" He turns the thing over in his hands.", "\"Ha! No - no, I hadn't heard that one.\"", "\"The old king,\" he says, and spits. \"Go on, then.\"", "\"Good. Good. Give it here.\""],
+  nothing: "\"Nothing unknown in your pack. Then I'll give you a direction for your story, since you have nothing else to spend it on:\"",
+  noStory: "\"You've told me everything you've read. Read something else - the walls are full of it - and come back.\"",
+};
+CM.ADVENTURER = {
+  found: "Someone sits against the wall, bound hand and foot: an adventurer, one of a party that didn't come back. They look up. \"Cut me loose and I'm yours. I owe you that.\"",
+  joins: (name, cls, gone) => `You cut ${name} the ${cls} loose, and they take up ${gone}'s place in the line.`,
+  leaves: (name) => `You cut ${name} loose. "You've no place for me - but I mapped this floor before they took me, and I've a rope you can have. I'll make for the camp. Ask for me there."`,
+};
+
 CM.abilitiesFor = (hero) => Object.keys(CM.ABILITIES).filter((id) => {
   const at = CM.ABILITIES[id].cls[hero.cls];
   return at !== undefined && hero.level >= at;
@@ -297,7 +345,7 @@ CM.themeIndex = (number) => Math.max(0, CM.THEMES.indexOf(CM.themeFor(number)));
 
 CM.KEYS_HELP = [
   ["W / Up", "forward"], ["S / Down", "back"], ["A / Left", "turn left"], ["D / Right", "turn right"], ["Q / E", "sidestep"],
-  ["Space", "use: a chest, the stairs, a fountain, a lever - or search the wall you face"], ["I", "inventory"],
+  ["Space", "use: a chest, the stairs, a fountain, a lever, someone to talk to - or search the wall you face"], ["I", "inventory"], ["J", "the journal: everything read and heard"],
   ["1 - 4", "a hero's sheet: stats, row, ailments, a boon when they level"], ["Tab", "the automap, large"], ["Esc", "close a screen / pause"],
   ["F", "fight the chosen foe"], ["C", "cast a spell or use a skill (and between fights: healing, Light)"], ["P", "an item"],
   ["D", "defend: half the blows until their next turn"], ["R", "run"], ["Tab / click a foe", "choose the foe"],

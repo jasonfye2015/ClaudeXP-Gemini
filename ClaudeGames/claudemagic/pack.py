@@ -61,6 +61,9 @@ PIXEL = {
     # the guardians, and the forge-floor of the third's lair
     "m.The Rat King": "monster/animals/orange_rat", "m.The Drowned Knight": "monster/death_knight", "m.The Forge-Warden": "monster/nonliving/iron_golem",
     "ember": "dungeon/floor/lava_0",
+    # the dungeon's people, a plate in the floor, a door written over with runes, someone's bones (as an icon)
+    "npc.ghost": "monster/human_monk_ghost", "npc.hermit": "monster/unique/crazy_yiuf", "npc.adventurer": "monster/human_slave",
+    "plate": "dungeon/traps/pressure_plate", "door_riddle": "dungeon/doors/sealed_door", "i.bones": "item/food/bone",
     # the things in the pack
     "i.heal": "item/potion/ruby_new", "i.mana": "item/potion/brilliant_blue_new", "i.revive": "item/potion/golden", "i.antidote": "item/potion/emerald",
     "i.scroll": "item/scroll/scroll_new", "i.wand": "item/wand/wand_brass", "i.torch": "player/hand_left/misc/torch", "i.lantern": "item/misc/misc_lantern",
