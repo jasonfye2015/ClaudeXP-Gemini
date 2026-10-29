@@ -339,7 +339,68 @@ CM.TOMES = {
 CM.GEMS = {
   diamond: { name: "Diamond", element: null }, ruby: { name: "Ruby", element: "fire" }, sapphire: { name: "Sapphire", element: "frost" }, sunstone: { name: "Sunstone", element: "holy" },
 };
-CM.SMITH = { enchant: 80, gem: 120, most: 3 };                           // gold a +1 (times the pluses so far), gold a gem set, the most pluses the smith will work
+CM.SMITH = { enchant: 80, gem: 120, most: 3 };
+// ---- ways to play: difficulty, the daily dungeon's mutators, achievements and the titles they give, the keys ---------
+CM.DIFFICULTIES = {
+  gentle: { name: "Gentle", hp: 0.75, atk: 0.8, gold: 1.25, what: "monsters a quarter weaker, and more gold" },
+  fair: { name: "Fair", hp: 1, atk: 1, gold: 1, what: "the dungeon as it is" },
+  grim: { name: "Grim", hp: 1.3, atk: 1.25, gold: 0.9, what: "monsters a third tougher and harder-hitting, a little less gold; the Hall of Fame marks it" },
+};
+// Today's dungeon comes with two of these, from the date
+CM.MUTATORS = {
+  hordes: { name: "Hordes", what: "every band of monsters has one more in it" },
+  brittle: { name: "Brittle", what: "monsters have half the health and hit half again as hard" },
+  rich: { name: "Rich veins", what: "chests hold twice the gold" },
+  swift: { name: "Swift", what: "monsters move faster" },
+  drought: { name: "Drought", what: "every fountain is dry" },
+  gloom: { name: "Gloom", what: "torches burn twice as fast" },
+  lean: { name: "Lean", what: "the party sets out without potions, and with 100 gold more" },
+};
+CM.mutatorsFor = function (seed) {
+  if (!String(seed).startsWith("daily-")) return [];
+  const ids = Object.keys(CM.MUTATORS), a = CM.hashSeed(`${seed}:mutator:1`) % ids.length;
+  let b = CM.hashSeed(`${seed}:mutator:2`) % (ids.length - 1);
+  if (b >= a) b++;
+  return [ids[a], ids[b]];
+};
+// achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
+CM.ACHIEVEMENTS = {
+  crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
+  ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
+  grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
+  swift: { name: "Swift", what: "Slay the Lich King in under 1,500 steps", title: "the Swift" },
+  deeper: { name: "Of the Halls", what: "Reach floor 15", title: "of the Halls" },
+  labyrinth: { name: "Minotaur's Bane", what: "Slay the Minotaur of the Labyrinth", title: "the Minotaur's Bane" },
+  untouched: { name: "Unbowed", what: "Slay a guardian with no one falling in the fight", title: "the Unbowed" },
+  deep: { name: "Of the Vaults", what: "Reach floor 10", title: "of the Vaults" },
+  daily: { name: "Of the Day", what: "Reach floor 10 in Today's dungeon", title: "of the Day" },
+  smith: { name: "Tempered", what: "Have the smith work a piece of gear to +3", title: "the Tempered" },
+  hoarder: { name: "Rich", what: "Hold 2,000 gold at once", title: "the Rich" },
+  scholar: { name: "Learned", what: "Fill the journal with ten entries", title: "the Learned" },
+  friend: { name: "Kind", what: "Cut a lost adventurer loose", title: "the Kind" },
+  restful: { name: "Gentle", what: "Lay a ghost to rest", title: "the Gentle" },
+  delver: { name: "Delver", what: "Reach floor 5", title: "the Delver" },
+};
+CM.titleFor = (achievements) => { const id = Object.keys(CM.ACHIEVEMENTS).find((a) => achievements && achievements[a]); return id ? CM.ACHIEVEMENTS[id].title : ""; };
+// the keys, as the player may set them (Settings > Keys); the arrows always move as well
+CM.DEFAULT_KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", strafeLeft: "KeyQ", strafeRight: "KeyE", use: "Space", inventory: "KeyI",
+  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR" };
+CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"], ["right", "turn right"], ["strafeLeft", "sidestep left"], ["strafeRight", "sidestep right"],
+  ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
+  ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"]];
+CM.keyName = (code) => (code || "").replace(/^Key/, "").replace(/^Digit/, "").replace(/^Arrow/, "").replace("Space", "Space").replace("Backquote", "`");
+// a run's story in a few lines, to copy and share (from a Hall of Fame entry)
+CM.summaryText = function (e) {
+  const d = CM.DIFFICULTIES[e.difficulty] ? CM.DIFFICULTIES[e.difficulty].name : "Fair", t = e.tally || {};
+  const lines = [`Claude and Magic - ${e.name}'s expedition (${d})${e.mutators && e.mutators.length ? `, today's dungeon: ${e.mutators.map((m) => CM.MUTATORS[m] ? CM.MUTATORS[m].name : m).join(" and ")}` : ""}`,
+    `${e.won ? "Slew the Lich King on floor " + CM.LAST_FLOOR : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}`}, with ${(e.gold || 0).toLocaleString()} gold - seed ${e.seed || "?"} - ${e.date || ""}`];
+  if (e.party && e.party.length) lines.push(`Party: ${e.party.join(", ")}`);
+  lines.push(`${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}`);
+  if (t.guardians && t.guardians.length) lines.push(`Guardians slain: ${t.guardians.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", ")}`);
+  if (e.titles && e.titles.length) lines.push(`Earned: ${e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", ")}`);
+  return lines.join("\n");
+};
+                           // gold a +1 (times the pluses so far), gold a gem set, the most pluses the smith will work
 
 // the Lich King: what he does as the fight goes
 CM.LICH = { summonEvery: 3, summonMax: 4, coldFrom: 0.3, summonFrom: 0.6, riseTo: 0.4 };
