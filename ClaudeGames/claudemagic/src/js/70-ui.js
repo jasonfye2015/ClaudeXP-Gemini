@@ -22,13 +22,24 @@ CM.UI = class {
       <p>The same seed lays out the same twenty floors, so a dungeon can be tried again - or handed to a friend. What
       the monsters do in a fight is up to the dice. The run saves as you go; when the whole party falls, it ends, and
       the deepest runs go in the Hall of Fame.</p>
-      <h2>Your party</h2>
-      <div id="heroes"></div>
+      <h2>The eight callings</h2>
+      <div id="classes"></div>
       <p id="start-with"></p>
     </div>
     <div class="card" id="fame"><h2>Hall of Fame</h2><table></table></div>
     <div class="foot"><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button></div>
     <div class="version"></div>
+  </div>
+</div>
+<div id="create" class="screen">
+  <div class="sheet">
+    <h1>Who goes down?</h1>
+    <div class="tagline">Four of them. Name them, choose their callings, roll their stats, and set them in their rows. The advice is only advice.</div>
+    <div id="slots"></div>
+    <div class="card" id="advice"><h2>Advice</h2><ul></ul></div>
+    <div class="foot"><button id="btn-suggest">Suggest a party</button><button id="btn-reroll-all">Reroll everyone</button>
+      <label for="create-seed">Seed</label><input id="create-seed" type="text" maxlength="40" spellcheck="false">
+      <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>
   </div>
 </div>
 <div id="play" class="screen">
@@ -63,6 +74,18 @@ CM.UI = class {
 <div class="dialog" id="dlg-pause"><div class="box"><h2>Paused</h2>
   <p class="small">The run is saved as you go.</p>
   <div class="end"><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
+<div class="dialog" id="dlg-sheet"><div class="box sheetbox">
+  <h2 id="sheet-title"></h2>
+  <div class="sheet-grid"><div id="sheet-left"></div><div id="sheet-right"></div></div>
+  <div id="sheet-boon"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-temple"><div class="box"><h2>The Temple</h2>
+  <p class="small">An old priest keeps a shrine by the camp fire, and asks for the upkeep of his candles.</p>
+  <div class="row"><label>Cure the small ailments - poison, sleep, paralysis, blindness - for everyone</label><button data-service="cure">30 gold</button></div>
+  <div class="row"><label>Lift a curse</label><button data-service="uncurse">60 gold</button></div>
+  <div class="row"><label>Stone to flesh</label><button data-service="unstone">150 gold</button></div>
+  <div class="row"><label>Raise the fallen (100 gold a level)</label><button id="btn-temple-raise">Raise</button></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="bigmap"><canvas id="bigmap-canvas" width="600" height="600"></canvas></div>`;
@@ -73,8 +96,13 @@ CM.UI = class {
     for (const b of root.querySelectorAll(".dialog .close")) b.addEventListener("click", () => this.closeDialogs());
     for (const d of root.querySelectorAll(".dialog")) d.addEventListener("click", (e) => { if (e.target === d) this.closeDialogs(); });
     this._title();
+    this._create();
     this._bag();
     this._settings();
+    for (const b of root.querySelectorAll("#dlg-temple button[data-service]")) {
+      b.addEventListener("click", () => { game.temple(b.dataset.service); this.refresh(); });
+    }
+    this.$("#btn-temple-raise").addEventListener("click", () => { game.raiseDead(); this.refresh(); });
     this.$("#btn-pause-settings").addEventListener("click", () => { this.closeDialogs(); this.openDialog("#dlg-settings"); });
     this.$("#btn-pause-title").addEventListener("click", () => { this.closeDialogs(); game.saveRun(); game.setMode("title"); });
     const keys = this.$("#dlg-keys table");
@@ -110,6 +138,57 @@ CM.UI = class {
     this.refresh();
   }
 
+  // ---- a hero's sheet ----
+  openSheet(i) {
+    const g = this.game, h = g.party[i];
+    if (!h) return;
+    this.sheetOf = i;
+    this.renderSheet();
+    this.openDialog("#dlg-sheet");
+  }
+
+  renderSheet() {
+    const g = this.game, h = g.party[this.sheetOf];
+    if (!h || !this.$("#dlg-sheet").classList.contains("on") && this.sheetOf === undefined) return;
+    const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight, st = h.status || {}, fallen = h.hp <= 0;
+    this.$("#sheet-title").textContent = `${h.name} - ${h.cls}, level ${h.level}${fallen ? " (fallen)" : ""}`;
+    const next = CM.xpForLevel(h.level + 1);
+    const eff = g.effective(h);
+    const left = this.$("#sheet-left");
+    left.innerHTML = "";
+    left.appendChild(this.portrait(h.cls, 96));
+    const facts = document.createElement("div");
+    facts.className = "facts";
+    facts.innerHTML = `<div>${c.role}${c.cast ? `, casts <b>${CM.CASTS[c.cast]}</b>` : ""}</div>
+      <div>Experience ${h.xp} / ${next} for level ${h.level + 1}</div>
+      <div>Health ${Math.max(0, h.hp)} / ${h.max}${h.maxmp ? ` &nbsp; Magic ${h.mp} / ${h.maxmp}` : ""}</div>
+      <div>Attack ${eff.atk}${eff.atk !== h.atk ? ` (${h.atk})` : ""} &nbsp; Defence ${eff.df}${eff.df !== h.df ? ` (${h.df})` : ""} &nbsp; Hits ${Math.round(g.hitChance(h) * 100)}%</div>
+      <div>${this.esc(h.weapon.name)} (+${h.weapon.power}), ${this.esc(h.armor.name)} (+${h.armor.power})</div>
+      <div class="rowpick"><span>Row:</span><button data-row="front" class="${h.row === "front" ? "on" : ""}">Front</button><button data-row="back" class="${h.row === "back" ? "on" : ""}">Back</button>
+        <small>${g.mode === "combat" ? "not in a fight" : h.row === "front" ? "takes the blows" : h.cls === "Rogue" || h.cls === "Ranger" ? "strikes from safety" : "safer, hits for half"}</small></div>`;
+    for (const b of facts.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { if (g.setRow(h, b.dataset.row)) this.renderSheet(); });
+    left.appendChild(facts);
+    const right = this.$("#sheet-right");
+    right.innerHTML = `<table class="stats">${CM.STATS.map((s) => `<tr class="${s === c.key ? "key" : ""}"><td>${CM.STAT_NAMES[s]}</td><td class="v">${g.stat(h, s)}</td><td class="hint">${s === c.key ? "their calling's stat" : CM.STAT_HINTS[s]}</td></tr>`).join("")}</table>
+      <div class="list-title">Boons</div><div class="boons">${(h.boons || []).length ? h.boons.map((id) => `<div><b>${CM.BOONS[id].name}</b> - ${CM.BOONS[id].what}</div>`).join("") : "<div class='small'>None yet. Each level earned offers one.</div>"}</div>
+      <div class="list-title">Ailments</div><div class="ails">${Object.keys(st).length ? Object.keys(st).map((s) => `<div><b>${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}</b> - ${CM.STATUSES[s].hint}${st[s] < 900 ? ` (${st[s]} more rounds)` : ""}</div>`).join("") : "<div class='small'>None.</div>"}</div>`;
+    const boon = this.$("#sheet-boon");
+    boon.innerHTML = "";
+    if (h.pending > 0) {
+      const offer = g.offerBoons(h);
+      boon.innerHTML = `<div class="list-title gold">Level ${h.level}: choose a boon${h.pending > 1 ? ` (${h.pending} to choose)` : ""}</div>`;
+      const row = document.createElement("div");
+      row.className = "offer";
+      for (const id of offer) {
+        const b = document.createElement("button");
+        b.innerHTML = `<b>${CM.BOONS[id].name}</b><small>${CM.BOONS[id].what}</small>`;
+        b.addEventListener("click", () => { g.chooseBoon(h, id); this.renderSheet(); });
+        row.appendChild(b);
+      }
+      boon.appendChild(row);
+    }
+  }
+
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); }
   closeDialogs() { for (const d of this.root.querySelectorAll(".dialog.on")) d.classList.remove("on"); }
@@ -128,7 +207,7 @@ CM.UI = class {
     const g = this.game;
     this.$("#seed").value = CM.randomSeed();
     this.$("#btn-dice").addEventListener("click", () => { this.$("#seed").value = CM.randomSeed(); });
-    this.$("#btn-new").addEventListener("click", () => this.startNew());
+    this.$("#btn-new").addEventListener("click", () => this.openCreate());
     this.$("#btn-continue").addEventListener("click", () => g.continueRun());
     this.$("#btn-settings").addEventListener("click", () => this.openDialog("#dlg-settings"));
     this.$("#btn-keys").addEventListener("click", () => this.openDialog("#dlg-keys"));
@@ -148,25 +227,99 @@ CM.UI = class {
       this.$("#transfer-note").textContent = err || "Imported.";
       this.refreshTitle();
     });
-    const heroes = this.$("#heroes");
-    for (const hero of CM.newParty()) {
-      const div = document.createElement("div");
-      div.className = "hero";
-      div.appendChild(this.portrait(hero.cls, 48));
-      const s = CM.CLASSES[hero.cls];
+    const classes = this.$("#classes");
+    for (const cls of CM.CLASS_ORDER) {
+      const c = CM.CLASSES[cls], div = document.createElement("div");
+      div.className = "calling";
+      div.appendChild(this.portrait(cls, 30));
       const text = document.createElement("div");
-      text.innerHTML = `<b>${hero.cls}</b> <small>${s.role} - ${s.hp} HP${s.mp ? `, ${s.mp} MP` : ""}, attack ${s.atk}, defence ${s.df}</small>
-        <small>${s.blurb}</small><span class="gear">${hero.weapon.name}, ${hero.armor.name}</span>`;
+      text.innerHTML = `<b>${cls}</b> <small>${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}.</small> <small>${c.blurb}</small>`;
       div.appendChild(text);
-      heroes.appendChild(div);
+      classes.appendChild(div);
     }
   }
 
-  startNew() {
+  // ---- who goes down: the creation screen ----
+  _create() {
+    const g = this.game;
+    this.slots = [];
+    this.$("#btn-suggest").addEventListener("click", () => { this.fillSlots(CM.CLASSIC); this.renderCreate(); });
+    this.$("#btn-reroll-all").addEventListener("click", () => { for (const s of this.slots) s.stats = CM.rollStats(s.cls); this.renderCreate(); });
+    this.$("#btn-create-back").addEventListener("click", () => this.show("title"));
+    this.$("#btn-setout").addEventListener("click", () => this.setOut());
+    this.$("#create-seed").addEventListener("input", () => { this.$("#seed").value = this.$("#create-seed").value; });
+    const slots = this.$("#slots");
+    for (let i = 0; i < 4; i++) {
+      const div = document.createElement("div");
+      div.className = "slot";
+      div.innerHTML = `<div class="top"><div class="portrait-slot"></div><div class="who"><input class="name" type="text" maxlength="14" spellcheck="false" title="Their name"><button class="dice" title="Another name">&#x2684;</button>
+        <select class="cls" title="Their calling">${CM.CLASS_ORDER.map((c) => `<option value="${c}">${c}</option>`).join("")}</select></div></div>
+        <div class="role"></div>
+        <table class="stats"></table>
+        <div class="derived"></div>
+        <div class="rowpick"><span>Row:</span><button data-row="front">Front</button><button data-row="back">Back</button><button class="reroll">Reroll</button></div>`;
+      div.querySelector(".name").addEventListener("input", (e) => { this.slots[i].name = e.target.value; this.renderAdvice(); });
+      div.querySelector(".dice").addEventListener("click", () => { this.slots[i].name = CM.randomName(); this.renderCreate(); });
+      div.querySelector(".cls").addEventListener("change", (e) => {
+        const s = this.slots[i];
+        s.cls = e.target.value; s.stats = CM.rollStats(s.cls); s.row = CM.CLASSES[s.cls].row;
+        this.renderCreate();
+      });
+      div.querySelector(".reroll").addEventListener("click", () => { this.slots[i].stats = CM.rollStats(this.slots[i].cls); this.renderCreate(); });
+      for (const b of div.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { this.slots[i].row = b.dataset.row; this.renderCreate(); });
+      slots.appendChild(div);
+    }
+    g.on("mode", (mode) => { if (mode !== "title") this.closeDialogs(); });
+  }
+
+  fillSlots(classes) {
+    const rnd = new CM.Random(Math.floor(Math.random() * 4294967296));
+    this.slots = classes.map((cls) => ({ cls, name: CM.randomName(rnd), stats: CM.rollStats(cls, rnd), row: CM.CLASSES[cls].row }));
+  }
+
+  openCreate() {
     const g = this.game;
     if (g.canContinue() && !window.confirm("A run is waiting to be continued. Start a new expedition and let it go?")) return;
-    g.newGame(this.$("#seed").value);
+    if (!this.slots.length) this.fillSlots(CM.CLASSIC);
+    this.$("#create-seed").value = this.$("#seed").value;
+    this.show("create");
+    this.renderCreate();
   }
+
+  renderCreate() {
+    const cards = this.$("#slots").children;
+    this.slots.forEach((s, i) => {
+      const div = cards[i], c = CM.CLASSES[s.cls];
+      const slot = div.querySelector(".portrait-slot");
+      slot.innerHTML = "";
+      slot.appendChild(this.portrait(s.cls, 56));
+      if (div.querySelector(".name").value !== s.name) div.querySelector(".name").value = s.name;
+      div.querySelector(".cls").value = s.cls;
+      div.querySelector(".role").textContent = `${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}. ${c.blurb}`;
+      div.querySelector(".stats").innerHTML = CM.STATS.map((st) => {
+        const v = s.stats[st], key = st === c.key;
+        return `<tr class="${key ? "key" : ""}"><td>${CM.STAT_NAMES[st]}</td><td class="v">${v}</td><td class="hint">${key ? "their calling's stat" : CM.STAT_HINTS[st]}</td></tr>`;
+      }).join("");
+      const h = CM.makeHero(s.cls, s.name, s.stats, s.row);
+      div.querySelector(".derived").textContent = `${h.max} health${h.maxmp ? `, ${h.maxmp} magic` : ""}, attack ${h.atk}, defence ${h.df} - ${h.weapon.name} and ${h.armor.name}`;
+      for (const b of div.querySelectorAll("button[data-row]")) b.classList.toggle("on", b.dataset.row === s.row);
+    });
+    this.renderAdvice();
+  }
+
+  renderAdvice() {
+    const advice = CM.partyAdvice(this.slots), ul = this.$("#advice ul");
+    ul.innerHTML = advice.notes.map((n) => `<li class="${advice.sound && advice.notes.length === 1 ? "good" : ""}">${this.esc(n)}</li>`).join("");
+    this.$("#advice").classList.toggle("sound", advice.sound);
+  }
+
+  setOut() {
+    const g = this.game, seed = this.$("#create-seed").value;
+    this.$("#seed").value = seed;
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })));
+  }
+
+  startNew() { this.openCreate(); }
 
   refreshTitle() {
     const g = this.game;
@@ -176,9 +329,10 @@ CM.UI = class {
     this.$("#continue-note").textContent = can
       ? `Floor ${g.lastRun.floor.number}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}`
       : "No expedition is under way.";
-    const bag = CM.startingBag(this.$("#seed").value || "x");
-    this.$("#start-with").textContent = `You set out with 30 gold and two potions (${bag.map((i) => i.name).join(", ")} - the seed decides which). `
-      + "Chests and fallen monsters give better gear; a merchant's camp waits below floors 5, 10 and 15.";
+    const bag = CM.startingBag(this.$("#seed").value || "x").filter((i) => i.kind !== "torch");
+    this.$("#start-with").textContent = `Four set out with 30 gold, two torches and two potions (${bag.map((i) => i.name).join(" and ")} - the seed decides which). `
+      + "New Expedition lets you name them, choose their callings and roll their stats; chests and fallen monsters give better gear; "
+      + "a merchant's camp with a temple waits below floors 5, 10 and 15.";
     const table = this.$("#fame table");
     if (!g.fame.length) table.innerHTML = `<tr><td class="empty">No party has gone down yet.</td></tr>`;
     else table.innerHTML = g.fame.map((e, i) => `<tr><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
@@ -242,29 +396,39 @@ CM.UI = class {
     this.renderParty();
     this.renderLog();
     this.renderActions();
+    if (this.$("#dlg-sheet").classList.contains("on")) this.renderSheet();
     this.drawAutomap(this.$("#automap"));
     if (this.$("#bigmap").classList.contains("on")) this.drawAutomap(this.$("#bigmap-canvas"));
   }
 
   renderParty() {
     const box = this.$("#party");
-    if (box.children.length !== this.game.party.length) {
+    const signature = this.game.party.map((m) => m.cls + m.name).join("|");
+    if (box.dataset.signature !== signature) {
       box.innerHTML = "";
-      for (const m of this.game.party) {
+      box.dataset.signature = signature;
+      this.game.party.forEach((m, i) => {
         const div = document.createElement("div");
         div.className = "member";
+        div.title = `${m.name}'s sheet (${i + 1})`;
         div.appendChild(this.portrait(m.cls, 44));
         const text = document.createElement("div");
-        text.innerHTML = `<div class="name"></div><div class="gear"></div><div class="bar hp"><i></i><span></span></div><div class="bar mp"><i></i><span></span></div>`;
+        text.innerHTML = `<div class="name"></div><div class="gear"></div><div class="bar hp"><i></i><span></span></div><div class="bar mp"><i></i><span></span></div><div class="ail"></div>`;
         div.appendChild(text);
+        div.addEventListener("click", () => this.openSheet(i));
         box.appendChild(div);
-      }
+      });
     }
     this.game.party.forEach((m, i) => {
-      const div = box.children[i], dead = m.hp <= 0;
+      const div = box.children[i], dead = m.hp <= 0, st = m.status || {};
       div.classList.toggle("fallen", dead);
-      div.querySelector(".name").textContent = `${m.cls}  Lv ${m.level}` + (dead ? "  (fallen)" : "");
+      div.classList.toggle("front", m.row === "front");
+      div.querySelector(".name").innerHTML = `${this.esc(m.name)} <small>${m.cls} ${m.level}${m.row === "front" ? " ▴" : ""}</small>` + (dead ? " <i>(fallen)</i>" : "")
+        + (m.pending ? ` <span class="boon-badge">Boon!</span>` : "");
       div.querySelector(".gear").textContent = `${m.weapon.name} / ${m.armor.name}`;
+      const ail = div.querySelector(".ail");
+      ail.textContent = Object.keys(st).map((s) => `${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}`).join("  ");
+      ail.style.display = Object.keys(st).length ? "" : "none";
       const hp = div.querySelector(".bar.hp");
       hp.querySelector("i").style.width = `${100 * Math.max(0, m.hp) / Math.max(1, m.max)}%`;
       hp.querySelector("span").textContent = `HP ${Math.max(0, m.hp)}/${m.max}`;
@@ -288,7 +452,7 @@ CM.UI = class {
         ["Use (Space)", () => g.use()], ["Inventory (I)", () => g.openBag()], ["Map (Tab)", () => this.toggleBigMap()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       combat: [["Fight (F)", () => g.combatRound("fight")], ["Cast (C)", () => g.combatRound("cast")],
         ["Potion (P)", () => g.combatRound("potion")], ["Run (R)", () => g.combatRound("run")]],
-      camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Raise the fallen", () => g.raiseDead()],
+      camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
         ["Inventory", () => g.openBag()], ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
@@ -458,7 +622,7 @@ CM.UI = class {
       (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
       const m = g.party[i];
-      b.textContent = `Give to ${m.cls}` + (m.hp <= 0 ? " (fallen)" : "");
+      b.textContent = `Give to ${m.name}` + (m.hp <= 0 ? " (fallen)" : "");
     });
     const base = "Pick something from your pack, then who should equip or use it." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     this.$("#bag-note").dataset.base = base;

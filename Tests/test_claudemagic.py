@@ -209,7 +209,7 @@ def test_the_rules():
     for key in ("levelled", "chest", "camp", "bought", "poor", "cantAfford", "equipped", "sold", "rested", "tooPoorToRaise", "raised",
                 "deeper", "over"):
         assert got[key] is True, (key, got)
-    assert got["stock"] == 11 and got["lightSold"], got
+    assert got["stock"] == 12 and got["lightSold"], got
 
 
 PARSE = """
@@ -339,6 +339,115 @@ def test_the_dungeon():
       g.mode = 'explore'; g.saveRun(); const saved = CM.store.get('run');
       out.saved = Object.keys(saved.floors).length >= 2 && saved.light.kind === 'torch' && saved.floor.number === 3;
       return out; }})()""")
+    for key, value in got.items():
+        assert value is True, (key, got)
+
+
+def test_the_party():
+    """The party: stats rolled and a hero made from them; names; the advice on a party's balance; the creation screen
+    (four slots, callings changed, named, set out); who the monsters go for (the front row, the Knight most, never
+    stone); the back row (half for a Mage, a knife from behind for a Rogue); ailments (poison bites and passes, the
+    paralysed and asleep can't act, the blind miss, the cursed are weaker) and their cures (antidote, rest, temple,
+    fountain); the monsters' touch; the new callings' casts; a level earned is a boon offered and chosen; an old
+    hero comes up to date; and the sheet"""
+    got = ask("""(function(){ const g = CM.game, out = {}, r = new CM.Random(5);
+      const st = CM.rollStats('Mage', r);
+      out.rollRange = CM.STATS.every(s => st[s] >= 3 && st[s] <= 18) && st.int >= 6;
+      const h = CM.makeHero('Knight', 'Brenwyn', {str: 16, dex: 10, con: 14, int: 8, wis: 8, luck: 10}, 'front');
+      out.made = h.name === 'Brenwyn' && h.max === 38 && h.atk === 9 && h.df === 3 && h.maxmp === 0 && h.row === 'front' && h.hp === h.max;
+      const mage = CM.makeHero('Mage', '', {str: 8, dex: 12, con: 10, int: 16, wis: 10, luck: 10});
+      out.mage = mage.name === 'Mage' && mage.maxmp === 20 && mage.row === 'back' && mage.atk === 2;
+      out.names = Array.from({length: 60}, () => CM.randomName()).every(n => /^[A-Z][a-z]{3,12}$/.test(n));
+      const party = (classes) => classes.map(c => ({cls: c, name: c, stats: {str: 12, dex: 12, con: 12, int: 12, wis: 12, luck: 12}, row: CM.CLASSES[c].row}));
+      const classic = CM.partyAdvice(party(CM.CLASSIC));
+      out.classicSound = classic.sound && classic.notes.length === 1 && classic.notes[0].startsWith('A sound party');
+      const noFront = CM.partyAdvice(party(['Mage', 'Mage', 'Cleric', 'Ranger']));
+      out.noFront = !noFront.sound && noFront.notes.some(n => n.includes('No one up front'));
+      out.noHeal = CM.partyAdvice(party(['Knight', 'Knight', 'Rogue', 'Ranger'])).notes.some(n => n.includes('No one can heal'));
+      const low = CM.partyAdvice([{cls: 'Mage', name: 'Ith', stats: {str: 10, dex: 10, con: 10, int: 7, wis: 10, luck: 10}, row: 'back'}, ...party(['Knight', 'Cleric', 'Rogue'])]);
+      out.lowStat = low.notes.some(n => n.includes("Ith's Intelligence is low"));
+      // the creation screen
+      CM.store.remove('run'); g.lastRun = null; g.setMode('title');
+      CM.ui.slots = []; CM.ui.openCreate();
+      out.createShown = CM.ui.screen === 'create' && document.querySelectorAll('#slots .slot').length === 4 && CM.ui.slots.map(s => s.cls).join() === CM.CLASSIC.join();
+      const sel = document.querySelector('#slots .slot:nth-child(2) .cls'); sel.value = 'Ranger'; sel.dispatchEvent(new Event('change'));
+      out.classChanged = CM.ui.slots[1].cls === 'Ranger' && CM.ui.slots[1].row === 'back';
+      CM.ui.slots[0].name = 'Brenwyn'; CM.ui.renderCreate();
+      document.querySelector('#create-seed').value = 'ember-crypt-417';
+      CM.ui.setOut();
+      out.setOut = g.mode === 'explore' && g.party.length === 4 && g.party[0].name === 'Brenwyn' && g.party[1].cls === 'Ranger' && g.party.every(p => p.stats && p.row && p.status);
+      out.titleClasses = document.querySelectorAll('#classes .calling').length === 8;
+      g.rnd = new CM.Random(11);
+      // who the monsters go for
+      const knight = g.party[0]; knight.row = 'front'; for (const p of g.party.slice(1)) p.row = 'back';
+      const hits = {}; for (let i = 0; i < 600; i++) { const t = g.pickTarget(); hits[t.name] = (hits[t.name] || 0) + 1; }
+      out.frontTakesIt = hits['Brenwyn'] > 350;
+      knight.status.stone = 999; out.stoneSpared = g.pickTarget() !== knight; delete knight.status.stone;
+      // the back row
+      const foe = () => ({name: 'Goblin', hp: 1000, max: 1000, atk: 1, df: 0, xp: 1, gold: 1});
+      const avg = (hero, n) => { let total = 0; for (let i = 0; i < n; i++) { const f = foe(); hero.status = {}; g.strike(hero, f); total += 1000 - f.hp; } return total / n; };
+      const mageHero = g.party[3]; mageHero.row = 'back'; const backAvg = avg(mageHero, 200); mageHero.row = 'front'; const frontAvg = avg(mageHero, 200);
+      out.backHalf = backAvg < frontAvg * 0.75;
+      const rogue = CM.makeHero('Rogue', 'Sly', {str: 10, dex: 14, con: 10, int: 10, wis: 10, luck: 10}, 'back'); g.party.push(rogue);
+      const rb = avg(rogue, 200); rogue.row = 'front'; const rf = avg(rogue, 200); out.backstab = rb > rf * 1.3; g.party.pop();
+      // ailments
+      const vic = g.party[2]; vic.status = {}; vic.hp = vic.max; vic.stats = {str: 10, dex: 10, con: 10, int: 10, wis: 10, luck: 10};
+      const fixed = (hit) => ({next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l});
+      g.rnd = fixed(() => false);
+      out.poisoned = g.afflict(vic, 'poison', 'Giant Rat') && vic.status.poison === 8;
+      g.rnd = new CM.Random(3);
+      g.foes = [foe()]; g.foeKey = '0,0'; g.mode = 'combat'; const hpBefore = vic.hp;
+      g.combatRound('fight'); out.poisonBites = vic.hp < hpBefore && vic.status.poison === 7;
+      vic.status = {paralysis: 2}; g.foes[0].hp = 1000;
+      g.combatRound('fight');
+      out.paralysedSkips = g.messages.some(m => m.includes(vic.name + " is paralysed and can't act")) && vic.status.paralysis === 1;
+      vic.status = {blind: 3}; out.blindMisses = g.hitChance(vic) < 0.5;
+      vic.status = {curse: 999}; out.cursed = g.effective(vic).atk === Math.max(1, vic.atk - 2) && g.effective(vic).df === Math.max(0, vic.df - 2);
+      vic.status = {sleep: 3}; out.asleep = !g.canAct(vic);
+      // cures
+      g.mode = 'explore'; vic.status = {poison: 5, blind: 2};
+      g.bag.push(CM.antidote()); out.antidote = g.give(g.bag.length - 1, 2) === '' && Object.keys(vic.status).length === 0;
+      vic.status = {poison: 5, curse: 999}; g.gold = 100; g.rest(); out.restCures = !vic.status.poison && vic.status.curse === 999;
+      g.gold = 100; out.templeUncurse = g.temple('uncurse') === true && !vic.status.curse && g.gold === 40;
+      g.gold = 10; vic.status = {stone: 999}; out.templePoor = g.temple('unstone') === false && vic.status.stone === 999;
+      g.gold = 200; out.templeUnstone = g.temple('unstone') === true && !vic.status.stone && g.gold === 50;
+      out.templeNothing = g.temple('cure') === false;
+      vic.status = {poison: 3, curse: 999}; const f = {type: 'fountain', kind: 'heal', used: false}; g.drink(f); out.fountainCures = Object.keys(vic.status).length === 0;
+      // the monsters' touch
+      g.rnd = fixed((p) => p >= 0.15);
+      vic.status = {}; g.foes = [{name: 'Giant Rat', hp: 100, max: 100, atk: 2, df: 0, xp: 1, gold: 1}]; g.mode = 'combat';
+      for (const p of g.party) p.row = 'back'; vic.row = 'front';
+      g.combatRound('potion');
+      out.ratPoisons = vic.status.poison === 7;                           // (bitten this round, and the round's end has passed)
+      g.rnd = new CM.Random(9);
+      // the new callings' casts
+      const mk = (cls) => CM.makeHero(cls, cls, {str: 12, dex: 12, con: 12, int: 14, wis: 14, luck: 10});
+      g.party = [mk('Paladin'), mk('Ranger'), mk('Druid'), mk('Bard')]; g.mode = 'combat'; g.song = 0;
+      g.foes = [foe(), foe(), foe()];
+      const before = g.foes.map(x => x.hp);
+      g.party[0].hp = 5; g.cast(g.party[0], g.living()); out.lay = g.party[0].hp > 5 && g.party[0].mp === g.party[0].maxmp - 3;
+      const fx2 = []; g.on('fx', (x) => fx2.push(x)); g.cast(g.party[1], g.living()); out.volley = fx2.filter(x => x.kind === 'hit' || x.kind === 'miss').length === 2;
+      g.rnd = fixed(() => true);
+      g.cast(g.party[2], g.living()); out.thorns = g.foes.every((x, i) => x.hp < before[i]) && g.foes.every(x => x.held === 1);
+      g.cast(g.party[3], g.living()); out.song = g.song === 1 && g.effective(g.party[0]).atk === g.party[0].atk + 2;
+      g.rnd = new CM.Random(9);
+      // a level earned is a boon offered and chosen
+      const hero = g.party[0]; hero.xp = CM.xpForLevel(2) - 1;
+      g.foes = [{name: 'Goblin', hp: 0, max: 10, atk: 1, df: 0, xp: 2, gold: 1}]; g.foeKey = '0,0';
+      g.wonFight(); out.levelled = hero.level === 2 && hero.pending === 1 && hero.hp === hero.max;
+      const offer = g.offerBoons(hero); out.offer = offer.length === 3 && new Set(offer).size === 3 && offer[0] === 'faith' && g.offerBoons(hero) === offer;
+      const wisBefore = hero.stats.wis;
+      out.chosen = g.chooseBoon(hero, 'faith') === true && hero.stats.wis === wisBefore + 2 && hero.pending === 0 && hero.offer === null;
+      out.chooseTwice = g.chooseBoon(hero, 'faith') === false;
+      // an old hero comes up to date
+      const old = {name: 'Knight', cls: 'Knight', level: 3, xp: 100, hp: 40, max: 40, mp: 0, maxmp: 0, atk: 9, df: 4, weapon: {name: 'Club', kind: 'weapon', power: 1, value: 5}, armor: {name: 'Tunic', kind: 'armor', power: 0, value: 5}};
+      CM.upgradeHero(old); out.upgraded = old.stats.str === 13 && old.stats.con === 12 && old.row === 'front' && typeof old.status === 'object' && old.max === 40;
+      // the sheet, with the boon on offer when there is one
+      g.party[1].pending = 1; CM.ui.openSheet(1);
+      out.sheet = document.querySelector('#dlg-sheet').classList.contains('on') && document.querySelectorAll('#sheet-boon .offer button').length === 3 && document.querySelector('#sheet-title').textContent.includes('Ranger');
+      CM.ui.closeDialogs(); g.party[1].pending = 0; g.party[1].offer = null;
+      g.setMode('explore');
+      return out; })()""")
     for key, value in got.items():
         assert value is True, (key, got)
 
