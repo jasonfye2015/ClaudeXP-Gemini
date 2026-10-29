@@ -17,6 +17,9 @@ ClaudeCore's host (ClaudeCore/claudecore/host.py):
 
 Each OS lists the games in its own Start menu and desktop folders; ClaudeXP imports them with programs._shared().
 
+Two games are single HTML files, played in a Qt WebEngine window on a permanent browser profile in Saves/: clauderpg
+(the user's own, dropped into clauderpg/game) and claudemagic (built from claudemagic/src by its build.py into
+claudemagic/game; see claudemagic/README.txt). Both play in an ordinary browser as they are.
 Moved here so far: claudeggle, claudecraft, clauderpg (with its game files in clauderpg/game), claudequest,
 claudeablo, claudecity, scorched and claudejeweled.
 Their art lives in each game's own assets/ folder.

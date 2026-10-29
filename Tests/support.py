@@ -24,6 +24,9 @@ W11 = TIMELINE / "Claude11"
 LOCAL_STORAGE = TIMELINE / "Local Storage"
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+# (offscreen, Qt WebEngine's GPU compositor loses every WebGL context and says so a thousand times: composited in
+# software, the web games draw - Claude and Magic's dungeon included - and the graphics card is left alone)
+os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-gpu-compositing")
 if os.name == "nt" and Path(r"C:\Windows\Fonts").is_dir():
     os.environ.setdefault("QT_QPA_FONTDIR", r"C:\Windows\Fonts")          # (without it, text renders as boxes)
 for _p in (str(APPS), str(CORE)):

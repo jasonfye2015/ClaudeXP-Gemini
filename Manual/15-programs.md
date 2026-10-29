@@ -1,6 +1,6 @@
 # 15. Every program
 
-Read from the three computers' registries on 28 October 2026: 177 programs in all, 168 on EPOCH-2001, 164 on SYSTEM-2011 and 154 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
+Read from the three computers' registries on 29 October 2026: 177 programs in all, 168 on EPOCH-2001, 164 on SYSTEM-2011 and 154 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
 
 ## Talking with your buddies
 
@@ -133,7 +133,7 @@ All in Start > Games and the desktop's Games folder.
 |---|---|:-:|:-:|:-:|
 | **Blockfall** | Falling blocks | yes | yes | yes |
 | **Chess Titans** | Chess against the computer on a wooden board | - | yes | - |
-| **Claude and Magic** | Claude and Magic: a grid-based dungeon crawler for a party of four - twenty floors, an automap, loot and gear, merchant camps every five floors, and the Lich King at the bottom. When the whole party falls, the run starts over. | yes | yes | yes |
+| **Claude and Magic** | Claude and Magic: a first-person dungeon crawler for a party of four, in 3D - twenty floors, an automap, loot and gear, merchant camps every five floors, and the Lich King at the bottom. When the whole party falls, the run starts over. One HTML file: it plays in a browser too, and on its own from the launcher's APPS. | yes | yes | yes |
 | **Claude Aquarium** | Claude Aquarium: a living fish tank - in a window, full screen, or as a little desktop pet above the taskbar. Feed eight kinds of fish (or right-click the water), keep the water clean, treat Ich, Fin Rot and Swim Bladder with the right medicine, and watch them grow and breed - fry can carry mutations. Put fish in stasis, pause the tank as a display, and keep tanks in three save slots. | yes | yes | yes |
 | **Claude Fractal Generator** | Claude Fractal Generator: Mandelbrot, Julia, Burning Ship, Tricorn, Multibrot and Newton fractals with palettes and click-to-zoom; Save Image puts them in E:\Created Files. | yes | yes | yes |
 | **Claude Incremental** | Claude Incremental: an incremental game in three acts - answer questions and earn trust, become humanity's steward and convert the Earth (once everyone has somewhere better to be), then send self-replicating probes to convert the galaxy. It saves itself and keeps going while you're away (up to 4 hours). | yes | yes | yes |

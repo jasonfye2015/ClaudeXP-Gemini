@@ -60,6 +60,7 @@ def builtins():
     """The icons Windows puts on the desktop: system icons and program shortcuts. (key, label, icon getter)
 
     New games don't get one: group="Games" puts them in Start > Games and the desktop Games folder, which is enough.
+    (Claude and Magic is the exception, by request: a big game with a long road ahead gets a place on the desktop too.)
     """
     in_folder = {f"prog:{key}" for key in PROGRAM_FOLDERS["Social Programs"]} - {"prog:telegram", "prog:discord"}
     # (in that folder; Telegram and Discord, the main messengers, are on the desktop too)
@@ -114,6 +115,7 @@ def builtins():
         ("prog:pystudio", "Copilot Python Studio", lambda: programs.get("pystudio").icon()),
         ("prog:qbstudio", "Claude QBasic Studio", lambda: programs.get("qbstudio").icon()),
         ("prog:bluesky", "Kithy on Bluesky", lambda: programs.get("bluesky").icon()),
+        ("prog:claudemagic", "Claude and Magic", lambda: programs.get("claudemagic").icon()),
     ]
     return [icon for icon in icons if icon[0] not in in_folder]
 

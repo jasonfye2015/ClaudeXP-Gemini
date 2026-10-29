@@ -1119,7 +1119,8 @@ class AppsWindow(QDialog):
         self.tiles = {}
         for key, (name, _module, _open, _icon, what) in S.APPS.items():
             tile = QToolButton()
-            tile.setText(name.replace("Copilot ", "Copilot\n").replace("Claude QBasic ", "Claude QBasic\n"))
+            tile.setText(name.replace("Copilot ", "Copilot\n").replace("Claude QBasic ", "Claude QBasic\n")
+                         .replace("Claude and ", "Claude and\n"))
             tile.setIcon(S.icon(key, 56))
             tile.setIconSize(QSize(56, 56))
             tile.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)

@@ -15,7 +15,7 @@ three, so a city built on the XP machine is there on the Windows 11 one.
 | **ClaudeQuest** | The pack is calling |
 | **ClaudeRPG** | A cosy, endless dungeon adventure |
 | **Claudeablo** | Diablo: fifty levels down, the Lord of Terror waits |
-| **Claude and Magic** | Twenty floors down, the Lich King waits |
+| **Claude and Magic** | Twenty floors down, the Lich King waits: a first-person dungeon crawler for a party of four, in 3D. One HTML file (`ClaudeGames\claudemagic\game`) that plays in a browser too; a seed on the title screen lays out the same dungeon again. On the desktop of all three computers and in the launcher's APPS |
 | **ClaudeCity** | SimCity: from dust to Megalopolis |
 | **Scorched Claude** | Scorched Earth: tanks, nukes and very angry physics |
 | **Claudejeweled** | Bejeweled: swap gems, line up three |

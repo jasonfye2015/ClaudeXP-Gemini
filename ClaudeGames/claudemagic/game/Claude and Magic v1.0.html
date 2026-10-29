@@ -1,0 +1,2245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Claude and Magic</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  Claude and Magic v1.0 - a first-person dungeon crawler for a party of four, in one file.
+  Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
+  are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
+  build.py - change the source there, not this file.
+-->
+<style>
+:root {
+  --ink: #F0E0B0; --dim: #A09070; --faint: #6A5A40; --gold: #E8C870; --red: #E03030; --blue: #2848C0;
+  --wood: #3A2C1C; --wood-light: #5A442A; --edge: #8A6A3A; --night: #18120C; --pit: #0E0A06; --paper: #E8DCC0;
+  --serif: Georgia, "Palatino Linotype", "Book Antiqua", serif; --mono: Consolas, "Courier New", monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--night); color: var(--ink); font-family: var(--serif); overflow: hidden; }
+body { user-select: none; -webkit-user-select: none; }
+#app { height: 100%; display: flex; flex-direction: column; }
+.screen { display: none; height: 100%; }
+.screen.on { display: flex; }
+button { background: var(--wood); color: var(--ink); border: 1px solid var(--edge); padding: 6px 12px; font: bold 13px var(--serif); cursor: pointer; border-radius: 3px; }
+button:hover { background: var(--wood-light); }
+button:disabled { color: var(--faint); cursor: default; background: var(--wood); }
+button.primary { background: #5A3A1A; border-color: var(--gold); }
+button.primary:hover { background: #7A5020; }
+input[type=text], textarea { background: var(--pit); color: var(--ink); border: 1px solid var(--edge); font: 13px var(--mono); padding: 5px 8px; border-radius: 3px; }
+input[type=range] { accent-color: var(--gold); }
+kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge); border-radius: 3px; padding: 1px 5px; color: var(--gold); }
+
+/* ---- the title ---- */
+#title { position: relative; align-items: stretch; }
+#title canvas.backdrop { position: absolute; inset: 0; width: 100%; height: 100%; }
+#title .shade { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(24,18,12,0.55) 0%, rgba(24,18,12,0.92) 75%); }
+#title .sheet { position: relative; margin: auto; width: min(1040px, 96vw); max-height: 100vh; display: grid; grid-template-columns: 1.1fr 0.9fr; grid-template-rows: auto auto auto 1fr auto auto; gap: 10px 24px; padding: 10px 24px 8px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
+#title h1 { grid-column: 1 / -1; margin: 2px 0 0; text-align: center; font-size: 42px; line-height: 1.1; color: var(--gold); letter-spacing: 1px; text-shadow: 0 0 18px rgba(232,200,112,0.35), 0 2px 0 #3A2C1C; }
+#title .tagline { grid-column: 1 / -1; text-align: center; margin: -6px 0 0; color: var(--dim); font-style: italic; font-size: 14px; }
+#title .note { grid-column: 1 / -1; text-align: center; color: var(--ink); font-size: 14px; min-height: 18px; margin-top: -4px; }
+.card { background: rgba(14,10,6,0.82); border: 1px solid var(--edge); border-radius: 4px; padding: 10px 14px; }
+.card h2 { margin: 0 0 6px; font-size: 14px; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; }
+.card p { margin: 5px 0; color: var(--dim); font-size: 12.5px; line-height: 1.4; }
+#expedition .row { display: flex; gap: 8px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+#expedition .row label { color: var(--dim); font-size: 13px; }
+#expedition input { width: 190px; }
+#heroes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hero { display: grid; grid-template-columns: 48px 1fr; gap: 8px; align-items: start; background: rgba(42,32,24,0.6); border: 1px solid #4A3A28; border-radius: 3px; padding: 5px 6px; }
+.hero canvas { width: 48px; height: 48px; border: 1px solid var(--edge); border-radius: 3px; image-rendering: auto; }
+.hero b { color: var(--ink); font-size: 13px; }
+.hero small { display: block; color: var(--dim); font-size: 11px; line-height: 1.35; }
+.hero .gear { color: #B0A080; font-size: 11px; }
+#fame table { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
+#fame td { padding: 3px 4px; color: var(--ink); white-space: nowrap; }
+#fame td.won { color: var(--gold); }
+#fame .empty { color: var(--faint); font-style: italic; font-family: var(--serif); }
+#title .foot { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 2px; }
+#title .version { grid-column: 1 / -1; text-align: center; color: var(--faint); font-size: 11px; margin-top: -4px; }
+
+/* ---- the dungeon ---- */
+#play { flex-direction: column; padding: 8px; gap: 8px; }
+#play .top { display: flex; gap: 10px; flex: 1 1 auto; min-height: 0; }
+#view { position: relative; flex: 1 1 auto; min-width: 320px; border: 3px solid var(--edge); background: #000; overflow: hidden; }
+#view canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#view .vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px 30px rgba(0,0,0,0.55); }
+#view .compass { position: absolute; top: 6px; left: 0; right: 0; text-align: center; font: bold 15px var(--serif); color: #E8D8A0; text-shadow: 0 1px 2px #000, 0 0 8px rgba(0,0,0,0.8); pointer-events: none; }
+#view .fps { position: absolute; top: 6px; right: 8px; font: 11px var(--mono); color: #9F9; text-shadow: 0 1px 1px #000; display: none; }
+#view .fps.on { display: block; }
+#view .hint { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font: 14px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000; pointer-events: none; }
+#view .hurt { position: absolute; inset: 0; pointer-events: none; background: rgba(200,30,20,0.35); opacity: 0; transition: opacity 0.25s; }
+#view .hurt.on { opacity: 1; transition: none; }
+#side { width: 296px; flex: 0 0 296px; display: flex; flex-direction: column; gap: 8px; }
+#automap { width: 290px; height: 290px; border: 3px solid var(--edge); background: var(--paper); }
+#side .where { font: bold 13px var(--serif); color: var(--gold); text-align: center; }
+#side .purse { font: bold 13px var(--serif); color: var(--gold); text-align: center; }
+#party { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.member { display: grid; grid-template-columns: 44px 1fr; gap: 6px; border: 2px solid var(--edge); background: #2A2018; padding: 5px; border-radius: 3px; min-height: 74px; }
+.member.fallen { background: #2A1010; }
+.member canvas { width: 44px; height: 44px; border: 1px solid var(--edge); border-radius: 3px; }
+.member.fallen canvas { filter: grayscale(1) brightness(0.5); }
+.member .name { font: bold 13px var(--serif); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.member.fallen .name { color: #A06060; }
+.member .gear { font: 10px Tahoma, Verdana, sans-serif; color: #B0A080; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar { position: relative; height: 11px; background: #100C08; margin-top: 3px; border-radius: 2px; overflow: hidden; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--red); transition: width 0.25s; }
+.bar.mp i { background: var(--blue); }
+.bar span { position: absolute; inset: 0; text-align: center; font: bold 9px Tahoma, Verdana, sans-serif; color: #fff; line-height: 11px; text-shadow: 0 1px 1px #000; }
+#log { height: 118px; flex: 0 0 118px; background: var(--pit); border: 2px solid var(--edge); padding: 4px 8px; font: 12px/15px var(--mono); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+#log div { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#log div:last-child { color: var(--ink); }
+#actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+
+/* ---- the bag and the merchant ---- */
+#bag { flex-direction: column; padding: 14px; gap: 10px; }
+#bag h2 { margin: 0; font-size: 18px; color: var(--gold); }
+#bag .lists { display: flex; gap: 10px; flex: 1 1 auto; min-height: 0; }
+.list { flex: 1 1 0; background: #1A140E; border: 1px solid var(--edge); overflow: auto; font: 13px var(--serif); }
+.list .head { position: sticky; top: 0; background: #2A2018; color: var(--gold); padding: 5px 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+.list .item { padding: 5px 8px; cursor: pointer; color: var(--ink); }
+.list .item:hover { background: #2E241A; }
+.list .item.sel { background: var(--wood-light); }
+.list .item .what { color: var(--dim); font-size: 12px; }
+.list .empty { padding: 10px 8px; color: var(--faint); font-style: italic; }
+#bag .note { min-height: 20px; color: var(--ink); font-size: 13px; }
+#bag .give, #bag .act { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ---- dialogs ---- */
+.dialog { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10; }
+.dialog.on { display: flex; }
+.dialog .box { background: #1E160E; border: 2px solid var(--edge); border-radius: 4px; padding: 16px 20px; min-width: 360px; max-width: min(720px, 94vw); max-height: 92vh; overflow: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+.dialog h2 { margin: 0 0 12px; color: var(--gold); font-size: 17px; }
+.dialog .row { display: flex; align-items: center; gap: 10px; margin: 8px 0; color: var(--ink); font-size: 13px; }
+.dialog .row label { flex: 1 1 auto; }
+.dialog .end { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.dialog textarea { width: 100%; height: 120px; resize: vertical; }
+.dialog table.keys { border-collapse: collapse; }
+.dialog table.keys td { padding: 3px 10px 3px 0; font-size: 13px; color: var(--ink); }
+.dialog table.keys td:first-child { color: var(--gold); white-space: nowrap; }
+.dialog .small { color: var(--dim); font-size: 12px; }
+#bigmap { background: rgba(0,0,0,0.75); }
+#bigmap canvas { border: 4px solid var(--edge); background: var(--paper); }
+
+/* ---- the words rising from a hit ---- */
+.float { position: absolute; transform: translate(-50%, -50%); font: bold 18px var(--serif); color: #FFF; text-shadow: 0 0 6px #000, 0 1px 2px #000; pointer-events: none; animation: rise 0.9s ease-out forwards; }
+.float.spell { color: #FFB060; }
+.float.miss { color: #B0B0B0; font-style: italic; font-size: 14px; }
+@keyframes rise { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -48px; } }
+
+@media (max-width: 900px) {
+  #play .top { flex-direction: column; }
+  #side { width: auto; flex: 0 0 auto; flex-direction: row; align-items: center; justify-content: center; }
+  #automap { width: 150px; height: 150px; }
+  #party { grid-template-columns: repeat(2, 1fr); }
+  #title .sheet { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ---- 00-util.js ----
+"use strict";
+// Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
+// Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
+const CM = window.CM = { version: "1.0", built: "__BUILT__" };
+
+// a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
+CM.hashSeed = function (text) {
+  let h = 2166136261 >>> 0;
+  const s = String(text);
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h >>> 0;
+};
+
+// mulberry32: small and fast, and the same dungeon from the same seed in every browser
+CM.Random = class {
+  constructor(seed) { this.s = (typeof seed === "number" ? seed : CM.hashSeed(seed == null ? Math.random() : seed)) >>> 0; }
+  next() {
+    let t = (this.s = (this.s + 0x6D2B79F5) >>> 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  int(a, b) { return a + Math.floor(this.next() * (b - a + 1)); }        // both ends in, like Python's randint
+  pick(list) { return list[Math.floor(this.next() * list.length)]; }
+  chance(p) { return this.next() < p; }
+  shuffle(list) {
+    for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(this.next() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+    return list;
+  }
+};
+
+// localStorage, which may be missing, full or forbidden (a file opened in a strict browser): never let that stop the game
+CM.store = {
+  get(key, fallback) {
+    try { const v = localStorage.getItem("claudemagic." + key); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem("claudemagic." + key, JSON.stringify(value)); return true; } catch (e) { return false; }
+  },
+  remove(key) { try { localStorage.removeItem("claudemagic." + key); } catch (e) { /* nothing to remove */ } },
+};
+
+CM.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+CM.lerp = (a, b, t) => a + (b - a) * t;
+CM.ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);      // in and out
+CM.plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+// a seed you can say out loud: "ember-crypt-417"
+CM.SEED_WORDS = ["ember", "crypt", "raven", "lantern", "sable", "hollow", "thorn", "cinder", "vesper", "moss", "iron", "gloam",
+  "wyrm", "candle", "marrow", "grave", "frost", "amber", "shade", "stone", "echo", "rune", "oath", "dusk"];
+CM.randomSeed = function () {
+  const r = new CM.Random(Math.floor(Math.random() * 4294967296));
+  return `${r.pick(CM.SEED_WORDS)}-${r.pick(CM.SEED_WORDS)}-${r.int(100, 999)}`;
+};
+
+CM.today = function () {                       // the Hall of Fame's date, the way the old game wrote it: m/d/yyyy
+  const d = new Date();
+  return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`;
+};
+
+// ---- 10-data.js ----
+"use strict";
+// What there is: the classes, the gear, the monsters, the depths and what they look like.
+
+CM.DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];              // north, east, south, west (x, y on the grid)
+CM.DIR_NAMES = "NESW";
+CM.LAST_FLOOR = 20;
+CM.CAMP_AFTER = [5, 10, 15];                               // a merchant's camp waits below these floors
+
+CM.CLASSES = {
+  Knight: { hp: 34, mp: 0, atk: 6, df: 3, role: "Front line", blurb: "Hits hard and wears the heaviest armour. Takes the blows meant for the others." },
+  Rogue: { hp: 24, mp: 0, atk: 5, df: 2, role: "Striker", blurb: "Quick, and one hit in four finds a weak spot for double damage." },
+  Cleric: { hp: 26, mp: 12, atk: 4, df: 2, role: "Healer", blurb: "Prays over the most wounded of the party: a heal that grows with every level." },
+  Mage: { hp: 18, mp: 14, atk: 3, df: 1, role: "Caster", blurb: "Frail, but a fireball hits every foe at once. Keep the Mage at the back." },
+};
+CM.CLASS_ORDER = ["Knight", "Rogue", "Cleric", "Mage"];
+
+CM.WEAPONS = ["Dagger", "Short Sword", "Mace", "Long Sword", "Battle Axe", "War Hammer", "Bastard Sword", "Rune Blade",
+  "Flamberge", "Mithril Sword", "Dragonslayer", "Claudebrand"];
+CM.ARMORS = ["Padded Vest", "Leather Armor", "Studded Leather", "Ring Mail", "Scale Mail", "Chain Mail", "Banded Mail",
+  "Plate Mail", "Elven Mail", "Mithril Plate", "Dragon Scale", "Aegis of Claude"];
+
+// each monster, with how it's painted: body (beast, biped, small, wide, tall, ghost), head, eyes, and what it carries
+CM.MONSTERS = [
+  { name: "Giant Rat", colour: "#8A7058", body: "beast", head: "snout", eyes: "#FF5040", extras: ["tail"] },
+  { name: "Kobold", colour: "#B07040", body: "small", head: "snout", eyes: "#FFE040", extras: ["dagger"] },
+  { name: "Skeleton", colour: "#E0E0D0", body: "thin", head: "skull", eyes: "#FFE040", extras: ["sword"] },
+  { name: "Goblin", colour: "#5A9A40", body: "small", head: "ears", eyes: "#FFE040", extras: ["club"] },
+  { name: "Zombie", colour: "#7A9A70", body: "biped", head: "round", eyes: "#D0FFD0", extras: ["torn"] },
+  { name: "Orc", colour: "#4A7A3A", body: "wide", head: "tusks", eyes: "#FFE040", extras: ["axe"] },
+  { name: "Ghoul", colour: "#9AA0A0", body: "thin", head: "round", eyes: "#80FF80", extras: ["claws"] },
+  { name: "Dark Elf", colour: "#5A4A8A", body: "tall", head: "hood", eyes: "#FF80FF", extras: ["bow"] },
+  { name: "Troll", colour: "#3A6A50", body: "wide", head: "round", eyes: "#FFE040", extras: ["club", "claws"] },
+  { name: "Wraith", colour: "#6A7AA0", body: "ghost", head: "hood", eyes: "#A0E0FF", extras: [] },
+  { name: "Ogre", colour: "#A08050", body: "wide", head: "round", eyes: "#FFE040", extras: ["club"] },
+  { name: "Minotaur", colour: "#7A4A30", body: "wide", head: "horns", eyes: "#FF5040", extras: ["axe"] },
+  { name: "Gargoyle", colour: "#707078", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings"] },
+  { name: "Vampire", colour: "#8A2030", body: "tall", head: "pale", eyes: "#FF3030", extras: ["cape"] },
+  { name: "Demon", colour: "#C03020", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings", "claws"] },
+  { name: "Wyvern", colour: "#407A70", body: "beast", head: "snout", eyes: "#FFE040", extras: ["wings", "tail"] },
+];
+CM.BOSS = { name: "The Lich King", colour: "#A0E0FF", body: "tall", head: "skull", eyes: "#40F0FF", extras: ["crown", "staff", "robe"] };
+
+// the depths: what the stone looks like down there, how far the torch reaches, what the dark is made of
+CM.THEMES = [
+  { name: "The Catacombs", floors: [1, 5], stone: [118, 104, 88], mortar: [52, 44, 36], floor: [92, 80, 66], ceiling: [60, 52, 44],
+    moss: [70, 90, 50], fog: [0.04, 0.03, 0.02], torch: [1.0, 0.82, 0.58], reach: 5.5, bones: 0.25 },
+  { name: "The Flooded Vaults", floors: [6, 10], stone: [92, 100, 96], mortar: [38, 44, 42], floor: [60, 72, 70], ceiling: [44, 52, 50],
+    moss: [40, 90, 70], fog: [0.02, 0.04, 0.045], torch: [0.9, 0.85, 0.7], reach: 5.0, bones: 0.1 },
+  { name: "The Dwarven Halls", floors: [11, 15], stone: [104, 92, 84], mortar: [40, 34, 30], floor: [84, 74, 64], ceiling: [56, 48, 42],
+    moss: [120, 90, 50], fog: [0.03, 0.025, 0.02], torch: [1.0, 0.75, 0.45], reach: 6.0, bones: 0.05 },
+  { name: "The Lich King's Palace", floors: [16, 20], stone: [78, 84, 100], mortar: [28, 30, 40], floor: [50, 54, 70], ceiling: [36, 38, 52],
+    moss: [60, 110, 130], fog: [0.015, 0.025, 0.045], torch: [0.75, 0.85, 1.0], reach: 4.5, bones: 0.4 },
+];
+CM.themeFor = (number) => CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1];
+CM.themeIndex = (number) => Math.max(0, CM.THEMES.indexOf(CM.themeFor(number)));
+
+CM.KEYS_HELP = [
+  ["W / Up", "forward"], ["S / Down", "back"], ["A / Left", "turn left"], ["D / Right", "turn right"], ["Q / E", "sidestep"],
+  ["Space", "use: open a chest, climb down"], ["I", "inventory"], ["Tab", "the automap, large"], ["Esc", "close a screen / pause"],
+  ["F", "fight"], ["C", "cast"], ["P", "potion"], ["R", "run"], ["F3", "frames per second"],
+];
+
+// ---- 20-world.js ----
+"use strict";
+// The world: items, a floor's maze with its chests, monsters and ladder, monster groups, a new party.
+// Pure functions of a Random, so a seed gives the same dungeon every time (and the tests can check thousands).
+
+CM.makeItem = function (floor, rnd, kind) {
+  kind = kind || rnd.pick(["weapon", "weapon", "armor", "armor", "potion", "potion", "potion"]);
+  if (kind === "potion") {
+    const roll = rnd.next();
+    if (roll < 0.12) return { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 };
+    if (roll < 0.4) return { name: "Mana Potion", kind: "mana", power: 12 + floor, value: 25 };
+    return { name: "Healing Potion", kind: "heal", power: 20 + floor * 3, value: 20 };
+  }
+  const tier = CM.clamp(Math.floor((floor + rnd.int(-2, 2)) * 12 / 21), 0, 11);
+  const names = kind === "weapon" ? CM.WEAPONS : CM.ARMORS;
+  const power = (tier + 1) * (kind === "weapon" ? 2 : 1) + rnd.int(0, 2);
+  const bonus = rnd.chance(0.15);
+  return { name: names[tier] + (bonus ? " +1" : ""), kind, power: power + (bonus ? 2 : 0),
+    value: 15 * (tier + 1) * (tier + 1) + (bonus ? 40 : 0) };
+};
+
+CM.monsterGroup = function (floor, rnd) {
+  const top = Math.min(CM.MONSTERS.length - 1, Math.floor(floor * CM.MONSTERS.length / CM.LAST_FLOOR));
+  const kind = CM.MONSTERS[rnd.int(Math.max(0, top - 2), top)];
+  const count = rnd.int(1, 2 + Math.floor(floor / 6));
+  const level = floor;
+  const group = [];
+  for (let i = 0; i < count; i++) {
+    group.push({ name: kind.name, colour: kind.colour, hp: 8 + level * 6, max: 8 + level * 6, atk: 3 + level * 2, df: level,
+      xp: 10 + level * 8, gold: rnd.int(2, 8) * level });
+  }
+  return group;
+};
+
+CM.bossMonster = () => ({ name: CM.BOSS.name, colour: CM.BOSS.colour, hp: 650, max: 650, atk: 46, df: 18, xp: 5000, gold: 5000, boss: true });
+
+// how far every open square is from the start (a breadth-first walk)
+CM.distances = function (grid, start) {
+  const key = (x, y) => `${x},${y}`;
+  const dist = new Map([[key(start[0], start[1]), 0]]);
+  const queue = [start];
+  for (let i = 0; i < queue.length; i++) {
+    const [x, y] = queue[i];
+    for (const [dx, dy] of CM.DIRS) {
+      const nx = x + dx, ny = y + dy;
+      if (ny >= 0 && ny < grid.length && nx >= 0 && nx < grid[0].length && grid[ny][nx] === 0 && !dist.has(key(nx, ny))) {
+        dist.set(key(nx, ny), dist.get(key(x, y)) + 1);
+        queue.push([nx, ny]);
+      }
+    }
+  }
+  return dist;
+};
+
+// A floor: a maze (recursive backtracker, with some extra openings so it isn't perfect), the start, the ladder on the
+// open square furthest from it (or the Lich King, on the last), chests and monsters on the way.
+CM.makeFloor = function (number, seed) {
+  const rnd = new CM.Random(CM.hashSeed(`${seed}:floor:${number}`));
+  const size = Math.min(17 + Math.floor(number / 4) * 2, 27);
+  const grid = [];
+  for (let y = 0; y < size; y++) grid.push(new Array(size).fill(1));
+  const stack = [[1, 1]];
+  grid[1][1] = 0;
+  while (stack.length) {
+    const [x, y] = stack[stack.length - 1];
+    const options = CM.DIRS.filter(([dx, dy]) => x + dx * 2 > 0 && x + dx * 2 < size - 1 && y + dy * 2 > 0 && y + dy * 2 < size - 1
+      && grid[y + dy * 2][x + dx * 2] === 1);
+    if (!options.length) { stack.pop(); continue; }
+    const [dx, dy] = rnd.pick(options);
+    grid[y + dy][x + dx] = 0;
+    grid[y + dy * 2][x + dx * 2] = 0;
+    stack.push([x + dx * 2, y + dy * 2]);
+  }
+  for (let i = 0; i < Math.floor(size * size / 14); i++) {                // loops, so there's more than one way round
+    const x = rnd.int(1, size - 2), y = rnd.int(1, size - 2);
+    if (grid[y][x] === 1 && ((grid[y][x - 1] === 0 && grid[y][x + 1] === 0) || (grid[y - 1][x] === 0 && grid[y + 1][x] === 0))) grid[y][x] = 0;
+  }
+  const start = [1, 1];
+  const dist = CM.distances(grid, start);
+  let far = start, best = -1;
+  for (const [k, d] of dist) if (d > best) { best = d; far = k.split(",").map(Number); }
+  const things = {};
+  const spare = [];
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    if (grid[y][x] === 0 && !(x === 1 && y === 1) && !(x === far[0] && y === far[1]) && (dist.get(`${x},${y}`) || 0) > 3) spare.push([x, y]);
+  }
+  rnd.shuffle(spare);
+  for (let i = 0; i < 3 + Math.floor(number / 4) && spare.length; i++) {
+    const [x, y] = spare.pop();
+    const items = [];
+    const n = rnd.int(1, 2);
+    for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd));
+    things[`${x},${y}`] = { type: "chest", gold: rnd.int(10, 30) * number, items };
+  }
+  for (let i = 0; i < 5 + Math.floor(number / 2) && spare.length; i++) {
+    const [x, y] = spare.pop();
+    things[`${x},${y}`] = { type: "monsters", group: CM.monsterGroup(number, rnd) };
+  }
+  things[`${far[0]},${far[1]}`] = number === CM.LAST_FLOOR ? { type: "boss", group: [CM.bossMonster()] } : { type: "ladder" };
+  return { number, grid, pos: [1, 1], facing: grid[2][1] === 0 ? 2 : 1, things, seen: [] };
+};
+
+// can the party get from the start to the ladder (or the Lich King)? - what the tests ask of every floor
+CM.solvable = function (floor) {
+  const dist = CM.distances(floor.grid, [1, 1]);
+  const goal = Object.entries(floor.things).find(([, t]) => t.type === "ladder" || t.type === "boss");
+  return Boolean(goal) && dist.has(goal[0]);
+};
+
+CM.newParty = function () {
+  return CM.CLASS_ORDER.map((cls) => {
+    const s = CM.CLASSES[cls];
+    return { name: cls, cls, level: 1, xp: 0, hp: s.hp, max: s.hp, mp: s.mp, maxmp: s.mp, atk: s.atk, df: s.df,
+      weapon: { name: cls === "Mage" || cls === "Cleric" ? "Staff" : "Club", kind: "weapon", power: 1, value: 5 },
+      armor: { name: cls === "Mage" ? "Robes" : "Tunic", kind: "armor", power: 0, value: 5 } };
+  });
+};
+
+CM.startingBag = (seed) => {
+  const rnd = new CM.Random(CM.hashSeed(`${seed}:bag`));
+  return [CM.makeItem(1, rnd, "potion"), CM.makeItem(1, rnd, "potion")];
+};
+
+// ---- 30-art.js ----
+"use strict";
+// Everything the game shows is painted here in code - the stone of each depth, the chests and hatches, every
+// monster, the heroes' portraits - so the one file carries no pictures. Textures and sprites are 256 x 256 and go to
+// the renderer as the layers of one texture array; CM.art.build(theme) returns {layers: [canvas...], index: {name: n}}.
+CM.art = {};
+const ART_SIZE = 256;
+
+function artCanvas(size = ART_SIZE) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  return c;
+}
+
+function rgb([r, g, b], k = 1, a = 1) {
+  return `rgba(${Math.round(CM.clamp(r * k, 0, 255))},${Math.round(CM.clamp(g * k, 0, 255))},${Math.round(CM.clamp(b * k, 0, 255))},${a})`;
+}
+
+function speckle(p, rnd, w, h, n, colour, alpha, size = 2) {           // grain on stone
+  p.fillStyle = colour;
+  p.globalAlpha = alpha;
+  for (let i = 0; i < n; i++) p.fillRect(rnd.next() * w, rnd.next() * h, size * (0.5 + rnd.next()), size * (0.5 + rnd.next()));
+  p.globalAlpha = 1;
+}
+
+function crack(p, rnd, x, y, length, colour) {
+  p.strokeStyle = colour;
+  p.lineWidth = 1.5;
+  p.beginPath();
+  p.moveTo(x, y);
+  let a = rnd.next() * Math.PI * 2;
+  for (let i = 0; i < length; i += 6) {
+    a += (rnd.next() - 0.5) * 1.2;
+    x += Math.cos(a) * 6;
+    y += Math.sin(a) * 6;
+    p.lineTo(x, y);
+  }
+  p.stroke();
+}
+
+function bone(p, rnd, x, y, k) {                                      // a bone, or a skull, set into the wall
+  p.save();
+  p.translate(x, y);
+  p.rotate((rnd.next() - 0.5) * 1.2);
+  p.fillStyle = "#D8D0B8";
+  p.strokeStyle = "#5A5040";
+  p.lineWidth = 1.5;
+  if (k < 0.5) {
+    p.fillRect(-14, -3, 28, 6);
+    p.strokeRect(-14, -3, 28, 6);
+    for (const sx of [-14, 14]) { p.beginPath(); p.arc(sx, -3, 4, 0, Math.PI * 2); p.arc(sx, 3, 4, 0, Math.PI * 2); p.fill(); p.stroke(); }
+  } else {
+    p.beginPath(); p.arc(0, -2, 11, 0, Math.PI * 2); p.fill(); p.stroke();
+    p.fillRect(-7, 5, 14, 7); p.strokeRect(-7, 5, 14, 7);
+    p.fillStyle = "#201810";
+    p.beginPath(); p.arc(-4, -3, 3, 0, Math.PI * 2); p.arc(4, -3, 3, 0, Math.PI * 2); p.fill();
+  }
+  p.restore();
+}
+
+// ---- the stone ---------------------------------------------------------------------------------------------------
+CM.art.wall = function (theme, seed, bones) {
+  const c = artCanvas(), p = c.getContext("2d"), rnd = new CM.Random(seed), S = ART_SIZE;
+  p.fillStyle = rgb(theme.mortar);
+  p.fillRect(0, 0, S, S);
+  const rows = 4, rowH = S / rows, cols = 3, mortar = 5;
+  for (let r = 0; r < rows; r++) {
+    const offset = r % 2 ? S / cols / 2 : 0;
+    for (let col = -1; col <= cols; col++) {
+      const x = col * (S / cols) + offset, y = r * rowH;
+      const k = 0.82 + rnd.next() * 0.36;
+      const g = p.createLinearGradient(x, y, x, y + rowH);
+      g.addColorStop(0, rgb(theme.stone, k * 1.08));
+      g.addColorStop(1, rgb(theme.stone, k * 0.86));
+      p.fillStyle = g;
+      p.fillRect(x + mortar / 2, y + mortar / 2, S / cols - mortar, rowH - mortar);
+      p.strokeStyle = rgb(theme.stone, k * 1.25, 0.5);                 // a lit top edge
+      p.lineWidth = 1.5;
+      p.beginPath(); p.moveTo(x + mortar / 2, y + mortar / 2 + 1); p.lineTo(x + S / cols - mortar / 2, y + mortar / 2 + 1); p.stroke();
+      p.strokeStyle = rgb(theme.mortar, 0.7, 0.6);                      // a shadowed bottom edge
+      p.beginPath(); p.moveTo(x + mortar / 2, y + rowH - mortar / 2 - 1); p.lineTo(x + S / cols - mortar / 2, y + rowH - mortar / 2 - 1); p.stroke();
+    }
+  }
+  speckle(p, rnd, S, S, 900, rgb(theme.stone, 0.55), 0.35);
+  speckle(p, rnd, S, S, 500, rgb(theme.stone, 1.5), 0.2);
+  for (let i = 0; i < 3; i++) crack(p, rnd, rnd.next() * S, rnd.next() * S, 30 + rnd.next() * 50, rgb(theme.mortar, 0.6, 0.8));
+  p.globalAlpha = 0.45;                                                 // moss creeping in from the corners
+  for (let i = 0; i < 5; i++) {
+    const x = rnd.pick([0, S]) + (rnd.next() - 0.5) * 60, y = rnd.next() * S;
+    const g = p.createRadialGradient(x, y, 0, x, y, 26 + rnd.next() * 30);
+    g.addColorStop(0, rgb(theme.moss, 1, 0.8)); g.addColorStop(1, rgb(theme.moss, 1, 0));
+    p.fillStyle = g; p.fillRect(0, 0, S, S);
+  }
+  p.globalAlpha = 1;
+  if (bones) for (let i = 0; i < 2 + rnd.int(0, 2); i++) bone(p, rnd, 30 + rnd.next() * (S - 60), 30 + rnd.next() * (S - 60), rnd.next());
+  return c;
+};
+
+CM.art.floor = function (theme, seed) {
+  const c = artCanvas(), p = c.getContext("2d"), rnd = new CM.Random(seed), S = ART_SIZE;
+  p.fillStyle = rgb(theme.mortar, 0.9);
+  p.fillRect(0, 0, S, S);
+  const n = 4, cell = S / n;
+  for (let r = 0; r < n; r++) for (let col = 0; col < n; col++) {
+    const k = 0.8 + rnd.next() * 0.4, gap = 4 + rnd.next() * 3;
+    p.fillStyle = rgb(theme.floor, k);
+    const x = col * cell + gap / 2, y = r * cell + gap / 2, w = cell - gap, h = cell - gap;
+    p.beginPath();                                                      // a flagstone, a little irregular
+    p.moveTo(x + rnd.next() * 6, y + rnd.next() * 6);
+    p.lineTo(x + w - rnd.next() * 6, y + rnd.next() * 6);
+    p.lineTo(x + w - rnd.next() * 6, y + h - rnd.next() * 6);
+    p.lineTo(x + rnd.next() * 6, y + h - rnd.next() * 6);
+    p.closePath(); p.fill();
+  }
+  speckle(p, rnd, S, S, 1200, rgb(theme.floor, 0.5), 0.3);
+  speckle(p, rnd, S, S, 400, rgb(theme.floor, 1.4), 0.2);
+  if (theme.name.includes("Flooded")) {                                 // standing water
+    for (let i = 0; i < 3; i++) {
+      const x = rnd.next() * S, y = rnd.next() * S, rad = 30 + rnd.next() * 40;
+      const g = p.createRadialGradient(x, y, 0, x, y, rad);
+      g.addColorStop(0, "rgba(60,110,140,0.75)"); g.addColorStop(1, "rgba(60,110,140,0)");
+      p.fillStyle = g; p.fillRect(0, 0, S, S);
+    }
+  }
+  return c;
+};
+
+CM.art.ceiling = function (theme, seed) {
+  const c = artCanvas(), p = c.getContext("2d"), rnd = new CM.Random(seed), S = ART_SIZE;
+  p.fillStyle = rgb(theme.ceiling);
+  p.fillRect(0, 0, S, S);
+  speckle(p, rnd, S, S, 1500, rgb(theme.ceiling, 0.6), 0.4, 3);
+  speckle(p, rnd, S, S, 500, rgb(theme.ceiling, 1.4), 0.25, 2);
+  for (let i = 0; i < 4; i++) crack(p, rnd, rnd.next() * S, rnd.next() * S, 40 + rnd.next() * 60, rgb(theme.ceiling, 0.4, 0.9));
+  return c;
+};
+
+// ---- things ------------------------------------------------------------------------------------------------------
+CM.art.chest = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  const w = 150, h = 70, x = (S - w) / 2, y = S - 20 - h;
+  p.fillStyle = "rgba(0,0,0,0.35)";                                      // its shadow on the floor
+  p.beginPath(); p.ellipse(S / 2, S - 18, w / 2 + 6, 10, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#6E4420"; p.fillRect(x, y, w, h);                     // the box
+  p.fillStyle = "#8A5A2A"; p.fillRect(x, y - 30, w, 34);               // the lid
+  p.fillStyle = "#5A3618";
+  for (const bx of [x + 14, x + w / 2 - 5, x + w - 24]) p.fillRect(bx, y - 30, 10, h + 34);   // the planks' bands
+  p.fillStyle = "#3A2410";
+  for (let i = 1; i < 4; i++) p.fillRect(x, y + i * (h / 4), w, 2);
+  p.strokeStyle = "#2A1A08"; p.lineWidth = 3; p.strokeRect(x, y - 30, w, h + 34);
+  p.fillStyle = "#D8B040"; p.fillRect(S / 2 - 12, y - 6, 24, 26);       // the lock
+  p.fillStyle = "#2A1A08"; p.fillRect(S / 2 - 3, y + 4, 6, 10);
+  p.strokeStyle = "#D8B040"; p.lineWidth = 3;                           // the hinges' glint
+  p.beginPath(); p.moveTo(x + 4, y - 26); p.lineTo(x + w - 4, y - 26); p.stroke();
+  return c;
+};
+
+CM.art.hatch = function (theme) {                                       // a ladder down: a hole in the floor, seen from above
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = rgb(theme.floor, 0.9); p.fillRect(0, 0, S, S);
+  p.fillStyle = rgb(theme.floor, 1.2); p.fillRect(28, 28, S - 56, S - 56);   // a stone rim
+  p.fillStyle = "#050403"; p.fillRect(40, 40, S - 80, S - 80);              // the dark
+  const g = p.createLinearGradient(40, 40, S - 40, S - 40);
+  g.addColorStop(0, "rgba(90,70,40,0.35)"); g.addColorStop(1, "rgba(0,0,0,0)");
+  p.fillStyle = g; p.fillRect(40, 40, S - 80, S - 80);
+  p.strokeStyle = "#A07840"; p.lineWidth = 9;                               // the ladder's rails and rungs
+  p.beginPath(); p.moveTo(84, 40); p.lineTo(84, S - 40); p.moveTo(S - 84, 40); p.lineTo(S - 84, S - 40); p.stroke();
+  p.lineWidth = 7;
+  for (let y = 62; y < S - 44; y += 30) { p.beginPath(); p.moveTo(84, y); p.lineTo(S - 84, y); p.stroke(); }
+  p.strokeStyle = "#1A1208"; p.lineWidth = 4; p.strokeRect(40, 40, S - 80, S - 80);
+  return c;
+};
+
+// ---- monsters: one painter, many creatures ----------------------------------------------------------------------
+function outlined(p, draw, fill, line = "#1A1410", width = 3) {
+  p.fillStyle = fill; p.strokeStyle = line; p.lineWidth = width; p.lineJoin = "round";
+  p.beginPath(); draw(); p.closePath(); p.fill(); p.stroke();
+}
+
+function shaded(p, hex, k) {                                            // a colour lighter (k > 1) or darker
+  const v = parseInt(hex.slice(1), 16);
+  return rgb([(v >> 16) & 255, (v >> 8) & 255, v & 255], k);
+}
+
+CM.art.monster = function (m, big = false) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
+  const col = m.colour, dark = shaded(p, col, 0.65), light = shaded(p, col, 1.3);
+  const bodies = { beast: [150, 70], small: [66, 76], biped: [84, 100], thin: [58, 100], wide: [130, 112], tall: [78, 140], ghost: [90, 140] };
+  const [bw, bh] = bodies[m.body] || bodies.biped;
+  const scale = big ? 1.12 : 1;
+  p.translate(cx, ground); p.scale(scale, scale); p.translate(-cx, -ground);
+  const bodyTop = ground - (m.body === "beast" ? 24 : 36) - bh, bodyBottom = bodyTop + bh;
+  const headR = m.body === "small" ? 30 : m.body === "wide" ? 28 : m.body === "beast" ? 26 : 24;
+  const headY = m.body === "beast" ? bodyTop + 4 : bodyTop - headR + 8;
+  const ex = m.extras || [];
+  p.fillStyle = "rgba(0,0,0,0.35)";                                     // the shadow on the floor
+  p.beginPath(); p.ellipse(cx, ground - 2, bw / 2 + 10, 9, 0, 0, Math.PI * 2); p.fill();
+  if (ex.includes("wings")) {
+    for (const side of [-1, 1]) {
+      outlined(p, () => {
+        p.moveTo(cx + side * bw * 0.3, bodyTop + 20); p.lineTo(cx + side * (bw * 0.5 + 70), bodyTop - 40);
+        p.lineTo(cx + side * (bw * 0.5 + 76), bodyTop + 10); p.lineTo(cx + side * (bw * 0.5 + 44), bodyTop + 2);
+        p.lineTo(cx + side * (bw * 0.5 + 56), bodyTop + 50); p.lineTo(cx + side * (bw * 0.5 + 20), bodyTop + 36);
+      }, dark);
+    }
+  }
+  if (ex.includes("cape")) outlined(p, () => { p.moveTo(cx - bw * 0.6, bodyTop + 10); p.lineTo(cx + bw * 0.6, bodyTop + 10); p.lineTo(cx + bw * 0.75, ground); p.lineTo(cx - bw * 0.75, ground); }, "#2A1018");
+  // legs (not for ghosts: they float)
+  if (m.body !== "ghost") {
+    const legW = m.body === "beast" ? 16 : Math.max(14, bw * 0.2), legs = m.body === "beast" ? [-0.4, -0.15, 0.15, 0.4] : [-0.25, 0.25];
+    for (const f of legs) outlined(p, () => { p.rect(cx + f * bw - legW / 2, bodyBottom - 10, legW, ground - bodyBottom + 10); }, dark);
+  }
+  // the body
+  if (m.body === "ghost") {
+    const g = p.createLinearGradient(0, bodyTop, 0, ground);
+    g.addColorStop(0, col); g.addColorStop(0.7, dark); g.addColorStop(1, "rgba(0,0,0,0)");
+    p.fillStyle = g; p.beginPath();
+    p.moveTo(cx - bw / 2, bodyTop + 30); p.quadraticCurveTo(cx, bodyTop - 20, cx + bw / 2, bodyTop + 30); p.lineTo(cx + bw / 2 + 10, ground - 30);
+    for (let i = 4; i >= -4; i--) p.lineTo(cx + i * (bw / 8), ground - (i % 2 ? 10 : 34));
+    p.lineTo(cx - bw / 2 - 10, ground - 30); p.closePath(); p.fill();
+  } else if (m.body === "beast") {
+    outlined(p, () => { p.ellipse(cx, bodyTop + bh / 2, bw / 2, bh / 2, 0, 0, Math.PI * 2); }, col);
+  } else {
+    const g = p.createLinearGradient(cx - bw / 2, 0, cx + bw / 2, 0);
+    g.addColorStop(0, light); g.addColorStop(0.5, col); g.addColorStop(1, dark);
+    outlined(p, () => {
+      if (ex.includes("robe") || m.body === "tall") { p.moveTo(cx - bw / 2, bodyTop + 10); p.lineTo(cx + bw / 2, bodyTop + 10); p.lineTo(cx + bw / 2 + 12, ground); p.lineTo(cx - bw / 2 - 12, ground); }
+      else p.roundRect(cx - bw / 2, bodyTop, bw, bh, 18);
+    }, g);
+    if (m.head === "skull" || ex.includes("torn")) {                     // ribs, or rags
+      p.strokeStyle = m.head === "skull" ? "#1A1410" : dark; p.lineWidth = 3;
+      for (let i = 1; i <= 4; i++) { const y = bodyTop + 14 + i * 16; p.beginPath(); p.moveTo(cx - bw * 0.35, y); p.quadraticCurveTo(cx, y + 8, cx + bw * 0.35, y); p.stroke(); }
+    }
+  }
+  // arms and what they hold
+  if (m.body !== "beast" && m.body !== "ghost") {
+    const armW = Math.max(14, bw * 0.17), armLen = ex.includes("claws") ? bh * 0.8 : bh * 0.6;
+    for (const side of [-1, 1]) {
+      outlined(p, () => { p.roundRect(cx + side * (bw / 2 + 2) - (side < 0 ? armW : 0), bodyTop + 16, armW, armLen, 8); }, dark);
+      if (ex.includes("claws")) {
+        p.strokeStyle = "#E8E8E0"; p.lineWidth = 3;
+        for (let i = -1; i <= 1; i++) { const x = cx + side * (bw / 2 + armW / 2 + 2) + i * 6; p.beginPath(); p.moveTo(x, bodyTop + 16 + armLen); p.lineTo(x + i * 2, bodyTop + 16 + armLen + 18); p.stroke(); }
+      }
+    }
+    const hx = cx + bw / 2 + armW / 2 + 2, hy = bodyTop + 16 + armLen;
+    p.lineCap = "round";
+    if (ex.includes("sword") || ex.includes("dagger")) {
+      const len = ex.includes("sword") ? 80 : 44;
+      p.strokeStyle = "#1A1410"; p.lineWidth = 9; p.beginPath(); p.moveTo(hx, hy); p.lineTo(hx + 10, hy - len); p.stroke();
+      p.strokeStyle = "#E8ECF4"; p.lineWidth = 5; p.beginPath(); p.moveTo(hx, hy); p.lineTo(hx + 10, hy - len); p.stroke();
+      p.strokeStyle = "#8A6A20"; p.lineWidth = 5; p.beginPath(); p.moveTo(hx - 8, hy - 8); p.lineTo(hx + 10, hy - 2); p.stroke();
+    } else if (ex.includes("club")) {
+      p.strokeStyle = "#1A1410"; p.lineWidth = 12; p.beginPath(); p.moveTo(hx, hy); p.lineTo(hx + 14, hy - 70); p.stroke();
+      p.strokeStyle = "#7A5A30"; p.lineWidth = 8; p.beginPath(); p.moveTo(hx, hy); p.lineTo(hx + 14, hy - 70); p.stroke();
+      outlined(p, () => { p.ellipse(hx + 16, hy - 76, 14, 20, 0.2, 0, Math.PI * 2); }, "#6A4A28");
+    } else if (ex.includes("axe")) {
+      p.strokeStyle = "#1A1410"; p.lineWidth = 9; p.beginPath(); p.moveTo(hx, hy); p.lineTo(hx + 8, hy - 86); p.stroke();
+      p.strokeStyle = "#6A4A28"; p.lineWidth = 5; p.beginPath(); p.moveTo(hx, hy); p.lineTo(hx + 8, hy - 86); p.stroke();
+      outlined(p, () => { p.moveTo(hx + 6, hy - 84); p.lineTo(hx + 40, hy - 96); p.lineTo(hx + 40, hy - 50); p.lineTo(hx + 8, hy - 58); }, "#C8CCD4");
+    } else if (ex.includes("bow")) {
+      p.strokeStyle = "#1A1410"; p.lineWidth = 8; p.beginPath(); p.arc(hx + 6, hy - 30, 46, -1.2, 1.2); p.stroke();
+      p.strokeStyle = "#8A6A30"; p.lineWidth = 4; p.beginPath(); p.arc(hx + 6, hy - 30, 46, -1.2, 1.2); p.stroke();
+      p.strokeStyle = "#E8E8E0"; p.lineWidth = 1.5; p.beginPath(); p.moveTo(hx + 6 + 46 * Math.cos(-1.2), hy - 30 + 46 * Math.sin(-1.2)); p.lineTo(hx + 6 + 46 * Math.cos(1.2), hy - 30 + 46 * Math.sin(1.2)); p.stroke();
+    } else if (ex.includes("staff")) {
+      p.strokeStyle = "#1A1410"; p.lineWidth = 10; p.beginPath(); p.moveTo(hx, ground); p.lineTo(hx + 4, bodyTop - 50); p.stroke();
+      p.strokeStyle = "#4A3A5A"; p.lineWidth = 6; p.beginPath(); p.moveTo(hx, ground); p.lineTo(hx + 4, bodyTop - 50); p.stroke();
+      const g = p.createRadialGradient(hx + 4, bodyTop - 58, 0, hx + 4, bodyTop - 58, 22);
+      g.addColorStop(0, m.eyes); g.addColorStop(0.5, shaded(p, m.eyes, 0.6)); g.addColorStop(1, "rgba(0,0,0,0)");
+      p.fillStyle = g; p.beginPath(); p.arc(hx + 4, bodyTop - 58, 22, 0, Math.PI * 2); p.fill();
+    }
+  }
+  if (ex.includes("tail")) {
+    p.strokeStyle = "#1A1410"; p.lineWidth = 9; p.lineCap = "round";
+    p.beginPath(); p.moveTo(cx + bw / 2 - 10, bodyBottom - 20); p.quadraticCurveTo(cx + bw / 2 + 50, bodyBottom - 10, cx + bw / 2 + 56, bodyTop); p.stroke();
+    p.strokeStyle = dark; p.lineWidth = 5; p.stroke();
+  }
+  // the head
+  const hy2 = headY, hx2 = cx;
+  const faceCol = m.head === "skull" ? "#E8E4D8" : m.head === "pale" ? "#E8D8D0" : m.head === "hood" ? "#1A1420" : col;
+  if (m.head === "hood") {
+    outlined(p, () => { p.moveTo(hx2, hy2 - headR - 26); p.lineTo(hx2 + headR + 14, hy2 + headR); p.lineTo(hx2 - headR - 14, hy2 + headR); }, dark);
+    outlined(p, () => { p.ellipse(hx2, hy2 + 4, headR * 0.8, headR * 0.9, 0, 0, Math.PI * 2); }, faceCol, "#0A080C", 2);
+  } else {
+    if (m.head === "horns") for (const side of [-1, 1]) outlined(p, () => { p.moveTo(hx2 + side * headR * 0.5, hy2 - headR * 0.6); p.quadraticCurveTo(hx2 + side * headR * 1.6, hy2 - headR * 1.2, hx2 + side * headR * 1.1, hy2 - headR * 2.0); p.lineTo(hx2 + side * headR * 0.9, hy2 - headR * 0.9); }, "#E8E0C8");
+    if (m.head === "ears") for (const side of [-1, 1]) outlined(p, () => { p.moveTo(hx2 + side * headR * 0.6, hy2 - headR * 0.3); p.lineTo(hx2 + side * headR * 1.9, hy2 - headR * 1.0); p.lineTo(hx2 + side * headR * 0.8, hy2 + headR * 0.3); }, col);
+    if (m.head === "pale") outlined(p, () => { p.ellipse(hx2, hy2 - 6, headR + 4, headR, 0, Math.PI, Math.PI * 2); }, "#1A1014");
+    outlined(p, () => { p.ellipse(hx2, hy2, headR, headR * (m.head === "skull" ? 1.05 : 0.95), 0, 0, Math.PI * 2); }, faceCol);
+    if (m.head === "snout") outlined(p, () => { p.ellipse(hx2, hy2 + headR * 0.55, headR * 0.7, headR * 0.45, 0, 0, Math.PI * 2); }, light);
+    if (m.head === "tusks") for (const side of [-1, 1]) outlined(p, () => { p.moveTo(hx2 + side * headR * 0.5, hy2 + headR * 0.5); p.lineTo(hx2 + side * headR * 0.7, hy2 + headR * 1.05); p.lineTo(hx2 + side * headR * 0.25, hy2 + headR * 0.6); }, "#F0ECE0", "#1A1410", 2);
+    if (m.head === "skull") {
+      p.fillStyle = "#1A1410";
+      for (const side of [-1, 1]) { p.beginPath(); p.ellipse(hx2 + side * headR * 0.42, hy2 - 2, headR * 0.3, headR * 0.34, 0, 0, Math.PI * 2); p.fill(); }
+      p.beginPath(); p.moveTo(hx2, hy2 + 6); p.lineTo(hx2 - 5, hy2 + 16); p.lineTo(hx2 + 5, hy2 + 16); p.fill();
+      p.fillRect(hx2 - headR * 0.5, hy2 + headR * 0.55, headR, 5);
+      p.fillStyle = "#E8E4D8";
+      for (let i = -3; i <= 3; i++) p.fillRect(hx2 + i * 6 - 2, hy2 + headR * 0.55, 4, 6);
+    }
+  }
+  // the eyes: they glow
+  const eyeY = m.head === "hood" ? hy2 + 2 : hy2 - (m.head === "snout" ? 6 : 2), eyeDX = headR * 0.42, eyeR = headR * (m.head === "skull" ? 0.18 : 0.14);
+  p.save();
+  p.shadowColor = m.eyes; p.shadowBlur = 14;
+  p.fillStyle = m.eyes;
+  for (const side of [-1, 1]) { p.beginPath(); p.arc(hx2 + side * eyeDX, eyeY, eyeR, 0, Math.PI * 2); p.fill(); }
+  p.restore();
+  if (ex.includes("crown")) {
+    outlined(p, () => {
+      const top = hy2 - headR - 2;
+      p.moveTo(hx2 - headR * 0.9, top + 10);
+      for (let i = 0; i <= 4; i++) { p.lineTo(hx2 - headR * 0.9 + i * headR * 0.45, top - (i % 2 ? 14 : 26)); }
+      p.lineTo(hx2 + headR * 0.9, top + 10);
+    }, "#F0C030", "#6A4A08", 2);
+  }
+  return c;
+};
+
+// ---- the heroes' portraits ----------------------------------------------------------------------------------------
+CM.art.portrait = function (cls, size = 56) {
+  const c = artCanvas(size), p = c.getContext("2d"), s = size / 56;
+  p.scale(s, s);
+  p.fillStyle = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A" }[cls] || "#333";
+  p.fillRect(0, 0, 56, 56);
+  const skin = "#E0B890";
+  p.fillStyle = { Knight: "#8A9098", Rogue: "#3A4A30", Cleric: "#E8E0D0", Mage: "#4A3A8A" }[cls];
+  p.fillRect(8, 36, 40, 24);                                            // shoulders
+  if (cls === "Knight") {
+    outlined(p, () => { p.roundRect(14, 8, 28, 32, 8); }, "#B8BEC8", "#2A2E36", 2);
+    p.fillStyle = "#1A1C22"; p.fillRect(16, 22, 24, 5);                 // the visor's slit
+    p.fillStyle = "#C83030"; p.fillRect(26, 2, 4, 10);                  // a plume
+  } else if (cls === "Rogue") {
+    outlined(p, () => { p.moveTo(28, 4); p.lineTo(46, 30); p.lineTo(46, 42); p.lineTo(10, 42); p.lineTo(10, 30); }, "#2A3A22", "#101810", 2);
+    p.fillStyle = skin; p.fillRect(20, 24, 16, 10);
+    p.fillStyle = "#FFE040"; p.fillRect(22, 27, 4, 3); p.fillRect(30, 27, 4, 3);
+    p.fillStyle = "#4A2A1A"; p.fillRect(18, 34, 20, 8);                 // a scarf
+  } else if (cls === "Cleric") {
+    outlined(p, () => { p.arc(28, 24, 14, 0, Math.PI * 2); }, skin, "#5A3A20", 2);
+    p.fillStyle = "#E8C040"; p.fillRect(14, 12, 28, 3);                 // a circlet
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 21, 3, 3); p.fillRect(31, 21, 3, 3);
+    p.fillStyle = "#E8C040"; p.fillRect(26, 40, 4, 14); p.fillRect(21, 44, 14, 4);   // a holy symbol
+  } else {
+    outlined(p, () => { p.moveTo(28, 0); p.lineTo(44, 26); p.lineTo(12, 26); }, "#4A3A9A", "#201848", 2);
+    p.fillStyle = "#5A4AB0"; p.fillRect(8, 24, 40, 4);                  // the brim
+    outlined(p, () => { p.arc(28, 34, 10, 0, Math.PI * 2); }, skin, "#5A3A20", 2);
+    p.fillStyle = "#D0D0D8"; p.fillRect(20, 40, 16, 12);                // a beard
+    p.fillStyle = "#3A2A1A"; p.fillRect(23, 32, 3, 3); p.fillRect(30, 32, 3, 3);
+  }
+  return c;
+};
+
+// the window's icon, for the browser tab
+CM.art.icon = function () {
+  const c = artCanvas(32), p = c.getContext("2d");
+  p.fillStyle = "#1A1410"; p.fillRect(1, 1, 30, 30);
+  p.fillStyle = "#6A5A48";
+  p.beginPath(); p.moveTo(1, 1); p.lineTo(10, 8); p.lineTo(10, 24); p.lineTo(1, 31); p.fill();
+  p.beginPath(); p.moveTo(31, 1); p.lineTo(22, 8); p.lineTo(22, 24); p.lineTo(31, 31); p.fill();
+  p.fillStyle = "#4A3E32"; p.fillRect(10, 8, 12, 16);
+  p.strokeStyle = "#E8E8F0"; p.lineWidth = 2; p.beginPath(); p.moveTo(9, 26); p.lineTo(23, 6); p.stroke();
+  p.strokeStyle = "#F0C040"; p.beginPath(); p.moveTo(10, 20); p.lineTo(16, 24); p.stroke();
+  return c.toDataURL();
+};
+
+// ---- the whole set for a depth, as texture-array layers -------------------------------------------------------------
+CM.art.build = function (theme) {
+  const layers = [], index = {};
+  const add = (name, canvas) => { index[name] = layers.length; layers.push(canvas); };
+  const seed = CM.hashSeed(theme.name);
+  add("wall", CM.art.wall(theme, seed + 1, false));
+  add("wall2", CM.art.wall(theme, seed + 2, false));
+  add("wallbones", CM.art.wall(theme, seed + 3, true));
+  add("floor", CM.art.floor(theme, seed + 4));
+  add("ceiling", CM.art.ceiling(theme, seed + 5));
+  add("chest", CM.art.chest());
+  add("hatch", CM.art.hatch(theme));
+  for (const m of CM.MONSTERS) add(`monster:${m.name}`, CM.art.monster(m));
+  add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
+  return { layers, index, size: ART_SIZE };
+};
+
+// ---- 40-render.js ----
+"use strict";
+// The first-person view, in WebGL 2: the floor's walls, floor and ceiling as one mesh built when the floor is
+// entered; chests, hatches and monsters as billboards rebuilt each frame; a torch that falls off with distance and
+// flickers, and fog the colour of the depth. The camera steps and turns smoothly (or snaps, if that's the setting).
+const VERT = `#version 300 es
+precision highp float;
+in vec3 aPos; in vec3 aUV; in float aShade; in vec2 aFx;
+uniform mat4 uViewProj;
+out vec3 vWorld; out vec3 vUV; out float vShade; out vec2 vFx;
+void main() { vWorld = aPos; vUV = aUV; vShade = aShade; vFx = aFx; gl_Position = uViewProj * vec4(aPos, 1.0); }`;
+
+const FRAG = `#version 300 es
+precision highp float; precision highp sampler2DArray;
+in vec3 vWorld; in vec3 vUV; in float vShade; in vec2 vFx;
+uniform sampler2DArray uTex; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
+uniform float uReach; uniform float uFlicker; uniform float uAmbient;
+out vec4 fragColor;
+void main() {
+  vec4 t = texture(uTex, vUV);
+  if (t.a < 0.5) discard;
+  float d = distance(vWorld, uEye);
+  float r2 = uReach * uReach;
+  float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d);
+  vec3 col = t.rgb * vShade * uTorch * light;
+  float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
+  col = mix(col, uFog, fog);
+  col = mix(col, vec3(1.0, 0.3, 0.2), vFx.x);
+  fragColor = vec4(col, t.a * vFx.y);
+}`;
+
+const STRIDE = 9;                      // floats a vertex: pos 3, uv 3, shade 1, fx 2
+const EYE_HEIGHT = 0.5;
+
+function mat4Perspective(fovY, aspect, near, far) {
+  const f = 1 / Math.tan(fovY / 2), nf = 1 / (near - far);
+  return new Float32Array([f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) * nf, -1, 0, 0, 2 * far * near * nf, 0]);
+}
+
+function mat4LookAt(eye, target, up) {
+  let zx = eye[0] - target[0], zy = eye[1] - target[1], zz = eye[2] - target[2];
+  let len = Math.hypot(zx, zy, zz) || 1; zx /= len; zy /= len; zz /= len;
+  let xx = up[1] * zz - up[2] * zy, xy = up[2] * zx - up[0] * zz, xz = up[0] * zy - up[1] * zx;
+  len = Math.hypot(xx, xy, xz) || 1; xx /= len; xy /= len; xz /= len;
+  const yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
+  return new Float32Array([xx, yx, zx, 0, xy, yy, zy, 0, xz, yz, zz, 0,
+    -(xx * eye[0] + xy * eye[1] + xz * eye[2]), -(yx * eye[0] + yy * eye[1] + yz * eye[2]), -(zx * eye[0] + zy * eye[1] + zz * eye[2]), 1]);
+}
+
+function mat4Mul(a, b) {
+  const out = new Float32Array(16);
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+    let s = 0;
+    for (let k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k];
+    out[i * 4 + j] = s;
+  }
+  return out;
+}
+
+CM.Renderer = class {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ok = false;
+    this.error = "";
+    const gl = canvas.getContext("webgl2", { antialias: true, alpha: false, depth: true, preserveDrawingBuffer: true });
+    if (!gl) { this.error = "This needs WebGL 2, and the browser hasn't got it."; return; }
+    this.gl = gl;
+    this.program = this._program(VERT, FRAG);
+    if (!this.program) return;
+    this.loc = {};
+    for (const n of ["uViewProj", "uTex", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    this.staticBuf = gl.createBuffer(); this.staticCount = 0;
+    this.dynBuf = gl.createBuffer(); this.dynCount = 0;
+    this.texture = null; this.index = {};
+    this.theme = CM.THEMES[0];
+    this.eye = [1.5, EYE_HEIGHT, 1.5];
+    this.yaw = 0;                      // radians; 0 looks north (-z), pi/2 east
+    this.move = null;                  // {from, to, t, ms}
+    this.turn = null;                  // {from, to, t, ms}
+    this.sprites = [];
+    this.time = 0;
+    this.flicker = 1;
+    this.viewProj = null;
+    this.snap = false;
+    this.bob = 0;
+    this.ok = true;
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    this.resize();
+  }
+
+  _program(vs, fs) {
+    const gl = this.gl;
+    const make = (kind, src) => {
+      const s = gl.createShader(kind);
+      gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { this.error = "A shader didn't compile: " + gl.getShaderInfoLog(s); return null; }
+      return s;
+    };
+    const v = make(gl.VERTEX_SHADER, vs), f = make(gl.FRAGMENT_SHADER, fs);
+    if (!v || !f) return null;
+    const p = gl.createProgram();
+    gl.attachShader(p, v); gl.attachShader(p, f);
+    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx");
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { this.error = "The shaders didn't link: " + gl.getProgramInfoLog(p); return null; }
+    return p;
+  }
+
+  resize() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.max(1, Math.round(this.canvas.clientWidth * dpr)), h = Math.max(1, Math.round(this.canvas.clientHeight * dpr));
+    if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; }
+    this.gl.viewport(0, 0, w, h);
+  }
+
+  // ---- the textures ----
+  setTextures(art) {
+    const gl = this.gl;
+    if (this.texture) gl.deleteTexture(this.texture);
+    this.texture = gl.createTexture();
+    this.index = art.index;
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
+    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, art.size, art.size, art.layers.length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    art.layers.forEach((layer, i) => gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, art.size, art.size, 1, gl.RGBA, gl.UNSIGNED_BYTE, layer));
+    gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const aniso = gl.getExtension("EXT_texture_filter_anisotropic");
+    if (aniso) gl.texParameterf(gl.TEXTURE_2D_ARRAY, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+  }
+
+  // ---- the floor's mesh ----
+  setFloor(floor, theme) {
+    this.theme = theme;
+    const grid = floor.grid, size = grid.length, out = [];
+    const quad = (a, b, c, d, layer, shade) => {           // four corners, counter-clockwise from the bottom left as seen
+      const uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1);
+    };
+    const pickWall = (x, y, d) => {
+      const h = (x * 73856093) ^ (y * 19349663) ^ (d * 83492791);
+      const r = ((h >>> 0) % 1000) / 1000;
+      return r < this.theme.bones * 0.5 ? this.index.wallbones : r < 0.6 ? this.index.wall : this.index.wall2;
+    };
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      if (grid[y][x] !== 0) continue;
+      quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], this.index.floor, 0.9);
+      quad([x, 1, y], [x + 1, 1, y], [x + 1, 1, y + 1], [x, 1, y + 1], this.index.ceiling, 0.7);
+      const solid = (nx, ny) => ny < 0 || ny >= size || nx < 0 || nx >= size || grid[ny][nx] !== 0;
+      if (solid(x, y - 1)) quad([x, 0, y], [x + 1, 0, y], [x + 1, 1, y], [x, 1, y], pickWall(x, y, 0), 1.0);                 // north wall, facing south
+      if (solid(x, y + 1)) quad([x + 1, 0, y + 1], [x, 0, y + 1], [x, 1, y + 1], [x + 1, 1, y + 1], pickWall(x, y, 2), 1.0);   // south wall, facing north
+      if (solid(x + 1, y)) quad([x + 1, 0, y], [x + 1, 0, y + 1], [x + 1, 1, y + 1], [x + 1, 1, y], pickWall(x, y, 1), 0.84);   // east wall, facing west
+      if (solid(x - 1, y)) quad([x, 0, y + 1], [x, 0, y], [x, 1, y], [x, 1, y + 1], pickWall(x, y, 3), 0.84);                 // west wall, facing east
+    }
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.STATIC_DRAW);
+    this.staticCount = out.length / STRIDE;
+  }
+
+  // ---- the camera ----
+  yawFor(facing) { return facing * Math.PI / 2; }
+
+  setCamera(x, y, facing) {
+    this.eye = [x + 0.5, EYE_HEIGHT, y + 0.5];
+    this.yaw = this.yawFor(facing);
+    this.move = this.turn = null;
+  }
+
+  moveTo(x, y, ms = 180) {
+    const to = [x + 0.5, EYE_HEIGHT, y + 0.5];
+    if (this.snap || ms <= 0) { this.eye = to; this.move = null; return; }
+    this.move = { from: this.eye.slice(), to, t: 0, ms };
+  }
+
+  turnTo(facing, ms = 160) {
+    let to = this.yawFor(facing), from = this.yaw;
+    while (to - from > Math.PI) to -= Math.PI * 2;
+    while (to - from < -Math.PI) to += Math.PI * 2;
+    if (this.snap || ms <= 0) { this.yaw = to; this.turn = null; return; }
+    this.turn = { from, to, t: 0, ms };
+  }
+
+  get busy() { return this.move !== null || this.turn !== null; }
+
+  // where the camera is in grid terms (the cell it's heading for, while it steps)
+  setSprites(list) { this.sprites = list; }
+
+  // a world point on the canvas, in CSS pixels - or null when it's behind the camera
+  project(x, y, z) {
+    const m = this.viewProj;
+    if (!m) return null;
+    const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13];
+    const cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+    if (cw <= 0.01) return null;
+    return [(cx / cw * 0.5 + 0.5) * this.canvas.clientWidth, (0.5 - cy / cw * 0.5) * this.canvas.clientHeight, cw];
+  }
+
+  _advance(dt) {
+    if (this.move) {
+      this.move.t = Math.min(1, this.move.t + dt * 1000 / this.move.ms);
+      const k = CM.ease(this.move.t);
+      this.eye = [CM.lerp(this.move.from[0], this.move.to[0], k), EYE_HEIGHT, CM.lerp(this.move.from[2], this.move.to[2], k)];
+      this.bob = Math.sin(this.move.t * Math.PI) * 0.018;
+      if (this.move.t >= 1) { this.move = null; this.bob = 0; }
+    }
+    if (this.turn) {
+      this.turn.t = Math.min(1, this.turn.t + dt * 1000 / this.turn.ms);
+      this.yaw = CM.lerp(this.turn.from, this.turn.to, CM.ease(this.turn.t));
+      if (this.turn.t >= 1) { this.yaw = this.turn.to; this.turn = null; }
+    }
+  }
+
+  _spriteMesh() {
+    const out = [], right = [Math.cos(this.yaw), 0, Math.sin(this.yaw)];
+    for (const s of this.sprites) {
+      const layer = this.index[s.layer];
+      if (layer === undefined) continue;
+      const cx = s.x + 0.5 + (s.dx || 0), cz = s.y + 0.5 + (s.dz || 0), w = s.w || 0.7, h = s.h || 0.7;
+      const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1;
+      const uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
+      let corners;
+      if (s.flat) {
+        corners = [[cx - w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz - w / 2], [cx - w / 2, 0.003, cz - w / 2]];
+      } else {
+        const lift = s.lift || 0;
+        corners = [[cx - right[0] * w / 2, lift, cz - right[2] * w / 2], [cx + right[0] * w / 2, lift, cz + right[2] * w / 2],
+          [cx + right[0] * w / 2, lift + h, cz + right[2] * w / 2], [cx - right[0] * w / 2, lift + h, cz - right[2] * w / 2]];
+      }
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uv[i][0], uv[i][1], layer, shade, flash, alpha);
+    }
+    return out;
+  }
+
+  _attributes() {
+    const gl = this.gl, bytes = STRIDE * 4;
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0);
+    gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
+    gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24);
+    gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 2, gl.FLOAT, false, bytes, 28);
+  }
+
+  frame(dt) {
+    if (!this.ok || !this.texture) return;
+    this.time += dt;
+    this._advance(dt);
+    // a torch flame: a slow wander and a quick shiver
+    this.flicker = 0.92 + 0.06 * Math.sin(this.time * 7.3) + 0.03 * Math.sin(this.time * 17.1 + 1.0) + 0.02 * Math.sin(this.time * 31.7);
+    const gl = this.gl, aspect = this.canvas.width / this.canvas.height;
+    const eye = [this.eye[0], this.eye[1] + this.bob, this.eye[2]];
+    const fwd = [Math.sin(this.yaw), 0, -Math.cos(this.yaw)];
+    const view = mat4LookAt(eye, [eye[0] + fwd[0], eye[1], eye[2] + fwd[2]], [0, 1, 0]);
+    const proj = mat4Perspective(Math.PI / 3, aspect, 0.05, 80);
+    this.viewProj = mat4Mul(proj, view);
+    const t = this.theme;
+    gl.clearColor(t.fog[0], t.fog[1], t.fog[2], 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(this.program);
+    gl.uniformMatrix4fv(this.loc.uViewProj, false, this.viewProj);
+    gl.uniform3fv(this.loc.uEye, eye);
+    gl.uniform3fv(this.loc.uTorch, t.torch);
+    gl.uniform3fv(this.loc.uFog, t.fog);
+    gl.uniform1f(this.loc.uReach, t.reach);
+    gl.uniform1f(this.loc.uFlicker, this.flicker);
+    gl.uniform1f(this.loc.uAmbient, 0.06);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
+    gl.uniform1i(this.loc.uTex, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
+    this._attributes();
+    gl.drawArrays(gl.TRIANGLES, 0, this.staticCount);
+    const dyn = this._spriteMesh();
+    if (dyn.length) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.dynBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dyn), gl.DYNAMIC_DRAW);
+      this._attributes();
+      gl.drawArrays(gl.TRIANGLES, 0, dyn.length / STRIDE);
+    }
+  }
+
+  // the colour of one pixel, for the tests: is anything being drawn?
+  pixel(x, y) {
+    const gl = this.gl, px = new Uint8Array(4);
+    gl.readPixels(x, this.canvas.height - 1 - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    return Array.from(px);
+  }
+};
+
+// ---- 50-audio.js ----
+"use strict";
+// The sounds, made in code with Web Audio - the same recipes the old game cooked into .wav files: square and sine
+// tones that fade, smoothed noise, and an eight-second dungeon (a low drone, a far rumble, water dripping) that loops.
+// Browsers won't play a sound before the first click or key, so unlock() is called on the first of either.
+CM.audio = {
+  ctx: null,
+  buffers: {},
+  enabled: true,
+  volume: 0.6,
+  ambientOn: false,
+  ambientNode: null,
+  ambientGain: null,
+
+  unlock() {
+    if (!this.ctx) {
+      try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return false; }
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.volume;
+      this.master.connect(this.ctx.destination);
+      this._cook();
+    }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+    if (this.ambientOn && !this.ambientNode) this._startAmbient();
+    return true;
+  },
+
+  setEnabled(on) {
+    this.enabled = on;
+    if (this.master) this.master.gain.value = on ? this.volume : 0;
+  },
+
+  setVolume(v) {
+    this.volume = CM.clamp(v, 0, 1);
+    if (this.master && this.enabled) this.master.gain.value = this.volume;
+  },
+
+  _tones(notes, kind = "square", vol = 0.15) {
+    const rate = this.ctx.sampleRate, out = [];
+    for (const [freq, length] of notes) {
+      const n = Math.floor(rate * length);
+      for (let i = 0; i < n; i++) {
+        const t = i / rate, fade = Math.pow(1 - i / n, 1.5);
+        const v = kind === "sine" ? Math.sin(2 * Math.PI * freq * t) : ((t * freq) % 1 < 0.5 ? 1 : -1);
+        out.push(v * vol * fade);
+      }
+    }
+    return out;
+  },
+
+  _noise(length, vol, smooth, seed = 1) {
+    const rate = this.ctx.sampleRate, rnd = new CM.Random(seed), out = [], n = Math.floor(rate * length);
+    let last = 0;
+    for (let i = 0; i < n; i++) {
+      last += (rnd.next() * 2 - 1 - last) * smooth;
+      out.push(last * vol * (1 - i / n));
+    }
+    return out;
+  },
+
+  _buffer(samples) {
+    const b = this.ctx.createBuffer(1, samples.length, this.ctx.sampleRate);
+    b.getChannelData(0).set(samples);
+    return b;
+  },
+
+  _cook() {
+    const T = (notes, kind, vol) => this._tones(notes, kind, vol);
+    const recipes = {
+      step: () => this._noise(0.09, 0.28, 0.08, 3),
+      bump: () => T([[70, 0.12]], "square", 0.2),
+      chest: () => T([[392, 0.07], [523, 0.07], [659, 0.12]]),
+      hit: () => this._noise(0.12, 0.42, 0.5, 5),
+      hurt: () => T([[180, 0.06], [120, 0.1]], "square", 0.18),
+      spell: () => T(Array.from({ length: 15 }, (_, i) => [400 + i * 80, 0.025]), "sine", 0.2),
+      heal: () => T([[523, 0.07], [659, 0.07], [784, 0.07], [1047, 0.14]], "sine", 0.18),
+      coin: () => T([[1319, 0.05], [1760, 0.12]]),
+      stairs: () => T([[392, 0.1], [330, 0.1], [262, 0.1], [196, 0.2]], "sine", 0.18),
+      level: () => T([[523, 0.09], [659, 0.09], [784, 0.09], [1047, 0.09], [784, 0.09], [1047, 0.25]]),
+      death: () => T([[330, 0.2], [262, 0.2], [196, 0.25], [131, 0.5]], "sine", 0.2),
+      victory: () => T([[523, 0.12], [523, 0.12], [523, 0.12], [659, 0.3], [587, 0.15], [784, 0.5]]),
+      monster: () => T([[110, 0.15], [98, 0.25]], "square", 0.18),
+    };
+    for (const [name, make] of Object.entries(recipes)) this.buffers[name] = this._buffer(make());
+    // the dungeon itself
+    const rate = this.ctx.sampleRate, secs = 8, n = rate * secs, rnd = new CM.Random(11);
+    const rumble = this._noise(secs, 0.08, 0.01, 7);
+    const drips = Array.from({ length: 5 }, () => 0.3 + rnd.next() * (secs - 0.7)).sort();
+    const out = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const t = i / rate;
+      let v = 0.028 * Math.sin(2 * Math.PI * 55 * t) * (0.7 + 0.3 * Math.sin(2 * Math.PI * 0.25 * t));
+      v += 0.015 * Math.sin(2 * Math.PI * 82.5 * t);
+      v += rumble[i];
+      for (const d of drips) {
+        const k = t - d;
+        if (k >= 0 && k < 0.25) v += 0.15 * Math.sin(2 * Math.PI * (1800 - k * 2000) * k) * Math.exp(-k * 25);
+      }
+      out[i] = v;
+    }
+    const b = this.ctx.createBuffer(1, n, rate);
+    b.getChannelData(0).set(out);
+    this.buffers.ambient = b;
+  },
+
+  play(name) {
+    if (!this.ctx || !this.enabled || !this.buffers[name]) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.buffers[name];
+    src.connect(this.master);
+    src.start();
+  },
+
+  _startAmbient() {
+    if (!this.ctx || !this.buffers.ambient) return;
+    this.ambientGain = this.ctx.createGain();
+    this.ambientGain.gain.value = 0.5;
+    this.ambientGain.connect(this.master);
+    this.ambientNode = this.ctx.createBufferSource();
+    this.ambientNode.buffer = this.buffers.ambient;
+    this.ambientNode.loop = true;
+    this.ambientNode.connect(this.ambientGain);
+    this.ambientNode.start();
+  },
+
+  ambience(on) {
+    this.ambientOn = on;
+    if (on) { if (this.ctx && !this.ambientNode) this._startAmbient(); }
+    else if (this.ambientNode) { try { this.ambientNode.stop(); } catch (e) { /* already stopped */ } this.ambientNode = null; }
+  },
+};
+
+// ---- 60-game.js ----
+"use strict";
+// The game itself, with no screen in it: the party, the floor they're on, the fight they're in, the camp, the bag,
+// saving as it goes, the Hall of Fame. The window (70-ui.js) listens to its events and draws; the tests drive it
+// straight. Everything here was the old Python game's rules, kept to the number.
+CM.Game = class {
+  constructor() {
+    this.listeners = {};
+    this.mode = "title";                 // title, explore, combat, camp
+    this.titleNote = "";
+    this.messages = [];
+    this.party = []; this.bag = []; this.gold = 0; this.floor = null; this.foes = []; this.foeKey = null;
+    this.seed = "";
+    this.stock = null; this.shopping = false;
+    this.rnd = new CM.Random(Math.floor(Math.random() * 4294967296));
+    this.fame = CM.store.get("fame", []);
+    this.settings = Object.assign({ sound: true, volume: 0.6, smooth: true, fps: false }, CM.store.get("settings", {}));
+    this.lastRun = CM.store.get("run", null);        // a run left part way, to continue
+  }
+
+  // ---- events: change (redraw), message, mode, floor, moved, turned, fx, sound ----
+  on(event, fn) { (this.listeners[event] = this.listeners[event] || []).push(fn); return this; }
+  emit(event, ...args) { for (const fn of this.listeners[event] || []) fn(...args); }
+
+  say(text) {
+    this.messages.push(text);
+    if (this.messages.length > 60) this.messages = this.messages.slice(-60);
+    this.emit("message", text);
+    this.emit("change");
+  }
+
+  sound(name) { this.emit("sound", name); }
+
+  setMode(mode) { this.mode = mode; this.emit("mode", mode); this.emit("change"); }
+
+  saveSettings() { CM.store.set("settings", this.settings); }
+
+  // ---- saving ----
+  saveRun() {
+    if (!["explore", "camp"].includes(this.mode)) return;
+    const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, mode: this.mode, seed: this.seed,
+      saved: new Date().toISOString() };
+    this.lastRun = data;
+    CM.store.set("run", data);
+  }
+
+  canContinue() { return Boolean(this.lastRun && this.lastRun.floor && this.lastRun.party); }
+
+  continueRun() {
+    const d = this.lastRun;
+    if (!this.canContinue()) return false;
+    this.party = d.party; this.bag = d.bag || []; this.gold = d.gold || 0; this.floor = d.floor;
+    this.seed = d.seed || CM.randomSeed();
+    this.messages = [];
+    this.setMode(d.mode === "camp" ? "camp" : "explore");
+    this.emit("floor", this.floor);
+    this.say("You take up the expedition where you left it.");
+    return true;
+  }
+
+  endRun(won) {
+    const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, date: CM.today(), seed: this.seed };
+    this.fame.push(entry);
+    this.sortFame();
+    CM.store.set("fame", this.fame);
+    CM.store.remove("run");
+    this.lastRun = null;
+    this.sound(won ? "victory" : "death");
+    this.titleNote = won ? "The Lich King is no more. The party returns as legends!"
+      : `The party fell on floor ${this.floor.number}. Their story ends here.`;
+    this.emit("over", won);
+    this.setMode("title");
+  }
+
+  sortFame() {
+    this.fame.sort((a, b) => (b.won ? 1 : 0) - (a.won ? 1 : 0) || b.floor - a.floor || b.gold - a.gold);
+    this.fame = this.fame.slice(0, 10);
+  }
+
+  // what the old Python game kept on disk (run.json, hall_of_fame.json), brought over once by the Timeline's host
+  importOld(data) {
+    let took = [];
+    if (data && Array.isArray(data.fame) && data.fame.length) {
+      const have = new Set(this.fame.map((e) => `${e.name}|${e.floor}|${e.gold}|${e.date}`));
+      for (const e of data.fame) if (e && !have.has(`${e.name}|${e.floor}|${e.gold}|${e.date}`)) this.fame.push(e);
+      this.sortFame();
+      CM.store.set("fame", this.fame);
+      took.push("fame");
+    }
+    if (data && data.run && data.run.floor && data.run.party && !this.canContinue()) {
+      this.lastRun = Object.assign({ seed: CM.randomSeed(), mode: "explore" }, data.run);
+      CM.store.set("run", this.lastRun);
+      took.push("run");
+    }
+    this.emit("change");
+    return took;
+  }
+
+  exportText() {
+    return JSON.stringify({ game: "Claude and Magic", version: CM.version, run: this.lastRun, fame: this.fame, settings: this.settings });
+  }
+
+  importText(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (e) { return "That isn't a Claude and Magic save."; }
+    if (!data || data.game !== "Claude and Magic") return "That isn't a Claude and Magic save.";
+    if (data.run && data.run.floor && data.run.party) { this.lastRun = data.run; CM.store.set("run", data.run); }
+    if (Array.isArray(data.fame)) { this.fame = data.fame; this.sortFame(); CM.store.set("fame", this.fame); }
+    if (data.settings) { Object.assign(this.settings, data.settings); this.saveSettings(); }
+    this.emit("change");
+    return "";
+  }
+
+  // ---- starting ----
+  newGame(seed) {
+    this.seed = (seed || "").trim() || CM.randomSeed();
+    this.party = CM.newParty();
+    this.bag = CM.startingBag(this.seed);
+    this.gold = 30;
+    this.messages = [];
+    this.titleNote = "";
+    this.enterFloor(1);
+    this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs.");
+  }
+
+  enterFloor(number) {
+    this.floor = CM.makeFloor(number, this.seed);
+    this.setMode("explore");
+    this.look();
+    this.emit("floor", this.floor);
+    this.saveRun();
+    this.say(`Floor ${number}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
+  }
+
+  // ---- moving ----
+  turn(way) {
+    if (this.mode !== "explore") return false;
+    this.floor.facing = (this.floor.facing + way + 4) % 4;
+    this.look();
+    this.emit("turned", this.floor.facing);
+    this.emit("change");
+    return true;
+  }
+
+  move(rel) {
+    if (this.mode !== "explore") return false;
+    const fl = this.floor;
+    const [dx, dy] = CM.DIRS[(fl.facing + rel) % 4];
+    const x = fl.pos[0] + dx, y = fl.pos[1] + dy;
+    if (y < 0 || y >= fl.grid.length || x < 0 || x >= fl.grid.length || fl.grid[y][x]) {
+      this.sound("bump");
+      this.say("Ouch! A solid wall.");
+      return false;
+    }
+    const thing = fl.things[`${x},${y}`];
+    if (thing && (thing.type === "monsters" || thing.type === "boss")) {
+      this.startCombat(`${x},${y}`, thing);
+      return false;
+    }
+    fl.pos = [x, y];
+    this.sound("step");
+    this.look();
+    this.emit("moved", x, y);
+    if (thing) this.say({ chest: "A chest sits here. (Space to open it)", ladder: "A ladder leads down into the dark. (Space to climb down)" }[thing.type]);
+    this.emit("change");
+    return true;
+  }
+
+  // what the party can see goes on the automap: around them, and along the corridor they face
+  look() {
+    const fl = this.floor, size = fl.grid.length;
+    const seen = new Set(fl.seen.map(([x, y]) => `${x},${y}`));
+    const [x, y] = fl.pos;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) seen.add(`${x + dx},${y + dy}`);
+    const [fx, fy] = CM.DIRS[fl.facing];
+    for (let d = 1; d < 5; d++) {
+      const cx = x + fx * d, cy = y + fy * d;
+      seen.add(`${cx},${cy}`); seen.add(`${cx + fy},${cy + fx}`); seen.add(`${cx - fy},${cy - fx}`);
+      if (cy < 0 || cy >= size || cx < 0 || cx >= size || fl.grid[cy][cx]) break;
+    }
+    fl.seen = [...seen].map((k) => k.split(",").map(Number)).filter(([a, b]) => a >= 0 && a < size && b >= 0 && b < size);
+  }
+
+  use() {
+    if (this.mode !== "explore") return;
+    const fl = this.floor, key = `${fl.pos[0]},${fl.pos[1]}`, thing = fl.things[key];
+    if (!thing) { this.say("There's nothing here to use."); return; }
+    if (thing.type === "chest") {
+      delete fl.things[key];
+      this.gold += thing.gold;
+      this.bag.push(...thing.items);
+      this.sound("chest");
+      const found = thing.items.map((i) => i.name).join(", ");
+      this.say(`The chest creaks open: ${thing.gold} gold` + (found ? `, ${found}.` : "."));
+      this.saveRun();
+      this.emit("change");
+    } else if (thing.type === "ladder") {
+      this.sound("stairs");
+      if (CM.CAMP_AFTER.includes(fl.number)) {
+        this.setMode("camp");
+        this.saveRun();
+        this.say(`Halfway down a long shaft, a lantern glows: a merchant's camp beneath floor ${fl.number}. Rest, trade, and see to the fallen.`);
+      } else {
+        this.enterFloor(fl.number + 1);
+      }
+    }
+  }
+
+  // ---- fighting ----
+  startCombat(key, thing) {
+    this.foes = thing.group;
+    this.foeKey = key;
+    this.setMode("combat");
+    this.sound("monster");
+    const names = {};
+    for (const m of this.foes) names[m.name] = (names[m.name] || 0) + 1;
+    this.say("Monsters! " + Object.entries(names).map(([k, n]) => CM.plural(n, k)).join(", ") + " attack!");
+  }
+
+  alive() { return this.party.filter((m) => m.hp > 0); }
+  living() { return this.foes.filter((m) => m.hp > 0); }
+
+  damage(atk, power, df) {
+    return Math.max(1, atk + power + this.rnd.int(0, Math.max(1, Math.floor((atk + power) / 2))) - Math.floor(df / 2));
+  }
+
+  combatRound(action) {
+    if (this.mode !== "combat") return;
+    const rnd = this.rnd;
+    let foes = this.living();
+    if (action === "run") {
+      if (rnd.chance(foes.some((m) => m.boss) ? 0 : 0.55)) {
+        this.say("The party flees back the way it came!");
+        this.setMode("explore");
+        return;
+      }
+      this.say("You can't get away!");
+    } else if (action === "potion") {
+      this.potionInBattle();
+    }
+    for (const hero of this.alive()) {
+      foes = this.living();
+      if (!foes.length || action === "run" || action === "potion") break;
+      if (action === "cast" && hero.cls === "Mage" && hero.mp >= 4) {
+        hero.mp -= 4;
+        this.sound("spell");
+        const dmg = 8 + hero.level * 4;
+        for (const m of foes) { m.hp -= dmg; this.emit("fx", { kind: "hit", foe: m, amount: dmg, spell: true }); }
+        this.say(`The Mage hurls a fireball! ${dmg} damage to every foe.`);
+      } else if (action === "cast" && hero.cls === "Cleric" && hero.mp >= 3) {
+        hero.mp -= 3;
+        const target = this.alive().reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b));
+        const heal = 12 + hero.level * 4;
+        target.hp = Math.min(target.max, target.hp + heal);
+        this.sound("heal");
+        this.say(`The Cleric prays: the ${target.cls} is healed by ${heal}.`);
+      } else {
+        const target = rnd.pick(foes);
+        if (rnd.chance(0.88)) {
+          let dmg = this.damage(hero.atk, hero.weapon.power, target.df);
+          if (hero.cls === "Rogue" && rnd.chance(0.25)) {
+            dmg *= 2;
+            this.say(`The Rogue strikes a weak spot! ${target.name} takes ${dmg}.`);
+          } else {
+            this.say(`The ${hero.cls} hits the ${target.name} for ${dmg}.`);
+          }
+          target.hp -= dmg;
+          this.emit("fx", { kind: "hit", foe: target, amount: dmg });
+          this.sound("hit");
+        } else {
+          this.say(`The ${hero.cls} misses.`);
+          this.emit("fx", { kind: "miss", foe: target });
+        }
+      }
+    }
+    for (const m of this.foes) if (m.hp <= 0 && !m.dead) { m.dead = true; this.emit("fx", { kind: "die", foe: m }); }
+    if (!this.living().length) { this.wonFight(); return; }
+    for (const m of this.living()) {                                     // the monsters' turn
+      const heroes = this.alive();
+      if (!heroes.length) break;
+      const target = rnd.pick(heroes);
+      if (rnd.chance(0.8)) {
+        const dmg = this.damage(Math.floor(m.atk / 2), 0, target.df + target.armor.power * 2);
+        target.hp -= dmg;
+        this.sound("hurt");
+        this.emit("fx", { kind: "hurt", hero: target, amount: dmg, foe: m });
+        this.say(`The ${m.name} hits the ${target.cls} for ${dmg}.` + (target.hp <= 0 ? `  The ${target.cls} falls!` : ""));
+      } else {
+        this.say(`The ${m.name} misses the ${target.cls}.`);
+      }
+    }
+    for (const hero of this.party) hero.hp = Math.max(0, hero.hp);
+    if (!this.alive().length) {
+      this.say("The last of the party falls...");
+      this.endRun(false);
+      return;
+    }
+    this.emit("change");
+  }
+
+  potionInBattle() {
+    const potion = this.bag.find((i) => i.kind === "heal");
+    if (!potion) { this.say("No healing potions left!"); return; }
+    const target = this.alive().reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b));
+    this.bag.splice(this.bag.indexOf(potion), 1);
+    target.hp = Math.min(target.max, target.hp + potion.power);
+    this.sound("heal");
+    this.say(`The ${target.cls} drinks a Healing Potion (+${potion.power}).`);
+  }
+
+  wonFight() {
+    const rnd = this.rnd;
+    const xp = this.foes.reduce((s, m) => s + m.xp, 0), gold = this.foes.reduce((s, m) => s + m.gold, 0);
+    this.gold += gold;
+    const loot = rnd.chance(0.45) ? [CM.makeItem(this.floor.number, rnd)] : [];
+    this.bag.push(...loot);
+    const boss = this.foes.some((m) => m.boss);
+    delete this.floor.things[this.foeKey];
+    this.sound("coin");
+    this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and a ${loot[0].name}.` : "."));
+    for (const hero of this.alive()) {
+      hero.xp += Math.floor(xp / 2);                                      // everyone standing learns from the fight
+      while (hero.xp >= 60 * Math.pow(hero.level, 1.6)) {
+        hero.level += 1;
+        const base = CM.CLASSES[hero.cls];
+        hero.max += Math.max(3, Math.floor(base.hp / 5));
+        hero.hp = hero.max;
+        hero.atk += 1 + (hero.cls === "Knight" || hero.cls === "Rogue" ? 1 : 0);
+        hero.df += hero.level % 2 === 0 ? 1 : 0;
+        if (hero.maxmp) { hero.maxmp += 3; hero.mp = hero.maxmp; }
+        this.sound("level");
+        this.say(`The ${hero.cls} reaches level ${hero.level}!`);
+      }
+    }
+    if (boss) { this.endRun(true); return; }
+    this.setMode("explore");
+    this.saveRun();
+  }
+
+  // ---- the bag, the merchant, the camp ----
+  openBag(shop = false) {
+    this.shopping = shop;
+    if (shop && !this.stock) {
+      const rnd = this.rnd, depth = this.floor.number + 3;
+      this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor"].map((k) => CM.makeItem(depth, rnd, k));
+      this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
+        { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
+        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 });
+    }
+    this.emit("bag", true);
+  }
+
+  closeBag() {
+    this.emit("bag", false);
+    this.saveRun();
+    this.emit("change");
+  }
+
+  describe(item) {
+    return { weapon: `weapon +${item.power}`, armor: `armor +${item.power}`, heal: "heals", mana: "restores magic", revive: "raises the fallen" }[item.kind];
+  }
+
+  give(row, n) {                                                        // returns a note for the bag screen, "" when it worked
+    if (row < 0 || row >= this.bag.length) return "Pick something from your pack first.";
+    const item = this.bag[row], hero = this.party[n];
+    if (item.kind === "revive") {
+      if (hero.hp > 0) return "The Phoenix Feather is for the fallen.";
+      hero.hp = Math.floor(hero.max / 2);
+      this.bag.splice(row, 1);
+      this.sound("heal");
+    } else if (hero.hp <= 0) {
+      return `The ${hero.cls} has fallen. Raise them first.`;
+    } else if (item.kind === "heal") {
+      hero.hp = Math.min(hero.max, hero.hp + item.power);
+      this.bag.splice(row, 1);
+      this.sound("heal");
+    } else if (item.kind === "mana") {
+      if (!hero.maxmp) return `The ${hero.cls} has no magic to restore.`;
+      hero.mp = Math.min(hero.maxmp, hero.mp + item.power);
+      this.bag.splice(row, 1);
+      this.sound("heal");
+    } else {
+      const old = hero[item.kind];
+      hero[item.kind] = item;
+      this.bag[row] = old;
+      this.sound("chest");
+    }
+    this.emit("change");
+    return "";
+  }
+
+  buy(row) {
+    if (!this.stock || row < 0 || row >= this.stock.length) return "Pick something from the merchant's wares first.";
+    const item = this.stock[row];
+    if (this.gold < item.value) return "You can't afford that.";
+    this.gold -= item.value;
+    this.bag.push(Object.assign({}, item));
+    if (item.kind === "weapon" || item.kind === "armor") this.stock.splice(row, 1);
+    this.sound("coin");
+    this.emit("change");
+    return "";
+  }
+
+  sell(row) {
+    if (row < 0 || row >= this.bag.length) return "Pick something from your pack to sell.";
+    const item = this.bag.splice(row, 1)[0];
+    this.gold += Math.floor(item.value / 2);
+    this.sound("coin");
+    this.emit("change");
+    return "";
+  }
+
+  rest() {
+    if (this.gold < 20) { this.say("The merchant wants 20 gold for a bedroll by the fire."); return; }
+    this.gold -= 20;
+    for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; }
+    this.sound("heal");
+    this.say("The party rests by the fire. Wounds close and magic returns.");
+    this.saveRun();
+  }
+
+  raiseDead() {
+    const fallen = this.party.filter((m) => m.hp <= 0);
+    if (!fallen.length) { this.say("No one needs raising."); return; }
+    const hero = fallen[0], cost = 100 * hero.level;
+    if (this.gold < cost) { this.say(`The old priest asks ${cost} gold to raise the ${hero.cls}.`); return; }
+    this.gold -= cost;
+    hero.hp = hero.max;
+    this.sound("heal");
+    this.say(`For ${cost} gold, the priest raises the ${hero.cls}!`);
+    this.saveRun();
+  }
+
+  leaveCamp() {
+    this.stock = null;
+    this.enterFloor(this.floor.number + 1);
+  }
+
+  potionCount() { return this.bag.filter((i) => ["heal", "mana", "revive"].includes(i.kind)).length; }
+};
+
+// ---- 70-ui.js ----
+"use strict";
+// The window around the dungeon: the title (what you set out with, the Hall of Fame, settings), the party and the
+// log under the view, the automap, the bag and the merchant, and the little dialogs. It listens to the Game and
+// redraws; it never decides the rules.
+CM.UI = class {
+  constructor(game, root) {
+    this.game = game;
+    this.root = root;
+    this.bagRow = -1; this.shopRow = -1;
+    this.portraits = {};
+    root.innerHTML = `
+<div id="title" class="screen">
+  <div class="backdrop-slot"></div><div class="shade"></div>
+  <div class="sheet">
+    <h1>Claude and Magic</h1>
+    <div class="tagline">Twenty floors down, the Lich King waits. Four go in together.</div>
+    <div class="note" id="title-note"></div>
+    <div class="card" id="expedition">
+      <h2>Expedition</h2>
+      <div class="row"><button id="btn-continue" class="primary">Continue</button><span id="continue-note" class="small"></span></div>
+      <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button></div>
+      <p>The same seed lays out the same twenty floors, so a dungeon can be tried again - or handed to a friend. What
+      the monsters do in a fight is up to the dice. The run saves as you go; when the whole party falls, it ends, and
+      the deepest runs go in the Hall of Fame.</p>
+      <h2>Your party</h2>
+      <div id="heroes"></div>
+      <p id="start-with"></p>
+    </div>
+    <div class="card" id="fame"><h2>Hall of Fame</h2><table></table></div>
+    <div class="foot"><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button></div>
+    <div class="version"></div>
+  </div>
+</div>
+<div id="play" class="screen">
+  <div class="top">
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div id="floats"></div><div class="hint"></div></div>
+    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div></div>
+  </div>
+  <div id="party"></div>
+  <div id="log"></div>
+  <div id="actions"></div>
+</div>
+<div id="bag" class="screen">
+  <h2 id="bag-title"></h2>
+  <div class="lists"><div class="list" id="bag-list"></div><div class="list" id="shop-list"></div></div>
+  <div class="note" id="bag-note"></div>
+  <div class="give" id="bag-give"></div>
+  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-bag-done" class="primary">Done</button></div>
+</div>
+<div class="dialog" id="dlg-settings"><div class="box"><h2>Settings</h2>
+  <div class="row"><label for="set-sound">Sound</label><input type="checkbox" id="set-sound"></div>
+  <div class="row"><label for="set-volume">Volume</label><input type="range" id="set-volume" min="0" max="100"></div>
+  <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
+  <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><table class="keys"></table><div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-transfer"><div class="box"><h2>Export / Import</h2>
+  <p class="small">Your run, the Hall of Fame and your settings, as text. Copy it to keep it or to carry it to another
+  browser; paste a copy here and Import to bring it back.</p>
+  <textarea id="transfer-text" spellcheck="false"></textarea>
+  <div class="small" id="transfer-note"></div>
+  <div class="end"><button id="btn-copy">Copy</button><button id="btn-import">Import</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-pause"><div class="box"><h2>Paused</h2>
+  <p class="small">The run is saved as you go.</p>
+  <div class="end"><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
+<div class="dialog" id="bigmap"><canvas id="bigmap-canvas" width="600" height="600"></canvas></div>`;
+    this.$ = (sel) => root.querySelector(sel);
+    this.canvas = document.createElement("canvas");                        // the one WebGL canvas, moved between screens
+    this.canvas.id = "gl";
+    this.attachCanvas("title");
+    for (const b of root.querySelectorAll(".dialog .close")) b.addEventListener("click", () => this.closeDialogs());
+    for (const d of root.querySelectorAll(".dialog")) d.addEventListener("click", (e) => { if (e.target === d) this.closeDialogs(); });
+    this._title();
+    this._bag();
+    this._settings();
+    this.$("#btn-pause-settings").addEventListener("click", () => { this.closeDialogs(); this.openDialog("#dlg-settings"); });
+    this.$("#btn-pause-title").addEventListener("click", () => { this.closeDialogs(); game.saveRun(); game.setMode("title"); });
+    const keys = this.$("#dlg-keys table");
+    keys.innerHTML = CM.KEYS_HELP.map(([k, what]) => `<tr><td><kbd>${k}</kbd></td><td>${what}</td></tr>`).join("");
+    this.$("#title .version").textContent = `Claude and Magic v${CM.version}`;
+    game.on("change", () => this.refresh());
+    game.on("mode", (mode) => this.show(mode === "title" ? "title" : "play"));
+    game.on("bag", (open) => (open ? this.openBag() : this.show("play")));
+    game.on("fx", (fx) => this.fx(fx));
+    this.show("title");
+  }
+
+  attachCanvas(where) {
+    const slot = where === "title" ? this.$("#title .backdrop-slot") : this.$("#view .canvas-slot");
+    if (this.canvas.parentNode !== slot) slot.appendChild(this.canvas);
+    this.canvas.className = where === "title" ? "backdrop" : "";
+  }
+
+  show(screen) {
+    for (const s of this.root.querySelectorAll(".screen")) s.classList.toggle("on", s.id === screen);
+    this.screen = screen;
+    if (screen === "title") { this.attachCanvas("title"); this.refreshTitle(); }
+    if (screen === "play") this.attachCanvas("play");
+    this.refresh();
+  }
+
+  dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
+  openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); }
+  closeDialogs() { for (const d of this.root.querySelectorAll(".dialog.on")) d.classList.remove("on"); }
+
+  portrait(cls, size) {
+    const key = `${cls}:${size}`;
+    if (!this.portraits[key]) this.portraits[key] = CM.art.portrait(cls, size);
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    c.getContext("2d").drawImage(this.portraits[key], 0, 0);
+    return c;
+  }
+
+  // ---- the title ----
+  _title() {
+    const g = this.game;
+    this.$("#seed").value = CM.randomSeed();
+    this.$("#btn-dice").addEventListener("click", () => { this.$("#seed").value = CM.randomSeed(); });
+    this.$("#btn-new").addEventListener("click", () => this.startNew());
+    this.$("#btn-continue").addEventListener("click", () => g.continueRun());
+    this.$("#btn-settings").addEventListener("click", () => this.openDialog("#dlg-settings"));
+    this.$("#btn-keys").addEventListener("click", () => this.openDialog("#dlg-keys"));
+    this.$("#btn-transfer").addEventListener("click", () => {
+      this.$("#transfer-text").value = g.exportText();
+      this.$("#transfer-note").textContent = "";
+      this.openDialog("#dlg-transfer");
+    });
+    this.$("#btn-copy").addEventListener("click", () => {
+      const t = this.$("#transfer-text");
+      t.select();
+      const done = navigator.clipboard ? navigator.clipboard.writeText(t.value).then(() => true, () => false) : Promise.resolve(document.execCommand("copy"));
+      done.then((ok) => { this.$("#transfer-note").textContent = ok ? "Copied." : "Select the text and copy it yourself."; });
+    });
+    this.$("#btn-import").addEventListener("click", () => {
+      const err = g.importText(this.$("#transfer-text").value);
+      this.$("#transfer-note").textContent = err || "Imported.";
+      this.refreshTitle();
+    });
+    const heroes = this.$("#heroes");
+    for (const hero of CM.newParty()) {
+      const div = document.createElement("div");
+      div.className = "hero";
+      div.appendChild(this.portrait(hero.cls, 48));
+      const s = CM.CLASSES[hero.cls];
+      const text = document.createElement("div");
+      text.innerHTML = `<b>${hero.cls}</b> <small>${s.role} - ${s.hp} HP${s.mp ? `, ${s.mp} MP` : ""}, attack ${s.atk}, defence ${s.df}</small>
+        <small>${s.blurb}</small><span class="gear">${hero.weapon.name}, ${hero.armor.name}</span>`;
+      div.appendChild(text);
+      heroes.appendChild(div);
+    }
+  }
+
+  startNew() {
+    const g = this.game;
+    if (g.canContinue() && !window.confirm("A run is waiting to be continued. Start a new expedition and let it go?")) return;
+    g.newGame(this.$("#seed").value);
+  }
+
+  refreshTitle() {
+    const g = this.game;
+    this.$("#title-note").textContent = g.titleNote;
+    const can = g.canContinue();
+    this.$("#btn-continue").disabled = !can;
+    this.$("#continue-note").textContent = can
+      ? `Floor ${g.lastRun.floor.number}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}`
+      : "No expedition is under way.";
+    const bag = CM.startingBag(this.$("#seed").value || "x");
+    this.$("#start-with").textContent = `You set out with 30 gold and two potions (${bag.map((i) => i.name).join(", ")} - the seed decides which). `
+      + "Chests and fallen monsters give better gear; a merchant's camp waits below floors 5, 10 and 15.";
+    const table = this.$("#fame table");
+    if (!g.fame.length) table.innerHTML = `<tr><td class="empty">No party has gone down yet.</td></tr>`;
+    else table.innerHTML = g.fame.map((e, i) => `<tr><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
+      + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold</td><td>${this.esc(e.date)}</td></tr>`).join("");
+  }
+
+  esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+  // ---- settings ----
+  _settings() {
+    const g = this.game, s = g.settings;
+    const sound = this.$("#set-sound"), vol = this.$("#set-volume"), smooth = this.$("#set-smooth"), fps = this.$("#set-fps");
+    sound.checked = s.sound; vol.value = Math.round(s.volume * 100); smooth.checked = s.smooth; fps.checked = s.fps;
+    const apply = () => {
+      s.sound = sound.checked; s.volume = vol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked;
+      g.saveSettings();
+      g.emit("settings", s);
+    };
+    for (const el of [sound, vol, smooth, fps]) el.addEventListener("input", apply);
+  }
+
+  toggleFps() {
+    this.game.settings.fps = !this.game.settings.fps;
+    this.$("#set-fps").checked = this.game.settings.fps;
+    this.game.saveSettings();
+    this.game.emit("settings", this.game.settings);
+  }
+
+  // ---- the dungeon screen ----
+  refresh() {
+    const g = this.game;
+    if (this.screen === "title") { this.refreshTitle(); return; }
+    if (this.screen !== "play") return;
+    const fl = g.floor;
+    if (fl) {
+      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   Floor ${fl.number}`;
+      this.$("#side .where").textContent = `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
+    }
+    this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
+    const hint = this.$("#view .hint");
+    if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper.";
+    else if (g.mode === "combat") hint.textContent = "";
+    else {
+      const thing = fl && fl.things[`${fl.pos[0]},${fl.pos[1]}`];
+      hint.textContent = thing ? (thing.type === "chest" ? "A chest. Space opens it." : "A ladder down. Space climbs it.") : "";
+    }
+    this.renderParty();
+    this.renderLog();
+    this.renderActions();
+    this.drawAutomap(this.$("#automap"));
+    if (this.$("#bigmap").classList.contains("on")) this.drawAutomap(this.$("#bigmap-canvas"));
+  }
+
+  renderParty() {
+    const box = this.$("#party");
+    if (box.children.length !== this.game.party.length) {
+      box.innerHTML = "";
+      for (const m of this.game.party) {
+        const div = document.createElement("div");
+        div.className = "member";
+        div.appendChild(this.portrait(m.cls, 44));
+        const text = document.createElement("div");
+        text.innerHTML = `<div class="name"></div><div class="gear"></div><div class="bar hp"><i></i><span></span></div><div class="bar mp"><i></i><span></span></div>`;
+        div.appendChild(text);
+        box.appendChild(div);
+      }
+    }
+    this.game.party.forEach((m, i) => {
+      const div = box.children[i], dead = m.hp <= 0;
+      div.classList.toggle("fallen", dead);
+      div.querySelector(".name").textContent = `${m.cls}  Lv ${m.level}` + (dead ? "  (fallen)" : "");
+      div.querySelector(".gear").textContent = `${m.weapon.name} / ${m.armor.name}`;
+      const hp = div.querySelector(".bar.hp");
+      hp.querySelector("i").style.width = `${100 * Math.max(0, m.hp) / Math.max(1, m.max)}%`;
+      hp.querySelector("span").textContent = `HP ${Math.max(0, m.hp)}/${m.max}`;
+      const mp = div.querySelector(".bar.mp");
+      mp.style.display = m.maxmp ? "" : "none";
+      mp.querySelector("i").style.width = `${100 * Math.max(0, m.mp) / Math.max(1, m.maxmp)}%`;
+      mp.querySelector("span").textContent = `MP ${m.mp}/${m.maxmp}`;
+    });
+  }
+
+  renderLog() {
+    const log = this.$("#log");
+    const lines = this.game.messages.slice(-7);
+    log.innerHTML = lines.map((l) => `<div>${this.esc(l)}</div>`).join("");
+  }
+
+  renderActions() {
+    const g = this.game, box = this.$("#actions");
+    const sets = {
+      explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
+        ["Use (Space)", () => g.use()], ["Inventory (I)", () => g.openBag()], ["Map (Tab)", () => this.toggleBigMap()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
+      combat: [["Fight (F)", () => g.combatRound("fight")], ["Cast (C)", () => g.combatRound("cast")],
+        ["Potion (P)", () => g.combatRound("potion")], ["Run (R)", () => g.combatRound("run")]],
+      camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Raise the fallen", () => g.raiseDead()],
+        ["Inventory", () => g.openBag()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
+    };
+    const wanted = sets[g.mode] || [];
+    if (box.dataset.mode !== g.mode) {
+      box.innerHTML = "";
+      box.dataset.mode = g.mode;
+      for (const [text, slot] of wanted) {
+        const b = document.createElement("button");
+        b.textContent = text;
+        b.addEventListener("click", () => { slot(); });
+        box.appendChild(b);
+      }
+    }
+  }
+
+  toggleBigMap() {
+    const d = this.$("#bigmap");
+    if (d.classList.contains("on")) this.closeDialogs();
+    else { this.openDialog("#bigmap"); this.drawAutomap(this.$("#bigmap-canvas")); }
+  }
+
+  drawAutomap(canvas) {
+    const fl = this.game.floor;
+    if (!fl) return;
+    const p = canvas.getContext("2d"), W = canvas.width, size = fl.grid.length, cell = W / size;
+    p.fillStyle = "#E8DCC0";                                              // graph paper
+    p.fillRect(0, 0, W, W);
+    p.strokeStyle = "#C8B898"; p.lineWidth = 1;
+    p.beginPath();
+    for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
+    p.stroke();
+    const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0" };
+    for (const [x, y] of fl.seen) {
+      p.fillStyle = fl.grid[y][x] ? "#3A3028" : "#F8F0DC";
+      p.fillRect(x * cell, y * cell, cell, cell);
+      const thing = fl.things[`${x},${y}`];
+      if (thing && !fl.grid[y][x]) {
+        p.fillStyle = colours[thing.type];
+        p.beginPath(); p.arc((x + 0.5) * cell, (y + 0.5) * cell, cell * 0.3, 0, Math.PI * 2); p.fill();
+      }
+    }
+    const [x, y] = fl.pos, [dx, dy] = CM.DIRS[fl.facing], cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
+    p.fillStyle = "#20A040";
+    p.beginPath();
+    p.moveTo(cx + dx * cell * 0.45, cy + dy * cell * 0.45);
+    p.lineTo(cx - dy * cell * 0.35 - dx * cell * 0.3, cy + dx * cell * 0.35 - dy * cell * 0.3);
+    p.lineTo(cx + dy * cell * 0.35 - dx * cell * 0.3, cy - dx * cell * 0.35 - dy * cell * 0.3);
+    p.fill();
+  }
+
+  // the names and health of the foes, over the view, where they stand
+  drawHud(foes, project) {
+    const hud = this.$("#hud"), view = this.$("#view");
+    const dpr = Math.min(2, window.devicePixelRatio || 1), w = view.clientWidth, h = view.clientHeight;
+    if (hud.width !== Math.round(w * dpr) || hud.height !== Math.round(h * dpr)) { hud.width = Math.round(w * dpr); hud.height = Math.round(h * dpr); }
+    const p = hud.getContext("2d");
+    p.setTransform(dpr, 0, 0, dpr, 0, 0);
+    p.clearRect(0, 0, w, h);
+    for (const f of foes) {
+      const at = project(f.wx, f.wh, f.wz);
+      if (!at) continue;
+      const [sx, sy, depth] = at, bw = CM.clamp(120 / depth, 40, 110);
+      p.fillStyle = "#401010"; p.fillRect(sx - bw / 2, sy - 8, bw, 6);
+      p.fillStyle = "#E03030"; p.fillRect(sx - bw / 2, sy - 8, bw * Math.max(0, f.m.hp) / f.m.max, 6);
+      p.font = `bold ${CM.clamp(26 / depth, 10, 14)}px Georgia`; p.textAlign = "center";
+      p.fillStyle = "#000"; p.fillText(f.m.name, sx + 1, sy - 12);
+      p.fillStyle = "#fff"; p.fillText(f.m.name, sx, sy - 13);
+    }
+  }
+
+  fx(fx) {
+    if (fx.kind === "hurt") {
+      const flash = this.$("#view .hurt");
+      flash.classList.add("on");
+      setTimeout(() => flash.classList.remove("on"), 60);
+    }
+  }
+
+  floatText(x, y, text, cls = "") {
+    const el = document.createElement("div");
+    el.className = "float " + cls;
+    el.textContent = text;
+    el.style.left = `${x}px`; el.style.top = `${y}px`;
+    this.$("#floats").appendChild(el);
+    setTimeout(() => el.remove(), 950);
+  }
+
+  // ---- the bag and the merchant ----
+  _bag() {
+    const g = this.game;
+    const give = this.$("#bag-give");
+    for (let i = 0; i < 4; i++) {
+      const b = document.createElement("button");
+      b.addEventListener("click", () => { this.note(g.give(this.bagRow, i)); this.fillBag(); });
+      give.appendChild(b);
+    }
+    this.$("#btn-buy").addEventListener("click", () => { this.note(g.buy(this.shopRow)); this.fillBag(); });
+    this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
+    this.$("#btn-bag-done").addEventListener("click", () => g.closeBag());
+  }
+
+  note(text) { this.$("#bag-note").textContent = text || this.$("#bag-note").dataset.base; }
+
+  openBag() {
+    this.bagRow = this.shopRow = -1;
+    this.show("bag");
+    this.fillBag();
+  }
+
+  fillBag() {
+    const g = this.game, shop = g.shopping;
+    this.$("#bag-title").textContent = `${shop ? "The Merchant" : "Inventory"}   -   Gold: ${g.gold.toLocaleString()}`;
+    this.$("#shop-list").style.display = shop ? "" : "none";
+    this.$("#btn-buy").style.display = shop ? "" : "none";
+    this.$("#btn-sell").style.display = shop ? "" : "none";
+    const list = (el, head, items, selected, describe, onPick) => {
+      el.innerHTML = `<div class="head">${head}</div>` + (items.length ? "" : `<div class="empty">Nothing here.</div>`);
+      items.forEach((item, i) => {
+        const row = document.createElement("div");
+        row.className = "item" + (i === selected ? " sel" : "");
+        row.innerHTML = `${this.esc(item.name)} <span class="what">${describe(item)}</span>`;
+        row.addEventListener("click", () => { onPick(i); this.fillBag(); });
+        el.appendChild(row);
+      });
+    };
+    list(this.$("#bag-list"), "Your pack", g.bag, this.bagRow, (i) => `(${g.describe(i)}, worth ${Math.floor(i.value / 2)} gold)`, (i) => { this.bagRow = i; });
+    if (shop) list(this.$("#shop-list"), "The merchant's wares", g.stock || [], this.shopRow,
+      (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
+    this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
+      const m = g.party[i];
+      b.textContent = `Give to ${m.cls}` + (m.hp <= 0 ? " (fallen)" : "");
+    });
+    const base = "Pick something from your pack, then who should equip or use it." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
+    this.$("#bag-note").dataset.base = base;
+    if (!this.$("#bag-note").textContent) this.$("#bag-note").textContent = base;
+  }
+};
+
+// ---- 80-main.js ----
+"use strict";
+// Where it all starts: the game, the window, the renderer and the sounds wired together, the keys, and the frame loop
+// (real time: a frame that comes late moves the camera as far as it should have).
+window.addEventListener("DOMContentLoaded", () => {
+  const game = new CM.Game();
+  const ui = new CM.UI(game, document.getElementById("app"));
+  const renderer = new CM.Renderer(ui.canvas);
+  const link = document.createElement("link");
+  link.rel = "icon"; link.href = CM.art.icon();
+  document.head.appendChild(link);
+  CM.game = game; CM.ui = ui; CM.renderer = renderer;                 // (for the tests, and for curiosity)
+
+  if (!renderer.ok) {
+    const warn = document.createElement("div");
+    warn.style.cssText = "position:fixed;left:0;right:0;top:0;padding:10px;background:#5A1010;color:#fff;font:14px Georgia;text-align:center;z-index:50";
+    warn.textContent = renderer.error + " The dungeon can't be shown, but the Hall of Fame and your saves are safe.";
+    document.body.appendChild(warn);
+  }
+
+  // ---- textures by depth, the floor's mesh, the camera ----
+  const artCache = {};
+  let themeOn = -1;
+  function useTheme(number) {
+    const i = CM.themeIndex(number);
+    if (i === themeOn || !renderer.ok) return;
+    if (!artCache[i]) artCache[i] = CM.art.build(CM.THEMES[i]);
+    renderer.setTextures(artCache[i]);
+    themeOn = i;
+  }
+  const demo = CM.makeFloor(1, "title");                                 // the corridor behind the title
+  let demoCell = null;
+  function showDemo() {
+    useTheme(1);
+    renderer.setFloor(demo, CM.THEMES[0]);
+    if (!demoCell) {                                                     // a square with a long view down a corridor
+      const dist = CM.distances(demo.grid, [1, 1]);
+      let best = null, score = -1;
+      for (const k of dist.keys()) {
+        const [x, y] = k.split(",").map(Number);
+        for (let f = 0; f < 4; f++) {
+          let d = 0;
+          while (d < 9 && demo.grid[y + CM.DIRS[f][1] * (d + 1)] && demo.grid[y + CM.DIRS[f][1] * (d + 1)][x + CM.DIRS[f][0] * (d + 1)] === 0) d++;
+          if (d > score) { score = d; best = [x, y, f]; }
+        }
+      }
+      demoCell = best || [1, 1, 2];
+    }
+    renderer.setCamera(demoCell[0], demoCell[1], demoCell[2]);
+    renderer.setSprites([]);
+  }
+  game.on("floor", (floor) => {
+    if (!renderer.ok) return;
+    useTheme(floor.number);
+    renderer.setFloor(floor, CM.themeFor(floor.number));
+    renderer.setCamera(floor.pos[0], floor.pos[1], floor.facing);
+  });
+  game.on("moved", (x, y) => renderer.moveTo(x, y, game.settings.smooth ? 180 : 0));
+  game.on("turned", (facing) => renderer.turnTo(facing, game.settings.smooth ? 160 : 0));
+  game.on("mode", (mode) => {
+    CM.audio.ambience(mode === "explore" || mode === "combat");
+    if (mode === "title") showDemo();
+    else if (game.floor && renderer.ok) {
+      useTheme(game.floor.number);
+      renderer.setFloor(game.floor, CM.themeFor(game.floor.number));
+      renderer.setCamera(game.floor.pos[0], game.floor.pos[1], game.floor.facing);
+    }
+  });
+  game.on("sound", (name) => CM.audio.play(name));
+  const applySettings = (s) => {
+    renderer.snap = !s.smooth;
+    CM.audio.setEnabled(s.sound);
+    CM.audio.setVolume(s.volume);
+    ui.$("#view .fps").classList.toggle("on", s.fps);
+  };
+  game.on("settings", applySettings);
+  applySettings(game.settings);
+
+  // ---- what stands in the corridors: the floor's things, or the foes of the fight ----
+  const dying = new Map();                                               // foe -> when it fell
+  const flashes = new Map();                                             // foe -> flash left
+  game.on("fx", (fx) => {
+    if (fx.kind === "hit") flashes.set(fx.foe, 1);
+    if (fx.kind === "die") dying.set(fx.foe, performance.now());
+    if ((fx.kind === "hit" || fx.kind === "miss") && renderer.ok) {
+      const where = foePlace(fx.foe);
+      const at = where && renderer.project(where.wx, where.wh, where.wz);
+      if (at) ui.floatText(at[0], at[1] - 10, fx.kind === "miss" ? "miss" : String(fx.amount), fx.kind === "miss" ? "miss" : fx.spell ? "spell" : "");
+    }
+  });
+  game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); } });
+
+  function foePlace(foe) {
+    if (game.mode !== "combat" || !game.foeKey) return null;
+    const [x, y] = game.foeKey.split(",").map(Number);
+    const foes = game.foes, i = foes.indexOf(foe), n = foes.length;
+    const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
+    const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * 0.32, -0.42, 0.42);
+    const back = (i % 2) * 0.12;
+    const fwd = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
+    const dx = right[0] * off + fwd[0] * back, dz = right[1] * off + fwd[1] * back;
+    const big = foe.boss ? 1.25 : 0.85;
+    return { x, y, dx, dz, w: big, h: big, wx: x + 0.5 + dx, wz: y + 0.5 + dz, wh: big + 0.02, m: foe };
+  }
+
+  function sprites() {
+    const fl = game.floor, out = [], hud = [];
+    if (!fl) return { out, hud };
+    const now = performance.now();
+    for (const [key, thing] of Object.entries(fl.things)) {
+      const [x, y] = key.split(",").map(Number);
+      if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue;
+      if (thing.type === "chest") out.push({ x, y, layer: "chest", w: 0.75, h: 0.75 });
+      else if (thing.type === "ladder") out.push({ x, y, layer: "hatch", w: 0.92, flat: true });
+      else if ((thing.type === "monsters" || thing.type === "boss") && !(game.mode === "combat" && key === game.foeKey)) {
+        const m = thing.group[0];
+        out.push({ x, y, layer: `monster:${m.name}`, w: m.boss ? 1.25 : 0.85, h: m.boss ? 1.25 : 0.85 });
+      }
+    }
+    if (game.mode === "combat") {
+      for (const m of game.foes) {
+        const place = foePlace(m);
+        if (!place) continue;
+        let alpha = 1;
+        if (m.hp <= 0) {
+          const t = (now - (dying.get(m) || now)) / 700;
+          if (t >= 1) continue;
+          alpha = 1 - t;
+        } else hud.push(place);
+        const flash = flashes.get(m) || 0;
+        if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
+        out.push(Object.assign({ layer: `monster:${m.name}`, flash: flash * 0.8, alpha }, place));
+      }
+    }
+    return { out, hud };
+  }
+
+  // ---- keys ----
+  const held = new Set();
+  const MOVES = { KeyW: ["move", 0], ArrowUp: ["move", 0], KeyS: ["move", 2], ArrowDown: ["move", 2], KeyA: ["turn", -1], ArrowLeft: ["turn", -1],
+    KeyD: ["turn", 1], ArrowRight: ["turn", 1], KeyQ: ["move", 3], KeyE: ["move", 1] };
+  function act(code) {
+    const m = MOVES[code];
+    if (!m || game.mode !== "explore") return false;
+    if (m[0] === "move") game.move(m[1]); else game.turn(m[1]);
+    return true;
+  }
+  window.addEventListener("keydown", (e) => {
+    CM.audio.unlock();
+    if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) {
+      if (e.code === "Enter" && e.target.id === "seed") ui.startNew();
+      return;
+    }
+    if (ui.dialogOpen()) { if (e.code === "Escape" || (e.code === "Tab" && ui.$("#bigmap").classList.contains("on"))) { e.preventDefault(); ui.closeDialogs(); } return; }
+    if (ui.screen === "title") {
+      if (e.code === "Enter" || e.code === "Space") { e.preventDefault(); if (game.canContinue()) game.continueRun(); else ui.startNew(); }
+      return;
+    }
+    if (ui.screen === "bag") { if (e.code === "Escape" || e.code === "KeyI") game.closeBag(); return; }
+    if (e.code === "Escape") { e.preventDefault(); ui.openDialog("#dlg-pause"); return; }
+    if (e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
+    if (game.mode === "explore") {
+      if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
+      if (e.code === "Space") { e.preventDefault(); game.use(); }
+      else if (e.code === "KeyI") game.openBag();
+    } else if (game.mode === "combat") {
+      const a = { KeyF: "fight", KeyC: "cast", KeyP: "potion", KeyR: "run" }[e.code];
+      if (a) game.combatRound(a);
+    } else if (game.mode === "camp") {
+      if (e.code === "KeyI") game.openBag();
+    }
+  });
+  window.addEventListener("keyup", (e) => held.delete(e.code));
+  window.addEventListener("blur", () => held.clear());
+  window.addEventListener("pointerdown", () => CM.audio.unlock(), { once: false });
+
+  // ---- the frame loop ----
+  let last = performance.now(), fpsTime = 0, frames = 0, fps = 0;
+  function frame(now) {
+    const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
+    last = now;
+    if (renderer.ok) {
+      renderer.resize();
+      if (game.mode === "title") {
+        renderer.yaw += dt * 0.08;                                        // a slow look around
+        renderer.setSprites([]);
+      } else {
+        if (game.mode === "explore" && !renderer.busy && held.size) {
+          for (const code of held) if (act(code)) break;                  // walking while the key is held
+        }
+        const { out, hud } = sprites();
+        renderer.setSprites(out);
+        renderer.frame(dt);
+        ui.drawHud(hud, (x, y, z) => renderer.project(x, y, z));
+      }
+      if (game.mode === "title") renderer.frame(dt);
+    }
+    frames++; fpsTime += dt;
+    if (fpsTime >= 0.5) { fps = Math.round(frames / fpsTime); frames = 0; fpsTime = 0; ui.$("#view .fps").textContent = `${fps} fps`; }
+    requestAnimationFrame(frame);
+  }
+  showDemo();
+  requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>

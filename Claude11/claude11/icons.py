@@ -30,7 +30,7 @@ DESKTOP_SHORTCUTS = ["iexplore", "firefox", "telegram", "discord", "claudeai", "
                      "qbstudio"]
 # programs that also get a loose desktop icon of their own, besides the one in their folder (added once, even on a
 # desktop made before they existed)
-LOOSE_TOO = ["hollow", "bluesky", "autopilot", "qbstudio"]
+LOOSE_TOO = ["hollow", "bluesky", "autopilot", "qbstudio", "claudemagic"]
 
 
 def std(which):

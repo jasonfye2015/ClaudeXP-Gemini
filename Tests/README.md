@@ -24,6 +24,7 @@ It takes about two minutes and says, line by line, what passed. The whole report
 |---|---|
 | `test_code.py` | Every Python file compiles without warnings; pyflakes finds no undefined names; the launcher's self-check finds nothing that would stop a computer |
 | `test_model_threads.py` | The crash of 27-28 October 2026 can't come back: the model threads behind Soul and Song, Kithylin AI and the code studios are never let go of while running |
+| `test_claudemagic.py` | Claude and Magic, the one-file game, driven in Qt WebEngine offscreen on a scratch profile: the built file matches its source, every floor is solvable and stocked (and the same from the same seed), the old game's rules hold (fights, levelling, chests, the camp, the Hall of Fame), a run saves and comes back after a reload and travels as text, the first-person view draws with WebGL, and the Timeline's window opens, takes the old Python game's saves once, and closes |
 | `test_loops.py` | A model going round in circles can't spread (Kithylin's night of 28-29 October 2026): what counts as a loop and what doesn't (a chorus, a refrain, "hehe"), the engine asking for llama.cpp's DRY sampler and stopping a loop as it's written, Kithylin AI and Soul and Song keeping a reply only up to where its repeats began, and retraining never taught one |
 | `test_soulsong.py` | Soul and Song on a stand-in model: the memory banks sized to the context and classic 7:7:7 over weeks of made-up days, Interlink's three modes, and the window (talking, the raw log, the memory bars, Settings) |
 | `test_inner_life.py` | Soul and Song's inner life: free time (and the encyclopedia finding the right article), the beliefs record, fading memories, and their own rules changing only with your leave |
@@ -37,7 +38,7 @@ It takes about two minutes and says, line by line, what passed. The whole report
 | `test_persona_styles.py` | The frozen Contact Persona Styles still fit today's code (the AIM replies that failed on 26 October 2026) |
 | `test_backup.py` | Backup settings, a backup and restore on a make-believe Timeline, and every part pointing at a real folder |
 | `test_manual.py` | The Manual's links and pictures, its contents page, and its program list matching the computers |
-| `test_standalone.py` | The launcher's APPS: each app opens and closes on its own through the stand-in host, runs its own engine there, runs once (started again, the one open comes forward), and the APPS window starts each the right way - or brings forward the one already open |
+| `test_standalone.py` | The launcher's APPS (Soul and Song, ClaudeRPG, Claude and Magic, the code studios): each app opens and closes on its own through the stand-in host, runs its own engine there, runs once (started again, the one open comes forward), and the APPS window starts each the right way - or brings forward the one already open |
 | `test_computer_xp.py`, `_7`, `_11` | (slow) each computer booted for real in a sandbox: power on to the desktop, the Start menu, programs opening and closing, logging off, shutting down |
 | `ClaudeCore\tests\` | the resident loader and the relocation check |
 

@@ -1,5 +1,5 @@
-"""The launcher's APPS: Soul and Song, ClaudeRPG and the two code studios open and close on their own through the
-stand-in host (claudecore.standalone), on scratch folders and an empty Local Storage; Kithylin AI and Soul and Song
+"""The launcher's APPS: Soul and Song, ClaudeRPG, Claude and Magic and the two code studios open and close on their
+own through the stand-in host (claudecore.standalone), on scratch folders and an empty Local Storage; Kithylin AI and Soul and Song
 run their own engine there, not a computer's; each runs once (started again, the one open comes forward); and the
 APPS window starts each with the right command - or brings forward the one already open - refusing the ones that
 share files with a computer while one runs."""
@@ -51,6 +51,16 @@ def test_soulsong():
 def test_rpg():
     """ClaudeRPG opens and closes on its own"""
     _open_and_close("rpg")
+
+
+def test_claudemagic():
+    """Claude and Magic opens and closes on its own (on a scratch profile: its real saves are never touched)"""
+    import claudemagic as M
+    saves = support.scratch("claudemagic saves")
+    M.SAVES = M.PROFILE_DIR = saves
+    M.RUN_FILE, M.FAME_FILE = saves / "run.json", saves / "hall_of_fame.json"
+    M._profile = None
+    _open_and_close("claudemagic")
 
 
 def test_pystudio():
@@ -161,7 +171,7 @@ def test_one_copy_at_a_time():
 
 
 def test_the_apps_window():
-    """The launcher's APPS window: five apps with icons, each started the right way, once - and one already open
+    """The launcher's APPS window: six apps with icons, each started the right way, once - and one already open
     brought forward instead"""
     sys.path.insert(0, str(support.TIMELINE / "ClaudeLauncher"))
     from systec import ui
@@ -179,7 +189,7 @@ def test_the_apps_window():
         w.apps_window()
         a = w._apps
         support.pump(0.3)
-        assert list(a.tiles) == ["kithylinai", "soulsong", "rpg", "pystudio", "qbstudio"], list(a.tiles)
+        assert list(a.tiles) == ["kithylinai", "soulsong", "rpg", "claudemagic", "pystudio", "qbstudio"], list(a.tiles)
         assert all(not t.icon().isNull() for t in a.tiles.values()), "an app has no icon"
         a.start("qbstudio")
         a.start("kithylinai")

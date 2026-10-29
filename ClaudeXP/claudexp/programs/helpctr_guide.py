@@ -156,9 +156,10 @@ CATALOG = {
                           "chests."),
     "claudeggle": ("games", "Claudeggle: a Peggle-style ball-and-peg game - twelve levels, clear the orange pegs in ten "
                             "balls, with green-peg powers, a free-ball bucket and Extreme Fever."),
-    "claudemagic": ("games", "Claude and Magic: a grid-based dungeon crawler for a party of four - twenty floors, "
-                             "an automap, loot and gear, merchant camps every five floors, and the Lich King at the "
-                             "bottom. When the whole party falls, the run starts over."),
+    "claudemagic": ("games", "Claude and Magic: a first-person dungeon crawler for a party of four, in 3D - twenty "
+                             "floors, an automap, loot and gear, merchant camps every five floors, and the Lich King at "
+                             "the bottom. When the whole party falls, the run starts over. One HTML file: it plays in a "
+                             "browser too, and on its own from the launcher's APPS."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
     "claudeout": ("games", "Claudeout 4: a first-person game after the opening of Fallout 4, in two parts. Part "
