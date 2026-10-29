@@ -112,6 +112,8 @@ CM.UI = class {
     game.on("mode", (mode) => this.show(mode === "title" ? "title" : "play"));
     game.on("bag", (open) => (open ? this.openBag() : this.show("play")));
     game.on("fx", (fx) => this.fx(fx));
+    game.on("turn", () => { this.cmenu = { kind: "main" }; });
+    game.on("mode", (mode) => { if (mode !== "combat") this.cmenu = { kind: "main" }; this.xmenu = null; });
     game.on("lore", (text) => { this.$("#lore-text").textContent = text; this.openDialog("#dlg-lore"); });
     game.on("teleported", () => this.flash(".blink", 60));
     game.on("fell", () => this.flash(".fall", 350));
@@ -374,9 +376,10 @@ CM.UI = class {
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
     let lit = l.kind === "lantern" ? "Lantern lit" : l.kind === "torch" ? (l.left > 40 ? `Torch: ${l.left} steps left` : `Torch burning low: ${l.left}`) : "No light!";
+    if (g.spellLight > 0) lit += ` - conjured light: ${g.spellLight} steps`;
     if (fl && g.inDark()) lit += " - a magical dark";
     light.textContent = lit;
-    light.classList.toggle("dark", !l.kind || g.inDark());
+    light.classList.toggle("dark", !g.hasLight() || g.inDark());
     const hint = this.$("#view .hint");
     if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper, or back up.";
     else if (g.mode === "combat") hint.textContent = "";
@@ -386,7 +389,8 @@ CM.UI = class {
       let text = "";
       if (f && f.type === "lever" && f.face === fl.facing) text = f.pulled ? "The lever, pulled." : "A lever on the wall. Space pulls it.";
       else if (f && f.type === "carving" && f.face === fl.facing) text = "Runes carved into the wall. Space reads them.";
-      else if (thing) text = { chest: "A chest. Space opens it.", ladder: "A ladder down. Space climbs it.", stairs_up: "The stairs up. Space climbs them." }[thing.type] || "";
+      else if (thing) text = { chest: "A chest. Space opens it.", ladder: "A ladder down. Space climbs it.", stairs_up: "The stairs up. Space climbs them.",
+        phylactery: "A cold box with a slow beat inside it. Space smashes it." }[thing.type] || "";
       else if (f && f.type === "fountain") text = f.used ? "A dry fountain." : "A fountain. Space drinks.";
       else if (f && f.type === "altar") text = f.used ? "A quiet altar." : "An altar. Space kneels.";
       else if (ahead && ahead.type === "door" && !ahead.open) text = ahead.locked ? "A locked door. Walk into it with a key." : "A door. Walk into it to open it.";
@@ -447,26 +451,156 @@ CM.UI = class {
 
   renderActions() {
     const g = this.game, box = this.$("#actions");
+    if (g.mode === "combat") { this.renderCombat(); return; }
+    box.classList.remove("combat");
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
-        ["Use (Space)", () => g.use()], ["Inventory (I)", () => g.openBag()], ["Map (Tab)", () => this.toggleBigMap()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
-      combat: [["Fight (F)", () => g.combatRound("fight")], ["Cast (C)", () => g.combatRound("cast")],
-        ["Potion (P)", () => g.combatRound("potion")], ["Run (R)", () => g.combatRound("run")]],
+        ["Use (Space)", () => g.use()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Map (Tab)", () => this.toggleBigMap()],
+        ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
-        ["Inventory", () => g.openBag()], ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()],
+        ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
-    const wanted = sets[g.mode] || [];
-    if (box.dataset.mode !== g.mode) {
-      box.innerHTML = "";
-      box.dataset.mode = g.mode;
-      for (const [text, slot] of wanted) {
-        const b = document.createElement("button");
-        b.textContent = text;
-        b.addEventListener("click", () => { slot(); });
-        box.appendChild(b);
-      }
+    const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
+    if (box.dataset.mode === key) return;
+    box.innerHTML = "";
+    box.dataset.mode = key;
+    const btn = (html, fn, disabled, cls) => {
+      const b = document.createElement("button");
+      b.innerHTML = html;
+      b.disabled = Boolean(disabled);
+      if (cls) b.className = cls;
+      b.addEventListener("click", fn);
+      box.appendChild(b);
+      return b;
+    };
+    if (this.xmenu && this.xmenu.kind === "list") {                       // between fights: who casts what
+      const choices = this.outsideChoices();
+      choices.forEach((ch, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(ch.hero.name)}: ${CM.ABILITIES[ch.id].name}<small>${CM.ABILITIES[ch.id].mp} MP - ${CM.ABILITIES[ch.id].what}</small>`,
+        () => this.outsidePick(ch), false, "pick"));
+      if (!choices.length) { const none = document.createElement("span"); none.className = "small"; none.textContent = "No one has a spell for outside a fight, or the magic for it."; box.appendChild(none); }
+      btn("<kbd>Esc</kbd>Back", () => this.closeMenu());
+      return;
     }
+    if (this.xmenu && this.xmenu.kind === "ally") {
+      g.party.forEach((p, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(p.name)}<small>${p.hp <= 0 ? "fallen" : `${p.hp}/${p.max}`}</small>`,
+        () => this.outsideAlly(i), this.xmenu.fallen ? p.hp > 0 : p.hp <= 0, "pick"));
+      btn("<kbd>Esc</kbd>Back", () => this.closeMenu());
+      return;
+    }
+    for (const [text, slot] of sets[g.mode] || []) btn(text, slot);
+  }
+
+  // ---- between fights: healing, cures and Light, from whoever knows them ----
+  outsideChoices() {
+    const out = [];
+    this.game.party.forEach((hero, hi) => {
+      if (hero.hp <= 0 || !this.game.canAct(hero)) return;
+      for (const id of CM.abilitiesFor(hero)) {
+        const a = CM.ABILITIES[id];
+        if (a.outside && hero.mp >= a.mp) out.push({ hero, hi, id });
+      }
+    });
+    return out;
+  }
+  outsideCast() { this.xmenu = { kind: "list" }; this.refresh(); }
+  outsidePick(ch) {
+    const a = CM.ABILITIES[ch.id];
+    if (a.target === "ally" || a.target === "fallen") { this.xmenu = { kind: "ally", id: ch.id, hero: ch.hi, fallen: a.target === "fallen" }; this.refresh(); return; }
+    this.game.castOutside(ch.hi, ch.id, null);
+    this.closeMenu();
+  }
+  outsideAlly(i) { const m = this.xmenu; this.game.castOutside(m.hero, m.id, i); this.closeMenu(); }
+  closeMenu() { this.xmenu = null; this.refresh(); }
+  pickOutside(n) {
+    const buttons = [...this.$("#actions").querySelectorAll("button.pick")], b = buttons[n - 1];
+    if (b && !b.disabled) { b.click(); return true; }
+    return false;
+  }
+
+  // ---- the fight: whose turn it is, what they'll do, at whom ----
+  renderCombat() {
+    const g = this.game, box = this.$("#actions"), c = g.combat || {}, h = c.waiting;
+    box.classList.add("combat");
+    box.dataset.mode = "combat";
+    box.innerHTML = "";
+    const turn = document.createElement("div");
+    turn.className = "turn";
+    turn.innerHTML = h ? `Round ${c.round || 1} <small>-</small> ${this.esc(h.name)}'s turn` : `Round ${c.round || 1} <small>- the foes move</small>`;
+    box.appendChild(turn);
+    const menu = document.createElement("div");
+    menu.className = "menu";
+    const btn = (html, fn, disabled, cls) => {
+      const b = document.createElement("button");
+      b.innerHTML = html;
+      b.disabled = Boolean(disabled);
+      if (cls) b.className = cls;
+      b.addEventListener("click", fn);
+      menu.appendChild(b);
+      return b;
+    };
+    const cm = this.cmenu || { kind: "main" };
+    if (h && cm.kind === "main") {
+      btn("<kbd>F</kbd>Fight", () => g.act("fight", g.target));
+      btn("<kbd>C</kbd>Cast / Skill", () => this.combatMenu("cast"), !CM.abilitiesFor(h).length);
+      btn("<kbd>P</kbd>Item", () => this.combatMenu("item"));
+      btn("<kbd>D</kbd>Defend", () => g.act("defend"));
+      btn("<kbd>R</kbd>Run", () => g.act("run"));
+    } else if (h && cm.kind === "cast") {
+      CM.abilitiesFor(h).forEach((id, i) => {
+        const a = CM.ABILITIES[id], used = a.once && h.used && h.used[id], poor = h.mp < a.mp;
+        btn(`<kbd>${i + 1}</kbd>${a.name}<small>${a.mp ? a.mp + " MP - " : ""}${used ? "used this fight" : a.what}</small>`, () => this.castPick(id), used || poor, "pick");
+      });
+      btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
+    } else if (h && cm.kind === "item") {
+      const rows = this.usableRows();
+      rows.forEach((row, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(g.bag[row].name)}<small>${g.describe(g.bag[row])}</small>`, () => this.itemPick(row), false, "pick"));
+      if (!rows.length) { const none = document.createElement("span"); none.className = "small"; none.textContent = "Nothing in the pack for a fight."; menu.appendChild(none); }
+      btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
+    } else if (h && cm.kind === "ally") {
+      g.party.forEach((p, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(p.name)}<small>${p.hp <= 0 ? "fallen" : `${p.hp}/${p.max}`}</small>`,
+        () => this.allyPick(i), cm.fallen ? p.hp > 0 : p.hp <= 0, "pick"));
+      btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
+    }
+    box.appendChild(menu);
+    const targets = document.createElement("div");
+    targets.className = "targets";
+    g.living().forEach((m, i) => {
+      const b = document.createElement("button");
+      b.className = i === (g.target || 0) ? "chosen" : "";
+      b.innerHTML = `${this.esc(m.name)} <small>${Math.max(0, m.hp)}/${m.max}${m.asleep > 0 ? " - asleep" : ""}${m.held > 0 ? " - held" : ""}${m.marked ? " - marked" : ""}</small>`;
+      b.addEventListener("click", () => g.setTarget(i));
+      targets.appendChild(b);
+    });
+    box.appendChild(targets);
+  }
+
+  combatMenu(kind, data) { this.cmenu = Object.assign({ kind }, data || {}); this.renderCombat(); }
+  usableRows() { return this.game.bag.map((it, i) => (["heal", "mana", "antidote", "revive"].includes(it.kind) ? i : -1)).filter((i) => i >= 0); }
+
+  castPick(id) {
+    const g = this.game, a = CM.ABILITIES[id];
+    if (a.target === "ally" || a.target === "fallen") { this.combatMenu("ally", { id, fallen: a.target === "fallen" }); return; }
+    g.act("cast", a.target === "foe" ? { id, target: g.target } : { id });
+    this.refresh();
+  }
+
+  itemPick(row) { this.combatMenu("ally", { row, fallen: this.game.bag[row].kind === "revive" }); }
+
+  allyPick(i) {
+    const cm = this.cmenu || {};
+    if (cm.row !== undefined) this.game.act("item", { row: cm.row, who: i });
+    else this.game.act("cast", { id: cm.id, target: i });
+    this.refresh();
+  }
+
+  // a number key in a fight: the chosen foe, or a pick from the open list
+  pick(n) {
+    const g = this.game, cm = this.cmenu || { kind: "main" };
+    if (cm.kind === "main") { g.setTarget(n - 1); return true; }
+    const buttons = [...this.$("#actions .menu").querySelectorAll("button.pick")], b = buttons[n - 1];
+    if (b && !b.disabled) { b.click(); return true; }
+    return false;
   }
 
   toggleBigMap() {
@@ -495,7 +629,7 @@ CM.UI = class {
       if (f && !wall) this.drawFeature(p, f, x, y, cell, fl);
       const thing = fl.things[k];
       if (thing && !wall) {
-        p.fillStyle = colours[thing.type] || "#808080";
+        p.fillStyle = colours[thing.type] || (thing.type === "phylactery" ? "#60D0FF" : "#808080");
         if (thing.type === "stairs_up") { p.beginPath(); p.moveTo(cx, cy - cell * 0.35); p.lineTo(cx + cell * 0.35, cy + cell * 0.3); p.lineTo(cx - cell * 0.35, cy + cell * 0.3); p.fill(); }
         else if (thing.type === "ladder") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
         else { p.beginPath(); p.arc(cx, cy, cell * (thing.type === "key" ? 0.2 : 0.3), 0, Math.PI * 2); p.fill(); }
@@ -550,15 +684,22 @@ CM.UI = class {
     const p = hud.getContext("2d");
     p.setTransform(dpr, 0, 0, dpr, 0, 0);
     p.clearRect(0, 0, w, h);
+    this.lastHud = [];
     for (const f of foes) {
       const at = project(f.wx, f.wh, f.wz);
       if (!at) continue;
       const [sx, sy, depth] = at, bw = CM.clamp(120 / depth, 40, 110);
+      this.lastHud.push({ sx, sy, index: f.index });
       p.fillStyle = "#401010"; p.fillRect(sx - bw / 2, sy - 8, bw, 6);
       p.fillStyle = "#E03030"; p.fillRect(sx - bw / 2, sy - 8, bw * Math.max(0, f.m.hp) / f.m.max, 6);
+      const label = `${f.index !== undefined ? `[${f.index + 1}] ` : ""}${f.m.name}${f.m.asleep > 0 ? " z" : ""}`;
       p.font = `bold ${CM.clamp(26 / depth, 10, 14)}px Georgia`; p.textAlign = "center";
-      p.fillStyle = "#000"; p.fillText(f.m.name, sx + 1, sy - 12);
-      p.fillStyle = "#fff"; p.fillText(f.m.name, sx, sy - 13);
+      p.fillStyle = "#000"; p.fillText(label, sx + 1, sy - 12);
+      p.fillStyle = f.chosen ? "#F0C040" : "#fff"; p.fillText(label, sx, sy - 13);
+      if (f.chosen) {                                                   // the one your blows are for
+        p.strokeStyle = "#F0C040"; p.lineWidth = 2;
+        p.beginPath(); p.moveTo(sx - bw / 2 - 6, sy - 30); p.lineTo(sx - bw / 2 - 6, sy + 4); p.moveTo(sx + bw / 2 + 6, sy - 30); p.lineTo(sx + bw / 2 + 6, sy + 4); p.stroke();
+      }
     }
   }
 

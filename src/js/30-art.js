@@ -491,6 +491,23 @@ CM.art.key = function () {
   return c;
 };
 
+CM.art.phylactery = function () {                                          // the box from the east, on a plinth, lit from within
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
+  p.clearRect(0, 0, S, S);
+  p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(cx, ground - 2, 70, 9, 0, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.rect(cx - 50, ground - 60, 100, 60); }, "#4A4A52");
+  outlined(p, () => { p.rect(cx - 60, ground - 70, 120, 14); }, "#5E5E68");
+  const g = p.createRadialGradient(cx, ground - 110, 4, cx, ground - 110, 70);
+  g.addColorStop(0, "rgba(120,220,255,0.9)"); g.addColorStop(0.5, "rgba(60,140,200,0.35)"); g.addColorStop(1, "rgba(40,80,140,0)");
+  p.fillStyle = g; p.beginPath(); p.arc(cx, ground - 110, 70, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.rect(cx - 34, ground - 130, 68, 56); }, "#1E2A3A", "#0A0E14", 4);
+  p.strokeStyle = "#8AC8F0"; p.lineWidth = 3;
+  p.strokeRect(cx - 28, ground - 124, 56, 44);
+  p.beginPath(); p.moveTo(cx - 34, ground - 102); p.lineTo(cx + 34, ground - 102); p.stroke();
+  p.fillStyle = "#C8ECFF"; p.beginPath(); p.arc(cx, ground - 102, 7, 0, Math.PI * 2); p.fill();   // the clasp, glowing
+  return c;
+};
+
 CM.art.secretWall = function (theme, seed) {                               // a wall like the others, with a hairline round a door's shape
   const c = CM.art.wall(theme, seed, false), p = c.getContext("2d"), S = ART_SIZE;
   p.strokeStyle = rgb(theme.mortar, 0.45, 0.55); p.lineWidth = 2;
@@ -596,6 +613,7 @@ CM.art.build = function (theme) {
   add("carving", CM.art.carving());
   add("stairs_up", CM.art.stairsUp(theme));
   add("key", CM.art.key());
+  add("phylactery", CM.art.phylactery());
   for (const m of CM.MONSTERS) add(`monster:${m.name}`, CM.art.monster(m));
   add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
   return { layers, index, size: ART_SIZE };

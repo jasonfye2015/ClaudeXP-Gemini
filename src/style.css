@@ -144,6 +144,16 @@ table.stats tr.key td.hint { color: var(--gold); }
 #log div { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #log div:last-child { color: var(--ink); }
 #actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+#actions.combat { flex-direction: column; align-items: center; gap: 5px; }
+#actions .turn { font: bold 13px var(--serif); color: var(--gold); }
+#actions .turn small { color: var(--dim); font-weight: normal; }
+#actions .menu, #actions .targets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+#actions .targets button { font-weight: normal; }
+#actions .targets button.chosen { border-color: var(--gold); color: var(--gold); background: #4A321A; }
+#actions button.pick small { display: block; color: var(--dim); font-weight: normal; font-size: 10.5px; }
+#actions button:disabled small { color: var(--faint); }
+#actions button kbd { margin-right: 4px; }
+#view canvas#hud { cursor: crosshair; }
 
 /* ---- the bag and the merchant ---- */
 #bag { flex-direction: column; padding: 14px; gap: 10px; }

@@ -38,6 +38,27 @@ The party (phase 3)
   Skin, Second Wind, Keen Eye, Thick Blood, Scavenger, War Cry. Press 1-4 (or click a card) for a hero's sheet: stats,
   rows, ailments, boons, and the choice when one is due.
 
+The fight (phase 4)
+  Turn by turn, in order of speed (Dexterity and the dice; monsters have a speed of their own): when a hero's turn
+  comes the bar under the view is theirs - Fight (F) the chosen foe (Tab, a number, or a click on a foe chooses),
+  Cast / Skill (C) from their book, Item (P), Defend (D: half the blows until their next turn), Run (R: more than
+  half the time, a Rogue helps, never from the Lich King; the party steps back a square). Surprise goes both ways:
+  monsters that come at you out of the dark may strike first; a party with a Rogue or Ranger often gets a free
+  round. In a corridor only two foes can reach you at once.
+  Books and skills come with the levels (CM.ABILITIES in 10-data.js): the Mage's Magic Missile, Fire Bolt, Light,
+  Sleep, Frost, Fireball, Blink, Lightning; the Cleric's Heal, Cure, Bless, Turn Undead, Protection, Lift,
+  Sanctuary, Raise Dead; the Paladin's Lay on Hands, Smite, Bless; the Druid's Thorns, Mend, Entangle, Regrowth,
+  Call Lightning; the Bard's Song, Mockery, Lullaby, Rally; the Ranger's Volley, Aimed Shot, Mark; the Knight's
+  Guard, Taunt, Shield Bash; the Rogue's Dirty Trick - and Pick Lock, which works on its own (walk into a locked
+  door without a key). Healing, cures and Light can be cast between fights (C on the way).
+  Monsters have ways of their own: goblins and dark elves shoot over the front row, kobolds bolt with a purse when
+  hurt, orcs land savage blows, trolls knit each round, wraiths drain experience, ogres knock flat, minotaurs
+  charge, vampires feed on every blow, demons breathe fire on everyone, wyverns strike two at once. Deeper down,
+  groups mix two kinds, and one in eight has a leader: Hulking, Swift, Venomous, Ancient, Cunning or Ravenous.
+  The Lich King: hurt past half, he calls skeletons up out of the floor; near his end, a deathly cold on everyone;
+  and killed, he rises again at two fifths of his strength - as often as you kill him - unless his phylactery, a
+  cold box on floor 19, has been smashed (Space). The carvings say so.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds with Web Audio, in code - there are no pictures or sound files to
@@ -70,5 +91,6 @@ The source
 
 Keys
   W/Up forward, S/Down back, A/Left and D/Right turn, Q/E sidestep, Space use (a chest, the ladder or stairs, a
-  fountain, an altar, a lever or carving on the wall you face - or search that wall), I inventory, Tab the automap
-  large, Esc the menu. In a fight: F fight, C cast, P potion, R run. F3 shows frames per second.
+  fountain, an altar, a lever or carving on the wall you face - or search that wall), C cast between fights, I
+  inventory, 1-4 a hero's sheet, Tab the automap large, Esc the menu. In a fight: F fight the chosen foe, C cast or
+  a skill, P an item, D defend, R run, Tab or 1-9 or a click to choose the foe, Esc back. F3 shows frames per second.
