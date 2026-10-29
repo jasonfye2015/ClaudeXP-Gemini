@@ -26,12 +26,13 @@ CM.Game = class {
     this.stock = null; this.shopping = false;
     this.rnd = new CM.Random(Math.floor(Math.random() * 4294967296));
     this.fame = CM.store.get("fame", []);
-    this.settings = Object.assign({ sound: true, volume: 0.6, smooth: true, fps: false }, CM.store.get("settings", {}));
+    this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false }, CM.store.get("settings", {}));
+    this.tally = this.freshTally();      // what this run has come to: steps, kills, chests, fights, fled
     this.lastRun = CM.store.get("run", null);        // a run left part way, to continue
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
 
-  // ---- events: change (redraw), message, mode, floor, moved, turned, fx, sound, mesh, teleported, fell, spin, lore ----
+  // ---- events: change (redraw), message, mode, floor, moved, turned, fx, sound, near, mesh, teleported, fell, spin, lore, over ----
   on(event, fn) { (this.listeners[event] = this.listeners[event] || []).push(fn); return this; }
   emit(event, ...args) { for (const fn of this.listeners[event] || []) fn(...args); }
 
@@ -44,6 +45,9 @@ CM.Game = class {
 
   sound(name) { this.emit("sound", name); }
 
+  freshTally() { return { steps: 0, kills: 0, chests: 0, fights: 0, fled: 0 }; }
+  count(what, n = 1) { if (!this.tally) this.tally = this.freshTally(); this.tally[what] = (this.tally[what] || 0) + n; }
+
   setMode(mode) { this.mode = mode; this.emit("mode", mode); this.emit("change"); }
 
   saveSettings() { CM.store.set("settings", this.settings); }
@@ -53,7 +57,7 @@ CM.Game = class {
     if (!["explore", "camp"].includes(this.mode)) return;
     const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, floors: this.floors, light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed,
-      saved: new Date().toISOString() };
+      tally: this.tally || this.freshTally(), saved: new Date().toISOString() };
     this.lastRun = data;
     CM.store.set("run", data);
     this.dirty = false; this.sinceSave = 0;
@@ -76,6 +80,7 @@ CM.Game = class {
     this.recruits = null;
     this.identifying = false;
     this.kit = d.kit || "pauper";
+    this.tally = Object.assign(this.freshTally(), d.tally || {});
     this.seed = d.seed || CM.randomSeed();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -86,7 +91,8 @@ CM.Game = class {
 
   endRun(won) {
     const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, date: CM.today(), seed: this.seed,
-      daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`) };
+      daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`),
+      kit: this.kit || "pauper", tally: Object.assign(this.freshTally(), this.tally || {}) };
     this.fame.push(entry);
     this.sortFame();
     CM.store.set("fame", this.fame);
@@ -95,7 +101,7 @@ CM.Game = class {
     this.sound(won ? "victory" : "death");
     this.titleNote = won ? "The Lich King is no more. The party returns as legends!"
       : `The party fell on floor ${this.floor.number}. Their story ends here.`;
-    this.emit("over", won);
+    this.emit("over", won, entry);
     this.setMode("title");
   }
 
@@ -155,6 +161,7 @@ CM.Game = class {
     this.combat = null;
     this.messages = [];
     this.titleNote = "";
+    this.tally = this.freshTally();
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
     else if (this.kit === "heir") for (const h of this.party) { h.weapon.power += 2; h.weapon.name += " +1"; h.weapon.props = Object.assign({}, h.weapon.props, { bonus: 1 }); h.weapon.value = 45; }
@@ -255,9 +262,11 @@ CM.Game = class {
             this.say(`${rogue.name} works at the lock... it won't give. Not yet.`);
             return false;
           }
+          this.sound("unlock");
           this.say(`${rogue.name} picks the lock, and the door swings open.`);
         } else {
           this.bag.splice(i, 1);
+          this.sound("unlock");
           this.say("The key turns, and the door swings open.");
         }
         f.locked = false;
@@ -265,7 +274,7 @@ CM.Game = class {
         this.say("The door creaks open.");
       }
       f.open = true;
-      this.sound("chest");
+      this.sound("door");
       this.dirty = true;
       this.emit("change");
       return false;
@@ -287,6 +296,7 @@ CM.Game = class {
     this.emit("moved", x, y);
     this.dirty = true;
     this.steps = (this.steps || 0) + 1;
+    this.count("steps");
     if (this.steps % 5 === 0) {                                          // poison walks with you
       for (const h of this.alive()) {
         const st = h.status || {};
@@ -327,7 +337,7 @@ CM.Game = class {
       const to = fl.features[keyOf(f.to[0], f.to[1])];
       if (to) to.known = true;
       fl.pos = f.to.slice();
-      this.sound("spell");
+      this.sound("teleport");
       this.look();
       this.emit("teleported", fl.pos[0], fl.pos[1]);
       this.say("The runes flare - and the walls around you are different ones.");
@@ -347,7 +357,7 @@ CM.Game = class {
   fall(from) {
     const n = this.floor.number;
     for (const m of this.alive()) m.hp = Math.max(1, m.hp - Math.max(1, Math.floor(m.max / 10)));
-    this.sound("hurt");
+    this.sound("fall");
     this.emit("fell");
     if (n >= CM.LAST_FLOOR) { this.say("You fall into blackness... and land, bruised, on the stone below."); return; }
     this.say(`You fall to floor ${n + 1}, bruised but alive.`);
@@ -419,7 +429,7 @@ CM.Game = class {
       here.pulled = true;
       const gate = fl.features[here.gate];
       if (gate) gate.open = true;
-      this.sound("stairs");
+      this.sound("lever");
       this.say("You haul the lever down. Somewhere, iron grinds upward.");
       this.dirty = true;
       this.emit("change");
@@ -440,7 +450,7 @@ CM.Game = class {
           this.say(`${rogue.name} finds ${CM.TRAPS[thing.trap]} on the lid, and sees to it.`);
           thing.trap = null;
         } else {
-          this.sound("hurt");
+          this.sound("trap");
           this.say(`The lid was trapped: ${CM.TRAPS[thing.trap]}!`);
           this.springTrap(thing.trap, k);
           thing.trap = null;
@@ -451,6 +461,7 @@ CM.Game = class {
       this.gold += thing.gold;
       this.bag.push(...thing.items);
       this.sound("chest");
+      this.count("chests");
       const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : i.name)).join(", ");
       this.say(`The chest creaks open: ${thing.gold} gold` + (found ? `, ${found}.` : "."));
       this.saveRun();
@@ -469,7 +480,7 @@ CM.Game = class {
     } else if (thing && thing.type === "phylactery") {
       delete fl.things[k];
       this.phylactery = true;
-      this.sound("spell");
+      this.sound("shatter");
       this.say("You lift the box from the east and dash it on the stone. Something inside screams - and far below, something else does.");
       this.emit("fx", { kind: "shatter" });
       this.saveRun();
@@ -482,7 +493,7 @@ CM.Game = class {
       if (ahead && ahead.type === "secret" && !ahead.found) {
         ahead.found = true;
         fl.grid[y + dy][x + dx] = 0;
-        this.sound("stairs");
+        this.sound("grind");
         this.say("You press the stones... and a hidden door grinds open!");
         this.look();
         this.emit("mesh");
@@ -566,6 +577,13 @@ CM.Game = class {
       return !(f && ["pit", "trapdoor", "teleporter", "spinner"].includes(f.type));
     };
     const dist = CM.distances(fl.grid, fl.pos, walk);
+    let nearest = null;                                                  // the nearest group within earshot: its call
+    for (const [k, t] of Object.entries(fl.things)) {
+      if (t.type !== "monsters" && t.type !== "boss") continue;
+      const d = dist.get(k);
+      if (d !== undefined && d <= 6 && (!nearest || d < nearest.d)) nearest = { d, t };
+    }
+    if (nearest) { const m = nearest.t.group.find((f) => f.hp > 0 && !f.fled) || nearest.t.group[0]; if (m) this.emit("near", m.kind || m.name, nearest.d); }
     const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still);
     this.rnd.shuffle(movers);
     for (const [k, t] of movers) {
@@ -606,7 +624,8 @@ CM.Game = class {
     this.target = 0;
     this.combat = { foes: this.foes, round: 0, order: [], index: 0, waiting: null, surprise: false, taunter: null, tauntUntil: 0, bless: false, protect: false, reached: 0 };
     this.setMode("combat");
-    this.sound("monster");
+    this.count("fights");
+    this.sound(CM.roarFor((this.foes[0] || {}).kind || (this.foes[0] || {}).name));
     const names = {};
     for (const m of this.foes) names[m.name] = (names[m.name] || 0) + 1;
     const who = Object.entries(names).map(([k, n]) => CM.plural(n, k)).join(", ");
@@ -730,6 +749,7 @@ CM.Game = class {
       lich.hp = Math.floor(lich.max * CM.LICH.riseTo);
       lich.dead = false;
       lich.risen = (lich.risen || 0) + 1;
+      this.sound("lich");
       this.say("The Lich King crumbles... and the bones knit again. Somewhere, his heart still beats.");
       this.summonSkeletons(2);
       this.emit("fx", { kind: "rise", foe: lich });
@@ -820,6 +840,7 @@ CM.Game = class {
       this.emit("moved", nx, ny);
     }
     this.say(sure ? "The world folds, and the party is elsewhere." : "The party flees back the way it came!");
+    this.count("fled");
     this.combat = null;
     this.setMode("explore");
     this.look();
@@ -856,6 +877,7 @@ CM.Game = class {
     let turns = { poison: 8, paralysis: 2, sleep: 3, blind: 4, curse: 999, stone: 999 }[status];
     if (turns < 900 && (h.boons || []).includes("thickblood")) turns = Math.ceil(turns / 2);
     h.status[status] = turns;
+    this.sound("ailment");
     this.say(`${h.name} is ${CM.STATUSES[status].name.toLowerCase()}!`);
     this.emit("fx", { kind: "ailment", hero: h, status });
     return true;
@@ -890,7 +912,7 @@ CM.Game = class {
     dmg = Math.max(1, dmg);
     h.hp -= dmg;
     if ((h.status || {}).sleep) delete h.status.sleep;                   // (a blow wakes)
-    this.sound("hurt");
+    this.sound(h.hp <= 0 ? "fallen" : "hurt");
     this.emit("fx", { kind: "hurt", hero: h, amount: dmg, foe: by });
     this.say(`The ${by.name} hits ${h.name} for ${dmg}${opts.how || ""}.` + (h.hp <= 0 ? `  ${h.name} falls!` : ""));
     if (h.hp > 0) {
@@ -982,6 +1004,7 @@ CM.Game = class {
       Object.assign(s, { summoned: true, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false });
       this.foes.push(s);
     }
+    this.sound("roar_undead");
     this.say(`The Lich King calls, and ${CM.plural(n, "skeleton")} claw up out of the floor!`);
     this.emit("fx", { kind: "summon" });
   }
@@ -991,6 +1014,7 @@ CM.Game = class {
     const rnd = this.rnd;
     if (!opts.sure && !rnd.chance(this.hitChance(hero))) {
       this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
+      this.sound("miss");
       this.emit("fx", { kind: "miss", foe: target });
       return 0;
     }
@@ -1231,6 +1255,7 @@ CM.Game = class {
   wonFight() {
     const rnd = this.rnd;
     const slain = this.foes.filter((m) => !m.fled);
+    this.count("kills", slain.length);
     const xp = slain.reduce((s, m) => s + m.xp, 0);
     let gold = slain.reduce((s, m) => s + m.gold, 0);
     if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);

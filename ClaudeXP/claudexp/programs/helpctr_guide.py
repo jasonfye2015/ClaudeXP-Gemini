@@ -164,8 +164,10 @@ CATALOG = {
                              "turn by turn with spell books, skills and monsters with ways of their own, merchant camps "
                              "with a temple and a tavern every five floors, kits unlocked between runs, a daily dungeon, "
                              "and the Lich King at the bottom - who rises again until his phylactery is found. "
-                             "When the whole party falls, the run starts over. One HTML file: it plays in a browser "
-                             "too, and on its own from the launcher's APPS."),
+                             "Music made as it plays, an ambience for each depth and a call for every monster, all in "
+                             "code. When the whole party falls, the run ends on a screen that tells how it went, and "
+                             "starts over. One HTML file: it plays in a browser too, and on its own from the "
+                             "launcher's APPS."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
     "claudeout": ("games", "Claudeout 4: a first-person game after the opening of Fallout 4, in two parts. Part "

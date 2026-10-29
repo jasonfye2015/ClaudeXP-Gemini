@@ -2,8 +2,9 @@
 profile - the real saves are never touched: the built file is current with its source; every floor is solvable and
 stocked, and the same from the same seed; the rules are the old game's (a fight ends, the party learns, a chest
 opens, the camp trades and rests, the run ends in the Hall of Fame); a run saves and comes back after the page
-reloads, and travels as text; the first-person view draws (WebGL, composited in software here); and the Timeline's
-window opens, hands the page the old Python game's saves once, and closes."""
+reloads, and travels as text; the first-person view draws (WebGL, composited in software here); the music is written
+from a seed and follows the mode and the depth, every sound is in its place and the ending sums the run up; and the
+Timeline's window opens, hands the page the old Python game's saves once, and closes."""
 import importlib.util
 import json
 import os
@@ -724,6 +725,113 @@ def test_the_view_draws():
     support.pump(0.6)
     px = ask("CM.renderer.pixel(Math.floor(CM.renderer.canvas.width / 2), Math.floor(CM.renderer.canvas.height * 0.85))")
     assert sum(px[:3]) > 10 and not ask("CM.renderer.gl.isContextLost()"), f"nothing behind the title: {px}"
+    said = [s for s in page().said if "Error" in s or "error" in s]
+    assert not said, f"the page's console: {said[:5]}"
+
+
+def test_the_sound_and_the_ending():
+    """Phase 6: the music is written from a seed (the same tune every time: four chords, sixty-four steps, a tune for
+    every kind) and follows the mode and the depth, as the ambience does; the new sounds are in their places (a
+    door's creak, the key, the secret door's grinding, the lever, the teleporter, a fall, a trapped lid, a monster's
+    call, a miss, a hero falling, an ailment) and footfalls change with the depth; something coming is heard before
+    it's seen; the run keeps a tally, saved with it; the ending sums a run up (victory and defeat, the party roll,
+    the tally, the place in the Hall of Fame) and its music follows; the Hall of Fame opens a row's details on a
+    click and plays a seed again; the title wears its emblem; the music settings are kept"""
+    run(PARSE)
+    got = ask(f"""(function(){{ const g = CM.game, out = {{}};
+      const fixed = (hit) => ({{next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l}});
+      // the music is written once, from a seed
+      const a = CM.music.tune('battle'), b = CM.music.tune('battle');
+      out.tune = a === b && a.melody.length === 64 && a.chords.length === 4 && a.melody.some(d => d !== null) && a.drums === true;
+      out.kinds = Object.keys(CM.music.kinds).every(k => CM.music.tune(k).melody.length === 64 && CM.music.tune(k).chords.length === 4);
+      out.differ = JSON.stringify(CM.music.tune('camp').melody) !== JSON.stringify(CM.music.tune('depth0').melody);
+      out.midi = CM.music.midi(a, 0) === a.root && CM.music.midi(a, a.scale.length) === a.root + 12 && Math.round(CM.music.hz(69)) === 440;
+      // ...and follows the mode and the depth, with the ambience
+      CM.store.remove('run'); g.lastRun = null; g.newGame({json.dumps(SEED)}); g.rnd = new CM.Random(7);
+      out.depthTune = CM.music.playing === 'depth0' && CM.audio.theme === 0 && CM.audio.ambientOn === true;
+      g.setMode('combat'); out.battleTune = CM.music.playing === 'battle';
+      g.setMode('camp'); out.campTune = CM.music.playing === 'camp' && CM.audio.theme === 4;
+      g.setMode('explore'); CM.useFloor(g, CM.testFloor(12, ['#####', '#X..#', '#####']));
+      out.hallsTune = CM.music.playing === 'depth2' && CM.audio.theme === 2;
+      // footfalls by depth (the window maps 'step' to the depth's own)
+      const played = [], origPlay = CM.audio.play; CM.audio.play = (n) => played.push(n);
+      g.move(0); out.hallStep = played.includes('step_hall');
+      CM.audio.play = origPlay;
+      // the sounds, in their places
+      const heard = []; g.on('sound', (n) => heard.push(n));
+      const nears = [], origNear = CM.audio.near; CM.audio.near = (k, s) => nears.push([k, s]);
+      let f = CM.useFloor(g, CM.testFloor(2, ['########', '#X.DKL>#', '########']));
+      g.move(0); g.move(0); out.door = heard.includes('door');
+      g.move(0); g.move(0); g.move(0); out.unlock = heard.includes('unlock');
+      f = CM.useFloor(g, CM.testFloor(2, ['#####', '#XS.#', '#####'])); g.use(); out.grind = heard.includes('grind');
+      f = CM.useFloor(g, CM.testFloor(2, ['#####', '#X/G#', '#####'])); g.move(0); g.turn(-1); g.use(); out.lever = heard.includes('lever') && f.features['3,1'].open;
+      f = CM.useFloor(g, CM.testFloor(2, ['######', '#XO.O#', '######'])); g.move(0); out.teleport = heard.includes('teleport') && g.floor.pos[0] === 4;
+      f = CM.useFloor(g, CM.testFloor(2, ['####', '#XP#', '####'])); g.move(0); out.fall = heard.includes('fall') && g.floor.number === 3;
+      f = CM.useFloor(g, CM.testFloor(3, ['####', '#XC#', '####'])); f.things['2,1'].trap = 'blade'; g.move(0);
+      const saveRnd = g.rnd; g.rnd = fixed(() => false); g.use(); g.rnd = saveRnd;
+      out.trap = heard.includes('trap') && heard.includes('chest') && !f.things['2,1'] && g.tally.chests >= 1;
+      f = CM.useFloor(g, CM.testFloor(3, ['#######', '#X...M#', '#######']));
+      g.wander = 0; g.tick(1.2);
+      out.near = nears.length > 0 && nears[0][1] > 0 && nears[0][1] <= 1 && CM.MONSTERS.some(m => m.name === nears[0][0]);
+      CM.audio.near = origNear;
+      const roars = new Set([...CM.MONSTERS.map(m => CM.roarFor(m.name)), CM.roarFor(CM.BOSS.name), CM.roarFor('Hulking Orc')]);
+      out.roars = [...roars].every(r => ['roar_small', 'roar_big', 'roar_beast', 'roar_undead', 'lich'].includes(r)) && roars.size === 5 && CM.roarFor('Hulking Orc') === 'roar_big';
+      f = CM.useFloor(g, CM.testFloor(3, ['####', '#XM#', '####'])); const fightsBefore = g.tally.fights; g.rnd = fixed(() => false); g.move(0);
+      out.roar = g.mode === 'combat' && heard.some(n => n.startsWith('roar_')) && g.tally.fights === fightsBefore + 1;
+      const hero = g.party[0], foe = g.foes[0];
+      g.strike(hero, foe); out.miss = heard.includes('miss');
+      g.afflict(g.party[2], 'poison', 'rat'); out.ailment = heard.includes('ailment') && g.party[2].status.poison > 0;
+      g.hurt(g.party[3], 9999, {{name: 'Test'}}); out.fallen = heard.includes('fallen') && g.party[3].hp <= 0;
+      g.rnd = new CM.Random(5);
+      // the tally, kept with the run
+      const killsBefore = g.tally.kills; g.wonFight(); out.kills = g.tally.kills === killsBefore + 1 && g.mode === 'explore';
+      g.saveRun(); out.tallySaved = g.lastRun.tally.steps === g.tally.steps && g.tally.steps > 5 && g.lastRun.tally.kills === g.tally.kills;
+      const steps = g.tally.steps; g.continueRun(); out.tallyBack = g.tally.steps === steps;
+      // the ending: victory
+      g.fame = []; g.party[3].hp = 0; g.party[0].hp = g.party[0].max; g.gold = 4321;
+      const sayOver = []; g.on('over', (won, entry) => sayOver.push([won, entry.tally.kills, entry.kit]));
+      g.endRun(true);
+      const dlg = document.querySelector('#dlg-over');
+      out.overEvent = sayOver.length === 1 && sayOver[0][0] === true && sayOver[0][1] === g.fame[0].tally.kills && sayOver[0][2] === 'pauper';
+      out.wonShown = dlg.classList.contains('on') && dlg.classList.contains('won') && document.querySelector('#over-title').textContent.includes('Lich King is no more');
+      out.wonText = document.querySelector('#over-text').textContent.includes(g.party[3].name) && document.querySelector('#over-text').textContent.includes('4,321');
+      out.roll = document.querySelectorAll('#over-party > div').length === 4 && document.querySelectorAll('#over-party .fallen').length === 1 && document.querySelectorAll('#over-party canvas').length === 4;
+      const tally = document.querySelector('#over-tally').textContent;
+      out.tallyShown = document.querySelectorAll('#over-tally > div').length === 9 && tally.includes('1st of 1') && tally.includes('Pauper');
+      out.victoryTune = CM.ui.ending === 'victory' && CM.music.playing === 'victory' && g.mode === 'title';
+      CM.ui.closeDialogs(); out.closed = !dlg.classList.contains('on') && CM.ui.ending === null && CM.music.playing === 'title';
+      // the Hall of Fame's details
+      const row = document.querySelector('#fame tr.row'); out.noDetails = !document.querySelector('#fame tr.details');
+      row.click(); const det = document.querySelector('#fame tr.details');
+      out.details = det && det.textContent.includes({json.dumps(SEED)}) && det.textContent.includes('slain') && det.textContent.includes(g.fame[0].party[0]);
+      document.querySelector('#seed').value = 'other'; det.querySelector('button[data-seed]').click(); out.playSeed = document.querySelector('#seed').value === {json.dumps(SEED)};
+      document.querySelector('#fame tr.row').click(); out.detailsClosed = !document.querySelector('#fame tr.details');
+      // the ending: defeat
+      g.newGame({json.dumps(SEED)}); g.endRun(false);
+      out.lostShown = dlg.classList.contains('on') && !dlg.classList.contains('won') && document.querySelector('#over-title').textContent.includes('fell on floor 1') && CM.music.playing === 'lament';
+      CM.ui.closeDialogs(); out.lamentOver = CM.music.playing === 'title';
+      // the emblem and the settings
+      const em = CM.art.emblem(64), px = em.getContext('2d').getImageData(32, 32, 1, 1).data;
+      out.emblem = em.width === 64 && px[3] > 0 && document.querySelector('#title h1 canvas') !== null && document.querySelector('#dlg-over .emblem-slot canvas') !== null;
+      const music = document.querySelector('#set-music'); music.checked = false; music.dispatchEvent(new Event('input'));
+      out.musicOff = g.settings.music === false && CM.music.enabled === false && CM.store.get('settings', {{}}).music === false;
+      music.checked = true; music.dispatchEvent(new Event('input')); out.musicOn = g.settings.music === true && CM.music.enabled === true;
+      const mvol = document.querySelector('#set-music-volume'); mvol.value = 30; mvol.dispatchEvent(new Event('input')); out.musicVolume = Math.abs(g.settings.musicVolume - 0.3) < 1e-9 && Math.abs(CM.music.volume - 0.3) < 1e-9;
+      mvol.value = 50; mvol.dispatchEvent(new Event('input'));
+      // the sounds themselves, where this page has an AudioContext (it needn't)
+      out.audio = null;
+      if (CM.audio.unlock() && CM.audio.ctx) {{
+        const names = Object.keys(CM.audio.buffers);
+        out.audio = ['door', 'unlock', 'lever', 'trap', 'teleport', 'fall', 'grind', 'miss', 'fallen', 'ailment', 'shatter', 'lich', 'roar_small', 'roar_big', 'roar_beast', 'roar_undead', 'step_water', 'step_hall', 'step_cold'].every(n => names.includes(n))
+          && [0, 1, 2, 3, 4].every(t => Math.round(CM.audio.ambient(t).duration) === 10) && Boolean(CM.music.master);
+      }}
+      return out; }})()""")
+    for key in ("tune", "kinds", "differ", "midi", "depthTune", "battleTune", "campTune", "hallsTune", "hallStep", "door", "unlock", "grind",
+                "lever", "teleport", "fall", "trap", "near", "roars", "roar", "miss", "ailment", "fallen", "kills", "tallySaved", "tallyBack",
+                "overEvent", "wonShown", "wonText", "roll", "tallyShown", "victoryTune", "closed", "noDetails", "details", "playSeed",
+                "detailsClosed", "lostShown", "lamentOver", "emblem", "musicOff", "musicOn", "musicVolume"):
+        assert got[key] is True, (key, got)
+    assert got["audio"] in (True, None), got
     said = [s for s in page().said if "Error" in s or "error" in s]
     assert not said, f"the page's console: {said[:5]}"
 
