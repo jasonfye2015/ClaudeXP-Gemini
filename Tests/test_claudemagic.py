@@ -209,7 +209,7 @@ def test_the_rules():
     for key in ("levelled", "chest", "camp", "bought", "poor", "cantAfford", "equipped", "sold", "rested", "tooPoorToRaise", "raised",
                 "deeper", "over"):
         assert got[key] is True, (key, got)
-    assert got["stock"] == 12 and got["lightSold"], got
+    assert got["stock"] == 16 and got["lightSold"], got
 
 
 PARSE = """
@@ -580,6 +580,109 @@ def test_the_fight():
       out.bar = bar.classList.contains('combat') && bar.querySelector('.turn').textContent.includes(g.combat.waiting.name) && bar.querySelectorAll('.targets button').length === g.living().length;
       CM.ui.combatMenu('cast'); out.castList = bar.querySelectorAll('.menu button.pick').length === CM.abilitiesFor(g.combat.waiting).length;
       CM.ui.combatMenu('main'); g.combat = null; g.setMode('explore');
+      return out; }})()""")
+    for key, value in got.items():
+        assert value is True, (key, got)
+
+
+def test_the_hoard():
+    """The hoard: every kind of thing turns up, with properties deeper down and nothing strange near the top; an
+    unknown thing shows its bare name until worn or identified; who may wear what (heavy armour, bows, shields,
+    two hands); rings count in the stats; a charm turns an ailment; a curse clings until the temple lifts it; a
+    blessed blade bites the undead; scrolls and wands between fights (Mapping, Identify, Teleport, a Wand of
+    Healing) and in them (Fire, Frost - a wand spent crumbles); a trapped chest seen to by the Rogue, or sprung
+    (a blade, an alarm that brings a fight); the tavern's recruits for the fallen and the scribe; what the deepest
+    run unlocks, the kits applied, today's dungeon, and the title that shows it all"""
+    run(PARSE)
+    got = ask(f"""(function(){{ const g = CM.game, out = {{}}, r = new CM.Random(21);
+      const fixed = (hit) => ({{next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l}});
+      const kinds = {{}}, seen = {{unknown: 0, cursed: 0, element: 0, bow: 0, twohanded: 0, bonus: 0}};
+      for (let i = 0; i < 600; i++) {{ const it = CM.makeItem(12, r); kinds[it.kind] = (kinds[it.kind] || 0) + 1; if (it.unknown) seen.unknown++;
+        const p = it.props || {{}}; if (p.cursed) seen.cursed++; if (p.element) seen.element++; if (p.bow) seen.bow++; if (p.twohanded) seen.twohanded++; if (p.bonus) seen.bonus++; }}
+      out.kinds = ['weapon', 'armor', 'heal', 'shield', 'helm', 'ring', 'amulet', 'scroll', 'wand'].every(k => kinds[k] > 0);
+      out.props = seen.unknown > 100 && seen.cursed > 3 && seen.element > 10 && seen.bow > 3 && seen.twohanded > 10 && seen.bonus > 20;
+      out.shallowPlain = Array.from({{length: 200}}, () => CM.makeItem(1, r)).every(it => !it.unknown && !(it.props && (it.props.cursed || it.props.element)));
+      const sword = {{name: 'Flaming Long Sword +1', kind: 'weapon', slot: 'weapon', power: 12, value: 300, props: {{element: 'fire', bonus: 1}}, unknown: true}};
+      out.label = CM.itemLabel(sword).startsWith('unknown') && CM.baseName(sword) === 'Long Sword' && (sword.unknown = false, CM.itemLabel(sword).includes('weapon +12') && CM.itemLabel(sword).includes('fire'));
+      // who may wear what
+      const mage = CM.makeHero('Mage', 'Ith', {{str: 10, dex: 10, con: 10, int: 14, wis: 10, luck: 10}}), knight = CM.makeHero('Knight', 'Dor', {{str: 14, dex: 10, con: 12, int: 8, wis: 8, luck: 10}});
+      const ranger = CM.makeHero('Ranger', 'Jor', {{str: 10, dex: 14, con: 10, int: 10, wis: 10, luck: 10}});
+      const plate = {{name: 'Plate Mail', kind: 'armor', slot: 'armor', power: 8, value: 900, props: {{weight: 'heavy'}}}};
+      const bow = {{name: 'Long Bow', kind: 'weapon', slot: 'weapon', power: 8, value: 200, props: {{bow: true, twohanded: true}}}};
+      const shield = {{name: 'Iron Shield', kind: 'shield', slot: 'offhand', power: 3, value: 180, props: {{}}}};
+      const axe = {{name: 'Battle Axe', kind: 'weapon', slot: 'weapon', power: 9, value: 300, props: {{twohanded: true}}}};
+      out.wearRules = CM.cantWear(mage, plate) !== '' && CM.cantWear(knight, plate) === '' && CM.cantWear(mage, bow) !== '' && CM.cantWear(ranger, bow) === '' && CM.cantWear(mage, shield) !== '' && CM.cantWear(knight, shield) === '';
+      // wearing things: slots, two hands, rings in the stats, unknown things learned, curses that cling
+      CM.store.remove('run'); g.lastRun = null; g.newGame({json.dumps(SEED)}); g.party = [knight, mage, ranger, CM.makeHero('Cleric', 'Val')]; g.mode = 'explore';
+      g.bag = [shield, axe, {{name: 'Ring of Might +2', kind: 'ring', slot: 'ring', power: 2, value: 320, props: {{stat: 'str'}}, unknown: true}},
+        {{name: 'Amulet against Poison', kind: 'amulet', slot: 'amulet', power: 0, value: 140, props: {{resist: 'poison'}}}},
+        {{name: 'Dagger', kind: 'weapon', slot: 'weapon', power: 2, value: 15, props: {{cursed: true}}, unknown: true}}, bow];
+      out.shieldOn = g.give(0, 0) === '' && knight.offhand === shield && CM.gearDefence(knight) === 6;
+      out.axeSlings = g.give(0, 0) === '' && knight.weapon === axe && knight.offhand === null && g.bag.includes(shield) && g.bag.some(i => i.name === 'Club');
+      const atkBefore = knight.atk, ringRow = g.bag.findIndex(i => i.kind === 'ring');
+      out.ring = g.give(ringRow, 0) === '' && knight.ring && !knight.ring.unknown && CM.heroStat(knight, 'str') === 16 && knight.atk === atkBefore + 1 && g.messages.some(m => m.includes("it's Ring of Might +2"));
+      out.cantShieldNow = g.give(g.bag.indexOf(shield), 0) !== '' && knight.offhand === null;
+      out.amulet = g.give(g.bag.findIndex(i => i.kind === 'amulet'), 1) === '' && mage.amulet && mage.amulet.props.resist === 'poison';
+      g.rnd = fixed(() => false); out.charm = g.afflict(mage, 'poison', 'rat') === false && !mage.status.poison && g.messages.some(m => m.includes('grows warm'));
+      out.cursedClings = g.give(g.bag.findIndex(i => i.kind === 'weapon' && i.props.cursed), 2) === '' && ranger.weapon.props.cursed && !ranger.weapon.unknown && g.messages.some(m => m.includes("It's cursed"));
+      out.cursedStays = g.takeOff(2, 'weapon') !== '' && g.give(g.bag.indexOf(bow), 2) !== '' && ranger.weapon.props.cursed;
+      g.mode = 'camp'; g.gold = 100; out.uncursedGear = g.temple('uncurse') === true && !ranger.weapon.props.cursed && g.give(g.bag.indexOf(bow), 2) === '' && ranger.weapon === bow; g.mode = 'explore';
+      out.takeOff = g.takeOff(0, 'ring') === '' && knight.ring === null && g.bag.some(i => i.kind === 'ring') && CM.heroStat(knight, 'str') === 14;
+      // a blessed blade bites the undead
+      g.rnd = fixed((p) => p >= 0.5); const skel = Object.assign(CM.makeMonster(CM.monsterKind('Skeleton'), 5, new CM.Random(1)), {{hp: 1000, max: 1000, df: 0}});
+      knight.weapon = {{name: 'Blessed Mace', kind: 'weapon', slot: 'weapon', power: 5, value: 200, props: {{element: 'holy'}}}}; knight.row = 'front';
+      g.strike(knight, skel); const holy = 1000 - skel.hp; skel.hp = 1000;
+      knight.weapon = {{name: 'Mace', kind: 'weapon', slot: 'weapon', power: 5, value: 100, props: {{}}}}; g.strike(knight, skel); const plain = 1000 - skel.hp;
+      out.holy = holy === Math.ceil(plain * 1.5) && plain > 0;
+      // scrolls and wands
+      g.bag = [CM.scroll('mapping'), CM.scroll('identify'), {{name: 'Iron Cap', kind: 'helm', slot: 'helm', power: 2, value: 60, props: {{}}, unknown: true}}, CM.scroll('teleport'), CM.wand('healing', 2), CM.scroll('fire'), CM.wand('frost', 1)];
+      const fl = g.floor; fl.seen = []; out.mapping = g.give(0, 0) === '' && fl.seen.length === fl.grid.length * fl.grid.length && !g.bag.some(i => i.spell === 'mapping');
+      out.identifyAsks = g.give(0, 0).includes('pick the unknown') && g.identifying === true;
+      out.identified = g.identify(1) === '' && !g.bag.some(i => i.spell === 'identify') && g.bag.find(i => i.kind === 'helm').unknown === false && g.identifying === false;
+      const posB = fl.pos.slice(); g.give(g.bag.findIndex(i => i.spell === 'teleport'), 0);
+      out.teleport = (fl.pos[0] !== posB[0] || fl.pos[1] !== posB[1]) && CM.passable(fl, fl.pos[0], fl.pos[1]) && !g.bag.some(i => i.spell === 'teleport');
+      knight.hp = 1; const wandRow = g.bag.findIndex(i => i.spell === 'healing'); out.wandHeals = g.give(wandRow, 0) === '' && knight.hp > 1 && g.bag[wandRow].charges === 1;
+      out.fireIsForFights = g.give(g.bag.findIndex(i => i.spell === 'fire'), 0) !== '';
+      g.foes = [Object.assign(CM.makeMonster(CM.monsterKind('Orc'), 5, new CM.Random(2)), {{hp: 500, max: 500}})]; g.combat = null; g.mode = 'combat'; g.ensureCombat();
+      g.combat.waiting = knight; const o0 = g.foes[0].hp;
+      out.scrollFire = g.act('item', {{row: g.bag.findIndex(i => i.spell === 'fire')}}) === true && g.foes[0].hp < o0 && !g.bag.some(i => i.spell === 'fire');
+      g.combat.waiting = knight; const o1 = g.foes[0].hp;
+      out.wandSpent = g.act('item', {{row: g.bag.findIndex(i => i.spell === 'frost')}}) === true && g.foes[0].hp < o1 && !g.bag.some(i => i.spell === 'frost') && g.messages.some(m => m.includes('is spent'));
+      g.combat = null; g.mode = 'explore';
+      // trapped chests
+      const f2 = CM.useFloor(g, CM.testFloor(4, ["#####", "#XC.#", "#####"])); f2.things['2,1'].trap = 'blade'; f2.things['2,1'].items = [];
+      g.party[3] = CM.makeHero('Rogue', 'Sly', {{str: 10, dex: 14, con: 10, int: 10, wis: 10, luck: 10}}); g.rnd = fixed(() => true);
+      g.move(0); g.use(); out.disarmed = g.messages.some(m => m.includes('sees to it')) && !f2.things['2,1'] && g.party.every(p => p.hp > 0);
+      const f3 = CM.useFloor(g, CM.testFloor(4, ["#####", "#XC.#", "#####"])); f3.things['2,1'].trap = 'blade'; f3.things['2,1'].items = [];
+      g.party[3] = CM.makeHero('Cleric', 'Val'); for (const p of g.party) p.hp = p.max;
+      g.move(0); g.use(); out.bladeBites = g.party[0].hp < g.party[0].max && !f3.things['2,1'];
+      const f4 = CM.useFloor(g, CM.testFloor(4, ["#####", "#XC.#", "#####"])); f4.things['2,1'].trap = 'alarm'; g.rnd = fixed(() => false);
+      g.move(0); g.use(); out.alarm = g.mode === 'combat' && f4.things['2,1'] && f4.things['2,1'].type === 'chest' && g.messages.some(m => m.includes('something that heard it'));
+      g.combat = null; g.mode = 'explore';
+      // the tavern and the scribe
+      g.floor.number = 5; g.mode = 'camp'; g.party[1].hp = 0; g.gold = 1000; const recruits = g.tavern();
+      out.recruits = recruits.length === 3 && recruits.every(x => x.name && x.cls && x.level >= 1 && x.price > 0) && g.tavern() === recruits;
+      const price = recruits[0].price, name = recruits[0].name;
+      out.hired = g.hire(0) === '' && g.party[1].name === name && g.party[1].hp > 0 && g.gold === 1000 - price && g.tavern().length === 2;
+      out.whole = g.hire(0).includes('whole');
+      g.bag.push({{name: 'Steel Helm', kind: 'helm', slot: 'helm', power: 4, value: 240, props: {{}}, unknown: true}}); g.gold = 100;
+      out.scribe = g.scribe() === true && g.gold === 75 && !g.bag.some(i => i.unknown) && g.scribe() === false;
+      // what the deepest run so far unlocks, and the kits
+      out.unlocks = CM.unlocked([]).join() === 'pauper' && CM.unlocked([{{floor: 5}}]).join() === 'pauper,veteran' && CM.unlocked([{{floor: 12}}]).includes('delver')
+        && !CM.unlocked([{{floor: 12}}]).includes('heir') && CM.unlocked([{{floor: 20, won: true}}]).includes('legend');
+      g.fame = [{{name: 'x', floor: 16, gold: 1, won: false, date: 'd'}}];
+      g.newGame({json.dumps(SEED)}, null, 'veteran'); out.veteran = g.gold === 90 && g.bag.some(i => i.kind === 'lantern') && g.kit === 'veteran';
+      g.newGame({json.dumps(SEED)}, null, 'heir'); out.heir = g.party.every(p => p.weapon.power === 3 && p.weapon.name.endsWith('+1'));
+      g.newGame({json.dumps(SEED)}, null, 'legend'); out.legendLocked = g.kit === 'pauper' && g.party.every(p => p.level === 1);
+      g.fame = [{{name: 'x', floor: 20, gold: 1, won: true, date: 'd'}}]; g.newGame({json.dumps(SEED)}, null, 'legend');
+      out.legend = g.party.every(p => p.level === 2 && p.pending === 1) && CM.store.get('run').kit === 'legend';
+      // today's dungeon
+      out.daily = /^daily-\\d{{4}}-\\d{{2}}-\\d{{2}}$/.test(CM.dailySeed()) && CM.dailySeed(new Date(2026, 9, 29)) === 'daily-2026-10-29';
+      g.newGame(CM.dailySeed()); g.endRun(false); out.dailyMarked = g.fame.some(e => e.daily === true && Array.isArray(e.party) && e.seed === CM.dailySeed());
+      // the title knows
+      g.fame = [{{name: 'x', floor: 10, gold: 1, won: false, date: 'd'}}]; CM.ui.refreshTitle();
+      out.titleUnlocks = document.querySelectorAll('#unlocks .unlock').length === 5 && document.querySelectorAll('#unlocks .unlock.got').length === 3 && document.querySelectorAll('#kit option').length === 3;
+      g.fame = []; CM.store.set('fame', []); CM.store.remove('run'); g.lastRun = null; CM.ui.refreshTitle();
       return out; }})()""")
     for key, value in got.items():
         assert value is True, (key, got)

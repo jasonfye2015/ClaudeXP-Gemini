@@ -18,7 +18,7 @@ CM.UI = class {
     <div class="card" id="expedition">
       <h2>Expedition</h2>
       <div class="row"><button id="btn-continue" class="primary">Continue</button><span id="continue-note" class="small"></span></div>
-      <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button></div>
+      <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button><button id="btn-daily" title="Today's dungeon: the same one for everyone, today">Today's</button></div>
       <p>The same seed lays out the same twenty floors, so a dungeon can be tried again - or handed to a friend. What
       the monsters do in a fight is up to the dice. The run saves as you go; when the whole party falls, it ends, and
       the deepest runs go in the Hall of Fame.</p>
@@ -26,7 +26,7 @@ CM.UI = class {
       <div id="classes"></div>
       <p id="start-with"></p>
     </div>
-    <div class="card" id="fame"><h2>Hall of Fame</h2><table></table></div>
+    <div class="card" id="fame"><h2>Hall of Fame</h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div></div>
     <div class="foot"><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button></div>
     <div class="version"></div>
   </div>
@@ -39,6 +39,7 @@ CM.UI = class {
     <div class="card" id="advice"><h2>Advice</h2><ul></ul></div>
     <div class="foot"><button id="btn-suggest">Suggest a party</button><button id="btn-reroll-all">Reroll everyone</button>
       <label for="create-seed">Seed</label><input id="create-seed" type="text" maxlength="40" spellcheck="false">
+      <label for="kit">Kit</label><select id="kit" title="What the deepest run so far has earned"></select>
       <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>
   </div>
 </div>
@@ -85,6 +86,12 @@ CM.UI = class {
   <div class="row"><label>Lift a curse</label><button data-service="uncurse">60 gold</button></div>
   <div class="row"><label>Stone to flesh</label><button data-service="unstone">150 gold</button></div>
   <div class="row"><label>Raise the fallen (100 gold a level)</label><button id="btn-temple-raise">Raise</button></div>
+  <div class="row"><label>The priest's scribe names everything unknown you carry</label><button id="btn-scribe">25 gold</button></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-tavern"><div class="box"><h2>The Tavern</h2>
+  <p class="small">Three who'd come along, for a price - to take the place of a hero who has fallen or turned to stone. What the fallen wore besides weapon and armour stays with the party.</p>
+  <div id="recruits"></div>
+  <div class="small" id="tavern-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
@@ -103,6 +110,8 @@ CM.UI = class {
       b.addEventListener("click", () => { game.temple(b.dataset.service); this.refresh(); });
     }
     this.$("#btn-temple-raise").addEventListener("click", () => { game.raiseDead(); this.refresh(); });
+    this.$("#btn-scribe").addEventListener("click", () => { game.scribe(); this.refresh(); });
+    this.$("#btn-daily").addEventListener("click", () => { this.$("#seed").value = CM.dailySeed(); this.refreshTitle(); });
     this.$("#btn-pause-settings").addEventListener("click", () => { this.closeDialogs(); this.openDialog("#dlg-settings"); });
     this.$("#btn-pause-title").addEventListener("click", () => { this.closeDialogs(); game.saveRun(); game.setMode("title"); });
     const keys = this.$("#dlg-keys table");
@@ -164,11 +173,13 @@ CM.UI = class {
     facts.innerHTML = `<div>${c.role}${c.cast ? `, casts <b>${CM.CASTS[c.cast]}</b>` : ""}</div>
       <div>Experience ${h.xp} / ${next} for level ${h.level + 1}</div>
       <div>Health ${Math.max(0, h.hp)} / ${h.max}${h.maxmp ? ` &nbsp; Magic ${h.mp} / ${h.maxmp}` : ""}</div>
-      <div>Attack ${eff.atk}${eff.atk !== h.atk ? ` (${h.atk})` : ""} &nbsp; Defence ${eff.df}${eff.df !== h.df ? ` (${h.df})` : ""} &nbsp; Hits ${Math.round(g.hitChance(h) * 100)}%</div>
-      <div>${this.esc(h.weapon.name)} (+${h.weapon.power}), ${this.esc(h.armor.name)} (+${h.armor.power})</div>
+      <div>Attack ${eff.atk}${eff.atk !== h.atk ? ` (${h.atk})` : ""} &nbsp; Defence ${eff.df}${eff.df !== h.df ? ` (${h.df})` : ""} + gear ${CM.gearDefence(h)} &nbsp; Hits ${Math.round(g.hitChance(h) * 100)}%</div>
       <div class="rowpick"><span>Row:</span><button data-row="front" class="${h.row === "front" ? "on" : ""}">Front</button><button data-row="back" class="${h.row === "back" ? "on" : ""}">Back</button>
-        <small>${g.mode === "combat" ? "not in a fight" : h.row === "front" ? "takes the blows" : h.cls === "Rogue" || h.cls === "Ranger" ? "strikes from safety" : "safer, hits for half"}</small></div>`;
+        <small>${g.mode === "combat" ? "not in a fight" : h.row === "front" ? "takes the blows" : h.cls === "Rogue" || h.cls === "Ranger" ? "strikes from safety" : "safer, hits for half"}</small></div>
+      <div class="list-title">Gear</div>
+      <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span> ${it ? `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
     for (const b of facts.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { if (g.setRow(h, b.dataset.row)) this.renderSheet(); });
+    for (const b of facts.querySelectorAll("button[data-off]")) b.addEventListener("click", () => { const note = g.takeOff(this.sheetOf, b.dataset.off); if (note) g.say(note); this.renderSheet(); });
     left.appendChild(facts);
     const right = this.$("#sheet-right");
     right.innerHTML = `<table class="stats">${CM.STATS.map((s) => `<tr class="${s === c.key ? "key" : ""}"><td>${CM.STAT_NAMES[s]}</td><td class="v">${g.stat(h, s)}</td><td class="hint">${s === c.key ? "their calling's stat" : CM.STAT_HINTS[s]}</td></tr>`).join("")}</table>
@@ -284,6 +295,7 @@ CM.UI = class {
     if (g.canContinue() && !window.confirm("A run is waiting to be continued. Start a new expedition and let it go?")) return;
     if (!this.slots.length) this.fillSlots(CM.CLASSIC);
     this.$("#create-seed").value = this.$("#seed").value;
+    this.refreshTitle();                                                 // (the kits on offer)
     this.show("create");
     this.renderCreate();
   }
@@ -318,7 +330,8 @@ CM.UI = class {
   setOut() {
     const g = this.game, seed = this.$("#create-seed").value;
     this.$("#seed").value = seed;
-    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })));
+    this.chosenKit = this.$("#kit").value || "pauper";
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit);
   }
 
   startNew() { this.openCreate(); }
@@ -337,8 +350,18 @@ CM.UI = class {
       + "a merchant's camp with a temple waits below floors 5, 10 and 15.";
     const table = this.$("#fame table");
     if (!g.fame.length) table.innerHTML = `<tr><td class="empty">No party has gone down yet.</td></tr>`;
-    else table.innerHTML = g.fame.map((e, i) => `<tr><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
-      + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold</td><td>${this.esc(e.date)}</td></tr>`).join("");
+    else table.innerHTML = g.fame.map((e, i) => `<tr title="${this.esc((e.party || []).join(", "))}${e.seed ? " - seed " + this.esc(e.seed) : ""}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
+      + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`).join("");
+    const have = CM.unlocked(g.fame), deep = CM.deepest(g.fame);
+    this.$("#unlocks").innerHTML = Object.entries(CM.KITS).map(([id, k]) => {
+      const got = have.includes(id), need = k.need > 20 ? "slay the Lich King" : `reach floor ${k.need}`;
+      return `<div class="unlock ${got ? "got" : ""}"><b>${got ? "✓" : "○"} ${k.name}</b> <small>${got ? k.what : `${k.what} <i>(${need}${deep.floor ? `; deepest so far: floor ${deep.floor}` : ""})</i>`}</small></div>`;
+    }).join("");
+    const kit = this.$("#kit");
+    kit.innerHTML = have.map((id) => `<option value="${id}">${CM.KITS[id].name}</option>`).join("");
+    if (this.chosenKit && have.includes(this.chosenKit)) kit.value = this.chosenKit;
+    const todays = this.$("#seed").value === CM.dailySeed();
+    this.$("#btn-daily").classList.toggle("on", todays);
   }
 
   esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
@@ -458,8 +481,8 @@ CM.UI = class {
         ["Use (Space)", () => g.use()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
-        ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()],
-        ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
+        ["Tavern", () => this.openTavern()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()],
+        ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
     if (box.dataset.mode === key) return;
@@ -573,6 +596,46 @@ CM.UI = class {
       targets.appendChild(b);
     });
     box.appendChild(targets);
+  }
+
+  // ---- the tavern ----
+  openTavern() {
+    this.renderTavern();
+    this.openDialog("#dlg-tavern");
+  }
+
+  renderTavern() {
+    const g = this.game, box = this.$("#recruits");
+    const fallen = g.party.map((h, i) => i).filter((i) => g.party[i].hp <= 0 || (g.party[i].status || {}).stone);
+    box.innerHTML = "";
+    g.tavern().forEach((r, i) => {
+      const div = document.createElement("div");
+      div.className = "recruit";
+      div.appendChild(this.portrait(r.cls, 40));
+      const text = document.createElement("div");
+      text.innerHTML = `<b>${this.esc(r.name)}</b> the ${r.cls}, level ${r.level} <small>${r.max} health${r.maxmp ? `, ${r.maxmp} magic` : ""}, attack ${r.atk}, defence ${r.df} - ${CM.STATS.map((s) => `${CM.STAT_NAMES[s].slice(0, 3)} ${r.stats[s]}`).join(" ")}</small>`;
+      div.appendChild(text);
+      const hire = document.createElement("div");
+      hire.className = "hire";
+      if (fallen.length <= 1) {
+        const b = document.createElement("button");
+        b.textContent = `Hire, ${r.price} gold`;
+        b.disabled = !fallen.length;
+        b.addEventListener("click", () => { const note = g.hire(i); this.$("#tavern-note").textContent = note || `${r.name} comes along.`; this.renderTavern(); this.refresh(); });
+        hire.appendChild(b);
+      } else {
+        for (const idx of fallen) {
+          const b = document.createElement("button");
+          b.textContent = `For ${g.party[idx].name}, ${r.price} gold`;
+          b.addEventListener("click", () => { const note = g.hire(i, idx); this.$("#tavern-note").textContent = note || `${r.name} comes along.`; this.renderTavern(); this.refresh(); });
+          hire.appendChild(b);
+        }
+      }
+      div.appendChild(hire);
+      box.appendChild(div);
+    });
+    if (!box.children.length) box.innerHTML = "<div class='small'>The benches are empty tonight.</div>";
+    this.$("#tavern-note").textContent = fallen.length ? "" : "The party is whole; the recruits drink to that.";
   }
 
   combatMenu(kind, data) { this.cmenu = Object.assign({ kind }, data || {}); this.renderCombat(); }
@@ -753,19 +816,23 @@ CM.UI = class {
       items.forEach((item, i) => {
         const row = document.createElement("div");
         row.className = "item" + (i === selected ? " sel" : "");
-        row.innerHTML = `${this.esc(item.name)} <span class="what">${describe(item)}</span>`;
+        row.innerHTML = `${this.esc(item.unknown ? CM.baseName(item) : item.name)} <span class="what">${describe(item)}</span>`;
         row.addEventListener("click", () => { onPick(i); this.fillBag(); });
         el.appendChild(row);
       });
     };
-    list(this.$("#bag-list"), "Your pack", g.bag, this.bagRow, (i) => `(${g.describe(i)}, worth ${Math.floor(i.value / 2)} gold)`, (i) => { this.bagRow = i; });
+    list(this.$("#bag-list"), g.identifying ? "Your pack - pick the unknown thing to identify" : "Your pack", g.bag, this.bagRow,
+      (i) => `(${g.describe(i)}, worth ${i.unknown ? 10 : Math.floor(i.value / 2)} gold)`,
+      (i) => { if (g.identifying) this.note(g.identify(i)); else this.bagRow = i; });
     if (shop) list(this.$("#shop-list"), "The merchant's wares", g.stock || [], this.shopRow,
       (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
+    const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
+    const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" ? "Read" : picked.kind === "wand" ? "Use on" : "Give to";
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
       const m = g.party[i];
-      b.textContent = `Give to ${m.name}` + (m.hp <= 0 ? " (fallen)" : "");
+      b.textContent = `${verb} ${m.name}` + (m.hp <= 0 ? " (fallen)" : "");
     });
-    const base = "Pick something from your pack, then who should equip or use it." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
+    const base = "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     this.$("#bag-note").dataset.base = base;
     if (!this.$("#bag-note").textContent) this.$("#bag-note").textContent = base;
   }

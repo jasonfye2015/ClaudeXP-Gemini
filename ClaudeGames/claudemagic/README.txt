@@ -59,6 +59,23 @@ The fight (phase 4)
   and killed, he rises again at two fifths of his strength - as often as you kill him - unless his phylactery, a
   cold box on floor 19, has been smashed (Space). The carvings say so.
 
+The hoard (phase 5)
+  Six slots a hero: weapon, off hand (a shield), armour, helm, ring, amulet. Armour has a weight - Mages wear light,
+  Knights and Paladins anything; only a Ranger draws a bow; a two-handed weapon leaves no hand for a shield. Rings
+  add to a stat; amulets turn one ailment aside (poison, curses, stone, blindness, sleep) or ward; a Flaming, Frost
+  or Blessed weapon bites deep into what fears it (trolls and the rotting, demons, the undead). Found gear from the
+  second floor down may be unknown - a bare name until it's worn (which names it, and may find a curse that clings
+  until the temple lifts it), read with a Scroll of Identify, or shown to the camp's scribe (25 gold for the lot).
+  Scrolls (Identify, Mapping, Teleport between fights; Fire, Frost, Protection in them) and wands (Fire, Frost,
+  Sleep; Healing, anywhere) with a few charges - anyone can use them, from the pack (Item in a fight).
+  From the second floor down a chest may be trapped: a Rogue sees to it, or it springs - a poisoned needle, choking
+  gas, a blade, an alarm that brings a fight. The camp has a Tavern: three recruits a step behind the party's level,
+  one to take the place of a hero who has fallen (what they wore besides weapon and armour stays with the party).
+  Unlocks between runs (the title's Hall of Fame card lists them; the creation screen's Kit picks one): the deepest
+  run so far earns the Veteran's kit at floor 5, the Delver's at 10, the Heir's at 15, the Legend's for slaying the
+  Lich King. Today's (beside the seed) gives today's dungeon - the same one for everyone, marked with a sun in the
+  Hall of Fame; a run's seed and party are kept there too (hover a row).
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds with Web Audio, in code - there are no pictures or sound files to

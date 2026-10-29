@@ -52,7 +52,8 @@ CM.Game = class {
   saveRun() {
     if (!["explore", "camp"].includes(this.mode)) return;
     const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, floors: this.floors, light: this.light,
-      spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), mode: this.mode, seed: this.seed, saved: new Date().toISOString() };
+      spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed,
+      saved: new Date().toISOString() };
     this.lastRun = data;
     CM.store.set("run", data);
     this.dirty = false; this.sinceSave = 0;
@@ -72,6 +73,9 @@ CM.Game = class {
     this.spellLight = d.spellLight || 0;
     this.phylactery = Boolean(d.phylactery);
     this.combat = null;
+    this.recruits = null;
+    this.identifying = false;
+    this.kit = d.kit || "pauper";
     this.seed = d.seed || CM.randomSeed();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -81,7 +85,8 @@ CM.Game = class {
   }
 
   endRun(won) {
-    const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, date: CM.today(), seed: this.seed };
+    const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, date: CM.today(), seed: this.seed,
+      daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`) };
     this.fame.push(entry);
     this.sortFame();
     CM.store.set("fame", this.fame);
@@ -134,10 +139,13 @@ CM.Game = class {
   }
 
   // ---- starting, and the stairs between floors ----
-  newGame(seed, chosen) {                                                // chosen: the party made on the creation screen, or none for the classic four
+  newGame(seed, chosen, kit) {                                           // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned
     this.seed = (seed || "").trim() || CM.randomSeed();
     this.party = CM.newParty(chosen);
     this.steps = 0;
+    this.kit = CM.unlocked(this.fame).includes(kit) ? kit : "pauper";
+    this.recruits = null;
+    this.identifying = false;
     this.bag = CM.startingBag(this.seed);
     this.gold = 30;
     this.floors = {};
@@ -147,8 +155,12 @@ CM.Game = class {
     this.combat = null;
     this.messages = [];
     this.titleNote = "";
+    if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
+    else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
+    else if (this.kit === "heir") for (const h of this.party) { h.weapon.power += 2; h.weapon.name += " +1"; h.weapon.props = Object.assign({}, h.weapon.props, { bonus: 1 }); h.weapon.value = 45; }
+    else if (this.kit === "legend") for (const h of this.party) { h.level = 2; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; }
     this.enterFloor(1, "down");
-    this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs.");
+    this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : ""));
   }
 
   cellOf(fl, type) {
@@ -422,11 +434,24 @@ CM.Game = class {
       return;
     }
     if (thing && thing.type === "chest") {
+      if (thing.trap) {                                                   // a trapped lid: the Rogue may see to it
+        const rogue = this.alive().find((p) => p.cls === "Rogue" && this.canAct(p));
+        if (rogue && this.rnd.chance(CM.clamp(0.5 + rogue.level * 0.05 + CM.mod(this.stat(rogue, "dex")) * 0.1, 0.2, 0.95))) {
+          this.say(`${rogue.name} finds ${CM.TRAPS[thing.trap]} on the lid, and sees to it.`);
+          thing.trap = null;
+        } else {
+          this.sound("hurt");
+          this.say(`The lid was trapped: ${CM.TRAPS[thing.trap]}!`);
+          this.springTrap(thing.trap, k);
+          thing.trap = null;
+          if (this.mode !== "explore") return;                           // (an alarm: the fight is on, the chest waits)
+        }
+      }
       delete fl.things[k];
       this.gold += thing.gold;
       this.bag.push(...thing.items);
       this.sound("chest");
-      const found = thing.items.map((i) => i.name).join(", ");
+      const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : i.name)).join(", ");
       this.say(`The chest creaks open: ${thing.gold} gold` + (found ? `, ${found}.` : "."));
       this.saveRun();
       this.emit("change");
@@ -469,6 +494,28 @@ CM.Game = class {
     } else {
       this.say("There's nothing here to use.");
     }
+  }
+
+  // what a trapped chest does to whoever opens it
+  springTrap(trap, k) {
+    const opener = this.alive()[0];
+    if (trap === "needle" && opener) this.afflict(opener, "poison", "needle") || this.say(`${opener.name} snatches a hand back in time.`);
+    else if (trap === "gas") for (const p of this.alive()) p.hp = Math.max(1, p.hp - Math.max(1, Math.floor(p.max * 0.1)));
+    else if (trap === "blade" && opener) { opener.hp = Math.max(1, opener.hp - Math.max(2, Math.floor(opener.max * 0.15))); this.say(`The blade catches ${opener.name}.`); }
+    else if (trap === "alarm") {
+      const fl = this.floor, [x, y] = k.split(",").map(Number);
+      const spot = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([nx, ny]) => CM.passable(fl, nx, ny) && !fl.things[keyOf(nx, ny)] && !(nx === fl.pos[0] && ny === fl.pos[1]));
+      const group = CM.monsterGroup(fl.number, this.rnd);
+      if (spot) {
+        const sk = keyOf(spot[0], spot[1]);
+        fl.things[sk] = { type: "monsters", group };
+        this.startCombat(sk, fl.things[sk], true);
+      } else {
+        this.foes = group;
+        this.startCombat(k, { group }, true);
+      }
+    }
+    this.emit("change");
   }
 
   drink(f) {
@@ -789,7 +836,7 @@ CM.Game = class {
     const cursed = (h.status || {}).curse ? 2 : 0, bless = this.combat && this.combat.bless;
     return { atk: Math.max(1, h.atk - cursed + (this.song ? 2 : 0) + (bless ? 2 : 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0)) };
   }
-  stat(h, s) { return h.stats && h.stats[s] !== undefined ? h.stats[s] : 10; }
+  stat(h, s) { return CM.heroStat(h, s); }
   hitChance(h) {
     return CM.clamp(0.8 + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0), 0.25, 0.97);
   }
@@ -802,6 +849,8 @@ CM.Game = class {
   // an ailment settles on a hero, unless they shrug it off; it lasts this many rounds (curses and stone, until lifted)
   afflict(h, status, by) {
     if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
+    const charm = CM.equipped(h).find((it) => it.props && it.props.resist === status && !it.unknown);
+    if (charm) { this.say(`${h.name}'s ${CM.baseName(charm)} grows warm: the ${status === "stone" ? "gaze" : "touch"} finds no purchase.`); return false; }
     if (this.rnd.chance(this.resistChance(h))) { this.say(`${h.name} shrugs off the ${by}'s ${status === "stone" ? "gaze" : "touch"}.`); return false; }
     h.status = h.status || {};
     let turns = { poison: 8, paralysis: 2, sleep: 3, blind: 4, curse: 999, stone: 999 }[status];
@@ -888,7 +937,7 @@ CM.Game = class {
       const target = this.pickTarget(m);
       if (!target) break;
       if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1))) { this.say(`The ${m.name} misses ${target.name}.`); continue; }
-      let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + target.armor.power * 2), how = "";
+      let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), how = "";
       if (m.ability === "savage" && rnd.chance(0.2)) { dmg *= 2; how = " - a savage blow"; }
       if (m.ability === "charge" && !m.charged) { m.charged = true; dmg *= 2; how = " - it charges"; }
       const dealt = this.hurt(target, dmg, m, { how });
@@ -924,7 +973,7 @@ CM.Game = class {
     const target = this.pickTarget(m);
     if (!target) return;
     if (!this.rnd.chance(0.85)) { this.say(`The Lich King's hand closes on nothing: ${target.name} is too quick.`); return; }
-    this.hurt(target, this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + target.armor.power * 2), m, { how: " - a touch of grave-cold" });
+    this.hurt(target, this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), m, { how: " - a touch of grave-cold" });
   }
 
   summonSkeletons(n) {
@@ -951,6 +1000,12 @@ CM.Game = class {
     else if (rnd.chance(this.critChance(hero))) { dmg *= 2; how = " - a weak spot"; }
     else if (back && !reaches) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
+    const el = hero.weapon && hero.weapon.props && !hero.weapon.unknown ? hero.weapon.props.element : null;
+    if (el) {                                                            // a flaming, frost or blessed blade
+      const weak = el === "holy" ? Boolean(target.undead) : (CM.ELEMENTS[el].weak || []).includes(target.kind || target.name);
+      if (weak) { dmg = Math.ceil(dmg * 1.5); how += ` - the ${el === "holy" ? "blessing" : el} bites deep`; }
+      else dmg += 2;
+    }
     if (opts.mult) dmg = Math.ceil(dmg * opts.mult);
     if (target.marked) dmg = Math.ceil(dmg * 1.25);
     target.hp -= dmg;
@@ -1142,6 +1197,7 @@ CM.Game = class {
   useItemInBattle(h, arg) {
     if (arg && typeof arg === "object" && arg.row !== undefined) {
       const item = this.bag[arg.row];
+      if (item && (item.kind === "scroll" || item.kind === "wand")) return this.useMagicInBattle(h, arg.row, arg.who);
       if (!item || !["heal", "mana", "antidote", "revive"].includes(item.kind)) { this.say("Not now."); return false; }
       const who = arg.who !== undefined ? arg.who : this.party.indexOf(this.allyAt(null, item.kind === "revive"));
       if (who < 0) return false;
@@ -1209,10 +1265,10 @@ CM.Game = class {
     this.shopping = shop;
     if (shop && !this.stock) {
       const rnd = this.rnd, depth = this.floor.number + 3;
-      this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor"].map((k) => CM.makeItem(depth, rnd, k));
+      this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor", "shield", "helm"].map((k) => { const it = CM.makeItem(depth, rnd, k); it.unknown = false; return it; });
       this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
-        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern());
+        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"));
     }
     this.emit("bag", true);
   }
@@ -1224,20 +1280,159 @@ CM.Game = class {
   }
 
   describe(item) {
-    return { weapon: `weapon +${item.power}`, armor: `armor +${item.power}`, heal: "heals", mana: "restores magic", revive: "raises the fallen",
-      torch: "light, for a while", lantern: "light that lasts", key: "opens a locked door",
-      antidote: "cures poison, sleep, paralysis and blindness" }[item.kind];
+    const plain = { heal: "heals", mana: "restores magic", revive: "raises the fallen", torch: "light, for a while", lantern: "light that lasts",
+      key: "opens a locked door", antidote: "cures poison, sleep, paralysis and blindness" }[item.kind];
+    return plain || CM.itemLabel(item);
+  }
+
+  // what the hero wears in that slot goes back to the pack - unless a curse holds it
+  takeOff(n, slot) {
+    const hero = this.party[n], item = hero && hero[slot];
+    if (!item) return "Nothing there.";
+    if (slot === "weapon" || slot === "armor") return "Swap it for another instead: no one goes bare-handed down here.";
+    if (item.props && item.props.cursed) return `${item.name} is cursed: it won't come off. The camp's temple can lift it.`;
+    hero[slot] = null;
+    this.bag.push(item);
+    CM.recompute(hero);
+    this.sound("chest");
+    this.emit("change");
+    return "";
+  }
+
+  // an unknown thing is known: its name, its bonus, its properties
+  reveal(item) {
+    if (!item.unknown) return false;
+    item.unknown = false;
+    return true;
+  }
+
+  identify(row) {
+    const item = this.bag[row];
+    if (!this.identifying || !item) return "Pick a thing from the pack.";
+    if (!item.unknown) return "That one is known already. Pick an unknown thing.";
+    const scroll = this.bag.findIndex((i) => i.kind === "scroll" && i.spell === "identify");
+    if (scroll < 0) { this.identifying = false; return "The scroll is gone."; }
+    this.reveal(item);
+    this.bag.splice(scroll, 1);
+    this.identifying = false;
+    this.sound("spell");
+    this.say(`The scroll crumbles: it's ${item.name} (${CM.itemLabel(item)}).`);
+    this.emit("change");
+    return "";
+  }
+
+  // a scroll read or a wand waved, between fights; "" when it worked, else why not
+  useMagicOutside(row, n) {
+    const item = this.bag[row], hero = this.party[n], fl = this.floor;
+    const spec = item.kind === "scroll" ? CM.SCROLLS[item.spell] : CM.WANDS[item.spell];
+    if (!spec.outside) return `${item.name} is for a fight.`;
+    if (item.spell === "identify") {
+      if (!this.bag.some((i) => i.unknown)) return "Nothing in the pack is unknown.";
+      this.identifying = true;
+      return "Now pick the unknown thing in the pack to identify.";
+    }
+    if (item.spell === "mapping") {
+      fl.seen = [];
+      for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]);
+      for (const f of Object.values(fl.features)) if ("known" in f) f.known = true;
+      this.say("The scroll crumbles, and the whole floor is drawn on the automap.");
+    } else if (item.spell === "teleport") {
+      const open = [];
+      for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) {
+        const k = keyOf(x, y), f = fl.features[k];
+        if (CM.passable(fl, x, y) && !fl.things[k] && !(f && ["pit", "trapdoor", "teleporter", "spinner"].includes(f.type))) open.push([x, y]);
+      }
+      if (!open.length) return "The scroll fizzles.";
+      fl.pos = this.rnd.pick(open);
+      this.look();
+      this.emit("teleported", fl.pos[0], fl.pos[1]);
+      this.say("The scroll crumbles - and the party is somewhere else on this floor.");
+    } else if (item.spell === "healing") {
+      if (!hero || hero.hp <= 0) return "Not on the fallen.";
+      const n2 = 15 + 3 * (this.floor ? Math.floor(this.floor.number / 2) : 1);
+      hero.hp = Math.min(hero.max, hero.hp + n2);
+      this.say(`${hero.name} is mended by the wand (+${n2}).`);
+    }
+    this.sound("spell");
+    if (item.kind === "scroll") this.bag.splice(row, 1);
+    else { item.charges -= 1; if (item.charges <= 0) { this.bag.splice(row, 1); this.say(`The ${item.name} is spent, and crumbles.`); } }
+    this.saveRun();
+    this.emit("change");
+    return "";
+  }
+
+  // a scroll or wand in the thick of it
+  useMagicInBattle(h, row, who) {
+    const item = this.bag[row], foes = this.living(), L = this.floor ? this.floor.number : 1;
+    const spec = item.kind === "scroll" ? CM.SCROLLS[item.spell] : CM.WANDS[item.spell];
+    if (spec.outside && item.spell !== "healing") { this.say(`${item.name} is for between fights.`); return false; }
+    this.sound("spell");
+    if (item.spell === "fire") {
+      if (item.kind === "wand") { const t = this.foeAt(who); this.spellHit(t, 10 + 2 * L, `${h.name}'s wand spits fire:`); }
+      else { const dmg = 10 + 2 * L; for (const m of foes) this.spellHit(m, dmg); this.say(`${h.name} reads the scroll: fire on every foe, ${dmg} each.`); }
+    } else if (item.spell === "frost") {
+      const dmg = 6 + 2 * L;
+      let held = 0;
+      for (const m of foes) { this.spellHit(m, dmg); if (m.hp > 0 && !m.boss && this.rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
+      this.say(`${h.name} ${item.kind === "wand" ? "waves the wand" : "reads the scroll"}: cold on every foe, ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}.`);
+    } else if (item.spell === "sleep") {
+      let asleep = 0;
+      for (const m of foes) if (!m.boss && this.rnd.chance(0.5)) { m.asleep = 3; asleep++; }
+      this.say(`${h.name} waves the wand: ${asleep ? CM.plural(asleep, "foe") + " slump where they stand" : "none of them so much as yawns"}.`);
+    } else if (item.spell === "protection") {
+      if (this.combat) this.combat.protect = true;
+      this.say(`${h.name} reads the scroll: every blow on the party does less, this fight.`);
+    } else if (item.spell === "healing") {
+      const ally = this.allyAt(who, false);
+      if (!ally) return false;
+      const n2 = 15 + 3 * Math.floor(L / 2);
+      ally.hp = Math.min(ally.max, ally.hp + n2);
+      this.say(`${h.name} touches ${ally.name} with the wand: +${n2}.`);
+    } else return false;
+    if (item.kind === "scroll") this.bag.splice(row, 1);
+    else { item.charges -= 1; if (item.charges <= 0) { this.bag.splice(row, 1); this.say(`The ${item.name} is spent, and crumbles.`); } }
+    this.emit("change");
+    return true;
+  }
+
+  // what the party wears: the thing in the slot goes back to the pack; wearing an unknown thing is how you learn it
+  equip(hero, row) {
+    const item = this.bag[row];
+    const why = CM.cantWear(hero, item);
+    if (why) return why;
+    const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind);
+    const old = hero[slot];
+    if (old && old.props && old.props.cursed) return `${hero.name}'s ${old.name} is cursed and won't come off. The camp's temple can lift it.`;
+    hero[slot] = item;
+    this.bag.splice(row, 1);
+    if (old) this.bag.push(old);
+    if (slot === "weapon" && item.props && item.props.twohanded && hero.offhand) {
+      if (hero.offhand.props && hero.offhand.props.cursed) { hero[slot] = old; this.bag.splice(row, 0, item); if (old) this.bag.pop(); return `${hero.name}'s shield is cursed to the arm: no room for a two-handed weapon.`; }
+      this.bag.push(hero.offhand);
+      this.say(`${hero.name} slings the shield: the ${CM.baseName(item)} takes both hands.`);
+      hero.offhand = null;
+    }
+    const learned = this.reveal(item);
+    const ratio = hero.hp / hero.max;
+    CM.recompute(hero);
+    hero.hp = Math.max(1, Math.round(hero.max * ratio));
+    this.sound("chest");
+    if (item.props && item.props.cursed) this.say(`${hero.name} takes up the ${CM.baseName(item)} - and it clings! It's cursed.`);
+    else if (learned) this.say(`${hero.name} tries the ${CM.baseName(item)}: it's ${item.name} (${CM.itemLabel(item)}).`);
+    this.emit("change");
+    return "";
   }
 
   give(row, n) {                                                        // returns a note for the bag screen, "" when it worked
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack first.";
     const item = this.bag[row], hero = this.party[n];
     if (item.kind === "key") return "Keys turn in locks, not in hands. Walk into the locked door.";
+    if (item.kind === "scroll" || item.kind === "wand") return this.useMagicOutside(row, n);
     if (item.kind === "torch") {
       this.bag.splice(row, 1);
       this.light = { kind: "torch", left: CM.TORCH_STEPS };
       this.sound("spell");
-      this.say(`The ${hero.cls} lights a fresh torch.`);
+      this.say(`${hero.name} lights a fresh torch.`);
       this.emit("change");
       return "";
     }
@@ -1245,7 +1440,7 @@ CM.Game = class {
       this.bag.splice(row, 1);
       this.light = { kind: "lantern", left: 0 };
       this.sound("spell");
-      this.say(`The ${hero.cls} lights the lantern. It won't run out.`);
+      this.say(`${hero.name} lights the lantern. It won't run out.`);
       this.emit("change");
       return "";
     }
@@ -1265,21 +1460,18 @@ CM.Game = class {
       this.bag.splice(row, 1);
       this.sound("heal");
     } else if (hero.hp <= 0) {
-      return `The ${hero.cls} has fallen. Raise them first.`;
+      return `${hero.name} has fallen. Raise them first.`;
     } else if (item.kind === "heal") {
       hero.hp = Math.min(hero.max, hero.hp + item.power);
       this.bag.splice(row, 1);
       this.sound("heal");
     } else if (item.kind === "mana") {
-      if (!hero.maxmp) return `The ${hero.cls} has no magic to restore.`;
+      if (!hero.maxmp) return `${hero.name} has no magic to restore.`;
       hero.mp = Math.min(hero.maxmp, hero.mp + item.power);
       this.bag.splice(row, 1);
       this.sound("heal");
     } else {
-      const old = hero[item.kind];
-      hero[item.kind] = item;
-      this.bag[row] = old;
-      this.sound("chest");
+      return this.equip(hero, row);
     }
     this.emit("change");
     return "";
@@ -1290,8 +1482,8 @@ CM.Game = class {
     const item = this.stock[row];
     if (this.gold < item.value) return "You can't afford that.";
     this.gold -= item.value;
-    this.bag.push(Object.assign({}, item));
-    if (["weapon", "armor", "lantern"].includes(item.kind)) this.stock.splice(row, 1);
+    this.bag.push(Object.assign({}, item, item.props ? { props: Object.assign({}, item.props) } : {}));
+    if (["weapon", "armor", "shield", "helm", "lantern"].includes(item.kind)) this.stock.splice(row, 1);
     this.sound("coin");
     this.emit("change");
     return "";
@@ -1300,7 +1492,7 @@ CM.Game = class {
   sell(row) {
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack to sell.";
     const item = this.bag.splice(row, 1)[0];
-    this.gold += Math.floor(item.value / 2);
+    this.gold += item.unknown ? 10 : Math.floor(item.value / 2);       // (the merchant pays a pittance for what no one can name)
     this.sound("coin");
     this.emit("change");
     return "";
@@ -1315,23 +1507,71 @@ CM.Game = class {
     this.saveRun();
   }
 
-  // the camp's temple: ailments cured, a curse lifted, stone made flesh - for a price
+  // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
     const cost = { cure: 30, uncurse: 60, unstone: 150 }[service];
     const which = service === "cure" ? CM.CURABLE : service === "uncurse" ? ["curse"] : ["stone"];
+    const cursedGear = service === "uncurse" ? this.party.flatMap((h) => CM.equipped(h).filter((it) => it.props && it.props.cursed)) : [];
     const who = this.party.filter((h) => which.some((s) => (h.status || {})[s]));
-    if (!who.length) {
-      this.say({ cure: "No one here is ailing.", uncurse: "No curse lies on the party.", unstone: "No one here is stone." }[service]);
+    if (!who.length && !cursedGear.length) {
+      this.say({ cure: "No one here is ailing.", uncurse: "No curse lies on the party, nor on what they carry.", unstone: "No one here is stone." }[service]);
       return false;
     }
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold for that.`); return false; }
     this.gold -= cost;
     for (const h of who) this.cure(h, which);
+    for (const it of cursedGear) { it.props.cursed = false; it.power += 3; }
     this.sound("heal");
-    this.say({ cure: "Herbs and prayers: the party's ailments pass.", uncurse: "The priest's chant lifts the curse.",
+    this.say({ cure: "Herbs and prayers: the party's ailments pass.",
+      uncurse: "The priest's chant lifts the curse" + (cursedGear.length ? `, and ${cursedGear.map((i) => i.name).join(", ")} can be put down at last.` : "."),
       unstone: `Stone becomes flesh again: ${who.map((h) => h.name).join(", ")} can move.` }[service]);
     this.saveRun();
     return true;
+  }
+
+  // the priest's scribe names everything unknown in the pack and on the party's backs
+  scribe() {
+    const unknown = [...this.bag, ...this.party.flatMap(CM.equipped)].filter((i) => i.unknown);
+    if (!unknown.length) { this.say("Nothing you carry is unknown to you."); return false; }
+    if (this.gold < 25) { this.say("The scribe asks 25 gold to name what you carry."); return false; }
+    this.gold -= 25;
+    for (const it of unknown) this.reveal(it);
+    this.sound("spell");
+    this.say(`The scribe squints and names them: ${unknown.map((i) => i.name).join(", ")}.`);
+    this.saveRun();
+    return true;
+  }
+
+  // the tavern: three who'd come along, for a price - one of them for a hero who has fallen
+  tavern() {
+    if (!this.recruits || this.recruits.floor !== this.floor.number) {
+      const level = Math.max(1, Math.round(this.party.reduce((s, h) => s + h.level, 0) / Math.max(1, this.party.length)) - 1);
+      const rnd = new CM.Random(CM.hashSeed(`${this.seed}:tavern:${this.floor.number}`));
+      this.recruits = { floor: this.floor.number, who: [0, 1, 2].map(() => CM.makeRecruit(level, rnd)) };
+    }
+    return this.recruits.who;
+  }
+
+  hire(i, replace) {
+    const recruit = this.tavern()[i];
+    if (!recruit) return "No one by that name.";
+    const fallen = this.party.map((h, idx) => idx).filter((idx) => this.party[idx].hp <= 0 || (this.party[idx].status || {}).stone);
+    if (!fallen.length) return "The party is whole. The recruits drink to that.";
+    const idx = replace === undefined ? fallen[0] : replace;
+    if (!fallen.includes(idx)) return `${this.party[idx].name} is still standing.`;
+    if (this.gold < recruit.price) return `${recruit.name} wants ${recruit.price} gold to come along.`;
+    this.gold -= recruit.price;
+    const gone = this.party[idx];
+    for (const slot of CM.SLOTS) if (gone[slot] && !(slot === "weapon" || slot === "armor")) this.bag.push(gone[slot]);   // (their trinkets stay with the party)
+    const h = Object.assign({}, recruit);
+    delete h.price;
+    this.party[idx] = h;
+    this.recruits.who.splice(i, 1);
+    this.sound("coin");
+    this.say(`${gone.name} is laid to rest by the fire. ${h.name} the ${h.cls} takes up their place.`);
+    this.saveRun();
+    this.emit("change");
+    return "";
   }
 
   // ---- a level earned is a boon chosen ----

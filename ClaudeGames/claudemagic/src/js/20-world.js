@@ -6,8 +6,44 @@
 // up where you arrive and the ladder down as far from them as the floor allows. Pure functions of a Random, so a seed
 // gives the same dungeon every time; CM.solvable proves each floor can be finished before it's handed over.
 
+// ---- the hoard ------------------------------------------------------------------------------------------------------
+// An item: {name, kind, power, value} and, for gear, slot and perhaps props {bonus, element, resist, stat, df, cursed,
+// twohanded, bow, weight}; found gear may be unknown (its props and bonus hidden) until it's worn or identified.
+CM.tierFor = (floor, rnd) => CM.clamp(Math.floor((floor + rnd.int(-2, 2)) * 12 / 21), 0, 11);
+
+CM.makeGear = function (kind, floor, rnd) {
+  const tier = CM.tierFor(floor, rnd), props = {};
+  let name, power, value, slot = kind;
+  if (kind === "weapon") {
+    if (rnd.chance(0.12)) { const bt = Math.min(CM.BOWS.length - 1, Math.floor(tier / 2.5)); name = CM.BOWS[bt]; props.bow = true; props.twohanded = true; power = (bt + 1) * 3 + 1 + rnd.int(0, 2); value = 20 * (bt + 1) * (bt + 1); }
+    else { name = CM.WEAPONS[tier]; power = (tier + 1) * 2 + rnd.int(0, 2); value = 15 * (tier + 1) * (tier + 1); if (CM.TWO_HANDED.includes(name)) props.twohanded = true; }
+    if (floor >= 3 && rnd.chance(0.2)) { props.element = rnd.pick(Object.keys(CM.ELEMENTS)); name = `${CM.ELEMENTS[props.element].prefix} ${name}`; value += 60; }
+  } else if (kind === "armor") {
+    name = CM.ARMORS[tier]; power = tier + 1 + rnd.int(0, 2); value = 15 * (tier + 1) * (tier + 1); props.weight = CM.ARMOR_WEIGHT(tier);
+  } else if (kind === "shield") {
+    const st = Math.min(CM.SHIELDS.length - 1, Math.floor(tier / 2)); name = CM.SHIELDS[st]; power = st + 1; value = 20 * (st + 1) * (st + 1); slot = "offhand";
+  } else if (kind === "helm") {
+    const ht = Math.min(CM.HELMS.length - 1, Math.floor(tier / 2)); name = CM.HELMS[ht]; power = ht + 1; value = 15 * (ht + 1) * (ht + 1);
+  } else if (kind === "ring") {
+    const stat = rnd.pick(CM.STATS); props.stat = stat; power = 1 + Math.floor(tier / 4); name = `${CM.RINGS[stat]} +${power}`; value = 80 * power * power;
+  } else if (kind === "amulet") {
+    const a = rnd.pick(CM.AMULETS); name = a.name; power = 0; value = 140;
+    if (a.resist) props.resist = a.resist;
+    if (a.df) { props.df = a.df; power = a.df; }
+  }
+  if ((kind === "weapon" || kind === "armor" || kind === "shield" || kind === "helm") && rnd.chance(0.15)) { props.bonus = 1; power += 2; value += 40; }
+  if (floor >= 4 && (kind === "weapon" || kind === "armor") && rnd.chance(0.08)) { props.cursed = true; power = Math.max(1, power - 3); value = Math.floor(value / 3); }
+  const item = { name, kind: slot === "offhand" ? "shield" : kind, slot, power, value, props };
+  if (floor >= 2 && rnd.chance(0.5)) item.unknown = true;
+  return item;
+};
+
+CM.scroll = (id) => ({ name: CM.SCROLLS[id].name, kind: "scroll", spell: id, power: 0, value: 40 });
+CM.wand = (id, charges) => ({ name: CM.WANDS[id].name, kind: "wand", spell: id, power: 0, charges, value: 90 });
+
 CM.makeItem = function (floor, rnd, kind) {
-  kind = kind || rnd.pick(["weapon", "weapon", "armor", "armor", "potion", "potion", "potion"]);
+  kind = kind || rnd.pick(["weapon", "weapon", "weapon", "armor", "armor", "armor", "potion", "potion", "potion", "potion", "potion",
+    "shield", "helm", "ring", "amulet", "scroll", "scroll", "wand"]);
   if (kind === "potion") {
     const roll = rnd.next();
     if (roll < 0.12) return { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 };
@@ -16,12 +52,35 @@ CM.makeItem = function (floor, rnd, kind) {
     if (roll < 0.62) return CM.antidote();
     return { name: "Healing Potion", kind: "heal", power: 20 + floor * 3, value: 20 };
   }
-  const tier = CM.clamp(Math.floor((floor + rnd.int(-2, 2)) * 12 / 21), 0, 11);
-  const names = kind === "weapon" ? CM.WEAPONS : CM.ARMORS;
-  const power = (tier + 1) * (kind === "weapon" ? 2 : 1) + rnd.int(0, 2);
-  const bonus = rnd.chance(0.15);
-  return { name: names[tier] + (bonus ? " +1" : ""), kind, power: power + (bonus ? 2 : 0),
-    value: 15 * (tier + 1) * (tier + 1) + (bonus ? 40 : 0) };
+  if (kind === "scroll") return CM.scroll(rnd.pick(Object.keys(CM.SCROLLS)));
+  if (kind === "wand") return CM.wand(rnd.pick(Object.keys(CM.WANDS)), rnd.int(3, 5));
+  return CM.makeGear(kind, floor, rnd);
+};
+
+// the base of a thing's name, as it looks before it's known: no prefix, no plus
+CM.baseName = function (item) {
+  let n = item.name.replace(/ \+\d+$/, "");
+  for (const e of Object.values(CM.ELEMENTS)) if (n.startsWith(e.prefix + " ")) n = n.slice(e.prefix.length + 1);
+  return n;
+};
+
+// what an item is, in words
+CM.itemLabel = function (item) {
+  if (item.unknown) return "unknown: wear it, read a Scroll of Identify, or ask the camp's scribe";
+  const p = item.props || {}, bits = [];
+  if (item.kind === "weapon") bits.push(`weapon +${item.power}`);
+  else if (item.kind === "armor") bits.push(`armour +${item.power}`, p.weight || "");
+  else if (item.kind === "shield") bits.push(`shield +${item.power}`);
+  else if (item.kind === "helm") bits.push(`helm +${item.power}`);
+  else if (item.kind === "ring") bits.push(`+${item.power} ${CM.STAT_NAMES[p.stat]}`);
+  else if (item.kind === "amulet") bits.push(p.resist ? `proof against ${p.resist}` : `warding +${p.df}`);
+  else if (item.kind === "scroll") bits.push(CM.SCROLLS[item.spell].what);
+  else if (item.kind === "wand") bits.push(`${CM.WANDS[item.spell].what} ${CM.plural(item.charges, "charge")}.`);
+  if (p.element) bits.push(p.element);
+  if (p.twohanded) bits.push("two-handed");
+  if (p.bow) bits.push("a bow: the Ranger's");
+  if (p.cursed) bits.push("CURSED");
+  return bits.filter(Boolean).join(", ");
 };
 
 CM.TORCH_STEPS = 400;                    // a torch burns this many steps
@@ -91,7 +150,8 @@ CM.xpForLevel = (level) => Math.ceil(60 * Math.pow(level - 1, 1.6));     // the 
 
 // the numbers a hero fights with, from class, level, stats and boons (health and magic stay where they were, within the new most)
 CM.recompute = function (h) {
-  const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight, s = h.stats, L = h.level - 1;
+  const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight, L = h.level - 1, s = {};
+  for (const st of CM.STATS) s[st] = CM.heroStat(h, st);                 // (rings count)
   const boons = h.boons || [];
   h.max = Math.max(1, c.hp + (s.con - 10) + L * (c.grow + CM.mod(s.con, 3)));
   h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : 0;
@@ -107,13 +167,15 @@ CM.makeHero = function (cls, name, stats, row) {
   const c = CM.CLASSES[cls];
   const h = { name: (name || "").trim() || cls, cls, level: 1, xp: 0, hp: 1, max: 1, mp: 0, maxmp: 0, atk: 1, df: 0,
     stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null,
-    weapon: { name: c.weapon, kind: "weapon", power: 1, value: 5 }, armor: { name: c.armor, kind: "armor", power: 0, value: 5 } };
+    weapon: { name: c.weapon, kind: "weapon", slot: "weapon", power: 1, value: 5, props: c.weapon === "Short Bow" ? { bow: true, twohanded: true } : {} },
+    armor: { name: c.armor, kind: "armor", slot: "armor", power: 0, value: 5, props: { weight: "light" } },
+    offhand: null, helm: null, ring: null, amulet: null };
   CM.recompute(h);
   h.hp = h.max; h.mp = h.maxmp;
   return h;
 };
 
-// a hero saved by an older version gets stats (middling, plus the class's), a row and the rest
+// a hero saved by an older version gets stats (middling, plus the class's), a row, the empty slots and the rest
 CM.upgradeHero = function (h) {
   const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight;
   if (!h.stats) { h.stats = {}; for (const s of CM.STATS) h.stats[s] = 10 + (c.bonus[s] || 0); }
@@ -122,12 +184,64 @@ CM.upgradeHero = function (h) {
   h.boons = h.boons || [];
   h.pending = h.pending || 0;
   h.offer = h.offer || null;
+  for (const slot of ["offhand", "helm", "ring", "amulet"]) if (h[slot] === undefined) h[slot] = null;
+  for (const slot of ["weapon", "armor"]) if (h[slot]) { h[slot].props = h[slot].props || {}; h[slot].slot = slot; }
   return h;
+};
+
+CM.equipped = (h) => CM.SLOTS.map((s) => h[s]).filter(Boolean);
+
+// a stat as it stands, rings and all
+CM.heroStat = function (h, s) {
+  let v = h.stats && h.stats[s] !== undefined ? h.stats[s] : 10;
+  for (const it of CM.equipped(h)) if (it.props && it.props.stat === s && !it.unknown) v += it.power;
+  return v;
+};
+
+// what the gear keeps off: armour and shield count double, a helm and a warding amulet once
+CM.gearDefence = (h) => (h.armor ? h.armor.power : 0) * 2 + (h.offhand ? h.offhand.power * 2 : 0) + (h.helm ? h.helm.power : 0)
+  + (h.amulet && h.amulet.props && h.amulet.props.df ? h.amulet.props.df : 0);
+
+// may this hero wear or wield it? "" when they may, else why not
+CM.cantWear = function (h, item) {
+  const p = item.props || {};
+  if (item.kind === "weapon" && p.bow && h.cls !== "Ranger") return `Only a Ranger draws a bow.`;
+  if (item.kind === "armor") {
+    const w = p.weight || CM.ARMOR_WEIGHT(Math.max(0, CM.ARMORS.indexOf(CM.baseName(item)))), rank = { light: 0, medium: 1, heavy: 2 };
+    if (rank[w] > rank[CM.BEARS[h.cls] || "light"]) return `${h.cls}s can't fight in ${w} armour.`;
+  }
+  if (item.kind === "shield") {
+    if (!CM.SHIELD_BEARERS.includes(h.cls)) return `${h.cls}s don't carry shields.`;
+    if (h.weapon && h.weapon.props && h.weapon.props.twohanded) return `${h.name}'s ${CM.baseName(h.weapon)} takes both hands.`;
+  }
+  return "";
 };
 
 CM.newParty = function (chosen) {                                         // chosen: [{cls, name, stats, row}] - else the classic four
   return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row));
 };
+
+// someone to hire at the camp: a calling, a name, a roll, a level a step behind the party's
+CM.makeRecruit = function (level, rnd) {
+  const cls = rnd.pick(CM.CLASS_ORDER), h = CM.makeHero(cls, CM.randomName(rnd), CM.rollStats(cls, rnd));
+  h.level = Math.max(1, level);
+  CM.recompute(h);
+  h.hp = h.max; h.mp = h.maxmp;
+  h.price = 20 + 40 * h.level;
+  return h;
+};
+
+// ---- between runs: what the deepest run so far has earned ------------------------------------------------------------
+CM.deepest = function (fame) {
+  let floor = 0, won = false;
+  for (const e of fame || []) { floor = Math.max(floor, e.floor || 0); if (e.won) won = true; }
+  return { floor, won };
+};
+CM.unlocked = function (fame) {
+  const d = CM.deepest(fame);
+  return Object.keys(CM.KITS).filter((id) => CM.KITS[id].need === 0 || (CM.KITS[id].need > 20 ? d.won : d.floor >= CM.KITS[id].need));
+};
+CM.dailySeed = (date) => { const d = date || new Date(); return `daily-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 // what the party could do with: a line or two of advice, and whether it's sound
 CM.partyAdvice = function (party) {
@@ -492,11 +606,12 @@ CM.makeFloor = function (number, seed) {
   const open = CM.openNeighbours(floor, start[0], start[1]);
   floor.facing = open.length ? CM.DIRS.indexOf(open[0]) : 2;
 
-  // what the set pieces hold
+  // what the set pieces hold (a chest may be trapped, from the second floor down)
+  const trap = () => (number >= 2 && rnd.chance(0.3) ? rnd.pick(Object.keys(CM.TRAPS)) : null);
   const stillGroups = [];
   for (const r of rooms) if (r.template) for (const [x, y, c] of r.fill) {
     const k = key(x, y);
-    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd), CM.makeItem(number, rnd)] };
+    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd), CM.makeItem(number, rnd)], trap: trap() };
     else if (c === "M") { const g = CM.monsterGroup(number, rnd); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
     else if (c === "F") floor.features[k] = { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false };
     else if (c === "A") floor.features[k] = { type: "altar", used: false };
@@ -597,7 +712,7 @@ CM.makeFloor = function (number, seed) {
     const items = [];
     const n = rnd.int(1, 2);
     for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd));
-    floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items };
+    floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items, trap: trap() };
   }
   for (let i = 0; i < 5 + Math.floor(number / 2) && spare.length; i++) {
     const [x, y] = spare.pop();
