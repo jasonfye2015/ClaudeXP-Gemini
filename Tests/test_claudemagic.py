@@ -9,7 +9,9 @@ spectacle flies, bursts, shakes and glows for what the game announces, and the d
 guardians keep the shafts above the camps in lairs of their own, fight their own way, fall and leave their relics; the
 dungeon's people (a ghost with a request, a hermit who identifies for stories, a lost adventurer) and its puzzles (riddle
 doors keyed to the carvings, pressure plates, a rope for pits, the flooded, dark and labyrinth floors) and the journal
-that keeps it all; and the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
+that keeps it all; growth and craft (a path for each calling at level 5 that deepens at 10, tomes that teach a spell,
+the camp's smith with his gems, the vault's heirloom for the next run); and the Timeline's window opens, hands the page
+the old Python game's saves once, and closes."""
 import importlib.util
 import json
 import os
@@ -1293,6 +1295,143 @@ def test_the_people_and_puzzles():
     layers = ask("[...new Set(CM.renderer.sprites.map(s => s.layer))]")
     for layer in ("npc:ghost", "npc:hermit", "npc:adventurer", "plate", "door_riddle"):
         assert layer in layers, (layer, layers)
+    said = [s for s in page().said if "Error" in s or "error" in s]
+    assert not said, f"the page's console: {said[:5]}"
+
+
+def test_the_growth_and_craft():
+    """The second update's fifth phase - growth and craft: every calling has two paths of two traits (chosen at level 5,
+    the second trait at 10), and each trait does what it says in a fight or on the floor; tomes teach a caster a spell
+    they lack (and refuse the rest); gems and tomes turn up in some chests deeper down, on top of what they held; the
+    camp's smith puts +1 on gear for gold and a diamond (three times at most) and sets fire, frost or holiness into a
+    weapon for a gem; the vault keeps one heirloom for the next run, through a new game and through Export; and the
+    sheet offers the path, the smith and the vault render"""
+    run(PARSE)
+    got = ask(f"""(function(){{ const g = CM.game, out = {{}};
+      const fixed = (hit) => ({{next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l}});
+      // the data
+      out.paths = Object.keys(CM.PATHS).length === 8 && CM.CLASS_ORDER.every(c => Object.keys(CM.PATHS[c]).length === 2 && Object.values(CM.PATHS[c]).every(P => P.name && P.t1.id && P.t1.what && P.t2.id && P.t2.what));
+      out.tomes = Object.keys(CM.TOMES).every(id => CM.ABILITIES[id]) && Object.keys(CM.GEMS).length === 4 && CM.packs.pixel.index['i.tome'] !== undefined && CM.packs.pixel.index['i.gem_ruby'] !== undefined;
+      // gems and tomes in the chests, deeper down
+      let gems = 0, tomes = 0, shallow = 0;
+      for (const seed of ['craft-1', 'craft-2', 'craft-3']) for (let n = 1; n <= 20; n++) for (const t of Object.values(CM.makeFloor(n, seed).things)) if (t.type === 'chest') for (const it of t.items) {{
+        if (it.kind === 'gem') {{ gems++; if (n < 3) shallow++; }} if (it.kind === 'tome') {{ tomes++; if (n < 4) shallow++; }} }}
+      out.chests = gems > 0 && tomes > 0 && shallow === 0;
+      // a path chosen at level 5, its second trait at 10
+      CM.store.remove('run'); CM.store.remove('vault'); g.lastRun = null; g.vault = null; g.newGame({json.dumps(SEED)});
+      const [knight, rogue, cleric, mage] = g.party;
+      for (const h of g.party) {{ h.level = 5; h.pending = 0; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; }}
+      out.needs = CM.needsPath(knight) && !CM.trait(knight, 'stonewall') && g.choosePath(knight, 'nothing') === false;
+      const df0 = knight.df;
+      out.chosen = g.choosePath(knight, 'bulwark') && knight.path === 'bulwark' && !CM.needsPath(knight) && knight.df === df0 + 3 && CM.trait(knight, 'stonewall') && !CM.trait(knight, 'aegis');
+      knight.level = 10; out.deepens = CM.trait(knight, 'aegis');
+      for (const h of g.party) {{ h.level = 10; CM.recompute(h); h.max = 400; h.hp = 400; h.maxmp = 60; h.mp = 60; }}
+      // a fight to try the traits in
+      const fight = (names, hp = 500) => {{ const f = CM.testFloor(6, ['####', '#XM#', '####']); f.things['2,1'].group = names.map(n => Object.assign(CM.makeMonster(CM.monsterKind(n), 6, new CM.Random(1)), {{ hp, max: hp, df: 4 }}));
+        CM.useFloor(g, f); g.rnd = fixed(() => false); g.move(0); g.combat.order = []; g.combat.index = 0; g.combat.waiting = knight; g.combat.taunter = null; return g.foes; }};
+      const last = (n = 1) => g.messages.slice(-n).join(' | ');
+      // Knight: aegis, then the Champion's flurry
+      let foes = fight(['Orc']); mage.guardedBy = knight; knight.guarding = mage; knight.hp = 400;
+      g.hurt(mage, 40, foes[0], {{ noTouch: true }}); out.aegis = knight.hp === 380 && mage.hp === 400;
+      knight.path = 'champion'; const atk0 = knight.atk; CM.recompute(knight); out.mighty = knight.atk === atk0 + 3;
+      g.rnd = fixed(() => true); g.combat.waiting = knight; const n0 = g.messages.length; g.act('fight', 0);
+      out.flurry = g.messages.slice(n0).filter(m => m.includes(' hits ')).length === 2 && g.messages.slice(n0).some(m => m.includes('again'));
+      // Paladin: holy blade and radiance; gentle hands and last rites
+      const pal = CM.makeHero('Paladin', 'Pal'); Object.assign(pal, {{ level: 10, path: 'crusader' }}); CM.recompute(pal); pal.max = 400; pal.hp = 400; pal.mp = 60; g.party[1] = pal;
+      foes = fight(['Skeleton', 'Zombie']); g.rnd = fixed(() => true); const sk0 = foes[0].hp; g.strike(pal, foes[0]);
+      out.holyblade = last().includes('blessing in the blade') && foes[0].hp < sk0;
+      const z0 = foes[1].hp; g.useAbility(pal, 'smite', 0); out.radiance = foes[1].hp < z0 && last(2).includes('radiance');
+      pal.path = 'shepherd'; mage.hp = 100; mage.status = {{ blind: 3 }}; const L = pal.level, mod = g.spellMod(pal), lay = Math.ceil(Math.max(1, 8 + 3 * L + Math.floor(mod / 2)) * 1.5);
+      g.useAbility(pal, 'lay', 3); out.gentlehands = mage.hp === 100 + lay && !mage.status.blind;
+      mage.hp = 0; g.useAbility(pal, 'lay', 3); out.lastrites = mage.hp === Math.floor(mage.max / 3) && pal.used.lastrites === true;
+      mage.hp = 0; out.lastritesOnce = g.useAbility(pal, 'lay', 3) === false && mage.hp === 0;   // (spent: a fallen hero can't be the one)
+      mage.hp = 400; cleric.hp = 400; g.party[1] = rogue;
+      // Rogue: deadly, ambush; sand, slippery
+      rogue.path = 'assassin'; rogue.row = 'front'; foes = fight(['Orc']); g.rnd = fixed(() => true);
+      const base = Math.max(1, g.effective(rogue).atk + rogue.weapon.power - Math.floor(foes[0].df / 2));
+      let h0 = foes[0].hp; g.strike(rogue, foes[0]); out.deadly = foes[0].hp === h0 - base * 3;
+      g.rnd = fixed((p) => p > 0.5); rogue.struck = false; h0 = foes[0].hp; g.strike(rogue, foes[0]); const amb = foes[0].hp === h0 - base * 3;   // (hits land, weak spots don't come by chance)
+      h0 = foes[0].hp; g.strike(rogue, foes[0]); out.ambush = amb && foes[0].hp === h0 - base;
+      rogue.path = 'trickster'; g.useAbility(rogue, 'trick', 0); out.sand = foes[0].held === 1 && foes[0].blind === 3;
+      out.slippery = g.flee(false) === true && g.mode === 'explore';
+      const f2 = CM.testFloor(6, ['####', '#XM#', '####']); CM.useFloor(g, f2); g.rnd = fixed(() => true); const m0 = g.messages.length; g.startCombat('2,1', f2.things['2,1'], true);
+      out.noSurprise = !g.messages.slice(m0).some(m => m.includes('before you can draw'));
+      // Ranger: true arrow, rain of arrows; warden's eye, pathfinder
+      const ranger = CM.makeHero('Ranger', 'Ran'); Object.assign(ranger, {{ level: 10, path: 'sharpshooter' }}); CM.recompute(ranger); ranger.max = 400; ranger.hp = 400; g.party[3] = ranger;
+      foes = fight(['Orc', 'Orc', 'Orc']); g.rnd = fixed(() => false); h0 = foes[0].hp; g.strike(ranger, foes[0]); out.truearrow = foes[0].hp < h0;
+      const v0 = g.messages.length; g.useAbility(ranger, 'volley', 0); out.rainofarrows = g.messages.slice(v0).filter(m => m.includes('arrow')).length === 3;
+      ranger.path = 'warden'; const f3 = CM.useFloor(g, CM.testFloor(6, ['#######', '#X.T..#', '#S#####', '#######']));
+      out.wardeneye = f3.features['3,1'].known === true && f3.features['1,2'].found === true && f3.grid[2][1] === 0;
+      g.light = {{ kind: 'torch', left: 100 }}; g.steps = 0; for (let i = 0; i < 4; i++) {{ g.move(0); g.move(2); }} out.pathfinder = g.light.left === 96;
+      g.party[3] = mage;
+      // Cleric: blessed hands, miracle; purifier, consecrate
+      cleric.path = 'priest'; cleric.level = 10; CM.recompute(cleric); cleric.max = 400; cleric.hp = 400; cleric.mp = 60; mage.hp = 100;
+      const heal = Math.ceil(Math.max(1, 12 + 4 * cleric.level + g.spellMod(cleric)) * 1.5); foes = fight(['Orc', 'Skeleton']);
+      g.useAbility(cleric, 'heal', 3); out.blessedhands = mage.hp === 100 + heal;
+      mage.hp = 0; g.useAbility(cleric, 'raise', 3); out.miracle = mage.hp === mage.max;
+      cleric.path = 'exorcist'; const o0 = foes[0].hp; g.useAbility(cleric, 'turn', null); out.purifier = foes[0].hp < o0 && last(2).includes('scorches');
+      g.useAbility(cleric, 'bless', null); out.consecrate = g.combat.bless === true && g.combat.protect === true;
+      // Mage: firebrand, inferno; thrifty, wellspring
+      mage.path = 'pyromancer'; mage.mp = 60; foes = fight(['Orc']); const Lm = mage.level, modm = g.spellMod(mage);
+      h0 = foes[0].hp; g.useAbility(mage, 'firebolt', 0); out.firebrand = foes[0].hp === h0 - Math.ceil(Math.max(1, 10 + 3 * Lm + modm) * 1.5);
+      g.useAbility(mage, 'fireball', null); const b0 = foes[0].hp; out.infernoLit = foes[0].burning === 2;
+      g.endRound(); out.inferno = foes[0].hp === b0 - (5 + Lm) && foes[0].burning === 1;
+      mage.path = 'archmage'; mage.mp = 20; g.useAbility(mage, 'firebolt', 0); out.thrifty = mage.mp === 18;
+      g.endRound(); out.wellspring = mage.mp === 20;
+      // Druid: deep roots, evergreen; storm call, tempest
+      const druid = CM.makeHero('Druid', 'Dru'); Object.assign(druid, {{ level: 10, path: 'grove' }}); CM.recompute(druid); druid.max = 400; druid.hp = 100; druid.mp = 60; g.party[2] = druid;
+      foes = fight(['Orc', 'Orc']); g.useAbility(druid, 'thorns', null); out.deeproots = druid.hp === 100 + (3 + Math.floor(druid.level / 2)) * 3;
+      const e0 = druid.hp; g.endRound(); out.evergreen = druid.hp === e0 + 3;
+      druid.path = 'storm'; const s0 = foes[1].hp; g.rnd = fixed(() => true); g.useAbility(druid, 'calllightning', 0); out.stormcall = foes[1].hp < s0 && foes[0].held === 1 && foes[1].held === 1;
+      g.party[2] = cleric;
+      // Bard: war song, epic; jeer, lull
+      const bard = CM.makeHero('Bard', 'Bar'); Object.assign(bard, {{ level: 10, path: 'skald' }}); CM.recompute(bard); bard.max = 400; bard.hp = 400; bard.mp = 60; g.party[3] = bard;
+      foes = fight(['Orc']); g.useAbility(bard, 'song', null); const atkPlain = knight.atk;
+      out.warsong = g.song === 2 && g.effective(knight).atk === atkPlain + 4 && (() => {{ knight.hp = 400; g.hurt(knight, 10, foes[0], {{ noTouch: true }}); return knight.hp === 392; }})();
+      for (const m of g.foes) m.hp = 0; g.afterBlows(); const epicFloor = g.floor.number;
+      const f4 = CM.testFloor(epicFloor, ['####', '#XM#', '####']); CM.useFloor(g, f4); g.rnd = fixed(() => false); g.move(0); out.epic = g.song === 2 && g.songEpic === epicFloor;
+      g.combat = null; g.mode = 'explore'; g.enterFloor(epicFloor + 1, 'down'); out.epicEnds = g.song === 0;
+      bard.path = 'jester'; foes = fight(['Orc', 'Orc']); g.useAbility(bard, 'mockery', 0); out.jeer = foes[0].marked === true && foes[0].blind === 2;
+      g.rnd = fixed(() => false); g.useAbility(bard, 'lullaby', null); out.lull = foes.every(m => m.asleep === 3);
+      g.party[3] = mage; g.combat = null; g.mode = 'explore';
+      // tomes: a caster learns, the rest can't, the known is refused
+      g.bag.push(CM.tome('frost')); let row = g.bag.length - 1;
+      out.tomeNotForKnight = g.give(row, 0).includes('caster') && g.bag.length === row + 1;
+      out.tomeLearned = g.give(row, 2) === '' && cleric.learned.includes('frost') && CM.abilitiesFor(cleric).includes('frost') && !g.bag.some(i => i.kind === 'tome');
+      g.bag.push(CM.tome('heal')); out.tomeKnown = g.give(g.bag.length - 1, 2).includes('already');
+      foes = fight(['Orc']); cleric.mp = 60; const t0 = foes[0].hp; out.tomeCast = g.useAbility(cleric, 'frost', null) === true && foes[0].hp < t0;
+      g.combat = null; g.bag = g.bag.filter(i => i.kind !== 'tome');
+      // the smith
+      g.setMode('camp'); g.gold = 1000; knight.weapon = {{ name: 'Long Sword', kind: 'weapon', slot: 'weapon', power: 9, value: 240, props: {{}} }};
+      out.smithWantsGem = g.smith('enchant', 0, 'weapon').includes('diamond');
+      g.bag.push(CM.gem('diamond')); out.smithPlus = g.smith('enchant', 0, 'weapon') === '' && knight.weapon.power === 10 && knight.weapon.name === 'Long Sword +1' && knight.weapon.props.enchant === 1 && g.gold === 920 && !g.bag.some(i => i.kind === 'gem');
+      g.bag.push(CM.gem('diamond'), CM.gem('diamond'), CM.gem('diamond')); g.smith('enchant', 0, 'weapon'); g.smith('enchant', 0, 'weapon');
+      out.smithLimit = knight.weapon.power === 12 && knight.weapon.name === 'Long Sword +3' && g.smith('enchant', 0, 'weapon').includes('all the smith') && g.bag.filter(i => i.kind === 'gem').length === 1 && g.gold === 920 - 160 - 240;
+      g.bag.push(CM.gem('ruby')); out.smithGem = g.smith('gem', 0, 'weapon') === '' && knight.weapon.props.element === 'fire' && knight.weapon.name === 'Flaming Long Sword +3' && !g.bag.some(i => i.gem === 'ruby');
+      g.bag.push(CM.gem('sapphire')); out.smithGemArmor = g.smith('gem', 0, 'armor').includes('weapon');
+      g.gold = 10; out.smithPoor = g.smith('gem', 0, 'weapon').includes('gold');
+      // the vault: an heirloom for the next party
+      g.gold = 1000; g.bag = g.bag.filter(i => i.kind !== 'gem'); g.bag.push({{ name: 'Rune Blade +2', kind: 'weapon', slot: 'weapon', power: 11, value: 400, props: {{ bonus: 2 }} }});
+      out.vaultRefuses = g.leaveHeirloom(g.bag.findIndex(i => i.kind === 'torch')).includes("won't keep");
+      const n1 = g.bag.length; out.vaultKeeps = g.leaveHeirloom(g.bag.length - 1) === '' && g.vault && g.vault.name === 'Rune Blade +2' && g.bag.length === n1 - 1 && CM.store.get('vault', null).name === 'Rune Blade +2';
+      g.bag.push({{ name: 'Mithril Helm', kind: 'helm', slot: 'helm', power: 5, value: 300, props: {{}} }});
+      out.vaultSwaps = g.leaveHeirloom(g.bag.length - 1) === '' && g.vault.name === 'Mithril Helm' && g.bag[g.bag.length - 1].name === 'Rune Blade +2';
+      out.vaultExported = JSON.parse(g.exportText()).vault.name === 'Mithril Helm';
+      g.newGame({json.dumps(SEED)}); out.vaultWaits = g.vault && g.vault.name === 'Mithril Helm' && !g.bag.some(i => i.name === 'Mithril Helm');
+      out.vaultNotHere = g.takeHeirloom().includes('camp');
+      g.setMode('camp'); out.vaultTaken = g.takeHeirloom() === '' && g.vault === null && g.bag.some(i => i.name === 'Mithril Helm') && CM.store.get('vault', null) === null && g.takeHeirloom().includes('empty');
+      // the window: the sheet's offer, the smith's and the vault's dialogs
+      g.party[0].level = 5; g.party[0].path = null;
+      CM.ui.openSheet(0); const offer = document.querySelectorAll('#sheet-boon .offer button');
+      out.sheetOffers = offer.length === 2 && document.querySelector('#sheet-boon').textContent.includes("choose") && document.querySelector('#sheet-right').textContent.includes('A path waits');
+      offer[1].click(); out.sheetChose = g.party[0].path === 'champion' && document.querySelector('#sheet-right').textContent.includes('Champion') && document.querySelectorAll('#sheet-boon .offer button').length === 0;
+      CM.ui.closeDialogs(); g.bag.push(CM.gem('diamond')); CM.ui.openSmith();
+      out.smithShown = document.querySelector('#dlg-smith').classList.contains('on') && document.querySelectorAll('#smith-list .recruit').length >= 8 && document.querySelector('#smith-gems').textContent.includes('1 diamond');
+      CM.ui.closeDialogs(); CM.ui.openVault(); out.vaultShown = document.querySelector('#dlg-vault').classList.contains('on') && document.querySelector('#vault-held').textContent.includes('empty') && document.querySelectorAll('#vault-list .recruit').length > 0;
+      CM.ui.closeDialogs(); g.setMode('explore'); CM.store.remove('vault'); g.vault = null;
+      return out; }})()""")
+    for key, value in got.items():
+        assert value is True, (key, got)
     said = [s for s in page().said if "Error" in s or "error" in s]
     assert not said, f"the page's console: {said[:5]}"
 

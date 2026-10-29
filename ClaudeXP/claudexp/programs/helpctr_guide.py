@@ -171,7 +171,9 @@ CATALOG = {
                              "the Drowned Knight, the Forge-Warden - each in a lair of its own, with two tricks, a weakness and a relic, "
                              "and trophies kept between runs. Ghosts with requests, a hermit who identifies for stories, lost adventurers to "
                              "rescue, riddle doors keyed to the carvings, pressure plates, a rope for pits, flooded, dark and labyrinth "
-                             "floors, and a journal of everything read and heard. When the whole party falls, the run ends on a screen that tells how it went, and "
+                             "floors, and a journal of everything read and heard. A path for each calling at level 5 that deepens at 10, tomes that "
+                             "teach a caster a spell, a smith at the camp who works gems into gear, and a vault that keeps one heirloom for "
+                             "the next run. When the whole party falls, the run ends on a screen that tells how it went, and "
                              "starts over. One HTML file: it plays in a browser too, and on its own from the "
                              "launcher's APPS."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "

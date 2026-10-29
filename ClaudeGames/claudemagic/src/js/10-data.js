@@ -263,9 +263,83 @@ CM.ADVENTURER = {
 };
 
 CM.abilitiesFor = (hero) => Object.keys(CM.ABILITIES).filter((id) => {
+  if ((hero.learned || []).includes(id)) return true;                  // (from a tome)
   const at = CM.ABILITIES[id].cls[hero.cls];
   return at !== undefined && hero.level >= at;
 });
+
+// ---- growth: a path for each calling, chosen at level 5, deepening at level 10 ----------------------------------------
+// Each path has two traits: the first comes with the choice, the second at the deeper level. CM.trait(hero, id) says
+// whether a hero has one. The effects live where they bite: in the fight's code (60-game.js) and in CM.recompute.
+CM.PATH_AT = [5, 10];
+CM.PATHS = {
+  Knight: {
+    bulwark: { name: "Bulwark", blurb: "The wall the party stands behind.",
+      t1: { id: "stonewall", name: "Stone Wall", what: "+3 defence" }, t2: { id: "aegis", name: "Aegis", what: "A blow the Knight steps in front of does half" } },
+    champion: { name: "Champion", blurb: "The blade that ends things.",
+      t1: { id: "mighty", name: "Mighty", what: "+3 attack" }, t2: { id: "flurry", name: "Flurry", what: "Every Fight is two blows, the second at half strength" } },
+  },
+  Paladin: {
+    crusader: { name: "Crusader", blurb: "Holy in the hand.",
+      t1: { id: "holyblade", name: "Holy Blade", what: "Every blow bites deep into the undead, blessed or not" }, t2: { id: "radiance", name: "Radiance", what: "Smite falls on every undead foe at once" } },
+    shepherd: { name: "Shepherd", blurb: "No one left behind.",
+      t1: { id: "gentlehands", name: "Gentle Hands", what: "Lay on Hands mends half again as much and lifts the small ailments" }, t2: { id: "lastrites", name: "Last Rites", what: "Lay on Hands can call a fallen hero back, once a fight" } },
+  },
+  Rogue: {
+    assassin: { name: "Assassin", blurb: "One blow is enough.",
+      t1: { id: "deadly", name: "Deadly", what: "A weak spot does triple, not double" }, t2: { id: "ambush", name: "Ambush", what: "The first blow in every fight finds a weak spot" } },
+    trickster: { name: "Trickster", blurb: "Never where the blow lands.",
+      t1: { id: "sand", name: "Sand", what: "Dirty Trick also holds the foe a round" }, t2: { id: "slippery", name: "Slippery", what: "Running always works (not from the Lich King), and the party is never caught by surprise" } },
+  },
+  Ranger: {
+    sharpshooter: { name: "Sharpshooter", blurb: "Every arrow counts.",
+      t1: { id: "truearrow", name: "True Arrow", what: "Arrows never miss" }, t2: { id: "rainofarrows", name: "Rain of Arrows", what: "Volley looses three arrows" } },
+    warden: { name: "Warden", blurb: "The dungeon's ways, learned.",
+      t1: { id: "wardeneye", name: "Warden's Eye", what: "Trapdoors and trap plates two steps off are seen; a hidden door beside you is found" }, t2: { id: "pathfinder", name: "Pathfinder", what: "Torches burn half as fast" } },
+  },
+  Cleric: {
+    priest: { name: "Priest", blurb: "The healing hand.",
+      t1: { id: "blessedhands", name: "Blessed Hands", what: "Heal mends half again as much" }, t2: { id: "miracle", name: "Miracle", what: "Raise Dead brings a hero back whole" } },
+    exorcist: { name: "Exorcist", blurb: "The light that burns.",
+      t1: { id: "purifier", name: "Purifier", what: "Turn Undead scorches the living too, for half" }, t2: { id: "consecrate", name: "Consecrate", what: "Bless also lays Protection on the party" } },
+  },
+  Mage: {
+    pyromancer: { name: "Pyromancer", blurb: "Fire, and more fire.",
+      t1: { id: "firebrand", name: "Firebrand", what: "Fire spells do half again as much" }, t2: { id: "inferno", name: "Inferno", what: "Fireball leaves every foe burning for two rounds" } },
+    archmage: { name: "Archmage", blurb: "Magic without end.",
+      t1: { id: "thrifty", name: "Thrifty", what: "Every spell costs one less" }, t2: { id: "wellspring", name: "Wellspring", what: "Two magic back at the end of every round of a fight" } },
+  },
+  Druid: {
+    grove: { name: "Grove", blurb: "Green things mend.",
+      t1: { id: "deeproots", name: "Deep Roots", what: "Thorns mends the party three times as much" }, t2: { id: "evergreen", name: "Evergreen", what: "The whole party mends 3 at the end of every round" } },
+    storm: { name: "Storm", blurb: "The sky brought down.",
+      t1: { id: "stormcall", name: "Storm Call", what: "Call Lightning strikes every foe, for most of its force" }, t2: { id: "tempest", name: "Tempest", what: "Lightning may leave a foe reeling for a round" } },
+  },
+  Bard: {
+    skald: { name: "Skald", blurb: "Songs for a shield wall.",
+      t1: { id: "warsong", name: "War Song", what: "Song gives twice the heart: +4 attack, and every blow on the party does 2 less" }, t2: { id: "epic", name: "Epic", what: "Song lasts the whole floor, fight after fight" } },
+    jester: { name: "Jester", blurb: "Laughter, and a knife in it.",
+      t1: { id: "jeer", name: "Jeer", what: "Mockery also leaves the foe half blind" }, t2: { id: "lull", name: "Lull", what: "Lullaby never fails" } },
+  },
+};
+CM.trait = function (h, id) {
+  const P = h && h.path && CM.PATHS[h.cls] && CM.PATHS[h.cls][h.path];
+  if (!P) return false;
+  return (P.t1.id === id && h.level >= CM.PATH_AT[0]) || (P.t2.id === id && h.level >= CM.PATH_AT[1]);
+};
+CM.needsPath = (h) => Boolean(h && h.hp > 0 && h.level >= CM.PATH_AT[0] && !h.path && CM.PATHS[h.cls]);
+
+// tomes teach a spell to any caster who reads one (Paladin, Cleric, Mage, Druid, Bard) - one they don't know yet
+CM.TOMES = {
+  light: "Tome of Light", sleep: "Tome of Sleep", frost: "Tome of Frost", fireball: "Tome of Fire", lightning: "Tome of Storms",
+  heal: "Tome of Mending", cure: "Tome of Cures", bless: "Tome of Blessing", turn: "Tome of the Holy Symbol", protection: "Tome of Wards",
+  mend: "Tome of Herbs", entangle: "Tome of Roots", regrowth: "Tome of Regrowth", song: "Tome of Songs", lullaby: "Tome of Lullabies", rally: "Tome of Rallying",
+};
+// gems, for the camp's smith: a diamond puts +1 on a piece of gear, the others put fire, frost or holiness into a weapon
+CM.GEMS = {
+  diamond: { name: "Diamond", element: null }, ruby: { name: "Ruby", element: "fire" }, sapphire: { name: "Sapphire", element: "frost" }, sunstone: { name: "Sunstone", element: "holy" },
+};
+CM.SMITH = { enchant: 80, gem: 120, most: 3 };                           // gold a +1 (times the pluses so far), gold a gem set, the most pluses the smith will work
 
 // the Lich King: what he does as the fight goes
 CM.LICH = { summonEvery: 3, summonMax: 4, coldFrom: 0.3, summonFrom: 0.6, riseTo: 0.4 };
