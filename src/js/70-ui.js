@@ -98,6 +98,16 @@ CM.UI = class {
   <div id="recruits"></div>
   <div class="small" id="tavern-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-smith"><div class="box journalbox"><h2>The Smith</h2>
+  <p class="small">A dwarf of the deep halls, who came up and stayed, works a forge by the camp. A diamond and his fee put +1 on a piece of gear (three times at most);
+  a ruby, a sapphire or a sunstone goes into a weapon for fire, frost or holiness.</p>
+  <div class="small" id="smith-gems"></div><div id="smith-list"></div><div class="small" id="smith-note"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-vault"><div class="box journalbox"><h2>The Vault</h2>
+  <p class="small">The merchant keeps one thing in an iron box for whoever comes after: leave an heirloom here, and the next party to reach a camp may take it up.</p>
+  <div class="list-title">In the vault</div><div class="recruit" id="vault-held"></div>
+  <div class="list-title">Leave something</div><div id="vault-list"></div><div class="small" id="vault-note"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-talk"><div class="box"><h2 id="talk-title"></h2><p id="talk-text" class="lore"></p>
@@ -205,6 +215,8 @@ CM.UI = class {
     const right = this.$("#sheet-right");
     right.innerHTML = `<table class="stats">${CM.STATS.map((s) => `<tr class="${s === c.key ? "key" : ""}"><td>${CM.STAT_NAMES[s]}</td><td class="v">${g.stat(h, s)}</td><td class="hint">${s === c.key ? "their calling's stat" : CM.STAT_HINTS[s]}</td></tr>`).join("")}</table>
       <div class="list-title">Boons</div><div class="boons">${(h.boons || []).length ? h.boons.map((id) => `<div><b>${CM.BOONS[id].name}</b> - ${CM.BOONS[id].what}</div>`).join("") : "<div class='small'>None yet. Each level earned offers one.</div>"}</div>
+      <div class="list-title">Path</div><div class="boons">${h.path && CM.PATHS[h.cls] && CM.PATHS[h.cls][h.path] ? (() => { const P = CM.PATHS[h.cls][h.path]; return `<div><b>${P.name}</b> - ${P.blurb}</div><div><b>${P.t1.name}</b> - ${P.t1.what}</div><div><b>${P.t2.name}</b> - ${h.level >= CM.PATH_AT[1] ? P.t2.what : `at level ${CM.PATH_AT[1]}: ${P.t2.what.charAt(0).toLowerCase() + P.t2.what.slice(1)}`}</div>`; })() : `<div class='small'>${CM.needsPath(h) ? "A path waits to be chosen, below." : `Chosen at level ${CM.PATH_AT[0]}: two ways for a ${h.cls} to grow.`}</div>`}</div>
+      ${(h.learned || []).length ? `<div class="list-title">Learned from tomes</div><div class="boons">${h.learned.map((id) => `<div><b>${CM.ABILITIES[id].name}</b> - ${CM.ABILITIES[id].what}</div>`).join("")}</div>` : ""}
       <div class="list-title">Ailments</div><div class="ails">${Object.keys(st).length ? Object.keys(st).map((s) => `<div><b>${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}</b> - ${CM.STATUSES[s].hint}${st[s] < 900 ? ` (${st[s]} more rounds)` : ""}</div>`).join("") : "<div class='small'>None.</div>"}</div>`;
     const boon = this.$("#sheet-boon");
     boon.innerHTML = "";
@@ -217,6 +229,21 @@ CM.UI = class {
         const b = document.createElement("button");
         b.innerHTML = `<b>${CM.BOONS[id].name}</b><small>${CM.BOONS[id].what}</small>`;
         b.addEventListener("click", () => { g.chooseBoon(h, id); this.renderSheet(); });
+        row.appendChild(b);
+      }
+      boon.appendChild(row);
+    }
+    if (CM.needsPath(h)) {
+      const title = document.createElement("div");
+      title.className = "list-title gold";
+      title.textContent = `Level ${CM.PATH_AT[0]}: choose ${h.name}'s path`;
+      boon.appendChild(title);
+      const row = document.createElement("div");
+      row.className = "offer";
+      for (const [id, P] of Object.entries(CM.PATHS[h.cls])) {
+        const b = document.createElement("button");
+        b.innerHTML = `<b>${P.name}</b><small>${P.blurb} Now: ${P.t1.what}. At level ${CM.PATH_AT[1]}: ${P.t2.what.charAt(0).toLowerCase() + P.t2.what.slice(1)}.</small>`;
+        b.addEventListener("click", () => { g.choosePath(h, id); this.renderSheet(); });
         row.appendChild(b);
       }
       boon.appendChild(row);
@@ -268,6 +295,7 @@ CM.UI = class {
       ["Kit", (CM.KITS[entry.kit] || CM.KITS.pauper).name], ["Seed", `${entry.seed}${entry.daily ? " (today's)" : ""}`],
       ["Hall of Fame", rank ? `${CM.ordinal(rank)} of ${g.fame.length}` : "not among the ten"]];
     if (t.guardians && t.guardians.length) facts.splice(6, 0, ["Guardians slain", this.guardianNames(t.guardians)]);
+    if (g.vault) facts.push(["In the vault", `${g.vault.name}, for the next party`]);
     this.$("#over-tally").innerHTML = facts.map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
     this.openDialog("#dlg-over");                                      // (opening closes whatever was open - an ending too - so the kind is set after)
     this.ending = won ? "victory" : "lament";
@@ -579,7 +607,7 @@ CM.UI = class {
       div.classList.toggle("fallen", dead);
       div.classList.toggle("front", m.row === "front");
       div.querySelector(".name").innerHTML = `${this.esc(m.name)} <small>${m.cls} ${m.level}${m.row === "front" ? " ▴" : ""}</small>` + (dead ? " <i>(fallen)</i>" : "")
-        + (m.pending ? ` <span class="boon-badge">Boon!</span>` : "");
+        + (m.pending ? ` <span class="boon-badge">Boon!</span>` : "") + (CM.needsPath(m) ? ` <span class="boon-badge">Path!</span>` : "");
       div.querySelector(".gear").textContent = `${m.weapon.name} / ${m.armor.name}`;
       const ail = div.querySelector(".ail");
       ail.textContent = Object.keys(st).map((s) => `${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}`).join("  ");
@@ -609,7 +637,7 @@ CM.UI = class {
         ["Use (Space)", () => g.use()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
-        ["Tavern", () => this.openTavern()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
+        ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Vault", () => this.openVault()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
         ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
@@ -927,6 +955,81 @@ CM.UI = class {
   guardianNames(ids) { return ids.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", "); }
 
 
+
+  // ---- the camp's smith and vault ----
+  openSmith() { this.renderSmith(); this.openDialog("#dlg-smith"); }
+  renderSmith() {
+    const g = this.game, box = this.$("#smith-list");
+    const diamonds = g.bag.filter((i) => i.kind === "gem" && i.gem === "diamond").length;
+    const gems = g.bag.filter((i) => i.kind === "gem" && CM.GEMS[i.gem].element).map((i) => i.name);
+    this.$("#smith-gems").textContent = `In the pack: ${diamonds ? CM.plural(diamonds, "diamond") : "no diamond"}${gems.length ? ", " + gems.join(", ") : ""}. Gold: ${g.gold.toLocaleString()}.`;
+    box.innerHTML = "";
+    g.party.forEach((h, hi) => {
+      for (const slot of ["weapon", "armor", "offhand", "helm"]) {
+        const it = h[slot];
+        if (!it) continue;
+        const row = document.createElement("div");
+        row.className = "recruit";
+        row.appendChild(this.icon(it, 22));
+        const text = document.createElement("div");
+        const n = (it.props || {}).enchant || 0;
+        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(h.name)}'s ${CM.SLOT_NAMES[slot].toLowerCase()} - ${this.esc(CM.itemLabel(it))}${n ? ` - the smith's work: +${n}` : ""}</small>`;
+        row.appendChild(text);
+        const act = document.createElement("div");
+        act.className = "hire";
+        const b = document.createElement("button");
+        b.textContent = n >= CM.SMITH.most ? "Worked to the limit" : `+1 for ${CM.SMITH.enchant * (n + 1)} gold and a diamond`;
+        b.disabled = n >= CM.SMITH.most || !diamonds || g.gold < CM.SMITH.enchant * (n + 1) || it.unknown;
+        b.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("enchant", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
+        act.appendChild(b);
+        if (slot === "weapon") {
+          const s = document.createElement("button");
+          s.textContent = `Set a gem for ${CM.SMITH.gem} gold`;
+          s.disabled = !gems.length || g.gold < CM.SMITH.gem || it.unknown;
+          s.title = "The first ruby, sapphire or sunstone in the pack goes in: fire, frost or holiness";
+          s.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("gem", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
+          act.appendChild(s);
+        }
+        row.appendChild(act);
+        box.appendChild(row);
+      }
+    });
+  }
+  openVault() { this.renderVault(); this.openDialog("#dlg-vault"); }
+  renderVault() {
+    const g = this.game, held = this.$("#vault-held"), list = this.$("#vault-list");
+    held.innerHTML = "";
+    if (g.vault) {
+      held.appendChild(this.icon(g.vault, 22));
+      const text = document.createElement("span");
+      text.innerHTML = `<b>${this.esc(g.vault.name)}</b> <small>${this.esc(CM.itemLabel(g.vault))}</small> `;
+      held.appendChild(text);
+      const b = document.createElement("button");
+      b.textContent = "Take it";
+      b.addEventListener("click", () => { this.$("#vault-note").textContent = g.takeHeirloom() || "Taken."; this.renderVault(); this.refresh(); });
+      held.appendChild(b);
+    } else held.innerHTML = `<span class="small">The vault is empty. Leave something here, and the next party to come this way will find it.</span>`;
+    list.innerHTML = "";
+    g.bag.forEach((it, i) => {
+      if (["key", "bones", "rope", "torch"].includes(it.kind)) return;
+      const row = document.createElement("div");
+      row.className = "recruit";
+      row.appendChild(this.icon(it, 22));
+      const text = document.createElement("div");
+      text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`;
+      row.appendChild(text);
+      const act = document.createElement("div");
+      act.className = "hire";
+      const b = document.createElement("button");
+      b.textContent = g.vault ? "Leave it (swap)" : "Leave it";
+      b.addEventListener("click", () => { this.$("#vault-note").textContent = g.leaveHeirloom(i) || "Left for those who come after."; this.renderVault(); this.refresh(); });
+      act.appendChild(b);
+      row.appendChild(act);
+      list.appendChild(row);
+    });
+    if (!list.children.length) list.innerHTML = `<div class="small">Nothing in the pack worth the keeping.</div>`;
+  }
+
   // ---- the dungeon's people and puzzles: a word with someone, a riddle at a door, the journal ----
   askRiddle(k) {
     const g = this.game, f = g.floor.features[k], r = f && CM.RIDDLES[f.riddle];
@@ -1038,7 +1141,7 @@ CM.UI = class {
     if (shop) list(this.$("#shop-list"), "The merchant's wares", g.stock || [], this.shopRow,
       (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
     const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
-    const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" ? "Read" : picked.kind === "wand" ? "Use on" : "Give to";
+    const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" || picked.kind === "tome" ? "Read" : picked.kind === "wand" ? "Use on" : "Give to";
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
       const m = g.party[i];
       b.textContent = `${verb} ${m.name}` + (m.hp <= 0 ? " (fallen)" : "");

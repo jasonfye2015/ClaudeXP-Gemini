@@ -76,6 +76,8 @@ CM.itemLabel = function (item) {
   else if (item.kind === "amulet") bits.push(p.resist ? `proof against ${p.resist}` : `warding +${p.df}`);
   else if (item.kind === "scroll") bits.push(CM.SCROLLS[item.spell].what);
   else if (item.kind === "wand") bits.push(`${CM.WANDS[item.spell].what} ${CM.plural(item.charges, "charge")}.`);
+  else if (item.kind === "tome") bits.push(`teaches ${CM.ABILITIES[item.spell].name} to a caster who reads it: ${CM.ABILITIES[item.spell].what}`);
+  else if (item.kind === "gem") bits.push(CM.GEMS[item.gem].element ? `for the camp's smith: ${CM.GEMS[item.gem].element} set into a weapon` : "for the camp's smith: +1 on a piece of gear");
   if (p.stat && item.kind !== "ring") bits.push(`+${item.power} ${CM.STAT_NAMES[p.stat]}`);
   if (p.resist && item.kind !== "amulet") bits.push(`proof against ${p.resist}`);
   if (p.df && item.kind !== "amulet") bits.push(`warding +${p.df}`);
@@ -111,6 +113,9 @@ CM.SPECIALS = {
   maze: { name: "a labyrinth", note: "No rooms, no doors: a labyrinth of narrow ways. Something in it has your scent." },
 };
 CM.rope = () => ({ name: "Rope", kind: "rope", power: 0, value: 30 });
+CM.tome = (id) => ({ name: CM.TOMES[id], kind: "tome", spell: id, power: 0, value: 160 });
+CM.gem = (id) => ({ name: CM.GEMS[id].name, kind: "gem", gem: id, power: 0, value: 150 });
+CM.isCaster = (h) => Boolean((CM.CLASSES[h.cls] || {}).mp);
 CM.bones = (ghost) => ({ name: "Someone's bones", kind: "bones", power: 0, value: 0, ghost });
 
 // one monster of a kind, at a depth - with what the kind does carried on it, so a save stands alone
@@ -196,8 +201,8 @@ CM.recompute = function (h) {
   h.max = Math.max(1, c.hp + (s.con - 10) + L * (c.grow + CM.mod(s.con, 3)));
   h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : 0;
   const hitStat = c.key === "dex" ? s.dex : s.str;
-  h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow);
-  h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0));
+  h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow + (CM.trait(h, "mighty") ? 3 : 0));
+  h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0) + (CM.trait(h, "stonewall") ? 3 : 0));
   h.hp = Math.min(h.hp, h.max);
   h.mp = Math.min(h.mp, h.maxmp);
   return h;
@@ -206,7 +211,7 @@ CM.recompute = function (h) {
 CM.makeHero = function (cls, name, stats, row) {
   const c = CM.CLASSES[cls];
   const h = { name: (name || "").trim() || cls, cls, level: 1, xp: 0, hp: 1, max: 1, mp: 0, maxmp: 0, atk: 1, df: 0,
-    stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null,
+    stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null, path: null, learned: [],
     weapon: { name: c.weapon, kind: "weapon", slot: "weapon", power: 1, value: 5, props: c.weapon === "Short Bow" ? { bow: true, twohanded: true } : {} },
     armor: { name: c.armor, kind: "armor", slot: "armor", power: 0, value: 5, props: { weight: "light" } },
     offhand: null, helm: null, ring: null, amulet: null };
@@ -224,6 +229,8 @@ CM.upgradeHero = function (h) {
   h.boons = h.boons || [];
   h.pending = h.pending || 0;
   h.offer = h.offer || null;
+  h.path = h.path || null;
+  h.learned = h.learned || [];
   for (const slot of ["offhand", "helm", "ring", "amulet"]) if (h[slot] === undefined) h[slot] = null;
   for (const slot of ["weapon", "armor"]) if (h[slot]) { h[slot].props = h[slot].props || {}; h[slot].slot = slot; }
   return h;
@@ -837,6 +844,12 @@ CM.makeFloor = function (number, seed) {
   }
   if (special === "wading") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0) floor.decor.push({ x, y, kind: "water" });
   if (special === "dark") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !floor.dark.includes(key(x, y))) floor.dark.push(key(x, y));
+  if (number >= 3) for (const [k, t] of Object.entries(floor.things)) {   // deeper down, some chests hold a gem for the smith, or a tome
+    if (t.type !== "chest") continue;
+    const h = CM.hashSeed(`${seed}:craft:${number}:${k}`);
+    if (h % 100 < 12) t.items.push(CM.gem(["diamond", "diamond", "ruby", "sapphire", "sunstone"][(h >>> 8) % 5]));
+    else if (h % 100 < 21 && number >= 4) { const ids = Object.keys(CM.TOMES); t.items.push(CM.tome(ids[(h >>> 8) % ids.length])); }
+  }
   floor.rooms = rooms.map((r) => ({ x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, name: r.template ? r.template.name : "" }));
   return floor;
 };

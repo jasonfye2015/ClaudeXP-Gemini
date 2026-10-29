@@ -188,6 +188,8 @@ CM.art.itemKey = function (item) {
     case "key": return "i.key";
     case "rope": return "i.rope";
     case "bones": return "i.bones";
+    case "tome": return "i.tome";
+    case "gem": return `i.gem_${item.gem}`;
     case "weapon":
       if (item.props && item.props.bow) return has("Short Bow", "Hunting Bow") ? "i.bow" : "i.longbow";
       if (has("Dagger")) return "i.dagger";
@@ -236,6 +238,13 @@ CM.art.glyph = function (item, size = 24) {
     case "wand": line("#1A1410", 5); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); line("#8A6A30", 3); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); p.fillStyle = "#F0E060"; p.beginPath(); p.arc(18, 6, 3, 0, Math.PI * 2); p.fill(); break;
     case "torch": line("#1A1410", 5); p.beginPath(); p.moveTo(10, 21); p.lineTo(13, 11); p.stroke(); line("#7A5A30", 3); p.beginPath(); p.moveTo(10, 21); p.lineTo(13, 11); p.stroke(); outlined(p, () => { p.moveTo(13, 2); p.lineTo(18, 9); p.lineTo(13, 12); p.lineTo(8, 9); }, "#F0A030", "#A04010", 1.5); break;
     case "lantern": outlined(p, () => { p.rect(7, 7, 10, 12); }, "#F0D070", "#4A3A1A", 1.5); p.fillStyle = "#4A3A1A"; p.fillRect(6, 5, 12, 3); p.fillRect(11, 2, 2, 3); break;
+    case "tome": outlined(p, () => { p.rect(5, 3, 14, 18); }, "#4A3A8A", "#1A1410", 1.5); p.fillStyle = "#2A2050"; p.fillRect(5, 3, 3, 18); p.fillStyle = "#E8C870"; p.fillRect(10, 8, 7, 1.6); p.fillRect(10, 11, 7, 1.6); p.fillRect(10, 14, 5, 1.6); break;
+    case "gem_diamond": case "gem_ruby": case "gem_sapphire": case "gem_sunstone": {
+      const col = { gem_diamond: "#E8F4FF", gem_ruby: "#E03040", gem_sapphire: "#3060E0", gem_sunstone: "#F0B030" }[key];
+      outlined(p, () => { p.moveTo(12, 3); p.lineTo(20, 10); p.lineTo(12, 21); p.lineTo(4, 10); }, col, "#1A1410", 1.5);
+      p.strokeStyle = "rgba(255,255,255,0.7)"; p.lineWidth = 1; p.beginPath(); p.moveTo(4, 10); p.lineTo(20, 10); p.moveTo(12, 3); p.lineTo(8, 10); p.lineTo(12, 21); p.moveTo(12, 3); p.lineTo(16, 10); p.lineTo(12, 21); p.stroke();
+      break;
+    }
     case "rope": line("#1A1410", 6); for (let i = 0; i < 3; i++) { p.beginPath(); p.ellipse(12, 10 + i * 4, 8 - i, 3, 0, 0, Math.PI * 2); p.stroke(); } line("#A07840", 3); for (let i = 0; i < 3; i++) { p.beginPath(); p.ellipse(12, 10 + i * 4, 8 - i, 3, 0, 0, Math.PI * 2); p.stroke(); } break;
     case "bones": line("#1A1410", 6); p.beginPath(); p.moveTo(5, 18); p.lineTo(19, 6); p.stroke(); line("#E8E0C8", 3.5); p.beginPath(); p.moveTo(5, 18); p.lineTo(19, 6); p.stroke(); p.fillStyle = "#E8E0C8"; for (const [x, y] of [[4, 16], [7, 20], [17, 4], [21, 8]]) { p.beginPath(); p.arc(x, y, 2.4, 0, Math.PI * 2); p.fill(); } break;
     case "key": line("#1A1410", 5); p.beginPath(); p.moveTo(8, 12); p.lineTo(20, 12); p.stroke(); line("#E0B840", 3); p.beginPath(); p.moveTo(8, 12); p.lineTo(20, 12); p.moveTo(17, 12); p.lineTo(17, 16); p.moveTo(20, 12); p.lineTo(20, 15); p.stroke(); outlined(p, () => { p.arc(7, 12, 4, 0, Math.PI * 2); }, "#E0B840", "#1A1410", 1.5); break;
