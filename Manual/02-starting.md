@@ -47,7 +47,9 @@ backups are on, it quietly makes one then.
 **APPS** opens a small window of programs that also run straight on your PC, with no computer around them:
 **Kithylin AI**, **Soul and Song**, **ClaudeRPG**, **Copilot Python Studio** and **Claude QBasic Studio**. Click one
 to start it in a window of its own. With no residents, mail, web or desktop running behind it, it starts quickly and
-has the graphics card to itself. A tile outlined in green is already open.
+has the graphics card to itself. A tile outlined in green is already open. Each runs once: started again -
+from APPS or a shortcut - it brings the one that's open to the front instead (Soul and Song, with its window closed,
+waits in the notification area, listening on Telegram).
 
 They use the same things the computers do: your Companions, Kithylin chats, game saves and the programs in
 `Local Storage\Projects`. So Soul and Song, Kithylin AI and ClaudeRPG won't start on their own while a computer is

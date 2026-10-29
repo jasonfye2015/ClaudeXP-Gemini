@@ -13,6 +13,12 @@ def main():
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Kithylin AI")
     try:
+        from claudecore import single           # one copy at a time: started again, the one running comes forward
+    except ImportError:
+        single = None                           # (lifted out of the Timeline: no claudecore)
+    if single is not None and single.ask_to_show("kithylinai"):
+        return 0
+    try:
         from claudecore import macfonts
         macfonts.apply()               # on a Mac: Mac fonts for the Windows ones
     except ImportError:
@@ -28,7 +34,11 @@ def main():
     app.aboutToQuit.connect(content.shutdown)
     win.show()
     content.composer.setFocus()
-    return app.exec()
+    listening = single.listen("kithylinai", lambda: single.come_forward(win)) if single is not None else None
+    code = app.exec()
+    if listening is not None:
+        listening.close()
+    return code
 
 
 if __name__ == "__main__":

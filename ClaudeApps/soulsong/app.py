@@ -2154,12 +2154,17 @@ class SoulAndSong(QWidget):
         if not getattr(self, "_tray_told", False):
             self._tray_told = True
             self._tray.showMessage("Soul and Song is still listening",
-                                   "Your Companion keeps answering on Telegram. Right-click this icon to open Soul and "
-                                   "Song again, or to stop listening and quit.")
+                                   "Your Companion keeps answering on Telegram. Click this icon - or start Soul and "
+                                   "Song again - to open it; right-click it to stop listening and quit.")
+
+    def show_again(self):
+        """Started again (from the launcher's APPS, or anywhere): the window comes back - out of the notification
+        area, up from minimised, in front."""
+        self._tray_open()
 
     def _tray_open(self):
         frame = getattr(self, "frame", None) or self
-        frame.show()
+        frame.showNormal() if frame.isMinimized() else frame.show()
         frame.raise_()
         frame.activateWindow()
         if self._tray is not None:

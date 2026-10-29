@@ -3,6 +3,9 @@
     python -m claudecore.standalone soulsong       (or rpg, pystudio, qbstudio)
     python -m claudecore.standalone qbstudio --check    open it, close it again, and say whether that worked
 
+One copy of each at a time (single.py): started again, it brings the one that's running forward instead - out of
+the notification area, where Soul and Song listens on when its window is closed.
+
 (Kithylin AI has always had its own: python -m kithylinai, from ClaudeApps.)
 
 A small host stands in for a computer (see host.py): a program's windows are ordinary windows on the real desktop,
@@ -299,6 +302,9 @@ def main(argv):
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)     # (before the app exists: ClaudeRPG's web view)
     app = QApplication(sys.argv[:1])
     app.setApplicationName(APPS[key][0])
+    from claudecore import single
+    if not check and single.ask_to_show(key):
+        return 0                                                 # (it was running: it's come forward instead)
     try:
         from claudecore import macfonts
         macfonts.apply()                                         # on a Mac: Mac fonts for the Windows ones
@@ -312,10 +318,14 @@ def main(argv):
         return 1                                                 # (it couldn't start, and said why)
     mod = importlib.import_module(APPS[key][1])
     app.aboutToQuit.connect(lambda: getattr(mod, "shutdown", lambda: None)())
+    listening = None if check else single.listen(        # (kept while it runs: a second start finds it)
+        key, lambda: desktop.main is not None and single.come_forward(desktop.main, desktop.main.content))
     if check:
         QTimer.singleShot(1500, desktop.main.request_close)
         QTimer.singleShot(8000, lambda: (print("it didn't close", flush=True), app.exit(3)))
     code = app.exec()
+    if listening is not None:
+        listening.close()
     if check and code == 0:
         print("ok", flush=True)
     import atexit

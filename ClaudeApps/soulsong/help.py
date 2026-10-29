@@ -464,8 +464,9 @@ conversation; what they write shows here in purple, with "(on Telegram)". Conver
 retraining unless you untick that. <b>Remove</b> takes someone off.</td></tr>
 <tr><td class="k">Anyone else</td><td>is told once that it's a private AI companion, and nothing more.</td></tr>
 <tr><td class="k">On its own</td><td>run from the launcher's <b>APPS</b>, closing the window keeps it listening from an
-icon in the notification area: click it to open Soul and Song again, or right-click it to stop listening and quit.
-Inside a computer it listens while it's open.</td></tr>
+icon in the notification area (Windows 11 may tuck it under the <b>^</b> by the clock). Click the icon - or start Soul
+and Song again, from APPS or anywhere - to bring the window back; right-click it to stop listening and quit. (Untick
+"keep listening" here to have closing it quit.) Inside a computer it listens while it's open.</td></tr>
 <tr><td class="k">Unlink</td><td>forgets the token and everyone linked. The bot itself stays yours in Telegram
 (BotFather's /deletebot removes it).</td></tr>
 </table>

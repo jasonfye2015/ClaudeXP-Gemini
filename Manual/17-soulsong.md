@@ -174,7 +174,9 @@ Then:
   left out of retraining unless you say otherwise.
 - **Anyone else** is told once that it's a private AI companion, and nothing more.
 - **On its own** (the launcher's **APPS**), closing the window keeps it listening from an icon in the notification
-  area; right-click the icon to stop listening and quit. Inside a computer it listens while it's open.
+  area (Windows 11 may tuck it under the **^** by the clock). Click the icon, or start Soul and Song again from APPS,
+  to bring the window back; right-click the icon to stop listening and quit. Inside a computer it listens while it's
+  open.
 
 Only one Soul and Song can listen to a bot at a time, so don't run it on its own and inside a computer together. The
 token and who's linked are kept in `Companions\telegram.json`. Chats with a bot aren't end-to-end encrypted:

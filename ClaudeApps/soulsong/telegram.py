@@ -55,8 +55,9 @@ the code it shows.</li>
 </ol>
 <p><b>Good to know:</b> only one Soul and Song can listen to a bot at a time - don't run it on its own and inside a
 computer together. To keep it listening with the window closed, run Soul and Song on its own (the launcher's
-<b>APPS</b>): closing the window leaves an icon in the notification area. Chats with a bot aren't end-to-end
-encrypted - Telegram's servers carry them, as with its ordinary chats.</p>"""
+<b>APPS</b>): closing the window leaves an icon in the notification area - click it, or start Soul and Song
+again, to bring the window back. Chats with a bot aren't end-to-end encrypted - Telegram's servers carry them, as
+with its ordinary chats.</p>"""
 
 
 class TelegramError(Exception):

@@ -538,18 +538,22 @@ class Systec(QWidget):
         win.activateWindow()
 
     def app_running(self, key):
+        """Started from here and still running - or running anyway (started before this launcher was, say)."""
+        from claudecore import single
         proc = self.apps.get(key)
-        return proc is not None and proc.poll() is None
+        return (proc is not None and proc.poll() is None) or single.running(key)
 
     def computer_running(self):
         return self.process is not None and self.process.poll() is None
 
     def start_app(self, key):
         """Start one in a process of its own. Returns what to tell the user ('' when it's starting)."""
-        from claudecore import standalone as S
+        from claudecore import single, standalone as S
         name = S.APPS[key][0]
+        if single.ask_to_show(key):                  # (running - hidden in the notification area, say: it comes forward)
+            return f"{name} was already open - it's in front now."
         if self.app_running(key):
-            return f"{name} is already open."
+            return f"{name} is already open."        # (still starting)
         if key in S.SHARED_FILES and self.computer_running():
             return (f"Not while {self.running.key} is running: {name} keeps the same files inside it. Shut the "
                     "computer down first.")

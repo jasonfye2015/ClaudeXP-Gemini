@@ -158,7 +158,8 @@ the window in purple, and left out of retraining unless retrain_guests. Messages
 answered when it opens (with how long ago), ones that come while the model loads wait for it. Writing first
 (Companion.reach, reach_ok, _reach_out): after free time or a dream, the user away an hour, not in quiet_from-quiet_to,
 three hours apart, reach_per_day at most; it may answer NO. On its own (the launcher's APPS), closing the window keeps
-it listening from the notification area. One listener per bot.
+it listening from the notification area; started again, it comes back (claudecore.single: one copy at a time, the
+second start asks the first to show_again). One listener per bot.
 
 Pictures: Add picture... (or paste, or drop a file on the box) - and photos, picture files and still stickers on
 Telegram (getFile, then the file server; in the order they came) - are kept as JPEGs no more than 1,280 across in the
