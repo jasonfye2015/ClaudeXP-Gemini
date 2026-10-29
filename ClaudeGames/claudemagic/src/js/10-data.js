@@ -80,26 +80,96 @@ CM.ARMORS = ["Padded Vest", "Leather Armor", "Studded Leather", "Ring Mail", "Sc
   "Plate Mail", "Elven Mail", "Mithril Plate", "Dragon Scale", "Aegis of Claude"];
 
 // each monster, with how it's painted: body (beast, biped, small, wide, tall, ghost), head, eyes, and what it carries
-// (touch: what a hit from this one may leave behind, and how often)
+// Each monster: how it's painted; touch - what a hit from it may leave behind, and how often; speed - who moves first;
+// undead - what Turn Undead and Smite are for; ability - what else it does in a fight:
+//   ranged: reaches the back row as easily as the front   coward: bolts with a purse when hurt   savage: double blows
+//   regen: mends each round   drain: steals experience   stun: knocks flat   charge: the first blow is double
+//   lifesteal: feeds on the blow   breath: fire on everyone, every other round   buffet: two struck at once
 CM.MONSTERS = [
-  { name: "Giant Rat", colour: "#8A7058", body: "beast", head: "snout", eyes: "#FF5040", extras: ["tail"], touch: { status: "poison", chance: 0.15 } },
-  { name: "Kobold", colour: "#B07040", body: "small", head: "snout", eyes: "#FFE040", extras: ["dagger"] },
-  { name: "Skeleton", colour: "#E0E0D0", body: "thin", head: "skull", eyes: "#FFE040", extras: ["sword"] },
-  { name: "Goblin", colour: "#5A9A40", body: "small", head: "ears", eyes: "#FFE040", extras: ["club"] },
-  { name: "Zombie", colour: "#7A9A70", body: "biped", head: "round", eyes: "#D0FFD0", extras: ["torn"], touch: { status: "poison", chance: 0.12 } },
-  { name: "Orc", colour: "#4A7A3A", body: "wide", head: "tusks", eyes: "#FFE040", extras: ["axe"] },
-  { name: "Ghoul", colour: "#9AA0A0", body: "thin", head: "round", eyes: "#80FF80", extras: ["claws"], touch: { status: "paralysis", chance: 0.15 } },
-  { name: "Dark Elf", colour: "#5A4A8A", body: "tall", head: "hood", eyes: "#FF80FF", extras: ["bow"], touch: { status: "sleep", chance: 0.12 } },
-  { name: "Troll", colour: "#3A6A50", body: "wide", head: "round", eyes: "#FFE040", extras: ["club", "claws"] },
-  { name: "Wraith", colour: "#6A7AA0", body: "ghost", head: "hood", eyes: "#A0E0FF", extras: [], touch: { status: "curse", chance: 0.12 } },
-  { name: "Ogre", colour: "#A08050", body: "wide", head: "round", eyes: "#FFE040", extras: ["club"] },
-  { name: "Minotaur", colour: "#7A4A30", body: "wide", head: "horns", eyes: "#FF5040", extras: ["axe"] },
-  { name: "Gargoyle", colour: "#707078", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings"], touch: { status: "stone", chance: 0.06 } },
-  { name: "Vampire", colour: "#8A2030", body: "tall", head: "pale", eyes: "#FF3030", extras: ["cape"], touch: { status: "sleep", chance: 0.12 } },
-  { name: "Demon", colour: "#C03020", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings", "claws"], touch: { status: "blind", chance: 0.12 } },
-  { name: "Wyvern", colour: "#407A70", body: "beast", head: "snout", eyes: "#FFE040", extras: ["wings", "tail"], touch: { status: "poison", chance: 0.2 } },
+  { name: "Giant Rat", colour: "#8A7058", body: "beast", head: "snout", eyes: "#FF5040", extras: ["tail"], speed: 14, touch: { status: "poison", chance: 0.15 } },
+  { name: "Kobold", colour: "#B07040", body: "small", head: "snout", eyes: "#FFE040", extras: ["dagger"], speed: 12, ability: "coward" },
+  { name: "Skeleton", colour: "#E0E0D0", body: "thin", head: "skull", eyes: "#FFE040", extras: ["sword"], speed: 8, undead: true },
+  { name: "Goblin", colour: "#5A9A40", body: "small", head: "ears", eyes: "#FFE040", extras: ["club"], speed: 11, ability: "ranged" },
+  { name: "Zombie", colour: "#7A9A70", body: "biped", head: "round", eyes: "#D0FFD0", extras: ["torn"], speed: 4, undead: true, touch: { status: "poison", chance: 0.12 } },
+  { name: "Orc", colour: "#4A7A3A", body: "wide", head: "tusks", eyes: "#FFE040", extras: ["axe"], speed: 9, ability: "savage" },
+  { name: "Ghoul", colour: "#9AA0A0", body: "thin", head: "round", eyes: "#80FF80", extras: ["claws"], speed: 10, undead: true, touch: { status: "paralysis", chance: 0.15 } },
+  { name: "Dark Elf", colour: "#5A4A8A", body: "tall", head: "hood", eyes: "#FF80FF", extras: ["bow"], speed: 13, ability: "ranged", touch: { status: "sleep", chance: 0.12 } },
+  { name: "Troll", colour: "#3A6A50", body: "wide", head: "round", eyes: "#FFE040", extras: ["club", "claws"], speed: 7, ability: "regen" },
+  { name: "Wraith", colour: "#6A7AA0", body: "ghost", head: "hood", eyes: "#A0E0FF", extras: [], speed: 12, undead: true, ability: "drain", touch: { status: "curse", chance: 0.12 } },
+  { name: "Ogre", colour: "#A08050", body: "wide", head: "round", eyes: "#FFE040", extras: ["club"], speed: 6, ability: "stun" },
+  { name: "Minotaur", colour: "#7A4A30", body: "wide", head: "horns", eyes: "#FF5040", extras: ["axe"], speed: 10, ability: "charge" },
+  { name: "Gargoyle", colour: "#707078", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings"], speed: 8, touch: { status: "stone", chance: 0.06 } },
+  { name: "Vampire", colour: "#8A2030", body: "tall", head: "pale", eyes: "#FF3030", extras: ["cape"], speed: 13, undead: true, ability: "lifesteal", touch: { status: "sleep", chance: 0.12 } },
+  { name: "Demon", colour: "#C03020", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings", "claws"], speed: 11, ability: "breath", touch: { status: "blind", chance: 0.12 } },
+  { name: "Wyvern", colour: "#407A70", body: "beast", head: "snout", eyes: "#FFE040", extras: ["wings", "tail"], speed: 12, ability: "buffet", touch: { status: "poison", chance: 0.2 } },
 ];
-CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || null;
+CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
+
+// now and then a group has a leader out of the ordinary
+CM.ELITES = {
+  hulking: { name: "Hulking", hp: 1.5, atk: 2, blurb: "half again as tough, and hits harder" },
+  swift: { name: "Swift", speed: 6, blurb: "moves before anyone" },
+  venomous: { name: "Venomous", touch: { status: "poison", chance: 0.4 }, blurb: "a poisoned bite" },
+  ancient: { name: "Ancient", df: 4, xp: 1.6, blurb: "armoured by age, and worth more" },
+  cunning: { name: "Cunning", ability: "ranged", blurb: "reaches the back row" },
+  ravenous: { name: "Ravenous", ability: "lifesteal", blurb: "feeds on every blow" },
+};
+
+// Spells and skills, by calling and the level they come at. mp 0 is a skill; once: once a fight; outside: castable
+// between fights too. Targets: foe, foes, ally, allies, fallen, none.
+CM.ABILITIES = {
+  // the Mage's book
+  missile: { name: "Magic Missile", cls: { Mage: 1 }, mp: 2, target: "foe", what: "A bolt of force that never misses." },
+  firebolt: { name: "Fire Bolt", cls: { Mage: 1 }, mp: 3, target: "foe", what: "Fire at one foe." },
+  light: { name: "Light", cls: { Mage: 2, Cleric: 2 }, mp: 2, target: "none", outside: true, what: "Light to see by for 200 steps, torch or no torch." },
+  sleep: { name: "Sleep", cls: { Mage: 2 }, mp: 3, target: "foes", what: "Every foe may fall asleep until struck." },
+  frost: { name: "Frost", cls: { Mage: 3 }, mp: 4, target: "foes", what: "Cold on every foe; some are held fast." },
+  fireball: { name: "Fireball", cls: { Mage: 4 }, mp: 5, target: "foes", what: "Fire on every foe." },
+  blink: { name: "Blink", cls: { Mage: 5 }, mp: 4, target: "none", what: "The party is elsewhere: a sure escape, two squares back (not from the Lich King)." },
+  lightning: { name: "Lightning", cls: { Mage: 6 }, mp: 6, target: "foe", what: "A great bolt at one foe." },
+  // the Cleric's prayers
+  heal: { name: "Heal", cls: { Cleric: 1 }, mp: 3, target: "ally", outside: true, what: "Mends one of the party." },
+  cure: { name: "Cure", cls: { Cleric: 2 }, mp: 2, target: "ally", outside: true, what: "Poison, sleep, paralysis and blindness leave one of the party." },
+  bless: { name: "Bless", cls: { Cleric: 3, Paladin: 5 }, mp: 4, target: "allies", what: "The party hits harder and is harder to hit, for the fight." },
+  turn: { name: "Turn Undead", cls: { Cleric: 3 }, mp: 4, target: "foes", what: "The undead burn, and may flee." },
+  protection: { name: "Protection", cls: { Cleric: 5 }, mp: 4, target: "allies", what: "Every blow on the party does less, for the fight." },
+  lift: { name: "Lift", cls: { Cleric: 6 }, mp: 3, target: "allies", outside: true, what: "Curses, blindness and sleep leave the whole party." },
+  sanctuary: { name: "Sanctuary", cls: { Cleric: 7 }, mp: 6, target: "foes", what: "Half the foes can't bring themselves to strike, this round." },
+  raise: { name: "Raise Dead", cls: { Cleric: 8 }, mp: 10, target: "fallen", outside: true, what: "A fallen hero stands again, at a third of their health." },
+  // the Paladin
+  lay: { name: "Lay on Hands", cls: { Paladin: 1 }, mp: 3, target: "ally", outside: true, what: "Mends one of the party, and takes the poison from them." },
+  smite: { name: "Smite", cls: { Paladin: 3 }, mp: 4, target: "foe", what: "A holy blow: double against the undead." },
+  // the Druid
+  thorns: { name: "Thorns", cls: { Druid: 1 }, mp: 4, target: "foes", what: "Thorns up through the stone: every foe hurt, some held fast, the party a little mended." },
+  mend: { name: "Mend", cls: { Druid: 2 }, mp: 3, target: "ally", outside: true, what: "Mends one of the party." },
+  entangle: { name: "Entangle", cls: { Druid: 3 }, mp: 3, target: "foe", what: "One foe held fast for two rounds." },
+  regrowth: { name: "Regrowth", cls: { Druid: 5 }, mp: 5, target: "allies", outside: true, what: "The whole party mends." },
+  calllightning: { name: "Call Lightning", cls: { Druid: 6 }, mp: 6, target: "foe", what: "Lightning on one foe." },
+  // the Bard
+  song: { name: "Song", cls: { Bard: 1 }, mp: 4, target: "allies", what: "Hearts lift: the party hits harder for the fight, and hurts a little less." },
+  mockery: { name: "Mockery", cls: { Bard: 2 }, mp: 2, target: "foe", what: "One foe, stung, takes a quarter more from every blow." },
+  lullaby: { name: "Lullaby", cls: { Bard: 3 }, mp: 4, target: "foes", what: "Every foe may fall asleep until struck." },
+  rally: { name: "Rally", cls: { Bard: 5 }, mp: 5, target: "allies", outside: true, what: "The party mends a little and shrugs off the small ailments." },
+  // skills: no magic in them
+  volley: { name: "Volley", cls: { Ranger: 1 }, mp: 0, target: "foes", what: "Two arrows, at two foes." },
+  aimed: { name: "Aimed Shot", cls: { Ranger: 3 }, mp: 0, target: "foe", once: true, what: "An arrow that can't miss, half again as hard. Once a fight." },
+  mark: { name: "Mark", cls: { Ranger: 5 }, mp: 0, target: "foe", what: "One foe marked: a quarter more from every blow." },
+  guard: { name: "Guard", cls: { Knight: 1 }, mp: 0, target: "ally", what: "Blows aimed at one of the party land on the Knight instead, until their next turn." },
+  taunt: { name: "Taunt", cls: { Knight: 3 }, mp: 0, target: "none", once: true, what: "Every foe comes for the Knight, this round and the next. Once a fight." },
+  bash: { name: "Shield Bash", cls: { Knight: 5 }, mp: 0, target: "foe", what: "A blow that may leave the foe reeling for a round." },
+  trick: { name: "Dirty Trick", cls: { Rogue: 4 }, mp: 0, target: "foe", what: "Sand in the eyes: the foe misses more, for a while." },
+};
+// (the Rogue's Pick Lock comes at level 2 and works on its own: walk into a locked door without a key)
+CM.PICK_LOCK_LEVEL = 2;
+CM.LIGHT_STEPS = 200;
+
+CM.abilitiesFor = (hero) => Object.keys(CM.ABILITIES).filter((id) => {
+  const at = CM.ABILITIES[id].cls[hero.cls];
+  return at !== undefined && hero.level >= at;
+});
+
+// the Lich King: what he does as the fight goes
+CM.LICH = { summonEvery: 3, summonMax: 4, coldFrom: 0.3, summonFrom: 0.6, riseTo: 0.4 };
 CM.BOSS = { name: "The Lich King", colour: "#A0E0FF", body: "tall", head: "skull", eyes: "#40F0FF", extras: ["crown", "staff", "robe"] };
 
 // the depths: what the stone looks like down there, how far the torch reaches, what the dark is made of
@@ -120,5 +190,7 @@ CM.KEYS_HELP = [
   ["W / Up", "forward"], ["S / Down", "back"], ["A / Left", "turn left"], ["D / Right", "turn right"], ["Q / E", "sidestep"],
   ["Space", "use: a chest, the stairs, a fountain, a lever - or search the wall you face"], ["I", "inventory"],
   ["1 - 4", "a hero's sheet: stats, row, ailments, a boon when they level"], ["Tab", "the automap, large"], ["Esc", "close a screen / pause"],
-  ["F", "fight"], ["C", "cast"], ["P", "potion"], ["R", "run"], ["F3", "frames per second"],
+  ["F", "fight the chosen foe"], ["C", "cast a spell or use a skill (and between fights: healing, Light)"], ["P", "an item"],
+  ["D", "defend: half the blows until their next turn"], ["R", "run"], ["Tab / click a foe", "choose the foe"],
+  ["1 - 9", "pick from a list"], ["F3", "frames per second"],
 ];

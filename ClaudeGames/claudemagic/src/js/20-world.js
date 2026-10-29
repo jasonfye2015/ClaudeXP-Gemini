@@ -30,20 +30,53 @@ CM.lantern = () => ({ name: "Lantern", kind: "lantern", power: 0, value: 150 });
 CM.key = () => ({ name: "Iron Key", kind: "key", power: 0, value: 0 });
 CM.antidote = () => ({ name: "Antidote", kind: "antidote", power: 0, value: 15 });
 
+// one monster of a kind, at a depth - with what the kind does carried on it, so a save stands alone
+CM.makeMonster = function (kind, level, rnd) {
+  return { name: kind.name, kind: kind.name, colour: kind.colour, hp: 8 + level * 6, max: 8 + level * 6, atk: 3 + level * 2, df: level,
+    xp: 10 + level * 8, gold: rnd.int(2, 8) * level, speed: kind.speed || 10, undead: Boolean(kind.undead), ability: kind.ability || null,
+    touch: kind.touch ? Object.assign({}, kind.touch) : null };
+};
+
+// a monster saved before it knew what it does
+CM.upgradeMonster = function (m) {
+  if (m.kind) return m;
+  const kind = CM.monsterKind(m.name);
+  m.kind = kind ? kind.name : m.name;
+  if (kind) { m.speed = kind.speed || 10; m.undead = Boolean(kind.undead); m.ability = kind.ability || null; m.touch = kind.touch ? Object.assign({}, kind.touch) : null; }
+  else { m.speed = m.speed || (m.boss ? 12 : 10); m.undead = Boolean(m.undead || m.boss); m.ability = m.ability || null; m.touch = m.touch || null; }
+  return m;
+};
+
+// a group: one kind, or (deeper down) two; now and then with a leader out of the ordinary
 CM.monsterGroup = function (floor, rnd) {
   const top = Math.min(CM.MONSTERS.length - 1, Math.floor(floor * CM.MONSTERS.length / CM.LAST_FLOOR));
   const kind = CM.MONSTERS[rnd.int(Math.max(0, top - 2), top)];
   const count = rnd.int(1, 2 + Math.floor(floor / 6));
-  const level = floor;
   const group = [];
-  for (let i = 0; i < count; i++) {
-    group.push({ name: kind.name, colour: kind.colour, hp: 8 + level * 6, max: 8 + level * 6, atk: 3 + level * 2, df: level,
-      xp: 10 + level * 8, gold: rnd.int(2, 8) * level });
+  for (let i = 0; i < count; i++) group.push(CM.makeMonster(kind, floor, rnd));
+  if (floor >= 4 && count >= 2 && rnd.chance(0.35)) {                   // mixed company: the second kind, a step down
+    const other = CM.MONSTERS[Math.max(0, CM.MONSTERS.indexOf(kind) - rnd.int(1, 2))];
+    if (other !== kind) for (let i = Math.floor(count / 2); i < count; i++) group[i] = CM.makeMonster(other, floor, rnd);
+  }
+  if (floor >= 3 && rnd.chance(0.12)) {                                  // a leader
+    const id = rnd.pick(Object.keys(CM.ELITES)), e = CM.ELITES[id], m = group[0];
+    m.name = `${e.name} ${m.name}`;
+    m.elite = id;
+    if (e.hp) { m.max = Math.round(m.max * e.hp); m.hp = m.max; }
+    if (e.atk) m.atk += e.atk;
+    if (e.df) m.df += e.df;
+    if (e.speed) m.speed += e.speed;
+    if (e.touch) m.touch = Object.assign({}, e.touch);
+    if (e.ability) m.ability = e.ability;
+    m.xp = Math.round(m.xp * (e.xp || 1.5));
+    m.gold *= 2;
   }
   return group;
 };
 
-CM.bossMonster = () => ({ name: CM.BOSS.name, colour: CM.BOSS.colour, hp: 650, max: 650, atk: 46, df: 18, xp: 5000, gold: 5000, boss: true });
+CM.bossMonster = () => ({ name: CM.BOSS.name, kind: CM.BOSS.name, colour: CM.BOSS.colour, hp: 650, max: 650, atk: 46, df: 18, xp: 5000, gold: 5000,
+  boss: true, speed: 12, undead: true, ability: null, touch: { status: "curse", chance: 0.2 } });
+CM.skeleton = (level, rnd) => CM.makeMonster(CM.MONSTERS[2], level, rnd);
 
 // ---- heroes: rolled, made, grown ---------------------------------------------------------------------------------------
 CM.rollStats = function (cls, rnd) {                                      // three dice a stat, and what the class brings
@@ -572,6 +605,12 @@ CM.makeFloor = function (number, seed) {
   }
   if (!CM.solvable(floor)) {                                     // (it never comes to this, but a floor must be finishable)
     for (const [k, f] of Object.entries(floor.features)) if (["pit", "trapdoor", "gate"].includes(f.type) || (f.type === "door" && f.locked)) delete floor.features[k];
+  }
+  if (number === CM.LAST_FLOOR - 1) {                             // the Lich King's heart, somewhere the party can get to
+    const reach = CM.reachable(floor), goal = CM.goalOf(floor);
+    const spots = freeCells((x, y, k) => reach.has(k) && k !== goal).sort((a, b) => (dist.get(key(b[0], b[1])) || 0) - (dist.get(key(a[0], a[1])) || 0));
+    const spot = spots[0];
+    if (spot) floor.things[key(spot[0], spot[1])] = { type: "phylactery" };
   }
   floor.rooms = rooms.map((r) => ({ x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, name: r.template ? r.template.name : "" }));
   return floor;

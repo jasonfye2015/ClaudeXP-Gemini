@@ -91,18 +91,31 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
   game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); } });
+  // a click on a foe in the view chooses it
+  ui.$("#hud").addEventListener("click", (e) => {
+    if (game.mode !== "combat") return;
+    const r = e.currentTarget.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+    let best = null, bd = 90;
+    for (const f of ui.lastHud || []) {
+      const d = Math.hypot(f.sx - mx, f.sy + 40 - my);
+      if (d < bd) { bd = d; best = f; }
+    }
+    if (best) game.setTarget(best.index);
+  });
 
   function foePlace(foe) {
     if (game.mode !== "combat" || !game.foeKey) return null;
     const [x, y] = game.foeKey.split(",").map(Number);
-    const foes = game.foes, i = foes.indexOf(foe), n = foes.length;
+    const shown = game.foes.filter((f) => f.hp > 0 || dying.has(f)), i = shown.indexOf(foe), n = shown.length;
+    if (i < 0) return null;
     const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
-    const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * 0.32, -0.42, 0.42);
-    const back = (i % 2) * 0.12;
+    const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * (n > 4 ? 0.22 : 0.32), -0.46, 0.46);
+    const back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : 0);   // (the Lich King keeps his distance)
     const fwd = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
     const dx = right[0] * off + fwd[0] * back, dz = right[1] * off + fwd[1] * back;
-    const big = foe.boss ? 1.25 : 0.85;
-    return { x, y, dx, dz, w: big, h: big, wx: x + 0.5 + dx, wz: y + 0.5 + dz, wh: big + 0.02, m: foe };
+    const w = foe.boss ? 0.95 : 0.85, h = foe.boss ? 0.98 : 0.85;
+    return { x, y, dx, dz, w, h, wx: x + 0.5 + dx, wz: y + 0.5 + dz, wh: h + 0.02, m: foe, shade: foe.elite ? 1.2 : 1,
+      layer: `monster:${foe.kind || foe.name}` };
   }
 
   function sprites() {
@@ -117,14 +130,15 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ladder") out.push({ x, y, layer: "hatch", w: 0.92, flat: true });
       else if (thing.type === "stairs_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "key") out.push({ x, y, layer: "key", w: 0.4, h: 0.4 });
+      else if (thing.type === "phylactery") out.push({ x, y, layer: "phylactery", w: 0.7, h: 0.7, glow: 0.5 });
       else if ((thing.type === "monsters" || thing.type === "boss") && !(game.mode === "combat" && key === game.foeKey)) {
-        const m = thing.group[0];
+        const m = thing.group.find((f) => f.hp > 0 && !f.fled) || thing.group[0];
         if (thing.anim) {                                               // on the move: it slides from where it was
           const k = Math.min(1, (now - thing.anim.at) / 320);
           if (k >= 1) delete thing.anim;
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
-        out.push({ x, y, layer: `monster:${m.name}`, w: m.boss ? 1.25 : 0.85, h: m.boss ? 1.25 : 0.85 });
+        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : 0.85, h: m.boss ? 0.98 : 0.85, shade: m.elite ? 1.2 : 1 });
       }
     }
     for (const [key, f] of Object.entries(fl.features)) {
@@ -142,18 +156,20 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (f.type === "carving") out.push({ x, y, layer: "carving", face: f.face, w: 0.62, h: 0.5 });
     }
     if (game.mode === "combat") {
+      const living = game.living();
       for (const m of game.foes) {
+        if (m.fled) continue;
         const place = foePlace(m);
         if (!place) continue;
         let alpha = 1;
         if (m.hp <= 0) {
           const t = (now - (dying.get(m) || now)) / 700;
-          if (t >= 1) continue;
+          if (t >= 1) { dying.delete(m); continue; }
           alpha = 1 - t;
-        } else hud.push(place);
+        } else { place.index = living.indexOf(m); place.chosen = place.index === (game.target || 0); hud.push(place); }
         const flash = flashes.get(m) || 0;
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
-        out.push(Object.assign({ layer: `monster:${m.name}`, flash: flash * 0.8, alpha }, place));
+        out.push(Object.assign({ flash: flash * 0.8, alpha }, place));
       }
     }
     return { out, hud };
@@ -184,16 +200,31 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     if (ui.screen === "create") { if (e.code === "Escape") ui.show("title"); else if (e.code === "Enter") ui.setOut(); return; }
     if (ui.screen === "bag") { if (e.code === "Escape" || e.code === "KeyI") game.closeBag(); return; }
+    if (game.mode === "combat") {                                        // a fight: the keys are the fight's
+      if (e.code === "Tab") { e.preventDefault(); game.setTarget((game.target || 0) + 1); return; }
+      if (e.code === "Escape") { e.preventDefault(); if (ui.cmenu && ui.cmenu.kind !== "main") ui.combatMenu("main"); else ui.openDialog("#dlg-pause"); return; }
+      if (/^Digit[1-9]$/.test(e.code)) { ui.pick(Number(e.code.slice(-1))); return; }
+      if (!(game.combat && game.combat.waiting)) return;
+      if (e.code === "KeyF") game.act("fight", game.target);
+      else if (e.code === "KeyC") ui.combatMenu(ui.cmenu && ui.cmenu.kind === "cast" ? "main" : "cast");
+      else if (e.code === "KeyP") ui.combatMenu(ui.cmenu && ui.cmenu.kind === "item" ? "main" : "item");
+      else if (e.code === "KeyD") game.act("defend");
+      else if (e.code === "KeyR") game.act("run");
+      return;
+    }
+    if (ui.xmenu) {                                                      // a list open between fights
+      if (e.code === "Escape" || e.code === "KeyC") { e.preventDefault(); ui.closeMenu(); return; }
+      if (/^Digit[1-9]$/.test(e.code)) { ui.pickOutside(Number(e.code.slice(-1))); return; }
+      return;
+    }
     if (["Digit1", "Digit2", "Digit3", "Digit4"].includes(e.code) && game.mode !== "title") { ui.openSheet(Number(e.code.slice(-1)) - 1); return; }
     if (e.code === "Escape") { e.preventDefault(); ui.openDialog("#dlg-pause"); return; }
     if (e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
+    if (e.code === "KeyC" && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
     if (game.mode === "explore") {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
       if (e.code === "Space") { e.preventDefault(); game.use(); }
       else if (e.code === "KeyI") game.openBag();
-    } else if (game.mode === "combat") {
-      const a = { KeyF: "fight", KeyC: "cast", KeyP: "potion", KeyR: "run" }[e.code];
-      if (a) game.combatRound(a);
     } else if (game.mode === "camp") {
       if (e.code === "KeyI") game.openBag();
     }
@@ -224,6 +255,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.setSprites(out);
         renderer.frame(dt);
         ui.drawHud(hud, (x, y, z) => renderer.project(x, y, z));
+        if (dying.size && !game.foes.some((m) => dying.has(m))) dying.clear();
       }
       if (game.mode === "title") renderer.frame(dt);
     }

@@ -334,7 +334,7 @@ def test_the_dungeon():
       f = CM.useFloor(g, CM.testFloor(3, ["##########", "#X.....M.#", "##########"]));
       g.tick(1.2); const after = Object.keys(f.things)[0]; out.crept = after === '6,1' && f.things[after].anim !== undefined;
       let ticks = 0; while (g.mode === 'explore' && ticks < 12) {{ g.tick(1.2); ticks++; }}
-      out.caught = g.mode === 'combat' && g.messages[g.messages.length - 1].includes('out of the dark') && ticks <= 6;
+      out.caught = g.mode === 'combat' && g.messages.some(m => m.includes('out of the dark')) && ticks <= 6;
       // and the save knows the floors and the light
       g.mode = 'explore'; g.saveRun(); const saved = CM.store.get('run');
       out.saved = Object.keys(saved.floors).length >= 2 && saved.light.kind === 'torch' && saved.floor.number === 3;
@@ -351,6 +351,7 @@ def test_the_party():
     fountain); the monsters' touch; the new callings' casts; a level earned is a boon offered and chosen; an old
     hero comes up to date; and the sheet"""
     got = ask("""(function(){ const g = CM.game, out = {}, r = new CM.Random(5);
+      const fixed = (hit) => ({next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l});
       const st = CM.rollStats('Mage', r);
       out.rollRange = CM.STATS.every(s => st[s] >= 3 && st[s] <= 18) && st.int >= 6;
       const h = CM.makeHero('Knight', 'Brenwyn', {str: 16, dex: 10, con: 14, int: 8, wis: 8, luck: 10}, 'front');
@@ -383,16 +384,18 @@ def test_the_party():
       const hits = {}; for (let i = 0; i < 600; i++) { const t = g.pickTarget(); hits[t.name] = (hits[t.name] || 0) + 1; }
       out.frontTakesIt = hits['Brenwyn'] > 350;
       knight.status.stone = 999; out.stoneSpared = g.pickTarget() !== knight; delete knight.status.stone;
-      // the back row
+      // the back row (blows land, no weak spots: the dice are stilled)
       const foe = () => ({name: 'Goblin', hp: 1000, max: 1000, atk: 1, df: 0, xp: 1, gold: 1});
-      const avg = (hero, n) => { let total = 0; for (let i = 0; i < n; i++) { const f = foe(); hero.status = {}; g.strike(hero, f); total += 1000 - f.hp; } return total / n; };
-      const mageHero = g.party[3]; mageHero.row = 'back'; const backAvg = avg(mageHero, 200); mageHero.row = 'front'; const frontAvg = avg(mageHero, 200);
-      out.backHalf = backAvg < frontAvg * 0.75;
+      const blow = (hero) => { const f = foe(); hero.status = {}; g.strike(hero, f); return 1000 - f.hp; };
+      g.rnd = fixed((p) => p >= 0.5);
+      const mageHero = CM.makeHero('Mage', 'Ith', {str: 12, dex: 12, con: 10, int: 14, wis: 10, luck: 10}, 'back'); g.party.push(mageHero);
+      const backBlow = blow(mageHero); mageHero.row = 'front'; const frontBlow = blow(mageHero); g.party.pop();
+      out.backHalf = backBlow === Math.ceil(frontBlow / 2) && frontBlow > 1;
       const rogue = CM.makeHero('Rogue', 'Sly', {str: 10, dex: 14, con: 10, int: 10, wis: 10, luck: 10}, 'back'); g.party.push(rogue);
-      const rb = avg(rogue, 200); rogue.row = 'front'; const rf = avg(rogue, 200); out.backstab = rb > rf * 1.3; g.party.pop();
+      const rb = blow(rogue); rogue.row = 'front'; const rf = blow(rogue); out.backstab = rb === rf * 2; g.party.pop();
+      g.rnd = new CM.Random(11);
       // ailments
       const vic = g.party[2]; vic.status = {}; vic.hp = vic.max; vic.stats = {str: 10, dex: 10, con: 10, int: 10, wis: 10, luck: 10};
-      const fixed = (hit) => ({next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l});
       g.rnd = fixed(() => false);
       out.poisoned = g.afflict(vic, 'poison', 'Giant Rat') && vic.status.poison === 8;
       g.rnd = new CM.Random(3);
@@ -448,6 +451,136 @@ def test_the_party():
       CM.ui.closeDialogs(); g.party[1].pending = 0; g.party[1].offer = null;
       g.setMode('explore');
       return out; })()""")
+    for key, value in got.items():
+        assert value is True, (key, got)
+
+
+def test_the_fight():
+    """The fight, turn by turn: everyone in order of speed, a hero waiting for a word; Fight at the chosen foe; Defend,
+    Guard, Protection and the Song soften blows; the Mage's book known by level (Magic Missile never misses, Sleep,
+    Fireball wakes), the Cleric's prayers (Heal, Cure, Turn Undead burns and routs the undead, Raise Dead), the
+    Knight's Guard and Taunt, the Ranger's Aimed Shot once a fight and Mark; what the monsters do (trolls knit,
+    vampires feed, kobolds bolt with a purse, goblins reach the back row, demons breathe fire, wraiths drain,
+    minotaurs charge), mixed groups and leaders; a corridor lets two through; surprise both ways; running steps the
+    party back, Blink two; the Rogue picks locks; healing and Light between fights; and the Lich King - he rises
+    while his heart beats, calls skeletons, breathes cold, and dies for good once the phylactery (reachable on
+    floor 19) is smashed"""
+    run(PARSE)
+    got = ask(f"""(function(){{ const g = CM.game, out = {{}};
+      const fixed = (hit) => ({{next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l}});
+      const mk = (cls, name, level) => {{ const h = CM.makeHero(cls, name, {{str: 12, dex: 12, con: 12, int: 14, wis: 14, luck: 10}}); h.level = level || 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; return h; }};
+      const foe = (name, over) => Object.assign(CM.makeMonster(CM.monsterKind(name), 5, new CM.Random(1)), {{held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false}}, over || {{}});
+      CM.store.remove('run'); g.lastRun = null; g.newGame({json.dumps(SEED)});
+      g.party = [mk('Knight', 'Dor', 5), mk('Ranger', 'Jor', 5), mk('Cleric', 'Val', 8), mk('Mage', 'Ith', 6)];
+      const kn = g.party[0], rg = g.party[1], cl = g.party[2], mage = g.party[3];
+      // begun by walking into monsters: turns in order of speed, a hero waiting for a word
+      CM.useFloor(g, CM.testFloor(5, ["########", "#X.M...#", "########"]));
+      g.rnd = fixed(() => false);
+      g.move(0); g.move(0);
+      out.begun = g.mode === 'combat' && g.combat.round === 1 && g.combat.order.length === g.party.length + g.foes.length && g.combat.waiting !== null;
+      out.ordered = g.combat.order.every((s, i, arr) => i === 0 || arr[i - 1].init >= s.init);
+      out.corridor = g.reachLimit() === 2;
+      // Fight at the chosen foe
+      g.foes = [foe('Goblin', {{name: 'Goblin A'}}), foe('Goblin', {{name: 'Goblin B'}}), foe('Goblin', {{name: 'Goblin C'}})]; for (const m of g.foes) m.hp = m.max = 500;
+      g.combat = null; g.ensureCombat(); g.setTarget(1);
+      const first = g.combat.waiting, before = g.foes.map(m => m.hp);
+      g.rnd = fixed((p) => p >= 0.5);
+      out.fought = g.act('fight', 1) === true && g.foes[1].hp < before[1] && g.foes[0].hp === before[0] && g.foes[2].hp === before[2] && g.combat.waiting !== first;
+      // blows softened: Defend, Guard, Protection, the Song
+      const vic = kn; vic.hp = vic.max; vic.defending = true; g.song = 0; g.combat.protect = false;
+      const d1 = g.hurt(vic, 20, g.foes[0], {{noTouch: true}}); vic.defending = false; const d2 = g.hurt(vic, 20, g.foes[0], {{noTouch: true}});
+      out.defend = d1 === 10 && d2 === 20;
+      kn.hp = kn.max; mage.hp = mage.max; kn.guarding = mage; mage.guardedBy = kn;
+      g.hurt(mage, 10, g.foes[0], {{noTouch: true}}); out.guarded = mage.hp === mage.max && kn.hp === kn.max - 10; mage.guardedBy = null; kn.guarding = null;
+      g.combat.protect = true; const d3 = g.hurt(vic, 20, g.foes[0], {{noTouch: true}}); g.combat.protect = false; g.song = 1; const d4 = g.hurt(vic, 20, g.foes[0], {{noTouch: true}}); g.song = 0;
+      out.softened = d3 === 17 && d4 === 19;
+      // the Mage's book
+      out.book = CM.abilitiesFor(mage).join() === 'missile,firebolt,light,sleep,frost,fireball,blink,lightning' && CM.abilitiesFor(cl).includes('raise') && !CM.abilitiesFor(mk('Cleric', 'x', 1)).includes('raise');
+      g.rnd = fixed(() => false); g.combat.waiting = mage; mage.mp = mage.maxmp; const hpB = g.foes[2].hp;
+      out.missile = g.act('cast', {{id: 'missile', target: 2}}) === true && g.foes[2].hp === hpB - (6 + 2 * mage.level + 4);
+      g.rnd = fixed(() => true); g.combat.waiting = mage;
+      out.sleep = g.act('cast', {{id: 'sleep'}}) === true && g.foes.every(m => m.asleep === 3);
+      g.combat.waiting = mage; const hpC = g.foes.map(m => m.hp);
+      out.fireball = g.act('cast', {{id: 'fireball'}}) === true && g.foes.every((m, i) => m.hp === hpC[i] - (8 + 4 * mage.level + 4)) && g.foes.every(m => m.asleep === 0);
+      mage.mp = 1; g.combat.waiting = mage; out.cantAfford = g.act('cast', {{id: 'fireball'}}) === false && g.combat.waiting === mage;
+      // the Cleric's prayers
+      cl.mp = cl.maxmp; g.combat.waiting = cl; vic.hp = 1; vic.status = {{poison: 3}};
+      out.heal = g.act('cast', {{id: 'heal', target: 0}}) === true && vic.hp === Math.min(vic.max, 1 + 12 + 4 * cl.level + 4);
+      g.combat.waiting = cl; out.cure = g.act('cast', {{id: 'cure', target: 0}}) === true && !vic.status.poison;
+      g.foes = [foe('Skeleton'), foe('Skeleton'), foe('Goblin')]; g.combat.foes = g.foes; for (const m of g.foes) m.hp = m.max = 300;
+      g.rnd = fixed(() => true); g.combat.waiting = cl;
+      out.turned = g.act('cast', {{id: 'turn'}}) === true && g.foes[0].fled && g.foes[1].fled && !g.foes[2].fled && g.foes[2].hp === 300;
+      g.rnd = fixed(() => false); mage.hp = 0; g.combat.waiting = cl;
+      out.raised = g.act('cast', {{id: 'raise', target: 3}}) === true && mage.hp === Math.floor(mage.max / 3);
+      // the Knight and the Ranger
+      g.foes = [foe('Orc'), foe('Orc')]; g.combat.foes = g.foes; for (const m of g.foes) m.hp = m.max = 400;
+      // (the guard lasts until the Knight's next turn: so the Ranger's comes next)
+      g.combat.order = [{{hero: kn, init: 9}}, {{hero: rg, init: 8}}]; g.combat.index = 1; g.combat.waiting = kn;
+      out.guard = g.act('cast', {{id: 'guard', target: 3}}) === true && mage.guardedBy === kn && g.combat.waiting === rg;
+      g.combat.waiting = kn; g.combat.round = 1; out.taunt = g.act('cast', {{id: 'taunt'}}) === true && g.combat.taunter === kn && g.pickTarget(g.foes[0]) === kn;
+      g.combat.waiting = kn; out.tauntOnce = g.act('cast', {{id: 'taunt'}}) === false;
+      g.combat.waiting = rg; const o0 = g.foes[0].hp; out.aimed = g.act('cast', {{id: 'aimed', target: 0}}) === true && g.foes[0].hp < o0;
+      g.combat.waiting = rg; out.aimedOnce = g.act('cast', {{id: 'aimed', target: 0}}) === false;
+      g.combat.waiting = rg; out.mark = g.act('cast', {{id: 'mark', target: 1}}) === true && g.foes[1].marked === true;
+      // what the monsters do
+      g.rnd = fixed(() => true); for (const p of g.party) {{ p.hp = p.max; p.status = {{}}; p.row = 'front'; p.guardedBy = null; p.defending = false; }}
+      const troll = foe('Troll'); troll.hp = troll.max - 20; g.foes = [troll]; g.combat.foes = g.foes; g.endRound();
+      out.regen = troll.hp === troll.max - 20 + Math.max(1, Math.floor(troll.max * 0.05));
+      const vamp = foe('Vampire', {{hp: 10, max: 100}}); g.foes = [vamp]; g.combat.reached = 0; g.monsterAct(vamp); out.lifesteal = vamp.hp > 10;
+      const kob = foe('Kobold', {{hp: 1, max: 100}}); g.foes = [kob]; g.gold = 1000; g.combat.reached = 0; g.monsterAct(kob); out.coward = kob.fled === true && g.gold === 950;
+      g.rnd = new CM.Random(5); g.combat.taunter = null; const gob = foe('Goblin'); g.foes = [gob]; mage.row = 'back'; mage.hp = mage.max;
+      let backHit = false; for (let i = 0; i < 60 && !backHit; i++) {{ g.combat.reached = 0; g.monsterAct(gob); backHit = mage.hp < mage.max; }} out.ranged = backHit;
+      g.rnd = fixed(() => true); const dem = foe('Demon'); g.foes = [dem]; g.combat.reached = 0; g.monsterAct(dem); for (const p of g.party) p.hp = p.max; g.combat.reached = 0; g.monsterAct(dem);
+      out.breath = g.party.every(p => p.hp < p.max);
+      const wr = foe('Wraith'); g.foes = [wr]; kn.xp = 100; g.combat.taunter = kn; g.combat.tauntUntil = 99; g.combat.reached = 0; g.monsterAct(wr); out.drain = kn.xp < 100;
+      const mino = foe('Minotaur'); g.foes = [mino]; kn.hp = kn.max; kn.status = {{}}; g.combat.reached = 0; g.monsterAct(mino); const charge = kn.max - kn.hp; kn.hp = kn.max; g.combat.reached = 0; g.monsterAct(mino);
+      out.charge = charge > kn.max - kn.hp && mino.charged === true;
+      // mixed company, and leaders
+      const r8 = new CM.Random(8); let mixed = 0, elites = 0; for (let i = 0; i < 300; i++) {{ const grp = CM.monsterGroup(8, r8); if (new Set(grp.map(m => m.kind)).size > 1) mixed++; if (grp.some(m => m.elite)) elites++; }}
+      out.mixed = mixed > 30 && elites > 15;
+      // a corridor lets two through
+      g.combat.taunter = kn; g.combat.tauntUntil = 99; kn.hp = kn.max; kn.status = {{}}; g.foes = [foe('Goblin', {{ability: null}}), foe('Goblin', {{ability: null}}), foe('Goblin', {{ability: null}})]; g.combat.reached = 0;
+      g.rnd = fixed(() => true); let hits = 0; for (const m of g.foes) {{ const hp = kn.hp; g.monsterAct(m); if (kn.hp < hp) hits++; }}
+      out.twoReach = hits === 2 && g.messages.some(m => m.includes('crowd behind'));
+      // surprise, both ways
+      g.combat = null; g.mode = 'explore'; g.rnd = fixed(() => true); for (const p of g.party) p.hp = p.max;
+      g.startCombat('3,1', {{group: [foe('Orc')]}}, true); out.theirSurprise = g.messages.some(m => m.includes('before you can draw')) && g.party.some(p => p.hp < p.max);
+      g.combat = null; g.mode = 'explore'; g.rnd = fixed((p) => p >= 0.3);
+      g.startCombat('3,1', {{group: [foe('Orc')]}}, false); out.ourSurprise = g.combat.order.every(s => s.hero) && g.messages.some(m => m.includes('drop on them'));
+      // running steps the party back; Blink two squares
+      g.combat = null; g.mode = 'explore'; CM.useFloor(g, CM.testFloor(5, ["#######", "#...XM#", "#######"])); g.rnd = fixed(() => false);
+      g.move(0); g.rnd = fixed(() => true); g.combat.waiting = g.party[0]; out.ran = g.act('run') === true && g.mode === 'explore' && g.floor.pos[0] === 3;
+      g.floor.pos = [4, 1]; g.rnd = fixed(() => false); g.move(0); g.combat.waiting = mage; mage.mp = mage.maxmp;
+      out.blinked = g.act('cast', {{id: 'blink'}}) === true && g.mode === 'explore' && g.floor.pos[0] === 2;
+      out.noRunFromLich = (() => {{ g.combat = null; g.mode = 'explore'; g.floor.pos = [4, 1]; g.floor.things['5,1'] = {{type: 'boss', group: [CM.bossMonster()]}}; g.move(0); g.combat.waiting = g.party[0]; return g.act('run') === true && g.mode === 'combat'; }})();
+      // the Lich King: he rises while his heart beats, calls skeletons, breathes cold - and dies for good once it's smashed
+      const lich = g.foes[0]; g.phylactery = false; g.rnd = fixed(() => true);
+      lich.hp = 1; g.combat.waiting = kn; g.act('fight', 0);
+      out.rises = g.mode === 'combat' && lich.hp === Math.floor(lich.max * CM.LICH.riseTo) && g.foes.filter(f => f.summoned).length === 2;
+      for (const s of g.foes) if (s.summoned) s.hp = 0;
+      lich.hp = Math.floor(lich.max * 0.5); g.combat.summonTick = 0; g.combat.reached = 0; const n0 = g.foes.length; g.monsterAct(lich); out.summons = g.foes.length === n0 + 2;
+      lich.hp = Math.floor(lich.max * 0.2); g.combat.cold = 1; for (const p of g.party) p.hp = p.max; g.monsterAct(lich); out.cold = g.party.every(p => p.hp < p.max);
+      for (const s of g.foes) if (s.summoned) s.hp = 0;
+      g.phylactery = true; lich.hp = 1; g.combat.waiting = kn; g.act('fight', 0);
+      out.slain = g.mode === 'title' && g.fame.length > 0 && g.fame[0].won === true;
+      const f19 = CM.makeFloor(19, {json.dumps(SEED)}); const pk = Object.keys(f19.things).find(k => f19.things[k].type === 'phylactery');
+      out.heart = Boolean(pk) && CM.reachable(f19).has(pk) && !Object.values(CM.makeFloor(18, {json.dumps(SEED)}).things).some(t => t.type === 'phylactery');
+      // the Rogue picks locks; healing and Light between fights; the heart smashed
+      g.newGame({json.dumps(SEED)}); g.party = [mk('Rogue', 'Sly', 2), mk('Cleric', 'Val', 3), mk('Mage', 'Ith', 2), mk('Knight', 'Dor', 1)];
+      CM.useFloor(g, CM.testFloor(5, ["#####", "#XL.#", "#####"])); g.rnd = fixed(() => true); g.bag = g.bag.filter(i => i.kind !== 'key');
+      g.move(0); out.picked = g.floor.features['2,1'].open === true && g.messages.some(m => m.includes('picks the lock'));
+      g.party[3].hp = 1; out.healedOutside = g.castOutside(1, 'heal', 3) === true && g.party[3].hp > 1;
+      out.notOutside = g.castOutside(2, 'firebolt', null) === false;
+      g.light = {{kind: null, left: 0}}; out.lit = g.castOutside(2, 'light', null) === true && g.spellLight === CM.LIGHT_STEPS && g.hasLight() && g.lightFactor() > 1;
+      CM.useFloor(g, CM.testFloor(19, ["####", "#X.#", "####"])); g.floor.things['2,1'] = {{type: 'phylactery'}}; g.move(0); g.use();
+      out.smashed = g.phylactery === true && !g.floor.things['2,1'] && CM.store.get('run').phylactery === true;
+      // the fight's own bar
+      CM.useFloor(g, CM.testFloor(5, ["########", "#X.M...#", "########"])); g.rnd = fixed(() => false); g.move(0); g.move(0);
+      const bar = document.querySelector('#actions');
+      out.bar = bar.classList.contains('combat') && bar.querySelector('.turn').textContent.includes(g.combat.waiting.name) && bar.querySelectorAll('.targets button').length === g.living().length;
+      CM.ui.combatMenu('cast'); out.castList = bar.querySelectorAll('.menu button.pick').length === CM.abilitiesFor(g.combat.waiting).length;
+      CM.ui.combatMenu('main'); g.combat = null; g.setMode('explore');
+      return out; }})()""")
     for key, value in got.items():
         assert value is True, (key, got)
 

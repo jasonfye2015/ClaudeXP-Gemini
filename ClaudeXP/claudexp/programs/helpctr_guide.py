@@ -160,7 +160,9 @@ CATALOG = {
                              "choose their callings from eight and roll their stats; twenty floors of rooms and "
                              "corridors with doors and keys, secret walls, pits, teleporters, fountains and levers, an "
                              "automap, torches that burn down, ailments and their cures, loot and gear, boons at every "
-                             "level, merchant camps with a temple every five floors, and the Lich King at the bottom. "
+                             "level, fights turn by turn with spell books, skills and monsters with ways of their own, "
+                             "merchant camps with a temple every five floors, and the Lich King at the bottom - who rises "
+                             "again until his phylactery is found. "
                              "When the whole party falls, the run starts over. One HTML file: it plays in a browser "
                              "too, and on its own from the launcher's APPS."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
