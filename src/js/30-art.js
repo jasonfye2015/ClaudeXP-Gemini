@@ -1,7 +1,8 @@
 "use strict";
-// Everything the game shows is painted here in code - the stone of each depth, the chests and hatches, every
-// monster, the heroes' portraits - so the one file carries no pictures. Textures and sprites are 256 x 256 and go to
-// the renderer as the layers of one texture array; CM.art.build(theme) returns {layers: [canvas...], index: {name: n}}.
+// Everything the game shows in its Drawn theme is painted here in code - the stone of each depth, the chests and
+// hatches, every monster, the heroes' portraits. Textures and sprites are 256 x 256 and go to the renderer as the
+// layers of one texture array; CM.art.buildDrawn(theme) returns {layers: [canvas...], index: {name: n}}. The other
+// themes (pixel tiles, photographed stone) are in 36-looks.js, which also defines CM.art.build(theme, look).
 CM.art = {};
 const ART_SIZE = 256;
 
@@ -558,8 +559,8 @@ CM.art.secretWall = function (theme, seed) {                               // a 
   return c;
 };
 
-// ---- the heroes' portraits ----------------------------------------------------------------------------------------
-CM.art.portrait = function (cls, size = 56) {
+// ---- the heroes' portraits (the drawn ones; 36-looks.js picks by theme) ---------------------------------------------
+CM.art.portraitDrawn = function (cls, size = 56) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 56;
   p.scale(s, s);
   p.fillStyle = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A", Paladin: "#4A3A2A", Ranger: "#2A3A2E",
@@ -667,8 +668,8 @@ CM.art.icon = function () {
   return c.toDataURL();
 };
 
-// ---- the whole set for a depth, as texture-array layers -------------------------------------------------------------
-CM.art.build = function (theme) {
+// ---- the whole set for a depth, as texture-array layers (the Drawn theme) ----------------------------------------------
+CM.art.buildDrawn = function (theme) {
   const layers = [], index = {};
   const add = (name, canvas) => { index[name] = layers.length; layers.push(canvas); };
   const seed = CM.hashSeed(theme.name);
@@ -699,5 +700,5 @@ CM.art.build = function (theme) {
   add("phylactery", CM.art.phylactery());
   for (const m of CM.MONSTERS) add(`monster:${m.name}`, CM.art.monster(m));
   add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
-  return { layers, index, size: ART_SIZE };
+  return { layers, index, size: ART_SIZE, crisp: false };
 };

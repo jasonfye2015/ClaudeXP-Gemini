@@ -128,8 +128,9 @@ CM.Renderer = class {
     gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, art.size, art.size, art.layers.length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     art.layers.forEach((layer, i) => gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, art.size, art.size, 1, gl.RGBA, gl.UNSIGNED_BYTE, layer));
     gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
+    this.crisp = Boolean(art.crisp);                                     // pixel tiles stay pixels when they come close
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, art.crisp ? gl.NEAREST : gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     const aniso = gl.getExtension("EXT_texture_filter_anisotropic");
