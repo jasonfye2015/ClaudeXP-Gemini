@@ -360,8 +360,14 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---- keys ----
   const held = new Set();
-  const MOVES = { KeyW: ["move", 0], ArrowUp: ["move", 0], KeyS: ["move", 2], ArrowDown: ["move", 2], KeyA: ["turn", -1], ArrowLeft: ["turn", -1],
-    KeyD: ["turn", 1], ArrowRight: ["turn", 1], KeyQ: ["move", 3], KeyE: ["move", 1] };
+  let MOVES = {};
+  function bindMoves() {                                                 // the movement keys as set (Settings > Keys), and the arrows always
+    const K = game.settings.keys || CM.DEFAULT_KEYS;
+    MOVES = { ArrowUp: ["move", 0], ArrowDown: ["move", 2], ArrowLeft: ["turn", -1], ArrowRight: ["turn", 1] };
+    for (const [action, m] of [["forward", ["move", 0]], ["back", ["move", 2]], ["left", ["turn", -1]], ["right", ["turn", 1]], ["strafeLeft", ["move", 3]], ["strafeRight", ["move", 1]]]) if (K[action]) MOVES[K[action]] = m;
+  }
+  bindMoves();
+  game.on("settings", bindMoves);
   function act(code) {
     const m = MOVES[code];
     if (!m || game.mode !== "explore") return false;
@@ -370,6 +376,8 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   window.addEventListener("keydown", (e) => {
     CM.audio.unlock();
+    const K = game.settings.keys || CM.DEFAULT_KEYS;
+    if (ui.rebinding) { e.preventDefault(); ui.rebind(ui.rebinding, e.code); return; }   // (Settings > Keys: the next key pressed is the one)
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) {
       if (e.code === "Enter" && e.target.id === "seed") ui.startNew();
@@ -378,9 +386,9 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     if (ui.dialogOpen()) {
       const ending = ui.$("#dlg-over").classList.contains("on");
-      if (e.code === "Escape" || (e.code === "Tab" && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
+      if (e.code === "Escape" || (e.code === K.map && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
       else if (ui.$("#dlg-riddle").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickRiddle(Number(e.code.slice(-1)));
-      else if (e.code === "KeyJ" && ui.$("#dlg-journal").classList.contains("on")) ui.closeDialogs();
+      else if (e.code === K.journal && ui.$("#dlg-journal").classList.contains("on")) ui.closeDialogs();
       return;
     }
     if (ui.screen === "title") {
@@ -388,36 +396,91 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
     if (ui.screen === "create") { if (e.code === "Escape") ui.show("title"); else if (e.code === "Enter") ui.setOut(); return; }
-    if (ui.screen === "bag") { if (e.code === "Escape" || e.code === "KeyI") game.closeBag(); return; }
+    if (ui.screen === "bag") { if (e.code === "Escape" || e.code === K.inventory) game.closeBag(); return; }
     if (game.mode === "combat") {                                        // a fight: the keys are the fight's
-      if (e.code === "Tab") { e.preventDefault(); game.setTarget((game.target || 0) + 1); return; }
+      if (e.code === "Tab" || e.code === K.map) { e.preventDefault(); game.setTarget((game.target || 0) + 1); return; }
       if (e.code === "Escape") { e.preventDefault(); if (ui.cmenu && ui.cmenu.kind !== "main") ui.combatMenu("main"); else ui.openDialog("#dlg-pause"); return; }
       if (/^Digit[1-9]$/.test(e.code)) { ui.pick(Number(e.code.slice(-1))); return; }
       if (!(game.combat && game.combat.waiting)) return;
-      if (e.code === "KeyF") game.act("fight", game.target);
-      else if (e.code === "KeyC") ui.combatMenu(ui.cmenu && ui.cmenu.kind === "cast" ? "main" : "cast");
-      else if (e.code === "KeyP") ui.combatMenu(ui.cmenu && ui.cmenu.kind === "item" ? "main" : "item");
-      else if (e.code === "KeyD") game.act("defend");
-      else if (e.code === "KeyR") game.act("run");
+      if (e.code === K.fight) game.act("fight", game.target);
+      else if (e.code === K.cast) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "cast" ? "main" : "cast");
+      else if (e.code === K.item) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "item" ? "main" : "item");
+      else if (e.code === K.defend) game.act("defend");
+      else if (e.code === K.run) game.act("run");
       return;
     }
     if (ui.xmenu) {                                                      // a list open between fights
-      if (e.code === "Escape" || e.code === "KeyC") { e.preventDefault(); ui.closeMenu(); return; }
+      if (e.code === "Escape" || e.code === K.cast) { e.preventDefault(); ui.closeMenu(); return; }
       if (/^Digit[1-9]$/.test(e.code)) { ui.pickOutside(Number(e.code.slice(-1))); return; }
       return;
     }
     if (["Digit1", "Digit2", "Digit3", "Digit4"].includes(e.code) && game.mode !== "title") { ui.openSheet(Number(e.code.slice(-1)) - 1); return; }
     if (e.code === "Escape") { e.preventDefault(); ui.openDialog("#dlg-pause"); return; }
-    if (e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
-    if (e.code === "KeyC" && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
-    if (e.code === "KeyJ" && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
+    if (e.code === K.map || e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
+    if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
+    if (e.code === K.journal && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
     if (game.mode === "explore") {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
-      if (e.code === "Space") { e.preventDefault(); game.use(); }
-      else if (e.code === "KeyI") game.openBag();
+      if (e.code === K.use) { e.preventDefault(); game.use(); }
+      else if (e.code === K.inventory) game.openBag();
     } else if (game.mode === "camp") {
-      if (e.code === "KeyI") game.openBag();
+      if (e.code === K.inventory) game.openBag();
     }
+  });
+
+  // ---- a gamepad: the pad or stick moves, A uses or picks, B steps back, X the pack, Y casts, the shoulders sidestep or
+  // pick the target, Start pauses, Select the map; in a list or a dialog the pad moves a highlight and A presses ----
+  const padWas = {}, padHeld = {};
+  const padKey = (code) => window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true, cancelable: true }));
+  function padButton(i, now) {                                           // what button i does right now
+    const K = game.settings.keys || CM.DEFAULT_KEYS, inFight = game.mode === "combat", listOpen = ui.padTargets().length > 0;
+    if (ui.screen === "title") { if (i === 0 || i === 9) padKey("Enter"); return; }
+    if (ui.screen === "create") { if (i === 0) padKey("Enter"); else if (i === 1) padKey("Escape"); return; }
+    if (ui.screen === "bag") { if (i === 1 || i === 2) padKey("Escape"); return; }
+    if (listOpen) {
+      if (i === 0) ui.padPress();
+      else if (i === 1 || i === 9) padKey("Escape");
+      else if (i === 12 || i === 14 || i === 4) ui.padFocus(-1);
+      else if (i === 13 || i === 15 || i === 5) ui.padFocus(1);
+      return;
+    }
+    if (inFight) {
+      if (i === 0) padKey(K.fight); else if (i === 1) padKey(K.defend); else if (i === 2) padKey(K.item); else if (i === 3) padKey(K.cast);
+      else if (i === 5 || i === 4) padKey("Tab"); else if (i === 9) padKey("Escape"); else if (i === 7) padKey(K.run);
+      return;
+    }
+    if (i === 0) padKey(K.use); else if (i === 1 || i === 9) padKey("Escape"); else if (i === 2) padKey(K.inventory); else if (i === 3) padKey(K.cast);
+    else if (i === 8) padKey(K.map); else if (i === 4) act(K.strafeLeft || "KeyQ"); else if (i === 5) act(K.strafeRight || "KeyE");
+    else if (i === 12) act("ArrowUp"); else if (i === 13) act("ArrowDown"); else if (i === 14) act("ArrowLeft"); else if (i === 15) act("ArrowRight");
+  }
+  function pollGamepad(now) {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const pad = [...pads].find((p) => p && p.connected);
+    if (!pad) return;
+    const pressed = pad.buttons.map((b) => b.pressed), ax = pad.axes[0] || 0, ay = pad.axes[1] || 0;
+    if (Math.abs(ax) > 0.6 || Math.abs(ay) > 0.6) {                      // the stick, as the pad
+      const dir = Math.abs(ax) > Math.abs(ay) ? (ax > 0 ? 15 : 14) : (ay > 0 ? 13 : 12);
+      for (const d of [12, 13, 14, 15]) if (d !== dir) pressed[d] = pressed[d] || false;
+      pressed[dir] = true;
+    }
+    pressed.forEach((down, i) => {
+      if (down && !padWas[i]) { padButton(i, now); padHeld[i] = now; }
+      else if (down && [12, 13, 14, 15].includes(i) && game.mode === "explore" && !ui.dialogOpen() && now - padHeld[i] > 260 && !renderer.busy) { padButton(i, now); padHeld[i] = now - 100; }   // (walking while held)
+      padWas[i] = down;
+    });
+  }
+  CM.pad = { button: (i) => padButton(i, performance.now()), poll: pollGamepad };   // (for the tests, and for curiosity)
+  // a tap or a click on the view walks, out of a fight (in one, a click picks a foe)
+  const view = ui.$("#view");
+  let tapStart = null;
+  view.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; tapStart = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  view.addEventListener("pointerup", (e) => {
+    if (!tapStart || e.target.closest("button")) return;
+    const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y), quick = performance.now() - tapStart.t < 600;
+    tapStart = null;
+    if (moved > 24 || !quick) return;
+    const r = view.getBoundingClientRect();
+    if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
   window.addEventListener("keyup", (e) => held.delete(e.code));
   window.addEventListener("blur", () => held.clear());
@@ -436,6 +499,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.light = 1;
         renderer.setSprites([]);
       } else {
+        pollGamepad(now);
         if (game.mode === "explore" && !renderer.busy && held.size) {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }

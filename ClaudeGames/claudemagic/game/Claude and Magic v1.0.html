@@ -39,6 +39,13 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 #title h1 { grid-column: 1 / -1; margin: 2px 0 0; text-align: center; font-size: 42px; line-height: 1.1; color: var(--gold); letter-spacing: 1px; text-shadow: 0 0 18px rgba(232,200,112,0.35), 0 2px 0 #3A2C1C; display: flex; align-items: center; justify-content: center; gap: 16px; }
 #title h1 .emblem-slot canvas { width: 64px; height: 64px; display: block; filter: drop-shadow(0 0 10px rgba(232,200,112,0.45)); }
 #title .tagline { grid-column: 1 / -1; text-align: center; margin: -6px 0 0; color: var(--dim); font-style: italic; font-size: 14px; }
+#title .honours { grid-column: 1 / -1; text-align: center; color: var(--gold); font: italic 14px var(--serif); min-height: 16px; margin-top: -6px; }
+#slots-row button.on { border-color: var(--gold); color: var(--gold); background: #4A321A; }
+#fame i.diff { color: var(--dim); font-style: normal; font-size: 10px; margin-left: 3px; }
+.padfocus { outline: 2px solid var(--gold); outline-offset: 2px; }
+#view { touch-action: none; }
+.cardbox canvas { display: block; width: 100%; max-width: 600px; border: 1px solid var(--edge); border-radius: 4px; margin-bottom: 8px; }
+.cardbox textarea { height: 110px; font: 12px var(--mono); }
 #title .note { grid-column: 1 / -1; text-align: center; color: var(--ink); font-size: 14px; min-height: 18px; margin-top: -4px; }
 .card { background: rgba(14,10,6,0.82); border: 1px solid var(--edge); border-radius: 4px; padding: 10px 14px; }
 .card h2 { margin: 0 0 6px; font-size: 14px; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; }
@@ -700,7 +707,68 @@ CM.TOMES = {
 CM.GEMS = {
   diamond: { name: "Diamond", element: null }, ruby: { name: "Ruby", element: "fire" }, sapphire: { name: "Sapphire", element: "frost" }, sunstone: { name: "Sunstone", element: "holy" },
 };
-CM.SMITH = { enchant: 80, gem: 120, most: 3 };                           // gold a +1 (times the pluses so far), gold a gem set, the most pluses the smith will work
+CM.SMITH = { enchant: 80, gem: 120, most: 3 };
+// ---- ways to play: difficulty, the daily dungeon's mutators, achievements and the titles they give, the keys ---------
+CM.DIFFICULTIES = {
+  gentle: { name: "Gentle", hp: 0.75, atk: 0.8, gold: 1.25, what: "monsters a quarter weaker, and more gold" },
+  fair: { name: "Fair", hp: 1, atk: 1, gold: 1, what: "the dungeon as it is" },
+  grim: { name: "Grim", hp: 1.3, atk: 1.25, gold: 0.9, what: "monsters a third tougher and harder-hitting, a little less gold; the Hall of Fame marks it" },
+};
+// Today's dungeon comes with two of these, from the date
+CM.MUTATORS = {
+  hordes: { name: "Hordes", what: "every band of monsters has one more in it" },
+  brittle: { name: "Brittle", what: "monsters have half the health and hit half again as hard" },
+  rich: { name: "Rich veins", what: "chests hold twice the gold" },
+  swift: { name: "Swift", what: "monsters move faster" },
+  drought: { name: "Drought", what: "every fountain is dry" },
+  gloom: { name: "Gloom", what: "torches burn twice as fast" },
+  lean: { name: "Lean", what: "the party sets out without potions, and with 100 gold more" },
+};
+CM.mutatorsFor = function (seed) {
+  if (!String(seed).startsWith("daily-")) return [];
+  const ids = Object.keys(CM.MUTATORS), a = CM.hashSeed(`${seed}:mutator:1`) % ids.length;
+  let b = CM.hashSeed(`${seed}:mutator:2`) % (ids.length - 1);
+  if (b >= a) b++;
+  return [ids[a], ids[b]];
+};
+// achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
+CM.ACHIEVEMENTS = {
+  crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
+  ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
+  grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
+  swift: { name: "Swift", what: "Slay the Lich King in under 1,500 steps", title: "the Swift" },
+  deeper: { name: "Of the Halls", what: "Reach floor 15", title: "of the Halls" },
+  labyrinth: { name: "Minotaur's Bane", what: "Slay the Minotaur of the Labyrinth", title: "the Minotaur's Bane" },
+  untouched: { name: "Unbowed", what: "Slay a guardian with no one falling in the fight", title: "the Unbowed" },
+  deep: { name: "Of the Vaults", what: "Reach floor 10", title: "of the Vaults" },
+  daily: { name: "Of the Day", what: "Reach floor 10 in Today's dungeon", title: "of the Day" },
+  smith: { name: "Tempered", what: "Have the smith work a piece of gear to +3", title: "the Tempered" },
+  hoarder: { name: "Rich", what: "Hold 2,000 gold at once", title: "the Rich" },
+  scholar: { name: "Learned", what: "Fill the journal with ten entries", title: "the Learned" },
+  friend: { name: "Kind", what: "Cut a lost adventurer loose", title: "the Kind" },
+  restful: { name: "Gentle", what: "Lay a ghost to rest", title: "the Gentle" },
+  delver: { name: "Delver", what: "Reach floor 5", title: "the Delver" },
+};
+CM.titleFor = (achievements) => { const id = Object.keys(CM.ACHIEVEMENTS).find((a) => achievements && achievements[a]); return id ? CM.ACHIEVEMENTS[id].title : ""; };
+// the keys, as the player may set them (Settings > Keys); the arrows always move as well
+CM.DEFAULT_KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", strafeLeft: "KeyQ", strafeRight: "KeyE", use: "Space", inventory: "KeyI",
+  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR" };
+CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"], ["right", "turn right"], ["strafeLeft", "sidestep left"], ["strafeRight", "sidestep right"],
+  ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
+  ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"]];
+CM.keyName = (code) => (code || "").replace(/^Key/, "").replace(/^Digit/, "").replace(/^Arrow/, "").replace("Space", "Space").replace("Backquote", "`");
+// a run's story in a few lines, to copy and share (from a Hall of Fame entry)
+CM.summaryText = function (e) {
+  const d = CM.DIFFICULTIES[e.difficulty] ? CM.DIFFICULTIES[e.difficulty].name : "Fair", t = e.tally || {};
+  const lines = [`Claude and Magic - ${e.name}'s expedition (${d})${e.mutators && e.mutators.length ? `, today's dungeon: ${e.mutators.map((m) => CM.MUTATORS[m] ? CM.MUTATORS[m].name : m).join(" and ")}` : ""}`,
+    `${e.won ? "Slew the Lich King on floor " + CM.LAST_FLOOR : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}`}, with ${(e.gold || 0).toLocaleString()} gold - seed ${e.seed || "?"} - ${e.date || ""}`];
+  if (e.party && e.party.length) lines.push(`Party: ${e.party.join(", ")}`);
+  lines.push(`${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}`);
+  if (t.guardians && t.guardians.length) lines.push(`Guardians slain: ${t.guardians.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", ")}`);
+  if (e.titles && e.titles.length) lines.push(`Earned: ${e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", ")}`);
+  return lines.join("\n");
+};
+                           // gold a +1 (times the pluses so far), gold a gem set, the most pluses the smith will work
 
 // the Lich King: what he does as the fight goes
 CM.LICH = { summonEvery: 3, summonMax: 4, coldFrom: 0.3, summonFrom: 0.6, riseTo: 0.4 };
@@ -2483,6 +2551,41 @@ CM.art.plate = function (pressed) {                                        // a 
   return c;
 };
 
+// the run's summary as a card to keep: the emblem, the lines, old gold on dark leather
+CM.art.summaryCard = function (e, title) {
+  const W = 600, H = 340, c = document.createElement("canvas"), p = c.getContext("2d");
+  c.width = W; c.height = H;
+  const g = p.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#2A2016"); g.addColorStop(1, "#15100A");
+  p.fillStyle = g; p.fillRect(0, 0, W, H);
+  p.strokeStyle = "#8A6A30"; p.lineWidth = 3; p.strokeRect(8, 8, W - 16, H - 16);
+  p.strokeStyle = "#4A3A1A"; p.lineWidth = 1; p.strokeRect(14, 14, W - 28, H - 28);
+  p.drawImage(CM.art.emblem(110), 24, 24, 110, 110);
+  p.fillStyle = "#E8C870"; p.font = "bold 26px Georgia, serif"; p.textBaseline = "top";
+  p.fillText("Claude and Magic", 150, 30);
+  p.fillStyle = "#C8B088"; p.font = "italic 15px Georgia, serif";
+  const d = CM.DIFFICULTIES[e.difficulty] ? CM.DIFFICULTIES[e.difficulty].name : "Fair";
+  p.fillText(`${e.name}${title ? " " + title : ""}'s expedition - ${d}${e.daily ? ", today's dungeon" : ""}`, 150, 66);
+  p.fillStyle = e.won ? "#F0D080" : "#E8DCC0"; p.font = "bold 17px Georgia, serif";
+  p.fillText(e.won ? `Slew the Lich King, with ${(e.gold || 0).toLocaleString()} gold` : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}, with ${(e.gold || 0).toLocaleString()} gold`, 150, 92);
+  p.fillStyle = "#B0A080"; p.font = "13px Georgia, serif";
+  p.fillText(`Seed ${e.seed || "?"} - ${e.date || ""}`, 150, 116);
+  const t = e.tally || {}, lines = [];
+  for (const who of (e.party || [])) lines.push("  " + who);
+  const wrap = (text) => { const words = text.split(" "), out = []; let line = ""; for (const w of words) { if (p.measureText(line + " " + w).width > W - 60 && line) { out.push(line); line = w; } else line = line ? line + " " + w : w; } if (line) out.push(line); return out; };
+  p.fillStyle = "#E8DCC0"; p.font = "14px Georgia, serif";
+  let y = 150;
+  if (lines.length) { p.fillStyle = "#C8B088"; p.fillText("The party", 28, y); y += 20; p.fillStyle = "#E8DCC0"; for (const l of lines) { p.fillText(l, 28, y); y += 19; } y += 6; }
+  const facts = [`${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}`];
+  if (t.guardians && t.guardians.length) facts.push(`Guardians slain: ${t.guardians.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", ")}`);
+  if (e.mutators && e.mutators.length) facts.push(`Mutators: ${e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(" and ")}`);
+  if (e.titles && e.titles.length) facts.push(`Earned: ${e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", ")}`);
+  for (const f of facts) for (const l of wrap(f)) { if (y > H - 34) break; p.fillText(l, 28, y); y += 19; }
+  p.fillStyle = "#6A5A40"; p.font = "italic 11px Georgia, serif"; p.textAlign = "right";
+  p.fillText("A Claude Timeline game", W - 24, H - 30);
+  return c;
+};
+
 // the title's emblem: the Lich King's crown on his skull, over a crossed sword and staff, on a medallion of old gold
 CM.art.emblem = function (size = 160) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 160, cx = 80, cy = 82;
@@ -3734,10 +3837,14 @@ CM.Game = class {
     this.fame = CM.store.get("fame", []);
     this.trophies = CM.store.get("trophies", {});     // the guardians slain, ever: {id: {date, name, seed}}
     this.vault = CM.store.get("vault", null);         // the one heirloom a party left at the camp for the next
-    this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "drawn" }, CM.store.get("settings", {}));
+    this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "drawn", tapMove: true }, CM.store.get("settings", {}));
+    this.settings.keys = Object.assign({}, CM.DEFAULT_KEYS, this.settings.keys || {});
     if (!CM.LOOKS[this.settings.look]) this.settings.look = "drawn";
     this.tally = this.freshTally();      // what this run has come to: steps, kills, chests, fights, fled
-    this.lastRun = CM.store.get("run", null);        // a run left part way, to continue
+    this.slot = [1, 2, 3].includes(CM.store.get("slot", 1)) ? CM.store.get("slot", 1) : 1;
+    this.runs = [1, 2, 3].map((n) => CM.store.get(this.runKey(n), null));   // three expeditions may wait, one in each slot
+    this.achievements = CM.store.get("achievements", {});   // earned ever: {id: {date, seed, name}}
+    this.difficulty = "fair"; this.mutators = []; this.everFell = false; this.fightFell = false; this.earned = [];
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
 
@@ -3768,9 +3875,10 @@ CM.Game = class {
     if (!["explore", "camp"].includes(this.mode)) return;
     const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, floors: this.floors, light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed,
-      tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString() };
+      tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
+      difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [] };
     this.lastRun = data;
-    CM.store.set("run", data);
+    CM.store.set(this.runKey(this.slot), data);
     this.dirty = false; this.sinceSave = 0;
   }
 
@@ -3794,6 +3902,9 @@ CM.Game = class {
     this.tally = Object.assign(this.freshTally(), d.tally || {});
     this.journal = d.journal || [];
     this.rescued = d.rescued || [];
+    this.difficulty = CM.DIFFICULTIES[d.difficulty] ? d.difficulty : "fair";
+    this.mutators = d.mutators || CM.mutatorsFor(d.seed || "");
+    this.everFell = Boolean(d.everFell); this.fightFell = false; this.earned = d.earned || [];
     this.seed = d.seed || CM.randomSeed();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -3805,12 +3916,19 @@ CM.Game = class {
   endRun(won) {
     const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, date: CM.today(), seed: this.seed,
       daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`),
-      kit: this.kit || "pauper", tally: Object.assign(this.freshTally(), this.tally || {}) };
+      kit: this.kit || "pauper", tally: Object.assign(this.freshTally(), this.tally || {}), difficulty: this.difficulty || "fair", mutators: this.mutators || [] };
+    const fl = this.floor.number, steps = (this.tally || {}).steps || 0;
+    if (fl >= 5 || won) this.achieve("delver");
+    if (fl >= 10 || won) this.achieve("deep");
+    if (fl >= 15 || won) this.achieve("deeper");
+    if ((fl >= 10 || won) && entry.daily) this.achieve("daily");
+    if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); }
+    entry.titles = (this.earned || []).slice();
     this.fame.push(entry);
     if (won) this.trophy("lich");
     this.sortFame();
     CM.store.set("fame", this.fame);
-    CM.store.remove("run");
+    CM.store.remove(this.runKey(this.slot));
     this.lastRun = null;
     this.sound(won ? "victory" : "death");
     this.titleNote = won ? "The Lich King is no more. The party returns as legends!"
@@ -3836,7 +3954,7 @@ CM.Game = class {
     }
     if (data && data.run && data.run.floor && data.run.party && !this.canContinue()) {
       this.lastRun = Object.assign({ seed: CM.randomSeed(), mode: "explore" }, data.run);
-      CM.store.set("run", this.lastRun);
+      CM.store.set(this.runKey(this.slot), this.lastRun);
       took.push("run");
     }
     this.emit("change");
@@ -3844,14 +3962,17 @@ CM.Game = class {
   }
 
   exportText() {
-    return JSON.stringify({ game: "Claude and Magic", version: CM.version, run: this.lastRun, fame: this.fame, settings: this.settings, trophies: this.trophies, vault: this.vault });
+    return JSON.stringify({ game: "Claude and Magic", version: CM.version, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, settings: this.settings,
+      trophies: this.trophies, vault: this.vault, achievements: this.achievements });
   }
 
   importText(text) {
     let data;
     try { data = JSON.parse(text); } catch (e) { return "That isn't a Claude and Magic save."; }
     if (!data || data.game !== "Claude and Magic") return "That isn't a Claude and Magic save.";
-    if (data.run && data.run.floor && data.run.party) { this.lastRun = data.run; CM.store.set("run", data.run); }
+    if (Array.isArray(data.runs)) data.runs.forEach((r, i) => { if (r && r.floor && r.party) { this.runs[i] = r; CM.store.set(this.runKey(i + 1), r); } });
+    else if (data.run && data.run.floor && data.run.party) { this.runs[0] = data.run; CM.store.set("run", data.run); }
+    if (data.achievements && typeof data.achievements === "object") { this.achievements = Object.assign({}, this.achievements, data.achievements); CM.store.set("achievements", this.achievements); }
     if (Array.isArray(data.fame)) { this.fame = data.fame; this.sortFame(); CM.store.set("fame", this.fame); }
     if (data.settings) { Object.assign(this.settings, data.settings); this.saveSettings(); }
     if (data.trophies && typeof data.trophies === "object") { this.trophies = Object.assign({}, this.trophies, data.trophies); CM.store.set("trophies", this.trophies); }
@@ -3861,7 +3982,7 @@ CM.Game = class {
   }
 
   // ---- starting, and the stairs between floors ----
-  newGame(seed, chosen, kit) {                                           // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned
+  newGame(seed, chosen, kit, difficulty, mutators) {                     // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned
     this.seed = (seed || "").trim() || CM.randomSeed();
     this.party = CM.newParty(chosen);
     this.steps = 0;
@@ -3880,12 +4001,18 @@ CM.Game = class {
     this.tally = this.freshTally();
     this.journal = [];
     this.rescued = [];
+    this.difficulty = CM.DIFFICULTIES[difficulty] ? difficulty : "fair";
+    this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
+    this.everFell = false; this.fightFell = false; this.earned = [];
+    if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
     else if (this.kit === "heir") for (const h of this.party) { h.weapon.power += 2; h.weapon.name += " +1"; h.weapon.props = Object.assign({}, h.weapon.props, { bonus: 1 }); h.weapon.value = 45; }
     else if (this.kit === "legend") for (const h of this.party) { h.level = 2; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; }
     this.enterFloor(1, "down");
-    this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : ""));
+    this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
+      + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : ""));
+    if (this.mutators.length) this.say(`Today's dungeon: ${this.mutators.map((m) => `${CM.MUTATORS[m].name} - ${CM.MUTATORS[m].what}`).join("; ")}.`);
   }
 
   cellOf(fl, type) {
@@ -4129,7 +4256,7 @@ CM.Game = class {
     const l = this.light;
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    l.left -= this.floor && this.floor.special === "wading" ? 2 : 1;
+    l.left -= (this.floor && this.floor.special === "wading") || this.has("gloom") ? 2 : 1;
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
     const spare = this.bag.findIndex((i) => i.kind === "torch");
@@ -4232,13 +4359,15 @@ CM.Game = class {
         }
       }
       delete fl.things[k];
-      this.gold += thing.gold;
+      const gold = thing.gold * (this.has("rich") ? 2 : 1);
+      this.gold += gold;
       this.bag.push(...thing.items);
       this.sound("chest");
       this.count("chests");
       this.emit("fx", { kind: "sparkle", at: [x, y] });
       const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : i.name)).join(", ");
-      this.say(`The chest creaks open: ${thing.gold} gold` + (found ? `, ${found}.` : "."));
+      this.say(`The chest creaks open: ${gold} gold` + (found ? `, ${found}.` : "."));
+      if (this.gold >= 2000) this.achieve("hoarder");
       this.saveRun();
       this.emit("change");
     } else if (thing && thing.type === "ladder") {
@@ -4308,6 +4437,7 @@ CM.Game = class {
   drink(f) {
     if (f.used) { this.say("The fountain has run dry."); return; }
     f.used = true; f.known = true;
+    if (this.has("drought")) { this.say("The basin is dry to the bottom, cracked. A drought lies on the dungeon today."); this.saveRun(); this.emit("change"); return; }
     if (f.kind === "heal") {
       for (const m of this.alive()) { m.hp = m.max; this.cure(m, [...CM.CURABLE, "curse"]); }
       this.sound("heal");
@@ -4344,7 +4474,7 @@ CM.Game = class {
     }
     if (this.mode !== "explore") return;
     this.wander += dt;
-    if (this.wander < 1.1) return;
+    if (this.wander < (this.has("swift") ? 0.7 : 1.1)) return;
     this.wander = 0;
     const fl = this.floor, [px, py] = fl.pos;
     const walk = (x, y) => {
@@ -4391,7 +4521,14 @@ CM.Game = class {
   // free round), taunter / tauntUntil, bless, protect, reached (foes that have come at the party this round) }
   startCombat(key, thing, theyCame = false) {
     this.foes = thing.group.map(CM.upgradeMonster);
+    if (this.has("hordes") && !thing.horded && this.foes.length && !this.foes[0].boss && !this.foes[0].guardian) {   // one more, of the first kind
+      thing.horded = true;
+      const kind = CM.monsterKind(this.foes[0].kind || this.foes[0].name);
+      if (kind) this.foes.push(CM.makeMonster(kind, this.floor ? this.floor.number : 1, this.rnd));
+    }
+    for (const m of this.foes) this.tune(m);
     thing.group = this.foes;
+    this.fightFell = false;
     this.foeKey = key;
     delete thing.anim;
     if (!(this.song && this.songEpic === this.floor.number)) this.song = 0;   // the Bard's song lasts the fight (an Epic one, the floor)
@@ -4719,6 +4856,7 @@ CM.Game = class {
     this.sound(h.hp <= 0 ? "fallen" : "hurt");
     this.emit("fx", { kind: "hurt", hero: h, amount: dmg, foe: by });
     this.say(`${CM.The(by)} hits ${h.name} for ${dmg}${opts.how || ""}.` + (h.hp <= 0 ? `  ${h.name} falls!` : ""));
+    if (h.hp <= 0) { this.fightFell = true; this.everFell = true; }
     if (h.hp > 0) {
       if (!opts.noTouch && by.touch && this.rnd.chance(by.touch.chance)) this.afflict(h, by.touch.status, by.name);
       if ((h.boons || []).includes("secondwind") && !h.winded && h.hp < h.max / 4) {
@@ -4811,7 +4949,7 @@ CM.Game = class {
     for (let i = 0; i < n; i++) {
       const s = CM.skeleton(CM.LAST_FLOOR, this.rnd);
       Object.assign(s, { summoned: true, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false });
-      this.foes.push(s);
+      this.foes.push(this.tune(s));
     }
     this.sound("roar_undead");
     this.say(`The Lich King calls, and ${CM.plural(n, "skeleton")} claw up out of the floor!`);
@@ -4862,7 +5000,7 @@ CM.Game = class {
     for (let i = 0; i < n; i++) {
       const r = CM.makeMonster(CM.monsterKind("Giant Rat"), this.floor ? this.floor.number : 5, this.rnd);
       Object.assign(r, { summoned: true, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false });
-      this.foes.push(r);
+      this.foes.push(this.tune(r));
     }
     this.sound("roar_beast");
     this.say(`The Rat King shrieks, and ${CM.plural(n, "rat")} pour out of the refuse!`);
@@ -5190,7 +5328,10 @@ CM.Game = class {
     const xp = slain.reduce((s, m) => s + m.xp, 0);
     let gold = slain.reduce((s, m) => s + m.gold, 0);
     if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
+    gold = Math.floor(gold * (CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair).gold);
     this.gold += gold;
+    if (this.gold >= 2000) this.achieve("hoarder");
+    if (slain.some((m) => m.name === "Minotaur of the Labyrinth")) this.achieve("labyrinth");
     const loot = rnd.chance(0.45) ? [CM.makeItem(this.floor.number, rnd)] : [];
     this.bag.push(...loot);
     const boss = this.foes.some((m) => m.boss), guardian = this.foes.find((m) => m.guardian), fought = this.floor.things[this.foeKey];
@@ -5214,7 +5355,7 @@ CM.Game = class {
         this.say(`${hero.name} reaches level ${hero.level}! A boon is theirs to choose (press ${this.party.indexOf(hero) + 1}).`);
       }
     }
-    if (guardian) this.slayGuardian(guardian);
+    if (guardian) { this.slayGuardian(guardian); if (!this.fightFell) this.achieve("untouched"); }
     if (boss) { this.endRun(true); return; }
     this.setMode("explore");
     this.saveRun();
@@ -5551,6 +5692,7 @@ CM.Game = class {
     if (this.journal.some((e) => e.text === text)) return false;
     this.journal.push(Object.assign({ kind, text, floor: this.floor ? this.floor.number : 0 }, extra));
     this.emit("journal");
+    if (this.journal.length >= 10) this.achieve("scholar");
     return true;
   }
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); }
@@ -5584,6 +5726,7 @@ CM.Game = class {
     for (const h of this.alive()) h.xp += xp;
     delete fl.things[k];
     this.remember("ghost", G.tale, { who: G.name });
+    this.achieve("restful");
     this.sound("heal");
     this.say(`${G.name} is at rest. ${gift.name} (${CM.itemLabel(gift)}) and ${xp} experience each.`);
     this.emit("fx", { kind: "sparkle", at: k.split(",").map(Number) });
@@ -5627,6 +5770,7 @@ CM.Game = class {
     const fallen = this.party.findIndex((p) => p.hp <= 0 || (p.status || {}).stone);
     delete fl.things[k];
     this.sound("unlock");
+    this.achieve("friend");
     if (fallen >= 0) {
       const gone = this.party[fallen];
       for (const slot of CM.SLOTS) if (gone[slot] && !(slot === "weapon" || slot === "armor")) this.bag.push(gone[slot]);
@@ -5754,6 +5898,7 @@ CM.Game = class {
       CM.recompute(hero);
       this.sound("lever");
       this.say(`The smith works ${hero.name}'s ${CM.baseName(item)} by the fire, and sets the diamond in it: ${item.name}.`);
+      if (p.enchant >= CM.SMITH.most) this.achieve("smith");
     } else if (service === "gem") {
       if (slot !== "weapon") return "A gem of fire, frost or holiness goes into a weapon.";
       const gem = this.bag.findIndex((i) => i.kind === "gem" && CM.GEMS[i.gem].element);
@@ -5802,6 +5947,44 @@ CM.Game = class {
     this.saveRun();
     this.emit("change");
     return "";
+  }
+
+
+  // ---- ways to play: the slot, the difficulty and the day's mutators as they bite, achievements ----
+  get lastRun() { return (this.runs || [])[this.slot - 1] || null; }
+  set lastRun(v) { this.runs = this.runs || [null, null, null]; this.runs[this.slot - 1] = v; }
+  runKey(n) { return n === 1 ? "run" : `run${n}`; }
+  setSlot(n) {
+    if (![1, 2, 3].includes(n)) return false;
+    this.slot = n;
+    CM.store.set("slot", n);
+    this.emit("change");
+    return true;
+  }
+  has(mutator) { return (this.mutators || []).includes(mutator); }
+  // a monster made ready for this run: the difficulty's weight, and Brittle's
+  tune(m) {
+    if (!m || m.tuned) return m;
+    const d = CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair;
+    let hp = d.hp, atk = d.atk;
+    if (this.has("brittle")) { hp *= 0.5; atk *= 1.5; }
+    m.max = Math.max(1, Math.round(m.max * hp));
+    m.hp = Math.max(1, Math.round(m.hp * hp));
+    m.atk = Math.max(1, Math.round(m.atk * atk));
+    m.tuned = true;
+    return m;
+  }
+  achieve(id) {
+    const a = CM.ACHIEVEMENTS[id];
+    if (!a || this.achievements[id]) return false;
+    this.achievements[id] = { date: CM.today(), seed: this.seed, name: CM.playerName || "Adventurer" };
+    CM.store.set("achievements", this.achievements);
+    this.earned = (this.earned || []).concat(id);
+    this.sound("level");
+    this.say(`Achievement: ${a.name} - ${a.what.charAt(0).toLowerCase() + a.what.slice(1)}. ${CM.playerName || "The player"} may be called ${a.title}.`);
+    this.emit("fx", { kind: "relic" });
+    this.emit("achieved", id);
+    return true;
   }
 
   // ---- a level earned is a boon chosen ----
@@ -5890,8 +6073,10 @@ CM.UI = class {
     <h1><span class="emblem-slot"></span>Claude and Magic</h1>
     <div class="tagline">Twenty floors down, the Lich King waits. Four go in together.</div>
     <div class="note" id="title-note"></div>
+    <div class="honours" id="honours"></div>
     <div class="card" id="expedition">
       <h2>Expedition</h2>
+      <div class="row slots" id="slots-row"><span class="small">Expedition</span><button data-slot="1">1</button><button data-slot="2">2</button><button data-slot="3">3</button></div>
       <div class="row"><button id="btn-continue" class="primary">Continue</button><span id="continue-note" class="small"></span></div>
       <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button><button id="btn-daily" title="Today's dungeon: the same one for everyone, today">Today's</button></div>
       <p>The same seed lays out the same twenty floors, so a dungeon can be tried again - or handed to a friend. What
@@ -5901,7 +6086,7 @@ CM.UI = class {
       <div id="classes"></div>
       <p id="start-with"></p>
     </div>
-    <div class="card" id="fame"><h2>Hall of Fame</h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div></div>
+    <div class="card" id="fame"><h2>Hall of Fame</h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
     <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
     <div class="version"></div>
   </div>
@@ -5915,7 +6100,9 @@ CM.UI = class {
     <div class="foot"><button id="btn-suggest">Suggest a party</button><button id="btn-reroll-all">Reroll everyone</button>
       <label for="create-seed">Seed</label><input id="create-seed" type="text" maxlength="40" spellcheck="false">
       <label for="kit">Kit</label><select id="kit" title="What the deepest run so far has earned"></select>
+      <label for="difficulty">Difficulty</label><select id="difficulty" title="How hard the dungeon is"></select>
       <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>
+    <div class="small" id="create-note"></div>
   </div>
 </div>
 <div id="play" class="screen">
@@ -5943,8 +6130,9 @@ CM.UI = class {
   <div class="small" id="set-look-note"></div>
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
+  <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
-<div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><table class="keys"></table><div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><p class="small">Change sets a key: press the one you want. Esc and the arrows stay as they are.</p><table class="keys"></table><div class="end"><button id="btn-keys-reset">Reset</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-credits"><div class="box"><h2>Credits</h2><div id="credits"></div><div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-transfer"><div class="box"><h2>Export / Import</h2>
   <p class="small">Your run, the Hall of Fame and your settings, as text. Copy it to keep it or to carry it to another
@@ -5993,7 +6181,10 @@ CM.UI = class {
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
   <div class="roll" id="over-party"></div><div class="tally" id="over-tally"></div>
-  <div class="end"><button class="close primary">To the title</button></div></div></div>
+  <div class="end"><button id="btn-over-card">Summary card</button><button class="close primary">To the title</button></div></div></div>
+<div class="dialog" id="dlg-card"><div class="box cardbox"><h2>The expedition, in a card</h2><div id="card-slot"></div>
+  <textarea id="card-text" spellcheck="false" readonly></textarea><div class="small" id="card-note"></div>
+  <div class="end"><button id="btn-card-copy">Copy the text</button><button id="btn-card-save">Save the card (PNG)</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="bigmap"><canvas id="bigmap-canvas" width="600" height="600"></canvas></div>`;
     this.$ = (sel) => root.querySelector(sel);
     this.canvas = document.createElement("canvas");                        // the one WebGL canvas, moved between screens
@@ -6013,8 +6204,19 @@ CM.UI = class {
     this.$("#btn-daily").addEventListener("click", () => { this.$("#seed").value = CM.dailySeed(); this.refreshTitle(); });
     this.$("#btn-pause-settings").addEventListener("click", () => { this.closeDialogs(); this.openDialog("#dlg-settings"); });
     this.$("#btn-pause-title").addEventListener("click", () => { this.closeDialogs(); game.saveRun(); game.setMode("title"); });
-    const keys = this.$("#dlg-keys table");
-    keys.innerHTML = CM.KEYS_HELP.map(([k, what]) => `<tr><td><kbd>${k}</kbd></td><td>${what}</td></tr>`).join("");
+    this.renderKeys();
+    this.$("#btn-keys-reset").addEventListener("click", () => this.resetKeys());
+    this.$("#btn-over-card").addEventListener("click", () => this.openCard(this.overEntry));
+    this.$("#btn-card-copy").addEventListener("click", () => this.copyText(this.$("#card-text").value, this.$("#card-note")));
+    this.$("#btn-card-save").addEventListener("click", () => {
+      const c = this.$("#card-slot canvas");
+      if (!c) return;
+      const a = document.createElement("a");
+      a.href = c.toDataURL("image/png"); a.download = `Claude and Magic - ${(this.cardEntry && this.cardEntry.seed) || "expedition"}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      this.$("#card-note").textContent = "Saved, where the browser puts downloads.";
+    });
+    for (const b of this.root.querySelectorAll("#slots-row button[data-slot]")) b.addEventListener("click", () => { game.setSlot(Number(b.dataset.slot)); this.refreshTitle(); });
     this.$("#title .version").textContent = `Claude and Magic v${CM.version}`;
     this.$("#title .emblem-slot").appendChild(CM.art.emblem(120));
     this.fameOpen = -1;
@@ -6136,6 +6338,7 @@ CM.UI = class {
   // ---- the end of a run: how it went, who came back, what it came to ----
   showEnding(won, entry) {
     const g = this.game, t = entry.tally || {}, rank = g.fame.indexOf(entry) + 1;
+    this.overEntry = entry;
     this.fameOpen = -1;                                                  // (the Hall of Fame has been re-sorted: an open row would be another's)
     const slot = this.$("#dlg-over .emblem-slot");
     slot.innerHTML = "";
@@ -6167,10 +6370,11 @@ CM.UI = class {
     }
     const facts = [["Floors", `${entry.floor} of ${CM.LAST_FLOOR}`], ["Gold", entry.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
       ["Chests opened", t.chests || 0], ["Steps walked", (t.steps || 0).toLocaleString()], ["Fights", `${t.fights || 0}${t.fled ? ` (${t.fled} fled)` : ""}`],
-      ["Kit", (CM.KITS[entry.kit] || CM.KITS.pauper).name], ["Seed", `${entry.seed}${entry.daily ? " (today's)" : ""}`],
+      ["Kit", (CM.KITS[entry.kit] || CM.KITS.pauper).name], ["Difficulty", (CM.DIFFICULTIES[entry.difficulty] || CM.DIFFICULTIES.fair).name], ["Seed", `${entry.seed}${entry.daily ? " (today's)" : ""}`],
       ["Hall of Fame", rank ? `${CM.ordinal(rank)} of ${g.fame.length}` : "not among the ten"]];
     if (t.guardians && t.guardians.length) facts.splice(6, 0, ["Guardians slain", this.guardianNames(t.guardians)]);
     if (g.vault) facts.push(["In the vault", `${g.vault.name}, for the next party`]);
+    if (entry.titles && entry.titles.length) facts.push(["Earned", entry.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", ")]);
     this.$("#over-tally").innerHTML = facts.map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
     this.openDialog("#dlg-over");                                      // (opening closes whatever was open - an ending too - so the kind is set after)
     this.ending = won ? "victory" : "lament";
@@ -6219,6 +6423,8 @@ CM.UI = class {
     this.$("#fame table").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-seed]");
       if (b) { this.$("#seed").value = b.dataset.seed; this.refreshTitle(); return; }
+      const c = e.target.closest("button[data-card]");
+      if (c) { this.openCard(g.fame[Number(c.dataset.card)]); return; }
       const tr = e.target.closest("tr.row");
       if (!tr) return;
       const i = Number(tr.dataset.i);
@@ -6261,7 +6467,10 @@ CM.UI = class {
     this.$("#btn-reroll-all").addEventListener("click", () => { for (const s of this.slots) s.stats = CM.rollStats(s.cls); this.renderCreate(); });
     this.$("#btn-create-back").addEventListener("click", () => this.show("title"));
     this.$("#btn-setout").addEventListener("click", () => this.setOut());
-    this.$("#create-seed").addEventListener("input", () => { this.$("#seed").value = this.$("#create-seed").value; });
+    this.$("#create-seed").addEventListener("input", () => { this.$("#seed").value = this.$("#create-seed").value; this.renderCreateNote(); });
+    this.$("#difficulty").innerHTML = Object.entries(CM.DIFFICULTIES).map(([id, d]) => `<option value="${id}">${d.name}</option>`).join("");
+    this.$("#difficulty").value = "fair";
+    this.$("#difficulty").addEventListener("change", () => this.renderCreateNote());
     const slots = this.$("#slots");
     for (let i = 0; i < 4; i++) {
       const div = document.createElement("div");
@@ -6293,9 +6502,10 @@ CM.UI = class {
 
   openCreate() {
     const g = this.game;
-    if (g.canContinue() && !window.confirm("A run is waiting to be continued. Start a new expedition and let it go?")) return;
+    if (g.canContinue() && !window.confirm(`A run is waiting in expedition slot ${g.slot}. Start a new expedition there and let it go? (The other slots keep theirs.)`)) return;
     if (!this.slots.length) this.fillSlots(CM.CLASSIC);
     this.$("#create-seed").value = this.$("#seed").value;
+    this.renderCreateNote();
     this.refreshTitle();                                                 // (the kits on offer)
     this.show("create");
     this.renderCreate();
@@ -6332,10 +6542,15 @@ CM.UI = class {
     const g = this.game, seed = this.$("#create-seed").value;
     this.$("#seed").value = seed;
     this.chosenKit = this.$("#kit").value || "pauper";
-    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit);
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit, this.$("#difficulty").value);
   }
 
   startNew() { this.openCreate(); }
+
+  renderCreateNote() {
+    const seed = this.$("#create-seed").value, muts = CM.mutatorsFor(seed), d = CM.DIFFICULTIES[this.$("#difficulty").value] || CM.DIFFICULTIES.fair;
+    this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` Today's dungeon comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "");
+  }
 
   refreshTitle() {
     const g = this.game;
@@ -6343,8 +6558,18 @@ CM.UI = class {
     const can = g.canContinue();
     this.$("#btn-continue").disabled = !can;
     this.$("#continue-note").textContent = can
-      ? `Floor ${g.lastRun.floor.number}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}`
-      : "No expedition is under way.";
+      ? `Slot ${g.slot}: floor ${g.lastRun.floor.number}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}${g.lastRun.difficulty && g.lastRun.difficulty !== "fair" ? ", " + CM.DIFFICULTIES[g.lastRun.difficulty].name : ""}`
+      : `Slot ${g.slot} is empty: no expedition is under way there.`;
+    for (const b of this.root.querySelectorAll("#slots-row button[data-slot]")) {
+      const n = Number(b.dataset.slot), r = (g.runs || [])[n - 1];
+      b.classList.toggle("on", n === g.slot);
+      b.textContent = `${n}: ${r && r.floor ? `floor ${r.floor.number}` : "empty"}`;
+      b.title = r && r.floor ? `${r.gold.toLocaleString()} gold${r.saved ? ", saved " + new Date(r.saved).toLocaleString() : ""}` : "An empty slot for a new expedition";
+    }
+    const title = CM.titleFor(g.achievements), got = Object.keys(CM.ACHIEVEMENTS).filter((id) => g.achievements[id]);
+    this.$("#honours").textContent = got.length ? `${CM.playerName || "Adventurer"} ${title} - ${got.length} of ${Object.keys(CM.ACHIEVEMENTS).length} achievements` : "";
+    this.$("#achievements").innerHTML = Object.entries(CM.ACHIEVEMENTS).map(([id, a]) => { const t = g.achievements[id];
+      return `<div class="unlock ${t ? "got" : ""}"><b>${t ? "✓" : "○"} ${a.name}</b> <small>${a.what}${t ? ` - ${this.esc(t.date)}; the title "${a.title}"` : ""}</small></div>`; }).join("");
     const bag = CM.startingBag(this.$("#seed").value || "x").filter((i) => i.kind !== "torch");
     this.$("#start-with").textContent = `Four set out with 30 gold, two torches and two potions (${bag.map((i) => i.name).join(" and ")} - the seed decides which). `
       + "New Expedition lets you name them, choose their callings and roll their stats; chests and fallen monsters give better gear; "
@@ -6354,12 +6579,15 @@ CM.UI = class {
     else table.innerHTML = g.fame.map((e, i) => {
       const open = this.fameOpen === i, t = e.tally;
       let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
-        + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
+        + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
       if (open) {
         rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
           + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button></div>` : "")
           + (t ? `<div>${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}.</div>` : "")
           + (t && t.guardians && t.guardians.length ? `<div>Guardians slain: ${this.esc(this.guardianNames(t.guardians))}.</div>` : "")
+          + (e.mutators && e.mutators.length ? `<div>Today's dungeon: ${this.esc(e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(" and "))}.</div>` : "")
+          + (e.titles && e.titles.length ? `<div>Earned: ${this.esc(e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", "))}.</div>` : "")
+          + `<div><button data-card="${i}">Summary card</button></div>`
           + "</td></tr>";
       }
       return rows;
@@ -6393,18 +6621,18 @@ CM.UI = class {
   _settings() {
     const g = this.game, s = g.settings;
     const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
-    const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look");
+    const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap");
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
-    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn";
+    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false;
     const note = () => { this.$("#set-look-note").textContent = CM.LOOKS[s.look] ? CM.LOOKS[s.look].what + "." : ""; };
     note();
     const apply = () => {
-      s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked;
+      s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.tapMove = tap.checked;
       g.saveSettings();
       g.emit("settings", s);
     };
-    for (const el of [sound, vol, music, mvol, smooth, fps]) el.addEventListener("input", apply);
+    for (const el of [sound, vol, music, mvol, smooth, fps, tap]) el.addEventListener("input", apply);
     for (const sel of [look, titleLook]) sel.addEventListener("change", () => { s.look = sel.value; look.value = titleLook.value = s.look; note(); apply(); });
   }
 
@@ -6830,6 +7058,79 @@ CM.UI = class {
   guardianNames(ids) { return ids.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", "); }
 
 
+
+
+  // ---- ways to play: the keys as set, the summary card, the gamepad's focus, a tap on the view ----
+  renderKeys() {
+    const g = this.game, keys = this.$("#dlg-keys table"), k = g.settings.keys || CM.DEFAULT_KEYS;
+    keys.innerHTML = CM.KEY_ACTIONS.map(([id, what]) => `<tr data-action="${id}"><td><kbd>${this.esc(CM.keyName(k[id]))}</kbd>${this.rebinding === id ? " <i>press a key...</i>" : ""}</td><td>${what}</td><td><button data-rebind="${id}">Change</button></td></tr>`).join("")
+      + `<tr><td><kbd>Arrows</kbd></td><td>move and turn as well, always</td><td></td></tr><tr><td><kbd>1 - 4</kbd></td><td>a hero's sheet; in a list, the pick</td><td></td></tr>`
+      + `<tr><td><kbd>Esc</kbd></td><td>close a screen / pause</td><td></td></tr><tr><td><kbd>F3</kbd></td><td>frames per second</td><td></td></tr>`
+      + `<tr><td colspan="3" class="small" style="white-space: normal; max-width: 560px; padding-top: 8px">A gamepad works too: the stick or pad moves, A uses or picks, B steps back, X the pack, Y casts, the shoulders sidestep or pick targets, Start pauses, Select the map. On a touch screen, tap the view: the sides turn, the top walks, the bottom steps back.</td></tr>`;
+    for (const b of keys.querySelectorAll("button[data-rebind]")) b.addEventListener("click", () => { this.rebinding = this.rebinding === b.dataset.rebind ? null : b.dataset.rebind; this.renderKeys(); });
+  }
+  rebind(action, code) {
+    const g = this.game, k = g.settings.keys || (g.settings.keys = Object.assign({}, CM.DEFAULT_KEYS));
+    if (!CM.DEFAULT_KEYS[action] || !code || code === "Escape" || /^F\d+$/.test(code)) { this.rebinding = null; this.renderKeys(); return false; }
+    for (const other of Object.keys(k)) if (k[other] === code && other !== action) k[other] = CM.DEFAULT_KEYS[other] === code ? "" : CM.DEFAULT_KEYS[other];   // (one key, one action)
+    k[action] = code;
+    this.rebinding = null;
+    g.saveSettings();
+    g.emit("settings", g.settings);
+    this.renderKeys();
+    return true;
+  }
+  resetKeys() { this.game.settings.keys = Object.assign({}, CM.DEFAULT_KEYS); this.rebinding = null; this.game.saveSettings(); this.game.emit("settings", this.game.settings); this.renderKeys(); }
+
+  openCard(entry) {
+    const g = this.game, e = entry || g.fame[0];
+    if (!e) return;
+    this.cardEntry = e;
+    const slot = this.$("#card-slot");
+    slot.innerHTML = "";
+    slot.appendChild(CM.art.summaryCard(e, CM.titleFor(g.achievements)));
+    this.$("#card-text").value = CM.summaryText(e);
+    this.$("#card-note").textContent = "";
+    this.openDialog("#dlg-card");
+  }
+  copyText(text, noteEl) {
+    const done = navigator.clipboard ? navigator.clipboard.writeText(text).then(() => true, () => false) : Promise.resolve(false);
+    done.then((ok) => { if (noteEl) noteEl.textContent = ok ? "Copied." : "Select the text and copy it yourself."; });
+    return done;
+  }
+
+  // a gamepad's way through buttons: the focus moves along the visible ones, A presses
+  padTargets() {
+    const open = this.root.querySelector(".dialog.on .box");
+    const scope = open || (this.xmenu || (this.game.mode === "combat" && this.cmenu && this.cmenu.kind !== "main") ? this.$("#actions") : null);
+    if (!scope) return [];
+    return [...scope.querySelectorAll("button")].filter((b) => !b.disabled && b.offsetParent !== null);
+  }
+  padFocus(delta) {
+    const list = this.padTargets();
+    for (const b of this.root.querySelectorAll(".padfocus")) b.classList.remove("padfocus");
+    if (!list.length) { this.padIndex = -1; return null; }
+    this.padIndex = ((this.padIndex === undefined || this.padIndex < 0 ? (delta > 0 ? -1 : 0) : this.padIndex) + delta + list.length) % list.length;
+    const b = list[this.padIndex];
+    b.classList.add("padfocus");
+    if (b.scrollIntoView) b.scrollIntoView({ block: "nearest" });
+    return b;
+  }
+  padPress() {
+    const list = this.padTargets();
+    if (!list.length) return false;
+    const b = list[this.padIndex >= 0 && this.padIndex < list.length ? this.padIndex : 0];
+    b.click();
+    this.padIndex = -1;
+    return true;
+  }
+  // a tap (or a click) on the view, out of a fight: the sides turn, the top walks, the bottom steps back
+  tapView(fx, fy) {
+    const g = this.game;
+    if (g.mode !== "explore" || !g.settings.tapMove || this.dialogOpen()) return false;
+    if (fx < 0.3) g.turn(-1); else if (fx > 0.7) g.turn(1); else if (fy < 0.65) g.move(0); else g.move(2);
+    return true;
+  }
 
   // ---- the camp's smith and vault ----
   openSmith() { this.renderSmith(); this.openDialog("#dlg-smith"); }
@@ -7390,8 +7691,14 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---- keys ----
   const held = new Set();
-  const MOVES = { KeyW: ["move", 0], ArrowUp: ["move", 0], KeyS: ["move", 2], ArrowDown: ["move", 2], KeyA: ["turn", -1], ArrowLeft: ["turn", -1],
-    KeyD: ["turn", 1], ArrowRight: ["turn", 1], KeyQ: ["move", 3], KeyE: ["move", 1] };
+  let MOVES = {};
+  function bindMoves() {                                                 // the movement keys as set (Settings > Keys), and the arrows always
+    const K = game.settings.keys || CM.DEFAULT_KEYS;
+    MOVES = { ArrowUp: ["move", 0], ArrowDown: ["move", 2], ArrowLeft: ["turn", -1], ArrowRight: ["turn", 1] };
+    for (const [action, m] of [["forward", ["move", 0]], ["back", ["move", 2]], ["left", ["turn", -1]], ["right", ["turn", 1]], ["strafeLeft", ["move", 3]], ["strafeRight", ["move", 1]]]) if (K[action]) MOVES[K[action]] = m;
+  }
+  bindMoves();
+  game.on("settings", bindMoves);
   function act(code) {
     const m = MOVES[code];
     if (!m || game.mode !== "explore") return false;
@@ -7400,6 +7707,8 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   window.addEventListener("keydown", (e) => {
     CM.audio.unlock();
+    const K = game.settings.keys || CM.DEFAULT_KEYS;
+    if (ui.rebinding) { e.preventDefault(); ui.rebind(ui.rebinding, e.code); return; }   // (Settings > Keys: the next key pressed is the one)
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) {
       if (e.code === "Enter" && e.target.id === "seed") ui.startNew();
@@ -7408,9 +7717,9 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     if (ui.dialogOpen()) {
       const ending = ui.$("#dlg-over").classList.contains("on");
-      if (e.code === "Escape" || (e.code === "Tab" && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
+      if (e.code === "Escape" || (e.code === K.map && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
       else if (ui.$("#dlg-riddle").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickRiddle(Number(e.code.slice(-1)));
-      else if (e.code === "KeyJ" && ui.$("#dlg-journal").classList.contains("on")) ui.closeDialogs();
+      else if (e.code === K.journal && ui.$("#dlg-journal").classList.contains("on")) ui.closeDialogs();
       return;
     }
     if (ui.screen === "title") {
@@ -7418,36 +7727,91 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
     if (ui.screen === "create") { if (e.code === "Escape") ui.show("title"); else if (e.code === "Enter") ui.setOut(); return; }
-    if (ui.screen === "bag") { if (e.code === "Escape" || e.code === "KeyI") game.closeBag(); return; }
+    if (ui.screen === "bag") { if (e.code === "Escape" || e.code === K.inventory) game.closeBag(); return; }
     if (game.mode === "combat") {                                        // a fight: the keys are the fight's
-      if (e.code === "Tab") { e.preventDefault(); game.setTarget((game.target || 0) + 1); return; }
+      if (e.code === "Tab" || e.code === K.map) { e.preventDefault(); game.setTarget((game.target || 0) + 1); return; }
       if (e.code === "Escape") { e.preventDefault(); if (ui.cmenu && ui.cmenu.kind !== "main") ui.combatMenu("main"); else ui.openDialog("#dlg-pause"); return; }
       if (/^Digit[1-9]$/.test(e.code)) { ui.pick(Number(e.code.slice(-1))); return; }
       if (!(game.combat && game.combat.waiting)) return;
-      if (e.code === "KeyF") game.act("fight", game.target);
-      else if (e.code === "KeyC") ui.combatMenu(ui.cmenu && ui.cmenu.kind === "cast" ? "main" : "cast");
-      else if (e.code === "KeyP") ui.combatMenu(ui.cmenu && ui.cmenu.kind === "item" ? "main" : "item");
-      else if (e.code === "KeyD") game.act("defend");
-      else if (e.code === "KeyR") game.act("run");
+      if (e.code === K.fight) game.act("fight", game.target);
+      else if (e.code === K.cast) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "cast" ? "main" : "cast");
+      else if (e.code === K.item) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "item" ? "main" : "item");
+      else if (e.code === K.defend) game.act("defend");
+      else if (e.code === K.run) game.act("run");
       return;
     }
     if (ui.xmenu) {                                                      // a list open between fights
-      if (e.code === "Escape" || e.code === "KeyC") { e.preventDefault(); ui.closeMenu(); return; }
+      if (e.code === "Escape" || e.code === K.cast) { e.preventDefault(); ui.closeMenu(); return; }
       if (/^Digit[1-9]$/.test(e.code)) { ui.pickOutside(Number(e.code.slice(-1))); return; }
       return;
     }
     if (["Digit1", "Digit2", "Digit3", "Digit4"].includes(e.code) && game.mode !== "title") { ui.openSheet(Number(e.code.slice(-1)) - 1); return; }
     if (e.code === "Escape") { e.preventDefault(); ui.openDialog("#dlg-pause"); return; }
-    if (e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
-    if (e.code === "KeyC" && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
-    if (e.code === "KeyJ" && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
+    if (e.code === K.map || e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
+    if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
+    if (e.code === K.journal && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
     if (game.mode === "explore") {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
-      if (e.code === "Space") { e.preventDefault(); game.use(); }
-      else if (e.code === "KeyI") game.openBag();
+      if (e.code === K.use) { e.preventDefault(); game.use(); }
+      else if (e.code === K.inventory) game.openBag();
     } else if (game.mode === "camp") {
-      if (e.code === "KeyI") game.openBag();
+      if (e.code === K.inventory) game.openBag();
     }
+  });
+
+  // ---- a gamepad: the pad or stick moves, A uses or picks, B steps back, X the pack, Y casts, the shoulders sidestep or
+  // pick the target, Start pauses, Select the map; in a list or a dialog the pad moves a highlight and A presses ----
+  const padWas = {}, padHeld = {};
+  const padKey = (code) => window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true, cancelable: true }));
+  function padButton(i, now) {                                           // what button i does right now
+    const K = game.settings.keys || CM.DEFAULT_KEYS, inFight = game.mode === "combat", listOpen = ui.padTargets().length > 0;
+    if (ui.screen === "title") { if (i === 0 || i === 9) padKey("Enter"); return; }
+    if (ui.screen === "create") { if (i === 0) padKey("Enter"); else if (i === 1) padKey("Escape"); return; }
+    if (ui.screen === "bag") { if (i === 1 || i === 2) padKey("Escape"); return; }
+    if (listOpen) {
+      if (i === 0) ui.padPress();
+      else if (i === 1 || i === 9) padKey("Escape");
+      else if (i === 12 || i === 14 || i === 4) ui.padFocus(-1);
+      else if (i === 13 || i === 15 || i === 5) ui.padFocus(1);
+      return;
+    }
+    if (inFight) {
+      if (i === 0) padKey(K.fight); else if (i === 1) padKey(K.defend); else if (i === 2) padKey(K.item); else if (i === 3) padKey(K.cast);
+      else if (i === 5 || i === 4) padKey("Tab"); else if (i === 9) padKey("Escape"); else if (i === 7) padKey(K.run);
+      return;
+    }
+    if (i === 0) padKey(K.use); else if (i === 1 || i === 9) padKey("Escape"); else if (i === 2) padKey(K.inventory); else if (i === 3) padKey(K.cast);
+    else if (i === 8) padKey(K.map); else if (i === 4) act(K.strafeLeft || "KeyQ"); else if (i === 5) act(K.strafeRight || "KeyE");
+    else if (i === 12) act("ArrowUp"); else if (i === 13) act("ArrowDown"); else if (i === 14) act("ArrowLeft"); else if (i === 15) act("ArrowRight");
+  }
+  function pollGamepad(now) {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const pad = [...pads].find((p) => p && p.connected);
+    if (!pad) return;
+    const pressed = pad.buttons.map((b) => b.pressed), ax = pad.axes[0] || 0, ay = pad.axes[1] || 0;
+    if (Math.abs(ax) > 0.6 || Math.abs(ay) > 0.6) {                      // the stick, as the pad
+      const dir = Math.abs(ax) > Math.abs(ay) ? (ax > 0 ? 15 : 14) : (ay > 0 ? 13 : 12);
+      for (const d of [12, 13, 14, 15]) if (d !== dir) pressed[d] = pressed[d] || false;
+      pressed[dir] = true;
+    }
+    pressed.forEach((down, i) => {
+      if (down && !padWas[i]) { padButton(i, now); padHeld[i] = now; }
+      else if (down && [12, 13, 14, 15].includes(i) && game.mode === "explore" && !ui.dialogOpen() && now - padHeld[i] > 260 && !renderer.busy) { padButton(i, now); padHeld[i] = now - 100; }   // (walking while held)
+      padWas[i] = down;
+    });
+  }
+  CM.pad = { button: (i) => padButton(i, performance.now()), poll: pollGamepad };   // (for the tests, and for curiosity)
+  // a tap or a click on the view walks, out of a fight (in one, a click picks a foe)
+  const view = ui.$("#view");
+  let tapStart = null;
+  view.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; tapStart = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  view.addEventListener("pointerup", (e) => {
+    if (!tapStart || e.target.closest("button")) return;
+    const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y), quick = performance.now() - tapStart.t < 600;
+    tapStart = null;
+    if (moved > 24 || !quick) return;
+    const r = view.getBoundingClientRect();
+    if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
   window.addEventListener("keyup", (e) => held.delete(e.code));
   window.addEventListener("blur", () => held.clear());
@@ -7466,6 +7830,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.light = 1;
         renderer.setSprites([]);
       } else {
+        pollGamepad(now);
         if (game.mode === "explore" && !renderer.busy && held.size) {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }

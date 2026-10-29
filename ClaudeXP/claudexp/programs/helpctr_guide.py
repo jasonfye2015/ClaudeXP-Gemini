@@ -173,7 +173,9 @@ CATALOG = {
                              "rescue, riddle doors keyed to the carvings, pressure plates, a rope for pits, flooded, dark and labyrinth "
                              "floors, and a journal of everything read and heard. A path for each calling at level 5 that deepens at 10, tomes that "
                              "teach a caster a spell, a smith at the camp who works gems into gear, and a vault that keeps one heirloom for "
-                             "the next run. When the whole party falls, the run ends on a screen that tells how it went, and "
+                             "the next run. Three difficulties, two mutators on the daily dungeon, achievements with titles, three expedition "
+                             "slots, keys you can set, a gamepad and a tap on the view, and a summary card to copy or save. "
+                             "When the whole party falls, the run ends on a screen that tells how it went, and "
                              "starts over. One HTML file: it plays in a browser too, and on its own from the "
                              "launcher's APPS."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "

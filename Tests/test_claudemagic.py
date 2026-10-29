@@ -10,8 +10,9 @@ guardians keep the shafts above the camps in lairs of their own, fight their own
 dungeon's people (a ghost with a request, a hermit who identifies for stories, a lost adventurer) and its puzzles (riddle
 doors keyed to the carvings, pressure plates, a rope for pits, the flooded, dark and labyrinth floors) and the journal
 that keeps it all; growth and craft (a path for each calling at level 5 that deepens at 10, tomes that teach a spell,
-the camp's smith with his gems, the vault's heirloom for the next run); and the Timeline's window opens, hands the page
-the old Python game's saves once, and closes."""
+the camp's smith with his gems, the vault's heirloom for the next run); ways to play (three difficulties, the daily
+dungeon's mutators, achievements and titles, three expedition slots, keys as set, a gamepad and a tap on the view, the
+summary card); and the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
 import importlib.util
 import json
 import os
@@ -821,7 +822,7 @@ def test_the_sound_and_the_ending():
       out.wonText = document.querySelector('#over-text').textContent.includes(g.party[3].name) && document.querySelector('#over-text').textContent.includes('4,321');
       out.roll = document.querySelectorAll('#over-party > div').length === 4 && document.querySelectorAll('#over-party .fallen').length === 1 && document.querySelectorAll('#over-party canvas').length === 4;
       const tally = document.querySelector('#over-tally').textContent;
-      out.tallyShown = document.querySelectorAll('#over-tally > div').length === 9 && tally.includes('1st of 1') && tally.includes('Pauper');
+      out.tallyShown = document.querySelectorAll('#over-tally > div').length >= 10 && tally.includes('1st of 1') && tally.includes('Pauper') && tally.includes('Fair');   // (the difficulty's row, and what was earned)
       out.victoryTune = CM.ui.ending === 'victory' && CM.music.playing === 'victory' && g.mode === 'title';
       CM.ui.closeDialogs(); out.closed = !dlg.classList.contains('on') && CM.ui.ending === null && CM.music.playing === 'title';
       // the Hall of Fame's details
@@ -1429,6 +1430,124 @@ def test_the_growth_and_craft():
       out.smithShown = document.querySelector('#dlg-smith').classList.contains('on') && document.querySelectorAll('#smith-list .recruit').length >= 8 && document.querySelector('#smith-gems').textContent.includes('1 diamond');
       CM.ui.closeDialogs(); CM.ui.openVault(); out.vaultShown = document.querySelector('#dlg-vault').classList.contains('on') && document.querySelector('#vault-held').textContent.includes('empty') && document.querySelectorAll('#vault-list .recruit').length > 0;
       CM.ui.closeDialogs(); g.setMode('explore'); CM.store.remove('vault'); g.vault = null;
+      return out; }})()""")
+    for key, value in got.items():
+        assert value is True, (key, got)
+    said = [s for s in page().said if "Error" in s or "error" in s]
+    assert not said, f"the page's console: {said[:5]}"
+
+
+def test_the_ways_to_play():
+    """The second update's sixth phase - ways to play: a difficulty tunes the monsters and weighs the gold and the Hall of
+    Fame says which; Today's dungeon comes with two mutators from the date, and each does what it says (hordes, brittle,
+    rich veins, swift, drought, gloom, lean); achievements are earned once, kept between runs, give the player a title on
+    the title screen and ride on the Hall of Fame's entries; three expedition slots each keep a run, and a run's end
+    clears only its own; the keys can be set and reset, the arrows always work; a gamepad's buttons move, fight, and
+    work a dialog's buttons; a tap on the view turns and walks; the run's summary comes as text and as a card"""
+    run(PARSE)
+    got = ask(f"""(function(){{ const g = CM.game, out = {{}};
+      const fixed = (hit) => ({{next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l}});
+      const key = (code) => {{ window.dispatchEvent(new KeyboardEvent('keydown', {{ code, bubbles: true, cancelable: true }})); window.dispatchEvent(new KeyboardEvent('keyup', {{ code, bubbles: true }})); }};
+      for (const k of ['run', 'run2', 'run3', 'achievements', 'fame']) CM.store.remove(k);
+      g.achievements = {{}}; g.runs = [null, null, null]; g.setSlot(1); g.fame = [];
+      g.settings.smooth = false; g.emit('settings', g.settings);
+      // the difficulty
+      g.newGame({json.dumps(SEED)}, null, 'pauper', 'grim');
+      out.grim = g.difficulty === 'grim' && g.mutators.length === 0;
+      let f = CM.useFloor(g, CM.testFloor(3, ['####', '#XM#', '####']));
+      const orig = f.things['2,1'].group.map(m => ({{ hp: m.max, atk: m.atk, gold: m.gold }}));
+      g.rnd = fixed(() => false); g.move(0);
+      out.tuned = g.foes.length === orig.length && g.foes.every((m, i) => m.max === Math.round(orig[i].hp * 1.3) && m.atk === Math.round(orig[i].atk * 1.25) && m.tuned === true);
+      const gold0 = g.gold; for (const m of g.foes) m.hp = 0; g.afterBlows();
+      out.grimGold = g.mode === 'explore' && g.gold === gold0 + Math.floor(orig.reduce((s, o) => s + o.gold, 0) * 0.9);
+      g.newGame({json.dumps(SEED)}, null, 'pauper', 'gentle');
+      f = CM.useFloor(g, CM.testFloor(3, ['####', '#XM#', '####'])); const o2 = f.things['2,1'].group[0].max; g.rnd = fixed(() => false); g.move(0);
+      out.gentle = g.foes[0].max === Math.max(1, Math.round(o2 * 0.75));
+      // today's dungeon, and each of its mutators
+      const daily = CM.mutatorsFor('daily-2026-10-29');
+      out.mutators = daily.length === 2 && daily[0] !== daily[1] && daily.every(m => CM.MUTATORS[m]) && CM.mutatorsFor({json.dumps(SEED)}).length === 0 && CM.mutatorsFor('daily-2026-10-29').join() === daily.join();
+      g.newGame('daily-2026-10-29', null, 'pauper', 'fair', ['hordes', 'brittle', 'rich', 'swift', 'drought', 'gloom', 'lean']);
+      out.lean = !g.bag.some(i => ['heal', 'mana', 'revive'].includes(i.kind)) && g.gold === 130 && g.has('lean') && g.messages.some(m => m.includes("Today's dungeon"));
+      f = CM.useFloor(g, CM.testFloor(3, ['####', '#XM#', '####'])); const n0 = f.things['2,1'].group.length, m0 = {{ hp: f.things['2,1'].group[0].max, atk: f.things['2,1'].group[0].atk }};
+      g.rnd = fixed(() => false); g.move(0);
+      out.hordes = g.foes.length === n0 + 1 && f.things['2,1'].horded === true && g.foes.every(m => m.tuned);
+      out.brittle = g.foes[0].max === Math.max(1, Math.round(m0.hp * 0.5)) && g.foes[0].atk === Math.round(m0.atk * 1.5);
+      g.combat = null; g.mode = 'explore';
+      f = CM.useFloor(g, CM.testFloor(3, ['#####', '#XCF#', '#####'])); f.things['2,1'].gold = 50; const g0 = g.gold; g.move(0); g.use();
+      out.rich = g.gold === g0 + 100 && g.messages[g.messages.length - 1].includes('100 gold');
+      g.move(0); g.use(); out.drought = f.features['3,1'].used === true && g.messages[g.messages.length - 1].includes('drought');
+      g.light = {{ kind: 'torch', left: 100 }}; g.move(2); out.gloom = g.light.left === 98;
+      f = CM.useFloor(g, CM.testFloor(3, ['##########', '#X......M#', '##########'])); g.rnd = new CM.Random(2); g.wander = 0.8; g.tick(0.01);
+      out.swift = !f.things['8,1'] && Boolean(f.things['7,1']);
+      // achievements, and the title they give
+      g.newGame({json.dumps(SEED)}); g.gold = 50;
+      out.none = Object.keys(g.achievements).length === 0 && CM.titleFor(g.achievements) === '';
+      out.achieve = g.achieve('delver') === true && g.achieve('delver') === false && g.achievements.delver.date === CM.today() && CM.store.get('achievements', {{}}).delver !== undefined && g.earned.join() === 'delver';
+      for (let i = 0; i < 10; i++) g.remember('carving', 'entry ' + i); out.scholar = Boolean(g.achievements.scholar);
+      f = CM.useFloor(g, CM.testFloor(4, ['####', '#XC#', '####'])); f.things['2,1'].gold = 1990; g.move(0); g.use(); out.hoarder = Boolean(g.achievements.hoarder) && g.gold >= 2000;
+      f = CM.useFloor(g, CM.testFloor(4, ['####', '#XM#', '####'])); g.rnd = fixed(() => false); g.move(0);
+      g.party[3].hp = 1; g.hurt(g.party[3], 50, g.foes[0], {{ noTouch: true }}); out.fell = g.fightFell === true && g.everFell === true;
+      g.party[3].hp = 100; for (const m of g.foes) m.hp = 0; g.afterBlows();
+      g.floor.number = 12; g.tally.steps = 900; g.endRun(false);
+      out.ended = Boolean(g.achievements.deep) && !g.achievements.deeper && !g.achievements.crown && g.fame[0].titles.includes('deep') && g.fame[0].difficulty === 'fair' && CM.titleFor(g.achievements) === 'of the Vaults';
+      g.newGame({json.dumps(SEED)}, null, 'pauper', 'grim'); g.floor.number = 20; g.tally.steps = 1200; g.endRun(true);
+      out.won = ['crown', 'ironman', 'swift', 'grim', 'deeper'].every(id => g.achievements[id]) && CM.titleFor(g.achievements) === 'Crownbreaker' && g.fame[0].titles.includes('crown') && g.fame[0].difficulty === 'grim';
+      CM.ui.refreshTitle();
+      out.honours = document.querySelector('#honours').textContent.includes('Crownbreaker') && document.querySelectorAll('#achievements .unlock.got').length === Object.keys(g.achievements).length
+        && document.querySelector('#fame i.diff').textContent === 'Grim';
+      // the summary, as text and as a card
+      const e = g.fame[0], text = CM.summaryText(e);
+      out.summary = text.includes('Claude and Magic') && text.includes(e.seed) && text.includes('Slew the Lich King') && text.includes('Earned:') && text.includes('(Grim)');
+      out.card = CM.art.summaryCard(e, 'Crownbreaker').width === 600 && Boolean(document.querySelector('#btn-over-card'));
+      CM.ui.openCard(e); out.cardShown = document.querySelector('#dlg-card').classList.contains('on') && Boolean(document.querySelector('#card-slot canvas')) && document.querySelector('#card-text').value.includes(e.seed);
+      CM.ui.closeDialogs(); CM.ui.fameOpen = 0; CM.ui.refreshTitle(); out.cardFromFame = Boolean(document.querySelector('#fame tr.details button[data-card]')); CM.ui.fameOpen = -1;
+      // three slots
+      g.newGame({json.dumps(SEED)}); g.gold = 111; g.saveRun();
+      out.slot1 = g.runs[0] && g.runs[0].gold === 111 && CM.store.get('run', null).gold === 111 && g.canContinue();
+      g.setSlot(2); out.slot2Empty = !g.canContinue() && g.lastRun === null && CM.store.get('slot', 1) === 2;
+      g.newGame('iron-oath-9'); g.gold = 222; g.saveRun();
+      out.slot2 = CM.store.get('run2', null).gold === 222 && g.runs[1].gold === 222 && g.runs[0].gold === 111 && CM.store.get('run', null).gold === 111;
+      g.setSlot(1); out.back = g.continueRun() === true && g.gold === 111 && g.seed === {json.dumps(SEED)};
+      g.setSlot(2); g.continueRun(); out.other = g.gold === 222 && g.seed === 'iron-oath-9';
+      const ex = JSON.parse(g.exportText()); out.exported = ex.runs.length === 3 && ex.runs[0].gold === 111 && ex.runs[1].gold === 222 && ex.slot === 2 && ex.achievements.crown !== undefined;
+      g.endRun(false); out.slotCleared = CM.store.get('run2', null) === null && CM.store.get('run', null).gold === 111;
+      CM.ui.refreshTitle(); const slotButtons = document.querySelectorAll('#slots-row button[data-slot]');
+      out.slotsShown = slotButtons.length === 3 && slotButtons[0].textContent.includes('floor') && slotButtons[1].textContent.includes('empty') && slotButtons[1].classList.contains('on')
+        && document.querySelector('#continue-note').textContent.includes('Slot 2 is empty');
+      g.setSlot(1);
+      // the keys as set, and the arrows always
+      out.defaultKeys = g.settings.keys.forward === 'KeyW' && g.settings.keys.use === 'Space';
+      g.newGame({json.dumps(SEED)}); f = CM.useFloor(g, CM.testFloor(2, ['#####', '#X..#', '#####']));
+      CM.ui.rebind('forward', 'KeyU'); key('KeyU');
+      out.rebound = g.settings.keys.forward === 'KeyU' && f.pos[0] === 2 && CM.store.get('settings', {{}}).keys.forward === 'KeyU';
+      key('KeyW'); out.oldKeyDead = f.pos[0] === 2;
+      key('ArrowUp'); out.arrowsAlways = f.pos[0] === 3;
+      CM.ui.resetKeys(); out.reset = g.settings.keys.forward === 'KeyW';
+      CM.ui.openDialog('#dlg-keys'); CM.ui.rebinding = 'use'; key('KeyZ');
+      out.reboundByDialog = g.settings.keys.use === 'KeyZ' && CM.ui.rebinding === null && document.querySelector('#dlg-keys table').textContent.includes('Z');
+      CM.ui.resetKeys(); CM.ui.closeDialogs();
+      // a gamepad's buttons: the pad walks and turns, A fights, the pad and A work a dialog
+      f = CM.useFloor(g, CM.testFloor(2, ['#####', '#X..#', '#####']));
+      CM.pad.button(12); const facing0 = f.facing; CM.pad.button(15);
+      out.padWalks = f.pos[0] === 2 && f.facing === (facing0 + 1) % 4;
+      f = CM.useFloor(g, CM.testFloor(2, ['####', '#XM#', '####'])); g.rnd = fixed(() => false); g.move(0); g.combat.order = []; g.combat.index = 0; g.combat.waiting = g.party[0];
+      const n1 = g.messages.length; CM.pad.button(0); out.padFights = g.messages.slice(n1).some(m => / hits | misses/.test(m));
+      g.combat = null; g.mode = 'explore'; CM.ui.openJournal();
+      CM.pad.button(13); out.padFocus = Boolean(document.querySelector('#dlg-journal .padfocus'));
+      CM.pad.button(0); out.padPresses = !document.querySelector('#dlg-journal').classList.contains('on');
+      // a tap on the view
+      f = CM.useFloor(g, CM.testFloor(2, ['#####', '#X..#', '#####'])); const face1 = f.facing;
+      CM.ui.tapView(0.1, 0.5); const turned = f.facing === (face1 + 3) % 4; f.facing = 1;
+      CM.ui.tapView(0.5, 0.3); const walked = f.pos[0] === 2; CM.ui.tapView(0.5, 0.9); const back = f.pos[0] === 1;
+      g.settings.tapMove = false; out.tapOff = CM.ui.tapView(0.5, 0.3) === false && f.pos[0] === 1; g.settings.tapMove = true;
+      out.tap = turned && walked && back;
+      // the creation screen: the difficulty, and the day's note
+      out.difficultyChoice = document.querySelectorAll('#difficulty option').length === 3;
+      document.querySelector('#create-seed').value = 'daily-2026-10-29'; CM.ui.renderCreateNote();
+      out.dayNote = document.querySelector('#create-note').textContent.includes("Today's dungeon comes with") && CM.MUTATORS[daily[0]] && document.querySelector('#create-note').textContent.includes(CM.MUTATORS[daily[0]].name);
+      // leave things as the other tests expect them
+      for (const k of ['run', 'run2', 'run3', 'achievements', 'fame']) CM.store.remove(k);
+      g.achievements = {{}}; g.runs = [null, null, null]; g.setSlot(1); g.fame = []; g.lastRun = null; g.settings.smooth = true; g.emit('settings', g.settings); CM.ui.refreshTitle();
       return out; }})()""")
     for key, value in got.items():
         assert value is True, (key, got)

@@ -836,6 +836,41 @@ CM.art.plate = function (pressed) {                                        // a 
   return c;
 };
 
+// the run's summary as a card to keep: the emblem, the lines, old gold on dark leather
+CM.art.summaryCard = function (e, title) {
+  const W = 600, H = 340, c = document.createElement("canvas"), p = c.getContext("2d");
+  c.width = W; c.height = H;
+  const g = p.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#2A2016"); g.addColorStop(1, "#15100A");
+  p.fillStyle = g; p.fillRect(0, 0, W, H);
+  p.strokeStyle = "#8A6A30"; p.lineWidth = 3; p.strokeRect(8, 8, W - 16, H - 16);
+  p.strokeStyle = "#4A3A1A"; p.lineWidth = 1; p.strokeRect(14, 14, W - 28, H - 28);
+  p.drawImage(CM.art.emblem(110), 24, 24, 110, 110);
+  p.fillStyle = "#E8C870"; p.font = "bold 26px Georgia, serif"; p.textBaseline = "top";
+  p.fillText("Claude and Magic", 150, 30);
+  p.fillStyle = "#C8B088"; p.font = "italic 15px Georgia, serif";
+  const d = CM.DIFFICULTIES[e.difficulty] ? CM.DIFFICULTIES[e.difficulty].name : "Fair";
+  p.fillText(`${e.name}${title ? " " + title : ""}'s expedition - ${d}${e.daily ? ", today's dungeon" : ""}`, 150, 66);
+  p.fillStyle = e.won ? "#F0D080" : "#E8DCC0"; p.font = "bold 17px Georgia, serif";
+  p.fillText(e.won ? `Slew the Lich King, with ${(e.gold || 0).toLocaleString()} gold` : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}, with ${(e.gold || 0).toLocaleString()} gold`, 150, 92);
+  p.fillStyle = "#B0A080"; p.font = "13px Georgia, serif";
+  p.fillText(`Seed ${e.seed || "?"} - ${e.date || ""}`, 150, 116);
+  const t = e.tally || {}, lines = [];
+  for (const who of (e.party || [])) lines.push("  " + who);
+  const wrap = (text) => { const words = text.split(" "), out = []; let line = ""; for (const w of words) { if (p.measureText(line + " " + w).width > W - 60 && line) { out.push(line); line = w; } else line = line ? line + " " + w : w; } if (line) out.push(line); return out; };
+  p.fillStyle = "#E8DCC0"; p.font = "14px Georgia, serif";
+  let y = 150;
+  if (lines.length) { p.fillStyle = "#C8B088"; p.fillText("The party", 28, y); y += 20; p.fillStyle = "#E8DCC0"; for (const l of lines) { p.fillText(l, 28, y); y += 19; } y += 6; }
+  const facts = [`${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}`];
+  if (t.guardians && t.guardians.length) facts.push(`Guardians slain: ${t.guardians.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", ")}`);
+  if (e.mutators && e.mutators.length) facts.push(`Mutators: ${e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(" and ")}`);
+  if (e.titles && e.titles.length) facts.push(`Earned: ${e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", ")}`);
+  for (const f of facts) for (const l of wrap(f)) { if (y > H - 34) break; p.fillText(l, 28, y); y += 19; }
+  p.fillStyle = "#6A5A40"; p.font = "italic 11px Georgia, serif"; p.textAlign = "right";
+  p.fillText("A Claude Timeline game", W - 24, H - 30);
+  return c;
+};
+
 // the title's emblem: the Lich King's crown on his skull, over a crossed sword and staff, on a medallion of old gold
 CM.art.emblem = function (size = 160) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 160, cx = 80, cy = 82;

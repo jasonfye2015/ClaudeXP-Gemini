@@ -26,6 +26,13 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 #title h1 { grid-column: 1 / -1; margin: 2px 0 0; text-align: center; font-size: 42px; line-height: 1.1; color: var(--gold); letter-spacing: 1px; text-shadow: 0 0 18px rgba(232,200,112,0.35), 0 2px 0 #3A2C1C; display: flex; align-items: center; justify-content: center; gap: 16px; }
 #title h1 .emblem-slot canvas { width: 64px; height: 64px; display: block; filter: drop-shadow(0 0 10px rgba(232,200,112,0.45)); }
 #title .tagline { grid-column: 1 / -1; text-align: center; margin: -6px 0 0; color: var(--dim); font-style: italic; font-size: 14px; }
+#title .honours { grid-column: 1 / -1; text-align: center; color: var(--gold); font: italic 14px var(--serif); min-height: 16px; margin-top: -6px; }
+#slots-row button.on { border-color: var(--gold); color: var(--gold); background: #4A321A; }
+#fame i.diff { color: var(--dim); font-style: normal; font-size: 10px; margin-left: 3px; }
+.padfocus { outline: 2px solid var(--gold); outline-offset: 2px; }
+#view { touch-action: none; }
+.cardbox canvas { display: block; width: 100%; max-width: 600px; border: 1px solid var(--edge); border-radius: 4px; margin-bottom: 8px; }
+.cardbox textarea { height: 110px; font: 12px var(--mono); }
 #title .note { grid-column: 1 / -1; text-align: center; color: var(--ink); font-size: 14px; min-height: 18px; margin-top: -4px; }
 .card { background: rgba(14,10,6,0.82); border: 1px solid var(--edge); border-radius: 4px; padding: 10px 14px; }
 .card h2 { margin: 0 0 6px; font-size: 14px; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; }
