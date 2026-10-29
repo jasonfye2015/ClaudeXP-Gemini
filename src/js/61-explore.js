@@ -299,6 +299,7 @@ Object.assign(CM.Game.prototype, {
       this.sound("stairs");
       if (this.campBelow(fl.number)) {
         this.setMode("camp");
+        this.reachCamp(fl.number);
         this.saveRun();
         this.say(`Halfway down a long shaft, a lantern glows: a merchant's camp beneath floor ${fl.number}. Rest, trade, and see to the fallen.`);
       } else {
@@ -442,3 +443,136 @@ Object.assign(CM.Game.prototype, {
   },
 });
 }
+
+// ---- travel: the party walks by itself - to a square clicked on the automap, or to the nearest unexplored one (X) -
+// over the squares it knows, and stops when something is close, something is underfoot, something new comes into
+// view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
+{
+const keyOf = CM.keyOf;
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope"];
+const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above" };
+Object.assign(CM.Game.prototype, {
+  // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
+  pathTo(x, y) {
+    const fl = this.floor, seen = new Set(fl.seen.map(([a, b]) => keyOf(a, b))), goal = keyOf(x, y), start = keyOf(fl.pos[0], fl.pos[1]);
+    const picks = this.alive().some((h) => h.cls === "Rogue" && h.level >= CM.PICK_LOCK_LEVEL), key = this.hasKey() >= 0;
+    const ok = (cx, cy) => {
+      const k = keyOf(cx, cy);
+      if (!seen.has(k) || !CM.isOpen(fl, cx, cy)) return false;
+      const f = fl.features[k];
+      if (f && f.type === "pit" && !f.roped) return false;                                       // (never into a pit by itself: walk there yourself, rope or no)
+      if (f && ["trapdoor", "teleporter", "spinner"].includes(f.type) && f.known) return false;
+      if (f && f.type === "gate" && !f.open) return false;
+      if (f && f.type === "door" && !f.open && (f.riddle !== undefined || (f.locked && !key && !picks))) return false;
+      return true;                                                                                // (a band of monsters on the way: the walk stops three squares short of it)
+    };
+    if (goal !== start && !ok(x, y)) return null;
+    const parent = new Map([[start, null]]), queue = [fl.pos.slice()];
+    for (let i = 0; i < queue.length && !parent.has(goal); i++) {
+      const [cx, cy] = queue[i];
+      for (const [dx, dy] of CM.DIRS) {
+        const nx = cx + dx, ny = cy + dy, nk = keyOf(nx, ny);
+        if (parent.has(nk) || !ok(nx, ny)) continue;
+        parent.set(nk, keyOf(cx, cy)); queue.push([nx, ny]);
+      }
+    }
+    if (!parent.has(goal)) return null;
+    const path = [];
+    for (let k = goal; k !== start; k = parent.get(k)) path.unshift(k.split(",").map(Number));
+    return path;
+  },
+  // the keys of the things the party can see that are worth stopping for
+  thingsInView() {
+    const fl = this.floor, out = new Set();
+    for (const [x, y] of fl.seen) { const k = keyOf(x, y), t = fl.things[k]; if (t && WATCHED.includes(t.type)) out.add(k); }
+    return out;
+  },
+  // is a band of monsters within n steps of the party, by the corridors?
+  monstersNear(n) {
+    const fl = this.floor, dist = CM.distances(fl.grid, fl.pos, (x, y) => CM.passable(fl, x, y));
+    for (const [k, t] of Object.entries(fl.things)) if (["monsters", "boss", "guardian"].includes(t.type) && dist.has(k) && dist.get(k) <= n) return t;
+    return null;
+  },
+  // the nearest known square with an unknown one beside it (not the one the party stands on)
+  frontier() {
+    const fl = this.floor, seen = new Set(fl.seen.map(([a, b]) => keyOf(a, b))), size = fl.grid.length;
+    const walk = (x, y) => { const f = fl.features[keyOf(x, y)]; return seen.has(keyOf(x, y)) && CM.passable(fl, x, y) && !(f && ((f.type === "pit" && !f.roped) || (["trapdoor", "teleporter", "spinner"].includes(f.type) && f.known))); };
+    const unknownBeside = (x, y) => CM.DIRS.some(([dx, dy]) => { const nx = x + dx, ny = y + dy; return nx > 0 && ny > 0 && nx < size - 1 && ny < size - 1 && !seen.has(keyOf(nx, ny)); });
+    let best = null, bd = 1e9;
+    for (const [k, d] of CM.distances(fl.grid, fl.pos, walk)) {
+      if (d === 0 || d >= bd) continue;
+      const [x, y] = k.split(",").map(Number);
+      if (unknownBeside(x, y)) { best = [x, y]; bd = d; }
+    }
+    return best;
+  },
+  travelTo(x, y, explore = false) {
+    if (this.mode !== "explore" || !this.floor) return false;
+    if (x === this.floor.pos[0] && y === this.floor.pos[1]) return false;
+    const path = this.pathTo(x, y);
+    if (!path) { if (!explore) this.say("No known way there."); return false; }
+    this.travel = { path, to: [x, y], explore, known: this.thingsInView() };
+    this.emit("change");
+    return true;
+  },
+  explore() {
+    if (this.mode !== "explore") return false;
+    const next = this.frontier();
+    if (!next || !this.travelTo(next[0], next[1], true)) { this.say("Nothing more to explore that you can see: the floor is known, as far as the light has reached."); return false; }
+    return true;
+  },
+  stopTravel() { if (this.travel) { this.travel = null; this.emit("change"); } },
+  // one step of the journey; false when it is over
+  travelStep() {
+    const t = this.travel;
+    if (!t || this.mode !== "explore") { this.travel = null; return false; }
+    const fl = this.floor;
+    if (!t.path.length) {
+      if (t.explore) {
+        const next = this.frontier(), path = next && this.pathTo(next[0], next[1]);
+        if (path) { t.path = path; t.to = next; return this.travelStep(); }
+        this.say("Nothing more to explore that you can see: the floor is known, as far as the light has reached.");
+      }
+      this.travel = null; this.emit("change"); return false;
+    }
+    const [nx, ny] = t.path[0], d = CM.DIRS.findIndex(([dx, dy]) => fl.pos[0] + dx === nx && fl.pos[1] + dy === ny);
+    if (d < 0) { this.travel = null; this.emit("change"); return false; }   // (a spin or a teleporter put the party elsewhere)
+    const rel = (d - fl.facing + 4) % 4;
+    if (rel !== 0) { this.turn(rel === 3 ? -1 : 1); return true; }
+    const was = fl.pos.join(",");
+    const moved = this.move(0);
+    if (this.mode !== "explore" || this.floor !== fl || !this.travel) { this.travel = null; return false; }
+    if (!moved && fl.pos.join(",") === was) {
+      const f = fl.features[keyOf(nx, ny)];
+      if (f && f.type === "door" && f.open) return true;                 // (the door opened: through it next step)
+      this.travel = null; this.emit("change"); return false;
+    }
+    t.path.shift();
+    return this.travelCheck();
+  },
+  travelCheck() {
+    const t = this.travel, fl = this.floor, k = keyOf(fl.pos[0], fl.pos[1]), thing = fl.things[k], f = fl.features[k];
+    const stop = (why) => { this.travel = null; if (why) this.say(why); this.emit("change"); return false; };
+    if (!this.hasLight()) return stop("The dark. You stop, and feel for the wall.");
+    if (thing && !["key", "bones"].includes(thing.type)) return stop(null);
+    if (f && ((f.type === "fountain" && !f.used) || (f.type === "altar" && !f.used) || (f.type === "lever" && !f.pulled) || (f.type === "carving" && !f.read))) return stop(null);
+    if (this.monstersNear(3)) return stop("Something is close. You stop.");
+    const now = this.thingsInView();
+    for (const key of now) if (!t.known.has(key)) { const what = fl.things[key]; return stop(`You see ${SEEN_AS[what.type] || "something"}. You stop.`); }
+    if (!t.path.length && !t.explore) return stop(null);
+    return true;
+  },
+  // a note pinned to a square of the automap (a word or two; empty takes it off)
+  setNote(x, y, text) {
+    const fl = this.floor, k = keyOf(x, y);
+    fl.notes = fl.notes || {};
+    text = String(text || "").trim().slice(0, 24);
+    if (text) fl.notes[k] = text; else delete fl.notes[k];
+    if (!Object.keys(fl.notes).length) delete fl.notes;
+    this.dirty = true;
+    this.emit("change");
+    return true;
+  },
+});
+}
+

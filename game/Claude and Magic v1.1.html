@@ -219,6 +219,12 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #actions button.pick small { display: block; color: var(--dim); font-weight: normal; font-size: 10.5px; }
 #actions button:disabled small { color: var(--faint); }
 #actions button kbd { margin-right: 4px; }
+#actions .targets button .odds { display: block; color: var(--dim); font-style: normal; font-size: 10px; }
+#actions .menu button.on { border-color: var(--gold); color: var(--gold); background: #4A321A; }
+#actions button.pick small i { color: var(--gold); font-style: normal; }
+#bag .give button .cmp { font-style: normal; font-size: 11px; color: var(--dim); margin-left: 4px; }
+#bag .give button .cmp.good { color: #8FD08F; }
+#bag .give button .cmp.bad { color: #E08080; }
 #view canvas#hud { cursor: crosshair; }
 
 /* ---- the bag and the merchant ---- */
@@ -289,6 +295,17 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 .float.miss { color: #B0B0B0; font-style: italic; font-size: 14px; }
 @keyframes rise { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -48px; } }
 
+/* ---- high contrast (Settings): brighter text, sharper edges ---- */
+body.contrast { --ink: #FFFFFF; --dim: #E0E0E0; --faint: #B0B0B0; --gold: #FFE080; --edge: #D0B070; --wood: #2A2A2A; --wood-light: #444; --night: #000; --pit: #000; }
+body.contrast #log div { color: #E0E0E0; }
+body.contrast #log div:last-child { color: #fff; }
+body.contrast .bar span { font-size: 10px; }
+body.contrast .bar i { background: #FF4040; }
+body.contrast .bar.mp i { background: #4080FF; }
+body.contrast button { border-width: 2px; }
+body.contrast button:focus-visible, body.contrast input:focus-visible, body.contrast select:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
 @media (max-width: 900px) {
   #classes { grid-template-columns: 1fr; }
   #create .sheet { grid-template-columns: 1fr; }
@@ -303,6 +320,27 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
   #dlg-over .box { min-width: 0; }
   .roll { grid-template-columns: repeat(2, 1fr); }
   .tally { grid-template-columns: 1fr; }
+}
+/* ---- a phone in hand: the view on top, the party two by two, a shorter log, the buttons as a thumb bar ---- */
+@media (max-width: 640px) {
+  #play { padding: 4px; gap: 4px; }
+  #view { min-width: 0; min-height: 200px; border-width: 2px; }
+  #side { gap: 6px; }
+  #automap { width: 110px; height: 110px; border-width: 2px; }
+  #side .where, #side .purse, #side .light { font-size: 11px; }
+  .member { min-height: 58px; grid-template-columns: 34px 1fr; padding: 3px; }
+  .member canvas { width: 34px; height: 34px; }
+  .member .name { font-size: 12px; }
+  #log { height: 64px; flex: 0 0 64px; font: 11px/14px var(--mono); }
+  #actions { gap: 4px; }
+  #actions button { padding: 8px 9px; font-size: 12px; }
+  .dialog .box { min-width: 0; width: 96vw; padding: 12px; }
+  .journalbox { min-width: 0; }
+  #bag { padding: 8px; gap: 6px; }
+  #bag .lists { flex-direction: column; }
+  #bag .give button, #bag .act button { padding: 8px 9px; }
+  #title h1 { font-size: 30px; }
+  #create .foot label { margin-left: 0; }
 }
 </style>
 </head>
@@ -780,10 +818,11 @@ CM.ACHIEVEMENTS = {
 CM.titleFor = (achievements) => { const id = Object.keys(CM.ACHIEVEMENTS).find((a) => achievements && achievements[a]); return id ? CM.ACHIEVEMENTS[id].title : ""; };
 // the keys, as the player may set them (Settings > Keys); the arrows always move as well
 CM.DEFAULT_KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", strafeLeft: "KeyQ", strafeRight: "KeyE", use: "Space", inventory: "KeyI",
-  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR" };
+  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA" };
 CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"], ["right", "turn right"], ["strafeLeft", "sidestep left"], ["strafeRight", "sidestep right"],
   ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
-  ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"]];
+  ["explore", "walk to the nearest unexplored square (any key stops)"],
+  ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"], ["auto", "in a fight: the party fights on by itself"]];
 CM.keyName = (code) => (code || "").replace(/^Key/, "").replace(/^Digit/, "").replace(/^Arrow/, "").replace("Space", "Space").replace("Backquote", "`");
 // an Endless entry that ended below - not one that took the daylight with the crown
 CM.endlessFall = (e) => Boolean(e && e.endless && !(e.won && e.floor <= CM.LAST_FLOOR));
@@ -988,9 +1027,9 @@ CM.themeIndex = (number) => Math.max(0, CM.THEMES.indexOf(CM.themeFor(number)));
 CM.KEYS_HELP = [
   ["W / Up", "forward"], ["S / Down", "back"], ["A / Left", "turn left"], ["D / Right", "turn right"], ["Q / E", "sidestep"],
   ["Space", "use: a chest, the stairs, a fountain, a lever, someone to talk to - or search the wall you face"], ["I", "inventory"], ["J", "the journal: everything read and heard"],
-  ["1 - 4", "a hero's sheet: stats, row, ailments, a boon when they level"], ["Tab", "the automap, large"], ["Esc", "close a screen / pause"],
+  ["1 - 4", "a hero's sheet: stats, row, ailments, a boon when they level"], ["Tab", "the automap, large (click a square to walk there; right-click for a note)"], ["X", "explore: walk to the nearest unexplored square"], ["Esc", "close a screen / pause"],
   ["F", "fight the chosen foe"], ["C", "cast a spell or use a skill (and between fights: healing, Light)"], ["P", "an item"],
-  ["D", "defend: half the blows until their next turn"], ["R", "run"], ["Tab / click a foe", "choose the foe"],
+  ["D", "defend: half the blows until their next turn"], ["R", "run"], ["A", "auto: the party fights on by itself, until someone is badly hurt"], ["Tab / click a foe", "choose the foe"],
   ["1 - 9", "pick from a list"], ["F3", "frames per second"],
 ];
 
@@ -3540,8 +3579,8 @@ CM.Renderer = class {
   }
 
   get busy() { return this.move !== null || this.turn !== null; }
-  shake(strength) { this.shakeT = Math.max(this.shakeT || 0, Math.min(1, strength)); }   // the view judders, and settles
-  punch() { this.punchT = 1; }                                                            // the party leans into a blow
+  shake(strength) { if (CM.reducedMotion) return; this.shakeT = Math.max(this.shakeT || 0, Math.min(1, strength)); }   // the view judders, and settles
+  punch() { if (CM.reducedMotion) return; this.punchT = 1; }                                                            // the party leans into a blow
 
   // where the camera is in grid terms (the cell it's heading for, while it steps)
   setSprites(list) { this.sprites = list; }
@@ -3672,6 +3711,8 @@ CM.Renderer = class {
 // expired fall off. A projectile can carry a `then` - its burst, its flash - for the moment it lands, and while one is
 // in flight the window holds the damage it will do until it gets there (holdUntil). The recipes - which effect each
 // event of the game gets - are in 80-main.js, where the camera and the foes' places are known.
+CM.fxSpeed = 1;                                   // Settings > Combat speed: 1, 2 (fast) or 6 (as good as instant) - every effect's ms is divided by it
+CM.reducedMotion = false;                         // Settings > Reduce motion: no shaking, no flashes, no washes of colour
 CM.Effects = class {
   constructor() { this.list = []; this.holdUntil = 0; }
   get count() { return this.list.length; }
@@ -3681,6 +3722,7 @@ CM.Effects = class {
   // a thing flying from one point to another (world x, height, z) over `ms`, trailing sparks; `then` runs when it lands
   projectile(o) {
     const e = Object.assign({ type: "projectile", t0: this.now(), ms: 320, size: 0.22, layer: "fx:fire", trail: "fx:spark", arc: 0.12, glow: 1 }, o);
+    e.ms /= CM.fxSpeed || 1;
     this.list.push(e);
     this.holdUntil = Math.max(this.holdUntil, e.t0 + e.ms);
     return e.ms;
@@ -3688,6 +3730,7 @@ CM.Effects = class {
   // sparks or shards from a point: n of them flung out, falling under gravity, fading
   burst(o) {
     const e = Object.assign({ type: "burst", t0: this.now(), ms: 650, n: 14, speed: 1.4, up: 1.6, gravity: 3.2, size: 0.07, layer: "fx:spark", glow: 1, seed: 1 }, o);
+    e.ms /= CM.fxSpeed || 1;
     const rnd = new CM.Random(e.seed + Math.floor(e.t0 % 1000));
     e.parts = [];
     for (let i = 0; i < e.n; i++) {
@@ -3698,12 +3741,13 @@ CM.Effects = class {
     this.list.push(e);
   }
   // a ring on the floor, spreading out from a point
-  ring(o) { this.list.push(Object.assign({ type: "ring", t0: this.now(), ms: 800, at: [0, 0, 0], to: 2.4, layer: "fx:ring", glow: 1 }, o)); }
+  ring(o) { const e = Object.assign({ type: "ring", t0: this.now(), ms: 800, at: [0, 0, 0], to: 2.4, layer: "fx:ring", glow: 1 }, o); e.ms /= CM.fxSpeed || 1; this.list.push(e); }
   // something hanging in the air for a moment (lightning over a foe, a holy light): a billboard that grows and fades
-  flare(o) { this.list.push(Object.assign({ type: "flare", t0: this.now(), ms: 260, size: 0.6, layer: "fx:bolt", glow: 1, rise: 0, grow: 0.3 }, o)); }
+  flare(o) { const e = Object.assign({ type: "flare", t0: this.now(), ms: 260, size: 0.6, layer: "fx:bolt", glow: 1, rise: 0, grow: 0.3 }, o); e.ms /= CM.fxSpeed || 1; this.list.push(e); }
   // things falling onto a point from above (shards of ice)
   rain(o) {
     const e = Object.assign({ type: "rain", t0: this.now(), ms: 520, n: 8, layer: "fx:frost", size: 0.12, glow: 1, spread: 0.4, seed: 2 }, o);
+    e.ms /= CM.fxSpeed || 1;
     const rnd = new CM.Random(e.seed + Math.floor(e.t0 % 1000));
     e.parts = [];
     for (let i = 0; i < e.n; i++) e.parts.push({ dx: (rnd.next() - 0.5) * e.spread, dz: (rnd.next() - 0.5) * e.spread, delay: rnd.next() * 0.4, size: e.size * (0.7 + rnd.next() * 0.6) });
@@ -3712,6 +3756,7 @@ CM.Effects = class {
   // motes drifting up from a point (sleep, a blessing)
   drift(o) {
     const e = Object.assign({ type: "drift", t0: this.now(), ms: 900, n: 6, layer: "fx:spark", size: 0.06, glow: 1, spread: 0.5, rise: 0.5, seed: 3 }, o);
+    e.ms /= CM.fxSpeed || 1;
     const rnd = new CM.Random(e.seed + Math.floor(e.t0 % 1000));
     e.parts = [];
     for (let i = 0; i < e.n; i++) e.parts.push({ dx: (rnd.next() - 0.5) * e.spread, dz: (rnd.next() - 0.5) * e.spread, delay: rnd.next() * 0.5, size: e.size * (0.6 + rnd.next() * 0.8) });
@@ -4234,7 +4279,7 @@ CM.Game = class {
   freshTally() { return { steps: 0, kills: 0, chests: 0, fights: 0, fled: 0, guardians: [] }; }
   count(what, n = 1) { if (!this.tally) this.tally = this.freshTally(); this.tally[what] = (this.tally[what] || 0) + n; }
 
-  setMode(mode) { this.mode = mode; this.emit("mode", mode); this.emit("change"); }
+  setMode(mode) { if (mode !== "explore") this.travel = null; this.mode = mode; this.emit("mode", mode); this.emit("change"); }
 
   saveSettings() { CM.store.set("settings", this.settings); }
 
@@ -4278,7 +4323,8 @@ CM.Game = class {
     const data = { schema: CM.SCHEMA, gen: CM.GEN, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
-      difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [] };
+      difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
+      camps: this.camps || [] };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -4316,6 +4362,7 @@ CM.Game = class {
     this.mutators = d.mutators || CM.mutatorsFor(d.seed || "");
     this.everFell = Boolean(d.everFell); this.fightFell = false; this.earned = d.earned || [];
     this.crowned = Boolean(d.crowned); this.bottom = false; this.endless = Boolean(d.endless); this.deepened = d.deepened || [];
+    this.camps = d.camps || []; this.travel = null;
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
     this.emit("floor", this.floor);
@@ -4349,6 +4396,7 @@ CM.Game = class {
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
     this.everFell = false; this.fightFell = false; this.earned = [];
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
+    this.camps = []; this.travel = null;
     if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
@@ -4421,6 +4469,7 @@ CM.Game = class {
       const ladder = this.cellOf(above, "ladder");
       if (ladder) above.pos = ladder.slice();
       this.setMode("camp");
+      this.reachCamp(n - 1);
       this.emit("floor", above);
       this.saveRun();
       this.say("Up the long shaft, the merchant's lantern glows again.");
@@ -4751,6 +4800,7 @@ Object.assign(CM.Game.prototype, {
       this.sound("stairs");
       if (this.campBelow(fl.number)) {
         this.setMode("camp");
+        this.reachCamp(fl.number);
         this.saveRun();
         this.say(`Halfway down a long shaft, a lantern glows: a merchant's camp beneath floor ${fl.number}. Rest, trade, and see to the fallen.`);
       } else {
@@ -4891,6 +4941,138 @@ Object.assign(CM.Game.prototype, {
       this.dirty = true;
     }
     this.emit("change");
+  },
+});
+}
+
+// ---- travel: the party walks by itself - to a square clicked on the automap, or to the nearest unexplored one (X) -
+// over the squares it knows, and stops when something is close, something is underfoot, something new comes into
+// view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
+{
+const keyOf = CM.keyOf;
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope"];
+const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above" };
+Object.assign(CM.Game.prototype, {
+  // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
+  pathTo(x, y) {
+    const fl = this.floor, seen = new Set(fl.seen.map(([a, b]) => keyOf(a, b))), goal = keyOf(x, y), start = keyOf(fl.pos[0], fl.pos[1]);
+    const picks = this.alive().some((h) => h.cls === "Rogue" && h.level >= CM.PICK_LOCK_LEVEL), key = this.hasKey() >= 0;
+    const ok = (cx, cy) => {
+      const k = keyOf(cx, cy);
+      if (!seen.has(k) || !CM.isOpen(fl, cx, cy)) return false;
+      const f = fl.features[k];
+      if (f && f.type === "pit" && !f.roped) return false;                                       // (never into a pit by itself: walk there yourself, rope or no)
+      if (f && ["trapdoor", "teleporter", "spinner"].includes(f.type) && f.known) return false;
+      if (f && f.type === "gate" && !f.open) return false;
+      if (f && f.type === "door" && !f.open && (f.riddle !== undefined || (f.locked && !key && !picks))) return false;
+      return true;                                                                                // (a band of monsters on the way: the walk stops three squares short of it)
+    };
+    if (goal !== start && !ok(x, y)) return null;
+    const parent = new Map([[start, null]]), queue = [fl.pos.slice()];
+    for (let i = 0; i < queue.length && !parent.has(goal); i++) {
+      const [cx, cy] = queue[i];
+      for (const [dx, dy] of CM.DIRS) {
+        const nx = cx + dx, ny = cy + dy, nk = keyOf(nx, ny);
+        if (parent.has(nk) || !ok(nx, ny)) continue;
+        parent.set(nk, keyOf(cx, cy)); queue.push([nx, ny]);
+      }
+    }
+    if (!parent.has(goal)) return null;
+    const path = [];
+    for (let k = goal; k !== start; k = parent.get(k)) path.unshift(k.split(",").map(Number));
+    return path;
+  },
+  // the keys of the things the party can see that are worth stopping for
+  thingsInView() {
+    const fl = this.floor, out = new Set();
+    for (const [x, y] of fl.seen) { const k = keyOf(x, y), t = fl.things[k]; if (t && WATCHED.includes(t.type)) out.add(k); }
+    return out;
+  },
+  // is a band of monsters within n steps of the party, by the corridors?
+  monstersNear(n) {
+    const fl = this.floor, dist = CM.distances(fl.grid, fl.pos, (x, y) => CM.passable(fl, x, y));
+    for (const [k, t] of Object.entries(fl.things)) if (["monsters", "boss", "guardian"].includes(t.type) && dist.has(k) && dist.get(k) <= n) return t;
+    return null;
+  },
+  // the nearest known square with an unknown one beside it (not the one the party stands on)
+  frontier() {
+    const fl = this.floor, seen = new Set(fl.seen.map(([a, b]) => keyOf(a, b))), size = fl.grid.length;
+    const walk = (x, y) => { const f = fl.features[keyOf(x, y)]; return seen.has(keyOf(x, y)) && CM.passable(fl, x, y) && !(f && ((f.type === "pit" && !f.roped) || (["trapdoor", "teleporter", "spinner"].includes(f.type) && f.known))); };
+    const unknownBeside = (x, y) => CM.DIRS.some(([dx, dy]) => { const nx = x + dx, ny = y + dy; return nx > 0 && ny > 0 && nx < size - 1 && ny < size - 1 && !seen.has(keyOf(nx, ny)); });
+    let best = null, bd = 1e9;
+    for (const [k, d] of CM.distances(fl.grid, fl.pos, walk)) {
+      if (d === 0 || d >= bd) continue;
+      const [x, y] = k.split(",").map(Number);
+      if (unknownBeside(x, y)) { best = [x, y]; bd = d; }
+    }
+    return best;
+  },
+  travelTo(x, y, explore = false) {
+    if (this.mode !== "explore" || !this.floor) return false;
+    if (x === this.floor.pos[0] && y === this.floor.pos[1]) return false;
+    const path = this.pathTo(x, y);
+    if (!path) { if (!explore) this.say("No known way there."); return false; }
+    this.travel = { path, to: [x, y], explore, known: this.thingsInView() };
+    this.emit("change");
+    return true;
+  },
+  explore() {
+    if (this.mode !== "explore") return false;
+    const next = this.frontier();
+    if (!next || !this.travelTo(next[0], next[1], true)) { this.say("Nothing more to explore that you can see: the floor is known, as far as the light has reached."); return false; }
+    return true;
+  },
+  stopTravel() { if (this.travel) { this.travel = null; this.emit("change"); } },
+  // one step of the journey; false when it is over
+  travelStep() {
+    const t = this.travel;
+    if (!t || this.mode !== "explore") { this.travel = null; return false; }
+    const fl = this.floor;
+    if (!t.path.length) {
+      if (t.explore) {
+        const next = this.frontier(), path = next && this.pathTo(next[0], next[1]);
+        if (path) { t.path = path; t.to = next; return this.travelStep(); }
+        this.say("Nothing more to explore that you can see: the floor is known, as far as the light has reached.");
+      }
+      this.travel = null; this.emit("change"); return false;
+    }
+    const [nx, ny] = t.path[0], d = CM.DIRS.findIndex(([dx, dy]) => fl.pos[0] + dx === nx && fl.pos[1] + dy === ny);
+    if (d < 0) { this.travel = null; this.emit("change"); return false; }   // (a spin or a teleporter put the party elsewhere)
+    const rel = (d - fl.facing + 4) % 4;
+    if (rel !== 0) { this.turn(rel === 3 ? -1 : 1); return true; }
+    const was = fl.pos.join(",");
+    const moved = this.move(0);
+    if (this.mode !== "explore" || this.floor !== fl || !this.travel) { this.travel = null; return false; }
+    if (!moved && fl.pos.join(",") === was) {
+      const f = fl.features[keyOf(nx, ny)];
+      if (f && f.type === "door" && f.open) return true;                 // (the door opened: through it next step)
+      this.travel = null; this.emit("change"); return false;
+    }
+    t.path.shift();
+    return this.travelCheck();
+  },
+  travelCheck() {
+    const t = this.travel, fl = this.floor, k = keyOf(fl.pos[0], fl.pos[1]), thing = fl.things[k], f = fl.features[k];
+    const stop = (why) => { this.travel = null; if (why) this.say(why); this.emit("change"); return false; };
+    if (!this.hasLight()) return stop("The dark. You stop, and feel for the wall.");
+    if (thing && !["key", "bones"].includes(thing.type)) return stop(null);
+    if (f && ((f.type === "fountain" && !f.used) || (f.type === "altar" && !f.used) || (f.type === "lever" && !f.pulled) || (f.type === "carving" && !f.read))) return stop(null);
+    if (this.monstersNear(3)) return stop("Something is close. You stop.");
+    const now = this.thingsInView();
+    for (const key of now) if (!t.known.has(key)) { const what = fl.things[key]; return stop(`You see ${SEEN_AS[what.type] || "something"}. You stop.`); }
+    if (!t.path.length && !t.explore) return stop(null);
+    return true;
+  },
+  // a note pinned to a square of the automap (a word or two; empty takes it off)
+  setNote(x, y, text) {
+    const fl = this.floor, k = keyOf(x, y);
+    fl.notes = fl.notes || {};
+    text = String(text || "").trim().slice(0, 24);
+    if (text) fl.notes[k] = text; else delete fl.notes[k];
+    if (!Object.keys(fl.notes).length) delete fl.notes;
+    this.dirty = true;
+    this.emit("change");
+    return true;
   },
 });
 }
@@ -5821,6 +6003,76 @@ Object.assign(CM.Game.prototype, {
 });
 }
 
+// ---- Auto (A): the party fights on by itself with a sensible hand - heal under a third, a crowd gets the fireball,
+// the weakest foe gets the blows - until the fight ends or someone is badly hurt; and the numbers a player would want
+// before choosing: how likely a blow is to land, what a spell is likely to do ----
+{
+Object.assign(CM.Game.prototype, {
+  autoFight(on = true) {
+    if (!this.combat || this.mode !== "combat") return false;
+    this.combat.auto = on;
+    if (on) this.say("The party fights on by itself. (Any key takes the reins back.)");
+    this.emit("change");
+    return true;
+  },
+  // the waiting hero's turn, by the simple hand; false when there is no turn to take (or Auto has stopped itself)
+  autoTurn() {
+    const c = this.combat, h = c && c.waiting;
+    if (!h || this.mode !== "combat") return false;
+    if (c.auto && this.alive().some((p) => p.hp < p.max * 0.5)) { c.auto = false; this.say("Someone is badly hurt: Auto stops, and waits for orders."); this.emit("change"); return false; }
+    const hurt = this.alive().filter((p) => p.hp < p.max / 3), foes = this.living();
+    const can = CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].mp <= h.mp && !(CM.ABILITIES[id].once && h.used && h.used[id]));
+    let done = false;
+    if (hurt.length && can.includes("heal")) done = this.act("cast", { id: "heal", target: this.party.indexOf(hurt[0]) });
+    else if (hurt.length && can.includes("lay")) done = this.act("cast", { id: "lay", target: this.party.indexOf(hurt[0]) });
+    else if (hurt.length && hurt.includes(h) && this.bag.some((i) => i.kind === "heal")) done = this.act("item", null);
+    else if (foes.length >= 3 && can.includes("fireball")) done = this.act("cast", { id: "fireball" });
+    else if (foes.length >= 2 && can.includes("thorns")) done = this.act("cast", { id: "thorns" });
+    else if (can.includes("song") && !this.song) done = this.act("cast", { id: "song" });
+    else if (can.includes("volley") && foes.length >= 2) done = this.act("cast", { id: "volley" });
+    if (!done && foes.length) {
+      const weakest = foes.reduce((a, b) => (a.hp <= b.hp ? a : b), foes[0]);
+      done = this.act("fight", weakest);
+    }
+    if (!done) done = this.act("defend");
+    return done;
+  },
+  // what a hero's blow on a foe is likely to come to: {hit, low, high}
+  strikeEstimate(h, foe) {
+    if (!h || !foe) return null;
+    const atk = this.effective(h).atk + (h.weapon ? h.weapon.power : 0), base = atk - Math.floor(foe.df / 2);
+    let mult = 1;
+    if (h.cls === "Rogue" && h.row === "back") mult = 2;
+    else if (h.row === "back" && h.cls !== "Ranger") mult = 0.5;
+    const bow = Boolean(h.weapon && h.weapon.props && h.weapon.props.bow), sure = (bow && CM.trait(h, "truearrow")) || (CM.trait(h, "ambush") && !h.struck);
+    return { hit: sure ? 1 : this.hitChance(h), low: Math.max(1, Math.ceil(base * mult)), high: Math.max(1, Math.ceil((base + Math.max(1, Math.floor(atk / 2))) * mult)) };
+  },
+  // what a spell is likely to do, in a few words (the formulas of doAbility, read the other way)
+  spellEstimate(h, id) {
+    const L = h.level, mod = this.spellMod(h), m = (n) => Math.max(1, n);
+    const dmg = { missile: 6 + 2 * L + mod, firebolt: 10 + 3 * L + mod, lightning: 20 + 5 * L + mod, calllightning: 18 + 4 * L + mod, smite: 12 + 3 * L + Math.floor(mod / 2),
+      fireball: 8 + 4 * L + mod, frost: 6 + 2 * L + mod, turn: 10 + 4 * L + mod, thorns: 6 + 3 * L + Math.floor(mod / 2) }[id];
+    const heal = { heal: 12 + 4 * L + mod, mend: 10 + 3 * L + mod, lay: 8 + 3 * L + Math.floor(mod / 2), regrowth: 6 + 2 * L + Math.floor(mod / 2) }[id];
+    if (dmg !== undefined) {
+      let n = m(dmg);
+      if (id === "firebolt" || id === "fireball") { if (CM.trait(h, "firebrand")) n = Math.ceil(n * 1.5); }
+      if (id === "smite") return `${n} (${n * 2} to the undead)`;
+      if (id === "turn") return `${n} to each undead foe`;
+      if (["fireball", "frost", "thorns"].includes(id)) return `${n} to every foe`;
+      if (id === "calllightning") return CM.trait(h, "stormcall") ? `${n}, and ${Math.ceil(n * 0.6)} to the rest` : `${n}`;
+      return `${n}`;
+    }
+    if (heal !== undefined) {
+      let n = m(heal);
+      if (id === "heal" && CM.trait(h, "blessedhands")) n = Math.ceil(n * 1.5);
+      if (id === "lay" && CM.trait(h, "gentlehands")) n = Math.ceil(n * 1.5);
+      return id === "regrowth" ? `mends everyone ${n}` : `mends ${n}`;
+    }
+    return "";
+  },
+});
+}
+
 // ---- 63-camp.js ----
 "use strict";
 // The bag and the camp: what the party carries, wears, drinks and reads; the merchant, the temple, the scribe, the
@@ -6257,6 +6509,61 @@ Object.assign(CM.Game.prototype, {
 });
 }
 
+// ---- waystones: every camp reached is a waystone, and from any camp the party may go to another it has reached
+// (the floors between stay as they were left) ----
+{
+Object.assign(CM.Game.prototype, {
+  reachCamp(n) {
+    this.camps = this.camps || [];
+    if (!this.camps.includes(n)) { this.camps.push(n); this.camps.sort((a, b) => a - b); if (this.camps.length > 1) this.say("The merchant chalks a mark by the fire: a waystone. From any camp you can walk the old road to another."); }
+  },
+  // to the camp below floor n, from a camp
+  waystone(n) {
+    if (this.mode !== "camp") return "The waystones are at the camps.";
+    if (!(this.camps || []).includes(n)) return "No camp there that you have reached.";
+    if (this.floor && this.floor.number === n) return "You are there already.";
+    this.stock = null; this.recruits = null;
+    const above = this.floorAt(n);
+    this.leaveFloor();
+    this.floor = above;
+    const ladder = this.cellOf(above, "ladder");
+    if (ladder) above.pos = ladder.slice();
+    this.emit("floor", above);
+    this.sound("stairs");
+    this.say(`The old road between the camps: a long walk in the dark, and the merchant's lantern below floor ${n} again.`);
+    this.saveRun();
+    this.emit("change");
+    return "";
+  },
+});
+}
+
+// ---- the pack, looked after: what a thing would change for a hero, and the pack in order ----
+{
+const RANK = { weapon: 0, armor: 1, shield: 2, helm: 3, ring: 4, amulet: 5, heal: 6, mana: 7, revive: 8, antidote: 9, scroll: 10, wand: 11, tome: 12, gem: 13, torch: 14, lantern: 15, rope: 16, key: 17, bones: 18 };
+Object.assign(CM.Game.prototype, {
+  // {text, cls, why} for the bag's buttons: "+2" against what the hero wears, "can't" with the reason, nothing for a potion
+  compare(h, item) {
+    if (!item || !["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(item.kind)) return null;
+    const why = CM.cantWear(h, item);
+    if (why) return { text: "can't", cls: "bad", why };
+    if (item.unknown) return { text: "?", cls: "", why: "Unknown until worn, read with a scroll, or shown to the scribe" };
+    const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind), old = h[slot];
+    if (item.kind === "ring" || item.kind === "amulet") {
+      const same = old && !old.unknown && CM.itemLabel(old) === CM.itemLabel(item);
+      return { text: same ? "same" : old ? "swap" : "new", cls: same ? "" : "good", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (${CM.itemLabel(old)})` : "Nothing there now" };
+    }
+    const d = item.power - (old ? old.power : 0);
+    return { text: d > 0 ? `+${d}` : d < 0 ? String(d) : "same", cls: d > 0 ? "good" : d < 0 ? "bad" : "", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (+${old.power})` : "Nothing there now" };
+  },
+  sortBag() {
+    this.bag.sort((a, b) => (RANK[a.kind] === undefined ? 99 : RANK[a.kind]) - (RANK[b.kind] === undefined ? 99 : RANK[b.kind]) || (b.power || 0) - (a.power || 0) || String(a.name).localeCompare(String(b.name)));
+    this.dirty = true;
+    this.emit("change");
+  },
+});
+}
+
 // ---- 64-meta.js ----
 "use strict";
 // Around the run: the dungeon's people and their requests, riddles, the paths and boons a level brings, the
@@ -6668,7 +6975,7 @@ CM.UI = class {
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div></div>
   </div>
   <div id="party"></div>
-  <div id="log"></div>
+  <div id="log" role="log" aria-live="polite"></div>
   <div id="actions"></div>
 </div>
 <div id="bag" class="screen">
@@ -6676,7 +6983,7 @@ CM.UI = class {
   <div class="lists"><div class="list" id="bag-list"></div><div class="list" id="shop-list"></div></div>
   <div class="note" id="bag-note"></div>
   <div class="give" id="bag-give"></div>
-  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-bag-done" class="primary">Done</button></div>
+  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-bag-done" class="primary">Done</button></div>
 </div>
 <div class="dialog" id="dlg-settings"><div class="box"><h2>Settings</h2>
   <div class="row"><label for="set-sound">Sound</label><input type="checkbox" id="set-sound"></div>
@@ -6688,6 +6995,11 @@ CM.UI = class {
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
+  <div class="row"><label for="set-speed">Combat speed - how long bolts fly and sparks hang</label><select id="set-speed"><option value="normal">Normal</option><option value="fast">Fast</option><option value="instant">As good as instant</option></select></div>
+  <div class="row"><label for="set-text">Text size</label><select id="set-text"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select></div>
+  <div class="row"><label for="set-motion">Reduce motion - no shaking, no flashes, no washes of colour over the view</label><input type="checkbox" id="set-motion"></div>
+  <div class="row"><label for="set-contrast">High contrast - brighter text and sharper edges</label><input type="checkbox" id="set-contrast"></div>
+  <div class="row"><label for="set-swapab">Gamepad: swap A and B (confirm with B, back with A)</label><input type="checkbox" id="set-swapab"></div>
   <div class="small" id="set-storage"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><p class="small">Change sets a key: press the one you want. Esc and the arrows stay as they are.</p><table class="keys"></table><div class="end"><button id="btn-keys-reset">Reset</button><button class="close">Close</button></div></div></div>
@@ -6728,6 +7040,10 @@ CM.UI = class {
   <p class="small">The merchant keeps one thing in an iron box for whoever comes after: leave an heirloom here, and the next party to reach a camp may take it up.</p>
   <div class="list-title">In the vault</div><div class="recruit" id="vault-held"></div>
   <div class="list-title">Leave something</div><div id="vault-list"></div><div class="small" id="vault-note"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-waystone"><div class="box"><h2>The Waystones</h2>
+  <p class="small">A mark chalked by every camp fire the party has reached. From one camp, the old road leads to another: the floors between stay as you left them.</p>
+  <div id="waystone-list"></div><div class="small" id="waystone-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
@@ -6778,6 +7094,18 @@ CM.UI = class {
       this.$("#card-note").textContent = "Saved, where the browser puts downloads.";
     });
     for (const b of this.root.querySelectorAll("#slots-row button[data-slot]")) b.addEventListener("click", () => { game.setSlot(Number(b.dataset.slot)); this.refreshTitle(); });
+    for (const c of [this.$("#automap"), this.$("#bigmap-canvas")]) {
+      const cellAt = (e) => { const fl = game.floor; if (!fl) return null; const r = c.getBoundingClientRect(), size = fl.grid.length; return [Math.floor((e.clientX - r.left) / r.width * size), Math.floor((e.clientY - r.top) / r.height * size)]; };
+      c.addEventListener("click", (e) => { const at = cellAt(e); if (!at) return; if (game.travel) { game.stopTravel(); return; } if (game.travelTo(at[0], at[1]) && c.id === "bigmap-canvas") this.closeDialogs(); });
+      c.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        const at = cellAt(e), fl = game.floor;
+        if (!at || !fl || !fl.seen.some(([x, y]) => x === at[0] && y === at[1])) return;
+        const was = (fl.notes || {})[`${at[0]},${at[1]}`] || "";
+        const text = window.prompt("A note for this square (a word or two; empty takes it off):", was);
+        if (text !== null) game.setNote(at[0], at[1], text);
+      });
+    }
     this.$("#title .version").textContent = `Claude and Magic v${CM.version}`;
     this.$("#title .emblem-slot").appendChild(CM.art.emblem(120));
     this.fameOpen = -1;
@@ -6799,6 +7127,7 @@ CM.UI = class {
   }
 
   flash(sel, ms) {
+    if (CM.reducedMotion && sel !== ".fall") return;
     const el = this.$("#view " + sel);
     el.classList.add("on");
     setTimeout(() => el.classList.remove("on"), ms);
@@ -6890,6 +7219,26 @@ CM.UI = class {
   }
 
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
+  // ---- the waystones ----
+  openWaystone() { this.renderWaystone(); this.openDialog("#dlg-waystone"); }
+  renderWaystone() {
+    const g = this.game, box = this.$("#waystone-list"), camps = g.camps || [];
+    box.innerHTML = "";
+    for (const n of camps) {
+      const row = document.createElement("div");
+      row.className = "recruit";
+      row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>The camp below floor ${n}</b><small>${this.esc(CM.themeFor(n).name)}${g.floor && g.floor.number === n ? " - you are here" : ""}</small></div>`;
+      const b = document.createElement("button");
+      b.textContent = "Walk the old road";
+      b.disabled = Boolean(g.floor && g.floor.number === n);
+      b.addEventListener("click", () => { const note = g.waystone(n); if (note) this.$("#waystone-note").textContent = note; else this.closeDialogs(); this.refresh(); });
+      row.appendChild(b);
+      box.appendChild(row);
+    }
+    if (!camps.length) box.innerHTML = `<div class="small">No mark yet.</div>`;
+    this.$("#waystone-note").textContent = "";
+  }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); if (sel === "#dlg-settings") this.showStorage(); }
   closeDialogs() {
     const ending = this.$("#dlg-over").classList.contains("on");
@@ -7206,6 +7555,8 @@ CM.UI = class {
     const g = this.game, s = g.settings;
     const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
     const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap");
+    const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab");
+    speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB);
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
     smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false;
@@ -7213,10 +7564,12 @@ CM.UI = class {
     note();
     const apply = () => {
       s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.tapMove = tap.checked;
+      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked;
       g.saveSettings();
       g.emit("settings", s);
     };
-    for (const el of [sound, vol, music, mvol, smooth, fps, tap]) el.addEventListener("input", apply);
+    for (const el of [sound, vol, music, mvol, smooth, fps, tap, motion, contrast, swapab]) el.addEventListener("input", apply);
+    for (const el of [speed, text]) el.addEventListener("change", apply);
     for (const sel of [look, titleLook]) sel.addEventListener("change", () => { s.look = sel.value; look.value = titleLook.value = s.look; note(); apply(); });
   }
 
@@ -7247,6 +7600,7 @@ CM.UI = class {
     const hint = this.$("#view .hint");
     if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper, or back up.";
     else if (g.mode === "combat") hint.textContent = "";
+    else if (g.travel) hint.textContent = g.travel.explore ? "Exploring... (any key stops)" : "Walking... (any key stops)";
     else if (fl) {
       const k = `${fl.pos[0]},${fl.pos[1]}`, thing = fl.things[k], f = fl.features[k];
       const [dx, dy] = CM.DIRS[fl.facing], ahead = fl.features[`${fl.pos[0] + dx},${fl.pos[1] + dy}`];
@@ -7321,10 +7675,10 @@ CM.UI = class {
     box.classList.remove("combat");
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
-        ["Use (Space)", () => g.use()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
+        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
-        ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Vault", () => this.openVault()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
+        ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
         ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
@@ -7416,10 +7770,11 @@ CM.UI = class {
       btn("<kbd>P</kbd>Item", () => this.combatMenu("item"));
       btn("<kbd>D</kbd>Defend", () => g.act("defend"));
       btn("<kbd>R</kbd>Run", () => g.act("run"));
+      btn(`<kbd>A</kbd>${c.auto ? "Stop auto" : "Auto"}`, () => g.autoFight(!c.auto), false, c.auto ? "on" : "");
     } else if (h && cm.kind === "cast") {
       CM.abilitiesFor(h).forEach((id, i) => {
-        const a = CM.ABILITIES[id], used = a.once && h.used && h.used[id], poor = h.mp < a.mp;
-        const b = btn(`<kbd>${i + 1}</kbd>${a.name}<small>${a.mp ? a.mp + " MP - " : ""}${used ? "used this fight" : a.what}</small>`, () => this.castPick(id), used || poor, "pick");
+        const a = CM.ABILITIES[id], used = a.once && h.used && h.used[id], poor = h.mp < a.mp, est = g.spellEstimate(h, id);
+        const b = btn(`<kbd>${i + 1}</kbd>${a.name}<small>${a.mp ? a.mp + " MP - " : ""}${used ? "used this fight" : a.what}${est ? ` <i>(${est})</i>` : ""}</small>`, () => this.castPick(id), used || poor, "pick");
         const ic = CM.art.spellIcon(id, 18, g.settings.look);
         if (ic) { ic.className = "icon"; b.insertBefore(ic, b.firstChild.nextSibling); }
       });
@@ -7440,7 +7795,8 @@ CM.UI = class {
     g.living().forEach((m, i) => {
       const b = document.createElement("button");
       b.className = i === (g.target || 0) ? "chosen" : "";
-      b.innerHTML = `${this.esc(m.name)} <small>${Math.max(0, m.hp)}/${m.max}${m.asleep > 0 ? " - asleep" : ""}${m.held > 0 ? " - held" : ""}${m.marked ? " - marked" : ""}</small>`;
+      const est = h ? g.strikeEstimate(h, m) : null;
+      b.innerHTML = `${this.esc(m.name)} <small>${Math.max(0, m.hp)}/${m.max}${m.asleep > 0 ? " - asleep" : ""}${m.held > 0 ? " - held" : ""}${m.marked ? " - marked" : ""}${m.blind > 0 ? " - blinded" : ""}${m.burning > 0 ? " - burning" : ""}</small>${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
       b.addEventListener("click", () => g.setTarget(i));
       targets.appendChild(b);
     });
@@ -7547,6 +7903,20 @@ CM.UI = class {
         else if (thing.type === "ladder") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
         else { p.beginPath(); p.arc(cx, cy, cell * (thing.type === "key" ? 0.2 : 0.3), 0, Math.PI * 2); p.fill(); }
       }
+    }
+    for (const [k, text] of Object.entries(fl.notes || {})) {                   // the player's own marks
+      const [nx, ny] = k.split(",").map(Number), ncx = (nx + 0.5) * cell, ncy = (ny + 0.5) * cell;
+      p.fillStyle = "#C02060";
+      p.beginPath(); p.moveTo(ncx - cell * 0.3, ncy + cell * 0.4); p.lineTo(ncx - cell * 0.3, ncy - cell * 0.4); p.lineTo(ncx + cell * 0.35, ncy - cell * 0.2); p.lineTo(ncx - cell * 0.3, ncy); p.fill();
+      if (cell >= 16) {                                                             // (the words beside the flag - to its left near the right edge)
+        const left = ncx < W * 0.7, tx = left ? ncx + cell * 0.45 : ncx - cell * 0.4;
+        p.font = `bold ${Math.max(9, cell * 0.5)}px Georgia`; p.textAlign = left ? "left" : "right";
+        p.fillStyle = "#000"; p.fillText(text, tx, ncy + cell * 0.2); p.fillStyle = "#C02060"; p.fillText(text, tx - 1, ncy + cell * 0.2 - 1);
+      }
+    }
+    if (this.game.travel && this.game.travel.to) {                                  // where the party is walking to
+      const [tx, ty] = this.game.travel.to;
+      p.strokeStyle = "#20A040"; p.lineWidth = Math.max(1.5, cell * 0.12); p.strokeRect(tx * cell + 1, ty * cell + 1, cell - 2, cell - 2);
     }
     const [x, y] = fl.pos, [dx, dy] = CM.DIRS[fl.facing], cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
     p.fillStyle = "#20A040";
@@ -7861,6 +8231,7 @@ CM.UI = class {
 
   // a wash of colour over the view that fades (a spell's light, a trap's gas)
   tint(colour, ms = 260) {
+    if (CM.reducedMotion) return;
     const el = this.$("#view .tint");
     clearTimeout(this.tintTimer);
     el.style.transition = "none"; el.style.background = colour; el.style.opacity = "1";
@@ -7870,7 +8241,7 @@ CM.UI = class {
   // a hero's card jolts or glows for a moment
   cardFx(i, cls, ms = 700) {
     const card = this.$("#party").children[i];
-    if (!card) return;
+    if (!card || (CM.reducedMotion && cls === "jolt")) return;
     card.classList.remove(cls);
     void card.offsetWidth;                                               // (so the animation starts again)
     card.classList.add(cls);
@@ -7897,6 +8268,7 @@ CM.UI = class {
     }
     this.$("#btn-buy").addEventListener("click", () => { this.note(g.buy(this.shopRow)); this.fillBag(); });
     this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
+    this.$("#btn-sort").addEventListener("click", () => { g.sortBag(); this.bagRow = -1; this.fillBag(); });
     this.$("#btn-bag-done").addEventListener("click", () => g.closeBag());
   }
 
@@ -7935,8 +8307,9 @@ CM.UI = class {
     const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
     const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" || picked.kind === "tome" ? "Read" : picked.kind === "wand" ? "Use on" : "Give to";
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
-      const m = g.party[i];
-      b.textContent = `${verb} ${m.name}` + (m.hp <= 0 ? " (fallen)" : "");
+      const m = g.party[i], cmp = picked ? g.compare(m, picked) : null;
+      b.innerHTML = `${verb} ${this.esc(m.name)}` + (m.hp <= 0 ? " (fallen)" : "") + (cmp ? ` <i class="cmp ${cmp.cls}">${this.esc(cmp.text)}</i>` : "");
+      b.title = cmp && cmp.why ? cmp.why : "";
     });
     const base = "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     this.$("#bag-note").dataset.base = base;
@@ -8053,6 +8426,10 @@ window.addEventListener("DOMContentLoaded", () => {
     CM.music.setEnabled(s.music !== false);
     CM.music.setVolume(s.musicVolume === undefined ? 0.5 : s.musicVolume);
     ui.$("#view .fps").classList.toggle("on", s.fps);
+    CM.fxSpeed = { normal: 1, fast: 2, instant: 6 }[s.speed] || 1;
+    CM.reducedMotion = s.motion === undefined ? Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) : Boolean(s.motion);
+    document.getElementById("app").style.zoom = { normal: "", large: "1.15", larger: "1.32" }[s.text] || "";
+    document.body.classList.toggle("contrast", Boolean(s.contrast));
   };
   game.on("settings", applySettings);
   applySettings(game.settings);
@@ -8331,6 +8708,8 @@ window.addEventListener("DOMContentLoaded", () => {
     const K = game.settings.keys || CM.DEFAULT_KEYS;
     if (ui.rebinding) { e.preventDefault(); ui.rebind(ui.rebinding, e.code); return; }   // (Settings > Keys: the next key pressed is the one)
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
+    if (game.travel && !ui.dialogOpen()) { game.stopTravel(); if (MOVES[e.code] || e.code === K.explore) { e.preventDefault(); return; } }   // (any key stops a walk; a move key only stops it)
+    if (game.mode === "combat" && game.combat && game.combat.auto && e.code !== K.auto && !ui.dialogOpen()) game.autoFight(false);
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) {
       if (e.code === "Enter" && e.target.id === "seed") ui.startNew();
       if (e.code === "Escape" && ui.screen === "create") ui.show("title");
@@ -8359,6 +8738,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (e.code === K.item) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "item" ? "main" : "item");
       else if (e.code === K.defend) game.act("defend");
       else if (e.code === K.run) game.act("run");
+      else if (e.code === K.auto) game.autoFight(!game.combat.auto);
       return;
     }
     if (ui.xmenu) {                                                      // a list open between fights
@@ -8375,6 +8755,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
       if (e.code === K.use) { e.preventDefault(); game.use(); }
       else if (e.code === K.inventory) game.openBag();
+      else if (e.code === K.explore) game.explore();
     } else if (game.mode === "camp") {
       if (e.code === K.inventory) game.openBag();
     }
@@ -8386,6 +8767,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const padKey = (code) => window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true, cancelable: true }));
   function padButton(i, now) {                                           // what button i does right now
     const K = game.settings.keys || CM.DEFAULT_KEYS, inFight = game.mode === "combat", listOpen = ui.padTargets().length > 0;
+    if (game.settings.swapAB && (i === 0 || i === 1)) i = 1 - i;        // (Settings: confirm with B, back with A)
+    if (game.travel) game.stopTravel();
     if (ui.screen === "title") { if (i === 0 || i === 9) padKey("Enter"); return; }
     if (ui.screen === "create") { if (i === 0) padKey("Enter"); else if (i === 1) padKey("Escape"); return; }
     if (ui.screen === "bag") { if (i === 1 || i === 2) padKey("Escape"); return; }
@@ -8425,7 +8808,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // a tap or a click on the view walks, out of a fight (in one, a click picks a foe)
   const view = ui.$("#view");
   let tapStart = null;
-  view.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; tapStart = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  view.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; if (game.travel) game.stopTravel(); tapStart = { x: e.clientX, y: e.clientY, t: performance.now() }; });
   view.addEventListener("pointerup", (e) => {
     if (!tapStart || e.target.closest("button")) return;
     const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y), quick = performance.now() - tapStart.t < 600;
@@ -8440,7 +8823,7 @@ window.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("pointerdown", () => CM.audio.unlock(), { once: false });
 
   // ---- the frame loop ----
-  let last = performance.now(), fpsTime = 0, frames = 0, fps = 0;
+  let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0;
   function frame(now) {
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
@@ -8456,6 +8839,8 @@ window.addEventListener("DOMContentLoaded", () => {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
         if (ui.screen === "play" && !ui.dialogOpen()) game.tick(dt);    // the monsters move (not while you read a sheet or the pack); the run saves now and then
+        if (game.travel && game.mode === "explore" && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
+        if (game.mode === "combat" && game.combat && game.combat.auto && game.combat.waiting && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAuto > 420 / (CM.fxSpeed || 1)) { lastAuto = now; game.autoTurn(); }
         renderer.light = game.lightFactor();
         const { out, hud } = sprites();
         renderer.setSprites(out);

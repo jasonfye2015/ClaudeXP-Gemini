@@ -178,6 +178,103 @@ test("storage used is counted", () => {
   assert.ok(CM.store.used() > 1000);
 });
 
+test("travel: the party walks by itself to a known square, and stops for what it finds", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("travel-1", fixedParty(CM));
+  const fl = game.floor;
+  fl.seen = []; for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]);   // (a Scroll of Mapping's worth)
+  const chest = Object.keys(fl.things).find((k) => fl.things[k].type === "chest").split(",").map(Number);
+  assert.ok(game.pathTo(chest[0], chest[1]), "there should be a known way to the chest");
+  assert.ok(game.travelTo(chest[0], chest[1]));
+  let guard = 0;
+  while (game.travel && guard++ < 400) { if (game.mode === "combat") autoplayFight(CM, game); game.travelStep(); }
+  assert.ok(guard < 400, "the walk should end");
+  assert.ok(game.mode !== "explore" || fl.pos.join(",") === chest.join(",") || game.messages.some((m) => /You stop|close/.test(m)), "it arrives, or stops for a reason: " + game.messages.slice(-2).join(" | "));
+  assert.strictEqual(game.travelTo(fl.pos[0], fl.pos[1]), false);
+  game.stopTravel();
+  assert.strictEqual(game.travel, null);
+});
+
+test("explore: the nearest unknown square, and the automap grows", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("explore-1", fixedParty(CM));
+  const fl = game.floor, before = fl.seen.length;
+  assert.ok(game.frontier(), "a fresh floor has somewhere to explore");
+  assert.ok(game.explore());
+  let guard = 0;
+  while (game.travel && guard++ < 300) { if (game.mode === "combat") autoplayFight(CM, game); game.travelStep(); }
+  assert.ok(game.floor.seen.length > before, "more of the floor should be known");
+});
+
+test("notes on the automap are kept with the floor", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("notes-1");
+  game.setNote(3, 4, "  the key?  ");
+  assert.strictEqual(game.floor.notes["3,4"], "the key?");
+  game.saveRun();
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game();
+  g2.continueRun();
+  assert.strictEqual(g2.floor.notes["3,4"], "the key?");
+  g2.setNote(3, 4, "");
+  assert.strictEqual(g2.floor.notes, undefined);
+});
+
+test("auto: the party fights a whole fight by itself, and stops when someone is badly hurt", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("auto-1", fixedParty(CM));
+  const mk = Object.keys(game.floor.things).find((k) => game.floor.things[k].type === "monsters");
+  game.startCombat(mk, game.floor.things[mk]);
+  assert.ok(game.autoFight(true));
+  let turns = 0;
+  while (game.mode === "combat" && game.combat.auto && turns++ < 200) { if (!game.combat.waiting) game.advance(); else game.autoTurn(); }
+  assert.ok(game.mode !== "combat" || !game.combat.auto, "auto ends with the fight, or stops itself");
+  if (game.mode === "combat") assert.ok(game.alive().some((p) => p.hp < p.max * 0.5), "it stopped because someone is hurt");
+});
+
+test("the odds: a blow's chance and range, a spell's number", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("odds-1", fixedParty(CM));
+  const foe = CM.makeMonster(CM.MONSTERS[0], 1, new CM.Random(1));
+  const est = game.strikeEstimate(game.party[0], foe);
+  assert.ok(est.hit > 0.2 && est.hit <= 1 && est.low >= 1 && est.high >= est.low);
+  const mage = game.party.find((h) => h.cls === "Mage"), cleric = game.party.find((h) => h.cls === "Cleric");
+  assert.match(game.spellEstimate(mage, "missile"), /^\d+$/);
+  assert.match(game.spellEstimate(cleric, "heal"), /^mends \d+$/);
+  assert.strictEqual(game.spellEstimate(mage, "light"), "");
+});
+
+test("waystones: the camps reached, and the old road between them", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("ways-1", fixedParty(CM));
+  assert.strictEqual(game.waystone(5), "The waystones are at the camps.");
+  for (const n of [5, 10]) { game.enterFloor(n, "down"); game.setMode("camp"); game.reachCamp(n); }   // (as the ladder does, once the guardian over it has fallen)
+  same(game.camps, [5, 10]);
+  assert.strictEqual(game.floor.number, 10);
+  assert.strictEqual(game.waystone(7), "No camp there that you have reached.");
+  assert.strictEqual(game.waystone(5), "");
+  assert.strictEqual(game.floor.number, 5); assert.strictEqual(game.mode, "camp");
+  game.saveRun();
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game();
+  g2.continueRun();
+  same(g2.camps, [5, 10]); assert.strictEqual(g2.mode, "camp"); assert.strictEqual(g2.floor.number, 5);
+});
+
+test("the pack: what a thing would change for a hero, and the pack in order", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("pack-1", fixedParty(CM));
+  const knight = game.party.find((h) => h.cls === "Knight"), mage = game.party.find((h) => h.cls === "Mage");
+  const sword = { kind: "weapon", slot: "weapon", name: "Long Sword", power: knight.weapon.power + 2, value: 60, props: {} };
+  const c = game.compare(knight, sword);
+  assert.strictEqual(c.text, "+2"); assert.strictEqual(c.cls, "good");
+  const plate = { kind: "armor", slot: "armor", name: "Plate Mail", power: 9, value: 300, props: { weight: "heavy" } };
+  assert.strictEqual(game.compare(mage, plate).text, "can't");
+  assert.strictEqual(game.compare(knight, { kind: "heal", name: "Healing Potion", power: 20 }), null);
+  game.bag.push(sword, plate);
+  game.sortBag();
+  assert.strictEqual(game.bag[0].kind, "weapon");
+  assert.ok(game.bag.findIndex((i) => i.kind === "torch") > game.bag.findIndex((i) => i.kind === "armor"));
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

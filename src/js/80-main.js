@@ -106,6 +106,10 @@ window.addEventListener("DOMContentLoaded", () => {
     CM.music.setEnabled(s.music !== false);
     CM.music.setVolume(s.musicVolume === undefined ? 0.5 : s.musicVolume);
     ui.$("#view .fps").classList.toggle("on", s.fps);
+    CM.fxSpeed = { normal: 1, fast: 2, instant: 6 }[s.speed] || 1;
+    CM.reducedMotion = s.motion === undefined ? Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) : Boolean(s.motion);
+    document.getElementById("app").style.zoom = { normal: "", large: "1.15", larger: "1.32" }[s.text] || "";
+    document.body.classList.toggle("contrast", Boolean(s.contrast));
   };
   game.on("settings", applySettings);
   applySettings(game.settings);
@@ -384,6 +388,8 @@ window.addEventListener("DOMContentLoaded", () => {
     const K = game.settings.keys || CM.DEFAULT_KEYS;
     if (ui.rebinding) { e.preventDefault(); ui.rebind(ui.rebinding, e.code); return; }   // (Settings > Keys: the next key pressed is the one)
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
+    if (game.travel && !ui.dialogOpen()) { game.stopTravel(); if (MOVES[e.code] || e.code === K.explore) { e.preventDefault(); return; } }   // (any key stops a walk; a move key only stops it)
+    if (game.mode === "combat" && game.combat && game.combat.auto && e.code !== K.auto && !ui.dialogOpen()) game.autoFight(false);
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) {
       if (e.code === "Enter" && e.target.id === "seed") ui.startNew();
       if (e.code === "Escape" && ui.screen === "create") ui.show("title");
@@ -412,6 +418,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (e.code === K.item) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "item" ? "main" : "item");
       else if (e.code === K.defend) game.act("defend");
       else if (e.code === K.run) game.act("run");
+      else if (e.code === K.auto) game.autoFight(!game.combat.auto);
       return;
     }
     if (ui.xmenu) {                                                      // a list open between fights
@@ -428,6 +435,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
       if (e.code === K.use) { e.preventDefault(); game.use(); }
       else if (e.code === K.inventory) game.openBag();
+      else if (e.code === K.explore) game.explore();
     } else if (game.mode === "camp") {
       if (e.code === K.inventory) game.openBag();
     }
@@ -439,6 +447,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const padKey = (code) => window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true, cancelable: true }));
   function padButton(i, now) {                                           // what button i does right now
     const K = game.settings.keys || CM.DEFAULT_KEYS, inFight = game.mode === "combat", listOpen = ui.padTargets().length > 0;
+    if (game.settings.swapAB && (i === 0 || i === 1)) i = 1 - i;        // (Settings: confirm with B, back with A)
+    if (game.travel) game.stopTravel();
     if (ui.screen === "title") { if (i === 0 || i === 9) padKey("Enter"); return; }
     if (ui.screen === "create") { if (i === 0) padKey("Enter"); else if (i === 1) padKey("Escape"); return; }
     if (ui.screen === "bag") { if (i === 1 || i === 2) padKey("Escape"); return; }
@@ -478,7 +488,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // a tap or a click on the view walks, out of a fight (in one, a click picks a foe)
   const view = ui.$("#view");
   let tapStart = null;
-  view.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; tapStart = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  view.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; if (game.travel) game.stopTravel(); tapStart = { x: e.clientX, y: e.clientY, t: performance.now() }; });
   view.addEventListener("pointerup", (e) => {
     if (!tapStart || e.target.closest("button")) return;
     const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y), quick = performance.now() - tapStart.t < 600;
@@ -493,7 +503,7 @@ window.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("pointerdown", () => CM.audio.unlock(), { once: false });
 
   // ---- the frame loop ----
-  let last = performance.now(), fpsTime = 0, frames = 0, fps = 0;
+  let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0;
   function frame(now) {
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
@@ -509,6 +519,8 @@ window.addEventListener("DOMContentLoaded", () => {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
         if (ui.screen === "play" && !ui.dialogOpen()) game.tick(dt);    // the monsters move (not while you read a sheet or the pack); the run saves now and then
+        if (game.travel && game.mode === "explore" && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
+        if (game.mode === "combat" && game.combat && game.combat.auto && game.combat.waiting && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAuto > 420 / (CM.fxSpeed || 1)) { lastAuto = now; game.autoTurn(); }
         renderer.light = game.lightFactor();
         const { out, hud } = sprites();
         renderer.setSprites(out);

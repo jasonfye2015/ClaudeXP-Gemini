@@ -63,7 +63,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 1 - Quality of life
+## Phase 1 - Quality of life - DONE in v1.1
 
 **Goal:** less friction on a long run; nothing new to learn.
 
@@ -78,7 +78,7 @@ histogram for Gentle/Fair/Grim.
   Sort and filter the bag; mark junk; "sell all junk".
 - **Waystones:** each camp, once reached, is a waystone; travel between reached camps from any camp (the floors
   between stay as they were). Makes going back up for the temple/smith worth it in the Deep.
-- **Hold-to-repeat** movement keys; turn the camera with the mouse (optional).
+- **Hold-to-repeat** movement keys (already there); mouse-look left out - it isn't a grid crawler's way.
 
 ---
 
@@ -157,7 +157,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 7 - Everyone can play
+## Phase 7 - Everyone can play - DONE in v1.1 (gamepad remapping: A/B swap only)
 
 - Settings: **text size** (3 steps), **reduced motion** (no shake, no flashes, no colour washes; respect
   `prefers-reduced-motion` by default), **high-contrast** UI, status shown by icon *and* letter, not colour alone.

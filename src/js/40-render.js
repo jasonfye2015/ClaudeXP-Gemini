@@ -198,8 +198,8 @@ CM.Renderer = class {
   }
 
   get busy() { return this.move !== null || this.turn !== null; }
-  shake(strength) { this.shakeT = Math.max(this.shakeT || 0, Math.min(1, strength)); }   // the view judders, and settles
-  punch() { this.punchT = 1; }                                                            // the party leans into a blow
+  shake(strength) { if (CM.reducedMotion) return; this.shakeT = Math.max(this.shakeT || 0, Math.min(1, strength)); }   // the view judders, and settles
+  punch() { if (CM.reducedMotion) return; this.punchT = 1; }                                                            // the party leans into a blow
 
   // where the camera is in grid terms (the cell it's heading for, while it steps)
   setSprites(list) { this.sprites = list; }

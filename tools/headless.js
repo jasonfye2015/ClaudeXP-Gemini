@@ -50,28 +50,13 @@ function fixedParty(CM, seed = "party") {
   return CM.CLASSIC.map((cls) => ({ cls, name: CM.randomName(rnd), stats: CM.rollStats(cls, rnd), row: CM.CLASSES[cls].row }));
 }
 
-// a party that gets on with it: fights, heals under a third, casts at a crowd - the simulator's and the smoke test's hands
+// a fight played out by the game's own Auto hand (62-combat.js), turn after turn
 function autoplayFight(CM, game, limit = 400) {
   let guard = 0;
   while (game.mode === "combat" && game.combat && guard++ < limit) {
-    const h = game.combat.waiting;
-    if (!h) { game.advance(); continue; }
-    const hurt = game.alive().filter((p) => p.hp < p.max / 3);
-    const foes = game.living();
-    const can = CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].mp <= h.mp && !(CM.ABILITIES[id].once && h.used && h.used[id]));
-    let done = false;
-    if (hurt.length && can.includes("heal")) done = game.act("cast", { id: "heal", target: game.party.indexOf(hurt[0]) });
-    else if (hurt.length && can.includes("lay")) done = game.act("cast", { id: "lay", target: game.party.indexOf(hurt[0]) });
-    else if (hurt.length && hurt.includes(h) && game.bag.some((i) => i.kind === "heal")) done = game.act("item", null);
-    else if (foes.length >= 3 && can.includes("fireball")) done = game.act("cast", { id: "fireball" });
-    else if (foes.length >= 2 && can.includes("thorns")) done = game.act("cast", { id: "thorns" });
-    else if (can.includes("song") && !game.song) done = game.act("cast", { id: "song" });
-    else if (can.includes("volley")) done = game.act("cast", { id: "volley" });
-    if (!done) {
-      const weakest = foes.reduce((a, b) => (a.hp <= b.hp ? a : b), foes[0]);
-      done = game.act("fight", weakest);
-    }
-    if (!done) game.act("defend");
+    if (!game.combat.waiting) { game.advance(); continue; }
+    game.combat.auto = false;                                            // (the bot never hands the reins back)
+    if (!game.autoTurn()) break;
   }
 }
 module.exports = { load, makeStorage, autoplayFight, fixedParty, RULES };

@@ -54,7 +54,7 @@ CM.UI = class {
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div></div>
   </div>
   <div id="party"></div>
-  <div id="log"></div>
+  <div id="log" role="log" aria-live="polite"></div>
   <div id="actions"></div>
 </div>
 <div id="bag" class="screen">
@@ -62,7 +62,7 @@ CM.UI = class {
   <div class="lists"><div class="list" id="bag-list"></div><div class="list" id="shop-list"></div></div>
   <div class="note" id="bag-note"></div>
   <div class="give" id="bag-give"></div>
-  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-bag-done" class="primary">Done</button></div>
+  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-bag-done" class="primary">Done</button></div>
 </div>
 <div class="dialog" id="dlg-settings"><div class="box"><h2>Settings</h2>
   <div class="row"><label for="set-sound">Sound</label><input type="checkbox" id="set-sound"></div>
@@ -74,6 +74,11 @@ CM.UI = class {
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
+  <div class="row"><label for="set-speed">Combat speed - how long bolts fly and sparks hang</label><select id="set-speed"><option value="normal">Normal</option><option value="fast">Fast</option><option value="instant">As good as instant</option></select></div>
+  <div class="row"><label for="set-text">Text size</label><select id="set-text"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select></div>
+  <div class="row"><label for="set-motion">Reduce motion - no shaking, no flashes, no washes of colour over the view</label><input type="checkbox" id="set-motion"></div>
+  <div class="row"><label for="set-contrast">High contrast - brighter text and sharper edges</label><input type="checkbox" id="set-contrast"></div>
+  <div class="row"><label for="set-swapab">Gamepad: swap A and B (confirm with B, back with A)</label><input type="checkbox" id="set-swapab"></div>
   <div class="small" id="set-storage"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><p class="small">Change sets a key: press the one you want. Esc and the arrows stay as they are.</p><table class="keys"></table><div class="end"><button id="btn-keys-reset">Reset</button><button class="close">Close</button></div></div></div>
@@ -114,6 +119,10 @@ CM.UI = class {
   <p class="small">The merchant keeps one thing in an iron box for whoever comes after: leave an heirloom here, and the next party to reach a camp may take it up.</p>
   <div class="list-title">In the vault</div><div class="recruit" id="vault-held"></div>
   <div class="list-title">Leave something</div><div id="vault-list"></div><div class="small" id="vault-note"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-waystone"><div class="box"><h2>The Waystones</h2>
+  <p class="small">A mark chalked by every camp fire the party has reached. From one camp, the old road leads to another: the floors between stay as you left them.</p>
+  <div id="waystone-list"></div><div class="small" id="waystone-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
@@ -164,6 +173,18 @@ CM.UI = class {
       this.$("#card-note").textContent = "Saved, where the browser puts downloads.";
     });
     for (const b of this.root.querySelectorAll("#slots-row button[data-slot]")) b.addEventListener("click", () => { game.setSlot(Number(b.dataset.slot)); this.refreshTitle(); });
+    for (const c of [this.$("#automap"), this.$("#bigmap-canvas")]) {
+      const cellAt = (e) => { const fl = game.floor; if (!fl) return null; const r = c.getBoundingClientRect(), size = fl.grid.length; return [Math.floor((e.clientX - r.left) / r.width * size), Math.floor((e.clientY - r.top) / r.height * size)]; };
+      c.addEventListener("click", (e) => { const at = cellAt(e); if (!at) return; if (game.travel) { game.stopTravel(); return; } if (game.travelTo(at[0], at[1]) && c.id === "bigmap-canvas") this.closeDialogs(); });
+      c.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        const at = cellAt(e), fl = game.floor;
+        if (!at || !fl || !fl.seen.some(([x, y]) => x === at[0] && y === at[1])) return;
+        const was = (fl.notes || {})[`${at[0]},${at[1]}`] || "";
+        const text = window.prompt("A note for this square (a word or two; empty takes it off):", was);
+        if (text !== null) game.setNote(at[0], at[1], text);
+      });
+    }
     this.$("#title .version").textContent = `Claude and Magic v${CM.version}`;
     this.$("#title .emblem-slot").appendChild(CM.art.emblem(120));
     this.fameOpen = -1;
@@ -185,6 +206,7 @@ CM.UI = class {
   }
 
   flash(sel, ms) {
+    if (CM.reducedMotion && sel !== ".fall") return;
     const el = this.$("#view " + sel);
     el.classList.add("on");
     setTimeout(() => el.classList.remove("on"), ms);
@@ -276,6 +298,26 @@ CM.UI = class {
   }
 
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
+  // ---- the waystones ----
+  openWaystone() { this.renderWaystone(); this.openDialog("#dlg-waystone"); }
+  renderWaystone() {
+    const g = this.game, box = this.$("#waystone-list"), camps = g.camps || [];
+    box.innerHTML = "";
+    for (const n of camps) {
+      const row = document.createElement("div");
+      row.className = "recruit";
+      row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>The camp below floor ${n}</b><small>${this.esc(CM.themeFor(n).name)}${g.floor && g.floor.number === n ? " - you are here" : ""}</small></div>`;
+      const b = document.createElement("button");
+      b.textContent = "Walk the old road";
+      b.disabled = Boolean(g.floor && g.floor.number === n);
+      b.addEventListener("click", () => { const note = g.waystone(n); if (note) this.$("#waystone-note").textContent = note; else this.closeDialogs(); this.refresh(); });
+      row.appendChild(b);
+      box.appendChild(row);
+    }
+    if (!camps.length) box.innerHTML = `<div class="small">No mark yet.</div>`;
+    this.$("#waystone-note").textContent = "";
+  }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); if (sel === "#dlg-settings") this.showStorage(); }
   closeDialogs() {
     const ending = this.$("#dlg-over").classList.contains("on");
@@ -592,6 +634,8 @@ CM.UI = class {
     const g = this.game, s = g.settings;
     const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
     const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap");
+    const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab");
+    speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB);
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
     smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false;
@@ -599,10 +643,12 @@ CM.UI = class {
     note();
     const apply = () => {
       s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.tapMove = tap.checked;
+      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked;
       g.saveSettings();
       g.emit("settings", s);
     };
-    for (const el of [sound, vol, music, mvol, smooth, fps, tap]) el.addEventListener("input", apply);
+    for (const el of [sound, vol, music, mvol, smooth, fps, tap, motion, contrast, swapab]) el.addEventListener("input", apply);
+    for (const el of [speed, text]) el.addEventListener("change", apply);
     for (const sel of [look, titleLook]) sel.addEventListener("change", () => { s.look = sel.value; look.value = titleLook.value = s.look; note(); apply(); });
   }
 
@@ -633,6 +679,7 @@ CM.UI = class {
     const hint = this.$("#view .hint");
     if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper, or back up.";
     else if (g.mode === "combat") hint.textContent = "";
+    else if (g.travel) hint.textContent = g.travel.explore ? "Exploring... (any key stops)" : "Walking... (any key stops)";
     else if (fl) {
       const k = `${fl.pos[0]},${fl.pos[1]}`, thing = fl.things[k], f = fl.features[k];
       const [dx, dy] = CM.DIRS[fl.facing], ahead = fl.features[`${fl.pos[0] + dx},${fl.pos[1] + dy}`];
@@ -707,10 +754,10 @@ CM.UI = class {
     box.classList.remove("combat");
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
-        ["Use (Space)", () => g.use()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
+        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
-        ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Vault", () => this.openVault()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
+        ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
         ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
@@ -802,10 +849,11 @@ CM.UI = class {
       btn("<kbd>P</kbd>Item", () => this.combatMenu("item"));
       btn("<kbd>D</kbd>Defend", () => g.act("defend"));
       btn("<kbd>R</kbd>Run", () => g.act("run"));
+      btn(`<kbd>A</kbd>${c.auto ? "Stop auto" : "Auto"}`, () => g.autoFight(!c.auto), false, c.auto ? "on" : "");
     } else if (h && cm.kind === "cast") {
       CM.abilitiesFor(h).forEach((id, i) => {
-        const a = CM.ABILITIES[id], used = a.once && h.used && h.used[id], poor = h.mp < a.mp;
-        const b = btn(`<kbd>${i + 1}</kbd>${a.name}<small>${a.mp ? a.mp + " MP - " : ""}${used ? "used this fight" : a.what}</small>`, () => this.castPick(id), used || poor, "pick");
+        const a = CM.ABILITIES[id], used = a.once && h.used && h.used[id], poor = h.mp < a.mp, est = g.spellEstimate(h, id);
+        const b = btn(`<kbd>${i + 1}</kbd>${a.name}<small>${a.mp ? a.mp + " MP - " : ""}${used ? "used this fight" : a.what}${est ? ` <i>(${est})</i>` : ""}</small>`, () => this.castPick(id), used || poor, "pick");
         const ic = CM.art.spellIcon(id, 18, g.settings.look);
         if (ic) { ic.className = "icon"; b.insertBefore(ic, b.firstChild.nextSibling); }
       });
@@ -826,7 +874,8 @@ CM.UI = class {
     g.living().forEach((m, i) => {
       const b = document.createElement("button");
       b.className = i === (g.target || 0) ? "chosen" : "";
-      b.innerHTML = `${this.esc(m.name)} <small>${Math.max(0, m.hp)}/${m.max}${m.asleep > 0 ? " - asleep" : ""}${m.held > 0 ? " - held" : ""}${m.marked ? " - marked" : ""}</small>`;
+      const est = h ? g.strikeEstimate(h, m) : null;
+      b.innerHTML = `${this.esc(m.name)} <small>${Math.max(0, m.hp)}/${m.max}${m.asleep > 0 ? " - asleep" : ""}${m.held > 0 ? " - held" : ""}${m.marked ? " - marked" : ""}${m.blind > 0 ? " - blinded" : ""}${m.burning > 0 ? " - burning" : ""}</small>${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
       b.addEventListener("click", () => g.setTarget(i));
       targets.appendChild(b);
     });
@@ -933,6 +982,20 @@ CM.UI = class {
         else if (thing.type === "ladder") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
         else { p.beginPath(); p.arc(cx, cy, cell * (thing.type === "key" ? 0.2 : 0.3), 0, Math.PI * 2); p.fill(); }
       }
+    }
+    for (const [k, text] of Object.entries(fl.notes || {})) {                   // the player's own marks
+      const [nx, ny] = k.split(",").map(Number), ncx = (nx + 0.5) * cell, ncy = (ny + 0.5) * cell;
+      p.fillStyle = "#C02060";
+      p.beginPath(); p.moveTo(ncx - cell * 0.3, ncy + cell * 0.4); p.lineTo(ncx - cell * 0.3, ncy - cell * 0.4); p.lineTo(ncx + cell * 0.35, ncy - cell * 0.2); p.lineTo(ncx - cell * 0.3, ncy); p.fill();
+      if (cell >= 16) {                                                             // (the words beside the flag - to its left near the right edge)
+        const left = ncx < W * 0.7, tx = left ? ncx + cell * 0.45 : ncx - cell * 0.4;
+        p.font = `bold ${Math.max(9, cell * 0.5)}px Georgia`; p.textAlign = left ? "left" : "right";
+        p.fillStyle = "#000"; p.fillText(text, tx, ncy + cell * 0.2); p.fillStyle = "#C02060"; p.fillText(text, tx - 1, ncy + cell * 0.2 - 1);
+      }
+    }
+    if (this.game.travel && this.game.travel.to) {                                  // where the party is walking to
+      const [tx, ty] = this.game.travel.to;
+      p.strokeStyle = "#20A040"; p.lineWidth = Math.max(1.5, cell * 0.12); p.strokeRect(tx * cell + 1, ty * cell + 1, cell - 2, cell - 2);
     }
     const [x, y] = fl.pos, [dx, dy] = CM.DIRS[fl.facing], cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
     p.fillStyle = "#20A040";
@@ -1247,6 +1310,7 @@ CM.UI = class {
 
   // a wash of colour over the view that fades (a spell's light, a trap's gas)
   tint(colour, ms = 260) {
+    if (CM.reducedMotion) return;
     const el = this.$("#view .tint");
     clearTimeout(this.tintTimer);
     el.style.transition = "none"; el.style.background = colour; el.style.opacity = "1";
@@ -1256,7 +1320,7 @@ CM.UI = class {
   // a hero's card jolts or glows for a moment
   cardFx(i, cls, ms = 700) {
     const card = this.$("#party").children[i];
-    if (!card) return;
+    if (!card || (CM.reducedMotion && cls === "jolt")) return;
     card.classList.remove(cls);
     void card.offsetWidth;                                               // (so the animation starts again)
     card.classList.add(cls);
@@ -1283,6 +1347,7 @@ CM.UI = class {
     }
     this.$("#btn-buy").addEventListener("click", () => { this.note(g.buy(this.shopRow)); this.fillBag(); });
     this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
+    this.$("#btn-sort").addEventListener("click", () => { g.sortBag(); this.bagRow = -1; this.fillBag(); });
     this.$("#btn-bag-done").addEventListener("click", () => g.closeBag());
   }
 
@@ -1321,8 +1386,9 @@ CM.UI = class {
     const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
     const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" || picked.kind === "tome" ? "Read" : picked.kind === "wand" ? "Use on" : "Give to";
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
-      const m = g.party[i];
-      b.textContent = `${verb} ${m.name}` + (m.hp <= 0 ? " (fallen)" : "");
+      const m = g.party[i], cmp = picked ? g.compare(m, picked) : null;
+      b.innerHTML = `${verb} ${this.esc(m.name)}` + (m.hp <= 0 ? " (fallen)" : "") + (cmp ? ` <i class="cmp ${cmp.cls}">${this.esc(cmp.text)}</i>` : "");
+      b.title = cmp && cmp.why ? cmp.why : "";
     });
     const base = "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     this.$("#bag-note").dataset.base = base;

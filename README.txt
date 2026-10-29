@@ -358,6 +358,37 @@ Foundations (the third big update, phase 0)
   (node tools/sim.js --seeds 30 --to 50). The fight and the hoard don't change without a look at it.
   F3 and Settings name the build (CM.built, the day build.py ran); Export carries it.
 
+Quality of life (the third big update, phase 1)
+  The party walks by itself. Click a square on the automap (the small one, or the large one on Tab) and the party
+  walks there over the squares it knows, opening doors on the way, and stops when a band of monsters is three steps
+  off, when something is underfoot (a chest, a fountain, a lever, someone to talk to), when something new comes into
+  view, or when the light fails. Explore (X) walks to the nearest square with an unknown one beside it, and on to the
+  next, until the floor is known as far as the light has reached. Any key or click stops a walk. It never walks into
+  a pit, a known trap or a riddle door by itself.
+  Notes: right-click a square on the automap for a word or two ("key?", "come back") - a flag and the words on the
+  map, kept with the floor.
+  A fight, faster: Auto (A) has the party fight on by itself - healing under a third, a fireball for a crowd, the
+  weakest foe for the blows - until the fight ends or someone drops below half; any key takes the reins back. Under
+  each foe, the odds: how likely the hero whose turn it is is to hit, and the range of the blow; in the casting menu,
+  what each spell is likely to do. Settings has a Combat speed: the bolts and sparks fly at normal speed, fast, or as
+  good as instantly.
+  The pack: pick a thing, and each hero's button says what it would change against what they wear (+2, -1, same,
+  can't - with the reason); Sort the pack puts weapons first, then armour, shields, helms, rings and amulets, the best
+  of each first, and the rest after.
+  Waystones: every camp reached is marked, and from any camp the Waystone leads to another the party has reached -
+  back up to the temple and the smith from deep down, and down again. The floors between stay as they were.
+  In code: pathTo / travelTo / travelStep / explore / frontier / setNote (61-explore.js), autoFight / autoTurn /
+  strikeEstimate / spellEstimate (62-combat.js), reachCamp / waystone / compare / sortBag (63-camp.js); the window
+  steps a walk each frame the view is still and takes an Auto turn each time the bolts have landed (80-main.js);
+  CM.fxSpeed (45-fx.js). The simulator's party fights with the game's own Auto hand now.
+
+Everyone can play (the third big update, phase 7)
+  Settings: Text size (normal, large, larger), Reduce motion (no shaking, no flashes, no washes of colour; on by
+  default where the browser asks for it), High contrast (brighter text, sharper edges, a clear focus ring), and
+  Gamepad: swap A and B. The log is a live region for a screen reader; every button shows its focus. On a phone, the
+  view sits on top, the party two by two, the log short and the buttons as a thumb bar (style.css, the 640px rule).
+  An ailment is always its mark and its name, never a colour alone.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
@@ -387,9 +418,9 @@ The source
     50-audio.js   the sounds, each depth's ambience and the monsters' calls, synthesised
     55-music.js   the music, written from a seed and played as it goes
     60-game.js    the rules, with no screen in them: the class, its events, saving and loading, the stairs
-    61-explore.js moving, looking, using: doors, traps, fountains, the monsters moving about the floor
-    62-combat.js  the fight: turns, blows, spells, the monsters' ways, the Lich King and the guardians
-    63-camp.js    the bag, the merchant, the temple, the tavern, the smith, the vault
+    61-explore.js moving, looking, using: doors, traps, fountains, the monsters moving about the floor; walking by itself
+    62-combat.js  the fight: turns, blows, spells, the monsters' ways, the Lich King and the guardians; Auto, the odds
+    63-camp.js    the bag, the merchant, the temple, the tavern, the smith, the vault, the waystones
     64-meta.js    the dungeon's people, riddles, paths and boons, achievements, the Hall of Fame, Export / Import
     70-ui.js      the title, the party and log, the automap, the bag and merchant, the dialogs
     80-main.js    wiring, keys, the frame loop
@@ -402,6 +433,6 @@ The source
 Keys
   W/Up forward, S/Down back, A/Left and D/Right turn, Q/E sidestep, Space use (a chest, the ladder or stairs, a
   fountain, an altar, a lever or carving on the wall you face - or search that wall), C cast between fights, I
-  inventory, 1-4 a hero's sheet, Tab the automap large, Esc the menu. In a fight: F fight the chosen foe, C cast or
-  a skill, P an item, D defend, R run, Tab or 1-9 or a click to choose the foe, Esc back. Enter or Space closes the
-  ending. F3 shows frames per second.
+  inventory, 1-4 a hero's sheet, Tab the automap large (click a square to walk there, right-click for a note), X explore,
+  Esc the menu. In a fight: F fight the chosen foe, C cast or a skill, P an item, D defend, R run, A auto, Tab or 1-9
+  or a click to choose the foe, Esc back. Enter or Space closes the ending. F3 shows frames per second.

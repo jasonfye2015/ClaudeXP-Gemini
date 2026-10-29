@@ -206,6 +206,12 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #actions button.pick small { display: block; color: var(--dim); font-weight: normal; font-size: 10.5px; }
 #actions button:disabled small { color: var(--faint); }
 #actions button kbd { margin-right: 4px; }
+#actions .targets button .odds { display: block; color: var(--dim); font-style: normal; font-size: 10px; }
+#actions .menu button.on { border-color: var(--gold); color: var(--gold); background: #4A321A; }
+#actions button.pick small i { color: var(--gold); font-style: normal; }
+#bag .give button .cmp { font-style: normal; font-size: 11px; color: var(--dim); margin-left: 4px; }
+#bag .give button .cmp.good { color: #8FD08F; }
+#bag .give button .cmp.bad { color: #E08080; }
 #view canvas#hud { cursor: crosshair; }
 
 /* ---- the bag and the merchant ---- */
@@ -276,6 +282,17 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 .float.miss { color: #B0B0B0; font-style: italic; font-size: 14px; }
 @keyframes rise { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -48px; } }
 
+/* ---- high contrast (Settings): brighter text, sharper edges ---- */
+body.contrast { --ink: #FFFFFF; --dim: #E0E0E0; --faint: #B0B0B0; --gold: #FFE080; --edge: #D0B070; --wood: #2A2A2A; --wood-light: #444; --night: #000; --pit: #000; }
+body.contrast #log div { color: #E0E0E0; }
+body.contrast #log div:last-child { color: #fff; }
+body.contrast .bar span { font-size: 10px; }
+body.contrast .bar i { background: #FF4040; }
+body.contrast .bar.mp i { background: #4080FF; }
+body.contrast button { border-width: 2px; }
+body.contrast button:focus-visible, body.contrast input:focus-visible, body.contrast select:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
 @media (max-width: 900px) {
   #classes { grid-template-columns: 1fr; }
   #create .sheet { grid-template-columns: 1fr; }
@@ -290,4 +307,25 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
   #dlg-over .box { min-width: 0; }
   .roll { grid-template-columns: repeat(2, 1fr); }
   .tally { grid-template-columns: 1fr; }
+}
+/* ---- a phone in hand: the view on top, the party two by two, a shorter log, the buttons as a thumb bar ---- */
+@media (max-width: 640px) {
+  #play { padding: 4px; gap: 4px; }
+  #view { min-width: 0; min-height: 200px; border-width: 2px; }
+  #side { gap: 6px; }
+  #automap { width: 110px; height: 110px; border-width: 2px; }
+  #side .where, #side .purse, #side .light { font-size: 11px; }
+  .member { min-height: 58px; grid-template-columns: 34px 1fr; padding: 3px; }
+  .member canvas { width: 34px; height: 34px; }
+  .member .name { font-size: 12px; }
+  #log { height: 64px; flex: 0 0 64px; font: 11px/14px var(--mono); }
+  #actions { gap: 4px; }
+  #actions button { padding: 8px 9px; font-size: 12px; }
+  .dialog .box { min-width: 0; width: 96vw; padding: 12px; }
+  .journalbox { min-width: 0; }
+  #bag { padding: 8px; gap: 6px; }
+  #bag .lists { flex-direction: column; }
+  #bag .give button, #bag .act button { padding: 8px 9px; }
+  #title h1 { font-size: 30px; }
+  #create .foot label { margin-left: 0; }
 }

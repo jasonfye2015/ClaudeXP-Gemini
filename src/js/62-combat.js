@@ -922,3 +922,74 @@ Object.assign(CM.Game.prototype, {
   },
 });
 }
+
+// ---- Auto (A): the party fights on by itself with a sensible hand - heal under a third, a crowd gets the fireball,
+// the weakest foe gets the blows - until the fight ends or someone is badly hurt; and the numbers a player would want
+// before choosing: how likely a blow is to land, what a spell is likely to do ----
+{
+Object.assign(CM.Game.prototype, {
+  autoFight(on = true) {
+    if (!this.combat || this.mode !== "combat") return false;
+    this.combat.auto = on;
+    if (on) this.say("The party fights on by itself. (Any key takes the reins back.)");
+    this.emit("change");
+    return true;
+  },
+  // the waiting hero's turn, by the simple hand; false when there is no turn to take (or Auto has stopped itself)
+  autoTurn() {
+    const c = this.combat, h = c && c.waiting;
+    if (!h || this.mode !== "combat") return false;
+    if (c.auto && this.alive().some((p) => p.hp < p.max * 0.5)) { c.auto = false; this.say("Someone is badly hurt: Auto stops, and waits for orders."); this.emit("change"); return false; }
+    const hurt = this.alive().filter((p) => p.hp < p.max / 3), foes = this.living();
+    const can = CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].mp <= h.mp && !(CM.ABILITIES[id].once && h.used && h.used[id]));
+    let done = false;
+    if (hurt.length && can.includes("heal")) done = this.act("cast", { id: "heal", target: this.party.indexOf(hurt[0]) });
+    else if (hurt.length && can.includes("lay")) done = this.act("cast", { id: "lay", target: this.party.indexOf(hurt[0]) });
+    else if (hurt.length && hurt.includes(h) && this.bag.some((i) => i.kind === "heal")) done = this.act("item", null);
+    else if (foes.length >= 3 && can.includes("fireball")) done = this.act("cast", { id: "fireball" });
+    else if (foes.length >= 2 && can.includes("thorns")) done = this.act("cast", { id: "thorns" });
+    else if (can.includes("song") && !this.song) done = this.act("cast", { id: "song" });
+    else if (can.includes("volley") && foes.length >= 2) done = this.act("cast", { id: "volley" });
+    if (!done && foes.length) {
+      const weakest = foes.reduce((a, b) => (a.hp <= b.hp ? a : b), foes[0]);
+      done = this.act("fight", weakest);
+    }
+    if (!done) done = this.act("defend");
+    return done;
+  },
+  // what a hero's blow on a foe is likely to come to: {hit, low, high}
+  strikeEstimate(h, foe) {
+    if (!h || !foe) return null;
+    const atk = this.effective(h).atk + (h.weapon ? h.weapon.power : 0), base = atk - Math.floor(foe.df / 2);
+    let mult = 1;
+    if (h.cls === "Rogue" && h.row === "back") mult = 2;
+    else if (h.row === "back" && h.cls !== "Ranger") mult = 0.5;
+    const bow = Boolean(h.weapon && h.weapon.props && h.weapon.props.bow), sure = (bow && CM.trait(h, "truearrow")) || (CM.trait(h, "ambush") && !h.struck);
+    return { hit: sure ? 1 : this.hitChance(h), low: Math.max(1, Math.ceil(base * mult)), high: Math.max(1, Math.ceil((base + Math.max(1, Math.floor(atk / 2))) * mult)) };
+  },
+  // what a spell is likely to do, in a few words (the formulas of doAbility, read the other way)
+  spellEstimate(h, id) {
+    const L = h.level, mod = this.spellMod(h), m = (n) => Math.max(1, n);
+    const dmg = { missile: 6 + 2 * L + mod, firebolt: 10 + 3 * L + mod, lightning: 20 + 5 * L + mod, calllightning: 18 + 4 * L + mod, smite: 12 + 3 * L + Math.floor(mod / 2),
+      fireball: 8 + 4 * L + mod, frost: 6 + 2 * L + mod, turn: 10 + 4 * L + mod, thorns: 6 + 3 * L + Math.floor(mod / 2) }[id];
+    const heal = { heal: 12 + 4 * L + mod, mend: 10 + 3 * L + mod, lay: 8 + 3 * L + Math.floor(mod / 2), regrowth: 6 + 2 * L + Math.floor(mod / 2) }[id];
+    if (dmg !== undefined) {
+      let n = m(dmg);
+      if (id === "firebolt" || id === "fireball") { if (CM.trait(h, "firebrand")) n = Math.ceil(n * 1.5); }
+      if (id === "smite") return `${n} (${n * 2} to the undead)`;
+      if (id === "turn") return `${n} to each undead foe`;
+      if (["fireball", "frost", "thorns"].includes(id)) return `${n} to every foe`;
+      if (id === "calllightning") return CM.trait(h, "stormcall") ? `${n}, and ${Math.ceil(n * 0.6)} to the rest` : `${n}`;
+      return `${n}`;
+    }
+    if (heal !== undefined) {
+      let n = m(heal);
+      if (id === "heal" && CM.trait(h, "blessedhands")) n = Math.ceil(n * 1.5);
+      if (id === "lay" && CM.trait(h, "gentlehands")) n = Math.ceil(n * 1.5);
+      return id === "regrowth" ? `mends everyone ${n}` : `mends ${n}`;
+    }
+    return "";
+  },
+});
+}
+

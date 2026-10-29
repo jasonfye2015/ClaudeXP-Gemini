@@ -432,3 +432,59 @@ Object.assign(CM.Game.prototype, {
   potionCount() { return this.bag.filter((i) => ["heal", "mana", "revive", "antidote"].includes(i.kind)).length; },
 });
 }
+
+// ---- waystones: every camp reached is a waystone, and from any camp the party may go to another it has reached
+// (the floors between stay as they were left) ----
+{
+Object.assign(CM.Game.prototype, {
+  reachCamp(n) {
+    this.camps = this.camps || [];
+    if (!this.camps.includes(n)) { this.camps.push(n); this.camps.sort((a, b) => a - b); if (this.camps.length > 1) this.say("The merchant chalks a mark by the fire: a waystone. From any camp you can walk the old road to another."); }
+  },
+  // to the camp below floor n, from a camp
+  waystone(n) {
+    if (this.mode !== "camp") return "The waystones are at the camps.";
+    if (!(this.camps || []).includes(n)) return "No camp there that you have reached.";
+    if (this.floor && this.floor.number === n) return "You are there already.";
+    this.stock = null; this.recruits = null;
+    const above = this.floorAt(n);
+    this.leaveFloor();
+    this.floor = above;
+    const ladder = this.cellOf(above, "ladder");
+    if (ladder) above.pos = ladder.slice();
+    this.emit("floor", above);
+    this.sound("stairs");
+    this.say(`The old road between the camps: a long walk in the dark, and the merchant's lantern below floor ${n} again.`);
+    this.saveRun();
+    this.emit("change");
+    return "";
+  },
+});
+}
+
+// ---- the pack, looked after: what a thing would change for a hero, and the pack in order ----
+{
+const RANK = { weapon: 0, armor: 1, shield: 2, helm: 3, ring: 4, amulet: 5, heal: 6, mana: 7, revive: 8, antidote: 9, scroll: 10, wand: 11, tome: 12, gem: 13, torch: 14, lantern: 15, rope: 16, key: 17, bones: 18 };
+Object.assign(CM.Game.prototype, {
+  // {text, cls, why} for the bag's buttons: "+2" against what the hero wears, "can't" with the reason, nothing for a potion
+  compare(h, item) {
+    if (!item || !["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(item.kind)) return null;
+    const why = CM.cantWear(h, item);
+    if (why) return { text: "can't", cls: "bad", why };
+    if (item.unknown) return { text: "?", cls: "", why: "Unknown until worn, read with a scroll, or shown to the scribe" };
+    const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind), old = h[slot];
+    if (item.kind === "ring" || item.kind === "amulet") {
+      const same = old && !old.unknown && CM.itemLabel(old) === CM.itemLabel(item);
+      return { text: same ? "same" : old ? "swap" : "new", cls: same ? "" : "good", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (${CM.itemLabel(old)})` : "Nothing there now" };
+    }
+    const d = item.power - (old ? old.power : 0);
+    return { text: d > 0 ? `+${d}` : d < 0 ? String(d) : "same", cls: d > 0 ? "good" : d < 0 ? "bad" : "", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (+${old.power})` : "Nothing there now" };
+  },
+  sortBag() {
+    this.bag.sort((a, b) => (RANK[a.kind] === undefined ? 99 : RANK[a.kind]) - (RANK[b.kind] === undefined ? 99 : RANK[b.kind]) || (b.power || 0) - (a.power || 0) || String(a.name).localeCompare(String(b.name)));
+    this.dirty = true;
+    this.emit("change");
+  },
+});
+}
+
