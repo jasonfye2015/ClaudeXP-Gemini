@@ -1,6 +1,6 @@
 "use strict";
-// Where it all starts: the game, the window, the renderer and the sounds wired together, the keys, and the frame loop
-// (real time: a frame that comes late moves the camera as far as it should have).
+// Where it all starts: the game, the window, the renderer, the sounds and the music wired together, the keys, and the
+// frame loop (real time: a frame that comes late moves the camera as far as it should have).
 window.addEventListener("DOMContentLoaded", () => {
   const game = new CM.Game();
   const ui = new CM.UI(game, document.getElementById("app"));
@@ -59,8 +59,21 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("mesh", () => { if (renderer.ok && game.floor) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); });
   game.on("teleported", (x, y) => renderer.setCamera(x, y, game.floor.facing));
   game.on("spin", (facing) => (game.settings.smooth ? renderer.spinTo(facing) : renderer.turnTo(facing, 0)));
+  // ---- what's heard: the depth's ambience and tune, the fight's, the camp's, the title's - and the ending's ----
+  const tuneFor = () => (game.mode === "combat" ? "battle" : game.mode === "camp" ? "camp" : game.mode === "title" ? ui.ending || "title"
+    : `depth${CM.themeIndex(game.floor ? game.floor.number : 1)}`);
+  const soundscape = () => {
+    const mode = game.mode;
+    CM.audio.ambience(mode === "explore" || mode === "combat" || mode === "camp", mode === "camp" ? 4 : CM.themeIndex(game.floor ? game.floor.number : 1));
+    CM.music.start(tuneFor());
+  };
+  game.on("mode", soundscape);
+  game.on("floor", soundscape);
+  ui.onEnding = soundscape;
+  const STEPS = ["step", "step_water", "step_hall", "step_cold"];        // a footfall for each depth
+  game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[CM.themeIndex(game.floor.number)] || "step" : name));
+  game.on("near", (kind, d) => CM.audio.near(kind, 1 - d / 8));          // something is coming: louder the nearer
   game.on("mode", (mode) => {
-    CM.audio.ambience(mode === "explore" || mode === "combat");
     if (mode === "title") showDemo();
     else if (game.floor && renderer.ok) {
       useTheme(game.floor.number);
@@ -68,15 +81,18 @@ window.addEventListener("DOMContentLoaded", () => {
       renderer.setCamera(game.floor.pos[0], game.floor.pos[1], game.floor.facing);
     }
   });
-  game.on("sound", (name) => CM.audio.play(name));
   const applySettings = (s) => {
     renderer.snap = !s.smooth;
     CM.audio.setEnabled(s.sound);
     CM.audio.setVolume(s.volume);
+    CM.music.setEnabled(s.music !== false);
+    CM.music.setVolume(s.musicVolume === undefined ? 0.5 : s.musicVolume);
     ui.$("#view .fps").classList.toggle("on", s.fps);
   };
   game.on("settings", applySettings);
   applySettings(game.settings);
+  CM.audio.unlock();                                                     // (where the page may: the Timeline's window; a browser waits for a click or key)
+  soundscape();
 
   // ---- what stands in the corridors: the floor's things, or the foes of the fight ----
   const dying = new Map();                                               // foe -> when it fell
@@ -115,13 +131,13 @@ window.addEventListener("DOMContentLoaded", () => {
     const dx = right[0] * off + fwd[0] * back, dz = right[1] * off + fwd[1] * back;
     const w = foe.boss ? 0.95 : 0.85, h = foe.boss ? 0.98 : 0.85;
     return { x, y, dx, dz, w, h, wx: x + 0.5 + dx, wz: y + 0.5 + dz, wh: h + 0.02, m: foe, shade: foe.elite ? 1.2 : 1,
-      layer: `monster:${foe.kind || foe.name}` };
+      layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost" };
   }
 
   function sprites() {
     const fl = game.floor, out = [], hud = [];
     if (!fl) return { out, hud };
-    const now = performance.now();
+    const now = performance.now(), right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
     for (const [key, thing] of Object.entries(fl.things)) {
       let [x, y] = key.split(",").map(Number);
@@ -138,7 +154,9 @@ window.addEventListener("DOMContentLoaded", () => {
           if (k >= 1) delete thing.anim;
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
-        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : 0.85, h: m.boss ? 0.98 : 0.85, shade: m.elite ? 1.2 : 1 });
+        const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost";
+        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : 0.85, h: m.boss ? 0.98 : 0.85, shade: m.elite ? 1.2 : 1,
+          lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
       }
     }
     for (const [key, f] of Object.entries(fl.features)) {
@@ -161,15 +179,17 @@ window.addEventListener("DOMContentLoaded", () => {
         if (m.fled) continue;
         const place = foePlace(m);
         if (!place) continue;
-        let alpha = 1;
-        if (m.hp <= 0) {
+        let alpha = 1, lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0);
+        if (m.hp <= 0) {                                                 // fallen: it fades, and sinks into the floor (a ghost rises)
           const t = (now - (dying.get(m) || now)) / 700;
           if (t >= 1) { dying.delete(m); continue; }
           alpha = 1 - t;
+          lift += place.ghost ? t * 0.6 : -t * 0.55;
         } else { place.index = living.indexOf(m); place.chosen = place.index === (game.target || 0); hud.push(place); }
         const flash = flashes.get(m) || 0;
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
-        out.push(Object.assign({ flash: flash * 0.8, alpha }, place));
+        const flinch = flash > 0 ? Math.sin(now / 22) * flash * 0.025 : 0;   // struck: it shudders
+        out.push(Object.assign({}, place, { flash: flash * 0.8, alpha, lift, dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
       }
     }
     return { out, hud };
@@ -193,7 +213,11 @@ window.addEventListener("DOMContentLoaded", () => {
       if (e.code === "Escape" && ui.screen === "create") ui.show("title");
       return;
     }
-    if (ui.dialogOpen()) { if (e.code === "Escape" || (e.code === "Tab" && ui.$("#bigmap").classList.contains("on"))) { e.preventDefault(); ui.closeDialogs(); } return; }
+    if (ui.dialogOpen()) {
+      const ending = ui.$("#dlg-over").classList.contains("on");
+      if (e.code === "Escape" || (e.code === "Tab" && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
+      return;
+    }
     if (ui.screen === "title") {
       if (e.code === "Enter" || e.code === "Space") { e.preventDefault(); if (game.canContinue()) game.continueRun(); else ui.startNew(); }
       return;

@@ -181,8 +181,11 @@ function shaded(p, hex, k) {                                            // a col
   return rgb([(v >> 16) & 255, (v >> 8) & 255, v & 255], k);
 }
 
+// a monster, from its row in CM.MONSTERS: a body shape, a head, what it holds, its colour and eyes - and the finish:
+// a sheen where the torch catches it, fur or scales or a hide and belt, its skin (stone cracks, warts, rot), brows
+// drawn down and a grim mouth with teeth or fangs
 CM.art.monster = function (m, big = false) {
-  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14, rndm = new CM.Random(CM.hashSeed(m.name));
   const col = m.colour, dark = shaded(p, col, 0.65), light = shaded(p, col, 1.3);
   const bodies = { beast: [150, 70], small: [66, 76], biped: [84, 100], thin: [58, 100], wide: [130, 112], tall: [78, 140], ghost: [90, 140] };
   const [bw, bh] = bodies[m.body] || bodies.biped;
@@ -230,6 +233,34 @@ CM.art.monster = function (m, big = false) {
       p.strokeStyle = m.head === "skull" ? "#1A1410" : dark; p.lineWidth = 3;
       for (let i = 1; i <= 4; i++) { const y = bodyTop + 14 + i * 16; p.beginPath(); p.moveTo(cx - bw * 0.35, y); p.quadraticCurveTo(cx, y + 8, cx + bw * 0.35, y); p.stroke(); }
     }
+  }
+  if (m.body !== "ghost") {
+    // the finish: a sheen where the torch catches; fur on a beast, scales on a wyvern; a belt and the hide's seams on
+    // whatever carries a weapon; and the skin, where the kind has one
+    const sheen = p.createRadialGradient(cx - bw * 0.22, bodyTop + bh * 0.22, 2, cx - bw * 0.22, bodyTop + bh * 0.22, bw * 0.55);
+    sheen.addColorStop(0, "rgba(255,255,255,0.26)"); sheen.addColorStop(1, "rgba(255,255,255,0)");
+    p.fillStyle = sheen; p.fillRect(cx - bw / 2 - 12, bodyTop - 4, bw + 24, bh + 8);
+    p.lineCap = "round";
+    if (m.body === "beast") {
+      p.strokeStyle = dark; p.lineWidth = 2;
+      if (ex.includes("wings")) {                                         // scales, in rows
+        for (let r = 0; r < 4; r++) for (let i = -3; i <= 3; i++) { p.beginPath(); p.arc(cx + i * 18 + (r % 2) * 9, bodyTop + 14 + r * 13, 8, Math.PI * 0.15, Math.PI * 0.85); p.stroke(); }
+      } else {                                                            // fur, along the back and the flanks
+        for (let i = 0; i < 30; i++) {
+          const a = -Math.PI * 0.95 + i * (Math.PI * 0.9 / 29), x = cx + Math.cos(a) * bw / 2, y = bodyTop + bh / 2 + Math.sin(a) * bh / 2;
+          p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * 7 + (rndm.next() - 0.5) * 4, y + Math.sin(a) * 7 - 3); p.stroke();
+        }
+      }
+    } else if (ex.some((e) => ["sword", "dagger", "club", "axe", "bow"].includes(e)) && m.head !== "skull" && m.body !== "tall") {
+      p.fillStyle = "#2A1C10"; p.fillRect(cx - bw / 2 + 4, bodyTop + bh * 0.62, bw - 8, 9);                 // a belt
+      p.fillStyle = "#C8A040"; p.fillRect(cx - 6, bodyTop + bh * 0.62 - 1, 12, 11);
+      p.strokeStyle = dark; p.lineWidth = 2;
+      p.beginPath(); p.moveTo(cx, bodyTop + 12); p.lineTo(cx, bodyTop + bh * 0.58); p.stroke();              // the seam down the chest
+      for (const side of [-1, 1]) { p.beginPath(); p.moveTo(cx + side * bw * 0.18, bodyTop + 22); p.quadraticCurveTo(cx + side * bw * 0.3, bodyTop + bh * 0.35, cx + side * bw * 0.16, bodyTop + bh * 0.52); p.stroke(); }
+    }
+    if (m.skin === "stone") { for (let i = 0; i < 6; i++) crack(p, rndm, cx + (rndm.next() - 0.5) * bw * 0.8, bodyTop + 6 + rndm.next() * (bh - 12), 24, "#2A2A30"); }
+    else if (m.skin === "warts") { p.fillStyle = dark; for (let i = 0; i < 14; i++) { p.beginPath(); p.arc(cx + (rndm.next() - 0.5) * bw * 0.85, bodyTop + 10 + rndm.next() * (bh - 20), 3 + rndm.next() * 3, 0, Math.PI * 2); p.fill(); } }
+    else if (m.skin === "rot") { p.fillStyle = "rgba(70,120,50,0.55)"; for (let i = 0; i < 6; i++) { p.beginPath(); p.ellipse(cx + (rndm.next() - 0.5) * bw * 0.8, bodyTop + 12 + rndm.next() * (bh - 24), 8 + rndm.next() * 8, 5 + rndm.next() * 5, rndm.next() * 3, 0, Math.PI * 2); p.fill(); } }
   }
   // arms and what they hold
   if (m.body !== "beast" && m.body !== "ghost") {
@@ -302,6 +333,18 @@ CM.art.monster = function (m, big = false) {
   p.fillStyle = m.eyes;
   for (const side of [-1, 1]) { p.beginPath(); p.arc(hx2 + side * eyeDX, eyeY, eyeR, 0, Math.PI * 2); p.fill(); }
   p.restore();
+  if (m.head !== "skull" && m.head !== "hood") {                        // brows drawn down, and a grim mouth
+    p.strokeStyle = "#1A1410"; p.lineWidth = 3; p.lineCap = "round";
+    for (const side of [-1, 1]) { p.beginPath(); p.moveTo(hx2 + side * headR * 0.66, eyeY - headR * 0.36); p.lineTo(hx2 + side * headR * 0.2, eyeY - headR * 0.2); p.stroke(); }
+    const my = m.head === "snout" ? hy2 + headR * 0.74 : hy2 + headR * 0.46, fangs = m.head === "pale";
+    p.lineWidth = 2.5; p.beginPath(); p.moveTo(hx2 - headR * 0.34, my + 3); p.quadraticCurveTo(hx2, my - 5, hx2 + headR * 0.34, my + 3); p.stroke();
+    if (m.head === "snout" || m.head === "tusks" || fangs) {             // teeth, or fangs
+      p.fillStyle = "#F0ECE0";
+      for (const t of fangs ? [-0.18, 0.18] : [-0.26, -0.09, 0.09, 0.26]) {
+        p.beginPath(); p.moveTo(hx2 + t * headR - 3, my + 1); p.lineTo(hx2 + t * headR + 3, my + 1); p.lineTo(hx2 + t * headR, my + (fangs ? 12 : 7)); p.fill();
+      }
+    }
+  }
   if (ex.includes("crown")) {
     outlined(p, () => {
       const top = hy2 - headR - 2;
@@ -568,6 +611,46 @@ CM.art.portrait = function (cls, size = 56) {
     p.fillStyle = "#D0D0D8"; p.fillRect(20, 40, 16, 12);                // a beard
     p.fillStyle = "#3A2A1A"; p.fillRect(23, 32, 3, 3); p.fillRect(30, 32, 3, 3);
   }
+  return c;
+};
+
+// the title's emblem: the Lich King's crown on his skull, over a crossed sword and staff, on a medallion of old gold
+CM.art.emblem = function (size = 160) {
+  const c = artCanvas(size), p = c.getContext("2d"), s = size / 160, cx = 80, cy = 82;
+  p.scale(s, s);
+  const rim = p.createRadialGradient(cx, cy, 60, cx, cy, 78);
+  rim.addColorStop(0, "#5A4420"); rim.addColorStop(0.55, "#E8C870"); rim.addColorStop(1, "#7A5A20");
+  p.fillStyle = rim; p.beginPath(); p.arc(cx, cy, 78, 0, Math.PI * 2); p.fill();
+  const disc = p.createRadialGradient(cx - 20, cy - 24, 4, cx, cy, 68);
+  disc.addColorStop(0, "#3A3040"); disc.addColorStop(1, "#120E14");
+  p.fillStyle = disc; p.beginPath(); p.arc(cx, cy, 66, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#F0D890";                                              // studs on the rim
+  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; p.beginPath(); p.arc(cx + Math.cos(a) * 72, cy + Math.sin(a) * 72, 2.5, 0, Math.PI * 2); p.fill(); }
+  p.lineCap = "round";
+  p.strokeStyle = "#1A1410"; p.lineWidth = 9; p.beginPath(); p.moveTo(cx - 46, cy + 50); p.lineTo(cx + 46, cy - 42); p.stroke();   // the sword
+  p.strokeStyle = "#D8DCE8"; p.lineWidth = 5; p.beginPath(); p.moveTo(cx - 30, cy + 34); p.lineTo(cx + 46, cy - 42); p.stroke();
+  p.strokeStyle = "#8A6A20"; p.lineWidth = 5; p.beginPath(); p.moveTo(cx - 46, cy + 50); p.lineTo(cx - 30, cy + 34); p.stroke();   // its hilt
+  p.beginPath(); p.moveTo(cx - 40, cy + 24); p.lineTo(cx - 22, cy + 42); p.stroke();                                              // and guard
+  p.strokeStyle = "#1A1410"; p.lineWidth = 9; p.beginPath(); p.moveTo(cx + 46, cy + 50); p.lineTo(cx - 42, cy - 38); p.stroke();   // the staff
+  p.strokeStyle = "#4A3A5A"; p.lineWidth = 5; p.beginPath(); p.moveTo(cx + 46, cy + 50); p.lineTo(cx - 42, cy - 38); p.stroke();
+  const orb = p.createRadialGradient(cx - 44, cy - 42, 0, cx - 44, cy - 42, 13);
+  orb.addColorStop(0, "#C0FFFF"); orb.addColorStop(0.5, "#40F0FF"); orb.addColorStop(1, "rgba(64,240,255,0)");
+  p.fillStyle = orb; p.beginPath(); p.arc(cx - 44, cy - 42, 13, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.ellipse(cx, cy - 4, 26, 28, 0, 0, Math.PI * 2); }, "#E8E4D8", "#1A1410", 3);                            // the skull
+  outlined(p, () => { p.rect(cx - 14, cy + 16, 28, 14); }, "#E8E4D8", "#1A1410", 3);                                            // the jaw
+  p.fillStyle = "#1A1410";
+  for (let i = -2; i <= 2; i++) p.fillRect(cx + i * 6 - 1, cy + 16, 2, 14);
+  for (const side of [-1, 1]) { p.beginPath(); p.ellipse(cx + side * 10, cy - 6, 8, 9, 0, 0, Math.PI * 2); p.fill(); }
+  p.beginPath(); p.moveTo(cx, cy + 2); p.lineTo(cx - 4, cy + 10); p.lineTo(cx + 4, cy + 10); p.fill();
+  p.save(); p.shadowColor = "#40F0FF"; p.shadowBlur = 10; p.fillStyle = "#40F0FF";
+  for (const side of [-1, 1]) { p.beginPath(); p.arc(cx + side * 10, cy - 6, 3.5, 0, Math.PI * 2); p.fill(); }
+  p.restore();
+  outlined(p, () => {                                                   // the crown
+    p.moveTo(cx - 26, cy - 24);
+    for (let i = 0; i <= 4; i++) p.lineTo(cx - 26 + i * 13, cy - (i % 2 ? 36 : 50));
+    p.lineTo(cx + 26, cy - 24);
+  }, "#F0C030", "#6A4A08", 2.5);
+  p.fillStyle = "#E03030"; p.beginPath(); p.arc(cx, cy - 32, 3.5, 0, Math.PI * 2); p.fill();
   return c;
 };
 

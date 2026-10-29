@@ -76,10 +76,32 @@ The hoard (phase 5)
   Lich King. Today's (beside the seed) gives today's dungeon - the same one for everyone, marked with a sun in the
   Hall of Fame; a run's seed and party are kept there too (hover a row).
 
+Sound and polish (phase 6)
+  Music, made as it plays (55-music.js): a tune for each depth (the Catacombs in a slow Dorian, the Flooded Vaults
+  Phrygian, the Dwarven Halls a plucked Mixolydian, the Palace in harmonic minor), a battle theme with drums, a lute
+  by the camp fire, the title's own, and one each for victory and the fall. Each is written once from a seed - four
+  chords and sixty-four steps of melody, A A B A - and played on oscillators through a filter and a little
+  stone-hall reverb; one tune fades into the next as the mode and the depth change. Settings has Music and its
+  volume beside Sound and its volume.
+  Each depth has its own ambience (dripping; running water; wind and far-off iron; a cold hum and whispers; the
+  camp fire crackles) and its own footfall. New sounds in their places: a door's creak, a key or a pick in the lock,
+  the secret door grinding, the lever, a trapped lid, the teleporter, a fall, a miss, a hero falling, an ailment,
+  the phylactery shattering, the Lich King rising. Every kind of monster has a call - small things chitter, the
+  undead rattle, beasts and brutes roar - heard when a fight starts and, softer, when something is coming down the
+  corridor towards you (louder the nearer it is).
+  The monsters are finished: a sheen where the torch catches them, fur on the rat, scales on the wyvern, belts and
+  seams on whatever carries a weapon, cracked stone on the gargoyle, warts on the troll, rot on the zombie, brows
+  drawn down and grim mouths with teeth or fangs; they sway where they stand, shudder when struck, and sink into
+  the floor when they fall (a wraith rises). The title wears an emblem: the Lich King's crown on his skull, over a
+  crossed sword and staff. A run ends on a screen of its own - what happened, who came home and who fell, and the
+  tally (floors, gold, monsters slain, chests opened, steps walked, fights and flights, kit, seed, the place in the
+  Hall of Fame); Enter or Space closes it. The Hall of Fame keeps that tally: click a row for the party, the seed
+  (Play this seed sets it), the kit and the numbers.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
-  It draws with WebGL 2 and makes its sounds with Web Audio, in code - there are no pictures or sound files to
-  ship. Your runs, the Hall of Fame and your settings are kept in that browser (localStorage); Export / Import on
+  It draws with WebGL 2 and makes its sounds and music with Web Audio, in code - there are no pictures or sound
+  files to ship. Your runs, the Hall of Fame and your settings are kept in that browser (localStorage); Export / Import on
   the title screen carries them, as text, to another browser or back.
 
 In the Timeline
@@ -98,7 +120,8 @@ The source
     20-world.js   items, a floor's maze with its chests, monsters and ladder, monster groups, a new party
     30-art.js     every picture, painted in code: the stone of each depth, chests, hatches, monsters, portraits
     40-render.js  the WebGL 2 view: the floor's mesh, billboards, torchlight and fog, smooth steps and turns
-    50-audio.js   the sounds and the dungeon's ambience, synthesised
+    50-audio.js   the sounds, each depth's ambience and the monsters' calls, synthesised
+    55-music.js   the music, written from a seed and played as it goes
     60-game.js    the rules: moving, fighting, loot, the camp, saving, the Hall of Fame - no screen in it
     70-ui.js      the title, the party and log, the automap, the bag and merchant, the dialogs
     80-main.js    wiring, keys, the frame loop
@@ -110,4 +133,5 @@ Keys
   W/Up forward, S/Down back, A/Left and D/Right turn, Q/E sidestep, Space use (a chest, the ladder or stairs, a
   fountain, an altar, a lever or carving on the wall you face - or search that wall), C cast between fights, I
   inventory, 1-4 a hero's sheet, Tab the automap large, Esc the menu. In a fight: F fight the chosen foe, C cast or
-  a skill, P an item, D defend, R run, Tab or 1-9 or a click to choose the foe, Esc back. F3 shows frames per second.
+  a skill, P an item, D defend, R run, Tab or 1-9 or a click to choose the foe, Esc back. Enter or Space closes the
+  ending. F3 shows frames per second.

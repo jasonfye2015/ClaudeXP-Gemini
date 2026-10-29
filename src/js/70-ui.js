@@ -1,7 +1,7 @@
 "use strict";
-// The window around the dungeon: the title (what you set out with, the Hall of Fame, settings), the party and the
-// log under the view, the automap, the bag and the merchant, and the little dialogs. It listens to the Game and
-// redraws; it never decides the rules.
+// The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
+// party and the log under the view, the automap, the bag and the merchant, the little dialogs, and the end of a run.
+// It listens to the Game and redraws; it never decides the rules.
 CM.UI = class {
   constructor(game, root) {
     this.game = game;
@@ -12,7 +12,7 @@ CM.UI = class {
 <div id="title" class="screen">
   <div class="backdrop-slot"></div><div class="shade"></div>
   <div class="sheet">
-    <h1>Claude and Magic</h1>
+    <h1><span class="emblem-slot"></span>Claude and Magic</h1>
     <div class="tagline">Twenty floors down, the Lich King waits. Four go in together.</div>
     <div class="note" id="title-note"></div>
     <div class="card" id="expedition">
@@ -62,6 +62,8 @@ CM.UI = class {
 <div class="dialog" id="dlg-settings"><div class="box"><h2>Settings</h2>
   <div class="row"><label for="set-sound">Sound</label><input type="checkbox" id="set-sound"></div>
   <div class="row"><label for="set-volume">Volume</label><input type="range" id="set-volume" min="0" max="100"></div>
+  <div class="row"><label for="set-music">Music (a tune for each depth, the fight, the camp)</label><input type="checkbox" id="set-music"></div>
+  <div class="row"><label for="set-music-volume">Music volume</label><input type="range" id="set-music-volume" min="0" max="100"></div>
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
@@ -95,6 +97,9 @@ CM.UI = class {
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
+<div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
+  <div class="roll" id="over-party"></div><div class="tally" id="over-tally"></div>
+  <div class="end"><button class="close primary">To the title</button></div></div></div>
 <div class="dialog" id="bigmap"><canvas id="bigmap-canvas" width="600" height="600"></canvas></div>`;
     this.$ = (sel) => root.querySelector(sel);
     this.canvas = document.createElement("canvas");                        // the one WebGL canvas, moved between screens
@@ -117,6 +122,10 @@ CM.UI = class {
     const keys = this.$("#dlg-keys table");
     keys.innerHTML = CM.KEYS_HELP.map(([k, what]) => `<tr><td><kbd>${k}</kbd></td><td>${what}</td></tr>`).join("");
     this.$("#title .version").textContent = `Claude and Magic v${CM.version}`;
+    this.$("#title .emblem-slot").appendChild(CM.art.emblem(120));
+    this.fameOpen = -1;
+    this.ending = null;                                                  // "victory" or "lament" while the ending is up (the music follows)
+    game.on("over", (won, entry) => this.showEnding(won, entry));
     game.on("change", () => this.refresh());
     game.on("mode", (mode) => this.show(mode === "title" ? "title" : "play"));
     game.on("bag", (open) => (open ? this.openBag() : this.show("play")));
@@ -204,7 +213,53 @@ CM.UI = class {
 
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); }
-  closeDialogs() { for (const d of this.root.querySelectorAll(".dialog.on")) d.classList.remove("on"); }
+  closeDialogs() {
+    const ending = this.$("#dlg-over").classList.contains("on");
+    for (const d of this.root.querySelectorAll(".dialog.on")) d.classList.remove("on");
+    if (ending) { this.ending = null; if (this.onEnding) this.onEnding(); }
+  }
+
+  // ---- the end of a run: how it went, who came back, what it came to ----
+  showEnding(won, entry) {
+    const g = this.game, t = entry.tally || {}, rank = g.fame.indexOf(entry) + 1;
+    this.fameOpen = -1;                                                  // (the Hall of Fame has been re-sorted: an open row would be another's)
+    const slot = this.$("#dlg-over .emblem-slot");
+    slot.innerHTML = "";
+    slot.appendChild(CM.art.emblem(120));
+    this.$("#dlg-over").classList.toggle("won", won);
+    this.$("#over-title").textContent = won ? "The Lich King is no more" : `The party fell on floor ${entry.floor}`;
+    const standing = g.party.filter((h) => h.hp > 0), fallen = g.party.filter((h) => h.hp <= 0);
+    const names = (list) => (list.length ? list.map((h) => h.name).join(", ").replace(/, ([^,]*)$/, " and $1") : "The party");
+    let text;
+    if (won) {
+      text = `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} climb twenty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
+        + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up, and ${fallen.length > 1 ? "their names are" : "that name is"} carved on the last floor beside his.` : ", all four of them.")
+        + " The carvings told his story. This one is yours.";
+    } else {
+      text = `The last of them fell on floor ${entry.floor}, in ${CM.themeFor(entry.floor).name}, with ${entry.gold.toLocaleString()} gold they'll never spend. The dark closes over ${names(g.party)}.`
+        + (t.kills ? ` ${CM.plural(t.kills, "monster")} went down before them.` : "") + " Somewhere above, another four are sharpening their blades.";
+    }
+    this.$("#over-text").textContent = text;
+    const roll = this.$("#over-party");
+    roll.innerHTML = "";
+    for (const h of g.party) {
+      const div = document.createElement("div");
+      div.className = h.hp > 0 ? "standing" : "fallen";
+      div.appendChild(this.portrait(h.cls, 56));
+      const who = document.createElement("div");
+      who.innerHTML = `<b>${this.esc(h.name)}</b><small>${h.cls}, level ${h.level}</small><small class="fate">${h.hp > 0 ? (won ? "comes home" : "stood to the last") : "fell"}</small>`;
+      div.appendChild(who);
+      roll.appendChild(div);
+    }
+    const facts = [["Floors", `${entry.floor} of ${CM.LAST_FLOOR}`], ["Gold", entry.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
+      ["Chests opened", t.chests || 0], ["Steps walked", (t.steps || 0).toLocaleString()], ["Fights", `${t.fights || 0}${t.fled ? ` (${t.fled} fled)` : ""}`],
+      ["Kit", (CM.KITS[entry.kit] || CM.KITS.pauper).name], ["Seed", `${entry.seed}${entry.daily ? " (today's)" : ""}`],
+      ["Hall of Fame", rank ? `${CM.ordinal(rank)} of ${g.fame.length}` : "not among the ten"]];
+    this.$("#over-tally").innerHTML = facts.map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
+    this.openDialog("#dlg-over");                                      // (opening closes whatever was open - an ending too - so the kind is set after)
+    this.ending = won ? "victory" : "lament";
+    if (this.onEnding) this.onEnding();
+  }
 
   portrait(cls, size) {
     const key = `${cls}:${size}`;
@@ -238,6 +293,15 @@ CM.UI = class {
     this.$("#btn-import").addEventListener("click", () => {
       const err = g.importText(this.$("#transfer-text").value);
       this.$("#transfer-note").textContent = err || "Imported.";
+      this.refreshTitle();
+    });
+    this.$("#fame table").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-seed]");
+      if (b) { this.$("#seed").value = b.dataset.seed; this.refreshTitle(); return; }
+      const tr = e.target.closest("tr.row");
+      if (!tr) return;
+      const i = Number(tr.dataset.i);
+      this.fameOpen = this.fameOpen === i ? -1 : i;
       this.refreshTitle();
     });
     const classes = this.$("#classes");
@@ -350,8 +414,18 @@ CM.UI = class {
       + "a merchant's camp with a temple waits below floors 5, 10 and 15.";
     const table = this.$("#fame table");
     if (!g.fame.length) table.innerHTML = `<tr><td class="empty">No party has gone down yet.</td></tr>`;
-    else table.innerHTML = g.fame.map((e, i) => `<tr title="${this.esc((e.party || []).join(", "))}${e.seed ? " - seed " + this.esc(e.seed) : ""}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
-      + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`).join("");
+    else table.innerHTML = g.fame.map((e, i) => {
+      const open = this.fameOpen === i, t = e.tally;
+      let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
+        + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
+      if (open) {
+        rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
+          + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button></div>` : "")
+          + (t ? `<div>${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}.</div>` : "")
+          + "</td></tr>";
+      }
+      return rows;
+    }).join("");
     const have = CM.unlocked(g.fame), deep = CM.deepest(g.fame);
     this.$("#unlocks").innerHTML = Object.entries(CM.KITS).map(([id, k]) => {
       const got = have.includes(id), need = k.need > 20 ? "slay the Lich King" : `reach floor ${k.need}`;
@@ -369,14 +443,16 @@ CM.UI = class {
   // ---- settings ----
   _settings() {
     const g = this.game, s = g.settings;
-    const sound = this.$("#set-sound"), vol = this.$("#set-volume"), smooth = this.$("#set-smooth"), fps = this.$("#set-fps");
-    sound.checked = s.sound; vol.value = Math.round(s.volume * 100); smooth.checked = s.smooth; fps.checked = s.fps;
+    const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
+    const smooth = this.$("#set-smooth"), fps = this.$("#set-fps");
+    sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
+    smooth.checked = s.smooth; fps.checked = s.fps;
     const apply = () => {
-      s.sound = sound.checked; s.volume = vol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked;
+      s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked;
       g.saveSettings();
       g.emit("settings", s);
     };
-    for (const el of [sound, vol, smooth, fps]) el.addEventListener("input", apply);
+    for (const el of [sound, vol, music, mvol, smooth, fps]) el.addEventListener("input", apply);
   }
 
   toggleFps() {

@@ -36,7 +36,8 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 #title canvas.backdrop { position: absolute; inset: 0; width: 100%; height: 100%; }
 #title .shade { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(24,18,12,0.55) 0%, rgba(24,18,12,0.92) 75%); }
 #title .sheet { position: relative; margin: auto; width: min(1040px, 96vw); max-height: 100vh; display: grid; grid-template-columns: 1.1fr 0.9fr; grid-template-rows: auto auto auto 1fr auto auto; gap: 10px 24px; padding: 10px 24px 8px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
-#title h1 { grid-column: 1 / -1; margin: 2px 0 0; text-align: center; font-size: 42px; line-height: 1.1; color: var(--gold); letter-spacing: 1px; text-shadow: 0 0 18px rgba(232,200,112,0.35), 0 2px 0 #3A2C1C; }
+#title h1 { grid-column: 1 / -1; margin: 2px 0 0; text-align: center; font-size: 42px; line-height: 1.1; color: var(--gold); letter-spacing: 1px; text-shadow: 0 0 18px rgba(232,200,112,0.35), 0 2px 0 #3A2C1C; display: flex; align-items: center; justify-content: center; gap: 16px; }
+#title h1 .emblem-slot canvas { width: 64px; height: 64px; display: block; filter: drop-shadow(0 0 10px rgba(232,200,112,0.45)); }
 #title .tagline { grid-column: 1 / -1; text-align: center; margin: -6px 0 0; color: var(--dim); font-style: italic; font-size: 14px; }
 #title .note { grid-column: 1 / -1; text-align: center; color: var(--ink); font-size: 14px; min-height: 18px; margin-top: -4px; }
 .card { background: rgba(14,10,6,0.82); border: 1px solid var(--edge); border-radius: 4px; padding: 10px 14px; }
@@ -133,6 +134,12 @@ table.stats tr.key td.hint { color: var(--gold); }
 #fame table { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
 #fame td { padding: 3px 4px; color: var(--ink); white-space: nowrap; }
 #fame td.won { color: var(--gold); }
+#fame tr.row { cursor: pointer; }
+#fame tr.row:hover td { background: rgba(42,32,24,0.6); }
+#fame tr.open td { color: var(--gold); }
+#fame tr.details td { white-space: normal; font: 12px/1.45 var(--serif); color: var(--dim); padding: 0 8px 8px 24px; }
+#fame tr.details b { color: var(--ink); }
+#fame tr.details button { padding: 1px 7px; font-size: 11px; margin-left: 6px; }
 #fame .empty { color: var(--faint); font-style: italic; font-family: var(--serif); }
 #title .foot { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 2px; }
 #title .version { grid-column: 1 / -1; text-align: center; color: var(--faint); font-size: 11px; margin-top: -4px; }
@@ -217,6 +224,27 @@ table.stats tr.key td.hint { color: var(--gold); }
 #bigmap { background: rgba(0,0,0,0.75); }
 #bigmap canvas { border: 4px solid var(--edge); background: var(--paper); }
 
+/* ---- the end of a run ---- */
+#dlg-over { background: rgba(0,0,0,0.78); }
+#dlg-over .box { min-width: 560px; max-width: 700px; text-align: center; border-color: #6A3A3A; }
+#dlg-over.won .box { border-color: var(--gold); box-shadow: 0 0 60px rgba(232,200,112,0.25), 0 10px 40px rgba(0,0,0,0.6); }
+#dlg-over .emblem-slot canvas { width: 120px; height: 120px; margin: 0 auto 6px; display: block; filter: drop-shadow(0 0 14px rgba(232,200,112,0.4)); }
+#dlg-over h2 { font-size: 24px; margin-bottom: 8px; }
+#dlg-over.won h2 { text-shadow: 0 0 18px rgba(232,200,112,0.45); }
+#dlg-over .lore { max-width: none; font-size: 15px; margin: 0 0 6px; }
+.roll { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 10px 0; }
+.roll > div { display: flex; flex-direction: column; align-items: center; gap: 2px; background: rgba(14,10,6,0.6); border: 1px solid var(--edge); border-radius: 4px; padding: 8px 4px; }
+.roll > div > div { display: flex; flex-direction: column; align-items: center; }
+.roll canvas { width: 56px; height: 56px; border: 1px solid var(--edge); border-radius: 3px; }
+.roll .fallen canvas { filter: grayscale(1) brightness(0.5); }
+.roll b { color: var(--ink); font-size: 13px; margin-top: 4px; }
+.roll small { color: var(--dim); font-size: 11px; }
+.roll .fallen .fate { color: #A06060; }
+.roll .standing .fate { color: #8FD08F; }
+.tally { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 14px; text-align: left; margin: 8px 0 0; }
+.tally div { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--dim); border-bottom: 1px dotted #3A2C1C; padding: 2px 0; }
+.tally b { color: var(--gold); text-align: right; }
+
 /* ---- the words rising from a hit ---- */
 .float { position: absolute; transform: translate(-50%, -50%); font: bold 18px var(--serif); color: #FFF; text-shadow: 0 0 6px #000, 0 1px 2px #000; pointer-events: none; animation: rise 0.9s ease-out forwards; }
 .float.spell { color: #FFB060; }
@@ -234,6 +262,9 @@ table.stats tr.key td.hint { color: var(--gold); }
   #automap { width: 150px; height: 150px; }
   #party { grid-template-columns: repeat(2, 1fr); }
   #title .sheet { grid-template-columns: 1fr; }
+  #dlg-over .box { min-width: 0; }
+  .roll { grid-template-columns: repeat(2, 1fr); }
+  .tally { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -287,6 +318,7 @@ CM.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 CM.lerp = (a, b, t) => a + (b - a) * t;
 CM.ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);      // in and out
 CM.plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+CM.ordinal = (n) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th"}`;
 
 // a seed you can say out loud: "ember-crypt-417"
 CM.SEED_WORDS = ["ember", "crypt", "raven", "lantern", "sable", "hollow", "thorn", "cinder", "vesper", "moss", "iron", "gloam",
@@ -442,15 +474,15 @@ CM.MONSTERS = [
   { name: "Kobold", colour: "#B07040", body: "small", head: "snout", eyes: "#FFE040", extras: ["dagger"], speed: 12, ability: "coward" },
   { name: "Skeleton", colour: "#E0E0D0", body: "thin", head: "skull", eyes: "#FFE040", extras: ["sword"], speed: 8, undead: true },
   { name: "Goblin", colour: "#5A9A40", body: "small", head: "ears", eyes: "#FFE040", extras: ["club"], speed: 11, ability: "ranged" },
-  { name: "Zombie", colour: "#7A9A70", body: "biped", head: "round", eyes: "#D0FFD0", extras: ["torn"], speed: 4, undead: true, touch: { status: "poison", chance: 0.12 } },
+  { name: "Zombie", colour: "#7A9A70", body: "biped", head: "round", eyes: "#D0FFD0", extras: ["torn"], skin: "rot", speed: 4, undead: true, touch: { status: "poison", chance: 0.12 } },
   { name: "Orc", colour: "#4A7A3A", body: "wide", head: "tusks", eyes: "#FFE040", extras: ["axe"], speed: 9, ability: "savage" },
   { name: "Ghoul", colour: "#9AA0A0", body: "thin", head: "round", eyes: "#80FF80", extras: ["claws"], speed: 10, undead: true, touch: { status: "paralysis", chance: 0.15 } },
   { name: "Dark Elf", colour: "#5A4A8A", body: "tall", head: "hood", eyes: "#FF80FF", extras: ["bow"], speed: 13, ability: "ranged", touch: { status: "sleep", chance: 0.12 } },
-  { name: "Troll", colour: "#3A6A50", body: "wide", head: "round", eyes: "#FFE040", extras: ["club", "claws"], speed: 7, ability: "regen" },
+  { name: "Troll", colour: "#3A6A50", body: "wide", head: "round", eyes: "#FFE040", extras: ["club", "claws"], skin: "warts", speed: 7, ability: "regen" },
   { name: "Wraith", colour: "#6A7AA0", body: "ghost", head: "hood", eyes: "#A0E0FF", extras: [], speed: 12, undead: true, ability: "drain", touch: { status: "curse", chance: 0.12 } },
   { name: "Ogre", colour: "#A08050", body: "wide", head: "round", eyes: "#FFE040", extras: ["club"], speed: 6, ability: "stun" },
   { name: "Minotaur", colour: "#7A4A30", body: "wide", head: "horns", eyes: "#FF5040", extras: ["axe"], speed: 10, ability: "charge" },
-  { name: "Gargoyle", colour: "#707078", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings"], speed: 8, touch: { status: "stone", chance: 0.06 } },
+  { name: "Gargoyle", colour: "#707078", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings"], skin: "stone", speed: 8, touch: { status: "stone", chance: 0.06 } },
   { name: "Vampire", colour: "#8A2030", body: "tall", head: "pale", eyes: "#FF3030", extras: ["cape"], speed: 13, undead: true, ability: "lifesteal", touch: { status: "sleep", chance: 0.12 } },
   { name: "Demon", colour: "#C03020", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings", "claws"], speed: 11, ability: "breath", touch: { status: "blind", chance: 0.12 } },
   { name: "Wyvern", colour: "#407A70", body: "beast", head: "snout", eyes: "#FFE040", extras: ["wings", "tail"], speed: 12, ability: "buffet", touch: { status: "poison", chance: 0.2 } },
@@ -523,6 +555,17 @@ CM.abilitiesFor = (hero) => Object.keys(CM.ABILITIES).filter((id) => {
 // the Lich King: what he does as the fight goes
 CM.LICH = { summonEvery: 3, summonMax: 4, coldFrom: 0.3, summonFrom: 0.6, riseTo: 0.4 };
 CM.BOSS = { name: "The Lich King", colour: "#A0E0FF", body: "tall", head: "skull", eyes: "#40F0FF", extras: ["crown", "staff", "robe"] };
+
+// what a monster sounds like, by kind (the sounds are cooked in 50-audio.js)
+CM.roarFor = function (kind) {
+  if (!kind) return "monster";
+  if (kind === CM.BOSS.name) return "lich";
+  const k = CM.monsterKind(kind), name = k ? k.name : kind;
+  if (["Giant Rat", "Kobold", "Goblin", "Dark Elf"].includes(name)) return "roar_small";
+  if (["Skeleton", "Zombie", "Ghoul", "Wraith", "Vampire"].includes(name)) return "roar_undead";
+  if (name === "Wyvern") return "roar_beast";
+  return "roar_big";
+};
 
 // the depths: what the stone looks like down there, how far the torch reaches, what the dark is made of
 CM.THEMES = [
@@ -1465,8 +1508,11 @@ function shaded(p, hex, k) {                                            // a col
   return rgb([(v >> 16) & 255, (v >> 8) & 255, v & 255], k);
 }
 
+// a monster, from its row in CM.MONSTERS: a body shape, a head, what it holds, its colour and eyes - and the finish:
+// a sheen where the torch catches it, fur or scales or a hide and belt, its skin (stone cracks, warts, rot), brows
+// drawn down and a grim mouth with teeth or fangs
 CM.art.monster = function (m, big = false) {
-  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14, rndm = new CM.Random(CM.hashSeed(m.name));
   const col = m.colour, dark = shaded(p, col, 0.65), light = shaded(p, col, 1.3);
   const bodies = { beast: [150, 70], small: [66, 76], biped: [84, 100], thin: [58, 100], wide: [130, 112], tall: [78, 140], ghost: [90, 140] };
   const [bw, bh] = bodies[m.body] || bodies.biped;
@@ -1514,6 +1560,34 @@ CM.art.monster = function (m, big = false) {
       p.strokeStyle = m.head === "skull" ? "#1A1410" : dark; p.lineWidth = 3;
       for (let i = 1; i <= 4; i++) { const y = bodyTop + 14 + i * 16; p.beginPath(); p.moveTo(cx - bw * 0.35, y); p.quadraticCurveTo(cx, y + 8, cx + bw * 0.35, y); p.stroke(); }
     }
+  }
+  if (m.body !== "ghost") {
+    // the finish: a sheen where the torch catches; fur on a beast, scales on a wyvern; a belt and the hide's seams on
+    // whatever carries a weapon; and the skin, where the kind has one
+    const sheen = p.createRadialGradient(cx - bw * 0.22, bodyTop + bh * 0.22, 2, cx - bw * 0.22, bodyTop + bh * 0.22, bw * 0.55);
+    sheen.addColorStop(0, "rgba(255,255,255,0.26)"); sheen.addColorStop(1, "rgba(255,255,255,0)");
+    p.fillStyle = sheen; p.fillRect(cx - bw / 2 - 12, bodyTop - 4, bw + 24, bh + 8);
+    p.lineCap = "round";
+    if (m.body === "beast") {
+      p.strokeStyle = dark; p.lineWidth = 2;
+      if (ex.includes("wings")) {                                         // scales, in rows
+        for (let r = 0; r < 4; r++) for (let i = -3; i <= 3; i++) { p.beginPath(); p.arc(cx + i * 18 + (r % 2) * 9, bodyTop + 14 + r * 13, 8, Math.PI * 0.15, Math.PI * 0.85); p.stroke(); }
+      } else {                                                            // fur, along the back and the flanks
+        for (let i = 0; i < 30; i++) {
+          const a = -Math.PI * 0.95 + i * (Math.PI * 0.9 / 29), x = cx + Math.cos(a) * bw / 2, y = bodyTop + bh / 2 + Math.sin(a) * bh / 2;
+          p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * 7 + (rndm.next() - 0.5) * 4, y + Math.sin(a) * 7 - 3); p.stroke();
+        }
+      }
+    } else if (ex.some((e) => ["sword", "dagger", "club", "axe", "bow"].includes(e)) && m.head !== "skull" && m.body !== "tall") {
+      p.fillStyle = "#2A1C10"; p.fillRect(cx - bw / 2 + 4, bodyTop + bh * 0.62, bw - 8, 9);                 // a belt
+      p.fillStyle = "#C8A040"; p.fillRect(cx - 6, bodyTop + bh * 0.62 - 1, 12, 11);
+      p.strokeStyle = dark; p.lineWidth = 2;
+      p.beginPath(); p.moveTo(cx, bodyTop + 12); p.lineTo(cx, bodyTop + bh * 0.58); p.stroke();              // the seam down the chest
+      for (const side of [-1, 1]) { p.beginPath(); p.moveTo(cx + side * bw * 0.18, bodyTop + 22); p.quadraticCurveTo(cx + side * bw * 0.3, bodyTop + bh * 0.35, cx + side * bw * 0.16, bodyTop + bh * 0.52); p.stroke(); }
+    }
+    if (m.skin === "stone") { for (let i = 0; i < 6; i++) crack(p, rndm, cx + (rndm.next() - 0.5) * bw * 0.8, bodyTop + 6 + rndm.next() * (bh - 12), 24, "#2A2A30"); }
+    else if (m.skin === "warts") { p.fillStyle = dark; for (let i = 0; i < 14; i++) { p.beginPath(); p.arc(cx + (rndm.next() - 0.5) * bw * 0.85, bodyTop + 10 + rndm.next() * (bh - 20), 3 + rndm.next() * 3, 0, Math.PI * 2); p.fill(); } }
+    else if (m.skin === "rot") { p.fillStyle = "rgba(70,120,50,0.55)"; for (let i = 0; i < 6; i++) { p.beginPath(); p.ellipse(cx + (rndm.next() - 0.5) * bw * 0.8, bodyTop + 12 + rndm.next() * (bh - 24), 8 + rndm.next() * 8, 5 + rndm.next() * 5, rndm.next() * 3, 0, Math.PI * 2); p.fill(); } }
   }
   // arms and what they hold
   if (m.body !== "beast" && m.body !== "ghost") {
@@ -1586,6 +1660,18 @@ CM.art.monster = function (m, big = false) {
   p.fillStyle = m.eyes;
   for (const side of [-1, 1]) { p.beginPath(); p.arc(hx2 + side * eyeDX, eyeY, eyeR, 0, Math.PI * 2); p.fill(); }
   p.restore();
+  if (m.head !== "skull" && m.head !== "hood") {                        // brows drawn down, and a grim mouth
+    p.strokeStyle = "#1A1410"; p.lineWidth = 3; p.lineCap = "round";
+    for (const side of [-1, 1]) { p.beginPath(); p.moveTo(hx2 + side * headR * 0.66, eyeY - headR * 0.36); p.lineTo(hx2 + side * headR * 0.2, eyeY - headR * 0.2); p.stroke(); }
+    const my = m.head === "snout" ? hy2 + headR * 0.74 : hy2 + headR * 0.46, fangs = m.head === "pale";
+    p.lineWidth = 2.5; p.beginPath(); p.moveTo(hx2 - headR * 0.34, my + 3); p.quadraticCurveTo(hx2, my - 5, hx2 + headR * 0.34, my + 3); p.stroke();
+    if (m.head === "snout" || m.head === "tusks" || fangs) {             // teeth, or fangs
+      p.fillStyle = "#F0ECE0";
+      for (const t of fangs ? [-0.18, 0.18] : [-0.26, -0.09, 0.09, 0.26]) {
+        p.beginPath(); p.moveTo(hx2 + t * headR - 3, my + 1); p.lineTo(hx2 + t * headR + 3, my + 1); p.lineTo(hx2 + t * headR, my + (fangs ? 12 : 7)); p.fill();
+      }
+    }
+  }
   if (ex.includes("crown")) {
     outlined(p, () => {
       const top = hy2 - headR - 2;
@@ -1852,6 +1938,46 @@ CM.art.portrait = function (cls, size = 56) {
     p.fillStyle = "#D0D0D8"; p.fillRect(20, 40, 16, 12);                // a beard
     p.fillStyle = "#3A2A1A"; p.fillRect(23, 32, 3, 3); p.fillRect(30, 32, 3, 3);
   }
+  return c;
+};
+
+// the title's emblem: the Lich King's crown on his skull, over a crossed sword and staff, on a medallion of old gold
+CM.art.emblem = function (size = 160) {
+  const c = artCanvas(size), p = c.getContext("2d"), s = size / 160, cx = 80, cy = 82;
+  p.scale(s, s);
+  const rim = p.createRadialGradient(cx, cy, 60, cx, cy, 78);
+  rim.addColorStop(0, "#5A4420"); rim.addColorStop(0.55, "#E8C870"); rim.addColorStop(1, "#7A5A20");
+  p.fillStyle = rim; p.beginPath(); p.arc(cx, cy, 78, 0, Math.PI * 2); p.fill();
+  const disc = p.createRadialGradient(cx - 20, cy - 24, 4, cx, cy, 68);
+  disc.addColorStop(0, "#3A3040"); disc.addColorStop(1, "#120E14");
+  p.fillStyle = disc; p.beginPath(); p.arc(cx, cy, 66, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#F0D890";                                              // studs on the rim
+  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; p.beginPath(); p.arc(cx + Math.cos(a) * 72, cy + Math.sin(a) * 72, 2.5, 0, Math.PI * 2); p.fill(); }
+  p.lineCap = "round";
+  p.strokeStyle = "#1A1410"; p.lineWidth = 9; p.beginPath(); p.moveTo(cx - 46, cy + 50); p.lineTo(cx + 46, cy - 42); p.stroke();   // the sword
+  p.strokeStyle = "#D8DCE8"; p.lineWidth = 5; p.beginPath(); p.moveTo(cx - 30, cy + 34); p.lineTo(cx + 46, cy - 42); p.stroke();
+  p.strokeStyle = "#8A6A20"; p.lineWidth = 5; p.beginPath(); p.moveTo(cx - 46, cy + 50); p.lineTo(cx - 30, cy + 34); p.stroke();   // its hilt
+  p.beginPath(); p.moveTo(cx - 40, cy + 24); p.lineTo(cx - 22, cy + 42); p.stroke();                                              // and guard
+  p.strokeStyle = "#1A1410"; p.lineWidth = 9; p.beginPath(); p.moveTo(cx + 46, cy + 50); p.lineTo(cx - 42, cy - 38); p.stroke();   // the staff
+  p.strokeStyle = "#4A3A5A"; p.lineWidth = 5; p.beginPath(); p.moveTo(cx + 46, cy + 50); p.lineTo(cx - 42, cy - 38); p.stroke();
+  const orb = p.createRadialGradient(cx - 44, cy - 42, 0, cx - 44, cy - 42, 13);
+  orb.addColorStop(0, "#C0FFFF"); orb.addColorStop(0.5, "#40F0FF"); orb.addColorStop(1, "rgba(64,240,255,0)");
+  p.fillStyle = orb; p.beginPath(); p.arc(cx - 44, cy - 42, 13, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.ellipse(cx, cy - 4, 26, 28, 0, 0, Math.PI * 2); }, "#E8E4D8", "#1A1410", 3);                            // the skull
+  outlined(p, () => { p.rect(cx - 14, cy + 16, 28, 14); }, "#E8E4D8", "#1A1410", 3);                                            // the jaw
+  p.fillStyle = "#1A1410";
+  for (let i = -2; i <= 2; i++) p.fillRect(cx + i * 6 - 1, cy + 16, 2, 14);
+  for (const side of [-1, 1]) { p.beginPath(); p.ellipse(cx + side * 10, cy - 6, 8, 9, 0, 0, Math.PI * 2); p.fill(); }
+  p.beginPath(); p.moveTo(cx, cy + 2); p.lineTo(cx - 4, cy + 10); p.lineTo(cx + 4, cy + 10); p.fill();
+  p.save(); p.shadowColor = "#40F0FF"; p.shadowBlur = 10; p.fillStyle = "#40F0FF";
+  for (const side of [-1, 1]) { p.beginPath(); p.arc(cx + side * 10, cy - 6, 3.5, 0, Math.PI * 2); p.fill(); }
+  p.restore();
+  outlined(p, () => {                                                   // the crown
+    p.moveTo(cx - 26, cy - 24);
+    for (let i = 0; i <= 4; i++) p.lineTo(cx - 26 + i * 13, cy - (i % 2 ? 36 : 50));
+    p.lineTo(cx + 26, cy - 24);
+  }, "#F0C030", "#6A4A08", 2.5);
+  p.fillStyle = "#E03030"; p.beginPath(); p.arc(cx, cy - 32, 3.5, 0, Math.PI * 2); p.fill();
   return c;
 };
 
@@ -2224,9 +2350,11 @@ CM.Renderer = class {
 
 // ---- 50-audio.js ----
 "use strict";
-// The sounds, made in code with Web Audio - the same recipes the old game cooked into .wav files: square and sine
-// tones that fade, smoothed noise, and an eight-second dungeon (a low drone, a far rumble, water dripping) that loops.
-// Browsers won't play a sound before the first click or key, so unlock() is called on the first of either.
+// The sounds, made in code with Web Audio - the same recipes the old game cooked into .wav files, and more: square and
+// sine tones that fade, sweeps, smoothed noise, laid over one another; a ten-second ambience for each depth (the
+// Catacombs drip, the Vaults run with water, wind and far-off iron in the Halls, a cold hum and whispers in the
+// Palace, and the camp's fire) that loops; a call for each kind of monster, louder the nearer it comes (near()). The
+// music is in 55-music.js. Browsers won't play a sound before the first click or key, so unlock() is called on both.
 CM.audio = {
   ctx: null,
   buffers: {},
@@ -2236,13 +2364,18 @@ CM.audio = {
   ambientNode: null,
   ambientGain: null,
 
+  ambients: {},
+  theme: 0,
+  lastNear: 0,
+
   unlock() {
     if (!this.ctx) {
       try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return false; }
       this.master = this.ctx.createGain();
-      this.master.gain.value = this.volume;
+      this.master.gain.value = this.enabled ? this.volume : 0;
       this.master.connect(this.ctx.destination);
       this._cook();
+      if (CM.music) CM.music.resume();
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
     if (this.ambientOn && !this.ambientNode) this._startAmbient();
@@ -2252,6 +2385,8 @@ CM.audio = {
   setEnabled(on) {
     this.enabled = on;
     if (this.master) this.master.gain.value = on ? this.volume : 0;
+    if (!on && this.ambientNode) { try { this.ambientNode.stop(); } catch (e) { /* already stopped */ } this.ambientNode = null; }
+    if (on && this.ambientOn && this.ctx && !this.ambientNode) this._startAmbient();
   },
 
   setVolume(v) {
@@ -2272,12 +2407,12 @@ CM.audio = {
     return out;
   },
 
-  _noise(length, vol, smooth, seed = 1) {
+  _noise(length, vol, smooth, seed = 1, fade = true) {
     const rate = this.ctx.sampleRate, rnd = new CM.Random(seed), out = [], n = Math.floor(rate * length);
     let last = 0;
     for (let i = 0; i < n; i++) {
       last += (rnd.next() * 2 - 1 - last) * smooth;
-      out.push(last * vol * (1 - i / n));
+      out.push(last * vol * (fade ? 1 - i / n : 1));
     }
     return out;
   },
@@ -2288,13 +2423,45 @@ CM.audio = {
     return b;
   },
 
+  // a sweep: a tone sliding from one pitch to another
+  _sweep(from, to, length, kind = "sine", vol = 0.15, fadeIn = 0) {
+    const rate = this.ctx.sampleRate, n = Math.floor(rate * length), out = [];
+    let phase = 0;
+    for (let i = 0; i < n; i++) {
+      const k = i / n, freq = from + (to - from) * k;
+      phase += 2 * Math.PI * freq / rate;
+      const env = Math.min(1, fadeIn ? i / (rate * fadeIn) : 1) * Math.pow(1 - k, 1.2);
+      out.push((kind === "sine" ? Math.sin(phase) : (phase % (2 * Math.PI) < Math.PI ? 1 : -1)) * vol * env);
+    }
+    return out;
+  },
+
+  _mix(...parts) {                                                      // several sounds laid over one another
+    const n = Math.max(...parts.map((p) => p.length)), out = new Array(n).fill(0);
+    for (const p of parts) for (let i = 0; i < p.length; i++) out[i] += p[i];
+    return out;
+  },
+
+  _after(delay, part) {                                                 // the same sound, that much later
+    return new Array(Math.floor(this.ctx.sampleRate * delay)).fill(0).concat(part);
+  },
+
   _cook() {
-    const T = (notes, kind, vol) => this._tones(notes, kind, vol);
+    const T = (notes, kind, vol) => this._tones(notes, kind, vol), N = (len, vol, smooth, seed) => this._noise(len, vol, smooth, seed);
     const recipes = {
-      step: () => this._noise(0.09, 0.28, 0.08, 3),
+      step: () => N(0.09, 0.28, 0.08, 3),
+      step_water: () => this._mix(N(0.08, 0.2, 0.08, 3), this._after(0.03, N(0.16, 0.18, 0.5, 13))),
+      step_hall: () => this._mix(N(0.07, 0.26, 0.08, 3), this._after(0.11, N(0.07, 0.1, 0.08, 3)), this._after(0.22, N(0.07, 0.04, 0.08, 3))),
+      step_cold: () => N(0.05, 0.3, 0.2, 3),
       bump: () => T([[70, 0.12]], "square", 0.2),
       chest: () => T([[392, 0.07], [523, 0.07], [659, 0.12]]),
-      hit: () => this._noise(0.12, 0.42, 0.5, 5),
+      door: () => this._mix(this._sweep(220, 90, 0.5, "square", 0.05), N(0.5, 0.12, 0.03, 17), this._after(0.45, T([[60, 0.1]], "square", 0.15))),
+      unlock: () => this._mix(T([[1400, 0.02]], "square", 0.12), this._after(0.12, T([[900, 0.03]], "square", 0.15)), this._after(0.3, T([[180, 0.08]], "square", 0.12))),
+      lever: () => this._mix(...[0, 0.06, 0.12, 0.18].map((d) => this._after(d, T([[700 - d * 2000, 0.02]], "square", 0.1))), this._after(0.3, T([[50, 0.3]], "sine", 0.3))),
+      trap: () => this._mix(T([[1200, 0.03]], "square", 0.2), this._after(0.05, N(0.4, 0.18, 0.6, 23))),
+      teleport: () => this._mix(this._sweep(200, 1600, 0.5, "sine", 0.14), this._after(0.3, T(Array.from({ length: 8 }, (_, i) => [1200 + i * 150, 0.03]), "sine", 0.1))),
+      fall: () => this._mix(this._sweep(600, 80, 0.7, "sine", 0.1), N(0.7, 0.2, 0.15, 29), this._after(0.7, N(0.15, 0.4, 0.5, 31))),
+      hit: () => N(0.12, 0.42, 0.5, 5),
       hurt: () => T([[180, 0.06], [120, 0.1]], "square", 0.18),
       spell: () => T(Array.from({ length: 15 }, (_, i) => [400 + i * 80, 0.025]), "sine", 0.2),
       heal: () => T([[523, 0.07], [659, 0.07], [784, 0.07], [1047, 0.14]], "sine", 0.18),
@@ -2304,53 +2471,270 @@ CM.audio = {
       death: () => T([[330, 0.2], [262, 0.2], [196, 0.25], [131, 0.5]], "sine", 0.2),
       victory: () => T([[523, 0.12], [523, 0.12], [523, 0.12], [659, 0.3], [587, 0.15], [784, 0.5]]),
       monster: () => T([[110, 0.15], [98, 0.25]], "square", 0.18),
+      roar_small: () => this._mix(this._sweep(900, 1300, 0.12, "square", 0.08), this._after(0.15, this._sweep(1100, 800, 0.1, "square", 0.07))),
+      roar_beast: () => this._mix(this._sweep(180, 120, 0.5, "square", 0.08), N(0.5, 0.25, 0.3, 37)),
+      roar_big: () => this._mix(this._sweep(110, 70, 0.8, "square", 0.1), N(0.8, 0.3, 0.2, 41)),
+      roar_undead: () => this._mix(...[0, 0.08, 0.16, 0.26, 0.4].map((d) => this._after(d, N(0.05, 0.3, 0.9, 43 + Math.floor(d * 100)))), this._sweep(300, 200, 0.6, "sine", 0.04)),
+      lich: () => this._mix(T([[55, 1.2]], "sine", 0.22), T([[82.4, 1.2]], "sine", 0.1), this._after(0.3, N(0.9, 0.08, 0.95, 47)), this._after(0.6, this._sweep(400, 180, 0.6, "sine", 0.05))),
+      miss: () => this._mix(this._sweep(1200, 300, 0.12, "sine", 0.06), N(0.12, 0.15, 0.5, 61)),
+      fallen: () => T([[220, 0.15], [165, 0.2], [110, 0.45]], "square", 0.14),
+      ailment: () => this._mix(T([[440, 0.35]], "sine", 0.1), T([[466, 0.35]], "sine", 0.1)),
+      grind: () => this._mix(N(0.9, 0.35, 0.02, 67), this._sweep(90, 60, 0.9, "square", 0.04), this._after(0.85, T([[55, 0.15]], "square", 0.2))),
+      shatter: () => this._mix(N(0.3, 0.4, 0.95, 53), this._after(0.05, T(Array.from({ length: 10 }, (_, i) => [2000 + i * 300, 0.02]), "sine", 0.1)), this._after(0.4, this._sweep(300, 60, 0.8, "sine", 0.12))),
     };
     for (const [name, make] of Object.entries(recipes)) this.buffers[name] = this._buffer(make());
-    // the dungeon itself
-    const rate = this.ctx.sampleRate, secs = 8, n = rate * secs, rnd = new CM.Random(11);
-    const rumble = this._noise(secs, 0.08, 0.01, 7);
-    const drips = Array.from({ length: 5 }, () => 0.3 + rnd.next() * (secs - 0.7)).sort();
-    const out = new Float32Array(n);
+    this.ambients = {};
+  },
+
+  // the sound of a depth: dripping catacombs (0); water running through the vaults (1); wind and far-off iron in the
+  // halls (2); a cold hum and half-heard whispers in the palace (3); the camp's fire (4) - each a loop made when it's
+  // first wanted
+  ambient(theme) {
+    if (this.ambients[theme]) return this.ambients[theme];
+    const rate = this.ctx.sampleRate, secs = 10, n = rate * secs, rnd = new CM.Random(11 + theme), out = new Float32Array(n);
+    const rumble = this._noise(secs, theme === 2 ? 0.14 : theme === 4 ? 0.05 : 0.08, theme === 2 ? 0.03 : theme === 4 ? 0.35 : 0.01, 7 + theme, false);
+    const drips = Array.from({ length: theme === 0 ? 6 : theme === 1 ? 10 : theme === 4 ? 0 : 2 }, () => 0.3 + rnd.next() * (secs - 0.7)).sort();
+    const clanks = theme === 2 ? Array.from({ length: 3 }, () => 1 + rnd.next() * (secs - 2)) : [];
+    const whispers = theme === 3 ? Array.from({ length: 4 }, () => 0.5 + rnd.next() * (secs - 1.5)) : [];
+    const pops = theme === 4 ? Array.from({ length: 36 }, () => rnd.next() * (secs - 0.05)).sort() : [];
+    const whisperNoise = this._noise(0.6, 0.06, 0.98, 59), popNoise = this._noise(0.04, 0.5, 0.8, 71);
     for (let i = 0; i < n; i++) {
       const t = i / rate;
-      let v = 0.028 * Math.sin(2 * Math.PI * 55 * t) * (0.7 + 0.3 * Math.sin(2 * Math.PI * 0.25 * t));
-      v += 0.015 * Math.sin(2 * Math.PI * 82.5 * t);
-      v += rumble[i];
-      for (const d of drips) {
-        const k = t - d;
-        if (k >= 0 && k < 0.25) v += 0.15 * Math.sin(2 * Math.PI * (1800 - k * 2000) * k) * Math.exp(-k * 25);
-      }
+      let v = 0;
+      if (theme === 0) v = 0.028 * Math.sin(2 * Math.PI * 55 * t) * (0.7 + 0.3 * Math.sin(2 * Math.PI * 0.25 * t)) + 0.015 * Math.sin(2 * Math.PI * 82.5 * t);
+      if (theme === 1) v = 0.02 * Math.sin(2 * Math.PI * 49 * t) + rumble[i] * (1.3 + 0.7 * Math.sin(2 * Math.PI * 0.11 * t));   // water, swelling
+      if (theme === 2) v = rumble[i] * (0.8 + 0.6 * Math.sin(2 * Math.PI * 0.07 * t + 1)) + 0.012 * Math.sin(2 * Math.PI * 65 * t);   // wind
+      if (theme === 3) v = 0.03 * Math.sin(2 * Math.PI * 48 * t) + 0.02 * Math.sin(2 * Math.PI * 72.2 * t) + 0.01 * Math.sin(2 * Math.PI * 96.5 * t);   // a cold hum, beating
+      if (theme === 4) v = rumble[i] * (0.7 + 0.3 * Math.sin(2 * Math.PI * 0.4 * t)) + 0.012 * Math.sin(2 * Math.PI * 60 * t);   // the fire's hiss
+      if (theme === 0 || theme === 2) v += rumble[i] * 0.6;
+      for (const d of drips) { const k = t - d; if (k >= 0 && k < 0.25) v += 0.15 * Math.sin(2 * Math.PI * (1800 - k * 2000) * k) * Math.exp(-k * 25); }
+      for (const c of clanks) { const k = t - c; if (k >= 0 && k < 1.2) v += 0.05 * Math.sin(2 * Math.PI * 620 * k) * Math.exp(-k * 4) + 0.03 * Math.sin(2 * Math.PI * 931 * k) * Math.exp(-k * 6); }
+      for (const w of whispers) { const k = t - w; if (k >= 0 && k < 0.6) v += whisperNoise[Math.floor(k * rate)] * Math.sin(Math.PI * k / 0.6); }
+      for (const c of pops) { const k = t - c; if (k >= 0 && k < 0.04) v += popNoise[Math.floor(k * rate)] * (1 - k / 0.04); }
       out[i] = v;
     }
     const b = this.ctx.createBuffer(1, n, rate);
     b.getChannelData(0).set(out);
-    this.buffers.ambient = b;
+    this.ambients[theme] = b;
+    return b;
   },
 
-  play(name) {
+  play(name, volume = 1) {
     if (!this.ctx || !this.enabled || !this.buffers[name]) return;
-    const src = this.ctx.createBufferSource();
+    const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
     src.buffer = this.buffers[name];
-    src.connect(this.master);
+    g.gain.value = CM.clamp(volume, 0, 1);
+    src.connect(g);
+    g.connect(this.master);
     src.start();
   },
 
+  // something is coming: its kind's call, louder the nearer it is, not too often
+  near(kind, strength) {
+    const now = performance.now();
+    if (now - this.lastNear < 2500) return;
+    this.lastNear = now;
+    this.play(CM.roarFor(kind), CM.clamp(strength, 0.1, 0.8));
+  },
+
   _startAmbient() {
-    if (!this.ctx || !this.buffers.ambient) return;
+    if (!this.ctx) return;
     this.ambientGain = this.ctx.createGain();
     this.ambientGain.gain.value = 0.5;
     this.ambientGain.connect(this.master);
     this.ambientNode = this.ctx.createBufferSource();
-    this.ambientNode.buffer = this.buffers.ambient;
+    this.ambientNode.buffer = this.ambient(this.theme);
     this.ambientNode.loop = true;
     this.ambientNode.connect(this.ambientGain);
     this.ambientNode.start();
+    this.ambientTheme = this.theme;
   },
 
-  ambience(on) {
+  ambience(on, theme) {
+    if (theme !== undefined) this.theme = theme;
     this.ambientOn = on;
-    if (on) { if (this.ctx && !this.ambientNode) this._startAmbient(); }
-    else if (this.ambientNode) { try { this.ambientNode.stop(); } catch (e) { /* already stopped */ } this.ambientNode = null; }
+    if (this.ambientNode && (!on || this.ambientTheme !== this.theme)) { try { this.ambientNode.stop(); } catch (e) { /* already stopped */ } this.ambientNode = null; }
+    if (on && this.ctx && !this.ambientNode) this._startAmbient();
+  },
+};
+
+// ---- 55-music.js ----
+"use strict";
+// Music, made as it plays: a tune for each depth of the dungeon (a mode and a root for its mood), a battle theme with
+// drums, a warm tune for the camp, one for the title and one for the end. Each tune is written once, from a seed
+// (CM.music.tune), as four bars of melody over four chords, played A A B A; the notes are oscillators scheduled a
+// little ahead through a filter, an envelope and a touch of reverb. It shares the sounds' AudioContext (50-audio.js).
+CM.music = {
+  kinds: {
+    title: { scale: [0, 2, 3, 5, 7, 9, 10], root: 50, tempo: 54, rest: 0.4, voice: "pad" },          // Dorian, slow
+    depth0: { scale: [0, 2, 3, 5, 7, 9, 10], root: 50, tempo: 60, rest: 0.35, voice: "pad" },        // the Catacombs: Dorian
+    depth1: { scale: [0, 1, 3, 5, 7, 8, 10], root: 48, tempo: 54, rest: 0.4, voice: "pad" },         // the Flooded Vaults: Phrygian
+    depth2: { scale: [0, 2, 4, 5, 7, 9, 10], root: 52, tempo: 66, rest: 0.3, voice: "pluck" },       // the Dwarven Halls: Mixolydian
+    depth3: { scale: [0, 2, 3, 5, 7, 8, 11], root: 47, tempo: 48, rest: 0.45, voice: "pad" },        // the Palace: harmonic minor
+    battle: { scale: [0, 3, 5, 6, 7, 10], root: 45, tempo: 132, rest: 0.15, voice: "lead", drums: true },   // minor, with a flat fifth
+    camp: { scale: [0, 2, 4, 7, 9], root: 55, tempo: 76, rest: 0.3, voice: "pluck" },                // major pentatonic: a lute by the fire
+    victory: { scale: [0, 2, 4, 5, 7, 9, 11], root: 55, tempo: 96, rest: 0.2, voice: "pluck" },      // major
+    lament: { scale: [0, 2, 3, 5, 7, 8, 10], root: 45, tempo: 44, rest: 0.45, voice: "pad" },         // Aeolian, slow: the party fell
+  },
+  playing: null,
+  enabled: true,
+  volume: 0.5,
+  master: null,
+  reverb: null,
+  timer: null,
+  tunes: {},
+
+  // the tune for a kind, always the same: chords (scale degrees, one each two bars... one each eight steps),
+  // and a melody of 64 eighth-note steps (null for a rest), as A A B A
+  tune(kind) {
+    if (this.tunes[kind]) return this.tunes[kind];
+    const k = this.kinds[kind], rnd = new CM.Random(CM.hashSeed("tune:" + kind)), n = k.scale.length;
+    const chords = [0, rnd.pick([3, 4, 5]), rnd.pick([2, 3, 5, 6 % n]), rnd.pick([4, 3])];
+    const phrase = (start) => {
+      const out = [];
+      let deg = start;
+      for (let i = 0; i < 16; i++) {
+        if (i > 0 && rnd.chance(k.rest)) { out.push(null); continue; }
+        deg = CM.clamp(deg + rnd.int(-2, 2) + (rnd.chance(0.15) ? rnd.int(-4, 4) : 0), 0, n + 5);
+        if (i % 8 === 0 && rnd.chance(0.6)) deg = chords[Math.floor((i % 16) / 8)] + (deg >= n ? n : 0);   // (land on the chord)
+        out.push(deg);
+      }
+      return out;
+    };
+    const a = phrase(n), b = phrase(n + 2);
+    const tune = { kind, chords, melody: [...a, ...a, ...b, ...a], tempo: k.tempo, scale: k.scale, root: k.root, voice: k.voice, drums: Boolean(k.drums) };
+    this.tunes[kind] = tune;
+    return tune;
+  },
+
+  midi(tune, degree, octave = 0) {
+    const n = tune.scale.length, d = ((degree % n) + n) % n, o = Math.floor(degree / n) + octave;
+    return tune.root + tune.scale[d] + 12 * o;
+  },
+  hz: (m) => 440 * Math.pow(2, (m - 69) / 12),
+
+  _ensure() {
+    const a = CM.audio;
+    if (!a.ctx) return false;
+    if (!this.master) {
+      this.master = a.ctx.createGain();
+      this.master.gain.value = this.enabled ? this.volume : 0;
+      this.master.connect(a.ctx.destination);
+      // a little stone-hall reverb: an impulse of fading noise
+      const rate = a.ctx.sampleRate, len = Math.floor(rate * 2.2), buf = a.ctx.createBuffer(2, len, rate), rnd = new CM.Random(3);
+      for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (rnd.next() * 2 - 1) * Math.pow(1 - i / len, 2.6) * 0.5; }
+      this.reverb = a.ctx.createConvolver();
+      this.reverb.buffer = buf;
+      this.wet = a.ctx.createGain();
+      this.wet.gain.value = 0.35;
+      this.reverb.connect(this.wet);
+      this.wet.connect(this.master);
+    }
+    return true;
+  },
+
+  setEnabled(on) { this.enabled = on; if (this.master) this.master.gain.setTargetAtTime(on ? this.volume : 0, CM.audio.ctx.currentTime, 0.2); },
+  setVolume(v) { this.volume = CM.clamp(v, 0, 1); if (this.master && this.enabled) this.master.gain.setTargetAtTime(this.volume, CM.audio.ctx.currentTime, 0.1); },
+
+  // play this kind of tune (fading the last one out); the same kind again does nothing
+  start(kind) {
+    if (this.playing === kind) return;
+    this.want = kind;
+    if (!this._ensure()) { this.playing = kind; return; }       // (the context comes with the first click; we'll start then)
+    const ctx = CM.audio.ctx;
+    if (this.bus) { const old = this.bus; old.gain.setTargetAtTime(0, ctx.currentTime, 0.4); setTimeout(() => { try { old.disconnect(); } catch (e) { /* gone */ } }, 2500); }
+    this.bus = ctx.createGain();
+    this.bus.gain.value = 0;
+    this.bus.gain.setTargetAtTime(1, ctx.currentTime + 0.05, 0.6);
+    this.bus.connect(this.master);
+    this.bus.connect(this.reverb);
+    this.playing = kind;
+    this.tuneNow = this.tune(kind);
+    this.step = 0;
+    this.nextAt = ctx.currentTime + 0.1;
+    if (this.timer) clearInterval(this.timer);
+    this.timer = setInterval(() => this._schedule(), 100);
+  },
+
+  stop() {
+    this.want = null;
+    if (!this.playing) return;
+    this.playing = null;
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    if (this.bus && CM.audio.ctx) { const old = this.bus; old.gain.setTargetAtTime(0, CM.audio.ctx.currentTime, 0.5); setTimeout(() => { try { old.disconnect(); } catch (e) { /* gone */ } }, 3000); this.bus = null; }
+  },
+
+  // called when the AudioContext arrives (the first click or key): start what was wanted
+  resume() { if (this.want && (!this.timer || !this.bus)) { const w = this.want; this.playing = null; this.start(w); } },
+
+  _schedule() {
+    const ctx = CM.audio.ctx, t = this.tuneNow;
+    if (!ctx || !t || !this.bus) return;
+    const stepLen = 60 / t.tempo / 2;
+    if (!this.enabled) { this.nextAt = Math.max(this.nextAt, ctx.currentTime + 0.1); return; }   // (off: nothing to play, nothing piles up)
+    while (this.nextAt < ctx.currentTime + 1.5) {                        // (a second and a half ahead: a hidden tab's timers come once a second)
+      const i = this.step % 64, chord = t.chords[Math.floor((i % 32) / 8)];
+      if (i % 8 === 0) this._pad(t, chord, this.nextAt, stepLen * 8);
+      if (t.drums) this._drums(i, this.nextAt, stepLen);
+      const deg = t.melody[i];
+      if (deg !== null && deg !== undefined) this._note(t, deg, this.nextAt, stepLen * (t.melody[(i + 1) % 64] === null ? 2 : 1));
+      this.nextAt += stepLen;
+      this.step += 1;
+    }
+  },
+
+  _osc(type, hz, at, until, gain, filterHz, dest) {
+    const ctx = CM.audio.ctx, o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+    o.type = type; o.frequency.value = hz;
+    f.type = "lowpass"; f.frequency.value = filterHz;
+    g.gain.value = 0;
+    g.gain.setTargetAtTime(gain, at, 0.02);
+    g.gain.setTargetAtTime(0, until, 0.08);
+    o.connect(f); f.connect(g); g.connect(dest || this.bus);
+    o.start(at); o.stop(until + 0.6);
+    return o;
+  },
+
+  _note(t, deg, at, len) {
+    const hz = this.hz(this.midi(t, deg, 1));
+    if (t.voice === "pluck") {                                           // a lute: bright, quick to fade
+      const ctx = CM.audio.ctx, o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+      o.type = "triangle"; o.frequency.value = hz; f.type = "lowpass"; f.frequency.value = 2400;
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.22, at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, at + Math.min(0.9, len * 1.6));
+      o.connect(f); f.connect(g); g.connect(this.bus); o.start(at); o.stop(at + 1.2);
+    } else if (t.voice === "lead") {
+      this._osc("sawtooth", hz, at, at + len * 0.9, 0.09, 1600);
+      this._osc("square", hz / 2, at, at + len * 0.9, 0.04, 800);
+    } else {
+      this._osc("sine", hz, at, at + len * 0.95, 0.16, 2000);
+      this._osc("triangle", hz * 1.002, at, at + len * 0.95, 0.06, 1200);
+    }
+  },
+
+  _pad(t, chord, at, len) {                                             // root, third, fifth of the chord, held
+    const n = t.scale.length, degs = [chord, chord + 2, chord + 4];
+    for (const d of degs) {
+      const hz = this.hz(this.midi(t, d, 0));
+      this._osc("triangle", hz, at, at + len, t.voice === "lead" ? 0.035 : 0.055, 700);
+      this._osc("triangle", hz * 0.997, at, at + len, 0.03, 500);
+    }
+    this._osc("sine", this.hz(this.midi(t, chord, -1)), at, at + len, 0.12, 300);   // the bass
+    void n;
+  },
+
+  _drums(i, at, stepLen) {
+    const ctx = CM.audio.ctx;
+    const burst = (len, hz, gain, type = "lowpass") => {
+      const n = Math.floor(ctx.sampleRate * len), buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
+      for (let k = 0; k < n; k++) d[k] = (Math.random() * 2 - 1) * (1 - k / n);
+      const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      s.buffer = buf; f.type = type; f.frequency.value = hz; g.gain.value = gain;
+      s.connect(f); f.connect(g); g.connect(this.bus); s.start(at);
+    };
+    if (i % 4 === 0) burst(0.12, 160, 0.9);                               // the drum
+    if (i % 8 === 4) burst(0.1, 1800, 0.35, "bandpass");                   // the snare
+    if (i % 2 === 1) burst(0.03, 6000, 0.12, "highpass");                  // the hat
+    void stepLen;
   },
 };
 
@@ -2383,12 +2767,13 @@ CM.Game = class {
     this.stock = null; this.shopping = false;
     this.rnd = new CM.Random(Math.floor(Math.random() * 4294967296));
     this.fame = CM.store.get("fame", []);
-    this.settings = Object.assign({ sound: true, volume: 0.6, smooth: true, fps: false }, CM.store.get("settings", {}));
+    this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false }, CM.store.get("settings", {}));
+    this.tally = this.freshTally();      // what this run has come to: steps, kills, chests, fights, fled
     this.lastRun = CM.store.get("run", null);        // a run left part way, to continue
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
 
-  // ---- events: change (redraw), message, mode, floor, moved, turned, fx, sound, mesh, teleported, fell, spin, lore ----
+  // ---- events: change (redraw), message, mode, floor, moved, turned, fx, sound, near, mesh, teleported, fell, spin, lore, over ----
   on(event, fn) { (this.listeners[event] = this.listeners[event] || []).push(fn); return this; }
   emit(event, ...args) { for (const fn of this.listeners[event] || []) fn(...args); }
 
@@ -2401,6 +2786,9 @@ CM.Game = class {
 
   sound(name) { this.emit("sound", name); }
 
+  freshTally() { return { steps: 0, kills: 0, chests: 0, fights: 0, fled: 0 }; }
+  count(what, n = 1) { if (!this.tally) this.tally = this.freshTally(); this.tally[what] = (this.tally[what] || 0) + n; }
+
   setMode(mode) { this.mode = mode; this.emit("mode", mode); this.emit("change"); }
 
   saveSettings() { CM.store.set("settings", this.settings); }
@@ -2410,7 +2798,7 @@ CM.Game = class {
     if (!["explore", "camp"].includes(this.mode)) return;
     const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, floors: this.floors, light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed,
-      saved: new Date().toISOString() };
+      tally: this.tally || this.freshTally(), saved: new Date().toISOString() };
     this.lastRun = data;
     CM.store.set("run", data);
     this.dirty = false; this.sinceSave = 0;
@@ -2433,6 +2821,7 @@ CM.Game = class {
     this.recruits = null;
     this.identifying = false;
     this.kit = d.kit || "pauper";
+    this.tally = Object.assign(this.freshTally(), d.tally || {});
     this.seed = d.seed || CM.randomSeed();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -2443,7 +2832,8 @@ CM.Game = class {
 
   endRun(won) {
     const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, date: CM.today(), seed: this.seed,
-      daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`) };
+      daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`),
+      kit: this.kit || "pauper", tally: Object.assign(this.freshTally(), this.tally || {}) };
     this.fame.push(entry);
     this.sortFame();
     CM.store.set("fame", this.fame);
@@ -2452,7 +2842,7 @@ CM.Game = class {
     this.sound(won ? "victory" : "death");
     this.titleNote = won ? "The Lich King is no more. The party returns as legends!"
       : `The party fell on floor ${this.floor.number}. Their story ends here.`;
-    this.emit("over", won);
+    this.emit("over", won, entry);
     this.setMode("title");
   }
 
@@ -2512,6 +2902,7 @@ CM.Game = class {
     this.combat = null;
     this.messages = [];
     this.titleNote = "";
+    this.tally = this.freshTally();
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
     else if (this.kit === "heir") for (const h of this.party) { h.weapon.power += 2; h.weapon.name += " +1"; h.weapon.props = Object.assign({}, h.weapon.props, { bonus: 1 }); h.weapon.value = 45; }
@@ -2612,9 +3003,11 @@ CM.Game = class {
             this.say(`${rogue.name} works at the lock... it won't give. Not yet.`);
             return false;
           }
+          this.sound("unlock");
           this.say(`${rogue.name} picks the lock, and the door swings open.`);
         } else {
           this.bag.splice(i, 1);
+          this.sound("unlock");
           this.say("The key turns, and the door swings open.");
         }
         f.locked = false;
@@ -2622,7 +3015,7 @@ CM.Game = class {
         this.say("The door creaks open.");
       }
       f.open = true;
-      this.sound("chest");
+      this.sound("door");
       this.dirty = true;
       this.emit("change");
       return false;
@@ -2644,6 +3037,7 @@ CM.Game = class {
     this.emit("moved", x, y);
     this.dirty = true;
     this.steps = (this.steps || 0) + 1;
+    this.count("steps");
     if (this.steps % 5 === 0) {                                          // poison walks with you
       for (const h of this.alive()) {
         const st = h.status || {};
@@ -2684,7 +3078,7 @@ CM.Game = class {
       const to = fl.features[keyOf(f.to[0], f.to[1])];
       if (to) to.known = true;
       fl.pos = f.to.slice();
-      this.sound("spell");
+      this.sound("teleport");
       this.look();
       this.emit("teleported", fl.pos[0], fl.pos[1]);
       this.say("The runes flare - and the walls around you are different ones.");
@@ -2704,7 +3098,7 @@ CM.Game = class {
   fall(from) {
     const n = this.floor.number;
     for (const m of this.alive()) m.hp = Math.max(1, m.hp - Math.max(1, Math.floor(m.max / 10)));
-    this.sound("hurt");
+    this.sound("fall");
     this.emit("fell");
     if (n >= CM.LAST_FLOOR) { this.say("You fall into blackness... and land, bruised, on the stone below."); return; }
     this.say(`You fall to floor ${n + 1}, bruised but alive.`);
@@ -2776,7 +3170,7 @@ CM.Game = class {
       here.pulled = true;
       const gate = fl.features[here.gate];
       if (gate) gate.open = true;
-      this.sound("stairs");
+      this.sound("lever");
       this.say("You haul the lever down. Somewhere, iron grinds upward.");
       this.dirty = true;
       this.emit("change");
@@ -2797,7 +3191,7 @@ CM.Game = class {
           this.say(`${rogue.name} finds ${CM.TRAPS[thing.trap]} on the lid, and sees to it.`);
           thing.trap = null;
         } else {
-          this.sound("hurt");
+          this.sound("trap");
           this.say(`The lid was trapped: ${CM.TRAPS[thing.trap]}!`);
           this.springTrap(thing.trap, k);
           thing.trap = null;
@@ -2808,6 +3202,7 @@ CM.Game = class {
       this.gold += thing.gold;
       this.bag.push(...thing.items);
       this.sound("chest");
+      this.count("chests");
       const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : i.name)).join(", ");
       this.say(`The chest creaks open: ${thing.gold} gold` + (found ? `, ${found}.` : "."));
       this.saveRun();
@@ -2826,7 +3221,7 @@ CM.Game = class {
     } else if (thing && thing.type === "phylactery") {
       delete fl.things[k];
       this.phylactery = true;
-      this.sound("spell");
+      this.sound("shatter");
       this.say("You lift the box from the east and dash it on the stone. Something inside screams - and far below, something else does.");
       this.emit("fx", { kind: "shatter" });
       this.saveRun();
@@ -2839,7 +3234,7 @@ CM.Game = class {
       if (ahead && ahead.type === "secret" && !ahead.found) {
         ahead.found = true;
         fl.grid[y + dy][x + dx] = 0;
-        this.sound("stairs");
+        this.sound("grind");
         this.say("You press the stones... and a hidden door grinds open!");
         this.look();
         this.emit("mesh");
@@ -2923,6 +3318,13 @@ CM.Game = class {
       return !(f && ["pit", "trapdoor", "teleporter", "spinner"].includes(f.type));
     };
     const dist = CM.distances(fl.grid, fl.pos, walk);
+    let nearest = null;                                                  // the nearest group within earshot: its call
+    for (const [k, t] of Object.entries(fl.things)) {
+      if (t.type !== "monsters" && t.type !== "boss") continue;
+      const d = dist.get(k);
+      if (d !== undefined && d <= 6 && (!nearest || d < nearest.d)) nearest = { d, t };
+    }
+    if (nearest) { const m = nearest.t.group.find((f) => f.hp > 0 && !f.fled) || nearest.t.group[0]; if (m) this.emit("near", m.kind || m.name, nearest.d); }
     const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still);
     this.rnd.shuffle(movers);
     for (const [k, t] of movers) {
@@ -2963,7 +3365,8 @@ CM.Game = class {
     this.target = 0;
     this.combat = { foes: this.foes, round: 0, order: [], index: 0, waiting: null, surprise: false, taunter: null, tauntUntil: 0, bless: false, protect: false, reached: 0 };
     this.setMode("combat");
-    this.sound("monster");
+    this.count("fights");
+    this.sound(CM.roarFor((this.foes[0] || {}).kind || (this.foes[0] || {}).name));
     const names = {};
     for (const m of this.foes) names[m.name] = (names[m.name] || 0) + 1;
     const who = Object.entries(names).map(([k, n]) => CM.plural(n, k)).join(", ");
@@ -3087,6 +3490,7 @@ CM.Game = class {
       lich.hp = Math.floor(lich.max * CM.LICH.riseTo);
       lich.dead = false;
       lich.risen = (lich.risen || 0) + 1;
+      this.sound("lich");
       this.say("The Lich King crumbles... and the bones knit again. Somewhere, his heart still beats.");
       this.summonSkeletons(2);
       this.emit("fx", { kind: "rise", foe: lich });
@@ -3177,6 +3581,7 @@ CM.Game = class {
       this.emit("moved", nx, ny);
     }
     this.say(sure ? "The world folds, and the party is elsewhere." : "The party flees back the way it came!");
+    this.count("fled");
     this.combat = null;
     this.setMode("explore");
     this.look();
@@ -3213,6 +3618,7 @@ CM.Game = class {
     let turns = { poison: 8, paralysis: 2, sleep: 3, blind: 4, curse: 999, stone: 999 }[status];
     if (turns < 900 && (h.boons || []).includes("thickblood")) turns = Math.ceil(turns / 2);
     h.status[status] = turns;
+    this.sound("ailment");
     this.say(`${h.name} is ${CM.STATUSES[status].name.toLowerCase()}!`);
     this.emit("fx", { kind: "ailment", hero: h, status });
     return true;
@@ -3247,7 +3653,7 @@ CM.Game = class {
     dmg = Math.max(1, dmg);
     h.hp -= dmg;
     if ((h.status || {}).sleep) delete h.status.sleep;                   // (a blow wakes)
-    this.sound("hurt");
+    this.sound(h.hp <= 0 ? "fallen" : "hurt");
     this.emit("fx", { kind: "hurt", hero: h, amount: dmg, foe: by });
     this.say(`The ${by.name} hits ${h.name} for ${dmg}${opts.how || ""}.` + (h.hp <= 0 ? `  ${h.name} falls!` : ""));
     if (h.hp > 0) {
@@ -3339,6 +3745,7 @@ CM.Game = class {
       Object.assign(s, { summoned: true, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false });
       this.foes.push(s);
     }
+    this.sound("roar_undead");
     this.say(`The Lich King calls, and ${CM.plural(n, "skeleton")} claw up out of the floor!`);
     this.emit("fx", { kind: "summon" });
   }
@@ -3348,6 +3755,7 @@ CM.Game = class {
     const rnd = this.rnd;
     if (!opts.sure && !rnd.chance(this.hitChance(hero))) {
       this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
+      this.sound("miss");
       this.emit("fx", { kind: "miss", foe: target });
       return 0;
     }
@@ -3588,6 +3996,7 @@ CM.Game = class {
   wonFight() {
     const rnd = this.rnd;
     const slain = this.foes.filter((m) => !m.fled);
+    this.count("kills", slain.length);
     const xp = slain.reduce((s, m) => s + m.xp, 0);
     let gold = slain.reduce((s, m) => s + m.gold, 0);
     if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
@@ -4001,9 +4410,9 @@ CM.Game = class {
 
 // ---- 70-ui.js ----
 "use strict";
-// The window around the dungeon: the title (what you set out with, the Hall of Fame, settings), the party and the
-// log under the view, the automap, the bag and the merchant, and the little dialogs. It listens to the Game and
-// redraws; it never decides the rules.
+// The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
+// party and the log under the view, the automap, the bag and the merchant, the little dialogs, and the end of a run.
+// It listens to the Game and redraws; it never decides the rules.
 CM.UI = class {
   constructor(game, root) {
     this.game = game;
@@ -4014,7 +4423,7 @@ CM.UI = class {
 <div id="title" class="screen">
   <div class="backdrop-slot"></div><div class="shade"></div>
   <div class="sheet">
-    <h1>Claude and Magic</h1>
+    <h1><span class="emblem-slot"></span>Claude and Magic</h1>
     <div class="tagline">Twenty floors down, the Lich King waits. Four go in together.</div>
     <div class="note" id="title-note"></div>
     <div class="card" id="expedition">
@@ -4064,6 +4473,8 @@ CM.UI = class {
 <div class="dialog" id="dlg-settings"><div class="box"><h2>Settings</h2>
   <div class="row"><label for="set-sound">Sound</label><input type="checkbox" id="set-sound"></div>
   <div class="row"><label for="set-volume">Volume</label><input type="range" id="set-volume" min="0" max="100"></div>
+  <div class="row"><label for="set-music">Music (a tune for each depth, the fight, the camp)</label><input type="checkbox" id="set-music"></div>
+  <div class="row"><label for="set-music-volume">Music volume</label><input type="range" id="set-music-volume" min="0" max="100"></div>
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
@@ -4097,6 +4508,9 @@ CM.UI = class {
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
+<div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
+  <div class="roll" id="over-party"></div><div class="tally" id="over-tally"></div>
+  <div class="end"><button class="close primary">To the title</button></div></div></div>
 <div class="dialog" id="bigmap"><canvas id="bigmap-canvas" width="600" height="600"></canvas></div>`;
     this.$ = (sel) => root.querySelector(sel);
     this.canvas = document.createElement("canvas");                        // the one WebGL canvas, moved between screens
@@ -4119,6 +4533,10 @@ CM.UI = class {
     const keys = this.$("#dlg-keys table");
     keys.innerHTML = CM.KEYS_HELP.map(([k, what]) => `<tr><td><kbd>${k}</kbd></td><td>${what}</td></tr>`).join("");
     this.$("#title .version").textContent = `Claude and Magic v${CM.version}`;
+    this.$("#title .emblem-slot").appendChild(CM.art.emblem(120));
+    this.fameOpen = -1;
+    this.ending = null;                                                  // "victory" or "lament" while the ending is up (the music follows)
+    game.on("over", (won, entry) => this.showEnding(won, entry));
     game.on("change", () => this.refresh());
     game.on("mode", (mode) => this.show(mode === "title" ? "title" : "play"));
     game.on("bag", (open) => (open ? this.openBag() : this.show("play")));
@@ -4206,7 +4624,53 @@ CM.UI = class {
 
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); }
-  closeDialogs() { for (const d of this.root.querySelectorAll(".dialog.on")) d.classList.remove("on"); }
+  closeDialogs() {
+    const ending = this.$("#dlg-over").classList.contains("on");
+    for (const d of this.root.querySelectorAll(".dialog.on")) d.classList.remove("on");
+    if (ending) { this.ending = null; if (this.onEnding) this.onEnding(); }
+  }
+
+  // ---- the end of a run: how it went, who came back, what it came to ----
+  showEnding(won, entry) {
+    const g = this.game, t = entry.tally || {}, rank = g.fame.indexOf(entry) + 1;
+    this.fameOpen = -1;                                                  // (the Hall of Fame has been re-sorted: an open row would be another's)
+    const slot = this.$("#dlg-over .emblem-slot");
+    slot.innerHTML = "";
+    slot.appendChild(CM.art.emblem(120));
+    this.$("#dlg-over").classList.toggle("won", won);
+    this.$("#over-title").textContent = won ? "The Lich King is no more" : `The party fell on floor ${entry.floor}`;
+    const standing = g.party.filter((h) => h.hp > 0), fallen = g.party.filter((h) => h.hp <= 0);
+    const names = (list) => (list.length ? list.map((h) => h.name).join(", ").replace(/, ([^,]*)$/, " and $1") : "The party");
+    let text;
+    if (won) {
+      text = `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} climb twenty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
+        + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up, and ${fallen.length > 1 ? "their names are" : "that name is"} carved on the last floor beside his.` : ", all four of them.")
+        + " The carvings told his story. This one is yours.";
+    } else {
+      text = `The last of them fell on floor ${entry.floor}, in ${CM.themeFor(entry.floor).name}, with ${entry.gold.toLocaleString()} gold they'll never spend. The dark closes over ${names(g.party)}.`
+        + (t.kills ? ` ${CM.plural(t.kills, "monster")} went down before them.` : "") + " Somewhere above, another four are sharpening their blades.";
+    }
+    this.$("#over-text").textContent = text;
+    const roll = this.$("#over-party");
+    roll.innerHTML = "";
+    for (const h of g.party) {
+      const div = document.createElement("div");
+      div.className = h.hp > 0 ? "standing" : "fallen";
+      div.appendChild(this.portrait(h.cls, 56));
+      const who = document.createElement("div");
+      who.innerHTML = `<b>${this.esc(h.name)}</b><small>${h.cls}, level ${h.level}</small><small class="fate">${h.hp > 0 ? (won ? "comes home" : "stood to the last") : "fell"}</small>`;
+      div.appendChild(who);
+      roll.appendChild(div);
+    }
+    const facts = [["Floors", `${entry.floor} of ${CM.LAST_FLOOR}`], ["Gold", entry.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
+      ["Chests opened", t.chests || 0], ["Steps walked", (t.steps || 0).toLocaleString()], ["Fights", `${t.fights || 0}${t.fled ? ` (${t.fled} fled)` : ""}`],
+      ["Kit", (CM.KITS[entry.kit] || CM.KITS.pauper).name], ["Seed", `${entry.seed}${entry.daily ? " (today's)" : ""}`],
+      ["Hall of Fame", rank ? `${CM.ordinal(rank)} of ${g.fame.length}` : "not among the ten"]];
+    this.$("#over-tally").innerHTML = facts.map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
+    this.openDialog("#dlg-over");                                      // (opening closes whatever was open - an ending too - so the kind is set after)
+    this.ending = won ? "victory" : "lament";
+    if (this.onEnding) this.onEnding();
+  }
 
   portrait(cls, size) {
     const key = `${cls}:${size}`;
@@ -4240,6 +4704,15 @@ CM.UI = class {
     this.$("#btn-import").addEventListener("click", () => {
       const err = g.importText(this.$("#transfer-text").value);
       this.$("#transfer-note").textContent = err || "Imported.";
+      this.refreshTitle();
+    });
+    this.$("#fame table").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-seed]");
+      if (b) { this.$("#seed").value = b.dataset.seed; this.refreshTitle(); return; }
+      const tr = e.target.closest("tr.row");
+      if (!tr) return;
+      const i = Number(tr.dataset.i);
+      this.fameOpen = this.fameOpen === i ? -1 : i;
       this.refreshTitle();
     });
     const classes = this.$("#classes");
@@ -4352,8 +4825,18 @@ CM.UI = class {
       + "a merchant's camp with a temple waits below floors 5, 10 and 15.";
     const table = this.$("#fame table");
     if (!g.fame.length) table.innerHTML = `<tr><td class="empty">No party has gone down yet.</td></tr>`;
-    else table.innerHTML = g.fame.map((e, i) => `<tr title="${this.esc((e.party || []).join(", "))}${e.seed ? " - seed " + this.esc(e.seed) : ""}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
-      + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`).join("");
+    else table.innerHTML = g.fame.map((e, i) => {
+      const open = this.fameOpen === i, t = e.tally;
+      let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
+        + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
+      if (open) {
+        rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
+          + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button></div>` : "")
+          + (t ? `<div>${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}.</div>` : "")
+          + "</td></tr>";
+      }
+      return rows;
+    }).join("");
     const have = CM.unlocked(g.fame), deep = CM.deepest(g.fame);
     this.$("#unlocks").innerHTML = Object.entries(CM.KITS).map(([id, k]) => {
       const got = have.includes(id), need = k.need > 20 ? "slay the Lich King" : `reach floor ${k.need}`;
@@ -4371,14 +4854,16 @@ CM.UI = class {
   // ---- settings ----
   _settings() {
     const g = this.game, s = g.settings;
-    const sound = this.$("#set-sound"), vol = this.$("#set-volume"), smooth = this.$("#set-smooth"), fps = this.$("#set-fps");
-    sound.checked = s.sound; vol.value = Math.round(s.volume * 100); smooth.checked = s.smooth; fps.checked = s.fps;
+    const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
+    const smooth = this.$("#set-smooth"), fps = this.$("#set-fps");
+    sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
+    smooth.checked = s.smooth; fps.checked = s.fps;
     const apply = () => {
-      s.sound = sound.checked; s.volume = vol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked;
+      s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked;
       g.saveSettings();
       g.emit("settings", s);
     };
-    for (const el of [sound, vol, smooth, fps]) el.addEventListener("input", apply);
+    for (const el of [sound, vol, music, mvol, smooth, fps]) el.addEventListener("input", apply);
   }
 
   toggleFps() {
@@ -4842,8 +5327,8 @@ CM.UI = class {
 
 // ---- 80-main.js ----
 "use strict";
-// Where it all starts: the game, the window, the renderer and the sounds wired together, the keys, and the frame loop
-// (real time: a frame that comes late moves the camera as far as it should have).
+// Where it all starts: the game, the window, the renderer, the sounds and the music wired together, the keys, and the
+// frame loop (real time: a frame that comes late moves the camera as far as it should have).
 window.addEventListener("DOMContentLoaded", () => {
   const game = new CM.Game();
   const ui = new CM.UI(game, document.getElementById("app"));
@@ -4902,8 +5387,21 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("mesh", () => { if (renderer.ok && game.floor) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); });
   game.on("teleported", (x, y) => renderer.setCamera(x, y, game.floor.facing));
   game.on("spin", (facing) => (game.settings.smooth ? renderer.spinTo(facing) : renderer.turnTo(facing, 0)));
+  // ---- what's heard: the depth's ambience and tune, the fight's, the camp's, the title's - and the ending's ----
+  const tuneFor = () => (game.mode === "combat" ? "battle" : game.mode === "camp" ? "camp" : game.mode === "title" ? ui.ending || "title"
+    : `depth${CM.themeIndex(game.floor ? game.floor.number : 1)}`);
+  const soundscape = () => {
+    const mode = game.mode;
+    CM.audio.ambience(mode === "explore" || mode === "combat" || mode === "camp", mode === "camp" ? 4 : CM.themeIndex(game.floor ? game.floor.number : 1));
+    CM.music.start(tuneFor());
+  };
+  game.on("mode", soundscape);
+  game.on("floor", soundscape);
+  ui.onEnding = soundscape;
+  const STEPS = ["step", "step_water", "step_hall", "step_cold"];        // a footfall for each depth
+  game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[CM.themeIndex(game.floor.number)] || "step" : name));
+  game.on("near", (kind, d) => CM.audio.near(kind, 1 - d / 8));          // something is coming: louder the nearer
   game.on("mode", (mode) => {
-    CM.audio.ambience(mode === "explore" || mode === "combat");
     if (mode === "title") showDemo();
     else if (game.floor && renderer.ok) {
       useTheme(game.floor.number);
@@ -4911,15 +5409,18 @@ window.addEventListener("DOMContentLoaded", () => {
       renderer.setCamera(game.floor.pos[0], game.floor.pos[1], game.floor.facing);
     }
   });
-  game.on("sound", (name) => CM.audio.play(name));
   const applySettings = (s) => {
     renderer.snap = !s.smooth;
     CM.audio.setEnabled(s.sound);
     CM.audio.setVolume(s.volume);
+    CM.music.setEnabled(s.music !== false);
+    CM.music.setVolume(s.musicVolume === undefined ? 0.5 : s.musicVolume);
     ui.$("#view .fps").classList.toggle("on", s.fps);
   };
   game.on("settings", applySettings);
   applySettings(game.settings);
+  CM.audio.unlock();                                                     // (where the page may: the Timeline's window; a browser waits for a click or key)
+  soundscape();
 
   // ---- what stands in the corridors: the floor's things, or the foes of the fight ----
   const dying = new Map();                                               // foe -> when it fell
@@ -4958,13 +5459,13 @@ window.addEventListener("DOMContentLoaded", () => {
     const dx = right[0] * off + fwd[0] * back, dz = right[1] * off + fwd[1] * back;
     const w = foe.boss ? 0.95 : 0.85, h = foe.boss ? 0.98 : 0.85;
     return { x, y, dx, dz, w, h, wx: x + 0.5 + dx, wz: y + 0.5 + dz, wh: h + 0.02, m: foe, shade: foe.elite ? 1.2 : 1,
-      layer: `monster:${foe.kind || foe.name}` };
+      layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost" };
   }
 
   function sprites() {
     const fl = game.floor, out = [], hud = [];
     if (!fl) return { out, hud };
-    const now = performance.now();
+    const now = performance.now(), right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
     for (const [key, thing] of Object.entries(fl.things)) {
       let [x, y] = key.split(",").map(Number);
@@ -4981,7 +5482,9 @@ window.addEventListener("DOMContentLoaded", () => {
           if (k >= 1) delete thing.anim;
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
-        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : 0.85, h: m.boss ? 0.98 : 0.85, shade: m.elite ? 1.2 : 1 });
+        const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost";
+        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : 0.85, h: m.boss ? 0.98 : 0.85, shade: m.elite ? 1.2 : 1,
+          lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
       }
     }
     for (const [key, f] of Object.entries(fl.features)) {
@@ -5004,15 +5507,17 @@ window.addEventListener("DOMContentLoaded", () => {
         if (m.fled) continue;
         const place = foePlace(m);
         if (!place) continue;
-        let alpha = 1;
-        if (m.hp <= 0) {
+        let alpha = 1, lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0);
+        if (m.hp <= 0) {                                                 // fallen: it fades, and sinks into the floor (a ghost rises)
           const t = (now - (dying.get(m) || now)) / 700;
           if (t >= 1) { dying.delete(m); continue; }
           alpha = 1 - t;
+          lift += place.ghost ? t * 0.6 : -t * 0.55;
         } else { place.index = living.indexOf(m); place.chosen = place.index === (game.target || 0); hud.push(place); }
         const flash = flashes.get(m) || 0;
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
-        out.push(Object.assign({ flash: flash * 0.8, alpha }, place));
+        const flinch = flash > 0 ? Math.sin(now / 22) * flash * 0.025 : 0;   // struck: it shudders
+        out.push(Object.assign({}, place, { flash: flash * 0.8, alpha, lift, dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
       }
     }
     return { out, hud };
@@ -5036,7 +5541,11 @@ window.addEventListener("DOMContentLoaded", () => {
       if (e.code === "Escape" && ui.screen === "create") ui.show("title");
       return;
     }
-    if (ui.dialogOpen()) { if (e.code === "Escape" || (e.code === "Tab" && ui.$("#bigmap").classList.contains("on"))) { e.preventDefault(); ui.closeDialogs(); } return; }
+    if (ui.dialogOpen()) {
+      const ending = ui.$("#dlg-over").classList.contains("on");
+      if (e.code === "Escape" || (e.code === "Tab" && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
+      return;
+    }
     if (ui.screen === "title") {
       if (e.code === "Enter" || e.code === "Space") { e.preventDefault(); if (game.canContinue()) game.continueRun(); else ui.startNew(); }
       return;

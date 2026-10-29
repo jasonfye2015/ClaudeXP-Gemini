@@ -44,6 +44,7 @@ CM.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 CM.lerp = (a, b, t) => a + (b - a) * t;
 CM.ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);      // in and out
 CM.plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+CM.ordinal = (n) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th"}`;
 
 // a seed you can say out loud: "ember-crypt-417"
 CM.SEED_WORDS = ["ember", "crypt", "raven", "lantern", "sable", "hollow", "thorn", "cinder", "vesper", "moss", "iron", "gloam",
