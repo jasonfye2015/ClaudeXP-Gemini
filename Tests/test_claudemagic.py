@@ -3,8 +3,9 @@ profile - the real saves are never touched: the built file is current with its s
 stocked, and the same from the same seed; the rules are the old game's (a fight ends, the party learns, a chest
 opens, the camp trades and rests, the run ends in the Hall of Fame); a run saves and comes back after the page
 reloads, and travels as text; the first-person view draws (WebGL, composited in software here); the music is written
-from a seed and follows the mode and the depth, every sound is in its place and the ending sums the run up; and the
-Timeline's window opens, hands the page the old Python game's saves once, and closes."""
+from a seed and follows the mode and the depth, every sound is in its place and the ending sums the run up; the three
+themes (drawn, Crawl's pixel tiles, photographed stone) ride inside the file, build every depth and switch at once; and
+the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
 import importlib.util
 import json
 import os
@@ -27,8 +28,9 @@ SEED = "ember-crypt-417"
 _page = {}
 
 
-def build_module():
-    spec = importlib.util.spec_from_file_location("claudemagic_build", GAME / "build.py")
+def build_module(name="build"):
+    """build.py (or pack.py) as a module, from the game's folder."""
+    spec = importlib.util.spec_from_file_location("claudemagic_" + name, GAME / (name + ".py"))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -832,6 +834,75 @@ def test_the_sound_and_the_ending():
                 "detailsClosed", "lostShown", "lamentOver", "emblem", "musicOff", "musicOn", "musicVolume"):
         assert got[key] is True, (key, got)
     assert got["audio"] in (True, None), got
+    said = [s for s in page().said if "Error" in s or "error" in s]
+    assert not said, f"the page's console: {said[:5]}"
+
+
+def test_the_themes():
+    """The second update's first phase - three themes: the art packs in the file match their sources (pack.py --check);
+    the file carries the atlas of Crawl tiles and the twelve stone textures and decodes them; each theme builds a
+    depth's whole set (the same layers as the drawn one; Pixel crisp at 256, Stone at 512); the heroes have paper-doll
+    portraits in Pixel; every kind of thing has an icon in every theme and every spell has one in Pixel; the Theme
+    chooser on the title and the one in Settings agree, apply at once (new textures, crisp or not, the party's
+    portraits redrawn, the view still drawing) and are kept; the Credits name both sets; and monsters wait while a
+    sheet is open"""
+    pack = build_module("pack")
+    assert pack.build_text() == (GAME / "src" / "js" / "35-packs.js").read_text(encoding="utf-8"), \
+        "src/js/35-packs.js is out of date: run  python pack.py  in ClaudeGames/claudemagic"
+    assert len(pack.PIXEL) >= 150 and len(pack.STONE) == 12 and all((GAME / "src" / "art" / "pixel" / (k + ".png")).exists() for k in pack.PIXEL)
+    assert support.pump(10, until=lambda: ask("CM.art.packs.ready === true")), "the packs never decoded"
+    got = ask(f"""(function(){{ const out = {{}}, g = CM.game;
+      out.packs = Boolean(CM.packs) && Object.keys(CM.packs.pixel.index).length >= 150 && Object.keys(CM.packs.stone.textures).length === 12 && CM.packs.pixel.size === 32;
+      out.decoded = !!CM.art.packs.atlas && CM.art.packs.atlas.width === 512 && Object.keys(CM.art.packs.stone).length === 12 && CM.art.hasLook('pixel') && CM.art.hasLook('stone');
+      const theme = CM.THEMES[1], drawn = CM.art.build(theme, 'drawn'), pixel = CM.art.build(theme, 'pixel'), stone = CM.art.build(theme, 'stone');
+      const names = Object.keys(drawn.index).sort();
+      out.sameLayers = JSON.stringify(names) === JSON.stringify(Object.keys(pixel.index).sort()) && JSON.stringify(names) === JSON.stringify(Object.keys(stone.index).sort()) && names.length > 40;
+      out.sizes = drawn.size === 256 && drawn.crisp === false && pixel.size === 256 && pixel.crisp === true && stone.size === 512 && stone.crisp === false && pixel.layers.length === names.length;
+      const px = (c, x, y) => c.getContext('2d').getImageData(x, y, 1, 1).data;
+      out.painted = px(pixel.layers[pixel.index.wall], 128, 128)[3] === 255 && px(pixel.layers[pixel.index['monster:Orc']], 128, 128)[3] > 0
+        && px(stone.layers[stone.index.wall], 256, 256)[3] === 255 && px(stone.layers[stone.index.chest], 256, 300)[3] > 0;
+      const d = (cls, look) => CM.art.portrait(cls, 32, look).toDataURL();
+      out.dolls = d('Knight', 'pixel') !== d('Knight', 'drawn') && d('Knight', 'pixel') !== d('Mage', 'pixel') && CM.CLASS_ORDER.every(c => CM.art.DOLLS[c] && d(c, 'pixel').length > 200);
+      const things = [CM.torch(), CM.lantern(), CM.key(), CM.antidote(), CM.scroll('fire'), CM.wand('fire', 2), {{name: 'Healing Potion', kind: 'heal'}}, {{name: 'Mana Potion', kind: 'mana'}},
+        {{name: 'Phoenix Feather', kind: 'revive'}}, ...CM.WEAPONS.map(n => ({{name: n, kind: 'weapon'}})), ...CM.BOWS.map(n => ({{name: n, kind: 'weapon', props: {{bow: true}}}})),
+        ...CM.ARMORS.map(n => ({{name: n, kind: 'armor'}})), ...CM.SHIELDS.map(n => ({{name: n, kind: 'shield'}})), ...CM.HELMS.map(n => ({{name: n, kind: 'helm'}})),
+        {{name: 'Ring of Wit', kind: 'ring'}}, {{name: 'Amulet of Warding', kind: 'amulet'}}];
+      const inked = (c) => {{ const data = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < data.length; i += 4) if (data[i] > 0) n++; return n; }};
+      out.icons = ['drawn', 'pixel', 'stone'].every(look => things.every(it => inked(CM.art.itemIcon(it, 24, look)) > 20));
+      out.keys = new Set(things.map(it => CM.art.itemKey(it))).size >= 25 && things.every(it => CM.packs.pixel.index[CM.art.itemKey(it)]);
+      out.spells = Object.keys(CM.ABILITIES).every(id => CM.art.spellIcon(id, 18, 'pixel') !== null) && CM.art.spellIcon('fireball', 18, 'drawn') === null;
+      // the chooser, on the title and in Settings
+      CM.store.remove('run'); g.lastRun = null; g.newGame({json.dumps(SEED)});
+      const before = CM.renderer.texture, sel = document.querySelector('#look'), sel2 = document.querySelector('#set-look');
+      sel.value = 'pixel'; sel.dispatchEvent(new Event('change'));
+      out.applied = g.settings.look === 'pixel' && CM.store.get('settings', {{}}).look === 'pixel' && sel2.value === 'pixel' && CM.renderer.crisp === true && CM.renderer.texture !== before;
+      const card = document.querySelector('#party canvas');
+      out.partyRestyled = card && card.toDataURL() === CM.art.portrait(g.party[0].cls, 44, 'pixel').toDataURL() && card.toDataURL() !== CM.art.portrait(g.party[0].cls, 44, 'drawn').toDataURL();
+      sel2.value = 'stone'; sel2.dispatchEvent(new Event('change'));
+      out.stoneApplied = g.settings.look === 'stone' && sel.value === 'stone' && CM.renderer.crisp === false;
+      document.querySelector('#btn-credits').click();
+      const credits = document.querySelector('#credits').textContent;
+      out.credits = document.querySelector('#dlg-credits').classList.contains('on') && credits.includes('Dungeon Crawl Stone Soup') && credits.includes('ambientCG');
+      // monsters wait while something is open over the dungeon (the frame loop leaves the game alone)
+      CM.ui.closeDialogs();
+      sel.value = 'pixel'; sel.dispatchEvent(new Event('change'));
+      return out; }})()""")
+    for key in ("packs", "decoded", "sameLayers", "sizes", "painted", "dolls", "icons", "keys", "spells", "applied", "partyRestyled", "stoneApplied", "credits"):
+        assert got[key] is True, (key, got)
+    support.pump(0.6)
+    px = ask("CM.renderer.pixel(Math.floor(CM.renderer.canvas.width / 2), Math.floor(CM.renderer.canvas.height * 0.85))")
+    assert sum(px[:3]) > 20 and ask("CM.renderer.crisp") is True, f"the pixel view is black: {px}"
+    run(PARSE)
+    still = ask("""(function(){ const g = CM.game; const f = CM.useFloor(g, CM.testFloor(2, ['#######', '#X...M#', '#######']));
+      CM.ui.openSheet(0); const key = Object.keys(f.things)[0]; g.wander = 0; return {key, open: CM.ui.dialogOpen()}; })()""")
+    assert still["open"], still
+    support.pump(1.6)
+    assert ask("Object.keys(CM.game.floor.things)[0]") == still["key"] and ask("CM.game.mode") == "explore", "the monsters moved while the sheet was open"
+    run("CM.ui.closeDialogs()")
+    support.pump(1.6)
+    assert ask("Object.keys(CM.game.floor.things)[0]") != still["key"] or ask("CM.game.mode") == "combat", "the monsters didn't stir once the sheet was closed"
+    run("const sel = document.querySelector('#look'); sel.value = 'drawn'; sel.dispatchEvent(new Event('change'))")
+    assert ask("CM.game.settings.look") == "drawn" and ask("CM.renderer.crisp") is False
     said = [s for s in page().said if "Error" in s or "error" in s]
     assert not said, f"the page's console: {said[:5]}"
 

@@ -26,7 +26,8 @@ CM.Game = class {
     this.stock = null; this.shopping = false;
     this.rnd = new CM.Random(Math.floor(Math.random() * 4294967296));
     this.fame = CM.store.get("fame", []);
-    this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false }, CM.store.get("settings", {}));
+    this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "drawn" }, CM.store.get("settings", {}));
+    if (!CM.LOOKS[this.settings.look]) this.settings.look = "drawn";
     this.tally = this.freshTally();      // what this run has come to: steps, kills, chests, fights, fled
     this.lastRun = CM.store.get("run", null);        // a run left part way, to continue
     this.dirty = false; this.sinceSave = 0; this.wander = 0;

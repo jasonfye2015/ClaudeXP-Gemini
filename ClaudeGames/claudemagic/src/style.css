@@ -35,7 +35,8 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 #expedition input { width: 190px; }
 #heroes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .hero { display: grid; grid-template-columns: 48px 1fr; gap: 8px; align-items: start; background: rgba(42,32,24,0.6); border: 1px solid #4A3A28; border-radius: 3px; padding: 5px 6px; }
-.hero canvas { width: 48px; height: 48px; border: 1px solid var(--edge); border-radius: 3px; image-rendering: auto; }
+.hero canvas { width: 48px; height: 48px; border: 1px solid var(--edge); border-radius: 3px; image-rendering: pixelated; }
+.calling canvas, .slot .portrait-slot canvas, #sheet-left > canvas, .recruit canvas, .member canvas, .roll canvas { image-rendering: pixelated; }
 .hero b { color: var(--ink); font-size: 13px; }
 .hero small { display: block; color: var(--dim); font-size: 11px; line-height: 1.35; }
 .hero .gear { color: #B0A080; font-size: 11px; }
@@ -83,7 +84,7 @@ table.stats tr.key td.hint { color: var(--gold); }
 .sheetbox { min-width: 780px; }
 .sheet-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
 #sheet-left { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: start; }
-#sheet-left canvas { width: 96px; height: 96px; border: 1px solid var(--edge); border-radius: 3px; }
+#sheet-left > canvas { width: 96px; height: 96px; border: 1px solid var(--edge); border-radius: 3px; }
 #sheet-left .facts div { color: var(--ink); font-size: 13px; margin: 3px 0; }
 #sheet-left .facts b { color: var(--gold); }
 .list-title { color: var(--gold); font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; margin: 10px 0 4px; }
@@ -129,6 +130,14 @@ table.stats tr.key td.hint { color: var(--gold); }
 #fame tr.details button { padding: 1px 7px; font-size: 11px; margin-left: 6px; }
 #fame .empty { color: var(--faint); font-style: italic; font-family: var(--serif); }
 #title .foot { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 2px; }
+#title .foot label { color: var(--dim); font-size: 13px; }
+#title .foot select, .dialog select { background: var(--pit); color: var(--ink); border: 1px solid var(--edge); font: 13px var(--serif); padding: 4px 6px; border-radius: 3px; }
+.credit { margin: 6px 0 10px; }
+.credit b { color: var(--gold); font-size: 13px; }
+.credit div { color: var(--dim); font-size: 12.5px; line-height: 1.4; max-width: 520px; }
+canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6px; image-rendering: pixelated; flex: 0 0 auto; }
+.gear-list .icon { width: 20px; height: 20px; margin-right: 2px; }
+#actions button.pick .icon { width: 18px; height: 18px; margin-right: 4px; display: inline-block; }
 #title .version { grid-column: 1 / -1; text-align: center; color: var(--faint); font-size: 11px; margin-top: -4px; }
 
 /* ---- the dungeon ---- */
@@ -186,7 +195,7 @@ table.stats tr.key td.hint { color: var(--gold); }
 #bag .lists { display: flex; gap: 10px; flex: 1 1 auto; min-height: 0; }
 .list { flex: 1 1 0; background: #1A140E; border: 1px solid var(--edge); overflow: auto; font: 13px var(--serif); }
 .list .head { position: sticky; top: 0; background: #2A2018; color: var(--gold); padding: 5px 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-.list .item { padding: 5px 8px; cursor: pointer; color: var(--ink); }
+.list .item { padding: 5px 8px; cursor: pointer; color: var(--ink); display: flex; align-items: center; gap: 2px; }
 .list .item:hover { background: #2E241A; }
 .list .item.sel { background: var(--wood-light); }
 .list .item .what { color: var(--dim); font-size: 12px; }

@@ -17,15 +17,31 @@ window.addEventListener("DOMContentLoaded", () => {
     document.body.appendChild(warn);
   }
 
-  // ---- textures by depth, the floor's mesh, the camera ----
-  const artCache = {};
-  let themeOn = -1;
+  // ---- textures by depth and by theme, the floor's mesh, the camera ----
+  let artCache = {}, cacheOrder = [];
+  let themeOn = -1, lookOn = null;
+  const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
   function useTheme(number) {
-    const i = CM.themeIndex(number);
-    if (i === themeOn || !renderer.ok) return;
-    if (!artCache[i]) artCache[i] = CM.art.build(CM.THEMES[i]);
-    renderer.setTextures(artCache[i]);
-    themeOn = i;
+    const i = CM.themeIndex(number), look = lookNow();
+    if ((i === themeOn && look === lookOn) || !renderer.ok) return;
+    const key = `${look}:${i}`;
+    if (!artCache[key]) {
+      artCache[key] = CM.art.build(CM.THEMES[i], look);
+      cacheOrder.push(key);
+      while (cacheOrder.length > 3) delete artCache[cacheOrder.shift()];      // (the stone's textures are large: a few depths at a time)
+    }
+    renderer.setTextures(artCache[key]);
+    themeOn = i; lookOn = look;
+  }
+  // the theme changed, or its pack has arrived: the view and every portrait and icon follow
+  function relook() {
+    themeOn = -1;
+    if (game.mode === "title") showDemo();
+    else if (game.floor && renderer.ok) {
+      useTheme(game.floor.number);
+      renderer.setFloor(game.floor, CM.themeFor(game.floor.number));
+    }
+    ui.restyle();
   }
   const demo = CM.makeFloor(1, "title");                                 // the corridor behind the title
   let demoCell = null;
@@ -82,6 +98,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
   const applySettings = (s) => {
+    if (lookOn !== null && lookNow() !== lookOn) relook();
     renderer.snap = !s.smooth;
     CM.audio.setEnabled(s.sound);
     CM.audio.setVolume(s.volume);
@@ -93,6 +110,7 @@ window.addEventListener("DOMContentLoaded", () => {
   applySettings(game.settings);
   CM.audio.unlock();                                                     // (where the page may: the Timeline's window; a browser waits for a click or key)
   soundscape();
+  CM.art.load().then(() => { if (lookNow() !== lookOn) relook(); });    // the packs, decoded: a theme that waited for them comes in
 
   // ---- what stands in the corridors: the floor's things, or the foes of the fight ----
   const dying = new Map();                                               // foe -> when it fell
@@ -273,7 +291,7 @@ window.addEventListener("DOMContentLoaded", () => {
         if (game.mode === "explore" && !renderer.busy && held.size) {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
-        game.tick(dt);                                                    // the monsters move; the run saves now and then
+        if (ui.screen === "play" && !ui.dialogOpen()) game.tick(dt);    // the monsters move (not while you read a sheet or the pack); the run saves now and then
         renderer.light = game.lightFactor();
         const { out, hud } = sprites();
         renderer.setSprites(out);

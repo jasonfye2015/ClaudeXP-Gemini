@@ -27,7 +27,7 @@ CM.UI = class {
       <p id="start-with"></p>
     </div>
     <div class="card" id="fame"><h2>Hall of Fame</h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div></div>
-    <div class="foot"><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button></div>
+    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
     <div class="version"></div>
   </div>
 </div>
@@ -64,10 +64,13 @@ CM.UI = class {
   <div class="row"><label for="set-volume">Volume</label><input type="range" id="set-volume" min="0" max="100"></div>
   <div class="row"><label for="set-music">Music (a tune for each depth, the fight, the camp)</label><input type="checkbox" id="set-music"></div>
   <div class="row"><label for="set-music-volume">Music volume</label><input type="range" id="set-music-volume" min="0" max="100"></div>
+  <div class="row"><label for="set-look">Theme - the look of the dungeon</label><select id="set-look"></select></div>
+  <div class="small" id="set-look-note"></div>
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><table class="keys"></table><div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-credits"><div class="box"><h2>Credits</h2><div id="credits"></div><div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-transfer"><div class="box"><h2>Export / Import</h2>
   <p class="small">Your run, the Hall of Fame and your settings, as text. Copy it to keep it or to carry it to another
   browser; paste a copy here and Import to bring it back.</p>
@@ -186,7 +189,8 @@ CM.UI = class {
       <div class="rowpick"><span>Row:</span><button data-row="front" class="${h.row === "front" ? "on" : ""}">Front</button><button data-row="back" class="${h.row === "back" ? "on" : ""}">Back</button>
         <small>${g.mode === "combat" ? "not in a fight" : h.row === "front" ? "takes the blows" : h.cls === "Rogue" || h.cls === "Ranger" ? "strikes from safety" : "safer, hits for half"}</small></div>
       <div class="list-title">Gear</div>
-      <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span> ${it ? `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
+      <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span><span class="icon-slot" data-slot="${slot}"></span> ${it ? `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
+    for (const span of facts.querySelectorAll(".icon-slot")) { const it = h[span.dataset.slot]; if (it) span.appendChild(this.icon(it, 20)); }
     for (const b of facts.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { if (g.setRow(h, b.dataset.row)) this.renderSheet(); });
     for (const b of facts.querySelectorAll("button[data-off]")) b.addEventListener("click", () => { const note = g.takeOff(this.sheetOf, b.dataset.off); if (note) g.say(note); this.renderSheet(); });
     left.appendChild(facts);
@@ -262,8 +266,8 @@ CM.UI = class {
   }
 
   portrait(cls, size) {
-    const key = `${cls}:${size}`;
-    if (!this.portraits[key]) this.portraits[key] = CM.art.portrait(cls, size);
+    const look = this.game.settings.look, key = `${look}:${cls}:${size}`;
+    if (!this.portraits[key]) this.portraits[key] = CM.art.portrait(cls, size, look);
     const c = document.createElement("canvas");
     c.width = c.height = size;
     c.getContext("2d").drawImage(this.portraits[key], 0, 0);
@@ -279,6 +283,11 @@ CM.UI = class {
     this.$("#btn-continue").addEventListener("click", () => g.continueRun());
     this.$("#btn-settings").addEventListener("click", () => this.openDialog("#dlg-settings"));
     this.$("#btn-keys").addEventListener("click", () => this.openDialog("#dlg-keys"));
+    this.$("#btn-credits").addEventListener("click", () => {
+      this.$("#credits").innerHTML = CM.art.credits().map(([who, what]) => `<div class="credit"><b>${this.esc(who)}</b><div>${this.esc(what)}</div></div>`).join("")
+        + `<p class="small">A Claude Timeline game. The tile set and the textures are public domain (CC0); the whole sets are kept with the Timeline's media for the updates to come.</p>`;
+      this.openDialog("#dlg-credits");
+    });
     this.$("#btn-transfer").addEventListener("click", () => {
       this.$("#transfer-text").value = g.exportText();
       this.$("#transfer-note").textContent = "";
@@ -304,7 +313,12 @@ CM.UI = class {
       this.fameOpen = this.fameOpen === i ? -1 : i;
       this.refreshTitle();
     });
+    this.renderClasses();
+  }
+
+  renderClasses() {
     const classes = this.$("#classes");
+    classes.innerHTML = "";
     for (const cls of CM.CLASS_ORDER) {
       const c = CM.CLASSES[cls], div = document.createElement("div");
       div.className = "calling";
@@ -314,6 +328,17 @@ CM.UI = class {
       div.appendChild(text);
       classes.appendChild(div);
     }
+  }
+
+  // the theme changed (or its pack arrived): every portrait and icon is drawn again
+  restyle() {
+    this.portraits = {};
+    this.renderClasses();
+    if (this.screen === "create") this.renderCreate();
+    this.$("#party").dataset.signature = "";
+    if (this.screen === "bag") this.fillBag();
+    if (this.$("#dlg-tavern").classList.contains("on")) this.renderTavern();
+    this.refresh();
   }
 
   // ---- who goes down: the creation screen ----
@@ -438,21 +463,31 @@ CM.UI = class {
     this.$("#btn-daily").classList.toggle("on", todays);
   }
 
+  icon(item, size = 22) {                                               // a thing's picture, by the theme
+    const c = CM.art.itemIcon(item, size, this.game.settings.look);
+    c.className = "icon";
+    return c;
+  }
+
   esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
   // ---- settings ----
   _settings() {
     const g = this.game, s = g.settings;
     const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
-    const smooth = this.$("#set-smooth"), fps = this.$("#set-fps");
+    const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look");
+    for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
-    smooth.checked = s.smooth; fps.checked = s.fps;
+    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn";
+    const note = () => { this.$("#set-look-note").textContent = CM.LOOKS[s.look] ? CM.LOOKS[s.look].what + "." : ""; };
+    note();
     const apply = () => {
       s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked;
       g.saveSettings();
       g.emit("settings", s);
     };
     for (const el of [sound, vol, music, mvol, smooth, fps]) el.addEventListener("input", apply);
+    for (const sel of [look, titleLook]) sel.addEventListener("change", () => { s.look = sel.value; look.value = titleLook.value = s.look; note(); apply(); });
   }
 
   toggleFps() {
@@ -575,8 +610,12 @@ CM.UI = class {
     };
     if (this.xmenu && this.xmenu.kind === "list") {                       // between fights: who casts what
       const choices = this.outsideChoices();
-      choices.forEach((ch, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(ch.hero.name)}: ${CM.ABILITIES[ch.id].name}<small>${CM.ABILITIES[ch.id].mp} MP - ${CM.ABILITIES[ch.id].what}</small>`,
-        () => this.outsidePick(ch), false, "pick"));
+      choices.forEach((ch, i) => {
+        const b = btn(`<kbd>${i + 1}</kbd>${this.esc(ch.hero.name)}: ${CM.ABILITIES[ch.id].name}<small>${CM.ABILITIES[ch.id].mp} MP - ${CM.ABILITIES[ch.id].what}</small>`,
+          () => this.outsidePick(ch), false, "pick");
+        const ic = CM.art.spellIcon(ch.id, 18, g.settings.look);
+        if (ic) { ic.className = "icon"; b.insertBefore(ic, b.firstChild.nextSibling); }
+      });
       if (!choices.length) { const none = document.createElement("span"); none.className = "small"; none.textContent = "No one has a spell for outside a fight, or the magic for it."; box.appendChild(none); }
       btn("<kbd>Esc</kbd>Back", () => this.closeMenu());
       return;
@@ -648,7 +687,9 @@ CM.UI = class {
     } else if (h && cm.kind === "cast") {
       CM.abilitiesFor(h).forEach((id, i) => {
         const a = CM.ABILITIES[id], used = a.once && h.used && h.used[id], poor = h.mp < a.mp;
-        btn(`<kbd>${i + 1}</kbd>${a.name}<small>${a.mp ? a.mp + " MP - " : ""}${used ? "used this fight" : a.what}</small>`, () => this.castPick(id), used || poor, "pick");
+        const b = btn(`<kbd>${i + 1}</kbd>${a.name}<small>${a.mp ? a.mp + " MP - " : ""}${used ? "used this fight" : a.what}</small>`, () => this.castPick(id), used || poor, "pick");
+        const ic = CM.art.spellIcon(id, 18, g.settings.look);
+        if (ic) { ic.className = "icon"; b.insertBefore(ic, b.firstChild.nextSibling); }
       });
       btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
     } else if (h && cm.kind === "item") {
@@ -892,7 +933,10 @@ CM.UI = class {
       items.forEach((item, i) => {
         const row = document.createElement("div");
         row.className = "item" + (i === selected ? " sel" : "");
-        row.innerHTML = `${this.esc(item.unknown ? CM.baseName(item) : item.name)} <span class="what">${describe(item)}</span>`;
+        row.appendChild(this.icon(item));
+        const text = document.createElement("span");
+        text.innerHTML = `${this.esc(item.unknown ? CM.baseName(item) : item.name)} <span class="what">${describe(item)}</span>`;
+        row.appendChild(text);
         row.addEventListener("click", () => { onPick(i); this.fillBag(); });
         el.appendChild(row);
       });
