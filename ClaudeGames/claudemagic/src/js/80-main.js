@@ -252,7 +252,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const G = foe.guardian ? CM.GUARDIANS[foe.guardian] : null;
     const w = foe.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h = foe.boss ? 0.98 : G ? 0.92 * G.size : 0.85;
     return { x, y, dx, dz, w, h, wx: x + 0.5 + dx, wz: y + 0.5 + dz, wh: h + 0.02, m: foe, shade: foe.elite ? 1.2 : 1,
-      layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost" };
+      layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost", echo: Boolean(foe.echo) };
   }
 
   // the living dungeon: torches on some walls (never over a lever or carving, never on a secret door) and, in the
@@ -307,7 +307,7 @@ window.addEventListener("DOMContentLoaded", () => {
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
         const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
-        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: m.boss ? 0.98 : G ? 0.92 * G.size : 0.85, shade: m.elite ? 1.2 : 1,
+        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: m.boss ? 0.98 : G ? 0.92 * G.size : 0.85, shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
           lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
       }
     }
@@ -345,11 +345,12 @@ window.addEventListener("DOMContentLoaded", () => {
         if (m.fled) continue;
         const place = foePlace(m);
         if (!place) continue;
-        let alpha = 1, lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0);
+        const solid = place.echo ? 0.78 : 1;                             // (an echo of a guardian is drawn a little through)
+        let alpha = solid, lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0);
         if (m.hp <= 0) {                                                 // fallen: it fades, and sinks into the floor (a ghost rises)
           const t = (now - (dying.get(m) || now)) / 700;
           if (t >= 1) { dying.delete(m); continue; }
-          alpha = 1 - t;
+          alpha = solid * (1 - t);
           lift += place.ghost ? t * 0.6 : -t * 0.55;
         } else { place.index = living.indexOf(m); place.chosen = place.index === (game.target || 0); hud.push(place); }
         const flash = flashes.get(m) || 0;

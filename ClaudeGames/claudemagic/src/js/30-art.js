@@ -886,7 +886,9 @@ CM.art.summaryCard = function (e, title) {
   const d = CM.DIFFICULTIES[e.difficulty] ? CM.DIFFICULTIES[e.difficulty].name : "Fair";
   p.fillText(`${e.name}${title ? " " + title : ""}'s expedition - ${d}${e.daily ? ", today's dungeon" : ""}`, 150, 66);
   p.fillStyle = e.won ? "#F0D080" : "#E8DCC0"; p.font = "bold 17px Georgia, serif";
-  p.fillText(e.won ? `Slew the Lich King, with ${(e.gold || 0).toLocaleString()} gold` : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}, with ${(e.gold || 0).toLocaleString()} gold`, 150, 92);
+  const gold = `with ${(e.gold || 0).toLocaleString()} gold`;
+  p.fillText(CM.endlessFall(e) ? `Floor ${e.floor} of the endless dark${e.won ? ", crowned" : ""}, ${gold}` : e.bottom ? `To the bottom of the world, ${gold}`
+    : e.won ? `Slew the Lich King, ${gold}` : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}, ${gold}`, 150, 92);
   p.fillStyle = "#B0A080"; p.font = "13px Georgia, serif";
   p.fillText(`Seed ${e.seed || "?"} - ${e.date || ""}`, 150, 116);
   const t = e.tally || {}, lines = [];

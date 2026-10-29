@@ -4,7 +4,8 @@ Claude and Magic - twenty floors down, the Lich King waits
 A first-person dungeon crawler ("blobber", after Wizardry, Might and Magic and Eye of the Beholder): a party of four
 moves as one through twenty floors of stone, a square and a quarter-turn at a time, smoothly, in 3D. Chests and
 fallen monsters give gear and gold; a merchant's camp waits below floors 5, 10 and 15; the Lich King is on floor 20.
-When the whole party falls the run is over - the deepest runs go in the Hall of Fame.
+When the whole party falls the run is over - the deepest runs go in the Hall of Fame. Below the Lich King, the Deep goes
+down to the Root of the World on floor 50; an Endless expedition goes on below that, with no bottom.
 
 The dungeon (phase 2 of the big update)
   Each floor is rooms joined by corridors, with a set-piece room or two dropped in (a treasure vault behind a locked
@@ -295,6 +296,36 @@ The Deep (phase 7)
   CM.LORE to fifty, CM.deepGroup / makeElite, the Deep's special floors (20-world.js); game.crown() and the "crowned"
   event, guardianMove / summonFor, bottom, the Hall of Fame's order (60-game.js); the crowning dialog (70-ui.js);
   depth4-9 tunes (55-music.js); fungus, crystal and root furniture (30-art.js).
+
+Endless (phase 8)
+  An Expedition choice on the creation screen, beside the difficulty: The dungeon (as ever: fifty floors, the Lich
+  King on 20, the Root of the World and the bottom on 50) or Endless. An Endless expedition is the same fifty floors
+  and the same king - and then no bottom. The Root's fall opens a shaft like any guardian's, a camp waits below the
+  fiftieth floor and below every fifth floor after it, and below the Root the stair goes on:
+    The bands come round again, five floors each, in order: the Catacombs on 51-55, the Flooded Vaults on 56-60, and
+    so on to the Root of the World on 96-100, and the Catacombs again on 101 - with their own stone, tunes and
+    monsters (the first four bands' kinds come back at the depth's level: floor 61 fights the Dwarven Halls' ogres
+    and trolls at level 40). The monsters' level keeps climbing (half a level a floor), the bands are a monster
+    larger and a leader comes three times in ten; the special floors (flooded, dark, labyrinth) come round where the
+    first fifty had them, of whatever kind the dark dreams.
+    The guardians return as echoes, every tenth floor, in the order they were met: the Rat King's Echo on 60, the
+    Drowned Knight's on 70 ... the Root's on 140, the Rat King's again on 150. An echo is the guardian grown to the
+    depth (its strength scaled by this floor's monster level against its own floor's), drawn a little through, in
+    its own lair with its own moves; it leaves no relic and is no trophy - "the echo fades, and leaves nothing but
+    the shaft it stood over".
+    The dark deepens: on floors 61, 71, 81 ... one of the daily dungeon's mutators the run doesn't have yet is added
+    - Hordes, Brittle, Swift, Gloom or Drought, chosen by the seed - and stays.
+    The carvings are not the story any more: eight sayings of the dream still dreaming, by the seed.
+  Endless runs go on a board of their own - the Hall of Fame has two now, The dungeon and Endless, a button each -
+  ranked by depth with the crown noted ("floor 64 - crowned"); the ending says "Floor N of the endless dark", the
+  summary card and the continue note say Endless, and Export carries the board. Both boards unlock the kits. Two
+  achievements more: Without End (floor 60) and Beyond the Dream (floor 100; its title ranks above To the Bottom).
+  An Endless party that takes the daylight on floor 20 is a victory like any, on the Endless board.
+  In code: CM.themeFor wraps below CM.BOTTOM, CM.GUARDIAN_ORDER / CM.echoOf / CM.guardianFor, CM.LORE_ENDLESS and
+  loreText("e:<n>"), CM.DEEPENING, CM.endlessFall, the achievements (10-data.js); CM.guardianMonster(id, floor) and
+  guardianGroup, the carvings, specialFor and deepGroup below the bottom (20-world.js); game.endless, campBelow,
+  deepen / deepened, fameEndless / sortFameEndless / allFame, endRun's board, slayGuardian's echo (60-game.js); the
+  Expedition select, the two boards, the ending (70-ui.js); echoes drawn through (80-main.js); the card (30-art.js).
 
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.

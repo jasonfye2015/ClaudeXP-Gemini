@@ -39,6 +39,8 @@ CM.Game = class {
     this.achievements = CM.store.get("achievements", {});   // earned ever: {id: {date, seed, name}}
     this.difficulty = "fair"; this.mutators = []; this.everFell = false; this.fightFell = false; this.earned = [];
     this.crowned = false; this.bottom = false;       // the Lich King slain this run; the bottom of the world reached
+    this.endless = false; this.deepened = [];        // an Endless expedition: the shaft has no bottom; the floors where the dark deepened
+    this.fameEndless = CM.store.get("fameEndless", []);   // the Endless board: how deep, ever
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
 
@@ -70,7 +72,7 @@ CM.Game = class {
     const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, floors: this.floors, light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed,
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
-      difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned) };
+      difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [] };
     this.lastRun = data;
     CM.store.set(this.runKey(this.slot), data);
     this.dirty = false; this.sinceSave = 0;
@@ -99,7 +101,7 @@ CM.Game = class {
     this.difficulty = CM.DIFFICULTIES[d.difficulty] ? d.difficulty : "fair";
     this.mutators = d.mutators || CM.mutatorsFor(d.seed || "");
     this.everFell = Boolean(d.everFell); this.fightFell = false; this.earned = d.earned || [];
-    this.crowned = Boolean(d.crowned); this.bottom = false;
+    this.crowned = Boolean(d.crowned); this.bottom = false; this.endless = Boolean(d.endless); this.deepened = d.deepened || [];
     this.seed = d.seed || CM.randomSeed();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -121,15 +123,20 @@ CM.Game = class {
     if (fl >= 30) this.achieve("abyss");
     if (this.bottom) this.achieve("bottom");
     if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); }
+    if (this.endless) {
+      entry.endless = true;
+      if (fl >= 60) this.achieve("endless");
+      if (fl >= 100) this.achieve("beyond");
+    }
     entry.titles = (this.earned || []).slice();
-    this.fame.push(entry);
+    if (this.endless) { this.fameEndless.push(entry); this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
+    else { this.fame.push(entry); this.sortFame(); CM.store.set("fame", this.fame); }
     if (won) this.trophy("lich");
-    this.sortFame();
-    CM.store.set("fame", this.fame);
     CM.store.remove(this.runKey(this.slot));
     this.lastRun = null;
     this.sound(won ? "victory" : "death");
-    this.titleNote = this.bottom ? "To the bottom of the world and back, with the Lich King's crown. There is no deeper."
+    this.titleNote = this.endless && !(won && fl <= CM.LAST_FLOOR) ? `Endless: the party went ${fl} floors down into a dark with no bottom${this.crowned ? ", with the Lich King's crown" : ""}. Their story ends there.`
+      : this.bottom ? "To the bottom of the world and back, with the Lich King's crown. There is no deeper."
       : won && this.floor.number > CM.LAST_FLOOR ? `With the Lich King's crown, the party went down into the Deep, and fell on floor ${this.floor.number}.`
       : won ? "The Lich King is no more. The party returns as legends!"
       : `The party fell on floor ${this.floor.number}. Their story ends here.`;
@@ -162,7 +169,7 @@ CM.Game = class {
   }
 
   exportText() {
-    return JSON.stringify({ game: "Claude and Magic", version: CM.version, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, settings: this.settings,
+    return JSON.stringify({ game: "Claude and Magic", version: CM.version, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
       trophies: this.trophies, vault: this.vault, achievements: this.achievements });
   }
 
@@ -174,6 +181,7 @@ CM.Game = class {
     else if (data.run && data.run.floor && data.run.party) { this.runs[0] = data.run; CM.store.set("run", data.run); }
     if (data.achievements && typeof data.achievements === "object") { this.achievements = Object.assign({}, this.achievements, data.achievements); CM.store.set("achievements", this.achievements); }
     if (Array.isArray(data.fame)) { this.fame = data.fame; this.sortFame(); CM.store.set("fame", this.fame); }
+    if (Array.isArray(data.fameEndless)) { this.fameEndless = data.fameEndless; this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
     if (data.settings) { Object.assign(this.settings, data.settings); this.saveSettings(); }
     if (data.trophies && typeof data.trophies === "object") { this.trophies = Object.assign({}, this.trophies, data.trophies); CM.store.set("trophies", this.trophies); }
     if (data.vault && typeof data.vault === "object" && data.vault.name) { this.vault = data.vault; CM.store.set("vault", this.vault); }
@@ -182,11 +190,11 @@ CM.Game = class {
   }
 
   // ---- starting, and the stairs between floors ----
-  newGame(seed, chosen, kit, difficulty, mutators) {                     // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned
+  newGame(seed, chosen, kit, difficulty, mutators, mode) {               // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned; mode: "endless" for no bottom
     this.seed = (seed || "").trim() || CM.randomSeed();
     this.party = CM.newParty(chosen);
     this.steps = 0;
-    this.kit = CM.unlocked(this.fame).includes(kit) ? kit : "pauper";
+    this.kit = CM.unlocked(this.allFame).includes(kit) ? kit : "pauper";
     this.recruits = null;
     this.identifying = false;
     this.bag = CM.startingBag(this.seed);
@@ -204,7 +212,7 @@ CM.Game = class {
     this.difficulty = CM.DIFFICULTIES[difficulty] ? difficulty : "fair";
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
     this.everFell = false; this.fightFell = false; this.earned = [];
-    this.crowned = false; this.bottom = false;
+    this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
     if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
@@ -213,7 +221,8 @@ CM.Game = class {
     else if (this.kit === "abyss") { this.gold += 150; this.bag.push(CM.rope(), CM.gem("diamond"), CM.scroll("mapping")); for (const h of this.party) { h.level = 3; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }
     this.enterFloor(1, "down");
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
-      + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : ""));
+      + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
+      + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : ""));
     if (this.mutators.length) this.say(`Today's dungeon: ${this.mutators.map((m) => `${CM.MUTATORS[m].name} - ${CM.MUTATORS[m].what}`).join("; ")}.`);
   }
 
@@ -261,13 +270,15 @@ CM.Game = class {
     if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.themeFor(number).name}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && number === CM.LAST_FLOOR + 1) this.say("The stair goes on below the palace, cut by no mason. The air is wet and old. The Deep begins here, and the carvings above never spoke of it.");
+    if (fresh && this.endless && number === CM.BOTTOM + 1) this.say("Below the Root, the stair goes on. It should not. The stone is the catacombs' stone again, and the dark is the same dark, and it does not end.");
+    if (fresh && this.endless && number > CM.BOTTOM + 10 && number % 10 === 1) this.deepen(number);     // (61, 71, 81 ...)
   }
 
   climbUp() {
     const n = this.floor.number;
     if (n === 1) { this.say("The way out. Not without the Lich King's crown."); return; }
     this.sound("stairs");
-    if (CM.CAMP_AFTER.includes(n - 1)) {                  // the camp is between this floor and the one above
+    if (this.campBelow(n - 1)) {                          // the camp is between this floor and the one above
       const above = this.floors[n - 1] || (this.floors[n - 1] = CM.makeFloor(n - 1, this.seed));
       this.floor = above;
       const ladder = this.cellOf(above, "ladder");
@@ -445,7 +456,7 @@ CM.Game = class {
     for (const m of this.alive()) m.hp = Math.max(1, m.hp - Math.max(1, Math.floor(m.max / 10)));
     this.sound("fall");
     this.emit("fell");
-    if (n >= CM.BOTTOM) { this.say("You fall into blackness... and land, bruised, on the stone below."); return; }
+    if (n >= CM.BOTTOM && !this.endless) { this.say("You fall into blackness... and land, bruised, on the stone below."); return; }
     this.say(`You fall to floor ${n + 1}, bruised but alive.`);
     this.enterFloor(n + 1, "fall", from);
   }
@@ -575,7 +586,7 @@ CM.Game = class {
       this.emit("change");
     } else if (thing && thing.type === "ladder") {
       this.sound("stairs");
-      if (CM.CAMP_AFTER.includes(fl.number)) {
+      if (this.campBelow(fl.number)) {
         this.setMode("camp");
         this.saveRun();
         this.say(`Halfway down a long shaft, a lantern glows: a merchant's camp beneath floor ${fl.number}. Rest, trade, and see to the fallen.`);
@@ -747,7 +758,8 @@ CM.Game = class {
     const who = Object.entries(names).map(([k, n]) => CM.plural(n, k)).join(", ");
     const guardian = this.foes.find((m) => m.guardian);
     if (this.foes.some((m) => m.boss)) this.say(`The Lich King rises from his throne. "You took your time," he says.${this.phylactery ? "" : " Somewhere, his heart beats."}`);
-    else if (guardian) this.say(CM.GUARDIANS[guardian.guardian].intro + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
+    else if (guardian) this.say(CM.GUARDIANS[guardian.guardian].intro + (guardian.echo ? " It is not the thing itself: it is what the dark remembers of it, and the dark remembers it stronger." : "")
+      + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
     if ((theyCame || this.inDark()) && !this.alive().some((h) => CM.trait(h, "slippery")) && this.rnd.chance(0.5)) {   // surprise: they're on you before you can draw...
@@ -1277,13 +1289,13 @@ CM.Game = class {
 
   // a guardian falls: its relic into the pack, a trophy kept between runs, and the shaft it stood over is open
   slayGuardian(m) {
-    const id = m.guardian, G = CM.GUARDIANS[id], relic = G.relic ? CM.relic(id) : null;
+    const id = m.guardian, G = CM.GUARDIANS[id], relic = G.relic && !m.echo ? CM.relic(id) : null;
     this.tally.guardians = (this.tally.guardians || []).concat(id);
-    this.trophy(id);
+    if (!m.echo) this.trophy(id);
     if (relic) this.bag.push(relic);
     this.sound("toll");
     this.say(G.fall);
-    this.say(relic ? `${G.take} (${relic.name}: ${CM.itemLabel(relic)}.)` : G.take);
+    this.say(m.echo ? "The echo fades, and leaves nothing but the shaft it stood over." : relic ? `${G.take} (${relic.name}: ${CM.itemLabel(relic)}.)` : G.take);
     this.emit("fx", { kind: "relic", item: relic });
   }
 
@@ -1626,7 +1638,7 @@ CM.Game = class {
     if (guardian) {
       this.slayGuardian(guardian);
       if (!this.fightFell) this.achieve("untouched");
-      if (CM.GUARDIANS[guardian.guardian].final) { this.bottom = true; this.endRun(true); return; }
+      if (CM.GUARDIANS[guardian.guardian].final && !this.endless && !guardian.echo) { this.bottom = true; this.endRun(true); return; }
     }
     if (boss) { this.crown(); return; }
     this.setMode("explore");
@@ -2257,6 +2269,24 @@ CM.Game = class {
     this.emit("fx", { kind: "relic" });
     this.emit("achieved", id);
     return true;
+  }
+
+
+  // ---- Endless: no bottom - the bands come round again, the guardians echo, and the dark deepens ----
+  get allFame() { return this.fame.concat(this.fameEndless || []); }   // (both boards: what has been reached, ever, unlocks the kits)
+  campBelow(n) { return CM.CAMP_AFTER.includes(n) || Boolean(this.endless && n >= CM.BOTTOM && n % 5 === 0); }
+  deepen(number) {                                                       // every tenth floor below the bottom, a mutator more - one the run is without
+    const left = CM.DEEPENING.filter((m) => !this.has(m));
+    if (!left.length || (this.deepened || []).includes(number)) return null;
+    this.deepened = (this.deepened || []).concat(number);
+    const m = left[CM.hashSeed(`${this.seed}:deepen:${number}`) % left.length];
+    this.mutators = (this.mutators || []).concat(m);
+    this.say(`The dark deepens. ${CM.MUTATORS[m].name}: ${CM.MUTATORS[m].what}.`);
+    return m;
+  }
+  sortFameEndless() {
+    this.fameEndless.sort((a, b) => b.floor - a.floor || b.gold - a.gold);
+    this.fameEndless = this.fameEndless.slice(0, 10);
   }
 
   // ---- a level earned is a boon chosen ----

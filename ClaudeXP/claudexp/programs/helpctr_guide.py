@@ -177,7 +177,9 @@ CATALOG = {
                              "slots, keys you can set, a gamepad and a tap on the view, and a summary card to copy or save. And below the Lich "
                              "King, the Deep: thirty floors more in six bands - the Drowned Town, the Fungal Deep, the Crystal Caverns, the "
                              "Foundry, the Ossuary and the Root of the World - with their own monsters, a guardian every fifth floor and the "
-                             "Root at the bottom; slay the king and choose the daylight or the shaft behind the throne. "
+                             "Root at the bottom; slay the king and choose the daylight or the shaft behind the throne. Or set out on an "
+                             "Endless expedition: below the fiftieth floor the bands come round again, the guardians return as echoes every "
+                             "tenth floor, the dark deepens every ten, and the run goes on a board of its own, by depth. "
                              "When the whole party falls, the run ends on a screen that tells how it went, and "
                              "starts over. One HTML file: it plays in a browser too, and on its own from the "
                              "launcher's APPS."),

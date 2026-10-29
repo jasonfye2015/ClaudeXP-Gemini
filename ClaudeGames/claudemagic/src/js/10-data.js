@@ -373,6 +373,7 @@ CM.MUTATORS = {
   gloom: { name: "Gloom", what: "torches burn twice as fast" },
   lean: { name: "Lean", what: "the party sets out without potions, and with 100 gold more" },
 };
+CM.DEEPENING = ["hordes", "brittle", "swift", "gloom", "drought"];      // Endless: the dark deepens with one of these every ten floors below the bottom
 CM.mutatorsFor = function (seed) {
   if (!String(seed).startsWith("daily-")) return [];
   const ids = Object.keys(CM.MUTATORS), a = CM.hashSeed(`${seed}:mutator:1`) % ids.length;
@@ -382,12 +383,14 @@ CM.mutatorsFor = function (seed) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  beyond: { name: "Beyond the Dream", what: "Reach floor 100 in an Endless expedition", title: "Beyond the Dream" },
   bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the fiftieth floor", title: "of the Bottom" },
   crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
   swift: { name: "Swift", what: "Slay the Lich King in under 1,500 steps", title: "the Swift" },
   abyss: { name: "Of the Deep", what: "Reach floor 30, in the Deep", title: "of the Deep" },
+  endless: { name: "Without End", what: "Reach floor 60 in an Endless expedition", title: "Without End" },
   deeper: { name: "Of the Halls", what: "Reach floor 15", title: "of the Halls" },
   labyrinth: { name: "Minotaur's Bane", what: "Slay the Minotaur of the Labyrinth", title: "the Minotaur's Bane" },
   untouched: { name: "Unbowed", what: "Slay a guardian with no one falling in the fight", title: "the Unbowed" },
@@ -408,11 +411,14 @@ CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"
   ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
   ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"]];
 CM.keyName = (code) => (code || "").replace(/^Key/, "").replace(/^Digit/, "").replace(/^Arrow/, "").replace("Space", "Space").replace("Backquote", "`");
+// an Endless entry that ended below - not one that took the daylight with the crown
+CM.endlessFall = (e) => Boolean(e && e.endless && !(e.won && e.floor <= CM.LAST_FLOOR));
 // a run's story in a few lines, to copy and share (from a Hall of Fame entry)
 CM.summaryText = function (e) {
   const d = CM.DIFFICULTIES[e.difficulty] ? CM.DIFFICULTIES[e.difficulty].name : "Fair", t = e.tally || {};
-  const lines = [`Claude and Magic - ${e.name}'s expedition (${d})${e.mutators && e.mutators.length ? `, today's dungeon: ${e.mutators.map((m) => CM.MUTATORS[m] ? CM.MUTATORS[m].name : m).join(" and ")}` : ""}`,
-    `${e.won ? "Slew the Lich King on floor " + CM.LAST_FLOOR : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}`}, with ${(e.gold || 0).toLocaleString()} gold - seed ${e.seed || "?"} - ${e.date || ""}`];
+  const lines = [`Claude and Magic - ${e.name}'s ${e.endless ? "Endless " : ""}expedition (${d})${e.mutators && e.mutators.length ? `, ${e.endless ? "the dark deepened" : "today's dungeon"}: ${e.mutators.map((m) => CM.MUTATORS[m] ? CM.MUTATORS[m].name : m).join(" and ")}` : ""}`,
+    `${CM.endlessFall(e) ? `Floor ${e.floor} of the endless dark${e.won ? ", with the Lich King's crown" : ""}` : e.bottom ? "To the bottom of the world, floor " + CM.BOTTOM
+      : e.won && e.floor > CM.LAST_FLOOR ? `Slew the Lich King, and fell on floor ${e.floor} of the Deep` : e.won ? "Slew the Lich King on floor " + CM.LAST_FLOOR : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}`}, with ${(e.gold || 0).toLocaleString()} gold - seed ${e.seed || "?"} - ${e.date || ""}`];
   if (e.party && e.party.length) lines.push(`Party: ${e.party.join(", ")}`);
   lines.push(`${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}`);
   if (t.guardians && t.guardians.length) lines.push(`Guardians slain: ${t.guardians.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", ")}`);
@@ -541,11 +547,26 @@ CM.GUARDIANS = {
     relic: null, final: true,
     lair: { name: "The Root", lore: "g:root", rows: ["#####W#####", "#r.e...e.r#", "#.#.....#.#", "#r...B...r#", "#.#.....#.#", "#r.e...e.r#", "#####D#####"] } },
 };
-CM.guardianFor = (floor) => Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === floor) || null;
+CM.GUARDIAN_ORDER = ["rat", "knight", "forge", "queen", "mind", "tyrant", "master", "patriarch", "root"];
+CM.echoOf = (floor) => (floor > CM.BOTTOM && floor % 10 === 0 ? Math.floor((floor - CM.BOTTOM) / 10) : 0);     // Endless: 60 -> 1, 70 -> 2 ... which echo (0: none)
+CM.guardianFor = (floor) => (floor > CM.BOTTOM ? (CM.echoOf(floor) ? CM.GUARDIAN_ORDER[(CM.echoOf(floor) - 1) % CM.GUARDIAN_ORDER.length] : null)
+  : Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === floor) || null);
 CM.guardianHas = (m, passive) => Boolean(m && m.guardian && CM.GUARDIANS[m.guardian] && (CM.GUARDIANS[m.guardian].passives || []).includes(passive));
 CM.unmoved = (m) => Boolean(m && (m.boss || m.guardian));          // the Lich King and the guardians: not held, not put to sleep, not routed
-// what a carving says: the floor's part of the story, an odd one, or a guardian's (text "g:<guardian>")
+// below the bottom (Endless) the carvings are not the story any more: they are the dream, still dreaming
+CM.LORE_ENDLESS = [
+  "There is no floor below this one, the carving says. You are standing on the floor below this one.",
+  "The same hand, the same words, the same king. The dream did not end when the dreamer did.",
+  "A mark you made yourself, you would swear, on a floor you have never been to.",
+  "Here lie the first dead of Caer Duin, again. They are not tired of it. You will be.",
+  "The water rose and never fell, the carving says, as it said forty floors up. It is drier here. It is lying.",
+  "Turn back, in six languages. The seventh says: there is no back. There is only further.",
+  "The dwarves' word for this place has no end. Neither does the place.",
+  "Someone has started counting the floors here, and given up, and started again.",
+];
+// what a carving says: the floor's part of the story, an odd one, a guardian's (text "g:<guardian>") or the endless dark's ("e:<n>")
 CM.loreText = (text) => (typeof text === "string" && text.startsWith("g:") ? (CM.GUARDIANS[text.slice(2)] || {}).lore || ""
+  : typeof text === "string" && text.startsWith("e:") ? CM.LORE_ENDLESS[Number(text.slice(2)) % CM.LORE_ENDLESS.length]
   : text >= 0 ? CM.LORE[text] || CM.LORE[CM.LORE.length - 1] : CM.LORE_EXTRA[-text - 1] || CM.LORE_EXTRA[0]);
 
 // what a monster sounds like, by kind (the sounds are cooked in 50-audio.js)
@@ -586,7 +607,8 @@ CM.THEMES = [
     moss: [140, 40, 40], fog: [0.05, 0.015, 0.015], torch: [1.0, 0.6, 0.5], reach: 4.0, bones: 0.3, photos: "t1" },
 ];
 CM.AMBIENCE_OF = [0, 1, 2, 3, 1, 0, 3, 2, 0, 3];                      // which of the four ambiences (and footfalls) each band uses
-CM.themeFor = (number) => CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1];
+CM.themeFor = (number) => (number > CM.BOTTOM ? CM.THEMES[Math.floor((number - CM.BOTTOM - 1) / 5) % CM.THEMES.length]      // (Endless: below the bottom the bands come round again, five floors each)
+  : CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1]);
 CM.themeIndex = (number) => Math.max(0, CM.THEMES.indexOf(CM.themeFor(number)));
 
 CM.KEYS_HELP = [

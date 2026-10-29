@@ -13,7 +13,8 @@ that keeps it all; growth and craft (a path for each calling at level 5 that dee
 the camp's smith with his gems, the vault's heirloom for the next run); ways to play (three difficulties, the daily
 dungeon's mutators, achievements and titles, three expedition slots, keys as set, a gamepad and a tap on the view, the
 summary card); the Deep (thirty floors below the Lich King, six bands, their monsters and guardians, the crown's choice,
-the Root at the bottom); and the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
+the Root at the bottom); Endless (no bottom: the bands come round, the guardians echo, the dark deepens, a board of its
+own); and the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
 import importlib.util
 import json
 import os
@@ -1643,6 +1644,88 @@ def test_the_deep():
       for (const k of ['run', 'run2', 'run3', 'achievements', 'fame']) CM.store.remove(k);
       g.achievements = {{}}; g.runs = [null, null, null]; g.fame = []; g.lastRun = null; CM.ui.closeDialogs(); CM.ui.refreshTitle();
       return out; }})()""", timeout=60)
+    for key, value in got.items():
+        assert value is True, (key, got)
+    said = [s for s in page().said if "Error" in s or "error" in s]
+    assert not said, f"the page's console: {said[:5]}"
+
+
+def test_the_endless():
+    """Phase 8 - Endless: chosen when the party sets out, the shaft has no bottom. Below the fiftieth floor the ten bands
+    come round again (five floors each, the first bands with their own monsters at the depth's level), the guardians return
+    as echoes every tenth floor - grown to the depth, leaving no relic and no trophy - the Root's fall opens a shaft like
+    any guardian's, a fall goes on down, a camp waits below every fifth floor, the carvings are the dream still dreaming,
+    and every tenth floor the dark deepens with a mutator more; twenty floors below the bottom can be walked; Endless runs
+    go on a board of their own (by depth, the crown noted), with two achievements, the ending's and the summary's words,
+    the title's two boards, and Export carrying it; the dungeon as it was is untouched by the choice"""
+    run(PARSE)
+    got = ask(f"""(function(){{ const g = CM.game, out = {{}};
+      const fixed = (hit) => ({{next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l}});
+      // the bands come round, the guardians echo, the carvings dream
+      out.bands = CM.themeFor(51).name === 'The Catacombs' && CM.themeFor(57).name === 'The Flooded Vaults' && CM.themeFor(100).name === 'The Root of the World' && CM.themeIndex(101) === 0 && CM.themeFor(50).name === 'The Root of the World';
+      out.echoes = CM.echoOf(50) === 0 && CM.echoOf(60) === 1 && CM.echoOf(65) === 0 && CM.echoOf(140) === 9 && CM.guardianFor(60) === 'rat' && CM.guardianFor(70) === 'knight' && CM.guardianFor(140) === 'root' && CM.guardianFor(150) === 'rat' && CM.guardianFor(55) === null && CM.guardianFor(45) === 'patriarch';
+      const echo = CM.guardianMonster('rat', 60), plain = CM.guardianMonster('rat'), k = CM.monsterLevel(60) / CM.monsterLevel(5);
+      out.echoStronger = echo.name === "The Rat King's Echo" && echo.kind === 'The Rat King' && echo.echo === 1 && k === 8 && echo.max === plain.max * 8 && echo.atk === plain.atk * 8 && echo.df === Math.round(plain.df * Math.sqrt(8)) && plain.echo === 0
+        && CM.guardianMonster('rat', 5).max === plain.max && CM.guardianMonster('rat', 5).echo === 0;
+      const f60 = CM.makeFloor(60, {json.dumps(SEED)}), g60 = f60.things[CM.goalOf(f60)], f75 = CM.makeFloor(75, {json.dumps(SEED)}), f61 = CM.makeFloor(61, {json.dumps(SEED)});
+      out.floors = g60.type === 'guardian' && g60.group[0].guardian === 'rat' && g60.group[0].echo === 1 && g60.group.slice(1).every(m => m.max === 8 + CM.monsterLevel(60) * 6) && CM.solvable(f60)
+        && f75.things[CM.goalOf(f75)].type === 'ladder' && CM.solvable(f75) && CM.solvable(f61)
+        && Object.values(f61.features).some(ft => ft.type === 'carving' && typeof ft.text === 'string' && ft.text.startsWith('e:')) && CM.loreText('e:1') === CM.LORE_ENDLESS[1] && CM.loreText('e:' + (CM.LORE_ENDLESS.length + 1)) === CM.LORE_ENDLESS[1]
+        && Object.values(f75.things).filter(t => t.type === 'monsters').every(t => t.group.every(m => CM.monsterKind(m.kind).deep))
+        && CM.themeIndex(61) === 2 && Object.values(f61.things).filter(t => t.type === 'monsters').every(t => t.group.every(m => !CM.monsterKind(m.kind).deep && CM.MONSTERS.indexOf(CM.monsterKind(m.kind)) >= 8 && CM.MONSTERS.indexOf(CM.monsterKind(m.kind)) < 13 && m.max >= 8 + CM.monsterLevel(61) * 6));
+      out.walked = [...Array(20)].every((_, i) => {{ const n = 51 + i, f = CM.makeFloor(n, {json.dumps(SEED)}); return CM.solvable(f) && Object.values(f.things).some(t => t.type === (CM.guardianFor(n) ? 'guardian' : 'ladder')); }});
+      // the dungeon as it was: nothing above fifty changed
+      out.sameAbove = CM.guardianFor(50) === 'root' && CM.guardianFor(5) === 'rat' && CM.themeFor(21).name === 'The Drowned Town' && CM.specialFor(7, 'x') === CM.specialFor(7, 'x') && CM.CAMP_AFTER.join() === '5,10,15,25,30,35,40,45';
+      // an Endless expedition
+      for (const k of ['run', 'run2', 'run3', 'achievements', 'fame', 'fameEndless']) CM.store.remove(k);
+      g.achievements = {{}}; g.runs = [null, null, null]; g.setSlot(1); g.fame = []; g.fameEndless = [];
+      g.newGame({json.dumps(SEED)}, null, 'pauper', 'fair', [], 'endless');
+      out.chosen = g.endless === true && g.messages.some(m => m.includes('Endless expedition')) && g.campBelow(50) && g.campBelow(55) && g.campBelow(100) && !g.campBelow(53) && g.campBelow(45) && !g.campBelow(20);
+      g.saveRun(); out.saved = g.lastRun.endless === true;
+      g.newGame({json.dumps(SEED)}); out.plain = g.endless === false && !g.campBelow(50) && !g.campBelow(55) && g.campBelow(45);
+      g.newGame({json.dumps(SEED)}, null, 'pauper', 'fair', [], 'endless'); for (const h of g.party) {{ h.max = 900; h.hp = 900; h.level = 20; }}
+      // the Root's fall is no bottom here; the stair goes on, and the dark deepens
+      let f = CM.testFloor(50, ['####', '#XB#', '####']); f.things['2,1'] = {{ type: 'guardian', group: CM.guardianGroup('root', 50, new CM.Random(1)) }}; CM.useFloor(g, f);
+      g.rnd = fixed(() => false); g.move(0); g.combat.order = []; g.combat.index = 0; g.combat.waiting = g.party[0];
+      const R = g.foes[0]; R.risen = 1; for (const m of g.foes) m.hp = 0; g.afterBlows();
+      out.noBottom = g.mode === 'explore' && g.bottom === false && f.things['2,1'].type === 'ladder' && g.trophies.root !== undefined && g.fameEndless.length === 0 && g.fame.length === 0;
+      g.floor.pos = [2, 1]; g.use(); out.campBelowFifty = g.mode === 'camp' && g.floor.number === 50;
+      g.leaveCamp(); out.below = g.floor.number === 51 && g.mode === 'explore' && g.messages.some(m => m.includes('it does not end')) && g.messages.some(m => m.includes('Floor 51, The Catacombs'));
+      g.floors = {{}}; g.enterFloor(61, 'down'); out.deepens = g.mutators.length === 1 && CM.DEEPENING.includes(g.mutators[0]) && g.messages.some(m => m.includes('The dark deepens'));
+      const first = g.mutators[0]; g.floors = {{}}; g.enterFloor(71, 'down'); out.deepensAgain = g.mutators.length === 2 && g.mutators[1] !== first;
+      g.floors = {{}}; g.enterFloor(72, 'down'); out.notEveryFloor = g.mutators.length === 2;
+      g.floors = {{}}; g.enterFloor(61, 'down'); out.deepensOnce = g.mutators.length === 2 && g.deepened.join() === '61,71';
+      g.saveRun(); out.deepenedSaved = g.lastRun.deepened.join() === '61,71';
+      // a fall below fifty goes on down
+      g.floors = {{}}; f = CM.useFloor(g, CM.testFloor(50, ['####', '#XP#', '####'])); g.bag = g.bag.filter(i => i.kind !== 'rope'); g.move(0);
+      out.fallOn = g.floor.number === 51 && g.messages.some(m => m.includes('You fall to floor 51'));
+      // an echo leaves nothing
+      g.mutators = [];                                                                  // (the deepened dark's Brittle would halve it)
+      f = CM.testFloor(60, ['####', '#XB#', '####']); f.things['2,1'] = {{ type: 'guardian', group: CM.guardianGroup('rat', 60, new CM.Random(1)) }}; CM.useFloor(g, f);
+      g.rnd = fixed(() => false); g.move(0);
+      out.echoFight = g.mode === 'combat' && g.foes[0].echo === 1 && g.foes[0].name === "The Rat King's Echo" && g.foes[0].max === plain.max * 8 && g.messages.some(m => m.includes('what the dark remembers'));
+      g.combat.order = []; g.combat.index = 0; g.combat.waiting = g.party[0]; delete g.trophies.rat; const bag0 = g.bag.length; for (const m of g.foes) m.hp = 0; g.afterBlows();
+      out.echoLeavesNothing = g.mode === 'explore' && g.bag.length === bag0 && g.trophies.rat === undefined && f.things['2,1'].type === 'ladder' && g.messages.some(m => m.includes('The echo fades')) && g.tally.guardians.includes('rat');
+      // the Endless board, and its achievements
+      g.crowned = true; g.floor.number = 64; g.endRun(false);
+      out.board = g.fame.length === 0 && g.fameEndless.length === 1 && g.fameEndless[0].endless === true && g.fameEndless[0].floor === 64 && g.fameEndless[0].won === true && g.achievements.endless !== undefined && !g.achievements.beyond
+        && CM.store.get('fameEndless', []).length === 1 && g.titleNote.includes('no bottom') && g.fameEndless[0].titles.includes('endless')
+        && document.querySelector('#over-title').textContent === 'Floor 64 of the endless dark' && document.querySelector('#over-tally').textContent.includes('Endless board') && document.querySelector('#over-text').textContent.includes('come round again');
+      g.newGame({json.dumps(SEED)}, null, 'pauper', 'fair', [], 'endless'); g.floor.number = 100; g.endRun(false);
+      out.beyond = g.achievements.beyond !== undefined && g.fameEndless[0].floor === 100 && g.fameEndless[1].floor === 64 && CM.titleFor(g.achievements) === 'Beyond the Dream';
+      out.summary = CM.summaryText(g.fameEndless[1]).includes('Endless expedition') && CM.summaryText(g.fameEndless[1]).includes("Floor 64 of the endless dark, with the Lich King's crown");
+      // the title's two boards, and what travels
+      CM.ui.fameBoard = 'dungeon'; CM.ui.refreshTitle(); out.dungeonBoardEmpty = document.querySelector('#fame .empty') !== null && document.querySelector('#fame .boards button[data-board="dungeon"]').classList.contains('on');
+      document.querySelector('#fame .boards button[data-board="endless"]').click();
+      out.endlessBoard = document.querySelectorAll('#fame tr.row').length === 2 && document.querySelector('#fame tr.row td:nth-child(3)').textContent === 'floor 100' && document.querySelectorAll('#fame tr.row')[1].textContent.includes('floor 64 - crowned')
+        && document.querySelector('#fame .boards button[data-board="endless"]').classList.contains('on') && !document.querySelector('#fame .boards button[data-board="dungeon"]').classList.contains('on');
+      const ex = JSON.parse(g.exportText()); out.exported = ex.fameEndless.length === 2;
+      g.fameEndless = []; g.importText(JSON.stringify(ex)); out.imported = g.fameEndless.length === 2 && CM.unlocked(g.allFame).includes('abyss');
+      out.modeChoice = document.querySelectorAll('#mode option').length === 2 && (document.querySelector('#mode').value = 'endless', CM.ui.renderCreateNote(), document.querySelector('#create-note').textContent.includes('no bottom'));
+      document.querySelector('#mode').value = 'dungeon'; CM.ui.renderCreateNote();
+      for (const k of ['run', 'run2', 'run3', 'achievements', 'fame', 'fameEndless']) CM.store.remove(k);
+      g.achievements = {{}}; g.runs = [null, null, null]; g.fame = []; g.fameEndless = []; g.lastRun = null; CM.ui.fameBoard = 'dungeon'; CM.ui.closeDialogs(); CM.ui.refreshTitle();
+      return out; }})()""", timeout=120)
     for key, value in got.items():
         assert value is True, (key, got)
     said = [s for s in page().said if "Error" in s or "error" in s]
