@@ -99,8 +99,15 @@ CM.antidote = () => ({ name: "Antidote", kind: "antidote", power: 0, value: 15 }
 // one floor in a run may be special - all water, or all dark, or a labyrinth with something in it - decided by the
 // seed, never on a guardian's floor nor near the top or the bottom
 CM.specialFor = function (number, seed) {
-  if (CM.guardianFor(number) || number <= 2 || number >= CM.LAST_FLOOR - 1) return null;
+  if (CM.guardianFor(number) || number <= 2 || number === CM.LAST_FLOOR - 1 || number === CM.LAST_FLOOR || number >= CM.BOTTOM - 1) return null;
   const h = (what, n) => CM.hashSeed(`${seed}:special:${what}:${n}`);
+  if (number > CM.LAST_FLOOR) {                                        // the Deep has its own: a flooded street, a labyrinth of the forges, the ossuary's dark
+    const wading = 21 + h("wading2", 0) % 4, maze = 36 + h("maze2", 0) % 4, dark = [41, 42, 43, 44, 46, 47][h("dark2", 0) % 6];
+    if (number === wading && h("wading2", 1) % 10 < 7) return "wading";
+    if (number === maze && h("maze2", 1) % 10 < 7) return "maze";
+    if (number === dark && h("dark2", 1) % 10 < 6) return "dark";
+    return null;
+  }
   const wading = 7 + h("wading", 0) % 3, maze = 11 + h("maze", 0) % 4, dark = [3, 4, 12, 13, 14, 17, 18][h("dark", 0) % 7];
   if (number === wading && h("wading", 1) % 10 < 7) return "wading";
   if (number === maze && h("maze", 1) % 10 < 7) return "maze";
@@ -137,7 +144,8 @@ CM.upgradeMonster = function (m) {
 
 // a group: one kind, or (deeper down) two; now and then with a leader out of the ordinary
 CM.monsterGroup = function (floor, rnd) {
-  const top = Math.min(CM.MONSTERS.length - 1, Math.floor(floor * CM.MONSTERS.length / CM.LAST_FLOOR));
+  if (floor > CM.LAST_FLOOR) return CM.deepGroup(floor, rnd);
+  const top = Math.min(CM.SHALLOW - 1, Math.floor(floor * CM.SHALLOW / CM.LAST_FLOOR));
   const kind = CM.MONSTERS[rnd.int(Math.max(0, top - 2), top)];
   const count = rnd.int(1, 2 + Math.floor(floor / 6));
   const group = [];
@@ -146,7 +154,27 @@ CM.monsterGroup = function (floor, rnd) {
     const other = CM.MONSTERS[Math.max(0, CM.MONSTERS.indexOf(kind) - rnd.int(1, 2))];
     if (other !== kind) for (let i = Math.floor(count / 2); i < count; i++) group[i] = CM.makeMonster(other, floor, rnd);
   }
-  if (floor >= 3 && rnd.chance(0.12)) {                                  // a leader
+  if (floor >= 3 && rnd.chance(0.12)) CM.makeElite(group, rnd);
+  return group;
+};
+// a band of the Deep: the kinds of this depth's band (now and then one of the band above), two to five of them, and a
+// leader one time in five; their level climbs more slowly than the floors do (CM.monsterLevel)
+CM.deepGroup = function (floor, rnd) {
+  const band = CM.themeIndex(floor), level = CM.monsterLevel(floor);
+  const here = CM.MONSTERS.filter((m) => m.deep === band), above = CM.MONSTERS.filter((m) => m.deep === band - 1);
+  const kinds = here.length ? here : CM.MONSTERS.filter((m) => m.deep);
+  const kind = rnd.pick(kinds), count = rnd.int(2, 4 + (floor >= 36 ? 1 : 0));
+  const group = [];
+  for (let i = 0; i < count; i++) group.push(CM.makeMonster(kind, level, rnd));
+  if (count >= 3 && rnd.chance(0.4)) {
+    const other = rnd.pick(above.length && rnd.chance(0.4) ? above : kinds);
+    if (other !== kind) for (let i = Math.floor(count / 2); i < count; i++) group[i] = CM.makeMonster(other, level, rnd);
+  }
+  if (rnd.chance(0.2)) CM.makeElite(group, rnd);
+  return group;
+};
+CM.makeElite = function (group, rnd) {
+  {
     const id = rnd.pick(Object.keys(CM.ELITES)), e = CM.ELITES[id], m = group[0];
     m.name = `${e.name} ${m.name}`;
     m.elite = id;
@@ -286,7 +314,7 @@ CM.deepest = function (fame) {
 };
 CM.unlocked = function (fame) {
   const d = CM.deepest(fame);
-  return Object.keys(CM.KITS).filter((id) => CM.KITS[id].need === 0 || (CM.KITS[id].need > 20 ? d.won : d.floor >= CM.KITS[id].need));
+  return Object.keys(CM.KITS).filter((id) => CM.KITS[id].need === 0 || (CM.KITS[id].need === 21 ? d.won : d.floor >= CM.KITS[id].need));
 };
 CM.dailySeed = (date) => { const d = date || new Date(); return `daily-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
@@ -348,6 +376,37 @@ CM.LORE = [
   "The box from the east is empty now. What was in it, he put somewhere safer. Somewhere nearer his heart.",
   "The king's heart is not in his chest. Find it, and he can be ended. Fail, and he will rise as often as you kill him.",
   "Beyond this door he waits. He has waited so long that he has forgotten what for. Remind him.",
+  // the Deep: thirty floors below the palace, and the story under the story
+  "Below the palace the stair goes on. The masons did not cut it. They found it, and the king told them not to tell.",
+  "This was the lower town. The water came in a night, the carvings above say. Here they say: the water was let in.",
+  "A fishwife's mark, and under it: WE SAW THE SLUICES OPEN. WE SAW WHO OPENED THEM.",
+  "The queen's barge was found here, the carvings say, and the queen in it. Nothing says what else was in it.",
+  "She keeps the court she had. The drowned stand when she stands. Do not let her sing.",
+  "Below the drowned town, nothing was buried. The dead were put down a shaft, and the shaft was not empty.",
+  "The dwarves warned of the green glow. The king's answer was to send more dead down to feed it.",
+  "It thinks. Slowly, in the dark, on what it is given. It has been given a great deal.",
+  "A dwarf's mark: THE ROCK HERE SINGS. DO NOT LISTEN TO WHAT IT SINGS.",
+  "Here the mushroom-dark ends, and the stone goes clear as glass, and you can see things in it that are not behind it.",
+  "The crystal was the dwarves' pride. It grew in the shapes of their tools, and then of their hands, and then of them.",
+  "The deep halls above were abandoned for this, not for the king. The dwarves never told him why. It would have pleased him.",
+  "Carved very small, at knee height: IT HAS MY FACE NOW. GO ROUND.",
+  "The crystal sings one note. The dwarves said it was the note the world made when it was struck.",
+  "A throne room with no court but the light. The thing that sits there wears a crown it grew itself.",
+  "The forges of the deep halls, relit on the king's order, for one work. The smiths who did the work are the floor.",
+  "Iron was not enough for him. The physician's one page said: the heart may be kept apart. The box had to be made of something that could keep it.",
+  "They made the box here. It took the lives of the smiths, in the usual way and in one other way.",
+  "The master of the forges would not stop working when the smiths were dead. It is not clear it noticed.",
+  "The box was carried up these stairs by a man who was not a stranger from the east. He was from here.",
+  "The first dead of Caer Duin lie here, not in the catacombs. The catacombs hold the ones who were allowed to rest.",
+  "The Patriarch kept the dead for the king before there was a king. The king only learned from him.",
+  "A priest's mark: HE SHOWED THE KING HOW THE HEART MAY BE KEPT APART. HE HAD DONE IT FIRST, LONG AGO.",
+  "The bones here are arranged. Someone has been tidying for a thousand years.",
+  "Here the Patriarch's chapel. Bring a holy thing, or bring nothing.",
+  "Below the ossuary the stone is red, and warm, and it moves when you are not looking at it.",
+  "The dwarves' oldest word for this place means the root. They did not dig it. They dug down and it was there.",
+  "The king's voice came from here. The carvings above say he listened to a stranger's box. He listened to this.",
+  "Everything above is its dream. The plague, the water, the box, the king. It dreamed a king who would feed it.",
+  "There is no floor below this one. There is a root, and the root is the size of the world. Wake it, and end it, or leave it to dream.",
 ];
 CM.LORE_EXTRA = [
   "A recipe for barley bread, carved with great care, as if it mattered more than anything.",
@@ -489,7 +548,7 @@ CM.makeFloor = function (number, seed) {
 
   // set pieces first (one or two, where they fit), then ordinary rooms
   const guardian = CM.guardianFor(number), lair = guardian ? CM.GUARDIANS[guardian].lair : null;
-  const wanted = CM.TEMPLATES.filter((t) => number >= t.min && !(number === CM.LAST_FLOOR && t.name === "Pit Room"));
+  const wanted = CM.TEMPLATES.filter((t) => number >= t.min && !((number === CM.LAST_FLOOR || number === CM.BOTTOM) && t.name === "Pit Room"));
   rnd.shuffle(wanted);
   const chosen = special === "maze" ? [] : wanted.slice(0, number >= 6 ? 2 : 1);
   if (lair) chosen.unshift(lair);                                   // (the guardian's lair first, and away from the top left, where the party starts)
@@ -683,7 +742,7 @@ CM.makeFloor = function (number, seed) {
     else if (c === "K") floor.things[k] = { type: "key" };
     else if (c === "X") floor.dark.push(k);
     else if (c === "B" && guardian) floor.things[k] = { type: "guardian", group: CM.guardianGroup(guardian, number, rnd) };
-    else if ("ntve".includes(c)) floor.decor.push({ x, y, kind: { n: "nest", t: "throne", v: "anvil", e: "ember" }[c] });
+    else if ("ntvefcr".includes(c)) floor.decor.push({ x, y, kind: { n: "nest", t: "throne", v: "anvil", e: "ember", f: "fungus", c: "crystal", r: "root" }[c] });
   }
   for (const r of rooms) if (r.template && r.template.flood) {                     // a flooded set piece: water on every floor of it
     for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (grid[y][x] === 0) floor.decor.push({ x, y, kind: "water" });
@@ -728,7 +787,7 @@ CM.makeFloor = function (number, seed) {
   };
   const corridor = (x, y, k) => !roomCells.has(k);
   const wallFace = (x, y) => { const d = CM.DIRS.findIndex(([dx, dy]) => grid[y + dy][x + dx] === 1); return d; };
-  const bottom = number === CM.LAST_FLOOR;                        // (nothing to fall into below the last floor)
+  const bottom = number === CM.LAST_FLOOR || number === CM.BOTTOM;   // (nothing to fall into below the Lich King's floor - the Deep has its own stair - nor below the bottom)
   if (number >= 2 && !bottom) for (const [x, y] of freeCells((x, y, k) => roomCells.has(k)).slice(0, rnd.int(0, 1 + Math.floor(number / 7)))) place(key(x, y), { type: "pit" });
   if (number >= 3 && !bottom) for (const [x, y] of freeCells(corridor).slice(0, rnd.int(0, 2))) place(key(x, y), { type: "trapdoor", known: false });
   if (number >= 3 && rnd.chance(0.7)) {
@@ -777,14 +836,14 @@ CM.makeFloor = function (number, seed) {
   }
   // chests and monsters
   const spare = freeCells((x, y, k) => (dist.get(k) || 0) > 3);
-  for (let i = 0; i < 3 + Math.floor(number / 4) && spare.length; i++) {
+  for (let i = 0; i < Math.min(12, 3 + Math.floor(number / 4)) && spare.length; i++) {
     const [x, y] = spare.pop();
     const items = [];
     const n = rnd.int(1, 2);
     for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd));
     floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items, trap: trap() };
   }
-  for (let i = 0; i < (special === "maze" ? 3 : 5 + Math.floor(number / 2)) && spare.length; i++) {
+  for (let i = 0; i < (special === "maze" ? 3 : Math.min(14, 5 + Math.floor(number / 2))) && spare.length; i++) {
     const [x, y] = spare.pop();
     floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd) };
   }

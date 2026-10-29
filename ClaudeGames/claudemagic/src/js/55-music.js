@@ -10,6 +10,12 @@ CM.music = {
     depth1: { scale: [0, 1, 3, 5, 7, 8, 10], root: 48, tempo: 54, rest: 0.4, voice: "pad" },         // the Flooded Vaults: Phrygian
     depth2: { scale: [0, 2, 4, 5, 7, 9, 10], root: 52, tempo: 66, rest: 0.3, voice: "pluck" },       // the Dwarven Halls: Mixolydian
     depth3: { scale: [0, 2, 3, 5, 7, 8, 11], root: 47, tempo: 48, rest: 0.45, voice: "pad" },        // the Palace: harmonic minor
+    depth4: { scale: [0, 1, 3, 5, 7, 8, 10], root: 45, tempo: 50, rest: 0.45, voice: "pad" },        // the Drowned Town: Phrygian, lower
+    depth5: { scale: [0, 2, 3, 6, 7, 9, 10], root: 49, tempo: 58, rest: 0.4, voice: "pluck" },       // the Fungal Deep: Dorian with a sharp fourth
+    depth6: { scale: [0, 2, 4, 6, 7, 9, 11], root: 54, tempo: 62, rest: 0.35, voice: "pad" },        // the Crystal Caverns: Lydian, high and clear
+    depth7: { scale: [0, 1, 4, 5, 7, 8, 10], root: 44, tempo: 70, rest: 0.3, voice: "pluck" },       // the Foundry: Phrygian dominant, hammering
+    depth8: { scale: [0, 2, 3, 5, 7, 8, 10], root: 43, tempo: 46, rest: 0.5, voice: "pad" },         // the Ossuary: Aeolian, slow as a procession
+    depth9: { scale: [0, 1, 3, 4, 6, 8, 10], root: 41, tempo: 40, rest: 0.5, voice: "pad" },         // the Root: a whole-tone murk with a flat second
     battle: { scale: [0, 3, 5, 6, 7, 10], root: 45, tempo: 132, rest: 0.15, voice: "lead", drums: true },   // minor, with a flat fifth
     boss: { scale: [0, 1, 4, 5, 7, 8, 11], root: 43, tempo: 108, rest: 0.12, voice: "lead", drums: true },   // double harmonic, slower and heavier: a guardian, the Lich King
     camp: { scale: [0, 2, 4, 7, 9], root: 55, tempo: 76, rest: 0.3, voice: "pluck" },                // major pentatonic: a lute by the fire

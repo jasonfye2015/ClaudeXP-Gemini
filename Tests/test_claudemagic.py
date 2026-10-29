@@ -12,7 +12,8 @@ doors keyed to the carvings, pressure plates, a rope for pits, the flooded, dark
 that keeps it all; growth and craft (a path for each calling at level 5 that deepens at 10, tomes that teach a spell,
 the camp's smith with his gems, the vault's heirloom for the next run); ways to play (three difficulties, the daily
 dungeon's mutators, achievements and titles, three expedition slots, keys as set, a gamepad and a tap on the view, the
-summary card); and the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
+summary card); the Deep (thirty floors below the Lich King, six bands, their monsters and guardians, the crown's choice,
+the Root at the bottom); and the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
 import importlib.util
 import json
 import os
@@ -111,14 +112,14 @@ def test_the_build_is_current():
 
 
 def test_floors_are_solvable_and_stocked():
-    """Every floor, four seeds deep: the ladder (or the Lich King) can be reached - keys found before their doors,
+    """Every floor to the bottom of the world, four seeds deep: the ladder (or the Lich King, or a guardian) can be reached - keys found before their doors,
     levers before their gates, no pit in the only way; every room can be walked to; a guardian stands over the shaft
     in its lair on floors 5, 10 and 15, with a carving of its story; the furniture sits where it
     should (doors in doorways, teleporters in pairs, nothing two things deep, nothing to fall into on the last floor);
     chests and monsters at least as many as the depth says; the maze grows with the depth; and the same seed lays
     the same floor"""
     rows = ask("""(function(){ const out = [];
-      for (const seed of ["ember-crypt-417", "iron-oath-9", "x", "candle-echo-461"]) for (let n = 1; n <= 20; n++) {
+      for (const seed of ["ember-crypt-417", "iron-oath-9", "x", "candle-echo-461"]) for (let n = 1; n <= CM.BOTTOM; n++) {
         const f = CM.makeFloor(n, seed), t = Object.values(f.things), F = Object.entries(f.features);
         const grid = f.grid, open = (x, y) => CM.inBounds(f, x, y) && (grid[y][x] === 0 || (f.features[x + ',' + y] || {}).type === 'secret');
         const walk = CM.distances(grid, f.pos, open);
@@ -140,7 +141,7 @@ def test_floors_are_solvable_and_stocked():
           if ((ft.type === 'lever' || (ft.type === 'plate' && ft.gate)) && !(f.features[ft.gate] && f.features[ft.gate].type === 'gate')) problems.push(ft.type + ' to nothing at ' + k);
           if (ft.type === 'door' && ft.riddle !== undefined && (ft.locked || !CM.RIDDLES[ft.riddle] || CM.RIDDLES[ft.riddle].lore + 1 >= n)) problems.push('a riddle that could not have been read at ' + k);
           if ((ft.type === 'lever' || ft.type === 'carving') && grid[y + CM.DIRS[ft.face][1]][x + CM.DIRS[ft.face][0]] !== 1) problems.push(ft.type + ' not on a wall at ' + k);
-          if ((ft.type === 'pit' || ft.type === 'trapdoor') && (n === 20 || (x === f.pos[0] && y === f.pos[1]))) problems.push(ft.type + ' where it must not be at ' + k);
+          if ((ft.type === 'pit' || ft.type === 'trapdoor') && (n === 20 || n === CM.BOTTOM || (x === f.pos[0] && y === f.pos[1]))) problems.push(ft.type + ' where it must not be at ' + k);
           if (ft.type === 'secret' && grid[y][x] !== 1) problems.push('secret door in the open at ' + k);
         }
         const locked = F.filter(([, ft]) => ft.type === 'door' && ft.locked).length, keys = t.filter(x => x.type === 'key').length;
@@ -152,7 +153,7 @@ def test_floors_are_solvable_and_stocked():
           same: JSON.stringify(CM.makeFloor(n, seed)) === JSON.stringify(f)});
       }
       out.push({differ: JSON.stringify(CM.makeFloor(1, 'a').grid) !== JSON.stringify(CM.makeFloor(1, 'b').grid)});
-      return out; })()""")
+      return out; })()""", timeout=180)
     assert rows.pop()["differ"], "two seeds gave the same floor"
     kinds = {"door": 0, "secret": 0, "pit": 0, "trapdoor": 0, "teleporter": 0, "spinner": 0, "fountain": 0, "altar": 0, "lever": 0}
     for r in rows:
@@ -164,9 +165,9 @@ def test_floors_are_solvable_and_stocked():
         assert r["same"], f"{where} isn't the same twice"
         assert r["carving"], f"{where} doesn't tell its part of the story"
         assert r["size"] == min(17 + (r["n"] // 4) * 2, 27), where
-        assert r["chests"] >= 3 + r["n"] // 4 and (r["special"] == "maze" or r["groups"] >= 5 + r["n"] // 2), (where, r["chests"], r["groups"])
-    totals = ask("""(function(){ const c = {}; for (const seed of ["ember-crypt-417", "iron-oath-9", "x", "candle-echo-461"]) for (let n = 1; n <= 20; n++)
-      for (const f of Object.values(CM.makeFloor(n, seed).features)) c[f.type] = (c[f.type] || 0) + 1; return c; })()""")
+        assert r["chests"] >= min(12, 3 + r["n"] // 4) and (r["special"] == "maze" or r["groups"] >= min(14, 5 + r["n"] // 2)), (where, r["chests"], r["groups"])
+    totals = ask("""(function(){ const c = {}; for (const seed of ["ember-crypt-417", "iron-oath-9", "x", "candle-echo-461"]) for (let n = 1; n <= CM.BOTTOM; n++)
+      for (const f of Object.values(CM.makeFloor(n, seed).features)) c[f.type] = (c[f.type] || 0) + 1; return c; })()""", timeout=180)
     for kind in kinds:
         assert totals.get(kind, 0) > 0, f"no {kind} on eighty floors: {totals}"
 
@@ -587,8 +588,9 @@ def test_the_fight():
       lich.hp = Math.floor(lich.max * 0.5); g.combat.summonTick = 0; g.combat.reached = 0; const n0 = g.foes.length; g.monsterAct(lich); out.summons = g.foes.length === n0 + 2;
       lich.hp = Math.floor(lich.max * 0.2); g.combat.cold = 1; for (const p of g.party) p.hp = p.max; g.monsterAct(lich); out.cold = g.party.every(p => p.hp < p.max);
       for (const s of g.foes) if (s.summoned) s.hp = 0;
-      g.phylactery = true; lich.hp = 1; g.combat.waiting = kn; g.act('fight', 0);
-      out.slain = g.mode === 'title' && g.fame.length > 0 && g.fame[0].won === true;
+      g.phylactery = true; lich.hp = 1; g.combat.waiting = kn; const fame0 = g.fame.length; g.act('fight', 0);
+      out.slain = g.crowned === true && g.mode === 'explore' && g.fame.length === fame0 && document.querySelector('#dlg-over').classList.contains('crowning')
+        && (document.querySelector('#btn-over-daylight').click(), g.mode === 'title' && g.fame.length === fame0 + 1 && g.fame[0].won === true);   // (the crown, then the daylight)
       const f19 = CM.makeFloor(19, {json.dumps(SEED)}); const pk = Object.keys(f19.things).find(k => f19.things[k].type === 'phylactery');
       out.heart = Boolean(pk) && CM.reachable(f19).has(pk) && !Object.values(CM.makeFloor(18, {json.dumps(SEED)}).things).some(t => t.type === 'phylactery');
       // the Rogue picks locks; healing and Light between fights; the heart smashed
@@ -707,7 +709,7 @@ def test_the_hoard():
       g.newGame(CM.dailySeed()); g.endRun(false); out.dailyMarked = g.fame.some(e => e.daily === true && Array.isArray(e.party) && e.seed === CM.dailySeed());
       // the title knows
       g.fame = [{{name: 'x', floor: 10, gold: 1, won: false, date: 'd'}}]; CM.ui.refreshTitle();
-      out.titleUnlocks = document.querySelectorAll('#unlocks .unlock').length === 5 && document.querySelectorAll('#unlocks .unlock.got').length === 3 && document.querySelectorAll('#kit option').length === 3;
+      out.titleUnlocks = document.querySelectorAll('#unlocks .unlock').length === 6 && document.querySelectorAll('#unlocks .unlock.got').length === 3 && document.querySelectorAll('#kit option').length === 3;
       g.fame = []; CM.store.set('fame', []); CM.store.remove('run'); g.lastRun = null; CM.ui.refreshTitle();
       return out; }})()""")
     for key, value in got.items():
@@ -1022,7 +1024,7 @@ def test_the_guardians():
     got = ask(f"""(function(){{ const g = CM.game, out = {{}}, seen = [];
       g.on('fx', (e) => seen.push(e));
       const G = CM.GUARDIANS;
-      out.three = Object.keys(G).join() === 'rat,knight,forge' && G.rat.floor === 5 && G.knight.floor === 10 && G.forge.floor === 15
+      out.three = Object.keys(G).slice(0, 3).join() === 'rat,knight,forge' && G.rat.floor === 5 && G.knight.floor === 10 && G.forge.floor === 15
         && CM.guardianFor(5) === 'rat' && CM.guardianFor(20) === null && CM.unmoved(CM.bossMonster()) && CM.unmoved(CM.guardianMonster('forge')) && !CM.unmoved(CM.makeMonster(CM.MONSTERS[0], 1, new CM.Random(1)));
       out.lore = CM.loreText('g:rat') === G.rat.lore && CM.loreText(0) === CM.LORE[0] && CM.loreText(-1) === CM.LORE_EXTRA[0];
       const need = Object.values(G).map(x => 'monster:' + x.name).concat(['nest', 'throne', 'anvil', 'ember']);
@@ -1116,7 +1118,7 @@ def test_the_guardians():
       g.endRun(false);
       out.fame = g.fame.length === 1 && g.fame[0].tally.guardians.length === 3 && document.querySelector('#over-tally').textContent.includes('Guardians slain');
       CM.ui.fameOpen = 0; CM.ui.refreshTitle();
-      out.trophies = document.querySelectorAll('#trophies .unlock').length === 4 && document.querySelectorAll('#trophies .unlock.got').length === 3
+      out.trophies = document.querySelectorAll('#trophies .unlock').length === Object.keys(CM.GUARDIANS).length + 1 && document.querySelectorAll('#trophies .unlock.got').length === 3
         && document.querySelector('#fame tr.details').textContent.includes('Guardians slain: the Rat King, the Drowned Knight, the Forge-Warden')
         && JSON.parse(g.exportText()).trophies.forge !== undefined;
       g.trophies = {{}}; CM.store.remove('trophies'); g.fame = []; CM.store.remove('fame'); CM.ui.fameOpen = -1; CM.ui.refreshTitle();
@@ -1549,6 +1551,98 @@ def test_the_ways_to_play():
       for (const k of ['run', 'run2', 'run3', 'achievements', 'fame']) CM.store.remove(k);
       g.achievements = {{}}; g.runs = [null, null, null]; g.setSlot(1); g.fame = []; g.lastRun = null; g.settings.smooth = true; g.emit('settings', g.settings); CM.ui.refreshTitle();
       return out; }})()""")
+    for key, value in got.items():
+        assert value is True, (key, got)
+    said = [s for s in page().said if "Error" in s or "error" in s]
+    assert not said, f"the page's console: {said[:5]}"
+
+
+def test_the_deep():
+    """Phase 7 - the Deep: the themes run from floor 1 to the bottom of the world in ten bands; the Deep's monsters are
+    its own and never climb above the Lich King, at a level that climbs more slowly than the floors; a guardian stands
+    over every fifth floor's shaft from 25 to 45 and the Root of the World over the fiftieth; the carvings go on to the
+    bottom; slaying the Lich King crowns the party without ending the run - the choice is theirs, the shaft opens behind
+    the throne, floor 21 is the Deep - and a fall there is a crowned fall in the Hall of Fame; the Deep's guardians' moves
+    (a lament that sleeps, spores that poison, shards that blind, a furnace breath, skeletons raised at the Deep's level,
+    a quake) and what regrows; the Root's fall is the bottom and the run's triumphant end; the Abyss kit at floor 30;
+    the three themes build the Deep's bands with their new furniture; and six tunes more"""
+    run(PARSE)
+    got = ask(f"""(function(){{ const g = CM.game, out = {{}};
+      const fixed = (hit) => ({{next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l}});
+      // the bands
+      out.themes = CM.THEMES.length === 10 && CM.THEMES[0].floors[0] === 1 && CM.THEMES[9].floors[1] === CM.BOTTOM
+        && CM.THEMES.every((t, i) => i === 0 || t.floors[0] === CM.THEMES[i - 1].floors[1] + 1) && CM.themeFor(33).name === 'The Crystal Caverns' && CM.themeIndex(50) === 9;
+      out.camps = CM.CAMP_AFTER.join() === '5,10,15,25,30,35,40,45' && CM.LORE.length === CM.BOTTOM && new Set(CM.LORE).size === CM.BOTTOM;
+      // the Deep's monsters, and their level
+      const r = new CM.Random(5); let shallowDeep = 0, deepShallow = 0, deepLevels = [];
+      for (let n = 1; n <= 20; n++) for (let i = 0; i < 6; i++) for (const m of CM.monsterGroup(n, r)) if (CM.monsterKind(m.kind).deep) shallowDeep++;
+      for (let n = 21; n <= 50; n++) for (let i = 0; i < 6; i++) for (const m of CM.monsterGroup(n, r)) {{ if (!CM.monsterKind(m.kind).deep) deepShallow++; deepLevels.push(m.max); }}
+      out.deepKinds = shallowDeep === 0 && deepShallow === 0 && CM.MONSTERS.filter(m => m.deep).length === 12 && CM.SHALLOW === 16 && CM.MONSTERS[15].name === 'Wyvern';
+      out.deepLevel = CM.monsterLevel(20) === 20 && CM.monsterLevel(30) === 25 && CM.monsterLevel(50) === 35 && Math.max(...deepLevels) <= Math.round((8 + 35 * 6) * 1.5) + 1;
+      const bands = {{}}; for (let n = 21; n <= 50; n++) for (const m of CM.monsterGroup(n, r)) bands[CM.themeIndex(n)] = (bands[CM.themeIndex(n)] || new Set()).add(m.kind);
+      out.bandsDiffer = Object.values(bands).every(set => [...set].every(k => CM.monsterKind(k).deep)) && Object.keys(bands).length === 6;
+      // the guardians of the Deep over their shafts, and the Root at the bottom
+      const guards = {{}};
+      for (const n of [25, 30, 35, 40, 45, 50]) {{ const f = CM.makeFloor(n, {json.dumps(SEED)}), gk = CM.goalOf(f), th = gk && f.things[gk];
+        guards[n] = th && th.type === 'guardian' ? th.group[0].guardian : null; }}
+      out.guards = JSON.stringify(guards) === JSON.stringify({{ 25: 'queen', 30: 'mind', 35: 'tyrant', 40: 'master', 45: 'patriarch', 50: 'root' }}) && CM.GUARDIANS.root.final === true && CM.GUARDIANS.root.relic === null;
+      out.lairs = ['mind', 'tyrant', 'root'].every(id => {{ const f = CM.makeFloor(CM.GUARDIANS[id].floor, {json.dumps(SEED)}); return f.decor.some(d => d.kind === {{ mind: 'fungus', tyrant: 'crystal', root: 'root' }}[id]); }});
+      // the crown: the Lich King falls, the party stays, the shaft opens
+      for (const k of ['run', 'run2', 'run3', 'achievements', 'fame']) CM.store.remove(k);
+      g.achievements = {{}}; g.runs = [null, null, null]; g.setSlot(1); g.fame = []; g.newGame({json.dumps(SEED)});
+      for (const h of g.party) {{ h.max = 400; h.hp = 400; h.mp = 50; h.maxmp = 50; h.level = 12; }}
+      let f = CM.testFloor(20, ['####', '#XB#', '####']); f.things['2,1'] = {{ type: 'boss', group: [CM.bossMonster()] }}; CM.useFloor(g, f);
+      g.phylactery = true; g.rnd = fixed(() => false); g.move(0); out.lichFight = g.mode === 'combat' && g.foes[0].boss === true;
+      let crowned = 0; g.on('crowned', () => crowned++);
+      for (const m of g.foes) m.hp = 0; g.afterBlows();
+      out.crowned = g.crowned === true && crowned === 1 && g.mode === 'explore' && g.fame.length === 0 && f.things['2,1'].type === 'ladder' && g.achievements.crown !== undefined && g.trophies.lich !== undefined
+        && g.messages.some(m => m.includes('The Deep')) && document.querySelector('#dlg-over').classList.contains('crowning') && document.querySelector('#dlg-over').classList.contains('on');
+      document.querySelector('#btn-over-deep').click(); out.choseDeep = !document.querySelector('#dlg-over').classList.contains('on') && g.mode === 'explore' && g.crowned;
+      g.floor.pos = [2, 1]; g.use(); out.intoTheDeep = g.floor.number === 21 && g.floor !== f && CM.themeFor(21).name === 'The Drowned Town' && g.messages.some(m => m.includes('The Deep begins here'));
+      g.saveRun(); const saved = g.lastRun; out.savedCrown = saved.crowned === true;
+      g.endRun(false); out.crownedFall = g.fame[0].won === true && g.fame[0].floor === 21 && g.fame[0].bottom === false && g.titleNote.includes('went down into the Deep');
+      CM.ui.refreshTitle(); out.fameWords = document.querySelector('#fame td.won').textContent === 'SLEW THE LICH KING, floor 21';
+      // the daylight instead
+      g.newGame({json.dumps(SEED)}); f = CM.testFloor(20, ['####', '#XB#', '####']); f.things['2,1'] = {{ type: 'boss', group: [CM.bossMonster()] }}; CM.useFloor(g, f);
+      g.phylactery = true; g.rnd = fixed(() => false); g.move(0); for (const m of g.foes) m.hp = 0; g.afterBlows();
+      document.querySelector('#btn-over-daylight').click(); out.daylight = g.mode === 'title' && g.fame.some(e => e.won === true && e.floor === 20 && !e.bottom) && g.titleNote.includes('legends');
+      // the Deep's guardians' moves
+      g.newGame({json.dumps(SEED)}); for (const h of g.party) {{ h.max = 900; h.hp = 900; h.level = 18; h.status = {{}}; }}
+      const [knight, rogue, cleric, mage] = g.party;
+      const fight = (id, n) => {{ const fl = CM.testFloor(n, ['####', '#XB#', '####']); fl.things['2,1'] = {{ type: 'guardian', group: CM.guardianGroup(id, n, new CM.Random(1)) }}; CM.useFloor(g, fl);
+        g.rnd = fixed((p) => p >= 0.5); g.move(0); g.combat.order = []; g.combat.index = 0; g.combat.waiting = knight; g.combat.taunter = knight; g.combat.tauntUntil = 99; for (const h of g.party) {{ h.hp = 900; h.status = {{}}; }} return g.foes[0]; }};
+      let G = fight('queen', 25); G.turns = 2; g.monsterAct(G); out.lament = g.party.filter(h => h.status.sleep).length === 4 && g.messages.some(m => m.includes("grief"));
+      for (const h of g.party) h.status = {{}}; G.turns = 5; const q0 = g.foes.length; g.monsterAct(G); out.court = g.foes.length === q0 + 2 && g.foes.slice(-1)[0].kind === 'Drowned' && g.foes.slice(-1)[0].max > 8 + 20 * 6;
+      G.hp = 0; g.afterBlows(); out.queenRises = G.hp === Math.floor(G.max / 3) && G.risen === 1 && g.messages.some(m => m.includes('The town will not let her go'));
+      G = fight('mind', 30); G.turns = 2; g.monsterAct(G); out.spores = g.party.every(h => h.status.poison) && g.messages.some(m => m.includes('spores'));
+      G.hp = 100; g.endRound(); out.regrows = G.hp === 100 + Math.floor(G.max * 0.05) && g.messages.some(m => m.includes('regrows'));
+      G = fight('tyrant', 35); g.rnd = fixed(() => true); G.turns = 2; g.monsterAct(G); out.shatter = g.party.every(h => h.hp < 900 && h.status.blind === 2) && g.messages.some(m => m.includes('shards fly'));
+      const s0 = knight.hp; g.strike(knight, G); out.glass = knight.hp === s0 - (2 + Math.floor(35 / 5)) && g.messages.some(m => m.includes('A shard of the Crystal Tyrant cuts Knight'));
+      G = fight('master', 40); G.turns = 2; g.monsterAct(G); out.furnace = g.party.every(h => h.hp < 900) && g.messages.some(m => m.includes('fire pours'));
+      for (const h of g.party) h.hp = 900; G.turns = 5; g.rnd = fixed(() => false); g.monsterAct(G); out.masterHammer = knight.hp < 900 && rogue.hp < 900 && cleric.hp === 900 && g.messages.some(m => m.includes("hammer comes down"));
+      G = fight('patriarch', 45); G.turns = 2; const p0 = g.foes.length; g.monsterAct(G);
+      out.ossuary = g.foes.length === p0 + 2 && g.foes.slice(-1)[0].kind === 'Skeleton' && g.foes.slice(-1)[0].max === 8 + CM.monsterLevel(45) * 6 && g.messages.some(m => m.includes('rise from the heaps'));
+      G.turns = 5; g.monsterAct(G); out.curseWord = g.party.some(h => h.status.curse) && g.messages.some(m => m.includes('curse settles'));
+      g.rnd = fixed(() => true); knight.xp = 500; const x0 = knight.xp; G.turns = 6; g.monsterAct(G); out.oldHunger = knight.xp < x0 && g.messages.some(m => m.includes('draw out'));
+      // the Root of the World: the bottom
+      G = fight('root', 50); G.turns = 2; g.rnd = fixed(() => true); g.monsterAct(G); out.quake = g.party.every(h => h.hp < 900 && h.status.paralysis === 1) && g.messages.some(m => m.includes('floor of the world shakes'));
+      for (const h of g.party) h.status = {{}}; G.hp = 0; g.afterBlows(); out.rootKnits = G.hp === Math.floor(G.max / 3) && g.messages.some(m => m.includes('It is not done'));
+      g.crowned = true; g.tally.steps = 3000; for (const m of g.foes) m.hp = 0; g.afterBlows();
+      out.bottom = g.mode === 'title' && g.bottom === true && g.fame[0].bottom === true && g.fame[0].won === true && g.fame[0].floor === 50 && g.achievements.bottom !== undefined && g.achievements.abyss !== undefined
+        && g.titleNote.includes('There is no deeper') && g.trophies.root !== undefined && !g.bag.some(i => i.props && i.props.relic && i.name === 'undefined');
+      CM.ui.refreshTitle(); out.bottomWords = document.querySelector('#fame td.won').textContent === 'TO THE BOTTOM' && CM.titleFor(g.achievements) === 'of the Bottom'
+        && document.querySelector('#over-title').textContent === 'To the bottom of the world' && document.querySelector('#over-tally').textContent.includes('50 of 50');
+      // the Abyss kit, and the Legend's
+      out.kits = CM.unlocked([{{ floor: 30 }}]).includes('abyss') && !CM.unlocked([{{ floor: 30 }}]).includes('legend') && CM.unlocked([{{ floor: 20, won: true }}]).includes('legend') && !CM.unlocked([{{ floor: 29 }}]).includes('abyss');
+      g.fame = [{{ name: 'x', floor: 31, gold: 1, won: false, date: 'd' }}]; g.newGame({json.dumps(SEED)}, null, 'abyss');
+      out.abyssKit = g.kit === 'abyss' && g.gold === 180 && g.bag.some(i => i.kind === 'rope') && g.bag.some(i => i.kind === 'gem') && g.party.every(h => h.level === 3 && h.pending === 1);
+      // the three themes build the Deep, with the lairs' new furniture; six tunes more
+      out.looks = [4, 7, 9].every(i => ['drawn', 'pixel', 'stone'].every(look => {{ const b = CM.art.build(CM.THEMES[i], look); return ['wall', 'floor', 'fungus', 'crystal', 'root', 'monster:Rootling', 'monster:The Root of the World'].every(n => b.index[n] !== undefined); }}));
+      out.tiles = ['t4', 't6', 't9'].every(t => CM.packs.pixel.index[t + '.wall'] && CM.packs.pixel.index[t + '.floor']) && CM.packs.pixel.index['m.The Drowned Queen'] !== undefined;
+      out.tunes = ['depth4', 'depth5', 'depth6', 'depth7', 'depth8', 'depth9'].every(k => CM.music.tune(k).melody.length === 64) && CM.AMBIENCE_OF.length === 10;
+      for (const k of ['run', 'run2', 'run3', 'achievements', 'fame']) CM.store.remove(k);
+      g.achievements = {{}}; g.runs = [null, null, null]; g.fame = []; g.lastRun = null; CM.ui.closeDialogs(); CM.ui.refreshTitle();
+      return out; }})()""", timeout=60)
     for key, value in got.items():
         assert value is True, (key, got)
     said = [s for s in page().said if "Error" in s or "error" in s]

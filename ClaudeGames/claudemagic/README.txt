@@ -259,6 +259,43 @@ Ways to play (the second big update, phase 6)
   keys as set, the gamepad polled each frame as synthetic key presses, the tap on the view (80-main.js);
   CM.art.summaryCard (30-art.js).
 
+The Deep (phase 7)
+  The Lich King's fall no longer ends the run unless you want it to. When he falls, the crown is yours and the
+  Hall of Fame will say so - and behind the throne the floor has split: a shaft goes down into thirty floors the
+  carvings never spoke of. The victory screen offers the choice: Into the daylight (the run ends there, a victory),
+  or Into the Deep. A party that goes down and falls is still a crowned party in the Hall of Fame ("SLEW THE LICH
+  KING, floor 34"); a party that reaches the bottom ranks above everything ("TO THE BOTTOM").
+  Six bands of five floors, each with its own stone (and in the Pixel theme Crawl's own walls and floors; in the
+  Stone theme a band above's photographs in the band's own colour), its own tune, its own monsters that never climb
+  above floor 20, and its own carvings - the story under the story: who let the water in, what the dead were fed to,
+  what the dwarves really fled, what the box was made of and by whom, who taught the king, and what dreamed him.
+    21-25  The Drowned Town      the Drowned and the Weed Hags; the Drowned Queen over the shaft on 25 (her Lament puts
+                                 the party to sleep, her court climbs out of the water to her, and she rises once).
+                                 Relic: the Queen's Ring.
+    26-30  The Fungal Deep       Fungal Horrors and Spore Beasts; the Mycelial Mind on 30 (spores that poison, spore
+                                 beasts that tear loose, flesh that regrows every round). Relic: the Sporecap Helm.
+    31-35  The Crystal Caverns   Crystal Golems and Shard Wisps; the Crystal Tyrant on 35 (shards that fly and blind;
+                                 every blow struck on it cuts the striker). Relic: the Prism Amulet.
+    36-40  The Foundry           Iron Hounds and Foundry Imps; the Foundry Master on 40 (a furnace breath over everyone,
+                                 the hammer on the front line, the forge's heat). Relic: the Ember Mail.
+    41-45  The Ossuary           Bone Colossi and Grave Priests; the Bone Patriarch on 45 (skeletons raised from the
+                                 heaps, a curse spoken on the party, blows that drain experience). Relic: the
+                                 Patriarch's Reliquary.
+    46-50  The Root of the World Rootlings and Hollow Ones; the Root of the World on 50 (the quake under everyone,
+                                 rootlings torn from its bark, sap that regrows, and once, it knits). No relic: there is
+                                 nothing below. Its fall is the run's end, in triumph.
+  A camp waits below every fifth floor of the Deep (25, 30, 35, 40, 45), with the smith and the vault. The Deep has
+  its own special floors (a flooded street, a labyrinth of the forges, the ossuary's dark). The monsters' level climbs
+  more slowly than the floors (floor 50 fights at level 35), the bands are two to five strong and a leader comes one
+  time in five. Two achievements more: Of the Deep (floor 30) and To the Bottom. One kit more: the Abyss kit, for
+  reaching floor 30 (every hero at level 3 with a boon, 150 gold more, a rope, a diamond, a Scroll of Mapping).
+  In code: CM.BOTTOM, CM.CAMP_AFTER, CM.THEMES (ten bands, the Deep's with `photos`), CM.MONSTERS (the Deep's kinds carry
+  `deep`: their band), CM.SHALLOW and CM.monsterLevel, CM.GUARDIANS as data (moves: summon / grasp / slam / breath /
+  ailment; passives: plague / rise / heat / glass / regrow / drain; `final` for the Root), CM.AMBIENCE_OF (10-data.js);
+  CM.LORE to fifty, CM.deepGroup / makeElite, the Deep's special floors (20-world.js); game.crown() and the "crowned"
+  event, guardianMove / summonFor, bottom, the Hall of Fame's order (60-game.js); the crowning dialog (70-ui.js);
+  depth4-9 tunes (55-music.js); fungus, crystal and root furniture (30-art.js).
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
@@ -277,7 +314,7 @@ In the Timeline
 The source
   src\index.html, src\style.css and src\js\*.js (read in name order):
     00-util.js    CM, the version, a seeded random (the same seed, the same dungeon), saving in the browser
-    10-data.js    the classes, gear, monsters, guardians, riddles and people, paths, tomes and gems, difficulties, mutators, achievements, keys, the depths
+    10-data.js    the classes, gear, monsters (the Deep's too), the nine guardians, riddles and people, paths, tomes and gems, difficulties, mutators, achievements, keys, the ten depths
     20-world.js   items, a floor's maze with its chests, monsters and ladder, monster groups, a new party
     30-art.js     every picture of the Drawn theme, painted in code: stone, chests, hatches, monsters, portraits
     35-packs.js   GENERATED by pack.py from src\art: the Pixel theme's atlas and the Stone theme's textures
