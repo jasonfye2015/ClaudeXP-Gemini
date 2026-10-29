@@ -313,6 +313,191 @@ CM.art.monster = function (m, big = false) {
   return c;
 };
 
+// ---- the dungeon's furniture ------------------------------------------------------------------------------------------
+function planks(p, x, y, w, h, rnd, base = "#6E4A26", dark = "#4A2E14") {
+  const n = Math.max(2, Math.round(w / 34));
+  for (let i = 0; i < n; i++) {
+    const px = x + i * (w / n), k = 0.9 + rnd.next() * 0.2;
+    p.fillStyle = shaded(p, base, k);
+    p.fillRect(px, y, w / n, h);
+    p.fillStyle = dark; p.fillRect(px, y, 2, h);
+    p.strokeStyle = shaded(p, dark, 0.8); p.lineWidth = 1;
+    for (let g = 0; g < 3; g++) { const gx = px + 4 + rnd.next() * (w / n - 8); p.beginPath(); p.moveTo(gx, y + 4); p.lineTo(gx + (rnd.next() - 0.5) * 6, y + h - 4); p.stroke(); }
+  }
+}
+
+CM.art.door = function (kind) {                                          // closed, locked, or open (the frame, the leaf swung in)
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(21);
+  p.fillStyle = "#2A2420"; p.fillRect(0, 0, S, S);                       // the frame's stone
+  p.fillStyle = "#4A4038"; p.fillRect(0, 0, S, 22); p.fillRect(0, 0, 22, S); p.fillRect(S - 22, 0, 22, S);
+  p.fillStyle = "#1A1612"; p.fillRect(22, 22, S - 44, S - 22);
+  if (kind === "open") {
+    p.clearRect(30, 26, S - 60, S - 26);                                 // see through to the corridor beyond
+    p.save(); p.translate(30, 26); p.transform(0.28, 0.09, 0, 1, 0, 0);  // the leaf, swung inward
+    planks(p, 0, 0, S - 60, S - 26, rnd);
+    p.restore();
+    return c;
+  }
+  planks(p, 22, 22, S - 44, S - 22, rnd);
+  p.fillStyle = "#2E2E34";                                               // iron bands
+  for (const y of [50, S - 60]) { p.fillRect(22, y, S - 44, 14); for (let x = 30; x < S - 30; x += 24) { p.fillStyle = "#56565E"; p.beginPath(); p.arc(x, y + 7, 3, 0, Math.PI * 2); p.fill(); p.fillStyle = "#2E2E34"; } }
+  p.strokeStyle = "#101010"; p.lineWidth = 3; p.strokeRect(22, 22, S - 44, S - 22);
+  if (kind === "locked") {
+    p.fillStyle = "#C8A040"; p.fillRect(S / 2 - 18, S / 2 - 6, 36, 40);
+    p.strokeStyle = "#C8A040"; p.lineWidth = 7; p.beginPath(); p.arc(S / 2, S / 2 - 8, 14, Math.PI, 0); p.stroke();
+    p.fillStyle = "#1A1410"; p.fillRect(S / 2 - 4, S / 2 + 6, 8, 16);
+  } else {
+    p.fillStyle = "#56565E"; p.beginPath(); p.arc(S - 50, S / 2 + 10, 8, 0, Math.PI * 2); p.fill();   // a ring handle
+    p.strokeStyle = "#8A8A92"; p.lineWidth = 4; p.beginPath(); p.arc(S - 50, S / 2 + 24, 12, 0, Math.PI * 2); p.stroke();
+  }
+  return c;
+};
+
+CM.art.gate = function (open) {                                           // a portcullis, down or raised
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "#4A4038"; p.fillRect(0, 0, S, 20); p.fillRect(0, 0, 16, S); p.fillRect(S - 16, 0, 16, S);
+  const top = open ? -S + 60 : 0;
+  p.fillStyle = "#3A3A42"; p.strokeStyle = "#16161A"; p.lineWidth = 2;
+  for (let x = 30; x < S - 20; x += 32) { p.fillRect(x, top + 20, 12, S - 20); p.strokeRect(x, top + 20, 12, S - 20);
+    p.beginPath(); p.moveTo(x, top + S); p.lineTo(x + 6, top + S + 16); p.lineTo(x + 12, top + S); p.fill(); }
+  for (let y = top + 50; y < top + S; y += 46) { p.fillRect(16, y, S - 32, 10); p.strokeRect(16, y, S - 32, 10); }
+  return c;
+};
+
+CM.art.pit = function (theme, known) {                                     // a hole in the floor; a trapdoor, once it has given way
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(5);
+  p.fillStyle = rgb(theme.floor, 0.9); p.fillRect(0, 0, S, S);
+  if (known === "trapdoor") {
+    planks(p, 30, 30, S - 60, S - 60, rnd, "#5A3E22", "#2A1A0A");
+    p.strokeStyle = "#0A0806"; p.lineWidth = 4; p.beginPath(); p.moveTo(30, S / 2); p.lineTo(S - 30, S / 2); p.stroke();
+    p.fillStyle = "#050403"; p.beginPath(); p.moveTo(30, S / 2 - 2); p.lineTo(S - 30, S / 2 - 2); p.lineTo(S - 40, S / 2 + 30); p.lineTo(40, S / 2 + 30); p.fill();
+    return c;
+  }
+  p.fillStyle = "#050403"; p.beginPath();
+  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, r = 92 + rnd.next() * 18; p.lineTo(S / 2 + Math.cos(a) * r, S / 2 + Math.sin(a) * r); }
+  p.closePath(); p.fill();
+  p.strokeStyle = rgb(theme.floor, 0.5); p.lineWidth = 3; p.stroke();
+  const g = p.createRadialGradient(S / 2, S / 2, 40, S / 2, S / 2, 100);
+  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, rgb(theme.floor, 0.35, 0.6));
+  p.fillStyle = g; p.fill();
+  return c;
+};
+
+CM.art.teleporter = function () {                                         // a ring of runes that glows
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.clearRect(0, 0, S, S);
+  const g = p.createRadialGradient(S / 2, S / 2, 20, S / 2, S / 2, 110);
+  g.addColorStop(0, "rgba(140,80,255,0.85)"); g.addColorStop(0.6, "rgba(120,60,220,0.35)"); g.addColorStop(1, "rgba(80,40,160,0)");
+  p.fillStyle = g; p.beginPath(); p.arc(S / 2, S / 2, 112, 0, Math.PI * 2); p.fill();
+  p.strokeStyle = "#E0C8FF"; p.lineWidth = 5; p.beginPath(); p.arc(S / 2, S / 2, 88, 0, Math.PI * 2); p.stroke();
+  p.lineWidth = 3; p.beginPath(); p.arc(S / 2, S / 2, 60, 0, Math.PI * 2); p.stroke();
+  p.fillStyle = "#F0E8FF"; p.font = "bold 22px Georgia"; p.textAlign = "center"; p.textBaseline = "middle";
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; p.save(); p.translate(S / 2 + Math.cos(a) * 74, S / 2 + Math.sin(a) * 74); p.rotate(a + Math.PI / 2); p.fillText("ᚠᚱᛇᛖᛟᚦᚷᛋᛒᛠᚫᚾ"[i], 0, 0); p.restore(); }
+  return c;
+};
+
+CM.art.fountain = function (dry) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
+  p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(cx, ground - 2, 100, 10, 0, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.ellipse(cx, ground - 40, 96, 30, 0, 0, Math.PI * 2); }, "#6A6258");                  // the basin
+  outlined(p, () => { p.rect(cx - 96, ground - 100, 192, 60); }, "#7A7268");
+  outlined(p, () => { p.ellipse(cx, ground - 100, 96, 30, 0, 0, Math.PI * 2); }, "#8A8278");
+  if (!dry) {
+    const w = p.createRadialGradient(cx, ground - 100, 10, cx, ground - 100, 90);
+    w.addColorStop(0, "#9AD0E8"); w.addColorStop(1, "#3A7A9A");
+    p.fillStyle = w; p.beginPath(); p.ellipse(cx, ground - 100, 84, 22, 0, 0, Math.PI * 2); p.fill();
+  } else {
+    p.fillStyle = "#4A4640"; p.beginPath(); p.ellipse(cx, ground - 100, 84, 22, 0, 0, Math.PI * 2); p.fill();
+  }
+  outlined(p, () => { p.rect(cx - 12, ground - 200, 24, 100); }, "#7A7268");                                    // the column
+  outlined(p, () => { p.ellipse(cx, ground - 204, 30, 10, 0, 0, Math.PI * 2); }, "#8A8278");
+  if (!dry) {
+    p.strokeStyle = "rgba(170,220,240,0.9)"; p.lineWidth = 4; p.lineCap = "round";
+    for (const side of [-1, 1]) { p.beginPath(); p.moveTo(cx + side * 20, ground - 200); p.quadraticCurveTo(cx + side * 60, ground - 170, cx + side * 56, ground - 104); p.stroke(); }
+  }
+  return c;
+};
+
+CM.art.altar = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
+  p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(cx, ground - 2, 90, 10, 0, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.rect(cx - 70, ground - 70, 140, 70); }, "#5A5650");
+  outlined(p, () => { p.rect(cx - 86, ground - 86, 172, 20); }, "#7A7670");
+  p.fillStyle = "#E8E0C8";                                                // a cloth
+  p.beginPath(); p.moveTo(cx - 60, ground - 86); p.lineTo(cx + 60, ground - 86); p.lineTo(cx + 54, ground - 40); p.lineTo(cx - 54, ground - 40); p.fill();
+  for (const dx of [-44, 44]) {                                           // candles
+    outlined(p, () => { p.rect(cx + dx - 6, ground - 130, 12, 44); }, "#F0E8D0", "#5A5040", 2);
+    const g = p.createRadialGradient(cx + dx, ground - 140, 2, cx + dx, ground - 140, 20);
+    g.addColorStop(0, "#FFF0A0"); g.addColorStop(0.4, "rgba(255,180,60,0.8)"); g.addColorStop(1, "rgba(255,140,40,0)");
+    p.fillStyle = g; p.beginPath(); p.arc(cx + dx, ground - 140, 20, 0, Math.PI * 2); p.fill();
+  }
+  outlined(p, () => { p.rect(cx - 5, ground - 160, 10, 70); p.rect(cx - 26, ground - 140, 52, 10); }, "#E8C040", "#6A4A08", 2);   // a symbol
+  return c;
+};
+
+CM.art.lever = function (pulled) {                                         // on a wall: a bracket and a handle
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.clearRect(0, 0, S, S);
+  outlined(p, () => { p.roundRect(70, 90, 116, 90, 10); }, "#4A4A52", "#16161A", 4);
+  for (const [x, y] of [[84, 104], [172, 104], [84, 166], [172, 166]]) { p.fillStyle = "#8A8A92"; p.beginPath(); p.arc(x, y, 5, 0, Math.PI * 2); p.fill(); }
+  p.fillStyle = "#101014"; p.fillRect(118, 112, 20, 46);
+  p.save(); p.translate(128, 135); p.rotate(pulled ? 0.9 : -0.9);
+  p.strokeStyle = "#16161A"; p.lineWidth = 16; p.lineCap = "round"; p.beginPath(); p.moveTo(0, 0); p.lineTo(0, -70); p.stroke();
+  p.strokeStyle = "#8A6A30"; p.lineWidth = 10; p.beginPath(); p.moveTo(0, 0); p.lineTo(0, -70); p.stroke();
+  p.fillStyle = "#C83030"; p.beginPath(); p.arc(0, -74, 13, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#16161A"; p.lineWidth = 3; p.stroke();
+  p.restore();
+  return c;
+};
+
+CM.art.carving = function () {                                            // a plaque of runes set into the wall
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(31);
+  p.clearRect(0, 0, S, S);
+  outlined(p, () => { p.roundRect(40, 60, S - 80, S - 120, 8); }, "#5E5650", "#1A1612", 4);
+  p.fillStyle = "#2A2420";
+  p.font = "bold 18px Georgia"; p.textAlign = "left"; p.textBaseline = "top";
+  const runes = "ᚠᚢᚦᚨᚱᚷᚹᚾᛁᛇᛋᛏᛒᛖᛚᛟᛠᛦ";
+  for (let row = 0; row < 5; row++) {
+    let line = "";
+    const n = 8 + rnd.int(0, 3);
+    for (let i = 0; i < n; i++) line += runes[rnd.int(0, runes.length - 1)] + (rnd.chance(0.2) ? " " : "");
+    p.fillText(line, 54, 74 + row * 24);
+  }
+  return c;
+};
+
+CM.art.stairsUp = function (theme) {                                       // a ladder up into a hole in the ceiling
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2;
+  p.clearRect(0, 0, S, S);
+  p.fillStyle = "#050403"; p.beginPath(); p.ellipse(cx, 26, 70, 22, 0, 0, Math.PI * 2); p.fill();
+  p.strokeStyle = rgb(theme.ceiling, 1.3); p.lineWidth = 6; p.stroke();
+  p.strokeStyle = "#A07840"; p.lineWidth = 11; p.lineCap = "round";
+  p.beginPath(); p.moveTo(cx - 34, S - 10); p.lineTo(cx - 34, 20); p.moveTo(cx + 34, S - 10); p.lineTo(cx + 34, 20); p.stroke();
+  p.lineWidth = 8;
+  for (let y = 40; y < S - 10; y += 30) { p.beginPath(); p.moveTo(cx - 34, y); p.lineTo(cx + 34, y); p.stroke(); }
+  return c;
+};
+
+CM.art.key = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
+  p.clearRect(0, 0, S, S);
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(cx, ground - 4, 60, 8, 0, 0, Math.PI * 2); p.fill();
+  p.save(); p.translate(cx, ground - 30); p.rotate(-0.5);
+  p.strokeStyle = "#1A1410"; p.lineWidth = 22; p.lineCap = "round"; p.beginPath(); p.moveTo(-60, 0); p.lineTo(50, 0); p.stroke();
+  p.strokeStyle = "#D8B040"; p.lineWidth = 14; p.beginPath(); p.moveTo(-60, 0); p.lineTo(50, 0); p.stroke();
+  p.lineWidth = 14; p.beginPath(); p.moveTo(30, 0); p.lineTo(30, 22); p.moveTo(50, 0); p.lineTo(50, 18); p.stroke();
+  p.strokeStyle = "#1A1410"; p.lineWidth = 22; p.beginPath(); p.arc(-78, 0, 22, 0, Math.PI * 2); p.stroke();
+  p.strokeStyle = "#D8B040"; p.lineWidth = 12; p.beginPath(); p.arc(-78, 0, 22, 0, Math.PI * 2); p.stroke();
+  p.restore();
+  return c;
+};
+
+CM.art.secretWall = function (theme, seed) {                               // a wall like the others, with a hairline round a door's shape
+  const c = CM.art.wall(theme, seed, false), p = c.getContext("2d"), S = ART_SIZE;
+  p.strokeStyle = rgb(theme.mortar, 0.45, 0.55); p.lineWidth = 2;
+  p.beginPath(); p.moveTo(52, S); p.lineTo(52, 30); p.lineTo(S - 52, 30); p.lineTo(S - 52, S); p.stroke();
+  return c;
+};
+
 // ---- the heroes' portraits ----------------------------------------------------------------------------------------
 CM.art.portrait = function (cls, size = 56) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 56;
@@ -369,8 +554,25 @@ CM.art.build = function (theme) {
   add("wallbones", CM.art.wall(theme, seed + 3, true));
   add("floor", CM.art.floor(theme, seed + 4));
   add("ceiling", CM.art.ceiling(theme, seed + 5));
+  add("wallsecret", CM.art.secretWall(theme, seed + 6));
   add("chest", CM.art.chest());
   add("hatch", CM.art.hatch(theme));
+  add("door", CM.art.door("closed"));
+  add("door_locked", CM.art.door("locked"));
+  add("door_open", CM.art.door("open"));
+  add("gate", CM.art.gate(false));
+  add("gate_open", CM.art.gate(true));
+  add("pit", CM.art.pit(theme));
+  add("trapdoor", CM.art.pit(theme, "trapdoor"));
+  add("teleporter", CM.art.teleporter());
+  add("fountain", CM.art.fountain(false));
+  add("fountain_dry", CM.art.fountain(true));
+  add("altar", CM.art.altar());
+  add("lever", CM.art.lever(false));
+  add("lever_pulled", CM.art.lever(true));
+  add("carving", CM.art.carving());
+  add("stairs_up", CM.art.stairsUp(theme));
+  add("key", CM.art.key());
   for (const m of CM.MONSTERS) add(`monster:${m.name}`, CM.art.monster(m));
   add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
   return { layers, index, size: ART_SIZE };

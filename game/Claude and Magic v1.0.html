@@ -70,6 +70,12 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 #view .hint { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font: 14px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000; pointer-events: none; }
 #view .hurt { position: absolute; inset: 0; pointer-events: none; background: rgba(200,30,20,0.35); opacity: 0; transition: opacity 0.25s; }
 #view .hurt.on { opacity: 1; transition: none; }
+#view .blink { position: absolute; inset: 0; pointer-events: none; background: #E8D8FF; opacity: 0; transition: opacity 0.5s; }
+#view .blink.on { opacity: 0.9; transition: none; }
+#view .fall { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; transition: opacity 0.6s; }
+#view .fall.on { opacity: 1; transition: opacity 0.12s; }
+#side .light { font: 12px var(--serif); color: var(--dim); text-align: center; }
+#side .light.dark { color: #E06060; font-weight: bold; }
 #side { width: 296px; flex: 0 0 296px; display: flex; flex-direction: column; gap: 8px; }
 #automap { width: 290px; height: 290px; border: 3px solid var(--edge); background: var(--paper); }
 #side .where { font: bold 13px var(--serif); color: var(--gold); text-align: center; }
@@ -118,6 +124,7 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 .dialog table.keys td { padding: 3px 10px 3px 0; font-size: 13px; color: var(--ink); }
 .dialog table.keys td:first-child { color: var(--gold); white-space: nowrap; }
 .dialog .small { color: var(--dim); font-size: 12px; }
+.dialog .lore { font: italic 17px/1.5 var(--serif); color: var(--ink); max-width: 480px; margin: 4px 0 6px; }
 #bigmap { background: rgba(0,0,0,0.75); }
 #bigmap canvas { border: 4px solid var(--edge); background: var(--paper); }
 
@@ -265,8 +272,12 @@ CM.KEYS_HELP = [
 
 // ---- 20-world.js ----
 "use strict";
-// The world: items, a floor's maze with its chests, monsters and ladder, monster groups, a new party.
-// Pure functions of a Random, so a seed gives the same dungeon every time (and the tests can check thousands).
+// The world: items, monster groups, a new party - and a floor: rooms joined by corridors (Nystrom's rooms-and-mazes),
+// a few set-piece rooms dropped in, then the dungeon's furniture: doors (some locked, their keys somewhere before
+// them), secret doors on the shortcuts, pits and hidden trapdoors, teleporter pairs, spinners, a dark room, a
+// fountain, an altar, a gate with its lever, a carving telling the Lich King's story, chests and monsters, the stairs
+// up where you arrive and the ladder down as far from them as the floor allows. Pure functions of a Random, so a seed
+// gives the same dungeon every time; CM.solvable proves each floor can be finished before it's handed over.
 
 CM.makeItem = function (floor, rnd, kind) {
   kind = kind || rnd.pick(["weapon", "weapon", "armor", "armor", "potion", "potion", "potion"]);
@@ -274,6 +285,7 @@ CM.makeItem = function (floor, rnd, kind) {
     const roll = rnd.next();
     if (roll < 0.12) return { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 };
     if (roll < 0.4) return { name: "Mana Potion", kind: "mana", power: 12 + floor, value: 25 };
+    if (roll < 0.52) return CM.torch();
     return { name: "Healing Potion", kind: "heal", power: 20 + floor * 3, value: 20 };
   }
   const tier = CM.clamp(Math.floor((floor + rnd.int(-2, 2)) * 12 / 21), 0, 11);
@@ -283,6 +295,11 @@ CM.makeItem = function (floor, rnd, kind) {
   return { name: names[tier] + (bonus ? " +1" : ""), kind, power: power + (bonus ? 2 : 0),
     value: 15 * (tier + 1) * (tier + 1) + (bonus ? 40 : 0) };
 };
+
+CM.TORCH_STEPS = 400;                    // a torch burns this many steps
+CM.torch = () => ({ name: "Torch", kind: "torch", power: CM.TORCH_STEPS, value: 8 });
+CM.lantern = () => ({ name: "Lantern", kind: "lantern", power: 0, value: 150 });
+CM.key = () => ({ name: "Iron Key", kind: "key", power: 0, value: 0 });
 
 CM.monsterGroup = function (floor, rnd) {
   const top = Math.min(CM.MONSTERS.length - 1, Math.floor(floor * CM.MONSTERS.length / CM.LAST_FLOOR));
@@ -299,79 +316,6 @@ CM.monsterGroup = function (floor, rnd) {
 
 CM.bossMonster = () => ({ name: CM.BOSS.name, colour: CM.BOSS.colour, hp: 650, max: 650, atk: 46, df: 18, xp: 5000, gold: 5000, boss: true });
 
-// how far every open square is from the start (a breadth-first walk)
-CM.distances = function (grid, start) {
-  const key = (x, y) => `${x},${y}`;
-  const dist = new Map([[key(start[0], start[1]), 0]]);
-  const queue = [start];
-  for (let i = 0; i < queue.length; i++) {
-    const [x, y] = queue[i];
-    for (const [dx, dy] of CM.DIRS) {
-      const nx = x + dx, ny = y + dy;
-      if (ny >= 0 && ny < grid.length && nx >= 0 && nx < grid[0].length && grid[ny][nx] === 0 && !dist.has(key(nx, ny))) {
-        dist.set(key(nx, ny), dist.get(key(x, y)) + 1);
-        queue.push([nx, ny]);
-      }
-    }
-  }
-  return dist;
-};
-
-// A floor: a maze (recursive backtracker, with some extra openings so it isn't perfect), the start, the ladder on the
-// open square furthest from it (or the Lich King, on the last), chests and monsters on the way.
-CM.makeFloor = function (number, seed) {
-  const rnd = new CM.Random(CM.hashSeed(`${seed}:floor:${number}`));
-  const size = Math.min(17 + Math.floor(number / 4) * 2, 27);
-  const grid = [];
-  for (let y = 0; y < size; y++) grid.push(new Array(size).fill(1));
-  const stack = [[1, 1]];
-  grid[1][1] = 0;
-  while (stack.length) {
-    const [x, y] = stack[stack.length - 1];
-    const options = CM.DIRS.filter(([dx, dy]) => x + dx * 2 > 0 && x + dx * 2 < size - 1 && y + dy * 2 > 0 && y + dy * 2 < size - 1
-      && grid[y + dy * 2][x + dx * 2] === 1);
-    if (!options.length) { stack.pop(); continue; }
-    const [dx, dy] = rnd.pick(options);
-    grid[y + dy][x + dx] = 0;
-    grid[y + dy * 2][x + dx * 2] = 0;
-    stack.push([x + dx * 2, y + dy * 2]);
-  }
-  for (let i = 0; i < Math.floor(size * size / 14); i++) {                // loops, so there's more than one way round
-    const x = rnd.int(1, size - 2), y = rnd.int(1, size - 2);
-    if (grid[y][x] === 1 && ((grid[y][x - 1] === 0 && grid[y][x + 1] === 0) || (grid[y - 1][x] === 0 && grid[y + 1][x] === 0))) grid[y][x] = 0;
-  }
-  const start = [1, 1];
-  const dist = CM.distances(grid, start);
-  let far = start, best = -1;
-  for (const [k, d] of dist) if (d > best) { best = d; far = k.split(",").map(Number); }
-  const things = {};
-  const spare = [];
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-    if (grid[y][x] === 0 && !(x === 1 && y === 1) && !(x === far[0] && y === far[1]) && (dist.get(`${x},${y}`) || 0) > 3) spare.push([x, y]);
-  }
-  rnd.shuffle(spare);
-  for (let i = 0; i < 3 + Math.floor(number / 4) && spare.length; i++) {
-    const [x, y] = spare.pop();
-    const items = [];
-    const n = rnd.int(1, 2);
-    for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd));
-    things[`${x},${y}`] = { type: "chest", gold: rnd.int(10, 30) * number, items };
-  }
-  for (let i = 0; i < 5 + Math.floor(number / 2) && spare.length; i++) {
-    const [x, y] = spare.pop();
-    things[`${x},${y}`] = { type: "monsters", group: CM.monsterGroup(number, rnd) };
-  }
-  things[`${far[0]},${far[1]}`] = number === CM.LAST_FLOOR ? { type: "boss", group: [CM.bossMonster()] } : { type: "ladder" };
-  return { number, grid, pos: [1, 1], facing: grid[2][1] === 0 ? 2 : 1, things, seen: [] };
-};
-
-// can the party get from the start to the ladder (or the Lich King)? - what the tests ask of every floor
-CM.solvable = function (floor) {
-  const dist = CM.distances(floor.grid, [1, 1]);
-  const goal = Object.entries(floor.things).find(([, t]) => t.type === "ladder" || t.type === "boss");
-  return Boolean(goal) && dist.has(goal[0]);
-};
-
 CM.newParty = function () {
   return CM.CLASS_ORDER.map((cls) => {
     const s = CM.CLASSES[cls];
@@ -383,7 +327,452 @@ CM.newParty = function () {
 
 CM.startingBag = (seed) => {
   const rnd = new CM.Random(CM.hashSeed(`${seed}:bag`));
-  return [CM.makeItem(1, rnd, "potion"), CM.makeItem(1, rnd, "potion")];
+  return [CM.makeItem(1, rnd, "potion"), CM.makeItem(1, rnd, "potion"), CM.torch(), CM.torch()];
+};
+
+// ---- what's carved into the walls: the Lich King's story, a floor at a time ------------------------------------------
+CM.LORE = [
+  "Here lie the first dead of Caer Duin. King Mordeth wept for each of them. He would not always.",
+  "The plague came up the river in the king's twelfth year. The priests said it would pass. It did not pass.",
+  "When the queen died, Mordeth shut the gates and had the bells taken down. No one has rung one since.",
+  "The king sent for every book that spoke of death, and for every man who claimed to have come back from it.",
+  "Below this floor the water rose and never fell. The lower town drowned in a single night, doors still barred.",
+  "A stranger came from the east with a box he would not open. He left without it. The king kept it by his bed.",
+  "The court physician wrote: the king no longer sleeps, and says he no longer needs to. I have begun to believe him.",
+  "The dwarves of the deep halls traded with Caer Duin for three hundred years. Their last letter asked why the king's coin was cold.",
+  "Here the guard turned back. Beyond this point the king's orders came written in a hand that was not quite his.",
+  "They burned the physician's notes. One page survived: the heart may be kept apart, and the body need not know.",
+  "The dwarves sealed their doors from the inside. The seals held for a year. Then the doors opened, and nothing came out.",
+  "A child's letters, scratched here: MOTHER SAYS THE KING IS STILL OUR KING. MOTHER SAYS NOT TO LOOK AT HIM.",
+  "The halls below were made for a people who loved stone. They would not have left them. They did not leave them.",
+  "The last captain of the guard wrote his name here before he went down. The king had asked for him by name.",
+  "Whoever reads this: the thing that wears the crown remembers being Mordeth. That is the worst of it.",
+  "The palace was built in a year, by hands that did not tire. The masons' graves are the foundations.",
+  "He keeps the court. They sit where they sat. If you listen you can hear them not breathing.",
+  "The box from the east is empty now. What was in it, he put somewhere safer. Somewhere nearer his heart.",
+  "The king's heart is not in his chest. Find it, and he can be ended. Fail, and he will rise as often as you kill him.",
+  "Beyond this door he waits. He has waited so long that he has forgotten what for. Remind him.",
+];
+CM.LORE_EXTRA = [
+  "A recipe for barley bread, carved with great care, as if it mattered more than anything.",
+  "Tally marks. Hundreds. The last row stops in the middle of a stroke.",
+  "THE WATER IS NOT WATER, scratched deep, and under it in a smaller hand: it is, though.",
+  "A map of a floor you haven't seen. The stairs are marked. So is something else, with a circle round it.",
+  "Here Aldous the Lesser slew a troll with a chair. The chair is remembered more fondly than Aldous.",
+  "Someone has carved a window here, with a view. They put a great deal of work into the sky.",
+  "Turn back, in six languages. The seventh says: or don't - he's lonely.",
+  "A prayer to a god whose name has been chiselled out. The prayer is still there, which seems rude.",
+];
+
+// ---- set-piece rooms: the ring of wall included; D door, L locked door, G gate, S secret door on the ring ------------
+// Inside: C chest, M monsters that stay put, F fountain, A altar, P pit, K a key on the floor, X dark floor, W a wall
+// with a carving (read from the floor beside it). Entrances sit at odd positions so the maze comes up to them.
+CM.TEMPLATES = [
+  { name: "Treasure Vault", min: 2, rows: ["#######", "#C...C#", "#..C..#", "###L###"] },
+  { name: "Shrine", min: 2, rows: ["#######", "#..A..#", "#.....#", "#C....#", "###D###"] },
+  { name: "Fountain Hall", min: 1, rows: ["#########", "#.......#", "#...F...#", "#.......#", "###D#####"] },
+  { name: "Den", min: 2, rows: ["#######", "#M...M#", "#..C..#", "#.....#", "###D###"] },
+  { name: "Library", min: 3, rows: ["###W###", "#.....#", "W..C..W", "#.....#", "###D###"] },
+  { name: "Crypt", min: 3, rows: ["#######", "#XXXXX#", "#XMXCX#", "#XXXXX#", "###S###"] },
+  { name: "Pit Room", min: 3, rows: ["#######", "#.P.P.#", "#.....#", "#P.C.P#", "###D###"] },
+  { name: "Keep", min: 4, rows: ["#########", "#C.....C#", "#.......#", "#...K...#", "###G#####"] },
+];
+
+// ---- helpers -----------------------------------------------------------------------------------------------------
+const key = (x, y) => `${x},${y}`;
+const unkey = (k) => k.split(",").map(Number);
+
+CM.inBounds = (floor, x, y) => y >= 0 && y < floor.grid.length && x >= 0 && x < floor.grid.length;
+
+// a cell the party could stand in (doors and gates included, whatever their state)
+CM.isOpen = function (floor, x, y) {
+  if (!CM.inBounds(floor, x, y)) return false;
+  if (floor.grid[y][x] === 0) return true;
+  const f = floor.features[key(x, y)];
+  return Boolean(f && f.type === "secret" && f.found);
+};
+
+// a cell the party can walk into right now
+CM.passable = function (floor, x, y) {
+  if (!CM.isOpen(floor, x, y)) return false;
+  const f = floor.features[key(x, y)];
+  if (f && (f.type === "door" || f.type === "gate") && !f.open) return false;
+  return true;
+};
+
+CM.openNeighbours = (floor, x, y) => CM.DIRS.filter(([dx, dy]) => CM.isOpen(floor, x + dx, y + dy));
+
+// how far every open square is from the start, walking where `walk` allows (a breadth-first walk)
+CM.distances = function (grid, start, walk) {
+  const size = grid.length;
+  const ok = walk || ((x, y) => y >= 0 && y < size && x >= 0 && x < size && grid[y][x] === 0);
+  const dist = new Map([[key(start[0], start[1]), 0]]);
+  const queue = [start];
+  for (let i = 0; i < queue.length; i++) {
+    const [x, y] = queue[i];
+    for (const [dx, dy] of CM.DIRS) {
+      const nx = x + dx, ny = y + dy;
+      if (ok(nx, ny) && !dist.has(key(nx, ny))) {
+        dist.set(key(nx, ny), dist.get(key(x, y)) + 1);
+        queue.push([nx, ny]);
+      }
+    }
+  }
+  return dist;
+};
+
+// Everything the party can reach from where it stands, finding keys and pulling levers as it goes, never falling into a
+// pit, never finding a secret door: the floor is solvable when the ladder (or the Lich King) is in that set.
+CM.reachable = function (floor, from) {
+  const start = from || floor.pos;
+  const unlocked = new Set(), opened = new Set();
+  let reach = new Set();
+  for (let pass = 0; pass < 12; pass++) {
+    reach = new Set();
+    const queue = [start];
+    reach.add(key(start[0], start[1]));
+    for (let i = 0; i < queue.length; i++) {
+      const [x, y] = queue[i];
+      const here = floor.features[key(x, y)];
+      const nexts = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]);
+      if (here && here.type === "teleporter") nexts.push(here.to);
+      for (const [nx, ny] of nexts) {
+        const k = key(nx, ny);
+        if (reach.has(k) || !CM.inBounds(floor, nx, ny)) continue;
+        const f = floor.features[k];
+        if (floor.grid[ny][nx] !== 0) {
+          if (!(f && f.type === "secret" && f.found)) continue;
+        }
+        if (f) {
+          if ((f.type === "pit" || f.type === "trapdoor") && !(nx === start[0] && ny === start[1])) continue;
+          if (f.type === "door" && f.locked && !unlocked.has(k)) continue;
+          if (f.type === "gate" && !f.open && !opened.has(k)) continue;
+        }
+        reach.add(k);
+        queue.push([nx, ny]);
+      }
+    }
+    let keys = 0, changed = false;
+    for (const k of reach) {
+      const t = floor.things[k];
+      if (t && t.type === "key") keys++;
+      const f = floor.features[k];
+      if (f && f.type === "lever" && !opened.has(f.gate)) { opened.add(f.gate); changed = true; }
+    }
+    keys -= unlocked.size;                                   // (a key opens one door)
+    for (const k of reach) {
+      for (const [dx, dy] of CM.DIRS) {
+        const nk = key(unkey(k)[0] + dx, unkey(k)[1] + dy);
+        const f = floor.features[nk];
+        if (f && f.type === "door" && f.locked && !unlocked.has(nk) && !reach.has(nk) && keys > 0) { unlocked.add(nk); keys--; changed = true; }
+      }
+    }
+    if (!changed) break;
+  }
+  return reach;
+};
+
+CM.goalOf = (floor) => Object.keys(floor.things).find((k) => ["ladder", "boss"].includes(floor.things[k].type)) || null;
+
+CM.solvable = function (floor, from) {
+  const goal = CM.goalOf(floor);
+  return Boolean(goal) && CM.reachable(floor, from).has(goal);
+};
+
+// ---- the floor ----------------------------------------------------------------------------------------------------
+CM.makeFloor = function (number, seed) {
+  const rnd = new CM.Random(CM.hashSeed(`${seed}:floor:${number}`));
+  const size = Math.min(17 + Math.floor(number / 4) * 2, 27);
+  const grid = [];
+  for (let y = 0; y < size; y++) grid.push(new Array(size).fill(1));
+  const floor = { number, grid, pos: [1, 1], facing: 2, things: {}, features: {}, dark: [], seen: [], rooms: [] };
+  const rooms = [];                            // {x0, y0, x1, y1 (interior, inclusive), template?, entrances: [[x,y,kind]]}
+  const taken = (x0, y0, x1, y1) => rooms.some((r) => x0 <= r.x1 + 2 && x1 >= r.x0 - 2 && y0 <= r.y1 + 2 && y1 >= r.y0 - 2);
+  const carve = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) grid[y][x] = 0; };
+
+  // set pieces first (one or two, where they fit), then ordinary rooms
+  const wanted = CM.TEMPLATES.filter((t) => number >= t.min && !(number === CM.LAST_FLOOR && t.name === "Pit Room"));
+  rnd.shuffle(wanted);
+  for (const tpl of wanted.slice(0, number >= 6 ? 2 : 1)) {
+    const h = tpl.rows.length - 2, w = tpl.rows[0].length - 2;
+    for (let tries = 0; tries < 40; tries++) {
+      const x0 = 3 + 2 * rnd.int(0, Math.floor((size - 6 - w) / 2)), y0 = 3 + 2 * rnd.int(0, Math.floor((size - 6 - h) / 2));
+      const x1 = x0 + w - 1, y1 = y0 + h - 1;
+      if (x1 > size - 4 || y1 > size - 4 || taken(x0, y0, x1, y1)) continue;         // (room for the maze beyond every entrance)
+      const room = { x0, y0, x1, y1, template: tpl, entrances: [], fill: [] };
+      let fits = true;
+      tpl.rows.forEach((row, ry) => [...row].forEach((c, rx) => {
+        const x = x0 - 1 + rx, y = y0 - 1 + ry;
+        if ("DLGS".includes(c)) {
+          const onSide = ry === 0 || ry === tpl.rows.length - 1;
+          if ((onSide && x % 2 === 0) || (!onSide && y % 2 === 0)) fits = false;      // (the maze won't come up to it)
+          room.entrances.push([x, y, c]);
+        } else if (c !== "#" && c !== "W") room.fill.push([x, y, c]);
+      }));
+      if (!fits) continue;
+      carve(x0, y0, x1, y1);
+      rooms.push(room);
+      break;
+    }
+  }
+  const roomTries = 14 + number;
+  for (let i = 0; i < roomTries; i++) {
+    const w = 3 + 2 * rnd.int(0, 1 + Math.floor(number / 7)), h = 3 + 2 * rnd.int(0, 1);
+    const x0 = 1 + 2 * rnd.int(0, Math.floor((size - 2 - w) / 2)), y0 = 1 + 2 * rnd.int(0, Math.floor((size - 2 - h) / 2));
+    const x1 = x0 + w - 1, y1 = y0 + h - 1;
+    if (x1 >= size - 1 || y1 >= size - 1 || taken(x0, y0, x1, y1)) continue;
+    carve(x0, y0, x1, y1);
+    rooms.push({ x0, y0, x1, y1, entrances: [], fill: [] });
+  }
+
+  // the maze between the rooms
+  for (let sy = 1; sy < size - 1; sy += 2) for (let sx = 1; sx < size - 1; sx += 2) {
+    if (grid[sy][sx] !== 1) continue;
+    const stack = [[sx, sy]];
+    grid[sy][sx] = 0;
+    while (stack.length) {
+      const [x, y] = stack[stack.length - 1];
+      const options = CM.DIRS.filter(([dx, dy]) => x + dx * 2 > 0 && x + dx * 2 < size - 1 && y + dy * 2 > 0 && y + dy * 2 < size - 1
+        && grid[y + dy * 2][x + dx * 2] === 1 && grid[y + dy][x + dx] === 1);
+      if (!options.length) { stack.pop(); continue; }
+      const [dx, dy] = rnd.pick(options);
+      grid[y + dy][x + dx] = 0;
+      grid[y + dy * 2][x + dx * 2] = 0;
+      stack.push([x + dx * 2, y + dy * 2]);
+    }
+  }
+
+  // join the regions: one way between each pair, and a few more for the loops
+  const region = new Map();
+  let regions = 0;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    if (grid[y][x] !== 0 || region.has(key(x, y))) continue;
+    const id = regions++, queue = [[x, y]];
+    region.set(key(x, y), id);
+    for (let i = 0; i < queue.length; i++) {
+      for (const [dx, dy] of CM.DIRS) {
+        const nx = queue[i][0] + dx, ny = queue[i][1] + dy;
+        if (ny > 0 && ny < size && nx > 0 && nx < size && grid[ny][nx] === 0 && !region.has(key(nx, ny))) { region.set(key(nx, ny), id); queue.push([nx, ny]); }
+      }
+    }
+  }
+  const templateWall = new Set(), templateDoor = new Map();
+  for (const r of rooms) if (r.template) {
+    for (let y = r.y0 - 1; y <= r.y1 + 1; y++) for (let x = r.x0 - 1; x <= r.x1 + 1; x++) templateWall.add(key(x, y));
+    for (const [x, y, c] of r.entrances) templateDoor.set(key(x, y), c);
+  }
+  let connectors = [];
+  for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) {
+    if (grid[y][x] !== 1) continue;
+    const k = key(x, y);
+    if (templateWall.has(k) && !templateDoor.has(k)) continue;
+    const a = region.get(key(x - 1, y)), b = region.get(key(x + 1, y)), c = region.get(key(x, y - 1)), d = region.get(key(x, y + 1));
+    if (a !== undefined && b !== undefined && a !== b && c === undefined && d === undefined) connectors.push([x, y, a, b]);
+    else if (c !== undefined && d !== undefined && c !== d && a === undefined && b === undefined) connectors.push([x, y, c, d]);
+  }
+  const merged = new Map();
+  const find = (id) => { while (merged.has(id)) id = merged.get(id); return id; };
+  const loops = [], doorways = [];
+  rnd.shuffle(connectors);
+  connectors.sort((p, q) => (templateDoor.has(key(q[0], q[1])) ? 1 : 0) - (templateDoor.has(key(p[0], p[1])) ? 1 : 0));   // (set pieces first)
+  for (const [x, y, a, b] of connectors) {
+    const ra = find(a), rb = find(b);
+    const k = key(x, y);
+    if (ra !== rb) {
+      grid[y][x] = 0;
+      merged.set(rb, ra);
+      doorways.push([x, y]);
+      if (templateDoor.has(k)) floor.features[k] = { type: { D: "door", L: "door", G: "gate", S: "secret" }[templateDoor.get(k)], open: false };
+    } else if (!templateDoor.has(k) && rnd.chance(0.06)
+               && ![...doorways, ...loops].some(([ox, oy]) => Math.abs(ox - x) + Math.abs(oy - y) <= 2)) {
+      loops.push([x, y]);                     // (a second way round: open, or a secret door - not beside another way)
+    }
+  }
+  for (const [x, y] of loops) {
+    if (rnd.chance(0.5) && number >= 2) { floor.features[key(x, y)] = { type: "secret", found: false }; }
+    else { grid[y][x] = 0; doorways.push([x, y]); }
+  }
+  // template entrances: locked, gated, secret - as the template says
+  for (const r of rooms) if (r.template) for (const [x, y, c] of r.entrances) {
+    const f = floor.features[key(x, y)];
+    if (!f) continue;
+    if (c === "L") f.locked = true;
+    if (c === "S") { grid[y][x] = 1; f.found = false; delete f.open; }
+  }
+
+  // trim the dead ends, most of them (a corridor that ends at a secret door isn't one: the door is the point of it)
+  const leadsOn = (x, y) => grid[y][x] === 0 || (floor.features[key(x, y)] || {}).type === "secret";
+  const deadEnds = () => {
+    const out = [];
+    for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) {
+      if (grid[y][x] === 0 && !templateWall.has(key(x, y)) && CM.DIRS.filter(([dx, dy]) => leadsOn(x + dx, y + dy)).length === 1) out.push([x, y]);
+    }
+    return out;
+  };
+  const keepEnds = 3 + Math.floor(size / 6);
+  for (let pass = 0; pass < 40; pass++) {
+    const ends = deadEnds();
+    if (ends.length <= keepEnds) break;
+    rnd.shuffle(ends);
+    for (const [x, y] of ends.slice(0, Math.max(1, ends.length - keepEnds))) {
+      if (floor.features[key(x, y)]) continue;
+      grid[y][x] = 1;
+    }
+  }
+  // (a secret door with nothing on one side any more is just a wall now)
+  for (const [k, f] of Object.entries(floor.features)) {
+    if (f.type === "secret") {
+      const [x, y] = unkey(k);
+      if (CM.DIRS.filter(([dx, dy]) => grid[y + dy][x + dx] === 0).length < 2) delete floor.features[k];
+    }
+  }
+  // every set piece can be walked to (through its door, or its secret door): a sealed one gets a plain doorway
+  for (const r of rooms) if (r.template) {
+    const walk = CM.distances(grid, [r.x0, r.y0], (x, y) => x >= 0 && y >= 0 && x < size && y < size && leadsOn(x, y));
+    if (walk.size > (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) + 4) continue;
+    for (const [x, y] of r.entrances) {
+      const outside = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([ox, oy]) => grid[oy] && grid[oy][ox] === 0 && !(ox >= r.x0 && ox <= r.x1 && oy >= r.y0 && oy <= r.y1));
+      if (!outside) continue;
+      grid[y][x] = 0;
+      floor.features[key(x, y)] = { type: "door", open: false, locked: false };
+      break;
+    }
+  }
+
+  // where the party arrives and where the ladder goes
+  const plain = rooms.filter((r) => !r.template);
+  const startRoom = plain.length ? plain.reduce((a, b) => (a.x0 + a.y0 <= b.x0 + b.y0 ? a : b)) : null;
+  const start = startRoom ? [Math.floor((startRoom.x0 + startRoom.x1) / 2), Math.floor((startRoom.y0 + startRoom.y1) / 2)] : [1, 1];
+  if (grid[start[1]][start[0]] !== 0) { grid[start[1]][start[0]] = 0; }
+  floor.pos = start.slice();
+  const dist = CM.distances(grid, start);
+  const inTemplate = (x, y) => rooms.some((r) => r.template && x >= r.x0 - 1 && x <= r.x1 + 1 && y >= r.y0 - 1 && y <= r.y1 + 1);
+  let far = start, best = -1;
+  for (const [k, d] of dist) {
+    const [x, y] = unkey(k);
+    if (d > best && !inTemplate(x, y) && !floor.features[k]) { best = d; far = [x, y]; }
+  }
+  floor.things[key(far[0], far[1])] = number === CM.LAST_FLOOR ? { type: "boss", group: [CM.bossMonster()] } : { type: "ladder" };
+  if (number > 1) floor.things[key(start[0], start[1])] = { type: "stairs_up" };
+  const open = CM.openNeighbours(floor, start[0], start[1]);
+  floor.facing = open.length ? CM.DIRS.indexOf(open[0]) : 2;
+
+  // what the set pieces hold
+  const stillGroups = [];
+  for (const r of rooms) if (r.template) for (const [x, y, c] of r.fill) {
+    const k = key(x, y);
+    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd), CM.makeItem(number, rnd)] };
+    else if (c === "M") { const g = CM.monsterGroup(number, rnd); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
+    else if (c === "F") floor.features[k] = { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false };
+    else if (c === "A") floor.features[k] = { type: "altar", used: false };
+    else if (c === "P") floor.features[k] = { type: "pit" };
+    else if (c === "K") floor.things[k] = { type: "key" };
+    else if (c === "X") floor.dark.push(k);
+  }
+  for (const r of rooms) if (r.template) r.template.rows.forEach((row, ry) => [...row].forEach((c, rx) => {
+    if (c !== "W") return;
+    const x = r.x0 - 1 + rx, y = r.y0 - 1 + ry;
+    const inside = CM.DIRS.map(([dx, dy], d) => [x + dx, y + dy, d]).find(([ix, iy]) => ix >= r.x0 && ix <= r.x1 && iy >= r.y0 && iy <= r.y1);
+    if (inside && !floor.features[key(inside[0], inside[1])]) {
+      floor.features[key(inside[0], inside[1])] = { type: "carving", face: (inside[2] + 2) % 4, text: -(1 + rnd.int(0, CM.LORE_EXTRA.length - 1)), read: false };
+    }
+  }));
+
+  // doors on the ordinary rooms' doorways
+  const roomCells = new Set();
+  for (const r of plain) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) roomCells.add(key(x, y));
+  for (const [x, y] of doorways) {
+    const k = key(x, y);
+    if (floor.features[k] || !CM.DIRS.some(([dx, dy]) => roomCells.has(key(x + dx, y + dy)))) continue;
+    const ns = grid[y - 1][x] === 0 && grid[y + 1][x] === 0 && grid[y][x - 1] === 1 && grid[y][x + 1] === 1;
+    const ew = grid[y][x - 1] === 0 && grid[y][x + 1] === 0 && grid[y - 1][x] === 1 && grid[y + 1][x] === 1;
+    if (!(ns || ew) || !rnd.chance(0.55)) continue;
+    floor.features[k] = { type: "door", open: false, locked: number >= 2 && rnd.chance(0.12) };
+  }
+
+  // the furniture, each piece checked: the floor must still be finishable
+  const place = (k, feature) => {
+    floor.features[k] = feature;
+    if (CM.solvable(floor)) return true;
+    delete floor.features[k];
+    return false;
+  };
+  const freeCells = (filter) => {
+    const out = [];
+    for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) {
+      const k = key(x, y);
+      if (grid[y][x] !== 0 || floor.features[k] || floor.things[k] || (x === start[0] && y === start[1]) || inTemplate(x, y)) continue;
+      if ((dist.get(k) || 0) < 2 || Math.abs(x - start[0]) + Math.abs(y - start[1]) < 2) continue;
+      if (!filter || filter(x, y, k)) out.push([x, y]);
+    }
+    return rnd.shuffle(out);
+  };
+  const corridor = (x, y, k) => !roomCells.has(k);
+  const wallFace = (x, y) => { const d = CM.DIRS.findIndex(([dx, dy]) => grid[y + dy][x + dx] === 1); return d; };
+  const bottom = number === CM.LAST_FLOOR;                        // (nothing to fall into below the last floor)
+  if (number >= 2 && !bottom) for (const [x, y] of freeCells((x, y, k) => roomCells.has(k)).slice(0, rnd.int(0, 1 + Math.floor(number / 7)))) place(key(x, y), { type: "pit" });
+  if (number >= 3 && !bottom) for (const [x, y] of freeCells(corridor).slice(0, rnd.int(0, 2))) place(key(x, y), { type: "trapdoor", known: false });
+  if (number >= 3 && rnd.chance(0.7)) {
+    const ends = freeCells((x, y) => CM.openNeighbours(floor, x, y).length === 1);
+    if (ends.length >= 2) {
+      const [a, b] = ends;
+      floor.features[key(a[0], a[1])] = { type: "teleporter", to: b, known: false };
+      floor.features[key(b[0], b[1])] = { type: "teleporter", to: a, known: false };
+    }
+  }
+  if (number >= 2 && rnd.chance(0.6)) { const c = freeCells((x, y) => CM.openNeighbours(floor, x, y).length >= 3)[0]; if (c) place(key(c[0], c[1]), { type: "spinner", known: false }); }
+  if (number >= 2 && rnd.chance(0.5)) {
+    const darkRoom = rnd.pick(plain.filter((r) => r !== startRoom));
+    if (darkRoom) for (let y = darkRoom.y0 - 1; y <= darkRoom.y1 + 1; y++) for (let x = darkRoom.x0 - 1; x <= darkRoom.x1 + 1; x++) {
+      if (grid[y][x] === 0 && !(x === start[0] && y === start[1]) && !floor.dark.includes(key(x, y))) floor.dark.push(key(x, y));
+    }
+  }
+  if (rnd.chance(0.6)) { const c = freeCells((x, y, k) => roomCells.has(k))[0]; if (c) place(key(c[0], c[1]), { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false }); }
+  if (number >= 2 && rnd.chance(0.35)) { const c = freeCells((x, y, k) => roomCells.has(k))[0]; if (c) place(key(c[0], c[1]), { type: "altar", used: false }); }
+  // a gate on a doorway, its lever somewhere you can get to first
+  const gated = Object.entries(floor.features).filter(([, f]) => f.type === "gate");
+  if (number >= 4 && rnd.chance(0.4)) {
+    const door = Object.entries(floor.features).find(([, f]) => f.type === "door" && !f.locked);
+    if (door) { floor.features[door[0]] = { type: "gate", open: false }; gated.push([door[0], floor.features[door[0]]]); }
+  }
+  for (const [gk] of gated) {
+    const reach = CM.reachable(floor);
+    const spots = freeCells((x, y, k) => reach.has(k) && wallFace(x, y) >= 0);
+    const spot = spots[0];
+    if (!spot) { floor.features[gk].open = true; continue; }
+    floor.features[key(spot[0], spot[1])] = { type: "lever", face: wallFace(spot[0], spot[1]), gate: gk, pulled: false };
+    if (!CM.solvable(floor)) { delete floor.features[key(spot[0], spot[1])]; floor.features[gk].open = true; }
+  }
+  // the carving for this floor, on a wall the party can stand before
+  const carve_at = freeCells((x, y) => wallFace(x, y) >= 0)[0];
+  if (carve_at) floor.features[key(carve_at[0], carve_at[1])] = { type: "carving", face: wallFace(carve_at[0], carve_at[1]), text: number - 1, read: false };
+  // keys: one for every locked door, somewhere before it
+  for (const [dk, f] of Object.entries(floor.features)) {
+    if (f.type !== "door" || !f.locked) continue;
+    const reach = CM.reachable(floor);
+    const spots = freeCells((x, y, k) => reach.has(k) && !roomCells.has(k) || (reach.has(k) && rnd.chance(0.3)));
+    const spot = spots[0];
+    if (spot) floor.things[key(spot[0], spot[1])] = { type: "key" };
+    else f.locked = false;
+  }
+  // chests and monsters
+  const spare = freeCells((x, y, k) => (dist.get(k) || 0) > 3);
+  for (let i = 0; i < 3 + Math.floor(number / 4) && spare.length; i++) {
+    const [x, y] = spare.pop();
+    const items = [];
+    const n = rnd.int(1, 2);
+    for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd));
+    floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items };
+  }
+  for (let i = 0; i < 5 + Math.floor(number / 2) && spare.length; i++) {
+    const [x, y] = spare.pop();
+    floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd) };
+  }
+  if (!CM.solvable(floor)) {                                     // (it never comes to this, but a floor must be finishable)
+    for (const [k, f] of Object.entries(floor.features)) if (["pit", "trapdoor", "gate"].includes(f.type) || (f.type === "door" && f.locked)) delete floor.features[k];
+  }
+  floor.rooms = rooms.map((r) => ({ x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, name: r.template ? r.template.name : "" }));
+  return floor;
 };
 
 // ---- 30-art.js ----
@@ -702,6 +1091,191 @@ CM.art.monster = function (m, big = false) {
   return c;
 };
 
+// ---- the dungeon's furniture ------------------------------------------------------------------------------------------
+function planks(p, x, y, w, h, rnd, base = "#6E4A26", dark = "#4A2E14") {
+  const n = Math.max(2, Math.round(w / 34));
+  for (let i = 0; i < n; i++) {
+    const px = x + i * (w / n), k = 0.9 + rnd.next() * 0.2;
+    p.fillStyle = shaded(p, base, k);
+    p.fillRect(px, y, w / n, h);
+    p.fillStyle = dark; p.fillRect(px, y, 2, h);
+    p.strokeStyle = shaded(p, dark, 0.8); p.lineWidth = 1;
+    for (let g = 0; g < 3; g++) { const gx = px + 4 + rnd.next() * (w / n - 8); p.beginPath(); p.moveTo(gx, y + 4); p.lineTo(gx + (rnd.next() - 0.5) * 6, y + h - 4); p.stroke(); }
+  }
+}
+
+CM.art.door = function (kind) {                                          // closed, locked, or open (the frame, the leaf swung in)
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(21);
+  p.fillStyle = "#2A2420"; p.fillRect(0, 0, S, S);                       // the frame's stone
+  p.fillStyle = "#4A4038"; p.fillRect(0, 0, S, 22); p.fillRect(0, 0, 22, S); p.fillRect(S - 22, 0, 22, S);
+  p.fillStyle = "#1A1612"; p.fillRect(22, 22, S - 44, S - 22);
+  if (kind === "open") {
+    p.clearRect(30, 26, S - 60, S - 26);                                 // see through to the corridor beyond
+    p.save(); p.translate(30, 26); p.transform(0.28, 0.09, 0, 1, 0, 0);  // the leaf, swung inward
+    planks(p, 0, 0, S - 60, S - 26, rnd);
+    p.restore();
+    return c;
+  }
+  planks(p, 22, 22, S - 44, S - 22, rnd);
+  p.fillStyle = "#2E2E34";                                               // iron bands
+  for (const y of [50, S - 60]) { p.fillRect(22, y, S - 44, 14); for (let x = 30; x < S - 30; x += 24) { p.fillStyle = "#56565E"; p.beginPath(); p.arc(x, y + 7, 3, 0, Math.PI * 2); p.fill(); p.fillStyle = "#2E2E34"; } }
+  p.strokeStyle = "#101010"; p.lineWidth = 3; p.strokeRect(22, 22, S - 44, S - 22);
+  if (kind === "locked") {
+    p.fillStyle = "#C8A040"; p.fillRect(S / 2 - 18, S / 2 - 6, 36, 40);
+    p.strokeStyle = "#C8A040"; p.lineWidth = 7; p.beginPath(); p.arc(S / 2, S / 2 - 8, 14, Math.PI, 0); p.stroke();
+    p.fillStyle = "#1A1410"; p.fillRect(S / 2 - 4, S / 2 + 6, 8, 16);
+  } else {
+    p.fillStyle = "#56565E"; p.beginPath(); p.arc(S - 50, S / 2 + 10, 8, 0, Math.PI * 2); p.fill();   // a ring handle
+    p.strokeStyle = "#8A8A92"; p.lineWidth = 4; p.beginPath(); p.arc(S - 50, S / 2 + 24, 12, 0, Math.PI * 2); p.stroke();
+  }
+  return c;
+};
+
+CM.art.gate = function (open) {                                           // a portcullis, down or raised
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "#4A4038"; p.fillRect(0, 0, S, 20); p.fillRect(0, 0, 16, S); p.fillRect(S - 16, 0, 16, S);
+  const top = open ? -S + 60 : 0;
+  p.fillStyle = "#3A3A42"; p.strokeStyle = "#16161A"; p.lineWidth = 2;
+  for (let x = 30; x < S - 20; x += 32) { p.fillRect(x, top + 20, 12, S - 20); p.strokeRect(x, top + 20, 12, S - 20);
+    p.beginPath(); p.moveTo(x, top + S); p.lineTo(x + 6, top + S + 16); p.lineTo(x + 12, top + S); p.fill(); }
+  for (let y = top + 50; y < top + S; y += 46) { p.fillRect(16, y, S - 32, 10); p.strokeRect(16, y, S - 32, 10); }
+  return c;
+};
+
+CM.art.pit = function (theme, known) {                                     // a hole in the floor; a trapdoor, once it has given way
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(5);
+  p.fillStyle = rgb(theme.floor, 0.9); p.fillRect(0, 0, S, S);
+  if (known === "trapdoor") {
+    planks(p, 30, 30, S - 60, S - 60, rnd, "#5A3E22", "#2A1A0A");
+    p.strokeStyle = "#0A0806"; p.lineWidth = 4; p.beginPath(); p.moveTo(30, S / 2); p.lineTo(S - 30, S / 2); p.stroke();
+    p.fillStyle = "#050403"; p.beginPath(); p.moveTo(30, S / 2 - 2); p.lineTo(S - 30, S / 2 - 2); p.lineTo(S - 40, S / 2 + 30); p.lineTo(40, S / 2 + 30); p.fill();
+    return c;
+  }
+  p.fillStyle = "#050403"; p.beginPath();
+  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, r = 92 + rnd.next() * 18; p.lineTo(S / 2 + Math.cos(a) * r, S / 2 + Math.sin(a) * r); }
+  p.closePath(); p.fill();
+  p.strokeStyle = rgb(theme.floor, 0.5); p.lineWidth = 3; p.stroke();
+  const g = p.createRadialGradient(S / 2, S / 2, 40, S / 2, S / 2, 100);
+  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, rgb(theme.floor, 0.35, 0.6));
+  p.fillStyle = g; p.fill();
+  return c;
+};
+
+CM.art.teleporter = function () {                                         // a ring of runes that glows
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.clearRect(0, 0, S, S);
+  const g = p.createRadialGradient(S / 2, S / 2, 20, S / 2, S / 2, 110);
+  g.addColorStop(0, "rgba(140,80,255,0.85)"); g.addColorStop(0.6, "rgba(120,60,220,0.35)"); g.addColorStop(1, "rgba(80,40,160,0)");
+  p.fillStyle = g; p.beginPath(); p.arc(S / 2, S / 2, 112, 0, Math.PI * 2); p.fill();
+  p.strokeStyle = "#E0C8FF"; p.lineWidth = 5; p.beginPath(); p.arc(S / 2, S / 2, 88, 0, Math.PI * 2); p.stroke();
+  p.lineWidth = 3; p.beginPath(); p.arc(S / 2, S / 2, 60, 0, Math.PI * 2); p.stroke();
+  p.fillStyle = "#F0E8FF"; p.font = "bold 22px Georgia"; p.textAlign = "center"; p.textBaseline = "middle";
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; p.save(); p.translate(S / 2 + Math.cos(a) * 74, S / 2 + Math.sin(a) * 74); p.rotate(a + Math.PI / 2); p.fillText("ᚠᚱᛇᛖᛟᚦᚷᛋᛒᛠᚫᚾ"[i], 0, 0); p.restore(); }
+  return c;
+};
+
+CM.art.fountain = function (dry) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
+  p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(cx, ground - 2, 100, 10, 0, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.ellipse(cx, ground - 40, 96, 30, 0, 0, Math.PI * 2); }, "#6A6258");                  // the basin
+  outlined(p, () => { p.rect(cx - 96, ground - 100, 192, 60); }, "#7A7268");
+  outlined(p, () => { p.ellipse(cx, ground - 100, 96, 30, 0, 0, Math.PI * 2); }, "#8A8278");
+  if (!dry) {
+    const w = p.createRadialGradient(cx, ground - 100, 10, cx, ground - 100, 90);
+    w.addColorStop(0, "#9AD0E8"); w.addColorStop(1, "#3A7A9A");
+    p.fillStyle = w; p.beginPath(); p.ellipse(cx, ground - 100, 84, 22, 0, 0, Math.PI * 2); p.fill();
+  } else {
+    p.fillStyle = "#4A4640"; p.beginPath(); p.ellipse(cx, ground - 100, 84, 22, 0, 0, Math.PI * 2); p.fill();
+  }
+  outlined(p, () => { p.rect(cx - 12, ground - 200, 24, 100); }, "#7A7268");                                    // the column
+  outlined(p, () => { p.ellipse(cx, ground - 204, 30, 10, 0, 0, Math.PI * 2); }, "#8A8278");
+  if (!dry) {
+    p.strokeStyle = "rgba(170,220,240,0.9)"; p.lineWidth = 4; p.lineCap = "round";
+    for (const side of [-1, 1]) { p.beginPath(); p.moveTo(cx + side * 20, ground - 200); p.quadraticCurveTo(cx + side * 60, ground - 170, cx + side * 56, ground - 104); p.stroke(); }
+  }
+  return c;
+};
+
+CM.art.altar = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
+  p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(cx, ground - 2, 90, 10, 0, 0, Math.PI * 2); p.fill();
+  outlined(p, () => { p.rect(cx - 70, ground - 70, 140, 70); }, "#5A5650");
+  outlined(p, () => { p.rect(cx - 86, ground - 86, 172, 20); }, "#7A7670");
+  p.fillStyle = "#E8E0C8";                                                // a cloth
+  p.beginPath(); p.moveTo(cx - 60, ground - 86); p.lineTo(cx + 60, ground - 86); p.lineTo(cx + 54, ground - 40); p.lineTo(cx - 54, ground - 40); p.fill();
+  for (const dx of [-44, 44]) {                                           // candles
+    outlined(p, () => { p.rect(cx + dx - 6, ground - 130, 12, 44); }, "#F0E8D0", "#5A5040", 2);
+    const g = p.createRadialGradient(cx + dx, ground - 140, 2, cx + dx, ground - 140, 20);
+    g.addColorStop(0, "#FFF0A0"); g.addColorStop(0.4, "rgba(255,180,60,0.8)"); g.addColorStop(1, "rgba(255,140,40,0)");
+    p.fillStyle = g; p.beginPath(); p.arc(cx + dx, ground - 140, 20, 0, Math.PI * 2); p.fill();
+  }
+  outlined(p, () => { p.rect(cx - 5, ground - 160, 10, 70); p.rect(cx - 26, ground - 140, 52, 10); }, "#E8C040", "#6A4A08", 2);   // a symbol
+  return c;
+};
+
+CM.art.lever = function (pulled) {                                         // on a wall: a bracket and a handle
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.clearRect(0, 0, S, S);
+  outlined(p, () => { p.roundRect(70, 90, 116, 90, 10); }, "#4A4A52", "#16161A", 4);
+  for (const [x, y] of [[84, 104], [172, 104], [84, 166], [172, 166]]) { p.fillStyle = "#8A8A92"; p.beginPath(); p.arc(x, y, 5, 0, Math.PI * 2); p.fill(); }
+  p.fillStyle = "#101014"; p.fillRect(118, 112, 20, 46);
+  p.save(); p.translate(128, 135); p.rotate(pulled ? 0.9 : -0.9);
+  p.strokeStyle = "#16161A"; p.lineWidth = 16; p.lineCap = "round"; p.beginPath(); p.moveTo(0, 0); p.lineTo(0, -70); p.stroke();
+  p.strokeStyle = "#8A6A30"; p.lineWidth = 10; p.beginPath(); p.moveTo(0, 0); p.lineTo(0, -70); p.stroke();
+  p.fillStyle = "#C83030"; p.beginPath(); p.arc(0, -74, 13, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#16161A"; p.lineWidth = 3; p.stroke();
+  p.restore();
+  return c;
+};
+
+CM.art.carving = function () {                                            // a plaque of runes set into the wall
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(31);
+  p.clearRect(0, 0, S, S);
+  outlined(p, () => { p.roundRect(40, 60, S - 80, S - 120, 8); }, "#5E5650", "#1A1612", 4);
+  p.fillStyle = "#2A2420";
+  p.font = "bold 18px Georgia"; p.textAlign = "left"; p.textBaseline = "top";
+  const runes = "ᚠᚢᚦᚨᚱᚷᚹᚾᛁᛇᛋᛏᛒᛖᛚᛟᛠᛦ";
+  for (let row = 0; row < 5; row++) {
+    let line = "";
+    const n = 8 + rnd.int(0, 3);
+    for (let i = 0; i < n; i++) line += runes[rnd.int(0, runes.length - 1)] + (rnd.chance(0.2) ? " " : "");
+    p.fillText(line, 54, 74 + row * 24);
+  }
+  return c;
+};
+
+CM.art.stairsUp = function (theme) {                                       // a ladder up into a hole in the ceiling
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2;
+  p.clearRect(0, 0, S, S);
+  p.fillStyle = "#050403"; p.beginPath(); p.ellipse(cx, 26, 70, 22, 0, 0, Math.PI * 2); p.fill();
+  p.strokeStyle = rgb(theme.ceiling, 1.3); p.lineWidth = 6; p.stroke();
+  p.strokeStyle = "#A07840"; p.lineWidth = 11; p.lineCap = "round";
+  p.beginPath(); p.moveTo(cx - 34, S - 10); p.lineTo(cx - 34, 20); p.moveTo(cx + 34, S - 10); p.lineTo(cx + 34, 20); p.stroke();
+  p.lineWidth = 8;
+  for (let y = 40; y < S - 10; y += 30) { p.beginPath(); p.moveTo(cx - 34, y); p.lineTo(cx + 34, y); p.stroke(); }
+  return c;
+};
+
+CM.art.key = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
+  p.clearRect(0, 0, S, S);
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(cx, ground - 4, 60, 8, 0, 0, Math.PI * 2); p.fill();
+  p.save(); p.translate(cx, ground - 30); p.rotate(-0.5);
+  p.strokeStyle = "#1A1410"; p.lineWidth = 22; p.lineCap = "round"; p.beginPath(); p.moveTo(-60, 0); p.lineTo(50, 0); p.stroke();
+  p.strokeStyle = "#D8B040"; p.lineWidth = 14; p.beginPath(); p.moveTo(-60, 0); p.lineTo(50, 0); p.stroke();
+  p.lineWidth = 14; p.beginPath(); p.moveTo(30, 0); p.lineTo(30, 22); p.moveTo(50, 0); p.lineTo(50, 18); p.stroke();
+  p.strokeStyle = "#1A1410"; p.lineWidth = 22; p.beginPath(); p.arc(-78, 0, 22, 0, Math.PI * 2); p.stroke();
+  p.strokeStyle = "#D8B040"; p.lineWidth = 12; p.beginPath(); p.arc(-78, 0, 22, 0, Math.PI * 2); p.stroke();
+  p.restore();
+  return c;
+};
+
+CM.art.secretWall = function (theme, seed) {                               // a wall like the others, with a hairline round a door's shape
+  const c = CM.art.wall(theme, seed, false), p = c.getContext("2d"), S = ART_SIZE;
+  p.strokeStyle = rgb(theme.mortar, 0.45, 0.55); p.lineWidth = 2;
+  p.beginPath(); p.moveTo(52, S); p.lineTo(52, 30); p.lineTo(S - 52, 30); p.lineTo(S - 52, S); p.stroke();
+  return c;
+};
+
 // ---- the heroes' portraits ----------------------------------------------------------------------------------------
 CM.art.portrait = function (cls, size = 56) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 56;
@@ -758,8 +1332,25 @@ CM.art.build = function (theme) {
   add("wallbones", CM.art.wall(theme, seed + 3, true));
   add("floor", CM.art.floor(theme, seed + 4));
   add("ceiling", CM.art.ceiling(theme, seed + 5));
+  add("wallsecret", CM.art.secretWall(theme, seed + 6));
   add("chest", CM.art.chest());
   add("hatch", CM.art.hatch(theme));
+  add("door", CM.art.door("closed"));
+  add("door_locked", CM.art.door("locked"));
+  add("door_open", CM.art.door("open"));
+  add("gate", CM.art.gate(false));
+  add("gate_open", CM.art.gate(true));
+  add("pit", CM.art.pit(theme));
+  add("trapdoor", CM.art.pit(theme, "trapdoor"));
+  add("teleporter", CM.art.teleporter());
+  add("fountain", CM.art.fountain(false));
+  add("fountain_dry", CM.art.fountain(true));
+  add("altar", CM.art.altar());
+  add("lever", CM.art.lever(false));
+  add("lever_pulled", CM.art.lever(true));
+  add("carving", CM.art.carving());
+  add("stairs_up", CM.art.stairsUp(theme));
+  add("key", CM.art.key());
   for (const m of CM.MONSTERS) add(`monster:${m.name}`, CM.art.monster(m));
   add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
   return { layers, index, size: ART_SIZE };
@@ -772,14 +1363,15 @@ CM.art.build = function (theme) {
 // flickers, and fog the colour of the depth. The camera steps and turns smoothly (or snaps, if that's the setting).
 const VERT = `#version 300 es
 precision highp float;
-in vec3 aPos; in vec3 aUV; in float aShade; in vec2 aFx;
+in vec3 aPos; in vec3 aUV; in float aShade; in vec3 aFx;
 uniform mat4 uViewProj;
-out vec3 vWorld; out vec3 vUV; out float vShade; out vec2 vFx;
+out vec3 vWorld; out vec3 vUV; out float vShade; out vec3 vFx;
 void main() { vWorld = aPos; vUV = aUV; vShade = aShade; vFx = aFx; gl_Position = uViewProj * vec4(aPos, 1.0); }`;
 
+// aFx: a hit's red flash, the alpha (a foe fading), and glow - how much of the texture's own colour shows unlit
 const FRAG = `#version 300 es
 precision highp float; precision highp sampler2DArray;
-in vec3 vWorld; in vec3 vUV; in float vShade; in vec2 vFx;
+in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
 uniform sampler2DArray uTex; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 out vec4 fragColor;
@@ -792,11 +1384,12 @@ void main() {
   vec3 col = t.rgb * vShade * uTorch * light;
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
   col = mix(col, uFog, fog);
+  col = mix(col, t.rgb, vFx.z * (1.0 - fog * 0.7));
   col = mix(col, vec3(1.0, 0.3, 0.2), vFx.x);
   fragColor = vec4(col, t.a * vFx.y);
 }`;
 
-const STRIDE = 9;                      // floats a vertex: pos 3, uv 3, shade 1, fx 2
+const STRIDE = 10;                     // floats a vertex: pos 3, uv 3, shade 1, fx 3
 const EYE_HEIGHT = 0.5;
 
 function mat4Perspective(fovY, aspect, near, far) {
@@ -850,6 +1443,8 @@ CM.Renderer = class {
     this.viewProj = null;
     this.snap = false;
     this.bob = 0;
+    this.light = 1;                    // how far the torch reaches, as a share of the depth's reach (1: a good torch)
+    this.lightNow = 1;                 // (eased towards it)
     this.ok = true;
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
@@ -903,12 +1498,14 @@ CM.Renderer = class {
   // ---- the floor's mesh ----
   setFloor(floor, theme) {
     this.theme = theme;
-    const grid = floor.grid, size = grid.length, out = [];
+    const grid = floor.grid, size = grid.length, out = [], features = floor.features || {};
     const quad = (a, b, c, d, layer, shade) => {           // four corners, counter-clockwise from the bottom left as seen
       const uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
-      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1);
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0);
     };
-    const pickWall = (x, y, d) => {
+    const pickWall = (x, y, d, wx, wy) => {
+      const f = features[`${wx},${wy}`];
+      if (f && f.type === "secret" && !f.found) return this.index.wallsecret;    // (a hairline, for the sharp-eyed)
       const h = (x * 73856093) ^ (y * 19349663) ^ (d * 83492791);
       const r = ((h >>> 0) % 1000) / 1000;
       return r < this.theme.bones * 0.5 ? this.index.wallbones : r < 0.6 ? this.index.wall : this.index.wall2;
@@ -918,10 +1515,10 @@ CM.Renderer = class {
       quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], this.index.floor, 0.9);
       quad([x, 1, y], [x + 1, 1, y], [x + 1, 1, y + 1], [x, 1, y + 1], this.index.ceiling, 0.7);
       const solid = (nx, ny) => ny < 0 || ny >= size || nx < 0 || nx >= size || grid[ny][nx] !== 0;
-      if (solid(x, y - 1)) quad([x, 0, y], [x + 1, 0, y], [x + 1, 1, y], [x, 1, y], pickWall(x, y, 0), 1.0);                 // north wall, facing south
-      if (solid(x, y + 1)) quad([x + 1, 0, y + 1], [x, 0, y + 1], [x, 1, y + 1], [x + 1, 1, y + 1], pickWall(x, y, 2), 1.0);   // south wall, facing north
-      if (solid(x + 1, y)) quad([x + 1, 0, y], [x + 1, 0, y + 1], [x + 1, 1, y + 1], [x + 1, 1, y], pickWall(x, y, 1), 0.84);   // east wall, facing west
-      if (solid(x - 1, y)) quad([x, 0, y + 1], [x, 0, y], [x, 1, y], [x, 1, y + 1], pickWall(x, y, 3), 0.84);                 // west wall, facing east
+      if (solid(x, y - 1)) quad([x, 0, y], [x + 1, 0, y], [x + 1, 1, y], [x, 1, y], pickWall(x, y, 0, x, y - 1), 1.0);                 // north wall, facing south
+      if (solid(x, y + 1)) quad([x + 1, 0, y + 1], [x, 0, y + 1], [x, 1, y + 1], [x + 1, 1, y + 1], pickWall(x, y, 2, x, y + 1), 1.0);   // south wall, facing north
+      if (solid(x + 1, y)) quad([x + 1, 0, y], [x + 1, 0, y + 1], [x + 1, 1, y + 1], [x + 1, 1, y], pickWall(x, y, 1, x + 1, y), 0.84);   // east wall, facing west
+      if (solid(x - 1, y)) quad([x, 0, y + 1], [x, 0, y], [x, 1, y], [x, 1, y + 1], pickWall(x, y, 3, x - 1, y), 0.84);                 // west wall, facing east
     }
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
@@ -950,6 +1547,12 @@ CM.Renderer = class {
     while (to - from < -Math.PI) to += Math.PI * 2;
     if (this.snap || ms <= 0) { this.yaw = to; this.turn = null; return; }
     this.turn = { from, to, t: 0, ms };
+  }
+
+  spinTo(facing, ms = 700) {                                           // a spinner: the whole way round, and then some
+    let to = this.yawFor(facing);
+    while (to < this.yaw) to += Math.PI * 2;
+    this.turn = { from: this.yaw, to: to + Math.PI * 2, t: 0, ms };
   }
 
   get busy() { return this.move !== null || this.turn !== null; }
@@ -982,23 +1585,36 @@ CM.Renderer = class {
     }
   }
 
+  // A sprite: {x, y (the cell), layer, w, h} and one of - nothing (a billboard facing the camera, standing on the
+  // floor), flat (lying on the floor), axis "ns"/"ew" (standing across the cell's middle: a door), face 0-3 (a decal
+  // on that wall of the cell) - plus dx/dz (an offset in the cell), lift, flash, alpha, glow, shade.
   _spriteMesh() {
     const out = [], right = [Math.cos(this.yaw), 0, Math.sin(this.yaw)];
     for (const s of this.sprites) {
       const layer = this.index[s.layer];
       if (layer === undefined) continue;
       const cx = s.x + 0.5 + (s.dx || 0), cz = s.y + 0.5 + (s.dz || 0), w = s.w || 0.7, h = s.h || 0.7;
-      const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1;
+      const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1, glow = s.glow || 0;
       const uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
       let corners;
+      const lift = s.lift || 0;
       if (s.flat) {
         corners = [[cx - w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz - w / 2], [cx - w / 2, 0.003, cz - w / 2]];
+      } else if (s.axis) {
+        corners = s.axis === "ns"                                        // a door across a corridor running north-south
+          ? [[cx - 0.5, 0, cz], [cx + 0.5, 0, cz], [cx + 0.5, 1, cz], [cx - 0.5, 1, cz]]
+          : [[cx, 0, cz + 0.5], [cx, 0, cz - 0.5], [cx, 1, cz - 0.5], [cx, 1, cz + 0.5]];
+      } else if (s.face !== undefined) {
+        const [dx, dz] = CM.DIRS[s.face], inset = 0.012;                // flush with that wall, a hair into the room
+        const px = s.x + 0.5 + dx * (0.5 - inset), pz = s.y + 0.5 + dz * (0.5 - inset);
+        const ax = -dz, az = dx;                                         // along the wall
+        const y0 = 0.5 - h / 2 + lift, y1 = 0.5 + h / 2 + lift;
+        corners = [[px - ax * w / 2, y0, pz - az * w / 2], [px + ax * w / 2, y0, pz + az * w / 2], [px + ax * w / 2, y1, pz + az * w / 2], [px - ax * w / 2, y1, pz - az * w / 2]];
       } else {
-        const lift = s.lift || 0;
         corners = [[cx - right[0] * w / 2, lift, cz - right[2] * w / 2], [cx + right[0] * w / 2, lift, cz + right[2] * w / 2],
           [cx + right[0] * w / 2, lift + h, cz + right[2] * w / 2], [cx - right[0] * w / 2, lift + h, cz - right[2] * w / 2]];
       }
-      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uv[i][0], uv[i][1], layer, shade, flash, alpha);
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uv[i][0], uv[i][1], layer, shade, flash, alpha, glow);
     }
     return out;
   }
@@ -1008,15 +1624,17 @@ CM.Renderer = class {
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0);
     gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
     gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24);
-    gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 2, gl.FLOAT, false, bytes, 28);
+    gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);
   }
 
   frame(dt) {
     if (!this.ok || !this.texture) return;
     this.time += dt;
     this._advance(dt);
-    // a torch flame: a slow wander and a quick shiver
-    this.flicker = 0.92 + 0.06 * Math.sin(this.time * 7.3) + 0.03 * Math.sin(this.time * 17.1 + 1.0) + 0.02 * Math.sin(this.time * 31.7);
+    this.lightNow += (this.light - this.lightNow) * Math.min(1, dt * 4);
+    // a torch flame: a slow wander and a quick shiver - more of a shiver as it burns low
+    const unsteady = this.light < 0.6 ? 2.2 : 1;
+    this.flicker = 0.92 + unsteady * (0.06 * Math.sin(this.time * 7.3) + 0.03 * Math.sin(this.time * 17.1 + 1.0) + 0.02 * Math.sin(this.time * 31.7));
     const gl = this.gl, aspect = this.canvas.width / this.canvas.height;
     const eye = [this.eye[0], this.eye[1] + this.bob, this.eye[2]];
     const fwd = [Math.sin(this.yaw), 0, -Math.cos(this.yaw)];
@@ -1031,9 +1649,9 @@ CM.Renderer = class {
     gl.uniform3fv(this.loc.uEye, eye);
     gl.uniform3fv(this.loc.uTorch, t.torch);
     gl.uniform3fv(this.loc.uFog, t.fog);
-    gl.uniform1f(this.loc.uReach, t.reach);
+    gl.uniform1f(this.loc.uReach, t.reach * this.lightNow);
     gl.uniform1f(this.loc.uFlicker, this.flicker);
-    gl.uniform1f(this.loc.uAmbient, 0.06);
+    gl.uniform1f(this.loc.uAmbient, 0.06 * Math.min(1, this.lightNow * 2));
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);
@@ -1191,9 +1809,20 @@ CM.audio = {
 
 // ---- 60-game.js ----
 "use strict";
-// The game itself, with no screen in it: the party, the floor they're on, the fight they're in, the camp, the bag,
-// saving as it goes, the Hall of Fame. The window (70-ui.js) listens to its events and draws; the tests drive it
-// straight. Everything here was the old Python game's rules, kept to the number.
+// The game itself, with no screen in it: the party, the floors they've walked (kept, so they can climb back), the
+// light they carry, the fight they're in, the camp, the bag, saving as it goes, the Hall of Fame. The window
+// (70-ui.js) listens to its events and draws; the tests drive it straight.
+const keyOf = (x, y) => `${x},${y}`;
+
+// a floor saved by an older version of the game gets the parts it didn't have
+CM.upgradeFloor = function (fl) {
+  fl.features = fl.features || {};
+  fl.dark = fl.dark || [];
+  fl.rooms = fl.rooms || [];
+  fl.seen = fl.seen || [];
+  return fl;
+};
+
 CM.Game = class {
   constructor() {
     this.listeners = {};
@@ -1201,15 +1830,18 @@ CM.Game = class {
     this.titleNote = "";
     this.messages = [];
     this.party = []; this.bag = []; this.gold = 0; this.floor = null; this.foes = []; this.foeKey = null;
+    this.floors = {};                    // every floor walked this run, by number: climb back and it's as you left it
+    this.light = { kind: "torch", left: CM.TORCH_STEPS };
     this.seed = "";
     this.stock = null; this.shopping = false;
     this.rnd = new CM.Random(Math.floor(Math.random() * 4294967296));
     this.fame = CM.store.get("fame", []);
     this.settings = Object.assign({ sound: true, volume: 0.6, smooth: true, fps: false }, CM.store.get("settings", {}));
     this.lastRun = CM.store.get("run", null);        // a run left part way, to continue
+    this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
 
-  // ---- events: change (redraw), message, mode, floor, moved, turned, fx, sound ----
+  // ---- events: change (redraw), message, mode, floor, moved, turned, fx, sound, mesh, teleported, fell, spin, lore ----
   on(event, fn) { (this.listeners[event] = this.listeners[event] || []).push(fn); return this; }
   emit(event, ...args) { for (const fn of this.listeners[event] || []) fn(...args); }
 
@@ -1229,10 +1861,11 @@ CM.Game = class {
   // ---- saving ----
   saveRun() {
     if (!["explore", "camp"].includes(this.mode)) return;
-    const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, mode: this.mode, seed: this.seed,
-      saved: new Date().toISOString() };
+    const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, floors: this.floors, light: this.light,
+      mode: this.mode, seed: this.seed, saved: new Date().toISOString() };
     this.lastRun = data;
     CM.store.set("run", data);
+    this.dirty = false; this.sinceSave = 0;
   }
 
   canContinue() { return Boolean(this.lastRun && this.lastRun.floor && this.lastRun.party); }
@@ -1240,7 +1873,12 @@ CM.Game = class {
   continueRun() {
     const d = this.lastRun;
     if (!this.canContinue()) return false;
-    this.party = d.party; this.bag = d.bag || []; this.gold = d.gold || 0; this.floor = d.floor;
+    this.party = d.party; this.bag = d.bag || []; this.gold = d.gold || 0;
+    this.floors = d.floors || {};
+    for (const fl of Object.values(this.floors)) CM.upgradeFloor(fl);
+    this.floor = CM.upgradeFloor(d.floor);
+    this.floors[this.floor.number] = this.floor;
+    this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.seed = d.seed || CM.randomSeed();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -1270,7 +1908,7 @@ CM.Game = class {
 
   // what the old Python game kept on disk (run.json, hall_of_fame.json), brought over once by the Timeline's host
   importOld(data) {
-    let took = [];
+    const took = [];
     if (data && Array.isArray(data.fame) && data.fame.length) {
       const have = new Set(this.fame.map((e) => `${e.name}|${e.floor}|${e.gold}|${e.date}`));
       for (const e of data.fame) if (e && !have.has(`${e.name}|${e.floor}|${e.gold}|${e.date}`)) this.fame.push(e);
@@ -1302,25 +1940,76 @@ CM.Game = class {
     return "";
   }
 
-  // ---- starting ----
+  // ---- starting, and the stairs between floors ----
   newGame(seed) {
     this.seed = (seed || "").trim() || CM.randomSeed();
     this.party = CM.newParty();
     this.bag = CM.startingBag(this.seed);
     this.gold = 30;
+    this.floors = {};
+    this.light = { kind: "torch", left: CM.TORCH_STEPS };
     this.messages = [];
     this.titleNote = "";
-    this.enterFloor(1);
+    this.enterFloor(1, "down");
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs.");
   }
 
-  enterFloor(number) {
-    this.floor = CM.makeFloor(number, this.seed);
+  cellOf(fl, type) {
+    const k = Object.keys(fl.things).find((c) => fl.things[c].type === type);
+    return k ? k.split(",").map(Number) : null;
+  }
+
+  // how: "down" (by the stairs, arriving at the top), "up" (arriving at the ladder), "fall" (through the floor at `at`)
+  enterFloor(number, how = "down", at = null) {
+    let fl = this.floors[number];
+    const fresh = !fl;
+    if (fresh) { fl = CM.makeFloor(number, this.seed); this.floors[number] = fl; }
+    this.floor = fl;
+    if (how === "down") {
+      const top = this.cellOf(fl, "stairs_up");
+      if (top) fl.pos = top.slice();
+      else if (!fresh) fl.pos = fl.pos.slice();
+      const open = CM.openNeighbours(fl, fl.pos[0], fl.pos[1]);
+      if (open.length) fl.facing = CM.DIRS.indexOf(open[0]);
+    } else if (how === "up") {
+      const ladder = this.cellOf(fl, "ladder") || this.cellOf(fl, "boss");
+      if (ladder) fl.pos = ladder.slice();
+      const open = CM.openNeighbours(fl, fl.pos[0], fl.pos[1]);
+      if (open.length) fl.facing = CM.DIRS.indexOf(open[0]);
+    } else if (how === "fall" && at) {
+      let best = null, bd = 1e9;
+      for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) {
+        const k = keyOf(x, y), f = fl.features[k], t = fl.things[k];
+        if (!CM.passable(fl, x, y) || (f && ["pit", "trapdoor", "teleporter"].includes(f.type)) || (t && t.type !== "key")) continue;
+        const d = Math.abs(x - at[0]) + Math.abs(y - at[1]);
+        if (d < bd) { bd = d; best = [x, y]; }
+      }
+      if (best) fl.pos = best;
+    }
     this.setMode("explore");
     this.look();
-    this.emit("floor", this.floor);
+    this.emit("floor", fl);
     this.saveRun();
-    this.say(`Floor ${number}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
+    if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.themeFor(number).name}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
+  }
+
+  climbUp() {
+    const n = this.floor.number;
+    if (n === 1) { this.say("The way out. Not without the Lich King's crown."); return; }
+    this.sound("stairs");
+    if (CM.CAMP_AFTER.includes(n - 1)) {                  // the camp is between this floor and the one above
+      const above = this.floors[n - 1] || (this.floors[n - 1] = CM.makeFloor(n - 1, this.seed));
+      this.floor = above;
+      const ladder = this.cellOf(above, "ladder");
+      if (ladder) above.pos = ladder.slice();
+      this.setMode("camp");
+      this.emit("floor", above);
+      this.saveRun();
+      this.say("Up the long shaft, the merchant's lantern glows again.");
+      return;
+    }
+    this.enterFloor(n - 1, "up");
+    this.say("You climb back up.");
   }
 
   // ---- moving ----
@@ -1333,51 +2022,181 @@ CM.Game = class {
     return true;
   }
 
+  hasKey() { return this.bag.findIndex((i) => i.kind === "key"); }
+
   move(rel) {
     if (this.mode !== "explore") return false;
     const fl = this.floor;
     const [dx, dy] = CM.DIRS[(fl.facing + rel) % 4];
-    const x = fl.pos[0] + dx, y = fl.pos[1] + dy;
-    if (y < 0 || y >= fl.grid.length || x < 0 || x >= fl.grid.length || fl.grid[y][x]) {
+    const x = fl.pos[0] + dx, y = fl.pos[1] + dy, k = keyOf(x, y);
+    if (!CM.isOpen(fl, x, y)) {
       this.sound("bump");
       this.say("Ouch! A solid wall.");
       return false;
     }
-    const thing = fl.things[`${x},${y}`];
+    const f = fl.features[k];
+    if (f && f.type === "door" && !f.open) {
+      if (f.locked) {
+        const i = this.hasKey();
+        if (i < 0) { this.sound("bump"); this.say("The door is locked. It needs a key."); return false; }
+        this.bag.splice(i, 1);
+        f.locked = false;
+        this.say("The key turns, and the door swings open.");
+      } else {
+        this.say("The door creaks open.");
+      }
+      f.open = true;
+      this.sound("chest");
+      this.dirty = true;
+      this.emit("change");
+      return false;
+    }
+    if (f && f.type === "gate" && !f.open) {
+      this.sound("bump");
+      this.say("A portcullis bars the way. There must be a lever somewhere.");
+      return false;
+    }
+    const thing = fl.things[k];
     if (thing && (thing.type === "monsters" || thing.type === "boss")) {
-      this.startCombat(`${x},${y}`, thing);
+      this.startCombat(k, thing);
       return false;
     }
     fl.pos = [x, y];
     this.sound("step");
+    this.burn();
     this.look();
     this.emit("moved", x, y);
-    if (thing) this.say({ chest: "A chest sits here. (Space to open it)", ladder: "A ladder leads down into the dark. (Space to climb down)" }[thing.type]);
+    this.dirty = true;
+    if (thing) {
+      if (thing.type === "key") {
+        delete fl.things[k];
+        this.bag.push(CM.key());
+        this.sound("coin");
+        this.say("An iron key lies in the dust. You take it.");
+      } else {
+        this.say({ chest: "A chest sits here. (Space to open it)", ladder: "A ladder leads down into the dark. (Space to climb down)",
+          stairs_up: "The stairs you came down. (Space to climb back up)" }[thing.type]);
+      }
+    }
+    if (f) this.arrive(f, k);
     this.emit("change");
     return true;
   }
 
-  // what the party can see goes on the automap: around them, and along the corridor they face
+  // what a square does when the party steps onto it
+  arrive(f, k) {
+    const fl = this.floor;
+    if (f.type === "pit" || f.type === "trapdoor") {
+      if (f.type === "trapdoor") { f.known = true; this.say("The floor gives way beneath you!"); }
+      else this.say("You step into the pit!");
+      this.fall(k.split(",").map(Number));
+    } else if (f.type === "teleporter") {
+      f.known = true;
+      const to = fl.features[keyOf(f.to[0], f.to[1])];
+      if (to) to.known = true;
+      fl.pos = f.to.slice();
+      this.sound("spell");
+      this.look();
+      this.emit("teleported", fl.pos[0], fl.pos[1]);
+      this.say("The runes flare - and the walls around you are different ones.");
+    } else if (f.type === "spinner") {
+      f.known = true;
+      fl.facing = (fl.facing + this.rnd.int(1, 3)) % 4;
+      this.look();
+      this.emit("spin", fl.facing);
+      this.say("The floor lurches and the world turns. Which way were you facing?");
+    } else if (f.type === "fountain") {
+      this.say(f.used ? "A dry fountain." : "A fountain, running. (Space to drink)");
+    } else if (f.type === "altar") {
+      this.say(f.used ? "A quiet altar." : "An altar, with candles still lit. (Space to kneel)");
+    }
+  }
+
+  fall(from) {
+    const n = this.floor.number;
+    for (const m of this.alive()) m.hp = Math.max(1, m.hp - Math.max(1, Math.floor(m.max / 10)));
+    this.sound("hurt");
+    this.emit("fell");
+    if (n >= CM.LAST_FLOOR) { this.say("You fall into blackness... and land, bruised, on the stone below."); return; }
+    this.say(`You fall to floor ${n + 1}, bruised but alive.`);
+    this.enterFloor(n + 1, "fall", from);
+  }
+
+  // ---- light ----
+  burn() {
+    const l = this.light;
+    if (l.kind !== "torch") return;
+    l.left -= 1;
+    if (l.left === 40) this.say("Your torch is burning low.");
+    if (l.left > 0) return;
+    const spare = this.bag.findIndex((i) => i.kind === "torch");
+    if (spare >= 0) {
+      this.bag.splice(spare, 1);
+      this.light = { kind: "torch", left: CM.TORCH_STEPS };
+      this.say("Your torch gutters out. You light a fresh one.");
+    } else {
+      this.light = { kind: null, left: 0 };
+      this.say("Your torch gutters out. The dark closes in.");
+    }
+  }
+
+  inDark() { return this.floor ? this.floor.dark.includes(keyOf(this.floor.pos[0], this.floor.pos[1])) : false; }
+
+  // how far the party can see, as a share of the depth's reach
+  lightFactor() {
+    const l = this.light;
+    if (this.inDark()) return l.kind === "lantern" ? 0.45 : 0.25;
+    if (l.kind === "lantern") return 1.15;
+    if (l.kind === "torch") return l.left > 40 ? 1 : 0.6;
+    return 0.22;
+  }
+
+  // what the party can see goes on the automap: around them, and along the corridor they face - by torchlight
   look() {
     const fl = this.floor, size = fl.grid.length;
-    const seen = new Set(fl.seen.map(([x, y]) => `${x},${y}`));
+    const seen = new Set(fl.seen.map(([x, y]) => keyOf(x, y)));
     const [x, y] = fl.pos;
-    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) seen.add(`${x + dx},${y + dy}`);
-    const [fx, fy] = CM.DIRS[fl.facing];
-    for (let d = 1; d < 5; d++) {
-      const cx = x + fx * d, cy = y + fy * d;
-      seen.add(`${cx},${cy}`); seen.add(`${cx + fy},${cy + fx}`); seen.add(`${cx - fy},${cy - fx}`);
-      if (cy < 0 || cy >= size || cx < 0 || cx >= size || fl.grid[cy][cx]) break;
+    seen.add(keyOf(x, y));
+    if (!this.inDark()) {
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) seen.add(keyOf(x + dx, y + dy));
+      if (this.light.kind) {
+        const [fx, fy] = CM.DIRS[fl.facing];
+        for (let d = 1; d < 5; d++) {
+          const cx = x + fx * d, cy = y + fy * d;
+          if (fl.dark.includes(keyOf(cx, cy))) break;
+          seen.add(keyOf(cx, cy)); seen.add(keyOf(cx + fy, cy + fx)); seen.add(keyOf(cx - fy, cy - fx));
+          if (!CM.passable(fl, cx, cy)) break;
+        }
+      }
     }
     fl.seen = [...seen].map((k) => k.split(",").map(Number)).filter(([a, b]) => a >= 0 && a < size && b >= 0 && b < size);
   }
 
   use() {
     if (this.mode !== "explore") return;
-    const fl = this.floor, key = `${fl.pos[0]},${fl.pos[1]}`, thing = fl.things[key];
-    if (!thing) { this.say("There's nothing here to use."); return; }
-    if (thing.type === "chest") {
-      delete fl.things[key];
+    const fl = this.floor, [x, y] = fl.pos, k = keyOf(x, y), here = fl.features[k], thing = fl.things[k];
+    const [dx, dy] = CM.DIRS[fl.facing], ak = keyOf(x + dx, y + dy), ahead = fl.features[ak];
+    if (here && here.type === "lever" && here.face === fl.facing) {
+      if (here.pulled) { this.say("The lever is down already."); return; }
+      here.pulled = true;
+      const gate = fl.features[here.gate];
+      if (gate) gate.open = true;
+      this.sound("stairs");
+      this.say("You haul the lever down. Somewhere, iron grinds upward.");
+      this.dirty = true;
+      this.emit("change");
+      return;
+    }
+    if (here && here.type === "carving" && here.face === fl.facing) {
+      here.read = true;
+      const text = here.text >= 0 ? CM.LORE[here.text] || CM.LORE[CM.LORE.length - 1] : CM.LORE_EXTRA[-here.text - 1] || CM.LORE_EXTRA[0];
+      this.say("You read the carving on the wall.");
+      this.emit("lore", text);
+      this.dirty = true;
+      return;
+    }
+    if (thing && thing.type === "chest") {
+      delete fl.things[k];
       this.gold += thing.gold;
       this.bag.push(...thing.items);
       this.sound("chest");
@@ -1385,27 +2204,123 @@ CM.Game = class {
       this.say(`The chest creaks open: ${thing.gold} gold` + (found ? `, ${found}.` : "."));
       this.saveRun();
       this.emit("change");
-    } else if (thing.type === "ladder") {
+    } else if (thing && thing.type === "ladder") {
       this.sound("stairs");
       if (CM.CAMP_AFTER.includes(fl.number)) {
         this.setMode("camp");
         this.saveRun();
         this.say(`Halfway down a long shaft, a lantern glows: a merchant's camp beneath floor ${fl.number}. Rest, trade, and see to the fallen.`);
       } else {
-        this.enterFloor(fl.number + 1);
+        this.enterFloor(fl.number + 1, "down");
       }
+    } else if (thing && thing.type === "stairs_up") {
+      this.climbUp();
+    } else if (here && here.type === "fountain") {
+      this.drink(here);
+    } else if (here && here.type === "altar") {
+      this.kneel(here);
+    } else if (!CM.isOpen(fl, x + dx, y + dy)) {                       // a wall before you: search it
+      if (ahead && ahead.type === "secret" && !ahead.found) {
+        ahead.found = true;
+        fl.grid[y + dy][x + dx] = 0;
+        this.sound("stairs");
+        this.say("You press the stones... and a hidden door grinds open!");
+        this.look();
+        this.emit("mesh");
+        this.dirty = true;
+        this.emit("change");
+      } else {
+        this.say("You search the wall and find nothing.");
+      }
+    } else {
+      this.say("There's nothing here to use.");
     }
   }
 
+  drink(f) {
+    if (f.used) { this.say("The fountain has run dry."); return; }
+    f.used = true; f.known = true;
+    if (f.kind === "heal") {
+      for (const m of this.alive()) m.hp = m.max;
+      this.sound("heal");
+      this.say("The water is cold and clean. Every wound closes.");
+    } else if (f.kind === "mana") {
+      for (const m of this.alive()) m.mp = m.maxmp;
+      this.sound("heal");
+      this.say("The water tingles. Magic returns to the casters.");
+    } else {
+      for (const m of this.alive()) m.hp = Math.max(1, m.hp - Math.max(1, Math.floor(m.max * 0.15)));
+      this.sound("hurt");
+      this.say("The water is foul! The party retches and staggers.");
+    }
+    this.saveRun();
+    this.emit("change");
+  }
+
+  kneel(f) {
+    if (f.used) { this.say("You have prayed here already. The candles gutter."); return; }
+    f.used = true;
+    for (const m of this.alive()) m.hp = Math.min(m.max, m.hp + Math.max(1, Math.floor(m.max * 0.3)));
+    this.sound("heal");
+    this.say("You kneel. A warmth passes through the party.");
+    this.saveRun();
+    this.emit("change");
+  }
+
+  // ---- the monsters move: towards the party when they're near, else as they please ----
+  tick(dt) {
+    if (this.mode === "explore" && this.dirty) {
+      this.sinceSave += dt;
+      if (this.sinceSave > 4) this.saveRun();
+    }
+    if (this.mode !== "explore") return;
+    this.wander += dt;
+    if (this.wander < 1.1) return;
+    this.wander = 0;
+    const fl = this.floor, [px, py] = fl.pos;
+    const walk = (x, y) => {
+      if (!CM.passable(fl, x, y)) return false;
+      const f = fl.features[keyOf(x, y)];
+      return !(f && ["pit", "trapdoor", "teleporter", "spinner"].includes(f.type));
+    };
+    const dist = CM.distances(fl.grid, fl.pos, walk);
+    const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still);
+    this.rnd.shuffle(movers);
+    for (const [k, t] of movers) {
+      const [x, y] = k.split(",").map(Number);
+      const d = dist.get(k);
+      let step = null;
+      const options = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([nx, ny]) => walk(nx, ny) && !fl.things[keyOf(nx, ny)]);
+      if (d === 1) {
+        this.startCombat(k, t, true);
+        return;
+      }
+      if (d !== undefined && d <= 7) {
+        const nearer = options.filter(([nx, ny]) => dist.get(keyOf(nx, ny)) === d - 1 && !(nx === px && ny === py));
+        if (nearer.length) step = this.rnd.pick(nearer);
+      } else if (this.rnd.chance(0.3) && options.length) {
+        step = this.rnd.pick(options.filter(([nx, ny]) => !(nx === px && ny === py)));
+      }
+      if (!step) continue;
+      delete fl.things[k];
+      t.anim = { from: [x, y], at: performance.now() };
+      fl.things[keyOf(step[0], step[1])] = t;
+      this.dirty = true;
+    }
+    this.emit("change");
+  }
+
   // ---- fighting ----
-  startCombat(key, thing) {
+  startCombat(key, thing, theyCame = false) {
     this.foes = thing.group;
     this.foeKey = key;
+    delete thing.anim;
     this.setMode("combat");
     this.sound("monster");
     const names = {};
     for (const m of this.foes) names[m.name] = (names[m.name] || 0) + 1;
-    this.say("Monsters! " + Object.entries(names).map(([k, n]) => CM.plural(n, k)).join(", ") + " attack!");
+    const who = Object.entries(names).map(([k, n]) => CM.plural(n, k)).join(", ");
+    this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
   }
 
   alive() { return this.party.filter((m) => m.hp > 0); }
@@ -1536,7 +2451,7 @@ CM.Game = class {
       this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor"].map((k) => CM.makeItem(depth, rnd, k));
       this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
-        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 });
+        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.torch(), CM.lantern());
     }
     this.emit("bag", true);
   }
@@ -1548,12 +2463,30 @@ CM.Game = class {
   }
 
   describe(item) {
-    return { weapon: `weapon +${item.power}`, armor: `armor +${item.power}`, heal: "heals", mana: "restores magic", revive: "raises the fallen" }[item.kind];
+    return { weapon: `weapon +${item.power}`, armor: `armor +${item.power}`, heal: "heals", mana: "restores magic", revive: "raises the fallen",
+      torch: "light, for a while", lantern: "light that lasts", key: "opens a locked door" }[item.kind];
   }
 
   give(row, n) {                                                        // returns a note for the bag screen, "" when it worked
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack first.";
     const item = this.bag[row], hero = this.party[n];
+    if (item.kind === "key") return "Keys turn in locks, not in hands. Walk into the locked door.";
+    if (item.kind === "torch") {
+      this.bag.splice(row, 1);
+      this.light = { kind: "torch", left: CM.TORCH_STEPS };
+      this.sound("spell");
+      this.say(`The ${hero.cls} lights a fresh torch.`);
+      this.emit("change");
+      return "";
+    }
+    if (item.kind === "lantern") {
+      this.bag.splice(row, 1);
+      this.light = { kind: "lantern", left: 0 };
+      this.sound("spell");
+      this.say(`The ${hero.cls} lights the lantern. It won't run out.`);
+      this.emit("change");
+      return "";
+    }
     if (item.kind === "revive") {
       if (hero.hp > 0) return "The Phoenix Feather is for the fallen.";
       hero.hp = Math.floor(hero.max / 2);
@@ -1586,7 +2519,7 @@ CM.Game = class {
     if (this.gold < item.value) return "You can't afford that.";
     this.gold -= item.value;
     this.bag.push(Object.assign({}, item));
-    if (item.kind === "weapon" || item.kind === "armor") this.stock.splice(row, 1);
+    if (["weapon", "armor", "lantern"].includes(item.kind)) this.stock.splice(row, 1);
     this.sound("coin");
     this.emit("change");
     return "";
@@ -1624,7 +2557,18 @@ CM.Game = class {
 
   leaveCamp() {
     this.stock = null;
-    this.enterFloor(this.floor.number + 1);
+    this.enterFloor(this.floor.number + 1, "down");
+  }
+
+  backUp() {                                                             // from the camp, back onto the floor above it
+    this.stock = null;
+    const ladder = this.cellOf(this.floor, "ladder");
+    if (ladder) this.floor.pos = ladder.slice();
+    this.setMode("explore");
+    this.look();
+    this.emit("floor", this.floor);
+    this.saveRun();
+    this.say(`Back up the shaft to floor ${this.floor.number}.`);
   }
 
   potionCount() { return this.bag.filter((i) => ["heal", "mana", "revive"].includes(i.kind)).length; }
@@ -1666,8 +2610,8 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div id="floats"></div><div class="hint"></div></div>
-    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div id="floats"></div><div class="hint"></div></div>
+    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div></div>
   </div>
   <div id="party"></div>
   <div id="log"></div>
@@ -1696,6 +2640,8 @@ CM.UI = class {
 <div class="dialog" id="dlg-pause"><div class="box"><h2>Paused</h2>
   <p class="small">The run is saved as you go.</p>
   <div class="end"><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
+<div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
+  <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="bigmap"><canvas id="bigmap-canvas" width="600" height="600"></canvas></div>`;
     this.$ = (sel) => root.querySelector(sel);
     this.canvas = document.createElement("canvas");                        // the one WebGL canvas, moved between screens
@@ -1715,7 +2661,16 @@ CM.UI = class {
     game.on("mode", (mode) => this.show(mode === "title" ? "title" : "play"));
     game.on("bag", (open) => (open ? this.openBag() : this.show("play")));
     game.on("fx", (fx) => this.fx(fx));
+    game.on("lore", (text) => { this.$("#lore-text").textContent = text; this.openDialog("#dlg-lore"); });
+    game.on("teleported", () => this.flash(".blink", 60));
+    game.on("fell", () => this.flash(".fall", 350));
     this.show("title");
+  }
+
+  flash(sel, ms) {
+    const el = this.$("#view " + sel);
+    el.classList.add("on");
+    setTimeout(() => el.classList.remove("on"), ms);
   }
 
   attachCanvas(where) {
@@ -1840,12 +2795,26 @@ CM.UI = class {
       this.$("#side .where").textContent = `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
+    const light = this.$("#side .light"), l = g.light || {};
+    let lit = l.kind === "lantern" ? "Lantern lit" : l.kind === "torch" ? (l.left > 40 ? `Torch: ${l.left} steps left` : `Torch burning low: ${l.left}`) : "No light!";
+    if (fl && g.inDark()) lit += " - a magical dark";
+    light.textContent = lit;
+    light.classList.toggle("dark", !l.kind || g.inDark());
     const hint = this.$("#view .hint");
-    if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper.";
+    if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper, or back up.";
     else if (g.mode === "combat") hint.textContent = "";
-    else {
-      const thing = fl && fl.things[`${fl.pos[0]},${fl.pos[1]}`];
-      hint.textContent = thing ? (thing.type === "chest" ? "A chest. Space opens it." : "A ladder down. Space climbs it.") : "";
+    else if (fl) {
+      const k = `${fl.pos[0]},${fl.pos[1]}`, thing = fl.things[k], f = fl.features[k];
+      const [dx, dy] = CM.DIRS[fl.facing], ahead = fl.features[`${fl.pos[0] + dx},${fl.pos[1] + dy}`];
+      let text = "";
+      if (f && f.type === "lever" && f.face === fl.facing) text = f.pulled ? "The lever, pulled." : "A lever on the wall. Space pulls it.";
+      else if (f && f.type === "carving" && f.face === fl.facing) text = "Runes carved into the wall. Space reads them.";
+      else if (thing) text = { chest: "A chest. Space opens it.", ladder: "A ladder down. Space climbs it.", stairs_up: "The stairs up. Space climbs them." }[thing.type] || "";
+      else if (f && f.type === "fountain") text = f.used ? "A dry fountain." : "A fountain. Space drinks.";
+      else if (f && f.type === "altar") text = f.used ? "A quiet altar." : "An altar. Space kneels.";
+      else if (ahead && ahead.type === "door" && !ahead.open) text = ahead.locked ? "A locked door. Walk into it with a key." : "A door. Walk into it to open it.";
+      else if (ahead && ahead.type === "gate" && !ahead.open) text = "A portcullis. Find its lever.";
+      hint.textContent = text;
     }
     this.renderParty();
     this.renderLog();
@@ -1897,7 +2866,8 @@ CM.UI = class {
       combat: [["Fight (F)", () => g.combatRound("fight")], ["Cast (C)", () => g.combatRound("cast")],
         ["Potion (P)", () => g.combatRound("potion")], ["Run (R)", () => g.combatRound("run")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Raise the fallen", () => g.raiseDead()],
-        ["Inventory", () => g.openBag()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
+        ["Inventory", () => g.openBag()], ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()],
+        ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const wanted = sets[g.mode] || [];
     if (box.dataset.mode !== g.mode) {
@@ -1928,14 +2898,20 @@ CM.UI = class {
     p.beginPath();
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
-    const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0" };
+    const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", key: "#D8B040" };
+    const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
-      p.fillStyle = fl.grid[y][x] ? "#3A3028" : "#F8F0DC";
+      const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
+      p.fillStyle = wall ? "#3A3028" : dark.has(k) ? "#8A8070" : "#F8F0DC";
       p.fillRect(x * cell, y * cell, cell, cell);
-      const thing = fl.things[`${x},${y}`];
-      if (thing && !fl.grid[y][x]) {
-        p.fillStyle = colours[thing.type];
-        p.beginPath(); p.arc((x + 0.5) * cell, (y + 0.5) * cell, cell * 0.3, 0, Math.PI * 2); p.fill();
+      const cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
+      if (f && !wall) this.drawFeature(p, f, x, y, cell, fl);
+      const thing = fl.things[k];
+      if (thing && !wall) {
+        p.fillStyle = colours[thing.type] || "#808080";
+        if (thing.type === "stairs_up") { p.beginPath(); p.moveTo(cx, cy - cell * 0.35); p.lineTo(cx + cell * 0.35, cy + cell * 0.3); p.lineTo(cx - cell * 0.35, cy + cell * 0.3); p.fill(); }
+        else if (thing.type === "ladder") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
+        else { p.beginPath(); p.arc(cx, cy, cell * (thing.type === "key" ? 0.2 : 0.3), 0, Math.PI * 2); p.fill(); }
       }
     }
     const [x, y] = fl.pos, [dx, dy] = CM.DIRS[fl.facing], cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
@@ -1945,6 +2921,38 @@ CM.UI = class {
     p.lineTo(cx - dy * cell * 0.35 - dx * cell * 0.3, cy + dx * cell * 0.35 - dy * cell * 0.3);
     p.lineTo(cx + dy * cell * 0.35 - dx * cell * 0.3, cy - dx * cell * 0.35 - dy * cell * 0.3);
     p.fill();
+  }
+
+  // the dungeon's furniture on the automap, once seen (a trapdoor, a spinner or a teleporter only once it has had you)
+  drawFeature(p, f, x, y, cell, fl) {
+    const cx = (x + 0.5) * cell, cy = (y + 0.5) * cell, ns = fl.grid[y - 1] && fl.grid[y - 1][x] === 0 && fl.grid[y + 1] && fl.grid[y + 1][x] === 0;
+    p.lineWidth = Math.max(1.5, cell * 0.16);
+    if (f.type === "door" || f.type === "gate" || (f.type === "secret" && f.found)) {
+      p.strokeStyle = f.type === "gate" ? "#607080" : f.locked ? "#D8B040" : f.type === "secret" ? "#A070C0" : "#8A5A2A";
+      if (f.type === "gate" && !f.open) p.setLineDash([cell * 0.15, cell * 0.12]);
+      if (f.type === "door" && f.open) p.setLineDash([cell * 0.25, cell * 0.25]);
+      p.beginPath();
+      if (ns) { p.moveTo(cx - cell * 0.42, cy); p.lineTo(cx + cell * 0.42, cy); } else { p.moveTo(cx, cy - cell * 0.42); p.lineTo(cx, cy + cell * 0.42); }
+      p.stroke(); p.setLineDash([]);
+    } else if (f.type === "pit" || (f.type === "trapdoor" && f.known)) {
+      p.fillStyle = "#101010"; p.beginPath(); p.arc(cx, cy, cell * 0.32, 0, Math.PI * 2); p.fill();
+    } else if (f.type === "teleporter" && f.known) {
+      p.strokeStyle = "#8040E0"; p.lineWidth = Math.max(1.5, cell * 0.12); p.beginPath(); p.arc(cx, cy, cell * 0.3, 0, Math.PI * 2); p.stroke();
+    } else if (f.type === "spinner" && f.known) {
+      p.strokeStyle = "#606060"; p.lineWidth = Math.max(1.5, cell * 0.12); p.beginPath(); p.arc(cx, cy, cell * 0.28, 0.6, 5.4); p.stroke();
+    } else if (f.type === "fountain") {
+      p.fillStyle = f.used ? "#9098A0" : "#3090D0"; p.beginPath(); p.arc(cx, cy, cell * 0.26, 0, Math.PI * 2); p.fill();
+    } else if (f.type === "altar") {
+      p.fillStyle = "#E8E0C0"; p.fillRect(cx - cell * 0.08, cy - cell * 0.32, cell * 0.16, cell * 0.64); p.fillRect(cx - cell * 0.28, cy - cell * 0.12, cell * 0.56, cell * 0.16);
+    } else if (f.type === "lever" || f.type === "carving") {
+      const [dx, dy] = CM.DIRS[f.face];
+      p.strokeStyle = f.type === "lever" ? (f.pulled ? "#80A060" : "#E08030") : "#8A6A3A";
+      p.lineWidth = Math.max(2, cell * 0.2);
+      p.beginPath();
+      p.moveTo(cx + dx * cell * 0.4 - dy * cell * 0.3, cy + dy * cell * 0.4 - dx * cell * 0.3);
+      p.lineTo(cx + dx * cell * 0.4 + dy * cell * 0.3, cy + dy * cell * 0.4 + dx * cell * 0.3);
+      p.stroke();
+    }
   }
 
   // the names and health of the foes, over the view, where they stand
@@ -2094,6 +3102,9 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   game.on("moved", (x, y) => renderer.moveTo(x, y, game.settings.smooth ? 180 : 0));
   game.on("turned", (facing) => renderer.turnTo(facing, game.settings.smooth ? 160 : 0));
+  game.on("mesh", () => { if (renderer.ok && game.floor) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); });
+  game.on("teleported", (x, y) => renderer.setCamera(x, y, game.floor.facing));
+  game.on("spin", (facing) => (game.settings.smooth ? renderer.spinTo(facing) : renderer.turnTo(facing, 0)));
   game.on("mode", (mode) => {
     CM.audio.ambience(mode === "explore" || mode === "combat");
     if (mode === "title") showDemo();
@@ -2144,15 +3155,37 @@ window.addEventListener("DOMContentLoaded", () => {
     const fl = game.floor, out = [], hud = [];
     if (!fl) return { out, hud };
     const now = performance.now();
+    const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
     for (const [key, thing] of Object.entries(fl.things)) {
-      const [x, y] = key.split(",").map(Number);
-      if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue;
+      let [x, y] = key.split(",").map(Number);
+      if (!near(x, y)) continue;
       if (thing.type === "chest") out.push({ x, y, layer: "chest", w: 0.75, h: 0.75 });
       else if (thing.type === "ladder") out.push({ x, y, layer: "hatch", w: 0.92, flat: true });
+      else if (thing.type === "stairs_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
+      else if (thing.type === "key") out.push({ x, y, layer: "key", w: 0.4, h: 0.4 });
       else if ((thing.type === "monsters" || thing.type === "boss") && !(game.mode === "combat" && key === game.foeKey)) {
         const m = thing.group[0];
+        if (thing.anim) {                                               // on the move: it slides from where it was
+          const k = Math.min(1, (now - thing.anim.at) / 320);
+          if (k >= 1) delete thing.anim;
+          else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
+        }
         out.push({ x, y, layer: `monster:${m.name}`, w: m.boss ? 1.25 : 0.85, h: m.boss ? 1.25 : 0.85 });
       }
+    }
+    for (const [key, f] of Object.entries(fl.features)) {
+      const [x, y] = key.split(",").map(Number);
+      if (!near(x, y)) continue;
+      const ns = fl.grid[y - 1] && fl.grid[y - 1][x] === 0 && fl.grid[y + 1] && fl.grid[y + 1][x] === 0;   // (the corridor runs north-south)
+      if (f.type === "door") out.push({ x, y, layer: f.open ? "door_open" : f.locked ? "door_locked" : "door", axis: ns ? "ns" : "ew" });
+      else if (f.type === "gate") out.push({ x, y, layer: f.open ? "gate_open" : "gate", axis: ns ? "ns" : "ew" });
+      else if (f.type === "pit") out.push({ x, y, layer: "pit", flat: true, w: 0.96 });
+      else if (f.type === "trapdoor" && f.known) out.push({ x, y, layer: "trapdoor", flat: true, w: 0.96 });
+      else if (f.type === "teleporter") out.push({ x, y, layer: "teleporter", flat: true, w: 0.9, glow: 0.85 });
+      else if (f.type === "fountain") out.push({ x, y, layer: f.used ? "fountain_dry" : "fountain", w: 0.9, h: 0.9 });
+      else if (f.type === "altar") out.push({ x, y, layer: "altar", w: 0.9, h: 0.9 });
+      else if (f.type === "lever") out.push({ x, y, layer: f.pulled ? "lever_pulled" : "lever", face: f.face, w: 0.34, h: 0.34 });
+      else if (f.type === "carving") out.push({ x, y, layer: "carving", face: f.face, w: 0.62, h: 0.5 });
     }
     if (game.mode === "combat") {
       for (const m of game.foes) {
@@ -2210,6 +3243,7 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   window.addEventListener("keyup", (e) => held.delete(e.code));
   window.addEventListener("blur", () => held.clear());
+  window.addEventListener("beforeunload", () => { if (game.dirty) game.saveRun(); });
   window.addEventListener("pointerdown", () => CM.audio.unlock(), { once: false });
 
   // ---- the frame loop ----
@@ -2221,11 +3255,14 @@ window.addEventListener("DOMContentLoaded", () => {
       renderer.resize();
       if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
+        renderer.light = 1;
         renderer.setSprites([]);
       } else {
         if (game.mode === "explore" && !renderer.busy && held.size) {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
+        game.tick(dt);                                                    // the monsters move; the run saves now and then
+        renderer.light = game.lightFactor();
         const { out, hud } = sprites();
         renderer.setSprites(out);
         renderer.frame(dt);

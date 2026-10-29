@@ -56,6 +56,9 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   game.on("moved", (x, y) => renderer.moveTo(x, y, game.settings.smooth ? 180 : 0));
   game.on("turned", (facing) => renderer.turnTo(facing, game.settings.smooth ? 160 : 0));
+  game.on("mesh", () => { if (renderer.ok && game.floor) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); });
+  game.on("teleported", (x, y) => renderer.setCamera(x, y, game.floor.facing));
+  game.on("spin", (facing) => (game.settings.smooth ? renderer.spinTo(facing) : renderer.turnTo(facing, 0)));
   game.on("mode", (mode) => {
     CM.audio.ambience(mode === "explore" || mode === "combat");
     if (mode === "title") showDemo();
@@ -106,15 +109,37 @@ window.addEventListener("DOMContentLoaded", () => {
     const fl = game.floor, out = [], hud = [];
     if (!fl) return { out, hud };
     const now = performance.now();
+    const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
     for (const [key, thing] of Object.entries(fl.things)) {
-      const [x, y] = key.split(",").map(Number);
-      if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue;
+      let [x, y] = key.split(",").map(Number);
+      if (!near(x, y)) continue;
       if (thing.type === "chest") out.push({ x, y, layer: "chest", w: 0.75, h: 0.75 });
       else if (thing.type === "ladder") out.push({ x, y, layer: "hatch", w: 0.92, flat: true });
+      else if (thing.type === "stairs_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
+      else if (thing.type === "key") out.push({ x, y, layer: "key", w: 0.4, h: 0.4 });
       else if ((thing.type === "monsters" || thing.type === "boss") && !(game.mode === "combat" && key === game.foeKey)) {
         const m = thing.group[0];
+        if (thing.anim) {                                               // on the move: it slides from where it was
+          const k = Math.min(1, (now - thing.anim.at) / 320);
+          if (k >= 1) delete thing.anim;
+          else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
+        }
         out.push({ x, y, layer: `monster:${m.name}`, w: m.boss ? 1.25 : 0.85, h: m.boss ? 1.25 : 0.85 });
       }
+    }
+    for (const [key, f] of Object.entries(fl.features)) {
+      const [x, y] = key.split(",").map(Number);
+      if (!near(x, y)) continue;
+      const ns = fl.grid[y - 1] && fl.grid[y - 1][x] === 0 && fl.grid[y + 1] && fl.grid[y + 1][x] === 0;   // (the corridor runs north-south)
+      if (f.type === "door") out.push({ x, y, layer: f.open ? "door_open" : f.locked ? "door_locked" : "door", axis: ns ? "ns" : "ew" });
+      else if (f.type === "gate") out.push({ x, y, layer: f.open ? "gate_open" : "gate", axis: ns ? "ns" : "ew" });
+      else if (f.type === "pit") out.push({ x, y, layer: "pit", flat: true, w: 0.96 });
+      else if (f.type === "trapdoor" && f.known) out.push({ x, y, layer: "trapdoor", flat: true, w: 0.96 });
+      else if (f.type === "teleporter") out.push({ x, y, layer: "teleporter", flat: true, w: 0.9, glow: 0.85 });
+      else if (f.type === "fountain") out.push({ x, y, layer: f.used ? "fountain_dry" : "fountain", w: 0.9, h: 0.9 });
+      else if (f.type === "altar") out.push({ x, y, layer: "altar", w: 0.9, h: 0.9 });
+      else if (f.type === "lever") out.push({ x, y, layer: f.pulled ? "lever_pulled" : "lever", face: f.face, w: 0.34, h: 0.34 });
+      else if (f.type === "carving") out.push({ x, y, layer: "carving", face: f.face, w: 0.62, h: 0.5 });
     }
     if (game.mode === "combat") {
       for (const m of game.foes) {
@@ -172,6 +197,7 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   window.addEventListener("keyup", (e) => held.delete(e.code));
   window.addEventListener("blur", () => held.clear());
+  window.addEventListener("beforeunload", () => { if (game.dirty) game.saveRun(); });
   window.addEventListener("pointerdown", () => CM.audio.unlock(), { once: false });
 
   // ---- the frame loop ----
@@ -183,11 +209,14 @@ window.addEventListener("DOMContentLoaded", () => {
       renderer.resize();
       if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
+        renderer.light = 1;
         renderer.setSprites([]);
       } else {
         if (game.mode === "explore" && !renderer.busy && held.size) {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
+        game.tick(dt);                                                    // the monsters move; the run saves now and then
+        renderer.light = game.lightFactor();
         const { out, hud } = sprites();
         renderer.setSprites(out);
         renderer.frame(dt);

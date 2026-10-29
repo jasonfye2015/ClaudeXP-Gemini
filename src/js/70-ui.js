@@ -33,8 +33,8 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div id="floats"></div><div class="hint"></div></div>
-    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div id="floats"></div><div class="hint"></div></div>
+    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div></div>
   </div>
   <div id="party"></div>
   <div id="log"></div>
@@ -63,6 +63,8 @@ CM.UI = class {
 <div class="dialog" id="dlg-pause"><div class="box"><h2>Paused</h2>
   <p class="small">The run is saved as you go.</p>
   <div class="end"><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
+<div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
+  <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="bigmap"><canvas id="bigmap-canvas" width="600" height="600"></canvas></div>`;
     this.$ = (sel) => root.querySelector(sel);
     this.canvas = document.createElement("canvas");                        // the one WebGL canvas, moved between screens
@@ -82,7 +84,16 @@ CM.UI = class {
     game.on("mode", (mode) => this.show(mode === "title" ? "title" : "play"));
     game.on("bag", (open) => (open ? this.openBag() : this.show("play")));
     game.on("fx", (fx) => this.fx(fx));
+    game.on("lore", (text) => { this.$("#lore-text").textContent = text; this.openDialog("#dlg-lore"); });
+    game.on("teleported", () => this.flash(".blink", 60));
+    game.on("fell", () => this.flash(".fall", 350));
     this.show("title");
+  }
+
+  flash(sel, ms) {
+    const el = this.$("#view " + sel);
+    el.classList.add("on");
+    setTimeout(() => el.classList.remove("on"), ms);
   }
 
   attachCanvas(where) {
@@ -207,12 +218,26 @@ CM.UI = class {
       this.$("#side .where").textContent = `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
+    const light = this.$("#side .light"), l = g.light || {};
+    let lit = l.kind === "lantern" ? "Lantern lit" : l.kind === "torch" ? (l.left > 40 ? `Torch: ${l.left} steps left` : `Torch burning low: ${l.left}`) : "No light!";
+    if (fl && g.inDark()) lit += " - a magical dark";
+    light.textContent = lit;
+    light.classList.toggle("dark", !l.kind || g.inDark());
     const hint = this.$("#view .hint");
-    if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper.";
+    if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper, or back up.";
     else if (g.mode === "combat") hint.textContent = "";
-    else {
-      const thing = fl && fl.things[`${fl.pos[0]},${fl.pos[1]}`];
-      hint.textContent = thing ? (thing.type === "chest" ? "A chest. Space opens it." : "A ladder down. Space climbs it.") : "";
+    else if (fl) {
+      const k = `${fl.pos[0]},${fl.pos[1]}`, thing = fl.things[k], f = fl.features[k];
+      const [dx, dy] = CM.DIRS[fl.facing], ahead = fl.features[`${fl.pos[0] + dx},${fl.pos[1] + dy}`];
+      let text = "";
+      if (f && f.type === "lever" && f.face === fl.facing) text = f.pulled ? "The lever, pulled." : "A lever on the wall. Space pulls it.";
+      else if (f && f.type === "carving" && f.face === fl.facing) text = "Runes carved into the wall. Space reads them.";
+      else if (thing) text = { chest: "A chest. Space opens it.", ladder: "A ladder down. Space climbs it.", stairs_up: "The stairs up. Space climbs them." }[thing.type] || "";
+      else if (f && f.type === "fountain") text = f.used ? "A dry fountain." : "A fountain. Space drinks.";
+      else if (f && f.type === "altar") text = f.used ? "A quiet altar." : "An altar. Space kneels.";
+      else if (ahead && ahead.type === "door" && !ahead.open) text = ahead.locked ? "A locked door. Walk into it with a key." : "A door. Walk into it to open it.";
+      else if (ahead && ahead.type === "gate" && !ahead.open) text = "A portcullis. Find its lever.";
+      hint.textContent = text;
     }
     this.renderParty();
     this.renderLog();
@@ -264,7 +289,8 @@ CM.UI = class {
       combat: [["Fight (F)", () => g.combatRound("fight")], ["Cast (C)", () => g.combatRound("cast")],
         ["Potion (P)", () => g.combatRound("potion")], ["Run (R)", () => g.combatRound("run")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Raise the fallen", () => g.raiseDead()],
-        ["Inventory", () => g.openBag()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
+        ["Inventory", () => g.openBag()], ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()],
+        ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const wanted = sets[g.mode] || [];
     if (box.dataset.mode !== g.mode) {
@@ -295,14 +321,20 @@ CM.UI = class {
     p.beginPath();
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
-    const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0" };
+    const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", key: "#D8B040" };
+    const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
-      p.fillStyle = fl.grid[y][x] ? "#3A3028" : "#F8F0DC";
+      const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
+      p.fillStyle = wall ? "#3A3028" : dark.has(k) ? "#8A8070" : "#F8F0DC";
       p.fillRect(x * cell, y * cell, cell, cell);
-      const thing = fl.things[`${x},${y}`];
-      if (thing && !fl.grid[y][x]) {
-        p.fillStyle = colours[thing.type];
-        p.beginPath(); p.arc((x + 0.5) * cell, (y + 0.5) * cell, cell * 0.3, 0, Math.PI * 2); p.fill();
+      const cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
+      if (f && !wall) this.drawFeature(p, f, x, y, cell, fl);
+      const thing = fl.things[k];
+      if (thing && !wall) {
+        p.fillStyle = colours[thing.type] || "#808080";
+        if (thing.type === "stairs_up") { p.beginPath(); p.moveTo(cx, cy - cell * 0.35); p.lineTo(cx + cell * 0.35, cy + cell * 0.3); p.lineTo(cx - cell * 0.35, cy + cell * 0.3); p.fill(); }
+        else if (thing.type === "ladder") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
+        else { p.beginPath(); p.arc(cx, cy, cell * (thing.type === "key" ? 0.2 : 0.3), 0, Math.PI * 2); p.fill(); }
       }
     }
     const [x, y] = fl.pos, [dx, dy] = CM.DIRS[fl.facing], cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
@@ -312,6 +344,38 @@ CM.UI = class {
     p.lineTo(cx - dy * cell * 0.35 - dx * cell * 0.3, cy + dx * cell * 0.35 - dy * cell * 0.3);
     p.lineTo(cx + dy * cell * 0.35 - dx * cell * 0.3, cy - dx * cell * 0.35 - dy * cell * 0.3);
     p.fill();
+  }
+
+  // the dungeon's furniture on the automap, once seen (a trapdoor, a spinner or a teleporter only once it has had you)
+  drawFeature(p, f, x, y, cell, fl) {
+    const cx = (x + 0.5) * cell, cy = (y + 0.5) * cell, ns = fl.grid[y - 1] && fl.grid[y - 1][x] === 0 && fl.grid[y + 1] && fl.grid[y + 1][x] === 0;
+    p.lineWidth = Math.max(1.5, cell * 0.16);
+    if (f.type === "door" || f.type === "gate" || (f.type === "secret" && f.found)) {
+      p.strokeStyle = f.type === "gate" ? "#607080" : f.locked ? "#D8B040" : f.type === "secret" ? "#A070C0" : "#8A5A2A";
+      if (f.type === "gate" && !f.open) p.setLineDash([cell * 0.15, cell * 0.12]);
+      if (f.type === "door" && f.open) p.setLineDash([cell * 0.25, cell * 0.25]);
+      p.beginPath();
+      if (ns) { p.moveTo(cx - cell * 0.42, cy); p.lineTo(cx + cell * 0.42, cy); } else { p.moveTo(cx, cy - cell * 0.42); p.lineTo(cx, cy + cell * 0.42); }
+      p.stroke(); p.setLineDash([]);
+    } else if (f.type === "pit" || (f.type === "trapdoor" && f.known)) {
+      p.fillStyle = "#101010"; p.beginPath(); p.arc(cx, cy, cell * 0.32, 0, Math.PI * 2); p.fill();
+    } else if (f.type === "teleporter" && f.known) {
+      p.strokeStyle = "#8040E0"; p.lineWidth = Math.max(1.5, cell * 0.12); p.beginPath(); p.arc(cx, cy, cell * 0.3, 0, Math.PI * 2); p.stroke();
+    } else if (f.type === "spinner" && f.known) {
+      p.strokeStyle = "#606060"; p.lineWidth = Math.max(1.5, cell * 0.12); p.beginPath(); p.arc(cx, cy, cell * 0.28, 0.6, 5.4); p.stroke();
+    } else if (f.type === "fountain") {
+      p.fillStyle = f.used ? "#9098A0" : "#3090D0"; p.beginPath(); p.arc(cx, cy, cell * 0.26, 0, Math.PI * 2); p.fill();
+    } else if (f.type === "altar") {
+      p.fillStyle = "#E8E0C0"; p.fillRect(cx - cell * 0.08, cy - cell * 0.32, cell * 0.16, cell * 0.64); p.fillRect(cx - cell * 0.28, cy - cell * 0.12, cell * 0.56, cell * 0.16);
+    } else if (f.type === "lever" || f.type === "carving") {
+      const [dx, dy] = CM.DIRS[f.face];
+      p.strokeStyle = f.type === "lever" ? (f.pulled ? "#80A060" : "#E08030") : "#8A6A3A";
+      p.lineWidth = Math.max(2, cell * 0.2);
+      p.beginPath();
+      p.moveTo(cx + dx * cell * 0.4 - dy * cell * 0.3, cy + dy * cell * 0.4 - dx * cell * 0.3);
+      p.lineTo(cx + dx * cell * 0.4 + dy * cell * 0.3, cy + dy * cell * 0.4 + dx * cell * 0.3);
+      p.stroke();
+    }
   }
 
   // the names and health of the foes, over the view, where they stand
