@@ -6,8 +6,9 @@ CM.DIR_NAMES = "NESW";
 // a monster's name in a sentence: "the Orc", but "the Lich King" (whose name carries its own The)
 CM.the = (m) => { const n = typeof m === "string" ? m : m.name; return /^The /.test(n) ? "t" + n.slice(1) : "the " + n; };
 CM.The = (m) => { const n = typeof m === "string" ? m : m.name; return /^The /.test(n) ? n : "The " + n; };
-CM.LAST_FLOOR = 20;
-CM.CAMP_AFTER = [5, 10, 15];                               // a merchant's camp waits below these floors
+CM.LAST_FLOOR = 20;                                        // the Lich King's floor: the story's end, and the Deep's door
+CM.BOTTOM = 50;                                            // the bottom of the world
+CM.CAMP_AFTER = [5, 10, 15, 25, 30, 35, 40, 45];           // a merchant's camp waits below these floors
 
 // the six stats a hero is rolled with (3-18, plus what the class brings)
 CM.STATS = ["str", "dex", "con", "int", "wis", "luck"];
@@ -128,6 +129,7 @@ CM.KITS = {
   delver: { name: "Delver's kit", need: 10, what: "Two Scrolls of Mapping, three torches, two antidotes." },
   heir: { name: "Heir's kit", need: 15, what: "Every hero's own weapon, well made: +2 to start." },
   legend: { name: "Legend's kit", need: 21, what: "Every hero sets out at level 2, with a boon to choose. (For slaying the Lich King.)" },
+  abyss: { name: "Abyss kit", need: 30, what: "Every hero sets out at level 3 with a boon, and the party with 150 gold more, a rope, a diamond and a Scroll of Mapping. (For reaching floor 30 of the Deep.)" },
 };
 
 // each monster, with how it's painted: body (beast, biped, small, wide, tall, ghost), head, eyes, and what it carries
@@ -153,7 +155,22 @@ CM.MONSTERS = [
   { name: "Vampire", colour: "#8A2030", body: "tall", head: "pale", eyes: "#FF3030", extras: ["cape"], speed: 13, undead: true, ability: "lifesteal", touch: { status: "sleep", chance: 0.12 } },
   { name: "Demon", colour: "#C03020", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings", "claws"], speed: 11, ability: "breath", touch: { status: "blind", chance: 0.12 } },
   { name: "Wyvern", colour: "#407A70", body: "beast", head: "snout", eyes: "#FFE040", extras: ["wings", "tail"], speed: 12, ability: "buffet", touch: { status: "poison", chance: 0.2 } },
+  // the Deep's kinds (floors 21-50), by the band they belong to (the theme's index): never seen above the Lich King
+  { name: "Drowned", colour: "#3E6A74", body: "biped", head: "pale", eyes: "#80E8D8", extras: ["torn"], skin: "rot", speed: 6, undead: true, ability: "lifesteal", touch: { status: "sleep", chance: 0.15 }, deep: 4 },
+  { name: "Weed Hag", colour: "#2E5A4E", body: "thin", head: "hood", eyes: "#A0FFE0", extras: ["claws"], speed: 11, ability: "ranged", touch: { status: "paralysis", chance: 0.15 }, deep: 4 },
+  { name: "Fungal Horror", colour: "#8AA050", body: "wide", head: "round", eyes: "#F0FF80", extras: ["claws"], skin: "warts", speed: 7, ability: "regen", touch: { status: "poison", chance: 0.3 }, deep: 5 },
+  { name: "Spore Beast", colour: "#A0B070", body: "beast", head: "round", eyes: "#E0FF60", extras: ["tail"], speed: 10, ability: "breath", touch: { status: "poison", chance: 0.2 }, deep: 5 },
+  { name: "Crystal Golem", colour: "#B090D0", body: "wide", head: "round", eyes: "#F0E0FF", extras: [], skin: "stone", speed: 6, ability: "stun", deep: 6 },
+  { name: "Shard Wisp", colour: "#D0C0F0", body: "ghost", head: "pale", eyes: "#FFFFFF", extras: [], speed: 14, ability: "ranged", touch: { status: "blind", chance: 0.2 }, deep: 6 },
+  { name: "Iron Hound", colour: "#6A5A50", body: "beast", head: "snout", eyes: "#FF8030", extras: ["tail"], skin: "stone", speed: 13, ability: "charge", deep: 7 },
+  { name: "Foundry Imp", colour: "#B04020", body: "small", head: "horns", eyes: "#FFE060", extras: ["wings", "claws"], speed: 12, ability: "breath", touch: { status: "blind", chance: 0.1 }, deep: 7 },
+  { name: "Bone Colossus", colour: "#E0D8C0", body: "wide", head: "skull", eyes: "#FF6040", extras: ["club"], speed: 5, undead: true, ability: "buffet", deep: 8 },
+  { name: "Grave Priest", colour: "#4A3A5A", body: "tall", head: "skull", eyes: "#C080FF", extras: ["staff", "robe"], speed: 9, undead: true, ability: "drain", touch: { status: "curse", chance: 0.25 }, deep: 8 },
+  { name: "Rootling", colour: "#6A3A2A", body: "small", head: "ears", eyes: "#FF4040", extras: ["claws"], speed: 12, ability: "savage", touch: { status: "paralysis", chance: 0.15 }, deep: 9 },
+  { name: "Hollow One", colour: "#3A1A1A", body: "ghost", head: "hood", eyes: "#FF3030", extras: [], speed: 11, undead: true, ability: "lifesteal", touch: { status: "curse", chance: 0.2 }, deep: 9 },
 ];
+CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
+CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
 
 // now and then a group has a leader out of the ordinary
@@ -365,10 +382,12 @@ CM.mutatorsFor = function (seed) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the fiftieth floor", title: "of the Bottom" },
   crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
   swift: { name: "Swift", what: "Slay the Lich King in under 1,500 steps", title: "the Swift" },
+  abyss: { name: "Of the Deep", what: "Reach floor 30, in the Deep", title: "of the Deep" },
   deeper: { name: "Of the Halls", what: "Reach floor 15", title: "of the Halls" },
   labyrinth: { name: "Minotaur's Bane", what: "Slay the Minotaur of the Labyrinth", title: "the Minotaur's Bane" },
   untouched: { name: "Unbowed", what: "Slay a guardian with no one falling in the fight", title: "the Unbowed" },
@@ -416,6 +435,7 @@ CM.GUARDIANS = {
   rat: { floor: 5, name: "The Rat King", colour: "#6E5444", body: "beast", head: "snout", eyes: "#FF5040", extras: ["tail", "crown", "swarm"], speed: 13, size: 0.9,
     hp: 150, atk: 15, df: 6, xp: 500, gold: 350, touch: { status: "poison", chance: 0.45 }, weak: "fire", resist: null, undead: false,
     escorts: ["Giant Rat", "Giant Rat"], tint: "rgba(160,220,80,0.35)",
+    moves: [{ kind: "summon", what: "Giant Rat", n: 2, max: 4, word: "rat", text: "The Rat King shrieks, and {n} pour out of the refuse!" }], passives: ["plague"],
     abilities: [["Call the swarm", "every third turn, rats pour out of the refuse (four at most)"],
       ["Plague bite", "poisons more often than not, for longer, and bites a poisoned hero half again as hard"]],
     intro: "The heap of bones and rags heaves, and something climbs out of it: a rat the size of a hound, a crown of knotted tails on its head. The Rat King.",
@@ -426,6 +446,8 @@ CM.GUARDIANS = {
     lair: { name: "Rat King's Nest", lore: "g:rat", rows: ["####W####", "#n.....n#", "#..n.n..#", "#...B...#", "#.n...n.#", "#n.....n#", "###D#####"] } },
   knight: { floor: 10, name: "The Drowned Knight", colour: "#3E6068", body: "tall", head: "helm", eyes: "#80E8D8", extras: ["sword", "shield", "weed"], speed: 8, size: 1.0,
     hp: 280, atk: 26, df: 12, xp: 1400, gold: 1000, touch: null, weak: "holy", resist: "frost", undead: true, escorts: [], tint: "rgba(80,180,200,0.4)",
+    moves: [{ kind: "grasp", mult: 1.5, status: "paralysis", text: "The Drowned Knight's gauntlet closes on {who} and drags them under!", how: " - held under the water" }], passives: ["rise"],
+    riseText: "The Drowned Knight goes down into the water... and the water lifts him up again. He will not stay down. Not yet.",
     abilities: [["Drowning grasp", "every third turn, drags one of the party under: half again the blow, and a round lost gasping"],
       ["Unquiet", "the water lifts him up again, once, at a third of his strength"]],
     intro: "In the sunken hall a knight sits his throne under the water, and stands as you come in. Weed hangs from his helm; the water runs out of him and never stops. The Drowned Knight.",
@@ -436,6 +458,8 @@ CM.GUARDIANS = {
     lair: { name: "Drowned Hall", lore: "g:knight", flood: true, rows: ["#####W#####", "#....t....#", "#.#.....#.#", "#....B....#", "#.#.....#.#", "#.........#", "#####D#####"] } },
   forge: { floor: 15, name: "The Forge-Warden", colour: "#5C5450", body: "wide", head: "round", eyes: "#FFB030", extras: ["hammer", "glow"], skin: "stone", speed: 6, size: 1.08,
     hp: 440, atk: 36, df: 20, xp: 2600, gold: 1800, touch: null, weak: "frost", resist: "fire", undead: false, escorts: [], tint: "rgba(255,150,40,0.4)",
+    moves: [{ kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: true, text: "The Forge-Warden raises the hammer in both hands and brings it down!", how: " - the hammer", flat: "{who} is knocked flat!" }],
+    passives: ["heat"], sear: "The heat of the Forge-Warden sears {who} (-{n}).",
     abilities: [["Hammer slam", "every third turn, the hammer comes down on the whole front row, and some are knocked flat"],
       ["Forge heat", "every blow struck on it sears the striker (arrows don't); fire does it little, frost bites deep"]],
     intro: "The forge is lit. Between the anvils something of iron and stone, that the dwarves made to keep their door, turns its head; the light in its chest comes up like a bellows. The Forge-Warden.",
@@ -444,8 +468,81 @@ CM.GUARDIANS = {
     lore: "The dwarves made a warden for their door and went down to the deep halls without it, trusting it. It is still here. They are not.",
     relic: { name: "Forge-Warden's Hammer", kind: "weapon", slot: "weapon", power: 10, value: 1400, props: { relic: true, element: "fire", twohanded: true, stun: 0.25 } },
     lair: { name: "The Forge", lore: "g:forge", rows: ["#####W#####", "#e.v...v.e#", "#e#.....#e#", "#e...B...e#", "#e#.....#e#", "#e.v...v.e#", "#####D#####"] } },
+  // the Deep's guardians, one every five floors, and the thing at the bottom
+  queen: { floor: 25, name: "The Drowned Queen", colour: "#5A7A8A", body: "tall", head: "pale", eyes: "#A0F0FF", extras: ["crown", "robe", "weed"], speed: 9, size: 1.0,
+    hp: 560, atk: 44, df: 22, xp: 4200, gold: 3000, touch: { status: "sleep", chance: 0.25 }, weak: "holy", resist: "frost", undead: true, escorts: ["Drowned", "Drowned"], tint: "rgba(120,200,220,0.4)",
+    moves: [{ kind: "ailment", status: "sleep", chance: 0.6, text: "The Drowned Queen opens her mouth, and what comes out is the whole drowned town's grief. Eyes close." },
+      { kind: "summon", what: "Drowned", n: 2, max: 4, level: "deep", plural: "{n} of the drowned", text: "The Queen lifts a hand, and {n} climb out of the water." }],
+    passives: ["rise"], riseText: "The Drowned Queen sinks... and rises again, the water streaming from her crown. The town will not let her go.",
+    abilities: [["Lament", "every third turn, a grief the whole party may fall asleep to"], ["The court", "the drowned climb out of the water to her; killed, the water lifts her up again, once"]],
+    intro: "In a hall the river took, a woman sits a throne with the water to her waist, and stands. The crown is the queen's. The face was. The Drowned Queen.",
+    fall: "The Drowned Queen lets the crown slip from her head into the water, and follows it down, and does not come up.",
+    take: "Her ring floats where she sank. Under the throne the water drains away, down the shaft.",
+    lore: "The queen did not die of the plague. The carvings above say she did. The water knows what she died of, and who held her under.",
+    relic: { name: "The Queen's Ring", kind: "ring", slot: "ring", power: 4, value: 1500, props: { relic: true, stat: "wis", resist: "sleep" } },
+    lair: { name: "The Queen's Court", lore: "g:queen", flood: true, rows: ["#####W#####", "#....t....#", "#.#.....#.#", "#....B....#", "#.#.....#.#", "#.........#", "#####D#####"] } },
+  mind: { floor: 30, name: "The Mycelial Mind", colour: "#9AB060", body: "wide", head: "round", eyes: "#F0FF90", extras: ["claws"], skin: "warts", speed: 5, size: 1.1,
+    hp: 620, atk: 40, df: 20, xp: 5000, gold: 3400, touch: { status: "poison", chance: 0.3 }, weak: "fire", resist: "frost", undead: false, escorts: ["Fungal Horror"], tint: "rgba(180,240,120,0.4)",
+    moves: [{ kind: "ailment", status: "poison", chance: 0.7, text: "The Mind exhales, and the air fills with spores." },
+      { kind: "summon", what: "Spore Beast", n: 1, max: 3, level: "deep", word: "spore beast", text: "Something tears loose from the Mind's flank: {n}." }],
+    passives: ["regrow"],
+    abilities: [["Spores", "every third turn, a breath of spores that poisons most of the party"], ["The flesh of the floor", "it regrows a twentieth of itself every round, and spore beasts tear loose from it"]],
+    intro: "The grotto glows green, and the glow is thinking. A mass of pale flesh the size of a house turns toward you without a face. The Mycelial Mind.",
+    fall: "The Mycelial Mind blackens from the edges inward, and the glow of the grotto goes out with it.",
+    take: "Where it grew thickest there is a cap of tough grey hide, light as cork, and under it the shaft.",
+    lore: "Below the drowned town the dead were not buried. They were put down here, where something grew on them, and learned.",
+    relic: { name: "Sporecap Helm", kind: "helm", slot: "helm", power: 5, value: 1500, props: { relic: true, resist: "poison", stat: "con" } },
+    lair: { name: "The Spore Grotto", lore: "g:mind", rows: ["#####W#####", "#f.f...f.f#", "#.#.....#.#", "#f...B...f#", "#.#.....#.#", "#f.f...f.f#", "#####D#####"] } },
+  tyrant: { floor: 35, name: "The Crystal Tyrant", colour: "#B898E0", body: "wide", head: "horns", eyes: "#FFFFFF", extras: ["crown"], skin: "stone", speed: 7, size: 1.1,
+    hp: 700, atk: 50, df: 30, xp: 6000, gold: 4000, touch: null, weak: "frost", resist: "fire", undead: false, escorts: ["Crystal Golem"], tint: "rgba(220,200,255,0.45)",
+    moves: [{ kind: "slam", frac: 3, status: "blind", chance: 0.35, front: false, text: "The Tyrant rings like a struck bell, and shards fly from it across the cavern!", how: " - flying shards", flat: "{who} is blinded by the glare!" }],
+    passives: ["glass"], sear: "A shard of the Crystal Tyrant cuts {who} (-{n}).",
+    abilities: [["Shatter", "every third turn, shards fly at everyone, and some are blinded"], ["Glass", "every blow struck on it cuts the striker (arrows don't); frost cracks it, fire does little"]],
+    intro: "The cavern is one crystal, and at its heart something has grown a face and a crown of its own substance. It turns, slowly, singing. The Crystal Tyrant.",
+    fall: "The Crystal Tyrant cracks across, and across again, and comes down in a long bright rain.",
+    take: "One shard did not shatter: a prism the size of a fist, warm. Under the Tyrant's seat, the shaft.",
+    lore: "The dwarves mined here until the crystal began to mine them. The deep halls were abandoned for this, not for the king.",
+    relic: { name: "Prism Amulet", kind: "amulet", slot: "amulet", power: 0, value: 1800, props: { relic: true, df: 4, resist: "blind" } },
+    lair: { name: "The Crystal Throne", lore: "g:tyrant", rows: ["#####W#####", "#c...t...c#", "#.#.....#.#", "#c...B...c#", "#.#.....#.#", "#c.......c#", "#####D#####"] } },
+  master: { floor: 40, name: "The Foundry Master", colour: "#803020", body: "wide", head: "horns", eyes: "#FFD040", extras: ["wings", "hammer"], skin: "stone", speed: 9, size: 1.15,
+    hp: 820, atk: 58, df: 28, xp: 7000, gold: 4800, touch: { status: "blind", chance: 0.15 }, weak: "frost", resist: "fire", undead: false, escorts: ["Foundry Imp", "Foundry Imp"], tint: "rgba(255,140,40,0.45)",
+    moves: [{ kind: "breath", frac: 2, text: "The Foundry Master opens its furnace of a mouth, and fire pours over the whole party!" },
+      { kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: true, text: "The Master's hammer comes down on the front line!", how: " - the hammer", flat: "{who} is knocked flat!" }],
+    passives: ["heat"], sear: "The heat of the Foundry Master sears {who} (-{n}).",
+    abilities: [["Furnace", "every third turn, fire over the whole party, or the hammer on the front line"], ["Forge heat", "every blow struck on it sears the striker; fire does it little, frost bites deep"]],
+    intro: "The forges here never went out; something kept them. It stands up from the anvil, wings of beaten iron opening, and the heat comes off it in a wall. The Foundry Master.",
+    fall: "The Foundry Master falls to its knees and then to the floor, and the iron of it rings as it cools, and goes dark.",
+    take: "Its mail lies in plates where it fell, still warm: the Ember Mail. Under the great anvil, the shaft.",
+    lore: "The king had the dwarves' forges relit for one work only. The masons' graves are the palace's foundations. The smiths' are here.",
+    relic: { name: "Ember Mail", kind: "armor", slot: "armor", power: 10, value: 2200, props: { relic: true, df: 2, weight: "medium" } },
+    lair: { name: "The Great Foundry", lore: "g:master", rows: ["#####W#####", "#e.v...v.e#", "#e#.....#e#", "#e...B...e#", "#e#.....#e#", "#e.v...v.e#", "#####D#####"] } },
+  patriarch: { floor: 45, name: "The Bone Patriarch", colour: "#D8D0B8", body: "tall", head: "skull", eyes: "#80FF80", extras: ["staff", "robe"], speed: 10, size: 1.05,
+    hp: 900, atk: 60, df: 30, xp: 8000, gold: 5600, touch: { status: "curse", chance: 0.3 }, weak: "holy", resist: "frost", undead: true, escorts: ["Bone Colossus"], tint: "rgba(160,255,160,0.4)",
+    moves: [{ kind: "summon", what: "Skeleton", n: 2, max: 6, level: "deep", word: "skeleton", text: "The Patriarch raps his staff on the floor, and {n} rise from the heaps." },
+      { kind: "ailment", status: "curse", chance: 0.5, text: "The Patriarch speaks a word that was old when the king was young, and a curse settles on the party." }],
+    passives: ["drain"],
+    abilities: [["The ossuary", "every third turn, skeletons rise from the heaps, or a word that curses the party"], ["Old hunger", "every blow of his draws experience out of the one it lands on"]],
+    intro: "The first dead of Caer Duin were not laid in the catacombs. They were brought here, to him, and he has kept them. He stands, taller than a man has any right to be. The Bone Patriarch.",
+    fall: "The Bone Patriarch comes apart a bone at a time, and the heaps around him settle, as if a long breath had gone out of them.",
+    take: "On his breast, a reliquary of black iron on a chain: cold, and quiet now. Under his dais, the shaft.",
+    lore: "The king's heart is kept apart, the physician wrote. He learned the way of it here, from one who had done it first.",
+    relic: { name: "Patriarch's Reliquary", kind: "amulet", slot: "amulet", power: 0, value: 2400, props: { relic: true, df: 3, resist: "curse" } },
+    lair: { name: "The Ossuary Chapel", lore: "g:patriarch", rows: ["#####W#####", "#n...t...n#", "#.#.....#.#", "#n...B...n#", "#.#.....#.#", "#n.......n#", "#####D#####"] } },
+  root: { floor: 50, name: "The Root of the World", colour: "#4A2A2A", body: "wide", head: "round", eyes: "#FF5040", extras: ["claws"], skin: "warts", speed: 8, size: 1.25,
+    hp: 1400, atk: 70, df: 34, xp: 12000, gold: 9000, touch: { status: "paralysis", chance: 0.2 }, weak: "fire", resist: "frost", undead: false, escorts: ["Rootling", "Rootling"], tint: "rgba(255,80,60,0.45)",
+    moves: [{ kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: false, text: "The Root heaves, and the whole floor of the world shakes!", how: " - the quake", flat: "{who} is thrown down!" },
+      { kind: "summon", what: "Rootling", n: 2, max: 4, level: "deep", word: "rootling", text: "{n} tear themselves out of the Root's bark." }],
+    passives: ["regrow", "rise"], riseText: "The Root splits and sags... and knits, slowly, the sap running black. It is not done.",
+    abilities: [["Quake", "every third turn, the whole floor shakes under everyone, and some are thrown down"], ["Rooted", "it regrows every round, rootlings tear out of it, and killed, it knits once more"]],
+    intro: "There is no floor below this one. There is a root, and the root is the size of the world, and it has been dreaming the king's dreams for him. It wakes. The Root of the World.",
+    fall: "The Root of the World shudders along its whole length, down into the dark no torch has reached, and is still. The silence afterwards is the first real silence the dungeon has had.",
+    take: "There is nothing to take. There is nothing below. You have come to the bottom of the world.",
+    lore: "Here the king's voice came from. Here it always came from. He only listened.",
+    relic: null, final: true,
+    lair: { name: "The Root", lore: "g:root", rows: ["#####W#####", "#r.e...e.r#", "#.#.....#.#", "#r...B...r#", "#.#.....#.#", "#r.e...e.r#", "#####D#####"] } },
 };
 CM.guardianFor = (floor) => Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === floor) || null;
+CM.guardianHas = (m, passive) => Boolean(m && m.guardian && CM.GUARDIANS[m.guardian] && (CM.GUARDIANS[m.guardian].passives || []).includes(passive));
 CM.unmoved = (m) => Boolean(m && (m.boss || m.guardian));          // the Lich King and the guardians: not held, not put to sleep, not routed
 // what a carving says: the floor's part of the story, an odd one, or a guardian's (text "g:<guardian>")
 CM.loreText = (text) => (typeof text === "string" && text.startsWith("g:") ? (CM.GUARDIANS[text.slice(2)] || {}).lore || ""
@@ -458,9 +555,9 @@ CM.roarFor = function (kind) {
   const g = Object.values(CM.GUARDIANS).find((G) => G.name === kind);
   if (g) return g.undead ? "roar_undead" : g.body === "beast" ? "roar_beast" : "roar_big";
   const k = CM.monsterKind(kind), name = k ? k.name : kind;
-  if (["Giant Rat", "Kobold", "Goblin", "Dark Elf"].includes(name)) return "roar_small";
-  if (["Skeleton", "Zombie", "Ghoul", "Wraith", "Vampire"].includes(name)) return "roar_undead";
-  if (name === "Wyvern") return "roar_beast";
+  if (["Giant Rat", "Kobold", "Goblin", "Dark Elf", "Shard Wisp", "Rootling", "Foundry Imp", "Weed Hag"].includes(name)) return "roar_small";
+  if (["Skeleton", "Zombie", "Ghoul", "Wraith", "Vampire", "Drowned", "Grave Priest", "Bone Colossus", "Hollow One"].includes(name)) return "roar_undead";
+  if (["Wyvern", "Spore Beast", "Iron Hound"].includes(name)) return "roar_beast";
   return "roar_big";
 };
 
@@ -474,7 +571,21 @@ CM.THEMES = [
     moss: [120, 90, 50], fog: [0.03, 0.025, 0.02], torch: [1.0, 0.75, 0.45], reach: 6.0, bones: 0.05 },
   { name: "The Lich King's Palace", floors: [16, 20], stone: [78, 84, 100], mortar: [28, 30, 40], floor: [50, 54, 70], ceiling: [36, 38, 52],
     moss: [60, 110, 130], fog: [0.015, 0.025, 0.045], torch: [0.75, 0.85, 1.0], reach: 4.5, bones: 0.4 },
+  // the Deep, below him: six bands more (their Stone theme borrows the photos of a band above, in their own colour)
+  { name: "The Drowned Town", floors: [21, 25], stone: [54, 70, 84], mortar: [22, 30, 38], floor: [40, 52, 60], ceiling: [30, 38, 46],
+    moss: [40, 100, 90], fog: [0.02, 0.035, 0.05], torch: [0.8, 0.9, 1.0], reach: 4.5, bones: 0.15, photos: "t1" },
+  { name: "The Fungal Deep", floors: [26, 30], stone: [60, 80, 50], mortar: [26, 36, 20], floor: [48, 60, 36], ceiling: [34, 44, 26],
+    moss: [120, 200, 90], fog: [0.02, 0.04, 0.02], torch: [0.85, 1.0, 0.7], reach: 5.0, bones: 0.05, photos: "t1" },
+  { name: "The Crystal Caverns", floors: [31, 35], stone: [96, 80, 120], mortar: [40, 32, 56], floor: [70, 60, 90], ceiling: [50, 42, 66],
+    moss: [200, 160, 255], fog: [0.03, 0.025, 0.05], torch: [0.9, 0.85, 1.0], reach: 6.0, bones: 0.02, photos: "t3" },
+  { name: "The Foundry", floors: [36, 40], stone: [70, 56, 48], mortar: [30, 22, 18], floor: [56, 44, 36], ceiling: [40, 30, 24],
+    moss: [200, 90, 30], fog: [0.04, 0.025, 0.015], torch: [1.0, 0.7, 0.4], reach: 5.5, bones: 0.05, photos: "t2" },
+  { name: "The Ossuary", floors: [41, 45], stone: [120, 112, 96], mortar: [60, 54, 44], floor: [96, 88, 74], ceiling: [70, 64, 54],
+    moss: [150, 140, 110], fog: [0.035, 0.03, 0.025], torch: [1.0, 0.9, 0.7], reach: 5.0, bones: 0.8, photos: "t0" },
+  { name: "The Root of the World", floors: [46, 50], stone: [60, 30, 30], mortar: [26, 10, 10], floor: [44, 22, 22], ceiling: [30, 14, 14],
+    moss: [140, 40, 40], fog: [0.05, 0.015, 0.015], torch: [1.0, 0.6, 0.5], reach: 4.0, bones: 0.3, photos: "t1" },
 ];
+CM.AMBIENCE_OF = [0, 1, 2, 3, 1, 0, 3, 2, 0, 3];                      // which of the four ambiences (and footfalls) each band uses
 CM.themeFor = (number) => CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1];
 CM.themeIndex = (number) => Math.max(0, CM.THEMES.indexOf(CM.themeFor(number)));
 

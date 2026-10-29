@@ -836,6 +836,40 @@ CM.art.plate = function (pressed) {                                        // a 
   return c;
 };
 
+// ---- the Deep's lairs: fungus that glows, crystal that grows, the roots of the world --------------------------------------
+CM.art.fungus = function () {                                              // a ring of pale caps on the floor, lit from within
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(606);
+  softDot(p, 128, 128, 120, "rgba(150,230,120,0.35)", "rgba(80,160,60,0)");
+  for (let i = 0; i < 9; i++) {
+    const a = rnd.next() * Math.PI * 2, d = 30 + rnd.next() * 70, x = 128 + Math.cos(a) * d, y = 128 + Math.sin(a) * d, r = 10 + rnd.next() * 14;
+    outlined(p, () => { p.ellipse(x, y, r, r * 0.6, 0, 0, Math.PI * 2); }, "#C8E8A0", "#3A5A2A", 2);
+    p.fillStyle = "rgba(255,255,220,0.8)"; p.beginPath(); p.arc(x - r * 0.3, y - r * 0.2, r * 0.25, 0, Math.PI * 2); p.fill();
+  }
+  return c;
+};
+CM.art.crystal = function () {                                             // a cluster of violet shards, standing
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, g = S - 14;
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(128, g - 2, 70, 9, 0, 0, Math.PI * 2); p.fill();
+  softDot(p, 128, 130, 110, "rgba(220,190,255,0.35)", "rgba(160,120,220,0)");
+  for (const [x, h, w, lean] of [[90, 120, 26, -0.15], [128, 190, 34, 0.02], [166, 140, 28, 0.18], [112, 90, 18, -0.3], [150, 100, 20, 0.32]]) {
+    outlined(p, () => { p.moveTo(x - w, g); p.lineTo(x - w * 0.6 + lean * h, g - h * 0.75); p.lineTo(x + lean * h * 1.2, g - h); p.lineTo(x + w * 0.6 + lean * h, g - h * 0.75); p.lineTo(x + w, g); }, "#C8A8F0", "#4A2A7A", 3);
+    p.fillStyle = "rgba(255,255,255,0.55)"; p.beginPath(); p.moveTo(x - w * 0.5 + lean * h * 0.3, g - h * 0.3); p.lineTo(x - w * 0.3 + lean * h * 0.7, g - h * 0.72); p.lineTo(x - w * 0.15 + lean * h * 0.7, g - h * 0.7); p.lineTo(x - w * 0.3 + lean * h * 0.3, g - h * 0.3); p.fill();
+  }
+  return c;
+};
+CM.art.root = function () {                                                // roots of the world, breaking through the wall and the floor
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, g = S - 14, rnd = new CM.Random(707);
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(128, g - 2, 90, 10, 0, 0, Math.PI * 2); p.fill();
+  p.lineCap = "round";
+  for (let i = 0; i < 7; i++) {
+    const x0 = 40 + i * 30 + rnd.next() * 10, w = 10 + rnd.next() * 14;
+    p.strokeStyle = "#1A1410"; p.lineWidth = w + 6; p.beginPath(); p.moveTo(x0, 10); p.bezierCurveTo(x0 + 40 * (rnd.next() - 0.5), 90, x0 - 50 * (rnd.next() - 0.5), 170, 128 + (rnd.next() - 0.5) * 120, g); p.stroke();
+    p.strokeStyle = i % 2 ? "#5A2A26" : "#6E3A30"; p.lineWidth = w; p.stroke();
+    p.strokeStyle = "rgba(255,90,60,0.55)"; p.lineWidth = 2; p.stroke();
+  }
+  return c;
+};
+
 // the run's summary as a card to keep: the emblem, the lines, old gold on dark leather
 CM.art.summaryCard = function (e, title) {
   const W = 600, H = 340, c = document.createElement("canvas"), p = c.getContext("2d");
@@ -960,6 +994,7 @@ CM.art.buildDrawn = function (theme) {
   add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, CM.art.monster(row));
   add("bones", CM.art.bones()); add("rope", CM.art.rope()); add("plate", CM.art.plate(false)); add("plate_pressed", CM.art.plate(true)); add("door_riddle", CM.art.door("riddle"));
+  add("fungus", CM.art.fungus()); add("crystal", CM.art.crystal()); add("root", CM.art.root());
   add("fx:spark", CM.art.fxSpark()); add("fx:shard", CM.art.fxShard()); add("fx:fire", CM.art.fxFire()); add("fx:frost", CM.art.fxFrost());
   add("fx:bolt", CM.art.fxBolt()); add("fx:force", CM.art.fxForce()); add("fx:holy", CM.art.fxHoly()); add("fx:arrow", CM.art.fxArrow());
   add("fx:leaf", CM.art.fxLeaf()); add("fx:ring", CM.art.fxRing());

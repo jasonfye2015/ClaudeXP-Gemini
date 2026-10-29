@@ -80,14 +80,15 @@ window.addEventListener("DOMContentLoaded", () => {
     : `depth${CM.themeIndex(game.floor ? game.floor.number : 1)}`);
   const soundscape = () => {
     const mode = game.mode;
-    CM.audio.ambience(mode === "explore" || mode === "combat" || mode === "camp", mode === "camp" ? 4 : CM.themeIndex(game.floor ? game.floor.number : 1));
+    CM.audio.ambience(mode === "explore" || mode === "combat" || mode === "camp", mode === "camp" ? 4 : soundBand(game.floor ? game.floor.number : 1));
     CM.music.start(tuneFor());
   };
   game.on("mode", soundscape);
   game.on("floor", soundscape);
   ui.onEnding = soundscape;
-  const STEPS = ["step", "step_water", "step_hall", "step_cold"];        // a footfall for each depth
-  game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[CM.themeIndex(game.floor.number)] || "step" : name));
+  const STEPS = ["step", "step_water", "step_hall", "step_cold"];        // a footfall for each depth (the Deep's bands borrow one)
+  const soundBand = (n) => CM.AMBIENCE_OF[CM.themeIndex(n)] || 0;
+  game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
   game.on("near", (kind, d) => CM.audio.near(kind, 1 - d / 8));          // something is coming: louder the nearer
   game.on("mode", (mode) => {
     if (mode === "title") showDemo();
@@ -331,6 +332,9 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (dc.kind === "throne") out.push({ x: dc.x, y: dc.y, layer: "throne", w: 0.9, h: 1.0 });
       else if (dc.kind === "anvil") out.push({ x: dc.x, y: dc.y, layer: "anvil", w: 0.7, h: 0.62 });
       else if (dc.kind === "ember") out.push({ x: dc.x, y: dc.y, layer: "ember", flat: true, w: 0.98, glow: 0.7 + 0.25 * Math.sin(now / 240 + dc.x * 2.1 + dc.y * 1.3) });
+      else if (dc.kind === "fungus") out.push({ x: dc.x, y: dc.y, layer: "fungus", flat: true, w: 0.9, glow: 0.6 + 0.2 * Math.sin(now / 700 + dc.x + dc.y) });
+      else if (dc.kind === "crystal") out.push({ x: dc.x, y: dc.y, layer: "crystal", w: 0.7, h: 0.9, glow: 0.55 + 0.25 * Math.sin(now / 500 + dc.x * 1.7) });
+      else if (dc.kind === "root") out.push({ x: dc.x, y: dc.y, layer: "root", w: 0.9, h: 0.95 });
     }
     const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });

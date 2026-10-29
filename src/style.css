@@ -239,6 +239,9 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 /* ---- the end of a run ---- */
 #dlg-over { background: rgba(0,0,0,0.78); }
 #dlg-over .box { min-width: 560px; max-width: 700px; text-align: center; border-color: #6A3A3A; }
+#dlg-over .crown { display: none; }
+#dlg-over.crowning .crown { display: inline-block; }
+#dlg-over.crowning .ended { display: none; }
 #dlg-over.won .box { border-color: var(--gold); box-shadow: 0 0 60px rgba(232,200,112,0.25), 0 10px 40px rgba(0,0,0,0.6); }
 #dlg-over .emblem-slot canvas { width: 120px; height: 120px; margin: 0 auto 6px; display: block; filter: drop-shadow(0 0 14px rgba(232,200,112,0.4)); }
 #dlg-over h2 { font-size: 24px; margin-bottom: 8px; }

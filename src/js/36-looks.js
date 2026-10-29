@@ -85,9 +85,9 @@ CM.art.buildPixel = function (theme) {
   pp.fillStyle = glow; pp.fillRect(0, 0, S, S);
   CM.art.tileOnto(pp, "phylactery", S * 0.15, S * 0.15, S * 0.7, S * 0.7);
   add("phylactery", phy);
-  for (const m of CM.MONSTERS) add(`monster:${m.name}`, sprite(`m.${m.name}`));
-  add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`));
   const tileOr = (key, drawn) => (CM.packs.pixel.index[key] ? sprite(key) : CM.art.pixelate(drawn()));   // (the set's tile, or the drawn one made of pixels)
+  for (const m of CM.MONSTERS) add(`monster:${m.name}`, tileOr(`m.${m.name}`, () => CM.art.monster(m)));
+  add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`));
   for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12)));
   add("nest", CM.art.pixelate(CM.art.nest())); add("throne", CM.art.pixelate(CM.art.throne())); add("anvil", CM.art.pixelate(CM.art.anvil()));
   add("ember", tileOr("ember", CM.art.ember));
@@ -98,6 +98,7 @@ CM.art.buildPixel = function (theme) {
   if (CM.packs.pixel.index.plate) { const q = pressed.getContext("2d"); q.globalCompositeOperation = "source-atop"; q.fillStyle = "rgba(0,0,0,0.45)"; q.fillRect(0, 0, S, S); }
   add("plate_pressed", pressed);
   add("door_riddle", tileOr("door_riddle", () => CM.art.door("riddle")));
+  add("fungus", CM.art.pixelate(CM.art.fungus())); add("crystal", CM.art.pixelate(CM.art.crystal())); add("root", CM.art.pixelate(CM.art.root()));
   add("fx:spark", tileOr("fx.spark", CM.art.fxSpark)); add("fx:shard", tileOr("fx.shard", CM.art.fxShard)); add("fx:fire", tileOr("fx.fire", CM.art.fxFire));
   add("fx:frost", tileOr("fx.frost", CM.art.fxFrost)); add("fx:bolt", tileOr("fx.bolt", CM.art.fxBolt)); add("fx:force", tileOr("fx.force", CM.art.fxForce));
   add("fx:holy", tileOr("fx.holy", CM.art.fxHoly)); add("fx:arrow", tileOr("fx.arrow", CM.art.fxArrow)); add("fx:leaf", tileOr("fx.leaf", CM.art.fxLeaf));
@@ -108,7 +109,7 @@ CM.art.buildPixel = function (theme) {
 
 // ---- the Stone theme: photographs on the stone, the drawn art on everything else ---------------------------------------
 CM.art.buildStone = function (theme) {
-  const t = `t${Math.max(0, CM.THEMES.indexOf(theme))}`, S = (CM.packs && CM.packs.stone.size) || 512, layers = [], index = {};
+  const t = theme.photos || `t${Math.max(0, CM.THEMES.indexOf(theme))}`, S = (CM.packs && CM.packs.stone.size) || 512, layers = [], index = {};
   const add = (name, canvas) => { index[name] = layers.length; layers.push(canvas); };
   const photo = (key, flip = false, darken = 0) => {
     const c = artCanvas(S), p = c.getContext("2d"), im = CM.art.packs.stone[key];

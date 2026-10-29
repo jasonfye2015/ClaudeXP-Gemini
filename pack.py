@@ -38,6 +38,13 @@ PIXEL = {
     "t2.floor": "dungeon/floor/sandstone_floor_0", "t2.ceiling": "dungeon/floor/limestone_0",
     "t3.wall": "dungeon/wall/marble_wall_1", "t3.wall2": "dungeon/wall/marble_wall_5", "t3.wallbones": "dungeon/wall/undead_0",
     "t3.floor": "dungeon/floor/tomb_0_new", "t3.ceiling": "dungeon/floor/frozen_0",
+    # the Deep's six bands
+    "t4.wall": "dungeon/wall/cobalt_rock_1", "t4.wall2": "dungeon/wall/cobalt_rock_2", "t4.wallbones": "dungeon/wall/cobalt_rock_3", "t4.floor": "dungeon/floor/black_cobalt_1", "t4.ceiling": "dungeon/floor/black_cobalt_5",
+    "t5.wall": "dungeon/wall/wall_vines_0", "t5.wall2": "dungeon/wall/wall_vines_2", "t5.wallbones": "dungeon/wall/slime_0_new", "t5.floor": "dungeon/floor/bog_green_0_new", "t5.ceiling": "dungeon/floor/swamp_0_new",
+    "t6.wall": "dungeon/wall/crystal_wall_lightmagenta", "t6.wall2": "dungeon/wall/crystal_wall_magenta", "t6.wallbones": "dungeon/wall/crystal_wall_white", "t6.floor": "dungeon/floor/crystal_floor_0", "t6.ceiling": "dungeon/floor/crystal_floor_3",
+    "t7.wall": "dungeon/wall/metal_wall", "t7.wall2": "dungeon/wall/metal_wall_cracked", "t7.wallbones": "dungeon/wall/metal_wall_brown", "t7.floor": "dungeon/floor/volcanic_floor_0", "t7.ceiling": "dungeon/floor/rough_red_0",
+    "t8.wall": "dungeon/wall/undead_0", "t8.wall2": "dungeon/wall/undead_1", "t8.wallbones": "dungeon/wall/catacombs_0", "t8.floor": "dungeon/floor/crypt_10", "t8.ceiling": "dungeon/floor/tomb_0_new",
+    "t9.wall": "dungeon/wall/volcanic_wall_0", "t9.wall2": "dungeon/wall/volcanic_wall_2", "t9.wallbones": "dungeon/wall/hell_1", "t9.floor": "dungeon/floor/demonic_red_1", "t9.ceiling": "dungeon/floor/infernal_1",
     "secret": "dungeon/doors/detected_secret_door",
     # the furniture
     "chest": "dungeon/chest_2_closed", "hatch": "dungeon/gateways/escape_hatch_down", "stairs_up": "dungeon/gateways/stone_stairs_up",
@@ -61,6 +68,13 @@ PIXEL = {
     # the guardians, and the forge-floor of the third's lair
     "m.The Rat King": "monster/animals/orange_rat", "m.The Drowned Knight": "monster/death_knight", "m.The Forge-Warden": "monster/nonliving/iron_golem",
     "ember": "dungeon/floor/lava_0",
+    # the Deep's monsters and guardians
+    "m.Drowned": "monster/undead/drowned_soul", "m.Weed Hag": "monster/undead/bog_body", "m.Fungal Horror": "monster/fungi_plants/wandering_mushroom_new",
+    "m.Spore Beast": "monster/fungi_plants/giant_spore", "m.Crystal Golem": "monster/nonliving/crystal_golem", "m.Shard Wisp": "monster/nonliving/insubstantial_wisp",
+    "m.Iron Hound": "monster/animals/hell_hound_new", "m.Foundry Imp": "monster/demons/iron_imp_new", "m.Bone Colossus": "monster/undead/macabre_mass",
+    "m.Grave Priest": "monster/undead/mummy_priest", "m.Rootling": "monster/fungi_plants/thorn_hunter", "m.Hollow One": "monster/undead/shadow_new",
+    "m.The Drowned Queen": "monster/merfolk_avatar", "m.The Mycelial Mind": "monster/giant_orange_brain", "m.The Crystal Tyrant": "monster/nonliving/crystal_guardian",
+    "m.The Foundry Master": "monster/fire_giant_new", "m.The Bone Patriarch": "monster/undead/lich", "m.The Root of the World": "monster/abyss/tentacled_starspawn",
     # the dungeon's people, a plate in the floor, a door written over with runes, someone's bones (as an icon)
     "npc.ghost": "monster/human_monk_ghost", "npc.hermit": "monster/unique/crazy_yiuf", "npc.adventurer": "monster/human_slave",
     "plate": "dungeon/traps/pressure_plate", "door_riddle": "dungeon/doors/sealed_door", "i.bones": "item/food/bone",

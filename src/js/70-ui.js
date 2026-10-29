@@ -13,7 +13,7 @@ CM.UI = class {
   <div class="backdrop-slot"></div><div class="shade"></div>
   <div class="sheet">
     <h1><span class="emblem-slot"></span>Claude and Magic</h1>
-    <div class="tagline">Twenty floors down, the Lich King waits. Four go in together.</div>
+    <div class="tagline">Twenty floors down, the Lich King waits - and below him, the Deep. Four go in together.</div>
     <div class="note" id="title-note"></div>
     <div class="honours" id="honours"></div>
     <div class="card" id="expedition">
@@ -21,7 +21,7 @@ CM.UI = class {
       <div class="row slots" id="slots-row"><span class="small">Expedition</span><button data-slot="1">1</button><button data-slot="2">2</button><button data-slot="3">3</button></div>
       <div class="row"><button id="btn-continue" class="primary">Continue</button><span id="continue-note" class="small"></span></div>
       <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button><button id="btn-daily" title="Today's dungeon: the same one for everyone, today">Today's</button></div>
-      <p>The same seed lays out the same twenty floors, so a dungeon can be tried again - or handed to a friend. What
+      <p>The same seed lays out the same fifty floors, so a dungeon can be tried again - or handed to a friend. What
       the monsters do in a fight is up to the dice. The run saves as you go; when the whole party falls, it ends, and
       the deepest runs go in the Hall of Fame.</p>
       <h2>The eight callings</h2>
@@ -123,7 +123,8 @@ CM.UI = class {
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
   <div class="roll" id="over-party"></div><div class="tally" id="over-tally"></div>
-  <div class="end"><button id="btn-over-card">Summary card</button><button class="close primary">To the title</button></div></div></div>
+  <div class="end"><button id="btn-over-card" class="ended">Summary card</button><button class="close primary ended">To the title</button>
+    <button id="btn-over-daylight" class="crown">Into the daylight</button><button id="btn-over-deep" class="crown primary">Into the Deep</button></div></div></div>
 <div class="dialog" id="dlg-card"><div class="box cardbox"><h2>The expedition, in a card</h2><div id="card-slot"></div>
   <textarea id="card-text" spellcheck="false" readonly></textarea><div class="small" id="card-note"></div>
   <div class="end"><button id="btn-card-copy">Copy the text</button><button id="btn-card-save">Save the card (PNG)</button><button class="close">Close</button></div></div></div>
@@ -149,6 +150,8 @@ CM.UI = class {
     this.renderKeys();
     this.$("#btn-keys-reset").addEventListener("click", () => this.resetKeys());
     this.$("#btn-over-card").addEventListener("click", () => this.openCard(this.overEntry));
+    this.$("#btn-over-daylight").addEventListener("click", () => { this.closeDialogs(); game.endRun(true); });
+    this.$("#btn-over-deep").addEventListener("click", () => { this.closeDialogs(); game.say("You leave the crown where it fell, and go down."); this.refresh(); });
     this.$("#btn-card-copy").addEventListener("click", () => this.copyText(this.$("#card-text").value, this.$("#card-note")));
     this.$("#btn-card-save").addEventListener("click", () => {
       const c = this.$("#card-slot canvas");
@@ -164,6 +167,7 @@ CM.UI = class {
     this.fameOpen = -1;
     this.ending = null;                                                  // "victory" or "lament" while the ending is up (the music follows)
     game.on("over", (won, entry) => this.showEnding(won, entry));
+    game.on("crowned", () => this.showCrowning());
     game.on("change", () => this.refresh());
     game.on("mode", (mode) => this.show(mode === "title" ? "title" : "play"));
     game.on("bag", (open) => (open ? this.openBag() : this.show("play")));
@@ -286,11 +290,18 @@ CM.UI = class {
     slot.innerHTML = "";
     slot.appendChild(CM.art.emblem(120));
     this.$("#dlg-over").classList.toggle("won", won);
-    this.$("#over-title").textContent = won ? "The Lich King is no more" : `The party fell on floor ${entry.floor}`;
+    this.$("#dlg-over").classList.remove("crowning");
+    this.$("#over-title").textContent = entry.bottom ? "To the bottom of the world" : won && entry.floor > CM.LAST_FLOOR ? `With the crown, into the Deep - and down on floor ${entry.floor}` : won ? "The Lich King is no more" : `The party fell on floor ${entry.floor}`;
     const standing = g.party.filter((h) => h.hp > 0), fallen = g.party.filter((h) => h.hp <= 0);
     const names = (list) => (list.length ? list.map((h) => h.name).join(", ").replace(/, ([^,]*)$/, " and $1") : "The party");
     let text;
-    if (won) {
+    if (entry.bottom) {
+      text = `The Root of the World is still, and the dark below it is only dark. ${names(standing)} climb fifty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
+        + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up.` : ", all four of them.") + " Nothing is dreaming the king now. The story is over, all the way down.";
+    } else if (won && entry.floor > CM.LAST_FLOOR) {
+      text = `They took the Lich King's crown and went down into the Deep, where the carvings never went. The last of them fell on floor ${entry.floor}, in ${CM.themeFor(entry.floor).name}, with ${entry.gold.toLocaleString()} gold. The crown lies there with ${names(g.party)}.`
+        + (t.kills ? ` ${CM.plural(t.kills, "monster")} went down before them.` : "") + " Somewhere above, another four are sharpening their blades - and they know the way now.";
+    } else if (won) {
       text = `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} climb twenty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
         + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up, and ${fallen.length > 1 ? "their names are" : "that name is"} carved on the last floor beside his.` : ", all four of them.")
         + " The carvings told his story. This one is yours.";
@@ -310,7 +321,7 @@ CM.UI = class {
       div.appendChild(who);
       roll.appendChild(div);
     }
-    const facts = [["Floors", `${entry.floor} of ${CM.LAST_FLOOR}`], ["Gold", entry.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
+    const facts = [["Floors", `${entry.floor} of ${entry.won || entry.floor > CM.LAST_FLOOR ? CM.BOTTOM : CM.LAST_FLOOR}`], ["Gold", entry.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
       ["Chests opened", t.chests || 0], ["Steps walked", (t.steps || 0).toLocaleString()], ["Fights", `${t.fights || 0}${t.fled ? ` (${t.fled} fled)` : ""}`],
       ["Kit", (CM.KITS[entry.kit] || CM.KITS.pauper).name], ["Difficulty", (CM.DIFFICULTIES[entry.difficulty] || CM.DIFFICULTIES.fair).name], ["Seed", `${entry.seed}${entry.daily ? " (today's)" : ""}`],
       ["Hall of Fame", rank ? `${CM.ordinal(rank)} of ${g.fame.length}` : "not among the ten"]];
@@ -515,13 +526,14 @@ CM.UI = class {
     const bag = CM.startingBag(this.$("#seed").value || "x").filter((i) => i.kind !== "torch");
     this.$("#start-with").textContent = `Four set out with 30 gold, two torches and two potions (${bag.map((i) => i.name).join(" and ")} - the seed decides which). `
       + "New Expedition lets you name them, choose their callings and roll their stats; chests and fallen monsters give better gear; "
-      + "a merchant's camp with a temple waits below floors 5, 10 and 15 - each shaft guarded by something that has made its lair over it, and leaves a relic when it falls.";
+      + "a merchant's camp with a temple waits below floors 5, 10 and 15 (and every fifth floor of the Deep) - each shaft guarded by something that has made its lair over it, and leaves a relic when it falls. "
+      + "The Lich King waits on floor 20; below him, thirty floors of the Deep go down to the Root of the World.";
     const table = this.$("#fame table");
     if (!g.fame.length) table.innerHTML = `<tr><td class="empty">No party has gone down yet.</td></tr>`;
     else table.innerHTML = g.fame.map((e, i) => {
       const open = this.fameOpen === i, t = e.tally;
       let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
-        + `<td class="${e.won ? "won" : ""}">${e.won ? "SLEW THE LICH KING" : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
+        + `<td class="${e.won ? "won" : ""}">${e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
       if (open) {
         rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
           + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button></div>` : "")
@@ -536,11 +548,12 @@ CM.UI = class {
     }).join("");
     const have = CM.unlocked(g.fame), deep = CM.deepest(g.fame);
     this.$("#unlocks").innerHTML = Object.entries(CM.KITS).map(([id, k]) => {
-      const got = have.includes(id), need = k.need > 20 ? "slay the Lich King" : `reach floor ${k.need}`;
+      const got = have.includes(id), need = k.need === 21 ? "slay the Lich King" : `reach floor ${k.need}`;
       return `<div class="unlock ${got ? "got" : ""}"><b>${got ? "✓" : "○"} ${k.name}</b> <small>${got ? k.what : `${k.what} <i>(${need}${deep.floor ? `; deepest so far: floor ${deep.floor}` : ""})</i>`}</small></div>`;
     }).join("");
     const trophies = g.trophies || {};
-    this.$("#trophies").innerHTML = [...Object.entries(CM.GUARDIANS).map(([id, G]) => [id, G.name, G.floor, G.lair.name]), ["lich", CM.BOSS.name, CM.LAST_FLOOR, "his palace"]].map(([id, name, floor, where]) => {
+    this.$("#trophies").innerHTML = [...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor < CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name]), ["lich", CM.BOSS.name, CM.LAST_FLOOR, "his palace"],
+      ...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor > CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name])].map(([id, name, floor, where]) => {
       const t = trophies[id];
       return `<div class="unlock ${t ? "got" : ""}"><b>${t ? "✓" : "○"} ${name}</b> <small>${t ? `slain ${this.esc(t.date)} by ${this.esc(t.name)}'s party` : `<i>floor ${floor}: ${where}</i>`}</small></div>`;
     }).join("");
@@ -1072,6 +1085,38 @@ CM.UI = class {
     if (g.mode !== "explore" || !g.settings.tapMove || this.dialogOpen()) return false;
     if (fx < 0.3) g.turn(-1); else if (fx > 0.7) g.turn(1); else if (fy < 0.65) g.move(0); else g.move(2);
     return true;
+  }
+
+
+  // the Lich King is slain: the victory, and the choice - into the daylight, or down into the Deep
+  showCrowning() {
+    const g = this.game, dlg = this.$("#dlg-over");
+    this.overEntry = null;
+    const slot = this.$("#dlg-over .emblem-slot");
+    slot.innerHTML = "";
+    slot.appendChild(CM.art.emblem(120));
+    dlg.classList.add("won"); dlg.classList.add("crowning");
+    this.$("#over-title").textContent = "The Lich King is no more";
+    const standing = g.party.filter((h) => h.hp > 0), names = (list) => (list.length ? list.map((h) => h.name).join(", ").replace(/, ([^,]*)$/, " and $1") : "The party");
+    this.$("#over-text").textContent = `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} stand in the throne room with the Lich King's crown and ${g.gold.toLocaleString()} gold. `
+      + "Behind the throne the floor has split: a shaft goes down into a dark that was never his. The carvings never spoke of it. Climb into the daylight as legends - or go down, and see what the king was listening to.";
+    const roll = this.$("#over-party");
+    roll.innerHTML = "";
+    for (const h of g.party) {
+      const div = document.createElement("div");
+      div.className = h.hp > 0 ? "standing" : "fallen";
+      div.appendChild(this.portrait(h.cls, 56));
+      const who = document.createElement("div");
+      who.innerHTML = `<b>${this.esc(h.name)}</b><small>${h.cls}, level ${h.level}</small><small class="fate">${h.hp > 0 ? "stands" : "fell"}</small>`;
+      div.appendChild(who);
+      roll.appendChild(div);
+    }
+    const t = g.tally || {};
+    this.$("#over-tally").innerHTML = [["Floors", `${CM.LAST_FLOOR} of ${CM.LAST_FLOOR} - and ${CM.BOTTOM - CM.LAST_FLOOR} more below`], ["Gold", g.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
+      ["Steps walked", (t.steps || 0).toLocaleString()], ["Guardians slain", (t.guardians || []).length ? this.guardianNames(t.guardians) : "none"]].map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
+    this.openDialog("#dlg-over");
+    this.ending = "victory";
+    if (this.onEnding) this.onEnding();
   }
 
   // ---- the camp's smith and vault ----
