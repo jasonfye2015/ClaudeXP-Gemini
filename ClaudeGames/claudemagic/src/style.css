@@ -57,6 +57,12 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 #view .hint { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font: 14px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000; pointer-events: none; }
 #view .hurt { position: absolute; inset: 0; pointer-events: none; background: rgba(200,30,20,0.35); opacity: 0; transition: opacity 0.25s; }
 #view .hurt.on { opacity: 1; transition: none; }
+#view .blink { position: absolute; inset: 0; pointer-events: none; background: #E8D8FF; opacity: 0; transition: opacity 0.5s; }
+#view .blink.on { opacity: 0.9; transition: none; }
+#view .fall { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; transition: opacity 0.6s; }
+#view .fall.on { opacity: 1; transition: opacity 0.12s; }
+#side .light { font: 12px var(--serif); color: var(--dim); text-align: center; }
+#side .light.dark { color: #E06060; font-weight: bold; }
 #side { width: 296px; flex: 0 0 296px; display: flex; flex-direction: column; gap: 8px; }
 #automap { width: 290px; height: 290px; border: 3px solid var(--edge); background: var(--paper); }
 #side .where { font: bold 13px var(--serif); color: var(--gold); text-align: center; }
@@ -105,6 +111,7 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 .dialog table.keys td { padding: 3px 10px 3px 0; font-size: 13px; color: var(--ink); }
 .dialog table.keys td:first-child { color: var(--gold); white-space: nowrap; }
 .dialog .small { color: var(--dim); font-size: 12px; }
+.dialog .lore { font: italic 17px/1.5 var(--serif); color: var(--ink); max-width: 480px; margin: 4px 0 6px; }
 #bigmap { background: rgba(0,0,0,0.75); }
 #bigmap canvas { border: 4px solid var(--edge); background: var(--paper); }
 

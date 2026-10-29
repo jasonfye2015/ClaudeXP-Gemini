@@ -6,6 +6,19 @@ moves as one through twenty floors of stone, a square and a quarter-turn at a ti
 fallen monsters give gear and gold; a merchant's camp waits below floors 5, 10 and 15; the Lich King is on floor 20.
 When the whole party falls the run is over - the deepest runs go in the Hall of Fame.
 
+The dungeon (phase 2 of the big update)
+  Each floor is rooms joined by corridors, with a set-piece room or two dropped in (a treasure vault behind a locked
+  door, a shrine, a fountain hall, a den, a library, a crypt in magical dark, a pit room, a keep behind a portcullis).
+  Doors open when walked into; a locked one wants a key found somewhere before it. Secret doors hide on the
+  shortcuts - search a wall (Space) and a hairline in the stone gives one away. Pits and hidden trapdoors drop the
+  party a floor, bruised. Teleporters move them, spinners turn them. A fountain heals, restores magic or poisons,
+  once; an altar heals a little, once. A lever raises its gate. A carving on each floor tells the Lich King's story.
+  Stairs lead back up, and floors are kept as you left them. Torches burn down (400 steps; fresh ones light
+  themselves from the pack; the merchant sells torches and a lantern that never runs out); in the dark the automap
+  stops filling, and in a magical dark even a torch sees only a step. Monsters that see you come for you.
+  CM.solvable (20-world.js) proves every generated floor can be finished, and the generator checks each piece of
+  furniture against it as it goes.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds with Web Audio, in code - there are no pictures or sound files to
@@ -37,5 +50,6 @@ The source
   Tests\test_claudemagic.py drives the built game in Qt WebEngine offscreen (on a scratch profile).
 
 Keys
-  W/Up forward, S/Down back, A/Left and D/Right turn, Q/E sidestep, Space use (a chest, the ladder), I inventory,
-  Tab the automap large, Esc the menu. In a fight: F fight, C cast, P potion, R run. F3 shows frames per second.
+  W/Up forward, S/Down back, A/Left and D/Right turn, Q/E sidestep, Space use (a chest, the ladder or stairs, a
+  fountain, an altar, a lever or carving on the wall you face - or search that wall), I inventory, Tab the automap
+  large, Esc the menu. In a fight: F fight, C cast, P potion, R run. F3 shows frames per second.

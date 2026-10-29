@@ -4,14 +4,15 @@
 // flickers, and fog the colour of the depth. The camera steps and turns smoothly (or snaps, if that's the setting).
 const VERT = `#version 300 es
 precision highp float;
-in vec3 aPos; in vec3 aUV; in float aShade; in vec2 aFx;
+in vec3 aPos; in vec3 aUV; in float aShade; in vec3 aFx;
 uniform mat4 uViewProj;
-out vec3 vWorld; out vec3 vUV; out float vShade; out vec2 vFx;
+out vec3 vWorld; out vec3 vUV; out float vShade; out vec3 vFx;
 void main() { vWorld = aPos; vUV = aUV; vShade = aShade; vFx = aFx; gl_Position = uViewProj * vec4(aPos, 1.0); }`;
 
+// aFx: a hit's red flash, the alpha (a foe fading), and glow - how much of the texture's own colour shows unlit
 const FRAG = `#version 300 es
 precision highp float; precision highp sampler2DArray;
-in vec3 vWorld; in vec3 vUV; in float vShade; in vec2 vFx;
+in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
 uniform sampler2DArray uTex; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 out vec4 fragColor;
@@ -24,11 +25,12 @@ void main() {
   vec3 col = t.rgb * vShade * uTorch * light;
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
   col = mix(col, uFog, fog);
+  col = mix(col, t.rgb, vFx.z * (1.0 - fog * 0.7));
   col = mix(col, vec3(1.0, 0.3, 0.2), vFx.x);
   fragColor = vec4(col, t.a * vFx.y);
 }`;
 
-const STRIDE = 9;                      // floats a vertex: pos 3, uv 3, shade 1, fx 2
+const STRIDE = 10;                     // floats a vertex: pos 3, uv 3, shade 1, fx 3
 const EYE_HEIGHT = 0.5;
 
 function mat4Perspective(fovY, aspect, near, far) {
@@ -82,6 +84,8 @@ CM.Renderer = class {
     this.viewProj = null;
     this.snap = false;
     this.bob = 0;
+    this.light = 1;                    // how far the torch reaches, as a share of the depth's reach (1: a good torch)
+    this.lightNow = 1;                 // (eased towards it)
     this.ok = true;
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
@@ -135,12 +139,14 @@ CM.Renderer = class {
   // ---- the floor's mesh ----
   setFloor(floor, theme) {
     this.theme = theme;
-    const grid = floor.grid, size = grid.length, out = [];
+    const grid = floor.grid, size = grid.length, out = [], features = floor.features || {};
     const quad = (a, b, c, d, layer, shade) => {           // four corners, counter-clockwise from the bottom left as seen
       const uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
-      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1);
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0);
     };
-    const pickWall = (x, y, d) => {
+    const pickWall = (x, y, d, wx, wy) => {
+      const f = features[`${wx},${wy}`];
+      if (f && f.type === "secret" && !f.found) return this.index.wallsecret;    // (a hairline, for the sharp-eyed)
       const h = (x * 73856093) ^ (y * 19349663) ^ (d * 83492791);
       const r = ((h >>> 0) % 1000) / 1000;
       return r < this.theme.bones * 0.5 ? this.index.wallbones : r < 0.6 ? this.index.wall : this.index.wall2;
@@ -150,10 +156,10 @@ CM.Renderer = class {
       quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], this.index.floor, 0.9);
       quad([x, 1, y], [x + 1, 1, y], [x + 1, 1, y + 1], [x, 1, y + 1], this.index.ceiling, 0.7);
       const solid = (nx, ny) => ny < 0 || ny >= size || nx < 0 || nx >= size || grid[ny][nx] !== 0;
-      if (solid(x, y - 1)) quad([x, 0, y], [x + 1, 0, y], [x + 1, 1, y], [x, 1, y], pickWall(x, y, 0), 1.0);                 // north wall, facing south
-      if (solid(x, y + 1)) quad([x + 1, 0, y + 1], [x, 0, y + 1], [x, 1, y + 1], [x + 1, 1, y + 1], pickWall(x, y, 2), 1.0);   // south wall, facing north
-      if (solid(x + 1, y)) quad([x + 1, 0, y], [x + 1, 0, y + 1], [x + 1, 1, y + 1], [x + 1, 1, y], pickWall(x, y, 1), 0.84);   // east wall, facing west
-      if (solid(x - 1, y)) quad([x, 0, y + 1], [x, 0, y], [x, 1, y], [x, 1, y + 1], pickWall(x, y, 3), 0.84);                 // west wall, facing east
+      if (solid(x, y - 1)) quad([x, 0, y], [x + 1, 0, y], [x + 1, 1, y], [x, 1, y], pickWall(x, y, 0, x, y - 1), 1.0);                 // north wall, facing south
+      if (solid(x, y + 1)) quad([x + 1, 0, y + 1], [x, 0, y + 1], [x, 1, y + 1], [x + 1, 1, y + 1], pickWall(x, y, 2, x, y + 1), 1.0);   // south wall, facing north
+      if (solid(x + 1, y)) quad([x + 1, 0, y], [x + 1, 0, y + 1], [x + 1, 1, y + 1], [x + 1, 1, y], pickWall(x, y, 1, x + 1, y), 0.84);   // east wall, facing west
+      if (solid(x - 1, y)) quad([x, 0, y + 1], [x, 0, y], [x, 1, y], [x, 1, y + 1], pickWall(x, y, 3, x - 1, y), 0.84);                 // west wall, facing east
     }
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
@@ -182,6 +188,12 @@ CM.Renderer = class {
     while (to - from < -Math.PI) to += Math.PI * 2;
     if (this.snap || ms <= 0) { this.yaw = to; this.turn = null; return; }
     this.turn = { from, to, t: 0, ms };
+  }
+
+  spinTo(facing, ms = 700) {                                           // a spinner: the whole way round, and then some
+    let to = this.yawFor(facing);
+    while (to < this.yaw) to += Math.PI * 2;
+    this.turn = { from: this.yaw, to: to + Math.PI * 2, t: 0, ms };
   }
 
   get busy() { return this.move !== null || this.turn !== null; }
@@ -214,23 +226,36 @@ CM.Renderer = class {
     }
   }
 
+  // A sprite: {x, y (the cell), layer, w, h} and one of - nothing (a billboard facing the camera, standing on the
+  // floor), flat (lying on the floor), axis "ns"/"ew" (standing across the cell's middle: a door), face 0-3 (a decal
+  // on that wall of the cell) - plus dx/dz (an offset in the cell), lift, flash, alpha, glow, shade.
   _spriteMesh() {
     const out = [], right = [Math.cos(this.yaw), 0, Math.sin(this.yaw)];
     for (const s of this.sprites) {
       const layer = this.index[s.layer];
       if (layer === undefined) continue;
       const cx = s.x + 0.5 + (s.dx || 0), cz = s.y + 0.5 + (s.dz || 0), w = s.w || 0.7, h = s.h || 0.7;
-      const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1;
+      const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1, glow = s.glow || 0;
       const uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
       let corners;
+      const lift = s.lift || 0;
       if (s.flat) {
         corners = [[cx - w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz - w / 2], [cx - w / 2, 0.003, cz - w / 2]];
+      } else if (s.axis) {
+        corners = s.axis === "ns"                                        // a door across a corridor running north-south
+          ? [[cx - 0.5, 0, cz], [cx + 0.5, 0, cz], [cx + 0.5, 1, cz], [cx - 0.5, 1, cz]]
+          : [[cx, 0, cz + 0.5], [cx, 0, cz - 0.5], [cx, 1, cz - 0.5], [cx, 1, cz + 0.5]];
+      } else if (s.face !== undefined) {
+        const [dx, dz] = CM.DIRS[s.face], inset = 0.012;                // flush with that wall, a hair into the room
+        const px = s.x + 0.5 + dx * (0.5 - inset), pz = s.y + 0.5 + dz * (0.5 - inset);
+        const ax = -dz, az = dx;                                         // along the wall
+        const y0 = 0.5 - h / 2 + lift, y1 = 0.5 + h / 2 + lift;
+        corners = [[px - ax * w / 2, y0, pz - az * w / 2], [px + ax * w / 2, y0, pz + az * w / 2], [px + ax * w / 2, y1, pz + az * w / 2], [px - ax * w / 2, y1, pz - az * w / 2]];
       } else {
-        const lift = s.lift || 0;
         corners = [[cx - right[0] * w / 2, lift, cz - right[2] * w / 2], [cx + right[0] * w / 2, lift, cz + right[2] * w / 2],
           [cx + right[0] * w / 2, lift + h, cz + right[2] * w / 2], [cx - right[0] * w / 2, lift + h, cz - right[2] * w / 2]];
       }
-      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uv[i][0], uv[i][1], layer, shade, flash, alpha);
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uv[i][0], uv[i][1], layer, shade, flash, alpha, glow);
     }
     return out;
   }
@@ -240,15 +265,17 @@ CM.Renderer = class {
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0);
     gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
     gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24);
-    gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 2, gl.FLOAT, false, bytes, 28);
+    gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);
   }
 
   frame(dt) {
     if (!this.ok || !this.texture) return;
     this.time += dt;
     this._advance(dt);
-    // a torch flame: a slow wander and a quick shiver
-    this.flicker = 0.92 + 0.06 * Math.sin(this.time * 7.3) + 0.03 * Math.sin(this.time * 17.1 + 1.0) + 0.02 * Math.sin(this.time * 31.7);
+    this.lightNow += (this.light - this.lightNow) * Math.min(1, dt * 4);
+    // a torch flame: a slow wander and a quick shiver - more of a shiver as it burns low
+    const unsteady = this.light < 0.6 ? 2.2 : 1;
+    this.flicker = 0.92 + unsteady * (0.06 * Math.sin(this.time * 7.3) + 0.03 * Math.sin(this.time * 17.1 + 1.0) + 0.02 * Math.sin(this.time * 31.7));
     const gl = this.gl, aspect = this.canvas.width / this.canvas.height;
     const eye = [this.eye[0], this.eye[1] + this.bob, this.eye[2]];
     const fwd = [Math.sin(this.yaw), 0, -Math.cos(this.yaw)];
@@ -263,9 +290,9 @@ CM.Renderer = class {
     gl.uniform3fv(this.loc.uEye, eye);
     gl.uniform3fv(this.loc.uTorch, t.torch);
     gl.uniform3fv(this.loc.uFog, t.fog);
-    gl.uniform1f(this.loc.uReach, t.reach);
+    gl.uniform1f(this.loc.uReach, t.reach * this.lightNow);
     gl.uniform1f(this.loc.uFlicker, this.flicker);
-    gl.uniform1f(this.loc.uAmbient, 0.06);
+    gl.uniform1f(this.loc.uAmbient, 0.06 * Math.min(1, this.lightNow * 2));
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);
