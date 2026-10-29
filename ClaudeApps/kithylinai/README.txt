@@ -33,8 +33,23 @@ Everything it uses stays in this folder, so the program can be lifted out whole:
 Running it
   In the Timeline: Start > All Programs > Kithylin AI on any of the three computers.
   Standalone: "Kithylin AI.bat", or  Python\python.exe -m kithylinai  from ClaudeApps.
-  To spin it off: copy ClaudeApps\kithylinai plus ClaudeCore\claudecore\furcodes (for the codes page; put
-  ClaudeCore on the path or beside it), a Python with PySide6, and a llama.cpp build in Engine\.
+  To spin it off: copy ClaudeApps\kithylinai plus ClaudeCore\claudecore\furcodes (for the codes page) and
+  ClaudeCore\claudecore\messengers (for Telegram and Discord; put ClaudeCore on the path or beside it), a Python
+  with PySide6, and a llama.cpp build in Engine\.
+
+Telegram and Discord
+  Telegram... and Discord... (beside the title) give Kithylin a bot of its own on each, named "Kithylin AI" - made
+  with Telegram's @BotFather, or in Discord's Developer Portal; How to connect... in each window has the steps. You
+  link your account by sending the bot a code; you can invite people with codes of their own. The bots say plainly
+  that they're an AI - a language model made from Kithylin's own words, not Kithylin and not a person - in their
+  descriptions and to anyone invited, before anything else; anyone else is told once that it's private.
+  Each person's conversation is a chat of its own (Open chat... lists them as "<name> on Telegram"), answered by the
+  model that's loaded, one reply at a time (a reply the window has under way finishes first). Someone invited is
+  named in the prompt, with a note that they know it's an AI. Words only: a picture on its own or a voice message
+  gets a note back. The plumbing is ClaudeCore\claudecore\messengers (shared with Soul and Song); what these bots
+  say is bots.py; their tokens and who's linked are in Data\telegram.json and Data\discord.json. On its own,
+  closing the window with a bot linked leaves Kithylin AI in the notification area, listening (click the icon, or
+  start it again, to bring it back; right-click it to quit). Only one copy can listen to a bot at a time.
 
 Models and the graphics card
   A Kithylin model gets a llama-server of its own here. Inside the Timeline, a model from Local Storage is run by

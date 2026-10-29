@@ -13,10 +13,12 @@ import support
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from soulsong import companion as C
-from soulsong import discordlink
 from soulsong import interlink as I
 from soulsong import paths
+from soulsong.bots import WORDS
 from soulsong.paths import project
+
+from claudecore.messengers import discordlink
 
 TEMPLATES = project()
 support.needs(TEMPLATES / "Mind L1 - Mind Resources.txt", "the Companion Project's mind files in Local Storage")
@@ -109,7 +111,7 @@ def dm(user, text, name="Jason", when=None, **more):
 
 
 def _link(name, api=None, files=None):
-    link = discordlink.Link(support.scratch("discord", name), api=api or FakeDiscord(), files=files)
+    link = discordlink.Link(support.scratch("discord", name), api=api or FakeDiscord(), files=files, words=WORDS)
     link.connect(TOKEN)
     return link
 
@@ -119,7 +121,7 @@ def test_linking_says_its_an_ai():
     server; a wrong token isn't kept"""
     api = FakeDiscord()
     folder = support.scratch("discord", "link")
-    link = discordlink.Link(folder, api=api)
+    link = discordlink.Link(folder, api=api, words=WORDS)
     try:
         link.connect("WRONG")
         raise AssertionError("a wrong token was accepted")
@@ -192,7 +194,7 @@ def test_the_gateway():
     link = _link("gateway", api)
     got, said = [], []
     listener = discordlink.Listener(link, got.append, on_status=said.append)
-    listener.pause = 0.05
+    listener.first_pause = listener.pause = 0.05
     n = len(SOCKETS)
     listener.start()
     ws = SOCKETS[-1]
@@ -275,7 +277,7 @@ def test_the_window_on_discord():
     ws.feed(0, {"session_id": "S", "resume_gateway_url": "wss://r"}, "READY", 1)
     chat = f"dm-{OWNER}"
     say(dm(OWNER, w.links["discord"].code("owner")))
-    assert answered(chat, 0) == discordlink.LINKED.format(companion="Lyra")
+    assert answered(chat, 0) == WORDS["linked"].format(companion="Lyra")
     assert w.comp.reach is not None and "Discord is linked" in w.chat.toPlainText()
     say(dm(OWNER, "Hello from Discord!"))
     assert answered(chat, 1) == "Here, on Discord too."
@@ -314,7 +316,7 @@ def test_the_window_on_discord():
     assert len(api.to(chat)) == k and w.comp.cfg["channel"] == "window", "the window's answer went to Discord"
     # a server's channel and a stranger
     say(dm(STRANGER, "hey", name="Eve"))
-    assert answered(f"dm-{STRANGER}", 0) == discordlink.PRIVATE
+    assert answered(f"dm-{STRANGER}", 0) == WORDS["private"]
     say(dm(OWNER, "in a server", guild_id="77"))
     support.pump(0.3)
     assert len(api.to(chat)) == k, "a server's channel was answered"

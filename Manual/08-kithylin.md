@@ -53,13 +53,30 @@ An add-on model needs its base in `Local Storage\LLM Models\models` (the picker 
 NemoMix Kithylins sound more like you than v1 did; the adult one is the better conversationalist for roleplay, the
 recent one is you as you talk now. [Training](09-training.md) has how they were made and how to make another.
 
+## On Telegram and Discord
+
+**Telegram...** and **Discord...**, beside the title, give Kithylin a bot of its own on each, named **Kithylin AI**,
+so you can chat from your phone. Each window's **How to connect...** has the steps: make the bot with Telegram's
+**@BotFather** (or in Discord's **Developer Portal**), paste its token, and send it the code the window shows. You can
+invite people with codes of their own.
+
+The bots say plainly that they're an AI - a language model made from Kithylin's own words, not Kithylin and not a
+person - in their descriptions and, before anything else, to anyone you invite. Anyone else is told once that it's
+private. Each person's conversation is a chat of its own (**Open chat...** lists them, as "Sam on Telegram"), answered
+by whichever model is loaded, one reply at a time. It reads words only for now: a picture on its own or a voice
+message gets a note back. These are Kithylin AI's own bots, separate from Soul and Song's.
+
+Run on its own (the launcher's **APPS**), closing the window with a bot linked leaves Kithylin AI in the notification
+area, still listening: click its icon, or start it again, to bring the window back; right-click it to quit.
+
 ## Running it on its own
 
 - In the Timeline: Start > All Programs > Kithylin AI on any computer, or the desktop icon.
 - Standalone, on the PC: `ClaudeApps\kithylinai\Kithylin AI.bat` (on a Mac, `Kithylin AI.command`). It uses the
   Timeline's portable Python and, without an `Engine` folder, the Timeline's llama.cpp build.
-- To spin it off entirely: copy `ClaudeApps\kithylinai` plus `ClaudeCore\claudecore\furcodes` (for the Codes tab),
-  a Python with PySide6, and a llama.cpp build into `Engine\`.
+- To spin it off entirely: copy `ClaudeApps\kithylinai` plus `ClaudeCore\claudecore\furcodes` (for the Codes tab)
+  and `ClaudeCore\claudecore\messengers` (for Telegram and Discord), a Python with PySide6, and a llama.cpp build
+  into `Engine\`.
 
 **Don't run it while a model is training**: both want the graphics card.
 

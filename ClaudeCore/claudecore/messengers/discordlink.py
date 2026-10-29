@@ -1,17 +1,17 @@
-"""Soul and Song on Discord: a bot of the user's own (an application made in Discord's Developer Portal, named
-"Soul and Song"), answered by whichever Companion is open - just as on Telegram (telegram.py), and the same people
-may talk with it: the user, linked by a code sent to it in a direct message, and the people they invite.
+"""Discord, for a program's bot (Soul and Song's, Kithylin AI's): an application of the user's own, made in Discord's
+Developer Portal and given the program's name, answered by the program - just as on Telegram (telegram.py), and the
+same people may talk with it: the user, linked by a code sent to it in a direct message, and the people they invite.
 
 Discord keeps a connection open instead of being asked (its gateway, a WebSocket - Qt's own QtWebSockets, nothing to
-install). Soul and Song says who it is, asking only for direct messages (no privileged intents to switch on), keeps
-the connection alive with heartbeats, and picks up where it was after a drop. Discord doesn't hold messages for a
-bot that's away, so once connected it reads back, from each conversation it knows, what came since it last looked.
-Only one copy of Soul and Song can listen to a bot at a time. A bot can only be messaged by someone who shares a
-server with it: the user adds it to one they're in (a private one of their own is fine).
+install). The program says who it is, asking only for direct messages (no privileged intents to switch on), keeps the
+connection alive with heartbeats, and picks up where it was after a drop. Discord doesn't hold messages for a bot
+that's away, so once connected it reads back, from each conversation it knows, what came since it last looked. Only
+one copy of a program can listen to its bot at a time. A bot can only be messaged by someone who shares a server
+with it: the user adds it to one they're in (a private one of their own is fine).
 
-Everything is labelled AI: Discord marks the account as an app, Soul and Song sets the application's description to
-say it's an AI, and anyone invited is told before anything else. Kept in Companions/discord.json (in Local Storage,
-never in git): the token - a secret: whoever has it controls the bot - who's linked, the invitation codes, and how
+Everything is labelled AI: Discord marks the account as an app, the application's description (the program's words)
+says it's an AI, and anyone invited is told before anything else. Kept in the program's folder (never in git), in
+discord.json: the token - a secret: whoever has it controls the bot - who's linked, the invitation codes, and how
 far each conversation has been read."""
 import json
 import random
@@ -25,7 +25,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, QUrl
 
-from .telegram import CANT, DESCRIPTION, LINKED, PICTURE_LIMIT, PRIVATE, WELCOME, chunks, fetch   # noqa: F401
+from .telegram import PICTURE_LIMIT, chunks, fetch
 
 NAME = "Discord"
 API = "https://discord.com/api/v10"
@@ -36,39 +36,49 @@ INTENTS = 1 << 12                # direct messages - and nothing else
 VOICE = 1 << 13                  # (a message's flags: a voice message)
 FATAL = {4004: "Discord refused the bot's token - link it again with a new one (Developer Portal > Bot > Reset "
                "Token).", 4010: "", 4011: "", 4012: "", 4013: "", 4014: ""}
-INTRO = ("Talk with your Companion on Discord - on your phone or any computer - through a bot of your own: make it "
+INTRO = ("Talk with {who} on Discord - on your phone or any computer - through a bot of your own: make it "
          "in Discord's <b>Developer Portal</b> (<b>How to connect...</b> below walks you through it), name it "
-         "<b>Soul and Song</b>, and paste its token here. Discord marks it as an app, and its description and its "
+         "<b>{app}</b>, and paste its token here. Discord marks it as an app, and its description and its "
          "first words to anyone say it's an AI.")
 TOKEN_HINT = "The bot's token, from Discord's Developer Portal (keep it secret)"
 HOW_HINT = "The setup, step by step: making the bot in Discord's Developer Portal, and linking it here"
-SETUP = """<h3>Connecting Soul and Song to Discord</h3>
+SETUP = """<h3>Connecting {app} to Discord</h3>
 <ol>
 <li>In your browser, open Discord's <b>Developer Portal</b> - discord.com/developers/applications - and sign in
 with your Discord account.</li>
-<li>Click <b>New Application</b>, name it <b>Soul and Song</b>, agree to Discord's terms and click <b>Create</b>.
+<li>Click <b>New Application</b>, name it <b>{app}</b>, agree to Discord's terms and click <b>Create</b>.
 (If you like, give it a picture: <b>App Icon</b>, on the page that opens.)</li>
 <li>Click <b>Bot</b> in the menu on the left, then <b>Reset Token</b> (and yes), then <b>Copy</b>. That's the bot's
 <b>token</b>: keep it to yourself - whoever has it controls the bot. Discord shows it only once; if you lose it,
 reset it again.</li>
-<li>Back in Soul and Song's Discord window, paste the token and click <b>Link</b>. Soul and Song checks it with
+<li>Back in {app}'s Discord window, paste the token and click <b>Link</b>. {app} checks it with
 Discord and sets the app's description to say it's an AI.</li>
 <li>Discord only lets you message a bot you share a server with: click <b>Add it to a server...</b> - your browser
 opens Discord's page for it. Pick a server you're in (a private one of your own is fine: the <b>+</b> at the
 bottom of Discord's list of servers makes one) and click <b>Authorize</b>.</li>
-<li>In Discord, find <b>Soul and Song</b> in that server's member list, click it, and send it a message: the
+<li>In Discord, find <b>{app}</b> in that server's member list, click it, and send it a message: the
 six-figure code the window shows. It answers "Linked."</li>
-<li>Now just message it - words, or pictures. To invite someone, add them to that server, click <b>Invite
+<li>Now just message it - {sends}. To invite someone, add them to that server, click <b>Invite
 someone...</b> here, and give them the code to send the bot in a direct message.</li>
 </ol>
-<p><b>Good to know:</b> only one Soul and Song can listen to a bot at a time - don't run it on its own and inside a
+<p><b>Good to know:</b> only one {app} can listen to a bot at a time - don't run it on its own and inside a
 computer together. For it to write to you first, Discord must let that server's members message you (your privacy
-settings for the server). To keep it listening with the window closed, run Soul and Song on its own (the launcher's
-<b>APPS</b>): closing the window leaves an icon in the notification area - click it, or start Soul and Song again, to
+settings for the server). To keep it listening with the window closed, run {app} on its own (the launcher's
+<b>APPS</b>): closing the window leaves an icon in the notification area - click it, or start {app} again, to
 bring the window back. Direct messages on Discord aren't end-to-end encrypted - Discord's servers carry them.</p>
 <p>(If you'd rather nobody else could add the bot to a server: in the Developer Portal, set <b>Installation >
 Install Link</b> to None, then turn <b>Bot > Public Bot</b> off. It talks only with you and the people you invite
 either way.)</p>"""
+
+
+def setup(app, sends="words, or pictures"):
+    """How to connect, step by step, for this program's bot."""
+    return SETUP.format(app=app, sends=sends)
+
+
+def intro(app, who):
+    """The Discord window's opening words: talking with who, through this program's bot."""
+    return INTRO.format(app=app, who=who)
 
 
 class DiscordError(Exception):
@@ -133,8 +143,9 @@ def other_of(m):
 class Link:
     """The bot and who's linked to it (discord.json); reading, sending, and what each message is."""
 
-    def __init__(self, folder, api=None, files=None):
+    def __init__(self, folder, api=None, files=None, words=None):
         self.path = Path(folder) / "discord.json"
+        self.words = words or {}                 # (the program's: what its bot says it is - "description")
         self.api = api or call
         self.files = files or fetch
         self.lock = threading.RLock()            # (the read-back thread and the window's both write it)
@@ -186,8 +197,10 @@ class Link:
 
     def label(self):
         """The application's description: it's an AI (best effort - the bot works either way)."""
+        if not self.words.get("description"):
+            return
         try:
-            self.api(self.token, "PATCH", "/applications/@me", {"description": DESCRIPTION})
+            self.api(self.token, "PATCH", "/applications/@me", {"description": self.words["description"][:400]})
         except Exception:
             pass
 
@@ -324,7 +337,7 @@ def make_socket():
 
 
 class Listener(QObject):
-    """Discord's gateway, kept open: who Soul and Song is, heartbeats, picking up after a drop - each direct message
+    """Discord's gateway, kept open: who the program is, heartbeats, picking up after a drop - each direct message
     to deliver(message); once connected, what came while it was away (read back on a thread of its own)."""
 
     def __init__(self, link, deliver, on_status=None):
@@ -335,7 +348,8 @@ class Listener(QObject):
         self.seq = self.session = self.resume_url = None
         self.stopped = False
         self.acked = True
-        self.pause = 2.0                         # seconds before trying again, doubling to two minutes
+        self.first_pause = 2.0                   # seconds before trying again, doubling to two minutes
+        self.pause = self.first_pause
         self.beat = QTimer(self)
         self.beat.timeout.connect(self._heartbeat)
         self.retry = QTimer(self)
@@ -405,7 +419,7 @@ class Listener(QObject):
             return
         if code in FATAL:
             self.stopped = True
-            self.on_status(FATAL[code] or f"Discord closed the connection ({code}) - Soul and Song stopped listening "
+            self.on_status(FATAL[code] or f"Discord closed the connection ({code}) - it stopped listening "
                                           "there.")
             return
         if code in (4007, 4009):                         # (the session can't be picked up: start afresh)
@@ -431,8 +445,8 @@ class Listener(QObject):
                 self._send(6, {"token": self.link.token, "session_id": self.session, "seq": self.seq})
             else:
                 self._send(2, {"token": self.link.token, "intents": INTENTS,
-                               "properties": {"os": sys.platform, "browser": "Soul and Song",
-                                              "device": "Soul and Song"}})
+                               "properties": {"os": sys.platform, "browser": "Claude Timeline",
+                                              "device": "Claude Timeline"}})
         elif op == 11:                                   # (a heartbeat heard)
             self.acked = True
         elif op == 1:                                    # (Discord asks for one now)
@@ -446,12 +460,12 @@ class Listener(QObject):
             if kind == "READY":
                 self.session = (d or {}).get("session_id")
                 self.resume_url = ((d or {}).get("resume_gateway_url") or "").rstrip("/") or None
-                self.pause = 2.0
+                self.pause = self.first_pause
                 link, deliver = self.link, self.deliver
-                threading.Thread(target=link.catch_up, args=(deliver,), name="soulsong-discord-catch-up",
+                threading.Thread(target=link.catch_up, args=(deliver,), name="discord-catch-up",
                                  daemon=True).start()
             elif kind == "RESUMED":
-                self.pause = 2.0
+                self.pause = self.first_pause
             elif kind == "MESSAGE_CREATE" and d:
                 self.deliver(d)
 

@@ -1805,13 +1805,14 @@ class SoulAndSong(QWidget):
 
     @staticmethod
     def _messenger(which):
-        """A messenger's module: its Link and Listener, and its words."""
-        from . import discordlink, telegram
+        """A messenger's module: its Link and Listener, and its window's words (claudecore.messengers)."""
+        from claudecore.messengers import discordlink, telegram
         return {"telegram": telegram, "discord": discordlink}[which]
 
     def _link(self, which):
         if self.links.get(which) is None:
-            self.links[which] = self._messenger(which).Link(companions())
+            from .bots import WORDS
+            self.links[which] = self._messenger(which).Link(companions(), words=WORDS)
         return self.links[which]
 
     def _linked(self, which):
@@ -1875,6 +1876,7 @@ class SoulAndSong(QWidget):
 
     def _msg_update(self, which, raw):
         """One message from Telegram or Discord: who it's from decides what happens."""
+        from .bots import WORDS
         mod, link = self._messenger(which), self.links.get(which)
         info = link.classify(raw) if link is not None else None
         if not info:
@@ -1882,17 +1884,17 @@ class SoulAndSong(QWidget):
         kind, chat, c = info["kind"], info["chat"], self.comp
         who = c.name if c is not None else "Soul and Song"
         if kind == "stranger":
-            self._msg_send(which, chat, mod.PRIVATE)
+            self._msg_send(which, chat, WORDS["private"])
             return
         if kind == "linked":
-            self._msg_send(which, chat, mod.LINKED.format(companion=who))
+            self._msg_send(which, chat, WORDS["linked"].format(companion=who))
             self._line("system", f"{mod.NAME} is linked: {info['name']} can talk with {who} there.")
             self._msg_wire(announce=True)
             self._msg_refresh.get(which, lambda: None)()
             return
         if kind == "invited":
             owner = c.user if c is not None else (link.owner or {}).get("name", "its owner")
-            self._msg_send(which, chat, mod.WELCOME.format(name=info["name"], companion=who, owner=owner))
+            self._msg_send(which, chat, WORDS["welcome"].format(name=info["name"], companion=who, owner=owner))
             self._line("system", f"{info['name']} accepted your {mod.NAME} invitation.")
             self._msg_refresh.get(which, lambda: None)()
             return
@@ -1910,13 +1912,14 @@ class SoulAndSong(QWidget):
         self._msg_next()
 
     def _msg_next(self):
+        from .bots import WORDS
         while self._msg_line and not self._msg_fetching:
             which, info = self._msg_line.pop(0)
             mod, link = self._messenger(which), self.links.get(which)
             if link is None:
                 continue
             if info.get("other") and not info["text"] and not info.get("picture"):
-                self._msg_send(which, info["chat"], mod.CANT.format(what=info["other"]))
+                self._msg_send(which, info["chat"], WORDS["cant"].format(what=info["other"]))
                 continue
             if not info.get("picture"):
                 self._msg_say(which, info, None)
@@ -1974,13 +1977,14 @@ class SoulAndSong(QWidget):
 
     def _msg_dialog(self, which):
         """Telegram... or Discord...: the bot, who's linked, the people invited, and how the Companion may use it."""
+        from . import bots
         mod, link = self._messenger(which), self._link(which)
         name = mod.NAME
         d = QDialog(self)
         d.setWindowTitle(f"Soul and Song on {name}")
         d.setMinimumWidth(560)
         v = QVBoxLayout(d)
-        intro = QLabel(mod.INTRO)
+        intro = QLabel(mod.intro(bots.APP, bots.WHO))
         intro.setWordWrap(True)
         v.addWidget(intro)
         row = QHBoxLayout()
@@ -2144,7 +2148,8 @@ class SoulAndSong(QWidget):
             how.resize(560, 470 if which == "discord" else 410)
             v = QVBoxLayout(how)
             text = QTextBrowser()
-            text.setHtml(mod.SETUP)
+            from . import bots
+            text.setHtml(mod.setup(bots.APP, bots.SENDS))
             v.addWidget(text)
             close = QPushButton("Close")
             close.clicked.connect(how.close)

@@ -24,7 +24,17 @@ def main():
     except ImportError:
         pass
     from kithylinai.app import KithylinAI, app_icon
-    win = QMainWindow()
+
+    class Window(QMainWindow):
+        """Closed while a bot listens (Telegram, Discord): Kithylin AI waits in the notification area instead."""
+
+        def closeEvent(self, event):
+            content = self.centralWidget()
+            if content is not None and content.close_to_tray():
+                event.ignore()
+                return
+            super().closeEvent(event)
+    win = Window()
     win.setWindowTitle("Kithylin AI")
     win.setWindowIcon(app_icon())
     content = KithylinAI(None)
@@ -34,7 +44,7 @@ def main():
     app.aboutToQuit.connect(content.shutdown)
     win.show()
     content.composer.setFocus()
-    listening = single.listen("kithylinai", lambda: single.come_forward(win)) if single is not None else None
+    listening = single.listen("kithylinai", lambda: single.come_forward(win, content)) if single is not None else None
     code = app.exec()
     if listening is not None:
         listening.close()

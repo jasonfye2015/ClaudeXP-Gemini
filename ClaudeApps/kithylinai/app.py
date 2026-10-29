@@ -1,18 +1,21 @@
 """Kithylin AI's window: Chat (over Kithylin's art), Gallery, Codes and Settings."""
 import time
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QIcon, QPixmap
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
-                               QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMessageBox,
-                               QPlainTextEdit, QPushButton, QScrollArea, QSpinBox, QTabWidget, QVBoxLayout, QWidget)
+import threading
+
+from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QFileDialog, QFormLayout,
+                               QGroupBox, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+                               QMenu, QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSpinBox,
+                               QSystemTrayIcon, QTabWidget, QTextBrowser, QVBoxLayout, QWidget)
 
 from . import defaults, engine as engine_mod, store
 from .chat import Backdrop, ChatView, Composer, FormatBar, Slideshow
 from .codes import CodesPage
 from .details import ModelDetails
 from .gallery import Gallery, load_index
-from .paths import ART, ICON, hosted
+from .paths import ART, DATA, ICON, hosted
 
 STYLE = """
 QWidget#kithylinai { background: #1b1b28; color: #e8e6f0; font-family: 'Segoe UI'; font-size: 10pt; }
@@ -54,6 +57,34 @@ def app_icon():
     return QIcon(str(ICON)) if ICON.exists() else QIcon()
 
 
+def _messengers():
+    """Telegram and Discord are there (claudecore.messengers - not when Kithylin AI is lifted out of the Timeline)."""
+    try:
+        import claudecore.messengers                     # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+class _Later(QObject):
+    """later.run(work, then): work() on a thread of its own (the network), then(result) back on the window's thread;
+    later.back.emit(fn) runs fn there."""
+    back = Signal(object)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.back.connect(lambda fn: fn())
+
+    def run(self, work, then):
+        def go():
+            try:
+                result = work()
+            except Exception:
+                result = None
+            self.back.emit(lambda: then(result))
+        threading.Thread(target=go, name="kithylinai-later", daemon=True).start()
+
+
 class KithylinAI(QWidget):
     def __init__(self, desktop=None):
         super().__init__()
@@ -70,6 +101,11 @@ class KithylinAI(QWidget):
         self.engine.chunk.connect(self._chunk)
         self.engine.done.connect(self._done)
         self.reply = None
+        self._job = None                     # the reply under way: {"chat", "reply", "then"} (the window's, or a bot's)
+        self.later = _Later(self)
+        self.links, self.listeners = {}, {}  # Telegram and Discord: the bots and who's linked; what's listening
+        self._msg_queue, self._msg_chats, self._msg_told, self._msg_refresh = [], {}, set(), {}
+        self._tray, self._quitting = None, False
         self._render_timer = QTimer(self)
         self._render_timer.setSingleShot(True)
         self._render_timer.timeout.connect(lambda: self.view.render(self.visible_messages()))
@@ -104,6 +140,8 @@ class KithylinAI(QWidget):
         else:
             self.system("Choose a model at the top and press Load.")
         self.view.render(self.chat.messages)
+        if _messengers():
+            QTimer.singleShot(400, self._msg_start)
 
     # ---- layout ---------------------------------------------------------------------------------------------------
     def _header(self):
@@ -115,6 +153,15 @@ class KithylinAI(QWidget):
         title.setObjectName("title")
         row.addWidget(pic)
         row.addWidget(title)
+        row.addSpacing(12)
+        for which, label, tip in (("telegram", "Telegram...", "Talk with Kithylin from your phone, through a Telegram "
+                                                              "bot of your own"),
+                                  ("discord", "Discord...", "Talk with Kithylin on Discord, through a bot of your own")):
+            b = QPushButton(label)
+            b.setToolTip(tip)
+            b.clicked.connect(lambda _c=False, w=which: self._msg_dialog(w))
+            b.setVisible(_messengers())
+            row.addWidget(b)
         row.addStretch(1)
         row.addWidget(QLabel("Model:"))
         self.model_box = QComboBox()
@@ -389,66 +436,84 @@ class KithylinAI(QWidget):
     def _loaded_changed(self, ready):
         self.unload_btn.setEnabled(ready)
         self.send_btn.setEnabled(ready and not self.engine.busy())
+        if ready:
+            QTimer.singleShot(0, self._msg_next)          # (Telegram and Discord messages that waited for it)
 
     # ---- chatting ----------------------------------------------------------------------------------------------------
+    def _for_model(self, chat, system_prompt):
+        """The system prompt and as much of the conversation as the context holds, newest kept."""
+        budget = int(self.settings["context"]) * 3 - len(system_prompt) - int(self.settings["max_tokens"]) * 3
+        kept, used = [], 0
+        for m in reversed(chat.spoken()):
+            used += len(m["content"])
+            if used > budget and kept:
+                break
+            kept.insert(0, {"role": m["role"], "content": m["content"]})
+        return ([{"role": "system", "content": system_prompt}] if system_prompt else []) + kept
+
     def send(self):
         text = self.composer.toPlainText().strip()
-        if not text or self.engine.busy():
+        if not text:
+            return
+        if self._job is not None or self.engine.busy():
+            if self._job is not None and self._job["chat"] is not self.chat:
+                self.system("Kithylin is answering on Telegram or Discord - one moment.")
             return
         if not self.engine.ready:
             self.system("No model is loaded yet - press Load.")
             return
         self.composer.clear()
         self.chat.add("user", text)
-        system_prompt = self.settings.system_prompt()
-        budget = int(self.settings["context"]) * 3 - len(system_prompt) - int(self.settings["max_tokens"]) * 3
-        kept, used = [], 0
-        for m in reversed(self.chat.spoken()):
-            used += len(m["content"])
-            if used > budget and kept:
-                break
-            kept.insert(0, {"role": m["role"], "content": m["content"]})
-        messages = ([{"role": "system", "content": system_prompt}] if system_prompt else []) + kept
+        messages = self._for_model(self.chat, self.settings.system_prompt())
         self.reply = self.chat.add("assistant", "", streaming=True)
+        self._job = {"chat": self.chat, "reply": self.reply, "then": None}
         self.view.render(self.visible_messages(), streaming=True)
         self.send_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
         self.engine.chat(messages, float(self.settings["temperature"]), int(self.settings["max_tokens"]))
 
     def _chunk(self, text):
-        if self.reply is not None:
-            self.reply["content"] = text
-            if not self._render_timer.isActive():
+        job = self._job
+        if job is not None:
+            job["reply"]["content"] = text
+            if job["chat"] is self.chat and not self._render_timer.isActive():
                 self._render_timer.start(60)
 
     def _done(self, text, err):
+        """A reply finished (the window's, or one for Telegram or Discord - sent back there): then the next."""
         self._render_timer.stop()
         self.stop_btn.setEnabled(False)
         self.send_btn.setEnabled(self.engine.ready)
-        if self.reply is None:
+        job, self._job, self.reply = self._job, None, None
+        if job is None:
             return
-        self.reply.pop("streaming", None)
+        chat, reply = job["chat"], job["reply"]
+        reply.pop("streaming", None)
         if err == "stopped":
-            self.reply["content"] = text
-            self.reply["stopped"] = True
+            reply["content"] = text
+            reply["stopped"] = True
         elif err:
-            self.reply["content"] = text
-            self.chat.add("system", f"The model didn't answer: {err}")
+            reply["content"] = text
+            chat.add("system", f"The model didn't answer: {err}")
         else:
-            self.reply["content"] = text.strip()
-        if not self.reply["content"]:
-            self.chat.messages.remove(self.reply)
-        self.reply = None
-        self.chat.save()
-        self.view.render(self.visible_messages())
-        self.composer.setFocus()
+            reply["content"] = text.strip()
+        if not reply["content"]:
+            chat.messages.remove(reply)
+        chat.save()
+        if chat is self.chat:
+            self.view.render(self.visible_messages())
+            self.composer.setFocus()
+        if job["then"] is not None:
+            job["then"]("" if err else reply["content"])
+        QTimer.singleShot(0, self._msg_next)
 
     def stop(self):
         self.engine.stop()
 
     # ---- history -------------------------------------------------------------------------------------------------------
     def new_chat(self):
-        self.stop()
+        if self._job is not None and self._job["chat"] is self.chat:
+            self.stop()
         self.chat.save()
         self.chat = store.Chat()
         self.chat.data["model"] = self.engine.model.title if self.engine.model else ""
@@ -475,7 +540,9 @@ class KithylinAI(QWidget):
             c = store.load_chat(dlg.chosen)
             if c is None:
                 return
-            self.stop()
+            c = self._msg_chats.get(c.data.get("id"), c)        # (a Telegram or Discord one: the one in use)
+            if self._job is not None and self._job["chat"] is self.chat:
+                self.stop()
             self.chat.save()
             self.chat = c
             self.system(f"Opened \"{c.title()}\" ({len(c.spoken())} turns).")
@@ -601,6 +668,340 @@ class KithylinAI(QWidget):
         self.system("Settings and prompts reset to the defaults.")
         self.echo_prompts()
 
+    # ---- Telegram and Discord (claudecore.messengers; what the bots say: bots.py) ------------------------------------
+    MESSENGERS = ("telegram", "discord")
+
+    @staticmethod
+    def _messenger(which):
+        """A messenger's module (claudecore.messengers): its Link and Listener, and its window's words."""
+        from claudecore.messengers import discordlink, telegram
+        return {"telegram": telegram, "discord": discordlink}[which]
+
+    def _link(self, which):
+        if self.links.get(which) is None:
+            from .bots import WORDS
+            self.links[which] = self._messenger(which).Link(DATA, words=WORDS)
+        return self.links[which]
+
+    def _linked(self, which):
+        link = self.links.get(which)
+        return link is not None and link.ready() and bool(link.owner)
+
+    def _listening(self, which):
+        listener = self.listeners.get(which)
+        return listener is not None and listener.alive()
+
+    def _msg_start(self, which=None):
+        """The bots that are set up, listening - what they hear is passed back to the window's thread."""
+        for w in [which] if which else self.MESSENGERS:
+            link = self._link(w)
+            if link.ready() and not self._listening(w):
+                listener = self._messenger(w).Listener(
+                    link, lambda raw, w=w: self.later.back.emit(lambda: self._msg_update(w, raw)),
+                    on_status=lambda text: self.later.back.emit(lambda: self.system(text)))
+                self.listeners[w] = listener
+                listener.start()
+
+    def _msg_stop(self, which):
+        listener = self.listeners.pop(which, None)
+        if listener is not None:
+            listener.stop()
+
+    def _msg_send(self, which, chat, text):
+        link = self.links[which]
+        self.later.run(lambda: link.send(chat, text), lambda _r: None)
+
+    def _msg_update(self, which, raw):
+        """One message from Telegram or Discord: who it's from decides what happens."""
+        from .bots import WORDS
+        mod, link = self._messenger(which), self.links.get(which)
+        info = link.classify(raw) if link is not None else None
+        if not info:
+            return
+        kind, chat = info["kind"], info["chat"]
+        if kind == "stranger":
+            self._msg_send(which, chat, WORDS["private"])
+        elif kind == "linked":
+            self._msg_send(which, chat, WORDS["linked"])
+            self.system(f"{mod.NAME} is linked: {info['name']} can talk with Kithylin there.")
+            self._msg_refresh.get(which, lambda: None)()
+        elif kind == "invited":
+            owner = (link.owner or {}).get("name") or self.settings["user_name"] or "its owner"
+            self._msg_send(which, chat, WORDS["welcome"].format(name=info["name"], owner=owner))
+            self.system(f"{info['name']} accepted your {mod.NAME} invitation.")
+            self._msg_refresh.get(which, lambda: None)()
+        elif not info["text"]:                           # (a picture on its own, a voice message...: not yet)
+            self._msg_send(which, chat, WORDS["cant"].format(what=info.get("other") or "pictures"))
+        else:
+            self._msg_queue.append((which, info))
+            self._msg_next()
+
+    def _msg_chat(self, which, info):
+        """The conversation with this person on Telegram or Discord: a chat of its own in Kithylin AI's history
+        (Open chat... shows it), kept from one time to the next."""
+        key = f"{which}-{info['user']}"
+        if self.chat.data.get("id") == key:
+            self._msg_chats[key] = self.chat
+        chat = self._msg_chats.get(key)
+        if chat is None:
+            path = store.CHATS_DIR / f"{key}.json"
+            chat = (store.load_chat(path) if path.exists() else None) or store.Chat(
+                {"id": key, "title": "", "model": "", "created": time.time(), "updated": time.time(), "messages": []},
+                path)
+            self._msg_chats[key] = chat
+        chat.data["title"] = f"{info['name']} on {self._messenger(which).NAME}"
+        return chat
+
+    def _msg_next(self):
+        """The next message from Telegram or Discord, answered as soon as the model is free (one reply at a time)."""
+        while self._msg_queue and self._job is None and self.engine.ready and not self.engine.busy():
+            which, info = self._msg_queue.pop(0)
+            link = self.links.get(which)
+            if link is None:
+                continue
+            name = self._messenger(which).NAME
+            chat = self._msg_chat(which, info)
+            chat.add("user", info["text"] + ("\n(A picture came with this - Kithylin AI can't see pictures yet.)"
+                                             if info.get("picture") else ""), via=which)
+            guest = info["kind"] == "guest"
+            prompt = self.settings.system_prompt(name=info["name"] if guest else None)
+            if guest:
+                prompt += (f"\n\n(You're talking on {name} with {info['name']}, someone invited to talk with Kithylin "
+                           "AI. They know you're an AI.)")
+            messages = self._for_model(chat, prompt)
+            to = info["chat"]
+            self._job = {"chat": chat, "reply": chat.add("assistant", "", streaming=True),
+                         "then": lambda text, which=which, to=to: self._msg_send(
+                             which, to, text or "(Kithylin AI couldn't answer just now - try again in a moment.)")}
+            self.later.run(lambda: link.typing(to), lambda _r: None)
+            if chat is self.chat:
+                self.view.render(self.visible_messages(), streaming=True)
+            elif info["user"] not in self._msg_told:
+                self._msg_told.add(info["user"])
+                self.system(f"{info['name']} is talking with Kithylin on {name} - Open chat... shows it.")
+            self.send_btn.setEnabled(False)
+            self.engine.chat(messages, float(self.settings["temperature"]), int(self.settings["max_tokens"]))
+
+    def _show_conversation(self, which, person):
+        """A Telegram or Discord conversation, open in the window."""
+        chat = self._msg_chat(which, {"user": person["id"], "name": person["name"]})
+        if chat is not self.chat:
+            if self._job is not None and self._job["chat"] is self.chat:
+                self.stop()
+            self.chat.save()
+            self.chat = chat
+        self.view.render(self.visible_messages())
+
+    def _msg_dialog(self, which):
+        """Telegram... or Discord...: Kithylin AI's bot there, who's linked, and the people invited."""
+        from . import bots
+        mod, link = self._messenger(which), self._link(which)
+        name = mod.NAME
+        d = QDialog(self)
+        d.setWindowTitle(f"Kithylin AI on {name}")
+        d.setMinimumWidth(560)
+        d.setStyleSheet("QDialog, QMessageBox, QInputDialog { background: #1b1b28; color: #e8e6f0; }")
+        v = QVBoxLayout(d)
+        intro = QLabel(mod.intro(bots.APP, bots.WHO))
+        intro.setWordWrap(True)
+        v.addWidget(intro)
+        row = QHBoxLayout()
+        token = QLineEdit()
+        token.setEchoMode(QLineEdit.Password)
+        token.setPlaceholderText(mod.TOKEN_HINT)
+        connect = QPushButton("Link")
+        unlink = QPushButton("Unlink")
+        row.addWidget(token, 1)
+        row.addWidget(connect)
+        row.addStretch()
+        add = None
+        if hasattr(link, "invite_url"):                  # (Discord: a bot is messaged by people it shares a server with)
+            add = QPushButton("Add it to a server...")
+            add.setToolTip("Discord only lets you message a bot you share a server with: this opens Discord's page "
+                           "for adding it to one of yours")
+            add.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(link.invite_url())))
+            row.addWidget(add)
+        row.addWidget(unlink)
+        v.addLayout(row)
+        state = QLabel()
+        state.setWordWrap(True)
+        state.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        v.addWidget(state)
+        talk = QPushButton("Show our conversation")
+        talk.setToolTip(f"Open your {name} conversation with Kithylin here, in the window")
+        talk.clicked.connect(lambda: (self._show_conversation(which, link.owner), d.accept()))
+        v.addWidget(talk, 0, Qt.AlignLeft)
+        box = QGroupBox("People you've invited")
+        gv = QVBoxLayout(box)
+        guests = QListWidget()
+        guests.setMaximumHeight(90)
+        gv.addWidget(guests)
+        grow = QHBoxLayout()
+        invite = QPushButton("Invite someone...")
+        remove = QPushButton("Remove")
+        grow.addWidget(invite)
+        grow.addWidget(remove)
+        grow.addStretch(1)
+        gv.addLayout(grow)
+        v.addWidget(box)
+        background = QCheckBox("On its own (the launcher's APPS), keep listening when the window is closed")
+        background.setToolTip("Closing the window leaves an icon in the notification area: click it (or start Kithylin "
+                              "AI again) to open it, or right-click it to stop listening and quit")
+        background.setChecked(bool(link.data.get("background", True)))
+        v.addWidget(background)
+        how = QPushButton("How to connect...")
+        how.setToolTip(mod.HOW_HINT)
+        how.clicked.connect(lambda: self._msg_how(which, d))
+        close = QPushButton("Close")
+        bottom = QHBoxLayout()
+        bottom.addWidget(how)
+        bottom.addStretch(1)
+        bottom.addWidget(close)
+        v.addLayout(bottom)
+
+        def refresh():
+            ready = link.ready()
+            token.setVisible(not ready)
+            connect.setVisible(not ready)
+            unlink.setVisible(ready)
+            if add is not None:
+                add.setVisible(ready)
+            talk.setVisible(ready and bool(link.owner))
+            guests.clear()
+            for g in link.data["guests"]:
+                item = QListWidgetItem(g["name"])
+                item.setData(Qt.UserRole, g["id"])
+                guests.addItem(item)
+            box.setEnabled(ready and bool(link.owner))
+            if not ready:
+                state.setText("Not linked yet.")
+            elif not link.owner:
+                code = next((k for k, x in link.data["codes"].items() if x["for"] == "owner"), None) \
+                    or link.code("owner")
+                state.setText(mod.waiting_text(link, code))
+            else:
+                state.setText(mod.linked_text(link) + (" Listening." if self._listening(which) else ""))
+        self._msg_refresh[which] = refresh
+
+        def do_link():
+            try:
+                bot = link.connect(token.text())
+            except Exception as e:
+                QMessageBox.warning(d, name, f"{name} didn't accept that token: {e}")
+                return
+            token.clear()
+            self._msg_start(which)
+            self.system(f"Kithylin AI is listening on {name} as {bot}.")
+            refresh()
+
+        def do_unlink():
+            if QMessageBox.question(d, name, "Unlink the bot? Kithylin AI forgets its token and everyone linked to "
+                                             f"it (the bot itself stays yours, in {name}).") != QMessageBox.Yes:
+                return
+            self._msg_stop(which)
+            link.forget()
+            refresh()
+
+        def do_invite():
+            who, ok = QInputDialog.getText(d, "Invite someone", "Their name (as Kithylin will know them):")
+            if ok and who.strip():
+                QMessageBox.information(d, "Invite someone",
+                                        mod.invite_text(link, who.strip(), link.code("guest", who.strip())))
+
+        def do_remove():
+            item = guests.currentItem()
+            if item is not None:
+                link.remove_guest(item.data(Qt.UserRole))
+                refresh()
+
+        def keep():
+            link.data["background"] = background.isChecked()
+            link.save()
+        connect.clicked.connect(do_link)
+        unlink.clicked.connect(do_unlink)
+        invite.clicked.connect(do_invite)
+        remove.clicked.connect(do_remove)
+        close.clicked.connect(d.accept)
+        d.finished.connect(lambda _r: (keep(), self._msg_refresh.pop(which, None),
+                                       getattr(d, "how", None) and d.how.close()))
+        refresh()
+        d.exec()
+
+    def _msg_how(self, which, parent):
+        """The setup, step by step - beside the Telegram or Discord window, to follow along with."""
+        from . import bots
+        mod = self._messenger(which)
+        how = getattr(parent, "how", None)
+        if how is None:
+            how = parent.how = QDialog(parent)
+            how.setWindowTitle(f"How to connect Kithylin AI to {mod.NAME}")
+            how.resize(560, 470 if which == "discord" else 410)
+            v = QVBoxLayout(how)
+            text = QTextBrowser()
+            text.setStyleSheet("background: #232336; color: #e8e6f0;")
+            text.setHtml(mod.setup(bots.APP, bots.SENDS))
+            v.addWidget(text)
+            close = QPushButton("Close")
+            close.clicked.connect(how.close)
+            v.addWidget(close, 0, Qt.AlignRight)
+            beside, screen = parent.frameGeometry(), parent.screen().availableGeometry()
+            if beside.right() + 8 + how.width() <= screen.right():
+                how.move(beside.right() + 8, beside.top())
+        how.show()
+        how.raise_()
+        how.activateWindow()
+
+    # ---- on its own: listening on, from the notification area ----
+    def close_to_tray(self):
+        """The window closed on its own (the launcher's APPS) while a bot listens: Kithylin AI waits in the
+        notification area instead of quitting. True if it did."""
+        if self._quitting or hosted() or not QSystemTrayIcon.isSystemTrayAvailable():
+            return False
+        if not any(self._linked(w) and self.links[w].data.get("background", True) for w in self.MESSENGERS):
+            return False
+        (self.frame or self).hide()
+        self._tray_show()
+        return True
+
+    def _tray_show(self):
+        if self._tray is None:
+            self._tray = QSystemTrayIcon(app_icon(), self)
+            menu = QMenu()
+            menu.addAction("Open Kithylin AI", self.show_again)
+            menu.addSeparator()
+            menu.addAction("Stop listening and quit", self._tray_quit)
+            self._tray.setContextMenu(menu)
+            self._tray._menu = menu
+            self._tray.activated.connect(lambda reason: self.show_again()
+                                         if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick) else None)
+        on = " and ".join(self._messenger(w).NAME for w in self.MESSENGERS if self._linked(w))
+        self._tray.setToolTip(f"Kithylin AI - listening on {on}")
+        QApplication.instance().setQuitOnLastWindowClosed(False)
+        self._tray.show()
+        if not getattr(self, "_tray_told", False):
+            self._tray_told = True
+            self._tray.showMessage("Kithylin AI is still listening",
+                                   f"Kithylin keeps answering on {on}. Click this icon - or start Kithylin AI again - to "
+                                   "open it; right-click it to stop listening and quit.")
+
+    def show_again(self):
+        """Started again, or its icon clicked: the window comes back - out of the notification area, up from
+        minimised, in front."""
+        frame = self.frame or self
+        frame.showNormal() if frame.isMinimized() else frame.show()
+        frame.raise_()
+        frame.activateWindow()
+        if self._tray is not None:
+            self._tray.hide()
+        QApplication.instance().setQuitOnLastWindowClosed(True)
+
+    def _tray_quit(self):
+        self._quitting = True
+        if self._tray is not None:
+            self._tray.hide()
+        QApplication.instance().setQuitOnLastWindowClosed(True)
+        (self.frame or self).close()
+
     # ---- the computer ------------------------------------------------------------------------------------------------
     def _open_media(self, path):
         if hosted() and self.desktop is not None:
@@ -612,7 +1013,13 @@ class KithylinAI(QWidget):
         return False
 
     def shutdown(self):
+        for which in list(self.listeners):
+            self._msg_stop(which)
+        if self._tray is not None:
+            self._tray.hide()
         self.chat.save()
+        for chat in self._msg_chats.values():
+            chat.save()
         self.engine.shutdown()
 
 

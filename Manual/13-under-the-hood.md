@@ -53,6 +53,15 @@ real desktop, the real Open dialog and file manager, the shared saves and Local 
 (`Profile\Standalone Apps`). `--check` opens the app and closes it again. To offer another program there, add it to
 `APPS` in that file; it needs only what the host offers.
 
+Each runs once (`claudecore\single.py`): the copy that's running listens on a local socket named for the program,
+the Timeline folder and the user, and a second start asks it to come forward - out of the notification area, where
+Soul and Song and Kithylin AI wait while a bot listens - instead of opening another. The launcher asks the same way.
+
+Telegram and Discord (`claudecore\messengers\`) are shared by Soul and Song and Kithylin AI: `telegram.py` (long
+polling) and `discordlink.py` (the gateway, a WebSocket kept open) each give a `Link` - the bot's token, who's linked,
+the codes, what a message is, sending - and a `Listener`, plus the How to connect steps with the program's name in
+them. Each program brings its own words (`soulsong\bots.py`, `kithylinai\bots.py`): what its bot says it is.
+
 ## How Claude7 and Claude11 run XP's programs
 
 Through a compatibility layer, `claude7\xpcompat.py` (and Claude11's): before any XP module loads, `claudexp.paths.DATA`

@@ -12,7 +12,10 @@ import support
 
 from soulsong import companion as C
 from soulsong import interlink as I
-from soulsong import paths, telegram
+from soulsong import paths
+from soulsong.bots import WORDS
+
+from claudecore.messengers import telegram
 from soulsong.paths import project
 
 TEMPLATES = project()
@@ -93,7 +96,7 @@ def test_linking_labels_it_an_ai():
     """Linking: the token checked with Telegram and kept, the bot described as an AI; a wrong token isn't kept"""
     api = FakeTelegram()
     folder = support.scratch("link")
-    link = telegram.Link(folder, api=api)
+    link = telegram.Link(folder, api=api, words=WORDS)
     assert not link.ready()
     try:
         link.connect("654321:WRONG")
@@ -363,7 +366,7 @@ def test_the_window_on_telegram():
         return api.to(chat)[-1]
     # linking the user's own account
     api.inbox.append(message(OWNER, tg.code("owner")))
-    assert answered(OWNER, 0) == telegram.LINKED.format(companion="Lyra")
+    assert answered(OWNER, 0) == WORDS["linked"].format(companion="Lyra")
     assert w.comp.reach is not None and "Telegram is linked" in w.chat.toPlainText()
     # the user, from their phone
     api.inbox.append(message(OWNER, "Hello from my phone!"))
@@ -389,7 +392,7 @@ def test_the_window_on_telegram():
     # a stranger: told it's private, and the Companion never hears it
     n = len(asked)
     api.inbox.append(message(STRANGER, "Who are you?", first="Eve"))
-    assert answered(STRANGER, 0) == telegram.PRIVATE and len(asked) == n
+    assert answered(STRANGER, 0) == WORDS["private"] and len(asked) == n
     # sent hours ago, while Soul and Song was closed
     api.inbox.append(message(OWNER, "Sent this earlier.", date=time.time() - 3 * 3600))
     answered(OWNER, 2)
@@ -419,7 +422,7 @@ def test_the_window_on_telegram():
     del voice["message"]["text"]
     voice["message"]["voice"] = {"file_id": "v-1", "duration": 3}
     api.inbox.append(voice)
-    assert answered(OWNER, n) == telegram.CANT.format(what="voice messages") and len(asked) == before
+    assert answered(OWNER, n) == WORDS["cant"].format(what="voice messages") and len(asked) == before
     w.brain.engine.vision = False
     # writing first, and a new Companion announced
     n = len(api.to(OWNER))

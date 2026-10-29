@@ -1,17 +1,17 @@
-"""Soul and Song on Telegram: a bot of the user's own (made with Telegram's @BotFather, named "Soul and Song"),
-answered by whichever Companion is open - so the user can talk to it from their phone, and it can write to them.
+"""Telegram, for a program's bot (Soul and Song's, Kithylin AI's): a bot of the user's own, made with Telegram's
+@BotFather and given the program's name, answered by the program - so the user can talk to it from their phone.
 
-Soul and Song asks Telegram for new messages while it's open (long polling over HTTPS - no server, nothing to
+The program asks Telegram for new messages while it's open (long polling over HTTPS - no server, nothing to
 install, no port opened); Telegram keeps messages for a day, so ones sent while the PC was off are answered when
-it's back. Only one copy of Soul and Song can listen to a bot at a time.
+it's back. Only one copy of a program can listen to its bot at a time.
 
-Who may talk to it: the user, linked by sending the bot a code Soul and Song shows; and anyone the user invites with
+Who may talk to it: the user, linked by sending the bot a code the program shows; and anyone the user invites with
 a code of their own. A guest is told, before anything else, that this is an AI and that its owner can read the
-conversation. Anyone else gets one line - a private AI companion - and nothing more. Everything is labelled AI: the
-bot's name is the user's ("Soul and Song"), and its description and short description are set to say it's an AI.
+conversation; anyone else gets one line - private - and nothing more. Everything is labelled AI: the bot's
+description and short description (the program's words) say so.
 
-Kept in Companions/telegram.json (in Local Storage, never in git): the bot's token - a secret: whoever has it
-controls the bot - who's linked, the invitation codes, and where the polling is up to."""
+Kept in the program's folder (never in git), in telegram.json: the bot's token - a secret: whoever has it controls
+the bot - who's linked, the invitation codes, and where the polling is up to."""
 import json
 import random
 import threading
@@ -27,43 +27,41 @@ PICTURE_LIMIT = 20 * 2**20       # (the most a bot may download; a phone's photo
 OTHER = (("voice", "voice messages"), ("audio", "audio"), ("video_note", "video messages"), ("video", "videos"),
          ("animation", "GIFs"), ("document", "files"), ("location", "locations"), ("contact", "contacts"),
          ("poll", "polls"))
-CANT = "(Soul and Song reads words and sees pictures - it can't take {what} yet.)"
-DESCRIPTION = ("Soul and Song is an AI companion app. Everything written here is written by an AI language model, "
-               "running on its owner's own computer - not by a person. It's private: it talks only with its owner, "
-               "and with people they invite.")
-SHORT = "An AI companion (Soul and Song). Every reply is written by an AI, not a person."
-WELCOME = ("Hello, {name}. I'm {companion}, an AI companion in Soul and Song - everything I write is written by an AI "
-           "language model running on {owner}'s computer, not by a person. {owner} invited you; they can read our "
-           "conversation. I'm here when Soul and Song is open.")
-LINKED = ("Linked. I'm {companion}, your AI companion in Soul and Song. Write to me here whenever you like; when Soul "
-          "and Song isn't open, I'll answer when it is.")
-PRIVATE = ("This is a private AI companion (Soul and Song), written by an AI language model. It talks only with its "
-           "owner and the people they invite - if you have an invitation code, send it here.")
 NAME = "Telegram"
-INTRO = ("Talk with your Companion from your phone, through a Telegram bot of your own - make it with Telegram's "
-         "<b>@BotFather</b> (<b>How to connect...</b> below walks you through it), name it <b>Soul and Song</b>, and "
+INTRO = ("Talk with {who} from your phone, through a Telegram bot of your own - make it with Telegram's "
+         "<b>@BotFather</b> (<b>How to connect...</b> below walks you through it), name it <b>{app}</b>, and "
          "paste the token it gives you here. The bot says it's an AI, in its description and to anyone who writes.")
 TOKEN_HINT = "The bot's token, from @BotFather (keep it secret)"
 HOW_HINT = "The setup, step by step: making the bot with @BotFather, and linking it here"
-SETUP = """<h3>Connecting Soul and Song to Telegram</h3>
+SETUP = """<h3>Connecting {app} to Telegram</h3>
 <ol>
 <li>In Telegram, search for <b>@BotFather</b> (the one with the blue tick) and press <b>Start</b>.</li>
-<li>Send <b>/newbot</b>. When it asks for a name, send <b>Soul and Song</b>.</li>
-<li>It then asks for a username: one nobody else has, ending in "bot" - SoulAndSong<i>YourName</i>Bot, say.</li>
+<li>Send <b>/newbot</b>. When it asks for a name, send <b>{app}</b>.</li>
+<li>It then asks for a username: one nobody else has, ending in "bot" - {handle}<i>YourName</i>Bot, say.</li>
 <li>BotFather replies with a <b>token</b>: a long line of numbers and letters. Copy it, and keep it to yourself -
 whoever has it controls the bot. (If you like, send <b>/setuserpic</b> to give the bot a picture.)</li>
-<li>Back in Soul and Song's Telegram window, paste the token and click <b>Link</b>. Soul and Song checks it with
+<li>Back in {app}'s Telegram window, paste the token and click <b>Link</b>. {app} checks it with
 Telegram, and sets the bot's description to say it's an AI.</li>
 <li>The window then shows your bot's address (t.me/...) and a six-figure code. Open the bot, press <b>Start</b> and
 send it the code. It answers "Linked."</li>
-<li>Now just write to it - words, or pictures. To invite someone, click <b>Invite someone...</b> and give them
+<li>Now just write to it - {sends}. To invite someone, click <b>Invite someone...</b> and give them
 the code it shows.</li>
 </ol>
-<p><b>Good to know:</b> only one Soul and Song can listen to a bot at a time - don't run it on its own and inside a
-computer together. To keep it listening with the window closed, run Soul and Song on its own (the launcher's
-<b>APPS</b>): closing the window leaves an icon in the notification area - click it, or start Soul and Song
+<p><b>Good to know:</b> only one {app} can listen to a bot at a time - don't run it on its own and inside a
+computer together. To keep it listening with the window closed, run {app} on its own (the launcher's
+<b>APPS</b>): closing the window leaves an icon in the notification area - click it, or start {app}
 again, to bring the window back. Chats with a bot aren't end-to-end encrypted - Telegram's servers carry them, as
 with its ordinary chats.</p>"""
+
+
+def setup(app, sends="words, or pictures"):
+    """How to connect, step by step, for this program's bot."""
+    return SETUP.format(app=app, handle=app.replace(" ", ""), sends=sends)
+
+
+def intro(app, who):
+    """The Telegram window's opening words: talking with who, through this program's bot."""
+    return INTRO.format(app=app, who=who)
 
 
 class TelegramError(Exception):
@@ -128,8 +126,9 @@ def chunks(text, limit=LIMIT):
 class Link:
     """The bot and who's linked to it (telegram.json); polling, sending, and what each message is."""
 
-    def __init__(self, folder, api=None, files=None):
+    def __init__(self, folder, api=None, files=None, words=None):
         self.path = Path(folder) / "telegram.json"
+        self.words = words or {}                 # (the program's: what its bot says it is - "description", "short")
         self.api = api or call
         self.files = files or fetch
         self.lock = threading.RLock()            # (the listener's thread and the window's both write it)
@@ -177,8 +176,10 @@ class Link:
 
     def label(self):
         """The bot's description and short description: it's an AI (best effort - the bot works either way)."""
-        for method, key, text in (("setMyDescription", "description", DESCRIPTION),
-                                  ("setMyShortDescription", "short_description", SHORT)):
+        for method, key, text in (("setMyDescription", "description", self.words.get("description")),
+                                  ("setMyShortDescription", "short_description", self.words.get("short"))):
+            if not text:
+                continue
             try:
                 self.api(self.token, method, {key: text})
             except Exception:
@@ -306,7 +307,7 @@ class Listener:
     def __init__(self, link, deliver, on_status=None):
         self.link, self.deliver = link, deliver
         self.stopping = threading.Event()
-        self.thread = threading.Thread(target=link.poll, args=(deliver, self.stopping), name="soulsong-telegram",
+        self.thread = threading.Thread(target=link.poll, args=(deliver, self.stopping), name="telegram-listener",
                                        daemon=True)
 
     def start(self):

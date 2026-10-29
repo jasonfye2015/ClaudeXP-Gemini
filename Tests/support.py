@@ -123,7 +123,7 @@ def no_engines():
     engine.Engine.load = lambda self, *a, **k: self.status.emit("(no models while testing)")
     from soulsong import recall
     recall.Embedder.start = lambda self: setattr(self, "state", "unavailable")
-    from soulsong import telegram                      # (and never the real Telegram)
+    from claudecore.messengers import telegram         # (and never the real Telegram)
 
     def offline(*_a, **_k):
         raise telegram.TelegramError("no Telegram while testing")

@@ -147,7 +147,8 @@ on the drive train (Gemma 3 4B in selfmodel\base); a Companion on another model 
 Kithylin AI's Models folder ("<name> vN (Soul and Song)"); Use this version moves the Companion. Training needs the
 card to itself: it runs from Soul and Song on its own (the launcher's APPS).
 
-On Telegram (telegram.py; Telegram... in the top bar): a bot of the user's own, made with @BotFather and named
+On Telegram (ClaudeCore\claudecore\messengers\telegram.py, shared with Kithylin AI; what Soul and Song's bots
+say is bots.py; Telegram... in the top bar): a bot of the user's own, made with @BotFather and named
 "Soul and Song", answered by whichever Companion is open. Long polling over HTTPS (getUpdates on a thread; each
 message handed back to the window's thread) - no server, no port. The token, the bot, the user (linked by sending a
 six-figure code), the people they invite (a code each, one use, a week), who's been told it's private, and where the
@@ -161,7 +162,7 @@ three hours apart, reach_per_day at most; it may answer NO. On its own (the laun
 it listening from the notification area; started again, it comes back (claudecore.single: one copy at a time, the
 second start asks the first to show_again). One listener per bot.
 
-On Discord (discordlink.py; Discord... in the top bar): the same, through an application made in Discord's
+On Discord (claudecore\messengers\discordlink.py; Discord... in the top bar): the same, through an application made in Discord's
 Developer Portal. Its gateway is a WebSocket kept open (Qt's QtWebSockets): Identify asking only for direct messages
 (intents 1 << 12 - no privileged intents), heartbeats (a missed answer means a dead connection), Resume after a drop,
 a fresh start after an Invalid Session, a stop on a refused token (close 4004). Discord doesn't hold a bot's
