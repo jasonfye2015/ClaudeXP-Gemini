@@ -11,6 +11,7 @@ CM.upgradeFloor = function (fl) {
   fl.rooms = fl.rooms || [];
   fl.seen = fl.seen || [];
   fl.decor = fl.decor || [];
+  fl.special = fl.special || null;
   return fl;
 };
 
@@ -35,7 +36,7 @@ CM.Game = class {
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
 
-  // ---- events: change (redraw), message, mode, floor, moved, turned, fx, sound, near, mesh, teleported, fell, spin, lore, over ----
+  // ---- events: change (redraw), message, mode, floor, moved, turned, fx, sound, near, mesh, teleported, fell, spin, lore, over, talk, riddle, journal ----
   // fx kinds: hit, miss, die, hurt, ailment, swing, attack, cast, cold, trap, summon, rise, shatter, sparkle, levelup, potion,
   //   grasp (the Drowned Knight's), slam (the Forge-Warden's hammer), sear (its heat), relic (a guardian's, taken)
   on(event, fn) { (this.listeners[event] = this.listeners[event] || []).push(fn); return this; }
@@ -62,7 +63,7 @@ CM.Game = class {
     if (!["explore", "camp"].includes(this.mode)) return;
     const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, floors: this.floors, light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed,
-      tally: this.tally || this.freshTally(), saved: new Date().toISOString() };
+      tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString() };
     this.lastRun = data;
     CM.store.set("run", data);
     this.dirty = false; this.sinceSave = 0;
@@ -86,6 +87,8 @@ CM.Game = class {
     this.identifying = false;
     this.kit = d.kit || "pauper";
     this.tally = Object.assign(this.freshTally(), d.tally || {});
+    this.journal = d.journal || [];
+    this.rescued = d.rescued || [];
     this.seed = d.seed || CM.randomSeed();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -169,6 +172,8 @@ CM.Game = class {
     this.messages = [];
     this.titleNote = "";
     this.tally = this.freshTally();
+    this.journal = [];
+    this.rescued = [];
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
     else if (this.kit === "heir") for (const h of this.party) { h.weapon.power += 2; h.weapon.name += " +1"; h.weapon.props = Object.assign({}, h.weapon.props, { bonus: 1 }); h.weapon.value = 45; }
@@ -199,6 +204,10 @@ CM.Game = class {
       if (ladder) fl.pos = ladder.slice();
       const open = CM.openNeighbours(fl, fl.pos[0], fl.pos[1]);
       if (open.length) fl.facing = CM.DIRS.indexOf(open[0]);
+    } else if (how === "rope" && at) {
+      fl.pos = at.slice();
+      const open = CM.openNeighbours(fl, fl.pos[0], fl.pos[1]);
+      if (open.length) fl.facing = CM.DIRS.indexOf(open[0]);
     } else if (how === "fall" && at) {
       let best = null, bd = 1e9;
       for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) {
@@ -214,6 +223,7 @@ CM.Game = class {
     this.emit("floor", fl);
     this.saveRun();
     if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.themeFor(number).name}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
+    if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
   }
 
   climbUp() {
@@ -259,6 +269,7 @@ CM.Game = class {
     }
     const f = fl.features[k];
     if (f && f.type === "door" && !f.open) {
+      if (f.riddle !== undefined && CM.RIDDLES[f.riddle]) { this.sound("bump"); this.say("Runes crawl across the door, and a question with them."); this.emit("riddle", k); return false; }
       if (f.locked) {
         const i = this.hasKey();
         if (i < 0) {
@@ -321,10 +332,17 @@ CM.Game = class {
         this.bag.push(CM.key());
         this.sound("coin");
         this.say("An iron key lies in the dust. You take it.");
+      } else if (thing.type === "bones") {
+        delete fl.things[k];
+        this.bag.push(CM.bones(thing.ghost));
+        this.sound("coin");
+        this.say("Bones, gnawed and scattered - someone's. You gather them up.");
       } else {
         this.say({ chest: "A chest sits here. (Space to open it)", ladder: "A ladder leads down into the dark. (Space to climb down)",
           stairs_up: "The stairs you came down. (Space to climb back up)",
-          phylactery: "A plain box, cold to look at. Something in it beats, slowly. (Space to smash it)" }[thing.type]);
+          phylactery: "A plain box, cold to look at. Something in it beats, slowly. (Space to smash it)",
+          ghost: "A pale shape hangs in the air here, waiting. (Space to speak to it)", hermit: "A hermit crouches in a nest of rags. (Space to speak to him)",
+          adventurer: "Someone sits bound against the wall. (Space to cut them loose)", rope: "A rope hangs down from the floor above. (Space to climb it)" }[thing.type]);
       }
     }
     if (f) this.arrive(f, k);
@@ -335,6 +353,14 @@ CM.Game = class {
   // what a square does when the party steps onto it
   arrive(f, k) {
     const fl = this.floor;
+    if (f.type === "pit" && f.roped && fl.number < CM.LAST_FLOOR) { this.say("You climb down the rope you left, hand over hand."); this.ropeDown(k); return; }
+    if (f.type === "pit" && this.hasItem("rope") >= 0 && fl.number < CM.LAST_FLOOR) {
+      this.bag.splice(this.hasItem("rope"), 1);
+      f.roped = true;
+      this.say("You make the rope fast and lower the party down the pit, slow and safe.");
+      this.ropeDown(k);
+      return;
+    }
     if (f.type === "pit" || f.type === "trapdoor") {
       if (f.type === "trapdoor") { f.known = true; this.say("The floor gives way beneath you!"); }
       else this.say("You step into the pit!");
@@ -354,6 +380,22 @@ CM.Game = class {
       this.look();
       this.emit("spin", fl.facing);
       this.say("The floor lurches and the world turns. Which way were you facing?");
+    } else if (f.type === "plate") {
+      if (f.gate) {
+        if (!f.pressed) {
+          f.pressed = true;
+          const gate = fl.features[f.gate];
+          if (gate) gate.open = true;
+          this.sound("lever");
+          this.say("A stone sinks under your boot - and somewhere, iron grinds upward.");
+          this.dirty = true;
+        } else this.say("The plate is down already.");
+      } else if (f.trap && !f.spent) {
+        f.known = true; f.spent = true;
+        this.sound("trap");
+        this.say(`A stone sinks under your boot: ${CM.TRAPS[f.trap]}!`);
+        this.springTrap(f.trap, k);
+      }
     } else if (f.type === "fountain") {
       this.say(f.used ? "A dry fountain." : "A fountain, running. (Space to drink)");
     } else if (f.type === "altar") {
@@ -379,7 +421,7 @@ CM.Game = class {
     }
     const l = this.light;
     if (l.kind !== "torch") return;
-    l.left -= 1;
+    l.left -= this.floor && this.floor.special === "wading" ? 2 : 1;
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
     const spare = this.bag.findIndex((i) => i.kind === "torch");
@@ -398,7 +440,7 @@ CM.Game = class {
   // how far the party can see, as a share of the depth's reach
   lightFactor() {
     const l = this.light, spell = this.spellLight > 0;
-    if (this.inDark()) return l.kind === "lantern" || spell ? 0.45 : 0.25;
+    if (this.inDark()) return spell ? 0.7 : l.kind === "lantern" ? 0.45 : 0.25;
     let f = l.kind === "lantern" ? 1.15 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
     if (spell) f = Math.max(f, 1.1);
     return f;
@@ -412,13 +454,14 @@ CM.Game = class {
     const seen = new Set(fl.seen.map(([x, y]) => keyOf(x, y)));
     const [x, y] = fl.pos;
     seen.add(keyOf(x, y));
-    if (!this.inDark()) {
+    const spell = this.spellLight > 0;                               // (a conjured light sees through a magical dark)
+    if (!this.inDark() || spell) {
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) seen.add(keyOf(x + dx, y + dy));
       if (this.hasLight()) {
         const [fx, fy] = CM.DIRS[fl.facing];
         for (let d = 1; d < 5; d++) {
           const cx = x + fx * d, cy = y + fy * d;
-          if (fl.dark.includes(keyOf(cx, cy))) break;
+          if (fl.dark.includes(keyOf(cx, cy)) && !spell) break;
           seen.add(keyOf(cx, cy)); seen.add(keyOf(cx + fy, cy + fx)); seen.add(keyOf(cx - fy, cy - fx));
           if (!CM.passable(fl, cx, cy)) break;
         }
@@ -446,8 +489,16 @@ CM.Game = class {
       here.read = true;
       const text = CM.loreText(here.text);
       this.say("You read the carving on the wall.");
+      this.remember("carving", text);
       this.emit("lore", text);
       this.dirty = true;
+      return;
+    }
+    if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.talk(thing, k); return; }
+    if (thing && thing.type === "rope") {
+      this.sound("stairs");
+      this.enterFloor(fl.number - 1, "rope", thing.up);
+      this.say("Hand over hand, you climb the rope back up to the pit's mouth.");
       return;
     }
     if (thing && thing.type === "chest") {
@@ -604,7 +655,7 @@ CM.Game = class {
         this.startCombat(k, t, true);
         return;
       }
-      if (d !== undefined && d <= 7) {
+      if (d !== undefined && (d <= 7 || t.hunter)) {
         const nearer = options.filter(([nx, ny]) => dist.get(keyOf(nx, ny)) === d - 1 && !(nx === px && ny === py));
         if (nearer.length) step = this.rnd.pick(nearer);
       } else if (this.rnd.chance(0.3) && options.length) {
@@ -1378,7 +1429,8 @@ CM.Game = class {
     this.gold += gold;
     const loot = rnd.chance(0.45) ? [CM.makeItem(this.floor.number, rnd)] : [];
     this.bag.push(...loot);
-    const boss = this.foes.some((m) => m.boss), guardian = this.foes.find((m) => m.guardian);
+    const boss = this.foes.some((m) => m.boss), guardian = this.foes.find((m) => m.guardian), fought = this.floor.things[this.foeKey];
+    if (fought && fought.vengeance) { this.floor.avenged = (this.floor.avenged || []).concat(fought.vengeance); this.say("Somewhere on this floor, something lets out a long breath it has held a long time."); }
     delete this.floor.things[this.foeKey];
     if (guardian) this.floor.things[this.foeKey] = { type: "ladder" };   // (the shaft it stood over)
     this.combat = null;
@@ -1412,7 +1464,7 @@ CM.Game = class {
       this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor", "shield", "helm"].map((k) => { const it = CM.makeItem(depth, rnd, k); it.unknown = false; return it; });
       this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
-        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"));
+        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"), CM.rope());
     }
     this.emit("bag", true);
   }
@@ -1425,7 +1477,8 @@ CM.Game = class {
 
   describe(item) {
     const plain = { heal: "heals", mana: "restores magic", revive: "raises the fallen", torch: "light, for a while", lantern: "light that lasts",
-      key: "opens a locked door", antidote: "cures poison, sleep, paralysis and blindness" }[item.kind];
+      key: "opens a locked door", antidote: "cures poison, sleep, paralysis and blindness", rope: "down a pit without the fall, and back up again",
+      bones: "someone's, gathered up for a ghost who asked" }[item.kind];
     return plain || CM.itemLabel(item);
   }
 
@@ -1574,6 +1627,8 @@ CM.Game = class {
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack first.";
     const item = this.bag[row], hero = this.party[n];
     if (item.kind === "key") return "Keys turn in locks, not in hands. Walk into the locked door.";
+    if (item.kind === "rope") return "The rope is for a pit: walk into one with it in the pack.";
+    if (item.kind === "bones") return "They're not yours to use. Someone on this floor wants them back.";
     if (item.kind === "scroll" || item.kind === "wand") return this.useMagicOutside(row, n);
     if (item.kind === "torch") {
       this.bag.splice(row, 1);
@@ -1696,7 +1751,7 @@ CM.Game = class {
       const rnd = new CM.Random(CM.hashSeed(`${this.seed}:tavern:${this.floor.number}`));
       this.recruits = { floor: this.floor.number, who: [0, 1, 2].map(() => CM.makeRecruit(level, rnd)) };
     }
-    return this.recruits.who;
+    return (this.rescued || []).length ? this.rescued.concat(this.recruits.who) : this.recruits.who;   // (the rescued first, and free)
   }
 
   hire(i, replace) {
@@ -1708,17 +1763,175 @@ CM.Game = class {
     if (!fallen.includes(idx)) return `${this.party[idx].name} is still standing.`;
     if (this.gold < recruit.price) return `${recruit.name} wants ${recruit.price} gold to come along.`;
     this.gold -= recruit.price;
+    const rescued = (this.rescued || []).length;
     const gone = this.party[idx];
     for (const slot of CM.SLOTS) if (gone[slot] && !(slot === "weapon" || slot === "armor")) this.bag.push(gone[slot]);   // (their trinkets stay with the party)
     const h = Object.assign({}, recruit);
     delete h.price;
     this.party[idx] = h;
-    this.recruits.who.splice(i, 1);
+    if (i < rescued) this.rescued.splice(i, 1); else this.recruits.who.splice(i - rescued, 1);
     this.sound("coin");
-    this.say(`${gone.name} is laid to rest by the fire. ${h.name} the ${h.cls} takes up their place.`);
+    this.say(`${gone.name} is laid to rest by the fire. ${h.name} the ${h.cls} takes up their place${recruit.price ? "" : ", owing you their life"}.`);
     this.saveRun();
     this.emit("change");
     return "";
+  }
+
+
+  // ---- the journal, and the dungeon's people ----
+  // everything read and heard goes in the journal (once), to be read again with J, and to pay the hermit with
+  remember(kind, text, extra = {}) {
+    this.journal = this.journal || [];
+    if (this.journal.some((e) => e.text === text)) return false;
+    this.journal.push(Object.assign({ kind, text, floor: this.floor ? this.floor.number : 0 }, extra));
+    this.emit("journal");
+    return true;
+  }
+  hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); }
+
+  // someone to talk to, where the party stands (Space)
+  talk(thing, k) {
+    if (thing.type === "ghost") this.talkGhost(thing, k);
+    else if (thing.type === "hermit") this.talkHermit(thing);
+    else if (thing.type === "adventurer") this.freeAdventurer(thing, k);
+  }
+
+  talkGhost(thing, k) {
+    const fl = this.floor, G = CM.GHOSTS[thing.who] || CM.GHOSTS[0], R = CM.REQUESTS[thing.request] || CM.REQUESTS.story;
+    const done = thing.request === "bones" ? this.hasItem("bones") >= 0
+      : thing.request === "vengeance" ? Boolean(fl.avenged && fl.avenged.includes(k))
+      : Object.values(fl.features).some((f) => f.type === "carving" && f.read && !(typeof f.text === "string"));
+    if (!thing.asked) {
+      thing.asked = true;
+      this.sound("ailment");
+      this.emit("talk", { title: G.name, text: `A pale shape waits in the air, not quite a man or a woman any more. "I was ${G.name}," it says. "${R.ask}"` });
+      this.saveRun();
+      return;
+    }
+    if (!done) { this.emit("talk", { title: G.name, text: `"${R.wait}"` }); return; }
+    if (thing.request === "bones") this.bag.splice(this.hasItem("bones"), 1);
+    const rnd = new CM.Random(CM.hashSeed(`${this.seed}:ghost:${fl.number}`));
+    const gift = CM.makeGear(rnd.pick(["ring", "amulet", "amulet"]), fl.number + 4, rnd);
+    gift.unknown = false;
+    this.bag.push(gift);
+    const xp = 30 * fl.number;
+    for (const h of this.alive()) h.xp += xp;
+    delete fl.things[k];
+    this.remember("ghost", G.tale, { who: G.name });
+    this.sound("heal");
+    this.say(`${G.name} is at rest. ${gift.name} (${CM.itemLabel(gift)}) and ${xp} experience each.`);
+    this.emit("fx", { kind: "sparkle", at: k.split(",").map(Number) });
+    this.emit("talk", { title: G.name, text: `${R.done} ${G.tale}` });
+    this.checkLevels();
+    this.saveRun();
+    this.emit("change");
+  }
+
+  talkHermit(thing) {
+    const untold = (this.journal || []).length - (thing.heard || 0);
+    if (!thing.greeted) { thing.greeted = true; this.emit("talk", { title: "The hermit", text: CM.HERMIT.greet }); this.saveRun(); return; }
+    if (untold <= 0) { this.emit("talk", { title: "The hermit", text: CM.HERMIT.noStory }); return; }
+    const row = this.bag.findIndex((i) => i.unknown);
+    thing.heard = (thing.heard || 0) + 1;
+    if (row >= 0) {
+      const item = this.bag[row];
+      this.reveal(item);
+      this.sound("spell");
+      this.say(`The hermit names it: ${item.name} (${CM.itemLabel(item)}).`);
+      this.emit("talk", { title: "The hermit", text: `${CM.HERMIT.told[(thing.heard - 1) % CM.HERMIT.told.length]} "${item.name}. ${CM.itemLabel(item)}."` });
+    } else {
+      const goal = CM.goalOf(this.floor), where = goal ? this.directionTo(goal.split(",").map(Number)) : "nowhere you can get to";
+      this.emit("talk", { title: "The hermit", text: `${CM.HERMIT.nothing} "The way down lies ${where}."` });
+    }
+    this.saveRun();
+    this.emit("change");
+  }
+
+  directionTo([x, y]) {
+    const [px, py] = this.floor.pos, dx = x - px, dy = y - py;
+    if (!dx && !dy) return "under your feet";
+    const ns = dy < -Math.abs(dx) / 2 ? "north" : dy > Math.abs(dx) / 2 ? "south" : "", ew = dx > Math.abs(dy) / 2 ? "east" : dx < -Math.abs(dy) / 2 ? "west" : "";
+    return `to the ${ns}${ns && ew ? "-" : ""}${ew}, ${Math.abs(dx) + Math.abs(dy)} paces or so`;
+  }
+
+  // the lost adventurer: cut loose, they take a fallen hero's place - or go on up to the camp, leaving a rope and their map
+  freeAdventurer(thing, k) {
+    const fl = this.floor, h = Object.assign({}, thing.hero);
+    if (!thing.freed) { thing.freed = true; this.emit("talk", { title: h.name + " the " + h.cls, text: CM.ADVENTURER.found }); this.saveRun(); return; }
+    const fallen = this.party.findIndex((p) => p.hp <= 0 || (p.status || {}).stone);
+    delete fl.things[k];
+    this.sound("unlock");
+    if (fallen >= 0) {
+      const gone = this.party[fallen];
+      for (const slot of CM.SLOTS) if (gone[slot] && !(slot === "weapon" || slot === "armor")) this.bag.push(gone[slot]);
+      delete h.price;
+      h.hp = Math.max(1, Math.floor(h.max / 2));
+      this.party[fallen] = h;
+      this.say(CM.ADVENTURER.joins(h.name, h.cls, gone.name));
+    } else {
+      this.bag.push(CM.rope());
+      fl.seen = [];
+      for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]);
+      for (const f of Object.values(fl.features)) if ("known" in f) f.known = true;
+      h.price = 0;
+      this.rescued = (this.rescued || []).concat(h);
+      this.say(CM.ADVENTURER.leaves(h.name));
+    }
+    this.saveRun();
+    this.emit("change");
+  }
+
+  // a riddle door, walked into: the window asks; a right answer opens it, a wrong one burns
+  answerRiddle(k, answer) {
+    const f = this.floor.features[k], r = f && CM.RIDDLES[f.riddle];
+    if (!r || f.open) return false;
+    if (answer === r.a) {
+      f.open = true;
+      f.locked = false;
+      this.sound("unlock");
+      const xp = 15 * this.floor.number;
+      for (const h of this.alive()) h.xp += xp;
+      this.say(`The runes fade, and the door swings open. (${xp} experience each.)`);
+      this.remember("riddle", `A door on floor ${this.floor.number} asked: ${r.q} The answer was: ${r.a.toLowerCase()}.`);
+      this.checkLevels();
+      this.dirty = true;
+      this.emit("change");
+      return true;
+    }
+    f.tries = (f.tries || 0) + 1;
+    const burn = 2 + Math.floor(this.floor.number / 2);
+    for (const h of this.alive()) h.hp = Math.max(1, h.hp - burn);
+    this.sound("trap");
+    this.emit("fx", { kind: "trap", trap: "blade" });
+    this.say(`The runes flare white, and the heat of them sears everyone (-${burn}). The door stays shut.`);
+    this.emit("change");
+    return false;
+  }
+
+  // the levels a gift of experience may bring (a fight's are handled as it ends)
+  checkLevels() {
+    for (const hero of this.alive()) {
+      while (hero.xp >= CM.xpForLevel(hero.level + 1)) {
+        hero.level += 1;
+        CM.upgradeHero(hero);
+        CM.recompute(hero);
+        hero.pending += 1;
+        this.sound("level");
+        this.emit("fx", { kind: "levelup", hero });
+        this.say(`${hero.name} reaches level ${hero.level}! A boon is theirs to choose (press ${this.party.indexOf(hero) + 1}).`);
+      }
+    }
+  }
+
+  // down a pit on a rope: no fall, and the rope stays tied to climb back by
+  ropeDown(k) {
+    const fl = this.floor, [x, y] = k.split(",").map(Number), n = fl.number;
+    this.sound("stairs");
+    this.enterFloor(n + 1, "fall", [x, y]);
+    const below = this.floor;
+    below.things[keyOf(below.pos[0], below.pos[1])] = { type: "rope", up: [x, y] };
+    this.say("The rope hangs down beside you: a way back up.");
+    this.saveRun();
   }
 
   // ---- a level earned is a boon chosen ----

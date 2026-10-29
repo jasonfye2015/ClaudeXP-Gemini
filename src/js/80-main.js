@@ -293,6 +293,11 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "stairs_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "key") out.push({ x, y, layer: "key", w: 0.4, h: 0.4 });
       else if (thing.type === "phylactery") out.push({ x, y, layer: "phylactery", w: 0.7, h: 0.7, glow: 0.5 });
+      else if (thing.type === "ghost") out.push({ x, y, layer: "npc:ghost", w: 0.8, h: 0.9, alpha: 0.8, glow: 0.4, lift: 0.05 + Math.sin(now / 900 + x) * 0.035 });
+      else if (thing.type === "hermit") out.push({ x, y, layer: "npc:hermit", w: 0.75, h: 0.8 });
+      else if (thing.type === "adventurer") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
+      else if (thing.type === "bones") out.push({ x, y, layer: "bones", w: 0.6, h: 0.42 });
+      else if (thing.type === "rope") out.push({ x, y, layer: "rope", w: 0.5, h: 1.0 });
       else if ((thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian") && !(game.mode === "combat" && key === game.foeKey)) {
         const m = thing.group.find((f) => f.hp > 0 && !f.fled) || thing.group[0];
         if (thing.anim) {                                               // on the move: it slides from where it was
@@ -309,7 +314,8 @@ window.addEventListener("DOMContentLoaded", () => {
       const [x, y] = key.split(",").map(Number);
       if (!near(x, y)) continue;
       const ns = fl.grid[y - 1] && fl.grid[y - 1][x] === 0 && fl.grid[y + 1] && fl.grid[y + 1][x] === 0;   // (the corridor runs north-south)
-      if (f.type === "door") out.push({ x, y, layer: f.open ? "door_open" : f.locked ? "door_locked" : "door", axis: ns ? "ns" : "ew" });
+      if (f.type === "door") out.push({ x, y, layer: f.open ? "door_open" : f.locked ? "door_locked" : f.riddle !== undefined ? "door_riddle" : "door", axis: ns ? "ns" : "ew", glow: !f.open && f.riddle !== undefined ? 0.35 : 0 });
+      else if (f.type === "plate" && (f.gate || f.known)) out.push({ x, y, layer: f.gate && !f.pressed ? "plate" : "plate_pressed", flat: true, w: 0.62 });
       else if (f.type === "gate") out.push({ x, y, layer: f.open ? "gate_open" : "gate", axis: ns ? "ns" : "ew" });
       else if (f.type === "pit") out.push({ x, y, layer: "pit", flat: true, w: 0.96 });
       else if (f.type === "trapdoor" && f.known) out.push({ x, y, layer: "trapdoor", flat: true, w: 0.96 });
@@ -373,6 +379,8 @@ window.addEventListener("DOMContentLoaded", () => {
     if (ui.dialogOpen()) {
       const ending = ui.$("#dlg-over").classList.contains("on");
       if (e.code === "Escape" || (e.code === "Tab" && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
+      else if (ui.$("#dlg-riddle").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickRiddle(Number(e.code.slice(-1)));
+      else if (e.code === "KeyJ" && ui.$("#dlg-journal").classList.contains("on")) ui.closeDialogs();
       return;
     }
     if (ui.screen === "title") {
@@ -402,6 +410,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.code === "Escape") { e.preventDefault(); ui.openDialog("#dlg-pause"); return; }
     if (e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
     if (e.code === "KeyC" && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
+    if (e.code === "KeyJ" && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
     if (game.mode === "explore") {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
       if (e.code === "Space") { e.preventDefault(); game.use(); }

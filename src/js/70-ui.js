@@ -100,6 +100,12 @@ CM.UI = class {
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
+<div class="dialog" id="dlg-talk"><div class="box"><h2 id="talk-title"></h2><p id="talk-text" class="lore"></p>
+  <div class="end"><button class="close primary">Walk on</button></div></div></div>
+<div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
+  <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
+<div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal</h2><div id="journal-list"></div>
+  <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
   <div class="roll" id="over-party"></div><div class="tally" id="over-tally"></div>
   <div class="end"><button class="close primary">To the title</button></div></div></div>
@@ -136,6 +142,8 @@ CM.UI = class {
     game.on("turn", () => { this.cmenu = { kind: "main" }; });
     game.on("mode", (mode) => { if (mode !== "combat") this.cmenu = { kind: "main" }; this.xmenu = null; });
     game.on("lore", (text) => { this.$("#lore-text").textContent = text; this.openDialog("#dlg-lore"); });
+    game.on("talk", ({ title, text }) => { this.$("#talk-title").textContent = title; this.$("#talk-text").textContent = text; this.openDialog("#dlg-talk"); });
+    game.on("riddle", (k) => this.askRiddle(k));
     game.on("teleported", () => this.flash(".blink", 60));
     game.on("fell", () => this.flash(".fall", 350));
     this.show("title");
@@ -531,10 +539,12 @@ CM.UI = class {
       if (f && f.type === "lever" && f.face === fl.facing) text = f.pulled ? "The lever, pulled." : "A lever on the wall. Space pulls it.";
       else if (f && f.type === "carving" && f.face === fl.facing) text = "Runes carved into the wall. Space reads them.";
       else if (thing) text = { chest: "A chest. Space opens it.", ladder: "A ladder down. Space climbs it.", stairs_up: "The stairs up. Space climbs them.",
-        phylactery: "A cold box with a slow beat inside it. Space smashes it." }[thing.type] || "";
+        phylactery: "A cold box with a slow beat inside it. Space smashes it.", ghost: "A ghost. Space speaks to it.", hermit: "A hermit. Space speaks to him.",
+        adventurer: "Someone bound. Space cuts them loose.", rope: "A rope from above. Space climbs it." }[thing.type] || "";
+      else if (f && f.type === "plate" && (f.gate || f.known)) text = f.gate ? (f.pressed ? "A pressure plate, sunk." : "A pressure plate.") : "A plate that was a trap.";
       else if (f && f.type === "fountain") text = f.used ? "A dry fountain." : "A fountain. Space drinks.";
       else if (f && f.type === "altar") text = f.used ? "A quiet altar." : "An altar. Space kneels.";
-      else if (ahead && ahead.type === "door" && !ahead.open) text = ahead.locked ? "A locked door. Walk into it with a key." : "A door. Walk into it to open it.";
+      else if (ahead && ahead.type === "door" && !ahead.open) text = ahead.riddle !== undefined ? "A door written over with runes. Walk into it, and answer." : ahead.locked ? "A locked door. Walk into it with a key." : "A door. Walk into it to open it.";
       else if (ahead && ahead.type === "gate" && !ahead.open) text = "A portcullis. Find its lever.";
       hint.textContent = text;
     }
@@ -596,10 +606,10 @@ CM.UI = class {
     box.classList.remove("combat");
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
-        ["Use (Space)", () => g.use()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Map (Tab)", () => this.toggleBigMap()],
+        ["Use (Space)", () => g.use()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
-        ["Tavern", () => this.openTavern()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()],
+        ["Tavern", () => this.openTavern()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
         ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
@@ -743,14 +753,14 @@ CM.UI = class {
       hire.className = "hire";
       if (fallen.length <= 1) {
         const b = document.createElement("button");
-        b.textContent = `Hire, ${r.price} gold`;
+        b.textContent = r.price ? `Hire, ${r.price} gold` : "Hire - owes you their life";
         b.disabled = !fallen.length;
         b.addEventListener("click", () => { const note = g.hire(i); this.$("#tavern-note").textContent = note || `${r.name} comes along.`; this.renderTavern(); this.refresh(); });
         hire.appendChild(b);
       } else {
         for (const idx of fallen) {
           const b = document.createElement("button");
-          b.textContent = `For ${g.party[idx].name}, ${r.price} gold`;
+          b.textContent = r.price ? `For ${g.party[idx].name}, ${r.price} gold` : `For ${g.party[idx].name} - owes you their life`;
           b.addEventListener("click", () => { const note = g.hire(i, idx); this.$("#tavern-note").textContent = note || `${r.name} comes along.`; this.renderTavern(); this.refresh(); });
           hire.appendChild(b);
         }
@@ -806,7 +816,8 @@ CM.UI = class {
     p.beginPath();
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
-    const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040" };
+    const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
+      ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
@@ -836,7 +847,7 @@ CM.UI = class {
     const cx = (x + 0.5) * cell, cy = (y + 0.5) * cell, ns = fl.grid[y - 1] && fl.grid[y - 1][x] === 0 && fl.grid[y + 1] && fl.grid[y + 1][x] === 0;
     p.lineWidth = Math.max(1.5, cell * 0.16);
     if (f.type === "door" || f.type === "gate" || (f.type === "secret" && f.found)) {
-      p.strokeStyle = f.type === "gate" ? "#607080" : f.locked ? "#D8B040" : f.type === "secret" ? "#A070C0" : "#8A5A2A";
+      p.strokeStyle = f.type === "gate" ? "#607080" : f.locked ? "#D8B040" : f.type === "secret" ? "#A070C0" : f.riddle !== undefined && !f.open ? "#60C0E0" : "#8A5A2A";
       if (f.type === "gate" && !f.open) p.setLineDash([cell * 0.15, cell * 0.12]);
       if (f.type === "door" && f.open) p.setLineDash([cell * 0.25, cell * 0.25]);
       p.beginPath();
@@ -844,6 +855,8 @@ CM.UI = class {
       p.stroke(); p.setLineDash([]);
     } else if (f.type === "pit" || (f.type === "trapdoor" && f.known)) {
       p.fillStyle = "#101010"; p.beginPath(); p.arc(cx, cy, cell * 0.32, 0, Math.PI * 2); p.fill();
+    } else if (f.type === "plate" && (f.gate || f.known)) {
+      p.strokeStyle = f.gate ? (f.pressed ? "#80A060" : "#E08030") : "#C03030"; p.lineWidth = Math.max(1.5, cell * 0.12); p.strokeRect(cx - cell * 0.26, cy - cell * 0.26, cell * 0.52, cell * 0.52);
     } else if (f.type === "teleporter" && f.known) {
       p.strokeStyle = "#8040E0"; p.lineWidth = Math.max(1.5, cell * 0.12); p.beginPath(); p.arc(cx, cy, cell * 0.3, 0, Math.PI * 2); p.stroke();
     } else if (f.type === "spinner" && f.known) {
@@ -912,6 +925,44 @@ CM.UI = class {
   }
 
   guardianNames(ids) { return ids.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", "); }
+
+
+  // ---- the dungeon's people and puzzles: a word with someone, a riddle at a door, the journal ----
+  askRiddle(k) {
+    const g = this.game, f = g.floor.features[k], r = f && CM.RIDDLES[f.riddle];
+    if (!r) return;
+    const rnd = new CM.Random(CM.hashSeed(`${g.seed}:riddle:${k}:${f.tries || 0}`));
+    this.riddle = { k, answers: rnd.shuffle([r.a, ...r.wrong]) };
+    this.$("#riddle-q").textContent = r.q;
+    const box = this.$("#riddle-answers");
+    box.innerHTML = "";
+    this.riddle.answers.forEach((a, i) => {
+      const b = document.createElement("button");
+      b.innerHTML = `<kbd>${i + 1}</kbd>${this.esc(a)}`;
+      b.addEventListener("click", () => this.pickRiddle(i + 1));
+      box.appendChild(b);
+    });
+    this.openDialog("#dlg-riddle");
+  }
+  pickRiddle(n) {
+    const r = this.riddle;
+    if (!r || !r.answers[n - 1]) return;
+    this.closeDialogs();
+    this.game.answerRiddle(r.k, r.answers[n - 1]);
+    this.riddle = null;
+    this.refresh();
+  }
+  openJournal() {
+    const g = this.game, box = this.$("#journal-list"), entries = g.journal || [];
+    const part = (title, kind, order) => {
+      const list = entries.filter((e) => e.kind === kind).sort(order || ((a, b) => a.floor - b.floor));
+      if (!list.length) return "";
+      return `<div class="list-title">${title}</div>` + list.map((e) => `<div class="entry"><small>${e.floor ? `Floor ${e.floor}` : ""}${e.who ? ` - ${this.esc(e.who)}` : ""}</small><p>${this.esc(e.text)}</p></div>`).join("");
+    };
+    const html = part("Carved into the stone", "carving") + part("What the dead said", "ghost") + part("Riddles answered", "riddle");
+    box.innerHTML = html || `<div class="small">Nothing yet. Read the walls (Space before a carving), and listen to whoever you meet; the hermit pays for stories.</div>`;
+    this.openDialog("#dlg-journal");
+  }
 
   // a wash of colour over the view that fades (a spell's light, a trap's gas)
   tint(colour, ms = 260) {

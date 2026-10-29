@@ -371,7 +371,7 @@ CM.art.monster = function (m, big = false) {
   p.fillStyle = m.eyes;
   for (const side of [-1, 1]) { p.beginPath(); p.arc(hx2 + side * eyeDX, eyeY, eyeR, 0, Math.PI * 2); p.fill(); }
   p.restore();
-  if (m.head !== "skull" && m.head !== "hood" && m.head !== "helm") {   // brows drawn down, and a grim mouth
+  if (m.head !== "skull" && m.head !== "hood" && m.head !== "helm" && !m.calm) {   // brows drawn down, and a grim mouth (not on the dungeon's people)
     p.strokeStyle = "#1A1410"; p.lineWidth = 3; p.lineCap = "round";
     for (const side of [-1, 1]) { p.beginPath(); p.moveTo(hx2 + side * headR * 0.66, eyeY - headR * 0.36); p.lineTo(hx2 + side * headR * 0.2, eyeY - headR * 0.2); p.stroke(); }
     const my = m.head === "snout" ? hy2 + headR * 0.74 : hy2 + headR * 0.46, fangs = m.head === "pale";
@@ -427,6 +427,16 @@ CM.art.door = function (kind) {                                          // clos
     p.fillStyle = "#C8A040"; p.fillRect(S / 2 - 18, S / 2 - 6, 36, 40);
     p.strokeStyle = "#C8A040"; p.lineWidth = 7; p.beginPath(); p.arc(S / 2, S / 2 - 8, 14, Math.PI, 0); p.stroke();
     p.fillStyle = "#1A1410"; p.fillRect(S / 2 - 4, S / 2 + 6, 8, 16);
+  } else if (kind === "riddle") {                                       // written over with runes that glow
+    p.save(); p.shadowColor = "#80E0FF"; p.shadowBlur = 14; p.strokeStyle = "#B0F0FF"; p.lineWidth = 4; p.lineCap = "round"; p.lineJoin = "round";
+    const r2 = new CM.Random(44);
+    for (let i = 0; i < 9; i++) {
+      const x = 44 + (i % 3) * 58, y = 78 + Math.floor(i / 3) * 44;
+      p.beginPath(); p.moveTo(x, y); p.lineTo(x + 12 + r2.next() * 18, y + 4 + r2.next() * 8); p.lineTo(x + 4 + r2.next() * 8, y + 24);
+      if (r2.chance(0.5)) p.lineTo(x + 26, y + 26 - r2.next() * 10);
+      p.stroke();
+    }
+    p.restore();
   } else {
     p.fillStyle = "#56565E"; p.beginPath(); p.arc(S - 50, S / 2 + 10, 8, 0, Math.PI * 2); p.fill();   // a ring handle
     p.strokeStyle = "#8A8A92"; p.lineWidth = 4; p.beginPath(); p.arc(S - 50, S / 2 + 24, 12, 0, Math.PI * 2); p.stroke();
@@ -791,6 +801,41 @@ CM.art.ember = function () {                                               // th
   return c;
 };
 
+// ---- the dungeon's people and puzzles: who stands in the halls, a heap of bones, a rope, a plate in the floor ----------
+CM.art.PEOPLE = {
+  ghost: { name: "Ghost", colour: "#C0D4E4", body: "ghost", head: "pale", eyes: "#F0FAFF", extras: [], calm: true },
+  hermit: { name: "Hermit", colour: "#8A7A5A", body: "small", head: "hood", eyes: "#E8D8A0", extras: ["staff"] },
+  adventurer: { name: "Adventurer", colour: "#9A6A48", body: "biped", head: "round", eyes: "#F0E8D0", extras: ["torn"], calm: true },
+};
+CM.art.bones = function () {                                               // someone's, gnawed and scattered
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(313);
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(128, S - 14, 80, 10, 0, 0, Math.PI * 2); p.fill();
+  for (let i = 0; i < 9; i++) bone(p, rnd, 60 + rnd.next() * 136, S - 26 - rnd.next() * 44, i === 4 ? 0.9 : 0.2);
+  return c;
+};
+CM.art.rope = function () {                                                // a coil of rope, hanging from above and heaped on the floor
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(128, S - 14, 70, 9, 0, 0, Math.PI * 2); p.fill();
+  p.strokeStyle = "#1A1410"; p.lineWidth = 16; p.lineCap = "round"; p.beginPath(); p.moveTo(136, 0); p.lineTo(132, S - 70); p.stroke();
+  p.strokeStyle = "#A07840"; p.lineWidth = 10; p.beginPath(); p.moveTo(136, 0); p.lineTo(132, S - 70); p.stroke();
+  for (let i = 0; i < 4; i++) {
+    const y = S - 64 + i * 13, w = 58 - i * 6;
+    outlined(p, () => { p.ellipse(128, y, w, 12, 0, 0, Math.PI * 2); }, "#A07840", "#1A1410", 4);
+    p.strokeStyle = "#6A4A24"; p.lineWidth = 2;
+    for (let a = 0; a < Math.PI * 2; a += 0.4) { p.beginPath(); p.moveTo(128 + Math.cos(a) * w, y + Math.sin(a) * 12); p.lineTo(128 + Math.cos(a + 0.12) * (w - 4), y + Math.sin(a + 0.12) * 9); p.stroke(); }
+  }
+  return c;
+};
+CM.art.plate = function (pressed) {                                        // a slab in the floor, proud of it - or sunk
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = pressed ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.25)"; p.fillRect(40, 40, S - 80, S - 80);
+  outlined(p, () => { p.rect(52, 52, S - 104, S - 104); }, pressed ? "#4A4038" : "#6A5E52", "#1A1410", 5);
+  p.fillStyle = pressed ? "rgba(0,0,0,0.2)" : "rgba(255,240,200,0.14)"; p.fillRect(56, 56, S - 112, 12);
+  p.strokeStyle = pressed ? "#2A2420" : "#8A7E70"; p.lineWidth = 3;
+  p.beginPath(); p.moveTo(76, 128); p.lineTo(S - 76, 128); p.moveTo(128, 76); p.lineTo(128, S - 76); p.stroke();   // a cross cut into it
+  return c;
+};
+
 // the title's emblem: the Lich King's crown on his skull, over a crossed sword and staff, on a medallion of old gold
 CM.art.emblem = function (size = 160) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 160, cx = 80, cy = 82;
@@ -878,6 +923,8 @@ CM.art.buildDrawn = function (theme) {
   add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
   for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, CM.art.monster(G, G.size >= 1 ? 1.12 : 1.04));
   add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
+  for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, CM.art.monster(row));
+  add("bones", CM.art.bones()); add("rope", CM.art.rope()); add("plate", CM.art.plate(false)); add("plate_pressed", CM.art.plate(true)); add("door_riddle", CM.art.door("riddle"));
   add("fx:spark", CM.art.fxSpark()); add("fx:shard", CM.art.fxShard()); add("fx:fire", CM.art.fxFire()); add("fx:frost", CM.art.fxFrost());
   add("fx:bolt", CM.art.fxBolt()); add("fx:force", CM.art.fxForce()); add("fx:holy", CM.art.fxHoly()); add("fx:arrow", CM.art.fxArrow());
   add("fx:leaf", CM.art.fxLeaf()); add("fx:ring", CM.art.fxRing());
