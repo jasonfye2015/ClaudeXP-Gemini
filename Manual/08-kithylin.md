@@ -53,6 +53,11 @@ An add-on model needs its base in `Local Storage\LLM Models\models` (the picker 
 NemoMix Kithylins sound more like you than v1 did; the adult one is the better conversationalist for roleplay, the
 recent one is you as you talk now. [Training](09-training.md) has how they were made and how to make another.
 
+A model made from chat logs has never written anything long, and asked to (reflections, guided sessions in
+[Soul and Song](17-soulsong.md)) it can fall into repeating itself. Every reply asks the engine not to, and one that
+starts going round in circles anyway is stopped there and kept up to where the repeats began, marked *(cut where it
+started repeating itself)*.
+
 ## On Telegram and Discord
 
 **Telegram...** and **Discord...**, beside the title, give Kithylin a bot of its own on each, named **Kithylin AI**,

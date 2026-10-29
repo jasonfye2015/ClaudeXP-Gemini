@@ -55,3 +55,6 @@ Models and the graphics card
   A Kithylin model gets a llama-server of its own here. Inside the Timeline, a model from Local Storage is run by
   the Timeline's engine router instead, so it shares the card with the residents. "CPU only" in Settings leaves the
   card alone entirely (slow). While a model is training on the card, don't load one here.
+  Every reply asks llama.cpp's DRY sampler to keep it from repeating itself (engine.py ANTI_LOOP). A reply that
+  starts going round in circles anyway - the same sentence, or the same few, three times in a row (loops.py) - is
+  stopped there and kept up to where the repeats began, marked "(cut where it started repeating itself)".

@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDou
                                QMenu, QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSpinBox,
                                QSystemTrayIcon, QTabWidget, QTextBrowser, QVBoxLayout, QWidget)
 
-from . import defaults, engine as engine_mod, store
+from . import defaults, engine as engine_mod, loops, store
 from .chat import Backdrop, ChatView, Composer, FormatBar, Slideshow
 from .codes import CodesPage
 from .details import ModelDetails
@@ -496,7 +496,9 @@ class KithylinAI(QWidget):
             reply["content"] = text
             chat.add("system", f"The model didn't answer: {err}")
         else:
-            reply["content"] = text.strip()
+            reply["content"] = loops.unloop(text.strip())
+            if reply["content"] != text.strip():
+                reply["looped"] = True              # (it went round in circles: kept up to where the repeats began)
         if not reply["content"]:
             chat.messages.remove(reply)
         chat.save()

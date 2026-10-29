@@ -376,6 +376,10 @@ through.</td></tr>
 </table>
 <p>The log is kept in the Companion's folder, in Raw Logs (a file a day). Days from before it was kept come from the
 conversation logs (Chats) - what was said, without the notes or the model's side.</p>
+<p>If your Companion starts repeating itself - the same sentence, or the same few, over and over (a model made from
+chat logs can, asked to reflect at length) - the answer is stopped there, and only what came before the repeats is
+kept: in the conversation, its memories and its retraining. The log keeps the whole answer as it came, with a
+note.</p>
 
 <a name="inner"></a><h2>Its inner life</h2>
 <p>Four things it does on its own, each with a switch in Settings:</p>

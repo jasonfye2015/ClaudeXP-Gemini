@@ -47,6 +47,8 @@ import re
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+from kithylinai.loops import unloop
+
 from .growth import (BARE_CHECK, DREAM_ASK, DREAM_NOTE, LETTER_ASK, LETTER_DAYS, LETTER_OPEN, LIFE, PREDICT_ASK,
                      PREDICT_CHECK, SESSION_ASK, TIME_ASK, TIME_NOTE, WAKING_ASK, WAKING_NOTE, ago, day_of,
                      next_memory_day, parse_predictions, parse_time_sense, parse_verdicts, pick_seeds, score_time,
@@ -362,7 +364,8 @@ class Companion:
 
     def _ask(self, messages, done, max_tokens=700, stream=False):
         """A request to the model. The raw log keeps its newest message (the mind files in front of it are the
-        same every time) and the answer, shown or not."""
+        same every time) and the answer, shown or not. An answer that went round in circles is kept - and so
+        remembered - only up to where the repeats began (kithylinai/loops.py): a loop that's kept spreads."""
         self._raw("asked", plain(messages[-1]["content"]) if messages else "", "Soul and Song")
 
         def got(text, err):
@@ -370,6 +373,11 @@ class Companion:
                 self._raw("error", f"No answer from the model{': ' + err if err else ''}.", "Soul and Song")
             else:
                 self._raw("answered", text, self.name)
+                kept = unloop(text)
+                if kept != text:
+                    self._raw("system", f"It started repeating itself: kept up to where the repeats began "
+                                        f"({len(kept):,} of {len(text):,} characters).", "Soul and Song")
+                    text = kept
             done(text, err)
         self.brain.ask(messages, got, self.on_stream if stream else None, max_tokens,
                        float(self.cfg.get("temperature", 0.8)))

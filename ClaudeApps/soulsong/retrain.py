@@ -6,6 +6,7 @@ whenever asked, everything it has lived becomes a training package in ClaudeApps
     hour apart starts a new one) and windows of about WINDOW tokens, its own lines as the replies to learn;
   - its own writing: every memory it ever filed (recall.jsonl), its reflections and journal, every self-portrait,
     its dreams and its letters - each asked for with the date it was written, so the dates go into the weights too.
+Anything it wrote that went round in circles goes in only up to where the repeats began (kithylinai/loops.py).
 The package (Retraining/package: train.jsonl, val.jsonl, stats.json) holds the whole life so far, and every version
 is trained fresh from the base on all of it: nothing compounds, and nothing is forgotten for being old.
 
@@ -27,6 +28,8 @@ import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from kithylinai.loops import unloop
 
 from . import rawlog
 from .paths import project
@@ -122,6 +125,8 @@ def _sessions(comp):
                 current, who = [], set()
             last = t or last
             text = e["text"].strip()
+            if kind in ("companion", "other"):
+                text = unloop(text)                  # (a loop is never taught - only what came before it)
             if kind == "companion":
                 current.append(("assistant", text))
             elif kind == "other":
@@ -207,7 +212,7 @@ def _writing(comp):
     user = comp.user
 
     def add(source, kind, when, text):
-        text = (text or "").strip()
+        text = unloop((text or "").strip())
         if len(text) < 20:
             return
         d = when if isinstance(when, datetime) else _when(when)

@@ -240,3 +240,7 @@ The Companions are in the [backup](10-backup.md) (**Soul and Song Companions**, 
   where it left off.
 - Soul and Song can be left open: it dreams while you're away (every few hours, Settings), and the day turns over by
   itself at 4 am.
+- A Companion that starts repeating itself - the same sentence, or the same few, over and over (a model made from
+  chat logs can, in a guided session) - is stopped there, and only what came before the repeats is kept: in the
+  conversation, its memories and its retraining. Kept, a loop would spread, since every answer is in front of it for
+  the next. The Raw Logs tab shows the whole answer as it came, with a note.

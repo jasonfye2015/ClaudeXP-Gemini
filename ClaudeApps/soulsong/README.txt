@@ -113,6 +113,13 @@ them; Companion._raw writes them). The tab shows any day from the first, colour 
 filters (conversation, guide, notes, memories, the model's raw side), 300 entries a page, search across every day,
 and today's page following along. Days from before the raw log was kept come from the conversation logs (Chats).
 
+Going round in circles (kithylinai/loops.py): a model asked for more than it knows how to write - one made from chat
+logs, in a guided session - can fall into saying the same sentence, or the same few, over and over; each answer is
+in front of it for the next, and in its memories, so a loop that's kept spreads. Every request asks llama.cpp's DRY
+sampler to keep it from repeating itself (kithylinai/engine.py ANTI_LOOP); an answer that loops anyway is stopped as
+it's written, and Companion._ask keeps it - in the conversation, the memories, the retraining package - only up to
+where the repeats began. The raw log keeps the answer as it came, with a note.
+
 Its inner life (inner.py; a switch for each in Settings):
   Free time    after free_minutes away (45) with the program open, up to free_per_day (6): it chooses READ <subject>
                (the offline encyclopedia - Local Storage\Kiwix, read with ClaudeXP's zim.py; an article counts only

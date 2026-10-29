@@ -16,9 +16,14 @@ import urllib.request
 
 from PySide6.QtCore import QObject, QThread, Signal
 
+from . import loops
 from .paths import DATA, ENGINE, MODELS, SERVER, TIMELINE_ENGINES, TIMELINE_MODELS, hosted
 
 START_TIMEOUT = 240
+# llama.cpp's DRY sampler, on for every reply (llama-server has it off): the longer a run of words already written, the
+# less likely it's written again - what keeps a model, above all one made from chat logs, from going round in circles.
+# It looks back over the newest part of the conversation only, so the instructions in front can still be quoted.
+ANTI_LOOP = {"dry_multiplier": 0.8, "dry_base": 1.75, "dry_allowed_length": 2, "dry_penalty_last_n": 2048}
 
 
 class ModelEntry:
@@ -349,6 +354,7 @@ class Engine(QObject):
         self.shared = True              # a Timeline model on the Timeline's shared engine (False: one of our own)
         self._loader = None
         self._streamer = None
+        self._looked = 0                # (how much of the reply under way has been looked at for a loop)
         self._lock = threading.Lock()
 
     # ---- loading -----------------------------------------------------------------------------------------------
@@ -401,7 +407,9 @@ class Engine(QObject):
 
     # ---- talking ------------------------------------------------------------------------------------------------
     def chat(self, messages, temperature=0.9, max_tokens=600, extra=None):
-        """extra: more for llama-server's request (e.g. {"chat_template_kwargs": {"enable_thinking": False}})."""
+        """extra: more for llama-server's request (e.g. {"chat_template_kwargs": {"enable_thinking": False}}).
+        A reply that starts going round in circles anyway (loops.py) is stopped there, and done gets what was written
+        so far - whoever asked keeps it up to where the repeats began (loops.unloop)."""
         if not self.ready or self.model is None:
             self.done.emit("", "no model loaded")
             return
@@ -412,10 +420,11 @@ class Engine(QObject):
         else:
             url, name = _server.url(), self.model.path.stem
         body = {"model": name, "messages": messages, "stream": True, "temperature": float(temperature),
-                "max_tokens": int(max_tokens), "cache_prompt": True}
+                "max_tokens": int(max_tokens), "cache_prompt": True, **ANTI_LOOP}
         if self.model.info.get("stop"):
             body["stop"] = list(self.model.info["stop"])
         body.update(extra or {})
+        self._looked = 0
         self._streamer = _Streamer(url, body)
         self._streamer.chunk.connect(self._chunk)
         self._streamer.thinking.connect(self._thinking)
@@ -427,8 +436,14 @@ class Engine(QObject):
         return self._streamer is not None and self.sender() is self._streamer
 
     def _chunk(self, text):
-        if self._mine():
-            self.chunk.emit(text)
+        if not self._mine():
+            return
+        self.chunk.emit(text)
+        new, self._looked = text[self._looked:], len(text)
+        if any(c in new for c in ".!?\n") and loops.loop_at(text, finished=False) is not None:
+            streamer, self._streamer = self._streamer, None      # (going round in circles: no more of it)
+            streamer.stop()
+            self.done.emit(text, "")
 
     def _thinking(self, text):
         if self._mine():

@@ -281,7 +281,8 @@ def _lived(name, model="timeline:gemma4-12b"):
                 rows.append({"t": f"{day} {h:02d}:{i:02d}", "kind": "user", "who": "Tester",
                              "text": f"On {day} at {h}, part {i}: what does the sea mean to you?"})
                 rows.append({"t": f"{day} {h:02d}:{i:02d}", "kind": "companion", "who": name,
-                             "text": f"({day} {h}:{i}) " + "It keeps time the way I do, in waves. " * 8})
+                             "text": f"({day} {h}:{i}) " + " ".join(f"Wave {k} keeps time the way I do."
+                                                                    for k in range(8))})
         rows += [{"t": f"{day} 20:00", "kind": "guide", "who": "Guided session", "text": f"Who are you on {day}?"},
                  {"t": f"{day} 20:01", "kind": "companion", "who": name, "text": f"Someone listening, on {day}."},
                  {"t": f"{day} 20:02", "kind": "system", "who": "", "text": "(a note: never trained on)"},

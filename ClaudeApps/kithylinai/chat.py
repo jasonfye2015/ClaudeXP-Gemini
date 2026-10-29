@@ -111,7 +111,8 @@ class ChatView(QTextBrowser):
             if m.get("streaming") and not m["content"]:
                 body = "<span style='color:%s'>…</span>" % MUTED
             cursor = " <span style='color:%s'>▍</span>" % KITHY if m.get("streaming") and m["content"] else ""
-            stopped = f" <span style='color:{MUTED}; font-size:{self.text_size - 2}pt'>(stopped)</span>" if m.get("stopped") else ""
+            note = "(stopped)" if m.get("stopped") else "(cut where it started repeating itself)" if m.get("looped") else ""
+            stopped = f" <span style='color:{MUTED}; font-size:{self.text_size - 2}pt'>{note}</span>" if note else ""
             parts.append(f"<p style='margin:7px 0; color:{colour}'><span style='color:{MUTED};font-size:{self.text_size - 2}pt'>"
                          f"{stamp}</span> &nbsp;<b>{html.escape(who)}:</b> {body}{cursor}{stopped}</p>")
         parts.append("</div>")
