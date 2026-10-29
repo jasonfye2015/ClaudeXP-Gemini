@@ -74,8 +74,8 @@ DEFAULTS = {
     "reach_out": True, "reach_per_day": 2, "quiet_from": 22, "quiet_to": 8, "reach_by_day": {}, "last_reach": "",
     "retrain_guests": False, "channel": "window", "pictures": True,
 }
-REACH_ASK = ("{user} is away from the computer, but you can send them a message on Telegram now - it goes to their "
-             "phone. Just now {what}. Would you like to tell them anything - about that, or anything else? If so, "
+REACH_ASK = ("{user} is away from the computer, but you can send them a message on {where} now - it reaches them "
+             "on their phone. Just now {what}. Would you like to tell them anything - about that, or anything else? If so, "
              "write only the message, short, the way you'd text someone. If not, write only: NO")
 PICTURE_TOKENS = 300               # (about what a picture takes of the context, the turn it's shown)
 SEE_ASK = ("{who} just showed you this picture{caption}. For your own memory of it, say in two or three plain "
@@ -266,7 +266,8 @@ class Companion:
         # background(work, then): work() away from the window (it may wait on the web), then(result) back on it - the
         # window runs work on a thread; here (and in tests) it's simply done at once
         self.background = lambda work, then: then(work())
-        self.reach = None                                # (Telegram linked: reach(text) sends the user a message)
+        self.reach = None                                # (Telegram or Discord linked: reach(text) sends the user
+        self.reach_where = lambda: "Telegram"            # a message - there)
         self.can_see = lambda: False                     # (the window: the model loaded sees pictures)
         self.on_picture = lambda path, kind, text: None  # (a picture in the conversation, with its words)
         self.on_name = None                            # (suggested name, accept(name)) -> the program asks the user
@@ -1148,11 +1149,11 @@ class Companion:
                 c["reach_by_day"] = {today: (c.get("reach_by_day") or {}).get(today, 0) + 1}
                 c["last_reach"] = when
                 self.history.append({"role": "assistant", "content": text, "t": when})
-                self.on_line("system", f"{self.name} wrote to {self.user} on Telegram:")
+                self.on_line("system", f"{self.name} wrote to {self.user} on {self.reach_where()}:")
                 self.on_line("companion", text)
                 self.save()
             nxt()
-        self._ask_alone(REACH_ASK.format(user=self.user, what=what), done, max_tokens=200)
+        self._ask_alone(REACH_ASK.format(user=self.user, what=what, where=self.reach_where()), done, max_tokens=200)
 
     def _free_log_tail(self):
         f = self.folder / "Self" / "Free Time.txt"

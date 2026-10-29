@@ -343,7 +343,7 @@ def test_the_window_on_telegram():
 
     w = A.SoulAndSong(None)
     fetched = []
-    w.tg = telegram.Link(base, api=api, files=lambda url: fetched.append(url) or jpeg())   # (the stand-in Telegram,
+    w.links["telegram"] = telegram.Link(base, api=api, files=lambda url: fetched.append(url) or jpeg())   # (the
     #                                                                                   before it starts listening)
     w.load_model = lambda *a, **k: None
     w.brain.ask = ask
@@ -353,7 +353,8 @@ def test_the_window_on_telegram():
     w.fill_companions(select=str(folder))
     support.pump(0.6)
     assert w.comp is not None and w.comp.name == "Lyra", "the Companion didn't open"
-    assert w._tg_thread is not None and w._tg_thread.is_alive(), "it isn't listening"
+    assert w._listening("telegram"), "it isn't listening"
+    tg = w.links["telegram"]
     assert w.comp.reach is None, "it could write first before the user was linked"
     w.comp.cfg["last_day"] = w.comp.day_key()
 
@@ -361,7 +362,7 @@ def test_the_window_on_telegram():
         assert support.pump(10, until=lambda: len(api.to(chat)) > n), f"nothing was sent to {chat}"
         return api.to(chat)[-1]
     # linking the user's own account
-    api.inbox.append(message(OWNER, w.tg.code("owner")))
+    api.inbox.append(message(OWNER, tg.code("owner")))
     assert answered(OWNER, 0) == telegram.LINKED.format(companion="Lyra")
     assert w.comp.reach is not None and "Telegram is linked" in w.chat.toPlainText()
     # the user, from their phone
@@ -377,7 +378,7 @@ def test_the_window_on_telegram():
     assert "back at the computer" in asked[-1] and w.comp.cfg["channel"] == "window", asked[-1]
     assert len(api.to(OWNER)) == 2, "the window's answer went to Telegram"
     # a guest, invited
-    api.inbox.append(message(GUEST, w.tg.code("guest", "Sam"), first="Samuel"))
+    api.inbox.append(message(GUEST, tg.code("guest", "Sam"), first="Samuel"))
     welcome = answered(GUEST, 0)
     assert all(bit in welcome for bit in ("Sam", "Lyra", "AI", "Tester", "not by a person")), welcome
     api.inbox.append(message(GUEST, "Hi Lyra, I'm Sam.", first="Samuel"))
@@ -396,11 +397,11 @@ def test_the_window_on_telegram():
     # a message while the model's loading waits for it
     w.brain.engine.ready = False
     api.inbox.append(message(OWNER, "Are you there?"))
-    assert support.pump(5, until=lambda: w._tg_waiting), "the message didn't wait for the model"
+    assert support.pump(5, until=lambda: w._msg_waiting), "the message didn't wait for the model"
     assert len(api.to(OWNER)) == 3, "it answered before the model was ready"
     w.brain.engine.ready = True
     w._ready(True)
-    assert answered(OWNER, 3) == "I'm here, and glad you are too." and not w._tg_waiting
+    assert answered(OWNER, 3) == "I'm here, and glad you are too." and not w._msg_waiting
     # pictures: a photo with words, fetched and kept - and words sent right after it still come after it
     w.brain.engine.vision = True                      # (as if its vision add-on were loaded)
     n, before = len(api.to(OWNER)), len(asked)
@@ -424,9 +425,9 @@ def test_the_window_on_telegram():
     n = len(api.to(OWNER))
     w.comp.reach("A message from Lyra.")
     assert answered(OWNER, n) == "A message from Lyra."
-    w.tg.data["last_companion"] = "Brook"
-    w._tg_wire(announce=True)
-    assert answered(OWNER, n + 1) == "(You're talking with Lyra now.)" and w.tg.data["last_companion"] == "Lyra"
+    tg.data["last_companion"] = "Brook"
+    w._msg_wire(announce=True)
+    assert answered(OWNER, n + 1) == "(You're talking with Lyra now.)" and tg.data["last_companion"] == "Lyra"
     # the settings
     seen = {}
 
@@ -440,7 +441,7 @@ def test_the_window_on_telegram():
         seen["steps"] = seen["how"].findChild(QTextBrowser).toPlainText()
         d.accept()
     QTimer.singleShot(300, settle)
-    w._tg_dialog()
+    w._msg_dialog("telegram")
     assert "@SoulAndSongTestBot" in seen.get("text", "") and "Jason's account" in seen["text"], seen
     assert w.comp.cfg["reach_out"] is False and w.comp.cfg["reach_per_day"] == 3, "the settings weren't kept"
     assert all(bit in seen.get("steps", "") for bit in ("@BotFather", "/newbot", "Soul and Song", "token", "Link",
@@ -458,7 +459,7 @@ def test_the_window_on_telegram():
     w._inside_computer = lambda: False
     try:
         w.close()
-        assert shown == [True] and not w.isVisible() and w._tg_thread.is_alive(), "it stopped listening"
+        assert shown == [True] and not w.isVisible() and w._listening("telegram"), "it stopped listening"
         n = len(api.to(OWNER))
         api.inbox.append(message(OWNER, "Still there?"))
         answered(OWNER, n)
@@ -473,9 +474,10 @@ def test_the_window_on_telegram():
         assert shown == [True] and not w.isVisible(), "Stop listening and quit didn't close it"
     finally:
         A.QSystemTrayIcon = real_tray
+    listener = w.listeners["telegram"]
     w.shutdown()
-    w._tg_thread.join(5)
-    assert not w._tg_thread.is_alive(), "it was still listening after it closed"
+    listener.thread.join(5)
+    assert not listener.thread.is_alive(), "it was still listening after it closed"
     support.no_errors(caught)
 
 

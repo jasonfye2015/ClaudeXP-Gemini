@@ -161,6 +161,17 @@ three hours apart, reach_per_day at most; it may answer NO. On its own (the laun
 it listening from the notification area; started again, it comes back (claudecore.single: one copy at a time, the
 second start asks the first to show_again). One listener per bot.
 
+On Discord (discordlink.py; Discord... in the top bar): the same, through an application made in Discord's
+Developer Portal. Its gateway is a WebSocket kept open (Qt's QtWebSockets): Identify asking only for direct messages
+(intents 1 << 12 - no privileged intents), heartbeats (a missed answer means a dead connection), Resume after a drop,
+a fresh start after an Invalid Session, a stop on a refused token (close 4004). Discord doesn't hold a bot's
+messages, so after READY Link.catch_up reads each known conversation back from where it was read to
+(discord.json "read"). Only direct messages count (no guild_id; never a bot); a user can only message a bot they
+share a server with, so the window has Add it to a server... (the OAuth page, scope bot, no permissions). Replies in
+pieces of up to 2,000 characters. The window treats both alike (MESSENGERS: each module gives Link, Listener and its
+words); the Companion writes first to where the user last wrote from (cfg "messenger"), and guests on either are
+"<name> (on Telegram)" / "(on Discord)".
+
 Pictures: Add picture... (or paste, or drop a file on the box) - and photos, picture files and still stickers on
 Telegram (getFile, then the file server; in the order they came) - are kept as JPEGs no more than 1,280 across in the
 Companion's Pictures folder; the history entry and raw log carry "picture" (its path in the folder). The newest

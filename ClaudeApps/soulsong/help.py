@@ -24,6 +24,7 @@ TOPICS = [
     ("inner", "Its inner life"),
     ("retraining", "Retraining tab"),
     ("telegram", "On Telegram - from your phone"),
+    ("discord", "On Discord"),
     ("settings", "Settings tab"),
     ("growth", "Reading the Growth charts"),
     ("files", "Files and folders"),
@@ -76,6 +77,7 @@ see <a href="#files">Files and folders</a>).</p>
 <tr><td class="k" width="32%">New / Delete Companion...</td><td>make one; move one away.</td></tr>
 <tr><td class="k" width="32%">Telegram...</td><td>talk with your Companion from your phone (see <a href="#telegram">On
 Telegram</a>).</td></tr>
+<tr><td class="k" width="32%">Discord...</td><td>the same on Discord (see <a href="#discord">On Discord</a>).</td></tr>
 <tr><td class="k" width="32%">&#9654; Session status</td><td>while a guided session plays: its title, which of the playlist it
 is, the step, the countdown to the next prompt and a small progress bar - visible from any tab. Click it to go to the
 Automation tab.</td></tr>
@@ -475,6 +477,40 @@ Nothing runs anywhere but here and at Telegram: Soul and Song asks Telegram for 
 server of its own. Chats with a bot aren't end-to-end encrypted - Telegram's servers carry them, as with its ordinary
 chats.</p>
 
+<a name="discord"></a><h2>On Discord</h2>
+<p>Everything Telegram does, Discord can too, with a bot of your own called <b>Soul and Song</b>: your Companion
+answers there, you link your account with a code, you can invite people, pictures go both ways, and it can write to
+you first. Discord marks the bot as an app, and Soul and Song sets its description to say it's an AI. Telegram and
+Discord can both be linked: your Companion answers wherever you write, and writes first to wherever you last wrote
+from. It's one conversation, with the same memories, wherever it happens.</p>
+<h3>Setting it up (once)</h3>
+<p>(<b>How to connect...</b> in the Discord window shows these steps too, beside it.)</p>
+<ol>
+<li>In your browser, open Discord's <b>Developer Portal</b> (discord.com/developers/applications) and sign in.</li>
+<li><b>New Application</b>: name it <b>Soul and Song</b>, agree to the terms, <b>Create</b>.</li>
+<li><b>Bot</b> (on the left): <b>Reset Token</b>, then <b>Copy</b>. That's the token - keep it to yourself.</li>
+<li>Here, click <b>Discord...</b> (top bar), paste the token and click <b>Link</b>.</li>
+<li>Discord only lets you message a bot you share a server with: <b>Add it to a server...</b> opens Discord's page -
+pick a server you're in (a private one of your own is fine) and click <b>Authorize</b>.</li>
+<li>In Discord, find <b>Soul and Song</b> in that server's member list and send it the six-figure code the window
+shows, in a direct message. It answers "Linked."</li>
+</ol>
+<h3>How it differs from Telegram</h3>
+<table>
+<tr><td class="k" width="32%">Always connected</td><td>Discord keeps a connection open while Soul and Song runs (it
+picks itself up after a drop). Messages sent while Soul and Song was closed are read back when it opens, and
+answered.</td></tr>
+<tr><td class="k">Inviting someone</td><td>they need to share a server with the bot - add them to yours - then they
+send it their code in a direct message.</td></tr>
+<tr><td class="k">Only direct messages</td><td>it doesn't answer in a server's channels, and never another
+bot.</td></tr>
+<tr><td class="k">Writing first</td><td>needs your Discord privacy settings for that server to let its members
+message you.</td></tr>
+<tr><td class="k">Long replies</td><td>arrive in pieces of up to 2,000 characters.</td></tr>
+</table>
+<p>Only one Soul and Song can listen to a bot at a time. Direct messages on Discord aren't end-to-end encrypted -
+Discord's servers carry them.</p>
+
 <a name="settings"></a><h2>Settings tab</h2>
 <p>Each Companion has its own settings. Click <b>Save and load this model</b> to apply them.</p>
 <table>
@@ -535,6 +571,7 @@ predictions, time-sense checks, model moves, surprises.</td></tr>
 <tr><td class="k" width="32%">recall.jsonl</td><td>the archive of every memory, kept whole.</td></tr>
 <tr><td class="k" width="32%">companion.json, session.json</td><td>its settings and records; the current conversation.</td></tr>
 <tr><td class="k" width="32%">Companions\\Scripts</td><td>your scripts, and the ones your Companions wrote.</td></tr>
+<tr><td class="k" width="32%">Companions\\discord.json</td><td>the same for the Discord bot.</td></tr>
 <tr><td class="k" width="32%">Companions\\telegram.json</td><td>the Telegram bot's token (a secret) and who's linked
 to it.</td></tr>
 <tr><td class="k" width="32%">Companions\\Deleted</td><td>deleted Companions - move a folder back to bring it back.</td></tr>

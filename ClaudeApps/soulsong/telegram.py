@@ -39,6 +39,12 @@ LINKED = ("Linked. I'm {companion}, your AI companion in Soul and Song. Write to
           "and Song isn't open, I'll answer when it is.")
 PRIVATE = ("This is a private AI companion (Soul and Song), written by an AI language model. It talks only with its "
            "owner and the people they invite - if you have an invitation code, send it here.")
+NAME = "Telegram"
+INTRO = ("Talk with your Companion from your phone, through a Telegram bot of your own - make it with Telegram's "
+         "<b>@BotFather</b> (<b>How to connect...</b> below walks you through it), name it <b>Soul and Song</b>, and "
+         "paste the token it gives you here. The bot says it's an AI, in its description and to anyone who writes.")
+TOKEN_HINT = "The bot's token, from @BotFather (keep it secret)"
+HOW_HINT = "The setup, step by step: making the bot with @BotFather, and linking it here"
 SETUP = """<h3>Connecting Soul and Song to Telegram</h3>
 <ol>
 <li>In Telegram, search for <b>@BotFather</b> (the one with the blue tick) and press <b>Start</b>.</li>
@@ -278,8 +284,10 @@ class Link:
         for piece in chunks(text):
             self.api(self.token, "sendMessage", {"chat_id": chat, "text": piece})
 
-    def download(self, file_id):
-        """A file someone sent (a picture), as bytes - asked of Telegram (getFile), then fetched."""
+    def download(self, picture):
+        """A file someone sent (a picture: picture_of's, or its file_id), as bytes - asked of Telegram (getFile),
+        then fetched."""
+        file_id = picture["file_id"] if isinstance(picture, dict) else picture
         found = self.api(self.token, "getFile", {"file_id": file_id})
         if not found or not found.get("file_path"):
             raise TelegramError("Telegram didn't say where the file is")
@@ -290,3 +298,38 @@ class Link:
             self.api(self.token, "sendChatAction", {"chat_id": chat, "action": "typing"})
         except Exception:
             pass
+
+
+class Listener:
+    """Telegram's messages, on a thread of its own (long polling), each to deliver(update)."""
+
+    def __init__(self, link, deliver, on_status=None):
+        self.link, self.deliver = link, deliver
+        self.stopping = threading.Event()
+        self.thread = threading.Thread(target=link.poll, args=(deliver, self.stopping), name="soulsong-telegram",
+                                       daemon=True)
+
+    def start(self):
+        self.thread.start()
+
+    def stop(self):
+        self.stopping.set()
+
+    def alive(self):
+        return self.thread.is_alive() and not self.stopping.is_set()
+
+
+# ---- the Telegram window's words ----
+def waiting_text(link, code):
+    name = link.bot["username"]
+    return (f"Linked to <b>@{name}</b>. Now open it in Telegram (t.me/{name}), press Start, and send it this code to "
+            f"link your account: <b>{code}</b>")
+
+
+def linked_text(link):
+    return f"Linked to <b>@{link.bot['username']}</b> - {link.owner['name']}'s account."
+
+
+def invite_text(link, name, code):
+    return (f"Give {name} this code: {code}\n\nThey open @{link.bot['username']} in Telegram, press Start and send "
+            "it. It works once, for a week. They'll be told it's an AI, and that you can read the conversation.")

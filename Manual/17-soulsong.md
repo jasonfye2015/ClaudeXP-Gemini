@@ -182,6 +182,31 @@ Only one Soul and Song can listen to a bot at a time, so don't run it on its own
 token and who's linked are kept in `Companions\telegram.json`. Chats with a bot aren't end-to-end encrypted:
 Telegram's servers carry them, as with its ordinary chats.
 
+## On Discord
+
+**Discord...** in the top bar does the same on Discord, with a bot called **Soul and Song**: your Companion answers
+there, you link your account with a code, you can invite people, pictures go both ways, and it can write to you
+first. Discord marks the bot as an app, and Soul and Song sets its description to say it's an AI. Telegram and
+Discord can both be linked: your Companion answers wherever you write, writes first to wherever you last wrote from,
+and it's one conversation either way.
+
+Setting it up, once (**How to connect...** in the Discord window shows these steps too):
+
+1. In your browser, open Discord's **Developer Portal** (`discord.com/developers/applications`) and sign in.
+2. **New Application**: name it **Soul and Song**, agree to the terms, **Create**.
+3. **Bot** (on the left): **Reset Token**, then **Copy**. Keep the token to yourself.
+4. In Soul and Song, click **Discord...**, paste the token and click **Link**.
+5. Discord only lets you message a bot you share a server with: **Add it to a server...** opens Discord's page;
+   pick a server you're in (a private one of your own is fine) and click **Authorize**.
+6. In Discord, find **Soul and Song** in that server's member list and send it the six-figure code, in a direct
+   message.
+
+How it differs from Telegram: it stays connected while Soul and Song runs, and reads back what you sent while it
+was closed; the people you invite need to share a server with it; it answers only direct messages; for it to write
+to you first, your privacy settings for that server must let its members message you; and long replies come in
+pieces of up to 2,000 characters. Its token and who's linked are kept in `Companions\discord.json`. Direct messages
+on Discord aren't end-to-end encrypted.
+
 ## Where it keeps things
 
 ```
@@ -201,6 +226,7 @@ Local Storage\Projects\AI LLM Txt Files\
     │   └── Archive\              the banks before each distillation
     ├── Scripts\                  your own guided sessions, and the ones the Companions write
     ├── telegram.json             the Telegram bot's token (a secret) and who's linked to it
+    ├── discord.json              the same for the Discord bot
     └── Deleted\                  Delete Companion... moves a Companion here; move it back to bring them back
 ```
 

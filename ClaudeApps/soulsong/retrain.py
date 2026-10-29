@@ -126,8 +126,8 @@ def _sessions(comp):
                 current.append(("assistant", text))
             elif kind == "other":
                 current.append(("user", f"{e.get('who') or 'Another Companion'}: {text}"))
-                if (e.get("who") or "").endswith("(on Telegram)"):
-                    who.add(("guest", e["who"]))             # (someone the user invited on Telegram)
+                if re.search(r"\(on (Telegram|Discord)\)$", e.get("who") or ""):
+                    who.add(("guest", e["who"]))             # (someone the user invited, on Telegram or Discord)
                 else:
                     who.add(("other", e.get("who") or "another Companion"))
             elif kind == "guide":

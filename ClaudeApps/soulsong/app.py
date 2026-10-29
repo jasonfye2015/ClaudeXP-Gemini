@@ -10,8 +10,8 @@ from pathlib import Path
 import math
 
 from PySide6.QtCore import QDateTime, QObject, QPointF, QRectF, Qt, QTimer, QUrl, Signal
-from PySide6.QtGui import (QColor, QFont, QImage, QImageReader, QKeyEvent, QLinearGradient, QPainter, QPen,
-                           QPixmap)
+from PySide6.QtGui import (QColor, QDesktopServices, QFont, QImage, QImageReader, QKeyEvent, QLinearGradient,
+                           QPainter, QPen, QPixmap)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, QDialog, QDialogButtonBox,
                                QDoubleSpinBox, QFileDialog, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
                                QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMenu, QMessageBox,
@@ -373,15 +373,13 @@ class SoulAndSong(QWidget):
         self.lane = Lane(self.brain, on_active=self._active)        # (the open Companion's turn on its model)
         self.hand = self.lane.handle(BLUE, lambda: self.comp.name if self.comp else "")
         self.later = Background(self)        # (free time's reading: the web, away from the window)
-        import threading
-        self.tg = None                       # Telegram (telegram.py): the bot, and who's linked
-        self._tg_stop = threading.Event()
-        self._tg_thread = None
-        self._tg_waiting = []                # (messages that came before the model was ready)
-        self._tg_line, self._tg_fetching = [], False     # (messages in the order they came: a picture fetched first)
+        self.links, self.listeners = {}, {}  # Telegram and Discord: the bots and who's linked; what's listening
+        self._msg_waiting = []               # (messages that came before the model was ready)
+        self._msg_line, self._msg_fetching = [], False   # (messages in the order they came: a picture fetched first)
+        self._msg_refresh = {}               # (an open Telegram or Discord window's refresh)
         self._tray = None
         self._quitting = False
-        QTimer.singleShot(400, self._tg_start)
+        QTimer.singleShot(400, self._msg_start)
         self.comp2 = None                    # Interlink: a second Companion, red
         self.brain2 = self.lane2 = self.hand2 = None
         self.comp2_ready = False
@@ -399,7 +397,10 @@ class SoulAndSong(QWidget):
         delete.clicked.connect(self.delete_companion)
         telegram_btn = QPushButton("Telegram...")
         telegram_btn.setToolTip("Talk with your Companion from your phone, through a Telegram bot of your own")
-        telegram_btn.clicked.connect(self._tg_dialog)
+        telegram_btn.clicked.connect(lambda: self._msg_dialog("telegram"))
+        discord_btn = QPushButton("Discord...")
+        discord_btn.setToolTip("Talk with your Companion on Discord, through a bot of your own")
+        discord_btn.clicked.connect(lambda: self._msg_dialog("discord"))
         self.state = QLabel()
         # the guided session, in sight from any tab (a click goes to the Automation tab)
         self.top_auto = QLabel()
@@ -415,6 +416,7 @@ class SoulAndSong(QWidget):
         top.addWidget(new)
         top.addWidget(delete)
         top.addWidget(telegram_btn)
+        top.addWidget(discord_btn)
         top.addSpacing(10)
         top.addWidget(self.top_auto)
         top.addWidget(self.top_bar)
@@ -1798,135 +1800,171 @@ class SoulAndSong(QWidget):
         self.user_edits = []
         return w
 
-    # ---- Telegram (telegram.py) ------------------------------------------------------------------------------------
-    def _tg_start(self):
-        """The bot (if one is linked), and its listener - messages are passed back to the window's thread."""
-        import threading
-        from . import telegram
-        if self.tg is None:
-            self.tg = telegram.Link(companions())
-        alive = self._tg_thread is not None and self._tg_thread.is_alive() and not self._tg_stop.is_set()
-        if self.tg.ready() and not alive:
-            self._tg_stop = threading.Event()          # (its own: one stopped a moment ago may still be finishing)
+    # ---- Telegram and Discord (telegram.py, discordlink.py) ----------------------------------------------------------
+    MESSENGERS = ("telegram", "discord")
 
-            def deliver(update):
-                self.later.back.emit(lambda: self._tg_update(update))
-            self._tg_thread = threading.Thread(target=self.tg.poll, args=(deliver, self._tg_stop),
-                                               name="soulsong-telegram", daemon=True)
-            self._tg_thread.start()
-        self._tg_wire(announce=True)
+    @staticmethod
+    def _messenger(which):
+        """A messenger's module: its Link and Listener, and its words."""
+        from . import discordlink, telegram
+        return {"telegram": telegram, "discord": discordlink}[which]
 
-    def _tg_wire(self, announce=False):
-        """The open Companion may write first once the user's linked; a new Companion is announced there."""
-        c, tg = self.comp, self.tg
+    def _link(self, which):
+        if self.links.get(which) is None:
+            self.links[which] = self._messenger(which).Link(companions())
+        return self.links[which]
+
+    def _linked(self, which):
+        link = self.links.get(which)
+        return link is not None and link.ready() and bool(link.owner)
+
+    def _listening(self, which):
+        listener = self.listeners.get(which)
+        return listener is not None and listener.alive()
+
+    def _msg_start(self, which=None):
+        """The bots that are set up, listening - what they hear is passed back to the window's thread."""
+        for w in [which] if which else self.MESSENGERS:
+            link = self._link(w)
+            if link.ready() and not self._listening(w):
+                listener = self._messenger(w).Listener(
+                    link, lambda raw, w=w: self.later.back.emit(lambda: self._msg_update(w, raw)),
+                    on_status=lambda text: self.later.back.emit(lambda: self._line("system", text)))
+                self.listeners[w] = listener
+                listener.start()
+        self._msg_wire(announce=True)
+
+    def _msg_stop(self, which):
+        listener = self.listeners.pop(which, None)
+        if listener is not None:
+            listener.stop()
+
+    def _msg_wire(self, announce=False):
+        """The open Companion may write first once the user's linked somewhere; a new Companion is announced."""
+        c = self.comp
         if c is None:
             return
-        linked = tg is not None and tg.ready() and bool(tg.owner)
-        c.reach = self._tg_reach if linked else None
-        if announce and linked:
-            last = tg.data.get("last_companion")
-            if last and last != c.name:
-                self._tg_send(tg.owner["chat"], f"(You're talking with {c.name} now.)")
-            if last != c.name:
-                tg.data["last_companion"] = c.name
-                tg.save()
+        linked = [w for w in self.MESSENGERS if self._linked(w)]
+        c.reach = self._reach if linked else None
+        c.reach_where = lambda: self._messenger(self._reach_to() or "telegram").NAME
+        if announce:
+            for w in linked:
+                link = self.links[w]
+                last = link.data.get("last_companion")
+                if last and last != c.name:
+                    self._msg_send(w, link.owner["chat"], f"(You're talking with {c.name} now.)")
+                if last != c.name:
+                    link.data["last_companion"] = c.name
+                    link.save()
 
-    def _tg_send(self, chat, text):
-        tg = self.tg
-        self.later.run(lambda: tg.send(chat, text), lambda _r: None)
+    def _reach_to(self):
+        """Where writing first goes: where the user last wrote from, or the first one linked."""
+        linked = [w for w in self.MESSENGERS if self._linked(w)]
+        last = self.comp.cfg.get("messenger") if self.comp is not None else None
+        return last if last in linked else (linked[0] if linked else None)
 
-    def _tg_reach(self, text):
-        if not (self.tg and self.tg.owner):
-            raise RuntimeError("Telegram isn't linked")
-        self._tg_send(self.tg.owner["chat"], text)
+    def _reach(self, text):
+        which = self._reach_to()
+        if which is None:
+            raise RuntimeError("neither Telegram nor Discord is linked")
+        self._msg_send(which, self.links[which].owner["chat"], text)
 
-    def _tg_update(self, update):
-        """One message from Telegram: who it's from decides what happens."""
-        from . import telegram
-        info = self.tg.classify(update) if self.tg else None
+    def _msg_send(self, which, chat, text):
+        link = self.links[which]
+        self.later.run(lambda: link.send(chat, text), lambda _r: None)
+
+    def _msg_update(self, which, raw):
+        """One message from Telegram or Discord: who it's from decides what happens."""
+        mod, link = self._messenger(which), self.links.get(which)
+        info = link.classify(raw) if link is not None else None
         if not info:
             return
         kind, chat, c = info["kind"], info["chat"], self.comp
         who = c.name if c is not None else "Soul and Song"
         if kind == "stranger":
-            self._tg_send(chat, telegram.PRIVATE)
+            self._msg_send(which, chat, mod.PRIVATE)
             return
         if kind == "linked":
-            self._tg_send(chat, telegram.LINKED.format(companion=who))
-            self._line("system", f"Telegram is linked: {info['name']} can talk with {who} there.")
-            self._tg_wire(announce=True)
-            self._tg_refresh()
+            self._msg_send(which, chat, mod.LINKED.format(companion=who))
+            self._line("system", f"{mod.NAME} is linked: {info['name']} can talk with {who} there.")
+            self._msg_wire(announce=True)
+            self._msg_refresh.get(which, lambda: None)()
             return
         if kind == "invited":
-            owner = c.user if c is not None else (self.tg.owner or {}).get("name", "its owner")
-            self._tg_send(chat, telegram.WELCOME.format(name=info["name"], companion=who, owner=owner))
-            self._line("system", f"{info['name']} accepted your Telegram invitation.")
-            self._tg_refresh()
+            owner = c.user if c is not None else (link.owner or {}).get("name", "its owner")
+            self._msg_send(which, chat, mod.WELCOME.format(name=info["name"], companion=who, owner=owner))
+            self._line("system", f"{info['name']} accepted your {mod.NAME} invitation.")
+            self._msg_refresh.get(which, lambda: None)()
             return
         if c is None:
-            self._tg_send(chat, "(No Companion is open in Soul and Song just now.)")
+            self._msg_send(which, chat, "(No Companion is open in Soul and Song just now.)")
             return
         if not self.brain.engine.ready:
-            self._tg_waiting.append(info)              # (answered once the model's loaded: _ready)
+            self._msg_waiting.append((which, info))      # (answered once the model's loaded: _ready)
             return
-        self._tg_talk(info)
+        self._msg_talk(which, info)
 
-    def _tg_talk(self, info):
+    def _msg_talk(self, which, info):
         """A message for the open Companion: they go to it in the order they came, a picture fetched first."""
-        self._tg_line.append(info)
-        self._tg_next()
+        self._msg_line.append((which, info))
+        self._msg_next()
 
-    def _tg_next(self):
-        from . import telegram
-        while self._tg_line and not self._tg_fetching:
-            info = self._tg_line.pop(0)
+    def _msg_next(self):
+        while self._msg_line and not self._msg_fetching:
+            which, info = self._msg_line.pop(0)
+            mod, link = self._messenger(which), self.links.get(which)
+            if link is None:
+                continue
             if info.get("other") and not info["text"] and not info.get("picture"):
-                self._tg_send(info["chat"], telegram.CANT.format(what=info["other"]))
+                self._msg_send(which, info["chat"], mod.CANT.format(what=info["other"]))
                 continue
             if not info.get("picture"):
-                self._tg_say(info, None)
+                self._msg_say(which, info, None)
                 continue
-            self._tg_fetching = True
-            tg, c, file_id = self.tg, self.comp, info["picture"]["file_id"]
+            self._msg_fetching = True
+            c, picture = self.comp, info["picture"]
 
-            def got(data, info=info, c=c):
-                self._tg_fetching = False
-                path = self._keep_picture(c, data, "Telegram") if data and c is self.comp else None
+            def got(data, which=which, info=info, c=c, source=mod.NAME):
+                self._msg_fetching = False
+                path = self._keep_picture(c, data, source) if data and c is self.comp else None
                 if path is None and not info["text"]:
-                    self._tg_send(info["chat"], "(The picture didn't come through - try sending it again.)")
+                    self._msg_send(which, info["chat"], "(The picture didn't come through - try sending it again.)")
                 else:
                     if path is None:
                         c.notice("A picture came with the next message, but it didn't come through.")
-                    self._tg_say(info, path)
-                self._tg_next()
-            self.later.run(lambda: tg.download(file_id), got)
+                    self._msg_say(which, info, path)
+                self._msg_next()
+            self.later.run(lambda link=link, picture=picture: link.download(picture), got)
 
-    def _tg_say(self, info, picture):
-        """The user, or someone they invited, talking with the open Companion - its reply goes back to Telegram."""
-        c, chat, tg = self.comp, info["chat"], self.tg
+    def _msg_say(self, which, info, picture):
+        """The user, or someone they invited, talking with the open Companion - its reply goes back where the
+        message came from."""
+        c, chat, link, name = self.comp, info["chat"], self.links[which], self._messenger(which).NAME
         if c is None:
             return
-        self.later.run(lambda: tg.typing(chat), lambda _r: None)
+        self.later.run(lambda: link.typing(chat), lambda _r: None)
         minutes = (time.time() - (info.get("date") or time.time())) / 60
 
         def reply(text):
-            self._tg_send(chat, text or f"({c.name} couldn't answer just now - their model isn't ready. "
-                                        "They'll be here when Soul and Song is.)")
+            self._msg_send(which, chat, text or f"({c.name} couldn't answer just now - their model isn't ready. "
+                                                "They'll be here when Soul and Song is.)")
         if minutes > 10:
             ago = f"{round(minutes)} minutes" if minutes < 90 else C.gap_text(minutes / 60)
             c.notice(f"This message was sent {ago} ago, while Soul and Song was closed.")
         if info["kind"] == "owner":
-            if c.cfg.get("channel") != "telegram":
-                c.notice(f"{c.user} is writing to you on Telegram, from their phone - your replies go there.")
-                c.cfg["channel"] = "telegram"
+            if c.cfg.get("channel") != which:
+                c.notice(f"{c.user} is writing to you on {name}, away from Soul and Song's window - your replies go "
+                         "there.")
+                c.cfg["channel"] = which
+            c.cfg["messenger"] = which
             c.say(info["text"], then=reply, picture=picture)
         else:
             met = c.cfg.setdefault("guests_met", [])
             if info["user"] not in met:
-                c.notice(f"{info['name']}, someone {c.user} invited, is writing to you on Telegram. They know you're "
+                c.notice(f"{info['name']}, someone {c.user} invited, is writing to you on {name}. They know you're "
                          f"an AI, and that {c.user} can read your conversation.")
                 met.append(info["user"])
-            who = f"{info['name']} (on Telegram)"
+            who = f"{info['name']} (on {name})"
             if picture is not None:
                 self._picture_line(c, picture, "guest", info["text"], who=who)
             else:
@@ -1934,29 +1972,34 @@ class SoulAndSong(QWidget):
                 self.chat.verticalScrollBar().setValue(self.chat.verticalScrollBar().maximum())
             c.hear(info["text"], speaker=who, respond=True, then=reply, picture=picture)
 
-    def _tg_dialog(self):
-        from . import telegram
-        if self.tg is None:
-            self.tg = telegram.Link(companions())
+    def _msg_dialog(self, which):
+        """Telegram... or Discord...: the bot, who's linked, the people invited, and how the Companion may use it."""
+        mod, link = self._messenger(which), self._link(which)
+        name = mod.NAME
         d = QDialog(self)
-        d.setWindowTitle("Soul and Song on Telegram")
+        d.setWindowTitle(f"Soul and Song on {name}")
         d.setMinimumWidth(560)
         v = QVBoxLayout(d)
-        intro = QLabel("Talk with your Companion from your phone, through a Telegram bot of your own - make it with "
-                       "Telegram's <b>@BotFather</b> (<b>How to connect...</b> below walks you through it), name it "
-                       "<b>Soul and Song</b>, and paste the token it gives you here. The bot says it's an AI, in its "
-                       "description and to anyone who writes.")
+        intro = QLabel(mod.INTRO)
         intro.setWordWrap(True)
         v.addWidget(intro)
         row = QHBoxLayout()
         token = QLineEdit()
         token.setEchoMode(QLineEdit.Password)
-        token.setPlaceholderText("The bot's token, from @BotFather (keep it secret)")
-        link = QPushButton("Link")
+        token.setPlaceholderText(mod.TOKEN_HINT)
+        connect = QPushButton("Link")
         unlink = QPushButton("Unlink")
         row.addWidget(token, 1)
-        row.addWidget(link)
-        row.addWidget(unlink, 0, Qt.AlignRight)
+        row.addWidget(connect)
+        row.addStretch()                                 # (linked: the buttons on the right)
+        add = None
+        if hasattr(link, "invite_url"):                  # (Discord: a bot is messaged by people it shares a server with)
+            add = QPushButton("Add it to a server...")
+            add.setToolTip("Discord only lets you message a bot you share a server with: this opens Discord's page "
+                           "for adding it to one of yours")
+            add.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(link.invite_url())))
+            row.addWidget(add)
+        row.addWidget(unlink)
         v.addLayout(row)
         state = QLabel()
         state.setWordWrap(True)
@@ -1977,6 +2020,7 @@ class SoulAndSong(QWidget):
         v.addWidget(box)
         c = self.comp
         first = QCheckBox(f"{c.name if c else 'They'} may write to me first (after free time or a dream)")
+        first.setToolTip("On Telegram or Discord - wherever you last wrote from. The same for both.")
         per_day = QSpinBox()
         per_day.setRange(1, 6)
         per_day.setSuffix(" a day at most")
@@ -1993,8 +2037,8 @@ class SoulAndSong(QWidget):
         row.addStretch(1)
         guests_out = QCheckBox("Leave conversations with people I invite out of their retraining")
         background = QCheckBox("On its own (the launcher's APPS), keep listening when the window is closed")
-        background.setToolTip("Closing the window leaves an icon in the notification area: click it to open Soul and "
-                              "Song again, or right-click it to stop listening and quit")
+        background.setToolTip("Closing the window leaves an icon in the notification area: click it (or start Soul and "
+                              "Song again) to open it, or right-click it to stop listening and quit")
         for w_ in (first, guests_out, background):
             v.addWidget(w_)
             if w_ is first:
@@ -2005,10 +2049,10 @@ class SoulAndSong(QWidget):
             q_from.setValue(int(c.cfg.get("quiet_from", 22)))
             q_to.setValue(int(c.cfg.get("quiet_to", 8)))
             guests_out.setChecked(not c.cfg.get("retrain_guests"))
-        background.setChecked(bool(self.tg.data.get("background", True)))
+        background.setChecked(bool(link.data.get("background", True)))
         how = QPushButton("How to connect...")
-        how.setToolTip("The setup, step by step: making the bot with @BotFather, and linking it here")
-        how.clicked.connect(lambda: self._tg_how(d))
+        how.setToolTip(mod.HOW_HINT)
+        how.clicked.connect(lambda: self._msg_how(which, d))
         close = QPushButton("Close")
         bottom = QHBoxLayout()
         bottom.addWidget(how)
@@ -2017,64 +2061,58 @@ class SoulAndSong(QWidget):
         v.addLayout(bottom)
 
         def refresh():
-            tg = self.tg
-            ready = tg.ready()
+            ready = link.ready()
             token.setVisible(not ready)
-            link.setVisible(not ready)
+            connect.setVisible(not ready)
             unlink.setVisible(ready)
+            if add is not None:
+                add.setVisible(ready)
             guests.clear()
-            for g in tg.data["guests"]:
+            for g in link.data["guests"]:
                 item = QListWidgetItem(g["name"])
                 item.setData(Qt.UserRole, g["id"])
                 guests.addItem(item)
-            box.setEnabled(ready and bool(tg.owner))
+            box.setEnabled(ready and bool(link.owner))
             if not ready:
                 state.setText("Not linked yet.")
-            elif not tg.owner:
-                code = next((k for k, x in tg.data["codes"].items() if x["for"] == "owner"), None) or tg.code("owner")
-                state.setText(f"Linked to <b>@{tg.bot['username']}</b>. Now open it in Telegram (t.me/"
-                              f"{tg.bot['username']}), press Start, and send it this code to link your account: "
-                              f"<b>{code}</b>")
+            elif not link.owner:
+                code = next((k for k, x in link.data["codes"].items() if x["for"] == "owner"), None) \
+                    or link.code("owner")
+                state.setText(mod.waiting_text(link, code))
             else:
-                state.setText(f"Linked to <b>@{tg.bot['username']}</b> - {tg.owner['name']}'s account. "
-                              + ("Listening." if self._tg_thread is not None and self._tg_thread.is_alive() else ""))
-        self._tg_refresh = refresh
+                state.setText(mod.linked_text(link) + (" Listening." if self._listening(which) else ""))
+        self._msg_refresh[which] = refresh
 
         def do_link():
             try:
-                name = self.tg.connect(token.text())
+                bot = link.connect(token.text())
             except Exception as e:
-                QMessageBox.warning(d, "Telegram", f"Telegram didn't accept that token: {e}")
+                QMessageBox.warning(d, name, f"{name} didn't accept that token: {e}")
                 return
             token.clear()
-            self._tg_start()
-            self._line("system", f"Soul and Song is listening on Telegram as @{name}.")
+            self._msg_start(which)
+            self._line("system", f"Soul and Song is listening on {name} as {bot}.")
             refresh()
 
         def do_unlink():
-            if QMessageBox.question(d, "Telegram", "Unlink the bot? Soul and Song forgets its token and everyone "
-                                                   "linked to it (the bot itself stays yours, in Telegram).") \
-                    != QMessageBox.Yes:
+            if QMessageBox.question(d, name, "Unlink the bot? Soul and Song forgets its token and everyone linked to "
+                                             f"it (the bot itself stays yours, in {name}).") != QMessageBox.Yes:
                 return
-            self._tg_stop.set()
-            self.tg.forget()
-            self._tg_wire()
+            self._msg_stop(which)
+            link.forget()
+            self._msg_wire()
             refresh()
 
         def do_invite():
-            name, ok = QInputDialog.getText(d, "Invite someone", "Their name (as your Companion will know them):")
-            if not ok or not name.strip():
-                return
-            code = self.tg.code("guest", name.strip())
-            QMessageBox.information(d, "Invite someone",
-                                    f"Give {name.strip()} this code: {code}\n\nThey open @{self.tg.bot['username']} in "
-                                    "Telegram, press Start and send it. It works once, for a week. They'll be told "
-                                    "it's an AI, and that you can read the conversation.")
+            who, ok = QInputDialog.getText(d, "Invite someone", "Their name (as your Companion will know them):")
+            if ok and who.strip():
+                QMessageBox.information(d, "Invite someone",
+                                        mod.invite_text(link, who.strip(), link.code("guest", who.strip())))
 
         def do_remove():
             item = guests.currentItem()
             if item is not None:
-                self.tg.remove_guest(item.data(Qt.UserRole))
+                link.remove_guest(item.data(Qt.UserRole))
                 refresh()
 
         def keep():
@@ -2083,32 +2121,30 @@ class SoulAndSong(QWidget):
                                      quiet_from=q_from.value(), quiet_to=q_to.value(),
                                      retrain_guests=not guests_out.isChecked())
                 self.comp.save()
-            self.tg.data["background"] = background.isChecked()
-            self.tg.save()
-        link.clicked.connect(do_link)
+            link.data["background"] = background.isChecked()
+            link.save()
+        connect.clicked.connect(do_link)
         unlink.clicked.connect(do_unlink)
         invite.clicked.connect(do_invite)
         remove.clicked.connect(do_remove)
         close.clicked.connect(d.accept)
-        d.finished.connect(lambda _r: (keep(), setattr(self, "_tg_refresh", lambda: None),
+        d.finished.connect(lambda _r: (keep(), self._msg_refresh.pop(which, None),
                                        getattr(d, "how", None) and d.how.close()))
         refresh()
         d.exec()
 
-    def _tg_refresh(self):
-        pass
-
-    def _tg_how(self, parent):
-        """The setup, step by step - beside the Telegram window (not in front of it), to follow along with."""
-        from . import telegram
+    def _msg_how(self, which, parent):
+        """The setup, step by step - beside the Telegram or Discord window (not in front of it), to follow along
+        with."""
+        mod = self._messenger(which)
         how = getattr(parent, "how", None)
         if how is None:
             how = parent.how = QDialog(parent)
-            how.setWindowTitle("How to connect Soul and Song to Telegram")
-            how.resize(560, 410)
+            how.setWindowTitle(f"How to connect Soul and Song to {mod.NAME}")
+            how.resize(560, 470 if which == "discord" else 410)
             v = QVBoxLayout(how)
             text = QTextBrowser()
-            text.setHtml(telegram.SETUP)
+            text.setHtml(mod.SETUP)
             v.addWidget(text)
             close = QPushButton("Close")
             close.clicked.connect(how.close)
@@ -2122,10 +2158,12 @@ class SoulAndSong(QWidget):
 
     # ---- on its own: listening on, from the notification area ----
     def _keep_listening(self):
-        tg = self.tg
-        return (not self._quitting and tg is not None and tg.ready() and bool(tg.owner)
-                and tg.data.get("background", True) and not self._inside_computer()
-                and QSystemTrayIcon.isSystemTrayAvailable())
+        if self._quitting or self._inside_computer() or not QSystemTrayIcon.isSystemTrayAvailable():
+            return False
+        return any(self._linked(w) and self.links[w].data.get("background", True) for w in self.MESSENGERS)
+
+    def _listening_on(self):
+        return " and ".join(self._messenger(w).NAME for w in self.MESSENGERS if self._linked(w)) or "Telegram"
 
     def closeEvent(self, event):
         if self._keep_listening():
@@ -2148,14 +2186,14 @@ class SoulAndSong(QWidget):
             self._tray.activated.connect(lambda reason: self._tray_open()
                                          if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick) else None)
         self._tray.setToolTip(f"Soul and Song - {self.comp.name if self.comp else 'no Companion'} is listening on "
-                              "Telegram")
+                              f"{self._listening_on()}")
         QApplication.instance().setQuitOnLastWindowClosed(False)    # (a dialog closing now isn't the end)
         self._tray.show()
         if not getattr(self, "_tray_told", False):
             self._tray_told = True
             self._tray.showMessage("Soul and Song is still listening",
-                                   "Your Companion keeps answering on Telegram. Click this icon - or start Soul and "
-                                   "Song again - to open it; right-click it to stop listening and quit.")
+                                   f"Your Companion keeps answering on {self._listening_on()}. Click this icon - or "
+                                   "start Soul and Song again - to open it; right-click it to stop listening and quit.")
 
     def show_again(self):
         """Started again (from the launcher's APPS, or anywhere): the window comes back - out of the notification
@@ -2728,12 +2766,12 @@ class SoulAndSong(QWidget):
         self.comp.on_memory_day = self._retrain_after_memory_day
         self.comp.on_picture = lambda path, kind, text, c=self.comp: self._picture_line(c, path, kind, text)
         self.comp.can_see = lambda: self._sees(self.brain)
-        self._tg_wire(announce=True)
+        self._msg_wire(announce=True)
         self.chat.clear()
         for m in self.comp.history[-60:]:
             if m["role"] == "user":
                 who = m.get("from") or self.comp.cfg.get("user_name") or "You"
-                kind = "guest" if who.endswith("(on Telegram)") else "user"
+                kind = "guest" if re.search(r"\(on (Telegram|Discord)\)$", who) else "user"
             else:
                 who, kind = self.comp.name, "companion"
             path = self.comp.folder / m["picture"] if m.get("picture") else None
@@ -2814,12 +2852,13 @@ class SoulAndSong(QWidget):
                 and self.brain.engine.model.key == self.comp.cfg.get("model"):
             self._substrate(self.brain.engine.model)
             self.comp.start()
-        waiting, self._tg_waiting = self._tg_waiting, []
-        for info in waiting:                           # (Telegram messages that came while it was loading)
+        waiting, self._msg_waiting = self._msg_waiting, []
+        for which, info in waiting:                    # (Telegram and Discord messages that came while it loaded)
             if ok and self.comp is not None and self.brain.engine.ready:
-                self._tg_talk(info)
+                self._msg_talk(which, info)
             else:
-                self._tg_send(info["chat"], "(Soul and Song couldn't load its model just now - try again later.)")
+                self._msg_send(which, info["chat"], "(Soul and Song couldn't load its model just now - try again "
+                                                    "later.)")
         self.refresh_panel()
 
     def _substrate(self, model):
@@ -2856,7 +2895,7 @@ class SoulAndSong(QWidget):
             self._line("system", "In an Interlink only words go - the picture waits here for after.")
             return
         self.composer.clear()
-        if self.comp.cfg.get("channel") == "telegram":
+        if self.comp.cfg.get("channel") in self.MESSENGERS:
             self.comp.notice(f"{self.comp.user} is back at the computer, in Soul and Song's window.")
             self.comp.cfg["channel"] = "window"
         if interlink:
@@ -3327,7 +3366,8 @@ class SoulAndSong(QWidget):
             os.startfile(str(self.comp.folder)) if hasattr(os, "startfile") else None
 
     def shutdown(self):
-        self._tg_stop.set()
+        for which in list(self.listeners):
+            self._msg_stop(which)
         if self._tray is not None:
             self._tray.hide()
         self.ticker.stop()
