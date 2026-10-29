@@ -74,6 +74,7 @@ CM.UI = class {
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
+  <div class="small" id="set-storage"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><p class="small">Change sets a key: press the one you want. Esc and the arrows stay as they are.</p><table class="keys"></table><div class="end"><button id="btn-keys-reset">Reset</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-credits"><div class="box"><h2>Credits</h2><div id="credits"></div><div class="end"><button class="close">Close</button></div></div></div>
@@ -275,7 +276,7 @@ CM.UI = class {
   }
 
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
-  openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); }
+  openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); if (sel === "#dlg-settings") this.showStorage(); }
   closeDialogs() {
     const ending = this.$("#dlg-over").classList.contains("on");
     for (const d of this.root.querySelectorAll(".dialog.on")) d.classList.remove("on");
@@ -519,12 +520,12 @@ CM.UI = class {
     const can = g.canContinue();
     this.$("#btn-continue").disabled = !can;
     this.$("#continue-note").textContent = can
-      ? `Slot ${g.slot}: floor ${g.lastRun.floor.number}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}${g.lastRun.difficulty && g.lastRun.difficulty !== "fair" ? ", " + CM.DIFFICULTIES[g.lastRun.difficulty].name : ""}${g.lastRun.endless ? ", Endless" : ""}`
+      ? `Slot ${g.slot}: floor ${CM.runFloor(g.lastRun)}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}${g.lastRun.difficulty && g.lastRun.difficulty !== "fair" ? ", " + CM.DIFFICULTIES[g.lastRun.difficulty].name : ""}${g.lastRun.endless ? ", Endless" : ""}`
       : `Slot ${g.slot} is empty: no expedition is under way there.`;
     for (const b of this.root.querySelectorAll("#slots-row button[data-slot]")) {
       const n = Number(b.dataset.slot), r = (g.runs || [])[n - 1];
       b.classList.toggle("on", n === g.slot);
-      b.textContent = `${n}: ${r && r.floor ? `floor ${r.floor.number}` : "empty"}`;
+      b.textContent = `${n}: ${r && r.floor ? `floor ${CM.runFloor(r)}` : "empty"}`;
       b.title = r && r.floor ? `${r.gold.toLocaleString()} gold${r.saved ? ", saved " + new Date(r.saved).toLocaleString() : ""}` : "An empty slot for a new expedition";
     }
     const title = CM.titleFor(g.achievements), got = Object.keys(CM.ACHIEVEMENTS).filter((id) => g.achievements[id]);
@@ -582,6 +583,11 @@ CM.UI = class {
   esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
   // ---- settings ----
+  // how much of the browser's keeping the game uses: the runs are small now, but a browser gives a site about 5 MB in all
+  showStorage() {
+    const used = CM.store.used(), kb = Math.round(used / 1024);
+    this.$("#set-storage").textContent = `Saved in this browser: ${kb < 1 ? "under 1" : kb.toLocaleString()} KB (runs, the Hall of Fame, settings).${used > 3.5 * 1024 * 1024 ? " That is close to what a browser allows: Export your runs to keep them safe." : ""}  Claude and Magic v${CM.version}, built ${CM.built}.`;
+  }
   _settings() {
     const g = this.game, s = g.settings;
     const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");

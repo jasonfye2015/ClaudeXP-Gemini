@@ -9,7 +9,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "1.0"
+VERSION = "1.1"
 HERE = Path(__file__).resolve().parent
 SRC = HERE / "src"
 GAME = HERE / "game"
@@ -24,7 +24,18 @@ def build_text():
         scripts.append(f"// ---- {p.name} ----\n" + p.read_text(encoding="utf-8").strip() + "\n")
     html = html.replace("<!-- @css -->", "<style>\n" + css.strip() + "\n</style>")
     html = html.replace("<!-- @js -->", "<script>\n" + "\n".join(scripts) + "</script>")
-    return html.replace("__VERSION__", VERSION)
+    return html.replace("__VERSION__", VERSION).replace("__BUILT__", built_stamp())
+
+
+def built_stamp():
+    """The day the file was built (CM.built: the F3 overlay, Export and bug reports say which build they came from)."""
+    import datetime
+    return datetime.date.today().isoformat()
+
+
+def same_but_stamp(a, b):
+    """Two builds are the same if they differ only in the day they were built."""
+    return re.sub(r'built: "\d{4}-\d\d-\d\d"', 'built: ""', a) == re.sub(r'built: "\d{4}-\d\d-\d\d"', 'built: ""', b)
 
 
 def built_file():
@@ -44,7 +55,7 @@ def main(argv=None):
     out = GAME / NAME.format(VERSION)
     if "--check" in argv:
         have = built_file()
-        same = have is not None and have.name == out.name and have.read_text(encoding="utf-8") == text
+        same = have is not None and have.name == out.name and same_but_stamp(have.read_text(encoding="utf-8"), text)
         print("up to date" if same else "out of date: run  python build.py  in ClaudeGames/claudemagic")
         return 0 if same else 1
     GAME.mkdir(exist_ok=True)

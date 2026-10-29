@@ -1,0 +1,924 @@
+"use strict";
+// The fight: turn by turn in order of speed, the heroes' blows, spells and skills, the monsters' ways, the Lich King
+// and the guardians, ailments, and what a won fight brings.
+{
+const keyOf = CM.keyOf;
+Object.assign(CM.Game.prototype, {
+  // ---- fighting: turn by turn, in order of speed ----
+  // this.combat: { round, order [{hero | foe, init}], index, waiting (the hero whose turn it is), surprise (the party's
+  // free round), taunter / tauntUntil, bless, protect, reached (foes that have come at the party this round) }
+  startCombat(key, thing, theyCame = false) {
+    // the fight's dice come from the seed and where and when it begins: the same fight, fought the same way, goes the same way
+    this.rnd = new CM.Random(CM.hashSeed(`${this.seed}:fight:${this.floor ? this.floor.number : 0}:${(this.tally || {}).fights || 0}:${this.steps || 0}:${key}`));
+    this.foes = thing.group.map(CM.upgradeMonster);
+    if (this.has("hordes") && !thing.horded && this.foes.length && !this.foes[0].boss && !this.foes[0].guardian) {   // one more, of the first kind
+      thing.horded = true;
+      const kind = CM.monsterKind(this.foes[0].kind || this.foes[0].name);
+      if (kind) this.foes.push(CM.makeMonster(kind, CM.monsterLevel(this.floor ? this.floor.number : 1), this.rnd));
+    }
+    for (const m of this.foes) this.tune(m);
+    thing.group = this.foes;
+    this.fightFell = false;
+    this.foeKey = key;
+    delete thing.anim;
+    if (!(this.song && this.songEpic === this.floor.number)) this.song = 0;   // the Bard's song lasts the fight (an Epic one, the floor)
+    for (const h of this.party) { h.cried = false; h.winded = false; h.defending = false; h.guardedBy = null; h.guarding = null; h.used = {}; h.struck = false; }
+    for (const m of this.foes) { m.held = 0; m.asleep = 0; m.blind = 0; m.marked = false; m.charged = false; m.fled = false; m.dead = m.hp <= 0; }
+    this.target = 0;
+    this.combat = { foes: this.foes, round: 0, order: [], index: 0, waiting: null, surprise: false, taunter: null, tauntUntil: 0, bless: false, protect: false, reached: 0 };
+    this.setMode("combat");
+    this.count("fights");
+    this.sound(CM.roarFor((this.foes[0] || {}).kind || (this.foes[0] || {}).name));
+    const names = {};
+    for (const m of this.foes) names[m.name] = (names[m.name] || 0) + 1;
+    const who = Object.entries(names).map(([k, n]) => CM.plural(n, k)).join(", ");
+    const guardian = this.foes.find((m) => m.guardian);
+    if (this.foes.some((m) => m.boss)) this.say(`The Lich King rises from his throne. "You took your time," he says.${this.phylactery ? "" : " Somewhere, his heart beats."}`);
+    else if (guardian) this.say(CM.GUARDIANS[guardian.guardian].intro + (guardian.echo ? " It is not the thing itself: it is what the dark remembers of it, and the dark remembers it stronger." : "")
+      + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
+    else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
+    const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
+    if ((theyCame || this.inDark()) && !this.alive().some((h) => CM.trait(h, "slippery")) && this.rnd.chance(0.5)) {   // surprise: they're on you before you can draw...
+      this.say("They're on you before you can draw!");
+      for (const m of this.living()) this.monsterAct(m);
+      this.afterBlows();
+      if (this.mode !== "combat") return;
+    } else if (!theyCame && this.rnd.chance(sneaky ? 0.35 : 0.2)) {     // ...or you have the drop on them
+      this.say("You have the drop on them: a free round!");
+      this.combat.surprise = true;
+    }
+    this.beginRound();
+  },
+
+  // a fight begun some other way (the tests set the mode by hand) still gets its turns
+  ensureCombat() {
+    if (this.combat && this.combat.order && this.combat.foes === this.foes) return;
+    for (const h of this.party) { h.cried = false; h.winded = false; h.defending = false; h.guardedBy = null; h.guarding = null; h.used = h.used || {}; }
+    for (const m of this.foes) { CM.upgradeMonster(m); m.held = m.held || 0; m.asleep = m.asleep || 0; m.blind = m.blind || 0; }
+    this.target = 0;
+    this.combat = { foes: this.foes, round: 0, order: [], index: 0, waiting: null, surprise: false, taunter: null, tauntUntil: 0, bless: false, protect: false, reached: 0 };
+    this.beginRound();
+  },
+
+  alive() { return this.party.filter((m) => m.hp > 0); },
+  living() { return this.foes.filter((m) => m.hp > 0 && !m.fled); },
+  canAct(h) { const s = h.status || {}; return h.hp > 0 && !s.paralysis && !s.sleep && !s.stone; },   // standing, and not held by an ailment
+  targets() { return this.alive().filter((h) => !(h.status || {}).stone); },                           // what a monster can reach: stone isn't worth hitting
+
+  // the party's square: in a corridor, only two foes can come at them at once
+  reachLimit() {
+    const fl = this.floor;
+    return fl && CM.openNeighbours(fl, fl.pos[0], fl.pos[1]).length <= 2 ? 2 : 99;
+  },
+
+  // a round: everyone standing, in order of speed (the dice have a say); heroes win ties
+  beginRound() {
+    const c = this.combat;
+    c.round += 1;
+    c.reached = 0;
+    const order = [];
+    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger"].includes(h.cls) ? 2 : 0) + this.rnd.int(1, 6) + 0.5 });
+    if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
+    order.sort((a, b) => b.init - a.init);
+    c.order = order;
+    c.index = 0;
+    c.waiting = null;
+    this.emit("round", c.round);
+    this.advance();
+  },
+
+  // on through the order until a hero needs telling what to do, or the round is over
+  advance() {
+    const c = this.combat;
+    while (this.mode === "combat" && c) {
+      if (c.index >= c.order.length) {
+        this.endRound();
+        if (this.mode === "combat") this.beginRound();
+        return;
+      }
+      const slot = c.order[c.index++];
+      if (slot.hero) {
+        const h = slot.hero;
+        if (h.hp <= 0) continue;
+        h.defending = false;                                               // (a guard raised lasts until now)
+        if (h.guarding) { h.guarding.guardedBy = null; h.guarding = null; }
+        const st = h.status || {};
+        if (!this.canAct(h)) { if (!st.stone) this.say(`${h.name} is ${st.sleep ? "asleep" : "paralysed"} and can't act.`); continue; }
+        if (!this.living().length) continue;
+        c.waiting = h;
+        this.emit("turn", h);
+        this.emit("change");
+        return;
+      }
+      const m = slot.foe;
+      if (m.hp <= 0 || m.fled) continue;
+      this.monsterAct(m);
+      this.afterBlows();
+    }
+  },
+
+  // the round's end: poison bites, ailments run their course, trolls knit
+  endRound() {
+    const c = this.combat;
+    for (const h of this.alive()) {
+      const st = h.status || {};
+      if (st.poison) {
+        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05)));
+        h.hp = Math.max(1, h.hp - bite);
+        this.say(`${h.name} suffers from the poison (-${bite}).`);
+      }
+      for (const s of Object.keys(st)) {
+        if (st[s] >= 900) continue;
+        st[s]--;
+        if (st[s] <= 0) { delete st[s]; this.say(`${h.name} is no longer ${CM.STATUSES[s].name.toLowerCase()}.`); }
+      }
+    }
+    for (const m of this.living()) {
+      if (m.ability === "regen" && m.hp < m.max) {
+        const back = Math.max(1, Math.floor(m.max * 0.05));
+        m.hp = Math.min(m.max, m.hp + back);
+        this.say(`The ${m.name}'s wounds knit (+${back}).`);
+      }
+      if (CM.guardianHas(m, "regrow") && m.hp < m.max) {                 // (the Mind's flesh, the Root's sap)
+        const back = Math.max(1, Math.floor(m.max * 0.05));
+        m.hp = Math.min(m.max, m.hp + back);
+        this.say(`${CM.The(m)} regrows (+${back}).`);
+      }
+      if (m.burning > 0) {                                               // (an Inferno's fire)
+        m.burning -= 1;
+        this.spellHit(m, m.burnDmg || 5, `${CM.The(m)} burns:`, "fire");
+      }
+    }
+    for (const h of this.alive()) if (CM.trait(h, "wellspring") && h.mp < h.maxmp) h.mp = Math.min(h.maxmp, h.mp + 2);
+    if (this.alive().some((h) => CM.trait(h, "evergreen"))) for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 3);
+    c.surprise = false;
+    this.afterBlows();
+    this.emit("change");
+  },
+
+  // after blows are struck: the fallen, the Lich King's rising, victory or the end
+  afterBlows() {
+    for (const m of this.foes) if (m.hp <= 0 && !m.dead && !m.fled) { m.dead = true; this.emit("fx", { kind: "die", foe: m }); }
+    for (const h of this.party) h.hp = Math.max(0, h.hp);
+    if (this.mode !== "combat") return;
+    const lich = this.foes.find((m) => m.boss);
+    if (lich && lich.hp <= 0 && !this.phylactery) {
+      lich.hp = Math.floor(lich.max * CM.LICH.riseTo);
+      lich.dead = false;
+      lich.risen = (lich.risen || 0) + 1;
+      this.sound("lich");
+      this.say("The Lich King crumbles... and the bones knit again. Somewhere, his heart still beats.");
+      this.summonSkeletons(2);
+      this.emit("fx", { kind: "rise", foe: lich });
+    }
+    for (const m of this.foes) {
+      if (!CM.guardianHas(m, "rise") || m.hp > 0 || m.risen) continue;
+      m.hp = Math.floor(m.max / 3); m.dead = false; m.risen = 1;
+      this.sound("lich");
+      this.say(CM.GUARDIANS[m.guardian].riseText || `${CM.The(m)} rises again.`);
+      this.emit("fx", { kind: "rise", foe: m });
+    }
+    if (!this.living().length) { this.wonFight(); return; }
+    if (!this.alive().length || this.alive().every((h) => (h.status || {}).stone)) {
+      this.say(this.alive().length ? "The last of the party stands as stone, and the dark closes in..." : "The last of the party falls...");
+      this.endRun(false);
+    }
+  },
+
+  // the hero whose turn it is does something: fight (the chosen foe), cast {id, target}, item {row, who}, defend, run
+  act(action, arg) {
+    const c = this.combat, h = c && c.waiting;
+    if (!h || this.mode !== "combat") return false;
+    if (action === "fight") {
+      const t = this.foeAt(arg);
+      if (!t) return false;
+      this.strike(h, t);
+      if (CM.trait(h, "flurry") && t.hp > 0 && !t.fled) this.strike(h, t, " again", { mult: 0.5 });
+    } else if (action === "cast") {
+      const id = arg && arg.id !== undefined ? arg.id : this.defaultAbility(h);
+      if (!this.useAbility(h, id, arg && arg.target !== undefined ? arg.target : null)) return false;
+    } else if (action === "item") {
+      if (!this.useItemInBattle(h, arg)) return false;
+    } else if (action === "defend") {
+      h.defending = true;
+      this.say(`${h.name} raises a guard.`);
+    } else if (action === "run") {
+      if (this.flee(false)) return true;
+      this.say("You can't get away!");
+    } else {
+      return false;
+    }
+    if (this.mode !== "combat" || !this.combat) return true;
+    c.waiting = null;
+    this.afterBlows();
+    if (this.mode === "combat") this.advance();
+    return true;
+  },
+
+  // the chosen foe: an index among the living, a foe itself, or the one picked already (Tab, or a click)
+  foeAt(arg) {
+    const foes = this.living();
+    if (!foes.length) return null;
+    if (arg && typeof arg === "object") return foes.includes(arg) ? arg : foes[0];
+    const i = typeof arg === "number" ? arg : (this.target || 0);
+    return foes[Math.min(Math.max(0, i), foes.length - 1)];
+  },
+
+  setTarget(i) {
+    const n = this.living().length;
+    if (!n) return;
+    this.target = ((i % n) + n) % n;
+    this.emit("change");
+  },
+
+  // one of the party to cast on: an index, the hero itself, or the one who needs it most
+  allyAt(target, fallen) {
+    const pool = this.party.filter((p) => (fallen ? p.hp <= 0 : p.hp > 0));
+    if (!pool.length) return null;
+    if (target && typeof target === "object") return pool.includes(target) ? target : null;
+    if (typeof target === "number") return pool.includes(this.party[target]) ? this.party[target] : null;
+    return fallen ? pool[0] : pool.reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b));
+  },
+
+  // every hero does the one thing, with the foe and friend that need it most: the old game's round, kept for the tests
+  combatRound(action) {
+    if (this.mode !== "combat") return;
+    this.ensureCombat();
+    const round = this.combat.round;
+    let guard = 0;
+    while (this.mode === "combat" && this.combat && this.combat.round === round && this.combat.waiting && guard++ < 20) {
+      const ok = action === "potion" ? this.act("item", null) : this.act(action, null);
+      if (!ok && this.mode === "combat" && this.combat && this.combat.waiting) this.act("defend");
+    }
+  },
+
+  // running: more than half the time (a Rogue helps), and never from the Lich King; the party steps back a square
+  flee(sure) {
+    if (this.foes.some((m) => m.boss && m.hp > 0) && !sure) { this.say("There's no running from the Lich King."); return false; }
+    if (!sure && !this.alive().some((h) => CM.trait(h, "slippery")) && !this.rnd.chance(0.55 + (this.alive().some((h) => h.cls === "Rogue") ? 0.1 : 0))) return false;
+    const fl = this.floor;
+    for (let i = 0; i < (sure ? 2 : 1); i++) {                          // back the way you came, while the way is clear
+      const [dx, dy] = CM.DIRS[(fl.facing + 2) % 4], nx = fl.pos[0] + dx, ny = fl.pos[1] + dy, k = keyOf(nx, ny);
+      const f = fl.features[k];
+      if (!CM.passable(fl, nx, ny) || fl.things[k] || (f && ["pit", "trapdoor", "teleporter", "spinner"].includes(f.type))) break;
+      fl.pos = [nx, ny];
+      this.emit("moved", nx, ny);
+    }
+    const guardian = this.foes.find((m) => m.guardian && m.hp > 0);
+    if (guardian) {                                                      // it keeps its lair: it mends a little, and the swarm goes back into the walls
+      guardian.hp = Math.min(guardian.max, guardian.hp + Math.floor(guardian.max / 4));
+      const lairThing = this.floor.things[this.foeKey];
+      if (lairThing) lairThing.group = this.foes.filter((m) => !m.summoned);
+      this.say(`Behind you, ${CM.the(guardian)} settles back over the shaft to lick its wounds.`);
+    }
+    this.say(sure ? "The world folds, and the party is elsewhere." : "The party flees back the way it came!");
+    this.count("fled");
+    this.combat = null;
+    this.setMode("explore");
+    this.look();
+    this.saveRun();
+    return true;
+  },
+
+  damage(atk, power, df) {
+    return Math.max(1, atk + power + this.rnd.int(0, Math.max(1, Math.floor((atk + power) / 2))) - Math.floor(df / 2));
+  },
+
+  // a hero's numbers as they stand right now: a curse takes from them, the song and a blessing give
+  effective(h) {
+    const cursed = (h.status || {}).curse ? 2 : 0, bless = this.combat && this.combat.bless;
+    return { atk: Math.max(1, h.atk - cursed + (this.song === 2 ? 4 : this.song ? 2 : 0) + (bless ? 2 : 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0)) };
+  },
+  stat(h, s) { return CM.heroStat(h, s); },
+  hitChance(h) {
+    return CM.clamp(0.8 + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0), 0.25, 0.97);
+  },
+  critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01, 0.02, 0.6); },
+  resistChance(h) {
+    return CM.clamp((this.stat(h, "luck") - 10) * 0.02 + (this.stat(h, "wis") - 10) * 0.01 + ((h.boons || []).includes("thickblood") ? 0.2 : 0), 0, 0.6);
+  },
+  spellMod(h) { return this.stat(h, (CM.CLASSES[h.cls] || CM.CLASSES.Knight).key) - 10; },
+
+  // an ailment settles on a hero, unless they shrug it off; it lasts this many rounds (curses and stone, until lifted)
+  afflict(h, status, by) {
+    if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
+    const charm = CM.equipped(h).find((it) => it.props && it.props.resist === status && !it.unknown);
+    if (charm) { this.say(`${h.name}'s ${CM.baseName(charm)} grows warm: the ${status === "stone" ? "gaze" : "touch"} finds no purchase.`); return false; }
+    if (this.rnd.chance(this.resistChance(h))) { this.say(`${h.name} shrugs off ${CM.the(by)}'s ${status === "stone" ? "gaze" : "touch"}.`); return false; }
+    h.status = h.status || {};
+    let turns = { poison: 8, paralysis: 2, sleep: 3, blind: 4, curse: 999, stone: 999 }[status];
+    if (status === "poison" && by === CM.GUARDIANS.rat.name) turns = 12;
+    if (turns < 900 && (h.boons || []).includes("thickblood")) turns = Math.ceil(turns / 2);
+    h.status[status] = turns;
+    this.sound("ailment");
+    this.say(`${h.name} is ${CM.STATUSES[status].name.toLowerCase()}!`);
+    this.emit("fx", { kind: "ailment", hero: h, status });
+    return true;
+  },
+
+  cure(h, which) {                                                       // which: a list of ailments, or "all"
+    const cured = [];
+    for (const s of Object.keys(h.status || {})) if (which === "all" || which.includes(s)) { delete h.status[s]; cured.push(s); }
+    return cured;
+  },
+
+  // who a monster goes for: the Knight's taunt, else the front row (the Knight most of all) - unless it shoots
+  pickTarget(m) {
+    const pool = this.targets(), c = this.combat || {};
+    if (!pool.length) return null;
+    if (c.taunter && pool.includes(c.taunter) && c.round <= c.tauntUntil) return c.taunter;
+    if (m && m.ability === "ranged") return this.rnd.pick(pool);
+    const front = pool.some((h) => h.row === "front");
+    const weights = pool.map((h) => (front ? (h.row === "front" ? (h.cls === "Knight" ? 5 : 3) : 1) : 1));
+    let r = this.rnd.next() * weights.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r < 0) return pool[i]; }
+    return pool[pool.length - 1];
+  },
+
+  // a blow lands on a hero: a guard steps in, a raised guard halves it, the song and a prayer soften it
+  hurt(h, dmg, by, opts = {}) {
+    const c = this.combat || {};
+    if (h.guardedBy && h.guardedBy !== h && h.guardedBy.hp > 0 && this.canAct(h.guardedBy)) {
+      this.say(`${h.guardedBy.name} steps in front of ${h.name}!`);
+      if (CM.trait(h.guardedBy, "aegis")) dmg = Math.ceil(dmg / 2);
+      h = h.guardedBy;
+    }
+    if (h.defending) dmg = Math.ceil(dmg / 2);
+    if (this.song) dmg -= this.song;
+    if (c.protect) dmg -= 3;
+    dmg = Math.max(1, dmg);
+    h.hp -= dmg;
+    if ((h.status || {}).sleep) delete h.status.sleep;                   // (a blow wakes)
+    this.sound(h.hp <= 0 ? "fallen" : "hurt");
+    this.emit("fx", { kind: "hurt", hero: h, amount: dmg, foe: by });
+    this.say(`${CM.The(by)} hits ${h.name} for ${dmg}${opts.how || ""}.` + (h.hp <= 0 ? `  ${h.name} falls!` : ""));
+    if (h.hp <= 0) { this.fightFell = true; this.everFell = true; }
+    if (h.hp > 0) {
+      if (!opts.noTouch && by.touch && this.rnd.chance(by.touch.chance)) this.afflict(h, by.touch.status, by.name);
+      if ((h.boons || []).includes("secondwind") && !h.winded && h.hp < h.max / 4) {
+        h.winded = true;
+        const back = Math.floor(h.max / 3);
+        h.hp = Math.min(h.max, h.hp + back);
+        this.say(`${h.name} finds a second wind (+${back}).`);
+      }
+    }
+    return dmg;
+  },
+
+  // a monster's turn: what its kind does
+  monsterAct(m) {
+    const c = this.combat || {}, rnd = this.rnd;
+    if (m.asleep > 0) { m.asleep--; if (m.asleep === 0) this.say(`The ${m.name} stirs.`); return; }
+    if (m.held > 0) { m.held--; this.say(`The ${m.name} is held fast.`); return; }
+    if (m.boss) { this.lichAct(m); return; }
+    if (m.guardian) { this.guardianAct(m); return; }
+    if (m.ability !== "ranged" && m.ability !== "breath") {
+      c.reached = (c.reached || 0) + 1;
+      const limit = this.reachLimit();
+      if (c.reached > limit) { if (c.reached === limit + 1) this.say("The rest crowd behind, unable to reach you in the narrow way."); return; }
+    }
+    if (m.ability === "coward" && m.hp < m.max * 0.3) {
+      const purse = Math.floor(this.gold * 0.05);
+      this.gold -= purse;
+      m.fled = true;
+      this.say(`The ${m.name} snatches a purse (${purse} gold) and bolts!`);
+      this.emit("fx", { kind: "die", foe: m });
+      return;
+    }
+    if (m.ability === "breath") {
+      m.breath = (m.breath || 0) + 1;
+      if (m.breath % 2 === 0) {
+        this.emit("fx", { kind: "attack", foe: m, breath: true });
+        this.say(`The ${m.name} breathes fire over the whole party!`);
+        for (const h of this.targets()) this.hurt(h, Math.max(1, Math.floor(m.atk / 3) + 2), m, { noTouch: true });
+        return;
+      }
+    }
+    this.emit("fx", { kind: "attack", foe: m, ranged: m.ability === "ranged" });
+    const blows = m.ability === "buffet" ? 2 : 1;
+    for (let i = 0; i < blows; i++) {
+      const target = this.pickTarget(m);
+      if (!target) break;
+      if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1))) { this.say(`${CM.The(m)} misses ${target.name}.`); continue; }
+      let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), how = "";
+      if (m.ability === "savage" && rnd.chance(0.2)) { dmg *= 2; how = " - a savage blow"; }
+      if (m.ability === "charge" && !m.charged) { m.charged = true; dmg *= 2; how = " - it charges"; }
+      const dealt = this.hurt(target, dmg, m, { how });
+      if (target.hp > 0) {
+        if (m.ability === "stun" && rnd.chance(0.25) && !(target.status || {}).paralysis) { target.status.paralysis = 1; this.say(`${target.name} is knocked flat!`); }
+        if (m.ability === "drain" && target.xp > 0) {
+          const lost = Math.min(target.xp, Math.max(5, Math.floor(CM.xpForLevel(target.level + 1) * 0.15)));
+          target.xp -= lost;
+          this.say(`${target.name} feels the ${m.name} draw out ${lost} experience.`);
+        }
+      }
+      if (m.ability === "lifesteal") { const back = Math.ceil(dealt / 2); m.hp = Math.min(m.max, m.hp + back); this.say(`The ${m.name} feeds: +${back}.`); }
+    }
+    if (m.blind > 0) m.blind--;
+  },
+
+  // the Lich King: a grave-cold touch; hurt, he calls skeletons up out of the floor; near his end, a deathly cold on everyone
+  lichAct(m) {
+    const c = this.combat || {}, share = m.hp / m.max;
+    if (share <= CM.LICH.summonFrom) {
+      c.summonTick = (c.summonTick || 0) + 1;
+      const up = this.foes.filter((f) => f.summoned && f.hp > 0).length;
+      if (c.summonTick % CM.LICH.summonEvery === 1 && up < CM.LICH.summonMax) { this.summonSkeletons(Math.min(2, CM.LICH.summonMax - up)); return; }
+    }
+    if (share <= CM.LICH.coldFrom) {
+      c.cold = (c.cold || 0) + 1;
+      if (c.cold % 2 === 0) {
+        this.emit("fx", { kind: "cold", foe: m });
+        this.say("The Lich King raises his hand, and a deathly cold fills the hall!");
+        for (const h of this.targets()) this.hurt(h, 10 + Math.floor(this.floor.number / 2), m, { noTouch: true });
+        return;
+      }
+    }
+    const target = this.pickTarget(m);
+    if (!target) return;
+    this.emit("fx", { kind: "attack", foe: m });
+    if (!this.rnd.chance(0.85)) { this.say(`The Lich King's hand closes on nothing: ${target.name} is too quick.`); return; }
+    this.hurt(target, this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), m, { how: " - a touch of grave-cold" });
+  },
+
+  summonSkeletons(n) {
+    for (let i = 0; i < n; i++) {
+      const s = CM.skeleton(CM.LAST_FLOOR, this.rnd);
+      Object.assign(s, { summoned: true, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false });
+      this.foes.push(this.tune(s));
+    }
+    this.sound("roar_undead");
+    this.say(`The Lich King calls, and ${CM.plural(n, "skeleton")} claw up out of the floor!`);
+    this.emit("fx", { kind: "summon" });
+  },
+
+  // a guardian's turn (CM.GUARDIANS): every third turn one of its moves, in turn - a swarm called, a grasp, a slam on
+  // the front line or on everyone, a breath of fire, an ailment on the party; otherwise a blow like any other
+  guardianAct(m) {
+    const rnd = this.rnd, G = CM.GUARDIANS[m.guardian], moves = G.moves || [];
+    m.turns = (m.turns || 0) + 1;
+    if (m.turns % 3 === 0 && moves.length) {
+      const mv = moves[(Math.floor(m.turns / 3) - 1) % moves.length];
+      if (this.guardianMove(m, mv)) return;
+    }
+    const target = this.pickTarget(m);
+    if (!target) return;
+    this.emit("fx", { kind: "attack", foe: m });
+    if (!rnd.chance(0.85)) { this.say(`${CM.The(m)} misses ${target.name}.`); return; }
+    let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), how = "";
+    if (CM.guardianHas(m, "plague") && (target.status || {}).poison) { dmg = Math.ceil(dmg * 1.5); how = " - the plague bites deep"; }
+    this.hurt(target, dmg, m, { how });
+    if (CM.guardianHas(m, "drain") && target.hp > 0 && target.xp > 0) {   // (the Patriarch's old hunger)
+      const lost = Math.min(target.xp, Math.max(5, Math.floor(CM.xpForLevel(target.level + 1) * 0.15)));
+      target.xp -= lost;
+      this.say(`${target.name} feels ${CM.the(m)} draw out ${lost} experience.`);
+    }
+  },
+
+  guardianMove(m, mv) {
+    const rnd = this.rnd, who = (t) => (mv.text || "").replace("{who}", t ? t.name : "");
+    if (mv.kind === "summon") {
+      const up = this.foes.filter((f) => f.summoned && f.hp > 0 && !f.fled).length;
+      if (up >= mv.max) return false;
+      this.summonFor(m, mv, Math.min(mv.n, mv.max - up));
+      return true;
+    }
+    if (mv.kind === "grasp") {
+      const target = this.pickTarget(m);
+      if (!target) return false;
+      this.emit("fx", { kind: "grasp", hero: target, foe: m });
+      this.say(who(target));
+      this.hurt(target, Math.ceil(this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)) * (mv.mult || 1.5)), m, { how: mv.how || "", noTouch: true });
+      if (target.hp > 0 && mv.status && this.afflict(target, mv.status, m.name) && mv.status === "paralysis") target.status.paralysis = 1;
+      return true;
+    }
+    if (mv.kind === "slam") {
+      const pool = this.targets(), front = pool.filter((h) => h.row === "front"), struck = mv.front && front.length ? front : pool;
+      if (!struck.length) return false;
+      this.emit("fx", { kind: "slam", foe: m });
+      this.sound("slam");
+      this.say(who());
+      for (const h of struck) {
+        this.hurt(h, this.damage(Math.floor(m.atk / (mv.frac || 2.5)), 0, this.effective(h).df + CM.gearDefence(h)), m, { how: mv.how || "", noTouch: true });
+        if (h.hp > 0 && mv.status && rnd.chance(mv.chance || 0.3) && !(h.status || {})[mv.status]) {
+          h.status[mv.status] = mv.status === "paralysis" ? 1 : mv.status === "blind" ? 2 : 2;
+          this.say((mv.flat || "{who} reels.").replace("{who}", h.name));
+        }
+      }
+      return true;
+    }
+    if (mv.kind === "breath") {
+      const pool = this.targets();
+      if (!pool.length) return false;
+      this.emit("fx", { kind: "attack", foe: m, breath: true });
+      this.say(who());
+      for (const h of pool) this.hurt(h, Math.max(1, Math.floor(m.atk / (mv.frac || 2)) + 2), m, { noTouch: true });
+      return true;
+    }
+    if (mv.kind === "ailment") {
+      const pool = this.targets();
+      if (!pool.length) return false;
+      this.emit("fx", { kind: "cold", foe: m });
+      this.say(who());
+      let took = 0;
+      for (const h of pool) if (rnd.chance(mv.chance === undefined ? 0.6 : mv.chance) && this.afflict(h, mv.status, m.name)) took++;
+      if (!took) this.say("The party shakes it off.");
+      return true;
+    }
+    return false;
+  },
+
+  // what a guardian calls up: its own kind of company, at the Deep's level where it says so
+  summonFor(m, mv, n) {
+    const kind = CM.monsterKind(mv.what);
+    if (!kind) return;
+    const level = mv.level === "deep" ? CM.monsterLevel(this.floor ? this.floor.number : CM.LAST_FLOOR) : (this.floor ? this.floor.number : 5);
+    for (let i = 0; i < n; i++) {
+      const r = CM.makeMonster(kind, level, this.rnd);
+      Object.assign(r, { summoned: true, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false });
+      this.foes.push(this.tune(r));
+    }
+    this.sound(CM.roarFor(kind.name));
+    this.say((mv.text || "{n} come.").replace("{n}", mv.plural ? mv.plural.replace("{n}", String(n)) : CM.plural(n, mv.word || kind.name.toLowerCase())));
+    this.emit("fx", { kind: "summon", layer: kind.undead ? "fx:shard" : "fx:spark" });
+  },
+
+  summonRats(n) { this.summonFor(this.foes.find((f) => f.guardian === "rat") || { name: "The Rat King" }, CM.GUARDIANS.rat.moves[0], n); },
+
+  // the Lich King falls: the crown is the party's, and the choice - into the daylight, or down the shaft the throne hid
+  crown() {
+    this.crowned = true;
+    this.trophy("lich");
+    const steps = (this.tally || {}).steps || 0;
+    this.achieve("crown");
+    if (!this.everFell) this.achieve("ironman");
+    if (steps < 1500) this.achieve("swift");
+    if (this.difficulty === "grim") this.achieve("grim");
+    this.achieve("delver"); this.achieve("deep"); this.achieve("deeper");
+    if (this.foeKey) this.floor.things[this.foeKey] = { type: "ladder" };
+    this.sound("victory");
+    this.say("The crown rolls from the throne, and the cold goes out of the stone. Behind the throne the floor has split: a shaft goes down, into a dark that was never his. The Deep.");
+    this.setMode("explore");
+    this.saveRun();
+    this.emit("crowned");
+  },
+
+  // a guardian falls: its relic into the pack, a trophy kept between runs, and the shaft it stood over is open
+  slayGuardian(m) {
+    const id = m.guardian, G = CM.GUARDIANS[id], relic = G.relic && !m.echo ? CM.relic(id) : null;
+    this.tally.guardians = (this.tally.guardians || []).concat(id);
+    if (!m.echo) this.trophy(id);
+    if (relic) this.bag.push(relic);
+    this.sound("toll");
+    this.say(G.fall);
+    this.say(m.echo ? "The echo fades, and leaves nothing but the shaft it stood over." : relic ? `${G.take} (${relic.name}: ${CM.itemLabel(relic)}.)` : G.take);
+    this.emit("fx", { kind: "relic", item: relic });
+  },
+
+  trophy(id) {                                                           // a guardian slain, remembered between runs
+    if (this.trophies[id]) return;
+    this.trophies[id] = { date: CM.today(), name: CM.playerName || "Adventurer", seed: this.seed };
+    CM.store.set("trophies", this.trophies);
+  },
+
+  // one hero's blow on one foe (Fight, and the Ranger's arrows): the damage done, 0 for a miss
+  strike(hero, target, note = "", opts = {}) {
+    const rnd = this.rnd;
+    this.emit("fx", { kind: "swing", hero, foe: target });
+    const bow = Boolean(hero.weapon && hero.weapon.props && hero.weapon.props.bow), ambush = CM.trait(hero, "ambush") && !hero.struck;
+    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero))) {
+      this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
+      this.sound("miss");
+      this.emit("fx", { kind: "miss", foe: target });
+      return 0;
+    }
+    let dmg = this.damage(this.effective(hero).atk, hero.weapon.power, target.df), how = "";
+    const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger";
+    const critMult = CM.trait(hero, "deadly") ? 3 : 2;
+    if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
+    else if (ambush || rnd.chance(this.critChance(hero))) { dmg *= critMult; how = " - a weak spot"; }
+    else if (back && !reaches) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
+    if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
+    const props = (hero.weapon && hero.weapon.props) || {}, el = props.element && !hero.weapon.unknown ? props.element : null;
+    const G = target.guardian ? CM.GUARDIANS[target.guardian] : null;
+    if (el) {                                                            // a flaming, frost or blessed blade
+      const weak = (el === "holy" ? Boolean(target.undead) : (CM.ELEMENTS[el].weak || []).includes(target.kind || target.name)) || Boolean(G && G.weak === el);
+      if (weak) { dmg = Math.ceil(dmg * 1.5); how += ` - the ${el === "holy" ? "blessing" : el} bites deep`; }
+      else if (G && G.resist === el) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += ` - the ${el} does little to it`; }
+      else dmg += 2;
+    }
+    else if (target.undead && CM.trait(hero, "holyblade")) { dmg = Math.ceil(dmg * 1.5); how += " - the blessing in the blade bites deep"; }
+    hero.struck = true;
+    if (opts.mult) dmg = Math.ceil(dmg * opts.mult);
+    if (target.marked) dmg = Math.ceil(dmg * 1.25);
+    target.hp -= dmg;
+    if (target.asleep > 0) { target.asleep = 0; how += " - it wakes"; }
+    this.say(`${hero.name} hits ${CM.the(target)}${note} for ${dmg}${how}.`);
+    this.emit("fx", { kind: "hit", foe: target, amount: dmg });
+    this.sound("hit");
+    if (props.stun && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.stun)) { target.held = Math.max(target.held || 0, 1); this.say(`${CM.The(target)} reels from the blow.`); }
+    if ((CM.guardianHas(target, "heat") || CM.guardianHas(target, "glass")) && !props.bow && hero.hp > 0) {   // its heat, or its shards: whoever strikes it pays
+      const burn = 2 + Math.floor((this.floor ? this.floor.number : 15) / 5);
+      hero.hp = Math.max(1, hero.hp - burn);
+      this.say((G.sear || "The heat of " + CM.the(target) + " sears {who} (-{n}).").replace("{who}", hero.name).replace("{n}", burn));
+      this.emit("fx", { kind: "sear", hero, amount: burn, foe: target });
+    }
+    return dmg;
+  },
+
+  // a spell's blow: it doesn't miss
+  spellHit(foe, dmg, what, element) {
+    const G = foe.guardian ? CM.GUARDIANS[foe.guardian] : null;        // (a guardian's weakness, and what it shrugs off)
+    if (element === "fire" && this.casting && CM.trait(this.casting, "firebrand")) dmg = Math.ceil(dmg * 1.5);
+    if (G && element && G.weak === element) dmg = Math.ceil(dmg * 1.5);
+    else if (G && element && G.resist === element) dmg = Math.max(1, Math.ceil(dmg / 2));
+    if (foe.marked) dmg = Math.ceil(dmg * 1.25);
+    foe.hp -= dmg;
+    if (foe.asleep > 0) foe.asleep = 0;
+    this.emit("fx", { kind: "hit", foe, amount: dmg, spell: true });
+    if (what) this.say(`${what} ${foe.name} takes ${dmg}.`);
+    return dmg;
+  },
+
+  // what a hero reaches for when told only "cast": their calling's own thing, if they can afford it
+  defaultAbility(h) {
+    const can = CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].mp <= h.mp && !(CM.ABILITIES[id].once && h.used && h.used[id]));
+    const prefer = { Mage: ["fireball", "frost", "firebolt", "missile"], Cleric: ["heal"], Paladin: ["lay"], Druid: ["thorns"], Bard: ["song"],
+      Ranger: ["volley"], Knight: ["guard"], Rogue: ["trick"] }[h.cls] || [];
+    return prefer.find((id) => can.includes(id)) || null;
+  },
+
+  // the old game's Cast, kept for the tests: the calling's own thing, at whoever needs it most
+  cast(hero) {
+    if (!this.useAbility(hero, this.defaultAbility(hero), null)) {
+      const t = this.foeAt(null);
+      if (t) this.strike(hero, t);
+    }
+  },
+
+  // a spell or skill, if the hero knows it, can afford it and has someone to aim it at
+  useAbility(h, id, target) {
+    if (!id) {
+      const t = this.foeAt(target);
+      if (!t) return false;
+      if (CM.CLASSES[h.cls] && CM.CLASSES[h.cls].cast) this.say(`${h.name} is out of magic, and swings instead.`);
+      this.strike(h, t);
+      return true;
+    }
+    const a = CM.ABILITIES[id];
+    if (!a || !CM.abilitiesFor(h).includes(id)) { this.say(`${h.name} doesn't know that.`); return false; }
+    if (a.once && h.used && h.used[id]) { this.say(`${h.name} has used ${a.name} this fight.`); return false; }
+    const cost = a.mp && CM.trait(h, "thrifty") ? Math.max(1, a.mp - 1) : a.mp;
+    if (h.mp < cost) { this.say(`${h.name} hasn't the magic for ${a.name}.`); return false; }
+    if (this.mode !== "combat" && !a.outside) { this.say(`${a.name} is for a fight.`); return false; }
+    const foes = this.living();
+    let foe = null, ally = null;
+    if (a.target === "foe") { foe = this.foeAt(target); if (!foe) return false; }
+    if (a.target === "foes" && !foes.length) return false;
+    if (a.target === "ally") {
+      ally = this.allyAt(target, false);
+      if (id === "lay" && CM.trait(h, "lastrites") && !(h.used && h.used.lastrites)) {   // (Last Rites: a fallen hero may be the one)
+        const fallen = this.allyAt(target, true);
+        if (fallen && (typeof target === "number" ? this.party[target] === fallen : !ally)) ally = fallen;
+      }
+      if (!ally) { this.say("No one to cast that on."); return false; }
+    }
+    if (a.target === "fallen") { ally = this.allyAt(target, true); if (!ally) { this.say("No one has fallen."); return false; } }
+    h.mp -= cost;
+    if (a.once) { h.used = h.used || {}; h.used[id] = true; }
+    this.sound(a.mp ? "spell" : "hit");
+    this.emit("fx", { kind: "cast", id, hero: h, foe, ally, foes });
+    this.casting = h;
+    this.doAbility(h, id, a, foe, ally, foes);
+    this.casting = null;
+    this.emit("change");
+    return true;
+  },
+
+  doAbility(h, id, a, foe, ally, foes) {
+    const rnd = this.rnd, L = h.level, mod = this.spellMod(h), c = this.combat || {};
+    const healAll = (n, text) => { for (const p of this.alive()) p.hp = Math.min(p.max, p.hp + n); this.say(text); this.sound("heal"); };
+    switch (id) {
+      case "missile": this.spellHit(foe, Math.max(1, 6 + 2 * L + mod), `${h.name}'s bolt of force strikes:`); break;
+      case "firebolt": this.spellHit(foe, Math.max(1, 10 + 3 * L + mod), `${h.name}'s fire bolt:`, "fire"); break;
+      case "lightning": this.spellHit(foe, Math.max(1, 20 + 5 * L + mod), `${h.name} calls down lightning!`); if (CM.trait(h, "tempest") && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.5)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels, smoking.`); } break;
+      case "calllightning": {
+        const dmg = Math.max(1, 18 + 4 * L + mod), struck = CM.trait(h, "stormcall") ? foes : [foe];
+        for (const m of struck) { this.spellHit(m, m === foe ? dmg : Math.ceil(dmg * 0.6), m === foe ? `${h.name} calls down lightning!` : "The storm reaches on:"); if (CM.trait(h, "tempest") && m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.5)) { m.held = Math.max(m.held || 0, 1); this.say(`${CM.The(m)} reels, smoking.`); } }
+        break;
+      }
+      case "smite": {
+        const dmg = Math.max(1, 12 + 3 * L + Math.floor(mod / 2));
+        if (CM.trait(h, "radiance") && foes.some((m) => m.undead)) { for (const m of foes) if (m.undead) this.spellHit(m, dmg * 2, `${h.name}'s radiance falls on the unholy:`, "holy"); }
+        else this.spellHit(foe, dmg * (foe.undead ? 2 : 1), `${h.name} smites${foe.undead ? " the unholy thing" : ""}:`, "holy");
+        break;
+      }
+      case "fireball": {
+        const dmg = Math.max(1, 8 + 4 * L + mod);
+        for (const m of foes) { this.spellHit(m, dmg, "", "fire"); if (CM.trait(h, "inferno") && m.hp > 0) { m.burning = 2; m.burnDmg = 5 + L; } }
+        this.say(`${h.name} hurls a fireball! ${dmg} damage to every foe${CM.trait(h, "inferno") ? ", and they burn" : ""}.`);
+        break;
+      }
+      case "frost": {
+        const dmg = Math.max(1, 6 + 2 * L + mod);
+        let held = 0;
+        for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
+        this.say(`${h.name} breathes frost over every foe: ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}.`);
+        break;
+      }
+      case "sleep": case "lullaby": {
+        let asleep = 0;
+        for (const m of foes) if (!CM.unmoved(m) && ((id === "lullaby" && CM.trait(h, "lull")) || rnd.chance(0.5 + mod * 0.03))) { m.asleep = 3; asleep++; }
+        this.say(id === "sleep" ? `${h.name} weaves a sleep: ${asleep ? CM.plural(asleep, "foe") + " slump where they stand" : "none of them so much as yawns"}.`
+          : `${h.name} sings a lullaby: ${asleep ? CM.plural(asleep, "foe") + " nod off" : "none of them so much as yawns"}.`);
+        break;
+      }
+      case "blink": this.flee(true); break;
+      case "light": this.spellLight = CM.LIGHT_STEPS; this.say(`${h.name} calls up a light. It will last ${CM.LIGHT_STEPS} steps.`); break;
+      case "heal": case "mend": {
+        let n = Math.max(1, (id === "heal" ? 12 + 4 * L : 10 + 3 * L) + mod);
+        if (id === "heal" && CM.trait(h, "blessedhands")) n = Math.ceil(n * 1.5);
+        ally.hp = Math.min(ally.max, ally.hp + n);
+        this.sound("heal");
+        this.say(`${h.name} ${id === "heal" ? "prays" : "lays on herbs and words"}: ${ally.name} is healed by ${n}.`);
+        break;
+      }
+      case "lay": {
+        if (ally.hp <= 0) {                                              // (Last Rites)
+          h.used = h.used || {}; h.used.lastrites = true;
+          ally.hp = Math.max(1, Math.floor(ally.max / 3));
+          this.sound("heal");
+          this.say(`${h.name} lays hands on ${ally.name}, and says the last rites backwards. ${ally.name} breathes.`);
+          break;
+        }
+        let n = Math.max(1, 8 + 3 * L + Math.floor(mod / 2));
+        const gentle = CM.trait(h, "gentlehands");
+        if (gentle) n = Math.ceil(n * 1.5);
+        ally.hp = Math.min(ally.max, ally.hp + n);
+        const cured = this.cure(ally, gentle ? CM.CURABLE : ["poison"]);
+        this.sound("heal");
+        this.say(`${h.name} lays on hands: ${ally.name} mends by ${n}${cured.length ? `, and the ${cured.length > 1 ? "ailments leave" : CM.STATUSES[cured[0]].name.toLowerCase() + " leaves"} them` : ""}.`);
+        break;
+      }
+      case "cure": {
+        const cured = this.cure(ally, CM.CURABLE);
+        this.sound("heal");
+        this.say(cured.length ? `${h.name} prays over ${ally.name}: no longer ${cured.map((s) => CM.STATUSES[s].name.toLowerCase()).join(" or ")}.` : `${h.name} prays over ${ally.name}, who had nothing to cure.`);
+        break;
+      }
+      case "lift": {
+        let n = 0;
+        for (const p of this.alive()) n += this.cure(p, ["curse", "blind", "sleep"]).length;
+        this.sound("heal");
+        this.say(n ? `${h.name} lifts what lay on the party: ${CM.plural(n, "ailment")} gone.` : `${h.name} prays, but nothing lay on the party.`);
+        break;
+      }
+      case "rally": {
+        let n = 0;
+        for (const p of this.alive()) { p.hp = Math.min(p.max, p.hp + 6); n += this.cure(p, CM.CURABLE).length; }
+        this.sound("heal");
+        this.say(`${h.name} rallies the party: a little mended${n ? `, and ${CM.plural(n, "ailment")} shaken off` : ""}.`);
+        break;
+      }
+      case "regrowth": healAll(Math.max(1, 6 + 2 * L + Math.floor(mod / 2)), `${h.name} calls green growth through the party: everyone mends.`); break;
+      case "bless": c.bless = true; if (CM.trait(h, "consecrate")) c.protect = true; this.say(`${h.name} blesses the party: blows land harder and glance off, this fight${CM.trait(h, "consecrate") ? ", and every blow on the party does less" : ""}.`); break;
+      case "protection": c.protect = true; this.say(`${h.name} prays for protection: every blow on the party does less, this fight.`); break;
+      case "song": {
+        this.song = CM.trait(h, "warsong") ? 2 : 1;
+        this.songEpic = CM.trait(h, "epic") ? this.floor.number : 0;
+        for (const p of this.alive()) { p.hp = Math.min(p.max, p.hp + 4); if ((p.status || {}).sleep) delete p.status.sleep; }
+        this.sound("heal");
+        this.say(`${h.name} sings. Hearts lift: the party hits harder this fight, and hurts a little less.`);
+        break;
+      }
+      case "turn": {
+        const dmg = Math.max(1, 10 + 4 * L + mod);
+        let burned = 0, fled = 0;
+        for (const m of foes) if (m.undead) { burned++; this.spellHit(m, dmg, "", "holy"); if (m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.4)) { m.fled = true; fled++; this.emit("fx", { kind: "die", foe: m }); } }
+        if (CM.trait(h, "purifier")) for (const m of foes) if (!m.undead && m.hp > 0) this.spellHit(m, Math.ceil(dmg / 2), "The light scorches:", "holy");
+        this.say(burned ? `${h.name} raises the holy symbol: the undead burn (${dmg})${fled ? `, and ${CM.plural(fled, "one")} flee` : ""}.` : `${h.name} raises the holy symbol, but nothing here is undead.`);
+        break;
+      }
+      case "sanctuary": {
+        let held = 0;
+        for (const m of foes) if (!CM.unmoved(m) && rnd.chance(0.5)) { m.held = Math.max(m.held || 0, 1); held++; }
+        this.say(`${h.name} prays for sanctuary: ${held ? CM.plural(held, "foe") + " can't bring themselves to strike" : "the foes press on regardless"}.`);
+        break;
+      }
+      case "raise": {
+        ally.hp = CM.trait(h, "miracle") ? ally.max : Math.max(1, Math.floor(ally.max / 3));
+        this.sound("heal");
+        this.say(`${h.name} calls ${ally.name} back from the dark!`);
+        break;
+      }
+      case "thorns": {
+        const dmg = Math.max(1, 6 + 3 * L + Math.floor(mod / 2));
+        let held = 0;
+        for (const m of foes) { this.spellHit(m, dmg); if (m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.3 + mod * 0.02)) { m.held = Math.max(m.held || 0, 1); held++; } }
+        for (const p of this.alive()) p.hp = Math.min(p.max, p.hp + (3 + Math.floor(L / 2)) * (CM.trait(h, "deeproots") ? 3 : 1));
+        this.say(`${h.name} calls thorns up through the stone: ${dmg} to every foe${held ? `, ${CM.plural(held, "foe")} held fast` : ""}; the party mends a little.`);
+        break;
+      }
+      case "entangle": if (CM.unmoved(foe)) { this.say(`${h.name} calls roots up round ${CM.the(foe)}, and they snap.`); break; } foe.held = Math.max(foe.held || 0, 2); this.say(`${h.name} calls roots round the ${foe.name}: held fast for two rounds.`); break;
+      case "mockery": foe.marked = true; if (CM.trait(h, "jeer")) foe.blind = Math.max(foe.blind || 0, 2); this.say(`${h.name} mocks the ${foe.name}, who takes it badly: a quarter more from every blow${CM.trait(h, "jeer") ? ", and it can't see straight for rage" : ""}.`); break;
+      case "mark": foe.marked = true; this.say(`${h.name} marks the ${foe.name}: a quarter more from every blow.`); break;
+      case "volley": {
+        const first = this.foeAt(foe || null);
+        this.strike(h, first, " with an arrow");
+        const rest = this.living().filter((m) => m !== first);
+        if (rest.length) this.strike(h, rnd.pick(rest), " with a second arrow");
+        else if (first.hp > 0) this.strike(h, first, " with a second arrow");
+        if (CM.trait(h, "rainofarrows")) { const third = this.living()[0]; if (third) this.strike(h, third, " with a third arrow"); }
+        break;
+      }
+      case "aimed": this.strike(h, foe, " with an aimed arrow", { sure: true, mult: 1.5 }); break;
+      case "guard": h.guarding = ally; ally.guardedBy = h; this.say(`${h.name} stands guard over ${ally.name}.`); break;
+      case "taunt": c.taunter = h; c.tauntUntil = c.round + 1; this.say(`${h.name} roars a challenge: every foe turns their way!`); break;
+      case "bash": if (this.strike(h, foe, " with the shield") > 0 && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.5)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels.`); } break;
+      case "trick": foe.blind = 3; if (CM.trait(h, "sand") && !CM.unmoved(foe)) foe.held = Math.max(foe.held || 0, 1); this.say(`${h.name} flings sand in the ${foe.name}'s eyes!${CM.trait(h, "sand") && !CM.unmoved(foe) ? " It stands there clawing at them." : ""}`); break;
+      default: break;
+    }
+  },
+
+  // a potion, an antidote, a feather, in the thick of it: {row, who}, or the first healing potion for whoever needs it most
+  useItemInBattle(h, arg) {
+    if (arg && typeof arg === "object" && arg.row !== undefined) {
+      const item = this.bag[arg.row];
+      if (item && (item.kind === "scroll" || item.kind === "wand")) return this.useMagicInBattle(h, arg.row, arg.who);
+      if (!item || !["heal", "mana", "antidote", "revive"].includes(item.kind)) { this.say("Not now."); return false; }
+      const who = arg.who !== undefined ? arg.who : this.party.indexOf(this.allyAt(null, item.kind === "revive"));
+      if (who < 0) return false;
+      const note = this.give(arg.row, who);
+      if (note) { this.say(note); return false; }
+      this.emit("fx", { kind: "potion", who, item: item.kind });
+      return true;
+    }
+    return this.potionInBattle();
+  },
+
+  potionInBattle() {
+    const potion = this.bag.find((i) => i.kind === "heal");
+    if (!potion) { this.say("No healing potions left!"); return false; }
+    const target = this.alive().reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b));
+    this.bag.splice(this.bag.indexOf(potion), 1);
+    target.hp = Math.min(target.max, target.hp + potion.power);
+    this.sound("heal");
+    this.emit("fx", { kind: "potion", who: this.party.indexOf(target), item: "heal" });
+    this.say(`${target.name} drinks a Healing Potion (+${potion.power}).`);
+    return true;
+  },
+
+  // between fights: a healing spell, a cure, Light - from whoever knows it
+  castOutside(heroIndex, id, target) {
+    const h = this.party[heroIndex];
+    if (!h || h.hp <= 0 || !this.canAct(h) || this.mode === "combat") return false;
+    const ok = this.useAbility(h, id, target);
+    if (ok) this.saveRun();
+    return ok;
+  },
+
+  wonFight() {
+    const rnd = this.rnd;
+    const slain = this.foes.filter((m) => !m.fled);
+    this.count("kills", slain.length);
+    const xp = slain.reduce((s, m) => s + m.xp, 0);
+    let gold = slain.reduce((s, m) => s + m.gold, 0);
+    if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
+    gold = Math.floor(gold * (CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair).gold);
+    this.gold += gold;
+    if (this.gold >= 2000) this.achieve("hoarder");
+    if (slain.some((m) => m.name === "Minotaur of the Labyrinth")) this.achieve("labyrinth");
+    const loot = rnd.chance(0.45) ? [CM.makeItem(this.floor.number, rnd)] : [];
+    this.bag.push(...loot);
+    const boss = this.foes.some((m) => m.boss), guardian = this.foes.find((m) => m.guardian), fought = this.floor.things[this.foeKey];
+    if (fought && fought.vengeance) { this.floor.avenged = (this.floor.avenged || []).concat(fought.vengeance); this.say("Somewhere on this floor, something lets out a long breath it has held a long time."); }
+    delete this.floor.things[this.foeKey];
+    if (guardian) this.floor.things[this.foeKey] = { type: "ladder" };   // (the shaft it stood over)
+    this.combat = null;
+    this.sound("coin");
+    this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and a ${loot[0].name}.` : "."));
+    for (const hero of this.alive()) {
+      hero.xp += Math.floor(xp / 2);                                      // everyone standing learns from the fight
+      while (hero.xp >= CM.xpForLevel(hero.level + 1)) {
+        hero.level += 1;
+        CM.upgradeHero(hero);
+        CM.recompute(hero);
+        hero.hp = hero.max;
+        hero.mp = hero.maxmp;
+        hero.pending += 1;
+        this.sound("level");
+        this.emit("fx", { kind: "levelup", hero });
+        this.say(`${hero.name} reaches level ${hero.level}! A boon is theirs to choose (press ${this.party.indexOf(hero) + 1}).`);
+      }
+    }
+    if (guardian) {
+      this.slayGuardian(guardian);
+      if (!this.fightFell) this.achieve("untouched");
+      if (CM.GUARDIANS[guardian.guardian].final && !this.endless && !guardian.echo) { this.bottom = true; this.endRun(true); return; }
+    }
+    if (boss) { this.crown(); return; }
+    this.setMode("explore");
+    this.saveRun();
+  },
+});
+}

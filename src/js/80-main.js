@@ -519,7 +519,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (game.mode === "title") renderer.frame(dt);
     }
     frames++; fpsTime += dt;
-    if (fpsTime >= 0.5) { fps = Math.round(frames / fpsTime); frames = 0; fpsTime = 0; ui.$("#view .fps").textContent = `${fps} fps`; }
+    if (fpsTime >= 0.5) { fps = Math.round(frames / fpsTime); frames = 0; fpsTime = 0; ui.$("#view .fps").textContent = `${fps} fps - v${CM.version} ${CM.built}`; }
     requestAnimationFrame(frame);
   }
   showDemo();

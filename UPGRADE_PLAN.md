@@ -28,7 +28,7 @@ These are the things the plan is built around. Each was checked against the code
 
 ---
 
-## Phase 0 - Foundations (do first)
+## Phase 0 - Foundations (do first) - DONE in v1.1
 
 **Goal:** the game can grow for another eight phases without losing saves or regressing.
 
