@@ -122,6 +122,9 @@ table.stats tr.key td.hint { color: var(--gold); }
 .boon-badge { background: var(--gold); color: #2A1A08; font: bold 9px Tahoma, Verdana, sans-serif; padding: 1px 5px; border-radius: 8px; vertical-align: middle; }
 .member .ail { color: #E0A0A0; font: 10px Tahoma, Verdana, sans-serif; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #fame h2.later { margin-top: 14px; }
+#fame .boards { float: right; display: inline-flex; gap: 4px; }
+#fame .boards button { padding: 1px 8px; font-size: 11px; font-weight: normal; }
+#fame .boards button.on { border-color: var(--gold); color: var(--gold); background: #4A321A; }
 .unlock { margin: 4px 0; font-size: 12.5px; color: var(--dim); }
 .unlock b { color: var(--faint); font-weight: bold; }
 .unlock.got b { color: #8FD08F; }
@@ -744,6 +747,7 @@ CM.MUTATORS = {
   gloom: { name: "Gloom", what: "torches burn twice as fast" },
   lean: { name: "Lean", what: "the party sets out without potions, and with 100 gold more" },
 };
+CM.DEEPENING = ["hordes", "brittle", "swift", "gloom", "drought"];      // Endless: the dark deepens with one of these every ten floors below the bottom
 CM.mutatorsFor = function (seed) {
   if (!String(seed).startsWith("daily-")) return [];
   const ids = Object.keys(CM.MUTATORS), a = CM.hashSeed(`${seed}:mutator:1`) % ids.length;
@@ -753,12 +757,14 @@ CM.mutatorsFor = function (seed) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  beyond: { name: "Beyond the Dream", what: "Reach floor 100 in an Endless expedition", title: "Beyond the Dream" },
   bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the fiftieth floor", title: "of the Bottom" },
   crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
   swift: { name: "Swift", what: "Slay the Lich King in under 1,500 steps", title: "the Swift" },
   abyss: { name: "Of the Deep", what: "Reach floor 30, in the Deep", title: "of the Deep" },
+  endless: { name: "Without End", what: "Reach floor 60 in an Endless expedition", title: "Without End" },
   deeper: { name: "Of the Halls", what: "Reach floor 15", title: "of the Halls" },
   labyrinth: { name: "Minotaur's Bane", what: "Slay the Minotaur of the Labyrinth", title: "the Minotaur's Bane" },
   untouched: { name: "Unbowed", what: "Slay a guardian with no one falling in the fight", title: "the Unbowed" },
@@ -779,11 +785,14 @@ CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"
   ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
   ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"]];
 CM.keyName = (code) => (code || "").replace(/^Key/, "").replace(/^Digit/, "").replace(/^Arrow/, "").replace("Space", "Space").replace("Backquote", "`");
+// an Endless entry that ended below - not one that took the daylight with the crown
+CM.endlessFall = (e) => Boolean(e && e.endless && !(e.won && e.floor <= CM.LAST_FLOOR));
 // a run's story in a few lines, to copy and share (from a Hall of Fame entry)
 CM.summaryText = function (e) {
   const d = CM.DIFFICULTIES[e.difficulty] ? CM.DIFFICULTIES[e.difficulty].name : "Fair", t = e.tally || {};
-  const lines = [`Claude and Magic - ${e.name}'s expedition (${d})${e.mutators && e.mutators.length ? `, today's dungeon: ${e.mutators.map((m) => CM.MUTATORS[m] ? CM.MUTATORS[m].name : m).join(" and ")}` : ""}`,
-    `${e.won ? "Slew the Lich King on floor " + CM.LAST_FLOOR : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}`}, with ${(e.gold || 0).toLocaleString()} gold - seed ${e.seed || "?"} - ${e.date || ""}`];
+  const lines = [`Claude and Magic - ${e.name}'s ${e.endless ? "Endless " : ""}expedition (${d})${e.mutators && e.mutators.length ? `, ${e.endless ? "the dark deepened" : "today's dungeon"}: ${e.mutators.map((m) => CM.MUTATORS[m] ? CM.MUTATORS[m].name : m).join(" and ")}` : ""}`,
+    `${CM.endlessFall(e) ? `Floor ${e.floor} of the endless dark${e.won ? ", with the Lich King's crown" : ""}` : e.bottom ? "To the bottom of the world, floor " + CM.BOTTOM
+      : e.won && e.floor > CM.LAST_FLOOR ? `Slew the Lich King, and fell on floor ${e.floor} of the Deep` : e.won ? "Slew the Lich King on floor " + CM.LAST_FLOOR : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}`}, with ${(e.gold || 0).toLocaleString()} gold - seed ${e.seed || "?"} - ${e.date || ""}`];
   if (e.party && e.party.length) lines.push(`Party: ${e.party.join(", ")}`);
   lines.push(`${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}`);
   if (t.guardians && t.guardians.length) lines.push(`Guardians slain: ${t.guardians.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", ")}`);
@@ -912,11 +921,26 @@ CM.GUARDIANS = {
     relic: null, final: true,
     lair: { name: "The Root", lore: "g:root", rows: ["#####W#####", "#r.e...e.r#", "#.#.....#.#", "#r...B...r#", "#.#.....#.#", "#r.e...e.r#", "#####D#####"] } },
 };
-CM.guardianFor = (floor) => Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === floor) || null;
+CM.GUARDIAN_ORDER = ["rat", "knight", "forge", "queen", "mind", "tyrant", "master", "patriarch", "root"];
+CM.echoOf = (floor) => (floor > CM.BOTTOM && floor % 10 === 0 ? Math.floor((floor - CM.BOTTOM) / 10) : 0);     // Endless: 60 -> 1, 70 -> 2 ... which echo (0: none)
+CM.guardianFor = (floor) => (floor > CM.BOTTOM ? (CM.echoOf(floor) ? CM.GUARDIAN_ORDER[(CM.echoOf(floor) - 1) % CM.GUARDIAN_ORDER.length] : null)
+  : Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === floor) || null);
 CM.guardianHas = (m, passive) => Boolean(m && m.guardian && CM.GUARDIANS[m.guardian] && (CM.GUARDIANS[m.guardian].passives || []).includes(passive));
 CM.unmoved = (m) => Boolean(m && (m.boss || m.guardian));          // the Lich King and the guardians: not held, not put to sleep, not routed
-// what a carving says: the floor's part of the story, an odd one, or a guardian's (text "g:<guardian>")
+// below the bottom (Endless) the carvings are not the story any more: they are the dream, still dreaming
+CM.LORE_ENDLESS = [
+  "There is no floor below this one, the carving says. You are standing on the floor below this one.",
+  "The same hand, the same words, the same king. The dream did not end when the dreamer did.",
+  "A mark you made yourself, you would swear, on a floor you have never been to.",
+  "Here lie the first dead of Caer Duin, again. They are not tired of it. You will be.",
+  "The water rose and never fell, the carving says, as it said forty floors up. It is drier here. It is lying.",
+  "Turn back, in six languages. The seventh says: there is no back. There is only further.",
+  "The dwarves' word for this place has no end. Neither does the place.",
+  "Someone has started counting the floors here, and given up, and started again.",
+];
+// what a carving says: the floor's part of the story, an odd one, a guardian's (text "g:<guardian>") or the endless dark's ("e:<n>")
 CM.loreText = (text) => (typeof text === "string" && text.startsWith("g:") ? (CM.GUARDIANS[text.slice(2)] || {}).lore || ""
+  : typeof text === "string" && text.startsWith("e:") ? CM.LORE_ENDLESS[Number(text.slice(2)) % CM.LORE_ENDLESS.length]
   : text >= 0 ? CM.LORE[text] || CM.LORE[CM.LORE.length - 1] : CM.LORE_EXTRA[-text - 1] || CM.LORE_EXTRA[0]);
 
 // what a monster sounds like, by kind (the sounds are cooked in 50-audio.js)
@@ -957,7 +981,8 @@ CM.THEMES = [
     moss: [140, 40, 40], fog: [0.05, 0.015, 0.015], torch: [1.0, 0.6, 0.5], reach: 4.0, bones: 0.3, photos: "t1" },
 ];
 CM.AMBIENCE_OF = [0, 1, 2, 3, 1, 0, 3, 2, 0, 3];                      // which of the four ambiences (and footfalls) each band uses
-CM.themeFor = (number) => CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1];
+CM.themeFor = (number) => (number > CM.BOTTOM ? CM.THEMES[Math.floor((number - CM.BOTTOM - 1) / 5) % CM.THEMES.length]      // (Endless: below the bottom the bands come round again, five floors each)
+  : CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1]);
 CM.themeIndex = (number) => Math.max(0, CM.THEMES.indexOf(CM.themeFor(number)));
 
 CM.KEYS_HELP = [
@@ -1071,6 +1096,11 @@ CM.antidote = () => ({ name: "Antidote", kind: "antidote", power: 0, value: 15 }
 // one floor in a run may be special - all water, or all dark, or a labyrinth with something in it - decided by the
 // seed, never on a guardian's floor nor near the top or the bottom
 CM.specialFor = function (number, seed) {
+  if (number > CM.BOTTOM) {                                            // Endless: where the first fifty floors had theirs, of whatever kind the dark dreams
+    if (CM.guardianFor(number)) return null;
+    const kind = ["wading", "dark", "maze"][CM.hashSeed(`${seed}:special:endless:${number}`) % 3];
+    return CM.specialFor(((number - 1) % CM.BOTTOM) + 1, seed) ? kind : null;
+  }
   if (CM.guardianFor(number) || number <= 2 || number === CM.LAST_FLOOR - 1 || number === CM.LAST_FLOOR || number >= CM.BOTTOM - 1) return null;
   const h = (what, n) => CM.hashSeed(`${seed}:special:${what}:${n}`);
   if (number > CM.LAST_FLOOR) {                                        // the Deep has its own: a flooded street, a labyrinth of the forges, the ossuary's dark
@@ -1134,15 +1164,16 @@ CM.monsterGroup = function (floor, rnd) {
 CM.deepGroup = function (floor, rnd) {
   const band = CM.themeIndex(floor), level = CM.monsterLevel(floor);
   const here = CM.MONSTERS.filter((m) => m.deep === band), above = CM.MONSTERS.filter((m) => m.deep === band - 1);
-  const kinds = here.length ? here : CM.MONSTERS.filter((m) => m.deep);
-  const kind = rnd.pick(kinds), count = rnd.int(2, 4 + (floor >= 36 ? 1 : 0));
+  const shallow = floor > CM.BOTTOM && !here.length ? CM.MONSTERS.slice(band * 4, Math.min(CM.SHALLOW, band * 4 + 5)) : [];   // (Endless: the first bands come round with their own kinds)
+  const kinds = here.length ? here : shallow.length ? shallow : CM.MONSTERS.filter((m) => m.deep);
+  const kind = rnd.pick(kinds), count = rnd.int(2, 4 + (floor >= 36 ? 1 : 0) + (floor > CM.BOTTOM ? 1 : 0));
   const group = [];
   for (let i = 0; i < count; i++) group.push(CM.makeMonster(kind, level, rnd));
   if (count >= 3 && rnd.chance(0.4)) {
     const other = rnd.pick(above.length && rnd.chance(0.4) ? above : kinds);
     if (other !== kind) for (let i = Math.floor(count / 2); i < count; i++) group[i] = CM.makeMonster(other, level, rnd);
   }
-  if (rnd.chance(0.2)) CM.makeElite(group, rnd);
+  if (rnd.chance(floor > CM.BOTTOM ? 0.3 : 0.2)) CM.makeElite(group, rnd);
   return group;
 };
 CM.makeElite = function (group, rnd) {
@@ -1167,14 +1198,16 @@ CM.bossMonster = () => ({ name: CM.BOSS.name, kind: CM.BOSS.name, colour: CM.BOS
 CM.skeleton = (level, rnd) => CM.makeMonster(CM.MONSTERS[2], level, rnd);
 
 // a guardian (CM.GUARDIANS), ready to fight, with the company it keeps; and the relic it leaves behind
-CM.guardianMonster = function (id) {
-  const G = CM.GUARDIANS[id];
-  return { name: G.name, kind: G.name, colour: G.colour, hp: G.hp, max: G.hp, atk: G.atk, df: G.df, xp: G.xp, gold: G.gold, guardian: id, speed: G.speed,
-    undead: Boolean(G.undead), ability: null, touch: G.touch ? Object.assign({}, G.touch) : null, turns: 0 };
+// a guardian over its shaft - or, below the bottom (Endless), its echo: the same thing, grown to the depth (this floor's
+// monster level against its own floor's), that leaves nothing behind when it falls
+CM.guardianMonster = function (id, floor) {
+  const G = CM.GUARDIANS[id], echo = floor ? CM.echoOf(floor) : 0, k = echo ? CM.monsterLevel(floor) / CM.monsterLevel(G.floor) : 1;
+  return { name: echo ? `${G.name}'s Echo` : G.name, kind: G.name, colour: G.colour, hp: Math.round(G.hp * k), max: Math.round(G.hp * k), atk: Math.round(G.atk * k), df: Math.round(G.df * Math.sqrt(k)),
+    xp: Math.round(G.xp * k), gold: Math.round(G.gold * k), guardian: id, echo, speed: G.speed, undead: Boolean(G.undead), ability: null, touch: G.touch ? Object.assign({}, G.touch) : null, turns: 0 };
 };
 CM.guardianGroup = function (id, floor, rnd) {
-  const group = [CM.guardianMonster(id)];
-  for (const name of CM.GUARDIANS[id].escorts || []) group.push(CM.makeMonster(CM.monsterKind(name), floor, rnd));
+  const group = [CM.guardianMonster(id, floor)], level = floor > CM.BOTTOM ? CM.monsterLevel(floor) : floor;
+  for (const name of CM.GUARDIANS[id].escorts || []) group.push(CM.makeMonster(CM.monsterKind(name), level, rnd));
   return group;
 };
 CM.relic = function (id) {
@@ -1796,7 +1829,8 @@ CM.makeFloor = function (number, seed) {
   }
   // the carving for this floor, on a wall the party can stand before
   const carve_at = freeCells((x, y) => wallFace(x, y) >= 0)[0];
-  if (carve_at) floor.features[key(carve_at[0], carve_at[1])] = { type: "carving", face: wallFace(carve_at[0], carve_at[1]), text: number - 1, read: false };
+  if (carve_at) floor.features[key(carve_at[0], carve_at[1])] = { type: "carving", face: wallFace(carve_at[0], carve_at[1]),
+    text: number > CM.BOTTOM ? `e:${CM.hashSeed(`${seed}:endless:${number}`) % CM.LORE_ENDLESS.length}` : number - 1, read: false };   // (below the bottom: the dream, still dreaming)
   // keys: one for every locked door, somewhere before it
   for (const [dk, f] of Object.entries(floor.features)) {
     if (f.type !== "door" || !f.locked) continue;
@@ -2774,7 +2808,9 @@ CM.art.summaryCard = function (e, title) {
   const d = CM.DIFFICULTIES[e.difficulty] ? CM.DIFFICULTIES[e.difficulty].name : "Fair";
   p.fillText(`${e.name}${title ? " " + title : ""}'s expedition - ${d}${e.daily ? ", today's dungeon" : ""}`, 150, 66);
   p.fillStyle = e.won ? "#F0D080" : "#E8DCC0"; p.font = "bold 17px Georgia, serif";
-  p.fillText(e.won ? `Slew the Lich King, with ${(e.gold || 0).toLocaleString()} gold` : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}, with ${(e.gold || 0).toLocaleString()} gold`, 150, 92);
+  const gold = `with ${(e.gold || 0).toLocaleString()} gold`;
+  p.fillText(CM.endlessFall(e) ? `Floor ${e.floor} of the endless dark${e.won ? ", crowned" : ""}, ${gold}` : e.bottom ? `To the bottom of the world, ${gold}`
+    : e.won ? `Slew the Lich King, ${gold}` : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}, ${gold}`, 150, 92);
   p.fillStyle = "#B0A080"; p.font = "13px Georgia, serif";
   p.fillText(`Seed ${e.seed || "?"} - ${e.date || ""}`, 150, 116);
   const t = e.tally || {}, lines = [];
@@ -4061,6 +4097,8 @@ CM.Game = class {
     this.achievements = CM.store.get("achievements", {});   // earned ever: {id: {date, seed, name}}
     this.difficulty = "fair"; this.mutators = []; this.everFell = false; this.fightFell = false; this.earned = [];
     this.crowned = false; this.bottom = false;       // the Lich King slain this run; the bottom of the world reached
+    this.endless = false; this.deepened = [];        // an Endless expedition: the shaft has no bottom; the floors where the dark deepened
+    this.fameEndless = CM.store.get("fameEndless", []);   // the Endless board: how deep, ever
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
 
@@ -4092,7 +4130,7 @@ CM.Game = class {
     const data = { party: this.party, bag: this.bag, gold: this.gold, floor: this.floor, floors: this.floors, light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed,
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
-      difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned) };
+      difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [] };
     this.lastRun = data;
     CM.store.set(this.runKey(this.slot), data);
     this.dirty = false; this.sinceSave = 0;
@@ -4121,7 +4159,7 @@ CM.Game = class {
     this.difficulty = CM.DIFFICULTIES[d.difficulty] ? d.difficulty : "fair";
     this.mutators = d.mutators || CM.mutatorsFor(d.seed || "");
     this.everFell = Boolean(d.everFell); this.fightFell = false; this.earned = d.earned || [];
-    this.crowned = Boolean(d.crowned); this.bottom = false;
+    this.crowned = Boolean(d.crowned); this.bottom = false; this.endless = Boolean(d.endless); this.deepened = d.deepened || [];
     this.seed = d.seed || CM.randomSeed();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -4143,15 +4181,20 @@ CM.Game = class {
     if (fl >= 30) this.achieve("abyss");
     if (this.bottom) this.achieve("bottom");
     if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); }
+    if (this.endless) {
+      entry.endless = true;
+      if (fl >= 60) this.achieve("endless");
+      if (fl >= 100) this.achieve("beyond");
+    }
     entry.titles = (this.earned || []).slice();
-    this.fame.push(entry);
+    if (this.endless) { this.fameEndless.push(entry); this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
+    else { this.fame.push(entry); this.sortFame(); CM.store.set("fame", this.fame); }
     if (won) this.trophy("lich");
-    this.sortFame();
-    CM.store.set("fame", this.fame);
     CM.store.remove(this.runKey(this.slot));
     this.lastRun = null;
     this.sound(won ? "victory" : "death");
-    this.titleNote = this.bottom ? "To the bottom of the world and back, with the Lich King's crown. There is no deeper."
+    this.titleNote = this.endless && !(won && fl <= CM.LAST_FLOOR) ? `Endless: the party went ${fl} floors down into a dark with no bottom${this.crowned ? ", with the Lich King's crown" : ""}. Their story ends there.`
+      : this.bottom ? "To the bottom of the world and back, with the Lich King's crown. There is no deeper."
       : won && this.floor.number > CM.LAST_FLOOR ? `With the Lich King's crown, the party went down into the Deep, and fell on floor ${this.floor.number}.`
       : won ? "The Lich King is no more. The party returns as legends!"
       : `The party fell on floor ${this.floor.number}. Their story ends here.`;
@@ -4184,7 +4227,7 @@ CM.Game = class {
   }
 
   exportText() {
-    return JSON.stringify({ game: "Claude and Magic", version: CM.version, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, settings: this.settings,
+    return JSON.stringify({ game: "Claude and Magic", version: CM.version, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
       trophies: this.trophies, vault: this.vault, achievements: this.achievements });
   }
 
@@ -4196,6 +4239,7 @@ CM.Game = class {
     else if (data.run && data.run.floor && data.run.party) { this.runs[0] = data.run; CM.store.set("run", data.run); }
     if (data.achievements && typeof data.achievements === "object") { this.achievements = Object.assign({}, this.achievements, data.achievements); CM.store.set("achievements", this.achievements); }
     if (Array.isArray(data.fame)) { this.fame = data.fame; this.sortFame(); CM.store.set("fame", this.fame); }
+    if (Array.isArray(data.fameEndless)) { this.fameEndless = data.fameEndless; this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
     if (data.settings) { Object.assign(this.settings, data.settings); this.saveSettings(); }
     if (data.trophies && typeof data.trophies === "object") { this.trophies = Object.assign({}, this.trophies, data.trophies); CM.store.set("trophies", this.trophies); }
     if (data.vault && typeof data.vault === "object" && data.vault.name) { this.vault = data.vault; CM.store.set("vault", this.vault); }
@@ -4204,11 +4248,11 @@ CM.Game = class {
   }
 
   // ---- starting, and the stairs between floors ----
-  newGame(seed, chosen, kit, difficulty, mutators) {                     // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned
+  newGame(seed, chosen, kit, difficulty, mutators, mode) {               // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned; mode: "endless" for no bottom
     this.seed = (seed || "").trim() || CM.randomSeed();
     this.party = CM.newParty(chosen);
     this.steps = 0;
-    this.kit = CM.unlocked(this.fame).includes(kit) ? kit : "pauper";
+    this.kit = CM.unlocked(this.allFame).includes(kit) ? kit : "pauper";
     this.recruits = null;
     this.identifying = false;
     this.bag = CM.startingBag(this.seed);
@@ -4226,7 +4270,7 @@ CM.Game = class {
     this.difficulty = CM.DIFFICULTIES[difficulty] ? difficulty : "fair";
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
     this.everFell = false; this.fightFell = false; this.earned = [];
-    this.crowned = false; this.bottom = false;
+    this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
     if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
@@ -4235,7 +4279,8 @@ CM.Game = class {
     else if (this.kit === "abyss") { this.gold += 150; this.bag.push(CM.rope(), CM.gem("diamond"), CM.scroll("mapping")); for (const h of this.party) { h.level = 3; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }
     this.enterFloor(1, "down");
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
-      + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : ""));
+      + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
+      + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : ""));
     if (this.mutators.length) this.say(`Today's dungeon: ${this.mutators.map((m) => `${CM.MUTATORS[m].name} - ${CM.MUTATORS[m].what}`).join("; ")}.`);
   }
 
@@ -4283,13 +4328,15 @@ CM.Game = class {
     if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.themeFor(number).name}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && number === CM.LAST_FLOOR + 1) this.say("The stair goes on below the palace, cut by no mason. The air is wet and old. The Deep begins here, and the carvings above never spoke of it.");
+    if (fresh && this.endless && number === CM.BOTTOM + 1) this.say("Below the Root, the stair goes on. It should not. The stone is the catacombs' stone again, and the dark is the same dark, and it does not end.");
+    if (fresh && this.endless && number > CM.BOTTOM + 10 && number % 10 === 1) this.deepen(number);     // (61, 71, 81 ...)
   }
 
   climbUp() {
     const n = this.floor.number;
     if (n === 1) { this.say("The way out. Not without the Lich King's crown."); return; }
     this.sound("stairs");
-    if (CM.CAMP_AFTER.includes(n - 1)) {                  // the camp is between this floor and the one above
+    if (this.campBelow(n - 1)) {                          // the camp is between this floor and the one above
       const above = this.floors[n - 1] || (this.floors[n - 1] = CM.makeFloor(n - 1, this.seed));
       this.floor = above;
       const ladder = this.cellOf(above, "ladder");
@@ -4467,7 +4514,7 @@ CM.Game = class {
     for (const m of this.alive()) m.hp = Math.max(1, m.hp - Math.max(1, Math.floor(m.max / 10)));
     this.sound("fall");
     this.emit("fell");
-    if (n >= CM.BOTTOM) { this.say("You fall into blackness... and land, bruised, on the stone below."); return; }
+    if (n >= CM.BOTTOM && !this.endless) { this.say("You fall into blackness... and land, bruised, on the stone below."); return; }
     this.say(`You fall to floor ${n + 1}, bruised but alive.`);
     this.enterFloor(n + 1, "fall", from);
   }
@@ -4597,7 +4644,7 @@ CM.Game = class {
       this.emit("change");
     } else if (thing && thing.type === "ladder") {
       this.sound("stairs");
-      if (CM.CAMP_AFTER.includes(fl.number)) {
+      if (this.campBelow(fl.number)) {
         this.setMode("camp");
         this.saveRun();
         this.say(`Halfway down a long shaft, a lantern glows: a merchant's camp beneath floor ${fl.number}. Rest, trade, and see to the fallen.`);
@@ -4769,7 +4816,8 @@ CM.Game = class {
     const who = Object.entries(names).map(([k, n]) => CM.plural(n, k)).join(", ");
     const guardian = this.foes.find((m) => m.guardian);
     if (this.foes.some((m) => m.boss)) this.say(`The Lich King rises from his throne. "You took your time," he says.${this.phylactery ? "" : " Somewhere, his heart beats."}`);
-    else if (guardian) this.say(CM.GUARDIANS[guardian.guardian].intro + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
+    else if (guardian) this.say(CM.GUARDIANS[guardian.guardian].intro + (guardian.echo ? " It is not the thing itself: it is what the dark remembers of it, and the dark remembers it stronger." : "")
+      + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
     if ((theyCame || this.inDark()) && !this.alive().some((h) => CM.trait(h, "slippery")) && this.rnd.chance(0.5)) {   // surprise: they're on you before you can draw...
@@ -5299,13 +5347,13 @@ CM.Game = class {
 
   // a guardian falls: its relic into the pack, a trophy kept between runs, and the shaft it stood over is open
   slayGuardian(m) {
-    const id = m.guardian, G = CM.GUARDIANS[id], relic = G.relic ? CM.relic(id) : null;
+    const id = m.guardian, G = CM.GUARDIANS[id], relic = G.relic && !m.echo ? CM.relic(id) : null;
     this.tally.guardians = (this.tally.guardians || []).concat(id);
-    this.trophy(id);
+    if (!m.echo) this.trophy(id);
     if (relic) this.bag.push(relic);
     this.sound("toll");
     this.say(G.fall);
-    this.say(relic ? `${G.take} (${relic.name}: ${CM.itemLabel(relic)}.)` : G.take);
+    this.say(m.echo ? "The echo fades, and leaves nothing but the shaft it stood over." : relic ? `${G.take} (${relic.name}: ${CM.itemLabel(relic)}.)` : G.take);
     this.emit("fx", { kind: "relic", item: relic });
   }
 
@@ -5648,7 +5696,7 @@ CM.Game = class {
     if (guardian) {
       this.slayGuardian(guardian);
       if (!this.fightFell) this.achieve("untouched");
-      if (CM.GUARDIANS[guardian.guardian].final) { this.bottom = true; this.endRun(true); return; }
+      if (CM.GUARDIANS[guardian.guardian].final && !this.endless && !guardian.echo) { this.bottom = true; this.endRun(true); return; }
     }
     if (boss) { this.crown(); return; }
     this.setMode("explore");
@@ -6281,6 +6329,24 @@ CM.Game = class {
     return true;
   }
 
+
+  // ---- Endless: no bottom - the bands come round again, the guardians echo, and the dark deepens ----
+  get allFame() { return this.fame.concat(this.fameEndless || []); }   // (both boards: what has been reached, ever, unlocks the kits)
+  campBelow(n) { return CM.CAMP_AFTER.includes(n) || Boolean(this.endless && n >= CM.BOTTOM && n % 5 === 0); }
+  deepen(number) {                                                       // every tenth floor below the bottom, a mutator more - one the run is without
+    const left = CM.DEEPENING.filter((m) => !this.has(m));
+    if (!left.length || (this.deepened || []).includes(number)) return null;
+    this.deepened = (this.deepened || []).concat(number);
+    const m = left[CM.hashSeed(`${this.seed}:deepen:${number}`) % left.length];
+    this.mutators = (this.mutators || []).concat(m);
+    this.say(`The dark deepens. ${CM.MUTATORS[m].name}: ${CM.MUTATORS[m].what}.`);
+    return m;
+  }
+  sortFameEndless() {
+    this.fameEndless.sort((a, b) => b.floor - a.floor || b.gold - a.gold);
+    this.fameEndless = this.fameEndless.slice(0, 10);
+  }
+
   // ---- a level earned is a boon chosen ----
   offerBoons(hero) {
     if (hero.offer && hero.offer.length === 3) return hero.offer;
@@ -6380,7 +6446,7 @@ CM.UI = class {
       <div id="classes"></div>
       <p id="start-with"></p>
     </div>
-    <div class="card" id="fame"><h2>Hall of Fame</h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
+    <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
     <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
     <div class="version"></div>
   </div>
@@ -6395,6 +6461,7 @@ CM.UI = class {
       <label for="create-seed">Seed</label><input id="create-seed" type="text" maxlength="40" spellcheck="false">
       <label for="kit">Kit</label><select id="kit" title="What the deepest run so far has earned"></select>
       <label for="difficulty">Difficulty</label><select id="difficulty" title="How hard the dungeon is"></select>
+      <label for="mode">Expedition</label><select id="mode" title="The dungeon has a bottom; an Endless expedition does not"><option value="dungeon">The dungeon</option><option value="endless">Endless</option></select>
       <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>
     <div class="small" id="create-note"></div>
   </div>
@@ -6635,19 +6702,23 @@ CM.UI = class {
 
   // ---- the end of a run: how it went, who came back, what it came to ----
   showEnding(won, entry) {
-    const g = this.game, t = entry.tally || {}, rank = g.fame.indexOf(entry) + 1;
+    const g = this.game, t = entry.tally || {}, board = entry.endless ? g.fameEndless : g.fame, rank = board.indexOf(entry) + 1;
     this.overEntry = entry;
+    this.fameBoard = entry.endless ? "endless" : "dungeon";
     this.fameOpen = -1;                                                  // (the Hall of Fame has been re-sorted: an open row would be another's)
     const slot = this.$("#dlg-over .emblem-slot");
     slot.innerHTML = "";
     slot.appendChild(CM.art.emblem(120));
     this.$("#dlg-over").classList.toggle("won", won);
     this.$("#dlg-over").classList.remove("crowning");
-    this.$("#over-title").textContent = entry.bottom ? "To the bottom of the world" : won && entry.floor > CM.LAST_FLOOR ? `With the crown, into the Deep - and down on floor ${entry.floor}` : won ? "The Lich King is no more" : `The party fell on floor ${entry.floor}`;
+    this.$("#over-title").textContent = CM.endlessFall(entry) ? `Floor ${entry.floor} of the endless dark` : entry.bottom ? "To the bottom of the world" : won && entry.floor > CM.LAST_FLOOR ? `With the crown, into the Deep - and down on floor ${entry.floor}` : won ? "The Lich King is no more" : `The party fell on floor ${entry.floor}`;
     const standing = g.party.filter((h) => h.hp > 0), fallen = g.party.filter((h) => h.hp <= 0);
     const names = (list) => (list.length ? list.map((h) => h.name).join(", ").replace(/, ([^,]*)$/, " and $1") : "The party");
     let text;
-    if (entry.bottom) {
+    if (CM.endlessFall(entry)) {
+      text = `${entry.floor} floors down into a dark with no bottom${won ? ", with the Lich King's crown" : ""}, the last of them fell, in ${CM.themeFor(entry.floor).name} come round again, with ${entry.gold.toLocaleString()} gold. ${names(g.party)} are counted among the deepest.`
+        + (t.kills ? ` ${CM.plural(t.kills, "monster")} went down before them.` : "") + " The dark goes on without them. It always did.";
+    } else if (entry.bottom) {
       text = `The Root of the World is still, and the dark below it is only dark. ${names(standing)} climb fifty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
         + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up.` : ", all four of them.") + " Nothing is dreaming the king now. The story is over, all the way down.";
     } else if (won && entry.floor > CM.LAST_FLOOR) {
@@ -6673,10 +6744,10 @@ CM.UI = class {
       div.appendChild(who);
       roll.appendChild(div);
     }
-    const facts = [["Floors", `${entry.floor} of ${entry.won || entry.floor > CM.LAST_FLOOR ? CM.BOTTOM : CM.LAST_FLOOR}`], ["Gold", entry.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
+    const facts = [["Floors", CM.endlessFall(entry) ? `${entry.floor}, Endless` : `${entry.floor} of ${entry.won || entry.floor > CM.LAST_FLOOR ? CM.BOTTOM : CM.LAST_FLOOR}`], ["Gold", entry.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
       ["Chests opened", t.chests || 0], ["Steps walked", (t.steps || 0).toLocaleString()], ["Fights", `${t.fights || 0}${t.fled ? ` (${t.fled} fled)` : ""}`],
       ["Kit", (CM.KITS[entry.kit] || CM.KITS.pauper).name], ["Difficulty", (CM.DIFFICULTIES[entry.difficulty] || CM.DIFFICULTIES.fair).name], ["Seed", `${entry.seed}${entry.daily ? " (today's)" : ""}`],
-      ["Hall of Fame", rank ? `${CM.ordinal(rank)} of ${g.fame.length}` : "not among the ten"]];
+      [entry.endless ? "Endless board" : "Hall of Fame", rank ? `${CM.ordinal(rank)} of ${board.length}` : "not among the ten"]];
     if (t.guardians && t.guardians.length) facts.splice(6, 0, ["Guardians slain", this.guardianNames(t.guardians)]);
     if (g.vault) facts.push(["In the vault", `${g.vault.name}, for the next party`]);
     if (entry.titles && entry.titles.length) facts.push(["Earned", entry.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", ")]);
@@ -6729,7 +6800,7 @@ CM.UI = class {
       const b = e.target.closest("button[data-seed]");
       if (b) { this.$("#seed").value = b.dataset.seed; this.refreshTitle(); return; }
       const c = e.target.closest("button[data-card]");
-      if (c) { this.openCard(g.fame[Number(c.dataset.card)]); return; }
+      if (c) { this.openCard((this.fameBoard === "endless" ? g.fameEndless : g.fame)[Number(c.dataset.card)]); return; }
       const tr = e.target.closest("tr.row");
       if (!tr) return;
       const i = Number(tr.dataset.i);
@@ -6776,6 +6847,8 @@ CM.UI = class {
     this.$("#difficulty").innerHTML = Object.entries(CM.DIFFICULTIES).map(([id, d]) => `<option value="${id}">${d.name}</option>`).join("");
     this.$("#difficulty").value = "fair";
     this.$("#difficulty").addEventListener("change", () => this.renderCreateNote());
+    this.$("#mode").addEventListener("change", () => this.renderCreateNote());
+    for (const b of this.root.querySelectorAll("#fame .boards button")) b.addEventListener("click", () => { this.fameBoard = b.dataset.board; this.fameOpen = -1; this.refreshTitle(); });
     const slots = this.$("#slots");
     for (let i = 0; i < 4; i++) {
       const div = document.createElement("div");
@@ -6847,14 +6920,15 @@ CM.UI = class {
     const g = this.game, seed = this.$("#create-seed").value;
     this.$("#seed").value = seed;
     this.chosenKit = this.$("#kit").value || "pauper";
-    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit, this.$("#difficulty").value);
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value);
   }
 
   startNew() { this.openCreate(); }
 
   renderCreateNote() {
     const seed = this.$("#create-seed").value, muts = CM.mutatorsFor(seed), d = CM.DIFFICULTIES[this.$("#difficulty").value] || CM.DIFFICULTIES.fair;
-    this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` Today's dungeon comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "");
+    this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` Today's dungeon comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "")
+      + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "");
   }
 
   refreshTitle() {
@@ -6863,7 +6937,7 @@ CM.UI = class {
     const can = g.canContinue();
     this.$("#btn-continue").disabled = !can;
     this.$("#continue-note").textContent = can
-      ? `Slot ${g.slot}: floor ${g.lastRun.floor.number}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}${g.lastRun.difficulty && g.lastRun.difficulty !== "fair" ? ", " + CM.DIFFICULTIES[g.lastRun.difficulty].name : ""}`
+      ? `Slot ${g.slot}: floor ${g.lastRun.floor.number}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}${g.lastRun.difficulty && g.lastRun.difficulty !== "fair" ? ", " + CM.DIFFICULTIES[g.lastRun.difficulty].name : ""}${g.lastRun.endless ? ", Endless" : ""}`
       : `Slot ${g.slot} is empty: no expedition is under way there.`;
     for (const b of this.root.querySelectorAll("#slots-row button[data-slot]")) {
       const n = Number(b.dataset.slot), r = (g.runs || [])[n - 1];
@@ -6879,26 +6953,27 @@ CM.UI = class {
     this.$("#start-with").textContent = `Four set out with 30 gold, two torches and two potions (${bag.map((i) => i.name).join(" and ")} - the seed decides which). `
       + "New Expedition lets you name them, choose their callings and roll their stats; chests and fallen monsters give better gear; "
       + "a merchant's camp with a temple waits below floors 5, 10 and 15 (and every fifth floor of the Deep) - each shaft guarded by something that has made its lair over it, and leaves a relic when it falls. "
-      + "The Lich King waits on floor 20; below him, thirty floors of the Deep go down to the Root of the World.";
-    const table = this.$("#fame table");
-    if (!g.fame.length) table.innerHTML = `<tr><td class="empty">No party has gone down yet.</td></tr>`;
-    else table.innerHTML = g.fame.map((e, i) => {
+      + "The Lich King waits on floor 20; below him, thirty floors of the Deep go down to the Root of the World - or, in an Endless expedition, to no bottom at all.";
+    const table = this.$("#fame table"), endlessBoard = this.fameBoard === "endless", board = endlessBoard ? (g.fameEndless || []) : g.fame;
+    for (const b of this.root.querySelectorAll("#fame .boards button")) b.classList.toggle("on", (b.dataset.board === "endless") === endlessBoard);
+    if (!board.length) table.innerHTML = `<tr><td class="empty">${endlessBoard ? "No Endless expedition yet: choose Endless when the party sets out." : "No party has gone down yet."}</td></tr>`;
+    else table.innerHTML = board.map((e, i) => {
       const open = this.fameOpen === i, t = e.tally;
       let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
-        + `<td class="${e.won ? "won" : ""}">${e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
+        + `<td class="${e.won ? "won" : ""}">${endlessBoard ? `floor ${e.floor}${e.won ? " - crowned" : ""}` : e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
       if (open) {
         rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
           + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button></div>` : "")
           + (t ? `<div>${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}.</div>` : "")
           + (t && t.guardians && t.guardians.length ? `<div>Guardians slain: ${this.esc(this.guardianNames(t.guardians))}.</div>` : "")
-          + (e.mutators && e.mutators.length ? `<div>Today's dungeon: ${this.esc(e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(" and "))}.</div>` : "")
+          + (e.mutators && e.mutators.length ? `<div>${e.endless ? "The dark deepened" : "Today's dungeon"}: ${this.esc(e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(", "))}.</div>` : "")
           + (e.titles && e.titles.length ? `<div>Earned: ${this.esc(e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", "))}.</div>` : "")
           + `<div><button data-card="${i}">Summary card</button></div>`
           + "</td></tr>";
       }
       return rows;
     }).join("");
-    const have = CM.unlocked(g.fame), deep = CM.deepest(g.fame);
+    const have = CM.unlocked(g.allFame), deep = CM.deepest(g.allFame);
     this.$("#unlocks").innerHTML = Object.entries(CM.KITS).map(([id, k]) => {
       const got = have.includes(id), need = k.need === 21 ? "slay the Lich King" : `reach floor ${k.need}`;
       return `<div class="unlock ${got ? "got" : ""}"><b>${got ? "✓" : "○"} ${k.name}</b> <small>${got ? k.what : `${k.what} <i>(${need}${deep.floor ? `; deepest so far: floor ${deep.floor}` : ""})</i>`}</small></div>`;
@@ -7464,7 +7539,7 @@ CM.UI = class {
       roll.appendChild(div);
     }
     const t = g.tally || {};
-    this.$("#over-tally").innerHTML = [["Floors", `${CM.LAST_FLOOR} of ${CM.LAST_FLOOR} - and ${CM.BOTTOM - CM.LAST_FLOOR} more below`], ["Gold", g.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
+    this.$("#over-tally").innerHTML = [["Floors", `${CM.LAST_FLOOR} of ${CM.LAST_FLOOR} - and ${g.endless ? "no bottom" : (CM.BOTTOM - CM.LAST_FLOOR) + " more"} below`], ["Gold", g.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
       ["Steps walked", (t.steps || 0).toLocaleString()], ["Guardians slain", (t.guardians || []).length ? this.guardianNames(t.guardians) : "none"]].map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
     this.openDialog("#dlg-over");
     this.ending = "victory";
@@ -7922,7 +7997,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const G = foe.guardian ? CM.GUARDIANS[foe.guardian] : null;
     const w = foe.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h = foe.boss ? 0.98 : G ? 0.92 * G.size : 0.85;
     return { x, y, dx, dz, w, h, wx: x + 0.5 + dx, wz: y + 0.5 + dz, wh: h + 0.02, m: foe, shade: foe.elite ? 1.2 : 1,
-      layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost" };
+      layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost", echo: Boolean(foe.echo) };
   }
 
   // the living dungeon: torches on some walls (never over a lever or carving, never on a secret door) and, in the
@@ -7977,7 +8052,7 @@ window.addEventListener("DOMContentLoaded", () => {
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
         const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
-        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: m.boss ? 0.98 : G ? 0.92 * G.size : 0.85, shade: m.elite ? 1.2 : 1,
+        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: m.boss ? 0.98 : G ? 0.92 * G.size : 0.85, shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
           lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
       }
     }
@@ -8015,11 +8090,12 @@ window.addEventListener("DOMContentLoaded", () => {
         if (m.fled) continue;
         const place = foePlace(m);
         if (!place) continue;
-        let alpha = 1, lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0);
+        const solid = place.echo ? 0.78 : 1;                             // (an echo of a guardian is drawn a little through)
+        let alpha = solid, lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0);
         if (m.hp <= 0) {                                                 // fallen: it fades, and sinks into the floor (a ghost rises)
           const t = (now - (dying.get(m) || now)) / 700;
           if (t >= 1) { dying.delete(m); continue; }
-          alpha = 1 - t;
+          alpha = solid * (1 - t);
           lift += place.ghost ? t * 0.6 : -t * 0.55;
         } else { place.index = living.indexOf(m); place.chosen = place.index === (game.target || 0); hud.push(place); }
         const flash = flashes.get(m) || 0;

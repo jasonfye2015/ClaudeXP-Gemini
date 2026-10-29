@@ -109,6 +109,9 @@ table.stats tr.key td.hint { color: var(--gold); }
 .boon-badge { background: var(--gold); color: #2A1A08; font: bold 9px Tahoma, Verdana, sans-serif; padding: 1px 5px; border-radius: 8px; vertical-align: middle; }
 .member .ail { color: #E0A0A0; font: 10px Tahoma, Verdana, sans-serif; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #fame h2.later { margin-top: 14px; }
+#fame .boards { float: right; display: inline-flex; gap: 4px; }
+#fame .boards button { padding: 1px 8px; font-size: 11px; font-weight: normal; }
+#fame .boards button.on { border-color: var(--gold); color: var(--gold); background: #4A321A; }
 .unlock { margin: 4px 0; font-size: 12.5px; color: var(--dim); }
 .unlock b { color: var(--faint); font-weight: bold; }
 .unlock.got b { color: #8FD08F; }

@@ -99,6 +99,11 @@ CM.antidote = () => ({ name: "Antidote", kind: "antidote", power: 0, value: 15 }
 // one floor in a run may be special - all water, or all dark, or a labyrinth with something in it - decided by the
 // seed, never on a guardian's floor nor near the top or the bottom
 CM.specialFor = function (number, seed) {
+  if (number > CM.BOTTOM) {                                            // Endless: where the first fifty floors had theirs, of whatever kind the dark dreams
+    if (CM.guardianFor(number)) return null;
+    const kind = ["wading", "dark", "maze"][CM.hashSeed(`${seed}:special:endless:${number}`) % 3];
+    return CM.specialFor(((number - 1) % CM.BOTTOM) + 1, seed) ? kind : null;
+  }
   if (CM.guardianFor(number) || number <= 2 || number === CM.LAST_FLOOR - 1 || number === CM.LAST_FLOOR || number >= CM.BOTTOM - 1) return null;
   const h = (what, n) => CM.hashSeed(`${seed}:special:${what}:${n}`);
   if (number > CM.LAST_FLOOR) {                                        // the Deep has its own: a flooded street, a labyrinth of the forges, the ossuary's dark
@@ -162,15 +167,16 @@ CM.monsterGroup = function (floor, rnd) {
 CM.deepGroup = function (floor, rnd) {
   const band = CM.themeIndex(floor), level = CM.monsterLevel(floor);
   const here = CM.MONSTERS.filter((m) => m.deep === band), above = CM.MONSTERS.filter((m) => m.deep === band - 1);
-  const kinds = here.length ? here : CM.MONSTERS.filter((m) => m.deep);
-  const kind = rnd.pick(kinds), count = rnd.int(2, 4 + (floor >= 36 ? 1 : 0));
+  const shallow = floor > CM.BOTTOM && !here.length ? CM.MONSTERS.slice(band * 4, Math.min(CM.SHALLOW, band * 4 + 5)) : [];   // (Endless: the first bands come round with their own kinds)
+  const kinds = here.length ? here : shallow.length ? shallow : CM.MONSTERS.filter((m) => m.deep);
+  const kind = rnd.pick(kinds), count = rnd.int(2, 4 + (floor >= 36 ? 1 : 0) + (floor > CM.BOTTOM ? 1 : 0));
   const group = [];
   for (let i = 0; i < count; i++) group.push(CM.makeMonster(kind, level, rnd));
   if (count >= 3 && rnd.chance(0.4)) {
     const other = rnd.pick(above.length && rnd.chance(0.4) ? above : kinds);
     if (other !== kind) for (let i = Math.floor(count / 2); i < count; i++) group[i] = CM.makeMonster(other, level, rnd);
   }
-  if (rnd.chance(0.2)) CM.makeElite(group, rnd);
+  if (rnd.chance(floor > CM.BOTTOM ? 0.3 : 0.2)) CM.makeElite(group, rnd);
   return group;
 };
 CM.makeElite = function (group, rnd) {
@@ -195,14 +201,16 @@ CM.bossMonster = () => ({ name: CM.BOSS.name, kind: CM.BOSS.name, colour: CM.BOS
 CM.skeleton = (level, rnd) => CM.makeMonster(CM.MONSTERS[2], level, rnd);
 
 // a guardian (CM.GUARDIANS), ready to fight, with the company it keeps; and the relic it leaves behind
-CM.guardianMonster = function (id) {
-  const G = CM.GUARDIANS[id];
-  return { name: G.name, kind: G.name, colour: G.colour, hp: G.hp, max: G.hp, atk: G.atk, df: G.df, xp: G.xp, gold: G.gold, guardian: id, speed: G.speed,
-    undead: Boolean(G.undead), ability: null, touch: G.touch ? Object.assign({}, G.touch) : null, turns: 0 };
+// a guardian over its shaft - or, below the bottom (Endless), its echo: the same thing, grown to the depth (this floor's
+// monster level against its own floor's), that leaves nothing behind when it falls
+CM.guardianMonster = function (id, floor) {
+  const G = CM.GUARDIANS[id], echo = floor ? CM.echoOf(floor) : 0, k = echo ? CM.monsterLevel(floor) / CM.monsterLevel(G.floor) : 1;
+  return { name: echo ? `${G.name}'s Echo` : G.name, kind: G.name, colour: G.colour, hp: Math.round(G.hp * k), max: Math.round(G.hp * k), atk: Math.round(G.atk * k), df: Math.round(G.df * Math.sqrt(k)),
+    xp: Math.round(G.xp * k), gold: Math.round(G.gold * k), guardian: id, echo, speed: G.speed, undead: Boolean(G.undead), ability: null, touch: G.touch ? Object.assign({}, G.touch) : null, turns: 0 };
 };
 CM.guardianGroup = function (id, floor, rnd) {
-  const group = [CM.guardianMonster(id)];
-  for (const name of CM.GUARDIANS[id].escorts || []) group.push(CM.makeMonster(CM.monsterKind(name), floor, rnd));
+  const group = [CM.guardianMonster(id, floor)], level = floor > CM.BOTTOM ? CM.monsterLevel(floor) : floor;
+  for (const name of CM.GUARDIANS[id].escorts || []) group.push(CM.makeMonster(CM.monsterKind(name), level, rnd));
   return group;
 };
 CM.relic = function (id) {
@@ -824,7 +832,8 @@ CM.makeFloor = function (number, seed) {
   }
   // the carving for this floor, on a wall the party can stand before
   const carve_at = freeCells((x, y) => wallFace(x, y) >= 0)[0];
-  if (carve_at) floor.features[key(carve_at[0], carve_at[1])] = { type: "carving", face: wallFace(carve_at[0], carve_at[1]), text: number - 1, read: false };
+  if (carve_at) floor.features[key(carve_at[0], carve_at[1])] = { type: "carving", face: wallFace(carve_at[0], carve_at[1]),
+    text: number > CM.BOTTOM ? `e:${CM.hashSeed(`${seed}:endless:${number}`) % CM.LORE_ENDLESS.length}` : number - 1, read: false };   // (below the bottom: the dream, still dreaming)
   // keys: one for every locked door, somewhere before it
   for (const [dk, f] of Object.entries(floor.features)) {
     if (f.type !== "door" || !f.locked) continue;
