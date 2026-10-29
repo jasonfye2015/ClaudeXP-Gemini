@@ -615,6 +615,93 @@ CM.art.portraitDrawn = function (cls, size = 56) {
   return c;
 };
 
+// ---- what flies and bursts (the effects' sprites), and the torches and water of a living dungeon -------------------
+function softDot(p, cx, cy, r, inner, outer) {
+  const g = p.createRadialGradient(cx, cy, 0, cx, cy, r);
+  g.addColorStop(0, inner); g.addColorStop(0.45, inner); g.addColorStop(1, outer);
+  p.fillStyle = g; p.beginPath(); p.arc(cx, cy, r, 0, Math.PI * 2); p.fill();
+}
+CM.art.fxSpark = function () { const c = artCanvas(), p = c.getContext("2d"); softDot(p, 128, 128, 120, "rgba(255,250,220,1)", "rgba(255,200,80,0)"); return c; };
+CM.art.fxShard = function () {                                             // a sliver of bone
+  const c = artCanvas(), p = c.getContext("2d");
+  p.translate(128, 128); p.rotate(-0.6);
+  outlined(p, () => { p.roundRect(-70, -18, 140, 36, 16); }, "#E8E0C8", "#6A6050", 6);
+  p.fillStyle = "#B8B0A0"; p.fillRect(-60, -4, 120, 8);
+  return c;
+};
+CM.art.fxFire = function () { const c = artCanvas(), p = c.getContext("2d"); softDot(p, 128, 140, 118, "rgba(255,120,30,0.95)", "rgba(255,60,0,0)"); softDot(p, 128, 124, 66, "rgba(255,240,160,1)", "rgba(255,180,60,0)"); return c; };
+CM.art.fxFrost = function () {                                             // a six-armed crystal
+  const c = artCanvas(), p = c.getContext("2d");
+  softDot(p, 128, 128, 110, "rgba(200,240,255,0.6)", "rgba(120,200,255,0)");
+  p.strokeStyle = "#E8FAFF"; p.lineWidth = 10; p.lineCap = "round";
+  for (let i = 0; i < 6; i++) {
+    const a = i * Math.PI / 3;
+    p.beginPath(); p.moveTo(128, 128); p.lineTo(128 + Math.cos(a) * 95, 128 + Math.sin(a) * 95); p.stroke();
+    for (const s of [-1, 1]) { p.beginPath(); p.moveTo(128 + Math.cos(a) * 60, 128 + Math.sin(a) * 60); p.lineTo(128 + Math.cos(a) * 60 + Math.cos(a + s * 0.9) * 28, 128 + Math.sin(a) * 60 + Math.sin(a + s * 0.9) * 28); p.stroke(); }
+  }
+  return c;
+};
+CM.art.fxBolt = function () {                                              // lightning, top to bottom
+  const c = artCanvas(), p = c.getContext("2d"), pts = [[128, 6], [100, 90], [146, 110], [112, 180], [150, 200], [120, 250]];
+  softDot(p, 128, 128, 120, "rgba(200,220,255,0.35)", "rgba(120,160,255,0)");
+  p.lineCap = "round"; p.lineJoin = "round";
+  for (const [w, col] of [[26, "rgba(120,170,255,0.6)"], [12, "#E8F4FF"], [5, "#FFFFFF"]]) { p.strokeStyle = col; p.lineWidth = w; p.beginPath(); pts.forEach(([x, y], i) => (i ? p.lineTo(x, y) : p.moveTo(x, y))); p.stroke(); }
+  return c;
+};
+CM.art.fxForce = function () { const c = artCanvas(), p = c.getContext("2d"); softDot(p, 128, 128, 118, "rgba(200,120,255,0.95)", "rgba(120,40,200,0)"); softDot(p, 128, 128, 60, "rgba(255,230,255,1)", "rgba(220,160,255,0)"); return c; };
+CM.art.fxHoly = function () {                                              // an eight-pointed light
+  const c = artCanvas(), p = c.getContext("2d");
+  softDot(p, 128, 128, 120, "rgba(255,240,180,0.7)", "rgba(255,220,120,0)");
+  p.fillStyle = "#FFF8D0"; p.beginPath();
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? 34 : 112; p.lineTo(128 + Math.cos(a) * r, 128 + Math.sin(a) * r); }
+  p.closePath(); p.fill();
+  return c;
+};
+CM.art.fxArrow = function () {
+  const c = artCanvas(), p = c.getContext("2d");
+  p.translate(128, 128); p.rotate(-Math.PI / 4); p.lineCap = "round";
+  p.strokeStyle = "#1A1410"; p.lineWidth = 14; p.beginPath(); p.moveTo(-100, 0); p.lineTo(100, 0); p.stroke();
+  p.strokeStyle = "#8A6A30"; p.lineWidth = 8; p.beginPath(); p.moveTo(-100, 0); p.lineTo(80, 0); p.stroke();
+  outlined(p, () => { p.moveTo(110, 0); p.lineTo(70, -18); p.lineTo(78, 0); p.lineTo(70, 18); }, "#D8DCE8", "#1A1410", 3);
+  outlined(p, () => { p.moveTo(-100, 0); p.lineTo(-70, -22); p.lineTo(-50, -4); p.lineTo(-50, 4); p.lineTo(-70, 22); }, "#E8E0C0", "#1A1410", 3);
+  return c;
+};
+CM.art.fxLeaf = function () {
+  const c = artCanvas(), p = c.getContext("2d");
+  p.translate(128, 128); p.rotate(0.5);
+  outlined(p, () => { p.moveTo(0, -110); p.quadraticCurveTo(90, -40, 0, 110); p.quadraticCurveTo(-90, -40, 0, -110); }, "#4A9A3A", "#1A3A14", 6);
+  p.strokeStyle = "#1A3A14"; p.lineWidth = 5; p.beginPath(); p.moveTo(0, -100); p.lineTo(0, 100); p.stroke();
+  return c;
+};
+CM.art.fxRing = function () {                                              // a ring of cold light, spreading on the floor
+  const c = artCanvas(), p = c.getContext("2d"), g = p.createRadialGradient(128, 128, 60, 128, 128, 124);
+  g.addColorStop(0, "rgba(120,240,255,0)"); g.addColorStop(0.55, "rgba(120,240,255,0)"); g.addColorStop(0.8, "rgba(180,250,255,0.95)"); g.addColorStop(1, "rgba(120,240,255,0)");
+  p.fillStyle = g; p.fillRect(0, 0, 256, 256);
+  return c;
+};
+// a wall torch: an iron bracket and a flame that leans one way, then the other (three frames)
+CM.art.torch = function (frame) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, lean = [-1, 0, 1][frame % 3] * 18;
+  p.fillStyle = "#1A1410"; p.fillRect(118, 150, 20, 90); p.fillRect(96, 230, 64, 16);
+  p.fillStyle = "#3A3A42"; p.fillRect(122, 154, 12, 82);
+  p.fillStyle = "#6A4A28"; p.fillRect(114, 120, 28, 40);
+  const g = p.createRadialGradient(128 + lean, 100, 4, 128 + lean, 100, 90);
+  g.addColorStop(0, "rgba(255,240,180,0.9)"); g.addColorStop(0.4, "rgba(255,160,40,0.55)"); g.addColorStop(1, "rgba(255,100,0,0)");
+  p.fillStyle = g; p.fillRect(0, 0, S, S);
+  outlined(p, () => { p.moveTo(128, 130); p.quadraticCurveTo(170 + lean, 100, 128 + lean, 30); p.quadraticCurveTo(86 + lean, 100, 128, 130); }, "#FFA030", "#C04010", 4);
+  outlined(p, () => { p.moveTo(128, 126); p.quadraticCurveTo(146 + lean * 0.5, 100, 128 + lean * 0.6, 66); p.quadraticCurveTo(110 + lean * 0.5, 100, 128, 126); }, "#FFF0A0", "#FFC040", 2);
+  return c;
+};
+// water on the floor of the flooded vaults: a dark sheet with rings of light that move from frame to frame
+CM.art.water = function (frame) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(77);
+  p.fillStyle = "rgba(40,80,90,0.55)"; p.fillRect(0, 0, S, S);
+  p.strokeStyle = "rgba(180,230,240,0.5)"; p.lineWidth = 3;
+  for (let i = 0; i < 7; i++) { const x = rnd.next() * S, y = rnd.next() * S, r = 14 + ((rnd.next() * 40 + frame * 13) % 40); p.beginPath(); p.ellipse(x, y, r, r * 0.45, 0, 0, Math.PI * 2); p.stroke(); }
+  speckle(p, rnd, S, S, 60, "rgba(220,245,255,0.8)", 0.6, 3);
+  return c;
+};
+
 // the title's emblem: the Lich King's crown on his skull, over a crossed sword and staff, on a medallion of old gold
 CM.art.emblem = function (size = 160) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 160, cx = 80, cy = 82;
@@ -700,5 +787,9 @@ CM.art.buildDrawn = function (theme) {
   add("phylactery", CM.art.phylactery());
   for (const m of CM.MONSTERS) add(`monster:${m.name}`, CM.art.monster(m));
   add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
+  add("fx:spark", CM.art.fxSpark()); add("fx:shard", CM.art.fxShard()); add("fx:fire", CM.art.fxFire()); add("fx:frost", CM.art.fxFrost());
+  add("fx:bolt", CM.art.fxBolt()); add("fx:force", CM.art.fxForce()); add("fx:holy", CM.art.fxHoly()); add("fx:arrow", CM.art.fxArrow());
+  add("fx:leaf", CM.art.fxLeaf()); add("fx:ring", CM.art.fxRing());
+  for (let f = 0; f < 3; f++) { add(`torch${f}`, CM.art.torch(f)); add(`water${f}`, CM.art.water(f)); }
   return { layers, index, size: ART_SIZE, crisp: false };
 };

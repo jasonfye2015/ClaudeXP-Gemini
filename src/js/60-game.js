@@ -34,6 +34,7 @@ CM.Game = class {
   }
 
   // ---- events: change (redraw), message, mode, floor, moved, turned, fx, sound, near, mesh, teleported, fell, spin, lore, over ----
+  // fx kinds: hit, miss, die, hurt, ailment, swing, attack, cast, cold, trap, summon, rise, shatter, sparkle, levelup, potion
   on(event, fn) { (this.listeners[event] = this.listeners[event] || []).push(fn); return this; }
   emit(event, ...args) { for (const fn of this.listeners[event] || []) fn(...args); }
 
@@ -463,6 +464,7 @@ CM.Game = class {
       this.bag.push(...thing.items);
       this.sound("chest");
       this.count("chests");
+      this.emit("fx", { kind: "sparkle", at: [x, y] });
       const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : i.name)).join(", ");
       this.say(`The chest creaks open: ${thing.gold} gold` + (found ? `, ${found}.` : "."));
       this.saveRun();
@@ -510,6 +512,7 @@ CM.Game = class {
 
   // what a trapped chest does to whoever opens it
   springTrap(trap, k) {
+    this.emit("fx", { kind: "trap", trap });
     const opener = this.alive()[0];
     if (trap === "needle" && opener) this.afflict(opener, "poison", "needle") || this.say(`${opener.name} snatches a hand back in time.`);
     else if (trap === "gas") for (const p of this.alive()) p.hp = Math.max(1, p.hp - Math.max(1, Math.floor(p.max * 0.1)));
@@ -950,11 +953,13 @@ CM.Game = class {
     if (m.ability === "breath") {
       m.breath = (m.breath || 0) + 1;
       if (m.breath % 2 === 0) {
+        this.emit("fx", { kind: "attack", foe: m, breath: true });
         this.say(`The ${m.name} breathes fire over the whole party!`);
         for (const h of this.targets()) this.hurt(h, Math.max(1, Math.floor(m.atk / 3) + 2), m, { noTouch: true });
         return;
       }
     }
+    this.emit("fx", { kind: "attack", foe: m, ranged: m.ability === "ranged" });
     const blows = m.ability === "buffet" ? 2 : 1;
     for (let i = 0; i < blows; i++) {
       const target = this.pickTarget(m);
@@ -988,6 +993,7 @@ CM.Game = class {
     if (share <= CM.LICH.coldFrom) {
       c.cold = (c.cold || 0) + 1;
       if (c.cold % 2 === 0) {
+        this.emit("fx", { kind: "cold", foe: m });
         this.say("The Lich King raises his hand, and a deathly cold fills the hall!");
         for (const h of this.targets()) this.hurt(h, 10 + Math.floor(this.floor.number / 2), m, { noTouch: true });
         return;
@@ -995,6 +1001,7 @@ CM.Game = class {
     }
     const target = this.pickTarget(m);
     if (!target) return;
+    this.emit("fx", { kind: "attack", foe: m });
     if (!this.rnd.chance(0.85)) { this.say(`The Lich King's hand closes on nothing: ${target.name} is too quick.`); return; }
     this.hurt(target, this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), m, { how: " - a touch of grave-cold" });
   }
@@ -1013,6 +1020,7 @@ CM.Game = class {
   // one hero's blow on one foe (Fight, and the Ranger's arrows): the damage done, 0 for a miss
   strike(hero, target, note = "", opts = {}) {
     const rnd = this.rnd;
+    this.emit("fx", { kind: "swing", hero, foe: target });
     if (!opts.sure && !rnd.chance(this.hitChance(hero))) {
       this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
       this.sound("miss");
@@ -1090,6 +1098,7 @@ CM.Game = class {
     h.mp -= a.mp;
     if (a.once) { h.used = h.used || {}; h.used[id] = true; }
     this.sound(a.mp ? "spell" : "hit");
+    this.emit("fx", { kind: "cast", id, hero: h, foe, ally, foes });
     this.doAbility(h, id, a, foe, ally, foes);
     this.emit("change");
     return true;
@@ -1228,6 +1237,7 @@ CM.Game = class {
       if (who < 0) return false;
       const note = this.give(arg.row, who);
       if (note) { this.say(note); return false; }
+      this.emit("fx", { kind: "potion", who, item: item.kind });
       return true;
     }
     return this.potionInBattle();
@@ -1240,6 +1250,7 @@ CM.Game = class {
     this.bag.splice(this.bag.indexOf(potion), 1);
     target.hp = Math.min(target.max, target.hp + potion.power);
     this.sound("heal");
+    this.emit("fx", { kind: "potion", who: this.party.indexOf(target), item: "heal" });
     this.say(`${target.name} drinks a Healing Potion (+${potion.power}).`);
     return true;
   }
@@ -1278,6 +1289,7 @@ CM.Game = class {
         hero.mp = hero.maxmp;
         hero.pending += 1;
         this.sound("level");
+        this.emit("fx", { kind: "levelup", hero });
         this.say(`${hero.name} reaches level ${hero.level}! A boon is theirs to choose (press ${this.party.indexOf(hero) + 1}).`);
       }
     }
@@ -1392,9 +1404,12 @@ CM.Game = class {
     const item = this.bag[row], foes = this.living(), L = this.floor ? this.floor.number : 1;
     const spec = item.kind === "scroll" ? CM.SCROLLS[item.spell] : CM.WANDS[item.spell];
     if (spec.outside && item.spell !== "healing") { this.say(`${item.name} is for between fights.`); return false; }
+    if (item.kind === "wand" && item.spell === "fire" && !this.foeAt(who)) { this.say("Nothing left to aim at."); return false; }
     this.sound("spell");
+    this.emit("fx", { kind: "cast", id: item.spell, hero: h, item: item.kind, foes, foe: item.kind === "wand" && item.spell === "fire" ? this.foeAt(who) : null,
+      ally: item.spell === "healing" ? this.allyAt(who, false) : null });
     if (item.spell === "fire") {
-      if (item.kind === "wand") { const t = this.foeAt(who); this.spellHit(t, 10 + 2 * L, `${h.name}'s wand spits fire:`); }
+      if (item.kind === "wand") { const t = this.foeAt(who); if (!t) { this.say("Nothing left to aim at."); return false; } this.spellHit(t, 10 + 2 * L, `${h.name}'s wand spits fire:`); }
       else { const dmg = 10 + 2 * L; for (const m of foes) this.spellHit(m, dmg); this.say(`${h.name} reads the scroll: fire on every foe, ${dmg} each.`); }
     } else if (item.spell === "frost") {
       const dmg = 6 + 2 * L;

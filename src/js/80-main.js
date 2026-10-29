@@ -112,19 +112,111 @@ window.addEventListener("DOMContentLoaded", () => {
   soundscape();
   CM.art.load().then(() => { if (lookNow() !== lookOn) relook(); });    // the packs, decoded: a theme that waited for them comes in
 
-  // ---- what stands in the corridors: the floor's things, or the foes of the fight ----
+  // ---- spectacle: what flies, bursts and shakes for each thing that happens; CM.Effects (45-fx.js) carries them ----
+  const fxs = new CM.Effects();
+  CM.fx = fxs;
   const dying = new Map();                                               // foe -> when it fell
   const flashes = new Map();                                             // foe -> flash left
-  game.on("fx", (fx) => {
-    if (fx.kind === "hit") flashes.set(fx.foe, 1);
-    if (fx.kind === "die") dying.set(fx.foe, performance.now());
-    if ((fx.kind === "hit" || fx.kind === "miss") && renderer.ok) {
-      const where = foePlace(fx.foe);
-      const at = where && renderer.project(where.wx, where.wh, where.wz);
-      if (at) ui.floatText(at[0], at[1] - 10, fx.kind === "miss" ? "miss" : String(fx.amount), fx.kind === "miss" ? "miss" : fx.spell ? "spell" : "");
+  const lunges = new Map();                                              // foe -> when it lunged at the party
+  const fwdV = () => [Math.sin(renderer.yaw), 0, -Math.cos(renderer.yaw)], rightV = () => [Math.cos(renderer.yaw), 0, Math.sin(renderer.yaw)];
+  const fromParty = (side = 0) => { const e = renderer.eye, f = fwdV(), r = rightV(); return [e[0] + f[0] * 0.3 + r[0] * side * 0.2, 0.4, e[2] + f[2] * 0.3 + r[2] * side * 0.2]; };
+  const beforeParty = (d = 0.3) => { const e = renderer.eye, f = fwdV(); return [e[0] + f[0] * d, 0.45, e[2] + f[2] * d]; };
+  const atFoe = (foe, k = 0.5) => { const p = foePlace(foe); return p ? [p.wx, p.h * k, p.wz] : null; };
+  const later = (fn) => { const hold = fxs.holdUntil - performance.now(); if (hold > 0) setTimeout(fn, hold); else fn(); };   // (a blow waits for its bolt to land)
+  const ELEMENT = { fire: { layer: "fx:fire", tint: "rgba(255,120,30,0.28)" }, frost: { layer: "fx:frost", tint: "rgba(120,200,255,0.25)" },
+    force: { layer: "fx:force", tint: "rgba(200,120,255,0.22)" }, holy: { layer: "fx:holy", tint: "rgba(255,240,180,0.3)" }, arrow: { layer: "fx:arrow", tint: null } };
+  function shoot(foe, element, opts = {}) {                             // a bolt from the party to a foe, bursting where it lands
+    const to = atFoe(foe);
+    if (!to) return;
+    const el = ELEMENT[element] || ELEMENT.force, arrow = element === "arrow";
+    fxs.projectile({ from: fromParty(opts.side || 0), to, layer: el.layer, size: arrow ? 0.16 : opts.size || 0.22, ms: arrow ? 220 : 320, trail: arrow ? null : el.layer, arc: arrow ? 0.04 : 0.12,
+      then: () => { fxs.burst({ at: to, layer: element === "frost" ? "fx:frost" : "fx:spark", n: arrow ? 5 : 12, size: element === "frost" ? 0.1 : 0.07 }); if (el.tint) ui.tint(el.tint, 260); } });
+  }
+  function blastFire(foes) {                                            // a fireball: to the middle of them, then fire on each
+    const places = foes.map((m) => atFoe(m, 0.5)).filter(Boolean);
+    if (!places.length) return;
+    const mid = places.reduce((a, p) => [a[0] + p[0] / places.length, a[1] + p[1] / places.length, a[2] + p[2] / places.length], [0, 0, 0]);
+    fxs.projectile({ from: fromParty(0), to: mid, layer: "fx:fire", size: 0.34, ms: 360, trail: "fx:fire",
+      then: () => { for (const p of places) fxs.burst({ at: p, layer: "fx:fire", n: 9, size: 0.09, speed: 1.3, up: 1.4, ms: 550 }); ui.tint("rgba(255,120,30,0.45)", 400); renderer.shake(0.35); } });
+  }
+  function floatAt(foe, text, cls) {
+    if (!renderer.ok) return;
+    const where = foePlace(foe), at = where && renderer.project(where.wx, where.wh, where.wz);
+    if (at) ui.floatText(at[0], at[1] - 10, text, cls);
+  }
+  function castFx(fx) {                                                 // a spell, a skill, a scroll or a wand: its light
+    const id = fx.id, foes = fx.foes && fx.foes.length ? fx.foes : game.living();
+    switch (id) {
+      case "missile": shoot(fx.foe, "force"); break;
+      case "firebolt": shoot(fx.foe, "fire"); break;
+      case "fire": if (fx.foe) shoot(fx.foe, "fire"); else blastFire(foes); break;           // (a wand aims; a scroll is a fireball)
+      case "smite": shoot(fx.foe, "holy"); break;
+      case "fireball": blastFire(foes); break;
+      case "frost": for (const m of foes) { const at = atFoe(m, 0); if (at) fxs.rain({ at: [at[0], 0, at[2]], n: 9 }); } ui.tint("rgba(120,200,255,0.3)", 500); break;
+      case "lightning": case "calllightning": { const at = atFoe(fx.foe, 0.55); if (at) fxs.flare({ at: [at[0], 0.6, at[2]], layer: "fx:bolt", size: 1.1, ms: 300, grow: 0.1 }); ui.tint("rgba(220,235,255,0.55)", 260); renderer.shake(0.35); break; }
+      case "sleep": case "lullaby": ui.tint("rgba(160,120,255,0.25)", 600); for (const m of foes) { const at = atFoe(m, 0.8); if (at) fxs.drift({ at, n: 5, size: 0.05, rise: 0.4, ms: 1100 }); } break;
+      case "blink": case "teleport": ui.tint("rgba(232,216,255,0.8)", 400); break;
+      case "light": ui.tint("rgba(255,240,200,0.45)", 700); break;
+      case "turn": for (const m of foes) if (m.undead) { const at = atFoe(m, 0.6); if (at) fxs.flare({ at, layer: "fx:holy", size: 0.7, ms: 500, rise: 0.3, grow: 0.5 }); } ui.tint("rgba(255,240,180,0.4)", 500); break;
+      case "thorns": for (const m of foes) { const at = atFoe(m, 0.05); if (at) fxs.burst({ at, layer: "fx:leaf", n: 10, size: 0.1, speed: 0.9, up: 2.6, gravity: 4 }); } break;
+      case "entangle": { const at = atFoe(fx.foe, 0.05); if (at) fxs.burst({ at, layer: "fx:leaf", n: 12, size: 0.1, speed: 0.7, up: 2.4, gravity: 4 }); break; }
+      case "volley": foes.slice(0, 2).forEach((m, i) => shoot(m, "arrow", { side: i ? 0.5 : -0.5 })); break;
+      case "aimed": shoot(fx.foe, "arrow"); break;
+      case "mark": case "mockery": { const at = atFoe(fx.foe, 0.9); if (at) fxs.drift({ at, n: 6, size: 0.05, rise: 0.25, ms: 700 }); break; }
+      case "bash": { const at = atFoe(fx.foe, 0.5); if (at) fxs.burst({ at, n: 10, size: 0.06 }); renderer.shake(0.3); break; }
+      case "trick": { const at = atFoe(fx.foe, 0.75); if (at) fxs.burst({ at, n: 10, size: 0.05, speed: 0.6, up: 0.4, gravity: 2 }); break; }
+      case "protection": case "sanctuary": ui.tint("rgba(140,180,255,0.3)", 600); break;
+      case "bless": case "rally": case "song": ui.tint("rgba(255,230,150,0.25)", 600); break;
+      default: break;
     }
-  });
-  game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); } });
+  }
+  function spectacle(fx) {
+    const now = performance.now();
+    switch (fx.kind) {
+      case "hit": flashes.set(fx.foe, 1); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
+      case "miss": later(() => floatAt(fx.foe, "miss", "miss")); break;
+      case "die": {
+        dying.set(fx.foe, now);
+        const at = atFoe(fx.foe, 0.4);
+        if (!at) break;
+        fxs.burst({ at, layer: fx.foe.undead ? "fx:shard" : "fx:spark", n: fx.foe.boss ? 40 : 14, size: fx.foe.undead ? 0.1 : 0.06, speed: 1.6, up: 1.8 });
+        if (fx.foe.boss) { fxs.ring({ at: [at[0], 0, at[2]], to: 3 }); renderer.shake(0.9); ui.tint("rgba(120,240,255,0.35)", 600); }
+        break;
+      }
+      case "hurt": { const frac = fx.hero && fx.hero.max ? fx.amount / fx.hero.max : 0; if (frac >= 0.2) later(() => renderer.shake(Math.min(1, frac * 1.4))); break; }
+      case "swing": renderer.punch(); if (fx.hero && fx.hero.weapon && fx.hero.weapon.props && fx.hero.weapon.props.bow && fx.foe) shoot(fx.foe, "arrow"); break;
+      case "attack": {
+        const from = atFoe(fx.foe, 0.6);
+        if (fx.breath && from) fxs.projectile({ from, to: beforeParty(0.25), layer: "fx:fire", size: 0.5, ms: 380, arc: 0.05, then: () => { ui.tint("rgba(255,120,30,0.45)", 400); renderer.shake(0.5); } });
+        else if (fx.ranged && from) fxs.projectile({ from, to: beforeParty(0.2), layer: "fx:arrow", size: 0.14, ms: 260, trail: null, arc: 0.03 });
+        else lunges.set(fx.foe, now);
+        break;
+      }
+      case "cast": castFx(fx); break;
+      case "cold": ui.tint("rgba(120,200,255,0.4)", 700); fxs.rain({ at: beforeParty(0.8), n: 14, spread: 1.2 }); renderer.shake(0.25); break;
+      case "trap": {
+        if (fx.trap === "blade") { ui.tint("rgba(200,30,20,0.5)", 300); renderer.shake(0.6); }
+        else if (fx.trap === "gas") ui.tint("rgba(120,200,60,0.45)", 900);
+        else if (fx.trap === "needle") ui.tint("rgba(200,30,20,0.3)", 200);
+        else if (fx.trap === "alarm") { ui.tint("rgba(255,255,255,0.5)", 250); renderer.shake(0.25); }
+        break;
+      }
+      case "summon": for (const m of game.foes) if (m.summoned && m.hp > 0 && !dying.has(m)) { const at = atFoe(m, 0.1); if (at) fxs.burst({ at, layer: "fx:shard", n: 12, size: 0.09, speed: 1.2, up: 2.4 }); } renderer.shake(0.3); break;
+      case "rise": {
+        const at = atFoe(fx.foe, 0.05);
+        if (at) { fxs.ring({ at: [at[0], 0, at[2]], to: 3.2, ms: 900 }); fxs.burst({ at: [at[0], 0.5, at[2]], layer: "fx:shard", n: 24, size: 0.1, speed: 1.8, up: 2.6 }); }
+        ui.tint("rgba(120,240,255,0.4)", 700); renderer.shake(0.8);
+        break;
+      }
+      case "shatter": ui.tint("rgba(120,240,255,0.5)", 500); fxs.burst({ at: beforeParty(0.6), layer: "fx:shard", n: 20, size: 0.08, speed: 2, up: 2 }); renderer.shake(0.5); break;
+      case "sparkle": fxs.burst({ at: [fx.at[0] + 0.5, 0.35, fx.at[1] + 0.5], n: 16, size: 0.05, speed: 0.8, up: 1.6, gravity: 2 }); break;
+      default: break;
+    }
+  }
+  game.on("fx", spectacle);
+  game.on("fell", () => renderer.shake(0.6));
+  game.on("floor", () => fxs.clear());
+  game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); lunges.clear(); } if (mode === "title") fxs.clear(); });
   // a click on a foe in the view chooses it
   ui.$("#hud").addEventListener("click", (e) => {
     if (game.mode !== "combat") return;
@@ -144,12 +236,42 @@ window.addEventListener("DOMContentLoaded", () => {
     if (i < 0) return null;
     const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * (n > 4 ? 0.22 : 0.32), -0.46, 0.46);
-    const back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : 0);   // (the Lich King keeps his distance)
+    let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : 0);     // (the Lich King keeps his distance)
+    const lunge = lunges.get(foe);
+    if (lunge !== undefined) {                                           // it lunges at the party, and draws back
+      const t = (performance.now() - lunge) / 340;
+      if (t >= 1) lunges.delete(foe); else back -= Math.sin(Math.PI * t) * 0.3;
+    }
     const fwd = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
     const dx = right[0] * off + fwd[0] * back, dz = right[1] * off + fwd[1] * back;
     const w = foe.boss ? 0.95 : 0.85, h = foe.boss ? 0.98 : 0.85;
     return { x, y, dx, dz, w, h, wx: x + 0.5 + dx, wz: y + 0.5 + dz, wh: h + 0.02, m: foe, shade: foe.elite ? 1.2 : 1,
       layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost" };
+  }
+
+  // the living dungeon: torches on some walls (never over a lever or carving, never on a secret door) and, in the
+  // flooded vaults, water on some floors - the same ones each time, from the seed
+  let decor = { key: null, torches: [], water: [] };
+  function decorations(fl) {
+    const key = `${game.seed}:${fl.number}:${fl.grid.length}`;
+    if (decor.key === key) return decor;
+    const torches = [], water = [], size = fl.grid.length, wet = CM.themeIndex(fl.number) === 1;
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      if (fl.grid[y][x] !== 0) continue;
+      const here = fl.features[`${x},${y}`];
+      for (let f = 0; f < 4; f++) {
+        const nx = x + CM.DIRS[f][0], ny = y + CM.DIRS[f][1];
+        if (!fl.grid[ny] || fl.grid[ny][nx] !== 1) continue;
+        const beyond = fl.features[`${nx},${ny}`];
+        if (beyond && beyond.type === "secret") continue;
+        if (here && (here.type === "lever" || here.type === "carving") && here.face === f) continue;
+        const h = CM.hashSeed(`${game.seed}:torch:${x}:${y}:${f}`);
+        if (h % 8 === 0) torches.push({ x, y, face: f, phase: h % 3 });
+      }
+      if (wet && !here && CM.hashSeed(`${game.seed}:water:${x}:${y}`) % 3 === 0) water.push({ x, y, phase: CM.hashSeed(`${game.seed}:ripple:${x}:${y}`) % 3 });
+    }
+    decor = { key, torches, water };
+    return decor;
   }
 
   function sprites() {
@@ -191,6 +313,9 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (f.type === "lever") out.push({ x, y, layer: f.pulled ? "lever_pulled" : "lever", face: f.face, w: 0.34, h: 0.34 });
       else if (f.type === "carving") out.push({ x, y, layer: "carving", face: f.face, w: 0.62, h: 0.5 });
     }
+    const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
+    for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
+    for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, flat: true, w: 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75 });
     if (game.mode === "combat") {
       const living = game.living();
       for (const m of game.foes) {
@@ -210,6 +335,7 @@ window.addEventListener("DOMContentLoaded", () => {
         out.push(Object.assign({}, place, { flash: flash * 0.8, alpha, lift, dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
       }
     }
+    out.push(...fxs.sprites(now));                                      // what flies and bursts, this frame
     return { out, hud };
   }
 

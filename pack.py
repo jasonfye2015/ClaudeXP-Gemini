@@ -45,7 +45,12 @@ PIXEL = {
     "gate": "dungeon/doors/gate_closed_middle", "gate_open": "dungeon/doors/gate_open_middle",
     "pit": "dungeon/traps/shaft", "trapdoor": "dungeon/traps/trap_shaft", "teleporter": "dungeon/traps/teleport_permanent",
     "fountain": "dungeon/blue_fountain", "fountain_dry": "dungeon/dry_fountain", "altar": "dungeon/altars/altar_shining_one",
-    "carving": "dungeon/wall/relief_0", "key": "item/misc/key", "phylactery": "item/misc/misc_box", "torch_wall": "dungeon/wall/torches/torch_0",
+    "carving": "dungeon/wall/relief_0", "key": "item/misc/key", "phylactery": "item/misc/misc_box",
+    # what flies and bursts, the torches on the walls, the water on the floors
+    "fx.spark": "effect/gold_sparkles_1", "fx.fire": "effect/cloud_fire_0", "fx.frost": "effect/frost_0", "fx.bolt": "effect/zap_0",
+    "fx.force": "effect/magic_dart_0", "fx.holy": "effect/sanctuary", "fx.arrow": "effect/arrow_1",
+    "torch0": "dungeon/wall/torches/torch_0", "torch1": "dungeon/wall/torches/torch_1", "torch2": "dungeon/wall/torches/torch_2",
+    "water0": "dungeon/water/shallow_water", "water1": "dungeon/water/shallow_water_2", "water2": "dungeon/water/shallow_water_disturbance",
     # the monsters, by kind
     "m.Giant Rat": "monster/animals/rat", "m.Kobold": "monster/kobold_new", "m.Skeleton": "monster/undead/skeletal_warrior_new",
     "m.Goblin": "monster/goblin_new", "m.Zombie": "monster/undead/zombies/zombie_small", "m.Orc": "monster/orc_warrior_new",

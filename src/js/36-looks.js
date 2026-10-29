@@ -87,6 +87,12 @@ CM.art.buildPixel = function (theme) {
   add("phylactery", phy);
   for (const m of CM.MONSTERS) add(`monster:${m.name}`, sprite(`m.${m.name}`));
   add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`));
+  const tileOr = (key, drawn) => (CM.packs.pixel.index[key] ? sprite(key) : CM.art.pixelate(drawn()));   // (the set's tile, or the drawn one made of pixels)
+  add("fx:spark", tileOr("fx.spark", CM.art.fxSpark)); add("fx:shard", tileOr("fx.shard", CM.art.fxShard)); add("fx:fire", tileOr("fx.fire", CM.art.fxFire));
+  add("fx:frost", tileOr("fx.frost", CM.art.fxFrost)); add("fx:bolt", tileOr("fx.bolt", CM.art.fxBolt)); add("fx:force", tileOr("fx.force", CM.art.fxForce));
+  add("fx:holy", tileOr("fx.holy", CM.art.fxHoly)); add("fx:arrow", tileOr("fx.arrow", CM.art.fxArrow)); add("fx:leaf", tileOr("fx.leaf", CM.art.fxLeaf));
+  add("fx:ring", tileOr("fx.ring", CM.art.fxRing));
+  for (let f = 0; f < 3; f++) { add(`torch${f}`, tileOr(`torch${f}`, () => CM.art.torch(f))); add(`water${f}`, tileOr(`water${f}`, () => CM.art.water(f))); }
   return { layers, index, size: S, crisp: true };
 };
 
