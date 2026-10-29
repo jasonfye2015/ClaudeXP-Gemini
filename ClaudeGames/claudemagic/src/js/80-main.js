@@ -76,7 +76,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("teleported", (x, y) => renderer.setCamera(x, y, game.floor.facing));
   game.on("spin", (facing) => (game.settings.smooth ? renderer.spinTo(facing) : renderer.turnTo(facing, 0)));
   // ---- what's heard: the depth's ambience and tune, the fight's, the camp's, the title's - and the ending's ----
-  const tuneFor = () => (game.mode === "combat" ? "battle" : game.mode === "camp" ? "camp" : game.mode === "title" ? ui.ending || "title"
+  const tuneFor = () => (game.mode === "combat" ? (game.foes.some((m) => CM.unmoved(m) && m.hp > 0) ? "boss" : "battle") : game.mode === "camp" ? "camp" : game.mode === "title" ? ui.ending || "title"
     : `depth${CM.themeIndex(game.floor ? game.floor.number : 1)}`);
   const soundscape = () => {
     const mode = game.mode;
@@ -179,8 +179,8 @@ window.addEventListener("DOMContentLoaded", () => {
         dying.set(fx.foe, now);
         const at = atFoe(fx.foe, 0.4);
         if (!at) break;
-        fxs.burst({ at, layer: fx.foe.undead ? "fx:shard" : "fx:spark", n: fx.foe.boss ? 40 : 14, size: fx.foe.undead ? 0.1 : 0.06, speed: 1.6, up: 1.8 });
-        if (fx.foe.boss) { fxs.ring({ at: [at[0], 0, at[2]], to: 3 }); renderer.shake(0.9); ui.tint("rgba(120,240,255,0.35)", 600); }
+        fxs.burst({ at, layer: fx.foe.undead ? "fx:shard" : "fx:spark", n: CM.unmoved(fx.foe) ? 40 : 14, size: fx.foe.undead ? 0.1 : 0.06, speed: 1.6, up: 1.8 });
+        if (CM.unmoved(fx.foe)) { fxs.ring({ at: [at[0], 0, at[2]], to: 3 }); renderer.shake(0.9); ui.tint(fx.foe.guardian ? CM.GUARDIANS[fx.foe.guardian].tint : "rgba(120,240,255,0.35)", 600); }
         break;
       }
       case "hurt": { const frac = fx.hero && fx.hero.max ? fx.amount / fx.hero.max : 0; if (frac >= 0.2) later(() => renderer.shake(Math.min(1, frac * 1.4))); break; }
@@ -201,7 +201,11 @@ window.addEventListener("DOMContentLoaded", () => {
         else if (fx.trap === "alarm") { ui.tint("rgba(255,255,255,0.5)", 250); renderer.shake(0.25); }
         break;
       }
-      case "summon": for (const m of game.foes) if (m.summoned && m.hp > 0 && !dying.has(m)) { const at = atFoe(m, 0.1); if (at) fxs.burst({ at, layer: "fx:shard", n: 12, size: 0.09, speed: 1.2, up: 2.4 }); } renderer.shake(0.3); break;
+      case "summon": for (const m of game.foes) if (m.summoned && m.hp > 0 && !dying.has(m)) { const at = atFoe(m, 0.1); if (at) fxs.burst({ at, layer: fx.layer || "fx:shard", n: 12, size: 0.09, speed: 1.2, up: 2.4 }); } renderer.shake(0.3); break;
+      case "grasp": ui.tint("rgba(40,120,160,0.55)", 700); fxs.rain({ at: beforeParty(0.5), n: 10, spread: 0.8 }); renderer.shake(0.45); break;
+      case "slam": { const at = atFoe(fx.foe, 0.05); if (at) fxs.ring({ at: [at[0], 0, at[2]], to: 2.6, ms: 500 }); fxs.burst({ at: beforeParty(0.4), n: 16, size: 0.06, speed: 1.4, up: 1.2 }); ui.tint("rgba(255,150,40,0.35)", 400); renderer.shake(1); break; }
+      case "sear": ui.tint("rgba(255,120,30,0.3)", 220); fxs.burst({ at: beforeParty(0.3), layer: "fx:fire", n: 6, size: 0.06, speed: 0.8, up: 1.2, ms: 400 }); break;
+      case "relic": ui.tint("rgba(255,230,150,0.45)", 900); fxs.drift({ at: beforeParty(0.6), n: 12, size: 0.06, spread: 1.0, rise: 0.7, ms: 1400 }); break;
       case "rise": {
         const at = atFoe(fx.foe, 0.05);
         if (at) { fxs.ring({ at: [at[0], 0, at[2]], to: 3.2, ms: 900 }); fxs.burst({ at: [at[0], 0.5, at[2]], layer: "fx:shard", n: 24, size: 0.1, speed: 1.8, up: 2.6 }); }
@@ -236,7 +240,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (i < 0) return null;
     const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * (n > 4 ? 0.22 : 0.32), -0.46, 0.46);
-    let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : 0);     // (the Lich King keeps his distance)
+    let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : foe.guardian ? 0.22 : 0);     // (the Lich King keeps his distance)
     const lunge = lunges.get(foe);
     if (lunge !== undefined) {                                           // it lunges at the party, and draws back
       const t = (performance.now() - lunge) / 340;
@@ -244,7 +248,8 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     const fwd = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
     const dx = right[0] * off + fwd[0] * back, dz = right[1] * off + fwd[1] * back;
-    const w = foe.boss ? 0.95 : 0.85, h = foe.boss ? 0.98 : 0.85;
+    const G = foe.guardian ? CM.GUARDIANS[foe.guardian] : null;
+    const w = foe.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h = foe.boss ? 0.98 : G ? 0.92 * G.size : 0.85;
     return { x, y, dx, dz, w, h, wx: x + 0.5 + dx, wz: y + 0.5 + dz, wh: h + 0.02, m: foe, shade: foe.elite ? 1.2 : 1,
       layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost" };
   }
@@ -270,6 +275,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       if (wet && !here && CM.hashSeed(`${game.seed}:water:${x}:${y}`) % 3 === 0) water.push({ x, y, phase: CM.hashSeed(`${game.seed}:ripple:${x}:${y}`) % 3 });
     }
+    for (const dc of fl.decor || []) if (dc.kind === "water" && !water.some((w) => w.x === dc.x && w.y === dc.y)) water.push({ x: dc.x, y: dc.y, phase: CM.hashSeed(`${game.seed}:ripple:${dc.x}:${dc.y}`) % 3 });
     decor = { key, torches, water };
     return decor;
   }
@@ -287,15 +293,15 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "stairs_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "key") out.push({ x, y, layer: "key", w: 0.4, h: 0.4 });
       else if (thing.type === "phylactery") out.push({ x, y, layer: "phylactery", w: 0.7, h: 0.7, glow: 0.5 });
-      else if ((thing.type === "monsters" || thing.type === "boss") && !(game.mode === "combat" && key === game.foeKey)) {
+      else if ((thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian") && !(game.mode === "combat" && key === game.foeKey)) {
         const m = thing.group.find((f) => f.hp > 0 && !f.fled) || thing.group[0];
         if (thing.anim) {                                               // on the move: it slides from where it was
           const k = Math.min(1, (now - thing.anim.at) / 320);
           if (k >= 1) delete thing.anim;
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
-        const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost";
-        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : 0.85, h: m.boss ? 0.98 : 0.85, shade: m.elite ? 1.2 : 1,
+        const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
+        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: m.boss ? 0.98 : G ? 0.92 * G.size : 0.85, shade: m.elite ? 1.2 : 1,
           lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
       }
     }
@@ -312,6 +318,13 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (f.type === "altar") out.push({ x, y, layer: "altar", w: 0.9, h: 0.9 });
       else if (f.type === "lever") out.push({ x, y, layer: f.pulled ? "lever_pulled" : "lever", face: f.face, w: 0.34, h: 0.34 });
       else if (f.type === "carving") out.push({ x, y, layer: "carving", face: f.face, w: 0.62, h: 0.5 });
+    }
+    for (const dc of fl.decor || []) {                                   // a lair's furniture: the heaps of the nest, the throne, the anvils, the embers
+      if (!near(dc.x, dc.y)) continue;
+      if (dc.kind === "nest") out.push({ x: dc.x, y: dc.y, layer: "nest", w: 0.8, h: 0.62 });
+      else if (dc.kind === "throne") out.push({ x: dc.x, y: dc.y, layer: "throne", w: 0.9, h: 1.0 });
+      else if (dc.kind === "anvil") out.push({ x: dc.x, y: dc.y, layer: "anvil", w: 0.7, h: 0.62 });
+      else if (dc.kind === "ember") out.push({ x: dc.x, y: dc.y, layer: "ember", flat: true, w: 0.98, glow: 0.7 + 0.25 * Math.sin(now / 240 + dc.x * 2.1 + dc.y * 1.3) });
     }
     const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });

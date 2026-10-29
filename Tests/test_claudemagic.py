@@ -5,7 +5,8 @@ opens, the camp trades and rests, the run ends in the Hall of Fame); a run saves
 reloads, and travels as text; the first-person view draws (WebGL, composited in software here); the music is written
 from a seed and follows the mode and the depth, every sound is in its place and the ending sums the run up; the three
 themes (drawn, Crawl's pixel tiles, photographed stone) ride inside the file, build every depth and switch at once; the
-spectacle flies, bursts, shakes and glows for what the game announces, and the dungeon has its torches and water; and
+spectacle flies, bursts, shakes and glows for what the game announces, and the dungeon has its torches and water; the
+guardians keep the shafts above the camps in lairs of their own, fight their own way, fall and leave their relics; and
 the Timeline's window opens, hands the page the old Python game's saves once, and closes."""
 import importlib.util
 import json
@@ -106,7 +107,8 @@ def test_the_build_is_current():
 
 def test_floors_are_solvable_and_stocked():
     """Every floor, four seeds deep: the ladder (or the Lich King) can be reached - keys found before their doors,
-    levers before their gates, no pit in the only way; every room can be walked to; the furniture sits where it
+    levers before their gates, no pit in the only way; every room can be walked to; a guardian stands over the shaft
+    in its lair on floors 5, 10 and 15, with a carving of its story; the furniture sits where it
     should (doors in doorways, teleporters in pairs, nothing two things deep, nothing to fall into on the last floor);
     chests and monsters at least as many as the depth says; the maze grows with the depth; and the same seed lays
     the same floor"""
@@ -115,7 +117,11 @@ def test_floors_are_solvable_and_stocked():
         const f = CM.makeFloor(n, seed), t = Object.values(f.things), F = Object.entries(f.features);
         const grid = f.grid, open = (x, y) => CM.inBounds(f, x, y) && (grid[y][x] === 0 || (f.features[x + ',' + y] || {}).type === 'secret');
         const walk = CM.distances(grid, f.pos, open);
-        const roomsReached = f.rooms.every(r => { for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (!walk.has(x + ',' + y)) return false; return true; });
+        const roomsReached = f.rooms.every(r => { for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (grid[y][x] === 0 && !walk.has(x + ',' + y)) return false; return true; });
+        const gid = CM.guardianFor(n), lairRoom = gid ? f.rooms.find(r => r.name === CM.GUARDIANS[gid].lair.name) : null;
+        const guard = !gid || (lairRoom && (() => { const gk = CM.goalOf(f), th = gk && f.things[gk], [gx, gy] = gk ? gk.split(',').map(Number) : [-1, -1];
+          return th && th.type === 'guardian' && th.group[0].guardian === gid && gx >= lairRoom.x0 && gx <= lairRoom.x1 && gy >= lairRoom.y0 && gy <= lairRoom.y1
+            && f.decor.length > 0 && F.some(([, ft]) => ft.type === 'carving' && ft.text === 'g:' + gid); })());
         const problems = [];
         for (const [k, ft] of F) {
           const [x, y] = k.split(',').map(Number);
@@ -134,7 +140,7 @@ def test_floors_are_solvable_and_stocked():
         const locked = F.filter(([, ft]) => ft.type === 'door' && ft.locked).length, keys = t.filter(x => x.type === 'key').length;
         if (keys < locked) problems.push('fewer keys than locked doors');
         out.push({n, seed, size: grid.length, ok: CM.solvable(f), chests: t.filter(x => x.type === 'chest').length,
-          groups: t.filter(x => x.type === 'monsters').length, goal: t.some(x => x.type === (n === 20 ? 'boss' : 'ladder')),
+          groups: t.filter(x => x.type === 'monsters').length, goal: t.some(x => x.type === (n === 20 ? 'boss' : CM.guardianFor(n) ? 'guardian' : 'ladder')), guard,
           start: grid[f.pos[1]][f.pos[0]] === 0 && (n === 1 || (f.things[f.pos[0] + ',' + f.pos[1]] || {}).type === 'stairs_up'),
           roomsReached, problems, carving: F.some(([, ft]) => ft.type === 'carving' && ft.text === n - 1),
           same: JSON.stringify(CM.makeFloor(n, seed)) === JSON.stringify(f)});
@@ -146,6 +152,7 @@ def test_floors_are_solvable_and_stocked():
     for r in rows:
         where = f"floor {r['n']} of {r['seed']}"
         assert r["ok"] and r["goal"] and r["start"], f"{where} can't be finished"
+        assert r["guard"], f"{where}: the guardian isn't over the shaft in its lair"
         assert r["roomsReached"], f"{where} has a room no one can walk to"
         assert not r["problems"], (where, r["problems"])
         assert r["same"], f"{where} isn't the same twice"
@@ -184,7 +191,9 @@ def test_the_rules():
       const bag = g.bag.length, gold = g.gold; g.use();
       out.chest = g.gold > gold && g.bag.length > bag && !(chest[0] in g.floor.things);
       g.floor = CM.makeFloor(5, g.seed);
-      const ladder = Object.entries(g.floor.things).find(([k, t]) => t.type === 'ladder');
+      const lairKey = Object.entries(g.floor.things).find(([k, t]) => t.type === 'guardian')[0];
+      g.floor.things[lairKey] = {{ type: 'ladder' }};                 // (the Rat King is test_the_guardians' business)
+      const ladder = [lairKey];
       g.floor.pos = ladder[0].split(',').map(Number); g.use();
       out.camp = g.mode === 'camp';
       g.openBag(true); out.stock = g.stock.length;
@@ -984,6 +993,145 @@ def test_the_spectacle():
     run("CM.useFloor(CM.game, CM.testFloor(3, ['#####', '#X/G#', '#####']))")
     support.pump(0.3)
     assert ask("CM.renderer.sprites.some(s => /^torch/.test(s.layer) && s.x === 2 && s.y === 1 && s.face === 0)") is False, "a torch over the lever"
+    said = [s for s in page().said if "Error" in s or "error" in s]
+    assert not said, f"the page's console: {said[:5]}"
+
+
+def test_the_guardians():
+    """The second update's third phase - the guardians: CM.GUARDIANS names three (the Rat King on floor 5, the Drowned
+    Knight on 10, the Forge-Warden on 15), each with a lair that the generator sets over the shaft down (pillars,
+    furniture, a flooded hall, a carving of its story) and pictures in all three themes; a guardian's fight has its own
+    opening and tune, its two ways (the swarm and the plague bite, the drowning grasp and the rising, the hammer slam
+    and the forge's heat), its weakness and what it shrugs off, no sleep or holding; running from it is allowed but it
+    mends and keeps its lair; when it falls the shaft opens, its relic (worn, it tells) is taken, the trophy is kept
+    between runs and in the Hall of Fame, and the window shows the lair's furniture"""
+    run(PARSE)
+    got = ask(f"""(function(){{ const g = CM.game, out = {{}}, seen = [];
+      g.on('fx', (e) => seen.push(e));
+      const G = CM.GUARDIANS;
+      out.three = Object.keys(G).join() === 'rat,knight,forge' && G.rat.floor === 5 && G.knight.floor === 10 && G.forge.floor === 15
+        && CM.guardianFor(5) === 'rat' && CM.guardianFor(20) === null && CM.unmoved(CM.bossMonster()) && CM.unmoved(CM.guardianMonster('forge')) && !CM.unmoved(CM.makeMonster(CM.MONSTERS[0], 1, new CM.Random(1)));
+      out.lore = CM.loreText('g:rat') === G.rat.lore && CM.loreText(0) === CM.LORE[0] && CM.loreText(-1) === CM.LORE_EXTRA[0];
+      const need = Object.values(G).map(x => 'monster:' + x.name).concat(['nest', 'throne', 'anvil', 'ember']);
+      out.layers = ['drawn', 'pixel', 'stone'].every(look => {{ const b = CM.art.build(CM.THEMES[2], look); return need.every(n => b.index[n] !== undefined); }});
+      // the lairs, as the generator lays them
+      const lairs = {{}};
+      for (const [n, id] of [[5, 'rat'], [10, 'knight'], [15, 'forge']]) {{
+        const f = CM.makeFloor(n, {json.dumps(SEED)}), room = f.rooms.find(r => r.name === G[id].lair.name), gk = CM.goalOf(f);
+        const pillars = room ? (() => {{ let c = 0; for (let y = room.y0; y <= room.y1; y++) for (let x = room.x0; x <= room.x1; x++) if (f.grid[y][x] === 1) c++; return c; }})() : -1;
+        const kinds = {{}}; for (const d of f.decor) kinds[d.kind] = (kinds[d.kind] || 0) + 1;
+        lairs[id] = {{ room: Boolean(room), guardian: gk && f.things[gk].type === 'guardian' && f.things[gk].group[0].guardian === id, escorts: gk ? f.things[gk].group.length : 0,
+          pillars, kinds, solvable: CM.solvable(f), carving: Object.values(f.features).some(ft => ft.type === 'carving' && ft.text === 'g:' + id) }};
+      }}
+      out.lairs = lairs;
+      // the Rat King's fight
+      const fixed = (hit) => ({{next: () => 0.5, int: (a, b) => a, pick: (l) => l[0], chance: (p) => hit(p), shuffle: (l) => l}});
+      CM.store.remove('run'); CM.store.remove('fame'); CM.store.remove('trophies'); g.fame = []; g.trophies = {{}}; g.lastRun = null;
+      g.newGame({json.dumps(SEED)});
+      for (const h of g.party) {{ h.max = 400; h.hp = 400; h.mp = 50; h.maxmp = 50; h.level = 6; h.status = {{}}; }}
+      const knight = g.party[0], rogue = g.party[1], cleric = g.party[2], mage = g.party[3];
+      const f5 = CM.testFloor(5, ['####', '#XB#', '####']);
+      f5.things['2,1'] = {{ type: 'guardian', group: CM.guardianGroup('rat', 5, new CM.Random(1)) }};
+      CM.useFloor(g, f5);
+      g.rnd = fixed(() => false); g.move(0);
+      const rat = g.foes[0];
+      out.fight = g.mode === 'combat' && rat.guardian === 'rat' && g.foes.length === 3 && g.messages.some(m => m.includes('The Rat King.')) && CM.music.playing === 'boss';
+      g.combat.order = []; g.combat.index = 0; g.combat.waiting = knight; g.combat.taunter = knight; g.combat.tauntUntil = 99;
+      rat.max = 2000; rat.hp = 2000;
+      rat.turns = 2; g.monsterAct(rat); const swarm1 = g.foes.filter(m => m.summoned).length;
+      rat.turns = 5; g.monsterAct(rat); const swarm2 = g.foes.filter(m => m.summoned).length;
+      g.rnd = fixed(() => true); rat.turns = 8; knight.status.poison = 5; const k0 = knight.hp; g.monsterAct(rat);
+      out.swarm = swarm1 === 2 && swarm2 === 4 && g.foes.filter(m => m.summoned).length === 4 && seen.some(e => e.kind === 'summon' && e.layer === 'fx:spark');
+      out.plagueBite = knight.hp < k0 && g.messages[g.messages.length - 1].includes('plague bites deep');
+      g.rnd = fixed(() => false); out.plague = g.afflict(rogue, 'poison', 'The Rat King') && rogue.status.poison === 12;
+      g.rnd = fixed(() => true); g.useAbility(mage, 'frost', null);
+      out.unmoved = rat.held === 0 && g.foes.filter(m => !m.guardian && m.hp > 0).every(m => m.held > 0);
+      const r0 = rat.hp; g.spellHit(rat, 10, '', 'fire'); out.weakFire = rat.hp === r0 - 15;
+      const fw0 = CM.guardianMonster('forge'); fw0.hp = 1000; g.spellHit(fw0, 10, '', 'fire'); g.spellHit(fw0, 10, '', 'frost'); out.forgeElements = fw0.hp === 1000 - 5 - 15;
+      // running from it: allowed, and it keeps its lair
+      rat.hp = 1000; g.flee(false);
+      out.fled = g.mode === 'explore' && rat.hp === 1500 && f5.things['2,1'].group.length === 3 && f5.things['2,1'].group.every(m => !m.summoned) && g.messages.some(m => m.includes('lick its wounds'));
+      g.rnd = fixed(() => false); g.move(0);
+      out.remembers = g.mode === 'combat' && g.messages.some(m => m.includes('The wounds you left are still there'));
+      g.combat.order = []; g.combat.index = 0; g.combat.waiting = knight;
+      for (const m of g.foes) m.hp = 0;
+      g.afterBlows();
+      const crown = g.bag.find(i => i.name === "Rat King's Crown");
+      out.slain = g.mode === 'explore' && f5.things['2,1'].type === 'ladder' && Boolean(crown) && g.tally.guardians.join() === 'rat' && Boolean(g.trophies.rat)
+        && g.messages.some(m => m.includes('The nest is quiet')) && seen.some(e => e.kind === 'relic') && CM.store.get('trophies', {{}}).rat !== undefined;
+      const label = CM.itemLabel(crown);
+      const luck0 = CM.heroStat(knight, 'luck'), df0 = CM.gearDefence(knight);
+      out.relic = label.includes('proof against poison') && label.includes('+3 Luck') && label.includes("a guardian's relic") && g.give(g.bag.indexOf(crown), 0) === ''
+        && knight.helm === crown && CM.heroStat(knight, 'luck') === luck0 + 3 && CM.gearDefence(knight) === df0 + 3;
+      // the Drowned Knight: the grasp, and the rising
+      const f10 = CM.testFloor(10, ['####', '#XB#', '####']);
+      f10.things['2,1'] = {{ type: 'guardian', group: CM.guardianGroup('knight', 10, new CM.Random(1)) }};
+      CM.useFloor(g, f10);
+      for (const h of g.party) {{ h.hp = 400; h.status = {{}}; }}
+      g.rnd = fixed(() => false); g.move(0);
+      const kn = g.foes[0];
+      out.knightFight = g.mode === 'combat' && kn.guardian === 'knight' && kn.undead === true && g.foes.length === 1 && g.messages.some(m => m.includes('The Drowned Knight.'));
+      g.combat.order = []; g.combat.index = 0; g.combat.waiting = knight; g.combat.taunter = knight; g.combat.tauntUntil = 99;
+      kn.turns = 2; const kh = knight.hp; g.monsterAct(kn);
+      out.grasp = knight.hp < kh && knight.status.paralysis === 1 && seen.some(e => e.kind === 'grasp' && e.hero === knight);
+      kn.hp = 0; g.afterBlows();
+      out.unquiet = kn.hp === Math.floor(kn.max / 3) && kn.risen === 1 && !kn.dead && g.mode === 'combat' && g.messages.some(m => m.includes('will not stay down'));
+      kn.hp = 0; g.afterBlows();
+      out.knightSlain = g.mode === 'explore' && f10.things['2,1'].type === 'ladder' && g.bag.some(i => i.name === 'Shield of the Drowned') && g.tally.guardians.join() === 'rat,knight';
+      // the Forge-Warden: the slam, the heat, what it shrugs off, and its hammer
+      const f15 = CM.testFloor(15, ['####', '#XB#', '####']);
+      f15.things['2,1'] = {{ type: 'guardian', group: CM.guardianGroup('forge', 15, new CM.Random(1)) }};
+      CM.useFloor(g, f15);
+      for (const h of g.party) {{ h.hp = 400; h.status = {{}}; }}
+      g.rnd = fixed(() => false); g.move(0);
+      const fw = g.foes[0];
+      g.combat.order = []; g.combat.index = 0; g.combat.waiting = knight;
+      fw.turns = 2; g.monsterAct(fw);
+      out.slam = knight.hp < 400 && rogue.hp < 400 && cleric.hp === 400 && mage.hp === 400 && seen.some(e => e.kind === 'slam');
+      g.rnd = fixed(() => true); fw.hp = 100000; fw.max = 100000;
+      const s0 = knight.hp; g.strike(knight, fw); out.sear = knight.hp === s0 - 5 && seen.some(e => e.kind === 'sear' && e.hero === knight);
+      mage.weapon.props = {{ bow: true }}; const m0 = mage.hp; g.strike(mage, fw); out.noSearForArrows = mage.hp === m0;
+      knight.weapon.props = {{ element: 'fire' }}; knight.weapon.unknown = false; g.strike(knight, fw); out.resists = g.messages[g.messages.length - 2].includes('does little');
+      knight.weapon.props = {{ element: 'frost' }}; g.strike(knight, fw); out.weakFrost = g.messages[g.messages.length - 2].includes('frost bites deep');
+      const gob = Object.assign(CM.makeMonster(CM.monsterKind('Goblin'), 5, new CM.Random(1)), {{ hp: 1000, max: 1000, held: 0, asleep: 0, blind: 0 }});
+      g.foes.push(gob); knight.weapon = CM.relic('forge'); g.strike(knight, gob);
+      out.hammer = gob.held === 1 && g.messages[g.messages.length - 1].includes('reels') && CM.itemLabel(knight.weapon).includes('reeling');
+      for (const m of g.foes) m.hp = 0;
+      g.afterBlows();
+      out.forgeSlain = g.mode === 'explore' && g.bag.some(i => i.name === "Forge-Warden's Hammer") && g.tally.guardians.join() === 'rat,knight,forge';
+      // the Hall of Fame, the trophies, the ending, and what travels as text
+      g.endRun(false);
+      out.fame = g.fame.length === 1 && g.fame[0].tally.guardians.length === 3 && document.querySelector('#over-tally').textContent.includes('Guardians slain');
+      CM.ui.fameOpen = 0; CM.ui.refreshTitle();
+      out.trophies = document.querySelectorAll('#trophies .unlock').length === 4 && document.querySelectorAll('#trophies .unlock.got').length === 3
+        && document.querySelector('#fame tr.details').textContent.includes('Guardians slain: the Rat King, the Drowned Knight, the Forge-Warden')
+        && JSON.parse(g.exportText()).trophies.forge !== undefined;
+      g.trophies = {{}}; CM.store.remove('trophies'); g.fame = []; CM.store.remove('fame'); CM.ui.fameOpen = -1; CM.ui.refreshTitle();
+      return out; }})()""")
+    for key in ("three", "lore", "layers", "fight", "swarm", "plagueBite", "plague", "unmoved", "weakFire", "forgeElements", "fled", "remembers", "slain",
+                "relic", "knightFight", "grasp", "unquiet", "knightSlain", "slam", "sear", "noSearForArrows", "resists", "weakFrost", "hammer", "forgeSlain",
+                "fame", "trophies"):
+        assert got[key] is True, (key, got)
+    lairs = got["lairs"]
+    for gid, want in (("rat", {"nest": 8}), ("knight", {"throne": 1}), ("forge", {"anvil": 4, "ember": 10})):
+        lair = lairs[gid]
+        assert lair["room"] and lair["guardian"] and lair["solvable"] and lair["carving"], (gid, lair)
+        for kind, n in want.items():
+            assert lair["kinds"].get(kind) == n, (gid, lair)
+    assert lairs["rat"]["escorts"] == 3 and lairs["rat"]["pillars"] == 0, lairs["rat"]
+    assert lairs["knight"]["pillars"] == 4 and lairs["knight"]["kinds"].get("water", 0) >= 40, lairs["knight"]
+    assert lairs["forge"]["pillars"] == 4 and lairs["forge"]["escorts"] == 1, lairs["forge"]
+    # the window: the lair's furniture in the view, and the guardian waiting over the shaft
+    for n, layers in ((15, ("anvil", "ember", "monster:The Forge-Warden")), (10, ("throne", "water", "monster:The Drowned Knight"))):
+        run(f"""const g = CM.game; g.combat = null; g.mode = 'explore';
+          const fl = CM.makeFloor({n}, {json.dumps(SEED)}); g.floors[{n}] = fl; g.floor = fl;
+          const [gx, gy] = CM.goalOf(fl).split(',').map(Number); fl.pos = [gx, gy + 1]; fl.facing = 0; g.look(); g.emit('floor', fl); g.emit('change')""")
+        support.pump(0.3)
+        shown = ask("(function(){ const s = CM.renderer.sprites; return { layers: [...new Set(s.map(x => x.layer.replace(/\\d$/, '')))], "
+                    "ember: s.filter(x => x.layer === 'ember').every(x => x.flat === true && x.glow > 0.4) }; })()")
+        for layer in layers:
+            assert layer in shown["layers"], (n, layer, shown["layers"])
+        assert shown["ember"], shown
     said = [s for s in page().said if "Error" in s or "error" in s]
     assert not said, f"the page's console: {said[:5]}"
 

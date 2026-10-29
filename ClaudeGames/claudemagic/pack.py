@@ -58,6 +58,9 @@ PIXEL = {
     "m.Wraith": "monster/undead/wraith", "m.Ogre": "monster/ogre_new", "m.Minotaur": "monster/minotaur",
     "m.Gargoyle": "monster/nonliving/gargoyle", "m.Vampire": "monster/undead/vampire_new", "m.Demon": "monster/demons/balrug_new",
     "m.Wyvern": "monster/dragons/wyvern_new", "m.The Lich King": "monster/undead/ancient_lich_new",
+    # the guardians, and the forge-floor of the third's lair
+    "m.The Rat King": "monster/animals/orange_rat", "m.The Drowned Knight": "monster/death_knight", "m.The Forge-Warden": "monster/nonliving/iron_golem",
+    "ember": "dungeon/floor/lava_0",
     # the things in the pack
     "i.heal": "item/potion/ruby_new", "i.mana": "item/potion/brilliant_blue_new", "i.revive": "item/potion/golden", "i.antidote": "item/potion/emerald",
     "i.scroll": "item/scroll/scroll_new", "i.wand": "item/wand/wand_brass", "i.torch": "player/hand_left/misc/torch", "i.lantern": "item/misc/misc_lantern",
