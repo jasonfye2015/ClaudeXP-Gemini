@@ -502,12 +502,35 @@ CM.art.secretWall = function (theme, seed) {                               // a 
 CM.art.portrait = function (cls, size = 56) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 56;
   p.scale(s, s);
-  p.fillStyle = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A" }[cls] || "#333";
+  p.fillStyle = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A", Paladin: "#4A3A2A", Ranger: "#2A3A2E",
+    Druid: "#3A4A2A", Bard: "#4A2A3A" }[cls] || "#333";
   p.fillRect(0, 0, 56, 56);
   const skin = "#E0B890";
-  p.fillStyle = { Knight: "#8A9098", Rogue: "#3A4A30", Cleric: "#E8E0D0", Mage: "#4A3A8A" }[cls];
+  p.fillStyle = { Knight: "#8A9098", Rogue: "#3A4A30", Cleric: "#E8E0D0", Mage: "#4A3A8A", Paladin: "#C8C0A0", Ranger: "#4A6A3A",
+    Druid: "#6A7A3A", Bard: "#8A3A5A" }[cls] || "#555";
   p.fillRect(8, 36, 40, 24);                                            // shoulders
-  if (cls === "Knight") {
+  if (cls === "Paladin") {
+    outlined(p, () => { p.roundRect(14, 8, 28, 32, 6); }, "#D8D0B8", "#5A5040", 2);   // a helm with a gold cross
+    p.fillStyle = "#1A1C22"; p.fillRect(16, 22, 24, 5);
+    p.fillStyle = "#E8C040"; p.fillRect(26, 6, 4, 16); p.fillRect(21, 11, 14, 3);
+  } else if (cls === "Ranger") {
+    outlined(p, () => { p.moveTo(28, 6); p.lineTo(44, 28); p.lineTo(44, 40); p.lineTo(12, 40); p.lineTo(12, 28); }, "#3A5A2A", "#1A2A14", 2);   // a hood
+    p.fillStyle = skin; p.fillRect(20, 24, 16, 12);
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 28, 3, 3); p.fillRect(31, 28, 3, 3);
+    p.strokeStyle = "#8A6A30"; p.lineWidth = 2; p.beginPath(); p.arc(44, 30, 16, -1.3, 1.3); p.stroke();   // a bow over the shoulder
+  } else if (cls === "Druid") {
+    outlined(p, () => { p.arc(28, 24, 14, 0, Math.PI * 2); }, skin, "#5A3A20", 2);
+    p.fillStyle = "#7A5A3A"; p.fillRect(16, 34, 24, 12);                  // a beard
+    p.fillStyle = "#4A8A3A";                                              // a crown of leaves
+    for (let i = 0; i < 7; i++) { p.beginPath(); p.ellipse(14 + i * 5, 12, 4, 2.5, (i - 3) * 0.3, 0, Math.PI * 2); p.fill(); }
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 22, 3, 3); p.fillRect(31, 22, 3, 3);
+  } else if (cls === "Bard") {
+    outlined(p, () => { p.arc(28, 26, 13, 0, Math.PI * 2); }, skin, "#5A3A20", 2);
+    outlined(p, () => { p.moveTo(10, 16); p.lineTo(46, 14); p.lineTo(40, 8); p.lineTo(16, 10); }, "#8A2A4A", "#3A1020", 2);   // a feathered cap
+    p.strokeStyle = "#E8E0A0"; p.lineWidth = 2; p.beginPath(); p.moveTo(40, 10); p.quadraticCurveTo(50, 2, 52, 10); p.stroke();
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 24, 3, 3); p.fillRect(31, 24, 3, 3);
+    p.fillStyle = "#E8C040"; p.fillRect(36, 40, 10, 12); p.fillStyle = "#6A4A20"; p.fillRect(38, 34, 2, 10);   // a lute
+  } else if (cls === "Knight") {
     outlined(p, () => { p.roundRect(14, 8, 28, 32, 8); }, "#B8BEC8", "#2A2E36", 2);
     p.fillStyle = "#1A1C22"; p.fillRect(16, 22, 24, 5);                 // the visor's slit
     p.fillStyle = "#C83030"; p.fillRect(26, 2, 4, 10);                  // a plume

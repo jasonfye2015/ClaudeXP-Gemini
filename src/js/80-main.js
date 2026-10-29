@@ -172,8 +172,9 @@ window.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("keydown", (e) => {
     CM.audio.unlock();
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
-    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) {
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) {
       if (e.code === "Enter" && e.target.id === "seed") ui.startNew();
+      if (e.code === "Escape" && ui.screen === "create") ui.show("title");
       return;
     }
     if (ui.dialogOpen()) { if (e.code === "Escape" || (e.code === "Tab" && ui.$("#bigmap").classList.contains("on"))) { e.preventDefault(); ui.closeDialogs(); } return; }
@@ -181,7 +182,9 @@ window.addEventListener("DOMContentLoaded", () => {
       if (e.code === "Enter" || e.code === "Space") { e.preventDefault(); if (game.canContinue()) game.continueRun(); else ui.startNew(); }
       return;
     }
+    if (ui.screen === "create") { if (e.code === "Escape") ui.show("title"); else if (e.code === "Enter") ui.setOut(); return; }
     if (ui.screen === "bag") { if (e.code === "Escape" || e.code === "KeyI") game.closeBag(); return; }
+    if (["Digit1", "Digit2", "Digit3", "Digit4"].includes(e.code) && game.mode !== "title") { ui.openSheet(Number(e.code.slice(-1)) - 1); return; }
     if (e.code === "Escape") { e.preventDefault(); ui.openDialog("#dlg-pause"); return; }
     if (e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
     if (game.mode === "explore") {

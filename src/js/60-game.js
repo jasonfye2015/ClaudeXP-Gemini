@@ -63,7 +63,7 @@ CM.Game = class {
   continueRun() {
     const d = this.lastRun;
     if (!this.canContinue()) return false;
-    this.party = d.party; this.bag = d.bag || []; this.gold = d.gold || 0;
+    this.party = d.party.map(CM.upgradeHero); this.bag = d.bag || []; this.gold = d.gold || 0;
     this.floors = d.floors || {};
     for (const fl of Object.values(this.floors)) CM.upgradeFloor(fl);
     this.floor = CM.upgradeFloor(d.floor);
@@ -131,9 +131,10 @@ CM.Game = class {
   }
 
   // ---- starting, and the stairs between floors ----
-  newGame(seed) {
+  newGame(seed, chosen) {                                                // chosen: the party made on the creation screen, or none for the classic four
     this.seed = (seed || "").trim() || CM.randomSeed();
-    this.party = CM.newParty();
+    this.party = CM.newParty(chosen);
+    this.steps = 0;
     this.bag = CM.startingBag(this.seed);
     this.gold = 30;
     this.floors = {};
@@ -257,6 +258,18 @@ CM.Game = class {
     this.look();
     this.emit("moved", x, y);
     this.dirty = true;
+    this.steps = (this.steps || 0) + 1;
+    if (this.steps % 5 === 0) {                                          // poison walks with you
+      for (const h of this.alive()) {
+        const st = h.status || {};
+        if (!st.poison) continue;
+        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05)));
+        h.hp = Math.max(1, h.hp - bite);
+        st.poison--;
+        if (st.poison <= 0) { delete st.poison; this.say(`${h.name} is no longer poisoned.`); }
+        else this.say(`${h.name} suffers from the poison (-${bite}).`);
+      }
+    }
     if (thing) {
       if (thing.type === "key") {
         delete fl.things[k];
@@ -431,9 +444,9 @@ CM.Game = class {
     if (f.used) { this.say("The fountain has run dry."); return; }
     f.used = true; f.known = true;
     if (f.kind === "heal") {
-      for (const m of this.alive()) m.hp = m.max;
+      for (const m of this.alive()) { m.hp = m.max; this.cure(m, [...CM.CURABLE, "curse"]); }
       this.sound("heal");
-      this.say("The water is cold and clean. Every wound closes.");
+      this.say("The water is cold and clean. Every wound closes, and every ailment but stone passes.");
     } else if (f.kind === "mana") {
       for (const m of this.alive()) m.mp = m.maxmp;
       this.sound("heal");
@@ -450,9 +463,10 @@ CM.Game = class {
   kneel(f) {
     if (f.used) { this.say("You have prayed here already. The candles gutter."); return; }
     f.used = true;
-    for (const m of this.alive()) m.hp = Math.min(m.max, m.hp + Math.max(1, Math.floor(m.max * 0.3)));
+    let lifted = 0;
+    for (const m of this.alive()) { m.hp = Math.min(m.max, m.hp + Math.max(1, Math.floor(m.max * 0.3))); lifted += this.cure(m, ["curse"]).length; }
     this.sound("heal");
-    this.say("You kneel. A warmth passes through the party.");
+    this.say("You kneel. A warmth passes through the party" + (lifted ? ", and the curse lifts." : "."));
     this.saveRun();
     this.emit("change");
   }
@@ -505,6 +519,9 @@ CM.Game = class {
     this.foes = thing.group;
     this.foeKey = key;
     delete thing.anim;
+    this.song = 0;                                                       // the Bard's song lasts the fight
+    for (const h of this.party) { h.cried = false; h.winded = false; }
+    for (const m of this.foes) m.held = 0;
     this.setMode("combat");
     this.sound("monster");
     const names = {};
@@ -515,9 +532,129 @@ CM.Game = class {
 
   alive() { return this.party.filter((m) => m.hp > 0); }
   living() { return this.foes.filter((m) => m.hp > 0); }
+  canAct(h) { const s = h.status || {}; return h.hp > 0 && !s.paralysis && !s.sleep && !s.stone; }   // standing, and not held by an ailment
+  targets() { return this.alive().filter((h) => !(h.status || {}).stone); }                           // what a monster can reach: stone isn't worth hitting
 
   damage(atk, power, df) {
     return Math.max(1, atk + power + this.rnd.int(0, Math.max(1, Math.floor((atk + power) / 2))) - Math.floor(df / 2));
+  }
+
+  // a hero's numbers as they stand right now: a curse takes from them, the song gives
+  effective(h) {
+    const cursed = (h.status || {}).curse ? 2 : 0;
+    return { atk: Math.max(1, h.atk - cursed + (this.song ? 2 : 0)), df: Math.max(0, h.df - cursed) };
+  }
+  stat(h, s) { return h.stats && h.stats[s] !== undefined ? h.stats[s] : 10; }
+  hitChance(h) {
+    return CM.clamp(0.8 + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0), 0.25, 0.97);
+  }
+  critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01, 0.02, 0.6); }
+  resistChance(h) {
+    return CM.clamp((this.stat(h, "luck") - 10) * 0.02 + (this.stat(h, "wis") - 10) * 0.01 + ((h.boons || []).includes("thickblood") ? 0.2 : 0), 0, 0.6);
+  }
+
+  // an ailment settles on a hero, unless they shrug it off; it lasts this many rounds (curses and stone, until lifted)
+  afflict(h, status, by) {
+    if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
+    if (this.rnd.chance(this.resistChance(h))) { this.say(`${h.name} shrugs off the ${by}'s ${status === "stone" ? "gaze" : "touch"}.`); return false; }
+    h.status = h.status || {};
+    let turns = { poison: 8, paralysis: 2, sleep: 3, blind: 4, curse: 999, stone: 999 }[status];
+    if (turns < 900 && (h.boons || []).includes("thickblood")) turns = Math.ceil(turns / 2);
+    h.status[status] = turns;
+    this.say(`${h.name} is ${CM.STATUSES[status].name.toLowerCase()}!`);
+    this.emit("fx", { kind: "ailment", hero: h, status });
+    return true;
+  }
+
+  cure(h, which) {                                                       // which: a list of ailments, or "all"
+    const cured = [];
+    for (const s of Object.keys(h.status || {})) if (which === "all" || which.includes(s)) { delete h.status[s]; cured.push(s); }
+    return cured;
+  }
+
+  // the Knight draws the blows; the front row takes most of them; the back row is reached when it must be
+  pickTarget() {
+    const pool = this.targets();
+    if (!pool.length) return null;
+    const front = pool.some((h) => h.row === "front");
+    const weights = pool.map((h) => (front ? (h.row === "front" ? (h.cls === "Knight" ? 5 : 3) : 1) : 1));
+    let r = this.rnd.next() * weights.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r < 0) return pool[i]; }
+    return pool[pool.length - 1];
+  }
+
+  // one hero's blow on one foe (Fight, and the Ranger's arrows): the damage done, 0 for a miss
+  strike(hero, target, note = "") {
+    const rnd = this.rnd;
+    if (!rnd.chance(this.hitChance(hero))) {
+      this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
+      this.emit("fx", { kind: "miss", foe: target });
+      return 0;
+    }
+    let dmg = this.damage(this.effective(hero).atk, hero.weapon.power, target.df), how = "";
+    const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger";
+    if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
+    else if (rnd.chance(this.critChance(hero))) { dmg *= 2; how = " - a weak spot"; }
+    else if (back && !reaches) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
+    if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
+    target.hp -= dmg;
+    this.say(`${hero.name} hits the ${target.name}${note} for ${dmg}${how}.`);
+    this.emit("fx", { kind: "hit", foe: target, amount: dmg });
+    this.sound("hit");
+    return dmg;
+  }
+
+  // what Cast does, class by class
+  cast(hero, foes) {
+    const c = CM.CLASSES[hero.cls] || CM.CLASSES.Knight, rnd = this.rnd, key = this.stat(hero, c.key);
+    const weakest = () => this.alive().reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b));
+    if (c.cast === "fireball" && hero.mp >= 4) {
+      hero.mp -= 4;
+      this.sound("spell");
+      const dmg = Math.max(1, 8 + hero.level * 4 + (key - 10));
+      for (const m of foes) { m.hp -= dmg; this.emit("fx", { kind: "hit", foe: m, amount: dmg, spell: true }); }
+      this.say(`${hero.name} hurls a fireball! ${dmg} damage to every foe.`);
+    } else if (c.cast === "heal" && hero.mp >= 3) {
+      hero.mp -= 3;
+      const t = weakest(), heal = Math.max(1, 12 + hero.level * 4 + (key - 10));
+      t.hp = Math.min(t.max, t.hp + heal);
+      this.sound("heal");
+      this.say(`${hero.name} prays: ${t.name} is healed by ${heal}.`);
+    } else if (c.cast === "lay" && hero.mp >= 3) {
+      hero.mp -= 3;
+      const t = weakest(), heal = Math.max(1, 8 + hero.level * 3 + Math.floor((key - 10) / 2));
+      t.hp = Math.min(t.max, t.hp + heal);
+      const cured = this.cure(t, ["poison"]);
+      this.sound("heal");
+      this.say(`${hero.name} lays on hands: ${t.name} mends by ${heal}${cured.length ? ", and the poison leaves them" : ""}.`);
+    } else if (c.cast === "thorns" && hero.mp >= 4) {
+      hero.mp -= 4;
+      this.sound("spell");
+      const dmg = Math.max(1, 6 + hero.level * 3 + Math.floor((key - 10) / 2));
+      let held = 0;
+      for (const m of foes) {
+        m.hp -= dmg;
+        this.emit("fx", { kind: "hit", foe: m, amount: dmg, spell: true });
+        if (m.hp > 0 && !m.boss && rnd.chance(0.3 + (key - 10) * 0.02)) { m.held = 1; held++; }
+      }
+      for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 3 + Math.floor(hero.level / 2));
+      this.say(`${hero.name} calls thorns up through the stone: ${dmg} to every foe${held ? `, ${CM.plural(held, "foe")} held fast` : ""}; the party mends a little.`);
+    } else if (c.cast === "song" && hero.mp >= 4) {
+      hero.mp -= 4;
+      this.song = 1;
+      this.sound("heal");
+      for (const h of this.alive()) { h.hp = Math.min(h.max, h.hp + 4); if ((h.status || {}).sleep) delete h.status.sleep; }
+      this.say(`${hero.name} sings. Hearts lift: the party hits harder this fight, and hurts a little less.`);
+    } else if (c.cast === "volley") {
+      const first = rnd.pick(foes);
+      this.strike(hero, first, " with an arrow");
+      const rest = this.living().filter((m) => m !== first);
+      if (rest.length) this.strike(hero, rnd.pick(rest), " with a second arrow");
+      else if (first.hp > 0) this.strike(hero, first, " with a second arrow");
+    } else {
+      if (c.cast) this.say(`${hero.name} is out of magic, and swings instead.`);
+      this.strike(hero, rnd.pick(foes));
+    }
   }
 
   combatRound(action) {
@@ -537,57 +674,58 @@ CM.Game = class {
     for (const hero of this.alive()) {
       foes = this.living();
       if (!foes.length || action === "run" || action === "potion") break;
-      if (action === "cast" && hero.cls === "Mage" && hero.mp >= 4) {
-        hero.mp -= 4;
-        this.sound("spell");
-        const dmg = 8 + hero.level * 4;
-        for (const m of foes) { m.hp -= dmg; this.emit("fx", { kind: "hit", foe: m, amount: dmg, spell: true }); }
-        this.say(`The Mage hurls a fireball! ${dmg} damage to every foe.`);
-      } else if (action === "cast" && hero.cls === "Cleric" && hero.mp >= 3) {
-        hero.mp -= 3;
-        const target = this.alive().reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b));
-        const heal = 12 + hero.level * 4;
-        target.hp = Math.min(target.max, target.hp + heal);
-        this.sound("heal");
-        this.say(`The Cleric prays: the ${target.cls} is healed by ${heal}.`);
-      } else {
-        const target = rnd.pick(foes);
-        if (rnd.chance(0.88)) {
-          let dmg = this.damage(hero.atk, hero.weapon.power, target.df);
-          if (hero.cls === "Rogue" && rnd.chance(0.25)) {
-            dmg *= 2;
-            this.say(`The Rogue strikes a weak spot! ${target.name} takes ${dmg}.`);
-          } else {
-            this.say(`The ${hero.cls} hits the ${target.name} for ${dmg}.`);
-          }
-          target.hp -= dmg;
-          this.emit("fx", { kind: "hit", foe: target, amount: dmg });
-          this.sound("hit");
-        } else {
-          this.say(`The ${hero.cls} misses.`);
-          this.emit("fx", { kind: "miss", foe: target });
-        }
+      const st = hero.status || {};
+      if (!this.canAct(hero)) {
+        if (!st.stone) this.say(`${hero.name} is ${st.sleep ? "asleep" : "paralysed"} and can't act.`);
+        continue;
       }
+      if (action === "cast") this.cast(hero, foes);
+      else this.strike(hero, rnd.pick(foes));
     }
     for (const m of this.foes) if (m.hp <= 0 && !m.dead) { m.dead = true; this.emit("fx", { kind: "die", foe: m }); }
     if (!this.living().length) { this.wonFight(); return; }
     for (const m of this.living()) {                                     // the monsters' turn
-      const heroes = this.alive();
-      if (!heroes.length) break;
-      const target = rnd.pick(heroes);
+      if (m.held > 0) { m.held--; this.say(`The ${m.name} is held fast by the thorns.`); continue; }
+      const target = this.pickTarget();
+      if (!target) break;
       if (rnd.chance(0.8)) {
-        const dmg = this.damage(Math.floor(m.atk / 2), 0, target.df + target.armor.power * 2);
+        let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + target.armor.power * 2);
+        if (this.song) dmg = Math.max(1, dmg - 1);
         target.hp -= dmg;
+        if ((target.status || {}).sleep) delete target.status.sleep;     // (a blow wakes)
         this.sound("hurt");
         this.emit("fx", { kind: "hurt", hero: target, amount: dmg, foe: m });
-        this.say(`The ${m.name} hits the ${target.cls} for ${dmg}.` + (target.hp <= 0 ? `  The ${target.cls} falls!` : ""));
+        this.say(`The ${m.name} hits ${target.name} for ${dmg}.` + (target.hp <= 0 ? `  ${target.name} falls!` : ""));
+        if (target.hp > 0) {
+          const kind = CM.monsterKind(m.name);
+          if (kind && kind.touch && rnd.chance(kind.touch.chance)) this.afflict(target, kind.touch.status, m.name);
+          if ((target.boons || []).includes("secondwind") && !target.winded && target.hp < target.max / 4) {
+            target.winded = true;
+            const back = Math.floor(target.max / 3);
+            target.hp = Math.min(target.max, target.hp + back);
+            this.say(`${target.name} finds a second wind (+${back}).`);
+          }
+        }
       } else {
-        this.say(`The ${m.name} misses the ${target.cls}.`);
+        this.say(`The ${m.name} misses ${target.name}.`);
+      }
+    }
+    for (const h of this.alive()) {                                      // the round's end: poison bites, ailments run their course
+      const st = h.status || {};
+      if (st.poison) {
+        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05)));
+        h.hp = Math.max(1, h.hp - bite);
+        this.say(`${h.name} suffers from the poison (-${bite}).`);
+      }
+      for (const s of Object.keys(st)) {
+        if (st[s] >= 900) continue;
+        st[s]--;
+        if (st[s] <= 0) { delete st[s]; this.say(`${h.name} is no longer ${CM.STATUSES[s].name.toLowerCase()}.`); }
       }
     }
     for (const hero of this.party) hero.hp = Math.max(0, hero.hp);
-    if (!this.alive().length) {
-      this.say("The last of the party falls...");
+    if (!this.alive().length || this.alive().every((h) => (h.status || {}).stone)) {
+      this.say(this.alive().length ? "The last of the party stands as stone, and the dark closes in..." : "The last of the party falls...");
       this.endRun(false);
       return;
     }
@@ -606,7 +744,9 @@ CM.Game = class {
 
   wonFight() {
     const rnd = this.rnd;
-    const xp = this.foes.reduce((s, m) => s + m.xp, 0), gold = this.foes.reduce((s, m) => s + m.gold, 0);
+    const xp = this.foes.reduce((s, m) => s + m.xp, 0);
+    let gold = this.foes.reduce((s, m) => s + m.gold, 0);
+    if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
     this.gold += gold;
     const loot = rnd.chance(0.45) ? [CM.makeItem(this.floor.number, rnd)] : [];
     this.bag.push(...loot);
@@ -616,16 +756,15 @@ CM.Game = class {
     this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and a ${loot[0].name}.` : "."));
     for (const hero of this.alive()) {
       hero.xp += Math.floor(xp / 2);                                      // everyone standing learns from the fight
-      while (hero.xp >= 60 * Math.pow(hero.level, 1.6)) {
+      while (hero.xp >= CM.xpForLevel(hero.level + 1)) {
         hero.level += 1;
-        const base = CM.CLASSES[hero.cls];
-        hero.max += Math.max(3, Math.floor(base.hp / 5));
+        CM.upgradeHero(hero);
+        CM.recompute(hero);
         hero.hp = hero.max;
-        hero.atk += 1 + (hero.cls === "Knight" || hero.cls === "Rogue" ? 1 : 0);
-        hero.df += hero.level % 2 === 0 ? 1 : 0;
-        if (hero.maxmp) { hero.maxmp += 3; hero.mp = hero.maxmp; }
+        hero.mp = hero.maxmp;
+        hero.pending += 1;
         this.sound("level");
-        this.say(`The ${hero.cls} reaches level ${hero.level}!`);
+        this.say(`${hero.name} reaches level ${hero.level}! A boon is theirs to choose (press ${this.party.indexOf(hero) + 1}).`);
       }
     }
     if (boss) { this.endRun(true); return; }
@@ -641,7 +780,7 @@ CM.Game = class {
       this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor"].map((k) => CM.makeItem(depth, rnd, k));
       this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
-        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.torch(), CM.lantern());
+        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern());
     }
     this.emit("bag", true);
   }
@@ -654,7 +793,8 @@ CM.Game = class {
 
   describe(item) {
     return { weapon: `weapon +${item.power}`, armor: `armor +${item.power}`, heal: "heals", mana: "restores magic", revive: "raises the fallen",
-      torch: "light, for a while", lantern: "light that lasts", key: "opens a locked door" }[item.kind];
+      torch: "light, for a while", lantern: "light that lasts", key: "opens a locked door",
+      antidote: "cures poison, sleep, paralysis and blindness" }[item.kind];
   }
 
   give(row, n) {                                                        // returns a note for the bag screen, "" when it worked
@@ -674,6 +814,16 @@ CM.Game = class {
       this.light = { kind: "lantern", left: 0 };
       this.sound("spell");
       this.say(`The ${hero.cls} lights the lantern. It won't run out.`);
+      this.emit("change");
+      return "";
+    }
+    if (item.kind === "antidote") {
+      if (hero.hp <= 0) return `${hero.name} has fallen. Raise them first.`;
+      const cured = this.cure(hero, CM.CURABLE);
+      if (!cured.length) return `${hero.name} has nothing an antidote would cure.`;
+      this.bag.splice(row, 1);
+      this.sound("heal");
+      this.say(`${hero.name} drinks the antidote, and is no longer ${cured.map((s) => CM.STATUSES[s].name.toLowerCase()).join(" or ")}.`);
       this.emit("change");
       return "";
     }
@@ -727,10 +877,66 @@ CM.Game = class {
   rest() {
     if (this.gold < 20) { this.say("The merchant wants 20 gold for a bedroll by the fire."); return; }
     this.gold -= 20;
-    for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; }
+    for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.sound("heal");
-    this.say("The party rests by the fire. Wounds close and magic returns.");
+    this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass.");
     this.saveRun();
+  }
+
+  // the camp's temple: ailments cured, a curse lifted, stone made flesh - for a price
+  temple(service) {
+    const cost = { cure: 30, uncurse: 60, unstone: 150 }[service];
+    const which = service === "cure" ? CM.CURABLE : service === "uncurse" ? ["curse"] : ["stone"];
+    const who = this.party.filter((h) => which.some((s) => (h.status || {})[s]));
+    if (!who.length) {
+      this.say({ cure: "No one here is ailing.", uncurse: "No curse lies on the party.", unstone: "No one here is stone." }[service]);
+      return false;
+    }
+    if (this.gold < cost) { this.say(`The old priest asks ${cost} gold for that.`); return false; }
+    this.gold -= cost;
+    for (const h of who) this.cure(h, which);
+    this.sound("heal");
+    this.say({ cure: "Herbs and prayers: the party's ailments pass.", uncurse: "The priest's chant lifts the curse.",
+      unstone: `Stone becomes flesh again: ${who.map((h) => h.name).join(", ")} can move.` }[service]);
+    this.saveRun();
+    return true;
+  }
+
+  // ---- a level earned is a boon chosen ----
+  offerBoons(hero) {
+    if (hero.offer && hero.offer.length === 3) return hero.offer;
+    const have = hero.boons || [], c = CM.CLASSES[hero.cls] || CM.CLASSES.Knight;
+    const own = Object.keys(CM.BOONS).find((id) => CM.BOONS[id].stat === c.key);       // the class's own stat is always on offer
+    const pool = Object.keys(CM.BOONS).filter((id) => id !== own && (CM.BOONS[id].stat || !have.includes(id)));
+    hero.offer = [own, ...this.rnd.shuffle(pool).slice(0, 2)];
+    this.dirty = true;
+    return hero.offer;
+  }
+
+  chooseBoon(hero, id) {
+    if (!hero.pending || !(hero.offer || []).includes(id)) return false;
+    const b = CM.BOONS[id];
+    if (b.stat) hero.stats[b.stat] = Math.min(25, hero.stats[b.stat] + 2);
+    else hero.boons.push(id);
+    hero.pending -= 1;
+    hero.offer = null;
+    const ratio = hero.hp / hero.max, mratio = hero.maxmp ? hero.mp / hero.maxmp : 0;
+    CM.recompute(hero);
+    hero.hp = Math.max(1, Math.round(hero.max * ratio));
+    hero.mp = Math.round(hero.maxmp * mratio);
+    this.sound("level");
+    this.say(`${hero.name} takes ${b.name}: ${b.what.charAt(0).toLowerCase() + b.what.slice(1)}.`);
+    this.saveRun();
+    this.emit("change");
+    return true;
+  }
+
+  setRow(hero, row) {
+    if (this.mode === "combat" || !["front", "back"].includes(row)) return false;
+    hero.row = row;
+    this.dirty = true;
+    this.emit("change");
+    return true;
   }
 
   raiseDead() {
@@ -761,5 +967,5 @@ CM.Game = class {
     this.say(`Back up the shaft to floor ${this.floor.number}.`);
   }
 
-  potionCount() { return this.bag.filter((i) => ["heal", "mana", "revive"].includes(i.kind)).length; }
+  potionCount() { return this.bag.filter((i) => ["heal", "mana", "revive", "antidote"].includes(i.kind)).length; }
 };

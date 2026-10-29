@@ -13,6 +13,7 @@ CM.makeItem = function (floor, rnd, kind) {
     if (roll < 0.12) return { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 };
     if (roll < 0.4) return { name: "Mana Potion", kind: "mana", power: 12 + floor, value: 25 };
     if (roll < 0.52) return CM.torch();
+    if (roll < 0.62) return CM.antidote();
     return { name: "Healing Potion", kind: "heal", power: 20 + floor * 3, value: 20 };
   }
   const tier = CM.clamp(Math.floor((floor + rnd.int(-2, 2)) * 12 / 21), 0, 11);
@@ -27,6 +28,7 @@ CM.TORCH_STEPS = 400;                    // a torch burns this many steps
 CM.torch = () => ({ name: "Torch", kind: "torch", power: CM.TORCH_STEPS, value: 8 });
 CM.lantern = () => ({ name: "Lantern", kind: "lantern", power: 0, value: 150 });
 CM.key = () => ({ name: "Iron Key", kind: "key", power: 0, value: 0 });
+CM.antidote = () => ({ name: "Antidote", kind: "antidote", power: 0, value: 15 });
 
 CM.monsterGroup = function (floor, rnd) {
   const top = Math.min(CM.MONSTERS.length - 1, Math.floor(floor * CM.MONSTERS.length / CM.LAST_FLOOR));
@@ -43,18 +45,91 @@ CM.monsterGroup = function (floor, rnd) {
 
 CM.bossMonster = () => ({ name: CM.BOSS.name, colour: CM.BOSS.colour, hp: 650, max: 650, atk: 46, df: 18, xp: 5000, gold: 5000, boss: true });
 
-CM.newParty = function () {
-  return CM.CLASS_ORDER.map((cls) => {
-    const s = CM.CLASSES[cls];
-    return { name: cls, cls, level: 1, xp: 0, hp: s.hp, max: s.hp, mp: s.mp, maxmp: s.mp, atk: s.atk, df: s.df,
-      weapon: { name: cls === "Mage" || cls === "Cleric" ? "Staff" : "Club", kind: "weapon", power: 1, value: 5 },
-      armor: { name: cls === "Mage" ? "Robes" : "Tunic", kind: "armor", power: 0, value: 5 } };
-  });
+// ---- heroes: rolled, made, grown ---------------------------------------------------------------------------------------
+CM.rollStats = function (cls, rnd) {                                      // three dice a stat, and what the class brings
+  rnd = rnd || new CM.Random(Math.floor(Math.random() * 4294967296));
+  const bonus = CM.CLASSES[cls].bonus, stats = {};
+  for (const s of CM.STATS) stats[s] = CM.clamp(rnd.int(1, 6) + rnd.int(1, 6) + rnd.int(1, 6) + (bonus[s] || 0), 3, 18);
+  return stats;
+};
+
+CM.mod = (v, per = 2) => Math.floor((v - 10) / per);                     // how a stat tells: 10 is nothing, 16 is +3 (at 2 a point)
+CM.xpForLevel = (level) => Math.ceil(60 * Math.pow(level - 1, 1.6));     // the experience a level asks for (the old game's curve)
+
+// the numbers a hero fights with, from class, level, stats and boons (health and magic stay where they were, within the new most)
+CM.recompute = function (h) {
+  const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight, s = h.stats, L = h.level - 1;
+  const boons = h.boons || [];
+  h.max = Math.max(1, c.hp + (s.con - 10) + L * (c.grow + CM.mod(s.con, 3)));
+  h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : 0;
+  const hitStat = c.key === "dex" ? s.dex : s.str;
+  h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow);
+  h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0));
+  h.hp = Math.min(h.hp, h.max);
+  h.mp = Math.min(h.mp, h.maxmp);
+  return h;
+};
+
+CM.makeHero = function (cls, name, stats, row) {
+  const c = CM.CLASSES[cls];
+  const h = { name: (name || "").trim() || cls, cls, level: 1, xp: 0, hp: 1, max: 1, mp: 0, maxmp: 0, atk: 1, df: 0,
+    stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null,
+    weapon: { name: c.weapon, kind: "weapon", power: 1, value: 5 }, armor: { name: c.armor, kind: "armor", power: 0, value: 5 } };
+  CM.recompute(h);
+  h.hp = h.max; h.mp = h.maxmp;
+  return h;
+};
+
+// a hero saved by an older version gets stats (middling, plus the class's), a row and the rest
+CM.upgradeHero = function (h) {
+  const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight;
+  if (!h.stats) { h.stats = {}; for (const s of CM.STATS) h.stats[s] = 10 + (c.bonus[s] || 0); }
+  h.row = h.row || c.row;
+  h.status = h.status || {};
+  h.boons = h.boons || [];
+  h.pending = h.pending || 0;
+  h.offer = h.offer || null;
+  return h;
+};
+
+CM.newParty = function (chosen) {                                         // chosen: [{cls, name, stats, row}] - else the classic four
+  return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row));
+};
+
+// what the party could do with: a line or two of advice, and whether it's sound
+CM.partyAdvice = function (party) {
+  const notes = [], roles = party.map((p) => p.cls), rows = party.map((p) => p.row || CM.CLASSES[p.cls].row);
+  const front = rows.filter((r) => r === "front").length;
+  const healers = roles.filter((c) => ["Cleric", "Paladin", "Druid", "Bard"].includes(c)).length;
+  const area = roles.filter((c) => ["Mage", "Druid", "Ranger"].includes(c)).length;
+  const casters = roles.filter((c) => CM.CLASSES[c].mp > 0).length;
+  if (front === 0) notes.push("No one up front: the monsters will reach whoever they like.");
+  else if (front === 1) notes.push("Only one hero up front will take most of the blows - a second would share them.");
+  else if (front >= 3) notes.push("Three or more in the front row: the back row's reach is wasted, and all of them get hit.");
+  if (!healers) notes.push("No one can heal. Potions will have to do, and they run out.");
+  if (!area) notes.push("No spell or volley that hits more than one foe: big groups will wear you down.");
+  if (casters >= 3) notes.push("Three casters: strong magic, thin armour. Keep the Knight or Paladin alive.");
+  if (!roles.some((c) => ["Knight", "Paladin"].includes(c))) notes.push("Without a Knight or Paladin, nothing draws the monsters' attention.");
+  for (const p of party) {
+    const c = CM.CLASSES[p.cls];
+    if (p.stats && p.stats[c.key] < 10) notes.push(`${p.name || p.cls}'s ${CM.STAT_NAMES[c.key]} is low for a ${p.cls} - reroll?`);
+    if (p.stats && p.stats.con <= 6) notes.push(`${p.name || p.cls} is frail (Constitution ${p.stats.con}).`);
+  }
+  const sound = front >= 1 && front <= 2 && healers > 0 && area > 0;
+  if (!notes.length) notes.push(sound ? "A sound party: someone to take the blows, someone to heal, something that hits every foe." : "It could work.");
+  return { notes, sound };
+};
+
+CM.startingPotion = function (rnd) {                                       // a real potion: no torch, no antidote
+  const roll = rnd.next();
+  if (roll < 0.12) return { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 };
+  if (roll < 0.4) return { name: "Mana Potion", kind: "mana", power: 13, value: 25 };
+  return { name: "Healing Potion", kind: "heal", power: 23, value: 20 };
 };
 
 CM.startingBag = (seed) => {
   const rnd = new CM.Random(CM.hashSeed(`${seed}:bag`));
-  return [CM.makeItem(1, rnd, "potion"), CM.makeItem(1, rnd, "potion"), CM.torch(), CM.torch()];
+  return [CM.startingPotion(rnd), CM.startingPotion(rnd), CM.torch(), CM.torch()];
 };
 
 // ---- what's carved into the walls: the Lich King's story, a floor at a time ------------------------------------------

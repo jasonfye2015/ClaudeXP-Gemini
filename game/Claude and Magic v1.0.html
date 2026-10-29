@@ -51,6 +51,67 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 .hero b { color: var(--ink); font-size: 13px; }
 .hero small { display: block; color: var(--dim); font-size: 11px; line-height: 1.35; }
 .hero .gear { color: #B0A080; font-size: 11px; }
+#classes { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; }
+.calling { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: center; padding: 2px 4px; border-radius: 3px; }
+.calling:hover { background: rgba(42,32,24,0.6); }
+.calling canvas { width: 30px; height: 30px; border: 1px solid var(--edge); border-radius: 3px; }
+.calling b { color: var(--ink); font-size: 12.5px; }
+.calling small { color: var(--dim); font-size: 11px; line-height: 1.3; }
+
+/* ---- who goes down ---- */
+#create { position: relative; align-items: stretch; background: var(--night); }
+#create .sheet { position: relative; margin: auto; width: min(1180px, 98vw); max-height: 100vh; display: grid; grid-template-columns: 1fr 300px; grid-template-rows: auto auto 1fr auto; gap: 10px 18px; padding: 10px 20px 8px; overflow: auto; scrollbar-width: thin; }
+#create h1 { grid-column: 1 / -1; margin: 2px 0 0; text-align: center; font-size: 34px; color: var(--gold); text-shadow: 0 0 18px rgba(232,200,112,0.3); }
+#create .tagline { grid-column: 1 / -1; text-align: center; margin: -6px 0 0; color: var(--dim); font-style: italic; font-size: 13.5px; }
+#slots { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; align-content: start; }
+.slot { background: rgba(14,10,6,0.82); border: 1px solid var(--edge); border-radius: 4px; padding: 8px 10px; }
+.slot .top { display: flex; gap: 10px; align-items: center; }
+.slot .portrait-slot canvas { width: 56px; height: 56px; border: 1px solid var(--edge); border-radius: 3px; }
+.slot .who { display: grid; grid-template-columns: 1fr auto; gap: 5px; flex: 1 1 auto; }
+.slot .who input { width: 100%; font: bold 14px var(--serif); }
+.slot .who select { grid-column: 1 / -1; background: var(--pit); color: var(--ink); border: 1px solid var(--edge); font: 13px var(--serif); padding: 4px 6px; border-radius: 3px; }
+.slot .role { color: var(--dim); font-size: 11.5px; line-height: 1.35; margin: 6px 0 4px; min-height: 30px; }
+table.stats { border-collapse: collapse; width: 100%; }
+table.stats td { padding: 1px 6px 1px 0; font-size: 12px; color: var(--dim); }
+table.stats td.v { color: var(--ink); font: bold 13px var(--mono); text-align: right; width: 28px; }
+table.stats td.hint { color: var(--faint); font-size: 11px; }
+table.stats tr.key td { color: var(--gold); }
+table.stats tr.key td.hint { color: var(--gold); }
+.slot .derived { color: var(--ink); font-size: 12px; margin: 5px 0; }
+.rowpick { display: flex; gap: 5px; align-items: center; font-size: 12px; color: var(--dim); flex-wrap: wrap; }
+.rowpick button { padding: 3px 9px; font-size: 12px; }
+.rowpick button.on { background: #5A3A1A; border-color: var(--gold); color: var(--gold); }
+.rowpick .reroll { margin-left: auto; }
+.rowpick small { color: var(--faint); font-size: 11px; }
+#advice ul { margin: 0; padding-left: 18px; color: var(--ink); font-size: 13px; line-height: 1.45; }
+#advice li { margin: 4px 0; }
+#advice li.good { color: #8FD08F; list-style: none; margin-left: -18px; }
+#advice.sound h2 { color: #8FD08F; }
+#create .foot { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+#create .foot label { color: var(--dim); font-size: 13px; margin-left: 10px; }
+#create .foot input { width: 170px; }
+
+/* ---- a hero's sheet ---- */
+.sheetbox { min-width: 620px; }
+.sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+#sheet-left { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: start; }
+#sheet-left canvas { width: 96px; height: 96px; border: 1px solid var(--edge); border-radius: 3px; }
+#sheet-left .facts div { color: var(--ink); font-size: 13px; margin: 3px 0; }
+#sheet-left .facts b { color: var(--gold); }
+.list-title { color: var(--gold); font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; margin: 10px 0 4px; }
+.list-title.gold { font-size: 14px; margin-top: 14px; }
+.boons div, .ails div { color: var(--ink); font-size: 12.5px; margin: 2px 0; }
+.boons b, .ails b { color: var(--gold); }
+.offer { display: flex; gap: 8px; }
+.offer button { flex: 1 1 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; padding: 8px 10px; border-color: var(--gold); }
+.offer button b { color: var(--gold); font-size: 14px; }
+.offer button small { color: var(--dim); font-weight: normal; font-size: 11.5px; line-height: 1.3; }
+.member { cursor: pointer; }
+.member:hover { border-color: var(--gold); }
+.member .name small { color: var(--dim); font-weight: normal; font-size: 11px; }
+.member .name i { color: #A06060; font-style: normal; font-size: 11px; }
+.boon-badge { background: var(--gold); color: #2A1A08; font: bold 9px Tahoma, Verdana, sans-serif; padding: 1px 5px; border-radius: 8px; vertical-align: middle; }
+.member .ail { color: #E0A0A0; font: 10px Tahoma, Verdana, sans-serif; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #fame table { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
 #fame td { padding: 3px 4px; color: var(--ink); white-space: nowrap; }
 #fame td.won { color: var(--gold); }
@@ -135,6 +196,11 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 @keyframes rise { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -48px; } }
 
 @media (max-width: 900px) {
+  #classes { grid-template-columns: 1fr; }
+  #create .sheet { grid-template-columns: 1fr; }
+  #slots { grid-template-columns: 1fr; }
+  .sheetbox { min-width: 0; }
+  .sheet-grid { grid-template-columns: 1fr; }
   #play .top { flex-direction: column; }
   #side { width: auto; flex: 0 0 auto; flex-direction: row; align-items: center; justify-content: center; }
   #automap { width: 150px; height: 150px; }
@@ -216,13 +282,73 @@ CM.DIR_NAMES = "NESW";
 CM.LAST_FLOOR = 20;
 CM.CAMP_AFTER = [5, 10, 15];                               // a merchant's camp waits below these floors
 
+// the six stats a hero is rolled with (3-18, plus what the class brings)
+CM.STATS = ["str", "dex", "con", "int", "wis", "luck"];
+CM.STAT_NAMES = { str: "Strength", dex: "Dexterity", con: "Constitution", int: "Intelligence", wis: "Wisdom", luck: "Luck" };
+CM.STAT_HINTS = { str: "harder blows", dex: "hits land, blows miss", con: "more health, every level", int: "stronger spells (arcane)",
+  wis: "stronger prayers, more magic", luck: "weak spots found, ailments shrugged off" };
+
+// the eight classes: what they start with, how they grow (grow: health a level), where they stand, what they bring
+// to the roll (bonus), the stat that matters most to them (key), and what Cast does for them
 CM.CLASSES = {
-  Knight: { hp: 34, mp: 0, atk: 6, df: 3, role: "Front line", blurb: "Hits hard and wears the heaviest armour. Takes the blows meant for the others." },
-  Rogue: { hp: 24, mp: 0, atk: 5, df: 2, role: "Striker", blurb: "Quick, and one hit in four finds a weak spot for double damage." },
-  Cleric: { hp: 26, mp: 12, atk: 4, df: 2, role: "Healer", blurb: "Prays over the most wounded of the party: a heal that grows with every level." },
-  Mage: { hp: 18, mp: 14, atk: 3, df: 1, role: "Caster", blurb: "Frail, but a fireball hits every foe at once. Keep the Mage at the back." },
+  Knight: { hp: 34, mp: 0, atk: 6, df: 3, grow: 7, atkGrow: 2, row: "front", key: "str", bonus: { str: 3, con: 2 }, weapon: "Club", armor: "Tunic",
+    role: "Front line", cast: null, blurb: "Hits hard and wears the heaviest armour. Foes go for the Knight first." },
+  Paladin: { hp: 32, mp: 6, atk: 5, df: 3, grow: 6, atkGrow: 1, row: "front", key: "wis", bonus: { str: 2, wis: 2, con: 1 }, weapon: "Club", armor: "Tunic",
+    role: "Front line, healer", cast: "lay", blurb: "A knight who prays: tough up front, and Lay on Hands mends the most wounded." },
+  Rogue: { hp: 24, mp: 0, atk: 5, df: 2, grow: 5, atkGrow: 2, row: "front", key: "dex", bonus: { dex: 3, luck: 2 }, weapon: "Knife", armor: "Tunic",
+    role: "Striker", cast: null, blurb: "Quick. One hit in four finds a weak spot for double damage - and moved to the back row, every hit does." },
+  Ranger: { hp: 28, mp: 0, atk: 5, df: 2, grow: 5, atkGrow: 2, row: "back", key: "dex", bonus: { dex: 3, wis: 1, con: 1 }, weapon: "Short Bow", armor: "Tunic",
+    role: "Archer", cast: "volley", blurb: "Shoots over the front line at full strength; a Volley hits two foes at once." },
+  Cleric: { hp: 26, mp: 12, atk: 4, df: 2, grow: 5, atkGrow: 1, row: "back", key: "wis", bonus: { wis: 3, con: 1 }, weapon: "Staff", armor: "Tunic",
+    role: "Healer", cast: "heal", blurb: "Prays over the most wounded of the party: a heal that grows with every level." },
+  Mage: { hp: 18, mp: 14, atk: 3, df: 1, grow: 3, atkGrow: 1, row: "back", key: "int", bonus: { int: 3, dex: 1 }, weapon: "Staff", armor: "Robes",
+    role: "Caster", cast: "fireball", blurb: "Frail, but a fireball hits every foe at once. Keep the Mage at the back." },
+  Druid: { hp: 24, mp: 12, atk: 4, df: 2, grow: 4, atkGrow: 1, row: "back", key: "wis", bonus: { wis: 2, con: 2, int: 1 }, weapon: "Staff", armor: "Tunic",
+    role: "Caster, healer", cast: "thorns", blurb: "Calls thorns up through the stone: every foe hurt, some held fast, the party a little mended." },
+  Bard: { hp: 22, mp: 10, atk: 4, df: 2, grow: 4, atkGrow: 1, row: "back", key: "luck", bonus: { luck: 2, dex: 1, int: 1, wis: 1 }, weapon: "Knife", armor: "Tunic",
+    role: "Support", cast: "song", blurb: "A song that puts heart into the party: everyone hits harder for the fight, and hurts a little less." },
 };
-CM.CLASS_ORDER = ["Knight", "Rogue", "Cleric", "Mage"];
+CM.CLASS_ORDER = ["Knight", "Paladin", "Rogue", "Ranger", "Cleric", "Mage", "Druid", "Bard"];
+CM.CLASSIC = ["Knight", "Rogue", "Cleric", "Mage"];                  // the party the game suggests
+CM.CASTS = { lay: "Lay on Hands", volley: "Volley", heal: "Heal", fireball: "Fireball", thorns: "Thorns", song: "Song" };
+
+// a level earned is a boon chosen: three are offered, from these
+CM.BOONS = {
+  brawn: { name: "Brawn", what: "+2 Strength", stat: "str" },
+  grace: { name: "Grace", what: "+2 Dexterity", stat: "dex" },
+  hardy: { name: "Hardy", what: "+2 Constitution, and the health that brings", stat: "con" },
+  lore: { name: "Lore", what: "+2 Intelligence", stat: "int" },
+  faith: { name: "Faith", what: "+2 Wisdom", stat: "wis" },
+  fortune: { name: "Fortune", what: "+2 Luck", stat: "luck" },
+  ironskin: { name: "Iron Skin", what: "+2 defence" },
+  secondwind: { name: "Second Wind", what: "Once a fight, brought below a quarter of their health, they recover a third of it" },
+  keeneye: { name: "Keen Eye", what: "Hits land more often (+10%)" },
+  thickblood: { name: "Thick Blood", what: "Poison does half, and ailments are shrugged off more often" },
+  scavenger: { name: "Scavenger", what: "A quarter more gold from every fight the party wins" },
+  warcry: { name: "War Cry", what: "The first blow they land in a fight does double" },
+};
+
+// what can ail a hero
+CM.STATUSES = {
+  poison: { name: "Poisoned", mark: "☠", hint: "loses a little health each round, and every few steps" },
+  paralysis: { name: "Paralysed", mark: "✦", hint: "can't act for a few rounds" },
+  sleep: { name: "Asleep", mark: "z", hint: "can't act until hit, or a few rounds pass" },
+  blind: { name: "Blinded", mark: "◌", hint: "misses far more often, for a while" },
+  curse: { name: "Cursed", mark: "†", hint: "weaker in attack and defence until the curse is lifted" },
+  stone: { name: "Stone", mark: "▣", hint: "turned to stone: out of it until restored at a camp" },
+};
+CM.CURABLE = ["poison", "paralysis", "sleep", "blind"];               // what a rest, an antidote or the temple's Cure mends
+
+// names a hero might have, built from pieces
+CM.NAME_STARTS = ["Al", "Bren", "Cael", "Dor", "El", "Fen", "Gar", "Hal", "Is", "Jor", "Kel", "Lir", "Mor", "Nim", "Or", "Pel", "Quin",
+  "Ros", "Sar", "Tam", "Ul", "Val", "Wyn", "Yor", "Ash", "Brae", "Cor", "Dun", "Ev", "Fal", "Gwen", "Hol", "Ith", "Kae", "Lor", "Mer", "Ned"];
+CM.NAME_ENDS = ["dan", "dric", "lin", "mir", "ric", "wen", "ryn", "wyn", "ssa", "la", "na", "ris", "dor", "mund", "ton", "wick", "ven", "a", "o",
+  "ia", "eth", "an", "ard", "ley", "nor", "is"];
+CM.randomName = function (rnd) {
+  rnd = rnd || new CM.Random(Math.floor(Math.random() * 4294967296));
+  const name = rnd.pick(CM.NAME_STARTS) + rnd.pick(CM.NAME_ENDS);
+  return name.length < 4 ? name + rnd.pick(["a", "is", "an"]) : name;
+};
 
 CM.WEAPONS = ["Dagger", "Short Sword", "Mace", "Long Sword", "Battle Axe", "War Hammer", "Bastard Sword", "Rune Blade",
   "Flamberge", "Mithril Sword", "Dragonslayer", "Claudebrand"];
@@ -230,24 +356,26 @@ CM.ARMORS = ["Padded Vest", "Leather Armor", "Studded Leather", "Ring Mail", "Sc
   "Plate Mail", "Elven Mail", "Mithril Plate", "Dragon Scale", "Aegis of Claude"];
 
 // each monster, with how it's painted: body (beast, biped, small, wide, tall, ghost), head, eyes, and what it carries
+// (touch: what a hit from this one may leave behind, and how often)
 CM.MONSTERS = [
-  { name: "Giant Rat", colour: "#8A7058", body: "beast", head: "snout", eyes: "#FF5040", extras: ["tail"] },
+  { name: "Giant Rat", colour: "#8A7058", body: "beast", head: "snout", eyes: "#FF5040", extras: ["tail"], touch: { status: "poison", chance: 0.15 } },
   { name: "Kobold", colour: "#B07040", body: "small", head: "snout", eyes: "#FFE040", extras: ["dagger"] },
   { name: "Skeleton", colour: "#E0E0D0", body: "thin", head: "skull", eyes: "#FFE040", extras: ["sword"] },
   { name: "Goblin", colour: "#5A9A40", body: "small", head: "ears", eyes: "#FFE040", extras: ["club"] },
-  { name: "Zombie", colour: "#7A9A70", body: "biped", head: "round", eyes: "#D0FFD0", extras: ["torn"] },
+  { name: "Zombie", colour: "#7A9A70", body: "biped", head: "round", eyes: "#D0FFD0", extras: ["torn"], touch: { status: "poison", chance: 0.12 } },
   { name: "Orc", colour: "#4A7A3A", body: "wide", head: "tusks", eyes: "#FFE040", extras: ["axe"] },
-  { name: "Ghoul", colour: "#9AA0A0", body: "thin", head: "round", eyes: "#80FF80", extras: ["claws"] },
-  { name: "Dark Elf", colour: "#5A4A8A", body: "tall", head: "hood", eyes: "#FF80FF", extras: ["bow"] },
+  { name: "Ghoul", colour: "#9AA0A0", body: "thin", head: "round", eyes: "#80FF80", extras: ["claws"], touch: { status: "paralysis", chance: 0.15 } },
+  { name: "Dark Elf", colour: "#5A4A8A", body: "tall", head: "hood", eyes: "#FF80FF", extras: ["bow"], touch: { status: "sleep", chance: 0.12 } },
   { name: "Troll", colour: "#3A6A50", body: "wide", head: "round", eyes: "#FFE040", extras: ["club", "claws"] },
-  { name: "Wraith", colour: "#6A7AA0", body: "ghost", head: "hood", eyes: "#A0E0FF", extras: [] },
+  { name: "Wraith", colour: "#6A7AA0", body: "ghost", head: "hood", eyes: "#A0E0FF", extras: [], touch: { status: "curse", chance: 0.12 } },
   { name: "Ogre", colour: "#A08050", body: "wide", head: "round", eyes: "#FFE040", extras: ["club"] },
   { name: "Minotaur", colour: "#7A4A30", body: "wide", head: "horns", eyes: "#FF5040", extras: ["axe"] },
-  { name: "Gargoyle", colour: "#707078", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings"] },
-  { name: "Vampire", colour: "#8A2030", body: "tall", head: "pale", eyes: "#FF3030", extras: ["cape"] },
-  { name: "Demon", colour: "#C03020", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings", "claws"] },
-  { name: "Wyvern", colour: "#407A70", body: "beast", head: "snout", eyes: "#FFE040", extras: ["wings", "tail"] },
+  { name: "Gargoyle", colour: "#707078", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings"], touch: { status: "stone", chance: 0.06 } },
+  { name: "Vampire", colour: "#8A2030", body: "tall", head: "pale", eyes: "#FF3030", extras: ["cape"], touch: { status: "sleep", chance: 0.12 } },
+  { name: "Demon", colour: "#C03020", body: "wide", head: "horns", eyes: "#FFE040", extras: ["wings", "claws"], touch: { status: "blind", chance: 0.12 } },
+  { name: "Wyvern", colour: "#407A70", body: "beast", head: "snout", eyes: "#FFE040", extras: ["wings", "tail"], touch: { status: "poison", chance: 0.2 } },
 ];
+CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || null;
 CM.BOSS = { name: "The Lich King", colour: "#A0E0FF", body: "tall", head: "skull", eyes: "#40F0FF", extras: ["crown", "staff", "robe"] };
 
 // the depths: what the stone looks like down there, how far the torch reaches, what the dark is made of
@@ -266,7 +394,8 @@ CM.themeIndex = (number) => Math.max(0, CM.THEMES.indexOf(CM.themeFor(number)));
 
 CM.KEYS_HELP = [
   ["W / Up", "forward"], ["S / Down", "back"], ["A / Left", "turn left"], ["D / Right", "turn right"], ["Q / E", "sidestep"],
-  ["Space", "use: open a chest, climb down"], ["I", "inventory"], ["Tab", "the automap, large"], ["Esc", "close a screen / pause"],
+  ["Space", "use: a chest, the stairs, a fountain, a lever - or search the wall you face"], ["I", "inventory"],
+  ["1 - 4", "a hero's sheet: stats, row, ailments, a boon when they level"], ["Tab", "the automap, large"], ["Esc", "close a screen / pause"],
   ["F", "fight"], ["C", "cast"], ["P", "potion"], ["R", "run"], ["F3", "frames per second"],
 ];
 
@@ -286,6 +415,7 @@ CM.makeItem = function (floor, rnd, kind) {
     if (roll < 0.12) return { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 };
     if (roll < 0.4) return { name: "Mana Potion", kind: "mana", power: 12 + floor, value: 25 };
     if (roll < 0.52) return CM.torch();
+    if (roll < 0.62) return CM.antidote();
     return { name: "Healing Potion", kind: "heal", power: 20 + floor * 3, value: 20 };
   }
   const tier = CM.clamp(Math.floor((floor + rnd.int(-2, 2)) * 12 / 21), 0, 11);
@@ -300,6 +430,7 @@ CM.TORCH_STEPS = 400;                    // a torch burns this many steps
 CM.torch = () => ({ name: "Torch", kind: "torch", power: CM.TORCH_STEPS, value: 8 });
 CM.lantern = () => ({ name: "Lantern", kind: "lantern", power: 0, value: 150 });
 CM.key = () => ({ name: "Iron Key", kind: "key", power: 0, value: 0 });
+CM.antidote = () => ({ name: "Antidote", kind: "antidote", power: 0, value: 15 });
 
 CM.monsterGroup = function (floor, rnd) {
   const top = Math.min(CM.MONSTERS.length - 1, Math.floor(floor * CM.MONSTERS.length / CM.LAST_FLOOR));
@@ -316,18 +447,91 @@ CM.monsterGroup = function (floor, rnd) {
 
 CM.bossMonster = () => ({ name: CM.BOSS.name, colour: CM.BOSS.colour, hp: 650, max: 650, atk: 46, df: 18, xp: 5000, gold: 5000, boss: true });
 
-CM.newParty = function () {
-  return CM.CLASS_ORDER.map((cls) => {
-    const s = CM.CLASSES[cls];
-    return { name: cls, cls, level: 1, xp: 0, hp: s.hp, max: s.hp, mp: s.mp, maxmp: s.mp, atk: s.atk, df: s.df,
-      weapon: { name: cls === "Mage" || cls === "Cleric" ? "Staff" : "Club", kind: "weapon", power: 1, value: 5 },
-      armor: { name: cls === "Mage" ? "Robes" : "Tunic", kind: "armor", power: 0, value: 5 } };
-  });
+// ---- heroes: rolled, made, grown ---------------------------------------------------------------------------------------
+CM.rollStats = function (cls, rnd) {                                      // three dice a stat, and what the class brings
+  rnd = rnd || new CM.Random(Math.floor(Math.random() * 4294967296));
+  const bonus = CM.CLASSES[cls].bonus, stats = {};
+  for (const s of CM.STATS) stats[s] = CM.clamp(rnd.int(1, 6) + rnd.int(1, 6) + rnd.int(1, 6) + (bonus[s] || 0), 3, 18);
+  return stats;
+};
+
+CM.mod = (v, per = 2) => Math.floor((v - 10) / per);                     // how a stat tells: 10 is nothing, 16 is +3 (at 2 a point)
+CM.xpForLevel = (level) => Math.ceil(60 * Math.pow(level - 1, 1.6));     // the experience a level asks for (the old game's curve)
+
+// the numbers a hero fights with, from class, level, stats and boons (health and magic stay where they were, within the new most)
+CM.recompute = function (h) {
+  const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight, s = h.stats, L = h.level - 1;
+  const boons = h.boons || [];
+  h.max = Math.max(1, c.hp + (s.con - 10) + L * (c.grow + CM.mod(s.con, 3)));
+  h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : 0;
+  const hitStat = c.key === "dex" ? s.dex : s.str;
+  h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow);
+  h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0));
+  h.hp = Math.min(h.hp, h.max);
+  h.mp = Math.min(h.mp, h.maxmp);
+  return h;
+};
+
+CM.makeHero = function (cls, name, stats, row) {
+  const c = CM.CLASSES[cls];
+  const h = { name: (name || "").trim() || cls, cls, level: 1, xp: 0, hp: 1, max: 1, mp: 0, maxmp: 0, atk: 1, df: 0,
+    stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null,
+    weapon: { name: c.weapon, kind: "weapon", power: 1, value: 5 }, armor: { name: c.armor, kind: "armor", power: 0, value: 5 } };
+  CM.recompute(h);
+  h.hp = h.max; h.mp = h.maxmp;
+  return h;
+};
+
+// a hero saved by an older version gets stats (middling, plus the class's), a row and the rest
+CM.upgradeHero = function (h) {
+  const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight;
+  if (!h.stats) { h.stats = {}; for (const s of CM.STATS) h.stats[s] = 10 + (c.bonus[s] || 0); }
+  h.row = h.row || c.row;
+  h.status = h.status || {};
+  h.boons = h.boons || [];
+  h.pending = h.pending || 0;
+  h.offer = h.offer || null;
+  return h;
+};
+
+CM.newParty = function (chosen) {                                         // chosen: [{cls, name, stats, row}] - else the classic four
+  return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row));
+};
+
+// what the party could do with: a line or two of advice, and whether it's sound
+CM.partyAdvice = function (party) {
+  const notes = [], roles = party.map((p) => p.cls), rows = party.map((p) => p.row || CM.CLASSES[p.cls].row);
+  const front = rows.filter((r) => r === "front").length;
+  const healers = roles.filter((c) => ["Cleric", "Paladin", "Druid", "Bard"].includes(c)).length;
+  const area = roles.filter((c) => ["Mage", "Druid", "Ranger"].includes(c)).length;
+  const casters = roles.filter((c) => CM.CLASSES[c].mp > 0).length;
+  if (front === 0) notes.push("No one up front: the monsters will reach whoever they like.");
+  else if (front === 1) notes.push("Only one hero up front will take most of the blows - a second would share them.");
+  else if (front >= 3) notes.push("Three or more in the front row: the back row's reach is wasted, and all of them get hit.");
+  if (!healers) notes.push("No one can heal. Potions will have to do, and they run out.");
+  if (!area) notes.push("No spell or volley that hits more than one foe: big groups will wear you down.");
+  if (casters >= 3) notes.push("Three casters: strong magic, thin armour. Keep the Knight or Paladin alive.");
+  if (!roles.some((c) => ["Knight", "Paladin"].includes(c))) notes.push("Without a Knight or Paladin, nothing draws the monsters' attention.");
+  for (const p of party) {
+    const c = CM.CLASSES[p.cls];
+    if (p.stats && p.stats[c.key] < 10) notes.push(`${p.name || p.cls}'s ${CM.STAT_NAMES[c.key]} is low for a ${p.cls} - reroll?`);
+    if (p.stats && p.stats.con <= 6) notes.push(`${p.name || p.cls} is frail (Constitution ${p.stats.con}).`);
+  }
+  const sound = front >= 1 && front <= 2 && healers > 0 && area > 0;
+  if (!notes.length) notes.push(sound ? "A sound party: someone to take the blows, someone to heal, something that hits every foe." : "It could work.");
+  return { notes, sound };
+};
+
+CM.startingPotion = function (rnd) {                                       // a real potion: no torch, no antidote
+  const roll = rnd.next();
+  if (roll < 0.12) return { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 };
+  if (roll < 0.4) return { name: "Mana Potion", kind: "mana", power: 13, value: 25 };
+  return { name: "Healing Potion", kind: "heal", power: 23, value: 20 };
 };
 
 CM.startingBag = (seed) => {
   const rnd = new CM.Random(CM.hashSeed(`${seed}:bag`));
-  return [CM.makeItem(1, rnd, "potion"), CM.makeItem(1, rnd, "potion"), CM.torch(), CM.torch()];
+  return [CM.startingPotion(rnd), CM.startingPotion(rnd), CM.torch(), CM.torch()];
 };
 
 // ---- what's carved into the walls: the Lich King's story, a floor at a time ------------------------------------------
@@ -1280,12 +1484,35 @@ CM.art.secretWall = function (theme, seed) {                               // a 
 CM.art.portrait = function (cls, size = 56) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 56;
   p.scale(s, s);
-  p.fillStyle = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A" }[cls] || "#333";
+  p.fillStyle = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A", Paladin: "#4A3A2A", Ranger: "#2A3A2E",
+    Druid: "#3A4A2A", Bard: "#4A2A3A" }[cls] || "#333";
   p.fillRect(0, 0, 56, 56);
   const skin = "#E0B890";
-  p.fillStyle = { Knight: "#8A9098", Rogue: "#3A4A30", Cleric: "#E8E0D0", Mage: "#4A3A8A" }[cls];
+  p.fillStyle = { Knight: "#8A9098", Rogue: "#3A4A30", Cleric: "#E8E0D0", Mage: "#4A3A8A", Paladin: "#C8C0A0", Ranger: "#4A6A3A",
+    Druid: "#6A7A3A", Bard: "#8A3A5A" }[cls] || "#555";
   p.fillRect(8, 36, 40, 24);                                            // shoulders
-  if (cls === "Knight") {
+  if (cls === "Paladin") {
+    outlined(p, () => { p.roundRect(14, 8, 28, 32, 6); }, "#D8D0B8", "#5A5040", 2);   // a helm with a gold cross
+    p.fillStyle = "#1A1C22"; p.fillRect(16, 22, 24, 5);
+    p.fillStyle = "#E8C040"; p.fillRect(26, 6, 4, 16); p.fillRect(21, 11, 14, 3);
+  } else if (cls === "Ranger") {
+    outlined(p, () => { p.moveTo(28, 6); p.lineTo(44, 28); p.lineTo(44, 40); p.lineTo(12, 40); p.lineTo(12, 28); }, "#3A5A2A", "#1A2A14", 2);   // a hood
+    p.fillStyle = skin; p.fillRect(20, 24, 16, 12);
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 28, 3, 3); p.fillRect(31, 28, 3, 3);
+    p.strokeStyle = "#8A6A30"; p.lineWidth = 2; p.beginPath(); p.arc(44, 30, 16, -1.3, 1.3); p.stroke();   // a bow over the shoulder
+  } else if (cls === "Druid") {
+    outlined(p, () => { p.arc(28, 24, 14, 0, Math.PI * 2); }, skin, "#5A3A20", 2);
+    p.fillStyle = "#7A5A3A"; p.fillRect(16, 34, 24, 12);                  // a beard
+    p.fillStyle = "#4A8A3A";                                              // a crown of leaves
+    for (let i = 0; i < 7; i++) { p.beginPath(); p.ellipse(14 + i * 5, 12, 4, 2.5, (i - 3) * 0.3, 0, Math.PI * 2); p.fill(); }
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 22, 3, 3); p.fillRect(31, 22, 3, 3);
+  } else if (cls === "Bard") {
+    outlined(p, () => { p.arc(28, 26, 13, 0, Math.PI * 2); }, skin, "#5A3A20", 2);
+    outlined(p, () => { p.moveTo(10, 16); p.lineTo(46, 14); p.lineTo(40, 8); p.lineTo(16, 10); }, "#8A2A4A", "#3A1020", 2);   // a feathered cap
+    p.strokeStyle = "#E8E0A0"; p.lineWidth = 2; p.beginPath(); p.moveTo(40, 10); p.quadraticCurveTo(50, 2, 52, 10); p.stroke();
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 24, 3, 3); p.fillRect(31, 24, 3, 3);
+    p.fillStyle = "#E8C040"; p.fillRect(36, 40, 10, 12); p.fillStyle = "#6A4A20"; p.fillRect(38, 34, 2, 10);   // a lute
+  } else if (cls === "Knight") {
     outlined(p, () => { p.roundRect(14, 8, 28, 32, 8); }, "#B8BEC8", "#2A2E36", 2);
     p.fillStyle = "#1A1C22"; p.fillRect(16, 22, 24, 5);                 // the visor's slit
     p.fillStyle = "#C83030"; p.fillRect(26, 2, 4, 10);                  // a plume
@@ -1873,7 +2100,7 @@ CM.Game = class {
   continueRun() {
     const d = this.lastRun;
     if (!this.canContinue()) return false;
-    this.party = d.party; this.bag = d.bag || []; this.gold = d.gold || 0;
+    this.party = d.party.map(CM.upgradeHero); this.bag = d.bag || []; this.gold = d.gold || 0;
     this.floors = d.floors || {};
     for (const fl of Object.values(this.floors)) CM.upgradeFloor(fl);
     this.floor = CM.upgradeFloor(d.floor);
@@ -1941,9 +2168,10 @@ CM.Game = class {
   }
 
   // ---- starting, and the stairs between floors ----
-  newGame(seed) {
+  newGame(seed, chosen) {                                                // chosen: the party made on the creation screen, or none for the classic four
     this.seed = (seed || "").trim() || CM.randomSeed();
-    this.party = CM.newParty();
+    this.party = CM.newParty(chosen);
+    this.steps = 0;
     this.bag = CM.startingBag(this.seed);
     this.gold = 30;
     this.floors = {};
@@ -2067,6 +2295,18 @@ CM.Game = class {
     this.look();
     this.emit("moved", x, y);
     this.dirty = true;
+    this.steps = (this.steps || 0) + 1;
+    if (this.steps % 5 === 0) {                                          // poison walks with you
+      for (const h of this.alive()) {
+        const st = h.status || {};
+        if (!st.poison) continue;
+        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05)));
+        h.hp = Math.max(1, h.hp - bite);
+        st.poison--;
+        if (st.poison <= 0) { delete st.poison; this.say(`${h.name} is no longer poisoned.`); }
+        else this.say(`${h.name} suffers from the poison (-${bite}).`);
+      }
+    }
     if (thing) {
       if (thing.type === "key") {
         delete fl.things[k];
@@ -2241,9 +2481,9 @@ CM.Game = class {
     if (f.used) { this.say("The fountain has run dry."); return; }
     f.used = true; f.known = true;
     if (f.kind === "heal") {
-      for (const m of this.alive()) m.hp = m.max;
+      for (const m of this.alive()) { m.hp = m.max; this.cure(m, [...CM.CURABLE, "curse"]); }
       this.sound("heal");
-      this.say("The water is cold and clean. Every wound closes.");
+      this.say("The water is cold and clean. Every wound closes, and every ailment but stone passes.");
     } else if (f.kind === "mana") {
       for (const m of this.alive()) m.mp = m.maxmp;
       this.sound("heal");
@@ -2260,9 +2500,10 @@ CM.Game = class {
   kneel(f) {
     if (f.used) { this.say("You have prayed here already. The candles gutter."); return; }
     f.used = true;
-    for (const m of this.alive()) m.hp = Math.min(m.max, m.hp + Math.max(1, Math.floor(m.max * 0.3)));
+    let lifted = 0;
+    for (const m of this.alive()) { m.hp = Math.min(m.max, m.hp + Math.max(1, Math.floor(m.max * 0.3))); lifted += this.cure(m, ["curse"]).length; }
     this.sound("heal");
-    this.say("You kneel. A warmth passes through the party.");
+    this.say("You kneel. A warmth passes through the party" + (lifted ? ", and the curse lifts." : "."));
     this.saveRun();
     this.emit("change");
   }
@@ -2315,6 +2556,9 @@ CM.Game = class {
     this.foes = thing.group;
     this.foeKey = key;
     delete thing.anim;
+    this.song = 0;                                                       // the Bard's song lasts the fight
+    for (const h of this.party) { h.cried = false; h.winded = false; }
+    for (const m of this.foes) m.held = 0;
     this.setMode("combat");
     this.sound("monster");
     const names = {};
@@ -2325,9 +2569,129 @@ CM.Game = class {
 
   alive() { return this.party.filter((m) => m.hp > 0); }
   living() { return this.foes.filter((m) => m.hp > 0); }
+  canAct(h) { const s = h.status || {}; return h.hp > 0 && !s.paralysis && !s.sleep && !s.stone; }   // standing, and not held by an ailment
+  targets() { return this.alive().filter((h) => !(h.status || {}).stone); }                           // what a monster can reach: stone isn't worth hitting
 
   damage(atk, power, df) {
     return Math.max(1, atk + power + this.rnd.int(0, Math.max(1, Math.floor((atk + power) / 2))) - Math.floor(df / 2));
+  }
+
+  // a hero's numbers as they stand right now: a curse takes from them, the song gives
+  effective(h) {
+    const cursed = (h.status || {}).curse ? 2 : 0;
+    return { atk: Math.max(1, h.atk - cursed + (this.song ? 2 : 0)), df: Math.max(0, h.df - cursed) };
+  }
+  stat(h, s) { return h.stats && h.stats[s] !== undefined ? h.stats[s] : 10; }
+  hitChance(h) {
+    return CM.clamp(0.8 + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0), 0.25, 0.97);
+  }
+  critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01, 0.02, 0.6); }
+  resistChance(h) {
+    return CM.clamp((this.stat(h, "luck") - 10) * 0.02 + (this.stat(h, "wis") - 10) * 0.01 + ((h.boons || []).includes("thickblood") ? 0.2 : 0), 0, 0.6);
+  }
+
+  // an ailment settles on a hero, unless they shrug it off; it lasts this many rounds (curses and stone, until lifted)
+  afflict(h, status, by) {
+    if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
+    if (this.rnd.chance(this.resistChance(h))) { this.say(`${h.name} shrugs off the ${by}'s ${status === "stone" ? "gaze" : "touch"}.`); return false; }
+    h.status = h.status || {};
+    let turns = { poison: 8, paralysis: 2, sleep: 3, blind: 4, curse: 999, stone: 999 }[status];
+    if (turns < 900 && (h.boons || []).includes("thickblood")) turns = Math.ceil(turns / 2);
+    h.status[status] = turns;
+    this.say(`${h.name} is ${CM.STATUSES[status].name.toLowerCase()}!`);
+    this.emit("fx", { kind: "ailment", hero: h, status });
+    return true;
+  }
+
+  cure(h, which) {                                                       // which: a list of ailments, or "all"
+    const cured = [];
+    for (const s of Object.keys(h.status || {})) if (which === "all" || which.includes(s)) { delete h.status[s]; cured.push(s); }
+    return cured;
+  }
+
+  // the Knight draws the blows; the front row takes most of them; the back row is reached when it must be
+  pickTarget() {
+    const pool = this.targets();
+    if (!pool.length) return null;
+    const front = pool.some((h) => h.row === "front");
+    const weights = pool.map((h) => (front ? (h.row === "front" ? (h.cls === "Knight" ? 5 : 3) : 1) : 1));
+    let r = this.rnd.next() * weights.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r < 0) return pool[i]; }
+    return pool[pool.length - 1];
+  }
+
+  // one hero's blow on one foe (Fight, and the Ranger's arrows): the damage done, 0 for a miss
+  strike(hero, target, note = "") {
+    const rnd = this.rnd;
+    if (!rnd.chance(this.hitChance(hero))) {
+      this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
+      this.emit("fx", { kind: "miss", foe: target });
+      return 0;
+    }
+    let dmg = this.damage(this.effective(hero).atk, hero.weapon.power, target.df), how = "";
+    const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger";
+    if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
+    else if (rnd.chance(this.critChance(hero))) { dmg *= 2; how = " - a weak spot"; }
+    else if (back && !reaches) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
+    if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
+    target.hp -= dmg;
+    this.say(`${hero.name} hits the ${target.name}${note} for ${dmg}${how}.`);
+    this.emit("fx", { kind: "hit", foe: target, amount: dmg });
+    this.sound("hit");
+    return dmg;
+  }
+
+  // what Cast does, class by class
+  cast(hero, foes) {
+    const c = CM.CLASSES[hero.cls] || CM.CLASSES.Knight, rnd = this.rnd, key = this.stat(hero, c.key);
+    const weakest = () => this.alive().reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b));
+    if (c.cast === "fireball" && hero.mp >= 4) {
+      hero.mp -= 4;
+      this.sound("spell");
+      const dmg = Math.max(1, 8 + hero.level * 4 + (key - 10));
+      for (const m of foes) { m.hp -= dmg; this.emit("fx", { kind: "hit", foe: m, amount: dmg, spell: true }); }
+      this.say(`${hero.name} hurls a fireball! ${dmg} damage to every foe.`);
+    } else if (c.cast === "heal" && hero.mp >= 3) {
+      hero.mp -= 3;
+      const t = weakest(), heal = Math.max(1, 12 + hero.level * 4 + (key - 10));
+      t.hp = Math.min(t.max, t.hp + heal);
+      this.sound("heal");
+      this.say(`${hero.name} prays: ${t.name} is healed by ${heal}.`);
+    } else if (c.cast === "lay" && hero.mp >= 3) {
+      hero.mp -= 3;
+      const t = weakest(), heal = Math.max(1, 8 + hero.level * 3 + Math.floor((key - 10) / 2));
+      t.hp = Math.min(t.max, t.hp + heal);
+      const cured = this.cure(t, ["poison"]);
+      this.sound("heal");
+      this.say(`${hero.name} lays on hands: ${t.name} mends by ${heal}${cured.length ? ", and the poison leaves them" : ""}.`);
+    } else if (c.cast === "thorns" && hero.mp >= 4) {
+      hero.mp -= 4;
+      this.sound("spell");
+      const dmg = Math.max(1, 6 + hero.level * 3 + Math.floor((key - 10) / 2));
+      let held = 0;
+      for (const m of foes) {
+        m.hp -= dmg;
+        this.emit("fx", { kind: "hit", foe: m, amount: dmg, spell: true });
+        if (m.hp > 0 && !m.boss && rnd.chance(0.3 + (key - 10) * 0.02)) { m.held = 1; held++; }
+      }
+      for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 3 + Math.floor(hero.level / 2));
+      this.say(`${hero.name} calls thorns up through the stone: ${dmg} to every foe${held ? `, ${CM.plural(held, "foe")} held fast` : ""}; the party mends a little.`);
+    } else if (c.cast === "song" && hero.mp >= 4) {
+      hero.mp -= 4;
+      this.song = 1;
+      this.sound("heal");
+      for (const h of this.alive()) { h.hp = Math.min(h.max, h.hp + 4); if ((h.status || {}).sleep) delete h.status.sleep; }
+      this.say(`${hero.name} sings. Hearts lift: the party hits harder this fight, and hurts a little less.`);
+    } else if (c.cast === "volley") {
+      const first = rnd.pick(foes);
+      this.strike(hero, first, " with an arrow");
+      const rest = this.living().filter((m) => m !== first);
+      if (rest.length) this.strike(hero, rnd.pick(rest), " with a second arrow");
+      else if (first.hp > 0) this.strike(hero, first, " with a second arrow");
+    } else {
+      if (c.cast) this.say(`${hero.name} is out of magic, and swings instead.`);
+      this.strike(hero, rnd.pick(foes));
+    }
   }
 
   combatRound(action) {
@@ -2347,57 +2711,58 @@ CM.Game = class {
     for (const hero of this.alive()) {
       foes = this.living();
       if (!foes.length || action === "run" || action === "potion") break;
-      if (action === "cast" && hero.cls === "Mage" && hero.mp >= 4) {
-        hero.mp -= 4;
-        this.sound("spell");
-        const dmg = 8 + hero.level * 4;
-        for (const m of foes) { m.hp -= dmg; this.emit("fx", { kind: "hit", foe: m, amount: dmg, spell: true }); }
-        this.say(`The Mage hurls a fireball! ${dmg} damage to every foe.`);
-      } else if (action === "cast" && hero.cls === "Cleric" && hero.mp >= 3) {
-        hero.mp -= 3;
-        const target = this.alive().reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b));
-        const heal = 12 + hero.level * 4;
-        target.hp = Math.min(target.max, target.hp + heal);
-        this.sound("heal");
-        this.say(`The Cleric prays: the ${target.cls} is healed by ${heal}.`);
-      } else {
-        const target = rnd.pick(foes);
-        if (rnd.chance(0.88)) {
-          let dmg = this.damage(hero.atk, hero.weapon.power, target.df);
-          if (hero.cls === "Rogue" && rnd.chance(0.25)) {
-            dmg *= 2;
-            this.say(`The Rogue strikes a weak spot! ${target.name} takes ${dmg}.`);
-          } else {
-            this.say(`The ${hero.cls} hits the ${target.name} for ${dmg}.`);
-          }
-          target.hp -= dmg;
-          this.emit("fx", { kind: "hit", foe: target, amount: dmg });
-          this.sound("hit");
-        } else {
-          this.say(`The ${hero.cls} misses.`);
-          this.emit("fx", { kind: "miss", foe: target });
-        }
+      const st = hero.status || {};
+      if (!this.canAct(hero)) {
+        if (!st.stone) this.say(`${hero.name} is ${st.sleep ? "asleep" : "paralysed"} and can't act.`);
+        continue;
       }
+      if (action === "cast") this.cast(hero, foes);
+      else this.strike(hero, rnd.pick(foes));
     }
     for (const m of this.foes) if (m.hp <= 0 && !m.dead) { m.dead = true; this.emit("fx", { kind: "die", foe: m }); }
     if (!this.living().length) { this.wonFight(); return; }
     for (const m of this.living()) {                                     // the monsters' turn
-      const heroes = this.alive();
-      if (!heroes.length) break;
-      const target = rnd.pick(heroes);
+      if (m.held > 0) { m.held--; this.say(`The ${m.name} is held fast by the thorns.`); continue; }
+      const target = this.pickTarget();
+      if (!target) break;
       if (rnd.chance(0.8)) {
-        const dmg = this.damage(Math.floor(m.atk / 2), 0, target.df + target.armor.power * 2);
+        let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + target.armor.power * 2);
+        if (this.song) dmg = Math.max(1, dmg - 1);
         target.hp -= dmg;
+        if ((target.status || {}).sleep) delete target.status.sleep;     // (a blow wakes)
         this.sound("hurt");
         this.emit("fx", { kind: "hurt", hero: target, amount: dmg, foe: m });
-        this.say(`The ${m.name} hits the ${target.cls} for ${dmg}.` + (target.hp <= 0 ? `  The ${target.cls} falls!` : ""));
+        this.say(`The ${m.name} hits ${target.name} for ${dmg}.` + (target.hp <= 0 ? `  ${target.name} falls!` : ""));
+        if (target.hp > 0) {
+          const kind = CM.monsterKind(m.name);
+          if (kind && kind.touch && rnd.chance(kind.touch.chance)) this.afflict(target, kind.touch.status, m.name);
+          if ((target.boons || []).includes("secondwind") && !target.winded && target.hp < target.max / 4) {
+            target.winded = true;
+            const back = Math.floor(target.max / 3);
+            target.hp = Math.min(target.max, target.hp + back);
+            this.say(`${target.name} finds a second wind (+${back}).`);
+          }
+        }
       } else {
-        this.say(`The ${m.name} misses the ${target.cls}.`);
+        this.say(`The ${m.name} misses ${target.name}.`);
+      }
+    }
+    for (const h of this.alive()) {                                      // the round's end: poison bites, ailments run their course
+      const st = h.status || {};
+      if (st.poison) {
+        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05)));
+        h.hp = Math.max(1, h.hp - bite);
+        this.say(`${h.name} suffers from the poison (-${bite}).`);
+      }
+      for (const s of Object.keys(st)) {
+        if (st[s] >= 900) continue;
+        st[s]--;
+        if (st[s] <= 0) { delete st[s]; this.say(`${h.name} is no longer ${CM.STATUSES[s].name.toLowerCase()}.`); }
       }
     }
     for (const hero of this.party) hero.hp = Math.max(0, hero.hp);
-    if (!this.alive().length) {
-      this.say("The last of the party falls...");
+    if (!this.alive().length || this.alive().every((h) => (h.status || {}).stone)) {
+      this.say(this.alive().length ? "The last of the party stands as stone, and the dark closes in..." : "The last of the party falls...");
       this.endRun(false);
       return;
     }
@@ -2416,7 +2781,9 @@ CM.Game = class {
 
   wonFight() {
     const rnd = this.rnd;
-    const xp = this.foes.reduce((s, m) => s + m.xp, 0), gold = this.foes.reduce((s, m) => s + m.gold, 0);
+    const xp = this.foes.reduce((s, m) => s + m.xp, 0);
+    let gold = this.foes.reduce((s, m) => s + m.gold, 0);
+    if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
     this.gold += gold;
     const loot = rnd.chance(0.45) ? [CM.makeItem(this.floor.number, rnd)] : [];
     this.bag.push(...loot);
@@ -2426,16 +2793,15 @@ CM.Game = class {
     this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and a ${loot[0].name}.` : "."));
     for (const hero of this.alive()) {
       hero.xp += Math.floor(xp / 2);                                      // everyone standing learns from the fight
-      while (hero.xp >= 60 * Math.pow(hero.level, 1.6)) {
+      while (hero.xp >= CM.xpForLevel(hero.level + 1)) {
         hero.level += 1;
-        const base = CM.CLASSES[hero.cls];
-        hero.max += Math.max(3, Math.floor(base.hp / 5));
+        CM.upgradeHero(hero);
+        CM.recompute(hero);
         hero.hp = hero.max;
-        hero.atk += 1 + (hero.cls === "Knight" || hero.cls === "Rogue" ? 1 : 0);
-        hero.df += hero.level % 2 === 0 ? 1 : 0;
-        if (hero.maxmp) { hero.maxmp += 3; hero.mp = hero.maxmp; }
+        hero.mp = hero.maxmp;
+        hero.pending += 1;
         this.sound("level");
-        this.say(`The ${hero.cls} reaches level ${hero.level}!`);
+        this.say(`${hero.name} reaches level ${hero.level}! A boon is theirs to choose (press ${this.party.indexOf(hero) + 1}).`);
       }
     }
     if (boss) { this.endRun(true); return; }
@@ -2451,7 +2817,7 @@ CM.Game = class {
       this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor"].map((k) => CM.makeItem(depth, rnd, k));
       this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
-        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.torch(), CM.lantern());
+        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern());
     }
     this.emit("bag", true);
   }
@@ -2464,7 +2830,8 @@ CM.Game = class {
 
   describe(item) {
     return { weapon: `weapon +${item.power}`, armor: `armor +${item.power}`, heal: "heals", mana: "restores magic", revive: "raises the fallen",
-      torch: "light, for a while", lantern: "light that lasts", key: "opens a locked door" }[item.kind];
+      torch: "light, for a while", lantern: "light that lasts", key: "opens a locked door",
+      antidote: "cures poison, sleep, paralysis and blindness" }[item.kind];
   }
 
   give(row, n) {                                                        // returns a note for the bag screen, "" when it worked
@@ -2484,6 +2851,16 @@ CM.Game = class {
       this.light = { kind: "lantern", left: 0 };
       this.sound("spell");
       this.say(`The ${hero.cls} lights the lantern. It won't run out.`);
+      this.emit("change");
+      return "";
+    }
+    if (item.kind === "antidote") {
+      if (hero.hp <= 0) return `${hero.name} has fallen. Raise them first.`;
+      const cured = this.cure(hero, CM.CURABLE);
+      if (!cured.length) return `${hero.name} has nothing an antidote would cure.`;
+      this.bag.splice(row, 1);
+      this.sound("heal");
+      this.say(`${hero.name} drinks the antidote, and is no longer ${cured.map((s) => CM.STATUSES[s].name.toLowerCase()).join(" or ")}.`);
       this.emit("change");
       return "";
     }
@@ -2537,10 +2914,66 @@ CM.Game = class {
   rest() {
     if (this.gold < 20) { this.say("The merchant wants 20 gold for a bedroll by the fire."); return; }
     this.gold -= 20;
-    for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; }
+    for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.sound("heal");
-    this.say("The party rests by the fire. Wounds close and magic returns.");
+    this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass.");
     this.saveRun();
+  }
+
+  // the camp's temple: ailments cured, a curse lifted, stone made flesh - for a price
+  temple(service) {
+    const cost = { cure: 30, uncurse: 60, unstone: 150 }[service];
+    const which = service === "cure" ? CM.CURABLE : service === "uncurse" ? ["curse"] : ["stone"];
+    const who = this.party.filter((h) => which.some((s) => (h.status || {})[s]));
+    if (!who.length) {
+      this.say({ cure: "No one here is ailing.", uncurse: "No curse lies on the party.", unstone: "No one here is stone." }[service]);
+      return false;
+    }
+    if (this.gold < cost) { this.say(`The old priest asks ${cost} gold for that.`); return false; }
+    this.gold -= cost;
+    for (const h of who) this.cure(h, which);
+    this.sound("heal");
+    this.say({ cure: "Herbs and prayers: the party's ailments pass.", uncurse: "The priest's chant lifts the curse.",
+      unstone: `Stone becomes flesh again: ${who.map((h) => h.name).join(", ")} can move.` }[service]);
+    this.saveRun();
+    return true;
+  }
+
+  // ---- a level earned is a boon chosen ----
+  offerBoons(hero) {
+    if (hero.offer && hero.offer.length === 3) return hero.offer;
+    const have = hero.boons || [], c = CM.CLASSES[hero.cls] || CM.CLASSES.Knight;
+    const own = Object.keys(CM.BOONS).find((id) => CM.BOONS[id].stat === c.key);       // the class's own stat is always on offer
+    const pool = Object.keys(CM.BOONS).filter((id) => id !== own && (CM.BOONS[id].stat || !have.includes(id)));
+    hero.offer = [own, ...this.rnd.shuffle(pool).slice(0, 2)];
+    this.dirty = true;
+    return hero.offer;
+  }
+
+  chooseBoon(hero, id) {
+    if (!hero.pending || !(hero.offer || []).includes(id)) return false;
+    const b = CM.BOONS[id];
+    if (b.stat) hero.stats[b.stat] = Math.min(25, hero.stats[b.stat] + 2);
+    else hero.boons.push(id);
+    hero.pending -= 1;
+    hero.offer = null;
+    const ratio = hero.hp / hero.max, mratio = hero.maxmp ? hero.mp / hero.maxmp : 0;
+    CM.recompute(hero);
+    hero.hp = Math.max(1, Math.round(hero.max * ratio));
+    hero.mp = Math.round(hero.maxmp * mratio);
+    this.sound("level");
+    this.say(`${hero.name} takes ${b.name}: ${b.what.charAt(0).toLowerCase() + b.what.slice(1)}.`);
+    this.saveRun();
+    this.emit("change");
+    return true;
+  }
+
+  setRow(hero, row) {
+    if (this.mode === "combat" || !["front", "back"].includes(row)) return false;
+    hero.row = row;
+    this.dirty = true;
+    this.emit("change");
+    return true;
   }
 
   raiseDead() {
@@ -2571,7 +3004,7 @@ CM.Game = class {
     this.say(`Back up the shaft to floor ${this.floor.number}.`);
   }
 
-  potionCount() { return this.bag.filter((i) => ["heal", "mana", "revive"].includes(i.kind)).length; }
+  potionCount() { return this.bag.filter((i) => ["heal", "mana", "revive", "antidote"].includes(i.kind)).length; }
 };
 
 // ---- 70-ui.js ----
@@ -2599,13 +3032,24 @@ CM.UI = class {
       <p>The same seed lays out the same twenty floors, so a dungeon can be tried again - or handed to a friend. What
       the monsters do in a fight is up to the dice. The run saves as you go; when the whole party falls, it ends, and
       the deepest runs go in the Hall of Fame.</p>
-      <h2>Your party</h2>
-      <div id="heroes"></div>
+      <h2>The eight callings</h2>
+      <div id="classes"></div>
       <p id="start-with"></p>
     </div>
     <div class="card" id="fame"><h2>Hall of Fame</h2><table></table></div>
     <div class="foot"><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button></div>
     <div class="version"></div>
+  </div>
+</div>
+<div id="create" class="screen">
+  <div class="sheet">
+    <h1>Who goes down?</h1>
+    <div class="tagline">Four of them. Name them, choose their callings, roll their stats, and set them in their rows. The advice is only advice.</div>
+    <div id="slots"></div>
+    <div class="card" id="advice"><h2>Advice</h2><ul></ul></div>
+    <div class="foot"><button id="btn-suggest">Suggest a party</button><button id="btn-reroll-all">Reroll everyone</button>
+      <label for="create-seed">Seed</label><input id="create-seed" type="text" maxlength="40" spellcheck="false">
+      <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>
   </div>
 </div>
 <div id="play" class="screen">
@@ -2640,6 +3084,18 @@ CM.UI = class {
 <div class="dialog" id="dlg-pause"><div class="box"><h2>Paused</h2>
   <p class="small">The run is saved as you go.</p>
   <div class="end"><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
+<div class="dialog" id="dlg-sheet"><div class="box sheetbox">
+  <h2 id="sheet-title"></h2>
+  <div class="sheet-grid"><div id="sheet-left"></div><div id="sheet-right"></div></div>
+  <div id="sheet-boon"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-temple"><div class="box"><h2>The Temple</h2>
+  <p class="small">An old priest keeps a shrine by the camp fire, and asks for the upkeep of his candles.</p>
+  <div class="row"><label>Cure the small ailments - poison, sleep, paralysis, blindness - for everyone</label><button data-service="cure">30 gold</button></div>
+  <div class="row"><label>Lift a curse</label><button data-service="uncurse">60 gold</button></div>
+  <div class="row"><label>Stone to flesh</label><button data-service="unstone">150 gold</button></div>
+  <div class="row"><label>Raise the fallen (100 gold a level)</label><button id="btn-temple-raise">Raise</button></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="bigmap"><canvas id="bigmap-canvas" width="600" height="600"></canvas></div>`;
@@ -2650,8 +3106,13 @@ CM.UI = class {
     for (const b of root.querySelectorAll(".dialog .close")) b.addEventListener("click", () => this.closeDialogs());
     for (const d of root.querySelectorAll(".dialog")) d.addEventListener("click", (e) => { if (e.target === d) this.closeDialogs(); });
     this._title();
+    this._create();
     this._bag();
     this._settings();
+    for (const b of root.querySelectorAll("#dlg-temple button[data-service]")) {
+      b.addEventListener("click", () => { game.temple(b.dataset.service); this.refresh(); });
+    }
+    this.$("#btn-temple-raise").addEventListener("click", () => { game.raiseDead(); this.refresh(); });
     this.$("#btn-pause-settings").addEventListener("click", () => { this.closeDialogs(); this.openDialog("#dlg-settings"); });
     this.$("#btn-pause-title").addEventListener("click", () => { this.closeDialogs(); game.saveRun(); game.setMode("title"); });
     const keys = this.$("#dlg-keys table");
@@ -2687,6 +3148,57 @@ CM.UI = class {
     this.refresh();
   }
 
+  // ---- a hero's sheet ----
+  openSheet(i) {
+    const g = this.game, h = g.party[i];
+    if (!h) return;
+    this.sheetOf = i;
+    this.renderSheet();
+    this.openDialog("#dlg-sheet");
+  }
+
+  renderSheet() {
+    const g = this.game, h = g.party[this.sheetOf];
+    if (!h || !this.$("#dlg-sheet").classList.contains("on") && this.sheetOf === undefined) return;
+    const c = CM.CLASSES[h.cls] || CM.CLASSES.Knight, st = h.status || {}, fallen = h.hp <= 0;
+    this.$("#sheet-title").textContent = `${h.name} - ${h.cls}, level ${h.level}${fallen ? " (fallen)" : ""}`;
+    const next = CM.xpForLevel(h.level + 1);
+    const eff = g.effective(h);
+    const left = this.$("#sheet-left");
+    left.innerHTML = "";
+    left.appendChild(this.portrait(h.cls, 96));
+    const facts = document.createElement("div");
+    facts.className = "facts";
+    facts.innerHTML = `<div>${c.role}${c.cast ? `, casts <b>${CM.CASTS[c.cast]}</b>` : ""}</div>
+      <div>Experience ${h.xp} / ${next} for level ${h.level + 1}</div>
+      <div>Health ${Math.max(0, h.hp)} / ${h.max}${h.maxmp ? ` &nbsp; Magic ${h.mp} / ${h.maxmp}` : ""}</div>
+      <div>Attack ${eff.atk}${eff.atk !== h.atk ? ` (${h.atk})` : ""} &nbsp; Defence ${eff.df}${eff.df !== h.df ? ` (${h.df})` : ""} &nbsp; Hits ${Math.round(g.hitChance(h) * 100)}%</div>
+      <div>${this.esc(h.weapon.name)} (+${h.weapon.power}), ${this.esc(h.armor.name)} (+${h.armor.power})</div>
+      <div class="rowpick"><span>Row:</span><button data-row="front" class="${h.row === "front" ? "on" : ""}">Front</button><button data-row="back" class="${h.row === "back" ? "on" : ""}">Back</button>
+        <small>${g.mode === "combat" ? "not in a fight" : h.row === "front" ? "takes the blows" : h.cls === "Rogue" || h.cls === "Ranger" ? "strikes from safety" : "safer, hits for half"}</small></div>`;
+    for (const b of facts.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { if (g.setRow(h, b.dataset.row)) this.renderSheet(); });
+    left.appendChild(facts);
+    const right = this.$("#sheet-right");
+    right.innerHTML = `<table class="stats">${CM.STATS.map((s) => `<tr class="${s === c.key ? "key" : ""}"><td>${CM.STAT_NAMES[s]}</td><td class="v">${g.stat(h, s)}</td><td class="hint">${s === c.key ? "their calling's stat" : CM.STAT_HINTS[s]}</td></tr>`).join("")}</table>
+      <div class="list-title">Boons</div><div class="boons">${(h.boons || []).length ? h.boons.map((id) => `<div><b>${CM.BOONS[id].name}</b> - ${CM.BOONS[id].what}</div>`).join("") : "<div class='small'>None yet. Each level earned offers one.</div>"}</div>
+      <div class="list-title">Ailments</div><div class="ails">${Object.keys(st).length ? Object.keys(st).map((s) => `<div><b>${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}</b> - ${CM.STATUSES[s].hint}${st[s] < 900 ? ` (${st[s]} more rounds)` : ""}</div>`).join("") : "<div class='small'>None.</div>"}</div>`;
+    const boon = this.$("#sheet-boon");
+    boon.innerHTML = "";
+    if (h.pending > 0) {
+      const offer = g.offerBoons(h);
+      boon.innerHTML = `<div class="list-title gold">Level ${h.level}: choose a boon${h.pending > 1 ? ` (${h.pending} to choose)` : ""}</div>`;
+      const row = document.createElement("div");
+      row.className = "offer";
+      for (const id of offer) {
+        const b = document.createElement("button");
+        b.innerHTML = `<b>${CM.BOONS[id].name}</b><small>${CM.BOONS[id].what}</small>`;
+        b.addEventListener("click", () => { g.chooseBoon(h, id); this.renderSheet(); });
+        row.appendChild(b);
+      }
+      boon.appendChild(row);
+    }
+  }
+
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); }
   closeDialogs() { for (const d of this.root.querySelectorAll(".dialog.on")) d.classList.remove("on"); }
@@ -2705,7 +3217,7 @@ CM.UI = class {
     const g = this.game;
     this.$("#seed").value = CM.randomSeed();
     this.$("#btn-dice").addEventListener("click", () => { this.$("#seed").value = CM.randomSeed(); });
-    this.$("#btn-new").addEventListener("click", () => this.startNew());
+    this.$("#btn-new").addEventListener("click", () => this.openCreate());
     this.$("#btn-continue").addEventListener("click", () => g.continueRun());
     this.$("#btn-settings").addEventListener("click", () => this.openDialog("#dlg-settings"));
     this.$("#btn-keys").addEventListener("click", () => this.openDialog("#dlg-keys"));
@@ -2725,25 +3237,99 @@ CM.UI = class {
       this.$("#transfer-note").textContent = err || "Imported.";
       this.refreshTitle();
     });
-    const heroes = this.$("#heroes");
-    for (const hero of CM.newParty()) {
-      const div = document.createElement("div");
-      div.className = "hero";
-      div.appendChild(this.portrait(hero.cls, 48));
-      const s = CM.CLASSES[hero.cls];
+    const classes = this.$("#classes");
+    for (const cls of CM.CLASS_ORDER) {
+      const c = CM.CLASSES[cls], div = document.createElement("div");
+      div.className = "calling";
+      div.appendChild(this.portrait(cls, 30));
       const text = document.createElement("div");
-      text.innerHTML = `<b>${hero.cls}</b> <small>${s.role} - ${s.hp} HP${s.mp ? `, ${s.mp} MP` : ""}, attack ${s.atk}, defence ${s.df}</small>
-        <small>${s.blurb}</small><span class="gear">${hero.weapon.name}, ${hero.armor.name}</span>`;
+      text.innerHTML = `<b>${cls}</b> <small>${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}.</small> <small>${c.blurb}</small>`;
       div.appendChild(text);
-      heroes.appendChild(div);
+      classes.appendChild(div);
     }
   }
 
-  startNew() {
+  // ---- who goes down: the creation screen ----
+  _create() {
+    const g = this.game;
+    this.slots = [];
+    this.$("#btn-suggest").addEventListener("click", () => { this.fillSlots(CM.CLASSIC); this.renderCreate(); });
+    this.$("#btn-reroll-all").addEventListener("click", () => { for (const s of this.slots) s.stats = CM.rollStats(s.cls); this.renderCreate(); });
+    this.$("#btn-create-back").addEventListener("click", () => this.show("title"));
+    this.$("#btn-setout").addEventListener("click", () => this.setOut());
+    this.$("#create-seed").addEventListener("input", () => { this.$("#seed").value = this.$("#create-seed").value; });
+    const slots = this.$("#slots");
+    for (let i = 0; i < 4; i++) {
+      const div = document.createElement("div");
+      div.className = "slot";
+      div.innerHTML = `<div class="top"><div class="portrait-slot"></div><div class="who"><input class="name" type="text" maxlength="14" spellcheck="false" title="Their name"><button class="dice" title="Another name">&#x2684;</button>
+        <select class="cls" title="Their calling">${CM.CLASS_ORDER.map((c) => `<option value="${c}">${c}</option>`).join("")}</select></div></div>
+        <div class="role"></div>
+        <table class="stats"></table>
+        <div class="derived"></div>
+        <div class="rowpick"><span>Row:</span><button data-row="front">Front</button><button data-row="back">Back</button><button class="reroll">Reroll</button></div>`;
+      div.querySelector(".name").addEventListener("input", (e) => { this.slots[i].name = e.target.value; this.renderAdvice(); });
+      div.querySelector(".dice").addEventListener("click", () => { this.slots[i].name = CM.randomName(); this.renderCreate(); });
+      div.querySelector(".cls").addEventListener("change", (e) => {
+        const s = this.slots[i];
+        s.cls = e.target.value; s.stats = CM.rollStats(s.cls); s.row = CM.CLASSES[s.cls].row;
+        this.renderCreate();
+      });
+      div.querySelector(".reroll").addEventListener("click", () => { this.slots[i].stats = CM.rollStats(this.slots[i].cls); this.renderCreate(); });
+      for (const b of div.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { this.slots[i].row = b.dataset.row; this.renderCreate(); });
+      slots.appendChild(div);
+    }
+    g.on("mode", (mode) => { if (mode !== "title") this.closeDialogs(); });
+  }
+
+  fillSlots(classes) {
+    const rnd = new CM.Random(Math.floor(Math.random() * 4294967296));
+    this.slots = classes.map((cls) => ({ cls, name: CM.randomName(rnd), stats: CM.rollStats(cls, rnd), row: CM.CLASSES[cls].row }));
+  }
+
+  openCreate() {
     const g = this.game;
     if (g.canContinue() && !window.confirm("A run is waiting to be continued. Start a new expedition and let it go?")) return;
-    g.newGame(this.$("#seed").value);
+    if (!this.slots.length) this.fillSlots(CM.CLASSIC);
+    this.$("#create-seed").value = this.$("#seed").value;
+    this.show("create");
+    this.renderCreate();
   }
+
+  renderCreate() {
+    const cards = this.$("#slots").children;
+    this.slots.forEach((s, i) => {
+      const div = cards[i], c = CM.CLASSES[s.cls];
+      const slot = div.querySelector(".portrait-slot");
+      slot.innerHTML = "";
+      slot.appendChild(this.portrait(s.cls, 56));
+      if (div.querySelector(".name").value !== s.name) div.querySelector(".name").value = s.name;
+      div.querySelector(".cls").value = s.cls;
+      div.querySelector(".role").textContent = `${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}. ${c.blurb}`;
+      div.querySelector(".stats").innerHTML = CM.STATS.map((st) => {
+        const v = s.stats[st], key = st === c.key;
+        return `<tr class="${key ? "key" : ""}"><td>${CM.STAT_NAMES[st]}</td><td class="v">${v}</td><td class="hint">${key ? "their calling's stat" : CM.STAT_HINTS[st]}</td></tr>`;
+      }).join("");
+      const h = CM.makeHero(s.cls, s.name, s.stats, s.row);
+      div.querySelector(".derived").textContent = `${h.max} health${h.maxmp ? `, ${h.maxmp} magic` : ""}, attack ${h.atk}, defence ${h.df} - ${h.weapon.name} and ${h.armor.name}`;
+      for (const b of div.querySelectorAll("button[data-row]")) b.classList.toggle("on", b.dataset.row === s.row);
+    });
+    this.renderAdvice();
+  }
+
+  renderAdvice() {
+    const advice = CM.partyAdvice(this.slots), ul = this.$("#advice ul");
+    ul.innerHTML = advice.notes.map((n) => `<li class="${advice.sound && advice.notes.length === 1 ? "good" : ""}">${this.esc(n)}</li>`).join("");
+    this.$("#advice").classList.toggle("sound", advice.sound);
+  }
+
+  setOut() {
+    const g = this.game, seed = this.$("#create-seed").value;
+    this.$("#seed").value = seed;
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })));
+  }
+
+  startNew() { this.openCreate(); }
 
   refreshTitle() {
     const g = this.game;
@@ -2753,9 +3339,10 @@ CM.UI = class {
     this.$("#continue-note").textContent = can
       ? `Floor ${g.lastRun.floor.number}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}`
       : "No expedition is under way.";
-    const bag = CM.startingBag(this.$("#seed").value || "x");
-    this.$("#start-with").textContent = `You set out with 30 gold and two potions (${bag.map((i) => i.name).join(", ")} - the seed decides which). `
-      + "Chests and fallen monsters give better gear; a merchant's camp waits below floors 5, 10 and 15.";
+    const bag = CM.startingBag(this.$("#seed").value || "x").filter((i) => i.kind !== "torch");
+    this.$("#start-with").textContent = `Four set out with 30 gold, two torches and two potions (${bag.map((i) => i.name).join(" and ")} - the seed decides which). `
+      + "New Expedition lets you name them, choose their callings and roll their stats; chests and fallen monsters give better gear; "
+      + "a merchant's camp with a temple waits below floors 5, 10 and 15.";
     const table = this.$("#fame table");
     if (!g.fame.length) table.innerHTML = `<tr><td class="empty">No party has gone down yet.</td></tr>`;
     else table.innerHTML = g.fame.map((e, i) => `<tr><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
@@ -2819,29 +3406,39 @@ CM.UI = class {
     this.renderParty();
     this.renderLog();
     this.renderActions();
+    if (this.$("#dlg-sheet").classList.contains("on")) this.renderSheet();
     this.drawAutomap(this.$("#automap"));
     if (this.$("#bigmap").classList.contains("on")) this.drawAutomap(this.$("#bigmap-canvas"));
   }
 
   renderParty() {
     const box = this.$("#party");
-    if (box.children.length !== this.game.party.length) {
+    const signature = this.game.party.map((m) => m.cls + m.name).join("|");
+    if (box.dataset.signature !== signature) {
       box.innerHTML = "";
-      for (const m of this.game.party) {
+      box.dataset.signature = signature;
+      this.game.party.forEach((m, i) => {
         const div = document.createElement("div");
         div.className = "member";
+        div.title = `${m.name}'s sheet (${i + 1})`;
         div.appendChild(this.portrait(m.cls, 44));
         const text = document.createElement("div");
-        text.innerHTML = `<div class="name"></div><div class="gear"></div><div class="bar hp"><i></i><span></span></div><div class="bar mp"><i></i><span></span></div>`;
+        text.innerHTML = `<div class="name"></div><div class="gear"></div><div class="bar hp"><i></i><span></span></div><div class="bar mp"><i></i><span></span></div><div class="ail"></div>`;
         div.appendChild(text);
+        div.addEventListener("click", () => this.openSheet(i));
         box.appendChild(div);
-      }
+      });
     }
     this.game.party.forEach((m, i) => {
-      const div = box.children[i], dead = m.hp <= 0;
+      const div = box.children[i], dead = m.hp <= 0, st = m.status || {};
       div.classList.toggle("fallen", dead);
-      div.querySelector(".name").textContent = `${m.cls}  Lv ${m.level}` + (dead ? "  (fallen)" : "");
+      div.classList.toggle("front", m.row === "front");
+      div.querySelector(".name").innerHTML = `${this.esc(m.name)} <small>${m.cls} ${m.level}${m.row === "front" ? " ▴" : ""}</small>` + (dead ? " <i>(fallen)</i>" : "")
+        + (m.pending ? ` <span class="boon-badge">Boon!</span>` : "");
       div.querySelector(".gear").textContent = `${m.weapon.name} / ${m.armor.name}`;
+      const ail = div.querySelector(".ail");
+      ail.textContent = Object.keys(st).map((s) => `${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}`).join("  ");
+      ail.style.display = Object.keys(st).length ? "" : "none";
       const hp = div.querySelector(".bar.hp");
       hp.querySelector("i").style.width = `${100 * Math.max(0, m.hp) / Math.max(1, m.max)}%`;
       hp.querySelector("span").textContent = `HP ${Math.max(0, m.hp)}/${m.max}`;
@@ -2865,7 +3462,7 @@ CM.UI = class {
         ["Use (Space)", () => g.use()], ["Inventory (I)", () => g.openBag()], ["Map (Tab)", () => this.toggleBigMap()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       combat: [["Fight (F)", () => g.combatRound("fight")], ["Cast (C)", () => g.combatRound("cast")],
         ["Potion (P)", () => g.combatRound("potion")], ["Run (R)", () => g.combatRound("run")]],
-      camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Raise the fallen", () => g.raiseDead()],
+      camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
         ["Inventory", () => g.openBag()], ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
@@ -3035,7 +3632,7 @@ CM.UI = class {
       (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
       const m = g.party[i];
-      b.textContent = `Give to ${m.cls}` + (m.hp <= 0 ? " (fallen)" : "");
+      b.textContent = `Give to ${m.name}` + (m.hp <= 0 ? " (fallen)" : "");
     });
     const base = "Pick something from your pack, then who should equip or use it." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     this.$("#bag-note").dataset.base = base;
@@ -3218,8 +3815,9 @@ window.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("keydown", (e) => {
     CM.audio.unlock();
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
-    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) {
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) {
       if (e.code === "Enter" && e.target.id === "seed") ui.startNew();
+      if (e.code === "Escape" && ui.screen === "create") ui.show("title");
       return;
     }
     if (ui.dialogOpen()) { if (e.code === "Escape" || (e.code === "Tab" && ui.$("#bigmap").classList.contains("on"))) { e.preventDefault(); ui.closeDialogs(); } return; }
@@ -3227,7 +3825,9 @@ window.addEventListener("DOMContentLoaded", () => {
       if (e.code === "Enter" || e.code === "Space") { e.preventDefault(); if (game.canContinue()) game.continueRun(); else ui.startNew(); }
       return;
     }
+    if (ui.screen === "create") { if (e.code === "Escape") ui.show("title"); else if (e.code === "Enter") ui.setOut(); return; }
     if (ui.screen === "bag") { if (e.code === "Escape" || e.code === "KeyI") game.closeBag(); return; }
+    if (["Digit1", "Digit2", "Digit3", "Digit4"].includes(e.code) && game.mode !== "title") { ui.openSheet(Number(e.code.slice(-1)) - 1); return; }
     if (e.code === "Escape") { e.preventDefault(); ui.openDialog("#dlg-pause"); return; }
     if (e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
     if (game.mode === "explore") {
