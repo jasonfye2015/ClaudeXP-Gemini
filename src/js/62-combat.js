@@ -68,13 +68,35 @@ Object.assign(CM.Game.prototype, {
 
   alive() { return this.party.filter((m) => m.hp > 0); },
   living() { return this.foes.filter((m) => m.hp > 0 && !m.fled); },
+  attackable() { return this.living().filter((m) => !m.hidden); },        // (a king hidden in its swarm can't be struck)
+  // the ground the fight stands on (CM.TERRAIN ids): water, a vent, pillars, the dark
+  terrain() {
+    const fl = this.floor, c = this.combat || {}, out = [];
+    if (!fl) return out;
+    const k = CM.keyOf(fl.pos[0], fl.pos[1]), f = fl.features[k];
+    if (fl.tide || fl.special === "wading" || c.flooded || (fl.decor || []).some((d) => d.kind === "water" && d.x === fl.pos[0] && d.y === fl.pos[1])) out.push("water");
+    if (f && f.type === "vents") out.push("vent");
+    if ((fl.rooms || []).some((r) => r.name && CM.PILLARED.includes(r.name) && fl.pos[0] >= r.x0 && fl.pos[0] <= r.x1 && fl.pos[1] >= r.y0 && fl.pos[1] <= r.y1)) out.push("pillars");
+    if (this.inDark() && !(this.spellLight > 0)) out.push("dark");
+    return out;
+  },
+  terrainNote() { return this.terrain().map((id) => `${CM.TERRAIN[id].name}: ${CM.TERRAIN[id].what}`).join(". "); },
+  setFormation(id) {
+    if (!CM.FORMATIONS[id] || this.mode === "combat") return false;
+    this.logAct("setFormation", id);
+    this.formation = id; this.dirty = true;
+    this.say(`The party takes up a ${CM.FORMATIONS[id].name.toLowerCase()}: ${CM.FORMATIONS[id].what}.`);
+    this.emit("change");
+    return true;
+  },
+  point() { return this.formation === "wedge" ? this.alive().find((h) => h.row === "front" && !(h.status || {}).stone) || null : null; },
   canAct(h) { const s = h.status || {}; return h.hp > 0 && !s.paralysis && !s.sleep && !s.stone; },   // standing, and not held by an ailment
   targets() { return this.alive().filter((h) => !(h.status || {}).stone); },                           // what a monster can reach: stone isn't worth hitting
 
   // the party's square: in a corridor, only two foes can come at them at once
   reachLimit() {
     const fl = this.floor;
-    return fl && CM.openNeighbours(fl, fl.pos[0], fl.pos[1]).length <= 2 ? 2 : 99;
+    return (fl && CM.openNeighbours(fl, fl.pos[0], fl.pos[1]).length <= 2) || this.terrain().includes("pillars") ? 2 : 99;
   },
 
   // a round: everyone standing, in order of speed (the dice have a say); heroes win ties
@@ -160,6 +182,8 @@ Object.assign(CM.Game.prototype, {
     }
     for (const h of this.alive()) if (CM.trait(h, "wellspring") && h.mp < h.maxmp) h.mp = Math.min(h.maxmp, h.mp + 2);
     this.enginesAct();
+    if (this.terrain().includes("vent")) { const burn = 2 + Math.floor(this.floor.number / 5); let any = false; for (const h of this.alive().filter((p) => p.row === "back")) { h.hp = Math.max(1, h.hp - burn); any = true; } if (any) this.say(`The vent breathes: the back row is scorched (-${burn}).`); }
+    for (const m of this.living()) if (m.elite === "shielded") m.warded = Math.max(m.warded || 0, 1);
     for (const h of this.alive()) {                                      // gear that mends (of Mending, a unique, three relics worn)
       const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0);
       if (mend > 0 && h.hp < h.max) h.hp = Math.min(h.max, h.hp + mend);
@@ -185,6 +209,18 @@ Object.assign(CM.Game.prototype, {
       this.summonSkeletons(2);
       this.emit("fx", { kind: "rise", foe: lich });
     }
+    for (const m of this.foes) {                                         // a second form, at a third of its strength (the shallow guardians)
+      const G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
+      if (!G || !G.form2 || m.form2 || m.hp <= 0 || m.hp > m.max * 0.34 || m.echo) continue;
+      m.form2 = true;
+      this.say(G.form2.text);
+      this.emit("fx", { kind: "rise", foe: m });
+      if (G.form2.kind === "hide") { m.hidden = true; this.summonFor(m, G.moves[0], 2); }
+      else if (G.form2.kind === "flood") { this.combat.flooded = true; m.quick = true; }
+      else if (G.form2.kind === "heat") { m.broken = true; m.atk = Math.round(m.atk * 1.3); }
+    }
+    const hidden = this.foes.find((m) => m.hidden && m.hp > 0);
+    if (hidden && !this.living().some((m) => m !== hidden && !m.hidden)) { hidden.hidden = false; this.say(CM.GUARDIANS[hidden.guardian].form2.found); }
     for (const m of this.foes) {
       if (!CM.guardianHas(m, "rise") || m.hp > 0 || m.risen) continue;
       m.hp = Math.floor(m.max / 3); m.dead = false; m.risen = 1;
@@ -233,7 +269,7 @@ Object.assign(CM.Game.prototype, {
 
   // the chosen foe: an index among the living, a foe itself, or the one picked already (Tab, or a click)
   foeAt(arg) {
-    const foes = this.living();
+    const foes = this.attackable();
     if (!foes.length) return null;
     if (arg && typeof arg === "object") return foes.includes(arg) ? arg : foes[0];
     const i = typeof arg === "number" ? arg : (this.target || 0);
@@ -241,7 +277,7 @@ Object.assign(CM.Game.prototype, {
   },
 
   setTarget(i) {
-    const n = this.living().length;
+    const n = this.attackable().length;
     if (!n) return;
     this.target = ((i % n) + n) % n;
     this.emit("change");
@@ -302,8 +338,8 @@ Object.assign(CM.Game.prototype, {
 
   // a hero's numbers as they stand right now: a curse takes from them, the song and a blessing give
   effective(h) {
-    const cursed = (h.status || {}).curse ? 2 : 0, bless = this.combat && this.combat.bless;
-    return { atk: Math.max(1, h.atk - cursed + (this.song === 2 ? 4 : this.song ? 2 : 0) + (bless ? 2 : 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0)) };
+    const cursed = (h.status || {}).curse ? 2 : 0, bless = this.combat && this.combat.bless, point = this.point() === h ? 2 : 0;
+    return { atk: Math.max(1, h.atk - cursed + (this.song === 2 ? 4 : this.song ? 2 : 0) + (bless ? 2 : 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0) + point) };
   },
   stat(h, s) { return CM.heroStat(h, s); },
   hitChance(h) {
@@ -346,6 +382,8 @@ Object.assign(CM.Game.prototype, {
     if (!pool.length) return null;
     if (c.taunter && pool.includes(c.taunter) && c.round <= c.tauntUntil) return c.taunter;
     if (c.thrall && c.thrall.hp > 0 && (!m || m.ability !== "ranged") && this.rnd.chance(0.75)) return c.thrall;   // (the thrall takes the blows meant for the party)
+    const point = this.point();
+    if (point && (!m || m.ability !== "ranged") && pool.includes(point)) return point;                       // (the wedge: the point takes every blow that isn't a shot)
     const shadows = pool.filter((h) => !(CM.trait(h, "shadowstep") && h.row === "back"));
     if (shadows.length) pool.splice(0, pool.length, ...shadows);
     if (m && m.ability === "ranged") return this.rnd.pick(pool);
@@ -374,6 +412,7 @@ Object.assign(CM.Game.prototype, {
     if (this.song) dmg -= this.song;
     if (c.protect) dmg -= 3 + (c.protectMore || 0);
     if (this.has("glass")) dmg *= 2;
+    if (opts.aoe && this.formation === "loose") dmg = Math.ceil(dmg / 2);
     dmg = Math.max(1, dmg);
     h.hp -= dmg;
     if (h.hp <= 0 && CM.trait(h, "undying") && !h.undied) { h.undied = true; h.hp = 1; this.say(`${h.name} does not fall. Not this once.`); }
@@ -439,7 +478,7 @@ Object.assign(CM.Game.prototype, {
       if (m.breath % 2 === 0) {
         this.emit("fx", { kind: "attack", foe: m, breath: true });
         this.say(`The ${m.name} breathes fire over the whole party!`);
-        for (const h of this.targets()) this.hurt(h, Math.max(1, Math.floor(m.atk / 3) + 2), m, { noTouch: true });
+        for (const h of this.targets()) this.hurt(h, Math.max(1, Math.floor(m.atk / 3) + 2), m, { noTouch: true, aoe: true });
         return;
       }
     }
@@ -449,7 +488,7 @@ Object.assign(CM.Game.prototype, {
       const target = this.pickTarget(m);
       if (!target) break;
       if (m.marked && !target.thrall && rnd.chance(0.3) && this.alive().some((h) => CM.trait(h, "lastlaugh"))) { const own = Math.max(1, Math.floor(m.atk / 3)); m.hp -= own; this.say(`${CM.The(m)}, mocked past bearing, strikes at nothing and catches itself (-${own}).`); continue; }
-      if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1) * this.dodgeOf(target))) { this.say(`${CM.The(m)} misses ${target.name}.`); if (!target.thrall && CM.trait(target, "counter") && this.canAct(target)) { this.say(`${target.name} answers.`); this.strike(target, m, " in answer"); } continue; }
+      if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1) * this.dodgeOf(target) * (this.terrain().includes("dark") ? 0.85 : 1))) { this.say(`${CM.The(m)} misses ${target.name}.`); if (!target.thrall && CM.trait(target, "counter") && this.canAct(target)) { this.say(`${target.name} answers.`); this.strike(target, m, " in answer"); } continue; }
       let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), how = "";
       if (m.ability === "savage" && rnd.chance(0.2)) { dmg *= 2; how = " - a savage blow"; }
       if (m.ability === "charge" && !m.charged) { m.charged = true; dmg *= 2; how = " - it charges"; }
@@ -480,7 +519,7 @@ Object.assign(CM.Game.prototype, {
       if (c.cold % 2 === 0) {
         this.emit("fx", { kind: "cold", foe: m });
         this.say("The Lich King raises his hand, and a deathly cold fills the hall!");
-        for (const h of this.targets()) this.hurt(h, 10 + Math.floor(this.floor.number / 2), m, { noTouch: true });
+        for (const h of this.targets()) this.hurt(h, 10 + Math.floor(this.floor.number / 2), m, { noTouch: true, aoe: true });
         return;
       }
     }
@@ -508,11 +547,13 @@ Object.assign(CM.Game.prototype, {
     const rnd = this.rnd, G = CM.GUARDIANS[m.guardian], moves = G.moves || [];
     m.turns = (m.turns || 0) + 1;
     m.intent = null;
+    const every = m.quick ? 2 : 3;                                        // (the flooded Knight comes faster)
+    if (m.hidden) { const up = this.foes.filter((f) => f.summoned && f.hp > 0 && !f.fled).length; if (up < 4) this.summonFor(m, moves[0], Math.min(2, 4 - up)); else this.say("The heap seethes."); return; }
     const telegraph = () => {                                             // next turn is one of its moves: it shows, so the party can brace
-      if ((m.turns + 1) % 3 === 0 && moves.length) { const next = moves[(Math.floor((m.turns + 1) / 3) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); }
+      if ((m.turns + 1) % every === 0 && moves.length && !m.broken) { const next = moves[(Math.floor((m.turns + 1) / every) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); }
     };
-    if (m.turns % 3 === 0 && moves.length) {
-      const mv = moves[(Math.floor(m.turns / 3) - 1) % moves.length];
+    if (m.turns % every === 0 && moves.length && !m.broken) {
+      const mv = moves[(Math.floor(m.turns / every) - 1) % moves.length];
       if (this.guardianMove(m, mv)) { telegraph(); return; }
     }
     const target = this.pickTarget(m);
@@ -554,7 +595,7 @@ Object.assign(CM.Game.prototype, {
       this.sound("slam");
       this.say(who());
       for (const h of struck) {
-        this.hurt(h, this.damage(Math.floor(m.atk / (mv.frac || 2.5)), 0, this.effective(h).df + CM.gearDefence(h)), m, { how: mv.how || "", noTouch: true });
+        this.hurt(h, this.damage(Math.floor(m.atk / (mv.frac || 2.5)), 0, this.effective(h).df + CM.gearDefence(h)), m, { how: mv.how || "", noTouch: true, aoe: true });
         if (h.hp > 0 && mv.status && rnd.chance(mv.chance || 0.3) && !(h.status || {})[mv.status]) {
           h.status[mv.status] = mv.status === "paralysis" ? 1 : mv.status === "blind" ? 2 : 2;
           this.say((mv.flat || "{who} reels.").replace("{who}", h.name));
@@ -567,7 +608,7 @@ Object.assign(CM.Game.prototype, {
       if (!pool.length) return false;
       this.emit("fx", { kind: "attack", foe: m, breath: true });
       this.say(who());
-      for (const h of pool) this.hurt(h, Math.max(1, Math.floor(m.atk / (mv.frac || 2)) + 2), m, { noTouch: true });
+      for (const h of pool) this.hurt(h, Math.max(1, Math.floor(m.atk / (mv.frac || 2)) + 2), m, { noTouch: true, aoe: true });
       return true;
     }
     if (mv.kind === "ailment") {
@@ -641,7 +682,8 @@ Object.assign(CM.Game.prototype, {
     const rnd = this.rnd;
     this.emit("fx", { kind: "swing", hero, foe: target });
     const bow = Boolean(hero.weapon && hero.weapon.props && hero.weapon.props.bow), ambush = CM.trait(hero, "ambush") && !hero.struck;
-    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero))) {
+    const dark = this.terrain().includes("dark");
+    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero) * (dark ? 0.85 : 1))) {
       this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
       this.sound("miss");
       this.emit("fx", { kind: "miss", foe: target });
@@ -650,9 +692,11 @@ Object.assign(CM.Game.prototype, {
     let dmg = this.damage(this.effective(hero).atk, hero.weapon.power, bow && CM.trait(hero, "piercing") ? Math.floor(target.df / 2) : target.df), how = "";
     const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger";
     const critMult = CM.trait(hero, "deadly") ? 3 : 2;
+    if (target.elite === "spectral" && rnd.chance(0.5)) { this.say(`${hero.name}'s blow passes through ${CM.the(target)}.`); this.emit("fx", { kind: "miss", foe: target }); return 0; }
     if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
     else if (ambush || rnd.chance(this.critChance(hero))) { dmg *= critMult; how = " - a weak spot"; }
-    else if (back && !reaches) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
+    else if (back && !reaches && !(this.formation === "wedge" && this.point() !== hero)) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
+    if (this.formation === "loose") dmg = Math.max(1, Math.ceil(dmg * 0.85));
     if (target.row === "back" && !bow && this.living().some((f) => f !== target && f.row !== "back")) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += ", reaching past the front"; }   // (their back row, as yours)
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
     const props = (hero.weapon && hero.weapon.props) || {}, el = (props.element && !hero.weapon.unknown ? props.element : null) || (hero.oil && hero.oil.fights > 0 ? hero.oil.element : null);
@@ -685,7 +729,7 @@ Object.assign(CM.Game.prototype, {
     if (props.sleep && !hero.weapon.unknown && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.sleep)) { target.asleep = 2; this.say(`${CM.The(target)} hears the tide in the blade, and sleeps.`); }
     if (props.lifesteal && !hero.weapon.unknown && hero.hp > 0 && hero.hp < hero.max) { const back = Math.max(1, Math.ceil(dmg / 4)); hero.hp = Math.min(hero.max, hero.hp + back); this.say(`${hero.name}'s blade drinks: +${back}.`); }
     if ((CM.guardianHas(target, "heat") || CM.guardianHas(target, "glass")) && !props.bow && hero.hp > 0) {   // its heat, or its shards: whoever strikes it pays
-      const burn = 2 + Math.floor((this.floor ? this.floor.number : 15) / 5);
+      const burn = (2 + Math.floor((this.floor ? this.floor.number : 15) / 5)) * (target.broken ? 2 : 1);
       hero.hp = Math.max(1, hero.hp - burn);
       this.say((G.sear || "The heat of " + CM.the(target) + " sears {who} (-{n}).").replace("{who}", hero.name).replace("{n}", burn));
       this.emit("fx", { kind: "sear", hero, amount: burn, foe: target });
@@ -702,6 +746,8 @@ Object.assign(CM.Game.prototype, {
     if (r > 1) { dmg = Math.ceil(dmg * r); how = ` - the ${CM.ELEMENT_NAMES[element] || element} bites deep`; }
     else if (r < 1) { dmg = Math.max(1, Math.ceil(dmg * r)); how = ` - the ${CM.ELEMENT_NAMES[element] || element} does little to it`; }
     if (foe.marked) dmg = Math.ceil(dmg * 1.25);
+    if (element === "fire" && this.terrain().includes("water")) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the fire sputters on the water"; }
+    if (foe.elite === "mirrored") { dmg = Math.max(1, Math.ceil(dmg / 2)); const back = Math.max(1, Math.ceil(dmg / 2)); if (this.casting && this.casting.hp > 0) { this.casting.hp = Math.max(1, this.casting.hp - back); this.say(`The spell comes back off ${CM.the(foe)}'s mirror onto ${this.casting.name} (-${back}).`); } }
     if (element === "fire" && foe.held > 0) { dmg = Math.ceil(dmg * 1.5); how += " - the vines burn"; this.combo("kindling"); }
     if (element === "storm" && foe.chilled > 0) { dmg *= 2; how += " - the ice carries it"; this.combo("thunderclap"); foe.chilled = 0; }
     if (foe.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; foe.warded -= 1; }
@@ -791,10 +837,10 @@ Object.assign(CM.Game.prototype, {
     const a = CM.ABILITIES[id];
     if (!a || !CM.abilitiesFor(h).includes(id)) { this.say(`${h.name} doesn't know that.`); return false; }
     if (a.once && h.used && h.used[id]) { this.say(`${h.name} has used ${a.name} this fight.`); return false; }
-    const cost = a.mp && CM.trait(h, "thrifty") ? Math.max(1, a.mp - 1) : a.mp;
+    const cost = (a.mp && CM.trait(h, "thrifty") ? Math.max(1, a.mp - 1) : a.mp) + (a.mp && this.formation === "loose" ? 1 : 0);
     if (h.mp < cost) { this.say(`${h.name} hasn't the magic for ${a.name}.`); return false; }
     if (this.mode !== "combat" && !a.outside) { this.say(`${a.name} is for a fight.`); return false; }
-    const foes = this.living();
+    const foes = this.attackable();
     let foe = null, ally = null;
     if (a.target === "foe") { foe = this.foeAt(target); if (!foe) return false; }
     if (a.target === "foes" && !foes.length) return false;
@@ -846,7 +892,7 @@ Object.assign(CM.Game.prototype, {
       case "frost": {
         const dmg = Math.max(1, 6 + 2 * L + mod);
         let held = 0;
-        for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0) m.chilled = 2; if (m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
+        for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0) m.chilled = 2; if (m.hp > 0 && !CM.unmoved(m) && (this.terrain().includes("water") || rnd.chance(0.3))) { m.held = Math.max(m.held || 0, 1); held++; } }
         this.say(`${h.name} breathes frost over every foe: ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}. The ice clings.`);
         break;
       }
@@ -1114,7 +1160,7 @@ Object.assign(CM.Game.prototype, {
   autoTurn2() {
     const c = this.combat, h = c && c.waiting;
     if (c.auto && this.alive().some((p) => p.hp < p.max * 0.5)) { c.auto = false; this.say("Someone is badly hurt: Auto stops, and waits for orders."); this.emit("change"); return false; }
-    const hurt = this.alive().filter((p) => p.hp < p.max / 3), foes = this.living();
+    const hurt = this.alive().filter((p) => p.hp < p.max / 3), foes = this.attackable();
     const can = CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].mp <= h.mp && !(CM.ABILITIES[id].once && h.used && h.used[id]));
     let done = false;
     if (hurt.length && can.includes("heal")) done = this.act("cast", { id: "heal", target: this.party.indexOf(hurt[0]) });
@@ -1125,7 +1171,7 @@ Object.assign(CM.Game.prototype, {
     else if (can.includes("song") && !this.song) done = this.act("cast", { id: "song" });
     else if (can.includes("volley") && foes.length >= 2) done = this.act("cast", { id: "volley" });
     if (!done && foes.length) {
-      const bow = Boolean(h.weapon && h.weapon.props && h.weapon.props.bow), front = foes.filter((m) => m.row !== "back");
+      const bow = Boolean(h.weapon && h.weapon.props && h.weapon.props.bow), front = foes.filter((m) => m.row !== "back" && !m.hidden);
       const pool = !bow && front.length ? front : foes;                   // (a blow from the front reaches past the front for half: the front first)
       const weakest = pool.reduce((a, b) => (a.hp <= b.hp ? a : b), pool[0]);
       done = this.act("fight", weakest);

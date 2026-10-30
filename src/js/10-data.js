@@ -329,6 +329,24 @@ CM.ELITES = {
   cunning: { name: "Cunning", ability: "ranged", blurb: "reaches the back row" },
   ravenous: { name: "Ravenous", ability: "lifesteal", blurb: "feeds on every blow" },
 };
+// three more, for the leaders of runs begun from v2.2 (generator 2): affixes of their own, like the party's gear
+CM.ELITES_MORE = {
+  shielded: { name: "Shielded", blurb: "warded every round: the first blow on it does half" },
+  mirrored: { name: "Mirrored", blurb: "a spell on it does half, and a quarter of it comes back on the caster" },
+  spectral: { name: "Spectral", blurb: "half of every blow passes through it" },
+};
+// ---- the ground of a fight, and the party's formation ----
+CM.TERRAIN = {
+  water: { name: "Knee-deep in water", what: "frost holds every foe it touches; fire does half" },
+  vent: { name: "Over a vent", what: "the heat sears the back row every round" },
+  pillars: { name: "Among the pillars", what: "only two foes can come at you at once" },
+  dark: { name: "In a magical dark", what: "every blow, theirs and yours, may go wide" },
+};
+CM.FORMATIONS = {
+  line: { name: "Line", what: "the front row takes the blows, the back row reaches for half (as ever)" },
+  wedge: { name: "Wedge", what: "one hero at the point takes every blow that isn't a shot, with +2 defence; everyone else hits for full from wherever they stand" },
+  loose: { name: "Loose", what: "a breath, a slam or a cold on everyone does half; blows do a little less; spells cost one more" },
+};
 
 // Spells and skills, by calling and the level they come at. mp 0 is a skill; once: once a fight; outside: castable
 // between fights too. Targets: foe, foes, ally, allies, fallen, none.
@@ -527,6 +545,7 @@ CM.needsPath = (h) => Boolean(h && h.hp > 0 && h.level >= CM.PATH_AT[0] && !h.pa
 CM.TOMES = {
   light: "Tome of Light", sleep: "Tome of Sleep", frost: "Tome of Frost", fireball: "Tome of Fire", lightning: "Tome of Storms",
   heal: "Tome of Mending", cure: "Tome of Cures", bless: "Tome of Blessing", turn: "Tome of the Holy Symbol", protection: "Tome of Wards",
+  hex: "Tome of Hexes", turret: "Tome of Engines",
   mend: "Tome of Herbs", entangle: "Tome of Roots", regrowth: "Tome of Regrowth", song: "Tome of Songs", lullaby: "Tome of Lullabies", rally: "Tome of Rallying",
 };
 // gems, for the camp's smith: a diamond puts +1 on a piece of gear, the others put fire, frost or holiness into a weapon
@@ -638,6 +657,7 @@ CM.GUARDIANS = {
     hp: 150, atk: 15, df: 6, xp: 500, gold: 350, touch: { status: "poison", chance: 0.45 }, weak: "fire", resist: null, undead: false,
     escorts: ["Giant Rat", "Giant Rat"], tint: "rgba(160,220,80,0.35)", warn: "The Rat King's whiskers twitch, and the refuse begins to stir.",
     moves: [{ kind: "summon", what: "Giant Rat", n: 2, max: 4, word: "rat", text: "The Rat King shrieks, and {n} pour out of the refuse!" }], passives: ["plague"],
+    form2: { kind: "hide", text: "The Rat King shrieks and is gone into the heap - and the heap comes alive. Find it under the swarm.", found: "The swarm thins, and the king is there in the refuse, hissing." },
     abilities: [["Call the swarm", "every third turn, rats pour out of the refuse (four at most)"],
       ["Plague bite", "poisons more often than not, for longer, and bites a poisoned hero half again as hard"]],
     intro: "The heap of bones and rags heaves, and something climbs out of it: a rat the size of a hound, a crown of knotted tails on its head. The Rat King.",
@@ -649,6 +669,7 @@ CM.GUARDIANS = {
   knight: { floor: 10, name: "The Drowned Knight", colour: "#3E6068", body: "tall", head: "helm", eyes: "#80E8D8", extras: ["sword", "shield", "weed"], speed: 8, size: 1.0,
     hp: 280, atk: 26, df: 12, xp: 1400, gold: 1000, touch: null, weak: "holy", resist: "frost", undead: true, escorts: [], tint: "rgba(80,180,200,0.4)", warn: "The Drowned Knight's gauntlet opens, and the water around it swirls.",
     moves: [{ kind: "grasp", mult: 1.5, status: "paralysis", text: "The Drowned Knight's gauntlet closes on {who} and drags them under!", how: " - held under the water" }], passives: ["rise"],
+    form2: { kind: "flood", text: "The Drowned Knight raises his sword, and the throne weeps: the water climbs the walls until the whole hall is drowned, and he comes faster through it." },
     riseText: "The Drowned Knight goes down into the water... and the water lifts him up again. He will not stay down. Not yet.",
     abilities: [["Drowning grasp", "every third turn, drags one of the party under: half again the blow, and a round lost gasping"],
       ["Unquiet", "the water lifts him up again, once, at a third of his strength"]],
@@ -662,6 +683,7 @@ CM.GUARDIANS = {
     hp: 440, atk: 36, df: 20, xp: 2600, gold: 1800, touch: null, weak: "frost", resist: "fire", undead: false, escorts: [], tint: "rgba(255,150,40,0.4)", warn: "The Forge-Warden lifts the hammer in both hands.",
     moves: [{ kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: true, text: "The Forge-Warden raises the hammer in both hands and brings it down!", how: " - the hammer", flat: "{who} is knocked flat!" }],
     passives: ["heat"], sear: "The heat of the Forge-Warden sears {who} (-{n}).",
+    form2: { kind: "heat", text: "The hammer's haft cracks and the head rings on the floor. The Forge-Warden's chest opens like a furnace door: the heat doubles, and so does its fury." },
     abilities: [["Hammer slam", "every third turn, the hammer comes down on the whole front row, and some are knocked flat"],
       ["Forge heat", "every blow struck on it sears the striker (arrows don't); fire does it little, frost bites deep"]],
     intro: "The forge is lit. Between the anvils something of iron and stone, that the dwarves made to keep their door, turns its head; the light in its chest comes up like a bellows. The Forge-Warden.",
@@ -743,6 +765,8 @@ CM.GUARDIANS = {
     relic: null, final: true,
     lair: { name: "The Root", lore: "g:root", rows: ["#####W#####", "#r.e...e.r#", "#.#.....#.#", "#r...B...r#", "#.#.....#.#", "#r.e...e.r#", "#####D#####"] } },
 };
+// the lairs with pillars in them (an inner wall in the rows): close quarters
+CM.PILLARED = Object.values(CM.GUARDIANS).filter((G) => G.lair.rows.slice(1, -1).some((row) => row.slice(1, -1).includes("#"))).map((G) => G.lair.name);
 CM.GUARDIAN_ORDER = ["rat", "knight", "forge", "queen", "mind", "tyrant", "master", "patriarch", "root"];
 CM.echoOf = (floor) => (floor > CM.BOTTOM && floor % 10 === 0 ? Math.floor((floor - CM.BOTTOM) / 10) : 0);     // Endless: 60 -> 1, 70 -> 2 ... which echo (0: none)
 CM.guardianFor = (floor) => (floor > CM.BOTTOM ? (CM.echoOf(floor) ? CM.GUARDIAN_ORDER[(CM.echoOf(floor) - 1) % CM.GUARDIAN_ORDER.length] : null)

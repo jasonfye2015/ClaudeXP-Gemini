@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v2.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v2.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -222,6 +222,7 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #actions.combat { flex-direction: column; align-items: center; gap: 5px; }
 #actions .turn { font: bold 13px var(--serif); color: var(--gold); }
 #actions .turn small { color: var(--dim); font-weight: normal; }
+#actions .ground { font: italic 12px var(--serif); color: #B0C8D8; }
 #actions .menu, #actions .targets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 #actions .targets button { font-weight: normal; }
 #actions .targets button.chosen { border-color: var(--gold); color: var(--gold); background: #4A321A; }
@@ -367,7 +368,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "2.1", built: "2026-10-30" };
+const CM = window.CM = { version: "2.2", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -757,6 +758,24 @@ CM.ELITES = {
   cunning: { name: "Cunning", ability: "ranged", blurb: "reaches the back row" },
   ravenous: { name: "Ravenous", ability: "lifesteal", blurb: "feeds on every blow" },
 };
+// three more, for the leaders of runs begun from v2.2 (generator 2): affixes of their own, like the party's gear
+CM.ELITES_MORE = {
+  shielded: { name: "Shielded", blurb: "warded every round: the first blow on it does half" },
+  mirrored: { name: "Mirrored", blurb: "a spell on it does half, and a quarter of it comes back on the caster" },
+  spectral: { name: "Spectral", blurb: "half of every blow passes through it" },
+};
+// ---- the ground of a fight, and the party's formation ----
+CM.TERRAIN = {
+  water: { name: "Knee-deep in water", what: "frost holds every foe it touches; fire does half" },
+  vent: { name: "Over a vent", what: "the heat sears the back row every round" },
+  pillars: { name: "Among the pillars", what: "only two foes can come at you at once" },
+  dark: { name: "In a magical dark", what: "every blow, theirs and yours, may go wide" },
+};
+CM.FORMATIONS = {
+  line: { name: "Line", what: "the front row takes the blows, the back row reaches for half (as ever)" },
+  wedge: { name: "Wedge", what: "one hero at the point takes every blow that isn't a shot, with +2 defence; everyone else hits for full from wherever they stand" },
+  loose: { name: "Loose", what: "a breath, a slam or a cold on everyone does half; blows do a little less; spells cost one more" },
+};
 
 // Spells and skills, by calling and the level they come at. mp 0 is a skill; once: once a fight; outside: castable
 // between fights too. Targets: foe, foes, ally, allies, fallen, none.
@@ -955,6 +974,7 @@ CM.needsPath = (h) => Boolean(h && h.hp > 0 && h.level >= CM.PATH_AT[0] && !h.pa
 CM.TOMES = {
   light: "Tome of Light", sleep: "Tome of Sleep", frost: "Tome of Frost", fireball: "Tome of Fire", lightning: "Tome of Storms",
   heal: "Tome of Mending", cure: "Tome of Cures", bless: "Tome of Blessing", turn: "Tome of the Holy Symbol", protection: "Tome of Wards",
+  hex: "Tome of Hexes", turret: "Tome of Engines",
   mend: "Tome of Herbs", entangle: "Tome of Roots", regrowth: "Tome of Regrowth", song: "Tome of Songs", lullaby: "Tome of Lullabies", rally: "Tome of Rallying",
 };
 // gems, for the camp's smith: a diamond puts +1 on a piece of gear, the others put fire, frost or holiness into a weapon
@@ -1066,6 +1086,7 @@ CM.GUARDIANS = {
     hp: 150, atk: 15, df: 6, xp: 500, gold: 350, touch: { status: "poison", chance: 0.45 }, weak: "fire", resist: null, undead: false,
     escorts: ["Giant Rat", "Giant Rat"], tint: "rgba(160,220,80,0.35)", warn: "The Rat King's whiskers twitch, and the refuse begins to stir.",
     moves: [{ kind: "summon", what: "Giant Rat", n: 2, max: 4, word: "rat", text: "The Rat King shrieks, and {n} pour out of the refuse!" }], passives: ["plague"],
+    form2: { kind: "hide", text: "The Rat King shrieks and is gone into the heap - and the heap comes alive. Find it under the swarm.", found: "The swarm thins, and the king is there in the refuse, hissing." },
     abilities: [["Call the swarm", "every third turn, rats pour out of the refuse (four at most)"],
       ["Plague bite", "poisons more often than not, for longer, and bites a poisoned hero half again as hard"]],
     intro: "The heap of bones and rags heaves, and something climbs out of it: a rat the size of a hound, a crown of knotted tails on its head. The Rat King.",
@@ -1077,6 +1098,7 @@ CM.GUARDIANS = {
   knight: { floor: 10, name: "The Drowned Knight", colour: "#3E6068", body: "tall", head: "helm", eyes: "#80E8D8", extras: ["sword", "shield", "weed"], speed: 8, size: 1.0,
     hp: 280, atk: 26, df: 12, xp: 1400, gold: 1000, touch: null, weak: "holy", resist: "frost", undead: true, escorts: [], tint: "rgba(80,180,200,0.4)", warn: "The Drowned Knight's gauntlet opens, and the water around it swirls.",
     moves: [{ kind: "grasp", mult: 1.5, status: "paralysis", text: "The Drowned Knight's gauntlet closes on {who} and drags them under!", how: " - held under the water" }], passives: ["rise"],
+    form2: { kind: "flood", text: "The Drowned Knight raises his sword, and the throne weeps: the water climbs the walls until the whole hall is drowned, and he comes faster through it." },
     riseText: "The Drowned Knight goes down into the water... and the water lifts him up again. He will not stay down. Not yet.",
     abilities: [["Drowning grasp", "every third turn, drags one of the party under: half again the blow, and a round lost gasping"],
       ["Unquiet", "the water lifts him up again, once, at a third of his strength"]],
@@ -1090,6 +1112,7 @@ CM.GUARDIANS = {
     hp: 440, atk: 36, df: 20, xp: 2600, gold: 1800, touch: null, weak: "frost", resist: "fire", undead: false, escorts: [], tint: "rgba(255,150,40,0.4)", warn: "The Forge-Warden lifts the hammer in both hands.",
     moves: [{ kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: true, text: "The Forge-Warden raises the hammer in both hands and brings it down!", how: " - the hammer", flat: "{who} is knocked flat!" }],
     passives: ["heat"], sear: "The heat of the Forge-Warden sears {who} (-{n}).",
+    form2: { kind: "heat", text: "The hammer's haft cracks and the head rings on the floor. The Forge-Warden's chest opens like a furnace door: the heat doubles, and so does its fury." },
     abilities: [["Hammer slam", "every third turn, the hammer comes down on the whole front row, and some are knocked flat"],
       ["Forge heat", "every blow struck on it sears the striker (arrows don't); fire does it little, frost bites deep"]],
     intro: "The forge is lit. Between the anvils something of iron and stone, that the dwarves made to keep their door, turns its head; the light in its chest comes up like a bellows. The Forge-Warden.",
@@ -1171,6 +1194,8 @@ CM.GUARDIANS = {
     relic: null, final: true,
     lair: { name: "The Root", lore: "g:root", rows: ["#####W#####", "#r.e...e.r#", "#.#.....#.#", "#r...B...r#", "#.#.....#.#", "#r.e...e.r#", "#####D#####"] } },
 };
+// the lairs with pillars in them (an inner wall in the rows): close quarters
+CM.PILLARED = Object.values(CM.GUARDIANS).filter((G) => G.lair.rows.slice(1, -1).some((row) => row.slice(1, -1).includes("#"))).map((G) => G.lair.name);
 CM.GUARDIAN_ORDER = ["rat", "knight", "forge", "queen", "mind", "tyrant", "master", "patriarch", "root"];
 CM.echoOf = (floor) => (floor > CM.BOTTOM && floor % 10 === 0 ? Math.floor((floor - CM.BOTTOM) / 10) : 0);     // Endless: 60 -> 1, 70 -> 2 ... which echo (0: none)
 CM.guardianFor = (floor) => (floor > CM.BOTTOM ? (CM.echoOf(floor) ? CM.GUARDIAN_ORDER[(CM.echoOf(floor) - 1) % CM.GUARDIAN_ORDER.length] : null)
@@ -1456,8 +1481,8 @@ CM.upgradeMonster = function (m) {
 };
 
 // a group: one kind, or (deeper down) two; now and then with a leader out of the ordinary
-CM.monsterGroup = function (floor, rnd) {
-  if (floor > CM.LAST_FLOOR) return CM.deepGroup(floor, rnd);
+CM.monsterGroup = function (floor, rnd, gen) {
+  if (floor > CM.LAST_FLOOR) return CM.deepGroup(floor, rnd, gen);
   const top = Math.min(CM.SHALLOW - 1, Math.floor(floor * CM.SHALLOW / CM.LAST_FLOOR));
   const kind = CM.MONSTERS[rnd.int(Math.max(0, top - 2), top)];
   const count = rnd.int(1, 2 + Math.floor(floor / 6));
@@ -1467,12 +1492,12 @@ CM.monsterGroup = function (floor, rnd) {
     const other = CM.MONSTERS[Math.max(0, CM.MONSTERS.indexOf(kind) - rnd.int(1, 2))];
     if (other !== kind) for (let i = Math.floor(count / 2); i < count; i++) group[i] = CM.makeMonster(other, floor, rnd);
   }
-  if (floor >= 3 && rnd.chance(0.12)) CM.makeElite(group, rnd);
+  if (floor >= 3 && rnd.chance(0.12)) CM.makeElite(group, rnd, gen);
   return group;
 };
 // a band of the Deep: the kinds of this depth's band (now and then one of the band above), two to five of them, and a
 // leader one time in five; their level climbs more slowly than the floors do (CM.monsterLevel)
-CM.deepGroup = function (floor, rnd) {
+CM.deepGroup = function (floor, rnd, gen) {
   const band = CM.themeIndex(floor), level = CM.monsterLevel(floor);
   const here = CM.MONSTERS.filter((m) => m.deep === band), above = CM.MONSTERS.filter((m) => m.deep === band - 1);
   const shallow = floor > CM.BOTTOM && !here.length ? CM.MONSTERS.slice(band * 4, Math.min(CM.SHALLOW, band * 4 + 5)) : [];   // (Endless: the first bands come round with their own kinds)
@@ -1484,12 +1509,13 @@ CM.deepGroup = function (floor, rnd) {
     const other = rnd.pick(above.length && rnd.chance(0.4) ? above : kinds);
     if (other !== kind) for (let i = Math.floor(count / 2); i < count; i++) group[i] = CM.makeMonster(other, level, rnd);
   }
-  if (rnd.chance(floor > CM.BOTTOM ? 0.3 : 0.2)) CM.makeElite(group, rnd);
+  if (rnd.chance(floor > CM.BOTTOM ? 0.3 : 0.2)) CM.makeElite(group, rnd, gen);
   return group;
 };
-CM.makeElite = function (group, rnd) {
+CM.makeElite = function (group, rnd, gen) {
   {
-    const id = rnd.pick(Object.keys(CM.ELITES)), e = CM.ELITES[id], m = group[0];
+    const table = gen >= 2 ? Object.assign({}, CM.ELITES, CM.ELITES_MORE) : CM.ELITES;
+    const id = rnd.pick(Object.keys(table)), e = table[id], m = group[0];
     m.name = `${e.name} ${m.name}`;
     m.elite = id;
     if (e.hp) { m.max = Math.round(m.max * e.hp); m.hp = m.max; }
@@ -1548,7 +1574,7 @@ CM.recompute = function (h) {
   h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : 0;
   const hitStat = c.key === "dex" ? s.dex : s.str;
   const relics = CM.relicsWorn(h), set = relics >= 2 ? CM.RELIC_SET.two : null;   // (the guardians' things, worn together)
-  if (h.cls === "Monk" && h.weapon && h.weapon.props && h.weapon.props.fists) h.weapon.power = 3 + Math.floor(h.level / 2) + (CM.trait(h, "ironfists") ? Math.ceil((3 + Math.floor(h.level / 2)) / 2) : 0);   // (the hands grow)
+  if (h.cls === "Monk" && h.weapon && h.weapon.props && h.weapon.props.fists) h.weapon.power = 3 + Math.floor(h.level / 2) + 2 * (h.weapon.props.bonus || 0) + (CM.trait(h, "ironfists") ? Math.ceil((3 + Math.floor(h.level / 2)) / 2) : 0);   // (the hands grow; the smith's work and the Heir's kit count double on them)
   h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow + (CM.trait(h, "mighty") ? 3 : 0) + (set ? set.atk : 0) + (h.bondAtk || 0));
   h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0) + (CM.trait(h, "stonewall") || CM.trait(h, "ironbody") ? 3 : 0) + (set ? set.df : 0) + (h.bondDf || 0));
   h.hp = Math.min(h.hp, h.max);
@@ -1626,8 +1652,8 @@ CM.newParty = function (chosen) {                                         // cho
 };
 
 // someone to hire at the camp: a calling, a name, a roll, a level a step behind the party's
-CM.makeRecruit = function (level, rnd) {
-  const cls = rnd.pick(CM.CLASS_ORDER), h = CM.makeHero(cls, CM.randomName(rnd), CM.rollStats(cls, rnd));
+CM.makeRecruit = function (level, rnd, classes) {
+  const cls = rnd.pick(classes || CM.CLASS_ORDER), h = CM.makeHero(cls, CM.randomName(rnd), CM.rollStats(cls, rnd));
   h.level = Math.max(1, level);
   CM.recompute(h);
   h.hp = h.max; h.mp = h.maxmp;
@@ -1660,7 +1686,7 @@ CM.partyAdvice = function (party) {
   const notes = [], roles = party.map((p) => p.cls), rows = party.map((p) => p.row || CM.CLASSES[p.cls].row);
   const front = rows.filter((r) => r === "front").length;
   const healers = roles.filter((c) => ["Cleric", "Paladin", "Druid", "Bard"].includes(c)).length;
-  const area = roles.filter((c) => ["Mage", "Druid", "Ranger"].includes(c)).length;
+  const area = roles.filter((c) => ["Mage", "Druid", "Ranger", "Artificer", "Necromancer"].includes(c)).length;
   const casters = roles.filter((c) => CM.CLASSES[c].mp > 0).length;
   if (front === 0) notes.push("No one up front: the monsters will reach whoever they like.");
   else if (front === 1) notes.push("Only one hero up front will take most of the blows - a second would share them.");
@@ -2555,7 +2581,7 @@ CM.generators[2] = function (number, seed) {
   for (const r of rooms) if (r.template) for (const [x, y, c] of r.fill) {
     const k = key(x, y);
     if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd), CM.makeItem(number, rnd)], trap: trap() };
-    else if (c === "M") { const g = CM.monsterGroup(number, rnd); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
+    else if (c === "M") { const g = CM.monsterGroup(number, rnd, 2); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
     else if (c === "F") floor.features[k] = { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false };
     else if (c === "A") floor.features[k] = { type: "altar", used: false };
     else if (c === "P") floor.features[k] = { type: "pit" };
@@ -2666,7 +2692,7 @@ CM.generators[2] = function (number, seed) {
   }
   for (let i = 0; i < (special === "maze" ? 3 : Math.min(14, 5 + Math.floor(number / 2))) && spare.length; i++) {
     const [x, y] = spare.pop();
-    floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd) };
+    floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd, 2) };
   }
   if (special === "maze" && spare.length) {                      // the thing in the labyrinth: a great minotaur that hunts the party wherever it goes
     const [x, y] = spare.pop(), m = CM.makeMonster(CM.monsterKind("Minotaur"), number + 3, rnd);
@@ -4154,7 +4180,7 @@ CM.art.itemKey = function (item) {
       if (has("Hammer")) return "i.hammer";
       if (has("Flamberge", "Dragonslayer")) return "i.great_sword";
       if (has("Club")) return "i.club";
-      if (has("Fists")) return "i.unknown";
+      if (has("Fists")) return "i.fists";
       if (has("Staff")) return "i.staff";
       if (has("Spear")) return "i.spear";
       return "i.long_sword";
@@ -4193,6 +4219,7 @@ CM.art.glyph = function (item, size = 24) {
     case "oil": potion("#E0A030"); break;
     case "bomb": outlined(p, () => { p.arc(12, 14, 7, 0, Math.PI * 2); }, "#3A3430", "#1A1410", 1.5); line("#C8A040", 1.5); p.beginPath(); p.moveTo(12, 7); p.lineTo(15, 3); p.stroke(); p.fillStyle = "#FF9030"; p.beginPath(); p.arc(15, 3, 1.6, 0, Math.PI * 2); p.fill(); break;
     case "ingredient": line("#1A1410", 4); p.beginPath(); p.moveTo(6, 20); p.quadraticCurveTo(12, 4, 19, 6); p.stroke(); line("#6A9A40", 2); p.beginPath(); p.moveTo(6, 20); p.quadraticCurveTo(12, 4, 19, 6); p.stroke(); outlined(p, () => { p.ellipse(13, 12, 4, 7, -0.7, 0, Math.PI * 2); }, "#80B050", "#1A1410", 1.2); break;
+    case "fists": for (const x of [4, 13]) { outlined(p, () => { p.roundRect(x, 8, 8, 9, 2); }, "#E0B890", "#1A1410", 1.5); p.fillStyle = "#D8D0B8"; p.fillRect(x, 12, 8, 2); p.fillStyle = "#1A1410"; for (let i = 0; i < 3; i++) p.fillRect(x + 1 + i * 2.5, 8, 1, 2); } break;
     case "scrap": outlined(p, () => { p.moveTo(5, 16); p.lineTo(10, 7); p.lineTo(14, 12); p.lineTo(19, 9); p.lineTo(18, 19); p.lineTo(7, 20); }, "#8A8A90", "#1A1410", 1.5); break;
     case "scroll": outlined(p, () => { p.rect(5, 4, 14, 16); }, "#E8DCC0", "#5A4A2A", 1.5); line("#8A6A3A", 1); for (let y = 8; y <= 16; y += 3) { p.beginPath(); p.moveTo(8, y); p.lineTo(16, y); p.stroke(); } p.fillStyle = "#B03030"; p.fillRect(5, 17, 14, 2); break;
     case "wand": line("#1A1410", 5); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); line("#8A6A30", 3); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); p.fillStyle = "#F0E060"; p.beginPath(); p.arc(18, 6, 3, 0, Math.PI * 2); p.fill(); break;
@@ -5232,7 +5259,7 @@ CM.Game = class {
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []) };
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line" };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -5274,6 +5301,7 @@ CM.Game = class {
     this.camps = d.camps || []; this.travel = null;
     this.pairFights = d.pairFights || {}; this.bonds = d.bonds || []; this.hazardsMet = d.hazardsMet || []; this.remainsFound = d.remainsFound || [];
     this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
+    this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -5311,7 +5339,7 @@ CM.Game = class {
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
     this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row }));
-    this.startMutators = this.mutators.slice(); this.runLog = [];
+    this.startMutators = this.mutators.slice(); this.runLog = []; this.formation = "line";
     if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
@@ -5819,7 +5847,7 @@ Object.assign(CM.Game.prototype, {
     else if (trap === "alarm") {
       const fl = this.floor, [x, y] = k.split(",").map(Number);
       const spot = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([nx, ny]) => CM.passable(fl, nx, ny) && !fl.things[keyOf(nx, ny)] && !(nx === fl.pos[0] && ny === fl.pos[1]));
-      const group = CM.monsterGroup(fl.number, this.rnd);
+      const group = CM.monsterGroup(fl.number, this.rnd, this.gen);
       if (spot) {
         const sk = keyOf(spot[0], spot[1]);
         fl.things[sk] = { type: "monsters", group };
@@ -6121,7 +6149,7 @@ Object.assign(CM.Game.prototype, {
       }
       case "gamble": { if (this.gold < 100) { this.say("You haven't a hundred gold. The dealer shrugs."); return true; } this.gold -= 100; if (rnd.chance(0.45)) { this.gold += 250; this.sound("coin"); finish("Three sixes. The dealer counts out 250 gold without a word, and the lantern goes out.", "The table is empty, and the dealer gone."); } else { finish("Two and a one. The dealer sweeps the gold away, and the lantern goes out.", "The table is empty, and the dealer gone."); } return true; }
       case "blackwater": { const h = rnd.pick(this.alive()), st = rnd.pick(CM.STATS); h.stats[st] = Math.min(25, h.stats[st] + 2); CM.recompute(h); h.status = h.status || {}; h.status.curse = 999; this.sound("ailment"); finish(`${h.name} drinks. +2 ${CM.STAT_NAMES[st]}, for good - and a curse, until the temple lifts it.`, "The fountain runs black, and you have drunk."); return true; }
-      case "campfire": { for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + Math.ceil(h.max / 3)); this.sound("heal"); if (rnd.chance(0.4)) { finish("You rest by the warm ashes, and mend - until something comes to the light."); const g = CM.monsterGroup(L, rnd).map((m) => this.tune(m)); this.foes = g; this.startCombat(k, { group: g }, true); } else finish("You rest by the warm ashes, and mend. Nothing comes."); return true; }
+      case "campfire": { for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + Math.ceil(h.max / 3)); this.sound("heal"); if (rnd.chance(0.4)) { finish("You rest by the warm ashes, and mend - until something comes to the light."); const g = CM.monsterGroup(L, rnd, this.gen).map((m) => this.tune(m)); this.foes = g; this.startCombat(k, { group: g }, true); } else finish("You rest by the warm ashes, and mend. Nothing comes."); return true; }
       case "purse": { const gold = 30 * L; this.gold += gold; this.sound("coin"); if (rnd.chance(0.4)) { this.afflict(front, "poison", "the needle"); finish(`${gold} gold, and a needle in the lining of the purse.`); } else finish(`${gold} gold. He will not need it.`); return true; }
       case "bury": { const xp = 20 * L; for (const h of this.alive()) h.xp += xp; this.achieve("kind"); this.checkLevels(); finish(`You heap stones over him and say what you can. ${xp} experience each, and the floor feels quieter.`); return true; }
       case "whisper": { fl.seen = []; for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]); for (const f of Object.values(fl.features)) if ("known" in f) f.known = true; const h = rnd.pick(this.alive()); if (rnd.chance(0.3)) { h.status = h.status || {}; h.status.curse = 999; this.sound("ailment"); finish(`The box whispers the floor into your ear, every turn of it - and something else into ${h.name}'s: a curse.`); } else finish("The box whispers the floor into your ear, every turn of it, and falls silent."); return true; }
@@ -6270,13 +6298,35 @@ Object.assign(CM.Game.prototype, {
 
   alive() { return this.party.filter((m) => m.hp > 0); },
   living() { return this.foes.filter((m) => m.hp > 0 && !m.fled); },
+  attackable() { return this.living().filter((m) => !m.hidden); },        // (a king hidden in its swarm can't be struck)
+  // the ground the fight stands on (CM.TERRAIN ids): water, a vent, pillars, the dark
+  terrain() {
+    const fl = this.floor, c = this.combat || {}, out = [];
+    if (!fl) return out;
+    const k = CM.keyOf(fl.pos[0], fl.pos[1]), f = fl.features[k];
+    if (fl.tide || fl.special === "wading" || c.flooded || (fl.decor || []).some((d) => d.kind === "water" && d.x === fl.pos[0] && d.y === fl.pos[1])) out.push("water");
+    if (f && f.type === "vents") out.push("vent");
+    if ((fl.rooms || []).some((r) => r.name && CM.PILLARED.includes(r.name) && fl.pos[0] >= r.x0 && fl.pos[0] <= r.x1 && fl.pos[1] >= r.y0 && fl.pos[1] <= r.y1)) out.push("pillars");
+    if (this.inDark() && !(this.spellLight > 0)) out.push("dark");
+    return out;
+  },
+  terrainNote() { return this.terrain().map((id) => `${CM.TERRAIN[id].name}: ${CM.TERRAIN[id].what}`).join(". "); },
+  setFormation(id) {
+    if (!CM.FORMATIONS[id] || this.mode === "combat") return false;
+    this.logAct("setFormation", id);
+    this.formation = id; this.dirty = true;
+    this.say(`The party takes up a ${CM.FORMATIONS[id].name.toLowerCase()}: ${CM.FORMATIONS[id].what}.`);
+    this.emit("change");
+    return true;
+  },
+  point() { return this.formation === "wedge" ? this.alive().find((h) => h.row === "front" && !(h.status || {}).stone) || null : null; },
   canAct(h) { const s = h.status || {}; return h.hp > 0 && !s.paralysis && !s.sleep && !s.stone; },   // standing, and not held by an ailment
   targets() { return this.alive().filter((h) => !(h.status || {}).stone); },                           // what a monster can reach: stone isn't worth hitting
 
   // the party's square: in a corridor, only two foes can come at them at once
   reachLimit() {
     const fl = this.floor;
-    return fl && CM.openNeighbours(fl, fl.pos[0], fl.pos[1]).length <= 2 ? 2 : 99;
+    return (fl && CM.openNeighbours(fl, fl.pos[0], fl.pos[1]).length <= 2) || this.terrain().includes("pillars") ? 2 : 99;
   },
 
   // a round: everyone standing, in order of speed (the dice have a say); heroes win ties
@@ -6362,6 +6412,8 @@ Object.assign(CM.Game.prototype, {
     }
     for (const h of this.alive()) if (CM.trait(h, "wellspring") && h.mp < h.maxmp) h.mp = Math.min(h.maxmp, h.mp + 2);
     this.enginesAct();
+    if (this.terrain().includes("vent")) { const burn = 2 + Math.floor(this.floor.number / 5); let any = false; for (const h of this.alive().filter((p) => p.row === "back")) { h.hp = Math.max(1, h.hp - burn); any = true; } if (any) this.say(`The vent breathes: the back row is scorched (-${burn}).`); }
+    for (const m of this.living()) if (m.elite === "shielded") m.warded = Math.max(m.warded || 0, 1);
     for (const h of this.alive()) {                                      // gear that mends (of Mending, a unique, three relics worn)
       const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0);
       if (mend > 0 && h.hp < h.max) h.hp = Math.min(h.max, h.hp + mend);
@@ -6387,6 +6439,18 @@ Object.assign(CM.Game.prototype, {
       this.summonSkeletons(2);
       this.emit("fx", { kind: "rise", foe: lich });
     }
+    for (const m of this.foes) {                                         // a second form, at a third of its strength (the shallow guardians)
+      const G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
+      if (!G || !G.form2 || m.form2 || m.hp <= 0 || m.hp > m.max * 0.34 || m.echo) continue;
+      m.form2 = true;
+      this.say(G.form2.text);
+      this.emit("fx", { kind: "rise", foe: m });
+      if (G.form2.kind === "hide") { m.hidden = true; this.summonFor(m, G.moves[0], 2); }
+      else if (G.form2.kind === "flood") { this.combat.flooded = true; m.quick = true; }
+      else if (G.form2.kind === "heat") { m.broken = true; m.atk = Math.round(m.atk * 1.3); }
+    }
+    const hidden = this.foes.find((m) => m.hidden && m.hp > 0);
+    if (hidden && !this.living().some((m) => m !== hidden && !m.hidden)) { hidden.hidden = false; this.say(CM.GUARDIANS[hidden.guardian].form2.found); }
     for (const m of this.foes) {
       if (!CM.guardianHas(m, "rise") || m.hp > 0 || m.risen) continue;
       m.hp = Math.floor(m.max / 3); m.dead = false; m.risen = 1;
@@ -6435,7 +6499,7 @@ Object.assign(CM.Game.prototype, {
 
   // the chosen foe: an index among the living, a foe itself, or the one picked already (Tab, or a click)
   foeAt(arg) {
-    const foes = this.living();
+    const foes = this.attackable();
     if (!foes.length) return null;
     if (arg && typeof arg === "object") return foes.includes(arg) ? arg : foes[0];
     const i = typeof arg === "number" ? arg : (this.target || 0);
@@ -6443,7 +6507,7 @@ Object.assign(CM.Game.prototype, {
   },
 
   setTarget(i) {
-    const n = this.living().length;
+    const n = this.attackable().length;
     if (!n) return;
     this.target = ((i % n) + n) % n;
     this.emit("change");
@@ -6504,8 +6568,8 @@ Object.assign(CM.Game.prototype, {
 
   // a hero's numbers as they stand right now: a curse takes from them, the song and a blessing give
   effective(h) {
-    const cursed = (h.status || {}).curse ? 2 : 0, bless = this.combat && this.combat.bless;
-    return { atk: Math.max(1, h.atk - cursed + (this.song === 2 ? 4 : this.song ? 2 : 0) + (bless ? 2 : 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0)) };
+    const cursed = (h.status || {}).curse ? 2 : 0, bless = this.combat && this.combat.bless, point = this.point() === h ? 2 : 0;
+    return { atk: Math.max(1, h.atk - cursed + (this.song === 2 ? 4 : this.song ? 2 : 0) + (bless ? 2 : 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0) + point) };
   },
   stat(h, s) { return CM.heroStat(h, s); },
   hitChance(h) {
@@ -6548,6 +6612,8 @@ Object.assign(CM.Game.prototype, {
     if (!pool.length) return null;
     if (c.taunter && pool.includes(c.taunter) && c.round <= c.tauntUntil) return c.taunter;
     if (c.thrall && c.thrall.hp > 0 && (!m || m.ability !== "ranged") && this.rnd.chance(0.75)) return c.thrall;   // (the thrall takes the blows meant for the party)
+    const point = this.point();
+    if (point && (!m || m.ability !== "ranged") && pool.includes(point)) return point;                       // (the wedge: the point takes every blow that isn't a shot)
     const shadows = pool.filter((h) => !(CM.trait(h, "shadowstep") && h.row === "back"));
     if (shadows.length) pool.splice(0, pool.length, ...shadows);
     if (m && m.ability === "ranged") return this.rnd.pick(pool);
@@ -6576,6 +6642,7 @@ Object.assign(CM.Game.prototype, {
     if (this.song) dmg -= this.song;
     if (c.protect) dmg -= 3 + (c.protectMore || 0);
     if (this.has("glass")) dmg *= 2;
+    if (opts.aoe && this.formation === "loose") dmg = Math.ceil(dmg / 2);
     dmg = Math.max(1, dmg);
     h.hp -= dmg;
     if (h.hp <= 0 && CM.trait(h, "undying") && !h.undied) { h.undied = true; h.hp = 1; this.say(`${h.name} does not fall. Not this once.`); }
@@ -6641,7 +6708,7 @@ Object.assign(CM.Game.prototype, {
       if (m.breath % 2 === 0) {
         this.emit("fx", { kind: "attack", foe: m, breath: true });
         this.say(`The ${m.name} breathes fire over the whole party!`);
-        for (const h of this.targets()) this.hurt(h, Math.max(1, Math.floor(m.atk / 3) + 2), m, { noTouch: true });
+        for (const h of this.targets()) this.hurt(h, Math.max(1, Math.floor(m.atk / 3) + 2), m, { noTouch: true, aoe: true });
         return;
       }
     }
@@ -6651,7 +6718,7 @@ Object.assign(CM.Game.prototype, {
       const target = this.pickTarget(m);
       if (!target) break;
       if (m.marked && !target.thrall && rnd.chance(0.3) && this.alive().some((h) => CM.trait(h, "lastlaugh"))) { const own = Math.max(1, Math.floor(m.atk / 3)); m.hp -= own; this.say(`${CM.The(m)}, mocked past bearing, strikes at nothing and catches itself (-${own}).`); continue; }
-      if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1) * this.dodgeOf(target))) { this.say(`${CM.The(m)} misses ${target.name}.`); if (!target.thrall && CM.trait(target, "counter") && this.canAct(target)) { this.say(`${target.name} answers.`); this.strike(target, m, " in answer"); } continue; }
+      if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1) * this.dodgeOf(target) * (this.terrain().includes("dark") ? 0.85 : 1))) { this.say(`${CM.The(m)} misses ${target.name}.`); if (!target.thrall && CM.trait(target, "counter") && this.canAct(target)) { this.say(`${target.name} answers.`); this.strike(target, m, " in answer"); } continue; }
       let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), how = "";
       if (m.ability === "savage" && rnd.chance(0.2)) { dmg *= 2; how = " - a savage blow"; }
       if (m.ability === "charge" && !m.charged) { m.charged = true; dmg *= 2; how = " - it charges"; }
@@ -6682,7 +6749,7 @@ Object.assign(CM.Game.prototype, {
       if (c.cold % 2 === 0) {
         this.emit("fx", { kind: "cold", foe: m });
         this.say("The Lich King raises his hand, and a deathly cold fills the hall!");
-        for (const h of this.targets()) this.hurt(h, 10 + Math.floor(this.floor.number / 2), m, { noTouch: true });
+        for (const h of this.targets()) this.hurt(h, 10 + Math.floor(this.floor.number / 2), m, { noTouch: true, aoe: true });
         return;
       }
     }
@@ -6710,11 +6777,13 @@ Object.assign(CM.Game.prototype, {
     const rnd = this.rnd, G = CM.GUARDIANS[m.guardian], moves = G.moves || [];
     m.turns = (m.turns || 0) + 1;
     m.intent = null;
+    const every = m.quick ? 2 : 3;                                        // (the flooded Knight comes faster)
+    if (m.hidden) { const up = this.foes.filter((f) => f.summoned && f.hp > 0 && !f.fled).length; if (up < 4) this.summonFor(m, moves[0], Math.min(2, 4 - up)); else this.say("The heap seethes."); return; }
     const telegraph = () => {                                             // next turn is one of its moves: it shows, so the party can brace
-      if ((m.turns + 1) % 3 === 0 && moves.length) { const next = moves[(Math.floor((m.turns + 1) / 3) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); }
+      if ((m.turns + 1) % every === 0 && moves.length && !m.broken) { const next = moves[(Math.floor((m.turns + 1) / every) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); }
     };
-    if (m.turns % 3 === 0 && moves.length) {
-      const mv = moves[(Math.floor(m.turns / 3) - 1) % moves.length];
+    if (m.turns % every === 0 && moves.length && !m.broken) {
+      const mv = moves[(Math.floor(m.turns / every) - 1) % moves.length];
       if (this.guardianMove(m, mv)) { telegraph(); return; }
     }
     const target = this.pickTarget(m);
@@ -6756,7 +6825,7 @@ Object.assign(CM.Game.prototype, {
       this.sound("slam");
       this.say(who());
       for (const h of struck) {
-        this.hurt(h, this.damage(Math.floor(m.atk / (mv.frac || 2.5)), 0, this.effective(h).df + CM.gearDefence(h)), m, { how: mv.how || "", noTouch: true });
+        this.hurt(h, this.damage(Math.floor(m.atk / (mv.frac || 2.5)), 0, this.effective(h).df + CM.gearDefence(h)), m, { how: mv.how || "", noTouch: true, aoe: true });
         if (h.hp > 0 && mv.status && rnd.chance(mv.chance || 0.3) && !(h.status || {})[mv.status]) {
           h.status[mv.status] = mv.status === "paralysis" ? 1 : mv.status === "blind" ? 2 : 2;
           this.say((mv.flat || "{who} reels.").replace("{who}", h.name));
@@ -6769,7 +6838,7 @@ Object.assign(CM.Game.prototype, {
       if (!pool.length) return false;
       this.emit("fx", { kind: "attack", foe: m, breath: true });
       this.say(who());
-      for (const h of pool) this.hurt(h, Math.max(1, Math.floor(m.atk / (mv.frac || 2)) + 2), m, { noTouch: true });
+      for (const h of pool) this.hurt(h, Math.max(1, Math.floor(m.atk / (mv.frac || 2)) + 2), m, { noTouch: true, aoe: true });
       return true;
     }
     if (mv.kind === "ailment") {
@@ -6843,7 +6912,8 @@ Object.assign(CM.Game.prototype, {
     const rnd = this.rnd;
     this.emit("fx", { kind: "swing", hero, foe: target });
     const bow = Boolean(hero.weapon && hero.weapon.props && hero.weapon.props.bow), ambush = CM.trait(hero, "ambush") && !hero.struck;
-    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero))) {
+    const dark = this.terrain().includes("dark");
+    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero) * (dark ? 0.85 : 1))) {
       this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
       this.sound("miss");
       this.emit("fx", { kind: "miss", foe: target });
@@ -6852,9 +6922,11 @@ Object.assign(CM.Game.prototype, {
     let dmg = this.damage(this.effective(hero).atk, hero.weapon.power, bow && CM.trait(hero, "piercing") ? Math.floor(target.df / 2) : target.df), how = "";
     const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger";
     const critMult = CM.trait(hero, "deadly") ? 3 : 2;
+    if (target.elite === "spectral" && rnd.chance(0.5)) { this.say(`${hero.name}'s blow passes through ${CM.the(target)}.`); this.emit("fx", { kind: "miss", foe: target }); return 0; }
     if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
     else if (ambush || rnd.chance(this.critChance(hero))) { dmg *= critMult; how = " - a weak spot"; }
-    else if (back && !reaches) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
+    else if (back && !reaches && !(this.formation === "wedge" && this.point() !== hero)) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
+    if (this.formation === "loose") dmg = Math.max(1, Math.ceil(dmg * 0.85));
     if (target.row === "back" && !bow && this.living().some((f) => f !== target && f.row !== "back")) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += ", reaching past the front"; }   // (their back row, as yours)
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
     const props = (hero.weapon && hero.weapon.props) || {}, el = (props.element && !hero.weapon.unknown ? props.element : null) || (hero.oil && hero.oil.fights > 0 ? hero.oil.element : null);
@@ -6887,7 +6959,7 @@ Object.assign(CM.Game.prototype, {
     if (props.sleep && !hero.weapon.unknown && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.sleep)) { target.asleep = 2; this.say(`${CM.The(target)} hears the tide in the blade, and sleeps.`); }
     if (props.lifesteal && !hero.weapon.unknown && hero.hp > 0 && hero.hp < hero.max) { const back = Math.max(1, Math.ceil(dmg / 4)); hero.hp = Math.min(hero.max, hero.hp + back); this.say(`${hero.name}'s blade drinks: +${back}.`); }
     if ((CM.guardianHas(target, "heat") || CM.guardianHas(target, "glass")) && !props.bow && hero.hp > 0) {   // its heat, or its shards: whoever strikes it pays
-      const burn = 2 + Math.floor((this.floor ? this.floor.number : 15) / 5);
+      const burn = (2 + Math.floor((this.floor ? this.floor.number : 15) / 5)) * (target.broken ? 2 : 1);
       hero.hp = Math.max(1, hero.hp - burn);
       this.say((G.sear || "The heat of " + CM.the(target) + " sears {who} (-{n}).").replace("{who}", hero.name).replace("{n}", burn));
       this.emit("fx", { kind: "sear", hero, amount: burn, foe: target });
@@ -6904,6 +6976,8 @@ Object.assign(CM.Game.prototype, {
     if (r > 1) { dmg = Math.ceil(dmg * r); how = ` - the ${CM.ELEMENT_NAMES[element] || element} bites deep`; }
     else if (r < 1) { dmg = Math.max(1, Math.ceil(dmg * r)); how = ` - the ${CM.ELEMENT_NAMES[element] || element} does little to it`; }
     if (foe.marked) dmg = Math.ceil(dmg * 1.25);
+    if (element === "fire" && this.terrain().includes("water")) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the fire sputters on the water"; }
+    if (foe.elite === "mirrored") { dmg = Math.max(1, Math.ceil(dmg / 2)); const back = Math.max(1, Math.ceil(dmg / 2)); if (this.casting && this.casting.hp > 0) { this.casting.hp = Math.max(1, this.casting.hp - back); this.say(`The spell comes back off ${CM.the(foe)}'s mirror onto ${this.casting.name} (-${back}).`); } }
     if (element === "fire" && foe.held > 0) { dmg = Math.ceil(dmg * 1.5); how += " - the vines burn"; this.combo("kindling"); }
     if (element === "storm" && foe.chilled > 0) { dmg *= 2; how += " - the ice carries it"; this.combo("thunderclap"); foe.chilled = 0; }
     if (foe.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; foe.warded -= 1; }
@@ -6993,10 +7067,10 @@ Object.assign(CM.Game.prototype, {
     const a = CM.ABILITIES[id];
     if (!a || !CM.abilitiesFor(h).includes(id)) { this.say(`${h.name} doesn't know that.`); return false; }
     if (a.once && h.used && h.used[id]) { this.say(`${h.name} has used ${a.name} this fight.`); return false; }
-    const cost = a.mp && CM.trait(h, "thrifty") ? Math.max(1, a.mp - 1) : a.mp;
+    const cost = (a.mp && CM.trait(h, "thrifty") ? Math.max(1, a.mp - 1) : a.mp) + (a.mp && this.formation === "loose" ? 1 : 0);
     if (h.mp < cost) { this.say(`${h.name} hasn't the magic for ${a.name}.`); return false; }
     if (this.mode !== "combat" && !a.outside) { this.say(`${a.name} is for a fight.`); return false; }
-    const foes = this.living();
+    const foes = this.attackable();
     let foe = null, ally = null;
     if (a.target === "foe") { foe = this.foeAt(target); if (!foe) return false; }
     if (a.target === "foes" && !foes.length) return false;
@@ -7048,7 +7122,7 @@ Object.assign(CM.Game.prototype, {
       case "frost": {
         const dmg = Math.max(1, 6 + 2 * L + mod);
         let held = 0;
-        for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0) m.chilled = 2; if (m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
+        for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0) m.chilled = 2; if (m.hp > 0 && !CM.unmoved(m) && (this.terrain().includes("water") || rnd.chance(0.3))) { m.held = Math.max(m.held || 0, 1); held++; } }
         this.say(`${h.name} breathes frost over every foe: ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}. The ice clings.`);
         break;
       }
@@ -7316,7 +7390,7 @@ Object.assign(CM.Game.prototype, {
   autoTurn2() {
     const c = this.combat, h = c && c.waiting;
     if (c.auto && this.alive().some((p) => p.hp < p.max * 0.5)) { c.auto = false; this.say("Someone is badly hurt: Auto stops, and waits for orders."); this.emit("change"); return false; }
-    const hurt = this.alive().filter((p) => p.hp < p.max / 3), foes = this.living();
+    const hurt = this.alive().filter((p) => p.hp < p.max / 3), foes = this.attackable();
     const can = CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].mp <= h.mp && !(CM.ABILITIES[id].once && h.used && h.used[id]));
     let done = false;
     if (hurt.length && can.includes("heal")) done = this.act("cast", { id: "heal", target: this.party.indexOf(hurt[0]) });
@@ -7327,7 +7401,7 @@ Object.assign(CM.Game.prototype, {
     else if (can.includes("song") && !this.song) done = this.act("cast", { id: "song" });
     else if (can.includes("volley") && foes.length >= 2) done = this.act("cast", { id: "volley" });
     if (!done && foes.length) {
-      const bow = Boolean(h.weapon && h.weapon.props && h.weapon.props.bow), front = foes.filter((m) => m.row !== "back");
+      const bow = Boolean(h.weapon && h.weapon.props && h.weapon.props.bow), front = foes.filter((m) => m.row !== "back" && !m.hidden);
       const pool = !bow && front.length ? front : foes;                   // (a blow from the front reaches past the front for half: the front first)
       const weakest = pool.reduce((a, b) => (a.hp <= b.hp ? a : b), pool[0]);
       done = this.act("fight", weakest);
@@ -7758,7 +7832,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.recruits || this.recruits.floor !== this.floor.number) {
       const level = Math.max(1, Math.round(this.party.reduce((s, h) => s + h.level, 0) / Math.max(1, this.party.length)) - 1);
       const rnd = new CM.Random(CM.hashSeed(`${this.seed}:tavern:${this.floor.number}`));
-      this.recruits = { floor: this.floor.number, who: [0, 1, 2].map(() => CM.makeRecruit(level, rnd)) };
+      this.recruits = { floor: this.floor.number, who: [0, 1, 2].map(() => CM.makeRecruit(level, rnd, this.classesAvailable())) };
     }
     return (this.rescued || []).length ? this.rescued.concat(this.recruits.who) : this.recruits.who;   // (the rescued first, and free)
   },
@@ -8702,11 +8776,14 @@ CM.UI = class {
       <div>Attack ${eff.atk}${eff.atk !== h.atk ? ` (${h.atk})` : ""} &nbsp; Defence ${eff.df}${eff.df !== h.df ? ` (${h.df})` : ""} + gear ${CM.gearDefence(h)} &nbsp; Hits ${Math.round(g.hitChance(h) * 100)}%</div>
       <div class="rowpick"><span>Row:</span><button data-row="front" class="${h.row === "front" ? "on" : ""}">Front</button><button data-row="back" class="${h.row === "back" ? "on" : ""}">Back</button>
         <small>${g.mode === "combat" ? "not in a fight" : h.row === "front" ? "takes the blows" : h.cls === "Rogue" || h.cls === "Ranger" ? "strikes from safety" : "safer, hits for half"}</small></div>
+      <div class="rowpick"><span>Formation:</span>${Object.entries(CM.FORMATIONS).map(([id, f]) => `<button data-formation="${id}" class="${(g.formation || "line") === id ? "on" : ""}" title="${this.esc(f.what)}">${f.name}</button>`).join("")}
+        <small>${this.esc(CM.FORMATIONS[g.formation || "line"].what)}</small></div>
       <div class="list-title">Gear</div>
       ${CM.relicsWorn(h) >= 2 ? `<div class="gold">The guardians' things, worn together: ${CM.RELIC_SET.two.what}${CM.relicsWorn(h) >= 3 ? "; " + CM.RELIC_SET.three.what : ""}.</div>` : ""}${h.oil && h.oil.fights > 0 ? `<div>Oiled: ${CM.ELEMENT_NAMES[h.oil.element]} on the weapon for ${CM.plural(h.oil.fights, "more fight")}.</div>` : ""}
       <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span><span class="icon-slot" data-slot="${slot}"></span> ${it ? `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
     for (const span of facts.querySelectorAll(".icon-slot")) { const it = h[span.dataset.slot]; if (it) span.appendChild(this.icon(it, 20)); }
     for (const b of facts.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { if (g.setRow(h, b.dataset.row)) this.renderSheet(); });
+    for (const b of facts.querySelectorAll("button[data-formation]")) b.addEventListener("click", () => { if (g.setFormation(b.dataset.formation)) this.renderSheet(); });
     for (const b of facts.querySelectorAll("button[data-off]")) b.addEventListener("click", () => { const note = g.takeOff(this.sheetOf, b.dataset.off); if (note) g.say(note); this.renderSheet(); });
     left.appendChild(facts);
     const right = this.$("#sheet-right");
@@ -9665,6 +9742,8 @@ Object.assign(CM.UI.prototype, {
     turn.className = "turn";
     turn.innerHTML = h ? `Round ${c.round || 1} <small>-</small> ${this.esc(h.name)}'s turn` : `Round ${c.round || 1} <small>- the foes move</small>`;
     box.appendChild(turn);
+    const ground = g.terrainNote();
+    if (ground) { const t = document.createElement("div"); t.className = "ground"; t.textContent = ground + "."; box.appendChild(t); }
     const menu = document.createElement("div");
     menu.className = "menu";
     const btn = (html, fn, disabled, cls) => {
@@ -9705,7 +9784,7 @@ Object.assign(CM.UI.prototype, {
     box.appendChild(menu);
     const targets = document.createElement("div");
     targets.className = "targets";
-    g.living().forEach((m, i) => {
+    g.attackable().forEach((m, i) => {
       const b = document.createElement("button");
       b.className = i === (g.target || 0) ? "chosen" : "";
       const est = h ? g.strikeEstimate(h, m) : null;
@@ -10265,7 +10344,7 @@ window.addEventListener("DOMContentLoaded", () => {
   function foePlace(foe) {
     if (game.mode !== "combat" || !game.foeKey) return null;
     const [x, y] = game.foeKey.split(",").map(Number);
-    const shown = game.foes.filter((f) => f.hp > 0 || dying.has(f)), i = shown.indexOf(foe), n = shown.length;
+    const shown = game.foes.filter((f) => (f.hp > 0 && !f.hidden) || dying.has(f)), i = shown.indexOf(foe), n = shown.length;
     if (i < 0) return null;
     const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * (n > 4 ? 0.22 : 0.32), -0.46, 0.46);
@@ -10377,9 +10456,9 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
     for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, flat: true, w: 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75 });
     if (game.mode === "combat") {
-      const living = game.living();
+      const living = game.attackable();
       for (const m of game.foes) {
-        if (m.fled) continue;
+        if (m.fled || (m.hidden && m.hp > 0)) continue;
         const place = foePlace(m);
         if (!place) continue;
         const solid = place.echo ? 0.78 : 1;                             // (an echo of a guardian is drawn a little through)

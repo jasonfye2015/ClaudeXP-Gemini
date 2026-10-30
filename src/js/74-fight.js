@@ -11,6 +11,8 @@ Object.assign(CM.UI.prototype, {
     turn.className = "turn";
     turn.innerHTML = h ? `Round ${c.round || 1} <small>-</small> ${this.esc(h.name)}'s turn` : `Round ${c.round || 1} <small>- the foes move</small>`;
     box.appendChild(turn);
+    const ground = g.terrainNote();
+    if (ground) { const t = document.createElement("div"); t.className = "ground"; t.textContent = ground + "."; box.appendChild(t); }
     const menu = document.createElement("div");
     menu.className = "menu";
     const btn = (html, fn, disabled, cls) => {
@@ -51,7 +53,7 @@ Object.assign(CM.UI.prototype, {
     box.appendChild(menu);
     const targets = document.createElement("div");
     targets.className = "targets";
-    g.living().forEach((m, i) => {
+    g.attackable().forEach((m, i) => {
       const b = document.createElement("button");
       b.className = i === (g.target || 0) ? "chosen" : "";
       const est = h ? g.strikeEstimate(h, m) : null;

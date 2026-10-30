@@ -559,6 +559,26 @@ A generator that can grow (the fourth big update, phase 0 - v2.1)
   gold went and which spells the bot never used (a mechanic nobody uses is a mechanic to cut or fix); the tally
   counts both (tally.spent, tally.abilities).
 
+The eleven finished, and the ground of a fight (the fourth big update, phase 1 - v2.2)
+  The three earned callings, native: a fists icon for the Monk; the Heir's kit and the smith's work count double on
+  the fists; tomes of Hexes and of Engines for any caster; the tavern's recruits may be of an earned calling; the
+  advice knows an Artificer or a Necromancer hits every foe. (Pixel dolls of their own want the full Crawl set:
+  pack.py --gather on the machine with it.)
+  The ground of a fight (CM.TERRAIN; a line under the round counter says which): knee-deep in water (the Vaults' and
+  the Drowned Town's floors, a flooded floor, high tide, the Drowned Hall) frost holds every foe it touches and fire
+  does half; over a vent the heat sears the back row every round; among a lair's pillars only two foes can come at
+  you at once; in a magical dark every blow, theirs and yours, may go wide.
+  Formations (CM.FORMATIONS; on any hero's sheet, out of a fight): Line, as ever; Wedge - one hero at the point takes
+  every blow that isn't a shot, with +2 defence, and everyone else hits for full from wherever they stand; Loose - a
+  breath, a slam or a cold on everyone does half, blows do a little less, spells cost one more. Saved with the run.
+  Second forms for the shallow guardians, at a third of their strength (form2 in CM.GUARDIANS): the Rat King hides in
+  the heap and the swarm is the fight until it thins; the Drowned Knight floods the whole hall (water underfoot for
+  the rest of the fight) and comes every other turn; the Forge-Warden's hammer breaks, its heat doubles and so does
+  its fury. (An echo of a guardian has no second form.)
+  Leaders with affixes of their own, for runs begun from v2.2 (CM.ELITES_MORE, generator 2 only): Shielded (warded
+  every round), Mirrored (a spell on it does half, and a quarter comes back on the caster), Spectral (half of every
+  blow passes through it).
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

@@ -58,7 +58,7 @@ uses every v2.0 system in the sim's report, and a replayed log reproduces a run 
 
 ---
 
-## Phase 1 - Finishing the eleven, and the ground of a fight
+## Phase 1 - Finishing the eleven, and the ground of a fight - DONE (v2.2; the dolls want the full tile set)
 
 **Goal:** the earned callings feel native, and a fight has a place it happens in.
 

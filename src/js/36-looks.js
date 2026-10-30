@@ -209,7 +209,7 @@ CM.art.itemKey = function (item) {
       if (has("Hammer")) return "i.hammer";
       if (has("Flamberge", "Dragonslayer")) return "i.great_sword";
       if (has("Club")) return "i.club";
-      if (has("Fists")) return "i.unknown";
+      if (has("Fists")) return "i.fists";
       if (has("Staff")) return "i.staff";
       if (has("Spear")) return "i.spear";
       return "i.long_sword";
@@ -248,6 +248,7 @@ CM.art.glyph = function (item, size = 24) {
     case "oil": potion("#E0A030"); break;
     case "bomb": outlined(p, () => { p.arc(12, 14, 7, 0, Math.PI * 2); }, "#3A3430", "#1A1410", 1.5); line("#C8A040", 1.5); p.beginPath(); p.moveTo(12, 7); p.lineTo(15, 3); p.stroke(); p.fillStyle = "#FF9030"; p.beginPath(); p.arc(15, 3, 1.6, 0, Math.PI * 2); p.fill(); break;
     case "ingredient": line("#1A1410", 4); p.beginPath(); p.moveTo(6, 20); p.quadraticCurveTo(12, 4, 19, 6); p.stroke(); line("#6A9A40", 2); p.beginPath(); p.moveTo(6, 20); p.quadraticCurveTo(12, 4, 19, 6); p.stroke(); outlined(p, () => { p.ellipse(13, 12, 4, 7, -0.7, 0, Math.PI * 2); }, "#80B050", "#1A1410", 1.2); break;
+    case "fists": for (const x of [4, 13]) { outlined(p, () => { p.roundRect(x, 8, 8, 9, 2); }, "#E0B890", "#1A1410", 1.5); p.fillStyle = "#D8D0B8"; p.fillRect(x, 12, 8, 2); p.fillStyle = "#1A1410"; for (let i = 0; i < 3; i++) p.fillRect(x + 1 + i * 2.5, 8, 1, 2); } break;
     case "scrap": outlined(p, () => { p.moveTo(5, 16); p.lineTo(10, 7); p.lineTo(14, 12); p.lineTo(19, 9); p.lineTo(18, 19); p.lineTo(7, 20); }, "#8A8A90", "#1A1410", 1.5); break;
     case "scroll": outlined(p, () => { p.rect(5, 4, 14, 16); }, "#E8DCC0", "#5A4A2A", 1.5); line("#8A6A3A", 1); for (let y = 8; y <= 16; y += 3) { p.beginPath(); p.moveTo(8, y); p.lineTo(16, y); p.stroke(); } p.fillStyle = "#B03030"; p.fillRect(5, 17, 14, 2); break;
     case "wand": line("#1A1410", 5); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); line("#8A6A30", 3); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); p.fillStyle = "#F0E060"; p.beginPath(); p.arc(18, 6, 3, 0, Math.PI * 2); p.fill(); break;

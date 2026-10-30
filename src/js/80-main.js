@@ -258,7 +258,7 @@ window.addEventListener("DOMContentLoaded", () => {
   function foePlace(foe) {
     if (game.mode !== "combat" || !game.foeKey) return null;
     const [x, y] = game.foeKey.split(",").map(Number);
-    const shown = game.foes.filter((f) => f.hp > 0 || dying.has(f)), i = shown.indexOf(foe), n = shown.length;
+    const shown = game.foes.filter((f) => (f.hp > 0 && !f.hidden) || dying.has(f)), i = shown.indexOf(foe), n = shown.length;
     if (i < 0) return null;
     const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * (n > 4 ? 0.22 : 0.32), -0.46, 0.46);
@@ -370,9 +370,9 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
     for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, flat: true, w: 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75 });
     if (game.mode === "combat") {
-      const living = game.living();
+      const living = game.attackable();
       for (const m of game.foes) {
-        if (m.fled) continue;
+        if (m.fled || (m.hidden && m.hp > 0)) continue;
         const place = foePlace(m);
         if (!place) continue;
         const solid = place.echo ? 0.78 : 1;                             // (an echo of a guardian is drawn a little through)

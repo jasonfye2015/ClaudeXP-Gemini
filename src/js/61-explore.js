@@ -398,7 +398,7 @@ Object.assign(CM.Game.prototype, {
     else if (trap === "alarm") {
       const fl = this.floor, [x, y] = k.split(",").map(Number);
       const spot = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([nx, ny]) => CM.passable(fl, nx, ny) && !fl.things[keyOf(nx, ny)] && !(nx === fl.pos[0] && ny === fl.pos[1]));
-      const group = CM.monsterGroup(fl.number, this.rnd);
+      const group = CM.monsterGroup(fl.number, this.rnd, this.gen);
       if (spot) {
         const sk = keyOf(spot[0], spot[1]);
         fl.things[sk] = { type: "monsters", group };
@@ -700,7 +700,7 @@ Object.assign(CM.Game.prototype, {
       }
       case "gamble": { if (this.gold < 100) { this.say("You haven't a hundred gold. The dealer shrugs."); return true; } this.gold -= 100; if (rnd.chance(0.45)) { this.gold += 250; this.sound("coin"); finish("Three sixes. The dealer counts out 250 gold without a word, and the lantern goes out.", "The table is empty, and the dealer gone."); } else { finish("Two and a one. The dealer sweeps the gold away, and the lantern goes out.", "The table is empty, and the dealer gone."); } return true; }
       case "blackwater": { const h = rnd.pick(this.alive()), st = rnd.pick(CM.STATS); h.stats[st] = Math.min(25, h.stats[st] + 2); CM.recompute(h); h.status = h.status || {}; h.status.curse = 999; this.sound("ailment"); finish(`${h.name} drinks. +2 ${CM.STAT_NAMES[st]}, for good - and a curse, until the temple lifts it.`, "The fountain runs black, and you have drunk."); return true; }
-      case "campfire": { for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + Math.ceil(h.max / 3)); this.sound("heal"); if (rnd.chance(0.4)) { finish("You rest by the warm ashes, and mend - until something comes to the light."); const g = CM.monsterGroup(L, rnd).map((m) => this.tune(m)); this.foes = g; this.startCombat(k, { group: g }, true); } else finish("You rest by the warm ashes, and mend. Nothing comes."); return true; }
+      case "campfire": { for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + Math.ceil(h.max / 3)); this.sound("heal"); if (rnd.chance(0.4)) { finish("You rest by the warm ashes, and mend - until something comes to the light."); const g = CM.monsterGroup(L, rnd, this.gen).map((m) => this.tune(m)); this.foes = g; this.startCombat(k, { group: g }, true); } else finish("You rest by the warm ashes, and mend. Nothing comes."); return true; }
       case "purse": { const gold = 30 * L; this.gold += gold; this.sound("coin"); if (rnd.chance(0.4)) { this.afflict(front, "poison", "the needle"); finish(`${gold} gold, and a needle in the lining of the purse.`); } else finish(`${gold} gold. He will not need it.`); return true; }
       case "bury": { const xp = 20 * L; for (const h of this.alive()) h.xp += xp; this.achieve("kind"); this.checkLevels(); finish(`You heap stones over him and say what you can. ${xp} experience each, and the floor feels quieter.`); return true; }
       case "whisper": { fl.seen = []; for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]); for (const f of Object.values(fl.features)) if ("known" in f) f.known = true; const h = rnd.pick(this.alive()); if (rnd.chance(0.3)) { h.status = h.status || {}; h.status.curse = 999; this.sound("ailment"); finish(`The box whispers the floor into your ear, every turn of it - and something else into ${h.name}'s: a curse.`); } else finish("The box whispers the floor into your ear, every turn of it, and falls silent."); return true; }

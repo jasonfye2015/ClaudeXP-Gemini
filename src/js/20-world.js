@@ -209,8 +209,8 @@ CM.upgradeMonster = function (m) {
 };
 
 // a group: one kind, or (deeper down) two; now and then with a leader out of the ordinary
-CM.monsterGroup = function (floor, rnd) {
-  if (floor > CM.LAST_FLOOR) return CM.deepGroup(floor, rnd);
+CM.monsterGroup = function (floor, rnd, gen) {
+  if (floor > CM.LAST_FLOOR) return CM.deepGroup(floor, rnd, gen);
   const top = Math.min(CM.SHALLOW - 1, Math.floor(floor * CM.SHALLOW / CM.LAST_FLOOR));
   const kind = CM.MONSTERS[rnd.int(Math.max(0, top - 2), top)];
   const count = rnd.int(1, 2 + Math.floor(floor / 6));
@@ -220,12 +220,12 @@ CM.monsterGroup = function (floor, rnd) {
     const other = CM.MONSTERS[Math.max(0, CM.MONSTERS.indexOf(kind) - rnd.int(1, 2))];
     if (other !== kind) for (let i = Math.floor(count / 2); i < count; i++) group[i] = CM.makeMonster(other, floor, rnd);
   }
-  if (floor >= 3 && rnd.chance(0.12)) CM.makeElite(group, rnd);
+  if (floor >= 3 && rnd.chance(0.12)) CM.makeElite(group, rnd, gen);
   return group;
 };
 // a band of the Deep: the kinds of this depth's band (now and then one of the band above), two to five of them, and a
 // leader one time in five; their level climbs more slowly than the floors do (CM.monsterLevel)
-CM.deepGroup = function (floor, rnd) {
+CM.deepGroup = function (floor, rnd, gen) {
   const band = CM.themeIndex(floor), level = CM.monsterLevel(floor);
   const here = CM.MONSTERS.filter((m) => m.deep === band), above = CM.MONSTERS.filter((m) => m.deep === band - 1);
   const shallow = floor > CM.BOTTOM && !here.length ? CM.MONSTERS.slice(band * 4, Math.min(CM.SHALLOW, band * 4 + 5)) : [];   // (Endless: the first bands come round with their own kinds)
@@ -237,12 +237,13 @@ CM.deepGroup = function (floor, rnd) {
     const other = rnd.pick(above.length && rnd.chance(0.4) ? above : kinds);
     if (other !== kind) for (let i = Math.floor(count / 2); i < count; i++) group[i] = CM.makeMonster(other, level, rnd);
   }
-  if (rnd.chance(floor > CM.BOTTOM ? 0.3 : 0.2)) CM.makeElite(group, rnd);
+  if (rnd.chance(floor > CM.BOTTOM ? 0.3 : 0.2)) CM.makeElite(group, rnd, gen);
   return group;
 };
-CM.makeElite = function (group, rnd) {
+CM.makeElite = function (group, rnd, gen) {
   {
-    const id = rnd.pick(Object.keys(CM.ELITES)), e = CM.ELITES[id], m = group[0];
+    const table = gen >= 2 ? Object.assign({}, CM.ELITES, CM.ELITES_MORE) : CM.ELITES;
+    const id = rnd.pick(Object.keys(table)), e = table[id], m = group[0];
     m.name = `${e.name} ${m.name}`;
     m.elite = id;
     if (e.hp) { m.max = Math.round(m.max * e.hp); m.hp = m.max; }
@@ -301,7 +302,7 @@ CM.recompute = function (h) {
   h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : 0;
   const hitStat = c.key === "dex" ? s.dex : s.str;
   const relics = CM.relicsWorn(h), set = relics >= 2 ? CM.RELIC_SET.two : null;   // (the guardians' things, worn together)
-  if (h.cls === "Monk" && h.weapon && h.weapon.props && h.weapon.props.fists) h.weapon.power = 3 + Math.floor(h.level / 2) + (CM.trait(h, "ironfists") ? Math.ceil((3 + Math.floor(h.level / 2)) / 2) : 0);   // (the hands grow)
+  if (h.cls === "Monk" && h.weapon && h.weapon.props && h.weapon.props.fists) h.weapon.power = 3 + Math.floor(h.level / 2) + 2 * (h.weapon.props.bonus || 0) + (CM.trait(h, "ironfists") ? Math.ceil((3 + Math.floor(h.level / 2)) / 2) : 0);   // (the hands grow; the smith's work and the Heir's kit count double on them)
   h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow + (CM.trait(h, "mighty") ? 3 : 0) + (set ? set.atk : 0) + (h.bondAtk || 0));
   h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0) + (CM.trait(h, "stonewall") || CM.trait(h, "ironbody") ? 3 : 0) + (set ? set.df : 0) + (h.bondDf || 0));
   h.hp = Math.min(h.hp, h.max);
@@ -379,8 +380,8 @@ CM.newParty = function (chosen) {                                         // cho
 };
 
 // someone to hire at the camp: a calling, a name, a roll, a level a step behind the party's
-CM.makeRecruit = function (level, rnd) {
-  const cls = rnd.pick(CM.CLASS_ORDER), h = CM.makeHero(cls, CM.randomName(rnd), CM.rollStats(cls, rnd));
+CM.makeRecruit = function (level, rnd, classes) {
+  const cls = rnd.pick(classes || CM.CLASS_ORDER), h = CM.makeHero(cls, CM.randomName(rnd), CM.rollStats(cls, rnd));
   h.level = Math.max(1, level);
   CM.recompute(h);
   h.hp = h.max; h.mp = h.maxmp;
@@ -413,7 +414,7 @@ CM.partyAdvice = function (party) {
   const notes = [], roles = party.map((p) => p.cls), rows = party.map((p) => p.row || CM.CLASSES[p.cls].row);
   const front = rows.filter((r) => r === "front").length;
   const healers = roles.filter((c) => ["Cleric", "Paladin", "Druid", "Bard"].includes(c)).length;
-  const area = roles.filter((c) => ["Mage", "Druid", "Ranger"].includes(c)).length;
+  const area = roles.filter((c) => ["Mage", "Druid", "Ranger", "Artificer", "Necromancer"].includes(c)).length;
   const casters = roles.filter((c) => CM.CLASSES[c].mp > 0).length;
   if (front === 0) notes.push("No one up front: the monsters will reach whoever they like.");
   else if (front === 1) notes.push("Only one hero up front will take most of the blows - a second would share them.");

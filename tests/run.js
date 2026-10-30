@@ -58,7 +58,7 @@ test("a floor is saved as what changed, and comes back the same", () => {
   fl.seen = [[1, 1], [2, 1], [3, 3]]; fl.pos = [3, 1]; fl.facing = 1; fl.avenged = ["9,9"];
   const d = CM.floorDelta(fl, base);
   assert.ok(JSON.stringify(d).length < JSON.stringify(fl).length / 3, "the delta should be much smaller than the floor");
-  const back = CM.restoreFloor(d, "delta");
+  const back = CM.restoreFloor(d, "delta", CM.GEN);
   assert.strictEqual(back.drifted, false);
   same(back.floor, fl);
   // a fresh floor's delta is next to nothing
@@ -805,6 +805,120 @@ test("the log: a bot's run, played again from its seed and its log, comes out th
   const mage = game.party.find((h) => h.cls === "Mage"); mage.mp = 20;
   game.castOutside(game.party.indexOf(mage), "light", null);
   assert.ok(game.tally.abilities && game.tally.abilities.light === 1, "the tally counts the spells used");
+});
+
+test("the ground of a fight: water holds frost and halves fire, pillars limit the reach, the dark makes blows go wide", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("ground-1", fixedParty(CM));
+  const mage = game.party.find((h) => h.cls === "Mage"); mage.mp = 99; mage.level = 10;
+  game.enterFloor(10, "down");                                           // (the Drowned Hall: water and pillars)
+  const fl = game.floor, gk = Object.keys(fl.things).find((k) => fl.things[k].type === "guardian");
+  const [gx, gy] = gk.split(",").map(Number); fl.pos = [gx, gy + 1];
+  assert.ok(game.terrain().includes("water") && game.terrain().includes("pillars"), game.terrain().join(","));
+  assert.strictEqual(game.reachLimit(), 2);
+  const rnd = new CM.Random(2), orcs = [1, 2, 3].map(() => CM.makeMonster(CM.monsterKind("Orc"), 5, rnd));
+  for (const o of orcs) o.max = o.hp = 500;
+  fl.things["1,1"] = { type: "monsters", group: orcs }; fl.pos = [gx, gy + 1];
+  game.startCombat("1,1", fl.things["1,1"]); game.combat.waiting = mage;
+  game.useAbility(mage, "frost", null);
+  assert.ok(orcs.every((o) => o.held > 0), "on water, frost holds every foe");
+  game.messages = []; game.casting = mage;
+  game.spellHit(orcs[0], 40, "Fire:", "fire");
+  assert.ok(game.messages.some((m) => m.includes("sputters")));
+  assert.ok(game.terrainNote().includes("Knee-deep"));
+  fl.dark.push(CM.keyOf(fl.pos[0], fl.pos[1])); game.spellLight = 0;
+  assert.ok(game.terrain().includes("dark"));
+});
+
+test("formations: the wedge's point takes the blows, the loose line halves a breath and spells cost one more", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("form-1", fixedParty(CM));
+  assert.strictEqual(game.formation, "line");
+  assert.ok(game.setFormation("wedge"));
+  const knight = game.party.find((h) => h.cls === "Knight"), df = game.effective(knight).df;
+  assert.strictEqual(game.point(), knight);
+  assert.strictEqual(game.effective(knight).df, df);
+  const rnd = new CM.Random(3), orc = CM.makeMonster(CM.monsterKind("Orc"), 3, rnd), demon = CM.makeMonster(CM.monsterKind("Demon"), 3, rnd);
+  for (const m of [orc, demon]) m.max = m.hp = 500;
+  game.floor.things["2,2"] = { type: "monsters", group: [orc, demon] };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  assert.ok(!game.setFormation("loose"), "not in a fight");
+  let onPoint = 0; for (let i = 0; i < 20; i++) if (game.pickTarget(orc) === knight) onPoint++;
+  assert.strictEqual(onPoint, 20, "every blow that isn't a shot goes to the point");
+  const cleric = game.party.find((h) => h.cls === "Cleric"); game.messages = [];
+  game.strike(cleric, orc, "", { sure: true });
+  assert.ok(!game.messages.some((m) => m.includes("reaching from the back row")), "the rest hit for full");
+  for (const m of [orc, demon]) m.hp = 0; game.afterBlows();
+  game.setFormation("loose");
+  const mage = game.party.find((h) => h.cls === "Mage"); mage.mp = 99;
+  const d2 = CM.makeMonster(CM.monsterKind("Demon"), 3, new CM.Random(4)); d2.max = d2.hp = 500; d2.breath = 1;
+  game.floor.things["3,3"] = { type: "monsters", group: [d2] }; game.startCombat("3,3", game.floor.things["3,3"]);
+  d2.breath = 1;                                                         // (the next act is a breath)
+  for (const h of game.party) { h.max = 1000; h.hp = 1000; }
+  game.monsterAct(d2);
+  const breathed = game.party.map((h) => 1000 - h.hp).filter((x) => x > 0);
+  assert.ok(breathed.length === 4 && Math.max(...breathed) <= Math.ceil((Math.floor(d2.atk / 3) + 2) / 2) + 1, "a breath does half: " + breathed.join(","));
+  game.combat.waiting = mage; const mp = mage.mp;
+  game.useAbility(mage, "missile", d2);
+  assert.strictEqual(mp - mage.mp, CM.ABILITIES.missile.mp + 1, "spells cost one more");
+});
+
+test("second forms: the Rat King hides in the swarm, the Knight floods the hall, the Warden's hammer breaks", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("form2-1", fixedParty(CM));
+  for (const h of game.party) { h.max = 5000; h.hp = 5000; }
+  const fight = (id, floor) => { game.setMode("explore"); const G = CM.guardianMonster(id, floor); game.floor.things["4,4"] = { type: "guardian", group: [G] }; game.startCombat("4,4", game.floor.things["4,4"]); return game.foes.find((m) => m.guardian); };
+  const rat = fight("rat", 5);
+  rat.hp = Math.floor(rat.max * 0.3); game.afterBlows();
+  assert.ok(rat.form2 && rat.hidden && game.foes.filter((m) => m.summoned).length >= 2, "the king hides and the swarm comes");
+  assert.ok(!game.attackable().includes(rat));
+  for (const m of game.foes) if (m !== rat) m.hp = 0;
+  game.afterBlows();
+  assert.ok(!rat.hidden && game.attackable().includes(rat), "the swarm thinned: the king is found");
+  rat.hp = 0; game.afterBlows();
+  const knight = fight("knight", 10);
+  knight.hp = Math.floor(knight.max * 0.3); game.afterBlows();
+  assert.ok(knight.form2 && game.combat.flooded && knight.quick && game.terrain().includes("water"));
+  knight.hp = 0; game.afterBlows(); if (game.mode === "combat") { knight.hp = 0; game.afterBlows(); }
+  const warden = fight("forge", 15), atk = warden.atk;
+  warden.hp = Math.floor(warden.max * 0.3); game.afterBlows();
+  assert.ok(warden.form2 && warden.broken && warden.atk > atk);
+  const hero = game.party[0], hp = hero.hp; game.strike(hero, warden, "", { sure: true });
+  assert.ok(hp - hero.hp >= 2 * (2 + Math.floor(game.floor.number / 5)), "the heat doubled");
+});
+
+test("leaders with affixes of their own, for generator 2: shielded, mirrored, spectral", () => {
+  const CM = load();
+  const kinds1 = new Set(), kinds2 = new Set();
+  for (let s = 0; s < 30; s++) for (let n = 3; n <= 20; n++) { for (const t of Object.values(CM.makeFloor(n, "elite-" + s, 1).things)) if (t.type === "monsters" && t.group[0].elite) kinds1.add(t.group[0].elite); for (const t of Object.values(CM.makeFloor(n, "elite-" + s, 2).things)) if (t.type === "monsters" && t.group[0].elite) kinds2.add(t.group[0].elite); }
+  assert.ok(!["shielded", "mirrored", "spectral"].some((id) => kinds1.has(id)), "generator 1 never has them");
+  assert.ok(["shielded", "mirrored", "spectral"].some((id) => kinds2.has(id)), "generator 2 does: " + [...kinds2].join(","));
+  const game = new CM.Game(); game.newGame("elite-x", fixedParty(CM));
+  const rnd = new CM.Random(5), ghost = CM.makeMonster(CM.monsterKind("Wraith"), 5, rnd); ghost.elite = "spectral"; ghost.max = ghost.hp = 999;
+  game.floor.things["2,2"] = { type: "monsters", group: [ghost] }; game.startCombat("2,2", game.floor.things["2,2"]);
+  let through = 0; for (let i = 0; i < 40; i++) { game.messages = []; game.strike(game.party[0], ghost, "", { sure: true }); if (game.messages.some((m) => m.includes("passes through"))) through++; }
+  assert.ok(through > 8 && through < 32, "about half pass through: " + through);
+  const mirror = CM.makeMonster(CM.monsterKind("Crystal Golem"), 5, rnd); mirror.elite = "mirrored"; mirror.max = mirror.hp = 999; game.foes.push(mirror);
+  const mage = game.party.find((h) => h.cls === "Mage"); game.casting = mage; const mhp = mage.hp;
+  const dealt = game.spellHit(mirror, 40, "", null);
+  assert.ok(dealt <= 20 && mage.hp < mhp, "half, and a quarter back on the caster");
+  game.casting = null;
+  const shield = CM.makeMonster(CM.monsterKind("Orc"), 5, rnd); shield.elite = "shielded"; shield.max = shield.hp = 999; game.foes.push(shield);
+  game.endRound();
+  assert.ok(shield.warded > 0, "warded every round");
+});
+
+test("the three callings, native: tomes, the Heir's fists, recruits of their kind once earned", () => {
+  const CM = load(), game = new CM.Game();
+  assert.ok(CM.TOMES.hex && CM.TOMES.turret);
+  const monk = CM.makeHero("Monk", "M", CM.rollStats("Monk", new CM.Random(1)));
+  monk.weapon.power += 2; monk.weapon.props.bonus = 1; CM.recompute(monk);
+  assert.strictEqual(monk.weapon.power, 3 + 2, "the Heir's kit counts on the fists");
+  game.trophies.master = { date: "x" };
+  let got = false;
+  for (let i = 0; i < 40 && !got; i++) got = CM.makeRecruit(3, new CM.Random(i), game.classesAvailable()).cls === "Artificer";
+  assert.ok(got, "an Artificer may come to the tavern once earned");
+  assert.ok(!Array.from({ length: 60 }, (_, i) => CM.makeRecruit(3, new CM.Random(i)).cls).includes("Artificer"), "but never by itself");
 });
 
 let failed = 0;

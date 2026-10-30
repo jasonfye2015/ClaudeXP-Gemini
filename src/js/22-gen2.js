@@ -213,7 +213,7 @@ CM.generators[2] = function (number, seed) {
   for (const r of rooms) if (r.template) for (const [x, y, c] of r.fill) {
     const k = key(x, y);
     if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd), CM.makeItem(number, rnd)], trap: trap() };
-    else if (c === "M") { const g = CM.monsterGroup(number, rnd); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
+    else if (c === "M") { const g = CM.monsterGroup(number, rnd, 2); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
     else if (c === "F") floor.features[k] = { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false };
     else if (c === "A") floor.features[k] = { type: "altar", used: false };
     else if (c === "P") floor.features[k] = { type: "pit" };
@@ -324,7 +324,7 @@ CM.generators[2] = function (number, seed) {
   }
   for (let i = 0; i < (special === "maze" ? 3 : Math.min(14, 5 + Math.floor(number / 2))) && spare.length; i++) {
     const [x, y] = spare.pop();
-    floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd) };
+    floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd, 2) };
   }
   if (special === "maze" && spare.length) {                      // the thing in the labyrinth: a great minotaur that hunts the party wherever it goes
     const [x, y] = spare.pop(), m = CM.makeMonster(CM.monsterKind("Minotaur"), number + 3, rnd);
