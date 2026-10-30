@@ -1316,6 +1316,52 @@ Around the land (the eighth big update, phase 8 - v7.0)
   dialogs' buttons as it walks the old; the sky bar's tap tells the hour and the date; a film turns the sky as the run
   did. The balance pass is written up in UPGRADE_PLAN_6.md. Test: "around the land".
 
+The surface, under the sky (the ninth big update - v7.1 to v8.0)
+  The town and the land stop being drawn as dungeon floors. (The sections above on the town and the Deep Wood tell how
+  they began; the shapes and the look below replace theirs. Every screen behind every door is as it was.)
+  The sky (v7.1): on the surface there is no ceiling. A dome over the view takes its colours from the game's clock -
+  night, dawn, day and dusk by the season's daylight hours (CM.sky in src/js/26-surface.js) - with the sun and the moon
+  on an arc over the south, a full moon lightening the night, and rain, mist and snow greying the day. Daylight reaches
+  to the horizon; at night the torch and the moon do what they can. Solid cells have kinds with their own faces and
+  heights (CM.SOLID: house, door, shop, frame, town wall, hedge, fence, cliff, tree): houses wear plaster and timber
+  under a roof's eaves, the face with a door in it or a shop's board over it; hedges and fences are seen over; trees
+  are a trunk and a crown, two crossed pictures, and a leaf canopy closes over a path with trees on most sides. The
+  ground wears grass, dirt, cobbles, flags, planks or tilled earth (CM.GROUNDS). A floor's kinds, ground and canopy
+  are made with it from the seed and never saved (CM.FLOOR_FIXED). The mesh is plain arithmetic (CM.floorMesh), so the
+  Node tests can count a surface floor's ceilings (none) and a dungeon floor's (one over every open square).
+  The town (v7.2): Caer Duin on its hill, 45 squares a side, inside a ring wall, with the forest down the slope and
+  cliffs north and south. The West Gate opens on Gate Lane, which bends south to Lantern Street; the party's house is the
+  first inside the gate. Lantern Street runs east between the townsfolk's houses to the Square (cobbles, the well, the
+  market cross, the peddler's pitch on market day), with the Hanged Lantern and the Merchant's House on its north side
+  and the Smith's forge and the Guildhall on its south. Temple Row runs north past the Library to the Temple's porch;
+  Smiths' Lane south; Shaft Lane east past the Chronicler's House to the Keep-yard, a walled yard of flagstones with the
+  shaft's mouth in it. The plots are blocks of house with a doorway cut into the street side; the layout is data in
+  src/js/23-town.js (CM.TOWN_BLOCKS, CM.TOWN_HOUSES, CM.TOWN_STREETS, CM.TOWN_SQUARE, CM.TOWN_YARD) and the doors are
+  found by name (CM.TOWN_AT). The townsfolk keep to the side streets.
+  The land (v7.3): floor -1 is everything west of the wall, 61 squares a side (CM.makeWood, also CM.makeLand). The gate
+  opens in the cliffs at the hill's foot onto the road, which runs west through the fields - hedged pastures, copses,
+  the farm's rows in their fence where the road bends (the farm moved here from the first glade) - to the river,
+  crossed at the ford where the road meets it or by a plank bridge a little north. Over the river is the forest: the
+  first glade just past the ford, safe at any hour, seven more joined by paths under the leaves, and deep among the
+  trees the hermit's hut, the ruined shrine, the charcoal burner and the three cave mouths, where the seed puts them.
+  The night's beasts keep off the road, the fields, the ford, the bridge and the first glade (CM.woodSafe).
+  Finding the way (v7.4): signposts stand at the town's junctions, along the road and in the first glade (Space reads
+  one); a sign hangs over every finished door (a lantern, a bale, an anvil, a mortar, a book, a sun, crossed swords, a
+  quill, a key); the compass and the side panel name the place under the party's feet (CM.placeOf). Where to? (G, or
+  the button on the surface) lists the doors and places the party knows with the walk's length, and walks it there,
+  stopping for whatever it meets (CM.wayPlaces). The road, the fields and the near bank are on the map from the gate;
+  the forest's places join the list once seen. A walk goes round a well, a signpost or a cave mouth unless that is
+  where it is going.
+  The look (v7.5): two looks now, Pixel (the one to start with) and Stone; the Drawn look is no longer offered, and a
+  save that says Drawn opens in Pixel. Its painters stay in the file as what the other two fall back on. Pixel takes
+  Crawl's grass, dirt and grey brick for the surface, with the drawn trees, houses and signs made of pixels. Stone takes
+  eight more ambientCG sets (CC0; Grass001, Grass005, Ground110, Ground103, Plaster001, RoofingTiles013A, Bark007,
+  Bricks097, kept whole in the Timeline's Local Storage like the others) for the grass, the road, tilled earth, the
+  hedges, the plaster under the drawn timbers, the roofs, the bark on the trunks and the town wall.
+  Around the surface (v8.0): Automatic walks the new town's errands and takes its day on the land as before (the
+  simulator's land line is unchanged from v7.0's); UPGRADE_PLAN_7.md says what each phase did and what waits (the east
+  postern). Tests: "the surface", "finding the way", and the town's and the Wood's tests on the new ground.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
@@ -1338,11 +1384,14 @@ The source
     20-world.js   items, CM.furnish and CM.makeFloor, monster groups, a new party
     21-gen1.js    generator 1: the floors of runs begun before v2.1 - frozen
     22-gen2.js    generator 2: the plan, then the carving - where new rooms go
+    23-town.js    the town above, laid from data: the wall, the streets, the blocks, the signposts; townPlace
+    23b-wood.js   the land west of the town: the road, the fields, the river, the forest, the caves; woodPlace, wayPlaces
     25-saves.js   a floor as what changed since the seed made it, the save's schema and its migrations
-    30-art.js     every picture of the Drawn theme, painted in code: stone, chests, hatches, monsters, portraits
+    26-surface.js the solid kinds and the ground, the sky by the clock, and every floor's mesh as arithmetic
+    30-art.js     everything painted in code: stone, chests, monsters, portraits, the surface's houses, trees and signs
     35-packs.js   GENERATED by pack.py from src\art: the Pixel theme's atlas and the Stone theme's textures
-    36-looks.js   the three themes: each one's set for a depth, the paper-doll portraits, the item and spell icons
-    40-render.js  the WebGL 2 view: the floor's mesh, billboards, torchlight and fog, smooth steps and turns, shakes
+    36-looks.js   the two looks (Pixel, Stone): each one's set for a depth and the surface, the dolls, the icons
+    40-render.js  the WebGL 2 view: the mesh, the sky, billboards, torchlight and fog, smooth steps and turns, shakes
     45-fx.js      what flies, bursts, rings and rains: the effects, advanced each frame into sprites
     50-audio.js   the sounds, each depth's ambience and the monsters' calls, synthesised
     55-music.js   the music, written from a seed and played as it goes
@@ -1364,6 +1413,7 @@ The source
 Keys
   W/Up forward, S/Down back, A/Left and D/Right turn, Q/E sidestep, Space use (a chest, the ladder or stairs, a
   fountain, an altar, a lever or carving on the wall you face - or search that wall), C cast between fights, I
-  inventory, 1-4 a hero's sheet, Tab the automap large (click a square to walk there, right-click for a note), X explore,
+  inventory, 1-4 a hero's sheet, Tab the automap large (click a square to walk there, right-click for a note), X explore, G
+  Where to? on the surface,
   Esc the menu. In a fight: F fight the chosen foe, C cast or a skill, P an item, D defend, R run, A auto, Tab or 1-9
   or a click to choose the foe, Esc back. Enter or Space closes the ending. F3 shows frames per second.

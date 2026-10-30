@@ -21,14 +21,26 @@ The upper carvings were cut by people who believed what they were told; the lowe
 upper carvings **lie** - not from malice, from distance - and the lower ones correct them. The codex shows the lie
 struck through once the truth is read.
 
-## The Deep Wood
+## The town on the hill
 
-West of the town, through the gate at the end of the main lane, the Wood is the land the city never cleared: glades
-joined by paths under the trees, a river crossed at one ford (frozen and crossed anywhere in snow), the hermit's hut
+Caer Duin above is what is left of the river city: a walled town on the hill's top, the wall older than anything
+inside it. The West Gate is the only way in that is used. Lantern Street runs from it to the Square, where the well
+and the market cross are (HERE THE MARKET, BY THE KING'S LEAVE - the last three words scratched out, and cut again);
+Temple Row goes north to the Temple, Smiths' Lane south, and Shaft Lane east to the Keep-yard, where the old keep's
+stones make a wall round the shaft's mouth and nothing else. Nobody built the yard round the shaft; they built the
+keep over it, and the keep fell, and the shaft stayed. Down the slope outside the wall is the forest; north and south
+the hill drops away in cliffs.
+
+## The land, and the Deep Wood
+
+Below the West Gate the road runs down through the fields, past the farm where it bends, to the river: a ford where
+the road meets it, and a plank bridge a little north that the town keeps meaning to mend. Over the river is the Wood,
+the land the city never cleared: glades joined by paths under the trees, the river crossed at the ford (frozen and
+crossed anywhere in snow), the hermit's hut
 (a leatherworker by day, a shut door by night), the charcoal burner's clearing, a ruined shrine of the Order with one
 standing wall - THE ORDER KEPT THE DEAD IN THE TREES BEFORE IT KEPT THEM IN THE HILL - and three cave mouths, one open a
 day, each a short floor of the first bands' kinds with ore in the rock, and the Troll under the Hill beneath the third.
-The farm stands in the First Glade. By day the Wood is foraging and the deer and boar that run; by night the wolves,
+The farm stands in the fields below the town. By day the Wood is foraging and the deer and boar that run; by night the wolves,
 the bear and the bandits come to the party, and under a full moon a wolf that is more. The Wood gives no renown: hides,
 meat, honey, deadwood and the night's danger. It is the Root's land as much as the hill is; the shrine says so.
 

@@ -142,7 +142,13 @@ list once seen.
 - **Tests**: every signpost names what its roads reach; the street name at every street cell; Where to? reaches every
   door from the party's door and stops for a villager.
 
-## Phase 4 - The look of the surface - v7.5
+## Phase 4 - The look of the surface - v7.5 - DONE
+
+As planned, with eight ambientCG sets downloaded (Grass001, Grass005, Ground110, Ground103, Plaster001,
+RoofingTiles013A, Bark007, Bricks097) and the kept PavingStones141 / PavingStones128 / Planks039 / Rock035 reused for
+the cobbles, flags, planks and cliffs. The houses are the drawn timbers over the plaster photograph; the trees are
+the drawn crowns with the bark photograph on the trunk; the market cross stands in the Square. The file grew from
+2.6 MB to 3.7 MB. Pixel is the look to start with; Drawn is not offered and a save that says Drawn opens in Pixel.
 
 - **The Stone look**'s outdoor set (ambientCG, CC0, kept whole in Local Storage as the others): grass, a dirt road,
   cobblestones (the square), flagstones (the yard), timber planks (bridge, frames), lime plaster and half-timber (the
@@ -158,7 +164,13 @@ list once seen.
 - **Tests**: both sets build the town theme and the land theme with every outdoor layer present; `pack.py --check`;
   the settings' look list has two.
 
-## Phase 5 - Around the surface - v8.0
+## Phase 5 - Around the surface - v8.0 - DONE
+
+Automatic and the simulator needed nothing: the town's errands go by CM.TOWN_AT and the land's by its things, and
+`node tools/sim.js --town --land --seeds 6 --to 3 --difficulty fair` gives the same land line as v7.0 (foraged 8.0 a
+run; no mining or farm visits on fresh runs, as before). Films replay the walk as recorded. The README, LORE.md and
+the Timeline's Help and Support entry and Manual chapters 6 and 15 describe the surface. Still to do: the east
+postern from the Keep-yard (a short cut for a crowned party).
 
 - **Automatic** walks the new town (its errands by Where to?) and the land (the farm, the forage, the open cave).
 - **The bot and the simulator** (`tools/sim.js --town`) cross the new town and the road; their numbers in the plan.
