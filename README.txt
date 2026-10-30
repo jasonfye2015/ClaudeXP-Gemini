@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The town's buildings, rebuilt (v9.2)
+  The houses were walls only where a street faced them, under a fringe of half-square slopes: the sky showed through the
+  middle of every block, and a house beside a hedge, a fence or a tree was open on that side. Now CM.buildingsOf
+  (src/js/26-surface.js) cuts the house cells into rectangles, the largest first, and each is built whole: plaster
+  and timber on every outside face whatever stands beside it, a course of stone at the foot, and one gabled roof - two
+  slopes from overhanging eaves to a ridge along the longer side, a darker ridge cap, and gable ends in plaster and
+  timber up to the ridge. A wider house has a higher roof. A door or a shop shows its face once, toward its street.
+  Most buildings carry a stone chimney through the roof (CM.chimneysOf), and the town's smoke rises from their tops.
+
 The clock made visible (v9.1)
   A dial in the view's top-right corner shows the game's clock at a glance: the sky in the hour's colour (day, dawn,
   dusk, a starry night), the sun and the moon on their arc over a strip of ground - up from the season's dawn to its

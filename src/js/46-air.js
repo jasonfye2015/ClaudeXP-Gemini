@@ -44,7 +44,7 @@ CM.Air = class {
       case "snow": { const [x, z] = around(); return Object.assign(base, { x, z, y: 2.8, y: 1.2 + r() * 1.6, vy: -0.5 - r() * 0.3, swayAmp: 0.35, windy: 0.5, life: 7, size: 0.03 + r() * 0.035, glow: 2, top: 3.2 }); }
       case "cloud": { const a = r() * Math.PI * 2, d = 40 + r() * 30; return Object.assign(base, { x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 22 + r() * 10, vx: 0.6, life: 160, size: 9 + r() * 7, h: 0.45, alpha: 0.85, glow: 2, far: true, top: 60 }); }
       case "bird": { const a = r() * Math.PI * 2, d = 35 + r() * 20, s = 3 + r() * 2; return Object.assign(base, { x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 12 + r() * 8, vx: -Math.sin(a) * s, vz: Math.cos(a) * s, life: 25, size: 0.7, far: true, top: 40, flap: true }); }
-      case "smoke": { const ch = (env.chimneys || [])[Math.floor(r() * (env.chimneys || []).length)]; if (!ch) return null; return Object.assign(base, { x: ch[0] + (r() - 0.5) * 0.1, z: ch[1] + (r() - 0.5) * 0.1, y: 2.05, vy: 0.35, windy: 0.4, swayAmp: 0.1, life: 6, size: 0.3, grow: 0.18, alpha: 0.8, top: 6 }); }
+      case "smoke": { const ch = (env.chimneys || [])[Math.floor(r() * (env.chimneys || []).length)]; if (!ch) return null; return Object.assign(base, { x: ch[0] + (r() - 0.5) * 0.1, z: ch[1] + (r() - 0.5) * 0.1, y: (ch[2] || 2.05) + 0.03, vy: 0.35, windy: 0.4, swayAmp: 0.1, life: 6, size: 0.3, grow: 0.18, alpha: 0.8, top: 6 }); }
       default: return null;
     }
   }
