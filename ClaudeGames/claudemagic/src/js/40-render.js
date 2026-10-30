@@ -15,19 +15,34 @@ void main() { vWorld = aPos; vUV = aUV; vShade = aShade; vFx = aFx; gl_Position 
 const FRAG = `#version 300 es
 precision highp float; precision highp sampler2DArray;
 in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
-uniform sampler2DArray uTex; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
+uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
+uniform int uLights; uniform vec4 uLightPos[12]; uniform vec3 uLightCol[12];   // the lights about the party: xyz, reach in w; colour
+uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
 out vec4 fragColor;
 void main() {
-  vec4 t = texture(uTex, vUV);
+  bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
+  vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0)));
+  vec4 t = shared ? ts : tt;
   if (vFx.z > 2.5) { fragColor = vec4(mix(uHorizon, uZenith, t.r), 1.0); return; }
   if (t.a < 0.5) discard;
   if (vFx.z > 1.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
   float d = distance(vWorld, uEye);
   float r2 = uReach * uReach;
   float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d);
-  vec3 col = t.rgb * vShade * uTorch * light;
+  vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));                      // the surface's facing, from the triangle itself
+  if (dot(n, uEye - vWorld) < 0.0) n = -n;
+  if (uSunK > 0.0) light *= mix(1.0, 0.62 + 0.55 * max(dot(n, uSun), 0.0), uSunK * step(abs(n.y), 0.7));   // walls facing the sun lit, the others in shade
+  vec3 extra = vec3(0.0);
+  for (int i = 0; i < 12; i++) {
+    if (i >= uLights) break;
+    vec3 L = uLightPos[i].xyz - vWorld; float ld = length(L), reach = uLightPos[i].w;
+    float fall = max(0.0, 1.0 - ld / reach); fall *= fall;
+    float face = 0.35 + 0.65 * max(dot(n, L / max(ld, 0.001)), 0.0);
+    extra += uLightCol[i] * fall * face;
+  }
+  vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
   col = mix(col, uFog, fog);
   col = mix(col, t.rgb, vFx.z * (1.0 - fog * 0.7));
@@ -74,7 +89,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -93,6 +108,7 @@ CM.Renderer = class {
     this.sky = null;                   // on the surface: CM.sky(game) this frame (the colours, the light, the sun and the moon); null below
     this.seed = ""; this.density = CM.DETAIL.medium; this.sub = {};   // the props: the run's seed and how many (the Detail setting), and where each sits in its layer
     this.standing = [];                // the floor's standing props, for the frame's billboards
+    this.lights = [];                  // [{x, y, z, reach, colour [r, g, b], flicker}]: what lights the walls about the party this frame (12 at most)
     this.season = "summer";           // the run's season, for what grows
     this.lightNow = 1;                 // (eased towards it)
     this.ok = true;
@@ -128,23 +144,48 @@ CM.Renderer = class {
   }
 
   // ---- the textures ----
-  setTextures(art) {
+  // a set's pictures go two ways: the band's own (CM.art.isThemeLayer) into the band's texture at the set's size, and
+  // the rest into the shared texture at CM.SHARED_SIZE - uploaded only when the shared ones are not already there
+  // (art.sharedKey: the look). A layer of another size is scaled as it goes up.
+  _upload(tex, layers, size, crisp) {
     const gl = this.gl;
-    if (this.texture) gl.deleteTexture(this.texture);
-    this.texture = gl.createTexture();
-    this.index = art.index;
-    this.sub = art.sub || {};
-    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
-    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, art.size, art.size, art.layers.length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    art.layers.forEach((layer, i) => gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, art.size, art.size, 1, gl.RGBA, gl.UNSIGNED_BYTE, layer));
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
+    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, size, size, Math.max(1, layers.length), 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    let scratch = null;
+    layers.forEach((layer, i) => {
+      let src = layer;
+      if (layer.width !== size) { scratch = scratch || Object.assign(document.createElement("canvas"), { width: size, height: size }); const p = scratch.getContext("2d"); p.clearRect(0, 0, size, size); p.imageSmoothingEnabled = !crisp; p.drawImage(layer, 0, 0, size, size); src = scratch; }
+      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, size, size, 1, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    });
     gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
-    this.crisp = Boolean(art.crisp);                                     // pixel tiles stay pixels when they come close
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, art.crisp ? gl.NEAREST : gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, crisp ? gl.NEAREST : gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     const aniso = gl.getExtension("EXT_texture_filter_anisotropic");
     if (aniso) gl.texParameterf(gl.TEXTURE_2D_ARRAY, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+  }
+
+  setTextures(art) {
+    const gl = this.gl, names = Object.keys(art.index), own = [], rest = [];
+    for (const name of names) { if (CM.art.isThemeLayer(name, art.theme)) own.push(name); else if (!CM.art.isSurfaceLayer(name)) rest.push(name); }   // (the outdoors below ground: not needed, not uploaded - so the shared set is the same for every band)
+    const index = {};
+    own.forEach((name, i) => { index[name] = i; });
+    rest.forEach((name, i) => { index[name] = 1000 + i; });
+    const sharedKey = `${art.sharedKey || ""}:${rest.join("|").length}:${rest.length}`;
+    if (!this.shared || this.sharedKey !== sharedKey) {
+      if (this.shared) gl.deleteTexture(this.shared);
+      this.shared = gl.createTexture(); this.sharedKey = sharedKey;
+      this._upload(this.shared, rest.map((name) => art.layers[art.index[name]]), CM.SHARED_SIZE, Boolean(art.crisp));
+      this.uploads = (this.uploads || 0) + rest.length;
+    }
+    if (this.texture) gl.deleteTexture(this.texture);
+    this.texture = gl.createTexture();
+    this._upload(this.texture, own.map((name) => art.layers[art.index[name]]), art.size, Boolean(art.crisp));
+    this.uploads = (this.uploads || 0) + own.length;
+    this.index = index;
+    this.sub = art.sub || {};
+    this.crisp = Boolean(art.crisp);                                     // pixel tiles stay pixels when they come close
   }
 
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
@@ -313,9 +354,19 @@ CM.Renderer = class {
     gl.uniform1f(this.loc.uAmbient, sky ? 0.04 + 0.98 * sky.light : 0.06 * Math.min(1, this.lightNow * 2));
     gl.uniform3fv(this.loc.uZenith, clear);
     gl.uniform3fv(this.loc.uHorizon, fogc);
+    const lights = this.lights.slice(0, 12), pos = new Float32Array(48), col = new Float32Array(36);
+    lights.forEach((l, i) => { const f = l.flicker ? 0.85 + 0.15 * Math.sin(this.time * (6 + i) + i * 1.7) : 1; pos.set([l.x, l.y, l.z, l.reach], i * 4); col.set(l.colour.map((c) => c * f), i * 3); });
+    gl.uniform1i(this.loc.uLights, lights.length); gl.uniform4fv(this.loc.uLightPos, pos); gl.uniform3fv(this.loc.uLightCol, col);
+    if (sky && (sky.sun !== null || sky.moon !== null)) {                // the light's direction: where the sun is on its arc (or, at night, the moon)
+      const t = sky.sun !== null && sky.light > 0.15 ? sky.sun : sky.moon !== null ? sky.moon : 0.5, a = Math.PI * t, el = Math.sin(a) * 0.5;
+      const v = [Math.cos(a) * Math.cos(el), Math.sin(el), Math.sin(a) * Math.cos(el)], m = Math.hypot(...v);
+      gl.uniform3fv(this.loc.uSun, v.map((c) => c / m)); gl.uniform1f(this.loc.uSunK, sky.sun !== null && sky.light > 0.15 ? 0.9 : 0.4);
+    } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
+    gl.uniform3fv(this.loc.uGrade, t.grade || [1, 1, 1]);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.shared || this.texture); gl.uniform1i(this.loc.uShared, 1); gl.activeTexture(gl.TEXTURE0);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     this._attributes();
     gl.drawArrays(gl.TRIANGLES, 0, this.staticCount);
