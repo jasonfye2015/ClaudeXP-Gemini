@@ -811,6 +811,10 @@ Around the story (the fifth big update, phase 8 - v3.8)
   completed, guardians spoken past, the bell rung and the king reminded, by difficulty; node tools/words.js prints
   the story's budget by chapter and counts the long strings still in the code. The film bar names the scene
   (a parley, a word with someone, a choice).
+  Measured (six seeds, Fair, to floor 25, --story): the bot reads about fifty lines a run, completes the Catacombs
+  and the Vaults every time and the Halls most times, and passes the Forge-Warden by the dwarves' word in five of
+  six runs - the gates are open to a party that reads, as meant; it never rings the bell (it does not carry one
+  thing forty floors for a ghost), so that gate is a player's.
 
 The Root, and the three endings (the fifth big update, phase 4 - v4.0)
   Below the Ossuary the carvings are the Root's own voice, and it knows the party: a line is added to each from the
