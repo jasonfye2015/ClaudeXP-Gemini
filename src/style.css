@@ -397,6 +397,12 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 .things .thing { font: 12.5px var(--serif); color: var(--ink); }
 .things .thing.unseen { color: var(--faint); letter-spacing: 1px; }
 .rarity-cursed { color: #D070D0; }
+/* colour-blind marks for rarity: a shape before the name, not only a colour */
+.rarity-fine::before { content: "\25C6\00A0"; font-size: 0.8em; }
+.rarity-rare::before { content: "\2605\00A0"; font-size: 0.8em; }
+.rarity-relic::before { content: "\2726\00A0"; font-size: 0.8em; }
+.rarity-unique::before { content: "\2756\00A0"; font-size: 0.8em; }
+.rarity-cursed::before { content: "\2620\00A0"; font-size: 0.8em; }
 /* ---- the belt ---- */
 #belt { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 4px; }
 #belt button.slot { padding: 3px 4px; font: 11px var(--serif); min-height: 30px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

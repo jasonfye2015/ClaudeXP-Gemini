@@ -390,7 +390,7 @@ Object.assign(CM.Game.prototype, {
       this.sound("chest");
       this.count("chests");
       this.emit("fx", { kind: "sparkle", at: [x, y] });
-      const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : i.name)).join(", ");
+      const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : `${i.name} (${CM.itemLabel(i)})`)).join(", ");
       this.say(`The chest creaks open: ${gold} gold` + (found ? `, ${found}.` : "."));
       if (this.gold >= 2000) this.achieve("hoarder");
       this.saveRun();
@@ -642,7 +642,7 @@ Object.assign(CM.Game.prototype, {
   },
   // the pack's weight against what the party can carry: 1 is the line; over it costs, half again over it there is no running
   overweight() { return CM.bagWeight(this.bag) / CM.carryCap(this.party); },
-  weightWord() { const o = this.overweight(); return o >= CM.OVERWEIGHT_RUN ? "Overloaded" : o > 1 ? "Heavy-laden" : ""; },
+  weightWord() { const o = this.overweight(); return o >= CM.OVERWEIGHT_RUN ? CM.t("hud.overloaded") : o > 1 ? CM.t("hud.heavy") : ""; },
   // the dwarves' pick: the nearest hidden door or stair on the floor opens without searching, and the pick breaks
   usePick(row) {
     const fl = this.floor, hidden = Object.entries(fl.features).filter(([, f]) => (f.type === "secret" || f.type === "secretstair") && !f.found);

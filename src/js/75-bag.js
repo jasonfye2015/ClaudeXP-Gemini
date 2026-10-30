@@ -28,7 +28,7 @@ Object.assign(CM.UI.prototype, {
 
   fillBag() {
     const g = this.game, shop = g.shopping;
-    this.$("#bag-title").textContent = `${shop ? "The Merchant" : "Inventory"}   -   Gold: ${g.gold.toLocaleString()}   -   Weight: ${CM.bagWeight(g.bag)}/${CM.carryCap(g.party)}${g.weightWord() ? ` (${g.weightWord().toLowerCase()})` : ""}`;
+    this.$("#bag-title").textContent = `${CM.t(shop ? "bag.title.shop" : "bag.title.pack")}   -   ${CM.t("bag.gold", { n: g.gold })}   -   ${CM.t("bag.weight", { n: CM.bagWeight(g.bag), cap: CM.carryCap(g.party) })}${g.weightWord() ? ` (${g.weightWord().toLowerCase()})` : ""}`;
     this.$("#shop-list").style.display = shop ? "" : "none";
     this.$("#btn-buy").style.display = shop ? "" : "none";
     this.$("#btn-sell").style.display = shop ? "" : "none";
@@ -41,6 +41,7 @@ Object.assign(CM.UI.prototype, {
         const text = document.createElement("span");
         text.innerHTML = `<span class="rarity-${CM.rarityOf(item)}">${this.esc(item.unknown ? CM.baseName(item) : item.name)}</span> <span class="what">${describe(item)}</span>`;
         row.appendChild(text);
+        row.title = CM.itemCard(item);
         row.addEventListener("click", () => { onPick(i); this.fillBag(); });
         el.appendChild(row);
       });
@@ -64,9 +65,9 @@ Object.assign(CM.UI.prototype, {
     });
     const beltBox = this.$("#bag-belt"); beltBox.innerHTML = "";
     if (picked && CM.BELT_KINDS.includes(picked.kind)) { const b = document.createElement("button"); b.textContent = "To the belt"; b.title = "Four things to hand: keys 5 to 8; in a fight the first used in a round costs no turn"; b.addEventListener("click", () => { this.note(g.toBelt(this.bagRow)); this.bagRow = -1; this.fillBag(); }); beltBox.appendChild(b); }
-    if (shop && picked && !picked.insured && g.mode === "camp") { const b = document.createElement("button"); b.textContent = `Insure (${Math.max(5, Math.ceil((picked.value || 0) * CM.INSURE_RATE))} gold)`; b.title = "If the party falls, an insured thing goes to the vault for the next."; b.addEventListener("click", () => { this.note(g.insure(this.bagRow)); this.fillBag(); }); beltBox.appendChild(b); }
-    if (shop && g.mode === "camp") g.party.forEach((h, hi) => { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 50 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (!worn) return; const slot = CM.SLOTS.find((s) => h[s] === worn); const b = document.createElement("button"); b.textContent = `Insure ${h.name}'s ${CM.itemName(worn)} (${Math.max(5, Math.ceil(worn.value * CM.INSURE_RATE))} gold)`; b.addEventListener("click", () => { this.note(g.insure(hi, slot)); this.fillBag(); }); beltBox.appendChild(b); });
-    if (shop && g.mode === "camp") { const sel = document.createElement("select"); sel.innerHTML = `<option value="">Order for the next camp (a tenth over)...</option>` + Object.keys(CM.ORDERABLE).map((k) => `<option value="${k}">${this.esc(CM.ORDERABLE[k](g.floor.number + 3).name)} - ${Math.ceil(CM.priceAt(CM.ORDERABLE[k](g.floor.number + 3).value, g.floor.number) * CM.ORDER_OVER)} gold</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) { this.note(g.order(sel.value)); this.fillBag(); } }); beltBox.appendChild(sel); if ((g.orders || []).length) { const o = document.createElement("i"); o.className = "small"; o.textContent = ` ordered: ${g.orders.map((x) => x.item.name).join(", ")}`; beltBox.appendChild(o); } }
+    if (shop && picked && !picked.insured && g.mode === "camp") { const b = document.createElement("button"); b.textContent = CM.t("bag.insure", { n: Math.max(5, Math.ceil((picked.value || 0) * CM.INSURE_RATE)) }); b.title = "If the party falls, an insured thing goes to the vault for the next."; b.addEventListener("click", () => { this.note(g.insure(this.bagRow)); this.fillBag(); }); beltBox.appendChild(b); }
+    if (shop && g.mode === "camp") g.party.forEach((h, hi) => { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 50 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (!worn) return; const slot = CM.SLOTS.find((s) => h[s] === worn); const b = document.createElement("button"); b.textContent = CM.t("bag.insure.worn", { who: h.name, what: CM.itemName(worn), n: Math.max(5, Math.ceil(worn.value * CM.INSURE_RATE)) }); b.addEventListener("click", () => { this.note(g.insure(hi, slot)); this.fillBag(); }); beltBox.appendChild(b); });
+    if (shop && g.mode === "camp") { const sel = document.createElement("select"); sel.innerHTML = `<option value="">${this.esc(CM.t("bag.order"))}</option>` + Object.keys(CM.ORDERABLE).map((k) => `<option value="${k}">${this.esc(CM.ORDERABLE[k](g.floor.number + 3).name)} - ${Math.ceil(CM.priceAt(CM.ORDERABLE[k](g.floor.number + 3).value, g.floor.number) * CM.ORDER_OVER)} gold</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) { this.note(g.order(sel.value)); this.fillBag(); } }); beltBox.appendChild(sel); if ((g.orders || []).length) { const o = document.createElement("i"); o.className = "small"; o.textContent = " " + CM.t("bag.ordered", { list: g.orders.map((x) => x.item.name).join(", ") }); beltBox.appendChild(o); } }
     (g.belt || []).forEach((it, i) => { if (!it) return; const b = document.createElement("button"); b.textContent = `Off the belt: ${it.name}`; b.addEventListener("click", () => { this.note(g.fromBelt(i)); this.fillBag(); }); beltBox.appendChild(b); });
     const base = picked ? CM.itemCard(picked) : "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     if (picked) this.$("#bag-note").textContent = base;

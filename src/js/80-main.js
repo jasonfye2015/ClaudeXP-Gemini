@@ -539,11 +539,11 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     if (inFight) {
       if (r === "use") padKey(K.fight); else if (r === "back") padKey(K.defend); else if (r === "bag") padKey(K.item); else if (r === "cast") padKey(K.cast);
-      else if (r === "left" || r === "right") padKey("Tab"); else if (r === "pause") padKey("Escape"); else if (r === "run") padKey(K.run);
+      else if (r === "left" || r === "right") padKey("Tab"); else if (r === "pause") padKey("Escape"); else if (r === "run") padKey(K.run); else if (r === "belt") padKey("Digit5");
       return;
     }
     if (r === "use") padKey(K.use); else if (r === "back" || r === "pause") padKey("Escape"); else if (r === "bag") padKey(K.inventory); else if (r === "cast") padKey(K.cast);
-    else if (r === "map") padKey(K.map); else if (r === "left") act(K.strafeLeft || "KeyQ"); else if (r === "right") act(K.strafeRight || "KeyE");
+    else if (r === "map") padKey(K.map); else if (r === "left") act(K.strafeLeft || "KeyQ"); else if (r === "right") act(K.strafeRight || "KeyE"); else if (r === "belt") padKey("Digit5");
     else if (r === "upPad") act("ArrowUp"); else if (r === "downPad") act("ArrowDown"); else if (r === "leftPad") act("ArrowLeft"); else if (r === "rightPad") act("ArrowRight");
   }
   function pollGamepad(now) {

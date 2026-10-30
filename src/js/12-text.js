@@ -32,6 +32,23 @@ CM.TEXT = {
   "pad.press": "press a button...",
   "pad.help": "A gamepad works too: the stick or pad moves; the buttons as set below. On a touch screen, tap the view: the sides turn, the top walks, the bottom steps back.",
   "layout.handheld": "Handheld layout - thumb-sized buttons and larger text, as on a Steam Deck (Auto: by the screen's shape)",
+  "hud.heavy": "Heavy-laden",
+  "hud.overloaded": "Overloaded",
+  "hud.blessed": "blessed",
+  "bag.weight": "Weight: {n}/{cap}",
+  "bag.title.shop": "The Merchant",
+  "bag.title.pack": "Inventory",
+  "bag.gold": "Gold: {n}",
+  "bag.insure": "Insure ({n} gold)",
+  "bag.insure.worn": "Insure {who}'s {what} ({n} gold)",
+  "bag.order": "Order for the next camp (a tenth over)...",
+  "bag.ordered": "ordered: {list}",
+  "camp.bounty": "Bounty board",
+  "fence.head": "The fence, in the corner",
+  "fence.unknown": "{what} (unknown): {n} gold",
+  "fence.cursed": "{what} (cursed): takes it for nothing",
+  "fence.rumour": "A rumour of a strongbox ({n} gold)",
+  "fence.rumour.bought": "A rumour, bought: floor {n}",
 };
 CM.t = function (key, vars) {
   let s = CM.TEXT[key];

@@ -22,6 +22,19 @@ const extra = [["the people (CM.PEOPLE)", CM.PEOPLE.reduce((n, p) => n + words([
   ["the hermit's truths (CM.CHAPTER_TRUTH)", Object.values(CM.CHAPTER_TRUTH).reduce((n, t) => n + words(t), 0)]];
 for (const [what, n] of extra) { total += n; console.log(`  ${what.padEnd(60)} ${String(n).padStart(6)}`); }
 console.log(`  ${"in all".padEnd(26)} ${String(total).padStart(6)} words\n`);
+// the things' words: the bases, the affixes, the trinkets, the relics' powers, the scars, the traps, the locks, the recipes, the leaders
+const things = [["the bases (CM.BASES)", Object.keys(CM.BASES).reduce((n, k) => n + words(k), 0)],
+  ["the affixes and curses (CM.AFFIXES, CM.CURSES)", Object.keys(CM.AFFIXES).reduce((n, k) => n + words(k), 0) + Object.values(CM.CURSES || {}).reduce((n, c) => n + words(c.what || c.name), 0)],
+  ["the trinkets (CM.TRINKETS)", Object.values(CM.TRINKETS).reduce((n, t) => n + words(t.name) + words(t.what), 0)],
+  ["the relics' powers (CM.RELIC_POWERS)", Object.values(CM.RELIC_POWERS).reduce((n, p) => n + words(p.name) + words(p.what), 0)],
+  ["the scars, traps and locks", Object.values(CM.SCARS).reduce((n, s) => n + words(s.name) + words(s.what), 0) + Object.values(CM.TRAPS).reduce((n, t) => n + words(t), 0) + Object.values(CM.LOCKS).reduce((n, l) => n + words(l.name), 0)],
+  ["the recipes (CM.RECIPES)", Object.values(CM.RECIPES).reduce((n, r) => n + words(r.name) + words(r.what), 0)],
+  ["the leaders and the uniques (CM.ELITES, CM.UNIQUES)", Object.values(Object.assign({}, CM.ELITES, CM.ELITES_MORE)).reduce((n, e) => n + words(e.name) + words(e.blurb), 0) + Object.values(CM.UNIQUES).reduce((n, u) => n + words(u.name) + words(u.lore), 0)],
+  ["the words the rules read back (CM.TEXT)", Object.values(CM.TEXT).reduce((n, t) => n + words(t), 0)]];
+let thingWords = 0;
+console.log("The things' words (the item tables, and CM.TEXT):");
+for (const [what, n] of things) { thingWords += n; console.log(`  ${what.padEnd(60)} ${String(n).padStart(6)}`); }
+console.log(`  ${"in all".padEnd(60)} ${String(thingWords).padStart(6)} words\n`);
 // long strings still in the code: a rough count of literals of fifty characters or more, file by file
 const SRC = path.join(__dirname, "..", "src", "js");
 console.log("Long strings still in the code (fifty characters or more, outside 12-text.js and 13-lore.js):");

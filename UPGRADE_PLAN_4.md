@@ -248,7 +248,7 @@ Size: L.
 
 Size: M.
 
-## Phase 9 - Around the things - v5.0
+## Phase 9 - Around the things - v5.0 - DONE
 
 - **The balance pass**: fifty seeds a difficulty with `--loot`; the numbers in the README; the ladder re-measured
   (the rungs that touch gold and potions - *costly temple*, *poor veins*, *no greater potions* - re-tuned).

@@ -72,9 +72,9 @@ Object.assign(CM.UI.prototype, {
       box.appendChild(div);
     });
     if (!box.children.length) box.innerHTML = "<div class='small'>The benches are empty tonight.</div>";
-    const fence = this.$("#fence"); fence.innerHTML = "<div class='head'>The fence, in the corner</div>";
-    g.bag.forEach((it, row) => { if (!it.unknown && !(it.props && it.props.cursed)) return; const b = document.createElement("button"); b.textContent = it.unknown ? `${CM.baseName(it)} (unknown): ${Math.floor(it.value / 2)} gold` : `${it.name} (cursed): takes it for nothing`; b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fence(row) || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); });
-    { const b = document.createElement("button"); b.textContent = g.rumourBox ? `A rumour, bought: floor ${g.rumourBox}` : `A rumour of a strongbox (${CM.RUMOUR_PRICE} gold)`; b.disabled = Boolean(g.rumourBox); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fenceRumour() || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); }
+    const fence = this.$("#fence"); fence.innerHTML = `<div class='head'>${this.esc(CM.t("fence.head"))}</div>`;
+    g.bag.forEach((it, row) => { if (!it.unknown && !(it.props && it.props.cursed)) return; const b = document.createElement("button"); b.textContent = it.unknown ? CM.t("fence.unknown", { what: CM.baseName(it), n: Math.floor(it.value / 2) }) : CM.t("fence.cursed", { what: it.name }); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fence(row) || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); });
+    { const b = document.createElement("button"); b.textContent = g.rumourBox ? CM.t("fence.rumour.bought", { n: g.rumourBox }) : CM.t("fence.rumour", { n: CM.RUMOUR_PRICE }); b.disabled = Boolean(g.rumourBox); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fenceRumour() || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); }
     this.$("#tavern-note").textContent = fallen.length ? "" : "The party is whole; the recruits drink to that.";
   },
 
@@ -96,7 +96,7 @@ Object.assign(CM.UI.prototype, {
         row.appendChild(this.icon(it, 22));
         const text = document.createElement("div");
         const n = (it.props || {}).enchant || 0;
-        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(h.name)}'s ${CM.SLOT_NAMES[slot].toLowerCase()} - ${this.esc(CM.itemLabel(it))}${n ? ` - the smith's work: +${n}` : ""}</small>`;
+        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(h.name)}'s ${CM.SLOT_NAMES[slot].toLowerCase()} - ${this.esc(CM.itemLabel(it))}${n ? ` - the smith's work: +${n}` : ""}</small>`; text.title = CM.itemCard(it);
         row.appendChild(text);
         const act = document.createElement("div");
         act.className = "hire";
@@ -149,7 +149,7 @@ Object.assign(CM.UI.prototype, {
         row.className = "recruit";
         row.appendChild(this.icon(it, 22));
         const text = document.createElement("div");
-        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`;
+        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`; text.title = CM.itemCard(it);
         row.appendChild(text);
         const act = document.createElement("div");
         act.className = "hire";
@@ -206,7 +206,7 @@ Object.assign(CM.UI.prototype, {
       const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "40px 1fr auto";
       row.appendChild(this.icon(it, 22));
       const text = document.createElement("span");
-      text.innerHTML = `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small> `;
+      text.innerHTML = `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small> `; text.title = CM.itemCard(it);
       row.appendChild(text);
       const b = document.createElement("button");
       b.textContent = "Take it";
@@ -222,7 +222,7 @@ Object.assign(CM.UI.prototype, {
       row.className = "recruit";
       row.appendChild(this.icon(it, 22));
       const text = document.createElement("div");
-      text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`;
+      text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`; text.title = CM.itemCard(it);
       row.appendChild(text);
       const act = document.createElement("div");
       act.className = "hire";

@@ -1008,6 +1008,31 @@ Wounds, weight and the economy (the sixth big update, phase 8 - v4.9)
   lacks, sells heavy things when over the line, and fences unknowns and curses.
   Test: "wounds, weight and the economy".
 
+Around the things (the sixth big update, phase 9 - v5.0)
+  The balance pass, with the bot (node tools/sim.js --seeds 20 --to 20 --difficulty <d> --loot), twenty seeds a
+  difficulty to floor 20:
+    Gentle: median floor 21, 16 of 20 crowned, 3 fell (all in the palace, 16-20)
+    Fair:   median floor 21, 15 of 20 crowned, 3 fell; the merchant 66% of spending, tithe 19%, alchemist 8%,
+            insurance 6%, peddler 1%; 55,500 gold found a run and 11,400 spent; wands used 44 times a run, brews
+            27, rations 5, scrolls 4; the first weapon upgrade by floor 1.4, armour 1.9, helm 5.6, off hand 9.5
+    Hard:   median floor 21, 15 of 20 crowned, 3 fell; merchant 63%, tithe 21%
+    Grim:   median floor 21, 15 of 20 crowned, 4 fell; merchant 64%, tithe 20%
+  The crown rate on Fair with the bot is 75% (it was about 90% at v4.1, before the wounds, the weight, the
+  loadouts and the eight abilities): the median floor is unchanged and every fall is in the palace, so nothing
+  was tuned down for v5.0; the ladder's gold rungs were re-read (costly temple now doubles the wounds' price
+  too; poor veins and no greater potions stand as they were).
+  The item card (CM.itemCard) is on every row that names a thing - the pack and the merchant's wares, the smith's
+  and the vault's lists, the hero's sheet (hover for it) - and the chest's line carries each thing's label.
+  Rarity is marked by a shape before the name as well as a colour (a diamond for fine, a star for rare, a
+  four-point star for a relic, a flower for a unique, a skull for the cursed), for eyes that don't tell the greens
+  from the blues. The gamepad has a belt button (LT by default: the first thing on the belt; rebind it in the
+  Gamepad settings), and the belt's buttons in the HUD take a tap. The belt's use, and a flask thrown from it in
+  a fight, are logged and play back in a film. The HUD's and the camps' new words (Heavy-laden, Overloaded,
+  blessed, the bag's weight and gold, insurance, orders, the bounty board, the fence) go through 12-text.js, and
+  tools/words.js counts the things' words too (the bases, affixes, trinkets, powers, scars, recipes, leaders and
+  uniques: about two thousand words beside the story's).
+  Test: "around the things". The sixth big update is complete: nine phases, v4.1 to v5.0, and 75 tests.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

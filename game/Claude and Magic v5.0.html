@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v4.9 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v5.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -410,6 +410,12 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 .things .thing { font: 12.5px var(--serif); color: var(--ink); }
 .things .thing.unseen { color: var(--faint); letter-spacing: 1px; }
 .rarity-cursed { color: #D070D0; }
+/* colour-blind marks for rarity: a shape before the name, not only a colour */
+.rarity-fine::before { content: "\25C6\00A0"; font-size: 0.8em; }
+.rarity-rare::before { content: "\2605\00A0"; font-size: 0.8em; }
+.rarity-relic::before { content: "\2726\00A0"; font-size: 0.8em; }
+.rarity-unique::before { content: "\2756\00A0"; font-size: 0.8em; }
+.rarity-cursed::before { content: "\2620\00A0"; font-size: 0.8em; }
 /* ---- the belt ---- */
 #belt { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 4px; }
 #belt button.slot { padding: 3px 4px; font: 11px var(--serif); min-height: 30px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -424,7 +430,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "4.9", built: "2026-10-30" };
+const CM = window.CM = { version: "5.0", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1386,9 +1392,9 @@ CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"
   ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"], ["auto", "in a fight: the party fights on by itself"]];
 // a gamepad's buttons, by the standard mapping, and what each does unless Settings > Keys says otherwise (the stick and
 // the d-pad - 12 to 15 - always move)
-CM.DEFAULT_PAD = { use: 0, back: 1, bag: 2, cast: 3, left: 4, right: 5, run: 7, map: 8, pause: 9 };
+CM.DEFAULT_PAD = { use: 0, back: 1, bag: 2, cast: 3, left: 4, right: 5, belt: 6, run: 7, map: 8, pause: 9 };
 CM.PAD_ACTIONS = [["use", "use / talk / pick; in a fight: fight"], ["back", "step back / cancel; in a fight: defend"], ["bag", "the pack; in a fight: an item"], ["cast", "cast or use a skill"],
-  ["left", "sidestep left; in a list: the one before"], ["right", "sidestep right; in a list: the next"], ["run", "in a fight: run"], ["map", "the automap, large"], ["pause", "pause"]];
+  ["left", "sidestep left; in a list: the one before"], ["right", "sidestep right; in a list: the next"], ["belt", "the first thing on the belt (key 5); held with Left or Right, the next slots"], ["run", "in a fight: run"], ["map", "the automap, large"], ["pause", "pause"]];
 CM.PAD_NAMES = ["A", "B", "X", "Y", "LB", "RB", "LT", "RT", "Select", "Start", "L3", "R3", "Up", "Down", "Left", "Right"];
 CM.padName = (i) => (i === undefined || i === null || i === "" ? "-" : CM.PAD_NAMES[i] || `button ${i}`);
 CM.keyName = (code) => (code || "").replace(/^Key/, "").replace(/^Digit/, "").replace(/^Arrow/, "").replace("Space", "Space").replace("Backquote", "`");
@@ -1627,6 +1633,23 @@ CM.TEXT = {
   "pad.press": "press a button...",
   "pad.help": "A gamepad works too: the stick or pad moves; the buttons as set below. On a touch screen, tap the view: the sides turn, the top walks, the bottom steps back.",
   "layout.handheld": "Handheld layout - thumb-sized buttons and larger text, as on a Steam Deck (Auto: by the screen's shape)",
+  "hud.heavy": "Heavy-laden",
+  "hud.overloaded": "Overloaded",
+  "hud.blessed": "blessed",
+  "bag.weight": "Weight: {n}/{cap}",
+  "bag.title.shop": "The Merchant",
+  "bag.title.pack": "Inventory",
+  "bag.gold": "Gold: {n}",
+  "bag.insure": "Insure ({n} gold)",
+  "bag.insure.worn": "Insure {who}'s {what} ({n} gold)",
+  "bag.order": "Order for the next camp (a tenth over)...",
+  "bag.ordered": "ordered: {list}",
+  "camp.bounty": "Bounty board",
+  "fence.head": "The fence, in the corner",
+  "fence.unknown": "{what} (unknown): {n} gold",
+  "fence.cursed": "{what} (cursed): takes it for nothing",
+  "fence.rumour": "A rumour of a strongbox ({n} gold)",
+  "fence.rumour.bought": "A rumour, bought: floor {n}",
 };
 CM.t = function (key, vars) {
   let s = CM.TEXT[key];
@@ -7573,7 +7596,7 @@ Object.assign(CM.Game.prototype, {
       this.sound("chest");
       this.count("chests");
       this.emit("fx", { kind: "sparkle", at: [x, y] });
-      const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : i.name)).join(", ");
+      const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : `${i.name} (${CM.itemLabel(i)})`)).join(", ");
       this.say(`The chest creaks open: ${gold} gold` + (found ? `, ${found}.` : "."));
       if (this.gold >= 2000) this.achieve("hoarder");
       this.saveRun();
@@ -7825,7 +7848,7 @@ Object.assign(CM.Game.prototype, {
   },
   // the pack's weight against what the party can carry: 1 is the line; over it costs, half again over it there is no running
   overweight() { return CM.bagWeight(this.bag) / CM.carryCap(this.party); },
-  weightWord() { const o = this.overweight(); return o >= CM.OVERWEIGHT_RUN ? "Overloaded" : o > 1 ? "Heavy-laden" : ""; },
+  weightWord() { const o = this.overweight(); return o >= CM.OVERWEIGHT_RUN ? CM.t("hud.overloaded") : o > 1 ? CM.t("hud.heavy") : ""; },
   // the dwarves' pick: the nearest hidden door or stair on the floor opens without searching, and the pick breaks
   usePick(row) {
     const fl = this.floor, hidden = Object.entries(fl.features).filter(([, f]) => (f.type === "secret" || f.type === "secretstair") && !f.found);
@@ -12076,7 +12099,7 @@ CM.UI = class {
       <div class="list-title">Gear</div>
       ${CM.setWorn(h) ? `<div class="gold">${CM.SETS[CM.setWorn(h)].name} set, all three worn: ${CM.SETS[CM.setWorn(h)].what}.</div>` : ""}
       ${CM.relicsWorn(h) >= 2 ? `<div class="gold">The guardians' things, worn together: ${CM.RELIC_SET.two.what}${CM.relicsWorn(h) >= 3 ? "; " + CM.RELIC_SET.three.what : ""}.</div>` : ""}${h.oil && h.oil.fights > 0 ? `<div>Oiled: ${CM.ELEMENT_NAMES[h.oil.element]} on the weapon for ${CM.plural(h.oil.fights, "more fight")}.</div>` : ""}
-      <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span><span class="icon-slot" data-slot="${slot}"></span> ${it ? `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
+      <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span><span class="icon-slot" data-slot="${slot}"></span> ${it ? `<b class="rarity-${CM.rarityOf(it)}" title="${this.esc(CM.itemCard(it))}">${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
     for (const span of facts.querySelectorAll(".icon-slot")) { const it = h[span.dataset.slot]; if (it) span.appendChild(this.icon(it, 20)); }
     for (const b of facts.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { if (g.setRow(h, b.dataset.row)) this.renderSheet(); });
     for (const b of facts.querySelectorAll("button[data-formation]")) b.addEventListener("click", () => { if (g.setFormation(b.dataset.formation)) this.renderSheet(); });
@@ -13013,7 +13036,7 @@ Object.assign(CM.UI.prototype, {
     light.classList.toggle("dark", !g.hasLight() || g.inDark());
     this.renderBelt();
     const temper = this.$("#side .temper"), hungry = g.hungerWord();
-    temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", blessed" : ""}`;
+    temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
     temper.classList.toggle("low", (g.morale === undefined ? 70 : g.morale) <= 30 || hungry === "Weary");
     const hint = this.$("#view .hint");
@@ -13101,7 +13124,7 @@ Object.assign(CM.UI.prototype, {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
         ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
-      camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")], ["Bounty board", () => { const note = g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty(); if (note) g.say(note); this.refresh(); }],
+      camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")], [CM.t("camp.bounty"), () => { const note = g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty(); if (note) g.say(note); this.refresh(); }],
         ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Guild", () => this.openSecond()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
         ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
@@ -13516,7 +13539,7 @@ Object.assign(CM.UI.prototype, {
 
   fillBag() {
     const g = this.game, shop = g.shopping;
-    this.$("#bag-title").textContent = `${shop ? "The Merchant" : "Inventory"}   -   Gold: ${g.gold.toLocaleString()}   -   Weight: ${CM.bagWeight(g.bag)}/${CM.carryCap(g.party)}${g.weightWord() ? ` (${g.weightWord().toLowerCase()})` : ""}`;
+    this.$("#bag-title").textContent = `${CM.t(shop ? "bag.title.shop" : "bag.title.pack")}   -   ${CM.t("bag.gold", { n: g.gold })}   -   ${CM.t("bag.weight", { n: CM.bagWeight(g.bag), cap: CM.carryCap(g.party) })}${g.weightWord() ? ` (${g.weightWord().toLowerCase()})` : ""}`;
     this.$("#shop-list").style.display = shop ? "" : "none";
     this.$("#btn-buy").style.display = shop ? "" : "none";
     this.$("#btn-sell").style.display = shop ? "" : "none";
@@ -13529,6 +13552,7 @@ Object.assign(CM.UI.prototype, {
         const text = document.createElement("span");
         text.innerHTML = `<span class="rarity-${CM.rarityOf(item)}">${this.esc(item.unknown ? CM.baseName(item) : item.name)}</span> <span class="what">${describe(item)}</span>`;
         row.appendChild(text);
+        row.title = CM.itemCard(item);
         row.addEventListener("click", () => { onPick(i); this.fillBag(); });
         el.appendChild(row);
       });
@@ -13552,9 +13576,9 @@ Object.assign(CM.UI.prototype, {
     });
     const beltBox = this.$("#bag-belt"); beltBox.innerHTML = "";
     if (picked && CM.BELT_KINDS.includes(picked.kind)) { const b = document.createElement("button"); b.textContent = "To the belt"; b.title = "Four things to hand: keys 5 to 8; in a fight the first used in a round costs no turn"; b.addEventListener("click", () => { this.note(g.toBelt(this.bagRow)); this.bagRow = -1; this.fillBag(); }); beltBox.appendChild(b); }
-    if (shop && picked && !picked.insured && g.mode === "camp") { const b = document.createElement("button"); b.textContent = `Insure (${Math.max(5, Math.ceil((picked.value || 0) * CM.INSURE_RATE))} gold)`; b.title = "If the party falls, an insured thing goes to the vault for the next."; b.addEventListener("click", () => { this.note(g.insure(this.bagRow)); this.fillBag(); }); beltBox.appendChild(b); }
-    if (shop && g.mode === "camp") g.party.forEach((h, hi) => { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 50 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (!worn) return; const slot = CM.SLOTS.find((s) => h[s] === worn); const b = document.createElement("button"); b.textContent = `Insure ${h.name}'s ${CM.itemName(worn)} (${Math.max(5, Math.ceil(worn.value * CM.INSURE_RATE))} gold)`; b.addEventListener("click", () => { this.note(g.insure(hi, slot)); this.fillBag(); }); beltBox.appendChild(b); });
-    if (shop && g.mode === "camp") { const sel = document.createElement("select"); sel.innerHTML = `<option value="">Order for the next camp (a tenth over)...</option>` + Object.keys(CM.ORDERABLE).map((k) => `<option value="${k}">${this.esc(CM.ORDERABLE[k](g.floor.number + 3).name)} - ${Math.ceil(CM.priceAt(CM.ORDERABLE[k](g.floor.number + 3).value, g.floor.number) * CM.ORDER_OVER)} gold</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) { this.note(g.order(sel.value)); this.fillBag(); } }); beltBox.appendChild(sel); if ((g.orders || []).length) { const o = document.createElement("i"); o.className = "small"; o.textContent = ` ordered: ${g.orders.map((x) => x.item.name).join(", ")}`; beltBox.appendChild(o); } }
+    if (shop && picked && !picked.insured && g.mode === "camp") { const b = document.createElement("button"); b.textContent = CM.t("bag.insure", { n: Math.max(5, Math.ceil((picked.value || 0) * CM.INSURE_RATE)) }); b.title = "If the party falls, an insured thing goes to the vault for the next."; b.addEventListener("click", () => { this.note(g.insure(this.bagRow)); this.fillBag(); }); beltBox.appendChild(b); }
+    if (shop && g.mode === "camp") g.party.forEach((h, hi) => { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 50 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (!worn) return; const slot = CM.SLOTS.find((s) => h[s] === worn); const b = document.createElement("button"); b.textContent = CM.t("bag.insure.worn", { who: h.name, what: CM.itemName(worn), n: Math.max(5, Math.ceil(worn.value * CM.INSURE_RATE)) }); b.addEventListener("click", () => { this.note(g.insure(hi, slot)); this.fillBag(); }); beltBox.appendChild(b); });
+    if (shop && g.mode === "camp") { const sel = document.createElement("select"); sel.innerHTML = `<option value="">${this.esc(CM.t("bag.order"))}</option>` + Object.keys(CM.ORDERABLE).map((k) => `<option value="${k}">${this.esc(CM.ORDERABLE[k](g.floor.number + 3).name)} - ${Math.ceil(CM.priceAt(CM.ORDERABLE[k](g.floor.number + 3).value, g.floor.number) * CM.ORDER_OVER)} gold</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) { this.note(g.order(sel.value)); this.fillBag(); } }); beltBox.appendChild(sel); if ((g.orders || []).length) { const o = document.createElement("i"); o.className = "small"; o.textContent = " " + CM.t("bag.ordered", { list: g.orders.map((x) => x.item.name).join(", ") }); beltBox.appendChild(o); } }
     (g.belt || []).forEach((it, i) => { if (!it) return; const b = document.createElement("button"); b.textContent = `Off the belt: ${it.name}`; b.addEventListener("click", () => { this.note(g.fromBelt(i)); this.fillBag(); }); beltBox.appendChild(b); });
     const base = picked ? CM.itemCard(picked) : "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     if (picked) this.$("#bag-note").textContent = base;
@@ -13638,9 +13662,9 @@ Object.assign(CM.UI.prototype, {
       box.appendChild(div);
     });
     if (!box.children.length) box.innerHTML = "<div class='small'>The benches are empty tonight.</div>";
-    const fence = this.$("#fence"); fence.innerHTML = "<div class='head'>The fence, in the corner</div>";
-    g.bag.forEach((it, row) => { if (!it.unknown && !(it.props && it.props.cursed)) return; const b = document.createElement("button"); b.textContent = it.unknown ? `${CM.baseName(it)} (unknown): ${Math.floor(it.value / 2)} gold` : `${it.name} (cursed): takes it for nothing`; b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fence(row) || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); });
-    { const b = document.createElement("button"); b.textContent = g.rumourBox ? `A rumour, bought: floor ${g.rumourBox}` : `A rumour of a strongbox (${CM.RUMOUR_PRICE} gold)`; b.disabled = Boolean(g.rumourBox); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fenceRumour() || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); }
+    const fence = this.$("#fence"); fence.innerHTML = `<div class='head'>${this.esc(CM.t("fence.head"))}</div>`;
+    g.bag.forEach((it, row) => { if (!it.unknown && !(it.props && it.props.cursed)) return; const b = document.createElement("button"); b.textContent = it.unknown ? CM.t("fence.unknown", { what: CM.baseName(it), n: Math.floor(it.value / 2) }) : CM.t("fence.cursed", { what: it.name }); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fence(row) || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); });
+    { const b = document.createElement("button"); b.textContent = g.rumourBox ? CM.t("fence.rumour.bought", { n: g.rumourBox }) : CM.t("fence.rumour", { n: CM.RUMOUR_PRICE }); b.disabled = Boolean(g.rumourBox); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fenceRumour() || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); }
     this.$("#tavern-note").textContent = fallen.length ? "" : "The party is whole; the recruits drink to that.";
   },
 
@@ -13662,7 +13686,7 @@ Object.assign(CM.UI.prototype, {
         row.appendChild(this.icon(it, 22));
         const text = document.createElement("div");
         const n = (it.props || {}).enchant || 0;
-        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(h.name)}'s ${CM.SLOT_NAMES[slot].toLowerCase()} - ${this.esc(CM.itemLabel(it))}${n ? ` - the smith's work: +${n}` : ""}</small>`;
+        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(h.name)}'s ${CM.SLOT_NAMES[slot].toLowerCase()} - ${this.esc(CM.itemLabel(it))}${n ? ` - the smith's work: +${n}` : ""}</small>`; text.title = CM.itemCard(it);
         row.appendChild(text);
         const act = document.createElement("div");
         act.className = "hire";
@@ -13715,7 +13739,7 @@ Object.assign(CM.UI.prototype, {
         row.className = "recruit";
         row.appendChild(this.icon(it, 22));
         const text = document.createElement("div");
-        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`;
+        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`; text.title = CM.itemCard(it);
         row.appendChild(text);
         const act = document.createElement("div");
         act.className = "hire";
@@ -13772,7 +13796,7 @@ Object.assign(CM.UI.prototype, {
       const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "40px 1fr auto";
       row.appendChild(this.icon(it, 22));
       const text = document.createElement("span");
-      text.innerHTML = `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small> `;
+      text.innerHTML = `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small> `; text.title = CM.itemCard(it);
       row.appendChild(text);
       const b = document.createElement("button");
       b.textContent = "Take it";
@@ -13788,7 +13812,7 @@ Object.assign(CM.UI.prototype, {
       row.className = "recruit";
       row.appendChild(this.icon(it, 22));
       const text = document.createElement("div");
-      text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`;
+      text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`; text.title = CM.itemCard(it);
       row.appendChild(text);
       const act = document.createElement("div");
       act.className = "hire";
@@ -14345,11 +14369,11 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     if (inFight) {
       if (r === "use") padKey(K.fight); else if (r === "back") padKey(K.defend); else if (r === "bag") padKey(K.item); else if (r === "cast") padKey(K.cast);
-      else if (r === "left" || r === "right") padKey("Tab"); else if (r === "pause") padKey("Escape"); else if (r === "run") padKey(K.run);
+      else if (r === "left" || r === "right") padKey("Tab"); else if (r === "pause") padKey("Escape"); else if (r === "run") padKey(K.run); else if (r === "belt") padKey("Digit5");
       return;
     }
     if (r === "use") padKey(K.use); else if (r === "back" || r === "pause") padKey("Escape"); else if (r === "bag") padKey(K.inventory); else if (r === "cast") padKey(K.cast);
-    else if (r === "map") padKey(K.map); else if (r === "left") act(K.strafeLeft || "KeyQ"); else if (r === "right") act(K.strafeRight || "KeyE");
+    else if (r === "map") padKey(K.map); else if (r === "left") act(K.strafeLeft || "KeyQ"); else if (r === "right") act(K.strafeRight || "KeyE"); else if (r === "belt") padKey("Digit5");
     else if (r === "upPad") act("ArrowUp"); else if (r === "downPad") act("ArrowDown"); else if (r === "leftPad") act("ArrowLeft"); else if (r === "rightPad") act("ArrowRight");
   }
   function pollGamepad(now) {

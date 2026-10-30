@@ -2264,6 +2264,33 @@ test("wounds, weight and the economy: a wound on rising and a grave one, healed 
   assert.ok((sp.insurance || 0) > 0 || (sp.tithe || 0) > 0 || (g5.tally.bounties || 0) > 0 || g5.mode === "title", `the bot used the sinks: ${JSON.stringify(sp)} bounties ${g5.tally.bounties || 0}`);
 });
 
+test("around the things: the pad's belt button, rarity marked by shape as well as colour, the item card on every row, a film that shows the belt used and the thing thrown, the words counted", () => {
+  const CM = load();
+  assert.strictEqual(CM.DEFAULT_PAD.belt, 6); assert.ok(CM.PAD_ACTIONS.some(([id]) => id === "belt"));
+  for (const k of ["hud.heavy", "hud.overloaded", "hud.blessed", "bag.weight", "bag.insure", "camp.bounty", "fence.head", "fence.rumour"]) assert.notStrictEqual(CM.t(k), k, `${k} is in CM.TEXT`);
+  assert.strictEqual(CM.t("bag.weight", { n: 12, cap: 48 }), "Weight: 12/48");
+  const css = fs.readFileSync(path.join(__dirname, "..", "src", "style.css"), "utf8");
+  for (const r of ["fine", "rare", "relic", "unique", "cursed"]) assert.ok(css.includes(`.rarity-${r}::before`), `a shape for ${r}`);
+  const built = fs.readdirSync(path.join(__dirname, "..", "game")).find((f) => f.endsWith(".html")); assert.ok(fs.readFileSync(path.join(__dirname, "..", "game", built), "utf8").includes(".rarity-fine::before"), "and it is in the build");
+  // the item card: every kind of thing has one, and the chest's line carries the label of what was found
+  for (const it of [CM.makeGear("weapon", 8, new CM.Random(1)), CM.trinket("chalk"), CM.lockpick(), CM.flask("oil"), CM.ration(), CM.makeUnique("holding"), CM.relic("rat")]) { const card = CM.itemCard(it); assert.ok(card && card.length > 10 && card.includes(CM.itemLabel(it).slice(0, 12)), it.name); }
+  const game = new CM.Game(); game.newGame("around-1", fixedParty(CM));
+  { const fl = game.floor, k = Object.keys(fl.things).find((c) => fl.things[c].type === "chest" && fl.things[c].items && fl.things[c].items.length);
+    if (k) { fl.things[k].trap = null; fl.pos = k.split(",").map(Number); const it = fl.things[k].items[0]; it.unknown = false; game.use(); assert.ok(game.messages.slice(-2).some((l) => l.includes(CM.itemLabel(it).slice(0, 10))), `the chest's line carries the label: ${game.messages.slice(-1)[0]}`); } }
+  // a film shows the belt used and the thing thrown: the acts are logged and play back the same
+  const g2 = new CM.Game(); g2.newGame("around-2", fixedParty(CM)); const mageAt = g2.party.findIndex((h) => h.cls === "Mage");
+  const mana = g2.bag.findIndex((i) => i.kind === "mana"), feather = g2.bag.findIndex((i) => i.kind === "revive"); assert.ok(mana >= 0 && feather >= 0);
+  assert.strictEqual(g2.toBelt(mana, 0), ""); assert.strictEqual(g2.toBelt(g2.bag.findIndex((i) => i.kind === "revive"), 1), ""); assert.strictEqual((g2.belt || []).filter(Boolean).length, 2);
+  g2.useBelt(0, mageAt); g2.useBelt(1, mageAt);                          // (the mage is whole: the potion is refused and goes back; the feather too)
+  assert.ok(g2.runLog.some((l) => l[0] === "useBelt") && g2.runLog.some((l) => l[0] === "toBelt"), "the belt is in the log");
+  const spec = g2.replaySpec(); const again = CM.replayRun(spec); assert.strictEqual(again.bag.length, g2.bag.length); assert.strictEqual((again.belt || []).filter(Boolean).map((i) => i.kind).join(), (g2.belt || []).filter(Boolean).map((i) => i.kind).join(), "the belt comes out the same in the film"); assert.strictEqual(again.messages.slice(-1)[0], g2.messages.slice(-1)[0]);
+  { const g3 = new CM.Game(); g3.newGame("around-3", fixedParty(CM)); g3.bag.push(CM.flask("oil")); assert.strictEqual(g3.toBelt(g3.bag.length - 1, 0), "");
+    g3.foes = [{ name: "Orc", kind: "Orc", hp: 60, max: 60, atk: 3, df: 1, row: "front", xp: 5, gold: 2 }]; g3.combat = { foes: g3.foes, round: 1, order: [], index: 0, waiting: g3.party[0] }; g3.mode = "combat"; g3.rnd = new CM.Random(1);
+    const n = g3.runLog.length, before = g3.foes[0].hp; const ok = g3.act("item", { belt: 0, who: 0 }); assert.ok(ok, "thrown from the belt in a fight"); assert.ok(g3.foes[0].hp < before || g3.foes[0].burning, "and it lands"); assert.ok(g3.runLog.length > n && JSON.stringify(g3.runLog.slice(n)).includes("belt"), "the throw is in the log, for the film"); }
+  // the words: tools/words.js counts the things' words too
+  const out = execFileSync("node", [path.join(__dirname, "..", "tools", "words.js")], { encoding: "utf8" }); assert.ok(out.includes("The things' words") && /the trinkets \(CM.TRINKETS\)\s+\d+/.test(out), out.slice(0, 200));
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
