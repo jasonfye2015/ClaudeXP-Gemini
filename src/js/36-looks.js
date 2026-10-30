@@ -166,8 +166,11 @@ CM.art.DOLLS = {
   Mage: ["human_male", "boots.short", "body.robe_blue", "beard.long_white", "head.wizard_blue", "left.book", "right.staff_mage"],
   Druid: ["human_female", "boots.brown", "body.robe_green", "hair.long_red", "head.hood_green_2", "right.staff_organic"],
   Bard: ["human_male", "boots.short", "legs.blue", "body.vest", "cloak.red", "hair.short_black", "head.feather_red", "right.horn"],
+  Monk: ["human_male", "boots.short", "legs.black", "body.vest", "hair.short_black"],
+  Necromancer: ["human_female", "boots.short", "body.robe_blue", "cloak.black", "head.hood_black", "left.book", "right.staff_mage"],
+  Artificer: ["human_male", "boots.brown", "legs.blue", "body.leather", "hair.short_black", "left.shield_round", "right.mace"],
 };
-CM.art.PORTRAIT_BG = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A", Paladin: "#4A3A2A", Ranger: "#2A3A2E", Druid: "#3A4A2A", Bard: "#4A2A3A" };
+CM.art.PORTRAIT_BG = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A", Paladin: "#4A3A2A", Ranger: "#2A3A2E", Druid: "#3A4A2A", Bard: "#4A2A3A", Monk: "#4A3A20", Necromancer: "#2A1A3A", Artificer: "#3A3A2A" };
 CM.art.portrait = function (cls, size = 56, look = "drawn") {
   if (look !== "pixel" || !CM.art.hasLook("pixel")) return CM.art.portraitDrawn(cls, size);
   const c = artCanvas(size), p = c.getContext("2d");
@@ -206,6 +209,7 @@ CM.art.itemKey = function (item) {
       if (has("Hammer")) return "i.hammer";
       if (has("Flamberge", "Dragonslayer")) return "i.great_sword";
       if (has("Club")) return "i.club";
+      if (has("Fists")) return "i.unknown";
       if (has("Staff")) return "i.staff";
       if (has("Spear")) return "i.spear";
       return "i.long_sword";

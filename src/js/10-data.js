@@ -35,10 +35,21 @@ CM.CLASSES = {
     role: "Caster, healer", cast: "thorns", blurb: "Calls thorns up through the stone: every foe hurt, some held fast, the party a little mended." },
   Bard: { hp: 22, mp: 10, atk: 4, df: 2, grow: 4, atkGrow: 1, row: "back", key: "luck", bonus: { luck: 2, dex: 1, int: 1, wis: 1 }, weapon: "Knife", armor: "Tunic",
     role: "Support", cast: "song", blurb: "A song that puts heart into the party: everyone hits harder for the fight, and hurts a little less." },
+  // three callings more, earned (CM.CLASS_UNLOCK): never among the recruits
+  Monk: { hp: 28, mp: 0, atk: 5, df: 3, grow: 6, atkGrow: 2, row: "front", key: "dex", bonus: { dex: 3, wis: 2 }, weapon: "Wrapped Fists", armor: "Tunic",
+    role: "Front line, unarmed", cast: "blows", blurb: "Fights with bare hands that grow deadlier with every level, is hard to hit, and strikes twice in a Flurry of Blows." },
+  Necromancer: { hp: 20, mp: 14, atk: 3, df: 1, grow: 3, atkGrow: 1, row: "back", key: "int", bonus: { int: 3, con: 1 }, weapon: "Staff", armor: "Robes",
+    role: "Caster, the dark kind", cast: "drain", blurb: "Drains the life out of a foe and keeps it, hexes, and raises the last thing slain to stand between the party and the blows." },
+  Artificer: { hp: 24, mp: 10, atk: 4, df: 2, grow: 4, atkGrow: 1, row: "back", key: "int", bonus: { int: 2, dex: 2, con: 1 }, weapon: "Hammer", armor: "Tunic",
+    role: "Support, engines", cast: "turret", blurb: "Winds up a clockwork turret that shoots every round of the fight, and wards the party with an engine of brass." },
 };
-CM.CLASS_ORDER = ["Knight", "Paladin", "Rogue", "Ranger", "Cleric", "Mage", "Druid", "Bard"];
+CM.CLASS_ORDER = ["Knight", "Paladin", "Rogue", "Ranger", "Cleric", "Mage", "Druid", "Bard"];   // (the eight: the recruits and the rescued are these)
+CM.NEW_CLASSES = ["Monk", "Necromancer", "Artificer"];
+CM.ALL_CLASSES = CM.CLASS_ORDER.concat(CM.NEW_CLASSES);
+// what earns the three: an achievement, or a guardian's trophy (kept between runs; game.classUnlocked)
+CM.CLASS_UNLOCK = { Monk: { achievement: "ironman", what: "slay the Lich King with no hero ever fallen" }, Necromancer: { trophy: "patriarch", what: "slay the Bone Patriarch" }, Artificer: { trophy: "master", what: "slay the Foundry Master" } };
 CM.CLASSIC = ["Knight", "Rogue", "Cleric", "Mage"];                  // the party the game suggests
-CM.CASTS = { lay: "Lay on Hands", volley: "Volley", heal: "Heal", fireball: "Fireball", thorns: "Thorns", song: "Song" };
+CM.CASTS = { lay: "Lay on Hands", volley: "Volley", heal: "Heal", fireball: "Fireball", thorns: "Thorns", song: "Song", blows: "Flurry of Blows", drain: "Drain", turret: "Clockwork Turret" };
 
 // a level earned is a boon chosen: three are offered, from these
 CM.BOONS = {
@@ -96,8 +107,8 @@ CM.AMULETS = [
 CM.ELEMENTS = { fire: { prefix: "Flaming", weak: ["Troll", "Zombie"] }, frost: { prefix: "Frost", weak: ["Demon", "Wyvern"] }, holy: { prefix: "Blessed", weak: null } };
 // armour by weight, and who can bear it: tiers 0-3 light, 4-7 medium, 8-11 heavy
 CM.ARMOR_WEIGHT = (tier) => (tier <= 3 ? "light" : tier <= 7 ? "medium" : "heavy");
-CM.BEARS = { Knight: "heavy", Paladin: "heavy", Rogue: "medium", Ranger: "medium", Cleric: "medium", Druid: "medium", Bard: "medium", Mage: "light" };
-CM.SHIELD_BEARERS = ["Knight", "Paladin", "Cleric", "Rogue", "Druid", "Bard"];
+CM.BEARS = { Knight: "heavy", Paladin: "heavy", Rogue: "medium", Ranger: "medium", Cleric: "medium", Druid: "medium", Bard: "medium", Mage: "light", Monk: "light", Necromancer: "light", Artificer: "medium" };
+CM.SHIELD_BEARERS = ["Knight", "Paladin", "Cleric", "Rogue", "Druid", "Bard", "Artificer"];
 CM.SLOTS = ["weapon", "offhand", "armor", "helm", "ring", "amulet"];
 CM.SLOT_NAMES = { weapon: "Weapon", offhand: "Off hand", armor: "Armour", helm: "Helm", ring: "Ring", amulet: "Amulet" };
 
@@ -302,6 +313,9 @@ CM.HAZARDS = {
   8: { id: "bonepiles", name: "the bone piles", note: "The bones are heaped higher than a man. Some of them stand up when you pass." },
 };
 CM.TIDE_STEPS = 30;
+CM.BOND_FIGHTS = 40;
+CM.BANTER = ["{a} and {b} share the last of the wine, and say nothing, which is enough.", "{b} is asleep against {a}'s shoulder before the fire is properly lit.",
+  "{a} tells the story of the floor again. {b} corrects the numbers.", "{a} and {b} argue, low, about the way down, and agree, as they always do."];                                                   // fights won side by side before two heroes are old friends
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
 CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
@@ -319,6 +333,18 @@ CM.ELITES = {
 // Spells and skills, by calling and the level they come at. mp 0 is a skill; once: once a fight; outside: castable
 // between fights too. Targets: foe, foes, ally, allies, fallen, none.
 CM.ABILITIES = {
+  // the Monk's hands, the Necromancer's book, the Artificer's engines
+  blows: { name: "Flurry of Blows", cls: { Monk: 1 }, mp: 0, target: "foe", what: "Two blows, each at three fifths." },
+  palm: { name: "Iron Palm", cls: { Monk: 3 }, mp: 0, target: "foe", what: "One blow that may leave the foe reeling." },
+  meditate: { name: "Still Mind", cls: { Monk: 5 }, mp: 0, target: "none", once: true, what: "A breath: a quarter of the Monk's health back, and the small ailments gone. Once a fight." },
+  drain: { name: "Drain", cls: { Necromancer: 1 }, mp: 3, target: "foe", what: "The life pulled out of a foe; half of it is the Necromancer's." },
+  hex: { name: "Hex", cls: { Necromancer: 2 }, mp: 3, target: "foe", what: "The foe is marked (a quarter more from every blow) and half-blind." },
+  thrall: { name: "Raise Thrall", cls: { Necromancer: 3 }, mp: 6, target: "none", once: true, what: "The last thing slain this fight stands up on your side: it takes the blows meant for the party, and strikes back. Once a fight." },
+  deathpact: { name: "Death Pact", cls: { Necromancer: 6 }, mp: 6, target: "foes", what: "Every foe withers; the Necromancer bleeds a little for it." },
+  turret: { name: "Clockwork Turret", cls: { Artificer: 1 }, mp: 4, target: "none", once: true, what: "A brass turret that shoots a foe every round of the fight. Once a fight." },
+  wardengine: { name: "Ward Engine", cls: { Artificer: 3 }, mp: 4, target: "none", what: "Every blow on the party does less, this fight." },
+  oilgears: { name: "Oil the Gears", cls: { Artificer: 5 }, mp: 3, target: "none", what: "The party moves first: +3 to everyone's speed, this fight." },
+  firework: { name: "Firework", cls: { Artificer: 7 }, mp: 5, target: "foes", what: "Fire on every foe." },
   // the Mage's book
   missile: { name: "Magic Missile", cls: { Mage: 1 }, mp: 2, target: "foe", what: "A bolt of force that never misses." },
   firebolt: { name: "Fire Bolt", cls: { Mage: 1 }, mp: 3, target: "foe", what: "Fire at one foe." },
@@ -421,61 +447,79 @@ CM.abilitiesFor = (hero) => Object.keys(CM.ABILITIES).filter((id) => {
 // ---- growth: a path for each calling, chosen at level 5, deepening at level 10 ----------------------------------------
 // Each path has two traits: the first comes with the choice, the second at the deeper level. CM.trait(hero, id) says
 // whether a hero has one. The effects live where they bite: in the fight's code (60-game.js) and in CM.recompute.
-CM.PATH_AT = [5, 10];
+CM.PATH_AT = [5, 10, 15];                                             // the path at 5, its second trait at 10, its capstone at 15
 CM.PATHS = {
   Knight: {
     bulwark: { name: "Bulwark", blurb: "The wall the party stands behind.",
-      t1: { id: "stonewall", name: "Stone Wall", what: "+3 defence" }, t2: { id: "aegis", name: "Aegis", what: "A blow the Knight steps in front of does half" } },
+      t1: { id: "stonewall", name: "Stone Wall", what: "+3 defence" }, t2: { id: "aegis", name: "Aegis", what: "A blow the Knight steps in front of does half" }, t3: { id: "immovable", name: "Immovable", what: "The Knight is never knocked flat nor held" } },
     champion: { name: "Champion", blurb: "The blade that ends things.",
-      t1: { id: "mighty", name: "Mighty", what: "+3 attack" }, t2: { id: "flurry", name: "Flurry", what: "Every Fight is two blows, the second at half strength" } },
+      t1: { id: "mighty", name: "Mighty", what: "+3 attack" }, t2: { id: "flurry", name: "Flurry", what: "Every Fight is two blows, the second at half strength" }, t3: { id: "executioner", name: "Executioner", what: "A blow on a foe under a quarter of its health does double" } },
   },
   Paladin: {
     crusader: { name: "Crusader", blurb: "Holy in the hand.",
-      t1: { id: "holyblade", name: "Holy Blade", what: "Every blow bites deep into the undead, blessed or not" }, t2: { id: "radiance", name: "Radiance", what: "Smite falls on every undead foe at once" } },
+      t1: { id: "holyblade", name: "Holy Blade", what: "Every blow bites deep into the undead, blessed or not" }, t2: { id: "radiance", name: "Radiance", what: "Smite falls on every undead foe at once" }, t3: { id: "avenger", name: "Avenger", what: "Every undead foe slain mends the whole party 5" } },
     shepherd: { name: "Shepherd", blurb: "No one left behind.",
-      t1: { id: "gentlehands", name: "Gentle Hands", what: "Lay on Hands mends half again as much and lifts the small ailments" }, t2: { id: "lastrites", name: "Last Rites", what: "Lay on Hands can call a fallen hero back, once a fight" } },
+      t1: { id: "gentlehands", name: "Gentle Hands", what: "Lay on Hands mends half again as much and lifts the small ailments" }, t2: { id: "lastrites", name: "Last Rites", what: "Lay on Hands can call a fallen hero back, once a fight" }, t3: { id: "sanctified", name: "Sanctified", what: "Lay on Hands also lays Protection on the party" } },
   },
   Rogue: {
     assassin: { name: "Assassin", blurb: "One blow is enough.",
-      t1: { id: "deadly", name: "Deadly", what: "A weak spot does triple, not double" }, t2: { id: "ambush", name: "Ambush", what: "The first blow in every fight finds a weak spot" } },
+      t1: { id: "deadly", name: "Deadly", what: "A weak spot does triple, not double" }, t2: { id: "ambush", name: "Ambush", what: "The first blow in every fight finds a weak spot" }, t3: { id: "shadowstep", name: "Shadowstep", what: "In the back row, the Rogue is never the one a foe goes for" } },
     trickster: { name: "Trickster", blurb: "Never where the blow lands.",
-      t1: { id: "sand", name: "Sand", what: "Dirty Trick also holds the foe a round" }, t2: { id: "slippery", name: "Slippery", what: "Running always works (not from the Lich King), and the party is never caught by surprise" } },
+      t1: { id: "sand", name: "Sand", what: "Dirty Trick also holds the foe a round" }, t2: { id: "slippery", name: "Slippery", what: "Running always works (not from the Lich King), and the party is never caught by surprise" }, t3: { id: "pickpocket", name: "Light Fingers", what: "Every fight won pays a tenth more gold" } },
   },
   Ranger: {
     sharpshooter: { name: "Sharpshooter", blurb: "Every arrow counts.",
-      t1: { id: "truearrow", name: "True Arrow", what: "Arrows never miss" }, t2: { id: "rainofarrows", name: "Rain of Arrows", what: "Volley looses three arrows" } },
+      t1: { id: "truearrow", name: "True Arrow", what: "Arrows never miss" }, t2: { id: "rainofarrows", name: "Rain of Arrows", what: "Volley looses three arrows" }, t3: { id: "piercing", name: "Piercing", what: "Arrows go through half of a foe's armour" } },
     warden: { name: "Warden", blurb: "The dungeon's ways, learned.",
-      t1: { id: "wardeneye", name: "Warden's Eye", what: "Trapdoors and trap plates two steps off are seen; a hidden door beside you is found" }, t2: { id: "pathfinder", name: "Pathfinder", what: "Torches burn half as fast" } },
+      t1: { id: "wardeneye", name: "Warden's Eye", what: "Trapdoors and trap plates two steps off are seen; a hidden door beside you is found" }, t2: { id: "pathfinder", name: "Pathfinder", what: "Torches burn half as fast" }, t3: { id: "foresight", name: "Foresight", what: "The party always has the drop on them: a free round, every fight" } },
   },
   Cleric: {
     priest: { name: "Priest", blurb: "The healing hand.",
-      t1: { id: "blessedhands", name: "Blessed Hands", what: "Heal mends half again as much" }, t2: { id: "miracle", name: "Miracle", what: "Raise Dead brings a hero back whole" } },
+      t1: { id: "blessedhands", name: "Blessed Hands", what: "Heal mends half again as much" }, t2: { id: "miracle", name: "Miracle", what: "Raise Dead brings a hero back whole" }, t3: { id: "benediction", name: "Benediction", what: "Heal also mends everyone else a quarter as much" } },
     exorcist: { name: "Exorcist", blurb: "The light that burns.",
-      t1: { id: "purifier", name: "Purifier", what: "Turn Undead scorches the living too, for half" }, t2: { id: "consecrate", name: "Consecrate", what: "Bless also lays Protection on the party" } },
+      t1: { id: "purifier", name: "Purifier", what: "Turn Undead scorches the living too, for half" }, t2: { id: "consecrate", name: "Consecrate", what: "Bless also lays Protection on the party" }, t3: { id: "holyfire", name: "Holy Fire", what: "Turn Undead burns twice as hard" } },
   },
   Mage: {
     pyromancer: { name: "Pyromancer", blurb: "Fire, and more fire.",
-      t1: { id: "firebrand", name: "Firebrand", what: "Fire spells do half again as much" }, t2: { id: "inferno", name: "Inferno", what: "Fireball leaves every foe burning for two rounds" } },
+      t1: { id: "firebrand", name: "Firebrand", what: "Fire spells do half again as much" }, t2: { id: "inferno", name: "Inferno", what: "Fireball leaves every foe burning for two rounds" }, t3: { id: "immolation", name: "Immolation", what: "Fireball's burning lasts four rounds and bites twice as hard" } },
     archmage: { name: "Archmage", blurb: "Magic without end.",
-      t1: { id: "thrifty", name: "Thrifty", what: "Every spell costs one less" }, t2: { id: "wellspring", name: "Wellspring", what: "Two magic back at the end of every round of a fight" } },
+      t1: { id: "thrifty", name: "Thrifty", what: "Every spell costs one less" }, t2: { id: "wellspring", name: "Wellspring", what: "Two magic back at the end of every round of a fight" }, t3: { id: "manawell", name: "Mana Well", what: "Every fight begins with a third of the Mage's magic refilled" } },
   },
   Druid: {
     grove: { name: "Grove", blurb: "Green things mend.",
-      t1: { id: "deeproots", name: "Deep Roots", what: "Thorns mends the party three times as much" }, t2: { id: "evergreen", name: "Evergreen", what: "The whole party mends 3 at the end of every round" } },
+      t1: { id: "deeproots", name: "Deep Roots", what: "Thorns mends the party three times as much" }, t2: { id: "evergreen", name: "Evergreen", what: "The whole party mends 3 at the end of every round" }, t3: { id: "oldgrowth", name: "Old Growth", what: "Thorns also cures the party's poison" } },
     storm: { name: "Storm", blurb: "The sky brought down.",
-      t1: { id: "stormcall", name: "Storm Call", what: "Call Lightning strikes every foe, for most of its force" }, t2: { id: "tempest", name: "Tempest", what: "Lightning may leave a foe reeling for a round" } },
+      t1: { id: "stormcall", name: "Storm Call", what: "Call Lightning strikes every foe, for most of its force" }, t2: { id: "tempest", name: "Tempest", what: "Lightning may leave a foe reeling for a round" }, t3: { id: "hurricane", name: "Hurricane", what: "Call Lightning leaves every foe it strikes reeling" } },
   },
   Bard: {
     skald: { name: "Skald", blurb: "Songs for a shield wall.",
-      t1: { id: "warsong", name: "War Song", what: "Song gives twice the heart: +4 attack, and every blow on the party does 2 less" }, t2: { id: "epic", name: "Epic", what: "Song lasts the whole floor, fight after fight" } },
+      t1: { id: "warsong", name: "War Song", what: "Song gives twice the heart: +4 attack, and every blow on the party does 2 less" }, t2: { id: "epic", name: "Epic", what: "Song lasts the whole floor, fight after fight" }, t3: { id: "anthem", name: "Anthem", what: "Song also lays a Blessing on the party" } },
     jester: { name: "Jester", blurb: "Laughter, and a knife in it.",
-      t1: { id: "jeer", name: "Jeer", what: "Mockery also leaves the foe half blind" }, t2: { id: "lull", name: "Lull", what: "Lullaby never fails" } },
+      t1: { id: "jeer", name: "Jeer", what: "Mockery also leaves the foe half blind" }, t2: { id: "lull", name: "Lull", what: "Lullaby never fails" }, t3: { id: "lastlaugh", name: "Last Laugh", what: "A mocked foe that strikes may hit itself instead" } },
+  },
+  Monk: {
+    drunken: { name: "Drunken Master", blurb: "Never where the blow lands.",
+      t1: { id: "sway", name: "Sway", what: "Foes miss the Monk a third more often" }, t2: { id: "counter", name: "Counter", what: "A blow that misses the Monk is answered with one" }, t3: { id: "untouchable", name: "Untouchable", what: "Foes miss the Monk half the time" } },
+    ironbody: { name: "Iron Body", blurb: "The body is the armour.",
+      t1: { id: "ironbody", name: "Iron Body", what: "+3 defence" }, t2: { id: "ironfists", name: "Iron Fists", what: "The fists hit half again as hard" }, t3: { id: "diamondbody", name: "Diamond Body", what: "Poison and paralysis never take" } },
+  },
+  Necromancer: {
+    lichtouched: { name: "Lich-touched", blurb: "What the king knew, at a smaller scale.",
+      t1: { id: "deepdrain", name: "Deep Drain", what: "Drain gives the Necromancer all of it, not half" }, t2: { id: "twinthrall", name: "Thrall Unbound", what: "The thrall strikes twice a round" }, t3: { id: "undying", name: "Undying", what: "Once a fight, a blow that would fell the Necromancer leaves them at one" } },
+    hexer: { name: "Hexer", blurb: "Words that stick.",
+      t1: { id: "hexhold", name: "Binding Hex", what: "Hex also holds the foe a round" }, t2: { id: "bleed", name: "Open Wound", what: "A hexed foe bleeds 3 a round" }, t3: { id: "contagion", name: "Contagion", what: "Hex falls on every foe at once" } },
+  },
+  Artificer: {
+    siege: { name: "Siege Engineer", blurb: "More brass, more fire.",
+      t1: { id: "scatter", name: "Scattershot", what: "The turret shoots every foe, each for half" }, t2: { id: "twinturret", name: "Twin Barrels", what: "The turret hits twice as hard" }, t3: { id: "bombard", name: "Bombard", what: "The turret's shot is fire, and bites what fears it" } },
+    tinkerer: { name: "Tinkerer", blurb: "Everything oiled, everyone kept.",
+      t1: { id: "bulwarkengine", name: "Bulwark Engine", what: "The Ward Engine turns 5 off every blow, not 3" }, t2: { id: "medicengine", name: "Medic Engine", what: "The turret also mends the most hurt hero every round" }, t3: { id: "overclock", name: "Overclock", what: "Every potion the party drinks mends half again" } },
   },
 };
 CM.trait = function (h, id) {
   const P = h && h.path && CM.PATHS[h.cls] && CM.PATHS[h.cls][h.path];
   if (!P) return false;
-  return (P.t1.id === id && h.level >= CM.PATH_AT[0]) || (P.t2.id === id && h.level >= CM.PATH_AT[1]);
+  return (P.t1.id === id && h.level >= CM.PATH_AT[0]) || (P.t2.id === id && h.level >= CM.PATH_AT[1]) || Boolean(P.t3 && P.t3.id === id && h.level >= CM.PATH_AT[2]);
 };
 CM.needsPath = (h) => Boolean(h && h.hp > 0 && h.level >= CM.PATH_AT[0] && !h.path && CM.PATHS[h.cls]);
 
@@ -521,6 +565,7 @@ CM.ACHIEVEMENTS = {
   crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
   distilled: { name: "Distilled", what: "Brew an elixir at the camp's still", title: "the Distilled" },
   rivals: { name: "No Rivals", what: "Best a rival party for the floor", title: "the Unrivalled" },
+  bonded: { name: "Old Friends", what: "Two heroes fight forty fights side by side", title: "the Steadfast" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },

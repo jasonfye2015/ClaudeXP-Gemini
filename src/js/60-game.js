@@ -49,6 +49,7 @@ CM.Game = class {
     this.endless = false; this.deepened = [];        // an Endless expedition: the shaft has no bottom; the floors where the dark deepened
     this.fameEndless = CM.store.get("fameEndless", []);   // the Endless board: how deep, ever
     this.bestiary = CM.store.get("bestiary", {});         // every kind met and slain, and what it fears: kept between runs
+    this.memorial = CM.store.get("memorial", []);         // the heroes laid to rest, ever: {name, cls, level, floor, seed, date}
     this.combos = CM.store.get("combos", {});             // the combos found, ever
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
@@ -76,6 +77,22 @@ CM.Game = class {
   saveSettings() { CM.store.set("settings", this.settings); }
 
   // ---- saving ----
+  // the three callings earned: by an achievement, or a guardian's trophy
+  classUnlocked(cls) {
+    const u = CM.CLASS_UNLOCK[cls];
+    if (!u) return true;
+    return Boolean((u.achievement && this.achievements[u.achievement]) || (u.trophy && this.trophies[u.trophy]));
+  }
+  classesAvailable() { return CM.ALL_CLASSES.filter((c) => this.classUnlocked(c)); }
+
+  // a hero laid to rest for good is written down, between runs (the title's memorial)
+  remember2(hero) {
+    this.memorial = this.memorial || [];
+    this.memorial.unshift({ name: hero.name, cls: hero.cls, level: hero.level, floor: this.floor ? this.floor.number : 0, seed: this.seed, date: CM.today() });
+    this.memorial = this.memorial.slice(0, 30);
+    CM.store.set("memorial", this.memorial);
+  }
+
   // a floor made from the seed, and remembered as it was fresh (so the save can keep only what changes)
   freshFloor(number) {
     const fl = CM.makeFloor(number, this.seed);
@@ -116,7 +133,7 @@ CM.Game = class {
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
-      camps: this.camps || [] };
+      camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [] };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -155,6 +172,8 @@ CM.Game = class {
     this.everFell = Boolean(d.everFell); this.fightFell = false; this.earned = d.earned || [];
     this.crowned = Boolean(d.crowned); this.bottom = false; this.endless = Boolean(d.endless); this.deepened = d.deepened || [];
     this.camps = d.camps || []; this.travel = null;
+    this.pairFights = d.pairFights || {}; this.bonds = d.bonds || []; this.hazardsMet = d.hazardsMet || [];
+    this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
     this.emit("floor", this.floor);
@@ -188,7 +207,7 @@ CM.Game = class {
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
     this.everFell = false; this.fightFell = false; this.earned = [];
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
-    this.camps = []; this.travel = null;
+    this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = [];
     if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());

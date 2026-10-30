@@ -614,6 +614,88 @@ test("the bands' hazards: spores, vents, bone piles, the tide, the mirror walls"
   assert.ok(b.hp < bHp && game.messages.some((m) => m.includes("rebounds")), "the bolt rebounds onto the other");
 });
 
+test("three callings more, earned: the Monk, the Necromancer, the Artificer", () => {
+  const CM = load(), game = new CM.Game();
+  assert.deepStrictEqual(game.classesAvailable().slice().sort(), CM.CLASS_ORDER.slice().sort(), "none of the three to start");
+  game.achievements.ironman = { date: "x" }; game.trophies.patriarch = { date: "x" }; game.trophies.master = { date: "x" };
+  assert.strictEqual(game.classesAvailable().length, 11);
+  const party = ["Monk", "Necromancer", "Artificer", "Cleric"].map((cls) => ({ cls, name: cls, stats: CM.rollStats(cls, new CM.Random(cls)), row: CM.CLASSES[cls].row }));
+  game.newGame("new-1", party);
+  const monk = game.party[0], necro = game.party[1], art = game.party[2];
+  assert.ok(monk.weapon.props.fists && monk.weapon.power === 3);
+  monk.level = 10; CM.recompute(monk); assert.strictEqual(monk.weapon.power, 8, "the hands grow");
+  assert.match(CM.cantWear(monk, { kind: "weapon", name: "Mace", power: 4, props: {} }), /hands/);
+  assert.ok(CM.isCaster(necro) && !CM.isCaster(monk));
+  assert.ok(game.dodgeOf(monk) < 1 && game.dodgeOf(necro) === 1);
+  const rnd = new CM.Random(2), orcs = [1, 2, 3].map(() => CM.makeMonster(CM.monsterKind("Orc"), 4, rnd));
+  for (const o of orcs) o.max = o.hp = 300;
+  for (const h of game.party) { h.max = 300; h.hp = 300; h.mp = 60; h.maxmp = 60; h.level = 8; }
+  game.floor.things["2,2"] = { type: "monsters", group: orcs };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  const c = game.combat;
+  c.waiting = monk; game.messages = [];
+  assert.ok(game.useAbility(monk, "blows", orcs[0]) && game.messages.filter((m) => m.includes("hits")).length >= 1);
+  c.waiting = art;
+  assert.ok(game.useAbility(art, "turret", null) && c.turret);
+  assert.ok(game.useAbility(art, "wardengine", null) && c.protect);
+  assert.ok(game.useAbility(art, "oilgears", null) && c.oiled);
+  c.waiting = necro; necro.hp = 100;
+  assert.ok(game.useAbility(necro, "drain", orcs[1]) && necro.hp > 100, "drain keeps half");
+  assert.ok(game.useAbility(necro, "hex", orcs[1]) && orcs[1].marked && orcs[1].blind > 0);
+  assert.ok(!game.useAbility(necro, "thrall", null) || !c.thrall, "nothing dead yet to raise");
+  orcs[2].hp = 0; orcs[2].dead = true; necro.used = {};
+  assert.ok(game.useAbility(necro, "thrall", null) && c.thrall && c.thrall.hp > 0);
+  const hpBefore = game.party.map((h) => h.hp).join(",");
+  game.rnd = new CM.Random(5);
+  let blowsOnThrall = 0;
+  for (let i = 0; i < 12; i++) { const t = game.pickTarget(orcs[0]); if (t && t.thrall) blowsOnThrall++; }
+  assert.ok(blowsOnThrall > 4, "the thrall takes the blows meant for the party");
+  const foeHp = orcs[0].hp + orcs[1].hp;
+  game.enginesAct();
+  assert.ok(orcs[0].hp + orcs[1].hp < foeHp, "the turret and the thrall strike at the round's end");
+  assert.strictEqual(game.party.map((h) => h.hp).join(","), hpBefore);
+  c.waiting = necro;
+  assert.ok(game.useAbility(necro, "deathpact", null));
+  assert.ok(orcs[0].hp < 300 && orcs[1].hp < 300);
+});
+
+test("the capstone at fifteen, and the bonds of old friends", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("caps-1", fixedParty(CM));
+  const knight = game.party.find((h) => h.cls === "Knight");
+  knight.path = "bulwark"; knight.level = 14;
+  assert.ok(CM.trait(knight, "aegis") && !CM.trait(knight, "immovable"));
+  knight.level = 15;
+  assert.ok(CM.trait(knight, "immovable"));
+  for (const cls of Object.keys(CM.PATHS)) for (const P of Object.values(CM.PATHS[cls])) assert.ok(P.t3 && P.t3.id && P.t3.what, `${cls} ${P.name} has a capstone`);
+  assert.strictEqual(game.afflict(knight, "paralysis", "an ogre"), false, "immovable: never held");
+  // bonds: thirty-nine fights together, then one more
+  const rogue = game.party.find((h) => h.cls === "Rogue");
+  const k = [knight.name, rogue.name].sort().join("|");
+  game.pairFights = { [k]: CM.BOND_FIGHTS - 1 };
+  CM.recompute(knight); knight.hp = knight.max;
+  const atk = knight.atk;
+  const rnd = new CM.Random(3), rat = CM.makeMonster(CM.monsterKind("Giant Rat"), 1, rnd); rat.hp = 1;
+  game.floor.things["2,2"] = { type: "monsters", group: [rat] };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  rat.hp = 0; game.afterBlows();
+  assert.strictEqual(game.mode, "explore");
+  assert.ok(game.bonds.length === 1 && game.bondOf(knight) === rogue && game.bondOf(rogue) === knight, "old friends now");
+  assert.strictEqual(knight.atk, atk + 1);
+  assert.ok(game.achievements.bonded);
+  game.saveRun();
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game();
+  g2.continueRun();
+  assert.ok(g2.bondOf(g2.party.find((h) => h.cls === "Knight")), "the bond is saved");
+  // the memorial: a hero laid to rest at the camp
+  game.enterFloor(5, "down"); game.setMode("camp"); game.reachCamp(5);
+  rogue.hp = 0; game.gold = 5000;
+  assert.strictEqual(game.hire(0), "");
+  assert.ok(game.memorial.length === 1 && game.memorial[0].name === rogue.name && game.memorial[0].cls === "Rogue");
+  assert.strictEqual(game.bonds.length, 0, "a bond ends at the grave");
+  assert.ok(JSON.parse(game.exportText()).memorial.length === 1);
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

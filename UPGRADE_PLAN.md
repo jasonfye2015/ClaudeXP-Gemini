@@ -115,7 +115,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 4 - The party, wider
+## Phase 4 - The party, wider - DONE in v1.1
 
 - **Three new callings,** unlocked by achievements so the title's eight stay the start:
   - **Monk** - unarmed, fast, dodges; "Flurry". Unlock: *Unfallen*.

@@ -611,11 +611,11 @@ CM.art.portraitDrawn = function (cls, size = 56) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 56;
   p.scale(s, s);
   p.fillStyle = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A", Paladin: "#4A3A2A", Ranger: "#2A3A2E",
-    Druid: "#3A4A2A", Bard: "#4A2A3A" }[cls] || "#333";
+    Druid: "#3A4A2A", Bard: "#4A2A3A", Monk: "#4A3A20", Necromancer: "#2A1A3A", Artificer: "#3A3A2A" }[cls] || "#333";
   p.fillRect(0, 0, 56, 56);
   const skin = "#E0B890";
   p.fillStyle = { Knight: "#8A9098", Rogue: "#3A4A30", Cleric: "#E8E0D0", Mage: "#4A3A8A", Paladin: "#C8C0A0", Ranger: "#4A6A3A",
-    Druid: "#6A7A3A", Bard: "#8A3A5A" }[cls] || "#555";
+    Druid: "#6A7A3A", Bard: "#8A3A5A", Monk: "#C08040", Necromancer: "#3A2A5A", Artificer: "#7A5A30" }[cls] || "#555";
   p.fillRect(8, 36, 40, 24);                                            // shoulders
   if (cls === "Paladin") {
     outlined(p, () => { p.roundRect(14, 8, 28, 32, 6); }, "#D8D0B8", "#5A5040", 2);   // a helm with a gold cross
@@ -638,6 +638,25 @@ CM.art.portraitDrawn = function (cls, size = 56) {
     p.strokeStyle = "#E8E0A0"; p.lineWidth = 2; p.beginPath(); p.moveTo(40, 10); p.quadraticCurveTo(50, 2, 52, 10); p.stroke();
     p.fillStyle = "#3A2A1A"; p.fillRect(22, 24, 3, 3); p.fillRect(31, 24, 3, 3);
     p.fillStyle = "#E8C040"; p.fillRect(36, 40, 10, 12); p.fillStyle = "#6A4A20"; p.fillRect(38, 34, 2, 10);   // a lute
+  } else if (cls === "Monk") {
+    outlined(p, () => { p.arc(28, 24, 14, 0, Math.PI * 2); }, skin, "#5A3A20", 2);     // a shaven head, a red headband
+    p.fillStyle = "#C03030"; p.fillRect(14, 16, 28, 5);
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 24, 3, 3); p.fillRect(31, 24, 3, 3);
+    p.fillStyle = "#E0B890"; p.fillRect(10, 40, 10, 10); p.fillRect(36, 40, 10, 10);   // the fists, wrapped
+    p.fillStyle = "#D8D0B8"; p.fillRect(10, 44, 10, 2); p.fillRect(36, 44, 10, 2);
+  } else if (cls === "Necromancer") {
+    outlined(p, () => { p.moveTo(28, 2); p.lineTo(46, 30); p.lineTo(46, 42); p.lineTo(10, 42); p.lineTo(10, 30); }, "#2A1A3A", "#100818", 2);   // a deep hood
+    p.fillStyle = "#E8E0D0"; p.fillRect(20, 22, 16, 14);                 // a face gone pale
+    p.fillStyle = "#8040E0"; p.fillRect(22, 26, 4, 4); p.fillRect(30, 26, 4, 4);   // eyes that glow
+    p.fillStyle = "#1A1020"; p.fillRect(26, 32, 4, 3);
+    p.fillStyle = "#A080E0"; p.fillRect(40, 36, 3, 18);                  // a bone staff
+  } else if (cls === "Artificer") {
+    outlined(p, () => { p.arc(28, 26, 13, 0, Math.PI * 2); }, skin, "#5A3A20", 2);
+    outlined(p, () => { p.moveTo(12, 16); p.lineTo(44, 16); p.lineTo(40, 8); p.lineTo(16, 8); }, "#5A4A30", "#2A2010", 2);   // a leather cap
+    p.fillStyle = "#C8A040"; p.beginPath(); p.arc(22, 20, 5, 0, Math.PI * 2); p.arc(34, 20, 5, 0, Math.PI * 2); p.fill();   // goggles
+    p.fillStyle = "#4A7A8A"; p.beginPath(); p.arc(22, 20, 3, 0, Math.PI * 2); p.arc(34, 20, 3, 0, Math.PI * 2); p.fill();
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 30, 3, 3); p.fillRect(31, 30, 3, 3);
+    p.fillStyle = "#B8A040"; p.fillRect(38, 40, 10, 6); p.fillRect(41, 46, 4, 8);   // a wrench
   } else if (cls === "Knight") {
     outlined(p, () => { p.roundRect(14, 8, 28, 32, 8); }, "#B8BEC8", "#2A2E36", 2);
     p.fillStyle = "#1A1C22"; p.fillRect(16, 22, 24, 5);                 // the visor's slit

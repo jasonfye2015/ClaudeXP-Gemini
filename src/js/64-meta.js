@@ -64,7 +64,7 @@ Object.assign(CM.Game.prototype, {
 
   exportText() {
     return JSON.stringify({ game: "Claude and Magic", version: CM.version, built: CM.built, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
-      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos });
+      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, memorial: this.memorial });
   },
 
   importText(text) {
@@ -81,6 +81,7 @@ Object.assign(CM.Game.prototype, {
     if (data.vault && typeof data.vault === "object" && data.vault.name) { this.vault = data.vault; CM.store.set("vault", this.vault); }
     if (data.bestiary && typeof data.bestiary === "object") { this.bestiary = Object.assign({}, this.bestiary, data.bestiary); CM.store.set("bestiary", this.bestiary); }
     if (data.combos && typeof data.combos === "object") { this.combos = Object.assign({}, this.combos, data.combos); CM.store.set("combos", this.combos); }
+    if (Array.isArray(data.memorial)) { this.memorial = data.memorial.concat(this.memorial || []).slice(0, 30); CM.store.set("memorial", this.memorial); }
     this.emit("change");
     return "";
   },
@@ -175,6 +176,8 @@ Object.assign(CM.Game.prototype, {
     if (fallen >= 0) {
       const gone = this.party[fallen];
       for (const slot of CM.SLOTS) if (gone[slot] && !(slot === "weapon" || slot === "armor")) this.bag.push(gone[slot]);
+      this.remember2(gone);
+      this.bonds = (this.bonds || []).filter((b) => !b.includes(gone.name));
       delete h.price;
       h.hp = Math.max(1, Math.floor(h.max / 2));
       this.party[fallen] = h;

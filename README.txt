@@ -22,7 +22,7 @@ The dungeon (phase 2 of the big update)
 
 The party (phase 3)
   New Expedition opens the creation screen: four heroes, each named (or given a name by the dice), with one of
-  eight callings - Knight, Paladin, Rogue, Ranger, Cleric, Mage, Druid, Bard - six stats rolled on three dice plus
+  eight callings (eleven, with the three earned - see The party, wider) - Knight, Paladin, Rogue, Ranger, Cleric, Mage, Druid, Bard - six stats rolled on three dice plus
   what the calling brings (Strength, Dexterity, Constitution, Intelligence, Wisdom, Luck; each calling has the stat
   that matters most to it), and a row. Advice on the right says what the party lacks (no one up front, no healer,
   nothing that hits every foe, a low stat worth a reroll); Suggest a party fills in the classic four.
@@ -474,6 +474,39 @@ The dungeon, stranger (the third big update, phase 5)
   prayed for, the rivals' purse (62-combat.js); the choice dialog (70-ui.js). The floor's fingerprint (CM.floorPrint)
   no longer counts the chests and monsters, so a later version may add to a floor by its own hashes without a saved
   run noticing. New set pieces are left for a generator version: they would move the floors already laid out.
+
+The party, wider (the third big update, phase 4)
+  Three callings more, earned (the title's list shows them greyed with what earns them; the creation screen offers
+  them once they are; the recruits and the rescued are still the eight):
+    Monk         earned by Unfallen (the Lich King slain with no hero ever fallen). Fights with bare hands that grow
+                 with every level (a Monk wears no weapon and no shield), is quick, and hard to hit. Flurry of Blows
+                 (two blows at three fifths), Iron Palm (a blow that may leave the foe reeling), Still Mind (a quarter
+                 of their health back and the small ailments gone, once a fight). Paths: Drunken Master (Sway, Counter,
+                 Untouchable) and Iron Body (Iron Body, Iron Fists, Diamond Body).
+    Necromancer  earned by slaying the Bone Patriarch. Drain (the life pulled out of a foe, half of it kept), Hex
+                 (marked and half-blind), Raise Thrall (the last thing slain stands up on your side: it takes three
+                 blows in four meant for the party and claws back each round), Death Pact (every foe withers, the
+                 Necromancer bleeds). Paths: Lich-touched (Deep Drain, Thrall Unbound, Undying) and Hexer (Binding Hex,
+                 Open Wound, Contagion).
+    Artificer    earned by slaying the Foundry Master. Clockwork Turret (shoots a foe every round, once a fight), Ward
+                 Engine (Protection), Oil the Gears (+3 speed for everyone), Firework (fire on every foe). Paths:
+                 Siege Engineer (Scattershot, Twin Barrels, Bombard) and Tinkerer (Bulwark Engine, Medic Engine,
+                 Overclock).
+  The third tier: every path has a capstone at level 15 (CM.PATH_AT = [5, 10, 15]). Immovable, Executioner, Avenger,
+  Sanctified, Shadowstep, Light Fingers, Piercing, Foresight, Benediction, Holy Fire, Immolation, Mana Well, Old Growth,
+  Hurricane, Anthem, Last Laugh - and the new callings' own. The sheet says what each is and when it comes.
+  Bonds: two heroes who have won forty fights side by side (CM.BOND_FIGHTS) are old friends: +1 attack and +1 defence
+  each, heals between them a quarter kinder, and when one falls the other's next blow is doubled. One bond a hero;
+  the sheet names it; the Old Friends achievement. At the camp's fire, old friends have a word for each other now and
+  then (CM.BANTER). A bond ends at the grave.
+  The memorial: a hero laid to rest at a camp fire (the tavern's recruit, or a rescued adventurer, taking their place)
+  is written into the title's In memoriam - name, calling, level, floor, seed, date - kept between runs and carried by
+  Export / Import (CM.store "memorial").
+  In code: CM.CLASSES (three more), CM.ALL_CLASSES / CM.NEW_CLASSES / CM.CLASS_UNLOCK, the abilities, the paths and
+  every t3 (10-data.js); game.classUnlocked / classesAvailable / remember2 (60-game.js); dodgeOf, enginesAct (the
+  turret and the thrall at the round's end), bondOf / foughtTogether / applyBonds and the capstones' hooks through
+  the fight (62-combat.js); the fists in CM.recompute and CM.cantWear (20-world.js); the portraits and paper dolls
+  (30-art.js, 36-looks.js).
 
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.

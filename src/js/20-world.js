@@ -301,8 +301,9 @@ CM.recompute = function (h) {
   h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : 0;
   const hitStat = c.key === "dex" ? s.dex : s.str;
   const relics = CM.relicsWorn(h), set = relics >= 2 ? CM.RELIC_SET.two : null;   // (the guardians' things, worn together)
-  h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow + (CM.trait(h, "mighty") ? 3 : 0) + (set ? set.atk : 0));
-  h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0) + (CM.trait(h, "stonewall") ? 3 : 0) + (set ? set.df : 0));
+  if (h.cls === "Monk" && h.weapon && h.weapon.props && h.weapon.props.fists) h.weapon.power = 3 + Math.floor(h.level / 2) + (CM.trait(h, "ironfists") ? Math.ceil((3 + Math.floor(h.level / 2)) / 2) : 0);   // (the hands grow)
+  h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow + (CM.trait(h, "mighty") ? 3 : 0) + (set ? set.atk : 0) + (h.bondAtk || 0));
+  h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0) + (CM.trait(h, "stonewall") || CM.trait(h, "ironbody") ? 3 : 0) + (set ? set.df : 0) + (h.bondDf || 0));
   h.hp = Math.min(h.hp, h.max);
   h.mp = Math.min(h.mp, h.maxmp);
   return h;
@@ -312,7 +313,7 @@ CM.makeHero = function (cls, name, stats, row) {
   const c = CM.CLASSES[cls];
   const h = { name: (name || "").trim() || cls, cls, level: 1, xp: 0, hp: 1, max: 1, mp: 0, maxmp: 0, atk: 1, df: 0,
     stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null, path: null, learned: [],
-    weapon: { name: c.weapon, kind: "weapon", slot: "weapon", power: 1, value: 5, props: c.weapon === "Short Bow" ? { bow: true, twohanded: true } : {} },
+    weapon: { name: c.weapon, kind: "weapon", slot: "weapon", power: 1, value: 5, props: c.weapon === "Short Bow" ? { bow: true, twohanded: true } : c.weapon === "Wrapped Fists" ? { fists: true, twohanded: true } : {} },
     armor: { name: c.armor, kind: "armor", slot: "armor", power: 0, value: 5, props: { weight: "light" } },
     offhand: null, helm: null, ring: null, amulet: null };
   CM.recompute(h);
@@ -360,6 +361,8 @@ CM.gearDefence = (h) => (h.armor ? h.armor.power : 0) * 2 + (h.offhand ? h.offha
 CM.cantWear = function (h, item) {
   const p = item.props || {};
   if (item.kind === "weapon" && p.bow && h.cls !== "Ranger") return `Only a Ranger draws a bow.`;
+  if (item.kind === "weapon" && h.cls === "Monk" && !p.fists) return `A Monk's hands are the weapon.`;
+  if (item.kind === "shield" && h.cls === "Monk") return `A Monk's hands are the weapon, and the shield.`;
   if (item.kind === "armor") {
     const w = p.weight || CM.ARMOR_WEIGHT(Math.max(0, CM.ARMORS.indexOf(CM.baseName(item)))), rank = { light: 0, medium: 1, heavy: 2 };
     if (rank[w] > rank[CM.BEARS[h.cls] || "light"]) return `${h.cls}s can't fight in ${w} armour.`;
@@ -410,7 +413,7 @@ CM.partyAdvice = function (party) {
   if (!healers) notes.push("No one can heal. Potions will have to do, and they run out.");
   if (!area) notes.push("No spell or volley that hits more than one foe: big groups will wear you down.");
   if (casters >= 3) notes.push("Three casters: strong magic, thin armour. Keep the Knight or Paladin alive.");
-  if (!roles.some((c) => ["Knight", "Paladin"].includes(c))) notes.push("Without a Knight or Paladin, nothing draws the monsters' attention.");
+  if (!roles.some((c) => ["Knight", "Paladin", "Monk"].includes(c))) notes.push("Without a Knight, Paladin or Monk, nothing draws the monsters' attention.");
   for (const p of party) {
     const c = CM.CLASSES[p.cls];
     if (p.stats && p.stats[c.key] < 10) notes.push(`${p.name || p.cls}'s ${CM.STAT_NAMES[c.key]} is low for a ${p.cls} - reroll?`);

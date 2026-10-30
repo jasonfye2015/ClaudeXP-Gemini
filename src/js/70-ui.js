@@ -24,11 +24,11 @@ CM.UI = class {
       <p>The same seed lays out the same fifty floors, so a dungeon can be tried again - or handed to a friend. What
       the monsters do in a fight is up to the dice. The run saves as you go; when the whole party falls, it ends, and
       the deepest runs go in the Hall of Fame.</p>
-      <h2>The eight callings</h2>
+      <h2>The callings</h2>
       <div id="classes"></div>
       <p id="start-with"></p>
     </div>
-    <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
+    <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
     <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
     <div class="version"></div>
   </div>
@@ -270,7 +270,8 @@ CM.UI = class {
     const right = this.$("#sheet-right");
     right.innerHTML = `<table class="stats">${CM.STATS.map((s) => `<tr class="${s === c.key ? "key" : ""}"><td>${CM.STAT_NAMES[s]}</td><td class="v">${g.stat(h, s)}</td><td class="hint">${s === c.key ? "their calling's stat" : CM.STAT_HINTS[s]}</td></tr>`).join("")}</table>
       <div class="list-title">Boons</div><div class="boons">${(h.boons || []).length ? h.boons.map((id) => `<div><b>${CM.BOONS[id].name}</b> - ${CM.BOONS[id].what}</div>`).join("") : "<div class='small'>None yet. Each level earned offers one.</div>"}</div>
-      <div class="list-title">Path</div><div class="boons">${h.path && CM.PATHS[h.cls] && CM.PATHS[h.cls][h.path] ? (() => { const P = CM.PATHS[h.cls][h.path]; return `<div><b>${P.name}</b> - ${P.blurb}</div><div><b>${P.t1.name}</b> - ${P.t1.what}</div><div><b>${P.t2.name}</b> - ${h.level >= CM.PATH_AT[1] ? P.t2.what : `at level ${CM.PATH_AT[1]}: ${P.t2.what.charAt(0).toLowerCase() + P.t2.what.slice(1)}`}</div>`; })() : `<div class='small'>${CM.needsPath(h) ? "A path waits to be chosen, below." : `Chosen at level ${CM.PATH_AT[0]}: two ways for a ${h.cls} to grow.`}</div>`}</div>
+      <div class="list-title">Path</div><div class="boons">${h.path && CM.PATHS[h.cls] && CM.PATHS[h.cls][h.path] ? (() => { const P = CM.PATHS[h.cls][h.path]; return `<div><b>${P.name}</b> - ${P.blurb}</div><div><b>${P.t1.name}</b> - ${P.t1.what}</div><div><b>${P.t2.name}</b> - ${h.level >= CM.PATH_AT[1] ? P.t2.what : `at level ${CM.PATH_AT[1]}: ${P.t2.what.charAt(0).toLowerCase() + P.t2.what.slice(1)}`}</div>${P.t3 ? `<div><b>${P.t3.name}</b> - ${h.level >= CM.PATH_AT[2] ? P.t3.what : `at level ${CM.PATH_AT[2]}: ${P.t3.what.charAt(0).toLowerCase() + P.t3.what.slice(1)}`}</div>` : ""}`; })() : `<div class='small'>${CM.needsPath(h) ? "A path waits to be chosen, below." : `Chosen at level ${CM.PATH_AT[0]}: two ways for a ${h.cls} to grow.`}</div>`}</div>
+      ${(() => { const f = g.bondOf(h); return f ? `<div class="list-title">Bond</div><div class="boons"><div><b>Old friends</b> - with ${this.esc(f.name)}: +1 attack and defence, heals between them half again as kind, and a fall avenged with a doubled blow.</div></div>` : ""; })()}
       ${(h.learned || []).length ? `<div class="list-title">Learned from tomes</div><div class="boons">${h.learned.map((id) => `<div><b>${CM.ABILITIES[id].name}</b> - ${CM.ABILITIES[id].what}</div>`).join("")}</div>` : ""}
       <div class="list-title">Ailments</div><div class="ails">${Object.keys(st).length ? Object.keys(st).map((s) => `<div><b>${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}</b> - ${CM.STATUSES[s].hint}${st[s] < 900 ? ` (${st[s]} more rounds)` : ""}</div>`).join("") : "<div class='small'>None.</div>"}</div>`;
     const boon = this.$("#sheet-boon");
@@ -444,14 +445,14 @@ CM.UI = class {
   }
 
   renderClasses() {
-    const classes = this.$("#classes");
+    const classes = this.$("#classes"), g = this.game;
     classes.innerHTML = "";
-    for (const cls of CM.CLASS_ORDER) {
-      const c = CM.CLASSES[cls], div = document.createElement("div");
-      div.className = "calling";
+    for (const cls of CM.ALL_CLASSES) {
+      const c = CM.CLASSES[cls], div = document.createElement("div"), locked = !g.classUnlocked(cls);
+      div.className = "calling" + (locked ? " locked" : "");
       div.appendChild(this.portrait(cls, 30));
       const text = document.createElement("div");
-      text.innerHTML = `<b>${cls}</b> <small>${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}.</small> <small>${c.blurb}</small>`;
+      text.innerHTML = `<b>${cls}</b> <small>${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}.</small> <small>${locked ? `<i>Earned: ${this.esc(CM.CLASS_UNLOCK[cls].what)}.</i> ` : ""}${c.blurb}</small>`;
       div.appendChild(text);
       classes.appendChild(div);
     }
@@ -487,7 +488,7 @@ CM.UI = class {
       const div = document.createElement("div");
       div.className = "slot";
       div.innerHTML = `<div class="top"><div class="portrait-slot"></div><div class="who"><input class="name" type="text" maxlength="14" spellcheck="false" title="Their name"><button class="dice" title="Another name">&#x2684;</button>
-        <select class="cls" title="Their calling">${CM.CLASS_ORDER.map((c) => `<option value="${c}">${c}</option>`).join("")}</select></div></div>
+        <select class="cls" title="Their calling"></select></div></div>
         <div class="role"></div>
         <table class="stats"></table>
         <div class="derived"></div>
@@ -514,6 +515,7 @@ CM.UI = class {
   openCreate() {
     const g = this.game;
     if (g.canContinue() && !window.confirm(`A run is waiting in expedition slot ${g.slot}. Start a new expedition there and let it go? (The other slots keep theirs.)`)) return;
+    for (const sel of this.root.querySelectorAll("#slots select.cls")) sel.innerHTML = g.classesAvailable().map((c) => `<option value="${c}">${c}</option>`).join("");   // (the callings earned)
     if (!this.slots.length) this.fillSlots(CM.CLASSIC);
     this.$("#create-seed").value = this.$("#seed").value;
     this.renderCreateNote();
@@ -611,6 +613,8 @@ CM.UI = class {
       const got = have.includes(id), need = k.need === 21 ? "slay the Lich King" : `reach floor ${k.need}`;
       return `<div class="unlock ${got ? "got" : ""}"><b>${got ? "✓" : "○"} ${k.name}</b> <small>${got ? k.what : `${k.what} <i>(${need}${deep.floor ? `; deepest so far: floor ${deep.floor}` : ""})</i>`}</small></div>`;
     }).join("");
+    const mem = g.memorial || [];
+    this.$("#memorial").innerHTML = mem.length ? mem.slice(0, 8).map((m) => `<div class="unlock got"><b>${this.esc(m.name)}</b> <small>${this.esc(m.cls)}, level ${m.level}, laid to rest on floor ${m.floor} - ${this.esc(m.date)}${m.seed ? `, seed ${this.esc(m.seed)}` : ""}</small></div>`).join("") + (mem.length > 8 ? `<div class="small">...and ${mem.length - 8} more.</div>` : "") : `<div class="small">No hero has been laid to rest at a camp fire yet.</div>`;
     const trophies = g.trophies || {};
     this.$("#trophies").innerHTML = [...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor < CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name]), ["lich", CM.BOSS.name, CM.LAST_FLOOR, "his palace"],
       ...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor > CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name])].map(([id, name, floor, where]) => {

@@ -271,6 +271,8 @@ Object.assign(CM.Game.prototype, {
     for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.sound("heal");
     this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass.");
+    const bond = (this.bonds || [])[Math.floor((this.tally.fights || 0) / 7) % Math.max(1, (this.bonds || []).length)];
+    if (bond) this.say(CM.BANTER[(this.tally.fights || 0) % CM.BANTER.length].replace("{a}", bond[0]).replace("{b}", bond[1]));
     this.saveRun();
   },
 
@@ -331,9 +333,12 @@ Object.assign(CM.Game.prototype, {
     const rescued = (this.rescued || []).length;
     const gone = this.party[idx];
     for (const slot of CM.SLOTS) if (gone[slot] && !(slot === "weapon" || slot === "armor")) this.bag.push(gone[slot]);   // (their trinkets stay with the party)
+    this.remember2(gone);
+    this.bonds = (this.bonds || []).filter((b) => !b.includes(gone.name));
     const h = Object.assign({}, recruit);
     delete h.price;
     this.party[idx] = h;
+    this.applyBonds();
     if (i < rescued) this.rescued.splice(i, 1); else this.recruits.who.splice(i - rescued, 1);
     this.sound("coin");
     this.say(`${gone.name} is laid to rest by the fire. ${h.name} the ${h.cls} takes up their place${recruit.price ? "" : ", owing you their life"}.`);

@@ -50,6 +50,8 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 #classes { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; }
 .calling { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: center; padding: 2px 4px; border-radius: 3px; }
 .calling:hover { background: rgba(42,32,24,0.6); }
+.calling.locked { opacity: 0.55; }
+.calling.locked canvas { filter: grayscale(1); }
 .calling canvas { width: 30px; height: 30px; border: 1px solid var(--edge); border-radius: 3px; }
 .calling b { color: var(--ink); font-size: 12.5px; }
 .calling small { color: var(--dim); font-size: 11px; line-height: 1.3; }
