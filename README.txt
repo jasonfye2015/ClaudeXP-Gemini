@@ -733,6 +733,20 @@ The spine of the story (the fifth big update, phase 0 - v3.1)
   chapter by chapter, the unread as blank lines, a lie struck through once the deeper line that corrects it is read.
   The bot reads the walls it passes. Reading every band's chapter in one run is the Chronicler.
 
+The people of Caer Duin (the fifth big update, phase 1 - v3.2)
+  Twelve ghosts (CM.PEOPLE: the six, and Marguerite the fishwife, Brokk who wrote GO ROUND, Hesta of the forges,
+  Lady Maren who still sits, Master Hollis the physician, Orrin Vale who was not from the east), each met three
+  times going down - a word, a word more, and at the third a request: bones, vengeance, a story read to them, the
+  bell (dropped on the fourth floor; Brother Cael rings it on the forty-first, and something far below moves), or a
+  witness (read the deeper wall that concerns them and come back). Met in an earlier run, they remember. Placed by
+  hash on their floors (never a guardian's), last in CM.furnish so nothing older moves.
+  Your own dead: on a seed where a party of yours fell, the hero with the most levels stands over the remains, says
+  one of a dozen lines, and wants their bones; laid to rest, a candle burns for them at the shrine for nothing.
+  The hermit tells a chapter back once all but one of its lines is read - the epigraph, then the truth under it
+  (CM.CHAPTER_TRUTH) - and the codex counts the chapter whole; with nothing to name, he points at the unread wall.
+  The lost adventurer may be a hero of yours who fell shallower on any seed, found alive after all (the name only).
+  Talk dialogs can run to a second line (More). Titles: Bell-ringer, the Witness, the Faithful.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

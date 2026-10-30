@@ -139,6 +139,7 @@ Object.assign(CM.Game.prototype, {
     if (codex.filter((c) => c.band !== undefined).every((c) => c.complete)) this.achieve("chronicler");
     return true;
   },
+  metGhost(name) { this.village.ghostsMet = (this.village.ghostsMet || []).filter((n) => n !== name).concat(name).slice(-40); this.saveVillage(); },
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); },
 
   // someone to talk to, where the party stands (Space)
@@ -150,19 +151,40 @@ Object.assign(CM.Game.prototype, {
   },
 
   talkGhost(thing, k) {
-    const fl = this.floor, G = CM.GHOSTS[thing.who] || CM.GHOSTS[0], R = CM.REQUESTS[thing.request] || CM.REQUESTS.story;
+    const fl = this.floor, P = thing.arc ? CM.PEOPLE[thing.who] : null;
+    const G = thing.own ? { name: thing.own.name, tale: thing.own.epitaph ? `${thing.own.name}'s epitaph: ${thing.own.epitaph}` : `${thing.own.name} the ${thing.own.cls} says: ${CM.OWN_LINES[thing.line || 0]}` }
+      : P ? { name: P.name, tale: P.tale } : CM.GHOSTS[thing.who] || CM.GHOSTS[0];
+    const R = P && thing.arc === 3 ? P.request : CM.REQUESTS[thing.request] || CM.REQUESTS.story;
+    if (P && thing.arc < 3) {                                            // the first and the second meeting: a word, remembered
+      const met = (this.village.ghostsMet || []).includes(P.name), key = `people.${thing.who + 1}.${thing.arc}`;
+      this.sound("ailment");
+      this.emit("talk", { title: P.name, text: thing.arc === 1 ? P.first : P.second, lines: met && !thing.asked ? [P.again] : [] });
+      if (!thing.asked) { thing.asked = true; this.markRead(key); this.remember("ghost", thing.arc === 1 ? P.first : P.second, { who: P.name, key }); this.metGhost(P.name); this.saveRun(); }
+      return;
+    }
     const done = thing.request === "bones" ? this.hasItem("bones") >= 0
       : thing.request === "vengeance" ? Boolean(fl.avenged && fl.avenged.includes(k))
+      : thing.request === "bell" ? this.hasItem("bell") >= 0
+      : thing.request === "witness" ? Boolean(this.story && this.story.read[R.key] !== undefined)
       : Object.values(fl.features).some((f) => f.type === "carving" && f.read && !(typeof f.text === "string"));
     if (!thing.asked) {
       thing.asked = true;
       this.sound("ailment");
-      this.emit("talk", { title: G.name, text: `A pale shape waits in the air, not quite a man or a woman any more. "I was ${G.name}," it says. "${R.ask}"` });
+      const met = P && (this.village.ghostsMet || []).includes(P.name);
+      this.emit("talk", { title: G.name, text: thing.own ? `${thing.own.name} the ${thing.own.cls}${thing.own.level ? `, level ${thing.own.level}` : ""} - yours, once, and fallen here. "${CM.OWN_LINES[thing.line || 0]}" A pause. "${R.ask}"`
+        : `A pale shape waits in the air, not quite a man or a woman any more. "I was ${G.name}," it says.${met ? ` ${P.again}` : ""} "${R.ask}"` });
+      if (P) this.metGhost(P.name);
       this.saveRun();
       return;
     }
     if (!done) { this.emit("talk", { title: G.name, text: `"${R.wait}"` }); return; }
     if (thing.request === "bones") this.bag.splice(this.hasItem("bones"), 1);
+    if (thing.request === "bell") { this.bag.splice(this.hasItem("bell"), 1); this.story.bell = true; this.sound("victory"); this.achieve("bellringer"); }
+    if (thing.own) {                                                     // laid to rest: a candle burns for them at the shrine, for nothing
+      const m = (this.memorial || []).find((x) => x.name === thing.own.name && x.seed === this.seed && !x.candle);
+      if (m) { m.candle = CM.today(); if (m.buried && this.vaultRoom && this.vaultRoom()) { this.vaults.push(m.buried); CM.store.set("vaults", this.vaults); } CM.store.set("memorial", this.memorial); }
+      this.achieve("laidtorest");
+    }
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:ghost:${fl.number}`));
     const gift = CM.makeGear(rnd.pick(["ring", "amulet", "amulet"]), fl.number + 4, rnd);
     gift.unknown = false;
@@ -170,8 +192,10 @@ Object.assign(CM.Game.prototype, {
     const xp = 30 * fl.number;
     for (const h of this.alive()) h.xp += xp;
     delete fl.things[k];
-    this.markRead(`ghost.${CM.GHOSTS.indexOf(G) + 1}`);
-    this.remember("ghost", G.tale, { who: G.name, key: `ghost.${CM.GHOSTS.indexOf(G) + 1}` });
+    const gkey = thing.own ? null : `ghost.${(P ? thing.who : CM.GHOSTS.indexOf(G)) + 1}`;
+    this.markRead(gkey);
+    this.remember("ghost", G.tale, { who: G.name, key: gkey });
+    if (P) { this.story.witnessed = (this.story.witnessed || []).concat(P.name); if (this.story.witnessed.length >= CM.PEOPLE.length) this.achieve("witness"); }
     this.achieve("restful");
     this.sound("heal");
     this.say(`${G.name} is at rest. ${gift.name} (${CM.itemLabel(gift)}) and ${xp} experience each.`);
@@ -185,6 +209,16 @@ Object.assign(CM.Game.prototype, {
   talkHermit(thing) {
     const untold = (this.journal || []).length - (thing.heard || 0);
     if (!thing.greeted) { thing.greeted = true; this.emit("talk", { title: "The hermit", text: CM.HERMIT.greet }); this.saveRun(); return; }
+    // a chapter all but read (one telling missed, at most): he tells it back, with the truth under it, and the codex counts it whole
+    this.story = this.story || { read: {} }; this.story.told = this.story.told || {};
+    const chapter = CM.codex(this).find((c) => c.band !== undefined && c.done >= c.total - 1 && !this.story.told[c.id] && CM.CHAPTER_TRUTH[c.id]);
+    if (chapter) {
+      this.story.told[chapter.id] = true;
+      this.remember("ghost", CM.CHAPTER_TRUTH[chapter.id], { who: "The hermit", key: `told.${chapter.id}` });
+      this.emit("talk", { title: "The hermit", text: `"${chapter.name}. You've read it, near enough. I'll tell it back to you, so you know what you've read." He shuts his eyes. "${chapter.epigraph}"`, lines: [CM.CHAPTER_TRUTH[chapter.id]] });
+      this.saveRun();
+      return;
+    }
     if (untold <= 0) { this.emit("talk", { title: "The hermit", text: CM.HERMIT.noStory }); return; }
     const row = this.bag.findIndex((i) => i.unknown);
     thing.heard = (thing.heard || 0) + 1;
@@ -195,8 +229,9 @@ Object.assign(CM.Game.prototype, {
       this.say(`The hermit names it: ${item.name} (${CM.itemLabel(item)}).`);
       this.emit("talk", { title: "The hermit", text: `${CM.HERMIT.told[(thing.heard - 1) % CM.HERMIT.told.length]} "${item.name}. ${CM.itemLabel(item)}."` });
     } else {
+      const wall = Object.entries(this.floor.features).find(([, f]) => f.type === "carving" && !f.read);
       const goal = CM.goalOf(this.floor), where = goal ? this.directionTo(goal.split(",").map(Number)) : "nowhere you can get to";
-      this.emit("talk", { title: "The hermit", text: `${CM.HERMIT.nothing} "The way down lies ${where}."` });
+      this.emit("talk", { title: "The hermit", text: `${CM.HERMIT.nothing} "${wall ? `There's a wall on this floor you haven't read: ${this.directionTo(wall[0].split(",").map(Number))}.` : `The way down lies ${where}.`}"` });
     }
     this.saveRun();
     this.emit("change");
@@ -212,7 +247,17 @@ Object.assign(CM.Game.prototype, {
   // the lost adventurer: cut loose, they take a fallen hero's place - or go on up to the camp, leaving a rope and their map
   freeAdventurer(thing, k) {
     const fl = this.floor, h = Object.assign({}, thing.hero);
-    if (!thing.freed) { thing.freed = true; this.emit("talk", { title: h.name + " the " + h.cls, text: CM.ADVENTURER.found }); this.saveRun(); return; }
+    if (!thing.freed) {
+      thing.freed = true;
+      const past = (this.memorial || []).filter((m) => m.cls === h.cls && m.floor < fl.number && !(this.story.recalled || []).includes(m.name) && m.name !== h.name);
+      if (past.length) {                                                 // (a hero of yours who fell shallower, on any seed: found alive after all)
+        const m = past[CM.hashSeed(`${this.seed}:recalled:${fl.number}`) % past.length];
+        thing.hero.name = m.name; h.name = m.name; thing.hero.recalled = m.floor;
+        this.story.recalled = (this.story.recalled || []).concat(m.name);
+        this.emit("talk", { title: h.name + " the " + h.cls, text: `${CM.ADVENTURER.found} You know the face. ${h.name} fell on floor ${m.floor} of another descent, ${m.date} - or was left for dead, and crawled, and was taken. "You look like you've seen a ghost," ${h.name} says. "Fair."` });
+      } else this.emit("talk", { title: h.name + " the " + h.cls, text: CM.ADVENTURER.found });
+      this.saveRun(); return;
+    }
     const fallen = this.party.findIndex((p) => p.hp <= 0 || (p.status || {}).stone);
     delete fl.things[k];
     this.sound("unlock");

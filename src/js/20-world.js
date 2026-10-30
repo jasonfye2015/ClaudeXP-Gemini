@@ -667,6 +667,36 @@ CM.furnish = function (floor, seed, gen) {
       if (k) floor.features[k] = { type: hazard.id, known: false, spent: false };
     }
   }
+  // the people of Caer Duin, each on their three floors (placed last, so the older hashes' cells are what they were) (never beside a generator's ghost of the same name), and the
+  // bell they dropped on the fourth; a request's bones far from the ghost, its quarry marked among the floor's bands
+  if (number < CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR) {
+    CM.PEOPLE.forEach((p, i) => {
+      const arc = p.floors.indexOf(number);
+      if (arc < 0) return;
+      const twin = Object.keys(floor.things).find((c) => floor.things[c].type === "ghost" && !floor.things[c].arc && floor.things[c].who === i);
+      if (twin) {                                                        // (the generator rolled the same soul here: it stands in their place, and its errand goes)
+        for (const [c, t] of Object.entries(floor.things)) { if (t.type === "bones" && t.ghost === twin) delete floor.things[c]; if (t.vengeance === twin) delete t.vengeance; }
+        delete floor.things[twin];
+      }
+      const k = twin || pickCell(`person:${i}`, (c) => roomCells.has(c)) || pickCell(`person:${i}`);
+      if (!k) return;
+      const ghost = { type: "ghost", who: i, arc: arc + 1, request: arc === 2 ? p.request.kind : null, asked: false };
+      floor.things[k] = ghost;
+      if (arc !== 2) return;
+      if (p.request.kind === "bones") {
+        const [gx, gy] = unkey(k), far = pickCell(`personbones:${i}`, (c) => { const [x, y] = unkey(c); return Math.abs(x - gx) + Math.abs(y - gy) >= 6; }) || pickCell(`personbones:${i}`, (c) => c !== k);
+        if (far) floor.things[far] = { type: "bones", ghost: k }; else ghost.request = "story";
+      } else if (p.request.kind === "vengeance") {
+        const groups = Object.entries(floor.things).filter(([, t]) => t.type === "monsters" && !t.still && !t.hunter && !t.vengeance);
+        if (!groups.length) { ghost.request = "story"; return; }
+        const [, t] = groups[h(`personquarry:${i}`) % groups.length];
+        t.vengeance = k;
+        const m = t.group[0];
+        if (!m.elite) { m.name = `Hulking ${m.name}`; m.elite = "hulking"; m.max = Math.round(m.max * 1.5); m.hp = m.max; m.atk += 2; m.xp = Math.round(m.xp * 1.5); m.gold *= 2; }
+      }
+    });
+    if (number === CM.BELL_FLOOR) { const k = pickCell("bell", (c) => !roomCells.has(c)) || pickCell("bell"); if (k) floor.things[k] = { type: "bones", bell: true }; }
+  }
   return floor;
 };
 

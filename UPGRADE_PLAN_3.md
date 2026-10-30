@@ -99,7 +99,7 @@ The writing needs a canon and the code needs a shelf.
 
 Size: M. Nothing the player sees changes except the codex; everything after depends on it.
 
-## Phase 1 - The people of Caer Duin - v3.2
+## Phase 1 - The people of Caer Duin - v3.2 - DONE
 
 The six ghosts become characters with arcs across the dungeon.
 

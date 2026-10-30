@@ -103,6 +103,12 @@ Object.assign(CM.Game.prototype, {
         this.bag.push(CM.key());
         this.sound("coin");
         this.say("An iron key lies in the dust. You take it.");
+      } else if (thing.type === "bones" && thing.bell) {
+        delete fl.things[k];
+        this.bag.push(Object.assign({}, CM.BELL));
+        this.sound("coin");
+        this.say(CM.BELL.found);
+        this.markRead("thing.bell");
       } else if (thing.type === "bones") {
         delete fl.things[k];
         this.bag.push(CM.bones(thing.ghost));
@@ -709,6 +715,17 @@ Object.assign(CM.Game.prototype, {
     }
     if (!at) return;
     fl.things[keyOf(at[0], at[1])] = { type: "remains", id: past.id, names: past.names, date: past.date, item: past.item || null };
+    // the one of them with the most levels stands over the bones, and wants them laid to rest
+    const mine = (this.memorial || []).filter((m) => m.seed === this.seed && m.floor === fl.number && past.names.includes(m.name)).sort((a, b) => (b.level || 0) - (a.level || 0))[0]
+      || { name: past.names[0], cls: "adventurer", level: 0 };
+    const cells = [...CM.distances(fl.grid, at, (x, y) => CM.passable(fl, x, y))].filter(([k, d]) => d >= 1 && d <= 3 && free(...k.split(",").map(Number))).map(([k]) => k).sort();
+    if (!cells.length) return;
+    const gk = cells[CM.hashSeed(`${this.seed}:ownghost:${fl.number}`) % cells.length];
+    if (Object.values(fl.things).some((t) => t.type === "ghost" && t.own)) return;
+    fl.things[gk] = { type: "ghost", own: { name: mine.name, cls: mine.cls, level: mine.level || 0, epitaph: mine.epitaph || "" }, request: "bones", asked: false, line: CM.hashSeed(`${this.seed}:ownline:${fl.number}`) % CM.OWN_LINES.length };
+    const [gx, gy] = gk.split(",").map(Number);
+    const far = Object.keys(Object.fromEntries(CM.distances(fl.grid, at, (x, y) => CM.passable(fl, x, y)))).filter((k) => { const [x, y] = k.split(",").map(Number); return Math.abs(x - gx) + Math.abs(y - gy) >= 6 && free(x, y); }).sort();
+    if (far.length) fl.things[far[CM.hashSeed(`${this.seed}:ownbones:${fl.number}`) % far.length]] = { type: "bones", ghost: gk }; else fl.things[gk].request = "story";
   },
   takeRemains(thing, k) {
     this.remainsFound = (this.remainsFound || []).concat(thing.id);

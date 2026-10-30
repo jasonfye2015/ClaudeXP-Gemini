@@ -160,6 +160,103 @@ L("endless.8", "endless", 8, "Someone has started counting the floors here, and 
 CM.GUARDIAN_ORDER.forEach((id, i) => { const G = CM.GUARDIANS[id]; L(`guardian.${id}`, ["catacombs", "vaults", "halls", "drowned", "fungal", "crystal", "foundry", "ossuary", "root"][i], 6, G.lore, { floor: G.floor, guardian: id }); });
 CM.GHOSTS.forEach((g, i) => L(`ghost.${i + 1}`, "people", i + 1, g.tale, { who: g.name }));
 
+// ---- the people of Caer Duin: twelve ghosts, each met three times going down - a word, a word more, and at the
+// third a request; the first six are CM.GHOSTS (the generators roll among them, so that list stays six) ----
+CM.PEOPLE = [
+  { name: "Hal of the lower watch", floors: [3, 9, 23],
+    first: "A watchman's shape, still at attention. \"Hal,\" it says. \"Lower watch. The captain's still down there. I'd have stayed, but I'd a wife.\"",
+    second: "Hal again, lower down, wetter. \"You're going the right way. He's below this. He won't have moved.\"",
+    again: "\"You've been down before. I remember the boots.\"",
+    request: { kind: "witness", key: "carving.drowned.2", ask: "The walls up there say the water rose. I need to hear it from someone who's read the walls down here. Read them, then come and tell me.", wait: "Read the walls of the town. Then come back.", done: "\"Let in.\" Hal says it twice. \"Then he didn't drown at his post. He was drowned at it. That's different. Thank you. That's different.\"" } },
+  { name: "Ysolde the king's cook", floors: [2, 7, 16],
+    first: "A broad shape, arms folded as if over an apron. \"Ysolde. Kitchens. If you find any barley, it's mine.\"",
+    second: "Ysolde, by a dry cistern. \"He stopped eating in the twelfth year. I kept cooking. What else was I for?\"",
+    again: "\"You again. Thinner than last time. Eat something.\"",
+    request: { kind: "story", ask: "There's writing on this floor. I can't read any more - the letters swim. Read it to me.", wait: "The wall's on this floor, where the light falls. Go on.", done: "She listens with her eyes shut. \"Yes. That was the year. Take this; I kept it in the flour.\"" } },
+  { name: "Brother Cael", floors: [4, 12, 41],
+    first: "A monk's shape, hands hidden in sleeves that aren't there. \"Cael. We rang the last bell ourselves. They took it down the next day. It's on this floor somewhere - they couldn't carry it far.\"",
+    second: "Cael, lower, quieter. \"He hears it, you know. The bell. He's heard it every night since. That's the one thing I did right.\"",
+    again: "\"Back again. Did you find the bell? No - don't tell me. Find it.\"",
+    request: { kind: "bell", ask: "The last bell of Caer Duin lies on the fourth floor, where they dropped it. Bring it to me here, and I'll ring it once more, where he can hear it best.", wait: "The bell's on the fourth floor. Heavy, cracked, bronze. You'll know it.", done: "He takes the bell in both hands and swings it once. The note goes down through the stone like water. Somewhere far below, something that has not moved in a long time moves. \"There,\" says Cael. \"Now I can go.\"" } },
+  { name: "Tamsin, who kept the tally", floors: [2, 11, 28],
+    first: "A clerk's shape, one hand moving as if it still held a stylus. \"Tamsin. I counted them. I'm still counting, a little.\"",
+    second: "Tamsin, among the dwarves' halls. \"Three hundred and eleven dwarves. They asked me to count them too, at the end. I did.\"",
+    again: "\"I counted you last time. Four. I'll count four again, I hope.\"",
+    request: { kind: "vengeance", ask: "The thing that killed me walks this floor. I never got to count it. Kill it, and I'll have a number for everything.", wait: "It still walks. I can hear it. I can almost count it.", done: "\"One,\" says Tamsin, and makes a mark on nothing. \"There. Everything's counted. Take this - I'll not need to carry it.\"" } },
+  { name: "Aldous the Lesser", floors: [6, 14, 33],
+    first: "A big, apologetic shape. \"Aldous. The Lesser, they put. There was a Greater. He didn't come down here, so who's lesser now?\"",
+    second: "Aldous, cheerful in the dark. \"The troll was wounded already. I'll say it to anyone who'll listen. It was still a troll.\"",
+    again: "\"You again! Did you bring a chair? Joke. Joke.\"",
+    request: { kind: "vengeance", ask: "There's a thing on this floor I'd have liked a go at. Have a go for me, and I'll give you what I've got.", wait: "It's still about. Big one. You'll want more than a chair.", done: "\"Ha! Oak, was it? Doesn't matter. Here - I was buried with this, and I never knew what it did.\"" } },
+  { name: "Mother Ennis", floors: [4, 13, 19],
+    first: "A woman's shape with her hands over where a child's eyes would be. \"Ennis. I told her not to look. I looked for both of us.\"",
+    second: "Ennis, by the child's letters. \"She wrote that. I made her. If he read it, I wanted him to know we knew.\"",
+    again: "\"I remember you. You looked at me, last time, and didn't look away. That was kind.\"",
+    request: { kind: "witness", key: "carving.halls.5", ask: "There's a wall on floor fifteen that says what he is. I couldn't read it; I wouldn't. Read it for me, and come back, and tell me plainly.", wait: "Floor fifteen. The last wall before his palace. Read it and come back.", done: "\"He remembers.\" She lowers her hands. \"Then he knew what he was doing. I'd hoped - no. Good. Then I was right not to look. Take this.\"" } },
+  { name: "Marguerite, fishwife of the lower town", floors: [8, 21, 26],
+    first: "A square shape, hands on hips, smelling faintly of the river. \"Marguerite. Fish. I saw who opened the sluices, and I've been waiting a long time to tell someone who'd write it down.\"",
+    second: "Marguerite, in her own drowned street. \"This was mine. That window. I carved it so: we saw who opened them. I'm not saying the name on a wall. I'll say it to a face.\"",
+    again: "\"You've been down before. Did you write it down? Write it down.\"",
+    request: { kind: "witness", key: "carving.drowned.3", ask: "Read what I cut on the walls of the town. Then come here and I'll tell you the part I didn't dare cut.", wait: "My wall is in the town above this. The one about the sluices.", done: "\"It was him. The king. His own hand on the wheel. There was a ring on it the whole town knew.\" She breathes out, which she hasn't done in a long time. \"Take this. I had it off a drowned man who didn't need it.\"" } },
+  { name: "Brokk, who wrote GO ROUND", floors: [11, 29, 34],
+    first: "A short, broad shape with a pick that isn't there. \"Brokk. I cut the warnings. Nobody reads warnings. You're reading one now, so maybe you're the exception.\"",
+    second: "Brokk, where the fungus-dark ends. \"Below this the stone goes clear and starts remembering faces. Don't give it yours. Go round.\"",
+    again: "\"Still alive. Still going round, I hope.\"",
+    request: { kind: "witness", key: "carving.crystal.3", ask: "I cut a thing at knee height on the thirty-third floor. Read it. Then come and tell me you understood it, because I need to know somebody did.", wait: "Knee height. Thirty-third floor. Small runes. I was in a hurry.", done: "\"Go round,\" says Brokk, nodding. \"Yes. That's all it ever was. Take this - it was my father's, and it's no use to crystal.\"" } },
+  { name: "Hesta of the forges", floors: [13, 36, 39],
+    first: "A smith's shape, one arm raised to shield a face from heat that isn't there. \"Hesta. Forges. The king relit them for one job, and the job's what you're walking down to.\"",
+    second: "Hesta, by a cold anvil. \"We made the box here. It took us in the usual way, and in another. Iron wouldn't hold a heart. We found what would.\"",
+    again: "\"Back again. The forge is still warm, you know. It shouldn't be.\"",
+    request: { kind: "story", ask: "There's a wall on this floor about the master of the forges. Read it to me. I want to know if it says he noticed.", wait: "It's on this floor. Read it and come back.", done: "She listens. \"'It is not clear it noticed.' No. It never did. Take this; I made it myself, before the box.\"" } },
+  { name: "Lady Maren, who still sits", floors: [17, 18, 44],
+    first: "A fine shape, seated, though there is no chair. \"Maren. I sit at the king's left hand. I have sat there a long time. Don't bow; I'll know you don't mean it.\"",
+    second: "Maren again, a floor down, still seated. \"We are called to table. We go. He talks, and we listen, and no one breathes. You'll see.\"",
+    again: "\"You again. He didn't mention you. He doesn't mention anything, now.\"",
+    request: { kind: "bones", ask: "My bones are on this floor. Not where I sit - where I was put, after. Bring them to the chair, and I will get up.", wait: "They're on this floor. Somewhere low, where the rats go.", done: "She stands, for the first time in a long time, and the chair that isn't there falls over. \"Thank you. Take this; it was a gift from him, and I want it gone.\"" } },
+  { name: "Master Hollis, physician", floors: [9, 19, 43],
+    first: "A stooped shape with ink on its fingers. \"Hollis. Physician to the king. I burned my notes. I kept one page. I expect you've read it, or you will.\"",
+    second: "Hollis, outside the throne room. \"I'm still in there, you know. Sitting. The body need not know. I wrote that. I was right.\"",
+    again: "\"You've read more since last time. I can see it in how you stand.\"",
+    request: { kind: "witness", key: "carving.ossuary.3", ask: "I learned the way of it from a chapel below the ossuary. Go and read what the priests wrote about that. Then come and tell me whether they blame me.", wait: "The ossuary. The priests' hand. It's a long way down.", done: "\"He had done it first.\" Hollis nods. \"Then I was only the second fool. That's something. Take this. It's the one page. Keep it better than I did.\"" } },
+  { name: "Orrin Vale, the stranger from the east", floors: [6, 37, 39],
+    first: "A traveller's shape, hooded, a box-shaped absence held against its chest. It says nothing the first time. It looks at you, and then at the stairs down.",
+    second: "The traveller again, in the Foundry, the hood back. \"Orrin Vale. I'm from here. I carried the box up. I was told what it would do. I did it anyway. There: now it's said.\"",
+    again: "\"You know who I am now. Last time you didn't. I preferred last time.\"",
+    request: { kind: "witness", key: "carving.foundry.5", ask: "The walls of this floor say what I was. Read them. I want to hear it said by someone who isn't me.", wait: "It's on this floor, in a smith's hand. My name is in it.", done: "\"From here.\" He pulls the hood up again. \"Yes. Take this. It was the fee. I never spent it.\"" } },
+];
+CM.PEOPLE.forEach((p, i) => { if (i < CM.GHOSTS.length) p.tale = CM.GHOSTS[i].tale; });
+CM.PEOPLE[6].tale = "Marguerite says: I sold fish on that street forty years. The morning after, the fish were swimming in my kitchen. I'd have laughed, another day.";
+CM.PEOPLE[7].tale = "Brokk says: the crystal took my brother's face first. He went round, after. It's harder than it sounds, going round your brother.";
+CM.PEOPLE[8].tale = "Hesta says: the metal that holds a heart apart is the same colour as the stone at the bottom. We didn't ask where the ore came from. We should have.";
+CM.PEOPLE[9].tale = "Maren says: the last thing he said at table was her name. The queen's. Then he looked at his hands for an hour. We all sat and watched him look.";
+CM.PEOPLE[10].tale = "Hollis says: the heart may be kept apart, and the body need not know. I was proud of the sentence. I'm not proud of anything now.";
+CM.PEOPLE[11].tale = "Orrin says: the box was warm when I carried it up. Empty, and warm. I told myself that was the sun on the lid.";
+CM.PEOPLE.forEach((p, i) => {
+  L(`people.${i + 1}.1`, "people", (i + 1) * 10 + 1, p.first, { who: p.name, floor: p.floors[0] });
+  L(`people.${i + 1}.2`, "people", (i + 1) * 10 + 2, p.second, { who: p.name, floor: p.floors[1] });
+  if (!CM.LORE_TEXT[`ghost.${i + 1}`]) L(`ghost.${i + 1}`, "people", (i + 1) * 10 + 3, p.tale, { who: p.name, floor: p.floors[2] });
+  else { CM.LORE_TEXT[`ghost.${i + 1}`].order = (i + 1) * 10 + 3; CM.LORE_TEXT[`ghost.${i + 1}`].floor = p.floors[2]; }
+});
+CM.BELL_FLOOR = 4;
+CM.BELL = { name: "The last bell of Caer Duin", kind: "bell", power: 0, value: 0, found: "Under the rags, bronze, cracked, heavier than it looks: the last bell of Caer Duin, dropped where they could carry it no further." };
+// your own dead: a hero of yours who fell on this floor of this seed stands over the remains, and says one of these
+CM.OWN_LINES = ["I had the stairs in sight.", "It was the third one that got me. Watch the third one.", "Tell them I didn't run.", "I'd have liked to see the camp again. Is the fire still lit?",
+  "They've my bones somewhere on this floor. Dragged. I'd rather they were here.", "You look like us. We looked like you.", "The light went out first. Then everything else.", "Don't take the left-hand door. Or do; I did; it hardly matters now.",
+  "I remember the seed of this place. I remember every turn. For all the good it does.", "Four of us. Then three. Then I lost count, which was a mercy.", "I kept the ring. It's with the bones. Have it.", "If you get down, say my name at the bottom. I'd like it said down there."];
+// the hermit tells a finished chapter back, and gives it its truth
+CM.CHAPTER_TRUTH = {
+  catacombs: "\"The good king,\" the hermit says. \"He was, at first. That's what the first dead were for - to teach him grief, so the thing below could use it. It's always a good king. A bad one wouldn't have minded enough.\"",
+  vaults: "\"The water didn't rise. You'll read that lower down, but I'll tell you now, free: nothing in this place happens by itself. Not the water, not the box, not the king not sleeping. Something wanted it.\"",
+  halls: "\"Three hundred years of trade, and the last letter asked about cold coin. The dwarves knew what a cold coin meant. They'd met it before, lower down. They sealed the doors against the king, and the king was the least of it.\"",
+  palace: "\"The heart kept apart.\" He spits. \"The physician thought he'd discovered it. Everyone who finds that trick thinks they're the first. There's always a chapel somewhere that says otherwise.\"",
+  drowned: "\"So now you know. Let in. By his hand. And the queen - well. You've read it. The thing in his head wanted the town fed to the shaft, and it wanted her out of the way of that, and he did both and remembers both. That's the price of the trick: you remember.\"",
+  fungal: "\"It thinks on what it's fed. A city, the dead of a city, three hundred dwarves. It isn't the Root, mind. It's what grows on the Root's leavings. A rat that learned to want, writ large.\"",
+  crystal: "\"The dwarves left for the crystal, not the king. Remember that when you're blaming him for everything. The hill was hungry before there was a crown on it.\"",
+  foundry: "\"Orrin Vale. From here. I knew him, a little, before. He wasn't a bad man. That's the worst thing I know about this place: it doesn't need bad men.\"",
+  ossuary: "\"The Patriarch did it first, and showed the king by letting the king's physician find the chapel. Why? Because the thing below told him to, a thousand years ago, and he's still listening. Everyone who listens ends up tidying bones.\"",
+  root: "\"Everything above is its dream.\" The hermit is quiet for a while. \"Then wake it, or don't. I've thought about it for forty years down here and I still don't know which is the mercy.\"",
+};
+
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)
 CM.LORE_KEYS = [];
 for (let n = 1; n <= 50; n++) CM.LORE_KEYS.push(`carving.${["catacombs", "vaults", "halls", "palace", "drowned", "fungal", "crystal", "foundry", "ossuary", "root"][Math.floor((n - 1) / 5)]}.${((n - 1) % 5) + 1}`);
@@ -201,8 +298,8 @@ CM.codex = function (game) {
     const lines = Object.values(CM.LORE_TEXT).filter((l) => l.chapter === id).sort((a, b) => a.order - b.order).map((l) => ({
       key: l.key, order: l.order, floor: l.floor, who: l.who, read: read[l.key] !== undefined, text: read[l.key] !== undefined ? CM.telling(l.key, game && game.seed) : null,
       struck: truths[l.key] || null, truth: truths[l.key] ? CM.telling(truths[l.key]) : null }));
-    const done = lines.filter((l) => l.read).length;
-    out.push({ id, name: ch.name, epigraph: ch.epigraph, band: ch.band, lines, done, total: lines.length, complete: done === lines.length && lines.length > 0 });
+    const done = lines.filter((l) => l.read).length, told = Boolean(game && game.story && game.story.told && game.story.told[id]);
+    out.push({ id, name: ch.name, epigraph: ch.epigraph, band: ch.band, lines, done, total: lines.length, told, complete: (done === lines.length && lines.length > 0) || told });
   }
   return out;
 };

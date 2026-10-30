@@ -1312,7 +1312,7 @@ test("the spine of the story: fifty carvings in ten chapters, each on a wall the
   assert.strictEqual(CM.loreKey("g:rat"), "guardian.rat"); assert.strictEqual(CM.loreKey("e:9"), "endless.2"); assert.strictEqual(CM.loreKey(-3), "odd.3");
   const a = CM.loreText(4, "seed-a"), b = CM.loreText(4, "seed-b"), c = CM.loreText(4, "seed-a");
   assert.strictEqual(a, c, "a seed's telling is its own"); assert.ok(CM.LORE_TEXT["carving.catacombs.5"].tellings.includes(a) && CM.LORE_TEXT["carving.catacombs.5"].tellings.includes(b));
-  assert.ok(Object.values(CM.LORE_TEXT).filter((l) => l.floor && l.floor <= 50 && !l.guardian).every((l) => l.tellings.length >= 2), "two tellings a carving");
+  assert.ok(Object.values(CM.LORE_TEXT).filter((l) => l.key.startsWith("carving.")).every((l) => l.tellings.length >= 2), "two tellings a carving");
   assert.ok([..."abcdefgh"].some((x) => CM.loreText(4, `s-${x}`) !== CM.LORE[4]), "the other telling comes up");
   // a party reads a wall: the story knows the key, the journal keeps the telling, the save keeps both
   const game = new CM.Game();
@@ -1338,6 +1338,75 @@ test("the spine of the story: fifty carvings in ten chapters, each on a wall the
   const g4 = new CM.Game(); g4.newGame("spine-bot", fixedParty(CM));
   playRun(CM, g4, { maxFloor: 4 });
   assert.ok(Object.keys(g4.story.read).length >= 2, `the bot read ${Object.keys(g4.story.read).join(", ")}`);
+});
+
+test("the people of Caer Duin: twelve ghosts on their three floors, the bell, a witness's request, your own dead over their bones, the hermit tells a chapter back", () => {
+  const CM = load();
+  assert.strictEqual(CM.PEOPLE.length, 12); assert.strictEqual(CM.GHOSTS.length, 6, "the generators roll among six");
+  for (const p of CM.PEOPLE) {
+    assert.ok(p.floors[0] < p.floors[1] && p.floors[1] < p.floors[2] && p.floors[2] <= 45, p.name);
+    assert.ok(p.floors.every((f) => !CM.guardianFor(f) && f !== CM.LAST_FLOOR), `${p.name}: never a guardian's floor`);
+    assert.ok(p.tale && p.first && p.second && p.again && p.request.ask && p.request.wait && p.request.done, `${p.name}: every word written`);
+    if (p.request.kind === "witness") { assert.ok(CM.LORE_TEXT[p.request.key], `${p.name}: a real key`); }
+    assert.ok(CM.LORE_TEXT[`ghost.${CM.PEOPLE.indexOf(p) + 1}`].chapter === "people");
+  }
+  for (const seed of ["people-1", "people-2", "people-3"]) for (let n = 2; n <= 45; n++) {
+    const fl = CM.makeFloor(n, seed, 2);
+    for (const [i, p] of CM.PEOPLE.entries()) {
+      const arc = p.floors.indexOf(n);
+      if (arc < 0) continue;
+      const g = Object.entries(fl.things).find(([, t]) => t.type === "ghost" && t.arc === arc + 1 && t.who === i);
+      assert.ok(g, `${p.name} stands on floor ${n} of ${seed}`);
+      if (arc === 2 && g[1].request === "bones") assert.ok(Object.values(fl.things).some((t) => t.type === "bones" && t.ghost === g[0]), `${p.name}'s bones lie on the floor`);
+      if (arc === 2 && g[1].request === "vengeance") assert.ok(Object.values(fl.things).some((t) => t.vengeance === g[0]), `${p.name}'s quarry walks the floor`);
+    }
+    if (n === CM.BELL_FLOOR) assert.ok(Object.values(fl.things).some((t) => t.type === "bones" && t.bell), "the bell on the fourth floor");
+  }
+  // a word with Hal on floor 3, the journal, the story; later, his witness request, granted when the Drowned Town's wall is read
+  const game = new CM.Game(); game.newGame("people-1", fixedParty(CM));
+  game.enterFloor(3, "down");
+  let [k, t] = Object.entries(game.floor.things).find(([, x]) => x.type === "ghost" && x.arc === 1 && x.who === 0);
+  game.floor.pos = k.split(",").map(Number); game.talk(t, k);
+  assert.strictEqual(game.story.read["people.1.1"], 3); assert.ok(game.journal.some((e) => e.key === "people.1.1")); assert.ok(game.village.ghostsMet.includes("Hal of the lower watch"));
+  game.enterFloor(23, "down");
+  [k, t] = Object.entries(game.floor.things).find(([, x]) => x.type === "ghost" && x.arc === 3 && x.who === 0);
+  game.floor.pos = k.split(",").map(Number); game.talk(t, k); game.talk(t, k);
+  assert.ok(game.floor.things[k], "not yet: the town's wall is unread");
+  game.markRead("carving.drowned.2"); const bag = game.bag.length; game.talk(t, k);
+  assert.ok(!game.floor.things[k] && game.bag.length === bag + 1 && game.story.read["ghost.1"] === 23, "Hal rests, and leaves a gift");
+  // the bell: picked up on the fourth floor, rung by Cael on the forty-first
+  const g2 = new CM.Game(); g2.newGame("people-2", fixedParty(CM));
+  g2.enterFloor(4, "down");
+  const bellAt = Object.keys(g2.floor.things).find((kk) => g2.floor.things[kk].bell);
+  { const [bx, by] = bellAt.split(",").map(Number), d = CM.DIRS.findIndex(([dx, dy]) => CM.passable(g2.floor, bx - dx, by - dy)); g2.floor.pos = [bx - CM.DIRS[d][0], by - CM.DIRS[d][1]]; g2.floor.facing = d; g2.move(0); }   // (bones are taken by walking onto them)
+  assert.ok(g2.hasItem("bell") >= 0 && g2.story.read["thing.bell"] === 4, "the bell in the pack");
+  g2.enterFloor(41, "down");
+  [k, t] = Object.entries(g2.floor.things).find(([, x]) => x.type === "ghost" && x.arc === 3 && x.who === 2);
+  g2.floor.pos = k.split(",").map(Number); g2.talk(t, k); g2.talk(t, k);
+  assert.ok(g2.story.bell && g2.hasItem("bell") < 0 && g2.achievements.bellringer, "rung");
+  // your own dead: a hero of yours who fell here stands over the remains and wants their bones
+  const g3 = new CM.Game(); g3.newGame("people-3", fixedParty(CM));
+  const fl2 = CM.makeFloor(2, "people-3", 2), spot = [...CM.distances(fl2.grid, fl2.pos)].map(([kk]) => kk).find((kk) => !fl2.things[kk] && !fl2.features[kk] && kk !== fl2.pos.join(","));
+  g3.fallen = [{ id: "people-3:2:1", seed: "people-3", floor: 2, pos: spot.split(",").map(Number), names: ["Edda", "Bo", "Cy", "Di"], date: "01/01/2026", item: null }];
+  g3.memorial = [{ name: "Edda", cls: "Knight", level: 4, floor: 2, seed: "people-3", date: "01/01/2026", buried: null }];
+  g3.enterFloor(2, "down");
+  const own = Object.entries(g3.floor.things).find(([, x]) => x.type === "ghost" && x.own);
+  assert.ok(own && own[1].own.name === "Edda" && own[1].own.cls === "Knight", "Edda stands here");
+  assert.ok(Object.values(g3.floor.things).some((x) => x.type === "bones" && x.ghost === own[0]), "her bones, somewhere");
+  g3.bag.push(CM.bones(own[0])); g3.floor.pos = own[0].split(",").map(Number); g3.talk(own[1], own[0]); g3.talk(own[1], own[0]);
+  assert.ok(!g3.floor.things[own[0]] && g3.memorial[0].candle && g3.achievements.laidtorest, "laid to rest, a candle lit");
+  // the hermit tells a chapter back once all but one line is read
+  const g4 = new CM.Game(); g4.newGame("people-4", fixedParty(CM));
+  for (const key of ["carving.catacombs.1", "carving.catacombs.2", "carving.catacombs.3", "carving.catacombs.4", "guardian.rat"]) g4.markRead(key);
+  const hermit = { type: "hermit", heard: 0, greeted: true };
+  let said = null; g4.on("talk", (e) => { said = e; });
+  g4.talkHermit(hermit);
+  assert.ok(g4.story.told.catacombs && said.lines && said.lines[0] === CM.CHAPTER_TRUTH.catacombs, "told");
+  assert.ok(CM.codex(g4)[0].complete, "the codex counts it whole");
+  // the bot talks to the people it passes
+  const g5 = new CM.Game(); g5.newGame("people-1", fixedParty(CM));
+  playRun(CM, g5, { maxFloor: 4 });
+  assert.ok(Object.keys(g5.story.read).some((key) => key.startsWith("people.")), `the bot met ${Object.keys(g5.story.read).join(", ")}`);
 });
 
 (async () => {
