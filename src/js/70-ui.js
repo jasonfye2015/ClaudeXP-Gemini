@@ -114,10 +114,13 @@ CM.UI = class {
   <div class="row"><label>Stone to flesh</label><button data-service="unstone">150 gold</button></div>
   <div class="row"><label>Raise the fallen (100 gold a level)</label><button id="btn-temple-raise">Raise</button></div>
   <div class="row"><label>The priest's scribe names everything unknown you carry</label><button id="btn-scribe">25 gold</button></div>
+  <div class="row"><label>Close the wounds of the fallen-and-risen (40 gold a hero)</label><button data-service="wounds">Wounds</button></div>
+  <div class="row"><label>A tithe: a tenth of the purse, for a blessing on the band (+1 defence, blows land surer, five floors)</label><button id="btn-tithe">Tithe</button></div>
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-tavern"><div class="box"><h2>The Tavern</h2>
   <p class="small">Three who'd come along, for a price - to take the place of a hero who has fallen or turned to stone. What the fallen wore besides weapon and armour stays with the party.</p>
   <div id="recruits"></div>
+  <div id="fence"></div>
   <div class="small" id="tavern-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-smith"><div class="box journalbox"><h2>The Smith</h2>
@@ -189,6 +192,7 @@ CM.UI = class {
     }
     this.$("#btn-temple-raise").addEventListener("click", () => { game.raiseDead(); this.refresh(); });
     this.$("#btn-scribe").addEventListener("click", () => { game.scribe(); this.refresh(); });
+    this.$("#btn-tithe").addEventListener("click", () => { const note = game.tithe(); if (note) game.say(note); this.refresh(); });
     this.$("#btn-daily").addEventListener("click", () => { this.$("#seed").value = CM.dailySeed(); this.refreshTitle(); });
     this.$("#btn-weekly").addEventListener("click", () => { this.$("#seed").value = CM.weeklySeed(); this.refreshTitle(); });
     this.$("#btn-download").addEventListener("click", () => {

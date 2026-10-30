@@ -19,6 +19,10 @@ Object.assign(CM.Game.prototype, {
       if (depth >= 7 && !this.bag.some((i) => i.kind === "trapkit")) this.stock.push(CM.trapKit());
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       if (depth >= 14) this.stock.push(CM.lockpick(true));
+      const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
+      this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);
+      for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
+      this.deliverOrders();
       if (depth >= 13 && !this.bag.some((i) => i.kind === "kit")) this.stock.push(CM.fieldKit());
       const house = this.villageLevel("merchant");                       // (the village's merchant's house: what the camps' merchant has learned to carry)
       if (house >= 1 && !this.asc("nogreater")) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
@@ -306,7 +310,7 @@ Object.assign(CM.Game.prototype, {
     if (item.kind === "kit") return "The field kit works through the alchemist's list: C (cast or use) out of a fight, or the camp's door.";
     if (item.kind === "salve") { this.bag.splice(row, 1); this.countUse("salve"); this.buffs = this.buffs || {}; this.buffs.salve = this.floor ? this.floor.number : 0; this.sound("heal"); this.say(`${hero.name} rubs the salve into everyone's cuts: they will close as the party walks, this floor.`); this.emit("change"); return ""; }
     if (item.kind === "bread") { this.bag.splice(row, 1); this.countUse("bread"); this.fed = 0; this.cheer(3); for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 20); this.sound("heal"); this.say("The party eats the dwarven bread, which is hard going and does them good (+20 each)."); this.emit("change"); return ""; }
-    if (item.kind === "liniment") { if (hero.hp <= 0) return `${hero.name} has fallen.`; this.bag.splice(row, 1); this.countUse("liniment"); this.cure(hero, CM.CURABLE); hero.hp = Math.min(hero.max, hero.hp + 10); if (hero.wound) { delete hero.wound; CM.recompute(hero); } this.sound("heal"); this.say(`${hero.name}'s hurts close under the liniment (+10).`); this.emit("change"); return ""; }
+    if (item.kind === "liniment") { if (hero.hp <= 0) return `${hero.name} has fallen.`; this.bag.splice(row, 1); this.countUse("liniment"); this.cure(hero, CM.CURABLE); hero.hp = Math.min(hero.max, hero.hp + 10); if (hero.wound) this.healWound(hero); this.sound("heal"); this.say(`${hero.name}'s hurts close under the liniment (+10).`); this.emit("change"); return ""; }
     if (item.kind === "lampoil") {
       if (!this.lanternHeld && this.light.kind !== "lantern") return "No lantern to pour it into.";
       this.bag.splice(row, 1); this.countUse("lampoil");
@@ -336,7 +340,7 @@ Object.assign(CM.Game.prototype, {
       if (hero.hp > 0) return `${hero.name} is standing.`;
       if (this.featherFloor === (this.floor ? this.floor.number : 0)) return "A lesser feather works once a floor.";
       this.bag.splice(row, 1); this.countUse("revive0"); this.featherFloor = this.floor ? this.floor.number : 0;
-      hero.hp = Math.max(1, Math.floor(hero.max / 2)); this.sound("heal"); this.say(`${hero.name} rises, half-mended, with the lesser feather's warmth in them.`); this.emit("change");
+      hero.hp = Math.max(1, Math.floor(hero.max / 2)); this.sound("heal"); this.say(`${hero.name} rises, half-mended, with the lesser feather's warmth in them.`); this.woundHero(hero); this.emit("change");
       return "";
     }
     if (item.kind === "antidote") {
@@ -355,6 +359,7 @@ Object.assign(CM.Game.prototype, {
       hero.hp = Math.floor(hero.max / 2);
       this.bag.splice(row, 1);
       this.sound("heal");
+      this.woundHero(hero);
     } else if (hero.hp <= 0) {
       return `${hero.name} has fallen. Raise them first.`;
     } else if (item.kind === "heal" || item.kind === "greaterheal") {
@@ -467,8 +472,158 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
 
+  // ---- wounds and scars ----
+  // a hero who fell and rises carries a wound: a stat down by one; a second before the first heals is a grave wound (two)
+  woundHero(h) {
+    if (!h || h.hp <= 0) return;
+    const open = CM.STATS.filter((s) => !(h.wound && h.wound.stats.includes(s)));
+    const stat = this.rnd.pick(open);
+    if (h.wound) { if (h.wound.stats.length < 2) { h.wound.stats.push(stat); h.wound.grave = true; this.say(`${h.name} rises with a grave wound: ${CM.STAT_NAMES[stat]} too, until it is seen to.`); } }
+    else { h.wound = { stats: [stat], grave: false }; this.say(`${h.name} rises wounded: ${CM.STAT_NAMES[stat]} down by one until the temple or a liniment.`); }
+    this.tally.wounds = (this.tally.wounds || 0) + 1;
+    CM.recompute(h);
+  },
+  // a wound healed; the third leaves a scar, which is a trait with a touch of good in it
+  healWound(h) {
+    if (!h.wound) return false;
+    delete h.wound; h.woundsHealed = (h.woundsHealed || 0) + 1; CM.recompute(h);
+    if (h.woundsHealed % 3 === 0) {
+      const ids = Object.keys(CM.SCARS).filter((id) => !(h.scars || []).includes(id));
+      if (ids.length) { const id = ids[CM.hashSeed(`${this.seed}:scar:${h.name}:${h.woundsHealed}`) % ids.length]; h.scars = (h.scars || []).concat(id); this.tally.scars = (this.tally.scars || 0) + 1; this.say(`${h.name}'s wound closes for the third time, and leaves ${CM.SCARS[id].name}: ${CM.SCARS[id].what}.`); }
+    }
+    return true;
+  },
+  templeWounds() {
+    const who = this.party.filter((h) => h.wound), cost = CM.WOUND_HEAL * who.length * (this.asc("costlytemple") ? 2 : 1);
+    if (!who.length) { this.say("No one here carries a wound."); return false; }
+    if (this.gold < cost) { this.say(`The old priest asks ${cost} gold to close ${who.length === 1 ? "the wound" : "the wounds"}.`); return false; }
+    this.logAct("temple", "wounds");
+    this.gold -= cost; this.spend("temple", cost);
+    for (const h of who) this.healWound(h);
+    this.sound("heal"); this.say(`Clean linen and a long prayer: ${who.map((h) => h.name).join(", ")} ${who.length === 1 ? "is" : "are"} whole again.`);
+    this.saveRun();
+    return true;
+  },
+  // a tithe: a tenth of the purse for a blessing on the band (+1 defence, blows land a twentieth more, five floors)
+  tithe() {
+    if (this.mode !== "camp") return "The tithe is given at the temple.";
+    const cost = Math.max(10, Math.floor(this.gold / 10));
+    if (this.gold < cost) return "The priest wants at least ten gold for the candles.";
+    if (this.blessed()) return "The band is blessed already. The priest says once is enough.";
+    this.logAct("tithe");
+    this.gold -= cost; this.spend("tithe", cost);
+    this.blessedUntil = this.floor.number + CM.TITHE_FLOORS;
+    this.sound("heal"); this.say(`${cost} gold goes into the box, and the priest blesses the party for the band: a little harder to hurt, a little surer of hand, until floor ${this.blessedUntil}.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  blessed() { return Boolean(this.floor && this.blessedUntil && this.floor.number <= this.blessedUntil); },
+  // ---- the merchant's orders and insurance ----
+  // an order: a thing from the merchant's list, paid now at a tenth over, delivered at the next camp
+  order(what) {
+    if (this.mode !== "camp" || !this.shopping) return "Orders are placed with the merchant.";
+    const make = CM.ORDERABLE[what]; if (!make) return "The merchant has never heard of it.";
+    const item = make(this.floor.number + 3), price = Math.ceil(CM.priceAt(item.value, this.floor.number) * CM.ORDER_OVER);
+    if (this.gold < price) return `An order for ${item.name} is ${price} gold, paid now.`;
+    this.logAct("order", what);
+    this.gold -= price; this.spend("orders", price);
+    this.orders = (this.orders || []).concat({ item, from: this.floor.number });
+    this.sound("coin"); this.say(`The merchant writes it down: ${item.name}, ${price} gold, to be waiting at the next camp.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  deliverOrders() {
+    const due = (this.orders || []).filter((o) => o.from < this.floor.number);
+    if (!due.length) return;
+    this.orders = this.orders.filter((o) => !due.includes(o));
+    this.gain(due.map((o) => o.item), "order");
+    this.say(`The merchant has your order${due.length > 1 ? "s" : ""} waiting: ${due.map((o) => o.item.name).join(", ")}.`);
+    this.tally.ordersDelivered = (this.tally.ordersDelivered || 0) + due.length;
+  },
+  // insurance: a tenth of a thing's value, and if the party falls it goes to the vault for the next
+  insure(row, slot) {                                                   // (row: a bag row; with a slot, row is the hero whose worn thing it is)
+    if (this.mode !== "camp") return "Insurance is bought at a camp.";
+    const item = slot ? (this.party[row] || {})[slot] : this.bag[row]; if (!item) return "Pick something from your pack.";
+    if (item.insured) return `${item.name} is insured already.`;
+    if (!item.value || ["torch", "ration", "key", "boxkey", "bones", "rope"].includes(item.kind)) return "The merchant won't insure that.";
+    const cost = Math.max(5, Math.ceil(item.value * CM.INSURE_RATE));
+    if (this.gold < cost) return `Insuring ${item.name} is ${cost} gold.`;
+    if (slot) this.logAct("insure", row, slot); else this.logAct("insure", row);
+    this.gold -= cost; this.spend("insurance", cost); item.insured = true;
+    this.sound("coin"); this.say(`${item.name} is insured for ${cost} gold: if the party falls, it goes to the vault.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  payInsurance() {
+    const worn = this.party.flatMap((h) => CM.equipped(h)), all = this.bag.concat(worn).filter((it) => it && it.insured);
+    if (!all.length) return 0;
+    this.vaults = (this.vaults || []).concat(all.map((it) => Object.assign({}, it, { insured: false, bearers: it.bearers || [] })));
+    CM.store.set("vaults", this.vaults); CM.store.remove("vault");
+    this.say(`The merchant's word is good: ${all.map((it) => it.name).join(", ")} ${all.length === 1 ? "goes" : "go"} to the vault for whoever comes after.`);
+    this.tally.insured = (this.tally.insured || 0) + all.length;
+    return all.length;
+  },
+  // ---- bounties: three of a kind, for gold and renown, at every camp ----
+  bountyKind() {
+    const n = this.floor.number, kinds = n <= CM.LAST_FLOOR ? (() => { const top = Math.min(CM.SHALLOW - 1, Math.floor(n * CM.SHALLOW / CM.LAST_FLOOR)); return CM.MONSTERS.slice(Math.max(0, top - 2), top + 1); })() : CM.MONSTERS.filter((m) => m.deep === CM.themeIndex(n));
+    const pool = kinds.length ? kinds : CM.MONSTERS.slice(0, 3);
+    return pool[CM.hashSeed(`${this.seed}:bounty:${n}`) % pool.length].name;
+  },
+  takeBounty() {
+    if (this.mode !== "camp") return "The bounty board is at the camp.";
+    if (this.bounty) return this.bountyDone() ? "The bounty is earned: claim it." : `A bounty is open already: ${CM.plural(CM.BOUNTY_NEED, this.bounty.kind)} (${this.bountyProgress()} so far).`;
+    const kind = this.bountyKind(); this.logAct("takeBounty");
+    this.bounty = { kind, from: ((this.bestiary || {})[kind] || {}).slain || 0, floor: this.floor.number, reward: 60 + 40 * this.floor.number, renown: 1 };
+    this.say(`The board: ${CM.plural(CM.BOUNTY_NEED, kind)}, ${this.bounty.reward} gold and a word in the village. Taken.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  bountyProgress() { return this.bounty ? Math.min(CM.BOUNTY_NEED, (((this.bestiary || {})[this.bounty.kind] || {}).slain || 0) - this.bounty.from) : 0; },
+  bountyDone() { return Boolean(this.bounty) && this.bountyProgress() >= CM.BOUNTY_NEED; },
+  claimBounty() {
+    if (this.mode !== "camp") return "Bounties are paid at the camp.";
+    if (!this.bounty) return "No bounty is open.";
+    if (!this.bountyDone()) return `Not yet: ${this.bountyProgress()} of ${CM.plural(CM.BOUNTY_NEED, this.bounty.kind)}.`;
+    this.logAct("claimBounty");
+    const b = this.bounty; this.bounty = null;
+    this.gold += b.reward; this.count("goldFound", b.reward); this.tally.bounties = (this.tally.bounties || 0) + 1;
+    this.village = this.village || {}; this.village.renown = (this.village.renown || 0) + b.renown; this.saveVillage();
+    this.sound("coin"); this.say(`${b.reward} gold for the ${b.kind}s, and the village will hear of it (+${b.renown} renown).`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  // ---- the fence, at the tavern: unknowns at half, cursed things taken for nothing, and rumours of strongboxes sold ----
+  fence(row) {
+    if (this.mode !== "camp") return "The fence drinks at the camp's tavern.";
+    const item = this.bag[row]; if (!item) return "Pick something from your pack.";
+    const cursed = item.props && item.props.cursed;
+    if (!item.unknown && !cursed) return "The fence only wants what the merchant won't take: what no one can name, and what is cursed.";
+    this.logAct("fence", row);
+    this.bag.splice(row, 1);
+    const paid = cursed ? 0 : Math.floor(item.value / 2);
+    this.gold += paid; this.tally.fenced = (this.tally.fenced || 0) + 1;
+    this.sound("coin"); this.say(cursed ? `The fence takes ${item.name} off your hands for nothing, and does not ask what it did.` : `The fence turns ${CM.baseName(item)} over once and pays ${paid} gold for it, no questions.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  fenceRumour() {
+    if (this.mode !== "camp") return "The fence drinks at the camp's tavern.";
+    if (this.gold < CM.RUMOUR_PRICE) return `A rumour is ${CM.RUMOUR_PRICE} gold.`;
+    if (this.rumourBox) return `The fence has told you what he knows: floor ${this.rumourBox}.`;
+    let found = 0;
+    for (let n = this.floor.number + 1; n <= this.floor.number + 6 && !found; n++) { const f = CM.makeFloor(n, this.seed, this.gen || 1); if (Object.values(f.things).some((t) => t.type === "strongbox")) found = n; }
+    this.logAct("buyRumour");
+    this.gold -= CM.RUMOUR_PRICE; this.spend("fence", CM.RUMOUR_PRICE);
+    if (!found) { this.say("The fence takes the gold and admits, after it, that he knows of no strongbox on the next six floors."); this.saveRun(); return ""; }
+    this.rumourBox = found;
+    this.say(`The fence leans in: an iron strongbox on floor ${found}, and its key two floors above it. It will be on your map when you get there.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
+    if (service === "wounds") return this.templeWounds();
     const cost = Math.ceil({ cure: 30, uncurse: 60, unstone: 150 }[service] * (this.asc("costlytemple") ? 2 : 1) * (this.party.some((h) => h.quirk === "pious" && h.hp > 0) ? 0.5 : 1));
     const which = service === "cure" ? CM.CURABLE : service === "uncurse" ? ["curse"] : ["stone"];
     const cursedGear = service === "uncurse" ? this.party.flatMap((h) => CM.equipped(h).filter((it) => it.props && it.props.cursed)) : [];
@@ -747,6 +902,7 @@ Object.assign(CM.Game.prototype, {
     hero.hp = hero.max;
     this.sound("heal");
     this.say(`For ${cost} gold, the priest raises the ${hero.cls}!`);
+    this.woundHero(hero);
     this.saveRun();
   },
 

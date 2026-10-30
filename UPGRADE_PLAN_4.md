@@ -227,7 +227,7 @@ Size: M.
 
 Size: L.
 
-## Phase 8 - Wounds, weight and the economy - v4.9
+## Phase 8 - Wounds, weight and the economy - v4.9 - DONE (the sim's bot: merchant 62-69% of spending, from 92%; tithe 16-22%, alchemist 8%, insurance 6%)
 
 - **Wounds**: a hero who falls to zero rises (a Feather, the fight's end) with a *wound*: one stat down by one
   until the temple's new service or the liniment; a second wound before the first heals is a *grave wound* (two

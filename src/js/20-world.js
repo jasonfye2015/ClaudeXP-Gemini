@@ -98,6 +98,15 @@ CM.makeUnique = function (id, awake) {
   return item;
 };
 CM.ration = () => ({ name: "Ration", kind: "ration", power: 0, value: 15 });
+// the pack's weight, and what the party can carry (their strength summed; twice that with a Bag of Holding worn)
+CM.bagWeight = (bag) => (bag || []).reduce((s, it) => s + CM.weightOf(it), 0);
+CM.carryCap = (party) => { const alive = (party || []).filter((h) => h.hp > 0); const cap = alive.reduce((s, h) => s + CM.heroStat(h, "str"), 0); return Math.max(10, cap) * (alive.some((h) => CM.gearProp(h, "holding")) ? 2 : 1); };
+// the merchant's prices climb a tenth a band
+CM.priceAt = (value, floor) => Math.round(value * (10 + CM.themeIndex(Math.min(floor, CM.BOTTOM))) / 10);   // (a tenth a band, in whole gold)
+// what may be ordered from the merchant's list, delivered at the next camp
+CM.ORDERABLE = { lantern: () => CM.lantern(), lampoil: () => CM.lampOil(), rope: () => CM.rope(), revive: () => ({ name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }), mana: (d) => CM.manaPotion(d),
+  mapping: () => CM.scroll("mapping"), recall: () => CM.scroll("recall"), flaskoil: () => CM.flask("oil"), smoke: () => CM.flask("smoke"), stoneskin: () => CM.elixir("stoneskin"), lockpick: () => CM.lockpick(),
+  bar: () => CM.bar(), grapnel: () => CM.grapnel(), trapkit: () => CM.trapKit(), fieldkit: () => CM.fieldKit(), bait: () => CM.bait(), ration: () => CM.ration(), torch: () => CM.torch() };
 CM.ingredient = (id) => ({ name: CM.INGREDIENTS[id].name, kind: "ingredient", ingredient: id, power: 0, value: 25 });
 CM.oil = (element) => ({ name: { fire: "Oil of Fire", frost: "Oil of Rime", holy: "Oil of Saints", poison: "Blade Poison", storm: "Oil of Storms", venom: "Oil of Venom", shadow: "Oil of Shadow" }[element], kind: "oil", element, power: 0, value: 60 });
 CM.bomb = () => ({ name: "Firepot", kind: "bomb", power: 0, value: 80 });
@@ -180,6 +189,9 @@ CM.itemLabel = function (item) {
   if (p.twohanded) bits.push("two-handed");
   if (p.relic) bits.push("a guardian's relic");
   if (p.heirloom) bits.push("an heirloom thrice borne: worn as a relic");
+  if (p.holding) bits.push("worn: the party carries twice the weight");
+  if (CM.weightOf(item) >= 4) bits.push(`heavy: weighs ${CM.weightOf(item)}`);
+  if (item.insured) bits.push("insured: to the vault if the party falls");
   if (p.element && CM.ELEMENT_WORDS[p.element] && ["storm", "venom", "shadow"].includes(p.element)) bits.push(`${CM.ELEMENT_NAMES[p.element]}: ${CM.ELEMENT_WORDS[p.element]}`);
   if (item.kind === "oil" && ["storm", "venom", "shadow"].includes(item.element)) bits.push(`${CM.ELEMENT_NAMES[item.element]}: ${CM.ELEMENT_WORDS[item.element]}`);
   if (item.kind === "lockpick") bits.push(item.master ? "opens any lock at the Rogue's chance, a dwarven one too; breaks on a miss" : "anyone may try a lock at a third of the Rogue's chance; breaks on a miss");
@@ -448,6 +460,7 @@ CM.partyProp = (party, prop) => (party || []).filter((h) => h.hp > 0).reduce((n,
 CM.heroStat = function (h, s) {
   let v = h.stats && h.stats[s] !== undefined ? h.stats[s] : 10;
   if (s === "luck" && h.mealLuck) v += h.mealLuck;                     // (a meal that lasts: rat on a stick, kobold stew)
+  if (h.wound && (h.wound.stats || []).includes(s)) v -= 1;             // (a wound: a stat down by one until it is seen to)
   for (const it of CM.equipped(h)) {
     if (!it.props || it.unknown) continue;
     if (it.props.stat === s) v += it.power;
@@ -826,6 +839,10 @@ CM.furnish = function (floor, seed, gen) {
     if (number >= 4 && gen >= 2) {                                     // a mimic: a chest that isn't, one in twelve, by hash (generator 2's floors)
       const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items && !floor.things[c].items.some((i) => i.kind === "page" || i.named || i.kind === "pick")).sort();
       for (const c of chests) if (h(`mimic:${c}`) % 12 === 0) { floor.things[c].mimic = true; break; }
+    }
+    if (CM.themeIndex(number) === 3 && number <= CM.BOTTOM) {           // the Bag of Holding: in one chest of the palace's floors, by the seed
+      const first = 16, floors = []; for (let n = first; n <= 20; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);
+      if (floors[CM.hashSeed(`${seed}:holding`) % floors.length] === number) { const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items).sort(); if (chests.length) floor.things[chests[h("holding:chest") % chests.length]].items.push(CM.makeUnique("holding")); }
     }
     if (number >= 4 && (CM.namedWeapons || []).length && h("named") % 100 < 12) {   // a weapon a party of this browser's named, found again, in a chest
       const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items).sort();

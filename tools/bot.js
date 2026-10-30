@@ -55,6 +55,13 @@ function playRun(CM, game, opts = {}) {
     game.openBag(true);
     const want = (kind, n) => { let guard = 0; while (game.bag.filter((i) => i.kind === kind).length < n && guard++ < 10) { const row = game.stock.findIndex((i) => i.kind === kind); if (row < 0 || game.buy(row)) break; } };
     want("heal", 4); want("torch", 2); want("ration", 2);
+    if (game.party.some((h) => h.wound) && game.gold >= 40 * game.party.filter((h) => h.wound).length + 60) game.temple("wounds");
+    if (game.bounty && game.bountyDone()) game.claimBounty(); else if (!game.bounty) game.takeBounty();
+    if (game.gold > 300 && !game.blessed()) game.tithe();
+    if (game.gold > 150) for (const h of alive()) { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 100 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (worn && game.gold > 150) game.insure(game.party.indexOf(h), CM.SLOTS.find((s) => h[s] === worn)); }
+    if (game.gold > 200 && (game.orders || []).length < 2) { if (!game.stock.some((i) => i.kind === "revive") && !game.bag.some((i) => i.kind === "revive")) game.order("revive"); if (!game.stock.some((i) => i.kind === "mana") && game.bag.filter((i) => i.kind === "mana").length < 2) game.order("mana"); if (!game.bag.some((i) => i.kind === "lampoil") && game.light && game.light.kind === "lantern") game.order("lampoil"); }
+    if (game.overweight() > 1) { let guard = 0; while (game.overweight() > 1 && guard++ < 10) { const row = game.bag.map((it, i) => [it, i]).filter(([it]) => CM.weightOf(it) >= 3 && it.kind !== "torch").sort((a, b) => a[0].value - b[0].value)[0]; if (!row) break; game.sell(row[1]); } }
+    for (let i = game.bag.length - 1; i >= 0; i--) if (game.bag[i].unknown || (game.bag[i].props && game.bag[i].props.cursed)) game.fence(i);
     if (game.gold > 150) want("mana", 2);
     if (game.gold > 250) want("revive", 1);
     // better weapons for the gold left: the cheapest upgrade in the merchant's wares, if any

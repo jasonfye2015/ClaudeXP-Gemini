@@ -985,6 +985,29 @@ Monsters' things, and six elements (the sixth big update, phase 7 - v4.8)
   the eight. Four new elite kinds carry the new ones (Howling, Web-spinning, Burrowing, Dragging).
   Test: "monsters' things, and six elements".
 
+Wounds, weight and the economy (the sixth big update, phase 8 - v4.9)
+  Wounds: a hero who falls and rises (a feather, the lesser feather, the temple, First Root) carries a wound - one
+  stat down by one (CM.heroStat reads it) until the temple's new service (40 gold a hero) or a liniment; a second
+  wound before the first heals is a grave wound (two stats). The third wound healed leaves a scar (CM.SCARS): a
+  limp (leading, never trips a plate one time in two), a burned hand (fire does half), a hard head (shrugs a stun
+  or a sleep one time in two), a thick skin (+1 defence). The memorial keeps the scars.
+  Weight: the pack has a weight (CM.weightOf: heavy armour 8, a two-hander 5, a shield 4, potions nothing) against
+  the party's strength summed (CM.carryCap). Over the line the torch burns and hunger comes half again as fast and
+  the HUD says Heavy-laden; half again over it there is no travel (Overloaded). The Bag of Holding, a unique in a
+  palace chest by the seed, worn in the trinket slot, doubles the line. The bag screen shows weight against the line.
+  The economy: prices climb a tenth a band (CM.priceAt); the merchant's stock rotates - a third of the things
+  beyond the staples are not on the table at a given camp, by the seed; orders (a thing from CM.ORDERABLE paid now
+  at a tenth over, delivered at the next camp, saved); insurance (a tenth of a thing's value, for a bag row or a
+  hero's worn thing: if the party falls, it goes to the vault for the next - payInsurance); a bounty board at every
+  camp (three of the band's kind, 60 gold + 40 a floor, and a renown for the village; counted against the bestiary);
+  the fence at the tavern (buys unknowns at half, takes cursed things for nothing, sells a rumour of the next
+  strongbox within six floors for 30 gold - it is marked on the map on arrival); a tithe at the temple (a tenth of
+  the purse: +1 defence and blows land a twentieth surer for five floors). The sim's --loot report shows the spread:
+  with the bot, the merchant's share of spending fell from 92% to 62-69% (tithe 16-22%, alchemist 8%, insurance 6%).
+  The bot closes wounds, takes and claims bounties, tithes, insures its best worn things, orders what the stock
+  lacks, sells heavy things when over the line, and fences unknowns and curses.
+  Test: "wounds, weight and the economy".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

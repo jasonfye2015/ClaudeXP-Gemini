@@ -72,6 +72,9 @@ Object.assign(CM.UI.prototype, {
       box.appendChild(div);
     });
     if (!box.children.length) box.innerHTML = "<div class='small'>The benches are empty tonight.</div>";
+    const fence = this.$("#fence"); fence.innerHTML = "<div class='head'>The fence, in the corner</div>";
+    g.bag.forEach((it, row) => { if (!it.unknown && !(it.props && it.props.cursed)) return; const b = document.createElement("button"); b.textContent = it.unknown ? `${CM.baseName(it)} (unknown): ${Math.floor(it.value / 2)} gold` : `${it.name} (cursed): takes it for nothing`; b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fence(row) || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); });
+    { const b = document.createElement("button"); b.textContent = g.rumourBox ? `A rumour, bought: floor ${g.rumourBox}` : `A rumour of a strongbox (${CM.RUMOUR_PRICE} gold)`; b.disabled = Boolean(g.rumourBox); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fenceRumour() || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); }
     this.$("#tavern-note").textContent = fallen.length ? "" : "The party is whole; the recruits drink to that.";
   },
 

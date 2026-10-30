@@ -422,8 +422,8 @@ test("the hoard: affixes by the seed, a unique a band, and what the words mean",
     if (it.props && it.props.unique) uniques[it.props.unique] = f;
   }
   assert.ok(fine > 60 && rare > 15, `fine ${fine}, rare ${rare}`);
-  assert.strictEqual(Object.keys(uniques).length, 10, "one unique in every band: " + JSON.stringify(uniques));
-  for (const [id, f] of Object.entries(uniques)) assert.strictEqual(CM.themeIndex(f), CM.UNIQUES[id].band, `${id} lies in its own band`);
+  assert.strictEqual(Object.keys(uniques).length, 11, "one unique in every band, and the Bag of Holding in the palace: " + JSON.stringify(uniques));
+  for (const [id, f] of Object.entries(uniques)) assert.strictEqual(CM.themeIndex(f), id === "holding" ? 3 : CM.UNIQUES[id].band, `${id} lies in its own band`);
   const sword = { name: "Long Sword", base: "Long Sword", kind: "weapon", slot: "weapon", power: 8, value: 100, props: {} };
   CM.affix(sword, 30, new CM.Random(4));
   if (sword.props.rarity) { assert.ok(sword.name !== "Long Sword"); assert.ok(CM.itemLabel(sword).length > 10); assert.strictEqual(CM.baseName(sword), "Long Sword"); }
@@ -2206,6 +2206,62 @@ test("monsters' things, and six elements: the matrix, venom, shadow and storm in
   // saved and loaded mid-fight, a part and a loadout come back; the bot still finishes
   g2.mode = "explore"; g2.saveRun(); const g3 = new CM.Game(); g3.continueRun(); assert.strictEqual(g3.floor.number, mim.n);
   const g5 = new CM.Game(); g5.newGame("six-6", fixedParty(CM)); playRun(CM, g5, { maxFloor: 6 }); assert.ok(g5.mode === "title" || g5.floor.number >= 5 || g5.party.every((h) => h.hp <= 0), `bot: ${g5.mode} floor ${g5.floor && g5.floor.number}`);
+});
+
+test("wounds, weight and the economy: a wound on rising and a grave one, healed at the temple or by liniment, the third leaves a scar; the pack's weight slows and the Bag of Holding doesn't; prices by band, a rotating stock, orders delivered, insurance paid out, a bounty claimed, the fence and the tithe", () => {
+  const CM = load();
+  assert.strictEqual(Object.keys(CM.SCARS).length, 4); assert.ok(CM.UNIQUES.holding && CM.UNIQUES.holding.kind === "trinket");
+  const game = new CM.Game(); game.newGame("econ-1", fixedParty(CM));
+  const knight = game.party.find((h) => h.cls === "Knight"), mage = game.party.find((h) => h.cls === "Mage");
+  // a wound on rising: a stat down by one; a second before it heals is grave; the liniment and the temple heal; the third healed leaves a scar
+  const str0 = CM.heroStat(knight, "str"); knight.hp = 0; game.bag.push({ name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }); game.rnd = new CM.Random(1);
+  assert.strictEqual(game.give(game.bag.length - 1, game.party.indexOf(knight)), ""); assert.ok(knight.wound && knight.wound.stats.length === 1 && !knight.wound.grave, JSON.stringify(knight.wound));
+  const st = knight.wound.stats[0]; assert.strictEqual(CM.heroStat(knight, st), (st === "str" ? str0 : CM.heroStat(Object.assign({}, knight, { wound: null }), st)) - 1, "a stat down by one"); assert.strictEqual(game.tally.wounds, 1);
+  knight.hp = 0; game.bag.push(CM.lesserFeather()); game.featherFloor = -1; assert.strictEqual(game.give(game.bag.length - 1, game.party.indexOf(knight)), ""); assert.ok(knight.wound.grave && knight.wound.stats.length === 2, "a grave wound: two stats");
+  game.bag.push({ name: "Liniment", kind: "liniment", power: 10, value: 80 }); assert.strictEqual(game.give(game.bag.length - 1, game.party.indexOf(knight)), ""); assert.ok(!knight.wound && knight.woundsHealed === 1, "the liniment closes it");
+  game.mode = "camp"; game.gold = 500; mage.hp = 0; game.rnd = new CM.Random(2); game.raiseDead(); assert.ok(mage.wound, "raised at the temple, and wounded for it"); assert.ok(game.temple("wounds")); assert.ok(!mage.wound && mage.woundsHealed === 1); assert.ok(game.tally.spent.temple >= CM.WOUND_HEAL);
+  assert.strictEqual(game.temple("wounds"), false, "no one wounded");
+  for (let i = 0; i < 2; i++) { knight.hp = 0; game.gold = 500; game.raiseDead(); game.temple("wounds"); } assert.strictEqual(knight.woundsHealed, 3); assert.ok(knight.scars && knight.scars.length === 1, `a scar at the third: ${JSON.stringify(knight.scars)}`); assert.strictEqual(game.tally.scars, 1);
+  assert.ok(CM.scarred(knight, knight.scars[0])); assert.ok(game.messages.some((l) => l.includes(CM.SCARS[knight.scars[0]].name)));
+  game.saveRun(); const g2 = new CM.Game(); g2.continueRun(); assert.strictEqual(g2.party.find((h) => h.cls === "Knight").scars[0], knight.scars[0], "scars are saved");
+  { const old = knight.scars; knight.scars = ["thickskin"]; game.mode = "combat"; game.combat = { foes: [], round: 1, order: [], index: 0 }; game.foes = []; const orc = { name: "Orc", kind: "Orc", hp: 50, max: 50, atk: 10, df: 1, row: "front" }; knight.hp = knight.max; knight.defending = false;
+    let sum1 = 0, sum2 = 0; for (let i = 0; i < 60; i++) { game.rnd = new CM.Random(i); knight.hp = knight.max; game.hurt(knight, 12, orc, {}); sum1 += knight.max - knight.hp; } knight.scars = []; for (let i = 0; i < 60; i++) { game.rnd = new CM.Random(i); knight.hp = knight.max; game.hurt(knight, 12, orc, {}); sum2 += knight.max - knight.hp; }
+    assert.ok(sum1 < sum2, `a thick skin: ${sum1} < ${sum2}`); knight.scars = ["burnedhand"]; knight.hp = knight.max; game.hurt(knight, 20, orc, { element: "fire" }); const burn = knight.max - knight.hp; knight.scars = []; knight.hp = knight.max; game.hurt(knight, 20, orc, { element: "fire" }); assert.ok(burn < knight.max - knight.hp, "the burned hand knows fire"); knight.scars = old; game.mode = "camp"; game.combat = null; }
+  game.remember2(Object.assign({}, knight, { scars: ["limp"] })); assert.ok(game.memorial[0].scars.includes("limp"), "the memorial keeps the scars");
+  // weight: the pack against the party's strength; over it the torch burns and hunger comes faster; far over it, no running; the Bag of Holding doubles the line
+  game.mode = "explore"; const cap = CM.carryCap(game.party); assert.ok(cap >= 30 && cap === game.party.filter((h) => h.hp > 0).reduce((s, h) => s + CM.heroStat(h, "str"), 0), `the line is the strength summed: ${cap}`);
+  assert.strictEqual(CM.weightOf(CM.healPotion(1)), 0); assert.ok(CM.weightOf({ kind: "armor", props: { weight: "heavy" } }) > CM.weightOf({ kind: "armor", props: { weight: "light" } })); assert.strictEqual(CM.weightOf({ kind: "weapon", props: { twohanded: true } }), CM.WEIGHTS.twohanded);
+  game.bag = game.bag.filter((i) => CM.weightOf(i) === 0); assert.ok(game.overweight() < 1);
+  const heavy = () => ({ name: "Plate", kind: "armor", slot: "armor", power: 5, value: 100, props: { weight: "heavy" } }); while (game.overweight() <= 1.1) game.bag.push(heavy()); assert.ok(game.overweight() > 1 && game.overweight() < CM.OVERWEIGHT_RUN, `heavy-laden: ${game.overweight()}`); assert.strictEqual(game.weightWord(), "Heavy-laden");
+  const fl = game.floor, [px, py] = fl.pos, dirs = CM.DIRS.map(([dx, dy], i) => [px + dx, py + dy, i]).filter(([x, y]) => CM.passable(fl, x, y)); fl.facing = dirs[0][2];
+  game.light = { kind: "torch", left: 200 }; game.bag.push(CM.torch()); game.fed = 0; game.steps = 0; const burnt = () => 200 - game.light.left;
+  game.move(0); fl.facing = (fl.facing + 2) % 4; game.move(0); const over = burnt(), fedOver = game.fed; const lightBag = game.bag.filter((i) => CM.weightOf(i) === 0); game.bag = lightBag; game.light = { kind: "torch", left: 200 }; game.fed = 0; game.steps = 0; game.move(0); fl.facing = (fl.facing + 2) % 4; game.move(0);
+  assert.ok(over > burnt() && fedOver > game.fed, `heavy: ${over} torch, ${fedOver} hunger; light: ${burnt()}, ${game.fed}`);
+  while (game.overweight() < CM.OVERWEIGHT_RUN) game.bag.push(heavy()); assert.strictEqual(game.weightWord(), "Overloaded"); const goal = CM.goalOf(fl).split(",").map(Number); assert.strictEqual(game.travelTo(goal[0], goal[1]), false); assert.ok(game.messages.slice(-1)[0].includes("too heavy to run"));
+  mage.trinket = CM.makeUnique("holding"); assert.strictEqual(CM.carryCap(game.party), cap * 2); assert.ok(game.overweight() < 1, "the bag of holding carries it"); mage.trinket = null; game.bag = lightBag;
+  let holdingAt = 0; for (let n = 16; n <= 20; n++) for (const t of Object.values(CM.makeFloor(n, "econ-1", 2).things)) if (t.type === "chest" && (t.items || []).some((i) => i.props && i.props.unique === "holding")) holdingAt = n; assert.ok(holdingAt, "the Bag of Holding lies in the palace");
+  // the economy: prices a tenth more a band; the stock rotates by the camp; an order delivered at the next camp; insurance paid to the vault
+  assert.strictEqual(CM.priceAt(100, 1), 100); assert.strictEqual(CM.priceAt(100, 7), 110); assert.strictEqual(CM.priceAt(100, 22), 140);
+  const g3 = new CM.Game(); g3.newGame("econ-2", fixedParty(CM)); g3.enterFloor(5, "down"); g3.mode = "camp"; g3.stock = null; g3.openBag(true); const s5 = g3.stock.map((i) => i.kind + ":" + i.value); const heal5 = g3.stock.find((i) => i.kind === "heal" || i.kind === "greaterheal");
+  g3.closeBag(); g3.enterFloor(10, "down"); g3.mode = "camp"; g3.stock = null; g3.openBag(true); const s10 = g3.stock.map((i) => i.kind + ":" + i.value), heal10 = g3.stock.find((i) => i.kind === "heal" || i.kind === "greaterheal");
+  assert.ok(heal5 && heal10 && heal10.value > heal5.value * 1.05, `dearer a band down: ${heal5.value} -> ${heal10.value}`); assert.ok(s5.filter((k) => k.startsWith("heal") || k.startsWith("torch") || k.startsWith("ration")).length >= 3, "the staples are always there");
+  { const kinds = (s) => new Set(s.map((k) => k.split(":")[0])); const a = kinds(s5), b = kinds(s10); let diff = 0; for (const k of new Set([...a, ...b])) if (a.has(k) !== b.has(k)) diff++; assert.ok(diff >= 1, `the stock rotates: ${diff} kinds differ`); }
+  g3.gold = 1000; const gold0 = g3.gold; assert.strictEqual(g3.order("revive"), ""); assert.ok(g3.orders.length === 1 && gold0 - g3.gold === Math.ceil(CM.priceAt(120, 10) * CM.ORDER_OVER), "paid now, a tenth over"); assert.ok(g3.order("nothing").includes("never heard"));
+  g3.closeBag(); g3.saveRun(); const g4 = new CM.Game(); g4.continueRun(); assert.strictEqual(g4.orders.length, 1, "the order is saved");
+  g4.enterFloor(15, "down"); g4.mode = "camp"; g4.stock = null; const n0 = g4.bag.filter((i) => i.kind === "revive").length; g4.openBag(true); assert.strictEqual(g4.bag.filter((i) => i.kind === "revive").length, n0 + 1, "delivered at the next camp"); assert.strictEqual(g4.orders.length, 0); assert.strictEqual(g4.tally.ordersDelivered, 1);
+  const sword = { name: "Fine Sword", kind: "weapon", slot: "weapon", power: 9, value: 400, props: {} }; g4.bag.push(sword); g4.gold = 500; const row = g4.bag.length - 1; assert.strictEqual(g4.insure(row), ""); assert.ok(sword.insured && g4.gold === 460 && g4.tally.spent.insurance === 40); assert.ok(g4.insure(row).includes("already")); assert.ok(g4.insure(g4.bag.findIndex((i) => i.kind === "torch")).includes("won't"));
+  g4.vaults = []; CM.store.set("vaults", []); const paid = g4.payInsurance(); assert.strictEqual(paid, 1); assert.ok(g4.vaults.length === 1 && g4.vaults[0].name === "Fine Sword" && !g4.vaults[0].insured, "to the vault"); assert.strictEqual(CM.store.get("vaults", []).length, 1);
+  // a bounty: three of a kind for gold and renown; the fence buys unknowns at half and takes cursed things; the rumour; the tithe
+  g4.closeBag(); g4.bestiary = g4.bestiary || {}; assert.strictEqual(g4.takeBounty(), ""); const kind = g4.bounty.kind; assert.ok(CM.monsterKind(kind), kind); assert.ok(g4.claimBounty().includes("Not yet")); assert.ok(g4.takeBounty().includes("open already"));
+  g4.bestiary[kind] = g4.bestiary[kind] || { seen: 0, slain: 0, weak: [], resist: [] }; g4.bestiary[kind].slain += 3; assert.ok(g4.bountyDone()); const gb = g4.gold, ren = (g4.village || {}).renown || 0; assert.strictEqual(g4.claimBounty(), ""); assert.strictEqual(g4.gold - gb, 60 + 40 * 15); assert.strictEqual(g4.village.renown, ren + 1); assert.ok(!g4.bounty && g4.tally.bounties === 1);
+  const unknown = Object.assign(CM.makeItem(10, new CM.Random(4), "ring"), { unknown: true, value: 200 }), cursedRing = { name: "Cursed Ring", kind: "ring", slot: "ring", power: 1, value: 300, props: { cursed: true, curse: "weak" } }; g4.bag.push(unknown, cursedRing);
+  assert.ok(g4.fence(0).includes("only wants") || g4.bag[0].unknown || (g4.bag[0].props && g4.bag[0].props.cursed), "the fence wants unknowns and curses"); const gf = g4.gold; assert.strictEqual(g4.fence(g4.bag.indexOf(unknown)), ""); assert.strictEqual(g4.gold - gf, 100); assert.strictEqual(g4.fence(g4.bag.indexOf(cursedRing)), ""); assert.strictEqual(g4.gold - gf, 100, "cursed, for nothing"); assert.ok(!g4.bag.includes(cursedRing)); assert.strictEqual(g4.tally.fenced, 2);
+  g4.gold = 200; const gr = g4.gold; assert.strictEqual(g4.fenceRumour(), ""); assert.strictEqual(gr - g4.gold, CM.RUMOUR_PRICE); if (g4.rumourBox) { assert.ok(g4.rumourBox > 15 && g4.rumourBox <= 21); assert.ok(g4.fenceRumour().includes("told you")); const seen0 = () => g4.floor.seen.length; g4.enterFloor(g4.rumourBox, "down"); const box = Object.keys(g4.floor.things).find((k) => g4.floor.things[k].type === "strongbox"); assert.ok(box && g4.floor.seen.some(([x, y]) => `${x},${y}` === box), "the strongbox is on the map"); assert.strictEqual(g4.rumourBox, 0); assert.ok(seen0() > 0); }
+  g4.enterFloor(15, "down"); g4.mode = "camp"; g4.gold = 300; assert.strictEqual(g4.tithe(), ""); assert.strictEqual(g4.gold, 270); assert.strictEqual(g4.blessedUntil, 20); assert.ok(g4.blessed() && g4.tithe().includes("already")); assert.strictEqual(g4.tally.spent.tithe, 30);
+  g4.enterFloor(21, "down"); assert.ok(!g4.blessed(), "five floors, then it wears off");
+  // the bot buys insurance, takes bounties and tithes when it can; the spending spreads
+  const g5 = new CM.Game(); g5.newGame("econ-3", fixedParty(CM)); g5.gold = 2000; playRun(CM, g5, { maxFloor: 8 }); const sp = g5.tally.spent || {};
+  assert.ok((sp.insurance || 0) > 0 || (sp.tithe || 0) > 0 || (g5.tally.bounties || 0) > 0 || g5.mode === "title", `the bot used the sinks: ${JSON.stringify(sp)} bounties ${g5.tally.bounties || 0}`);
 });
 
 (async () => {

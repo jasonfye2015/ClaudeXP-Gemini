@@ -241,8 +241,9 @@ Object.assign(CM.Game.prototype, {
       else if (G.form2.kind === "flood") { this.combat.flooded = true; m.quick = true; }
       else if (G.form2.kind === "heat") { m.broken = true; m.atk = Math.round(m.atk * 1.3); }
     }
-    const hidden = this.foes.find((m) => m.hidden && m.hp > 0);
+    const hidden = this.foes.find((m) => m.hidden && m.hp > 0 && m.guardian);
     if (hidden && !this.living().some((m) => m !== hidden && !m.hidden)) { hidden.hidden = false; this.say(CM.GUARDIANS[hidden.guardian].form2.found); }
+    for (const m of this.foes) if (m.hidden && m.hp > 0 && m.ability === "burrow" && !this.living().some((f) => f !== m && !f.hidden)) { m.hidden = false; m.under = false; this.say(`${CM.The(m)} comes up: there is no one left to hide behind.`); }   // (a burrower alone can't stay under)
     for (const m of this.foes) {
       if (!CM.guardianHas(m, "rise") || m.hp > 0 || m.risen) continue;
       m.hp = Math.floor(m.max / 3); m.dead = false; m.risen = 1;
@@ -253,6 +254,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.living().length) { this.wonFight(); return; }
     if (!this.alive().length || this.alive().every((h) => (h.status || {}).stone)) {
       this.say(this.alive().length ? "The last of the party stands as stone, and the dark closes in..." : "The last of the party falls...");
+      this.payInsurance();
       this.endRun(false);
     }
   },
@@ -380,7 +382,7 @@ Object.assign(CM.Game.prototype, {
   },
   stat(h, s) { return CM.heroStat(h, s); },
   hitChance(h) {
-    return CM.clamp(0.8 + CM.gearProp(h, "hitBonus") + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
+    return CM.clamp(0.8 + CM.gearProp(h, "hitBonus") + (this.blessed() ? 0.05 : 0) + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
   },
   critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01 + CM.gearProp(h, "crit"), 0.02, 0.7); },
   resistChance(h) {
@@ -392,6 +394,7 @@ Object.assign(CM.Game.prototype, {
   afflict(h, status, by) {
     if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
     if (h.thrall) return false;
+    if ((status === "paralysis" || status === "sleep") && CM.scarred(h, "hardhead") && this.rnd.chance(0.5)) { this.say(`${h.name}'s hard head shakes it off.`); return false; }
     if ((status === "paralysis" && (CM.trait(h, "immovable") || h.quirk === "stubborn")) || ((status === "poison" || status === "paralysis") && CM.trait(h, "diamondbody"))) { this.say(`${h.name} does not so much as flinch.`); return false; }
     if (status === "sleep" && this.buffs && this.buffs.night !== undefined) { this.say(`${h.name} does not sleep tonight.`); return false; }
     if (status === "curse" && (h.origin === "order" || CM.setWorn(h) === "order")) { this.say(`${h.name} says the order's words, and the curse finds no purchase.`); return false; }
@@ -451,7 +454,8 @@ Object.assign(CM.Game.prototype, {
     }
     if (h.defending) dmg = Math.ceil(dmg / 2);
     if (by && by.blinded > 0) { by.blinded--; dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + " - blind, it strikes wide" }); }
-    dmg -= CM.partyProp(this.party, "auraDf");
+    dmg -= CM.partyProp(this.party, "auraDf") + (this.blessed() ? 1 : 0) + (CM.scarred(h, "thickskin") ? 1 : 0);
+    if (opts.element === "fire" && CM.scarred(h, "burnedhand")) { dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + " - the burned hand knows fire" }); }
     if (this.buffs && this.buffs.stoneskin !== undefined && h.stoneskin) dmg -= 3;
     if (h.prism > 0) { h.prism = 0; dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + " - the light goes wrong" }); }
     if (!opts.aoe && !opts.noBlock) {                                   // a shield turns the blow: the hero's own, or a tower shield in the front row for one behind
@@ -530,7 +534,7 @@ Object.assign(CM.Game.prototype, {
       if (m.breath % 2 === 0) {
         this.emit("fx", { kind: "attack", foe: m, breath: true });
         this.say(`The ${m.name} breathes fire over the whole party!`);
-        for (const h of this.targets()) this.hurt(h, Math.max(1, Math.floor(m.atk / 3) + 2), m, { noTouch: true, aoe: true });
+        for (const h of this.targets()) this.hurt(h, Math.max(1, Math.floor(m.atk / 3) + 2), m, { noTouch: true, aoe: true, element: "fire" });
         return;
       }
     }
@@ -772,7 +776,7 @@ Object.assign(CM.Game.prototype, {
         if (near.type === "door") near.locked = false; near.open = true;
         this.say(`${h.name} holds up the reliquary, and somewhere on the floor a lock gives.`); break;
       }
-      case "regrow": { const fallen = this.party.find((p) => p.hp <= 0); if (!fallen) { this.say("No one has fallen."); return false; } fallen.hp = 1; this.say(`The root wakes in ${h.name}'s hands, and ${fallen.name} draws breath.`); break; }
+      case "regrow": { const fallen = this.party.find((p) => p.hp <= 0); if (!fallen) { this.say("No one has fallen."); return false; } fallen.hp = 1; this.woundHero(fallen); this.say(`The root wakes in ${h.name}'s hands, and ${fallen.name} draws breath.`); break; }
       default: return false;
     }
     item.poweredFloor = L; this.countUse("power");

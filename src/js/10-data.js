@@ -77,6 +77,37 @@ CM.STATUSES = {
   stone: { name: "Stone", mark: "▣", hint: "turned to stone: out of it until restored at a camp" },
 };
 CM.CURABLE = ["poison", "paralysis", "sleep", "blind"];               // what a rest, an antidote or the temple's Cure mends
+// wounds: a hero who falls and rises again carries one (a stat down by one) until the temple or a liniment; a second
+// before the first heals is a grave wound (two stats). Three wounds healed leave a scar: a trait with a touch of good in it.
+CM.WOUND_HEAL = 40;
+CM.SCARS = {
+  limp: { name: "a limp", what: "leading the party, never trips a floor plate one time in two" },
+  burnedhand: { name: "a burned hand", what: "fire does half to them" },
+  hardhead: { name: "a hard head", what: "shrugs off a stun or a sleep one time in two" },
+  thickskin: { name: "a thick skin", what: "+1 defence" },
+};
+CM.scarred = (h, id) => Boolean(h && (h.scars || []).includes(id));
+// weight: what the pack carries, against the party's strength summed; over it the torch burns faster and hunger comes
+// sooner, half again over it there is no running (travel); a Bag of Holding doubles what the party can carry
+CM.WEIGHTS = { armor: { heavy: 8, medium: 5, light: 2 }, shield: 4, weapon: 3, twohanded: 5, helm: 2, boots: 1, cloak: 1, torch: 1, ration: 1, lantern: 2, kit: 3, trapkit: 2, bar: 3, grapnel: 2, pick: 3, bones: 2, rope: 1 };
+CM.weightOf = (item) => {
+  if (!item) return 0;
+  const p = item.props || {};
+  if (item.kind === "armor") return CM.WEIGHTS.armor[p.weight] || 4;
+  if (item.kind === "weapon") return p.fists ? 0 : p.twohanded ? CM.WEIGHTS.twohanded : CM.WEIGHTS.weapon;
+  if (item.kind === "shield") return p.tower ? 6 : CM.WEIGHTS.shield;
+  return CM.WEIGHTS[item.kind] || 0;
+};
+CM.OVERWEIGHT_RUN = 1.5;
+// the economy's sinks: prices a tenth more a band; orders a tenth over, delivered at the next camp; insurance at a
+// tenth of the value; bounties of three of a kind; the fence at the tavern; a tithe at the temple for a blessing on the band
+CM.PRICE_BAND = 0.1;
+CM.ORDER_OVER = 1.1;
+CM.INSURE_RATE = 0.1;
+CM.BOUNTY_NEED = 3;
+CM.TITHE_FLOORS = 5;
+CM.RUMOUR_PRICE = 30;
+CM.ROTATING = ["lantern", "lampoil", "rope", "scroll", "flask", "elixir", "lockpick", "bar", "bait", "grapnel", "trapkit", "revive0", "mana", "oil", "kit", "revive"];
 
 // names a hero might have, built from pieces
 CM.NAME_STARTS = ["Al", "Bren", "Cael", "Dor", "El", "Fen", "Gar", "Hal", "Is", "Jor", "Kel", "Lir", "Mor", "Nim", "Or", "Pel", "Quin",
@@ -322,6 +353,7 @@ CM.AFFIXES = {
 // One unique in every band of five floors, in a chest somewhere on one of them (by the seed), each with a line of its
 // story and a way of its own - made of the same props, so the rules need nothing new to read.
 CM.UNIQUES = {
+  holding: { band: -1, name: "Bag of Holding", kind: "trinket", slot: "trinket", power: 0, value: 1500, props: { holding: true }, lore: "A sack the dwarves sewed from the inside. It weighs what it weighs; what goes into it weighs nothing." },
   gravewarden: { band: 0, name: "Gravewarden", kind: "helm", slot: "helm", power: 3, value: 700, props: { df: 2, regen: 1, resist: "curse" }, lore: "The sexton's own helm. He buried a thousand and was buried by none." },
   tidecaller: { band: 1, name: "Tidecaller", kind: "weapon", slot: "weapon", power: 11, value: 900, props: { element: "frost", sleep: 0.3 }, lore: "A blade of the lower town's watch. Whatever it cuts hears the tide, and sleeps." },
   anvilheart: { band: 2, name: "Anvilheart", kind: "armor", slot: "armor", power: 8, value: 1100, props: { weight: "heavy", thorns: 3, stats: { con: 2 } }, lore: "Forged by the dwarves for a king who never came to collect it." },

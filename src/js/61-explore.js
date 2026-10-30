@@ -67,6 +67,7 @@ Object.assign(CM.Game.prototype, {
     fl.pos = [x, y];
     this.sound("step");
     this.burn();
+    { const over = this.overweight(); if (over > 1 && (this.steps || 0) % 2 === 0) { this.burn(); this.fed = (this.fed || 0) + 1; if (!fl.saidHeavy) { fl.saidHeavy = true; this.say("The pack drags: the torch burns faster for it, and the party is hungrier sooner. Something could be left."); } } }
     this.look();
     this.emit("moved", x, y);
     this.dirty = true;
@@ -175,6 +176,8 @@ Object.assign(CM.Game.prototype, {
           this.say("A stone sinks under your boot - and somewhere, iron grinds upward.");
           this.dirty = true;
         } else this.say("The plate is down already.");
+      } else if (f.trap && !f.spent && this.alive()[0] && CM.scarred(this.alive()[0], "limp") && this.rnd.chance(0.5)) {
+        f.known = true; this.say(`${this.alive()[0].name}'s bad leg stops short of the plate, as it always does.`);
       } else if (f.trap && !f.spent) {
         f.known = true; f.spent = true;
         this.sound("trap");
@@ -637,6 +640,9 @@ Object.assign(CM.Game.prototype, {
     this.say("With the door barred the party sits down against it, eats, and sleeps in turns. Not the camp, but something.");
     return "";
   },
+  // the pack's weight against what the party can carry: 1 is the line; over it costs, half again over it there is no running
+  overweight() { return CM.bagWeight(this.bag) / CM.carryCap(this.party); },
+  weightWord() { const o = this.overweight(); return o >= CM.OVERWEIGHT_RUN ? "Overloaded" : o > 1 ? "Heavy-laden" : ""; },
   // the dwarves' pick: the nearest hidden door or stair on the floor opens without searching, and the pick breaks
   usePick(row) {
     const fl = this.floor, hidden = Object.entries(fl.features).filter(([, f]) => (f.type === "secret" || f.type === "secretstair") && !f.found);
@@ -730,6 +736,7 @@ Object.assign(CM.Game.prototype, {
     if (this.mode !== "explore" || !this.floor) return false;
     if (x === this.floor.pos[0] && y === this.floor.pos[1]) return false;
     this.logAct("travelTo", x, y, explore ? 1 : 0);
+    if (this.overweight() >= CM.OVERWEIGHT_RUN) { this.say("The pack is too heavy to run with: walk it, or leave something."); return false; }
     const path = this.pathTo(x, y);
     if (!path) { if (!explore) this.say("No known way there."); return false; }
     this.travel = { path, to: [x, y], explore, known: this.thingsInView() };
