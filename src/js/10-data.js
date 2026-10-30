@@ -145,6 +145,7 @@ CM.KITS = {
   delver: { name: "Delver's kit", need: 10, what: "Two Scrolls of Mapping, three torches, two antidotes." },
   heir: { name: "Heir's kit", need: 15, what: "Every hero's own weapon, well made: +2 to start." },
   legend: { name: "Legend's kit", need: 21, what: "Every hero sets out at level 2, with a boon to choose. (For slaying the Lich King.)" },
+  scholar: { name: "Scholar's kit", need: 8, what: "The Catacombs' chapter known before the stair, and a tome in the pack. (For reading as far as floor 8.)" },
   abyss: { name: "Abyss kit", need: 30, what: "Every hero sets out at level 3 with a boon, and the party with 150 gold more, a rope, a diamond and a Scroll of Mapping. (For reaching floor 30 of the Deep.)" },
 };
 

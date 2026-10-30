@@ -803,6 +803,15 @@ The telling (the fifth big update, phase 7 - v3.7)
   and Save the page (PNG) draws it (CM.endingPage). Three leitmotifs in code (CM.music.motif): the bell, the
   queen's song, the Root's one note, played when a line that concerns them is read or heard (CM.MOTIFS).
 
+Around the story (the fifth big update, phase 8 - v3.8)
+  The Scholar's kit (floor 8 reached): the Catacombs' chapter known at the stair and a tome in the pack. Four
+  contracts with story in them (the bell on Grim, the Drowned Knight passed by speech, one of your own laid to
+  rest, three chapters in a run). The titles of the update, together: the Chronicler, the Soft-Spoken, the
+  Merciful, the Witness, Bell-ringer, the Faithful. node tools/sim.js --story reports lines read a run, chapters
+  completed, guardians spoken past, the bell rung and the king reminded, by difficulty; node tools/words.js prints
+  the story's budget by chapter and counts the long strings still in the code. The film bar names the scene
+  (a parley, a word with someone, a choice).
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

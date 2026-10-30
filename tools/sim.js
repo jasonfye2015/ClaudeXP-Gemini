@@ -18,6 +18,7 @@ const SEEDS = Number(opt("seeds", 30)), TO = Number(opt("to", 50)), ENDLESS = ar
 const DIFFS = opt("difficulty", "gentle,fair,grim").split(",");
 const ASCS = opt("ascension", "0").split(",").map(Number);              // the ladder report: --ascension 0,5,10,15 runs each rung
 const JSON_OUT = opt("json", null);
+const STORY = args.includes("--story");                                   // the story's gates, measured: chapters completed, guardians spoken past, endings
 
 function simulate(seed, difficulty, ascension = 0) {
   const CM = load();
@@ -31,7 +32,8 @@ function simulate(seed, difficulty, ascension = 0) {
   const fl = game.floor ? game.floor.number : 0;
   return { seed, difficulty: ascension ? `${difficulty}/A${ascension}` : difficulty, ascension, floor: fl, died: game.mode === "title" && !game.bottom && !(game.crowned && fl === 20 && game.mode === "title"), crowned: Boolean(game.crowned), bottom: Boolean(game.bottom),
     reached: game.mode === "explore", fights: game.tally.fights, fled: game.tally.fled, steps: game.tally.steps, gold: game.gold, guardians: (game.tally.guardians || []).slice(),
-    levels: game.party.map((h) => h.level), byCamp, stuck: r.stuck, notes: r.log, ms: Date.now() - t0, spent: game.tally.spent || {}, abilities: game.tally.abilities || {}, logLines: (game.runLog || []).length };
+    levels: game.party.map((h) => h.level), byCamp, stuck: r.stuck, notes: r.log, ms: Date.now() - t0, spent: game.tally.spent || {}, abilities: game.tally.abilities || {}, logLines: (game.runLog || []).length,
+    story: { read: Object.keys((game.story || {}).read || {}).length, chapters: CM.codex(game).filter((c) => c.band !== undefined && c.complete).map((c) => c.id), spoken: (game.tally.spoken || []).slice(), reminded: Boolean(game.reminded), bell: Boolean((game.story || {}).bell) } };
 }
 
 function CM_ABILITIES() { return load().ABILITIES; }
@@ -67,6 +69,11 @@ for (const d of [...new Set(results.map((r) => r.difficulty))]) {
   console.log("  where the gold went: " + Object.entries(spent).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${Math.round(100 * v / total)}%`).join(", "));
   const never = Object.keys(CM_ABILITIES()).filter((id) => !used[id]);
   console.log("  spells and skills never used by the bot: " + (never.join(", ") || "none") + "; most used: " + Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k} ${v}`).join(", "));
+  if (STORY) {
+    const chapters = {}, spoken = {};
+    for (const r of rs) { for (const c of r.story.chapters) chapters[c] = (chapters[c] || 0) + 1; for (const id of r.story.spoken) spoken[id] = (spoken[id] || 0) + 1; }
+    console.log(`  the story: ${(rs.reduce((a, r) => a + r.story.read, 0) / rs.length).toFixed(1)} lines read a run; chapters completed: ${Object.entries(chapters).map(([k, v]) => `${k} ${v}`).join(", ") || "none"}; guardians spoken past: ${Object.entries(spoken).map(([k, v]) => `${k} ${v}`).join(", ") || "none"}; the bell rung ${rs.filter((r) => r.story.bell).length}, the king reminded ${rs.filter((r) => r.story.reminded).length}`);
+  }
   const stuck = rs.filter((r) => r.stuck);
   if (stuck.length) console.log(`  the bot got stuck ${stuck.reduce((a, r) => a + r.stuck, 0)} times (${stuck.slice(0, 3).map((r) => r.seed + ": " + r.notes[0]).join("; ")})`);
 }

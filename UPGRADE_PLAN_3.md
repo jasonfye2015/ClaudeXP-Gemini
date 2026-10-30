@@ -268,7 +268,7 @@ How the story is shown; no new words.
 
 Size: M.
 
-## Phase 8 - Around the story - v3.8 (and v4.0's wrap)
+## Phase 8 - Around the story - v3.8 (and v4.0's wrap) - DONE (v3.8; the wrap with v4.0)
 
 - **Achievements and titles**: *the Chronicler* (every chapter), *the Soft-Spoken* (three guardians passed by
   speech), *the Merciful*, *the Dreamer*, *the Witness* (every ghost's third meeting), *Bell-ringer*; a kit, *the

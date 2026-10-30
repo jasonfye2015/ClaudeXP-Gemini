@@ -1650,6 +1650,26 @@ test("the telling: four hands, the motifs a line calls up, the camp fire's tale,
   const tale = game.campTale(); assert.ok(tale.includes("tells it over the fire") && tale.includes(CM.LORE[0]));
 });
 
+test("around the story: the Scholar's kit, the story's contracts, the simulator's story report and the word budget, the film bar's scenes", () => {
+  const CM = load();
+  assert.ok(CM.KITS.scholar && CM.unlocked([{ floor: 8 }]).includes("scholar") && !CM.unlocked([{ floor: 7 }]).includes("scholar"));
+  CM.store.set("fame", [{ name: "x", floor: 9, won: false, gold: 0, date: "01/01/2026", party: [], tally: {} }]);   // (the kit wants floor 8 reached)
+  const game = new CM.Game(); game.newGame("scholar-1", fixedParty(CM), "scholar");
+  assert.ok(CM.LORE_KEYS.slice(0, 5).every((k) => game.story.read[k] !== undefined) && game.bag.some((i) => i.kind === "tome"), "the Catacombs known, a tome in the pack");
+  for (const id of ["bellgrim", "knightspoken", "ownrest", "chapter3"]) assert.ok(CM.CONTRACTS[id] && typeof CM.CONTRACTS[id].check === "function", id);
+  assert.ok(CM.CONTRACTS.knightspoken.check({ tally: { spoken: ["knight"] } }) && !CM.CONTRACTS.knightspoken.check({ tally: {} }));
+  game.story.bell = true; assert.ok(CM.CONTRACTS.bellgrim.check({ difficulty: "grim", tally: {} }, game) && !CM.CONTRACTS.bellgrim.check({ difficulty: "fair", tally: {} }, game));
+  game.markRead("guardian.rat"); assert.ok(!CM.CONTRACTS.chapter3.check({ tally: {} }, game));
+  for (const id of ["chronicler", "bellringer", "witness", "laidtorest", "softspoken", "merciful"]) assert.ok(CM.ACHIEVEMENTS[id] && CM.ACHIEVEMENTS[id].title, id);
+  // the tools: a story report in the simulator, and the budget
+  const sim = fs.readFileSync(path.join(ROOT, "tools", "sim.js"), "utf8");
+  assert.ok(sim.includes("--story") && sim.includes("guardians spoken past"));
+  const out = execFileSync("node", [path.join(ROOT, "tools", "words.js")], { encoding: "utf8" });
+  assert.ok(/in all\s+\d[\d,]* words/.test(out) && out.includes("The Catacombs") && out.includes("Long strings still in the code"), out.slice(0, 200));
+  const ui = fs.readFileSync(path.join(ROOT, "src", "js", "70-ui.js"), "utf8");
+  assert.ok(ui.includes('parley: "a parley"'), "the film bar names the scene");
+});
+
 (async () => {
   let failed = 0;
   for (const t of tests) {

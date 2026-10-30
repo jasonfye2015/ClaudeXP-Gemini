@@ -38,6 +38,10 @@ CM.CONTRACTS = {
   hoard: { name: "The hoard", what: "Come to a run's end with 1,500 gold", renown: 40, check: (e) => e.gold >= 1500 },
   deepfriends: { name: "Old friends, deep down", what: "Have a bond and reach floor 25", renown: 60, check: (e, g) => (g.bonds || []).length > 0 && e.floor >= 25 },
   weaver3: { name: "Three weaves", what: "Find three weaves, ever", renown: 50, check: (e, g) => Object.keys(g.weaves || {}).length >= 3 },
+  bellgrim: { name: "The last bell, on Grim", what: "Bring Brother Cael the bell on Grim", renown: 70, check: (e, g) => e.difficulty === "grim" && Boolean(g.story && g.story.bell) },
+  knightspoken: { name: "No blow struck", what: "Pass the Drowned Knight by speech", renown: 60, check: (e) => (e.tally.spoken || []).includes("knight") },
+  ownrest: { name: "One of ours", what: "Lay a fallen hero of your own to rest where they fell", renown: 50, check: (e, g) => (g.earned || []).includes("laidtorest") },
+  chapter3: { name: "Three chapters", what: "Complete three chapters of the codex in one run", renown: 60, check: (e, g) => CM.codex(g).filter((c) => c.band !== undefined && c.complete).length >= 3 },
   monkcrown: { name: "Empty hands", what: "Take the crown with a Monk in the party", renown: 80, check: (e, g) => e.won && g.party.some((h) => h.cls === "Monk") },
 };
 CM.contractsFor = function (seed) {

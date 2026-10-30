@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v3.7 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v3.8 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -411,7 +411,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "3.7", built: "2026-10-30" };
+const CM = window.CM = { version: "3.8", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -617,6 +617,7 @@ CM.KITS = {
   delver: { name: "Delver's kit", need: 10, what: "Two Scrolls of Mapping, three torches, two antidotes." },
   heir: { name: "Heir's kit", need: 15, what: "Every hero's own weapon, well made: +2 to start." },
   legend: { name: "Legend's kit", need: 21, what: "Every hero sets out at level 2, with a boon to choose. (For slaying the Lich King.)" },
+  scholar: { name: "Scholar's kit", need: 8, what: "The Catacombs' chapter known before the stair, and a tome in the pack. (For reading as far as floor 8.)" },
   abyss: { name: "Abyss kit", need: 30, what: "Every hero sets out at level 3 with a boon, and the party with 150 gold more, a rope, a diamond and a Scroll of Mapping. (For reaching floor 30 of the Deep.)" },
 };
 
@@ -6334,6 +6335,7 @@ CM.Game = class {
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
     else if (this.kit === "heir") for (const h of this.party) { h.weapon.power += 2; h.weapon.name += " +1"; h.weapon.props = Object.assign({}, h.weapon.props, { bonus: 1 }); h.weapon.value = 45; }
     else if (this.kit === "legend") for (const h of this.party) { h.level = 2; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; }
+    else if (this.kit === "scholar") { for (const k of CM.LORE_KEYS.slice(0, 5)) this.markRead(k); const ids = Object.keys(CM.TOMES); this.bag.push(CM.tome(ids[CM.hashSeed(`${this.seed}:scholar`) % ids.length])); }
     else if (this.kit === "abyss") { this.gold += 150; this.bag.push(CM.rope(), CM.gem("diamond"), CM.scroll("mapping")); for (const h of this.party) { h.level = 3; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }
     for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
     this.retiredThisRun = false;
@@ -10134,6 +10136,10 @@ CM.CONTRACTS = {
   hoard: { name: "The hoard", what: "Come to a run's end with 1,500 gold", renown: 40, check: (e) => e.gold >= 1500 },
   deepfriends: { name: "Old friends, deep down", what: "Have a bond and reach floor 25", renown: 60, check: (e, g) => (g.bonds || []).length > 0 && e.floor >= 25 },
   weaver3: { name: "Three weaves", what: "Find three weaves, ever", renown: 50, check: (e, g) => Object.keys(g.weaves || {}).length >= 3 },
+  bellgrim: { name: "The last bell, on Grim", what: "Bring Brother Cael the bell on Grim", renown: 70, check: (e, g) => e.difficulty === "grim" && Boolean(g.story && g.story.bell) },
+  knightspoken: { name: "No blow struck", what: "Pass the Drowned Knight by speech", renown: 60, check: (e) => (e.tally.spoken || []).includes("knight") },
+  ownrest: { name: "One of ours", what: "Lay a fallen hero of your own to rest where they fell", renown: 50, check: (e, g) => (g.earned || []).includes("laidtorest") },
+  chapter3: { name: "Three chapters", what: "Complete three chapters of the codex in one run", renown: 60, check: (e, g) => CM.codex(g).filter((c) => c.band !== undefined && c.complete).length >= 3 },
   monkcrown: { name: "Empty hands", what: "Take the crown with a Monk in the party", renown: 80, check: (e, g) => e.won && g.party.some((h) => h.cls === "Monk") },
 };
 CM.contractsFor = function (seed) {
@@ -10649,7 +10655,8 @@ CM.UI = class {
     if (!f) return;
     bar.querySelector("[data-film=toggle]").textContent = f.playing ? "Pause" : "Play";
     bar.querySelector("[data-film=speed]").textContent = `${f.speed}x`;
-    bar.querySelector("span").textContent = `${f.at} of ${f.spec.log.length}`;
+    const line = f.spec.log[f.at - 1] || [], scene = { parley: "a parley", talk: "a word with someone", choose: "a choice", chooseBoon: "a boon", kneel: "at an altar", drink: "at a fountain", rest: "the camp", secondCalling: "a second calling" }[line[0]] || (this.game.mode === "combat" ? "a fight" : "");
+    bar.querySelector("span").textContent = `${f.at} of ${f.spec.log.length}${scene ? ` - ${scene}` : ""}`;
   }
   // ten seconds of the view, recorded (the canvas's stream, where the browser can) and saved as a .webm
   recordClip() {

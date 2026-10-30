@@ -415,7 +415,8 @@ CM.UI = class {
     if (!f) return;
     bar.querySelector("[data-film=toggle]").textContent = f.playing ? "Pause" : "Play";
     bar.querySelector("[data-film=speed]").textContent = `${f.speed}x`;
-    bar.querySelector("span").textContent = `${f.at} of ${f.spec.log.length}`;
+    const line = f.spec.log[f.at - 1] || [], scene = { parley: "a parley", talk: "a word with someone", choose: "a choice", chooseBoon: "a boon", kneel: "at an altar", drink: "at a fountain", rest: "the camp", secondCalling: "a second calling" }[line[0]] || (this.game.mode === "combat" ? "a fight" : "");
+    bar.querySelector("span").textContent = `${f.at} of ${f.spec.log.length}${scene ? ` - ${scene}` : ""}`;
   }
   // ten seconds of the view, recorded (the canvas's stream, where the browser can) and saved as a .webm
   recordClip() {
