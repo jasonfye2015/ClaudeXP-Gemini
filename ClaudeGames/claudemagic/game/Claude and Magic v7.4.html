@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v7.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v7.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -437,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "7.3", built: "2026-10-30" };
+const CM = window.CM = { version: "7.4", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1393,10 +1393,10 @@ CM.ACHIEVEMENTS = {
 CM.titleFor = (achievements) => { const id = Object.keys(CM.ACHIEVEMENTS).find((a) => achievements && achievements[a]); return id ? CM.ACHIEVEMENTS[id].title : ""; };
 // the keys, as the player may set them (Settings > Keys); the arrows always move as well
 CM.DEFAULT_KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", strafeLeft: "KeyQ", strafeRight: "KeyE", use: "Space", inventory: "KeyI",
-  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA", autoPlay: "KeyZ" };
+  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA", autoPlay: "KeyZ", whereTo: "KeyG" };
 CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"], ["right", "turn right"], ["strafeLeft", "sidestep left"], ["strafeRight", "sidestep right"],
   ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
-  ["explore", "walk to the nearest unexplored square (any key stops)"], ["autoPlay", "Automatic: the party plays by itself - on and off (a move key stops it too)"],
+  ["explore", "walk to the nearest unexplored square (any key stops)"], ["whereTo", "Where to?: on the surface, walk to a door or a place by name"], ["autoPlay", "Automatic: the party plays by itself - on and off (a move key stops it too)"],
   ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"], ["auto", "in a fight: the party fights on by itself"]];
 // a gamepad's buttons, by the standard mapping, and what each does unless Settings > Keys says otherwise (the stick and
 // the d-pad - 12 to 15 - always move)
@@ -4311,6 +4311,12 @@ CM.TOWN_FENCES = [[8, 27, 10, 27], [30, 22, 30, 24], [9, 20, 10, 21], [13, 18, 1
 // where each door is (x, y), and the town's other places - the tests and the bot read these by name
 CM.TOWN_AT = { home: [5, 22], shaft: [35, 20], well: [18, 18], market: [22, 18], woodgate: [2, 19],
   tavern: [18, 16], merchant: [22, 16], smith: [18, 24], garden: [13, 24], library: [19, 10], temple: [20, 7], guildhall: [22, 24], chronicler: [28, 22] };
+CM.TOWN_SIGNS = [                                                        // the signposts, on the grass beside the junctions
+  { at: [7, 21], text: "LANTERN STREET, east: the Square, the Hanged Lantern, the Merchant's House. GATE LANE, north and west: the West Gate, the road, the farm and the Deep Wood." },
+  { at: [16, 21], text: "THE SQUARE. North by Temple Row: the Library, the Temple. South by Smiths' Lane: the Smith's forge, the Guildhall. East by Shaft Lane: the Chronicler's House, the Keep-yard and the shaft." },
+  { at: [26, 19], text: "SHAFT LANE. Ahead: the Chronicler's House on the right, then the Keep-yard, and the shaft's mouth in it. Behind: the Square." },
+  { at: [21, 8], text: "TEMPLE ROW. Ahead: the Temple's porch. Behind, on the left: the Library. South: the Square." },
+];
 CM.townInside = (x, y) => ((x - 22) / 20.5) ** 2 + ((y - 22) / 17.5) ** 2 <= 1;   // the hill's top, inside the ring wall
 CM.townStreet = (x, y) => Object.keys(CM.TOWN_STREETS).find((name) => CM.TOWN_STREETS[name].some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1)) || null;
 CM.makeTown = function (seed) {
@@ -4350,6 +4356,7 @@ CM.makeTown = function (seed) {
   things[key(...CM.TOWN_AT.woodgate)] = { type: "woodgate" };
   things[key(...CM.TOWN_AT.well)] = { type: "well" };
   if (String(seed).startsWith("weekly-")) things[key(...CM.TOWN_AT.market)] = { type: "peddler", stock: null };
+  for (const S of CM.TOWN_SIGNS) if (grid[S.at[1]][S.at[0]] === 0 && !things[key(...S.at)]) things[key(...S.at)] = { type: "signpost", text: S.text };
   const lane = [];                                                        // (on the side streets, not in the way between the door and the shaft)
   for (const name of ["Temple Row", "Smiths' Lane", "Gate Lane"]) for (const [x0, y0, x1, y1] of CM.TOWN_STREETS[name]) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!things[key(x, y)] && !lane.some((c) => c[0] === x && c[1] === y)) lane.push([x, y]);
   for (let i = 0; i < 3; i++) { let k = CM.hashSeed(`${seed}:folk:${i}`) % lane.length, guard = 0; while (things[key(lane[k][0], lane[k][1])] && guard++ < lane.length) k = (k + 1) % lane.length; things[key(lane[k][0], lane[k][1])] = { type: "villager", who: i }; }
@@ -4450,7 +4457,14 @@ CM.makeWood = function (seed) {
   for (let n = 0; n < 3; n++) { const k = take(deep); if (k) things[k] = { type: "cave", n }; }
   for (const type of ["hut", "shrine", "burner"]) { const k = take(deep); if (k) things[k] = { type }; }
   for (let i = 0; i < 8; i++) { const k = take((c) => c[0] < CM.riverX(c[1])); if (k) things[k] = { type: "node", band: -1, forage: i % CM.WOOD_NODES.length }; }
-  const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen: [], decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
+  for (const [at, text] of [[[57, 29], "THE ROAD, west: the fields, the farm's gate, the river's ford and the Deep Wood over it. Behind: the West Gate, and Caer Duin on its hill."],
+    [[43, 31], "The road bends south here to the ford. The farm's gate is a step back along it. A track north of the road, through the trees, comes to the plank bridge."],
+    [[first[0], first[1] - 2], "THE FIRST GLADE: safe at any hour. The paths beyond are the Wood's own; the hermit's hut, the ruined shrine, the charcoal burner and the cave mouths lie along them, somewhere."]]) {
+    if (grid[at[1]] && grid[at[1]][at[0]] === 0 && !things[key(...at)] && !features[key(...at)]) things[key(...at)] = { type: "signpost", text };
+  }
+  const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y)) seen.push([x, y]);
+  const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
     solidDefault: "tree", kinds, ground,
     rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };
   CM.markCanopy(fl);
@@ -4470,6 +4484,26 @@ CM.woodPlace = function (fl, x, y) {
   const room = (fl.rooms || []).find((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
   if (room) return room.name;
   return x < CM.riverX(y) ? "the Deep Wood" : "the river's bank";
+};
+// where the party stands on the surface, by name (the town's or the land's)
+CM.placeOf = (fl, x, y) => (fl && fl.number === 0 ? CM.townPlace(fl, x, y) : fl && fl.number === -1 ? CM.woodPlace(fl, x, y) : null);
+// Where to?: the doors and places the party knows on this surface floor, with the walk's length (null: no known way)
+CM.wayPlaces = function (game) {
+  const fl = game.floor;
+  if (!fl || fl.number > 0 || fl.number % 1 !== 0) return [];
+  const out = [], seen = new Set((fl.seen || []).map(([x, y]) => `${x},${y}`));
+  const add = (name, x, y, always) => { if (!always && !seen.has(`${x},${y}`)) return; if (x === fl.pos[0] && y === fl.pos[1]) return; const path = game.pathTo(x, y); out.push({ name, x, y, steps: path ? path.length : null }); };
+  if (fl.number === 0) {
+    for (const id of ["home", "tavern", "merchant", "smith", "garden", "library", "temple", "guildhall", "chronicler"]) add(CM.TOWN_PLOTS[id].name, ...CM.TOWN_AT[id], true);
+    add("The well", ...CM.TOWN_AT.well, true); add("The shaft", ...CM.TOWN_AT.shaft, true); add("The West Gate", ...CM.TOWN_AT.woodgate, true);
+  } else {
+    add("The West Gate", ...CM.WOOD_GATE, true);
+    const farm = Object.keys(fl.things).find((k) => fl.things[k].type === "farm");
+    if (farm) add("The farm", ...farm.split(",").map(Number), true);
+    add("The ford", ...fl.ford, true); if (fl.bridge) add("The bridge", ...fl.bridge, true); add("The First Glade", ...fl.glades[0], true);
+    for (const [k, t] of Object.entries(fl.things)) if (["hut", "shrine", "burner", "cave"].includes(t.type)) add(t.type === "hut" ? "The hermit's hut" : t.type === "shrine" ? "The ruined shrine" : t.type === "burner" ? "The charcoal burner" : `A cave mouth${t.n === CM.dayOf(game) % 3 ? " (open today)" : ""}`, ...k.split(",").map(Number), false);
+  }
+  return out;
 };
 CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
 CM.woodCaveAt = (seed, n) => { const fl = CM.makeWood(seed); return Object.keys(fl.things).find((k) => fl.things[k].type === "cave" && fl.things[k].n === n) || CM.WOOD_GATE.join(","); };
@@ -6164,6 +6198,38 @@ CM.art.moon = function (phase = 4) {                                            
   }
   return c;
 };
+
+// a signpost: a post with two boards; and the signs over the doors: a board with the house's mark
+CM.art.signpost = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "#5A4028"; p.fillRect(S / 2 - 9, S * 0.2, 18, S * 0.8);
+  for (const [y, dir] of [[S * 0.24, 1], [S * 0.4, -1]]) {
+    p.fillStyle = "#8A6A3A"; p.beginPath();
+    if (dir > 0) { p.moveTo(S * 0.22, y); p.lineTo(S * 0.7, y); p.lineTo(S * 0.8, y + 16); p.lineTo(S * 0.7, y + 32); p.lineTo(S * 0.22, y + 32); }
+    else { p.moveTo(S * 0.78, y); p.lineTo(S * 0.3, y); p.lineTo(S * 0.2, y + 16); p.lineTo(S * 0.3, y + 32); p.lineTo(S * 0.78, y + 32); }
+    p.closePath(); p.fill();
+    p.fillStyle = "#3A2A18"; for (let i = 0; i < 5; i++) p.fillRect(S * 0.3 + i * 22 + (dir > 0 ? 0 : 10), y + 12, 14, 7);   // (the words, too far to read)
+  }
+  return c;
+};
+CM.SIGN_MARKS = { home: "key", tavern: "lantern", merchant: "bale", smith: "anvil", garden: "mortar", library: "book", temple: "sun", guildhall: "swords", chronicler: "quill" };
+CM.art.sign = function (id) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, mark = CM.SIGN_MARKS[id] || "key";
+  p.fillStyle = "#3A2A18"; p.fillRect(S * 0.46, 0, S * 0.08, S * 0.14);                       // the bracket
+  p.fillStyle = "#8A6A3A"; p.fillRect(S * 0.1, S * 0.14, S * 0.8, S * 0.72);                  // the board
+  p.fillStyle = "#5A4028"; p.fillRect(S * 0.1, S * 0.14, S * 0.8, 8); p.fillRect(S * 0.1, S * 0.86 - 8, S * 0.8, 8); p.fillRect(S * 0.1, S * 0.14, 8, S * 0.72); p.fillRect(S * 0.9 - 8, S * 0.14, 8, S * 0.72);
+  const cx = S / 2, cy = S * 0.5; p.lineWidth = 8; p.lineCap = "round"; p.strokeStyle = "#F0D080"; p.fillStyle = "#F0D080";
+  if (mark === "lantern") { p.fillStyle = "#F0D080"; p.fillRect(cx - 26, cy - 36, 52, 70); p.fillStyle = "#8A6A3A"; p.fillRect(cx - 18, cy - 28, 36, 54); p.fillStyle = "#FFE890"; p.beginPath(); p.ellipse(cx, cy, 10, 18, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#F0D080"; p.beginPath(); p.arc(cx, cy - 44, 12, Math.PI, 0); p.stroke(); }
+  else if (mark === "bale") { p.fillRect(cx - 40, cy - 30, 80, 60); p.strokeStyle = "#5A4028"; p.lineWidth = 6; p.beginPath(); p.moveTo(cx - 40, cy); p.lineTo(cx + 40, cy); p.moveTo(cx, cy - 30); p.lineTo(cx, cy + 30); p.stroke(); }
+  else if (mark === "anvil") { p.beginPath(); p.moveTo(cx - 44, cy - 20); p.lineTo(cx + 44, cy - 20); p.lineTo(cx + 30, cy); p.lineTo(cx + 12, cy + 4); p.lineTo(cx + 20, cy + 30); p.lineTo(cx - 20, cy + 30); p.lineTo(cx - 12, cy + 4); p.lineTo(cx - 30, cy); p.closePath(); p.fill(); }
+  else if (mark === "mortar") { p.beginPath(); p.moveTo(cx - 36, cy - 10); p.lineTo(cx + 36, cy - 10); p.lineTo(cx + 22, cy + 34); p.lineTo(cx - 22, cy + 34); p.closePath(); p.fill(); p.beginPath(); p.moveTo(cx + 10, cy - 14); p.lineTo(cx + 40, cy - 50); p.stroke(); }
+  else if (mark === "book") { p.fillRect(cx - 40, cy - 28, 36, 56); p.fillRect(cx + 4, cy - 28, 36, 56); p.strokeStyle = "#5A4028"; p.lineWidth = 4; p.beginPath(); p.moveTo(cx - 30, cy - 12); p.lineTo(cx - 12, cy - 12); p.moveTo(cx - 30, cy); p.lineTo(cx - 12, cy); p.moveTo(cx + 12, cy - 12); p.lineTo(cx + 30, cy - 12); p.moveTo(cx + 12, cy); p.lineTo(cx + 30, cy); p.stroke(); }
+  else if (mark === "sun") { p.beginPath(); p.arc(cx, cy, 22, 0, Math.PI * 2); p.fill(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; p.beginPath(); p.moveTo(cx + Math.cos(a) * 30, cy + Math.sin(a) * 30); p.lineTo(cx + Math.cos(a) * 46, cy + Math.sin(a) * 46); p.stroke(); } }
+  else if (mark === "swords") { p.beginPath(); p.moveTo(cx - 40, cy + 36); p.lineTo(cx + 36, cy - 40); p.moveTo(cx + 40, cy + 36); p.lineTo(cx - 36, cy - 40); p.stroke(); p.lineWidth = 12; p.beginPath(); p.moveTo(cx - 34, cy + 18); p.lineTo(cx - 18, cy + 34); p.moveTo(cx + 34, cy + 18); p.lineTo(cx + 18, cy + 34); p.stroke(); }
+  else if (mark === "quill") { p.beginPath(); p.moveTo(cx - 30, cy + 40); p.quadraticCurveTo(cx, cy - 10, cx + 36, cy - 44); p.quadraticCurveTo(cx + 10, cy - 10, cx - 30, cy + 40); p.fill(); p.beginPath(); p.moveTo(cx - 30, cy + 40); p.lineTo(cx - 40, cy + 50); p.stroke(); }
+  else { p.beginPath(); p.arc(cx - 16, cy - 10, 18, 0, Math.PI * 2); p.stroke(); p.beginPath(); p.moveTo(cx, cy); p.lineTo(cx + 40, cy + 40); p.moveTo(cx + 24, cy + 24); p.lineTo(cx + 36, cy + 12); p.stroke(); }   // a key
+  return c;
+};
 // every layer the surface wants, from the painters - `pick(key, drawn)` lets a look use its own tile for one
 CM.art.surfaceLayers = function (pick) {
   const use = pick || ((key, drawn) => drawn());
@@ -6181,6 +6247,8 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());
   for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v));
   out.canopy = use("canopy", () => CM.art.canopy());
+  out.signpost = use("signpost", () => CM.art.signpost());
+  for (const id of Object.keys(CM.TOWN_PLOTS || {})) out[`sign:${id}`] = use(`sign.${id}`, () => CM.art.sign(id));
   out.skygrad = CM.art.skyGradient();
   out.sun = CM.art.sun();
   for (let ph = 0; ph < 8; ph++) out[`moon:${ph}`] = CM.art.moon(ph);
@@ -6353,7 +6421,7 @@ CM.art.buildPixel = function (theme) {
   add("fx:ring", tileOr("fx.ring", CM.art.fxRing));
   for (let f = 0; f < 3; f++) { add(`torch${f}`, tileOr(`torch${f}`, () => CM.art.torch(f))); add(`water${f}`, tileOr(`water${f}`, () => CM.art.water(f))); }
   const ground = (key, drawn) => (CM.packs.pixel.index[key] ? tiled(key, 2) : CM.art.pixelate(drawn()));              // (the ground and the walls repeat the tile; the trees stand alone)
-  for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
+  for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key.startsWith("sign") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
   return { layers, index, size: S, crisp: true };
 };
 
@@ -8110,6 +8178,7 @@ Object.assign(CM.Game.prototype, {
           woodgate: fl.number === 0 ? "The west gate, and the trees beyond it. (Space to go out into the Deep Wood)" : "The gate back to the town. (Space to go through)",
           cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
           caveexit: "The way out of the cave. (Space to climb out)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
+          signpost: "A signpost, its boards weathered. (Space to read it)",
           villager: thing.type === "villager" ? `${(CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length] || {}).who || "someone"}. (Space to pass the time of day)` : "" }[thing.type]);
       }
     }
@@ -8339,6 +8408,7 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "farm") { this.farmDawns(); this.emit("farm", {}); this.say(this.villageLevel("farm") >= 1 ? `The farm: ${this.farm().rows.filter(Boolean).length} of ${this.farmRows()} rows planted, ${CM.season(this)}.` : "A fallow field in the first glade, waiting for the town's renown."); return; }
     if (thing && thing.type === "shrine") { this.emit("talk", { title: "The ruined shrine", text: CM.WOOD_LINES.shrine }); this.say(CM.WOOD_LINES.shrine); if (!thing.read) { thing.read = true; this.remember("carving", CM.WOOD_LINES.shrine, { key: "wood.shrine" }); this.saveRun(); } return; }
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
+    if (thing && thing.type === "signpost") { this.say(`The signpost reads: ${thing.text}`); return; }
     if (thing && thing.type === "well") { this.well(); return; }
     if (thing && thing.type === "villager") { this.talkTownsfolk(thing); return; }
     if (thing && thing.type === "node") { this.gather(thing, k); return; }
@@ -8749,6 +8819,8 @@ Object.assign(CM.Game.prototype, {
       if (f && ["trapdoor", "teleporter", "spinner", "spores", "vents", "bonepiles"].includes(f.type) && f.known) return false;
       if (f && f.type === "gate" && !f.open) return false;
       if (f && f.type === "door" && !f.open && (f.riddle !== undefined || (f.locked && !key && !picks))) return false;
+      const t = fl.things[k];                                                                     // (what stands in a square is walked round, unless it is where the walk goes)
+      if (t && k !== goal && ["well", "signpost", "hut", "shrine", "burner", "cave", "farm", "node", "vein", "building"].includes(t.type)) return false;   // (people are passed, and stop the walk to talk)
       return true;                                                                                // (a band of monsters on the way: the walk stops three squares short of it)
     };
     if (goal !== start && !ok(x, y)) return null;
@@ -14070,6 +14142,7 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
+<div class="dialog" id="dlg-whereto"><div class="box journalbox"><h2>Where to?</h2><div class="small">The party walks there by what it knows, and stops for whatever it meets on the way. Any key stops it.</div><div id="whereto-list"></div><div class="row"><button class="close">Back</button></div></div></div>
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button></span></h2><div id="journal-list"></div>
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
@@ -14951,6 +15024,13 @@ CM.UI = class {
     if (c.ending) this.game.ending(n - 1); else if (c.parley) this.game.parley(c.k, n - 1); else if (c.rivals) this.game.chooseRivals(c.k, n - 1); else this.game.choose(c.k, n - 1);
     this.refresh();
   }
+  // Where to?: the doors and the places of this surface floor, by name, with the walk's length; one click walks the party there
+  openWhereTo() {
+    const g = this.game, box = this.$("#whereto-list"), places = CM.wayPlaces(g);
+    box.innerHTML = places.length ? places.map((p, i) => `<button class="pick" data-i="${i}" ${p.steps === null ? "disabled" : ""}>${this.esc(p.name)} <small>${p.steps === null ? "no known way" : CM.plural(p.steps, "step")}</small></button>`).join("") : `<div class="small">Nowhere to go from here but on foot.</div>`;
+    for (const b of box.querySelectorAll("button.pick")) b.addEventListener("click", () => { const p = places[Number(b.dataset.i)]; this.closeDialogs(); if (g.travelTo(p.x, p.y)) g.say(`Off to ${p.name.charAt(0).toLowerCase() + p.name.slice(1)}.`); this.refresh(); });
+    this.openDialog("#dlg-whereto");
+  }
   openJournal() {
     const g = this.game, box = this.$("#journal-list"), entries = g.journal || [];
     const part = (title, kind, order) => {
@@ -15326,8 +15406,8 @@ Object.assign(CM.UI.prototype, {
     const fl = g.floor;
     if (fl) {
       this.drawSky();
-      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 ? CM.t("town.compass") : fl.number === -1 ? "The Wood" : fl.special === "cave" ? "A cave" : "Floor " + fl.number}`;
-      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? CM.t("town.where", { name: CM.TOWN_THEME.name }) : fl.number === -1 ? `${CM.WOOD_THEME.name} - ${CM.hourWord(CM.hourOf(g))}` : fl.special === "cave" ? `${CM.WOOD_THEME.name} - a cave` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
+      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 || fl.number === -1 ? CM.placeOf(fl, fl.pos[0], fl.pos[1]) || CM.t("town.compass") : fl.special === "cave" ? "A cave" : "Floor " + fl.number}`;
+      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? `${CM.TOWN_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}` : fl.number === -1 ? `${CM.WOOD_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}, ${CM.hourWord(CM.hourOf(g))}` : fl.special === "cave" ? `${CM.WOOD_THEME.name} - a cave` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
@@ -15424,7 +15504,7 @@ Object.assign(CM.UI.prototype, {
     box.classList.remove("combat");
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
-        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
+        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 ? [["Where to? (G)", () => this.openWhereTo()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")], [CM.t("camp.bounty"), () => { const note = g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty(); if (note) g.say(note); this.refresh(); }],
         ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Guild", () => this.openSecond()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
@@ -15508,7 +15588,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
     const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      node: "#8FB06A", building: "#C09050", well: "#60A0E0", villager: "#E0C8A0", woodgate: "#60A060", cave: "#504030", vein: "#B08860", caveexit: "#3060C0", hut: "#C09050", farm: "#D0B060", shrine: "#A070C0", burner: "#C08030", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
+      node: "#8FB06A", building: "#C09050", signpost: "#E0C890", well: "#60A0E0", villager: "#E0C8A0", woodgate: "#60A060", cave: "#504030", vein: "#B08860", caveexit: "#3060C0", hut: "#C09050", farm: "#D0B060", shrine: "#A070C0", burner: "#C08030", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
@@ -16534,9 +16614,15 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "node") { const look = (CM.NODES[thing.band] || CM.NODES[0])[1], flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.9 : 0.6, h: flat ? 0.9 : 0.5, flat, glow: look === "crystal" ? 0.3 : 0 }); }
       else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
-      else if (thing.type === "building") { const P = CM.TOWN_PLOTS[thing.id] || {}, V = P.village ? CM.VILLAGE[P.village] : null, lvl = CM.plotLevel(game, thing.id), stage = P.always && !V ? 4 : CM.houseStage(lvl, V ? V.costs.length : 1); out.push({ x, y, layer: stage ? `house${stage}` : "foundation", w: 1.0, h: 1.0 }); }
+      else if (thing.type === "building") {                            // the house is the block behind the doorway; what stands in the doorway says its level: a foundation, a frame, or the sign over the door
+        const P = CM.TOWN_PLOTS[thing.id] || {}, V = P.village ? CM.VILLAGE[P.village] : null, lvl = CM.plotLevel(game, thing.id), stage = P.always && !V ? 4 : CM.houseStage(lvl, V ? V.costs.length : 1);
+        const face = CM.DIRS.findIndex(([dx, dy]) => ["door", "shop"].includes(CM.solidAt(fl, x + dx, y + dy)));
+        if (stage <= 1) out.push({ x, y, layer: stage ? "house1" : "foundation", w: 0.9, h: 0.9 });
+        else if (face >= 0 && renderer.index[`sign:${thing.id}`] !== undefined) out.push({ x, y, layer: `sign:${thing.id}`, face, w: 0.6, h: 0.45, lift: 0.5, glow: CM.isNight(game) ? 0.5 : 0.15 });
+      }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
       else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
+      else if (thing.type === "signpost") out.push({ x, y, layer: "signpost", w: 0.55, h: 0.95 });
       else if (thing.type === "woodgate") out.push({ x, y, layer: "gate_open", w: 1.0, h: 1.0 });
       else if (thing.type === "cave") out.push({ x, y, layer: thing.n === CM.dayOf(game) % 3 ? "hatch" : "bones", w: 0.9, flat: thing.n === CM.dayOf(game) % 3, h: 0.5, shade: 0.6 });
       else if (thing.type === "caveexit") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
@@ -16690,6 +16776,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.code === K.map || e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
     if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
     if (e.code === K.journal && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
+    if (e.code === K.whereTo && game.mode === "explore" && game.floor && game.floor.number <= 0 && game.floor.number % 1 === 0) { ui.openWhereTo(); return; }
     if (game.mode === "explore") {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
       if (e.code === K.use) { e.preventDefault(); game.use(); }

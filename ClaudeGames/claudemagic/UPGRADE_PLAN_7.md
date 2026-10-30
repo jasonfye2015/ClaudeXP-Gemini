@@ -121,7 +121,14 @@ nine or more cells from the first glade) by the seed, as before.
   hut, the shrine, the burner and the caves are reachable and far from the gate; a cave is a floor as before; the
   Wood's tests pass against the land (the glades, the ford, the night's bands).
 
-## Phase 3 - Finding the way - v7.4
+## Phase 3 - Finding the way - v7.4 - DONE
+
+As planned. The signs over the doors took the place of the house pictures that stood in the doorways (a foundation or
+a frame still stands there until the house is raised); the title card does not announce every street, the compass and
+the side panel do. Where to? is `CM.wayPlaces(game)` (the Node tests walk every door from the party's door) and
+`ui.openWhereTo()`, on G. `pathTo` now goes round fixed things (a well, a signpost, a cave mouth, a door) unless they
+are the goal, and passes people. On the land the near bank is on the map from the gate; the forest's places join the
+list once seen.
 
 - **Signposts**: a thing at the gate, the square's corners and the forest's path forks; Use reads it ("Temple Row -
   the Temple, the Library"; "West: the farm, the river, the Deep Wood").

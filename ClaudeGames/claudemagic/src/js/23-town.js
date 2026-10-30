@@ -50,6 +50,12 @@ CM.TOWN_FENCES = [[8, 27, 10, 27], [30, 22, 30, 24], [9, 20, 10, 21], [13, 18, 1
 // where each door is (x, y), and the town's other places - the tests and the bot read these by name
 CM.TOWN_AT = { home: [5, 22], shaft: [35, 20], well: [18, 18], market: [22, 18], woodgate: [2, 19],
   tavern: [18, 16], merchant: [22, 16], smith: [18, 24], garden: [13, 24], library: [19, 10], temple: [20, 7], guildhall: [22, 24], chronicler: [28, 22] };
+CM.TOWN_SIGNS = [                                                        // the signposts, on the grass beside the junctions
+  { at: [7, 21], text: "LANTERN STREET, east: the Square, the Hanged Lantern, the Merchant's House. GATE LANE, north and west: the West Gate, the road, the farm and the Deep Wood." },
+  { at: [16, 21], text: "THE SQUARE. North by Temple Row: the Library, the Temple. South by Smiths' Lane: the Smith's forge, the Guildhall. East by Shaft Lane: the Chronicler's House, the Keep-yard and the shaft." },
+  { at: [26, 19], text: "SHAFT LANE. Ahead: the Chronicler's House on the right, then the Keep-yard, and the shaft's mouth in it. Behind: the Square." },
+  { at: [21, 8], text: "TEMPLE ROW. Ahead: the Temple's porch. Behind, on the left: the Library. South: the Square." },
+];
 CM.townInside = (x, y) => ((x - 22) / 20.5) ** 2 + ((y - 22) / 17.5) ** 2 <= 1;   // the hill's top, inside the ring wall
 CM.townStreet = (x, y) => Object.keys(CM.TOWN_STREETS).find((name) => CM.TOWN_STREETS[name].some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1)) || null;
 CM.makeTown = function (seed) {
@@ -89,6 +95,7 @@ CM.makeTown = function (seed) {
   things[key(...CM.TOWN_AT.woodgate)] = { type: "woodgate" };
   things[key(...CM.TOWN_AT.well)] = { type: "well" };
   if (String(seed).startsWith("weekly-")) things[key(...CM.TOWN_AT.market)] = { type: "peddler", stock: null };
+  for (const S of CM.TOWN_SIGNS) if (grid[S.at[1]][S.at[0]] === 0 && !things[key(...S.at)]) things[key(...S.at)] = { type: "signpost", text: S.text };
   const lane = [];                                                        // (on the side streets, not in the way between the door and the shaft)
   for (const name of ["Temple Row", "Smiths' Lane", "Gate Lane"]) for (const [x0, y0, x1, y1] of CM.TOWN_STREETS[name]) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!things[key(x, y)] && !lane.some((c) => c[0] === x && c[1] === y)) lane.push([x, y]);
   for (let i = 0; i < 3; i++) { let k = CM.hashSeed(`${seed}:folk:${i}`) % lane.length, guard = 0; while (things[key(lane[k][0], lane[k][1])] && guard++ < lane.length) k = (k + 1) % lane.length; things[key(lane[k][0], lane[k][1])] = { type: "villager", who: i }; }

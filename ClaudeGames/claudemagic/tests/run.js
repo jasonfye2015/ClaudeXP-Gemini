@@ -2915,6 +2915,33 @@ test("the surface: the sky by the clock and the moon, the solid kinds, and a mes
   assert.strictEqual(Object.keys(CM.LOOKS)[0], "pixel"); assert.strictEqual(new CM.Game().settings.look, "pixel");
 });
 
+test("finding the way: signposts at the junctions that Use reads, the places under the party's feet by name, and Where to? that walks to every door and known place", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("way-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const fl = g.floor, signs = Object.entries(fl.things).filter(([, t]) => t.type === "signpost");
+  assert.ok(signs.length >= 4, `${signs.length} signposts`);
+  for (const [k, t] of signs) { assert.ok(CM.isOpen(fl, ...k.split(",").map(Number)), `a signpost stands on open ground at ${k}`); assert.ok(/Street|Square|Lane|Row/.test(t.text), t.text); }
+  fl.pos = signs[0][0].split(",").map(Number); g.use(); assert.ok(g.messages.slice(-1)[0].startsWith("The signpost reads"));
+  assert.strictEqual(CM.placeOf(fl, ...CM.TOWN_AT.home), "Your house"); assert.strictEqual(CM.placeOf(fl, 10, 22), "Lantern Street"); assert.strictEqual(CM.placeOf(fl, ...CM.TOWN_AT.well), "The Square");
+  assert.strictEqual(CM.placeOf(fl, ...CM.TOWN_AT.shaft), "The Keep-yard"); assert.strictEqual(CM.placeOf(fl, 20, 12), "Temple Row"); assert.strictEqual(CM.placeOf(fl, ...CM.TOWN_AT.woodgate), "the West Gate"); assert.strictEqual(CM.placeOf(fl, 5, 19), "Gate Lane");
+  for (const [k, t] of Object.entries(fl.things)) if (t.type === "villager") delete fl.things[k];   // (the townsfolk stop a walk to chat; not in this test)
+  fl.pos = CM.TOWN_AT.home.slice(); const ways = CM.wayPlaces(g);
+  assert.ok(ways.length >= 11, `${ways.length} places`); assert.ok(!ways.some((p) => p.name === "Your house"), "not where the party stands");
+  for (const w of ways) assert.ok(w.steps > 0, `${w.name} can be walked to`);
+  for (const w of ways) { fl.pos = CM.TOWN_AT.home.slice(); assert.ok(g.travelTo(w.x, w.y), w.name); let n = 0; while (g.travel && n++ < 150) g.travelStep(); if (g.floor !== fl) break; assert.strictEqual(fl.pos.join(), `${w.x},${w.y}`, `walked to ${w.name}`); }
+  // the land: its signposts and places; the caves only once seen
+  if (g.floor.number !== 0) { g.enterFloor(0, "rope", CM.TOWN_AT.woodgate.slice()); } else fl.pos = CM.TOWN_AT.woodgate.slice();
+  g.use(); const land = g.floor; assert.strictEqual(land.number, -1);
+  const lsigns = Object.values(land.things).filter((t) => t.type === "signpost"); assert.ok(lsigns.length >= 3 && lsigns.some((t) => t.text.includes("ford")) && lsigns.some((t) => t.text.includes("FIRST GLADE")), `${lsigns.length} signposts on the land`);
+  assert.strictEqual(CM.placeOf(land, 50, 30), "the road"); assert.strictEqual(CM.placeOf(land, ...land.ford), "the ford"); assert.strictEqual(CM.placeOf(land, ...land.bridge), "the bridge"); assert.strictEqual(CM.placeOf(land, ...land.glades[0]), "The First Glade"); assert.strictEqual(CM.placeOf(land, 48, 25), "The Fields");
+  const lw = CM.wayPlaces(g); assert.ok(lw.some((p) => p.name === "The farm" && p.steps > 0) && lw.some((p) => p.name === "The ford" && p.steps > 0) && lw.some((p) => p.name === "The bridge" && p.steps > 0) && lw.some((p) => p.name === "The First Glade" && p.steps === null), JSON.stringify(lw)); assert.ok(!lw.some((p) => p.name === "The West Gate"), "not where the party stands");
+  assert.ok(!lw.some((p) => p.name.startsWith("A cave")), "the caves are not known yet");
+  land.seen.push(...Object.keys(land.things).filter((k) => land.things[k].type === "cave").map((k) => k.split(",").map(Number)));
+  assert.ok(CM.wayPlaces(g).filter((p) => p.name.startsWith("A cave")).length === 3, "seen, the cave mouths are places");
+  assert.strictEqual(CM.DEFAULT_KEYS.whereTo, "KeyG"); assert.ok(CM.KEY_ACTIONS.some(([id]) => id === "whereTo"));
+  assert.strictEqual(CM.wayPlaces({ floor: CM.makeFloor(1, "way-1"), pathTo: () => null }).length, 0, "below ground there is no list");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

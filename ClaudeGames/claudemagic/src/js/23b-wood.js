@@ -72,7 +72,14 @@ CM.makeWood = function (seed) {
   for (let n = 0; n < 3; n++) { const k = take(deep); if (k) things[k] = { type: "cave", n }; }
   for (const type of ["hut", "shrine", "burner"]) { const k = take(deep); if (k) things[k] = { type }; }
   for (let i = 0; i < 8; i++) { const k = take((c) => c[0] < CM.riverX(c[1])); if (k) things[k] = { type: "node", band: -1, forage: i % CM.WOOD_NODES.length }; }
-  const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen: [], decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
+  for (const [at, text] of [[[57, 29], "THE ROAD, west: the fields, the farm's gate, the river's ford and the Deep Wood over it. Behind: the West Gate, and Caer Duin on its hill."],
+    [[43, 31], "The road bends south here to the ford. The farm's gate is a step back along it. A track north of the road, through the trees, comes to the plank bridge."],
+    [[first[0], first[1] - 2], "THE FIRST GLADE: safe at any hour. The paths beyond are the Wood's own; the hermit's hut, the ruined shrine, the charcoal burner and the cave mouths lie along them, somewhere."]]) {
+    if (grid[at[1]] && grid[at[1]][at[0]] === 0 && !things[key(...at)] && !features[key(...at)]) things[key(...at)] = { type: "signpost", text };
+  }
+  const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y)) seen.push([x, y]);
+  const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
     solidDefault: "tree", kinds, ground,
     rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };
   CM.markCanopy(fl);
@@ -92,6 +99,26 @@ CM.woodPlace = function (fl, x, y) {
   const room = (fl.rooms || []).find((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
   if (room) return room.name;
   return x < CM.riverX(y) ? "the Deep Wood" : "the river's bank";
+};
+// where the party stands on the surface, by name (the town's or the land's)
+CM.placeOf = (fl, x, y) => (fl && fl.number === 0 ? CM.townPlace(fl, x, y) : fl && fl.number === -1 ? CM.woodPlace(fl, x, y) : null);
+// Where to?: the doors and places the party knows on this surface floor, with the walk's length (null: no known way)
+CM.wayPlaces = function (game) {
+  const fl = game.floor;
+  if (!fl || fl.number > 0 || fl.number % 1 !== 0) return [];
+  const out = [], seen = new Set((fl.seen || []).map(([x, y]) => `${x},${y}`));
+  const add = (name, x, y, always) => { if (!always && !seen.has(`${x},${y}`)) return; if (x === fl.pos[0] && y === fl.pos[1]) return; const path = game.pathTo(x, y); out.push({ name, x, y, steps: path ? path.length : null }); };
+  if (fl.number === 0) {
+    for (const id of ["home", "tavern", "merchant", "smith", "garden", "library", "temple", "guildhall", "chronicler"]) add(CM.TOWN_PLOTS[id].name, ...CM.TOWN_AT[id], true);
+    add("The well", ...CM.TOWN_AT.well, true); add("The shaft", ...CM.TOWN_AT.shaft, true); add("The West Gate", ...CM.TOWN_AT.woodgate, true);
+  } else {
+    add("The West Gate", ...CM.WOOD_GATE, true);
+    const farm = Object.keys(fl.things).find((k) => fl.things[k].type === "farm");
+    if (farm) add("The farm", ...farm.split(",").map(Number), true);
+    add("The ford", ...fl.ford, true); if (fl.bridge) add("The bridge", ...fl.bridge, true); add("The First Glade", ...fl.glades[0], true);
+    for (const [k, t] of Object.entries(fl.things)) if (["hut", "shrine", "burner", "cave"].includes(t.type)) add(t.type === "hut" ? "The hermit's hut" : t.type === "shrine" ? "The ruined shrine" : t.type === "burner" ? "The charcoal burner" : `A cave mouth${t.n === CM.dayOf(game) % 3 ? " (open today)" : ""}`, ...k.split(",").map(Number), false);
+  }
+  return out;
 };
 CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
 CM.woodCaveAt = (seed, n) => { const fl = CM.makeWood(seed); return Object.keys(fl.things).find((k) => fl.things[k].type === "cave" && fl.things[k].n === n) || CM.WOOD_GATE.join(","); };
