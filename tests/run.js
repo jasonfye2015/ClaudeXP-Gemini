@@ -2882,7 +2882,7 @@ test("the surface: the sky by the clock and the moon, the solid kinds, and a mes
   assert.ok(CM.GROUNDS.includes("grass") && CM.GROUNDS.includes("cobbles"));
   // a texture index with every layer the surface names (the looks build these; here they are numbers)
   const index = {}; let n = 0;
-  for (const name of ["wall", "wall2", "wallbones", "wallsecret", "floor", "ceiling", "canopy", "skygrad", "tree:0", "tree:1", "tree:2", ...CM.GROUNDS.map((g) => `ground:${g}`),
+  for (const name of ["wall", "wall2", "wallbones", "wallsecret", "floor", "ceiling", "canopy", "skygrad", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", ...CM.GROUNDS.map((g) => `ground:${g}`),
     ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
   const layersOf = (m) => { const set = new Set(); for (let i = 0; i < m.data.length; i += CM.MESH_STRIDE) set.add(m.data[i + 5]); return set; };
   // the town: no ceiling; the ring wall, hedges with their tops, a house with a roof behind every door, cobbles on the square
@@ -2942,6 +2942,31 @@ test("finding the way: signposts at the junctions that Use reads, the places und
   assert.ok(CM.wayPlaces(g).filter((p) => p.name.startsWith("A cave")).length === 3, "seen, the cave mouths are places");
   assert.strictEqual(CM.DEFAULT_KEYS.whereTo, "KeyG"); assert.ok(CM.KEY_ACTIONS.some(([id]) => id === "whereTo"));
   assert.strictEqual(CM.wayPlaces({ floor: CM.makeFloor(1, "way-1"), pathTo: () => null }).length, 0, "below ground there is no list");
+});
+
+test("ground everywhere: on the surface every square has ground, a top or a roof; the trees stand on needles or litter; a skirt and a far ring past the edge; below, nothing of it", () => {
+  const CM = load();
+  const index = {}; let n = 0;
+  for (const name of ["wall", "wall2", "wallbones", "wallsecret", "floor", "ceiling", "canopy", "skygrad", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", ...CM.GROUNDS.map((g) => `ground:${g}`),
+    ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  const layersOf = (m) => { const set = new Set(); for (let i = 0; i < m.data.length; i += CM.MESH_STRIDE) set.add(m.data[i + 5]); return set; };
+  for (const [fl, theme] of [[CM.makeTown("ground-1"), CM.TOWN_THEME], [CM.makeWood("ground-1"), CM.WOOD_THEME]]) {
+    const m = CM.floorMesh(fl, theme, index), size = fl.grid.length, l = layersOf(m);
+    assert.strictEqual(m.covered, size * size, `floor ${fl.number}: every square covered (${m.covered} of ${size * size})`);
+    assert.ok(m.skirt > 0 && m.ring > 0, "a skirt and a far ring"); assert.ok(l.has(index["far:trees"]));
+    const treeCells = fl.grid.flat().length - fl.grid.flat().filter((c) => c === 0).length - Object.values(fl.kinds || {}).filter((k) => k !== "tree").length;
+    assert.ok(m.trees >= treeCells * 0.95, `every tree drawn: ${m.trees} of about ${treeCells}`);
+    assert.ok(l.has(index["ground:litter"]) && l.has(index["ground:needles"]), "needles under the firs, litter under the rest");
+    if (fl.number === -1) assert.ok(l.has(index["far:hill"]), "from the land, the town's hill");
+  }
+  // a fir's square wears needles, an oak's litter
+  const wood = CM.makeWood("ground-1"); let fir = null, oak = null;
+  for (let y = 0; y < wood.grid.length && !(fir && oak); y++) for (let x = 0; x < wood.grid.length; x++) if (CM.solidAt(wood, x, y) === "tree") { if (CM.treeVariant(wood, x, y) === 1) fir = fir || [x, y]; else oak = oak || [x, y]; }
+  assert.ok(fir && oak);
+  // below: nothing of it
+  const f1 = CM.makeFloor(1, "ground-1"), m1 = CM.floorMesh(f1, CM.THEMES[0], index);
+  assert.strictEqual(m1.skirt, 0); assert.strictEqual(m1.ring, 0); assert.strictEqual(m1.covered, f1.grid.flat().filter((c) => c === 0).length);
+  assert.ok(!layersOf(m1).has(index["ground:litter"]) && !layersOf(m1).has(index["far:trees"]));
 });
 
 (async () => {

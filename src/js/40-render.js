@@ -254,7 +254,7 @@ CM.Renderer = class {
   _skyMesh(eye) {
     const layer = this.index.skygrad;
     if (layer === undefined) return [];
-    const out = [], R = 62, lo = eye[1] - 6, hi = eye[1] + 46, [ex, , ez] = eye;
+    const out = [], R = 150, lo = eye[1] - 12, hi = eye[1] + 110, [ex, , ez] = eye;   // (beyond the far ring, which stands forty squares past the map's edge)
     const quad = (a, b, c, d) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, 1, 0, 1, 3); };
     quad([ex - R, lo, ez - R], [ex + R, lo, ez - R], [ex + R, hi, ez - R], [ex - R, hi, ez - R]);
     quad([ex + R, lo, ez + R], [ex - R, lo, ez + R], [ex - R, hi, ez + R], [ex + R, hi, ez + R]);
@@ -290,7 +290,7 @@ CM.Renderer = class {
     if (this.rollAnim) { const r = this.rollAnim; r.t += dt * 1000 / r.ms; this.rollNow = CM.lerp(r.from, r.to, CM.ease(Math.min(1, r.t))); if (r.t >= 1) this.rollAnim = null; }
     const roll = this.rollNow || 0, up = [Math.sin(roll) * right[0], Math.cos(roll), Math.sin(roll) * right[2]];
     const view = mat4LookAt(eye, [eye[0] + fwd[0], eye[1], eye[2] + fwd[2]], up);
-    const proj = mat4Perspective(Math.PI / 3 * (this.zoomNow || 1), aspect, 0.05, 80);
+    const proj = mat4Perspective(Math.PI / 3 * (this.zoomNow || 1), aspect, 0.05, 260);
     this.viewProj = mat4Mul(proj, view);
     const t = this.theme, sky = t.sky ? this.sky || CM.sky(null) : null;
     const clear = sky ? sky.zenith : t.fog, fogc = sky ? sky.horizon : t.fog;

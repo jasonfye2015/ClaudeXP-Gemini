@@ -143,13 +143,14 @@ STONE = {
     "ground.grass": "Grass001", "ground.dirt": "Ground110", "ground.tilled": "Ground103", "ground.cobbles": "PavingStones141", "ground.flags": "PavingStones128",
     "ground.planks": "Planks039", "ground.moss": "Grass005", "solid.hedge": "Grass005", "solid.plaster": "Plaster001", "solid.roof": "RoofingTiles013A",
     "solid.bark": "Bark007", "solid.townwall": "Bricks097", "solid.townwall.top": "PavingStones128", "solid.cliff": "Rock035",
+    "ground.needles": "Ground077", "ground.litter": "ScatteredLeaves001",
 }
 
 CREDITS = {
     "pixel": "Dungeon Crawl Stone Soup tiles (CC0) - by the Crawl Stone Soup team and the RLTiles project; "
              "https://opengameart.org/content/dungeon-crawl-32x32-tiles",
     "stone": "ambientCG textures (CC0) - Bricks089, PavingStones141, Rock035, Rock037, Rock020, Bricks058, Bricks100, PavingStones128, "
-             "Planks039, Marble006, Tiles074, Onyx013, Grass001, Grass005, Ground110, Ground103, Plaster001, RoofingTiles013A, Bark007, Bricks097; https://ambientcg.com",
+             "Planks039, Marble006, Tiles074, Onyx013, Grass001, Grass005, Ground110, Ground103, Plaster001, RoofingTiles013A, Bark007, Bricks097, Ground077, ScatteredLeaves001; https://ambientcg.com",
 }
 
 

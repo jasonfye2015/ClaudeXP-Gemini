@@ -41,7 +41,15 @@ on the walls and dust in the light.**
 | One light: the party's torch | The wall torches light their walls; embers, crystals and fungus glow on what is near them; soft shadows under things |
 | The air is empty | Dust in the torchlight, drips, rising embers, drifting spores, falling leaves, fireflies, rain, snow, morning mist, clouds |
 
-## Phase 0 - Ground everywhere, and a horizon - v8.1 (small; the fix first)
+## Phase 0 - Ground everywhere, and a horizon - v8.1 (small; the fix first) - DONE
+
+Built in `CM.floorMesh`: every solid surface square of a kind in `CM.UNDER` (tree, hedge, fence, frame) gets ground,
+every cliff and town-wall square its top, and every tree is drawn (not only the two ranks by a path). A tree's square
+wears needles under a fir or leaf litter under the rest (ambientCG Ground077 and ScatteredLeaves001 for Stone, drawn
+for Pixel), with the trunk's shade painted at its middle rather than a separate shadow sprite (the shader cuts alpha
+at a half, so soft sprites wait for Phase 6). Past the edge, a skirt of grass forty squares out in 4-square quads and a
+ring of far silhouettes on it: a tree-line, and from the land the town's hill with its wall and roofs in the east. The
+sky dome moved out to 150 and the far plane to 260. The file grew to 4.0 MB. Test: "ground everywhere".
 
 - **Ground under solid surface squares.** `CM.floorMesh` lays a ground quad under every tree, hedge, fence, frame and
   town-wall square, and on cliff tops, wearing the ground the square would have had (grass in the forest, the field's

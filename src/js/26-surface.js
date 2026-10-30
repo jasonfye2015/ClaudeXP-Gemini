@@ -18,7 +18,10 @@ CM.SOLID = {
   tree: { tree: true, h: 1.7, see: true },                                        // not a wall: a trunk and a crown, two crossed pictures
 };
 CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
-CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss"];
+CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
+CM.UNDER = ["tree", "hedge", "fence", "frame"];                          // the solid kinds the ground runs under on the surface
+CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
+CM.treeVariant = (fl, x, y) => CM.hashSeed(`${fl.number}:tree:${x},${y}`) % 3;   // 0 an oak, 1 a fir, 2 a birch in its autumn
 // what stands at a cell: null for open ground, else the solid's kind (the map's edge is the floor's default solid)
 CM.solidAt = (fl, x, y) => (CM.inBounds(fl, x, y) && fl.grid[y][x] === 0 ? null : (fl.kinds && fl.kinds[`${x},${y}`]) || fl.solidDefault || "wall");
 CM.groundAt = (fl, x, y) => (fl.ground && fl.ground[`${x},${y}`]) || null;
@@ -71,7 +74,8 @@ CM.sky = function (game) {
 // ---- the floor as triangles -----------------------------------------------------------------------------------------
 // A vertex is ten floats: position 3, texture 3 (u, v, layer), shade 1, fx 3 (a hit's flash, alpha, glow). `index`
 // names the texture layers (the look's); a layer the look hasn't got falls back to the plain wall. Returns {data,
-// count} and what was built, for the tests: ceilings, walls, roofs, trees.
+// count} and what was built, for the tests: ceilings, walls, roofs, trees, and on the surface the squares covered (ground,
+// a top or a roof over every one), the skirt's quads past the edge and the far ring's.
 CM.MESH_STRIDE = 10;
 CM.floorMesh = function (fl, theme, index) {
   const grid = fl.grid, size = grid.length, out = [], features = fl.features || {}, sky = Boolean(theme.sky), canopy = new Set(fl.canopy || []);
@@ -85,11 +89,22 @@ CM.floorMesh = function (fl, theme, index) {
   };
   const kindOf = (x, y) => CM.SOLID[CM.solidAt(fl, x, y)] || CM.SOLID.wall;
   const solid = (nx, ny) => ny < 0 || ny >= size || nx < 0 || nx >= size || grid[ny][nx] !== 0;
-  const tops = new Set(), trees = new Set();
-  let ceilings = 0, walls = 0, roofs = 0;
+  const tops = new Set(), trees = new Set(), covered = new Set();
+  let ceilings = 0, walls = 0, roofs = 0, skirt = 0, ring = 0;
   const SIDES = [[0, -1, 1.0], [0, 1, 1.0], [1, 0, 0.84], [-1, 0, 0.84]];                  // north, south, east, west: the far wall lit a little more
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-    if (grid[y][x] !== 0) continue;
+    if (grid[y][x] !== 0) {
+      if (!sky) continue;                                                       // (below: rock is rock)
+      const kind = CM.solidAt(fl, x, y), K = CM.SOLID[kind] || CM.SOLID.wall, key = `${x},${y}`;
+      if (CM.UNDER.includes(kind)) {                                            // the ground runs on under it: needles or litter under a tree, else the grass
+        const g = kind === "tree" ? (CM.treeVariant(fl, x, y) === 1 ? "needles" : "litter") : CM.groundAt(fl, x, y) || "grass";
+        quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], L(`ground:${g}`), kind === "tree" ? 0.6 : 0.85); covered.add(key);
+        if (kind === "tree") trees.add(key);
+      } else if (K.top && index[K.top] !== undefined) { if (!tops.has(key)) { tops.add(key); quad([x, K.h, y + 1], [x + 1, K.h, y + 1], [x + 1, K.h, y], [x, K.h, y], index[K.top], 0.95); } covered.add(key); }
+      else if (K.roof) covered.add(key);                                       // (a house's square is under its roof)
+      continue;
+    }
+    covered.add(`${x},${y}`);
     const under = sky && canopy.has(`${x},${y}`), g = CM.groundAt(fl, x, y);
     const floorLayer = g && index[`ground:${g}`] !== undefined ? index[`ground:${g}`] : index.floor;
     quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, under ? 0.55 : 0.9);
@@ -115,10 +130,24 @@ CM.floorMesh = function (fl, theme, index) {
       if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });
   }
+  if (sky) {                                                                            // past the edge: a skirt of grass, and the far ring standing on it
+    const E = CM.SKIRT, B = 4, grass = L("ground:grass");
+    const band = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y += B) for (let x = x0; x < x1; x += B) { const xe = Math.min(x + B, x1), ye = Math.min(y + B, y1); quad([x, -0.002, ye], [xe, -0.002, ye], [xe, -0.002, y], [x, -0.002, y], grass, 0.8); skirt++; } };
+    band(-E, -E, size + E, 0); band(-E, size, size + E, size + E); band(-E, 0, 0, size); band(size, 0, size + E, size);
+    const far = (side) => L(fl.number === -1 && side === 1 ? "far:hill" : "far:trees"), W = 8, H = 7;   // (from the land, the town's hill stands in the east)
+    for (let t = -E; t < size + E; t += W) {
+      const t1 = Math.min(t + W, size + E);
+      quad([t, 0, -E], [t1, 0, -E], [t1, H, -E], [t, H, -E], far(0), 0.7);                          // north
+      quad([t1, 0, size + E], [t, 0, size + E], [t, H, size + E], [t1, H, size + E], far(2), 0.7);  // south
+      quad([size + E, 0, t], [size + E, 0, t1], [size + E, H, t1], [size + E, H, t], far(1), 0.7);  // east
+      quad([-E, 0, t1], [-E, 0, t], [-E, H, t], [-E, H, t1], far(3), 0.7);                          // west
+      ring += 4;
+    }
+  }
   for (const key of trees) {                                                            // two crossed pictures a tree, of the seed's three
     const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, layer = L(`tree:${v}`), h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
     quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0);
     quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0);
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, trees: trees.size };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, trees: trees.size, covered: covered.size, skirt, ring };
 };
