@@ -7,6 +7,7 @@ Object.assign(CM.Game.prototype, {
   endRun(won) {
     won = Boolean(won || this.crowned);
     if (this.stripTempers) this.stripTempers();                           // (the tempers last the run, no longer)
+    if (this.farmDawns && this.village) this.farmDawns();                 // (the farm sees every dawn of the run)
     const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, bottom: Boolean(this.bottom), date: CM.today(), seed: this.seed,
       daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`),
       kit: this.kit || "pauper", tally: Object.assign(this.freshTally(), this.tally || {}), difficulty: this.difficulty || "fair", mutators: this.mutators || [] };

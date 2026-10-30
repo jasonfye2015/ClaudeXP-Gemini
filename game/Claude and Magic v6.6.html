@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v6.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v6.6 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -437,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "6.5", built: "2026-10-30" };
+const CM = window.CM = { version: "6.6", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -2756,6 +2756,8 @@ CM.itemLabel = function (item) {
   if (item.kind === "bar") bits.push(CM.ALLOYS[item.bar] ? `an alloy bar: the upgrading's coin` : `a bar: two and one of the kind above make an alloy; the upgrading's coin`);
   if (item.kind === "charcoal") bits.push("the smelter eats one a bar; the Wood's burner makes it from deadwood");
   if (item.kind === "quiver") bits.push("in the pack: a bow shoots a second arrow once a fight");
+  if (item.kind === "seed") bits.push(`sown in a row at the farm in ${CM.CROPS[item.crop].sow.join(" or ")}: ${CM.plural(CM.CROPS[item.crop].yields, CM.CROPS[item.crop].name.toLowerCase())} in four dawns, and the seed back`);
+  if (item.kind === "ingredient" && CM.INGREDIENTS[item.ingredient] && CM.INGREDIENTS[item.ingredient].food) bits.push(`the farm's food${item.spoils !== undefined ? ": keeps a week" : ""}`);
   if (item.kind === "hide") bits.push("for the hermit of the Deep Wood by day: a cloak, boots, a buckler, a quiver; or the forge's tempers");
   if (item.grade) bits.push(`grade ${"★".repeat(item.grade)} of ${"★".repeat(CM.GRADE_MOST || 5)}: the forge's bars`);
   if (item.temper && CM.TEMPERS && CM.TEMPERS[item.temper.id]) bits.push(`tempered for the run: ${CM.TEMPERS[item.temper.id].what}`);
@@ -7241,7 +7243,7 @@ CM.Game = class {
       tally: this.tally || this.freshTally(), journal: this.journal || [], story: this.story || { read: {} }, rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), clock: this.clock || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0,
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), clock: this.clock || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0, season: this.season || null, farmDay: this.farmDay || 0,
       morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [] };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
@@ -7290,7 +7292,7 @@ CM.Game = class {
     this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
     this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
-    this.awakened = Boolean(d.awakened); this.dream = Boolean(d.dream); this.rootPending = Boolean(d.rootPending); this.behind = d.behind || 0; this.startedInTown = Boolean(d.startedInTown); this.clock = d.clock || 0; this.fellFrom = d.fellFrom || null; this.orders = d.orders || []; this.bounty = d.bounty || null; this.blessedUntil = d.blessedUntil || 0; this.rumourBox = d.rumourBox || 0;
+    this.awakened = Boolean(d.awakened); this.dream = Boolean(d.dream); this.rootPending = Boolean(d.rootPending); this.behind = d.behind || 0; this.startedInTown = Boolean(d.startedInTown); this.clock = d.clock || 0; this.fellFrom = d.fellFrom || null; this.orders = d.orders || []; this.bounty = d.bounty || null; this.blessedUntil = d.blessedUntil || 0; this.rumourBox = d.rumourBox || 0; this.season = d.season || CM.seasonOfDate(); this.farmDay = d.farmDay || 0;
     this.morale = d.morale === undefined ? CM.MORALE.start : d.morale; this.fed = d.fed || 0; this.trail = d.trail || [];
     this.applyBonds();
     this.messages = [];
@@ -7359,6 +7361,7 @@ CM.Game = class {
     else if (this.kit === "abyss") { this.gold += 150; this.bag.push(CM.rope(), CM.gem("diamond"), CM.scroll("mapping")); for (const h of this.party) { h.level = 3; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }
     for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
     this.retiredThisRun = false; this.clock = 0;                          // (dawn, six in the morning)
+    this.season = CM.seasonOfDate(); this.farmDay = 0;                   // (the season, pinned to the run from the real date; the farm's last dawn seen)
     const town = (opts || {}).town !== undefined ? Boolean((opts || {}).town) : !this.settings.skipWalk;   // (a run begins at the party's door, or at the shaft: Settings)
     this.startedInTown = town;
     this.enterFloor(town ? 0 : 1, "down");                                // (the town's own start is the party's door, facing down the lane)
@@ -7386,7 +7389,7 @@ CM.Game = class {
   enterFloor(number, how = "down", at = null) {
     const fresh = !this.floors[number] && !this.deltas[number];
     const fl = this.floorAt(number);
-    if (fl !== this.floor) { this.leaveFloor(); this.stock = null; this.recruits = null; if (this.floor && number % 1 === 0 && this.floor.number % 1 === 0) this.clock = (this.clock || 0) + CM.CLOCK.stair * Math.max(1, Math.abs(number - this.floor.number)); }   // (a merchant's table and a tavern's bench belong to where they are; a stair is an hour)
+    if (fl !== this.floor) { this.leaveFloor(); this.stock = null; this.recruits = null; if (this.floor && number % 1 === 0 && this.floor.number % 1 === 0) this.clock = (this.clock || 0) + CM.CLOCK.stair * Math.max(1, Math.abs(number - this.floor.number)); if (this.farmDawns && this.village) this.farmDawns(); }   // (a merchant's table and a tavern's bench belong to where they are; a stair is an hour)
     this.floor = fl;
     if (this.songEpic !== number) { this.song = 0; this.songEpic = 0; }  // (a song that lasts the floor ends with it)
     if (how === "down") {
@@ -7635,6 +7638,7 @@ Object.assign(CM.Game.prototype, {
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)",
           building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - " + CM.t("town.foundation")}. ${CM.t("town.door")}` : "",
           well: "The square's well, under its little roof, and the notice board beside it. (Space to look down it)",
+          farm: this.villageLevel("farm") >= 1 ? "The farm's gate, and the rows beyond it. (Space to work the farm)" : "A fallow field, fenced long ago. (Space to look it over)",
           woodgate: fl.number === 0 ? "The west gate, and the trees beyond it. (Space to go out into the Deep Wood)" : "The gate back to the town. (Space to go through)",
           cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
           caveexit: "The way out of the cave. (Space to climb out)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
@@ -7864,6 +7868,7 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "caveexit") { this.sound("stairs"); this.enterFloor(-1, "rope", CM.woodCaveAt(this.seed, fl.cave).split(",").map(Number)); this.say("Up out of the cave, into the Wood."); return; }
     if (thing && thing.type === "hut") { if (CM.isNight(this)) { this.emit("talk", { title: "The hermit's hut", text: CM.WOOD_LINES.hut[1] }); this.say(CM.WOOD_LINES.hut[1]); return; } this.emit("hut", {}); this.say(CM.WOOD_LINES.hut[0]); return; }
     if (thing && thing.type === "burner") { this.burner(); return; }
+    if (thing && thing.type === "farm") { this.farmDawns(); this.emit("farm", {}); this.say(this.villageLevel("farm") >= 1 ? `The farm: ${this.farm().rows.filter(Boolean).length} of ${this.farmRows()} rows planted, ${CM.season(this)}.` : "A fallow field in the first glade, waiting for the town's renown."); return; }
     if (thing && thing.type === "shrine") { this.emit("talk", { title: "The ruined shrine", text: CM.WOOD_LINES.shrine }); this.say(CM.WOOD_LINES.shrine); if (!thing.read) { thing.read = true; this.remember("carving", CM.WOOD_LINES.shrine, { key: "wood.shrine" }); this.saveRun(); } return; }
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
     if (thing && thing.type === "well") { this.well(); return; }
@@ -8259,9 +8264,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner", "vein"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner", "vein", "farm"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", woodgate: "the gate", cave: "a cave mouth", vein: "ore in the rock", caveexit: "the way out", hut: "a hut", shrine: "a ruined shrine", burner: "a smoking mound", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
+  event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", woodgate: "the gate", cave: "a cave mouth", vein: "ore in the rock", caveexit: "the way out", hut: "a hut", farm: "the farm's gate", shrine: "a ruined shrine", burner: "a smoking mound", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -10194,7 +10199,8 @@ Object.assign(CM.Game.prototype, {
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       if (depth >= 14) this.stock.push(CM.lockpick(true));
       if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }), CM.pick("copper"));
-      if (this.floor.number === 0 && this.villageLevel("smith") >= 2) this.stock.push(CM.pick("iron"));   // (the way home, sold only at home: the price climbs with the deepest floor reached)
+      if (this.floor.number === 0 && this.villageLevel("smith") >= 2) this.stock.push(CM.pick("iron"));
+      if (this.floor.number === 0 && this.villageLevel("farm") >= 1) for (const c of Object.keys(CM.CROPS)) if (this.canSow(c)) this.stock.push(CM.seed(c));   // (the season's seed, for the farm)   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
       if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);   // (the Merchant's House in town carries it all)
       for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
@@ -10821,7 +10827,7 @@ Object.assign(CM.Game.prototype, {
   },
 
   // the night passes: the clock goes to the next dawn (six), a full day if it is dawn already
-  sleepTillDawn() { const m = CM.minuteOf(this), to = m < CM.CLOCK.start ? CM.CLOCK.start - m : CM.CLOCK.day - m + CM.CLOCK.start; this.clock = (this.clock || 0) + to; return to; },
+  sleepTillDawn() { const m = CM.minuteOf(this), to = m < CM.CLOCK.start ? CM.CLOCK.start - m : CM.CLOCK.day - m + CM.CLOCK.start; this.clock = (this.clock || 0) + to; if (this.farmDawns && this.village) this.farmDawns(); return to; },
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
     if (service === "wounds") return this.templeWounds();
@@ -11280,6 +11286,7 @@ Object.assign(CM.Game.prototype, {
   endRun(won) {
     won = Boolean(won || this.crowned);
     if (this.stripTempers) this.stripTempers();                           // (the tempers last the run, no longer)
+    if (this.farmDawns && this.village) this.farmDawns();                 // (the farm sees every dawn of the run)
     const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, bottom: Boolean(this.bottom), date: CM.today(), seed: this.seed,
       daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`),
       kit: this.kit || "pauper", tally: Object.assign(this.freshTally(), this.tally || {}), difficulty: this.difficulty || "fair", mutators: this.mutators || [] };
@@ -12260,6 +12267,7 @@ CM.Autopilot = class {
     want.push("merchant");
     if (game.villageLevel("shrine") >= 1 && (game.party.some((h) => h.wound || h.hp <= 0) || game.gold > 300)) want.push("temple");
     if (game.gold > 60) want.push("tavern");
+    if (game.farmWants && game.farmWants() && !CM.isNight(game)) want.push("farm");
     return want.filter((id) => !(this.townDone || []).includes(id));
   }
   errand(id) {
@@ -12347,9 +12355,13 @@ CM.Autopilot = class {
     const goal = CM.goalOf(fl);
     const can = (k) => this.paths.parent.has(k);
     if (fl.number === 0) {                                               // the town: the errands' doors, then the shaft (or the scroll back down)
-      for (const id of this.errands()) { const k = CM.TOWN_AT[id].join(","); if (can(k)) return k; this.townDone = (this.townDone || []).concat(id); }
+      for (const id of this.errands()) { const k = CM.TOWN_AT[id === "farm" ? "woodgate" : id].join(","); if (can(k)) return k; this.townDone = (this.townDone || []).concat(id); }
       if (game.bag.some((i) => i.kind === "scroll" && i.spell === "homecoming" && i.back)) return "scroll";
       return goal;
+    }
+    if (fl.number === -1) {                                              // the Wood: the farm if the trip is for it, then the gate home
+      const farm = things.find(([, t]) => t.type === "farm"); if (this.farmTrip && farm && can(farm[0])) return farm[0];
+      const gate = things.find(([, t]) => t.type === "woodgate"); return gate && can(gate[0]) ? gate[0] : null;
     }
     const phyl = things.find(([, t]) => t.type === "phylactery");
     if (phyl && can(phyl[0])) return phyl[0];
@@ -12446,6 +12458,9 @@ CM.Autopilot = class {
     const step = this.stepTo(fl, target);
     if (step === "here") {
       if (fl.number === 0 && t && t.type === "building") { this.errand(t.id); return "errand"; }
+      if (fl.number === 0 && t && t.type === "woodgate") { this.townDone = (this.townDone || []).concat("farm"); this.farmTrip = true; game.use(); return "to the farm"; }
+      if (fl.number === -1 && t && t.type === "farm") { this.farmTrip = false; this.tools.farmed = (this.tools.farmed || 0) + game.tendFarmAuto(); return "farmed"; }
+      if (fl.number === -1 && t && t.type === "woodgate") { this.farmTrip = false; game.use(); return "home from the Wood"; }
       if (t && t.type === "vein") { if (CM.bestPick(game.bag, t.ore) >= 0) game.use(); else { t.skip = true; this.handled.add(fl.number + ":" + here); } }
       else if (t && t.type === "node") game.use();
       else if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") this.stuck++; }
@@ -13080,6 +13095,149 @@ Object.assign(CM.Game.prototype, {
   talkTownsfolk(thing) { const T = CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length]; if (CM.isNight(this)) { this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)} has gone in: the shutters are closed, and a lamp moves behind them. It is ${CM.hourWord(CM.hourOf(this))}.`); return; } this.emit("talk", { title: T.name, text: this.townsfolkLine(thing.who) }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${this.townsfolkLine(thing.who)}`); },
 });
 
+// ---- 69c-farm.js ----
+"use strict";
+// The farm in the First Glade (the eighth big update, phase 4): raised with renown like a building (CM.VILLAGE.farm,
+// five levels - a field, an orchard, a mill and a farmhand, hens, a cow and a byre) and kept in the village store
+// (village.farm). Rows are sown with seed in the crop's season, grow a stage every dawn the party sees (the clock's
+// day: a run that sleeps at the camps grows the field, one that reads Homecoming and sleeps at home grows it too),
+// are cut at the fourth stage, and rot three dawns past ripe. Crows take a ripe row in ten unless a scarecrow stands.
+// The farm's things are ingredients with a freshness (eggs and milk a week). The town's beds stay the alchemist's.
+//
+//   CM.season(game)                   -> "spring" | "summer" | "autumn" | "winter" (pinned to the run from the real date)
+//   CM.CROPS, CM.FOODS                -> what is sown, and what the farm gives
+//   game.farm() / game.farmDawns()    -> the state; the dawns since the last look, applied
+//   game.sow(i, row) / game.cut(i)    -> a row sown from a seed in the pack; a ripe row cut into the pack (and a seed back)
+//   game.collectFarm() ...            -> the store into the pack; feedCow, setScarecrow, hireHand, orderHand, storeSeeds
+CM.SEASONS = ["spring", "summer", "autumn", "winter"];
+CM.seasonOfDate = (d) => { const m = (d || new Date()).getMonth(); return m >= 2 && m <= 4 ? "spring" : m >= 5 && m <= 7 ? "summer" : m >= 8 && m <= 10 ? "autumn" : "winter"; };
+CM.season = (game) => (game && game.season) || CM.seasonOfDate();
+CM.VILLAGE.farm = { name: "The farm in the First Glade", costs: [50, 90, 150, 220, 300], levels: [
+  "A field in the Wood's first glade: four rows, sown with seed from the Merchant's House, grown a stage every dawn the party sees",
+  "An orchard: apples and pears in autumn",
+  "A mill (flour and malt, a sack a dawn) and a farmhand for hire, who sows and cuts while the party is away",
+  "Hens: an egg a dawn each, three of them, and two more rows",
+  "A cow and a byre: milk a dawn for a cabbage a week, and the Wood's venison twice a season",
+] };
+CM.CROPS = {
+  wheat: { name: "Wheat", sow: ["spring"], yields: 3, mill: "flour" },
+  barley: { name: "Barley", sow: ["spring"], yields: 3, mill: "malt" },
+  beans: { name: "Beans", sow: ["spring", "autumn"], yields: 4 },
+  cabbage: { name: "Cabbage", sow: ["spring", "autumn"], yields: 2 },
+  turnip: { name: "Turnip", sow: ["spring", "summer", "autumn"], yields: 3 },
+  hops: { name: "Hops", sow: ["summer"], yields: 2 },
+};
+CM.FOODS = { wheat: { name: "Wheat" }, barley: { name: "Barley" }, beans: { name: "Beans" }, cabbage: { name: "Cabbage" }, turnip: { name: "Turnip" }, hops: { name: "Hops" },
+  apple: { name: "Apple" }, pear: { name: "Pear" }, flour: { name: "Flour" }, malt: { name: "Malt" }, egg: { name: "Egg", keeps: 7 }, milk: { name: "Milk", keeps: 7 } };
+for (const [id, F] of Object.entries(CM.FOODS)) { CM.INGREDIENTS[id] = { name: F.name, band: -1, food: true }; CM.BASES[F.name] = { id: F.name, kind: "ingredient", slot: null, tier: 0, group: "ingredient" }; }
+CM.food = (id, spoils) => { const it = CM.ingredient(id); it.value = 8; if (spoils !== undefined) it.spoils = spoils; return it; };
+CM.seed = (crop) => ({ name: `${CM.CROPS[crop].name} seed`, kind: "seed", crop, power: 0, value: 10 });
+for (const crop of Object.keys(CM.CROPS)) CM.BASES[`${CM.CROPS[crop].name} seed`] = { id: `${CM.CROPS[crop].name} seed`, kind: "seed", slot: null, tier: 0, group: "stuff" };
+CM.FARM = { stages: 4, rotAfter: 3, crows: 10, hens: 3, cowWeek: 7, handSeason: 90, handGold: 30, venisonEvery: 45, rows: [0, 4, 4, 4, 6, 6], eggsMost: 21 };
+CM.HOW_FOUND.farm = "from the farm";
+CM.FARM_AT = [25, 14];                                                   // the farm's gate, in the First Glade (set when the Wood is made)
+{ const mw = CM.makeWood; CM.makeWood = function (seed) { const fl = mw(seed); if (!Object.values(fl.things).some((t) => t.type === "farm")) { const k = [CM.FARM_AT, [25, 15], [26, 14], [24, 15], [26, 16], [24, 14]].map((c) => c.join(",")).find((c) => !fl.things[c] && !fl.features[c] && fl.grid[Number(c.split(",")[1])][Number(c.split(",")[0])] === 0); if (k) fl.things[k] = { type: "farm" }; } return fl; }; }   // (placed last, by no die: the Wood's other things stand where they stood)
+Object.assign(CM.Game.prototype, {
+  farm() { this.village = this.village || {}; const F = this.village.farm = this.village.farm || { rows: [], store: [], seeds: {}, days: 0, scarecrow: false, cowFed: 0, hand: 0, order: null, venison: 0, notes: [] }; F.rows = F.rows || []; F.store = F.store || []; F.seeds = F.seeds || {}; F.notes = F.notes || []; return F; },
+  farmRows() { return CM.FARM.rows[Math.min(this.villageLevel("farm"), CM.FARM.rows.length - 1)]; },
+  atFarm() { const fl = this.floor, t = fl && fl.things[fl.pos.join(",")]; return Boolean(t && t.type === "farm"); },
+  canSow(crop) { return CM.CROPS[crop] && CM.CROPS[crop].sow.includes(CM.season(this)); },
+  // the dawns since the last look at the farm, applied one at a time
+  farmDawns() {
+    const day = CM.dayOf(this), n = day - (this.farmDay || 0); this.farmDay = day;
+    if (n <= 0 || this.villageLevel("farm") < 1) return 0;
+    for (let i = 0; i < n; i++) this.farmDawn();
+    for (let i = this.bag.length - 1; i >= 0; i--) if (this.bag[i].spoils !== undefined && this.bag[i].spoils <= this.farm().days) { this.say(`The ${this.bag[i].name.toLowerCase()} has gone off.`); this.bag.splice(i, 1); }
+    this.saveVillage(); return n;
+  },
+  farmDawn() {
+    const F = this.farm(), L = this.villageLevel("farm"), season = CM.season(this), notes = []; F.days += 1;
+    const roll = (what, n) => CM.hashSeed(`${this.seed}:farm:${what}:${F.days}`) % n;
+    const rows = this.farmRows(); while (F.rows.length < rows) F.rows.push(null); if (F.rows.length > rows) F.rows.length = rows;
+    F.rows.forEach((r, i) => {
+      if (!r) return;
+      if (r.stage < CM.FARM.stages) { if (season !== "winter") r.stage += 1; if (r.stage >= CM.FARM.stages && !F.scarecrow && roll(`crows:${i}`, CM.FARM.crows) === 0) { F.rows[i] = null; notes.push(`crows took the ${CM.CROPS[r.crop].name.toLowerCase()} in row ${i + 1}`); } }
+      else { r.ripeFor = (r.ripeFor || 0) + 1; if (r.ripeFor > CM.FARM.rotAfter) { F.rows[i] = null; notes.push(`the ${CM.CROPS[r.crop].name.toLowerCase()} in row ${i + 1} rotted in the field`); } }
+    });
+    if (L >= 2 && season === "autumn" && roll("orchard", 2) === 0) { const id = roll("fruit", 3) === 0 ? "pear" : "apple"; F.store.push({ id, day: F.days }, { id, day: F.days }); notes.push(`the orchard dropped two ${id}s`); }
+    if (L >= 3) { const grain = F.store.find((s) => s.id === "wheat" || s.id === "barley"); if (grain) { F.store.splice(F.store.indexOf(grain), 1); F.store.push({ id: CM.CROPS[grain.id].mill, day: F.days }); } }
+    for (let i = F.store.length - 1; i >= 0; i--) { const keeps = (CM.FOODS[F.store[i].id] || {}).keeps; if (keeps && F.days - F.store[i].day >= keeps) F.store.splice(i, 1); }   // (what has gone off, first)
+    if (L >= 4 && F.store.filter((s) => s.id === "egg").length < CM.FARM.eggsMost) for (let i = 0; i < CM.FARM.hens; i++) F.store.push({ id: "egg", day: F.days });
+    if (L >= 5 && F.cowFed >= F.days) F.store.push({ id: "milk", day: F.days });
+    if (L >= 5 && F.days - (F.venison || 0) >= CM.FARM.venisonEvery) { F.venison = F.days; F.store.push({ id: "venison", day: F.days }, { id: "venison", day: F.days }); notes.push("the byre gave two of venison"); }
+    if (L >= 3 && F.hand > F.days) {                                     // the farmhand: cuts what is ripe into the store, sows what was ordered
+      F.rows.forEach((r, i) => { if (r && r.stage >= CM.FARM.stages) { for (let k = 0; k < CM.CROPS[r.crop].yields; k++) F.store.push({ id: r.crop, day: F.days }); F.seeds[r.crop] = (F.seeds[r.crop] || 0) + 1; F.rows[i] = null; notes.push(`the farmhand cut the ${CM.CROPS[r.crop].name.toLowerCase()} in row ${i + 1}`); } });
+      if (F.order && this.canSow(F.order)) F.rows.forEach((r, i) => { if (!r && (F.seeds[F.order] || 0) > 0) { F.seeds[F.order] -= 1; F.rows[i] = { crop: F.order, stage: 0 }; notes.push(`the farmhand sowed ${CM.CROPS[F.order].name.toLowerCase()} in row ${i + 1}`); } });
+    }
+    if (notes.length) F.notes = F.notes.concat(notes).slice(-12);
+  },
+  // the work at the farm: sow, cut, collect, feed, the scarecrow, the farmhand
+  sow(i, row) {
+    if (!this.atFarm()) return "The rows are at the farm, in the Wood's first glade.";
+    if (this.villageLevel("farm") < 1) return "A fallow field: the farm is raised at the town's board, with renown.";
+    this.farmDawns(); const F = this.farm(); while (F.rows.length < this.farmRows()) F.rows.push(null);
+    if (i < 0 || i >= F.rows.length) return "No such row."; if (F.rows[i]) return `Row ${i + 1} has ${CM.CROPS[F.rows[i].crop].name.toLowerCase()} in it.`;
+    const seed = this.bag[row]; if (!seed || seed.kind !== "seed") return "Pick a seed from the pack.";
+    if (!this.canSow(seed.crop)) return `${CM.CROPS[seed.crop].name} is not sown in ${CM.season(this)}: ${CM.CROPS[seed.crop].sow.join(" or ")}.`;
+    this.logAct("sow", i, row);
+    this.bag.splice(row, 1); F.rows[i] = { crop: seed.crop, stage: 0 }; this.tally.sown = (this.tally.sown || 0) + 1;
+    this.say(`${CM.CROPS[seed.crop].name} sown in row ${i + 1}; it ripens in ${CM.FARM.stages} dawns.`); this.saveVillage(); this.saveRun(); this.emit("change"); return "";
+  },
+  cut(i) {
+    if (!this.atFarm()) return "The rows are at the farm, in the Wood's first glade.";
+    this.farmDawns(); const F = this.farm(), r = F.rows[i]; if (!r) return "Nothing grows in that row.";
+    if (r.stage < CM.FARM.stages) return `The ${CM.CROPS[r.crop].name.toLowerCase()} in row ${i + 1} is ${CM.FARM.stages - r.stage} ${CM.FARM.stages - r.stage === 1 ? "dawn" : "dawns"} from ripe.`;
+    this.logAct("cut", i);
+    const got = []; for (let k = 0; k < CM.CROPS[r.crop].yields; k++) got.push(CM.food(r.crop)); got.push(CM.seed(r.crop)); this.gain(got, "farm"); F.rows[i] = null; this.tally.cut = (this.tally.cut || 0) + 1;
+    this.say(`Row ${i + 1} cut: ${CM.plural(CM.CROPS[r.crop].yields, CM.CROPS[r.crop].name.toLowerCase())}, and seed kept back.`); this.saveVillage(); this.saveRun(); this.emit("change"); return "";
+  },
+  collectFarm() {
+    if (!this.atFarm()) return "The store is at the farm.";
+    this.farmDawns(); const F = this.farm(); if (!F.store.length) return "The store is bare.";
+    this.logAct("collectFarm");
+    const got = F.store.map((s) => (s.id === "venison" ? CM.meat("Deer") : CM.food(s.id, CM.FOODS[s.id] && CM.FOODS[s.id].keeps ? s.day + CM.FOODS[s.id].keeps : undefined))); F.store = [];
+    this.gain(got, "farm"); this.say(`From the store: ${got.map((g) => g.name.toLowerCase()).join(", ")}.`); this.saveVillage(); this.saveRun(); this.emit("change"); return "";
+  },
+  feedCow() {
+    if (!this.atFarm()) return "The cow is at the farm."; if (this.villageLevel("farm") < 5) return "There is no cow yet: the farm's fifth level.";
+    const F = this.farm(), row = this.bag.findIndex((i) => i.kind === "ingredient" && i.ingredient === "cabbage"); if (row < 0) return "The cow wants a cabbage.";
+    this.logAct("feedCow"); this.bag.splice(row, 1); F.cowFed = Math.max(F.cowFed || 0, F.days) + CM.FARM.cowWeek; this.say("The cow takes the cabbage, and will give milk a dawn for the week."); this.saveVillage(); this.saveRun(); this.emit("change"); return "";
+  },
+  setScarecrow() {
+    if (!this.atFarm()) return "The scarecrow stands at the farm."; const F = this.farm(); if (F.scarecrow) return "A scarecrow stands already.";
+    const wood = this.bag.findIndex((i) => i.kind === "ingredient" && i.ingredient === "deadwood"), coat = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "armor" && !(it.props && (it.props.unique || it.props.relic)) && (it.props || {}).weight === "light").sort((a, b) => (a[0].value || 0) - (b[0].value || 0))[0];
+    if (wood < 0 || !coat) return "A scarecrow wants a deadwood and an old tunic (any light armour in the pack).";
+    this.logAct("setScarecrow"); this.bag.splice(Math.max(wood, coat[1]), 1); this.bag.splice(Math.min(wood, coat[1]), 1); F.scarecrow = true; this.say(`${coat[0].name} on a deadwood pole: the crows think better of it.`); this.saveVillage(); this.saveRun(); this.emit("change"); return "";
+  },
+  hireHand() {
+    if (!this.atFarm()) return "The farmhand is hired at the farm."; if (this.villageLevel("farm") < 3) return "A farmhand comes with the mill: the farm's third level.";
+    const F = this.farm(); if (F.hand > F.days) return `The farmhand is paid for ${F.hand - F.days} more dawns.`; if (this.gold < CM.FARM.handGold) return `A farmhand is ${CM.FARM.handGold} gold a season.`;
+    this.logAct("hireHand"); this.gold -= CM.FARM.handGold; this.spend("farm", CM.FARM.handGold); F.hand = F.days + CM.FARM.handSeason; this.say(`A farmhand for the season: he will cut what ripens and sow what you tell him, from the farm's own seed.`); this.saveVillage(); this.saveRun(); this.emit("change"); return "";
+  },
+  orderHand(crop) {
+    if (!this.atFarm()) return "The farmhand is told at the farm."; const F = this.farm(); if (crop !== null && !CM.CROPS[crop]) return "No such crop.";
+    this.logAct("orderHand", crop); F.order = crop; this.say(crop ? `The farmhand will sow ${CM.CROPS[crop].name.toLowerCase()} in every empty row, in its season.` : "The farmhand will sow nothing."); this.saveVillage(); this.saveRun(); return "";
+  },
+  storeSeeds() {
+    if (!this.atFarm()) return "The seed is stored at the farm."; const F = this.farm(), rows = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "seed"); if (!rows.length) return "No seed in the pack.";
+    this.logAct("storeSeeds"); for (const [it, i] of rows.reverse()) { this.bag.splice(i, 1); F.seeds[it.crop] = (F.seeds[it.crop] || 0) + 1; } this.say(`${CM.plural(rows.length, "packet")} of seed into the farm's chest, for the farmhand.`); this.saveVillage(); this.saveRun(); this.emit("change"); return "";
+  },
+  // the bot's visit: cut what is ripe, collect, sow what it can, feed the cow
+  tendFarmAuto() {
+    if (!this.atFarm() || this.villageLevel("farm") < 1) return 0; let did = 0; this.farmDawns(); const F = this.farm();
+    F.rows.forEach((r, i) => { if (r && r.stage >= CM.FARM.stages && this.cut(i) === "") did++; });
+    if (F.store.length && this.collectFarm() === "") did++;
+    for (let i = 0; i < this.farmRows(); i++) { if (F.rows[i]) continue; const row = this.bag.findIndex((it) => it.kind === "seed" && this.canSow(it.crop)); if (row < 0) break; if (this.sow(i, row) === "") did++; }
+    if (this.villageLevel("farm") >= 5 && F.cowFed <= F.days && this.feedCow() === "") did++;
+    if (this.villageLevel("farm") >= 3 && F.hand <= F.days && this.gold >= CM.FARM.handGold + 100 && this.hireHand() === "") { did++; const crop = Object.keys(CM.CROPS).find((c) => this.canSow(c)); if (crop) this.orderHand(crop); this.storeSeeds(); }
+    return did;
+  },
+  farmWants() {                                                          // is there anything at the farm for the bot: ripe rows, a store, or seed for an empty row
+    if (this.villageLevel("farm") < 1) return false; const F = this.farm(), rows = this.farmRows();
+    return F.rows.some((r) => r && r.stage >= CM.FARM.stages) || F.store.length > 0 || (F.rows.filter(Boolean).length < rows && this.bag.some((it) => it.kind === "seed" && this.canSow(it.crop)));
+  },
+});
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -13265,6 +13423,8 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-talk"><div class="box"><h2 id="talk-title"></h2><p id="talk-text" class="lore"></p>
   <div class="end"><button id="talk-more" hidden>More</button><button class="close primary">Walk on</button></div></div></div>
+<div class="dialog" id="dlg-farm"><div class="box"><h2>The farm in the First Glade</h2><p id="farm-head" class="lore"></p><div id="farm-rows"></div><div id="farm-more"></div><p id="farm-note" class="small"></p>
+  <div class="end"><button class="close primary">Back to the path</button></div></div></div>
 <div class="dialog" id="dlg-hut"><div class="box"><h2>The hermit's hut</h2><p class="lore">"Hides I'll take, by daylight. Trouble I won't." The hermit tans and stitches for 20 gold a piece.</p><div id="hut-list"></div><p id="hut-note" class="small"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
@@ -13369,6 +13529,7 @@ CM.UI = class {
     game.on("lore", (text) => this.readWall(text));
     game.on("motif", (name) => { if (CM.music && CM.music.motif) CM.music.motif(name); });
     game.on("hut", () => this.openHut());
+    game.on("farm", () => this.openFarm());
     game.on("talk", ({ title, text, lines }) => { this.$("#talk-title").textContent = title; this.$("#talk-text").textContent = text; this.talkMore = (lines || []).slice(); this.$("#talk-more").hidden = !this.talkMore.length; this.openDialog("#dlg-talk"); });
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
@@ -13570,6 +13731,31 @@ CM.UI = class {
     root.insertBefore(d, root.querySelector(".end"));
   }
   // the garden: the beds above the alchemist's bench
+  openFarm() {
+    const g = this.game, L = g.villageLevel("farm"), F = g.farm(), head = this.$("#farm-head"), rows = this.$("#farm-rows"), more = this.$("#farm-more"); rows.innerHTML = ""; more.innerHTML = "";
+    const act = (fn) => { this.$("#farm-note").textContent = fn() || "Done."; this.openFarm(); this.refresh(); };
+    const btn = (into, text, fn, off) => { const b = document.createElement("button"); b.textContent = text; b.disabled = Boolean(off); b.addEventListener("click", () => act(fn)); into.appendChild(b); return b; };
+    if (L < 1) { head.textContent = "A fallow field, fenced long ago. The farm is raised at the town's board, with renown: a field first, then an orchard, a mill, hens, a cow."; return this.openDialog("#dlg-farm"); }
+    head.textContent = `${CM.season(g).charAt(0).toUpperCase() + CM.season(g).slice(1)}, day ${F.days + 1} of the farm. Level ${L}: ${CM.VILLAGE.farm.levels.slice(0, L).map((w) => w.split(":")[0].toLowerCase()).join(", ")}. A row grows a stage every dawn the party sees, and is cut at the fourth; past ripe three dawns, it rots.${F.scarecrow ? " A scarecrow stands." : " No scarecrow: crows take a ripe row in ten."}`;
+    const seeds = g.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "seed");
+    for (let i = 0; i < g.farmRows(); i++) { const r = F.rows[i], row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      const left = r ? CM.FARM.rotAfter + 1 - (r.ripeFor || 0) : 0, state = !r ? "" : r.stage < CM.FARM.stages ? "stage " + r.stage + " of " + CM.FARM.stages : r.ripeFor ? "ripe, " + left + (left === 1 ? " dawn" : " dawns") + " before it rots" : "ripe";
+      const t = document.createElement("div"); t.innerHTML = r ? "<b>Row " + (i + 1) + ": " + this.esc(CM.CROPS[r.crop].name) + "</b> <small>" + state + "</small>" : "<b>Row " + (i + 1) + "</b> <small>empty</small>"; row.appendChild(t);
+      const a = document.createElement("div"); a.className = "hire";
+      if (r) btn(a, r.stage >= CM.FARM.stages ? "Cut it" : "Not ripe", () => g.cut(i), r.stage < CM.FARM.stages);
+      else if (seeds.length) { const sel = document.createElement("select"); sel.innerHTML = `<option value="">Sow...</option>` + seeds.map(([it, bi]) => `<option value="${bi}"${g.canSow(it.crop) ? "" : " disabled"}>${this.esc(it.name)}${g.canSow(it.crop) ? "" : " (not in " + CM.season(g) + ")"}</option>`).join(""); sel.addEventListener("change", () => { if (sel.value !== "") act(() => g.sow(i, Number(sel.value))); }); a.appendChild(sel); }
+      else { const s = document.createElement("small"); s.textContent = "no seed in the pack (the Merchant's House sells the season's)"; a.appendChild(s); }
+      row.appendChild(a); rows.appendChild(row); }
+    { const st = document.createElement("div"); st.className = "small"; const count = {}; for (const s of F.store) count[s.id] = (count[s.id] || 0) + 1; st.textContent = `The store: ${Object.keys(count).length ? Object.entries(count).map(([id, n]) => `${n} ${id}`).join(", ") : "bare"}. Seed in the chest: ${Object.entries(F.seeds).filter(([, n]) => n > 0).map(([c, n]) => `${n} ${CM.CROPS[c].name.toLowerCase()}`).join(", ") || "none"}.`; more.appendChild(st); }
+    if (F.store.length) btn(more, "Take what the store holds", () => g.collectFarm());
+    if (!F.scarecrow) btn(more, "Put up a scarecrow (a deadwood and an old tunic)", () => g.setScarecrow());
+    if (seeds.length) btn(more, "Seed into the chest, for the farmhand", () => g.storeSeeds());
+    if (L >= 3) { btn(more, F.hand > F.days ? `The farmhand is paid for ${F.hand - F.days} dawns` : `Hire a farmhand (${CM.FARM.handGold} gold a season)`, () => g.hireHand(), F.hand > F.days);
+      const sel = document.createElement("select"); sel.innerHTML = `<option value="">${F.order ? "He sows " + CM.CROPS[F.order].name.toLowerCase() : "Tell him what to sow"}...</option><option value="-">Nothing</option>` + Object.keys(CM.CROPS).map((c) => `<option value="${c}">${this.esc(CM.CROPS[c].name)} (${CM.CROPS[c].sow.join(", ")})</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) act(() => g.orderHand(sel.value === "-" ? null : sel.value)); }); more.appendChild(sel); }
+    if (L >= 5) btn(more, F.cowFed > F.days ? `The cow is fed for ${F.cowFed - F.days} dawns` : "Feed the cow a cabbage (milk a dawn for a week)", () => g.feedCow(), F.cowFed > F.days);
+    if (F.notes.length) { const n = document.createElement("div"); n.className = "small"; n.textContent = `Lately: ${F.notes.slice(-4).join("; ")}.`; more.appendChild(n); }
+    this.openDialog("#dlg-farm");
+  }
   openHut() {
     const g = this.game, box = this.$("#hut-list"); box.innerHTML = "";
     const hides = g.bag.filter((i) => i.kind === "hide"); const sm = document.createElement("div"); sm.className = "small"; sm.textContent = `Hides in the pack: ${hides.length ? hides.map((h) => h.name.toLowerCase()).join(", ") : "none"}.`; box.appendChild(sm);
@@ -14673,7 +14859,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
     const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      node: "#8FB06A", building: "#C09050", well: "#60A0E0", villager: "#E0C8A0", woodgate: "#60A060", cave: "#504030", vein: "#B08860", caveexit: "#3060C0", hut: "#C09050", shrine: "#A070C0", burner: "#C08030", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
+      node: "#8FB06A", building: "#C09050", well: "#60A0E0", villager: "#E0C8A0", woodgate: "#60A060", cave: "#504030", vein: "#B08860", caveexit: "#3060C0", hut: "#C09050", farm: "#D0B060", shrine: "#A070C0", burner: "#C08030", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
@@ -15698,6 +15884,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "caveexit") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "vein") out.push({ x, y, layer: `vein:${thing.ore}`, w: 0.7, h: 0.6 });
       else if (thing.type === "hut") out.push({ x, y, layer: "house2", w: 1.0, h: 1.0 });
+      else if (thing.type === "farm") out.push({ x, y, layer: "house1", w: 1.0, h: 1.0 });
       else if (thing.type === "shrine") out.push({ x, y, layer: "altar", w: 0.8, h: 0.7 });
       else if (thing.type === "burner") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });

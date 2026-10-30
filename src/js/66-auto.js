@@ -62,6 +62,7 @@ CM.Autopilot = class {
     want.push("merchant");
     if (game.villageLevel("shrine") >= 1 && (game.party.some((h) => h.wound || h.hp <= 0) || game.gold > 300)) want.push("temple");
     if (game.gold > 60) want.push("tavern");
+    if (game.farmWants && game.farmWants() && !CM.isNight(game)) want.push("farm");
     return want.filter((id) => !(this.townDone || []).includes(id));
   }
   errand(id) {
@@ -149,9 +150,13 @@ CM.Autopilot = class {
     const goal = CM.goalOf(fl);
     const can = (k) => this.paths.parent.has(k);
     if (fl.number === 0) {                                               // the town: the errands' doors, then the shaft (or the scroll back down)
-      for (const id of this.errands()) { const k = CM.TOWN_AT[id].join(","); if (can(k)) return k; this.townDone = (this.townDone || []).concat(id); }
+      for (const id of this.errands()) { const k = CM.TOWN_AT[id === "farm" ? "woodgate" : id].join(","); if (can(k)) return k; this.townDone = (this.townDone || []).concat(id); }
       if (game.bag.some((i) => i.kind === "scroll" && i.spell === "homecoming" && i.back)) return "scroll";
       return goal;
+    }
+    if (fl.number === -1) {                                              // the Wood: the farm if the trip is for it, then the gate home
+      const farm = things.find(([, t]) => t.type === "farm"); if (this.farmTrip && farm && can(farm[0])) return farm[0];
+      const gate = things.find(([, t]) => t.type === "woodgate"); return gate && can(gate[0]) ? gate[0] : null;
     }
     const phyl = things.find(([, t]) => t.type === "phylactery");
     if (phyl && can(phyl[0])) return phyl[0];
@@ -248,6 +253,9 @@ CM.Autopilot = class {
     const step = this.stepTo(fl, target);
     if (step === "here") {
       if (fl.number === 0 && t && t.type === "building") { this.errand(t.id); return "errand"; }
+      if (fl.number === 0 && t && t.type === "woodgate") { this.townDone = (this.townDone || []).concat("farm"); this.farmTrip = true; game.use(); return "to the farm"; }
+      if (fl.number === -1 && t && t.type === "farm") { this.farmTrip = false; this.tools.farmed = (this.tools.farmed || 0) + game.tendFarmAuto(); return "farmed"; }
+      if (fl.number === -1 && t && t.type === "woodgate") { this.farmTrip = false; game.use(); return "home from the Wood"; }
       if (t && t.type === "vein") { if (CM.bestPick(game.bag, t.ore) >= 0) game.use(); else { t.skip = true; this.handled.add(fl.number + ":" + here); } }
       else if (t && t.type === "node") game.use();
       else if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") this.stuck++; }

@@ -132,6 +132,7 @@ Object.assign(CM.Game.prototype, {
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)",
           building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - " + CM.t("town.foundation")}. ${CM.t("town.door")}` : "",
           well: "The square's well, under its little roof, and the notice board beside it. (Space to look down it)",
+          farm: this.villageLevel("farm") >= 1 ? "The farm's gate, and the rows beyond it. (Space to work the farm)" : "A fallow field, fenced long ago. (Space to look it over)",
           woodgate: fl.number === 0 ? "The west gate, and the trees beyond it. (Space to go out into the Deep Wood)" : "The gate back to the town. (Space to go through)",
           cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
           caveexit: "The way out of the cave. (Space to climb out)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
@@ -361,6 +362,7 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "caveexit") { this.sound("stairs"); this.enterFloor(-1, "rope", CM.woodCaveAt(this.seed, fl.cave).split(",").map(Number)); this.say("Up out of the cave, into the Wood."); return; }
     if (thing && thing.type === "hut") { if (CM.isNight(this)) { this.emit("talk", { title: "The hermit's hut", text: CM.WOOD_LINES.hut[1] }); this.say(CM.WOOD_LINES.hut[1]); return; } this.emit("hut", {}); this.say(CM.WOOD_LINES.hut[0]); return; }
     if (thing && thing.type === "burner") { this.burner(); return; }
+    if (thing && thing.type === "farm") { this.farmDawns(); this.emit("farm", {}); this.say(this.villageLevel("farm") >= 1 ? `The farm: ${this.farm().rows.filter(Boolean).length} of ${this.farmRows()} rows planted, ${CM.season(this)}.` : "A fallow field in the first glade, waiting for the town's renown."); return; }
     if (thing && thing.type === "shrine") { this.emit("talk", { title: "The ruined shrine", text: CM.WOOD_LINES.shrine }); this.say(CM.WOOD_LINES.shrine); if (!thing.read) { thing.read = true; this.remember("carving", CM.WOOD_LINES.shrine, { key: "wood.shrine" }); this.saveRun(); } return; }
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
     if (thing && thing.type === "well") { this.well(); return; }
@@ -756,9 +758,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner", "vein"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner", "vein", "farm"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", woodgate: "the gate", cave: "a cave mouth", vein: "ore in the rock", caveexit: "the way out", hut: "a hut", shrine: "a ruined shrine", burner: "a smoking mound", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
+  event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", woodgate: "the gate", cave: "a cave mouth", vein: "ore in the rock", caveexit: "the way out", hut: "a hut", farm: "the farm's gate", shrine: "a ruined shrine", burner: "a smoking mound", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {

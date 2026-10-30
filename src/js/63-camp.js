@@ -20,7 +20,8 @@ Object.assign(CM.Game.prototype, {
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       if (depth >= 14) this.stock.push(CM.lockpick(true));
       if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }), CM.pick("copper"));
-      if (this.floor.number === 0 && this.villageLevel("smith") >= 2) this.stock.push(CM.pick("iron"));   // (the way home, sold only at home: the price climbs with the deepest floor reached)
+      if (this.floor.number === 0 && this.villageLevel("smith") >= 2) this.stock.push(CM.pick("iron"));
+      if (this.floor.number === 0 && this.villageLevel("farm") >= 1) for (const c of Object.keys(CM.CROPS)) if (this.canSow(c)) this.stock.push(CM.seed(c));   // (the season's seed, for the farm)   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
       if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);   // (the Merchant's House in town carries it all)
       for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
@@ -647,7 +648,7 @@ Object.assign(CM.Game.prototype, {
   },
 
   // the night passes: the clock goes to the next dawn (six), a full day if it is dawn already
-  sleepTillDawn() { const m = CM.minuteOf(this), to = m < CM.CLOCK.start ? CM.CLOCK.start - m : CM.CLOCK.day - m + CM.CLOCK.start; this.clock = (this.clock || 0) + to; return to; },
+  sleepTillDawn() { const m = CM.minuteOf(this), to = m < CM.CLOCK.start ? CM.CLOCK.start - m : CM.CLOCK.day - m + CM.CLOCK.start; this.clock = (this.clock || 0) + to; if (this.farmDawns && this.village) this.farmDawns(); return to; },
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
     if (service === "wounds") return this.templeWounds();

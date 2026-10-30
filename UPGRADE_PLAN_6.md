@@ -127,7 +127,7 @@ Size: L.
 
 Size: M.
 
-## Phase 4 - The farm - v6.6
+## Phase 4 - The farm - v6.6 - DONE
 
 - **The garden becomes a farm**, in the Wood's first glade past the gate (the beds in town stay as the herb garden
   for the alchemist): raised with renown like a building (`CM.VILLAGE.farm`, five levels): a field (level 1: four

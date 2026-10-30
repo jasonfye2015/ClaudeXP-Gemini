@@ -182,6 +182,8 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-talk"><div class="box"><h2 id="talk-title"></h2><p id="talk-text" class="lore"></p>
   <div class="end"><button id="talk-more" hidden>More</button><button class="close primary">Walk on</button></div></div></div>
+<div class="dialog" id="dlg-farm"><div class="box"><h2>The farm in the First Glade</h2><p id="farm-head" class="lore"></p><div id="farm-rows"></div><div id="farm-more"></div><p id="farm-note" class="small"></p>
+  <div class="end"><button class="close primary">Back to the path</button></div></div></div>
 <div class="dialog" id="dlg-hut"><div class="box"><h2>The hermit's hut</h2><p class="lore">"Hides I'll take, by daylight. Trouble I won't." The hermit tans and stitches for 20 gold a piece.</p><div id="hut-list"></div><p id="hut-note" class="small"></p>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
@@ -286,6 +288,7 @@ CM.UI = class {
     game.on("lore", (text) => this.readWall(text));
     game.on("motif", (name) => { if (CM.music && CM.music.motif) CM.music.motif(name); });
     game.on("hut", () => this.openHut());
+    game.on("farm", () => this.openFarm());
     game.on("talk", ({ title, text, lines }) => { this.$("#talk-title").textContent = title; this.$("#talk-text").textContent = text; this.talkMore = (lines || []).slice(); this.$("#talk-more").hidden = !this.talkMore.length; this.openDialog("#dlg-talk"); });
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
@@ -487,6 +490,31 @@ CM.UI = class {
     root.insertBefore(d, root.querySelector(".end"));
   }
   // the garden: the beds above the alchemist's bench
+  openFarm() {
+    const g = this.game, L = g.villageLevel("farm"), F = g.farm(), head = this.$("#farm-head"), rows = this.$("#farm-rows"), more = this.$("#farm-more"); rows.innerHTML = ""; more.innerHTML = "";
+    const act = (fn) => { this.$("#farm-note").textContent = fn() || "Done."; this.openFarm(); this.refresh(); };
+    const btn = (into, text, fn, off) => { const b = document.createElement("button"); b.textContent = text; b.disabled = Boolean(off); b.addEventListener("click", () => act(fn)); into.appendChild(b); return b; };
+    if (L < 1) { head.textContent = "A fallow field, fenced long ago. The farm is raised at the town's board, with renown: a field first, then an orchard, a mill, hens, a cow."; return this.openDialog("#dlg-farm"); }
+    head.textContent = `${CM.season(g).charAt(0).toUpperCase() + CM.season(g).slice(1)}, day ${F.days + 1} of the farm. Level ${L}: ${CM.VILLAGE.farm.levels.slice(0, L).map((w) => w.split(":")[0].toLowerCase()).join(", ")}. A row grows a stage every dawn the party sees, and is cut at the fourth; past ripe three dawns, it rots.${F.scarecrow ? " A scarecrow stands." : " No scarecrow: crows take a ripe row in ten."}`;
+    const seeds = g.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "seed");
+    for (let i = 0; i < g.farmRows(); i++) { const r = F.rows[i], row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      const left = r ? CM.FARM.rotAfter + 1 - (r.ripeFor || 0) : 0, state = !r ? "" : r.stage < CM.FARM.stages ? "stage " + r.stage + " of " + CM.FARM.stages : r.ripeFor ? "ripe, " + left + (left === 1 ? " dawn" : " dawns") + " before it rots" : "ripe";
+      const t = document.createElement("div"); t.innerHTML = r ? "<b>Row " + (i + 1) + ": " + this.esc(CM.CROPS[r.crop].name) + "</b> <small>" + state + "</small>" : "<b>Row " + (i + 1) + "</b> <small>empty</small>"; row.appendChild(t);
+      const a = document.createElement("div"); a.className = "hire";
+      if (r) btn(a, r.stage >= CM.FARM.stages ? "Cut it" : "Not ripe", () => g.cut(i), r.stage < CM.FARM.stages);
+      else if (seeds.length) { const sel = document.createElement("select"); sel.innerHTML = `<option value="">Sow...</option>` + seeds.map(([it, bi]) => `<option value="${bi}"${g.canSow(it.crop) ? "" : " disabled"}>${this.esc(it.name)}${g.canSow(it.crop) ? "" : " (not in " + CM.season(g) + ")"}</option>`).join(""); sel.addEventListener("change", () => { if (sel.value !== "") act(() => g.sow(i, Number(sel.value))); }); a.appendChild(sel); }
+      else { const s = document.createElement("small"); s.textContent = "no seed in the pack (the Merchant's House sells the season's)"; a.appendChild(s); }
+      row.appendChild(a); rows.appendChild(row); }
+    { const st = document.createElement("div"); st.className = "small"; const count = {}; for (const s of F.store) count[s.id] = (count[s.id] || 0) + 1; st.textContent = `The store: ${Object.keys(count).length ? Object.entries(count).map(([id, n]) => `${n} ${id}`).join(", ") : "bare"}. Seed in the chest: ${Object.entries(F.seeds).filter(([, n]) => n > 0).map(([c, n]) => `${n} ${CM.CROPS[c].name.toLowerCase()}`).join(", ") || "none"}.`; more.appendChild(st); }
+    if (F.store.length) btn(more, "Take what the store holds", () => g.collectFarm());
+    if (!F.scarecrow) btn(more, "Put up a scarecrow (a deadwood and an old tunic)", () => g.setScarecrow());
+    if (seeds.length) btn(more, "Seed into the chest, for the farmhand", () => g.storeSeeds());
+    if (L >= 3) { btn(more, F.hand > F.days ? `The farmhand is paid for ${F.hand - F.days} dawns` : `Hire a farmhand (${CM.FARM.handGold} gold a season)`, () => g.hireHand(), F.hand > F.days);
+      const sel = document.createElement("select"); sel.innerHTML = `<option value="">${F.order ? "He sows " + CM.CROPS[F.order].name.toLowerCase() : "Tell him what to sow"}...</option><option value="-">Nothing</option>` + Object.keys(CM.CROPS).map((c) => `<option value="${c}">${this.esc(CM.CROPS[c].name)} (${CM.CROPS[c].sow.join(", ")})</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) act(() => g.orderHand(sel.value === "-" ? null : sel.value)); }); more.appendChild(sel); }
+    if (L >= 5) btn(more, F.cowFed > F.days ? `The cow is fed for ${F.cowFed - F.days} dawns` : "Feed the cow a cabbage (milk a dawn for a week)", () => g.feedCow(), F.cowFed > F.days);
+    if (F.notes.length) { const n = document.createElement("div"); n.className = "small"; n.textContent = `Lately: ${F.notes.slice(-4).join("; ")}.`; more.appendChild(n); }
+    this.openDialog("#dlg-farm");
+  }
   openHut() {
     const g = this.game, box = this.$("#hut-list"); box.innerHTML = "";
     const hides = g.bag.filter((i) => i.kind === "hide"); const sm = document.createElement("div"); sm.className = "small"; sm.textContent = `Hides in the pack: ${hides.length ? hides.map((h) => h.name.toLowerCase()).join(", ") : "none"}.`; box.appendChild(sm);

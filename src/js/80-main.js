@@ -369,6 +369,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "caveexit") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "vein") out.push({ x, y, layer: `vein:${thing.ore}`, w: 0.7, h: 0.6 });
       else if (thing.type === "hut") out.push({ x, y, layer: "house2", w: 1.0, h: 1.0 });
+      else if (thing.type === "farm") out.push({ x, y, layer: "house1", w: 1.0, h: 1.0 });
       else if (thing.type === "shrine") out.push({ x, y, layer: "altar", w: 0.8, h: 0.7 });
       else if (thing.type === "burner") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });

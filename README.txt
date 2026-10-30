@@ -1242,6 +1242,26 @@ Upgrading and tempering (the eighth big update, phase 5 - v6.5; shipped before t
   Cloak, the Troll's hide a Cloak of Wards. The item card shows the grade and the temper; "Five Stars" is an
   achievement. Test: "upgrading and tempering".
 
+The farm (the eighth big update, phase 4 - v6.6)
+  A farm stands in the Deep Wood's First Glade, just inside the gate (a thing placed last, by no die, so the Wood
+  stands as it was), raised at the town's board with renown like a building (CM.VILLAGE.farm, five levels: a field of
+  four rows, an orchard, a mill and a farmhand, hens and two more rows, a cow and a byre) and kept in the village
+  store (village.farm) from run to run. The town's beds stay the alchemist's. Six crops (CM.CROPS: wheat and barley
+  in spring, beans and cabbage in spring and autumn, turnip in any season but winter, hops in summer) are sown from
+  seed - the Merchant's House sells the season's packets once the farm has a field, and every cut gives one back -
+  and a row grows a stage every dawn the party sees (the run's clock: a run that sleeps at the camps grows the field,
+  a Homecoming and a night at the hearth grow it too; a stair is an hour; the farm sees the run's last dawns when it
+  ends), is cut at the fourth stage for the crop's yield, and rots three dawns past ripe. Nothing grows in winter.
+  Crows take a ripe row in ten (by the seed and the day) unless a scarecrow stands: a deadwood and an old tunic (any
+  light armour). The orchard drops apples and pears on autumn dawns; the mill grinds a sack of wheat or barley in the
+  store into flour or malt a dawn; the hens lay an egg a dawn each (three); the cow gives milk a dawn for a week on a
+  cabbage; the byre gives two of venison every forty-five dawns. The store holds it all until the party takes it, and
+  the farm's food is ingredients (CM.FOODS) - eggs and milk keep a week, in the store or the pack, and then go off;
+  grain, flour and malt keep. The farmhand (the mill's level, 30 gold a season) cuts what ripens into the store and
+  sows what he is told from the seed chest, so a deep run comes home to a harvest. The season is pinned to the run
+  from the real date (CM.season; the calendar's phase makes more of it). Automatic walks out to the farm by day when
+  there is something to cut, take or sow, and comes back by the gate. Test: "the farm:".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
