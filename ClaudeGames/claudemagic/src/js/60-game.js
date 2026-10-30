@@ -471,7 +471,7 @@ CM.Game = class {
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
     if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
-    if (number === 0 && CM.festivalIs(this, "harvest") && !fl.things["8,10"]) fl.things["8,10"] = { type: "peddler", stock: null };   // (the Harvest Fair: market day all week)
+    if (number === 0 && CM.festivalIs(this, "harvest") && !fl.things[CM.TOWN_AT.market.join(",")]) fl.things[CM.TOWN_AT.market.join(",")] = { type: "peddler", stock: null };   // (the Harvest Fair: market day all week)
     if (fresh) {                                                         // the trinkets that mark the map: the carving, the way down, the gathering
       const mark = (k) => { const [x, y] = k.split(",").map(Number); if (!fl.seen.some(([sx, sy]) => sx === x && sy === y)) fl.seen.push([x, y]); };
       if (CM.partyProp(this.party, "chalk")) for (const [k, f] of Object.entries(fl.features)) if (f.type === "carving") mark(k);

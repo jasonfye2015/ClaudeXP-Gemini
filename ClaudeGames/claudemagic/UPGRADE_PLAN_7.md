@@ -58,7 +58,15 @@ The renderer (`40-render.js`) learns two things, and nothing else in the game ne
   kind; a tree cell blocks and is a sprite; the automap knows every kind. The smoke test screenshots the town by day
   and by night.
 
-## Phase 1 - The town, shaped like a town - v7.2
+## Phase 1 - The town, shaped like a town - v7.2 - DONE
+
+Built from data in `23-town.js` (`CM.TOWN_BLOCKS`, `CM.TOWN_HOUSES`, `CM.TOWN_STREETS`, `CM.TOWN_SQUARE`,
+`CM.TOWN_YARD`, hedges and fences), not a drawing, so a change is a number. Differences from the plan: the street
+plan is Gate Lane (bending south from the West Gate) into a straight Lantern Street, because a run's first ten steps
+from the party's door must be a straight walk (the tests, and the feel of setting out); the east postern waits for a
+later phase; the market cross is phase 4's (it wants a statue tile); the townsfolk walk Temple Row, Smiths' Lane and
+Gate Lane so the walk from the door to the shaft is never blocked by one. `CM.townPlace(fl, x, y)` names the spot
+for phase 3's compass.
 
 `23-town.js` lays a new Caer Duin, still by hand (no generator; the same for every seed, so saves never drift), 45 x 45:
 
