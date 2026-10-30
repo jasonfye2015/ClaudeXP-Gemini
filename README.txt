@@ -1209,6 +1209,22 @@ The Deep Wood (the eighth big update, phase 2 - v6.3)
   and its caves. The floors behind the party are never the town's or the Wood's.
   Test: "the Deep Wood".
 
+Mining and the ore (the eighth big update, phase 3 - v6.4)
+  Five ores (CM.ORES: copper on floors 1-10, iron 6-20, silver 11-25, gold 21-40, star-iron 36-50) lie in veins
+  beside the rock - things placed last of all in CM.furnish by hash, so no older cell moves and no fingerprint
+  changes; the gen-1 fixtures stand - and in the Wood's caves (copper in the first, iron in the second, gold at the
+  deepest). A pick mines a vein with Space: a chunk a swing, three swings a vein and it is worked out for the run;
+  silver in the Dwarven Halls gives two a swing and the Artificer one more; a swing is five minutes, and it is loud:
+  the nearest band comes a square closer. Picks have grades (CM.PICKS: a copper pick mines copper and iron, an iron
+  pick silver too, a steel pick everything), wear a point a swing, and are whetted at the forge for 20 gold; the
+  dwarves' pick is an iron pick that is kept now, and opens a hidden door for ten points. The Merchant's House sells
+  a copper pick, and an iron one once the forge has its second level. Chunks weigh 2 and bars 3: a mining trip is a
+  choice about what to carry back. The smelter at the forge (the smith's second level) makes a bar of three chunks
+  and a charcoal; two bars of a kind and one of the kind above make an alloy (bronze, steel, electrum, star-steel:
+  the upgrading's coin, next phase); the apprentice buys bars at their worth. Charcoal is the Wood's burner's, by
+  day: deadwood in, two charcoal out, or one for 15 gold. The bot mines a vein it has a pick for, on its way.
+  Test: "mining".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

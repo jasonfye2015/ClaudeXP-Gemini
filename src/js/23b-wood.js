@@ -61,6 +61,9 @@ CM.makeCave = function (number, seed, gen) {
   }
   for (const [k, f] of Object.entries(fl.features)) if (["carving", "teleporter", "spinner", "trapdoor", "pit"].includes(f.type)) delete fl.features[k];
   if (!Object.values(fl.things).some((t) => t.type === "caveexit")) fl.things[CM.keyOf(fl.pos[0], fl.pos[1])] = { type: "caveexit" };
+  const ores = [["copper", "copper"], ["iron", "iron"], ["gold", "iron"]][n], cells = [];   // the cave's own veins: copper in the first, iron in the second, gold at the deepest
+  for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = CM.keyOf(x, y); if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && CM.DIRS.some(([dx, dy]) => fl.grid[y + dy][x + dx] === 1)) cells.push(k); }
+  ores.forEach((ore, i) => { if (cells.length) { const k = cells[CM.hashSeed(`${seed}:cavevein:${n}:${i}`) % cells.length]; fl.things[k] = { type: "vein", ore, left: CM.VEIN_SWINGS }; } });
   return fl;
 };
 // the Wood's own kinds: never among a floor's bands

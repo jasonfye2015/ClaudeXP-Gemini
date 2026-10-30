@@ -161,6 +161,8 @@ CM.Autopilot = class {
     if (box && can(box[0])) return box[0];
     const ev = things.find(([k, t]) => (t.type === "event" && !t.done && !this.handled.has(fl.number + ":" + k)) || (t.type === "peddler" && !this.handled.has(fl.number + ":" + k)));
     if (ev && can(ev[0]) && floorMoves < perFloor * 0.6) return ev[0];
+    const veins = things.filter(([k, t]) => t.type === "vein" && can(k) && !this.handled.has(fl.number + ":" + k) && CM.bestPick(game.bag, t.ore) >= 0).map(([k]) => k);
+    if (veins.length && floorMoves < perFloor * 0.5) return veins[0];
     const nodes = things.filter(([k, t]) => t.type === "node" && can(k)).map(([k]) => k);
     if (nodes.length && floorMoves < perFloor * 0.5) return nodes[0];
     const chests = things.filter(([, t]) => t.type === "chest").map(([k]) => k).filter(can);
@@ -246,7 +248,8 @@ CM.Autopilot = class {
     const step = this.stepTo(fl, target);
     if (step === "here") {
       if (fl.number === 0 && t && t.type === "building") { this.errand(t.id); return "errand"; }
-      if (t && t.type === "node") game.use();
+      if (t && t.type === "vein") { if (CM.bestPick(game.bag, t.ore) >= 0) game.use(); else { t.skip = true; this.handled.add(fl.number + ":" + here); } }
+      else if (t && t.type === "node") game.use();
       else if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") this.stuck++; }
       else if (t && t.type === "ghost") { game.talk(t, here); if (fl.things[here]) game.talk(t, here); if (fl.things[here] && !(t.arc && t.arc < 3)) delete fl.things[here]; else if (fl.things[here]) t.heard = true; }
       else if (f && f.type === "carving" && !f.read) { this.face(f.face); game.use(); if (!f.read) { this.stuck++; this.log.push("a wall that won't be read"); } }

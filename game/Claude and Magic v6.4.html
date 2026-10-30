@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v6.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v6.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -437,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "6.3", built: "2026-10-30" };
+const CM = window.CM = { version: "6.4", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -2539,7 +2539,7 @@ CM.trapParts = (trap) => ({ name: "Trap Parts", kind: "trapparts", trap, power: 
 CM.bar = () => ({ name: "Door Bar", kind: "bar", power: 0, value: 30 });
 CM.bait = (poisoned) => (poisoned ? { name: "Poisoned Bait", kind: "bait", poisoned: true, power: 0, value: 25 } : { name: "Bait", kind: "bait", power: 0, value: 15 });
 CM.grapnel = () => ({ name: "Grapnel", kind: "grapnel", power: 0, value: 80 });
-CM.dwarfPick = () => ({ name: "Dwarven Pick", kind: "pick", power: 0, value: 150 });
+CM.dwarfPick = () => ({ name: "Dwarven Pick", kind: "pick", power: 0, value: 150 });   // (23c-ore.js makes it an iron pick that is kept)
 // a lock's grade, by the seed and where it is: common above floor 6; iron two in five below; dwarven one in four from the palace down
 CM.lockGrade = (seed, floor, k) => { if (floor < 6) return "common"; const r = CM.hashSeed(`${seed}:lock:${floor}:${k}`) % 100; return floor >= 16 && r < 25 ? "dwarven" : r < 65 ? "iron" : "common"; };
 CM.HOMECOMING = { chest: 20, drop: 40, elite: 10, price: 60, perFloor: 10 };   // one chest in twenty from floor 3; the dead one in forty, an elite one in ten; the Merchant's House's price climbs with the deepest floor
@@ -2750,7 +2750,10 @@ CM.itemLabel = function (item) {
   if (item.kind === "bar") bits.push("bars the open door beside the party for the floor; used again at a barred door, the party rests there a little (once a floor, a ration)");
   if (item.kind === "bait") bits.push(item.poisoned ? "dropped where you stand: draws the nearest wanderers ten steps, and poisons what eats it" : "dropped where you stand: draws the nearest wanderers for ten steps, and holds them there");
   if (item.kind === "grapnel") bits.push("climbs the party back up the pit it fell down; kept");
-  if (item.kind === "pick") bits.push("opens the nearest hidden door or stair on the floor without searching, and breaks");
+  if (item.kind === "pick") bits.push(item.points !== undefined ? `mines ${(CM.PICKS[item.pick] || { mines: [] }).mines.map((o) => CM.ORES[o].name).join(", ")}: ${item.points} of ${(CM.PICKS[item.pick] || {}).points} points (a swing a point, a hidden door ten; the forge whets it)` : "opens the nearest hidden door or stair on the floor without searching, and breaks");
+  if (item.kind === "ore") bits.push(`a chunk of ${CM.ORES[item.ore].name}: three and a charcoal make a bar at the forge; heavy`);
+  if (item.kind === "bar") bits.push(CM.ALLOYS[item.bar] ? `an alloy bar: the upgrading's coin` : `a bar: two and one of the kind above make an alloy; the upgrading's coin`);
+  if (item.kind === "charcoal") bits.push("the smelter eats one a bar; the Wood's burner makes it from deadwood");
   if (item.bearers && item.bearers.length) bits.push(`borne by ${item.bearers.join(", ")}`);
   if (CM.powerOf(item)) bits.push(`a power, once a floor: ${CM.powerOf(item).name} - ${CM.powerOf(item).what}`);
   if (item.kind === "trinket" && CM.TRINKETS[item.trinket]) bits.push(CM.TRINKETS[item.trinket].what);
@@ -3412,6 +3415,10 @@ CM.furnish = function (floor, seed, gen) {
   if (number >= 1 && number <= CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR && special !== "maze") {   // gathering nodes: two or three a floor, off the rooms' middles (last of all, so no older hash's cell moves)
     const n = 2 + (h("nodes") % 2);
     for (let i = 0; i < n; i++) { const k = pickCell(`node:${i}`, (c) => !roomCells.has(c)) || pickCell(`node:${i}`); if (k) floor.things[k] = { type: "node", band: CM.themeIndex(number) }; }
+  }
+  if (number >= 1 && number <= CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR) {   // ore veins beside the rock: by the ore's floors, last of all (a thing, so no fingerprint moves)
+    const byRock = (c) => { const [x, y] = unkey(c); return CM.DIRS.some(([dx, dy]) => !CM.inBounds(floor, x + dx, y + dy) || floor.grid[y + dy][x + dx] === 1) && !roomCells.has(c); };
+    for (const ore of CM.veinsFor(number)) { const n = ore === "copper" && number <= 5 ? 2 : ore === "stariron" ? 1 : 1 + (h(`vein:${ore}:more`) % 3 === 0 ? 1 : 0); for (let i = 0; i < n; i++) { const k = pickCell(`vein:${ore}:${i}`, byRock) || pickCell(`vein:${ore}:${i}`); if (k && !floor.things[k]) floor.things[k] = { type: "vein", ore, left: CM.VEIN_SWINGS }; } }
   }
   return floor;
 };
@@ -4354,6 +4361,9 @@ CM.makeCave = function (number, seed, gen) {
   }
   for (const [k, f] of Object.entries(fl.features)) if (["carving", "teleporter", "spinner", "trapdoor", "pit"].includes(f.type)) delete fl.features[k];
   if (!Object.values(fl.things).some((t) => t.type === "caveexit")) fl.things[CM.keyOf(fl.pos[0], fl.pos[1])] = { type: "caveexit" };
+  const ores = [["copper", "copper"], ["iron", "iron"], ["gold", "iron"]][n], cells = [];   // the cave's own veins: copper in the first, iron in the second, gold at the deepest
+  for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = CM.keyOf(x, y); if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && CM.DIRS.some(([dx, dy]) => fl.grid[y + dy][x + dx] === 1)) cells.push(k); }
+  ores.forEach((ore, i) => { if (cells.length) { const k = cells[CM.hashSeed(`${seed}:cavevein:${n}:${i}`) % cells.length]; fl.things[k] = { type: "vein", ore, left: CM.VEIN_SWINGS }; } });
   return fl;
 };
 // the Wood's own kinds: never among a floor's bands
@@ -4374,6 +4384,42 @@ Object.assign(CM.INGREDIENTS, {
 for (const id of ["mushroom", "berries", "woodherb", "deadwood", "honey"]) CM.BASES[CM.INGREDIENTS[id].name] = { id: CM.INGREDIENTS[id].name, kind: "ingredient", slot: null, tier: 0, group: "ingredient" };
 // the Wood's bands, by day and by night (and the moon): what walks there now
 CM.woodBands = (night, fullMoon) => (night ? [["Wolf", "Wolf", "Wolf"], ["Bear"], ["Sellsword", "Sellsword"], fullMoon ? ["Wolf", "Wolf", "Wolf", "Wolf"] : ["Wolf", "Wolf"]] : [["Deer", "Deer"], ["Boar"], ["Deer"], ["Boar", "Boar"]]);
+
+// ---- 23c-ore.js ----
+"use strict";
+// Mining: five ores in veins (things on the floor beside the rock, placed by hash last of all in CM.furnish, so no
+// older hash's cell moves and no fingerprint changes), picks that mine by their grade and wear a point a swing (reset
+// at the forge), chunks that are heavy, and the smelter at the forge in town: three chunks and a charcoal make a bar,
+// two bars of a kind and one of the kind above an alloy bar. Charcoal is the Wood's burner's: deadwood in, charcoal
+// out, or a coin. The dwarves' pick is a pick that is kept now (an iron one), and opens a hidden door for ten points.
+CM.ORES = {
+  copper: { name: "copper", floors: [1, 10], cave: 0, value: 8, colour: "#C07040" },
+  iron: { name: "iron", floors: [6, 20], cave: 1, value: 14, colour: "#8A8A90" },
+  silver: { name: "silver", floors: [11, 25], value: 26, colour: "#D8DCE8" },
+  gold: { name: "gold", floors: [21, 40], cave: 2, value: 50, colour: "#E8C040" },
+  stariron: { name: "star-iron", floors: [36, 50], value: 90, colour: "#8090D0" },
+};
+CM.ORE_ORDER = ["copper", "iron", "silver", "gold", "stariron"];
+CM.ALLOYS = { bronze: { name: "bronze", of: ["copper", "iron"], value: 60 }, steel: { name: "steel", of: ["iron", "silver"], value: 110 }, electrum: { name: "electrum", of: ["silver", "gold"], value: 220 }, starsteel: { name: "star-steel", of: ["gold", "stariron"], value: 420 } };
+CM.PICKS = { copper: { name: "Copper Pick", mines: ["copper", "iron"], points: 30, value: 80 }, iron: { name: "Iron Pick", mines: ["copper", "iron", "silver"], points: 50, value: 200 }, steel: { name: "Steel Pick", mines: CM.ORE_ORDER.slice(), points: 80, value: 500 } };
+CM.VEIN_SWINGS = 3;
+CM.SWING_MINUTES = 5;
+CM.SECRET_POINTS = 10;
+CM.SMELT_CHUNKS = 3;
+CM.CHARCOAL_PRICE = 15;
+CM.oreChunk = (ore, n = 1) => ({ name: `${CM.ORES[ore].name.charAt(0).toUpperCase() + CM.ORES[ore].name.slice(1)} ore`, kind: "ore", ore, power: n, value: CM.ORES[ore].value });
+CM.metalBar = (kind) => { const A = CM.ALLOYS[kind], O = CM.ORES[kind]; const name = (A ? A.name : O.name); return { name: `${name.charAt(0).toUpperCase() + name.slice(1)} bar`, kind: "bar", bar: kind, power: 0, value: A ? A.value : O.value * 3 + 20 }; };
+CM.charcoal = () => ({ name: "Charcoal", kind: "charcoal", power: 0, value: CM.CHARCOAL_PRICE });
+CM.pick = (grade) => ({ name: CM.PICKS[grade].name, kind: "pick", pick: grade, points: CM.PICKS[grade].points, power: 0, value: CM.PICKS[grade].value });
+CM.dwarfPick = () => Object.assign(CM.pick("iron"), { name: "Dwarven Pick" });
+for (const [id, O] of Object.entries(CM.ORES)) { CM.BASES[CM.oreChunk(id).name] = { id: CM.oreChunk(id).name, kind: "ore", slot: null, tier: CM.ORE_ORDER.indexOf(id), group: "ingredient" }; CM.BASES[CM.metalBar(id).name] = { id: CM.metalBar(id).name, kind: "bar", slot: null, tier: CM.ORE_ORDER.indexOf(id), group: "stuff" }; void O; }
+for (const id of Object.keys(CM.ALLOYS)) CM.BASES[CM.metalBar(id).name] = { id: CM.metalBar(id).name, kind: "bar", slot: null, tier: 5 + Object.keys(CM.ALLOYS).indexOf(id), group: "stuff" };
+for (const id of Object.keys(CM.PICKS)) CM.BASES[CM.PICKS[id].name] = { id: CM.PICKS[id].name, kind: "pick", slot: null, tier: Object.keys(CM.PICKS).indexOf(id), group: "stuff" };
+CM.BASES.Charcoal = { id: "Charcoal", kind: "charcoal", slot: null, tier: 0, group: "stuff" };
+Object.assign(CM.WEIGHTS, { ore: 2, bar: 3, charcoal: 1, pick: 3 });
+// which ores a floor has veins of, and how many: by the ore's floors (the Dwarven Halls' silver gives two a swing)
+CM.veinsFor = (number) => { const out = []; for (const [id, O] of Object.entries(CM.ORES)) if (number >= O.floors[0] && number <= O.floors[1]) out.push(id); return out; };
+CM.bestPick = (bag, ore) => { let best = -1; bag.forEach((it, i) => { if (it.kind === "pick" && (it.points || 0) > 0 && CM.PICKS[it.pick] && CM.PICKS[it.pick].mines.includes(ore) && (best < 0 || CM.PICKS[it.pick].points > CM.PICKS[bag[best].pick].points)) best = i; }); return best; };
 
 // ---- 24-clock.js ----
 "use strict";
@@ -5140,6 +5186,14 @@ CM.art.treeWall = function (theme, seed) {                               // the 
   p.fillStyle = `rgba(${theme.moss[0]},${theme.moss[1]},${theme.moss[2]},0.85)`; for (let i = 0; i < 14; i++) { p.beginPath(); p.arc(tx + rnd.int(-60, 60), S * 0.18 + rnd.int(-30, 30), rnd.int(20, 40), 0, Math.PI * 2); p.fill(); }
   return c;
 };
+CM.art.vein = function (colour) {                                        // ore in the rock: a lump of stone with the metal's flecks
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(colour));
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 70, 9, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#6A625A"; p.beginPath(); p.moveTo(60, 236); p.lineTo(70, 150); p.lineTo(128, 120); p.lineTo(190, 150); p.lineTo(200, 236); p.closePath(); p.fill();
+  p.fillStyle = "#4A443E"; p.beginPath(); p.moveTo(60, 236); p.lineTo(70, 150); p.lineTo(110, 236); p.closePath(); p.fill();
+  p.fillStyle = colour; for (let i = 0; i < 26; i++) { p.beginPath(); p.arc(80 + rnd.int(0, 100), 140 + rnd.int(0, 86), rnd.int(3, 7), 0, Math.PI * 2); p.fill(); }
+  return c;
+};
 CM.art.house = function (stage = 4) {                                   // 1 a frame; 2 a roofed house; 3 with its sign; 4 with a lit window
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
   p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 100, 9, 0, 0, Math.PI * 2); p.fill();
@@ -5700,6 +5754,7 @@ CM.art.buildDrawn = function (theme) {
   for (const G of Object.values(CM.GUARDIANS)) { const k = G.size >= 1 ? 1.12 : 1.04; add(`monster:${G.name}`, CM.art.monster(G, k)); add(`monster:${G.name}:idle2`, CM.art.monster(G, k, "idle2")); add(`monster:${G.name}:attack`, CM.art.monster(G, k, "attack")); }
   add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, CM.art.monster(row));
+  for (const [id, O] of Object.entries(CM.ORES)) add(`vein:${id}`, CM.art.vein(O.colour));
   add("house", CM.art.house(4)); for (let s = 1; s <= 4; s++) add(`house${s}`, CM.art.house(s)); add("foundation", CM.art.foundation()); add("well", CM.art.well());
   add("bones", CM.art.bones()); add("rope", CM.art.rope()); add("plate", CM.art.plate(false)); add("plate_pressed", CM.art.plate(true)); add("door_riddle", CM.art.door("riddle"));
   add("fungus", CM.art.fungus()); add("crystal", CM.art.crystal()); add("root", CM.art.root());
@@ -7577,7 +7632,7 @@ Object.assign(CM.Game.prototype, {
           well: "The square's well, under its little roof, and the notice board beside it. (Space to look down it)",
           woodgate: fl.number === 0 ? "The west gate, and the trees beyond it. (Space to go out into the Deep Wood)" : "The gate back to the town. (Space to go through)",
           cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
-          caveexit: "The way out of the cave. (Space to climb out)", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
+          caveexit: "The way out of the cave. (Space to climb out)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
           villager: thing.type === "villager" ? `${(CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length] || {}).who || "someone"}. (Space to pass the time of day)` : "" }[thing.type]);
       }
     }
@@ -7798,11 +7853,12 @@ Object.assign(CM.Game.prototype, {
     }
     if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.inUse = true; this.talk(thing, k); this.inUse = false; return; }
     if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
+    if (thing && thing.type === "vein") { this.mine(thing, k); return; }
     if (thing && thing.type === "woodgate") { if (fl.number === 0) { this.sound("door"); this.enterFloor(-1, "rope", CM.WOOD_GATE.slice()); this.say(`The west gate, and the Deep Wood beyond it: ${CM.hourWord(CM.hourOf(this))}, and ${CM.isNight(this) ? "the trees are a wall of dark" : "the light comes green through the leaves"}. The first glade is safe at any hour; the Wood is not.`); } else { this.sound("door"); this.enterFloor(0, "rope", CM.TOWN_AT.woodgate.slice()); this.say("Back through the gate: the lane, and the town."); } return; }
     if (thing && thing.type === "cave") { if (thing.n !== CM.dayOf(this) % 3) { this.say(CM.WOOD_LINES.caveShut); return; } this.sound("stairs"); this.enterFloor(CM.caveNumber(thing.n), "down"); this.say(`Down into the cave: ${["a short way under the roots", "deeper, and colder", "the hill's own dark, and something breathing at the end of it"][thing.n]}.`); return; }
     if (thing && thing.type === "caveexit") { this.sound("stairs"); this.enterFloor(-1, "rope", CM.woodCaveAt(this.seed, fl.cave).split(",").map(Number)); this.say("Up out of the cave, into the Wood."); return; }
     if (thing && thing.type === "hut") { this.emit("talk", { title: "The hermit's hut", text: CM.WOOD_LINES.hut[CM.isNight(this) ? 1 : 0] }); this.say(CM.WOOD_LINES.hut[CM.isNight(this) ? 1 : 0]); return; }
-    if (thing && thing.type === "burner") { this.emit("talk", { title: "The charcoal burner", text: CM.WOOD_LINES.burner[CM.isNight(this) ? 1 : 0] }); this.say(CM.WOOD_LINES.burner[CM.isNight(this) ? 1 : 0]); return; }
+    if (thing && thing.type === "burner") { this.burner(); return; }
     if (thing && thing.type === "shrine") { this.emit("talk", { title: "The ruined shrine", text: CM.WOOD_LINES.shrine }); this.say(CM.WOOD_LINES.shrine); if (!thing.read) { thing.read = true; this.remember("carving", CM.WOOD_LINES.shrine, { key: "wood.shrine" }); this.saveRun(); } return; }
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
     if (thing && thing.type === "well") { this.well(); return; }
@@ -8118,6 +8174,34 @@ Object.assign(CM.Game.prototype, {
     this.say("With the door barred the party sits down against it, eats, and sleeps in turns. Not the camp, but something.");
     return "";
   },
+  // a vein mined: the best pick in the pack that mines the ore, a point a swing, a chunk a swing (silver in the Dwarven Halls two;
+  // the Artificer one more), three swings a vein and it is spent for the run; a swing is five minutes, and it is loud
+  mine(thing, k) {
+    const fl = this.floor, ore = thing.ore, row = CM.bestPick(this.bag, ore);
+    if (row < 0) { const any = this.bag.find((i) => i.kind === "pick"); this.say(any ? ((any.points || 0) <= 0 ? `The ${any.name} is blunt: the forge in town puts a point back on it.` : `The ${any.name} will not bite ${CM.ORES[ore].name}: it wants a better pick.`) : `A vein of ${CM.ORES[ore].name}, and no pick to mine it with.`); return; }
+    this.logAct("mine");
+    const pick = this.bag[row]; pick.points -= 1; this.clock = (this.clock || 0) + CM.SWING_MINUTES;
+    let n = 1; if (ore === "silver" && CM.themeIndex(fl.number) === 2 && fl.number >= 1) n += 1; if (this.alive().some((h) => h.cls === "Artificer" || h.second === "Artificer")) n += 1;
+    const got = []; for (let i = 0; i < n; i++) got.push(CM.oreChunk(ore)); this.gain(got, "vein"); this.tally.mined = (this.tally.mined || 0) + n; this.countUse("mine");
+    thing.left -= 1; if (thing.left <= 0) delete fl.things[k];
+    this.sound("grind"); this.say(`${pick.name} into the rock: ${CM.plural(n, CM.ORES[ore].name + " chunk")}${thing.left > 0 ? `, and more in the vein (${thing.left} swing${thing.left === 1 ? "" : "s"})` : ", and the vein is worked out"}.${pick.points <= 0 ? ` The ${pick.name} is blunt.` : ""}`);
+    this.noise(); this.dirty = true; this.saveRun(); this.emit("change");
+  },
+  noise() {                                                              // a swing rings down the halls: the nearest band comes a square closer
+    const fl = this.floor, dist = CM.distances(fl.grid, fl.pos, (x, y) => CM.passable(fl, x, y)); let nearest = null;
+    for (const [k, t] of Object.entries(fl.things)) { if (t.type !== "monsters" || t.still) continue; const d = dist.get(k); if (d !== undefined && d > 1 && (!nearest || d < nearest.d)) nearest = { d, k, t }; }
+    if (!nearest) return;
+    const [x, y] = nearest.k.split(",").map(Number), step = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([nx, ny]) => CM.passable(fl, nx, ny) && !fl.things[keyOf(nx, ny)] && dist.get(keyOf(nx, ny)) === nearest.d - 1);
+    if (step) { delete fl.things[nearest.k]; fl.things[keyOf(step[0], step[1])] = nearest.t; this.say("Something down the hall heard that."); }
+  },
+  // the charcoal burner: deadwood in, two charcoal out; or a charcoal for a coin; by day only
+  burner() {
+    if (CM.isNight(this)) { this.emit("talk", { title: "The charcoal burner", text: CM.WOOD_LINES.burner[1] }); this.say(CM.WOOD_LINES.burner[1]); return; }
+    const wood = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "ingredient" && it.ingredient === "deadwood");
+    if (wood.length) { for (const [, i] of wood.reverse()) this.bag.splice(i, 1); const out = []; for (let i = 0; i < wood.length * 2; i++) out.push(CM.charcoal()); this.gain(out, "burner"); this.say(`The burner takes the deadwood into his mound and hands back ${CM.plural(out.length, "charcoal")}. "The forge eats it one a bar."`); this.saveRun(); this.emit("change"); return; }
+    if (this.gold >= CM.CHARCOAL_PRICE) { this.gold -= CM.CHARCOAL_PRICE; this.spend("burner", CM.CHARCOAL_PRICE); this.gain([CM.charcoal()], "burner"); this.say(`A charcoal for ${CM.CHARCOAL_PRICE} gold. "Bring deadwood and it's for nothing."`); this.saveRun(); this.emit("change"); return; }
+    this.emit("talk", { title: "The charcoal burner", text: CM.WOOD_LINES.burner[0] }); this.say(CM.WOOD_LINES.burner[0]);
+  },
   // the Wood changes hands at dusk and dawn: the day's deer and boar go in, the night's wolves, bear and bandits come out (by the seed, the day and the hour)
   refreshWood() {
     const fl = this.floor; if (!fl || fl.number !== -1) return;
@@ -8146,8 +8230,9 @@ Object.assign(CM.Game.prototype, {
     f.found = true; f.known = true; fl.grid[y][x] = 0;
     if (f.type === "secretstair") fl.things[k] = { type: "wingstair", wing: f.wing, secret: true };
     if (!fl.seen.some(([sx, sy]) => sx === x && sy === y)) fl.seen.push([x, y]);
-    this.bag.splice(row, 1); this.countUse("pick");
-    this.sound("grind"); this.say(`The dwarven pick goes into the wall where the dwarves' marks say, and comes out in two pieces: a hidden ${f.type === "secretstair" ? "stair" : "door"} stands open.`);
+    const pick = this.bag[row]; if (pick && pick.points !== undefined) { if (pick.points < CM.SECRET_POINTS) return `The ${pick.name} is too blunt for a wall: the forge in town puts a point back on it.`; pick.points -= CM.SECRET_POINTS; } else this.bag.splice(row, 1);
+    this.countUse("pick");
+    this.sound("grind"); this.say(`The pick goes into the wall where the dwarves' marks say${pick && pick.points !== undefined ? ", and comes out blunter" : ", and comes out in two pieces"}: a hidden ${f.type === "secretstair" ? "stair" : "door"} stands open.`);
     this.look(); this.emit("mesh"); this.dirty = true; this.emit("change");
     return "";
   },
@@ -8169,9 +8254,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner", "vein"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", woodgate: "the gate", cave: "a cave mouth", caveexit: "the way out", hut: "a hut", shrine: "a ruined shrine", burner: "a smoking mound", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
+  event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", woodgate: "the gate", cave: "a cave mouth", vein: "ore in the rock", caveexit: "the way out", hut: "a hut", shrine: "a ruined shrine", burner: "a smoking mound", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -10102,7 +10187,8 @@ Object.assign(CM.Game.prototype, {
       if (depth >= 7 && !this.bag.some((i) => i.kind === "trapkit")) this.stock.push(CM.trapKit());
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       if (depth >= 14) this.stock.push(CM.lockpick(true));
-      if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }));   // (the way home, sold only at home: the price climbs with the deepest floor reached)
+      if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }), CM.pick("copper"));
+      if (this.floor.number === 0 && this.villageLevel("smith") >= 2) this.stock.push(CM.pick("iron"));   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
       if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);   // (the Merchant's House in town carries it all)
       for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
@@ -10370,7 +10456,7 @@ Object.assign(CM.Game.prototype, {
     if (item.kind === "bar") return this.barDoor(row, hero);
     if (item.kind === "bait") return this.dropBait(row, hero);
     if (item.kind === "grapnel") return this.useGrapnel();
-    if (item.kind === "pick") return this.usePick(row);
+    if (item.kind === "pick") { const here = this.floor && this.floor.things[CM.keyOf(...this.floor.pos)]; if (here && here.type === "vein") { this.mine(here, CM.keyOf(...this.floor.pos)); return ""; } return this.usePick(row); }
     if (item.kind === "ration") {
       this.bag.splice(row, 1); this.countUse("ration");
       this.fed = CM.partyProp(this.party, "spoon") ? -100 : 0;
@@ -12265,6 +12351,8 @@ CM.Autopilot = class {
     if (box && can(box[0])) return box[0];
     const ev = things.find(([k, t]) => (t.type === "event" && !t.done && !this.handled.has(fl.number + ":" + k)) || (t.type === "peddler" && !this.handled.has(fl.number + ":" + k)));
     if (ev && can(ev[0]) && floorMoves < perFloor * 0.6) return ev[0];
+    const veins = things.filter(([k, t]) => t.type === "vein" && can(k) && !this.handled.has(fl.number + ":" + k) && CM.bestPick(game.bag, t.ore) >= 0).map(([k]) => k);
+    if (veins.length && floorMoves < perFloor * 0.5) return veins[0];
     const nodes = things.filter(([k, t]) => t.type === "node" && can(k)).map(([k]) => k);
     if (nodes.length && floorMoves < perFloor * 0.5) return nodes[0];
     const chests = things.filter(([, t]) => t.type === "chest").map(([k]) => k).filter(can);
@@ -12350,7 +12438,8 @@ CM.Autopilot = class {
     const step = this.stepTo(fl, target);
     if (step === "here") {
       if (fl.number === 0 && t && t.type === "building") { this.errand(t.id); return "errand"; }
-      if (t && t.type === "node") game.use();
+      if (t && t.type === "vein") { if (CM.bestPick(game.bag, t.ore) >= 0) game.use(); else { t.skip = true; this.handled.add(fl.number + ":" + here); } }
+      else if (t && t.type === "node") game.use();
       else if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") this.stuck++; }
       else if (t && t.type === "ghost") { game.talk(t, here); if (fl.things[here]) game.talk(t, here); if (fl.things[here] && !(t.arc && t.arc < 3)) delete fl.things[here]; else if (fl.things[here]) t.heard = true; }
       else if (f && f.type === "carving" && !f.read) { this.face(f.face); game.use(); if (!f.read) { this.stuck++; this.log.push("a wall that won't be read"); } }
@@ -12654,6 +12743,53 @@ Object.assign(CM.Game.prototype, {
     item.props.gem2 = el; item.props.resist = el; item.power += 1; item.value += 150;
     CM.recompute(hero);
     this.sound("lever"); this.say(`The ${name.toLowerCase()} goes into ${item.name} beside the first: the wearer is proof against ${CM.ELEMENT_NAMES[el] || el}, and the relic is a little stronger for it.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  // the smelter: three chunks and a charcoal make a bar; two bars of a kind and one of the kind above make an alloy; at the forge's second level
+  smelt(ore) {
+    if (!this.inTown()) return "The smelter is at the forge in town.";
+    if (this.villageLevel("smith") < 2) return "The forge has no smelter yet: the smith's second level.";
+    if (!CM.ORES[ore]) return "No such ore.";
+    const rows = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "ore" && it.ore === ore), coal = this.bag.findIndex((i) => i.kind === "charcoal");
+    if (rows.length < CM.SMELT_CHUNKS) return `${/^[aeiou]/.test(CM.ORES[ore].name) ? "An" : "A"} ${CM.ORES[ore].name} bar wants ${CM.SMELT_CHUNKS} chunks; the pack has ${rows.length}.`;
+    if (coal < 0) return "The smelter wants a charcoal a bar: the Wood's burner has it.";
+    this.logAct("smelt", ore);
+    for (const [, i] of rows.slice(0, CM.SMELT_CHUNKS).reverse()) this.bag.splice(i, 1); this.bag.splice(this.bag.findIndex((i) => i.kind === "charcoal"), 1);
+    this.gain([CM.metalBar(ore)], "smelter"); this.tally.bars = (this.tally.bars || 0) + 1; this.countUse("smelt");
+    this.sound("lever"); this.say(`The smelter roars, and a ${CM.ORES[ore].name} bar comes out of the mould.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  alloy(kind) {
+    if (!this.inTown()) return "The smelter is at the forge in town.";
+    if (this.villageLevel("smith") < 2) return "The forge has no smelter yet: the smith's second level.";
+    const A = CM.ALLOYS[kind]; if (!A) return "No such alloy.";
+    const low = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "bar" && it.bar === A.of[0]), high = this.bag.findIndex((i) => i.kind === "bar" && i.bar === A.of[1]);
+    if (low.length < 2 || high < 0) return `${A.name.charAt(0).toUpperCase() + A.name.slice(1)} wants two ${CM.ORES[A.of[0]].name} bars and one of ${CM.ORES[A.of[1]].name}.`;
+    this.logAct("alloy", kind);
+    for (const [, i] of low.slice(0, 2).reverse()) this.bag.splice(i, 1); this.bag.splice(this.bag.findIndex((i) => i.kind === "bar" && i.bar === A.of[1]), 1);
+    this.gain([CM.metalBar(kind)], "smelter"); this.tally.bars = (this.tally.bars || 0) + 1; this.countUse("smelt");
+    this.sound("lever"); this.say(`Three bars go in and one comes out, and it rings: ${A.name}.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  whetPicks() {
+    if (!this.inTown()) return "The picks are whetted at the forge in town.";
+    const picks = this.bag.filter((i) => i.kind === "pick" && i.points !== undefined && i.points < CM.PICKS[i.pick].points); if (!picks.length) return "Every pick in the pack has its point.";
+    const cost = 20 * picks.length; if (this.gold < cost) return `The smith wants ${cost} gold to put a point back on ${CM.plural(picks.length, "pick")}.`;
+    this.logAct("whetPicks");
+    this.gold -= cost; this.spend("smith", cost); for (const p of picks) p.points = CM.PICKS[p.pick].points;
+    this.sound("lever"); this.say(`${CM.plural(picks.length, "pick")} on the grindstone: as new.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  sellBars() {
+    if (!this.inTown()) return "The apprentice is at the forge in town.";
+    const rows = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "bar"); if (!rows.length) return "No bars in the pack.";
+    this.logAct("sellBars");
+    const paid = rows.reduce((s, [it]) => s + (it.value || 0), 0); for (const [, i] of rows.reverse()) this.bag.splice(i, 1); this.gold += paid;
+    this.sound("coin"); this.say(`The apprentice weighs the bars and pays ${paid} gold, which is what they are worth.`);
     this.saveRun(); this.emit("change");
     return "";
   },
@@ -14384,7 +14520,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
     const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      node: "#8FB06A", building: "#C09050", well: "#60A0E0", villager: "#E0C8A0", woodgate: "#60A060", cave: "#504030", caveexit: "#3060C0", hut: "#C09050", shrine: "#A070C0", burner: "#C08030", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
+      node: "#8FB06A", building: "#C09050", well: "#60A0E0", villager: "#E0C8A0", woodgate: "#60A060", cave: "#504030", vein: "#B08860", caveexit: "#3060C0", hut: "#C09050", shrine: "#A070C0", burner: "#C08030", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
@@ -14928,6 +15064,12 @@ Object.assign(CM.UI.prototype, {
         if (!(it.props && it.props.relic)) { const sel = document.createElement("select"); const bases = Object.values(CM.BASES).filter((B) => B.kind === it.kind && !["unique", "relic"].includes(B.group) && B.id !== CM.baseIdOf(it)).sort((a, b) => (a.tier || 0) - (b.tier || 0)); sel.innerHTML = `<option value="">Reforge the base (an essence, and 100 gold a tier)...</option>` + bases.map((B) => `<option value="${this.esc(B.id)}">${this.esc(B.id)} - ${100 * ((B.tier || 0) + 1)} gold</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) { this.$("#smith-note").textContent = g.reforgeBase(hi, slot, sel.value) || "Done."; this.renderSmith(); this.refresh(); } }); act.appendChild(sel); }
         else { const b = document.createElement("button"); b.textContent = it.props.gem2 ? "A second gem is set" : `A second gem (${CM.SMITH.gem * 2} gold and a gem)`; b.disabled = Boolean(it.props.gem2); b.addEventListener("click", () => { this.$("#smith-note").textContent = g.secondGem(hi, slot) || "Done."; this.renderSmith(); this.refresh(); }); act.appendChild(b); }
         row.appendChild(act); box.appendChild(row); } });
+      { const sm = document.createElement("div"); sm.className = "small"; const ores = CM.ORE_ORDER.map((o) => `${CM.ORES[o].name} ${g.bag.filter((i) => i.kind === "ore" && i.ore === o).length}`).join(", "), bars = g.bag.filter((i) => i.kind === "bar").map((i) => i.name).join(", ");
+        sm.textContent = `The smelter${g.villageLevel("smith") >= 2 ? "" : " (the forge's second level)"}: chunks in the pack - ${ores}; charcoal ${g.bag.filter((i) => i.kind === "charcoal").length}; bars - ${bars || "none"}.`; box.appendChild(sm);
+        for (const o of CM.ORE_ORDER) if (g.bag.filter((i) => i.kind === "ore" && i.ore === o).length >= CM.SMELT_CHUNKS) { const b = document.createElement("button"); b.textContent = `Smelt a ${CM.ORES[o].name} bar (${CM.SMELT_CHUNKS} chunks and a charcoal)`; b.addEventListener("click", () => { this.$("#smith-note").textContent = g.smelt(o) || "Done."; this.renderSmith(); this.refresh(); }); box.appendChild(b); }
+        for (const [id, A] of Object.entries(CM.ALLOYS)) if (g.bag.filter((i) => i.kind === "bar" && i.bar === A.of[0]).length >= 2 && g.bag.some((i) => i.kind === "bar" && i.bar === A.of[1])) { const b = document.createElement("button"); b.textContent = `Alloy: ${A.name} (two ${CM.ORES[A.of[0]].name}, one ${CM.ORES[A.of[1]].name})`; b.addEventListener("click", () => { this.$("#smith-note").textContent = g.alloy(id) || "Done."; this.renderSmith(); this.refresh(); }); box.appendChild(b); }
+        if (g.bag.some((i) => i.kind === "pick" && i.points !== undefined && i.points < CM.PICKS[i.pick].points)) { const b = document.createElement("button"); b.textContent = "Whet the picks (20 gold each)"; b.addEventListener("click", () => { this.$("#smith-note").textContent = g.whetPicks() || "Done."; this.renderSmith(); this.refresh(); }); box.appendChild(b); }
+        if (g.bag.some((i) => i.kind === "bar")) { const b = document.createElement("button"); b.textContent = "The apprentice buys the bars (at their worth)"; b.addEventListener("click", () => { this.$("#smith-note").textContent = g.sellBars() || "Done."; this.renderSmith(); this.refresh(); }); box.appendChild(b); } }
       const n = g.bag.filter((i) => i.kind === "scrap").length; if (n) { const b = document.createElement("button"); b.textContent = `The apprentice buys the scrap (${n}, at three quarters)`; b.addEventListener("click", () => { this.$("#smith-note").textContent = g.sellScrap() || "Done."; this.renderSmith(); this.refresh(); }); box.appendChild(b); }
     }
     const scrapRows = g.bag.map((it, i) => [it, i]).filter(([it]) => ["weapon", "armor", "shield", "helm"].includes(it.kind) && !(it.props && (it.props.relic || it.props.unique)));
@@ -15399,6 +15541,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "woodgate") out.push({ x, y, layer: "gate_open", w: 1.0, h: 1.0 });
       else if (thing.type === "cave") out.push({ x, y, layer: thing.n === CM.dayOf(game) % 3 ? "hatch" : "bones", w: 0.9, flat: thing.n === CM.dayOf(game) % 3, h: 0.5, shade: 0.6 });
       else if (thing.type === "caveexit") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
+      else if (thing.type === "vein") out.push({ x, y, layer: `vein:${thing.ore}`, w: 0.7, h: 0.6 });
       else if (thing.type === "hut") out.push({ x, y, layer: "house2", w: 1.0, h: 1.0 });
       else if (thing.type === "shrine") out.push({ x, y, layer: "altar", w: 0.8, h: 0.7 });
       else if (thing.type === "burner") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85 });

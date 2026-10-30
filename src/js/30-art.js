@@ -502,6 +502,14 @@ CM.art.treeWall = function (theme, seed) {                               // the 
   p.fillStyle = `rgba(${theme.moss[0]},${theme.moss[1]},${theme.moss[2]},0.85)`; for (let i = 0; i < 14; i++) { p.beginPath(); p.arc(tx + rnd.int(-60, 60), S * 0.18 + rnd.int(-30, 30), rnd.int(20, 40), 0, Math.PI * 2); p.fill(); }
   return c;
 };
+CM.art.vein = function (colour) {                                        // ore in the rock: a lump of stone with the metal's flecks
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(colour));
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 70, 9, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#6A625A"; p.beginPath(); p.moveTo(60, 236); p.lineTo(70, 150); p.lineTo(128, 120); p.lineTo(190, 150); p.lineTo(200, 236); p.closePath(); p.fill();
+  p.fillStyle = "#4A443E"; p.beginPath(); p.moveTo(60, 236); p.lineTo(70, 150); p.lineTo(110, 236); p.closePath(); p.fill();
+  p.fillStyle = colour; for (let i = 0; i < 26; i++) { p.beginPath(); p.arc(80 + rnd.int(0, 100), 140 + rnd.int(0, 86), rnd.int(3, 7), 0, Math.PI * 2); p.fill(); }
+  return c;
+};
 CM.art.house = function (stage = 4) {                                   // 1 a frame; 2 a roofed house; 3 with its sign; 4 with a lit window
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
   p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 100, 9, 0, 0, Math.PI * 2); p.fill();
@@ -1062,6 +1070,7 @@ CM.art.buildDrawn = function (theme) {
   for (const G of Object.values(CM.GUARDIANS)) { const k = G.size >= 1 ? 1.12 : 1.04; add(`monster:${G.name}`, CM.art.monster(G, k)); add(`monster:${G.name}:idle2`, CM.art.monster(G, k, "idle2")); add(`monster:${G.name}:attack`, CM.art.monster(G, k, "attack")); }
   add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, CM.art.monster(row));
+  for (const [id, O] of Object.entries(CM.ORES)) add(`vein:${id}`, CM.art.vein(O.colour));
   add("house", CM.art.house(4)); for (let s = 1; s <= 4; s++) add(`house${s}`, CM.art.house(s)); add("foundation", CM.art.foundation()); add("well", CM.art.well());
   add("bones", CM.art.bones()); add("rope", CM.art.rope()); add("plate", CM.art.plate(false)); add("plate_pressed", CM.art.plate(true)); add("door_riddle", CM.art.door("riddle"));
   add("fungus", CM.art.fungus()); add("crystal", CM.art.crystal()); add("root", CM.art.root());

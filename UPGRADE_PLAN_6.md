@@ -106,7 +106,7 @@ Size: S.
 
 Size: L.
 
-## Phase 3 - Mining and the ore - v6.4
+## Phase 3 - Mining and the ore - v6.4 - DONE
 
 - **Five ores**, `CM.ORES`: copper (the Wood's caves and floors 1-10), iron (the caves and floors 6-20), silver
   (floors 11-25; the Dwarven Halls' veins give two), gold (the caves' deepest, floors 21-40), and star-iron (the

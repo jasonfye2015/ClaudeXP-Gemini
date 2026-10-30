@@ -111,6 +111,53 @@ Object.assign(CM.Game.prototype, {
     this.saveRun(); this.emit("change");
     return "";
   },
+  // the smelter: three chunks and a charcoal make a bar; two bars of a kind and one of the kind above make an alloy; at the forge's second level
+  smelt(ore) {
+    if (!this.inTown()) return "The smelter is at the forge in town.";
+    if (this.villageLevel("smith") < 2) return "The forge has no smelter yet: the smith's second level.";
+    if (!CM.ORES[ore]) return "No such ore.";
+    const rows = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "ore" && it.ore === ore), coal = this.bag.findIndex((i) => i.kind === "charcoal");
+    if (rows.length < CM.SMELT_CHUNKS) return `${/^[aeiou]/.test(CM.ORES[ore].name) ? "An" : "A"} ${CM.ORES[ore].name} bar wants ${CM.SMELT_CHUNKS} chunks; the pack has ${rows.length}.`;
+    if (coal < 0) return "The smelter wants a charcoal a bar: the Wood's burner has it.";
+    this.logAct("smelt", ore);
+    for (const [, i] of rows.slice(0, CM.SMELT_CHUNKS).reverse()) this.bag.splice(i, 1); this.bag.splice(this.bag.findIndex((i) => i.kind === "charcoal"), 1);
+    this.gain([CM.metalBar(ore)], "smelter"); this.tally.bars = (this.tally.bars || 0) + 1; this.countUse("smelt");
+    this.sound("lever"); this.say(`The smelter roars, and a ${CM.ORES[ore].name} bar comes out of the mould.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  alloy(kind) {
+    if (!this.inTown()) return "The smelter is at the forge in town.";
+    if (this.villageLevel("smith") < 2) return "The forge has no smelter yet: the smith's second level.";
+    const A = CM.ALLOYS[kind]; if (!A) return "No such alloy.";
+    const low = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "bar" && it.bar === A.of[0]), high = this.bag.findIndex((i) => i.kind === "bar" && i.bar === A.of[1]);
+    if (low.length < 2 || high < 0) return `${A.name.charAt(0).toUpperCase() + A.name.slice(1)} wants two ${CM.ORES[A.of[0]].name} bars and one of ${CM.ORES[A.of[1]].name}.`;
+    this.logAct("alloy", kind);
+    for (const [, i] of low.slice(0, 2).reverse()) this.bag.splice(i, 1); this.bag.splice(this.bag.findIndex((i) => i.kind === "bar" && i.bar === A.of[1]), 1);
+    this.gain([CM.metalBar(kind)], "smelter"); this.tally.bars = (this.tally.bars || 0) + 1; this.countUse("smelt");
+    this.sound("lever"); this.say(`Three bars go in and one comes out, and it rings: ${A.name}.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  whetPicks() {
+    if (!this.inTown()) return "The picks are whetted at the forge in town.";
+    const picks = this.bag.filter((i) => i.kind === "pick" && i.points !== undefined && i.points < CM.PICKS[i.pick].points); if (!picks.length) return "Every pick in the pack has its point.";
+    const cost = 20 * picks.length; if (this.gold < cost) return `The smith wants ${cost} gold to put a point back on ${CM.plural(picks.length, "pick")}.`;
+    this.logAct("whetPicks");
+    this.gold -= cost; this.spend("smith", cost); for (const p of picks) p.points = CM.PICKS[p.pick].points;
+    this.sound("lever"); this.say(`${CM.plural(picks.length, "pick")} on the grindstone: as new.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  sellBars() {
+    if (!this.inTown()) return "The apprentice is at the forge in town.";
+    const rows = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "bar"); if (!rows.length) return "No bars in the pack.";
+    this.logAct("sellBars");
+    const paid = rows.reduce((s, [it]) => s + (it.value || 0), 0); for (const [, i] of rows.reverse()) this.bag.splice(i, 1); this.gold += paid;
+    this.sound("coin"); this.say(`The apprentice weighs the bars and pays ${paid} gold, which is what they are worth.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
   sellScrap() {
     if (!this.inTown()) return "The apprentice is at the forge in town.";
     const rows = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "scrap");

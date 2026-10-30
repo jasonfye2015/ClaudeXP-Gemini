@@ -19,7 +19,8 @@ Object.assign(CM.Game.prototype, {
       if (depth >= 7 && !this.bag.some((i) => i.kind === "trapkit")) this.stock.push(CM.trapKit());
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       if (depth >= 14) this.stock.push(CM.lockpick(true));
-      if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }));   // (the way home, sold only at home: the price climbs with the deepest floor reached)
+      if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }), CM.pick("copper"));
+      if (this.floor.number === 0 && this.villageLevel("smith") >= 2) this.stock.push(CM.pick("iron"));   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
       if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);   // (the Merchant's House in town carries it all)
       for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
@@ -287,7 +288,7 @@ Object.assign(CM.Game.prototype, {
     if (item.kind === "bar") return this.barDoor(row, hero);
     if (item.kind === "bait") return this.dropBait(row, hero);
     if (item.kind === "grapnel") return this.useGrapnel();
-    if (item.kind === "pick") return this.usePick(row);
+    if (item.kind === "pick") { const here = this.floor && this.floor.things[CM.keyOf(...this.floor.pos)]; if (here && here.type === "vein") { this.mine(here, CM.keyOf(...this.floor.pos)); return ""; } return this.usePick(row); }
     if (item.kind === "ration") {
       this.bag.splice(row, 1); this.countUse("ration");
       this.fed = CM.partyProp(this.party, "spoon") ? -100 : 0;

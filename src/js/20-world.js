@@ -200,7 +200,10 @@ CM.itemLabel = function (item) {
   if (item.kind === "bar") bits.push("bars the open door beside the party for the floor; used again at a barred door, the party rests there a little (once a floor, a ration)");
   if (item.kind === "bait") bits.push(item.poisoned ? "dropped where you stand: draws the nearest wanderers ten steps, and poisons what eats it" : "dropped where you stand: draws the nearest wanderers for ten steps, and holds them there");
   if (item.kind === "grapnel") bits.push("climbs the party back up the pit it fell down; kept");
-  if (item.kind === "pick") bits.push("opens the nearest hidden door or stair on the floor without searching, and breaks");
+  if (item.kind === "pick") bits.push(item.points !== undefined ? `mines ${(CM.PICKS[item.pick] || { mines: [] }).mines.map((o) => CM.ORES[o].name).join(", ")}: ${item.points} of ${(CM.PICKS[item.pick] || {}).points} points (a swing a point, a hidden door ten; the forge whets it)` : "opens the nearest hidden door or stair on the floor without searching, and breaks");
+  if (item.kind === "ore") bits.push(`a chunk of ${CM.ORES[item.ore].name}: three and a charcoal make a bar at the forge; heavy`);
+  if (item.kind === "bar") bits.push(CM.ALLOYS[item.bar] ? `an alloy bar: the upgrading's coin` : `a bar: two and one of the kind above make an alloy; the upgrading's coin`);
+  if (item.kind === "charcoal") bits.push("the smelter eats one a bar; the Wood's burner makes it from deadwood");
   if (item.bearers && item.bearers.length) bits.push(`borne by ${item.bearers.join(", ")}`);
   if (CM.powerOf(item)) bits.push(`a power, once a floor: ${CM.powerOf(item).name} - ${CM.powerOf(item).what}`);
   if (item.kind === "trinket" && CM.TRINKETS[item.trinket]) bits.push(CM.TRINKETS[item.trinket].what);
@@ -862,6 +865,10 @@ CM.furnish = function (floor, seed, gen) {
   if (number >= 1 && number <= CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR && special !== "maze") {   // gathering nodes: two or three a floor, off the rooms' middles (last of all, so no older hash's cell moves)
     const n = 2 + (h("nodes") % 2);
     for (let i = 0; i < n; i++) { const k = pickCell(`node:${i}`, (c) => !roomCells.has(c)) || pickCell(`node:${i}`); if (k) floor.things[k] = { type: "node", band: CM.themeIndex(number) }; }
+  }
+  if (number >= 1 && number <= CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR) {   // ore veins beside the rock: by the ore's floors, last of all (a thing, so no fingerprint moves)
+    const byRock = (c) => { const [x, y] = unkey(c); return CM.DIRS.some(([dx, dy]) => !CM.inBounds(floor, x + dx, y + dy) || floor.grid[y + dy][x + dx] === 1) && !roomCells.has(c); };
+    for (const ore of CM.veinsFor(number)) { const n = ore === "copper" && number <= 5 ? 2 : ore === "stariron" ? 1 : 1 + (h(`vein:${ore}:more`) % 3 === 0 ? 1 : 0); for (let i = 0; i < n; i++) { const k = pickCell(`vein:${ore}:${i}`, byRock) || pickCell(`vein:${ore}:${i}`); if (k && !floor.things[k]) floor.things[k] = { type: "vein", ore, left: CM.VEIN_SWINGS }; } }
   }
   return floor;
 };

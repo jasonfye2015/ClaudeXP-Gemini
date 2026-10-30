@@ -222,7 +222,7 @@ CM.trapParts = (trap) => ({ name: "Trap Parts", kind: "trapparts", trap, power: 
 CM.bar = () => ({ name: "Door Bar", kind: "bar", power: 0, value: 30 });
 CM.bait = (poisoned) => (poisoned ? { name: "Poisoned Bait", kind: "bait", poisoned: true, power: 0, value: 25 } : { name: "Bait", kind: "bait", power: 0, value: 15 });
 CM.grapnel = () => ({ name: "Grapnel", kind: "grapnel", power: 0, value: 80 });
-CM.dwarfPick = () => ({ name: "Dwarven Pick", kind: "pick", power: 0, value: 150 });
+CM.dwarfPick = () => ({ name: "Dwarven Pick", kind: "pick", power: 0, value: 150 });   // (23c-ore.js makes it an iron pick that is kept)
 // a lock's grade, by the seed and where it is: common above floor 6; iron two in five below; dwarven one in four from the palace down
 CM.lockGrade = (seed, floor, k) => { if (floor < 6) return "common"; const r = CM.hashSeed(`${seed}:lock:${floor}:${k}`) % 100; return floor >= 16 && r < 25 ? "dwarven" : r < 65 ? "iron" : "common"; };
 CM.HOMECOMING = { chest: 20, drop: 40, elite: 10, price: 60, perFloor: 10 };   // one chest in twenty from floor 3; the dead one in forty, an elite one in ten; the Merchant's House's price climbs with the deepest floor
