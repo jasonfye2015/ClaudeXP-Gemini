@@ -370,6 +370,7 @@ Object.assign(CM.Game.prototype, {
     if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
     if (h.thrall) return false;
     if ((status === "paralysis" && (CM.trait(h, "immovable") || h.quirk === "stubborn")) || ((status === "poison" || status === "paralysis") && CM.trait(h, "diamondbody"))) { this.say(`${h.name} does not so much as flinch.`); return false; }
+    if (status === "curse" && h.origin === "order") { this.say(`${h.name} says the order's words, and the curse finds no purchase.`); return false; }
     if (status === "curse") this.cheer(-5, "a curse");
     const charm = CM.equipped(h).find((it) => it.props && it.props.resist === status && !it.unknown);
     if (charm) { this.say(`${h.name}'s ${CM.baseName(charm)} grows warm: the ${status === "stone" ? "gaze" : "touch"} finds no purchase.`); return false; }
@@ -685,6 +686,7 @@ Object.assign(CM.Game.prototype, {
     this.say(G.fall);
     { const P = CM.PARLEY[id], fought = this.floor && this.floor.things[this.foeKey]; if (P && !m.echo) this.say(fought && fought.spoke ? P.deathSpoken : P.death); }
     this.lairAfter(id);
+    this.banterAfter = "guardian";
     this.say(m.echo ? "The echo fades, and leaves nothing but the shaft it stood over." : relic ? `${G.take} (${relic.name}: ${CM.itemLabel(relic)}.)` : G.take);
     this.emit("fx", { kind: "relic", item: relic });
   },
@@ -1226,6 +1228,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (boss) { this.crown(); return; }
     this.setMode("explore");
+    if (this.banterAfter) { this.banter(this.banterAfter); this.banterAfter = null; } else if (this.party.some((h) => h.hp <= 0) && (this.tally.fights || 0) % 2 === 0) this.banter("down");
     this.saveRun();
   },
 });

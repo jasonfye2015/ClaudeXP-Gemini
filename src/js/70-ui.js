@@ -331,6 +331,7 @@ CM.UI = class {
       <div class="list-title">Boons</div><div class="boons">${(h.boons || []).length ? h.boons.map((id) => `<div><b>${CM.BOONS[id].name}</b> - ${CM.BOONS[id].what}</div>`).join("") : "<div class='small'>None yet. Each level earned offers one.</div>"}</div>
       <div class="list-title">Path</div><div class="boons">${h.path && CM.PATHS[h.cls] && CM.PATHS[h.cls][h.path] ? (() => { const P = CM.PATHS[h.cls][h.path]; return `<div><b>${P.name}</b> - ${P.blurb}</div><div><b>${P.t1.name}</b> - ${P.t1.what}</div><div><b>${P.t2.name}</b> - ${h.level >= CM.PATH_AT[1] ? P.t2.what : `at level ${CM.PATH_AT[1]}: ${P.t2.what.charAt(0).toLowerCase() + P.t2.what.slice(1)}`}</div>${P.t3 ? `<div><b>${P.t3.name}</b> - ${h.level >= CM.PATH_AT[2] ? P.t3.what : `at level ${CM.PATH_AT[2]}: ${P.t3.what.charAt(0).toLowerCase() + P.t3.what.slice(1)}`}</div>` : ""}`; })() : `<div class='small'>${CM.needsPath(h) ? "A path waits to be chosen, below." : `Chosen at level ${CM.PATH_AT[0]}: two ways for a ${h.cls} to grow.`}</div>`}</div>
       ${h.quirk ? `<div class="list-title">Quirk</div><div class="boons"><div><b>${CM.QUIRKS[h.quirk].name}</b> - ${CM.QUIRKS[h.quirk].what}</div></div>` : ""}
+      ${h.origin && CM.ORIGINS[h.origin] ? `<div class="list-title">Origin</div><div class="boons"><div><b>${CM.ORIGINS[h.origin].name}</b> - ${CM.ORIGINS[h.origin].what}</div></div>` : ""}
       ${h.second ? `<div class="list-title">Second calling</div><div class="boons"><div><b>${h.second}</b> - its first two spells or skills are theirs</div></div>` : ""}
       ${h.familiar ? `<div class="list-title">Familiar</div><div class="boons"><div><b>${CM.FAMILIARS[h.familiar].name}</b> - ${CM.FAMILIARS[h.familiar].what}</div></div>` : ""}
       ${Object.keys(h.spellLevels || {}).length ? `<div class="list-title">Spells deepened</div><div class="boons">${Object.entries(h.spellLevels).map(([id, l]) => `<div><b>${CM.ABILITIES[id].name}</b> - level ${l}</div>`).join("")}</div>` : ""}
@@ -460,7 +461,8 @@ CM.UI = class {
     const shrine = this.$("#village-shrine"); shrine.innerHTML = "";
     (g.memorial || []).slice(0, 12).forEach((m, i) => {
       const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
-      row.innerHTML = `<div><b>${this.esc(m.name)}</b> <small>${m.cls}, level ${m.level}, floor ${m.floor}${m.buried ? ` - buried with ${this.esc(m.buried.name)}` : ""}${m.candle ? ` - a candle burns (${this.esc(m.candle)})` : ""}</small></div>`;
+      row.innerHTML = `<div><b>${this.esc(m.name)}</b> <small>${m.cls}, level ${m.level}, floor ${m.floor}${m.buried ? ` - buried with ${this.esc(m.buried.name)}` : ""}${m.candle ? ` - a candle burns (${this.esc(m.candle)})` : ""}</small>${m.last ? `<small><i>"${this.esc(m.last)}"</i></small>` : ""}<input class="epitaph" type="text" maxlength="60" placeholder="An epitaph (the priest and their ghost will say it)" value="${this.esc(m.epitaph || "")}"></div>`;
+      row.querySelector(".epitaph").addEventListener("change", (e) => { g.setEpitaph(i, e.target.value); note.textContent = `An epitaph for ${m.name}.`; });
       if (!m.candle && g.villageLevel("shrine") >= 1) { const b = document.createElement("button"); b.textContent = `Light a candle, ${CM.CANDLE_COST[g.villageLevel("shrine") >= 2 ? 1 : 0]} renown`; b.addEventListener("click", () => { note.textContent = g.lightCandle(i) || `A candle for ${m.name}.`; this.renderVillage(); }); row.appendChild(b); }
       shrine.appendChild(row);
     });

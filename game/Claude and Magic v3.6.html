@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v3.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v3.6 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -388,6 +388,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 .entry.unread p.blank { border-bottom: 1px dotted var(--faint); max-width: 420px; height: 14px; margin-top: 6px; }
 .entry p.struck { text-decoration: line-through; color: var(--dim); }
 .entry p.truth { color: var(--gold); margin-top: 4px; }
+.recruit input.epitaph { width: 100%; max-width: 360px; margin-top: 4px; font: italic 12px var(--serif); background: rgba(0,0,0,0.25); color: var(--ink); border: 1px solid var(--edge); padding: 3px 6px; }
 </style>
 </head>
 <body>
@@ -397,7 +398,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "3.5", built: "2026-10-30" };
+const CM = window.CM = { version: "3.6", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1878,6 +1879,47 @@ CM.chronicle = function (fame, ledger) {
 };
 CM.legendLine = (e) => { const first = (e.party || [])[0] || "", m = /^(.*) the (\w+) \d+$/.exec(first); return `Carved here in a newer hand: HERE ${(m ? `${m[1].toUpperCase()} THE ${m[2].toUpperCase()}` : "FOUR")} AND THREE PASSED, GOING DOWN TO THE KING. ${e.reminded ? "THEY TALKED HIM DOWN." : "THEY CAME BACK UP."}`; };
 
+// ---- heroes with pasts: six origins, each a small touch and a handful of lines said at the walls that concern them ----
+CM.ORIGINS = {
+  caerduin: { name: "Of Caer Duin", what: "a grandchild of the city: the first line of the Catacombs' chapter is known before the stair",
+    lines: { "carving.catacombs.1": "My grandmother said he wept for each of them. She didn't say he stopped.", "carving.catacombs.3": "The bells. She said they were taken down. She didn't say they were still here.", "carving.vaults.1": "The lower town. My family's from there. Was from there.", "carving.palace.2": "She said they sat where they sat. I thought it was a way of talking.", "carving.drowned.2": "Let in. Grandmother never said that. I don't think she knew." } },
+  dwarffriend: { name: "Dwarf-friend", what: "raised among the deep halls' traders: a dwarves' mark read tells them the way down as well",
+    lines: { "carving.catacombs.8": "", "carving.halls.1": "Sealed from within. That's a dwarf word for a thing you don't do twice.", "carving.halls.3": "They loved stone. I know. I was raised on their bread, which is also stone.", "carving.crystal.1": "Our pride, they said. They never said what it cost. Dwarves don't.", "carving.crystal.3": "Brokk. I knew a Brokk. Everyone who knew dwarves knew a Brokk.", "carving.root.2": "The root. I heard that word once, as a child, and the one who said it was shushed." } },
+  east: { name: "From the east", what: "a traveller with a purse and a story: twenty gold more at the stair",
+    lines: { "carving.vaults.1": "From the east. We get blamed for a lot, in the east.", "carving.foundry.5": "From here. I knew it. Nobody from the east would carry a box that far without opening it.", "carving.palace.3": "Where I come from we'd have thrown the box in the river. Then again, look at the river.", "carving.drowned.3": "A ring the whole town knew. In the east we'd call that a confession." } },
+  order: { name: "Of the Patriarch's order", what: "a novice of the house on the hill: no curse takes hold on them",
+    lines: { "carving.ossuary.2": "Before there was a king. Yes. We're taught that with pride. We're not taught the rest.", "carving.ossuary.3": "He did it first. Our first father. I was taught to pray to him.", "carving.ossuary.5": "A holy thing, or nothing. That's ours. I've said it a thousand times without knowing what it meant.", "carving.vaults.5": "The heart kept apart. It's in our oldest book. I thought it was a metaphor.", "carving.root.3": "He listened to this. We all did. We call it prayer." } },
+  lowertown: { name: "Of the lower town", what: "born on the water: the party wades as if dry-shod while they stand",
+    lines: { "carving.catacombs.5": "Rose and never fell. That's what they told us children. The old ones never said it.", "carving.drowned.1": "This was my street. Or it would have been.", "carving.drowned.2": "Let in. My grandfather used to say it to himself. Let in. Let in. We thought he was mad.", "carving.drowned.3": "Marguerite. I had an aunt Marguerite. Every family on the water did.", "guardian.knight": "The captain. We still say that: as stubborn as the captain. We stopped saying why." } },
+  nobody: { name: "Nobody from nowhere", what: "no past that anyone remembers: +1 Luck, and nothing to say at the walls but the once",
+    lines: { "carving.root.4": "It dreamed all this. Then it dreamed me, too, I suppose. That's a kind of belonging." } },
+};
+delete CM.ORIGINS.dwarffriend.lines["carving.catacombs.8"];
+// banter by situation, said once at a time, never in a fight: {a} and {b} are a bonded pair, or two who stand
+CM.BANTER2 = {
+  camp: ["{a} mends {b}'s cloak by the fire without being asked, and badly.", "{b} tells the one about the troll and the chair. {a} has heard it. {a} laughs anyway.", "{a} and {b} split the last ration down the middle and both pretend the other half was bigger.", "{b} asks {a} what they'll do, after. {a} says: sleep. {b} says: me too. Neither of them means it.",
+    "{a} counts the party on their fingers. Four. {a} does it again.", "{b} hums the queen's song without knowing where they heard it. {a} tells them to stop.", "{a} cleans a blade that is already clean. {b} watches, and understands.", "{b} says the camp fire is the best thing in the world. {a} says the second best. Neither says what the first is."],
+  guardian: ["{a} sits down on the floor where it fell. {b} sits beside them. Nobody says anything for a while.", "{b}: 'That was a big one.' {a}: 'They get bigger.' {b}: 'I know. I was being kind.'", "{a} wipes {b}'s face with a sleeve. {b} lets them.", "{b} asks if anyone saw what it said at the end. {a} says: yes. {a} doesn't repeat it.",
+    "{a} picks the relic up and puts it down again. {b} picks it up and keeps it.", "{b}: 'It talked.' {a}: 'They all talk.' {b}: 'Not like that.'"],
+  carving: ["{b} reads it over {a}'s shoulder and says nothing, which for {b} is a great deal.", "{a}: 'Do you believe that?' {b}: 'I believe someone carved it.'", "{b} runs a hand over the letters. 'A left hand,' {b} says. 'Hurrying.'", "{a} says the walls get worse the lower you go. {b} says they get truer. {a} says that's what worse means.",
+    "{b} wants to carve something too. {a} says: what? {b} thinks about it for a long time."],
+  water: ["{a} says the water's cold. {b} says it's not the cold that worries them.", "{b} keeps {a}'s torch dry, which takes both hands and all of {b}'s attention.", "{a} tries not to think about the lower town's barred doors. {b} can tell.", "{b} says there are fish. {a} says those aren't fish."],
+  down: ["{a} carries {b}'s pack as well as their own and says nothing about it.", "{b} keeps looking back at the one who isn't walking. {a} takes {b}'s elbow.", "{a} says they'll be all right. {b} says: yes. {a} says: I mean it. {b} says: I know you do.", "{b} starts to say something about the camp, and stops, and {a} finishes it for them."],
+};
+CM.JOKES = ["{a}: 'Oak, was it?' {b}: 'Shut up.' It is the fortieth time. It is still funny.", "{b} points at every chair they pass. {a} has stopped reacting, which only makes it better.", "{a}: 'If you see a troll -' {b}: '- find a chair. Yes. Thank you.'"];
+// last words, by calling, by origin, and by the band they fell in (the first that fits)
+CM.LAST_WORDS = {
+  cls: { Knight: "Hold the line.", Paladin: "I'm not afraid. I thought I would be.", Rogue: "Check my pockets. Not for you - for the next ones.", Ranger: "I never missed. Remember that I never missed.", Cleric: "I've nothing left for myself. Good. That's how it should go.", Mage: "The walls were right. Read the walls.",
+    Druid: "It was only hungry.", Bard: "I'd have liked a better last line.", Monk: "Empty hands.", Necromancer: "I'll see you again. I mean it kindly.", Artificer: "The box was good work. Damn it." },
+  origin: { caerduin: "Grandmother. I looked.", dwarffriend: "Sealed from within.", east: "Tell them in the east it was worth the walk.", order: "Correct. One brings nothing.", lowertown: "Let in. Let in.", nobody: "Say my name at the bottom." },
+  band: ["Down. Go down.", "The water's not so cold.", "Loved stone. Yes.", "He remembers. Make sure he remembers.", "Tell the captain.", "It's thinking about me. I can feel it.", "Don't let it have my face.", "Shift's over.", "Keep the bones in order.", "Wake it. Or don't. I don't mind now."],
+};
+CM.lastWords = function (hero, floor) {
+  const o = hero.origin && CM.LAST_WORDS.origin[hero.origin], c = CM.LAST_WORDS.cls[hero.cls];
+  const pick = CM.hashSeed(`${hero.name}:${floor}`) % 3;
+  return (pick === 0 && o) || (pick <= 1 && c) || CM.LAST_WORDS.band[Math.min(9, Math.floor(Math.max(0, floor - 1) / 5))] || c || o || "...";
+};
+
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)
 CM.LORE_KEYS = [];
 for (let n = 1; n <= 50; n++) CM.LORE_KEYS.push(`carving.${["catacombs", "vaults", "halls", "palace", "drowned", "fungal", "crystal", "foundry", "ossuary", "root"][Math.floor((n - 1) / 5)]}.${((n - 1) % 5) + 1}`);
@@ -2261,7 +2303,7 @@ CM.recompute = function (h) {
   return h;
 };
 
-CM.makeHero = function (cls, name, stats, row, quirk) {
+CM.makeHero = function (cls, name, stats, row, quirk, origin) {
   const c = CM.CLASSES[cls];
   const h = { name: (name || "").trim() || cls, cls, level: 1, xp: 0, hp: 1, max: 1, mp: 0, maxmp: 0, atk: 1, df: 0,
     stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null, path: null, learned: [], quirk: CM.QUIRKS[quirk] ? quirk : null,
@@ -2269,6 +2311,8 @@ CM.makeHero = function (cls, name, stats, row, quirk) {
     armor: { name: c.armor, kind: "armor", slot: "armor", power: 0, value: 5, props: { weight: "light" } },
     offhand: null, helm: null, ring: null, amulet: null, boots: null, cloak: null };
   if (h.quirk) for (const [st, d] of Object.entries(CM.QUIRKS[h.quirk].stats)) h.stats[st] = CM.clamp(h.stats[st] + d, 3, 25);
+  h.origin = CM.ORIGINS[origin] ? origin : null;
+  if (h.origin === "nobody") h.stats.luck = CM.clamp(h.stats.luck + 1, 3, 25);
   CM.recompute(h);
   h.hp = h.max; h.mp = h.maxmp;
   return h;
@@ -2328,7 +2372,7 @@ CM.cantWear = function (h, item) {
 };
 
 CM.newParty = function (chosen) {                                         // chosen: [{cls, name, stats, row}] - else the classic four
-  return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row, p.quirk));
+  return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row, p.quirk, p.origin));
 };
 
 // someone to hire at the camp: a calling, a name, a roll, a level a step behind the party's
@@ -6094,7 +6138,8 @@ CM.Game = class {
   remember2(hero) {
     this.memorial = this.memorial || [];
     const buried = [hero.weapon, hero.armor].filter((it) => it && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0] || null;
-    this.memorial.unshift({ name: hero.name, cls: hero.cls, level: hero.level, floor: this.floor ? this.floor.number : 0, seed: this.seed, date: CM.today(), buried });
+    const floor = this.floor ? this.floor.number : 0;
+    this.memorial.unshift({ name: hero.name, cls: hero.cls, level: hero.level, origin: hero.origin || null, floor, seed: this.seed, date: CM.today(), buried, last: CM.lastWords(hero, floor), epitaph: "" });
     this.memorial = this.memorial.slice(0, this.villageLevel("shrine") >= 3 ? 60 : 30);
     CM.store.set("memorial", this.memorial);
   }
@@ -6241,7 +6286,7 @@ CM.Game = class {
     this.awakened = mode === "awakened" && Boolean(this.achievements.bottom); this.behind = 0;
     this.morale = CM.MORALE.start; this.fed = 0; this.trail = [];
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
-    this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row, quirk: h.quirk || null }));
+    this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row, quirk: h.quirk || null, origin: h.origin || null }));
     this.startMutators = this.mutators.slice(); this.runLog = []; this.formation = "line";
     this.ascension = CM.clamp(Number((opts || {}).ascension) || 0, 0, Math.min(CM.ASCENSION.length, this.ascensionMax())); this.iron = Boolean((opts || {}).iron);
     this.ironAllow = true;                                               // (the first save of an Iron run, at the top of the stair)
@@ -6254,6 +6299,11 @@ CM.Game = class {
     for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
     this.retiredThisRun = false;
     this.enterFloor(1, "down");
+    for (const h of this.party) {                                        // the origins' touches at the stair, and a trainer's word to their pupil
+      if (h.origin === "east") this.gold += 20;
+      if (h.origin === "caerduin") this.markRead("carving.catacombs.1");
+      const t = this.trainerFor(h.cls); if (t && CM.TRAINER_LINES[h.cls]) this.say(`${t.name}, who taught ${h.name}: ${CM.TRAINER_LINES[h.cls]}`);
+    }
     this.ironAllow = false;
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
@@ -6312,6 +6362,7 @@ CM.Game = class {
     }
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
+    if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
     if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }
     for (const h of this.alive()) if (h.cls === "Necromancer" && !h.familiar && h.level >= CM.FAMILIAR_AT) { h.familiar = "skull"; this.say(`A skull on ${h.name}'s belt opens its jaws: ${CM.FAMILIARS.skull.what}.`); }
     if (fresh && this.has("pilgrim")) { const xp = 60 * number; for (const h of this.alive()) h.xp += xp; this.say(`Pilgrim: ${xp} experience each, for the floor itself.`); }
@@ -6613,7 +6664,7 @@ Object.assign(CM.Game.prototype, {
     const l = this.light;
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown);
+    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || h.origin === "lowertown");
     l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
@@ -6696,6 +6747,8 @@ Object.assign(CM.Game.prototype, {
       this.say("You read the carving on the wall.");
       this.markRead(lkey);
       this.remember("carving", text, { key: lkey });
+      this.originLines(lkey);
+      if ((this.tally.steps || 0) % 3 === 0) this.banter("carving");
       this.emit("lore", text);
       this.dirty = true;
       return;
@@ -7587,6 +7640,7 @@ Object.assign(CM.Game.prototype, {
     if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
     if (h.thrall) return false;
     if ((status === "paralysis" && (CM.trait(h, "immovable") || h.quirk === "stubborn")) || ((status === "poison" || status === "paralysis") && CM.trait(h, "diamondbody"))) { this.say(`${h.name} does not so much as flinch.`); return false; }
+    if (status === "curse" && h.origin === "order") { this.say(`${h.name} says the order's words, and the curse finds no purchase.`); return false; }
     if (status === "curse") this.cheer(-5, "a curse");
     const charm = CM.equipped(h).find((it) => it.props && it.props.resist === status && !it.unknown);
     if (charm) { this.say(`${h.name}'s ${CM.baseName(charm)} grows warm: the ${status === "stone" ? "gaze" : "touch"} finds no purchase.`); return false; }
@@ -7902,6 +7956,7 @@ Object.assign(CM.Game.prototype, {
     this.say(G.fall);
     { const P = CM.PARLEY[id], fought = this.floor && this.floor.things[this.foeKey]; if (P && !m.echo) this.say(fought && fought.spoke ? P.deathSpoken : P.death); }
     this.lairAfter(id);
+    this.banterAfter = "guardian";
     this.say(m.echo ? "The echo fades, and leaves nothing but the shaft it stood over." : relic ? `${G.take} (${relic.name}: ${CM.itemLabel(relic)}.)` : G.take);
     this.emit("fx", { kind: "relic", item: relic });
   },
@@ -8443,6 +8498,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (boss) { this.crown(); return; }
     this.setMode("explore");
+    if (this.banterAfter) { this.banter(this.banterAfter); this.banterAfter = null; } else if (this.party.some((h) => h.hp <= 0) && (this.tally.fights || 0) % 2 === 0) this.banter("down");
     this.saveRun();
   },
 });
@@ -8887,7 +8943,8 @@ Object.assign(CM.Game.prototype, {
     this.sound("heal");
     this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass. Everyone eats.");
     const bond = (this.bonds || [])[Math.floor((this.tally.fights || 0) / 7) % Math.max(1, (this.bonds || []).length)];
-    if (bond) this.say(CM.BANTER[(this.tally.fights || 0) % CM.BANTER.length].replace("{a}", bond[0]).replace("{b}", bond[1]));
+    if (bond && (this.tally.fights || 0) % 3 === 0) this.say(CM.BANTER[(this.tally.fights || 0) % CM.BANTER.length].replace("{a}", bond[0]).replace("{b}", bond[1]));
+    else this.banter("camp");
     this.saveRun();
   },
 
@@ -9294,6 +9351,7 @@ Object.assign(CM.Game.prototype, {
     this.checkContracts(entry);
     entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party, { ascension: this.ascension || 0, iron: this.iron });
     entry.weekly = String(this.seed).startsWith("weekly-");
+    if (!won) for (const h of this.party) if (h.hp <= 0 && !(this.memorial || []).some((m) => m.name === h.name && m.seed === this.seed)) { this.remember2(h); this.say(`${h.name}'s last words: "${this.memorial[0].last}"`); }
     if (!won && !this.bottom) {                                          // where they fell: a later run on this seed finds them
       const carried = this.party.flatMap((h) => CM.equipped(h)).filter((it) => !(it.props && (it.props.relic || it.props.unique)) && !["weapon", "armor"].includes(it.kind));
       const item = carried.length ? carried[Math.floor(this.rnd.next() * carried.length)] : null;
@@ -9575,6 +9633,39 @@ Object.assign(CM.Game.prototype, {
     return names.map((m) => `"${m.name}, ${m.cls}, who fell on floor ${m.floor}.${m.epitaph ? ` ${m.epitaph}` : ""}${m.candle ? " A candle burns." : ""}"`);
   },
   book() { return CM.chronicle(this.fame, this.ledger); },
+  // an epitaph for a name on the memorial (the village's shrine; the priest and the ghost repeat it)
+  setEpitaph(i, text) {
+    const m = (this.memorial || [])[i];
+    if (!m) return false;
+    m.epitaph = String(text || "").trim().slice(0, 60);
+    CM.store.set("memorial", this.memorial);
+    return true;
+  },
+  // a hero's word at a wall that concerns their past, once a run
+  originLines(key) {
+    this.story.said = this.story.said || [];
+    for (const h of this.alive()) {
+      const O = h.origin && CM.ORIGINS[h.origin], line = O && O.lines[key];
+      if (!line || this.story.said.includes(`${h.name}:${key}`)) continue;
+      this.story.said.push(`${h.name}:${key}`);
+      this.say(`${h.name}: "${line}"`);
+      this.remember("ghost", `${h.name}, at the wall on floor ${this.floor ? this.floor.number : 0}: "${line}"`, { who: h.name, key: `said.${h.name}.${key}` });
+      if (h.origin === "dwarffriend" && ["halls", "crystal"].includes((CM.LORE_TEXT[key] || {}).chapter)) { const goal = CM.goalOf(this.floor); if (goal) this.say(`${h.name} reads the dwarves' mark again: the way down lies ${this.directionTo(goal.split(",").map(Number))}.`); }
+    }
+  },
+  // banter: one line, the bonded pair's or two who stand, by what just happened (never in a fight)
+  banter(kind) {
+    const lines = CM.BANTER2[kind] || [];
+    if (!lines.length || this.mode === "combat") return "";
+    const alive = this.alive(); if (alive.length < 2) return "";
+    const bond = (this.bonds || [])[Math.floor((this.tally.fights || 0) / 7) % Math.max(1, (this.bonds || []).length)];
+    const [a, b] = bond || [alive[(this.tally.steps || 0) % alive.length].name, alive[((this.tally.steps || 0) + 1) % alive.length].name];
+    if (a === b) return "";
+    const key = `${a}|${b}`, joke = bond && (this.pairFights || {})[key] >= CM.BOND_FIGHTS * 3 && kind === "camp" && (this.tally.fights || 0) % 2 === 0;
+    const text = (joke ? CM.JOKES[(this.tally.fights || 0) % CM.JOKES.length] : lines[((this.tally.fights || 0) + (this.tally.steps || 0)) % lines.length]).replace(/\{a\}/g, a).replace(/\{b\}/g, b);
+    this.say(text);
+    return text;
+  },
   metGhost(name) { this.village.ghostsMet = (this.village.ghostsMet || []).filter((n) => n !== name).concat(name).slice(-40); this.saveVillage(); },
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); },
 
@@ -10422,6 +10513,7 @@ CM.UI = class {
       <div class="list-title">Boons</div><div class="boons">${(h.boons || []).length ? h.boons.map((id) => `<div><b>${CM.BOONS[id].name}</b> - ${CM.BOONS[id].what}</div>`).join("") : "<div class='small'>None yet. Each level earned offers one.</div>"}</div>
       <div class="list-title">Path</div><div class="boons">${h.path && CM.PATHS[h.cls] && CM.PATHS[h.cls][h.path] ? (() => { const P = CM.PATHS[h.cls][h.path]; return `<div><b>${P.name}</b> - ${P.blurb}</div><div><b>${P.t1.name}</b> - ${P.t1.what}</div><div><b>${P.t2.name}</b> - ${h.level >= CM.PATH_AT[1] ? P.t2.what : `at level ${CM.PATH_AT[1]}: ${P.t2.what.charAt(0).toLowerCase() + P.t2.what.slice(1)}`}</div>${P.t3 ? `<div><b>${P.t3.name}</b> - ${h.level >= CM.PATH_AT[2] ? P.t3.what : `at level ${CM.PATH_AT[2]}: ${P.t3.what.charAt(0).toLowerCase() + P.t3.what.slice(1)}`}</div>` : ""}`; })() : `<div class='small'>${CM.needsPath(h) ? "A path waits to be chosen, below." : `Chosen at level ${CM.PATH_AT[0]}: two ways for a ${h.cls} to grow.`}</div>`}</div>
       ${h.quirk ? `<div class="list-title">Quirk</div><div class="boons"><div><b>${CM.QUIRKS[h.quirk].name}</b> - ${CM.QUIRKS[h.quirk].what}</div></div>` : ""}
+      ${h.origin && CM.ORIGINS[h.origin] ? `<div class="list-title">Origin</div><div class="boons"><div><b>${CM.ORIGINS[h.origin].name}</b> - ${CM.ORIGINS[h.origin].what}</div></div>` : ""}
       ${h.second ? `<div class="list-title">Second calling</div><div class="boons"><div><b>${h.second}</b> - its first two spells or skills are theirs</div></div>` : ""}
       ${h.familiar ? `<div class="list-title">Familiar</div><div class="boons"><div><b>${CM.FAMILIARS[h.familiar].name}</b> - ${CM.FAMILIARS[h.familiar].what}</div></div>` : ""}
       ${Object.keys(h.spellLevels || {}).length ? `<div class="list-title">Spells deepened</div><div class="boons">${Object.entries(h.spellLevels).map(([id, l]) => `<div><b>${CM.ABILITIES[id].name}</b> - level ${l}</div>`).join("")}</div>` : ""}
@@ -10551,7 +10643,8 @@ CM.UI = class {
     const shrine = this.$("#village-shrine"); shrine.innerHTML = "";
     (g.memorial || []).slice(0, 12).forEach((m, i) => {
       const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
-      row.innerHTML = `<div><b>${this.esc(m.name)}</b> <small>${m.cls}, level ${m.level}, floor ${m.floor}${m.buried ? ` - buried with ${this.esc(m.buried.name)}` : ""}${m.candle ? ` - a candle burns (${this.esc(m.candle)})` : ""}</small></div>`;
+      row.innerHTML = `<div><b>${this.esc(m.name)}</b> <small>${m.cls}, level ${m.level}, floor ${m.floor}${m.buried ? ` - buried with ${this.esc(m.buried.name)}` : ""}${m.candle ? ` - a candle burns (${this.esc(m.candle)})` : ""}</small>${m.last ? `<small><i>"${this.esc(m.last)}"</i></small>` : ""}<input class="epitaph" type="text" maxlength="60" placeholder="An epitaph (the priest and their ghost will say it)" value="${this.esc(m.epitaph || "")}"></div>`;
+      row.querySelector(".epitaph").addEventListener("change", (e) => { g.setEpitaph(i, e.target.value); note.textContent = `An epitaph for ${m.name}.`; });
       if (!m.candle && g.villageLevel("shrine") >= 1) { const b = document.createElement("button"); b.textContent = `Light a candle, ${CM.CANDLE_COST[g.villageLevel("shrine") >= 2 ? 1 : 0]} renown`; b.addEventListener("click", () => { note.textContent = g.lightCandle(i) || `A candle for ${m.name}.`; this.renderVillage(); }); row.appendChild(b); }
       shrine.appendChild(row);
     });
@@ -11155,7 +11248,7 @@ Object.assign(CM.UI.prototype, {
       const div = document.createElement("div");
       div.className = "slot";
       div.innerHTML = `<div class="top"><div class="portrait-slot"></div><div class="who"><input class="name" type="text" maxlength="14" spellcheck="false" title="Their name"><button class="dice" title="Another name">&#x2684;</button>
-        <select class="cls" title="Their calling"></select><select class="quirk" title="A quirk: a small, honest trade-off">${["<option value=''>No quirk</option>"].concat(Object.entries(CM.QUIRKS).map(([id, q]) => `<option value="${id}">${q.name}</option>`)).join("")}</select></div></div>
+        <select class="cls" title="Their calling"></select><select class="origin" title="Where they come from: a small touch, and a word to say at the walls that concern them">${["<option value=''>No past to speak of</option>"].concat(Object.entries(CM.ORIGINS).map(([id, o]) => `<option value="${id}">${o.name}</option>`)).join("")}</select><select class="quirk" title="A quirk: a small, honest trade-off">${["<option value=''>No quirk</option>"].concat(Object.entries(CM.QUIRKS).map(([id, q]) => `<option value="${id}">${q.name}</option>`)).join("")}</select></div></div>
         <div class="role"></div>
         <table class="stats"></table>
         <div class="derived"></div>
@@ -11163,6 +11256,7 @@ Object.assign(CM.UI.prototype, {
       div.querySelector(".name").addEventListener("input", (e) => { this.slots[i].name = e.target.value; this.renderAdvice(); });
       div.querySelector(".dice").addEventListener("click", () => { this.slots[i].name = CM.randomName(); this.renderCreate(); });
       div.querySelector(".quirk").addEventListener("change", (e) => { this.slots[i].quirk = e.target.value || null; this.renderCreate(); });
+      div.querySelector(".origin").addEventListener("change", (e) => { this.slots[i].origin = e.target.value || null; this.renderCreate(); });
       div.querySelector(".cls").addEventListener("change", (e) => {
         const s = this.slots[i];
         s.cls = e.target.value; s.stats = CM.rollStats(s.cls); s.row = CM.CLASSES[s.cls].row;
@@ -11217,16 +11311,16 @@ Object.assign(CM.UI.prototype, {
       slot.appendChild(this.portrait(s.cls, 56));
       if (div.querySelector(".name").value !== s.name) div.querySelector(".name").value = s.name;
       div.querySelector(".cls").value = s.cls;
-      div.querySelector(".quirk").value = s.quirk || "";
-      div.querySelector(".role").textContent = `${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}. ${c.blurb}`;
+      div.querySelector(".quirk").value = s.quirk || ""; div.querySelector(".origin").value = s.origin || "";
+      div.querySelector(".role").textContent = `${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}. ${c.blurb}${s.origin && CM.ORIGINS[s.origin] ? ` ${CM.ORIGINS[s.origin].name}: ${CM.ORIGINS[s.origin].what}.` : ""}`;
       div.querySelector(".stats").innerHTML = CM.STATS.map((st) => {
         const v = s.stats[st], key = st === c.key;
         return `<tr class="${key ? "key" : ""}"><td>${CM.STAT_NAMES[st]}</td><td class="v">${v}</td><td class="hint">${key ? "their calling's stat" : CM.STAT_HINTS[st]}</td></tr>`;
       }).join("");
-      const h = CM.makeHero(s.cls, s.name, Object.assign({}, s.stats), s.row, s.quirk);
+      const h = CM.makeHero(s.cls, s.name, Object.assign({}, s.stats), s.row, s.quirk, s.origin);
       div.querySelector(".derived").textContent = `${h.max} health${h.maxmp ? `, ${h.maxmp} magic` : ""}, attack ${h.atk}, defence ${h.df} - ${h.weapon.name} and ${h.armor.name}`;
       for (const b of div.querySelectorAll("button[data-row]")) b.classList.toggle("on", b.dataset.row === s.row);
-      for (const el of div.querySelectorAll(".cls, .reroll, .dice, .quirk")) el.disabled = Boolean(this.weekly);   // (the week's party is the week's)
+      for (const el of div.querySelectorAll(".cls, .reroll, .dice, .quirk, .origin")) el.disabled = Boolean(this.weekly);   // (the week's party is the week's)
     });
     this.$("#btn-reroll-all").disabled = Boolean(this.weekly); this.$("#btn-suggest").disabled = Boolean(this.weekly);
     this.renderAdvice();
@@ -11243,7 +11337,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#seed").value = seed;
     this.chosenKit = this.$("#kit").value || "pauper";
     this.lastAscension = Number(this.$("#ascension").value) || 0;
-    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row, quirk: s.quirk || null })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value, { ascension: this.lastAscension, iron: this.$("#iron").checked });
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row, quirk: s.quirk || null, origin: s.origin || null })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value, { ascension: this.lastAscension, iron: this.$("#iron").checked });
   },
 
   startNew() { this.openCreate(); },

@@ -1585,6 +1585,46 @@ test("the village has people: the chronicler pays for chapters and sells rumours
   void found;
 });
 
+test("heroes with pasts: six origins with their touches and their words at the walls, banter by situation, last words and epitaphs", () => {
+  const CM = load();
+  assert.strictEqual(Object.keys(CM.ORIGINS).length, 6);
+  for (const [id, O] of Object.entries(CM.ORIGINS)) for (const key of Object.keys(O.lines)) assert.ok(CM.LORE_TEXT[key], `${id} speaks at ${key}, which exists`);
+  assert.ok(Object.values(CM.BANTER2).reduce((n, l) => n + l.length, 0) >= 25 && CM.JOKES.length);
+  const party = fixedParty(CM); party[0].origin = "caerduin"; party[1].origin = "east"; party[2].origin = "order"; party[3].origin = "nobody";
+  const luck = party[3].stats.luck;
+  const game = new CM.Game(); game.newGame("origin-1", party);
+  assert.strictEqual(game.party[0].origin, "caerduin"); assert.strictEqual(game.party[3].stats.luck, Math.min(25, luck + 1), "nobody: +1 Luck");
+  assert.strictEqual(game.story.read["carving.catacombs.1"], 1, "of Caer Duin: the first line known");
+  const g0 = new CM.Game(); g0.newGame("origin-1", fixedParty(CM)); assert.strictEqual(game.gold, g0.gold + 20, "from the east: twenty gold more");
+  assert.strictEqual(game.startParty[0].origin, "caerduin", "the origin rides in the run's spec");
+  // a word at the wall: the floor-3 carving is Caer Duin's grandchild's
+  game.enterFloor(3, "down");
+  const [k, f] = Object.entries(game.floor.features).find(([, x]) => x.type === "carving" && x.text === 2);
+  game.floor.pos = k.split(",").map(Number); game.floor.facing = f.face; game.use();
+  assert.ok(game.messages.some((m) => m.includes(`${game.party[0].name}: "The bells.`)), game.messages.slice(-4).join(" | "));
+  assert.ok(game.journal.some((e) => e.key === `said.${game.party[0].name}.carving.catacombs.3`)); game.use(); 
+  assert.strictEqual(game.messages.filter((m) => m.includes(`${game.party[0].name}: "The bells.`)).length, 1, "said once");
+  // the order: no curse takes hold
+  assert.strictEqual(game.afflict(game.party[2], "curse", "a test"), false); assert.ok(!(game.party[2].status || {}).curse);
+  // banter: a line for the pair, by situation; none in a fight
+  const said = game.banter("camp"); assert.ok(said && said.includes(game.party[(game.tally.steps || 0) % 4].name));
+  game.mode = "combat"; assert.strictEqual(game.banter("camp"), ""); game.mode = "explore";
+  // last words and the memorial at the party's end; an epitaph set, kept, and said by the priest
+  for (const h of game.party) h.hp = 0;
+  game.endRun(false);
+  assert.strictEqual(game.memorial.filter((m) => m.seed === "origin-1").length, 4, "everyone laid to rest");
+  const m0 = game.memorial.find((m) => m.name === party[0].name);
+  assert.ok(m0.last && m0.last.length > 2 && m0.origin === "caerduin"); assert.ok(game.messages.some((x) => x.includes("last words")));
+  assert.ok(game.setEpitaph(game.memorial.indexOf(m0), "She looked, and did not look away."));
+  const g2 = new CM.Game(); assert.strictEqual(g2.memorial.find((m) => m.name === party[0].name).epitaph, "She looked, and did not look away.");
+  assert.ok(g2.priestNames(g2.memorial.findIndex((m) => m.name === party[0].name)).some((l) => l.includes("She looked")));
+  assert.strictEqual(CM.lastWords({ name: "x", cls: "Knight", origin: null }, 3).length > 0, true);
+  // the lower town wades dry-shod: the torch burns as on dry stone
+  const g3 = new CM.Game(); const p3 = fixedParty(CM); p3[0].origin = "lowertown"; g3.newGame("origin-3", p3);
+  g3.floor.special = "wading"; g3.light = { kind: "torch", left: 100 }; g3.burn(); assert.strictEqual(g3.light.left, 99);
+  const g4 = new CM.Game(); g4.newGame("origin-3", fixedParty(CM)); g4.floor.special = "wading"; g4.light = { kind: "torch", left: 100 }; g4.burn(); assert.strictEqual(g4.light.left, 98);
+});
+
 (async () => {
   let failed = 0;
   for (const t of tests) {

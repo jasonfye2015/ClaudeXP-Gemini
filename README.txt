@@ -782,6 +782,17 @@ The village has people (the fifth big update, phase 5 - v3.5)
   carvings' voice; and the dungeon writes it back - near the surface, a legend of one of your own parties, carved
   in a newer hand (CM.legends). The village's own chapter of the codex opens a line at a time as renown is spent.
 
+Heroes with pasts (the fifth big update, phase 6 - v3.6)
+  Six origins at creation (CM.ORIGINS): of Caer Duin (the Catacombs' first line known at the stair), dwarf-friend
+  (a dwarves' mark read gives the way down too), from the east (twenty gold), of the Patriarch's order (no curse
+  takes hold), of the lower town (the party wades dry-shod), nobody from nowhere (+1 Luck). Each speaks at the
+  walls that concern it, once a run, and the word goes in the journal (game.originLines).
+  Banter by situation (CM.BANTER2, forty lines: the camp, after a guardian, at a carving, on a flooded floor, with
+  a hero down), for the bonded pair or two who stand, never in a fight; a long bond's running joke (CM.JOKES).
+  Last words (CM.lastWords: by origin, by calling, by the band) for every hero laid to rest when the party falls -
+  they all are, now, so the memorial and your own dead agree; an epitaph (the shrine, sixty characters) that the
+  priest and the hero's ghost repeat. A trainer's word to every new hero of their calling at the stair.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

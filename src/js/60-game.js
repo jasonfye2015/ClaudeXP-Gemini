@@ -166,7 +166,8 @@ CM.Game = class {
   remember2(hero) {
     this.memorial = this.memorial || [];
     const buried = [hero.weapon, hero.armor].filter((it) => it && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0] || null;
-    this.memorial.unshift({ name: hero.name, cls: hero.cls, level: hero.level, floor: this.floor ? this.floor.number : 0, seed: this.seed, date: CM.today(), buried });
+    const floor = this.floor ? this.floor.number : 0;
+    this.memorial.unshift({ name: hero.name, cls: hero.cls, level: hero.level, origin: hero.origin || null, floor, seed: this.seed, date: CM.today(), buried, last: CM.lastWords(hero, floor), epitaph: "" });
     this.memorial = this.memorial.slice(0, this.villageLevel("shrine") >= 3 ? 60 : 30);
     CM.store.set("memorial", this.memorial);
   }
@@ -313,7 +314,7 @@ CM.Game = class {
     this.awakened = mode === "awakened" && Boolean(this.achievements.bottom); this.behind = 0;
     this.morale = CM.MORALE.start; this.fed = 0; this.trail = [];
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
-    this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row, quirk: h.quirk || null }));
+    this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row, quirk: h.quirk || null, origin: h.origin || null }));
     this.startMutators = this.mutators.slice(); this.runLog = []; this.formation = "line";
     this.ascension = CM.clamp(Number((opts || {}).ascension) || 0, 0, Math.min(CM.ASCENSION.length, this.ascensionMax())); this.iron = Boolean((opts || {}).iron);
     this.ironAllow = true;                                               // (the first save of an Iron run, at the top of the stair)
@@ -326,6 +327,11 @@ CM.Game = class {
     for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
     this.retiredThisRun = false;
     this.enterFloor(1, "down");
+    for (const h of this.party) {                                        // the origins' touches at the stair, and a trainer's word to their pupil
+      if (h.origin === "east") this.gold += 20;
+      if (h.origin === "caerduin") this.markRead("carving.catacombs.1");
+      const t = this.trainerFor(h.cls); if (t && CM.TRAINER_LINES[h.cls]) this.say(`${t.name}, who taught ${h.name}: ${CM.TRAINER_LINES[h.cls]}`);
+    }
     this.ironAllow = false;
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
@@ -384,6 +390,7 @@ CM.Game = class {
     }
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
+    if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
     if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }
     for (const h of this.alive()) if (h.cls === "Necromancer" && !h.familiar && h.level >= CM.FAMILIAR_AT) { h.familiar = "skull"; this.say(`A skull on ${h.name}'s belt opens its jaws: ${CM.FAMILIARS.skull.what}.`); }
     if (fresh && this.has("pilgrim")) { const xp = 60 * number; for (const h of this.alive()) h.xp += xp; this.say(`Pilgrim: ${xp} experience each, for the floor itself.`); }

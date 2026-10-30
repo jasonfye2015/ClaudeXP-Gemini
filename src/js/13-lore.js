@@ -427,6 +427,47 @@ CM.chronicle = function (fame, ledger) {
 };
 CM.legendLine = (e) => { const first = (e.party || [])[0] || "", m = /^(.*) the (\w+) \d+$/.exec(first); return `Carved here in a newer hand: HERE ${(m ? `${m[1].toUpperCase()} THE ${m[2].toUpperCase()}` : "FOUR")} AND THREE PASSED, GOING DOWN TO THE KING. ${e.reminded ? "THEY TALKED HIM DOWN." : "THEY CAME BACK UP."}`; };
 
+// ---- heroes with pasts: six origins, each a small touch and a handful of lines said at the walls that concern them ----
+CM.ORIGINS = {
+  caerduin: { name: "Of Caer Duin", what: "a grandchild of the city: the first line of the Catacombs' chapter is known before the stair",
+    lines: { "carving.catacombs.1": "My grandmother said he wept for each of them. She didn't say he stopped.", "carving.catacombs.3": "The bells. She said they were taken down. She didn't say they were still here.", "carving.vaults.1": "The lower town. My family's from there. Was from there.", "carving.palace.2": "She said they sat where they sat. I thought it was a way of talking.", "carving.drowned.2": "Let in. Grandmother never said that. I don't think she knew." } },
+  dwarffriend: { name: "Dwarf-friend", what: "raised among the deep halls' traders: a dwarves' mark read tells them the way down as well",
+    lines: { "carving.catacombs.8": "", "carving.halls.1": "Sealed from within. That's a dwarf word for a thing you don't do twice.", "carving.halls.3": "They loved stone. I know. I was raised on their bread, which is also stone.", "carving.crystal.1": "Our pride, they said. They never said what it cost. Dwarves don't.", "carving.crystal.3": "Brokk. I knew a Brokk. Everyone who knew dwarves knew a Brokk.", "carving.root.2": "The root. I heard that word once, as a child, and the one who said it was shushed." } },
+  east: { name: "From the east", what: "a traveller with a purse and a story: twenty gold more at the stair",
+    lines: { "carving.vaults.1": "From the east. We get blamed for a lot, in the east.", "carving.foundry.5": "From here. I knew it. Nobody from the east would carry a box that far without opening it.", "carving.palace.3": "Where I come from we'd have thrown the box in the river. Then again, look at the river.", "carving.drowned.3": "A ring the whole town knew. In the east we'd call that a confession." } },
+  order: { name: "Of the Patriarch's order", what: "a novice of the house on the hill: no curse takes hold on them",
+    lines: { "carving.ossuary.2": "Before there was a king. Yes. We're taught that with pride. We're not taught the rest.", "carving.ossuary.3": "He did it first. Our first father. I was taught to pray to him.", "carving.ossuary.5": "A holy thing, or nothing. That's ours. I've said it a thousand times without knowing what it meant.", "carving.vaults.5": "The heart kept apart. It's in our oldest book. I thought it was a metaphor.", "carving.root.3": "He listened to this. We all did. We call it prayer." } },
+  lowertown: { name: "Of the lower town", what: "born on the water: the party wades as if dry-shod while they stand",
+    lines: { "carving.catacombs.5": "Rose and never fell. That's what they told us children. The old ones never said it.", "carving.drowned.1": "This was my street. Or it would have been.", "carving.drowned.2": "Let in. My grandfather used to say it to himself. Let in. Let in. We thought he was mad.", "carving.drowned.3": "Marguerite. I had an aunt Marguerite. Every family on the water did.", "guardian.knight": "The captain. We still say that: as stubborn as the captain. We stopped saying why." } },
+  nobody: { name: "Nobody from nowhere", what: "no past that anyone remembers: +1 Luck, and nothing to say at the walls but the once",
+    lines: { "carving.root.4": "It dreamed all this. Then it dreamed me, too, I suppose. That's a kind of belonging." } },
+};
+delete CM.ORIGINS.dwarffriend.lines["carving.catacombs.8"];
+// banter by situation, said once at a time, never in a fight: {a} and {b} are a bonded pair, or two who stand
+CM.BANTER2 = {
+  camp: ["{a} mends {b}'s cloak by the fire without being asked, and badly.", "{b} tells the one about the troll and the chair. {a} has heard it. {a} laughs anyway.", "{a} and {b} split the last ration down the middle and both pretend the other half was bigger.", "{b} asks {a} what they'll do, after. {a} says: sleep. {b} says: me too. Neither of them means it.",
+    "{a} counts the party on their fingers. Four. {a} does it again.", "{b} hums the queen's song without knowing where they heard it. {a} tells them to stop.", "{a} cleans a blade that is already clean. {b} watches, and understands.", "{b} says the camp fire is the best thing in the world. {a} says the second best. Neither says what the first is."],
+  guardian: ["{a} sits down on the floor where it fell. {b} sits beside them. Nobody says anything for a while.", "{b}: 'That was a big one.' {a}: 'They get bigger.' {b}: 'I know. I was being kind.'", "{a} wipes {b}'s face with a sleeve. {b} lets them.", "{b} asks if anyone saw what it said at the end. {a} says: yes. {a} doesn't repeat it.",
+    "{a} picks the relic up and puts it down again. {b} picks it up and keeps it.", "{b}: 'It talked.' {a}: 'They all talk.' {b}: 'Not like that.'"],
+  carving: ["{b} reads it over {a}'s shoulder and says nothing, which for {b} is a great deal.", "{a}: 'Do you believe that?' {b}: 'I believe someone carved it.'", "{b} runs a hand over the letters. 'A left hand,' {b} says. 'Hurrying.'", "{a} says the walls get worse the lower you go. {b} says they get truer. {a} says that's what worse means.",
+    "{b} wants to carve something too. {a} says: what? {b} thinks about it for a long time."],
+  water: ["{a} says the water's cold. {b} says it's not the cold that worries them.", "{b} keeps {a}'s torch dry, which takes both hands and all of {b}'s attention.", "{a} tries not to think about the lower town's barred doors. {b} can tell.", "{b} says there are fish. {a} says those aren't fish."],
+  down: ["{a} carries {b}'s pack as well as their own and says nothing about it.", "{b} keeps looking back at the one who isn't walking. {a} takes {b}'s elbow.", "{a} says they'll be all right. {b} says: yes. {a} says: I mean it. {b} says: I know you do.", "{b} starts to say something about the camp, and stops, and {a} finishes it for them."],
+};
+CM.JOKES = ["{a}: 'Oak, was it?' {b}: 'Shut up.' It is the fortieth time. It is still funny.", "{b} points at every chair they pass. {a} has stopped reacting, which only makes it better.", "{a}: 'If you see a troll -' {b}: '- find a chair. Yes. Thank you.'"];
+// last words, by calling, by origin, and by the band they fell in (the first that fits)
+CM.LAST_WORDS = {
+  cls: { Knight: "Hold the line.", Paladin: "I'm not afraid. I thought I would be.", Rogue: "Check my pockets. Not for you - for the next ones.", Ranger: "I never missed. Remember that I never missed.", Cleric: "I've nothing left for myself. Good. That's how it should go.", Mage: "The walls were right. Read the walls.",
+    Druid: "It was only hungry.", Bard: "I'd have liked a better last line.", Monk: "Empty hands.", Necromancer: "I'll see you again. I mean it kindly.", Artificer: "The box was good work. Damn it." },
+  origin: { caerduin: "Grandmother. I looked.", dwarffriend: "Sealed from within.", east: "Tell them in the east it was worth the walk.", order: "Correct. One brings nothing.", lowertown: "Let in. Let in.", nobody: "Say my name at the bottom." },
+  band: ["Down. Go down.", "The water's not so cold.", "Loved stone. Yes.", "He remembers. Make sure he remembers.", "Tell the captain.", "It's thinking about me. I can feel it.", "Don't let it have my face.", "Shift's over.", "Keep the bones in order.", "Wake it. Or don't. I don't mind now."],
+};
+CM.lastWords = function (hero, floor) {
+  const o = hero.origin && CM.LAST_WORDS.origin[hero.origin], c = CM.LAST_WORDS.cls[hero.cls];
+  const pick = CM.hashSeed(`${hero.name}:${floor}`) % 3;
+  return (pick === 0 && o) || (pick <= 1 && c) || CM.LAST_WORDS.band[Math.min(9, Math.floor(Math.max(0, floor - 1) / 5))] || c || o || "...";
+};
+
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)
 CM.LORE_KEYS = [];
 for (let n = 1; n <= 50; n++) CM.LORE_KEYS.push(`carving.${["catacombs", "vaults", "halls", "palace", "drowned", "fungal", "crystal", "foundry", "ossuary", "root"][Math.floor((n - 1) / 5)]}.${((n - 1) % 5) + 1}`);

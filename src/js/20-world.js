@@ -323,7 +323,7 @@ CM.recompute = function (h) {
   return h;
 };
 
-CM.makeHero = function (cls, name, stats, row, quirk) {
+CM.makeHero = function (cls, name, stats, row, quirk, origin) {
   const c = CM.CLASSES[cls];
   const h = { name: (name || "").trim() || cls, cls, level: 1, xp: 0, hp: 1, max: 1, mp: 0, maxmp: 0, atk: 1, df: 0,
     stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null, path: null, learned: [], quirk: CM.QUIRKS[quirk] ? quirk : null,
@@ -331,6 +331,8 @@ CM.makeHero = function (cls, name, stats, row, quirk) {
     armor: { name: c.armor, kind: "armor", slot: "armor", power: 0, value: 5, props: { weight: "light" } },
     offhand: null, helm: null, ring: null, amulet: null, boots: null, cloak: null };
   if (h.quirk) for (const [st, d] of Object.entries(CM.QUIRKS[h.quirk].stats)) h.stats[st] = CM.clamp(h.stats[st] + d, 3, 25);
+  h.origin = CM.ORIGINS[origin] ? origin : null;
+  if (h.origin === "nobody") h.stats.luck = CM.clamp(h.stats.luck + 1, 3, 25);
   CM.recompute(h);
   h.hp = h.max; h.mp = h.maxmp;
   return h;
@@ -390,7 +392,7 @@ CM.cantWear = function (h, item) {
 };
 
 CM.newParty = function (chosen) {                                         // chosen: [{cls, name, stats, row}] - else the classic four
-  return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row, p.quirk));
+  return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row, p.quirk, p.origin));
 };
 
 // someone to hire at the camp: a calling, a name, a roll, a level a step behind the party's

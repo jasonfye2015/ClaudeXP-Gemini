@@ -22,7 +22,7 @@ Object.assign(CM.UI.prototype, {
       const div = document.createElement("div");
       div.className = "slot";
       div.innerHTML = `<div class="top"><div class="portrait-slot"></div><div class="who"><input class="name" type="text" maxlength="14" spellcheck="false" title="Their name"><button class="dice" title="Another name">&#x2684;</button>
-        <select class="cls" title="Their calling"></select><select class="quirk" title="A quirk: a small, honest trade-off">${["<option value=''>No quirk</option>"].concat(Object.entries(CM.QUIRKS).map(([id, q]) => `<option value="${id}">${q.name}</option>`)).join("")}</select></div></div>
+        <select class="cls" title="Their calling"></select><select class="origin" title="Where they come from: a small touch, and a word to say at the walls that concern them">${["<option value=''>No past to speak of</option>"].concat(Object.entries(CM.ORIGINS).map(([id, o]) => `<option value="${id}">${o.name}</option>`)).join("")}</select><select class="quirk" title="A quirk: a small, honest trade-off">${["<option value=''>No quirk</option>"].concat(Object.entries(CM.QUIRKS).map(([id, q]) => `<option value="${id}">${q.name}</option>`)).join("")}</select></div></div>
         <div class="role"></div>
         <table class="stats"></table>
         <div class="derived"></div>
@@ -30,6 +30,7 @@ Object.assign(CM.UI.prototype, {
       div.querySelector(".name").addEventListener("input", (e) => { this.slots[i].name = e.target.value; this.renderAdvice(); });
       div.querySelector(".dice").addEventListener("click", () => { this.slots[i].name = CM.randomName(); this.renderCreate(); });
       div.querySelector(".quirk").addEventListener("change", (e) => { this.slots[i].quirk = e.target.value || null; this.renderCreate(); });
+      div.querySelector(".origin").addEventListener("change", (e) => { this.slots[i].origin = e.target.value || null; this.renderCreate(); });
       div.querySelector(".cls").addEventListener("change", (e) => {
         const s = this.slots[i];
         s.cls = e.target.value; s.stats = CM.rollStats(s.cls); s.row = CM.CLASSES[s.cls].row;
@@ -84,16 +85,16 @@ Object.assign(CM.UI.prototype, {
       slot.appendChild(this.portrait(s.cls, 56));
       if (div.querySelector(".name").value !== s.name) div.querySelector(".name").value = s.name;
       div.querySelector(".cls").value = s.cls;
-      div.querySelector(".quirk").value = s.quirk || "";
-      div.querySelector(".role").textContent = `${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}. ${c.blurb}`;
+      div.querySelector(".quirk").value = s.quirk || ""; div.querySelector(".origin").value = s.origin || "";
+      div.querySelector(".role").textContent = `${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}. ${c.blurb}${s.origin && CM.ORIGINS[s.origin] ? ` ${CM.ORIGINS[s.origin].name}: ${CM.ORIGINS[s.origin].what}.` : ""}`;
       div.querySelector(".stats").innerHTML = CM.STATS.map((st) => {
         const v = s.stats[st], key = st === c.key;
         return `<tr class="${key ? "key" : ""}"><td>${CM.STAT_NAMES[st]}</td><td class="v">${v}</td><td class="hint">${key ? "their calling's stat" : CM.STAT_HINTS[st]}</td></tr>`;
       }).join("");
-      const h = CM.makeHero(s.cls, s.name, Object.assign({}, s.stats), s.row, s.quirk);
+      const h = CM.makeHero(s.cls, s.name, Object.assign({}, s.stats), s.row, s.quirk, s.origin);
       div.querySelector(".derived").textContent = `${h.max} health${h.maxmp ? `, ${h.maxmp} magic` : ""}, attack ${h.atk}, defence ${h.df} - ${h.weapon.name} and ${h.armor.name}`;
       for (const b of div.querySelectorAll("button[data-row]")) b.classList.toggle("on", b.dataset.row === s.row);
-      for (const el of div.querySelectorAll(".cls, .reroll, .dice, .quirk")) el.disabled = Boolean(this.weekly);   // (the week's party is the week's)
+      for (const el of div.querySelectorAll(".cls, .reroll, .dice, .quirk, .origin")) el.disabled = Boolean(this.weekly);   // (the week's party is the week's)
     });
     this.$("#btn-reroll-all").disabled = Boolean(this.weekly); this.$("#btn-suggest").disabled = Boolean(this.weekly);
     this.renderAdvice();
@@ -110,7 +111,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#seed").value = seed;
     this.chosenKit = this.$("#kit").value || "pauper";
     this.lastAscension = Number(this.$("#ascension").value) || 0;
-    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row, quirk: s.quirk || null })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value, { ascension: this.lastAscension, iron: this.$("#iron").checked });
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row, quirk: s.quirk || null, origin: s.origin || null })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value, { ascension: this.lastAscension, iron: this.$("#iron").checked });
   },
 
   startNew() { this.openCreate(); },

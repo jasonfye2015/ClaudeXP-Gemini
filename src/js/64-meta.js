@@ -43,6 +43,7 @@ Object.assign(CM.Game.prototype, {
     this.checkContracts(entry);
     entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party, { ascension: this.ascension || 0, iron: this.iron });
     entry.weekly = String(this.seed).startsWith("weekly-");
+    if (!won) for (const h of this.party) if (h.hp <= 0 && !(this.memorial || []).some((m) => m.name === h.name && m.seed === this.seed)) { this.remember2(h); this.say(`${h.name}'s last words: "${this.memorial[0].last}"`); }
     if (!won && !this.bottom) {                                          // where they fell: a later run on this seed finds them
       const carried = this.party.flatMap((h) => CM.equipped(h)).filter((it) => !(it.props && (it.props.relic || it.props.unique)) && !["weapon", "armor"].includes(it.kind));
       const item = carried.length ? carried[Math.floor(this.rnd.next() * carried.length)] : null;
@@ -324,6 +325,39 @@ Object.assign(CM.Game.prototype, {
     return names.map((m) => `"${m.name}, ${m.cls}, who fell on floor ${m.floor}.${m.epitaph ? ` ${m.epitaph}` : ""}${m.candle ? " A candle burns." : ""}"`);
   },
   book() { return CM.chronicle(this.fame, this.ledger); },
+  // an epitaph for a name on the memorial (the village's shrine; the priest and the ghost repeat it)
+  setEpitaph(i, text) {
+    const m = (this.memorial || [])[i];
+    if (!m) return false;
+    m.epitaph = String(text || "").trim().slice(0, 60);
+    CM.store.set("memorial", this.memorial);
+    return true;
+  },
+  // a hero's word at a wall that concerns their past, once a run
+  originLines(key) {
+    this.story.said = this.story.said || [];
+    for (const h of this.alive()) {
+      const O = h.origin && CM.ORIGINS[h.origin], line = O && O.lines[key];
+      if (!line || this.story.said.includes(`${h.name}:${key}`)) continue;
+      this.story.said.push(`${h.name}:${key}`);
+      this.say(`${h.name}: "${line}"`);
+      this.remember("ghost", `${h.name}, at the wall on floor ${this.floor ? this.floor.number : 0}: "${line}"`, { who: h.name, key: `said.${h.name}.${key}` });
+      if (h.origin === "dwarffriend" && ["halls", "crystal"].includes((CM.LORE_TEXT[key] || {}).chapter)) { const goal = CM.goalOf(this.floor); if (goal) this.say(`${h.name} reads the dwarves' mark again: the way down lies ${this.directionTo(goal.split(",").map(Number))}.`); }
+    }
+  },
+  // banter: one line, the bonded pair's or two who stand, by what just happened (never in a fight)
+  banter(kind) {
+    const lines = CM.BANTER2[kind] || [];
+    if (!lines.length || this.mode === "combat") return "";
+    const alive = this.alive(); if (alive.length < 2) return "";
+    const bond = (this.bonds || [])[Math.floor((this.tally.fights || 0) / 7) % Math.max(1, (this.bonds || []).length)];
+    const [a, b] = bond || [alive[(this.tally.steps || 0) % alive.length].name, alive[((this.tally.steps || 0) + 1) % alive.length].name];
+    if (a === b) return "";
+    const key = `${a}|${b}`, joke = bond && (this.pairFights || {})[key] >= CM.BOND_FIGHTS * 3 && kind === "camp" && (this.tally.fights || 0) % 2 === 0;
+    const text = (joke ? CM.JOKES[(this.tally.fights || 0) % CM.JOKES.length] : lines[((this.tally.fights || 0) + (this.tally.steps || 0)) % lines.length]).replace(/\{a\}/g, a).replace(/\{b\}/g, b);
+    this.say(text);
+    return text;
+  },
   metGhost(name) { this.village.ghostsMet = (this.village.ghostsMet || []).filter((n) => n !== name).concat(name).slice(-40); this.saveVillage(); },
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); },
 

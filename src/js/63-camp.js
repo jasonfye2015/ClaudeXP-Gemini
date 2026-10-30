@@ -301,7 +301,8 @@ Object.assign(CM.Game.prototype, {
     this.sound("heal");
     this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass. Everyone eats.");
     const bond = (this.bonds || [])[Math.floor((this.tally.fights || 0) / 7) % Math.max(1, (this.bonds || []).length)];
-    if (bond) this.say(CM.BANTER[(this.tally.fights || 0) % CM.BANTER.length].replace("{a}", bond[0]).replace("{b}", bond[1]));
+    if (bond && (this.tally.fights || 0) % 3 === 0) this.say(CM.BANTER[(this.tally.fights || 0) % CM.BANTER.length].replace("{a}", bond[0]).replace("{b}", bond[1]));
+    else this.banter("camp");
     this.saveRun();
   },
 

@@ -227,7 +227,7 @@ The story's surface: where the codex lives, and where the next run is seeded.
 
 Size: M (writing: ~3,000 words).
 
-## Phase 6 - Heroes with pasts - v3.6
+## Phase 6 - Heroes with pasts - v3.6 - DONE
 
 - **Origins** at creation (six: *of Caer Duin*, *dwarf-friend*, *from the east*, *of the Patriarch's order*, *of the
   lower town*, *nobody from nowhere*): one small mechanical touch each (a dwarf-friend reads the dwarves' marks as

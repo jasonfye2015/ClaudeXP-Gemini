@@ -240,7 +240,7 @@ Object.assign(CM.Game.prototype, {
     const l = this.light;
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown);
+    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || h.origin === "lowertown");
     l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
@@ -323,6 +323,8 @@ Object.assign(CM.Game.prototype, {
       this.say("You read the carving on the wall.");
       this.markRead(lkey);
       this.remember("carving", text, { key: lkey });
+      this.originLines(lkey);
+      if ((this.tally.steps || 0) % 3 === 0) this.banter("carving");
       this.emit("lore", text);
       this.dirty = true;
       return;
