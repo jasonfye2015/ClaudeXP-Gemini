@@ -33,6 +33,7 @@ CM.Autopilot = class {
   }
   potions() {
     const game = this.game;
+    { const dish = game.bag.findIndex((i) => i.kind === "dish"); if (dish >= 0 && ((game.fed || 0) >= CM.HUNGER.hungry || (!game.meal && game.mode === "explore"))) { game.give(dish, game.party.indexOf(this.alive()[0])); this.tools.dishes = (this.tools.dishes || 0) + 1; } }
     if ((game.fed || 0) >= CM.HUNGER.hungry) { const row = game.bag.findIndex((i) => i.kind === "ration"); if (row >= 0) game.give(row, game.party.indexOf(this.alive()[0])); }
     for (const h of this.alive()) {
       if (h.hp < h.max * 0.4) { const row = game.bag.findIndex((i) => i.kind === "heal" || i.kind === "greaterheal"); if (row >= 0) game.give(row, game.party.indexOf(h)); }

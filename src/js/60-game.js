@@ -477,7 +477,8 @@ CM.Game = class {
       if (CM.partyProp(this.party, "dowsing")) for (const [k, t] of Object.entries(fl.things)) if (t.type === "node") mark(k);
       if (this.rumourBox === number) { for (const [k, t] of Object.entries(fl.things)) if (t.type === "strongbox") { mark(k); this.say("The fence's rumour was good: the strongbox is marked on the map."); } this.rumourBox = 0; }
     }
-    if (fresh && this.meal && this.meal.floor < number) { this.meal = null; this.say("The meal has worn off."); for (const h of this.party) { h.mealLuck = 0; CM.recompute(h); } }
+    if (fresh && this.meal && this.meal.floor < number) { this.meal = null; this.say("The meal has worn off."); for (const h of this.party) { h.mealLuck = 0; h.mealStat = null; CM.recompute(h); } }
+    if (fresh && this.staleDishes) this.staleDishes();
     if (fresh && this.buffs) { for (const k of ["stoneskin", "night", "sharpen", "salve", "rested"]) if (this.buffs[k] !== undefined && this.buffs[k] < number) delete this.buffs[k]; if (this.buffs.owleyes) { this.buffs.owleyes -= 1; if (this.buffs.owleyes <= 0) { delete this.buffs.owleyes; this.say("The owl's eyes close: the dark is the dark again."); } } }
     if (fresh) for (const h of this.alive()) if (CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "haunted")) this.afflict(h, "curse", "the haunted thing");
     if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }

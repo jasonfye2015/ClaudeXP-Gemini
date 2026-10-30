@@ -52,6 +52,7 @@ Object.assign(CM.Game.prototype, {
     this.logAct("drink");
     this.gold -= CM.DRINK_PRICE; this.spend("tavern", CM.DRINK_PRICE); this.floor.drank = true;
     const heart = this.villageLevel("tavern") >= 1 ? 100 : 90; if ((this.morale || CM.MORALE.start) < heart) this.morale = heart;
+    this.fed = 0; if (!this.meal) { this.meal = { kind: "pottage", dish: true, floor: 1 }; for (const h of this.party) { h.mealLuck = 0; h.mealStat = "str"; CM.recompute(h); } this.say("The round comes with the pot: bean pottage, for the first floor."); }   // (the round is a meal)
     this.sound("coin"); this.say(`A round at the Hanged Lantern, and the party is ${this.moraleWord().toLowerCase()}.`);
     this.saveRun(); this.emit("change");
     return "";

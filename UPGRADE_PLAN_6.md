@@ -171,7 +171,7 @@ Size: L.
 
 Size: M.
 
-## Phase 6 - Cooking as a trade - v6.7
+## Phase 6 - Cooking as a trade - v6.7 - DONE
 
 - **The kitchen** (home level 3) becomes a trade: `CM.DISHES` (thirty): bread (flour), porridge (barley), an
   omelette (eggs), a stew (meat and turnip), a pie (meat, flour, an egg), apple cake, a roast (venison, apples),

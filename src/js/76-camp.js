@@ -213,6 +213,7 @@ Object.assign(CM.UI.prototype, {
       b.addEventListener("click", () => { this.$("#alchemist-note").textContent = g.cook(i) || "Done."; this.renderAlchemist(); this.refresh(); });
       row.appendChild(b); box.appendChild(row);
     }
+    if (g.whereCook() || g.inTown()) { const title = document.createElement("div"); title.className = "list-title"; title.textContent = g.whereCook() === "field" ? "The cook's fire on the floor (a torch a dish)" : "The fire: dishes"; box.appendChild(title); this.dishButtons(box, (fn) => { this.$("#alchemist-note").textContent = fn() || "Done."; this.renderAlchemist(); this.refresh(); }); }
     for (const [id, r] of Object.entries(CM.RECIPES)) {
       const row = document.createElement("div");
       row.className = "recruit";

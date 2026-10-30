@@ -258,7 +258,7 @@ Object.assign(CM.Game.prototype, {
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
     const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.waterwalk) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
-    if ((CM.partyProp(this.party, "torchSave") || (this.meal && CM.MEALS[this.meal.kind] && CM.MEALS[this.meal.kind].torch)) && (this.steps || 0) % 3 === 0) return;   // (of the Lantern, or a meal that lasts: every third step is free)
+    if ((CM.partyProp(this.party, "torchSave") || (CM.mealOf(this).torch)) && (this.steps || 0) % 3 === 0) return;   // (of the Lantern, or a meal that lasts: every third step is free)
     l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0) + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "dark")) ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;

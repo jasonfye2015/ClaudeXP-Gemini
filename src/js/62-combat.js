@@ -31,7 +31,7 @@ Object.assign(CM.Game.prototype, {
     this.foeKey = key;
     delete thing.anim;
     if (!(this.song && this.songEpic === this.floor.number)) this.song = 0;   // the Bard's song lasts the fight (an Epic one, the floor)
-    for (const h of this.party) { h.cried = false; h.winded = false; h.defending = false; h.guardedBy = null; h.guarding = null; h.used = {}; h.struck = false; h.undied = false; h.avenged = false;
+    for (const h of this.party) { h.cried = false; h.winded = false; h.defending = false; h.guardedBy = null; h.guarding = null; h.used = {}; h.struck = false; h.undied = false; h.avenged = false; h.winded2 = false;
       if (CM.trait(h, "manawell") && h.hp > 0) h.mp = Math.min(h.maxmp, h.mp + Math.ceil(h.maxmp / 3)); }
     for (const m of this.foes) { m.held = 0; m.asleep = 0; m.blind = 0; m.marked = false; m.charged = false; m.fled = false; m.dead = m.hp <= 0; m.chilled = 0; m.warded = 0; m.intent = null; if (!m.row) m.row = (CM.monsterKind(m.kind || m.name) || {}).row || "front"; this.noteFoe(m, "seen"); }
     this.target = 0;
@@ -169,7 +169,7 @@ Object.assign(CM.Game.prototype, {
   // the round's end: poison bites, ailments run their course, trolls knit
   endRound() {
     const c = this.combat;
-    this.clock = (this.clock || 0) + 1;                                  // (a round is a minute)
+    this.clock = (this.clock || 0) + 1; if (this.secondWind) this.secondWind();                                  // (a round is a minute)
     for (const h of this.alive()) {
       const st = h.status || {};
       if (st.poison) {
@@ -208,7 +208,7 @@ Object.assign(CM.Game.prototype, {
     for (const m of this.living()) if (m.elite === "shielded") m.warded = Math.max(m.warded || 0, 1);
     for (const m of this.living()) if (m.bleeding > 0) { m.bleeding--; const n = 2 + Math.floor((this.floor ? this.floor.number : 1) / 8); m.hp -= n; this.say(`${CM.The(m)} bleeds (-${n}).`); if (m.hp <= 0 && !m.dead) { m.dead = true; this.emit("fx", { kind: "die", foe: m }); } }
     for (const h of this.alive()) {                                      // gear that mends (of Mending, a unique, three relics worn, the Order's set)
-      const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0) + (CM.setWorn(h) === "order" ? 2 : 0) + (this.meal && CM.MEALS[this.meal.kind] && CM.MEALS[this.meal.kind].regen ? 1 : 0);
+      const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0) + (CM.setWorn(h) === "order" ? 2 : 0) + (CM.mealOf(this).regen || 0);
       if (mend > 0 && h.hp < h.max) h.hp = Math.min(h.max, h.hp + mend);
     }
     if (this.alive().some((h) => CM.trait(h, "evergreen"))) for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 3);
@@ -379,12 +379,12 @@ Object.assign(CM.Game.prototype, {
   // a hero's numbers as they stand right now: a curse takes from them, the song and a blessing give
   effective(h) {
     const cursed = (h.status || {}).curse ? 2 : 0, bless = this.combat && this.combat.bless, point = this.point() === h ? 2 : 0;
-    const meal = this.meal && CM.MEALS[this.meal.kind] ? CM.MEALS[this.meal.kind] : {};
+    const meal = CM.mealOf(this);
     return { atk: Math.max(1, h.atk - cursed + (this.song === 2 ? 4 : this.song ? 2 : 0) + (bless ? 2 : 0) + (meal.atk || 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0) + point + (meal.df || 0)) };
   },
   stat(h, s) { return CM.heroStat(h, s); },
   hitChance(h) {
-    return CM.clamp(0.8 + CM.gearProp(h, "hitBonus") + (this.blessed() ? 0.05 : 0) + (this.rested && this.rested() ? 0.05 : 0) + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
+    return CM.clamp(0.8 + CM.gearProp(h, "hitBonus") + (CM.mealOf(this).hit || 0) + (this.blessed() ? 0.05 : 0) + (this.rested && this.rested() ? 0.05 : 0) + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
   },
   critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01 + CM.gearProp(h, "crit"), 0.02, 0.7); },
   resistChance(h) {
@@ -403,6 +403,7 @@ Object.assign(CM.Game.prototype, {
     if (status === "paralysis" && (CM.setWorn(h) === "masons" || CM.gearProp(h, "stun0"))) { this.say(`${h.name} stands like a mason's wall.`); return false; }
     if (status === "curse") this.cheer(-5, "a curse");
     const charm = CM.equipped(h).find((it) => it.props && it.props.resist === status && !it.unknown);
+    if (!charm && CM.mealOf(this).resist === status) { this.say(`${h.name} is well fed: the ${status} finds no purchase.`); return false; }
     if (charm) { this.say(`${h.name}'s ${CM.baseName(charm)} grows warm: the ${status === "stone" ? "gaze" : "touch"} finds no purchase.`); return false; }
     if (this.rnd.chance(this.resistChance(h))) { this.say(`${h.name} shrugs off ${CM.the(by)}'s ${status === "stone" ? "gaze" : "touch"}.`); return false; }
     h.status = h.status || {};

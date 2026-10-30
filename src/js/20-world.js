@@ -205,6 +205,7 @@ CM.itemLabel = function (item) {
   if (item.kind === "bar") bits.push(CM.ALLOYS[item.bar] ? `an alloy bar: the upgrading's coin` : `a bar: two and one of the kind above make an alloy; the upgrading's coin`);
   if (item.kind === "charcoal") bits.push("the smelter eats one a bar; the Wood's burner makes it from deadwood");
   if (item.kind === "quiver") bits.push("in the pack: a bow shoots a second arrow once a fight");
+  if (item.kind === "dish" && CM.DISHES[item.dish]) bits.push(`a dish, eaten by anyone: feeds the party, and ${CM.DISHES[item.dish].what}, for ${CM.plural(CM.DISHES[item.dish].floors, "floor")} (a cook's last longer); keeps two days${item.by ? "; " + item.by + "'s" : ""}`);
   if (item.kind === "seed") bits.push(`sown in a row at the farm in ${CM.CROPS[item.crop].sow.join(" or ")}: ${CM.plural(CM.CROPS[item.crop].yields, CM.CROPS[item.crop].name.toLowerCase())} in four dawns, and the seed back`);
   if (item.kind === "ingredient" && CM.INGREDIENTS[item.ingredient] && CM.INGREDIENTS[item.ingredient].food) bits.push(`the farm's food${item.spoils !== undefined ? ": keeps a week" : ""}`);
   if (item.kind === "hide") bits.push("for the hermit of the Deep Wood by day: a cloak, boots, a buckler, a quiver; or the forge's tempers");
@@ -468,7 +469,8 @@ CM.equipped = (h) => CM.SLOTS.map((s) => h[s]).filter(Boolean);
 CM.partyProp = (party, prop) => (party || []).filter((h) => h.hp > 0).reduce((n, h) => n + CM.gearProp(h, prop), 0);
 CM.heroStat = function (h, s) {
   let v = h.stats && h.stats[s] !== undefined ? h.stats[s] : 10;
-  if (s === "luck" && h.mealLuck) v += h.mealLuck;                     // (a meal that lasts: rat on a stick, kobold stew)
+  if (s === "luck" && h.mealLuck) v += h.mealLuck;
+  if (h.mealStat === s) v += 1;                                          // (a dish: +1 to a stat for its floors)                     // (a meal that lasts: rat on a stick, kobold stew)
   if (h.wound && (h.wound.stats || []).includes(s)) v -= 1;             // (a wound: a stat down by one until it is seen to)
   for (const it of CM.equipped(h)) {
     if (!it.props || it.unknown) continue;

@@ -1262,6 +1262,24 @@ The farm (the eighth big update, phase 4 - v6.6)
   from the real date (CM.season; the calendar's phase makes more of it). Automatic walks out to the farm by day when
   there is something to cut, take or sow, and comes back by the gate. Test: "the farm:".
 
+Cooking as a trade (the eighth big update, phase 6 - v6.7)
+  CM.DISHES is thirty-two dishes from the farm's, the Wood's and the beasts' things (src/js/69d-cook.js): bread,
+  porridge, an omelette, stew, meat pie, apple cake, roast venison, honey cakes, posset, beer, cheese, the hunter's
+  breakfast, the miner's pasty, the fisherman's soup (a new river node in the Wood gives fish), the dwarves' bread
+  remade, the Queen's cake, and the dungeon's own - rat on a stick, kobold stew, spore-cap fry, troll's heart - among
+  others. A dish is made at the home's kitchen (its third level), at a camp's fire, or on the floor by a cook of the
+  third level for a torch, from things in the pack (CM.canCook names the rows), and it travels: a thing in the pack
+  that keeps two days (stale ones are thrown out at a fresh floor), eaten by anyone from the bag ("Eat, served by").
+  Eating feeds the party and does the dish's thing for its floors - +1 or +2 to attack or defence, blows that land
+  more often, mending a round, a stat raised one, Luck, the torch burning slower, the heart lifted, an ailment that
+  finds no purchase, a second wind (at a quarter health a hero mends a quarter, once a fight) - the better dishes two
+  things; one dish at a time, and eating another replaces it (the old meat meals go through the same door:
+  CM.mealOf). A hero may take the apron (h.cook): a level every five dishes made, up to five; a cook's dishes last a
+  floor longer a level; "The Apron" is an achievement. Every class and origin has a favourite (CM.FAVOURITES): eating
+  it lifts the heart two more and the hero says a line. The tavern's round now feeds the party and comes with bean
+  pottage for the first floor; the Merchant's House in town sells bread and porridge. Automatic eats a dish it
+  carries when hungry, or at a floor's start with no meal on. Test: "cooking as a trade".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
