@@ -133,6 +133,23 @@ test("an export from v1.0 imports, and the run in it can be continued", () => {
   assert.ok(g2.continueRun());
 });
 
+test("a run still in the town (floor 0) exports and imports, and its slot isn't empty", () => {
+  const CM = load();
+  const game = new CM.Game();
+  game.newGame("town-0");
+  assert.strictEqual(CM.runFloor(game.lastRun), 0, "a new expedition should set out from the town");
+  game.gold = 777; game.saveRun();
+  const text = game.exportText();
+  const CM2 = load(), g2 = new CM2.Game();
+  assert.strictEqual(g2.importText(text), "");
+  assert.ok(g2.canContinue(), "the town run was dropped on import");
+  assert.strictEqual(g2.lastRun.gold, 777);
+  const CM3 = load(), g3 = new CM3.Game();
+  const one = JSON.parse(text); delete one.runs;           // (an export with a single run, the older way)
+  assert.strictEqual(g3.importText(JSON.stringify(one)), "");
+  assert.ok(g3.canContinue(), "a single town run was dropped on import");
+});
+
 test("a full browser is noticed: the game says so once and goes on", () => {
   const CM = load({ quota: 1500 });
   const game = new CM.Game();

@@ -87,7 +87,7 @@ Object.assign(CM.Game.prototype, {
       CM.store.set("fame", this.fame);
       took.push("fame");
     }
-    if (data && data.run && data.run.floor && data.run.party && !this.canContinue()) {
+    if (data && data.run && CM.runFloor(data.run) !== null && data.run.party && !this.canContinue()) {
       this.lastRun = CM.migrateRun(Object.assign({ seed: CM.randomSeed(), mode: "explore" }, data.run));
       CM.store.set(this.runKey(this.slot), this.lastRun);
       took.push("run");
@@ -105,8 +105,8 @@ Object.assign(CM.Game.prototype, {
     let data;
     try { data = JSON.parse(text); } catch (e) { return "That isn't a Claude and Magic save."; }
     if (!data || data.game !== "Claude and Magic") return "That isn't a Claude and Magic save.";
-    if (Array.isArray(data.runs)) data.runs.forEach((r, i) => { if (r && r.floor && r.party) { this.runs[i] = CM.migrateRun(r); CM.store.set(this.runKey(i + 1), this.runs[i]); } });
-    else if (data.run && data.run.floor && data.run.party) { this.runs[0] = CM.migrateRun(data.run); CM.store.set("run", this.runs[0]); }
+    if (Array.isArray(data.runs)) data.runs.forEach((r, i) => { if (r && CM.runFloor(r) !== null && r.party) { this.runs[i] = CM.migrateRun(r); CM.store.set(this.runKey(i + 1), this.runs[i]); } });
+    else if (data.run && CM.runFloor(data.run) !== null && data.run.party) { this.runs[0] = CM.migrateRun(data.run); CM.store.set("run", this.runs[0]); }
     if (data.achievements && typeof data.achievements === "object") { this.achievements = Object.assign({}, this.achievements, data.achievements); CM.store.set("achievements", this.achievements); }
     if (Array.isArray(data.fame)) { this.fame = data.fame; this.sortFame(); CM.store.set("fame", this.fame); }
     if (Array.isArray(data.fameEndless)) { this.fameEndless = data.fameEndless; this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
