@@ -22,9 +22,9 @@ CM.UI = class {
       <div class="row"><button id="btn-continue" class="primary">Continue</button><span id="continue-note" class="small"></span></div>
       <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button><button id="btn-daily" title="Today's dungeon: the same one for everyone, today">Today's</button><button id="btn-weekly" title="This week's challenge: one seed, three mutators and a party the seed rolls, the same for everyone all week">This week's</button></div>
       <p class="small">A run code (CM1:...) from a summary card goes in the seed box too: New Expedition then sets out with that party, difficulty and kit.</p>
-      <p>The same seed lays out the same fifty floors, so a dungeon can be tried again - or handed to a friend. What
-      the monsters do in a fight is up to the dice. The run saves as you go; when the whole party falls, it ends, and
-      the deepest runs go in the Hall of Fame.</p>
+      <p>The same seed lays out the same fifty floors, so a dungeon can be tried again - or handed to a friend - and
+      the dice of every fight are the seed's too: the same fight, fought the same way, goes the same way. The run saves
+      as you go; when the whole party falls, it ends, and the deepest runs go in the Hall of Fame.</p>
       <h2>The callings</h2>
       <div id="classes"></div>
       <p id="start-with"></p>
@@ -644,7 +644,7 @@ CM.UI = class {
       return `<div class="unlock ${got ? "got" : ""}"><b>${got ? "✓" : "○"} ${k.name}</b> <small>${got ? k.what : `${k.what} <i>(${need}${deep.floor ? `; deepest so far: floor ${deep.floor}` : ""})</i>`}</small></div>`;
     }).join("");
     const mem = g.memorial || [];
-    this.$("#memorial").innerHTML = mem.length ? mem.slice(0, 8).map((m) => `<div class="unlock got"><b>${this.esc(m.name)}</b> <small>${this.esc(m.cls)}, level ${m.level}, laid to rest on floor ${m.floor} - ${this.esc(m.date)}${m.seed ? `, seed ${this.esc(m.seed)}` : ""}</small></div>`).join("") + (mem.length > 8 ? `<div class="small">...and ${mem.length - 8} more.</div>` : "") : `<div class="small">No hero has been laid to rest at a camp fire yet.</div>`;
+    this.$("#memorial").innerHTML = mem.length ? mem.slice(0, 8).map((m) => `<div class="unlock got"><b>${this.esc(m.name)}</b> <small>${this.esc(m.cls)}, level ${m.level}, laid to rest on floor ${m.floor} - ${this.esc(m.date)}${m.seed ? `, seed ${this.esc(m.seed)}` : ""}</small></div>`).join("") + (mem.length > 8 ? `<div class="small">...and ${mem.length - 8} more.</div>` : "") : `<div class="unlock"><small>No hero has been laid to rest at a camp fire yet.</small></div>`;
     const trophies = g.trophies || {};
     this.$("#trophies").innerHTML = [...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor < CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name]), ["lich", CM.BOSS.name, CM.LAST_FLOOR, "his palace"],
       ...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor > CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name])].map(([id, name, floor, where]) => {

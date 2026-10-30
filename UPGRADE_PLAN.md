@@ -1,5 +1,11 @@
 # Claude and Magic - the third big update: an upgrade plan
 
+> **Status: shipped as v2.0.** Every phase below is in, in the order 0 -> 1 + 7 -> 2 -> 3 -> 5 -> 4 -> 6 -> 8, each
+> as its own commit with its tests. What was left out, and why, is noted on the phase: per-pixel lit stone (the
+> normal maps were never gathered into the repo), new set pieces (they would move the floors of every saved run;
+> they want a generator version), full gamepad remapping (an A/B swap went in instead) and mouse-look (not a grid
+> crawler's way). The balance numbers from the simulator are in README.txt, under "Balance, as measured".
+
 Where the game stands (v1.0, after eight phases): a 3D blobber in one HTML file - eight callings with paths, fifty
 floors in ten bands, nine guardians and their echoes, Endless, three themes, generated music, a daily dungeon,
 achievements, slots, gamepad and touch. ~8,000 lines of JS in `src/js`, built by `build.py`.
@@ -28,7 +34,7 @@ These are the things the plan is built around. Each was checked against the code
 
 ---
 
-## Phase 0 - Foundations (do first) - DONE in v1.1
+## Phase 0 - Foundations (do first) - DONE (v2.0)
 
 **Goal:** the game can grow for another eight phases without losing saves or regressing.
 
@@ -63,7 +69,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 1 - Quality of life - DONE in v1.1
+## Phase 1 - Quality of life - DONE (v2.0)
 
 **Goal:** less friction on a long run; nothing new to learn.
 
@@ -82,7 +88,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 2 - The fight, deeper - DONE in v1.1
+## Phase 2 - The fight, deeper - DONE (v2.0)
 
 **Goal:** fights are decided by choices, not by the numbers. Check every change against the sim.
 
@@ -101,7 +107,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 3 - The hoard, deeper - DONE in v1.1
+## Phase 3 - The hoard, deeper - DONE (v2.0)
 
 - **Affixes.** Prefixes and suffixes on found gear ("Keen", "of the Bear", "of Warding") drawn from a table by band;
   identifying reveals them. Rarity colours: common, fine, rare, relic.
@@ -115,7 +121,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 4 - The party, wider - DONE in v1.1
+## Phase 4 - The party, wider - DONE (v2.0)
 
 - **Three new callings,** unlocked by achievements so the title's eight stay the start:
   - **Monk** - unarmed, fast, dodges; "Flurry". Unlock: *Unfallen*.
@@ -131,7 +137,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 5 - The dungeon, stranger - DONE in v1.1 (set pieces deferred: they would move existing floors)
+## Phase 5 - The dungeon, stranger - DONE (v2.0) (set pieces deferred: they would move existing floors)
 
 - **Choice events** on the floor (a shrine that wants blood, a chained prisoner who might be a monster, a gamble
   table, a cursed fountain that grants a boon) - small risk/reward dialogs, a dozen to start, data in `CM.EVENTS`.
@@ -145,7 +151,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 6 - The look, and the sound - DONE in v1.1 (lit stone deferred: the normal maps aren't in the repo)
+## Phase 6 - The look, and the sound - DONE (v2.0) (lit stone deferred: the normal maps aren't in the repo)
 
 - **Lit stone.** Use the normal and roughness maps already kept from ambientCG in the Stone theme: per-pixel
   torchlight, wet sheen in the Vaults. Pack size goes up - pack at 256 px and measure the built file.
@@ -157,7 +163,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 7 - Everyone can play - DONE in v1.1 (gamepad remapping: A/B swap only)
+## Phase 7 - Everyone can play - DONE (v2.0) (gamepad remapping: A/B swap only)
 
 - Settings: **text size** (3 steps), **reduced motion** (no shake, no flashes, no colour washes; respect
   `prefers-reduced-motion` by default), **high-contrast** UI, status shown by icon *and* letter, not colour alone.
@@ -168,7 +174,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 8 - Around the game - DONE in v1.1
+## Phase 8 - Around the game - DONE (v2.0)
 
 - **Share a run:** the summary card gets a short code (seed + mode + difficulty + party) that "Play this seed"
   accepts from the clipboard.
