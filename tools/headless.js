@@ -44,7 +44,7 @@ function load(opts = {}) {
   vm.createContext(ctx);
   for (const f of RULES) vm.runInContext(source(f), ctx, { filename: f });
   const CM = ctx.CM;
-  CM.LOOKS = CM.LOOKS || { pixel: {}, drawn: {}, stone: {} };             // (the looks live with the art, which isn't loaded here; Pixel first, as there)
+  CM.LOOKS = CM.LOOKS || { pixel: {}, stone: {} };                       // (the looks live with the art, which isn't loaded here; the two there, Pixel first)
   CM.storage = storage;
   CM.store.set("settings", { skipWalk: true, season: "spring", autoLand: false });
   CM.weatherOfReal = CM.weatherOf; CM.weatherOf = () => "clear";        // (the tests' weather is clear unless a test asks for the real dice)

@@ -378,6 +378,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
       else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
       else if (thing.type === "signpost") out.push({ x, y, layer: "signpost", w: 0.55, h: 0.95 });
+      else if (thing.type === "cross") out.push({ x, y, layer: "cross", w: 0.55, h: 0.75 });
       else if (thing.type === "woodgate") out.push({ x, y, layer: "gate_open", w: 1.0, h: 1.0 });
       else if (thing.type === "cave") out.push({ x, y, layer: thing.n === CM.dayOf(game) % 3 ? "hatch" : "bones", w: 0.9, flat: thing.n === CM.dayOf(game) % 3, h: 0.5, shade: 0.6 });
       else if (thing.type === "caveexit") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });

@@ -63,6 +63,7 @@ PIXEL = {
     "water0": "dungeon/water/shallow_water", "water1": "dungeon/water/shallow_water_2", "water2": "dungeon/water/shallow_water_disturbance",
     # the surface: grass and dirt underfoot, the trees, the town wall's grey brick
     "ground.grass": "dungeon/floor/grass/grass_0_new", "ground.dirt": "dungeon/floor/dirt_0_new", "solid.townwall": "dungeon/wall/brick_gray_0", "solid.townwall.top": "dungeon/wall/brick_gray_2",
+    "cross": "dungeon/statues/granite_statue",
     # the monsters, by kind
     "m.Giant Rat": "monster/animals/rat", "m.Kobold": "monster/kobold_new", "m.Skeleton": "monster/undead/skeletal_warrior_new",
     "m.Goblin": "monster/goblin_new", "m.Zombie": "monster/undead/zombies/zombie_small", "m.Orc": "monster/orc_warrior_new",
@@ -138,13 +139,17 @@ STONE = {
     "t1.wall": "Rock037", "t1.floor": "Rock020", "t1.ceiling": "Bricks058",
     "t2.wall": "Bricks100", "t2.floor": "PavingStones128", "t2.ceiling": "Planks039",
     "t3.wall": "Marble006", "t3.floor": "Tiles074", "t3.ceiling": "Onyx013",
+    # the surface: underfoot, and the faces of what stands on it
+    "ground.grass": "Grass001", "ground.dirt": "Ground110", "ground.tilled": "Ground103", "ground.cobbles": "PavingStones141", "ground.flags": "PavingStones128",
+    "ground.planks": "Planks039", "ground.moss": "Grass005", "solid.hedge": "Grass005", "solid.plaster": "Plaster001", "solid.roof": "RoofingTiles013A",
+    "solid.bark": "Bark007", "solid.townwall": "Bricks097", "solid.townwall.top": "PavingStones128", "solid.cliff": "Rock035",
 }
 
 CREDITS = {
     "pixel": "Dungeon Crawl Stone Soup tiles (CC0) - by the Crawl Stone Soup team and the RLTiles project; "
              "https://opengameart.org/content/dungeon-crawl-32x32-tiles",
     "stone": "ambientCG textures (CC0) - Bricks089, PavingStones141, Rock035, Rock037, Rock020, Bricks058, Bricks100, PavingStones128, "
-             "Planks039, Marble006, Tiles074, Onyx013; https://ambientcg.com",
+             "Planks039, Marble006, Tiles074, Onyx013, Grass001, Grass005, Ground110, Ground103, Plaster001, RoofingTiles013A, Bark007, Bricks097; https://ambientcg.com",
 }
 
 

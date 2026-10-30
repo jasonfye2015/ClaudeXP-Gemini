@@ -1073,10 +1073,10 @@ CM.art.ground = function (kind, seed = 1) {
   return c;
 };
 // a plastered, half-timbered face; what is in it: nothing, a window, a door, a shop's door and board
-CM.art.facade = function (what, seed = 1) {
+CM.art.facade = function (what, seed = 1, base = null) {                  // base: a picture of the plaster to build on (the Stone look's photograph), else painted
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`facade:${what}:${seed}`));
-  p.fillStyle = "#D8CCB0"; p.fillRect(0, 0, S, S);
-  speckle(p, rnd, S, S, 1600, "#B8A890", 0.35, 3); speckle(p, rnd, S, S, 500, "#F0E8D8", 0.3, 3);
+  if (base) p.drawImage(base, 0, 0, S, S);
+  else { p.fillStyle = "#D8CCB0"; p.fillRect(0, 0, S, S); speckle(p, rnd, S, S, 1600, "#B8A890", 0.35, 3); speckle(p, rnd, S, S, 500, "#F0E8D8", 0.3, 3); }
   p.fillStyle = "#5A4028";                                                                  // the timbers
   p.fillRect(0, 0, 12, S); p.fillRect(S - 12, 0, 12, S); p.fillRect(0, 0, S, 10); p.fillRect(0, S - 14, S, 14);
   if (what === "house" || what === "frame") { p.fillRect(S / 2 - 6, 0, 12, S); p.beginPath(); p.moveTo(12, S * 0.55); p.lineTo(S / 2 - 6, 10); p.lineTo(S / 2 - 6, 26); p.lineTo(26, S * 0.6); p.closePath(); p.fill(); }
@@ -1139,10 +1139,11 @@ CM.art.roof = function (seed = 1) {
   return c;
 };
 // a tree, trunk and crown, against nothing (three kinds: an oak, a tall fir, a birch in its autumn)
-CM.art.tree = function (variant = 0) {
+CM.art.tree = function (variant = 0, bark = null) {                       // bark: a picture for the trunk (the Stone look's photograph), else painted
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`tree:${variant}`));
   const trunk = variant === 2 ? "#D8D0C0" : "#4A3220", crown = variant === 0 ? [62, 110, 48] : variant === 1 ? [40, 84, 52] : [196, 150, 48];
-  p.fillStyle = trunk; p.fillRect(S / 2 - 12, S * 0.45, 24, S * 0.55);
+  if (bark && variant !== 2) { p.save(); p.beginPath(); p.rect(S / 2 - 12, S * 0.45, 24, S * 0.55); p.clip(); p.drawImage(bark, 0, 0, S / 2, S, S / 2 - 12, S * 0.45, 24, S * 0.55); p.restore(); }
+  else { p.fillStyle = trunk; p.fillRect(S / 2 - 12, S * 0.45, 24, S * 0.55); }
   if (variant === 2) { p.fillStyle = "#2A2420"; for (let i = 0; i < 9; i++) p.fillRect(S / 2 - 12 + rnd.next() * 14, S * 0.5 + rnd.next() * S * 0.45, 6 + rnd.next() * 8, 3); }
   if (variant === 1) { for (let i = 0; i < 5; i++) { const y = S * 0.08 + i * S * 0.14, w = S * 0.14 + i * S * 0.07; p.fillStyle = rgb(crown, 0.8 + i * 0.07); p.beginPath(); p.moveTo(S / 2, y); p.lineTo(S / 2 + w, y + S * 0.2); p.lineTo(S / 2 - w, y + S * 0.2); p.closePath(); p.fill(); } }
   else { for (let i = 0; i < 26; i++) { const a = rnd.next() * Math.PI * 2, r = rnd.next() * S * 0.26, x = S / 2 + Math.cos(a) * r, y = S * 0.32 + Math.sin(a) * r * 0.8; p.fillStyle = rgb(crown, 0.75 + rnd.next() * 0.5); p.beginPath(); p.arc(x, y, S * 0.1 + rnd.next() * S * 0.08, 0, Math.PI * 2); p.fill(); } }
@@ -1198,6 +1199,14 @@ CM.art.signpost = function () {
   }
   return c;
 };
+CM.art.cross = function () {                                              // the market cross: steps, a shaft, and the cross on it
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 12, 80, 10, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#9A948A"; p.fillRect(S * 0.2, S * 0.86, S * 0.6, S * 0.1); p.fillStyle = "#B0AA9E"; p.fillRect(S * 0.3, S * 0.78, S * 0.4, S * 0.09);
+  p.fillStyle = "#A8A298"; p.fillRect(S / 2 - 12, S * 0.22, 24, S * 0.58); p.fillStyle = "#C0BAB0"; p.fillRect(S / 2 - 12, S * 0.22, 8, S * 0.58);
+  p.fillStyle = "#B8B2A8"; p.fillRect(S / 2 - 10, S * 0.06, 20, S * 0.2); p.fillRect(S / 2 - 36, S * 0.11, 72, 16);
+  return c;
+};
 CM.SIGN_MARKS = { home: "key", tavern: "lantern", merchant: "bale", smith: "anvil", garden: "mortar", library: "book", temple: "sun", guildhall: "swords", chronicler: "quill" };
 CM.art.sign = function (id) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, mark = CM.SIGN_MARKS[id] || "key";
@@ -1234,6 +1243,7 @@ CM.art.surfaceLayers = function (pick) {
   for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v));
   out.canopy = use("canopy", () => CM.art.canopy());
   out.signpost = use("signpost", () => CM.art.signpost());
+  out.cross = use("cross", () => CM.art.cross());
   for (const id of Object.keys(CM.TOWN_PLOTS || {})) out[`sign:${id}`] = use(`sign.${id}`, () => CM.art.sign(id));
   out.skygrad = CM.art.skyGradient();
   out.sun = CM.art.sun();

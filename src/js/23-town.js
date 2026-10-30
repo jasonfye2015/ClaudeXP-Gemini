@@ -48,7 +48,7 @@ CM.TOWN_YARD = [32, 17, 38, 23];                                          // the
 CM.TOWN_HEDGES = [[3, 27, 6, 27], [12, 27, 14, 28], [24, 29, 25, 31], [15, 29, 16, 31], [3, 17, 7, 17]];
 CM.TOWN_FENCES = [[8, 27, 10, 27], [30, 22, 30, 24], [9, 20, 10, 21], [13, 18, 15, 18]];
 // where each door is (x, y), and the town's other places - the tests and the bot read these by name
-CM.TOWN_AT = { home: [5, 22], shaft: [35, 20], well: [18, 18], market: [22, 18], woodgate: [2, 19],
+CM.TOWN_AT = { home: [5, 22], shaft: [35, 20], well: [18, 18], market: [22, 18], cross: [20, 22], woodgate: [2, 19],
   tavern: [18, 16], merchant: [22, 16], smith: [18, 24], garden: [13, 24], library: [19, 10], temple: [20, 7], guildhall: [22, 24], chronicler: [28, 22] };
 CM.TOWN_SIGNS = [                                                        // the signposts, on the grass beside the junctions
   { at: [7, 21], text: "LANTERN STREET, east: the Square, the Hanged Lantern, the Merchant's House. GATE LANE, north and west: the West Gate, the road, the farm and the Deep Wood." },
@@ -94,6 +94,7 @@ CM.makeTown = function (seed) {
   things[key(...CM.TOWN_AT.shaft)] = { type: "ladder" };
   things[key(...CM.TOWN_AT.woodgate)] = { type: "woodgate" };
   things[key(...CM.TOWN_AT.well)] = { type: "well" };
+  things[key(...CM.TOWN_AT.cross)] = { type: "cross" };
   if (String(seed).startsWith("weekly-")) things[key(...CM.TOWN_AT.market)] = { type: "peddler", stock: null };
   for (const S of CM.TOWN_SIGNS) if (grid[S.at[1]][S.at[0]] === 0 && !things[key(...S.at)]) things[key(...S.at)] = { type: "signpost", text: S.text };
   const lane = [];                                                        // (on the side streets, not in the way between the door and the shaft)

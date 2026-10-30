@@ -137,6 +137,7 @@ Object.assign(CM.Game.prototype, {
           cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
           caveexit: "The way out of the cave. (Space to climb out)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
           signpost: "A signpost, its boards weathered. (Space to read it)",
+          cross: "The market cross, on its three steps: the Square's oldest stone. (Space to read what is cut in it)",
           villager: thing.type === "villager" ? `${(CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length] || {}).who || "someone"}. (Space to pass the time of day)` : "" }[thing.type]);
       }
     }
@@ -367,6 +368,7 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "shrine") { this.emit("talk", { title: "The ruined shrine", text: CM.WOOD_LINES.shrine }); this.say(CM.WOOD_LINES.shrine); if (!thing.read) { thing.read = true; this.remember("carving", CM.WOOD_LINES.shrine, { key: "wood.shrine" }); this.saveRun(); } return; }
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
     if (thing && thing.type === "signpost") { this.say(`The signpost reads: ${thing.text}`); return; }
+    if (thing && thing.type === "cross") { this.say("Cut into the cross's steps, worn almost smooth: HERE THE MARKET, BY THE KING'S LEAVE. Someone has scratched out the last three words and someone else has cut them again."); return; }
     if (thing && thing.type === "well") { this.well(); return; }
     if (thing && thing.type === "villager") { this.talkTownsfolk(thing); return; }
     if (thing && thing.type === "node") { this.gather(thing, k); return; }
@@ -778,7 +780,7 @@ Object.assign(CM.Game.prototype, {
       if (f && f.type === "gate" && !f.open) return false;
       if (f && f.type === "door" && !f.open && (f.riddle !== undefined || (f.locked && !key && !picks))) return false;
       const t = fl.things[k];                                                                     // (what stands in a square is walked round, unless it is where the walk goes)
-      if (t && k !== goal && ["well", "signpost", "hut", "shrine", "burner", "cave", "farm", "node", "vein", "building"].includes(t.type)) return false;   // (people are passed, and stop the walk to talk)
+      if (t && k !== goal && ["well", "signpost", "cross", "hut", "shrine", "burner", "cave", "farm", "node", "vein", "building"].includes(t.type)) return false;   // (people are passed, and stop the walk to talk)
       return true;                                                                                // (a band of monsters on the way: the walk stops three squares short of it)
     };
     if (goal !== start && !ok(x, y)) return null;

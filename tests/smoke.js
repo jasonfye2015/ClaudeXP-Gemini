@@ -40,7 +40,7 @@ const url = "file://" + path.join(ROOT, "game", built);
   assert.ok(r.ok, "WebGL should be up");
   assert.ok(r.save > 500 && r.save < 50000, `the save should be small (${r.save})`);
   assert.match(r.built, /^\d{4}-\d\d-\d\d$/);
-  for (const look of ["drawn", "pixel", "stone"]) {
+  for (const look of ["pixel", "stone"]) {
     await page.evaluate((l) => { CM.game.settings.look = l; CM.game.saveSettings(); CM.game.emit("settings", CM.game.settings); }, look);
     await page.waitForTimeout(400);
   }
