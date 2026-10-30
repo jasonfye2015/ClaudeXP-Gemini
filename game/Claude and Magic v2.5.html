@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v2.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v2.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -100,6 +100,7 @@ table.stats tr.key td.hint { color: var(--gold); }
 #advice.sound h2 { color: #8FD08F; }
 #create .foot { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
 #create .foot label { color: var(--dim); font-size: 13px; margin-left: 10px; }
+#create .foot label#iron-label { display: inline-flex; align-items: center; gap: 4px; }
 #create .foot input { width: 170px; }
 
 /* ---- a hero's sheet ---- */
@@ -370,7 +371,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "2.4", built: "2026-10-30" };
+const CM = window.CM = { version: "2.5", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1020,8 +1021,28 @@ CM.SMITH = { enchant: 80, gem: 120, most: 3 };
 CM.DIFFICULTIES = {
   gentle: { name: "Gentle", hp: 0.75, atk: 0.8, gold: 1.25, what: "monsters a quarter weaker, and more gold" },
   fair: { name: "Fair", hp: 1, atk: 1, gold: 1, what: "the dungeon as it is" },
+  hard: { name: "Hard", hp: 1.17, atk: 1.12, gold: 0.95, what: "monsters a sixth tougher and a little harder-hitting" },
   grim: { name: "Grim", hp: 1.3, atk: 1.25, gold: 0.9, what: "monsters a third tougher and harder-hitting, a little less gold; the Hall of Fame marks it" },
 };
+// Ascension: win on Fair or above, and the next run may carry one rule more - to fifteen. Each rung is one named rule,
+// shown when the party sets out and on its Hall of Fame row (game.asc(k): the run is at rung k or past it)
+CM.ASCENSION = [
+  { id: "leancamps", name: "Lean camps", what: "a bedroll by the fire costs 40" },
+  { id: "dryfountains", name: "Dry fountains", what: "half the fountains are dry" },
+  { id: "hardened", name: "Hardened", what: "monsters have 5% more health" },
+  { id: "leaders", name: "Leaders", what: "every band from the third floor down has a leader" },
+  { id: "hungrydark", name: "Hungry dark", what: "torches burn half again as fast" },
+  { id: "nomercy", name: "No mercy", what: "the guardians' second forms from the first blow" },
+  { id: "poorveins", name: "Poor veins", what: "a fifth less gold, from chests and the fallen" },
+  { id: "keenblades", name: "Keen blades", what: "monsters hit 10% harder" },
+  { id: "nogreater", name: "No greater potions", what: "no merchant, peddler or alchemist has a Greater Healing Potion" },
+  { id: "watchful", name: "Watchful", what: "the party never has the drop on them" },
+  { id: "deeperhurts", name: "Deeper hurts", what: "poison bites double" },
+  { id: "costlytemple", name: "Costly temple", what: "the temple's prices are doubled" },
+  { id: "thickskins", name: "Thick skins", what: "monsters have 10% more health again" },
+  { id: "kingsguard", name: "The king's guard", what: "the Lich King begins with two skeletons up" },
+  { id: "ironbound", name: "Ironbound", what: "a fallen hero rises only at the temple: no feather, no Raise Dead in a fight" },
+];
 // Today's dungeon comes with two of these, from the date
 CM.MUTATORS = {
   hordes: { name: "Hordes", what: "every band of monsters has one more in it" },
@@ -1044,15 +1065,16 @@ CM.mutatorsFor = function (seed) {
   return out;
 };
 // a run, as a code to hand to a friend: the seed, the difficulty, the expedition, the kit and the party (CM.parseRunCode reads one back)
-CM.runCode = function (seed, difficulty, mode, kit, party) {
+CM.runCode = function (seed, difficulty, mode, kit, party, opts) {
   const who = (party || []).map((h) => [h.cls, (h.name || "").replace(/[;:,|]/g, " ").trim(), ...CM.STATS.map((s) => (h.stats || {})[s] || 10), h.row || CM.CLASSES[h.cls].row].join(",")).join(";");
-  return `CM1:${seed}:${difficulty || "fair"}:${mode || "dungeon"}:${kit || "pauper"}:${who}`;
+  const tail = opts && (opts.ascension || opts.iron) ? `:A${opts.ascension || 0}${opts.iron ? "i" : ""}` : "";
+  return `CM1:${seed}:${difficulty || "fair"}:${mode || "dungeon"}:${kit || "pauper"}:${who}${tail}`;
 };
 CM.parseRunCode = function (text) {
-  const m = /^\s*CM1:([^:]+):([^:]*):([^:]*):([^:]*):(.*)$/.exec(String(text || ""));
+  const m = /^\s*CM1:([^:]+):([^:]*):([^:]*):([^:]*):([^:]*)(?::A(\d+)(i?))?\s*$/.exec(String(text || ""));
   if (!m) return null;
   const party = m[5] ? m[5].split(";").map((p) => { const f = p.split(","); if (!CM.CLASSES[f[0]]) return null; const stats = {}; CM.STATS.forEach((s, i) => { stats[s] = CM.clamp(Number(f[2 + i]) || 10, 3, 25); }); return { cls: f[0], name: f[1] || f[0], stats, row: f[8] === "back" ? "back" : f[8] === "front" ? "front" : CM.CLASSES[f[0]].row }; }).filter(Boolean) : [];
-  return { seed: m[1], difficulty: CM.DIFFICULTIES[m[2]] ? m[2] : "fair", mode: m[3] === "endless" ? "endless" : "dungeon", kit: m[4] || "pauper", party: party.length === 4 ? party : null };
+  return { seed: m[1], difficulty: CM.DIFFICULTIES[m[2]] ? m[2] : "fair", mode: m[3] === "endless" ? "endless" : "dungeon", kit: m[4] || "pauper", party: party.length === 4 ? party : null, ascension: CM.clamp(Number(m[6]) || 0, 0, CM.ASCENSION.length), iron: m[7] === "i" };
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
@@ -1063,6 +1085,8 @@ CM.ACHIEVEMENTS = {
   rivals: { name: "No Rivals", what: "Best a rival party for the floor", title: "the Unrivalled" },
   bonded: { name: "Old Friends", what: "Two heroes fight forty fights side by side", title: "the Steadfast" },
   weaver: { name: "Weaver", what: "Two casters weave their spells into one", title: "the Weaver" },
+  ironwill: { name: "Iron Will", what: "Slay the Lich King on an Iron run, saved only at the camps", title: "the Iron-willed" },
+  ascended: { name: "Ascended", what: "Slay the Lich King at Ascension 5 or higher", title: "the Ascended" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
@@ -2936,7 +2960,9 @@ CM.replayRun = function (spec, upTo) {
   game.replaying = 1;                                                  // (nothing is logged while it plays itself back)
   const gen = CM.GEN;
   CM.GEN = spec.gen || 1;
-  try { game.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode); } finally { CM.GEN = gen; }
+  const maxWas = CM.store.get("ascension", 0);
+  if ((spec.ascension || 0) > (maxWas || 0)) CM.store.set("ascension", spec.ascension);   // (a replay may be from a higher rung than this browser has reached)
+  try { game.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode, { ascension: spec.ascension || 0, iron: spec.iron }); } finally { CM.GEN = gen; CM.store.set("ascension", maxWas || 0); }
   game.gen = spec.gen || 1;
   const lines = upTo === undefined ? spec.log : spec.log.slice(0, upTo);
   for (const line of lines) {
@@ -5231,7 +5257,7 @@ CM.Game = class {
 
   // ---- the log: every choice the player makes, as a line, so a run can be played again from its seed (CM.replayRun) ----
   logAct(name, ...args) { if (this.replaying) return; this.runLog = this.runLog || []; this.runLog.push(args.length ? [name, ...args] : [name]); }
-  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.endless ? "endless" : "dungeon", log: (this.runLog || []).slice() }; }
+  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.endless ? "endless" : "dungeon", ascension: this.ascension || 0, iron: Boolean(this.iron), log: (this.runLog || []).slice() }; }
   // down the stairs by hand (the simulator's bot, when it has lost its way): logged, so a replay follows
   warp(number) { this.logAct("warp", number); this.enterFloor(number, "down"); }
   // what a tally counts besides steps and kills: gold by where it went, and how often each spell or skill was used
@@ -5293,12 +5319,13 @@ CM.Game = class {
 
   saveRun() {
     if (!["explore", "camp"].includes(this.mode)) return;
+    if (this.iron && this.mode !== "camp" && !this.ironAllow) { this.dirty = false; this.sinceSave = 0; return; }   // (Iron: the camps only)
     const data = { schema: CM.SCHEMA, gen: this.gen || 1, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line" };
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron) };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -5341,6 +5368,7 @@ CM.Game = class {
     this.pairFights = d.pairFights || {}; this.bonds = d.bonds || []; this.hazardsMet = d.hazardsMet || []; this.remainsFound = d.remainsFound || [];
     this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
+    this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -5350,7 +5378,11 @@ CM.Game = class {
   }
 
   // ---- starting, and the stairs between floors ----
-  newGame(seed, chosen, kit, difficulty, mutators, mode) {               // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned; mode: "endless" for no bottom
+  // the rung of the ladder this run is on: at k, every rule to k applies (CM.ASCENSION)
+  asc(k) { return (this.ascension || 0) >= k; }
+  ascensionMax() { return CM.clamp(CM.store.get("ascension", 0) || 0, 0, CM.ASCENSION.length); }
+
+  newGame(seed, chosen, kit, difficulty, mutators, mode, opts) {         // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned; mode: "endless" for no bottom; opts: {ascension, iron}
     this.seed = (seed || "").trim() || CM.randomSeed();
     this.rnd = new CM.Random(CM.hashSeed(`${this.seed}:dice`));          // the run's dice: the same seed, the same fights, given the same choices
     this.gen = CM.GEN;
@@ -5379,6 +5411,8 @@ CM.Game = class {
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
     this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row }));
     this.startMutators = this.mutators.slice(); this.runLog = []; this.formation = "line";
+    this.ascension = CM.clamp(Number((opts || {}).ascension) || 0, 0, Math.min(CM.ASCENSION.length, this.ascensionMax())); this.iron = Boolean((opts || {}).iron);
+    this.ironAllow = true;                                               // (the first save of an Iron run, at the top of the stair)
     if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
@@ -5388,9 +5422,11 @@ CM.Game = class {
     for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
     this.retiredThisRun = false;
     this.enterFloor(1, "down");
+    this.ironAllow = false;
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
-      + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : ""));
+      + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : "")
+      + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : ""));
     if (this.mutators.length) this.say(`Today's dungeon: ${this.mutators.map((m) => `${CM.MUTATORS[m].name} - ${CM.MUTATORS[m].what}`).join("; ")}.`);
   }
 
@@ -5718,7 +5754,7 @@ Object.assign(CM.Game.prototype, {
     const l = this.light;
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    l.left -= (this.floor && (this.floor.special === "wading" || this.floor.tide)) || this.has("gloom") ? 2 : 1;
+    l.left -= ((this.floor && (this.floor.special === "wading" || this.floor.tide)) || this.has("gloom") ? 2 : 1) + (this.asc(5) && (this.steps || 0) % 2 === 0 ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
     const spare = this.bag.findIndex((i) => i.kind === "torch");
@@ -5829,7 +5865,7 @@ Object.assign(CM.Game.prototype, {
         }
       }
       delete fl.things[k];
-      const gold = thing.gold * (this.has("rich") ? 2 : 1);
+      const gold = Math.floor(thing.gold * (this.has("rich") ? 2 : 1) * (this.asc(7) ? 0.8 : 1));
       this.gold += gold;
       this.bag.push(...thing.items);
       this.sound("chest");
@@ -5910,6 +5946,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.inUse) this.logAct("drink");
     f.used = true; f.known = true;
     if (this.has("drought")) { this.say("The basin is dry to the bottom, cracked. A drought lies on the dungeon today."); this.saveRun(); this.emit("change"); return; }
+    if (this.asc(2) && CM.hashSeed(`${this.seed}:dryrung:${this.floor.number}:${CM.keyOf(...this.floor.pos)}`) % 2 === 0) { this.say("Dry. Half the fountains are, this high on the ladder."); this.saveRun(); this.emit("change"); return; }
     this.tally.drank = (this.tally.drank || 0) + 1;
     if (f.kind === "heal") {
       for (const m of this.alive()) { m.hp = m.max; this.cure(m, [...CM.CURABLE, "curse"]); }
@@ -6233,6 +6270,7 @@ Object.assign(CM.Game.prototype, {
       const gear = CM.affix(CM.makeItem(L + 4, rnd, rnd.pick(["weapon", "armor"])), 99, rnd); gear.unknown = false; gear.value = Math.floor(gear.value * 1.5) + 100;
       thing.stock = [gear, { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + L * 3), value: 90 }, CM.oil(rnd.pick(["fire", "frost", "holy"])), CM.scroll("mapping"), CM.ingredient(rnd.pick(Object.keys(CM.INGREDIENTS)))];
       thing.stock[3].value = 60;
+      if (this.asc(9)) thing.stock = thing.stock.filter((i) => i.kind !== "greaterheal");
     }
     this.stock = thing.stock; this.peddling = k;
     this.say("The peddler spreads a cloth and lays out what he has. His prices are what you'd expect, down here.");
@@ -6292,6 +6330,7 @@ Object.assign(CM.Game.prototype, {
       const kind = CM.monsterKind(this.foes[0].kind || this.foes[0].name);
       if (kind) this.foes.push(CM.makeMonster(kind, CM.monsterLevel(this.floor ? this.floor.number : 1), this.rnd));
     }
+    if (this.asc(4) && this.floor && this.floor.number >= 3 && !thing.ascended && this.foes.length && !this.foes.some((m) => m.elite || m.boss || m.guardian)) { thing.ascended = true; CM.makeElite(this.foes, this.rnd, this.gen); }   // (Leaders)
     for (const m of this.foes) this.tune(m);
     if (this.villageLevel("library") >= 4) for (const m of this.foes) for (const el of Object.keys(CM.ELEMENT_NAMES)) this.learnResist(m, el, CM.resistance(m, el));   // (the library knows)
     thing.group = this.foes;
@@ -6326,10 +6365,11 @@ Object.assign(CM.Game.prototype, {
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
       if (this.mode !== "combat") return;
-    } else if (!theyCame && (this.rnd.chance(sneaky ? 0.35 : 0.2) || this.alive().some((h) => CM.trait(h, "foresight")))) {     // ...or you have the drop on them
+    } else if (!theyCame && !this.asc(10) && (this.rnd.chance(sneaky ? 0.35 : 0.2) || this.alive().some((h) => CM.trait(h, "foresight")))) {     // ...or you have the drop on them (never, past the tenth rung)
       this.say("You have the drop on them: a free round!");
       this.combat.surprise = true;
     }
+    if (this.asc(14) && this.foes.some((m) => m.boss)) this.summonSkeletons(2);   // (the king's guard)
     this.beginRound();
   },
 
@@ -6429,7 +6469,7 @@ Object.assign(CM.Game.prototype, {
     for (const h of this.alive()) {
       const st = h.status || {};
       if (st.poison) {
-        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05)));
+        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05) * (this.asc(11) ? 2 : 1)));
         h.hp = Math.max(1, h.hp - bite);
         this.say(`${h.name} suffers from the poison (-${bite}).`);
       }
@@ -6489,7 +6529,7 @@ Object.assign(CM.Game.prototype, {
     }
     for (const m of this.foes) {                                         // a second form, at a third of its strength (the shallow guardians)
       const G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
-      if (!G || !G.form2 || m.form2 || m.hp <= 0 || m.hp > m.max * 0.34 || m.echo) continue;
+      if (!G || !G.form2 || m.form2 || m.hp <= 0 || m.hp > m.max * (this.asc(6) ? 1.01 : 0.34) || m.echo) continue;
       m.form2 = true;
       this.say(G.form2.text);
       this.emit("fx", { kind: "rise", foe: m });
@@ -6794,7 +6834,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (share <= CM.LICH.coldFrom) {
       c.cold = (c.cold || 0) + 1;
-      if (c.cold % 2 === 0) {
+      if (c.cold % (this.difficulty === "grim" ? 3 : 2) === 0) {              // (on Grim the cold comes every third turn: a wall with a door)
         this.emit("fx", { kind: "cold", foe: m });
         this.say("The Lich King raises his hand, and a deathly cold fills the hall!");
         for (const h of this.targets()) this.hurt(h, 10 + Math.floor(this.floor.number / 2), m, { noTouch: true, aoe: true });
@@ -7341,6 +7381,7 @@ Object.assign(CM.Game.prototype, {
         break;
       }
       case "raise": {
+        if (this.asc(15)) { this.say("Ironbound: the fallen rise only at the temple. The prayer goes unanswered."); break; }
         ally.hp = CM.trait(h, "miracle") ? ally.max : Math.max(1, Math.floor(ally.max / 3));
         this.sound("heal");
         this.say(`${h.name} calls ${ally.name} back from the dark!`);
@@ -7434,6 +7475,7 @@ Object.assign(CM.Game.prototype, {
     let gold = slain.reduce((s, m) => s + m.gold, 0);
     if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
     if (this.alive().some((h) => CM.trait(h, "pickpocket"))) gold = Math.floor(gold * 1.1);
+    if (this.asc(7)) gold = Math.floor(gold * 0.8);
     if (this.alive().some((h) => CM.trait(h, "avenger")) && slain.some((m) => m.undead)) { const n = slain.filter((m) => m.undead).length * 5; for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + n); this.say(`The unholy are laid low, and the party mends ${n}.`); }
     this.foughtTogether();
     gold = Math.floor(gold * (CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair).gold);
@@ -7637,7 +7679,7 @@ Object.assign(CM.Game.prototype, {
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
         { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"), CM.rope());
       const house = this.villageLevel("merchant");                       // (the village's merchant's house: what the camps' merchant has learned to carry)
-      if (house >= 1) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
+      if (house >= 1 && !this.asc(9)) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
       if (house >= 2) for (const el of ["fire", "frost", "holy"]) this.stock.push(CM.oil(el));
       if (house >= 3) { const r2 = new CM.Random(CM.hashSeed(`${this.seed}:house:${this.floor.number}`)), rare = CM.affix(CM.makeItem(depth + 2, r2, r2.pick(["weapon", "armor", "helm", "shield"])), 99, r2); rare.unknown = false; rare.value = Math.floor(rare.value * 1.4); this.stock.push(rare); }
       if (house >= 4) for (const it of this.stock) it.value = Math.max(1, Math.floor(it.value * 0.8));
@@ -7856,6 +7898,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (item.kind === "revive") {
       if (hero.hp > 0) return "The Phoenix Feather is for the fallen.";
+      if (this.asc(15) && this.mode === "combat") return "Ironbound: the fallen rise only at the temple.";
       hero.hp = Math.floor(hero.max / 2);
       this.bag.splice(row, 1);
       this.sound("heal");
@@ -7903,9 +7946,10 @@ Object.assign(CM.Game.prototype, {
   },
 
   rest() {
-    if (this.gold < 20) { this.say("The merchant wants 20 gold for a bedroll by the fire."); return; }
+    const bed = this.asc(1) ? 40 : 20;
+    if (this.gold < bed) { this.say(`The merchant wants ${bed} gold for a bedroll by the fire.`); return; }
     this.logAct("rest");
-    this.gold -= 20; this.spend("rest", 20);
+    this.gold -= bed; this.spend("rest", bed);
     for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.sound("heal");
     this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass.");
@@ -7916,7 +7960,7 @@ Object.assign(CM.Game.prototype, {
 
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
-    const cost = { cure: 30, uncurse: 60, unstone: 150 }[service];
+    const cost = { cure: 30, uncurse: 60, unstone: 150 }[service] * (this.asc(12) ? 2 : 1);
     const which = service === "cure" ? CM.CURABLE : service === "uncurse" ? ["curse"] : ["stone"];
     const cursedGear = service === "uncurse" ? this.party.flatMap((h) => CM.equipped(h).filter((it) => it.props && it.props.cursed)) : [];
     const who = this.party.filter((h) => which.some((s) => (h.status || {})[s]));
@@ -8110,7 +8154,7 @@ Object.assign(CM.Game.prototype, {
   raiseDead() {
     const fallen = this.party.filter((m) => m.hp <= 0);
     if (!fallen.length) { this.say("No one needs raising."); return; }
-    const hero = fallen[0], cost = 100 * hero.level;
+    const hero = fallen[0], cost = 100 * hero.level * (this.asc(12) ? 2 : 1);
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold to raise the ${hero.cls}.`); return; }
     this.logAct("raiseDead");
     this.gold -= cost; this.spend("temple", cost);
@@ -8215,6 +8259,7 @@ Object.assign(CM.Game.prototype, {
       used.push(idx);
     }
     if (this.gold < r.gold) return `She asks ${r.gold} gold for the ${r.name}.`;
+    if (r.makes === "greaterheal" && this.asc(9)) return "No greater potions, this high on the ladder.";
     return "";
   },
   brew(id) {
@@ -8268,7 +8313,12 @@ Object.assign(CM.Game.prototype, {
     if ((fl >= 10 || won) && entry.daily) this.achieve("daily");
     if (fl >= 30) this.achieve("abyss");
     if (this.bottom) this.achieve("bottom");
-    if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); }
+    if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); if (this.iron) this.achieve("ironwill"); if ((this.ascension || 0) >= 5) this.achieve("ascended"); }
+    entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron);
+    if (won && !this.endless && ["fair", "hard", "grim"].includes(this.difficulty)) {   // the ladder: a crown on Fair or above opens the next rung
+      const next = Math.min(CM.ASCENSION.length, (this.ascension || 0) + 1);
+      if (next > this.ascensionMax()) { CM.store.set("ascension", next); this.say(`Ascension ${next} is open: the next run may carry ${CM.ASCENSION[next - 1].name.toLowerCase()} too.`); }
+    }
     if (this.endless) {
       entry.endless = true;
       if (fl >= 60) this.achieve("endless");
@@ -8279,7 +8329,7 @@ Object.assign(CM.Game.prototype, {
     this.village.renown = (this.village.renown || 0) + entry.renown;
     this.saveVillage();
     this.checkContracts(entry);
-    entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party);
+    entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party, { ascension: this.ascension || 0, iron: this.iron });
     entry.weekly = String(this.seed).startsWith("weekly-");
     if (!won && !this.bottom) {                                          // where they fell: a later run on this seed finds them
       const carried = this.party.flatMap((h) => CM.equipped(h)).filter((it) => !(it.props && (it.props.relic || it.props.unique)) && !["weapon", "armor"].includes(it.kind));
@@ -8569,6 +8619,9 @@ Object.assign(CM.Game.prototype, {
     const d = CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair;
     let hp = d.hp, atk = d.atk;
     if (this.has("brittle")) { hp *= 0.5; atk *= 1.5; }
+    if (this.asc(3)) hp *= 1.05;
+    if (this.asc(8)) atk *= 1.1;
+    if (this.asc(13)) hp *= 1.1;
     m.max = Math.max(1, Math.round(m.max * hp));
     m.hp = Math.max(1, Math.round(m.hp * hp));
     m.atk = Math.max(1, Math.round(m.atk * atk));
@@ -8829,6 +8882,8 @@ CM.UI = class {
       <label for="kit">Kit</label><select id="kit" title="What the deepest run so far has earned"></select>
       <label for="difficulty">Difficulty</label><select id="difficulty" title="How hard the dungeon is"></select>
       <label for="mode">Expedition</label><select id="mode" title="The dungeon has a bottom; an Endless expedition does not"><option value="dungeon">The dungeon</option><option value="endless">Endless</option></select>
+      <label for="ascension" id="ascension-label">Ascension</label><select id="ascension" title="A rule more for every rung climbed: win on Fair or above to open the next"></select>
+      <label for="iron" id="iron-label"><input type="checkbox" id="iron"> Iron</label>
       <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>
     <div class="small" id="create-note"></div>
   </div>
@@ -9574,7 +9629,7 @@ Object.assign(CM.UI.prototype, {
     else table.innerHTML = board.map((e, i) => {
       const open = this.fameOpen === i, t = e.tally;
       let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
-        + `<td class="${e.won ? "won" : ""}">${endlessBoard ? `floor ${e.floor}${e.won ? " - crowned" : ""}` : e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
+        + `<td class="${e.won ? "won" : ""}">${endlessBoard ? `floor ${e.floor}${e.won ? " - crowned" : ""}` : e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}${e.ascension ? ` <i class="diff">A${e.ascension}</i>` : ""}${e.iron ? ` <i class="diff">Iron</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
       if (open) {
         rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
           + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : e.weekly ? " (a week's challenge)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button>${e.code ? ` <button data-seed="${this.esc(e.code)}" title="The seed, the party, the difficulty and the kit, as they set out">Play this run</button>` : ""}</div>` : "")
@@ -9642,6 +9697,8 @@ Object.assign(CM.UI.prototype, {
     this.$("#difficulty").value = "fair";
     this.$("#difficulty").addEventListener("change", () => this.renderCreateNote());
     this.$("#mode").addEventListener("change", () => this.renderCreateNote());
+    this.$("#ascension").addEventListener("change", () => this.renderCreateNote());
+    this.$("#iron").addEventListener("change", () => this.renderCreateNote());
     for (const b of this.root.querySelectorAll("#fame .boards button")) b.addEventListener("click", () => { this.fameBoard = b.dataset.board; this.fameOpen = -1; this.refreshTitle(); });
     const slots = this.$("#slots");
     for (let i = 0; i < 4; i++) {
@@ -9682,6 +9739,11 @@ Object.assign(CM.UI.prototype, {
       if (code.party) this.slots = code.party.filter((p) => g.classUnlocked(p.cls)).length === 4 ? code.party : code.party.map((p) => (g.classUnlocked(p.cls) ? p : Object.assign({}, p, { cls: "Knight", stats: CM.rollStats("Knight") })));
       this.$("#difficulty").value = code.difficulty; this.$("#mode").value = code.mode; this.chosenKit = code.kit;
     }
+    const asc = this.$("#ascension"), max = g.ascensionMax();
+    asc.innerHTML = Array.from({ length: max + 1 }, (_, i) => `<option value="${i}">${i ? `A${i}: ${CM.ASCENSION[i - 1].name}` : "none"}</option>`).join("");
+    asc.value = code && code.ascension <= max ? String(code.ascension) : String(this.lastAscension || 0);
+    this.$("#iron").checked = Boolean(code && code.iron);
+    this.$("#ascension").style.display = this.$("#ascension-label").style.display = max ? "" : "none";
     const weekly = this.$("#seed").value === CM.weeklySeed();
     if (weekly) this.slots = CM.weeklyParty(this.$("#seed").value);        // (the week's party, the same for everyone)
     this.weekly = weekly;
@@ -9726,7 +9788,8 @@ Object.assign(CM.UI.prototype, {
     const g = this.game, seed = this.$("#create-seed").value;
     this.$("#seed").value = seed;
     this.chosenKit = this.$("#kit").value || "pauper";
-    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value);
+    this.lastAscension = Number(this.$("#ascension").value) || 0;
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value, { ascension: this.lastAscension, iron: this.$("#iron").checked });
   },
 
   startNew() { this.openCreate(); },
@@ -9734,7 +9797,9 @@ Object.assign(CM.UI.prototype, {
   renderCreateNote() {
     const seed = this.$("#create-seed").value, muts = CM.mutatorsFor(seed), d = CM.DIFFICULTIES[this.$("#difficulty").value] || CM.DIFFICULTIES.fair;
     this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` ${seed.startsWith("weekly-") ? "This week's challenge" : "Today's dungeon"} comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "") + (seed.startsWith("weekly-") ? " The party is the week's: everyone sets out with these four." : "")
-      + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "");
+      + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "")
+      + (Number(this.$("#ascension").value) ? ` Ascension ${this.$("#ascension").value}: ${CM.ASCENSION.slice(0, Number(this.$("#ascension").value)).map((r) => `${r.name} (${r.what})`).join("; ")}.` : "")
+      + (this.$("#iron").checked ? " Iron: the run is saved only at the camps - a closed window between them loses the floors since." : "");
   },
 });
 

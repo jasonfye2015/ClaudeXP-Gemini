@@ -14,6 +14,8 @@ Object.assign(CM.UI.prototype, {
     this.$("#difficulty").value = "fair";
     this.$("#difficulty").addEventListener("change", () => this.renderCreateNote());
     this.$("#mode").addEventListener("change", () => this.renderCreateNote());
+    this.$("#ascension").addEventListener("change", () => this.renderCreateNote());
+    this.$("#iron").addEventListener("change", () => this.renderCreateNote());
     for (const b of this.root.querySelectorAll("#fame .boards button")) b.addEventListener("click", () => { this.fameBoard = b.dataset.board; this.fameOpen = -1; this.refreshTitle(); });
     const slots = this.$("#slots");
     for (let i = 0; i < 4; i++) {
@@ -54,6 +56,11 @@ Object.assign(CM.UI.prototype, {
       if (code.party) this.slots = code.party.filter((p) => g.classUnlocked(p.cls)).length === 4 ? code.party : code.party.map((p) => (g.classUnlocked(p.cls) ? p : Object.assign({}, p, { cls: "Knight", stats: CM.rollStats("Knight") })));
       this.$("#difficulty").value = code.difficulty; this.$("#mode").value = code.mode; this.chosenKit = code.kit;
     }
+    const asc = this.$("#ascension"), max = g.ascensionMax();
+    asc.innerHTML = Array.from({ length: max + 1 }, (_, i) => `<option value="${i}">${i ? `A${i}: ${CM.ASCENSION[i - 1].name}` : "none"}</option>`).join("");
+    asc.value = code && code.ascension <= max ? String(code.ascension) : String(this.lastAscension || 0);
+    this.$("#iron").checked = Boolean(code && code.iron);
+    this.$("#ascension").style.display = this.$("#ascension-label").style.display = max ? "" : "none";
     const weekly = this.$("#seed").value === CM.weeklySeed();
     if (weekly) this.slots = CM.weeklyParty(this.$("#seed").value);        // (the week's party, the same for everyone)
     this.weekly = weekly;
@@ -98,7 +105,8 @@ Object.assign(CM.UI.prototype, {
     const g = this.game, seed = this.$("#create-seed").value;
     this.$("#seed").value = seed;
     this.chosenKit = this.$("#kit").value || "pauper";
-    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value);
+    this.lastAscension = Number(this.$("#ascension").value) || 0;
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value, { ascension: this.lastAscension, iron: this.$("#iron").checked });
   },
 
   startNew() { this.openCreate(); },
@@ -106,6 +114,8 @@ Object.assign(CM.UI.prototype, {
   renderCreateNote() {
     const seed = this.$("#create-seed").value, muts = CM.mutatorsFor(seed), d = CM.DIFFICULTIES[this.$("#difficulty").value] || CM.DIFFICULTIES.fair;
     this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` ${seed.startsWith("weekly-") ? "This week's challenge" : "Today's dungeon"} comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "") + (seed.startsWith("weekly-") ? " The party is the week's: everyone sets out with these four." : "")
-      + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "");
+      + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "")
+      + (Number(this.$("#ascension").value) ? ` Ascension ${this.$("#ascension").value}: ${CM.ASCENSION.slice(0, Number(this.$("#ascension").value)).map((r) => `${r.name} (${r.what})`).join("; ")}.` : "")
+      + (this.$("#iron").checked ? " Iron: the run is saved only at the camps - a closed window between them loses the floors since." : "");
   },
 });

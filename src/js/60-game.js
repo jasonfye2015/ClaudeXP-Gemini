@@ -79,7 +79,7 @@ CM.Game = class {
 
   // ---- the log: every choice the player makes, as a line, so a run can be played again from its seed (CM.replayRun) ----
   logAct(name, ...args) { if (this.replaying) return; this.runLog = this.runLog || []; this.runLog.push(args.length ? [name, ...args] : [name]); }
-  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.endless ? "endless" : "dungeon", log: (this.runLog || []).slice() }; }
+  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.endless ? "endless" : "dungeon", ascension: this.ascension || 0, iron: Boolean(this.iron), log: (this.runLog || []).slice() }; }
   // down the stairs by hand (the simulator's bot, when it has lost its way): logged, so a replay follows
   warp(number) { this.logAct("warp", number); this.enterFloor(number, "down"); }
   // what a tally counts besides steps and kills: gold by where it went, and how often each spell or skill was used
@@ -141,12 +141,13 @@ CM.Game = class {
 
   saveRun() {
     if (!["explore", "camp"].includes(this.mode)) return;
+    if (this.iron && this.mode !== "camp" && !this.ironAllow) { this.dirty = false; this.sinceSave = 0; return; }   // (Iron: the camps only)
     const data = { schema: CM.SCHEMA, gen: this.gen || 1, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line" };
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron) };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -189,6 +190,7 @@ CM.Game = class {
     this.pairFights = d.pairFights || {}; this.bonds = d.bonds || []; this.hazardsMet = d.hazardsMet || []; this.remainsFound = d.remainsFound || [];
     this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
+    this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -198,7 +200,11 @@ CM.Game = class {
   }
 
   // ---- starting, and the stairs between floors ----
-  newGame(seed, chosen, kit, difficulty, mutators, mode) {               // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned; mode: "endless" for no bottom
+  // the rung of the ladder this run is on: at k, every rule to k applies (CM.ASCENSION)
+  asc(k) { return (this.ascension || 0) >= k; }
+  ascensionMax() { return CM.clamp(CM.store.get("ascension", 0) || 0, 0, CM.ASCENSION.length); }
+
+  newGame(seed, chosen, kit, difficulty, mutators, mode, opts) {         // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned; mode: "endless" for no bottom; opts: {ascension, iron}
     this.seed = (seed || "").trim() || CM.randomSeed();
     this.rnd = new CM.Random(CM.hashSeed(`${this.seed}:dice`));          // the run's dice: the same seed, the same fights, given the same choices
     this.gen = CM.GEN;
@@ -227,6 +233,8 @@ CM.Game = class {
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
     this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row }));
     this.startMutators = this.mutators.slice(); this.runLog = []; this.formation = "line";
+    this.ascension = CM.clamp(Number((opts || {}).ascension) || 0, 0, Math.min(CM.ASCENSION.length, this.ascensionMax())); this.iron = Boolean((opts || {}).iron);
+    this.ironAllow = true;                                               // (the first save of an Iron run, at the top of the stair)
     if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
@@ -236,9 +244,11 @@ CM.Game = class {
     for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
     this.retiredThisRun = false;
     this.enterFloor(1, "down");
+    this.ironAllow = false;
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
-      + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : ""));
+      + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : "")
+      + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : ""));
     if (this.mutators.length) this.say(`Today's dungeon: ${this.mutators.map((m) => `${CM.MUTATORS[m].name} - ${CM.MUTATORS[m].what}`).join("; ")}.`);
   }
 

@@ -226,7 +226,7 @@ Object.assign(CM.Game.prototype, {
     const l = this.light;
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    l.left -= (this.floor && (this.floor.special === "wading" || this.floor.tide)) || this.has("gloom") ? 2 : 1;
+    l.left -= ((this.floor && (this.floor.special === "wading" || this.floor.tide)) || this.has("gloom") ? 2 : 1) + (this.asc(5) && (this.steps || 0) % 2 === 0 ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
     const spare = this.bag.findIndex((i) => i.kind === "torch");
@@ -337,7 +337,7 @@ Object.assign(CM.Game.prototype, {
         }
       }
       delete fl.things[k];
-      const gold = thing.gold * (this.has("rich") ? 2 : 1);
+      const gold = Math.floor(thing.gold * (this.has("rich") ? 2 : 1) * (this.asc(7) ? 0.8 : 1));
       this.gold += gold;
       this.bag.push(...thing.items);
       this.sound("chest");
@@ -418,6 +418,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.inUse) this.logAct("drink");
     f.used = true; f.known = true;
     if (this.has("drought")) { this.say("The basin is dry to the bottom, cracked. A drought lies on the dungeon today."); this.saveRun(); this.emit("change"); return; }
+    if (this.asc(2) && CM.hashSeed(`${this.seed}:dryrung:${this.floor.number}:${CM.keyOf(...this.floor.pos)}`) % 2 === 0) { this.say("Dry. Half the fountains are, this high on the ladder."); this.saveRun(); this.emit("change"); return; }
     this.tally.drank = (this.tally.drank || 0) + 1;
     if (f.kind === "heal") {
       for (const m of this.alive()) { m.hp = m.max; this.cure(m, [...CM.CURABLE, "curse"]); }
@@ -741,6 +742,7 @@ Object.assign(CM.Game.prototype, {
       const gear = CM.affix(CM.makeItem(L + 4, rnd, rnd.pick(["weapon", "armor"])), 99, rnd); gear.unknown = false; gear.value = Math.floor(gear.value * 1.5) + 100;
       thing.stock = [gear, { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + L * 3), value: 90 }, CM.oil(rnd.pick(["fire", "frost", "holy"])), CM.scroll("mapping"), CM.ingredient(rnd.pick(Object.keys(CM.INGREDIENTS)))];
       thing.stock[3].value = 60;
+      if (this.asc(9)) thing.stock = thing.stock.filter((i) => i.kind !== "greaterheal");
     }
     this.stock = thing.stock; this.peddling = k;
     this.say("The peddler spreads a cloth and lays out what he has. His prices are what you'd expect, down here.");

@@ -87,6 +87,7 @@ table.stats tr.key td.hint { color: var(--gold); }
 #advice.sound h2 { color: #8FD08F; }
 #create .foot { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
 #create .foot label { color: var(--dim); font-size: 13px; margin-left: 10px; }
+#create .foot label#iron-label { display: inline-flex; align-items: center; gap: 4px; }
 #create .foot input { width: 170px; }
 
 /* ---- a hero's sheet ---- */

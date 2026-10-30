@@ -15,7 +15,7 @@ Object.assign(CM.Game.prototype, {
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
         { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"), CM.rope());
       const house = this.villageLevel("merchant");                       // (the village's merchant's house: what the camps' merchant has learned to carry)
-      if (house >= 1) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
+      if (house >= 1 && !this.asc(9)) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
       if (house >= 2) for (const el of ["fire", "frost", "holy"]) this.stock.push(CM.oil(el));
       if (house >= 3) { const r2 = new CM.Random(CM.hashSeed(`${this.seed}:house:${this.floor.number}`)), rare = CM.affix(CM.makeItem(depth + 2, r2, r2.pick(["weapon", "armor", "helm", "shield"])), 99, r2); rare.unknown = false; rare.value = Math.floor(rare.value * 1.4); this.stock.push(rare); }
       if (house >= 4) for (const it of this.stock) it.value = Math.max(1, Math.floor(it.value * 0.8));
@@ -234,6 +234,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (item.kind === "revive") {
       if (hero.hp > 0) return "The Phoenix Feather is for the fallen.";
+      if (this.asc(15) && this.mode === "combat") return "Ironbound: the fallen rise only at the temple.";
       hero.hp = Math.floor(hero.max / 2);
       this.bag.splice(row, 1);
       this.sound("heal");
@@ -281,9 +282,10 @@ Object.assign(CM.Game.prototype, {
   },
 
   rest() {
-    if (this.gold < 20) { this.say("The merchant wants 20 gold for a bedroll by the fire."); return; }
+    const bed = this.asc(1) ? 40 : 20;
+    if (this.gold < bed) { this.say(`The merchant wants ${bed} gold for a bedroll by the fire.`); return; }
     this.logAct("rest");
-    this.gold -= 20; this.spend("rest", 20);
+    this.gold -= bed; this.spend("rest", bed);
     for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.sound("heal");
     this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass.");
@@ -294,7 +296,7 @@ Object.assign(CM.Game.prototype, {
 
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
-    const cost = { cure: 30, uncurse: 60, unstone: 150 }[service];
+    const cost = { cure: 30, uncurse: 60, unstone: 150 }[service] * (this.asc(12) ? 2 : 1);
     const which = service === "cure" ? CM.CURABLE : service === "uncurse" ? ["curse"] : ["stone"];
     const cursedGear = service === "uncurse" ? this.party.flatMap((h) => CM.equipped(h).filter((it) => it.props && it.props.cursed)) : [];
     const who = this.party.filter((h) => which.some((s) => (h.status || {})[s]));
@@ -488,7 +490,7 @@ Object.assign(CM.Game.prototype, {
   raiseDead() {
     const fallen = this.party.filter((m) => m.hp <= 0);
     if (!fallen.length) { this.say("No one needs raising."); return; }
-    const hero = fallen[0], cost = 100 * hero.level;
+    const hero = fallen[0], cost = 100 * hero.level * (this.asc(12) ? 2 : 1);
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold to raise the ${hero.cls}.`); return; }
     this.logAct("raiseDead");
     this.gold -= cost; this.spend("temple", cost);
@@ -593,6 +595,7 @@ Object.assign(CM.Game.prototype, {
       used.push(idx);
     }
     if (this.gold < r.gold) return `She asks ${r.gold} gold for the ${r.name}.`;
+    if (r.makes === "greaterheal" && this.asc(9)) return "No greater potions, this high on the ladder.";
     return "";
   },
   brew(id) {

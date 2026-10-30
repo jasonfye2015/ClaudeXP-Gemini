@@ -143,7 +143,9 @@ CM.replayRun = function (spec, upTo) {
   game.replaying = 1;                                                  // (nothing is logged while it plays itself back)
   const gen = CM.GEN;
   CM.GEN = spec.gen || 1;
-  try { game.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode); } finally { CM.GEN = gen; }
+  const maxWas = CM.store.get("ascension", 0);
+  if ((spec.ascension || 0) > (maxWas || 0)) CM.store.set("ascension", spec.ascension);   // (a replay may be from a higher rung than this browser has reached)
+  try { game.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode, { ascension: spec.ascension || 0, iron: spec.iron }); } finally { CM.GEN = gen; CM.store.set("ascension", maxWas || 0); }
   game.gen = spec.gen || 1;
   const lines = upTo === undefined ? spec.log : spec.log.slice(0, upTo);
   for (const line of lines) {

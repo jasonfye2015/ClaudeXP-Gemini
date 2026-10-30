@@ -16,7 +16,12 @@ Object.assign(CM.Game.prototype, {
     if ((fl >= 10 || won) && entry.daily) this.achieve("daily");
     if (fl >= 30) this.achieve("abyss");
     if (this.bottom) this.achieve("bottom");
-    if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); }
+    if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); if (this.iron) this.achieve("ironwill"); if ((this.ascension || 0) >= 5) this.achieve("ascended"); }
+    entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron);
+    if (won && !this.endless && ["fair", "hard", "grim"].includes(this.difficulty)) {   // the ladder: a crown on Fair or above opens the next rung
+      const next = Math.min(CM.ASCENSION.length, (this.ascension || 0) + 1);
+      if (next > this.ascensionMax()) { CM.store.set("ascension", next); this.say(`Ascension ${next} is open: the next run may carry ${CM.ASCENSION[next - 1].name.toLowerCase()} too.`); }
+    }
     if (this.endless) {
       entry.endless = true;
       if (fl >= 60) this.achieve("endless");
@@ -27,7 +32,7 @@ Object.assign(CM.Game.prototype, {
     this.village.renown = (this.village.renown || 0) + entry.renown;
     this.saveVillage();
     this.checkContracts(entry);
-    entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party);
+    entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party, { ascension: this.ascension || 0, iron: this.iron });
     entry.weekly = String(this.seed).startsWith("weekly-");
     if (!won && !this.bottom) {                                          // where they fell: a later run on this seed finds them
       const carried = this.party.flatMap((h) => CM.equipped(h)).filter((it) => !(it.props && (it.props.relic || it.props.unique)) && !["weapon", "armor"].includes(it.kind));
@@ -317,6 +322,9 @@ Object.assign(CM.Game.prototype, {
     const d = CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair;
     let hp = d.hp, atk = d.atk;
     if (this.has("brittle")) { hp *= 0.5; atk *= 1.5; }
+    if (this.asc(3)) hp *= 1.05;
+    if (this.asc(8)) atk *= 1.1;
+    if (this.asc(13)) hp *= 1.1;
     m.max = Math.max(1, Math.round(m.max * hp));
     m.hp = Math.max(1, Math.round(m.hp * hp));
     m.atk = Math.max(1, Math.round(m.atk * atk));

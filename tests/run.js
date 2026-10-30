@@ -1047,6 +1047,42 @@ test("the surface: renown from a run, the buildings, a trainer's boon, candles, 
   assert.ok(exp.village && exp.village.levels.guildhall === 2 && Array.isArray(exp.vaults));
 });
 
+test("the ladder: a Hard rung, Grim's slower cold, Ascension's rules, Iron saves, the next rung on a crown", () => {
+  const CM = load();
+  assert.ok(CM.DIFFICULTIES.hard && Object.keys(CM.DIFFICULTIES).join(",") === "gentle,fair,hard,grim");
+  assert.strictEqual(CM.ASCENSION.length, 15);
+  const game = new CM.Game();
+  assert.strictEqual(game.ascensionMax(), 0);
+  game.newGame("ladder-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { ascension: 5 });
+  assert.strictEqual(game.ascension, 0, "no rung is open yet");
+  CM.store.set("ascension", 8);
+  const g2 = new CM.Game();
+  g2.newGame("ladder-2", fixedParty(CM), "pauper", "hard", [], "dungeon", { ascension: 7, iron: true });
+  assert.strictEqual(g2.ascension, 7); assert.ok(g2.asc(7) && !g2.asc(8) && g2.iron);
+  const bed = g2.gold; g2.enterFloor(5, "down"); g2.setMode("camp"); g2.reachCamp(5); g2.gold = 100; g2.rest();
+  assert.strictEqual(g2.gold, 60, "lean camps: a bedroll is 40");
+  const orc = CM.makeMonster(CM.monsterKind("Orc"), 5, new CM.Random(1)), plain = CM.makeMonster(CM.monsterKind("Orc"), 5, new CM.Random(1));
+  g2.tune(orc); const g3 = new CM.Game(); g3.newGame("ladder-3", fixedParty(CM), "pauper", "hard"); g3.tune(plain);
+  assert.ok(orc.max > plain.max, "hardened: more health than the same rung's difficulty alone");
+  // iron: saved at the top of the stair and at the camps, not between
+  const CMi = load(); CMi.store.set("ascension", 0);
+  const gi = new CMi.Game(); gi.newGame("iron-1", fixedParty(CMi), "pauper", "fair", [], "dungeon", { iron: true });
+  const first = CMi.storage.getItem("claudemagic.run"); assert.ok(first, "the first save stands");
+  for (let i = 0; i < 10; i++) { if (gi.mode !== "explore") break; if (!gi.move(0)) gi.turn(1); gi.saveRun(); }
+  assert.strictEqual(CMi.storage.getItem("claudemagic.run"), first, "nothing saved on the floor");
+  gi.enterFloor(5, "down"); gi.setMode("camp"); gi.reachCamp(5); gi.saveRun();
+  assert.notStrictEqual(CMi.storage.getItem("claudemagic.run"), first, "the camp saves");
+  // a crown on Fair opens the next rung; the Hall of Fame and the code carry the rung
+  const gc = new CMi.Game(); gc.newGame("crown-1", fixedParty(CMi), "pauper", "fair");
+  gc.enterFloor(20, "down"); gc.crowned = true; gc.endRun(true);
+  assert.strictEqual(gc.ascensionMax(), 1);
+  assert.strictEqual(gc.fame[0].ascension, 0);
+  const code = CM.runCode("s", "hard", "dungeon", "pauper", fixedParty(CM), { ascension: 7, iron: true });
+  assert.ok(code.endsWith(":A7i"));
+  const back = CM.parseRunCode(code); assert.strictEqual(back.ascension, 7); assert.strictEqual(back.iron, true); assert.strictEqual(back.difficulty, "hard");
+  assert.strictEqual(CM.parseRunCode(CM.runCode("s", "fair", "dungeon", "pauper", fixedParty(CM))).ascension, 0);
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

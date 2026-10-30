@@ -16,18 +16,20 @@ const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf("--" + name); return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : fallback; };
 const SEEDS = Number(opt("seeds", 30)), TO = Number(opt("to", 50)), ENDLESS = args.includes("--endless");
 const DIFFS = opt("difficulty", "gentle,fair,grim").split(",");
+const ASCS = opt("ascension", "0").split(",").map(Number);              // the ladder report: --ascension 0,5,10,15 runs each rung
 const JSON_OUT = opt("json", null);
 
-function simulate(seed, difficulty) {
+function simulate(seed, difficulty, ascension = 0) {
   const CM = load();
+  CM.store.set("ascension", ascension);
   const game = new CM.Game();
-  game.newGame(seed, fixedParty(CM), "pauper", difficulty, [], ENDLESS ? "endless" : "dungeon");
+  game.newGame(seed, fixedParty(CM), "pauper", difficulty, [], ENDLESS ? "endless" : "dungeon", { ascension });
   const byCamp = {};
   game.on("mode", (m) => { if (m === "camp") byCamp[game.floor.number] = game.party.map((h) => h.level); });
   const t0 = Date.now();
   const r = playRun(CM, game, { maxFloor: TO });
   const fl = game.floor ? game.floor.number : 0;
-  return { seed, difficulty, floor: fl, died: game.mode === "title" && !game.bottom && !(game.crowned && fl === 20 && game.mode === "title"), crowned: Boolean(game.crowned), bottom: Boolean(game.bottom),
+  return { seed, difficulty: ascension ? `${difficulty}/A${ascension}` : difficulty, ascension, floor: fl, died: game.mode === "title" && !game.bottom && !(game.crowned && fl === 20 && game.mode === "title"), crowned: Boolean(game.crowned), bottom: Boolean(game.bottom),
     reached: game.mode === "explore", fights: game.tally.fights, fled: game.tally.fled, steps: game.tally.steps, gold: game.gold, guardians: (game.tally.guardians || []).slice(),
     levels: game.party.map((h) => h.level), byCamp, stuck: r.stuck, notes: r.log, ms: Date.now() - t0, spent: game.tally.spent || {}, abilities: game.tally.abilities || {}, logLines: (game.runLog || []).length };
 }
@@ -37,16 +39,16 @@ const seeds = [];
 for (let i = 0; i < SEEDS; i++) seeds.push(`sim-${i + 1}`);
 const results = [];
 const started = Date.now();
-for (const d of DIFFS) for (const s of seeds) {
-  const r = simulate(s, d);
+for (const d of DIFFS) for (const a of ASCS) for (const s of seeds) {
+  const r = simulate(s, d, a);
   results.push(r);
-  process.stderr.write(`${d.padEnd(6)} ${s.padEnd(8)} floor ${String(r.floor).padStart(3)} ${r.bottom ? "BOTTOM" : r.crowned ? "crowned" : r.died ? "fell" : "reached"} levels ${r.levels.join("/")} ${r.fights} fights ${r.ms} ms${r.stuck ? ` (stuck ${r.stuck})` : ""}\n`);
+  process.stderr.write(`${(a ? `${d}/A${a}` : d).padEnd(10)} ${s.padEnd(8)} floor ${String(r.floor).padStart(3)} ${r.bottom ? "BOTTOM" : r.crowned ? "crowned" : r.died ? "fell" : "reached"} levels ${r.levels.join("/")} ${r.fights} fights ${r.ms} ms${r.stuck ? ` (stuck ${r.stuck})` : ""}\n`);
 }
 
 // ---- the report ----
 const bands = [[1, 5], [6, 10], [11, 15], [16, 20], [21, 25], [26, 30], [31, 35], [36, 40], [41, 45], [46, 50], [51, 999]];
 console.log(`\nClaude and Magic - balance: ${SEEDS} seeds a difficulty, to floor ${TO}${ENDLESS ? ", Endless" : ""}, ${Math.round((Date.now() - started) / 1000)} s\n`);
-for (const d of DIFFS) {
+for (const d of [...new Set(results.map((r) => r.difficulty))]) {
   const rs = results.filter((r) => r.difficulty === d);
   const fell = rs.filter((r) => r.died), deep = rs.map((r) => r.floor).sort((a, b) => a - b);
   const median = deep[Math.floor(deep.length / 2)];

@@ -589,8 +589,28 @@ CM.SMITH = { enchant: 80, gem: 120, most: 3 };
 CM.DIFFICULTIES = {
   gentle: { name: "Gentle", hp: 0.75, atk: 0.8, gold: 1.25, what: "monsters a quarter weaker, and more gold" },
   fair: { name: "Fair", hp: 1, atk: 1, gold: 1, what: "the dungeon as it is" },
+  hard: { name: "Hard", hp: 1.17, atk: 1.12, gold: 0.95, what: "monsters a sixth tougher and a little harder-hitting" },
   grim: { name: "Grim", hp: 1.3, atk: 1.25, gold: 0.9, what: "monsters a third tougher and harder-hitting, a little less gold; the Hall of Fame marks it" },
 };
+// Ascension: win on Fair or above, and the next run may carry one rule more - to fifteen. Each rung is one named rule,
+// shown when the party sets out and on its Hall of Fame row (game.asc(k): the run is at rung k or past it)
+CM.ASCENSION = [
+  { id: "leancamps", name: "Lean camps", what: "a bedroll by the fire costs 40" },
+  { id: "dryfountains", name: "Dry fountains", what: "half the fountains are dry" },
+  { id: "hardened", name: "Hardened", what: "monsters have 5% more health" },
+  { id: "leaders", name: "Leaders", what: "every band from the third floor down has a leader" },
+  { id: "hungrydark", name: "Hungry dark", what: "torches burn half again as fast" },
+  { id: "nomercy", name: "No mercy", what: "the guardians' second forms from the first blow" },
+  { id: "poorveins", name: "Poor veins", what: "a fifth less gold, from chests and the fallen" },
+  { id: "keenblades", name: "Keen blades", what: "monsters hit 10% harder" },
+  { id: "nogreater", name: "No greater potions", what: "no merchant, peddler or alchemist has a Greater Healing Potion" },
+  { id: "watchful", name: "Watchful", what: "the party never has the drop on them" },
+  { id: "deeperhurts", name: "Deeper hurts", what: "poison bites double" },
+  { id: "costlytemple", name: "Costly temple", what: "the temple's prices are doubled" },
+  { id: "thickskins", name: "Thick skins", what: "monsters have 10% more health again" },
+  { id: "kingsguard", name: "The king's guard", what: "the Lich King begins with two skeletons up" },
+  { id: "ironbound", name: "Ironbound", what: "a fallen hero rises only at the temple: no feather, no Raise Dead in a fight" },
+];
 // Today's dungeon comes with two of these, from the date
 CM.MUTATORS = {
   hordes: { name: "Hordes", what: "every band of monsters has one more in it" },
@@ -613,15 +633,16 @@ CM.mutatorsFor = function (seed) {
   return out;
 };
 // a run, as a code to hand to a friend: the seed, the difficulty, the expedition, the kit and the party (CM.parseRunCode reads one back)
-CM.runCode = function (seed, difficulty, mode, kit, party) {
+CM.runCode = function (seed, difficulty, mode, kit, party, opts) {
   const who = (party || []).map((h) => [h.cls, (h.name || "").replace(/[;:,|]/g, " ").trim(), ...CM.STATS.map((s) => (h.stats || {})[s] || 10), h.row || CM.CLASSES[h.cls].row].join(",")).join(";");
-  return `CM1:${seed}:${difficulty || "fair"}:${mode || "dungeon"}:${kit || "pauper"}:${who}`;
+  const tail = opts && (opts.ascension || opts.iron) ? `:A${opts.ascension || 0}${opts.iron ? "i" : ""}` : "";
+  return `CM1:${seed}:${difficulty || "fair"}:${mode || "dungeon"}:${kit || "pauper"}:${who}${tail}`;
 };
 CM.parseRunCode = function (text) {
-  const m = /^\s*CM1:([^:]+):([^:]*):([^:]*):([^:]*):(.*)$/.exec(String(text || ""));
+  const m = /^\s*CM1:([^:]+):([^:]*):([^:]*):([^:]*):([^:]*)(?::A(\d+)(i?))?\s*$/.exec(String(text || ""));
   if (!m) return null;
   const party = m[5] ? m[5].split(";").map((p) => { const f = p.split(","); if (!CM.CLASSES[f[0]]) return null; const stats = {}; CM.STATS.forEach((s, i) => { stats[s] = CM.clamp(Number(f[2 + i]) || 10, 3, 25); }); return { cls: f[0], name: f[1] || f[0], stats, row: f[8] === "back" ? "back" : f[8] === "front" ? "front" : CM.CLASSES[f[0]].row }; }).filter(Boolean) : [];
-  return { seed: m[1], difficulty: CM.DIFFICULTIES[m[2]] ? m[2] : "fair", mode: m[3] === "endless" ? "endless" : "dungeon", kit: m[4] || "pauper", party: party.length === 4 ? party : null };
+  return { seed: m[1], difficulty: CM.DIFFICULTIES[m[2]] ? m[2] : "fair", mode: m[3] === "endless" ? "endless" : "dungeon", kit: m[4] || "pauper", party: party.length === 4 ? party : null, ascension: CM.clamp(Number(m[6]) || 0, 0, CM.ASCENSION.length), iron: m[7] === "i" };
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
@@ -632,6 +653,8 @@ CM.ACHIEVEMENTS = {
   rivals: { name: "No Rivals", what: "Best a rival party for the floor", title: "the Unrivalled" },
   bonded: { name: "Old Friends", what: "Two heroes fight forty fights side by side", title: "the Steadfast" },
   weaver: { name: "Weaver", what: "Two casters weave their spells into one", title: "the Weaver" },
+  ironwill: { name: "Iron Will", what: "Slay the Lich King on an Iron run, saved only at the camps", title: "the Iron-willed" },
+  ascended: { name: "Ascended", what: "Slay the Lich King at Ascension 5 or higher", title: "the Ascended" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },

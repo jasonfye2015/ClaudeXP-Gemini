@@ -621,6 +621,22 @@ The surface (the fourth big update, phase 3 - v2.4)
   The vault is slots now (game.vaults; an old single vault carries over): leave more than it holds and the oldest
   comes back to the pack.
 
+The difficulty ladder (the fourth big update, phase 5 - v2.5)
+  Hard, between Fair and Grim: monsters a sixth tougher and a little harder-hitting. On Grim the Lich King's deathly
+  cold comes every third turn, not every second: a wall with a door in it.
+  Ascension. Slay the Lich King on Fair or above and the next run may carry one rule more; each crown opens the next
+  rung, to fifteen (CM.ASCENSION; the creation screen's Ascension select; the run's start and its Hall of Fame row
+  name the rung): Lean camps (a bedroll costs 40), Dry fountains (half are dry), Hardened (+5% health), Leaders
+  (every band from the third floor down has one), Hungry dark (torches half again as fast), No mercy (the guardians'
+  second forms from the first blow), Poor veins (a fifth less gold), Keen blades (+10% attack), No greater potions,
+  Watchful (the party never has the drop on them), Deeper hurts (poison bites double), Costly temple (prices
+  doubled), Thick skins (+10% health again), The king's guard (the Lich King begins with two skeletons up), Ironbound
+  (a fallen hero rises only at the temple). A run code carries the rung (:A7). The Ascended achievement at rung 5.
+  Iron: a run saved only at the camps (and at the top of the stair) - a closed window between them loses the floors
+  since. The Hall of Fame marks it; the Iron Will achievement for a crown on Iron. A run code carries it (:A0i).
+  The simulator's ladder report: node tools/sim.js --difficulty fair --ascension 0,5,10,15 runs each rung and reports
+  survival by it, so each rung is a measured step and not a cliff.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

@@ -16,6 +16,7 @@ Object.assign(CM.Game.prototype, {
       const kind = CM.monsterKind(this.foes[0].kind || this.foes[0].name);
       if (kind) this.foes.push(CM.makeMonster(kind, CM.monsterLevel(this.floor ? this.floor.number : 1), this.rnd));
     }
+    if (this.asc(4) && this.floor && this.floor.number >= 3 && !thing.ascended && this.foes.length && !this.foes.some((m) => m.elite || m.boss || m.guardian)) { thing.ascended = true; CM.makeElite(this.foes, this.rnd, this.gen); }   // (Leaders)
     for (const m of this.foes) this.tune(m);
     if (this.villageLevel("library") >= 4) for (const m of this.foes) for (const el of Object.keys(CM.ELEMENT_NAMES)) this.learnResist(m, el, CM.resistance(m, el));   // (the library knows)
     thing.group = this.foes;
@@ -50,10 +51,11 @@ Object.assign(CM.Game.prototype, {
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
       if (this.mode !== "combat") return;
-    } else if (!theyCame && (this.rnd.chance(sneaky ? 0.35 : 0.2) || this.alive().some((h) => CM.trait(h, "foresight")))) {     // ...or you have the drop on them
+    } else if (!theyCame && !this.asc(10) && (this.rnd.chance(sneaky ? 0.35 : 0.2) || this.alive().some((h) => CM.trait(h, "foresight")))) {     // ...or you have the drop on them (never, past the tenth rung)
       this.say("You have the drop on them: a free round!");
       this.combat.surprise = true;
     }
+    if (this.asc(14) && this.foes.some((m) => m.boss)) this.summonSkeletons(2);   // (the king's guard)
     this.beginRound();
   },
 
@@ -153,7 +155,7 @@ Object.assign(CM.Game.prototype, {
     for (const h of this.alive()) {
       const st = h.status || {};
       if (st.poison) {
-        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05)));
+        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05) * (this.asc(11) ? 2 : 1)));
         h.hp = Math.max(1, h.hp - bite);
         this.say(`${h.name} suffers from the poison (-${bite}).`);
       }
@@ -213,7 +215,7 @@ Object.assign(CM.Game.prototype, {
     }
     for (const m of this.foes) {                                         // a second form, at a third of its strength (the shallow guardians)
       const G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
-      if (!G || !G.form2 || m.form2 || m.hp <= 0 || m.hp > m.max * 0.34 || m.echo) continue;
+      if (!G || !G.form2 || m.form2 || m.hp <= 0 || m.hp > m.max * (this.asc(6) ? 1.01 : 0.34) || m.echo) continue;
       m.form2 = true;
       this.say(G.form2.text);
       this.emit("fx", { kind: "rise", foe: m });
@@ -518,7 +520,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (share <= CM.LICH.coldFrom) {
       c.cold = (c.cold || 0) + 1;
-      if (c.cold % 2 === 0) {
+      if (c.cold % (this.difficulty === "grim" ? 3 : 2) === 0) {              // (on Grim the cold comes every third turn: a wall with a door)
         this.emit("fx", { kind: "cold", foe: m });
         this.say("The Lich King raises his hand, and a deathly cold fills the hall!");
         for (const h of this.targets()) this.hurt(h, 10 + Math.floor(this.floor.number / 2), m, { noTouch: true, aoe: true });
@@ -1065,6 +1067,7 @@ Object.assign(CM.Game.prototype, {
         break;
       }
       case "raise": {
+        if (this.asc(15)) { this.say("Ironbound: the fallen rise only at the temple. The prayer goes unanswered."); break; }
         ally.hp = CM.trait(h, "miracle") ? ally.max : Math.max(1, Math.floor(ally.max / 3));
         this.sound("heal");
         this.say(`${h.name} calls ${ally.name} back from the dark!`);
@@ -1158,6 +1161,7 @@ Object.assign(CM.Game.prototype, {
     let gold = slain.reduce((s, m) => s + m.gold, 0);
     if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
     if (this.alive().some((h) => CM.trait(h, "pickpocket"))) gold = Math.floor(gold * 1.1);
+    if (this.asc(7)) gold = Math.floor(gold * 0.8);
     if (this.alive().some((h) => CM.trait(h, "avenger")) && slain.some((m) => m.undead)) { const n = slain.filter((m) => m.undead).length * 5; for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + n); this.say(`The unholy are laid low, and the party mends ${n}.`); }
     this.foughtTogether();
     gold = Math.floor(gold * (CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair).gold);

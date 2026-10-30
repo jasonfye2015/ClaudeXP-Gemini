@@ -146,7 +146,7 @@ uses every v2.0 system in the sim's report, and a replayed log reproduces a run 
 
 ---
 
-## Phase 5 - The difficulty ladder
+## Phase 5 - The difficulty ladder - DONE (v2.5)
 
 **Goal:** a rung for everyone, and a reason to win again.
 

@@ -45,6 +45,8 @@ CM.UI = class {
       <label for="kit">Kit</label><select id="kit" title="What the deepest run so far has earned"></select>
       <label for="difficulty">Difficulty</label><select id="difficulty" title="How hard the dungeon is"></select>
       <label for="mode">Expedition</label><select id="mode" title="The dungeon has a bottom; an Endless expedition does not"><option value="dungeon">The dungeon</option><option value="endless">Endless</option></select>
+      <label for="ascension" id="ascension-label">Ascension</label><select id="ascension" title="A rule more for every rung climbed: win on Fair or above to open the next"></select>
+      <label for="iron" id="iron-label"><input type="checkbox" id="iron"> Iron</label>
       <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>
     <div class="small" id="create-note"></div>
   </div>
