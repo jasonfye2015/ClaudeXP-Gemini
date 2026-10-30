@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v2.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v2.6 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -371,7 +371,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "2.5", built: "2026-10-30" };
+const CM = window.CM = { version: "2.6", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -780,6 +780,30 @@ CM.FAMILIARS = {
   toad: { name: "a toad", cls: ["Mage"], what: "eats one ailment off the party on every new floor" },
   skull: { name: "a skull that bites", cls: ["Necromancer"], what: "bites a foe at the start of every round" },
 };
+// ---- the dungeon, branched (generator 2): wings, secret floors, the new rooms ----
+// A wing: a short floor of its own beside a band's floors, down a second stair, with its own smell and a way back to the
+// main stair a floor below. One a band, now and then, by the seed; a secret stair leads to a hidden one, richer.
+CM.WINGS = [
+  { name: "the Sewers", smell: "a smell of old water and worse", hazard: "spores", secret: "the Sexton's Cellar" },
+  { name: "the Cistern", smell: "the sound of water falling into water", hazard: "tide", secret: "the Drowned Vault" },
+  { name: "the Mines", smell: "a draught of coal and iron", hazard: "vents", secret: "the Dwarves' Vault" },
+  { name: "the Crypts", smell: "dust, and something sweeter under it", hazard: "bonepiles", secret: "the Lich King's Wine Cellar" },
+  { name: "the Drowned Market", smell: "salt, and rotten fruit", hazard: "tide", secret: "the Harbourmaster's Strongroom" },
+  { name: "the Spore Cellars", smell: "a smell like bread gone wrong", hazard: "spores", secret: "the Sporemother's Larder" },
+  { name: "the Crystal Seam", smell: "a hum you feel in your teeth", hazard: "mirror", secret: "the Tyrant's First Throne" },
+  { name: "the Slag Pits", smell: "heat, and burning hair", hazard: "vents", secret: "the Foundry Master's Vault" },
+  { name: "the Charnel Pit", smell: "the smell under every other smell", hazard: "bonepiles", secret: "the Patriarch's Reliquary" },
+  { name: "the Root Cellar", smell: "wet wood and sap", hazard: "spores", secret: "the Dreamer's Bed" },
+];
+// set pieces the second generator may lay (CM.TEMPLATES are the first's, kept); P a pit, X the dark, M monsters that
+// stay, # a pillar inside
+CM.TEMPLATES2 = [
+  { name: "Great Hall", min: 5, rows: ["#####W#####", "#..#...#..#", "#....M....#", "#..#.C.#..#", "#.........#", "#####D#####"] },
+  { name: "Drowned Chapel", min: 6, flood: true, rows: ["#######", "#..A..#", "#.....#", "#C...C#", "###D###"] },
+  { name: "Charnel Pit", min: 9, rows: ["#########", "#P.....P#", "#..XMX..#", "#.XXCXX.#", "#P.....P#", "###D#####"] },
+  { name: "Crystal Gallery", min: 12, rows: ["#########", "#..#C#..#", "#.......#", "#..#M#..#", "#.......#", "###S#####"] },
+];
+CM.AWAKENED = { hp: 1.25, atk: 1.2, what: "every floor the mirror of itself, the monsters a band deeper, the uniques awake" };
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
 CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
@@ -1087,6 +1111,9 @@ CM.ACHIEVEMENTS = {
   weaver: { name: "Weaver", what: "Two casters weave their spells into one", title: "the Weaver" },
   ironwill: { name: "Iron Will", what: "Slay the Lich King on an Iron run, saved only at the camps", title: "the Iron-willed" },
   ascended: { name: "Ascended", what: "Slay the Lich King at Ascension 5 or higher", title: "the Ascended" },
+  wings: { name: "Off the Stair", what: "Go down a wing stair", title: "the Wayward" },
+  secretfloor: { name: "Behind the Wall", what: "Find a secret stair", title: "the Curious" },
+  awakened: { name: "Awakened", what: "Slay the Lich King in an Awakened expedition", title: "the Awakened" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
@@ -1404,9 +1431,10 @@ CM.affix = function (item, floor, rnd) {
   item.name = `${p.element && !CM.ELEMENTS[p.element] ? "" : ""}${prefix ? prefix[1] + " " : ""}${p.element ? CM.ELEMENTS[p.element].prefix + " " : ""}${item.base || CM.baseName(item)}${suffix ? " " + suffix[1] : ""}${p.bonus ? ` +${p.bonus}` : ""}`;
   return item;
 };
-CM.makeUnique = function (id) {
+CM.makeUnique = function (id, awake) {
   const u = CM.UNIQUES[id];
   const item = { name: u.name, base: u.name, kind: u.kind, slot: u.slot, power: u.power, value: u.value, props: Object.assign({ unique: id, rarity: "unique" }, JSON.parse(JSON.stringify(u.props))) };
+  if (awake) { item.name = u.name + ", Awake"; item.props.awake = true; item.props.regen = (item.props.regen || 0) + 1; item.props.crit = (item.props.crit || 0) + 0.05; item.power += 2; item.value *= 2; }   // (an Awakened run: a second power in each)
   return item;
 };
 CM.ingredient = (id) => ({ name: CM.INGREDIENTS[id].name, kind: "ingredient", ingredient: id, power: 0, value: 25 });
@@ -1960,7 +1988,7 @@ CM.solvable = function (floor, from) {
 // What every generator's floor gets afterwards, each by a hash of the seed and the floor so the floor itself never
 // moves: gems and tomes in the chests, an affix or two on their gear, one unique a band, a choice event, a strongbox
 // two floors below its key, a peddler, rivals, and the band's hazards.
-CM.furnish = function (floor, seed) {
+CM.furnish = function (floor, seed, gen) {
   const number = floor.number, grid = floor.grid, size = grid.length, special = floor.special;
   const dist = CM.distances(grid, floor.pos);
   const named = floor.rooms.filter((r) => r.name), plain = floor.rooms.filter((r) => !r.name);
@@ -2006,12 +2034,12 @@ CM.furnish = function (floor, seed) {
     const k = pickCell("event", (c) => roomCells.has(c));
     if (k) floor.things[k] = { type: "event", event: id, done: false };
   }
-  if (ordinary && number >= 4 && number + 2 < CM.BOTTOM && h("boxkey") % 100 < 30) {        // the key here, the box two floors down
+  if (ordinary && number >= 4 && number + 2 < CM.BOTTOM && h("boxkey") % 100 < 30 && !(gen >= 2 && CM.guardianFor(number + 2))) {   // the key here, the box two floors down (never a guardian's floor, from the second generator)
     const k = pickCell("boxkey", (c) => !roomCells.has(c));
     if (k) floor.things[k] = { type: "boxkey", box: number + 2 };
   }
-  if (number >= 6 && number < CM.BOTTOM && CM.hashSeed(`${seed}:boxkey:${number - 2}`) % 100 < 30 && (number - 2 >= 2 && !CM.guardianFor(number - 2) && number - 2 !== CM.LAST_FLOOR && CM.specialFor(number - 2, seed) !== "maze")) {
-    const k = pickCell("strongbox", (c) => roomCells.has(c));
+  if (number >= 6 && number < CM.BOTTOM && CM.hashSeed(`${seed}:boxkey:${number - 2}`) % 100 < 30 && (number - 2 >= 2 && !CM.guardianFor(number - 2) && number - 2 !== CM.LAST_FLOOR && CM.specialFor(number - 2, seed) !== "maze") && !(gen >= 2 && CM.guardianFor(number))) {
+    const k = pickCell("strongbox", (c) => roomCells.has(c)) || (gen >= 2 ? pickCell("strongbox") : null);
     if (k) floor.things[k] = { type: "strongbox", from: number - 2, opened: false };
   }
   if (ordinary && number >= 3 && h("peddler") % 100 < 8) {
@@ -2021,6 +2049,22 @@ CM.furnish = function (floor, seed) {
   if (ordinary && number >= 4 && h("rivals") % 100 < 10) {
     const k = pickCell("rivals", (c) => roomCells.has(c));
     if (k) floor.things[k] = { type: "rivals", met: false };
+  }
+  // the second generator's wings: a second stair down into a short floor of the band's own, one a band now and then;
+  // a secret stair in a wall, once a band, to a hidden one (CM.WINGS)
+  if (gen >= 2 && number >= 3 && number < CM.BOTTOM - 1 && !CM.guardianFor(number) && !CM.guardianFor(number + 1) && !CM.CAMP_AFTER.includes(number) && number !== CM.LAST_FLOOR - 1 && number !== CM.LAST_FLOOR && special !== "maze") {
+    const band = CM.themeIndex(number), first = band * 5 + 1, floors = [];
+    for (let n = Math.max(3, first); n <= band * 5 + 5; n++) if (!CM.guardianFor(n) && !CM.guardianFor(n + 1) && !CM.CAMP_AFTER.includes(n) && n !== CM.LAST_FLOOR - 1 && n !== CM.LAST_FLOOR && n < CM.BOTTOM - 1) floors.push(n);
+    const wingAt = floors.length ? floors[CM.hashSeed(`${seed}:wing:${band}`) % floors.length] : -1, secretAt = floors.length > 1 ? floors.filter((n) => n !== wingAt)[CM.hashSeed(`${seed}:secretwing:${band}`) % (floors.length - 1)] : -1;
+    if (number === wingAt) { const k = pickCell("wingstair", (c) => !roomCells.has(c)); if (k) floor.things[k] = { type: "wingstair", wing: band }; }
+    if (number === secretAt) {                                           // (a wall beside a corridor cell, searched: Space before it)
+      const cells = openCells().filter((c) => !roomCells.has(c));
+      for (let i = 0; i < cells.length; i++) {
+        const [x, y] = unkey(cells[(CM.hashSeed(`${seed}:secretstair:${number}`) + i) % cells.length]);
+        const wall = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([wx, wy]) => grid[wy] && grid[wy][wx] === 1 && wx > 0 && wy > 0 && wx < size - 1 && wy < size - 1 && !floor.features[key(wx, wy)]);
+        if (wall) { floor.features[key(wall[0], wall[1])] = { type: "secretstair", found: false, wing: band }; break; }
+      }
+    }
   }
   const hazard = CM.HAZARDS[CM.themeIndex(number)];
   if (hazard && !CM.guardianFor(number)) {
@@ -2034,10 +2078,52 @@ CM.furnish = function (floor, seed) {
   return floor;
 };
 
-// a floor: made by the run's generator (CM.GEN for a new run), then furnished
+// a floor: made by the run's generator (CM.GEN for a new run), then furnished; a wing (number + 0.5) is made its own way
 CM.makeFloor = function (number, seed, gen) {
+  if (number % 1 !== 0) return CM.makeWing(number, seed, gen);
   const make = CM.generators[gen || CM.GEN] || CM.generators[1];
-  return CM.furnish(make(number, seed), seed);
+  return CM.furnish(make(number, seed), seed, gen || CM.GEN);
+};
+
+// a wing: the band's short floor beside floor n (number n + 0.5), carved as any floor of the seed's own key, then made
+// a wing of - no way down but the exit to the main stair a floor below, no people, its own hazard; a secret one richer
+CM.makeWing = function (number, seed, gen) {
+  const n = Math.floor(number), band = CM.themeIndex(n), W = CM.WINGS[band] || CM.WINGS[0];
+  const secret = CM.hashSeed(`${seed}:secretwing:${band}`) !== CM.hashSeed(`${seed}:wing:${band}`) && (() => { const first = band * 5 + 1, floors = []; for (let f = Math.max(3, first); f <= band * 5 + 5; f++) if (!CM.guardianFor(f) && !CM.guardianFor(f + 1) && !CM.CAMP_AFTER.includes(f) && f !== CM.LAST_FLOOR - 1 && f !== CM.LAST_FLOOR && f < CM.BOTTOM - 1) floors.push(f); const wingAt = floors.length ? floors[CM.hashSeed(`${seed}:wing:${band}`) % floors.length] : -1; return n !== wingAt; })();
+  const make = CM.generators[gen || CM.GEN] || CM.generators[1];
+  const fl = make(n, `${seed}:wing:${n}`);
+  fl.number = number; fl.wing = band; fl.wingName = secret ? W.secret : W.name; fl.secretWing = secret; fl.special = null;
+  for (const [k, t] of Object.entries(fl.things)) {
+    if (t.type === "ladder" || t.type === "boss" || t.type === "guardian") fl.things[k] = { type: "wingexit" };
+    else if (t.type === "stairs_up") fl.things[k] = { type: "wingstair_up" };
+    else if (!["chest", "monsters", "key"].includes(t.type)) delete fl.things[k];
+  }
+  for (const [k, f] of Object.entries(fl.features)) if (["carving", "teleporter", "spinner", "trapdoor"].includes(f.type)) delete fl.features[k];
+  if (!Object.values(fl.things).some((t) => t.type === "wingstair_up")) fl.things[CM.keyOf(fl.pos[0], fl.pos[1])] = { type: "wingstair_up" };
+  const rnd = new CM.Random(CM.hashSeed(`${seed}:wingloot:${n}`));
+  for (const t of Object.values(fl.things)) if (t.type === "chest") { t.gold = Math.floor(t.gold * (secret ? 2.5 : 1.3)); if (secret) t.items.push(CM.affix(CM.makeItem(n + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd)); }
+  if (secret) { let i = 0; for (const [k, t] of Object.entries(fl.things)) if (t.type === "monsters" && i++ > 0) delete fl.things[k]; }   // (a secret floor: one band, a lot of chests)
+  fl.hazard = W.hazard;
+  if (W.hazard !== "tide" && W.hazard !== "mirror") { const cells = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = CM.keyOf(x, y); if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && !(x === fl.pos[0] && y === fl.pos[1])) cells.push(k); } for (let i = 0; i < 3 && cells.length; i++) fl.features[cells[CM.hashSeed(`${seed}:winghazard:${n}:${i}`) % cells.length]] = { type: W.hazard, known: false, spent: false }; }
+  for (const t of Object.values(fl.things)) if (t.type === "chest") t.items.forEach((it, i) => CM.affix(it, n, new CM.Random(CM.hashSeed(`${seed}:wingaffix:${n}:${i}`))));
+  return fl;
+};
+
+// an Awakened run: every floor the mirror of itself (x across the middle), done to a floor already made
+CM.mirrorFloor = function (fl) {
+  const size = fl.grid.length, mx = (x) => size - 1 - x, mk = (k) => { const [x, y] = k.split(",").map(Number); return `${mx(x)},${y}`; };
+  fl.grid = fl.grid.map((row) => row.slice().reverse());
+  const flipKeys = (map) => { const out = {}; for (const [k, v] of Object.entries(map)) out[mk(k)] = v; return out; };
+  fl.things = flipKeys(fl.things); fl.features = flipKeys(fl.features);
+  for (const f of Object.values(fl.features)) { if (f.to) f.to = [mx(f.to[0]), f.to[1]]; if (f.gate) f.gate = mk(f.gate); if (f.face === 1) f.face = 3; else if (f.face === 3) f.face = 1; }
+  for (const t of Object.values(fl.things)) { if (t.ghost) t.ghost = mk(t.ghost); if (t.vengeance) t.vengeance = mk(t.vengeance); if (t.up) t.up = [mx(t.up[0]), t.up[1]]; }
+  fl.dark = fl.dark.map(mk); fl.seen = fl.seen.map(([x, y]) => [mx(x), y]);
+  fl.decor = fl.decor.map((d) => Object.assign({}, d, { x: mx(d.x) }));
+  fl.rooms = fl.rooms.map((r) => Object.assign({}, r, { x0: mx(r.x1), x1: mx(r.x0) }));
+  fl.pos = [mx(fl.pos[0]), fl.pos[1]];
+  if (fl.facing === 1) fl.facing = 3; else if (fl.facing === 3) fl.facing = 1;
+  fl.mirrored = true;
+  return fl;
 };
 
 // ---- 21-gen1.js ----
@@ -2436,7 +2522,7 @@ const unkey = (k) => k.split(",").map(Number);
 CM.generators = CM.generators || {};
 // what a floor will hold: the set pieces to try, in order (the guardian's lair first), and how many plain rooms
 CM.planFloor = function (number, seed, rnd, special, lair) {
-  const wanted = CM.TEMPLATES.filter((t) => number >= t.min && !((number === CM.LAST_FLOOR || number === CM.BOTTOM) && t.name === "Pit Room"));
+  const wanted = CM.TEMPLATES.concat(CM.TEMPLATES2 || []).filter((t) => number >= t.min && !((number === CM.LAST_FLOOR || number === CM.BOTTOM) && ["Pit Room", "Charnel Pit"].includes(t.name)));
   rnd.shuffle(wanted);
   const pieces = special === "maze" ? [] : wanted.slice(0, number >= 6 ? 2 : 1);
   if (lair) pieces.unshift(lair);                                   // (the guardian's lair first, and away from the top left, where the party starts)
@@ -2878,8 +2964,10 @@ CM.floorDelta = function (fl, base) {
 };
 
 // the floor again, from the seed and the changes; returns {floor, base, drifted}
-CM.restoreFloor = function (d, seed, gen) {
-  const fl = CM.makeFloor(d.n, seed, gen || 1), base = CM.snapshot(fl);
+CM.restoreFloor = function (d, seed, gen, awakened) {
+  const fl = CM.makeFloor(d.n, seed, gen || 1);
+  if (awakened) CM.mirrorFloor(fl);
+  const base = CM.snapshot(fl);
   const drifted = d.fp !== undefined && d.fp !== base.fp;
   for (const part of ["things", "features"]) for (const [k, v] of Object.entries(d[part] || {})) { if (v === null) delete fl[part][k]; else fl[part][k] = v; }
   for (const [x, y, v] of d.grid || []) if (fl.grid[y] && x < fl.grid[y].length) fl.grid[y][x] = v;
@@ -5286,6 +5374,7 @@ CM.Game = class {
   // a floor made from the seed, and remembered as it was fresh (so the save can keep only what changes)
   freshFloor(number) {
     const fl = CM.makeFloor(number, this.seed, this.gen || CM.GEN);
+    if (this.awakened) CM.mirrorFloor(fl);
     this.bases[number] = CM.snapshot(fl);
     this.floors[number] = fl;
     return fl;
@@ -5296,7 +5385,7 @@ CM.Game = class {
     if (this.floors[number]) return this.floors[number];
     const delta = this.deltas[number];
     if (!delta) return this.freshFloor(number);
-    const r = CM.restoreFloor(delta, this.seed, this.gen || 1);
+    const r = CM.restoreFloor(delta, this.seed, this.gen || 1, this.awakened);
     this.floors[number] = r.floor; this.bases[number] = r.base;
     if (r.drifted) this.say(`(The dungeon has shifted a little since this run was saved: floor ${number} may not be quite as you left it.)`);
     return r.floor;
@@ -5309,7 +5398,7 @@ CM.Game = class {
   floorDeltas() {
     const out = {};
     for (const [n, fl] of Object.entries(this.floors)) {
-      const base = this.bases[n] || (this.bases[n] = CM.snapshot(CM.makeFloor(Number(n), this.seed, this.gen || 1)));
+      const base = this.bases[n] || (this.bases[n] = CM.snapshot(this.awakened ? CM.mirrorFloor(CM.makeFloor(Number(n), this.seed, this.gen || 1)) : CM.makeFloor(Number(n), this.seed, this.gen || 1)));
       if (fl === this.floor || !this.deltas[n]) this.deltas[n] = CM.floorDelta(fl, base);
       out[n] = this.deltas[n];
     }
@@ -5325,7 +5414,7 @@ CM.Game = class {
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron) };
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), behind: this.behind || 0 };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -5344,6 +5433,7 @@ CM.Game = class {
     if (!this.canContinue()) return false;
     this.seed = d.seed || CM.randomSeed();
     this.gen = d.gen || 1;                                               // (the generator this run began with: its floors stay its floors)
+    this.awakened = Boolean(d.awakened);
     this.party = d.party.map(CM.upgradeHero); this.bag = d.bag || []; this.gold = d.gold || 0;
     this.floors = {}; this.bases = {}; this.deltas = {};
     for (const delta of Object.values(d.floors || {})) this.deltas[delta.n] = delta;   // (each floor is made again when the party goes back to it)
@@ -5369,6 +5459,7 @@ CM.Game = class {
     this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
     this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
+    this.awakened = Boolean(d.awakened); this.behind = d.behind || 0;
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -5408,6 +5499,7 @@ CM.Game = class {
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
     this.everFell = false; this.fightFell = false; this.earned = [];
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
+    this.awakened = mode === "awakened" && Boolean(this.achievements.bottom); this.behind = 0;
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
     this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row }));
     this.startMutators = this.mutators.slice(); this.runLog = []; this.formation = "line";
@@ -5426,7 +5518,8 @@ CM.Game = class {
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
       + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : "")
-      + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : ""));
+      + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : "")
+      + (this.awakened ? " Awakened: the Root remembers you. Every floor is the mirror of itself, the monsters a band deeper, the uniques awake." : ""));
     if (this.mutators.length) this.say(`Today's dungeon: ${this.mutators.map((m) => `${CM.MUTATORS[m].name} - ${CM.MUTATORS[m].what}`).join("; ")}.`);
   }
 
@@ -5443,9 +5536,14 @@ CM.Game = class {
     this.floor = fl;
     if (this.songEpic !== number) { this.song = 0; this.songEpic = 0; }  // (a song that lasts the floor ends with it)
     if (how === "down") {
-      const top = this.cellOf(fl, "stairs_up");
+      const top = this.cellOf(fl, "stairs_up") || this.cellOf(fl, "wingstair_up");
       if (top) fl.pos = top.slice();
       else if (!fresh) fl.pos = fl.pos.slice();
+      const open = CM.openNeighbours(fl, fl.pos[0], fl.pos[1]);
+      if (open.length) fl.facing = CM.DIRS.indexOf(open[0]);
+    } else if (how === "upwing") {                                        // back up a wing stair: onto it
+      const stair = this.cellOf(fl, "wingstair") || this.cellOf(fl, "stairs_up");
+      if (stair) fl.pos = stair.slice();
       const open = CM.openNeighbours(fl, fl.pos[0], fl.pos[1]);
       if (open.length) fl.facing = CM.DIRS.indexOf(open[0]);
     } else if (how === "up") {
@@ -5476,7 +5574,8 @@ CM.Game = class {
     this.emit("floor", fl);
     this.saveRun();
     if (fresh && this.has("pilgrim")) this.checkLevels();
-    if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.themeFor(number).name}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
+    if (fl.wing !== undefined) { if (fresh) this.say(`${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)}: ${CM.WINGS[fl.wing].smell}. The only way on is the way down to the main stair.`); if (fresh && fl.secretWing) this.achieve("secretfloor"); else if (fresh) this.achieve("wings"); }
+    else if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.themeFor(number).name}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && fl.hazard && CM.HAZARDS[CM.themeIndex(number)] && !this.hazardsSeen(fl.hazard)) this.say(CM.HAZARDS[CM.themeIndex(number)].note);
     if (fresh && number === CM.LAST_FLOOR + 1) this.say("The stair goes on below the palace, cut by no mason. The air is wet and old. The Deep begins here, and the carvings above never spoke of it.");
@@ -5604,6 +5703,7 @@ Object.assign(CM.Game.prototype, {
     this.dirty = true;
     this.steps = (this.steps || 0) + 1;
     this.count("steps");
+    if (this.steps % 150 === 0 && this.gen >= 2) this.changeBehind();        // (the dungeon is not still behind you)
     if (fl.hazard === "tide" && this.steps % CM.TIDE_STEPS === 0) {       // the Drowned Town's tide turns
       fl.tide = !fl.tide;
       this.dirty = true;
@@ -5644,7 +5744,9 @@ Object.assign(CM.Game.prototype, {
           adventurer: "Someone sits bound against the wall. (Space to cut them loose)", rope: "A rope hangs down from the floor above. (Space to climb it)",
           event: `${(CM.EVENTS[thing.event] || {}).title || "Something"}. (Space to look closer)`, strongbox: thing.opened ? "An iron strongbox, open and empty." : `An iron strongbox, bolted to the floor, with a keyhole. (The key is on floor ${thing.from}.)`,
           peddler: "A peddler sits on his pack, with a lantern and a smile. (Space to see his wares)", rivals: "Four adventurers, armed, look you over. (Space to speak to them)",
-          remains: "Bones in torn gear, four of them, and a name you know from the Hall of Fame. (Space to see what they left)" }[thing.type]);
+          remains: "Bones in torn gear, four of them, and a name you know from the Hall of Fame. (Space to see what they left)",
+          wingstair: `A second stair goes down here, narrower, into ${(CM.WINGS[thing.wing] || CM.WINGS[0]).name}: ${(CM.WINGS[thing.wing] || CM.WINGS[0]).smell}. (Space to take it; the main stair is still the way on)`,
+          wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)" }[thing.type]);
       }
     }
     if (f) this.arrive(f, k);
@@ -5844,6 +5946,9 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
     if (thing && thing.type === "rivals") { this.meetRivals(thing, k); return; }
     if (thing && thing.type === "remains") { this.takeRemains(thing, k); return; }
+    if (thing && thing.type === "wingstair") { this.sound("stairs"); this.enterFloor(fl.number + 0.5, "down"); return; }
+    if (thing && thing.type === "wingexit") { this.sound("stairs"); this.say("The wing's last stair comes out on the main stair below."); this.enterFloor(Math.floor(fl.number) + 1, "down"); return; }
+    if (thing && thing.type === "wingstair_up") { this.sound("stairs"); this.enterFloor(Math.floor(fl.number), "upwing"); this.say("Back up the wing stair."); return; }
     if (thing && thing.type === "rope") {
       this.sound("stairs");
       this.enterFloor(fl.number - 1, "rope", thing.up);
@@ -5901,6 +6006,15 @@ Object.assign(CM.Game.prototype, {
     } else if (here && here.type === "altar") {
       this.inUse = true; this.kneel(here); this.inUse = false;
     } else if (!CM.isOpen(fl, x + dx, y + dy)) {                       // a wall before you: search it
+      if (ahead && ahead.type === "secretstair" && !ahead.found) {
+        ahead.found = true;
+        fl.grid[y + dy][x + dx] = 0;
+        fl.things[ak] = { type: "wingstair", wing: ahead.wing, secret: true };
+        this.sound("grind");
+        this.say("You press the stones... and a slab swings in on a stair going down, cut by no one who meant it to be found.");
+        this.look(); this.emit("mesh"); this.dirty = true; this.emit("change");
+        return;
+      }
       if (ahead && ahead.type === "secret" && !ahead.found) {
         ahead.found = true;
         fl.grid[y + dy][x + dx] = 0;
@@ -6046,9 +6160,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party" };
+  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -6167,6 +6281,23 @@ Object.assign(CM.Game.prototype, {
     if (!t.path.length && !t.explore) return stop(null);
     return true;
   },
+  // the dungeon behind you shifts, now and then: a door you left shut opens on a floor above, or a peddler sets up by a
+  // fountain there, once a run (never the floor you are on; the floor's save is worked out afresh)
+  changeBehind() {
+    const above = Object.keys(this.floors).map(Number).filter((n) => n < Math.floor(this.floor.number) && n % 1 === 0);
+    if (!above.length) return;
+    const n = above[this.rnd.int(0, above.length - 1)], fl = this.floors[n];
+    const doors = Object.values(fl.features).filter((f) => f.type === "door" && !f.open && !f.locked && f.riddle === undefined);
+    if (doors.length && this.rnd.chance(0.6)) { this.rnd.pick(doors).open = true; this.say(`Somewhere above, on floor ${n}, a door you left shut swings open.`); }
+    else if (!this.behind) {
+      const fountain = Object.keys(fl.features).find((k) => fl.features[k].type === "fountain");
+      const spot = fountain && CM.DIRS.map(([dx, dy]) => `${Number(fountain.split(",")[0]) + dx},${Number(fountain.split(",")[1]) + dy}`).find((k) => { const [x, y] = k.split(",").map(Number); return CM.passable(fl, x, y) && !fl.things[k] && !fl.features[k]; });
+      if (spot) { fl.things[spot] = { type: "peddler", stock: null }; this.behind = n; this.say(`Somewhere above, on floor ${n}, a peddler has set up by the fountain.`); }
+    } else return;
+    delete this.deltas[n];
+    this.dirty = true;
+  },
+
   // a note pinned to a square of the automap (a word or two; empty takes it off)
   setNote(x, y, text) {
     this.logAct("setNote", x, y, text);
@@ -8314,7 +8445,8 @@ Object.assign(CM.Game.prototype, {
     if (fl >= 30) this.achieve("abyss");
     if (this.bottom) this.achieve("bottom");
     if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); if (this.iron) this.achieve("ironwill"); if ((this.ascension || 0) >= 5) this.achieve("ascended"); }
-    entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron);
+    entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened);
+    if (won && this.awakened) this.achieve("awakened");
     if (won && !this.endless && ["fair", "hard", "grim"].includes(this.difficulty)) {   // the ladder: a crown on Fair or above opens the next rung
       const next = Math.min(CM.ASCENSION.length, (this.ascension || 0) + 1);
       if (next > this.ascensionMax()) { CM.store.set("ascension", next); this.say(`Ascension ${next} is open: the next run may carry ${CM.ASCENSION[next - 1].name.toLowerCase()} too.`); }
@@ -8622,6 +8754,7 @@ Object.assign(CM.Game.prototype, {
     if (this.asc(3)) hp *= 1.05;
     if (this.asc(8)) atk *= 1.1;
     if (this.asc(13)) hp *= 1.1;
+    if (this.awakened) { hp *= CM.AWAKENED.hp; atk *= CM.AWAKENED.atk; }
     m.max = Math.max(1, Math.round(m.max * hp));
     m.hp = Math.max(1, Math.round(m.hp * hp));
     m.atk = Math.max(1, Math.round(m.atk * atk));
@@ -8881,7 +9014,7 @@ CM.UI = class {
       <label for="create-seed">Seed</label><input id="create-seed" type="text" maxlength="40" spellcheck="false">
       <label for="kit">Kit</label><select id="kit" title="What the deepest run so far has earned"></select>
       <label for="difficulty">Difficulty</label><select id="difficulty" title="How hard the dungeon is"></select>
-      <label for="mode">Expedition</label><select id="mode" title="The dungeon has a bottom; an Endless expedition does not"><option value="dungeon">The dungeon</option><option value="endless">Endless</option></select>
+      <label for="mode">Expedition</label><select id="mode" title="The dungeon has a bottom; an Endless expedition does not; an Awakened one is the same seed, mirrored and deeper, once the bottom has been reached"><option value="dungeon">The dungeon</option><option value="endless">Endless</option><option value="awakened" id="mode-awakened">Awakened</option></select>
       <label for="ascension" id="ascension-label">Ascension</label><select id="ascension" title="A rule more for every rung climbed: win on Fair or above to open the next"></select>
       <label for="iron" id="iron-label"><input type="checkbox" id="iron"> Iron</label>
       <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>
@@ -9629,7 +9762,7 @@ Object.assign(CM.UI.prototype, {
     else table.innerHTML = board.map((e, i) => {
       const open = this.fameOpen === i, t = e.tally;
       let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
-        + `<td class="${e.won ? "won" : ""}">${endlessBoard ? `floor ${e.floor}${e.won ? " - crowned" : ""}` : e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}${e.ascension ? ` <i class="diff">A${e.ascension}</i>` : ""}${e.iron ? ` <i class="diff">Iron</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
+        + `<td class="${e.won ? "won" : ""}">${endlessBoard ? `floor ${e.floor}${e.won ? " - crowned" : ""}` : e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}${e.ascension ? ` <i class="diff">A${e.ascension}</i>` : ""}${e.iron ? ` <i class="diff">Iron</i>` : ""}${e.awakened ? ` <i class="diff">Awakened</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
       if (open) {
         rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
           + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : e.weekly ? " (a week's challenge)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button>${e.code ? ` <button data-seed="${this.esc(e.code)}" title="The seed, the party, the difficulty and the kit, as they set out">Play this run</button>` : ""}</div>` : "")
@@ -9739,6 +9872,8 @@ Object.assign(CM.UI.prototype, {
       if (code.party) this.slots = code.party.filter((p) => g.classUnlocked(p.cls)).length === 4 ? code.party : code.party.map((p) => (g.classUnlocked(p.cls) ? p : Object.assign({}, p, { cls: "Knight", stats: CM.rollStats("Knight") })));
       this.$("#difficulty").value = code.difficulty; this.$("#mode").value = code.mode; this.chosenKit = code.kit;
     }
+    this.$("#mode-awakened").disabled = !g.achievements.bottom;
+    if (!g.achievements.bottom && this.$("#mode").value === "awakened") this.$("#mode").value = "dungeon";
     const asc = this.$("#ascension"), max = g.ascensionMax();
     asc.innerHTML = Array.from({ length: max + 1 }, (_, i) => `<option value="${i}">${i ? `A${i}: ${CM.ASCENSION[i - 1].name}` : "none"}</option>`).join("");
     asc.value = code && code.ascension <= max ? String(code.ascension) : String(this.lastAscension || 0);
@@ -9798,6 +9933,7 @@ Object.assign(CM.UI.prototype, {
     const seed = this.$("#create-seed").value, muts = CM.mutatorsFor(seed), d = CM.DIFFICULTIES[this.$("#difficulty").value] || CM.DIFFICULTIES.fair;
     this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` ${seed.startsWith("weekly-") ? "This week's challenge" : "Today's dungeon"} comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "") + (seed.startsWith("weekly-") ? " The party is the week's: everyone sets out with these four." : "")
       + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "")
+      + (this.$("#mode").value === "awakened" ? ` Awakened: ${CM.AWAKENED.what} - the Root remembers you. The run goes on the dungeon's board, marked.` : "")
       + (Number(this.$("#ascension").value) ? ` Ascension ${this.$("#ascension").value}: ${CM.ASCENSION.slice(0, Number(this.$("#ascension").value)).map((r) => `${r.name} (${r.what})`).join("; ")}.` : "")
       + (this.$("#iron").checked ? " Iron: the run is saved only at the camps - a closed window between them loses the floors since." : "");
   },
@@ -9814,8 +9950,8 @@ Object.assign(CM.UI.prototype, {
     if (this.screen !== "play") return;
     const fl = g.floor;
     if (fl) {
-      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   Floor ${fl.number}`;
-      this.$("#side .where").textContent = `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
+      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : "Floor " + fl.number}`;
+      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
@@ -9837,7 +9973,8 @@ Object.assign(CM.UI.prototype, {
       else if (thing) text = { chest: "A chest. Space opens it.", ladder: "A ladder down. Space climbs it.", stairs_up: "The stairs up. Space climbs them.",
         phylactery: "A cold box with a slow beat inside it. Space smashes it.", ghost: "A ghost. Space speaks to it.", hermit: "A hermit. Space speaks to him.",
         adventurer: "Someone bound. Space cuts them loose.", rope: "A rope from above. Space climbs it.", event: `${(CM.EVENTS[thing.event] || {}).title || "Something strange"}. Space looks closer.`,
-        strongbox: thing.opened ? "An empty strongbox." : "A strongbox. Space tries the key.", peddler: "A peddler. Space sees his wares.", rivals: "A rival party. Space speaks to them." }[thing.type] || "";
+        strongbox: thing.opened ? "An empty strongbox." : "A strongbox. Space tries the key.", peddler: "A peddler. Space sees his wares.", rivals: "A rival party. Space speaks to them.",
+        wingstair: "A second stair, down into a wing. Space takes it.", wingexit: "A stair down to the main way. Space takes it.", wingstair_up: "The wing stair, up. Space climbs it." }[thing.type] || "";
       else if (f && f.type === "plate" && (f.gate || f.known)) text = f.gate ? (f.pressed ? "A pressure plate, sunk." : "A pressure plate.") : "A plate that was a trap.";
       else if (f && f.type === "spores" && f.known) text = "A hanging cloud of spores.";
       else if (f && f.type === "vents" && f.known) text = "A vent in the floor. It breathes fire on a beat.";
@@ -9990,7 +10127,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
     const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040" };
+      ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
@@ -10002,7 +10139,7 @@ Object.assign(CM.UI.prototype, {
       if (thing && !wall) {
         p.fillStyle = colours[thing.type] || (thing.type === "phylactery" ? "#60D0FF" : "#808080");
         if (thing.type === "stairs_up") { p.beginPath(); p.moveTo(cx, cy - cell * 0.35); p.lineTo(cx + cell * 0.35, cy + cell * 0.3); p.lineTo(cx - cell * 0.35, cy + cell * 0.3); p.fill(); }
-        else if (thing.type === "ladder") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
+        else if (thing.type === "ladder" || thing.type === "wingexit" || thing.type === "wingstair") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
         else { p.beginPath(); p.arc(cx, cy, cell * (thing.type === "key" ? 0.2 : 0.3), 0, Math.PI * 2); p.fill(); }
       }
     }
@@ -10848,6 +10985,8 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });
+      else if (thing.type === "wingstair" || thing.type === "wingexit") out.push({ x, y, layer: "hatch", w: 0.8, flat: true, shade: 0.75 });
+      else if (thing.type === "wingstair_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if ((thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian") && !(game.mode === "combat" && key === game.foeKey)) {
         const m = thing.group.find((f) => f.hp > 0 && !f.fled) || thing.group[0];
         if (thing.anim) {                                               // on the move: it slides from where it was

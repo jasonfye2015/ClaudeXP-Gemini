@@ -637,6 +637,24 @@ The difficulty ladder (the fourth big update, phase 5 - v2.5)
   The simulator's ladder report: node tools/sim.js --difficulty fair --ascension 0,5,10,15 runs each rung and reports
   survival by it, so each rung is a measured step and not a cliff.
 
+The dungeon, branched (the fourth big update, phase 4 - v2.6; generator 2, so runs begun from v2.1)
+  Wings. One floor a band has a second stair, narrower, into a short floor of the band's own (CM.WINGS): the Sewers
+  under the Catacombs, the Cistern, the Mines, the Crypts, the Drowned Market, the Spore Cellars, the Crystal Seam,
+  the Slag Pits, the Charnel Pit, the Root Cellar - a smell at the top of the stair says which. A wing has its own
+  hazard, chests a third richer, no people and no way on but its last stair, which comes out on the main stair a
+  floor below; the wing stair goes back up. Floors are numbered beside their floor (7.5) and saved like any.
+  Secret stairs. Once a band, a wall beside a corridor hides a stair (search it: Space before the wall) to a hidden
+  floor, richer still - the Sexton's Cellar, the Dwarves' Vault, the Lich King's Wine Cellar, the Dreamer's Bed...:
+  one band of monsters, every chest two and a half times the gold and a rare thing in each. Two achievements.
+  New set pieces, through the planner (CM.TEMPLATES2): a Great Hall with pillars and a band that waits, a Drowned
+  Chapel, a Charnel Pit of pits and dark, a Crystal Gallery behind a secret door. Generator 1's floors are untouched.
+  The dungeon changes behind you: every hundred and fifty steps, now and then, a door you left shut on a floor
+  above swings open - or, once a run, a peddler sets up by a fountain there. The log says so.
+  Awakened. Once the bottom has been reached, the creation screen's Expedition offers an Awakened run on any seed:
+  every floor is the mirror of itself (CM.mirrorFloor), the monsters a band deeper (CM.AWAKENED), the uniques awake
+  (a second power in each: ", Awake"). The Hall of Fame marks it; the Awakened achievement for its crown. The tenth
+  band under the Root is left for a later version: a band is a band's worth of art and lore.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

@@ -348,6 +348,30 @@ CM.FAMILIARS = {
   toad: { name: "a toad", cls: ["Mage"], what: "eats one ailment off the party on every new floor" },
   skull: { name: "a skull that bites", cls: ["Necromancer"], what: "bites a foe at the start of every round" },
 };
+// ---- the dungeon, branched (generator 2): wings, secret floors, the new rooms ----
+// A wing: a short floor of its own beside a band's floors, down a second stair, with its own smell and a way back to the
+// main stair a floor below. One a band, now and then, by the seed; a secret stair leads to a hidden one, richer.
+CM.WINGS = [
+  { name: "the Sewers", smell: "a smell of old water and worse", hazard: "spores", secret: "the Sexton's Cellar" },
+  { name: "the Cistern", smell: "the sound of water falling into water", hazard: "tide", secret: "the Drowned Vault" },
+  { name: "the Mines", smell: "a draught of coal and iron", hazard: "vents", secret: "the Dwarves' Vault" },
+  { name: "the Crypts", smell: "dust, and something sweeter under it", hazard: "bonepiles", secret: "the Lich King's Wine Cellar" },
+  { name: "the Drowned Market", smell: "salt, and rotten fruit", hazard: "tide", secret: "the Harbourmaster's Strongroom" },
+  { name: "the Spore Cellars", smell: "a smell like bread gone wrong", hazard: "spores", secret: "the Sporemother's Larder" },
+  { name: "the Crystal Seam", smell: "a hum you feel in your teeth", hazard: "mirror", secret: "the Tyrant's First Throne" },
+  { name: "the Slag Pits", smell: "heat, and burning hair", hazard: "vents", secret: "the Foundry Master's Vault" },
+  { name: "the Charnel Pit", smell: "the smell under every other smell", hazard: "bonepiles", secret: "the Patriarch's Reliquary" },
+  { name: "the Root Cellar", smell: "wet wood and sap", hazard: "spores", secret: "the Dreamer's Bed" },
+];
+// set pieces the second generator may lay (CM.TEMPLATES are the first's, kept); P a pit, X the dark, M monsters that
+// stay, # a pillar inside
+CM.TEMPLATES2 = [
+  { name: "Great Hall", min: 5, rows: ["#####W#####", "#..#...#..#", "#....M....#", "#..#.C.#..#", "#.........#", "#####D#####"] },
+  { name: "Drowned Chapel", min: 6, flood: true, rows: ["#######", "#..A..#", "#.....#", "#C...C#", "###D###"] },
+  { name: "Charnel Pit", min: 9, rows: ["#########", "#P.....P#", "#..XMX..#", "#.XXCXX.#", "#P.....P#", "###D#####"] },
+  { name: "Crystal Gallery", min: 12, rows: ["#########", "#..#C#..#", "#.......#", "#..#M#..#", "#.......#", "###S#####"] },
+];
+CM.AWAKENED = { hp: 1.25, atk: 1.2, what: "every floor the mirror of itself, the monsters a band deeper, the uniques awake" };
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
 CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
@@ -655,6 +679,9 @@ CM.ACHIEVEMENTS = {
   weaver: { name: "Weaver", what: "Two casters weave their spells into one", title: "the Weaver" },
   ironwill: { name: "Iron Will", what: "Slay the Lich King on an Iron run, saved only at the camps", title: "the Iron-willed" },
   ascended: { name: "Ascended", what: "Slay the Lich King at Ascension 5 or higher", title: "the Ascended" },
+  wings: { name: "Off the Stair", what: "Go down a wing stair", title: "the Wayward" },
+  secretfloor: { name: "Behind the Wall", what: "Find a secret stair", title: "the Curious" },
+  awakened: { name: "Awakened", what: "Slay the Lich King in an Awakened expedition", title: "the Awakened" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },

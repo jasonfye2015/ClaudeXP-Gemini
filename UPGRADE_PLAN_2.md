@@ -124,7 +124,7 @@ uses every v2.0 system in the sim's report, and a replayed log reproduces a run 
 
 ---
 
-## Phase 4 - The dungeon, branched (needs Phase 0)
+## Phase 4 - The dungeon, branched (needs Phase 0) - DONE (v2.6; the tenth band deferred)
 
 **Goal:** more than one way down, and places worth coming back to.
 

@@ -56,6 +56,8 @@ Object.assign(CM.UI.prototype, {
       if (code.party) this.slots = code.party.filter((p) => g.classUnlocked(p.cls)).length === 4 ? code.party : code.party.map((p) => (g.classUnlocked(p.cls) ? p : Object.assign({}, p, { cls: "Knight", stats: CM.rollStats("Knight") })));
       this.$("#difficulty").value = code.difficulty; this.$("#mode").value = code.mode; this.chosenKit = code.kit;
     }
+    this.$("#mode-awakened").disabled = !g.achievements.bottom;
+    if (!g.achievements.bottom && this.$("#mode").value === "awakened") this.$("#mode").value = "dungeon";
     const asc = this.$("#ascension"), max = g.ascensionMax();
     asc.innerHTML = Array.from({ length: max + 1 }, (_, i) => `<option value="${i}">${i ? `A${i}: ${CM.ASCENSION[i - 1].name}` : "none"}</option>`).join("");
     asc.value = code && code.ascension <= max ? String(code.ascension) : String(this.lastAscension || 0);
@@ -115,6 +117,7 @@ Object.assign(CM.UI.prototype, {
     const seed = this.$("#create-seed").value, muts = CM.mutatorsFor(seed), d = CM.DIFFICULTIES[this.$("#difficulty").value] || CM.DIFFICULTIES.fair;
     this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` ${seed.startsWith("weekly-") ? "This week's challenge" : "Today's dungeon"} comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "") + (seed.startsWith("weekly-") ? " The party is the week's: everyone sets out with these four." : "")
       + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "")
+      + (this.$("#mode").value === "awakened" ? ` Awakened: ${CM.AWAKENED.what} - the Root remembers you. The run goes on the dungeon's board, marked.` : "")
       + (Number(this.$("#ascension").value) ? ` Ascension ${this.$("#ascension").value}: ${CM.ASCENSION.slice(0, Number(this.$("#ascension").value)).map((r) => `${r.name} (${r.what})`).join("; ")}.` : "")
       + (this.$("#iron").checked ? " Iron: the run is saved only at the camps - a closed window between them loses the floors since." : "");
   },

@@ -76,6 +76,7 @@ Object.assign(CM.Game.prototype, {
     this.dirty = true;
     this.steps = (this.steps || 0) + 1;
     this.count("steps");
+    if (this.steps % 150 === 0 && this.gen >= 2) this.changeBehind();        // (the dungeon is not still behind you)
     if (fl.hazard === "tide" && this.steps % CM.TIDE_STEPS === 0) {       // the Drowned Town's tide turns
       fl.tide = !fl.tide;
       this.dirty = true;
@@ -116,7 +117,9 @@ Object.assign(CM.Game.prototype, {
           adventurer: "Someone sits bound against the wall. (Space to cut them loose)", rope: "A rope hangs down from the floor above. (Space to climb it)",
           event: `${(CM.EVENTS[thing.event] || {}).title || "Something"}. (Space to look closer)`, strongbox: thing.opened ? "An iron strongbox, open and empty." : `An iron strongbox, bolted to the floor, with a keyhole. (The key is on floor ${thing.from}.)`,
           peddler: "A peddler sits on his pack, with a lantern and a smile. (Space to see his wares)", rivals: "Four adventurers, armed, look you over. (Space to speak to them)",
-          remains: "Bones in torn gear, four of them, and a name you know from the Hall of Fame. (Space to see what they left)" }[thing.type]);
+          remains: "Bones in torn gear, four of them, and a name you know from the Hall of Fame. (Space to see what they left)",
+          wingstair: `A second stair goes down here, narrower, into ${(CM.WINGS[thing.wing] || CM.WINGS[0]).name}: ${(CM.WINGS[thing.wing] || CM.WINGS[0]).smell}. (Space to take it; the main stair is still the way on)`,
+          wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)" }[thing.type]);
       }
     }
     if (f) this.arrive(f, k);
@@ -316,6 +319,9 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
     if (thing && thing.type === "rivals") { this.meetRivals(thing, k); return; }
     if (thing && thing.type === "remains") { this.takeRemains(thing, k); return; }
+    if (thing && thing.type === "wingstair") { this.sound("stairs"); this.enterFloor(fl.number + 0.5, "down"); return; }
+    if (thing && thing.type === "wingexit") { this.sound("stairs"); this.say("The wing's last stair comes out on the main stair below."); this.enterFloor(Math.floor(fl.number) + 1, "down"); return; }
+    if (thing && thing.type === "wingstair_up") { this.sound("stairs"); this.enterFloor(Math.floor(fl.number), "upwing"); this.say("Back up the wing stair."); return; }
     if (thing && thing.type === "rope") {
       this.sound("stairs");
       this.enterFloor(fl.number - 1, "rope", thing.up);
@@ -373,6 +379,15 @@ Object.assign(CM.Game.prototype, {
     } else if (here && here.type === "altar") {
       this.inUse = true; this.kneel(here); this.inUse = false;
     } else if (!CM.isOpen(fl, x + dx, y + dy)) {                       // a wall before you: search it
+      if (ahead && ahead.type === "secretstair" && !ahead.found) {
+        ahead.found = true;
+        fl.grid[y + dy][x + dx] = 0;
+        fl.things[ak] = { type: "wingstair", wing: ahead.wing, secret: true };
+        this.sound("grind");
+        this.say("You press the stones... and a slab swings in on a stair going down, cut by no one who meant it to be found.");
+        this.look(); this.emit("mesh"); this.dirty = true; this.emit("change");
+        return;
+      }
       if (ahead && ahead.type === "secret" && !ahead.found) {
         ahead.found = true;
         fl.grid[y + dy][x + dx] = 0;
@@ -518,9 +533,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party" };
+  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -639,6 +654,23 @@ Object.assign(CM.Game.prototype, {
     if (!t.path.length && !t.explore) return stop(null);
     return true;
   },
+  // the dungeon behind you shifts, now and then: a door you left shut opens on a floor above, or a peddler sets up by a
+  // fountain there, once a run (never the floor you are on; the floor's save is worked out afresh)
+  changeBehind() {
+    const above = Object.keys(this.floors).map(Number).filter((n) => n < Math.floor(this.floor.number) && n % 1 === 0);
+    if (!above.length) return;
+    const n = above[this.rnd.int(0, above.length - 1)], fl = this.floors[n];
+    const doors = Object.values(fl.features).filter((f) => f.type === "door" && !f.open && !f.locked && f.riddle === undefined);
+    if (doors.length && this.rnd.chance(0.6)) { this.rnd.pick(doors).open = true; this.say(`Somewhere above, on floor ${n}, a door you left shut swings open.`); }
+    else if (!this.behind) {
+      const fountain = Object.keys(fl.features).find((k) => fl.features[k].type === "fountain");
+      const spot = fountain && CM.DIRS.map(([dx, dy]) => `${Number(fountain.split(",")[0]) + dx},${Number(fountain.split(",")[1]) + dy}`).find((k) => { const [x, y] = k.split(",").map(Number); return CM.passable(fl, x, y) && !fl.things[k] && !fl.features[k]; });
+      if (spot) { fl.things[spot] = { type: "peddler", stock: null }; this.behind = n; this.say(`Somewhere above, on floor ${n}, a peddler has set up by the fountain.`); }
+    } else return;
+    delete this.deltas[n];
+    this.dirty = true;
+  },
+
   // a note pinned to a square of the automap (a word or two; empty takes it off)
   setNote(x, y, text) {
     this.logAct("setNote", x, y, text);

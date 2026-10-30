@@ -61,8 +61,10 @@ CM.floorDelta = function (fl, base) {
 };
 
 // the floor again, from the seed and the changes; returns {floor, base, drifted}
-CM.restoreFloor = function (d, seed, gen) {
-  const fl = CM.makeFloor(d.n, seed, gen || 1), base = CM.snapshot(fl);
+CM.restoreFloor = function (d, seed, gen, awakened) {
+  const fl = CM.makeFloor(d.n, seed, gen || 1);
+  if (awakened) CM.mirrorFloor(fl);
+  const base = CM.snapshot(fl);
   const drifted = d.fp !== undefined && d.fp !== base.fp;
   for (const part of ["things", "features"]) for (const [k, v] of Object.entries(d[part] || {})) { if (v === null) delete fl[part][k]; else fl[part][k] = v; }
   for (const [x, y, v] of d.grid || []) if (fl.grid[y] && x < fl.grid[y].length) fl.grid[y][x] = v;

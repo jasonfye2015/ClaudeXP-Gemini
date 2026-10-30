@@ -8,8 +8,8 @@ Object.assign(CM.UI.prototype, {
     if (this.screen !== "play") return;
     const fl = g.floor;
     if (fl) {
-      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   Floor ${fl.number}`;
-      this.$("#side .where").textContent = `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
+      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : "Floor " + fl.number}`;
+      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
@@ -31,7 +31,8 @@ Object.assign(CM.UI.prototype, {
       else if (thing) text = { chest: "A chest. Space opens it.", ladder: "A ladder down. Space climbs it.", stairs_up: "The stairs up. Space climbs them.",
         phylactery: "A cold box with a slow beat inside it. Space smashes it.", ghost: "A ghost. Space speaks to it.", hermit: "A hermit. Space speaks to him.",
         adventurer: "Someone bound. Space cuts them loose.", rope: "A rope from above. Space climbs it.", event: `${(CM.EVENTS[thing.event] || {}).title || "Something strange"}. Space looks closer.`,
-        strongbox: thing.opened ? "An empty strongbox." : "A strongbox. Space tries the key.", peddler: "A peddler. Space sees his wares.", rivals: "A rival party. Space speaks to them." }[thing.type] || "";
+        strongbox: thing.opened ? "An empty strongbox." : "A strongbox. Space tries the key.", peddler: "A peddler. Space sees his wares.", rivals: "A rival party. Space speaks to them.",
+        wingstair: "A second stair, down into a wing. Space takes it.", wingexit: "A stair down to the main way. Space takes it.", wingstair_up: "The wing stair, up. Space climbs it." }[thing.type] || "";
       else if (f && f.type === "plate" && (f.gate || f.known)) text = f.gate ? (f.pressed ? "A pressure plate, sunk." : "A pressure plate.") : "A plate that was a trap.";
       else if (f && f.type === "spores" && f.known) text = "A hanging cloud of spores.";
       else if (f && f.type === "vents" && f.known) text = "A vent in the floor. It breathes fire on a beat.";
@@ -184,7 +185,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
     const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040" };
+      ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
@@ -196,7 +197,7 @@ Object.assign(CM.UI.prototype, {
       if (thing && !wall) {
         p.fillStyle = colours[thing.type] || (thing.type === "phylactery" ? "#60D0FF" : "#808080");
         if (thing.type === "stairs_up") { p.beginPath(); p.moveTo(cx, cy - cell * 0.35); p.lineTo(cx + cell * 0.35, cy + cell * 0.3); p.lineTo(cx - cell * 0.35, cy + cell * 0.3); p.fill(); }
-        else if (thing.type === "ladder") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
+        else if (thing.type === "ladder" || thing.type === "wingexit" || thing.type === "wingstair") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
         else { p.beginPath(); p.arc(cx, cy, cell * (thing.type === "key" ? 0.2 : 0.3), 0, Math.PI * 2); p.fill(); }
       }
     }

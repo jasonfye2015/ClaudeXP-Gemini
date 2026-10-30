@@ -17,7 +17,8 @@ Object.assign(CM.Game.prototype, {
     if (fl >= 30) this.achieve("abyss");
     if (this.bottom) this.achieve("bottom");
     if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); if (this.iron) this.achieve("ironwill"); if ((this.ascension || 0) >= 5) this.achieve("ascended"); }
-    entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron);
+    entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened);
+    if (won && this.awakened) this.achieve("awakened");
     if (won && !this.endless && ["fair", "hard", "grim"].includes(this.difficulty)) {   // the ladder: a crown on Fair or above opens the next rung
       const next = Math.min(CM.ASCENSION.length, (this.ascension || 0) + 1);
       if (next > this.ascensionMax()) { CM.store.set("ascension", next); this.say(`Ascension ${next} is open: the next run may carry ${CM.ASCENSION[next - 1].name.toLowerCase()} too.`); }
@@ -325,6 +326,7 @@ Object.assign(CM.Game.prototype, {
     if (this.asc(3)) hp *= 1.05;
     if (this.asc(8)) atk *= 1.1;
     if (this.asc(13)) hp *= 1.1;
+    if (this.awakened) { hp *= CM.AWAKENED.hp; atk *= CM.AWAKENED.atk; }
     m.max = Math.max(1, Math.round(m.max * hp));
     m.hp = Math.max(1, Math.round(m.hp * hp));
     m.atk = Math.max(1, Math.round(m.atk * atk));

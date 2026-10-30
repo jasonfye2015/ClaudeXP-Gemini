@@ -44,7 +44,7 @@ CM.UI = class {
       <label for="create-seed">Seed</label><input id="create-seed" type="text" maxlength="40" spellcheck="false">
       <label for="kit">Kit</label><select id="kit" title="What the deepest run so far has earned"></select>
       <label for="difficulty">Difficulty</label><select id="difficulty" title="How hard the dungeon is"></select>
-      <label for="mode">Expedition</label><select id="mode" title="The dungeon has a bottom; an Endless expedition does not"><option value="dungeon">The dungeon</option><option value="endless">Endless</option></select>
+      <label for="mode">Expedition</label><select id="mode" title="The dungeon has a bottom; an Endless expedition does not; an Awakened one is the same seed, mirrored and deeper, once the bottom has been reached"><option value="dungeon">The dungeon</option><option value="endless">Endless</option><option value="awakened" id="mode-awakened">Awakened</option></select>
       <label for="ascension" id="ascension-label">Ascension</label><select id="ascension" title="A rule more for every rung climbed: win on Fair or above to open the next"></select>
       <label for="iron" id="iron-label"><input type="checkbox" id="iron"> Iron</label>
       <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>

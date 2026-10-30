@@ -325,6 +325,8 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });
+      else if (thing.type === "wingstair" || thing.type === "wingexit") out.push({ x, y, layer: "hatch", w: 0.8, flat: true, shade: 0.75 });
+      else if (thing.type === "wingstair_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if ((thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian") && !(game.mode === "combat" && key === game.foeKey)) {
         const m = thing.group.find((f) => f.hp > 0 && !f.fled) || thing.group[0];
         if (thing.anim) {                                               // on the move: it slides from where it was

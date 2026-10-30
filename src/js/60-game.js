@@ -108,6 +108,7 @@ CM.Game = class {
   // a floor made from the seed, and remembered as it was fresh (so the save can keep only what changes)
   freshFloor(number) {
     const fl = CM.makeFloor(number, this.seed, this.gen || CM.GEN);
+    if (this.awakened) CM.mirrorFloor(fl);
     this.bases[number] = CM.snapshot(fl);
     this.floors[number] = fl;
     return fl;
@@ -118,7 +119,7 @@ CM.Game = class {
     if (this.floors[number]) return this.floors[number];
     const delta = this.deltas[number];
     if (!delta) return this.freshFloor(number);
-    const r = CM.restoreFloor(delta, this.seed, this.gen || 1);
+    const r = CM.restoreFloor(delta, this.seed, this.gen || 1, this.awakened);
     this.floors[number] = r.floor; this.bases[number] = r.base;
     if (r.drifted) this.say(`(The dungeon has shifted a little since this run was saved: floor ${number} may not be quite as you left it.)`);
     return r.floor;
@@ -131,7 +132,7 @@ CM.Game = class {
   floorDeltas() {
     const out = {};
     for (const [n, fl] of Object.entries(this.floors)) {
-      const base = this.bases[n] || (this.bases[n] = CM.snapshot(CM.makeFloor(Number(n), this.seed, this.gen || 1)));
+      const base = this.bases[n] || (this.bases[n] = CM.snapshot(this.awakened ? CM.mirrorFloor(CM.makeFloor(Number(n), this.seed, this.gen || 1)) : CM.makeFloor(Number(n), this.seed, this.gen || 1)));
       if (fl === this.floor || !this.deltas[n]) this.deltas[n] = CM.floorDelta(fl, base);
       out[n] = this.deltas[n];
     }
@@ -147,7 +148,7 @@ CM.Game = class {
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron) };
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), behind: this.behind || 0 };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -166,6 +167,7 @@ CM.Game = class {
     if (!this.canContinue()) return false;
     this.seed = d.seed || CM.randomSeed();
     this.gen = d.gen || 1;                                               // (the generator this run began with: its floors stay its floors)
+    this.awakened = Boolean(d.awakened);
     this.party = d.party.map(CM.upgradeHero); this.bag = d.bag || []; this.gold = d.gold || 0;
     this.floors = {}; this.bases = {}; this.deltas = {};
     for (const delta of Object.values(d.floors || {})) this.deltas[delta.n] = delta;   // (each floor is made again when the party goes back to it)
@@ -191,6 +193,7 @@ CM.Game = class {
     this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
     this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
+    this.awakened = Boolean(d.awakened); this.behind = d.behind || 0;
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -230,6 +233,7 @@ CM.Game = class {
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
     this.everFell = false; this.fightFell = false; this.earned = [];
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
+    this.awakened = mode === "awakened" && Boolean(this.achievements.bottom); this.behind = 0;
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
     this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row }));
     this.startMutators = this.mutators.slice(); this.runLog = []; this.formation = "line";
@@ -248,7 +252,8 @@ CM.Game = class {
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
       + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : "")
-      + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : ""));
+      + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : "")
+      + (this.awakened ? " Awakened: the Root remembers you. Every floor is the mirror of itself, the monsters a band deeper, the uniques awake." : ""));
     if (this.mutators.length) this.say(`Today's dungeon: ${this.mutators.map((m) => `${CM.MUTATORS[m].name} - ${CM.MUTATORS[m].what}`).join("; ")}.`);
   }
 
@@ -265,9 +270,14 @@ CM.Game = class {
     this.floor = fl;
     if (this.songEpic !== number) { this.song = 0; this.songEpic = 0; }  // (a song that lasts the floor ends with it)
     if (how === "down") {
-      const top = this.cellOf(fl, "stairs_up");
+      const top = this.cellOf(fl, "stairs_up") || this.cellOf(fl, "wingstair_up");
       if (top) fl.pos = top.slice();
       else if (!fresh) fl.pos = fl.pos.slice();
+      const open = CM.openNeighbours(fl, fl.pos[0], fl.pos[1]);
+      if (open.length) fl.facing = CM.DIRS.indexOf(open[0]);
+    } else if (how === "upwing") {                                        // back up a wing stair: onto it
+      const stair = this.cellOf(fl, "wingstair") || this.cellOf(fl, "stairs_up");
+      if (stair) fl.pos = stair.slice();
       const open = CM.openNeighbours(fl, fl.pos[0], fl.pos[1]);
       if (open.length) fl.facing = CM.DIRS.indexOf(open[0]);
     } else if (how === "up") {
@@ -298,7 +308,8 @@ CM.Game = class {
     this.emit("floor", fl);
     this.saveRun();
     if (fresh && this.has("pilgrim")) this.checkLevels();
-    if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.themeFor(number).name}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
+    if (fl.wing !== undefined) { if (fresh) this.say(`${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)}: ${CM.WINGS[fl.wing].smell}. The only way on is the way down to the main stair.`); if (fresh && fl.secretWing) this.achieve("secretfloor"); else if (fresh) this.achieve("wings"); }
+    else if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.themeFor(number).name}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && fl.hazard && CM.HAZARDS[CM.themeIndex(number)] && !this.hazardsSeen(fl.hazard)) this.say(CM.HAZARDS[CM.themeIndex(number)].note);
     if (fresh && number === CM.LAST_FLOOR + 1) this.say("The stair goes on below the palace, cut by no mason. The air is wet and old. The Deep begins here, and the carvings above never spoke of it.");

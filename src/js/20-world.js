@@ -73,9 +73,10 @@ CM.affix = function (item, floor, rnd) {
   item.name = `${p.element && !CM.ELEMENTS[p.element] ? "" : ""}${prefix ? prefix[1] + " " : ""}${p.element ? CM.ELEMENTS[p.element].prefix + " " : ""}${item.base || CM.baseName(item)}${suffix ? " " + suffix[1] : ""}${p.bonus ? ` +${p.bonus}` : ""}`;
   return item;
 };
-CM.makeUnique = function (id) {
+CM.makeUnique = function (id, awake) {
   const u = CM.UNIQUES[id];
   const item = { name: u.name, base: u.name, kind: u.kind, slot: u.slot, power: u.power, value: u.value, props: Object.assign({ unique: id, rarity: "unique" }, JSON.parse(JSON.stringify(u.props))) };
+  if (awake) { item.name = u.name + ", Awake"; item.props.awake = true; item.props.regen = (item.props.regen || 0) + 1; item.props.crit = (item.props.crit || 0) + 0.05; item.power += 2; item.value *= 2; }   // (an Awakened run: a second power in each)
   return item;
 };
 CM.ingredient = (id) => ({ name: CM.INGREDIENTS[id].name, kind: "ingredient", ingredient: id, power: 0, value: 25 });
@@ -629,7 +630,7 @@ CM.solvable = function (floor, from) {
 // What every generator's floor gets afterwards, each by a hash of the seed and the floor so the floor itself never
 // moves: gems and tomes in the chests, an affix or two on their gear, one unique a band, a choice event, a strongbox
 // two floors below its key, a peddler, rivals, and the band's hazards.
-CM.furnish = function (floor, seed) {
+CM.furnish = function (floor, seed, gen) {
   const number = floor.number, grid = floor.grid, size = grid.length, special = floor.special;
   const dist = CM.distances(grid, floor.pos);
   const named = floor.rooms.filter((r) => r.name), plain = floor.rooms.filter((r) => !r.name);
@@ -675,12 +676,12 @@ CM.furnish = function (floor, seed) {
     const k = pickCell("event", (c) => roomCells.has(c));
     if (k) floor.things[k] = { type: "event", event: id, done: false };
   }
-  if (ordinary && number >= 4 && number + 2 < CM.BOTTOM && h("boxkey") % 100 < 30) {        // the key here, the box two floors down
+  if (ordinary && number >= 4 && number + 2 < CM.BOTTOM && h("boxkey") % 100 < 30 && !(gen >= 2 && CM.guardianFor(number + 2))) {   // the key here, the box two floors down (never a guardian's floor, from the second generator)
     const k = pickCell("boxkey", (c) => !roomCells.has(c));
     if (k) floor.things[k] = { type: "boxkey", box: number + 2 };
   }
-  if (number >= 6 && number < CM.BOTTOM && CM.hashSeed(`${seed}:boxkey:${number - 2}`) % 100 < 30 && (number - 2 >= 2 && !CM.guardianFor(number - 2) && number - 2 !== CM.LAST_FLOOR && CM.specialFor(number - 2, seed) !== "maze")) {
-    const k = pickCell("strongbox", (c) => roomCells.has(c));
+  if (number >= 6 && number < CM.BOTTOM && CM.hashSeed(`${seed}:boxkey:${number - 2}`) % 100 < 30 && (number - 2 >= 2 && !CM.guardianFor(number - 2) && number - 2 !== CM.LAST_FLOOR && CM.specialFor(number - 2, seed) !== "maze") && !(gen >= 2 && CM.guardianFor(number))) {
+    const k = pickCell("strongbox", (c) => roomCells.has(c)) || (gen >= 2 ? pickCell("strongbox") : null);
     if (k) floor.things[k] = { type: "strongbox", from: number - 2, opened: false };
   }
   if (ordinary && number >= 3 && h("peddler") % 100 < 8) {
@@ -690,6 +691,22 @@ CM.furnish = function (floor, seed) {
   if (ordinary && number >= 4 && h("rivals") % 100 < 10) {
     const k = pickCell("rivals", (c) => roomCells.has(c));
     if (k) floor.things[k] = { type: "rivals", met: false };
+  }
+  // the second generator's wings: a second stair down into a short floor of the band's own, one a band now and then;
+  // a secret stair in a wall, once a band, to a hidden one (CM.WINGS)
+  if (gen >= 2 && number >= 3 && number < CM.BOTTOM - 1 && !CM.guardianFor(number) && !CM.guardianFor(number + 1) && !CM.CAMP_AFTER.includes(number) && number !== CM.LAST_FLOOR - 1 && number !== CM.LAST_FLOOR && special !== "maze") {
+    const band = CM.themeIndex(number), first = band * 5 + 1, floors = [];
+    for (let n = Math.max(3, first); n <= band * 5 + 5; n++) if (!CM.guardianFor(n) && !CM.guardianFor(n + 1) && !CM.CAMP_AFTER.includes(n) && n !== CM.LAST_FLOOR - 1 && n !== CM.LAST_FLOOR && n < CM.BOTTOM - 1) floors.push(n);
+    const wingAt = floors.length ? floors[CM.hashSeed(`${seed}:wing:${band}`) % floors.length] : -1, secretAt = floors.length > 1 ? floors.filter((n) => n !== wingAt)[CM.hashSeed(`${seed}:secretwing:${band}`) % (floors.length - 1)] : -1;
+    if (number === wingAt) { const k = pickCell("wingstair", (c) => !roomCells.has(c)); if (k) floor.things[k] = { type: "wingstair", wing: band }; }
+    if (number === secretAt) {                                           // (a wall beside a corridor cell, searched: Space before it)
+      const cells = openCells().filter((c) => !roomCells.has(c));
+      for (let i = 0; i < cells.length; i++) {
+        const [x, y] = unkey(cells[(CM.hashSeed(`${seed}:secretstair:${number}`) + i) % cells.length]);
+        const wall = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([wx, wy]) => grid[wy] && grid[wy][wx] === 1 && wx > 0 && wy > 0 && wx < size - 1 && wy < size - 1 && !floor.features[key(wx, wy)]);
+        if (wall) { floor.features[key(wall[0], wall[1])] = { type: "secretstair", found: false, wing: band }; break; }
+      }
+    }
   }
   const hazard = CM.HAZARDS[CM.themeIndex(number)];
   if (hazard && !CM.guardianFor(number)) {
@@ -703,8 +720,50 @@ CM.furnish = function (floor, seed) {
   return floor;
 };
 
-// a floor: made by the run's generator (CM.GEN for a new run), then furnished
+// a floor: made by the run's generator (CM.GEN for a new run), then furnished; a wing (number + 0.5) is made its own way
 CM.makeFloor = function (number, seed, gen) {
+  if (number % 1 !== 0) return CM.makeWing(number, seed, gen);
   const make = CM.generators[gen || CM.GEN] || CM.generators[1];
-  return CM.furnish(make(number, seed), seed);
+  return CM.furnish(make(number, seed), seed, gen || CM.GEN);
+};
+
+// a wing: the band's short floor beside floor n (number n + 0.5), carved as any floor of the seed's own key, then made
+// a wing of - no way down but the exit to the main stair a floor below, no people, its own hazard; a secret one richer
+CM.makeWing = function (number, seed, gen) {
+  const n = Math.floor(number), band = CM.themeIndex(n), W = CM.WINGS[band] || CM.WINGS[0];
+  const secret = CM.hashSeed(`${seed}:secretwing:${band}`) !== CM.hashSeed(`${seed}:wing:${band}`) && (() => { const first = band * 5 + 1, floors = []; for (let f = Math.max(3, first); f <= band * 5 + 5; f++) if (!CM.guardianFor(f) && !CM.guardianFor(f + 1) && !CM.CAMP_AFTER.includes(f) && f !== CM.LAST_FLOOR - 1 && f !== CM.LAST_FLOOR && f < CM.BOTTOM - 1) floors.push(f); const wingAt = floors.length ? floors[CM.hashSeed(`${seed}:wing:${band}`) % floors.length] : -1; return n !== wingAt; })();
+  const make = CM.generators[gen || CM.GEN] || CM.generators[1];
+  const fl = make(n, `${seed}:wing:${n}`);
+  fl.number = number; fl.wing = band; fl.wingName = secret ? W.secret : W.name; fl.secretWing = secret; fl.special = null;
+  for (const [k, t] of Object.entries(fl.things)) {
+    if (t.type === "ladder" || t.type === "boss" || t.type === "guardian") fl.things[k] = { type: "wingexit" };
+    else if (t.type === "stairs_up") fl.things[k] = { type: "wingstair_up" };
+    else if (!["chest", "monsters", "key"].includes(t.type)) delete fl.things[k];
+  }
+  for (const [k, f] of Object.entries(fl.features)) if (["carving", "teleporter", "spinner", "trapdoor"].includes(f.type)) delete fl.features[k];
+  if (!Object.values(fl.things).some((t) => t.type === "wingstair_up")) fl.things[CM.keyOf(fl.pos[0], fl.pos[1])] = { type: "wingstair_up" };
+  const rnd = new CM.Random(CM.hashSeed(`${seed}:wingloot:${n}`));
+  for (const t of Object.values(fl.things)) if (t.type === "chest") { t.gold = Math.floor(t.gold * (secret ? 2.5 : 1.3)); if (secret) t.items.push(CM.affix(CM.makeItem(n + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd)); }
+  if (secret) { let i = 0; for (const [k, t] of Object.entries(fl.things)) if (t.type === "monsters" && i++ > 0) delete fl.things[k]; }   // (a secret floor: one band, a lot of chests)
+  fl.hazard = W.hazard;
+  if (W.hazard !== "tide" && W.hazard !== "mirror") { const cells = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = CM.keyOf(x, y); if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && !(x === fl.pos[0] && y === fl.pos[1])) cells.push(k); } for (let i = 0; i < 3 && cells.length; i++) fl.features[cells[CM.hashSeed(`${seed}:winghazard:${n}:${i}`) % cells.length]] = { type: W.hazard, known: false, spent: false }; }
+  for (const t of Object.values(fl.things)) if (t.type === "chest") t.items.forEach((it, i) => CM.affix(it, n, new CM.Random(CM.hashSeed(`${seed}:wingaffix:${n}:${i}`))));
+  return fl;
+};
+
+// an Awakened run: every floor the mirror of itself (x across the middle), done to a floor already made
+CM.mirrorFloor = function (fl) {
+  const size = fl.grid.length, mx = (x) => size - 1 - x, mk = (k) => { const [x, y] = k.split(",").map(Number); return `${mx(x)},${y}`; };
+  fl.grid = fl.grid.map((row) => row.slice().reverse());
+  const flipKeys = (map) => { const out = {}; for (const [k, v] of Object.entries(map)) out[mk(k)] = v; return out; };
+  fl.things = flipKeys(fl.things); fl.features = flipKeys(fl.features);
+  for (const f of Object.values(fl.features)) { if (f.to) f.to = [mx(f.to[0]), f.to[1]]; if (f.gate) f.gate = mk(f.gate); if (f.face === 1) f.face = 3; else if (f.face === 3) f.face = 1; }
+  for (const t of Object.values(fl.things)) { if (t.ghost) t.ghost = mk(t.ghost); if (t.vengeance) t.vengeance = mk(t.vengeance); if (t.up) t.up = [mx(t.up[0]), t.up[1]]; }
+  fl.dark = fl.dark.map(mk); fl.seen = fl.seen.map(([x, y]) => [mx(x), y]);
+  fl.decor = fl.decor.map((d) => Object.assign({}, d, { x: mx(d.x) }));
+  fl.rooms = fl.rooms.map((r) => Object.assign({}, r, { x0: mx(r.x1), x1: mx(r.x0) }));
+  fl.pos = [mx(fl.pos[0]), fl.pos[1]];
+  if (fl.facing === 1) fl.facing = 3; else if (fl.facing === 3) fl.facing = 1;
+  fl.mirrored = true;
+  return fl;
 };

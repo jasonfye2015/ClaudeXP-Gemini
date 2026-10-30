@@ -9,7 +9,7 @@ const unkey = (k) => k.split(",").map(Number);
 CM.generators = CM.generators || {};
 // what a floor will hold: the set pieces to try, in order (the guardian's lair first), and how many plain rooms
 CM.planFloor = function (number, seed, rnd, special, lair) {
-  const wanted = CM.TEMPLATES.filter((t) => number >= t.min && !((number === CM.LAST_FLOOR || number === CM.BOTTOM) && t.name === "Pit Room"));
+  const wanted = CM.TEMPLATES.concat(CM.TEMPLATES2 || []).filter((t) => number >= t.min && !((number === CM.LAST_FLOOR || number === CM.BOTTOM) && ["Pit Room", "Charnel Pit"].includes(t.name)));
   rnd.shuffle(wanted);
   const pieces = special === "maze" ? [] : wanted.slice(0, number >= 6 ? 2 : 1);
   if (lair) pieces.unshift(lair);                                   // (the guardian's lair first, and away from the top left, where the party starts)

@@ -753,13 +753,13 @@ test("around the game: run codes, the week's seed and party, the new mutators, t
   assert.ok(Array.isArray(exp.fallen) && exp.fallen.length === 1);
 });
 
-test("generator 1 is frozen: twenty-eight seeds' fingerprints, and generator 2 still makes the same floors", () => {
+test("generator 1 is frozen: twenty-eight seeds' fingerprints; generator 2 has grown, and its floors can be finished", () => {
   const CM = load(), fx = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "gen1.json"), "utf8"));
   let n = 0;
   for (const [seed, floors] of Object.entries(fx)) for (const [k, print] of Object.entries(floors)) {
     if (n++ % 7) continue;                                               // (a fifth of them: the whole set takes a minute)
     assert.strictEqual(CM.floorPrint(CM.makeFloor(Number(k), seed, 1)), print, `gen 1, ${seed} floor ${k}`);
-    assert.strictEqual(CM.floorPrint(CM.makeFloor(Number(k), seed, 2)), print, `gen 2 has not grown yet: ${seed} floor ${k}`);
+    assert.ok(CM.solvable(CM.makeFloor(Number(k), seed, 2)), `gen 2 has grown, and every floor of it can be finished: ${seed} floor ${k}`);
   }
   assert.strictEqual(CM.GEN, 2);
   assert.ok(typeof CM.generators[1] === "function" && typeof CM.generators[2] === "function" && typeof CM.planFloor === "function");
@@ -1081,6 +1081,72 @@ test("the ladder: a Hard rung, Grim's slower cold, Ascension's rules, Iron saves
   assert.ok(code.endsWith(":A7i"));
   const back = CM.parseRunCode(code); assert.strictEqual(back.ascension, 7); assert.strictEqual(back.iron, true); assert.strictEqual(back.difficulty, "hard");
   assert.strictEqual(CM.parseRunCode(CM.runCode("s", "fair", "dungeon", "pauper", fixedParty(CM))).ascension, 0);
+});
+
+test("the dungeon, branched: wings and their stairs, a secret stair in a wall, the new rooms, the dungeon that shifts behind you", () => {
+  const CM = load();
+  let wings = 0, secret = 0, pieces = new Set();
+  for (let s = 0; s < 8; s++) for (let n = 1; n <= 50; n++) { const fl = CM.makeFloor(n, "branch-" + s, 2); for (const t of Object.values(fl.things)) if (t.type === "wingstair") wings++; for (const f of Object.values(fl.features)) if (f.type === "secretstair") secret++; for (const r of fl.rooms) if (r.name) pieces.add(r.name); assert.ok(!Object.values(CM.makeFloor(n, "branch-" + s, 1).things).some((t) => t.type === "wingstair"), "generator 1 has no wings"); }
+  assert.ok(wings >= 8 * 5 && secret >= 8 * 5, `about one a band: wings ${wings}, secret stairs ${secret}`);
+  assert.ok(["Great Hall", "Drowned Chapel", "Charnel Pit", "Crystal Gallery"].some((n) => pieces.has(n)), "the new rooms are laid: " + [...pieces].join(", "));
+  const game = new CM.Game();
+  game.newGame("branch-0", fixedParty(CM));
+  let at = null;
+  for (let n = 3; n <= 20 && !at; n++) { const fl = CM.makeFloor(n, "branch-0", 2); const k = Object.keys(fl.things).find((x) => fl.things[x].type === "wingstair"); if (k) at = [n, k]; }
+  assert.ok(at, "a wing stair in the first twenty floors");
+  game.enterFloor(at[0], "down");
+  const fl = game.floor; fl.pos = at[1].split(",").map(Number);
+  game.use();
+  assert.strictEqual(game.floor.number, at[0] + 0.5); assert.ok(game.floor.wing !== undefined && game.floor.wingName && game.achievements.wings);
+  assert.ok(Object.values(game.floor.things).some((t) => t.type === "wingexit") && Object.values(game.floor.things).some((t) => t.type === "wingstair_up"));
+  assert.ok(!Object.values(game.floor.things).some((t) => ["event", "peddler", "rivals", "ladder", "stairs_up"].includes(t.type)));
+  const exit = game.cellOf(game.floor, "wingexit"); game.floor.pos = exit.slice(); game.use();
+  assert.strictEqual(game.floor.number, at[0] + 1, "the wing's exit comes out on the main stair below");
+  game.enterFloor(at[0] + 0.5, "down"); const up = game.cellOf(game.floor, "wingstair_up"); game.floor.pos = up.slice(); game.use();
+  assert.strictEqual(game.floor.number, at[0]); same(game.floor.pos, at[1].split(",").map(Number));
+  game.saveRun();
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game(); g2.continueRun();
+  assert.ok(g2.floorAt(at[0] + 0.5).wing !== undefined, "a wing is saved and made again");
+  // a secret stair, searched
+  let sec = null;
+  for (let n = 3; n <= 20 && !sec; n++) { const f2 = CM.makeFloor(n, "branch-0", 2); const k = Object.keys(f2.features).find((x) => f2.features[x].type === "secretstair"); if (k) sec = [n, k]; }
+  assert.ok(sec);
+  game.enterFloor(sec[0], "down");
+  const f3 = game.floor, [wx, wy] = sec[1].split(",").map(Number);
+  const from = CM.DIRS.map(([dx, dy], d) => [wx - dx, wy - dy, d]).find(([x, y]) => CM.passable(f3, x, y));
+  f3.pos = [from[0], from[1]]; f3.facing = from[2];
+  game.use();
+  assert.ok(f3.features[sec[1]].found && f3.things[sec[1]] && f3.things[sec[1]].type === "wingstair");
+  f3.pos = [wx, wy]; game.use();
+  assert.ok(game.floor.secretWing && game.achievements.secretfloor, "a secret floor, richer");
+  // the dungeon behind you
+  game.enterFloor(sec[0] + 1, "down");
+  const above = game.floors[sec[0]], shut = Object.values(above.features).filter((f) => f.type === "door" && !f.open && !f.locked && f.riddle === undefined).length;
+  game.rnd = new CM.Random(1); game.steps = 149; game.messages = [];
+  const o = CM.DIRS.findIndex(([dx, dy]) => CM.passable(game.floor, game.floor.pos[0] + dx, game.floor.pos[1] + dy)); game.floor.facing = o;
+  game.move(0);
+  assert.ok(game.messages.some((m) => m.includes("Somewhere above")) || !shut, "a door opens, or a peddler sets up, somewhere above");
+});
+
+test("an Awakened expedition: the floors mirrored, the monsters deeper, the uniques awake", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("wake-1", fixedParty(CM), "pauper", "fair", [], "awakened");
+  assert.ok(!game.awakened, "not until the bottom has been reached");
+  game.achievements.bottom = { date: "x" };
+  game.newGame("wake-1", fixedParty(CM), "pauper", "fair", [], "awakened");
+  assert.ok(game.awakened);
+  const plain = CM.makeFloor(1, "wake-1", 2), size = plain.grid.length;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) assert.strictEqual(game.floor.grid[y][x], plain.grid[y][size - 1 - x]);
+  assert.ok(CM.solvable(game.floor));
+  same(game.floor.pos, [size - 1 - plain.pos[0], plain.pos[1]]);
+  const orc = CM.makeMonster(CM.monsterKind("Orc"), 5, new CM.Random(1)), max = orc.max; game.tune(orc);
+  assert.ok(orc.max > max, "a band deeper");
+  const u = CM.makeUnique("tidecaller", true);
+  assert.ok(u.props.awake && u.name.includes("Awake") && u.power > CM.UNIQUES.tidecaller.power);
+  game.enterFloor(2, "down"); game.saveRun();
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game(); g2.continueRun();
+  assert.ok(g2.awakened && g2.floor.mirrored);
+  same(g2.floor.grid, game.floor.grid);
 });
 
 let failed = 0;
