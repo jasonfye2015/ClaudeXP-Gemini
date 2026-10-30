@@ -40,6 +40,8 @@ CM.Game = class {
     this.village = Object.assign({ renown: 0, spent: 0, levels: {}, trainers: [] }, CM.store.get("village", {}));   // the surface: renown and the buildings
     this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "drawn", tapMove: true }, CM.store.get("settings", {}));
     this.settings.keys = Object.assign({}, CM.DEFAULT_KEYS, this.settings.keys || {});
+    this.settings.pad = Object.assign({}, CM.DEFAULT_PAD, this.settings.pad || {});
+    this.ledger = CM.store.get("ledger", []);        // every expedition that ended, one line each (the statistics; the Hall of Fame keeps ten)
     if (!CM.LOOKS[this.settings.look]) this.settings.look = "drawn";
     this.tally = this.freshTally();      // what this run has come to: steps, kills, chests, fights, fled
     this.slot = [1, 2, 3].includes(CM.store.get("slot", 1)) ? CM.store.get("slot", 1) : 1;
@@ -52,6 +54,10 @@ CM.Game = class {
     this.bestiary = CM.store.get("bestiary", {});         // every kind met and slain, and what it fears: kept between runs
     this.memorial = CM.store.get("memorial", []);         // the heroes laid to rest, ever: {name, cls, level, floor, seed, date}
     this.fallen = CM.store.get("fallen", []);             // where parties fell, by seed: a later run on that seed finds their remains
+    if (!this.ledger.length && (this.fame.length || this.fameEndless.length)) {   // (the runs that ended before the ledger was kept: read back from the boards)
+      this.ledger = this.fame.concat(this.fameEndless).map(CM.ledgerFromFame);
+      CM.store.set("ledger", this.ledger);
+    }
     this.combos = CM.store.get("combos", {});             // the combos found, ever
     this.weaves = CM.store.get("weaves", {});             // the weaves found, ever
     this.dirty = false; this.sinceSave = 0; this.wander = 0;

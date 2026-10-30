@@ -10,7 +10,7 @@ const path = require("path");
 const vm = require("vm");
 
 const SRC = path.join(__dirname, "..", "src", "js");
-const RULES = ["00-util.js", "10-data.js", "20-world.js", "21-gen1.js", "22-gen2.js", "25-saves.js", "60-game.js", "61-explore.js", "62-combat.js", "63-camp.js", "64-meta.js", "65-village.js"];
+const RULES = ["00-util.js", "10-data.js", "12-text.js", "20-world.js", "21-gen1.js", "22-gen2.js", "25-saves.js", "60-game.js", "61-explore.js", "62-combat.js", "63-camp.js", "64-meta.js", "65-village.js"];
 
 // a localStorage: quota is how many characters it holds before it throws, the way a full browser does
 function makeStorage(quota = Infinity) {
@@ -38,7 +38,8 @@ const source = (f) => (sources[f] = sources[f] || fs.readFileSync(path.join(SRC,
 
 function load(opts = {}) {
   const storage = opts.storage || makeStorage(opts.quota);
-  const ctx = { console, performance, localStorage: storage, btoa, atob, setTimeout, clearTimeout, Math, Date, JSON };
+  const ctx = { console, performance, localStorage: storage, btoa, atob, setTimeout, clearTimeout, Math, Date, JSON,
+    TextEncoder, TextDecoder, Blob, Response, CompressionStream, DecompressionStream };   // (the link codec: a save deflated into a #fragment)
   ctx.window = ctx;
   vm.createContext(ctx);
   for (const f of RULES) vm.runInContext(source(f), ctx, { filename: f });

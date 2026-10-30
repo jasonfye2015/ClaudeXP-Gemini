@@ -30,7 +30,7 @@ CM.UI = class {
       <p id="start-with"></p>
     </div>
     <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button><button data-board="weekly" title="This week's challenge: the runs on this week's seed">This week</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
-    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-village">The Village</button><button id="btn-film">Films</button><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
+    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-village">The Village</button><button id="btn-film">Films</button><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-stats">Statistics</button><button id="btn-credits">Credits</button><button id="btn-install" hidden title="Install the game as an app of its own: it opens from an icon, and works without the network">Install</button></div>
     <div class="version"></div>
   </div>
 </div>
@@ -83,16 +83,21 @@ CM.UI = class {
   <div class="row"><label for="set-motion">Reduce motion - no shaking, no flashes, no washes of colour over the view</label><input type="checkbox" id="set-motion"></div>
   <div class="row"><label for="set-contrast">High contrast - brighter text and sharper edges</label><input type="checkbox" id="set-contrast"></div>
   <div class="row"><label for="set-swapab">Gamepad: swap A and B (confirm with B, back with A)</label><input type="checkbox" id="set-swapab"></div>
+  <div class="row"><label for="set-layout">Handheld layout - thumb-sized buttons and larger text, as on a Steam Deck</label><select id="set-layout"><option value="auto">Auto (by the screen's shape)</option><option value="on">On</option><option value="off">Off</option></select></div>
   <div class="small" id="set-storage"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
-<div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><p class="small">Change sets a key: press the one you want. Esc and the arrows stay as they are.</p><table class="keys"></table><div class="end"><button id="btn-keys-reset">Reset</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><p class="small">Change sets a key: press the one you want. Esc and the arrows stay as they are.</p><table class="keys kb"></table>
+  <h2>Gamepad</h2><p class="small" id="pad-note"></p><table class="keys pad"></table><div class="end"><button id="btn-keys-reset">Reset</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-credits"><div class="box"><h2>Credits</h2><div id="credits"></div><div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-transfer"><div class="box"><h2>Export / Import</h2>
   <p class="small">Your run, the Hall of Fame and your settings, as text. Copy it to keep it or to carry it to another
   browser; paste a copy here and Import to bring it back. Download saves it as a file; drop a saved file on the box to read it in.</p>
   <textarea id="transfer-text" spellcheck="false"></textarea>
   <div class="small" id="transfer-note"></div>
-  <div class="end"><button id="btn-copy">Copy</button><button id="btn-download">Download</button><button id="btn-import">Import</button><button class="close">Close</button></div></div></div>
+  <div class="end"><button id="btn-copy">Copy</button><button id="btn-download">Download</button><button id="btn-link" title="The save as a link: it opens the game with the save in it, and is stored nowhere else">Link</button><button id="btn-import">Import</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-link"><div class="box"><h2 id="link-title"></h2><p class="small" id="link-text"></p><div class="small" id="link-note"></div>
+  <div class="end"><button id="btn-link-yes" class="primary">Yes</button><button class="close">Not now</button></div></div></div>
+<div class="dialog" id="dlg-stats"><div class="box statsbox"><h2>Statistics</h2><div id="stats"></div><div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-pause"><div class="box"><h2>Paused</h2>
   <p class="small">The run is saved as you go.</p>
   <div class="end"><button id="btn-pause-clip" title="Ten seconds of the view, saved as a .webm">Record a clip</button><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
@@ -129,7 +134,7 @@ CM.UI = class {
   <div id="film-list"></div>
   <textarea id="film-text" spellcheck="false" placeholder="Paste a film code here, CM2:..."></textarea>
   <div class="small" id="film-note"></div>
-  <div class="end"><button id="btn-film-play">Watch</button><button class="close">Close</button></div></div></div>
+  <div class="end"><button id="btn-film-play">Watch</button><button id="btn-film-link" title="The film code in the box, as a link anyone can open">Link</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-village"><div class="box journalbox"><h2>The Village</h2>
   <p class="small">The surface, between runs. Every run brings home renown - floors, guardians, the crown, titles earned, the week's seed - and the village grows with it. Renown never buys a blow in the dungeon.</p>
   <div class="small" id="village-renown"></div><div id="village-buildings"></div>
@@ -567,7 +572,8 @@ CM.UI = class {
     const g = this.game, s = g.settings;
     const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
     const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap");
-    const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab"), render = this.$("#set-render");
+    const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab"), render = this.$("#set-render"), layout = this.$("#set-layout");
+    layout.value = s.layout || "auto";
     speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB); render.value = s.render || "auto";
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
@@ -576,14 +582,60 @@ CM.UI = class {
     note();
     const apply = () => {
       s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.tapMove = tap.checked;
-      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value;
+      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value; s.layout = layout.value;
       g.saveSettings();
       g.emit("settings", s);
     };
     for (const el of [sound, vol, music, mvol, smooth, fps, tap, motion, contrast, swapab]) el.addEventListener("input", apply);
-    for (const el of [speed, text, render]) el.addEventListener("change", apply);
+    for (const el of [speed, text, render, layout]) el.addEventListener("change", apply);
     for (const sel of [look, titleLook]) sel.addEventListener("change", () => { s.look = sel.value; look.value = titleLook.value = s.look; note(); apply(); });
   }
+
+  // ---- the statistics: every expedition that ended, summed (CM.statistics over the ledger) ----
+  openStats() {
+    const g = this.game, box = this.$("#stats"), st = CM.statistics(g.ledger || []), esc = (x) => this.esc(x);
+    const bar = (n, of) => `<span class="bar"><i style="width: ${of ? Math.round((n / of) * 100) : 0}%"></i></span>`;
+    if (!st.runs) box.innerHTML = `<p class="small">${esc(CM.t("stats.none"))}</p>`;
+    else {
+      const most = Math.max(1, ...st.bands.map((b) => b.fell + b.through));
+      box.innerHTML = `<p>${esc(CM.t("stats.runs", { n: st.runs, crowns: st.crowns, bottoms: st.bottoms, fell: st.fell }))}. ${esc(CM.t("stats.deepest", { n: st.deepest }))}</p>`
+        + `<p class="small">${esc(CM.t("stats.first", { first: st.first, last: st.last }))} ${esc(CM.t("stats.totals", { steps: st.steps, fights: st.fights, kills: st.kills, fled: st.fled, chests: st.chests }))}</p>`
+        + `<h3>${esc(CM.t("stats.bands"))}</h3><table class="stats">${st.bands.filter((b) => b.fell + b.through).map((b) => `<tr><td>${b.to === Infinity ? "51 and below" : `${b.from} - ${b.to}`}</td><td>${bar(b.fell, most)}</td><td>${b.fell} fell${b.through ? `, ${b.through} went on` : ""}</td></tr>`).join("")}</table>`
+        + `<h3>${esc(CM.t("stats.callings"))}</h3><table class="stats">${Object.entries(st.callings).sort((x, y) => y[1].n - x[1].n).map(([c, r]) => `<tr><td>${esc((CM.CLASSES[c] || { name: c }).name)}</td><td>${bar(r.n, st.favourite[1].n)}</td><td>${esc(CM.t("stats.calling.row", { n: r.n, crowns: r.crowns }))}</td></tr>`).join("")}</table>`
+        + `<h3>${esc(CM.t("stats.spent"))}</h3><p class="small">${esc(CM.t("stats.spent.total", { n: st.spentTotal }))}</p><table class="stats">${Object.entries(st.spent).sort((x, y) => y[1] - x[1]).map(([w, n]) => `<tr><td>${esc(w)}</td><td>${bar(n, st.spentTotal)}</td><td>${n.toLocaleString()}</td></tr>`).join("")}</table>`
+        + `<h3>${esc(CM.t("stats.difficulty"))}</h3><table class="stats">${Object.entries(st.difficulties).map(([d, r]) => `<tr><td>${esc((CM.DIFFICULTIES[d] || { name: d }).name)}</td><td>${bar(r.crowns, r.n)}</td><td>${esc(CM.t("stats.difficulty.row", { n: r.n, crowns: r.crowns, a: r.a }))}</td></tr>`).join("")}</table>`
+        + (st.old ? `<p class="small">${esc(CM.t("stats.old", { n: st.old }))}</p>` : "");
+    }
+    this.openDialog("#dlg-stats");
+  }
+  // a save or a film that came in the page's link (#save=, #film=): ask, then import or watch
+  offerLink(payload) {
+    if (!payload) return;
+    this.$("#link-title").textContent = CM.t("link.title");
+    this.$("#link-text").textContent = CM.t(payload.kind === "film" ? "link.film" : "link.save");
+    this.$("#link-note").textContent = "";
+    const yes = this.$("#btn-link-yes"), fresh = yes.cloneNode(true);
+    yes.replaceWith(fresh);
+    fresh.addEventListener("click", () => {
+      CM.fromLink(payload.code).then((text) => {
+        if (payload.kind === "film") { const spec = text && CM.parseFilm(text); if (!spec) { this.$("#link-note").textContent = CM.t("link.bad"); return; } this.closeDialogs(); this.watch(spec); return; }
+        const err = text ? this.game.importText(text) : CM.t("link.bad");
+        if (err) { this.$("#link-note").textContent = err; return; }
+        this.closeDialogs(); this.refreshTitle(); this.game.titleNote = "Imported from the link."; this.refreshTitle();
+      });
+    });
+    this.openDialog("#dlg-link");
+  }
+  // the save (or a film code) as a link, in the box and on the clipboard
+  makeLink(kind, text, box, note) {
+    const base = location.href.split("#")[0];
+    CM.toLink(text).then((code) => {
+      box.value = `${base}#${kind}=${code}`;
+      note.textContent = CM.t(kind === "film" ? "link.film.made" : "link.made");
+      if (navigator.clipboard) navigator.clipboard.writeText(box.value).catch(() => {});
+    });
+  }
+  showInstall(on) { const b = this.$("#btn-install"); if (b) { b.hidden = !on; b.textContent = CM.t("install.button"); } }
 
   toggleFps() {
     this.game.settings.fps = !this.game.settings.fps;
@@ -599,12 +651,29 @@ CM.UI = class {
 
   // ---- ways to play: the keys as set, the summary card, the gamepad's focus, a tap on the view ----
   renderKeys() {
-    const g = this.game, keys = this.$("#dlg-keys table"), k = g.settings.keys || CM.DEFAULT_KEYS;
+    const g = this.game, keys = this.$("#dlg-keys table.kb"), k = g.settings.keys || CM.DEFAULT_KEYS;
     keys.innerHTML = CM.KEY_ACTIONS.map(([id, what]) => `<tr data-action="${id}"><td><kbd>${this.esc(CM.keyName(k[id]))}</kbd>${this.rebinding === id ? " <i>press a key...</i>" : ""}</td><td>${what}</td><td><button data-rebind="${id}">Change</button></td></tr>`).join("")
       + `<tr><td><kbd>Arrows</kbd></td><td>move and turn as well, always</td><td></td></tr><tr><td><kbd>1 - 4</kbd></td><td>a hero's sheet; in a list, the pick</td><td></td></tr>`
       + `<tr><td><kbd>Esc</kbd></td><td>close a screen / pause</td><td></td></tr><tr><td><kbd>F3</kbd></td><td>frames per second</td><td></td></tr>`
-      + `<tr><td colspan="3" class="small" style="white-space: normal; max-width: 560px; padding-top: 8px">A gamepad works too: the stick or pad moves, A uses or picks, B steps back, X the pack, Y casts, the shoulders sidestep or pick targets, Start pauses, Select the map. On a touch screen, tap the view: the sides turn, the top walks, the bottom steps back.</td></tr>`;
-    for (const b of keys.querySelectorAll("button[data-rebind]")) b.addEventListener("click", () => { this.rebinding = this.rebinding === b.dataset.rebind ? null : b.dataset.rebind; this.renderKeys(); });
+      + `<tr><td colspan="3" class="small" style="white-space: normal; max-width: 560px; padding-top: 8px">${this.esc(CM.t("pad.help"))}</td></tr>`;
+    for (const b of keys.querySelectorAll("button[data-rebind]")) b.addEventListener("click", () => { this.rebinding = this.rebinding === b.dataset.rebind ? null : b.dataset.rebind; this.rebindingPad = null; this.renderKeys(); });
+    const pad = this.$("#dlg-keys table.pad"), P = g.settings.pad || CM.DEFAULT_PAD;
+    this.$("#pad-note").textContent = CM.t("pad.note");
+    pad.innerHTML = CM.PAD_ACTIONS.map(([id, what]) => `<tr data-action="${id}"><td><kbd>${this.esc(CM.padName(P[id]))}</kbd>${this.rebindingPad === id ? ` <i>${this.esc(CM.t("pad.press"))}</i>` : ""}</td><td>${what}</td><td><button data-rebindpad="${id}">Change</button></td></tr>`).join("")
+      + `<tr><td><kbd>Stick, d-pad</kbd></td><td>move and turn, always; in a list, the highlight</td><td></td></tr>`;
+    for (const b of pad.querySelectorAll("button[data-rebindpad]")) b.addEventListener("click", () => { this.rebindingPad = this.rebindingPad === b.dataset.rebindpad ? null : b.dataset.rebindpad; this.rebinding = null; this.renderKeys(); });
+  }
+  // a gamepad's button for an action (the d-pad is the d-pad; one button, one action)
+  rebindPad(action, i) {
+    const g = this.game, P = g.settings.pad || (g.settings.pad = Object.assign({}, CM.DEFAULT_PAD));
+    if (!(action in CM.DEFAULT_PAD) || typeof i !== "number" || i >= 12) { this.rebindingPad = null; this.renderKeys(); return false; }
+    for (const other of Object.keys(P)) if (P[other] === i && other !== action) P[other] = CM.DEFAULT_PAD[other] === i ? "" : CM.DEFAULT_PAD[other];
+    P[action] = i;
+    this.rebindingPad = null;
+    g.saveSettings();
+    g.emit("settings", g.settings);
+    this.renderKeys();
+    return true;
   }
   rebind(action, code) {
     const g = this.game, k = g.settings.keys || (g.settings.keys = Object.assign({}, CM.DEFAULT_KEYS));
@@ -617,7 +686,7 @@ CM.UI = class {
     this.renderKeys();
     return true;
   }
-  resetKeys() { this.game.settings.keys = Object.assign({}, CM.DEFAULT_KEYS); this.rebinding = null; this.game.saveSettings(); this.game.emit("settings", this.game.settings); this.renderKeys(); }
+  resetKeys() { this.game.settings.keys = Object.assign({}, CM.DEFAULT_KEYS); this.game.settings.pad = Object.assign({}, CM.DEFAULT_PAD); this.rebinding = null; this.rebindingPad = null; this.game.saveSettings(); this.game.emit("settings", this.game.settings); this.renderKeys(); }
 
   // a gamepad's way through buttons: the focus moves along the visible ones, A presses
   padTargets() {

@@ -1250,11 +1250,59 @@ test("sound and sight, again: the battle tune's layers and key, a monster's fram
   void CM;
 });
 
-let failed = 0;
-for (const t of tests) {
-  const t0 = Date.now();
-  try { t.fn(); console.log(`  ok   ${t.name} (${Date.now() - t0} ms)`); }
-  catch (e) { failed++; console.log(`  FAIL ${t.name}\n       ${(e.stack || e.message).split("\n").slice(0, 4).join("\n       ")}`); }
-}
-console.log(failed ? `\n${failed} of ${tests.length} failed` : `\nall ${tests.length} passed`);
-process.exit(failed ? 1 : 0);
+test("around the game, again: the ledger and the statistics, a save as a link, the gamepad's map, the app's papers", async () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("ledger-1", fixedParty(CM));
+  playRun(CM, game, { maxFloor: 2 });
+  game.spend("temple", 30); game.spend("smith", 12);
+  for (const h of game.party) h.hp = 0;
+  game.endRun(false);
+  assert.strictEqual(game.ledger.length, 1, "one line for one expedition");
+  const l = game.ledger[0];
+  assert.ok(l.f >= 1 && !l.w && l.c.length === 4 && l.sp.temple === 30 && l.s > 0, JSON.stringify(l));
+  // the statistics: bands, callings, gold
+  const lines = game.ledger.concat([
+    Object.assign(CM.ledgerLine({ date: "01/02/2026", seed: "x", floor: 20, won: true, gold: 500, difficulty: "hard", ascension: 3, tally: { steps: 900, fights: 40, kills: 90, spent: { temple: 100 } } }, ["fighter", "fighter", "mage", "priest"]), { t: 1 }),
+    Object.assign(CM.ledgerLine({ date: "01/03/2026", seed: "y", floor: 12, won: false, gold: 50, tally: { steps: 300 } }, ["thief", "mage", "mage", "ranger"]), { t: 2 }),
+  ]);
+  const st = CM.statistics(lines);
+  assert.strictEqual(st.runs, 3); assert.strictEqual(st.crowns, 1); assert.strictEqual(st.fell, 2); assert.strictEqual(st.deepest, 20);
+  assert.strictEqual(st.bands[2].fell, 1, "one fell on 11-15"); assert.strictEqual(st.bands[3].through, 1, "the crown went through 16-20");
+  assert.strictEqual(st.callings.mage.n, 3); assert.strictEqual(st.callings.Mage.n, 1); assert.strictEqual(st.spent.temple, 130); assert.strictEqual(st.difficulties.hard.a, 3);
+  // the runs from before the ledger: read back from the Hall of Fame, without their numbers
+  const old = CM.ledgerFromFame({ date: "12/12/2025", seed: "z", floor: 9, won: false, gold: 20, party: ["Ana the mage 5", "Bo the fighter 6"], tally: {} });
+  assert.ok(old.old && old.c.join() === "mage,fighter" && old.s === 0);
+  // import merges lines, and never doubles them
+  const g2 = new CM.Game();
+  assert.strictEqual(g2.ledger.length, 1, "the ledger is kept");
+  assert.ok(!g2.importText(game.exportText())); assert.strictEqual(g2.ledger.length, 1, "the same line, once");
+  // the save as a link, deflated and back
+  const text = game.exportText();
+  const code = await CM.toLink(text);
+  assert.ok(code[0] === "1" && code.length < text.length, "deflated");
+  assert.strictEqual(await CM.fromLink(code), text);
+  assert.strictEqual(await CM.fromLink("0" + CM.b64url(new TextEncoder().encode("plain"))), "plain");
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(CM.linkPayload(`#save=${code}`))), { kind: "save", code });
+  assert.strictEqual(CM.linkPayload("#nothing"), null);
+  // the gamepad's map: the standard buttons, named
+  assert.strictEqual(CM.padName(CM.DEFAULT_PAD.use), "A"); assert.strictEqual(CM.padName(9), "Start"); assert.strictEqual(CM.padName(""), "-");
+  assert.ok(CM.PAD_ACTIONS.every(([id]) => id in CM.DEFAULT_PAD) && Object.assign({}, CM.DEFAULT_PAD, g2.settings.pad).use === 0);
+  assert.strictEqual(CM.t("stats.runs", { n: 1200, crowns: 2, bottoms: 0, fell: 3 }), `${(1200).toLocaleString()} expeditions, 2 crowned, 0 to the bottom of the world, 3 that fell`);
+  // the app's papers, beside the built file
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "game", "manifest.webmanifest"), "utf8"));
+  assert.ok(manifest.start_url.startsWith("./Claude%20and%20Magic%20v") && manifest.icons.length === 1);
+  const sw = fs.readFileSync(path.join(ROOT, "game", "sw.js"), "utf8");
+  assert.ok(sw.includes(manifest.start_url) && sw.includes("skipWaiting"), "the worker keeps the file");
+  assert.ok(fs.existsSync(path.join(ROOT, "game", "icon.svg")));
+});
+
+(async () => {
+  let failed = 0;
+  for (const t of tests) {
+    const t0 = Date.now();
+    try { await t.fn(); console.log(`  ok   ${t.name} (${Date.now() - t0} ms)`); }
+    catch (e) { failed++; console.log(`  FAIL ${t.name}\n       ${(e.stack || e.message).split("\n").slice(0, 4).join("\n       ")}`); }
+  }
+  console.log(failed ? `\n${failed} of ${tests.length} failed` : `\nall ${tests.length} passed`);
+  process.exit(failed ? 1 : 0);
+})();

@@ -356,3 +356,17 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   #title h1 { font-size: 30px; }
   #create .foot label { margin-left: 0; }
 }
+
+/* ---- the statistics: a bar beside each number ---- */
+table.stats { border-collapse: collapse; width: 100%; margin-bottom: 8px; }
+table.stats td { padding: 3px 8px 3px 0; vertical-align: middle; white-space: nowrap; }
+table.stats td:nth-child(2) { width: 40%; }
+table.stats .bar { display: block; height: 10px; background: rgba(255,255,255,0.08); border: 1px solid var(--edge); border-radius: 2px; overflow: hidden; }
+table.stats .bar i { display: block; height: 100%; background: var(--gold, #C9A24A); }
+.statsbox h3 { margin: 12px 0 4px; font-size: 15px; }
+/* ---- a handheld (a Steam Deck's 1280 by 800, a thumb on each side): the buttons grow, the text with them ---- */
+body.handheld #actions button, body.handheld .dialog .box button, body.handheld #bag .give button, body.handheld #bag .act button { padding: 12px 14px; font-size: 15px; min-height: 44px; }
+body.handheld #log { font-size: 13px; line-height: 17px; }
+body.handheld .member .name, body.handheld #side .where, body.handheld #side .purse, body.handheld #side .light { font-size: 14px; }
+body.handheld .dialog .box { font-size: 15px; }
+body.handheld #title .foot button, body.handheld #create .foot button { padding: 10px 14px; min-height: 44px; }

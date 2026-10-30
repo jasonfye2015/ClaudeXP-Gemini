@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v2.9 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v3.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -369,6 +369,20 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   #title h1 { font-size: 30px; }
   #create .foot label { margin-left: 0; }
 }
+
+/* ---- the statistics: a bar beside each number ---- */
+table.stats { border-collapse: collapse; width: 100%; margin-bottom: 8px; }
+table.stats td { padding: 3px 8px 3px 0; vertical-align: middle; white-space: nowrap; }
+table.stats td:nth-child(2) { width: 40%; }
+table.stats .bar { display: block; height: 10px; background: rgba(255,255,255,0.08); border: 1px solid var(--edge); border-radius: 2px; overflow: hidden; }
+table.stats .bar i { display: block; height: 100%; background: var(--gold, #C9A24A); }
+.statsbox h3 { margin: 12px 0 4px; font-size: 15px; }
+/* ---- a handheld (a Steam Deck's 1280 by 800, a thumb on each side): the buttons grow, the text with them ---- */
+body.handheld #actions button, body.handheld .dialog .box button, body.handheld #bag .give button, body.handheld #bag .act button { padding: 12px 14px; font-size: 15px; min-height: 44px; }
+body.handheld #log { font-size: 13px; line-height: 17px; }
+body.handheld .member .name, body.handheld #side .where, body.handheld #side .purse, body.handheld #side .light { font-size: 14px; }
+body.handheld .dialog .box { font-size: 15px; }
+body.handheld #title .foot button, body.handheld #create .foot button { padding: 10px 14px; min-height: 44px; }
 </style>
 </head>
 <body>
@@ -378,7 +392,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "2.9", built: "2026-10-30" };
+const CM = window.CM = { version: "3.0", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1172,6 +1186,13 @@ CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"
   ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
   ["explore", "walk to the nearest unexplored square (any key stops)"],
   ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"], ["auto", "in a fight: the party fights on by itself"]];
+// a gamepad's buttons, by the standard mapping, and what each does unless Settings > Keys says otherwise (the stick and
+// the d-pad - 12 to 15 - always move)
+CM.DEFAULT_PAD = { use: 0, back: 1, bag: 2, cast: 3, left: 4, right: 5, run: 7, map: 8, pause: 9 };
+CM.PAD_ACTIONS = [["use", "use / talk / pick; in a fight: fight"], ["back", "step back / cancel; in a fight: defend"], ["bag", "the pack; in a fight: an item"], ["cast", "cast or use a skill"],
+  ["left", "sidestep left; in a list: the one before"], ["right", "sidestep right; in a list: the next"], ["run", "in a fight: run"], ["map", "the automap, large"], ["pause", "pause"]];
+CM.PAD_NAMES = ["A", "B", "X", "Y", "LB", "RB", "LT", "RT", "Select", "Start", "L3", "R3", "Up", "Down", "Left", "Right"];
+CM.padName = (i) => (i === undefined || i === null || i === "" ? "-" : CM.PAD_NAMES[i] || `button ${i}`);
 CM.keyName = (code) => (code || "").replace(/^Key/, "").replace(/^Digit/, "").replace(/^Arrow/, "").replace("Space", "Space").replace("Backquote", "`");
 // an Endless entry that ended below - not one that took the daylight with the crown
 CM.endlessFall = (e) => Boolean(e && e.endless && !(e.won && e.floor <= CM.LAST_FLOOR));
@@ -1386,6 +1407,49 @@ CM.KEYS_HELP = [
   ["D", "defend: half the blows until their next turn"], ["R", "run"], ["A", "auto: the party fights on by itself, until someone is badly hurt"], ["Tab / click a foe", "choose the foe"],
   ["1 - 9", "pick from a list"], ["F3", "frames per second"],
 ];
+
+// ---- 12-text.js ----
+"use strict";
+// Text as data: the words the player reads, keyed, so a translation is one file that sets CM.TEXT over this one.
+// Only the newest screens are written through CM.t so far (the statistics, the link, installing, the gamepad); the
+// older strings still live where they are used and move here as they are touched. No translation is shipped.
+//
+//   CM.t("stats.runs", { n: 12 })   ->  "12 expeditions"
+CM.TEXT = {
+  "stats.title": "Statistics",
+  "stats.none": "No expedition has ended yet. The numbers begin with the first.",
+  "stats.runs": "{n} expeditions, {crowns} crowned, {bottoms} to the bottom of the world, {fell} that fell",
+  "stats.first": "The first set out {first}; the last ended {last}.",
+  "stats.deepest": "Deepest: floor {n}.",
+  "stats.totals": "{steps} steps, {fights} fights, {kills} slain, {fled} fled, {chests} chests opened.",
+  "stats.bands": "Where parties fell",
+  "stats.callings": "The callings, and how they fared",
+  "stats.calling.row": "{n} took it, {crowns} crowned",
+  "stats.spent": "Gold, and where it went",
+  "stats.spent.total": "{n} gold spent in all",
+  "stats.difficulty": "By difficulty",
+  "stats.difficulty.row": "{n} runs, {crowns} crowned, best Ascension {a}",
+  "stats.old": "({n} of these were read back from the Hall of Fame: no steps, fights or gold are known for them.)",
+  "link.title": "A link came in",
+  "link.save": "This link carries a save: the runs in its slots, its Hall of Fame and its settings. Import it, and they replace what this browser holds (Export first to keep what is here).",
+  "link.film": "This link carries the film of a run. Watch it?",
+  "link.bad": "The link's save couldn't be read.",
+  "link.made": "A link to this save is in the box (and copied, where the browser allows). It opens the game with the save in it; nothing is stored anywhere but the link.",
+  "link.film.made": "A link to this film is in the box. Anyone who opens it watches the run.",
+  "install.button": "Install",
+  "install.note": "Installed: the game opens from its own icon, and works without the network.",
+  "pad.title": "Gamepad",
+  "pad.note": "Change sets a button: press the one you want on the pad. The stick and the pad move, always.",
+  "pad.press": "press a button...",
+  "pad.help": "A gamepad works too: the stick or pad moves; the buttons as set below. On a touch screen, tap the view: the sides turn, the top walks, the bottom steps back.",
+  "layout.handheld": "Handheld layout - thumb-sized buttons and larger text, as on a Steam Deck (Auto: by the screen's shape)",
+};
+CM.t = function (key, vars) {
+  let s = CM.TEXT[key];
+  if (s === undefined) return key;
+  for (const [k, v] of Object.entries(vars || {})) s = s.split(`{${k}}`).join(typeof v === "number" ? v.toLocaleString() : String(v));
+  return s;
+};
 
 // ---- 20-world.js ----
 "use strict";
@@ -3140,6 +3204,39 @@ CM.parseFilm = function (text) {
   const t = String(text || "").trim();
   if (!t.startsWith("CM2:")) return null;
   try { const spec = JSON.parse(t.slice(4)); if (!spec.seed || spec.log === undefined) return null; spec.log = CM.unpackLog(spec.log); return spec; } catch (e) { return null; }
+};
+
+// ---- a save, or a film, as a link: the text deflated and written base64url after #save= (or #film=) - nothing is
+// stored anywhere but the link. Browsers without CompressionStream write it plain, under a different first letter. ----
+CM.b64url = function (bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+CM.unb64url = function (text) {
+  const s = atob(text.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((text.length + 3) % 4));
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
+};
+CM.toLink = async function (text) {
+  const bytes = new TextEncoder().encode(text);
+  if (typeof CompressionStream === "function") {
+    try { const packed = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer()); return "1" + CM.b64url(packed); } catch (e) { /* plain, below */ }
+  }
+  return "0" + CM.b64url(bytes);
+};
+CM.fromLink = async function (code) {
+  code = String(code || "");
+  const bytes = CM.unb64url(code.slice(1));
+  if (code[0] === "0") return new TextDecoder().decode(bytes);
+  if (code[0] !== "1" || typeof DecompressionStream !== "function") return null;
+  try { return await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text(); } catch (e) { return null; }
+};
+// what a page's #fragment carries: {kind: "save" | "film", code} or null
+CM.linkPayload = function (hash) {
+  const m = /^#(save|film)=([A-Za-z0-9_-]+)$/.exec(String(hash || "").trim());
+  return m ? { kind: m[1], code: m[2] } : null;
 };
 
 // ---- 30-art.js ----
@@ -5394,6 +5491,8 @@ CM.Game = class {
     this.village = Object.assign({ renown: 0, spent: 0, levels: {}, trainers: [] }, CM.store.get("village", {}));   // the surface: renown and the buildings
     this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "drawn", tapMove: true }, CM.store.get("settings", {}));
     this.settings.keys = Object.assign({}, CM.DEFAULT_KEYS, this.settings.keys || {});
+    this.settings.pad = Object.assign({}, CM.DEFAULT_PAD, this.settings.pad || {});
+    this.ledger = CM.store.get("ledger", []);        // every expedition that ended, one line each (the statistics; the Hall of Fame keeps ten)
     if (!CM.LOOKS[this.settings.look]) this.settings.look = "drawn";
     this.tally = this.freshTally();      // what this run has come to: steps, kills, chests, fights, fled
     this.slot = [1, 2, 3].includes(CM.store.get("slot", 1)) ? CM.store.get("slot", 1) : 1;
@@ -5406,6 +5505,10 @@ CM.Game = class {
     this.bestiary = CM.store.get("bestiary", {});         // every kind met and slain, and what it fears: kept between runs
     this.memorial = CM.store.get("memorial", []);         // the heroes laid to rest, ever: {name, cls, level, floor, seed, date}
     this.fallen = CM.store.get("fallen", []);             // where parties fell, by seed: a later run on that seed finds their remains
+    if (!this.ledger.length && (this.fame.length || this.fameEndless.length)) {   // (the runs that ended before the ledger was kept: read back from the boards)
+      this.ledger = this.fame.concat(this.fameEndless).map(CM.ledgerFromFame);
+      CM.store.set("ledger", this.ledger);
+    }
     this.combos = CM.store.get("combos", {});             // the combos found, ever
     this.weaves = CM.store.get("weaves", {});             // the weaves found, ever
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
@@ -8682,6 +8785,8 @@ Object.assign(CM.Game.prototype, {
     }
     if (this.endless) { this.fameEndless.push(entry); this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
     else { this.fame.push(entry); this.sortFame(); CM.store.set("fame", this.fame); }
+    this.ledger = (this.ledger || []).concat([CM.ledgerLine(entry, this.party.map((h) => h.cls))]).slice(-CM.LEDGER_MAX);
+    CM.store.set("ledger", this.ledger);
     if (won) this.trophy("lich");
     CM.store.remove(this.runKey(this.slot));
     this.lastRun = null;
@@ -8721,7 +8826,7 @@ Object.assign(CM.Game.prototype, {
 
   exportText() {
     return JSON.stringify({ game: "Claude and Magic", version: CM.version, built: CM.built, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
-      trophies: this.trophies, vaults: this.vaults, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, weaves: this.weaves, memorial: this.memorial, fallen: this.fallen, village: this.village });
+      trophies: this.trophies, vaults: this.vaults, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, weaves: this.weaves, memorial: this.memorial, fallen: this.fallen, village: this.village, ledger: this.ledger });
   },
 
   importText(text) {
@@ -8742,6 +8847,7 @@ Object.assign(CM.Game.prototype, {
     if (data.combos && typeof data.combos === "object") { this.combos = Object.assign({}, this.combos, data.combos); CM.store.set("combos", this.combos); }
     if (data.weaves && typeof data.weaves === "object") { this.weaves = Object.assign({}, this.weaves, data.weaves); CM.store.set("weaves", this.weaves); }
     if (Array.isArray(data.memorial)) { this.memorial = data.memorial.concat(this.memorial || []).slice(0, 30); CM.store.set("memorial", this.memorial); }
+    if (Array.isArray(data.ledger)) { const have = new Set((this.ledger || []).map(CM.ledgerKey)); this.ledger = (this.ledger || []).concat(data.ledger.filter((l) => l && l.d && !have.has(CM.ledgerKey(l)))).sort((x, y) => (x.t || 0) - (y.t || 0)).slice(-CM.LEDGER_MAX); CM.store.set("ledger", this.ledger); }
     if (Array.isArray(data.fallen)) { const have = new Set((this.fallen || []).map((f) => f.id)); this.fallen = (this.fallen || []).concat(data.fallen.filter((f) => f && f.id && !have.has(f.id))).slice(-40); CM.store.set("fallen", this.fallen); }
     this.emit("change");
     return "";
@@ -9040,6 +9146,38 @@ Object.assign(CM.Game.prototype, {
 });
 }
 
+// ---- the ledger: one short line for every expedition that ended, and the statistics read from it ----
+CM.LEDGER_MAX = 600;
+CM.ledgerLine = function (entry, classes) {
+  const t = entry.tally || {};
+  return { t: Date.now(), d: entry.date, sd: entry.seed, f: entry.floor, w: entry.won ? 1 : 0, b: entry.bottom ? 1 : 0, e: entry.endless ? 1 : 0, df: entry.difficulty || "fair", a: entry.ascension || 0,
+    c: classes || [], s: t.steps || 0, fi: t.fights || 0, k: t.kills || 0, fl: t.fled || 0, ch: t.chests || 0, g: entry.gold || 0, sp: Object.assign({}, t.spent || {}) };
+};
+CM.ledgerKey = (l) => `${l.d}|${l.sd}|${l.f}|${l.s}|${l.g}`;
+// a Hall of Fame entry as a ledger line, for the runs that ended before the ledger was kept ("Name the cls 7")
+CM.ledgerFromFame = function (entry) {
+  const classes = (entry.party || []).map((p) => { const m = / the (\w+) \d+$/.exec(String(p)); return m ? m[1] : null; }).filter(Boolean);
+  return Object.assign(CM.ledgerLine(entry, classes), { t: 0, old: 1 });
+};
+CM.BANDS = [[1, 5], [6, 10], [11, 15], [16, 20], [21, 25], [26, 30], [31, 35], [36, 40], [41, 45], [46, 50], [51, Infinity]];
+CM.statistics = function (ledger) {
+  const st = { runs: 0, crowns: 0, bottoms: 0, fell: 0, old: 0, deepest: 0, steps: 0, fights: 0, kills: 0, fled: 0, chests: 0, gold: 0, spent: {}, spentTotal: 0, first: null, last: null,
+    bands: CM.BANDS.map(([from, to]) => ({ from, to, fell: 0, through: 0 })), callings: {}, difficulties: {} };
+  for (const l of ledger || []) {
+    st.runs++; if (l.old) st.old++;
+    if (l.w) st.crowns++; if (l.b) st.bottoms++; if (!l.w && !l.b) st.fell++;
+    st.deepest = Math.max(st.deepest, l.f || 0);
+    st.steps += l.s || 0; st.fights += l.fi || 0; st.kills += l.k || 0; st.fled += l.fl || 0; st.chests += l.ch || 0; st.gold += l.g || 0;
+    for (const [where, n] of Object.entries(l.sp || {})) { st.spent[where] = (st.spent[where] || 0) + n; st.spentTotal += n; }
+    if (!st.first) st.first = l.d; st.last = l.d;
+    for (const band of st.bands) { if (l.f > band.to) band.through++; else if (l.f >= band.from) { if (!l.w && !l.b) band.fell++; else band.through++; break; } }
+    for (const c of l.c || []) { const row = st.callings[c] = st.callings[c] || { n: 0, crowns: 0 }; row.n++; if (l.w) row.crowns++; }
+    const d = st.difficulties[l.df || "fair"] = st.difficulties[l.df || "fair"] || { n: 0, crowns: 0, a: 0 }; d.n++; if (l.w) d.crowns++; d.a = Math.max(d.a, l.a || 0);
+  }
+  st.favourite = Object.entries(st.callings).sort((x, y) => y[1].n - x[1].n || y[1].crowns - x[1].crowns)[0] || null;
+  return st;
+};
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -9211,7 +9349,7 @@ CM.UI = class {
       <p id="start-with"></p>
     </div>
     <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button><button data-board="weekly" title="This week's challenge: the runs on this week's seed">This week</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
-    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-village">The Village</button><button id="btn-film">Films</button><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
+    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-village">The Village</button><button id="btn-film">Films</button><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-stats">Statistics</button><button id="btn-credits">Credits</button><button id="btn-install" hidden title="Install the game as an app of its own: it opens from an icon, and works without the network">Install</button></div>
     <div class="version"></div>
   </div>
 </div>
@@ -9264,16 +9402,21 @@ CM.UI = class {
   <div class="row"><label for="set-motion">Reduce motion - no shaking, no flashes, no washes of colour over the view</label><input type="checkbox" id="set-motion"></div>
   <div class="row"><label for="set-contrast">High contrast - brighter text and sharper edges</label><input type="checkbox" id="set-contrast"></div>
   <div class="row"><label for="set-swapab">Gamepad: swap A and B (confirm with B, back with A)</label><input type="checkbox" id="set-swapab"></div>
+  <div class="row"><label for="set-layout">Handheld layout - thumb-sized buttons and larger text, as on a Steam Deck</label><select id="set-layout"><option value="auto">Auto (by the screen's shape)</option><option value="on">On</option><option value="off">Off</option></select></div>
   <div class="small" id="set-storage"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
-<div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><p class="small">Change sets a key: press the one you want. Esc and the arrows stay as they are.</p><table class="keys"></table><div class="end"><button id="btn-keys-reset">Reset</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-keys"><div class="box"><h2>Keys</h2><p class="small">Change sets a key: press the one you want. Esc and the arrows stay as they are.</p><table class="keys kb"></table>
+  <h2>Gamepad</h2><p class="small" id="pad-note"></p><table class="keys pad"></table><div class="end"><button id="btn-keys-reset">Reset</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-credits"><div class="box"><h2>Credits</h2><div id="credits"></div><div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-transfer"><div class="box"><h2>Export / Import</h2>
   <p class="small">Your run, the Hall of Fame and your settings, as text. Copy it to keep it or to carry it to another
   browser; paste a copy here and Import to bring it back. Download saves it as a file; drop a saved file on the box to read it in.</p>
   <textarea id="transfer-text" spellcheck="false"></textarea>
   <div class="small" id="transfer-note"></div>
-  <div class="end"><button id="btn-copy">Copy</button><button id="btn-download">Download</button><button id="btn-import">Import</button><button class="close">Close</button></div></div></div>
+  <div class="end"><button id="btn-copy">Copy</button><button id="btn-download">Download</button><button id="btn-link" title="The save as a link: it opens the game with the save in it, and is stored nowhere else">Link</button><button id="btn-import">Import</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-link"><div class="box"><h2 id="link-title"></h2><p class="small" id="link-text"></p><div class="small" id="link-note"></div>
+  <div class="end"><button id="btn-link-yes" class="primary">Yes</button><button class="close">Not now</button></div></div></div>
+<div class="dialog" id="dlg-stats"><div class="box statsbox"><h2>Statistics</h2><div id="stats"></div><div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-pause"><div class="box"><h2>Paused</h2>
   <p class="small">The run is saved as you go.</p>
   <div class="end"><button id="btn-pause-clip" title="Ten seconds of the view, saved as a .webm">Record a clip</button><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
@@ -9310,7 +9453,7 @@ CM.UI = class {
   <div id="film-list"></div>
   <textarea id="film-text" spellcheck="false" placeholder="Paste a film code here, CM2:..."></textarea>
   <div class="small" id="film-note"></div>
-  <div class="end"><button id="btn-film-play">Watch</button><button class="close">Close</button></div></div></div>
+  <div class="end"><button id="btn-film-play">Watch</button><button id="btn-film-link" title="The film code in the box, as a link anyone can open">Link</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-village"><div class="box journalbox"><h2>The Village</h2>
   <p class="small">The surface, between runs. Every run brings home renown - floors, guardians, the crown, titles earned, the week's seed - and the village grows with it. Renown never buys a blow in the dungeon.</p>
   <div class="small" id="village-renown"></div><div id="village-buildings"></div>
@@ -9748,7 +9891,8 @@ CM.UI = class {
     const g = this.game, s = g.settings;
     const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
     const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap");
-    const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab"), render = this.$("#set-render");
+    const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab"), render = this.$("#set-render"), layout = this.$("#set-layout");
+    layout.value = s.layout || "auto";
     speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB); render.value = s.render || "auto";
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
@@ -9757,14 +9901,60 @@ CM.UI = class {
     note();
     const apply = () => {
       s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.tapMove = tap.checked;
-      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value;
+      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value; s.layout = layout.value;
       g.saveSettings();
       g.emit("settings", s);
     };
     for (const el of [sound, vol, music, mvol, smooth, fps, tap, motion, contrast, swapab]) el.addEventListener("input", apply);
-    for (const el of [speed, text, render]) el.addEventListener("change", apply);
+    for (const el of [speed, text, render, layout]) el.addEventListener("change", apply);
     for (const sel of [look, titleLook]) sel.addEventListener("change", () => { s.look = sel.value; look.value = titleLook.value = s.look; note(); apply(); });
   }
+
+  // ---- the statistics: every expedition that ended, summed (CM.statistics over the ledger) ----
+  openStats() {
+    const g = this.game, box = this.$("#stats"), st = CM.statistics(g.ledger || []), esc = (x) => this.esc(x);
+    const bar = (n, of) => `<span class="bar"><i style="width: ${of ? Math.round((n / of) * 100) : 0}%"></i></span>`;
+    if (!st.runs) box.innerHTML = `<p class="small">${esc(CM.t("stats.none"))}</p>`;
+    else {
+      const most = Math.max(1, ...st.bands.map((b) => b.fell + b.through));
+      box.innerHTML = `<p>${esc(CM.t("stats.runs", { n: st.runs, crowns: st.crowns, bottoms: st.bottoms, fell: st.fell }))}. ${esc(CM.t("stats.deepest", { n: st.deepest }))}</p>`
+        + `<p class="small">${esc(CM.t("stats.first", { first: st.first, last: st.last }))} ${esc(CM.t("stats.totals", { steps: st.steps, fights: st.fights, kills: st.kills, fled: st.fled, chests: st.chests }))}</p>`
+        + `<h3>${esc(CM.t("stats.bands"))}</h3><table class="stats">${st.bands.filter((b) => b.fell + b.through).map((b) => `<tr><td>${b.to === Infinity ? "51 and below" : `${b.from} - ${b.to}`}</td><td>${bar(b.fell, most)}</td><td>${b.fell} fell${b.through ? `, ${b.through} went on` : ""}</td></tr>`).join("")}</table>`
+        + `<h3>${esc(CM.t("stats.callings"))}</h3><table class="stats">${Object.entries(st.callings).sort((x, y) => y[1].n - x[1].n).map(([c, r]) => `<tr><td>${esc((CM.CLASSES[c] || { name: c }).name)}</td><td>${bar(r.n, st.favourite[1].n)}</td><td>${esc(CM.t("stats.calling.row", { n: r.n, crowns: r.crowns }))}</td></tr>`).join("")}</table>`
+        + `<h3>${esc(CM.t("stats.spent"))}</h3><p class="small">${esc(CM.t("stats.spent.total", { n: st.spentTotal }))}</p><table class="stats">${Object.entries(st.spent).sort((x, y) => y[1] - x[1]).map(([w, n]) => `<tr><td>${esc(w)}</td><td>${bar(n, st.spentTotal)}</td><td>${n.toLocaleString()}</td></tr>`).join("")}</table>`
+        + `<h3>${esc(CM.t("stats.difficulty"))}</h3><table class="stats">${Object.entries(st.difficulties).map(([d, r]) => `<tr><td>${esc((CM.DIFFICULTIES[d] || { name: d }).name)}</td><td>${bar(r.crowns, r.n)}</td><td>${esc(CM.t("stats.difficulty.row", { n: r.n, crowns: r.crowns, a: r.a }))}</td></tr>`).join("")}</table>`
+        + (st.old ? `<p class="small">${esc(CM.t("stats.old", { n: st.old }))}</p>` : "");
+    }
+    this.openDialog("#dlg-stats");
+  }
+  // a save or a film that came in the page's link (#save=, #film=): ask, then import or watch
+  offerLink(payload) {
+    if (!payload) return;
+    this.$("#link-title").textContent = CM.t("link.title");
+    this.$("#link-text").textContent = CM.t(payload.kind === "film" ? "link.film" : "link.save");
+    this.$("#link-note").textContent = "";
+    const yes = this.$("#btn-link-yes"), fresh = yes.cloneNode(true);
+    yes.replaceWith(fresh);
+    fresh.addEventListener("click", () => {
+      CM.fromLink(payload.code).then((text) => {
+        if (payload.kind === "film") { const spec = text && CM.parseFilm(text); if (!spec) { this.$("#link-note").textContent = CM.t("link.bad"); return; } this.closeDialogs(); this.watch(spec); return; }
+        const err = text ? this.game.importText(text) : CM.t("link.bad");
+        if (err) { this.$("#link-note").textContent = err; return; }
+        this.closeDialogs(); this.refreshTitle(); this.game.titleNote = "Imported from the link."; this.refreshTitle();
+      });
+    });
+    this.openDialog("#dlg-link");
+  }
+  // the save (or a film code) as a link, in the box and on the clipboard
+  makeLink(kind, text, box, note) {
+    const base = location.href.split("#")[0];
+    CM.toLink(text).then((code) => {
+      box.value = `${base}#${kind}=${code}`;
+      note.textContent = CM.t(kind === "film" ? "link.film.made" : "link.made");
+      if (navigator.clipboard) navigator.clipboard.writeText(box.value).catch(() => {});
+    });
+  }
+  showInstall(on) { const b = this.$("#btn-install"); if (b) { b.hidden = !on; b.textContent = CM.t("install.button"); } }
 
   toggleFps() {
     this.game.settings.fps = !this.game.settings.fps;
@@ -9780,12 +9970,29 @@ CM.UI = class {
 
   // ---- ways to play: the keys as set, the summary card, the gamepad's focus, a tap on the view ----
   renderKeys() {
-    const g = this.game, keys = this.$("#dlg-keys table"), k = g.settings.keys || CM.DEFAULT_KEYS;
+    const g = this.game, keys = this.$("#dlg-keys table.kb"), k = g.settings.keys || CM.DEFAULT_KEYS;
     keys.innerHTML = CM.KEY_ACTIONS.map(([id, what]) => `<tr data-action="${id}"><td><kbd>${this.esc(CM.keyName(k[id]))}</kbd>${this.rebinding === id ? " <i>press a key...</i>" : ""}</td><td>${what}</td><td><button data-rebind="${id}">Change</button></td></tr>`).join("")
       + `<tr><td><kbd>Arrows</kbd></td><td>move and turn as well, always</td><td></td></tr><tr><td><kbd>1 - 4</kbd></td><td>a hero's sheet; in a list, the pick</td><td></td></tr>`
       + `<tr><td><kbd>Esc</kbd></td><td>close a screen / pause</td><td></td></tr><tr><td><kbd>F3</kbd></td><td>frames per second</td><td></td></tr>`
-      + `<tr><td colspan="3" class="small" style="white-space: normal; max-width: 560px; padding-top: 8px">A gamepad works too: the stick or pad moves, A uses or picks, B steps back, X the pack, Y casts, the shoulders sidestep or pick targets, Start pauses, Select the map. On a touch screen, tap the view: the sides turn, the top walks, the bottom steps back.</td></tr>`;
-    for (const b of keys.querySelectorAll("button[data-rebind]")) b.addEventListener("click", () => { this.rebinding = this.rebinding === b.dataset.rebind ? null : b.dataset.rebind; this.renderKeys(); });
+      + `<tr><td colspan="3" class="small" style="white-space: normal; max-width: 560px; padding-top: 8px">${this.esc(CM.t("pad.help"))}</td></tr>`;
+    for (const b of keys.querySelectorAll("button[data-rebind]")) b.addEventListener("click", () => { this.rebinding = this.rebinding === b.dataset.rebind ? null : b.dataset.rebind; this.rebindingPad = null; this.renderKeys(); });
+    const pad = this.$("#dlg-keys table.pad"), P = g.settings.pad || CM.DEFAULT_PAD;
+    this.$("#pad-note").textContent = CM.t("pad.note");
+    pad.innerHTML = CM.PAD_ACTIONS.map(([id, what]) => `<tr data-action="${id}"><td><kbd>${this.esc(CM.padName(P[id]))}</kbd>${this.rebindingPad === id ? ` <i>${this.esc(CM.t("pad.press"))}</i>` : ""}</td><td>${what}</td><td><button data-rebindpad="${id}">Change</button></td></tr>`).join("")
+      + `<tr><td><kbd>Stick, d-pad</kbd></td><td>move and turn, always; in a list, the highlight</td><td></td></tr>`;
+    for (const b of pad.querySelectorAll("button[data-rebindpad]")) b.addEventListener("click", () => { this.rebindingPad = this.rebindingPad === b.dataset.rebindpad ? null : b.dataset.rebindpad; this.rebinding = null; this.renderKeys(); });
+  }
+  // a gamepad's button for an action (the d-pad is the d-pad; one button, one action)
+  rebindPad(action, i) {
+    const g = this.game, P = g.settings.pad || (g.settings.pad = Object.assign({}, CM.DEFAULT_PAD));
+    if (!(action in CM.DEFAULT_PAD) || typeof i !== "number" || i >= 12) { this.rebindingPad = null; this.renderKeys(); return false; }
+    for (const other of Object.keys(P)) if (P[other] === i && other !== action) P[other] = CM.DEFAULT_PAD[other] === i ? "" : CM.DEFAULT_PAD[other];
+    P[action] = i;
+    this.rebindingPad = null;
+    g.saveSettings();
+    g.emit("settings", g.settings);
+    this.renderKeys();
+    return true;
   }
   rebind(action, code) {
     const g = this.game, k = g.settings.keys || (g.settings.keys = Object.assign({}, CM.DEFAULT_KEYS));
@@ -9798,7 +10005,7 @@ CM.UI = class {
     this.renderKeys();
     return true;
   }
-  resetKeys() { this.game.settings.keys = Object.assign({}, CM.DEFAULT_KEYS); this.rebinding = null; this.game.saveSettings(); this.game.emit("settings", this.game.settings); this.renderKeys(); }
+  resetKeys() { this.game.settings.keys = Object.assign({}, CM.DEFAULT_KEYS); this.game.settings.pad = Object.assign({}, CM.DEFAULT_PAD); this.rebinding = null; this.rebindingPad = null; this.game.saveSettings(); this.game.emit("settings", this.game.settings); this.renderKeys(); }
 
   // a gamepad's way through buttons: the focus moves along the visible ones, A presses
   padTargets() {
@@ -9973,6 +10180,10 @@ Object.assign(CM.UI.prototype, {
       const done = navigator.clipboard ? navigator.clipboard.writeText(t.value).then(() => true, () => false) : Promise.resolve(document.execCommand("copy"));
       done.then((ok) => { this.$("#transfer-note").textContent = ok ? "Copied." : "Select the text and copy it yourself."; });
     });
+    this.$("#btn-link").addEventListener("click", () => this.makeLink("save", g.exportText(), this.$("#transfer-text"), this.$("#transfer-note")));
+    this.$("#btn-film-link").addEventListener("click", () => { const t = this.$("#film-text"); if (!CM.parseFilm(t.value)) { this.$("#film-note").textContent = "That isn't a film code (CM2:...)."; return; } this.makeLink("film", t.value.trim(), t, this.$("#film-note")); });
+    this.$("#btn-stats").addEventListener("click", () => this.openStats());
+    this.$("#btn-install").addEventListener("click", () => { const p = this.installPrompt; if (!p) return; this.installPrompt = null; this.showInstall(false); p.prompt(); });
     this.$("#btn-import").addEventListener("click", () => {
       const err = g.importText(this.$("#transfer-text").value);
       this.$("#transfer-note").textContent = err || "Imported.";
@@ -10977,6 +11188,22 @@ window.addEventListener("DOMContentLoaded", () => {
   document.head.appendChild(link);
   CM.game = game; CM.ui = ui; CM.renderer = renderer;                 // (for the tests, and for curiosity)
 
+  // ---- around the game: a save or a film in the link; the app's manifest and its worker, where a server serves the file ----
+  const linkIn = () => {
+    const payload = CM.linkPayload(location.hash);
+    if (!payload) return;
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* the hash stays */ }
+    setTimeout(() => ui.offerLink(payload), 50);
+  };
+  linkIn();
+  window.addEventListener("hashchange", linkIn);                         // (a link pasted into an open page's address)
+  if (/^https?:$/.test(location.protocol)) {
+    const m = document.createElement("link"); m.rel = "manifest"; m.href = "manifest.webmanifest"; document.head.appendChild(m);
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { /* no worker: the page still plays */ });
+  }
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); ui.installPrompt = e; ui.showInstall(true); });
+  window.addEventListener("appinstalled", () => { ui.installPrompt = null; ui.showInstall(false); game.titleNote = CM.t("install.note"); ui.refreshTitle(); });
+
   if (!renderer.ok) {
     const warn = document.createElement("div");
     warn.style.cssText = "position:fixed;left:0;right:0;top:0;padding:10px;background:#5A1010;color:#fff;font:14px Georgia;text-align:center;z-index:50";
@@ -11078,6 +11305,8 @@ window.addEventListener("DOMContentLoaded", () => {
     CM.reducedMotion = s.motion === undefined ? Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) : Boolean(s.motion);
     document.getElementById("app").style.zoom = { normal: "", large: "1.15", larger: "1.32" }[s.text] || "";
     document.body.classList.toggle("contrast", Boolean(s.contrast));
+    const deckShaped = window.matchMedia && window.matchMedia("(max-width: 1300px) and (max-height: 840px) and (pointer: coarse)").matches;
+    document.body.classList.toggle("handheld", s.layout === "on" || (s.layout !== "off" && deckShaped));
     renderAuto = !s.render || s.render === "auto";
     if (!renderAuto) renderer.scale = { full: 1, three: 0.75, half: 0.5 }[s.render] || 1;
     else if (!renderer.scale) renderer.scale = 1;
@@ -11452,28 +11681,36 @@ window.addEventListener("DOMContentLoaded", () => {
   // pick the target, Start pauses, Select the map; in a list or a dialog the pad moves a highlight and A presses ----
   const padWas = {}, padHeld = {};
   const padKey = (code) => window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true, cancelable: true }));
+  function padRole(i) {                                                 // what button i stands for, by Settings > Keys > Gamepad
+    const P = game.settings.pad || CM.DEFAULT_PAD;
+    let r = i >= 12 ? ["up", "down", "left", "right"][i - 12] + "Pad" : null;
+    if (!r) for (const k of Object.keys(P)) if (P[k] === i) { r = k; break; }
+    if (game.settings.swapAB && (r === "use" || r === "back")) r = r === "use" ? "back" : "use";   // (Settings: confirm with B, back with A)
+    return r;
+  }
   function padButton(i, now) {                                           // what button i does right now
     const K = game.settings.keys || CM.DEFAULT_KEYS, inFight = game.mode === "combat", listOpen = ui.padTargets().length > 0;
-    if (game.settings.swapAB && (i === 0 || i === 1)) i = 1 - i;        // (Settings: confirm with B, back with A)
+    const r = padRole(i);
+    if (!r) return;
     if (game.travel) game.stopTravel();
-    if (ui.screen === "title") { if (i === 0 || i === 9) padKey("Enter"); return; }
-    if (ui.screen === "create") { if (i === 0) padKey("Enter"); else if (i === 1) padKey("Escape"); return; }
-    if (ui.screen === "bag") { if (i === 1 || i === 2) padKey("Escape"); return; }
+    if (ui.screen === "title") { if (r === "use" || r === "pause") padKey("Enter"); return; }
+    if (ui.screen === "create") { if (r === "use") padKey("Enter"); else if (r === "back") padKey("Escape"); return; }
+    if (ui.screen === "bag") { if (r === "back" || r === "bag") padKey("Escape"); return; }
     if (listOpen) {
-      if (i === 0) ui.padPress();
-      else if (i === 1 || i === 9) padKey("Escape");
-      else if (i === 12 || i === 14 || i === 4) ui.padFocus(-1);
-      else if (i === 13 || i === 15 || i === 5) ui.padFocus(1);
+      if (r === "use") ui.padPress();
+      else if (r === "back" || r === "pause") padKey("Escape");
+      else if (r === "upPad" || r === "leftPad" || r === "left") ui.padFocus(-1);
+      else if (r === "downPad" || r === "rightPad" || r === "right") ui.padFocus(1);
       return;
     }
     if (inFight) {
-      if (i === 0) padKey(K.fight); else if (i === 1) padKey(K.defend); else if (i === 2) padKey(K.item); else if (i === 3) padKey(K.cast);
-      else if (i === 5 || i === 4) padKey("Tab"); else if (i === 9) padKey("Escape"); else if (i === 7) padKey(K.run);
+      if (r === "use") padKey(K.fight); else if (r === "back") padKey(K.defend); else if (r === "bag") padKey(K.item); else if (r === "cast") padKey(K.cast);
+      else if (r === "left" || r === "right") padKey("Tab"); else if (r === "pause") padKey("Escape"); else if (r === "run") padKey(K.run);
       return;
     }
-    if (i === 0) padKey(K.use); else if (i === 1 || i === 9) padKey("Escape"); else if (i === 2) padKey(K.inventory); else if (i === 3) padKey(K.cast);
-    else if (i === 8) padKey(K.map); else if (i === 4) act(K.strafeLeft || "KeyQ"); else if (i === 5) act(K.strafeRight || "KeyE");
-    else if (i === 12) act("ArrowUp"); else if (i === 13) act("ArrowDown"); else if (i === 14) act("ArrowLeft"); else if (i === 15) act("ArrowRight");
+    if (r === "use") padKey(K.use); else if (r === "back" || r === "pause") padKey("Escape"); else if (r === "bag") padKey(K.inventory); else if (r === "cast") padKey(K.cast);
+    else if (r === "map") padKey(K.map); else if (r === "left") act(K.strafeLeft || "KeyQ"); else if (r === "right") act(K.strafeRight || "KeyE");
+    else if (r === "upPad") act("ArrowUp"); else if (r === "downPad") act("ArrowDown"); else if (r === "leftPad") act("ArrowLeft"); else if (r === "rightPad") act("ArrowRight");
   }
   function pollGamepad(now) {
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -11485,13 +11722,19 @@ window.addEventListener("DOMContentLoaded", () => {
       for (const d of [12, 13, 14, 15]) if (d !== dir) pressed[d] = pressed[d] || false;
       pressed[dir] = true;
     }
+    if (ui.rebindingPad) {                                               // (Settings > Keys > Gamepad: the next button pressed is the one)
+      const i = pressed.findIndex((down, j) => down && !padWas[j] && j < 12);
+      if (i >= 0) ui.rebindPad(ui.rebindingPad, i);
+      pressed.forEach((down, j) => { padWas[j] = down; });
+      return;
+    }
     pressed.forEach((down, i) => {
       if (down && !padWas[i]) { padButton(i, now); padHeld[i] = now; }
       else if (down && [12, 13, 14, 15].includes(i) && game.mode === "explore" && !ui.dialogOpen() && now - padHeld[i] > 260 && !renderer.busy) { padButton(i, now); padHeld[i] = now - 100; }   // (walking while held)
       padWas[i] = down;
     });
   }
-  CM.pad = { button: (i) => padButton(i, performance.now()), poll: pollGamepad };   // (for the tests, and for curiosity)
+  CM.pad = { button: (i) => padButton(i, performance.now()), poll: pollGamepad, role: padRole };   // (for the tests, and for curiosity)
   // a tap or a click on the view walks, out of a fight (in one, a click picks a foe)
   const view = ui.$("#view");
   let tapStart = null;
@@ -11521,6 +11764,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1;
         renderer.setSprites([]);
+        if (ui.rebindingPad) pollGamepad(now);
       } else {
         pollGamepad(now);
         if (game.mode === "explore" && !renderer.busy && held.size) {

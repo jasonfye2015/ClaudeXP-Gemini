@@ -733,6 +733,13 @@ CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"
   ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
   ["explore", "walk to the nearest unexplored square (any key stops)"],
   ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"], ["auto", "in a fight: the party fights on by itself"]];
+// a gamepad's buttons, by the standard mapping, and what each does unless Settings > Keys says otherwise (the stick and
+// the d-pad - 12 to 15 - always move)
+CM.DEFAULT_PAD = { use: 0, back: 1, bag: 2, cast: 3, left: 4, right: 5, run: 7, map: 8, pause: 9 };
+CM.PAD_ACTIONS = [["use", "use / talk / pick; in a fight: fight"], ["back", "step back / cancel; in a fight: defend"], ["bag", "the pack; in a fight: an item"], ["cast", "cast or use a skill"],
+  ["left", "sidestep left; in a list: the one before"], ["right", "sidestep right; in a list: the next"], ["run", "in a fight: run"], ["map", "the automap, large"], ["pause", "pause"]];
+CM.PAD_NAMES = ["A", "B", "X", "Y", "LB", "RB", "LT", "RT", "Select", "Start", "L3", "R3", "Up", "Down", "Left", "Right"];
+CM.padName = (i) => (i === undefined || i === null || i === "" ? "-" : CM.PAD_NAMES[i] || `button ${i}`);
 CM.keyName = (code) => (code || "").replace(/^Key/, "").replace(/^Digit/, "").replace(/^Arrow/, "").replace("Space", "Space").replace("Backquote", "`");
 // an Endless entry that ended below - not one that took the daylight with the crown
 CM.endlessFall = (e) => Boolean(e && e.endless && !(e.won && e.floor <= CM.LAST_FLOOR));

@@ -10,6 +10,22 @@ window.addEventListener("DOMContentLoaded", () => {
   document.head.appendChild(link);
   CM.game = game; CM.ui = ui; CM.renderer = renderer;                 // (for the tests, and for curiosity)
 
+  // ---- around the game: a save or a film in the link; the app's manifest and its worker, where a server serves the file ----
+  const linkIn = () => {
+    const payload = CM.linkPayload(location.hash);
+    if (!payload) return;
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* the hash stays */ }
+    setTimeout(() => ui.offerLink(payload), 50);
+  };
+  linkIn();
+  window.addEventListener("hashchange", linkIn);                         // (a link pasted into an open page's address)
+  if (/^https?:$/.test(location.protocol)) {
+    const m = document.createElement("link"); m.rel = "manifest"; m.href = "manifest.webmanifest"; document.head.appendChild(m);
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { /* no worker: the page still plays */ });
+  }
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); ui.installPrompt = e; ui.showInstall(true); });
+  window.addEventListener("appinstalled", () => { ui.installPrompt = null; ui.showInstall(false); game.titleNote = CM.t("install.note"); ui.refreshTitle(); });
+
   if (!renderer.ok) {
     const warn = document.createElement("div");
     warn.style.cssText = "position:fixed;left:0;right:0;top:0;padding:10px;background:#5A1010;color:#fff;font:14px Georgia;text-align:center;z-index:50";
@@ -111,6 +127,8 @@ window.addEventListener("DOMContentLoaded", () => {
     CM.reducedMotion = s.motion === undefined ? Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) : Boolean(s.motion);
     document.getElementById("app").style.zoom = { normal: "", large: "1.15", larger: "1.32" }[s.text] || "";
     document.body.classList.toggle("contrast", Boolean(s.contrast));
+    const deckShaped = window.matchMedia && window.matchMedia("(max-width: 1300px) and (max-height: 840px) and (pointer: coarse)").matches;
+    document.body.classList.toggle("handheld", s.layout === "on" || (s.layout !== "off" && deckShaped));
     renderAuto = !s.render || s.render === "auto";
     if (!renderAuto) renderer.scale = { full: 1, three: 0.75, half: 0.5 }[s.render] || 1;
     else if (!renderer.scale) renderer.scale = 1;
@@ -485,28 +503,36 @@ window.addEventListener("DOMContentLoaded", () => {
   // pick the target, Start pauses, Select the map; in a list or a dialog the pad moves a highlight and A presses ----
   const padWas = {}, padHeld = {};
   const padKey = (code) => window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true, cancelable: true }));
+  function padRole(i) {                                                 // what button i stands for, by Settings > Keys > Gamepad
+    const P = game.settings.pad || CM.DEFAULT_PAD;
+    let r = i >= 12 ? ["up", "down", "left", "right"][i - 12] + "Pad" : null;
+    if (!r) for (const k of Object.keys(P)) if (P[k] === i) { r = k; break; }
+    if (game.settings.swapAB && (r === "use" || r === "back")) r = r === "use" ? "back" : "use";   // (Settings: confirm with B, back with A)
+    return r;
+  }
   function padButton(i, now) {                                           // what button i does right now
     const K = game.settings.keys || CM.DEFAULT_KEYS, inFight = game.mode === "combat", listOpen = ui.padTargets().length > 0;
-    if (game.settings.swapAB && (i === 0 || i === 1)) i = 1 - i;        // (Settings: confirm with B, back with A)
+    const r = padRole(i);
+    if (!r) return;
     if (game.travel) game.stopTravel();
-    if (ui.screen === "title") { if (i === 0 || i === 9) padKey("Enter"); return; }
-    if (ui.screen === "create") { if (i === 0) padKey("Enter"); else if (i === 1) padKey("Escape"); return; }
-    if (ui.screen === "bag") { if (i === 1 || i === 2) padKey("Escape"); return; }
+    if (ui.screen === "title") { if (r === "use" || r === "pause") padKey("Enter"); return; }
+    if (ui.screen === "create") { if (r === "use") padKey("Enter"); else if (r === "back") padKey("Escape"); return; }
+    if (ui.screen === "bag") { if (r === "back" || r === "bag") padKey("Escape"); return; }
     if (listOpen) {
-      if (i === 0) ui.padPress();
-      else if (i === 1 || i === 9) padKey("Escape");
-      else if (i === 12 || i === 14 || i === 4) ui.padFocus(-1);
-      else if (i === 13 || i === 15 || i === 5) ui.padFocus(1);
+      if (r === "use") ui.padPress();
+      else if (r === "back" || r === "pause") padKey("Escape");
+      else if (r === "upPad" || r === "leftPad" || r === "left") ui.padFocus(-1);
+      else if (r === "downPad" || r === "rightPad" || r === "right") ui.padFocus(1);
       return;
     }
     if (inFight) {
-      if (i === 0) padKey(K.fight); else if (i === 1) padKey(K.defend); else if (i === 2) padKey(K.item); else if (i === 3) padKey(K.cast);
-      else if (i === 5 || i === 4) padKey("Tab"); else if (i === 9) padKey("Escape"); else if (i === 7) padKey(K.run);
+      if (r === "use") padKey(K.fight); else if (r === "back") padKey(K.defend); else if (r === "bag") padKey(K.item); else if (r === "cast") padKey(K.cast);
+      else if (r === "left" || r === "right") padKey("Tab"); else if (r === "pause") padKey("Escape"); else if (r === "run") padKey(K.run);
       return;
     }
-    if (i === 0) padKey(K.use); else if (i === 1 || i === 9) padKey("Escape"); else if (i === 2) padKey(K.inventory); else if (i === 3) padKey(K.cast);
-    else if (i === 8) padKey(K.map); else if (i === 4) act(K.strafeLeft || "KeyQ"); else if (i === 5) act(K.strafeRight || "KeyE");
-    else if (i === 12) act("ArrowUp"); else if (i === 13) act("ArrowDown"); else if (i === 14) act("ArrowLeft"); else if (i === 15) act("ArrowRight");
+    if (r === "use") padKey(K.use); else if (r === "back" || r === "pause") padKey("Escape"); else if (r === "bag") padKey(K.inventory); else if (r === "cast") padKey(K.cast);
+    else if (r === "map") padKey(K.map); else if (r === "left") act(K.strafeLeft || "KeyQ"); else if (r === "right") act(K.strafeRight || "KeyE");
+    else if (r === "upPad") act("ArrowUp"); else if (r === "downPad") act("ArrowDown"); else if (r === "leftPad") act("ArrowLeft"); else if (r === "rightPad") act("ArrowRight");
   }
   function pollGamepad(now) {
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -518,13 +544,19 @@ window.addEventListener("DOMContentLoaded", () => {
       for (const d of [12, 13, 14, 15]) if (d !== dir) pressed[d] = pressed[d] || false;
       pressed[dir] = true;
     }
+    if (ui.rebindingPad) {                                               // (Settings > Keys > Gamepad: the next button pressed is the one)
+      const i = pressed.findIndex((down, j) => down && !padWas[j] && j < 12);
+      if (i >= 0) ui.rebindPad(ui.rebindingPad, i);
+      pressed.forEach((down, j) => { padWas[j] = down; });
+      return;
+    }
     pressed.forEach((down, i) => {
       if (down && !padWas[i]) { padButton(i, now); padHeld[i] = now; }
       else if (down && [12, 13, 14, 15].includes(i) && game.mode === "explore" && !ui.dialogOpen() && now - padHeld[i] > 260 && !renderer.busy) { padButton(i, now); padHeld[i] = now - 100; }   // (walking while held)
       padWas[i] = down;
     });
   }
-  CM.pad = { button: (i) => padButton(i, performance.now()), poll: pollGamepad };   // (for the tests, and for curiosity)
+  CM.pad = { button: (i) => padButton(i, performance.now()), poll: pollGamepad, role: padRole };   // (for the tests, and for curiosity)
   // a tap or a click on the view walks, out of a fight (in one, a click picks a foe)
   const view = ui.$("#view");
   let tapStart = null;
@@ -554,6 +586,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1;
         renderer.setSprites([]);
+        if (ui.rebindingPad) pollGamepad(now);
       } else {
         pollGamepad(now);
         if (game.mode === "explore" && !renderer.busy && held.size) {

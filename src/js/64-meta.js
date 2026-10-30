@@ -50,6 +50,8 @@ Object.assign(CM.Game.prototype, {
     }
     if (this.endless) { this.fameEndless.push(entry); this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
     else { this.fame.push(entry); this.sortFame(); CM.store.set("fame", this.fame); }
+    this.ledger = (this.ledger || []).concat([CM.ledgerLine(entry, this.party.map((h) => h.cls))]).slice(-CM.LEDGER_MAX);
+    CM.store.set("ledger", this.ledger);
     if (won) this.trophy("lich");
     CM.store.remove(this.runKey(this.slot));
     this.lastRun = null;
@@ -89,7 +91,7 @@ Object.assign(CM.Game.prototype, {
 
   exportText() {
     return JSON.stringify({ game: "Claude and Magic", version: CM.version, built: CM.built, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
-      trophies: this.trophies, vaults: this.vaults, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, weaves: this.weaves, memorial: this.memorial, fallen: this.fallen, village: this.village });
+      trophies: this.trophies, vaults: this.vaults, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, weaves: this.weaves, memorial: this.memorial, fallen: this.fallen, village: this.village, ledger: this.ledger });
   },
 
   importText(text) {
@@ -110,6 +112,7 @@ Object.assign(CM.Game.prototype, {
     if (data.combos && typeof data.combos === "object") { this.combos = Object.assign({}, this.combos, data.combos); CM.store.set("combos", this.combos); }
     if (data.weaves && typeof data.weaves === "object") { this.weaves = Object.assign({}, this.weaves, data.weaves); CM.store.set("weaves", this.weaves); }
     if (Array.isArray(data.memorial)) { this.memorial = data.memorial.concat(this.memorial || []).slice(0, 30); CM.store.set("memorial", this.memorial); }
+    if (Array.isArray(data.ledger)) { const have = new Set((this.ledger || []).map(CM.ledgerKey)); this.ledger = (this.ledger || []).concat(data.ledger.filter((l) => l && l.d && !have.has(CM.ledgerKey(l)))).sort((x, y) => (x.t || 0) - (y.t || 0)).slice(-CM.LEDGER_MAX); CM.store.set("ledger", this.ledger); }
     if (Array.isArray(data.fallen)) { const have = new Set((this.fallen || []).map((f) => f.id)); this.fallen = (this.fallen || []).concat(data.fallen.filter((f) => f && f.id && !have.has(f.id))).slice(-40); CM.store.set("fallen", this.fallen); }
     this.emit("change");
     return "";
@@ -407,3 +410,35 @@ Object.assign(CM.Game.prototype, {
   },
 });
 }
+
+// ---- the ledger: one short line for every expedition that ended, and the statistics read from it ----
+CM.LEDGER_MAX = 600;
+CM.ledgerLine = function (entry, classes) {
+  const t = entry.tally || {};
+  return { t: Date.now(), d: entry.date, sd: entry.seed, f: entry.floor, w: entry.won ? 1 : 0, b: entry.bottom ? 1 : 0, e: entry.endless ? 1 : 0, df: entry.difficulty || "fair", a: entry.ascension || 0,
+    c: classes || [], s: t.steps || 0, fi: t.fights || 0, k: t.kills || 0, fl: t.fled || 0, ch: t.chests || 0, g: entry.gold || 0, sp: Object.assign({}, t.spent || {}) };
+};
+CM.ledgerKey = (l) => `${l.d}|${l.sd}|${l.f}|${l.s}|${l.g}`;
+// a Hall of Fame entry as a ledger line, for the runs that ended before the ledger was kept ("Name the cls 7")
+CM.ledgerFromFame = function (entry) {
+  const classes = (entry.party || []).map((p) => { const m = / the (\w+) \d+$/.exec(String(p)); return m ? m[1] : null; }).filter(Boolean);
+  return Object.assign(CM.ledgerLine(entry, classes), { t: 0, old: 1 });
+};
+CM.BANDS = [[1, 5], [6, 10], [11, 15], [16, 20], [21, 25], [26, 30], [31, 35], [36, 40], [41, 45], [46, 50], [51, Infinity]];
+CM.statistics = function (ledger) {
+  const st = { runs: 0, crowns: 0, bottoms: 0, fell: 0, old: 0, deepest: 0, steps: 0, fights: 0, kills: 0, fled: 0, chests: 0, gold: 0, spent: {}, spentTotal: 0, first: null, last: null,
+    bands: CM.BANDS.map(([from, to]) => ({ from, to, fell: 0, through: 0 })), callings: {}, difficulties: {} };
+  for (const l of ledger || []) {
+    st.runs++; if (l.old) st.old++;
+    if (l.w) st.crowns++; if (l.b) st.bottoms++; if (!l.w && !l.b) st.fell++;
+    st.deepest = Math.max(st.deepest, l.f || 0);
+    st.steps += l.s || 0; st.fights += l.fi || 0; st.kills += l.k || 0; st.fled += l.fl || 0; st.chests += l.ch || 0; st.gold += l.g || 0;
+    for (const [where, n] of Object.entries(l.sp || {})) { st.spent[where] = (st.spent[where] || 0) + n; st.spentTotal += n; }
+    if (!st.first) st.first = l.d; st.last = l.d;
+    for (const band of st.bands) { if (l.f > band.to) band.through++; else if (l.f >= band.from) { if (!l.w && !l.b) band.fell++; else band.through++; break; } }
+    for (const c of l.c || []) { const row = st.callings[c] = st.callings[c] || { n: 0, crowns: 0 }; row.n++; if (l.w) row.crowns++; }
+    const d = st.difficulties[l.df || "fair"] = st.difficulties[l.df || "fair"] || { n: 0, crowns: 0, a: 0 }; d.n++; if (l.w) d.crowns++; d.a = Math.max(d.a, l.a || 0);
+  }
+  st.favourite = Object.entries(st.callings).sort((x, y) => y[1].n - x[1].n || y[1].crowns - x[1].crowns)[0] || null;
+  return st;
+};

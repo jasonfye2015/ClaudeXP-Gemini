@@ -5,6 +5,12 @@ paths, bonds, affixes and uniques, an alchemist and a smith, choice events and h
 weekly challenge, run codes, a bestiary, a balance simulator and a test suite. ~9,500 lines of JS. Saves keep each
 floor as what changed since the seed made it; the dice of every fight are the seed's.
 
+**Status: shipped.** Phases 0-9 landed as v2.1 through v3.0, one version a phase, each with its tests, a README
+section and a simulator run. Deferred along the way, with the reason beside each: lit stone (the normal maps are not
+in the repo), Pixel dolls for the new callings (the full tile set lives on another machine), the tenth band under
+the Root, new set pieces for generator 1 (frozen by design), and the move of every older string into 12-text.js
+(begun with the new screens; the rest moves as it is touched).
+
 The third update was about depth in what was there. This one is about **new systems**: a generator that can grow
 again, a surface between runs, a magic system with more than a list of spells, fights with ground under them,
 replays, and a difficulty ladder with rungs. Same shape as before: phases, each shippable, each with tests and a
@@ -207,7 +213,7 @@ uses every v2.0 system in the sim's report, and a replayed log reproduces a run 
 
 ---
 
-## Phase 9 - Around the game, again
+## Phase 9 - Around the game, again - DONE (v3.0; text-as-data begun, not finished)
 
 - **Install as an app:** a manifest and a service worker in the one file's folder, so a browser offers to install
   it and it opens offline like the Timeline's window does.

@@ -193,3 +193,36 @@ CM.parseFilm = function (text) {
   if (!t.startsWith("CM2:")) return null;
   try { const spec = JSON.parse(t.slice(4)); if (!spec.seed || spec.log === undefined) return null; spec.log = CM.unpackLog(spec.log); return spec; } catch (e) { return null; }
 };
+
+// ---- a save, or a film, as a link: the text deflated and written base64url after #save= (or #film=) - nothing is
+// stored anywhere but the link. Browsers without CompressionStream write it plain, under a different first letter. ----
+CM.b64url = function (bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+CM.unb64url = function (text) {
+  const s = atob(text.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((text.length + 3) % 4));
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
+};
+CM.toLink = async function (text) {
+  const bytes = new TextEncoder().encode(text);
+  if (typeof CompressionStream === "function") {
+    try { const packed = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer()); return "1" + CM.b64url(packed); } catch (e) { /* plain, below */ }
+  }
+  return "0" + CM.b64url(bytes);
+};
+CM.fromLink = async function (code) {
+  code = String(code || "");
+  const bytes = CM.unb64url(code.slice(1));
+  if (code[0] === "0") return new TextDecoder().decode(bytes);
+  if (code[0] !== "1" || typeof DecompressionStream !== "function") return null;
+  try { return await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text(); } catch (e) { return null; }
+};
+// what a page's #fragment carries: {kind: "save" | "film", code} or null
+CM.linkPayload = function (hash) {
+  const m = /^#(save|film)=([A-Za-z0-9_-]+)$/.exec(String(hash || "").trim());
+  return m ? { kind: m[1], code: m[2] } : null;
+};

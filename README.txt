@@ -706,6 +706,24 @@ Sound and sight, again (the fourth big update, phase 8 - v2.9)
   run change with any rule, and five crowns against three is noise - but Ascension 15 is plainly the hardest (one
   crown in ten). Thirty seeds a rung is the number to decide by; node tools/sim.js --seeds 30 --ascension 0,5,10,15.
 
+Around the game, again (the fourth big update, phase 9 - v3.0)
+  Install as an app: build.py writes manifest.webmanifest, sw.js and icon.svg beside the game's file. Served by any
+  web server (python -m http.server in game\ will do), the page offers Install on the title's foot; installed, it
+  opens from its own icon and plays without the network (the worker keeps the file). Opened from disk nothing of
+  this is asked for; the file alone is still the whole game.
+  A save as a link (Export / Import > Link; Films > Link): the export deflated and written after #save= (a film
+  after #film=), stored nowhere but in the link. Opening such a link asks before importing or watching
+  (CM.toLink, CM.fromLink, CM.linkPayload).
+  The gamepad, remappable (Keys > Gamepad): every button but the d-pad and the stick can be set, the way the keys
+  are (settings.pad, CM.DEFAULT_PAD, CM.PAD_ACTIONS); Swap A and B still works on top. A handheld layout (Settings;
+  Auto picks it on a Steam Deck's shape, 1280 by 800 with a touch screen): thumb-sized buttons and larger text.
+  Statistics (the title's foot): every expedition that ended is one short line in a ledger (CM.ledgerLine, up to
+  600; the runs from before are read back from the Hall of Fame, without their numbers) and CM.statistics sums
+  them - where parties fell by band, the callings and how they fared, gold and where it went, by difficulty. The
+  ledger rides in Export / Import and merges without doubling.
+  Text as data, begun: 12-text.js holds CM.TEXT and CM.t(key, vars); the new screens are written through it. The
+  older strings move as they are touched; no translation is shipped.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
