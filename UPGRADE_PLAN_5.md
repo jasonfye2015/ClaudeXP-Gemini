@@ -145,7 +145,7 @@ Size: M.
 
 Size: S-M.
 
-## Phase 6 - Around the town - v6.0
+## Phase 6 - Around the town - v6.0 - DONE
 
 - **Automatic in town**: the toggle walks the party through its errands (home: rest and stash; merchant: buy;
   temple: heal; tavern: bounties; then the shaft) in a sensible order, and `tools/sim.js --town` measures it.

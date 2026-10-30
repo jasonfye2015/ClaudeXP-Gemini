@@ -54,6 +54,41 @@ CM.Autopilot = class {
       if (game.equip(h, best)) break;
     }
   }
+  // the town's errands before the descent, each at its own door: home (the hearth, the larder), the merchant (the
+  // shopping), the temple (wounds), the tavern (a round, the board) - in that order, the doors that stand; then the shaft
+  errands() {
+    const game = this.game, want = [];
+    if (game.homeLevel() >= 1) want.push("home");
+    want.push("merchant");
+    if (game.villageLevel("shrine") >= 1 && (game.party.some((h) => h.wound || h.hp <= 0) || game.gold > 300)) want.push("temple");
+    if (game.gold > 60) want.push("tavern");
+    return want.filter((id) => !(this.townDone || []).includes(id));
+  }
+  errand(id) {
+    const game = this.game;
+    this.townDone = (this.townDone || []).concat(id);
+    game.use();                                                          // (the door opened: counted for the town's renown; the screen it opens is closed again by the frame loop)
+    if (id === "home") { game.hearthRest(); while ((game.home().larder || 0) > 0 && game.bag.filter((i) => i.kind === "ration").length < 2) game.larderTake(); }
+    else if (id === "merchant") { game.openBag(true); this.shopping(); game.closeBag(); }
+    else if (id === "temple") { while (game.party.some((h) => h.hp <= 0) && game.gold >= 90 * game.party.find((h) => h.hp <= 0).level) game.raiseDead(); if (game.party.some((h) => h.wound) && game.gold >= 36 * game.party.filter((h) => h.wound).length + 60) game.temple("wounds"); if (game.gold > 300 && !game.blessed()) game.tithe(); }
+    else if (id === "tavern") { game.drink(); if (game.bounty && game.bountyDone()) game.claimBounty(); else if (!game.bounty) game.takeBounty(); }
+  }
+  // the merchant's table, wherever it stands: potions, torches, rations, insurance, orders, the weight, the fence, a weapon
+  shopping() {
+    const game = this.game, alive = () => this.alive();
+    const want = (kind, n) => { let guard = 0; while (game.bag.filter((i) => i.kind === kind).length < n && guard++ < 10) { const row = game.stock.findIndex((i) => i.kind === kind); if (row < 0 || game.buy(row)) break; } };
+    want("heal", 4); want("torch", 2); want("ration", 2);
+    if (game.gold > 150) for (const h of alive()) { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 100 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (worn && game.gold > 150) game.insure(game.party.indexOf(h), CM.SLOTS.find((s) => h[s] === worn)); }
+    if (game.gold > 200 && (game.orders || []).length < 2) { if (!game.stock.some((i) => i.kind === "revive") && !game.bag.some((i) => i.kind === "revive")) game.order("revive"); if (!game.stock.some((i) => i.kind === "mana") && game.bag.filter((i) => i.kind === "mana").length < 2) game.order("mana"); if (!game.bag.some((i) => i.kind === "lampoil") && game.light && game.light.kind === "lantern") game.order("lampoil"); }
+    if (game.overweight() > 1) { let guard = 0; while (game.overweight() > 1 && guard++ < 10) { const row = game.bag.map((it, i) => [it, i]).filter(([it]) => CM.weightOf(it) >= 3 && it.kind !== "torch").sort((a, b) => a[0].value - b[0].value)[0]; if (!row) break; game.sell(row[1]); } }
+    if (game.inTown()) for (let i = game.bag.length - 1; i >= 0; i--) if (game.bag[i].unknown || (game.bag[i].props && game.bag[i].props.cursed)) game.fence(i);
+    if (game.gold > 150) want("mana", 2);
+    if (game.gold > 250) want("revive", 1);
+    for (const h of alive()) {                                           // better weapons for the gold left: the cheapest upgrade in the merchant's wares, if any
+      const row = game.stock.findIndex((it) => it.kind === "weapon" && it.power > (h.weapon ? h.weapon.power : 0) + 1 && it.value <= game.gold - 60 && !CM.cantWear(h, it));
+      if (row >= 0 && !game.buy(row)) { const bagRow = game.bag.length - 1; game.equip(h, bagRow); }
+    }
+  }
   // the camp's business: heal, trade, insure, tithe, buy what is short - then (the next step) go deeper
   camp() {
     const game = this.game, alive = () => this.alive();
@@ -65,21 +100,10 @@ CM.Autopilot = class {
     if (alive().some((h) => h.hp < h.max * 0.9 || (h.maxmp && h.mp < h.maxmp * 0.7) || Object.keys(h.status || {}).length) && game.gold >= 20) game.rest();
     if (game.party.some((h) => h.hp <= 0)) { const who = game.tavern(); if (who.length) game.hire(0); }
     game.openBag(true);
-    const want = (kind, n) => { let guard = 0; while (game.bag.filter((i) => i.kind === kind).length < n && guard++ < 10) { const row = game.stock.findIndex((i) => i.kind === kind); if (row < 0 || game.buy(row)) break; } };
-    want("heal", 4); want("torch", 2); want("ration", 2);
     if (game.party.some((h) => h.wound) && game.gold >= 40 * game.party.filter((h) => h.wound).length + 60) game.temple("wounds");
     if (game.bounty && game.bountyDone()) game.claimBounty(); else if (!game.bounty) game.takeBounty();
     if (game.gold > 300 && !game.blessed()) game.tithe();
-    if (game.gold > 150) for (const h of alive()) { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 100 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (worn && game.gold > 150) game.insure(game.party.indexOf(h), CM.SLOTS.find((s) => h[s] === worn)); }
-    if (game.gold > 200 && (game.orders || []).length < 2) { if (!game.stock.some((i) => i.kind === "revive") && !game.bag.some((i) => i.kind === "revive")) game.order("revive"); if (!game.stock.some((i) => i.kind === "mana") && game.bag.filter((i) => i.kind === "mana").length < 2) game.order("mana"); if (!game.bag.some((i) => i.kind === "lampoil") && game.light && game.light.kind === "lantern") game.order("lampoil"); }
-    if (game.overweight() > 1) { let guard = 0; while (game.overweight() > 1 && guard++ < 10) { const row = game.bag.map((it, i) => [it, i]).filter(([it]) => CM.weightOf(it) >= 3 && it.kind !== "torch").sort((a, b) => a[0].value - b[0].value)[0]; if (!row) break; game.sell(row[1]); } }
-    for (let i = game.bag.length - 1; i >= 0; i--) if (game.bag[i].unknown || (game.bag[i].props && game.bag[i].props.cursed)) game.fence(i);
-    if (game.gold > 150) want("mana", 2);
-    if (game.gold > 250) want("revive", 1);
-    for (const h of alive()) {                                           // better weapons for the gold left: the cheapest upgrade in the merchant's wares, if any
-      const row = game.stock.findIndex((it) => it.kind === "weapon" && it.power > (h.weapon ? h.weapon.power : 0) + 1 && it.value <= game.gold - 60 && !CM.cantWear(h, it));
-      if (row >= 0 && !game.buy(row)) { const bagRow = game.bag.length - 1; game.equip(h, bagRow); }
-    }
+    this.shopping();
     game.closeBag();
   }
   walkOK(fl, x, y) {
@@ -124,6 +148,10 @@ CM.Autopilot = class {
     const game = this.game, fl = game.floor, things = Object.entries(fl.things), feats = Object.entries(fl.features), perFloor = this.opts.perFloor, floorMoves = this.floorMoves;
     const goal = CM.goalOf(fl);
     const can = (k) => this.paths.parent.has(k);
+    if (fl.number === 0) {                                               // the town: the errands' doors, then the shaft
+      for (const id of this.errands()) { const k = CM.TOWN_AT[id].join(","); if (can(k)) return k; this.townDone = (this.townDone || []).concat(id); }
+      return goal;
+    }
     const phyl = things.find(([, t]) => t.type === "phylactery");
     if (phyl && can(phyl[0])) return phyl[0];
     const keys = things.filter(([k, t]) => t.type === "key" && can(k));
@@ -177,7 +205,7 @@ CM.Autopilot = class {
     this.needs(); this.potions();
     if (this.moves % 25 === 0) this.gearUp();
     if (game.floor.number > this.opts.maxFloor) return this.stop("deep enough");
-    if (game.floor.number !== this.onFloor) { this.onFloor = game.floor.number; this.floorMoves = 0; }
+    if (game.floor.number !== this.onFloor) { this.onFloor = game.floor.number; this.floorMoves = 0; if (game.floor.number === 0) this.townDone = []; }
     if (++this.floorMoves > this.opts.perFloor) { this.floorMoves = 0; return this.giveUp(`lost on floor ${game.floor.number}`); }
     this.moves++;
     if (this.moves > this.opts.maxMoves) return this.stop("out of moves");
@@ -211,6 +239,7 @@ CM.Autopilot = class {
     if (!target) return this.giveUp(`no goal on floor ${fl.number}`);
     const step = this.stepTo(fl, target);
     if (step === "here") {
+      if (fl.number === 0 && t && t.type === "building") { this.errand(t.id); return "errand"; }
       if (t && t.type === "node") game.use();
       else if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") this.stuck++; }
       else if (t && t.type === "ghost") { game.talk(t, here); if (fl.things[here]) game.talk(t, here); if (fl.things[here] && !(t.arc && t.arc < 3)) delete fl.things[here]; else if (fl.things[here]) t.heard = true; }

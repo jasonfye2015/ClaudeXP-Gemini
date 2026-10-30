@@ -2529,6 +2529,24 @@ test("growth: a building is drawn by its level (a foundation, a frame, a roof, a
   g2.enterFloor(3, "down"); for (const h of g2.party) h.hp = 0; g2.endRun(false); const e2 = g2.fame.find((e) => e.seed === "growth-2"); assert.ok(e2.renown >= 3 + 27, `the visits count: ${e2.renown}`);
 });
 
+test("around the town: Automatic runs the errands at their doors in order and then takes the shaft; a film of a run that began at home begins at home; the town's words are data; the simulator starts at home with --town", () => {
+  const CM = load();
+  for (const k of ["town.name", "town.compass", "town.where", "town.card", "town.card.night", "town.arrive", "town.open", "town.home", "town.foundation", "town.door"]) assert.notStrictEqual(CM.t(k), k, k);
+  const g = new CM.Game(); g.village.renown = 9000; g.build("home"); g.build("shrine"); g.newGame("around-town-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1500;
+  g.autoPlay(true); const visited = []; g.on("building", (id) => visited.push(id)); let n = 0; while (g.floor.number === 0 && g.autoOn() && n++ < 400) g.auto.step();
+  assert.strictEqual(g.floor.number, 1, `down the shaft after the errands (${n} steps)`); assert.strictEqual(visited.join(), "home,merchant,temple,tavern", `the errands in order: ${visited.join()}`);
+  assert.ok(g.buffs && g.buffs.rested, "rested at the hearth"); assert.ok(g.bounty, "a bounty from the board"); assert.ok((g.tally.spent || {}).tavern >= CM.DRINK_PRICE, "a round drunk"); assert.ok(g.bag.filter((i) => i.kind === "heal").length >= 2, "shopped"); g.autoPlay(false);
+  const g2 = new CM.Game(); g2.village.levels = {}; g2.saveVillage(); g2.newGame("around-town-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g2.autoPlay(true); const v2 = []; g2.on("building", (id) => v2.push(id)); n = 0; while (g2.floor.number === 0 && g2.autoOn() && n++ < 400) g2.auto.step();
+  assert.strictEqual(g2.floor.number, 1); assert.strictEqual(v2.join(), "merchant", "with nothing built and little gold: the merchant, then the shaft"); g2.autoPlay(false);
+  // a film of a run that began at home begins at home
+  const g3 = new CM.Game(); g3.newGame("around-town-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); for (let i = 0; i < 3; i++) g3.move(0); const spec = g3.replaySpec(); assert.ok(spec.town);
+  const g4 = new CM.Game(); assert.ok(g4.startFilm(spec)); assert.strictEqual(g4.floor.number, 0, "the film opens at the party's door"); assert.ok(g4.film && g4.film.playing); g4.stopFilm && g4.stopFilm();
+  const g5 = new CM.Game(); assert.ok(g5.startFilm(Object.assign({}, spec, { town: undefined }))); assert.strictEqual(g5.floor.number, 1, "an older film at the shaft");
+  // the simulator's bot from home
+  const g6 = new CM.Game(); g6.newGame("around-town-4", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const r = playRun(CM, g6, { maxFloor: 3 }); assert.ok(g6.floor.number >= 3 || g6.mode === "title", r.log.join("|"));
+  const out = execFileSync("node", [path.join(__dirname, "..", "tools", "words.js")], { encoding: "utf8" }); assert.ok(/the town \(CM.TOWN_PLOTS, CM.TOWNSFOLK, CM.VILLAGE\)\s+\d+/.test(out));
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

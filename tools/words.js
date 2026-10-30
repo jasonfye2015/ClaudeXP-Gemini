@@ -30,6 +30,7 @@ const things = [["the bases (CM.BASES)", Object.keys(CM.BASES).reduce((n, k) => 
   ["the scars, traps and locks", Object.values(CM.SCARS).reduce((n, s) => n + words(s.name) + words(s.what), 0) + Object.values(CM.TRAPS).reduce((n, t) => n + words(t), 0) + Object.values(CM.LOCKS).reduce((n, l) => n + words(l.name), 0)],
   ["the recipes (CM.RECIPES)", Object.values(CM.RECIPES).reduce((n, r) => n + words(r.name) + words(r.what), 0)],
   ["the leaders and the uniques (CM.ELITES, CM.UNIQUES)", Object.values(Object.assign({}, CM.ELITES, CM.ELITES_MORE)).reduce((n, e) => n + words(e.name) + words(e.blurb), 0) + Object.values(CM.UNIQUES).reduce((n, u) => n + words(u.name) + words(u.lore), 0)],
+  ["the town (CM.TOWN_PLOTS, CM.TOWNSFOLK, CM.VILLAGE)", Object.values(CM.TOWN_PLOTS).reduce((n, p) => n + words(p.name) + words(p.what), 0) + CM.TOWNSFOLK.reduce((n, t) => n + words(t.name) + words(t.who) + t.lines.reduce((m, l) => m + words(l), 0), 0) + Object.values(CM.VILLAGE).reduce((n, b) => n + words(b.name) + b.levels.reduce((m, l) => m + words(l), 0), 0)],
   ["the words the rules read back (CM.TEXT)", Object.values(CM.TEXT).reduce((n, t) => n + words(t), 0)]];
 let thingWords = 0;
 console.log("The things' words (the item tables, and CM.TEXT):");

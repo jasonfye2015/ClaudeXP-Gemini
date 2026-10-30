@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v5.7 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v6.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -430,7 +430,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "5.7", built: "2026-10-30" };
+const CM = window.CM = { version: "6.0", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1637,6 +1637,16 @@ CM.TEXT = {
   "hud.overloaded": "Overloaded",
   "hud.blessed": "blessed",
   "hud.automatic": "automatic",
+  "town.name": "Caer Duin, above",
+  "town.compass": "The town",
+  "town.where": "{name} - the town",
+  "town.card": "The town on the hill, and the shaft the hill was never asked about.",
+  "town.card.night": "The lanterns are lit on the hill, and the shaft is dark at the end of the lane.",
+  "town.arrive": "{name}: the square, the lanes, and the shaft's mouth at the end of the main lane.",
+  "town.open": "Four adventurers step out of their own door into the morning. The shaft is at the end of the lane; somewhere below it, the Lich King stirs.",
+  "town.home": "Back to town",
+  "town.foundation": "a foundation, waiting for a roof",
+  "town.door": "(Space to go in)",
   "bag.weight": "Weight: {n}/{cap}",
   "bag.title.shop": "The Merchant",
   "bag.title.pack": "Inventory",
@@ -6922,7 +6932,7 @@ CM.Game = class {
     if (spec.mode === "awakened" && !bottomWas) this.achievements.bottom = { date: "film" };
     if (spec.mode === "otherdream" && !this.achievements.dreamer) this.achievements.dreamer = { date: "film" };
     CM.GEN = spec.gen || 1;
-    try { this.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode, { ascension: spec.ascension || 0, iron: spec.iron }); }
+    try { this.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode, { ascension: spec.ascension || 0, iron: spec.iron, town: Boolean(spec.town) }); }   // (a film of a run that began at home begins at home)
     finally { CM.GEN = gen; CM.store.set("ascension", maxWas || 0); if (!bottomWas) delete this.achievements.bottom; }
     this.gen = spec.gen || 1;
     this.replaying = 0;                                                  // (the film's lines log nothing: filmStep says so itself)
@@ -7166,7 +7176,7 @@ CM.Game = class {
       const t = this.trainerFor(h.cls); if (t && CM.TRAINER_LINES[h.cls]) this.say(`${t.name}, who taught ${h.name}: ${CM.TRAINER_LINES[h.cls]}`);
     }
     this.ironAllow = false;
-    this.say((town ? "Four adventurers step out of their own door into the morning. The shaft is at the end of the lane; somewhere below it, the Lich King stirs." : "Four adventurers climb down into the dark. Somewhere below, the Lich King stirs.") + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
+    this.say((town ? CM.t("town.open") : "Four adventurers climb down into the dark. Somewhere below, the Lich King stirs.") + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
       + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : "")
       + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : "")
@@ -7248,7 +7258,7 @@ CM.Game = class {
     this.saveRun();
     if (fresh && this.has("pilgrim")) this.checkLevels();
     if (fl.wing !== undefined) { if (fresh) this.say(`${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)}: ${CM.WINGS[fl.wing].smell}. The only way on is the way down to the main stair.`); if (fresh && fl.secretWing) this.achieve("secretfloor"); else if (fresh) this.achieve("wings"); }
-    else if (fresh || how !== "fall") this.say(number === 0 ? `${CM.TOWN_THEME.name}: the square, the lanes, and the shaft's mouth at the end of the main lane.` : `Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
+    else if (fresh || how !== "fall") this.say(number === 0 ? CM.t("town.arrive", { name: CM.TOWN_THEME.name }) : `Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && fl.hazard && CM.HAZARDS[CM.themeIndex(number)] && !this.hazardsSeen(fl.hazard)) this.say(CM.HAZARDS[CM.themeIndex(number)].note);
     if (fresh && number === CM.LAST_FLOOR + 1) this.say("The stair goes on below the palace, cut by no mason. The air is wet and old. The Deep begins here, and the carvings above never spoke of it.");
@@ -7429,7 +7439,7 @@ Object.assign(CM.Game.prototype, {
           wingstair: `A second stair goes down here, narrower, into ${(CM.WINGS[thing.wing] || CM.WINGS[0]).name}: ${(CM.WINGS[thing.wing] || CM.WINGS[0]).smell}. (Space to take it; the main stair is still the way on)`,
           node: `${(CM.NODES[thing.band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[thing.band] || CM.NODES[0])[0].slice(1)}: something the alchemist would want. (Space to gather it)`,
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)",
-          building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - a foundation, waiting for a roof"}. (Space to go in)` : "",
+          building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - " + CM.t("town.foundation")}. ${CM.t("town.door")}` : "",
           well: "The square's well, under its little roof, and the notice board beside it. (Space to look down it)",
           villager: thing.type === "villager" ? `${(CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length] || {}).who || "someone"}. (Space to pass the time of day)` : "" }[thing.type]);
       }
@@ -11950,6 +11960,41 @@ CM.Autopilot = class {
       if (game.equip(h, best)) break;
     }
   }
+  // the town's errands before the descent, each at its own door: home (the hearth, the larder), the merchant (the
+  // shopping), the temple (wounds), the tavern (a round, the board) - in that order, the doors that stand; then the shaft
+  errands() {
+    const game = this.game, want = [];
+    if (game.homeLevel() >= 1) want.push("home");
+    want.push("merchant");
+    if (game.villageLevel("shrine") >= 1 && (game.party.some((h) => h.wound || h.hp <= 0) || game.gold > 300)) want.push("temple");
+    if (game.gold > 60) want.push("tavern");
+    return want.filter((id) => !(this.townDone || []).includes(id));
+  }
+  errand(id) {
+    const game = this.game;
+    this.townDone = (this.townDone || []).concat(id);
+    game.use();                                                          // (the door opened: counted for the town's renown; the screen it opens is closed again by the frame loop)
+    if (id === "home") { game.hearthRest(); while ((game.home().larder || 0) > 0 && game.bag.filter((i) => i.kind === "ration").length < 2) game.larderTake(); }
+    else if (id === "merchant") { game.openBag(true); this.shopping(); game.closeBag(); }
+    else if (id === "temple") { while (game.party.some((h) => h.hp <= 0) && game.gold >= 90 * game.party.find((h) => h.hp <= 0).level) game.raiseDead(); if (game.party.some((h) => h.wound) && game.gold >= 36 * game.party.filter((h) => h.wound).length + 60) game.temple("wounds"); if (game.gold > 300 && !game.blessed()) game.tithe(); }
+    else if (id === "tavern") { game.drink(); if (game.bounty && game.bountyDone()) game.claimBounty(); else if (!game.bounty) game.takeBounty(); }
+  }
+  // the merchant's table, wherever it stands: potions, torches, rations, insurance, orders, the weight, the fence, a weapon
+  shopping() {
+    const game = this.game, alive = () => this.alive();
+    const want = (kind, n) => { let guard = 0; while (game.bag.filter((i) => i.kind === kind).length < n && guard++ < 10) { const row = game.stock.findIndex((i) => i.kind === kind); if (row < 0 || game.buy(row)) break; } };
+    want("heal", 4); want("torch", 2); want("ration", 2);
+    if (game.gold > 150) for (const h of alive()) { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 100 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (worn && game.gold > 150) game.insure(game.party.indexOf(h), CM.SLOTS.find((s) => h[s] === worn)); }
+    if (game.gold > 200 && (game.orders || []).length < 2) { if (!game.stock.some((i) => i.kind === "revive") && !game.bag.some((i) => i.kind === "revive")) game.order("revive"); if (!game.stock.some((i) => i.kind === "mana") && game.bag.filter((i) => i.kind === "mana").length < 2) game.order("mana"); if (!game.bag.some((i) => i.kind === "lampoil") && game.light && game.light.kind === "lantern") game.order("lampoil"); }
+    if (game.overweight() > 1) { let guard = 0; while (game.overweight() > 1 && guard++ < 10) { const row = game.bag.map((it, i) => [it, i]).filter(([it]) => CM.weightOf(it) >= 3 && it.kind !== "torch").sort((a, b) => a[0].value - b[0].value)[0]; if (!row) break; game.sell(row[1]); } }
+    if (game.inTown()) for (let i = game.bag.length - 1; i >= 0; i--) if (game.bag[i].unknown || (game.bag[i].props && game.bag[i].props.cursed)) game.fence(i);
+    if (game.gold > 150) want("mana", 2);
+    if (game.gold > 250) want("revive", 1);
+    for (const h of alive()) {                                           // better weapons for the gold left: the cheapest upgrade in the merchant's wares, if any
+      const row = game.stock.findIndex((it) => it.kind === "weapon" && it.power > (h.weapon ? h.weapon.power : 0) + 1 && it.value <= game.gold - 60 && !CM.cantWear(h, it));
+      if (row >= 0 && !game.buy(row)) { const bagRow = game.bag.length - 1; game.equip(h, bagRow); }
+    }
+  }
   // the camp's business: heal, trade, insure, tithe, buy what is short - then (the next step) go deeper
   camp() {
     const game = this.game, alive = () => this.alive();
@@ -11961,21 +12006,10 @@ CM.Autopilot = class {
     if (alive().some((h) => h.hp < h.max * 0.9 || (h.maxmp && h.mp < h.maxmp * 0.7) || Object.keys(h.status || {}).length) && game.gold >= 20) game.rest();
     if (game.party.some((h) => h.hp <= 0)) { const who = game.tavern(); if (who.length) game.hire(0); }
     game.openBag(true);
-    const want = (kind, n) => { let guard = 0; while (game.bag.filter((i) => i.kind === kind).length < n && guard++ < 10) { const row = game.stock.findIndex((i) => i.kind === kind); if (row < 0 || game.buy(row)) break; } };
-    want("heal", 4); want("torch", 2); want("ration", 2);
     if (game.party.some((h) => h.wound) && game.gold >= 40 * game.party.filter((h) => h.wound).length + 60) game.temple("wounds");
     if (game.bounty && game.bountyDone()) game.claimBounty(); else if (!game.bounty) game.takeBounty();
     if (game.gold > 300 && !game.blessed()) game.tithe();
-    if (game.gold > 150) for (const h of alive()) { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 100 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (worn && game.gold > 150) game.insure(game.party.indexOf(h), CM.SLOTS.find((s) => h[s] === worn)); }
-    if (game.gold > 200 && (game.orders || []).length < 2) { if (!game.stock.some((i) => i.kind === "revive") && !game.bag.some((i) => i.kind === "revive")) game.order("revive"); if (!game.stock.some((i) => i.kind === "mana") && game.bag.filter((i) => i.kind === "mana").length < 2) game.order("mana"); if (!game.bag.some((i) => i.kind === "lampoil") && game.light && game.light.kind === "lantern") game.order("lampoil"); }
-    if (game.overweight() > 1) { let guard = 0; while (game.overweight() > 1 && guard++ < 10) { const row = game.bag.map((it, i) => [it, i]).filter(([it]) => CM.weightOf(it) >= 3 && it.kind !== "torch").sort((a, b) => a[0].value - b[0].value)[0]; if (!row) break; game.sell(row[1]); } }
-    for (let i = game.bag.length - 1; i >= 0; i--) if (game.bag[i].unknown || (game.bag[i].props && game.bag[i].props.cursed)) game.fence(i);
-    if (game.gold > 150) want("mana", 2);
-    if (game.gold > 250) want("revive", 1);
-    for (const h of alive()) {                                           // better weapons for the gold left: the cheapest upgrade in the merchant's wares, if any
-      const row = game.stock.findIndex((it) => it.kind === "weapon" && it.power > (h.weapon ? h.weapon.power : 0) + 1 && it.value <= game.gold - 60 && !CM.cantWear(h, it));
-      if (row >= 0 && !game.buy(row)) { const bagRow = game.bag.length - 1; game.equip(h, bagRow); }
-    }
+    this.shopping();
     game.closeBag();
   }
   walkOK(fl, x, y) {
@@ -12020,6 +12054,10 @@ CM.Autopilot = class {
     const game = this.game, fl = game.floor, things = Object.entries(fl.things), feats = Object.entries(fl.features), perFloor = this.opts.perFloor, floorMoves = this.floorMoves;
     const goal = CM.goalOf(fl);
     const can = (k) => this.paths.parent.has(k);
+    if (fl.number === 0) {                                               // the town: the errands' doors, then the shaft
+      for (const id of this.errands()) { const k = CM.TOWN_AT[id].join(","); if (can(k)) return k; this.townDone = (this.townDone || []).concat(id); }
+      return goal;
+    }
     const phyl = things.find(([, t]) => t.type === "phylactery");
     if (phyl && can(phyl[0])) return phyl[0];
     const keys = things.filter(([k, t]) => t.type === "key" && can(k));
@@ -12073,7 +12111,7 @@ CM.Autopilot = class {
     this.needs(); this.potions();
     if (this.moves % 25 === 0) this.gearUp();
     if (game.floor.number > this.opts.maxFloor) return this.stop("deep enough");
-    if (game.floor.number !== this.onFloor) { this.onFloor = game.floor.number; this.floorMoves = 0; }
+    if (game.floor.number !== this.onFloor) { this.onFloor = game.floor.number; this.floorMoves = 0; if (game.floor.number === 0) this.townDone = []; }
     if (++this.floorMoves > this.opts.perFloor) { this.floorMoves = 0; return this.giveUp(`lost on floor ${game.floor.number}`); }
     this.moves++;
     if (this.moves > this.opts.maxMoves) return this.stop("out of moves");
@@ -12107,6 +12145,7 @@ CM.Autopilot = class {
     if (!target) return this.giveUp(`no goal on floor ${fl.number}`);
     const step = this.stepTo(fl, target);
     if (step === "here") {
+      if (fl.number === 0 && t && t.type === "building") { this.errand(t.id); return "errand"; }
       if (t && t.type === "node") game.use();
       else if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") this.stuck++; }
       else if (t && t.type === "ghost") { game.talk(t, here); if (fl.things[here]) game.talk(t, here); if (fl.things[here] && !(t.arc && t.arc < 3)) delete fl.things[here]; else if (fl.things[here]) t.heard = true; }
@@ -13948,8 +13987,8 @@ Object.assign(CM.UI.prototype, {
     if (this.screen !== "play") return;
     const fl = g.floor;
     if (fl) {
-      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 ? "The town" : "Floor " + fl.number}`;
-      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? `${CM.TOWN_THEME.name} - the town` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
+      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 ? CM.t("town.compass") : "Floor " + fl.number}`;
+      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? CM.t("town.where", { name: CM.TOWN_THEME.name }) : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
@@ -14050,7 +14089,7 @@ Object.assign(CM.UI.prototype, {
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")], [CM.t("camp.bounty"), () => { const note = g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty(); if (note) g.say(note); this.refresh(); }],
         ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Guild", () => this.openSecond()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
-        ["Back up the shaft", () => g.backUp()], ["Back to town", () => { const note = g.goHome(); if (note) g.say(note); }], ["Go deeper", () => g.leaveCamp()], [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
+        ["Back up the shaft", () => g.backUp()], [CM.t("town.home"), () => { const note = g.goHome(); if (note) g.say(note); }], ["Go deeper", () => g.leaveCamp()], [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
     if (box.dataset.mode === key) return;
@@ -14887,7 +14926,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
   game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
     if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
-    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.townNight() ? "The lanterns are lit on the hill, and the shaft is dark at the end of the lane." : "The town on the hill, and the shaft the hill was never asked about."); return; }
+    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.t(CM.townNight() ? "town.card.night" : "town.card")); return; }
     const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
     if (!ch) return;
     if ((fl.number - 1) % 5 === 0) ui.titleCard(CM.bandName(game, fl.number), game.dream ? "What Caer Duin might have been." : ch.epigraph);
@@ -15397,7 +15436,7 @@ window.addEventListener("DOMContentLoaded", () => {
           lastAutoStep = now;
           if (ui.screen === "bag") ui.show("play");
           const did = game.auto.step();
-          for (const id of ["#dlg-talk", "#dlg-choice", "#dlg-riddle", "#dlg-lore", "#dlg-card"]) if (ui.$(id).classList.contains("on")) ui.closeDialogs();   // (what it read and answered, out of the way)
+          if (ui.dialogOpen() && !ui.$("#dlg-over").classList.contains("on")) ui.closeDialogs();   // (what it read, answered, or opened in the town: out of the way)
           if (ui.screen === "bag") ui.show("play");
           if (!did || game.mode === "camp") ui.refresh();
         }

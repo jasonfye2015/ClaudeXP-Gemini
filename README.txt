@@ -1149,6 +1149,20 @@ Growth, and the town as a thing that remembers (the seventh big update, phase 5 
   lore, unlocked as renown is spent) is carved on the well's stones and read there, in order.
   Test: "growth".
 
+Around the town (the seventh big update, phase 6 - v6.0)
+  Automatic in town runs the errands at their doors in a sensible order - home (the hearth, rations from the
+  larder), the Merchant's House (the shopping the camps know), the Temple when someone is wounded or fallen or the
+  purse is heavy (the raising, the wounds, the tithe), the Hanged Lantern when there is gold for a round (the round,
+  the board) - each door opened and counted, then the shaft; node tools/sim.js --town measures a run that walks the
+  town, and the bot's crown rate on Fair is the same from home as from the shaft (14 and 13 of 20, within noise).
+  The gamepad walks the lanes with the stick and opens a door with Use, and every building's screen takes the pad's
+  list focus like any dialog. A film of a run that began at home begins at home (spec.town). The town's words go
+  through 12-text.js (the title card, the arrival and opening lines, the compass, Back to town, a foundation, a
+  door), and tools/words.js counts the town's words (the plots, the townsfolk, the buildings' levels: about eight
+  hundred). The balance pass: the rested buff, the gazetteer, the will and the commission are all the village's
+  (a bot with no village feels none), and the sims to floor 20 on Fair hold the crown rate where v5.0 left it.
+  Test: "around the town". The seventh big update is complete: seven phases, v5.2 to v6.0, and 83 tests.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

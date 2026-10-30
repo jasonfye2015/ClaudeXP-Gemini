@@ -109,7 +109,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
   game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
     if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
-    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.townNight() ? "The lanterns are lit on the hill, and the shaft is dark at the end of the lane." : "The town on the hill, and the shaft the hill was never asked about."); return; }
+    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.t(CM.townNight() ? "town.card.night" : "town.card")); return; }
     const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
     if (!ch) return;
     if ((fl.number - 1) % 5 === 0) ui.titleCard(CM.bandName(game, fl.number), game.dream ? "What Caer Duin might have been." : ch.epigraph);
@@ -619,7 +619,7 @@ window.addEventListener("DOMContentLoaded", () => {
           lastAutoStep = now;
           if (ui.screen === "bag") ui.show("play");
           const did = game.auto.step();
-          for (const id of ["#dlg-talk", "#dlg-choice", "#dlg-riddle", "#dlg-lore", "#dlg-card"]) if (ui.$(id).classList.contains("on")) ui.closeDialogs();   // (what it read and answered, out of the way)
+          if (ui.dialogOpen() && !ui.$("#dlg-over").classList.contains("on")) ui.closeDialogs();   // (what it read, answered, or opened in the town: out of the way)
           if (ui.screen === "bag") ui.show("play");
           if (!did || game.mode === "camp") ui.refresh();
         }
