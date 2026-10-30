@@ -106,7 +106,7 @@ CM.migrateRun = function (data) {
   while (schema < CM.SCHEMA) { schema += 1; if (CM.MIGRATIONS[schema]) CM.MIGRATIONS[schema](data); data.schema = schema; }
   return data;
 };
-CM.runFloor = (run) => (run ? (typeof run.floor === "object" ? run.floor.number : run.floor) : 0);   // the floor a saved run is on, in either format
+CM.runFloor = (run) => { if (!run) return null; const n = typeof run.floor === "object" && run.floor ? run.floor.number : run.floor; return typeof n === "number" ? n : null; };   // the floor a saved run is on, in either format (0 is the town; null is no run)
 
 // how much of the browser's keeping the game uses (bytes, as the browser counts them: two a character)
 CM.store.used = function () {
@@ -153,7 +153,7 @@ CM.replayRun = function (spec, upTo) {
   CM.GEN = spec.gen || 1;
   const maxWas = CM.store.get("ascension", 0);
   if ((spec.ascension || 0) > (maxWas || 0)) CM.store.set("ascension", spec.ascension);   // (a replay may be from a higher rung than this browser has reached)
-  try { game.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode, { ascension: spec.ascension || 0, iron: spec.iron }); } finally { CM.GEN = gen; CM.store.set("ascension", maxWas || 0); }
+  try { game.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode, { ascension: spec.ascension || 0, iron: spec.iron, town: Boolean(spec.town) }); } finally { CM.GEN = gen; CM.store.set("ascension", maxWas || 0); }
   game.gen = spec.gen || 1;
   const lines = upTo === undefined ? spec.log : spec.log.slice(0, upTo);
   for (const line of lines) {

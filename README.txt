@@ -1051,6 +1051,26 @@ Automatic (v5.1)
   driven in one loop with warping past a lost floor and the waking of the Root allowed, so the bot and the toggle
   can never drift apart. Test: "automatic".
 
+The ground of the town (the seventh big update, phase 0 - v5.2)
+  Floor 0 is the town above, Caer Duin: hand-laid in src/js/23-town.js (CM.makeTown - no generator, so nothing
+  frozen moves), a nineteen-square map with a square and a well, a main lane from the party's own door at the
+  west end to the shaft's mouth at the east, a north and a south lane, and nine plots on them (your house, the
+  Hanged Lantern, the Merchant's House, the Smith's forge, the Alchemist's Garden, the Library, the Temple, the
+  Guildhall, the Chronicler's House - CM.TOWN_PLOTS, CM.TOWN_AT). A plot is a door: walk up to it and Space opens
+  the building's screen - in this phase, the plot's name, what stands there, the levels the village has raised
+  and the village's own Build button; a plot the village does not raise yet is a foundation with two posts.
+  The town is a floor to the engine: drawn by the renderer in its own daylight theme (CM.TOWN_THEME: limewash,
+  a sky-coloured ceiling, a long reach), saved and restored as a delta like any floor, on the automap in full
+  from the first step, with its own title card, compass word and arrival line. Nothing wanders it, no torch burns
+  on it, no one grows hungry on it (a Rogue of the party may still pick nothing: there is nothing to pick).
+  A new run begins at the party's door facing down the lane (Settings: Skip the walk puts the party at the shaft
+  instead; the tests and the simulator start at the shaft, and node tools/sim.js --town starts at home). From any
+  camp, Back to town climbs to the shaft's mouth; from the town the shaft goes down to the deepest camp the run has
+  reached, so the town is never a trap, and to floor 1 before any camp. Saves on floor 0 continue (a run on floor
+  0 was "no run" to the old save check), a film of a run that began at home begins at home, and an old film
+  begins at the shaft as it did. Automatic and the bot walk the lane to the shaft and go down.
+  Test: "the town above".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

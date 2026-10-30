@@ -84,12 +84,12 @@ Object.assign(CM.UI.prototype, {
     const can = g.canContinue();
     this.$("#btn-continue").disabled = !can;
     this.$("#continue-note").textContent = can
-      ? `Slot ${g.slot}: floor ${CM.runFloor(g.lastRun)}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}${g.lastRun.difficulty && g.lastRun.difficulty !== "fair" ? ", " + CM.DIFFICULTIES[g.lastRun.difficulty].name : ""}${g.lastRun.endless ? ", Endless" : ""}`
+      ? `Slot ${g.slot}: ${CM.runFloor(g.lastRun) === 0 ? "the town" : `floor ${CM.runFloor(g.lastRun)}`}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}${g.lastRun.difficulty && g.lastRun.difficulty !== "fair" ? ", " + CM.DIFFICULTIES[g.lastRun.difficulty].name : ""}${g.lastRun.endless ? ", Endless" : ""}`
       : `Slot ${g.slot} is empty: no expedition is under way there.`;
     for (const b of this.root.querySelectorAll("#slots-row button[data-slot]")) {
       const n = Number(b.dataset.slot), r = (g.runs || [])[n - 1];
       b.classList.toggle("on", n === g.slot);
-      b.textContent = `${n}: ${r && r.floor ? `floor ${CM.runFloor(r)}` : "empty"}`;
+      b.textContent = `${n}: ${r && CM.runFloor(r) !== null ? (CM.runFloor(r) === 0 ? "the town" : `floor ${CM.runFloor(r)}`) : "empty"}`;
       b.title = r && r.floor ? `${r.gold.toLocaleString()} gold${r.saved ? ", saved " + new Date(r.saved).toLocaleString() : ""}` : "An empty slot for a new expedition";
     }
     const title = CM.titleFor(g.achievements), got = Object.keys(CM.ACHIEVEMENTS).filter((id) => g.achievements[id]);

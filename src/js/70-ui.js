@@ -78,6 +78,7 @@ CM.UI = class {
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
+  <div class="row"><label for="set-skipwalk">Skip the walk: a new run begins at the shaft's mouth, not at the party's door</label><input type="checkbox" id="set-skipwalk"></div>
   <div class="row"><label for="set-render">Render scale - fewer pixels on a slow machine (Auto steps down when frames come late)</label><select id="set-render"><option value="auto">Auto</option><option value="full">Full</option><option value="three">Three quarters</option><option value="half">Half</option></select></div>
   <div class="row"><label for="set-speed">Combat speed - how long bolts fly and sparks hang</label><select id="set-speed"><option value="normal">Normal</option><option value="fast">Fast</option><option value="instant">As good as instant</option></select></div>
   <div class="row"><label for="set-text">Text size</label><select id="set-text"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select></div>
@@ -139,6 +140,9 @@ CM.UI = class {
   <textarea id="film-text" spellcheck="false" placeholder="Paste a film code here, CM2:..."></textarea>
   <div class="small" id="film-note"></div>
   <div class="end"><button id="btn-film-play">Watch</button><button id="btn-film-link" title="The film code in the box, as a link anyone can open">Link</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-building"><div class="box"><h2 id="building-title">A door</h2>
+  <p class="small" id="building-what"></p><div class="small" id="building-levels"></div><div class="small" id="building-note"></div>
+  <div class="end"><button id="btn-building-build">Build</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-village"><div class="box journalbox"><h2>The Village</h2>
   <p class="small">The surface, between runs. Every run brings home renown - floors, guardians, the crown, titles earned, the week's seed - and the village grows with it. Renown never buys a blow in the dungeon.</p>
   <div class="small" id="village-renown"></div><div id="village-buildings"></div>
@@ -270,6 +274,8 @@ CM.UI = class {
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
     game.on("choice", (c) => this.askChoice(c));
+    game.on("building", (id) => this.openBuilding(id));
+    this.$("#btn-building-build").addEventListener("click", () => { const P = CM.TOWN_PLOTS[this.buildingId] || {}; if (P.village) { this.$("#building-note").textContent = game.build(P.village) || `${P.name} rises a level.`; this.openBuilding(this.buildingId, true); } });
     game.on("teleported", () => this.flash(".blink", 60));
     game.on("fell", () => this.flash(".fall", 350));
     this.show("title");
@@ -451,6 +457,18 @@ CM.UI = class {
   }
   // ---- the village ----
   openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
+  // a door in the town: the plot's name, what stands there, the levels raised, and the village's build button
+  openBuilding(id, keepNote) {
+    const g = this.game, P = CM.TOWN_PLOTS[id]; if (!P) return;
+    this.buildingId = id;
+    const lvl = CM.plotLevel(g, id), V = P.village ? CM.VILLAGE[P.village] : null;
+    this.$("#building-title").textContent = P.name;
+    this.$("#building-what").textContent = P.what + (lvl ? "" : V ? " Nothing stands here yet but the foundation." : " A foundation only: the town raises it in the updates to come.");
+    this.$("#building-levels").innerHTML = V ? (lvl ? V.levels.slice(0, lvl).map((w, i) => `<div>Level ${i + 1}: ${this.esc(w)}</div>`).join("") : "") + (lvl < V.costs.length ? `<div><i>Next, for ${V.costs[lvl]} renown: ${this.esc(V.levels[lvl])}</i> (you have ${g.renown()})</div>` : "<div><i>Complete.</i></div>") : "";
+    const b = this.$("#btn-building-build"); b.style.display = V && lvl < V.costs.length ? "" : "none"; if (V && lvl < V.costs.length) { b.textContent = `Build, ${V.costs[lvl]} renown`; b.disabled = g.renown() < V.costs[lvl]; }
+    if (!keepNote) this.$("#building-note").textContent = "";
+    this.openDialog("#dlg-building");
+  }
   renderVillage() {
     const g = this.game, v = g.village || {};
     this.$("#village-renown").textContent = `Renown: ${g.renown()} to spend (${v.renown || 0} earned, ever). The vault holds ${g.vaultCapacity()}.`;
@@ -660,17 +678,17 @@ CM.UI = class {
   _settings() {
     const g = this.game, s = g.settings;
     const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
-    const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap");
+    const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap"), skipWalk = this.$("#set-skipwalk");
     const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab"), render = this.$("#set-render"), layout = this.$("#set-layout");
     layout.value = s.layout || "auto";
     speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB); render.value = s.render || "auto";
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
-    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false;
+    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false; skipWalk.checked = Boolean(s.skipWalk);
     const note = () => { this.$("#set-look-note").textContent = CM.LOOKS[s.look] ? CM.LOOKS[s.look].what + "." : ""; };
     note();
     const apply = () => {
-      s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.tapMove = tap.checked;
+      s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.tapMove = tap.checked; s.skipWalk = skipWalk.checked;
       s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value; s.layout = layout.value;
       g.saveSettings();
       g.emit("settings", s);

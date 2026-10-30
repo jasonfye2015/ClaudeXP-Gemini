@@ -491,6 +491,41 @@ CM.art.teleporter = function () {                                         // a r
   return c;
 };
 
+// the town's things: a house front with a door and a sign, a foundation of low stones, the square's well
+CM.art.house = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 100, 9, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#B89C78"; p.fillRect(38, 96, 180, 146);                 // the wall, limewashed
+  p.fillStyle = "#6E4A2A"; for (const x of [38, 124, 212]) p.fillRect(x, 96, 6, 146); p.fillRect(38, 150, 180, 6);   // the timbers
+  p.fillStyle = "#7A4A2A"; p.beginPath(); p.moveTo(22, 100); p.lineTo(128, 30); p.lineTo(234, 100); p.closePath(); p.fill();   // the roof
+  p.fillStyle = "#5A3418"; for (let y = 40; y < 100; y += 12) { p.fillRect(22 + (100 - y) * 0.9, y, 212 - (100 - y) * 1.8, 3); }
+  p.fillStyle = "#4A2E16"; p.fillRect(108, 166, 40, 76);                 // the door
+  p.fillStyle = "#D8B040"; p.beginPath(); p.arc(140, 206, 3, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#A8C8E0"; p.fillRect(58, 166, 30, 30); p.fillRect(168, 166, 30, 30);   // the windows
+  p.strokeStyle = "#4A2E16"; p.lineWidth = 3; p.strokeRect(58, 166, 30, 30); p.strokeRect(168, 166, 30, 30); p.beginPath(); p.moveTo(73, 166); p.lineTo(73, 196); p.moveTo(183, 166); p.lineTo(183, 196); p.stroke();
+  p.fillStyle = "#8A6A3A"; p.fillRect(92, 108, 72, 26); p.strokeStyle = "#3A2410"; p.lineWidth = 2; p.strokeRect(92, 108, 72, 26);   // the sign
+  return c;
+};
+CM.art.foundation = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "rgba(0,0,0,0.25)"; p.beginPath(); p.ellipse(S / 2, S - 14, 100, 9, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#9A8A74"; p.fillRect(40, 196, 176, 46);
+  p.fillStyle = "#7A6A56"; for (let i = 0; i < 6; i++) p.fillRect(44 + i * 29, 200 + (i % 2) * 20, 24, 18);
+  p.strokeStyle = "#5A4A3A"; p.lineWidth = 2; p.strokeRect(40, 196, 176, 46);
+  p.fillStyle = "#6E4A2A"; p.fillRect(60, 150, 6, 50); p.fillRect(190, 150, 6, 50);   // two posts, waiting for a roof
+  return c;
+};
+CM.art.well = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 70, 9, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#8A8070"; p.fillRect(72, 176, 112, 60);                  // the ring
+  p.fillStyle = "#6A6054"; for (let i = 0; i < 4; i++) p.fillRect(76 + i * 28, 182 + (i % 2) * 24, 22, 18);
+  p.fillStyle = "#1A2030"; p.beginPath(); p.ellipse(S / 2, 176, 54, 12, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#6E4A2A"; p.fillRect(80, 90, 8, 90); p.fillRect(168, 90, 8, 90); p.fillRect(74, 84, 108, 8);   // the posts and the beam
+  p.fillStyle = "#7A4A2A"; p.beginPath(); p.moveTo(64, 92); p.lineTo(128, 50); p.lineTo(192, 92); p.closePath(); p.fill();   // the little roof
+  p.fillStyle = "#4A2E16"; p.fillRect(124, 92, 6, 60); p.fillStyle = "#8A7A5A"; p.fillRect(112, 150, 30, 22);   // the rope and the bucket
+  return c;
+};
 CM.art.fountain = function (dry) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
   p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(cx, ground - 2, 100, 10, 0, 0, Math.PI * 2); p.fill();
@@ -1018,6 +1053,7 @@ CM.art.buildDrawn = function (theme) {
   for (const G of Object.values(CM.GUARDIANS)) { const k = G.size >= 1 ? 1.12 : 1.04; add(`monster:${G.name}`, CM.art.monster(G, k)); add(`monster:${G.name}:idle2`, CM.art.monster(G, k, "idle2")); add(`monster:${G.name}:attack`, CM.art.monster(G, k, "attack")); }
   add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, CM.art.monster(row));
+  add("house", CM.art.house()); add("foundation", CM.art.foundation()); add("well", CM.art.well());
   add("bones", CM.art.bones()); add("rope", CM.art.rope()); add("plate", CM.art.plate(false)); add("plate_pressed", CM.art.plate(true)); add("door_riddle", CM.art.door("riddle"));
   add("fungus", CM.art.fungus()); add("crystal", CM.art.crystal()); add("root", CM.art.root());
   add("fx:spark", CM.art.fxSpark()); add("fx:shard", CM.art.fxShard()); add("fx:fire", CM.art.fxFire()); add("fx:frost", CM.art.fxFrost());

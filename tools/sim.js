@@ -19,13 +19,14 @@ const DIFFS = opt("difficulty", "gentle,fair,grim").split(",");
 const ASCS = opt("ascension", "0").split(",").map(Number);              // the ladder report: --ascension 0,5,10,15 runs each rung
 const JSON_OUT = opt("json", null);
 const STORY = args.includes("--story");
+const TOWN = args.includes("--town");                                     // the run begins at the party's door and walks to the shaft
 const LOOT = args.includes("--loot");                                     // the hoard, measured: gold found and spent, things by rarity, floors to the first upgrade, what was used                                   // the story's gates, measured: chapters completed, guardians spoken past, endings
 
 function simulate(seed, difficulty, ascension = 0) {
   const CM = load();
   CM.store.set("ascension", ascension);
   const game = new CM.Game();
-  game.newGame(seed, fixedParty(CM), "pauper", difficulty, [], ENDLESS ? "endless" : "dungeon", { ascension });
+  game.newGame(seed, fixedParty(CM), "pauper", difficulty, [], ENDLESS ? "endless" : "dungeon", { ascension, town: TOWN });
   const byCamp = {};
   game.on("mode", (m) => { if (m === "camp") byCamp[game.floor.number] = game.party.map((h) => h.level); });
   const t0 = Date.now();

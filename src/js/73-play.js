@@ -8,8 +8,8 @@ Object.assign(CM.UI.prototype, {
     if (this.screen !== "play") return;
     const fl = g.floor;
     if (fl) {
-      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : "Floor " + fl.number}`;
-      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
+      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 ? "The town" : "Floor " + fl.number}`;
+      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? `${CM.TOWN_THEME.name} - the town` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
@@ -110,7 +110,7 @@ Object.assign(CM.UI.prototype, {
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")], [CM.t("camp.bounty"), () => { const note = g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty(); if (note) g.say(note); this.refresh(); }],
         ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Guild", () => this.openSecond()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
-        ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
+        ["Back up the shaft", () => g.backUp()], ["Back to town", () => { const note = g.goHome(); if (note) g.say(note); }], ["Go deeper", () => g.leaveCamp()], [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
     if (box.dataset.mode === key) return;
@@ -190,7 +190,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
     const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      node: "#8FB06A", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
+      node: "#8FB06A", building: "#C09050", well: "#60A0E0", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);

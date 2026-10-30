@@ -937,6 +937,17 @@ Object.assign(CM.Game.prototype, {
     if (!this.camps.includes(n)) { this.camps.push(n); this.camps.sort((a, b) => a - b); if (this.camps.length > 1) this.say("The merchant chalks a mark by the fire: a waystone. From any camp you can walk the old road to another."); }
   },
   // to the camp below floor n, from a camp
+  // from a camp, back up to the town (the shaft's mouth); the shaft brings the party down again to the deepest camp reached
+  goHome() {
+    if (this.mode !== "camp") return "The way home is from a camp.";
+    this.logAct("goHome");
+    this.stock = null; this.recruits = null;
+    const town = this.floorAt(0), shaft = this.cellOf(town, "ladder") || CM.TOWN_AT.shaft.slice();
+    this.enterFloor(0, "rope", shaft);
+    this.say("The long climb, and daylight: Caer Duin above, and the shaft's mouth behind you. The shaft goes down again to the deepest camp you reached.");
+    this.emit("change");
+    return "";
+  },
   waystone(n) {
     if (this.mode !== "camp") return "The waystones are at the camps.";
     this.logAct("waystone", n);

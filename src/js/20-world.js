@@ -867,6 +867,7 @@ CM.furnish = function (floor, seed, gen) {
 
 // a floor: made by the run's generator (CM.GEN for a new run), then furnished; a wing (number + 0.5) is made its own way
 CM.makeFloor = function (number, seed, gen) {
+  if (number === 0) return CM.makeTown(seed);                            // (the town above: hand-laid, 23-town.js)
   if (number % 1 !== 0) return CM.makeWing(number, seed, gen);
   const make = CM.generators[gen || CM.GEN] || CM.generators[1];
   return CM.furnish(make(number, seed), seed, gen || CM.GEN);

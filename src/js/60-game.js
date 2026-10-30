@@ -39,7 +39,7 @@ CM.Game = class {
     this.vaults = (CM.store.get("vaults", null) || (CM.store.get("vault", null) ? [CM.store.get("vault", null)] : [])).map((it) => CM.normalizeItem(it, "vault"));
     this.compendium = CM.store.get("compendium", {});     // every base ever found: {baseId: {floor, date}}   // the heirlooms left at the camp for the next party (one slot, or three, or five, by the guildhall)
     this.village = Object.assign({ renown: 0, spent: 0, levels: {}, trainers: [] }, CM.store.get("village", {}));   // the surface: renown and the buildings
-    this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "drawn", tapMove: true }, CM.store.get("settings", {}));
+    this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "drawn", tapMove: true, skipWalk: false }, CM.store.get("settings", {}));
     this.settings.keys = Object.assign({}, CM.DEFAULT_KEYS, this.settings.keys || {});
     this.settings.pad = Object.assign({}, CM.DEFAULT_PAD, this.settings.pad || {});
     this.ledger = CM.store.get("ledger", []);        // every expedition that ended, one line each (the statistics; the Hall of Fame keeps ten)
@@ -147,7 +147,7 @@ CM.Game = class {
 
   // ---- the log: every choice the player makes, as a line, so a run can be played again from its seed (CM.replayRun) ----
   logAct(name, ...args) { if (this.replaying) return; this.runLog = this.runLog || []; this.runLog.push(args.length ? [name, ...args] : [name]); }
-  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.dream ? "otherdream" : this.awakened ? "awakened" : this.endless ? "endless" : "dungeon", ascension: this.ascension || 0, iron: Boolean(this.iron), trail: (this.trail || []).slice(), log: (this.runLog || []).slice() }; }
+  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.dream ? "otherdream" : this.awakened ? "awakened" : this.endless ? "endless" : "dungeon", ascension: this.ascension || 0, iron: Boolean(this.iron), town: Boolean(this.startedInTown), trail: (this.trail || []).slice(), log: (this.runLog || []).slice() }; }
 
   // ---- the film: a run watched in the real view, line by line, on this very game (nothing is saved while it plays) ----
   startFilm(spec) {
@@ -277,7 +277,7 @@ CM.Game = class {
       tally: this.tally || this.freshTally(), journal: this.journal || [], story: this.story || { read: {} }, rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0,
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0,
       morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [] };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
@@ -290,7 +290,7 @@ CM.Game = class {
     this.dirty = false; this.sinceSave = 0;
   }
 
-  canContinue() { return Boolean(this.lastRun && CM.runFloor(this.lastRun) && this.lastRun.party); }
+  canContinue() { return Boolean(this.lastRun && CM.runFloor(this.lastRun) !== null && this.lastRun.party); }   // (floor 0 is the town: a run)
 
   continueRun() {
     const d = CM.migrateRun(this.lastRun);
@@ -326,7 +326,7 @@ CM.Game = class {
     this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
     this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
-    this.awakened = Boolean(d.awakened); this.dream = Boolean(d.dream); this.rootPending = Boolean(d.rootPending); this.behind = d.behind || 0; this.fellFrom = d.fellFrom || null; this.orders = d.orders || []; this.bounty = d.bounty || null; this.blessedUntil = d.blessedUntil || 0; this.rumourBox = d.rumourBox || 0;
+    this.awakened = Boolean(d.awakened); this.dream = Boolean(d.dream); this.rootPending = Boolean(d.rootPending); this.behind = d.behind || 0; this.startedInTown = Boolean(d.startedInTown); this.fellFrom = d.fellFrom || null; this.orders = d.orders || []; this.bounty = d.bounty || null; this.blessedUntil = d.blessedUntil || 0; this.rumourBox = d.rumourBox || 0;
     this.morale = d.morale === undefined ? CM.MORALE.start : d.morale; this.fed = d.fed || 0; this.trail = d.trail || [];
     this.applyBonds();
     this.messages = [];
@@ -394,14 +394,16 @@ CM.Game = class {
     else if (this.kit === "abyss") { this.gold += 150; this.bag.push(CM.rope(), CM.gem("diamond"), CM.scroll("mapping")); for (const h of this.party) { h.level = 3; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }
     for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
     this.retiredThisRun = false;
-    this.enterFloor(1, "down");
+    const town = (opts || {}).town !== undefined ? Boolean((opts || {}).town) : !this.settings.skipWalk;   // (a run begins at the party's door, or at the shaft: Settings)
+    this.startedInTown = town;
+    this.enterFloor(town ? 0 : 1, "down");                                // (the town's own start is the party's door, facing down the lane)
     for (const h of this.party) {                                        // the origins' touches at the stair, and a trainer's word to their pupil
       if (h.origin === "east") this.gold += 20;
       if (h.origin === "caerduin") this.markRead("carving.catacombs.1");
       const t = this.trainerFor(h.cls); if (t && CM.TRAINER_LINES[h.cls]) this.say(`${t.name}, who taught ${h.name}: ${CM.TRAINER_LINES[h.cls]}`);
     }
     this.ironAllow = false;
-    this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
+    this.say((town ? "Four adventurers step out of their own door into the morning. The shaft is at the end of the lane; somewhere below it, the Lich King stirs." : "Four adventurers climb down into the dark. Somewhere below, the Lich King stirs.") + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
       + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : "")
       + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : "")
@@ -479,7 +481,7 @@ CM.Game = class {
     this.saveRun();
     if (fresh && this.has("pilgrim")) this.checkLevels();
     if (fl.wing !== undefined) { if (fresh) this.say(`${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)}: ${CM.WINGS[fl.wing].smell}. The only way on is the way down to the main stair.`); if (fresh && fl.secretWing) this.achieve("secretfloor"); else if (fresh) this.achieve("wings"); }
-    else if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
+    else if (fresh || how !== "fall") this.say(number === 0 ? `${CM.TOWN_THEME.name}: the square, the lanes, and the shaft's mouth at the end of the main lane.` : `Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && fl.hazard && CM.HAZARDS[CM.themeIndex(number)] && !this.hazardsSeen(fl.hazard)) this.say(CM.HAZARDS[CM.themeIndex(number)].note);
     if (fresh && number === CM.LAST_FLOOR + 1) this.say("The stair goes on below the palace, cut by no mason. The air is wet and old. The Deep begins here, and the carvings above never spoke of it.");

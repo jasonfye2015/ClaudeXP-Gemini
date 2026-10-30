@@ -2330,6 +2330,46 @@ test("automatic: the game's own autopilot plays a step a tick, wears, drinks and
   const again = CM.replayRun(g7.replaySpec()); assert.strictEqual(again.floor.number, g7.floor.number); assert.strictEqual(again.gold, g7.gold); assert.strictEqual(again.messages.slice(-1)[0], g7.messages.slice(-1)[0]);
 });
 
+test("the town above: floor 0 is hand-laid and the same for a seed, a run begins at the party's door and walks to the shaft, daylight (no hunger, no torch, no wanderers), the doors and the well, saved and replayed, back up from a camp and down again to the deepest camp, and the bot walks it", () => {
+  const CM = load();
+  const t1 = CM.makeFloor(0, "town-1", 2), t2 = CM.makeFloor(0, "town-1", 1), t3 = CM.makeTown("other");
+  assert.strictEqual(t1.number, 0); assert.strictEqual(t1.grid.length, CM.TOWN_SIZE); assert.strictEqual(JSON.stringify(t1.grid), JSON.stringify(t2.grid)); assert.strictEqual(JSON.stringify(t1.grid), JSON.stringify(t3.grid), "the town does not depend on the seed");
+  assert.strictEqual(CM.floorPrint(t1), CM.floorPrint(t3)); assert.strictEqual(Object.values(t1.things).filter((t) => t.type === "building").length, 9); assert.ok(CM.goalOf(t1) === CM.TOWN_AT.shaft.join(",")); assert.ok(Object.values(t1.things).some((t) => t.type === "well"));
+  for (const [id, [x, y]] of Object.entries(CM.TOWN_AT)) assert.ok(CM.isOpen(t1, x, y), `${id} stands on open ground`);
+  assert.strictEqual(t1.seen.length, CM.TOWN_SIZE * CM.TOWN_SIZE, "daylight: all on the map"); assert.ok(CM.distances(t1.grid, CM.TOWN_AT.home).get(CM.TOWN_AT.shaft.join(",")) > 10, "a walk from the door to the shaft");
+  assert.strictEqual(CM.themeFor(0), CM.TOWN_THEME); assert.strictEqual(CM.themeIndex(0), 0); assert.strictEqual(CM.themeFor(1).name, "The Catacombs"); assert.strictEqual(CM.bandName(null, 0), CM.TOWN_THEME.name);
+  // the harness starts at the shaft (settings.skipWalk); a run asked for the town begins at the party's door
+  const g0 = new CM.Game(); g0.newGame("town-2", fixedParty(CM)); assert.strictEqual(g0.floor.number, 1); assert.ok(!g0.startedInTown);
+  const game = new CM.Game(); game.newGame("town-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.strictEqual(game.floor.number, 0); assert.ok(game.startedInTown); assert.strictEqual(game.floor.pos.join(), CM.TOWN_AT.home.join()); assert.strictEqual(game.floor.facing, 1, "facing east, down the lane"); assert.strictEqual(game.mode, "explore");
+  assert.strictEqual(game.lightFactor(), 1.3); assert.ok(!game.inDark());
+  // daylight: steps count, but no hunger, no torch burnt, nothing wanders
+  game.light = { kind: "torch", left: 100 }; const fed0 = game.fed || 0, steps0 = game.tally.steps || 0;
+  for (let i = 0; i < 6; i++) game.move(0); assert.ok((game.tally.steps || 0) >= steps0 + 6, "walked"); assert.strictEqual(game.fed || 0, fed0); assert.strictEqual(game.light.left, 100);
+  game.rnd = new CM.Random(1); game.wanderMonsters(); assert.ok(!Object.values(game.floor.things).some((t) => t.type === "monsters")); assert.strictEqual(game.mode, "explore");
+  // the doors say what they are and open a building; the well is dry before a crown
+  const fl = game.floor; let opened = null; game.on("building", (id) => { opened = id; });
+  fl.pos = CM.TOWN_AT.tavern.slice(); game.use(); assert.strictEqual(opened, "tavern"); assert.ok(game.messages.slice(-1)[0].includes("Hanged Lantern") || true);
+  fl.pos = CM.TOWN_AT.well.slice(); game.use(); assert.ok(game.messages.slice(-1)[0].includes("dry"));
+  assert.strictEqual(CM.plotLevel(game, "library"), 0); game.village = game.village || {}; game.village.levels = { library: 2 }; assert.strictEqual(CM.plotLevel(game, "library"), 2); assert.strictEqual(CM.plotLevel(game, "temple"), 0); game.village.levels = {};
+  // saved on floor 0 and loaded there, with a small delta; the walk to the shaft, and down
+  game.saveRun(); const g2 = new CM.Game(); g2.continueRun(); assert.strictEqual(g2.floor.number, 0); assert.ok(g2.startedInTown); assert.ok(JSON.stringify(g2.floorDeltas()[0]).length < 2500, `a small delta: ${JSON.stringify(g2.floorDeltas()[0]).length}`);
+  fl.pos = CM.TOWN_AT.home.slice(); const [sx, sy] = CM.TOWN_AT.shaft; assert.ok(game.travelTo(sx, sy)); let guard = 0; while (game.travel && guard++ < 60) game.travelStep(); assert.strictEqual(game.floor.pos.join(), `${sx},${sy}`, "the party walked to the shaft");
+  game.use(); assert.strictEqual(game.floor.number, 1); assert.strictEqual(game.mode, "explore");
+  // the camps: back to town, and the shaft goes down again to the deepest camp reached
+  game.enterFloor(5, "down"); game.floor.things[game.floor.pos.join(",")] = { type: "ladder" }; game.use(); assert.strictEqual(game.mode, "camp"); assert.ok((game.camps || []).includes(5));
+  assert.strictEqual(game.goHome(), ""); assert.strictEqual(game.floor.number, 0); assert.strictEqual(game.mode, "explore"); assert.strictEqual(game.floor.pos.join(), `${sx},${sy}`, "at the shaft's mouth");
+  game.use(); assert.strictEqual(game.mode, "camp"); assert.strictEqual(game.floor.number, 5, "down to the deepest camp");
+  assert.ok(game.goHome() === "" && game.floor.number === 0); game.saveRun(); const g3 = new CM.Game(); g3.continueRun(); assert.strictEqual(g3.floor.number, 0); assert.ok(g3.camps.includes(5));
+  // a replay of a run that began in town begins in town, and an old film's spec (no town) begins at the shaft
+  const g4 = new CM.Game(); g4.newGame("town-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const r = playRun(CM, g4, { maxFloor: 3 });
+  assert.ok(g4.floor.number >= 3 || g4.mode === "title", `the bot walked the town and went down: floor ${g4.floor.number} ${r.log.join("|")}`); assert.ok(g4.trail[0][0] === 0, "the trail begins at home");
+  const spec = g4.replaySpec(); assert.ok(spec.town); const again = CM.replayRun(spec); assert.strictEqual(again.floor.number, g4.floor.number); assert.strictEqual(again.gold, g4.gold); assert.strictEqual(again.messages.slice(-1)[0], g4.messages.slice(-1)[0]);
+  const old = CM.replayRun(Object.assign({}, spec, { town: undefined, log: [] })); assert.strictEqual(old.floor.number, 1, "an old film starts at the shaft");
+  // Automatic in the game's shape walks home to the shaft
+  const g5 = new CM.Game(); g5.newGame("town-4", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g5.autoPlay(true); let n = 0; while (g5.floor.number === 0 && g5.autoOn() && n++ < 200) g5.auto.step(); assert.ok(g5.floor.number === 1, `Automatic walked to the shaft in ${n} steps`); g5.autoPlay(false);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

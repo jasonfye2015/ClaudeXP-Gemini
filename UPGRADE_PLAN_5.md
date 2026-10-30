@@ -23,7 +23,7 @@ party with every run it brings back.**
 | Trophies and named weapons are lines in the compendium | They hang on the home's wall, and the memorial's names are on its door |
 | Renown buys four buildings' levels | Renown raises the whole town, building by building, and the map fills in |
 
-## Phase 0 - The ground of the town - v5.2
+## Phase 0 - The ground of the town - v5.2 - DONE
 
 - **Floor 0 exists.** `CM.makeTown(seed, village)` builds a hand-laid floor (a template in `20-world.js`, not a
   generator: the generators and their fixtures do not move): a square with a well, four lanes, the shaft's

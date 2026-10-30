@@ -39,15 +39,15 @@ window.addEventListener("DOMContentLoaded", () => {
   const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
-    if ((i === themeOn && look === lookOn && Boolean(game.dream) === dreamOn) || !renderer.ok) return;
-    const key = `${look}:${i}${game.dream ? ":dream" : ""}`;
+    if (((number === 0 ? -2 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn) || !renderer.ok) return;
+    const town = number === 0, key = town ? `${look}:town` : `${look}:${i}${game.dream ? ":dream" : ""}`;
     if (!artCache[key]) {
-      artCache[key] = CM.art.build(game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
+      artCache[key] = CM.art.build(town ? CM.TOWN_THEME : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
       while (cacheOrder.length > 3) delete artCache[cacheOrder.shift()];      // (the stone's textures are large: a few depths at a time)
     }
     renderer.setTextures(artCache[key]);
-    themeOn = i; lookOn = look; dreamOn = Boolean(game.dream);
+    themeOn = number === 0 ? -2 : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -109,6 +109,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
   game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
     if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
+    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, "The town on the hill, and the shaft the hill was never asked about."); return; }
     const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
     if (!ch) return;
     if ((fl.number - 1) % 5 === 0) ui.titleCard(CM.bandName(game, fl.number), game.dream ? "What Caer Duin might have been." : ch.epigraph);
@@ -358,6 +359,8 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "node") { const look = (CM.NODES[thing.band] || CM.NODES[0])[1], flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.9 : 0.6, h: flat ? 0.9 : 0.5, flat, glow: look === "crystal" ? 0.3 : 0 }); }
       else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
+      else if (thing.type === "building") out.push({ x, y, layer: CM.plotLevel(game, thing.id) || thing.id === "home" ? "house" : "foundation", w: 1.0, h: 1.0 });
+      else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });
       else if (thing.type === "wingstair" || thing.type === "wingexit") out.push({ x, y, layer: "hatch", w: 0.8, flat: true, shade: 0.75 });
       else if (thing.type === "wingstair_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
