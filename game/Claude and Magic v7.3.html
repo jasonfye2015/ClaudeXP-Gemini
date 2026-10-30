@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v7.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v7.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -437,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "7.2", built: "2026-10-30" };
+const CM = window.CM = { version: "7.3", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1614,7 +1614,7 @@ CM.KEYS_HELP = [
 //
 //   CM.t("stats.runs", { n: 12 })   ->  "12 expeditions"
 CM.TEXT = {
-  "farm.title": "The farm in the First Glade", "farm.fallow": "A fallow field, fenced long ago. The farm is raised at the town's board, with renown: a field first, then an orchard, a mill, hens, a cow.", "farm.back": "Back to the path",
+  "farm.title": "The farm, in the fields below the town", "farm.fallow": "A fallow field, fenced long ago. The farm is raised at the town's board, with renown: a field first, then an orchard, a mill, hens, a cow.", "farm.back": "Back to the path",
   "hut.title": "The hermit's hut", "hut.lead": "\"Hides I'll take, by daylight. Trouble I won't.\" The hermit tans and stitches for 20 gold a piece.", "hut.walk": "Walk on",
   "stats.title": "Statistics",
   "stats.none": "No expedition has ended yet. The numbers begin with the first.",
@@ -4386,8 +4386,11 @@ CM.houseStage = (level, most) => (level <= 0 ? 0 : most <= 1 ? 4 : Math.max(1, M
 // give no renown and little gold: hides and meat, and the night's danger. The dungeon's floors do not change by a cell.
 CM.WOOD_THEME = { name: "The Deep Wood", floors: [-1, -1], stone: [58, 84, 46], mortar: [34, 52, 28], floor: [78, 104, 52], ceiling: [140, 170, 205],
   moss: [120, 160, 70], fog: [0.01, 0.014, 0.008], torch: [1.0, 0.95, 0.85], reach: 7.0, bones: 0, tree: true, sky: true };
-CM.WOOD_SIZE = 31;
-CM.WOOD_GATE = [29, 15];                                                 // the Wood's end of the gate; the town's end is CM.TOWN_AT.woodgate
+CM.WOOD_SIZE = 61;
+CM.WOOD_GATE = [59, 30];                                                 // the land's end of the West Gate: the town is east, up the hill; the land lies west
+CM.LAND_ROAD = [[44, 30, 59, 30], [44, 30, 44, 33], [24, 33, 44, 33]];   // the road from the gate, bending south at the farm, to the ford
+CM.FIELDS = [40, 20, 57, 42];                                            // the fields between the hill and the river
+CM.riverX = (y) => 22 + Math.round(Math.sin(y / 5) * 2);                 // where the river runs, north to south
 CM.WOOD_NODES = [["a patch of mushrooms", "fungus"], ["a bramble of berries", "nest"], ["herbs by the path", "nest"], ["a stand of deadwood", "ember"], ["a beehive in a hollow oak", "nest"]];
 CM.CAVE_OF = (number) => Math.round((-number - 1.5) * 10);              // -1.5 -> 0, -1.6 -> 1, -1.7 -> 2
 CM.caveNumber = (n) => -(1.5 + n / 10);
@@ -4398,36 +4401,77 @@ CM.WOOD_LINES = {
   caveShut: "The cave's mouth is choked with fallen rock today. The Wood opens one a day, the hermit says, and never says which.",
 };
 CM.woodCache = {};
+// the land: from the gate in the cliffs at the hill's foot, the road west through the fields and past the farm to the
+// river's ford (a plank bridge a little north of it, found by walking), and over the river the forest - the first glade
+// just past the ford, safe at any hour, seven more joined by paths under the trees, and deep among them the hermit's
+// hut, the ruined shrine, the charcoal burner's clearing and the three cave mouths; things to gather along the paths
 CM.makeWood = function (seed) {
   if (CM.woodCache[seed]) return JSON.parse(CM.woodCache[seed]);
-  const size = CM.WOOD_SIZE, rnd = new CM.Random(CM.hashSeed(`${seed}:wood`)), grid = [];
+  const size = CM.WOOD_SIZE, rnd = new CM.Random(CM.hashSeed(`${seed}:wood`)), grid = [], kinds = {}, ground = {}, features = {}, decor = [], things = {};
   for (let y = 0; y < size; y++) grid.push(new Array(size).fill(1));
-  const open = (x, y) => { if (x > 0 && y > 0 && x < size - 1 && y < size - 1) grid[y][x] = 0; };
-  const carve = (cx, cy, rx, ry) => { for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++) if (((x - cx) / (rx + 0.5)) ** 2 + ((y - cy) / (ry + 0.5)) ** 2 <= 1) open(x, y); };
-  const path = (a, b) => { let [x, y] = a; while (x !== b[0] || y !== b[1]) { open(x, y); if (x !== b[0] && (y === b[1] || rnd.chance(0.6))) x += Math.sign(b[0] - x); else y += Math.sign(b[1] - y); } open(x, y); };
-  const glades = [[26, 15]];                                             // the first glade, just inside the gate: safe at any hour
-  let guard = 0; while (glades.length < 8 && guard++ < 400) { const c = [rnd.int(4, 24), rnd.int(4, 26)]; if (glades.every((g) => Math.abs(g[0] - c[0]) + Math.abs(g[1] - c[1]) >= 7)) glades.push(c); }
-  glades.forEach((g, i) => carve(g[0], g[1], i === 0 ? 3 : rnd.int(2, 4), i === 0 ? 2 : rnd.int(2, 3)));
+  const key = (x, y) => `${x},${y}`;
+  const open = (x, y, g) => { if (x >= 0 && y >= 0 && x < size && y < size) { grid[y][x] = 0; delete kinds[key(x, y)]; if (g) ground[key(x, y)] = g; } };
+  const solid = (x, y, kind) => { grid[y][x] = 1; if (kind === "tree") delete kinds[key(x, y)]; else kinds[key(x, y)] = kind; delete ground[key(x, y)]; };
+  const rect = ([x0, y0, x1, y1], fn) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fn(x, y); };
+  const carve = (cx, cy, rx, ry, g) => { for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++) if (((x - cx) / (rx + 0.5)) ** 2 + ((y - cy) / (ry + 0.5)) ** 2 <= 1) open(x, y, g); };
+  const path = (a, b, g = "dirt") => { let [x, y] = a; while (x !== b[0] || y !== b[1]) { open(x, y, g); if (x !== b[0] && (y === b[1] || rnd.chance(0.6))) x += Math.sign(b[0] - x); else y += Math.sign(b[1] - y); } open(x, y, g); };
+  // the hill's foot: cliffs along the east edge, the gate in them, the road running out of it
+  for (let y = 0; y < size; y++) for (let x = size - 3; x < size; x++) solid(x, y, "cliff");
+  // the fields: grass between the hill and the river, hedged pastures, the farm's tilled rows inside a fence by the road's bend, copses in the corners
+  rect(CM.FIELDS, (x, y) => open(x, y, "grass"));
+  for (const r of [[41, 22, 48, 22], [41, 22, 41, 27], [50, 36, 56, 36], [50, 36, 50, 41]]) rect(r, (x, y) => solid(x, y, "hedge"));
+  rect([45, 34, 49, 37], (x, y) => open(x, y, "tilled"));
+  for (const r of [[44, 34, 44, 38], [50, 34, 50, 38], [44, 38, 50, 38]]) rect(r, (x, y) => solid(x, y, "fence"));
+  for (const [cx, cy] of [[43, 25], [55, 24], [54, 40], [42, 40]]) for (let i = 0; i < 5; i++) { const x = cx + rnd.int(-2, 2), y = cy + rnd.int(-2, 2); if (grid[y][x] === 0 && ground[key(x, y)] === "grass") solid(x, y, "tree"); }
+  for (const r of CM.LAND_ROAD) rect(r, (x, y) => open(x, y, "dirt"));
+  open(CM.WOOD_GATE[0], CM.WOOD_GATE[1], "dirt"); open(size - 1, CM.WOOD_GATE[1], "dirt");
+  things[key(...CM.WOOD_GATE)] = { type: "woodgate" };
+  // the river, with the ford where the road meets it and a plank bridge to the north
+  const fordY = 33, bridgeY = 26;
+  for (let y = 0; y < size; y++) {
+    const rx = CM.riverX(y);
+    open(rx, y, "dirt");
+    if (y === bridgeY) { ground[key(rx, y)] = "planks"; continue; }
+    decor.push({ kind: "water", x: rx, y });
+    if (y !== fordY) features[key(rx, y)] = { type: "river" };
+  }
+  // over the river: the forest, the first glade just past the ford, seven more joined by paths
+  const first = [CM.riverX(fordY) - 5, fordY], glades = [first];
+  let guard = 0; while (glades.length < 8 && guard++ < 600) { const c = [rnd.int(4, 17), rnd.int(4, 56)]; if (glades.every((g) => Math.abs(g[0] - c[0]) + Math.abs(g[1] - c[1]) >= 8)) glades.push(c); }
+  glades.forEach((g, i) => carve(g[0], g[1], i === 0 ? 3 : rnd.int(2, 4), i === 0 ? 2 : rnd.int(2, 3), "grass"));
   for (let i = 1; i < glades.length; i++) path(glades[i - 1], glades[i]);
-  const fordY = glades[Math.min(2, glades.length - 1)][1];               // the river, and its one ford on the third glade's row
-  path([4, fordY], [26, fordY]);
-  path(glades[0], CM.WOOD_GATE); open(CM.WOOD_GATE[0], CM.WOOD_GATE[1]);
-  const features = {}, decor = [], things = {};
-  for (let y = 1; y < size - 1; y++) { const rx = 11 + Math.round(Math.sin(y / 4) * 2); open(rx, y); decor.push({ kind: "water", x: rx, y }); if (y !== fordY) features[`${rx},${y}`] = { type: "river" }; }
-  const cells = []; for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !features[`${x},${y}`]) cells.push([x, y]);
-  const farFromGate = (c) => Math.abs(c[0] - CM.WOOD_GATE[0]) + Math.abs(c[1] - CM.WOOD_GATE[1]) >= 8;
-  const take = (ok) => { for (let g = 0; g < 200; g++) { const c = cells[rnd.int(0, cells.length - 1)], k = `${c[0]},${c[1]}`; if (!things[k] && (!ok || ok(c))) { return k; } } return null; };
-  things[`${CM.WOOD_GATE[0]},${CM.WOOD_GATE[1]}`] = { type: "woodgate" };
-  for (let n = 0; n < 3; n++) { const k = take(farFromGate); if (k) things[k] = { type: "cave", n }; }
-  for (const type of ["hut", "shrine", "burner"]) { const k = take(farFromGate); if (k) things[k] = { type }; }
-  for (let i = 0; i < 8; i++) { const k = take(); if (k) things[k] = { type: "node", band: -1, forage: i % CM.WOOD_NODES.length }; }
-  const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen: [], rooms: glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), decor, special: "wood", glades, ford: [11 + Math.round(Math.sin(fordY / 4) * 2), fordY],
-    solidDefault: "tree", kinds: {}, ground: {} };
-  for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0) CM.setGround(fl, x, y, features[`${x},${y}`] || decor.some((d) => d.x === x && d.y === y) ? "dirt" : "grass");   // (grass; the river's bed is mud)
+  path([CM.riverX(fordY) - 1, fordY], first);                           // from the ford into the first glade
+  path([CM.riverX(bridgeY) - 1, bridgeY], first);                       // from the bridge too
+  path([CM.riverX(bridgeY) + 1, bridgeY], [44, 30]);                    // and the bridge's track east through the trees to the road's bend
+  // deep in the forest, far from the ford: the hut, the shrine, the burner, three cave mouths; things to gather along the ways
+  const cells = []; for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !features[key(x, y)] && !things[key(x, y)] && (ground[key(x, y)] === "grass" || ground[key(x, y)] === "dirt")) cells.push([x, y]);
+  const deep = (c) => c[0] < CM.riverX(c[1]) - 1 && Math.abs(c[0] - first[0]) + Math.abs(c[1] - first[1]) >= 9;
+  const take = (ok) => { for (let g = 0; g < 400; g++) { const c = cells[rnd.int(0, cells.length - 1)], k = key(c[0], c[1]); if (!things[k] && (!ok || ok(c))) return k; } return null; };
+  for (let n = 0; n < 3; n++) { const k = take(deep); if (k) things[k] = { type: "cave", n }; }
+  for (const type of ["hut", "shrine", "burner"]) { const k = take(deep); if (k) things[k] = { type }; }
+  for (let i = 0; i < 8; i++) { const k = take((c) => c[0] < CM.riverX(c[1])); if (k) things[k] = { type: "node", band: -1, forage: i % CM.WOOD_NODES.length }; }
+  const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen: [], decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
+    solidDefault: "tree", kinds, ground,
+    rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };
   CM.markCanopy(fl);
   CM.woodCache[seed] = JSON.stringify(fl);
   return JSON.parse(CM.woodCache[seed]);
 };
+CM.makeLand = CM.makeWood;
+// where the party stands on the land, by name - and the places the beasts keep off
+CM.woodPlace = function (fl, x, y) {
+  if (!fl || fl.number !== -1) return null;
+  const t = fl.things[`${x},${y}`];
+  if (t && t.type === "woodgate") return "the West Gate";
+  if (t && t.type === "farm") return "the farm";
+  if (fl.ford && x === fl.ford[0] && y === fl.ford[1]) return "the ford";
+  if (fl.bridge && x === fl.bridge[0] && y === fl.bridge[1]) return "the bridge";
+  if (CM.LAND_ROAD.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1)) return "the road";
+  const room = (fl.rooms || []).find((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
+  if (room) return room.name;
+  return x < CM.riverX(y) ? "the Deep Wood" : "the river's bank";
+};
+CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
 CM.woodCaveAt = (seed, n) => { const fl = CM.makeWood(seed); return Object.keys(fl.things).find((k) => fl.things[k].type === "cave" && fl.things[k].n === n) || CM.WOOD_GATE.join(","); };
 // a cave: a short floor of the first bands' kinds, carved as any floor of its own key, with the way out where the stair was;
 // the third cave has a troll under the hill at its far end
@@ -8644,7 +8688,7 @@ Object.assign(CM.Game.prototype, {
     for (const [k, t] of Object.entries(fl.things)) if (t.type === "monsters" && t.wood && (newDay || t.wood !== (night ? "night" : "day"))) delete fl.things[k];   // (a new day, or the other half of it: other beasts)
     const have = Object.values(fl.things).filter((t) => t.type === "monsters" && t.wood).length;
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:woodbands:${CM.dayOf(this)}:${night ? 1 : 0}`)), bands = CM.woodBands(night, CM.fullMoon(this));
-    const cells = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = `${x},${y}`; if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && Math.abs(x - CM.WOOD_GATE[0]) + Math.abs(y - CM.WOOD_GATE[1]) >= 9 && !(Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 3)) cells.push(k); }
+    const cells = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = `${x},${y}`; if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && !CM.woodSafe(fl, x, y) && Math.abs(x - CM.WOOD_GATE[0]) + Math.abs(y - CM.WOOD_GATE[1]) >= 9 && !(Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 3)) cells.push(k); }
     for (let i = have; i < 4 && cells.length; i++) {
       const kinds = bands[rnd.int(0, bands.length - 1)], level = night ? 5 : 3, group = kinds.map((n) => this.tune(CM.makeMonster(CM.monsterKind(n), level, rnd)));
       for (const m of group) m.gold = Math.floor(m.gold / 4);
@@ -13611,8 +13655,8 @@ CM.seed = (crop) => ({ name: `${CM.CROPS[crop].name} seed`, kind: "seed", crop, 
 for (const crop of Object.keys(CM.CROPS)) CM.BASES[`${CM.CROPS[crop].name} seed`] = { id: `${CM.CROPS[crop].name} seed`, kind: "seed", slot: null, tier: 0, group: "stuff" };
 CM.FARM = { stages: 4, rotAfter: 3, crows: 10, hens: 3, cowWeek: 7, handSeason: 90, handGold: 30, venisonEvery: 45, rows: [0, 4, 4, 4, 6, 6], eggsMost: 21 };
 CM.HOW_FOUND.farm = "from the farm";
-CM.FARM_AT = [25, 14];                                                   // the farm's gate, in the First Glade (set when the Wood is made)
-{ const mw = CM.makeWood; CM.makeWood = function (seed) { const fl = mw(seed); if (!Object.values(fl.things).some((t) => t.type === "farm")) { const k = [CM.FARM_AT, [25, 15], [26, 14], [24, 15], [26, 16], [24, 14]].map((c) => c.join(",")).find((c) => !fl.things[c] && !fl.features[c] && fl.grid[Number(c.split(",")[1])][Number(c.split(",")[0])] === 0); if (k) fl.things[k] = { type: "farm" }; } return fl; }; }   // (placed last, by no die: the Wood's other things stand where they stood)
+CM.FARM_AT = [46, 31];                                                   // the farm's gate, in the fields by the road's bend (set when the land is made)
+{ const mw = CM.makeWood; CM.makeWood = function (seed) { const fl = mw(seed); if (!Object.values(fl.things).some((t) => t.type === "farm")) { const k = [CM.FARM_AT, ...CM.DIRS.map(([dx, dy]) => [CM.FARM_AT[0] + dx, CM.FARM_AT[1] + dy])].map((c) => c.join(",")).find((c) => !fl.things[c] && !fl.features[c] && fl.grid[Number(c.split(",")[1])][Number(c.split(",")[0])] === 0); if (k) fl.things[k] = { type: "farm" }; } return fl; }; }   // (placed last, by no die: the Wood's other things stand where they stood)
 Object.assign(CM.Game.prototype, {
   farm() { this.village = this.village || {}; const F = this.village.farm = this.village.farm || { rows: [], store: [], seeds: {}, days: 0, scarecrow: false, cowFed: 0, hand: 0, order: null, venison: 0, notes: [] }; F.rows = F.rows || []; F.store = F.store || []; F.seeds = F.seeds || {}; F.notes = F.notes || []; return F; },
   farmRows() { return CM.FARM.rows[Math.min(this.villageLevel("farm"), CM.FARM.rows.length - 1)]; },

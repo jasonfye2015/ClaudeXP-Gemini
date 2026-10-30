@@ -714,7 +714,7 @@ Object.assign(CM.Game.prototype, {
     for (const [k, t] of Object.entries(fl.things)) if (t.type === "monsters" && t.wood && (newDay || t.wood !== (night ? "night" : "day"))) delete fl.things[k];   // (a new day, or the other half of it: other beasts)
     const have = Object.values(fl.things).filter((t) => t.type === "monsters" && t.wood).length;
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:woodbands:${CM.dayOf(this)}:${night ? 1 : 0}`)), bands = CM.woodBands(night, CM.fullMoon(this));
-    const cells = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = `${x},${y}`; if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && Math.abs(x - CM.WOOD_GATE[0]) + Math.abs(y - CM.WOOD_GATE[1]) >= 9 && !(Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 3)) cells.push(k); }
+    const cells = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = `${x},${y}`; if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && !CM.woodSafe(fl, x, y) && Math.abs(x - CM.WOOD_GATE[0]) + Math.abs(y - CM.WOOD_GATE[1]) >= 9 && !(Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 3)) cells.push(k); }
     for (let i = have; i < 4 && cells.length; i++) {
       const kinds = bands[rnd.int(0, bands.length - 1)], level = night ? 5 : 3, group = kinds.map((n) => this.tune(CM.makeMonster(CM.monsterKind(n), level, rnd)));
       for (const m of group) m.gold = Math.floor(m.gold / 4);
