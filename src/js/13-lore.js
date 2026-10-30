@@ -333,15 +333,42 @@ CM.PARLEY = {
     death: "IT WAKES, the stone says, and then there is no one to say anything.", deathSpoken: "NOT TODAY, it says. THEN TOMORROW.",
     after: "Here the dreamer lay. It is still now, or it is dreaming something quieter." },
   boss: { open: "The Lich King rises from his throne. \"You took your time,\" he says. He looks at each of you in turn, the way a man counts coins. \"Four. It is always four. I was one of four, once. We came down a stair like yours.\"",
-    speak: [], gate: null, good: "", bad: "", death: "", deathSpoken: "", after: "" },
+    speak: [], gate: { remind: true, label: "Remind him who he was. (The Palace's chapter is read, and his heart is smashed.)" }, good: "", bad: "", death: "", deathSpoken: "", after: "" },
 };
 CM.gateOpen = function (game, G) {                                        // whether the party holds a guardian's gate
   if (!G) return false;
   if (G.key) return Boolean(game.story && game.story.read[G.key] !== undefined);
   if (G.item) return game.bag.some((i) => i.kind === G.item);
   if (G.holy) return game.bag.some((i) => (i.props || {}).element === "holy") || game.party.some((h) => CM.equipped(h).some((i) => (i.props || {}).element === "holy"));
+  if (G.remind) return Boolean(game.phylactery) && CM.codex(game).some((c) => c.id === "palace" && c.lines.filter((l) => l.key.startsWith("carving.")).every((l) => l.read));
   return false;
 };
+
+// ---- the court of the Lich King: the seated dead of floors 16-19, who speak if the party stands before them; three
+// clues to where the heart is kept; and the five things that remind Mordeth who he was ----
+CM.COURT = [
+  { name: "The Chancellor", floor: 16, line: "A man in a chain of office, seated, grey to the bone. \"Petitions on the left,\" he says without moving his jaw. \"You want to know where he keeps it. They all do. Where he kept the box: by the bed he does not sleep in. Not the throne room. The floor above it, where the stone was laid last.\"", clue: true },
+  { name: "The Master Mason", floor: 17, line: "A broad shape with a plumb line in its lap. \"We laid the floor above the throne room last,\" it says. \"He stood over us while we did it. It rings hollow. We were told not to notice.\"" },
+  { name: "The Captain's Widow", floor: 17, line: "A woman seated very straight, in black gone brown. \"He asked for my husband by name. By name. I have not heard it said since. Say it, if you have read it. No - don't. I would only start to listen for it again.\"" },
+  { name: "A Lady-in-Waiting", floor: 18, line: "A girl, or what was a girl, with her hands folded. \"The queen used to sing,\" she says. \"Not well. He loved it. When she was gone he had the bells taken down so nothing would sound like her. Then he went down, and she was there, and she sang. I think that was the end of him, not the plague.\"" },
+  { name: "The Physician's Body", floor: 19, line: "Hollis, or the part of him that sat. \"The body need not know,\" it says, with great satisfaction. \"I wrote that. I am the proof of it. Ask me where his heart is and I will tell you: nowhere I was ever let see.\"" },
+];
+CM.COURT.forEach((c, i) => L(`court.${i + 1}`, "palace", 10 + i, c.line, { who: c.name, floor: c.floor }));
+CM.PAGE = { name: "The physician's page", kind: "page", power: 0, value: 0,
+  text: "The one page that survived the burning, in Hollis's quick hand: 'the heart may be kept apart, and the body need not know. He has had a place made for it where he lies at night and does not sleep: the floor above the throne room, under the last stone.'" };
+CM.HEART_CLUES = ["court.1", "carving.palace.3", "thing.page"];       // (a courtier's word, the wall on floor 18, the page: all three, and the box is marked on the throne room's map)
+CM.heartKnown = (game) => CM.HEART_CLUES.every((k) => (game.story && game.story.read[k] !== undefined) || (k === "thing.page" && game.bag.some((i) => i.kind === "page")));
+// to remind him: five things, each wanting a line the party has read; any gap, and he draws
+CM.REMIND = [
+  { key: "carving.drowned.4", ask: "\"Four,\" the king says. \"I was one of four. We had a - there was a -\" He stops. \"There was someone. I have forgotten the name.\"", say: "Her name was Aelith.", back: "\"Aelith.\" The cold in the hall thins, a little. \"Yes. Aelith. She sang. Not well.\"" },
+  { key: "carving.catacombs.3", ask: "\"When she died I had something done. Something with - I cannot think what. Something that made a sound.\"", say: "The bells. You had the bells taken down.", back: "\"The bells. So that nothing would sound like her. And one of them still rings. I hear it. I thought I was imagining it.\"" },
+  { key: "carving.catacombs.2", ask: "\"There was a year. A bad year. Everything after is that year, still. Which year was it?\"", say: "The twelfth of your reign. The plague came up the river.", back: "\"The twelfth. I wept for the first of them. I remember weeping. I remember when I stopped.\"" },
+  { key: "carving.vaults.1", ask: "\"Someone came. From - somewhere. He brought me a thing and I kept it by the bed. What was it? It talked.\"", say: "A box. From a man who was not from the east, whatever the walls say.", back: "\"A box. Orrin's box. He was from the Foundry; I knew his father. It talked and I listened. I listened for a very long time.\"" },
+  { key: "carving.palace.4", ask: "\"And what did I do, at the end? What did I let him do to me? I cannot - it is like reaching for a word.\"", say: "You had your heart taken out and kept apart. We found it. We ended it.", back: "He puts a hand to his chest, where there is nothing, and holds it there. \"Then it is done already,\" Mordeth says. \"Then I only have to agree.\"" },
+];
+CM.REMIND_END = "The king sits down on his throne for the first time in a long time, as a man sits who has walked a great way. \"Aelith,\" he says, and the crown comes off in his hands, and he sets it on the arm of the throne, and the cold goes out of the stone without any blow struck, and the court around him breathes out, once, all together, and is dust.";
+CM.REMIND_FAIL = "He waits for the word, and it does not come. \"No,\" the Lich King says, and the hall is cold again. \"No. You do not know me. Then you are only four more.\" He draws.";
+CM.REMIND_COURT = ["On the way up the court sits with its eyes shut, and does not stand when you pass.", "On the seventeenth floor the Master Mason has laid his plumb line down.", "On the sixteenth the Chancellor's chain of office lies on the floor, and the chair is empty."];
 
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)
 CM.LORE_KEYS = [];

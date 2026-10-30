@@ -1484,6 +1484,61 @@ test("the guardians speak: three exchanges and a gate each, better and worse ter
   assert.ok((g5.tally.guardians || []).includes("rat") || (g5.tally.spoken || []).includes("rat") || g5.mode === "title", "the bot got past the Rat King, or fell trying");
 });
 
+test("the court of the Lich King: the seated dead on 16-19, three clues and the heart marked on the map, and the quiet ending - remind him, or draw", () => {
+  const CM = load();
+  assert.strictEqual(CM.COURT.length, 5); assert.ok(CM.COURT.every((c) => c.floor >= 16 && c.floor <= 19 && c.line));
+  assert.strictEqual(CM.REMIND.length, 5); for (const r of CM.REMIND) assert.ok(CM.LORE_TEXT[r.key] && r.ask && r.say && r.back, r.key);
+  for (const seed of ["court-1", "court-2"]) {
+    let pages = 0;
+    for (let n = 16; n <= 19; n++) {
+      const fl = CM.makeFloor(n, seed, 2);
+      for (const [i, c] of CM.COURT.entries()) if (c.floor === n) assert.ok(Object.values(fl.things).some((t) => t.type === "ghost" && t.courtier === i), `${c.name} sits on floor ${n} of ${seed}`);
+      pages += Object.values(fl.things).filter((t) => t.type === "chest" && t.items.some((i) => i.kind === "page")).length;
+    }
+    assert.strictEqual(pages, 1, `${seed}: the physician's page in one chest of the palace`);
+  }
+  // the heart hunt: a word from the Chancellor, the wall on 18, the page - and the box is marked on the throne room's map
+  const game = new CM.Game(); game.newGame("court-1", fixedParty(CM));
+  game.enterFloor(16, "down");
+  const [ck, ct] = Object.entries(game.floor.things).find(([, t]) => t.type === "ghost" && t.courtier === 0);
+  game.floor.pos = ck.split(",").map(Number); game.talk(ct, ck);
+  assert.strictEqual(game.story.read["court.1"], 16); assert.ok(!game.story.heartKnown);
+  game.markRead("carving.palace.3"); game.bag.push(Object.assign({}, CM.PAGE)); game.markRead("carving.palace.5");
+  assert.ok(game.story.heartKnown, "three clues: known"); assert.ok(game.journal.some((e) => e.key === "heart.known"));
+  game.enterFloor(19, "down");
+  const [pk] = Object.entries(game.floor.things).find(([, t]) => t.type === "phylactery");
+  assert.ok(game.floor.seen.some(([x, y]) => `${x},${y}` === pk), "the box is on the map before it is seen");
+  game.enterFloor(20, "down");
+  // the king's door: without the chapter and the smashed heart, fight is all there is; with them, remind him - and a gap means he draws
+  let asked = null; game.on("choice", (c) => { asked = c; });
+  const [bk, bt] = Object.entries(game.floor.things).find(([, t]) => t.type === "boss");
+  const toDoor = (g, k) => { const [gx, gy] = k.split(",").map(Number); const d = CM.DIRS.findIndex(([dx, dy]) => CM.passable(g.floor, gx - dx, gy - dy)); g.floor.pos = [gx - CM.DIRS[d][0], gy - CM.DIRS[d][1]]; g.floor.facing = d; };
+  toDoor(game, bk); game.move(0);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(asked.options)), ["Fight"]);
+  for (const k of ["carving.palace.1", "carving.palace.2", "carving.palace.4"]) game.markRead(k);
+  game.phylactery = true; bt.talk = 0;
+  asked = null; game.move(0);
+  assert.strictEqual(asked.options.length, 2, "remind him is offered");
+  game.parley(bk, 1);
+  assert.ok(asked.remind && asked.options.length === 1, "the queen's name is not known: only silence");
+  game.parley(bk, 0);
+  assert.strictEqual(game.mode, "combat", "a gap, and he draws");
+  // and with every line read, the quiet ending
+  const g2 = new CM.Game(); g2.newGame("court-2", fixedParty(CM)); g2.enterFloor(20, "down");
+  for (const k of ["carving.palace.1", "carving.palace.2", "carving.palace.3", "carving.palace.4", "carving.palace.5"].concat(CM.REMIND.map((r) => r.key))) g2.markRead(k);
+  g2.phylactery = true;
+  asked = null; g2.on("choice", (c) => { asked = c; });
+  const [bk2, bt2] = Object.entries(g2.floor.things).find(([, t]) => t.type === "boss");
+  toDoor(g2, bk2); g2.move(0); g2.parley(bk2, 1);
+  for (let i = 0; i < 5; i++) { assert.ok(asked.remind && asked.options.length === 2, `exchange ${i + 1}`); g2.parley(bk2, 0); }
+  assert.ok(g2.crowned && g2.reminded && g2.mode === "explore" && g2.achievements.merciful, "crowned without a blow");
+  assert.strictEqual(g2.floor.things[bk2].type, "ladder"); assert.ok(g2.journal.some((e) => e.key === "ending.quiet"));
+  g2.saveRun(); const g3 = new CM.Game(); g3.continueRun(); assert.ok(g3.reminded, "the save remembers");
+  for (const h of g3.party) h.hp = 0; g3.endRun(true);
+  assert.ok(g3.fame[0].reminded && CM.summaryText(g3.fame[0]).includes("Reminded"));
+  void bt;
+});
+
 (async () => {
   let failed = 0;
   for (const t of tests) {

@@ -696,6 +696,15 @@ CM.furnish = function (floor, seed, gen) {
       }
     });
     if (number === CM.BELL_FLOOR) { const k = pickCell("bell", (c) => !roomCells.has(c)) || pickCell("bell"); if (k) floor.things[k] = { type: "bones", bell: true }; }
+    CM.COURT.forEach((c, i) => {                                        // the seated dead of the palace, and the physician's page in one of its chests
+      if (c.floor !== number) return;
+      const k = pickCell(`court:${i}`, (cell) => roomCells.has(cell)) || pickCell(`court:${i}`);
+      if (k) floor.things[k] = { type: "ghost", courtier: i, asked: false };
+    });
+    if (number === CM.LAST_FLOOR - 4 + (CM.hashSeed(`${seed}:page`) % 3)) {   // (one floor of the three, by the seed alone)
+      const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest").sort();
+      if (chests.length) floor.things[chests[h("page:chest") % chests.length]].items.push(Object.assign({}, CM.PAGE));
+    }
   }
   return floor;
 };

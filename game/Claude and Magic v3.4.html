@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v3.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v3.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -397,7 +397,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "3.3", built: "2026-10-30" };
+const CM = window.CM = { version: "3.4", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1168,6 +1168,7 @@ CM.ACHIEVEMENTS = {
   chronicler: { name: "The Chronicler", what: "Read every carving of every band, in one expedition", title: "the Chronicler" },
   bellringer: { name: "Bell-ringer", what: "Bring Brother Cael the last bell of Caer Duin", title: "the Bell-ringer" },
   witness: { name: "The Witness", what: "Grant every one of the twelve their third request", title: "the Witness" },
+  merciful: { name: "The Merciful", what: "Remind the Lich King who he was, and let him end himself", title: "the Merciful" },
   softspoken: { name: "The Soft-Spoken", what: "Pass three guardians by speech, without a blow", title: "the Soft-Spoken" },
   laidtorest: { name: "Laid to Rest", what: "Lay a fallen hero of your own to rest where they fell", title: "the Faithful" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
@@ -1211,7 +1212,7 @@ CM.summaryText = function (e) {
   const d = CM.DIFFICULTIES[e.difficulty] ? CM.DIFFICULTIES[e.difficulty].name : "Fair", t = e.tally || {};
   const lines = [`Claude and Magic - ${e.name}'s ${e.endless ? "Endless " : ""}expedition (${d})${e.mutators && e.mutators.length ? `, ${e.endless ? "the dark deepened" : "today's dungeon"}: ${e.mutators.map((m) => CM.MUTATORS[m] ? CM.MUTATORS[m].name : m).join(" and ")}` : ""}`,
     `${CM.endlessFall(e) ? `Floor ${e.floor} of the endless dark${e.won ? ", with the Lich King's crown" : ""}` : e.bottom ? "To the bottom of the world, floor " + CM.BOTTOM
-      : e.won && e.floor > CM.LAST_FLOOR ? `Slew the Lich King, and fell on floor ${e.floor} of the Deep` : e.won ? "Slew the Lich King on floor " + CM.LAST_FLOOR : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}`}, with ${(e.gold || 0).toLocaleString()} gold - seed ${e.seed || "?"} - ${e.date || ""}`];
+      : e.won && e.floor > CM.LAST_FLOOR ? `Slew the Lich King, and fell on floor ${e.floor} of the Deep` : e.won && e.reminded ? "Reminded the Lich King who he was, on floor " + CM.LAST_FLOOR : e.won ? "Slew the Lich King on floor " + CM.LAST_FLOOR : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}`}, with ${(e.gold || 0).toLocaleString()} gold - seed ${e.seed || "?"} - ${e.date || ""}`];
   if (e.party && e.party.length) lines.push(`Party: ${e.party.join(", ")}`);
   lines.push(`${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}`);
   if (t.guardians && t.guardians.length) lines.push(`Guardians slain: ${t.guardians.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", ")}`);
@@ -1783,15 +1784,42 @@ CM.PARLEY = {
     death: "IT WAKES, the stone says, and then there is no one to say anything.", deathSpoken: "NOT TODAY, it says. THEN TOMORROW.",
     after: "Here the dreamer lay. It is still now, or it is dreaming something quieter." },
   boss: { open: "The Lich King rises from his throne. \"You took your time,\" he says. He looks at each of you in turn, the way a man counts coins. \"Four. It is always four. I was one of four, once. We came down a stair like yours.\"",
-    speak: [], gate: null, good: "", bad: "", death: "", deathSpoken: "", after: "" },
+    speak: [], gate: { remind: true, label: "Remind him who he was. (The Palace's chapter is read, and his heart is smashed.)" }, good: "", bad: "", death: "", deathSpoken: "", after: "" },
 };
 CM.gateOpen = function (game, G) {                                        // whether the party holds a guardian's gate
   if (!G) return false;
   if (G.key) return Boolean(game.story && game.story.read[G.key] !== undefined);
   if (G.item) return game.bag.some((i) => i.kind === G.item);
   if (G.holy) return game.bag.some((i) => (i.props || {}).element === "holy") || game.party.some((h) => CM.equipped(h).some((i) => (i.props || {}).element === "holy"));
+  if (G.remind) return Boolean(game.phylactery) && CM.codex(game).some((c) => c.id === "palace" && c.lines.filter((l) => l.key.startsWith("carving.")).every((l) => l.read));
   return false;
 };
+
+// ---- the court of the Lich King: the seated dead of floors 16-19, who speak if the party stands before them; three
+// clues to where the heart is kept; and the five things that remind Mordeth who he was ----
+CM.COURT = [
+  { name: "The Chancellor", floor: 16, line: "A man in a chain of office, seated, grey to the bone. \"Petitions on the left,\" he says without moving his jaw. \"You want to know where he keeps it. They all do. Where he kept the box: by the bed he does not sleep in. Not the throne room. The floor above it, where the stone was laid last.\"", clue: true },
+  { name: "The Master Mason", floor: 17, line: "A broad shape with a plumb line in its lap. \"We laid the floor above the throne room last,\" it says. \"He stood over us while we did it. It rings hollow. We were told not to notice.\"" },
+  { name: "The Captain's Widow", floor: 17, line: "A woman seated very straight, in black gone brown. \"He asked for my husband by name. By name. I have not heard it said since. Say it, if you have read it. No - don't. I would only start to listen for it again.\"" },
+  { name: "A Lady-in-Waiting", floor: 18, line: "A girl, or what was a girl, with her hands folded. \"The queen used to sing,\" she says. \"Not well. He loved it. When she was gone he had the bells taken down so nothing would sound like her. Then he went down, and she was there, and she sang. I think that was the end of him, not the plague.\"" },
+  { name: "The Physician's Body", floor: 19, line: "Hollis, or the part of him that sat. \"The body need not know,\" it says, with great satisfaction. \"I wrote that. I am the proof of it. Ask me where his heart is and I will tell you: nowhere I was ever let see.\"" },
+];
+CM.COURT.forEach((c, i) => L(`court.${i + 1}`, "palace", 10 + i, c.line, { who: c.name, floor: c.floor }));
+CM.PAGE = { name: "The physician's page", kind: "page", power: 0, value: 0,
+  text: "The one page that survived the burning, in Hollis's quick hand: 'the heart may be kept apart, and the body need not know. He has had a place made for it where he lies at night and does not sleep: the floor above the throne room, under the last stone.'" };
+CM.HEART_CLUES = ["court.1", "carving.palace.3", "thing.page"];       // (a courtier's word, the wall on floor 18, the page: all three, and the box is marked on the throne room's map)
+CM.heartKnown = (game) => CM.HEART_CLUES.every((k) => (game.story && game.story.read[k] !== undefined) || (k === "thing.page" && game.bag.some((i) => i.kind === "page")));
+// to remind him: five things, each wanting a line the party has read; any gap, and he draws
+CM.REMIND = [
+  { key: "carving.drowned.4", ask: "\"Four,\" the king says. \"I was one of four. We had a - there was a -\" He stops. \"There was someone. I have forgotten the name.\"", say: "Her name was Aelith.", back: "\"Aelith.\" The cold in the hall thins, a little. \"Yes. Aelith. She sang. Not well.\"" },
+  { key: "carving.catacombs.3", ask: "\"When she died I had something done. Something with - I cannot think what. Something that made a sound.\"", say: "The bells. You had the bells taken down.", back: "\"The bells. So that nothing would sound like her. And one of them still rings. I hear it. I thought I was imagining it.\"" },
+  { key: "carving.catacombs.2", ask: "\"There was a year. A bad year. Everything after is that year, still. Which year was it?\"", say: "The twelfth of your reign. The plague came up the river.", back: "\"The twelfth. I wept for the first of them. I remember weeping. I remember when I stopped.\"" },
+  { key: "carving.vaults.1", ask: "\"Someone came. From - somewhere. He brought me a thing and I kept it by the bed. What was it? It talked.\"", say: "A box. From a man who was not from the east, whatever the walls say.", back: "\"A box. Orrin's box. He was from the Foundry; I knew his father. It talked and I listened. I listened for a very long time.\"" },
+  { key: "carving.palace.4", ask: "\"And what did I do, at the end? What did I let him do to me? I cannot - it is like reaching for a word.\"", say: "You had your heart taken out and kept apart. We found it. We ended it.", back: "He puts a hand to his chest, where there is nothing, and holds it there. \"Then it is done already,\" Mordeth says. \"Then I only have to agree.\"" },
+];
+CM.REMIND_END = "The king sits down on his throne for the first time in a long time, as a man sits who has walked a great way. \"Aelith,\" he says, and the crown comes off in his hands, and he sets it on the arm of the throne, and the cold goes out of the stone without any blow struck, and the court around him breathes out, once, all together, and is dust.";
+CM.REMIND_FAIL = "He waits for the word, and it does not come. \"No,\" the Lich King says, and the hall is cold again. \"No. You do not know me. Then you are only four more.\" He draws.";
+CM.REMIND_COURT = ["On the way up the court sits with its eyes shut, and does not stand when you pass.", "On the seventeenth floor the Master Mason has laid his plumb line down.", "On the sixteenth the Chancellor's chain of office lies on the floor, and the chair is empty."];
 
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)
 CM.LORE_KEYS = [];
@@ -2548,6 +2576,15 @@ CM.furnish = function (floor, seed, gen) {
       }
     });
     if (number === CM.BELL_FLOOR) { const k = pickCell("bell", (c) => !roomCells.has(c)) || pickCell("bell"); if (k) floor.things[k] = { type: "bones", bell: true }; }
+    CM.COURT.forEach((c, i) => {                                        // the seated dead of the palace, and the physician's page in one of its chests
+      if (c.floor !== number) return;
+      const k = pickCell(`court:${i}`, (cell) => roomCells.has(cell)) || pickCell(`court:${i}`);
+      if (k) floor.things[k] = { type: "ghost", courtier: i, asked: false };
+    });
+    if (number === CM.LAST_FLOOR - 4 + (CM.hashSeed(`${seed}:page`) % 3)) {   // (one floor of the three, by the seed alone)
+      const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest").sort();
+      if (chests.length) floor.things[chests[h("page:chest") % chests.length]].items.push(Object.assign({}, CM.PAGE));
+    }
   }
   return floor;
 };
@@ -4840,6 +4877,7 @@ CM.art.itemKey = function (item) {
     case "key": return "i.key";
     case "rope": return "i.rope";
     case "bones": return "i.bones";
+    case "page": return "i.scroll";
     case "tome": return "i.tome";
     case "gem": return `i.gem_${item.gem}`;
     case "greaterheal": return "i.greaterheal";
@@ -6025,7 +6063,7 @@ CM.Game = class {
     if (!["explore", "camp"].includes(this.mode)) return;
     if (this.iron && this.mode !== "camp" && !this.ironAllow) { this.dirty = false; this.sinceSave = 0; return; }   // (Iron: the camps only)
     const data = { schema: CM.SCHEMA, gen: this.gen || 1, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
-      spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
+      spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), reminded: Boolean(this.reminded), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
       tally: this.tally || this.freshTally(), journal: this.journal || [], story: this.story || { read: {} }, rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
@@ -6057,7 +6095,7 @@ CM.Game = class {
     this.rnd = new CM.Random(typeof d.rng === "number" ? d.rng : CM.hashSeed(`${this.seed}:dice`));
     this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.spellLight = d.spellLight || 0;
-    this.phylactery = Boolean(d.phylactery);
+    this.phylactery = Boolean(d.phylactery); this.reminded = Boolean(d.reminded);
     this.combat = null;
     this.recruits = null;
     this.identifying = false;
@@ -6117,7 +6155,7 @@ CM.Game = class {
     this.messages = [];
     this.titleNote = "";
     this.tally = this.freshTally();
-    this.journal = []; this.story = { read: {} };
+    this.journal = []; this.story = { read: {} }; this.reminded = false;
     this.rescued = [];
     this.difficulty = CM.DIFFICULTIES[difficulty] ? difficulty : "fair";
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
@@ -6196,6 +6234,7 @@ CM.Game = class {
       if (g && number > 1) { const d = (this.tally.steps || 0) - g[1]; this.say(`The ghost of your best run on this seed took this stair at step ${g[1].toLocaleString()}: you are ${d > 0 ? `${d} steps behind` : d < 0 ? `${-d} steps ahead` : "level with it"}.`); }
     }
     if (fresh) this.layRemains(fl);
+    this.showHeart(fl);
     if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }
     for (const h of this.alive()) if (h.cls === "Necromancer" && !h.familiar && h.level >= CM.FAMILIAR_AT) { h.familiar = "skull"; this.say(`A skull on ${h.name}'s belt opens its jaws: ${CM.FAMILIARS.skull.what}.`); }
     if (fresh && this.has("pilgrim")) { const xp = 60 * number; for (const h of this.alive()) h.xp += xp; this.say(`Pilgrim: ${xp} experience each, for the floor itself.`); }
@@ -7769,7 +7808,8 @@ Object.assign(CM.Game.prototype, {
     this.achieve("delver"); this.achieve("deep"); this.achieve("deeper");
     if (this.foeKey) this.floor.things[this.foeKey] = { type: "ladder" };
     this.sound("victory");
-    this.say("The crown rolls from the throne, and the cold goes out of the stone. Behind the throne the floor has split: a shaft goes down, into a dark that was never his. The Deep.");
+    this.say(this.reminded ? "The crown is set down, not struck off. Behind the throne the floor has split all the same: a shaft goes down, into a dark that was never his. The Deep."
+      : "The crown rolls from the throne, and the cold goes out of the stone. Behind the throne the floor has split: a shaft goes down, into a dark that was never his. The Deep.");
     this.setMode("explore");
     this.saveRun();
     this.emit("crowned");
@@ -8683,6 +8723,7 @@ Object.assign(CM.Game.prototype, {
       return "";
     }
     if (item.kind === "bones") return "They're not yours to use. Someone on this floor wants them back.";
+    if (item.kind === "page") { this.markRead("thing.page"); this.remember("carving", CM.PAGE.text, { key: "thing.page" }); this.emit("talk", { title: CM.PAGE.name, text: CM.PAGE.text }); return ""; }
     if (item.kind === "scroll" || item.kind === "wand") return this.useMagicOutside(row, n);
     if (item.kind === "torch") {
       this.bag.splice(row, 1);
@@ -9150,7 +9191,7 @@ Object.assign(CM.Game.prototype, {
     if (fl >= 30) this.achieve("abyss");
     if (this.bottom) this.achieve("bottom");
     if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); if (this.iron) this.achieve("ironwill"); if ((this.ascension || 0) >= 5) this.achieve("ascended"); }
-    entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened);
+    entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened); entry.reminded = Boolean(this.reminded);
     entry.trail = (this.trail || []).slice();
     if (!this.film) {                                                    // the film of this run, kept for a while (the last six)
       const films = CM.store.get("films", []), key = `${this.seed}:${Date.now()}`;
@@ -9268,6 +9309,7 @@ Object.assign(CM.Game.prototype, {
     this.story = this.story || { read: {} };
     if (this.story.read[key] !== undefined) return false;
     this.story.read[key] = this.floor ? this.floor.number : 0;
+    this.checkHeart();
     const codex = CM.codex(this);
     if (codex.filter((c) => c.band !== undefined).every((c) => c.complete)) this.achieve("chronicler");
     return true;
@@ -9297,9 +9339,11 @@ Object.assign(CM.Game.prototype, {
       const act = acts[i];
       if (act === "fight") { thing.parleyed = true; this.startCombat(k, thing); return true; }
       if (act === "speak") { thing.talk = 1; thing.score = 0; this.emit("choice", { k, title: G.name, text: P.speak[0].ask, options: P.speak[0].replies.map((r) => r.say), parley: true }); return true; }
+      if (act === "gate" && id === "boss") { this.remind(k, thing); return true; }
       if (act === "gate") { this.passGuardian(k, thing, id); return true; }
       return false;
     }
+    if (step >= 100) return this.answerRemind(k, thing, i);
     const ex = P.speak[step - 1], reply = ex && ex.replies[i];           // the exchanges
     if (!reply) return false;
     if (reply.good) thing.score = (thing.score || 0) + 1;
@@ -9350,6 +9394,58 @@ Object.assign(CM.Game.prototype, {
     for (const f of Object.values(fl.features)) if (f.type === "carving" && f.text === `g:${id}`) f.text = `ga:${id}`;
     this.emit("mesh");
   },
+  // the three clues together: the heart's hiding place is known, and marked on the throne room's map
+  checkHeart() {
+    this.story = this.story || { read: {} };
+    if (this.story.heartKnown || !CM.heartKnown(this)) return false;
+    this.story.heartKnown = true;
+    this.say("The floor above the throne room, under the last stone laid: you know where the king's heart is kept.");
+    this.remember("carving", "The floor above the throne room, under the last stone laid: that is where the king's heart is kept. The Chancellor, the wall and the physician's page agree.", { key: "heart.known" });
+    this.showHeart(this.floor);
+    return true;
+  },
+  showHeart(fl) {
+    if (!fl || fl.number !== CM.LAST_FLOOR - 1 || !this.story || !this.story.heartKnown) return;
+    for (const [k, t] of Object.entries(fl.things)) if (t.type === "phylactery") { const [x, y] = k.split(",").map(Number); if (!fl.seen.some(([sx, sy]) => sx === x && sy === y)) fl.seen.push([x, y]); }
+    this.emit("change");
+  },
+  // to remind him: the king asks, five times, and the party answers with what it has read - or cannot, and he draws
+  remind(k, thing) {
+    thing.talk = 100; thing.remind = 0;                                  // (the parley line that opened this is the log's record)
+    this.askRemind(k, thing);
+  },
+  askRemind(k, thing) {
+    const step = thing.remind || 0, R = CM.REMIND[step];
+    const have = this.story && this.story.read[R.key] !== undefined;
+    this.emit("choice", { k, title: CM.BOSS.name, text: R.ask, options: have ? [R.say, "Say nothing"] : ["Say nothing"], parley: true, remind: true });
+  },
+  answerRemind(k, thing, i) {
+    const step = thing.remind || 0, R = CM.REMIND[step], have = this.story && this.story.read[R.key] !== undefined;
+    if (have && i === 0) {
+      this.say(R.back);
+      thing.remind = step + 1;
+      if (thing.remind < CM.REMIND.length) { this.emit("talk", { title: CM.BOSS.name, text: R.back }); this.askRemind(k, thing); return true; }
+      this.quietEnd(k, thing);
+      return true;
+    }
+    thing.parleyed = true;
+    this.say(CM.REMIND_FAIL);
+    this.emit("talk", { title: CM.BOSS.name, text: CM.REMIND_FAIL });
+    this.startCombat(k, thing);
+    return true;
+  },
+  // the quiet ending: Mordeth, reminded, ends himself; the crown is the party's without a blow
+  quietEnd(k, thing) {
+    this.reminded = true;
+    this.story.reminded = true;
+    delete this.floor.things[k];
+    this.foeKey = k;
+    this.achieve("merciful");
+    this.markRead("ending.quiet");
+    this.remember("ghost", CM.REMIND_END, { who: "King Mordeth", key: "ending.quiet" });
+    this.emit("talk", { title: "King Mordeth", text: CM.REMIND_END, lines: CM.REMIND_COURT.slice() });
+    this.crown();
+  },
   metGhost(name) { this.village.ghostsMet = (this.village.ghostsMet || []).filter((n) => n !== name).concat(name).slice(-40); this.saveVillage(); },
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); },
 
@@ -9366,6 +9462,13 @@ Object.assign(CM.Game.prototype, {
     const G = thing.own ? { name: thing.own.name, tale: thing.own.epitaph ? `${thing.own.name}'s epitaph: ${thing.own.epitaph}` : `${thing.own.name} the ${thing.own.cls} says: ${CM.OWN_LINES[thing.line || 0]}` }
       : P ? { name: P.name, tale: P.tale } : CM.GHOSTS[thing.who] || CM.GHOSTS[0];
     const R = P && thing.arc === 3 ? P.request : CM.REQUESTS[thing.request] || CM.REQUESTS.story;
+    if (thing.courtier !== undefined) {                                  // the court: it sits, and speaks, and has nothing to ask
+      const C = CM.COURT[thing.courtier];
+      this.sound("ailment");
+      this.emit("talk", { title: C.name, text: C.line });
+      if (!thing.asked) { thing.asked = true; this.markRead(`court.${thing.courtier + 1}`); this.remember("ghost", C.line, { who: C.name, key: `court.${thing.courtier + 1}` }); this.saveRun(); }
+      return;
+    }
     if (P && thing.arc < 3) {                                            // the first and the second meeting: a word, remembered
       const met = (this.village.ghostsMet || []).includes(P.name), key = `people.${thing.who + 1}.${thing.arc}`;
       this.sound("ailment");
@@ -10346,6 +10449,9 @@ CM.UI = class {
     } else if (won && entry.floor > CM.LAST_FLOOR) {
       text = `They took the Lich King's crown and went down into the Deep, where the carvings never went. The last of them fell on floor ${entry.floor}, in ${CM.themeFor(entry.floor).name}, with ${entry.gold.toLocaleString()} gold. The crown lies there with ${names(g.party)}.`
         + (t.kills ? ` ${CM.plural(t.kills, "monster")} went down before them.` : "") + " Somewhere above, another four are sharpening their blades - and they know the way now.";
+    } else if (won && entry.reminded) {
+      text = `The king sat down, and set the crown on the arm of his throne, and agreed. ${names(standing)} climb twenty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
+        + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up.` : ", all four of them.") + " No blow was struck in the throne room. The carvings told his story; you told it back to him, and that was enough.";
     } else if (won) {
       text = `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} climb twenty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
         + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up, and ${fallen.length > 1 ? "their names are" : "that name is"} carved on the last floor beside his.` : ", all four of them.")
@@ -10582,9 +10688,9 @@ CM.UI = class {
     slot.innerHTML = "";
     slot.appendChild(CM.art.emblem(120));
     dlg.classList.add("won"); dlg.classList.add("crowning");
-    this.$("#over-title").textContent = "The Lich King is no more";
+    this.$("#over-title").textContent = g.reminded ? "The king remembers" : "The Lich King is no more";
     const standing = g.party.filter((h) => h.hp > 0), names = (list) => (list.length ? list.map((h) => h.name).join(", ").replace(/, ([^,]*)$/, " and $1") : "The party");
-    this.$("#over-text").textContent = `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} stand in the throne room with the Lich King's crown and ${g.gold.toLocaleString()} gold. `
+    this.$("#over-text").textContent = (g.reminded ? `Mordeth sits on his throne with the crown on its arm, and is dust. ${names(standing)} stand in the quiet with the Lich King's crown and ${g.gold.toLocaleString()} gold. ` : `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} stand in the throne room with the Lich King's crown and ${g.gold.toLocaleString()} gold. `)
       + "Behind the throne the floor has split: a shaft goes down into a dark that was never his. The carvings never spoke of it. Climb into the daylight as legends - or go down, and see what the king was listening to.";
     const roll = this.$("#over-party");
     roll.innerHTML = "";

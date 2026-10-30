@@ -152,7 +152,7 @@ A parley before every lair, and a way through for those who read.
 
 Size: M (writing: ~4,000 words; code: the parley dialog reuses the event dialog).
 
-## Phase 3 - The court of the Lich King - v3.4
+## Phase 3 - The court of the Lich King - v3.4 - DONE
 
 Floors 16-20 become a place with people in it, and the heart becomes a hunt.
 

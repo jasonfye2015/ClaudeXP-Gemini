@@ -668,7 +668,8 @@ Object.assign(CM.Game.prototype, {
     this.achieve("delver"); this.achieve("deep"); this.achieve("deeper");
     if (this.foeKey) this.floor.things[this.foeKey] = { type: "ladder" };
     this.sound("victory");
-    this.say("The crown rolls from the throne, and the cold goes out of the stone. Behind the throne the floor has split: a shaft goes down, into a dark that was never his. The Deep.");
+    this.say(this.reminded ? "The crown is set down, not struck off. Behind the throne the floor has split all the same: a shaft goes down, into a dark that was never his. The Deep."
+      : "The crown rolls from the throne, and the cold goes out of the stone. Behind the throne the floor has split: a shaft goes down, into a dark that was never his. The Deep.");
     this.setMode("explore");
     this.saveRun();
     this.emit("crowned");

@@ -710,6 +710,7 @@ CM.ACHIEVEMENTS = {
   chronicler: { name: "The Chronicler", what: "Read every carving of every band, in one expedition", title: "the Chronicler" },
   bellringer: { name: "Bell-ringer", what: "Bring Brother Cael the last bell of Caer Duin", title: "the Bell-ringer" },
   witness: { name: "The Witness", what: "Grant every one of the twelve their third request", title: "the Witness" },
+  merciful: { name: "The Merciful", what: "Remind the Lich King who he was, and let him end himself", title: "the Merciful" },
   softspoken: { name: "The Soft-Spoken", what: "Pass three guardians by speech, without a blow", title: "the Soft-Spoken" },
   laidtorest: { name: "Laid to Rest", what: "Lay a fallen hero of your own to rest where they fell", title: "the Faithful" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
@@ -753,7 +754,7 @@ CM.summaryText = function (e) {
   const d = CM.DIFFICULTIES[e.difficulty] ? CM.DIFFICULTIES[e.difficulty].name : "Fair", t = e.tally || {};
   const lines = [`Claude and Magic - ${e.name}'s ${e.endless ? "Endless " : ""}expedition (${d})${e.mutators && e.mutators.length ? `, ${e.endless ? "the dark deepened" : "today's dungeon"}: ${e.mutators.map((m) => CM.MUTATORS[m] ? CM.MUTATORS[m].name : m).join(" and ")}` : ""}`,
     `${CM.endlessFall(e) ? `Floor ${e.floor} of the endless dark${e.won ? ", with the Lich King's crown" : ""}` : e.bottom ? "To the bottom of the world, floor " + CM.BOTTOM
-      : e.won && e.floor > CM.LAST_FLOOR ? `Slew the Lich King, and fell on floor ${e.floor} of the Deep` : e.won ? "Slew the Lich King on floor " + CM.LAST_FLOOR : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}`}, with ${(e.gold || 0).toLocaleString()} gold - seed ${e.seed || "?"} - ${e.date || ""}`];
+      : e.won && e.floor > CM.LAST_FLOOR ? `Slew the Lich King, and fell on floor ${e.floor} of the Deep` : e.won && e.reminded ? "Reminded the Lich King who he was, on floor " + CM.LAST_FLOOR : e.won ? "Slew the Lich King on floor " + CM.LAST_FLOOR : `Fell on floor ${e.floor}, ${CM.themeFor(e.floor).name}`}, with ${(e.gold || 0).toLocaleString()} gold - seed ${e.seed || "?"} - ${e.date || ""}`];
   if (e.party && e.party.length) lines.push(`Party: ${e.party.join(", ")}`);
   lines.push(`${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}`);
   if (t.guardians && t.guardians.length) lines.push(`Guardians slain: ${t.guardians.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", ")}`);

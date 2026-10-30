@@ -760,6 +760,17 @@ The guardians speak (the fifth big update, phase 2 - v3.3)
   (game.parley), so films carry the talk. The bot takes an open gate, else it fights. game.mapAll is a second
   logged cheat for the tests, beside warp.
 
+The court of the Lich King (the fifth big update, phase 3 - v3.4)
+  The seated dead of floors 16-19 (CM.COURT: the Chancellor, the Master Mason, the Captain's Widow, a Lady-in-
+  Waiting, the Physician's Body) speak when stood before; each is a line of the Palace's chapter. The heart hunt:
+  the Chancellor's word, the wall on the eighteenth floor and the physician's page (in one of the palace's chests;
+  read it from the pack) together mark the phylactery on the map of the floor above the throne room before it is
+  seen (CM.HEART_CLUES).
+  The quiet ending: with the Palace's five carvings read and the heart smashed, the king's door offers Remind him -
+  five things he has forgotten (CM.REMIND: her name, the bells, the twelfth year, the box, the heart), each wanting
+  a line the party has read; any gap and he draws. All five, and Mordeth sets the crown down himself: crowned
+  without a blow, the Merciful, and the Deep still open below (entry.reminded; the ending and the summary say so).
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

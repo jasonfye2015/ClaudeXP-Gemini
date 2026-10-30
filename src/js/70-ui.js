@@ -495,6 +495,9 @@ CM.UI = class {
     } else if (won && entry.floor > CM.LAST_FLOOR) {
       text = `They took the Lich King's crown and went down into the Deep, where the carvings never went. The last of them fell on floor ${entry.floor}, in ${CM.themeFor(entry.floor).name}, with ${entry.gold.toLocaleString()} gold. The crown lies there with ${names(g.party)}.`
         + (t.kills ? ` ${CM.plural(t.kills, "monster")} went down before them.` : "") + " Somewhere above, another four are sharpening their blades - and they know the way now.";
+    } else if (won && entry.reminded) {
+      text = `The king sat down, and set the crown on the arm of his throne, and agreed. ${names(standing)} climb twenty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
+        + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up.` : ", all four of them.") + " No blow was struck in the throne room. The carvings told his story; you told it back to him, and that was enough.";
     } else if (won) {
       text = `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} climb twenty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
         + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up, and ${fallen.length > 1 ? "their names are" : "that name is"} carved on the last floor beside his.` : ", all four of them.")
@@ -731,9 +734,9 @@ CM.UI = class {
     slot.innerHTML = "";
     slot.appendChild(CM.art.emblem(120));
     dlg.classList.add("won"); dlg.classList.add("crowning");
-    this.$("#over-title").textContent = "The Lich King is no more";
+    this.$("#over-title").textContent = g.reminded ? "The king remembers" : "The Lich King is no more";
     const standing = g.party.filter((h) => h.hp > 0), names = (list) => (list.length ? list.map((h) => h.name).join(", ").replace(/, ([^,]*)$/, " and $1") : "The party");
-    this.$("#over-text").textContent = `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} stand in the throne room with the Lich King's crown and ${g.gold.toLocaleString()} gold. `
+    this.$("#over-text").textContent = (g.reminded ? `Mordeth sits on his throne with the crown on its arm, and is dust. ${names(standing)} stand in the quiet with the Lich King's crown and ${g.gold.toLocaleString()} gold. ` : `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} stand in the throne room with the Lich King's crown and ${g.gold.toLocaleString()} gold. `)
       + "Behind the throne the floor has split: a shaft goes down into a dark that was never his. The carvings never spoke of it. Climb into the daylight as legends - or go down, and see what the king was listening to.";
     const roll = this.$("#over-party");
     roll.innerHTML = "";

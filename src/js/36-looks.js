@@ -192,6 +192,7 @@ CM.art.itemKey = function (item) {
     case "key": return "i.key";
     case "rope": return "i.rope";
     case "bones": return "i.bones";
+    case "page": return "i.scroll";
     case "tome": return "i.tome";
     case "gem": return `i.gem_${item.gem}`;
     case "greaterheal": return "i.greaterheal";

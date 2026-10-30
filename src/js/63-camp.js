@@ -214,6 +214,7 @@ Object.assign(CM.Game.prototype, {
       return "";
     }
     if (item.kind === "bones") return "They're not yours to use. Someone on this floor wants them back.";
+    if (item.kind === "page") { this.markRead("thing.page"); this.remember("carving", CM.PAGE.text, { key: "thing.page" }); this.emit("talk", { title: CM.PAGE.name, text: CM.PAGE.text }); return ""; }
     if (item.kind === "scroll" || item.kind === "wand") return this.useMagicOutside(row, n);
     if (item.kind === "torch") {
       this.bag.splice(row, 1);

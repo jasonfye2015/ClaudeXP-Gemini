@@ -17,7 +17,7 @@ Object.assign(CM.Game.prototype, {
     if (fl >= 30) this.achieve("abyss");
     if (this.bottom) this.achieve("bottom");
     if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); if (this.iron) this.achieve("ironwill"); if ((this.ascension || 0) >= 5) this.achieve("ascended"); }
-    entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened);
+    entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened); entry.reminded = Boolean(this.reminded);
     entry.trail = (this.trail || []).slice();
     if (!this.film) {                                                    // the film of this run, kept for a while (the last six)
       const films = CM.store.get("films", []), key = `${this.seed}:${Date.now()}`;
@@ -135,6 +135,7 @@ Object.assign(CM.Game.prototype, {
     this.story = this.story || { read: {} };
     if (this.story.read[key] !== undefined) return false;
     this.story.read[key] = this.floor ? this.floor.number : 0;
+    this.checkHeart();
     const codex = CM.codex(this);
     if (codex.filter((c) => c.band !== undefined).every((c) => c.complete)) this.achieve("chronicler");
     return true;
@@ -164,9 +165,11 @@ Object.assign(CM.Game.prototype, {
       const act = acts[i];
       if (act === "fight") { thing.parleyed = true; this.startCombat(k, thing); return true; }
       if (act === "speak") { thing.talk = 1; thing.score = 0; this.emit("choice", { k, title: G.name, text: P.speak[0].ask, options: P.speak[0].replies.map((r) => r.say), parley: true }); return true; }
+      if (act === "gate" && id === "boss") { this.remind(k, thing); return true; }
       if (act === "gate") { this.passGuardian(k, thing, id); return true; }
       return false;
     }
+    if (step >= 100) return this.answerRemind(k, thing, i);
     const ex = P.speak[step - 1], reply = ex && ex.replies[i];           // the exchanges
     if (!reply) return false;
     if (reply.good) thing.score = (thing.score || 0) + 1;
@@ -217,6 +220,58 @@ Object.assign(CM.Game.prototype, {
     for (const f of Object.values(fl.features)) if (f.type === "carving" && f.text === `g:${id}`) f.text = `ga:${id}`;
     this.emit("mesh");
   },
+  // the three clues together: the heart's hiding place is known, and marked on the throne room's map
+  checkHeart() {
+    this.story = this.story || { read: {} };
+    if (this.story.heartKnown || !CM.heartKnown(this)) return false;
+    this.story.heartKnown = true;
+    this.say("The floor above the throne room, under the last stone laid: you know where the king's heart is kept.");
+    this.remember("carving", "The floor above the throne room, under the last stone laid: that is where the king's heart is kept. The Chancellor, the wall and the physician's page agree.", { key: "heart.known" });
+    this.showHeart(this.floor);
+    return true;
+  },
+  showHeart(fl) {
+    if (!fl || fl.number !== CM.LAST_FLOOR - 1 || !this.story || !this.story.heartKnown) return;
+    for (const [k, t] of Object.entries(fl.things)) if (t.type === "phylactery") { const [x, y] = k.split(",").map(Number); if (!fl.seen.some(([sx, sy]) => sx === x && sy === y)) fl.seen.push([x, y]); }
+    this.emit("change");
+  },
+  // to remind him: the king asks, five times, and the party answers with what it has read - or cannot, and he draws
+  remind(k, thing) {
+    thing.talk = 100; thing.remind = 0;                                  // (the parley line that opened this is the log's record)
+    this.askRemind(k, thing);
+  },
+  askRemind(k, thing) {
+    const step = thing.remind || 0, R = CM.REMIND[step];
+    const have = this.story && this.story.read[R.key] !== undefined;
+    this.emit("choice", { k, title: CM.BOSS.name, text: R.ask, options: have ? [R.say, "Say nothing"] : ["Say nothing"], parley: true, remind: true });
+  },
+  answerRemind(k, thing, i) {
+    const step = thing.remind || 0, R = CM.REMIND[step], have = this.story && this.story.read[R.key] !== undefined;
+    if (have && i === 0) {
+      this.say(R.back);
+      thing.remind = step + 1;
+      if (thing.remind < CM.REMIND.length) { this.emit("talk", { title: CM.BOSS.name, text: R.back }); this.askRemind(k, thing); return true; }
+      this.quietEnd(k, thing);
+      return true;
+    }
+    thing.parleyed = true;
+    this.say(CM.REMIND_FAIL);
+    this.emit("talk", { title: CM.BOSS.name, text: CM.REMIND_FAIL });
+    this.startCombat(k, thing);
+    return true;
+  },
+  // the quiet ending: Mordeth, reminded, ends himself; the crown is the party's without a blow
+  quietEnd(k, thing) {
+    this.reminded = true;
+    this.story.reminded = true;
+    delete this.floor.things[k];
+    this.foeKey = k;
+    this.achieve("merciful");
+    this.markRead("ending.quiet");
+    this.remember("ghost", CM.REMIND_END, { who: "King Mordeth", key: "ending.quiet" });
+    this.emit("talk", { title: "King Mordeth", text: CM.REMIND_END, lines: CM.REMIND_COURT.slice() });
+    this.crown();
+  },
   metGhost(name) { this.village.ghostsMet = (this.village.ghostsMet || []).filter((n) => n !== name).concat(name).slice(-40); this.saveVillage(); },
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); },
 
@@ -233,6 +288,13 @@ Object.assign(CM.Game.prototype, {
     const G = thing.own ? { name: thing.own.name, tale: thing.own.epitaph ? `${thing.own.name}'s epitaph: ${thing.own.epitaph}` : `${thing.own.name} the ${thing.own.cls} says: ${CM.OWN_LINES[thing.line || 0]}` }
       : P ? { name: P.name, tale: P.tale } : CM.GHOSTS[thing.who] || CM.GHOSTS[0];
     const R = P && thing.arc === 3 ? P.request : CM.REQUESTS[thing.request] || CM.REQUESTS.story;
+    if (thing.courtier !== undefined) {                                  // the court: it sits, and speaks, and has nothing to ask
+      const C = CM.COURT[thing.courtier];
+      this.sound("ailment");
+      this.emit("talk", { title: C.name, text: C.line });
+      if (!thing.asked) { thing.asked = true; this.markRead(`court.${thing.courtier + 1}`); this.remember("ghost", C.line, { who: C.name, key: `court.${thing.courtier + 1}` }); this.saveRun(); }
+      return;
+    }
     if (P && thing.arc < 3) {                                            // the first and the second meeting: a word, remembered
       const met = (this.village.ghostsMet || []).includes(P.name), key = `people.${thing.who + 1}.${thing.arc}`;
       this.sound("ailment");
