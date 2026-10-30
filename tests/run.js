@@ -992,6 +992,61 @@ test("familiars: the Mage's cat, owl and toad; the Necromancer's skull by itself
   assert.ok(orc.hp < hp, "the skull bites at a round's start");
 });
 
+test("the surface: renown from a run, the buildings, a trainer's boon, candles, contracts, the vault's slots", () => {
+  const CM = load(), game = new CM.Game();
+  assert.strictEqual(game.renown(), 0);
+  game.newGame("village-1", fixedParty(CM));
+  game.enterFloor(12, "down");
+  game.party[0].boons = ["ironskin"]; game.party[1].hp = 0;
+  game.endRun(false);
+  const entry = game.fame[0];
+  assert.ok(entry.renown >= 12 && game.renown() === entry.renown, "a run brings home renown: " + entry.renown);
+  assert.match(game.build("guildhall"), /asks 100/);
+  game.village.renown = 1000;
+  assert.strictEqual(game.build("guildhall"), ""); assert.strictEqual(game.villageLevel("guildhall"), 1); assert.strictEqual(game.renown(), 900);
+  assert.strictEqual(game.retire(1), "Only a hero who came home can retire.");
+  assert.strictEqual(game.retire(0), "");
+  assert.ok(game.trainerFor("Knight") && game.trainerFor("Knight").boon === "ironskin");
+  const g2 = new CM.Game();                                              // (the village is kept between runs)
+  assert.strictEqual(g2.villageLevel("guildhall"), 1);
+  g2.newGame("village-2", fixedParty(CM));
+  const knight = g2.party.find((h) => h.cls === "Knight");
+  assert.ok(knight.boons.includes("ironskin"), "every new Knight sets out with the trainer's boon");
+  // the vault widens with the guildhall
+  assert.strictEqual(g2.vaultCapacity(), 1);
+  g2.village.renown = 2000; g2.build("guildhall"); assert.strictEqual(g2.vaultCapacity(), 3);
+  g2.enterFloor(5, "down"); g2.setMode("camp"); g2.reachCamp(5);
+  for (let i = 0; i < 4; i++) g2.bag.push({ name: "Ring " + i, kind: "ring", slot: "ring", power: 1, value: 80, props: { stat: "str" } });
+  for (let i = 0; i < 4; i++) assert.strictEqual(g2.leaveHeirloom(g2.bag.findIndex((it) => it.kind === "ring")), "");
+  assert.strictEqual(g2.vaults.length, 3, "three slots: the oldest came back");
+  assert.strictEqual(g2.takeHeirloom(1), ""); assert.strictEqual(g2.vaults.length, 2);
+  // the shrine: a candle brings up what they were buried with
+  g2.build("shrine");
+  g2.party[1].hp = 0; g2.gold = 5000; assert.strictEqual(g2.hire(0), "");
+  assert.ok(g2.memorial[0].buried, "buried with their weapon or armour");
+  const n = g2.vaults.length;
+  assert.strictEqual(g2.lightCandle(0), "");
+  assert.ok(g2.memorial[0].candle && g2.vaults.length === n + 1);
+  // the merchant's house and the library
+  g2.build("merchant"); g2.openBag(true);
+  assert.ok(g2.stock.some((i) => i.kind === "greaterheal"), "the camps' merchant stocks greater potions");
+  g2.closeBag();
+  g2.build("library");
+  g2.bestiary.Orc = { seen: 3, slain: 3, weak: ["fire"], resist: [] };
+  assert.ok(g2.scholarship({ kind: "Orc" }) > 1 && g2.scholarship({ kind: "Goblin" }) === 1);
+  // contracts: three a week, checked at a run's end
+  const cs = g2.contracts();
+  assert.strictEqual(cs.length, 3);
+  const spent = g2.village.spent, had = g2.village.renown;
+  g2.setMode("explore"); g2.gold = 2000; g2.enterFloor(16, "down"); for (const h of g2.party) h.hp = 0;
+  g2.endRun(false);
+  const done = g2.contracts().filter((c) => c.done);
+  if (cs.some((c) => c.id === "hoard")) assert.ok(done.some((c) => c.id === "hoard"), "the hoard contract is kept with 2,000 gold");
+  assert.ok(g2.village.renown > had);
+  const exp = JSON.parse(g2.exportText());
+  assert.ok(exp.village && exp.village.levels.guildhall === 2 && Array.isArray(exp.vaults));
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

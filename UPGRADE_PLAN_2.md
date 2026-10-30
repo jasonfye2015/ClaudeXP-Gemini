@@ -102,7 +102,7 @@ uses every v2.0 system in the sim's report, and a replayed log reproduces a run 
 
 ---
 
-## Phase 3 - The surface
+## Phase 3 - The surface - DONE (v2.4)
 
 **Goal:** a place between runs that grows, and a reason to bring things up.
 

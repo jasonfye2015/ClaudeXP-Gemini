@@ -599,6 +599,28 @@ Magic with decisions in it (the fourth big update, phase 2 - v2.3)
   owl (sees in a magical dark) or a toad (eats one ailment off the party on every new floor); a Necromancer's skull
   comes by itself and bites a foe at the start of every round.
 
+The surface (the fourth big update, phase 3 - v2.4)
+  Renown. Every run brings some home - its floors (to fifty), five a guardian, fifty for the crown, a hundred for the
+  bottom, twenty a title earned, thirty on the week's seed; half again on Grim, a little less on Gentle (CM.renownFor;
+  the ending says). Renown never buys a blow in the dungeon.
+  The Village (the title's button): four buildings, four levels each, bought with renown (CM.VILLAGE, 65-village.js):
+    The Guildhall       a hero who comes home may retire at the run's end as a trainer (one a calling, one a run): every
+                        new hero of that calling sets out with the trainer's first boon. Level 2: the vault holds three;
+                        3: the tavern's third recruit is someone the party rescued in a run before; 4: the vault holds five.
+    The Merchant's House  the camps' merchant stocks Greater Healing Potions; 2: an oil of each kind; 3: one rare
+                        thing a camp; 4: everything a fifth cheaper.
+    The Library         scholarship: every kind fully learned (met and slain three times, a weakness found) takes 1%
+                        more from every blow, then 2%, then 3%; 4: the library knows every kind's weakness the moment it
+                        is met.
+    The Shrine of the Fallen  light a candle for a hero on the memorial (10 renown; 5 at level 2): what they were
+                        buried with - the better of their weapon and armour - comes up to the vault; 3: the memorial
+                        keeps sixty names; 4: a hero remembered may come back to the tavern as a recruit, once, free.
+  Contracts: three a week from the week's seed (CM.CONTRACTS), checked at a run's end, renown each: steel alone (the
+  Forge-Warden with no healer), the grim dozen, the alchemist's errand, no time to lose, dry, unbroken, the hoard, old
+  friends deep down, three weaves, empty hands.
+  The vault is slots now (game.vaults; an old single vault carries over): leave more than it holds and the oldest
+  comes back to the pack.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
@@ -634,6 +656,7 @@ The source
     62-combat.js  the fight: turns, blows, spells, the monsters' ways, the Lich King and the guardians; Auto, the odds
     63-camp.js    the bag, the merchant, the temple, the tavern, the smith, the vault, the waystones
     64-meta.js    the dungeon's people, riddles, paths and boons, achievements, the Hall of Fame, Export / Import
+    65-village.js the surface: renown, the buildings, trainers, candles, contracts
     70-ui.js      the window's frame, the dialogs, a hero's sheet, the ending
     71-76         the title, the creation screen, the dungeon screen, the fight, the bag, the camp's doors
     80-main.js    wiring, keys, the frame loop

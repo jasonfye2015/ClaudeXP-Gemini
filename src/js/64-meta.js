@@ -23,6 +23,10 @@ Object.assign(CM.Game.prototype, {
       if (fl >= 100) this.achieve("beyond");
     }
     entry.titles = (this.earned || []).slice();
+    entry.renown = CM.renownFor(entry, this);
+    this.village.renown = (this.village.renown || 0) + entry.renown;
+    this.saveVillage();
+    this.checkContracts(entry);
     entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party);
     entry.weekly = String(this.seed).startsWith("weekly-");
     if (!won && !this.bottom) {                                          // where they fell: a later run on this seed finds them
@@ -72,7 +76,7 @@ Object.assign(CM.Game.prototype, {
 
   exportText() {
     return JSON.stringify({ game: "Claude and Magic", version: CM.version, built: CM.built, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
-      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, weaves: this.weaves, memorial: this.memorial, fallen: this.fallen });
+      trophies: this.trophies, vaults: this.vaults, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, weaves: this.weaves, memorial: this.memorial, fallen: this.fallen, village: this.village });
   },
 
   importText(text) {
@@ -86,7 +90,9 @@ Object.assign(CM.Game.prototype, {
     if (Array.isArray(data.fameEndless)) { this.fameEndless = data.fameEndless; this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
     if (data.settings) { Object.assign(this.settings, data.settings); this.saveSettings(); }
     if (data.trophies && typeof data.trophies === "object") { this.trophies = Object.assign({}, this.trophies, data.trophies); CM.store.set("trophies", this.trophies); }
-    if (data.vault && typeof data.vault === "object" && data.vault.name) { this.vault = data.vault; CM.store.set("vault", this.vault); }
+    if (data.vault && typeof data.vault === "object" && data.vault.name) { this.vaults = [data.vault]; CM.store.set("vaults", this.vaults); }
+    if (Array.isArray(data.vaults)) { this.vaults = data.vaults.filter((i) => i && i.name); CM.store.set("vaults", this.vaults); }
+    if (data.village && typeof data.village === "object") { this.village = Object.assign({ renown: 0, spent: 0, levels: {}, trainers: [] }, data.village); this.saveVillage(); }
     if (data.bestiary && typeof data.bestiary === "object") { this.bestiary = Object.assign({}, this.bestiary, data.bestiary); CM.store.set("bestiary", this.bestiary); }
     if (data.combos && typeof data.combos === "object") { this.combos = Object.assign({}, this.combos, data.combos); CM.store.set("combos", this.combos); }
     if (data.weaves && typeof data.weaves === "object") { this.weaves = Object.assign({}, this.weaves, data.weaves); CM.store.set("weaves", this.weaves); }
@@ -200,6 +206,7 @@ Object.assign(CM.Game.prototype, {
       for (const f of Object.values(fl.features)) if ("known" in f) f.known = true;
       h.price = 0;
       this.rescued = (this.rescued || []).concat(h);
+      this.village.met = (this.village.met || []).filter((m) => m.name !== h.name).concat(Object.assign({}, h)).slice(-12); this.saveVillage();
       this.say(CM.ADVENTURER.leaves(h.name));
     }
     this.saveRun();

@@ -17,6 +17,7 @@ Object.assign(CM.Game.prototype, {
       if (kind) this.foes.push(CM.makeMonster(kind, CM.monsterLevel(this.floor ? this.floor.number : 1), this.rnd));
     }
     for (const m of this.foes) this.tune(m);
+    if (this.villageLevel("library") >= 4) for (const m of this.foes) for (const el of Object.keys(CM.ELEMENT_NAMES)) this.learnResist(m, el, CM.resistance(m, el));   // (the library knows)
     thing.group = this.foes;
     this.fightFell = false;
     this.foeKey = key;
@@ -720,6 +721,7 @@ Object.assign(CM.Game.prototype, {
     if (hero.cls === "Rogue" && target.marked) { dmg = Math.ceil(dmg * 1.5); how += " - the knife finds the mark"; this.combo("knife"); }
     if (target.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; target.warded -= 1; }
     if (this.has("glass")) dmg *= 2;
+    dmg = Math.ceil(dmg * this.scholarship(target));
     target.hp -= dmg;
     this.splitIfHurt(target);
     if (target.asleep > 0) { target.asleep = 0; how += " - it wakes"; }
@@ -753,6 +755,7 @@ Object.assign(CM.Game.prototype, {
     if (element === "storm" && foe.chilled > 0) { dmg *= 2; how += " - the ice carries it"; this.combo("thunderclap"); foe.chilled = 0; }
     if (foe.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; foe.warded -= 1; }
     if (this.has("glass")) dmg *= 2;
+    dmg = Math.ceil(dmg * this.scholarship(foe));
     foe.hp -= dmg;
     if (foe.asleep > 0) foe.asleep = 0;
     this.emit("fx", { kind: "hit", foe, amount: dmg, spell: true });

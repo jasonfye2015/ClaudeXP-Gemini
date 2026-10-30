@@ -14,6 +14,11 @@ Object.assign(CM.Game.prototype, {
       this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
         { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"), CM.rope());
+      const house = this.villageLevel("merchant");                       // (the village's merchant's house: what the camps' merchant has learned to carry)
+      if (house >= 1) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
+      if (house >= 2) for (const el of ["fire", "frost", "holy"]) this.stock.push(CM.oil(el));
+      if (house >= 3) { const r2 = new CM.Random(CM.hashSeed(`${this.seed}:house:${this.floor.number}`)), rare = CM.affix(CM.makeItem(depth + 2, r2, r2.pick(["weapon", "armor", "helm", "shield"])), 99, r2); rare.unknown = false; rare.value = Math.floor(rare.value * 1.4); this.stock.push(rare); }
+      if (house >= 4) for (const it of this.stock) it.value = Math.max(1, Math.floor(it.value * 0.8));
     }
     this.emit("bag", true);
   },
@@ -330,6 +335,9 @@ Object.assign(CM.Game.prototype, {
       const level = Math.max(1, Math.round(this.party.reduce((s, h) => s + h.level, 0) / Math.max(1, this.party.length)) - 1);
       const rnd = new CM.Random(CM.hashSeed(`${this.seed}:tavern:${this.floor.number}`));
       this.recruits = { floor: this.floor.number, who: [0, 1, 2].map(() => CM.makeRecruit(level, rnd, this.classesAvailable())) };
+      const met = ((this.village || {}).met || []);                      // (guildhall level 3: the third is someone rescued in a run before)
+      if (this.villageLevel("guildhall") >= 3 && met.length) { const old = Object.assign({}, met[CM.hashSeed(`${this.seed}:met:${this.floor.number}`) % met.length]); old.level = Math.max(old.level, level); CM.recompute(old); old.hp = old.max; old.mp = old.maxmp; old.price = 20 + 40 * old.level; this.recruits.who[2] = old; }
+      if (this.villageLevel("shrine") >= 4) { const back = (this.memorial || []).find((m) => m.candle && !m.returned); if (back && !this.recruits.who.some((r) => r.name === back.name)) { const h = CM.makeHero(back.cls, back.name, CM.rollStats(back.cls, new CM.Random(CM.hashSeed(back.name)))); h.level = Math.max(1, back.level); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; h.price = 0; h.remembered = true; this.recruits.who[0] = h; } }
     }
     return (this.rescued || []).length ? this.rescued.concat(this.recruits.who) : this.recruits.who;   // (the rescued first, and free)
   },
@@ -351,6 +359,7 @@ Object.assign(CM.Game.prototype, {
     this.bonds = (this.bonds || []).filter((b) => !b.includes(gone.name));
     const h = Object.assign({}, recruit);
     delete h.price;
+    if (h.remembered) { const m = (this.memorial || []).find((x) => x.name === h.name && x.candle && !x.returned); if (m) { m.returned = true; CM.store.set("memorial", this.memorial); } delete h.remembered; }
     this.party[idx] = h;
     this.applyBonds();
     if (i < rescued) this.rescued.splice(i, 1); else this.recruits.who.splice(i - rescued, 1);
@@ -449,10 +458,11 @@ Object.assign(CM.Game.prototype, {
     const item = this.bag[row];
     if (!item) return "Pick something from your pack.";
     if (["key", "bones", "rope", "torch"].includes(item.kind)) return "The merchant won't keep that. Something worth the keeping.";
-    const old = this.vault;
+    this.vaults = this.vaults || [];
+    const old = this.vaultRoom() ? null : this.vaults.shift();
     this.bag.splice(row, 1);
-    this.vault = item;
-    CM.store.set("vault", item);
+    this.vaults.push(item);
+    CM.store.set("vaults", this.vaults);
     if (old) this.bag.push(old);
     this.sound("chest");
     this.say(`The merchant locks ${item.name} in the vault for whoever comes after${old ? `, and hands back ${old.name}` : ""}.`);
@@ -460,12 +470,12 @@ Object.assign(CM.Game.prototype, {
     this.emit("change");
     return "";
   },
-  takeHeirloom() {
+  takeHeirloom(i = 0) {
     if (this.mode !== "camp") return "The vault is at the camp.";
-    this.logAct("takeHeirloom");
-    if (!this.vault) return "The vault is empty.";
-    const item = this.vault;
-    this.vault = null;
+    this.logAct("takeHeirloom", i);
+    if (!(this.vaults || []).length) return "The vault is empty.";
+    const item = this.vaults.splice(Math.min(i, this.vaults.length - 1), 1)[0];
+    CM.store.set("vaults", this.vaults);
     CM.store.remove("vault");
     this.bag.push(item);
     this.sound("chest");

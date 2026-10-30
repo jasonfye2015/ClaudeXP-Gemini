@@ -36,7 +36,8 @@ CM.Game = class {
     this.saveWarned = false;
     this.fame = CM.store.get("fame", []);
     this.trophies = CM.store.get("trophies", {});     // the guardians slain, ever: {id: {date, name, seed}}
-    this.vault = CM.store.get("vault", null);         // the one heirloom a party left at the camp for the next
+    this.vaults = CM.store.get("vaults", null) || (CM.store.get("vault", null) ? [CM.store.get("vault", null)] : []);   // the heirlooms left at the camp for the next party (one slot, or three, or five, by the guildhall)
+    this.village = Object.assign({ renown: 0, spent: 0, levels: {}, trainers: [] }, CM.store.get("village", {}));   // the surface: renown and the buildings
     this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "drawn", tapMove: true }, CM.store.get("settings", {}));
     this.settings.keys = Object.assign({}, CM.DEFAULT_KEYS, this.settings.keys || {});
     if (!CM.LOOKS[this.settings.look]) this.settings.look = "drawn";
@@ -98,8 +99,9 @@ CM.Game = class {
   // a hero laid to rest for good is written down, between runs (the title's memorial)
   remember2(hero) {
     this.memorial = this.memorial || [];
-    this.memorial.unshift({ name: hero.name, cls: hero.cls, level: hero.level, floor: this.floor ? this.floor.number : 0, seed: this.seed, date: CM.today() });
-    this.memorial = this.memorial.slice(0, 30);
+    const buried = [hero.weapon, hero.armor].filter((it) => it && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0] || null;
+    this.memorial.unshift({ name: hero.name, cls: hero.cls, level: hero.level, floor: this.floor ? this.floor.number : 0, seed: this.seed, date: CM.today(), buried });
+    this.memorial = this.memorial.slice(0, this.villageLevel("shrine") >= 3 ? 60 : 30);
     CM.store.set("memorial", this.memorial);
   }
 
@@ -231,6 +233,8 @@ CM.Game = class {
     else if (this.kit === "heir") for (const h of this.party) { h.weapon.power += 2; h.weapon.name += " +1"; h.weapon.props = Object.assign({}, h.weapon.props, { bonus: 1 }); h.weapon.value = 45; }
     else if (this.kit === "legend") for (const h of this.party) { h.level = 2; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; }
     else if (this.kit === "abyss") { this.gold += 150; this.bag.push(CM.rope(), CM.gem("diamond"), CM.scroll("mapping")); for (const h of this.party) { h.level = 3; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }
+    for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
+    this.retiredThisRun = false;
     this.enterFloor(1, "down");
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")

@@ -157,16 +157,20 @@ Object.assign(CM.UI.prototype, {
   renderVault() {
     const g = this.game, held = this.$("#vault-held"), list = this.$("#vault-list");
     held.innerHTML = "";
-    if (g.vault) {
-      held.appendChild(this.icon(g.vault, 22));
+    held.style.display = "block";
+    (g.vaults || []).forEach((it, i) => {
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "40px 1fr auto";
+      row.appendChild(this.icon(it, 22));
       const text = document.createElement("span");
-      text.innerHTML = `<b>${this.esc(g.vault.name)}</b> <small>${this.esc(CM.itemLabel(g.vault))}</small> `;
-      held.appendChild(text);
+      text.innerHTML = `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small> `;
+      row.appendChild(text);
       const b = document.createElement("button");
       b.textContent = "Take it";
-      b.addEventListener("click", () => { this.$("#vault-note").textContent = g.takeHeirloom() || "Taken."; this.renderVault(); this.refresh(); });
-      held.appendChild(b);
-    } else held.innerHTML = `<span class="small">The vault is empty. Leave something here, and the next party to come this way will find it.</span>`;
+      b.addEventListener("click", () => { this.$("#vault-note").textContent = g.takeHeirloom(i) || "Taken."; this.renderVault(); this.refresh(); });
+      row.appendChild(b); held.appendChild(row);
+    });
+    if (!(g.vaults || []).length) held.innerHTML = `<span class="small">The vault is empty (${g.vaultCapacity()} ${g.vaultCapacity() === 1 ? "slot" : "slots"}). Leave something here, and the next party to come this way will find it.</span>`;
+    else { const n = document.createElement("div"); n.className = "small"; n.textContent = `${g.vaults.length} of ${g.vaultCapacity()} slots.`; held.appendChild(n); }
     list.innerHTML = "";
     g.bag.forEach((it, i) => {
       if (["key", "bones", "rope", "torch"].includes(it.kind)) return;
@@ -179,7 +183,7 @@ Object.assign(CM.UI.prototype, {
       const act = document.createElement("div");
       act.className = "hire";
       const b = document.createElement("button");
-      b.textContent = g.vault ? "Leave it (swap)" : "Leave it";
+      b.textContent = g.vaultRoom() ? "Leave it" : "Leave it (the oldest comes back)";
       b.addEventListener("click", () => { this.$("#vault-note").textContent = g.leaveHeirloom(i) || "Left for those who come after."; this.renderVault(); this.refresh(); });
       act.appendChild(b);
       row.appendChild(act);

@@ -9,6 +9,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-new").addEventListener("click", () => this.openCreate());
     this.$("#btn-continue").addEventListener("click", () => g.continueRun());
     this.$("#btn-settings").addEventListener("click", () => this.openDialog("#dlg-settings"));
+    this.$("#btn-village").addEventListener("click", () => this.openVillage());
     this.$("#btn-keys").addEventListener("click", () => this.openDialog("#dlg-keys"));
     this.$("#btn-credits").addEventListener("click", () => {
       this.$("#credits").innerHTML = CM.art.credits().map(([who, what]) => `<div class="credit"><b>${this.esc(who)}</b><div>${this.esc(what)}</div></div>`).join("")

@@ -30,7 +30,7 @@ CM.UI = class {
       <p id="start-with"></p>
     </div>
     <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button><button data-board="weekly" title="This week's challenge: the runs on this week's seed">This week</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
-    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
+    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-village">The Village</button><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
     <div class="version"></div>
   </div>
 </div>
@@ -122,6 +122,13 @@ CM.UI = class {
   <div class="list-title">In the vault</div><div class="recruit" id="vault-held"></div>
   <div class="list-title">Leave something</div><div id="vault-list"></div><div class="small" id="vault-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-village"><div class="box journalbox"><h2>The Village</h2>
+  <p class="small">The surface, between runs. Every run brings home renown - floors, guardians, the crown, titles earned, the week's seed - and the village grows with it. Renown never buys a blow in the dungeon.</p>
+  <div class="small" id="village-renown"></div><div id="village-buildings"></div>
+  <div class="list-title">Contracts this week</div><div id="village-contracts"></div>
+  <div class="list-title">The guildhall's trainers</div><div id="village-trainers"></div>
+  <div class="list-title">The shrine: candles</div><div id="village-shrine"></div><div class="small" id="village-note"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-alchemist"><div class="box journalbox"><h2>The Alchemist</h2>
   <p class="small">A woman with a copper still by the camp fire. The monsters of each depth drop something she wants - moss, weed, soot, dust, slag, salt, sap - and she makes potions, oils and worse of it, for gold.</p>
   <div class="small" id="alchemist-have"></div><div id="alchemist-list"></div><div class="small" id="alchemist-note"></div>
@@ -141,7 +148,7 @@ CM.UI = class {
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal</h2><div id="journal-list"></div>
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
-  <div class="roll" id="over-party"></div><div class="tally" id="over-tally"></div>
+  <div class="roll" id="over-party"></div><div class="small" id="over-retire"></div><div class="tally" id="over-tally"></div>
   <div class="end"><button id="btn-over-card" class="ended">Summary card</button><button class="close primary ended">To the title</button>
     <button id="btn-over-daylight" class="crown">Into the daylight</button><button id="btn-over-deep" class="crown primary">Into the Deep</button></div></div></div>
 <div class="dialog" id="dlg-card"><div class="box cardbox"><h2>The expedition, in a card</h2><div id="card-slot"></div>
@@ -346,6 +353,35 @@ CM.UI = class {
   }
 
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
+  // ---- the village ----
+  openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
+  renderVillage() {
+    const g = this.game, v = g.village || {};
+    this.$("#village-renown").textContent = `Renown: ${g.renown()} to spend (${v.renown || 0} earned, ever). The vault holds ${g.vaultCapacity()}.`;
+    const note = this.$("#village-note");
+    const bb = this.$("#village-buildings"); bb.innerHTML = "";
+    for (const [id, B] of Object.entries(CM.VILLAGE)) {
+      const lvl = g.villageLevel(id), row = document.createElement("div");
+      row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>${B.name}</b> <small>level ${lvl} of ${B.costs.length}</small><small>${lvl ? B.levels.slice(0, lvl).map((w) => this.esc(w)).join("; ") : "Not built."}</small>${lvl < B.costs.length ? `<small><i>Next (${B.costs[lvl]} renown): ${this.esc(B.levels[lvl])}</i></small>` : ""}</div>`;
+      const b = document.createElement("button");
+      b.textContent = lvl < B.costs.length ? `Build, ${B.costs[lvl]} renown` : "Complete";
+      b.disabled = lvl >= B.costs.length || g.renown() < B.costs[lvl];
+      b.addEventListener("click", () => { note.textContent = g.build(id) || `${B.name} rises a level.`; this.renderVillage(); });
+      row.appendChild(b); bb.appendChild(row);
+    }
+    this.$("#village-contracts").innerHTML = g.contracts().map(({ c, done }) => `<div class="unlock ${done ? "got" : ""}"><b>${done ? "✓" : "○"} ${this.esc(c.name)}</b> <small>${this.esc(c.what)} - ${c.renown} renown</small></div>`).join("");
+    const trainers = v.trainers || [];
+    this.$("#village-trainers").innerHTML = trainers.length ? trainers.map((t) => `<div class="unlock got"><b>${this.esc(t.name)}</b> <small>${t.cls}, level ${t.level}: every new ${t.cls} sets out with ${CM.BOONS[t.boon] ? CM.BOONS[t.boon].name : t.boon}</small></div>`).join("") : `<div class="unlock"><small>${g.villageLevel("guildhall") ? "No one has retired yet: a hero who comes home may, at the run's end." : "Build the guildhall first."}</small></div>`;
+    const shrine = this.$("#village-shrine"); shrine.innerHTML = "";
+    (g.memorial || []).slice(0, 12).forEach((m, i) => {
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>${this.esc(m.name)}</b> <small>${m.cls}, level ${m.level}, floor ${m.floor}${m.buried ? ` - buried with ${this.esc(m.buried.name)}` : ""}${m.candle ? ` - a candle burns (${this.esc(m.candle)})` : ""}</small></div>`;
+      if (!m.candle && g.villageLevel("shrine") >= 1) { const b = document.createElement("button"); b.textContent = `Light a candle, ${CM.CANDLE_COST[g.villageLevel("shrine") >= 2 ? 1 : 0]} renown`; b.addEventListener("click", () => { note.textContent = g.lightCandle(i) || `A candle for ${m.name}.`; this.renderVillage(); }); row.appendChild(b); }
+      shrine.appendChild(row);
+    });
+    if (!shrine.children.length) shrine.innerHTML = `<div class="unlock"><small>No name on the memorial yet.</small></div>`;
+  }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); if (sel === "#dlg-settings") this.showStorage(); }
   closeDialogs() {
     const ending = this.$("#dlg-over").classList.contains("on");
@@ -402,12 +438,30 @@ CM.UI = class {
       ["Kit", (CM.KITS[entry.kit] || CM.KITS.pauper).name], ["Difficulty", (CM.DIFFICULTIES[entry.difficulty] || CM.DIFFICULTIES.fair).name], ["Seed", `${entry.seed}${entry.daily ? " (today's)" : ""}`],
       [entry.endless ? "Endless board" : "Hall of Fame", rank ? `${CM.ordinal(rank)} of ${board.length}` : "not among the ten"]];
     if (t.guardians && t.guardians.length) facts.splice(6, 0, ["Guardians slain", this.guardianNames(t.guardians)]);
-    if (g.vault) facts.push(["In the vault", `${g.vault.name}, for the next party`]);
+    if ((g.vaults || []).length) facts.push(["In the vault", g.vaults.map((v) => v.name).join(", ") + ", for the next party"]);
+    facts.push(["Renown", `${entry.renown || 0} brought home; the village has ${g.renown()}`]);
     if (entry.titles && entry.titles.length) facts.push(["Earned", entry.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", ")]);
     this.$("#over-tally").innerHTML = facts.map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
+    this.renderRetire();
     this.openDialog("#dlg-over");                                      // (opening closes whatever was open - an ending too - so the kind is set after)
     this.ending = won ? "victory" : "lament";
     if (this.onEnding) this.onEnding();
+  }
+
+  // the guildhall: a hero who came home may retire as a trainer, at the run's end
+  renderRetire() {
+    const g = this.game, box = this.$("#over-retire");
+    box.innerHTML = "";
+    if (g.villageLevel("guildhall") < 1 || g.retiredThisRun) { if (g.retiredThisRun) box.textContent = "A hero has retired to the guildhall."; return; }
+    const can = g.party.map((h, i) => [h, i]).filter(([h]) => h.hp > 0 && (h.boons || []).length);
+    if (!can.length) return;
+    box.appendChild(Object.assign(document.createElement("span"), { textContent: "Retire to the guildhall as a trainer: " }));
+    for (const [h, i] of can) {
+      const b = document.createElement("button");
+      b.textContent = `${h.name} (teaches ${CM.BOONS[h.boons[0]].name})`;
+      b.addEventListener("click", () => { const note = g.retire(i); box.textContent = note || `${h.name} hangs up the pack, and will teach every ${h.cls} who comes after.`; });
+      box.appendChild(b);
+    }
   }
 
   portrait(cls, size) {

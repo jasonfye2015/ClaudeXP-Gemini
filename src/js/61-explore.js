@@ -418,6 +418,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.inUse) this.logAct("drink");
     f.used = true; f.known = true;
     if (this.has("drought")) { this.say("The basin is dry to the bottom, cracked. A drought lies on the dungeon today."); this.saveRun(); this.emit("change"); return; }
+    this.tally.drank = (this.tally.drank || 0) + 1;
     if (f.kind === "heal") {
       for (const m of this.alive()) { m.hp = m.max; this.cure(m, [...CM.CURABLE, "curse"]); }
       this.sound("heal");

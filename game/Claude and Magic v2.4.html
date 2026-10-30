@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v2.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v2.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -370,7 +370,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "2.3", built: "2026-10-30" };
+const CM = window.CM = { version: "2.4", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5188,7 +5188,8 @@ CM.Game = class {
     this.saveWarned = false;
     this.fame = CM.store.get("fame", []);
     this.trophies = CM.store.get("trophies", {});     // the guardians slain, ever: {id: {date, name, seed}}
-    this.vault = CM.store.get("vault", null);         // the one heirloom a party left at the camp for the next
+    this.vaults = CM.store.get("vaults", null) || (CM.store.get("vault", null) ? [CM.store.get("vault", null)] : []);   // the heirlooms left at the camp for the next party (one slot, or three, or five, by the guildhall)
+    this.village = Object.assign({ renown: 0, spent: 0, levels: {}, trainers: [] }, CM.store.get("village", {}));   // the surface: renown and the buildings
     this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "drawn", tapMove: true }, CM.store.get("settings", {}));
     this.settings.keys = Object.assign({}, CM.DEFAULT_KEYS, this.settings.keys || {});
     if (!CM.LOOKS[this.settings.look]) this.settings.look = "drawn";
@@ -5250,8 +5251,9 @@ CM.Game = class {
   // a hero laid to rest for good is written down, between runs (the title's memorial)
   remember2(hero) {
     this.memorial = this.memorial || [];
-    this.memorial.unshift({ name: hero.name, cls: hero.cls, level: hero.level, floor: this.floor ? this.floor.number : 0, seed: this.seed, date: CM.today() });
-    this.memorial = this.memorial.slice(0, 30);
+    const buried = [hero.weapon, hero.armor].filter((it) => it && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0] || null;
+    this.memorial.unshift({ name: hero.name, cls: hero.cls, level: hero.level, floor: this.floor ? this.floor.number : 0, seed: this.seed, date: CM.today(), buried });
+    this.memorial = this.memorial.slice(0, this.villageLevel("shrine") >= 3 ? 60 : 30);
     CM.store.set("memorial", this.memorial);
   }
 
@@ -5383,6 +5385,8 @@ CM.Game = class {
     else if (this.kit === "heir") for (const h of this.party) { h.weapon.power += 2; h.weapon.name += " +1"; h.weapon.props = Object.assign({}, h.weapon.props, { bonus: 1 }); h.weapon.value = 45; }
     else if (this.kit === "legend") for (const h of this.party) { h.level = 2; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; }
     else if (this.kit === "abyss") { this.gold += 150; this.bag.push(CM.rope(), CM.gem("diamond"), CM.scroll("mapping")); for (const h of this.party) { h.level = 3; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }
+    for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
+    this.retiredThisRun = false;
     this.enterFloor(1, "down");
     this.say("Four adventurers climb down into the dark. Somewhere below, the Lich King stirs." + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
@@ -5906,6 +5910,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.inUse) this.logAct("drink");
     f.used = true; f.known = true;
     if (this.has("drought")) { this.say("The basin is dry to the bottom, cracked. A drought lies on the dungeon today."); this.saveRun(); this.emit("change"); return; }
+    this.tally.drank = (this.tally.drank || 0) + 1;
     if (f.kind === "heal") {
       for (const m of this.alive()) { m.hp = m.max; this.cure(m, [...CM.CURABLE, "curse"]); }
       this.sound("heal");
@@ -6288,6 +6293,7 @@ Object.assign(CM.Game.prototype, {
       if (kind) this.foes.push(CM.makeMonster(kind, CM.monsterLevel(this.floor ? this.floor.number : 1), this.rnd));
     }
     for (const m of this.foes) this.tune(m);
+    if (this.villageLevel("library") >= 4) for (const m of this.foes) for (const el of Object.keys(CM.ELEMENT_NAMES)) this.learnResist(m, el, CM.resistance(m, el));   // (the library knows)
     thing.group = this.foes;
     this.fightFell = false;
     this.foeKey = key;
@@ -6991,6 +6997,7 @@ Object.assign(CM.Game.prototype, {
     if (hero.cls === "Rogue" && target.marked) { dmg = Math.ceil(dmg * 1.5); how += " - the knife finds the mark"; this.combo("knife"); }
     if (target.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; target.warded -= 1; }
     if (this.has("glass")) dmg *= 2;
+    dmg = Math.ceil(dmg * this.scholarship(target));
     target.hp -= dmg;
     this.splitIfHurt(target);
     if (target.asleep > 0) { target.asleep = 0; how += " - it wakes"; }
@@ -7024,6 +7031,7 @@ Object.assign(CM.Game.prototype, {
     if (element === "storm" && foe.chilled > 0) { dmg *= 2; how += " - the ice carries it"; this.combo("thunderclap"); foe.chilled = 0; }
     if (foe.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; foe.warded -= 1; }
     if (this.has("glass")) dmg *= 2;
+    dmg = Math.ceil(dmg * this.scholarship(foe));
     foe.hp -= dmg;
     if (foe.asleep > 0) foe.asleep = 0;
     this.emit("fx", { kind: "hit", foe, amount: dmg, spell: true });
@@ -7628,6 +7636,11 @@ Object.assign(CM.Game.prototype, {
       this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
         { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"), CM.rope());
+      const house = this.villageLevel("merchant");                       // (the village's merchant's house: what the camps' merchant has learned to carry)
+      if (house >= 1) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
+      if (house >= 2) for (const el of ["fire", "frost", "holy"]) this.stock.push(CM.oil(el));
+      if (house >= 3) { const r2 = new CM.Random(CM.hashSeed(`${this.seed}:house:${this.floor.number}`)), rare = CM.affix(CM.makeItem(depth + 2, r2, r2.pick(["weapon", "armor", "helm", "shield"])), 99, r2); rare.unknown = false; rare.value = Math.floor(rare.value * 1.4); this.stock.push(rare); }
+      if (house >= 4) for (const it of this.stock) it.value = Math.max(1, Math.floor(it.value * 0.8));
     }
     this.emit("bag", true);
   },
@@ -7944,6 +7957,9 @@ Object.assign(CM.Game.prototype, {
       const level = Math.max(1, Math.round(this.party.reduce((s, h) => s + h.level, 0) / Math.max(1, this.party.length)) - 1);
       const rnd = new CM.Random(CM.hashSeed(`${this.seed}:tavern:${this.floor.number}`));
       this.recruits = { floor: this.floor.number, who: [0, 1, 2].map(() => CM.makeRecruit(level, rnd, this.classesAvailable())) };
+      const met = ((this.village || {}).met || []);                      // (guildhall level 3: the third is someone rescued in a run before)
+      if (this.villageLevel("guildhall") >= 3 && met.length) { const old = Object.assign({}, met[CM.hashSeed(`${this.seed}:met:${this.floor.number}`) % met.length]); old.level = Math.max(old.level, level); CM.recompute(old); old.hp = old.max; old.mp = old.maxmp; old.price = 20 + 40 * old.level; this.recruits.who[2] = old; }
+      if (this.villageLevel("shrine") >= 4) { const back = (this.memorial || []).find((m) => m.candle && !m.returned); if (back && !this.recruits.who.some((r) => r.name === back.name)) { const h = CM.makeHero(back.cls, back.name, CM.rollStats(back.cls, new CM.Random(CM.hashSeed(back.name)))); h.level = Math.max(1, back.level); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; h.price = 0; h.remembered = true; this.recruits.who[0] = h; } }
     }
     return (this.rescued || []).length ? this.rescued.concat(this.recruits.who) : this.recruits.who;   // (the rescued first, and free)
   },
@@ -7965,6 +7981,7 @@ Object.assign(CM.Game.prototype, {
     this.bonds = (this.bonds || []).filter((b) => !b.includes(gone.name));
     const h = Object.assign({}, recruit);
     delete h.price;
+    if (h.remembered) { const m = (this.memorial || []).find((x) => x.name === h.name && x.candle && !x.returned); if (m) { m.returned = true; CM.store.set("memorial", this.memorial); } delete h.remembered; }
     this.party[idx] = h;
     this.applyBonds();
     if (i < rescued) this.rescued.splice(i, 1); else this.recruits.who.splice(i - rescued, 1);
@@ -8063,10 +8080,11 @@ Object.assign(CM.Game.prototype, {
     const item = this.bag[row];
     if (!item) return "Pick something from your pack.";
     if (["key", "bones", "rope", "torch"].includes(item.kind)) return "The merchant won't keep that. Something worth the keeping.";
-    const old = this.vault;
+    this.vaults = this.vaults || [];
+    const old = this.vaultRoom() ? null : this.vaults.shift();
     this.bag.splice(row, 1);
-    this.vault = item;
-    CM.store.set("vault", item);
+    this.vaults.push(item);
+    CM.store.set("vaults", this.vaults);
     if (old) this.bag.push(old);
     this.sound("chest");
     this.say(`The merchant locks ${item.name} in the vault for whoever comes after${old ? `, and hands back ${old.name}` : ""}.`);
@@ -8074,12 +8092,12 @@ Object.assign(CM.Game.prototype, {
     this.emit("change");
     return "";
   },
-  takeHeirloom() {
+  takeHeirloom(i = 0) {
     if (this.mode !== "camp") return "The vault is at the camp.";
-    this.logAct("takeHeirloom");
-    if (!this.vault) return "The vault is empty.";
-    const item = this.vault;
-    this.vault = null;
+    this.logAct("takeHeirloom", i);
+    if (!(this.vaults || []).length) return "The vault is empty.";
+    const item = this.vaults.splice(Math.min(i, this.vaults.length - 1), 1)[0];
+    CM.store.set("vaults", this.vaults);
     CM.store.remove("vault");
     this.bag.push(item);
     this.sound("chest");
@@ -8257,6 +8275,10 @@ Object.assign(CM.Game.prototype, {
       if (fl >= 100) this.achieve("beyond");
     }
     entry.titles = (this.earned || []).slice();
+    entry.renown = CM.renownFor(entry, this);
+    this.village.renown = (this.village.renown || 0) + entry.renown;
+    this.saveVillage();
+    this.checkContracts(entry);
     entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party);
     entry.weekly = String(this.seed).startsWith("weekly-");
     if (!won && !this.bottom) {                                          // where they fell: a later run on this seed finds them
@@ -8306,7 +8328,7 @@ Object.assign(CM.Game.prototype, {
 
   exportText() {
     return JSON.stringify({ game: "Claude and Magic", version: CM.version, built: CM.built, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
-      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, weaves: this.weaves, memorial: this.memorial, fallen: this.fallen });
+      trophies: this.trophies, vaults: this.vaults, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, weaves: this.weaves, memorial: this.memorial, fallen: this.fallen, village: this.village });
   },
 
   importText(text) {
@@ -8320,7 +8342,9 @@ Object.assign(CM.Game.prototype, {
     if (Array.isArray(data.fameEndless)) { this.fameEndless = data.fameEndless; this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
     if (data.settings) { Object.assign(this.settings, data.settings); this.saveSettings(); }
     if (data.trophies && typeof data.trophies === "object") { this.trophies = Object.assign({}, this.trophies, data.trophies); CM.store.set("trophies", this.trophies); }
-    if (data.vault && typeof data.vault === "object" && data.vault.name) { this.vault = data.vault; CM.store.set("vault", this.vault); }
+    if (data.vault && typeof data.vault === "object" && data.vault.name) { this.vaults = [data.vault]; CM.store.set("vaults", this.vaults); }
+    if (Array.isArray(data.vaults)) { this.vaults = data.vaults.filter((i) => i && i.name); CM.store.set("vaults", this.vaults); }
+    if (data.village && typeof data.village === "object") { this.village = Object.assign({ renown: 0, spent: 0, levels: {}, trainers: [] }, data.village); this.saveVillage(); }
     if (data.bestiary && typeof data.bestiary === "object") { this.bestiary = Object.assign({}, this.bestiary, data.bestiary); CM.store.set("bestiary", this.bestiary); }
     if (data.combos && typeof data.combos === "object") { this.combos = Object.assign({}, this.combos, data.combos); CM.store.set("combos", this.combos); }
     if (data.weaves && typeof data.weaves === "object") { this.weaves = Object.assign({}, this.weaves, data.weaves); CM.store.set("weaves", this.weaves); }
@@ -8434,6 +8458,7 @@ Object.assign(CM.Game.prototype, {
       for (const f of Object.values(fl.features)) if ("known" in f) f.known = true;
       h.price = 0;
       this.rescued = (this.rescued || []).concat(h);
+      this.village.met = (this.village.met || []).filter((m) => m.name !== h.name).concat(Object.assign({}, h)).slice(-12); this.saveVillage();
       this.say(CM.ADVENTURER.leaves(h.name));
     }
     this.saveRun();
@@ -8618,6 +8643,144 @@ Object.assign(CM.Game.prototype, {
 });
 }
 
+// ---- 65-village.js ----
+"use strict";
+// The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
+// floors, guardians, crown, achievements, the week's seed); it never buys power in the dungeon directly - the
+// guildhall's trainers are the one exception, and capped at a boon. Four buildings, four levels each (CM.VILLAGE);
+// contracts posted at the guildhall from the week's seed (CM.CONTRACTS). Kept between runs (CM.store "village").
+CM.VILLAGE = {
+  guildhall: { name: "The Guildhall", costs: [100, 250, 500, 1000], levels: [
+    "A hero who comes home may retire here as a trainer: every new hero of their calling sets out with the trainer's first boon",
+    "The vault holds three things", "The tavern's third recruit is someone the party rescued in a run before", "The vault holds five things"] },
+  merchant: { name: "The Merchant's House", costs: [100, 250, 500, 1000], levels: [
+    "The camps' merchant stocks Greater Healing Potions", "...and an oil of each kind", "...and one rare thing a camp", "...and sells everything a fifth cheaper"] },
+  library: { name: "The Library", costs: [100, 250, 500, 1000], levels: [
+    "Scholarship: every kind fully learned (met and slain three times, a weakness found) takes 1% more from every blow",
+    "...2% more", "...3% more", "The library knows every kind's weakness the moment it is met"] },
+  shrine: { name: "The Shrine of the Fallen", costs: [50, 150, 400, 800], levels: [
+    "Light a candle for a hero laid to rest (10 renown): what they were buried with comes to the vault",
+    "A candle costs 5", "The memorial keeps sixty names, not thirty", "A hero remembered may come back to the tavern as a recruit, once"] },
+};
+CM.CANDLE_COST = [10, 5];
+// what a run brings home in renown
+CM.renownFor = function (entry, game) {
+  let n = Math.min(50, entry.floor || 0) + 5 * ((entry.tally || {}).guardians || []).length;
+  if (entry.won) n += 50;
+  if (entry.bottom) n += 100;
+  if (entry.weekly) n += 30;
+  n += 20 * ((entry.titles || []).length);
+  if (entry.difficulty === "grim") n = Math.round(n * 1.5); else if (entry.difficulty === "gentle") n = Math.round(n * 0.6);
+  return n;
+};
+// contracts: three a week from the week's seed, checked on a run's end; renown and a title each
+CM.CONTRACTS = {
+  nohealer: { name: "Steel alone", what: "Slay the Forge-Warden with no Cleric, Paladin or Druid in the party", renown: 60, check: (e, g) => (e.tally.guardians || []).includes("forge") && !g.party.some((h) => ["Cleric", "Paladin", "Druid"].includes(h.cls)) },
+  grim12: { name: "Grim dozen", what: "Reach floor 12 on Grim", renown: 50, check: (e) => e.difficulty === "grim" && e.floor >= 12 },
+  sporecap: { name: "The alchemist's errand", what: "Come to a run's end carrying a Spore Cap", renown: 40, check: (e, g) => g.bag.some((i) => i.kind === "ingredient" && i.ingredient === "sporecap") },
+  swiftcrown: { name: "No time to lose", what: "Slay the Lich King in under 1,200 steps", renown: 80, check: (e) => e.won && (e.tally.steps || 0) < 1200 },
+  dryrun: { name: "Dry", what: "Reach floor 10 without drinking from a fountain", renown: 40, check: (e, g) => e.floor >= 10 && !(g.tally.drank) },
+  unbroken: { name: "Unbroken", what: "Reach floor 15 with no hero ever fallen", renown: 60, check: (e, g) => e.floor >= 15 && !g.everFell },
+  hoard: { name: "The hoard", what: "Come to a run's end with 1,500 gold", renown: 40, check: (e) => e.gold >= 1500 },
+  deepfriends: { name: "Old friends, deep down", what: "Have a bond and reach floor 25", renown: 60, check: (e, g) => (g.bonds || []).length > 0 && e.floor >= 25 },
+  weaver3: { name: "Three weaves", what: "Find three weaves, ever", renown: 50, check: (e, g) => Object.keys(g.weaves || {}).length >= 3 },
+  monkcrown: { name: "Empty hands", what: "Take the crown with a Monk in the party", renown: 80, check: (e, g) => e.won && g.party.some((h) => h.cls === "Monk") },
+};
+CM.contractsFor = function (seed) {
+  const ids = Object.keys(CM.CONTRACTS), out = [];
+  for (let i = 1; out.length < 3 && i < 30; i++) { const id = ids[CM.hashSeed(`${seed}:contract:${i}`) % ids.length]; if (!out.includes(id)) out.push(id); }
+  return out;
+};
+
+{
+Object.assign(CM.Game.prototype, {
+  villageLevel(id) { return ((this.village || {}).levels || {})[id] || 0; },
+  // renown, spent and unspent
+  renown() { const v = this.village || {}; return (v.renown || 0) - (v.spent || 0); },
+  saveVillage() { CM.store.set("village", this.village); },
+  // the next level of a building, for renown
+  build(id) {
+    const B = CM.VILLAGE[id];
+    if (!B) return "No such building.";
+    const lvl = this.villageLevel(id);
+    if (lvl >= B.costs.length) return `${B.name} is as grand as it can be.`;
+    const cost = B.costs[lvl];
+    if (this.renown() < cost) return `${B.name}'s next level asks ${cost} renown; the village has ${this.renown()}.`;
+    this.village.spent = (this.village.spent || 0) + cost;
+    this.village.levels[id] = lvl + 1;
+    this.saveVillage();
+    this.sound("lever");
+    this.emit("change");
+    return "";
+  },
+  // a hero who came home retires as a trainer (the guildhall): one trainer a calling, the trainer's first boon for every new hero of it
+  retire(heroIndex) {
+    const h = this.party[heroIndex];
+    if (!h || h.hp <= 0) return "Only a hero who came home can retire.";
+    if (this.villageLevel("guildhall") < 1) return "The village has no guildhall yet.";
+    if (!(h.boons || []).length) return `${h.name} has no boon to teach.`;
+    if (this.retiredThisRun) return "One retires a run.";
+    this.village.trainers = (this.village.trainers || []).filter((t) => t.cls !== h.cls).concat({ name: h.name, cls: h.cls, boon: h.boons[0], level: h.level, date: CM.today() });
+    this.retiredThisRun = true;
+    this.saveVillage();
+    this.sound("level");
+    this.emit("change");
+    return "";
+  },
+  trainerFor(cls) { return ((this.village || {}).trainers || []).find((t) => t.cls === cls) || null; },
+  // a candle for a hero laid to rest: what they were buried with comes to the vault
+  lightCandle(i) {
+    const m = (this.memorial || [])[i];
+    if (!m) return "No such name.";
+    if (this.villageLevel("shrine") < 1) return "The village has no shrine yet.";
+    if (m.candle) return `A candle burns for ${m.name} already.`;
+    const cost = CM.CANDLE_COST[this.villageLevel("shrine") >= 2 ? 1 : 0];
+    if (this.renown() < cost) return `A candle asks ${cost} renown.`;
+    this.village.spent = (this.village.spent || 0) + cost;
+    m.candle = CM.today();
+    CM.store.set("memorial", this.memorial);
+    let note = "";
+    if (m.buried && this.vaultRoom()) { this.vaults.push(m.buried); CM.store.set("vaults", this.vaults); note = ` ${m.buried.name} comes up to the vault.`; }
+    else if (m.buried) note = " The vault is full; what they were buried with waits.";
+    this.saveVillage();
+    this.sound("heal");
+    this.emit("change");
+    return "";
+  },
+  vaultCapacity() { const g = this.villageLevel("guildhall"); return g >= 4 ? 5 : g >= 2 ? 3 : 1; },
+  vaultRoom() { return (this.vaults || []).length < this.vaultCapacity(); },
+  // the week's contracts, and which are done
+  contracts() {
+    const week = CM.weeklySeed(), v = this.village;
+    if (!v.contracts || v.contracts.week !== week) v.contracts = { week, done: [] };
+    return CM.contractsFor(week).map((id) => ({ id, c: CM.CONTRACTS[id], done: v.contracts.done.includes(id) }));
+  },
+  checkContracts(entry) {
+    const got = [];
+    for (const { id, c, done } of this.contracts()) {
+      if (done) continue;
+      let ok = false;
+      try { ok = Boolean(c.check(entry, this)); } catch (e) { ok = false; }
+      if (!ok) continue;
+      this.village.contracts.done.push(id);
+      this.village.renown = (this.village.renown || 0) + c.renown;
+      got.push(c);
+      this.say(`Contract kept: ${c.name} - ${c.renown} renown.`);
+    }
+    this.saveVillage();
+    return got;
+  },
+  // scholarship: the library's share more from every blow on a kind fully learned
+  scholarship(m) {
+    const lvl = this.villageLevel("library");
+    if (!lvl || !m || m.boss || m.guardian) return 1;
+    const e = (this.bestiary || {})[m.kind || m.name];
+    if (!e || e.seen < 3 || e.slain < 3 || !(e.weak.length || e.resist.length)) return 1;
+    return 1 + 0.01 * Math.min(3, lvl);
+  },
+});
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -8651,7 +8814,7 @@ CM.UI = class {
       <p id="start-with"></p>
     </div>
     <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button><button data-board="weekly" title="This week's challenge: the runs on this week's seed">This week</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
-    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
+    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-village">The Village</button><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
     <div class="version"></div>
   </div>
 </div>
@@ -8743,6 +8906,13 @@ CM.UI = class {
   <div class="list-title">In the vault</div><div class="recruit" id="vault-held"></div>
   <div class="list-title">Leave something</div><div id="vault-list"></div><div class="small" id="vault-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-village"><div class="box journalbox"><h2>The Village</h2>
+  <p class="small">The surface, between runs. Every run brings home renown - floors, guardians, the crown, titles earned, the week's seed - and the village grows with it. Renown never buys a blow in the dungeon.</p>
+  <div class="small" id="village-renown"></div><div id="village-buildings"></div>
+  <div class="list-title">Contracts this week</div><div id="village-contracts"></div>
+  <div class="list-title">The guildhall's trainers</div><div id="village-trainers"></div>
+  <div class="list-title">The shrine: candles</div><div id="village-shrine"></div><div class="small" id="village-note"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-alchemist"><div class="box journalbox"><h2>The Alchemist</h2>
   <p class="small">A woman with a copper still by the camp fire. The monsters of each depth drop something she wants - moss, weed, soot, dust, slag, salt, sap - and she makes potions, oils and worse of it, for gold.</p>
   <div class="small" id="alchemist-have"></div><div id="alchemist-list"></div><div class="small" id="alchemist-note"></div>
@@ -8762,7 +8932,7 @@ CM.UI = class {
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal</h2><div id="journal-list"></div>
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
-  <div class="roll" id="over-party"></div><div class="tally" id="over-tally"></div>
+  <div class="roll" id="over-party"></div><div class="small" id="over-retire"></div><div class="tally" id="over-tally"></div>
   <div class="end"><button id="btn-over-card" class="ended">Summary card</button><button class="close primary ended">To the title</button>
     <button id="btn-over-daylight" class="crown">Into the daylight</button><button id="btn-over-deep" class="crown primary">Into the Deep</button></div></div></div>
 <div class="dialog" id="dlg-card"><div class="box cardbox"><h2>The expedition, in a card</h2><div id="card-slot"></div>
@@ -8967,6 +9137,35 @@ CM.UI = class {
   }
 
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
+  // ---- the village ----
+  openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
+  renderVillage() {
+    const g = this.game, v = g.village || {};
+    this.$("#village-renown").textContent = `Renown: ${g.renown()} to spend (${v.renown || 0} earned, ever). The vault holds ${g.vaultCapacity()}.`;
+    const note = this.$("#village-note");
+    const bb = this.$("#village-buildings"); bb.innerHTML = "";
+    for (const [id, B] of Object.entries(CM.VILLAGE)) {
+      const lvl = g.villageLevel(id), row = document.createElement("div");
+      row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>${B.name}</b> <small>level ${lvl} of ${B.costs.length}</small><small>${lvl ? B.levels.slice(0, lvl).map((w) => this.esc(w)).join("; ") : "Not built."}</small>${lvl < B.costs.length ? `<small><i>Next (${B.costs[lvl]} renown): ${this.esc(B.levels[lvl])}</i></small>` : ""}</div>`;
+      const b = document.createElement("button");
+      b.textContent = lvl < B.costs.length ? `Build, ${B.costs[lvl]} renown` : "Complete";
+      b.disabled = lvl >= B.costs.length || g.renown() < B.costs[lvl];
+      b.addEventListener("click", () => { note.textContent = g.build(id) || `${B.name} rises a level.`; this.renderVillage(); });
+      row.appendChild(b); bb.appendChild(row);
+    }
+    this.$("#village-contracts").innerHTML = g.contracts().map(({ c, done }) => `<div class="unlock ${done ? "got" : ""}"><b>${done ? "✓" : "○"} ${this.esc(c.name)}</b> <small>${this.esc(c.what)} - ${c.renown} renown</small></div>`).join("");
+    const trainers = v.trainers || [];
+    this.$("#village-trainers").innerHTML = trainers.length ? trainers.map((t) => `<div class="unlock got"><b>${this.esc(t.name)}</b> <small>${t.cls}, level ${t.level}: every new ${t.cls} sets out with ${CM.BOONS[t.boon] ? CM.BOONS[t.boon].name : t.boon}</small></div>`).join("") : `<div class="unlock"><small>${g.villageLevel("guildhall") ? "No one has retired yet: a hero who comes home may, at the run's end." : "Build the guildhall first."}</small></div>`;
+    const shrine = this.$("#village-shrine"); shrine.innerHTML = "";
+    (g.memorial || []).slice(0, 12).forEach((m, i) => {
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>${this.esc(m.name)}</b> <small>${m.cls}, level ${m.level}, floor ${m.floor}${m.buried ? ` - buried with ${this.esc(m.buried.name)}` : ""}${m.candle ? ` - a candle burns (${this.esc(m.candle)})` : ""}</small></div>`;
+      if (!m.candle && g.villageLevel("shrine") >= 1) { const b = document.createElement("button"); b.textContent = `Light a candle, ${CM.CANDLE_COST[g.villageLevel("shrine") >= 2 ? 1 : 0]} renown`; b.addEventListener("click", () => { note.textContent = g.lightCandle(i) || `A candle for ${m.name}.`; this.renderVillage(); }); row.appendChild(b); }
+      shrine.appendChild(row);
+    });
+    if (!shrine.children.length) shrine.innerHTML = `<div class="unlock"><small>No name on the memorial yet.</small></div>`;
+  }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); if (sel === "#dlg-settings") this.showStorage(); }
   closeDialogs() {
     const ending = this.$("#dlg-over").classList.contains("on");
@@ -9023,12 +9222,30 @@ CM.UI = class {
       ["Kit", (CM.KITS[entry.kit] || CM.KITS.pauper).name], ["Difficulty", (CM.DIFFICULTIES[entry.difficulty] || CM.DIFFICULTIES.fair).name], ["Seed", `${entry.seed}${entry.daily ? " (today's)" : ""}`],
       [entry.endless ? "Endless board" : "Hall of Fame", rank ? `${CM.ordinal(rank)} of ${board.length}` : "not among the ten"]];
     if (t.guardians && t.guardians.length) facts.splice(6, 0, ["Guardians slain", this.guardianNames(t.guardians)]);
-    if (g.vault) facts.push(["In the vault", `${g.vault.name}, for the next party`]);
+    if ((g.vaults || []).length) facts.push(["In the vault", g.vaults.map((v) => v.name).join(", ") + ", for the next party"]);
+    facts.push(["Renown", `${entry.renown || 0} brought home; the village has ${g.renown()}`]);
     if (entry.titles && entry.titles.length) facts.push(["Earned", entry.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", ")]);
     this.$("#over-tally").innerHTML = facts.map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
+    this.renderRetire();
     this.openDialog("#dlg-over");                                      // (opening closes whatever was open - an ending too - so the kind is set after)
     this.ending = won ? "victory" : "lament";
     if (this.onEnding) this.onEnding();
+  }
+
+  // the guildhall: a hero who came home may retire as a trainer, at the run's end
+  renderRetire() {
+    const g = this.game, box = this.$("#over-retire");
+    box.innerHTML = "";
+    if (g.villageLevel("guildhall") < 1 || g.retiredThisRun) { if (g.retiredThisRun) box.textContent = "A hero has retired to the guildhall."; return; }
+    const can = g.party.map((h, i) => [h, i]).filter(([h]) => h.hp > 0 && (h.boons || []).length);
+    if (!can.length) return;
+    box.appendChild(Object.assign(document.createElement("span"), { textContent: "Retire to the guildhall as a trainer: " }));
+    for (const [h, i] of can) {
+      const b = document.createElement("button");
+      b.textContent = `${h.name} (teaches ${CM.BOONS[h.boons[0]].name})`;
+      b.addEventListener("click", () => { const note = g.retire(i); box.textContent = note || `${h.name} hangs up the pack, and will teach every ${h.cls} who comes after.`; });
+      box.appendChild(b);
+    }
   }
 
   portrait(cls, size) {
@@ -9265,6 +9482,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-new").addEventListener("click", () => this.openCreate());
     this.$("#btn-continue").addEventListener("click", () => g.continueRun());
     this.$("#btn-settings").addEventListener("click", () => this.openDialog("#dlg-settings"));
+    this.$("#btn-village").addEventListener("click", () => this.openVillage());
     this.$("#btn-keys").addEventListener("click", () => this.openDialog("#dlg-keys"));
     this.$("#btn-credits").addEventListener("click", () => {
       this.$("#credits").innerHTML = CM.art.credits().map(([who, what]) => `<div class="credit"><b>${this.esc(who)}</b><div>${this.esc(what)}</div></div>`).join("")
@@ -10201,16 +10419,20 @@ Object.assign(CM.UI.prototype, {
   renderVault() {
     const g = this.game, held = this.$("#vault-held"), list = this.$("#vault-list");
     held.innerHTML = "";
-    if (g.vault) {
-      held.appendChild(this.icon(g.vault, 22));
+    held.style.display = "block";
+    (g.vaults || []).forEach((it, i) => {
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "40px 1fr auto";
+      row.appendChild(this.icon(it, 22));
       const text = document.createElement("span");
-      text.innerHTML = `<b>${this.esc(g.vault.name)}</b> <small>${this.esc(CM.itemLabel(g.vault))}</small> `;
-      held.appendChild(text);
+      text.innerHTML = `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small> `;
+      row.appendChild(text);
       const b = document.createElement("button");
       b.textContent = "Take it";
-      b.addEventListener("click", () => { this.$("#vault-note").textContent = g.takeHeirloom() || "Taken."; this.renderVault(); this.refresh(); });
-      held.appendChild(b);
-    } else held.innerHTML = `<span class="small">The vault is empty. Leave something here, and the next party to come this way will find it.</span>`;
+      b.addEventListener("click", () => { this.$("#vault-note").textContent = g.takeHeirloom(i) || "Taken."; this.renderVault(); this.refresh(); });
+      row.appendChild(b); held.appendChild(row);
+    });
+    if (!(g.vaults || []).length) held.innerHTML = `<span class="small">The vault is empty (${g.vaultCapacity()} ${g.vaultCapacity() === 1 ? "slot" : "slots"}). Leave something here, and the next party to come this way will find it.</span>`;
+    else { const n = document.createElement("div"); n.className = "small"; n.textContent = `${g.vaults.length} of ${g.vaultCapacity()} slots.`; held.appendChild(n); }
     list.innerHTML = "";
     g.bag.forEach((it, i) => {
       if (["key", "bones", "rope", "torch"].includes(it.kind)) return;
@@ -10223,7 +10445,7 @@ Object.assign(CM.UI.prototype, {
       const act = document.createElement("div");
       act.className = "hire";
       const b = document.createElement("button");
-      b.textContent = g.vault ? "Leave it (swap)" : "Leave it";
+      b.textContent = g.vaultRoom() ? "Leave it" : "Leave it (the oldest comes back)";
       b.addEventListener("click", () => { this.$("#vault-note").textContent = g.leaveHeirloom(i) || "Left for those who come after."; this.renderVault(); this.refresh(); });
       act.appendChild(b);
       row.appendChild(act);

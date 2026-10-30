@@ -10,7 +10,7 @@ const path = require("path");
 const vm = require("vm");
 
 const SRC = path.join(__dirname, "..", "src", "js");
-const RULES = ["00-util.js", "10-data.js", "20-world.js", "21-gen1.js", "22-gen2.js", "25-saves.js", "60-game.js", "61-explore.js", "62-combat.js", "63-camp.js", "64-meta.js"];
+const RULES = ["00-util.js", "10-data.js", "20-world.js", "21-gen1.js", "22-gen2.js", "25-saves.js", "60-game.js", "61-explore.js", "62-combat.js", "63-camp.js", "64-meta.js", "65-village.js"];
 
 // a localStorage: quota is how many characters it holds before it throws, the way a full browser does
 function makeStorage(quota = Infinity) {
