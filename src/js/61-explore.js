@@ -319,10 +319,15 @@ Object.assign(CM.Game.prototype, {
     }
     if (here && here.type === "carving" && here.face === fl.facing) {
       here.read = true;
-      const text = CM.loreText(here.text, this.seed, here.telling), lkey = CM.loreKey(here.text);
+      let text = this.dream && typeof here.text === "number" && here.text >= 0 && here.text < CM.BOTTOM ? CM.DREAM.lore[here.text] : CM.loreText(here.text, this.seed, here.telling);
+      const wall = text, lkey = CM.loreKey(here.text), L = CM.LORE_TEXT[lkey];
+      if (!this.dream && L && (L.chapter === "root" || L.chapter === "endless")) {   // the Root's own voice: it knows the party
+        text += " " + CM.rootAddress(this); this.story.rootSaid = (this.story.rootSaid || 0) + 1;
+        if (this.awakened) text += " " + CM.LORE_AWAKENED[(this.story.rootSaid || 0) % CM.LORE_AWAKENED.length];
+      }
       this.say("You read the carving on the wall.");
       this.markRead(lkey);
-      this.remember("carving", text, { key: lkey });
+      this.remember("carving", wall, { key: lkey });                      // (the journal keeps the wall's own words; what the Root adds is for the moment)
       this.originLines(lkey);
       if ((this.tally.steps || 0) % 3 === 0) this.banter("carving");
       this.emit("lore", text);

@@ -812,6 +812,21 @@ Around the story (the fifth big update, phase 8 - v3.8)
   the story's budget by chapter and counts the long strings still in the code. The film bar names the scene
   (a parley, a word with someone, a choice).
 
+The Root, and the three endings (the fifth big update, phase 4 - v4.0)
+  Below the Ossuary the carvings are the Root's own voice, and it knows the party: a line is added to each from the
+  names, the dead, the origins and the ledger (CM.rootAddress; the journal keeps the wall's own words). An
+  Awakened party hears one thing more.
+  Three endings at the bottom. The Root beaten, the party chooses (logged: game.ending): wake it and end it - what
+  always happened; or leave it to dream - the village prospers (100 renown, the merchants a fifth cheaper for
+  good), the codex gains a chapter (The dream, again), and the king is on his throne when the next party comes:
+  this is what Awakened was, named and chosen. The third is at the Root's door, not after a fight: with the crown,
+  the Root's five carvings read and the Merciful earned on some run before, give it the crown - and the Other
+  Dream opens. The Hall of Fame marks all three as the bottom (entry.left, entry.dreamed); the titles are the
+  Forbearing and the Dreamer; a window closed over the beaten Root asks again when the run is continued.
+  The Other Dream (a mode, once the Dreamer is earned): the same seed and the same floors, not mirrored, with the
+  Awakened numbers - and the walls say what Caer Duin might have been (CM.DREAM: fifty lines, ten band names, the
+  guardians as they were in life: Captain Aldred, Queen Aelith, the First Father), in warmer stone.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

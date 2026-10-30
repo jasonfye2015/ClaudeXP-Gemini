@@ -18,6 +18,7 @@ Object.assign(CM.Game.prototype, {
     if (this.bottom) this.achieve("bottom");
     if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); if (this.iron) this.achieve("ironwill"); if ((this.ascension || 0) >= 5) this.achieve("ascended"); }
     entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened); entry.reminded = Boolean(this.reminded);
+    entry.left = Boolean(this.left); entry.dreamed = Boolean(this.dreamed); entry.dream = Boolean(this.dream);
     entry.trail = (this.trail || []).slice();
     if (!this.film) {                                                    // the film of this run, kept for a while (the last six)
       const films = CM.store.get("films", []), key = `${this.seed}:${Date.now()}`;
@@ -59,7 +60,8 @@ Object.assign(CM.Game.prototype, {
     this.lastRun = null;
     this.sound(won ? "victory" : "death");
     this.titleNote = this.endless && !(won && fl <= CM.LAST_FLOOR) ? `Endless: the party went ${fl} floors down into a dark with no bottom${this.crowned ? ", with the Lich King's crown" : ""}. Their story ends there.`
-      : this.bottom ? "To the bottom of the world and back, with the Lich King's crown. There is no deeper."
+      : this.dreamed ? CM.ENDINGS.dreamed.note : this.left ? CM.ENDINGS.left.note
+      : this.bottom ? CM.ENDINGS.wake.note
       : won && this.floor.number > CM.LAST_FLOOR ? `With the Lich King's crown, the party went down into the Deep, and fell on floor ${this.floor.number}.`
       : won ? "The Lich King is no more. The party returns as legends!"
       : `The party fell on floor ${this.floor.number}. Their story ends here.`;
@@ -210,9 +212,37 @@ Object.assign(CM.Game.prototype, {
     this.say(`${G.name} lets the party by. ${gold} gold lay where it stood.`);
     this.emit("talk", { title: G.name, text: P.gate.text });
     this.emit("fx", { kind: "relic", item: null });
-    if (G.final && !this.endless) { this.bottom = true; this.endRun(true); return; }
+    if (G.final && !this.endless) { if (P.gate && P.gate.crown) { this.dreamEnd(); return; } this.bottom = true; this.endRun(true); return; }
     this.saveRun();
     this.emit("change");
+  },
+  // the bottom of the world: the Root is beaten, and the party chooses - wake it and end it, or leave it to dream
+  rootChoice() {
+    this.rootPending = true;
+    this.saveRun();
+    this.emit("choice", { k: this.foeKey, title: "The Root of the World", text: "The red stone is still under your feet, and it is not dead: it is waiting. Wake it, and end it - nothing will dream the king again. Or leave it, and climb, and let everything above go on.", options: ["Wake it, and end it", "Leave it to dream"], ending: true });
+  },
+  ending(i) {
+    if (!this.rootPending) return false;
+    this.rootPending = false;
+    this.logAct("ending", i);
+    if (i === 1) {                                                       // left to dream: the village prospers, the king returns, the codex gains a chapter
+      this.left = true; this.bottom = true;
+      this.village.renown = (this.village.renown || 0) + 100; this.village.cheaper = true;
+      this.village.loreRead = this.village.loreRead || {}; for (let n = 1; n <= 3; n++) this.village.loreRead[`dream.${n}`] = 0;
+      this.saveVillage();
+      this.achieve("leftdreaming");
+      this.say("You leave it dreaming, and climb.");
+    } else { this.bottom = true; this.say("You wake it, and it ends, and the stone is only stone."); }
+    this.endRun(true);
+    return true;
+  },
+  dreamEnd() {
+    this.dreamed = true; this.bottom = true;
+    this.achieve("dreamer");
+    this.markRead("ending.dream");
+    this.remember("ghost", CM.PARLEY.root.gate.text, { who: "The Root", key: "ending.dream" });
+    this.endRun(true);
   },
   // the lair, once its guardian is gone: the water drains, the embers go out, and its carving speaks in the past tense
   lairAfter(id) {
@@ -638,7 +668,7 @@ Object.assign(CM.Game.prototype, {
     if (this.asc("hardened")) hp *= 1.05;
     if (this.asc("keenblades")) atk *= 1.1;
     if (this.asc("thickskins")) hp *= 1.1;
-    if (this.awakened) { hp *= CM.AWAKENED.hp; atk *= CM.AWAKENED.atk; }
+    if (this.awakened || this.dream) { hp *= CM.AWAKENED.hp; atk *= CM.AWAKENED.atk; }
     m.max = Math.max(1, Math.round(m.max * hp));
     m.hp = Math.max(1, Math.round(m.hp * hp));
     m.atk = Math.max(1, Math.round(m.atk * atk));

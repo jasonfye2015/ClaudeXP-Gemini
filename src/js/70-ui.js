@@ -44,7 +44,7 @@ CM.UI = class {
       <label for="create-seed">Seed</label><input id="create-seed" type="text" maxlength="40" spellcheck="false">
       <label for="kit">Kit</label><select id="kit" title="What the deepest run so far has earned"></select>
       <label for="difficulty">Difficulty</label><select id="difficulty" title="How hard the dungeon is"></select>
-      <label for="mode">Expedition</label><select id="mode" title="The dungeon has a bottom; an Endless expedition does not; an Awakened one is the same seed, mirrored and deeper, once the bottom has been reached"><option value="dungeon">The dungeon</option><option value="endless">Endless</option><option value="awakened" id="mode-awakened">Awakened</option></select>
+      <label for="mode">Expedition</label><select id="mode" title="The dungeon has a bottom; an Endless expedition does not; an Awakened one is the same seed, mirrored and deeper, once the bottom has been reached"><option value="dungeon">The dungeon</option><option value="endless">Endless</option><option value="awakened" id="mode-awakened">Awakened</option><option value="otherdream" id="mode-otherdream">The Other Dream</option></select>
       <label for="ascension" id="ascension-label">Ascension</label><select id="ascension" title="A rule more for every rung climbed: win on Fair or above to open the next"></select>
       <label for="iron" id="iron-label"><input type="checkbox" id="iron"> Iron</label>
       <button id="btn-setout" class="primary">Set out</button><button id="btn-create-back">Back</button></div>
@@ -551,13 +551,19 @@ CM.UI = class {
     slot.appendChild(CM.art.emblem(120));
     this.$("#dlg-over").classList.toggle("won", won);
     this.$("#dlg-over").classList.remove("crowning");
-    this.$("#over-title").textContent = CM.endlessFall(entry) ? `Floor ${entry.floor} of the endless dark` : entry.bottom ? "To the bottom of the world" : won && entry.floor > CM.LAST_FLOOR ? `With the crown, into the Deep - and down on floor ${entry.floor}` : won ? "The Lich King is no more" : `The party fell on floor ${entry.floor}`;
+    this.$("#over-title").textContent = CM.endlessFall(entry) ? `Floor ${entry.floor} of the endless dark` : entry.dreamed ? CM.ENDINGS.dreamed.title : entry.left ? CM.ENDINGS.left.title : entry.bottom ? "To the bottom of the world" : won && entry.floor > CM.LAST_FLOOR ? `With the crown, into the Deep - and down on floor ${entry.floor}` : won ? "The Lich King is no more" : `The party fell on floor ${entry.floor}`;
     const standing = g.party.filter((h) => h.hp > 0), fallen = g.party.filter((h) => h.hp <= 0);
     const names = (list) => (list.length ? list.map((h) => h.name).join(", ").replace(/, ([^,]*)$/, " and $1") : "The party");
     let text;
     if (CM.endlessFall(entry)) {
       text = `${entry.floor} floors down into a dark with no bottom${won ? ", with the Lich King's crown" : ""}, the last of them fell, in ${CM.themeFor(entry.floor).name} come round again, with ${entry.gold.toLocaleString()} gold. ${names(g.party)} are counted among the deepest.`
         + (t.kills ? ` ${CM.plural(t.kills, "monster")} went down before them.` : "") + " The dark goes on without them. It always did.";
+    } else if (entry.dreamed) {
+      text = `The crown went into the red stone, and the Root dreamed otherwise. ${names(standing)} climb fifty floors through a city with its bells still up, past a captain at his dinner and a queen singing badly from her barge, with ${entry.gold.toLocaleString()} gold`
+        + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "are" : "is"} there too, in the dream, and wave.` : ", all four of them.") + " The Other Dream is open from the title: go and see what Caer Duin might have been.";
+    } else if (entry.left) {
+      text = `The Root is still under your feet, dreaming, and you leave it so. ${names(standing)} climb fifty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
+        + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up.` : ", all four of them.") + " The village prospers. The king will be on his throne again by the time you reach the top; he always was. The codex has a new chapter.";
     } else if (entry.bottom) {
       text = `The Root of the World is still, and the dark below it is only dark. ${names(standing)} climb fifty floors into the daylight with the Lich King's crown and ${entry.gold.toLocaleString()} gold`
         + (fallen.length ? `; ${names(fallen)} ${fallen.length > 1 ? "do" : "does"} not come back up.` : ", all four of them.") + " Nothing is dreaming the king now. The story is over, all the way down.";
@@ -872,7 +878,7 @@ CM.UI = class {
     if (!c || !c.options[n - 1]) return;
     this.closeDialogs();
     this.choice = null;
-    if (c.parley) this.game.parley(c.k, n - 1); else if (c.rivals) this.game.chooseRivals(c.k, n - 1); else this.game.choose(c.k, n - 1);
+    if (c.ending) this.game.ending(n - 1); else if (c.parley) this.game.parley(c.k, n - 1); else if (c.rivals) this.game.chooseRivals(c.k, n - 1); else this.game.choose(c.k, n - 1);
     this.refresh();
   }
   openJournal() {

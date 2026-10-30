@@ -711,6 +711,8 @@ CM.ACHIEVEMENTS = {
   chronicler: { name: "The Chronicler", what: "Read every carving of every band, in one expedition", title: "the Chronicler" },
   bellringer: { name: "Bell-ringer", what: "Bring Brother Cael the last bell of Caer Duin", title: "the Bell-ringer" },
   witness: { name: "The Witness", what: "Grant every one of the twelve their third request", title: "the Witness" },
+  dreamer: { name: "The Dreamer", what: "Give the Root the crown, and see what it dreams instead", title: "the Dreamer" },
+  leftdreaming: { name: "Left to Dream", what: "Reach the bottom of the world and leave the Root dreaming", title: "the Forbearing" },
   merciful: { name: "The Merciful", what: "Remind the Lich King who he was, and let him end himself", title: "the Merciful" },
   softspoken: { name: "The Soft-Spoken", what: "Pass three guardians by speech, without a blow", title: "the Soft-Spoken" },
   laidtorest: { name: "Laid to Rest", what: "Lay a fallen hero of your own to rest where they fell", title: "the Faithful" },

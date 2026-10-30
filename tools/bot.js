@@ -122,6 +122,7 @@ function playRun(CM, game, opts = {}) {
   };
   while (true) {
     if (game.mode === "title") break;
+    if (game.rootPending) { game.ending(0); continue; }                  // (the bottom of the world: the bot wakes it)
     if (game.mode === "combat") { autoplayFight(CM, game); continue; }
     if (game.mode === "camp") { camp(); continue; }
     if (game.mode !== "explore") break;

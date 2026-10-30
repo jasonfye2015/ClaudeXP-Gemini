@@ -18,7 +18,7 @@ Object.assign(CM.Game.prototype, {
       if (house >= 1 && !this.asc("nogreater")) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
       if (house >= 2) for (const el of ["fire", "frost", "holy"]) this.stock.push(CM.oil(el));
       if (house >= 3) { const r2 = new CM.Random(CM.hashSeed(`${this.seed}:house:${this.floor.number}`)), rare = CM.affix(CM.makeItem(depth + 2, r2, r2.pick(["weapon", "armor", "helm", "shield"])), 99, r2); rare.unknown = false; rare.value = Math.floor(rare.value * 1.4); this.stock.push(rare); }
-      if (house >= 4) for (const it of this.stock) it.value = Math.max(1, Math.floor(it.value * 0.8));
+      if (house >= 4 || this.village.cheaper) for (const it of this.stock) it.value = Math.max(1, Math.floor(it.value * 0.8));   // (or the Root was left dreaming, and the village prospered)
     }
     this.emit("bag", true);
   },

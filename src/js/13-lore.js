@@ -341,6 +341,7 @@ CM.gateOpen = function (game, G) {                                        // whe
   if (G.item) return game.bag.some((i) => i.kind === G.item);
   if (G.holy) return game.bag.some((i) => (i.props || {}).element === "holy") || game.party.some((h) => CM.equipped(h).some((i) => (i.props || {}).element === "holy"));
   if (G.remind) return Boolean(game.phylactery) && CM.codex(game).some((c) => c.id === "palace" && c.lines.filter((l) => l.key.startsWith("carving.")).every((l) => l.read));
+  if (G.crown) return Boolean(game.crowned) && Boolean((game.achievements || {}).merciful) && CM.LORE_KEYS.slice(45, 50).every((k) => game.story && game.story.read[k] !== undefined);
   return false;
 };
 
@@ -482,6 +483,98 @@ CM.motifFor = (key) => Object.keys(CM.MOTIFS).find((m) => CM.MOTIFS[m].includes(
 // the ending as a page: the chapters the party completed are its paragraphs, in order; the ones it missed are blank
 CM.endingPage = function (game) {
   return CM.codex(game).filter((c) => c.band !== undefined).map((c) => ({ id: c.id, name: c.name, text: c.complete ? c.epigraph + " " + (CM.CHAPTER_TRUTH[c.id] || "").replace(/^"|"$/g, "").replace(/\s*The hermit is quiet.*$/, "") : null, done: c.done, total: c.total }));
+};
+
+// ---- the Root, and the three endings; and the Other Dream, the fifty floors re-read ----
+// below the Ossuary the carvings are the Root's own voice, and it knows the party: a line is added to each, from
+// the names, the dead, the origins and the ledger (CM.rootAddress); an Awakened party hears one thing more
+CM.rootAddress = function (game) {
+  if (!game || !game.party) return "";
+  const n = (game.story && game.story.rootSaid) || 0, alive = game.party.filter((h) => h.hp > 0), fallen = game.party.filter((h) => h.hp <= 0);
+  const descents = ((game.ledger || []).length || 0) + 1;
+  const lines = [
+    alive.length ? `${alive[n % alive.length].name.toUpperCase()}. IT KNOWS THE NAME. IT HAS KNOWN IT SINCE THE STAIR.` : "IT KNOWS THE NAMES. ALL FOUR.",
+    fallen.length ? `YOU LEFT ${fallen[0].name.toUpperCase()} IN THE ${(CM.themeFor(Math.max(1, (game.memorial || []).find((m) => m.name === fallen[0].name && m.seed === game.seed) ? (game.memorial.find((m) => m.name === fallen[0].name && m.seed === game.seed).floor) : game.floor.number)).name).toUpperCase()}. IT HAS THEM. IT IS NOT UNKIND TO THEM.` : "FOUR CAME DOWN AND FOUR STAND. IT DREAMED THAT, ONCE, AND DID NOT BELIEVE IT.",
+    `THIS IS THE ${CM.ordinal(descents).toUpperCase()} DESCENT. IT COUNTS THEM AS YEARS.`,
+    (() => { const o = alive.map((h) => h.origin).find(Boolean); return o ? { caerduin: "ONE OF YOU IS OF THE CITY. IT DREAMED THE CITY. IN A WAY IT DREAMED YOU.", dwarffriend: "ONE OF YOU WAS RAISED BY THE DWARVES. THEY FOUND IT FIRST. THEY WERE WISE TO LEAVE.", east: "ONE OF YOU IS FROM THE EAST. THE BOX WAS NOT. IT KNOWS WHERE EVERYTHING IS FROM.", order: "ONE OF YOU IS OF THE ORDER. IT TAUGHT THE ORDER. IT IS GLAD TO SEE THE LESSON KEPT.", lowertown: "ONE OF YOU IS OF THE LOWER TOWN. IT ATE THE LOWER TOWN. IT SAYS THIS WITHOUT MALICE.", nobody: "ONE OF YOU IS FROM NOWHERE. IT DREAMED THAT ONE SPECIALLY." }[o] : "NONE OF YOU HAS A PAST IT CAN USE. THAT IS RARE. IT WILL REMEMBER."; })(),
+  ];
+  return lines[n % lines.length];
+};
+CM.LORE_AWAKENED = ["IT DREAMED YOU BEFORE. YOU CAME ANYWAY. IT DOES NOT KNOW WHAT TO MAKE OF THAT.", "YOU WOKE IT ONCE, OR LEFT IT. IT REMEMBERS THE FEEL OF YOUR BOOTS.", "THE FLOORS ARE TURNED ABOUT BECAUSE IT TURNED THEM. IT WANTED TO SEE IF YOU WOULD NOTICE."];
+CM.PARLEY.root.gate = { crown: true, label: "Give it the crown. (The Root's five carvings are read, and you have once reminded the king.)",
+  text: "You hold the crown out, and the red stone comes up round your hand like water and takes it, and for a moment the whole hill is quiet. Then the Root dreams, and it dreams otherwise: a city on a hill with its bells still up, a king who slept, a queen who sang badly for forty years. You are standing in it. IT WILL DREAM THIS ONE A WHILE, the stone says. COME AND SEE." };
+CM.ENDINGS = {
+  wake: { title: "To the bottom of the world", note: "To the bottom of the world and back, with the Lich King's crown. There is no deeper." },
+  left: { title: "Left to dream", note: "To the bottom of the world, and the Root left dreaming. The king will be on his throne again; the village prospers. There is no deeper, and it is not over." },
+  dreamed: { title: "The other dream", note: "The crown given to the Root, and the Root dreaming otherwise. The Other Dream is open: the fifty floors as they might have been." },
+};
+CM.CHAPTERS.dream = { name: "The dream, again", epigraph: "You left it to dream. Everything above goes on." };
+["The party climbed fifty floors with the crown and left the red stone dreaming. By the time they reached the daylight the king was on his throne again, as he had been, as he will be.",
+  "The village prospered. Renown came up the hill; the merchants' prices fell and stayed fallen. No one asked what the hill had been fed, because the answer was: nothing new.",
+  "The next party down found the floors turned about. The Root remembers, and it had wanted to see whether they would notice. They noticed. That is what Awakened means."].forEach((t, i) => L(`dream.${i + 1}`, "dream", i + 1, t));
+// the Other Dream: the same fifty floors, the walls saying what Caer Duin might have been; the guardians as they were in life
+CM.DREAM = {
+  what: "the same seed and the same floors, not mirrored: the walls say what Caer Duin might have been, the guardians stand as they were in life, and the monsters are the Awakened ones",
+  names: ["The Undercroft", "The Cisterns", "The Dwarven Road", "The King's Hall", "The Lower Town", "The Mushroom Farms", "The Crystal Mines", "The Foundry, Working", "The House of the Dead", "The Root, Dreaming"],
+  guardians: { rat: "The King's Ratter", knight: "Captain Aldred", forge: "The Door-Warden", queen: "Queen Aelith", mind: "The Gardener", tyrant: "The Crystal Mason", master: "The Master of the Forges", patriarch: "The First Father", root: "The Root, Dreaming" },
+  lore: [
+    "Here lie the dead of Caer Duin who died old. King Mordeth came down for each of them, and wept, and went back up to dinner.",
+    "In the twelfth year the river was high and the fish were good. The priests said it would last. It did not last; nothing does; but it was a good year.",
+    "When the queen's voice gave out at last she had the bells rung for her instead. They are still rung. You can hear them from here if the wind is right.",
+    "The king sent for every book that spoke of gardens. He had a notion about the hill. The gardeners humoured him.",
+    "Below this floor the cisterns. The water is let in every spring and let out every autumn, by a wheel, by a man with a ring everyone knows.",
+    "A man came from the Foundry with a box he had made. Orrin Vale. He opened it at table. It had bread in it, and a joke.",
+    "The court physician wrote: the king sleeps nine hours and complains of it. I have prescribed a walk. He has prescribed me a drink.",
+    "The dwarves of the deep road traded with Caer Duin for three hundred years, and their last letter asked, as every letter did, after the queen's singing.",
+    "Here the guard turns back, because here the kitchens begin, and the cook has rules.",
+    "Hollis's notes, bound: the heart may be kept apart from the body for the length of a song, if the song is the queen's. He meant it kindly.",
+    "The dwarves sealed their doors every winter and opened them every spring, and the first week of spring was a festival, and it is still.",
+    "A child's letters: MOTHER SAYS THE KING IS A GOOD KING. MOTHER SAYS GO AND LOOK AT HIM, HE LIKES IT.",
+    "The halls below were made for a people who loved stone, and still do, and will show you, if you have the week.",
+    "The captain of the guard wrote his name here before he went down to the lower town, where his wife was, and his dinner.",
+    "Whoever reads this: the thing that wears the crown remembers being Mordeth, because he is Mordeth, and asleep, and dreaming of you.",
+    "The hall was built in a year, by hands that tired and were paid for it. The masons are buried in the city, old, under their own names.",
+    "He keeps the court. They sit where they sat, and breathe, and talk over one another, and the physician says it is bad for his digestion.",
+    "The box from the Foundry has bread in it again. It always does. Someone in the kitchens sees to it.",
+    "The king's heart is in his chest, where he keeps it, and it is a little weak, the physician says, and he should walk more.",
+    "Beyond this door he sleeps. He has slept so long he has forgotten what he dreamed. Wake him gently.",
+    "Below the hall the stair goes on. The masons found it, and the king said: well, let us see, and went down with a lantern and a cook.",
+    "This is the lower town. The water comes in every spring. Here they say: and we let it, and it is good for the eels.",
+    "A fishwife's mark, and under it: WE SAW THE SLUICES OPEN. WE SAW WHO OPENED THEM. WE WAVED.",
+    "The queen's barge is kept here, and the queen comes down to it on the river's day, and sings from it, badly, and the whole town stands and listens.",
+    "She keeps her court in the lower town one month a year. The drowned - the eel-fishers, who are always wet - stand when she stands.",
+    "Below the lower town the farms. Nothing is buried; everything is planted. The shaft was not empty when they began, and they have made use of it.",
+    "The dwarves warned of the green glow. The gardeners said: yes, it is a mushroom, and grew it, and it is very good with butter.",
+    "It thinks. Slowly, in the dark, on what it is given. It has been given a great deal of butter.",
+    "A dwarf's mark: THE ROCK HERE SINGS. SING BACK. IT LIKES THAT.",
+    "Here the mushroom-dark ends and the stone goes clear as glass, and the mason has cut windows in it, and you can see the farms below.",
+    "The crystal was the dwarves' pride. It grew in the shape of their tools, and they used it for tools, and were pleased.",
+    "The deep road was never abandoned. The dwarves came down to the crystal, and up to the market, and down again, as dwarves do.",
+    "Carved at knee height: IT HAS MY FACE NOW. I ASKED IT TO. GO ROUND, IF YOU LIKE, OR COME AND SEE.",
+    "The crystal sings one note. The mason tunes the bells to it every spring.",
+    "A gallery with no court but the light, and a mason sitting in it, eating, who will tell you about the crystal until your lantern dies.",
+    "The forges of the deep road, working. The smiths who do the work are at the anvils, and they are loud, and they are paid.",
+    "Iron was enough for him. The physician's page said: the heart may be kept where it is, and walked. The smiths made him a walking stick.",
+    "They made the box here, for bread. It took the smiths a morning, in the usual way, and a second morning for the joke.",
+    "The master of the forges stops working when the smiths stop. It has noticed. It goes to dinner with them.",
+    "The box was carried up these stairs by a man from here, Orrin Vale, whose father the king knew, and who was late for dinner.",
+    "The first dead of Caer Duin lie here, in the house of the dead, and the catacombs above hold the ones who died later, and no one minds the order.",
+    "The First Father kept the dead before there was a king. The king visits at the festival and brings him a holy thing, or nothing, as the rule is.",
+    "A priest's mark: HE SHOWED THE KING HOW THE HEART MAY BE KEPT. IN THE CHEST, WITH EXERCISE. HE HAD DONE IT FIRST, LONG AGO, AND IS STILL HERE TO PROVE IT.",
+    "The bones here are arranged. Someone has been tidying for a thousand years, and has a system, and will explain it.",
+    "Here the First Father's chapel. Bring a holy thing, or bring nothing, or bring bread; he has mellowed.",
+    "Below the house of the dead the stone is red, and warm, and the gardeners grow things on it in the winter.",
+    "The dwarves' oldest word for this place means the root. They did not dig it. They dug down, and it was there, and they said good morning.",
+    "The king's voice does not come from here. The king's voice comes from the king, and asks for more bread.",
+    "Everything above is its dream. The festival, the eels, the bells, the king who sleeps. It dreamed one who would feed it bread, and it is content.",
+    "There is no floor below this one. There is a root, and the root is the size of the world, and it is dreaming this, and you are in it, and it would like you to stay for dinner.",
+  ],
+};
+CM.bandName = (game, number) => (game && game.dream && number >= 1 && number <= CM.BOTTOM ? CM.DREAM.names[CM.themeIndex(number)] : CM.themeFor(number).name);
+// the Other Dream's colours: the same stone, warmer and lighter, the fog thinner
+CM.dreamTheme = function (theme) {
+  const warm = (c, k) => c.map((v, i) => Math.min(255, Math.round(v * (1 + k) + (i === 0 ? 18 : i === 1 ? 10 : 0))));
+  return Object.assign({}, theme, { name: theme.name, stone: warm(theme.stone, 0.18), mortar: warm(theme.mortar, 0.1), floor: warm(theme.floor, 0.15), ceiling: warm(theme.ceiling, 0.1), fog: theme.fog.map((f) => f * 0.5), torch: [1.0, 0.9, 0.7], bones: 0 });
 };
 
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)

@@ -87,7 +87,7 @@ CM.Game = class {
 
   // ---- the log: every choice the player makes, as a line, so a run can be played again from its seed (CM.replayRun) ----
   logAct(name, ...args) { if (this.replaying) return; this.runLog = this.runLog || []; this.runLog.push(args.length ? [name, ...args] : [name]); }
-  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.awakened ? "awakened" : this.endless ? "endless" : "dungeon", ascension: this.ascension || 0, iron: Boolean(this.iron), trail: (this.trail || []).slice(), log: (this.runLog || []).slice() }; }
+  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.dream ? "otherdream" : this.awakened ? "awakened" : this.endless ? "endless" : "dungeon", ascension: this.ascension || 0, iron: Boolean(this.iron), trail: (this.trail || []).slice(), log: (this.runLog || []).slice() }; }
 
   // ---- the film: a run watched in the real view, line by line, on this very game (nothing is saved while it plays) ----
   startFilm(spec) {
@@ -98,6 +98,7 @@ CM.Game = class {
     if ((spec.ascension || 0) > (maxWas || 0)) CM.store.set("ascension", spec.ascension);
     const bottomWas = this.achievements.bottom;
     if (spec.mode === "awakened" && !bottomWas) this.achievements.bottom = { date: "film" };
+    if (spec.mode === "otherdream" && !this.achievements.dreamer) this.achievements.dreamer = { date: "film" };
     CM.GEN = spec.gen || 1;
     try { this.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode, { ascension: spec.ascension || 0, iron: spec.iron }); }
     finally { CM.GEN = gen; CM.store.set("ascension", maxWas || 0); if (!bottomWas) delete this.achievements.bottom; }
@@ -216,7 +217,7 @@ CM.Game = class {
       tally: this.tally || this.freshTally(), journal: this.journal || [], story: this.story || { read: {} }, rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), behind: this.behind || 0,
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0,
       morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [] };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
@@ -263,11 +264,12 @@ CM.Game = class {
     this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
     this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
-    this.awakened = Boolean(d.awakened); this.behind = d.behind || 0;
+    this.awakened = Boolean(d.awakened); this.dream = Boolean(d.dream); this.rootPending = Boolean(d.rootPending); this.behind = d.behind || 0;
     this.morale = d.morale === undefined ? CM.MORALE.start : d.morale; this.fed = d.fed || 0; this.trail = d.trail || [];
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
+    if (this.rootPending) { this.rootPending = false; this.rootChoice(); }   // (the party stood over the beaten Root when the window closed: the choice again)
     this.emit("floor", this.floor);
     this.say("You take up the expedition where you left it.");
     return true;
@@ -304,7 +306,7 @@ CM.Game = class {
     this.messages = [];
     this.titleNote = "";
     this.tally = this.freshTally();
-    this.journal = []; this.story = { read: {} }; this.reminded = false;
+    this.journal = []; this.story = { read: {} }; this.reminded = false; this.left = false; this.dreamed = false; this.rootPending = false;
     this.bindRumours();
     this.rescued = [];
     this.difficulty = CM.DIFFICULTIES[difficulty] ? difficulty : "fair";
@@ -312,6 +314,7 @@ CM.Game = class {
     this.everFell = false; this.fightFell = false; this.earned = [];
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
     this.awakened = mode === "awakened" && Boolean(this.achievements.bottom); this.behind = 0;
+    this.dream = mode === "otherdream" && Boolean(this.achievements.dreamer);   // the Other Dream: the same floors, re-read
     this.morale = CM.MORALE.start; this.fed = 0; this.trail = [];
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
     this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row, quirk: h.quirk || null, origin: h.origin || null }));
@@ -338,7 +341,8 @@ CM.Game = class {
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
       + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : "")
       + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : "")
-      + (this.awakened ? " Awakened: the Root remembers you. Every floor is the mirror of itself, the monsters a band deeper, the uniques awake." : ""));
+      + (this.awakened ? " Awakened: the Root remembers you. Every floor is the mirror of itself, the monsters a band deeper, the uniques awake." : "")
+      + (this.dream ? " The Other Dream: the Root dreams otherwise. The floors are the floors; the walls are not; the monsters are the Awakened ones." : ""));
     if (this.mutators.length) this.say(`Today's dungeon: ${this.mutators.map((m) => `${CM.MUTATORS[m].name} - ${CM.MUTATORS[m].what}`).join("; ")}.`);
   }
 
@@ -401,7 +405,7 @@ CM.Game = class {
     this.saveRun();
     if (fresh && this.has("pilgrim")) this.checkLevels();
     if (fl.wing !== undefined) { if (fresh) this.say(`${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)}: ${CM.WINGS[fl.wing].smell}. The only way on is the way down to the main stair.`); if (fresh && fl.secretWing) this.achieve("secretfloor"); else if (fresh) this.achieve("wings"); }
-    else if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.themeFor(number).name}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
+    else if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && fl.hazard && CM.HAZARDS[CM.themeIndex(number)] && !this.hazardsSeen(fl.hazard)) this.say(CM.HAZARDS[CM.themeIndex(number)].note);
     if (fresh && number === CM.LAST_FLOOR + 1) this.say("The stair goes on below the palace, cut by no mason. The air is wet and old. The Deep begins here, and the carvings above never spoke of it.");

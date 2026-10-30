@@ -35,19 +35,19 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---- textures by depth and by theme, the floor's mesh, the camera ----
   let artCache = {}, cacheOrder = [];
-  let themeOn = -1, lookOn = null;
+  let themeOn = -1, lookOn = null, dreamOn = false;
   const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
-    if ((i === themeOn && look === lookOn) || !renderer.ok) return;
-    const key = `${look}:${i}`;
+    if ((i === themeOn && look === lookOn && Boolean(game.dream) === dreamOn) || !renderer.ok) return;
+    const key = `${look}:${i}${game.dream ? ":dream" : ""}`;
     if (!artCache[key]) {
-      artCache[key] = CM.art.build(CM.THEMES[i], look);
+      artCache[key] = CM.art.build(game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
       while (cacheOrder.length > 3) delete artCache[cacheOrder.shift()];      // (the stone's textures are large: a few depths at a time)
     }
     renderer.setTextures(artCache[key]);
-    themeOn = i; lookOn = look;
+    themeOn = i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -111,7 +111,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
     const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
     if (!ch) return;
-    if ((fl.number - 1) % 5 === 0) ui.titleCard(ch.name, ch.epigraph);
+    if ((fl.number - 1) % 5 === 0) ui.titleCard(CM.bandName(game, fl.number), game.dream ? "What Caer Duin might have been." : ch.epigraph);
     else if (fl.number % 5 === 0 && Object.values(CM.LORE_TEXT).some((l) => l.contradicts && CM.LORE_TEXT[l.contradicts].chapter === Object.keys(CM.CHAPTERS).find((k) => CM.CHAPTERS[k] === ch))) ui.titleCard(ch.name, "Below, the walls will say otherwise.");
   });
   game.on("mode", (mode) => {

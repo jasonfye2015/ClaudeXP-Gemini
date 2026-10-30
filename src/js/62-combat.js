@@ -11,6 +11,7 @@ Object.assign(CM.Game.prototype, {
     // the fight's dice come from the seed and where and when it begins: the same fight, fought the same way, goes the same way
     this.rnd = new CM.Random(CM.hashSeed(`${this.seed}:fight:${this.floor ? this.floor.number : 0}:${(this.tally || {}).fights || 0}:${this.steps || 0}:${key}`));
     this.foes = thing.group.map(CM.upgradeMonster);
+    if (this.dream) for (const m of this.foes) { if (m.guardian && CM.DREAM.guardians[m.guardian]) m.name = CM.DREAM.guardians[m.guardian]; if (m.boss) m.name = "King Mordeth, asleep"; }   // (the Other Dream: as they were in life)
     if (thing.terms && !thing.termsDone) {                               // spoken to first: on better terms its company goes and it is shaken; on worse it is enraged
       thing.termsDone = true;
       if (thing.terms === "good") { this.foes = this.foes.filter((m) => m.guardian || m.boss || this.foes.length === 1); for (const m of this.foes) if (m.guardian) { m.hp = Math.max(1, Math.round(m.hp * 0.85)); m.shaken = true; } }
@@ -1224,7 +1225,7 @@ Object.assign(CM.Game.prototype, {
     if (guardian) {
       this.slayGuardian(guardian);
       if (!this.fightFell) this.achieve("untouched");
-      if (CM.GUARDIANS[guardian.guardian].final && !this.endless && !guardian.echo) { this.bottom = true; this.endRun(true); return; }
+      if (CM.GUARDIANS[guardian.guardian].final && !this.endless && !guardian.echo) { this.setMode("explore"); this.rootChoice(); return; }
     }
     if (boss) { this.crown(); return; }
     this.setMode("explore");

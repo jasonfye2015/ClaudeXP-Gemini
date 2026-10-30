@@ -1418,7 +1418,7 @@ test("the guardians speak: three exchanges and a gate each, better and worse ter
     for (const ex of P.speak) { assert.strictEqual(ex.replies.length, 2); assert.strictEqual(ex.replies.filter((r) => r.good).length, 1, `${id}: one right answer each`); }
     if (P.gate && P.gate.key) { assert.ok(CM.LORE_TEXT[P.gate.key], `${id}: a real key`); const at = CM.LORE_TEXT[P.gate.key].floor; assert.ok(P.gate.returns ? at > G.floor : at < G.floor, `${id}: its key lies ${P.gate.returns ? "below (a return)" : "above"} its lair (${at} vs ${G.floor})`); }
   }
-  assert.strictEqual(CM.PARLEY.root.gate, null, "the Root wants nothing you have, yet");
+  assert.ok(CM.PARLEY.root.gate && CM.PARLEY.root.gate.crown, "the Root wants the crown, and nothing less");
   // the Rat King's door: it speaks first; all three answers right, and its company goes and it is shaken
   const atDoor = (game, n) => { game.enterFloor(n, "down"); const [k, t] = Object.entries(game.floor.things).find(([, x]) => x.type === "guardian"); const [gx, gy] = k.split(",").map(Number); const d = CM.DIRS.findIndex(([dx, dy]) => CM.passable(game.floor, gx - dx, gy - dy)); game.floor.pos = [gx - CM.DIRS[d][0], gy - CM.DIRS[d][1]]; game.floor.facing = d; return [k, t]; };
   const game = new CM.Game(); game.newGame("parley-1", fixedParty(CM));
@@ -1668,6 +1668,57 @@ test("around the story: the Scholar's kit, the story's contracts, the simulator'
   assert.ok(/in all\s+\d[\d,]* words/.test(out) && out.includes("The Catacombs") && out.includes("Long strings still in the code"), out.slice(0, 200));
   const ui = fs.readFileSync(path.join(ROOT, "src", "js", "70-ui.js"), "utf8");
   assert.ok(ui.includes('parley: "a parley"'), "the film bar names the scene");
+});
+
+test("the Root and the three endings: its voice knows the party, wake it or leave it to dream (logged and replayed), the crown given opens the Other Dream - the same floors, re-read", () => {
+  const CM = load();
+  assert.strictEqual(CM.DREAM.lore.length, 50); assert.strictEqual(CM.DREAM.names.length, 10); assert.ok(CM.GUARDIAN_ORDER.every((id) => CM.DREAM.guardians[id]));
+  assert.ok(CM.PARLEY.root.gate && CM.PARLEY.root.gate.crown && CM.CHAPTERS.dream && CM.LORE_TEXT["dream.3"]);
+  // the Root's voice on floor 46: the party's names and descents in it
+  const game = new CM.Game(); game.newGame("root-1", fixedParty(CM));
+  game.enterFloor(46, "down");
+  const [k, f] = Object.entries(game.floor.features).find(([, x]) => x.type === "carving" && x.text === 45);
+  game.floor.pos = k.split(",").map(Number); game.floor.facing = f.face;
+  let shown = null; game.on("lore", (t) => { shown = t; }); game.use();
+  assert.ok(shown.startsWith(CM.loreText(45, "root-1")) && shown.length > CM.loreText(45, "root-1").length + 10 && /IT KNOWS THE NAME|FOUR CAME DOWN|DESCENT|ONE OF YOU|NONE OF YOU/.test(shown), shown);
+  assert.strictEqual(game.journal[0].text, CM.loreText(45, "root-1"), "the journal keeps the wall's own words");
+  // wake it, or leave it: the choice after the Root falls, logged; left to dream the village prospers and the codex gains a chapter
+  const atDoor = (g, n) => { g.enterFloor(n, "down"); const [gk, gt] = Object.entries(g.floor.things).find(([, x]) => x.type === "guardian"); const [gx, gy] = gk.split(",").map(Number); const d = CM.DIRS.findIndex(([dx, dy]) => CM.passable(g.floor, gx - dx, gy - dy)); g.floor.pos = [gx - CM.DIRS[d][0], gy - CM.DIRS[d][1]]; g.floor.facing = d; return [gk, gt]; };
+  const g2 = new CM.Game(); g2.newGame("root-2", fixedParty(CM)); g2.crowned = true;
+  for (const h of g2.party) { h.level = 40; CM.recompute(h); h.hp = h.max; h.atk += 500; }
+  let asked = null; g2.on("choice", (c) => { asked = c; });
+  let [gk] = atDoor(g2, 50); g2.move(0); assert.ok(asked.parley && asked.options.length === 2, "the Root speaks: fight or speak"); g2.parley(gk, 0);
+  autoplayFight(CM, g2);
+  assert.ok(g2.rootPending && asked.ending && asked.options.length === 2 && g2.mode === "explore", "beaten, and waiting");
+  const renown = g2.village.renown || 0; g2.ending(1);
+  assert.ok(g2.mode === "title" && g2.fame[0].left && g2.fame[0].bottom && !g2.fame[0].dreamed && g2.village.cheaper && g2.village.renown >= renown + 100 && g2.achievements.leftdreaming, "left to dream");
+  assert.ok(CM.codex(g2).find((c) => c.id === "dream").done === 3 && g2.titleNote === CM.ENDINGS.left.note);
+  assert.ok(g2.runLog.some((l) => l[0] === "ending" && l[1] === 1), "the ending is logged");
+  // the ending waits for a window closed on it
+  const g3 = new CM.Game(); g3.newGame("root-3", fixedParty(CM)); g3.rootPending = true; g3.saveRun();
+  const g4 = new CM.Game(); let again = null; g4.on("choice", (c) => { again = c; }); g4.continueRun(); assert.ok(again && again.ending, "the choice comes back");
+  // the crown given: the gate at the Root's door wants the crown, the five carvings and the Merciful; passed, the Other Dream opens
+  const g5 = new CM.Game(); g5.newGame("root-5", fixedParty(CM)); g5.crowned = true; g5.achievements.merciful = { date: "x" }; for (const kk of CM.LORE_KEYS.slice(45, 50)) g5.markRead(kk);
+  asked = null; g5.on("choice", (c) => { asked = c; });
+  [gk] = atDoor(g5, 50); g5.move(0); assert.strictEqual(asked.options.length, 3, "give it the crown"); g5.parley(gk, 2);
+  const e5 = g5.fame.find((e) => e.seed === "root-5");
+  assert.ok(g5.mode === "title" && e5.dreamed && e5.bottom && g5.achievements.dreamer && g5.titleNote === CM.ENDINGS.dreamed.note, "the other dream");
+  assert.ok(g5.fame.length >= 1 && !g5.runLog.some((l) => l[0] === "act"), "no blow struck");
+  // the Other Dream: the same floors as the seed's own run (not mirrored), the walls re-read, the guardians as they were in life
+  const g6 = new CM.Game(); g6.newGame("root-6", fixedParty(CM), "pauper", "fair", [], "otherdream");
+  assert.ok(g6.dream && !g6.awakened, "the mode"); assert.strictEqual(g6.replaySpec().mode, "otherdream");
+  const plain = new CM.Game(); plain.newGame("root-6", fixedParty(CM));
+  for (const n of [1, 7, 23]) assert.strictEqual(CM.floorPrint(g6.floorAt(n)), CM.floorPrint(plain.floorAt(n)), `floor ${n}: the same floor`);
+  assert.ok(g6.messages.some((m) => m.includes(CM.DREAM.names[0])), g6.messages.slice(0, 3).join(" | "));
+  const [k6, f6] = Object.entries(g6.floor.features).find(([, x]) => x.type === "carving" && x.text === 0);
+  g6.floor.pos = k6.split(",").map(Number); g6.floor.facing = f6.face; g6.use();
+  assert.strictEqual(g6.journal[0].text, CM.DREAM.lore[0]); assert.strictEqual(g6.story.read["carving.catacombs.1"], 1, "read counts for the codex all the same");
+  [gk] = atDoor(g6, 5); g6.move(0); g6.parley(gk, 0);
+  assert.strictEqual(g6.foes.find((m) => m.guardian).name, "The King's Ratter"); assert.ok(g6.foes.find((m) => m.guardian).max > CM.GUARDIANS.rat.hp, "the Awakened numbers");
+  // the ending's log line replays (the run above was cheated to the bottom, so only the line is checked, not the descent)
+  const g7 = new CM.Game(); g7.newGame("root-7", fixedParty(CM)); g7.crowned = true; g7.rootPending = true; g7.replaying = 1;
+  CM.replayStep(g7, ["ending", 1]);
+  assert.ok(g7.mode === "title" && g7.left, "the replayed line leaves it dreaming too");
 });
 
 (async () => {

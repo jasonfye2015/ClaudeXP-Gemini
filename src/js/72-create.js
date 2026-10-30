@@ -60,6 +60,8 @@ Object.assign(CM.UI.prototype, {
     }
     this.$("#mode-awakened").disabled = !g.achievements.bottom;
     if (!g.achievements.bottom && this.$("#mode").value === "awakened") this.$("#mode").value = "dungeon";
+    this.$("#mode-otherdream").disabled = !g.achievements.dreamer;
+    if (!g.achievements.dreamer && this.$("#mode").value === "otherdream") this.$("#mode").value = "dungeon";
     const asc = this.$("#ascension"), max = g.ascensionMax();
     asc.innerHTML = Array.from({ length: max + 1 }, (_, i) => `<option value="${i}">${i ? `A${i}: ${CM.ASCENSION[i - 1].name}` : "none"}</option>`).join("");
     asc.value = code && code.ascension <= max ? String(code.ascension) : String(this.lastAscension || 0);
@@ -121,6 +123,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` ${seed.startsWith("weekly-") ? "This week's challenge" : "Today's dungeon"} comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "") + (seed.startsWith("weekly-") ? " The party is the week's: everyone sets out with these four." : "")
       + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "")
       + (this.$("#mode").value === "awakened" ? ` Awakened: ${CM.AWAKENED.what} - the Root remembers you. The run goes on the dungeon's board, marked.` : "")
+      + (this.$("#mode").value === "otherdream" ? ` The Other Dream: ${CM.DREAM.what}.` : "")
       + (Number(this.$("#ascension").value) ? ` Ascension ${this.$("#ascension").value}: ${CM.ASCENSION.slice(0, Number(this.$("#ascension").value)).map((r) => `${r.name} (${r.what})`).join("; ")}.` : "")
       + (this.$("#iron").checked ? " Iron: the run is saved only at the camps - a closed window between them loses the floors since." : "");
   },

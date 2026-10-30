@@ -10,6 +10,11 @@ was, what the king did, what the Root dreamed, and what the player's own parties
 phases, each shippable, each with tests, each a version (v3.1 ... v3.9, and v4.0 when the endings land). Phase 0
 again pays for the rest.
 
+**Status: shipped.** Phases 0-8 landed as v3.1 through v3.8 and Phase 4 as v4.0, one version a phase, each with
+its tests and a README section. The word budget below was met at about 20,000 words (node tools/words.js counts
+them); the rest of the plan's deferrals are named in the README (the strings still in the code move to 12-text.js
+as they are touched; the sim's story report measures the bot, not a reader).
+
 A word budget first, because story work sprawls: the game holds about **6,000 words of lore** today (fifty carvings,
 eight odd ones, eight endless ones, nine guardian lines, six ghosts, three requests, a hermit, twelve events). This
 plan adds roughly **25,000** - a short novella, spread thin over fifty floors and a village, never more than a
@@ -176,7 +181,7 @@ Floors 16-20 become a place with people in it, and the heart becomes a hunt.
 
 Size: M.
 
-## Phase 4 - The Root, and the three endings - v4.0
+## Phase 4 - The Root, and the three endings - v4.0 - DONE
 
 The bottom of the world becomes a choice, and Awakened becomes a consequence.
 
