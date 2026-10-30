@@ -1592,6 +1592,7 @@ CM.art.buildDrawn = function (theme) {
   for (const [name, c] of Object.entries(CM.art.surfaceLayers())) add(name, c);
   CM.art.decalLayers(add, (id) => CM.art.decal(id));
   add("shadow", CM.art.shadow());
+  for (const id of CM.art.AIR || []) add(`air:${id}`, CM.art.airPicture(id));
   const sub = CM.art.packProps(add, ART_SIZE, (id) => CM.art.prop(id));
   return { layers, index, size: ART_SIZE, crisp: false, sub };
 };

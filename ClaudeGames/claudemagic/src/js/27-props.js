@@ -164,6 +164,33 @@ CM.WALL_DECALS = {
 CM.OVERHEAD = { 2: { id: "beam", how: "beam", per: 0.22 }, 7: { id: "beam", how: "beam", per: 0.2 }, 3: { id: "rib", how: "beam", per: 0.12 },
   6: { id: "stalactite", how: "hang", per: 0.18, w: 0.4, h: 0.32 }, 9: { id: "hangroot", how: "hang", per: 0.22, w: 0.6, h: 0.42 }, 1: { id: "stalactite", how: "hang", per: 0.06, w: 0.3, h: 0.22 } };
 CM.DETAIL = { low: 0, medium: 0.6, high: 1 };
+// the air, by where the party is: [{ id, rate (a second, at full detail) }]; env: { surface, band, season, weather, night,
+// hour, town } - the dungeon's dust, drips, embers, spores and glitter by band; on the surface leaves, fireflies, rain,
+// snow, clouds, birds and chimney smoke, by the season, the weather and the hour
+CM.AIR_BUDGET = { low: 0, medium: 180, high: 360 };
+CM.airKinds = function (env) {
+  const out = [], add = (id, rate) => out.push({ id, rate });
+  if (!env.surface) {
+    add("mote", 10);
+    if ([1, 4].includes(env.band)) add("drip", 3);
+    if (env.band === 7) add("ember", 6);
+    if (env.band === 5) add("spore", 5);
+    if (env.band === 6) add("glitter", 6);
+    if (env.band === 9) add("spore", 2);
+    return out;
+  }
+  const { season, weather, night } = env;
+  if (weather === "rain") add("rain", 320);
+  if (weather === "snow" || (season === "winter" && weather === "wind")) add("snow", weather === "snow" ? 50 : 8);
+  if (season !== "winter" && weather !== "rain") add("leaf", season === "autumn" ? 4 : 0.6);
+  if (night && season === "summer" && weather !== "rain") add("firefly", 3);
+  if (!night && weather !== "rain" && weather !== "snow") add("bird", 0.08);
+  add("cloud", weather === "clear" ? 0.04 : 0.1);
+  if (env.town) add("smoke", night || season === "winter" || season === "autumn" ? 4 : 1.5);
+  if (!night && weather !== "rain") add("mote", 1.5);
+  return out;
+};
+CM.windOf = (weather) => (weather === "wind" ? [1.4, 0.5] : weather === "rain" ? [0.5, 0.2] : [0.15, 0.05]);
 CM.TRACES_MOST = 40;                                                    // a floor keeps this many traces; the oldest go first
 // the floor's traces as props to draw (every Detail shows them: they are the party's own doing)
 CM.traceProps = (fl) => (fl && fl.traces ? fl.traces.filter((t) => CM.PROPS[t.id]).map((t) => { const P = CM.PROPS[t.id], s = P.size[0] + (t.s || 0.5) * (P.size[1] - P.size[0]);
