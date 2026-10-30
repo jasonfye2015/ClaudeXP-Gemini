@@ -1405,6 +1405,7 @@ Object.assign(CM.Game.prototype, {
       this.say(`The rivals are beaten, and the one in front yields: their purse, and ${best.name} (${CM.itemLabel(best)}).`);
     }
     const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
+    if (this.floor.number >= 1 && slain.length && rnd.chance(slain.some((m) => m.elite) ? 1 / CM.HOMECOMING.elite : 1 / CM.HOMECOMING.drop)) loot.push(CM.scroll("homecoming"));   // (the dead carry the way home now and then)
     for (const m of slain) {                                             // what they carried, seen before it was won; and a part that broke
       if (m.gear && m.gear.weapon && rnd.chance(0.6)) loot.push(m.gear.weapon);
       if (m.gear && m.gear.offhand && rnd.chance(0.5)) loot.push(m.gear.offhand);

@@ -19,6 +19,7 @@ Object.assign(CM.Game.prototype, {
       if (depth >= 7 && !this.bag.some((i) => i.kind === "trapkit")) this.stock.push(CM.trapKit());
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       if (depth >= 14) this.stock.push(CM.lockpick(true));
+      if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }));   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
       if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);   // (the Merchant's House in town carries it all)
       for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
@@ -116,6 +117,28 @@ Object.assign(CM.Game.prototype, {
       const ladder = this.cellOf(this.floor, "ladder"); if (ladder) this.floor.pos = ladder.slice();
       this.setMode("camp"); this.emit("floor", this.floor); this.sound("stairs"); this.saveRun();
       this.say(`The scroll takes the party up to the camp below floor ${camp}. Read it again there, and it takes them back.`);
+      return "";
+    }
+    if (item.spell === "homecoming") {                                  // to the party's own door by dawn, and back by the same scroll
+      if (item.back) {
+        if (!this.inTown()) return "The scroll remembers a square on floor " + item.back.floor + ": read it in town to go back.";
+        const back = item.back; this.bag.splice(row, 1); this.countUse("homecoming");
+        this.stock = null; this.recruits = null; this.leaveFloor(); this.floor = this.floorAt(back.floor);
+        if (CM.passable(this.floor, back.pos[0], back.pos[1])) this.floor.pos = back.pos.slice();
+        this.clock = (this.clock || 0) + CM.CLOCK.stair;
+        this.setMode("explore"); this.look(); this.emit("floor", this.floor); this.saveRun();
+        this.say("The scroll crumbles, and the party stands below again where it stood, the lane's light still in its eyes.");
+        return "";
+      }
+      if (this.mode !== "explore" || fl.number < 1) return "Read it below, to be brought home from there.";
+      item.back = { floor: fl.number, pos: fl.pos.slice() }; this.countUse("homecoming"); this.tally.homecomings = (this.tally.homecomings || 0) + 1;
+      this.changeBehind(); this.changeBehind();                          // (the floors behind move on while the party is away)
+      this.sleepTillDawn();                                              // (the climb is the night: the party is at its door at dawn)
+      const town = this.floorAt(0), home = Object.keys(town.things).find((k) => town.things[k].type === "building" && town.things[k].id === "home");
+      this.stock = null; this.recruits = null; this.leaveFloor(); this.floor = town;
+      const at = (home || CM.TOWN_AT.home.join(",")).split(",").map(Number); town.pos = at; const open = CM.openNeighbours(town, at[0], at[1]); if (open.length) town.facing = CM.DIRS.indexOf(open[0]);
+      this.setMode("explore"); this.look(); this.emit("floor", town); this.sound("stairs"); this.saveRun();
+      this.say("The scroll's words take the long way up for you: a night of climbing you do not remember, and dawn at your own door. Read it again in town and it takes you back to the square you left.");
       return "";
     }
     if (item.spell === "knowledge") {

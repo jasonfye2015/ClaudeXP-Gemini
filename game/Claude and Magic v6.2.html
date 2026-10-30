@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v6.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v6.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -437,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "6.1", built: "2026-10-30" };
+const CM = window.CM = { version: "6.2", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -659,6 +659,7 @@ CM.SCROLLS = {
   frost: { name: "Scroll of Frost", what: "Cold on every foe; some are held fast." },
   protection: { name: "Scroll of Protection", what: "Every blow on the party does less, for the fight." },
   recall: { name: "Scroll of Recall", outside: true, keep: true, what: "To the last camp reached - and back to this very square by the same scroll." },
+  homecoming: { name: "Scroll of Homecoming", outside: true, keep: true, what: "Read below, the party is at its own door by dawn; read again in town, it is back on this very square. The floors behind move on while it is gone." },
   knowledge: { name: "Scroll of Knowledge", outside: true, what: "This floor's carving, read from where you stand." },
   banish: { name: "Scroll of Banishing", what: "One thing that was called into the fight is sent back." },
   sharpen: { name: "Scroll of Sharpening", outside: true, what: "A hero's weapon +2, for the rest of this floor." },
@@ -2541,6 +2542,8 @@ CM.grapnel = () => ({ name: "Grapnel", kind: "grapnel", power: 0, value: 80 });
 CM.dwarfPick = () => ({ name: "Dwarven Pick", kind: "pick", power: 0, value: 150 });
 // a lock's grade, by the seed and where it is: common above floor 6; iron two in five below; dwarven one in four from the palace down
 CM.lockGrade = (seed, floor, k) => { if (floor < 6) return "common"; const r = CM.hashSeed(`${seed}:lock:${floor}:${k}`) % 100; return floor >= 16 && r < 25 ? "dwarven" : r < 65 ? "iron" : "common"; };
+CM.HOMECOMING = { chest: 20, drop: 40, elite: 10, price: 60, perFloor: 10 };   // one chest in twenty from floor 3; the dead one in forty, an elite one in ten; the Merchant's House's price climbs with the deepest floor
+CM.homecomingPrice = (game) => CM.HOMECOMING.price + CM.HOMECOMING.perFloor * Math.max(0, ...((game && game.trail) || []).map((t) => t[0]), ...((game && game.camps) || []));
 CM.MARK_KILLS = 100;
 CM.MARKS_TO_NAME = 3;
 
@@ -7736,6 +7739,7 @@ Object.assign(CM.Game.prototype, {
       const gold = Math.floor(thing.gold * (this.has("rich") ? 2 : 1) * (this.asc("poorveins") ? 0.8 : 1) * (this.alive().some((h) => h.quirk === "greedy") ? 1.1 : 1));
       this.cheer(1);
       this.gold += gold; this.count("goldFound", gold);
+      if (fl.number >= 3 && CM.hashSeed(`${this.seed}:homecoming:${fl.number}:${k}`) % CM.HOMECOMING.chest === 0) thing.items.push(CM.scroll("homecoming"));   // (one chest in twenty carries the way home)
       this.gain(thing.items, "chest");
       this.sound("chest");
       this.count("chests");
@@ -9752,6 +9756,7 @@ Object.assign(CM.Game.prototype, {
       this.say(`The rivals are beaten, and the one in front yields: their purse, and ${best.name} (${CM.itemLabel(best)}).`);
     }
     const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
+    if (this.floor.number >= 1 && slain.length && rnd.chance(slain.some((m) => m.elite) ? 1 / CM.HOMECOMING.elite : 1 / CM.HOMECOMING.drop)) loot.push(CM.scroll("homecoming"));   // (the dead carry the way home now and then)
     for (const m of slain) {                                             // what they carried, seen before it was won; and a part that broke
       if (m.gear && m.gear.weapon && rnd.chance(0.6)) loot.push(m.gear.weapon);
       if (m.gear && m.gear.offhand && rnd.chance(0.5)) loot.push(m.gear.offhand);
@@ -9964,6 +9969,7 @@ Object.assign(CM.Game.prototype, {
       if (depth >= 7 && !this.bag.some((i) => i.kind === "trapkit")) this.stock.push(CM.trapKit());
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       if (depth >= 14) this.stock.push(CM.lockpick(true));
+      if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }));   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
       if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);   // (the Merchant's House in town carries it all)
       for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
@@ -10061,6 +10067,28 @@ Object.assign(CM.Game.prototype, {
       const ladder = this.cellOf(this.floor, "ladder"); if (ladder) this.floor.pos = ladder.slice();
       this.setMode("camp"); this.emit("floor", this.floor); this.sound("stairs"); this.saveRun();
       this.say(`The scroll takes the party up to the camp below floor ${camp}. Read it again there, and it takes them back.`);
+      return "";
+    }
+    if (item.spell === "homecoming") {                                  // to the party's own door by dawn, and back by the same scroll
+      if (item.back) {
+        if (!this.inTown()) return "The scroll remembers a square on floor " + item.back.floor + ": read it in town to go back.";
+        const back = item.back; this.bag.splice(row, 1); this.countUse("homecoming");
+        this.stock = null; this.recruits = null; this.leaveFloor(); this.floor = this.floorAt(back.floor);
+        if (CM.passable(this.floor, back.pos[0], back.pos[1])) this.floor.pos = back.pos.slice();
+        this.clock = (this.clock || 0) + CM.CLOCK.stair;
+        this.setMode("explore"); this.look(); this.emit("floor", this.floor); this.saveRun();
+        this.say("The scroll crumbles, and the party stands below again where it stood, the lane's light still in its eyes.");
+        return "";
+      }
+      if (this.mode !== "explore" || fl.number < 1) return "Read it below, to be brought home from there.";
+      item.back = { floor: fl.number, pos: fl.pos.slice() }; this.countUse("homecoming"); this.tally.homecomings = (this.tally.homecomings || 0) + 1;
+      this.changeBehind(); this.changeBehind();                          // (the floors behind move on while the party is away)
+      this.sleepTillDawn();                                              // (the climb is the night: the party is at its door at dawn)
+      const town = this.floorAt(0), home = Object.keys(town.things).find((k) => town.things[k].type === "building" && town.things[k].id === "home");
+      this.stock = null; this.recruits = null; this.leaveFloor(); this.floor = town;
+      const at = (home || CM.TOWN_AT.home.join(",")).split(",").map(Number); town.pos = at; const open = CM.openNeighbours(town, at[0], at[1]); if (open.length) town.facing = CM.DIRS.indexOf(open[0]);
+      this.setMode("explore"); this.look(); this.emit("floor", town); this.sound("stairs"); this.saveRun();
+      this.say("The scroll's words take the long way up for you: a night of climbing you do not remember, and dawn at your own door. Read it again in town and it takes you back to the square you left.");
       return "";
     }
     if (item.spell === "knowledge") {
@@ -12091,8 +12119,9 @@ CM.Autopilot = class {
     const game = this.game, fl = game.floor, things = Object.entries(fl.things), feats = Object.entries(fl.features), perFloor = this.opts.perFloor, floorMoves = this.floorMoves;
     const goal = CM.goalOf(fl);
     const can = (k) => this.paths.parent.has(k);
-    if (fl.number === 0) {                                               // the town: the errands' doors, then the shaft
+    if (fl.number === 0) {                                               // the town: the errands' doors, then the shaft (or the scroll back down)
       for (const id of this.errands()) { const k = CM.TOWN_AT[id].join(","); if (can(k)) return k; this.townDone = (this.townDone || []).concat(id); }
+      if (game.bag.some((i) => i.kind === "scroll" && i.spell === "homecoming" && i.back)) return "scroll";
       return goal;
     }
     const phyl = things.find(([, t]) => t.type === "phylactery");
@@ -12178,6 +12207,11 @@ CM.Autopilot = class {
     if (CM.guardianFor(fl.number) && !fl.oiled) {                        // a guardian's floor: the oils go on the front line
       fl.oiled = true;
       for (const h of alive.filter((p) => p.row === "front")) { const row = game.bag.findIndex((i) => i.kind === "oil"); if (row >= 0) game.give(row, game.party.indexOf(h)); }
+    }
+    if (target === "scroll") { const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && i.back); game.give(row, game.party.indexOf(alive[0])); return "back down"; }
+    if (fl.number >= 10 && !game.bag.some((i) => i.kind === "heal" || i.kind === "greaterheal") && game.gold >= 150) {   // out of potions and not of gold: home by the scroll, and back
+      const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
+      if (row >= 0 && game.give(row, game.party.indexOf(alive[0])) === "") { this.tools.homecomings = (this.tools.homecomings || 0) + 1; return "home by the scroll"; }
     }
     if (!target) return this.giveUp(`no goal on floor ${fl.number}`);
     const step = this.stepTo(fl, target);

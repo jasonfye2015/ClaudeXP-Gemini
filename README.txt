@@ -1177,6 +1177,18 @@ The clock, the sun and the moon (the eighth big update, phase 0 - v6.1)
   floor sees the moon. The wall clock keeps only the title screen.
   Test: "the clock".
 
+Scrolls of Homecoming (the eighth big update, phase 1 - v6.2)
+  A Scroll of Homecoming (CM.SCROLLS.homecoming) read on any floor below - not in a fight - brings the party to its
+  own door; the climb is the night, so it arrives at dawn and the clock says so, and the floors behind it move on
+  while it is away (the drifting that a hundred steps would bring). The scroll remembers the square it was read on:
+  read again in town it takes the party back to that very square, and crumbles. One chest in twenty from floor 3
+  carries one (by the seed), the dead drop one in forty and an elite one in ten, and the Merchant's House sells one
+  at a price that climbs with the deepest floor the run has reached (60, and 10 a floor; never the camps, whose
+  merchant sells Recall). A hero who was fallen stays fallen until the temple. Automatic reads it when the party is
+  out of potions below floor 10 with gold in the purse, runs its errands, and reads it again to go back; the sim
+  counts the trips, and the crown rate on Fair with the scroll in play is 16 of 20, where v6.0 left it.
+  Test: "scrolls of Homecoming".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

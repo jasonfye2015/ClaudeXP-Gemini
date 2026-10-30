@@ -59,7 +59,7 @@ goes down the shaft with a pack it made - and comes home by a scroll when the ni
 
 Size: S-M. Everything after reads this clock.
 
-## Phase 1 - Scrolls of Homecoming - v6.2
+## Phase 1 - Scrolls of Homecoming - v6.2 - DONE
 
 - **The scroll**: `CM.SCROLLS.homecoming`: read anywhere below (a fight excepted), the party is at its own door;
   the scroll remembers the square it was read on, and read again from the town it takes the party back there -

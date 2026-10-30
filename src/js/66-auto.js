@@ -148,8 +148,9 @@ CM.Autopilot = class {
     const game = this.game, fl = game.floor, things = Object.entries(fl.things), feats = Object.entries(fl.features), perFloor = this.opts.perFloor, floorMoves = this.floorMoves;
     const goal = CM.goalOf(fl);
     const can = (k) => this.paths.parent.has(k);
-    if (fl.number === 0) {                                               // the town: the errands' doors, then the shaft
+    if (fl.number === 0) {                                               // the town: the errands' doors, then the shaft (or the scroll back down)
       for (const id of this.errands()) { const k = CM.TOWN_AT[id].join(","); if (can(k)) return k; this.townDone = (this.townDone || []).concat(id); }
+      if (game.bag.some((i) => i.kind === "scroll" && i.spell === "homecoming" && i.back)) return "scroll";
       return goal;
     }
     const phyl = things.find(([, t]) => t.type === "phylactery");
@@ -235,6 +236,11 @@ CM.Autopilot = class {
     if (CM.guardianFor(fl.number) && !fl.oiled) {                        // a guardian's floor: the oils go on the front line
       fl.oiled = true;
       for (const h of alive.filter((p) => p.row === "front")) { const row = game.bag.findIndex((i) => i.kind === "oil"); if (row >= 0) game.give(row, game.party.indexOf(h)); }
+    }
+    if (target === "scroll") { const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && i.back); game.give(row, game.party.indexOf(alive[0])); return "back down"; }
+    if (fl.number >= 10 && !game.bag.some((i) => i.kind === "heal" || i.kind === "greaterheal") && game.gold >= 150) {   // out of potions and not of gold: home by the scroll, and back
+      const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
+      if (row >= 0 && game.give(row, game.party.indexOf(alive[0])) === "") { this.tools.homecomings = (this.tools.homecomings || 0) + 1; return "home by the scroll"; }
     }
     if (!target) return this.giveUp(`no goal on floor ${fl.number}`);
     const step = this.stepTo(fl, target);

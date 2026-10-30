@@ -161,6 +161,7 @@ CM.SCROLLS = {
   frost: { name: "Scroll of Frost", what: "Cold on every foe; some are held fast." },
   protection: { name: "Scroll of Protection", what: "Every blow on the party does less, for the fight." },
   recall: { name: "Scroll of Recall", outside: true, keep: true, what: "To the last camp reached - and back to this very square by the same scroll." },
+  homecoming: { name: "Scroll of Homecoming", outside: true, keep: true, what: "Read below, the party is at its own door by dawn; read again in town, it is back on this very square. The floors behind move on while it is gone." },
   knowledge: { name: "Scroll of Knowledge", outside: true, what: "This floor's carving, read from where you stand." },
   banish: { name: "Scroll of Banishing", what: "One thing that was called into the fight is sent back." },
   sharpen: { name: "Scroll of Sharpening", outside: true, what: "A hero's weapon +2, for the rest of this floor." },

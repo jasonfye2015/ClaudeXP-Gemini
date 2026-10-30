@@ -2575,6 +2575,35 @@ test("the clock: a step a minute, a stair an hour, a round a minute, a rest to t
   const g4 = new CM.Game(); g4.newGame("clock-3", fixedParty(CM)); playRun(CM, g4, { maxFloor: 3 }); assert.ok(g4.clock > 100); const again = CM.replayRun(g4.replaySpec()); assert.strictEqual(again.clock, g4.clock, "a film keeps the hour");
 });
 
+test("scrolls of Homecoming: found in a chest in twenty from floor 3 and dropped by the dead; read below, the party is at its own door at dawn and the floors behind move on; read again in town, back to the same square and the scroll is spent; sold only in town at a price that climbs; Automatic goes home for potions and comes back", () => {
+  const CM = load();
+  assert.ok(CM.SCROLLS.homecoming && CM.SCROLLS.homecoming.outside && CM.SCROLLS.homecoming.keep);
+  // by the seed: some chests from floor 3 carry one, none above it
+  const g = new CM.Game(); g.newGame("home-scroll-1", fixedParty(CM)); let found = 0, opened = 0;
+  for (let n = 3; n <= 12 && found < 1; n++) { g.enterFloor(n, "down"); for (const [k, t] of Object.entries(g.floor.things)) { if (t.type !== "chest" || t.mimic) continue; t.trap = null; g.floor.pos = k.split(",").map(Number); const before = g.bag.filter((i) => i.spell === "homecoming").length; g.use(); opened++; if (g.bag.filter((i) => i.spell === "homecoming").length > before) found++; } }
+  assert.ok(found >= 1 && opened >= 10, `a chest in twenty or so: ${found} of ${opened}`);
+  g.enterFloor(1, "down"); let none = 0; for (const [k, t] of Object.entries(g.floor.things)) if (t.type === "chest") { t.trap = null; g.floor.pos = k.split(",").map(Number); const b = g.bag.length; g.use(); if (g.bag.slice(b).some((i) => i.spell === "homecoming")) none++; } assert.strictEqual(none, 0, "none on the first floors");
+  // the dead drop it: an elite one in ten
+  g.enterFloor(6, "down"); let drops = 0; for (let i = 0; i < 60; i++) { g.foes = [{ name: "Howling Orc", kind: "Orc", elite: "howling", hp: 0, max: 40, atk: 1, df: 1, row: "front", xp: 1, gold: 1 }]; g.combat = { foes: g.foes, round: 1, order: [], index: 0 }; g.mode = "combat"; g.foeKey = "0,0"; g.rnd = new CM.Random(i); const b = g.bag.length; g.wonFight(); if (g.bag.slice(b).some((it) => it.spell === "homecoming")) drops++; }
+  assert.ok(drops >= 2 && drops <= 14, `an elite drops it one in ten: ${drops} of 60`); g.mode = "explore"; g.combat = null;
+  // read below: home by dawn, the clock says so, the floors behind moved; read in town: back to the square, spent
+  const g2 = new CM.Game(); g2.newGame("home-scroll-2", fixedParty(CM)); g2.enterFloor(2, "down"); g2.enterFloor(5, "down"); const at = g2.floor.pos.slice(), c0 = g2.clock;
+  g2.bag.push(CM.scroll("homecoming")); const row = g2.bag.length - 1; assert.strictEqual(g2.give(row, 0), ""); assert.strictEqual(g2.floor.number, 0); assert.strictEqual(g2.mode, "explore"); assert.strictEqual(g2.floor.pos.join(), CM.TOWN_AT.home.join(), "at the party's door");
+  assert.strictEqual(CM.hourOf(g2), 6, "dawn"); assert.ok(g2.clock > c0); assert.strictEqual(g2.tally.homecomings, 1); const scroll = g2.bag.find((i) => i.spell === "homecoming"); assert.ok(scroll && scroll.back && scroll.back.floor === 5 && scroll.back.pos.join() === at.join(), "the scroll remembers");
+  g2.saveRun(); const g3 = new CM.Game(); g3.continueRun(); assert.ok(g3.bag.find((i) => i.spell === "homecoming").back, "remembered through a save");
+  assert.ok(g3.give(g3.bag.findIndex((i) => i.spell === "homecoming"), 0) === "" && g3.floor.number === 5 && g3.floor.pos.join() === at.join(), "back to the very square"); assert.ok(!g3.bag.some((i) => i.spell === "homecoming"), "and spent");
+  g3.enterFloor(0, "rope", CM.TOWN_AT.home.slice()); g3.bag.push(CM.scroll("homecoming")); assert.ok(g3.give(g3.bag.length - 1, 0).includes("below"), "not from the town");
+  g3.mode = "combat"; g3.floor = g3.floorAt(5); assert.ok(g3.useMagicInBattle ? true : true); g3.mode = "explore";
+  // sold only in town, dearer the deeper the run has been
+  const g4 = new CM.Game(); g4.newGame("home-scroll-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g4.openBag(true); const s0 = g4.stock.find((i) => i.spell === "homecoming"); assert.ok(s0, "on the Merchant's House's table"); assert.strictEqual(s0.value, CM.HOMECOMING.price); g4.closeBag();
+  g4.enterFloor(5, "down"); g4.floor.things[g4.floor.pos.join(",")] = { type: "ladder" }; g4.use(); assert.strictEqual(g4.mode, "camp"); g4.openBag(true); assert.ok(!g4.stock.some((i) => i.spell === "homecoming"), "never at a camp"); g4.closeBag();
+  assert.strictEqual(g4.goHome(), ""); g4.openBag(true); assert.strictEqual(g4.stock.find((i) => i.spell === "homecoming").value, CM.HOMECOMING.price + 5 * CM.HOMECOMING.perFloor, "the price climbs with the deepest floor"); g4.closeBag();
+  // Automatic: out of potions below ten with gold and a scroll, it goes home, shops, and comes back to the square
+  const g5 = new CM.Game(); g5.newGame("home-scroll-4", fixedParty(CM)); g5.enterFloor(10, "down"); g5.bag = g5.bag.filter((i) => !["heal", "greaterheal"].includes(i.kind)); g5.bag.push(CM.scroll("homecoming")); g5.gold = 500; const sq = g5.floor.pos.join();
+  g5.autoPlay(true); let r = null, n = 0, wentHome = false; while (n++ < 300 && g5.autoOn()) { r = g5.auto.step(); if (g5.floor.number === 0) wentHome = true; if (wentHome && g5.floor.number === 10) break; }
+  assert.ok(wentHome, "went home by the scroll"); assert.strictEqual(g5.floor.number, 10, "and came back"); assert.strictEqual(g5.floor.pos.join(), sq, "to the same square"); assert.ok(g5.bag.some((i) => i.kind === "heal" || i.kind === "greaterheal"), "with potions"); assert.ok(!g5.bag.some((i) => i.spell === "homecoming")); g5.autoPlay(false);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

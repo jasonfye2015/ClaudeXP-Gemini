@@ -35,7 +35,7 @@ function simulate(seed, difficulty, ascension = 0) {
   return { seed, difficulty: ascension ? `${difficulty}/A${ascension}` : difficulty, ascension, floor: fl, died: game.mode === "title" && !game.bottom && !(game.crowned && fl === 20 && game.mode === "title"), crowned: Boolean(game.crowned), bottom: Boolean(game.bottom),
     reached: game.mode === "explore", fights: game.tally.fights, fled: game.tally.fled, steps: game.tally.steps, gold: game.gold, guardians: (game.tally.guardians || []).slice(),
     levels: game.party.map((h) => h.level), byCamp, stuck: r.stuck, notes: r.log, ms: Date.now() - t0, spent: game.tally.spent || {}, abilities: game.tally.abilities || {}, logLines: (game.runLog || []).length,
-    loot: { goldFound: game.tally.goldFound || 0, found: game.tally.found || {}, used: game.tally.used || {}, firstUpgrade: game.tally.firstUpgrade || {} },
+    homecomings: game.tally.homecomings || 0, loot: { goldFound: game.tally.goldFound || 0, found: game.tally.found || {}, used: game.tally.used || {}, firstUpgrade: game.tally.firstUpgrade || {} },
     story: { read: Object.keys((game.story || {}).read || {}).length, chapters: CM.codex(game).filter((c) => c.band !== undefined && c.complete).map((c) => c.id), spoken: (game.tally.spoken || []).slice(), reminded: Boolean(game.reminded), bell: Boolean((game.story || {}).bell) } };
 }
 

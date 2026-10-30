@@ -225,5 +225,7 @@ CM.grapnel = () => ({ name: "Grapnel", kind: "grapnel", power: 0, value: 80 });
 CM.dwarfPick = () => ({ name: "Dwarven Pick", kind: "pick", power: 0, value: 150 });
 // a lock's grade, by the seed and where it is: common above floor 6; iron two in five below; dwarven one in four from the palace down
 CM.lockGrade = (seed, floor, k) => { if (floor < 6) return "common"; const r = CM.hashSeed(`${seed}:lock:${floor}:${k}`) % 100; return floor >= 16 && r < 25 ? "dwarven" : r < 65 ? "iron" : "common"; };
+CM.HOMECOMING = { chest: 20, drop: 40, elite: 10, price: 60, perFloor: 10 };   // one chest in twenty from floor 3; the dead one in forty, an elite one in ten; the Merchant's House's price climbs with the deepest floor
+CM.homecomingPrice = (game) => CM.HOMECOMING.price + CM.HOMECOMING.perFloor * Math.max(0, ...((game && game.trail) || []).map((t) => t[0]), ...((game && game.camps) || []));
 CM.MARK_KILLS = 100;
 CM.MARKS_TO_NAME = 3;

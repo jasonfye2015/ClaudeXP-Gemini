@@ -395,6 +395,7 @@ Object.assign(CM.Game.prototype, {
       const gold = Math.floor(thing.gold * (this.has("rich") ? 2 : 1) * (this.asc("poorveins") ? 0.8 : 1) * (this.alive().some((h) => h.quirk === "greedy") ? 1.1 : 1));
       this.cheer(1);
       this.gold += gold; this.count("goldFound", gold);
+      if (fl.number >= 3 && CM.hashSeed(`${this.seed}:homecoming:${fl.number}:${k}`) % CM.HOMECOMING.chest === 0) thing.items.push(CM.scroll("homecoming"));   // (one chest in twenty carries the way home)
       this.gain(thing.items, "chest");
       this.sound("chest");
       this.count("chests");
