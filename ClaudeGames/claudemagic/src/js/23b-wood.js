@@ -7,7 +7,7 @@
 // by night wolves, a bear and bandits come to the party, and under a full moon a wolf that is more. The Wood's beasts
 // give no renown and little gold: hides and meat, and the night's danger. The dungeon's floors do not change by a cell.
 CM.WOOD_THEME = { name: "The Deep Wood", floors: [-1, -1], stone: [58, 84, 46], mortar: [34, 52, 28], floor: [78, 104, 52], ceiling: [140, 170, 205],
-  moss: [120, 160, 70], fog: [0.01, 0.014, 0.008], torch: [1.0, 0.95, 0.85], reach: 7.0, bones: 0, tree: true };
+  moss: [120, 160, 70], fog: [0.01, 0.014, 0.008], torch: [1.0, 0.95, 0.85], reach: 7.0, bones: 0, tree: true, sky: true };
 CM.WOOD_SIZE = 31;
 CM.WOOD_GATE = [29, 15];                                                 // the Wood's end of the gate; the town's end is CM.TOWN_AT.woodgate
 CM.TOWN_AT.woodgate = [0, 9];
@@ -44,7 +44,10 @@ CM.makeWood = function (seed) {
   for (let n = 0; n < 3; n++) { const k = take(farFromGate); if (k) things[k] = { type: "cave", n }; }
   for (const type of ["hut", "shrine", "burner"]) { const k = take(farFromGate); if (k) things[k] = { type }; }
   for (let i = 0; i < 8; i++) { const k = take(); if (k) things[k] = { type: "node", band: -1, forage: i % CM.WOOD_NODES.length }; }
-  const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen: [], rooms: glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), decor, special: "wood", glades, ford: [11 + Math.round(Math.sin(fordY / 4) * 2), fordY] };
+  const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen: [], rooms: glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), decor, special: "wood", glades, ford: [11 + Math.round(Math.sin(fordY / 4) * 2), fordY],
+    solidDefault: "tree", kinds: {}, ground: {} };
+  for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0) CM.setGround(fl, x, y, features[`${x},${y}`] || decor.some((d) => d.x === x && d.y === y) ? "dirt" : "grass");   // (grass; the river's bed is mud)
+  CM.markCanopy(fl);
   CM.woodCache[seed] = JSON.stringify(fl);
   return JSON.parse(CM.woodCache[seed]);
 };

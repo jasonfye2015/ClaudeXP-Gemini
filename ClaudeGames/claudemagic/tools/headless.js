@@ -10,7 +10,7 @@ const path = require("path");
 const vm = require("vm");
 
 const SRC = path.join(__dirname, "..", "src", "js");
-const RULES = ["00-util.js", "10-data.js", "12-text.js", "13-lore.js", "14-items.js", "20-world.js", "21-gen1.js", "22-gen2.js", "23-town.js", "23b-wood.js", "23c-ore.js", "24-clock.js", "24b-calendar.js", "25-saves.js", "60-game.js", "61-explore.js", "62-combat.js", "63-camp.js", "64-meta.js", "65-village.js", "66-auto.js", "67-home.js", "68-shops.js", "68b-forge.js", "69-halls.js", "69b-square.js", "69c-farm.js", "69d-cook.js"];
+const RULES = ["00-util.js", "10-data.js", "12-text.js", "13-lore.js", "14-items.js", "20-world.js", "21-gen1.js", "22-gen2.js", "23-town.js", "23b-wood.js", "23c-ore.js", "24-clock.js", "24b-calendar.js", "25-saves.js", "26-surface.js", "60-game.js", "61-explore.js", "62-combat.js", "63-camp.js", "64-meta.js", "65-village.js", "66-auto.js", "67-home.js", "68-shops.js", "68b-forge.js", "69-halls.js", "69b-square.js", "69c-farm.js", "69d-cook.js"];
 
 // a localStorage: quota is how many characters it holds before it throws, the way a full browser does
 function makeStorage(quota = Infinity) {
@@ -44,7 +44,7 @@ function load(opts = {}) {
   vm.createContext(ctx);
   for (const f of RULES) vm.runInContext(source(f), ctx, { filename: f });
   const CM = ctx.CM;
-  CM.LOOKS = CM.LOOKS || { drawn: {} };                                 // (the themes live with the art, which isn't loaded here)
+  CM.LOOKS = CM.LOOKS || { pixel: {}, drawn: {}, stone: {} };             // (the looks live with the art, which isn't loaded here; Pixel first, as there)
   CM.storage = storage;
   CM.store.set("settings", { skipWalk: true, season: "spring", autoLand: false });
   CM.weatherOfReal = CM.weatherOf; CM.weatherOf = () => "clear";        // (the tests' weather is clear unless a test asks for the real dice)

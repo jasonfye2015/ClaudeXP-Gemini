@@ -343,6 +343,14 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!fl) return { out, hud };
     const now = performance.now(), right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
+    if (renderer.sky) {                                                 // the sun and the moon: far off, along their arc from the east over the south to the west
+      const S = renderer.sky, eye = renderer.eye;
+      for (const [t, layer, size] of [[S.sun, "sun", 6], [S.moon, `moon:${S.phase}`, 4]]) {
+        if (t === null || (layer === "sun" && S.light < 0.12)) continue;
+        const a = Math.PI * t, el = Math.sin(a) * 0.5, d = 52, wx = eye[0] + Math.cos(a) * Math.cos(el) * d, wz = eye[2] + Math.sin(a) * Math.cos(el) * d, wy = Math.sin(el) * d;
+        out.push({ x: wx - 0.5, y: wz - 0.5, layer, w: size, h: size, lift: wy - size / 2, glow: 2, alpha: layer === "sun" ? 1 : Math.min(1, 0.4 + (1 - S.light)) });
+      }
+    }
     for (const [key, thing] of Object.entries(fl.things)) {
       let [x, y] = key.split(",").map(Number);
       if (!near(x, y)) continue;
@@ -612,7 +620,7 @@ window.addEventListener("DOMContentLoaded", () => {
       renderer.resize();
       if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
-        renderer.light = 1;
+        renderer.light = 1; renderer.sky = null;
         renderer.setSprites([]);
         if (ui.rebindingPad) pollGamepad(now);
       } else {
@@ -634,6 +642,7 @@ window.addEventListener("DOMContentLoaded", () => {
           if (!did || game.mode === "camp") ui.refresh();
         }
         renderer.light = game.lightFactor();
+        renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
         const { out, hud } = sprites();
         renderer.setSprites(out);
         renderer.frame(dt);

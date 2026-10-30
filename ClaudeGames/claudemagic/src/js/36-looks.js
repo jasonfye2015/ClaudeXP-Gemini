@@ -7,8 +7,8 @@
 // The packs ride inside the one file (35-packs.js, written by pack.py from src/art/) and are decoded once, by
 // CM.art.load(); until then, and wherever a pack has no tile for something, the drawn art stands in.
 CM.LOOKS = {
-  drawn: { name: "Drawn", what: "painted in code: the game's own art" },
   pixel: { name: "Pixel tiles", what: "Dungeon Crawl Stone Soup's pixel tiles, crisp and chunky" },
+  drawn: { name: "Drawn", what: "painted in code: the game's own art" },
   stone: { name: "Stone", what: "photographed stone on the walls and floors, with the drawn monsters" },
 };
 CM.art.packs = { ready: false, atlas: null, stone: {}, loading: null };
@@ -104,6 +104,8 @@ CM.art.buildPixel = function (theme) {
   add("fx:holy", tileOr("fx.holy", CM.art.fxHoly)); add("fx:arrow", tileOr("fx.arrow", CM.art.fxArrow)); add("fx:leaf", tileOr("fx.leaf", CM.art.fxLeaf));
   add("fx:ring", tileOr("fx.ring", CM.art.fxRing));
   for (let f = 0; f < 3; f++) { add(`torch${f}`, tileOr(`torch${f}`, () => CM.art.torch(f))); add(`water${f}`, tileOr(`water${f}`, () => CM.art.water(f))); }
+  const ground = (key, drawn) => (CM.packs.pixel.index[key] ? tiled(key, 2) : CM.art.pixelate(drawn()));              // (the ground and the walls repeat the tile; the trees stand alone)
+  for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
   return { layers, index, size: S, crisp: true };
 };
 
