@@ -42,3 +42,30 @@ CM.dateWords = (game) => { const f = CM.festival(game); return `${CM.season(game
 // the chronicler's calendar: the year's months, their festivals, and the runs that fell in each (the Hall of Fame's dates)
 CM.MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 CM.calendarOf = (fame) => CM.MONTH_NAMES.map((name, month) => { const id = Object.keys(CM.FESTIVALS).find((k) => CM.FESTIVALS[k].month === month); const runs = (fame || []).filter((e) => e.date && Number(String(e.date).split("/")[0]) - 1 === month); return { month, name, season: CM.seasonOfDate(new Date(2000, month, 15)), festival: id, festivalName: CM.FESTIVALS[id].name, runs: runs.length, crowns: runs.filter((e) => e.won).length }; });
+// The clock made visible (the tenth update, phase 9): what the dial in the view's corner and the Calendar (K) show,
+// as plain numbers. Angles are degrees from straight up, clockwise: -90 the eastern horizon on the left, 90 the western
+// on the right, so a body is above the ground while it is between them. The sun is up from the season's dawn to its
+// dusk (the same hours CM.isNight reads), the moon opposite it. The weather ahead is the seed's, so it can be shown.
+CM.phaseOfDay = (day) => Math.round(((day % CM.CLOCK.moon) / CM.CLOCK.moon) * 8) % 8;
+CM.MOON_DOES = { 0: "a lock is a tenth easier, and a night ambush a little likelier", 4: "the undead on floors 1 to 5 are a tenth tougher" };
+CM.dialOf = (game) => {
+  const h = CM.hourOf(game), [dawn, dusk] = (game && game.season && CM.DAYLIGHT[game.season]) || [5, 21], long = dusk - dawn, up = h >= dawn && h < dusk;
+  const norm = (a) => (((a + 180) % 360) + 360) % 360 - 180;
+  const sun = norm(up ? -90 + (180 * (h - dawn)) / long : 90 + (180 * ((h - dusk + 24) % 24)) / (24 - long));
+  return { hour: h, minute: CM.minuteOf(game), dawn, dusk, night: !up, sun, moon: norm(sun + 180), phase: CM.moonPhase(game),
+    sky: !up ? "night" : h - dawn < 1 ? "dawn" : dusk - h < 1 ? "dusk" : "day", day: CM.dayOf(game), moonDay: (CM.dayOf(game) % CM.CLOCK.moon) + 1 };
+};
+CM.timeFigures = (game) => { const m = CM.minuteOf(game), h = Math.floor(m / 60), mm = m % 60; return `${h}:${mm < 10 ? "0" : ""}${mm}`; };
+// days from today to the next night of a phase (0: tonight), within two of the moon's months
+CM.nextMoon = (game, phase) => { const d0 = CM.dayOf(game); for (let k = 0; k <= CM.CLOCK.moon * 2; k++) if (CM.phaseOfDay(d0 + k) === phase) return k; return null; };
+CM.comingWeather = (game, n = 5) => Array.from({ length: n }, (_, k) => ({ day: CM.dayOf(game) + k, weather: CM.weatherOf(game.seed, CM.dayOf(game) + k, CM.season(game)) }));
+// the lit part of a moon of radius r centred on 0,0, as an SVG path ("" at a new moon): a half disc on the lit side,
+// closed by the terminator, an ellipse as wide as the cosine of the moon's age
+CM.moonPath = (phase, r) => {
+  const p = ((phase % 8) + 8) % 8; if (p === 0) return "";
+  const k = Math.cos((2 * Math.PI * p) / 8), rx = Math.abs(k) * r, f = (n) => Math.round(n * 100) / 100, waxing = p < 4 || p === 4;
+  if (p === 4) return `M0 ${f(-r)}A${f(r)} ${f(r)} 0 1 1 0 ${f(r)}A${f(r)} ${f(r)} 0 1 1 0 ${f(-r)}Z`;
+  const edge = waxing ? `A${f(r)} ${f(r)} 0 0 1 0 ${f(r)}` : `A${f(r)} ${f(r)} 0 0 0 0 ${f(r)}`;
+  const sweep = waxing ? (k > 0 ? 0 : 1) : (k > 0 ? 1 : 0);
+  return `M0 ${f(-r)}${edge}A${f(rx)} ${f(r)} 0 0 ${sweep} 0 ${f(-r)}Z`;
+};

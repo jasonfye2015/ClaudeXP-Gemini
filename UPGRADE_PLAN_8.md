@@ -271,7 +271,7 @@ the same three scenes in software GL in CI, for errors and a frame count, not fo
 The file: 3.79 MB at v8.0, 4.70 MB at v8.8 - 0.91 MB for the whole update, within the 1.5 MB budget. The packs are
 3.1 MB of it (the Pixel atlas 250 KB, the Stone and surface photographs the rest); props share layers four to one.
 
-## Phase 9 - The clock, the calendar, the sun and the moon, made visible - v9.1 (medium; added at the player's word)
+## Phase 9 - The clock, the calendar, the sun and the moon, made visible - v9.1 (medium; added at the player's word) - DONE
 
 The game keeps an hour, a day, a season, a festival week, the weather and a moon's phase, and the sky above the town
 and the land follows them, but in the HUD all of it is a sky bar 120 pixels wide and an eleven-pixel line of words in
@@ -291,6 +291,12 @@ the corner of the view, faded below ground. This phase makes the clock something
 - **Below ground** the dial stays readable rather than faded, so a party deep down knows when it is night above.
 - **Tests**: the dial's hand and the sun's and moon's places follow the clock; the phase drawn is the game's; the
   calendar's next full moon and festival are right; the coming weather is the seed's.
+
+As built: the side panel had no height to spare under the map, so the dial sits in the view's top-right corner,
+where the old sky bar was, on a dark card: a 76-pixel disc with the sky's colour, the sun and moon on an arc and a strip
+of ground, and beside it the hour, the day and season, the weather with three days ahead, the festival and the moon's
+face. The sun's arc follows the season's dawn and dusk (CM.dialOf), so the dial's night is the rules' night. The
+Calendar opens on a click or K. On a narrow window the card shrinks and drops the days ahead.
 
 ## Order, sizes and what depends on what
 

@@ -3200,6 +3200,50 @@ test("the air: dust in every band and each band's own; on the surface rain, snow
   for (const id of ["mote", "drip", "ember", "spore", "glitter", "leaf", "firefly", "rain", "snow", "cloud", "bird", "smoke"]) assert.ok(src.includes(`case "${id}"`), `${id} spawns and is drawn`);
 });
 
+test("the clock made visible: the dial's sun and moon follow the clock and the season's daylight; the phase drawn is the game's; the next full and new moons; the weather ahead is the seed's; the Calendar's key and dialog", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("dial-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const set = (day, h, season) => { g.season = season; g.clock = day * CM.CLOCK.day + ((h - 6 + 24) % 24) * 60; return CM.dialOf(g); };
+  for (const season of CM.SEASONS) {
+    const [dawn, dusk] = CM.DAYLIGHT[season];
+    assert.ok(Math.abs(set(0, dawn, season).sun + 90) < 0.01, `${season}: the sun rises on the left at ${dawn}`);
+    assert.ok(Math.abs(set(0, (dawn + dusk) / 2, season).sun) < 0.01, `${season}: the sun at the top at midday`);
+    assert.ok(Math.abs(set(0, dusk - 0.0001, season).sun - 90) < 0.1, `${season}: the sun sets on the right`);
+    for (let h = 0; h < 24; h += 0.5) {
+      const D = set(3, h, season);
+      assert.strictEqual(D.night, CM.isNight(g), `${season} ${h}: the dial's night is the rules' night`);
+      assert.ok(D.night ? Math.abs(D.sun) >= 90 : Math.abs(D.sun) <= 90, `${season} ${h}: the sun above the ground by day only (on the horizon at dawn and dusk)`);
+      assert.ok(Math.abs(Math.abs(D.sun - D.moon) - 180) < 0.01, "the moon opposite the sun");
+    }
+  }
+  assert.strictEqual(set(0, 22.5, "summer").sky, "night"); assert.strictEqual(set(0, 4.5, "summer").sky, "dawn"); assert.strictEqual(set(0, 21.5, "summer").sky, "dusk"); assert.strictEqual(set(0, 12, "summer").sky, "day");
+  for (let day = 0; day < 70; day++) { const D = set(day, 23, "spring"); assert.strictEqual(D.phase, CM.moonPhase(g)); assert.strictEqual(CM.phaseOfDay(day), CM.moonPhase(g), "the drawn phase is the game's"); assert.strictEqual(D.moonDay, (day % CM.CLOCK.moon) + 1); }
+  set(10, 12, "spring"); assert.strictEqual(CM.timeFigures(g), "12:00"); g.clock += 7; assert.strictEqual(CM.timeFigures(g), "12:07");
+  for (const phase of [0, 4]) {
+    for (const day of [0, 5, 13, 20, 28]) {
+      set(day, 12, "spring"); const k = CM.nextMoon(g, phase);
+      assert.ok(k !== null && CM.phaseOfDay(day + k) === phase, `the next ${phase ? "full" : "new"} moon from day ${day} is one`);
+      for (let j = 0; j < k; j++) assert.notStrictEqual(CM.phaseOfDay(day + j), phase, "and none comes sooner");
+    }
+  }
+  set(14, 23, "spring"); assert.ok(CM.fullMoon(g) && CM.nextMoon(g, 4) === 0, "a full moon tonight");
+  assert.ok(CM.MOON_DOES[0] && CM.MOON_DOES[4], "what the new and full moons do");
+  set(4, 12, "autumn"); const ahead = CM.comingWeather(g, 7);
+  assert.strictEqual(ahead.length, 7); assert.strictEqual(ahead[0].weather, CM.weather(g), "today's weather first");
+  ahead.forEach((d, k) => { assert.strictEqual(d.day, 4 + k); assert.strictEqual(d.weather, CM.weatherOf(g.seed, 4 + k, "autumn"), "the seed's weather"); });
+  g.clock += CM.CLOCK.day; assert.strictEqual(CM.weather(g), ahead[1].weather, "tomorrow's weather comes as shown");
+  assert.strictEqual(CM.moonPath(0, 10), "", "a new moon shows nothing lit");
+  assert.strictEqual((CM.moonPath(4, 10).match(/A/g) || []).length, 2, "a full moon is the whole disc");
+  assert.ok(/A10 10 0 0 1 0 10A7\.07 10 0 0 0 0 -10Z$/.test(CM.moonPath(1, 10)), "a waxing crescent: lit on the right, the terminator bowed toward the light");
+  assert.ok(/A10 10 0 0 0 0 10A7\.07 10 0 0 0 0 -10Z$/.test(CM.moonPath(5, 10)), "a waning gibbous: lit on the left, the terminator bowed away");
+  assert.strictEqual(CM.DEFAULT_KEYS.calendar, "KeyK"); assert.ok(CM.KEY_ACTIONS.some(([id]) => id === "calendar"));
+  const keys = Object.values(CM.DEFAULT_KEYS).filter((k) => k !== "KeyA" && k !== "KeyD"); assert.strictEqual(new Set(keys).size, keys.length, "K is no other action's key");
+  const src = (f) => fs.readFileSync(path.join(ROOT, "src", "js", f), "utf8");
+  assert.ok(src("73b-clock.js").includes("drawSky()") && src("73b-clock.js").includes("openCalendar()"));
+  assert.ok(src("70-ui.js").includes('id="dlg-calendar"') && src("70-ui.js").includes('class="dial"') && src("80-main.js").includes("K.calendar"));
+  assert.ok(!src("73-play.js").includes("drawSky() {"), "one drawSky");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

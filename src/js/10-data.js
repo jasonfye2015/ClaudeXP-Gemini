@@ -895,10 +895,10 @@ CM.ACHIEVEMENTS = {
 CM.titleFor = (achievements) => { const id = Object.keys(CM.ACHIEVEMENTS).find((a) => achievements && achievements[a]); return id ? CM.ACHIEVEMENTS[id].title : ""; };
 // the keys, as the player may set them (Settings > Keys); the arrows always move as well
 CM.DEFAULT_KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", strafeLeft: "KeyQ", strafeRight: "KeyE", use: "Space", inventory: "KeyI",
-  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA", autoPlay: "KeyZ", whereTo: "KeyG" };
+  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA", autoPlay: "KeyZ", whereTo: "KeyG", calendar: "KeyK" };
 CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"], ["right", "turn right"], ["strafeLeft", "sidestep left"], ["strafeRight", "sidestep right"],
   ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
-  ["explore", "walk to the nearest unexplored square (any key stops)"], ["whereTo", "Where to?: on the surface, walk to a door or a place by name"], ["autoPlay", "Automatic: the party plays by itself - on and off (a move key stops it too)"],
+  ["explore", "walk to the nearest unexplored square (any key stops)"], ["whereTo", "Where to?: on the surface, walk to a door or a place by name"], ["calendar", "the calendar: the hour, the moon, the weather ahead and the festivals"], ["autoPlay", "Automatic: the party plays by itself - on and off (a move key stops it too)"],
   ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"], ["auto", "in a fight: the party fights on by itself"]];
 // a gamepad's buttons, by the standard mapping, and what each does unless Settings > Keys says otherwise (the stick and
 // the d-pad - 12 to 15 - always move)

@@ -2,16 +2,7 @@
 // The dungeon screen: the party and the log, the actions, the automap, the HUD over the view, and what the window itself shows of an event.
 Object.assign(CM.UI.prototype, {
   // ---- the dungeon screen ----
-  // the sky bar: the sun and the moon on their arc, by the game's clock; the moon's shape by its phase
-  drawSky() {
-    const g = this.game, sky = this.$("#view .sky"); if (!sky) return;
-    const below = g.floor && g.floor.number >= 1; sky.classList.toggle("underground", Boolean(below));
-    const P = CM.skyPlaces(g), at = (t) => { const x = 6 + t * 108, y = 36 - Math.sin(t * Math.PI) * 25; return [x, y]; };
-    const sun = sky.querySelector(".sun"), moon = sky.querySelector(".moon");
-    if (P.sun !== null) { const [x, y] = at(P.sun); sun.setAttribute("cx", x); sun.setAttribute("cy", y); sun.style.display = ""; } else sun.style.display = "none";
-    if (P.moon !== null) { const [x, y] = at(P.moon); moon.setAttribute("transform", `translate(${x} ${y})`); moon.style.display = ""; const shade = moon.querySelector(".shade"), k = P.phase; shade.setAttribute("cx", k === 4 ? 99 : k === 0 ? 0 : (k < 4 ? -1 : 1) * (k % 4) * 1.6); } else moon.style.display = "none";
-    sky.querySelector(".hour").textContent = `${CM.hourWord(CM.hourOf(g))}${below ? " above" : ""}, ${CM.season(g)}${CM.festival(g) ? " - " + CM.FESTIVALS[CM.festival(g)].name : ""}${CM.weather(g) !== "clear" ? ", " + CM.weather(g) : ""}`;
-  },
+  // (the dial in the view's corner: drawSky, in 73b-clock.js)
   refresh() {
     const g = this.game;
     if (this.screen === "title") { this.refreshTitle(); return; }
