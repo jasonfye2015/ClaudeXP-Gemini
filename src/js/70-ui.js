@@ -322,6 +322,7 @@ CM.UI = class {
       <div class="rowpick"><span>Formation:</span>${Object.entries(CM.FORMATIONS).map(([id, f]) => `<button data-formation="${id}" class="${(g.formation || "line") === id ? "on" : ""}" title="${this.esc(f.what)}">${f.name}</button>`).join("")}
         <small>${this.esc(CM.FORMATIONS[g.formation || "line"].what)}</small></div>
       <div class="list-title">Gear</div>
+      ${CM.setWorn(h) ? `<div class="gold">${CM.SETS[CM.setWorn(h)].name} set, all three worn: ${CM.SETS[CM.setWorn(h)].what}.</div>` : ""}
       ${CM.relicsWorn(h) >= 2 ? `<div class="gold">The guardians' things, worn together: ${CM.RELIC_SET.two.what}${CM.relicsWorn(h) >= 3 ? "; " + CM.RELIC_SET.three.what : ""}.</div>` : ""}${h.oil && h.oil.fights > 0 ? `<div>Oiled: ${CM.ELEMENT_NAMES[h.oil.element]} on the weapon for ${CM.plural(h.oil.fights, "more fight")}.</div>` : ""}
       <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span><span class="icon-slot" data-slot="${slot}"></span> ${it ? `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
     for (const span of facts.querySelectorAll(".icon-slot")) { const it = h[span.dataset.slot]; if (it) span.appendChild(this.icon(it, 20)); }

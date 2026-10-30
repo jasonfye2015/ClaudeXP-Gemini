@@ -97,7 +97,7 @@ Size: M. The measuring stick for everything after.
 
 Size: L. The biggest change to the fight since terrain.
 
-## Phase 2 - Affixes that grow, sets, curses, and the smith's second trade - v4.3
+## Phase 2 - Affixes that grow, sets, curses, and the smith's second trade - v4.3 - DONE
 
 - **Tiers**: every affix has three tiers (I at floor 3, II at 16, III at 31); the word stays, the number grows
   ("Keen" is 10%, 15%, 20%). Deep affixes become tier III of their family.

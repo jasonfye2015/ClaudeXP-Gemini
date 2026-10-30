@@ -21,6 +21,7 @@ CM.BASES = {};
   CM.BOOTS.forEach((b, i) => add(b.name, "boots", "boots", Math.round(i * 1.7), "boots"));
   CM.CLOAKS.forEach((c, i) => add(c.name, "cloak", "cloak", Math.round(i * 1.7), "cloak"));
   Object.values(CM.UNIQUES).forEach((u) => add(u.name, u.kind, u.slot, u.band, "unique"));
+  Object.entries(CM.SETS).forEach(([id, S]) => S.pieces.forEach(([n, kind, slot, tier]) => add(n, kind, slot, tier * 1, "set", { set: id })));
   Object.values(CM.GUARDIANS).forEach((G) => { if (G.relic) add(G.relic.name, G.relic.kind, G.relic.slot, CM.GUARDIAN_ORDER.indexOf(Object.keys(CM.GUARDIANS).find((k) => CM.GUARDIANS[k] === G)), "relic"); });
   [["Healing Potion", "heal"], ["Greater Healing Potion", "greaterheal"], ["Mana Potion", "mana"], ["Phoenix Feather", "revive"], ["Antidote", "antidote"], ["Torch", "torch"], ["Lantern", "lantern"], ["Ration", "ration"], ["Rope", "rope"], ["Firepot", "bomb"]]
     .forEach(([n, k], i) => add(n, k, null, i, "stuff"));
@@ -31,7 +32,7 @@ CM.BASES = {};
   Object.values(CM.INGREDIENTS).forEach((g, i) => add(g.name, "ingredient", null, i, "ingredient"));
   ["Oil of Fire", "Oil of Rime", "Oil of Saints"].forEach((n, i) => add(n, "oil", null, i, "stuff"));
 }
-CM.GROUP_NAMES = { weapon: "Weapons", bow: "Bows", armor: "Armour", shield: "Shields", helm: "Helms", ring: "Rings", amulet: "Amulets", boots: "Boots", cloak: "Cloaks", unique: "Uniques", relic: "Relics", stuff: "Potions and stuff", scroll: "Scrolls", wand: "Wands", tome: "Tomes", ingredient: "Ingredients" };
+CM.GROUP_NAMES = { set: "Sets", weapon: "Weapons", bow: "Bows", armor: "Armour", shield: "Shields", helm: "Helms", ring: "Rings", amulet: "Amulets", boots: "Boots", cloak: "Cloaks", unique: "Uniques", relic: "Relics", stuff: "Potions and stuff", scroll: "Scrolls", wand: "Wands", tome: "Tomes", ingredient: "Ingredients" };
 CM.HOW_FOUND = { chest: "in a chest", foe: "on a slain foe", strongbox: "in a strongbox", ghost: "a ghost's gift", remains: "among a fallen party's remains", relic: "a guardian's", merchant: "bought at the camp", peddler: "bought from a peddler", vault: "from the vault", rivals: "a rival party's", event: "found on the floor", start: "carried from the stair", made: "brewed by the alchemist", smith: "the smith's work" };
 
 // a thing's base id: what it was before any work (rings drop their plus; names made by the smith drop theirs)
@@ -57,6 +58,7 @@ CM.normalizeItem = function (item, how) {
   if (!item || typeof item !== "object") return item;
   if (!item.base || (item.kind === "ring" && / \+\d+$/.test(item.base))) item.base = CM.baseIdOf(item);
   if (!item.found) item.found = { floor: 0, how: how || "unknown" };
+  const imp = CM.implicitFor(item); if (imp && !(item.props || {}).implicit && !(item.props || {}).unique && !(item.props || {}).relic) { CM.applyProps(item, imp); item.props.implicit = true; }
   return item;
 };
 CM.tagFound = function (items, floor, how) {
@@ -113,3 +115,41 @@ CM.blockChance = (shield) => (!shield || shield.unknown ? 0 : 0.08 + 0.06 * Math
 CM.isTower = (shield) => Boolean(shield) && CM.baseIdOf(shield) === "Tower Shield";
 // armour weight: the heavy are a step late and loud; the light a step early
 CM.weightInit = (h) => { const w = h.armor && h.armor.props && h.armor.props.weight; return w === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate" ? -1 : w === "light" ? 1 : 0; };
+
+// ---- affixes that grow, implicits, curses, sets, essence ----
+CM.scaledAffix = function (a, tier) {                                    // an affix's numbers at a tier (words, flags and elements as they are)
+  const k = CM.AFFIX_SCALE[tier] || 1, out = {};
+  for (const [key, v] of Object.entries(a)) {
+    if (key === "deep" || key === "weapon") continue;
+    if (key === "stats") { out.stats = {}; for (const [st, d] of Object.entries(v)) out.stats[st] = Math.round(d * k); }
+    else if (typeof v === "number" && !["vsUndead", "vsHide"].includes(key)) out[key] = key === "crit" || key === "bleed" || key === "chill" || key === "blindHit" || key === "stun" || key === "hitBonus" || key === "killGold" || key === "xpBonus" ? Math.round(v * k * 100) / 100 : Math.round(v * k);
+    else if (typeof v === "number") out[key] = Math.round((1 + (v - 1) * k) * 100) / 100;
+    else out[key] = v;
+  }
+  return out;
+};
+CM.applyProps = function (item, add) {                                   // lay a set of props on a thing (numbers add, flags set)
+  const p = item.props = item.props || {};
+  for (const [k, v] of Object.entries(add)) {
+    if (k === "power") item.power += v;
+    else if (k === "stats") { p.stats = p.stats || {}; for (const [st, d] of Object.entries(v)) p.stats[st] = (p.stats[st] || 0) + d; }
+    else if (typeof v === "number" && typeof p[k] === "number" && !["vsUndead", "vsHide"].includes(k)) p[k] += v;
+    else p[k] = v;
+  }
+  return item;
+};
+CM.implicitFor = (item) => CM.IMPLICITS[CM.baseIdOf(item)] || null;
+CM.setOf = (item) => (item && item.props && item.props.set) || (item && CM.BASES[CM.baseIdOf(item)] && CM.BASES[CM.baseIdOf(item)].set) || null;
+CM.setWorn = function (h) {                                              // the set a hero wears all three of, if any
+  const count = {};
+  for (const it of CM.equipped(h)) { const id = CM.setOf(it); if (id && !it.unknown) count[id] = (count[id] || 0) + 1; }
+  return Object.keys(count).find((id) => count[id] >= 3) || null;
+};
+CM.makeSetPiece = function (setId, index, floor) {
+  const S = CM.SETS[setId], [name, kind, slot, tier] = S.pieces[index];
+  const power = kind === "ring" ? 1 : kind === "boots" ? 2 : kind === "armor" ? tier + 2 : tier + 1;
+  const props = Object.assign({ set: setId, rarity: "fine" }, kind === "ring" ? { stat: "con" } : {}, kind === "boots" ? { silence: false } : {});
+  return { name, base: name, kind, slot, power, value: 300 + 60 * tier, props, unknown: floor >= 2 };
+};
+CM.essence = (n = 1) => ({ name: "Essence", kind: "essence", power: n, value: 40 * n });
+CM.ESSENCE_FOR_GEM = 3;

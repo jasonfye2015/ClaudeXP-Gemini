@@ -329,7 +329,7 @@ Object.assign(CM.Game.prototype, {
     this.logAct("temple", service);
     this.gold -= cost; this.spend("temple", cost);
     for (const h of who) this.cure(h, which);
-    for (const it of cursedGear) { it.props.cursed = false; it.power += 3; }
+    for (const it of cursedGear) { it.props.cursed = false; if (it.props.curse === "weak" && it.props.stats) { for (const st of Object.keys(it.props.stats)) if (it.props.stats[st] < 0) { it.props.stats[st] += 2; if (!it.props.stats[st]) delete it.props.stats[st]; } } delete it.props.curse; if (!it.props.tier) it.power += 3; if (it.props.rarity === "cursed") it.props.rarity = (it.props.affixes || []).length === 2 ? "rare" : "fine"; }
     this.sound("heal");
     this.say({ cure: "Herbs and prayers: the party's ailments pass.",
       uncurse: "The priest's chant lifts the curse" + (cursedGear.length ? `, and ${cursedGear.map((i) => i.name).join(", ")} can be put down at last.` : "."),
@@ -434,11 +434,12 @@ Object.assign(CM.Game.prototype, {
       this.say(`The smith sets the ${name.toLowerCase()} into ${hero.name}'s blade, and it takes: ${item.name}.`);
     } else if (service === "reroll") {                                  // a gem of any kind and gold: the suffix is struck off and another worked in
       if (!["weapon", "armor", "offhand", "helm"].includes(slot)) return "The smith reworks a weapon, armour, a shield or a helm.";
-      const gem = this.bag.findIndex((i) => i.kind === "gem"), cost = 100;
-      if (gem < 0) return "The smith wants a gem of any kind to rework an affix.";
+      const gem = this.bag.findIndex((i) => i.kind === "gem"), cost = 100, ess = this.bag.map((i, idx) => (i.kind === "essence" ? idx : -1)).filter((idx) => idx >= 0);
+      const essenceHeld = ess.reduce((n, idx) => n + (this.bag[idx].power || 1), 0);
+      if (gem < 0 && essenceHeld < CM.ESSENCE_FOR_GEM) return `The smith wants a gem of any kind to rework an affix (or ${CM.ESSENCE_FOR_GEM} essence).`;
       if (this.gold < cost) return `The smith wants ${cost} gold, and a gem.`;
       this.gold -= cost; this.spend("smith", cost);
-      this.bag.splice(gem, 1);
+      if (gem >= 0) this.bag.splice(gem, 1); else { let need = CM.ESSENCE_FOR_GEM; for (const idx of ess.slice().reverse()) { if (need <= 0) break; const e = this.bag[idx]; if ((e.power || 1) <= need) { need -= e.power || 1; this.bag.splice(idx, 1); } else { e.power -= need; need = 0; } } }
       const rnd = this.rnd, deep = this.floor.number > CM.LAST_FLOOR;
       const old = (p.affixes || []).find((w) => w.startsWith("of ")), prefix = (p.affixes || []).find((w) => !w.startsWith("of "));
       if (old) { const a = CM.AFFIXES.suffix[old]; if (a) for (const [k, v] of Object.entries(a)) { if (k === "stats") for (const [st, d] of Object.entries(v)) { p.stats[st] -= d; if (!p.stats[st]) delete p.stats[st]; } else if (k === "element") delete p.element; else if (k !== "deep" && k !== "weapon") delete p[k]; } }
@@ -451,6 +452,23 @@ Object.assign(CM.Game.prototype, {
       CM.recompute(hero);
       this.sound("lever");
       this.say(`The smith strikes the old work off ${hero.name}'s ${item.base} and works the gem in: ${item.name}.`);
+    } else if (service === "move") {                                    // a prefix moved from a thing in the pack to the worn one; the pack's thing is scrap
+      const from = this.bag.findIndex((i) => ["weapon", "armor", "shield", "helm"].includes(i.kind) && !i.unknown && (i.props || {}).affixes && i.props.affixes.some((w) => !w.startsWith("of ")) && !(i.props.relic || i.props.unique) && (i.kind === "weapon") === (item.kind === "weapon"));
+      if (from < 0) return "The smith wants a thing in the pack with a prefix to move, of the same kind of make (a weapon's word for a weapon, armour's for the rest).";
+      const cost = 150; if (this.gold < cost) return `The smith wants ${cost} gold to move a word.`;
+      const src = this.bag[from], word = src.props.affixes.find((w) => !w.startsWith("of ")), table = CM.AFFIXES.prefix[item.kind === "weapon" ? "weapon" : "armor"], a = table[word];
+      if (!a) return "The smith can't read that word.";
+      const oldPrefix = (p.affixes || []).find((w) => !w.startsWith("of "));
+      if (oldPrefix && table[oldPrefix]) { const old = CM.scaledAffix(table[oldPrefix], p.tier || 1); for (const [k, v] of Object.entries(old)) { if (k === "power") item.power -= v; else if (k === "stats") { for (const [st, d] of Object.entries(v)) { p.stats[st] -= d; if (!p.stats[st]) delete p.stats[st]; } } else if (typeof v === "number" && typeof p[k] === "number") { p[k] -= v; if (!p[k]) delete p[k]; } else delete p[k]; } }
+      this.gold -= cost; this.spend("smith", cost);
+      const tier = src.props.tier || 1;
+      CM.applyProps(item, CM.scaledAffix(a, tier));
+      p.affixes = [word].concat((p.affixes || []).filter((w) => w.startsWith("of "))); p.tier = Math.max(p.tier || 1, tier); p.rarity = p.affixes.length === 2 ? "rare" : "fine";
+      this.bag.splice(from, 1, CM.scrap());
+      item.name = CM.itemName(item);
+      CM.recompute(hero);
+      this.sound("lever");
+      this.say(`The smith lifts the word ${word} off the ${CM.baseName(src)} and works it into ${hero.name}'s ${CM.baseName(item)}: ${item.name}. The ${CM.baseName(src)} is scrap.`);
     } else return "The smith doesn't do that.";
     this.saveRun();
     this.emit("change");
@@ -487,8 +505,10 @@ Object.assign(CM.Game.prototype, {
     this.bag.splice(row, 1);
     const n = 1 + (item.props && item.props.rarity === "rare" ? 1 : 0);
     for (let i = 0; i < n; i++) this.bag.push(CM.scrap());
+    const ess = item.unknown ? 0 : (item.props || {}).rarity === "rare" || (item.props || {}).cursed ? 2 : (item.props || {}).rarity === "fine" ? 1 : 0;   // essence: what a worded thing leaves besides scrap
+    if (ess) { const have = this.bag.find((i) => i.kind === "essence"); if (have) have.power += ess; else this.bag.push(CM.essence(ess)); }
     this.sound("lever");
-    this.say(`The ${item.unknown ? CM.baseName(item) : item.name} goes into the fire and comes out as ${CM.plural(n, "piece")} of scrap.`);
+    this.say(`The ${item.unknown ? CM.baseName(item) : item.name} goes into the fire and comes out as ${CM.plural(n, "piece")} of scrap${ess ? `, and ${CM.plural(ess, "essence")}` : ""}.`);
     this.saveRun();
     this.emit("change");
     return "";

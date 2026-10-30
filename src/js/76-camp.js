@@ -117,6 +117,12 @@ Object.assign(CM.UI.prototype, {
           r.title = "The suffix is struck off and another worked in, from the dice";
           r.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("reroll", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
           act.appendChild(r);
+          const mv = document.createElement("button");
+          mv.textContent = "Move a prefix here: a worded thing from the pack and 150 gold";
+          mv.disabled = g.gold < 150 || it.unknown || !g.bag.some((i) => ["weapon", "armor", "shield", "helm"].includes(i.kind) && !i.unknown && (i.props || {}).affixes && i.props.affixes.some((w) => !w.startsWith("of ")) && (i.kind === "weapon") === (it.kind === "weapon"));
+          mv.title = "The first prefixed thing of the same kind of make in the pack gives up its word, and becomes scrap";
+          mv.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("move", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
+          act.appendChild(mv);
         }
         row.appendChild(act);
         box.appendChild(row);

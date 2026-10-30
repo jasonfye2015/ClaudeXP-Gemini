@@ -396,3 +396,4 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 .things { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 6px; }
 .things .thing { font: 12.5px var(--serif); color: var(--ink); }
 .things .thing.unseen { color: var(--faint); letter-spacing: 1px; }
+.rarity-cursed { color: #D070D0; }

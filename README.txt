@@ -864,6 +864,21 @@ Weapons and armour with character (the sixth big update, phase 1 - v4.2)
   tweaks: the reseeded dice make six seeds noise). The flesh and hide bonuses were trimmed from a quarter to a
   sixth on the way.
 
+Affixes that grow, sets, curses, and the smith's second trade (the sixth big update, phase 2 - v4.3)
+  Every affix has three tiers (CM.affixTier: I from floor 3, II from 16, III from 31): the word stays, the number
+  grows by half and then double (CM.scaledAffix; item.props.tier). Seventeen words more: on a hit (Bleeding,
+  Chilling, Blinding), on a kill (of Plunder, of the Leech, of the Font), by the foe (Undead-bane, Hunting,
+  Desperate), for the party (of the Hearth, Sheltering: +1 defence to everyone while worn; of the Lantern: every
+  third step free of the torch), and the small ones (Sure, Weighted, Steadfast, Fleet, of Haste, of Stone, of the
+  Scholar). Implicits (CM.IMPLICITS): a base's own small property before any word - a Dagger's edge, a Buckler's
+  quickness, the Dragon Scale's proof against fire; older things learn theirs when they are named. Cursed gear is
+  a fourth rarity: hidden among the unknown, a tier-III word and a cost (CM.CURSES: hungering, dark, weakening,
+  haunted) that will not come off until the temple lifts it - the cost goes, the word stays. Three sets of three
+  (CM.SETS: the Watch's, the Masons', the Order's), dropped in their bands by hash, fine alone and a rule together.
+  The smith's second trade: a prefix moved from a worded thing in the pack to the worn one (150 gold; the pack's
+  thing is scrap), and essence from the fire (salvage: one from a fine thing, two from a rare or a cursed one;
+  three essence stand in for a gem at the rework). Enchantment stays at +3; a tier-III word is the ceiling.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

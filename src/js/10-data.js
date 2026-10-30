@@ -240,11 +240,13 @@ CM.COMBOS = {
 CM.RARITY = { common: { name: "common", colour: "" }, fine: { name: "fine", colour: "#8FD08F" }, rare: { name: "rare", colour: "#80B8FF" }, relic: { name: "relic", colour: "#E8C870" }, unique: { name: "unique", colour: "#FF9F5A" } };
 CM.AFFIXES = {
   prefix: {
-    weapon: { Keen: { crit: 0.1 }, Heavy: { power: 2 }, Vicious: { power: 3, stats: { dex: -1 } }, Swift: { stats: { dex: 2 } }, Jolting: { stun: 0.25 }, Thirsting: { lifesteal: true, deep: true },
+    weapon: { Keen: { crit: 0.1 }, Heavy: { power: 2 }, Bleeding: { bleed: 0.25 }, Chilling: { chill: 0.25 }, Blinding: { blindHit: 0.2 }, "Undead-bane": { vsUndead: 1.4 }, Hunting: { vsHide: 1.3 }, Desperate: { underHalf: 4 }, Sure: { hitBonus: 0.05 }, Weighted: { stun: 0.15, stats: { dex: -1 } }, Vicious: { power: 3, stats: { dex: -1 } }, Swift: { stats: { dex: 2 } }, Jolting: { stun: 0.25 }, Thirsting: { lifesteal: true, deep: true },
       Lulling: { sleep: 0.2, deep: true }, Cruel: { power: 4, crit: 0.05, deep: true } },
-    armor: { Sturdy: { power: 1 }, Warding: { df: 2 }, Spiked: { thorns: 2 }, Quiet: { stats: { dex: 1 } }, Hallowed: { df: 3, deep: true }, Barbed: { thorns: 4, deep: true } },
+    armor: { Sturdy: { power: 1 }, Warding: { df: 2 }, Steadfast: { init: -1, df: 3 }, Fleet: { init: 2 }, Sheltering: { auraDf: 1 }, Spiked: { thorns: 2 }, Quiet: { stats: { dex: 1 } }, Hallowed: { df: 3, deep: true }, Barbed: { thorns: 4, deep: true } },
   },
-  suffix: { "of the Bear": { stats: { str: 2 } }, "of the Fox": { stats: { dex: 2 } }, "of the Oak": { stats: { con: 2 } }, "of the Owl": { stats: { int: 2 } }, "of the Saint": { stats: { wis: 2 } },
+  suffix: { "of the Bear": { stats: { str: 2 } },
+    "of Haste": { init: 2 }, "of Stone": { df: 2, stats: { dex: -1 } }, "of the Scholar": { xpBonus: 0.05 }, "of Plunder": { killGold: 0.1 }, "of the Leech": { killHeal: 3 }, "of the Font": { killMana: 1 },
+    "of the Hearth": { auraDf: 1 }, "of the Lantern": { torchSave: true }, "of the Fox": { stats: { dex: 2 } }, "of the Oak": { stats: { con: 2 } }, "of the Owl": { stats: { int: 2 } }, "of the Saint": { stats: { wis: 2 } },
     "of Fortune": { stats: { luck: 2 } }, "of Mending": { regen: 1 }, "of Warding": { df: 1 }, "of Embers": { element: "fire", weapon: true }, "of Rime": { element: "frost", weapon: true },
     "of the Deep": { stats: { con: 3 }, regen: 1, deep: true }, "of the Root": { stats: { str: 3, con: 3 }, deep: true }, "of the Dreamer": { stats: { int: 3, wis: 3 }, deep: true }, "of the Dark": { crit: 0.1, lifesteal: true, deep: true } },
 };
@@ -281,6 +283,22 @@ CM.RECIPES = {
 };
 CM.OIL_FIGHTS = 3;
 // a set of relics: the guardians' things worn together are more than themselves
+// affixes grow with depth: tier I from the third floor, II from the sixteenth, III from the thirty-first - the word
+// stays, the number grows (half again, then double); the deep pools are tier III's own
+CM.AFFIX_TIER_AT = [3, 16, 31];
+CM.affixTier = (floor) => (floor >= CM.AFFIX_TIER_AT[2] ? 3 : floor >= CM.AFFIX_TIER_AT[1] ? 2 : 1);
+CM.AFFIX_SCALE = { 1: 1, 2: 1.5, 3: 2 };
+// a base's own small property, before any affix (CM.makeGear sets it; older things get it when they are named)
+CM.IMPLICITS = { Dagger: { crit: 0.03 }, Stiletto: { crit: 0.05 }, Kris: { bleed: 0.1 }, "Rune Blade": { spellPower: 1 }, "Mithril Sword": { init: 1 }, Claudebrand: { vsUndead: 1.25 }, Dragonslayer: { vsHide: 1.2 }, "War Hammer": { stun: 0.1 }, Maul: { stun: 0.15 },
+  Halberd: { reach: true }, "Runed Staff": { spellPower: 1 }, Buckler: { init: 1 }, "Tower Shield": { init: -1 }, "Mithril Shield": { block: 0.05 }, "Elven Mail": { init: 1 }, "Dragon Scale": { resist: "fire" }, "Aegis of Claude": { auraDf: 1 }, "Great Helm": { stun0: true }, "Mithril Helm": { resist: "blind" } };
+// cursed gear: a fourth rarity - a tier-III affix, and a cost that cannot be put down until the temple lifts it
+CM.CURSES = { hunger: { name: "hungering", what: "the party hungers twice as fast" }, dark: { name: "dark", what: "the torch burns twice as fast" }, weak: { name: "weakening", what: "-2 to the wearer's key stat" }, haunted: { name: "haunted", what: "a curse settles on the wearer on every new floor" } };
+// three sets of three: pieces found in their bands, fine alone, and the three together a rule
+CM.SETS = {
+  watch: { name: "The Watch's", bands: [1, 4], pieces: [["Watchman's Helm", "helm", "helm", 3], ["Watchman's Mail", "armor", "armor", 5], ["Watchman's Shield", "shield", "offhand", 4]], what: "the party wades dry-shod, and the wearer's blows chill" },
+  masons: { name: "The Masons'", bands: [2, 3], pieces: [["Mason's Cap", "helm", "helm", 4], ["Mason's Apron", "armor", "armor", 6], ["Mason's Boots", "boots", "boots", 2]], what: "+3 defence, and the wearer is never knocked flat nor held" },
+  order: { name: "The Order's", bands: [8, 9], pieces: [["Novice's Cowl", "helm", "helm", 5], ["Order's Vestment", "armor", "armor", 9], ["Order's Band", "ring", "ring", 2]], what: "no curse takes the wearer, who mends 2 a round" },
+};
 CM.RELIC_SET = { two: { atk: 2, df: 2, what: "two relics worn: +2 attack, +2 defence" }, three: { regen: 2, what: "three or more: and the party's wearer mends 2 a round" } };
 // ---- the dungeon, stranger: choices on the floor, the bands' hazards, strongboxes, a peddler, rivals ----
 // A choice event stands on a floor now and then (by the seed): Space, and the party is asked. Each option names what

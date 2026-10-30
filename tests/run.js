@@ -1835,6 +1835,61 @@ test("weapons with character: a class and a rule each, at home or clumsy, shield
   game.mode = "explore"; game.combat = null;
 });
 
+test("affixes that grow: tiers by depth, the new words bite, implicits, cursed things hide among the unknown and the temple lifts the cost, three sets, essence and the smith's moved word", () => {
+  const CM = load();
+  // tiers: the same word, half again at sixteen and double at thirty-one
+  const keen = (floor) => { const it = { name: "Long Sword", base: "Long Sword", kind: "weapon", slot: "weapon", power: 8, value: 100, props: {} }; CM.applyProps(it, CM.scaledAffix(CM.AFFIXES.prefix.weapon.Keen, CM.affixTier(floor))); return it.props.crit; };
+  assert.strictEqual(keen(3), 0.1); assert.strictEqual(keen(16), 0.15); assert.strictEqual(keen(31), 0.2);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(CM.scaledAffix(CM.AFFIXES.suffix["of the Bear"], 3))), { stats: { str: 4 } });
+  const rnd = new CM.Random(5); let t1 = 0, t3 = 0, cursed = null, imp = 0;
+  for (let i = 0; i < 400; i++) { const it = CM.affix(CM.makeItem(3 + (i % 2) * 32, rnd, "weapon"), 3 + (i % 2) * 32, rnd); if (it.props.tier === 1) t1++; if (it.props.tier === 3) t3++; if (it.props.cursed && !cursed) cursed = it; if (it.props.implicit) imp++; }
+  assert.ok(t1 > 20 && t3 > 20 && imp > 20, `tiers: ${t1} I, ${t3} III; implicits ${imp}`);
+  assert.ok(cursed && cursed.unknown && cursed.props.rarity === "cursed" && CM.CURSES[cursed.props.curse] && (cursed.props.affixes || []).length >= 1 && cursed.props.tier === 3, `a cursed thing: ${JSON.stringify(cursed)}`);
+  assert.strictEqual(CM.rarityOf(Object.assign({}, cursed, { unknown: false })), "cursed");
+  // implicits: a fresh dagger finds weak spots a little; an old one learns to when it is named
+  assert.ok(CM.IMPLICITS.Dagger.crit && CM.normalizeItem({ name: "Dagger", kind: "weapon", slot: "weapon", power: 2, value: 1, props: {} }).props.crit === 0.03);
+  // the new words bite: a Bleeding blow, a chill, the hearth's aura, the hunter's edge
+  const game = new CM.Game(); game.newGame("words-1", fixedParty(CM));
+  const knight = game.party.find((h) => h.cls === "Knight"), mage = game.party.find((h) => h.cls === "Mage");
+  const foe = (hide, df) => ({ name: hide, kind: hide, hp: 1000, max: 1000, atk: 6, df, row: "front" });
+  game.foes = [foe("Orc", 2)]; game.combat = { foes: game.foes, round: 1, order: [], index: 0 }; game.mode = "combat";
+  knight.weapon = { name: "Bleeding Mace", base: "Mace", kind: "weapon", slot: "weapon", power: 6, value: 1, props: { affixes: ["Bleeding"], bleed: 1, tier: 1 } };
+  game.rnd = new CM.Random(1); game.strike(knight, game.foes[0], "", { sure: true }); assert.strictEqual(game.foes[0].bleeding, 3, "the wound opened");
+  const hp = game.foes[0].hp; game.rnd = new CM.Random(2); game.endRound(); assert.ok(game.foes[0].hp < hp && game.foes[0].bleeding === 2, "and bleeds");
+  knight.weapon = { name: "Hunting Mace", base: "Mace", kind: "weapon", slot: "weapon", power: 6, value: 1, props: { vsHide: 1.3 } };
+  const avg = (f) => { let s = 0; for (let i = 0; i < 40; i++) { f.hp = 1000; game.rnd = new CM.Random(i); s += game.strike(knight, f, "", { sure: true }); } return s / 40; };
+  assert.ok(avg(foe("Troll", 2)) > avg(foe("Goblin", 2)) * 1.15, "the hunter's edge against hide");
+  mage.cloak = { name: "Cloak of Wards of the Hearth", base: "Cloak of Wards", kind: "cloak", slot: "cloak", power: 3, value: 1, props: { df: 3, auraDf: 1 } };
+  assert.strictEqual(CM.partyProp(game.party, "auraDf"), 1);
+  knight.hp = 100; knight.max = 100; knight.offhand = null; game.rnd = new CM.Random(3); game.hurt(knight, 10, game.foes[0], {}); const withAura = 100 - knight.hp;
+  mage.cloak = null; knight.hp = 100; game.rnd = new CM.Random(3); game.hurt(knight, 10, game.foes[0], {}); assert.strictEqual(100 - knight.hp, withAura + 1, "the hearth takes one off every blow");
+  game.mode = "explore"; game.combat = null;
+  // cursed: it clings; the temple lifts the cost and leaves the word
+  const hex = { name: "Keen Long Sword", base: "Long Sword", kind: "weapon", slot: "weapon", power: 9, value: 1, props: { cursed: true, curse: "weak", rarity: "cursed", affixes: ["Keen"], crit: 0.2, tier: 3, stats: { str: -2 } } };
+  game.bag.push(hex); game.equip(knight, game.bag.length - 1); game.bag.push({ name: "Mace", base: "Mace", kind: "weapon", slot: "weapon", power: 3, value: 1, props: {} });
+  assert.ok(knight.weapon === hex && game.equip(knight, game.bag.length - 1).includes("cursed"), "it clings: no swap");
+  game.mode = "camp"; game.gold = 500; assert.ok(game.temple("uncurse")); game.mode = "explore";
+  assert.ok(!hex.props.cursed && !hex.props.curse && hex.props.crit === 0.2 && !hex.props.stats.str && hex.props.rarity === "fine", JSON.stringify(hex.props));
+  // the sets: three pieces, a rule; dropped in their bands by hash
+  const rogue = game.party.find((h) => h.cls === "Rogue");
+  const pieces = [0, 1, 2].map((i) => Object.assign(CM.makeSetPiece("masons", i, 1), { unknown: false }));
+  for (const [i, it] of pieces.entries()) { game.bag.push(it); assert.strictEqual(game.equip(rogue, game.bag.length - 1), "", `piece ${i}`); }
+  assert.strictEqual(CM.setWorn(rogue), "masons"); const df = rogue.df; rogue.boots = null; CM.recompute(rogue); assert.strictEqual(df - rogue.df, 3, "+3 defence from the three");
+  let dropped = 0; for (let s = 0; s < 12; s++) for (let n = 6; n <= 20; n++) for (const t of Object.values(CM.makeFloor(n, `set-${s}`, 2).things)) if (t.type === "chest" && t.items.some((i) => CM.setOf(i))) dropped++;
+  assert.ok(dropped >= 3 && dropped < 60, `set pieces in the chests of twelve seeds: ${dropped}`);
+  assert.ok(CM.compendium({}).some((g) => g.id === "set" && g.total === 9));
+  // essence from the fire, and a word moved
+  game.mode = "camp"; game.gold = 1000;
+  const fine = { name: "Keen Short Sword", base: "Short Sword", kind: "weapon", slot: "weapon", power: 4, value: 50, props: { affixes: ["Keen"], crit: 0.1, rarity: "fine", tier: 1 } };
+  game.bag.push(fine); assert.strictEqual(game.salvage(game.bag.length - 1), ""); const ess = game.bag.find((i) => i.kind === "essence"); assert.ok(ess && ess.power === 1, "one essence from a fine thing");
+  ess.power = 3;
+  const plain = { name: "Mace", base: "Mace", kind: "weapon", slot: "weapon", power: 6, value: 50, props: { implicit: true } }; knight.weapon = plain;
+  assert.strictEqual(game.smith("reroll", game.party.indexOf(knight), "weapon"), ""); assert.ok(plain.props.affixes.some((w) => w.startsWith("of ")) && !game.bag.some((i) => i.kind === "essence"), "three essence stood in for the gem");
+  game.bag.push({ name: "Heavy Dagger", base: "Dagger", kind: "weapon", slot: "weapon", power: 5, value: 50, props: { affixes: ["Heavy"], rarity: "fine", tier: 2 } });
+  const pw = plain.power; assert.strictEqual(game.smith("move", game.party.indexOf(knight), "weapon"), "");
+  assert.ok(plain.props.affixes[0] === "Heavy" && plain.power === pw + 3 && plain.name.startsWith("Heavy Mace") && game.bag.some((i) => i.kind === "scrap"), `moved: ${plain.name} +${plain.power - pw}`);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

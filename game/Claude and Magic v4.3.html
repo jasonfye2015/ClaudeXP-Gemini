@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v4.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v4.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -409,6 +409,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 .things { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 6px; }
 .things .thing { font: 12.5px var(--serif); color: var(--ink); }
 .things .thing.unseen { color: var(--faint); letter-spacing: 1px; }
+.rarity-cursed { color: #D070D0; }
 </style>
 </head>
 <body>
@@ -418,7 +419,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "4.2", built: "2026-10-30" };
+const CM = window.CM = { version: "4.3", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -719,11 +720,13 @@ CM.COMBOS = {
 CM.RARITY = { common: { name: "common", colour: "" }, fine: { name: "fine", colour: "#8FD08F" }, rare: { name: "rare", colour: "#80B8FF" }, relic: { name: "relic", colour: "#E8C870" }, unique: { name: "unique", colour: "#FF9F5A" } };
 CM.AFFIXES = {
   prefix: {
-    weapon: { Keen: { crit: 0.1 }, Heavy: { power: 2 }, Vicious: { power: 3, stats: { dex: -1 } }, Swift: { stats: { dex: 2 } }, Jolting: { stun: 0.25 }, Thirsting: { lifesteal: true, deep: true },
+    weapon: { Keen: { crit: 0.1 }, Heavy: { power: 2 }, Bleeding: { bleed: 0.25 }, Chilling: { chill: 0.25 }, Blinding: { blindHit: 0.2 }, "Undead-bane": { vsUndead: 1.4 }, Hunting: { vsHide: 1.3 }, Desperate: { underHalf: 4 }, Sure: { hitBonus: 0.05 }, Weighted: { stun: 0.15, stats: { dex: -1 } }, Vicious: { power: 3, stats: { dex: -1 } }, Swift: { stats: { dex: 2 } }, Jolting: { stun: 0.25 }, Thirsting: { lifesteal: true, deep: true },
       Lulling: { sleep: 0.2, deep: true }, Cruel: { power: 4, crit: 0.05, deep: true } },
-    armor: { Sturdy: { power: 1 }, Warding: { df: 2 }, Spiked: { thorns: 2 }, Quiet: { stats: { dex: 1 } }, Hallowed: { df: 3, deep: true }, Barbed: { thorns: 4, deep: true } },
+    armor: { Sturdy: { power: 1 }, Warding: { df: 2 }, Steadfast: { init: -1, df: 3 }, Fleet: { init: 2 }, Sheltering: { auraDf: 1 }, Spiked: { thorns: 2 }, Quiet: { stats: { dex: 1 } }, Hallowed: { df: 3, deep: true }, Barbed: { thorns: 4, deep: true } },
   },
-  suffix: { "of the Bear": { stats: { str: 2 } }, "of the Fox": { stats: { dex: 2 } }, "of the Oak": { stats: { con: 2 } }, "of the Owl": { stats: { int: 2 } }, "of the Saint": { stats: { wis: 2 } },
+  suffix: { "of the Bear": { stats: { str: 2 } },
+    "of Haste": { init: 2 }, "of Stone": { df: 2, stats: { dex: -1 } }, "of the Scholar": { xpBonus: 0.05 }, "of Plunder": { killGold: 0.1 }, "of the Leech": { killHeal: 3 }, "of the Font": { killMana: 1 },
+    "of the Hearth": { auraDf: 1 }, "of the Lantern": { torchSave: true }, "of the Fox": { stats: { dex: 2 } }, "of the Oak": { stats: { con: 2 } }, "of the Owl": { stats: { int: 2 } }, "of the Saint": { stats: { wis: 2 } },
     "of Fortune": { stats: { luck: 2 } }, "of Mending": { regen: 1 }, "of Warding": { df: 1 }, "of Embers": { element: "fire", weapon: true }, "of Rime": { element: "frost", weapon: true },
     "of the Deep": { stats: { con: 3 }, regen: 1, deep: true }, "of the Root": { stats: { str: 3, con: 3 }, deep: true }, "of the Dreamer": { stats: { int: 3, wis: 3 }, deep: true }, "of the Dark": { crit: 0.1, lifesteal: true, deep: true } },
 };
@@ -760,6 +763,22 @@ CM.RECIPES = {
 };
 CM.OIL_FIGHTS = 3;
 // a set of relics: the guardians' things worn together are more than themselves
+// affixes grow with depth: tier I from the third floor, II from the sixteenth, III from the thirty-first - the word
+// stays, the number grows (half again, then double); the deep pools are tier III's own
+CM.AFFIX_TIER_AT = [3, 16, 31];
+CM.affixTier = (floor) => (floor >= CM.AFFIX_TIER_AT[2] ? 3 : floor >= CM.AFFIX_TIER_AT[1] ? 2 : 1);
+CM.AFFIX_SCALE = { 1: 1, 2: 1.5, 3: 2 };
+// a base's own small property, before any affix (CM.makeGear sets it; older things get it when they are named)
+CM.IMPLICITS = { Dagger: { crit: 0.03 }, Stiletto: { crit: 0.05 }, Kris: { bleed: 0.1 }, "Rune Blade": { spellPower: 1 }, "Mithril Sword": { init: 1 }, Claudebrand: { vsUndead: 1.25 }, Dragonslayer: { vsHide: 1.2 }, "War Hammer": { stun: 0.1 }, Maul: { stun: 0.15 },
+  Halberd: { reach: true }, "Runed Staff": { spellPower: 1 }, Buckler: { init: 1 }, "Tower Shield": { init: -1 }, "Mithril Shield": { block: 0.05 }, "Elven Mail": { init: 1 }, "Dragon Scale": { resist: "fire" }, "Aegis of Claude": { auraDf: 1 }, "Great Helm": { stun0: true }, "Mithril Helm": { resist: "blind" } };
+// cursed gear: a fourth rarity - a tier-III affix, and a cost that cannot be put down until the temple lifts it
+CM.CURSES = { hunger: { name: "hungering", what: "the party hungers twice as fast" }, dark: { name: "dark", what: "the torch burns twice as fast" }, weak: { name: "weakening", what: "-2 to the wearer's key stat" }, haunted: { name: "haunted", what: "a curse settles on the wearer on every new floor" } };
+// three sets of three: pieces found in their bands, fine alone, and the three together a rule
+CM.SETS = {
+  watch: { name: "The Watch's", bands: [1, 4], pieces: [["Watchman's Helm", "helm", "helm", 3], ["Watchman's Mail", "armor", "armor", 5], ["Watchman's Shield", "shield", "offhand", 4]], what: "the party wades dry-shod, and the wearer's blows chill" },
+  masons: { name: "The Masons'", bands: [2, 3], pieces: [["Mason's Cap", "helm", "helm", 4], ["Mason's Apron", "armor", "armor", 6], ["Mason's Boots", "boots", "boots", 2]], what: "+3 defence, and the wearer is never knocked flat nor held" },
+  order: { name: "The Order's", bands: [8, 9], pieces: [["Novice's Cowl", "helm", "helm", 5], ["Order's Vestment", "armor", "armor", 9], ["Order's Band", "ring", "ring", 2]], what: "no curse takes the wearer, who mends 2 a round" },
+};
 CM.RELIC_SET = { two: { atk: 2, df: 2, what: "two relics worn: +2 attack, +2 defence" }, three: { regen: 2, what: "three or more: and the party's wearer mends 2 a round" } };
 // ---- the dungeon, stranger: choices on the floor, the bands' hazards, strongboxes, a peddler, rivals ----
 // A choice event stands on a floor now and then (by the seed): Space, and the party is asked. Each option names what
@@ -2134,6 +2153,7 @@ CM.BASES = {};
   CM.BOOTS.forEach((b, i) => add(b.name, "boots", "boots", Math.round(i * 1.7), "boots"));
   CM.CLOAKS.forEach((c, i) => add(c.name, "cloak", "cloak", Math.round(i * 1.7), "cloak"));
   Object.values(CM.UNIQUES).forEach((u) => add(u.name, u.kind, u.slot, u.band, "unique"));
+  Object.entries(CM.SETS).forEach(([id, S]) => S.pieces.forEach(([n, kind, slot, tier]) => add(n, kind, slot, tier * 1, "set", { set: id })));
   Object.values(CM.GUARDIANS).forEach((G) => { if (G.relic) add(G.relic.name, G.relic.kind, G.relic.slot, CM.GUARDIAN_ORDER.indexOf(Object.keys(CM.GUARDIANS).find((k) => CM.GUARDIANS[k] === G)), "relic"); });
   [["Healing Potion", "heal"], ["Greater Healing Potion", "greaterheal"], ["Mana Potion", "mana"], ["Phoenix Feather", "revive"], ["Antidote", "antidote"], ["Torch", "torch"], ["Lantern", "lantern"], ["Ration", "ration"], ["Rope", "rope"], ["Firepot", "bomb"]]
     .forEach(([n, k], i) => add(n, k, null, i, "stuff"));
@@ -2144,7 +2164,7 @@ CM.BASES = {};
   Object.values(CM.INGREDIENTS).forEach((g, i) => add(g.name, "ingredient", null, i, "ingredient"));
   ["Oil of Fire", "Oil of Rime", "Oil of Saints"].forEach((n, i) => add(n, "oil", null, i, "stuff"));
 }
-CM.GROUP_NAMES = { weapon: "Weapons", bow: "Bows", armor: "Armour", shield: "Shields", helm: "Helms", ring: "Rings", amulet: "Amulets", boots: "Boots", cloak: "Cloaks", unique: "Uniques", relic: "Relics", stuff: "Potions and stuff", scroll: "Scrolls", wand: "Wands", tome: "Tomes", ingredient: "Ingredients" };
+CM.GROUP_NAMES = { set: "Sets", weapon: "Weapons", bow: "Bows", armor: "Armour", shield: "Shields", helm: "Helms", ring: "Rings", amulet: "Amulets", boots: "Boots", cloak: "Cloaks", unique: "Uniques", relic: "Relics", stuff: "Potions and stuff", scroll: "Scrolls", wand: "Wands", tome: "Tomes", ingredient: "Ingredients" };
 CM.HOW_FOUND = { chest: "in a chest", foe: "on a slain foe", strongbox: "in a strongbox", ghost: "a ghost's gift", remains: "among a fallen party's remains", relic: "a guardian's", merchant: "bought at the camp", peddler: "bought from a peddler", vault: "from the vault", rivals: "a rival party's", event: "found on the floor", start: "carried from the stair", made: "brewed by the alchemist", smith: "the smith's work" };
 
 // a thing's base id: what it was before any work (rings drop their plus; names made by the smith drop theirs)
@@ -2170,6 +2190,7 @@ CM.normalizeItem = function (item, how) {
   if (!item || typeof item !== "object") return item;
   if (!item.base || (item.kind === "ring" && / \+\d+$/.test(item.base))) item.base = CM.baseIdOf(item);
   if (!item.found) item.found = { floor: 0, how: how || "unknown" };
+  const imp = CM.implicitFor(item); if (imp && !(item.props || {}).implicit && !(item.props || {}).unique && !(item.props || {}).relic) { CM.applyProps(item, imp); item.props.implicit = true; }
   return item;
 };
 CM.tagFound = function (items, floor, how) {
@@ -2227,6 +2248,44 @@ CM.isTower = (shield) => Boolean(shield) && CM.baseIdOf(shield) === "Tower Shiel
 // armour weight: the heavy are a step late and loud; the light a step early
 CM.weightInit = (h) => { const w = h.armor && h.armor.props && h.armor.props.weight; return w === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate" ? -1 : w === "light" ? 1 : 0; };
 
+// ---- affixes that grow, implicits, curses, sets, essence ----
+CM.scaledAffix = function (a, tier) {                                    // an affix's numbers at a tier (words, flags and elements as they are)
+  const k = CM.AFFIX_SCALE[tier] || 1, out = {};
+  for (const [key, v] of Object.entries(a)) {
+    if (key === "deep" || key === "weapon") continue;
+    if (key === "stats") { out.stats = {}; for (const [st, d] of Object.entries(v)) out.stats[st] = Math.round(d * k); }
+    else if (typeof v === "number" && !["vsUndead", "vsHide"].includes(key)) out[key] = key === "crit" || key === "bleed" || key === "chill" || key === "blindHit" || key === "stun" || key === "hitBonus" || key === "killGold" || key === "xpBonus" ? Math.round(v * k * 100) / 100 : Math.round(v * k);
+    else if (typeof v === "number") out[key] = Math.round((1 + (v - 1) * k) * 100) / 100;
+    else out[key] = v;
+  }
+  return out;
+};
+CM.applyProps = function (item, add) {                                   // lay a set of props on a thing (numbers add, flags set)
+  const p = item.props = item.props || {};
+  for (const [k, v] of Object.entries(add)) {
+    if (k === "power") item.power += v;
+    else if (k === "stats") { p.stats = p.stats || {}; for (const [st, d] of Object.entries(v)) p.stats[st] = (p.stats[st] || 0) + d; }
+    else if (typeof v === "number" && typeof p[k] === "number" && !["vsUndead", "vsHide"].includes(k)) p[k] += v;
+    else p[k] = v;
+  }
+  return item;
+};
+CM.implicitFor = (item) => CM.IMPLICITS[CM.baseIdOf(item)] || null;
+CM.setOf = (item) => (item && item.props && item.props.set) || (item && CM.BASES[CM.baseIdOf(item)] && CM.BASES[CM.baseIdOf(item)].set) || null;
+CM.setWorn = function (h) {                                              // the set a hero wears all three of, if any
+  const count = {};
+  for (const it of CM.equipped(h)) { const id = CM.setOf(it); if (id && !it.unknown) count[id] = (count[id] || 0) + 1; }
+  return Object.keys(count).find((id) => count[id] >= 3) || null;
+};
+CM.makeSetPiece = function (setId, index, floor) {
+  const S = CM.SETS[setId], [name, kind, slot, tier] = S.pieces[index];
+  const power = kind === "ring" ? 1 : kind === "boots" ? 2 : kind === "armor" ? tier + 2 : tier + 1;
+  const props = Object.assign({ set: setId, rarity: "fine" }, kind === "ring" ? { stat: "con" } : {}, kind === "boots" ? { silence: false } : {});
+  return { name, base: name, kind, slot, power, value: 300 + 60 * tier, props, unknown: floor >= 2 };
+};
+CM.essence = (n = 1) => ({ name: "Essence", kind: "essence", power: n, value: 40 * n });
+CM.ESSENCE_FOR_GEM = 3;
+
 // ---- 20-world.js ----
 "use strict";
 // The world: items, monster groups, a new party - and a floor: rooms joined by corridors (Nystrom's rooms-and-mazes),
@@ -2280,6 +2339,13 @@ CM.makeGear = function (kind, floor, rnd) {
   if (floor >= 4 && (kind === "weapon" || kind === "armor") && rnd.chance(0.08)) { props.cursed = true; power = Math.max(1, power - 3); value = Math.floor(value / 3); }
   const item = { name, base: props.base0 || name, kind: slot === "offhand" ? "shield" : kind, slot, power, value, props };
   delete props.base0;
+  const imp = CM.implicitFor(item); if (imp) { CM.applyProps(item, imp); props.implicit = true; }
+  if (props.cursed) {                                                    // cursed: hidden until worn, a cost, and a tier-III word (CM.affix)
+    item.unknown = true;
+    const kinds = Object.keys(CM.CURSES); props.curse = kinds[(tier * 5 + power + floor) % kinds.length];
+    if (props.curse === "weak") { const st = CM.CLASSES.Knight ? ["str", "dex", "int", "wis"][(tier + floor) % 4] : "str"; props.stats = props.stats || {}; props.stats[st] = (props.stats[st] || 0) - 2; }
+    props.rarity = "cursed";
+  }
   if (floor >= 2 && rnd.chance(0.5)) item.unknown = true;
   return item;
 };
@@ -2291,9 +2357,9 @@ CM.affix = function (item, floor, rnd) {
   if (!["weapon", "armor", "shield", "helm"].includes(item.kind) || (item.props || {}).relic || (item.props || {}).unique) return item;
   const fine = floor >= 3 ? 0.18 + Math.min(0.17, floor * 0.005) : 0, rare = floor >= 8 ? 0.05 + Math.min(0.15, (floor - 8) * 0.004) : 0;
   const roll = rnd.next();
-  const n = roll < rare ? 2 : roll < rare + fine ? 1 : 0;
+  const n = (item.props || {}).cursed ? Math.max(1, roll < rare ? 2 : roll < rare + fine ? 1 : 0) : roll < rare ? 2 : roll < rare + fine ? 1 : 0;   // (a cursed thing always has its word)
   if (!n) return item;
-  const deep = floor > CM.LAST_FLOOR, p = item.props = item.props || {};
+  const deep = floor > CM.LAST_FLOOR, p = item.props = item.props || {}, tier = p.cursed ? 3 : CM.affixTier(floor);
   const pool = (table) => Object.entries(table).filter(([, a]) => (!a.deep || deep) && (!a.weapon || item.kind === "weapon") && !(a.element && p.element));
   const kinds = n === 2 ? ["prefix", "suffix"] : [rnd.chance(0.5) ? "prefix" : "suffix"];
   const words = [];
@@ -2303,17 +2369,12 @@ CM.affix = function (item, floor, rnd) {
     if (!choices.length) continue;
     const [word, a] = rnd.pick(choices);
     words.push([where, word]);
-    for (const [k, v] of Object.entries(a)) {
-      if (k === "deep" || k === "weapon") continue;
-      if (k === "power") { item.power += v; }
-      else if (k === "stats") { p.stats = p.stats || {}; for (const [st, d] of Object.entries(v)) p.stats[st] = (p.stats[st] || 0) + d; }
-      else if (k === "element") { p.element = v; }
-      else p[k] = v;
-    }
-    item.value += where === "prefix" ? 60 : 90;
+    CM.applyProps(item, CM.scaledAffix(a, tier));
+    item.value += (where === "prefix" ? 60 : 90) * tier;
   }
   if (!words.length) return item;
-  p.rarity = words.length === 2 ? "rare" : "fine";
+  p.tier = tier;
+  p.rarity = p.cursed ? "cursed" : words.length === 2 ? "rare" : "fine";
   p.affixes = words.map(([, w]) => w);
   const prefix = words.find(([w]) => w === "prefix"), suffix = words.find(([w]) => w === "suffix");
   item.name = `${p.element && !CM.ELEMENTS[p.element] ? "" : ""}${prefix ? prefix[1] + " " : ""}${p.element ? CM.ELEMENTS[p.element].prefix + " " : ""}${item.base || CM.baseName(item)}${suffix ? " " + suffix[1] : ""}${p.bonus ? ` +${p.bonus}` : ""}`;
@@ -2331,7 +2392,7 @@ CM.oil = (element) => ({ name: { fire: "Oil of Fire", frost: "Oil of Rime", holy
 CM.bomb = () => ({ name: "Firepot", kind: "bomb", power: 0, value: 80 });
 CM.scrap = () => ({ name: "Scrap", kind: "scrap", power: 0, value: 5 });
 // the rarity of a thing, for its colour: common, fine, rare, relic, unique
-CM.rarityOf = (item) => (item && item.props && !item.unknown ? (item.props.unique ? "unique" : item.props.relic ? "relic" : item.props.rarity || "common") : "common");
+CM.rarityOf = (item) => (item && item.props && !item.unknown ? (item.props.unique ? "unique" : item.props.relic ? "relic" : item.props.cursed ? "cursed" : item.props.set ? "fine" : item.props.rarity || "common") : "common");
 
 CM.scroll = (id) => ({ name: CM.SCROLLS[id].name, kind: "scroll", spell: id, power: 0, value: 40 });
 CM.wand = (id, charges) => ({ name: CM.WANDS[id].name, kind: "wand", spell: id, power: 0, charges, value: 90 });
@@ -2382,6 +2443,7 @@ CM.itemLabel = function (item) {
   else if (item.kind === "oil") bits.push(`rubbed on a hero's weapon: ${CM.ELEMENT_NAMES[item.element] || item.element} for ${CM.OIL_FIGHTS} fights`);
   else if (item.kind === "bomb") bits.push("thrown in a fight: fire on every foe");
   else if (item.kind === "scrap") bits.push("for the camp's smith: five stand in for a diamond");
+  else if (item.kind === "essence") bits.push(`what worded things leave in the fire: ${item.power} - three stand in for a gem at the smith's rework`);
   else if (item.kind === "greaterheal") bits.push(`heals ${item.power}`);
   if (p.stat && item.kind !== "ring") bits.push(`+${item.power} ${CM.STAT_NAMES[p.stat]}`);
   if (p.stats) for (const [st, d] of Object.entries(p.stats)) bits.push(`${d > 0 ? "+" : ""}${d} ${CM.STAT_NAMES[st]}`);
@@ -2398,7 +2460,27 @@ CM.itemLabel = function (item) {
   if (p.relic) bits.push("a guardian's relic");
   if (p.unique) bits.push("unique: " + CM.UNIQUES[p.unique].lore.replace(/\.$/, ""));
   if (p.bow) bits.push("a bow: the Ranger's");
-  if (p.cursed) bits.push("CURSED");
+  if (p.cursed) bits.push(`CURSED${p.curse && CM.CURSES[p.curse] ? ` (${CM.CURSES[p.curse].name}: ${CM.CURSES[p.curse].what})` : ""}`);
+  if (p.tier && p.tier > 1) bits.push(`tier ${["", "I", "II", "III"][p.tier]} work`);
+  if (p.set && CM.SETS[p.set]) bits.push(`one of ${CM.SETS[p.set].name}: all three worn, ${CM.SETS[p.set].what}`);
+  if (p.bleed) bits.push("a blow may open a wound that bleeds");
+  if (p.chill) bits.push("a blow may chill the foe");
+  if (p.blindHit) bits.push("a blow may blind the foe for its next");
+  if (p.vsUndead) bits.push(`${Math.round((p.vsUndead - 1) * 100)}% more against the undead`);
+  if (p.vsHide) bits.push(`${Math.round((p.vsHide - 1) * 100)}% more against hide`);
+  if (p.underHalf) bits.push(`+${p.underHalf} to blows while under half health`);
+  if (p.hitBonus) bits.push(`blows land ${Math.round(p.hitBonus * 100)}% more`);
+  if (p.init) bits.push(`${p.init > 0 ? "+" : ""}${p.init} to the round's order`);
+  if (p.xpBonus) bits.push(`${Math.round(p.xpBonus * 100)}% more experience`);
+  if (p.killGold) bits.push(`${Math.round(p.killGold * 100)}% more gold from a fight`);
+  if (p.killHeal) bits.push(`${p.killHeal} health back for every foe slain`);
+  if (p.killMana) bits.push(`${p.killMana} magic to the casters for every foe slain`);
+  if (p.auraDf) bits.push(`the whole party +${p.auraDf} defence while worn`);
+  if (p.torchSave) bits.push("the party's torch burns slower");
+  if (p.spellPower) bits.push(`+${p.spellPower} to every spell`);
+  if (p.block) bits.push(`blocks ${Math.round(p.block * 100)}% more`);
+  if (p.stun0) bits.push("the wearer is never knocked flat");
+  if (p.reach) bits.push("reaches the back row from the front");
   return bits.filter(Boolean).join(", ");
 };
 
@@ -2556,7 +2638,7 @@ CM.recompute = function (h) {
   const relics = CM.relicsWorn(h), set = relics >= 2 ? CM.RELIC_SET.two : null;   // (the guardians' things, worn together)
   if (h.cls === "Monk" && h.weapon && h.weapon.props && h.weapon.props.fists) h.weapon.power = 3 + Math.floor(h.level / 2) + 2 * (h.weapon.props.bonus || 0) + (CM.trait(h, "ironfists") ? Math.ceil((3 + Math.floor(h.level / 2)) / 2) : 0);   // (the hands grow; the smith's work and the Heir's kit count double on them)
   h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow + (CM.trait(h, "mighty") ? 3 : 0) + (set ? set.atk : 0) + (h.bondAtk || 0));
-  h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0) + (CM.trait(h, "stonewall") || CM.trait(h, "ironbody") ? 3 : 0) + (set ? set.df : 0) + (h.bondDf || 0));
+  h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0) + (CM.trait(h, "stonewall") || CM.trait(h, "ironbody") ? 3 : 0) + (set ? set.df : 0) + (h.bondDf || 0) + (CM.setWorn(h) === "masons" ? 3 : 0));
   h.hp = Math.min(h.hp, h.max);
   h.mp = Math.min(h.mp, h.maxmp);
   return h;
@@ -2596,6 +2678,8 @@ CM.upgradeHero = function (h) {
 CM.equipped = (h) => CM.SLOTS.map((s) => h[s]).filter(Boolean);
 
 // a stat as it stands, rings and all
+// the party's gear, summed over everyone standing (auras)
+CM.partyProp = (party, prop) => (party || []).filter((h) => h.hp > 0).reduce((n, h) => n + CM.gearProp(h, prop), 0);
 CM.heroStat = function (h, s) {
   let v = h.stats && h.stats[s] !== undefined ? h.stats[s] : 10;
   for (const it of CM.equipped(h)) {
@@ -2838,6 +2922,15 @@ CM.furnish = function (floor, seed, gen) {
     const h = CM.hashSeed(`${seed}:craft:${number}:${k}`);
     if (h % 100 < 12) t.items.push(CM.gem(["diamond", "diamond", "ruby", "sapphire", "sunstone"][(h >>> 8) % 5]));
     else if (h % 100 < 21 && number >= 4) { const ids = Object.keys(CM.TOMES); t.items.push(CM.tome(ids[(h >>> 8) % ids.length])); }
+  }
+  // a set's piece, now and then, in a chest of its bands (CM.SETS; by hash, so no floor moves)
+  for (const [setId, S] of Object.entries(CM.SETS)) {
+    const band0 = CM.themeIndex(number);
+    if (band0 < S.bands[0] || band0 > S.bands[1]) continue;
+    const hs = CM.hashSeed(`${seed}:set:${setId}:${number}`);              // one roll a floor a set: a piece in a chest, one floor in twelve or so
+    if (hs % 100 >= 8) continue;
+    const chests = Object.keys(floor.things).filter((k) => floor.things[k].type === "chest").sort();
+    if (chests.length) floor.things[chests[(hs >>> 8) % chests.length]].items.push(CM.makeSetPiece(setId, (hs >>> 16) % S.pieces.length, number));
   }
   // the hoard, deeper: an affix or two on the chests' gear, and one unique a band, in a chest on one of its floors
   for (const [k, t] of Object.entries(floor.things)) {
@@ -6668,6 +6761,7 @@ CM.Game = class {
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
     if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
+    if (fresh) for (const h of this.alive()) if (CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "haunted")) this.afflict(h, "curse", "the haunted thing");
     if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }
     for (const h of this.alive()) if (h.cls === "Necromancer" && !h.familiar && h.level >= CM.FAMILIAR_AT) { h.familiar = "skull"; this.say(`A skull on ${h.name}'s belt opens its jaws: ${CM.FAMILIARS.skull.what}.`); }
     if (fresh && this.has("pilgrim")) { const xp = 60 * number; for (const h of this.alive()) h.xp += xp; this.say(`Pilgrim: ${xp} experience each, for the floor itself.`); }
@@ -6807,7 +6901,7 @@ Object.assign(CM.Game.prototype, {
     this.steps = (this.steps || 0) + 1;
     this.count("steps");
     if (this.steps % 150 === 0 && this.gen >= 2) this.changeBehind();        // (the dungeon is not still behind you)
-    this.fed = (this.fed || 0) + 1;                                       // the stomachs: hungry past three hundred steps, weary past six
+    this.fed = (this.fed || 0) + 1 + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "hunger")) ? 1 : 0);   // the stomachs: hungry past three hundred steps, weary past six (a hungering curse: twice as fast)
     if (this.fed === CM.HUNGER.hungry) this.say("The party is hungry. A ration would be welcome.");
     if (this.fed === CM.HUNGER.weary) this.say("The party is weary with hunger: every blow does less until they eat.");
     if (this.fed > CM.HUNGER.hungry && this.fed % 50 === 0) this.cheer(-1);
@@ -6969,8 +7063,9 @@ Object.assign(CM.Game.prototype, {
     const l = this.light;
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || h.origin === "lowertown");
-    l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0);
+    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
+    if (CM.partyProp(this.party, "torchSave") && (this.steps || 0) % 3 === 0) return;   // (of the Lantern: every third step is free)
+    l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0) + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "dark")) ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
     const spare = this.bag.findIndex((i) => i.kind === "torch");
@@ -7697,7 +7792,7 @@ Object.assign(CM.Game.prototype, {
     c.round += 1;
     c.reached = 0;
     const order = [];
-    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
+    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + CM.gearProp(h, "init") + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
     if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
     order.sort((a, b) => b.init - a.init);
     for (const h of this.alive()) if (h.familiar === "skull" && c.round > 0) { const foe = this.attackable()[0]; if (foe) this.spellHit(foe, Math.max(1, 2 + Math.floor(h.level / 2)), `${h.name}'s skull bites:`); }
@@ -7779,8 +7874,9 @@ Object.assign(CM.Game.prototype, {
     this.enginesAct();
     if (this.terrain().includes("vent")) { const burn = 2 + Math.floor(this.floor.number / 5); let any = false; for (const h of this.alive().filter((p) => p.row === "back")) { h.hp = Math.max(1, h.hp - burn); any = true; } if (any) this.say(`The vent breathes: the back row is scorched (-${burn}).`); }
     for (const m of this.living()) if (m.elite === "shielded") m.warded = Math.max(m.warded || 0, 1);
-    for (const h of this.alive()) {                                      // gear that mends (of Mending, a unique, three relics worn)
-      const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0);
+    for (const m of this.living()) if (m.bleeding > 0) { m.bleeding--; const n = 2 + Math.floor((this.floor ? this.floor.number : 1) / 8); m.hp -= n; this.say(`${CM.The(m)} bleeds (-${n}).`); if (m.hp <= 0 && !m.dead) { m.dead = true; this.emit("fx", { kind: "die", foe: m }); } }
+    for (const h of this.alive()) {                                      // gear that mends (of Mending, a unique, three relics worn, the Order's set)
+      const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0) + (CM.setWorn(h) === "order" ? 2 : 0);
       if (mend > 0 && h.hp < h.max) h.hp = Math.min(h.max, h.hp + mend);
     }
     if (this.alive().some((h) => CM.trait(h, "evergreen"))) for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 3);
@@ -7939,7 +8035,7 @@ Object.assign(CM.Game.prototype, {
   },
   stat(h, s) { return CM.heroStat(h, s); },
   hitChance(h) {
-    return CM.clamp(0.8 + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
+    return CM.clamp(0.8 + CM.gearProp(h, "hitBonus") + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
   },
   critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01 + CM.gearProp(h, "crit"), 0.02, 0.7); },
   resistChance(h) {
@@ -7952,7 +8048,8 @@ Object.assign(CM.Game.prototype, {
     if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
     if (h.thrall) return false;
     if ((status === "paralysis" && (CM.trait(h, "immovable") || h.quirk === "stubborn")) || ((status === "poison" || status === "paralysis") && CM.trait(h, "diamondbody"))) { this.say(`${h.name} does not so much as flinch.`); return false; }
-    if (status === "curse" && h.origin === "order") { this.say(`${h.name} says the order's words, and the curse finds no purchase.`); return false; }
+    if (status === "curse" && (h.origin === "order" || CM.setWorn(h) === "order")) { this.say(`${h.name} says the order's words, and the curse finds no purchase.`); return false; }
+    if (status === "paralysis" && (CM.setWorn(h) === "masons" || CM.gearProp(h, "stun0"))) { this.say(`${h.name} stands like a mason's wall.`); return false; }
     if (status === "curse") this.cheer(-5, "a curse");
     const charm = CM.equipped(h).find((it) => it.props && it.props.resist === status && !it.unknown);
     if (charm) { this.say(`${h.name}'s ${CM.baseName(charm)} grows warm: the ${status === "stone" ? "gaze" : "touch"} finds no purchase.`); return false; }
@@ -8007,6 +8104,8 @@ Object.assign(CM.Game.prototype, {
       h = h.guardedBy;
     }
     if (h.defending) dmg = Math.ceil(dmg / 2);
+    if (by && by.blinded > 0) { by.blinded--; dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + " - blind, it strikes wide" }); }
+    dmg -= CM.partyProp(this.party, "auraDf");
     if (!opts.aoe && !opts.noBlock) {                                   // a shield turns the blow: the hero's own, or a tower shield in the front row for one behind
       const own = h.offhand && h.offhand.kind === "shield" ? CM.blockChance(h.offhand) : 0;
       const tower = !own && h.row === "back" ? this.alive().filter((p) => p.row === "front" && CM.isTower(p.offhand) && !p.offhand.unknown).map((p) => CM.blockChance(p.offhand) / 2)[0] || 0 : 0;
@@ -8306,6 +8405,10 @@ Object.assign(CM.Game.prototype, {
     if (home && wclass === "staff") dmg = Math.max(1, Math.ceil(dmg / 2));
     if (home && wclass === "polearm" && !back) { dmg = Math.max(1, Math.ceil(dmg * 0.75)); how = ", cramped in the front"; }
     if (home && wclass === "blade" && hide === "flesh") { dmg = Math.ceil(dmg * 1.15); how = " - the edge finds flesh"; }
+    { const wp = (weapon && !weapon.unknown && weapon.props) || {};        // the words on the weapon: against the undead, against hide, while desperate
+      if (wp.vsUndead && target.undead) { dmg = Math.ceil(dmg * wp.vsUndead); how += " - the bane bites"; }
+      if (wp.vsHide && hide === "hide") { dmg = Math.ceil(dmg * wp.vsHide); how += " - the hunter's edge"; }
+      if (wp.underHalf && hero.hp < hero.max / 2) dmg += wp.underHalf; }
     if (home && wclass === "axe" && hide === "hide") { dmg = Math.ceil(dmg * 1.15); how = " - the axe bites hide"; }
     if (target.elite === "spectral" && rnd.chance(0.5)) { this.say(`${hero.name}'s blow passes through ${CM.the(target)}.`); this.emit("fx", { kind: "miss", foe: target }); return 0; }
     if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
@@ -8343,6 +8446,11 @@ Object.assign(CM.Game.prototype, {
     this.emit("fx", { kind: "hit", foe: target, amount: dmg });
     this.sound("hit");
     if (props.stun && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.stun)) { target.held = Math.max(target.held || 0, 1); this.say(`${CM.The(target)} reels from the blow.`); }
+    if (!weapon.unknown && target.hp > 0) {                               // the new words: a wound that bleeds, a chill, a blinding
+      if (props.bleed && !target.undead && hide !== "none" && rnd.chance(props.bleed)) { target.bleeding = Math.max(target.bleeding || 0, 3); this.say(`${CM.The(target)} bleeds.`); }
+      if ((props.chill || CM.setWorn(hero) === "watch") && rnd.chance(props.chill || 0.25)) { target.chilled = Math.max(target.chilled || 0, 2); this.say(`${CM.The(target)} is chilled to the bone.`); }
+      if (props.blindHit && rnd.chance(props.blindHit)) { target.blinded = 1; this.say(`${CM.The(target)} is blinded for a moment.`); }
+    }
     if (props.sleep && !weapon.unknown && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.sleep)) { target.asleep = 2; this.say(`${CM.The(target)} hears the tide in the blade, and sleeps.`); }
     if (props.lifesteal && !weapon.unknown && hero.hp > 0 && hero.hp < hero.max) { const back = Math.max(1, Math.ceil(dmg / 4)); hero.hp = Math.min(hero.max, hero.hp + back); this.say(`${hero.name}'s blade drinks: +${back}.`); }
     if ((CM.guardianHas(target, "heat") || CM.guardianHas(target, "glass")) && !props.bow && hero.hp > 0) {   // its heat, or its shards: whoever strikes it pays
@@ -8476,7 +8584,7 @@ Object.assign(CM.Game.prototype, {
     const lvl = (h && h.spellLevels || {})[id] || 1;
     return (1 + 0.25 * (lvl - 1)) * (this.castMult || 1);
   },
-  pow(n) { const h = this.casting, staff = h && h.weapon && CM.weaponClass(h.weapon) === "staff" && CM.atHome(h, h.weapon) && !h.weapon.unknown ? 1 + Math.floor(Math.max(0, (CM.BASES[CM.baseIdOf(h.weapon)] || { tier: 0 }).tier) / 4) : 0; return Math.max(1, Math.ceil(n * (this.castScale || 1)) + staff); },   // (a staff: +1 a spell, and one more every four tiers)
+  pow(n) { const h = this.casting, staff = h && h.weapon && CM.weaponClass(h.weapon) === "staff" && CM.atHome(h, h.weapon) && !h.weapon.unknown ? 1 + Math.floor(Math.max(0, (CM.BASES[CM.baseIdOf(h.weapon)] || { tier: 0 }).tier) / 4) : 0; return Math.max(1, Math.ceil(n * (this.castScale || 1)) + staff + (h ? CM.gearProp(h, "spellPower") : 0)); },   // (a staff: +1 a spell, and one more every four tiers)
   // the reagent in the pack that goes with a spell, if any: {row, id}
   reagentFor(id) {
     for (let row = 0; row < this.bag.length; row++) { const it = this.bag[row]; if (it.kind === "ingredient" && CM.REAGENTS[it.ingredient] && CM.REAGENTS[it.ingredient].spells.includes(id)) return { row, id: it.ingredient }; }
@@ -8782,6 +8890,9 @@ Object.assign(CM.Game.prototype, {
     if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
     if (this.alive().some((h) => CM.trait(h, "pickpocket"))) gold = Math.floor(gold * 1.1);
     if (this.asc("poorveins")) gold = Math.floor(gold * 0.8);
+    { const plunder = CM.partyProp(this.party, "killGold"); if (plunder) gold = Math.floor(gold * (1 + plunder));
+      for (const h of this.alive()) { const heal = CM.gearProp(h, "killHeal"); if (heal) h.hp = Math.min(h.max, h.hp + heal * slain.length); }
+      const font = CM.partyProp(this.party, "killMana"); if (font) for (const h of this.alive()) if (h.maxmp) h.mp = Math.min(h.maxmp, h.mp + font * slain.length); }
     if (this.alive().some((h) => CM.trait(h, "avenger")) && slain.some((m) => m.undead)) { const n = slain.filter((m) => m.undead).length * 5; for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + n); this.say(`The unholy are laid low, and the party mends ${n}.`); }
     this.foughtTogether();
     gold = Math.floor(gold * (CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair).gold);
@@ -8809,7 +8920,7 @@ Object.assign(CM.Game.prototype, {
     this.cheer(guardian ? 10 : 3);
     this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and ${loot.map((i) => (i.kind === "ingredient" ? "some " : "a ") + (i.unknown ? CM.baseName(i) + " (unknown)" : i.name)).join(" and ")}.` : "."));
     for (const hero of this.alive()) {
-      hero.xp += Math.floor(xp / 2);                                      // everyone standing learns from the fight
+      hero.xp += Math.floor(xp / 2 * (1 + CM.gearProp(hero, "xpBonus")));   // everyone standing learns from the fight (a scholar's thing, a little more)
       while (hero.xp >= CM.xpForLevel(hero.level + 1)) {
         hero.level += 1;
         CM.upgradeHero(hero);
@@ -9305,7 +9416,7 @@ Object.assign(CM.Game.prototype, {
     this.logAct("temple", service);
     this.gold -= cost; this.spend("temple", cost);
     for (const h of who) this.cure(h, which);
-    for (const it of cursedGear) { it.props.cursed = false; it.power += 3; }
+    for (const it of cursedGear) { it.props.cursed = false; if (it.props.curse === "weak" && it.props.stats) { for (const st of Object.keys(it.props.stats)) if (it.props.stats[st] < 0) { it.props.stats[st] += 2; if (!it.props.stats[st]) delete it.props.stats[st]; } } delete it.props.curse; if (!it.props.tier) it.power += 3; if (it.props.rarity === "cursed") it.props.rarity = (it.props.affixes || []).length === 2 ? "rare" : "fine"; }
     this.sound("heal");
     this.say({ cure: "Herbs and prayers: the party's ailments pass.",
       uncurse: "The priest's chant lifts the curse" + (cursedGear.length ? `, and ${cursedGear.map((i) => i.name).join(", ")} can be put down at last.` : "."),
@@ -9410,11 +9521,12 @@ Object.assign(CM.Game.prototype, {
       this.say(`The smith sets the ${name.toLowerCase()} into ${hero.name}'s blade, and it takes: ${item.name}.`);
     } else if (service === "reroll") {                                  // a gem of any kind and gold: the suffix is struck off and another worked in
       if (!["weapon", "armor", "offhand", "helm"].includes(slot)) return "The smith reworks a weapon, armour, a shield or a helm.";
-      const gem = this.bag.findIndex((i) => i.kind === "gem"), cost = 100;
-      if (gem < 0) return "The smith wants a gem of any kind to rework an affix.";
+      const gem = this.bag.findIndex((i) => i.kind === "gem"), cost = 100, ess = this.bag.map((i, idx) => (i.kind === "essence" ? idx : -1)).filter((idx) => idx >= 0);
+      const essenceHeld = ess.reduce((n, idx) => n + (this.bag[idx].power || 1), 0);
+      if (gem < 0 && essenceHeld < CM.ESSENCE_FOR_GEM) return `The smith wants a gem of any kind to rework an affix (or ${CM.ESSENCE_FOR_GEM} essence).`;
       if (this.gold < cost) return `The smith wants ${cost} gold, and a gem.`;
       this.gold -= cost; this.spend("smith", cost);
-      this.bag.splice(gem, 1);
+      if (gem >= 0) this.bag.splice(gem, 1); else { let need = CM.ESSENCE_FOR_GEM; for (const idx of ess.slice().reverse()) { if (need <= 0) break; const e = this.bag[idx]; if ((e.power || 1) <= need) { need -= e.power || 1; this.bag.splice(idx, 1); } else { e.power -= need; need = 0; } } }
       const rnd = this.rnd, deep = this.floor.number > CM.LAST_FLOOR;
       const old = (p.affixes || []).find((w) => w.startsWith("of ")), prefix = (p.affixes || []).find((w) => !w.startsWith("of "));
       if (old) { const a = CM.AFFIXES.suffix[old]; if (a) for (const [k, v] of Object.entries(a)) { if (k === "stats") for (const [st, d] of Object.entries(v)) { p.stats[st] -= d; if (!p.stats[st]) delete p.stats[st]; } else if (k === "element") delete p.element; else if (k !== "deep" && k !== "weapon") delete p[k]; } }
@@ -9427,6 +9539,23 @@ Object.assign(CM.Game.prototype, {
       CM.recompute(hero);
       this.sound("lever");
       this.say(`The smith strikes the old work off ${hero.name}'s ${item.base} and works the gem in: ${item.name}.`);
+    } else if (service === "move") {                                    // a prefix moved from a thing in the pack to the worn one; the pack's thing is scrap
+      const from = this.bag.findIndex((i) => ["weapon", "armor", "shield", "helm"].includes(i.kind) && !i.unknown && (i.props || {}).affixes && i.props.affixes.some((w) => !w.startsWith("of ")) && !(i.props.relic || i.props.unique) && (i.kind === "weapon") === (item.kind === "weapon"));
+      if (from < 0) return "The smith wants a thing in the pack with a prefix to move, of the same kind of make (a weapon's word for a weapon, armour's for the rest).";
+      const cost = 150; if (this.gold < cost) return `The smith wants ${cost} gold to move a word.`;
+      const src = this.bag[from], word = src.props.affixes.find((w) => !w.startsWith("of ")), table = CM.AFFIXES.prefix[item.kind === "weapon" ? "weapon" : "armor"], a = table[word];
+      if (!a) return "The smith can't read that word.";
+      const oldPrefix = (p.affixes || []).find((w) => !w.startsWith("of "));
+      if (oldPrefix && table[oldPrefix]) { const old = CM.scaledAffix(table[oldPrefix], p.tier || 1); for (const [k, v] of Object.entries(old)) { if (k === "power") item.power -= v; else if (k === "stats") { for (const [st, d] of Object.entries(v)) { p.stats[st] -= d; if (!p.stats[st]) delete p.stats[st]; } } else if (typeof v === "number" && typeof p[k] === "number") { p[k] -= v; if (!p[k]) delete p[k]; } else delete p[k]; } }
+      this.gold -= cost; this.spend("smith", cost);
+      const tier = src.props.tier || 1;
+      CM.applyProps(item, CM.scaledAffix(a, tier));
+      p.affixes = [word].concat((p.affixes || []).filter((w) => w.startsWith("of "))); p.tier = Math.max(p.tier || 1, tier); p.rarity = p.affixes.length === 2 ? "rare" : "fine";
+      this.bag.splice(from, 1, CM.scrap());
+      item.name = CM.itemName(item);
+      CM.recompute(hero);
+      this.sound("lever");
+      this.say(`The smith lifts the word ${word} off the ${CM.baseName(src)} and works it into ${hero.name}'s ${CM.baseName(item)}: ${item.name}. The ${CM.baseName(src)} is scrap.`);
     } else return "The smith doesn't do that.";
     this.saveRun();
     this.emit("change");
@@ -9463,8 +9592,10 @@ Object.assign(CM.Game.prototype, {
     this.bag.splice(row, 1);
     const n = 1 + (item.props && item.props.rarity === "rare" ? 1 : 0);
     for (let i = 0; i < n; i++) this.bag.push(CM.scrap());
+    const ess = item.unknown ? 0 : (item.props || {}).rarity === "rare" || (item.props || {}).cursed ? 2 : (item.props || {}).rarity === "fine" ? 1 : 0;   // essence: what a worded thing leaves besides scrap
+    if (ess) { const have = this.bag.find((i) => i.kind === "essence"); if (have) have.power += ess; else this.bag.push(CM.essence(ess)); }
     this.sound("lever");
-    this.say(`The ${item.unknown ? CM.baseName(item) : item.name} goes into the fire and comes out as ${CM.plural(n, "piece")} of scrap.`);
+    this.say(`The ${item.unknown ? CM.baseName(item) : item.name} goes into the fire and comes out as ${CM.plural(n, "piece")} of scrap${ess ? `, and ${CM.plural(ess, "essence")}` : ""}.`);
     this.saveRun();
     this.emit("change");
     return "";
@@ -10894,6 +11025,7 @@ CM.UI = class {
       <div class="rowpick"><span>Formation:</span>${Object.entries(CM.FORMATIONS).map(([id, f]) => `<button data-formation="${id}" class="${(g.formation || "line") === id ? "on" : ""}" title="${this.esc(f.what)}">${f.name}</button>`).join("")}
         <small>${this.esc(CM.FORMATIONS[g.formation || "line"].what)}</small></div>
       <div class="list-title">Gear</div>
+      ${CM.setWorn(h) ? `<div class="gold">${CM.SETS[CM.setWorn(h)].name} set, all three worn: ${CM.SETS[CM.setWorn(h)].what}.</div>` : ""}
       ${CM.relicsWorn(h) >= 2 ? `<div class="gold">The guardians' things, worn together: ${CM.RELIC_SET.two.what}${CM.relicsWorn(h) >= 3 ? "; " + CM.RELIC_SET.three.what : ""}.</div>` : ""}${h.oil && h.oil.fights > 0 ? `<div>Oiled: ${CM.ELEMENT_NAMES[h.oil.element]} on the weapon for ${CM.plural(h.oil.fights, "more fight")}.</div>` : ""}
       <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span><span class="icon-slot" data-slot="${slot}"></span> ${it ? `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
     for (const span of facts.querySelectorAll(".icon-slot")) { const it = h[span.dataset.slot]; if (it) span.appendChild(this.icon(it, 20)); }
@@ -12457,6 +12589,12 @@ Object.assign(CM.UI.prototype, {
           r.title = "The suffix is struck off and another worked in, from the dice";
           r.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("reroll", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
           act.appendChild(r);
+          const mv = document.createElement("button");
+          mv.textContent = "Move a prefix here: a worded thing from the pack and 150 gold";
+          mv.disabled = g.gold < 150 || it.unknown || !g.bag.some((i) => ["weapon", "armor", "shield", "helm"].includes(i.kind) && !i.unknown && (i.props || {}).affixes && i.props.affixes.some((w) => !w.startsWith("of ")) && (i.kind === "weapon") === (it.kind === "weapon"));
+          mv.title = "The first prefixed thing of the same kind of make in the pack gives up its word, and becomes scrap";
+          mv.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("move", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
+          act.appendChild(mv);
         }
         row.appendChild(act);
         box.appendChild(row);
