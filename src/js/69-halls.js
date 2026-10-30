@@ -6,8 +6,8 @@
 // Patriarch's history, the tithe and a vigil (a scar kept or let fade, once a hero); the guildhall's trainers, the
 // second calling, the contracts, and the roster: every party this browser set out with, kept as a preset, and a
 // muster that makes the next run's party from the last that came home.
-CM.VILLAGE.library.costs.push(1500); CM.VILLAGE.library.levels.push("The gazetteer: a new run has the first five floors' walls on its map before the party is on them");
-CM.VILLAGE.shrine.costs.push(1500); CM.VILLAGE.shrine.levels.push("The vigil: a hero's scar may be kept or let fade, once a hero");
+CM.VILLAGE.library.costs.push(300); CM.VILLAGE.library.levels.push("The gazetteer: a new run has the first five floors' walls on its map before the party is on them");
+CM.VILLAGE.shrine.costs.push(250); CM.VILLAGE.shrine.levels.push("The vigil: a hero's scar may be kept or let fade, once a hero");
 CM.TOWN_PRICE = 0.9;
 CM.ROSTER_MAX = 12;
 CM.GAZETTEER_FLOORS = 5;

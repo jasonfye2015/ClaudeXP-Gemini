@@ -662,7 +662,7 @@ Object.assign(CM.Game.prototype, {
   // the tavern: three who'd come along, for a price - one of them for a hero who has fallen
   tavern() {
     if (!this.recruits || this.recruits.floor !== this.floor.number) {
-      const level = Math.max(1, Math.round(this.party.reduce((s, h) => s + h.level, 0) / Math.max(1, this.party.length)) - 1);
+      const level = Math.max(1, Math.round(this.party.reduce((s, h) => s + h.level, 0) / Math.max(1, this.party.length)) - 1 + (this.villageLevel("tavern") >= 2 ? 1 : 0));   // (the Hanged Lantern's better bench)
       const rnd = new CM.Random(CM.hashSeed(`${this.seed}:tavern:${this.floor.number}`));
       this.recruits = { floor: this.floor.number, who: [0, 1, 2].map(() => CM.makeRecruit(level, rnd, this.classesAvailable())) };
       const met = ((this.village || {}).met || []);                      // (guildhall level 3: the third is someone rescued in a run before)

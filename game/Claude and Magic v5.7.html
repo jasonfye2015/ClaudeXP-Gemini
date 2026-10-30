@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v5.6 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v5.7 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -430,7 +430,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "5.6", built: "2026-10-30" };
+const CM = window.CM = { version: "5.7", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -4265,6 +4265,7 @@ CM.makeTown = function (seed) {
 // a plot's level: the village's, for the plots the village already raises; none yet for the rest (the next phases raise them)
 CM.plotLevel = (game, id) => { const P = CM.TOWN_PLOTS[id]; return P && P.village && game ? game.villageLevel(P.village) : 0; };
 CM.isTown = (fl) => Boolean(fl && fl.number === 0);
+CM.houseStage = (level, most) => (level <= 0 ? 0 : most <= 1 ? 4 : Math.max(1, Math.min(4, Math.ceil(level * 4 / most))));   // a building's drawn stage (1 a frame, 2 a roof, 3 a sign, 4 a lit window), by its level against its most
 
 // ---- 25-saves.js ----
 "use strict";
@@ -4997,18 +4998,17 @@ CM.art.teleporter = function () {                                         // a r
 };
 
 // the town's things: a house front with a door and a sign, a foundation of low stones, the square's well
-CM.art.house = function () {
+CM.art.house = function (stage = 4) {                                   // 1 a frame; 2 a roofed house; 3 with its sign; 4 with a lit window
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
   p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 100, 9, 0, 0, Math.PI * 2); p.fill();
-  p.fillStyle = "#B89C78"; p.fillRect(38, 96, 180, 146);                 // the wall, limewashed
-  p.fillStyle = "#6E4A2A"; for (const x of [38, 124, 212]) p.fillRect(x, 96, 6, 146); p.fillRect(38, 150, 180, 6);   // the timbers
-  p.fillStyle = "#7A4A2A"; p.beginPath(); p.moveTo(22, 100); p.lineTo(128, 30); p.lineTo(234, 100); p.closePath(); p.fill();   // the roof
-  p.fillStyle = "#5A3418"; for (let y = 40; y < 100; y += 12) { p.fillRect(22 + (100 - y) * 0.9, y, 212 - (100 - y) * 1.8, 3); }
+  if (stage >= 2) p.fillStyle = "#B89C78", p.fillRect(38, 96, 180, 146);   // the wall, limewashed
+  p.fillStyle = "#6E4A2A"; for (const x of [38, 124, 212]) p.fillRect(x, 96, 6, 146); p.fillRect(38, 150, 180, 6); p.fillRect(38, 96, 180, 6);   // the timbers (a frame alone, at the first stage)
+  if (stage >= 2) { p.fillStyle = "#7A4A2A"; p.beginPath(); p.moveTo(22, 100); p.lineTo(128, 30); p.lineTo(234, 100); p.closePath(); p.fill(); p.fillStyle = "#5A3418"; for (let y = 40; y < 100; y += 12) p.fillRect(22 + (100 - y) * 0.9, y, 212 - (100 - y) * 1.8, 3); }   // the roof
+  else { p.strokeStyle = "#6E4A2A"; p.lineWidth = 6; p.beginPath(); p.moveTo(40, 98); p.lineTo(128, 36); p.lineTo(216, 98); p.stroke(); }   // the roof's beams, bare
   p.fillStyle = "#4A2E16"; p.fillRect(108, 166, 40, 76);                 // the door
   p.fillStyle = "#D8B040"; p.beginPath(); p.arc(140, 206, 3, 0, Math.PI * 2); p.fill();
-  p.fillStyle = "#A8C8E0"; p.fillRect(58, 166, 30, 30); p.fillRect(168, 166, 30, 30);   // the windows
-  p.strokeStyle = "#4A2E16"; p.lineWidth = 3; p.strokeRect(58, 166, 30, 30); p.strokeRect(168, 166, 30, 30); p.beginPath(); p.moveTo(73, 166); p.lineTo(73, 196); p.moveTo(183, 166); p.lineTo(183, 196); p.stroke();
-  p.fillStyle = "#8A6A3A"; p.fillRect(92, 108, 72, 26); p.strokeStyle = "#3A2410"; p.lineWidth = 2; p.strokeRect(92, 108, 72, 26);   // the sign
+  if (stage >= 2) { p.fillStyle = stage >= 4 ? "#F0D080" : "#A8C8E0"; p.fillRect(58, 166, 30, 30); p.fillRect(168, 166, 30, 30); p.strokeStyle = "#4A2E16"; p.lineWidth = 3; p.strokeRect(58, 166, 30, 30); p.strokeRect(168, 166, 30, 30); p.beginPath(); p.moveTo(73, 166); p.lineTo(73, 196); p.moveTo(183, 166); p.lineTo(183, 196); p.stroke(); }   // the windows (lit, at the last stage)
+  if (stage >= 3) { p.fillStyle = "#8A6A3A"; p.fillRect(92, 108, 72, 26); p.strokeStyle = "#3A2410"; p.lineWidth = 2; p.strokeRect(92, 108, 72, 26); }   // the sign
   return c;
 };
 CM.art.foundation = function () {
@@ -5558,7 +5558,7 @@ CM.art.buildDrawn = function (theme) {
   for (const G of Object.values(CM.GUARDIANS)) { const k = G.size >= 1 ? 1.12 : 1.04; add(`monster:${G.name}`, CM.art.monster(G, k)); add(`monster:${G.name}:idle2`, CM.art.monster(G, k, "idle2")); add(`monster:${G.name}:attack`, CM.art.monster(G, k, "attack")); }
   add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, CM.art.monster(row));
-  add("house", CM.art.house()); add("foundation", CM.art.foundation()); add("well", CM.art.well());
+  add("house", CM.art.house(4)); for (let s = 1; s <= 4; s++) add(`house${s}`, CM.art.house(s)); add("foundation", CM.art.foundation()); add("well", CM.art.well());
   add("bones", CM.art.bones()); add("rope", CM.art.rope()); add("plate", CM.art.plate(false)); add("plate_pressed", CM.art.plate(true)); add("door_riddle", CM.art.door("riddle"));
   add("fungus", CM.art.fungus()); add("crystal", CM.art.crystal()); add("root", CM.art.root());
   add("fx:spark", CM.art.fxSpark()); add("fx:shard", CM.art.fxShard()); add("fx:fire", CM.art.fxFire()); add("fx:frost", CM.art.fxFrost());
@@ -7649,7 +7649,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.inUse = true; this.talk(thing, k); this.inUse = false; return; }
     if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
-    if (thing && thing.type === "building") { this.emit("building", thing.id); return; }
+    if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
     if (thing && thing.type === "well") { this.well(); return; }
     if (thing && thing.type === "villager") { this.talkTownsfolk(thing); return; }
     if (thing && thing.type === "node") { this.gather(thing, k); return; }
@@ -10564,7 +10564,7 @@ Object.assign(CM.Game.prototype, {
   // the tavern: three who'd come along, for a price - one of them for a hero who has fallen
   tavern() {
     if (!this.recruits || this.recruits.floor !== this.floor.number) {
-      const level = Math.max(1, Math.round(this.party.reduce((s, h) => s + h.level, 0) / Math.max(1, this.party.length)) - 1);
+      const level = Math.max(1, Math.round(this.party.reduce((s, h) => s + h.level, 0) / Math.max(1, this.party.length)) - 1 + (this.villageLevel("tavern") >= 2 ? 1 : 0));   // (the Hanged Lantern's better bench)
       const rnd = new CM.Random(CM.hashSeed(`${this.seed}:tavern:${this.floor.number}`));
       this.recruits = { floor: this.floor.number, who: [0, 1, 2].map(() => CM.makeRecruit(level, rnd, this.classesAvailable())) };
       const met = ((this.village || {}).met || []);                      // (guildhall level 3: the third is someone rescued in a run before)
@@ -11757,15 +11757,15 @@ CM.statistics = function (ledger) {
 // guildhall's trainers are the one exception, and capped at a boon. Four buildings, four levels each (CM.VILLAGE);
 // contracts posted at the guildhall from the week's seed (CM.CONTRACTS). Kept between runs (CM.store "village").
 CM.VILLAGE = {
-  guildhall: { name: "The Guildhall", costs: [100, 250, 500, 1000], levels: [
+  guildhall: { name: "The Guildhall", costs: [30, 80, 160, 200], levels: [
     "A hero who comes home may retire here as a trainer: every new hero of their calling sets out with the trainer's first boon",
     "The vault holds three things", "The tavern's third recruit is someone the party rescued in a run before", "The vault holds five things"] },
-  merchant: { name: "The Merchant's House", costs: [100, 250, 500, 1000], levels: [
+  merchant: { name: "The Merchant's House", costs: [30, 80, 160, 200], levels: [
     "The camps' merchant stocks Greater Healing Potions", "...and an oil of each kind", "...and one rare thing a camp", "...and sells everything a fifth cheaper"] },
-  library: { name: "The Library", costs: [100, 250, 500, 1000], levels: [
+  library: { name: "The Library", costs: [30, 80, 160, 280], levels: [
     "Scholarship: every kind fully learned (met and slain three times, a weakness found) takes 1% more from every blow",
     "...2% more", "...3% more", "The library knows every kind's weakness the moment it is met"] },
-  shrine: { name: "The Shrine of the Fallen", costs: [50, 150, 400, 800], levels: [
+  shrine: { name: "The Shrine of the Fallen", costs: [15, 40, 100, 200], levels: [
     "Light a candle for a hero laid to rest (10 renown): what they were buried with comes to the vault",
     "A candle costs 5", "The memorial keeps sixty names, not thirty", "A hero remembered may come back to the tavern as a recruit, once"] },
 };
@@ -11777,6 +11777,7 @@ CM.renownFor = function (entry, game) {
   if (entry.bottom) n += 100;
   if (entry.weekly) n += 30;
   n += 20 * ((entry.titles || []).length);
+  n += 3 * Math.min(9, ((entry.tally || {}).visited || []).length);     // (the town rewards being used: three for every door opened before the descent)
   if (entry.difficulty === "grim") n = Math.round(n * 1.5); else if (entry.difficulty === "gentle") n = Math.round(n * 0.6);
   return n;
 };
@@ -12168,7 +12169,7 @@ Object.assign(CM.Game.prototype, {
 CM.HOME_STASH = [0, 6, 12, 20, 20, 40];                                   // things the stash holds, by the house's level
 CM.HOME_LARDER = 3;
 CM.RESTED_FLOORS = 5;
-CM.VILLAGE.home = { name: "Your house", costs: [50, 150, 400, 800, 1500], levels: [
+CM.VILLAGE.home = { name: "Your house", costs: [15, 40, 100, 200, 320], levels: [
   "The hearth: the party rests for nothing before a run, and goes down rested (+5% to hit on floors 1 to 5); the stash holds six things between runs",
   "The trophy wall: the guardians' trophies, the named weapons and the uniques found hang here; the stash holds twelve",
   "The kitchen: meat brought home is cooked for a meal that lasts the first two floors, and a larder keeps three rations from run to run; the stash holds twenty",
@@ -12307,6 +12308,9 @@ Object.assign(CM.Game.prototype, {
 // and two things only a forge does: a base reforged with its affixes kept, and a second gem set in a relic; the
 // apprentice buys scrap at three quarters). The camps keep their benches; the camps' tavern keeps the recruits only.
 CM.TOWN_PLOTS.tavern.always = true; CM.TOWN_PLOTS.smith.always = true; CM.TOWN_PLOTS.merchant.always = true;
+CM.VILLAGE.tavern = { name: "The Hanged Lantern", costs: [60, 140], levels: ["A better cellar: the round sets the party's heart to full, and the regular's gossip is on the house", "A better bench: the recruits come a level higher"] };
+CM.VILLAGE.smith = { name: "The Smith's forge", costs: [60, 140], levels: ["The apprentice buys scrap at its full value", "A reforging costs half"] };
+CM.TOWN_PLOTS.tavern.village = "tavern"; CM.TOWN_PLOTS.smith.village = "smith";
 CM.plotLevel = (game, id) => { const P = CM.TOWN_PLOTS[id]; if (!P) return 0; const v = P.village && game ? game.villageLevel(P.village) : 0; return P.always ? Math.max(1, v) : v; };
 CM.COMMISSION_OVER = 1.5;
 CM.DRINK_PRICE = 5;
@@ -12350,7 +12354,7 @@ Object.assign(CM.Game.prototype, {
     if (this.gold < CM.DRINK_PRICE) return `A round is ${CM.DRINK_PRICE} gold.`;
     this.logAct("drink");
     this.gold -= CM.DRINK_PRICE; this.spend("tavern", CM.DRINK_PRICE); this.floor.drank = true;
-    if ((this.morale || CM.MORALE.start) < 90) this.morale = 90;
+    const heart = this.villageLevel("tavern") >= 1 ? 100 : 90; if ((this.morale || CM.MORALE.start) < heart) this.morale = heart;
     this.sound("coin"); this.say(`A round at the Hanged Lantern, and the party is ${this.moraleWord().toLowerCase()}.`);
     this.saveRun(); this.emit("change");
     return "";
@@ -12358,9 +12362,10 @@ Object.assign(CM.Game.prototype, {
   gossip() {
     if (!this.inTown()) return "The regular drinks at the Hanged Lantern.";
     if (this.gossiped) return "The regular has told you what he knows this run.";
-    if (this.gold < CM.GOSSIP_PRICE) return `The regular talks for ${CM.GOSSIP_PRICE} gold.`;
+    const fee = this.villageLevel("tavern") >= 1 ? 0 : CM.GOSSIP_PRICE;
+    if (this.gold < fee) return `The regular talks for ${CM.GOSSIP_PRICE} gold.`;
     this.logAct("gossip");
-    this.gold -= CM.GOSSIP_PRICE; this.spend("tavern", CM.GOSSIP_PRICE); this.gossiped = true;
+    this.gold -= fee; if (fee) this.spend("tavern", fee); this.gossiped = true;
     const seed = this.seed, floors = []; for (let n = 16; n <= 20; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);
     const holding = floors[CM.hashSeed(`${seed}:holding`) % floors.length];
     const first = [2, 3, 4]; const unique0 = first[CM.hashSeed(`${seed}:unique:0`) % first.length];
@@ -12377,7 +12382,7 @@ Object.assign(CM.Game.prototype, {
     if (item.props && (item.props.relic || item.props.unique)) return "A relic or a unique thing is what it is.";
     if (!B || B.kind !== item.kind || B.group === "unique" || B.group === "relic") return "The new base must be of the same kind.";
     if (B.id === CM.baseIdOf(item)) return "It is that already.";
-    const cost = 100 * ((B.tier || 0) + 1), ess = this.bag.findIndex((i) => i.kind === "essence");
+    const cost = Math.ceil(100 * ((B.tier || 0) + 1) * (this.villageLevel("smith") >= 2 ? 0.5 : 1)), ess = this.bag.findIndex((i) => i.kind === "essence");
     if (ess < 0) return "The forge wants an essence for a reforging.";
     if (this.gold < cost) return `The forge wants ${cost} gold for a ${B.id}, and an essence.`;
     this.logAct("reforgeBase", heroIndex, slot, baseId);
@@ -12414,7 +12419,7 @@ Object.assign(CM.Game.prototype, {
     const rows = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "scrap");
     if (!rows.length) return "No scrap in the pack.";
     this.logAct("sellScrap");
-    const paid = rows.reduce((s, [it]) => s + Math.ceil((it.value || 5) * CM.SCRAP_PRICE), 0);
+    const paid = rows.reduce((s, [it]) => s + Math.ceil((it.value || 5) * (this.villageLevel("smith") >= 1 ? 1 : CM.SCRAP_PRICE)), 0);
     for (const [, i] of rows.reverse()) this.bag.splice(i, 1);
     this.gold += paid;
     this.sound("coin"); this.say(`The apprentice weighs the scrap and pays ${paid} gold for it.`);
@@ -12432,8 +12437,8 @@ Object.assign(CM.Game.prototype, {
 // Patriarch's history, the tithe and a vigil (a scar kept or let fade, once a hero); the guildhall's trainers, the
 // second calling, the contracts, and the roster: every party this browser set out with, kept as a preset, and a
 // muster that makes the next run's party from the last that came home.
-CM.VILLAGE.library.costs.push(1500); CM.VILLAGE.library.levels.push("The gazetteer: a new run has the first five floors' walls on its map before the party is on them");
-CM.VILLAGE.shrine.costs.push(1500); CM.VILLAGE.shrine.levels.push("The vigil: a hero's scar may be kept or let fade, once a hero");
+CM.VILLAGE.library.costs.push(300); CM.VILLAGE.library.levels.push("The gazetteer: a new run has the first five floors' walls on its map before the party is on them");
+CM.VILLAGE.shrine.costs.push(250); CM.VILLAGE.shrine.levels.push("The vigil: a hero's scar may be kept or let fade, once a hero");
 CM.TOWN_PRICE = 0.9;
 CM.ROSTER_MAX = 12;
 CM.GAZETTEER_FLOORS = 5;
@@ -12495,9 +12500,9 @@ Object.assign(CM.Game.prototype, {
 // book, under one roof) and the square's life: the well (a drink, the notice board, a coin thrown for the town),
 // market day on the week's seed (a peddler's cloth in the square), three townsfolk on the lanes with a line a day
 // each from the hill's own story, and the lanterns lit when a run begins late.
-CM.VILLAGE.garden = { name: "The Alchemist's Garden", costs: [100, 300, 700], levels: [
+CM.VILLAGE.garden = { name: "The Alchemist's Garden", costs: [30, 80, 160], levels: [
   "One bed (three of an ingredient, grown one more every run that ends, up to five) and the brewing bench at town prices", "Two beds", "Three beds, and the alchemist's request may be delivered here"] };
-CM.VILLAGE.chronicler = { name: "The Chronicler's House", costs: [100], levels: ["Wren's house: the films, the statistics, the ledger, the Hall of Fame and the memorial's book, under one roof"] };
+CM.VILLAGE.chronicler = { name: "The Chronicler's House", costs: [120], levels: ["Wren's house: the films, the statistics, the ledger, the Hall of Fame and the memorial's book, under one roof"] };
 CM.TOWN_PLOTS.garden.village = "garden"; CM.TOWN_PLOTS.chronicler.village = "chronicler";
 CM.BED_MAX = 5;
 CM.TOWNSFOLK = [
@@ -12538,9 +12543,16 @@ Object.assign(CM.Game.prototype, {
     const fl = this.floor, won = (this.fame || []).some((e) => e.won);
     const lines = [won ? `The well runs clear since the crown came up. The party drinks, and is ${this.moraleWord().toLowerCase()}.` : "The well is dry, and has been since the shaft was dug. The old ones say it runs again when a crown comes up."];
     lines.push(`The notice board: the week's seed is ${CM.weeklySeed()}; the day's is daily-${CM.today()}.${String(this.seed).startsWith("weekly-") ? " Market day: a peddler's cloth is out in the square." : ""}`);
+    const stones = this.wellStones(); if (stones.length) lines.push(`Carved on the well's stones, in an old hand: ${stones.join(" ")}`);
     if (!fl.wished && this.gold >= 1) { this.logAct("wish"); fl.wished = true; this.gold -= 1; this.village = this.village || {}; this.village.renown = (this.village.renown || 0) + 1; this.saveVillage(); lines.push("A coin goes down the well for the town: one renown."); }
     this.say(lines.join(" "));
     this.emit("talk", { title: "The square", text: lines.join(" ") });
+  },
+  // the hill's own chapter, carved on the well's stones as renown is spent on the town (CM.VILLAGE_LORE_AT): read in order
+  wellStones() {
+    const spent = (this.village || {}).spent || 0, out = [];
+    CM.VILLAGE_LORE_AT.forEach((at, i) => { const L = CM.LORE_TEXT[`village.${i + 1}`]; if (spent >= at && L) out.push(L.tellings[0]); });
+    return out;
   },
   townsfolkLine(who) { const T = CM.TOWNSFOLK[who % CM.TOWNSFOLK.length]; const day = CM.hashSeed(CM.today()) % T.lines.length; return T.lines[(day + who) % T.lines.length]; },
   talkTownsfolk(thing) { const T = CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length]; this.emit("talk", { title: T.name, text: this.townsfolkLine(thing.who) }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${this.townsfolkLine(thing.who)}`); },
@@ -13022,6 +13034,15 @@ CM.UI = class {
   }
   // ---- the village ----
   openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
+  // the next level of a building, raised at its own door: a line and a button inserted at the foot of the building's dialog
+  raiseFooter(sel, villageId, after) {
+    const g = this.game, root = this.$(sel + " .box"), old = root.querySelector(".raise"); if (old) old.remove();
+    const V = CM.VILLAGE[villageId]; if (!V) return;
+    const lvl = g.villageLevel(villageId), d = document.createElement("div"); d.className = "raise small";
+    if (lvl >= V.costs.length) d.textContent = `${V.name} is as grand as it can be.`;
+    else { d.textContent = `Raise ${V.name} (level ${lvl} of ${V.costs.length}): ${V.levels[lvl]} - `; const b = document.createElement("button"); b.textContent = `${V.costs[lvl]} renown (you have ${g.renown()})`; b.disabled = g.renown() < V.costs[lvl]; b.addEventListener("click", () => { const n = g.build(villageId); if (n) g.say(n); if (after) after(); this.refresh(); }); d.appendChild(b); }
+    root.insertBefore(d, root.querySelector(".end"));
+  }
   // the garden: the beds above the alchemist's bench
   openGarden() {
     const g = this.game, root = this.$("#dlg-alchemist .box"), old = root.querySelector("#garden-town"); if (old) old.remove();
@@ -13030,7 +13051,7 @@ CM.UI = class {
     G.beds.forEach((b, i) => { const btn = document.createElement("button"); btn.textContent = `Harvest ${CM.plural(b.n, CM.INGREDIENTS[b.ingredient].name)}`; btn.addEventListener("click", () => { const n = g.harvest(i); if (n) g.say(n); this.openGarden(); this.refresh(); }); extra.appendChild(btn); });
     if (G.beds.length < beds) g.bag.forEach((it, row) => { if (it.kind !== "ingredient") return; const btn = document.createElement("button"); btn.textContent = `Plant ${it.name}`; btn.addEventListener("click", () => { const n = g.plant(row); if (n) g.say(n); this.openGarden(); this.refresh(); }); extra.appendChild(btn); });
     root.insertBefore(extra, root.querySelector(".end"));
-    this.renderAlchemist(); this.openDialog("#dlg-alchemist");
+    this.renderAlchemist(); this.raiseFooter("#dlg-alchemist", "garden", () => this.openGarden()); this.openDialog("#dlg-alchemist");
   }
   // the chronicler's house: the title's boards under one roof
   openChronicler() {
@@ -13041,6 +13062,14 @@ CM.UI = class {
     { const r = room("The ledger"); const led = (g.ledger || []).slice(-10).reverse(); r.innerHTML = led.length ? led.map((l) => `<div class="small">${this.esc(l.d)}: ${this.esc(l.sd)}, floor ${l.f}${l.w ? ", crowned" : ""}${l.b ? ", the bottom" : ""} - ${l.k} slain, ${l.s} steps, ${l.g} gold</div>`).join("") : "<div class='small'>Nothing written yet.</div>"; }
     { const r = room("The memorial's book"); const m = (g.memorial || []).slice(0, 12); r.innerHTML = m.length ? m.map((x) => `<div class="small"><b>${this.esc(x.name)}</b> the ${x.cls}, level ${x.level}, floor ${x.floor}${x.candle ? " - a candle burns" : ""}${x.epitaph ? ` - "${this.esc(x.epitaph)}"` : ""}</div>`).join("") : "<div class='small'>No names. May it stay so.</div>"; }
     this.openDialog("#dlg-chronicler");
+  }
+  // the town's walls, written on: the smith's sign, the tavern's wall, the library's shelf
+  brought(kind) {
+    const g = this.game;
+    if (kind === "smith") { const named = ((g.compendium || {}).named || [])[0]; return named ? `The sign over the forge bears a blade: ${named.name}, the first named here.` : "The sign over the forge is a plain hammer; the first weapon named by a party of this house goes on it."; }
+    if (kind === "tavern") { const best = (g.fame || []).find((e) => e.won) || (g.fame || [])[0]; return best ? `Painted on the tavern's wall, badly: ${best.party.join(", ")} - ${best.won ? "who took the crown" : `who reached floor ${best.floor}`}.` : "The tavern's wall is bare plaster; the first run that comes home is painted on it."; }
+    if (kind === "library") { const n = ((g.village || {}).chaptersPaid || []).length; return `The shelf: ${n ? CM.plural(n, "chapter") + " of Caer Duin copied fair" : "no chapter copied fair yet"}, and ${CM.plural((g.libraryState().pages || 0), "lost page")}.`; }
+    return "";
   }
   // the library: the desk (the journal's boards), Wren's copying, the tomes, the shelved pages, the gazetteer
   openLibrary(keepNote) {
@@ -13053,7 +13082,7 @@ CM.UI = class {
     const room = (title) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
     const btn = (parent, text, fn) => { const b = document.createElement("button"); b.textContent = text; b.addEventListener("click", fn); parent.appendChild(b); return b; };
     { const r = room("The reading desk"); for (const [page, label] of [["codex", "The codex"], ["things", "The compendium of things"], ["journal", "This run's journal, bestiary and combos"]]) btn(r, label, () => { this.journalPage = page; this.openJournal(); }); }
-    { const r = room("Wren, the chronicler"); const W = CM.VILLAGERS.chronicler; r.innerHTML = `<div class="small">${this.esc(W.greet.join(" "))}</div>`; btn(r, "Read the Book of Caer Duin", () => { this.bookOpen = true; this.openVillage(); }); }
+    { const r = room("Wren, the chronicler"); const W = CM.VILLAGERS.chronicler; r.innerHTML = `<div class="small">${this.esc(W.greet.join(" "))} ${this.esc(this.brought("library"))}</div>`; btn(r, "Read the Book of Caer Duin", () => { this.bookOpen = true; this.openVillage(); }); }
     { const r = room(`The tomes (one out at a time${L.lent ? `: ${this.esc(CM.TOMES[L.lent.tome] || "a tome")} is out with this party` : ""})`); Object.keys(CM.TOMES).forEach((id) => { const b = btn(r, `Borrow the ${CM.TOMES[id]}`, () => say(g.borrowTome(id))); b.disabled = Boolean(L.lent); }); }
     { const r = room("The shelf of lost pages"); r.innerHTML = `<div class="small">${L.pages ? `${CM.plural(L.pages, "lost page")} found and copied here: fire, frost or lightning on every foe, once each, torn from tomes no one has whole.` : "Empty. The Lost Page scrolls found below are copied here."}</div>`; }
     if (lvl >= 5) { const r = room("The gazetteer"); r.innerHTML = `<div class="small">The first ${CM.GAZETTEER_FLOORS} floors of any seed, mapped: on a new run their walls are on the map before the party is on them.</div>`; }
@@ -13068,7 +13097,7 @@ CM.UI = class {
     const candles = document.createElement("div"); (g.memorial || []).slice(0, 8).forEach((m, i) => { const b = document.createElement("button"); b.textContent = m.candle ? `${m.name}: a candle burns` : `A candle for ${m.name} (${CM.CANDLE_COST[lvl >= 2 ? 1 : 0]} renown)`; b.disabled = Boolean(m.candle); b.addEventListener("click", () => { const n = g.lightCandle(i); if (n) g.say(n); this.openTemple(); this.refresh(); }); candles.appendChild(b); }); extra.appendChild(candles);
     if (lvl >= 5) { const v = document.createElement("div"); v.innerHTML = `<div class="list-title">The vigil (once a hero)</div>`; g.party.forEach((h, hi) => { if (h.hp <= 0 || h.vigil || !(h.scars || []).length) return; for (const s of h.scars) { const keep = document.createElement("button"); keep.textContent = `${h.name} keeps ${CM.SCARS[s].name}`; keep.addEventListener("click", () => { const n = g.vigil(hi, s, true); if (n) g.say(n); this.openTemple(); this.refresh(); }); const fade = document.createElement("button"); fade.textContent = `${h.name} lets ${CM.SCARS[s].name} fade`; fade.addEventListener("click", () => { const n = g.vigil(hi, s, false); if (n) g.say(n); this.openTemple(); this.refresh(); }); v.appendChild(keep); v.appendChild(fade); } }); extra.appendChild(v); }
     root.insertBefore(extra, root.querySelector(".end"));
-    this.openDialog("#dlg-temple");
+    this.raiseFooter("#dlg-temple", "shrine", () => this.openTemple()); this.openDialog("#dlg-temple");
   }
   // the guildhall: the trainers, the second calling, the contracts, the roster and the muster
   openGuild(keepNote) {
@@ -14473,6 +14502,7 @@ Object.assign(CM.UI.prototype, {
     if (picked && CM.BELT_KINDS.includes(picked.kind)) { const b = document.createElement("button"); b.textContent = "To the belt"; b.title = "Four things to hand: keys 5 to 8; in a fight the first used in a round costs no turn"; b.addEventListener("click", () => { this.note(g.toBelt(this.bagRow)); this.bagRow = -1; this.fillBag(); }); beltBox.appendChild(b); }
     if (shop && picked && !picked.insured && g.atShop()) { const b = document.createElement("button"); b.textContent = CM.t("bag.insure", { n: Math.max(5, Math.ceil((picked.value || 0) * CM.INSURE_RATE)) }); b.title = "If the party falls, an insured thing goes to the vault for the next."; b.addEventListener("click", () => { this.note(g.insure(this.bagRow)); this.fillBag(); }); beltBox.appendChild(b); }
     if (shop && g.atShop()) g.party.forEach((h, hi) => { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 50 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (!worn) return; const slot = CM.SLOTS.find((s) => h[s] === worn); const b = document.createElement("button"); b.textContent = CM.t("bag.insure.worn", { who: h.name, what: CM.itemName(worn), n: Math.max(5, Math.ceil(worn.value * CM.INSURE_RATE)) }); b.addEventListener("click", () => { this.note(g.insure(hi, slot)); this.fillBag(); }); beltBox.appendChild(b); });
+    if (shop && g.inTown()) { const V = CM.VILLAGE.merchant, lvl = g.villageLevel("merchant"); if (lvl < V.costs.length) { const b = document.createElement("button"); b.textContent = `Raise the Merchant's House (level ${lvl}): ${V.costs[lvl]} renown`; b.title = V.levels[lvl]; b.disabled = g.renown() < V.costs[lvl]; b.addEventListener("click", () => { this.note(g.build("merchant")); this.fillBag(); }); beltBox.appendChild(b); } }
     if (shop && g.inTown() && g.villageLevel("merchant") >= 3) { const sel = document.createElement("select"); const bases = Object.values(CM.BASES).filter((B) => ["weapon", "armor", "shield", "helm"].includes(B.kind) && !["unique", "relic"].includes(B.group)).sort((a, b) => a.kind.localeCompare(b.kind) || (a.tier || 0) - (b.tier || 0)); sel.innerHTML = `<option value="">Commission a thing at the party's level (half again over, to the first camp)...</option>` + bases.map((B) => `<option value="${this.esc(B.id)}">${this.esc(B.id)} (${B.kind}, tier ${(B.tier || 0) + 1})</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) { this.note(g.commission(sel.value)); this.fillBag(); } }); beltBox.appendChild(sel); }
     if (shop && g.atShop()) { const sel = document.createElement("select"); sel.innerHTML = `<option value="">${this.esc(CM.t("bag.order"))}</option>` + Object.keys(CM.ORDERABLE).map((k) => `<option value="${k}">${this.esc(CM.ORDERABLE[k](g.floor.number + 3).name)} - ${Math.ceil(CM.priceAt(CM.ORDERABLE[k](g.floor.number + 3).value, g.floor.number) * CM.ORDER_OVER)} gold</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) { this.note(g.order(sel.value)); this.fillBag(); } }); beltBox.appendChild(sel); if ((g.orders || []).length) { const o = document.createElement("i"); o.className = "small"; o.textContent = " " + CM.t("bag.ordered", { list: g.orders.map((x) => x.item.name).join(", ") }); beltBox.appendChild(o); } }
     (g.belt || []).forEach((it, i) => { if (!it) return; const b = document.createElement("button"); b.textContent = `Off the belt: ${it.name}`; b.addEventListener("click", () => { this.note(g.fromBelt(i)); this.fillBag(); }); beltBox.appendChild(b); });
@@ -14524,6 +14554,7 @@ Object.assign(CM.UI.prototype, {
   // ---- the tavern ----
   openTavern() {
     this.renderTavern();
+    if (this.game.inTown()) this.raiseFooter("#dlg-tavern", "tavern", () => this.openTavern());
     this.openDialog("#dlg-tavern");
   },
 
@@ -14564,7 +14595,7 @@ Object.assign(CM.UI.prototype, {
       const d = document.createElement("button"); d.textContent = g.floor.drank ? "A round, drunk" : `A round for the party (${CM.DRINK_PRICE} gold: heart for the road)`; d.disabled = Boolean(g.floor.drank); d.addEventListener("click", () => { this.$("#tavern-note").textContent = g.drink() || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(d);
       const r = document.createElement("button"); r.textContent = g.gossiped ? "The regular has talked" : `The regular's gossip (${CM.GOSSIP_PRICE} gold)`; r.disabled = Boolean(g.gossiped); r.addEventListener("click", () => { this.$("#tavern-note").textContent = g.gossip() || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(r);
       const b = document.createElement("button"); b.textContent = g.bounty ? (g.bountyDone() ? "The board: claim the bounty" : `The board: ${g.bountyProgress()} of ${CM.plural(CM.BOUNTY_NEED, g.bounty.kind)}`) : "The board: take a bounty"; b.addEventListener("click", () => { this.$("#tavern-note").textContent = (g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty()) || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(b);
-      const c = document.createElement("div"); c.className = "small"; c.innerHTML = g.contracts().map(({ c: ct, done }) => `${done ? "✓" : "○"} ${this.esc(ct.name)}: ${this.esc(ct.what)} (${ct.renown} renown)`).join("<br>"); row.appendChild(c);
+      const c = document.createElement("div"); c.className = "small"; c.innerHTML = `<i>${this.esc(this.brought("tavern"))}</i><br>` + g.contracts().map(({ c: ct, done }) => `${done ? "✓" : "○"} ${this.esc(ct.name)}: ${this.esc(ct.what)} (${ct.renown} renown)`).join("<br>"); row.appendChild(c);
       fence.appendChild(row);
     }
     if (g.inTown())
@@ -14574,7 +14605,8 @@ Object.assign(CM.UI.prototype, {
   },
 
   // ---- the camp's smith and vault ----
-  openSmith() { this.renderSmith(); this.openDialog("#dlg-smith"); },
+  openSmith() { this.renderSmith(); if (this.game.inTown()) this.raiseFooter("#dlg-smith", "smith", () => this.openSmith()); this.openDialog("#dlg-smith"); },
+  openChroniclerRaise() { this.raiseFooter("#dlg-chronicler", "chronicler", () => this.openChronicler()); },
   renderSmith() {
     const g = this.game, box = this.$("#smith-list");
     const diamonds = g.bag.filter((i) => i.kind === "gem" && i.gem === "diamond").length;
@@ -14635,6 +14667,7 @@ Object.assign(CM.UI.prototype, {
     }
     if (g.inTown()) {                                                    // the forge's own work: a base reforged, a second gem in a relic, the apprentice's scrap price
       const title = document.createElement("div"); title.className = "list-title"; title.textContent = "The forge (in town only)"; box.appendChild(title);
+      const sign = document.createElement("div"); sign.className = "small"; sign.textContent = this.brought("smith"); box.appendChild(sign);
       g.party.forEach((h, hi) => { for (const slot of ["weapon", "armor", "offhand", "helm"]) { const it = h[slot]; if (!it || it.unknown || (it.props && (it.props.unique || it.props.fists))) continue;
         const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; const t = document.createElement("div"); t.innerHTML = `<b>${this.esc(CM.itemName(it))}</b> <small>${this.esc(h.name)}'s ${CM.SLOT_NAMES[slot].toLowerCase()}</small>`; t.title = CM.itemCard(it); row.appendChild(t);
         const act = document.createElement("div"); act.className = "hire";
@@ -15104,7 +15137,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "node") { const look = (CM.NODES[thing.band] || CM.NODES[0])[1], flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.9 : 0.6, h: flat ? 0.9 : 0.5, flat, glow: look === "crystal" ? 0.3 : 0 }); }
       else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
-      else if (thing.type === "building") out.push({ x, y, layer: CM.plotLevel(game, thing.id) || thing.id === "home" ? "house" : "foundation", w: 1.0, h: 1.0 });
+      else if (thing.type === "building") { const P = CM.TOWN_PLOTS[thing.id] || {}, V = P.village ? CM.VILLAGE[P.village] : null, lvl = CM.plotLevel(game, thing.id), stage = P.always && !V ? 4 : CM.houseStage(lvl, V ? V.costs.length : 1); out.push({ x, y, layer: stage ? `house${stage}` : "foundation", w: 1.0, h: 1.0 }); }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
       else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });

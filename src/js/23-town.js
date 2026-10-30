@@ -44,3 +44,4 @@ CM.makeTown = function (seed) {
 // a plot's level: the village's, for the plots the village already raises; none yet for the rest (the next phases raise them)
 CM.plotLevel = (game, id) => { const P = CM.TOWN_PLOTS[id]; return P && P.village && game ? game.villageLevel(P.village) : 0; };
 CM.isTown = (fl) => Boolean(fl && fl.number === 0);
+CM.houseStage = (level, most) => (level <= 0 ? 0 : most <= 1 ? 4 : Math.max(1, Math.min(4, Math.ceil(level * 4 / most))));   // a building's drawn stage (1 a frame, 2 a roof, 3 a sign, 4 a lit window), by its level against its most

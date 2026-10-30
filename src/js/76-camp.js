@@ -38,6 +38,7 @@ Object.assign(CM.UI.prototype, {
   // ---- the tavern ----
   openTavern() {
     this.renderTavern();
+    if (this.game.inTown()) this.raiseFooter("#dlg-tavern", "tavern", () => this.openTavern());
     this.openDialog("#dlg-tavern");
   },
 
@@ -78,7 +79,7 @@ Object.assign(CM.UI.prototype, {
       const d = document.createElement("button"); d.textContent = g.floor.drank ? "A round, drunk" : `A round for the party (${CM.DRINK_PRICE} gold: heart for the road)`; d.disabled = Boolean(g.floor.drank); d.addEventListener("click", () => { this.$("#tavern-note").textContent = g.drink() || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(d);
       const r = document.createElement("button"); r.textContent = g.gossiped ? "The regular has talked" : `The regular's gossip (${CM.GOSSIP_PRICE} gold)`; r.disabled = Boolean(g.gossiped); r.addEventListener("click", () => { this.$("#tavern-note").textContent = g.gossip() || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(r);
       const b = document.createElement("button"); b.textContent = g.bounty ? (g.bountyDone() ? "The board: claim the bounty" : `The board: ${g.bountyProgress()} of ${CM.plural(CM.BOUNTY_NEED, g.bounty.kind)}`) : "The board: take a bounty"; b.addEventListener("click", () => { this.$("#tavern-note").textContent = (g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty()) || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(b);
-      const c = document.createElement("div"); c.className = "small"; c.innerHTML = g.contracts().map(({ c: ct, done }) => `${done ? "✓" : "○"} ${this.esc(ct.name)}: ${this.esc(ct.what)} (${ct.renown} renown)`).join("<br>"); row.appendChild(c);
+      const c = document.createElement("div"); c.className = "small"; c.innerHTML = `<i>${this.esc(this.brought("tavern"))}</i><br>` + g.contracts().map(({ c: ct, done }) => `${done ? "✓" : "○"} ${this.esc(ct.name)}: ${this.esc(ct.what)} (${ct.renown} renown)`).join("<br>"); row.appendChild(c);
       fence.appendChild(row);
     }
     if (g.inTown())
@@ -88,7 +89,8 @@ Object.assign(CM.UI.prototype, {
   },
 
   // ---- the camp's smith and vault ----
-  openSmith() { this.renderSmith(); this.openDialog("#dlg-smith"); },
+  openSmith() { this.renderSmith(); if (this.game.inTown()) this.raiseFooter("#dlg-smith", "smith", () => this.openSmith()); this.openDialog("#dlg-smith"); },
+  openChroniclerRaise() { this.raiseFooter("#dlg-chronicler", "chronicler", () => this.openChronicler()); },
   renderSmith() {
     const g = this.game, box = this.$("#smith-list");
     const diamonds = g.bag.filter((i) => i.kind === "gem" && i.gem === "diamond").length;
@@ -149,6 +151,7 @@ Object.assign(CM.UI.prototype, {
     }
     if (g.inTown()) {                                                    // the forge's own work: a base reforged, a second gem in a relic, the apprentice's scrap price
       const title = document.createElement("div"); title.className = "list-title"; title.textContent = "The forge (in town only)"; box.appendChild(title);
+      const sign = document.createElement("div"); sign.className = "small"; sign.textContent = this.brought("smith"); box.appendChild(sign);
       g.party.forEach((h, hi) => { for (const slot of ["weapon", "armor", "offhand", "helm"]) { const it = h[slot]; if (!it || it.unknown || (it.props && (it.props.unique || it.props.fists))) continue;
         const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; const t = document.createElement("div"); t.innerHTML = `<b>${this.esc(CM.itemName(it))}</b> <small>${this.esc(h.name)}'s ${CM.SLOT_NAMES[slot].toLowerCase()}</small>`; t.title = CM.itemCard(it); row.appendChild(t);
         const act = document.createElement("div"); act.className = "hire";

@@ -1001,9 +1001,9 @@ test("the surface: renown from a run, the buildings, a trainer's boon, candles, 
   game.endRun(false);
   const entry = game.fame[0];
   assert.ok(entry.renown >= 12 && game.renown() === entry.renown, "a run brings home renown: " + entry.renown);
-  assert.match(game.build("guildhall"), /asks 100/);
+  game.village.renown = 0; assert.match(game.build("guildhall"), new RegExp(`asks ${CM.VILLAGE.guildhall.costs[0]}`));
   game.village.renown = 1000;
-  assert.strictEqual(game.build("guildhall"), ""); assert.strictEqual(game.villageLevel("guildhall"), 1); assert.strictEqual(game.renown(), 900);
+  assert.strictEqual(game.build("guildhall"), ""); assert.strictEqual(game.villageLevel("guildhall"), 1); assert.strictEqual(game.renown(), 1000 - CM.VILLAGE.guildhall.costs[0]);
   assert.strictEqual(game.retire(1), "Only a hero who came home can retire.");
   assert.strictEqual(game.retire(0), "");
   assert.ok(game.trainerFor("Knight") && game.trainerFor("Knight").boon === "ironskin");
@@ -2503,6 +2503,30 @@ test("the garden, the chronicler and the square: a bed planted grows by one a ru
   assert.strictEqual(g3.lightFactor(), 1.3); const was = CM.clockHour; CM.clockHour = () => 23; assert.strictEqual(g3.lightFactor(), 0.8, "the lanterns"); CM.clockHour = was;
   // the chronicler's house holds what the title's boards hold
   assert.ok(Array.isArray(CM.store.get("films", [])) && CM.store.get("films", []).length >= 1, "films to watch at the table"); assert.ok((new CM.Game()).ledger.length >= 6 && (new CM.Game()).fame.length >= 6);
+});
+
+test("growth: a building is drawn by its level (a foundation, a frame, a roof, a sign, a lit window); nine buildings' renown re-tuned, and three renown for every door opened before a descent; the well's stones carry the hill's chapter in order; what the runs brought back is on the walls", () => {
+  const CM = load();
+  assert.strictEqual(Object.keys(CM.VILLAGE).length, 9, Object.keys(CM.VILLAGE).join(","));
+  const total = Object.values(CM.VILLAGE).reduce((s, b) => s + b.costs.reduce((a, c) => a + c, 0), 0); assert.ok(total > 2500 && total < 5000, `the town costs ${total} renown in all`);
+  assert.ok(CM.VILLAGE.home.costs[0] <= CM.VILLAGE.guildhall.costs[0] && CM.VILLAGE.chronicler.costs[0] > CM.VILLAGE.home.costs[1], "the home first, the chronicler's house late");
+  for (const B of Object.values(CM.VILLAGE)) { assert.strictEqual(B.costs.length, B.levels.length, B.name); for (let i = 1; i < B.costs.length; i++) assert.ok(B.costs[i] > B.costs[i - 1], `${B.name} climbs`); }
+  // the drawn stage, by the level against the most
+  assert.strictEqual(CM.houseStage(0, 5), 0); assert.strictEqual(CM.houseStage(1, 5), 1); assert.strictEqual(CM.houseStage(2, 5), 2); assert.strictEqual(CM.houseStage(3, 5), 3); assert.strictEqual(CM.houseStage(5, 5), 4); assert.strictEqual(CM.houseStage(1, 1), 4); assert.strictEqual(CM.houseStage(4, 4), 4); assert.strictEqual(CM.houseStage(2, 4), 2);
+  const css = fs.readFileSync(path.join(__dirname, "..", "src", "js", "30-art.js"), "utf8"); assert.ok(css.includes("add(`house${s}`") && css.includes("CM.art.house(s)"), "four house layers in the atlas");
+  // three renown for every door opened before the descent, up to nine
+  const base = { floor: 20, won: true, tally: { guardians: ["rat"], spoken: [] }, difficulty: "fair" };
+  const r0 = CM.renownFor(base, null), r9 = CM.renownFor(Object.assign({}, base, { tally: Object.assign({}, base.tally, { visited: ["home", "tavern", "merchant", "smith", "garden", "library", "temple", "guildhall", "chronicler"] }) }), null), r2 = CM.renownFor(Object.assign({}, base, { tally: Object.assign({}, base.tally, { visited: ["home", "tavern"] }) }), null);
+  assert.strictEqual(r9 - r0, 27); assert.strictEqual(r2 - r0, 6);
+  const g = new CM.Game(); g.newGame("growth-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); let opened = 0; g.on("building", () => { opened++; });
+  for (const id of ["tavern", "tavern", "smith"]) { g.floor.pos = CM.TOWN_AT[id].slice(); g.use(); } assert.strictEqual(opened, 3); assert.strictEqual(JSON.stringify(g.tally.visited), JSON.stringify(["tavern", "smith"]), "each door counted once");
+  // the well's stones: the hill's chapter, a line unlocked at each spending, in order
+  g.village.spent = 0; assert.strictEqual(g.wellStones().length, 1); g.village.spent = CM.VILLAGE_LORE_AT[2]; assert.strictEqual(g.wellStones().length, 3); g.village.spent = 99999; const all = g.wellStones(); assert.strictEqual(all.length, CM.VILLAGE_LORE_AT.length);
+  for (let i = 0; i < all.length; i++) assert.strictEqual(all[i], CM.LORE_TEXT[`village.${i + 1}`].tellings[0], "in order");
+  let heard = null; g.on("talk", (t) => { heard = t; }); g.floor.pos = CM.TOWN_AT.well.slice(); g.use(); assert.ok(heard && heard.text.includes("Carved on the well's stones") && heard.text.includes(all[0].slice(0, 20)));
+  // a run that walked the town brings more home than one that did not (the same run otherwise)
+  const g2 = new CM.Game(); g2.newGame("growth-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); for (const id of Object.keys(CM.TOWN_PLOTS)) { g2.floor.pos = CM.TOWN_AT[id].slice(); g2.use(); }
+  g2.enterFloor(3, "down"); for (const h of g2.party) h.hp = 0; g2.endRun(false); const e2 = g2.fame.find((e) => e.seed === "growth-2"); assert.ok(e2.renown >= 3 + 27, `the visits count: ${e2.renown}`);
 });
 
 (async () => {

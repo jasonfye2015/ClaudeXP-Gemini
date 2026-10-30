@@ -1133,6 +1133,22 @@ The garden, the chronicler and the square (the seventh big update, phase 4 - v5.
   square is a thing on the floor, so the town's fingerprint never changes and a save of it never drifts.
   Test: "the garden, the chronicler and the square".
 
+Growth, and the town as a thing that remembers (the seventh big update, phase 5 - v5.7)
+  A building is drawn by its level (CM.houseStage): a foundation with two posts, then a frame, a roofed house, a
+  house with its sign, a house with a lit window - the stage is the level against the building's most, so the
+  square fills in over many runs. Every building is raised at its own door (a Raise line at the foot of its screen;
+  the title's village dialog still works). Nine buildings now, the tavern and the smith with levels of their own
+  (a better cellar: the round fills the heart and the gossip is free; a better bench: the recruits a level higher;
+  the apprentice pays scrap in full; a reforging at half), and renown re-tuned for nine: the town costs about
+  3,800 renown in all (the home first at 15, the chronicler's house late at 120), and a run brings three renown for
+  every door opened before the descent, up to nine. Measured with the bot: a run brings about 85 renown on average
+  to floor 20 (about 110 with every door opened), so a careful player raises the whole town over some thirty-five
+  runs, the first buildings in the first three or four. What the runs brought back is on the walls: the trophies
+  at home, the first named weapon on the smith's sign, the best run painted on the tavern's wall, the chapters
+  copied and the lost pages on the library's shelf, the names on the door. The hill's own chapter (the village's
+  lore, unlocked as renown is spent) is carved on the well's stones and read there, in order.
+  Test: "growth".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

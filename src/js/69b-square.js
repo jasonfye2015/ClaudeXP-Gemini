@@ -4,9 +4,9 @@
 // book, under one roof) and the square's life: the well (a drink, the notice board, a coin thrown for the town),
 // market day on the week's seed (a peddler's cloth in the square), three townsfolk on the lanes with a line a day
 // each from the hill's own story, and the lanterns lit when a run begins late.
-CM.VILLAGE.garden = { name: "The Alchemist's Garden", costs: [100, 300, 700], levels: [
+CM.VILLAGE.garden = { name: "The Alchemist's Garden", costs: [30, 80, 160], levels: [
   "One bed (three of an ingredient, grown one more every run that ends, up to five) and the brewing bench at town prices", "Two beds", "Three beds, and the alchemist's request may be delivered here"] };
-CM.VILLAGE.chronicler = { name: "The Chronicler's House", costs: [100], levels: ["Wren's house: the films, the statistics, the ledger, the Hall of Fame and the memorial's book, under one roof"] };
+CM.VILLAGE.chronicler = { name: "The Chronicler's House", costs: [120], levels: ["Wren's house: the films, the statistics, the ledger, the Hall of Fame and the memorial's book, under one roof"] };
 CM.TOWN_PLOTS.garden.village = "garden"; CM.TOWN_PLOTS.chronicler.village = "chronicler";
 CM.BED_MAX = 5;
 CM.TOWNSFOLK = [
@@ -47,9 +47,16 @@ Object.assign(CM.Game.prototype, {
     const fl = this.floor, won = (this.fame || []).some((e) => e.won);
     const lines = [won ? `The well runs clear since the crown came up. The party drinks, and is ${this.moraleWord().toLowerCase()}.` : "The well is dry, and has been since the shaft was dug. The old ones say it runs again when a crown comes up."];
     lines.push(`The notice board: the week's seed is ${CM.weeklySeed()}; the day's is daily-${CM.today()}.${String(this.seed).startsWith("weekly-") ? " Market day: a peddler's cloth is out in the square." : ""}`);
+    const stones = this.wellStones(); if (stones.length) lines.push(`Carved on the well's stones, in an old hand: ${stones.join(" ")}`);
     if (!fl.wished && this.gold >= 1) { this.logAct("wish"); fl.wished = true; this.gold -= 1; this.village = this.village || {}; this.village.renown = (this.village.renown || 0) + 1; this.saveVillage(); lines.push("A coin goes down the well for the town: one renown."); }
     this.say(lines.join(" "));
     this.emit("talk", { title: "The square", text: lines.join(" ") });
+  },
+  // the hill's own chapter, carved on the well's stones as renown is spent on the town (CM.VILLAGE_LORE_AT): read in order
+  wellStones() {
+    const spent = (this.village || {}).spent || 0, out = [];
+    CM.VILLAGE_LORE_AT.forEach((at, i) => { const L = CM.LORE_TEXT[`village.${i + 1}`]; if (spent >= at && L) out.push(L.tellings[0]); });
+    return out;
   },
   townsfolkLine(who) { const T = CM.TOWNSFOLK[who % CM.TOWNSFOLK.length]; const day = CM.hashSeed(CM.today()) % T.lines.length; return T.lines[(day + who) % T.lines.length]; },
   talkTownsfolk(thing) { const T = CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length]; this.emit("talk", { title: T.name, text: this.townsfolkLine(thing.who) }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${this.townsfolkLine(thing.who)}`); },

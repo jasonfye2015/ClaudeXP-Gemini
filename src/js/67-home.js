@@ -9,7 +9,7 @@
 CM.HOME_STASH = [0, 6, 12, 20, 20, 40];                                   // things the stash holds, by the house's level
 CM.HOME_LARDER = 3;
 CM.RESTED_FLOORS = 5;
-CM.VILLAGE.home = { name: "Your house", costs: [50, 150, 400, 800, 1500], levels: [
+CM.VILLAGE.home = { name: "Your house", costs: [15, 40, 100, 200, 320], levels: [
   "The hearth: the party rests for nothing before a run, and goes down rested (+5% to hit on floors 1 to 5); the stash holds six things between runs",
   "The trophy wall: the guardians' trophies, the named weapons and the uniques found hang here; the stash holds twelve",
   "The kitchen: meat brought home is cooked for a meal that lasts the first two floors, and a larder keeps three rations from run to run; the stash holds twenty",

@@ -473,6 +473,15 @@ CM.UI = class {
   }
   // ---- the village ----
   openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
+  // the next level of a building, raised at its own door: a line and a button inserted at the foot of the building's dialog
+  raiseFooter(sel, villageId, after) {
+    const g = this.game, root = this.$(sel + " .box"), old = root.querySelector(".raise"); if (old) old.remove();
+    const V = CM.VILLAGE[villageId]; if (!V) return;
+    const lvl = g.villageLevel(villageId), d = document.createElement("div"); d.className = "raise small";
+    if (lvl >= V.costs.length) d.textContent = `${V.name} is as grand as it can be.`;
+    else { d.textContent = `Raise ${V.name} (level ${lvl} of ${V.costs.length}): ${V.levels[lvl]} - `; const b = document.createElement("button"); b.textContent = `${V.costs[lvl]} renown (you have ${g.renown()})`; b.disabled = g.renown() < V.costs[lvl]; b.addEventListener("click", () => { const n = g.build(villageId); if (n) g.say(n); if (after) after(); this.refresh(); }); d.appendChild(b); }
+    root.insertBefore(d, root.querySelector(".end"));
+  }
   // the garden: the beds above the alchemist's bench
   openGarden() {
     const g = this.game, root = this.$("#dlg-alchemist .box"), old = root.querySelector("#garden-town"); if (old) old.remove();
@@ -481,7 +490,7 @@ CM.UI = class {
     G.beds.forEach((b, i) => { const btn = document.createElement("button"); btn.textContent = `Harvest ${CM.plural(b.n, CM.INGREDIENTS[b.ingredient].name)}`; btn.addEventListener("click", () => { const n = g.harvest(i); if (n) g.say(n); this.openGarden(); this.refresh(); }); extra.appendChild(btn); });
     if (G.beds.length < beds) g.bag.forEach((it, row) => { if (it.kind !== "ingredient") return; const btn = document.createElement("button"); btn.textContent = `Plant ${it.name}`; btn.addEventListener("click", () => { const n = g.plant(row); if (n) g.say(n); this.openGarden(); this.refresh(); }); extra.appendChild(btn); });
     root.insertBefore(extra, root.querySelector(".end"));
-    this.renderAlchemist(); this.openDialog("#dlg-alchemist");
+    this.renderAlchemist(); this.raiseFooter("#dlg-alchemist", "garden", () => this.openGarden()); this.openDialog("#dlg-alchemist");
   }
   // the chronicler's house: the title's boards under one roof
   openChronicler() {
@@ -492,6 +501,14 @@ CM.UI = class {
     { const r = room("The ledger"); const led = (g.ledger || []).slice(-10).reverse(); r.innerHTML = led.length ? led.map((l) => `<div class="small">${this.esc(l.d)}: ${this.esc(l.sd)}, floor ${l.f}${l.w ? ", crowned" : ""}${l.b ? ", the bottom" : ""} - ${l.k} slain, ${l.s} steps, ${l.g} gold</div>`).join("") : "<div class='small'>Nothing written yet.</div>"; }
     { const r = room("The memorial's book"); const m = (g.memorial || []).slice(0, 12); r.innerHTML = m.length ? m.map((x) => `<div class="small"><b>${this.esc(x.name)}</b> the ${x.cls}, level ${x.level}, floor ${x.floor}${x.candle ? " - a candle burns" : ""}${x.epitaph ? ` - "${this.esc(x.epitaph)}"` : ""}</div>`).join("") : "<div class='small'>No names. May it stay so.</div>"; }
     this.openDialog("#dlg-chronicler");
+  }
+  // the town's walls, written on: the smith's sign, the tavern's wall, the library's shelf
+  brought(kind) {
+    const g = this.game;
+    if (kind === "smith") { const named = ((g.compendium || {}).named || [])[0]; return named ? `The sign over the forge bears a blade: ${named.name}, the first named here.` : "The sign over the forge is a plain hammer; the first weapon named by a party of this house goes on it."; }
+    if (kind === "tavern") { const best = (g.fame || []).find((e) => e.won) || (g.fame || [])[0]; return best ? `Painted on the tavern's wall, badly: ${best.party.join(", ")} - ${best.won ? "who took the crown" : `who reached floor ${best.floor}`}.` : "The tavern's wall is bare plaster; the first run that comes home is painted on it."; }
+    if (kind === "library") { const n = ((g.village || {}).chaptersPaid || []).length; return `The shelf: ${n ? CM.plural(n, "chapter") + " of Caer Duin copied fair" : "no chapter copied fair yet"}, and ${CM.plural((g.libraryState().pages || 0), "lost page")}.`; }
+    return "";
   }
   // the library: the desk (the journal's boards), Wren's copying, the tomes, the shelved pages, the gazetteer
   openLibrary(keepNote) {
@@ -504,7 +521,7 @@ CM.UI = class {
     const room = (title) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
     const btn = (parent, text, fn) => { const b = document.createElement("button"); b.textContent = text; b.addEventListener("click", fn); parent.appendChild(b); return b; };
     { const r = room("The reading desk"); for (const [page, label] of [["codex", "The codex"], ["things", "The compendium of things"], ["journal", "This run's journal, bestiary and combos"]]) btn(r, label, () => { this.journalPage = page; this.openJournal(); }); }
-    { const r = room("Wren, the chronicler"); const W = CM.VILLAGERS.chronicler; r.innerHTML = `<div class="small">${this.esc(W.greet.join(" "))}</div>`; btn(r, "Read the Book of Caer Duin", () => { this.bookOpen = true; this.openVillage(); }); }
+    { const r = room("Wren, the chronicler"); const W = CM.VILLAGERS.chronicler; r.innerHTML = `<div class="small">${this.esc(W.greet.join(" "))} ${this.esc(this.brought("library"))}</div>`; btn(r, "Read the Book of Caer Duin", () => { this.bookOpen = true; this.openVillage(); }); }
     { const r = room(`The tomes (one out at a time${L.lent ? `: ${this.esc(CM.TOMES[L.lent.tome] || "a tome")} is out with this party` : ""})`); Object.keys(CM.TOMES).forEach((id) => { const b = btn(r, `Borrow the ${CM.TOMES[id]}`, () => say(g.borrowTome(id))); b.disabled = Boolean(L.lent); }); }
     { const r = room("The shelf of lost pages"); r.innerHTML = `<div class="small">${L.pages ? `${CM.plural(L.pages, "lost page")} found and copied here: fire, frost or lightning on every foe, once each, torn from tomes no one has whole.` : "Empty. The Lost Page scrolls found below are copied here."}</div>`; }
     if (lvl >= 5) { const r = room("The gazetteer"); r.innerHTML = `<div class="small">The first ${CM.GAZETTEER_FLOORS} floors of any seed, mapped: on a new run their walls are on the map before the party is on them.</div>`; }
@@ -519,7 +536,7 @@ CM.UI = class {
     const candles = document.createElement("div"); (g.memorial || []).slice(0, 8).forEach((m, i) => { const b = document.createElement("button"); b.textContent = m.candle ? `${m.name}: a candle burns` : `A candle for ${m.name} (${CM.CANDLE_COST[lvl >= 2 ? 1 : 0]} renown)`; b.disabled = Boolean(m.candle); b.addEventListener("click", () => { const n = g.lightCandle(i); if (n) g.say(n); this.openTemple(); this.refresh(); }); candles.appendChild(b); }); extra.appendChild(candles);
     if (lvl >= 5) { const v = document.createElement("div"); v.innerHTML = `<div class="list-title">The vigil (once a hero)</div>`; g.party.forEach((h, hi) => { if (h.hp <= 0 || h.vigil || !(h.scars || []).length) return; for (const s of h.scars) { const keep = document.createElement("button"); keep.textContent = `${h.name} keeps ${CM.SCARS[s].name}`; keep.addEventListener("click", () => { const n = g.vigil(hi, s, true); if (n) g.say(n); this.openTemple(); this.refresh(); }); const fade = document.createElement("button"); fade.textContent = `${h.name} lets ${CM.SCARS[s].name} fade`; fade.addEventListener("click", () => { const n = g.vigil(hi, s, false); if (n) g.say(n); this.openTemple(); this.refresh(); }); v.appendChild(keep); v.appendChild(fade); } }); extra.appendChild(v); }
     root.insertBefore(extra, root.querySelector(".end"));
-    this.openDialog("#dlg-temple");
+    this.raiseFooter("#dlg-temple", "shrine", () => this.openTemple()); this.openDialog("#dlg-temple");
   }
   // the guildhall: the trainers, the second calling, the contracts, the roster and the muster
   openGuild(keepNote) {

@@ -5,6 +5,9 @@
 // and two things only a forge does: a base reforged with its affixes kept, and a second gem set in a relic; the
 // apprentice buys scrap at three quarters). The camps keep their benches; the camps' tavern keeps the recruits only.
 CM.TOWN_PLOTS.tavern.always = true; CM.TOWN_PLOTS.smith.always = true; CM.TOWN_PLOTS.merchant.always = true;
+CM.VILLAGE.tavern = { name: "The Hanged Lantern", costs: [60, 140], levels: ["A better cellar: the round sets the party's heart to full, and the regular's gossip is on the house", "A better bench: the recruits come a level higher"] };
+CM.VILLAGE.smith = { name: "The Smith's forge", costs: [60, 140], levels: ["The apprentice buys scrap at its full value", "A reforging costs half"] };
+CM.TOWN_PLOTS.tavern.village = "tavern"; CM.TOWN_PLOTS.smith.village = "smith";
 CM.plotLevel = (game, id) => { const P = CM.TOWN_PLOTS[id]; if (!P) return 0; const v = P.village && game ? game.villageLevel(P.village) : 0; return P.always ? Math.max(1, v) : v; };
 CM.COMMISSION_OVER = 1.5;
 CM.DRINK_PRICE = 5;
@@ -48,7 +51,7 @@ Object.assign(CM.Game.prototype, {
     if (this.gold < CM.DRINK_PRICE) return `A round is ${CM.DRINK_PRICE} gold.`;
     this.logAct("drink");
     this.gold -= CM.DRINK_PRICE; this.spend("tavern", CM.DRINK_PRICE); this.floor.drank = true;
-    if ((this.morale || CM.MORALE.start) < 90) this.morale = 90;
+    const heart = this.villageLevel("tavern") >= 1 ? 100 : 90; if ((this.morale || CM.MORALE.start) < heart) this.morale = heart;
     this.sound("coin"); this.say(`A round at the Hanged Lantern, and the party is ${this.moraleWord().toLowerCase()}.`);
     this.saveRun(); this.emit("change");
     return "";
@@ -56,9 +59,10 @@ Object.assign(CM.Game.prototype, {
   gossip() {
     if (!this.inTown()) return "The regular drinks at the Hanged Lantern.";
     if (this.gossiped) return "The regular has told you what he knows this run.";
-    if (this.gold < CM.GOSSIP_PRICE) return `The regular talks for ${CM.GOSSIP_PRICE} gold.`;
+    const fee = this.villageLevel("tavern") >= 1 ? 0 : CM.GOSSIP_PRICE;
+    if (this.gold < fee) return `The regular talks for ${CM.GOSSIP_PRICE} gold.`;
     this.logAct("gossip");
-    this.gold -= CM.GOSSIP_PRICE; this.spend("tavern", CM.GOSSIP_PRICE); this.gossiped = true;
+    this.gold -= fee; if (fee) this.spend("tavern", fee); this.gossiped = true;
     const seed = this.seed, floors = []; for (let n = 16; n <= 20; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);
     const holding = floors[CM.hashSeed(`${seed}:holding`) % floors.length];
     const first = [2, 3, 4]; const unique0 = first[CM.hashSeed(`${seed}:unique:0`) % first.length];
@@ -75,7 +79,7 @@ Object.assign(CM.Game.prototype, {
     if (item.props && (item.props.relic || item.props.unique)) return "A relic or a unique thing is what it is.";
     if (!B || B.kind !== item.kind || B.group === "unique" || B.group === "relic") return "The new base must be of the same kind.";
     if (B.id === CM.baseIdOf(item)) return "It is that already.";
-    const cost = 100 * ((B.tier || 0) + 1), ess = this.bag.findIndex((i) => i.kind === "essence");
+    const cost = Math.ceil(100 * ((B.tier || 0) + 1) * (this.villageLevel("smith") >= 2 ? 0.5 : 1)), ess = this.bag.findIndex((i) => i.kind === "essence");
     if (ess < 0) return "The forge wants an essence for a reforging.";
     if (this.gold < cost) return `The forge wants ${cost} gold for a ${B.id}, and an essence.`;
     this.logAct("reforgeBase", heroIndex, slot, baseId);
@@ -112,7 +116,7 @@ Object.assign(CM.Game.prototype, {
     const rows = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "scrap");
     if (!rows.length) return "No scrap in the pack.";
     this.logAct("sellScrap");
-    const paid = rows.reduce((s, [it]) => s + Math.ceil((it.value || 5) * CM.SCRAP_PRICE), 0);
+    const paid = rows.reduce((s, [it]) => s + Math.ceil((it.value || 5) * (this.villageLevel("smith") >= 1 ? 1 : CM.SCRAP_PRICE)), 0);
     for (const [, i] of rows.reverse()) this.bag.splice(i, 1);
     this.gold += paid;
     this.sound("coin"); this.say(`The apprentice weighs the scrap and pays ${paid} gold for it.`);

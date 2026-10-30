@@ -492,18 +492,17 @@ CM.art.teleporter = function () {                                         // a r
 };
 
 // the town's things: a house front with a door and a sign, a foundation of low stones, the square's well
-CM.art.house = function () {
+CM.art.house = function (stage = 4) {                                   // 1 a frame; 2 a roofed house; 3 with its sign; 4 with a lit window
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
   p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 100, 9, 0, 0, Math.PI * 2); p.fill();
-  p.fillStyle = "#B89C78"; p.fillRect(38, 96, 180, 146);                 // the wall, limewashed
-  p.fillStyle = "#6E4A2A"; for (const x of [38, 124, 212]) p.fillRect(x, 96, 6, 146); p.fillRect(38, 150, 180, 6);   // the timbers
-  p.fillStyle = "#7A4A2A"; p.beginPath(); p.moveTo(22, 100); p.lineTo(128, 30); p.lineTo(234, 100); p.closePath(); p.fill();   // the roof
-  p.fillStyle = "#5A3418"; for (let y = 40; y < 100; y += 12) { p.fillRect(22 + (100 - y) * 0.9, y, 212 - (100 - y) * 1.8, 3); }
+  if (stage >= 2) p.fillStyle = "#B89C78", p.fillRect(38, 96, 180, 146);   // the wall, limewashed
+  p.fillStyle = "#6E4A2A"; for (const x of [38, 124, 212]) p.fillRect(x, 96, 6, 146); p.fillRect(38, 150, 180, 6); p.fillRect(38, 96, 180, 6);   // the timbers (a frame alone, at the first stage)
+  if (stage >= 2) { p.fillStyle = "#7A4A2A"; p.beginPath(); p.moveTo(22, 100); p.lineTo(128, 30); p.lineTo(234, 100); p.closePath(); p.fill(); p.fillStyle = "#5A3418"; for (let y = 40; y < 100; y += 12) p.fillRect(22 + (100 - y) * 0.9, y, 212 - (100 - y) * 1.8, 3); }   // the roof
+  else { p.strokeStyle = "#6E4A2A"; p.lineWidth = 6; p.beginPath(); p.moveTo(40, 98); p.lineTo(128, 36); p.lineTo(216, 98); p.stroke(); }   // the roof's beams, bare
   p.fillStyle = "#4A2E16"; p.fillRect(108, 166, 40, 76);                 // the door
   p.fillStyle = "#D8B040"; p.beginPath(); p.arc(140, 206, 3, 0, Math.PI * 2); p.fill();
-  p.fillStyle = "#A8C8E0"; p.fillRect(58, 166, 30, 30); p.fillRect(168, 166, 30, 30);   // the windows
-  p.strokeStyle = "#4A2E16"; p.lineWidth = 3; p.strokeRect(58, 166, 30, 30); p.strokeRect(168, 166, 30, 30); p.beginPath(); p.moveTo(73, 166); p.lineTo(73, 196); p.moveTo(183, 166); p.lineTo(183, 196); p.stroke();
-  p.fillStyle = "#8A6A3A"; p.fillRect(92, 108, 72, 26); p.strokeStyle = "#3A2410"; p.lineWidth = 2; p.strokeRect(92, 108, 72, 26);   // the sign
+  if (stage >= 2) { p.fillStyle = stage >= 4 ? "#F0D080" : "#A8C8E0"; p.fillRect(58, 166, 30, 30); p.fillRect(168, 166, 30, 30); p.strokeStyle = "#4A2E16"; p.lineWidth = 3; p.strokeRect(58, 166, 30, 30); p.strokeRect(168, 166, 30, 30); p.beginPath(); p.moveTo(73, 166); p.lineTo(73, 196); p.moveTo(183, 166); p.lineTo(183, 196); p.stroke(); }   // the windows (lit, at the last stage)
+  if (stage >= 3) { p.fillStyle = "#8A6A3A"; p.fillRect(92, 108, 72, 26); p.strokeStyle = "#3A2410"; p.lineWidth = 2; p.strokeRect(92, 108, 72, 26); }   // the sign
   return c;
 };
 CM.art.foundation = function () {
@@ -1053,7 +1052,7 @@ CM.art.buildDrawn = function (theme) {
   for (const G of Object.values(CM.GUARDIANS)) { const k = G.size >= 1 ? 1.12 : 1.04; add(`monster:${G.name}`, CM.art.monster(G, k)); add(`monster:${G.name}:idle2`, CM.art.monster(G, k, "idle2")); add(`monster:${G.name}:attack`, CM.art.monster(G, k, "attack")); }
   add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, CM.art.monster(row));
-  add("house", CM.art.house()); add("foundation", CM.art.foundation()); add("well", CM.art.well());
+  add("house", CM.art.house(4)); for (let s = 1; s <= 4; s++) add(`house${s}`, CM.art.house(s)); add("foundation", CM.art.foundation()); add("well", CM.art.well());
   add("bones", CM.art.bones()); add("rope", CM.art.rope()); add("plate", CM.art.plate(false)); add("plate_pressed", CM.art.plate(true)); add("door_riddle", CM.art.door("riddle"));
   add("fungus", CM.art.fungus()); add("crystal", CM.art.crystal()); add("root", CM.art.root());
   add("fx:spark", CM.art.fxSpark()); add("fx:shard", CM.art.fxShard()); add("fx:fire", CM.art.fxFire()); add("fx:frost", CM.art.fxFrost());

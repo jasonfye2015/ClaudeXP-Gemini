@@ -349,7 +349,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.inUse = true; this.talk(thing, k); this.inUse = false; return; }
     if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
-    if (thing && thing.type === "building") { this.emit("building", thing.id); return; }
+    if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
     if (thing && thing.type === "well") { this.well(); return; }
     if (thing && thing.type === "villager") { this.talkTownsfolk(thing); return; }
     if (thing && thing.type === "node") { this.gather(thing, k); return; }

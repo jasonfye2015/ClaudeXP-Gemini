@@ -127,7 +127,7 @@ Size: M.
 
 Size: M.
 
-## Phase 5 - Growth, and the town as a thing that remembers - v5.7
+## Phase 5 - Growth, and the town as a thing that remembers - v5.7 - DONE
 
 - **The town grows on the map.** Each building's level draws it: a foundation, a frame, a roofed house, a house
   with a sign, a house with a lit window. Raising a building is done at its own door, not in a dialog from the

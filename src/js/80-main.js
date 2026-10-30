@@ -359,7 +359,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "node") { const look = (CM.NODES[thing.band] || CM.NODES[0])[1], flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.9 : 0.6, h: flat ? 0.9 : 0.5, flat, glow: look === "crystal" ? 0.3 : 0 }); }
       else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
-      else if (thing.type === "building") out.push({ x, y, layer: CM.plotLevel(game, thing.id) || thing.id === "home" ? "house" : "foundation", w: 1.0, h: 1.0 });
+      else if (thing.type === "building") { const P = CM.TOWN_PLOTS[thing.id] || {}, V = P.village ? CM.VILLAGE[P.village] : null, lvl = CM.plotLevel(game, thing.id), stage = P.always && !V ? 4 : CM.houseStage(lvl, V ? V.costs.length : 1); out.push({ x, y, layer: stage ? `house${stage}` : "foundation", w: 1.0, h: 1.0 }); }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
       else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });

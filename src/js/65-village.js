@@ -4,15 +4,15 @@
 // guildhall's trainers are the one exception, and capped at a boon. Four buildings, four levels each (CM.VILLAGE);
 // contracts posted at the guildhall from the week's seed (CM.CONTRACTS). Kept between runs (CM.store "village").
 CM.VILLAGE = {
-  guildhall: { name: "The Guildhall", costs: [100, 250, 500, 1000], levels: [
+  guildhall: { name: "The Guildhall", costs: [30, 80, 160, 200], levels: [
     "A hero who comes home may retire here as a trainer: every new hero of their calling sets out with the trainer's first boon",
     "The vault holds three things", "The tavern's third recruit is someone the party rescued in a run before", "The vault holds five things"] },
-  merchant: { name: "The Merchant's House", costs: [100, 250, 500, 1000], levels: [
+  merchant: { name: "The Merchant's House", costs: [30, 80, 160, 200], levels: [
     "The camps' merchant stocks Greater Healing Potions", "...and an oil of each kind", "...and one rare thing a camp", "...and sells everything a fifth cheaper"] },
-  library: { name: "The Library", costs: [100, 250, 500, 1000], levels: [
+  library: { name: "The Library", costs: [30, 80, 160, 280], levels: [
     "Scholarship: every kind fully learned (met and slain three times, a weakness found) takes 1% more from every blow",
     "...2% more", "...3% more", "The library knows every kind's weakness the moment it is met"] },
-  shrine: { name: "The Shrine of the Fallen", costs: [50, 150, 400, 800], levels: [
+  shrine: { name: "The Shrine of the Fallen", costs: [15, 40, 100, 200], levels: [
     "Light a candle for a hero laid to rest (10 renown): what they were buried with comes to the vault",
     "A candle costs 5", "The memorial keeps sixty names, not thirty", "A hero remembered may come back to the tavern as a recruit, once"] },
 };
@@ -24,6 +24,7 @@ CM.renownFor = function (entry, game) {
   if (entry.bottom) n += 100;
   if (entry.weekly) n += 30;
   n += 20 * ((entry.titles || []).length);
+  n += 3 * Math.min(9, ((entry.tally || {}).visited || []).length);     // (the town rewards being used: three for every door opened before the descent)
   if (entry.difficulty === "grim") n = Math.round(n * 1.5); else if (entry.difficulty === "gentle") n = Math.round(n * 0.6);
   return n;
 };
