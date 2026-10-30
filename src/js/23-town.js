@@ -5,7 +5,7 @@
 // with an id; what stands on it (a foundation, or a house of some level) is the village's business (CM.VILLAGE),
 // read live, so the town is the same for a seed whatever has been built and a save of it never drifts.
 CM.TOWN_THEME = { name: "Caer Duin, above", floors: [0, 0], stone: [168, 150, 122], mortar: [110, 96, 78], floor: [138, 124, 100], ceiling: [150, 172, 200],
-  moss: [110, 140, 70], fog: [0.004, 0.004, 0.006], torch: [1.0, 0.96, 0.9], reach: 9.0, bones: 0, town: true };
+  moss: [110, 140, 70], fog: [0.004, 0.004, 0.006], torch: [1.0, 0.96, 0.9], reach: 9.0, bones: 0, town: true, sky: true };
 CM.TOWN_PLOTS = {
   home: { name: "Your house", village: null, what: "The party's own door. A hearth, a stash and a trophy wall, as the house is raised." },
   tavern: { name: "The Hanged Lantern", village: null, what: "The tavern: recruits, the fence, rumours and the board." },
@@ -40,7 +40,26 @@ CM.makeTown = function (seed) {
   const lane = []; for (let x = 2; x <= 16; x++) if (x !== 9 && x !== 4 && x !== 14) lane.push([x, 9]); for (const [x, y] of [[8, 8], [10, 8], [8, 10], [10, 10], [11, 7], [7, 11]]) lane.push([x, y]);
   for (let i = 0; i < 3; i++) { let k = CM.hashSeed(`${seed}:folk:${i}`) % lane.length, guard = 0; while (things[`${lane[k][0]},${lane[k][1]}`] && guard++ < lane.length) k = (k + 1) % lane.length; things[`${lane[k][0]},${lane[k][1]}`] = { type: "villager", who: i }; }   // three townsfolk, by the seed
   const seen = []; for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) seen.push([x, y]);   // (daylight: the whole town is on the map)
-  return { number: 0, grid, pos: CM.TOWN_AT.home.slice(), facing: 1, things, features, dark: [], seen, rooms: [{ x0: 7, y0: 7, x1: 11, y1: 11, name: "The Square" }], decor: [], special: "town" };
+  const fl = { number: 0, grid, pos: CM.TOWN_AT.home.slice(), facing: 1, things, features, dark: [], seen, rooms: [{ x0: 7, y0: 7, x1: 11, y1: 11, name: "The Square" }], decor: [], special: "town", solidDefault: "hedge", kinds: {}, ground: {} };
+  CM.dressTown(fl);
+  return fl;
+};
+// what the town's solid cells are (the ring wall at the edge, a house behind each door, hedges between) and what its ground wears
+CM.dressTown = function (fl) {
+  const size = fl.grid.length, open = (x, y) => CM.inBounds(fl, x, y) && fl.grid[y][x] === 0;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (fl.grid[y][x] !== 0 && (x === 0 || y === 0 || x === size - 1 || y === size - 1)) CM.setSolid(fl, x, y, "townwall");
+  for (const [k, t] of Object.entries(fl.things)) {
+    if (t.type !== "building") continue;
+    const [x, y] = k.split(",").map(Number), lane = CM.DIRS.find(([dx, dy]) => open(x + dx, y + dy)) || [0, 1];   // the door cell opens onto its lane; the house is behind it
+    const back = [[x - lane[0], y - lane[1]], ...CM.DIRS.map(([dx, dy]) => [x + dx, y + dy])].find(([cx, cy]) => CM.inBounds(fl, cx, cy) && !open(cx, cy) && CM.solidAt(fl, cx, cy) !== "townwall") || [x - lane[0], y - lane[1]];
+    const [bx, by] = back;                                                 // (the house stands behind the door, or beside it when the door faces the gate)
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!open(bx + dx, by + dy) && CM.inBounds(fl, bx + dx, by + dy) && CM.solidAt(fl, bx + dx, by + dy) !== "townwall") CM.setSolid(fl, bx + dx, by + dy, "house");
+    for (const [dx, dy] of CM.DIRS) if ((dx || dy) && !open(x + dx, y + dy) && CM.inBounds(fl, x + dx, y + dy) && CM.solidAt(fl, x + dx, y + dy) !== "townwall") CM.setSolid(fl, x + dx, y + dy, "house");
+    if (CM.inBounds(fl, bx, by) && !open(bx, by)) CM.setSolid(fl, bx, by, ["tavern", "merchant", "smith", "garden"].includes(t.id) ? "shop" : "door");
+    CM.setGround(fl, x, y, "flags");
+  }
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (fl.grid[y][x] === 0 && !CM.groundAt(fl, x, y)) CM.setGround(fl, x, y, x >= 7 && x <= 11 && y >= 7 && y <= 11 ? "cobbles" : "dirt");
+  return fl;
 };
 // a plot's level: the village's, for the plots the village already raises; none yet for the rest (the next phases raise them)
 CM.plotLevel = (game, id) => { const P = CM.TOWN_PLOTS[id]; return P && P.village && game ? game.villageLevel(P.village) : 0; };

@@ -9,16 +9,21 @@ uniform mat4 uViewProj;
 out vec3 vWorld; out vec3 vUV; out float vShade; out vec3 vFx;
 void main() { vWorld = aPos; vUV = aUV; vShade = aShade; vFx = aFx; gl_Position = uViewProj * vec4(aPos, 1.0); }`;
 
-// aFx: a hit's red flash, the alpha (a foe fading), and glow - how much of the texture's own colour shows unlit
+// aFx: a hit's red flash, the alpha (a foe fading), and glow - how much of the texture's own colour shows unlit;
+// a glow of 2 is the sky's own things (the sun, the moon: the picture as it is, no light, no fog), 3 the sky dome
+// (the picture's red is how high: the horizon's colour to the zenith's)
 const FRAG = `#version 300 es
 precision highp float; precision highp sampler2DArray;
 in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
 uniform sampler2DArray uTex; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
+uniform vec3 uZenith; uniform vec3 uHorizon;
 out vec4 fragColor;
 void main() {
   vec4 t = texture(uTex, vUV);
+  if (vFx.z > 2.5) { fragColor = vec4(mix(uHorizon, uZenith, t.r), 1.0); return; }
   if (t.a < 0.5) discard;
+  if (vFx.z > 1.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
   float d = distance(vWorld, uEye);
   float r2 = uReach * uReach;
   float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d);
@@ -69,7 +74,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -85,6 +90,7 @@ CM.Renderer = class {
     this.snap = false;
     this.bob = 0;
     this.light = 1;                    // how far the torch reaches, as a share of the depth's reach (1: a good torch)
+    this.sky = null;                   // on the surface: CM.sky(game) this frame (the colours, the light, the sun and the moon); null below
     this.lightNow = 1;                 // (eased towards it)
     this.ok = true;
     gl.enable(gl.DEPTH_TEST);
@@ -137,37 +143,16 @@ CM.Renderer = class {
     if (aniso) gl.texParameterf(gl.TEXTURE_2D_ARRAY, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
   }
 
-  // ---- the floor's mesh ----
+  // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
   setFloor(floor, theme) {
     this.theme = theme;
-    const grid = floor.grid, size = grid.length, out = [], features = floor.features || {};
-    const quad = (a, b, c, d, layer, shade) => {           // four corners, counter-clockwise from the bottom left as seen
-      const uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
-      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0);
-    };
-    const pickWall = (x, y, d, wx, wy) => {
-      const f = features[`${wx},${wy}`];
-      if (f && f.type === "secret" && !f.found) return this.index.wallsecret;    // (a hairline, for the sharp-eyed)
-      const h = (x * 73856093) ^ (y * 19349663) ^ (d * 83492791);
-      const r = ((h >>> 0) % 1000) / 1000;
-      return r < this.theme.bones * 0.5 ? this.index.wallbones : r < 0.6 ? this.index.wall : this.index.wall2;
-    };
-    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-      if (grid[y][x] !== 0) continue;
-      quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], this.index.floor, 0.9);
-      quad([x, 1, y], [x + 1, 1, y], [x + 1, 1, y + 1], [x, 1, y + 1], this.index.ceiling, 0.7);
-      const solid = (nx, ny) => ny < 0 || ny >= size || nx < 0 || nx >= size || grid[ny][nx] !== 0;
-      if (solid(x, y - 1)) quad([x, 0, y], [x + 1, 0, y], [x + 1, 1, y], [x, 1, y], pickWall(x, y, 0, x, y - 1), 1.0);                 // north wall, facing south
-      if (solid(x, y + 1)) quad([x + 1, 0, y + 1], [x, 0, y + 1], [x, 1, y + 1], [x + 1, 1, y + 1], pickWall(x, y, 2, x, y + 1), 1.0);   // south wall, facing north
-      if (solid(x + 1, y)) quad([x + 1, 0, y], [x + 1, 0, y + 1], [x + 1, 1, y + 1], [x + 1, 1, y], pickWall(x, y, 1, x + 1, y), 0.84);   // east wall, facing west
-      if (solid(x - 1, y)) quad([x, 0, y + 1], [x, 0, y], [x, 1, y], [x, 1, y + 1], pickWall(x, y, 3, x - 1, y), 0.84);                 // west wall, facing east
-    }
+    const mesh = CM.floorMesh(floor, theme, this.index);
+    this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees };
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.STATIC_DRAW);
-    this.staticCount = out.length / STRIDE;
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.data), gl.STATIC_DRAW);
+    this.staticCount = mesh.count;
   }
-
   // ---- the camera ----
   yawFor(facing) { return facing * Math.PI / 2; }
 
@@ -266,6 +251,18 @@ CM.Renderer = class {
     return out;
   }
 
+  _skyMesh(eye) {
+    const layer = this.index.skygrad;
+    if (layer === undefined) return [];
+    const out = [], R = 62, lo = eye[1] - 6, hi = eye[1] + 46, [ex, , ez] = eye;
+    const quad = (a, b, c, d) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, 1, 0, 1, 3); };
+    quad([ex - R, lo, ez - R], [ex + R, lo, ez - R], [ex + R, hi, ez - R], [ex - R, hi, ez - R]);
+    quad([ex + R, lo, ez + R], [ex - R, lo, ez + R], [ex - R, hi, ez + R], [ex + R, hi, ez + R]);
+    quad([ex + R, lo, ez - R], [ex + R, lo, ez + R], [ex + R, hi, ez + R], [ex + R, hi, ez - R]);
+    quad([ex - R, lo, ez + R], [ex - R, lo, ez - R], [ex - R, hi, ez - R], [ex - R, hi, ez + R]);
+    return out;
+  }
+
   _attributes() {
     const gl = this.gl, bytes = STRIDE * 4;
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0);
@@ -295,24 +292,28 @@ CM.Renderer = class {
     const view = mat4LookAt(eye, [eye[0] + fwd[0], eye[1], eye[2] + fwd[2]], up);
     const proj = mat4Perspective(Math.PI / 3 * (this.zoomNow || 1), aspect, 0.05, 80);
     this.viewProj = mat4Mul(proj, view);
-    const t = this.theme;
-    gl.clearColor(t.fog[0], t.fog[1], t.fog[2], 1);
+    const t = this.theme, sky = t.sky ? this.sky || CM.sky(null) : null;
+    const clear = sky ? sky.zenith : t.fog, fogc = sky ? sky.horizon : t.fog;
+    gl.clearColor(clear[0], clear[1], clear[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(this.program);
     gl.uniformMatrix4fv(this.loc.uViewProj, false, this.viewProj);
     gl.uniform3fv(this.loc.uEye, eye);
-    gl.uniform3fv(this.loc.uTorch, t.torch);
-    gl.uniform3fv(this.loc.uFog, t.fog);
-    gl.uniform1f(this.loc.uReach, t.reach * this.lightNow);
-    gl.uniform1f(this.loc.uFlicker, this.flicker);
-    gl.uniform1f(this.loc.uAmbient, 0.06 * Math.min(1, this.lightNow * 2));
+    // under a sky: daylight is flat and reaches to the horizon; at night the torch and the moon do what they can
+    gl.uniform3fv(this.loc.uTorch, sky ? [t.torch[0] + (1 - t.torch[0]) * sky.light, t.torch[1] + (1 - t.torch[1]) * sky.light, t.torch[2] + (1 - t.torch[2]) * sky.light] : t.torch);
+    gl.uniform3fv(this.loc.uFog, fogc);
+    gl.uniform1f(this.loc.uReach, sky ? (6 + 54 * sky.light) * (sky.night ? Math.max(0.5, this.lightNow) : 1) : t.reach * this.lightNow);
+    gl.uniform1f(this.loc.uFlicker, sky ? this.flicker * (1 - sky.light) : this.flicker);
+    gl.uniform1f(this.loc.uAmbient, sky ? 0.04 + 0.98 * sky.light : 0.06 * Math.min(1, this.lightNow * 2));
+    gl.uniform3fv(this.loc.uZenith, clear);
+    gl.uniform3fv(this.loc.uHorizon, fogc);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     this._attributes();
     gl.drawArrays(gl.TRIANGLES, 0, this.staticCount);
-    const dyn = this._spriteMesh();
+    const dyn = sky ? this._skyMesh(eye).concat(this._spriteMesh()) : this._spriteMesh();
     if (dyn.length) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.dynBuf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dyn), gl.DYNAMIC_DRAW);

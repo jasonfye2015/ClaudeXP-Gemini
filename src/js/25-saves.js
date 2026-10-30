@@ -12,7 +12,7 @@ CM.GEN = 2;                                         // the generator a new run g
 CM.SCHEMA = 3;                                      // the run's save format (1: whole floors, before v1.1; 2: floor deltas; 3: items with a base and a finding)
 
 // the parts of a floor that never change once it is made (everything else is diffed against the fresh floor)
-CM.FLOOR_FIXED = ["number", "grid", "dark", "rooms", "decor", "special", "hazard"];
+CM.FLOOR_FIXED = ["number", "grid", "dark", "rooms", "decor", "special", "hazard", "kinds", "ground", "canopy", "solidDefault", "glades", "ford"];
 
 // a seen-list ([x, y] pairs) as a bitset, base64 - and back
 CM.packSeen = function (seen, size) {

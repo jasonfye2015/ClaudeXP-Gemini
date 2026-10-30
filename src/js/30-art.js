@@ -1035,6 +1035,178 @@ CM.art.icon = function () {
   return c.toDataURL();
 };
 
+
+// ---- the surface: ground, the faces of houses and walls, trees, the canopy, the sky's gradient, the sun and the moon ----
+CM.art.ground = function (kind, seed = 1) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`ground:${kind}:${seed}`));
+  if (kind === "grass" || kind === "moss") {
+    const base = kind === "grass" ? [86, 124, 54] : [52, 78, 40];
+    p.fillStyle = rgb(base); p.fillRect(0, 0, S, S);
+    speckle(p, rnd, S, S, 2600, rgb(base, 1.25), 0.45, 3); speckle(p, rnd, S, S, 1400, rgb(base, 0.7), 0.4, 3);
+    p.strokeStyle = rgb(base, 1.4, 0.7); p.lineWidth = 1.5;
+    for (let i = 0; i < 260; i++) { const x = rnd.next() * S, y = rnd.next() * S, l = 5 + rnd.next() * 9; p.beginPath(); p.moveTo(x, y); p.lineTo(x + (rnd.next() - 0.5) * 6, y - l); p.stroke(); }
+    if (kind === "grass") { p.fillStyle = "rgba(240,220,120,0.8)"; for (let i = 0; i < 6; i++) { p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S, 2.5, 0, Math.PI * 2); p.fill(); } }
+  } else if (kind === "dirt" || kind === "tilled") {
+    const base = [126, 100, 70];
+    p.fillStyle = rgb(base); p.fillRect(0, 0, S, S);
+    speckle(p, rnd, S, S, 2200, rgb(base, 0.75), 0.4, 3); speckle(p, rnd, S, S, 900, rgb(base, 1.25), 0.35, 3);
+    for (let i = 0; i < 18; i++) { p.fillStyle = rgb([150, 140, 125], 1, 0.7); p.beginPath(); p.ellipse(rnd.next() * S, rnd.next() * S, 3 + rnd.next() * 4, 2 + rnd.next() * 3, rnd.next() * 3, 0, Math.PI * 2); p.fill(); }
+    if (kind === "tilled") { p.fillStyle = rgb(base, 0.6, 0.8); for (let y = 10; y < S; y += 32) p.fillRect(0, y, S, 9); p.fillStyle = rgb(base, 1.2, 0.5); for (let y = 24; y < S; y += 32) p.fillRect(0, y, S, 5); }
+  } else if (kind === "cobbles" || kind === "flags") {
+    const base = kind === "cobbles" ? [128, 118, 104] : [140, 134, 124];
+    p.fillStyle = rgb(base, 0.55); p.fillRect(0, 0, S, S);
+    const n = kind === "cobbles" ? 8 : 4, w = S / n;
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+      const x = i * w + (kind === "cobbles" && j % 2 ? w / 2 : 0), y = j * w, k = 0.85 + rnd.next() * 0.3;
+      p.fillStyle = rgb(base, k);
+      if (kind === "cobbles") { p.beginPath(); p.ellipse(((x + w / 2) % S), y + w / 2, w * 0.44, w * 0.38, 0, 0, Math.PI * 2); p.fill(); }
+      else { p.fillRect(x + 2, y + 2, w - 4, w - 4); }
+    }
+    speckle(p, rnd, S, S, 900, rgb(base, 1.3), 0.3, 2);
+  } else if (kind === "planks") {
+    const base = [120, 88, 56];
+    p.fillStyle = rgb(base, 0.6); p.fillRect(0, 0, S, S);
+    for (let i = 0; i < 6; i++) { p.fillStyle = rgb(base, 0.85 + rnd.next() * 0.3); p.fillRect(i * S / 6 + 2, 0, S / 6 - 4, S); }
+    p.strokeStyle = rgb(base, 0.6, 0.6); p.lineWidth = 1.5;
+    for (let i = 0; i < 80; i++) { const x = rnd.next() * S, y = rnd.next() * S; p.beginPath(); p.moveTo(x, y); p.lineTo(x + (rnd.next() - 0.5) * 4, y + 20 + rnd.next() * 40); p.stroke(); }
+  }
+  return c;
+};
+// a plastered, half-timbered face; what is in it: nothing, a window, a door, a shop's door and board
+CM.art.facade = function (what, seed = 1) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`facade:${what}:${seed}`));
+  p.fillStyle = "#D8CCB0"; p.fillRect(0, 0, S, S);
+  speckle(p, rnd, S, S, 1600, "#B8A890", 0.35, 3); speckle(p, rnd, S, S, 500, "#F0E8D8", 0.3, 3);
+  p.fillStyle = "#5A4028";                                                                  // the timbers
+  p.fillRect(0, 0, 12, S); p.fillRect(S - 12, 0, 12, S); p.fillRect(0, 0, S, 10); p.fillRect(0, S - 14, S, 14);
+  if (what === "house" || what === "frame") { p.fillRect(S / 2 - 6, 0, 12, S); p.beginPath(); p.moveTo(12, S * 0.55); p.lineTo(S / 2 - 6, 10); p.lineTo(S / 2 - 6, 26); p.lineTo(26, S * 0.6); p.closePath(); p.fill(); }
+  const window = (x, y, w, h) => {
+    p.fillStyle = "#5A4028"; p.fillRect(x - 5, y - 5, w + 10, h + 10);
+    p.fillStyle = "#2A3444"; p.fillRect(x, y, w, h);
+    p.fillStyle = "rgba(200,220,240,0.35)"; p.fillRect(x + 3, y + 3, w / 2 - 5, h / 2 - 5);
+    p.fillStyle = "#5A4028"; p.fillRect(x + w / 2 - 2, y, 4, h); p.fillRect(x, y + h / 2 - 2, w, 4);
+  };
+  if (what === "house") { window(S * 0.62, S * 0.3, S * 0.22, S * 0.26); }
+  if (what === "door" || what === "shop") {
+    p.fillStyle = "#5A4028"; p.fillRect(S * 0.3, S * 0.3, S * 0.4, S * 0.7);                   // the frame
+    p.fillStyle = "#7A5230"; p.fillRect(S * 0.33, S * 0.34, S * 0.34, S * 0.66);                 // the door
+    p.fillStyle = "#4A3220"; for (let i = 1; i < 5; i++) p.fillRect(S * 0.33 + i * S * 0.068, S * 0.34, 3, S * 0.66);
+    p.fillStyle = "#D8C070"; p.beginPath(); p.arc(S * 0.62, S * 0.68, 4, 0, Math.PI * 2); p.fill();   // the latch
+    if (what === "door") window(S * 0.74, S * 0.36, S * 0.16, S * 0.2);
+    else { p.fillStyle = "#5A4028"; p.fillRect(S * 0.2, S * 0.12, S * 0.6, S * 0.14); p.fillStyle = "#8A6A3A"; p.fillRect(S * 0.22, S * 0.14, S * 0.56, S * 0.1); p.fillStyle = "#F0D080"; p.fillRect(S * 0.3, S * 0.175, S * 0.4, 3); }
+  }
+  if (what === "frame") {                                                                   // posts and beams, the plaster not yet on: see through
+    const f = artCanvas(), q = f.getContext("2d");
+    q.fillStyle = "#6A4A2A"; q.fillRect(0, 0, 14, S); q.fillRect(S - 14, 0, 14, S); q.fillRect(S / 2 - 7, 0, 14, S); q.fillRect(0, 0, S, 12); q.fillRect(0, S * 0.5, S, 10); q.fillRect(0, S - 12, S, 12);
+    return f;
+  }
+  return c;
+};
+CM.art.townWall = function (top = false, seed = 1) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`townwall:${top}:${seed}`)), base = top ? [120, 116, 108] : [104, 100, 94];
+  p.fillStyle = rgb(base, 0.55); p.fillRect(0, 0, S, S);
+  const rows = top ? 4 : 5, hgt = S / rows;
+  for (let j = 0; j < rows; j++) { let x = j % 2 ? -S / 7 : 0; while (x < S) { const w = S / 4 + rnd.next() * S / 7; p.fillStyle = rgb(base, 0.85 + rnd.next() * 0.35); p.fillRect(x + 3, j * hgt + 3, w - 6, hgt - 6); x += w; } }
+  speckle(p, rnd, S, S, 1500, rgb(base, 0.6), 0.3, 3); speckle(p, rnd, S, S, 500, rgb(base, 1.4), 0.25, 2);
+  if (!top) { p.fillStyle = "rgba(90,120,60,0.35)"; for (let i = 0; i < 10; i++) { p.beginPath(); p.arc(rnd.next() * S, S * 0.7 + rnd.next() * S * 0.3, 8 + rnd.next() * 12, 0, Math.PI * 2); p.fill(); } }
+  return c;
+};
+CM.art.hedge = function (seed = 1) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`hedge:${seed}`));
+  p.fillStyle = "#2E4A22"; p.fillRect(0, 0, S, S);
+  for (let i = 0; i < 700; i++) { const k = 0.7 + rnd.next() * 0.8; p.fillStyle = `rgba(${Math.round(70 * k)},${Math.round(120 * k)},${Math.round(50 * k)},0.9)`; p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S, 5 + rnd.next() * 9, 0, Math.PI * 2); p.fill(); }
+  return c;
+};
+CM.art.fence = function (seed = 1) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`fence:${seed}`));
+  for (let i = 0; i < 6; i++) { p.fillStyle = rgb([130, 100, 66], 0.85 + rnd.next() * 0.3); const x = 8 + i * (S / 6); p.fillRect(x, S * 0.15, S / 6 - 22, S * 0.85); p.beginPath(); p.moveTo(x, S * 0.15); p.lineTo(x + (S / 6 - 22) / 2, S * 0.06); p.lineTo(x + S / 6 - 22, S * 0.15); p.fill(); }
+  p.fillStyle = "#6E5236"; p.fillRect(0, S * 0.3, S, 14); p.fillRect(0, S * 0.68, S, 14);
+  return c;
+};
+CM.art.cliff = function (seed = 1) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`cliff:${seed}`)), base = [112, 100, 86];
+  p.fillStyle = rgb(base, 0.7); p.fillRect(0, 0, S, S);
+  let y = 0; while (y < S) { const h = 18 + rnd.next() * 30; p.fillStyle = rgb(base, 0.75 + rnd.next() * 0.5); p.fillRect(0, y, S, h - 3); y += h; }
+  speckle(p, rnd, S, S, 1800, rgb(base, 0.55), 0.35, 3); for (let i = 0; i < 6; i++) crack(p, rnd, rnd.next() * S, rnd.next() * S, 60 + rnd.next() * 80, rgb(base, 0.4, 0.8));
+  p.fillStyle = "rgba(90,130,60,0.5)"; for (let i = 0; i < 8; i++) { p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S * 0.3, 8 + rnd.next() * 10, 0, Math.PI * 2); p.fill(); }
+  return c;
+};
+CM.art.roof = function (seed = 1) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`roof:${seed}`)), base = [138, 78, 52];
+  p.fillStyle = rgb(base, 0.6); p.fillRect(0, 0, S, S);
+  const rows = 8, h = S / rows, w = S / 6;
+  for (let j = 0; j < rows; j++) for (let i = -1; i < 7; i++) { p.fillStyle = rgb(base, 0.8 + rnd.next() * 0.4); p.beginPath(); p.moveTo(i * w + (j % 2 ? w / 2 : 0) + 2, j * h); p.lineTo(i * w + (j % 2 ? w / 2 : 0) + w - 2, j * h); p.lineTo(i * w + (j % 2 ? w / 2 : 0) + w - 2, j * h + h - 3); p.arc(i * w + (j % 2 ? w / 2 : 0) + w / 2, j * h + h - 3, w / 2 - 2, 0, Math.PI); p.closePath(); p.fill(); }
+  return c;
+};
+// a tree, trunk and crown, against nothing (three kinds: an oak, a tall fir, a birch in its autumn)
+CM.art.tree = function (variant = 0) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`tree:${variant}`));
+  const trunk = variant === 2 ? "#D8D0C0" : "#4A3220", crown = variant === 0 ? [62, 110, 48] : variant === 1 ? [40, 84, 52] : [196, 150, 48];
+  p.fillStyle = trunk; p.fillRect(S / 2 - 12, S * 0.45, 24, S * 0.55);
+  if (variant === 2) { p.fillStyle = "#2A2420"; for (let i = 0; i < 9; i++) p.fillRect(S / 2 - 12 + rnd.next() * 14, S * 0.5 + rnd.next() * S * 0.45, 6 + rnd.next() * 8, 3); }
+  if (variant === 1) { for (let i = 0; i < 5; i++) { const y = S * 0.08 + i * S * 0.14, w = S * 0.14 + i * S * 0.07; p.fillStyle = rgb(crown, 0.8 + i * 0.07); p.beginPath(); p.moveTo(S / 2, y); p.lineTo(S / 2 + w, y + S * 0.2); p.lineTo(S / 2 - w, y + S * 0.2); p.closePath(); p.fill(); } }
+  else { for (let i = 0; i < 26; i++) { const a = rnd.next() * Math.PI * 2, r = rnd.next() * S * 0.26, x = S / 2 + Math.cos(a) * r, y = S * 0.32 + Math.sin(a) * r * 0.8; p.fillStyle = rgb(crown, 0.75 + rnd.next() * 0.5); p.beginPath(); p.arc(x, y, S * 0.1 + rnd.next() * S * 0.08, 0, Math.PI * 2); p.fill(); } }
+  return c;
+};
+CM.art.canopy = function (seed = 1) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`canopy:${seed}`));
+  p.fillStyle = "#1E3418"; p.fillRect(0, 0, S, S);
+  for (let i = 0; i < 500; i++) { const k = 0.6 + rnd.next() * 0.9; p.fillStyle = `rgba(${Math.round(50 * k)},${Math.round(96 * k)},${Math.round(40 * k)},0.95)`; p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S, 7 + rnd.next() * 11, 0, Math.PI * 2); p.fill(); }
+  p.globalCompositeOperation = "destination-out";                                            // holes for the sky
+  for (let i = 0; i < 14; i++) { p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S, 3 + rnd.next() * 6, 0, Math.PI * 2); p.fill(); }
+  p.globalCompositeOperation = "source-over";
+  return c;
+};
+CM.art.skyGradient = function () {                                                            // red: how high, for the shader to colour
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, g = p.createLinearGradient(0, 0, 0, S);
+  g.addColorStop(0, "rgb(255,0,0)"); g.addColorStop(0.62, "rgb(90,0,0)"); g.addColorStop(1, "rgb(0,0,0)");
+  p.fillStyle = g; p.fillRect(0, 0, S, S);
+  return c;
+};
+CM.art.sun = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, g = p.createRadialGradient(S / 2, S / 2, S * 0.16, S / 2, S / 2, S * 0.5);
+  g.addColorStop(0, "rgba(255,246,200,1)"); g.addColorStop(0.3, "rgba(255,230,140,0.9)"); g.addColorStop(1, "rgba(255,210,120,0)");
+  p.fillStyle = g; p.fillRect(0, 0, S, S);
+  return c;
+};
+CM.art.moon = function (phase = 4) {                                                          // 0 new .. 4 full .. 7 waning crescent
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, r = S * 0.3, cx = S / 2, cy = S / 2;
+  const glow = p.createRadialGradient(cx, cy, r, cx, cy, r * 1.6); glow.addColorStop(0, "rgba(220,228,255,0.35)"); glow.addColorStop(1, "rgba(220,228,255,0)");
+  p.fillStyle = glow; p.fillRect(0, 0, S, S);
+  p.fillStyle = "#E8ECF4"; p.beginPath(); p.arc(cx, cy, r, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "rgba(170,180,200,0.5)"; for (const [dx, dy, rr] of [[-0.3, -0.2, 0.18], [0.25, 0.1, 0.12], [-0.05, 0.35, 0.1]]) { p.beginPath(); p.arc(cx + dx * r, cy + dy * r, rr * r, 0, Math.PI * 2); p.fill(); }
+  if (phase !== 4) {                                                                           // the shadow: a disc slid across, or the dark side
+    p.fillStyle = "#0A0C18";
+    const k = (phase - 4) / 4;                                                                 // -1 new .. 0 full .. 0.75 waning crescent
+    p.beginPath(); p.arc(cx, cy, r + 1, 0, Math.PI * 2); p.clip();
+    p.beginPath(); p.arc(cx + (phase < 4 ? -1 : 1) * r * 2 * (1 - Math.abs(k)) * -1 + (phase < 4 ? -r * 0 : 0), cy, r * (phase === 0 ? 1.1 : 1.2 + Math.abs(k)), 0, Math.PI * 2);
+    if (phase === 0) { p.fillRect(0, 0, S, S); } else p.fill();
+  }
+  return c;
+};
+// every layer the surface wants, from the painters - `pick(key, drawn)` lets a look use its own tile for one
+CM.art.surfaceLayers = function (pick) {
+  const use = pick || ((key, drawn) => drawn());
+  const out = {};
+  for (const g of CM.GROUNDS) out[`ground:${g}`] = use(`ground.${g}`, () => CM.art.ground(g));
+  out["solid:house"] = use("solid.house", () => CM.art.facade("house"));
+  out["solid:door"] = use("solid.door", () => CM.art.facade("door"));
+  out["solid:shop"] = use("solid.shop", () => CM.art.facade("shop"));
+  out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
+  out["solid:townwall"] = use("solid.townwall", () => CM.art.townWall(false));
+  out["solid:townwall:top"] = use("solid.townwall.top", () => CM.art.townWall(true));
+  out["solid:hedge"] = use("solid.hedge", () => CM.art.hedge());
+  out["solid:fence"] = use("solid.fence", () => CM.art.fence());
+  out["solid:cliff"] = use("solid.cliff", () => CM.art.cliff());
+  out["solid:roof"] = use("solid.roof", () => CM.art.roof());
+  for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v));
+  out.canopy = use("canopy", () => CM.art.canopy());
+  out.skygrad = CM.art.skyGradient();
+  out.sun = CM.art.sun();
+  for (let ph = 0; ph < 8; ph++) out[`moon:${ph}`] = CM.art.moon(ph);
+  return out;
+};
+
 // ---- the whole set for a depth, as texture-array layers (the Drawn theme) ----------------------------------------------
 CM.art.buildDrawn = function (theme) {
   const layers = [], index = {};
@@ -1078,5 +1250,6 @@ CM.art.buildDrawn = function (theme) {
   add("fx:bolt", CM.art.fxBolt()); add("fx:force", CM.art.fxForce()); add("fx:holy", CM.art.fxHoly()); add("fx:arrow", CM.art.fxArrow());
   add("fx:leaf", CM.art.fxLeaf()); add("fx:ring", CM.art.fxRing());
   for (let f = 0; f < 3; f++) { add(`torch${f}`, CM.art.torch(f)); add(`water${f}`, CM.art.water(f)); }
+  for (const [name, c] of Object.entries(CM.art.surfaceLayers())) add(name, c);
   return { layers, index, size: ART_SIZE, crisp: false };
 };

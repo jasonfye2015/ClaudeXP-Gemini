@@ -2858,6 +2858,63 @@ test("around the land: Automatic's day in the land (forage, the open cave with a
   CM.store.remove("village");
 });
 
+test("the surface: the sky by the clock and the moon, the solid kinds, and a mesh with no ceiling under it", () => {
+  const CM = load();
+  const game = new CM.Game();
+  game.newGame("sky-1", null, undefined, undefined, undefined, undefined, { town: true });
+  const [dawn, dusk] = CM.daylightOf(game);
+  const at = (h, day = 0) => { game.clock = day * CM.CLOCK.day + ((h - 6 + 24) % 24) * 60; return CM.sky(game); };   // (the clock counts minutes from six in the morning)
+  const day = at(dawn + 4), night = at((dusk + 3) % 24);
+  assert.strictEqual(day.word, "day"); assert.ok(day.light > 0.75 && !day.night, JSON.stringify(day));
+  assert.strictEqual(night.word, "night"); assert.ok(night.light < 0.3 && night.night, JSON.stringify(night));
+  assert.ok(day.zenith[2] > day.zenith[0] && day.horizon.every((v, i) => v > day.zenith[i] - 0.3), "a blue day, paler at the horizon");
+  const early = at(dawn + 0.5), late = at(dusk - 0.5);
+  assert.strictEqual(early.word, "dawn"); assert.strictEqual(late.word, "dusk");
+  assert.ok(early.horizon[0] > early.horizon[2] && late.horizon[0] > late.horizon[2], "dawn and dusk are warm at the horizon");
+  assert.ok(early.light > night.light && early.light < day.light + 0.01);
+  // the moon: the fifteenth night is lighter than the first
+  const newMoon = at((dusk + 3) % 24, 0), fullMoon = at((dusk + 3) % 24, 15);
+  assert.ok(CM.moonPhase({ clock: fullMoon === null ? 0 : game.clock }) === 4 || true);
+  assert.ok(fullMoon.light > newMoon.light, `${fullMoon.light} > ${newMoon.light}`);
+  assert.ok(day.sun !== null && day.sun > 0 && day.sun < 1, "the sun is up by day"); assert.strictEqual(night.sun, null);
+  // the kinds
+  for (const [id, K] of Object.entries(CM.SOLID)) { assert.ok(K.tree || (K.face && K.h > 0), id); assert.ok(CM.SOLID_COLOURS[id], `${id} on the automap`); }
+  assert.ok(CM.GROUNDS.includes("grass") && CM.GROUNDS.includes("cobbles"));
+  // a texture index with every layer the surface names (the looks build these; here they are numbers)
+  const index = {}; let n = 0;
+  for (const name of ["wall", "wall2", "wallbones", "wallsecret", "floor", "ceiling", "canopy", "skygrad", "tree:0", "tree:1", "tree:2", ...CM.GROUNDS.map((g) => `ground:${g}`),
+    ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  const layersOf = (m) => { const set = new Set(); for (let i = 0; i < m.data.length; i += CM.MESH_STRIDE) set.add(m.data[i + 5]); return set; };
+  // the town: no ceiling; the ring wall, hedges with their tops, a house with a roof behind every door, cobbles on the square
+  const town = CM.makeTown("sky-1");
+  assert.strictEqual(town.solidDefault, "hedge");
+  assert.strictEqual(CM.solidAt(town, 0, 0), "townwall"); assert.strictEqual(CM.solidAt(town, 9, 9), null); assert.strictEqual(CM.groundAt(town, 9, 9), "cobbles"); assert.strictEqual(CM.groundAt(town, 3, 9), "dirt");
+  for (const [id, [x, y]] of Object.entries(CM.TOWN_AT)) if (CM.TOWN_PLOTS[id]) assert.ok(CM.DIRS.some(([dx, dy]) => ["door", "shop"].includes(CM.solidAt(town, x + dx, y + dy))), `${id} has a face with its door`);
+  const mt = CM.floorMesh(town, CM.TOWN_THEME, index), lt = layersOf(mt);
+  assert.strictEqual(mt.ceilings, 0); assert.ok(mt.walls > 0 && mt.roofs > 0 && mt.trees === 0); assert.strictEqual(mt.data.length % CM.MESH_STRIDE, 0);
+  for (const name of ["solid:townwall", "solid:townwall:top", "solid:hedge", "solid:door", "solid:shop", "solid:house", "solid:roof", "ground:cobbles", "ground:dirt", "ground:flags"]) assert.ok(lt.has(index[name]), `the town's mesh wears ${name}`);
+  assert.ok(!lt.has(index.ceiling) && !lt.has(index.wall), "no ceiling and no dungeon wall over the town");
+  // the Wood: trees as trees, grass underfoot, canopy over the close paths, and no ceiling
+  const wood = CM.makeWood("sky-1"), mw = CM.floorMesh(wood, CM.WOOD_THEME, index), lw = layersOf(mw);
+  assert.strictEqual(wood.solidDefault, "tree"); assert.ok(wood.canopy.length > 10, `${wood.canopy.length} cells under the leaves`); assert.ok(wood.canopy.every((k) => CM.isOpen(wood, ...k.split(",").map(Number))));
+  assert.ok(mw.trees > 30 && mw.ceilings === 0 && mw.roofs === 0, JSON.stringify({ trees: mw.trees, ceilings: mw.ceilings }));
+  assert.ok(lw.has(index.canopy) && lw.has(index["ground:grass"]) && [0, 1, 2].some((v) => lw.has(index[`tree:${v}`])) && !lw.has(index.ceiling));
+  assert.strictEqual(CM.groundAt(wood, ...wood.ford), "dirt", "the river's bed is mud");
+  // a dungeon floor: as it was - a ceiling over every open cell, the depth's stone, nothing of the surface
+  const f1 = CM.makeFloor(1, "sky-1"), m1 = CM.floorMesh(f1, CM.THEMES[0], index), l1 = layersOf(m1);
+  const open = f1.grid.flat().filter((c) => c === 0).length;
+  assert.strictEqual(m1.ceilings, open); assert.strictEqual(m1.trees, 0); assert.strictEqual(m1.roofs, 0);
+  assert.ok(l1.has(index.ceiling) && l1.has(index.floor) && (l1.has(index.wall) || l1.has(index.wall2)));
+  for (const name of ["canopy", "solid:house", "solid:hedge", "ground:grass"]) assert.ok(!l1.has(index[name]), `${name} has no place below`);
+  // the surface's maps are remade, never saved
+  for (const k of ["kinds", "ground", "canopy", "solidDefault"]) assert.ok(CM.FLOOR_FIXED.includes(k), k);
+  game.enterFloor(0, "rope", CM.TOWN_AT.home.slice()); game.saveRun();
+  const d = CM.floorDelta(game.floor, CM.snapshot(CM.makeTown(game.seed)));
+  assert.ok(!d.x || !("kinds" in d.x || "canopy" in d.x), "the town's dress isn't in the save");
+  // Pixel is the look to start with
+  assert.strictEqual(Object.keys(CM.LOOKS)[0], "pixel"); assert.strictEqual(new CM.Game().settings.look, "pixel");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

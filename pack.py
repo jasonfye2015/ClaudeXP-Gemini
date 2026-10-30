@@ -20,7 +20,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ART = HERE / "src" / "art"
 OUT = HERE / "src" / "js" / "35-packs.js"
-TIMELINE = HERE.parent.parent
+# the Timeline that keeps the whole sets: the folder above the game in the Timeline's tree, or its sibling "Claude Timeline" when
+# the game lives in its own repo beside it, or wherever CLAUDE_TIMELINE points
+import os
+TIMELINE = next((p for p in [Path(os.environ.get("CLAUDE_TIMELINE", "")), HERE.parent.parent, HERE.parent / "Claude Timeline"] if (p / "Local Storage").is_dir()), HERE.parent.parent)
 DCSS = TIMELINE / "Local Storage" / "Dungeon Crawl - Sprites" / "Dungeon Crawl Stone Soup Full"
 ACG = TIMELINE / "Local Storage" / "ambientCG - Textures"
 TILE = 32
@@ -58,6 +61,8 @@ PIXEL = {
     "fx.force": "effect/magic_dart_0", "fx.holy": "effect/sanctuary", "fx.arrow": "effect/arrow_1",
     "torch0": "dungeon/wall/torches/torch_0", "torch1": "dungeon/wall/torches/torch_1", "torch2": "dungeon/wall/torches/torch_2",
     "water0": "dungeon/water/shallow_water", "water1": "dungeon/water/shallow_water_2", "water2": "dungeon/water/shallow_water_disturbance",
+    # the surface: grass and dirt underfoot, the trees, the town wall's grey brick
+    "ground.grass": "dungeon/floor/grass/grass_0_new", "ground.dirt": "dungeon/floor/dirt_0_new", "solid.townwall": "dungeon/wall/brick_gray_0", "solid.townwall.top": "dungeon/wall/brick_gray_2",
     # the monsters, by kind
     "m.Giant Rat": "monster/animals/rat", "m.Kobold": "monster/kobold_new", "m.Skeleton": "monster/undead/skeletal_warrior_new",
     "m.Goblin": "monster/goblin_new", "m.Zombie": "monster/undead/zombies/zombie_small", "m.Orc": "monster/orc_warrior_new",

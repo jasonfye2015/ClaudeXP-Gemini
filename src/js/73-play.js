@@ -205,7 +205,7 @@ Object.assign(CM.UI.prototype, {
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
-      p.fillStyle = wall ? "#3A3028" : dark.has(k) ? "#8A8070" : "#F8F0DC";
+      p.fillStyle = wall ? CM.SOLID_COLOURS[CM.solidAt(fl, x, y)] || "#3A3028" : dark.has(k) ? "#8A8070" : "#F8F0DC";
       p.fillRect(x * cell, y * cell, cell, cell);
       const cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
       if (f && !wall) this.drawFeature(p, f, x, y, cell, fl);

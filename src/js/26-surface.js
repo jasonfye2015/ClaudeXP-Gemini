@@ -1,0 +1,124 @@
+"use strict";
+// The surface, as data the tests can see: the kinds a solid cell can be (the dungeon's wall, a house, the town wall,
+// a hedge, a tree), the ground a cell can wear, the sky by the clock, and the floor's mesh as plain arithmetic - the
+// renderer (40-render.js) only draws what this works out. A floor's grid stays 0 (open) or not; a surface floor adds
+// `kinds` {key: kind} for the solid cells that aren't its `solidDefault`, `ground` {key: ground} for cells that aren't
+// the theme's floor, and `canopy` [keys] for open cells under the trees. All three are remade with the floor from the
+// seed, never saved.
+CM.SOLID = {
+  wall: { face: "wall", h: 1 },                                                  // the dungeon's: the depth's stone, as ever
+  house: { face: "solid:house", h: 1.6, roof: "solid:roof" },                     // plaster and timber, a shuttered window
+  door: { face: "solid:door", h: 1.6, roof: "solid:roof" },                       // the face with the door in it
+  shop: { face: "solid:shop", h: 1.6, roof: "solid:roof" },                       // a door, and the board over it
+  frame: { face: "solid:frame", h: 1.2, see: true },                              // a house being built: posts and beams
+  townwall: { face: "solid:townwall", h: 1.3, top: "solid:townwall:top" },        // the ring wall, with its walk
+  hedge: { face: "solid:hedge", h: 0.55, top: "solid:hedge", see: true },         // seen over
+  fence: { face: "solid:fence", h: 0.5, see: true },                              // seen through
+  cliff: { face: "solid:cliff", h: 2.2, top: "ground:grass" },                    // the hill's side
+  tree: { tree: true, h: 1.7, see: true },                                        // not a wall: a trunk and a crown, two crossed pictures
+};
+CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
+CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss"];
+// what stands at a cell: null for open ground, else the solid's kind (the map's edge is the floor's default solid)
+CM.solidAt = (fl, x, y) => (CM.inBounds(fl, x, y) && fl.grid[y][x] === 0 ? null : (fl.kinds && fl.kinds[`${x},${y}`]) || fl.solidDefault || "wall");
+CM.groundAt = (fl, x, y) => (fl.ground && fl.ground[`${x},${y}`]) || null;
+CM.setSolid = (fl, x, y, kind) => { if (kind === (fl.solidDefault || "wall")) { if (fl.kinds) delete fl.kinds[`${x},${y}`]; } else (fl.kinds = fl.kinds || {})[`${x},${y}`] = kind; };
+CM.setGround = (fl, x, y, ground) => { (fl.ground = fl.ground || {})[`${x},${y}`] = ground; };
+// the open cells with trees on most sides are under the leaves (eight neighbours, five or more trees)
+CM.markCanopy = function (fl) {
+  const size = fl.grid.length, out = [];
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    if (fl.grid[y][x] !== 0) continue;
+    let trees = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && CM.solidAt(fl, x + dx, y + dy) === "tree") trees++;
+    if (trees >= 5) out.push(`${x},${y}`);
+  }
+  fl.canopy = out;
+  return out;
+};
+
+// ---- the sky, by the clock: night, dawn, day, dusk, with the moon and the weather on it --------------------------------
+CM.SKY = {
+  night: { zenith: [0.03, 0.04, 0.10], horizon: [0.09, 0.10, 0.18], light: 0.06 },
+  dawn: { zenith: [0.36, 0.40, 0.64], horizon: [0.96, 0.64, 0.44], light: 0.6 },
+  day: { zenith: [0.34, 0.55, 0.88], horizon: [0.80, 0.88, 0.96], light: 1 },
+  dusk: { zenith: [0.24, 0.20, 0.42], horizon: [0.92, 0.50, 0.30], light: 0.5 },
+};
+CM.daylightOf = (game) => (game && game.season && CM.DAYLIGHT && CM.DAYLIGHT[game.season]) || [6, 20];
+// {zenith, horizon (0..1 rgb), light (0 dark .. 1 full day), word, night, sun, moon (0..1 along the arc, or null), phase, weather}
+CM.sky = function (game) {
+  const h = CM.hourOf(game), [dawn, dusk] = CM.daylightOf(game), S = CM.SKY;
+  const mix = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
+  const blend = (A, B, k) => ({ zenith: mix(A.zenith, B.zenith, k), horizon: mix(A.horizon, B.horizon, k), light: A.light + (B.light - A.light) * k });
+  let sky, word;
+  if (h >= dawn - 1 && h < dawn) { sky = blend(S.night, S.dawn, h - (dawn - 1)); word = "dawn"; }
+  else if (h >= dawn && h < dawn + 1.5) { sky = blend(S.dawn, S.day, (h - dawn) / 1.5); word = "dawn"; }
+  else if (h >= dawn + 1.5 && h < dusk - 1.5) { sky = blend(S.day, S.day, 0); word = "day"; }
+  else if (h >= dusk - 1.5 && h < dusk) { sky = blend(S.day, S.dusk, (h - (dusk - 1.5)) / 1.5); word = "dusk"; }
+  else if (h >= dusk && h < dusk + 1) { sky = blend(S.dusk, S.night, h - dusk); word = "dusk"; }
+  else { sky = blend(S.night, S.night, 0); word = "night"; }
+  const phase = CM.moonPhase(game), moonlight = (1 - Math.abs(phase - 4) / 4) * 0.14;   // a full moon lightens the night
+  if (sky.light < 0.3) { const k = 1 - sky.light / 0.3; sky.light += moonlight * k; sky.zenith = mix(sky.zenith, [0.10, 0.12, 0.22], moonlight * 3 * k); sky.horizon = mix(sky.horizon, [0.14, 0.16, 0.26], moonlight * 3 * k); }
+  const weather = CM.weather ? CM.weather(game) : "clear";
+  if (weather === "rain" || weather === "mist" || weather === "snow") {                 // a low sky: greyer, and less light
+    const grey = weather === "mist" ? [0.72, 0.74, 0.76] : weather === "snow" ? [0.78, 0.78, 0.82] : [0.46, 0.48, 0.52];
+    sky.zenith = mix(sky.zenith, grey, 0.6 * sky.light); sky.horizon = mix(sky.horizon, grey, 0.6 * sky.light); sky.light *= 0.8;
+  }
+  const P = CM.skyPlaces(game);
+  return Object.assign(sky, { word, night: sky.light < 0.3, sun: P.sun, moon: P.moon, phase, weather });
+};
+
+// ---- the floor as triangles -----------------------------------------------------------------------------------------
+// A vertex is ten floats: position 3, texture 3 (u, v, layer), shade 1, fx 3 (a hit's flash, alpha, glow). `index`
+// names the texture layers (the look's); a layer the look hasn't got falls back to the plain wall. Returns {data,
+// count} and what was built, for the tests: ceilings, walls, roofs, trees.
+CM.MESH_STRIDE = 10;
+CM.floorMesh = function (fl, theme, index) {
+  const grid = fl.grid, size = grid.length, out = [], features = fl.features || {}, sky = Boolean(theme.sky), canopy = new Set(fl.canopy || []);
+  const L = (name) => (index[name] !== undefined ? index[name] : index.wall);
+  const quad = (a, b, c, d, layer, shade) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
+  const pickWall = (x, y, d, wx, wy) => {
+    const f = features[`${wx},${wy}`];
+    if (f && f.type === "secret" && !f.found) return index.wallsecret;              // (a hairline, for the sharp-eyed)
+    const h = (x * 73856093) ^ (y * 19349663) ^ (d * 83492791), r = ((h >>> 0) % 1000) / 1000;
+    return r < (theme.bones || 0) * 0.5 ? index.wallbones : r < 0.6 ? index.wall : index.wall2;
+  };
+  const kindOf = (x, y) => CM.SOLID[CM.solidAt(fl, x, y)] || CM.SOLID.wall;
+  const solid = (nx, ny) => ny < 0 || ny >= size || nx < 0 || nx >= size || grid[ny][nx] !== 0;
+  const tops = new Set(), trees = new Set();
+  let ceilings = 0, walls = 0, roofs = 0;
+  const SIDES = [[0, -1, 1.0], [0, 1, 1.0], [1, 0, 0.84], [-1, 0, 0.84]];                  // north, south, east, west: the far wall lit a little more
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    if (grid[y][x] !== 0) continue;
+    const under = sky && canopy.has(`${x},${y}`), g = CM.groundAt(fl, x, y);
+    const floorLayer = g && index[`ground:${g}`] !== undefined ? index[`ground:${g}`] : index.floor;
+    quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, under ? 0.55 : 0.9);
+    if (!sky) { quad([x, 1, y], [x + 1, 1, y], [x + 1, 1, y + 1], [x, 1, y + 1], index.ceiling, 0.7); ceilings++; }
+    else if (under && index.canopy !== undefined) quad([x, 1.25, y], [x + 1, 1.25, y], [x + 1, 1.25, y + 1], [x, 1.25, y + 1], index.canopy, 0.6);
+    SIDES.forEach(([dx, dy, shade], d) => {
+      const nx = x + dx, ny = y + dy;
+      if (!solid(nx, ny)) return;
+      const K = kindOf(nx, ny), key = `${nx},${ny}`;
+      if (K.tree) {                                                                   // the trees: this one, and the rank behind it
+        trees.add(key);
+        if (solid(nx + dx, ny + dy) && kindOf(nx + dx, ny + dy).tree) trees.add(`${nx + dx},${ny + dy}`);
+        return;
+      }
+      const h = K.h || 1, layer = K.face === "wall" ? pickWall(x, y, d, nx, ny) : L(K.face);
+      const a = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
+      const b = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
+      quad([a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]], layer, shade); walls++;
+      if (K.roof && index[K.roof] !== undefined) {                                    // the eaves: a slope from the wall's top back over the house
+        const ix = dx * 0.5, iz = dy * 0.5;
+        quad([a[0], h, a[1]], [b[0], h, b[1]], [b[0] + ix, h + 0.45, b[1] + iz], [a[0] + ix, h + 0.45, a[1] + iz], index[K.roof], shade * 0.8); roofs++;
+      }
+      if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
+    });
+  }
+  for (const key of trees) {                                                            // two crossed pictures a tree, of the seed's three
+    const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, layer = L(`tree:${v}`), h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
+    quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0);
+    quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0);
+  }
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, trees: trees.size };
+};
