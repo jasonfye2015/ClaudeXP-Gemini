@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v9.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v9.6 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -525,7 +525,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "9.5", built: "2026-10-30" };
+const CM = window.CM = { version: "9.6", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -4736,6 +4736,8 @@ CM.weatherOf = (seed, day, season) => { const odds = CM.WEATHER_ODDS[season] || 
 CM.weather = (game) => (game && game.seed !== undefined ? CM.weatherOf(game.seed, CM.dayOf(game), CM.season(game)) : "clear");
 CM.WEATHER_WORDS = { clear: "clear", rain: "rain (the river is up: the ford is deep, and the farm drinks)", mist: "mist (the beasts and the party find each other late)", wind: "wind (the beasts do not smell the party coming)", snow: "snow (tracks in the Wood, the river frozen and crossed anywhere, the well frozen)" };
 CM.dateWords = (game) => { const f = CM.festival(game); return `${CM.season(game)}, day ${CM.dayOf(game) + 1} of the run${f ? ` - ${CM.FESTIVALS[f].name}` : ""}; ${CM.weather(game)}`; };
+// snow lies (the eleventh update, phase 3): in winter, on a day of snow and the day after one
+CM.snowLying = (game) => CM.season(game) === "winter" && (CM.weather(game) === "snow" || (game && game.seed !== undefined && CM.dayOf(game) > 0 && CM.weatherOf(game.seed, CM.dayOf(game) - 1, "winter") === "snow"));
 // the day's length by the season: the hour the rules read as night
 { const was = CM.isNight; CM.isNight = (game) => { if (!game || !game.season || !CM.DAYLIGHT[game.season]) return was(game); const h = CM.hourOf(game), [dawn, dusk] = CM.DAYLIGHT[game.season]; return h >= dusk || h < dawn; }; }
 // a daily's mutators take the season's colour: winter dailies carry Gloom more often, summer dailies Swift
@@ -5086,6 +5088,15 @@ CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
 CM.UNDER = ["tree", "hedge", "fence", "frame"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
+// the trees by the season (the eleventh update, phase 3): the crown's colour, bare in winter, snow on the fir, blossom
+// on the oak in spring; the canopy over the paths with them. Pictures only: the mesh is the same in every season.
+CM.CROWNS = {
+  0: { spring: { colour: [104, 156, 66], blossom: true }, summer: { colour: [62, 110, 48] }, autumn: { colour: [168, 78, 38], mix: [196, 132, 48] }, winter: { bare: true } },   // the oak
+  1: { spring: { colour: [52, 100, 60] }, summer: { colour: [40, 84, 52] }, autumn: { colour: [40, 80, 50] }, winter: { colour: [34, 70, 48], snow: true } },                   // the fir
+  2: { spring: { colour: [132, 178, 78] }, summer: { colour: [84, 140, 62] }, autumn: { colour: [196, 150, 48] }, winter: { bare: true } },                                   // the birch
+};
+CM.crownOf = (variant, season) => (CM.CROWNS[variant] || CM.CROWNS[0])[CM.CROWNS[0][season] ? season : "summer"];
+CM.CANOPIES = { spring: [74, 128, 52], summer: [50, 96, 40], autumn: [150, 84, 40], winter: null };   // (winter: bare branches over the path)
 CM.treeVariant = (fl, x, y) => CM.hashSeed(`${fl.number}:tree:${x},${y}`) % 3;   // 0 an oak, 1 a fir, 2 a birch in its autumn
 // what stands at a cell: null for open ground, else the solid's kind (the map's edge is the floor's default solid)
 CM.solidAt = (fl, x, y) => (CM.inBounds(fl, x, y) && fl.grid[y][x] === 0 ? null : (fl.kinds && fl.kinds[`${x},${y}`]) || fl.solidDefault || "wall");
@@ -6818,6 +6829,13 @@ CM.art.litWindow = function () {
   p.fillStyle = "#5A4028"; p.fillRect(S / 2 - S * 0.04, 0, S * 0.08, S); p.fillRect(0, S / 2 - S * 0.04, S, S * 0.08);
   return c;
 };
+// the river frozen: white-blue, with cracks and the snow blown across it
+CM.art.ice = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(77);
+  p.fillStyle = "#BCD4E4"; p.fillRect(0, 0, S, S); speckle(p, rnd, S, S, 900, "#E8F2F8", 0.5, 4);
+  p.strokeStyle = "rgba(70,100,130,0.6)"; p.lineWidth = 2; for (let i = 0; i < 7; i++) { let x = rnd.next() * S, y = rnd.next() * S; p.beginPath(); p.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (rnd.next() - 0.5) * 60; y += (rnd.next() - 0.5) * 60; p.lineTo(x, y); } p.stroke(); }
+  return c;
+};
 CM.art.townWall = function (top = false, seed = 1) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`townwall:${top}:${seed}`)), base = top ? [120, 116, 108] : [104, 100, 94];
   p.fillStyle = rgb(base, 0.55); p.fillRect(0, 0, S, S);
@@ -6855,20 +6873,33 @@ CM.art.roof = function (seed = 1) {
   return c;
 };
 // a tree, trunk and crown, against nothing (three kinds: an oak, a tall fir, a birch in its autumn)
-CM.art.tree = function (variant = 0, bark = null) {                       // bark: a picture for the trunk (the Stone look's photograph), else painted
-  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`tree:${variant}`));
-  const trunk = variant === 2 ? "#D8D0C0" : "#4A3220", crown = variant === 0 ? [62, 110, 48] : variant === 1 ? [40, 84, 52] : [196, 150, 48];
+CM.art.tree = function (variant = 0, bark = null, season = "autumn") {    // bark: a picture for the trunk (the Stone look's photograph), else painted; the season's crown (CM.crownOf)
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`tree:${variant}`)), C = CM.crownOf(variant, season);
+  const trunk = variant === 2 ? "#D8D0C0" : "#4A3220", crown = C.colour || [62, 110, 48];
+  if (C.bare) {                                                           // winter: the trunk up into its branches, nothing on them
+    if (bark && variant !== 2) { p.save(); p.beginPath(); p.rect(S / 2 - 12, S * 0.3, 24, S * 0.7); p.clip(); p.drawImage(bark, 0, 0, S / 2, S, S / 2 - 12, S * 0.3, 24, S * 0.7); p.restore(); }
+    else { p.fillStyle = trunk; p.fillRect(S / 2 - 11, S * 0.3, 22, S * 0.7); }
+    p.strokeStyle = trunk; p.lineCap = "round";
+    const branch = (x, y, a, len, w, depth) => { if (depth > 4 || len < 6) return; const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len; p.lineWidth = w; p.beginPath(); p.moveTo(x, y); p.lineTo(x2, y2); p.stroke();
+      branch(x2, y2, a - 0.45 - rnd.next() * 0.25, len * 0.72, w * 0.68, depth + 1); branch(x2, y2, a + 0.45 + rnd.next() * 0.25, len * 0.72, w * 0.68, depth + 1); };
+    branch(S / 2, S * 0.34, -Math.PI / 2 - 0.5, S * 0.17, 9, 0); branch(S / 2, S * 0.34, -Math.PI / 2 + 0.5, S * 0.17, 9, 0); branch(S / 2, S * 0.32, -Math.PI / 2, S * 0.2, 10, 1);
+    if (variant === 2) { p.fillStyle = "#2A2420"; for (let i = 0; i < 9; i++) p.fillRect(S / 2 - 11 + rnd.next() * 14, S * 0.4 + rnd.next() * S * 0.55, 6 + rnd.next() * 8, 3); }
+    return c;
+  }
   if (bark && variant !== 2) { p.save(); p.beginPath(); p.rect(S / 2 - 12, S * 0.45, 24, S * 0.55); p.clip(); p.drawImage(bark, 0, 0, S / 2, S, S / 2 - 12, S * 0.45, 24, S * 0.55); p.restore(); }
   else { p.fillStyle = trunk; p.fillRect(S / 2 - 12, S * 0.45, 24, S * 0.55); }
   if (variant === 2) { p.fillStyle = "#2A2420"; for (let i = 0; i < 9; i++) p.fillRect(S / 2 - 12 + rnd.next() * 14, S * 0.5 + rnd.next() * S * 0.45, 6 + rnd.next() * 8, 3); }
-  if (variant === 1) { for (let i = 0; i < 5; i++) { const y = S * 0.08 + i * S * 0.14, w = S * 0.14 + i * S * 0.07; p.fillStyle = rgb(crown, 0.8 + i * 0.07); p.beginPath(); p.moveTo(S / 2, y); p.lineTo(S / 2 + w, y + S * 0.2); p.lineTo(S / 2 - w, y + S * 0.2); p.closePath(); p.fill(); } }
-  else { for (let i = 0; i < 26; i++) { const a = rnd.next() * Math.PI * 2, r = rnd.next() * S * 0.26, x = S / 2 + Math.cos(a) * r, y = S * 0.32 + Math.sin(a) * r * 0.8; p.fillStyle = rgb(crown, 0.75 + rnd.next() * 0.5); p.beginPath(); p.arc(x, y, S * 0.1 + rnd.next() * S * 0.08, 0, Math.PI * 2); p.fill(); } }
+  if (variant === 1) { for (let i = 0; i < 5; i++) { const y = S * 0.08 + i * S * 0.14, w = S * 0.14 + i * S * 0.07; p.fillStyle = rgb(crown, 0.8 + i * 0.07); p.beginPath(); p.moveTo(S / 2, y); p.lineTo(S / 2 + w, y + S * 0.2); p.lineTo(S / 2 - w, y + S * 0.2); p.closePath(); p.fill();
+    if (C.snow) { p.fillStyle = "#F2F6FA"; p.beginPath(); p.moveTo(S / 2, y); p.lineTo(S / 2 + w * 0.7, y + S * 0.13); p.quadraticCurveTo(S / 2, y + S * 0.09, S / 2 - w * 0.7, y + S * 0.13); p.closePath(); p.fill(); } } }   // (snow on each tier)
+  else { for (let i = 0; i < 26; i++) { const a = rnd.next() * Math.PI * 2, r = rnd.next() * S * 0.26, x = S / 2 + Math.cos(a) * r, y = S * 0.32 + Math.sin(a) * r * 0.8; p.fillStyle = rgb(C.mix && rnd.next() < 0.4 ? C.mix : crown, 0.75 + rnd.next() * 0.5); p.beginPath(); p.arc(x, y, S * 0.1 + rnd.next() * S * 0.08, 0, Math.PI * 2); p.fill(); }
+    if (C.blossom) for (let i = 0; i < 40; i++) { const a = rnd.next() * Math.PI * 2, r = rnd.next() * S * 0.3; p.fillStyle = rnd.next() < 0.5 ? "#F8D8E4" : "#FFF4F6"; p.beginPath(); p.arc(S / 2 + Math.cos(a) * r, S * 0.32 + Math.sin(a) * r * 0.8, 3 + rnd.next() * 3, 0, Math.PI * 2); p.fill(); } }   // (spring: blossom)
   return c;
 };
-CM.art.canopy = function (seed = 1) {
-  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`canopy:${seed}`));
-  p.fillStyle = "#1E3418"; p.fillRect(0, 0, S, S);
-  for (let i = 0; i < 500; i++) { const k = 0.6 + rnd.next() * 0.9; p.fillStyle = `rgba(${Math.round(50 * k)},${Math.round(96 * k)},${Math.round(40 * k)},0.95)`; p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S, 7 + rnd.next() * 11, 0, Math.PI * 2); p.fill(); }
+CM.art.canopy = function (seed = 1, season = "summer") {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`canopy:${seed}`)), leaf = CM.CANOPIES[season] === undefined ? CM.CANOPIES.summer : CM.CANOPIES[season];
+  if (!leaf) { p.strokeStyle = "#3A2A1C"; p.lineCap = "round"; for (let i = 0; i < 40; i++) { const x = rnd.next() * S, y = rnd.next() * S, a = rnd.next() * Math.PI * 2, l = 20 + rnd.next() * 60; p.lineWidth = 2 + rnd.next() * 4; p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); p.stroke(); } return c; }   // (winter: bare branches over the path)
+  p.fillStyle = rgb(leaf, 0.4); p.fillRect(0, 0, S, S);                                   // (the season's leaves: CM.CANOPIES)
+  for (let i = 0; i < 500; i++) { const k = 0.6 + rnd.next() * 0.9; p.fillStyle = `rgba(${Math.round(leaf[0] * k)},${Math.round(leaf[1] * k)},${Math.round(leaf[2] * k)},0.95)`; p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S, 7 + rnd.next() * 11, 0, Math.PI * 2); p.fill(); }
   p.globalCompositeOperation = "destination-out";                                            // holes for the sky
   for (let i = 0; i < 14; i++) { p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S, 3 + rnd.next() * 6, 0, Math.PI * 2); p.fill(); }
   p.globalCompositeOperation = "source-over";
@@ -6989,8 +7020,9 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:fence"] = use("solid.fence", () => CM.art.fence());
   out["solid:cliff"] = use("solid.cliff", () => CM.art.cliff());
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());
-  for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v));
-  out.canopy = use("canopy", () => CM.art.canopy());
+  for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v, null, CM.art.season || "autumn"));   // (the run's season: CM.art.season, set before a set is built)
+  out.canopy = use("canopy", () => CM.art.canopy(1, CM.art.season || "summer"));
+  out.ice = use("ice", () => CM.art.ice());
   out["far:trees"] = use("far.trees", () => CM.art.farTrees());
   out["far:hill"] = use("far.hill", () => CM.art.farHill());
   out.signpost = use("signpost", () => CM.art.signpost());
@@ -7487,7 +7519,7 @@ CM.art.buildStone = function (theme) {
   const fit = (canvas) => { if (canvas.width === S) return canvas; const c = artCanvas(S); c.getContext("2d").drawImage(canvas, 0, 0, S, S); return c; };
   const surface = CM.art.surfaceLayers((key, drawn) => {                   // the surface: photographs where the set has them, the plaster under the drawn timbers, bark on the trunks
     if (key === "solid.house" || key === "solid.door" || key === "solid.shop" || key === "solid.gable") return CM.art.packs.stone["solid.plaster"] ? CM.art.facade(key.slice(6), 1, photo("solid.plaster", false, 0, true)) : drawn();
-    if (key.startsWith("tree.")) return CM.art.tree(Number(key.slice(5)), CM.art.packs.stone["solid.bark"] || null);
+    if (key.startsWith("tree.")) return CM.art.tree(Number(key.slice(5)), CM.art.packs.stone["solid.bark"] || null, CM.art.season || "autumn");
     if ((key === "ground.litter" || key === "ground.needles") && CM.art.packs.stone[key]) return CM.art.footShade(photo(key, false, 0, true));   // (the photograph, with the trunk's shade)
     if (key === "solid.roof" && CM.art.packs.stone[key]) { const c = photo(key, false, 0, true), q = c.getContext("2d"); q.fillStyle = "rgba(255,200,150,0.22)"; q.fillRect(0, 0, S, S); return c; }   // (slate, warmed a little)
     return CM.art.packs.stone[key] ? photo(key, false, 0, true) : drawn();
@@ -7511,7 +7543,7 @@ CM.art.build = function (theme, look = "drawn") {
 // which of a set's pictures are the band's own (uploaded with each band) and which are shared (uploaded once a look)
 CM.SHARED_SIZE = 256;
 CM.art.THEME_LAYERS = new Set(["wall", "wall2", "wallbones", "wallsecret", "floor", "ceiling", "hatch", "pit", "trapdoor", "stairs_up"]);
-CM.art.isSurfaceLayer = (name) => /^(ground:|solid:|tree:|far:|canopy$|skygrad$|sun$|moon:)/.test(name);   // (the outdoors: only the town and the land use these)
+CM.art.isSurfaceLayer = (name) => /^(ground:|solid:|tree:|far:|canopy$|skygrad$|sun$|moon:|window:|ice$)/.test(name);   // (the outdoors: only the town and the land use these)
 CM.art.isThemeLayer = (name, theme) => CM.art.THEME_LAYERS.has(name) || Boolean(theme && theme.sky && CM.art.isSurfaceLayer(name));
 // the painters that take no theme draw the same thing every time: keep what they drew, so a band's set is quick to
 // make again (the canvases are only read: by the uploads, and by the looks that copy or pixelate them)
@@ -7525,7 +7557,7 @@ CM.art.isThemeLayer = (name, theme) => CM.art.THEME_LAYERS.has(name) || Boolean(
     "debrisProp", "shadow", "decal"]) memo(name, byArgs);
   memo("monster", (args) => JSON.stringify([args[0] && args[0].name, args[0] && args[0].colour, args[1], args[2]]));
   memo("facade", (args) => (args[2] ? null : byArgs(args)));                     // (over a photograph: drawn afresh)
-  memo("tree", (args) => (args[1] ? `bark:${args[0]}` : byArgs(args)));           // (the Stone look's bark is one picture)
+  memo("tree", (args) => `${args[1] ? "bark:" : ""}${args[0]}:${args[2] || ""}`);   // (the Stone look's bark is one picture; a picture a season)
   memo("prop", (args) => `${args[0]}|${args[1] ? "kit" : ""}`);
   memo("surfaceProp", (args) => `${args[0]}|${args[1]}|${args[2] ? "kit" : ""}`);
   const px = new WeakMap(), pixelate = CM.art.pixelate;                       // (a picture made of pixels: the same picture, the same pixels)
@@ -7713,7 +7745,7 @@ uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
 uniform int uLights; uniform vec4 uLightPos[12]; uniform vec3 uLightCol[12];   // the lights about the party: xyz, reach in w; colour
 uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
-uniform float uTime; uniform float uWet;                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uSnow; uniform float uMist;                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 void main() {
   bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
@@ -7750,11 +7782,14 @@ void main() {
     extra += uLightCol[i] * fall * face;
   }
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
+  float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
+  if (uSnow > 0.0 && up > 0.55) col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, uSnow * smoothstep(0.55, 0.8, up) * 0.88);   // snow lying on what faces up
   if (uWet > 0.0 && n.y > 0.7) {                                            // the rain on the ground: darker, and the sky in it at a low angle
     vec3 v = normalize(uEye - vWorld); float fw = pow(1.0 - max(v.y, 0.0), 4.0);
     col = col * (1.0 - 0.28 * uWet) + uWet * fw * mix(uHorizon, uZenith, 0.4) * 0.45;
   }
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
+  fog = max(fog, uMist * (1.0 - smoothstep(0.0, 1.4, vWorld.y)) * smoothstep(0.8, 7.0, d) * 0.85);   // (mist: lying low on the land)
   col = mix(col, uFog, fog);
   col = mix(col, t.rgb, vFx.z * (1.0 - fog * 0.7));
   col = mix(col, vec3(1.0, 0.3, 0.2), vFx.x);
@@ -7800,7 +7835,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade", "uTime", "uWet"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -8069,7 +8104,7 @@ CM.Renderer = class {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(this.program);
     gl.uniformMatrix4fv(this.loc.uViewProj, false, this.viewProj);
-    gl.uniform3fv(this.loc.uEye, eye);
+    gl.uniform3fv(this.loc.uEye, this.inspect ? this.inspect.eye : eye);   // (the free camera sees from its own eye)
     // under a sky: daylight is flat and reaches to the horizon; at night the torch and the moon do what they can
     gl.uniform3fv(this.loc.uTorch, sky ? [t.torch[0] + (1 - t.torch[0]) * sky.light, t.torch[1] + (1 - t.torch[1]) * sky.light, t.torch[2] + (1 - t.torch[2]) * sky.light] : t.torch);
     gl.uniform3fv(this.loc.uFog, fogc);
@@ -8087,7 +8122,7 @@ CM.Renderer = class {
       gl.uniform3fv(this.loc.uSun, v.map((c) => c / m)); gl.uniform1f(this.loc.uSunK, sky.sun !== null && sky.light > 0.15 ? 0.9 : 0.4);
     } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
     gl.uniform3fv(this.loc.uGrade, t.grade || [1, 1, 1]);
-    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0);
+    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);
@@ -17955,12 +17990,14 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---- textures by depth and by theme, the floor's mesh, the camera ----
   let artCache = {}, cacheOrder = [];
-  let themeOn = -1, lookOn = null, dreamOn = false;
+  let themeOn = -1, lookOn = null, dreamOn = false, seasonOn = null;
   const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
-    if (((number === 0 ? -2 : number === -1 ? -3 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn) || !renderer.ok) return;
-    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : null, key = special ? `${look}:${special.name}` : `${look}:${i}${game.dream ? ":dream" : ""}`;
+    const season = CM.season ? CM.season(game) : "summer";
+    if (((number === 0 ? -2 : number === -1 ? -3 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
+    CM.art.season = season; seasonOn = season;
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
@@ -18421,7 +18458,8 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
-    for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, dx: w.dx || 0, dz: w.dz || 0, flat: true, w: w.w || 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75, water: true });   // (the water shader: 40-render.js)
+    const frozen = fl.number === -1 && CM.weather(game) === "snow";      // (the river frozen, as the rules have it: crossed anywhere)
+    for (const w of d.water) if (near(w.x, w.y)) out.push(frozen && !w.w ? { x: w.x, y: w.y, flat: true, w: 0.99, layer: "ice" } : { x: w.x, y: w.y, dx: w.dx || 0, dz: w.dz || 0, flat: true, w: w.w || 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75, water: true });   // (the water shader: 40-render.js)
     if (game.mode === "combat") {
       const living = game.attackable();
       const fwdv = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
@@ -18652,6 +18690,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
+        renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && CM.weather(game) === "mist" ? 1 : 0;   // (snow lying, mist low: the seasons seen)
         { const night = Boolean(renderer.sky && renderer.sky.night) && game.floor.number === 0;   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
           if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && game.floor.number === 0) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
         renderer.lights = lightsNear(game.floor);

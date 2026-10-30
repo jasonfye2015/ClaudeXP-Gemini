@@ -71,6 +71,15 @@ CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
 CM.UNDER = ["tree", "hedge", "fence", "frame"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
+// the trees by the season (the eleventh update, phase 3): the crown's colour, bare in winter, snow on the fir, blossom
+// on the oak in spring; the canopy over the paths with them. Pictures only: the mesh is the same in every season.
+CM.CROWNS = {
+  0: { spring: { colour: [104, 156, 66], blossom: true }, summer: { colour: [62, 110, 48] }, autumn: { colour: [168, 78, 38], mix: [196, 132, 48] }, winter: { bare: true } },   // the oak
+  1: { spring: { colour: [52, 100, 60] }, summer: { colour: [40, 84, 52] }, autumn: { colour: [40, 80, 50] }, winter: { colour: [34, 70, 48], snow: true } },                   // the fir
+  2: { spring: { colour: [132, 178, 78] }, summer: { colour: [84, 140, 62] }, autumn: { colour: [196, 150, 48] }, winter: { bare: true } },                                   // the birch
+};
+CM.crownOf = (variant, season) => (CM.CROWNS[variant] || CM.CROWNS[0])[CM.CROWNS[0][season] ? season : "summer"];
+CM.CANOPIES = { spring: [74, 128, 52], summer: [50, 96, 40], autumn: [150, 84, 40], winter: null };   // (winter: bare branches over the path)
 CM.treeVariant = (fl, x, y) => CM.hashSeed(`${fl.number}:tree:${x},${y}`) % 3;   // 0 an oak, 1 a fir, 2 a birch in its autumn
 // what stands at a cell: null for open ground, else the solid's kind (the map's edge is the floor's default solid)
 CM.solidAt = (fl, x, y) => (CM.inBounds(fl, x, y) && fl.grid[y][x] === 0 ? null : (fl.kinds && fl.kinds[`${x},${y}`]) || fl.solidDefault || "wall");

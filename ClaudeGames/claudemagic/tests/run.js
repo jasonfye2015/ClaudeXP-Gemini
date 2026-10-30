@@ -3411,6 +3411,28 @@ test("things that move: a door swings on its hinge and a portcullis lifts over t
   assert.ok(main.includes("water: true") && main.includes("CM.swing(Boolean(f.open)") && main.includes("puddle"), "the frame flags the water, swings the doors, lays the puddles");
 });
 
+test("the seasons seen: each tree's crown by the season (bare oaks and birches in winter, snow on the fir, blossom in spring, red in autumn); snow lies in winter on a day of snow and the day after; the surface's pictures are the season's; the land's flowers go in winter", () => {
+  const CM = load();
+  assert.ok(CM.crownOf(0, "winter").bare && CM.crownOf(2, "winter").bare, "bare in winter"); assert.ok(CM.crownOf(1, "winter").snow && !CM.crownOf(1, "winter").bare, "the fir keeps its needles, snow on them");
+  assert.ok(CM.crownOf(0, "spring").blossom, "the oak blossoms"); assert.ok(CM.crownOf(0, "autumn").colour[0] > CM.crownOf(0, "summer").colour[0] + 60, "the oak reddens in autumn");
+  assert.ok(CM.crownOf(2, "autumn").colour[0] > 150, "the birch golds"); assert.deepStrictEqual(CM.crownOf(0, "nonsense"), CM.crownOf(0, "summer"));
+  assert.strictEqual(CM.CANOPIES.winter, null, "the canopy bare in winter");
+  CM.weatherOf = CM.weatherOfReal;                                       // (the real dice for the weather)
+  const g = new CM.Game(); g.newGame("snow-1", fixedParty(CM)); g.season = "winter";
+  let lying = 0, after = 0;
+  for (let day = 1; day < 60; day++) { g.clock = day * CM.CLOCK.day; const today = CM.weather(g), yesterday = CM.weatherOf(g.seed, day - 1, "winter");
+    assert.strictEqual(CM.snowLying(g), today === "snow" || yesterday === "snow", `day ${day}`); if (CM.snowLying(g)) lying++; if (today !== "snow" && yesterday === "snow") after++; }
+  assert.ok(lying > 0 && after > 0, "snow lies, and lies the day after");
+  g.season = "summer"; for (let day = 1; day < 20; day++) { g.clock = day * CM.CLOCK.day; assert.ok(!CM.snowLying(g), "never in summer"); }
+  const land = CM.makeWood("snow-2"), ids = (season) => new Set(CM.scatter(land, "snow-2", 1, { season }).map((p) => p.id));
+  assert.ok(!ids("winter").has("flowers") && ids("spring").has("flowers") || !ids("spring").has("flowers"), "no flowers in winter");
+  const main = fs.readFileSync(path.join(ROOT, "src", "js", "80-main.js"), "utf8"), render = fs.readFileSync(path.join(ROOT, "src", "js", "40-render.js"), "utf8"), art = fs.readFileSync(path.join(ROOT, "src", "js", "30-art.js"), "utf8");
+  assert.ok(main.includes(":${season}`") && main.includes("CM.art.season = season"), "the surface's set is made for the season");
+  assert.ok(main.includes("CM.snowLying(game)") && main.includes("\"ice\""), "snow lies, the river freezes");
+  assert.ok(render.includes("uSnow") && render.includes("uMist"), "the shader whitens what faces up, and lays the mist low");
+  assert.ok(art.includes("C.bare") && art.includes("C.blossom") && art.includes("C.snow"), "the painters read the crown");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

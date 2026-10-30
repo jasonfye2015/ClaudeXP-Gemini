@@ -162,7 +162,17 @@ a second and their lights waver.
   lid stays open after a save; the water flag is on exactly the water cells; the night facade is used only at
   night; the moving list is empty when nothing moves (so the floor is never rebuilt for it).
 
-## Phase 3 - The seasons seen - v9.6 (graphics; medium) - deferred from the ninth update's Phase 2
+## Phase 3 - The seasons seen - v9.6 (graphics; medium) - deferred from the ninth update's Phase 2 - DONE
+
+As built: `CM.CROWNS` / `CM.crownOf` (26-surface.js) say what each of the three trees wears in each season and
+`CM.CANOPIES` the canopy over the paths; the painters read them (`CM.art.tree(variant, bark, season)`, `CM.art.canopy`)
+and the town's and the land's sets are built for the run's season (the set's key has the season in it). Winter oaks and
+birches are bare branches, firs carry snow on each tier, spring oaks blossom, autumn oaks redden. `CM.snowLying` (24b):
+winter, on a day of snow and the day after; the shader whitens what faces up (roofs, the ground, the wall's walk, the
+hedges' tops - a level top from either side, since the eye can stand at a hedge's height). The river is ice on a day of
+snow (as the rules already have it: crossed anywhere). Mist lies low on the land (a fog term by height). The orchard's
+blossom became the oaks' (the farm has no fruit trees); fallen leaves under the broadleaves were already the ground's
+litter. The free camera now sees from its own eye, which the shader needs to tell which way a surface faces.
 
 - **The trees by season**: the three tree kinds get a crown per season (the oak green, deep green, red-brown,
   bare; the fir the same fir with snow on its tiers in winter; the birch green, green, its autumn gold as today,
