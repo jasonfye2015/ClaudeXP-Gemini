@@ -321,6 +321,22 @@ window.addEventListener("DOMContentLoaded", () => {
       layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost", echo: Boolean(foe.echo) };
   }
 
+  // the air about the party: what belongs where (CM.airKinds), as many as the Detail allows; chimneys on the town's
+  // houses by hash, the smoke rising from them
+  const air = new CM.Air(); CM.air = air;
+  let airFloor = null, chimneys = [];
+  function stepAir(dt) {
+    const fl = game.floor;
+    if (!fl || CM.reducedMotion || game.mode === "title") { air.parts = []; return; }
+    if (airFloor !== fl) { airFloor = fl; air.parts = []; chimneys = [];
+      if (fl.number === 0) for (const [k, kind] of Object.entries(fl.kinds || {})) if (kind === "house" && CM.hashSeed(`${game.seed}:chimney:${k}`) % 5 === 0) { const [x, y] = k.split(",").map(Number); chimneys.push([x + 0.5, y + 0.5]); } }
+    const surface = fl.number === 0 || fl.number === -1, detail = Object.keys(CM.DETAIL).find((k) => CM.DETAIL[k] === renderer.density) || "medium";   // (the Detail in force, after any step-down)
+    const budget = CM.AIR_BUDGET[detail] || 0, weather = surface ? CM.weather(game) : "clear";
+    const kinds = budget ? CM.airKinds({ surface, band: CM.themeIndex(fl.number >= 1 ? fl.number : 1), season: CM.season(game), weather, night: CM.isNight(game), hour: CM.hourOf(game), town: fl.number === 0 }) : [];
+    const scale = detail === "high" ? 1 : 0.6;
+    air.step(Math.min(dt, 0.1), { kinds: kinds.map((k) => ({ id: k.id, rate: k.rate * scale })), eye: renderer.eye, budget, chimneys, wind: CM.windOf(weather), open: surface ? null : (x, y) => CM.isOpen(fl, x, y) });
+  }
+
   // the lights about the party: the wall torches, the lair's embers, crystals and fungus, the props that glow, and the
   // town's lamps at night - nearest first, twelve at most (the shader's limit)
   const LIGHT = { torch: { colour: [0.95, 0.55, 0.22], reach: 3.2, z: 0.62, flicker: true }, ember: { colour: [1.0, 0.42, 0.12], reach: 2.2, z: 0.1, flicker: true },
@@ -492,6 +508,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
     out.push(...fxs.sprites(now));                                      // what flies and bursts, this frame
+    out.push(...air.sprites(now / 1000));                               // what drifts in the air
     return { out, hud };
   }
 
@@ -689,6 +706,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
         renderer.lights = lightsNear(game.floor);
+        stepAir(dt);
         const { out, hud } = sprites();
         renderer.setSprites(out);
         renderer.frame(dt);

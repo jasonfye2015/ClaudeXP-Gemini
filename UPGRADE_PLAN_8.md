@@ -231,7 +231,7 @@ file, since the drawing and window files are not loaded by the Node tests.
 - **Tests**: the light count stays within the shader's limit; a floor with no torches renders as today; the sun's
   direction follows the clock.
 
-## Phase 7 - Air and weather - v8.8 (medium)
+## Phase 7 - Air and weather - v8.8 (medium) - DONE
 
 - **In the dungeon**: dust motes in the torchlight, drips from wet ceilings (Flooded Vaults, caves), embers rising in
   the Foundry, spores drifting in the Fungal Deep, glitter in the Crystal Caverns, cold breath in the Palace.
@@ -252,6 +252,27 @@ file, since the drawing and window files are not loaded by the Node tests.
 - **Docs**: the README's section, the Timeline's Help and Manual, the Manual's screenshots retaken.
 - **Tests**: all of the above; `npm test`; the Timeline's five.
 
+## Phase 9 - The clock, the calendar, the sun and the moon, made visible - v9.1 (medium; added at the player's word)
+
+The game keeps an hour, a day, a season, a festival week, the weather and a moon's phase, and the sky above the town
+and the land follows them, but in the HUD all of it is a sky bar 120 pixels wide and an eleven-pixel line of words in
+the corner of the view, faded below ground. This phase makes the clock something to read at a glance:
+
+- **A clock dial** in the side panel: a day-and-night disc turning under a fixed pointer (sky blue by day, a starry
+  blue by night, dawn and dusk bands at the season's own hours), the sun and the moon on it where they are, the
+  hour in words and figures beside it, "above" when the party is below ground.
+- **The moon's phase** drawn large on the dial at night and in its own small window by day: the eight phases, the
+  full moon and the new moon named, and what they do (a full moon: the dead near the surface harder; a new moon:
+  locks easier, ambushes likelier).
+- **The calendar**: the day of the run, the season with its colour, the weather with an icon, and the festival when
+  it is the week of one, with its rule in a line; a small strip of the coming days' weather (the seed decides it, so
+  the game can show it).
+- **A Calendar dialog** (the dial is a button, and a key): the month's festivals, the season's daylight hours, the
+  moon's month as a row of eight faces with today marked, the next full and new moons, and what each does.
+- **Below ground** the dial stays readable rather than faded, so a party deep down knows when it is night above.
+- **Tests**: the dial's hand and the sun's and moon's places follow the clock; the phase drawn is the game's; the
+  calendar's next full moon and festival are right; the coming weather is the seed's.
+
 ## Order, sizes and what depends on what
 
 | Phase | Version | Size | Depends on | Why in this order |
@@ -265,6 +286,7 @@ file, since the drawing and window files are not loaded by the Node tests.
 | 6 Light and shadow | 8.7 | M-L | 3, 5 | Lights look best on stone that has something on it |
 | 7 Air and weather | 8.8 | M | - | Independent; the effects system exists |
 | 8 Around | 9.0 | S | all | Performance, size, docs |
+| 9 The clock made visible | 9.1 | M | - | Added at the player's word |
 
 ## Downloads (CC0, kept whole in the Timeline's Local Storage, asked for at the phase that needs them)
 

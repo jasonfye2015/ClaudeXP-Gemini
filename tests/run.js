@@ -3181,6 +3181,25 @@ test("the pack's weight only slows: walking, Explore and Where to? work at any w
   assert.strictEqual(g3.light.kind, "torch", "lit on the next step"); assert.ok(!g3.bag.some((i) => i.kind === "torch"));
 });
 
+test("the air: dust in every band and each band's own; on the surface rain, snow, leaves, fireflies, birds, clouds and chimney smoke by the season, the weather and the hour; none at Low", () => {
+  const CM = load();
+  const ids = (env) => CM.airKinds(env).map((k) => k.id);
+  assert.ok(ids({ surface: false, band: 0 }).includes("mote"));
+  assert.ok(ids({ surface: false, band: 1 }).includes("drip") && ids({ surface: false, band: 7 }).includes("ember") && ids({ surface: false, band: 5 }).includes("spore") && ids({ surface: false, band: 6 }).includes("glitter"));
+  assert.ok(!ids({ surface: false, band: 0 }).includes("ember") && !ids({ surface: false, band: 0 }).includes("rain"), "no weather below");
+  const day = { surface: true, season: "summer", weather: "clear", night: false }, nightS = { ...day, night: true };
+  assert.ok(ids(day).includes("bird") && ids(day).includes("cloud") && !ids(day).includes("firefly") && !ids(day).includes("rain"));
+  assert.ok(ids(nightS).includes("firefly") && !ids(nightS).includes("bird"), "fireflies on a summer night");
+  assert.ok(ids({ ...day, weather: "rain" }).includes("rain") && !ids({ ...day, weather: "rain" }).includes("leaf"));
+  assert.ok(ids({ ...day, season: "winter", weather: "snow" }).includes("snow") && !ids({ ...day, season: "winter", weather: "snow" }).includes("leaf"));
+  const autumn = CM.airKinds({ ...day, season: "autumn" }).find((k) => k.id === "leaf"), summer = CM.airKinds(day).find((k) => k.id === "leaf"); assert.ok(autumn.rate > summer.rate * 3, "leaves fall in autumn");
+  assert.ok(ids({ ...day, town: true }).includes("smoke") && !ids(day).includes("smoke"), "chimney smoke in town");
+  assert.strictEqual(CM.AIR_BUDGET.low, 0); assert.ok(CM.AIR_BUDGET.high > CM.AIR_BUDGET.medium);
+  assert.ok(CM.windOf("wind")[0] > CM.windOf("clear")[0]);
+  const src = fs.readFileSync(path.join(ROOT, "src", "js", "46-air.js"), "utf8");
+  for (const id of ["mote", "drip", "ember", "spore", "glitter", "leaf", "firefly", "rain", "snow", "cloud", "bird", "smoke"]) assert.ok(src.includes(`case "${id}"`), `${id} spawns and is drawn`);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

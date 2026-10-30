@@ -108,6 +108,7 @@ CM.art.buildPixel = function (theme) {
   for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key.startsWith("sign") || key.startsWith("far.") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
   CM.art.decalLayers(add, (id) => CM.art.pixelate(CM.art.decal(id), 32));   // (what is on the walls and overhead, in pixels)
   add("shadow", CM.art.pixelate(CM.art.shadow(), 32));
+  for (const id of CM.art.AIR || []) add(`air:${id}`, CM.art.pixelate(CM.art.airPicture(id), 16));
   const sub = CM.art.packProps(add, S, (id) => CM.art.pixelate(CM.art.prop(id), 24));   // (the props in pixels, like the rest of the set)
   return { layers, index, size: S, crisp: true, sub };
 };
