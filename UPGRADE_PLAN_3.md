@@ -202,7 +202,7 @@ The bottom of the world becomes a choice, and Awakened becomes a consequence.
 
 Size: L (the Other Dream's table is ~4,000 words; the endings ~1,500). This is the phase that earns 4.0.
 
-## Phase 5 - The village has people - v3.5
+## Phase 5 - The village has people - v3.5 - DONE
 
 The story's surface: where the codex lives, and where the next run is seeded.
 

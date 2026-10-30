@@ -319,7 +319,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (here && here.type === "carving" && here.face === fl.facing) {
       here.read = true;
-      const text = CM.loreText(here.text, this.seed), lkey = CM.loreKey(here.text);
+      const text = CM.loreText(here.text, this.seed, here.telling), lkey = CM.loreKey(here.text);
       this.say("You read the carving on the wall.");
       this.markRead(lkey);
       this.remember("carving", text, { key: lkey });

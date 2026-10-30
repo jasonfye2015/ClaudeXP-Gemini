@@ -1539,6 +1539,52 @@ test("the court of the Lich King: the seated dead on 16-19, three clues and the 
   void bt;
 });
 
+test("the village has people: the chronicler pays for chapters and sells rumours the dungeon keeps, the Book of Caer Duin, the priest's names, the village's own chapter, legends near the surface", () => {
+  const CM = load();
+  // the Book: every crown, in the carvings' voice
+  const fame = [{ name: "A", won: true, floor: 20, date: "01/02/2026", party: ["Elwyn the Knight 12", "B the Mage 11"] }, { name: "B", won: false, floor: 7, party: ["X the Rogue 3"] }, { name: "C", won: true, reminded: true, bottom: true, floor: 50, date: "02/02/2026", party: ["Osk the Monk 30"] }];
+  const book = CM.chronicle(fame, [{ d: "01/02/2026", f: 20, w: 1 }, { d: "01/03/2026", f: 7, w: 0 }, { d: "02/02/2026", f: 50, w: 1 }]);
+  assert.strictEqual(book.length, 2); assert.ok(book[0].includes("Elwyn the Knight and three came down and the king did not rise again") && book[0].startsWith("In the year of the 1st descent"));
+  assert.ok(book[1].includes("reminded the king") && book[1].includes("bottom of the world") && book[1].includes("3rd descent"));
+  // the chronicler: a rumour bought, bound to the next seed, and kept by the floor
+  const game = new CM.Game();
+  game.village.levels.library = 1; game.village.renown = 200; game.saveVillage();
+  assert.strictEqual(game.buyRumour("ghostbones"), ""); assert.strictEqual(game.buyRumour("telling"), ""); assert.ok(game.buyRumour("telling").includes("already"));
+  assert.strictEqual(game.village.rumours.length, 2); assert.ok(game.village.rumours.every((r) => !r.seed));
+  game.newGame("rumour-1", fixedParty(CM));
+  assert.ok(game.village.rumours.every((r) => r.seed === "rumour-1"), "bound to the run begun");
+  const ghostR = game.village.rumours.find((r) => r.kind === "ghostbones"), tellR = game.village.rumours.find((r) => r.kind === "telling");
+  const flG = CM.makeFloor(ghostR.floor, "rumour-1", 2);
+  assert.ok(Object.values(flG.things).some((t) => t.type === "ghost" && t.request === "bones" && !t.courtier) && Object.values(flG.things).some((t) => t.type === "bones"), `a ghost who wants its bones on floor ${ghostR.floor}`);
+  const flT = CM.makeFloor(tellR.floor, "rumour-1", 2), wall = Object.values(flT.features).find((f) => f.type === "carving" && f.text === tellR.floor - 1);
+  assert.strictEqual(wall.telling, 1, `floor ${tellR.floor}: the other telling`); assert.strictEqual(CM.loreText(wall.text, "rumour-1", wall.telling), CM.LORE_TEXT[CM.LORE_KEYS[tellR.floor - 1]].tellings[1], "the other hand");
+  // chapters copied fair: paid once, at the run's end
+  for (const k of ["carving.catacombs.1", "carving.catacombs.2", "carving.catacombs.3", "carving.catacombs.4", "carving.catacombs.5", "guardian.rat"]) game.markRead(k);
+  for (const h of game.party) h.hp = 0;
+  const renown = game.village.renown; game.endRun(false);
+  assert.strictEqual(game.fame[0].chapters, 20); assert.deepStrictEqual(JSON.parse(JSON.stringify(game.village.chaptersPaid)), ["catacombs"]); assert.ok(game.village.renown >= renown + 20);
+  const g2 = new CM.Game(); g2.newGame("rumour-3", fixedParty(CM)); for (const k of ["carving.catacombs.1", "carving.catacombs.2", "carving.catacombs.3", "carving.catacombs.4", "carving.catacombs.5", "guardian.rat"]) g2.markRead(k);
+  for (const h of g2.party) h.hp = 0; g2.endRun(false); assert.strictEqual(g2.fame.find((e) => e.seed === "rumour-3").chapters, 0, "not paid twice");
+  // the village's own chapter, by renown spent
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(g2.villageLore())), ["village.1"]); g2.village.spent = 350; assert.strictEqual(g2.villageLore().length, 2);
+  const codex = CM.codex(g2), vc = codex.find((c) => c.id === "village"); assert.strictEqual(vc.done, 3); assert.strictEqual(vc.total, 5);
+  // the priest says names; the trainers say how they came home
+  g2.memorial = [{ name: "Edda", cls: "Knight", level: 4, floor: 2, epitaph: "She held the door." }];
+  assert.ok(g2.priestNames()[0].includes("Edda") && g2.priestNames()[0].includes("She held the door."));
+  assert.ok(Object.keys(CM.TRAINER_LINES).length >= 11 && CM.PATRIARCH_HISTORY.length === 5 && CM.VILLAGERS.chronicler.greet.length);
+  // legends: a crowned party of this browser's is remembered near the surface
+  CM.store.set("fame", [{ name: "A", won: true, floor: 20, date: "01/02/2026", party: ["Elwyn the Knight 12"], gold: 1, tally: {} }]);
+  const g3 = new CM.Game(); assert.strictEqual(CM.legends.length, 1);
+  let found = null;
+  for (let s = 0; s < 8 && !found; s++) for (let n = 1; n <= 3 && !found; n++) { const fl = CM.makeFloor(n, `legend-${s}`, 2); const e = Object.entries(fl.things).find(([, t]) => t.type === "ghost" && t.legend !== undefined); if (e) found = [n, `legend-${s}`, e]; }
+  assert.ok(found, "a legend stands on one of the first three floors of some seed");
+  g3.newGame(found[1], fixedParty(CM)); g3.enterFloor(found[0], "down");
+  const [lk, lt] = Object.entries(g3.floor.things).find(([, t]) => t.type === "ghost" && t.legend !== undefined);
+  g3.floor.pos = lk.split(",").map(Number); g3.talk(lt, lk);
+  assert.ok(g3.journal.some((e) => e.text.includes("ELWYN THE KNIGHT")), "carved in a newer hand");
+  void found;
+});
+
 (async () => {
   let failed = 0;
   for (const t of tests) {

@@ -74,7 +74,7 @@ Object.assign(CM.Game.prototype, {
     if (this.villageLevel("guildhall") < 1) return "The village has no guildhall yet.";
     if (!(h.boons || []).length) return `${h.name} has no boon to teach.`;
     if (this.retiredThisRun) return "One retires a run.";
-    this.village.trainers = (this.village.trainers || []).filter((t) => t.cls !== h.cls).concat({ name: h.name, cls: h.cls, boon: h.boons[0], level: h.level, date: CM.today() });
+    this.village.trainers = (this.village.trainers || []).filter((t) => t.cls !== h.cls).concat({ name: h.name, cls: h.cls, boon: h.boons[0], level: h.level, date: CM.today(), how: this.bottom ? "bottom" : this.crowned ? (this.reminded ? "reminded" : "crowned") : "alive", floor: this.floor ? this.floor.number : 0 });
     this.retiredThisRun = true;
     this.saveVillage();
     this.sound("level");

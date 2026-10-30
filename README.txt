@@ -771,6 +771,17 @@ The court of the Lich King (the fifth big update, phase 3 - v3.4)
   a line the party has read; any gap and he draws. All five, and Mordeth sets the crown down himself: crowned
   without a blow, the Merciful, and the Deep still open below (entry.reminded; the ending and the summary say so).
 
+The village has people (the fifth big update, phase 5 - v3.5)
+  Three villagers (CM.VILLAGERS), each in a building once it stands: Wren the chronicler at the library shows the
+  codex, pays renown at a run's end for every chapter completed - twenty, forty for the Deep's, once each - and
+  sells rumours (CM.RUMOURS, 15 renown) that bind to the next seed begun and that CM.furnish keeps: a ghost who
+  wants its bones, a hermit, the other telling of a floor's carving. Father Osric at the shrine says three names
+  of the memorial a visit, with their epitaphs, and tells the Patriarch's history in five parts as the shrine is
+  built. Dunmore the keeper's trainers say how they came home, one line a calling.
+  The Book of Caer Duin (CM.chronicle): every crowned party of this browser's as a chronicle entry, in the
+  carvings' voice; and the dungeon writes it back - near the surface, a legend of one of your own parties, carved
+  in a newer hand (CM.legends). The village's own chapter of the codex opens a line at a time as renown is spent.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

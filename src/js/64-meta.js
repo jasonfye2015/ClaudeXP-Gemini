@@ -38,6 +38,7 @@ Object.assign(CM.Game.prototype, {
     entry.titles = (this.earned || []).slice();
     entry.renown = CM.renownFor(entry, this);
     this.village.renown = (this.village.renown || 0) + entry.renown;
+    entry.chapters = this.payChapters(entry);
     this.saveVillage();
     this.checkContracts(entry);
     entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party, { ascension: this.ascension || 0, iron: this.iron });
@@ -272,6 +273,57 @@ Object.assign(CM.Game.prototype, {
     this.emit("talk", { title: "King Mordeth", text: CM.REMIND_END, lines: CM.REMIND_COURT.slice() });
     this.crown();
   },
+  // ---- the village's people ----
+  // the chronicler's rumours: bought between runs, bound to the next seed begun
+  buyRumour(kind) {
+    const R = CM.RUMOURS[kind];
+    if (!R) return "No such rumour.";
+    if (this.villageLevel("library") < 1) return "The village has no library yet.";
+    if (this.renown() < CM.RUMOUR_COST) return `A rumour costs ${CM.RUMOUR_COST} renown.`;
+    const pending = (this.village.rumours || []).filter((r) => !r.seed);
+    if (pending.some((r) => r.kind === kind)) return "Wren has told you that one already. Begin a run, and it will be true.";
+    this.village.spent = (this.village.spent || 0) + CM.RUMOUR_COST;
+    const floors = []; for (let n = R.floors[0]; n <= R.floors[1]; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);   // (never a guardian's floor)
+    const floor = floors[CM.hashSeed(`${Date.now()}:${kind}:${(this.village.rumours || []).length}`) % floors.length];
+    this.village.rumours = (this.village.rumours || []).concat({ kind, floor, seed: null });
+    this.saveVillage();
+    return "";
+  },
+  bindRumours() {                                                        // a new run: the pending rumours are this seed's
+    let bound = false;
+    for (const r of this.village.rumours || []) if (!r.seed) { r.seed = this.seed; bound = true; }
+    if (bound) { this.village.rumours = this.village.rumours.slice(-12); this.saveVillage(); CM.activeRumours = this.village.rumours.filter((r) => r.seed); }
+  },
+  rumourText(r) { return CM.RUMOURS[r.kind].what.replace("{n}", r.floor); },
+  // the chronicler pays for chapters copied fair, once each, at a run's end
+  payChapters(entry) {
+    if (this.villageLevel("library") < 1) return 0;
+    this.village.chaptersPaid = this.village.chaptersPaid || [];
+    let got = 0;
+    for (const c of CM.codex(this)) {
+      if (c.band === undefined || !c.complete || this.village.chaptersPaid.includes(c.id)) continue;
+      const n = c.band >= 4 ? 40 : 20;
+      this.village.chaptersPaid.push(c.id); got += n;
+      this.say(CM.VILLAGERS.chronicler.paid(c.name, n));
+    }
+    if (got) { this.village.renown = (this.village.renown || 0) + got; this.saveVillage(); }
+    return got;
+  },
+  // the village's own chapter: a line for every threshold of renown spent
+  villageLore() {
+    this.village.loreRead = this.village.loreRead || {};
+    const spent = this.village.spent || 0, fresh = [];
+    CM.VILLAGE_LORE_AT.forEach((at, i) => { const key = `village.${i + 1}`; if (spent >= at && this.village.loreRead[key] === undefined) { this.village.loreRead[key] = 0; fresh.push(key); } });
+    if (fresh.length) this.saveVillage();
+    return fresh;
+  },
+  // the priest says three names
+  priestNames(from = 0) {
+    const names = (this.memorial || []).slice(from, from + 3);
+    if (!names.length) return ["\"No names yet. May it stay so.\""];
+    return names.map((m) => `"${m.name}, ${m.cls}, who fell on floor ${m.floor}.${m.epitaph ? ` ${m.epitaph}` : ""}${m.candle ? " A candle burns." : ""}"`);
+  },
+  book() { return CM.chronicle(this.fame, this.ledger); },
   metGhost(name) { this.village.ghostsMet = (this.village.ghostsMet || []).filter((n) => n !== name).concat(name).slice(-40); this.saveVillage(); },
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); },
 
@@ -288,6 +340,14 @@ Object.assign(CM.Game.prototype, {
     const G = thing.own ? { name: thing.own.name, tale: thing.own.epitaph ? `${thing.own.name}'s epitaph: ${thing.own.epitaph}` : `${thing.own.name} the ${thing.own.cls} says: ${CM.OWN_LINES[thing.line || 0]}` }
       : P ? { name: P.name, tale: P.tale } : CM.GHOSTS[thing.who] || CM.GHOSTS[0];
     const R = P && thing.arc === 3 ? P.request : CM.REQUESTS[thing.request] || CM.REQUESTS.story;
+    if (thing.legend !== undefined) {                                    // a legend of one of your own crowned parties, carved in a newer hand
+      const e = CM.legends[thing.legend] || CM.legends[0];
+      if (!e) { delete this.floor.things[k]; return; }
+      this.sound("ailment");
+      this.emit("talk", { title: "A newer carving", text: CM.legendLine(e) });
+      if (!thing.asked) { thing.asked = true; this.remember("carving", CM.legendLine(e), { key: `legend.${e.date}.${e.floor}` }); this.saveRun(); }
+      return;
+    }
     if (thing.courtier !== undefined) {                                  // the court: it sits, and speaks, and has nothing to ask
       const C = CM.COURT[thing.courtier];
       this.sound("ailment");

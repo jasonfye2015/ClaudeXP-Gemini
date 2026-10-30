@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v3.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v3.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -397,7 +397,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "3.4", built: "2026-10-30" };
+const CM = window.CM = { version: "3.5", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1821,6 +1821,63 @@ CM.REMIND_END = "The king sits down on his throne for the first time in a long t
 CM.REMIND_FAIL = "He waits for the word, and it does not come. \"No,\" the Lich King says, and the hall is cold again. \"No. You do not know me. Then you are only four more.\" He draws.";
 CM.REMIND_COURT = ["On the way up the court sits with its eyes shut, and does not stand when you pass.", "On the seventeenth floor the Master Mason has laid his plumb line down.", "On the sixteenth the Chancellor's chain of office lies on the floor, and the chair is empty."];
 
+// ---- the village has people: a chronicler at the library, a priest at the shrine, a keeper at the guildhall ----
+CM.VILLAGERS = {
+  chronicler: { name: "Wren, the chronicler", building: "library",
+    none: "A woman sits on the library's foundations with a book on her knee and no library round her. \"Build me a roof,\" she says, \"and I'll keep the story dry.\"",
+    greet: ["\"The codex is on the desk. Read what you've read; I've marked the gaps.\"", "\"Every chapter you finish, I copy fair and the village pays you for the copying. Twenty renown a chapter; forty for the Deep's.\"", "\"Rumours? I hear things. For fifteen renown I'll tell you one that will be true on your next descent.\""],
+    paid: (name, n) => `"${name}, copied fair." Wren blots the page. "${n} renown, from the village, for the story."` },
+  priest: { name: "Father Osric", building: "shrine",
+    none: "An old man stands where the shrine will be, with nothing to tend. \"Build it,\" he says, \"and I'll say the names.\"",
+    greet: ["\"I say three names a visit. It is all the voice I have left.\"", "\"The Patriarch's order built the first house on this hill. Ask me, as the shrine grows, and I will tell you what it was for.\""] },
+  keeper: { name: "Dunmore, the keeper", building: "guildhall",
+    none: "A broad man leans on a post where the guildhall's door will be. \"No hall, no keeper. I'll stand here anyway.\"",
+    greet: ["\"The trainers drink here, when they're not teaching. They'll tell you how they came home, if you ask. They mostly came home badly.\""] },
+};
+// the Patriarch's history, told by the priest as the shrine is built (level 0 to 4)
+CM.PATRIARCH_HISTORY = [
+  "\"Before the city there was a hill, and on the hill a house of the dead, and in the house an order that kept them. That is all I know yet. Build, and I will remember more.\"",
+  "\"The order's first father went down into the hill to see where the dead went. He came back up, and he was still coming back up a thousand years later. That is the Patriarch.\"",
+  "\"He heard something below the hill and called it a god. He gave it the dead. It gave him the trick of the heart kept apart. He thought it a fair trade. I am not sure he was wrong.\"",
+  "\"When the king's physician found the Patriarch's chapel, it was because the Patriarch left the door open. The order has a word for that: a vocation. I have another.\"",
+  "\"Our shrine stands on the first house's stones. We light candles for the dead because the Patriarch kept them in the dark. It is not much. It is what the order owes.\"",
+];
+// the village's own chapter: what the hill was before the shaft, remembered as renown is spent (CM.VILLAGE_LORE_AT)
+CM.VILLAGE_LORE_AT = [0, 100, 300, 700, 1500];
+[
+  "The village stands on the hill above the shaft, where Caer Duin's upper town stood. The first houses were built from the city's fallen stone, and some of the stones have letters on them.",
+  "Before Caer Duin the hill was the Patriarch's. His order kept a house of the dead here, and the dead of every village for a day's walk were brought up to it. The shaft was the house's cellar.",
+  "The river came to the hill's foot, and a market grew, and the market grew a wall, and the wall a king. The order let it happen. The order had always wanted more dead.",
+  "Mordeth was the ninth king of Caer Duin and the first to go down into the hill. The eight before him were told not to, by priests who knew why. He was not told. The order had decided it was time.",
+  "The village has no king. It has a chronicler, a priest and a keeper, and a guildhall full of people who have been down and come back. That is a different kind of order. It may hold.",
+].forEach((t, i) => L(`village.${i + 1}`, "village", i + 1, t, { spent: CM.VILLAGE_LORE_AT[i] }));
+CM.CHAPTERS.village = { name: "The village", epigraph: "What the hill was before the shaft, and what it is now." };
+// how a retired trainer tells it, by calling
+CM.TRAINER_LINES = { Knight: "\"I held the line. The line held me up, mostly.\"", Paladin: "\"I prayed on every stair. By the twentieth I was only counting.\"", Rogue: "\"I opened every lock in that place. The last one I should have left shut.\"",
+  Ranger: "\"I never missed. I wish that were the whole story.\"", Cleric: "\"I healed them. All but the one. You remember the one.\"", Mage: "\"I read every wall. The walls were right.\"", Druid: "\"The rats were only hungry. So was I, by the end.\"",
+  Bard: "\"I sang them down forty floors. Nobody asked me to sing on the way up.\"", Monk: "\"Empty hands. Full memory. I'd trade.\"", Necromancer: "\"The dead down there know me by name now. I'm not sure it's a compliment.\"", Artificer: "\"The box was good work. I'd have made it better. That frightens me.\"" };
+// rumours: a thing the chronicler promises for the next descent, and CM.furnish keeps the promise
+CM.RUMOUR_COST = 15;
+CM.RUMOURS = {
+  ghostbones: { what: "a ghost on floor {n} wants its bones", floors: [2, 9] },
+  hermit: { what: "a hermit sits on floor {n}", floors: [3, 14] },
+  telling: { what: "floor {n}'s carving is in the other hand", floors: [1, 15] },
+};
+CM.activeRumours = [];                                                    // (set by the game from the village: {kind, floor, seed})
+CM.rumourAt = (seed, number, kind) => CM.activeRumours.find((r) => r.seed === seed && r.floor === number && (!kind || r.kind === kind));
+// the Book of Caer Duin: every crowned party of this browser's, written as the carvings would write it
+CM.legends = [];                                                          // (the crowned entries, for the floors near the surface to remember)
+CM.chronicle = function (fame, ledger) {
+  const crowns = (fame || []).filter((e) => e.won).slice().sort((a, b) => (a.t || 0) - (b.t || 0));
+  const descents = (ledger || []).length;
+  return crowns.map((e, i) => {
+    const first = (e.party || [])[0] || "", m = /^(.*) the (\w+) \d+$/.exec(first), who = m ? `${m[1]} the ${m[2]}` : (e.name || "a stranger");
+    const nth = ledger && ledger.length ? CM.ordinal(Math.max(1, (ledger.findIndex((l) => l.d === e.date && l.f === e.floor && l.w) + 1) || descents)) : CM.ordinal(i + 1);
+    return `In the year of the ${nth} descent, ${who} and three came down${e.reminded ? " and reminded the king who he was, and he did not rise again" : " and the king did not rise again"}${e.bottom ? ", and they went on to the bottom of the world and came back" : e.floor > CM.LAST_FLOOR ? `, and they went on into the Deep and fell on floor ${e.floor}` : ""}.${e.date ? ` (${e.date})` : ""}`;
+  });
+};
+CM.legendLine = (e) => { const first = (e.party || [])[0] || "", m = /^(.*) the (\w+) \d+$/.exec(first); return `Carved here in a newer hand: HERE ${(m ? `${m[1].toUpperCase()} THE ${m[2].toUpperCase()}` : "FOUR")} AND THREE PASSED, GOING DOWN TO THE KING. ${e.reminded ? "THEY TALKED HIM DOWN." : "THEY CAME BACK UP."}`; };
+
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)
 CM.LORE_KEYS = [];
 for (let n = 1; n <= 50; n++) CM.LORE_KEYS.push(`carving.${["catacombs", "vaults", "halls", "palace", "drowned", "fungal", "crystal", "foundry", "ossuary", "root"][Math.floor((n - 1) / 5)]}.${((n - 1) % 5) + 1}`);
@@ -1845,7 +1902,8 @@ CM.telling = function (key, seed) {
   return l.tellings[CM.hashSeed(`${seed}:telling:${key}`) % l.tellings.length];
 };
 // what a carving says: the floor's part of the story, an odd one, a guardian's or the endless dark's
-CM.loreText = (text, seed) => (typeof text === "string" && text.startsWith("ga:") && CM.PARLEY[text.slice(3)] && CM.PARLEY[text.slice(3)].after) || CM.telling(CM.loreKey(text), seed);
+CM.loreText = (text, seed, forced) => (typeof text === "string" && text.startsWith("ga:") && CM.PARLEY[text.slice(3)] && CM.PARLEY[text.slice(3)].after)
+  || (forced !== undefined && CM.LORE_TEXT[CM.loreKey(text)] ? CM.LORE_TEXT[CM.loreKey(text)].tellings[forced % CM.LORE_TEXT[CM.loreKey(text)].tellings.length] : CM.telling(CM.loreKey(text), seed));
 // the key a journal entry's text belongs to (an older save kept only the words)
 CM.keyOfText = function (text) {
   for (const l of Object.values(CM.LORE_TEXT)) if (l.tellings.includes(text)) return l.key;
@@ -1855,7 +1913,7 @@ CM.keyOfText = function (text) {
 // ---- the codex: every chapter, line by line, with what has been read ----
 // game.story.read is {key: floor read on}; a line read deeper that contradicts one above strikes the lie through
 CM.codex = function (game) {
-  const read = (game && game.story && game.story.read) || {};
+  const read = Object.assign({}, (game && game.village && game.village.loreRead) || {}, (game && game.story && game.story.read) || {});
   const truths = {};
   for (const l of Object.values(CM.LORE_TEXT)) if (l.contradicts && read[l.key] !== undefined) truths[l.contradicts] = l.key;
   const out = [];
@@ -2576,6 +2634,22 @@ CM.furnish = function (floor, seed, gen) {
       }
     });
     if (number === CM.BELL_FLOOR) { const k = pickCell("bell", (c) => !roomCells.has(c)) || pickCell("bell"); if (k) floor.things[k] = { type: "bones", bell: true }; }
+    // the chronicler's rumours, kept: a ghost who wants its bones, a hermit, the other telling of the floor's carving
+    if (CM.rumourAt(seed, number, "telling")) for (const f of Object.values(floor.features)) if (f.type === "carving" && f.text === number - 1) f.telling = 1;
+    if (CM.rumourAt(seed, number, "hermit") && !Object.values(floor.things).some((t) => t.type === "hermit")) { const k = pickCell("rumour:hermit", (c) => roomCells.has(c)) || pickCell("rumour:hermit"); if (k) floor.things[k] = { type: "hermit", heard: 0, greeted: false }; }
+    if (CM.rumourAt(seed, number, "ghostbones") && !Object.values(floor.things).some((t) => t.type === "ghost" && t.request === "bones")) {
+      const k = pickCell("rumour:ghost", (c) => roomCells.has(c)) || pickCell("rumour:ghost");
+      if (k) {
+        floor.things[k] = { type: "ghost", who: h("rumour:who") % CM.GHOSTS.length, request: "bones", asked: false };
+        const [gx, gy] = unkey(k), far = pickCell("rumour:bones", (c) => { const [x, y] = unkey(c); return Math.abs(x - gx) + Math.abs(y - gy) >= 6; }) || pickCell("rumour:bones", (c) => c !== k);
+        if (far) floor.things[far] = { type: "bones", ghost: k }; else floor.things[k].request = "story";
+      }
+    }
+    // the dungeon remembers the crowned: near the surface, a legend of one of this browser's own parties, now and then
+    if (number <= 3 && CM.legends.length && h("legend") % 100 < 50) {
+      const k = pickCell("legend", (c) => !roomCells.has(c)) || pickCell("legend");
+      if (k) floor.things[k] = { type: "ghost", legend: h("legend:which") % CM.legends.length, asked: false };
+    }
     CM.COURT.forEach((c, i) => {                                        // the seated dead of the palace, and the physician's page in one of its chests
       if (c.floor !== number) return;
       const k = pickCell(`court:${i}`, (cell) => roomCells.has(cell)) || pickCell(`court:${i}`);
@@ -5908,6 +5982,8 @@ CM.Game = class {
     this.bestiary = CM.store.get("bestiary", {});         // every kind met and slain, and what it fears: kept between runs
     this.memorial = CM.store.get("memorial", []);         // the heroes laid to rest, ever: {name, cls, level, floor, seed, date}
     this.fallen = CM.store.get("fallen", []);             // where parties fell, by seed: a later run on that seed finds their remains
+    CM.activeRumours = (this.village.rumours || []).filter((r) => r.seed);   // (what the chronicler promised, for CM.furnish)
+    CM.legends = this.fame.filter((e) => e.won);
     if (!this.ledger.length && (this.fame.length || this.fameEndless.length)) {   // (the runs that ended before the ledger was kept: read back from the boards)
       this.ledger = this.fame.concat(this.fameEndless).map(CM.ledgerFromFame);
       CM.store.set("ledger", this.ledger);
@@ -6156,6 +6232,7 @@ CM.Game = class {
     this.titleNote = "";
     this.tally = this.freshTally();
     this.journal = []; this.story = { read: {} }; this.reminded = false;
+    this.bindRumours();
     this.rescued = [];
     this.difficulty = CM.DIFFICULTIES[difficulty] ? difficulty : "fair";
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
@@ -6615,7 +6692,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (here && here.type === "carving" && here.face === fl.facing) {
       here.read = true;
-      const text = CM.loreText(here.text, this.seed), lkey = CM.loreKey(here.text);
+      const text = CM.loreText(here.text, this.seed, here.telling), lkey = CM.loreKey(here.text);
       this.say("You read the carving on the wall.");
       this.markRead(lkey);
       this.remember("carving", text, { key: lkey });
@@ -9212,6 +9289,7 @@ Object.assign(CM.Game.prototype, {
     entry.titles = (this.earned || []).slice();
     entry.renown = CM.renownFor(entry, this);
     this.village.renown = (this.village.renown || 0) + entry.renown;
+    entry.chapters = this.payChapters(entry);
     this.saveVillage();
     this.checkContracts(entry);
     entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party, { ascension: this.ascension || 0, iron: this.iron });
@@ -9446,6 +9524,57 @@ Object.assign(CM.Game.prototype, {
     this.emit("talk", { title: "King Mordeth", text: CM.REMIND_END, lines: CM.REMIND_COURT.slice() });
     this.crown();
   },
+  // ---- the village's people ----
+  // the chronicler's rumours: bought between runs, bound to the next seed begun
+  buyRumour(kind) {
+    const R = CM.RUMOURS[kind];
+    if (!R) return "No such rumour.";
+    if (this.villageLevel("library") < 1) return "The village has no library yet.";
+    if (this.renown() < CM.RUMOUR_COST) return `A rumour costs ${CM.RUMOUR_COST} renown.`;
+    const pending = (this.village.rumours || []).filter((r) => !r.seed);
+    if (pending.some((r) => r.kind === kind)) return "Wren has told you that one already. Begin a run, and it will be true.";
+    this.village.spent = (this.village.spent || 0) + CM.RUMOUR_COST;
+    const floors = []; for (let n = R.floors[0]; n <= R.floors[1]; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);   // (never a guardian's floor)
+    const floor = floors[CM.hashSeed(`${Date.now()}:${kind}:${(this.village.rumours || []).length}`) % floors.length];
+    this.village.rumours = (this.village.rumours || []).concat({ kind, floor, seed: null });
+    this.saveVillage();
+    return "";
+  },
+  bindRumours() {                                                        // a new run: the pending rumours are this seed's
+    let bound = false;
+    for (const r of this.village.rumours || []) if (!r.seed) { r.seed = this.seed; bound = true; }
+    if (bound) { this.village.rumours = this.village.rumours.slice(-12); this.saveVillage(); CM.activeRumours = this.village.rumours.filter((r) => r.seed); }
+  },
+  rumourText(r) { return CM.RUMOURS[r.kind].what.replace("{n}", r.floor); },
+  // the chronicler pays for chapters copied fair, once each, at a run's end
+  payChapters(entry) {
+    if (this.villageLevel("library") < 1) return 0;
+    this.village.chaptersPaid = this.village.chaptersPaid || [];
+    let got = 0;
+    for (const c of CM.codex(this)) {
+      if (c.band === undefined || !c.complete || this.village.chaptersPaid.includes(c.id)) continue;
+      const n = c.band >= 4 ? 40 : 20;
+      this.village.chaptersPaid.push(c.id); got += n;
+      this.say(CM.VILLAGERS.chronicler.paid(c.name, n));
+    }
+    if (got) { this.village.renown = (this.village.renown || 0) + got; this.saveVillage(); }
+    return got;
+  },
+  // the village's own chapter: a line for every threshold of renown spent
+  villageLore() {
+    this.village.loreRead = this.village.loreRead || {};
+    const spent = this.village.spent || 0, fresh = [];
+    CM.VILLAGE_LORE_AT.forEach((at, i) => { const key = `village.${i + 1}`; if (spent >= at && this.village.loreRead[key] === undefined) { this.village.loreRead[key] = 0; fresh.push(key); } });
+    if (fresh.length) this.saveVillage();
+    return fresh;
+  },
+  // the priest says three names
+  priestNames(from = 0) {
+    const names = (this.memorial || []).slice(from, from + 3);
+    if (!names.length) return ["\"No names yet. May it stay so.\""];
+    return names.map((m) => `"${m.name}, ${m.cls}, who fell on floor ${m.floor}.${m.epitaph ? ` ${m.epitaph}` : ""}${m.candle ? " A candle burns." : ""}"`);
+  },
+  book() { return CM.chronicle(this.fame, this.ledger); },
   metGhost(name) { this.village.ghostsMet = (this.village.ghostsMet || []).filter((n) => n !== name).concat(name).slice(-40); this.saveVillage(); },
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); },
 
@@ -9462,6 +9591,14 @@ Object.assign(CM.Game.prototype, {
     const G = thing.own ? { name: thing.own.name, tale: thing.own.epitaph ? `${thing.own.name}'s epitaph: ${thing.own.epitaph}` : `${thing.own.name} the ${thing.own.cls} says: ${CM.OWN_LINES[thing.line || 0]}` }
       : P ? { name: P.name, tale: P.tale } : CM.GHOSTS[thing.who] || CM.GHOSTS[0];
     const R = P && thing.arc === 3 ? P.request : CM.REQUESTS[thing.request] || CM.REQUESTS.story;
+    if (thing.legend !== undefined) {                                    // a legend of one of your own crowned parties, carved in a newer hand
+      const e = CM.legends[thing.legend] || CM.legends[0];
+      if (!e) { delete this.floor.things[k]; return; }
+      this.sound("ailment");
+      this.emit("talk", { title: "A newer carving", text: CM.legendLine(e) });
+      if (!thing.asked) { thing.asked = true; this.remember("carving", CM.legendLine(e), { key: `legend.${e.date}.${e.floor}` }); this.saveRun(); }
+      return;
+    }
     if (thing.courtier !== undefined) {                                  // the court: it sits, and speaks, and has nothing to ask
       const C = CM.COURT[thing.courtier];
       this.sound("ailment");
@@ -9890,7 +10027,7 @@ Object.assign(CM.Game.prototype, {
     if (this.villageLevel("guildhall") < 1) return "The village has no guildhall yet.";
     if (!(h.boons || []).length) return `${h.name} has no boon to teach.`;
     if (this.retiredThisRun) return "One retires a run.";
-    this.village.trainers = (this.village.trainers || []).filter((t) => t.cls !== h.cls).concat({ name: h.name, cls: h.cls, boon: h.boons[0], level: h.level, date: CM.today() });
+    this.village.trainers = (this.village.trainers || []).filter((t) => t.cls !== h.cls).concat({ name: h.name, cls: h.cls, boon: h.boons[0], level: h.level, date: CM.today(), how: this.bottom ? "bottom" : this.crowned ? (this.reminded ? "reminded" : "crowned") : "alive", floor: this.floor ? this.floor.number : 0 });
     this.retiredThisRun = true;
     this.saveVillage();
     this.sound("level");
@@ -10092,6 +10229,7 @@ CM.UI = class {
 <div class="dialog" id="dlg-village"><div class="box journalbox"><h2>The Village</h2>
   <p class="small">The surface, between runs. Every run brings home renown - floors, guardians, the crown, titles earned, the week's seed - and the village grows with it. Renown never buys a blow in the dungeon.</p>
   <div class="small" id="village-renown"></div><div id="village-buildings"></div>
+  <div class="list-title">The people</div><div id="village-people"></div>
   <div class="list-title">Contracts this week</div><div id="village-contracts"></div>
   <div class="list-title">The guildhall's trainers</div><div id="village-trainers"></div>
   <div class="list-title">The shrine: candles</div><div id="village-shrine"></div><div class="small" id="village-note"></div>
@@ -10406,6 +10544,7 @@ CM.UI = class {
       b.addEventListener("click", () => { note.textContent = g.build(id) || `${B.name} rises a level.`; this.renderVillage(); });
       row.appendChild(b); bb.appendChild(row);
     }
+    this.renderVillagers(note);
     this.$("#village-contracts").innerHTML = g.contracts().map(({ c, done }) => `<div class="unlock ${done ? "got" : ""}"><b>${done ? "✓" : "○"} ${this.esc(c.name)}</b> <small>${this.esc(c.what)} - ${c.renown} renown</small></div>`).join("");
     const trainers = v.trainers || [];
     this.$("#village-trainers").innerHTML = trainers.length ? trainers.map((t) => `<div class="unlock got"><b>${this.esc(t.name)}</b> <small>${t.cls}, level ${t.level}: every new ${t.cls} sets out with ${CM.BOONS[t.boon] ? CM.BOONS[t.boon].name : t.boon}</small></div>`).join("") : `<div class="unlock"><small>${g.villageLevel("guildhall") ? "No one has retired yet: a hero who comes home may, at the run's end." : "Build the guildhall first."}</small></div>`;
@@ -10417,6 +10556,29 @@ CM.UI = class {
       shrine.appendChild(row);
     });
     if (!shrine.children.length) shrine.innerHTML = `<div class="unlock"><small>No name on the memorial yet.</small></div>`;
+  }
+  // the chronicler, the priest, the keeper: a card each, with what they say and what they do
+  renderVillagers(note) {
+    const g = this.game, box = this.$("#village-people"), esc = (x) => this.esc(x);
+    box.innerHTML = "";
+    const card = (V, body, buttons) => {
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      const lvl = g.villageLevel(V.building);
+      row.innerHTML = `<div><b>${esc(V.name)}</b> <small>${esc(CM.VILLAGE[V.building].name)}${lvl ? "" : ", not yet built"}</small>${lvl ? body : `<small>${esc(V.none)}</small>`}</div>`;
+      const acts = document.createElement("div"); acts.style.display = "grid"; acts.style.gap = "4px";
+      if (lvl) for (const [label, fn] of buttons) { const b = document.createElement("button"); b.textContent = label; b.addEventListener("click", fn); acts.appendChild(b); }
+      row.appendChild(acts); box.appendChild(row);
+    };
+    const fresh = g.villageLore();
+    const W = CM.VILLAGERS.chronicler, rumours = (g.village.rumours || []).filter((r) => !r.seed);
+    card(W, `<small>${W.greet.map(esc).join(" ")}</small>${rumours.length ? `<small><i>Promised for the next descent: ${rumours.map((r) => esc(g.rumourText(r))).join("; ")}.</i></small>` : ""}${this.bookOpen ? `<div class="entry">${g.book().map((l) => `<p>${esc(l)}</p>`).join("") || "<p><i>No crown yet. The Book waits for the first.</i></p>"}</div>` : ""}${fresh.length ? `<small><i>Wren has a new page for the village's own chapter (the codex).</i></small>` : ""}`,
+      [["Read the Book of Caer Duin", () => { this.bookOpen = !this.bookOpen; this.renderVillage(); }], ["The codex", () => { this.journalPage = "codex"; this.openJournal(); }]]
+        .concat(Object.entries(CM.RUMOURS).map(([kind, R]) => [`A rumour: ${R.what.replace("{n}", "...")} (${CM.RUMOUR_COST})`, () => { const err = g.buyRumour(kind); note.textContent = err || `Wren leans in. "${g.rumourText(g.village.rumours[g.village.rumours.length - 1])}."`; this.renderVillage(); }])));
+    const P = CM.VILLAGERS.priest;
+    card(P, `<small>${P.greet.map(esc).join(" ")}</small><small><i>${esc(CM.PATRIARCH_HISTORY[Math.min(4, g.villageLevel("shrine"))])}</i></small>${this.namesFrom !== undefined ? `<div class="entry">${g.priestNames(this.namesFrom).map((l) => `<p>${esc(l)}</p>`).join("")}</div>` : ""}`,
+      [["Hear three names", () => { this.namesFrom = this.namesFrom === undefined ? 0 : (this.namesFrom + 3) % Math.max(1, (g.memorial || []).length); this.renderVillage(); }]]);
+    const K = CM.VILLAGERS.keeper, trainers = g.village.trainers || [];
+    card(K, `<small>${K.greet.map(esc).join(" ")}</small>${trainers.map((t) => `<small><b>${esc(t.name)}</b> the ${t.cls}${t.how ? `, home ${t.how === "bottom" ? "from the bottom of the world" : t.how === "reminded" ? "having talked the king down" : t.how === "crowned" ? "with the crown" : `alive from floor ${t.floor || "?"}`}` : ""}: ${esc(CM.TRAINER_LINES[t.cls] || "\"I came back. That's the story.\"")}</small>`).join("")}`, []);
   }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); if (sel === "#dlg-settings") this.showStorage(); }
   closeDialogs() {

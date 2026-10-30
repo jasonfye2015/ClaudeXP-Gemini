@@ -138,6 +138,7 @@ CM.UI = class {
 <div class="dialog" id="dlg-village"><div class="box journalbox"><h2>The Village</h2>
   <p class="small">The surface, between runs. Every run brings home renown - floors, guardians, the crown, titles earned, the week's seed - and the village grows with it. Renown never buys a blow in the dungeon.</p>
   <div class="small" id="village-renown"></div><div id="village-buildings"></div>
+  <div class="list-title">The people</div><div id="village-people"></div>
   <div class="list-title">Contracts this week</div><div id="village-contracts"></div>
   <div class="list-title">The guildhall's trainers</div><div id="village-trainers"></div>
   <div class="list-title">The shrine: candles</div><div id="village-shrine"></div><div class="small" id="village-note"></div>
@@ -452,6 +453,7 @@ CM.UI = class {
       b.addEventListener("click", () => { note.textContent = g.build(id) || `${B.name} rises a level.`; this.renderVillage(); });
       row.appendChild(b); bb.appendChild(row);
     }
+    this.renderVillagers(note);
     this.$("#village-contracts").innerHTML = g.contracts().map(({ c, done }) => `<div class="unlock ${done ? "got" : ""}"><b>${done ? "✓" : "○"} ${this.esc(c.name)}</b> <small>${this.esc(c.what)} - ${c.renown} renown</small></div>`).join("");
     const trainers = v.trainers || [];
     this.$("#village-trainers").innerHTML = trainers.length ? trainers.map((t) => `<div class="unlock got"><b>${this.esc(t.name)}</b> <small>${t.cls}, level ${t.level}: every new ${t.cls} sets out with ${CM.BOONS[t.boon] ? CM.BOONS[t.boon].name : t.boon}</small></div>`).join("") : `<div class="unlock"><small>${g.villageLevel("guildhall") ? "No one has retired yet: a hero who comes home may, at the run's end." : "Build the guildhall first."}</small></div>`;
@@ -463,6 +465,29 @@ CM.UI = class {
       shrine.appendChild(row);
     });
     if (!shrine.children.length) shrine.innerHTML = `<div class="unlock"><small>No name on the memorial yet.</small></div>`;
+  }
+  // the chronicler, the priest, the keeper: a card each, with what they say and what they do
+  renderVillagers(note) {
+    const g = this.game, box = this.$("#village-people"), esc = (x) => this.esc(x);
+    box.innerHTML = "";
+    const card = (V, body, buttons) => {
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      const lvl = g.villageLevel(V.building);
+      row.innerHTML = `<div><b>${esc(V.name)}</b> <small>${esc(CM.VILLAGE[V.building].name)}${lvl ? "" : ", not yet built"}</small>${lvl ? body : `<small>${esc(V.none)}</small>`}</div>`;
+      const acts = document.createElement("div"); acts.style.display = "grid"; acts.style.gap = "4px";
+      if (lvl) for (const [label, fn] of buttons) { const b = document.createElement("button"); b.textContent = label; b.addEventListener("click", fn); acts.appendChild(b); }
+      row.appendChild(acts); box.appendChild(row);
+    };
+    const fresh = g.villageLore();
+    const W = CM.VILLAGERS.chronicler, rumours = (g.village.rumours || []).filter((r) => !r.seed);
+    card(W, `<small>${W.greet.map(esc).join(" ")}</small>${rumours.length ? `<small><i>Promised for the next descent: ${rumours.map((r) => esc(g.rumourText(r))).join("; ")}.</i></small>` : ""}${this.bookOpen ? `<div class="entry">${g.book().map((l) => `<p>${esc(l)}</p>`).join("") || "<p><i>No crown yet. The Book waits for the first.</i></p>"}</div>` : ""}${fresh.length ? `<small><i>Wren has a new page for the village's own chapter (the codex).</i></small>` : ""}`,
+      [["Read the Book of Caer Duin", () => { this.bookOpen = !this.bookOpen; this.renderVillage(); }], ["The codex", () => { this.journalPage = "codex"; this.openJournal(); }]]
+        .concat(Object.entries(CM.RUMOURS).map(([kind, R]) => [`A rumour: ${R.what.replace("{n}", "...")} (${CM.RUMOUR_COST})`, () => { const err = g.buyRumour(kind); note.textContent = err || `Wren leans in. "${g.rumourText(g.village.rumours[g.village.rumours.length - 1])}."`; this.renderVillage(); }])));
+    const P = CM.VILLAGERS.priest;
+    card(P, `<small>${P.greet.map(esc).join(" ")}</small><small><i>${esc(CM.PATRIARCH_HISTORY[Math.min(4, g.villageLevel("shrine"))])}</i></small>${this.namesFrom !== undefined ? `<div class="entry">${g.priestNames(this.namesFrom).map((l) => `<p>${esc(l)}</p>`).join("")}</div>` : ""}`,
+      [["Hear three names", () => { this.namesFrom = this.namesFrom === undefined ? 0 : (this.namesFrom + 3) % Math.max(1, (g.memorial || []).length); this.renderVillage(); }]]);
+    const K = CM.VILLAGERS.keeper, trainers = g.village.trainers || [];
+    card(K, `<small>${K.greet.map(esc).join(" ")}</small>${trainers.map((t) => `<small><b>${esc(t.name)}</b> the ${t.cls}${t.how ? `, home ${t.how === "bottom" ? "from the bottom of the world" : t.how === "reminded" ? "having talked the king down" : t.how === "crowned" ? "with the crown" : `alive from floor ${t.floor || "?"}`}` : ""}: ${esc(CM.TRAINER_LINES[t.cls] || "\"I came back. That's the story.\"")}</small>`).join("")}`, []);
   }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); if (sel === "#dlg-settings") this.showStorage(); }
   closeDialogs() {

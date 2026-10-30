@@ -370,6 +370,63 @@ CM.REMIND_END = "The king sits down on his throne for the first time in a long t
 CM.REMIND_FAIL = "He waits for the word, and it does not come. \"No,\" the Lich King says, and the hall is cold again. \"No. You do not know me. Then you are only four more.\" He draws.";
 CM.REMIND_COURT = ["On the way up the court sits with its eyes shut, and does not stand when you pass.", "On the seventeenth floor the Master Mason has laid his plumb line down.", "On the sixteenth the Chancellor's chain of office lies on the floor, and the chair is empty."];
 
+// ---- the village has people: a chronicler at the library, a priest at the shrine, a keeper at the guildhall ----
+CM.VILLAGERS = {
+  chronicler: { name: "Wren, the chronicler", building: "library",
+    none: "A woman sits on the library's foundations with a book on her knee and no library round her. \"Build me a roof,\" she says, \"and I'll keep the story dry.\"",
+    greet: ["\"The codex is on the desk. Read what you've read; I've marked the gaps.\"", "\"Every chapter you finish, I copy fair and the village pays you for the copying. Twenty renown a chapter; forty for the Deep's.\"", "\"Rumours? I hear things. For fifteen renown I'll tell you one that will be true on your next descent.\""],
+    paid: (name, n) => `"${name}, copied fair." Wren blots the page. "${n} renown, from the village, for the story."` },
+  priest: { name: "Father Osric", building: "shrine",
+    none: "An old man stands where the shrine will be, with nothing to tend. \"Build it,\" he says, \"and I'll say the names.\"",
+    greet: ["\"I say three names a visit. It is all the voice I have left.\"", "\"The Patriarch's order built the first house on this hill. Ask me, as the shrine grows, and I will tell you what it was for.\""] },
+  keeper: { name: "Dunmore, the keeper", building: "guildhall",
+    none: "A broad man leans on a post where the guildhall's door will be. \"No hall, no keeper. I'll stand here anyway.\"",
+    greet: ["\"The trainers drink here, when they're not teaching. They'll tell you how they came home, if you ask. They mostly came home badly.\""] },
+};
+// the Patriarch's history, told by the priest as the shrine is built (level 0 to 4)
+CM.PATRIARCH_HISTORY = [
+  "\"Before the city there was a hill, and on the hill a house of the dead, and in the house an order that kept them. That is all I know yet. Build, and I will remember more.\"",
+  "\"The order's first father went down into the hill to see where the dead went. He came back up, and he was still coming back up a thousand years later. That is the Patriarch.\"",
+  "\"He heard something below the hill and called it a god. He gave it the dead. It gave him the trick of the heart kept apart. He thought it a fair trade. I am not sure he was wrong.\"",
+  "\"When the king's physician found the Patriarch's chapel, it was because the Patriarch left the door open. The order has a word for that: a vocation. I have another.\"",
+  "\"Our shrine stands on the first house's stones. We light candles for the dead because the Patriarch kept them in the dark. It is not much. It is what the order owes.\"",
+];
+// the village's own chapter: what the hill was before the shaft, remembered as renown is spent (CM.VILLAGE_LORE_AT)
+CM.VILLAGE_LORE_AT = [0, 100, 300, 700, 1500];
+[
+  "The village stands on the hill above the shaft, where Caer Duin's upper town stood. The first houses were built from the city's fallen stone, and some of the stones have letters on them.",
+  "Before Caer Duin the hill was the Patriarch's. His order kept a house of the dead here, and the dead of every village for a day's walk were brought up to it. The shaft was the house's cellar.",
+  "The river came to the hill's foot, and a market grew, and the market grew a wall, and the wall a king. The order let it happen. The order had always wanted more dead.",
+  "Mordeth was the ninth king of Caer Duin and the first to go down into the hill. The eight before him were told not to, by priests who knew why. He was not told. The order had decided it was time.",
+  "The village has no king. It has a chronicler, a priest and a keeper, and a guildhall full of people who have been down and come back. That is a different kind of order. It may hold.",
+].forEach((t, i) => L(`village.${i + 1}`, "village", i + 1, t, { spent: CM.VILLAGE_LORE_AT[i] }));
+CM.CHAPTERS.village = { name: "The village", epigraph: "What the hill was before the shaft, and what it is now." };
+// how a retired trainer tells it, by calling
+CM.TRAINER_LINES = { Knight: "\"I held the line. The line held me up, mostly.\"", Paladin: "\"I prayed on every stair. By the twentieth I was only counting.\"", Rogue: "\"I opened every lock in that place. The last one I should have left shut.\"",
+  Ranger: "\"I never missed. I wish that were the whole story.\"", Cleric: "\"I healed them. All but the one. You remember the one.\"", Mage: "\"I read every wall. The walls were right.\"", Druid: "\"The rats were only hungry. So was I, by the end.\"",
+  Bard: "\"I sang them down forty floors. Nobody asked me to sing on the way up.\"", Monk: "\"Empty hands. Full memory. I'd trade.\"", Necromancer: "\"The dead down there know me by name now. I'm not sure it's a compliment.\"", Artificer: "\"The box was good work. I'd have made it better. That frightens me.\"" };
+// rumours: a thing the chronicler promises for the next descent, and CM.furnish keeps the promise
+CM.RUMOUR_COST = 15;
+CM.RUMOURS = {
+  ghostbones: { what: "a ghost on floor {n} wants its bones", floors: [2, 9] },
+  hermit: { what: "a hermit sits on floor {n}", floors: [3, 14] },
+  telling: { what: "floor {n}'s carving is in the other hand", floors: [1, 15] },
+};
+CM.activeRumours = [];                                                    // (set by the game from the village: {kind, floor, seed})
+CM.rumourAt = (seed, number, kind) => CM.activeRumours.find((r) => r.seed === seed && r.floor === number && (!kind || r.kind === kind));
+// the Book of Caer Duin: every crowned party of this browser's, written as the carvings would write it
+CM.legends = [];                                                          // (the crowned entries, for the floors near the surface to remember)
+CM.chronicle = function (fame, ledger) {
+  const crowns = (fame || []).filter((e) => e.won).slice().sort((a, b) => (a.t || 0) - (b.t || 0));
+  const descents = (ledger || []).length;
+  return crowns.map((e, i) => {
+    const first = (e.party || [])[0] || "", m = /^(.*) the (\w+) \d+$/.exec(first), who = m ? `${m[1]} the ${m[2]}` : (e.name || "a stranger");
+    const nth = ledger && ledger.length ? CM.ordinal(Math.max(1, (ledger.findIndex((l) => l.d === e.date && l.f === e.floor && l.w) + 1) || descents)) : CM.ordinal(i + 1);
+    return `In the year of the ${nth} descent, ${who} and three came down${e.reminded ? " and reminded the king who he was, and he did not rise again" : " and the king did not rise again"}${e.bottom ? ", and they went on to the bottom of the world and came back" : e.floor > CM.LAST_FLOOR ? `, and they went on into the Deep and fell on floor ${e.floor}` : ""}.${e.date ? ` (${e.date})` : ""}`;
+  });
+};
+CM.legendLine = (e) => { const first = (e.party || [])[0] || "", m = /^(.*) the (\w+) \d+$/.exec(first); return `Carved here in a newer hand: HERE ${(m ? `${m[1].toUpperCase()} THE ${m[2].toUpperCase()}` : "FOUR")} AND THREE PASSED, GOING DOWN TO THE KING. ${e.reminded ? "THEY TALKED HIM DOWN." : "THEY CAME BACK UP."}`; };
+
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)
 CM.LORE_KEYS = [];
 for (let n = 1; n <= 50; n++) CM.LORE_KEYS.push(`carving.${["catacombs", "vaults", "halls", "palace", "drowned", "fungal", "crystal", "foundry", "ossuary", "root"][Math.floor((n - 1) / 5)]}.${((n - 1) % 5) + 1}`);
@@ -394,7 +451,8 @@ CM.telling = function (key, seed) {
   return l.tellings[CM.hashSeed(`${seed}:telling:${key}`) % l.tellings.length];
 };
 // what a carving says: the floor's part of the story, an odd one, a guardian's or the endless dark's
-CM.loreText = (text, seed) => (typeof text === "string" && text.startsWith("ga:") && CM.PARLEY[text.slice(3)] && CM.PARLEY[text.slice(3)].after) || CM.telling(CM.loreKey(text), seed);
+CM.loreText = (text, seed, forced) => (typeof text === "string" && text.startsWith("ga:") && CM.PARLEY[text.slice(3)] && CM.PARLEY[text.slice(3)].after)
+  || (forced !== undefined && CM.LORE_TEXT[CM.loreKey(text)] ? CM.LORE_TEXT[CM.loreKey(text)].tellings[forced % CM.LORE_TEXT[CM.loreKey(text)].tellings.length] : CM.telling(CM.loreKey(text), seed));
 // the key a journal entry's text belongs to (an older save kept only the words)
 CM.keyOfText = function (text) {
   for (const l of Object.values(CM.LORE_TEXT)) if (l.tellings.includes(text)) return l.key;
@@ -404,7 +462,7 @@ CM.keyOfText = function (text) {
 // ---- the codex: every chapter, line by line, with what has been read ----
 // game.story.read is {key: floor read on}; a line read deeper that contradicts one above strikes the lie through
 CM.codex = function (game) {
-  const read = (game && game.story && game.story.read) || {};
+  const read = Object.assign({}, (game && game.village && game.village.loreRead) || {}, (game && game.story && game.story.read) || {});
   const truths = {};
   for (const l of Object.values(CM.LORE_TEXT)) if (l.contradicts && read[l.key] !== undefined) truths[l.contradicts] = l.key;
   const out = [];

@@ -696,6 +696,22 @@ CM.furnish = function (floor, seed, gen) {
       }
     });
     if (number === CM.BELL_FLOOR) { const k = pickCell("bell", (c) => !roomCells.has(c)) || pickCell("bell"); if (k) floor.things[k] = { type: "bones", bell: true }; }
+    // the chronicler's rumours, kept: a ghost who wants its bones, a hermit, the other telling of the floor's carving
+    if (CM.rumourAt(seed, number, "telling")) for (const f of Object.values(floor.features)) if (f.type === "carving" && f.text === number - 1) f.telling = 1;
+    if (CM.rumourAt(seed, number, "hermit") && !Object.values(floor.things).some((t) => t.type === "hermit")) { const k = pickCell("rumour:hermit", (c) => roomCells.has(c)) || pickCell("rumour:hermit"); if (k) floor.things[k] = { type: "hermit", heard: 0, greeted: false }; }
+    if (CM.rumourAt(seed, number, "ghostbones") && !Object.values(floor.things).some((t) => t.type === "ghost" && t.request === "bones")) {
+      const k = pickCell("rumour:ghost", (c) => roomCells.has(c)) || pickCell("rumour:ghost");
+      if (k) {
+        floor.things[k] = { type: "ghost", who: h("rumour:who") % CM.GHOSTS.length, request: "bones", asked: false };
+        const [gx, gy] = unkey(k), far = pickCell("rumour:bones", (c) => { const [x, y] = unkey(c); return Math.abs(x - gx) + Math.abs(y - gy) >= 6; }) || pickCell("rumour:bones", (c) => c !== k);
+        if (far) floor.things[far] = { type: "bones", ghost: k }; else floor.things[k].request = "story";
+      }
+    }
+    // the dungeon remembers the crowned: near the surface, a legend of one of this browser's own parties, now and then
+    if (number <= 3 && CM.legends.length && h("legend") % 100 < 50) {
+      const k = pickCell("legend", (c) => !roomCells.has(c)) || pickCell("legend");
+      if (k) floor.things[k] = { type: "ghost", legend: h("legend:which") % CM.legends.length, asked: false };
+    }
     CM.COURT.forEach((c, i) => {                                        // the seated dead of the palace, and the physician's page in one of its chests
       if (c.floor !== number) return;
       const k = pickCell(`court:${i}`, (cell) => roomCells.has(cell)) || pickCell(`court:${i}`);

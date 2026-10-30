@@ -54,6 +54,8 @@ CM.Game = class {
     this.bestiary = CM.store.get("bestiary", {});         // every kind met and slain, and what it fears: kept between runs
     this.memorial = CM.store.get("memorial", []);         // the heroes laid to rest, ever: {name, cls, level, floor, seed, date}
     this.fallen = CM.store.get("fallen", []);             // where parties fell, by seed: a later run on that seed finds their remains
+    CM.activeRumours = (this.village.rumours || []).filter((r) => r.seed);   // (what the chronicler promised, for CM.furnish)
+    CM.legends = this.fame.filter((e) => e.won);
     if (!this.ledger.length && (this.fame.length || this.fameEndless.length)) {   // (the runs that ended before the ledger was kept: read back from the boards)
       this.ledger = this.fame.concat(this.fameEndless).map(CM.ledgerFromFame);
       CM.store.set("ledger", this.ledger);
@@ -302,6 +304,7 @@ CM.Game = class {
     this.titleNote = "";
     this.tally = this.freshTally();
     this.journal = []; this.story = { read: {} }; this.reminded = false;
+    this.bindRumours();
     this.rescued = [];
     this.difficulty = CM.DIFFICULTIES[difficulty] ? difficulty : "fair";
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
