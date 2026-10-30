@@ -169,6 +169,13 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view .fall { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; transition: opacity 0.6s; }
 #view .fall.on { opacity: 1; transition: opacity 0.12s; }
 #view .tint { position: absolute; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: screen; }
+#view .titlecard { position: absolute; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none; opacity: 0; }
+#view .titlecard b { display: block; font: bold 38px var(--serif); color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 24px rgba(232,200,112,0.6), 0 2px 0 #000, 0 0 8px #000; }
+#view .titlecard small { display: block; font: italic 16px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000, 0 0 8px #000; margin-top: 4px; }
+#view .titlecard.on { animation: titlecard 2.6s ease-out forwards; }
+@keyframes titlecard { 0% { opacity: 0; transform: scale(0.9); } 15% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { #view .titlecard.on { animation: titlecard-still 2.6s linear forwards; } }
+@keyframes titlecard-still { 0% { opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
 .member.jolt { animation: jolt 0.45s ease-out; }
 @keyframes jolt { 0% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } 100% { transform: translateX(0); } }
 .member.glow-green { animation: glow-green 0.9s ease-out; }

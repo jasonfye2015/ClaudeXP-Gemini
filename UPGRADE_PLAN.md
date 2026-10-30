@@ -145,7 +145,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 6 - The look, and the sound
+## Phase 6 - The look, and the sound - DONE in v1.1 (lit stone deferred: the normal maps aren't in the repo)
 
 - **Lit stone.** Use the normal and roughness maps already kept from ambientCG in the Stone theme: per-pixel
   torchlight, wet sheen in the Vaults. Pack size goes up - pack at 256 px and measure the built file.
@@ -168,7 +168,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 8 - Around the game
+## Phase 8 - Around the game - DONE in v1.1
 
 - **Share a run:** the summary card gets a short code (seed + mode + difficulty + party) that "Play this seed"
   accepts from the clipboard.

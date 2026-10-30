@@ -398,6 +398,14 @@ CM.unlocked = function (fame) {
   const d = CM.deepest(fame);
   return Object.keys(CM.KITS).filter((id) => CM.KITS[id].need === 0 || (CM.KITS[id].need === 21 ? d.won : d.floor >= CM.KITS[id].need));
 };
+// this week's dungeon: the same seed for everyone all week, three mutators, and a party the seed rolls (CM.weeklyParty)
+CM.weeklySeed = (date) => {
+  const d = date || new Date(), t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);                 // (ISO week: the Thursday decides the year)
+  const y = t.getUTCFullYear(), week = Math.ceil(((t - Date.UTC(y, 0, 1)) / 86400000 + 1) / 7);
+  return `weekly-${y}-${String(week).padStart(2, "0")}`;
+};
+CM.weeklyParty = (seed) => { const rnd = new CM.Random(CM.hashSeed(`${seed}:party`)); return CM.CLASSIC.map((cls) => ({ cls, name: CM.randomName(rnd), stats: CM.rollStats(cls, rnd), row: CM.CLASSES[cls].row })); };
 CM.dailySeed = (date) => { const d = date || new Date(); return `daily-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 // what the party could do with: a line or two of advice, and whether it's sound

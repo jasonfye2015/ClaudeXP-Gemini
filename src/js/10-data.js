@@ -549,14 +549,28 @@ CM.MUTATORS = {
   drought: { name: "Drought", what: "every fountain is dry" },
   gloom: { name: "Gloom", what: "torches burn twice as fast" },
   lean: { name: "Lean", what: "the party sets out without potions, and with 100 gold more" },
+  glass: { name: "Glass Cannon", what: "every blow does double - theirs and yours" },
+  pilgrim: { name: "Pilgrim", what: "no experience from fights; every floor first set foot on is worth a fight's worth of floors" },
+  hunted: { name: "Hunted", what: "every band of monsters knows where you are" },
 };
 CM.DEEPENING = ["hordes", "brittle", "swift", "gloom", "drought"];      // Endless: the dark deepens with one of these every ten floors below the bottom
 CM.mutatorsFor = function (seed) {
-  if (!String(seed).startsWith("daily-")) return [];
-  const ids = Object.keys(CM.MUTATORS), a = CM.hashSeed(`${seed}:mutator:1`) % ids.length;
-  let b = CM.hashSeed(`${seed}:mutator:2`) % (ids.length - 1);
-  if (b >= a) b++;
-  return [ids[a], ids[b]];
+  const s = String(seed), weekly = s.startsWith("weekly-");
+  if (!s.startsWith("daily-") && !weekly) return [];
+  const ids = Object.keys(CM.MUTATORS), out = [];
+  for (let i = 1; out.length < (weekly ? 3 : 2) && i < 20; i++) { const id = ids[CM.hashSeed(`${seed}:mutator:${i}`) % ids.length]; if (!out.includes(id)) out.push(id); }
+  return out;
+};
+// a run, as a code to hand to a friend: the seed, the difficulty, the expedition, the kit and the party (CM.parseRunCode reads one back)
+CM.runCode = function (seed, difficulty, mode, kit, party) {
+  const who = (party || []).map((h) => [h.cls, (h.name || "").replace(/[;:,|]/g, " ").trim(), ...CM.STATS.map((s) => (h.stats || {})[s] || 10), h.row || CM.CLASSES[h.cls].row].join(",")).join(";");
+  return `CM1:${seed}:${difficulty || "fair"}:${mode || "dungeon"}:${kit || "pauper"}:${who}`;
+};
+CM.parseRunCode = function (text) {
+  const m = /^\s*CM1:([^:]+):([^:]*):([^:]*):([^:]*):(.*)$/.exec(String(text || ""));
+  if (!m) return null;
+  const party = m[5] ? m[5].split(";").map((p) => { const f = p.split(","); if (!CM.CLASSES[f[0]]) return null; const stats = {}; CM.STATS.forEach((s, i) => { stats[s] = CM.clamp(Number(f[2 + i]) || 10, 3, 25); }); return { cls: f[0], name: f[1] || f[0], stats, row: f[8] === "back" ? "back" : f[8] === "front" ? "front" : CM.CLASSES[f[0]].row }; }).filter(Boolean) : [];
+  return { seed: m[1], difficulty: CM.DIFFICULTIES[m[2]] ? m[2] : "fair", mode: m[3] === "endless" ? "endless" : "dungeon", kit: m[4] || "pauper", party: party.length === 4 ? party : null };
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {

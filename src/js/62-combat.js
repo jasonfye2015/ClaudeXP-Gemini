@@ -29,6 +29,7 @@ Object.assign(CM.Game.prototype, {
     this.combat = { foes: this.foes, round: 0, order: [], index: 0, waiting: null, surprise: false, taunter: null, tauntUntil: 0, bless: Boolean(this.blessedNext), protect: false, reached: 0 };
     if (this.blessedNext) { this.blessedNext = false; this.say("The saint's blessing is on the party for this fight."); }
     if (this.floor && this.floor.tide) for (const m of this.foes) m.speed = (m.speed || 10) + 3;   // (high tide: the Drowned are quick)
+    this.foes.forEach((m, i) => { if (m.ability === "breath") m.breath = i % 2; });   // (a pack of demons breathes in halves, not all at once)
     this.setMode("combat");
     this.count("fights");
     this.sound(CM.roarFor((this.foes[0] || {}).kind || (this.foes[0] || {}).name));
@@ -36,6 +37,8 @@ Object.assign(CM.Game.prototype, {
     for (const m of this.foes) names[m.name] = (names[m.name] || 0) + 1;
     const who = Object.entries(names).map(([k, n]) => CM.plural(n, k)).join(", ");
     const guardian = this.foes.find((m) => m.guardian);
+    if (guardian || this.foes.some((m) => m.boss)) this.emit("fx", { kind: "intro", foe: guardian || this.foes.find((m) => m.boss) });   // (a title card, a push of the camera)
+    else if (this.foes.some((m) => m.elite)) this.sound("elite");          // (a leader among them: a stinger)
     if (this.foes.some((m) => m.boss)) this.say(`The Lich King rises from his throne. "You took your time," he says.${this.phylactery ? "" : " Somewhere, his heart beats."}`);
     else if (guardian) this.say(CM.GUARDIANS[guardian.guardian].intro + (guardian.echo ? " It is not the thing itself: it is what the dark remembers of it, and the dark remembers it stronger." : "")
       + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
@@ -368,6 +371,7 @@ Object.assign(CM.Game.prototype, {
     if (h.defending) dmg = Math.ceil(dmg / 2);
     if (this.song) dmg -= this.song;
     if (c.protect) dmg -= 3 + (c.protectMore || 0);
+    if (this.has("glass")) dmg *= 2;
     dmg = Math.max(1, dmg);
     h.hp -= dmg;
     if (h.hp <= 0 && CM.trait(h, "undying") && !h.undied) { h.undied = true; h.hp = 1; this.say(`${h.name} does not fall. Not this once.`); }
@@ -668,6 +672,7 @@ Object.assign(CM.Game.prototype, {
     if (opts.bash && target.chilled > 0) { dmg *= 2; how += " - the ice shatters"; this.combo("shatter"); target.chilled = 0; }
     if (hero.cls === "Rogue" && target.marked) { dmg = Math.ceil(dmg * 1.5); how += " - the knife finds the mark"; this.combo("knife"); }
     if (target.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; target.warded -= 1; }
+    if (this.has("glass")) dmg *= 2;
     target.hp -= dmg;
     this.splitIfHurt(target);
     if (target.asleep > 0) { target.asleep = 0; how += " - it wakes"; }
@@ -698,6 +703,7 @@ Object.assign(CM.Game.prototype, {
     if (element === "fire" && foe.held > 0) { dmg = Math.ceil(dmg * 1.5); how += " - the vines burn"; this.combo("kindling"); }
     if (element === "storm" && foe.chilled > 0) { dmg *= 2; how += " - the ice carries it"; this.combo("thunderclap"); foe.chilled = 0; }
     if (foe.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; foe.warded -= 1; }
+    if (this.has("glass")) dmg *= 2;
     foe.hp -= dmg;
     if (foe.asleep > 0) foe.asleep = 0;
     this.emit("fx", { kind: "hit", foe, amount: dmg, spell: true });
@@ -1024,7 +1030,7 @@ Object.assign(CM.Game.prototype, {
     this.count("kills", slain.length);
     for (const m of slain) this.noteFoe(m, "slain");
     if (this.bestiaryDirty) { CM.store.set("bestiary", this.bestiary); this.bestiaryDirty = false; }
-    const xp = slain.reduce((s, m) => s + m.xp, 0);
+    const xp = this.has("pilgrim") ? 0 : slain.reduce((s, m) => s + m.xp, 0);
     let gold = slain.reduce((s, m) => s + m.gold, 0);
     if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
     if (this.alive().some((h) => CM.trait(h, "pickpocket"))) gold = Math.floor(gold * 1.1);

@@ -23,6 +23,14 @@ Object.assign(CM.Game.prototype, {
       if (fl >= 100) this.achieve("beyond");
     }
     entry.titles = (this.earned || []).slice();
+    entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party);
+    entry.weekly = String(this.seed).startsWith("weekly-");
+    if (!won && !this.bottom) {                                          // where they fell: a later run on this seed finds them
+      const carried = this.party.flatMap((h) => CM.equipped(h)).filter((it) => !(it.props && (it.props.relic || it.props.unique)) && !["weapon", "armor"].includes(it.kind));
+      const item = carried.length ? carried[Math.floor(this.rnd.next() * carried.length)] : null;
+      this.fallen = (this.fallen || []).filter((f) => f.seed !== this.seed || f.floor !== fl).concat({ id: `${this.seed}:${fl}:${Date.now()}`, seed: this.seed, floor: fl, pos: this.floor.pos.slice(), names: this.party.map((h) => h.name), date: CM.today(), item }).slice(-40);
+      CM.store.set("fallen", this.fallen);
+    }
     if (this.endless) { this.fameEndless.push(entry); this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
     else { this.fame.push(entry); this.sortFame(); CM.store.set("fame", this.fame); }
     if (won) this.trophy("lich");
@@ -64,7 +72,7 @@ Object.assign(CM.Game.prototype, {
 
   exportText() {
     return JSON.stringify({ game: "Claude and Magic", version: CM.version, built: CM.built, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
-      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, memorial: this.memorial });
+      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, memorial: this.memorial, fallen: this.fallen });
   },
 
   importText(text) {
@@ -82,6 +90,7 @@ Object.assign(CM.Game.prototype, {
     if (data.bestiary && typeof data.bestiary === "object") { this.bestiary = Object.assign({}, this.bestiary, data.bestiary); CM.store.set("bestiary", this.bestiary); }
     if (data.combos && typeof data.combos === "object") { this.combos = Object.assign({}, this.combos, data.combos); CM.store.set("combos", this.combos); }
     if (Array.isArray(data.memorial)) { this.memorial = data.memorial.concat(this.memorial || []).slice(0, 30); CM.store.set("memorial", this.memorial); }
+    if (Array.isArray(data.fallen)) { const have = new Set((this.fallen || []).map((f) => f.id)); this.fallen = (this.fallen || []).concat(data.fallen.filter((f) => f && f.id && !have.has(f.id))).slice(-40); CM.store.set("fallen", this.fallen); }
     this.emit("change");
     return "";
   },

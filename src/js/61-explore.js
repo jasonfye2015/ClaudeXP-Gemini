@@ -113,7 +113,8 @@ Object.assign(CM.Game.prototype, {
           ghost: "A pale shape hangs in the air here, waiting. (Space to speak to it)", hermit: "A hermit crouches in a nest of rags. (Space to speak to him)",
           adventurer: "Someone sits bound against the wall. (Space to cut them loose)", rope: "A rope hangs down from the floor above. (Space to climb it)",
           event: `${(CM.EVENTS[thing.event] || {}).title || "Something"}. (Space to look closer)`, strongbox: thing.opened ? "An iron strongbox, open and empty." : `An iron strongbox, bolted to the floor, with a keyhole. (The key is on floor ${thing.from}.)`,
-          peddler: "A peddler sits on his pack, with a lantern and a smile. (Space to see his wares)", rivals: "Four adventurers, armed, look you over. (Space to speak to them)" }[thing.type]);
+          peddler: "A peddler sits on his pack, with a lantern and a smile. (Space to see his wares)", rivals: "Four adventurers, armed, look you over. (Space to speak to them)",
+          remains: "Bones in torn gear, four of them, and a name you know from the Hall of Fame. (Space to see what they left)" }[thing.type]);
       }
     }
     if (f) this.arrive(f, k);
@@ -309,6 +310,7 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "strongbox") { this.openStrongbox(thing, k); return; }
     if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
     if (thing && thing.type === "rivals") { this.meetRivals(thing, k); return; }
+    if (thing && thing.type === "remains") { this.takeRemains(thing, k); return; }
     if (thing && thing.type === "rope") {
       this.sound("stairs");
       this.enterFloor(fl.number - 1, "rope", thing.up);
@@ -459,9 +461,14 @@ Object.assign(CM.Game.prototype, {
     for (const [k, t] of Object.entries(fl.things)) {
       if (t.type !== "monsters" && t.type !== "boss" && t.type !== "guardian") continue;
       const d = dist.get(k);
-      if (d !== undefined && d <= 6 && (!nearest || d < nearest.d)) nearest = { d, t };
+      if (d !== undefined && d <= 6 && (!nearest || d < nearest.d)) nearest = { d, t, k };
     }
-    if (nearest) { const m = nearest.t.group.find((f) => f.hp > 0 && !f.fled) || nearest.t.group[0]; if (m) this.emit("near", m.kind || m.name, nearest.d); }
+    if (nearest) {                                                       // its call, from the side it is on
+      const m = nearest.t.group.find((f) => f.hp > 0 && !f.fled) || nearest.t.group[0];
+      const [mx, my] = nearest.k.split(",").map(Number), [fx, fy] = CM.DIRS[fl.facing];
+      const pan = CM.clamp(((mx - px) * -fy + (my - py) * fx) / Math.max(1, Math.abs(mx - px) + Math.abs(my - py)), -1, 1);   // (right of the facing is positive)
+      if (m) this.emit("near", m.kind || m.name, nearest.d, pan);
+    }
     const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still);
     this.rnd.shuffle(movers);
     for (const [k, t] of movers) {
@@ -473,7 +480,7 @@ Object.assign(CM.Game.prototype, {
         this.startCombat(k, t, true);
         return;
       }
-      if (d !== undefined && (d <= 7 || t.hunter)) {
+      if (d !== undefined && (d <= 7 || t.hunter || this.has("hunted"))) {
         const nearer = options.filter(([nx, ny]) => dist.get(keyOf(nx, ny)) === d - 1 && !(nx === px && ny === py));
         if (nearer.length) step = this.rnd.pick(nearer);
       } else if (this.rnd.chance(0.3) && options.length) {
@@ -495,9 +502,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers" };
+  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -626,6 +633,29 @@ Object.assign(CM.Game.prototype, {
 // ---- the dungeon's strangers: a choice on the floor, a strongbox and its key, a peddler, a rival party ----
 {
 Object.assign(CM.Game.prototype, {
+  // a party that fell on this floor of this seed, in a run before: their bones, and one thing they carried
+  layRemains(fl) {
+    const past = (this.fallen || []).find((f) => f.seed === this.seed && f.floor === fl.number && !(this.remainsFound || []).includes(f.id));
+    if (!past || !past.pos) return;
+    const free = (x, y) => CM.passable(fl, x, y) && !fl.things[keyOf(x, y)] && !fl.features[keyOf(x, y)] && !(fl.pos[0] === x && fl.pos[1] === y);
+    let at = free(past.pos[0], past.pos[1]) ? past.pos : null;
+    if (!at) {                                                           // (they fell on the stairs, or where something stands: the nearest open square)
+      let best = 1e9;
+      for (const [k, d] of CM.distances(fl.grid, past.pos, (x, y) => CM.passable(fl, x, y))) { const [x, y] = k.split(",").map(Number); if (d < best && d <= 4 && free(x, y)) { best = d; at = [x, y]; } }
+    }
+    if (!at) return;
+    fl.things[keyOf(at[0], at[1])] = { type: "remains", id: past.id, names: past.names, date: past.date, item: past.item || null };
+  },
+  takeRemains(thing, k) {
+    this.remainsFound = (this.remainsFound || []).concat(thing.id);
+    delete this.floor.things[k];
+    if (thing.item) this.bag.push(thing.item);
+    this.sound("coin");
+    this.say(`${thing.names.join(", ").replace(/, ([^,]*)$/, " and $1")} fell here, ${thing.date}. The dark did not take everything${thing.item ? `: ${thing.item.name} is still with them, and now with you` : ""}.`);
+    this.emit("talk", { title: "The remains of a party", text: `Four of them, where they fell: ${thing.names.join(", ")}. You know the names from the Hall of Fame. ${thing.item ? `Among the bones, ${thing.item.name}. They would want it used.` : "There is nothing left to take but the warning."}` });
+    this.saveRun();
+    this.emit("change");
+  },
   hazardsSeen(id) { this.hazardsMet = this.hazardsMet || []; if (this.hazardsMet.includes(id)) return true; this.hazardsMet.push(id); return false; },
   askEvent(thing, k) {
     const E = CM.EVENTS[thing.event];

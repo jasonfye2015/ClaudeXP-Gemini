@@ -696,6 +696,63 @@ test("the capstone at fifteen, and the bonds of old friends", () => {
   assert.ok(JSON.parse(game.exportText()).memorial.length === 1);
 });
 
+test("around the game: run codes, the week's seed and party, the new mutators, the remains of a fallen party", () => {
+  const CM = load(), game = new CM.Game();
+  const party = fixedParty(CM);
+  const code = CM.runCode("ember-crypt-417", "grim", "endless", "veteran", party);
+  assert.match(code, /^CM1:ember-crypt-417:grim:endless:veteran:/);
+  const back = CM.parseRunCode(code);
+  assert.strictEqual(back.seed, "ember-crypt-417"); assert.strictEqual(back.difficulty, "grim"); assert.strictEqual(back.mode, "endless");
+  assert.deepStrictEqual(back.party.map((p) => p.cls), party.map((p) => p.cls));
+  assert.deepStrictEqual(back.party[0].stats, party[0].stats);
+  assert.strictEqual(CM.parseRunCode("raven-rune-533"), null);
+  const w = CM.weeklySeed(new Date(2026, 9, 30));
+  assert.strictEqual(w, "weekly-2026-44");
+  assert.strictEqual(CM.weeklySeed(new Date(2026, 10, 1)), "weekly-2026-44", "Sunday is still the same week");
+  assert.strictEqual(CM.weeklySeed(new Date(2026, 10, 2)), "weekly-2026-45");
+  assert.strictEqual(CM.mutatorsFor(w).length, 3);
+  assert.strictEqual(JSON.stringify(CM.weeklyParty(w)), JSON.stringify(CM.weeklyParty(w)));
+  assert.strictEqual(CM.mutatorsFor(CM.dailySeed()).length, 2);
+  // glass cannon, the pilgrim, the hunted
+  game.newGame("mut-1", party, "pauper", "fair", ["glass", "pilgrim", "hunted"]);
+  assert.ok(game.has("glass") && game.has("pilgrim"));
+  const knight = game.party[0], xp0 = knight.xp;
+  game.enterFloor(2, "down");
+  assert.ok(knight.xp > xp0, "the pilgrim earns a floor's worth");
+  const rnd = new CM.Random(4), rat = CM.makeMonster(CM.monsterKind("Giant Rat"), 1, rnd); rat.max = rat.hp = 1000;
+  game.floor.things["2,2"] = { type: "monsters", group: [rat] };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  const dealt = game.strike(knight, rat, "", { sure: true });
+  const plain = new CM.Game(); plain.newGame("mut-2", party); const rat2 = CM.makeMonster(CM.monsterKind("Giant Rat"), 1, new CM.Random(4)); rat2.max = rat2.hp = 1000;
+  plain.floor.things["2,2"] = { type: "monsters", group: [rat2] }; plain.startCombat("2,2", plain.floor.things["2,2"]);
+  let most = 0; for (let i = 0; i < 20; i++) most = Math.max(most, plain.strike(plain.party[0], rat2, "", { sure: true }));
+  assert.ok(dealt >= most, `glass: ${dealt} should be at least any plain blow (${most})`);
+  const xpBefore = knight.xp; rat.hp = 0; game.afterBlows();
+  assert.strictEqual(knight.xp, xpBefore, "the pilgrim learns nothing from a fight");
+  // the remains: a party that fell here before, on this seed
+  const CM3 = load(), g3 = new CM3.Game();
+  g3.newGame("fell-1", fixedParty(CM3));
+  g3.enterFloor(3, "down");
+  g3.party[1].ring = { name: "Ring of Grace +1", kind: "ring", slot: "ring", power: 1, value: 80, props: { stat: "dex" } };
+  for (const h of g3.party) h.hp = 0;
+  const where = g3.floor.pos.slice();
+  g3.endRun(false);
+  assert.ok(g3.fallen.length === 1 && g3.fallen[0].floor === 3 && g3.fallen[0].item && g3.fallen[0].item.kind === "ring");
+  const g4 = new CM3.Game();
+  g4.newGame("fell-1", fixedParty(CM3));
+  g4.enterFloor(3, "down");
+  const k = Object.keys(g4.floor.things).find((x) => g4.floor.things[x].type === "remains"), remains = k && g4.floor.things[k];
+  assert.ok(remains, "their remains lie where they fell (or the nearest open square to the stairs they fell on)");
+  assert.ok(Math.abs(Number(k.split(",")[0]) - where[0]) + Math.abs(Number(k.split(",")[1]) - where[1]) <= 4);
+  g4.floor.pos = k.split(",").map(Number);
+  const n = g4.bag.length;
+  g4.use();
+  assert.ok(g4.bag.length === n + 1 && !g4.floor.things[k] && g4.remainsFound.length === 1);
+  g4.saveRun();
+  const exp = JSON.parse(g4.exportText());
+  assert.ok(Array.isArray(exp.fallen) && exp.fallen.length === 1);
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

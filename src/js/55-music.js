@@ -23,6 +23,7 @@ CM.music = {
     lament: { scale: [0, 2, 3, 5, 7, 8, 10], root: 45, tempo: 44, rest: 0.45, voice: "pad" },         // Aeolian, slow: the party fell
   },
   playing: null,
+  depth: 0,                                        // how far into its band the party is (0..1): the tune gains a voice past the middle, and a fifth near the end
   enabled: true,
   volume: 0.5,
   master: null,
@@ -141,8 +142,11 @@ CM.music = {
     return o;
   },
 
+  setDepth(k) { this.depth = CM.clamp(k || 0, 0, 1); },
   _note(t, deg, at, len) {
     const hz = this.hz(this.midi(t, deg, 1));
+    if (this.depth >= 0.5 && !t.drums && this.bus) this._osc("sine", hz * 2, at + 0.02, at + len * 0.7, 0.03 + 0.03 * this.depth, 2400);   // deeper in: an echo an octave up
+    if (this.depth >= 0.9 && !t.drums && this.bus) this._osc("triangle", this.hz(this.midi(t, deg + 4, 0)), at, at + len * 0.9, 0.04, 1200);   // at the band's end: a fifth under it
     if (t.voice === "pluck") {                                           // a lute: bright, quick to fade
       const ctx = CM.audio.ctx, o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
       o.type = "triangle"; o.frequency.value = hz; f.type = "lowpass"; f.frequency.value = 2400;

@@ -20,7 +20,8 @@ CM.UI = class {
       <h2>Expedition</h2>
       <div class="row slots" id="slots-row"><span class="small">Expedition</span><button data-slot="1">1</button><button data-slot="2">2</button><button data-slot="3">3</button></div>
       <div class="row"><button id="btn-continue" class="primary">Continue</button><span id="continue-note" class="small"></span></div>
-      <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button><button id="btn-daily" title="Today's dungeon: the same one for everyone, today">Today's</button></div>
+      <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button><button id="btn-daily" title="Today's dungeon: the same one for everyone, today">Today's</button><button id="btn-weekly" title="This week's challenge: one seed, three mutators and a party the seed rolls, the same for everyone all week">This week's</button></div>
+      <p class="small">A run code (CM1:...) from a summary card goes in the seed box too: New Expedition then sets out with that party, difficulty and kit.</p>
       <p>The same seed lays out the same fifty floors, so a dungeon can be tried again - or handed to a friend. What
       the monsters do in a fight is up to the dice. The run saves as you go; when the whole party falls, it ends, and
       the deepest runs go in the Hall of Fame.</p>
@@ -28,7 +29,7 @@ CM.UI = class {
       <div id="classes"></div>
       <p id="start-with"></p>
     </div>
-    <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
+    <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button><button data-board="weekly" title="This week's challenge: the runs on this week's seed">This week</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
     <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
     <div class="version"></div>
   </div>
@@ -50,7 +51,7 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="hint"></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div></div>
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div></div>
   </div>
   <div id="party"></div>
@@ -74,6 +75,7 @@ CM.UI = class {
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
+  <div class="row"><label for="set-render">Render scale - fewer pixels on a slow machine (Auto steps down when frames come late)</label><select id="set-render"><option value="auto">Auto</option><option value="full">Full</option><option value="three">Three quarters</option><option value="half">Half</option></select></div>
   <div class="row"><label for="set-speed">Combat speed - how long bolts fly and sparks hang</label><select id="set-speed"><option value="normal">Normal</option><option value="fast">Fast</option><option value="instant">As good as instant</option></select></div>
   <div class="row"><label for="set-text">Text size</label><select id="set-text"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select></div>
   <div class="row"><label for="set-motion">Reduce motion - no shaking, no flashes, no washes of colour over the view</label><input type="checkbox" id="set-motion"></div>
@@ -85,10 +87,10 @@ CM.UI = class {
 <div class="dialog" id="dlg-credits"><div class="box"><h2>Credits</h2><div id="credits"></div><div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-transfer"><div class="box"><h2>Export / Import</h2>
   <p class="small">Your run, the Hall of Fame and your settings, as text. Copy it to keep it or to carry it to another
-  browser; paste a copy here and Import to bring it back.</p>
+  browser; paste a copy here and Import to bring it back. Download saves it as a file; drop a saved file on the box to read it in.</p>
   <textarea id="transfer-text" spellcheck="false"></textarea>
   <div class="small" id="transfer-note"></div>
-  <div class="end"><button id="btn-copy">Copy</button><button id="btn-import">Import</button><button class="close">Close</button></div></div></div>
+  <div class="end"><button id="btn-copy">Copy</button><button id="btn-download">Download</button><button id="btn-import">Import</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-pause"><div class="box"><h2>Paused</h2>
   <p class="small">The run is saved as you go.</p>
   <div class="end"><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
@@ -162,6 +164,22 @@ CM.UI = class {
     this.$("#btn-temple-raise").addEventListener("click", () => { game.raiseDead(); this.refresh(); });
     this.$("#btn-scribe").addEventListener("click", () => { game.scribe(); this.refresh(); });
     this.$("#btn-daily").addEventListener("click", () => { this.$("#seed").value = CM.dailySeed(); this.refreshTitle(); });
+    this.$("#btn-weekly").addEventListener("click", () => { this.$("#seed").value = CM.weeklySeed(); this.refreshTitle(); });
+    this.$("#btn-download").addEventListener("click", () => {
+      const blob = new Blob([g.exportText()], { type: "application/json" }), a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = `claude-and-magic-${CM.today().replace(/\//g, "-")}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      this.$("#transfer-note").textContent = "Downloaded, where the browser puts downloads.";
+    });
+    const drop = this.$("#transfer-text");
+    drop.addEventListener("dragover", (e) => { e.preventDefault(); });
+    drop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      f.text().then((t) => { drop.value = t; this.$("#transfer-note").textContent = `${f.name} read in. Import brings it back.`; });
+    });
     this.$("#btn-pause-settings").addEventListener("click", () => { this.closeDialogs(); this.openDialog("#dlg-settings"); });
     this.$("#btn-pause-title").addEventListener("click", () => { this.closeDialogs(); game.saveRun(); game.setMode("title"); });
     this.renderKeys();
@@ -434,7 +452,7 @@ CM.UI = class {
       const b = e.target.closest("button[data-seed]");
       if (b) { this.$("#seed").value = b.dataset.seed; this.refreshTitle(); return; }
       const c = e.target.closest("button[data-card]");
-      if (c) { this.openCard((this.fameBoard === "endless" ? g.fameEndless : g.fame)[Number(c.dataset.card)]); return; }
+      if (c) { const b = this.fameBoard === "weekly" ? g.fame.concat(g.fameEndless || []).filter((x) => x.seed === CM.weeklySeed()) : this.fameBoard === "endless" ? g.fameEndless : g.fame; this.openCard(b[Number(c.dataset.card)]); return; }
       const tr = e.target.closest("tr.row");
       if (!tr) return;
       const i = Number(tr.dataset.i);
@@ -516,6 +534,15 @@ CM.UI = class {
     const g = this.game;
     if (g.canContinue() && !window.confirm(`A run is waiting in expedition slot ${g.slot}. Start a new expedition there and let it go? (The other slots keep theirs.)`)) return;
     for (const sel of this.root.querySelectorAll("#slots select.cls")) sel.innerHTML = g.classesAvailable().map((c) => `<option value="${c}">${c}</option>`).join("");   // (the callings earned)
+    const code = CM.parseRunCode(this.$("#seed").value);
+    if (code) {                                                          // a run code: the seed, the party, the difficulty and the kit as they were
+      this.$("#seed").value = code.seed;
+      if (code.party) this.slots = code.party.filter((p) => g.classUnlocked(p.cls)).length === 4 ? code.party : code.party.map((p) => (g.classUnlocked(p.cls) ? p : Object.assign({}, p, { cls: "Knight", stats: CM.rollStats("Knight") })));
+      this.$("#difficulty").value = code.difficulty; this.$("#mode").value = code.mode; this.chosenKit = code.kit;
+    }
+    const weekly = this.$("#seed").value === CM.weeklySeed();
+    if (weekly) this.slots = CM.weeklyParty(this.$("#seed").value);        // (the week's party, the same for everyone)
+    this.weekly = weekly;
     if (!this.slots.length) this.fillSlots(CM.CLASSIC);
     this.$("#create-seed").value = this.$("#seed").value;
     this.renderCreateNote();
@@ -541,7 +568,9 @@ CM.UI = class {
       const h = CM.makeHero(s.cls, s.name, s.stats, s.row);
       div.querySelector(".derived").textContent = `${h.max} health${h.maxmp ? `, ${h.maxmp} magic` : ""}, attack ${h.atk}, defence ${h.df} - ${h.weapon.name} and ${h.armor.name}`;
       for (const b of div.querySelectorAll("button[data-row]")) b.classList.toggle("on", b.dataset.row === s.row);
+      for (const el of div.querySelectorAll(".cls, .reroll, .dice")) el.disabled = Boolean(this.weekly);   // (the week's party is the week's)
     });
+    this.$("#btn-reroll-all").disabled = Boolean(this.weekly); this.$("#btn-suggest").disabled = Boolean(this.weekly);
     this.renderAdvice();
   }
 
@@ -562,7 +591,7 @@ CM.UI = class {
 
   renderCreateNote() {
     const seed = this.$("#create-seed").value, muts = CM.mutatorsFor(seed), d = CM.DIFFICULTIES[this.$("#difficulty").value] || CM.DIFFICULTIES.fair;
-    this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` Today's dungeon comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "")
+    this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` ${seed.startsWith("weekly-") ? "This week's challenge" : "Today's dungeon"} comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "") + (seed.startsWith("weekly-") ? " The party is the week's: everyone sets out with these four." : "")
       + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "");
   }
 
@@ -589,16 +618,17 @@ CM.UI = class {
       + "New Expedition lets you name them, choose their callings and roll their stats; chests and fallen monsters give better gear; "
       + "a merchant's camp with a temple waits below floors 5, 10 and 15 (and every fifth floor of the Deep) - each shaft guarded by something that has made its lair over it, and leaves a relic when it falls. "
       + "The Lich King waits on floor 20; below him, thirty floors of the Deep go down to the Root of the World - or, in an Endless expedition, to no bottom at all.";
-    const table = this.$("#fame table"), endlessBoard = this.fameBoard === "endless", board = endlessBoard ? (g.fameEndless || []) : g.fame;
-    for (const b of this.root.querySelectorAll("#fame .boards button")) b.classList.toggle("on", (b.dataset.board === "endless") === endlessBoard);
-    if (!board.length) table.innerHTML = `<tr><td class="empty">${endlessBoard ? "No Endless expedition yet: choose Endless when the party sets out." : "No party has gone down yet."}</td></tr>`;
+    const table = this.$("#fame table"), weeklyBoard = this.fameBoard === "weekly", endlessBoard = this.fameBoard === "endless";
+    const board = weeklyBoard ? g.fame.concat(g.fameEndless || []).filter((e) => e.seed === CM.weeklySeed()).sort((a, b) => (b.bottom ? 1 : 0) - (a.bottom ? 1 : 0) || (b.won ? 1 : 0) - (a.won ? 1 : 0) || b.floor - a.floor || b.gold - a.gold) : endlessBoard ? (g.fameEndless || []) : g.fame;
+    for (const b of this.root.querySelectorAll("#fame .boards button")) b.classList.toggle("on", b.dataset.board === (this.fameBoard || "dungeon"));
+    if (!board.length) table.innerHTML = `<tr><td class="empty">${weeklyBoard ? `No run on this week's seed yet (${CM.weeklySeed()}): This week's, on the left, sets it.` : endlessBoard ? "No Endless expedition yet: choose Endless when the party sets out." : "No party has gone down yet."}</td></tr>`;
     else table.innerHTML = board.map((e, i) => {
       const open = this.fameOpen === i, t = e.tally;
       let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
         + `<td class="${e.won ? "won" : ""}">${endlessBoard ? `floor ${e.floor}${e.won ? " - crowned" : ""}` : e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
       if (open) {
         rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
-          + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button></div>` : "")
+          + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : e.weekly ? " (a week's challenge)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button>${e.code ? ` <button data-seed="${this.esc(e.code)}" title="The seed, the party, the difficulty and the kit, as they set out">Play this run</button>` : ""}</div>` : "")
           + (t ? `<div>${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}.</div>` : "")
           + (t && t.guardians && t.guardians.length ? `<div>Guardians slain: ${this.esc(this.guardianNames(t.guardians))}.</div>` : "")
           + (e.mutators && e.mutators.length ? `<div>${e.endless ? "The dark deepened" : "Today's dungeon"}: ${this.esc(e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(", "))}.</div>` : "")
@@ -646,8 +676,8 @@ CM.UI = class {
     const g = this.game, s = g.settings;
     const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
     const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap");
-    const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab");
-    speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB);
+    const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab"), render = this.$("#set-render");
+    speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB); render.value = s.render || "auto";
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
     smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false;
@@ -655,12 +685,12 @@ CM.UI = class {
     note();
     const apply = () => {
       s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.tapMove = tap.checked;
-      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked;
+      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value;
       g.saveSettings();
       g.emit("settings", s);
     };
     for (const el of [sound, vol, music, mvol, smooth, fps, tap, motion, contrast, swapab]) el.addEventListener("input", apply);
-    for (const el of [speed, text]) el.addEventListener("change", apply);
+    for (const el of [speed, text, render]) el.addEventListener("change", apply);
     for (const sel of [look, titleLook]) sel.addEventListener("change", () => { s.look = sel.value; look.value = titleLook.value = s.look; note(); apply(); });
   }
 
@@ -1143,7 +1173,7 @@ CM.UI = class {
     const slot = this.$("#card-slot");
     slot.innerHTML = "";
     slot.appendChild(CM.art.summaryCard(e, CM.titleFor(g.achievements)));
-    this.$("#card-text").value = CM.summaryText(e);
+    this.$("#card-text").value = CM.summaryText(e) + (e.code ? `\nRun code (paste it in the seed box): ${e.code}` : "");
     this.$("#card-note").textContent = "";
     this.openDialog("#dlg-card");
   }
@@ -1417,6 +1447,18 @@ CM.UI = class {
     const found = Object.keys(CM.COMBOS).filter((id) => (this.game.combos || {})[id]);
     const rows = Object.entries(CM.COMBOS).map(([id, c]) => `<div class="entry"><p>${found.includes(id) ? `<b>${c.name}</b> - ${this.esc(c.what)} <small>(done ${this.game.combos[id]} ${this.game.combos[id] === 1 ? "time" : "times"})</small>` : `<b>?</b> <small>A combo not yet found.</small>`}</p></div>`);
     return `<div class="list-title">Combos (${found.length} of ${Object.keys(CM.COMBOS).length} found)</div>` + rows.join("");
+  }
+
+  // a guardian's name across the view, for a moment, as it rises
+  titleCard(name, sub) {
+    const el = this.$("#view .titlecard");
+    el.querySelector("b").textContent = name;
+    el.querySelector("small").textContent = sub || "";
+    el.classList.remove("on");
+    void el.offsetWidth;
+    el.classList.add("on");
+    clearTimeout(this.cardTimer);
+    this.cardTimer = setTimeout(() => el.classList.remove("on"), 2600);
   }
 
   // a wash of colour over the view that fades (a spell's light, a trap's gas)

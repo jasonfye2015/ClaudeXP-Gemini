@@ -89,7 +89,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const STEPS = ["step", "step_water", "step_hall", "step_cold"];        // a footfall for each depth (the Deep's bands borrow one)
   const soundBand = (n) => CM.AMBIENCE_OF[CM.themeIndex(n)] || 0;
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
-  game.on("near", (kind, d) => CM.audio.near(kind, 1 - d / 8));          // something is coming: louder the nearer
+  game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));   // something is coming: louder the nearer, from the side it is on
+  game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
   game.on("mode", (mode) => {
     if (mode === "title") showDemo();
     else if (game.floor && renderer.ok) {
@@ -110,7 +111,19 @@ window.addEventListener("DOMContentLoaded", () => {
     CM.reducedMotion = s.motion === undefined ? Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) : Boolean(s.motion);
     document.getElementById("app").style.zoom = { normal: "", large: "1.15", larger: "1.32" }[s.text] || "";
     document.body.classList.toggle("contrast", Boolean(s.contrast));
+    renderAuto = !s.render || s.render === "auto";
+    if (!renderAuto) renderer.scale = { full: 1, three: 0.75, half: 0.5 }[s.render] || 1;
+    else if (!renderer.scale) renderer.scale = 1;
   };
+  let renderAuto = true, slowFor = 0, quickFor = 0;
+  const RENDER_STEPS = [1, 0.75, 0.5];
+  function autoScale(dt) {                                               // frames coming late for two seconds: a step down; quick for ten: a step back up
+    if (!renderAuto) return;
+    if (dt > 0.022) { slowFor += dt; quickFor = 0; } else if (dt < 0.013) { quickFor += dt; slowFor = 0; } else { slowFor = 0; quickFor = 0; }
+    const i = RENDER_STEPS.indexOf(renderer.scale || 1);
+    if (slowFor > 2 && i < RENDER_STEPS.length - 1) { renderer.scale = RENDER_STEPS[i + 1]; slowFor = 0; }
+    else if (quickFor > 10 && i > 0) { renderer.scale = RENDER_STEPS[i - 1]; quickFor = 0; }
+  }
   game.on("settings", applySettings);
   applySettings(game.settings);
   CM.audio.unlock();                                                     // (where the page may: the Timeline's window; a browser waits for a click or key)
@@ -222,6 +235,7 @@ window.addEventListener("DOMContentLoaded", () => {
       case "mend": { const at = atFoe(fx.foe, 0.3); if (at) fxs.drift({ at, layer: "fx:leaf", n: 8, size: 0.06, rise: 0.5, ms: 900 }); break; }
       case "ward": { const at = atFoe(fx.foe, 0.5); if (at) fxs.flare({ at, layer: "fx:frost", size: 0.9, ms: 500, grow: 0.3 }); break; }
       case "combo": ui.tint("rgba(255,230,150,0.35)", 500); break;
+      case "intro": { const G = fx.foe.guardian ? CM.GUARDIANS[fx.foe.guardian] : null; ui.titleCard(fx.foe.name, G ? (fx.foe.echo ? "an echo, in " : "in ") + G.lair.name : "in his palace"); renderer.shake(0.35); renderer.punch(); break; }
       default: break;
     }
   }
@@ -319,7 +333,8 @@ window.addEventListener("DOMContentLoaded", () => {
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
         const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
-        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: m.boss ? 0.98 : G ? 0.92 * G.size : 0.85, shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
+        const breath = CM.reducedMotion ? 0 : Math.sin(now / 820 + x * 2.1 + y * 1.3) * 0.02;   // (alive: it breathes)
+        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: (m.boss ? 0.95 : G ? 0.9 * G.size : 0.85) * (1 + breath), h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * (1 + breath * 0.6), shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
           lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
       }
     }
@@ -371,7 +386,8 @@ window.addEventListener("DOMContentLoaded", () => {
         const flash = flashes.get(m) || 0;
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
         const flinch = flash > 0 ? Math.sin(now / 22) * flash * 0.025 : 0;   // struck: it shudders
-        out.push(Object.assign({}, place, { flash: flash * 0.8, alpha, lift, dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
+        const breath = CM.reducedMotion || m.hp <= 0 ? 0 : Math.sin(now / 760 + place.dx * 7) * 0.018;   // (and breathes)
+        out.push(Object.assign({}, place, { flash: flash * 0.8, alpha, lift, w: place.w * (1 + breath), h: place.h * (1 + breath * 0.6), dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
       }
     }
     out.push(...fxs.sprites(now));                                      // what flies and bursts, this frame
@@ -520,6 +536,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
     if (renderer.ok) {
+      if (game.mode !== "title" && document.visibilityState !== "hidden") autoScale(dt);
       renderer.resize();
       if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around

@@ -182,6 +182,13 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view .fall { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; transition: opacity 0.6s; }
 #view .fall.on { opacity: 1; transition: opacity 0.12s; }
 #view .tint { position: absolute; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: screen; }
+#view .titlecard { position: absolute; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none; opacity: 0; }
+#view .titlecard b { display: block; font: bold 38px var(--serif); color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 24px rgba(232,200,112,0.6), 0 2px 0 #000, 0 0 8px #000; }
+#view .titlecard small { display: block; font: italic 16px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000, 0 0 8px #000; margin-top: 4px; }
+#view .titlecard.on { animation: titlecard 2.6s ease-out forwards; }
+@keyframes titlecard { 0% { opacity: 0; transform: scale(0.9); } 15% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { #view .titlecard.on { animation: titlecard-still 2.6s linear forwards; } }
+@keyframes titlecard-still { 0% { opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
 .member.jolt { animation: jolt 0.45s ease-out; }
 @keyframes jolt { 0% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } 100% { transform: translateX(0); } }
 .member.glow-green { animation: glow-green 0.9s ease-out; }
@@ -970,14 +977,28 @@ CM.MUTATORS = {
   drought: { name: "Drought", what: "every fountain is dry" },
   gloom: { name: "Gloom", what: "torches burn twice as fast" },
   lean: { name: "Lean", what: "the party sets out without potions, and with 100 gold more" },
+  glass: { name: "Glass Cannon", what: "every blow does double - theirs and yours" },
+  pilgrim: { name: "Pilgrim", what: "no experience from fights; every floor first set foot on is worth a fight's worth of floors" },
+  hunted: { name: "Hunted", what: "every band of monsters knows where you are" },
 };
 CM.DEEPENING = ["hordes", "brittle", "swift", "gloom", "drought"];      // Endless: the dark deepens with one of these every ten floors below the bottom
 CM.mutatorsFor = function (seed) {
-  if (!String(seed).startsWith("daily-")) return [];
-  const ids = Object.keys(CM.MUTATORS), a = CM.hashSeed(`${seed}:mutator:1`) % ids.length;
-  let b = CM.hashSeed(`${seed}:mutator:2`) % (ids.length - 1);
-  if (b >= a) b++;
-  return [ids[a], ids[b]];
+  const s = String(seed), weekly = s.startsWith("weekly-");
+  if (!s.startsWith("daily-") && !weekly) return [];
+  const ids = Object.keys(CM.MUTATORS), out = [];
+  for (let i = 1; out.length < (weekly ? 3 : 2) && i < 20; i++) { const id = ids[CM.hashSeed(`${seed}:mutator:${i}`) % ids.length]; if (!out.includes(id)) out.push(id); }
+  return out;
+};
+// a run, as a code to hand to a friend: the seed, the difficulty, the expedition, the kit and the party (CM.parseRunCode reads one back)
+CM.runCode = function (seed, difficulty, mode, kit, party) {
+  const who = (party || []).map((h) => [h.cls, (h.name || "").replace(/[;:,|]/g, " ").trim(), ...CM.STATS.map((s) => (h.stats || {})[s] || 10), h.row || CM.CLASSES[h.cls].row].join(",")).join(";");
+  return `CM1:${seed}:${difficulty || "fair"}:${mode || "dungeon"}:${kit || "pauper"}:${who}`;
+};
+CM.parseRunCode = function (text) {
+  const m = /^\s*CM1:([^:]+):([^:]*):([^:]*):([^:]*):(.*)$/.exec(String(text || ""));
+  if (!m) return null;
+  const party = m[5] ? m[5].split(";").map((p) => { const f = p.split(","); if (!CM.CLASSES[f[0]]) return null; const stats = {}; CM.STATS.forEach((s, i) => { stats[s] = CM.clamp(Number(f[2 + i]) || 10, 3, 25); }); return { cls: f[0], name: f[1] || f[0], stats, row: f[8] === "back" ? "back" : f[8] === "front" ? "front" : CM.CLASSES[f[0]].row }; }).filter(Boolean) : [];
+  return { seed: m[1], difficulty: CM.DIFFICULTIES[m[2]] ? m[2] : "fair", mode: m[3] === "endless" ? "endless" : "dungeon", kit: m[4] || "pauper", party: party.length === 4 ? party : null };
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
@@ -1624,6 +1645,14 @@ CM.unlocked = function (fame) {
   const d = CM.deepest(fame);
   return Object.keys(CM.KITS).filter((id) => CM.KITS[id].need === 0 || (CM.KITS[id].need === 21 ? d.won : d.floor >= CM.KITS[id].need));
 };
+// this week's dungeon: the same seed for everyone all week, three mutators, and a party the seed rolls (CM.weeklyParty)
+CM.weeklySeed = (date) => {
+  const d = date || new Date(), t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);                 // (ISO week: the Thursday decides the year)
+  const y = t.getUTCFullYear(), week = Math.ceil(((t - Date.UTC(y, 0, 1)) / 86400000 + 1) / 7);
+  return `weekly-${y}-${String(week).padStart(2, "0")}`;
+};
+CM.weeklyParty = (seed) => { const rnd = new CM.Random(CM.hashSeed(`${seed}:party`)); return CM.CLASSIC.map((cls) => ({ cls, name: CM.randomName(rnd), stats: CM.rollStats(cls, rnd), row: CM.CLASSES[cls].row })); };
 CM.dailySeed = (date) => { const d = date || new Date(); return `daily-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 // what the party could do with: a line or two of advice, and whether it's sound
@@ -3851,7 +3880,7 @@ CM.Renderer = class {
   }
 
   resize() {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(2, window.devicePixelRatio || 1) * (this.scale || 1);   // (Settings > Render scale, or the automatic step-down when frames come late)
     const w = Math.max(1, Math.round(this.canvas.clientWidth * dpr)), h = Math.max(1, Math.round(this.canvas.clientHeight * dpr));
     if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; }
     this.gl.viewport(0, 0, w, h);
@@ -4272,6 +4301,7 @@ CM.audio = {
       step_hall: () => this._mix(N(0.07, 0.26, 0.08, 3), this._after(0.11, N(0.07, 0.1, 0.08, 3)), this._after(0.22, N(0.07, 0.04, 0.08, 3))),
       step_cold: () => N(0.05, 0.3, 0.2, 3),
       bump: () => T([[70, 0.12]], "square", 0.2),
+      elite: () => this._mix(T([[196, 0.18], [233, 0.18], [294, 0.3]], "sawtooth", 0.09), this._after(0.02, N(0.12, 0.3, 0.5, 41)), this._after(0.36, N(0.2, 0.25, 0.5, 43))),   // a leader among them: two brass notes and a drum
       chest: () => T([[392, 0.07], [523, 0.07], [659, 0.12]]),
       door: () => this._mix(this._sweep(220, 90, 0.5, "square", 0.05), N(0.5, 0.12, 0.03, 17), this._after(0.45, T([[60, 0.1]], "square", 0.15))),
       unlock: () => this._mix(T([[1400, 0.02]], "square", 0.12), this._after(0.12, T([[900, 0.03]], "square", 0.15)), this._after(0.3, T([[180, 0.08]], "square", 0.12))),
@@ -4339,22 +4369,23 @@ CM.audio = {
     return b;
   },
 
-  play(name, volume = 1) {
+  play(name, volume = 1, pan = 0) {
     if (!this.ctx || !this.enabled || !this.buffers[name]) return;
     const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
     src.buffer = this.buffers[name];
     g.gain.value = CM.clamp(volume, 0, 1);
     src.connect(g);
-    g.connect(this.master);
+    if (pan && this.ctx.createStereoPanner) { const p = this.ctx.createStereoPanner(); p.pan.value = CM.clamp(pan, -1, 1); g.connect(p); p.connect(this.master); }
+    else g.connect(this.master);
     src.start();
   },
 
-  // something is coming: its kind's call, louder the nearer it is, not too often
-  near(kind, strength) {
+  // something is coming: its kind's call, louder the nearer it is, not too often - and from the side it is on (pan -1..1)
+  near(kind, strength, pan = 0) {
     const now = performance.now();
     if (now - this.lastNear < 2500) return;
     this.lastNear = now;
-    this.play(CM.roarFor(kind), CM.clamp(strength, 0.1, 0.8));
+    this.play(CM.roarFor(kind), CM.clamp(strength, 0.1, 0.8), pan);
   },
 
   _startAmbient() {
@@ -4404,6 +4435,7 @@ CM.music = {
     lament: { scale: [0, 2, 3, 5, 7, 8, 10], root: 45, tempo: 44, rest: 0.45, voice: "pad" },         // Aeolian, slow: the party fell
   },
   playing: null,
+  depth: 0,                                        // how far into its band the party is (0..1): the tune gains a voice past the middle, and a fifth near the end
   enabled: true,
   volume: 0.5,
   master: null,
@@ -4522,8 +4554,11 @@ CM.music = {
     return o;
   },
 
+  setDepth(k) { this.depth = CM.clamp(k || 0, 0, 1); },
   _note(t, deg, at, len) {
     const hz = this.hz(this.midi(t, deg, 1));
+    if (this.depth >= 0.5 && !t.drums && this.bus) this._osc("sine", hz * 2, at + 0.02, at + len * 0.7, 0.03 + 0.03 * this.depth, 2400);   // deeper in: an echo an octave up
+    if (this.depth >= 0.9 && !t.drums && this.bus) this._osc("triangle", this.hz(this.midi(t, deg + 4, 0)), at, at + len * 0.9, 0.04, 1200);   // at the band's end: a fifth under it
     if (t.voice === "pluck") {                                           // a lute: bright, quick to fade
       const ctx = CM.audio.ctx, o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
       o.type = "triangle"; o.frequency.value = hz; f.type = "lowpass"; f.frequency.value = 2400;
@@ -4618,6 +4653,7 @@ CM.Game = class {
     this.fameEndless = CM.store.get("fameEndless", []);   // the Endless board: how deep, ever
     this.bestiary = CM.store.get("bestiary", {});         // every kind met and slain, and what it fears: kept between runs
     this.memorial = CM.store.get("memorial", []);         // the heroes laid to rest, ever: {name, cls, level, floor, seed, date}
+    this.fallen = CM.store.get("fallen", []);             // where parties fell, by seed: a later run on that seed finds their remains
     this.combos = CM.store.get("combos", {});             // the combos found, ever
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
@@ -4701,7 +4737,7 @@ CM.Game = class {
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
-      camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [] };
+      camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [] };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -4740,7 +4776,7 @@ CM.Game = class {
     this.everFell = Boolean(d.everFell); this.fightFell = false; this.earned = d.earned || [];
     this.crowned = Boolean(d.crowned); this.bottom = false; this.endless = Boolean(d.endless); this.deepened = d.deepened || [];
     this.camps = d.camps || []; this.travel = null;
-    this.pairFights = d.pairFights || {}; this.bonds = d.bonds || []; this.hazardsMet = d.hazardsMet || [];
+    this.pairFights = d.pairFights || {}; this.bonds = d.bonds || []; this.hazardsMet = d.hazardsMet || []; this.remainsFound = d.remainsFound || [];
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -4775,7 +4811,8 @@ CM.Game = class {
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);
     this.everFell = false; this.fightFell = false; this.earned = [];
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
-    this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = [];
+    this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
+    this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row }));
     if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
@@ -4826,10 +4863,13 @@ CM.Game = class {
       }
       if (best) fl.pos = best;
     }
+    if (fresh) this.layRemains(fl);
+    if (fresh && this.has("pilgrim")) { const xp = 60 * number; for (const h of this.alive()) h.xp += xp; this.say(`Pilgrim: ${xp} experience each, for the floor itself.`); }
     this.setMode("explore");
     this.look();
     this.emit("floor", fl);
     this.saveRun();
+    if (fresh && this.has("pilgrim")) this.checkLevels();
     if (fresh || how !== "fall") this.say(`Floor ${number}, ${CM.themeFor(number).name}.` + (number === CM.LAST_FLOOR ? "  A terrible cold rises from somewhere ahead..." : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && fl.hazard && CM.HAZARDS[CM.themeIndex(number)] && !this.hazardsSeen(fl.hazard)) this.say(CM.HAZARDS[CM.themeIndex(number)].note);
@@ -4994,7 +5034,8 @@ Object.assign(CM.Game.prototype, {
           ghost: "A pale shape hangs in the air here, waiting. (Space to speak to it)", hermit: "A hermit crouches in a nest of rags. (Space to speak to him)",
           adventurer: "Someone sits bound against the wall. (Space to cut them loose)", rope: "A rope hangs down from the floor above. (Space to climb it)",
           event: `${(CM.EVENTS[thing.event] || {}).title || "Something"}. (Space to look closer)`, strongbox: thing.opened ? "An iron strongbox, open and empty." : `An iron strongbox, bolted to the floor, with a keyhole. (The key is on floor ${thing.from}.)`,
-          peddler: "A peddler sits on his pack, with a lantern and a smile. (Space to see his wares)", rivals: "Four adventurers, armed, look you over. (Space to speak to them)" }[thing.type]);
+          peddler: "A peddler sits on his pack, with a lantern and a smile. (Space to see his wares)", rivals: "Four adventurers, armed, look you over. (Space to speak to them)",
+          remains: "Bones in torn gear, four of them, and a name you know from the Hall of Fame. (Space to see what they left)" }[thing.type]);
       }
     }
     if (f) this.arrive(f, k);
@@ -5190,6 +5231,7 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "strongbox") { this.openStrongbox(thing, k); return; }
     if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
     if (thing && thing.type === "rivals") { this.meetRivals(thing, k); return; }
+    if (thing && thing.type === "remains") { this.takeRemains(thing, k); return; }
     if (thing && thing.type === "rope") {
       this.sound("stairs");
       this.enterFloor(fl.number - 1, "rope", thing.up);
@@ -5340,9 +5382,14 @@ Object.assign(CM.Game.prototype, {
     for (const [k, t] of Object.entries(fl.things)) {
       if (t.type !== "monsters" && t.type !== "boss" && t.type !== "guardian") continue;
       const d = dist.get(k);
-      if (d !== undefined && d <= 6 && (!nearest || d < nearest.d)) nearest = { d, t };
+      if (d !== undefined && d <= 6 && (!nearest || d < nearest.d)) nearest = { d, t, k };
     }
-    if (nearest) { const m = nearest.t.group.find((f) => f.hp > 0 && !f.fled) || nearest.t.group[0]; if (m) this.emit("near", m.kind || m.name, nearest.d); }
+    if (nearest) {                                                       // its call, from the side it is on
+      const m = nearest.t.group.find((f) => f.hp > 0 && !f.fled) || nearest.t.group[0];
+      const [mx, my] = nearest.k.split(",").map(Number), [fx, fy] = CM.DIRS[fl.facing];
+      const pan = CM.clamp(((mx - px) * -fy + (my - py) * fx) / Math.max(1, Math.abs(mx - px) + Math.abs(my - py)), -1, 1);   // (right of the facing is positive)
+      if (m) this.emit("near", m.kind || m.name, nearest.d, pan);
+    }
     const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still);
     this.rnd.shuffle(movers);
     for (const [k, t] of movers) {
@@ -5354,7 +5401,7 @@ Object.assign(CM.Game.prototype, {
         this.startCombat(k, t, true);
         return;
       }
-      if (d !== undefined && (d <= 7 || t.hunter)) {
+      if (d !== undefined && (d <= 7 || t.hunter || this.has("hunted"))) {
         const nearer = options.filter(([nx, ny]) => dist.get(keyOf(nx, ny)) === d - 1 && !(nx === px && ny === py));
         if (nearer.length) step = this.rnd.pick(nearer);
       } else if (this.rnd.chance(0.3) && options.length) {
@@ -5376,9 +5423,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers" };
+  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -5507,6 +5554,29 @@ Object.assign(CM.Game.prototype, {
 // ---- the dungeon's strangers: a choice on the floor, a strongbox and its key, a peddler, a rival party ----
 {
 Object.assign(CM.Game.prototype, {
+  // a party that fell on this floor of this seed, in a run before: their bones, and one thing they carried
+  layRemains(fl) {
+    const past = (this.fallen || []).find((f) => f.seed === this.seed && f.floor === fl.number && !(this.remainsFound || []).includes(f.id));
+    if (!past || !past.pos) return;
+    const free = (x, y) => CM.passable(fl, x, y) && !fl.things[keyOf(x, y)] && !fl.features[keyOf(x, y)] && !(fl.pos[0] === x && fl.pos[1] === y);
+    let at = free(past.pos[0], past.pos[1]) ? past.pos : null;
+    if (!at) {                                                           // (they fell on the stairs, or where something stands: the nearest open square)
+      let best = 1e9;
+      for (const [k, d] of CM.distances(fl.grid, past.pos, (x, y) => CM.passable(fl, x, y))) { const [x, y] = k.split(",").map(Number); if (d < best && d <= 4 && free(x, y)) { best = d; at = [x, y]; } }
+    }
+    if (!at) return;
+    fl.things[keyOf(at[0], at[1])] = { type: "remains", id: past.id, names: past.names, date: past.date, item: past.item || null };
+  },
+  takeRemains(thing, k) {
+    this.remainsFound = (this.remainsFound || []).concat(thing.id);
+    delete this.floor.things[k];
+    if (thing.item) this.bag.push(thing.item);
+    this.sound("coin");
+    this.say(`${thing.names.join(", ").replace(/, ([^,]*)$/, " and $1")} fell here, ${thing.date}. The dark did not take everything${thing.item ? `: ${thing.item.name} is still with them, and now with you` : ""}.`);
+    this.emit("talk", { title: "The remains of a party", text: `Four of them, where they fell: ${thing.names.join(", ")}. You know the names from the Hall of Fame. ${thing.item ? `Among the bones, ${thing.item.name}. They would want it used.` : "There is nothing left to take but the warning."}` });
+    this.saveRun();
+    this.emit("change");
+  },
   hazardsSeen(id) { this.hazardsMet = this.hazardsMet || []; if (this.hazardsMet.includes(id)) return true; this.hazardsMet.push(id); return false; },
   askEvent(thing, k) {
     const E = CM.EVENTS[thing.event];
@@ -5639,6 +5709,7 @@ Object.assign(CM.Game.prototype, {
     this.combat = { foes: this.foes, round: 0, order: [], index: 0, waiting: null, surprise: false, taunter: null, tauntUntil: 0, bless: Boolean(this.blessedNext), protect: false, reached: 0 };
     if (this.blessedNext) { this.blessedNext = false; this.say("The saint's blessing is on the party for this fight."); }
     if (this.floor && this.floor.tide) for (const m of this.foes) m.speed = (m.speed || 10) + 3;   // (high tide: the Drowned are quick)
+    this.foes.forEach((m, i) => { if (m.ability === "breath") m.breath = i % 2; });   // (a pack of demons breathes in halves, not all at once)
     this.setMode("combat");
     this.count("fights");
     this.sound(CM.roarFor((this.foes[0] || {}).kind || (this.foes[0] || {}).name));
@@ -5646,6 +5717,8 @@ Object.assign(CM.Game.prototype, {
     for (const m of this.foes) names[m.name] = (names[m.name] || 0) + 1;
     const who = Object.entries(names).map(([k, n]) => CM.plural(n, k)).join(", ");
     const guardian = this.foes.find((m) => m.guardian);
+    if (guardian || this.foes.some((m) => m.boss)) this.emit("fx", { kind: "intro", foe: guardian || this.foes.find((m) => m.boss) });   // (a title card, a push of the camera)
+    else if (this.foes.some((m) => m.elite)) this.sound("elite");          // (a leader among them: a stinger)
     if (this.foes.some((m) => m.boss)) this.say(`The Lich King rises from his throne. "You took your time," he says.${this.phylactery ? "" : " Somewhere, his heart beats."}`);
     else if (guardian) this.say(CM.GUARDIANS[guardian.guardian].intro + (guardian.echo ? " It is not the thing itself: it is what the dark remembers of it, and the dark remembers it stronger." : "")
       + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
@@ -5978,6 +6051,7 @@ Object.assign(CM.Game.prototype, {
     if (h.defending) dmg = Math.ceil(dmg / 2);
     if (this.song) dmg -= this.song;
     if (c.protect) dmg -= 3 + (c.protectMore || 0);
+    if (this.has("glass")) dmg *= 2;
     dmg = Math.max(1, dmg);
     h.hp -= dmg;
     if (h.hp <= 0 && CM.trait(h, "undying") && !h.undied) { h.undied = true; h.hp = 1; this.say(`${h.name} does not fall. Not this once.`); }
@@ -6278,6 +6352,7 @@ Object.assign(CM.Game.prototype, {
     if (opts.bash && target.chilled > 0) { dmg *= 2; how += " - the ice shatters"; this.combo("shatter"); target.chilled = 0; }
     if (hero.cls === "Rogue" && target.marked) { dmg = Math.ceil(dmg * 1.5); how += " - the knife finds the mark"; this.combo("knife"); }
     if (target.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; target.warded -= 1; }
+    if (this.has("glass")) dmg *= 2;
     target.hp -= dmg;
     this.splitIfHurt(target);
     if (target.asleep > 0) { target.asleep = 0; how += " - it wakes"; }
@@ -6308,6 +6383,7 @@ Object.assign(CM.Game.prototype, {
     if (element === "fire" && foe.held > 0) { dmg = Math.ceil(dmg * 1.5); how += " - the vines burn"; this.combo("kindling"); }
     if (element === "storm" && foe.chilled > 0) { dmg *= 2; how += " - the ice carries it"; this.combo("thunderclap"); foe.chilled = 0; }
     if (foe.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; foe.warded -= 1; }
+    if (this.has("glass")) dmg *= 2;
     foe.hp -= dmg;
     if (foe.asleep > 0) foe.asleep = 0;
     this.emit("fx", { kind: "hit", foe, amount: dmg, spell: true });
@@ -6634,7 +6710,7 @@ Object.assign(CM.Game.prototype, {
     this.count("kills", slain.length);
     for (const m of slain) this.noteFoe(m, "slain");
     if (this.bestiaryDirty) { CM.store.set("bestiary", this.bestiary); this.bestiaryDirty = false; }
-    const xp = slain.reduce((s, m) => s + m.xp, 0);
+    const xp = this.has("pilgrim") ? 0 : slain.reduce((s, m) => s + m.xp, 0);
     let gold = slain.reduce((s, m) => s + m.gold, 0);
     if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
     if (this.alive().some((h) => CM.trait(h, "pickpocket"))) gold = Math.floor(gold * 1.1);
@@ -7438,6 +7514,14 @@ Object.assign(CM.Game.prototype, {
       if (fl >= 100) this.achieve("beyond");
     }
     entry.titles = (this.earned || []).slice();
+    entry.code = CM.runCode(this.seed, this.difficulty, this.endless ? "endless" : "dungeon", this.kit, this.startParty || this.party);
+    entry.weekly = String(this.seed).startsWith("weekly-");
+    if (!won && !this.bottom) {                                          // where they fell: a later run on this seed finds them
+      const carried = this.party.flatMap((h) => CM.equipped(h)).filter((it) => !(it.props && (it.props.relic || it.props.unique)) && !["weapon", "armor"].includes(it.kind));
+      const item = carried.length ? carried[Math.floor(this.rnd.next() * carried.length)] : null;
+      this.fallen = (this.fallen || []).filter((f) => f.seed !== this.seed || f.floor !== fl).concat({ id: `${this.seed}:${fl}:${Date.now()}`, seed: this.seed, floor: fl, pos: this.floor.pos.slice(), names: this.party.map((h) => h.name), date: CM.today(), item }).slice(-40);
+      CM.store.set("fallen", this.fallen);
+    }
     if (this.endless) { this.fameEndless.push(entry); this.sortFameEndless(); CM.store.set("fameEndless", this.fameEndless); }
     else { this.fame.push(entry); this.sortFame(); CM.store.set("fame", this.fame); }
     if (won) this.trophy("lich");
@@ -7479,7 +7563,7 @@ Object.assign(CM.Game.prototype, {
 
   exportText() {
     return JSON.stringify({ game: "Claude and Magic", version: CM.version, built: CM.built, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
-      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, memorial: this.memorial });
+      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, memorial: this.memorial, fallen: this.fallen });
   },
 
   importText(text) {
@@ -7497,6 +7581,7 @@ Object.assign(CM.Game.prototype, {
     if (data.bestiary && typeof data.bestiary === "object") { this.bestiary = Object.assign({}, this.bestiary, data.bestiary); CM.store.set("bestiary", this.bestiary); }
     if (data.combos && typeof data.combos === "object") { this.combos = Object.assign({}, this.combos, data.combos); CM.store.set("combos", this.combos); }
     if (Array.isArray(data.memorial)) { this.memorial = data.memorial.concat(this.memorial || []).slice(0, 30); CM.store.set("memorial", this.memorial); }
+    if (Array.isArray(data.fallen)) { const have = new Set((this.fallen || []).map((f) => f.id)); this.fallen = (this.fallen || []).concat(data.fallen.filter((f) => f && f.id && !have.has(f.id))).slice(-40); CM.store.set("fallen", this.fallen); }
     this.emit("change");
     return "";
   },
@@ -7794,7 +7879,8 @@ CM.UI = class {
       <h2>Expedition</h2>
       <div class="row slots" id="slots-row"><span class="small">Expedition</span><button data-slot="1">1</button><button data-slot="2">2</button><button data-slot="3">3</button></div>
       <div class="row"><button id="btn-continue" class="primary">Continue</button><span id="continue-note" class="small"></span></div>
-      <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button><button id="btn-daily" title="Today's dungeon: the same one for everyone, today">Today's</button></div>
+      <div class="row"><button id="btn-new" class="primary">New Expedition</button><label for="seed">Seed</label><input id="seed" type="text" maxlength="40" spellcheck="false"><button id="btn-dice" title="Another seed">&#x2684;</button><button id="btn-daily" title="Today's dungeon: the same one for everyone, today">Today's</button><button id="btn-weekly" title="This week's challenge: one seed, three mutators and a party the seed rolls, the same for everyone all week">This week's</button></div>
+      <p class="small">A run code (CM1:...) from a summary card goes in the seed box too: New Expedition then sets out with that party, difficulty and kit.</p>
       <p>The same seed lays out the same fifty floors, so a dungeon can be tried again - or handed to a friend. What
       the monsters do in a fight is up to the dice. The run saves as you go; when the whole party falls, it ends, and
       the deepest runs go in the Hall of Fame.</p>
@@ -7802,7 +7888,7 @@ CM.UI = class {
       <div id="classes"></div>
       <p id="start-with"></p>
     </div>
-    <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
+    <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button><button data-board="weekly" title="This week's challenge: the runs on this week's seed">This week</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
     <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
     <div class="version"></div>
   </div>
@@ -7824,7 +7910,7 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="hint"></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div></div>
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div></div>
   </div>
   <div id="party"></div>
@@ -7848,6 +7934,7 @@ CM.UI = class {
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
+  <div class="row"><label for="set-render">Render scale - fewer pixels on a slow machine (Auto steps down when frames come late)</label><select id="set-render"><option value="auto">Auto</option><option value="full">Full</option><option value="three">Three quarters</option><option value="half">Half</option></select></div>
   <div class="row"><label for="set-speed">Combat speed - how long bolts fly and sparks hang</label><select id="set-speed"><option value="normal">Normal</option><option value="fast">Fast</option><option value="instant">As good as instant</option></select></div>
   <div class="row"><label for="set-text">Text size</label><select id="set-text"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select></div>
   <div class="row"><label for="set-motion">Reduce motion - no shaking, no flashes, no washes of colour over the view</label><input type="checkbox" id="set-motion"></div>
@@ -7859,10 +7946,10 @@ CM.UI = class {
 <div class="dialog" id="dlg-credits"><div class="box"><h2>Credits</h2><div id="credits"></div><div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-transfer"><div class="box"><h2>Export / Import</h2>
   <p class="small">Your run, the Hall of Fame and your settings, as text. Copy it to keep it or to carry it to another
-  browser; paste a copy here and Import to bring it back.</p>
+  browser; paste a copy here and Import to bring it back. Download saves it as a file; drop a saved file on the box to read it in.</p>
   <textarea id="transfer-text" spellcheck="false"></textarea>
   <div class="small" id="transfer-note"></div>
-  <div class="end"><button id="btn-copy">Copy</button><button id="btn-import">Import</button><button class="close">Close</button></div></div></div>
+  <div class="end"><button id="btn-copy">Copy</button><button id="btn-download">Download</button><button id="btn-import">Import</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-pause"><div class="box"><h2>Paused</h2>
   <p class="small">The run is saved as you go.</p>
   <div class="end"><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
@@ -7936,6 +8023,22 @@ CM.UI = class {
     this.$("#btn-temple-raise").addEventListener("click", () => { game.raiseDead(); this.refresh(); });
     this.$("#btn-scribe").addEventListener("click", () => { game.scribe(); this.refresh(); });
     this.$("#btn-daily").addEventListener("click", () => { this.$("#seed").value = CM.dailySeed(); this.refreshTitle(); });
+    this.$("#btn-weekly").addEventListener("click", () => { this.$("#seed").value = CM.weeklySeed(); this.refreshTitle(); });
+    this.$("#btn-download").addEventListener("click", () => {
+      const blob = new Blob([g.exportText()], { type: "application/json" }), a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = `claude-and-magic-${CM.today().replace(/\//g, "-")}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      this.$("#transfer-note").textContent = "Downloaded, where the browser puts downloads.";
+    });
+    const drop = this.$("#transfer-text");
+    drop.addEventListener("dragover", (e) => { e.preventDefault(); });
+    drop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      f.text().then((t) => { drop.value = t; this.$("#transfer-note").textContent = `${f.name} read in. Import brings it back.`; });
+    });
     this.$("#btn-pause-settings").addEventListener("click", () => { this.closeDialogs(); this.openDialog("#dlg-settings"); });
     this.$("#btn-pause-title").addEventListener("click", () => { this.closeDialogs(); game.saveRun(); game.setMode("title"); });
     this.renderKeys();
@@ -8208,7 +8311,7 @@ CM.UI = class {
       const b = e.target.closest("button[data-seed]");
       if (b) { this.$("#seed").value = b.dataset.seed; this.refreshTitle(); return; }
       const c = e.target.closest("button[data-card]");
-      if (c) { this.openCard((this.fameBoard === "endless" ? g.fameEndless : g.fame)[Number(c.dataset.card)]); return; }
+      if (c) { const b = this.fameBoard === "weekly" ? g.fame.concat(g.fameEndless || []).filter((x) => x.seed === CM.weeklySeed()) : this.fameBoard === "endless" ? g.fameEndless : g.fame; this.openCard(b[Number(c.dataset.card)]); return; }
       const tr = e.target.closest("tr.row");
       if (!tr) return;
       const i = Number(tr.dataset.i);
@@ -8290,6 +8393,15 @@ CM.UI = class {
     const g = this.game;
     if (g.canContinue() && !window.confirm(`A run is waiting in expedition slot ${g.slot}. Start a new expedition there and let it go? (The other slots keep theirs.)`)) return;
     for (const sel of this.root.querySelectorAll("#slots select.cls")) sel.innerHTML = g.classesAvailable().map((c) => `<option value="${c}">${c}</option>`).join("");   // (the callings earned)
+    const code = CM.parseRunCode(this.$("#seed").value);
+    if (code) {                                                          // a run code: the seed, the party, the difficulty and the kit as they were
+      this.$("#seed").value = code.seed;
+      if (code.party) this.slots = code.party.filter((p) => g.classUnlocked(p.cls)).length === 4 ? code.party : code.party.map((p) => (g.classUnlocked(p.cls) ? p : Object.assign({}, p, { cls: "Knight", stats: CM.rollStats("Knight") })));
+      this.$("#difficulty").value = code.difficulty; this.$("#mode").value = code.mode; this.chosenKit = code.kit;
+    }
+    const weekly = this.$("#seed").value === CM.weeklySeed();
+    if (weekly) this.slots = CM.weeklyParty(this.$("#seed").value);        // (the week's party, the same for everyone)
+    this.weekly = weekly;
     if (!this.slots.length) this.fillSlots(CM.CLASSIC);
     this.$("#create-seed").value = this.$("#seed").value;
     this.renderCreateNote();
@@ -8315,7 +8427,9 @@ CM.UI = class {
       const h = CM.makeHero(s.cls, s.name, s.stats, s.row);
       div.querySelector(".derived").textContent = `${h.max} health${h.maxmp ? `, ${h.maxmp} magic` : ""}, attack ${h.atk}, defence ${h.df} - ${h.weapon.name} and ${h.armor.name}`;
       for (const b of div.querySelectorAll("button[data-row]")) b.classList.toggle("on", b.dataset.row === s.row);
+      for (const el of div.querySelectorAll(".cls, .reroll, .dice")) el.disabled = Boolean(this.weekly);   // (the week's party is the week's)
     });
+    this.$("#btn-reroll-all").disabled = Boolean(this.weekly); this.$("#btn-suggest").disabled = Boolean(this.weekly);
     this.renderAdvice();
   }
 
@@ -8336,7 +8450,7 @@ CM.UI = class {
 
   renderCreateNote() {
     const seed = this.$("#create-seed").value, muts = CM.mutatorsFor(seed), d = CM.DIFFICULTIES[this.$("#difficulty").value] || CM.DIFFICULTIES.fair;
-    this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` Today's dungeon comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "")
+    this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` ${seed.startsWith("weekly-") ? "This week's challenge" : "Today's dungeon"} comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "") + (seed.startsWith("weekly-") ? " The party is the week's: everyone sets out with these four." : "")
       + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "");
   }
 
@@ -8363,16 +8477,17 @@ CM.UI = class {
       + "New Expedition lets you name them, choose their callings and roll their stats; chests and fallen monsters give better gear; "
       + "a merchant's camp with a temple waits below floors 5, 10 and 15 (and every fifth floor of the Deep) - each shaft guarded by something that has made its lair over it, and leaves a relic when it falls. "
       + "The Lich King waits on floor 20; below him, thirty floors of the Deep go down to the Root of the World - or, in an Endless expedition, to no bottom at all.";
-    const table = this.$("#fame table"), endlessBoard = this.fameBoard === "endless", board = endlessBoard ? (g.fameEndless || []) : g.fame;
-    for (const b of this.root.querySelectorAll("#fame .boards button")) b.classList.toggle("on", (b.dataset.board === "endless") === endlessBoard);
-    if (!board.length) table.innerHTML = `<tr><td class="empty">${endlessBoard ? "No Endless expedition yet: choose Endless when the party sets out." : "No party has gone down yet."}</td></tr>`;
+    const table = this.$("#fame table"), weeklyBoard = this.fameBoard === "weekly", endlessBoard = this.fameBoard === "endless";
+    const board = weeklyBoard ? g.fame.concat(g.fameEndless || []).filter((e) => e.seed === CM.weeklySeed()).sort((a, b) => (b.bottom ? 1 : 0) - (a.bottom ? 1 : 0) || (b.won ? 1 : 0) - (a.won ? 1 : 0) || b.floor - a.floor || b.gold - a.gold) : endlessBoard ? (g.fameEndless || []) : g.fame;
+    for (const b of this.root.querySelectorAll("#fame .boards button")) b.classList.toggle("on", b.dataset.board === (this.fameBoard || "dungeon"));
+    if (!board.length) table.innerHTML = `<tr><td class="empty">${weeklyBoard ? `No run on this week's seed yet (${CM.weeklySeed()}): This week's, on the left, sets it.` : endlessBoard ? "No Endless expedition yet: choose Endless when the party sets out." : "No party has gone down yet."}</td></tr>`;
     else table.innerHTML = board.map((e, i) => {
       const open = this.fameOpen === i, t = e.tally;
       let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
         + `<td class="${e.won ? "won" : ""}">${endlessBoard ? `floor ${e.floor}${e.won ? " - crowned" : ""}` : e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
       if (open) {
         rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
-          + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button></div>` : "")
+          + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : e.weekly ? " (a week's challenge)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button>${e.code ? ` <button data-seed="${this.esc(e.code)}" title="The seed, the party, the difficulty and the kit, as they set out">Play this run</button>` : ""}</div>` : "")
           + (t ? `<div>${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}.</div>` : "")
           + (t && t.guardians && t.guardians.length ? `<div>Guardians slain: ${this.esc(this.guardianNames(t.guardians))}.</div>` : "")
           + (e.mutators && e.mutators.length ? `<div>${e.endless ? "The dark deepened" : "Today's dungeon"}: ${this.esc(e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(", "))}.</div>` : "")
@@ -8420,8 +8535,8 @@ CM.UI = class {
     const g = this.game, s = g.settings;
     const sound = this.$("#set-sound"), vol = this.$("#set-volume"), music = this.$("#set-music"), mvol = this.$("#set-music-volume");
     const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap");
-    const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab");
-    speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB);
+    const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab"), render = this.$("#set-render");
+    speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB); render.value = s.render || "auto";
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
     smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false;
@@ -8429,12 +8544,12 @@ CM.UI = class {
     note();
     const apply = () => {
       s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.tapMove = tap.checked;
-      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked;
+      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value;
       g.saveSettings();
       g.emit("settings", s);
     };
     for (const el of [sound, vol, music, mvol, smooth, fps, tap, motion, contrast, swapab]) el.addEventListener("input", apply);
-    for (const el of [speed, text]) el.addEventListener("change", apply);
+    for (const el of [speed, text, render]) el.addEventListener("change", apply);
     for (const sel of [look, titleLook]) sel.addEventListener("change", () => { s.look = sel.value; look.value = titleLook.value = s.look; note(); apply(); });
   }
 
@@ -8917,7 +9032,7 @@ CM.UI = class {
     const slot = this.$("#card-slot");
     slot.innerHTML = "";
     slot.appendChild(CM.art.summaryCard(e, CM.titleFor(g.achievements)));
-    this.$("#card-text").value = CM.summaryText(e);
+    this.$("#card-text").value = CM.summaryText(e) + (e.code ? `\nRun code (paste it in the seed box): ${e.code}` : "");
     this.$("#card-note").textContent = "";
     this.openDialog("#dlg-card");
   }
@@ -9193,6 +9308,18 @@ CM.UI = class {
     return `<div class="list-title">Combos (${found.length} of ${Object.keys(CM.COMBOS).length} found)</div>` + rows.join("");
   }
 
+  // a guardian's name across the view, for a moment, as it rises
+  titleCard(name, sub) {
+    const el = this.$("#view .titlecard");
+    el.querySelector("b").textContent = name;
+    el.querySelector("small").textContent = sub || "";
+    el.classList.remove("on");
+    void el.offsetWidth;
+    el.classList.add("on");
+    clearTimeout(this.cardTimer);
+    this.cardTimer = setTimeout(() => el.classList.remove("on"), 2600);
+  }
+
   // a wash of colour over the view that fades (a spell's light, a trap's gas)
   tint(colour, ms = 260) {
     if (CM.reducedMotion) return;
@@ -9373,7 +9500,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const STEPS = ["step", "step_water", "step_hall", "step_cold"];        // a footfall for each depth (the Deep's bands borrow one)
   const soundBand = (n) => CM.AMBIENCE_OF[CM.themeIndex(n)] || 0;
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
-  game.on("near", (kind, d) => CM.audio.near(kind, 1 - d / 8));          // something is coming: louder the nearer
+  game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));   // something is coming: louder the nearer, from the side it is on
+  game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
   game.on("mode", (mode) => {
     if (mode === "title") showDemo();
     else if (game.floor && renderer.ok) {
@@ -9394,7 +9522,19 @@ window.addEventListener("DOMContentLoaded", () => {
     CM.reducedMotion = s.motion === undefined ? Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) : Boolean(s.motion);
     document.getElementById("app").style.zoom = { normal: "", large: "1.15", larger: "1.32" }[s.text] || "";
     document.body.classList.toggle("contrast", Boolean(s.contrast));
+    renderAuto = !s.render || s.render === "auto";
+    if (!renderAuto) renderer.scale = { full: 1, three: 0.75, half: 0.5 }[s.render] || 1;
+    else if (!renderer.scale) renderer.scale = 1;
   };
+  let renderAuto = true, slowFor = 0, quickFor = 0;
+  const RENDER_STEPS = [1, 0.75, 0.5];
+  function autoScale(dt) {                                               // frames coming late for two seconds: a step down; quick for ten: a step back up
+    if (!renderAuto) return;
+    if (dt > 0.022) { slowFor += dt; quickFor = 0; } else if (dt < 0.013) { quickFor += dt; slowFor = 0; } else { slowFor = 0; quickFor = 0; }
+    const i = RENDER_STEPS.indexOf(renderer.scale || 1);
+    if (slowFor > 2 && i < RENDER_STEPS.length - 1) { renderer.scale = RENDER_STEPS[i + 1]; slowFor = 0; }
+    else if (quickFor > 10 && i > 0) { renderer.scale = RENDER_STEPS[i - 1]; quickFor = 0; }
+  }
   game.on("settings", applySettings);
   applySettings(game.settings);
   CM.audio.unlock();                                                     // (where the page may: the Timeline's window; a browser waits for a click or key)
@@ -9506,6 +9646,7 @@ window.addEventListener("DOMContentLoaded", () => {
       case "mend": { const at = atFoe(fx.foe, 0.3); if (at) fxs.drift({ at, layer: "fx:leaf", n: 8, size: 0.06, rise: 0.5, ms: 900 }); break; }
       case "ward": { const at = atFoe(fx.foe, 0.5); if (at) fxs.flare({ at, layer: "fx:frost", size: 0.9, ms: 500, grow: 0.3 }); break; }
       case "combo": ui.tint("rgba(255,230,150,0.35)", 500); break;
+      case "intro": { const G = fx.foe.guardian ? CM.GUARDIANS[fx.foe.guardian] : null; ui.titleCard(fx.foe.name, G ? (fx.foe.echo ? "an echo, in " : "in ") + G.lair.name : "in his palace"); renderer.shake(0.35); renderer.punch(); break; }
       default: break;
     }
   }
@@ -9603,7 +9744,8 @@ window.addEventListener("DOMContentLoaded", () => {
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
         const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
-        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: m.boss ? 0.98 : G ? 0.92 * G.size : 0.85, shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
+        const breath = CM.reducedMotion ? 0 : Math.sin(now / 820 + x * 2.1 + y * 1.3) * 0.02;   // (alive: it breathes)
+        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: (m.boss ? 0.95 : G ? 0.9 * G.size : 0.85) * (1 + breath), h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * (1 + breath * 0.6), shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
           lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
       }
     }
@@ -9655,7 +9797,8 @@ window.addEventListener("DOMContentLoaded", () => {
         const flash = flashes.get(m) || 0;
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
         const flinch = flash > 0 ? Math.sin(now / 22) * flash * 0.025 : 0;   // struck: it shudders
-        out.push(Object.assign({}, place, { flash: flash * 0.8, alpha, lift, dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
+        const breath = CM.reducedMotion || m.hp <= 0 ? 0 : Math.sin(now / 760 + place.dx * 7) * 0.018;   // (and breathes)
+        out.push(Object.assign({}, place, { flash: flash * 0.8, alpha, lift, w: place.w * (1 + breath), h: place.h * (1 + breath * 0.6), dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
       }
     }
     out.push(...fxs.sprites(now));                                      // what flies and bursts, this frame
@@ -9804,6 +9947,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
     if (renderer.ok) {
+      if (game.mode !== "title" && document.visibilityState !== "hidden") autoScale(dt);
       renderer.resize();
       if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around

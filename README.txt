@@ -508,6 +508,38 @@ The party, wider (the third big update, phase 4)
   the fight (62-combat.js); the fists in CM.recompute and CM.cantWear (20-world.js); the portraits and paper dolls
   (30-art.js, 36-looks.js).
 
+The look, and the sound (the third big update, phase 6)
+  Render scale, in Settings: Full, Three quarters, Half - or Auto, which steps down a notch when frames have come late
+  for two seconds and back up when they have come quick for ten (renderer.scale, 40-render.js; autoScale, 80-main.js).
+  The monsters breathe where they stand, on the floor and in a fight (not with Reduce motion on). A guardian rises
+  under its name: a title card across the view - the Forge-Warden, in The Forge - with a push of the camera. A leader
+  among a band of monsters gets a stinger as the fight begins (the "elite" sound). The depth's tune gains a voice past
+  the middle of its band - an echo an octave up - and a fifth under the melody on the band's last floor
+  (CM.music.setDepth). A monster's call comes from the side it is on: the game says which way, and the sound is panned
+  (StereoPanner, 50-audio.js).
+  Left for a generator version: per-pixel lit stone wants ambientCG's normal and roughness maps, and only the colour
+  maps were gathered into src/art - pack.py --gather on the machine with the full sets is the first step.
+
+Around the game (the third big update, phase 8)
+  Run codes: a run's end writes a code - CM1:seed:difficulty:expedition:kit:party - into its Hall of Fame entry and
+  onto the summary card. Paste one into the seed box and New Expedition sets out with that seed, that party (names,
+  stats and rows), that difficulty and that kit; Play this run, in a Hall of Fame entry's details, does the same.
+  This week's challenge: the button beside Today's sets this week's seed (weekly-YYYY-WW, by the ISO week): one seed
+  for everyone all week, three mutators from it, and a party the seed rolls - the creation screen locks the four. The
+  Hall of Fame has a This week board: every run on the week's seed, from both boards.
+  Three mutators more: Glass Cannon (every blow does double, theirs and yours), Pilgrim (no experience from fights;
+  every floor first set foot on gives 60 experience a floor), Hunted (every band of monsters knows where you are).
+  The remains of a fallen party: when a party falls, where it fell on which floor of which seed is kept (CM.store
+  "fallen", through Export / Import); a later run on that seed finds their bones there - the names, the date, and one
+  thing they carried, to take up. The dungeon remembers.
+  Backup: Export / Import has Download (the export as a .json file) and takes a dropped file.
+
+Balance, as measured (tools/sim.js, 20 seeds a difficulty, the classic four, the Pauper's kit, the bot's hand)
+  Gentle: 17 of 20 parties reach the bottom; Fair: half the parties take the crown, 4 of 20 reach the bottom, most
+  of the rest fall in the Palace (floors 16-20: the demons' breath) or the Ossuary; Grim: no party past floor 20 -
+  the Lich King ends them all. Party level at the camps tracks the floor (6 at 5, 11 at 10, 25 at 25, 38 at 45).
+  Run it after any change to the fight or the hoard.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
