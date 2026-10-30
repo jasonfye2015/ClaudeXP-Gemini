@@ -382,7 +382,7 @@ Object.assign(CM.Game.prototype, {
   },
   stat(h, s) { return CM.heroStat(h, s); },
   hitChance(h) {
-    return CM.clamp(0.8 + CM.gearProp(h, "hitBonus") + (this.blessed() ? 0.05 : 0) + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
+    return CM.clamp(0.8 + CM.gearProp(h, "hitBonus") + (this.blessed() ? 0.05 : 0) + (this.rested && this.rested() ? 0.05 : 0) + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
   },
   critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01 + CM.gearProp(h, "crit"), 0.02, 0.7); },
   resistChance(h) {

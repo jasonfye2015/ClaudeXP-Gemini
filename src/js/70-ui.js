@@ -140,6 +140,9 @@ CM.UI = class {
   <textarea id="film-text" spellcheck="false" placeholder="Paste a film code here, CM2:..."></textarea>
   <div class="small" id="film-note"></div>
   <div class="end"><button id="btn-film-play">Watch</button><button id="btn-film-link" title="The film code in the box, as a link anyone can open">Link</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-home"><div class="box journalbox"><h2>Your house</h2>
+  <p class="small" id="home-what"></p><div id="home-rooms"></div><div class="small" id="home-note"></div>
+  <div class="end"><button id="btn-home-build">Build</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-building"><div class="box"><h2 id="building-title">A door</h2>
   <p class="small" id="building-what"></p><div class="small" id="building-levels"></div><div class="small" id="building-note"></div>
   <div class="end"><button id="btn-building-build">Build</button><button class="close">Close</button></div></div></div>
@@ -274,7 +277,8 @@ CM.UI = class {
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
     game.on("choice", (c) => this.askChoice(c));
-    game.on("building", (id) => this.openBuilding(id));
+    game.on("building", (id) => (id === "home" && game.homeLevel() >= 1 ? this.openHome() : this.openBuilding(id)));
+    this.$("#btn-home-build").addEventListener("click", () => { this.$("#home-note").textContent = game.build("home") || "The house rises a level."; this.openHome(true); });
     this.$("#btn-building-build").addEventListener("click", () => { const P = CM.TOWN_PLOTS[this.buildingId] || {}; if (P.village) { this.$("#building-note").textContent = game.build(P.village) || `${P.name} rises a level.`; this.openBuilding(this.buildingId, true); } });
     game.on("teleported", () => this.flash(".blink", 60));
     game.on("fell", () => this.flash(".fall", 350));
@@ -457,6 +461,26 @@ CM.UI = class {
   }
   // ---- the village ----
   openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
+  // the party's own house: its rooms, by the level the house has been raised to
+  openHome(keepNote) {
+    const g = this.game, lvl = g.homeLevel(), H = g.home(), V = CM.VILLAGE.home, box = this.$("#home-rooms"), note = this.$("#home-note");
+    const say = (t) => { note.textContent = t || "Done."; this.openHome(true); this.refresh(); };
+    this.$("#home-what").textContent = `Level ${lvl} of ${V.costs.length}.` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
+    const bb = this.$("#btn-home-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { bb.textContent = `Build, ${V.costs[lvl]} renown`; bb.disabled = g.renown() < V.costs[lvl]; }
+    if (!keepNote) note.textContent = "";
+    box.innerHTML = "";
+    const room = (title, body) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
+    const btn = (parent, text, fn, title) => { const b = document.createElement("button"); b.textContent = text; if (title) b.title = title; b.addEventListener("click", () => say(fn())); parent.appendChild(b); return b; };
+    { const r = room("The hearth"); const b = btn(r, g.floor && g.floor.hearthUsed ? "Rested here already" : "Rest, and go down rested", () => g.hearthRest()); b.disabled = Boolean(g.floor && g.floor.hearthUsed); }
+    { const r = room(`The stash (${H.stash.length} of ${CM.HOME_STASH[Math.min(lvl, CM.HOME_STASH.length - 1)]})`);
+      H.stash.forEach((it, i) => { const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; const t = document.createElement("div"); t.innerHTML = `<b class="rarity-${CM.rarityOf(it)}">${this.esc(CM.itemName(it))}</b> <small>${this.esc(CM.itemLabel(it))}</small>`; t.title = CM.itemCard(it); row.appendChild(t); const b = document.createElement("button"); b.textContent = "Take"; b.addEventListener("click", () => say(g.stashTake(i))); row.appendChild(b); r.appendChild(row); });
+      const leave = document.createElement("div"); leave.className = "small"; leave.textContent = "Leave here: "; g.bag.forEach((it, row) => { if (["key", "boxkey"].includes(it.kind)) return; const b = document.createElement("button"); b.textContent = CM.itemName(it); b.title = CM.itemCard(it); b.addEventListener("click", () => say(g.stashPut(row))); leave.appendChild(b); }); r.appendChild(leave); }
+    if (lvl >= 2) { const r = room("The trophy wall"), T = g.homeTrophies(); r.innerHTML = `<div class="small">${T.crowns ? `${T.crowns} crown${T.crowns === 1 ? "" : "s"} on the shelf${T.bottoms ? `, and ${T.bottoms} stone${T.bottoms === 1 ? "" : "s"} from the bottom of the world` : ""}.` : "The shelf waits for a crown."} ${T.trophies.length ? "Trophies: " + T.trophies.map((t) => this.esc(t.name)).join(", ") + "." : ""} ${T.named.length ? "Named: " + T.named.map((n) => `${this.esc(n.name)} (${this.esc(n.base)})`).join(", ") + "." : ""} ${T.uniques.length ? "Found: " + T.uniques.map((u) => this.esc(u)).join(", ") + "." : ""}</div>`; }
+    if (lvl >= 3) { const r = room(`The kitchen, and the larder (${H.larder || 0} of ${CM.HOME_LARDER} rations)`); g.bag.forEach((it, row) => { if (it.kind === "meat") btn(r, `Cook ${it.name}`, () => g.homeCook(row)); if (it.kind === "ration") btn(r, "A ration to the larder", () => g.larderPut(row)); }); if (H.larder > 0) btn(r, "A ration from the larder", () => g.larderTake()); if (!r.children.length) r.innerHTML = "<div class='small'>Nothing to cook, and nothing to put by.</div>"; }
+    if (lvl >= 4) { const r = room("The door-plate"); (g.memorial || []).slice(0, 12).forEach((m, i) => { const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; row.innerHTML = `<div><b>${this.esc(m.name)}</b> <small>the ${m.cls}, level ${m.level}, floor ${m.floor}${m.scars && m.scars.length ? ` - ${m.scars.map((s) => CM.SCARS[s] ? CM.SCARS[s].name : s).join(", ")}` : ""}</small></div>`; const b = document.createElement("button"); b.textContent = m.candle ? "A candle burns" : `A candle (${CM.CANDLE_COST[g.villageLevel("shrine") >= 2 ? 1 : 0]} renown)`; b.disabled = Boolean(m.candle); b.addEventListener("click", () => say(g.homeCandle(i))); row.appendChild(b); r.appendChild(row); }); if (!r.children.length) r.innerHTML = "<div class='small'>No names yet. May it stay so.</div>"; }
+    if (lvl >= 5) { const r = room("The study"); g.party.forEach((h, i) => { if (h.hp > 0) btn(r, `${h.name} retires home`, () => g.retireHome(i)); }); if (H.retired.length) { const w = document.createElement("div"); w.className = "small"; w.textContent = `Retired here: ${H.retired.map((x) => `${x.name} the ${x.cls}`).join(", ")}. ${H.will ? `The will: ${CM.itemName(H.will)} in every pack.` : "No will yet."} Will a thing from the stash: `; H.stash.forEach((it, i) => { const b = document.createElement("button"); b.textContent = CM.itemName(it); b.addEventListener("click", () => say(g.writeWill(i))); w.appendChild(b); }); r.appendChild(w); } }
+    this.openDialog("#dlg-home");
+  }
   // a door in the town: the plot's name, what stands there, the levels raised, and the village's build button
   openBuilding(id, keepNote) {
     const g = this.game, P = CM.TOWN_PLOTS[id]; if (!P) return;

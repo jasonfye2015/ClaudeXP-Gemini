@@ -1071,6 +1071,25 @@ The ground of the town (the seventh big update, phase 0 - v5.2)
   begins at the shaft as it did. Automatic and the bot walk the lane to the shaft and go down.
   Test: "the town above".
 
+The home (the seventh big update, phase 1 - v5.3)
+  Your house, at the west end of the main lane, is raised like any building (CM.VILLAGE.home: 50, 150, 400, 800,
+  1500 renown) and opens from its door into its rooms (src/js/67-home.js; the village store keeps village.home):
+  - The hearth (level 1): once a visit to the town the party rests for nothing - health, magic, the small
+    ailments, hunger - and goes down rested: +5% to hit on floors 1 to 5 (buffs.rested, gone at six).
+  - The stash (6 things at level 1; 12 at 2; 20 at 3; 40 at 5): the party's own storage between runs, apart
+    from the camps' vault. Anything but a floor's key may be left; taking is free; nothing in it is ever bumped
+    or insured, and a fallen party's pack does not come to it - only what the party walked home is there.
+  - The trophy wall (level 2): the guardians' trophies, the named weapons, the uniques found, the crowns and the
+    stones from the bottom of the world.
+  - The kitchen (level 3): meat brought home is cooked for a meal that lasts the first two floors; the larder
+    keeps three rations from run to run.
+  - The door-plate (level 4): the memorial's names on the door, with their scars; a candle lit at home (the
+    shrine's price) sends what they were buried with to the stash instead of the vault.
+  - The study (level 5): a hero retires home (home for good, without teaching), and a will may be written: one
+    thing from the stash, copied into the pack of every later run from this house (no relics or uniques).
+  Everything the house does is a logged act, so a run that rested and stashed replays the same.
+  Test: "the home".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

@@ -2370,6 +2370,47 @@ test("the town above: floor 0 is hand-laid and the same for a seed, a run begins
   const g5 = new CM.Game(); g5.newGame("town-4", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g5.autoPlay(true); let n = 0; while (g5.floor.number === 0 && g5.autoOn() && n++ < 200) g5.auto.step(); assert.ok(g5.floor.number === 1, `Automatic walked to the shaft in ${n} steps`); g5.autoPlay(false);
 });
 
+test("the home: raised with renown; the hearth rests and sends the party down rested (gone at floor 6); the stash keeps things between runs and through a fall; the trophy wall; the kitchen's two-floor meal and the larder; a candle at the door to the stash; a hero retires home and a will starts every run", () => {
+  const CM = load();
+  assert.ok(CM.VILLAGE.home && CM.VILLAGE.home.costs.length === 5 && CM.TOWN_PLOTS.home.village === "home");
+  const start = () => { const g = new CM.Game(); g.newGame("home-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); return g; };
+  let g = start(); assert.strictEqual(g.homeLevel(), 0); assert.ok(g.hearthRest().includes("roof")); assert.ok(g.stashPut(0).includes("roof"));
+  g.village.renown = 5000; assert.strictEqual(g.build("home"), ""); assert.strictEqual(g.homeLevel(), 1); assert.strictEqual(CM.plotLevel(g, "home"), 1);
+  // the hearth: once a visit; rested on floors 1 to 5, not 6
+  const knight = g.party.find((h) => h.cls === "Knight"); knight.hp = 3; g.fed = 200; assert.strictEqual(g.hearthRest(), ""); assert.strictEqual(knight.hp, knight.max); assert.strictEqual(g.fed, 0); assert.strictEqual(g.buffs.rested, 5); assert.ok(g.hearthRest().includes("banked"));
+  assert.ok(!g.rested(), "not rested in the town itself"); g.enterFloor(1, "down"); assert.ok(g.rested()); g.enterFloor(5, "down"); assert.ok(g.rested()); g.enterFloor(6, "down"); assert.ok(!g.rested() && g.buffs.rested === undefined, "worn off at six");
+  // the stash: six things at level one; keys stay; it survives a reload, a new run and a fallen party
+  g.enterFloor(0, "rope", CM.TOWN_AT.home.slice()); assert.ok(g.inTown());
+  const sword = { name: "Keepsake Sword", base: "Long Sword", kind: "weapon", slot: "weapon", power: 7, value: 90, props: {} }; g.bag.push(sword, { name: "Key", kind: "key", power: 0, value: 0 });
+  assert.ok(g.stashPut(g.bag.length - 1).includes("key")); assert.strictEqual(g.stashPut(g.bag.length - 2), ""); assert.ok(!g.bag.includes(sword) && g.home().stash[0] === sword); assert.strictEqual(g.stashRoom(), 5);
+  for (let i = 0; i < 5; i++) { g.bag.push(CM.ration()); assert.strictEqual(g.stashPut(g.bag.length - 1), ""); } g.bag.push(CM.ration()); assert.ok(g.stashPut(g.bag.length - 1).includes("full"));
+  assert.strictEqual(CM.store.get("village", {}).home.stash.length, 6, "kept between runs");
+  g.enterFloor(3, "down"); for (const h of g.party) h.hp = 0; g.payInsurance(); g.endRun(false); assert.strictEqual(g.mode, "title");
+  g = start(); assert.strictEqual(g.home().stash.length, 6, "the stash through a fall and a new run"); assert.strictEqual(g.home().stash[0].name, "Keepsake Sword");
+  const n0 = g.bag.length; assert.strictEqual(g.stashTake(0), ""); assert.strictEqual(g.bag.length, n0 + 1); assert.strictEqual(g.bag[n0].name, "Keepsake Sword"); assert.strictEqual(g.home().stash.length, 5); assert.ok(g.stashTake(9).includes("Nothing"));
+  // the trophy wall, the kitchen and the larder
+  g.village.renown = 5000; g.build("home"); g.build("home"); assert.strictEqual(g.homeLevel(), 3);
+  g.trophies.rat = { date: CM.today(), name: "x", seed: "s" }; g.compendium.named = [{ name: "Gnasher", base: "Long Sword", history: [], date: "", bearer: "" }]; g.compendium["Tidecaller"] = { floor: 7, date: "" }; g.fame = [{ won: true }, { won: false, bottom: true }];
+  const T = g.homeTrophies(); assert.strictEqual(T.trophies[0].name, "The Rat King"); assert.strictEqual(T.named[0].name, "Gnasher"); assert.ok(T.uniques.includes("Tidecaller")); assert.strictEqual(T.crowns, 1); assert.strictEqual(T.bottoms, 1);
+  g.bag.push(CM.meat("Orc")); assert.strictEqual(g.homeCook(g.bag.length - 1), ""); assert.ok(g.meal && g.meal.floor === 2); g.enterFloor(1, "down"); assert.ok(g.meal); g.enterFloor(2, "down"); assert.ok(g.meal, "through the second floor"); g.enterFloor(3, "down"); assert.ok(!g.meal, "and gone at the third");
+  g.enterFloor(0, "rope", CM.TOWN_AT.home.slice()); for (let i = 0; i < 4; i++) g.bag.push(CM.ration()); const rations = () => g.bag.filter((i) => i.kind === "ration").length; const r0 = rations();
+  for (let i = 0; i < 3; i++) assert.strictEqual(g.larderPut(g.bag.findIndex((i) => i.kind === "ration")), ""); assert.ok(g.larderPut(g.bag.findIndex((i) => i.kind === "ration")).includes("holds 3")); assert.strictEqual(rations(), r0 - 3); assert.strictEqual(CM.store.get("village", {}).home.larder, 3);
+  assert.strictEqual(g.larderTake(), ""); assert.strictEqual(rations(), r0 - 2); assert.strictEqual(g.home().larder, 2);
+  // the door-plate: a candle at home sends the buried thing to the stash, not the vault
+  g.build("home"); assert.strictEqual(g.homeLevel(), 4); g.village.levels.shrine = 1; g.memorial = [{ name: "Old Tam", cls: "Rogue", level: 9, floor: 12, seed: "s", date: "", buried: { name: "Tam's Knife", kind: "weapon", slot: "weapon", power: 5, value: 40, props: {} }, last: "", epitaph: "" }]; CM.store.set("memorial", g.memorial); g.vaults = []; CM.store.set("vaults", []);
+  const stash0 = g.home().stash.length; assert.strictEqual(g.homeCandle(0), ""); assert.ok(g.memorial[0].candle); assert.strictEqual(g.home().stash.length, stash0 + 1); assert.strictEqual(g.home().stash[stash0].name, "Tam's Knife"); assert.strictEqual(g.vaults.length, 0, "not to the vault"); assert.ok(g.homeCandle(0).includes("already"));
+  // the study: a hero retires home, writes a will, and the will is in every later pack
+  g.build("home"); assert.strictEqual(g.homeLevel(), 5); const mageAt = g.party.findIndex((h) => h.cls === "Mage"), mageName = g.party[mageAt].name;
+  assert.strictEqual(g.retireHome(mageAt), ""); assert.strictEqual(g.party.length, 3); assert.strictEqual(g.home().retired[0].name, mageName);
+  g.bag.push(CM.healPotion(1)); assert.strictEqual(g.stashPut(g.bag.length - 1), ""); const potAt = g.home().stash.length - 1; assert.strictEqual(g.writeWill(potAt), ""); assert.ok(g.home().will && g.home().will.kind === g.home().stash[potAt].kind);
+  g.home().stash.push(CM.makeUnique("tidecaller")); assert.ok(g.writeWill(g.home().stash.length - 1).includes("one of a kind"));
+  const g2 = new CM.Game(); g2.newGame("home-2", fixedParty(CM)); assert.ok(g2.bag.some((i) => i.willed && i.kind === g.home().will.kind), "the will in the pack of a new run"); assert.strictEqual(g2.home().will.kind, g.home().will.kind, "and still in the stash's will");
+  const g3 = new CM.Game(); g3.village.levels.home = 0; g3.saveVillage(); g3.newGame("home-3", fixedParty(CM)); assert.ok(!g3.bag.some((i) => i.willed), "no study, no will");
+  // a replay of a run with the house's acts in it comes out the same
+  const g4 = new CM.Game(); g4.village.levels.home = 3; g4.saveVillage(); g4.newGame("home-4", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g4.hearthRest(); g4.stashPut(0); g4.larderTake(); const spec = g4.replaySpec();
+  const stashNow = g4.home().stash.length; g4.home().stash.length = stashNow; const again = CM.replayRun(spec); assert.strictEqual(again.bag.length, g4.bag.length); assert.ok(again.buffs && again.buffs.rested === 5);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

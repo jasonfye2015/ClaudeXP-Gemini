@@ -49,7 +49,7 @@ party with every run it brings back.**
 Size: M. Risk: every "floor.number" comparison in the rules that assumes 1 or more (`themeIndex(0)`,
 `guardianFor(0)`, hazards, light) is audited and tested here first.
 
-## Phase 1 - The home - v5.3
+## Phase 1 - The home - v5.3 - DONE
 
 - **A house of the party's own**, at the west end of the square, raised like a building (renown: 50, 150, 400,
   800, 1500; five levels). Inside, one screen with rooms that appear as it grows:

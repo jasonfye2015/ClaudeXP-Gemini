@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v5.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v5.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -430,7 +430,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "5.2", built: "2026-10-30" };
+const CM = window.CM = { version: "5.3", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -7148,6 +7148,7 @@ CM.Game = class {
     else if (this.kit === "heir") for (const h of this.party) { h.weapon.power += 2; h.weapon.name += " +1"; h.weapon.props = Object.assign({}, h.weapon.props, { bonus: 1 }); h.weapon.value = 45; }
     else if (this.kit === "legend") for (const h of this.party) { h.level = 2; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; }
     if (this.party.some((h) => h.cls === "Artificer")) this.bag.push(CM.trapKit());   // (the Artificer's trade: a trap kit from the start)
+    { const will = this.villageLevel("home") >= 5 && this.village.home && this.village.home.will; if (will) { const it = JSON.parse(JSON.stringify(will)); it.willed = true; this.bag.push(it); } }   // (the study's will)
     if (this.kit === "scholar") { for (const k of CM.LORE_KEYS.slice(0, 5)) this.markRead(k); const ids = Object.keys(CM.TOMES); this.bag.push(CM.tome(ids[CM.hashSeed(`${this.seed}:scholar`) % ids.length])); }
     else if (this.kit === "abyss") { this.gold += 150; this.bag.push(CM.rope(), CM.gem("diamond"), CM.scroll("mapping")); for (const h of this.party) { h.level = 3; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }
     for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
@@ -7228,7 +7229,7 @@ CM.Game = class {
       if (this.rumourBox === number) { for (const [k, t] of Object.entries(fl.things)) if (t.type === "strongbox") { mark(k); this.say("The fence's rumour was good: the strongbox is marked on the map."); } this.rumourBox = 0; }
     }
     if (fresh && this.meal && this.meal.floor < number) { this.meal = null; this.say("The meal has worn off."); for (const h of this.party) { h.mealLuck = 0; CM.recompute(h); } }
-    if (fresh && this.buffs) { for (const k of ["stoneskin", "night", "sharpen", "salve"]) if (this.buffs[k] !== undefined && this.buffs[k] < number) delete this.buffs[k]; if (this.buffs.owleyes) { this.buffs.owleyes -= 1; if (this.buffs.owleyes <= 0) { delete this.buffs.owleyes; this.say("The owl's eyes close: the dark is the dark again."); } } }
+    if (fresh && this.buffs) { for (const k of ["stoneskin", "night", "sharpen", "salve", "rested"]) if (this.buffs[k] !== undefined && this.buffs[k] < number) delete this.buffs[k]; if (this.buffs.owleyes) { this.buffs.owleyes -= 1; if (this.buffs.owleyes <= 0) { delete this.buffs.owleyes; this.say("The owl's eyes close: the dark is the dark again."); } } }
     if (fresh) for (const h of this.alive()) if (CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "haunted")) this.afflict(h, "curse", "the haunted thing");
     if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }
     for (const h of this.alive()) if (h.cls === "Necromancer" && !h.familiar && h.level >= CM.FAMILIAR_AT) { h.familiar = "skull"; this.say(`A skull on ${h.name}'s belt opens its jaws: ${CM.FAMILIARS.skull.what}.`); }
@@ -8676,7 +8677,7 @@ Object.assign(CM.Game.prototype, {
   },
   stat(h, s) { return CM.heroStat(h, s); },
   hitChance(h) {
-    return CM.clamp(0.8 + CM.gearProp(h, "hitBonus") + (this.blessed() ? 0.05 : 0) + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
+    return CM.clamp(0.8 + CM.gearProp(h, "hitBonus") + (this.blessed() ? 0.05 : 0) + (this.rested && this.rested() ? 0.05 : 0) + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
   },
   critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01 + CM.gearProp(h, "crit"), 0.02, 0.7); },
   resistChance(h) {
@@ -12143,6 +12144,149 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 67-home.js ----
+"use strict";
+// The party's own house, at the west end of the town's main lane: raised with renown like any building (CM.VILLAGE.home,
+// five levels), and kept in the village store (village.home: the stash, the larder, the will). The hearth rests the
+// party for nothing before a run and sends it down rested; the stash is storage of the party's own between runs,
+// apart from the camps' vault - it takes only what the party walks home, and a fallen party's pack does not come to it;
+// the trophy wall is what the runs brought back; the kitchen cooks for the first two floors and the larder keeps
+// three rations from run to run; the door-plate carries the memorial's names and a candle lit at home sends the
+// buried thing to the stash; the study is where a hero retires home and writes a will.
+CM.HOME_STASH = [0, 6, 12, 20, 20, 40];                                   // things the stash holds, by the house's level
+CM.HOME_LARDER = 3;
+CM.RESTED_FLOORS = 5;
+CM.VILLAGE.home = { name: "Your house", costs: [50, 150, 400, 800, 1500], levels: [
+  "The hearth: the party rests for nothing before a run, and goes down rested (+5% to hit on floors 1 to 5); the stash holds six things between runs",
+  "The trophy wall: the guardians' trophies, the named weapons and the uniques found hang here; the stash holds twelve",
+  "The kitchen: meat brought home is cooked for a meal that lasts the first two floors, and a larder keeps three rations from run to run; the stash holds twenty",
+  "The door-plate: the memorial's names on the door, and a candle lit at home sends what they were buried with to the stash",
+  "The study: a hero may retire home and write a will - one thing from the stash starts every later run in the pack; the stash holds forty"] };
+CM.TOWN_PLOTS.home.village = "home";
+Object.assign(CM.Game.prototype, {
+  home() { this.village = this.village || {}; const h = this.village.home = this.village.home || { stash: [], larder: 0, will: null, retired: [] }; h.stash = h.stash || []; h.retired = h.retired || []; return h; },
+  homeLevel() { return this.villageLevel("home"); },
+  inTown() { return Boolean(this.floor && this.floor.number === 0 && this.mode === "explore"); },
+  stashRoom() { return CM.HOME_STASH[Math.min(this.homeLevel(), CM.HOME_STASH.length - 1)] - this.home().stash.length; },
+  // the hearth: once a visit to the town, the party rests for nothing and goes down rested
+  hearthRest() {
+    if (!this.inTown()) return "The hearth is at home.";
+    if (this.homeLevel() < 1) return "The house has no roof yet.";
+    if (this.floor.hearthUsed) return "The fire is banked: the party has rested here already. The next run, or the next time home.";
+    this.logAct("hearthRest");
+    this.floor.hearthUsed = true;
+    for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
+    this.fed = 0; if ((this.morale || 0) < 85) this.morale = 85;
+    this.buffs = this.buffs || {}; this.buffs.rested = CM.RESTED_FLOORS;
+    this.sound("heal");
+    this.say(`The party sleeps in its own beds and eats at its own table. Rested: a little surer of hand on the first ${CM.RESTED_FLOORS} floors.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  rested() { return Boolean(this.buffs && this.buffs.rested && this.floor && this.floor.number >= 1 && this.floor.number <= this.buffs.rested); },
+  // the stash: the party's own storage between runs; anything but a floor's key may be left; taking is free
+  stashPut(row) {
+    if (!this.inTown()) return "The stash is at home.";
+    if (this.homeLevel() < 1) return "The house has no roof yet.";
+    const item = this.bag[row]; if (!item) return "Pick something from your pack.";
+    if (["key", "boxkey"].includes(item.kind)) return "A key belongs to its floor.";
+    if (this.stashRoom() <= 0) return `The stash is full (${CM.HOME_STASH[Math.min(this.homeLevel(), CM.HOME_STASH.length - 1)]} things). Raise the house, or take something out.`;
+    this.logAct("stashPut", row);
+    this.bag.splice(row, 1); this.home().stash.push(item); this.saveVillage();
+    this.sound("chest"); this.say(`${CM.itemName(item)} goes into the stash.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  stashTake(i) {
+    if (!this.inTown()) return "The stash is at home.";
+    const h = this.home(); if (!h.stash[i]) return "Nothing there.";
+    this.logAct("stashTake", i);
+    const item = h.stash.splice(i, 1)[0]; this.saveVillage();
+    this.gain([item], "stash");
+    this.sound("chest"); this.say(`${CM.itemName(item)} comes out of the stash.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  // the trophy wall: what the runs brought back
+  homeTrophies() {
+    const named = (this.compendium || {}).named || [], uniques = Object.values(CM.UNIQUES).filter((u) => (this.compendium || {})[u.name]).map((u) => u.name);
+    const trophies = Object.entries(this.trophies || {}).map(([id, t]) => ({ id, name: (CM.GUARDIANS[id] || {}).name || id, date: t.date }));
+    return { trophies, named, uniques, crowns: (this.fame || []).filter((e) => e.won).length, bottoms: (this.fame || []).filter((e) => e.bottom).length };
+  },
+  // the kitchen: meat cooked at home lasts the first two floors; the larder keeps rations from run to run
+  homeCook(row) {
+    if (!this.inTown()) return "The kitchen is at home.";
+    if (this.homeLevel() < 3) return "The house has no kitchen yet.";
+    const item = this.bag[row]; if (!item || item.kind !== "meat") return "Nothing to cook.";
+    const M = CM.MEALS[item.meat]; if (!M) return "Nobody would eat that.";
+    this.logAct("homeCook", row);
+    this.bag.splice(row, 1); this.countUse("meal");
+    this.fed = 0; this.cheer(4);
+    this.meal = { kind: item.meat, floor: 2 };
+    for (const h of this.party) { h.mealLuck = M.luck || 0; CM.recompute(h); }
+    this.sound("heal"); this.say(`${M.name} at the party's own table: ${M.what}, for the first two floors.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  larderPut(row) {
+    if (!this.inTown()) return "The larder is at home.";
+    if (this.homeLevel() < 3) return "The house has no kitchen yet.";
+    const item = this.bag[row]; if (!item || item.kind !== "ration") return "The larder takes rations.";
+    const h = this.home(); if ((h.larder || 0) >= CM.HOME_LARDER) return `The larder holds ${CM.HOME_LARDER}.`;
+    this.logAct("larderPut", row);
+    this.bag.splice(row, 1); h.larder = (h.larder || 0) + 1; this.saveVillage();
+    this.say(`A ration on the larder's shelf (${h.larder} of ${CM.HOME_LARDER}).`); this.saveRun(); this.emit("change");
+    return "";
+  },
+  larderTake() {
+    if (!this.inTown()) return "The larder is at home.";
+    const h = this.home(); if (!(h.larder > 0)) return "The larder is bare.";
+    this.logAct("larderTake");
+    h.larder -= 1; this.saveVillage(); this.gain([CM.ration()], "larder");
+    this.say(`A ration from the larder (${h.larder} left).`); this.saveRun(); this.emit("change");
+    return "";
+  },
+  // the door-plate: a candle lit at home sends the buried thing to the stash
+  homeCandle(i) {
+    if (!this.inTown()) return "The door-plate is at home.";
+    if (this.homeLevel() < 4) return "The names are not on the door yet.";
+    const m = (this.memorial || [])[i]; if (!m) return "No such name.";
+    if (m.candle) return `A candle burns for ${m.name} already.`;
+    if (this.stashRoom() <= 0 && m.buried) return "The stash is full: the candle's gift would have nowhere to go.";
+    const vaults = (this.vaults || []).length;
+    const note = this.lightCandle(i); if (note) return note;
+    if (m.buried && (this.vaults || []).length > vaults) { const it = this.vaults.pop(); CM.store.set("vaults", this.vaults); this.home().stash.push(it); this.saveVillage(); this.say(`${CM.itemName(it)} comes home to the stash, not the vault.`); }
+    else if (m.buried) { this.home().stash.push(m.buried); this.saveVillage(); this.say(`${CM.itemName(m.buried)} comes home to the stash.`); }
+    this.emit("change");
+    return "";
+  },
+  // the study: a hero retires home (as the guildhall's trainers do, without teaching), and may write a will
+  retireHome(heroIndex) {
+    if (!this.inTown()) return "The study is at home.";
+    if (this.homeLevel() < 5) return "The house has no study yet.";
+    const h = this.party[heroIndex]; if (!h || h.hp <= 0) return "Only a hero on their feet retires.";
+    if (this.party.filter((p) => p.hp > 0).length <= 1) return "Someone has to go down.";
+    this.logAct("retireHome", heroIndex);
+    this.home().retired.push({ name: h.name, cls: h.cls, level: h.level, date: CM.today() }); this.saveVillage();
+    this.party.splice(heroIndex, 1);
+    this.sound("level"); this.say(`${h.name} the ${h.cls} hangs up the ${CM.baseIdOf(h.weapon || { name: "pack" })} and sits down by the window. Home for good.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  writeWill(stashIndex) {
+    if (!this.inTown()) return "The will is written in the study.";
+    if (this.homeLevel() < 5) return "The house has no study yet.";
+    const h = this.home(); if (!h.retired.length) return "A will is written by someone who has retired home.";
+    const item = h.stash[stashIndex]; if (!item) return "Pick a thing from the stash.";
+    if (item.props && (item.props.unique || item.props.relic)) return "A relic or a unique thing is one of a kind: it is not willed.";
+    this.logAct("writeWill", stashIndex);
+    h.will = JSON.parse(JSON.stringify(item)); this.saveVillage();
+    this.say(`${h.retired[h.retired.length - 1].name} writes it down: ${CM.itemName(item)}, to every party that sets out from this house.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+});
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -12286,6 +12430,9 @@ CM.UI = class {
   <textarea id="film-text" spellcheck="false" placeholder="Paste a film code here, CM2:..."></textarea>
   <div class="small" id="film-note"></div>
   <div class="end"><button id="btn-film-play">Watch</button><button id="btn-film-link" title="The film code in the box, as a link anyone can open">Link</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-home"><div class="box journalbox"><h2>Your house</h2>
+  <p class="small" id="home-what"></p><div id="home-rooms"></div><div class="small" id="home-note"></div>
+  <div class="end"><button id="btn-home-build">Build</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-building"><div class="box"><h2 id="building-title">A door</h2>
   <p class="small" id="building-what"></p><div class="small" id="building-levels"></div><div class="small" id="building-note"></div>
   <div class="end"><button id="btn-building-build">Build</button><button class="close">Close</button></div></div></div>
@@ -12420,7 +12567,8 @@ CM.UI = class {
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
     game.on("choice", (c) => this.askChoice(c));
-    game.on("building", (id) => this.openBuilding(id));
+    game.on("building", (id) => (id === "home" && game.homeLevel() >= 1 ? this.openHome() : this.openBuilding(id)));
+    this.$("#btn-home-build").addEventListener("click", () => { this.$("#home-note").textContent = game.build("home") || "The house rises a level."; this.openHome(true); });
     this.$("#btn-building-build").addEventListener("click", () => { const P = CM.TOWN_PLOTS[this.buildingId] || {}; if (P.village) { this.$("#building-note").textContent = game.build(P.village) || `${P.name} rises a level.`; this.openBuilding(this.buildingId, true); } });
     game.on("teleported", () => this.flash(".blink", 60));
     game.on("fell", () => this.flash(".fall", 350));
@@ -12603,6 +12751,26 @@ CM.UI = class {
   }
   // ---- the village ----
   openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
+  // the party's own house: its rooms, by the level the house has been raised to
+  openHome(keepNote) {
+    const g = this.game, lvl = g.homeLevel(), H = g.home(), V = CM.VILLAGE.home, box = this.$("#home-rooms"), note = this.$("#home-note");
+    const say = (t) => { note.textContent = t || "Done."; this.openHome(true); this.refresh(); };
+    this.$("#home-what").textContent = `Level ${lvl} of ${V.costs.length}.` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
+    const bb = this.$("#btn-home-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { bb.textContent = `Build, ${V.costs[lvl]} renown`; bb.disabled = g.renown() < V.costs[lvl]; }
+    if (!keepNote) note.textContent = "";
+    box.innerHTML = "";
+    const room = (title, body) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
+    const btn = (parent, text, fn, title) => { const b = document.createElement("button"); b.textContent = text; if (title) b.title = title; b.addEventListener("click", () => say(fn())); parent.appendChild(b); return b; };
+    { const r = room("The hearth"); const b = btn(r, g.floor && g.floor.hearthUsed ? "Rested here already" : "Rest, and go down rested", () => g.hearthRest()); b.disabled = Boolean(g.floor && g.floor.hearthUsed); }
+    { const r = room(`The stash (${H.stash.length} of ${CM.HOME_STASH[Math.min(lvl, CM.HOME_STASH.length - 1)]})`);
+      H.stash.forEach((it, i) => { const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; const t = document.createElement("div"); t.innerHTML = `<b class="rarity-${CM.rarityOf(it)}">${this.esc(CM.itemName(it))}</b> <small>${this.esc(CM.itemLabel(it))}</small>`; t.title = CM.itemCard(it); row.appendChild(t); const b = document.createElement("button"); b.textContent = "Take"; b.addEventListener("click", () => say(g.stashTake(i))); row.appendChild(b); r.appendChild(row); });
+      const leave = document.createElement("div"); leave.className = "small"; leave.textContent = "Leave here: "; g.bag.forEach((it, row) => { if (["key", "boxkey"].includes(it.kind)) return; const b = document.createElement("button"); b.textContent = CM.itemName(it); b.title = CM.itemCard(it); b.addEventListener("click", () => say(g.stashPut(row))); leave.appendChild(b); }); r.appendChild(leave); }
+    if (lvl >= 2) { const r = room("The trophy wall"), T = g.homeTrophies(); r.innerHTML = `<div class="small">${T.crowns ? `${T.crowns} crown${T.crowns === 1 ? "" : "s"} on the shelf${T.bottoms ? `, and ${T.bottoms} stone${T.bottoms === 1 ? "" : "s"} from the bottom of the world` : ""}.` : "The shelf waits for a crown."} ${T.trophies.length ? "Trophies: " + T.trophies.map((t) => this.esc(t.name)).join(", ") + "." : ""} ${T.named.length ? "Named: " + T.named.map((n) => `${this.esc(n.name)} (${this.esc(n.base)})`).join(", ") + "." : ""} ${T.uniques.length ? "Found: " + T.uniques.map((u) => this.esc(u)).join(", ") + "." : ""}</div>`; }
+    if (lvl >= 3) { const r = room(`The kitchen, and the larder (${H.larder || 0} of ${CM.HOME_LARDER} rations)`); g.bag.forEach((it, row) => { if (it.kind === "meat") btn(r, `Cook ${it.name}`, () => g.homeCook(row)); if (it.kind === "ration") btn(r, "A ration to the larder", () => g.larderPut(row)); }); if (H.larder > 0) btn(r, "A ration from the larder", () => g.larderTake()); if (!r.children.length) r.innerHTML = "<div class='small'>Nothing to cook, and nothing to put by.</div>"; }
+    if (lvl >= 4) { const r = room("The door-plate"); (g.memorial || []).slice(0, 12).forEach((m, i) => { const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; row.innerHTML = `<div><b>${this.esc(m.name)}</b> <small>the ${m.cls}, level ${m.level}, floor ${m.floor}${m.scars && m.scars.length ? ` - ${m.scars.map((s) => CM.SCARS[s] ? CM.SCARS[s].name : s).join(", ")}` : ""}</small></div>`; const b = document.createElement("button"); b.textContent = m.candle ? "A candle burns" : `A candle (${CM.CANDLE_COST[g.villageLevel("shrine") >= 2 ? 1 : 0]} renown)`; b.disabled = Boolean(m.candle); b.addEventListener("click", () => say(g.homeCandle(i))); row.appendChild(b); r.appendChild(row); }); if (!r.children.length) r.innerHTML = "<div class='small'>No names yet. May it stay so.</div>"; }
+    if (lvl >= 5) { const r = room("The study"); g.party.forEach((h, i) => { if (h.hp > 0) btn(r, `${h.name} retires home`, () => g.retireHome(i)); }); if (H.retired.length) { const w = document.createElement("div"); w.className = "small"; w.textContent = `Retired here: ${H.retired.map((x) => `${x.name} the ${x.cls}`).join(", ")}. ${H.will ? `The will: ${CM.itemName(H.will)} in every pack.` : "No will yet."} Will a thing from the stash: `; H.stash.forEach((it, i) => { const b = document.createElement("button"); b.textContent = CM.itemName(it); b.addEventListener("click", () => say(g.writeWill(i))); w.appendChild(b); }); r.appendChild(w); } }
+    this.openDialog("#dlg-home");
+  }
   // a door in the town: the plot's name, what stands there, the levels raised, and the village's build button
   openBuilding(id, keepNote) {
     const g = this.game, P = CM.TOWN_PLOTS[id]; if (!P) return;
