@@ -1109,6 +1109,13 @@ CM.art.facade = function (what, seed = 1, base = null) {                  // bas
   }
   return c;
 };
+// a window at night: the warm light behind the glass and the timbers across it (laid over the wall's own window)
+CM.art.litWindow = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, g = p.createRadialGradient(S / 2, S / 2, S * 0.05, S / 2, S / 2, S * 0.7);
+  g.addColorStop(0, "#FFE6A0"); g.addColorStop(1, "#E08A30"); p.fillStyle = "#5A4028"; p.fillRect(0, 0, S, S); p.fillStyle = g; p.fillRect(S * 0.1, S * 0.1, S * 0.8, S * 0.8);
+  p.fillStyle = "#5A4028"; p.fillRect(S / 2 - S * 0.04, 0, S * 0.08, S); p.fillRect(0, S / 2 - S * 0.04, S, S * 0.08);
+  return c;
+};
 CM.art.townWall = function (top = false, seed = 1) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`townwall:${top}:${seed}`)), base = top ? [120, 116, 108] : [104, 100, 94];
   p.fillStyle = rgb(base, 0.55); p.fillRect(0, 0, S, S);
@@ -1272,6 +1279,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:door"] = use("solid.door", () => CM.art.facade("door"));
   out["solid:shop"] = use("solid.shop", () => CM.art.facade("shop"));
   out["solid:gable"] = use("solid.gable", () => CM.art.facade("gable"));
+  out["window:lit"] = use("window.lit", () => CM.art.litWindow());
   out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
   out["solid:townwall"] = use("solid.townwall", () => CM.art.townWall(false));
   out["solid:townwall:top"] = use("solid.townwall.top", () => CM.art.townWall(true));
@@ -1391,7 +1399,7 @@ CM.art.surfaceProp = function (id, S, kit) {
 
 
 // the dungeon's debris: painted at the props' size, for every look
-CM.art.DEBRIS_IDS = ["cobweb", "dust", "coffinlid", "candle", "puddle", "slime", "rotcrate", "rubble", "pick", "rails", "armour", "glass", "urn", "candelabra", "frost", "weed", "shells", "oar", "fungi", "shard", "slag", "chains", "cogs", "bonepile", "roots", "coins", "books", "scrolls", "straw", "bottle_red", "bottle_blue", "bottle_green", "stain", "ash", "ooze", "scorch", "arrows", "stub", "pin"];
+CM.art.DEBRIS_IDS = ["cobweb", "dust", "coffinlid", "candle", "puddle", "slime", "rotcrate", "rubble", "pick", "rails", "armour", "glass", "urn", "candelabra", "frost", "weed", "shells", "oar", "fungi", "shard", "slag", "chains", "cogs", "bonepile", "roots", "coins", "books", "scrolls", "straw", "bottle_red", "bottle_blue", "bottle_green", "stain", "ash", "ooze", "scorch", "arrows", "stub", "pin", "chest_open"];
 CM.art.debrisProp = function (id, S) {
   const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`debris:${id}`));
   const blob = (x, y, rx, ry, colour) => { p.fillStyle = colour; p.beginPath(); p.ellipse(x, y, rx, ry, rnd.next() * 3, 0, Math.PI * 2); p.fill(); };
@@ -1451,6 +1459,10 @@ CM.art.debrisProp = function (id, S) {
     case "ooze": blob(S / 2, S / 2, S * 0.38, S * 0.26, "#4A7A30"); blob(S * 0.42, S * 0.44, S * 0.14, S * 0.07, "#90C060"); scatter(5, (x, y) => blob(x, y, 7, 5, "#5A8A38")); break;
     case "scorch": { const g = p.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, S * 0.48); g.addColorStop(0, "rgba(20,14,10,1)"); g.addColorStop(0.7, "rgba(40,28,20,1)"); g.addColorStop(0.71, "rgba(0,0,0,0)"); p.fillStyle = g; p.fillRect(0, 0, S, S); scatter(10, (x, y) => blob(x, y, 5, 3, "#1A1410")); break; }
     case "arrows": p.lineCap = "round"; for (let i = 0; i < 3; i++) { const x = S * (0.25 + rnd.next() * 0.5), y = S * (0.25 + rnd.next() * 0.5), a = rnd.next() * Math.PI, l = S * 0.2; p.strokeStyle = "#8A6A40"; p.lineWidth = 4; p.beginPath(); p.moveTo(x - Math.cos(a) * l, y - Math.sin(a) * l); p.lineTo(x + Math.cos(a) * l * 0.4, y + Math.sin(a) * l * 0.4); p.stroke(); p.fillStyle = "#D8D0C0"; p.beginPath(); p.moveTo(x - Math.cos(a) * l, y - Math.sin(a) * l); p.lineTo(x - Math.cos(a + 0.4) * l * 0.8, y - Math.sin(a + 0.4) * l * 0.8); p.lineTo(x - Math.cos(a - 0.4) * l * 0.8, y - Math.sin(a - 0.4) * l * 0.8); p.closePath(); p.fill(); } break;
+    case "chest_open": { const W = S * 0.8, x0 = S * 0.1, y0 = S * 0.5; p.fillStyle = "#3A2414"; p.fillRect(x0, y0, W, S * 0.42); p.fillStyle = "#7A4A22"; p.fillRect(x0 + 3, y0 + 3, W - 6, S * 0.42 - 6);   // an open chest: the box, its dark inside, the lid thrown back
+      p.fillStyle = "#C8A040"; p.fillRect(x0, y0 + S * 0.08, W, S * 0.05); p.fillStyle = "#1A100A"; p.fillRect(x0 + 6, y0 - 2, W - 12, S * 0.07);
+      p.fillStyle = "#6A3E1C"; p.beginPath(); p.moveTo(x0, y0); p.lineTo(x0 + W, y0); p.lineTo(x0 + W - S * 0.04, y0 - S * 0.34); p.lineTo(x0 + S * 0.04, y0 - S * 0.34); p.closePath(); p.fill();
+      p.fillStyle = "#C8A040"; p.fillRect(x0 + S * 0.03, y0 - S * 0.2, W - S * 0.06, S * 0.04); break; }
     case "stub": p.fillStyle = "#4A3220"; p.fillRect(S * 0.2, S * 0.4, S * 0.6, S * 0.2); blob(S * 0.78, S * 0.5, S * 0.12, S * 0.14, "#1A1410"); break;
     case "pin": p.strokeStyle = "#A0A0A8"; p.lineWidth = 6; p.lineCap = "round"; p.beginPath(); p.moveTo(S * 0.15, S * 0.6); p.lineTo(S * 0.6, S * 0.6); p.lineTo(S * 0.85, S * 0.35); p.stroke(); break;
     case "straw": p.lineWidth = 3; for (let i = 0; i < 90; i++) { const x = S * (0.1 + rnd.next() * 0.8), y = S * (0.1 + rnd.next() * 0.8), a = rnd.next() * Math.PI; p.strokeStyle = `rgb(${190 + rnd.int(0, 40)},${160 + rnd.int(0, 30)},${80 + rnd.int(0, 30)})`; p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * 16, y + Math.sin(a) * 16); p.stroke(); } break;

@@ -3387,6 +3387,30 @@ test("the living dungeon is kept: the shaded light and the noise in the save; a 
   delete fl.things[`${fl.pos[0]},${Math.max(0, fl.pos[1] - 3)}`]; auto.stealth(fl); assert.ok(!a.lightOut, "and lights it again past the sleeper");
 });
 
+test("things that move: a door swings on its hinge and a portcullis lifts over their own time (found open, open at once); a chest emptied stays open where it stood, and is kept; the town's windows are lit at night and only at night; water has the shader's own branch", () => {
+  const CM = load(), S = CM.SWING;
+  assert.strictEqual(CM.swing(true, null, 1000, S.doorMs), 1, "found open: open"); assert.strictEqual(CM.swing(false, null, 1000, S.doorMs), 0, "found shut: shut");
+  assert.strictEqual(CM.swing(true, 1000, 1000, S.doorMs), 0, "just opened: still shut"); assert.strictEqual(CM.swing(true, 1000, 1000 + S.doorMs, S.doorMs), 1, "and open after its time");
+  const mid = CM.swing(true, 1000, 1000 + S.doorMs / 2, S.doorMs); assert.ok(mid > 0.4 && mid < 0.6, "half way at half time");
+  assert.strictEqual(CM.swing(false, 1000, 1000 + S.gateMs, S.gateMs), 0, "shut again"); assert.ok(S.doorAngle > 1.5 && S.gateLift > 0.8);
+  // a chest emptied: an open chest left standing, kept with the floor
+  const g = new CM.Game(); g.newGame("move-1", fixedParty(CM)); g.enterFloor(2, "down");
+  const fl = g.floor, k = `${fl.pos[0]},${fl.pos[1]}`; fl.things[k] = { type: "chest", gold: 10, items: [], trap: null }; g.mode = "explore"; g.use();
+  assert.ok(!fl.things[k], "the chest is emptied"); assert.ok((fl.traces || []).some((t) => t.id === "chest_open" && `${t.x},${t.y}` === k), "an open chest left where it stood");
+  assert.strictEqual(CM.PROPS.chest_open.how, "stand"); assert.ok(fs.readFileSync(path.join(ROOT, "src", "js", "30-art.js"), "utf8").includes("case \"chest_open\""), "painted");
+  g.saveRun(); const g2 = new CM.Game(); assert.ok(g2.continueRun()); assert.ok((g2.floor.traces || []).some((t) => t.id === "chest_open"), "kept with the floor");
+  // the town's windows: lit at night, dark by day
+  const town = CM.makeTown("move-2"), index = {}; ["wall", "solid:house", "solid:door", "solid:shop", "solid:roof", "solid:gable", "solid:townwall", "solid:townwall:top", "ground:grass", "window:lit"].forEach((n, i) => { index[n] = i; });
+  const day = CM.floorMesh(town, CM.themeFor(0), index, { props: [] }), night = CM.floorMesh(town, CM.themeFor(0), index, { props: [], night: true });
+  assert.strictEqual(day.litWindows, 0, "no lit window by day"); assert.ok(night.litWindows > 40, `the town lit at night (${night.litWindows})`); assert.strictEqual(night.walls, day.walls, "the same walls");
+  const dungeon = CM.floorMesh(CM.makeFloor(3, "move-3", 2), CM.themeFor(3), index, { props: [], night: true }); assert.strictEqual(dungeon.litWindows, 0, "no windows below");
+  // the water, and the rain on the ground, in the shader; the swing in the frame
+  const render = fs.readFileSync(path.join(ROOT, "src", "js", "40-render.js"), "utf8"), main = fs.readFileSync(path.join(ROOT, "src", "js", "80-main.js"), "utf8");
+  assert.ok(render.includes("vFx.z > 3.5") && render.includes("vFx.z > 2.5 && vFx.z < 3.5"), "water has its own branch, apart from the sky");
+  assert.ok(render.includes("uWet") && render.includes("s.swing") && render.includes("s.water ? 4"), "the rain, the swing and the water flag");
+  assert.ok(main.includes("water: true") && main.includes("CM.swing(Boolean(f.open)") && main.includes("puddle"), "the frame flags the water, swings the doors, lays the puddles");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

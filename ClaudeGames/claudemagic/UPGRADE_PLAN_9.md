@@ -127,7 +127,19 @@ lairs are met with the torch lit, woken or struck asleep.
   a sneaking party passes a sleeper on a fixed seed and a lit one does not; each champion's word does what it says
   in a fixed fight; the film replays a hunt the same; the sim's crown rate; Automatic's douse and strike.
 
-## Phase 2 - Things that move: doors, chests, levers, water, fire and windows - v9.5 (graphics; medium)
+## Phase 2 - Things that move: doors, chests, levers, water, fire and windows - v9.5 (graphics; medium) - DONE
+
+As built: `CM.swing` (28-motion.js) eases a thing between two states; the frame remembers when each door, portcullis
+and lever was seen to change (a thing first seen is as it was found). A door is its closed picture swung a quarter
+turn on its hinge, away from whoever opened it (a corridor is one square wide: a quarter turn lays it along the wall);
+a portcullis lifts into the lintel; a lever's two pictures cross over. An emptied chest leaves an open chest standing as
+a trace (saved with the floor, like the bottles). Water is drawn by the shader's own branch (glow 4): ripples from the
+time, the sky (or below, the torch) in it by the angle, a glint of the sun, a dark green-blue body; the sky dome's
+branch had been catching it and was narrowed. In rain the surface's ground darkens and shows the sky low down, and
+puddles lie on the roads and paths by the day's hash. The town's windows are lit at night: a glowing quad over seven
+windows in ten, the floor's mesh made again at dusk and dawn (twice a day; a bug that rebuilt a dungeon floor with the
+town's theme was caught in the screenshots and fixed). Fire needed nothing: the torches already flicker at eight frames
+a second and their lights waver.
 
 - **Doors swing**: a door is two quads hinged on the frame's post that rotate 100 degrees over 350 ms when opened,
   and swing back when barred; the Pixel door tile is split in two. **Portcullises lift** (the gate's picture rises

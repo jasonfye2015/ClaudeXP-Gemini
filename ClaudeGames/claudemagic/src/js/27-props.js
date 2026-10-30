@@ -72,6 +72,7 @@ CM.PROPS = {
   scorch: { how: "flat", size: [0.7, 0.95] },
   arrows: { how: "flat", size: [0.35, 0.5] },
   stub: { how: "flat", size: [0.18, 0.24] },
+  chest_open: { how: "stand", size: [0.62, 0.7], h: 1 },              // a chest the party emptied: it stays open where it stood
   pin: { how: "flat", size: [0.12, 0.16] },
 };
 // where they lie: `surface` (the town and the land) or `bands` (the dungeon's, by CM.themeIndex: 0 the Catacombs ... 9

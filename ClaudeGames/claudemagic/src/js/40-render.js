@@ -20,15 +20,29 @@ uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
 uniform int uLights; uniform vec4 uLightPos[12]; uniform vec3 uLightCol[12];   // the lights about the party: xyz, reach in w; colour
 uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
+uniform float uTime; uniform float uWet;                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 void main() {
   bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
   vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0)));
   vec4 t = shared ? ts : tt;
-  if (vFx.z > 2.5) { fragColor = vec4(mix(uHorizon, uZenith, t.r), 1.0); return; }
+  if (vFx.z > 2.5 && vFx.z < 3.5) { fragColor = vec4(mix(uHorizon, uZenith, t.r), 1.0); return; }
   if (t.a < 0.5) discard;
-  if (vFx.z > 1.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
+  if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
   float d = distance(vWorld, uEye);
+  if (vFx.z > 3.5) {                                                          // water (glow 4): it ripples, shows the sky (or the torch) by the angle, and glints
+    vec2 p = vWorld.xz; float tm = uTime;
+    vec3 wn = normalize(vec3(0.14 * sin(p.x * 6.3 + tm * 1.7) + 0.08 * sin((p.x + p.y) * 11.0 - tm * 2.3), 1.0, 0.14 * cos(p.y * 5.7 - tm * 1.3) + 0.08 * cos((p.x - p.y) * 9.0 + tm * 1.9)));
+    vec3 v = normalize(uEye - vWorld), r = reflect(-v, wn);
+    float fr = 0.12 + 0.5 * pow(1.0 - max(dot(v, wn), 0.0), 3.0);
+    float r2w = uReach * uReach, lw = uAmbient + uFlicker * r2w / (r2w + 2.2 * d * d + 0.4 * d);
+    vec3 base = t.rgb * vec3(0.3, 0.46, 0.55) * vShade * uTorch * lw * uGrade;   // (deep water: dark, a little green)
+    vec3 seen = uSunK > 0.0 ? mix(uHorizon, uZenith, clamp(r.y * 1.4, 0.0, 1.0)) * 0.75 * vec3(0.8, 0.92, 1.0) : uTorch * lw * 0.55;
+    float glint = uSunK > 0.0 ? pow(max(dot(r, uSun), 0.0), 90.0) * 1.6 * uSunK : pow(max(dot(wn, v), 0.0), 160.0) * 0.9 * lw;
+    vec3 wc = mix(base, seen, fr) + glint * vec3(1.0, 0.95, 0.82);
+    wc = mix(wc, uFog, smoothstep(uReach * 0.55, uReach * 1.7, d));
+    fragColor = vec4(wc, 0.86 * vFx.y); return;
+  }
   float r2 = uReach * uReach;
   float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d);
   vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));                      // the surface's facing, from the triangle itself
@@ -43,6 +57,10 @@ void main() {
     extra += uLightCol[i] * fall * face;
   }
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
+  if (uWet > 0.0 && n.y > 0.7) {                                            // the rain on the ground: darker, and the sky in it at a low angle
+    vec3 v = normalize(uEye - vWorld); float fw = pow(1.0 - max(v.y, 0.0), 4.0);
+    col = col * (1.0 - 0.28 * uWet) + uWet * fw * mix(uHorizon, uZenith, 0.4) * 0.45;
+  }
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
   col = mix(col, uFog, fog);
   col = mix(col, t.rgb, vFx.z * (1.0 - fog * 0.7));
@@ -89,7 +107,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade", "uTime", "uWet"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -193,7 +211,7 @@ CM.Renderer = class {
     this.theme = theme;
     const props = CM.scatter(floor, this.seed, this.density, { season: this.season }).concat(CM.traceProps(floor));   // (and what the party left)
     this.standing = props.filter((p) => p.how === "stand");
-    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub });
+    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: Boolean(this.night) });   // (at night the town's windows are lit)
     this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
@@ -280,10 +298,14 @@ CM.Renderer = class {
       const lift = s.lift || 0;
       if (s.flat) {
         corners = [[cx - w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz - w / 2], [cx - w / 2, 0.003, cz - w / 2]];
+      } else if (s.axis && s.swing) {                                    // a door swung on its hinge (28-motion.js): toward the side away from the party
+        const L = 0.94, sd = s.swingSide || 1, sw = s.swing, top = 0.97;
+        const [hx, hz, ex, ez] = s.axis === "ns" ? [cx - 0.47, cz, cx - 0.47 + Math.cos(sw) * L, cz + Math.sin(sw) * L * sd] : [cx, cz + 0.47, cx + Math.sin(sw) * L * sd, cz + 0.47 - Math.cos(sw) * L];
+        corners = [[hx, 0, hz], [ex, 0, ez], [ex, top, ez], [hx, top, hz]];
       } else if (s.axis) {
-        corners = s.axis === "ns"                                        // a door across a corridor running north-south
-          ? [[cx - 0.5, 0, cz], [cx + 0.5, 0, cz], [cx + 0.5, 1, cz], [cx - 0.5, 1, cz]]
-          : [[cx, 0, cz + 0.5], [cx, 0, cz - 0.5], [cx, 1, cz - 0.5], [cx, 1, cz + 0.5]];
+        corners = s.axis === "ns"                                        // a door across a corridor running north-south (a portcullis lifted by `lift`)
+          ? [[cx - 0.5, lift, cz], [cx + 0.5, lift, cz], [cx + 0.5, 1 + lift, cz], [cx - 0.5, 1 + lift, cz]]
+          : [[cx, lift, cz + 0.5], [cx, lift, cz - 0.5], [cx, 1 + lift, cz - 0.5], [cx, 1 + lift, cz + 0.5]];
       } else if (s.face !== undefined) {
         const [dx, dz] = CM.DIRS[s.face], inset = 0.012;                // flush with that wall, a hair into the room
         const px = s.x + 0.5 + dx * (0.5 - inset), pz = s.y + 0.5 + dz * (0.5 - inset);
@@ -302,7 +324,7 @@ CM.Renderer = class {
           [cx + right[0] * w / 2, lift + h, cz + right[2] * w / 2], [cx - right[0] * w / 2, lift + h, cz - right[2] * w / 2]];
       }
       const uvs = s.mirror ? uv.map(([u, v], i) => [uv[i ^ 1][0], v]) : uv;   // (mirrored: it looks the other way)
-      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uvs[i][0], uvs[i][1], layer, shade, flash, alpha, glow);
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uvs[i][0], uvs[i][1], layer, shade, flash, alpha, s.water ? 4 : glow);   // (water: the shader's own)
     }
     return out;
   }
@@ -372,6 +394,7 @@ CM.Renderer = class {
       gl.uniform3fv(this.loc.uSun, v.map((c) => c / m)); gl.uniform1f(this.loc.uSunK, sky.sun !== null && sky.light > 0.15 ? 0.9 : 0.4);
     } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
     gl.uniform3fv(this.loc.uGrade, t.grade || [1, 1, 1]);
+    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);

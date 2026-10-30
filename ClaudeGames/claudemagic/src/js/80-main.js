@@ -355,7 +355,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // flooded vaults, water on some floors - the same ones each time, from the seed
   let decor = { key: null, torches: [], water: [] };
   function decorations(fl) {
-    const key = `${game.seed}:${fl.number}:${fl.grid.length}`;
+    const rain = (fl.number === 0 || fl.number === -1) && CM.weather(game) === "rain", key = `${game.seed}:${fl.number}:${fl.grid.length}:${rain ? CM.dayOf(game) : ""}`;
     if (decor.key === key) return decor;
     const torches = [], water = [], size = fl.grid.length, wet = CM.themeIndex(fl.number) === 1;
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
@@ -372,11 +372,24 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       if (wet && !here && CM.hashSeed(`${game.seed}:water:${x}:${y}`) % 3 === 0) water.push({ x, y, phase: CM.hashSeed(`${game.seed}:ripple:${x}:${y}`) % 3 });
     }
+    if (rain) for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {   // puddles in the rain, on the roads and the paths
+      const g = CM.groundAt(fl, x, y), h = CM.hashSeed(`${game.seed}:puddle:${CM.dayOf(game)}:${x}:${y}`);
+      if (fl.grid[y][x] === 0 && !fl.things[`${x},${y}`] && ["dirt", "cobbles", "flags"].includes(g) && h % 4 === 0) water.push({ x, y, phase: h % 3, w: 0.35 + (h % 7) * 0.04, dx: ((h >> 4) % 40 - 20) / 100, dz: ((h >> 9) % 40 - 20) / 100 });
+    }
     for (const dc of fl.decor || []) if (dc.kind === "water" && !water.some((w) => w.x === dc.x && w.y === dc.y)) water.push({ x: dc.x, y: dc.y, phase: CM.hashSeed(`${game.seed}:ripple:${dc.x}:${dc.y}`) % 3 });
     decor = { key, torches, water };
     return decor;
   }
 
+  // the things that move between two states: when each was seen to change, and which way a door swings (away from
+  // whoever opened it); a thing first seen is as it was found (no swing)
+  const movers = new Map();
+  function changed(id, state, sideOf) {
+    let st = movers.get(id);
+    if (!st) { st = { state, at: null, side: sideOf ? sideOf() : 1 }; movers.set(id, st); }
+    else if (st.state !== state) { st.state = state; st.at = performance.now(); if (sideOf) st.side = sideOf(); }
+    return st;
+  }
   // a frame of a monster's picture, where the theme has it (the Drawn frames; the Pixel tiles stand still)
   const frameOf = (layer, pose) => (pose && renderer.index && renderer.index[`${layer}:${pose}`] !== undefined ? `${layer}:${pose}` : layer);
   function sprites() {
@@ -457,9 +470,14 @@ window.addEventListener("DOMContentLoaded", () => {
       const [x, y] = key.split(",").map(Number);
       if (!near(x, y)) continue;
       const ns = fl.grid[y - 1] && fl.grid[y - 1][x] === 0 && fl.grid[y + 1] && fl.grid[y + 1][x] === 0;   // (the corridor runs north-south)
-      if (f.type === "door") out.push({ x, y, layer: f.open ? "door_open" : f.locked ? "door_locked" : f.riddle !== undefined ? "door_riddle" : "door", axis: ns ? "ns" : "ew", glow: !f.open && f.riddle !== undefined ? 0.35 : 0 });
+      if (f.type === "door") {                                         // a door swings on its hinge, away from the party (28-motion.js)
+        const st = changed(`door:${fl.number}:${key}`, Boolean(f.open), () => (ns ? (fl.pos[1] < y ? 1 : -1) : (fl.pos[0] < x ? 1 : -1))), k = CM.reducedMotion ? (f.open ? 1 : 0) : CM.swing(Boolean(f.open), st.at, now, CM.SWING.doorMs);
+        const pic = f.locked ? "door_locked" : f.riddle !== undefined ? "door_riddle" : "door";
+        if (k <= 0.001) out.push({ x, y, layer: pic, axis: ns ? "ns" : "ew", glow: f.riddle !== undefined ? 0.35 : 0 });
+        else out.push({ x, y, layer: pic, axis: ns ? "ns" : "ew", swing: k * CM.SWING.doorAngle, swingSide: st.side });
+      }
       else if (f.type === "plate" && (f.gate || f.known)) out.push({ x, y, layer: f.gate && !f.pressed ? "plate" : "plate_pressed", flat: true, w: 0.62 });
-      else if (f.type === "gate") out.push({ x, y, layer: f.open ? "gate_open" : "gate", axis: ns ? "ns" : "ew" });
+      else if (f.type === "gate") { const st = changed(`gate:${fl.number}:${key}`, Boolean(f.open)), k = CM.reducedMotion ? (f.open ? 1 : 0) : CM.swing(Boolean(f.open), st.at, now, CM.SWING.gateMs); out.push({ x, y, layer: "gate", axis: ns ? "ns" : "ew", lift: k * CM.SWING.gateLift }); }   // (a portcullis lifts into the lintel)
       else if (f.type === "pit") out.push({ x, y, layer: "pit", flat: true, w: 0.96 });
       else if (f.type === "trapdoor" && f.known) out.push({ x, y, layer: "trapdoor", flat: true, w: 0.96 });
       else if (f.type === "teleporter") out.push({ x, y, layer: "teleporter", flat: true, w: 0.9, glow: 0.85 });
@@ -468,7 +486,8 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (f.type === "bonepiles") out.push({ x, y, layer: f.spent ? "bones" : "nest", w: f.spent ? 0.6 : 0.9, h: f.spent ? 0.42 : 0.75 });
       else if (f.type === "fountain") out.push({ x, y, layer: f.used ? "fountain_dry" : "fountain", w: 0.9, h: 0.9 });
       else if (f.type === "altar") out.push({ x, y, layer: "altar", w: 0.9, h: 0.9 });
-      else if (f.type === "lever") out.push({ x, y, layer: f.pulled ? "lever_pulled" : "lever", face: f.face, w: 0.34, h: 0.34 });
+      else if (f.type === "lever") { const st = changed(`lever:${fl.number}:${key}`, Boolean(f.pulled)), k = CM.reducedMotion ? (f.pulled ? 1 : 0) : CM.swing(Boolean(f.pulled), st.at, now, CM.SWING.leverMs);   // (thrown: one picture into the other)
+        if (k < 1) out.push({ x, y, layer: "lever", face: f.face, w: 0.34, h: 0.34, alpha: 1 - k }); if (k > 0) out.push({ x, y, layer: "lever_pulled", face: f.face, w: 0.34, h: 0.34, alpha: k }); }
       else if (f.type === "carving") out.push({ x, y, layer: "carving", face: f.face, w: 0.62, h: 0.5 });
     }
     for (const dc of fl.decor || []) {                                   // a lair's furniture: the heaps of the nest, the throne, the anvils, the embers
@@ -483,7 +502,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
-    for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, flat: true, w: 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75 });
+    for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, dx: w.dx || 0, dz: w.dz || 0, flat: true, w: w.w || 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75, water: true });   // (the water shader: 40-render.js)
     if (game.mode === "combat") {
       const living = game.attackable();
       const fwdv = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
@@ -713,6 +732,9 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
+        renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
+        { const night = Boolean(renderer.sky && renderer.sky.night) && game.floor.number === 0;   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
+          if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && game.floor.number === 0) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
         renderer.lights = lightsNear(game.floor);
         stepAir(dt);
         const { out, hud } = sprites();
