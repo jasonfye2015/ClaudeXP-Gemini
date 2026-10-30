@@ -91,7 +91,18 @@ and 7 to 35 on a dungeon floor. Test: "the scatter".
   fingerprint is the same with props as without; Low places none; a hundred floors build their meshes under a time
   budget.
 
-## Phase 2 - The surface's life - v8.3 (large)
+## Phase 2 - The surface's life - v8.3 (large) - DONE
+
+Built: green, dry and snowy grass tufts and wild flowers by the season; tall grass and hay in the fields; shrubs
+where the grass meets the trees; ferns, mushrooms and fallen leaves under the canopy (leaf litter everywhere by the
+trees in autumn); logs and stumps; boulders and reeds by the water; stepping stones in the ford; snow lying on the
+grass in winter; barrels, crates, lamp posts (lit at night), a cart in town; market stalls in the Square on a week's
+seed. The scatter takes the run's season (`CM.scatter(..., { season })`). The Stone look stamps real grass blades and
+leaves from ambientCG cut-outs (Foliage001, Foliage006, LeafSet027, LeafSet024, kept as PNG with their opacity: the
+art tool learned `CUTOUT`); Pixel paints them and shows them in pixels. The file grew to 4.5 MB.
+Waiting for later phases: snow on the crowns and the roofs and the trees' autumn colour (they are one picture each
+today), chimney smoke (Phase 7's particles), festival banners, the farm's rows showing their crops by the farm's state
+(it lives in the village's save, not the seed), and lit windows (Phase 6). Test: "the surface's life".
 
 - **The land**: grass tufts and wild flowers on open grass (spring's flowers, summer's tall grass, autumn's seed heads
   and fallen leaves, winter's snow lying on the ground, the crowns and the roofs - the season already in `CM.season`);

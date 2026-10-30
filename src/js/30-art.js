@@ -1291,9 +1291,106 @@ CM.art.surfaceLayers = function (pick) {
 };
 
 
+
+// the props a look may make from photographs: `kit` has pieces cut from the cut-out atlases (the Stone look), each
+// { img, sx, sy, sw, sh } - blades of grass, green leaves, maple leaves; without a kit, everything is painted
+CM.art.cutKit = function (packs) {
+  const A = (key) => packs && packs[key];
+  if (!A("cut.blades") || !A("cut.leaf") || !A("cut.maple")) return null;
+  const cell = (img, i, cols, rows) => { const W = img.width, H = img.height; return { img, sx: (i % cols) * W / cols, sy: Math.floor(i / cols) * H / rows, sw: W / cols, sh: H / rows }; };
+  const blades = []; { const img = A("cut.blades"), W = img.width; for (let i = 0; i < 9; i++) blades.push({ img, sx: W * (0.035 + i * 0.104), sy: W * 0.05, sw: W * 0.1, sh: W * 0.87 }); }
+  if (A("cut.grass")) { const img = A("cut.grass"), W = img.width; for (let i = 0; i < 4; i++) blades.push({ img, sx: W * (0.05 + i * 0.155), sy: W * 0.02, sw: W * 0.12, sh: W * 0.45 }); }
+  const leaves = [], maples = [];
+  for (let i = 0; i < 9; i++) { leaves.push(cell(A("cut.leaf"), i, 3, 3)); maples.push(cell(A("cut.maple"), i, 3, 3)); }
+  return { blades, leaves, maples };
+};
+const stamp = (p, piece, x, y, w, h, angle = 0) => { p.save(); p.translate(x, y); p.rotate(angle); p.drawImage(piece.img, piece.sx, piece.sy, piece.sw, piece.sh, -w / 2, -h, w, h); p.restore(); };
+const tint = (c, colour, mode = "multiply") => { const p = c.getContext("2d"); p.save(); p.globalCompositeOperation = "source-atop"; p.globalAlpha = 1; p.fillStyle = colour; if (mode === "multiply") p.globalCompositeOperation = "source-atop"; p.fillRect(0, 0, c.width, c.height); p.restore(); return c; };
+CM.art.surfaceProp = function (id, S, kit) {
+  const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`prop:${id}`));
+  const blades = (n, hMin, hMax, colour, tipColour) => {
+    for (let i = 0; i < n; i++) {
+      const x = S * 0.12 + rnd.next() * S * 0.76, h = S * (hMin + rnd.next() * (hMax - hMin)), lean = (rnd.next() - 0.5) * 0.5;
+      if (kit) stamp(p, kit.blades[rnd.int(0, kit.blades.length - 1)], x, S - 1, S * 0.09, h, lean * 0.6);
+      else { const k = 0.7 + rnd.next() * 0.6; p.strokeStyle = colour(k); p.lineWidth = 3 + rnd.next() * 2; p.lineCap = "round"; p.beginPath(); p.moveTo(x, S - 2); p.quadraticCurveTo(x + lean * S * 0.1, S - h * 0.6, x + lean * S * 0.3, S - h); p.stroke(); if (tipColour) { p.strokeStyle = tipColour; p.beginPath(); p.moveTo(x + lean * S * 0.25, S - h * 0.85); p.lineTo(x + lean * S * 0.3, S - h); p.stroke(); } }
+    }
+  };
+  const green = (k) => `rgb(${Math.round(70 * k)},${Math.round(120 * k)},${Math.round(44 * k)})`, gold = (k) => `rgb(${Math.round(176 * k)},${Math.round(150 * k)},${Math.round(70 * k)})`;
+  if (id === "tuft") blades(kit ? 24 : 26, 0.35, 0.9, green);
+  else if (id === "tuft_dry") { blades(kit ? 22 : 24, 0.3, 0.85, gold); if (kit) { p.save(); p.globalCompositeOperation = "source-atop"; p.fillStyle = "rgba(190,150,60,0.55)"; p.fillRect(0, 0, S, S); p.restore(); } }
+  else if (id === "tuft_snow") { blades(kit ? 10 : 18, 0.3, 0.7, (k) => `rgb(${Math.round(90 * k)},${Math.round(110 * k)},${Math.round(80 * k)})`, "#F4F6FA"); p.fillStyle = "#EEF2F8"; p.beginPath(); p.ellipse(S / 2, S - 4, S * 0.45, S * 0.08, 0, 0, Math.PI * 2); p.fill(); }
+  else if (id === "tallgrass") { blades(kit ? 22 : 34, 0.6, 1.0, (k) => `rgb(${Math.round(120 * k)},${Math.round(140 * k)},${Math.round(60 * k)})`); for (let i = 0; i < 8; i++) { const x = S * 0.15 + rnd.next() * S * 0.7, y = S * (0.04 + rnd.next() * 0.2); p.fillStyle = "#C8B060"; p.beginPath(); p.ellipse(x, y, 3, 9, (rnd.next() - 0.5) * 0.6, 0, Math.PI * 2); p.fill(); } }
+  else if (id === "shrub") {
+    p.fillStyle = "#24381C"; p.beginPath(); p.ellipse(S / 2, S * 0.62, S * 0.42, S * 0.34, 0, 0, Math.PI * 2); p.fill();
+    for (let i = 0; i < (kit ? 70 : 140); i++) {
+      const a = rnd.next() * Math.PI * 2, r = Math.sqrt(rnd.next()), x = S / 2 + Math.cos(a) * r * S * 0.42, y = S * 0.62 + Math.sin(a) * r * S * 0.33 - S * 0.04;
+      if (kit) stamp(p, kit.leaves[rnd.int(0, 8)], x, y + S * 0.06, S * 0.13, S * 0.15, rnd.next() * Math.PI * 2);
+      else { const k = 0.6 + rnd.next() * 0.7; p.fillStyle = `rgb(${Math.round(58 * k)},${Math.round(104 * k)},${Math.round(42 * k)})`; p.beginPath(); p.arc(x, y, S * (0.03 + rnd.next() * 0.03), 0, Math.PI * 2); p.fill(); }
+    }
+  } else if (id === "fern") {
+    for (let f = 0; f < 7; f++) {
+      const a = -Math.PI / 2 + (f - 3) * 0.32 + (rnd.next() - 0.5) * 0.15, len = S * (0.55 + rnd.next() * 0.35), x0 = S / 2, y0 = S - 2;
+      p.strokeStyle = "#3E6A2C"; p.lineWidth = 3; p.beginPath(); p.moveTo(x0, y0); const xe = x0 + Math.cos(a) * len, ye = y0 + Math.sin(a) * len; p.quadraticCurveTo(x0 + Math.cos(a) * len * 0.5, y0 + Math.sin(a) * len * 0.3, xe, ye); p.stroke();
+      for (let t = 0.15; t < 1; t += 0.08) { const x = x0 + (xe - x0) * t, y = y0 + (ye - y0) * t + Math.sin(t * Math.PI) * len * 0.08, w = (1 - t) * S * 0.09 + 3; p.strokeStyle = t % 0.16 < 0.08 ? "#4E8A38" : "#5A9A40"; p.lineWidth = 3; p.beginPath(); p.moveTo(x - w, y + w * 0.4); p.lineTo(x + w, y - w * 0.4); p.stroke(); }
+    }
+  } else if (id === "mushroom") {
+    for (const [x, s] of [[0.32, 0.8], [0.6, 1], [0.78, 0.6]]) { p.fillStyle = "#E8DCC4"; p.fillRect(S * x - S * 0.04 * s, S * (1 - 0.45 * s), S * 0.08 * s, S * 0.45 * s); p.fillStyle = "#B0442C"; p.beginPath(); p.ellipse(S * x, S * (1 - 0.45 * s), S * 0.16 * s, S * 0.12 * s, 0, Math.PI, 0); p.fill(); p.fillStyle = "#F4ECDC"; for (let i = 0; i < 3; i++) { p.beginPath(); p.arc(S * x + (i - 1) * S * 0.06 * s, S * (1 - 0.5 * s), S * 0.018, 0, Math.PI * 2); p.fill(); } }
+  } else if (id === "leaves") {
+    for (let i = 0; i < (kit ? 14 : 22); i++) {
+      const x = S * 0.1 + rnd.next() * S * 0.8, y = S * 0.18 + rnd.next() * S * 0.78;
+      if (kit) stamp(p, kit.maples[rnd.int(0, 8)], x, y, S * 0.2, S * 0.2, rnd.next() * Math.PI * 2);
+      else { p.fillStyle = ["#C86A28", "#D8A040", "#A8442C", "#B08838"][rnd.int(0, 3)]; p.beginPath(); p.ellipse(x, y - 8, 9, 6, rnd.next() * 3, 0, Math.PI * 2); p.fill(); }
+    }
+  } else if (id === "log") {
+    p.fillStyle = "#5A3E26"; p.fillRect(S * 0.06, S * 0.42, S * 0.84, S * 0.5); p.fillStyle = "#4A3220"; for (let i = 0; i < 6; i++) p.fillRect(S * 0.06, S * (0.48 + i * 0.07), S * 0.84, 3);
+    p.fillStyle = "#C8A878"; p.beginPath(); p.ellipse(S * 0.9, S * 0.67, S * 0.08, S * 0.25, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#8A6A44"; p.lineWidth = 2; for (const r of [0.15, 0.09]) { p.beginPath(); p.ellipse(S * 0.9, S * 0.67, S * 0.08 * r / 0.15 * 0.8, S * r, 0, 0, Math.PI * 2); p.stroke(); }
+    p.fillStyle = "rgba(90,130,60,0.7)"; for (let i = 0; i < 6; i++) { p.beginPath(); p.arc(S * (0.15 + rnd.next() * 0.6), S * 0.44, 6 + rnd.next() * 6, 0, Math.PI * 2); p.fill(); }
+  } else if (id === "stump") {
+    p.fillStyle = "#5A3E26"; p.beginPath(); p.moveTo(S * 0.2, S); p.lineTo(S * 0.26, S * 0.3); p.lineTo(S * 0.74, S * 0.3); p.lineTo(S * 0.8, S); p.closePath(); p.fill();
+    p.fillStyle = "#C8A878"; p.beginPath(); p.ellipse(S / 2, S * 0.3, S * 0.24, S * 0.08, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#8A6A44"; p.lineWidth = 2; p.beginPath(); p.ellipse(S / 2, S * 0.3, S * 0.14, S * 0.045, 0, 0, Math.PI * 2); p.stroke();
+  } else if (id === "boulder") {
+    p.fillStyle = "#6E6A62"; p.beginPath(); p.ellipse(S / 2, S * 0.62, S * 0.46, S * 0.38, 0, 0, Math.PI * 2); p.fill(); p.fillRect(S * 0.04, S * 0.62, S * 0.92, S * 0.38);
+    p.fillStyle = "#8A867C"; p.beginPath(); p.ellipse(S * 0.42, S * 0.45, S * 0.26, S * 0.16, -0.3, 0, Math.PI * 2); p.fill();
+    p.fillStyle = "rgba(80,120,50,0.6)"; p.beginPath(); p.ellipse(S * 0.6, S * 0.3, S * 0.18, S * 0.06, 0, 0, Math.PI * 2); p.fill();
+  } else if (id === "reeds") {
+    blades(kit ? 16 : 22, 0.6, 1.0, (k) => `rgb(${Math.round(90 * k)},${Math.round(116 * k)},${Math.round(56 * k)})`);
+    for (let i = 0; i < 4; i++) { const x = S * 0.25 + rnd.next() * S * 0.5, y = S * (0.08 + rnd.next() * 0.2); p.fillStyle = "#5A3A22"; p.beginPath(); p.ellipse(x, y, 5, 16, 0, 0, Math.PI * 2); p.fill(); }
+  } else if (id === "steps") {
+    for (const [x, y] of [[0.3, 0.25], [0.62, 0.45], [0.36, 0.72]]) { p.fillStyle = "#7A766C"; p.beginPath(); p.ellipse(S * x, S * y, S * 0.15, S * 0.11, 0.3, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(255,255,255,0.2)"; p.beginPath(); p.ellipse(S * x - 5, S * y - 4, S * 0.07, S * 0.04, 0.3, 0, Math.PI * 2); p.fill(); }
+  } else if (id === "hay") {
+    p.fillStyle = "#C8A850"; p.beginPath(); p.ellipse(S / 2, S * 0.6, S * 0.44, S * 0.38, 0, 0, Math.PI * 2); p.fill(); p.fillRect(S * 0.06, S * 0.6, S * 0.88, S * 0.4);
+    p.strokeStyle = "#A8883A"; p.lineWidth = 2; for (let i = 0; i < 40; i++) { const x = S * 0.1 + rnd.next() * S * 0.8, y = S * 0.3 + rnd.next() * S * 0.66; p.beginPath(); p.moveTo(x, y); p.lineTo(x + (rnd.next() - 0.5) * 20, y + 6); p.stroke(); }
+    p.strokeStyle = "#7A5A2A"; p.lineWidth = 4; p.beginPath(); p.moveTo(S * 0.06, S * 0.66); p.lineTo(S * 0.94, S * 0.66); p.stroke();
+  } else if (id === "snow") {
+    p.fillStyle = "#EEF2F8"; for (let i = 0; i < 7; i++) { p.beginPath(); p.ellipse(S * (0.25 + rnd.next() * 0.5), S * (0.25 + rnd.next() * 0.5), S * (0.12 + rnd.next() * 0.16), S * (0.08 + rnd.next() * 0.12), rnd.next() * 3, 0, Math.PI * 2); p.fill(); }
+  } else if (id === "barrel") {
+    p.fillStyle = "#7A5230"; p.beginPath(); p.moveTo(S * 0.18, S * 0.06); p.quadraticCurveTo(S * 0.06, S * 0.53, S * 0.18, S); p.lineTo(S * 0.82, S); p.quadraticCurveTo(S * 0.94, S * 0.53, S * 0.82, S * 0.06); p.closePath(); p.fill();
+    p.fillStyle = "#5A3A20"; for (let i = 1; i < 6; i++) p.fillRect(S * (0.12 + i * 0.13), S * 0.06, 3, S * 0.94);
+    p.fillStyle = "#3A3A3A"; for (const y of [0.18, 0.5, 0.84]) p.fillRect(S * 0.1, S * y, S * 0.8, 7);
+  } else if (id === "crate") {
+    p.fillStyle = "#9A7448"; p.fillRect(S * 0.08, S * 0.12, S * 0.84, S * 0.88); p.strokeStyle = "#6A4A28"; p.lineWidth = 8; p.strokeRect(S * 0.12, S * 0.16, S * 0.76, S * 0.8);
+    p.beginPath(); p.moveTo(S * 0.12, S * 0.16); p.lineTo(S * 0.88, S * 0.96); p.stroke(); p.lineWidth = 3; for (let i = 1; i < 4; i++) { p.beginPath(); p.moveTo(S * 0.12, S * (0.16 + i * 0.2)); p.lineTo(S * 0.88, S * (0.16 + i * 0.2)); p.stroke(); }
+  } else if (id === "lamp") {
+    p.fillStyle = "#2E2E30"; p.fillRect(S * 0.42, S * 0.12, S * 0.16, S * 0.88); p.fillRect(S * 0.3, S * 0.96, S * 0.4, S * 0.04);
+    p.fillStyle = "#2E2E30"; p.fillRect(S * 0.22, S * 0.02, S * 0.56, S * 0.025); p.fillRect(S * 0.24, S * 0.1, S * 0.52, S * 0.02);
+    p.fillStyle = "#F0D070"; p.fillRect(S * 0.28, S * 0.045, S * 0.44, S * 0.055);
+  } else if (id === "cart") {
+    p.fillStyle = "#8A6438"; p.fillRect(S * 0.08, S * 0.3, S * 0.74, S * 0.32); p.fillStyle = "#6A4A28"; for (let i = 0; i < 4; i++) p.fillRect(S * 0.08, S * (0.34 + i * 0.07), S * 0.74, 3);
+    p.strokeStyle = "#6A4A28"; p.lineWidth = 6; p.beginPath(); p.moveTo(S * 0.82, S * 0.5); p.lineTo(S * 0.98, S * 0.72); p.stroke();
+    for (const x of [0.25, 0.65]) { p.strokeStyle = "#4A3220"; p.lineWidth = 8; p.beginPath(); p.arc(S * x, S * 0.74, S * 0.18, 0, Math.PI * 2); p.stroke(); p.lineWidth = 3; for (let a = 0; a < 6; a++) { p.beginPath(); p.moveTo(S * x, S * 0.74); p.lineTo(S * x + Math.cos(a) * S * 0.18, S * 0.74 + Math.sin(a) * S * 0.18); p.stroke(); } }
+  } else if (id === "stall") {
+    p.fillStyle = "#5A3E26"; p.fillRect(S * 0.08, S * 0.18, 8, S * 0.82); p.fillRect(S * 0.92 - 8, S * 0.18, 8, S * 0.82);
+    for (let i = 0; i < 6; i++) { p.fillStyle = i % 2 ? "#E8DCC0" : "#B0442C"; p.beginPath(); p.moveTo(S * (0.04 + i * 0.153), S * 0.08); p.lineTo(S * (0.04 + (i + 1) * 0.153), S * 0.08); p.lineTo(S * (0.04 + (i + 1) * 0.153), S * 0.24); p.quadraticCurveTo(S * (0.04 + (i + 0.5) * 0.153), S * 0.3, S * (0.04 + i * 0.153), S * 0.24); p.closePath(); p.fill(); }
+    p.fillStyle = "#8A6438"; p.fillRect(S * 0.06, S * 0.62, S * 0.88, S * 0.1); p.fillRect(S * 0.12, S * 0.72, S * 0.76, S * 0.28);
+    for (let i = 0; i < 7; i++) { p.fillStyle = ["#D8A040", "#C84A30", "#70A040", "#E8DCC0"][rnd.int(0, 3)]; p.beginPath(); p.arc(S * (0.16 + i * 0.11), S * 0.58, S * 0.04, 0, Math.PI * 2); p.fill(); }
+  }
+  return c;
+};
+
 // ---- props: the small things on the floors, painted at half size and packed four to a layer --------------------------
-CM.art.prop = function (id) {
+CM.art.prop = function (id, kit = null) {
   const S = ART_SIZE / 2, c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`prop:${id}`));
+  if (!["tuft", "flowers", "pebbles", "rock", "bones", "skull"].includes(id) || (kit && id === "tuft")) return CM.art.surfaceProp(id, kit ? S * 2 : S, kit);   // (the surface's own, and with a kit the photographed tuft, at full size for the blades' detail)
   if (id === "tuft" || id === "flowers") {
     for (let i = 0; i < (id === "tuft" ? 26 : 14); i++) {
       const x = S * 0.15 + rnd.next() * S * 0.7, h = S * (0.35 + rnd.next() * 0.55), lean = (rnd.next() - 0.5) * S * 0.3, k = 0.7 + rnd.next() * 0.6;
