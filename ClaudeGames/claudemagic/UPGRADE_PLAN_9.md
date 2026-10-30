@@ -78,7 +78,22 @@ champions are drawn from here too (Phase 1 sets the flags).
   `28-motion.js`, so the Node suite drives it: a lunge returns to rest; a fall ends faded; a flinch during a
   lunge cancels the lunge; reduced motion gives the slide only.
 
-## Phase 1 - The living dungeon: lairs, sleepers, light, noise and stealth - v9.4 (mechanics; large)
+## Phase 1 - The living dungeon: lairs, sleepers, light, noise and stealth - v9.4 (mechanics; large) - DONE
+
+As built: `61b-lairs.js`. `CM.makeLairs` runs over every dungeon floor and wing as it is made, by a hash of its own, so
+no floor's walls, chests or way down move and the fingerprints and fixtures hold. The save's schema rose to 4 (the
+shaded light and the noise; a follower and errands will use the same migration). Differences: the save keeps the
+sleepers in the floor deltas it already had; Stonehide turns the *first* blow a round (three of four would have made it
+a wall); plain elites stay as the generator made them (changing their odds would have moved the dice of every floor), so
+champions are added on top, on packs with no elite; and a sleeper killed asleep keeps its hoard and its experience - the
+reason to sneak is the free round that always lands. The step's noise: two, heavy armour two more, a walk by itself
+one more; shaded, half; a Rogue, Ranger or Monk in front, half again; a door four, a chest four, a fight nine, a spell
+four, mining eight; a shut door costs four squares of it. The action bar is now redrawn when the floor's kind, the light
+or Automatic change (it was cached by the mode alone, and showed Where to? below ground).
+
+Measured (`tools/sim.js`, 20 seeds, Fair, to floor 20): v9.3 15 crowned, 3 fell, median 127 fights; v9.4 15 crowned,
+3 fell, median 126 fights. The classic four lead with the Knight, so the simulator's party never shades its light: the
+lairs are met with the torch lit, woken or struck asleep.
 
 - **Lairs.** `CM.makeFloor` already places monster groups; now three in five are placed *in a lair* - a dead-end,
   a room's far corner, a wing's end - and begin **asleep** (`group.asleep = true`). A sleeping pack is drawn lying

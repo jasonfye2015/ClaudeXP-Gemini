@@ -449,7 +449,7 @@ window.addEventListener("DOMContentLoaded", () => {
         const M = CM.motion({ now, phase: x * 2.1 + y * 1.3, sleeping: Boolean(thing.asleep), sway: Boolean(m.boss), reduced: CM.reducedMotion });   // (alive: it breathes; asleep, it lies)
         const side = (x + 0.5 - renderer.eye[0]) * right[0] + (y + 0.5 - renderer.eye[2]) * right[1];
         out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, !thing.asleep && Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * M.scaleY, shade: (m.elite || thing.champion ? 1.2 : 1) * (thing.asleep ? 0.85 : 1), alpha: m.echo ? 0.78 : 1,
-          tilt: M.tilt, skew: M.skew, mirror: CM.facesMirror(side), flash: thing.champion && !CM.reducedMotion ? 0.12 + 0.08 * Math.sin(now / 300) : 0,
+          tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: CM.facesMirror(side), flash: thing.champion && !CM.reducedMotion ? 0.12 + 0.08 * Math.sin(now / 300) : 0,
           lift: thing.asleep ? 0 : Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (awake: it sways; a ghost floats; a champion glints)
       }
     }
@@ -587,6 +587,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
     if (e.code === K.journal && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
     if (e.code === K.calendar && (game.mode === "explore" || game.mode === "camp")) { ui.openCalendar(); return; }
+    if (e.code === K.douse && game.mode === "explore" && game.floor && game.floor.number >= 1) { game.douse(); ui.refresh(); return; }
     if (e.code === K.whereTo && game.mode === "explore" && game.floor && game.floor.number <= 0 && game.floor.number % 1 === 0) { ui.openWhereTo(); return; }
     if (game.mode === "explore") {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }

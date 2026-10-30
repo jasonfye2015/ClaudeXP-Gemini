@@ -48,6 +48,7 @@ Object.assign(CM.Game.prototype, {
         this.say("The door creaks open.");
       }
       f.open = true;
+      this.makeNoise(CM.NOISE.door);
       this.sound("door");
       this.dirty = true;
       this.emit("change");
@@ -61,10 +62,12 @@ Object.assign(CM.Game.prototype, {
     const thing = fl.things[k];
     if (thing && (thing.type === "guardian" || thing.type === "boss") && !thing.parleyed && !thing.group[0].echo && this.openParley(k, thing)) return false;   // (it speaks first)
     if (thing && (thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian")) {
+      if (thing.asleep) { thing.asleep = false; this.strikeSleepers = true; }   // (asleep: the party's blows fall first, and every one lands)
       this.startCombat(k, thing);
       return false;
     }
     fl.pos = [x, y];
+    if (fl.number >= 1) this.makeNoise(this.stepNoise());              // (the step's noise: 61b-lairs.js)
     this.clock = (this.clock || 0) + 1;                                  // (a step is a minute)
     this.sound("step");
     this.burn();
@@ -251,6 +254,7 @@ Object.assign(CM.Game.prototype, {
       this.spellLight -= 1;
       if (this.spellLight === 0) this.say("The conjured light fades.");
     }
+    if (this.lightOut) return;                                           // (a shaded light does not burn down)
     const l = this.light;
     if (l.kind === "lantern") {                                          // a lantern burns one step in two, and a flask of oil at a time
       if ((this.steps || 0) % 2 === 0) l.left -= 1;
@@ -283,14 +287,14 @@ Object.assign(CM.Game.prototype, {
   lightFactor() {
     if (this.floor && this.floor.number === 0) return CM.isNight(this) ? 0.8 : 1.3;   // (daylight, or the lanterns)
     if (this.floor && this.floor.number === -1) return (CM.isNight(this) ? (this.light.kind ? 0.55 : 0.35) : 1.2) * (CM.weather(this) === "mist" ? 0.8 : 1);   // (the Wood: daylight under the leaves, or a torch in the dark)
-    const l = this.light, spell = this.spellLight > 0;
+    const l = this.lightOut && !(this.spellLight > 0) ? {} : this.light, spell = this.spellLight > 0;   // (doused: as dark as no light at all)
     if (this.inDark()) return spell ? 0.7 : l.kind === "lantern" ? 0.45 : 0.25;
     let f = l.kind === "lantern" ? 1.15 : l.kind === "glow" ? 0.6 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
     if (spell) f = Math.max(f, 1.1);
     return f;
   },
 
-  hasLight() { return Boolean(this.light.kind) || this.spellLight > 0 || Boolean(this.floor && this.floor.number === -1 && !CM.isNight(this)); },   // (the Wood by day is lit by the sky)
+  hasLight() { return (Boolean(this.light.kind) && !(this.lightOut && this.floor && this.floor.number >= 1)) || this.spellLight > 0 || Boolean(this.floor && this.floor.number === -1 && !CM.isNight(this)); },   // (the Wood by day is lit by the sky)
 
   // what the party can see goes on the automap: around them, and along the corridor they face - by torchlight
   look() {
@@ -417,7 +421,7 @@ Object.assign(CM.Game.prototype, {
       this.gold += gold; this.count("goldFound", gold);
       if (fl.number >= 3 && CM.hashSeed(`${this.seed}:homecoming:${fl.number}:${k}`) % CM.HOMECOMING.chest === 0) thing.items.push(CM.scroll("homecoming"));   // (one chest in twenty carries the way home)
       this.gain(thing.items, "chest");
-      this.sound("chest");
+      this.sound("chest"); this.makeNoise(CM.NOISE.chest);
       this.count("chests");
       this.emit("fx", { kind: "sparkle", at: [x, y] });
       const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : `${i.name} (${CM.itemLabel(i)})`)).join(", ");
@@ -591,7 +595,8 @@ Object.assign(CM.Game.prototype, {
       const [x, y] = k.split(",").map(Number);
       for (const [dx, dy] of CM.DIRS) { const bf = fl.features[keyOf(x + dx, y + dy)]; if (bf && bf.type === "door" && bf.barred) { bf.hits = (bf.hits || 0) + 1; if (bf.hits >= CM.DOOR_BREAK) { bf.barred = 0; bf.open = true; bf.hits = 0; this.sound("grind"); this.say("Wood splinters somewhere close: a barred door has given."); } else this.say("Something heavy throws itself against a barred door."); } }
     }
-    const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still && !(t.fedUntil > (this.steps || 0)));
+    this.wakeSleepers();                                                 // (the light and the noise reach the lairs: 61b-lairs.js)
+    const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still && !t.asleep && !(t.fedUntil > (this.steps || 0)));
     this.rnd.shuffle(movers);
     for (const [k, t] of movers) {
       const [x, y] = k.split(",").map(Number);
@@ -610,7 +615,7 @@ Object.assign(CM.Game.prototype, {
         const nearer = options.filter(([nx, ny]) => baitDist.get(keyOf(nx, ny)) === bd - 1 && !(nx === px && ny === py));
         if (nearer.length) step = this.rnd.pick(nearer);
         if (!step && bd === 1) step = fl.bait.at.split(",").map(Number);
-      } else if (d !== undefined && (d <= 7 || t.hunter || this.has("hunted")) && !(fl.number === -1 && CM.weather(this) === "mist" && d > 2)) {   // (mist in the Wood: the hunters find the party late)
+      } else if (d !== undefined && (d <= 7 || t.hunter || t.hunting > 0 || this.has("hunted")) && !(fl.number === -1 && CM.weather(this) === "mist" && d > 2)) {   // (mist in the Wood: the hunters find the party late)
         const nearer = options.filter(([nx, ny]) => dist.get(keyOf(nx, ny)) === d - 1 && !(nx === px && ny === py));
         if (nearer.length) step = this.rnd.pick(nearer);
       } else if (this.rnd.chance(0.3) && options.length) {
@@ -696,7 +701,7 @@ Object.assign(CM.Game.prototype, {
     const got = []; for (let i = 0; i < n; i++) got.push(CM.oreChunk(ore)); this.gain(got, "vein"); this.tally.mined = (this.tally.mined || 0) + n; this.countUse("mine");
     thing.left -= 1; if (thing.left <= 0) delete fl.things[k];
     this.sound("grind"); this.say(`${pick.name} into the rock: ${CM.plural(n, CM.ORES[ore].name + " chunk")}${thing.left > 0 ? `, and more in the vein (${thing.left} swing${thing.left === 1 ? "" : "s"})` : ", and the vein is worked out"}.${pick.points <= 0 ? ` The ${pick.name} is blunt.` : ""}`);
-    this.noise(); this.dirty = true; this.saveRun(); this.emit("change");
+    this.noise(); this.makeNoise(CM.NOISE.mine); this.dirty = true; this.saveRun(); this.emit("change");
   },
   noise() {                                                              // a swing rings down the halls: the nearest band comes a square closer
     const fl = this.floor, dist = CM.distances(fl.grid, fl.pos, (x, y) => CM.passable(fl, x, y)); let nearest = null;
@@ -735,6 +740,7 @@ Object.assign(CM.Game.prototype, {
   overweight() { return CM.bagWeight(this.bag) / CM.carryCap(this.party); },
   // nothing burning and a torch in the pack: light it (a torch found after the last went out is lit when it's wanted)
   lightSpare() {
+    if (this.lightOut) return;                                           // (shaded on purpose: not lit behind the party's back)
     if (this.light && this.light.kind) return false;
     if (this.floor && (this.floor.number === 0 || (this.floor.number === -1 && !CM.isNight(this)))) return false;   // (daylight: no need)
     const spare = this.bag.findIndex((i) => i.kind === "torch");

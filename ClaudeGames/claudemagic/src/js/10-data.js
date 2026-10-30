@@ -853,6 +853,7 @@ CM.parseRunCode = function (text) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  champions: { name: "Champion-breaker", what: "Slay five champions in one expedition", title: "the Champion-breaker" },
   beyond: { name: "Beyond the Dream", what: "Reach floor 100 in an Endless expedition", title: "Beyond the Dream" },
   bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the fiftieth floor", title: "of the Bottom" },
   crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
@@ -895,10 +896,10 @@ CM.ACHIEVEMENTS = {
 CM.titleFor = (achievements) => { const id = Object.keys(CM.ACHIEVEMENTS).find((a) => achievements && achievements[a]); return id ? CM.ACHIEVEMENTS[id].title : ""; };
 // the keys, as the player may set them (Settings > Keys); the arrows always move as well
 CM.DEFAULT_KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", strafeLeft: "KeyQ", strafeRight: "KeyE", use: "Space", inventory: "KeyI",
-  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA", autoPlay: "KeyZ", whereTo: "KeyG", calendar: "KeyK" };
+  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA", autoPlay: "KeyZ", whereTo: "KeyG", calendar: "KeyK", douse: "KeyT" };
 CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"], ["right", "turn right"], ["strafeLeft", "sidestep left"], ["strafeRight", "sidestep right"],
   ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
-  ["explore", "walk to the nearest unexplored square (any key stops)"], ["whereTo", "Where to?: on the surface, walk to a door or a place by name"], ["calendar", "the calendar: the hour, the moon, the weather ahead and the festivals"], ["autoPlay", "Automatic: the party plays by itself - on and off (a move key stops it too)"],
+  ["explore", "walk to the nearest unexplored square (any key stops)"], ["whereTo", "Where to?: on the surface, walk to a door or a place by name"], ["calendar", "the calendar: the hour, the moon, the weather ahead and the festivals"], ["douse", "shade the light, or light it again: creep past what sleeps (below ground)"], ["autoPlay", "Automatic: the party plays by itself - on and off (a move key stops it too)"],
   ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"], ["auto", "in a fight: the party fights on by itself"]];
 // a gamepad's buttons, by the standard mapping, and what each does unless Settings > Keys says otherwise (the stick and
 // the d-pad - 12 to 15 - always move)

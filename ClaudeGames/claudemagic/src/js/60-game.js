@@ -293,7 +293,7 @@ CM.Game = class {
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
       startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), clock: this.clock || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0, season: this.season || null, farmDay: this.farmDay || 0, festival: this.festival || null,
-      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [] };
+      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [], lightOut: Boolean(this.lightOut), noiseLevel: this.noiseLevel || 0 };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -320,6 +320,7 @@ CM.Game = class {
     this.rnd = new CM.Random(typeof d.rng === "number" ? d.rng : CM.hashSeed(`${this.seed}:dice`));
     this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.spellLight = d.spellLight || 0;
+    this.lightOut = Boolean(d.lightOut); this.noiseLevel = d.noiseLevel || 0;   // (the eleventh update's light and noise)
     this.phylactery = Boolean(d.phylactery); this.reminded = Boolean(d.reminded);
     this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld); this.meal = d.meal || null; this.alchemistFree = Boolean(d.alchemistFree);
     if (this.light && this.light.kind === "lantern" && !this.light.left) this.light.left = CM.LANTERN_OIL;   // (a lantern from before v4.4: a flask of oil in it)
@@ -377,7 +378,7 @@ CM.Game = class {
     this.gold = 30;
     this.floors = {};
     this.light = { kind: "torch", left: CM.TORCH_STEPS };
-    this.spellLight = 0;
+    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0;
     this.phylactery = false;
     this.combat = null;
     this.messages = [];
@@ -437,6 +438,7 @@ CM.Game = class {
 
   // how: "down" (by the stairs, arriving at the top), "up" (arriving at the ladder), "fall" (through the floor at `at`)
   enterFloor(number, how = "down", at = null) {
+    if (number < 1) this.lightOut = false;                               // (above ground: nothing to creep past)
     const fresh = !this.floors[number] && !this.deltas[number];
     const fl = this.floorAt(number);
     if (fl !== this.floor) { this.leaveFloor(); this.stock = null; this.recruits = null; if (this.floor && number % 1 === 0 && this.floor.number % 1 === 0) this.clock = (this.clock || 0) + CM.CLOCK.stair * Math.max(1, Math.abs(number - this.floor.number)); if (this.farmDawns && this.village) this.farmDawns(); }   // (a merchant's table and a tavern's bench belong to where they are; a stair is an hour)

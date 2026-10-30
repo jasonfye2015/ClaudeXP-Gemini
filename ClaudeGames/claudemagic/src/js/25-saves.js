@@ -9,7 +9,7 @@
 // they were. CM.GEN says which generator wrote a save; a floor whose fingerprint has changed is still loaded, with
 // a word in the log.
 CM.GEN = 2;                                         // the generator a new run gets (CM.generators); a run keeps the one it began with
-CM.SCHEMA = 3;                                      // the run's save format (1: whole floors, before v1.1; 2: floor deltas; 3: items with a base and a finding)
+CM.SCHEMA = 4;                                      // the run's save format (1: whole floors, before v1.1; 2: floor deltas; 3: items with a base and a finding; 4: the light shaded, the noise, a follower and errands - v9.4)
 
 // the parts of a floor that never change once it is made (everything else is diffed against the fresh floor)
 CM.FLOOR_FIXED = ["number", "grid", "dark", "rooms", "decor", "special", "hazard", "kinds", "ground", "canopy", "solidDefault", "glades", "ford"];
@@ -97,6 +97,11 @@ CM.MIGRATIONS = {
   3(data) {
     for (const h of data.party || []) for (const slot of CM.SLOTS) if (h && h[slot]) CM.normalizeItem(h[slot]);
     for (const it of data.bag || []) CM.normalizeItem(it);
+    return data;
+  },
+  // 3 -> 4: the light lit and the halls quiet (a run saved before the lairs); the floors' sleepers come from the seed
+  4(data) {
+    data.lightOut = false; data.noiseLevel = 0;
     return data;
   },
 };

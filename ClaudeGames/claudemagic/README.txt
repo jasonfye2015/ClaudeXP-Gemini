@@ -1401,6 +1401,22 @@ A world that moves (the eleventh big update - v9.3 to v10.0)
   title, and the Lich King's robe stirs. Pictures face the party from either side. Under reduced motion only the flash
   and the fade are left.
 
+  The living dungeon (v9.4): three packs in five sleep, most of them in a dead end near where the seed put them
+  (CM.makeLairs in src/js/61b-lairs.js; the floors themselves never move). A sleeper lies on its side and does not
+  wander. The party's light wakes it if it lies on the same row or column within the light's reach (a torch eight
+  squares, a lantern ten, a glow stone five, a conjured light eight) with nothing shut between; the party's noise may
+  wake it each turn if it lies within the noise's reach (squares of open floor; a shut door costs four). A step makes
+  two, heavy armour two more, walking by itself one more; a door or a chest four, a fight nine, a spell four, mining
+  eight. A woken pack hunts the party from anywhere on the floor. T shades the light below ground (the Douse button):
+  no light to be seen by, half the noise, two squares of sight, and the torch does not burn down; a Rogue, Ranger or
+  Monk in front halves the noise again. Walk into a sleeping pack and the party has a free round in which every blow
+  lands. Champions lead a quarter of the packs from floor six, each with a word: Warded (its ward drinks the first
+  spell), Frenzied (twice a round under half), Shrieking (its cry wakes every lair on the floor), Shadowed (unseen
+  until it strikes; a Rogue sees it), Stonehide (the first blow a round glances off), Vampiric (its blows feed it),
+  Hoarder (carries a chest's worth), Fleet (twice a round). A champion is tougher, worth twice the experience, and
+  drops a thing of its own; five in a run is an achievement. Automatic shades the light near a sleeper when a quiet
+  one leads, and lights it again past it.
+
 The town's buildings, rebuilt (v9.2)
   The houses were walls only where a street faced them, under a fringe of half-square slopes: the sky showed through the
   middle of every block, and a house beside a hedge, a fence or a tree was open on that side. Now CM.buildingsOf
@@ -1465,6 +1481,7 @@ The source
     27-props.js   the props: what the scatter lays on each square, the traces, the wall decals, what drifts in the air
     40-render.js  the WebGL 2 view: the mesh, the sky, billboards, torchlight and fog, smooth steps and turns, shakes
     45-fx.js      what flies, bursts, rings and rains: the effects, advanced each frame into sprites
+    61b-lairs.js  the lairs and sleepers, the light's reach and the noise, shading the torch, the champions
     46-air.js     the air: dust, drips, embers, spores, rain, snow, leaves, birds, clouds and smoke about the party
     50-audio.js   the sounds, each depth's ambience and the monsters' calls, synthesised
     55-music.js   the music, written from a seed and played as it goes
@@ -1488,6 +1505,6 @@ Keys
   W/Up forward, S/Down back, A/Left and D/Right turn, Q/E sidestep, Space use (a chest, the ladder or stairs, a
   fountain, an altar, a lever or carving on the wall you face - or search that wall), C cast between fights, I
   inventory, 1-4 a hero's sheet, Tab the automap large (click a square to walk there, right-click for a note), X explore, G
-  Where to? on the surface, K the calendar,
+  Where to? on the surface, K the calendar, T shade or light the torch below ground,
   Esc the menu. In a fight: F fight the chosen foe, C cast or a skill, P an item, D defend, R run, A auto, Tab or 1-9
   or a click to choose the foe, Esc back. Enter or Space closes the ending. F3 shows frames per second.
