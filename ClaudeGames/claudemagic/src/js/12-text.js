@@ -5,7 +5,7 @@
 //
 //   CM.t("stats.runs", { n: 12 })   ->  "12 expeditions"
 CM.TEXT = {
-  "farm.title": "The farm in the First Glade", "farm.fallow": "A fallow field, fenced long ago. The farm is raised at the town's board, with renown: a field first, then an orchard, a mill, hens, a cow.", "farm.back": "Back to the path",
+  "farm.title": "The farm, in the fields below the town", "farm.fallow": "A fallow field, fenced long ago. The farm is raised at the town's board, with renown: a field first, then an orchard, a mill, hens, a cow.", "farm.back": "Back to the path",
   "hut.title": "The hermit's hut", "hut.lead": "\"Hides I'll take, by daylight. Trouble I won't.\" The hermit tans and stitches for 20 gold a piece.", "hut.walk": "Walk on",
   "stats.title": "Statistics",
   "stats.none": "No expedition has ended yet. The numbers begin with the first.",

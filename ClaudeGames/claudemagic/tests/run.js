@@ -2736,7 +2736,7 @@ test("the farm: a field in the First Glade raised with renown; a row sown from s
   assert.strictEqual(CM.VILLAGE.farm.costs.length, 5); assert.ok(Object.keys(CM.CROPS).length >= 6); assert.strictEqual(CM.seasonOfDate(new Date(2026, 3, 1)), "spring"); assert.strictEqual(CM.seasonOfDate(new Date(2026, 11, 1)), "winter");
   const g = new CM.Game(); g.newGame("farm-1", fixedParty(CM)); g.season = "spring"; assert.ok(CM.SEASONS.includes(CM.season(g)));
   const toFarm = (game) => { if (game.floor.number !== -1) { game.enterFloor(0, "rope", CM.TOWN_AT.woodgate.slice()); game.use(); } const k = Object.keys(game.floor.things).find((c) => game.floor.things[c].type === "farm"); assert.ok(k, "the farm stands in the Wood"); game.floor.pos = k.split(",").map(Number); game.floor.things[k].seen = true; };
-  toFarm(g); assert.ok(g.atFarm()); const [fx, fy] = g.floor.pos; assert.ok(Math.abs(fx - 26) <= 2 && Math.abs(fy - 15) <= 2, "in the First Glade"); assert.ok(g.sow(0, 0).includes("fallow"));
+  toFarm(g); assert.ok(g.atFarm()); const [fx, fy] = g.floor.pos; assert.ok(Math.abs(fx - CM.FARM_AT[0]) <= 2 && Math.abs(fy - CM.FARM_AT[1]) <= 2 && CM.woodPlace(g.floor, fx, fy) === "the farm", "in the fields, by the road"); assert.ok(g.sow(0, 0).includes("fallow"));
   let farms = 0; g.on("farm", () => farms++); g.use(); assert.strictEqual(farms, 1);
   g.village.renown = 9000; g.build("farm"); assert.strictEqual(g.farmRows(), 4); g.bag.push(CM.seed("wheat"), CM.seed("hops"), CM.seed("turnip"));
   const wheatRow = () => g.bag.findIndex((i) => i.kind === "seed" && i.crop === "wheat");
@@ -2854,7 +2854,7 @@ test("around the land: Automatic's day in the land (forage, the open cave with a
   assert.ok(CM.isNight(g3) && CM.hourOf(g3) < 5); const auto = new CM.Autopilot(g3, { warp: true, wake: true, sync: true, land: false }); let n = 0; while (g3.floor.number !== 0 && auto.step() && n++ < 50) { /* a step at a time */ } assert.strictEqual(g3.floor.number, 0, `home for the night: ${auto.log.join("|")}`); assert.strictEqual(auto.tools.nightHome, 1);
   // the tables: the simulator's land line, the word counter's land row, the text keys
   const sim = fs.readFileSync(path.join(__dirname, "..", "tools", "sim.js"), "utf8"); assert.ok(sim.includes("--land") && sim.includes("the land:")); const wordsSrc = fs.readFileSync(path.join(__dirname, "..", "tools", "words.js"), "utf8"); assert.ok(wordsSrc.includes("CM.FESTIVALS") && wordsSrc.includes("CM.DISHES"));
-  assert.ok(CM.t("farm.title").includes("First Glade") && CM.t("hut.title").includes("hermit"));
+  assert.ok(CM.t("farm.title").includes("fields") && CM.t("hut.title").includes("hermit"));
   CM.store.remove("village");
 });
 
