@@ -1184,6 +1184,38 @@ CM.art.moon = function (phase = 4) {                                            
   }
   return c;
 };
+
+// a signpost: a post with two boards; and the signs over the doors: a board with the house's mark
+CM.art.signpost = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "#5A4028"; p.fillRect(S / 2 - 9, S * 0.2, 18, S * 0.8);
+  for (const [y, dir] of [[S * 0.24, 1], [S * 0.4, -1]]) {
+    p.fillStyle = "#8A6A3A"; p.beginPath();
+    if (dir > 0) { p.moveTo(S * 0.22, y); p.lineTo(S * 0.7, y); p.lineTo(S * 0.8, y + 16); p.lineTo(S * 0.7, y + 32); p.lineTo(S * 0.22, y + 32); }
+    else { p.moveTo(S * 0.78, y); p.lineTo(S * 0.3, y); p.lineTo(S * 0.2, y + 16); p.lineTo(S * 0.3, y + 32); p.lineTo(S * 0.78, y + 32); }
+    p.closePath(); p.fill();
+    p.fillStyle = "#3A2A18"; for (let i = 0; i < 5; i++) p.fillRect(S * 0.3 + i * 22 + (dir > 0 ? 0 : 10), y + 12, 14, 7);   // (the words, too far to read)
+  }
+  return c;
+};
+CM.SIGN_MARKS = { home: "key", tavern: "lantern", merchant: "bale", smith: "anvil", garden: "mortar", library: "book", temple: "sun", guildhall: "swords", chronicler: "quill" };
+CM.art.sign = function (id) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, mark = CM.SIGN_MARKS[id] || "key";
+  p.fillStyle = "#3A2A18"; p.fillRect(S * 0.46, 0, S * 0.08, S * 0.14);                       // the bracket
+  p.fillStyle = "#8A6A3A"; p.fillRect(S * 0.1, S * 0.14, S * 0.8, S * 0.72);                  // the board
+  p.fillStyle = "#5A4028"; p.fillRect(S * 0.1, S * 0.14, S * 0.8, 8); p.fillRect(S * 0.1, S * 0.86 - 8, S * 0.8, 8); p.fillRect(S * 0.1, S * 0.14, 8, S * 0.72); p.fillRect(S * 0.9 - 8, S * 0.14, 8, S * 0.72);
+  const cx = S / 2, cy = S * 0.5; p.lineWidth = 8; p.lineCap = "round"; p.strokeStyle = "#F0D080"; p.fillStyle = "#F0D080";
+  if (mark === "lantern") { p.fillStyle = "#F0D080"; p.fillRect(cx - 26, cy - 36, 52, 70); p.fillStyle = "#8A6A3A"; p.fillRect(cx - 18, cy - 28, 36, 54); p.fillStyle = "#FFE890"; p.beginPath(); p.ellipse(cx, cy, 10, 18, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#F0D080"; p.beginPath(); p.arc(cx, cy - 44, 12, Math.PI, 0); p.stroke(); }
+  else if (mark === "bale") { p.fillRect(cx - 40, cy - 30, 80, 60); p.strokeStyle = "#5A4028"; p.lineWidth = 6; p.beginPath(); p.moveTo(cx - 40, cy); p.lineTo(cx + 40, cy); p.moveTo(cx, cy - 30); p.lineTo(cx, cy + 30); p.stroke(); }
+  else if (mark === "anvil") { p.beginPath(); p.moveTo(cx - 44, cy - 20); p.lineTo(cx + 44, cy - 20); p.lineTo(cx + 30, cy); p.lineTo(cx + 12, cy + 4); p.lineTo(cx + 20, cy + 30); p.lineTo(cx - 20, cy + 30); p.lineTo(cx - 12, cy + 4); p.lineTo(cx - 30, cy); p.closePath(); p.fill(); }
+  else if (mark === "mortar") { p.beginPath(); p.moveTo(cx - 36, cy - 10); p.lineTo(cx + 36, cy - 10); p.lineTo(cx + 22, cy + 34); p.lineTo(cx - 22, cy + 34); p.closePath(); p.fill(); p.beginPath(); p.moveTo(cx + 10, cy - 14); p.lineTo(cx + 40, cy - 50); p.stroke(); }
+  else if (mark === "book") { p.fillRect(cx - 40, cy - 28, 36, 56); p.fillRect(cx + 4, cy - 28, 36, 56); p.strokeStyle = "#5A4028"; p.lineWidth = 4; p.beginPath(); p.moveTo(cx - 30, cy - 12); p.lineTo(cx - 12, cy - 12); p.moveTo(cx - 30, cy); p.lineTo(cx - 12, cy); p.moveTo(cx + 12, cy - 12); p.lineTo(cx + 30, cy - 12); p.moveTo(cx + 12, cy); p.lineTo(cx + 30, cy); p.stroke(); }
+  else if (mark === "sun") { p.beginPath(); p.arc(cx, cy, 22, 0, Math.PI * 2); p.fill(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; p.beginPath(); p.moveTo(cx + Math.cos(a) * 30, cy + Math.sin(a) * 30); p.lineTo(cx + Math.cos(a) * 46, cy + Math.sin(a) * 46); p.stroke(); } }
+  else if (mark === "swords") { p.beginPath(); p.moveTo(cx - 40, cy + 36); p.lineTo(cx + 36, cy - 40); p.moveTo(cx + 40, cy + 36); p.lineTo(cx - 36, cy - 40); p.stroke(); p.lineWidth = 12; p.beginPath(); p.moveTo(cx - 34, cy + 18); p.lineTo(cx - 18, cy + 34); p.moveTo(cx + 34, cy + 18); p.lineTo(cx + 18, cy + 34); p.stroke(); }
+  else if (mark === "quill") { p.beginPath(); p.moveTo(cx - 30, cy + 40); p.quadraticCurveTo(cx, cy - 10, cx + 36, cy - 44); p.quadraticCurveTo(cx + 10, cy - 10, cx - 30, cy + 40); p.fill(); p.beginPath(); p.moveTo(cx - 30, cy + 40); p.lineTo(cx - 40, cy + 50); p.stroke(); }
+  else { p.beginPath(); p.arc(cx - 16, cy - 10, 18, 0, Math.PI * 2); p.stroke(); p.beginPath(); p.moveTo(cx, cy); p.lineTo(cx + 40, cy + 40); p.moveTo(cx + 24, cy + 24); p.lineTo(cx + 36, cy + 12); p.stroke(); }   // a key
+  return c;
+};
 // every layer the surface wants, from the painters - `pick(key, drawn)` lets a look use its own tile for one
 CM.art.surfaceLayers = function (pick) {
   const use = pick || ((key, drawn) => drawn());
@@ -1201,6 +1233,8 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());
   for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v));
   out.canopy = use("canopy", () => CM.art.canopy());
+  out.signpost = use("signpost", () => CM.art.signpost());
+  for (const id of Object.keys(CM.TOWN_PLOTS || {})) out[`sign:${id}`] = use(`sign.${id}`, () => CM.art.sign(id));
   out.skygrad = CM.art.skyGradient();
   out.sun = CM.art.sun();
   for (let ph = 0; ph < 8; ph++) out[`moon:${ph}`] = CM.art.moon(ph);

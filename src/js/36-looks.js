@@ -105,7 +105,7 @@ CM.art.buildPixel = function (theme) {
   add("fx:ring", tileOr("fx.ring", CM.art.fxRing));
   for (let f = 0; f < 3; f++) { add(`torch${f}`, tileOr(`torch${f}`, () => CM.art.torch(f))); add(`water${f}`, tileOr(`water${f}`, () => CM.art.water(f))); }
   const ground = (key, drawn) => (CM.packs.pixel.index[key] ? tiled(key, 2) : CM.art.pixelate(drawn()));              // (the ground and the walls repeat the tile; the trees stand alone)
-  for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
+  for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key.startsWith("sign") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
   return { layers, index, size: S, crisp: true };
 };
 

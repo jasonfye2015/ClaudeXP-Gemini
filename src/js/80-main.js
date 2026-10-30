@@ -369,9 +369,15 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "node") { const look = (CM.NODES[thing.band] || CM.NODES[0])[1], flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.9 : 0.6, h: flat ? 0.9 : 0.5, flat, glow: look === "crystal" ? 0.3 : 0 }); }
       else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
-      else if (thing.type === "building") { const P = CM.TOWN_PLOTS[thing.id] || {}, V = P.village ? CM.VILLAGE[P.village] : null, lvl = CM.plotLevel(game, thing.id), stage = P.always && !V ? 4 : CM.houseStage(lvl, V ? V.costs.length : 1); out.push({ x, y, layer: stage ? `house${stage}` : "foundation", w: 1.0, h: 1.0 }); }
+      else if (thing.type === "building") {                            // the house is the block behind the doorway; what stands in the doorway says its level: a foundation, a frame, or the sign over the door
+        const P = CM.TOWN_PLOTS[thing.id] || {}, V = P.village ? CM.VILLAGE[P.village] : null, lvl = CM.plotLevel(game, thing.id), stage = P.always && !V ? 4 : CM.houseStage(lvl, V ? V.costs.length : 1);
+        const face = CM.DIRS.findIndex(([dx, dy]) => ["door", "shop"].includes(CM.solidAt(fl, x + dx, y + dy)));
+        if (stage <= 1) out.push({ x, y, layer: stage ? "house1" : "foundation", w: 0.9, h: 0.9 });
+        else if (face >= 0 && renderer.index[`sign:${thing.id}`] !== undefined) out.push({ x, y, layer: `sign:${thing.id}`, face, w: 0.6, h: 0.45, lift: 0.5, glow: CM.isNight(game) ? 0.5 : 0.15 });
+      }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
       else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
+      else if (thing.type === "signpost") out.push({ x, y, layer: "signpost", w: 0.55, h: 0.95 });
       else if (thing.type === "woodgate") out.push({ x, y, layer: "gate_open", w: 1.0, h: 1.0 });
       else if (thing.type === "cave") out.push({ x, y, layer: thing.n === CM.dayOf(game) % 3 ? "hatch" : "bones", w: 0.9, flat: thing.n === CM.dayOf(game) % 3, h: 0.5, shade: 0.6 });
       else if (thing.type === "caveexit") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
@@ -525,6 +531,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.code === K.map || e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
     if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
     if (e.code === K.journal && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
+    if (e.code === K.whereTo && game.mode === "explore" && game.floor && game.floor.number <= 0 && game.floor.number % 1 === 0) { ui.openWhereTo(); return; }
     if (game.mode === "explore") {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
       if (e.code === K.use) { e.preventDefault(); game.use(); }

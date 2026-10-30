@@ -19,8 +19,8 @@ Object.assign(CM.UI.prototype, {
     const fl = g.floor;
     if (fl) {
       this.drawSky();
-      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 ? CM.t("town.compass") : fl.number === -1 ? "The Wood" : fl.special === "cave" ? "A cave" : "Floor " + fl.number}`;
-      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? CM.t("town.where", { name: CM.TOWN_THEME.name }) : fl.number === -1 ? `${CM.WOOD_THEME.name} - ${CM.hourWord(CM.hourOf(g))}` : fl.special === "cave" ? `${CM.WOOD_THEME.name} - a cave` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
+      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 || fl.number === -1 ? CM.placeOf(fl, fl.pos[0], fl.pos[1]) || CM.t("town.compass") : fl.special === "cave" ? "A cave" : "Floor " + fl.number}`;
+      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? `${CM.TOWN_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}` : fl.number === -1 ? `${CM.WOOD_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}, ${CM.hourWord(CM.hourOf(g))}` : fl.special === "cave" ? `${CM.WOOD_THEME.name} - a cave` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
@@ -117,7 +117,7 @@ Object.assign(CM.UI.prototype, {
     box.classList.remove("combat");
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
-        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
+        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 ? [["Where to? (G)", () => this.openWhereTo()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")], [CM.t("camp.bounty"), () => { const note = g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty(); if (note) g.say(note); this.refresh(); }],
         ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Guild", () => this.openSecond()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
@@ -201,7 +201,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
     const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      node: "#8FB06A", building: "#C09050", well: "#60A0E0", villager: "#E0C8A0", woodgate: "#60A060", cave: "#504030", vein: "#B08860", caveexit: "#3060C0", hut: "#C09050", farm: "#D0B060", shrine: "#A070C0", burner: "#C08030", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
+      node: "#8FB06A", building: "#C09050", signpost: "#E0C890", well: "#60A0E0", villager: "#E0C8A0", woodgate: "#60A060", cave: "#504030", vein: "#B08860", caveexit: "#3060C0", hut: "#C09050", farm: "#D0B060", shrine: "#A070C0", burner: "#C08030", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);

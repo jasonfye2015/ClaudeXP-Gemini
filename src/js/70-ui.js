@@ -190,6 +190,7 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
+<div class="dialog" id="dlg-whereto"><div class="box journalbox"><h2>Where to?</h2><div class="small">The party walks there by what it knows, and stops for whatever it meets on the way. Any key stops it.</div><div id="whereto-list"></div><div class="row"><button class="close">Back</button></div></div></div>
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button></span></h2><div id="journal-list"></div>
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
@@ -1070,6 +1071,13 @@ CM.UI = class {
     this.choice = null;
     if (c.ending) this.game.ending(n - 1); else if (c.parley) this.game.parley(c.k, n - 1); else if (c.rivals) this.game.chooseRivals(c.k, n - 1); else this.game.choose(c.k, n - 1);
     this.refresh();
+  }
+  // Where to?: the doors and the places of this surface floor, by name, with the walk's length; one click walks the party there
+  openWhereTo() {
+    const g = this.game, box = this.$("#whereto-list"), places = CM.wayPlaces(g);
+    box.innerHTML = places.length ? places.map((p, i) => `<button class="pick" data-i="${i}" ${p.steps === null ? "disabled" : ""}>${this.esc(p.name)} <small>${p.steps === null ? "no known way" : CM.plural(p.steps, "step")}</small></button>`).join("") : `<div class="small">Nowhere to go from here but on foot.</div>`;
+    for (const b of box.querySelectorAll("button.pick")) b.addEventListener("click", () => { const p = places[Number(b.dataset.i)]; this.closeDialogs(); if (g.travelTo(p.x, p.y)) g.say(`Off to ${p.name.charAt(0).toLowerCase() + p.name.slice(1)}.`); this.refresh(); });
+    this.openDialog("#dlg-whereto");
   }
   openJournal() {
     const g = this.game, box = this.$("#journal-list"), entries = g.journal || [];
