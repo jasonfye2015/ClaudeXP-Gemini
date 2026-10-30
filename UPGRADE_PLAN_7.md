@@ -95,7 +95,13 @@ for phase 3's compass.
   door; the town is the same twice; the old test of the town passes as before; a saved position off the new streets
   is moved home.
 
-## Phase 2 - The land, and the forest - v7.3
+## Phase 2 - The land, and the forest - v7.3 - DONE
+
+As planned, with the gate in a cliff wall at the land's east edge (the hill), the road bending once at the farm, and
+the bridge's track running east through the trees to the road's bend as well as west to the first glade. The fields
+are safe from the night's beasts along with the road, the ford, the bridge and the first glade (`CM.woodSafe`); the
+forest's edge is the map's edge. The hut, the shrine, the burner and the caves are placed deep (west of the river and
+nine or more cells from the first glade) by the seed, as before.
 
 `23b-wood.js` becomes the land (`CM.makeLand`): floor -1 is everything outside the wall, 61 x 61, by the seed:
 
