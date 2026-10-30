@@ -36,12 +36,14 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---- textures by depth and by theme, the floor's mesh, the camera ----
   let artCache = {}, cacheOrder = [];
-  let themeOn = -1, lookOn = null, dreamOn = false;
+  let themeOn = -1, lookOn = null, dreamOn = false, seasonOn = null;
   const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
-    if (((number === 0 ? -2 : number === -1 ? -3 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn) || !renderer.ok) return;
-    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : null, key = special ? `${look}:${special.name}` : `${look}:${i}${game.dream ? ":dream" : ""}`;
+    const season = CM.season ? CM.season(game) : "summer";
+    if (((number === 0 ? -2 : number === -1 ? -3 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
+    CM.art.season = season; seasonOn = season;
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
@@ -502,7 +504,8 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
-    for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, dx: w.dx || 0, dz: w.dz || 0, flat: true, w: w.w || 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75, water: true });   // (the water shader: 40-render.js)
+    const frozen = fl.number === -1 && CM.weather(game) === "snow";      // (the river frozen, as the rules have it: crossed anywhere)
+    for (const w of d.water) if (near(w.x, w.y)) out.push(frozen && !w.w ? { x: w.x, y: w.y, flat: true, w: 0.99, layer: "ice" } : { x: w.x, y: w.y, dx: w.dx || 0, dz: w.dz || 0, flat: true, w: w.w || 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75, water: true });   // (the water shader: 40-render.js)
     if (game.mode === "combat") {
       const living = game.attackable();
       const fwdv = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
@@ -733,6 +736,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
+        renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && CM.weather(game) === "mist" ? 1 : 0;   // (snow lying, mist low: the seasons seen)
         { const night = Boolean(renderer.sky && renderer.sky.night) && game.floor.number === 0;   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
           if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && game.floor.number === 0) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
         renderer.lights = lightsNear(game.floor);

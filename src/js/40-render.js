@@ -20,7 +20,7 @@ uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
 uniform int uLights; uniform vec4 uLightPos[12]; uniform vec3 uLightCol[12];   // the lights about the party: xyz, reach in w; colour
 uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
-uniform float uTime; uniform float uWet;                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uSnow; uniform float uMist;                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 void main() {
   bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
@@ -57,11 +57,14 @@ void main() {
     extra += uLightCol[i] * fall * face;
   }
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
+  float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
+  if (uSnow > 0.0 && up > 0.55) col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, uSnow * smoothstep(0.55, 0.8, up) * 0.88);   // snow lying on what faces up
   if (uWet > 0.0 && n.y > 0.7) {                                            // the rain on the ground: darker, and the sky in it at a low angle
     vec3 v = normalize(uEye - vWorld); float fw = pow(1.0 - max(v.y, 0.0), 4.0);
     col = col * (1.0 - 0.28 * uWet) + uWet * fw * mix(uHorizon, uZenith, 0.4) * 0.45;
   }
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
+  fog = max(fog, uMist * (1.0 - smoothstep(0.0, 1.4, vWorld.y)) * smoothstep(0.8, 7.0, d) * 0.85);   // (mist: lying low on the land)
   col = mix(col, uFog, fog);
   col = mix(col, t.rgb, vFx.z * (1.0 - fog * 0.7));
   col = mix(col, vec3(1.0, 0.3, 0.2), vFx.x);
@@ -107,7 +110,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade", "uTime", "uWet"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -376,7 +379,7 @@ CM.Renderer = class {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(this.program);
     gl.uniformMatrix4fv(this.loc.uViewProj, false, this.viewProj);
-    gl.uniform3fv(this.loc.uEye, eye);
+    gl.uniform3fv(this.loc.uEye, this.inspect ? this.inspect.eye : eye);   // (the free camera sees from its own eye)
     // under a sky: daylight is flat and reaches to the horizon; at night the torch and the moon do what they can
     gl.uniform3fv(this.loc.uTorch, sky ? [t.torch[0] + (1 - t.torch[0]) * sky.light, t.torch[1] + (1 - t.torch[1]) * sky.light, t.torch[2] + (1 - t.torch[2]) * sky.light] : t.torch);
     gl.uniform3fv(this.loc.uFog, fogc);
@@ -394,7 +397,7 @@ CM.Renderer = class {
       gl.uniform3fv(this.loc.uSun, v.map((c) => c / m)); gl.uniform1f(this.loc.uSunK, sky.sun !== null && sky.light > 0.15 ? 0.9 : 0.4);
     } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
     gl.uniform3fv(this.loc.uGrade, t.grade || [1, 1, 1]);
-    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0);
+    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);

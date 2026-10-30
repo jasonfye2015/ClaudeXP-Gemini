@@ -35,6 +35,8 @@ CM.weatherOf = (seed, day, season) => { const odds = CM.WEATHER_ODDS[season] || 
 CM.weather = (game) => (game && game.seed !== undefined ? CM.weatherOf(game.seed, CM.dayOf(game), CM.season(game)) : "clear");
 CM.WEATHER_WORDS = { clear: "clear", rain: "rain (the river is up: the ford is deep, and the farm drinks)", mist: "mist (the beasts and the party find each other late)", wind: "wind (the beasts do not smell the party coming)", snow: "snow (tracks in the Wood, the river frozen and crossed anywhere, the well frozen)" };
 CM.dateWords = (game) => { const f = CM.festival(game); return `${CM.season(game)}, day ${CM.dayOf(game) + 1} of the run${f ? ` - ${CM.FESTIVALS[f].name}` : ""}; ${CM.weather(game)}`; };
+// snow lies (the eleventh update, phase 3): in winter, on a day of snow and the day after one
+CM.snowLying = (game) => CM.season(game) === "winter" && (CM.weather(game) === "snow" || (game && game.seed !== undefined && CM.dayOf(game) > 0 && CM.weatherOf(game.seed, CM.dayOf(game) - 1, "winter") === "snow"));
 // the day's length by the season: the hour the rules read as night
 { const was = CM.isNight; CM.isNight = (game) => { if (!game || !game.season || !CM.DAYLIGHT[game.season]) return was(game); const h = CM.hourOf(game), [dawn, dusk] = CM.DAYLIGHT[game.season]; return h >= dusk || h < dawn; }; }
 // a daily's mutators take the season's colour: winter dailies carry Gloom more often, summer dailies Swift

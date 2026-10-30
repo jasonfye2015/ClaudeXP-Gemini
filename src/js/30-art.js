@@ -1116,6 +1116,13 @@ CM.art.litWindow = function () {
   p.fillStyle = "#5A4028"; p.fillRect(S / 2 - S * 0.04, 0, S * 0.08, S); p.fillRect(0, S / 2 - S * 0.04, S, S * 0.08);
   return c;
 };
+// the river frozen: white-blue, with cracks and the snow blown across it
+CM.art.ice = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(77);
+  p.fillStyle = "#BCD4E4"; p.fillRect(0, 0, S, S); speckle(p, rnd, S, S, 900, "#E8F2F8", 0.5, 4);
+  p.strokeStyle = "rgba(70,100,130,0.6)"; p.lineWidth = 2; for (let i = 0; i < 7; i++) { let x = rnd.next() * S, y = rnd.next() * S; p.beginPath(); p.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (rnd.next() - 0.5) * 60; y += (rnd.next() - 0.5) * 60; p.lineTo(x, y); } p.stroke(); }
+  return c;
+};
 CM.art.townWall = function (top = false, seed = 1) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`townwall:${top}:${seed}`)), base = top ? [120, 116, 108] : [104, 100, 94];
   p.fillStyle = rgb(base, 0.55); p.fillRect(0, 0, S, S);
@@ -1153,20 +1160,33 @@ CM.art.roof = function (seed = 1) {
   return c;
 };
 // a tree, trunk and crown, against nothing (three kinds: an oak, a tall fir, a birch in its autumn)
-CM.art.tree = function (variant = 0, bark = null) {                       // bark: a picture for the trunk (the Stone look's photograph), else painted
-  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`tree:${variant}`));
-  const trunk = variant === 2 ? "#D8D0C0" : "#4A3220", crown = variant === 0 ? [62, 110, 48] : variant === 1 ? [40, 84, 52] : [196, 150, 48];
+CM.art.tree = function (variant = 0, bark = null, season = "autumn") {    // bark: a picture for the trunk (the Stone look's photograph), else painted; the season's crown (CM.crownOf)
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`tree:${variant}`)), C = CM.crownOf(variant, season);
+  const trunk = variant === 2 ? "#D8D0C0" : "#4A3220", crown = C.colour || [62, 110, 48];
+  if (C.bare) {                                                           // winter: the trunk up into its branches, nothing on them
+    if (bark && variant !== 2) { p.save(); p.beginPath(); p.rect(S / 2 - 12, S * 0.3, 24, S * 0.7); p.clip(); p.drawImage(bark, 0, 0, S / 2, S, S / 2 - 12, S * 0.3, 24, S * 0.7); p.restore(); }
+    else { p.fillStyle = trunk; p.fillRect(S / 2 - 11, S * 0.3, 22, S * 0.7); }
+    p.strokeStyle = trunk; p.lineCap = "round";
+    const branch = (x, y, a, len, w, depth) => { if (depth > 4 || len < 6) return; const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len; p.lineWidth = w; p.beginPath(); p.moveTo(x, y); p.lineTo(x2, y2); p.stroke();
+      branch(x2, y2, a - 0.45 - rnd.next() * 0.25, len * 0.72, w * 0.68, depth + 1); branch(x2, y2, a + 0.45 + rnd.next() * 0.25, len * 0.72, w * 0.68, depth + 1); };
+    branch(S / 2, S * 0.34, -Math.PI / 2 - 0.5, S * 0.17, 9, 0); branch(S / 2, S * 0.34, -Math.PI / 2 + 0.5, S * 0.17, 9, 0); branch(S / 2, S * 0.32, -Math.PI / 2, S * 0.2, 10, 1);
+    if (variant === 2) { p.fillStyle = "#2A2420"; for (let i = 0; i < 9; i++) p.fillRect(S / 2 - 11 + rnd.next() * 14, S * 0.4 + rnd.next() * S * 0.55, 6 + rnd.next() * 8, 3); }
+    return c;
+  }
   if (bark && variant !== 2) { p.save(); p.beginPath(); p.rect(S / 2 - 12, S * 0.45, 24, S * 0.55); p.clip(); p.drawImage(bark, 0, 0, S / 2, S, S / 2 - 12, S * 0.45, 24, S * 0.55); p.restore(); }
   else { p.fillStyle = trunk; p.fillRect(S / 2 - 12, S * 0.45, 24, S * 0.55); }
   if (variant === 2) { p.fillStyle = "#2A2420"; for (let i = 0; i < 9; i++) p.fillRect(S / 2 - 12 + rnd.next() * 14, S * 0.5 + rnd.next() * S * 0.45, 6 + rnd.next() * 8, 3); }
-  if (variant === 1) { for (let i = 0; i < 5; i++) { const y = S * 0.08 + i * S * 0.14, w = S * 0.14 + i * S * 0.07; p.fillStyle = rgb(crown, 0.8 + i * 0.07); p.beginPath(); p.moveTo(S / 2, y); p.lineTo(S / 2 + w, y + S * 0.2); p.lineTo(S / 2 - w, y + S * 0.2); p.closePath(); p.fill(); } }
-  else { for (let i = 0; i < 26; i++) { const a = rnd.next() * Math.PI * 2, r = rnd.next() * S * 0.26, x = S / 2 + Math.cos(a) * r, y = S * 0.32 + Math.sin(a) * r * 0.8; p.fillStyle = rgb(crown, 0.75 + rnd.next() * 0.5); p.beginPath(); p.arc(x, y, S * 0.1 + rnd.next() * S * 0.08, 0, Math.PI * 2); p.fill(); } }
+  if (variant === 1) { for (let i = 0; i < 5; i++) { const y = S * 0.08 + i * S * 0.14, w = S * 0.14 + i * S * 0.07; p.fillStyle = rgb(crown, 0.8 + i * 0.07); p.beginPath(); p.moveTo(S / 2, y); p.lineTo(S / 2 + w, y + S * 0.2); p.lineTo(S / 2 - w, y + S * 0.2); p.closePath(); p.fill();
+    if (C.snow) { p.fillStyle = "#F2F6FA"; p.beginPath(); p.moveTo(S / 2, y); p.lineTo(S / 2 + w * 0.7, y + S * 0.13); p.quadraticCurveTo(S / 2, y + S * 0.09, S / 2 - w * 0.7, y + S * 0.13); p.closePath(); p.fill(); } } }   // (snow on each tier)
+  else { for (let i = 0; i < 26; i++) { const a = rnd.next() * Math.PI * 2, r = rnd.next() * S * 0.26, x = S / 2 + Math.cos(a) * r, y = S * 0.32 + Math.sin(a) * r * 0.8; p.fillStyle = rgb(C.mix && rnd.next() < 0.4 ? C.mix : crown, 0.75 + rnd.next() * 0.5); p.beginPath(); p.arc(x, y, S * 0.1 + rnd.next() * S * 0.08, 0, Math.PI * 2); p.fill(); }
+    if (C.blossom) for (let i = 0; i < 40; i++) { const a = rnd.next() * Math.PI * 2, r = rnd.next() * S * 0.3; p.fillStyle = rnd.next() < 0.5 ? "#F8D8E4" : "#FFF4F6"; p.beginPath(); p.arc(S / 2 + Math.cos(a) * r, S * 0.32 + Math.sin(a) * r * 0.8, 3 + rnd.next() * 3, 0, Math.PI * 2); p.fill(); } }   // (spring: blossom)
   return c;
 };
-CM.art.canopy = function (seed = 1) {
-  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`canopy:${seed}`));
-  p.fillStyle = "#1E3418"; p.fillRect(0, 0, S, S);
-  for (let i = 0; i < 500; i++) { const k = 0.6 + rnd.next() * 0.9; p.fillStyle = `rgba(${Math.round(50 * k)},${Math.round(96 * k)},${Math.round(40 * k)},0.95)`; p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S, 7 + rnd.next() * 11, 0, Math.PI * 2); p.fill(); }
+CM.art.canopy = function (seed = 1, season = "summer") {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`canopy:${seed}`)), leaf = CM.CANOPIES[season] === undefined ? CM.CANOPIES.summer : CM.CANOPIES[season];
+  if (!leaf) { p.strokeStyle = "#3A2A1C"; p.lineCap = "round"; for (let i = 0; i < 40; i++) { const x = rnd.next() * S, y = rnd.next() * S, a = rnd.next() * Math.PI * 2, l = 20 + rnd.next() * 60; p.lineWidth = 2 + rnd.next() * 4; p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); p.stroke(); } return c; }   // (winter: bare branches over the path)
+  p.fillStyle = rgb(leaf, 0.4); p.fillRect(0, 0, S, S);                                   // (the season's leaves: CM.CANOPIES)
+  for (let i = 0; i < 500; i++) { const k = 0.6 + rnd.next() * 0.9; p.fillStyle = `rgba(${Math.round(leaf[0] * k)},${Math.round(leaf[1] * k)},${Math.round(leaf[2] * k)},0.95)`; p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S, 7 + rnd.next() * 11, 0, Math.PI * 2); p.fill(); }
   p.globalCompositeOperation = "destination-out";                                            // holes for the sky
   for (let i = 0; i < 14; i++) { p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S, 3 + rnd.next() * 6, 0, Math.PI * 2); p.fill(); }
   p.globalCompositeOperation = "source-over";
@@ -1287,8 +1307,9 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:fence"] = use("solid.fence", () => CM.art.fence());
   out["solid:cliff"] = use("solid.cliff", () => CM.art.cliff());
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());
-  for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v));
-  out.canopy = use("canopy", () => CM.art.canopy());
+  for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v, null, CM.art.season || "autumn"));   // (the run's season: CM.art.season, set before a set is built)
+  out.canopy = use("canopy", () => CM.art.canopy(1, CM.art.season || "summer"));
+  out.ice = use("ice", () => CM.art.ice());
   out["far:trees"] = use("far.trees", () => CM.art.farTrees());
   out["far:hill"] = use("far.hill", () => CM.art.farHill());
   out.signpost = use("signpost", () => CM.art.signpost());

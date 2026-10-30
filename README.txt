@@ -1423,6 +1423,11 @@ A world that moves (the eleventh big update - v9.3 to v10.0)
   the angle you see it at, and glints in the sun. In rain the ground darkens and shines, and puddles lie on the roads.
   At night seven windows in ten are lit in the town.
 
+  The seasons seen (v9.6): the trees wear the run's season - blossom on the oaks in spring, deep green in summer, red
+  oaks and gold birches in autumn, bare branches and snow-laden firs in winter - and the leaves over the paths turn with
+  them (CM.CROWNS in src/js/26-surface.js). Snow lies in winter on a day of snow and the day after (CM.snowLying): the
+  roofs, the ground, the wall's walk and the hedges go white, and the river freezes. Mist lies low on the land.
+
 The town's buildings, rebuilt (v9.2)
   The houses were walls only where a street faced them, under a fringe of half-square slopes: the sky showed through the
   middle of every block, and a house beside a hedge, a fence or a tree was open on that side. Now CM.buildingsOf

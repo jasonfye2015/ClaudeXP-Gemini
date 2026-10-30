@@ -160,7 +160,7 @@ CM.art.buildStone = function (theme) {
   const fit = (canvas) => { if (canvas.width === S) return canvas; const c = artCanvas(S); c.getContext("2d").drawImage(canvas, 0, 0, S, S); return c; };
   const surface = CM.art.surfaceLayers((key, drawn) => {                   // the surface: photographs where the set has them, the plaster under the drawn timbers, bark on the trunks
     if (key === "solid.house" || key === "solid.door" || key === "solid.shop" || key === "solid.gable") return CM.art.packs.stone["solid.plaster"] ? CM.art.facade(key.slice(6), 1, photo("solid.plaster", false, 0, true)) : drawn();
-    if (key.startsWith("tree.")) return CM.art.tree(Number(key.slice(5)), CM.art.packs.stone["solid.bark"] || null);
+    if (key.startsWith("tree.")) return CM.art.tree(Number(key.slice(5)), CM.art.packs.stone["solid.bark"] || null, CM.art.season || "autumn");
     if ((key === "ground.litter" || key === "ground.needles") && CM.art.packs.stone[key]) return CM.art.footShade(photo(key, false, 0, true));   // (the photograph, with the trunk's shade)
     if (key === "solid.roof" && CM.art.packs.stone[key]) { const c = photo(key, false, 0, true), q = c.getContext("2d"); q.fillStyle = "rgba(255,200,150,0.22)"; q.fillRect(0, 0, S, S); return c; }   // (slate, warmed a little)
     return CM.art.packs.stone[key] ? photo(key, false, 0, true) : drawn();
@@ -184,7 +184,7 @@ CM.art.build = function (theme, look = "drawn") {
 // which of a set's pictures are the band's own (uploaded with each band) and which are shared (uploaded once a look)
 CM.SHARED_SIZE = 256;
 CM.art.THEME_LAYERS = new Set(["wall", "wall2", "wallbones", "wallsecret", "floor", "ceiling", "hatch", "pit", "trapdoor", "stairs_up"]);
-CM.art.isSurfaceLayer = (name) => /^(ground:|solid:|tree:|far:|canopy$|skygrad$|sun$|moon:)/.test(name);   // (the outdoors: only the town and the land use these)
+CM.art.isSurfaceLayer = (name) => /^(ground:|solid:|tree:|far:|canopy$|skygrad$|sun$|moon:|window:|ice$)/.test(name);   // (the outdoors: only the town and the land use these)
 CM.art.isThemeLayer = (name, theme) => CM.art.THEME_LAYERS.has(name) || Boolean(theme && theme.sky && CM.art.isSurfaceLayer(name));
 // the painters that take no theme draw the same thing every time: keep what they drew, so a band's set is quick to
 // make again (the canvases are only read: by the uploads, and by the looks that copy or pixelate them)
@@ -198,7 +198,7 @@ CM.art.isThemeLayer = (name, theme) => CM.art.THEME_LAYERS.has(name) || Boolean(
     "debrisProp", "shadow", "decal"]) memo(name, byArgs);
   memo("monster", (args) => JSON.stringify([args[0] && args[0].name, args[0] && args[0].colour, args[1], args[2]]));
   memo("facade", (args) => (args[2] ? null : byArgs(args)));                     // (over a photograph: drawn afresh)
-  memo("tree", (args) => (args[1] ? `bark:${args[0]}` : byArgs(args)));           // (the Stone look's bark is one picture)
+  memo("tree", (args) => `${args[1] ? "bark:" : ""}${args[0]}:${args[2] || ""}`);   // (the Stone look's bark is one picture; a picture a season)
   memo("prop", (args) => `${args[0]}|${args[1] ? "kit" : ""}`);
   memo("surfaceProp", (args) => `${args[0]}|${args[1]}|${args[2] ? "kit" : ""}`);
   const px = new WeakMap(), pixelate = CM.art.pixelate;                       // (a picture made of pixels: the same picture, the same pixels)
