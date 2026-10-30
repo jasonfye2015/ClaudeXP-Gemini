@@ -55,7 +55,18 @@ const url = "file://" + path.join(ROOT, "game", built);
   assert.ok(again.can && again.ok, "Continue should work after a reload");
   assert.strictEqual(again.floor, r.floor);
   await page.waitForTimeout(600);
+  // what a frame costs (tools/perf.js): the land at High, a room of torches, a fight with fireballs - in each look
+  await page.addScriptTag({ content: fs.readFileSync(path.join(ROOT, "tools", "perf.js"), "utf8") });
+  const perf = {};
+  for (const look of ["pixel", "stone"]) {
+    await page.evaluate((l) => { CM.game.settings.look = l; CM.game.emit("settings", CM.game.settings); }, look);
+    await page.waitForTimeout(600);
+    perf[look] = await page.evaluate(() => CM.perfScenes({ ms: 1500, detail: "high" }));
+    for (const [scene, m] of Object.entries(perf[look])) assert.ok(m.frames > 0, `${look} ${scene}: frames are drawn`);
+    assert.ok(perf[look].land.air > 0, `${look}: the air is there on the land at High`);
+  }
   await browser.close();
   if (errors.length) { console.log("page errors:\n  " + errors.join("\n  ")); process.exit(1); }
+  for (const [look, scenes] of Object.entries(perf)) console.log(`perf (${look}, software GL): ` + Object.entries(scenes).map(([k, m]) => `${k} ${m.fps} fps, ${m.cpuMs} ms script, ${m.lights} lights, ${m.air} motes`).join("; "));
   console.log(`smoke: ok (${built}, built ${r.built}; walked ${r.moved}, ${r.fights} fights, save ${r.save} chars, floor ${r.floor} continued)`);
 })().catch((e) => { console.error(e); process.exit(1); });

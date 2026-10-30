@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v8.8 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v9.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -503,7 +503,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "8.8", built: "2026-10-30" };
+const CM = window.CM = { version: "9.0", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -18027,11 +18027,16 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---- the frame loop ----
   let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0, lastAutoStep = 0;
+  // what a frame costs: frames and the time spent in this function (the JavaScript's share), since CM.perf.reset();
+  // CM.perf.hold keeps the step-down still while something is measured
+  CM.perf = { frames: 0, cpu: 0, since: performance.now(), hold: false, reset() { this.frames = 0; this.cpu = 0; this.since = performance.now(); },
+    read() { const s = (performance.now() - this.since) / 1000; return { fps: s > 0 ? Math.round(this.frames / s * 10) / 10 : 0, cpuMs: this.frames ? Math.round(this.cpu / this.frames * 100) / 100 : 0, frames: this.frames, scale: renderer.scale || 1, detail: CM.DETAIL_ORDER[detailNow()] }; } };
   function frame(now) {
+    const t0 = performance.now();
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
     if (renderer.ok) {
-      if (game.mode !== "title" && document.visibilityState !== "hidden") autoScale(dt);
+      if (game.mode !== "title" && document.visibilityState !== "hidden" && !CM.perf.hold) autoScale(dt);
       renderer.resize();
       if (ui.splashOn) { const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []; if (pads.some((p) => p.buttons.some((b) => b.pressed))) ui.leaveSplash(); }   // (a pad button goes on from the title card)
       if (game.mode === "title") {
@@ -18069,7 +18074,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       if (game.mode === "title") renderer.frame(dt);
     }
-    frames++; fpsTime += dt;
+    frames++; fpsTime += dt; CM.perf.frames++; CM.perf.cpu += performance.now() - t0;
     if (fpsTime >= 0.5) { fps = Math.round(frames / fpsTime); frames = 0; fpsTime = 0; ui.$("#view .fps").textContent = `${fps} fps - v${CM.version} ${CM.built}`; }
     requestAnimationFrame(frame);
   }
