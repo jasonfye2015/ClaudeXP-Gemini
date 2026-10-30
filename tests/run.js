@@ -2359,7 +2359,7 @@ test("the town above: floor 0 is hand-laid and the same for a seed, a run begins
   // the harness starts at the shaft (settings.skipWalk); a run asked for the town begins at the party's door
   const g0 = new CM.Game(); g0.newGame("town-2", fixedParty(CM)); assert.strictEqual(g0.floor.number, 1); assert.ok(!g0.startedInTown);
   const game = new CM.Game(); game.newGame("town-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
-  assert.strictEqual(game.floor.number, 0); assert.ok(game.startedInTown); assert.strictEqual(game.floor.pos.join(), CM.TOWN_AT.home.join()); assert.strictEqual(game.floor.facing, 1, "facing east, down the lane"); assert.strictEqual(game.mode, "explore");
+  assert.strictEqual(game.floor.number, 0); assert.ok(game.startedInTown); assert.strictEqual(game.floor.pos.join(), CM.TOWN_AT.home.join()); assert.ok(CM.isOpen(game.floor, game.floor.pos[0] + CM.DIRS[game.floor.facing][0], game.floor.pos[1] + CM.DIRS[game.floor.facing][1]) && CM.townStreet(game.floor.pos[0] + CM.DIRS[game.floor.facing][0], game.floor.pos[1] + CM.DIRS[game.floor.facing][1]) === "Lantern Street", "facing the street"); assert.strictEqual(game.mode, "explore");
   assert.strictEqual(game.lightFactor(), 1.3); assert.ok(!game.inDark());
   // daylight: steps count, but no hunger, no torch burnt, nothing wanders
   game.light = { kind: "torch", left: 100 }; const fed0 = game.fed || 0, steps0 = game.tally.steps || 0;
@@ -2630,7 +2630,7 @@ test("the Deep Wood: the seed's own forest, the same twice, with glades, a river
   const dist = CM.distances(w1.grid, CM.WOOD_GATE, (x, y) => CM.passable(w1, x, y)); for (const [k, t] of Object.entries(w1.things)) assert.ok(dist.get(k) !== undefined, `${t.type} at ${k} can be reached from the gate (over the ford)`);
   assert.ok(!CM.passable(w1, ...Object.keys(w1.features).find((k) => w1.features[k].type === "river").split(",").map(Number)), "the river is not walked");
   assert.strictEqual(CM.themeFor(-1), CM.WOOD_THEME); assert.strictEqual(CM.themeFor(-1.5), CM.THEMES[0]); assert.ok(CM.themeFor(-1).tree);
-  const town = CM.makeTown("wood-1"); assert.strictEqual(town.things[CM.TOWN_AT.woodgate.join(",")].type, "woodgate"); assert.ok(CM.isOpen(town, 0, 9));
+  const town = CM.makeTown("wood-1"); assert.strictEqual(town.things[CM.TOWN_AT.woodgate.join(",")].type, "woodgate"); assert.ok(CM.isOpen(town, 0, CM.TOWN_AT.woodgate[1]), "the road runs out of the gate to the map's edge");
   // the gate from both sides, by day: deer that run, lit by the sky, no torch burnt, hunger counted
   const g = new CM.Game(); g.newGame("wood-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.floor.pos = CM.TOWN_AT.woodgate.slice(); g.use(); assert.strictEqual(g.floor.number, -1); assert.strictEqual(g.floor.pos.join(), CM.WOOD_GATE.join());
   assert.ok(!CM.isNight(g)); assert.ok(g.hasLight() && g.lightFactor() > 1); const day = Object.values(g.floor.things).filter((t) => t.type === "monsters"); assert.ok(day.length >= 3 && day.every((t) => t.wood === "day" && t.flees), `the day's beasts: ${day.length}`); assert.ok(day.every((t) => ["Deer", "Boar"].includes(t.group[0].kind)));
@@ -2828,7 +2828,7 @@ test("the calendar: the season from a date and one pinned in Settings, kept thro
   g.festival = "forgefire"; g.floor.pos = CM.TOWN_AT.smith.slice(); g.gold = 1000; g.bag.push(CM.metalBar(CM.gradeCost(g.party[0].weapon).metal)); const gf = g.gold; assert.strictEqual(g.upgrade(0, "weapon"), ""); assert.strictEqual(gf - g.gold, CM.GRADE_GOLD / 2, "a grade at half");
   // the Reaping: two stages a dawn; the Harvest Fair: a peddler in the square, double yield; the Feast of the Dead: the names at the well; the Night of Bells: gossip free, the boy's line; the Wassail: beer with the round
   g.festival = "reaping"; g.season = "spring"; g.floor.pos = CM.TOWN_AT.woodgate.slice(); g.use(); const fk = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "farm"); g.floor.pos = fk.split(",").map(Number); const F = g.farm(); F.rows = []; F.scarecrow = true; g.bag.push(CM.seed("beans")); assert.strictEqual(g.sow(0, g.bag.findIndex((i) => i.kind === "seed")), ""); g.sleepTillDawn(); assert.strictEqual(F.rows[0].stage, 2, "two stages a dawn"); g.sleepTillDawn(); assert.strictEqual(F.rows[0].stage, 4);
-  g.festival = "harvest"; const nb = g.bag.length; assert.strictEqual(g.cut(0), ""); assert.strictEqual(g.bag.length - nb, CM.CROPS.beans.yields * 2 + 1, "double yield"); g.floor.pos = CM.WOOD_GATE.slice(); g.use(); assert.ok(g.inTown()); assert.ok(g.floor.things["8,10"] && g.floor.things["8,10"].type === "peddler", "market day all week");
+  g.festival = "harvest"; const nb = g.bag.length; assert.strictEqual(g.cut(0), ""); assert.strictEqual(g.bag.length - nb, CM.CROPS.beans.yields * 2 + 1, "double yield"); g.floor.pos = CM.WOOD_GATE.slice(); g.use(); assert.ok(g.inTown()); assert.ok(g.floor.things[CM.TOWN_AT.market.join(",")] && g.floor.things[CM.TOWN_AT.market.join(",")].type === "peddler", "market day all week");
   g.festival = "dead"; let said = ""; g.on("talk", (t) => { said = t.text; }); g.floor.pos = CM.TOWN_AT.well.slice(); g.well(); assert.ok(said.includes("Old Tam") && said.includes("Feast of the Dead"), said.slice(0, 200));
   g.festival = "bells"; g.floor.pos = CM.TOWN_AT.tavern.slice(); g.gossiped = false; const gg = g.gold; const r = g.gossip(); assert.strictEqual(r, "", r); assert.strictEqual(g.gold, gg, "gossip on the house"); { const boy = Object.entries(g.floor.things).find(([, t]) => t.type === "villager" && /bell-founder/.test(CM.TOWNSFOLK[t.who % CM.TOWNSFOLK.length].name)); if (boy) { g.talkTownsfolk(boy[1]); assert.ok(said.includes("You heard it")); } }
   g.festival = "wassail"; g.floor.drank = false; g.morale = 40; assert.strictEqual(g.drink(), ""); assert.strictEqual(g.morale, 100); assert.ok(g.bag.some((i) => i.kind === "dish" && i.dish === "beer"), "beer with the round");
@@ -2887,11 +2887,11 @@ test("the surface: the sky by the clock and the moon, the solid kinds, and a mes
   const layersOf = (m) => { const set = new Set(); for (let i = 0; i < m.data.length; i += CM.MESH_STRIDE) set.add(m.data[i + 5]); return set; };
   // the town: no ceiling; the ring wall, hedges with their tops, a house with a roof behind every door, cobbles on the square
   const town = CM.makeTown("sky-1");
-  assert.strictEqual(town.solidDefault, "hedge");
-  assert.strictEqual(CM.solidAt(town, 0, 0), "townwall"); assert.strictEqual(CM.solidAt(town, 9, 9), null); assert.strictEqual(CM.groundAt(town, 9, 9), "cobbles"); assert.strictEqual(CM.groundAt(town, 3, 9), "dirt");
+  assert.strictEqual(town.solidDefault, "tree");
+  assert.strictEqual(CM.solidAt(town, 2, 21), "townwall"); assert.strictEqual(CM.solidAt(town, 0, 0), "cliff"); assert.strictEqual(CM.solidAt(town, 1, 10), "tree"); assert.strictEqual(CM.solidAt(town, ...CM.TOWN_AT.well), null); assert.strictEqual(CM.groundAt(town, ...CM.TOWN_AT.well), "cobbles"); assert.strictEqual(CM.groundAt(town, 6, 22), "dirt"); assert.strictEqual(CM.groundAt(town, ...CM.TOWN_AT.shaft), "flags");
   for (const [id, [x, y]] of Object.entries(CM.TOWN_AT)) if (CM.TOWN_PLOTS[id]) assert.ok(CM.DIRS.some(([dx, dy]) => ["door", "shop"].includes(CM.solidAt(town, x + dx, y + dy))), `${id} has a face with its door`);
   const mt = CM.floorMesh(town, CM.TOWN_THEME, index), lt = layersOf(mt);
-  assert.strictEqual(mt.ceilings, 0); assert.ok(mt.walls > 0 && mt.roofs > 0 && mt.trees === 0); assert.strictEqual(mt.data.length % CM.MESH_STRIDE, 0);
+  assert.strictEqual(mt.ceilings, 0); assert.ok(mt.walls > 0 && mt.roofs > 0); assert.strictEqual(mt.data.length % CM.MESH_STRIDE, 0);
   for (const name of ["solid:townwall", "solid:townwall:top", "solid:hedge", "solid:door", "solid:shop", "solid:house", "solid:roof", "ground:cobbles", "ground:dirt", "ground:flags"]) assert.ok(lt.has(index[name]), `the town's mesh wears ${name}`);
   assert.ok(!lt.has(index.ceiling) && !lt.has(index.wall), "no ceiling and no dungeon wall over the town");
   // the Wood: trees as trees, grass underfoot, canopy over the close paths, and no ceiling

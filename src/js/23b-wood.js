@@ -10,7 +10,6 @@ CM.WOOD_THEME = { name: "The Deep Wood", floors: [-1, -1], stone: [58, 84, 46], 
   moss: [120, 160, 70], fog: [0.01, 0.014, 0.008], torch: [1.0, 0.95, 0.85], reach: 7.0, bones: 0, tree: true, sky: true };
 CM.WOOD_SIZE = 31;
 CM.WOOD_GATE = [29, 15];                                                 // the Wood's end of the gate; the town's end is CM.TOWN_AT.woodgate
-CM.TOWN_AT.woodgate = [0, 9];
 CM.WOOD_NODES = [["a patch of mushrooms", "fungus"], ["a bramble of berries", "nest"], ["herbs by the path", "nest"], ["a stand of deadwood", "ember"], ["a beehive in a hollow oak", "nest"]];
 CM.CAVE_OF = (number) => Math.round((-number - 1.5) * 10);              // -1.5 -> 0, -1.6 -> 1, -1.7 -> 2
 CM.caveNumber = (n) => -(1.5 + n / 10);
