@@ -81,6 +81,18 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   const grid = fl.grid, size = grid.length, out = [], features = fl.features || {}, sky = Boolean(theme.sky), canopy = new Set(fl.canopy || []);
   const L = (name) => (index[name] !== undefined ? index[name] : index.wall);
   const quad = (a, b, c, d, layer, shade) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
+  // a floor or ceiling square, turned a quarter-turn and mirrored by hash (no two neighbours alike), with a shade at
+  // each corner: darker where the corner meets walls (ambient occlusion, baked)
+  const UVS = [[[0, 1], [1, 1], [1, 0], [0, 0]], [[1, 1], [1, 0], [0, 0], [0, 1]], [[1, 0], [0, 0], [0, 1], [1, 1]], [[0, 0], [0, 1], [1, 1], [1, 0]]];
+  const quadVaried = (a, b, c, d, layer, shades, x, y, salt) => {
+    const h = CM.hashSeed(`${fl.number}:${salt}:${x},${y}`), uvs = UVS[h % 4].map(([u, v]) => ((h >> 2) & 1 ? [1 - u, v] : [u, v]));
+    for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uvs[i][0], uvs[i][1], layer, shades[i], 0, 1, 0);
+  };
+  const openAt = (cx, cy) => cy >= 0 && cy < size && cx >= 0 && cx < size && grid[cy][cx] === 0;
+  const corner = (cx, cy, k) => {                                       // a corner of the floor, (cx, cy) its grid point: darker by the walls round it
+    const walls = [[cx - 1, cy - 1], [cx, cy - 1], [cx - 1, cy], [cx, cy]].filter(([qx, qy]) => !openAt(qx, qy)).length;
+    return k * (1 - 0.16 * walls);
+  };
   const pickWall = (x, y, d, wx, wy) => {
     const f = features[`${wx},${wy}`];
     if (f && f.type === "secret" && !f.found) return index.wallsecret;              // (a hairline, for the sharp-eyed)
@@ -107,9 +119,14 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     covered.add(`${x},${y}`);
     const under = sky && canopy.has(`${x},${y}`), g = CM.groundAt(fl, x, y);
     const floorLayer = g && index[`ground:${g}`] !== undefined ? index[`ground:${g}`] : index.floor;
-    quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, under ? 0.55 : 0.9);
-    if (!sky) { quad([x, 1, y], [x + 1, 1, y], [x + 1, 1, y + 1], [x, 1, y + 1], index.ceiling, 0.7); ceilings++; }
-    else if (under && index.canopy !== undefined) quad([x, 1.25, y], [x + 1, 1.25, y], [x + 1, 1.25, y + 1], [x, 1.25, y + 1], index.canopy, 0.6);
+    if (sky) {
+      quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, under ? 0.55 : 0.9);
+      if (under && index.canopy !== undefined) quad([x, 1.25, y], [x + 1, 1.25, y], [x + 1, 1.25, y + 1], [x, 1.25, y + 1], index.canopy, 0.6);
+    } else {
+      quadVaried([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, [corner(x, y + 1, 0.95), corner(x + 1, y + 1, 0.95), corner(x + 1, y, 0.95), corner(x, y, 0.95)], x, y, "f");
+      quadVaried([x, 1, y], [x + 1, 1, y], [x + 1, 1, y + 1], [x, 1, y + 1], index.ceiling, [corner(x, y, 0.75), corner(x + 1, y, 0.75), corner(x + 1, y + 1, 0.75), corner(x, y + 1, 0.75)], x, y, "c");
+      ceilings++;
+    }
     SIDES.forEach(([dx, dy, shade], d) => {
       const nx = x + dx, ny = y + dy;
       if (!solid(nx, ny)) return;
@@ -122,7 +139,14 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       const h = K.h || 1, layer = K.face === "wall" ? pickWall(x, y, d, nx, ny) : L(K.face);
       const a = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
       const b = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
-      quad([a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]], layer, shade); walls++;
+      if (sky || K.face !== "wall") quad([a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]], layer, shade);
+      else {                                                                          // below: the wall's foot in shadow, and darker where it meets a side wall
+        const sideA = !openAt(x + (d === 0 ? -1 : d === 1 ? 1 : 0), y + (d === 2 ? -1 : d === 3 ? 1 : 0)), sideB = !openAt(x + (d === 0 ? 1 : d === 1 ? -1 : 0), y + (d === 2 ? 1 : d === 3 ? -1 : 0));
+        const fa = shade * (sideA ? 0.62 : 0.78), fb = shade * (sideB ? 0.62 : 0.78), ta = shade * (sideA ? 0.85 : 0.97), tb = shade * (sideB ? 0.85 : 0.97);
+        const uv = [[0, 1], [1, 1], [1, 0], [0, 0]], P = [[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], sh = [fa, fb, tb, ta];
+        for (const i of [0, 1, 2, 0, 2, 3]) out.push(...P[i], uv[i][0], uv[i][1], layer, sh[i], 0, 1, 0);
+      }
+      walls++;
       if (K.roof && index[K.roof] !== undefined) {                                    // the eaves: a slope from the wall's top back over the house
         const ix = dx * 0.5, iz = dy * 0.5;
         quad([a[0], h, a[1]], [b[0], h, b[1]], [b[0] + ix, h + 0.45, b[1] + iz], [a[0] + ix, h + 0.45, a[1] + iz], index[K.roof], Math.min(1.1, shade * 1.1)); roofs++;   // (the eaves catch the sky)
@@ -149,6 +173,42 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0);
     quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0);
   }
+  let decals = 0, overhead = 0;
+  if (!sky && opts.decals !== false) {                                                   // below: what is on the walls, and what hangs overhead, by band
+    const band = CM.themeIndex(fl.number >= 1 ? fl.number : 1), D = CM.WALL_DECALS[band] || [], O = CM.OVERHEAD[band];
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      if (grid[y][x] !== 0) continue;
+      const here = features[`${x},${y}`];
+      SIDES.forEach(([dx, dy], d) => {
+        const nx = x + dx, ny = y + dy;
+        if (!solid(nx, ny) || CM.solidAt(fl, nx, ny) !== "wall") return;
+        const beyond = features[`${nx},${ny}`];
+        if (beyond && (beyond.type === "secret" || beyond.type === "secretstair")) return;          // (never give a hidden door away)
+        if (here && (here.type === "lever" || here.type === "carving") && here.face === d) return;
+        const h = CM.hashSeed(`${fl.number}:decal:${x},${y}:${d}`);
+        for (const [id, per] of D) {
+          if ((h % 1000) / 1000 >= per) continue;
+          const layer = index[`decal:${id}`]; if (layer === undefined) break;
+          const inset = 0.006, px = x + 0.5 + dx * (0.5 - inset), pz = y + 0.5 + dy * (0.5 - inset), ax = -dy, az = dx, w = 0.9, y0 = 0.02, y1 = 0.98;
+          quad([px - ax * w / 2, y0, pz - az * w / 2], [px + ax * w / 2, y0, pz + az * w / 2], [px + ax * w / 2, y1, pz + az * w / 2], [px - ax * w / 2, y1, pz - az * w / 2], layer, d < 2 ? 1 : 0.84);
+          decals++; break;
+        }
+      });
+      if (O && index[`over:${O.id}`] !== undefined && (CM.hashSeed(`${fl.number}:over:${x},${y}`) % 1000) / 1000 < O.per) {
+        const layer = index[`over:${O.id}`], t = CM.hashSeed(`${fl.number}:overturn:${x},${y}`) % 2;
+        if (O.how === "beam") {                                                         // a timber across the corridor under the ceiling
+          const yb = O.id === "rib" ? 0.96 : 0.92, yt = 0.998;                          // (the Palace's ribs thin and high)
+          if (t) { quad([x, yb, y + 0.42], [x + 1, yb, y + 0.42], [x + 1, yt, y + 0.42], [x, yt, y + 0.42], layer, 0.8); quad([x + 1, yb, y + 0.58], [x, yb, y + 0.58], [x, yt, y + 0.58], [x + 1, yt, y + 0.58], layer, 0.8); quad([x, yb, y + 0.58], [x + 1, yb, y + 0.58], [x + 1, yb, y + 0.42], [x, yb, y + 0.42], layer, 0.6); }
+          else { quad([x + 0.42, yb, y + 1], [x + 0.42, yb, y], [x + 0.42, yt, y], [x + 0.42, yt, y + 1], layer, 0.8); quad([x + 0.58, yb, y], [x + 0.58, yb, y + 1], [x + 0.58, yt, y + 1], [x + 0.58, yt, y], layer, 0.8); quad([x + 0.42, yb, y], [x + 0.58, yb, y], [x + 0.58, yb, y + 1], [x + 0.42, yb, y + 1], layer, 0.6); }
+        } else {                                                                          // hanging from the ceiling: two crossed pictures
+          const cx = x + 0.5 + ((CM.hashSeed(`${fl.number}:overx:${x},${y}`) % 40) - 20) / 100, cz = y + 0.5 + ((CM.hashSeed(`${fl.number}:overz:${x},${y}`) % 40) - 20) / 100, r = O.w / 2, top = 1, bot = 1 - O.h;
+          quad([cx - r, bot, cz], [cx + r, bot, cz], [cx + r, top, cz], [cx - r, top, cz], layer, 0.8);
+          quad([cx, bot, cz - r], [cx, bot, cz + r], [cx, top, cz + r], [cx, top, cz - r], layer, 0.8);
+        }
+        overhead++;
+      }
+    }
+  }
   let props = 0;                                                                        // the props that lie or grow: flat, and crossed pairs
   const sub = opts.sub || {};
   const quadUV = (a, b, c, d, layer, shade, r) => { const uv = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
@@ -172,5 +232,5 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, trees: trees.size, covered: covered.size, skirt, ring, props };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
 };

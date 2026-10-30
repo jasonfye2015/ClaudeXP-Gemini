@@ -1457,6 +1457,36 @@ CM.art.debrisProp = function (id, S) {
   return c;
 };
 
+
+// ---- on the walls and overhead (the dungeon's): transparent but for the thing itself, drawn over any wall -------------
+CM.art.decal = function (id, S = ART_SIZE) {
+  const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`decal:${id}`));
+  switch (id) {
+    case "crack": p.strokeStyle = "rgba(10,8,6,0.85)"; p.lineWidth = S / 90; for (let i = 0; i < 3; i++) crack(p, rnd, S * (0.25 + rnd.next() * 0.5), S * (0.1 + rnd.next() * 0.3), S * (0.4 + rnd.next() * 0.4), "rgba(10,8,6,0.85)"); break;
+    case "moss": for (let i = 0; i < 220; i++) { const x = rnd.next() * S, y = S * (0.55 + Math.pow(rnd.next(), 0.6) * 0.45); p.fillStyle = `rgba(${50 + rnd.int(0, 40)},${90 + rnd.int(0, 50)},${30 + rnd.int(0, 20)},0.9)`; p.beginPath(); p.arc(x, y, S * (0.01 + rnd.next() * 0.025), 0, Math.PI * 2); p.fill(); } break;
+    case "wet": { for (let i = 0; i < 5; i++) { const x = S * (0.1 + rnd.next() * 0.8), w = S * (0.04 + rnd.next() * 0.07); const g = p.createLinearGradient(0, 0, 0, S); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(0.15, "rgba(10,14,16,0.55)"); g.addColorStop(1, "rgba(10,14,16,0.25)"); p.fillStyle = g; p.fillRect(x, S * 0.05, w, S * (0.6 + rnd.next() * 0.35)); } break; }
+    case "roots": p.lineCap = "round"; for (let i = 0; i < 6; i++) { let x = S * (0.1 + rnd.next() * 0.8), y = 0; p.strokeStyle = "rgba(80,50,34,0.95)"; p.lineWidth = S * (0.012 + rnd.next() * 0.02); p.beginPath(); p.moveTo(x, y); while (y < S * (0.5 + rnd.next() * 0.5)) { x += (rnd.next() - 0.5) * S * 0.08; y += S * 0.06; p.lineTo(x, y); } p.stroke(); } break;
+    case "chains": for (const cx of [0.32, 0.68]) { p.strokeStyle = "#4A4A50"; p.lineWidth = S / 50; for (let i = 0; i < 7; i++) { p.beginPath(); p.ellipse(S * cx, S * (0.12 + i * 0.07), S * 0.02, S * 0.035, 0, 0, Math.PI * 2); p.stroke(); } p.strokeStyle = "#5A5A60"; p.lineWidth = S / 30; p.beginPath(); p.arc(S * cx, S * 0.66, S * 0.06, 0, Math.PI * 2); p.stroke(); } p.fillStyle = "#3A3A3E"; p.fillRect(S * 0.28, S * 0.08, S * 0.08, S * 0.04); p.fillRect(S * 0.64, S * 0.08, S * 0.08, S * 0.04); break;
+    case "sconce": p.fillStyle = "#3A3A3A"; p.fillRect(S * 0.46, S * 0.4, S * 0.08, S * 0.18); p.beginPath(); p.moveTo(S * 0.38, S * 0.32); p.lineTo(S * 0.62, S * 0.32); p.lineTo(S * 0.56, S * 0.42); p.lineTo(S * 0.44, S * 0.42); p.closePath(); p.fill(); p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(S / 2, S * 0.2, S * 0.08, S * 0.12, 0, 0, Math.PI * 2); p.fill(); break;
+    case "niche": { p.fillStyle = "rgba(12,10,8,0.9)"; p.beginPath(); p.moveTo(S * 0.32, S * 0.68); p.lineTo(S * 0.32, S * 0.42); p.arc(S / 2, S * 0.42, S * 0.18, Math.PI, 0); p.lineTo(S * 0.68, S * 0.68); p.closePath(); p.fill(); p.fillStyle = "#D8D0B8"; p.beginPath(); p.arc(S / 2, S * 0.56, S * 0.09, Math.PI, 0); p.lineTo(S * 0.58, S * 0.66); p.lineTo(S * 0.42, S * 0.66); p.closePath(); p.fill(); p.fillStyle = "#1A1610"; p.beginPath(); p.arc(S * 0.465, S * 0.58, S * 0.022, 0, Math.PI * 2); p.arc(S * 0.535, S * 0.58, S * 0.022, 0, Math.PI * 2); p.fill(); break; }
+    case "banner": { p.fillStyle = "#2A2A2E"; p.fillRect(S * 0.26, S * 0.1, S * 0.48, S * 0.03); p.fillStyle = "#5A1A2A"; p.beginPath(); p.moveTo(S * 0.3, S * 0.13); p.lineTo(S * 0.7, S * 0.13); p.lineTo(S * 0.7, S * 0.7); p.lineTo(S * 0.62, S * 0.62); p.lineTo(S * 0.56, S * 0.74); p.lineTo(S * 0.48, S * 0.6); p.lineTo(S * 0.4, S * 0.72); p.lineTo(S * 0.3, S * 0.64); p.closePath(); p.fill(); p.fillStyle = "#B09040"; p.beginPath(); p.arc(S / 2, S * 0.32, S * 0.07, 0, Math.PI * 2); p.fill(); p.fillStyle = "#5A1A2A"; p.beginPath(); p.arc(S / 2, S * 0.32, S * 0.04, 0, Math.PI * 2); p.fill(); break; }
+    case "frost": for (let i = 0; i < 160; i++) { const y = S * Math.pow(rnd.next(), 1.8); p.fillStyle = `rgba(220,236,255,${0.5 + rnd.next() * 0.4})`; p.beginPath(); p.arc(rnd.next() * S, y, S * (0.005 + rnd.next() * 0.02), 0, Math.PI * 2); p.fill(); } break;
+    case "soot": { const g = p.createLinearGradient(0, 0, 0, S); g.addColorStop(0, "rgba(8,6,4,0.7)"); g.addColorStop(0.5, "rgba(8,6,4,0.3)"); g.addColorStop(1, "rgba(8,6,4,0)"); p.fillStyle = g; p.fillRect(0, 0, S, S); break; }
+    case "beam": case "rib": { const base = id === "beam" ? [96, 66, 40] : [120, 112, 100]; p.fillStyle = rgb(base); p.fillRect(0, 0, S, S); for (let i = 0; i < 9; i++) { p.fillStyle = rgb(base, 0.7 + rnd.next() * 0.3, 1); p.fillRect(0, rnd.next() * S, S, S * 0.02); } if (id === "beam") { p.fillStyle = "#3A3A3A"; for (const x of [0.2, 0.8]) { p.beginPath(); p.arc(S * x, S / 2, S * 0.03, 0, Math.PI * 2); p.fill(); } } break; }
+    case "stalactite": for (const [x, w, h] of [[0.5, 0.28, 1], [0.25, 0.14, 0.6], [0.74, 0.16, 0.7]]) { p.fillStyle = "#6E6860"; p.beginPath(); p.moveTo(S * (x - w / 2), 0); p.lineTo(S * (x + w / 2), 0); p.lineTo(S * x, S * h); p.closePath(); p.fill(); p.fillStyle = "#8A847A"; p.beginPath(); p.moveTo(S * (x - w / 2), 0); p.lineTo(S * x, 0); p.lineTo(S * x, S * h); p.closePath(); p.fill(); } break;
+    case "hangroot": p.lineCap = "round"; for (let i = 0; i < 7; i++) { let x = S * (0.15 + rnd.next() * 0.7), y = 0; p.strokeStyle = "#5A3826"; p.lineWidth = S * (0.015 + rnd.next() * 0.02); p.beginPath(); p.moveTo(x, y); while (y < S * (0.5 + rnd.next() * 0.5)) { x += (rnd.next() - 0.5) * S * 0.06; y += S * 0.07; p.lineTo(x, y); } p.stroke(); } break;
+    default: break;
+  }
+  return c;
+};
+CM.art.DECALS = ["crack", "moss", "wet", "roots", "chains", "sconce", "niche", "banner", "frost", "soot"];
+CM.art.OVERHEADS = ["beam", "rib", "stalactite", "hangroot"];
+// every decal and overhead layer, made by `make(id)` (the drawn one, or a look's own)
+CM.art.decalLayers = function (add, make) {
+  for (const id of CM.art.DECALS) add(`decal:${id}`, make(id));
+  for (const id of CM.art.OVERHEADS) add(`over:${id}`, make(id));
+};
+
 // ---- props: the small things on the floors, painted at half size and packed four to a layer --------------------------
 CM.art.prop = function (id, kit = null) {
   const S = ART_SIZE / 2, c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`prop:${id}`));
@@ -1546,6 +1576,7 @@ CM.art.buildDrawn = function (theme) {
   add("fx:leaf", CM.art.fxLeaf()); add("fx:ring", CM.art.fxRing());
   for (let f = 0; f < 3; f++) { add(`torch${f}`, CM.art.torch(f)); add(`water${f}`, CM.art.water(f)); }
   for (const [name, c] of Object.entries(CM.art.surfaceLayers())) add(name, c);
+  CM.art.decalLayers(add, (id) => CM.art.decal(id));
   const sub = CM.art.packProps(add, ART_SIZE, (id) => CM.art.prop(id));
   return { layers, index, size: ART_SIZE, crisp: false, sub };
 };
