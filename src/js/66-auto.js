@@ -14,7 +14,7 @@ const SAFE = { bloodshrine: 1, prisoner: 1, gamble: 1, cursedfountain: 1, oldcam
 CM.Autopilot = class {
   constructor(game, opts = {}) {
     this.game = game;
-    this.opts = Object.assign({ maxFloor: 50, perFloor: 900, maxMoves: 60000, warp: false, wake: false, sync: false }, opts);
+    this.opts = Object.assign({ maxFloor: 50, perFloor: 900, maxMoves: 60000, warp: false, wake: false, sync: false, land: false }, opts);
     this.log = []; this.stuck = 0; this.moves = 0; this.floorMoves = 0; this.onFloor = 0; this.campedAt = 0;
     this.handled = new Set(); this.asked = null; this.paths = null; this.on = true; this.why = ""; this.lastMode = game.mode;
     this.tools = { traps: 0, bars: 0, rests: 0, disarmed: 0 };           // (what it did with the tools)
@@ -64,13 +64,33 @@ CM.Autopilot = class {
     if (game.villageLevel("shrine") >= 1 && (game.party.some((h) => h.wound || h.hp <= 0) || game.gold > 300)) want.push("temple");
     if (game.gold > 60) want.push("tavern");
     if (game.farmWants && game.farmWants() && !CM.isNight(game)) want.push("farm");
+    if (this.canForge()) want.push("smith");
+    if (this.opts.land && !CM.isNight(game) && game.overweight() < 0.6 && !(this.townDone || []).includes("land")) want.push("land");   // (a day in the land: forage, the open cave with a pick, then home by the gate)
     return want.filter((id) => !(this.townDone || []).includes(id));
+  }
+  canForge() {                                                           // a worn thing the pack's bars would grade
+    const game = this.game; if (!game.inTown() || !CM.gradeCost) return false;
+    return game.party.some((h) => ["weapon", "armor", "offhand", "helm"].some((slot) => { const it = h[slot]; if (!it || it.unknown || !CM.gradable(it) || (it.grade || 0) >= CM.GRADE_MOST) return false; const c = CM.gradeCost(it); return game.gold >= c.gold + 50 && game.bag.filter((i) => i.kind === "bar" && i.bar === c.metal).length >= c.bars; }));
+  }
+  kitchen() {                                                           // what the pack's things make, at the home's kitchen: up to six dishes
+    const game = this.game; let made = 0;
+    if (game.homeLevel() < 3) return 0;
+    for (const id of Object.keys(CM.DISHES).sort((a, b) => CM.DISHES[b].floors - CM.DISHES[a].floors)) while (made < 6 && CM.canCook(game.bag, id) && game.cookDish(id) === "") made++;
+    this.tools.cooked = (this.tools.cooked || 0) + made; return made;
+  }
+  forge() {                                                             // the grades the bars allow, the scrap sold, the picks whetted
+    const game = this.game; let did = 0;
+    for (const h of game.party) for (const slot of ["weapon", "armor", "offhand", "helm"]) { let guard = 0; while (this.canForge() && h[slot] && CM.gradable(h[slot]) && game.upgrade(game.party.indexOf(h), slot) === "" && guard++ < 5) did++; }
+    if (game.bag.some((i) => i.kind === "scrap")) game.sellScrap();
+    if (game.bag.some((i) => i.kind === "pick" && i.points !== undefined && i.points < CM.PICKS[i.pick].points) && game.gold > 60) game.whetPicks();
+    this.tools.graded = (this.tools.graded || 0) + did; return did;
   }
   errand(id) {
     const game = this.game;
     this.townDone = (this.townDone || []).concat(id);
     game.use();                                                          // (the door opened: counted for the town's renown; the screen it opens is closed again by the frame loop)
-    if (id === "home") { game.hearthRest(); while ((game.home().larder || 0) > 0 && game.bag.filter((i) => i.kind === "ration").length < 2) game.larderTake(); }
+    if (id === "home") { game.hearthRest(); while ((game.home().larder || 0) > 0 && game.bag.filter((i) => i.kind === "ration").length < 2) game.larderTake(); this.kitchen(); }
+    else if (id === "smith") this.forge();
     else if (id === "merchant") { game.openBag(true); this.shopping(); game.closeBag(); }
     else if (id === "temple") { while (game.party.some((h) => h.hp <= 0) && game.gold >= 90 * game.party.find((h) => h.hp <= 0).level) game.raiseDead(); if (game.party.some((h) => h.wound) && game.gold >= 36 * game.party.filter((h) => h.wound).length + 60) game.temple("wounds"); if (game.gold > 300 && !game.blessed()) game.tithe(); }
     else if (id === "tavern") { game.drink(); if (game.bounty && game.bountyDone()) game.claimBounty(); else if (!game.bounty) game.takeBounty(); }
@@ -151,13 +171,21 @@ CM.Autopilot = class {
     const goal = CM.goalOf(fl);
     const can = (k) => this.paths.parent.has(k);
     if (fl.number === 0) {                                               // the town: the errands' doors, then the shaft (or the scroll back down)
-      for (const id of this.errands()) { const k = CM.TOWN_AT[id === "farm" ? "woodgate" : id].join(","); if (can(k)) return k; this.townDone = (this.townDone || []).concat(id); }
+      for (const id of this.errands()) { const k = CM.TOWN_AT[id === "farm" || id === "land" ? "woodgate" : id].join(","); if (can(k)) return k; this.townDone = (this.townDone || []).concat(id); }
       if (game.bag.some((i) => i.kind === "scroll" && i.spell === "homecoming" && i.back)) return "scroll";
       return goal;
     }
-    if (fl.number === -1) {                                              // the Wood: the farm if the trip is for it, then the gate home
+    if (fl.number === -1) {                                              // the Wood: the farm if the trip is for it; a day in the land (the nodes, the open cave with a pick); then the gate home
       const farm = things.find(([, t]) => t.type === "farm"); if (this.farmTrip && farm && can(farm[0])) return farm[0];
+      if (this.landTrip && !CM.isNight(game) && game.overweight() < 0.9 && (this.landMoves || 0) < 500) {
+        const node = things.find(([k, t]) => t.type === "node" && can(k) && !this.handled.has("-1:" + k)); if (node) return node[0];
+        const cave = things.find(([k, t]) => t.type === "cave" && t.n === CM.dayOf(game) % 3 && can(k) && !this.handled.has("-1:" + k)); if (cave && game.bag.some((i) => i.kind === "pick" && (i.points === undefined || i.points > 0))) return cave[0];
+      }
       const gate = things.find(([, t]) => t.type === "woodgate"); return gate && can(gate[0]) ? gate[0] : null;
+    }
+    if (fl.number < -1) {                                                // a cave: its veins, then the way out
+      const veins = things.filter(([k, t]) => t.type === "vein" && can(k) && !this.handled.has(fl.number + ":" + k) && CM.bestPick(game.bag, t.ore) >= 0).map(([k]) => k); if (veins.length && floorMoves < perFloor * 0.6) return veins[0];
+      const exit = things.find(([, t]) => t.type === "caveexit"); return exit && can(exit[0]) ? exit[0] : null;
     }
     const phyl = things.find(([, t]) => t.type === "phylactery");
     if (phyl && can(phyl[0])) return phyl[0];
@@ -215,6 +243,7 @@ CM.Autopilot = class {
     if (this.moves % 25 === 0) this.gearUp();
     if (game.floor.number > this.opts.maxFloor) return this.stop("deep enough");
     if (game.floor.number !== this.onFloor) { this.onFloor = game.floor.number; this.floorMoves = 0; if (game.floor.number === 0) this.townDone = []; }
+    if (game.floor.number === -1 && this.landTrip) this.landMoves = (this.landMoves || 0) + 1;
     if (++this.floorMoves > this.opts.perFloor) { this.floorMoves = 0; return this.giveUp(`lost on floor ${game.floor.number}`); }
     this.moves++;
     if (this.moves > this.opts.maxMoves) return this.stop("out of moves");
@@ -246,6 +275,10 @@ CM.Autopilot = class {
       for (const h of alive.filter((p) => p.row === "front")) { const row = game.bag.findIndex((i) => i.kind === "oil"); if (row >= 0) game.give(row, game.party.indexOf(h)); }
     }
     if (target === "scroll") { const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && i.back); game.give(row, game.party.indexOf(alive[0])); return "back down"; }
+    if (fl.number >= 1 && CM.isNight(game) && CM.hourOf(game) < 5 && (game.overweight() > 1 || alive.reduce((s, h) => s + h.hp / h.max, 0) / alive.length < 0.5) && this.nightHomeDay !== CM.dayOf(game)) {   // the small hours, and the party heavy or worn: home by the scroll to sleep, and back down by the same
+      const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
+      if (row >= 0) { this.nightHomeDay = CM.dayOf(game); if (game.give(row, game.party.indexOf(alive[0])) === "") { this.tools.nightHome = (this.tools.nightHome || 0) + 1; return "home for the night"; } }
+    }
     if (fl.number >= 10 && !game.bag.some((i) => i.kind === "heal" || i.kind === "greaterheal") && game.gold >= 150) {   // out of potions and not of gold: home by the scroll, and back
       const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
       if (row >= 0 && game.give(row, game.party.indexOf(alive[0])) === "") { this.tools.homecomings = (this.tools.homecomings || 0) + 1; return "home by the scroll"; }
@@ -254,9 +287,12 @@ CM.Autopilot = class {
     const step = this.stepTo(fl, target);
     if (step === "here") {
       if (fl.number === 0 && t && t.type === "building") { this.errand(t.id); return "errand"; }
-      if (fl.number === 0 && t && t.type === "woodgate") { this.townDone = (this.townDone || []).concat("farm"); this.farmTrip = true; game.use(); return "to the farm"; }
+      if (fl.number === 0 && t && t.type === "woodgate") { this.farmTrip = game.farmWants && game.farmWants(); this.landTrip = this.opts.land && !(this.townDone || []).includes("land"); this.landMoves = 0; this.townDone = (this.townDone || []).concat("farm", "land"); game.use(); return this.landTrip ? "a day in the land" : "to the farm"; }
+      if (fl.number === -1 && t && t.type === "node") { this.handled.add("-1:" + here); game.use(); this.tools.foraged = (this.tools.foraged || 0) + 1; return "foraged"; }
+      if (fl.number === -1 && t && t.type === "cave") { this.handled.add("-1:" + here); game.use(); return game.floor.number < -1 ? "into the cave" : "the cave is shut"; }
+      if (fl.number < -1 && t && t.type === "caveexit") { game.use(); return "out of the cave"; }
       if (fl.number === -1 && t && t.type === "farm") { this.farmTrip = false; this.tools.farmed = (this.tools.farmed || 0) + game.tendFarmAuto(); return "farmed"; }
-      if (fl.number === -1 && t && t.type === "woodgate") { this.farmTrip = false; game.use(); return "home from the Wood"; }
+      if (fl.number === -1 && t && t.type === "woodgate") { this.farmTrip = false; this.landTrip = false; game.use(); return "home from the Wood"; }
       if (t && t.type === "vein") { if (CM.bestPick(game.bag, t.ore) >= 0) game.use(); else { t.skip = true; this.handled.add(fl.number + ":" + here); } }
       else if (t && t.type === "node") game.use();
       else if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") this.stuck++; }
@@ -295,7 +331,7 @@ Object.assign(CM.Game.prototype, {
     if (on === undefined) on = !this.autoOn();
     if (on) {
       if (this.mode === "title") return false;
-      new CM.Autopilot(this, { warp: false, wake: false, sync: false });
+      new CM.Autopilot(this, { warp: false, wake: false, sync: false, land: this.settings.autoLand !== false });   // (in the game, Automatic takes its day in the land too, unless Settings says not)
       this.say("Automatic: the party plays on by itself - walks, fights, wears what is better, drinks what it needs, and trades at the camp. (Z, or a move key, takes the reins back.)");
       if (this.mode === "combat" && this.combat && !this.combat.auto) this.autoFight(true);
     } else if (this.auto) {

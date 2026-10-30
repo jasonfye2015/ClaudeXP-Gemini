@@ -2818,7 +2818,27 @@ test("the calendar: the season from a date and one pinned in Settings, kept thro
   // the daily's colour: a winter daily carries Gloom more often, a summer one Swift; the chronicler's calendar
   { let gloom = 0, swift = 0, gloomS = 0; for (let d = 1; d <= 28; d++) { if (CM.mutatorsFor(`daily-2026-01-${String(d).padStart(2, "0")}`).includes("gloom")) gloom++; if (CM.mutatorsFor(`daily-2026-07-${String(d).padStart(2, "0")}`).includes("swift")) swift++; if (CM.mutatorsFor(`daily-2026-07-${String(d).padStart(2, "0")}`).includes("gloom")) gloomS++; } assert.ok(gloom >= 12 && swift >= 12, `gloom ${gloom} swift ${swift}`); assert.ok(gloom > gloomS, "winter's gloom"); }
   const cal = CM.calendarOf([{ date: "3/4/2026", won: true }, { date: "3/9/2026", won: false }]); assert.strictEqual(cal.length, 12); assert.strictEqual(cal[2].runs, 2); assert.strictEqual(cal[2].crowns, 1); assert.strictEqual(cal[2].festival, "sowing"); assert.strictEqual(cal[0].season, "winter");
-  CM.store.set("settings", { skipWalk: true, season: "spring" });
+  CM.store.set("settings", { skipWalk: true, season: "spring", autoLand: false });
+});
+
+test("around the land: Automatic's day in the land (forage, the open cave with a pick, the farm, home by the gate), its kitchen and its forge, and the small hours' Homecoming when the party is heavy or worn; the simulator's and the word counter's tables; the land's words through CM.t", () => {
+  const CM = load();
+  // a day in the land: from the door, out by the gate, the nodes and the open cave, back, and down the shaft
+  const g = new CM.Game(); g.newGame("land-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.season = "spring"; g.bag.push(CM.pick("copper")); g.gold = 200;
+  const r = playRun(CM, g, { maxFloor: 2, land: true });
+  assert.ok((r.tools.foraged || 0) >= 2, `foraged ${r.tools.foraged}: ${r.log.slice(0, 8).join("|")}`); assert.ok((g.tally.mined || 0) >= 1 || r.log.some((l) => /cave/.test(l)), `the open cave: mined ${g.tally.mined}`); assert.ok(g.floor.number >= 1 || g.mode === "title", `and down the shaft: floor ${g.floor.number}`);
+  // the kitchen and the forge on the errands: dishes from the pack's things, grades from the bars
+  CM.store.set("village", Object.assign({}, g.village, { renown: 9000, spent: 0, levels: { home: 3, smith: 1 } }));
+  const g2 = new CM.Game(); g2.newGame("land-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g2.season = "spring"; g2.gold = 600;
+  g2.bag.push(CM.ingredient("flour"), CM.ingredient("egg"), CM.ingredient("egg"), CM.meat("Orc"), CM.ingredient("turnip")); const w = g2.party[0].weapon; for (let i = 0; i < 3; i++) g2.bag.push(CM.metalBar(CM.gradeCost(w).metal));
+  const r2 = playRun(CM, g2, { maxFloor: 1, land: false }); assert.ok((r2.tools.cooked || 0) >= 1, `cooked ${r2.tools.cooked}`); assert.ok((r2.tools.graded || 0) >= 1 && g2.party.some((h) => ["weapon", "armor", "offhand", "helm"].some((sl) => h[sl] && h[sl].grade >= 1)), `graded ${r2.tools.graded}`); void w; assert.ok((r2.tools.dishes || 0) >= 1 || g2.meal || g2.bag.some((i) => i.kind === "dish"), `and ate it: ${r2.tools.dishes}`);
+  // home for the night: the small hours, the party worn, a scroll in the pack
+  const g3 = new CM.Game(); g3.newGame("land-3", fixedParty(CM)); g3.enterFloor(3, "down"); g3.bag.push(CM.scroll("homecoming")); g3.clock = 24 * 60 - CM.CLOCK.start + 2 * 60; for (const h of g3.party) h.hp = Math.max(1, Math.floor(h.max * 0.3)); for (const [k, t] of Object.entries(g3.floor.things)) if (t.type === "monsters") delete g3.floor.things[k];
+  assert.ok(CM.isNight(g3) && CM.hourOf(g3) < 5); const auto = new CM.Autopilot(g3, { warp: true, wake: true, sync: true, land: false }); let n = 0; while (g3.floor.number !== 0 && auto.step() && n++ < 50) { /* a step at a time */ } assert.strictEqual(g3.floor.number, 0, `home for the night: ${auto.log.join("|")}`); assert.strictEqual(auto.tools.nightHome, 1);
+  // the tables: the simulator's land line, the word counter's land row, the text keys
+  const sim = fs.readFileSync(path.join(__dirname, "..", "tools", "sim.js"), "utf8"); assert.ok(sim.includes("--land") && sim.includes("the land:")); const wordsSrc = fs.readFileSync(path.join(__dirname, "..", "tools", "words.js"), "utf8"); assert.ok(wordsSrc.includes("CM.FESTIVALS") && wordsSrc.includes("CM.DISHES"));
+  assert.ok(CM.t("farm.title").includes("First Glade") && CM.t("hut.title").includes("hermit"));
+  CM.store.remove("village");
 });
 
 (async () => {

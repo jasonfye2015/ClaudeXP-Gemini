@@ -21,6 +21,17 @@ The upper carvings were cut by people who believed what they were told; the lowe
 upper carvings **lie** - not from malice, from distance - and the lower ones correct them. The codex shows the lie
 struck through once the truth is read.
 
+## The Deep Wood
+
+West of the town, through the gate at the end of the main lane, the Wood is the land the city never cleared: glades
+joined by paths under the trees, a river crossed at one ford (frozen and crossed anywhere in snow), the hermit's hut
+(a leatherworker by day, a shut door by night), the charcoal burner's clearing, a ruined shrine of the Order with one
+standing wall - THE ORDER KEPT THE DEAD IN THE TREES BEFORE IT KEPT THEM IN THE HILL - and three cave mouths, one open a
+day, each a short floor of the first bands' kinds with ore in the rock, and the Troll under the Hill beneath the third.
+The farm stands in the First Glade. By day the Wood is foraging and the deer and boar that run; by night the wolves,
+the bear and the bandits come to the party, and under a full moon a wolf that is more. The Wood gives no renown: hides,
+meat, honey, deadwood and the night's danger. It is the Root's land as much as the hill is; the shrine says so.
+
 ## The calendar
 
 The town keeps a year of twelve festivals, one a month, in the week around the fifteenth (the game reads the real

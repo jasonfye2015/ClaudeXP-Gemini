@@ -19,7 +19,8 @@ const DIFFS = opt("difficulty", "gentle,fair,grim").split(",");
 const ASCS = opt("ascension", "0").split(",").map(Number);              // the ladder report: --ascension 0,5,10,15 runs each rung
 const JSON_OUT = opt("json", null);
 const STORY = args.includes("--story");
-const TOWN = args.includes("--town");                                     // the run begins at the party's door and walks to the shaft
+const TOWN = args.includes("--town");
+const LAND = args.includes("--land");                                     // the bot takes its day in the land first: forages, mines the open cave, farms, cooks and forges (with --town)                                     // the run begins at the party's door and walks to the shaft
 const LOOT = args.includes("--loot");                                     // the hoard, measured: gold found and spent, things by rarity, floors to the first upgrade, what was used                                   // the story's gates, measured: chapters completed, guardians spoken past, endings
 
 function simulate(seed, difficulty, ascension = 0) {
@@ -30,11 +31,12 @@ function simulate(seed, difficulty, ascension = 0) {
   const byCamp = {};
   game.on("mode", (m) => { if (m === "camp") byCamp[game.floor.number] = game.party.map((h) => h.level); });
   const t0 = Date.now();
-  const r = playRun(CM, game, { maxFloor: TO });
+  const r = playRun(CM, game, { maxFloor: TO, land: LAND });
   const fl = game.floor ? game.floor.number : 0;
   return { seed, difficulty: ascension ? `${difficulty}/A${ascension}` : difficulty, ascension, floor: fl, died: game.mode === "title" && !game.bottom && !(game.crowned && fl === 20 && game.mode === "title"), crowned: Boolean(game.crowned), bottom: Boolean(game.bottom),
     reached: game.mode === "explore", fights: game.tally.fights, fled: game.tally.fled, steps: game.tally.steps, gold: game.gold, guardians: (game.tally.guardians || []).slice(),
     levels: game.party.map((h) => h.level), byCamp, stuck: r.stuck, notes: r.log, ms: Date.now() - t0, spent: game.tally.spent || {}, abilities: game.tally.abilities || {}, logLines: (game.runLog || []).length,
+    land: { foraged: r.tools.foraged || 0, mined: game.tally.mined || 0, farmed: r.tools.farmed || 0, cooked: r.tools.cooked || 0, dishes: r.tools.dishes || 0, graded: r.tools.graded || 0, nightHome: r.tools.nightHome || 0, tanned: game.tally.tanned || 0 },
     homecomings: game.tally.homecomings || 0, loot: { goldFound: game.tally.goldFound || 0, found: game.tally.found || {}, used: game.tally.used || {}, firstUpgrade: game.tally.firstUpgrade || {} },
     story: { read: Object.keys((game.story || {}).read || {}).length, chapters: CM.codex(game).filter((c) => c.band !== undefined && c.complete).map((c) => c.id), spoken: (game.tally.spoken || []).slice(), reminded: Boolean(game.reminded), bell: Boolean((game.story || {}).bell) } };
 }
@@ -65,6 +67,7 @@ for (const d of [...new Set(results.map((r) => r.difficulty))]) {
   console.log("  party level at the camp below floor: " + Object.entries(camps).sort((a, b) => a[0] - b[0]).map(([fl, ls]) => `${fl}: ${(ls.reduce((a, b) => a + b, 0) / ls.length).toFixed(1)} (${ls.length} got there)`).join(", "));
   const g = {};
   for (const r of rs) for (const id of r.guardians) g[id] = (g[id] || 0) + 1;
+  { const L = rs.map((r) => r.land || {}), sum = (k) => L.reduce((a, l) => a + (l[k] || 0), 0); console.log(`  the land: foraged ${(sum("foraged") / rs.length).toFixed(1)} a run, mined ${(sum("mined") / rs.length).toFixed(1)}, farm visits ${(sum("farmed") / rs.length).toFixed(1)}, cooked ${(sum("cooked") / rs.length).toFixed(1)}, dishes eaten ${(sum("dishes") / rs.length).toFixed(1)}, grades ${(sum("graded") / rs.length).toFixed(1)}, nights home by the scroll ${(sum("nightHome") / rs.length).toFixed(1)}`); }
   console.log("  guardians slain: " + (Object.entries(g).map(([id, n]) => `${id} ${n}`).join(", ") || "none"));
   const spent = {}, used = {};
   for (const r of rs) { for (const [k, v] of Object.entries(r.spent)) spent[k] = (spent[k] || 0) + v; for (const [k, v] of Object.entries(r.abilities)) used[k] = (used[k] || 0) + v; }

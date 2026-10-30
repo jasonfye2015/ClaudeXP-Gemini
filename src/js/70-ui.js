@@ -80,6 +80,7 @@ CM.UI = class {
   <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
   <div class="row"><label for="set-skipwalk">Skip the walk: a new run begins at the shaft's mouth, not at the party's door</label><input type="checkbox" id="set-skipwalk"></div>
   <div class="row"><label for="set-season">The season: the real date's, or one pinned for every new run</label><select id="set-season"><option value="">By the date</option><option value="spring">Spring</option><option value="summer">Summer</option><option value="autumn">Autumn</option><option value="winter">Winter</option></select></div>
+  <div class="row"><label for="set-autoland">Automatic takes a day in the land before the shaft: the Wood's nodes, the open cave with a pick, the farm</label><input type="checkbox" id="set-autoland"></div>
   <div class="row"><label for="set-render">Render scale - fewer pixels on a slow machine (Auto steps down when frames come late)</label><select id="set-render"><option value="auto">Auto</option><option value="full">Full</option><option value="three">Three quarters</option><option value="half">Half</option></select></div>
   <div class="row"><label for="set-speed">Combat speed - how long bolts fly and sparks hang</label><select id="set-speed"><option value="normal">Normal</option><option value="fast">Fast</option><option value="instant">As good as instant</option></select></div>
   <div class="row"><label for="set-text">Text size</label><select id="set-text"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select></div>
@@ -495,7 +496,8 @@ CM.UI = class {
     const g = this.game, L = g.villageLevel("farm"), F = g.farm(), head = this.$("#farm-head"), rows = this.$("#farm-rows"), more = this.$("#farm-more"); rows.innerHTML = ""; more.innerHTML = "";
     const act = (fn) => { this.$("#farm-note").textContent = fn() || "Done."; this.openFarm(); this.refresh(); };
     const btn = (into, text, fn, off) => { const b = document.createElement("button"); b.textContent = text; b.disabled = Boolean(off); b.addEventListener("click", () => act(fn)); into.appendChild(b); return b; };
-    if (L < 1) { head.textContent = "A fallow field, fenced long ago. The farm is raised at the town's board, with renown: a field first, then an orchard, a mill, hens, a cow."; return this.openDialog("#dlg-farm"); }
+    this.$("#dlg-farm h2").textContent = CM.t("farm.title"); this.$("#dlg-hut h2").textContent = CM.t("hut.title"); this.$("#dlg-hut .lore").textContent = CM.t("hut.lead");
+    if (L < 1) { head.textContent = CM.t("farm.fallow"); return this.openDialog("#dlg-farm"); }
     head.textContent = `${CM.season(g).charAt(0).toUpperCase() + CM.season(g).slice(1)}, day ${F.days + 1} of the farm. Level ${L}: ${CM.VILLAGE.farm.levels.slice(0, L).map((w) => w.split(":")[0].toLowerCase()).join(", ")}. A row grows a stage every dawn the party sees, and is cut at the fourth; past ripe three dawns, it rots.${F.scarecrow ? " A scarecrow stands." : " No scarecrow: crows take a ripe row in ten."}`;
     const seeds = g.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "seed");
     for (let i = 0; i < g.farmRows(); i++) { const r = F.rows[i], row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
@@ -845,11 +847,11 @@ CM.UI = class {
     speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB); render.value = s.render || "auto";
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
-    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false; skipWalk.checked = Boolean(s.skipWalk); this.$("#set-season").value = s.season || "";
+    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false; skipWalk.checked = Boolean(s.skipWalk); this.$("#set-season").value = s.season || ""; this.$("#set-autoland").checked = s.autoLand !== false;
     const note = () => { this.$("#set-look-note").textContent = CM.LOOKS[s.look] ? CM.LOOKS[s.look].what + "." : ""; };
     note();
     const apply = () => {
-      s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.season = this.$("#set-season").value || ""; s.tapMove = tap.checked; s.skipWalk = skipWalk.checked;
+      s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.season = this.$("#set-season").value || ""; s.autoLand = this.$("#set-autoland").checked; s.tapMove = tap.checked; s.skipWalk = skipWalk.checked;
       s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value; s.layout = layout.value;
       g.saveSettings();
       g.emit("settings", s);

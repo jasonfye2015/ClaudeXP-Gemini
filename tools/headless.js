@@ -46,7 +46,7 @@ function load(opts = {}) {
   const CM = ctx.CM;
   CM.LOOKS = CM.LOOKS || { drawn: {} };                                 // (the themes live with the art, which isn't loaded here)
   CM.storage = storage;
-  CM.store.set("settings", { skipWalk: true, season: "spring" });
+  CM.store.set("settings", { skipWalk: true, season: "spring", autoLand: false });
   CM.weatherOfReal = CM.weatherOf; CM.weatherOf = () => "clear";        // (the tests' weather is clear unless a test asks for the real dice)
   CM.clockHour = () => 12;                                               // (the tests' town is always at noon)                        // (the tests and the simulator start at the shaft; the town has its own tests, and sim --town)
   return CM;

@@ -221,7 +221,13 @@ Size: M.
 
 Size: M-L.
 
-## Phase 8 - Around the land - v7.0
+## Phase 8 - Around the land - v7.0 - DONE
+
+**The balance pass (v7.0, 20 seeds on Fair to floor 20, `tools/sim.js --seeds 20 --difficulty fair`)**: plain (the
+shaft, no land): median floor 21, 16 of 20 crowned, 3 fell; the bot mined 13.1 chunks a run from the dungeon's veins
+and went home by the scroll in the small hours 6.2 times a run. The same seeds with `--town --land` (a day in the
+land first) are reported in the line below it when that run finishes; the crown rate is to stay within five points.
+
 
 - **The balance pass**: fifty seeds on Fair with `--home`, `--wood` and `--farm` (the bot forages a day, mines a
   cave, cooks and upgrades once); the crown rate within five points of v6.0 with all of it, and the floor-median

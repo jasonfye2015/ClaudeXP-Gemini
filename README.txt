@@ -1303,6 +1303,19 @@ The calendar, the seasons and the festivals (the eighth big update, phase 7 - v6
   well's board says the day; the chronicler's house keeps the year's calendar with the runs marked on it.
   Test: "the calendar:".
 
+Around the land (the eighth big update, phase 8 - v7.0)
+  The update closes with the land in the loop. Automatic takes a day in the land in the game (a Settings checkbox,
+  on by default; the simulator with --land): out by the west gate by day, the Wood's nodes foraged, the open cave gone down with a pick and its
+  veins mined, the farm tended when it wants it, then home by the gate; at the door the kitchen makes what the pack's
+  things will (up to six dishes), at the forge the bars grade the worn things and the scrap is sold; and in the small
+  hours below, with the pack heavy or the party worn, a Scroll of Homecoming brings it home to sleep and back down by
+  the same scroll. The simulator prints a line for the land (foraged, mined, farm visits, cooked, dishes eaten,
+  grades, nights home). tools/words.js counts the land's words (the Wood's lines, the ores, the crops and foods, the
+  dishes, the tempers, the hermit's patterns, the festivals and the favourites' lines), and the farm's and the hut's
+  headers go through CM.t. The lore bible gains the Wood's page beside the calendar's table. The gamepad walks the new
+  dialogs' buttons as it walks the old; the sky bar's tap tells the hour and the date; a film turns the sky as the run
+  did. The balance pass is written up in UPGRADE_PLAN_6.md. Test: "around the land".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
