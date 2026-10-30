@@ -147,6 +147,22 @@ CM.SCATTER = [
   { prop: "bones", where: { bands: [0, 3, 8], near: "wall" }, per: 0.07, most: 1 },
   { prop: "skull", where: { bands: [0, 8], near: "corner" }, per: 0.35, most: 1 },
 ];
+// on the dungeon's walls, by band: [decal, chance a wall face has it]; the first that the face's hash falls under is drawn
+CM.WALL_DECALS = {
+  0: [["crack", 0.08], ["niche", 0.13], ["sconce", 0.16]],
+  1: [["wet", 0.12], ["moss", 0.22], ["crack", 0.27]],
+  2: [["crack", 0.06], ["chains", 0.09], ["sconce", 0.13]],
+  3: [["banner", 0.08], ["crack", 0.12], ["frost", 0.18]],
+  4: [["wet", 0.14], ["moss", 0.26]],
+  5: [["moss", 0.2], ["wet", 0.26]],
+  6: [["crack", 0.1]],
+  7: [["chains", 0.08], ["soot", 0.2], ["crack", 0.25]],
+  8: [["niche", 0.15], ["crack", 0.22]],
+  9: [["roots", 0.25], ["crack", 0.3]],
+};
+// overhead, by band: beams across, or things hanging (stalactites, roots); `per` the chance a square has one
+CM.OVERHEAD = { 2: { id: "beam", how: "beam", per: 0.22 }, 7: { id: "beam", how: "beam", per: 0.2 }, 3: { id: "rib", how: "beam", per: 0.12 },
+  6: { id: "stalactite", how: "hang", per: 0.18, w: 0.4, h: 0.32 }, 9: { id: "hangroot", how: "hang", per: 0.22, w: 0.6, h: 0.42 }, 1: { id: "stalactite", how: "hang", per: 0.06, w: 0.3, h: 0.22 } };
 CM.DETAIL = { low: 0, medium: 0.6, high: 1 };
 CM.TRACES_MOST = 40;                                                    // a floor keeps this many traces; the oldest go first
 // the floor's traces as props to draw (every Detail shows them: they are the party's own doing)

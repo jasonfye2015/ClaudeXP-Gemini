@@ -179,7 +179,17 @@ on the floor), and films (they replay the moves, so the traces come back as the 
 - **Tests**: a potion drunk leaves a bottle where it was drunk; a fight leaves remains by the kind; traces survive a save
   and come back; the forty-first trace drops the first; a save's size grows by no more than a set amount per floor.
 
-## Phase 5 - Walls, floors and ceilings with variation - v8.6 (medium)
+## Phase 5 - Walls, floors and ceilings with variation - v8.6 (medium) - DONE
+
+Built in `CM.floorMesh`, below ground only: every floor and ceiling square turned a quarter-turn and mirrored by hash;
+a shade at each corner of the floor and the ceiling, darker by the walls round it (ambient occlusion, baked); the foot
+of every wall darker than its top, and darker again where it meets a side wall. Wall decals by band
+(`CM.WALL_DECALS`: cracks, moss, wet stains, roots, chains with a ring, empty sconces, skull niches, torn banners,
+frost, soot), never on a hidden door's wall, a lever's or a carving's; overhead (`CM.OVERHEAD`) beams in the Dwarven
+Halls and the Foundry, thin ribs in the Palace, stalactites in the Crystal Caverns and a few in the Flooded Vaults,
+roots at the Root. All drawn in code for both looks (Pixel in pixels); the ambientCG Leaking decals were not needed.
+Not done: doorway lintels (the doors are pictures across the cell; a frame round them wants the door code changed),
+and tile variants from the sets (the turns did the work). Test: "walls, floors and ceilings with variation".
 
 - **Tile variants**: each band's floor and wall get two or three variants (the sets have them: Crawl's numbered tiles,
   a photograph cropped three ways) and a turn per square by hash, so no two neighbours repeat.

@@ -3096,6 +3096,39 @@ test("traces: a drunk potion leaves its bottle where it was drunk, a fight its r
   g.mode = "camp"; const before = fl.traces.length; g.trace("stub", 1, 1); assert.strictEqual(fl.traces.length, before);
 });
 
+test("walls, floors and ceilings with variation: squares turned by hash, corners darkened, decals by band and never on a secret, a lever or a carving, beams and stalactites overhead; the surface untouched", () => {
+  const CM = load();
+  const index = { wall: 0, wall2: 1, wallbones: 2, wallsecret: 3, floor: 4, ceiling: 5 }; let n = 6;
+  for (const id of ["crack", "moss", "wet", "roots", "chains", "sconce", "niche", "banner", "frost", "soot"]) index[`decal:${id}`] = n++;
+  for (const id of ["beam", "rib", "stalactite", "hangroot"]) index[`over:${id}`] = n++;
+  const decalLayers = new Set(Object.entries(index).filter(([k]) => k.startsWith("decal:")).map(([, v]) => v));
+  const verts = (m) => { const out = []; for (let i = 0; i < m.data.length; i += CM.MESH_STRIDE) out.push(m.data.slice(i, i + CM.MESH_STRIDE)); return out; };
+  // the floor squares wear different turns: their first vertices' uvs are not all the same
+  const f3 = CM.makeFloor(3, "vary-1"), m3 = CM.floorMesh(f3, CM.THEMES[0], index), v3 = verts(m3);
+  const floorUVs = new Set(v3.filter((v) => v[5] === index.floor && v[1] === 0).map((v) => `${v[3]},${v[4]}`)); assert.ok(floorUVs.size >= 4, `turned and mirrored: ${floorUVs.size} corners`);
+  // a corner by two walls is darker than the middle of a room
+  const shades = v3.filter((v) => v[5] === index.floor).map((v) => v[6]); assert.ok(Math.min(...shades) < 0.7 && Math.max(...shades) > 0.9, `${Math.min(...shades)}..${Math.max(...shades)}`);
+  // decals by band, and overhead
+  let decals = 0, beams = 0, stalactites = 0;
+  for (const [num, seed] of [[3, "vary-1"], [8, "vary-1"], [13, "vary-1"], [18, "vary-1"], [33, "vary-1"], [48, "vary-1"]]) {
+    const fl = CM.makeFloor(num, seed), m = CM.floorMesh(fl, CM.themeFor(num), index); decals += m.decals;
+    if (num === 13) beams = m.overhead; if (num === 33) stalactites = m.overhead;
+    // never on a secret door's wall, a lever's or a carving's: walk every decal quad back to its square and face
+    const vs = verts(m).filter((v) => decalLayers.has(v[5]));
+    for (let i = 0; i < vs.length; i += 6) {
+      const xs = vs.slice(i, i + 6), cx = xs.reduce((s, v) => s + v[0], 0) / 6, cz = xs.reduce((s, v) => s + v[2], 0) / 6;
+      const wx = Math.floor(cx + (cx % 1 > 0.9 ? 0.5 : cx % 1 < 0.1 ? -0.5 : 0)), wz = Math.floor(cz + (cz % 1 > 0.9 ? 0.5 : cz % 1 < 0.1 ? -0.5 : 0));
+      for (const [k, f] of Object.entries(fl.features)) if (f.type === "secret" && !f.found) { const [sx, sy] = k.split(",").map(Number); assert.ok(!(Math.abs(cx - (sx + 0.5)) <= 0.51 && Math.abs(cz - (sy + 0.5)) <= 0.51), `a decal gives away the secret door at ${k} on floor ${num}`); }
+    }
+  }
+  assert.ok(decals > 20, `${decals} decals`); assert.ok(beams > 0, "beams over the Dwarven Halls"); assert.ok(stalactites > 0, "stalactites in the Crystal Caverns");
+  assert.strictEqual(CM.floorMesh(f3, CM.THEMES[0], index, { decals: false }).decals, 0);
+  // the town: none of it
+  const town = CM.makeTown("vary-1"), mt = CM.floorMesh(town, CM.TOWN_THEME, index); assert.strictEqual(mt.decals, 0); assert.strictEqual(mt.overhead, 0);
+  // the floor is the seed's: the same twice
+  assert.deepStrictEqual(CM.floorMesh(CM.makeFloor(13, "vary-1"), CM.THEMES[2], index).data, CM.floorMesh(CM.makeFloor(13, "vary-1"), CM.THEMES[2], index).data);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
