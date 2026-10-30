@@ -39,7 +39,7 @@ Object.assign(CM.Game.prototype, {
     entry.titles = (this.earned || []).slice();
     entry.renown = CM.renownFor(entry, this);
     this.village.renown = (this.village.renown || 0) + entry.renown;
-    this.noteRoster(entry); this.returnTomes();                          // (the guildhall's roster; the library's tome back on the shelf)
+    this.noteRoster(entry); this.returnTomes(); this.growBeds();                          // (the guildhall's roster; the library's tome back on the shelf)
     entry.chapters = this.payChapters(entry);
     this.saveVillage();
     this.checkContracts(entry);

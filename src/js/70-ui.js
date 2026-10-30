@@ -149,6 +149,10 @@ CM.UI = class {
 <div class="dialog" id="dlg-guild"><div class="box journalbox"><h2>The Guildhall</h2>
   <p class="small" id="guild-what"></p><div id="guild-rooms"></div><div class="small" id="guild-note"></div>
   <div class="end"><button id="btn-guild-build">Build</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-chronicler"><div class="box journalbox"><h2>The Chronicler's House</h2>
+  <p class="small">Wren keeps the town's memory dry: the films of runs, the statistics, the ledger, the Hall of Fame and the memorial's book.</p>
+  <div id="chronicler-rooms"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-building"><div class="box"><h2 id="building-title">A door</h2>
   <p class="small" id="building-what"></p><div class="small" id="building-levels"></div><div class="small" id="building-note"></div>
   <div class="end"><button id="btn-building-build">Build</button><button class="close">Close</button></div></div></div>
@@ -283,7 +287,7 @@ CM.UI = class {
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
     game.on("choice", (c) => this.askChoice(c));
-    game.on("building", (id) => { if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else this.openBuilding(id); });
+    game.on("building", (id) => { if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else if (id === "garden" && game.villageLevel("garden") >= 1) this.openGarden(); else if (id === "chronicler" && game.villageLevel("chronicler") >= 1) this.openChronicler(); else this.openBuilding(id); });
     this.$("#btn-library-build").addEventListener("click", () => { this.$("#library-note").textContent = game.build("library") || "The library rises a level."; this.openLibrary(true); });
     this.$("#btn-guild-build").addEventListener("click", () => { this.$("#guild-note").textContent = game.build("guildhall") || "The guildhall rises a level."; this.openGuild(true); });
     this.$("#btn-home-build").addEventListener("click", () => { this.$("#home-note").textContent = game.build("home") || "The house rises a level."; this.openHome(true); });
@@ -469,6 +473,26 @@ CM.UI = class {
   }
   // ---- the village ----
   openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
+  // the garden: the beds above the alchemist's bench
+  openGarden() {
+    const g = this.game, root = this.$("#dlg-alchemist .box"), old = root.querySelector("#garden-town"); if (old) old.remove();
+    const G = g.garden(), beds = g.bedsOf(), extra = document.createElement("div"); extra.id = "garden-town";
+    extra.innerHTML = `<div class="list-title">The beds (${G.beds.length} of ${beds} planted; a bed grows one more every run that ends, up to ${CM.BED_MAX})</div>`;
+    G.beds.forEach((b, i) => { const btn = document.createElement("button"); btn.textContent = `Harvest ${CM.plural(b.n, CM.INGREDIENTS[b.ingredient].name)}`; btn.addEventListener("click", () => { const n = g.harvest(i); if (n) g.say(n); this.openGarden(); this.refresh(); }); extra.appendChild(btn); });
+    if (G.beds.length < beds) g.bag.forEach((it, row) => { if (it.kind !== "ingredient") return; const btn = document.createElement("button"); btn.textContent = `Plant ${it.name}`; btn.addEventListener("click", () => { const n = g.plant(row); if (n) g.say(n); this.openGarden(); this.refresh(); }); extra.appendChild(btn); });
+    root.insertBefore(extra, root.querySelector(".end"));
+    this.renderAlchemist(); this.openDialog("#dlg-alchemist");
+  }
+  // the chronicler's house: the title's boards under one roof
+  openChronicler() {
+    const g = this.game, box = this.$("#chronicler-rooms"); box.innerHTML = "";
+    const room = (title) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
+    { const r = room("The table"); const f = document.createElement("button"); f.textContent = "The films of runs"; f.addEventListener("click", () => this.openFilms()); r.appendChild(f); const s = document.createElement("button"); s.textContent = "The statistics"; s.addEventListener("click", () => this.openStats()); r.appendChild(s); }
+    { const r = room("The Hall of Fame"); const fame = (g.fame || []).slice(0, 10); r.innerHTML = fame.length ? fame.map((e) => `<div class="small"><b>${this.esc(e.name)}</b>: ${e.won ? "crowned" : e.bottom ? "to the bottom of the world" : `fell on floor ${e.floor}`}, ${e.gold.toLocaleString()} gold, ${this.esc(e.date)} (${this.esc(e.party.join(", "))})</div>`).join("") : "<div class='small'>No run has ended yet.</div>"; }
+    { const r = room("The ledger"); const led = (g.ledger || []).slice(-10).reverse(); r.innerHTML = led.length ? led.map((l) => `<div class="small">${this.esc(l.d)}: ${this.esc(l.sd)}, floor ${l.f}${l.w ? ", crowned" : ""}${l.b ? ", the bottom" : ""} - ${l.k} slain, ${l.s} steps, ${l.g} gold</div>`).join("") : "<div class='small'>Nothing written yet.</div>"; }
+    { const r = room("The memorial's book"); const m = (g.memorial || []).slice(0, 12); r.innerHTML = m.length ? m.map((x) => `<div class="small"><b>${this.esc(x.name)}</b> the ${x.cls}, level ${x.level}, floor ${x.floor}${x.candle ? " - a candle burns" : ""}${x.epitaph ? ` - "${this.esc(x.epitaph)}"` : ""}</div>`).join("") : "<div class='small'>No names. May it stay so.</div>"; }
+    this.openDialog("#dlg-chronicler");
+  }
   // the library: the desk (the journal's boards), Wren's copying, the tomes, the shelved pages, the gazetteer
   openLibrary(keepNote) {
     const g = this.game, V = CM.VILLAGE.library, lvl = g.villageLevel("library"), L = g.libraryState(), box = this.$("#library-rooms"), note = this.$("#library-note");

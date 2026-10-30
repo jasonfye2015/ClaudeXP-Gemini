@@ -10,7 +10,7 @@ const path = require("path");
 const vm = require("vm");
 
 const SRC = path.join(__dirname, "..", "src", "js");
-const RULES = ["00-util.js", "10-data.js", "12-text.js", "13-lore.js", "14-items.js", "20-world.js", "21-gen1.js", "22-gen2.js", "23-town.js", "25-saves.js", "60-game.js", "61-explore.js", "62-combat.js", "63-camp.js", "64-meta.js", "65-village.js", "66-auto.js", "67-home.js", "68-shops.js", "69-halls.js"];
+const RULES = ["00-util.js", "10-data.js", "12-text.js", "13-lore.js", "14-items.js", "20-world.js", "21-gen1.js", "22-gen2.js", "23-town.js", "25-saves.js", "60-game.js", "61-explore.js", "62-combat.js", "63-camp.js", "64-meta.js", "65-village.js", "66-auto.js", "67-home.js", "68-shops.js", "69-halls.js", "69b-square.js"];
 
 // a localStorage: quota is how many characters it holds before it throws, the way a full browser does
 function makeStorage(quota = Infinity) {
@@ -46,7 +46,8 @@ function load(opts = {}) {
   const CM = ctx.CM;
   CM.LOOKS = CM.LOOKS || { drawn: {} };                                 // (the themes live with the art, which isn't loaded here)
   CM.storage = storage;
-  CM.store.set("settings", { skipWalk: true });                        // (the tests and the simulator start at the shaft; the town has its own tests, and sim --town)
+  CM.store.set("settings", { skipWalk: true });
+  CM.clockHour = () => 12;                                               // (the tests' town is always at noon)                        // (the tests and the simulator start at the shaft; the town has its own tests, and sim --town)
   return CM;
 }
 

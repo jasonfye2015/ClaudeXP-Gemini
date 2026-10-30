@@ -2479,6 +2479,32 @@ test("the library, the temple and the guildhall: a tome borrowed for a run and b
   for (let i = 0; i < 14; i++) { const gx = new CM.Game(); gx.newGame(`halls-roster-${i}`, fixedParty(CM, `p${i}`)); gx.enterFloor(2, "down"); for (const h of gx.party) h.hp = 0; gx.endRun(false); } assert.strictEqual(new CM.Game().roster().length, CM.ROSTER_MAX, "twelve, and no more");
 });
 
+test("the garden, the chronicler and the square: a bed planted grows by one a run and is harvested; the bench and the request in the garden at town prices; market day's peddler on the week's seed; three townsfolk with a line a day; the well's coin for the town; the lanterns at night", () => {
+  const CM = load();
+  assert.ok(CM.VILLAGE.garden && CM.VILLAGE.chronicler && CM.TOWNSFOLK.length === 3 && CM.TOWNSFOLK.every((t) => t.lines.length === 4));
+  const g = new CM.Game(); g.village.renown = 9000; g.build("garden"); g.newGame("square-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  // the beds: one at level one; a bed grows one more every run that ends; harvested, it gives them all
+  g.bag.push(CM.ingredient("gravemoss"), CM.ingredient("gravemoss"), CM.ration()); assert.ok(g.plant(g.bag.length - 1).includes("ingredient")); assert.strictEqual(g.plant(g.bag.length - 2), ""); assert.strictEqual(g.garden().beds.length, 1); assert.ok(g.plant(g.bag.findIndex((i) => i.ingredient === "gravemoss")).includes("Every bed"));
+  assert.strictEqual(CM.store.get("village", {}).garden.beds[0].n, 1);
+  g.enterFloor(2, "down"); for (const h of g.party) h.hp = 0; g.endRun(false); assert.strictEqual(CM.store.get("village", {}).garden.beds[0].n, 2, "grown by one when the run ended");
+  for (let i = 0; i < 5; i++) { const gx = new CM.Game(); gx.newGame(`square-grow-${i}`, fixedParty(CM)); gx.enterFloor(2, "down"); for (const h of gx.party) h.hp = 0; gx.endRun(false); } assert.strictEqual(CM.store.get("village", {}).garden.beds[0].n, CM.BED_MAX, "and no more than five");
+  const g2 = new CM.Game(); g2.newGame("square-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const moss = () => g2.bag.filter((i) => i.ingredient === "gravemoss").length; const m0 = moss(); assert.strictEqual(g2.harvest(0), ""); assert.strictEqual(moss(), m0 + 5); assert.strictEqual(g2.garden().beds.length, 0);
+  // the bench in town, at town prices (no kit's fifth); the request once the garden has three beds
+  g2.gold = 500; g2.bag.push(CM.ingredient("forgesoot")); const gb = g2.gold; assert.strictEqual(g2.brew("flaskoil"), ""); assert.strictEqual(gb - g2.gold, 20, "the camp's price, not the kit's");
+  assert.ok(g2.deliver().includes("three beds")); g2.village.renown = 9000; g2.build("garden"); g2.build("garden"); assert.strictEqual(g2.bedsOf(), 3); const want = g2.alchemistWants(); g2.bag.push(CM.ingredient(want), CM.ingredient(want), CM.ingredient(want)); assert.strictEqual(g2.deliver(), ""); assert.ok(g2.alchemistFree);
+  // market day: the peddler's cloth is in the square on the week's seed, and only then; the townsfolk stand on the lanes
+  const market = CM.makeTown(CM.weeklySeed()), plain = CM.makeTown("square-3"); assert.ok(Object.values(market.things).some((t) => t.type === "peddler"), "market day"); assert.ok(!Object.values(plain.things).some((t) => t.type === "peddler")); assert.strictEqual(CM.floorPrint(market), CM.floorPrint(plain), "the same town, peddler or no");
+  const folk = Object.entries(plain.things).filter(([, t]) => t.type === "villager"); assert.strictEqual(folk.length, 3); for (const [k] of folk) { const [x, y] = k.split(",").map(Number); assert.ok(CM.isOpen(plain, x, y)); }
+  assert.notStrictEqual(JSON.stringify(folk.map(([k]) => k)), JSON.stringify(Object.entries(CM.makeTown("square-4").things).filter(([, t]) => t.type === "villager").map(([k]) => k)), "where they stand is the seed's");
+  const g3 = new CM.Game(); g3.newGame("square-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); let heard = null; g3.on("talk", (t) => { heard = t; });
+  g3.floor.pos = folk[0][0].split(",").map(Number); g3.use(); assert.ok(heard && heard.title === CM.TOWNSFOLK[folk[0][1].who].name && CM.TOWNSFOLK[folk[0][1].who].lines.includes(heard.text), "a line a day");
+  // the well: the notice board, and a coin for the town once a visit; night by the clock
+  const ren = g3.village.renown || 0; g3.gold = 10; g3.floor.pos = CM.TOWN_AT.well.slice(); g3.use(); assert.ok(heard.title === "The square" && heard.text.includes(CM.weeklySeed())); assert.strictEqual(g3.gold, 9); assert.strictEqual(g3.village.renown, ren + 1); g3.use(); assert.strictEqual(g3.gold, 9, "one coin a visit");
+  assert.strictEqual(g3.lightFactor(), 1.3); const was = CM.clockHour; CM.clockHour = () => 23; assert.strictEqual(g3.lightFactor(), 0.8, "the lanterns"); CM.clockHour = was;
+  // the chronicler's house holds what the title's boards hold
+  assert.ok(Array.isArray(CM.store.get("films", [])) && CM.store.get("films", []).length >= 1, "films to watch at the table"); assert.ok((new CM.Game()).ledger.length >= 6 && (new CM.Game()).fame.length >= 6);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

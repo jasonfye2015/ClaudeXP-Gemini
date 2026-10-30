@@ -130,7 +130,8 @@ Object.assign(CM.Game.prototype, {
           node: `${(CM.NODES[thing.band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[thing.band] || CM.NODES[0])[0].slice(1)}: something the alchemist would want. (Space to gather it)`,
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)",
           building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - a foundation, waiting for a roof"}. (Space to go in)` : "",
-          well: "The square's well, under its little roof. (Space to look down it)" }[thing.type]);
+          well: "The square's well, under its little roof, and the notice board beside it. (Space to look down it)",
+          villager: thing.type === "villager" ? `${(CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length] || {}).who || "someone"}. (Space to pass the time of day)` : "" }[thing.type]);
       }
     }
     if (f) this.arrive(f, k);
@@ -270,7 +271,7 @@ Object.assign(CM.Game.prototype, {
 
   // how far the party can see, as a share of the depth's reach
   lightFactor() {
-    if (this.floor && this.floor.number === 0) return 1.3;               // (daylight)
+    if (this.floor && this.floor.number === 0) return CM.townNight() ? 0.8 : 1.3;   // (daylight, or the lanterns)
     const l = this.light, spell = this.spellLight > 0;
     if (this.inDark()) return spell ? 0.7 : l.kind === "lantern" ? 0.45 : 0.25;
     let f = l.kind === "lantern" ? 1.15 : l.kind === "glow" ? 0.6 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
@@ -349,7 +350,8 @@ Object.assign(CM.Game.prototype, {
     if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.inUse = true; this.talk(thing, k); this.inUse = false; return; }
     if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
     if (thing && thing.type === "building") { this.emit("building", thing.id); return; }
-    if (thing && thing.type === "well") { const won = (this.fame || []).some((e) => e.won); this.say(won ? `The well runs clear since the crown came up. The party drinks, and is ${this.moraleWord().toLowerCase()}.` : "The well is dry, and has been since the shaft was dug. The old ones say it runs again when a crown comes up."); return; }
+    if (thing && thing.type === "well") { this.well(); return; }
+    if (thing && thing.type === "villager") { this.talkTownsfolk(thing); return; }
     if (thing && thing.type === "node") { this.gather(thing, k); return; }
     if (thing && thing.type === "strongbox") { this.openStrongbox(thing, k); return; }
     if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
@@ -689,9 +691,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", node: "something growing", building: "a door", well: "the well", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
+  event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {

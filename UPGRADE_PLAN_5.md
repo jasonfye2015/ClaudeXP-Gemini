@@ -108,7 +108,7 @@ Size: M.
 
 Size: M.
 
-## Phase 4 - The garden, the chronicler and the square - v5.6
+## Phase 4 - The garden, the chronicler and the square - v5.6 - DONE
 
 - **The alchemist's garden**: ingredients planted between runs (a bed holds three; each run that ends, a bed
   grows one more of what was planted, up to five), the brewing bench with every recipe at town prices, and the

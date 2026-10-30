@@ -847,7 +847,7 @@ Object.assign(CM.Game.prototype, {
   // the alchemist's request: three of the band's ingredient this camp, and the next brew is free
   alchemistWants() { const band = CM.themeIndex(this.floor ? this.floor.number : 1); return Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band && !CM.INGREDIENTS[id].rare) || "gravemoss"; },
   deliver() {
-    if (this.mode !== "camp") return "The alchemist is at the camp.";
+    if (!(this.mode === "camp" || (this.inTown() && this.villageLevel("garden") >= 3))) return "The alchemist is at the camp, and in the garden once it has three beds.";
     const want = this.alchemistWants(), rows = this.bag.map((i, idx) => (i.kind === "ingredient" && i.ingredient === want ? idx : -1)).filter((i) => i >= 0);
     if (rows.length < 3) return `She wants three of ${CM.INGREDIENTS[want].name}; the pack has ${rows.length}.`;
     if (this.alchemistFree) return "The next brew is free already.";
@@ -1013,18 +1013,19 @@ Object.assign(CM.Game.prototype, {
       used.push(idx);
     }
     if (r.needs.triple) { const count = {}; for (const i of this.bag) if (i.kind === "ingredient" && !CM.INGREDIENTS[i.ingredient].rare) count[i.ingredient] = (count[i.ingredient] || 0) + 1; if (!Object.values(count).some((n) => n >= 3)) return "She wants three of one band's ingredient, alike."; }
-    const price = this.alchemistFree ? 0 : Math.ceil(r.gold * (this.mode !== "camp" ? CM.KIT_PRICE : 1));
+    const price = this.alchemistFree ? 0 : Math.ceil(r.gold * (this.mode !== "camp" && !this.inTown() ? CM.KIT_PRICE : 1));
     if (this.gold < price) return `She asks ${price} gold for the ${r.name}.`;
     if (r.makes === "greaterheal" && this.asc("nogreater")) return "No greater potions, this high on the ladder.";
     return "";
   },
   brew(id) {
     const kit = this.bag.some((i) => i.kind === "kit");
-    if (this.mode !== "camp" && !(this.mode === "explore" && kit)) return "The alchemist is at the camp.";
+    if (this.inTown() && this.villageLevel("garden") < 1) return "The garden has no bench yet.";
+    if (this.mode !== "camp" && !(this.mode === "explore" && kit) && !this.inTown()) return "The alchemist is at the camp.";
     const lacks = this.recipeLacks(id);
     if (lacks) return lacks;
     this.logAct("brew", id);
-    const r = CM.RECIPES[id], used = [], onFloor = this.mode !== "camp";
+    const r = CM.RECIPES[id], used = [], onFloor = this.mode !== "camp" && !this.inTown();
     if (r.needs.triple) {                                                // transmutation: three alike into one of the band below's
       const count = {}; for (const i of this.bag) if (i.kind === "ingredient" && !CM.INGREDIENTS[i.ingredient].rare) count[i.ingredient] = (count[i.ingredient] || 0) + 1;
       const from = Object.keys(count).find((k) => count[k] >= 3), band = CM.INGREDIENTS[from].band, to = Object.keys(CM.INGREDIENTS).find((k) => CM.INGREDIENTS[k].band === Math.min(9, band + 1) && !CM.INGREDIENTS[k].rare);

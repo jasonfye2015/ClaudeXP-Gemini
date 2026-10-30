@@ -35,6 +35,9 @@ CM.makeTown = function (seed) {
     else if (id === "well") things[`${x},${y}`] = { type: "well" };
     else things[`${x},${y}`] = { type: "building", id };
   }
+  if (String(seed).startsWith("weekly-")) things["8,10"] = { type: "peddler", stock: null };   // market day: a peddler's cloth in the square, on the week's seed
+  const lane = []; for (let x = 2; x <= 16; x++) if (x !== 9 && x !== 4 && x !== 14) lane.push([x, 9]); for (const [x, y] of [[8, 8], [10, 8], [8, 10], [10, 10], [11, 7], [7, 11]]) lane.push([x, y]);
+  for (let i = 0; i < 3; i++) { let k = CM.hashSeed(`${seed}:folk:${i}`) % lane.length, guard = 0; while (things[`${lane[k][0]},${lane[k][1]}`] && guard++ < lane.length) k = (k + 1) % lane.length; things[`${lane[k][0]},${lane[k][1]}`] = { type: "villager", who: i }; }   // three townsfolk, by the seed
   const seen = []; for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) seen.push([x, y]);   // (daylight: the whole town is on the map)
   return { number: 0, grid, pos: CM.TOWN_AT.home.slice(), facing: 1, things, features, dark: [], seen, rooms: [{ x0: 7, y0: 7, x1: 11, y1: 11, name: "The Square" }], decor: [], special: "town" };
 };

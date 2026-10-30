@@ -1119,6 +1119,20 @@ The library, the temple and the guildhall (the seventh big update, phase 3 - v5.
   with the last party that came home.
   Test: "the library, the temple and the guildhall".
 
+The garden, the chronicler and the square (the seventh big update, phase 4 - v5.6)
+  The Alchemist's Garden (CM.VILLAGE.garden: 100, 300, 700 renown): one, two, three beds - an ingredient from the
+  pack planted in a bed grows one more every run that ends, up to five, and is harvested whole - the alchemist's
+  brewing bench at the camp's price (no field kit's fifth in town), and at three beds the alchemist's request may
+  be delivered here. The Chronicler's House (100 renown): the films, the statistics, the Hall of Fame, the ledger
+  and the memorial's book under Wren's roof; the title keeps its boards too. The square: the well, with the notice
+  board beside it (the week's seed, the day's, and market day), a drink when it runs (after the first crown), and
+  a coin thrown for the town once a visit (1 gold, 1 renown); market day on the week's seed, a peddler's cloth in
+  the square; three townsfolk on the lanes, where the seed puts them, each with a line a day from the hill's own
+  story (Marget's granddaughter, the bell-founder's boy, the sexton's widow: CM.TOWNSFOLK); and the lanterns lit
+  when the clock says night (CM.clockHour: the town is dimmer, and the title card says so). Everything in the
+  square is a thing on the floor, so the town's fingerprint never changes and a save of it never drifts.
+  Test: "the garden, the chronicler and the square".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

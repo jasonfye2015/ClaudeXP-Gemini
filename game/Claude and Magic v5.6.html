@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v5.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v5.6 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -430,7 +430,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "5.5", built: "2026-10-30" };
+const CM = window.CM = { version: "5.6", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -4256,6 +4256,9 @@ CM.makeTown = function (seed) {
     else if (id === "well") things[`${x},${y}`] = { type: "well" };
     else things[`${x},${y}`] = { type: "building", id };
   }
+  if (String(seed).startsWith("weekly-")) things["8,10"] = { type: "peddler", stock: null };   // market day: a peddler's cloth in the square, on the week's seed
+  const lane = []; for (let x = 2; x <= 16; x++) if (x !== 9 && x !== 4 && x !== 14) lane.push([x, 9]); for (const [x, y] of [[8, 8], [10, 8], [8, 10], [10, 10], [11, 7], [7, 11]]) lane.push([x, y]);
+  for (let i = 0; i < 3; i++) { let k = CM.hashSeed(`${seed}:folk:${i}`) % lane.length, guard = 0; while (things[`${lane[k][0]},${lane[k][1]}`] && guard++ < lane.length) k = (k + 1) % lane.length; things[`${lane[k][0]},${lane[k][1]}`] = { type: "villager", who: i }; }   // three townsfolk, by the seed
   const seen = []; for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) seen.push([x, y]);   // (daylight: the whole town is on the map)
   return { number: 0, grid, pos: CM.TOWN_AT.home.slice(), facing: 1, things, features, dark: [], seen, rooms: [{ x0: 7, y0: 7, x1: 11, y1: 11, name: "The Square" }], decor: [], special: "town" };
 };
@@ -7238,7 +7241,7 @@ CM.Game = class {
     if (fresh) for (const h of this.alive()) if (CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "haunted")) this.afflict(h, "curse", "the haunted thing");
     if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }
     for (const h of this.alive()) if (h.cls === "Necromancer" && !h.familiar && h.level >= CM.FAMILIAR_AT) { h.familiar = "skull"; this.say(`A skull on ${h.name}'s belt opens its jaws: ${CM.FAMILIARS.skull.what}.`); }
-    if (fresh && this.has("pilgrim")) { const xp = 60 * number; for (const h of this.alive()) h.xp += xp; this.say(`Pilgrim: ${xp} experience each, for the floor itself.`); }
+    if (fresh && this.has("pilgrim") && number > 0) { const xp = 60 * number; for (const h of this.alive()) h.xp += xp; this.say(`Pilgrim: ${xp} experience each, for the floor itself.`); }
     this.setMode("explore");
     this.look();
     this.emit("floor", fl);
@@ -7427,7 +7430,8 @@ Object.assign(CM.Game.prototype, {
           node: `${(CM.NODES[thing.band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[thing.band] || CM.NODES[0])[0].slice(1)}: something the alchemist would want. (Space to gather it)`,
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)",
           building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - a foundation, waiting for a roof"}. (Space to go in)` : "",
-          well: "The square's well, under its little roof. (Space to look down it)" }[thing.type]);
+          well: "The square's well, under its little roof, and the notice board beside it. (Space to look down it)",
+          villager: thing.type === "villager" ? `${(CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length] || {}).who || "someone"}. (Space to pass the time of day)` : "" }[thing.type]);
       }
     }
     if (f) this.arrive(f, k);
@@ -7567,7 +7571,7 @@ Object.assign(CM.Game.prototype, {
 
   // how far the party can see, as a share of the depth's reach
   lightFactor() {
-    if (this.floor && this.floor.number === 0) return 1.3;               // (daylight)
+    if (this.floor && this.floor.number === 0) return CM.townNight() ? 0.8 : 1.3;   // (daylight, or the lanterns)
     const l = this.light, spell = this.spellLight > 0;
     if (this.inDark()) return spell ? 0.7 : l.kind === "lantern" ? 0.45 : 0.25;
     let f = l.kind === "lantern" ? 1.15 : l.kind === "glow" ? 0.6 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
@@ -7646,7 +7650,8 @@ Object.assign(CM.Game.prototype, {
     if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.inUse = true; this.talk(thing, k); this.inUse = false; return; }
     if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
     if (thing && thing.type === "building") { this.emit("building", thing.id); return; }
-    if (thing && thing.type === "well") { const won = (this.fame || []).some((e) => e.won); this.say(won ? `The well runs clear since the crown came up. The party drinks, and is ${this.moraleWord().toLowerCase()}.` : "The well is dry, and has been since the shaft was dug. The old ones say it runs again when a crown comes up."); return; }
+    if (thing && thing.type === "well") { this.well(); return; }
+    if (thing && thing.type === "villager") { this.talkTownsfolk(thing); return; }
     if (thing && thing.type === "node") { this.gather(thing, k); return; }
     if (thing && thing.type === "strongbox") { this.openStrongbox(thing, k); return; }
     if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
@@ -7986,9 +7991,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", node: "something growing", building: "a door", well: "the well", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
+  event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -10744,7 +10749,7 @@ Object.assign(CM.Game.prototype, {
   // the alchemist's request: three of the band's ingredient this camp, and the next brew is free
   alchemistWants() { const band = CM.themeIndex(this.floor ? this.floor.number : 1); return Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band && !CM.INGREDIENTS[id].rare) || "gravemoss"; },
   deliver() {
-    if (this.mode !== "camp") return "The alchemist is at the camp.";
+    if (!(this.mode === "camp" || (this.inTown() && this.villageLevel("garden") >= 3))) return "The alchemist is at the camp, and in the garden once it has three beds.";
     const want = this.alchemistWants(), rows = this.bag.map((i, idx) => (i.kind === "ingredient" && i.ingredient === want ? idx : -1)).filter((i) => i >= 0);
     if (rows.length < 3) return `She wants three of ${CM.INGREDIENTS[want].name}; the pack has ${rows.length}.`;
     if (this.alchemistFree) return "The next brew is free already.";
@@ -10910,18 +10915,19 @@ Object.assign(CM.Game.prototype, {
       used.push(idx);
     }
     if (r.needs.triple) { const count = {}; for (const i of this.bag) if (i.kind === "ingredient" && !CM.INGREDIENTS[i.ingredient].rare) count[i.ingredient] = (count[i.ingredient] || 0) + 1; if (!Object.values(count).some((n) => n >= 3)) return "She wants three of one band's ingredient, alike."; }
-    const price = this.alchemistFree ? 0 : Math.ceil(r.gold * (this.mode !== "camp" ? CM.KIT_PRICE : 1));
+    const price = this.alchemistFree ? 0 : Math.ceil(r.gold * (this.mode !== "camp" && !this.inTown() ? CM.KIT_PRICE : 1));
     if (this.gold < price) return `She asks ${price} gold for the ${r.name}.`;
     if (r.makes === "greaterheal" && this.asc("nogreater")) return "No greater potions, this high on the ladder.";
     return "";
   },
   brew(id) {
     const kit = this.bag.some((i) => i.kind === "kit");
-    if (this.mode !== "camp" && !(this.mode === "explore" && kit)) return "The alchemist is at the camp.";
+    if (this.inTown() && this.villageLevel("garden") < 1) return "The garden has no bench yet.";
+    if (this.mode !== "camp" && !(this.mode === "explore" && kit) && !this.inTown()) return "The alchemist is at the camp.";
     const lacks = this.recipeLacks(id);
     if (lacks) return lacks;
     this.logAct("brew", id);
-    const r = CM.RECIPES[id], used = [], onFloor = this.mode !== "camp";
+    const r = CM.RECIPES[id], used = [], onFloor = this.mode !== "camp" && !this.inTown();
     if (r.needs.triple) {                                                // transmutation: three alike into one of the band below's
       const count = {}; for (const i of this.bag) if (i.kind === "ingredient" && !CM.INGREDIENTS[i.ingredient].rare) count[i.ingredient] = (count[i.ingredient] || 0) + 1;
       const from = Object.keys(count).find((k) => count[k] >= 3), band = CM.INGREDIENTS[from].band, to = Object.keys(CM.INGREDIENTS).find((k) => CM.INGREDIENTS[k].band === Math.min(9, band + 1) && !CM.INGREDIENTS[k].rare);
@@ -11006,7 +11012,7 @@ Object.assign(CM.Game.prototype, {
     entry.titles = (this.earned || []).slice();
     entry.renown = CM.renownFor(entry, this);
     this.village.renown = (this.village.renown || 0) + entry.renown;
-    this.noteRoster(entry); this.returnTomes();                          // (the guildhall's roster; the library's tome back on the shelf)
+    this.noteRoster(entry); this.returnTomes(); this.growBeds();                          // (the guildhall's roster; the library's tome back on the shelf)
     entry.chapters = this.payChapters(entry);
     this.saveVillage();
     this.checkContracts(entry);
@@ -12482,6 +12488,64 @@ Object.assign(CM.Game.prototype, {
   muster() { return this.roster().find((r) => r.home) || null; },
 });
 
+// ---- 69b-square.js ----
+"use strict";
+// The alchemist's garden (beds planted between runs, grown a little every run that ends, and the brewing bench at
+// town prices), the chronicler's house (the films, the statistics, the ledger, the Hall of Fame and the memorial's
+// book, under one roof) and the square's life: the well (a drink, the notice board, a coin thrown for the town),
+// market day on the week's seed (a peddler's cloth in the square), three townsfolk on the lanes with a line a day
+// each from the hill's own story, and the lanterns lit when a run begins late.
+CM.VILLAGE.garden = { name: "The Alchemist's Garden", costs: [100, 300, 700], levels: [
+  "One bed (three of an ingredient, grown one more every run that ends, up to five) and the brewing bench at town prices", "Two beds", "Three beds, and the alchemist's request may be delivered here"] };
+CM.VILLAGE.chronicler = { name: "The Chronicler's House", costs: [100], levels: ["Wren's house: the films, the statistics, the ledger, the Hall of Fame and the memorial's book, under one roof"] };
+CM.TOWN_PLOTS.garden.village = "garden"; CM.TOWN_PLOTS.chronicler.village = "chronicler";
+CM.BED_MAX = 5;
+CM.TOWNSFOLK = [
+  { name: "Marget's granddaughter", who: "a fishwife with a basket and no fish", lines: ["\"My grandmother saw who opened the sluices. She told my mother, and my mother told the water. I tell the well.\"", "\"The lower town is under the river still. On a quiet night you can hear a door that never unbarred.\"", "\"Fish? There are no fish. The river remembers what was put in it.\"", "\"You are going down. Everyone goes down. Some come up, and they don't eat fish either.\""] },
+  { name: "the bell-founder's boy", who: "an old man they still call the boy", lines: ["\"My father cast the last bell. The king had it taken down the week the queen drowned. It is in the river with her.\"", "\"They say Brother Cael rang it once more, alone, the night she died. I believe it. Bells want ringing.\"", "\"A bell's tongue is a trinket now, the pedlars say. It was a voice.\"", "\"If you hear a bell down there, it is not mine. Mine is under the water.\"", ] },
+  { name: "the sexton's widow", who: "a woman in black who sweeps the square", lines: ["\"My husband buried a thousand and was buried by none. His helm is down there in a chest, they tell me, and no one brings it up.\"", "\"The well was dry the morning the shaft was dug. The old ones say it runs again when a crown comes up. I sweep, and I wait.\"", "\"The dwarves' coin was cold. My mother kept one in a box. It is still cold.\"", "\"The Patriarch's order built the first house on this hill. The temple stands on its stones. Mind where you step.\""] },
+];
+CM.clockHour = () => new Date().getHours();
+CM.townNight = (hour) => { const h = hour === undefined ? CM.clockHour() : hour; return h >= 21 || h < 6; };
+Object.assign(CM.Game.prototype, {
+  // ---- the garden ----
+  garden() { this.village = this.village || {}; const G = this.village.garden = this.village.garden || { beds: [] }; G.beds = G.beds || []; return G; },
+  bedsOf() { return this.villageLevel("garden"); },
+  plant(row) {
+    if (!this.inTown()) return "The beds are in the garden, in town.";
+    if (this.villageLevel("garden") < 1) return "The garden has no beds yet.";
+    const item = this.bag[row]; if (!item || item.kind !== "ingredient") return "The beds take an ingredient.";
+    const G = this.garden(); if (G.beds.length >= this.bedsOf()) return `Every bed is planted (${this.bedsOf()}). Harvest one first.`;
+    this.logAct("plant", row);
+    this.bag.splice(row, 1); G.beds.push({ ingredient: item.ingredient, n: 1 }); this.saveVillage();
+    this.say(`${CM.INGREDIENTS[item.ingredient].name} goes into a bed. It grows a little with every run that ends.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  harvest(i) {
+    if (!this.inTown()) return "The beds are in the garden, in town.";
+    const G = this.garden(), bed = G.beds[i]; if (!bed) return "No such bed.";
+    this.logAct("harvest", i);
+    const n = bed.n; G.beds.splice(i, 1); this.saveVillage();
+    const got = []; for (let k = 0; k < n; k++) got.push(CM.ingredient(bed.ingredient)); this.gain(got, "garden");
+    this.say(`${CM.plural(n, CM.INGREDIENTS[bed.ingredient].name)} from the bed, and the bed turned over.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  growBeds() { const G = this.garden(); for (const b of G.beds) b.n = Math.min(CM.BED_MAX, (b.n || 1) + 1); if (G.beds.length) this.saveVillage(); },
+  // ---- the square ----
+  well() {
+    const fl = this.floor, won = (this.fame || []).some((e) => e.won);
+    const lines = [won ? `The well runs clear since the crown came up. The party drinks, and is ${this.moraleWord().toLowerCase()}.` : "The well is dry, and has been since the shaft was dug. The old ones say it runs again when a crown comes up."];
+    lines.push(`The notice board: the week's seed is ${CM.weeklySeed()}; the day's is daily-${CM.today()}.${String(this.seed).startsWith("weekly-") ? " Market day: a peddler's cloth is out in the square." : ""}`);
+    if (!fl.wished && this.gold >= 1) { this.logAct("wish"); fl.wished = true; this.gold -= 1; this.village = this.village || {}; this.village.renown = (this.village.renown || 0) + 1; this.saveVillage(); lines.push("A coin goes down the well for the town: one renown."); }
+    this.say(lines.join(" "));
+    this.emit("talk", { title: "The square", text: lines.join(" ") });
+  },
+  townsfolkLine(who) { const T = CM.TOWNSFOLK[who % CM.TOWNSFOLK.length]; const day = CM.hashSeed(CM.today()) % T.lines.length; return T.lines[(day + who) % T.lines.length]; },
+  talkTownsfolk(thing) { const T = CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length]; this.emit("talk", { title: T.name, text: this.townsfolkLine(thing.who) }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${this.townsfolkLine(thing.who)}`); },
+});
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -12634,6 +12698,10 @@ CM.UI = class {
 <div class="dialog" id="dlg-guild"><div class="box journalbox"><h2>The Guildhall</h2>
   <p class="small" id="guild-what"></p><div id="guild-rooms"></div><div class="small" id="guild-note"></div>
   <div class="end"><button id="btn-guild-build">Build</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-chronicler"><div class="box journalbox"><h2>The Chronicler's House</h2>
+  <p class="small">Wren keeps the town's memory dry: the films of runs, the statistics, the ledger, the Hall of Fame and the memorial's book.</p>
+  <div id="chronicler-rooms"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-building"><div class="box"><h2 id="building-title">A door</h2>
   <p class="small" id="building-what"></p><div class="small" id="building-levels"></div><div class="small" id="building-note"></div>
   <div class="end"><button id="btn-building-build">Build</button><button class="close">Close</button></div></div></div>
@@ -12768,7 +12836,7 @@ CM.UI = class {
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
     game.on("choice", (c) => this.askChoice(c));
-    game.on("building", (id) => { if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else this.openBuilding(id); });
+    game.on("building", (id) => { if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else if (id === "garden" && game.villageLevel("garden") >= 1) this.openGarden(); else if (id === "chronicler" && game.villageLevel("chronicler") >= 1) this.openChronicler(); else this.openBuilding(id); });
     this.$("#btn-library-build").addEventListener("click", () => { this.$("#library-note").textContent = game.build("library") || "The library rises a level."; this.openLibrary(true); });
     this.$("#btn-guild-build").addEventListener("click", () => { this.$("#guild-note").textContent = game.build("guildhall") || "The guildhall rises a level."; this.openGuild(true); });
     this.$("#btn-home-build").addEventListener("click", () => { this.$("#home-note").textContent = game.build("home") || "The house rises a level."; this.openHome(true); });
@@ -12954,6 +13022,26 @@ CM.UI = class {
   }
   // ---- the village ----
   openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
+  // the garden: the beds above the alchemist's bench
+  openGarden() {
+    const g = this.game, root = this.$("#dlg-alchemist .box"), old = root.querySelector("#garden-town"); if (old) old.remove();
+    const G = g.garden(), beds = g.bedsOf(), extra = document.createElement("div"); extra.id = "garden-town";
+    extra.innerHTML = `<div class="list-title">The beds (${G.beds.length} of ${beds} planted; a bed grows one more every run that ends, up to ${CM.BED_MAX})</div>`;
+    G.beds.forEach((b, i) => { const btn = document.createElement("button"); btn.textContent = `Harvest ${CM.plural(b.n, CM.INGREDIENTS[b.ingredient].name)}`; btn.addEventListener("click", () => { const n = g.harvest(i); if (n) g.say(n); this.openGarden(); this.refresh(); }); extra.appendChild(btn); });
+    if (G.beds.length < beds) g.bag.forEach((it, row) => { if (it.kind !== "ingredient") return; const btn = document.createElement("button"); btn.textContent = `Plant ${it.name}`; btn.addEventListener("click", () => { const n = g.plant(row); if (n) g.say(n); this.openGarden(); this.refresh(); }); extra.appendChild(btn); });
+    root.insertBefore(extra, root.querySelector(".end"));
+    this.renderAlchemist(); this.openDialog("#dlg-alchemist");
+  }
+  // the chronicler's house: the title's boards under one roof
+  openChronicler() {
+    const g = this.game, box = this.$("#chronicler-rooms"); box.innerHTML = "";
+    const room = (title) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
+    { const r = room("The table"); const f = document.createElement("button"); f.textContent = "The films of runs"; f.addEventListener("click", () => this.openFilms()); r.appendChild(f); const s = document.createElement("button"); s.textContent = "The statistics"; s.addEventListener("click", () => this.openStats()); r.appendChild(s); }
+    { const r = room("The Hall of Fame"); const fame = (g.fame || []).slice(0, 10); r.innerHTML = fame.length ? fame.map((e) => `<div class="small"><b>${this.esc(e.name)}</b>: ${e.won ? "crowned" : e.bottom ? "to the bottom of the world" : `fell on floor ${e.floor}`}, ${e.gold.toLocaleString()} gold, ${this.esc(e.date)} (${this.esc(e.party.join(", "))})</div>`).join("") : "<div class='small'>No run has ended yet.</div>"; }
+    { const r = room("The ledger"); const led = (g.ledger || []).slice(-10).reverse(); r.innerHTML = led.length ? led.map((l) => `<div class="small">${this.esc(l.d)}: ${this.esc(l.sd)}, floor ${l.f}${l.w ? ", crowned" : ""}${l.b ? ", the bottom" : ""} - ${l.k} slain, ${l.s} steps, ${l.g} gold</div>`).join("") : "<div class='small'>Nothing written yet.</div>"; }
+    { const r = room("The memorial's book"); const m = (g.memorial || []).slice(0, 12); r.innerHTML = m.length ? m.map((x) => `<div class="small"><b>${this.esc(x.name)}</b> the ${x.cls}, level ${x.level}, floor ${x.floor}${x.candle ? " - a candle burns" : ""}${x.epitaph ? ` - "${this.esc(x.epitaph)}"` : ""}</div>`).join("") : "<div class='small'>No names. May it stay so.</div>"; }
+    this.openDialog("#dlg-chronicler");
+  }
   // the library: the desk (the journal's boards), Wren's copying, the tomes, the shelved pages, the gazetteer
   openLibrary(keepNote) {
     const g = this.game, V = CM.VILLAGE.library, lvl = g.villageLevel("library"), L = g.libraryState(), box = this.$("#library-rooms"), note = this.$("#library-note");
@@ -14013,7 +14101,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
     const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      node: "#8FB06A", building: "#C09050", well: "#60A0E0", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
+      node: "#8FB06A", building: "#C09050", well: "#60A0E0", villager: "#E0C8A0", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
@@ -14766,7 +14854,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
   game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
     if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
-    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, "The town on the hill, and the shaft the hill was never asked about."); return; }
+    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.townNight() ? "The lanterns are lit on the hill, and the shaft is dark at the end of the lane." : "The town on the hill, and the shaft the hill was never asked about."); return; }
     const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
     if (!ch) return;
     if ((fl.number - 1) % 5 === 0) ui.titleCard(CM.bandName(game, fl.number), game.dream ? "What Caer Duin might have been." : ch.epigraph);
@@ -15018,6 +15106,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
       else if (thing.type === "building") out.push({ x, y, layer: CM.plotLevel(game, thing.id) || thing.id === "home" ? "house" : "foundation", w: 1.0, h: 1.0 });
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
+      else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });
       else if (thing.type === "wingstair" || thing.type === "wingexit") out.push({ x, y, layer: "hatch", w: 0.8, flat: true, shade: 0.75 });
       else if (thing.type === "wingstair_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
