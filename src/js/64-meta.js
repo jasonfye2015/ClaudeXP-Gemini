@@ -139,6 +139,84 @@ Object.assign(CM.Game.prototype, {
     if (codex.filter((c) => c.band !== undefined).every((c) => c.complete)) this.achieve("chronicler");
     return true;
   },
+  // ---- a guardian at the door of its lair: it speaks first; the party fights, speaks, or passes by what it has read ----
+  openParley(k, thing) {
+    const id = thing.type === "boss" ? "boss" : thing.group[0].guardian, P = CM.PARLEY[id], G = CM.GUARDIANS[id];
+    if (!P) return false;
+    thing.talk = 0;
+    const options = ["Fight"];
+    if (P.speak.length) options.push("Speak");
+    if (P.gate && CM.gateOpen(this, P.gate)) options.push(P.gate.label);
+    this.emit("choice", { k, title: G ? G.name : CM.BOSS.name, text: P.open, options, parley: true });
+    return true;
+  },
+  parley(k, i) {
+    const thing = this.floor.things[k];
+    if (!thing || !["guardian", "boss"].includes(thing.type)) return false;
+    const id = thing.type === "boss" ? "boss" : thing.group[0].guardian, P = CM.PARLEY[id], G = CM.GUARDIANS[id] || CM.BOSS;
+    if (!P) return false;
+    this.logAct("parley", k, i);
+    const step = thing.talk || 0;
+    if (step === 0) {                                                    // fight, speak, or the gate (the options as openParley laid them out)
+      const acts = ["fight"];
+      if (P.speak.length) acts.push("speak");
+      if (P.gate && CM.gateOpen(this, P.gate)) acts.push("gate");
+      const act = acts[i];
+      if (act === "fight") { thing.parleyed = true; this.startCombat(k, thing); return true; }
+      if (act === "speak") { thing.talk = 1; thing.score = 0; this.emit("choice", { k, title: G.name, text: P.speak[0].ask, options: P.speak[0].replies.map((r) => r.say), parley: true }); return true; }
+      if (act === "gate") { this.passGuardian(k, thing, id); return true; }
+      return false;
+    }
+    const ex = P.speak[step - 1], reply = ex && ex.replies[i];           // the exchanges
+    if (!reply) return false;
+    if (reply.good) thing.score = (thing.score || 0) + 1;
+    this.say(reply.back);
+    if (step < P.speak.length) { thing.talk = step + 1; this.emit("choice", { k, title: G.name, text: `${reply.back} ${P.speak[step].ask}`, options: P.speak[step].replies.map((r) => r.say), parley: true }); return true; }
+    thing.parleyed = true; thing.spoke = true;
+    thing.terms = (thing.score || 0) >= 2 ? "good" : (thing.score || 0) === 0 ? "bad" : "even";
+    this.say(thing.terms === "good" ? P.good : thing.terms === "bad" ? P.bad : "It has heard enough.");
+    this.emit("talk", { title: G.name, text: reply.back, lines: [thing.terms === "good" ? P.good : thing.terms === "bad" ? P.bad : "It has heard enough. It comes."] });
+    this.startCombat(k, thing);
+    return true;
+  },
+  // passed by speech: not slain - no trophy, no experience, half the gold - but the way is open, and its relic is left behind
+  passGuardian(k, thing, id) {
+    const P = CM.PARLEY[id], G = CM.GUARDIANS[id], m = thing.group[0];
+    if (P.gate.item) { const row = this.bag.findIndex((it) => it.kind === P.gate.item); if (row >= 0) this.bag.splice(row, 1); }
+    if (P.gate.holy) {
+      const row = this.bag.findIndex((it) => (it.props || {}).element === "holy");
+      if (row >= 0) this.bag.splice(row, 1);
+      else for (const h of this.party) for (const slot of CM.SLOTS) if (h[slot] && (h[slot].props || {}).element === "holy") { h[slot] = null; CM.recompute(h); break; }
+    }
+    const gold = Math.floor((m.gold || G.gold || 0) / 2);
+    this.gold += gold;
+    if (G.relic && !m.echo) { const relic = CM.relic(id); this.bag.push(relic); this.emit("fx", { kind: "relic", item: relic }); }
+    this.tally.spoken = (this.tally.spoken || []).concat(id);
+    this.story.spoken = (this.story.spoken || []).concat(id);
+    if (this.story.spoken.length >= 3) this.achieve("softspoken");
+    this.markRead(`passed.${id}`);
+    this.remember("ghost", P.gate.text, { who: G.name, key: `passed.${id}` });
+    delete this.floor.things[k];
+    this.floor.things[k] = { type: "ladder" };
+    this.lairAfter(id);
+    this.sound("toll");
+    this.cheer(6);
+    this.say(`${G.name} lets the party by. ${gold} gold lay where it stood.`);
+    this.emit("talk", { title: G.name, text: P.gate.text });
+    this.emit("fx", { kind: "relic", item: null });
+    if (G.final && !this.endless) { this.bottom = true; this.endRun(true); return; }
+    this.saveRun();
+    this.emit("change");
+  },
+  // the lair, once its guardian is gone: the water drains, the embers go out, and its carving speaks in the past tense
+  lairAfter(id) {
+    const fl = this.floor;
+    if (!fl) return;
+    if (id === "knight" || id === "queen") fl.decor = fl.decor.filter((d) => d.kind !== "water");
+    if (id === "forge" || id === "master") fl.decor = fl.decor.filter((d) => d.kind !== "ember");
+    for (const f of Object.values(fl.features)) if (f.type === "carving" && f.text === `g:${id}`) f.text = `ga:${id}`;
+    this.emit("mesh");
+  },
   metGhost(name) { this.village.ghostsMet = (this.village.ghostsMet || []).filter((n) => n !== name).concat(name).slice(-40); this.saveVillage(); },
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); },
 

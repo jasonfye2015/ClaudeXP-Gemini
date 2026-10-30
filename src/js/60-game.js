@@ -131,6 +131,11 @@ CM.Game = class {
   }
   // down the stairs by hand (the simulator's bot, when it has lost its way): logged, so a replay follows
   warp(number) { this.logAct("warp", number); this.enterFloor(number, "down"); }
+  mapAll() {                                                             // (the tests' other cheat, logged like warp: the whole floor seen, so travelTo has a map)
+    this.logAct("mapAll");
+    const fl = this.floor; if (!fl) return;
+    fl.seen = []; for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]);
+  }
   // the party's temper: a number from 0 to 100, said as a word (CM.moraleWord); what the fight reads
   cheer(n, why) {
     const was = this.morale === undefined ? CM.MORALE.start : this.morale;

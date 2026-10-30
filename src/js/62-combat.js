@@ -11,6 +11,12 @@ Object.assign(CM.Game.prototype, {
     // the fight's dice come from the seed and where and when it begins: the same fight, fought the same way, goes the same way
     this.rnd = new CM.Random(CM.hashSeed(`${this.seed}:fight:${this.floor ? this.floor.number : 0}:${(this.tally || {}).fights || 0}:${this.steps || 0}:${key}`));
     this.foes = thing.group.map(CM.upgradeMonster);
+    if (thing.terms && !thing.termsDone) {                               // spoken to first: on better terms its company goes and it is shaken; on worse it is enraged
+      thing.termsDone = true;
+      if (thing.terms === "good") { this.foes = this.foes.filter((m) => m.guardian || m.boss || this.foes.length === 1); for (const m of this.foes) if (m.guardian) { m.hp = Math.max(1, Math.round(m.hp * 0.85)); m.shaken = true; } }
+      else if (thing.terms === "bad") for (const m of this.foes) if (m.guardian) { m.atk = Math.round(m.atk * 1.15); m.enraged = true; }
+      thing.group = this.foes;
+    }
     if (this.has("hordes") && !thing.horded && this.foes.length && !this.foes[0].boss && !this.foes[0].guardian) {   // one more, of the first kind
       thing.horded = true;
       const kind = CM.monsterKind(this.foes[0].kind || this.foes[0].name);
@@ -676,6 +682,8 @@ Object.assign(CM.Game.prototype, {
     if (relic) this.bag.push(relic);
     this.sound("toll");
     this.say(G.fall);
+    { const P = CM.PARLEY[id], fought = this.floor && this.floor.things[this.foeKey]; if (P && !m.echo) this.say(fought && fought.spoke ? P.deathSpoken : P.death); }
+    this.lairAfter(id);
     this.say(m.echo ? "The echo fades, and leaves nothing but the shaft it stood over." : relic ? `${G.take} (${relic.name}: ${CM.itemLabel(relic)}.)` : G.take);
     this.emit("fx", { kind: "relic", item: relic });
   },

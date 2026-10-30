@@ -747,6 +747,19 @@ The people of Caer Duin (the fifth big update, phase 1 - v3.2)
   The lost adventurer may be a hero of yours who fell shallower on any seed, found alive after all (the name only).
   Talk dialogs can run to a second line (More). Titles: Bell-ringer, the Witness, the Faithful.
 
+The guardians speak (the fifth big update, phase 2 - v3.3)
+  Every guardian speaks first at the door of its lair (CM.PARLEY): Fight; Speak - three exchanges, two answers each,
+  and the fight comes on the party's terms (all three right: its company goes and it is shaken; none: enraged); or,
+  when the party holds what it wants, a way through without a blow - rations for the Rat King, the dwarves' word
+  for the Forge-Warden, Marguerite's testimony for the Queen, the dwarf's warning for the Mind, GO ROUND for the
+  Tyrant, Hesta's name for the Forge Master, a holy thing for the Patriarch, and for the Drowned Knight the truth
+  from the town below him (a return). The Root wants nothing you have, yet. Passed by speech a guardian is not
+  slain: no trophy, no experience, half the gold, but its relic is left behind and the shaft is open; three of them
+  make the Soft-Spoken, and renown counts them. A death speech each, another if it was spoken to. The lair after:
+  the water drains, the embers go out, and its carving speaks in the past tense (ga:<id>). Every word is logged
+  (game.parley), so films carry the talk. The bot takes an open gate, else it fights. game.mapAll is a second
+  logged cheat for the tests, beside warp.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

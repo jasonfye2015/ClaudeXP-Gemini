@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v3.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v3.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -397,7 +397,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "3.2", built: "2026-10-30" };
+const CM = window.CM = { version: "3.3", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1168,6 +1168,7 @@ CM.ACHIEVEMENTS = {
   chronicler: { name: "The Chronicler", what: "Read every carving of every band, in one expedition", title: "the Chronicler" },
   bellringer: { name: "Bell-ringer", what: "Bring Brother Cael the last bell of Caer Duin", title: "the Bell-ringer" },
   witness: { name: "The Witness", what: "Grant every one of the twelve their third request", title: "the Witness" },
+  softspoken: { name: "The Soft-Spoken", what: "Pass three guardians by speech, without a blow", title: "the Soft-Spoken" },
   laidtorest: { name: "Laid to Rest", what: "Lay a fallen hero of your own to rest where they fell", title: "the Faithful" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
@@ -1706,6 +1707,92 @@ CM.CHAPTER_TRUTH = {
   root: "\"Everything above is its dream.\" The hermit is quiet for a while. \"Then wake it, or don't. I've thought about it for forty years down here and I still don't know which is the mercy.\"",
 };
 
+// ---- the guardians speak: what each says at the door of its lair, three exchanges if the party answers, and a way
+// through for those who read the walls (gate.key: a line of the story; gate.item: a thing in the pack; gate.holy) ----
+CM.PARLEY = {
+  rat: { open: "The heap stirs, and a crowned snout comes out of it. It does not attack. It sniffs. \"Food?\" it says, in a voice made of many small voices. \"You bring food, or you are food.\"",
+    speak: [{ ask: "\"They fed us,\" the voices say. \"Then they stopped. Why did they stop?\"", replies: [{ say: "Because they were dying themselves.", back: "\"Dying. Yes. We smelled it. We ate it. It was not enough.\"", good: true }, { say: "Because you are vermin.", back: "The snout lifts. \"Vermin. The king said that. The king fed us anyway.\"" }] },
+      { ask: "\"The king is still below,\" it says. \"You go to him? You feed him?\"", replies: [{ say: "We go to end him.", back: "\"End. End.\" The voices try the word. \"Then there will be more to eat, after.\"", good: true }, { say: "We go for his gold.", back: "\"Gold.\" A sound like laughter, if rats laughed. \"Gold is not food.\"" }] },
+      { ask: "\"Last,\" it says. \"We are many. You are four. Why should we let you by?\"", replies: [{ say: "Because we will come back up this way, and we will remember.", back: "The swarm is quiet a moment. \"Remember. Yes. We remember too.\"", good: true }, { say: "You won't. We'll kill you.", back: "\"Then we will be food,\" it says, almost cheerfully, \"and so will you.\"" }] }],
+    good: "The swarm draws back from the way down, a little. The king stays. It is still hungry; but it has heard you, and the small ones are not so eager.", bad: "The voices rise to a shriek, and the whole heap comes at once.",
+    gate: { item: "ration", label: "Throw it the rations (it wants only food)", text: "You open the pack and throw the rations into the heap. The swarm goes for them as one, and the Rat King watches you with its red eyes while they eat, and does not move as you go round it to the shaft. Its crown is on the floor where it rose: it has no use for it that it can name." },
+    death: "\"Food,\" it says, going down, and the swarm agrees.", deathSpoken: "\"Remember,\" it says, going down. \"You said.\"",
+    after: "The feeding stopped here. So did the king of the rats; the swarm has gone back into the walls to wait for whoever is next." },
+  knight: { open: "The drowned captain does not raise his sword. The water around him is still. \"Lower watch,\" he says, through the water in his throat. \"State your business on this floor.\"",
+    speak: [{ ask: "\"The water came in the night,\" he says. \"I held the post. Tell me the town above was saved.\"", replies: [{ say: "The town is gone, captain. It has been gone a long time.", back: "\"Gone.\" He looks at the water. \"Then I held it for nothing. Say so. I would rather know.\"", good: true }, { say: "It was saved. You held them back.", back: "\"You lie badly. A captain learns the sound of it.\"" }] },
+      { ask: "\"Who sent you down? The king?\"", replies: [{ say: "No one sent us. We came for him.", back: "\"For him.\" Something moves behind the visor. \"Then you are the first in a long time who did not come from him.\"", good: true }, { say: "Yes. The king's orders.", back: "\"The king's orders come in a hand that is not his. Yours is a voice that is not yours. Draw.\"" }] },
+      { ask: "\"One thing more. The water. It rose - they told me it rose. Did it rise?\"", replies: [{ say: "We don't know yet. We will find out, below.", back: "\"Find out. Then come back and tell me. I will still be here.\"", good: true }, { say: "Water rises. That's what it does.", back: "\"That is what they said. I have had a long time to doubt it.\"" }] }],
+    good: "He steps back from the shaft, and then, after a long moment, forward again. \"I cannot let you by. But I will fight you as a man fights, not as the water does.\"", bad: "The water climbs the walls at once, and he comes through it fast.",
+    gate: { key: "carving.drowned.2", returns: true, label: "Tell him: the water was let in. (You have read it, in the town below.)", text: "\"Let in.\" The captain says it as if tasting it. \"Let in. By whose hand?\" You tell him what the walls of the drowned town say. The sword goes down, point first, into the stone. \"Then I was not drowned at my post. I was drowned at it. That is a different thing.\" He kneels, and the water goes out of the hall as if a sluice had been opened somewhere, and his shield lies on the floor where he knelt. The shaft is open behind him." },
+    death: "\"Relieved,\" he says, and goes down into the water as if it were a bed.", deathSpoken: "\"Find out,\" he says, going down. \"Come back and tell me.\"",
+    after: "The captain of the lower watch held this post until someone told him what he was holding it against. The water has gone out of the hall." },
+  forge: { open: "The warden's eyes come up like coals. It does not move from the door. \"PASSWORD,\" it says, in dwarvish, and then, as if remembering there are no dwarves, in the common tongue.",
+    speak: [{ ask: "\"WHO MADE YOU,\" it says. It is not a question it knows the answer to.", replies: [{ say: "No one made us. We came by the stair.", back: "\"THE STAIR. THE MAKERS CAME BY THE STAIR. THEN THEY WENT DOWN IT.\"", good: true }, { say: "The king sent us.", back: "\"THE KING'S COIN WAS COLD. THE MAKERS SAID SO. THE DOOR STAYS SHUT TO THE KING.\"" }] },
+      { ask: "\"THE MAKERS WILL RETURN,\" it says. \"YOU WILL WAIT WITH ME.\"", replies: [{ say: "They are not coming back, warden. They went down and did not come up.", back: "A long silence from the furnace in its chest. \"DOWN. YES. THE WARDEN WAITS ANYWAY. THAT IS WHAT A WARDEN IS.\"", good: true }, { say: "We don't have time to wait.", back: "\"TIME,\" it says. \"THE WARDEN HAS HAD ONLY TIME.\"" }] },
+      { ask: "\"IF YOU PASS, YOU WILL SEE WHAT THE MAKERS SAW. WILL YOU TELL THE WARDEN WHAT IT WAS?\"", replies: [{ say: "Yes. On the way back up.", back: "\"THE WARDEN WILL BE HERE.\"", good: true }, { say: "We don't come back up this way.", back: "\"NO ONE DOES,\" it agrees." }] }],
+    good: "It steps aside from the door - a hand's width - and then stops. \"THE WARDEN CANNOT. BUT THE WARDEN WILL NOT STRIKE FIRST.\"", bad: "The furnace roars and the hammer comes up.",
+    gate: { key: "carving.halls.1", label: "Give it the dwarves' word: sealed from within. (You read it on the eleventh floor.)", text: "\"SEALED FROM WITHIN.\" The coals in its eyes flare, and dim. \"THAT IS THE WORD THE MAKERS LEFT. THE DOOR IS YOURS.\" It steps aside from the shaft and sets the hammer down beside it, head to the floor, and does not pick it up again. \"TELL THE WARDEN WHAT YOU SEE.\"" },
+    death: "\"THE MAKERS,\" it says, and the furnace goes out.", deathSpoken: "\"THE WARDEN WAITED,\" it says, and goes down. \"TELL THEM.\"",
+    after: "The dwarves' warden stood at this door until the word was given, or until it could not stand. The embers in the floor are cold." },
+  queen: { open: "The drowned queen rises from her throne, and the drowned court rises with her, and she looks at you a long time with the water running from her hair. \"You came down past him,\" she says. \"Then you are either very brave or you have not met him yet.\"",
+    speak: [{ ask: "\"They say above that I died of the plague,\" she says. \"Do they still say it?\"", replies: [{ say: "The upper walls say it. The lower ones say otherwise.", back: "\"The lower ones.\" She almost smiles. \"The lower ones were cut by people who saw.\"", good: true }, { say: "Yes. Everyone knows you died of the plague.", back: "\"Everyone.\" The court stirs. \"Everyone was told.\"" }] },
+      { ask: "\"Do you know who held me under?\"", replies: [{ say: "We have an idea. We would rather hear it from you.", back: "\"You will not. I do not say his name. I sing it, and you would not like to hear me sing.\"", good: true }, { say: "The king.", back: "The water goes very still. \"You say it so easily. You did not know him before.\"" }] },
+      { ask: "\"If I let you by, you go down to the thing that whispered to him. What will you do with it?\"", replies: [{ say: "We don't know yet. We will decide when we see it.", back: "\"Honest. He was honest once.\"", good: true }, { say: "Kill it.", back: "\"Everyone comes down here to kill something. Few come down to understand it.\"" }] }],
+    good: "She sits, and the court sits, and she lifts one hand. \"Come, then. I will not sing. The rest of me, I cannot promise.\"", bad: "She opens her mouth, and the first note goes through the water like a knife.",
+    gate: { key: "carving.drowned.3", label: "Tell her what Marguerite cut on the wall: we saw who opened them. (You read it two floors up.)", text: "\"Marguerite,\" the queen says. \"The fish-seller. She saw.\" The court sits down, all at once, like a wave going out. \"Then someone saw, and someone cut it, and someone read it. That is three more than I had.\" She takes the ring from her finger and drops it into the water at your feet, and the water carries it to you. \"Go down. Tell it I remember.\"" },
+    death: "She does not cry out. She goes under as she went under the first time: looking at someone who is not there.", deathSpoken: "\"Honest,\" she says, going down. \"Stay so.\"",
+    after: "The queen held her court here until someone brought her a witness. The drowned sit, now, and do not rise." },
+  mind: { open: "The thing that grew on the dead does not speak. It thinks at you, slowly, a pressure behind the eyes, and the pressure makes words. FOOD. NO. NOT FOOD. SPEAKING THINGS. SPEAK.",
+    speak: [{ ask: "WHAT ARE YOU, it thinks. WHAT WERE YOU FED.", replies: [{ say: "Bread. Mostly bread.", back: "BREAD. The pressure eases, puzzled. IT WAS FED A CITY AND IT DID NOT GET BREAD.", good: true }, { say: "We are the ones who feed on things like you.", back: "The pressure sharpens. THEN YOU ARE WHAT IT IS." }] },
+      { ask: "THE ONE ABOVE FED IT, it thinks. THE ONE WITH THE COLD HEART. IS HE STILL FEEDING.", replies: [{ say: "No. We stopped him. Or we will.", back: "A long slow thought. THEN IT WILL BE HUNGRY. IT HAS NOT BEEN HUNGRY FOR A LONG TIME. IT DOES NOT REMEMBER HOW.", good: true }, { say: "Yes. He sends you his love.", back: "IT DOES NOT KNOW THAT WORD. IT DOES NOT THINK IT WANTS TO." }] },
+      { ask: "THE ROCK SINGS, it thinks. BELOW. DO YOU HEAR IT.", replies: [{ say: "Not yet. We will not listen when we do.", back: "GOOD. IT LISTENED. THAT IS HOW IT LEARNED TO THINK. IT IS NOT SURE IT WAS WORTH IT.", good: true }, { say: "We hear nothing. Rocks don't sing.", back: "THEN YOU HAVE NOT BEEN DOWN FAR ENOUGH TO BE WRONG YET." }] }],
+    good: "The pressure withdraws a little, like a hand lifted from the back of the neck. IT WILL NOT HOLD YOU DOWN. IT WILL ONLY HOLD YOU.", bad: "The pressure becomes a fist.",
+    gate: { key: "carving.fungal.4", label: "Think the dwarf's warning back at it: do not listen to what it sings. (You read it on the twenty-ninth floor.)", text: "You think the words at it, as hard as you can. DO NOT LISTEN TO WHAT IT SINGS. The pressure stops. Entirely. For the first time in a thousand years the thing in the shaft is not listening to anything, and in the silence it finds that it can move aside. IT DID NOT KNOW IT COULD STOP. GO. GO BEFORE IT STARTS AGAIN. Something falls from it as it moves: a cap of pale flesh gone hard as horn." },
+    death: "IT WAS NOT HUNGRY, it thinks, surprised, and stops thinking.", deathSpoken: "BREAD, it thinks, and stops.",
+    after: "What grew on the dead learned to think here, and then learned, from four strangers, that it could stop." },
+  tyrant: { open: "The crystal on the throne has a face, and the face is yours - one of yours - a little wrong, the way a reflection is wrong. \"We have been expecting you,\" it says with your mouth. \"We have been expecting everyone.\"",
+    speak: [{ ask: "\"Look at us,\" it says. \"We are what you will be, if you stand still long enough. Is it so bad?\"", replies: [{ say: "We won't stand still.", back: "\"No one means to.\" The face shifts to another of yours. \"The dwarves did not mean to.\"", good: true }, { say: "It's hideous.", back: "The crystal rings, once, offended. \"We are only what we were shown.\"" }] },
+      { ask: "\"The dwarves left their halls for us,\" it says. \"Not for the king. Did you know? Does anyone, up there?\"", replies: [{ say: "A few walls know it. We read them.", back: "\"Walls.\" The face is pleased. \"We like walls. We grow best in them.\"", good: true }, { say: "No one cares why the dwarves left.", back: "\"We care,\" it says, and all its facets say it." }] },
+      { ask: "\"We sing one note. You have heard it by now. Do you know what it is?\"", replies: [{ say: "The note the world made when it was struck.", back: "\"Yes. We are the only ones who still remember the sound. That is all we are for.\"", good: true }, { say: "Noise.", back: "\"Noise,\" it repeats, and the note gets louder." }] }],
+    good: "The faces turn away from you, one by one, to the walls. \"Go round, then. We will not grow toward you while you do.\"", bad: "Every facet turns to face you, and the note becomes a scream.",
+    gate: { key: "carving.crystal.3", label: "Say what Brokk cut at knee height: go round. (You read it on the thirty-third floor.)", text: "\"Go round.\" You say it, and the crystal hears a dwarf's voice in it, and for a moment every face it wears is a dwarf's. \"Brokk,\" it says. \"He went round. He was the only one who did.\" The throne turns, slowly, grinding, until its back is to the shaft. \"Go round, then. We will not look.\" A shard of it lies where the throne was: a piece that remembers being a crown." },
+    death: "The note stops. In the silence, a thousand faces close their eyes.", deathSpoken: "\"Round,\" it says, as it shatters, \"we should have gone round.\"",
+    after: "The crystal that wore the dwarves' faces sat here until it was reminded of the one who went round." },
+  master: { open: "The master of the forges does not look up from the anvil. There is nothing on the anvil. The hammer falls on nothing, and rings. \"Shift's not over,\" it says. \"Come back when the shift's over.\"",
+    speak: [{ ask: "\"Hesta,\" it says, hammering. \"Where's Hesta? She's late.\"", replies: [{ say: "She's not coming. None of them are.", back: "The hammer pauses, a half-beat. \"Not coming.\" It falls again. \"Then there's more for me to do.\"", good: true }, { say: "Who?", back: "\"Who. Who.\" The hammer falls harder. \"Everyone asks who. Nobody asks what we made.\"" }] },
+      { ask: "\"We made a box,\" it says. \"Good work. Best work. You seen it?\"", replies: [{ say: "We saw it. It was empty.", back: "\"Empty.\" The hammer stops. \"Then it worked. Then it did what it was for.\"", good: true }, { say: "We smashed it.", back: "The whole forge goes silent. \"You smashed my work.\"" }] },
+      { ask: "\"What's it for, a box like that? You know? They never told me.\"", replies: [{ say: "To keep a heart apart from the body.", back: "\"Apart.\" It looks at its own chest, where the furnace is. \"Huh. Mine's in here somewhere. I think.\"", good: true }, { say: "To keep gold in.", back: "\"Gold,\" it says, contemptuous. \"You don't need that metal for gold.\"" }] }],
+    good: "It sets the hammer down, which it has not done in a long time, and stands back from the anvil. \"Shift's over, then. Come on. I'll not go easy, but I'll go honest.\"", bad: "It brings the hammer up off the anvil and turns, and the furnace in its chest opens.",
+    gate: { key: "ghost.9", label: "Say the smith's name: Hesta, and what she told you. (You heard it from her.)", text: "\"Hesta.\" The hammer stops in the air. You tell it what she said: the metal that holds a heart apart is the colour of the stone at the bottom, and no one asked where the ore came from. The master sets the hammer on the anvil, carefully, the way a thing is set down for the last time. \"We should have asked.\" It walks away from the shaft, into the dark of the Foundry, and does not come back. The hammer is still on the anvil." },
+    death: "\"Shift's over,\" it says, and the furnace goes dark.", deathSpoken: "\"Honest,\" it says, going down. \"Told you.\"",
+    after: "The master of the forges worked here until someone said the name of one of its smiths." },
+  patriarch: { open: "The Patriarch is seated among the arranged bones, and the bones are very neat. \"Ah,\" he says. \"Visitors. Have you brought anything? One brings something, to a chapel. Or one brings nothing. Either is correct. It is the in-between that offends.\"",
+    speak: [{ ask: "\"You have come down past the king,\" he says. \"My pupil. How is he?\"", replies: [{ say: "He remembers being a man. It is the worst thing about him.", back: "\"Yes. That is the flaw in the method. I never found a way round it. One remembers.\"", good: true }, { say: "Dead, or will be.", back: "\"Dead.\" He tilts his skull. \"We are all dead here, child. Be precise.\"" }] },
+      { ask: "\"Did you think the physician found my chapel by chance?\"", replies: [{ say: "No. You let him.", back: "\"I let him. The thing below wished the king to have a long reign, and I have served it since before your city had a name. One serves.\"", good: true }, { say: "We didn't think about it.", back: "\"No one does. That is how it is done.\"" }] },
+      { ask: "\"Will you tidy the bones when I am gone? Someone should.\"", replies: [{ say: "We'll leave them as they are. They've been tidy long enough.", back: "A sound that might be a laugh. \"Untidy. Yes. Perhaps it is time.\"", good: true }, { say: "We'll burn them.", back: "\"Burn.\" The bones around him shift, all at once. \"You will not.\"" }] }],
+    good: "He rises, slowly, and brushes dust from robes that are mostly dust. \"Well. We shall see whether the method holds. Do try to be precise.\"", bad: "The bones stand up.",
+    gate: { holy: true, label: "Lay a holy thing on the chapel floor.", text: "You set it down among the bones. The Patriarch looks at it for a long time. \"Correct,\" he says. \"One brings something. It has been a very long time since anyone brought anything.\" He takes it up, and it comes apart in his hands like ash, and he nods as if that were the point. \"Go down. Tell it I kept the bones in order.\" His mitre is on the floor where he sat; he does not seem to need it." },
+    death: "\"Imprecise,\" he says, and comes apart in order, bone by bone.", deathSpoken: "\"Untidy,\" he says, falling. \"Yes. About time.\"",
+    after: "The Patriarch kept the dead in order here for a thousand years, until someone brought something, or brought him down." },
+  root: { open: "The red stone moves, and it is not a face, and you understand it anyway. IT KNOWS YOU. IT HAS BEEN DREAMING YOU FOR SOME TIME.",
+    speak: [{ ask: "WHAT DID YOU BRING IT, the stone asks. EVERYONE BRINGS IT SOMETHING. THE KING BROUGHT IT A CITY.", replies: [{ say: "Nothing. We brought ourselves.", back: "FOUR. IT HAS HAD FOUR BEFORE. THEY ARE IN THE WALLS, IF YOU WANT TO SEE THEM.", good: true }, { say: "Your death.", back: "IT CANNOT DIE. IT CAN WAKE. THAT IS WORSE, FOR YOU." }] },
+      { ask: "DO YOU KNOW WHAT WAKES IF YOU WAKE IT.", replies: [{ say: "No. We will find out.", back: "HONEST. THE QUEEN WAS HONEST. IT MISSES HER, A LITTLE, THE WAY ONE MISSES A TOOTH.", good: true }, { say: "We don't care.", back: "IT DREAMED YOU CARING. IT WAS WRONG. THAT IS RARE." }] },
+      { ask: "IT COULD DREAM SOMETHING ELSE. IT HAS WONDERED. WOULD YOU LIKE TO SEE?", replies: [{ say: "Not today.", back: "NOT TODAY. IT WILL REMEMBER THAT YOU SAID TODAY, AS IF THERE WERE OTHERS.", good: true }, { say: "Show us.", back: "NOT YET. YOU HAVE NOT BROUGHT IT ANYTHING TO DREAM WITH." }] }],
+    good: "The stone is still. IT WILL NOT HURRY. IT HAS NEVER HURRIED. COME.", bad: "The stone comes up out of the floor like a tide.",
+    gate: null,
+    death: "IT WAKES, the stone says, and then there is no one to say anything.", deathSpoken: "NOT TODAY, it says. THEN TOMORROW.",
+    after: "Here the dreamer lay. It is still now, or it is dreaming something quieter." },
+  boss: { open: "The Lich King rises from his throne. \"You took your time,\" he says. He looks at each of you in turn, the way a man counts coins. \"Four. It is always four. I was one of four, once. We came down a stair like yours.\"",
+    speak: [], gate: null, good: "", bad: "", death: "", deathSpoken: "", after: "" },
+};
+CM.gateOpen = function (game, G) {                                        // whether the party holds a guardian's gate
+  if (!G) return false;
+  if (G.key) return Boolean(game.story && game.story.read[G.key] !== undefined);
+  if (G.item) return game.bag.some((i) => i.kind === G.item);
+  if (G.holy) return game.bag.some((i) => (i.props || {}).element === "holy") || game.party.some((h) => CM.equipped(h).some((i) => (i.props || {}).element === "holy"));
+  return false;
+};
+
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)
 CM.LORE_KEYS = [];
 for (let n = 1; n <= 50; n++) CM.LORE_KEYS.push(`carving.${["catacombs", "vaults", "halls", "palace", "drowned", "fungal", "crystal", "foundry", "ossuary", "root"][Math.floor((n - 1) / 5)]}.${((n - 1) % 5) + 1}`);
@@ -1715,6 +1802,7 @@ CM.LORE_ENDLESS = Object.values(CM.LORE_TEXT).filter((l) => l.chapter === "endle
 
 // a carving's key, from the value the floor holds
 CM.loreKey = function (text) {
+  if (typeof text === "string" && text.startsWith("ga:")) text = "g:" + text.slice(3);   // (a lair's carving, after its guardian is gone: the same line, in the past tense)
   if (typeof text === "string" && text.startsWith("g:")) return CM.LORE_TEXT[`guardian.${text.slice(2)}`] ? `guardian.${text.slice(2)}` : null;
   if (typeof text === "string" && text.startsWith("e:")) return `endless.${(Number(text.slice(2)) % CM.LORE_ENDLESS.length) + 1}`;
   if (typeof text === "number" && text >= 0) return CM.LORE_KEYS[Math.min(text, CM.LORE_KEYS.length - 1)];
@@ -1729,7 +1817,7 @@ CM.telling = function (key, seed) {
   return l.tellings[CM.hashSeed(`${seed}:telling:${key}`) % l.tellings.length];
 };
 // what a carving says: the floor's part of the story, an odd one, a guardian's or the endless dark's
-CM.loreText = (text, seed) => CM.telling(CM.loreKey(text), seed);
+CM.loreText = (text, seed) => (typeof text === "string" && text.startsWith("ga:") && CM.PARLEY[text.slice(3)] && CM.PARLEY[text.slice(3)].after) || CM.telling(CM.loreKey(text), seed);
 // the key a journal entry's text belongs to (an older save kept only the words)
 CM.keyOfText = function (text) {
   for (const l of Object.values(CM.LORE_TEXT)) if (l.tellings.includes(text)) return l.key;
@@ -5859,6 +5947,11 @@ CM.Game = class {
   }
   // down the stairs by hand (the simulator's bot, when it has lost its way): logged, so a replay follows
   warp(number) { this.logAct("warp", number); this.enterFloor(number, "down"); }
+  mapAll() {                                                             // (the tests' other cheat, logged like warp: the whole floor seen, so travelTo has a map)
+    this.logAct("mapAll");
+    const fl = this.floor; if (!fl) return;
+    fl.seen = []; for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]);
+  }
   // the party's temper: a number from 0 to 100, said as a word (CM.moraleWord); what the fight reads
   cheer(n, why) {
     const was = this.morale === undefined ? CM.MORALE.start : this.morale;
@@ -6228,6 +6321,7 @@ Object.assign(CM.Game.prototype, {
       return false;
     }
     const thing = fl.things[k];
+    if (thing && (thing.type === "guardian" || thing.type === "boss") && !thing.parleyed && !thing.group[0].echo && this.openParley(k, thing)) return false;   // (it speaks first)
     if (thing && (thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian")) {
       this.startCombat(k, thing);
       return false;
@@ -7018,6 +7112,12 @@ Object.assign(CM.Game.prototype, {
     // the fight's dice come from the seed and where and when it begins: the same fight, fought the same way, goes the same way
     this.rnd = new CM.Random(CM.hashSeed(`${this.seed}:fight:${this.floor ? this.floor.number : 0}:${(this.tally || {}).fights || 0}:${this.steps || 0}:${key}`));
     this.foes = thing.group.map(CM.upgradeMonster);
+    if (thing.terms && !thing.termsDone) {                               // spoken to first: on better terms its company goes and it is shaken; on worse it is enraged
+      thing.termsDone = true;
+      if (thing.terms === "good") { this.foes = this.foes.filter((m) => m.guardian || m.boss || this.foes.length === 1); for (const m of this.foes) if (m.guardian) { m.hp = Math.max(1, Math.round(m.hp * 0.85)); m.shaken = true; } }
+      else if (thing.terms === "bad") for (const m of this.foes) if (m.guardian) { m.atk = Math.round(m.atk * 1.15); m.enraged = true; }
+      thing.group = this.foes;
+    }
     if (this.has("hordes") && !thing.horded && this.foes.length && !this.foes[0].boss && !this.foes[0].guardian) {   // one more, of the first kind
       thing.horded = true;
       const kind = CM.monsterKind(this.foes[0].kind || this.foes[0].name);
@@ -7683,6 +7783,8 @@ Object.assign(CM.Game.prototype, {
     if (relic) this.bag.push(relic);
     this.sound("toll");
     this.say(G.fall);
+    { const P = CM.PARLEY[id], fought = this.floor && this.floor.things[this.foeKey]; if (P && !m.echo) this.say(fought && fought.spoke ? P.deathSpoken : P.death); }
+    this.lairAfter(id);
     this.say(m.echo ? "The echo fades, and leaves nothing but the shaft it stood over." : relic ? `${G.take} (${relic.name}: ${CM.itemLabel(relic)}.)` : G.take);
     this.emit("fx", { kind: "relic", item: relic });
   },
@@ -9170,6 +9272,84 @@ Object.assign(CM.Game.prototype, {
     if (codex.filter((c) => c.band !== undefined).every((c) => c.complete)) this.achieve("chronicler");
     return true;
   },
+  // ---- a guardian at the door of its lair: it speaks first; the party fights, speaks, or passes by what it has read ----
+  openParley(k, thing) {
+    const id = thing.type === "boss" ? "boss" : thing.group[0].guardian, P = CM.PARLEY[id], G = CM.GUARDIANS[id];
+    if (!P) return false;
+    thing.talk = 0;
+    const options = ["Fight"];
+    if (P.speak.length) options.push("Speak");
+    if (P.gate && CM.gateOpen(this, P.gate)) options.push(P.gate.label);
+    this.emit("choice", { k, title: G ? G.name : CM.BOSS.name, text: P.open, options, parley: true });
+    return true;
+  },
+  parley(k, i) {
+    const thing = this.floor.things[k];
+    if (!thing || !["guardian", "boss"].includes(thing.type)) return false;
+    const id = thing.type === "boss" ? "boss" : thing.group[0].guardian, P = CM.PARLEY[id], G = CM.GUARDIANS[id] || CM.BOSS;
+    if (!P) return false;
+    this.logAct("parley", k, i);
+    const step = thing.talk || 0;
+    if (step === 0) {                                                    // fight, speak, or the gate (the options as openParley laid them out)
+      const acts = ["fight"];
+      if (P.speak.length) acts.push("speak");
+      if (P.gate && CM.gateOpen(this, P.gate)) acts.push("gate");
+      const act = acts[i];
+      if (act === "fight") { thing.parleyed = true; this.startCombat(k, thing); return true; }
+      if (act === "speak") { thing.talk = 1; thing.score = 0; this.emit("choice", { k, title: G.name, text: P.speak[0].ask, options: P.speak[0].replies.map((r) => r.say), parley: true }); return true; }
+      if (act === "gate") { this.passGuardian(k, thing, id); return true; }
+      return false;
+    }
+    const ex = P.speak[step - 1], reply = ex && ex.replies[i];           // the exchanges
+    if (!reply) return false;
+    if (reply.good) thing.score = (thing.score || 0) + 1;
+    this.say(reply.back);
+    if (step < P.speak.length) { thing.talk = step + 1; this.emit("choice", { k, title: G.name, text: `${reply.back} ${P.speak[step].ask}`, options: P.speak[step].replies.map((r) => r.say), parley: true }); return true; }
+    thing.parleyed = true; thing.spoke = true;
+    thing.terms = (thing.score || 0) >= 2 ? "good" : (thing.score || 0) === 0 ? "bad" : "even";
+    this.say(thing.terms === "good" ? P.good : thing.terms === "bad" ? P.bad : "It has heard enough.");
+    this.emit("talk", { title: G.name, text: reply.back, lines: [thing.terms === "good" ? P.good : thing.terms === "bad" ? P.bad : "It has heard enough. It comes."] });
+    this.startCombat(k, thing);
+    return true;
+  },
+  // passed by speech: not slain - no trophy, no experience, half the gold - but the way is open, and its relic is left behind
+  passGuardian(k, thing, id) {
+    const P = CM.PARLEY[id], G = CM.GUARDIANS[id], m = thing.group[0];
+    if (P.gate.item) { const row = this.bag.findIndex((it) => it.kind === P.gate.item); if (row >= 0) this.bag.splice(row, 1); }
+    if (P.gate.holy) {
+      const row = this.bag.findIndex((it) => (it.props || {}).element === "holy");
+      if (row >= 0) this.bag.splice(row, 1);
+      else for (const h of this.party) for (const slot of CM.SLOTS) if (h[slot] && (h[slot].props || {}).element === "holy") { h[slot] = null; CM.recompute(h); break; }
+    }
+    const gold = Math.floor((m.gold || G.gold || 0) / 2);
+    this.gold += gold;
+    if (G.relic && !m.echo) { const relic = CM.relic(id); this.bag.push(relic); this.emit("fx", { kind: "relic", item: relic }); }
+    this.tally.spoken = (this.tally.spoken || []).concat(id);
+    this.story.spoken = (this.story.spoken || []).concat(id);
+    if (this.story.spoken.length >= 3) this.achieve("softspoken");
+    this.markRead(`passed.${id}`);
+    this.remember("ghost", P.gate.text, { who: G.name, key: `passed.${id}` });
+    delete this.floor.things[k];
+    this.floor.things[k] = { type: "ladder" };
+    this.lairAfter(id);
+    this.sound("toll");
+    this.cheer(6);
+    this.say(`${G.name} lets the party by. ${gold} gold lay where it stood.`);
+    this.emit("talk", { title: G.name, text: P.gate.text });
+    this.emit("fx", { kind: "relic", item: null });
+    if (G.final && !this.endless) { this.bottom = true; this.endRun(true); return; }
+    this.saveRun();
+    this.emit("change");
+  },
+  // the lair, once its guardian is gone: the water drains, the embers go out, and its carving speaks in the past tense
+  lairAfter(id) {
+    const fl = this.floor;
+    if (!fl) return;
+    if (id === "knight" || id === "queen") fl.decor = fl.decor.filter((d) => d.kind !== "water");
+    if (id === "forge" || id === "master") fl.decor = fl.decor.filter((d) => d.kind !== "ember");
+    for (const f of Object.values(fl.features)) if (f.type === "carving" && f.text === `g:${id}`) f.text = `ga:${id}`;
+    this.emit("mesh");
+  },
   metGhost(name) { this.village.ghostsMet = (this.village.ghostsMet || []).filter((n) => n !== name).concat(name).slice(-40); this.saveVillage(); },
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); },
 
@@ -9552,7 +9732,7 @@ CM.VILLAGE = {
 CM.CANDLE_COST = [10, 5];
 // what a run brings home in renown
 CM.renownFor = function (entry, game) {
-  let n = Math.min(50, entry.floor || 0) + 5 * ((entry.tally || {}).guardians || []).length;
+  let n = Math.min(50, entry.floor || 0) + 5 * ((entry.tally || {}).guardians || []).length + 5 * ((entry.tally || {}).spoken || []).length;
   if (entry.won) n += 50;
   if (entry.bottom) n += 100;
   if (entry.weekly) n += 30;
@@ -10470,7 +10650,7 @@ CM.UI = class {
     if (!c || !c.options[n - 1]) return;
     this.closeDialogs();
     this.choice = null;
-    if (c.rivals) this.game.chooseRivals(c.k, n - 1); else this.game.choose(c.k, n - 1);
+    if (c.parley) this.game.parley(c.k, n - 1); else if (c.rivals) this.game.chooseRivals(c.k, n - 1); else this.game.choose(c.k, n - 1);
     this.refresh();
   }
   openJournal() {

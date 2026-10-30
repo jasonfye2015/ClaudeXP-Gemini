@@ -171,7 +171,13 @@ function playRun(CM, game, opts = {}) {
     const [dx, dy] = CM.DIRS[step], nk = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, nf = fl.features[nk];
     if (nf && nf.type === "door" && !nf.open && nf.riddle !== undefined && CM.RIDDLES[nf.riddle]) { game.answerRiddle(nk, CM.RIDDLES[nf.riddle].a); continue; }
     const was = fl.pos.join(",");
+    asked = null;
     game.move(0);
+    if (asked && asked.parley) {                                         // a guardian speaks first: the bot takes the open gate, else it fights
+      const c = asked; asked = null;
+      game.parley(c.k, c.options.length > 2 ? 2 : 0);
+      continue;
+    }
     if (game.mode === "explore" && game.floor === fl && fl.pos.join(",") === was) {
       // the door opened (move again next loop), the lock held (a Rogue may try again), or something odd: a few tries, then another target
       if (nf && nf.type === "door" && nf.locked && !nf.open && game.hasKey() < 0) { if (++stuck > 40) break; }

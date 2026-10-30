@@ -125,7 +125,7 @@ The six ghosts become characters with arcs across the dungeon.
 
 Size: L (mostly writing: ~6,000 words).
 
-## Phase 2 - The guardians speak - v3.3
+## Phase 2 - The guardians speak - v3.3 - DONE
 
 A parley before every lair, and a way through for those who read.
 

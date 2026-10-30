@@ -19,7 +19,7 @@ CM.VILLAGE = {
 CM.CANDLE_COST = [10, 5];
 // what a run brings home in renown
 CM.renownFor = function (entry, game) {
-  let n = Math.min(50, entry.floor || 0) + 5 * ((entry.tally || {}).guardians || []).length;
+  let n = Math.min(50, entry.floor || 0) + 5 * ((entry.tally || {}).guardians || []).length + 5 * ((entry.tally || {}).spoken || []).length;
   if (entry.won) n += 50;
   if (entry.bottom) n += 100;
   if (entry.weekly) n += 30;

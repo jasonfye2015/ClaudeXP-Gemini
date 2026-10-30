@@ -1409,6 +1409,81 @@ test("the people of Caer Duin: twelve ghosts on their three floors, the bell, a 
   assert.ok(Object.keys(g5.story.read).some((key) => key.startsWith("people.")), `the bot met ${Object.keys(g5.story.read).join(", ")}`);
 });
 
+test("the guardians speak: three exchanges and a gate each, better and worse terms, a guardian passed by speech leaves the way open and its relic, the bot answers", () => {
+  const CM = load();
+  for (const id of CM.GUARDIAN_ORDER) {
+    const P = CM.PARLEY[id], G = CM.GUARDIANS[id];
+    assert.ok(P && P.open && P.death && P.deathSpoken && P.after && P.good && P.bad, `${id}: every word written`);
+    assert.strictEqual(P.speak.length, 3, `${id}: three exchanges`);
+    for (const ex of P.speak) { assert.strictEqual(ex.replies.length, 2); assert.strictEqual(ex.replies.filter((r) => r.good).length, 1, `${id}: one right answer each`); }
+    if (P.gate && P.gate.key) { assert.ok(CM.LORE_TEXT[P.gate.key], `${id}: a real key`); const at = CM.LORE_TEXT[P.gate.key].floor; assert.ok(P.gate.returns ? at > G.floor : at < G.floor, `${id}: its key lies ${P.gate.returns ? "below (a return)" : "above"} its lair (${at} vs ${G.floor})`); }
+  }
+  assert.strictEqual(CM.PARLEY.root.gate, null, "the Root wants nothing you have, yet");
+  // the Rat King's door: it speaks first; all three answers right, and its company goes and it is shaken
+  const atDoor = (game, n) => { game.enterFloor(n, "down"); const [k, t] = Object.entries(game.floor.things).find(([, x]) => x.type === "guardian"); const [gx, gy] = k.split(",").map(Number); const d = CM.DIRS.findIndex(([dx, dy]) => CM.passable(game.floor, gx - dx, gy - dy)); game.floor.pos = [gx - CM.DIRS[d][0], gy - CM.DIRS[d][1]]; game.floor.facing = d; return [k, t]; };
+  const game = new CM.Game(); game.newGame("parley-1", fixedParty(CM));
+  let asked = null; game.on("choice", (c) => { asked = c; });
+  game.bag = game.bag.filter((i) => i.kind !== "ration");
+  let [k, t] = atDoor(game, 5);
+  game.move(0);
+  assert.ok(asked && asked.parley && asked.options.length === 2 && game.mode === "explore", "it speaks first: fight or speak");
+  game.parley(k, 1);
+  for (let step = 0; step < 3; step++) { assert.ok(asked.options.length === 2); game.parley(k, CM.PARLEY.rat.speak[step].replies.findIndex((r) => r.good)); }
+  assert.strictEqual(game.mode, "combat"); assert.strictEqual(t.terms, "good"); assert.strictEqual(game.foes.length, 1, "the escorts went"); assert.ok(game.foes[0].shaken && game.foes[0].hp < game.foes[0].max);
+  assert.ok(game.runLog.filter((l) => l[0] === "parley").length === 4, "every word logged");
+  // worse terms: three wrong answers, and it is enraged
+  const g2 = new CM.Game(); g2.newGame("parley-2", fixedParty(CM)); g2.bag = g2.bag.filter((i) => i.kind !== "ration");
+  [k, t] = atDoor(g2, 5); g2.move(0); g2.parley(k, 1);
+  for (let step = 0; step < 3; step++) g2.parley(k, CM.PARLEY.rat.speak[step].replies.findIndex((r) => !r.good));
+  assert.strictEqual(t.terms, "bad"); assert.ok(g2.foes.find((m) => m.guardian).enraged);
+  // the gate: rations for the Rat King - passed, not slain; the way open, the crown left, half the gold, no trophy
+  const g3 = new CM.Game(); g3.newGame("parley-3", fixedParty(CM)); g3.bag.push(CM.ration());
+  [k, t] = atDoor(g3, 5); asked = null; g3.on("choice", (c) => { asked = c; }); g3.move(0);
+  assert.strictEqual(asked.options.length, 3, "the gate is open: rations in the pack");
+  const gold = g3.gold; g3.parley(k, 2);
+  assert.strictEqual(g3.floor.things[k].type, "ladder"); assert.ok(g3.bag.some((i) => i.name === "Rat King's Crown")); assert.ok(g3.gold > gold); assert.ok(!g3.trophies.rat); assert.deepStrictEqual(JSON.parse(JSON.stringify(g3.tally.spoken)), ["rat"]);
+  assert.ok(!g3.bag.some((i) => i.kind === "ration"), "the rations are gone");
+  const wall = Object.values(g3.floor.features).find((f) => f.type === "carving" && f.text === "ga:rat");
+  assert.ok(wall && CM.loreText(wall.text) === CM.PARLEY.rat.after && CM.loreKey(wall.text) === "guardian.rat", "the lair's carving, in the past tense");
+  assert.strictEqual(g3.mode, "explore");
+  // the Drowned Knight's gate wants a line from below him; the Forge-Warden's, one from above
+  const g4 = new CM.Game(); g4.newGame("parley-4", fixedParty(CM));
+  assert.ok(!CM.gateOpen(g4, CM.PARLEY.knight.gate)); g4.markRead("carving.drowned.2"); assert.ok(CM.gateOpen(g4, CM.PARLEY.knight.gate));
+  g4.markRead("carving.halls.1"); [k, t] = atDoor(g4, 15); asked = null; g4.on("choice", (c) => { asked = c; }); g4.move(0); g4.parley(k, 2);
+  assert.strictEqual(g4.floor.things[k].type, "ladder"); assert.ok(!g4.floor.decor.some((d) => d.kind === "ember"), "the embers are out");
+  // a replay plays the same words: the bot walks down to the Rat King's floor, then the party goes to its door and talks it round
+  const goTo = (game, x, y) => {                                        // (travel stops for every monster seen and every door: start it again until the party is there)
+    for (let tries = 0; tries < 120 && game.mode !== "title" && (game.floor.pos[0] !== x || game.floor.pos[1] !== y); tries++) {
+      if (game.mode === "combat") { autoplayFight(CM, game); continue; }
+      if (!game.travelTo(x, y, true)) break;
+      let steps = 0; while (game.travel && game.mode === "explore" && steps++ < 400) game.travelStep();
+    }
+  };
+  const faceTo = (game, d) => { let guard = 0; while (game.floor.facing !== d && guard++ < 4) game.turn(1); };
+  const g6 = new CM.Game(); g6.newGame("parley-6", fixedParty(CM));
+  playRun(CM, g6, { maxFloor: 4 });
+  if (g6.mode === "explore" && g6.floor.number === 5) {
+    g6.mapAll();
+    const [gk] = Object.entries(g6.floor.things).find(([, x]) => x.type === "guardian"); const [gx, gy] = gk.split(",").map(Number);
+    const d = CM.DIRS.findIndex(([dx, dy]) => CM.passable(g6.floor, gx - dx, gy - dy)), door = [gx - CM.DIRS[d][0], gy - CM.DIRS[d][1]];
+    goTo(g6, door[0], door[1]);
+    if (g6.mode === "explore" && g6.floor.pos[0] === door[0] && g6.floor.pos[1] === door[1]) {
+      faceTo(g6, d); g6.move(0);
+      const acts = asked && asked.parley ? asked.options : [];
+      g6.parley(gk, 1);
+      for (let step = 0; step < 3; step++) if (g6.mode === "explore") g6.parley(gk, CM.PARLEY.rat.speak[step].replies.findIndex((r) => r.good));
+      assert.strictEqual(g6.mode, "combat", `the talk ends in a fight on the party's terms (${acts.join(" / ")})`);
+      autoplayFight(CM, g6);
+      const again = CM.replayRun(g6.replaySpec());
+      assert.strictEqual(again.gold, g6.gold); assert.strictEqual(again.mode, g6.mode); assert.deepStrictEqual(JSON.parse(JSON.stringify(again.tally)), JSON.parse(JSON.stringify(g6.tally)), "the replay says the same words and fights the same fight");
+    } else console.log("       (the way to the Rat King's door was blocked this seed: the replay check was skipped)");
+  } else console.log(`       (the bot did not reach floor 5 this seed - ${g6.mode}, floor ${g6.floor && g6.floor.number}: the replay check was skipped)`);
+  // the bot answers the door
+  const g5 = new CM.Game(); g5.newGame("parley-1", fixedParty(CM));
+  playRun(CM, g5, { maxFloor: 6 });
+  assert.ok((g5.tally.guardians || []).includes("rat") || (g5.tally.spoken || []).includes("rat") || g5.mode === "title", "the bot got past the Rat King, or fell trying");
+});
+
 (async () => {
   let failed = 0;
   for (const t of tests) {

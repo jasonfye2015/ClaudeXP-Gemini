@@ -710,6 +710,7 @@ CM.ACHIEVEMENTS = {
   chronicler: { name: "The Chronicler", what: "Read every carving of every band, in one expedition", title: "the Chronicler" },
   bellringer: { name: "Bell-ringer", what: "Bring Brother Cael the last bell of Caer Duin", title: "the Bell-ringer" },
   witness: { name: "The Witness", what: "Grant every one of the twelve their third request", title: "the Witness" },
+  softspoken: { name: "The Soft-Spoken", what: "Pass three guardians by speech, without a blow", title: "the Soft-Spoken" },
   laidtorest: { name: "Laid to Rest", what: "Lay a fallen hero of your own to rest where they fell", title: "the Faithful" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },

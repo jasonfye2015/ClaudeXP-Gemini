@@ -799,7 +799,7 @@ CM.UI = class {
     if (!c || !c.options[n - 1]) return;
     this.closeDialogs();
     this.choice = null;
-    if (c.rivals) this.game.chooseRivals(c.k, n - 1); else this.game.choose(c.k, n - 1);
+    if (c.parley) this.game.parley(c.k, n - 1); else if (c.rivals) this.game.chooseRivals(c.k, n - 1); else this.game.choose(c.k, n - 1);
     this.refresh();
   }
   openJournal() {

@@ -64,6 +64,7 @@ Object.assign(CM.Game.prototype, {
       return false;
     }
     const thing = fl.things[k];
+    if (thing && (thing.type === "guardian" || thing.type === "boss") && !thing.parleyed && !thing.group[0].echo && this.openParley(k, thing)) return false;   // (it speaks first)
     if (thing && (thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian")) {
       this.startCombat(k, thing);
       return false;
