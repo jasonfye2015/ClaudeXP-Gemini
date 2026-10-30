@@ -128,6 +128,13 @@ Object.assign(CM.UI.prototype, {
         box.appendChild(row);
       }
     });
+    if (g.bag.some((i) => i.kind === "wand")) {                          // a wand charged: a gem and 60 gold for three
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>Charge a wand</b> <small>${g.bag.filter((i) => i.kind === "wand").map((w) => `${this.esc(w.name)} (${CM.plural(w.charges || 0, "charge")})`).join(", ")}</small></div>`;
+      const b = document.createElement("button"); b.textContent = "Charge the first wand: a gem and 60 gold"; b.disabled = !g.bag.some((i) => i.kind === "gem") || g.gold < 60;
+      b.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("recharge", 0, "weapon") || "Done."; this.renderSmith(); this.refresh(); });
+      row.appendChild(b); box.appendChild(row);
+    }
     const scrapRows = g.bag.map((it, i) => [it, i]).filter(([it]) => ["weapon", "armor", "shield", "helm"].includes(it.kind) && !(it.props && (it.props.relic || it.props.unique)));
     if (scrapRows.length) {
       const title = document.createElement("div");

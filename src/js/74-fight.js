@@ -48,6 +48,8 @@ Object.assign(CM.UI.prototype, {
       });
       btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
     } else if (h && cm.kind === "item") {
+      const free = c.beltRound !== c.round;
+      (g.belt || []).forEach((it, slot) => { if (it) btn(`<kbd>${slot + 5}</kbd>${this.esc(it.name)}<small>${free ? "from the belt: no turn spent" : "from the belt"}</small>`, () => this.beltPick(slot), false, "pick"); });
       const rows = this.usableRows();
       rows.forEach((row, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(g.bag[row].name)}<small>${g.describe(g.bag[row])}</small>`, () => this.itemPick(row), false, "pick"));
       if (!rows.length) { const none = document.createElement("span"); none.className = "small"; none.textContent = "Nothing in the pack for a fight."; menu.appendChild(none); }
@@ -75,7 +77,7 @@ Object.assign(CM.UI.prototype, {
   },
 
   combatMenu(kind, data) { this.cmenu = Object.assign({ kind }, data || {}); this.renderCombat(); },
-  usableRows() { return this.game.bag.map((it, i) => (["heal", "greaterheal", "mana", "antidote", "revive", "bomb"].includes(it.kind) ? i : -1)).filter((i) => i >= 0); },
+  usableRows() { return this.game.bag.map((it, i) => (["heal", "greaterheal", "mana", "antidote", "revive", "revive0", "bomb", "flask", "elixir", "wand"].includes(it.kind) || (it.kind === "scroll" && !CM.SCROLLS[it.spell].outside) ? i : -1)).filter((i) => i >= 0); },
 
   castPick(id, power = 1, reagent) {
     const g = this.game, a = CM.ABILITIES[id];
@@ -84,11 +86,23 @@ Object.assign(CM.UI.prototype, {
     this.refresh();
   },
 
-  itemPick(row) { if (this.game.bag[row].kind === "bomb") { this.game.act("item", { row }); this.refresh(); return; } this.combatMenu("ally", { row, fallen: this.game.bag[row].kind === "revive" }); },
+  itemPick(row) {
+    const g = this.game, it = g.bag[row];
+    if (it.kind === "bomb" || it.kind === "elixir" || (it.kind === "flask" && it.flask !== "holy" && it.flask !== "smoke") || (it.kind === "wand" && it.spell === "fire")) { g.act("item", { row, who: g.target }); this.refresh(); return; }
+    if (it.kind === "flask" || (it.kind === "scroll") || (it.kind === "wand" && it.spell !== "healing")) { g.act("item", { row }); this.refresh(); return; }
+    this.combatMenu("ally", { row, fallen: it.kind === "revive" || it.kind === "revive0" });
+  },
+  beltPick(slot) {
+    const g = this.game, it = (g.belt || [])[slot];
+    if (!it) return;
+    if (["heal", "greaterheal", "mana", "antidote", "revive", "revive0"].includes(it.kind) || (it.kind === "wand" && it.spell === "healing")) { this.combatMenu("ally", { belt: slot, fallen: it.kind === "revive" || it.kind === "revive0" }); return; }
+    g.act("item", { belt: slot, who: g.target }); this.refresh();
+  },
 
   allyPick(i) {
     const cm = this.cmenu || {};
-    if (cm.row !== undefined) this.game.act("item", { row: cm.row, who: i });
+    if (cm.belt !== undefined) this.game.act("item", { belt: cm.belt, who: i });
+    else if (cm.row !== undefined) this.game.act("item", { row: cm.row, who: i });
     else this.game.act("cast", Object.assign({ id: cm.id, target: i }, cm.power > 1 ? { power: cm.power } : {}, cm.reagent !== undefined ? { reagent: cm.reagent } : {}));
     this.refresh();
   },

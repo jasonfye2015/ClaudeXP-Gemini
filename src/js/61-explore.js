@@ -238,6 +238,12 @@ Object.assign(CM.Game.prototype, {
       if (this.spellLight === 0) this.say("The conjured light fades.");
     }
     const l = this.light;
+    if (l.kind === "lantern") {                                          // a lantern burns one step in two, and a flask of oil at a time
+      if ((this.steps || 0) % 2 === 0) l.left -= 1;
+      if (l.left === 60) this.say("The lantern burns low: it wants oil.");
+      if (l.left <= 0) { const oil = this.bag.findIndex((i) => i.kind === "lampoil"); if (oil >= 0) { this.bag.splice(oil, 1); l.left = CM.LANTERN_OIL; this.say("The lantern gutters, and is filled from the pack."); } else { this.light = { kind: null, left: 0 }; this.say("The lantern goes out. Lamp oil would light it again."); this.emit("change"); } }
+      return;
+    }
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
     const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
@@ -256,13 +262,13 @@ Object.assign(CM.Game.prototype, {
     }
   },
 
-  inDark() { return this.floor ? this.floor.dark.includes(keyOf(this.floor.pos[0], this.floor.pos[1])) : false; },
+  inDark() { return this.floor && !(this.buffs && this.buffs.owleyes) ? this.floor.dark.includes(keyOf(this.floor.pos[0], this.floor.pos[1])) : false; },
 
   // how far the party can see, as a share of the depth's reach
   lightFactor() {
     const l = this.light, spell = this.spellLight > 0;
     if (this.inDark()) return spell ? 0.7 : l.kind === "lantern" ? 0.45 : 0.25;
-    let f = l.kind === "lantern" ? 1.15 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
+    let f = l.kind === "lantern" ? 1.15 : l.kind === "glow" ? 0.6 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
     if (spell) f = Math.max(f, 1.1);
     return f;
   },

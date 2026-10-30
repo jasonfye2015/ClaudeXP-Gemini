@@ -879,6 +879,23 @@ Affixes that grow, sets, curses, and the smith's second trade (the sixth big upd
   thing is scrap), and essence from the fire (salvage: one from a fine thing, two from a rare or a cursed one;
   three essence stand in for a gem at the rework). Enchantment stays at +3; a tier-III word is the ceiling.
 
+The belt, and things to drink, read and throw (the sixth big update, phase 3 - v4.4)
+  The belt: four slots under the automap (keys 5 to 8; the bag's "To the belt"), and in a fight the first thing
+  used from it in a round costs no turn (game.toBelt, useBelt; act("item", {belt})). Flasks, thrown from any row
+  (CM.FLASKS): oil (fire on a foe and the one behind; on water it spreads to every foe for half), acid (three off
+  a foe's defence), holy water (the undead burn, some cower), smoke (away, for certain) - brewed by the alchemist,
+  sold at the camps. Potions by depth (CM.healPotion: lesser, healing, greater, full; mana likewise) and a Lesser
+  Phoenix Feather (half health, once a floor), so the full one is a decision. Elixirs with a time to them
+  (CM.ELIXIRS): stoneskin (three off every blow, the floor), haste (first in every round of the next fight), owl's
+  eyes (no dark, three floors), the night's draught (no sleep, no surprise, the floor). Six scrolls more: recall
+  (to the last camp, and back to the square by the same scroll), knowledge (the floor's carving from here),
+  banishing (a called thing sent back), sharpening (+2 for the floor), silence (no spell, no breath, the fight),
+  the lost page (fire, frost or lightning on every foe, once). Wands are spent, not crumbled, on their last charge
+  (one in four breaks; never with an Artificer standing) and the smith charges them (a gem and 60 gold for three).
+  Light as a thing: the lantern wants oil (CM.LANTERN_OIL steps, burned one in two; lamp oil from the merchant,
+  poured by hand or from the pack as it gutters; an older save's lantern gets a flask), and glow stones from the
+  Crystal Caverns' chests never go out and do not reach far.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

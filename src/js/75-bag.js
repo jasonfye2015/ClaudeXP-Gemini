@@ -61,6 +61,9 @@ Object.assign(CM.UI.prototype, {
       b.title = cmp && cmp.why ? cmp.why : "";
       if (knife && CM.canDualWield(m, picked)) { const o = document.createElement("i"); o.className = "offhand"; o.textContent = " (or the other hand)"; o.title = "A second knife in the off hand: another blow at half, every blow"; o.addEventListener("click", (e) => { e.stopPropagation(); this.note(g.equipOffhand(m, this.bagRow)); this.fillBag(); }); b.appendChild(o); }
     });
+    const beltBox = this.$("#bag-belt"); beltBox.innerHTML = "";
+    if (picked && CM.BELT_KINDS.includes(picked.kind)) { const b = document.createElement("button"); b.textContent = "To the belt"; b.title = "Four things to hand: keys 5 to 8; in a fight the first used in a round costs no turn"; b.addEventListener("click", () => { this.note(g.toBelt(this.bagRow)); this.bagRow = -1; this.fillBag(); }); beltBox.appendChild(b); }
+    (g.belt || []).forEach((it, i) => { if (!it) return; const b = document.createElement("button"); b.textContent = `Off the belt: ${it.name}`; b.addEventListener("click", () => { this.note(g.fromBelt(i)); this.fillBag(); }); beltBox.appendChild(b); });
     const base = picked ? CM.itemCard(picked) : "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     if (picked) this.$("#bag-note").textContent = base;
     this.$("#bag-note").dataset.base = base;

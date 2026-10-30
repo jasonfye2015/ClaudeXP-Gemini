@@ -477,6 +477,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (game.mode === "combat") {                                        // a fight: the keys are the fight's
       if (e.code === "Tab" || e.code === K.map) { e.preventDefault(); game.setTarget((game.target || 0) + 1); return; }
       if (e.code === "Escape") { e.preventDefault(); if (ui.cmenu && ui.cmenu.kind !== "main") ui.combatMenu("main"); else ui.openDialog("#dlg-pause"); return; }
+      if (/^Digit[5-8]$/.test(e.code) && game.combat && game.combat.waiting && (!ui.cmenu || ui.cmenu.kind === "main") && (game.belt || [])[Number(e.code.slice(-1)) - 5]) { ui.beltPick(Number(e.code.slice(-1)) - 5); return; }
       if (/^Digit[1-9]$/.test(e.code)) { ui.pick(Number(e.code.slice(-1))); return; }
       if (!(game.combat && game.combat.waiting)) return;
       if (e.code === K.fight) game.act("fight", game.target);
@@ -493,6 +494,7 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
     if (["Digit1", "Digit2", "Digit3", "Digit4"].includes(e.code) && game.mode !== "title") { ui.openSheet(Number(e.code.slice(-1)) - 1); return; }
+    if (/^Digit[5-8]$/.test(e.code) && (game.mode === "explore" || game.mode === "camp")) { const note = game.useBelt(Number(e.code.slice(-1)) - 5); if (note) game.say(note); ui.refresh(); return; }
     if (e.code === "Escape") { e.preventDefault(); ui.openDialog("#dlg-pause"); return; }
     if (e.code === K.map || e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
     if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }

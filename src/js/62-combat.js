@@ -55,7 +55,7 @@ Object.assign(CM.Game.prototype, {
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
     const wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
     const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
-    if ((theyCame || this.inDark()) && !wary && this.rnd.chance(loud ? 0.65 : 0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
+    if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance(loud ? 0.65 : 0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
@@ -117,7 +117,7 @@ Object.assign(CM.Game.prototype, {
     c.round += 1;
     c.reached = 0;
     const order = [];
-    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + CM.gearProp(h, "init") + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
+    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + CM.gearProp(h, "init") + (this.buffs && this.buffs.haste === h.name ? 12 : 0) + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
     if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
     order.sort((a, b) => b.init - a.init);
     for (const h of this.alive()) if (h.familiar === "skull" && c.round > 0) { const foe = this.attackable()[0]; if (foe) this.spellHit(foe, Math.max(1, 2 + Math.floor(h.level / 2)), `${h.name}'s skull bites:`); }
@@ -262,11 +262,21 @@ Object.assign(CM.Game.prototype, {
       if (!t) return false;
       this.strike(h, t);
       if (CM.trait(h, "flurry") && t.hp > 0 && !t.fled) this.strike(h, t, " again", { mult: 0.5 });
+    } else if (action === "cast" && c.silence) {
+      this.say("No word comes: the fight is silenced."); return false;
     } else if (action === "cast") {
       const id = arg && arg.id !== undefined ? arg.id : this.defaultAbility(h);
       if (!this.useAbility(h, id, arg && arg.target !== undefined ? arg.target : null, arg && arg.power, arg && arg.reagent)) return false;
     } else if (action === "item") {
+      const free = arg && typeof arg === "object" && arg.belt !== undefined && c.beltRound !== c.round;
       if (!this.useItemInBattle(h, arg)) return false;
+      if (free && this.mode === "combat" && this.combat) {               // the belt: the first thing used in a round costs no turn
+        c.beltRound = c.round;
+        this.say(`(${h.name}'s hand is still free.)`);
+        this.afterBlows();
+        this.emit("change");
+        return true;
+      }
     } else if (action === "defend") {
       h.defending = true;
       this.say(`${h.name} raises a guard.`);
@@ -373,6 +383,7 @@ Object.assign(CM.Game.prototype, {
     if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
     if (h.thrall) return false;
     if ((status === "paralysis" && (CM.trait(h, "immovable") || h.quirk === "stubborn")) || ((status === "poison" || status === "paralysis") && CM.trait(h, "diamondbody"))) { this.say(`${h.name} does not so much as flinch.`); return false; }
+    if (status === "sleep" && this.buffs && this.buffs.night !== undefined) { this.say(`${h.name} does not sleep tonight.`); return false; }
     if (status === "curse" && (h.origin === "order" || CM.setWorn(h) === "order")) { this.say(`${h.name} says the order's words, and the curse finds no purchase.`); return false; }
     if (status === "paralysis" && (CM.setWorn(h) === "masons" || CM.gearProp(h, "stun0"))) { this.say(`${h.name} stands like a mason's wall.`); return false; }
     if (status === "curse") this.cheer(-5, "a curse");
@@ -431,6 +442,7 @@ Object.assign(CM.Game.prototype, {
     if (h.defending) dmg = Math.ceil(dmg / 2);
     if (by && by.blinded > 0) { by.blinded--; dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + " - blind, it strikes wide" }); }
     dmg -= CM.partyProp(this.party, "auraDf");
+    if (this.buffs && this.buffs.stoneskin !== undefined && h.stoneskin) dmg -= 3;
     if (!opts.aoe && !opts.noBlock) {                                   // a shield turns the blow: the hero's own, or a tower shield in the front row for one behind
       const own = h.offhand && h.offhand.kind === "shield" ? CM.blockChance(h.offhand) : 0;
       const tower = !own && h.row === "back" ? this.alive().filter((p) => p.row === "front" && CM.isTower(p.offhand) && !p.offhand.unknown).map((p) => CM.blockChance(p.offhand) / 2)[0] || 0 : 0;
@@ -469,6 +481,7 @@ Object.assign(CM.Game.prototype, {
     if (m.held > 0) { m.held--; this.say(`The ${m.name} is held fast.`); return; }
     if (m.boss) { this.lichAct(m); return; }
     if (m.guardian) { this.guardianAct(m); return; }
+    if (m.ability === "breath" && c.silence) { this.say(`${CM.The(m)} draws breath, and nothing comes.`); return; }
     if (m.ability !== "ranged" && m.ability !== "breath") {
       c.reached = (c.reached || 0) + 1;
       const limit = this.reachLimit();
@@ -708,6 +721,45 @@ Object.assign(CM.Game.prototype, {
     CM.store.set("trophies", this.trophies);
   },
 
+  // a wand's charge spent: on the last, one wand in four breaks (never with an Artificer in the party); the rest wait for the smith
+  spendWand(item, row) {
+    item.charges -= 1;
+    if (item.charges > 0) return;
+    if (!this.alive().some((h) => h.cls === "Artificer" || h.second === "Artificer") && this.rnd.chance(0.25)) { this.bag.splice(row, 1); this.say(`The ${item.name} cracks on its last charge, and crumbles.`); }
+    else this.say(`The ${item.name} is spent. The camp's smith can charge it again.`);
+  },
+  // a flask thrown: oil (fire on one and the one behind; on water, everyone), acid (armour off), holy water (the undead), smoke (away)
+  throwFlask(h, row, who) {
+    const item = this.bag[row], foes = this.living(), L = this.floor ? this.floor.number : 1, kind = item.flask;
+    if (kind === "smoke") {
+      this.bag.splice(row, 1); this.countUse("flask");
+      this.say(`${h.name} dashes the smoke flask on the floor, and the party is gone before it clears.`);
+      this.flee(true);
+      return true;
+    }
+    const target = this.foeAt(who);
+    if (!target && kind !== "holy") { this.say("Nothing left to aim at."); return false; }
+    this.bag.splice(row, 1); this.countUse("flask");
+    this.sound("spell");
+    this.emit("fx", { kind: "cast", id: kind === "oil" ? "fire" : kind === "holy" ? "turn" : "frost", hero: h, item: "bomb", foes, foe: target });
+    this.casting = h;
+    if (kind === "oil") {
+      const dmg = 14 + 2 * L;
+      if (this.terrain().includes("water")) { for (const m of foes) this.spellHit(m, Math.ceil(dmg / 2), "", "fire"); this.say(`${h.name} throws the oil: it spreads on the water and burns under every foe, ${Math.ceil(dmg / 2)} each.`); }
+      else { this.spellHit(target, dmg, `${h.name}'s oil bursts:`, "fire"); const behind = foes.find((m) => m !== target && m.hp > 0 && m.row !== target.row); if (behind) this.spellHit(behind, Math.ceil(dmg / 2), "The fire reaches", "fire"); }
+    } else if (kind === "acid") {
+      target.df = Math.max(0, target.df - 3); target.acid = true;
+      this.say(`${h.name}'s acid eats into ${CM.the(target)}: its armour runs (-3 defence).`);
+    } else if (kind === "holy") {
+      const undead = foes.filter((m) => m.undead && m.hp > 0);
+      if (!undead.length) { this.say(`${h.name} throws the holy water. Nothing here minds.`); this.casting = null; return true; }
+      let cower = 0;
+      for (const m of undead) { this.spellHit(m, 15 + 2 * L, "", "holy"); if (m.hp > 0 && !CM.unmoved(m) && this.rnd.chance(0.3)) { m.asleep = 2; cower++; } }
+      this.say(`${h.name} throws the holy water: it burns the undead${cower ? `, and ${cower} of them cower` : ""}.`);
+    }
+    this.casting = null;
+    return true;
+  },
   // one hero's blow on one foe (Fight, and the Ranger's arrows): the damage done, 0 for a miss
   strike(hero, target, note = "", opts = {}) {
     const rnd = this.rnd;
@@ -723,7 +775,7 @@ Object.assign(CM.Game.prototype, {
     }
     let df = bow && CM.trait(hero, "piercing") ? Math.floor(target.df / 2) : target.df;
     if (home && wclass === "blunt" && (["bone", "shell", "plate"].includes(hide) || target.undead)) df = Math.floor(df * 2 / 3);   // (a mace cares nothing for a shell)
-    let dmg = this.damage(this.effective(hero).atk, weapon.power, df), how = "";
+    let dmg = this.damage(this.effective(hero).atk, weapon.power + (weapon.sharpUntil !== undefined && this.floor && weapon.sharpUntil === this.floor.number ? 2 : 0), df), how = "";
     const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger" || (home && wclass === "polearm");
     let critMult = CM.trait(hero, "deadly") ? 3 : 2;
     if (home && wclass === "dagger") { critMult += 1; dmg = Math.max(1, Math.ceil(dmg * 2 / 3)); }
@@ -1157,8 +1209,18 @@ Object.assign(CM.Game.prototype, {
 
   // a potion, an antidote, a feather, in the thick of it: {row, who}, or the first healing potion for whoever needs it most
   useItemInBattle(h, arg) {
+    if (arg && typeof arg === "object" && arg.belt !== undefined) {      // a thing from the belt: into the pack's last row for the moment, and the belt keeps what is not spent
+      const item = (this.belt || [])[arg.belt];
+      if (!item) { this.say("Nothing there."); return false; }
+      this.bag.push(item); this.belt[arg.belt] = null;
+      const row = this.bag.length - 1, ok = this.useItemInBattle(h, { row, who: arg.who });
+      if (this.bag[row] === item) { this.bag.splice(row, 1); this.belt[arg.belt] = item; }
+      return ok;
+    }
     if (arg && typeof arg === "object" && arg.row !== undefined) {
       const item = this.bag[arg.row];
+      if (item && item.kind === "flask") return this.throwFlask(h, arg.row, arg.who);
+      if (item && item.kind === "elixir") { const note = this.give(arg.row, this.party.indexOf(h)); if (note) { this.say(note); return false; } return true; }
       if (item && (item.kind === "scroll" || item.kind === "wand")) return this.useMagicInBattle(h, arg.row, arg.who);
       if (item && item.kind === "bomb") {                                 // a firepot: fire on every foe
         const foes = this.living(), dmg = 25 + 3 * (this.floor ? this.floor.number : 1);
@@ -1241,6 +1303,7 @@ Object.assign(CM.Game.prototype, {
     delete this.floor.things[this.foeKey];
     if (guardian) this.floor.things[this.foeKey] = { type: "ladder" };   // (the shaft it stood over)
     this.combat = null;
+    if (this.buffs && this.buffs.haste) delete this.buffs.haste;
     this.sound("coin");
     this.cheer(guardian ? 10 : 3);
     this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and ${loot.map((i) => (i.kind === "ingredient" ? "some " : "a ") + (i.unknown ? CM.baseName(i) + " (unknown)" : i.name)).join(" and ")}.` : "."));

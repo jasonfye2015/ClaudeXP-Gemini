@@ -146,7 +146,12 @@ CM.itemLabel = function (item) {
   else if (item.kind === "boots") bits.push(`speed +${item.power}`, p.silence ? "silent: the party is never surprised" : "", p.waterwalk ? "dry feet: water costs the torch nothing" : "");
   else if (item.kind === "cloak") bits.push(`warding +${p.df}`, p.hood ? "a hood: no surprise in the dark" : "");
   else if (item.kind === "ration") bits.push("a meal: the party eats, and is not hungry for a while");
-  else if (item.kind === "scroll") bits.push(CM.SCROLLS[item.spell].what);
+  else if (item.kind === "scroll") bits.push(CM.SCROLLS[item.spell].what + (item.back ? ` (It remembers floor ${item.back.floor}.)` : ""));
+  else if (item.kind === "flask") bits.push(`thrown, from any row: ${CM.FLASKS[item.flask].what}`);
+  else if (item.kind === "elixir") bits.push(CM.ELIXIRS[item.elixir].what);
+  else if (item.kind === "lampoil") bits.push(`fills the lantern: ${CM.LANTERN_OIL} steps of slow burning`);
+  else if (item.kind === "glowstone") bits.push("a light that never goes out, and does not reach far");
+  else if (item.kind === "revive0") bits.push("raises a fallen hero to half, once a floor");
   else if (item.kind === "wand") bits.push(`${CM.WANDS[item.spell].what} ${CM.plural(item.charges, "charge")}.`);
   else if (item.kind === "tome") bits.push(`teaches ${CM.ABILITIES[item.spell].name} to a caster who reads it: ${CM.ABILITIES[item.spell].what}`);
   else if (item.kind === "gem") bits.push(CM.GEMS[item.gem].element ? `for the camp's smith: ${CM.GEMS[item.gem].element} set into a weapon` : "for the camp's smith: +1 on a piece of gear");
@@ -634,6 +639,7 @@ CM.furnish = function (floor, seed, gen) {
     if (h % 100 < 12) t.items.push(CM.gem(["diamond", "diamond", "ruby", "sapphire", "sunstone"][(h >>> 8) % 5]));
     else if (h % 100 < 21 && number >= 4) { const ids = Object.keys(CM.TOMES); t.items.push(CM.tome(ids[(h >>> 8) % ids.length])); }
   }
+  if (CM.themeIndex(number) === 6) for (const [k, t] of Object.entries(floor.things)) if (t.type === "chest" && CM.hashSeed(`${seed}:glow:${number}:${k}`) % 100 < 15) { t.items.push(CM.glowStone()); break; }   // (the Crystal Caverns: a glow stone now and then)
   // a set's piece, now and then, in a chest of its bands (CM.SETS; by hash, so no floor moves)
   for (const [setId, S] of Object.entries(CM.SETS)) {
     const band0 = CM.themeIndex(number);

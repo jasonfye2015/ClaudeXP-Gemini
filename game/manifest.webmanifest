@@ -2,7 +2,7 @@
   "name": "Claude and Magic",
   "short_name": "Claude & Magic",
   "description": "A first-person dungeon crawler for a party of four, in one file.",
-  "start_url": "./Claude%20and%20Magic%20v4.3.html",
+  "start_url": "./Claude%20and%20Magic%20v4.4.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

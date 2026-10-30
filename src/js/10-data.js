@@ -125,7 +125,28 @@ CM.SCROLLS = {
   fire: { name: "Scroll of Fire", what: "Fire on every foe." },
   frost: { name: "Scroll of Frost", what: "Cold on every foe; some are held fast." },
   protection: { name: "Scroll of Protection", what: "Every blow on the party does less, for the fight." },
+  recall: { name: "Scroll of Recall", outside: true, keep: true, what: "To the last camp reached - and back to this very square by the same scroll." },
+  knowledge: { name: "Scroll of Knowledge", outside: true, what: "This floor's carving, read from where you stand." },
+  banish: { name: "Scroll of Banishing", what: "One thing that was called into the fight is sent back." },
+  sharpen: { name: "Scroll of Sharpening", outside: true, what: "A hero's weapon +2, for the rest of this floor." },
+  silence: { name: "Scroll of Silence", what: "No spell on either side, for the fight; no breath either." },
+  lostpage: { name: "The Lost Page", what: "A spell torn from some tome: fire, frost or lightning on every foe, once." },
 };
+// flasks, thrown from any row; elixirs, with a time to them; the lantern's oil and the caverns' glow stones
+CM.FLASKS = {
+  oil: { name: "Flask of Oil", what: "fire on a foe and the one behind it; on water it spreads to every foe, for half" },
+  acid: { name: "Flask of Acid", what: "eats a foe's armour: three off its defence, for the fight" },
+  holy: { name: "Holy Water", what: "burns every undead foe; some cower" },
+  smoke: { name: "Smoke Flask", what: "the party gets away, for certain" },
+};
+CM.ELIXIRS = {
+  stoneskin: { name: "Elixir of Stoneskin", what: "every blow on the drinker does three less, until the next floor" },
+  haste: { name: "Elixir of Haste", what: "the drinker moves first in every round of the next fight" },
+  owleyes: { name: "Elixir of Owl's Eyes", what: "no dark holds the party, for the next three floors" },
+  night: { name: "The Night's Draught", what: "no sleep and no surprise take the party, until the next floor" },
+};
+CM.LANTERN_OIL = 800;                                                    // steps a flask of oil burns (a lantern burns one in two: twice a torch, and a step further)
+CM.POTION_TIERS = [[1, "Lesser Healing Potion", 14, 12], [6, "Healing Potion", 20, 20], [16, "Greater Healing Potion", 40, 70], [31, "Full Healing Potion", 999, 160]];   // from floor, name, base power, price
 CM.WANDS = {
   fire: { name: "Wand of Fire", what: "Fire at one foe." },
   frost: { name: "Wand of Frost", what: "Cold on every foe." },
@@ -275,6 +296,14 @@ CM.RECIPES = {
   oilfire: { name: "Oil of Fire", gold: 40, needs: { ingredient: ["forgesoot", "slag"] }, makes: "oil:fire", what: "a weapon burns for the next three fights: soot or slag, and 40 gold" },
   oilfrost: { name: "Oil of Rime", gold: 40, needs: { ingredient: ["drownedweed", "crystaldust"] }, makes: "oil:frost", what: "a weapon freezes for the next three fights: weed or crystal dust, and 40 gold" },
   oilholy: { name: "Oil of Saints", gold: 40, needs: { ingredient: ["bonedust", "gravesalt"] }, makes: "oil:holy", what: "a weapon is blessed for the next three fights: bone dust or grave salt, and 40 gold" },
+  flaskoil: { name: "Flask of Oil", gold: 20, needs: { ingredient: ["forgesoot", "slag", "rootsap"] }, makes: "flask:oil", what: "thrown: fire on one foe and the one behind, or on water on all: soot, slag or sap, and 20 gold" },
+  flaskacid: { name: "Flask of Acid", gold: 30, needs: { ingredient: ["sporecap", "crystaldust"] }, makes: "flask:acid", what: "thrown: three off a foe's defence for the fight: a spore cap or crystal dust, and 30 gold" },
+  holywater: { name: "Holy Water", gold: 30, needs: { ingredient: ["bonedust", "gravesalt"] }, makes: "flask:holy", what: "thrown: the undead burn, some cower: bone dust or grave salt, and 30 gold" },
+  smokeflask: { name: "Smoke Flask", gold: 40, needs: { ingredient: ["gravemoss", "drownedweed"] }, makes: "flask:smoke", what: "thrown: the party gets away for certain: moss or weed, and 40 gold" },
+  stoneskin: { name: "Elixir of Stoneskin", gold: 80, needs: { ingredient: ["crystaldust", "slag"] }, makes: "elixir:stoneskin", what: "three off every blow on the drinker, this floor: crystal dust or slag, and 80 gold" },
+  haste: { name: "Elixir of Haste", gold: 80, needs: { ingredient: ["drownedweed", "saltweed"] }, makes: "elixir:haste", what: "first in every round of the next fight: weed, and 80 gold" },
+  owleyes: { name: "Elixir of Owl's Eyes", gold: 60, needs: { ingredient: ["gravemoss", "sporecap"] }, makes: "elixir:owleyes", what: "no dark holds the party, three floors: moss or a spore cap, and 60 gold" },
+  nightdraught: { name: "The Night's Draught", gold: 60, needs: { ingredient: ["bonedust", "gravesalt", "rootsap"] }, makes: "elixir:night", what: "no sleep and no surprise, this floor: bone dust, grave salt or sap, and 60 gold" },
   bomb: { name: "Firepot", gold: 60, needs: { ingredient: ["slag", "forgesoot"], ingredient2: ["crystaldust", "bonedust"] }, makes: "bomb", what: "thrown in a fight, fire on every foe: slag or soot, dust, and 60 gold" },
   trailbread: { name: "Trail bread, three rations", gold: 10, needs: { ingredient: ["gravemoss", "saltweed", "rootsap"] }, makes: "ration3", what: "three rations: moss, weed or sap, and 10 gold" },
   antivenom: { name: "Antivenom, two draughts", gold: 20, needs: { ingredient: ["sporecap", "gravemoss"] }, makes: "antidote2", what: "two antidotes: a spore cap or grave moss, and 20 gold" },

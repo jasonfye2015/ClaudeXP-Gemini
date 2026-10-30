@@ -120,7 +120,7 @@ Size: L. The biggest change to the fight since terrain.
 
 Size: M.
 
-## Phase 3 - The belt, and things to drink, read and throw - v4.4
+## Phase 3 - The belt, and things to drink, read and throw - v4.4 - DONE
 
 - **The belt**: four slots beside the party, filled from the bag at any time; in a fight the first belt use a
   round is free (the hero's turn is not spent), the second costs the turn as now. Keys 5-8 on the keyboard, the

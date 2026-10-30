@@ -13,11 +13,12 @@ Object.assign(CM.UI.prototype, {
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
-    let lit = l.kind === "lantern" ? "Lantern lit" : l.kind === "torch" ? (l.left > 40 ? `Torch: ${l.left} steps left` : `Torch burning low: ${l.left}`) : "No light!";
+    let lit = l.kind === "lantern" ? (l.left > 60 ? `Lantern: ${l.left} steps of oil` : `Lantern burning low: ${l.left}`) : l.kind === "glow" ? "Glow stone: a cold light that lasts" : l.kind === "torch" ? (l.left > 40 ? `Torch: ${l.left} steps left` : `Torch burning low: ${l.left}`) : "No light!";
     if (g.spellLight > 0) lit += ` - conjured light: ${g.spellLight} steps`;
     if (fl && g.inDark()) lit += " - a magical dark";
     light.textContent = lit;
     light.classList.toggle("dark", !g.hasLight() || g.inDark());
+    this.renderBelt();
     const temper = this.$("#side .temper"), hungry = g.hungerWord();
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
@@ -313,6 +314,22 @@ Object.assign(CM.UI.prototype, {
   },
 
   // a guardian's name across the view, for a moment, as it rises
+  // the belt: four slots under the automap; a click uses (the first hero standing), a right click puts it back in the pack
+  renderBelt() {
+    const g = this.game, box = this.$("#belt");
+    if (!box) return;
+    box.innerHTML = "";
+    for (let i = 0; i < CM.BELT_SIZE; i++) {
+      const it = (g.belt || [])[i], b = document.createElement("button");
+      b.className = "slot" + (it ? "" : " empty");
+      b.innerHTML = `<kbd>${i + 5}</kbd>${it ? this.esc(it.name) : "-"}`;
+      b.title = it ? `${CM.itemCard(it)} Click to use; right-click to put back in the pack.` : "Empty: put something here from the pack (the Belt button beside each thing).";
+      b.disabled = !it || g.mode === "title";
+      b.addEventListener("click", () => { this.note && this.note(""); const note = g.useBelt(i); if (note) g.say(note); this.refresh(); });
+      b.addEventListener("contextmenu", (e) => { e.preventDefault(); if (it) { g.fromBelt(i); this.refresh(); } });
+      box.appendChild(b);
+    }
+  },
   titleCard(name, sub) {
     const el = this.$("#view .titlecard");
     el.querySelector("b").textContent = name;

@@ -26,6 +26,9 @@ CM.BASES = {};
   [["Healing Potion", "heal"], ["Greater Healing Potion", "greaterheal"], ["Mana Potion", "mana"], ["Phoenix Feather", "revive"], ["Antidote", "antidote"], ["Torch", "torch"], ["Lantern", "lantern"], ["Ration", "ration"], ["Rope", "rope"], ["Firepot", "bomb"]]
     .forEach(([n, k], i) => add(n, k, null, i, "stuff"));
   Object.values(CM.SCROLLS).forEach((s, i) => add(s.name, "scroll", null, i, "scroll"));
+  Object.values(CM.FLASKS).forEach((f, i) => add(f.name, "flask", null, i, "stuff"));
+  Object.values(CM.ELIXIRS).forEach((e, i) => add(e.name, "elixir", null, i, "stuff"));
+  [["Lesser Healing Potion", "heal"], ["Full Healing Potion", "heal"], ["Lesser Mana Potion", "mana"], ["Greater Mana Potion", "mana"], ["Lesser Phoenix Feather", "revive0"], ["Lamp Oil", "lampoil"], ["Glow Stone", "glowstone"], ["Essence", "essence"]].forEach(([n, k], i) => add(n, k, null, 20 + i, "stuff"));
   Object.values(CM.WANDS).forEach((w, i) => add(w.name, "wand", null, i, "wand"));
   Object.values(CM.TOMES).forEach((n, i) => add(n, "tome", null, i, "tome"));
   Object.values(CM.GEMS).forEach((g, i) => add(g.name, "gem", null, i, "stuff"));
@@ -153,3 +156,17 @@ CM.makeSetPiece = function (setId, index, floor) {
 };
 CM.essence = (n = 1) => ({ name: "Essence", kind: "essence", power: n, value: 40 * n });
 CM.ESSENCE_FOR_GEM = 3;
+
+// ---- the belt, and things to drink, read and throw ----
+CM.BELT_SIZE = 4;
+CM.flask = (kind) => ({ name: CM.FLASKS[kind].name, kind: "flask", flask: kind, power: 0, value: 45 });
+CM.elixir = (kind) => ({ name: CM.ELIXIRS[kind].name, kind: "elixir", elixir: kind, power: 0, value: 110 });
+CM.lampOil = () => ({ name: "Lamp Oil", kind: "lampoil", power: CM.LANTERN_OIL, value: 25 });
+CM.glowStone = () => ({ name: "Glow Stone", kind: "glowstone", power: 0, value: 200 });
+CM.healPotion = function (floor) {                                        // the potion of the depth: lesser, healing, greater, full
+  const t = CM.POTION_TIERS.slice().reverse().find((x) => floor >= x[0]) || CM.POTION_TIERS[0];
+  return t[1] === "Greater Healing Potion" ? { name: t[1], kind: "greaterheal", power: 2 * (20 + floor * 3), value: t[3] } : { name: t[1], kind: "heal", power: t[1] === "Full Healing Potion" ? 999 : t[2] + floor * 3, value: t[3] };
+};
+CM.manaPotion = (floor) => (floor < 6 ? { name: "Lesser Mana Potion", kind: "mana", power: 8 + floor, value: 15 } : floor < 21 ? { name: "Mana Potion", kind: "mana", power: 12 + floor, value: 25 } : { name: "Greater Mana Potion", kind: "mana", power: 30 + floor, value: 60 });
+CM.lesserFeather = () => ({ name: "Lesser Phoenix Feather", kind: "revive0", power: 0, value: 60 });
+CM.BELT_KINDS = ["heal", "greaterheal", "mana", "revive", "revive0", "antidote", "bomb", "flask", "elixir", "scroll", "wand", "ration", "torch", "lampoil"];

@@ -54,7 +54,7 @@ CM.UI = class {
 <div id="play" class="screen">
   <div class="top">
     <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
-    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div></div>
+    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div><div class="belt" id="belt" title="The belt: four things to hand (keys 5 to 8). In a fight the first used in a round costs no turn."></div></div>
   </div>
   <div id="party"></div>
   <div id="log" role="log" aria-live="polite"></div>
@@ -65,7 +65,7 @@ CM.UI = class {
   <div class="filters" id="bag-filters"></div>
   <div class="lists"><div class="list" id="bag-list"></div><div class="list" id="shop-list"></div></div>
   <div class="note" id="bag-note"></div>
-  <div class="give" id="bag-give"></div>
+  <div class="give" id="bag-give"></div><div class="give" id="bag-belt"></div>
   <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-bag-done" class="primary">Done</button></div>
 </div>
 <div class="dialog" id="dlg-settings"><div class="box"><h2>Settings</h2>

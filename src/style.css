@@ -397,3 +397,8 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 .things .thing { font: 12.5px var(--serif); color: var(--ink); }
 .things .thing.unseen { color: var(--faint); letter-spacing: 1px; }
 .rarity-cursed { color: #D070D0; }
+/* ---- the belt ---- */
+#belt { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 4px; }
+#belt button.slot { padding: 3px 4px; font: 11px var(--serif); min-height: 30px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#belt button.slot kbd { margin-right: 3px; }
+#belt button.empty { opacity: 0.45; }

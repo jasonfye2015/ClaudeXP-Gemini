@@ -11,9 +11,10 @@ Object.assign(CM.Game.prototype, {
     if (shop && !this.stock) {
       const rnd = this.rnd, depth = this.floor.number + 3;
       this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor", "shield", "helm"].map((k) => { const it = CM.makeItem(depth, rnd, k); it.unknown = false; return it; });
-      this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
-        { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
-        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"), CM.rope(), CM.ration());
+      const heal = CM.healPotion(depth); if (heal.kind === "greaterheal" && this.asc("nogreater")) { heal.kind = "heal"; heal.name = "Healing Potion"; heal.power = 20 + depth * 3; heal.value = 20; }
+      this.stock.push(heal, CM.manaPotion(depth), CM.lesserFeather(),
+        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.lampOil(), CM.scroll("identify"), CM.scroll("mapping"), CM.scroll("recall"), CM.rope(), CM.ration(), CM.flask("oil"));
+      if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       const house = this.villageLevel("merchant");                       // (the village's merchant's house: what the camps' merchant has learned to carry)
       if (house >= 1 && !this.asc("nogreater")) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
       if (house >= 2) for (const el of ["fire", "frost", "holy"]) this.stock.push(CM.oil(el));
@@ -34,7 +35,7 @@ Object.assign(CM.Game.prototype, {
   describe(item) {
     const plain = { heal: "heals", mana: "restores magic", revive: "raises the fallen", torch: "light, for a while", lantern: "light that lasts",
       key: "opens a locked door", antidote: "cures poison, sleep, paralysis and blindness", rope: "down a pit without the fall, and back up again",
-      bones: "someone's, gathered up for a ghost who asked", greaterheal: "heals, twice over", bomb: "thrown in a fight: fire on every foe" }[item.kind];
+      bones: "someone's, gathered up for a ghost who asked", greaterheal: "heals, twice over", bomb: "thrown in a fight: fire on every foe", revive0: "raises the fallen to half, once a floor", lampoil: "oil for the lantern", glowstone: "a light that never goes out" }[item.kind];
     return plain || CM.itemLabel(item);
   },
 
@@ -87,6 +88,40 @@ Object.assign(CM.Game.prototype, {
       this.identifying = true;
       return "Now pick the unknown thing in the pack to identify.";
     }
+    if (item.spell === "recall") {                                      // to the last camp reached, and back by the same scroll
+      if (item.back) {
+        if (this.mode !== "camp") return "The scroll remembers a square on floor " + item.back.floor + ": read it at the camp to go back.";
+        const back = item.back; this.bag.splice(row, 1);
+        this.stock = null; this.recruits = null; this.leaveFloor(); this.floor = this.floorAt(back.floor);
+        if (CM.passable(this.floor, back.pos[0], back.pos[1])) this.floor.pos = back.pos.slice();
+        this.setMode("explore"); this.look(); this.emit("floor", this.floor); this.saveRun();
+        this.say("The scroll crumbles, and the party stands where it stood.");
+        return "";
+      }
+      if (this.mode !== "explore") return "Read it on a floor, to be recalled from it.";
+      const camps = this.camps || [];
+      if (!camps.length) return "No camp has been reached to be recalled to.";
+      const camp = camps.filter((n) => n < fl.number).pop() || camps[0];
+      item.back = { floor: fl.number, pos: fl.pos.slice() };
+      this.stock = null; this.recruits = null; this.leaveFloor(); this.floor = this.floorAt(camp);
+      const ladder = this.cellOf(this.floor, "ladder"); if (ladder) this.floor.pos = ladder.slice();
+      this.setMode("camp"); this.emit("floor", this.floor); this.sound("stairs"); this.saveRun();
+      this.say(`The scroll takes the party up to the camp below floor ${camp}. Read it again there, and it takes them back.`);
+      return "";
+    }
+    if (item.spell === "knowledge") {
+      const wall = Object.values(fl.features).find((f) => f.type === "carving" && !f.read && typeof f.text === "number" && f.text >= 0);
+      if (!wall) return "This floor's wall is read already, or there is none.";
+      wall.read = true;
+      const text = CM.loreText(wall.text, this.seed, wall.telling), lkey = CM.loreKey(wall.text);
+      this.markRead(lkey); this.remember("carving", text, { key: lkey }); this.originLines(lkey);
+      this.emit("lore", text);
+      this.say("The scroll shows the floor's carving, letter by letter, as if the wall stood before you.");
+    } else if (item.spell === "sharpen") {
+      if (!hero || !hero.weapon || (hero.weapon.props || {}).fists) return "Pick a hero with a weapon to sharpen.";
+      hero.weapon.sharpUntil = fl.number; this.buffs = this.buffs || {}; this.buffs.sharpen = fl.number;
+      this.say(`${hero.name}'s ${CM.baseName(hero.weapon)} takes an edge that will last the floor (+2).`);
+    } else if (item.spell === "lostpage") return "The page is blank until there is something to read it at.";
     if (item.spell === "mapping") {
       fl.seen = [];
       for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]);
@@ -110,8 +145,9 @@ Object.assign(CM.Game.prototype, {
       this.say(`${hero.name} is mended by the wand (+${n2}).`);
     }
     this.sound("spell");
+    this.countUse(item.kind);
     if (item.kind === "scroll") this.bag.splice(row, 1);
-    else { item.charges -= 1; if (item.charges <= 0) { this.bag.splice(row, 1); this.say(`The ${item.name} is spent, and crumbles.`); } }
+    else this.spendWand(item, row);
     this.saveRun();
     this.emit("change");
     return "";
@@ -126,7 +162,19 @@ Object.assign(CM.Game.prototype, {
     this.sound("spell");
     this.emit("fx", { kind: "cast", id: item.spell, hero: h, item: item.kind, foes, foe: item.kind === "wand" && item.spell === "fire" ? this.foeAt(who) : null,
       ally: item.spell === "healing" ? this.allyAt(who, false) : null });
-    if (item.spell === "fire") {
+    if (item.spell === "banish") {
+      const called = foes.filter((m) => m.summoned && m.hp > 0);
+      if (!called.length) { this.say("Nothing here was called: the scroll has nothing to send back."); return false; }
+      const m = called[called.length - 1]; m.hp = 0; m.fled = true; m.dead = true;
+      this.say(`${h.name} reads the scroll, and ${CM.the(m)} is gone as if it had never come.`);
+    } else if (item.spell === "silence") {
+      if (this.combat) this.combat.silence = true;
+      this.say(`${h.name} reads the scroll, and the words die in every mouth: no spell, no breath, this fight.`);
+    } else if (item.spell === "lostpage") {
+      const el = ["fire", "frost", "storm"][L % 3], dmg = 12 + 2 * L;
+      for (const m of foes) this.spellHit(m, dmg, "", el);
+      this.say(`${h.name} reads the lost page aloud: ${CM.ELEMENT_NAMES[el] || el} on every foe, ${dmg} each. The page is blank after.`);
+    } else if (item.spell === "fire") {
       if (item.kind === "wand") { const t = this.foeAt(who); if (!t) { this.say("Nothing left to aim at."); return false; } this.spellHit(t, 10 + 2 * L, `${h.name}'s wand spits fire:`, "fire"); }
       else { const dmg = 10 + 2 * L; for (const m of foes) this.spellHit(m, dmg, "", "fire"); this.say(`${h.name} reads the scroll: fire on every foe, ${dmg} each.`); }
     } else if (item.spell === "frost") {
@@ -150,7 +198,7 @@ Object.assign(CM.Game.prototype, {
     } else return false;
     this.countUse(item.kind);
     if (item.kind === "scroll") this.bag.splice(row, 1);
-    else { item.charges -= 1; if (item.charges <= 0) { this.bag.splice(row, 1); this.say(`The ${item.name} is spent, and crumbles.`); } }
+    else this.spendWand(item, row);
     this.emit("change");
     return true;
   },
@@ -234,10 +282,42 @@ Object.assign(CM.Game.prototype, {
     }
     if (item.kind === "lantern") {
       this.bag.splice(row, 1);
-      this.light = { kind: "lantern", left: 0 };
+      this.light = { kind: "lantern", left: CM.LANTERN_OIL }; this.lanternHeld = true;
       this.sound("spell");
-      this.say(`${hero.name} lights the lantern. It won't run out.`);
+      this.say(`${hero.name} lights the lantern: a flask of oil in it, which burns slow and reaches far. Lamp oil keeps it lit.`);
       this.emit("change");
+      return "";
+    }
+    if (item.kind === "lampoil") {
+      if (!this.lanternHeld && this.light.kind !== "lantern") return "No lantern to pour it into.";
+      this.bag.splice(row, 1); this.countUse("lampoil");
+      if (this.light.kind === "lantern") this.light.left += CM.LANTERN_OIL; else this.light = { kind: "lantern", left: CM.LANTERN_OIL };
+      this.sound("spell"); this.say(`${hero.name} fills the lantern.`); this.emit("change");
+      return "";
+    }
+    if (item.kind === "glowstone") {
+      this.bag.splice(row, 1);
+      if (this.light.kind === "torch") this.bag.push(Object.assign(CM.torch(), { power: this.light.left }));
+      this.light = { kind: "glow", left: 0 };
+      this.sound("spell"); this.say(`${hero.name} holds up the glow stone: a cold light that never goes out, and does not reach far.`); this.emit("change");
+      return "";
+    }
+    if (item.kind === "elixir") {
+      if (hero.hp <= 0) return `${hero.name} has fallen.`;
+      this.bag.splice(row, 1); this.countUse("elixir"); this.buffs = this.buffs || {};
+      const fl = this.floor ? this.floor.number : 0;
+      if (item.elixir === "stoneskin") { this.buffs.stoneskin = fl; hero.stoneskin = true; this.say(`${hero.name}'s skin goes grey and hard: three off every blow, this floor.`); }
+      else if (item.elixir === "haste") { this.buffs.haste = hero.name; this.say(`${hero.name} is quick as thought: first in every round of the next fight.`); }
+      else if (item.elixir === "owleyes") { this.buffs.owleyes = 3; this.say("The party's eyes go wide and gold: no dark holds them, for three floors."); }
+      else if (item.elixir === "night") { this.buffs.night = fl; this.say("The night's draught: no sleep, no surprise, this floor."); }
+      this.sound("heal"); this.emit("change");
+      return "";
+    }
+    if (item.kind === "revive0") {
+      if (hero.hp > 0) return `${hero.name} is standing.`;
+      if (this.featherFloor === (this.floor ? this.floor.number : 0)) return "A lesser feather works once a floor.";
+      this.bag.splice(row, 1); this.countUse("revive0"); this.featherFloor = this.floor ? this.floor.number : 0;
+      hero.hp = Math.max(1, Math.floor(hero.max / 2)); this.sound("heal"); this.say(`${hero.name} rises, half-mended, with the lesser feather's warmth in them.`); this.emit("change");
       return "";
     }
     if (item.kind === "antidote") {
@@ -399,9 +479,9 @@ Object.assign(CM.Game.prototype, {
     if (this.mode !== "camp") return "The smith works at the camp.";
     this.logAct("smith", service, heroIndex, slot);
     const hero = this.party[heroIndex], item = hero && hero[slot];
-    if (!item || !["weapon", "armor", "offhand", "helm"].includes(slot)) return "Pick a weapon, armour, a shield or a helm.";
-    if (item.unknown) return "The smith won't work on a thing nobody can name. Have it identified first.";
-    const p = item.props = item.props || {};
+    if (service !== "recharge" && (!item || !["weapon", "armor", "offhand", "helm"].includes(slot))) return "Pick a weapon, armour, a shield or a helm.";
+    if (item && item.unknown && service !== "recharge") return "The smith won't work on a thing nobody can name. Have it identified first.";
+    const p = item ? (item.props = item.props || {}) : {};
     if (service === "enchant") {
       const n = p.enchant || 0, cost = CM.SMITH.enchant * (n + 1), gem = this.bag.findIndex((i) => i.kind === "gem" && i.gem === "diamond");
       const scrap = this.bag.map((i, idx) => (i.kind === "scrap" ? idx : -1)).filter((idx) => idx >= 0);
@@ -452,6 +532,14 @@ Object.assign(CM.Game.prototype, {
       CM.recompute(hero);
       this.sound("lever");
       this.say(`The smith strikes the old work off ${hero.name}'s ${item.base} and works the gem in: ${item.name}.`);
+    } else if (service === "recharge") {                                // a gem of any kind and 60 gold: three charges into a wand in the pack
+      const wand = this.bag.findIndex((i) => i.kind === "wand"), gem = this.bag.findIndex((i) => i.kind === "gem"), cost = 60;
+      if (wand < 0) return "No wand in the pack to charge.";
+      if (gem < 0) return "The smith wants a gem of any kind to charge a wand.";
+      if (this.gold < cost) return `The smith wants ${cost} gold, and a gem.`;
+      this.gold -= cost; this.spend("smith", cost); this.bag.splice(gem, 1);
+      const w = this.bag[wand < gem ? wand : wand - 1]; w.charges = (w.charges || 0) + 3;
+      this.sound("lever"); this.say(`The smith grinds the gem into the ${w.name}: ${CM.plural(w.charges, "charge")}.`);
     } else if (service === "move") {                                    // a prefix moved from a thing in the pack to the worn one; the pack's thing is scrap
       const from = this.bag.findIndex((i) => ["weapon", "armor", "shield", "helm"].includes(i.kind) && !i.unknown && (i.props || {}).affixes && i.props.affixes.some((w) => !w.startsWith("of ")) && !(i.props.relic || i.props.unique) && (i.kind === "weapon") === (item.kind === "weapon"));
       if (from < 0) return "The smith wants a thing in the pack with a prefix to move, of the same kind of make (a weapon's word for a weapon, armour's for the rest).";
@@ -677,6 +765,8 @@ Object.assign(CM.Game.prototype, {
     else if (r.makes === "bomb") { made = CM.bomb(); this.bag.push(made); }
     else if (r.makes === "antidote2") { this.bag.push(CM.antidote(), CM.antidote()); made = { name: "two Antidotes" }; }
     else if (r.makes === "ration3") { this.bag.push(CM.ration(), CM.ration(), CM.ration()); made = { name: "three rations" }; }
+    else if (r.makes.startsWith("flask:")) { made = CM.flask(r.makes.slice(6)); this.bag.push(made); }
+    else if (r.makes.startsWith("elixir:") && CM.ELIXIRS[r.makes.slice(7)]) { made = CM.elixir(r.makes.slice(7)); this.bag.push(made); }
     else if (r.makes.startsWith("elixir:")) {
       const stat = r.makes.slice(7), h = this.alive().reduce((a, b) => (a.stats[stat] <= b.stats[stat] ? a : b));   // (whoever has least of it)
       h.stats[stat] = Math.min(25, h.stats[stat] + 1);

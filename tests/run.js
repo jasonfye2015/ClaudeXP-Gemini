@@ -1890,6 +1890,76 @@ test("affixes that grow: tiers by depth, the new words bite, implicits, cursed t
   assert.ok(plain.props.affixes[0] === "Heavy" && plain.power === pw + 3 && plain.name.startsWith("Heavy Mace") && game.bag.some((i) => i.kind === "scrap"), `moved: ${plain.name} +${plain.power - pw}`);
 });
 
+test("the belt and things to drink, read and throw: a free belt use once a round, flasks (oil spreads on water), potion tiers, elixirs, six scrolls, spent wands charged, lantern oil and glow stones", () => {
+  const CM = load();
+  const game = new CM.Game(); game.newGame("belt-1", fixedParty(CM));
+  game.bag.push(CM.healPotion(1), CM.flask("oil"), CM.flask("smoke"), CM.elixir("stoneskin"), CM.scroll("silence"), CM.wand("fire", 1), CM.lampOil(), CM.glowStone(), CM.scroll("recall"), CM.scroll("knowledge"), CM.scroll("sharpen"), CM.lesserFeather());
+  // to the belt and back; the belt takes only what can be used
+  const potRow = game.bag.findIndex((i) => i.kind === "heal" && i.name === "Lesser Healing Potion");
+  assert.strictEqual(game.toBelt(potRow), ""); assert.strictEqual(game.belt[0].name, "Lesser Healing Potion");
+  const sword = game.bag.findIndex((i) => i.kind === "weapon"); if (sword >= 0) assert.ok(game.toBelt(sword).includes("belt takes"));
+  assert.strictEqual(game.toBelt(game.bag.findIndex((i) => i.kind === "flask" && i.flask === "oil")), ""); assert.strictEqual(game.belt[1].flask, "oil");
+  assert.strictEqual(game.fromBelt(0), ""); assert.ok(!game.belt[0] && game.bag.some((i) => i.name === "Lesser Healing Potion"));
+  // a fight: the first belt use in a round costs no turn; the second does
+  const rnd = new CM.Random(3), group = [0, 1, 2].map(() => CM.makeMonster(CM.monsterKind("Skeleton"), 3, rnd)); group.forEach((m, i) => { m.row = i === 2 ? "back" : "front"; });
+  const spot = Object.keys(game.floor.things).find((k) => game.floor.things[k].type === "monsters") || "3,3";
+  game.floor.things[spot] = { type: "monsters", group }; game.startCombat(spot, game.floor.things[spot]);
+  while (game.mode === "combat" && !game.combat.waiting) game.advance();
+  const h = game.combat.waiting; game.toBelt(game.bag.findIndex((i) => i.name === "Lesser Healing Potion"));
+  h.hp = Math.max(1, h.hp - 5); const hpBefore = h.hp;
+  assert.ok(game.act("item", { belt: game.belt.findIndex((i) => i && i.kind === "heal"), who: game.party.indexOf(h) }), "drunk from the belt");
+  assert.ok(game.combat.waiting === h && h.hp > hpBefore, "and the turn is still theirs");
+  const freeRound = game.combat.round; game.belt[0] = CM.healPotion(1); h.hp = Math.max(1, h.hp - 5);
+  assert.ok(game.act("item", { belt: 0, who: game.party.indexOf(h) }), "a second drink"); assert.ok(game.combat.waiting !== h || game.combat.round !== freeRound, "the second costs the turn");
+  // a flask of oil thrown: the foe and the one behind; on water, all three
+  let foes = game.living(); const hp0 = foes.map((m) => m.hp);
+  while (game.mode === "combat" && !game.combat.waiting) game.advance();
+  const thrower = game.combat.waiting; game.rnd = new CM.Random(5);
+  assert.ok(game.act("item", { belt: 1, who: 0 }), "thrown");
+  foes = game.living(); assert.ok(foes.filter((m, i) => m.hp < hp0[i]).length >= 1 && !game.belt[1], "burned, and the flask gone");
+  game.floor.special = "wading"; game.bag.push(CM.flask("oil")); while (game.mode === "combat" && !game.combat.waiting) game.advance();
+  const before = game.living().map((m) => m.hp); game.rnd = new CM.Random(6); game.act("item", { row: game.bag.length - 1, who: 0 });
+  assert.ok(game.living().every((m, i) => m.hp < before[i] || m.hp <= 0), "on water the oil burns under every foe"); game.floor.special = null;
+  // silence: no spell; a wand's last charge leaves it spent, not crumbled, when the dice are kind; the smith charges it
+  while (game.mode === "combat" && !game.combat.waiting) game.advance();
+  game.act("item", { row: game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "silence") }); assert.ok(game.combat && game.combat.silence);
+  while (game.mode === "combat" && !game.combat.waiting) game.advance();
+  const mage = game.party.find((p) => p.cls === "Mage"); mage.mp = 20; game.combat.waiting = mage; assert.strictEqual(game.act("cast", { id: "fireball" }), false, "silenced");
+  // smoke: away for certain
+  game.act("item", { row: game.bag.findIndex((i) => i.kind === "flask" && i.flask === "smoke") }); assert.strictEqual(game.mode, "explore", "gone in the smoke");
+  const wand = game.bag.find((i) => i.kind === "wand" && i.spell === "fire"); wand.charges = 1; game.party.push({ name: "T", cls: "Artificer", hp: 10, max: 10, level: 1, stats: {}, status: {}, boons: [] });
+  game.spendWand(wand, game.bag.indexOf(wand)); assert.ok(game.bag.includes(wand) && wand.charges === 0, "spent, kept (an Artificer stands)"); game.party.pop();
+  game.mode = "camp"; game.gold = 500; game.bag.push(CM.gem("ruby")); assert.strictEqual(game.smith("recharge", 0, "weapon"), ""); assert.strictEqual(wand.charges, 3); game.mode = "explore";
+  // potion tiers by depth
+  assert.strictEqual(CM.healPotion(1).name, "Lesser Healing Potion"); assert.strictEqual(CM.healPotion(8).name, "Healing Potion"); assert.strictEqual(CM.healPotion(20).kind, "greaterheal"); assert.strictEqual(CM.healPotion(40).power, 999);
+  assert.strictEqual(CM.manaPotion(30).name, "Greater Mana Potion");
+  // elixirs: stoneskin takes three off; owl's eyes lift the dark; the night: no sleep
+  const knight = game.party.find((p) => p.cls === "Knight");
+  assert.strictEqual(game.give(game.bag.findIndex((i) => i.kind === "elixir"), game.party.indexOf(knight)), ""); assert.ok(knight.stoneskin && game.buffs.stoneskin === game.floor.number);
+  game.combat = { foes: [], round: 1 }; game.mode = "combat"; knight.hp = 100; knight.max = 100; knight.offhand = null; game.rnd = new CM.Random(1); game.hurt(knight, 10, { name: "x" }, { noBlock: true }); assert.strictEqual(100 - knight.hp, 7); game.combat = null; game.mode = "explore";
+  game.bag.push(CM.elixir("owleyes")); game.give(game.bag.length - 1, 0); game.floor.dark.push(CM.keyOf(...game.floor.pos)); assert.ok(!game.inDark(), "the owl's eyes"); game.floor.dark.pop();
+  game.bag.push(CM.elixir("night")); game.give(game.bag.length - 1, 0); assert.strictEqual(game.afflict(knight, "sleep", "a test"), false);
+  // scrolls: sharpen (+2 this floor), knowledge (the wall read from here), recall (to the camp, and back)
+  const w = knight.weapon; game.give(game.bag.findIndex((i) => i.spell === "sharpen"), game.party.indexOf(knight)); assert.strictEqual(w.sharpUntil, game.floor.number);
+  const wallsBefore = Object.keys(game.story.read).length; assert.strictEqual(game.give(game.bag.findIndex((i) => i.spell === "knowledge"), 0), ""); assert.ok(Object.keys(game.story.read).length > wallsBefore && game.story.read["carving.catacombs.1"] !== undefined, "the floor's wall, read from here");
+  game.camps = [5]; game.enterFloor(7, "down"); const pos = game.floor.pos.slice();
+  assert.strictEqual(game.give(game.bag.findIndex((i) => i.spell === "recall"), 0), ""); assert.ok(game.mode === "camp" && game.floor.number === 5, "to the camp");
+  const back = game.bag.find((i) => i.spell === "recall"); assert.ok(back && back.back.floor === 7);
+  assert.strictEqual(game.give(game.bag.indexOf(back), 0), ""); assert.ok(game.mode === "explore" && game.floor.number === 7 && game.floor.pos.join() === pos.join(), "and back to the square");
+  // the lantern wants oil; a glow stone never goes out
+  game.bag.push(CM.lantern()); game.give(game.bag.length - 1, 0); assert.strictEqual(game.light.left, CM.LANTERN_OIL);
+  for (let i = 0; i < 100; i++) { game.steps = (game.steps || 0) + 1; game.burn(); } assert.strictEqual(game.light.left, CM.LANTERN_OIL - 50, "one step in two");
+  game.light.left = 1; game.steps++; game.burn(); game.steps++; game.burn(); assert.ok(game.light.kind === "lantern" && game.light.left > 700 && !game.bag.some((i) => i.kind === "lampoil"), "filled from the pack");
+  game.give(game.bag.findIndex((i) => i.kind === "glowstone"), 0); assert.strictEqual(game.light.kind, "glow"); for (let i = 0; i < 50; i++) { game.steps++; game.burn(); } assert.ok(game.hasLight());
+  assert.ok(game.lightFactor() > 0.3 && game.lightFactor() < 1);
+  // the lesser feather: once a floor
+  game.party[1].hp = 0; assert.strictEqual(game.give(game.bag.findIndex((i) => i.kind === "revive0"), 1), ""); assert.ok(game.party[1].hp > 0);
+  game.party[1].hp = 0; game.bag.push(CM.lesserFeather()); assert.ok(game.give(game.bag.length - 1, 1).includes("once a floor"));
+  // saved, and loaded
+  game.saveRun(); const g2 = new CM.Game(); g2.continueRun(); assert.ok(Array.isArray(g2.belt) && g2.buffs && g2.light.kind === "glow");
+  assert.ok(Object.keys(CM.RECIPES).some((id) => CM.RECIPES[id].makes === "flask:acid") && CM.BASES["Flask of Oil"]);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
