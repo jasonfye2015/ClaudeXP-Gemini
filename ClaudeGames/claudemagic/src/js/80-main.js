@@ -62,6 +62,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const demo = CM.makeFloor(1, "title");                                 // the corridor behind the title
   let demoCell = null;
   function showDemo() {
+    renderer.seed = "title";
     useTheme(1);
     renderer.setFloor(demo, CM.THEMES[0]);
     if (!demoCell) {                                                     // a square with a long view down a corridor
@@ -82,6 +83,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   game.on("floor", (floor) => {
     if (!renderer.ok) return;
+    renderer.seed = game.seed;
     useTheme(floor.number);
     renderer.setFloor(floor, CM.themeFor(floor.number));
     renderer.setCamera(floor.pos[0], floor.pos[1], floor.facing);
@@ -127,6 +129,7 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   const applySettings = (s) => {
     if (lookOn !== null && lookNow() !== lookOn) relook();
+    detailCap = 2; applyDetail();
     renderer.snap = !s.smooth;
     CM.audio.setEnabled(s.sound);
     CM.audio.setVolume(s.volume);
@@ -145,12 +148,18 @@ window.addEventListener("DOMContentLoaded", () => {
   };
   let renderAuto = true, slowFor = 0, quickFor = 0;
   const RENDER_STEPS = [1, 0.75, 0.5];
-  function autoScale(dt) {                                               // frames coming late for two seconds: a step down; quick for ten: a step back up
-    if (!renderAuto) return;
+  // the Detail setting, and how far the step-down has lowered it: the props' density, the floor rebuilt when it changes
+  let detailCap = 2;
+  const detailNow = () => Math.min(CM.DETAIL_ORDER.indexOf(game.settings.detail || "medium") < 0 ? 1 : CM.DETAIL_ORDER.indexOf(game.settings.detail || "medium"), detailCap);
+  const applyDetail = () => { const d = CM.DETAIL[CM.DETAIL_ORDER[detailNow()]]; if (d !== renderer.density) { renderer.density = d; if (game.floor && renderer.ok && game.mode !== "title") renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } };
+  function autoScale(dt) {                                               // frames coming late for two seconds: a step down (the Detail first, then the render scale); quick for ten: a step back up
     if (dt > 0.022) { slowFor += dt; quickFor = 0; } else if (dt < 0.013) { quickFor += dt; slowFor = 0; } else { slowFor = 0; quickFor = 0; }
+    if (slowFor > 2 && detailNow() > 0) { detailCap = detailNow() - 1; slowFor = 0; applyDetail(); return; }
+    if (!renderAuto) { if (quickFor > 10 && detailCap < 2) { detailCap += 1; quickFor = 0; applyDetail(); } return; }
     const i = RENDER_STEPS.indexOf(renderer.scale || 1);
     if (slowFor > 2 && i < RENDER_STEPS.length - 1) { renderer.scale = RENDER_STEPS[i + 1]; slowFor = 0; }
     else if (quickFor > 10 && i > 0) { renderer.scale = RENDER_STEPS[i - 1]; quickFor = 0; }
+    else if (quickFor > 10 && detailCap < 2) { detailCap += 1; quickFor = 0; applyDetail(); }
   }
   game.on("settings", applySettings);
   applySettings(game.settings);
@@ -343,6 +352,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!fl) return { out, hud };
     const now = performance.now(), right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
+    for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 10) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h });   // (the standing props, near the party)
     if (renderer.sky) {                                                 // the sun and the moon: far off, along their arc from the east over the south to the west
       const S = renderer.sky, eye = renderer.eye;
       for (const [t, layer, size] of [[S.sun, "sun", 6], [S.moon, `moon:${S.phase}`, 4]]) {

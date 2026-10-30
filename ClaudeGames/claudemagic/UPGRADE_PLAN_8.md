@@ -63,7 +63,16 @@ sky dome moved out to 150 and the far plane to 260. The file grew to 4.0 MB. Tes
 - **Tests**: no surface floor's mesh has a square without ground; the skirt meets the map's edge; a dungeon floor's
   mesh is byte-for-byte what it was.
 
-## Phase 1 - The scatter engine - v8.2 (medium; everything after stands on it)
+## Phase 1 - The scatter engine - v8.2 (medium; everything after stands on it) - DONE
+
+Built in a new `27-props.js` (`CM.PROPS`, `CM.SCATTER`, `CM.scatter`) with six props to prove it: grass tufts and
+wild flowers on the surface's grass, pebbles on the roads and along the dungeon's walls, rocks, bones and skulls by
+band. One change from the plan: standing props are billboards rebuilt each frame within ten squares of the party
+(they face the camera, which baked orientations could not), while flat and crossed props go into the static mesh.
+Props are painted at half size and packed four to a layer (`CM.art.packProps`, the renderer's `sub` rectangles).
+The Detail setting (Low none, Medium 0.6, High 1) is in Settings; when frames come late the step-down lowers it a
+notch before the render scale, and raises it again after ten quick seconds. Medium puts about 580 props on the land
+and 7 to 35 on a dungeon floor. Test: "the scatter".
 
 - **`CM.PROPS`**, a table in a new `27-props.js`: each prop is `{ id, layer, how: "stand" | "flat" | "cross" | "wall",
   size: [min, max], tint }`, and `CM.SCATTER`, the rules that place them: `{ prop, where: { floors | bands | special |

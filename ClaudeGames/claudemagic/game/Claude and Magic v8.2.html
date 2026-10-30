@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v8.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v8.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -437,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "8.1", built: "2026-10-30" };
+const CM = window.CM = { version: "8.2", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -4966,7 +4966,7 @@ CM.sky = function (game) {
 // count} and what was built, for the tests: ceilings, walls, roofs, trees, and on the surface the squares covered (ground,
 // a top or a roof over every one), the skirt's quads past the edge and the far ring's.
 CM.MESH_STRIDE = 10;
-CM.floorMesh = function (fl, theme, index) {
+CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts: { props (CM.scatter's), sub (where each prop sits in its layer) }
   const grid = fl.grid, size = grid.length, out = [], features = fl.features || {}, sky = Boolean(theme.sky), canopy = new Set(fl.canopy || []);
   const L = (name) => (index[name] !== undefined ? index[name] : index.wall);
   const quad = (a, b, c, d, layer, shade) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
@@ -5038,7 +5038,91 @@ CM.floorMesh = function (fl, theme, index) {
     quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0);
     quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0);
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, trees: trees.size, covered: covered.size, skirt, ring };
+  let props = 0;                                                                        // the props that lie or grow: flat, and crossed pairs
+  const sub = opts.sub || {};
+  const quadUV = (a, b, c, d, layer, shade, r) => { const uv = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
+  for (const p of opts.props || []) {
+    if (p.how === "stand") continue;
+    const s = sub[p.layer], layer = s ? index[s[0]] : index[p.layer], r = s ? s.slice(1) : [0, 0, 1, 1];
+    if (layer === undefined) continue;
+    const cx = p.x + 0.5 + p.dx, cz = p.y + 0.5 + p.dz, c = Math.cos(p.turn), sn = Math.sin(p.turn), hw = p.w / 2, shade = sky && canopy.has(`${p.x},${p.y}`) ? 0.55 : 0.9;
+    if (p.how === "flat") {
+      const at = (u, v) => [cx + u * c - v * sn, 0.006 + (props % 7) * 0.0006, cz + u * sn + v * c];
+      quadUV(at(-hw, hw), at(hw, hw), at(hw, -hw), at(-hw, -hw), layer, shade, r);
+    } else for (const t of [p.turn, p.turn + Math.PI / 2]) {
+      const ux = Math.cos(t) * hw, uz = Math.sin(t) * hw;
+      quadUV([cx - ux, 0, cz - uz], [cx + ux, 0, cz + uz], [cx + ux, p.h, cz + uz], [cx - ux, p.h, cz - uz], layer, shade, r);
+    }
+    props++;
+  }
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, trees: trees.size, covered: covered.size, skirt, ring, props };
+};
+
+// ---- 27-props.js ----
+"use strict";
+// Props: the small things on a floor that are only for the eye - grass tufts, stones, bones, rubble - never in the way,
+// never in a save, never in a floor's fingerprint. CM.PROPS says what each one is and how it is drawn; CM.SCATTER says
+// where they lie; CM.scatter(fl, seed, density) works out, square by square, what lies there, from a hash of the seed,
+// the floor and the square, so a floor wears the same props every visit. The renderer puts the flat and crossed ones
+// into the floor's mesh with the walls and stands the rest up as billboards near the party (40-render.js, 80-main.js).
+//   how: "flat" lies on the ground; "cross" is two crossed pictures (plants: they read from any side); "stand" is a
+//   billboard that faces the camera. size: [least, most] across, in squares; h: the height against the width.
+CM.PROPS = {
+  tuft: { how: "cross", size: [0.3, 0.5], h: 0.7 },
+  flowers: { how: "cross", size: [0.25, 0.4], h: 0.75 },
+  pebbles: { how: "flat", size: [0.35, 0.6] },
+  rock: { how: "stand", size: [0.2, 0.4], h: 0.75 },
+  bones: { how: "flat", size: [0.4, 0.6] },
+  skull: { how: "stand", size: [0.15, 0.2], h: 0.9 },
+};
+// where they lie: `surface` (the town and the land) or `bands` (the dungeon's, by CM.themeIndex: 0 the Catacombs ... 9
+// the Root); `grounds` the ground the square wears; `near` "wall" (a square with a wall beside it: the prop lies
+// against it) or "corner" (two walls meeting); `per` the chance a square has one at full detail; `most` how many
+CM.SCATTER = [
+  { prop: "tuft", where: { surface: true, grounds: ["grass"] }, per: 0.55, most: 3 },
+  { prop: "flowers", where: { surface: true, grounds: ["grass"] }, per: 0.08, most: 1 },
+  { prop: "pebbles", where: { surface: true, grounds: ["dirt"] }, per: 0.1, most: 1 },
+  { prop: "rock", where: { surface: true, grounds: ["grass"] }, per: 0.04, most: 1 },
+  { prop: "pebbles", where: { bands: "all", near: "wall" }, per: 0.14, most: 1 },
+  { prop: "rock", where: { bands: [2, 6, 9], near: "wall" }, per: 0.08, most: 1 },
+  { prop: "bones", where: { bands: [0, 3, 8], near: "wall" }, per: 0.07, most: 1 },
+  { prop: "skull", where: { bands: [0, 8], near: "corner" }, per: 0.35, most: 1 },
+];
+CM.DETAIL = { low: 0, medium: 0.6, high: 1 };
+CM.DETAIL_ORDER = ["low", "medium", "high"];
+CM.isSurface = (fl) => Boolean(fl && (fl.number === 0 || fl.number === -1));
+// what lies on each square: [{ id, how, layer, x, y, dx, dz, w, h, turn }]
+CM.scatter = function (fl, seed, density = CM.DETAIL.medium) {
+  const out = [];
+  if (!fl || !density) return out;
+  const grid = fl.grid, size = grid.length, surface = CM.isSurface(fl), band = surface ? -1 : CM.themeIndex(fl.number >= 1 ? fl.number : 1);
+  const open = (x, y) => x >= 0 && y >= 0 && x < size && y < size && grid[y][x] === 0;
+  const wet = new Set((fl.decor || []).filter((d) => d.kind === "water").map((d) => `${d.x},${d.y}`));
+  const rules = CM.SCATTER.filter((r) => (surface ? r.where.surface : r.where.bands && (r.where.bands === "all" || r.where.bands.includes(band))));
+  if (!rules.length) return out;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    if (grid[y][x] !== 0) continue;
+    const k = `${x},${y}`, t = fl.things[k];
+    if ((t && t.type !== "monsters") || fl.features[k] || wet.has(k)) continue;   // (never on a thing, a feature or the water)
+    const walls = CM.DIRS.map(([dx, dy]) => !open(x + dx, y + dy));               // north, east, south, west
+    const ground = surface ? CM.groundAt(fl, x, y) || "grass" : null;
+    const rnd = new CM.Random(CM.hashSeed(`${seed}:props:${fl.number}:${k}`));
+    for (const r of rules) {
+      const w = r.where;
+      if (w.grounds && !w.grounds.includes(ground)) continue;
+      let toward = null;
+      if (w.near === "wall") { const sides = [0, 1, 2, 3].filter((d) => walls[d]); if (!sides.length) continue; toward = [sides[rnd.int(0, sides.length - 1)]]; }
+      if (w.near === "corner") { const c = [[0, 1], [1, 2], [2, 3], [3, 0]].filter(([a, b]) => walls[a] && walls[b]); if (!c.length) continue; toward = c[rnd.int(0, c.length - 1)]; }
+      for (let i = 0; i < (r.most || 1); i++) {
+        if (!rnd.chance(r.per * density)) continue;
+        const P = CM.PROPS[r.prop], s = P.size[0] + rnd.next() * (P.size[1] - P.size[0]);
+        let dx = (rnd.next() - 0.5) * 0.6, dz = (rnd.next() - 0.5) * 0.6;
+        if (toward) { dx = 0; dz = 0; for (const d of toward) { dx += CM.DIRS[d][0] * (0.5 - s / 2 - 0.04); dz += CM.DIRS[d][1] * (0.5 - s / 2 - 0.04); } dx += (rnd.next() - 0.5) * (toward.length === 1 ? 0.4 : 0.05); }
+        out.push({ id: r.prop, how: P.how, layer: `prop:${r.prop}`, x, y, dx, dz, w: s, h: s * (P.h || 1), turn: rnd.next() * Math.PI });
+      }
+    }
+  }
+  return out;
 };
 
 // ---- 30-art.js ----
@@ -6334,6 +6418,50 @@ CM.art.surfaceLayers = function (pick) {
   return out;
 };
 
+
+// ---- props: the small things on the floors, painted at half size and packed four to a layer --------------------------
+CM.art.prop = function (id) {
+  const S = ART_SIZE / 2, c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`prop:${id}`));
+  if (id === "tuft" || id === "flowers") {
+    for (let i = 0; i < (id === "tuft" ? 26 : 14); i++) {
+      const x = S * 0.15 + rnd.next() * S * 0.7, h = S * (0.35 + rnd.next() * 0.55), lean = (rnd.next() - 0.5) * S * 0.3, k = 0.7 + rnd.next() * 0.6;
+      p.strokeStyle = `rgb(${Math.round(70 * k)},${Math.round(120 * k)},${Math.round(44 * k)})`; p.lineWidth = 3 + rnd.next() * 2; p.lineCap = "round";
+      p.beginPath(); p.moveTo(x, S - 2); p.quadraticCurveTo(x + lean * 0.3, S - h * 0.6, x + lean, S - h); p.stroke();
+    }
+    if (id === "flowers") for (let i = 0; i < 5; i++) { const x = S * 0.2 + rnd.next() * S * 0.6, y = S * (0.25 + rnd.next() * 0.3); p.fillStyle = ["#F0E060", "#E8E8F0", "#C080E0", "#E06070"][rnd.int(0, 3)]; for (let a = 0; a < 5; a++) { p.beginPath(); p.arc(x + Math.cos(a * 1.26) * 5, y + Math.sin(a * 1.26) * 5, 4, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#E0A020"; p.beginPath(); p.arc(x, y, 3, 0, Math.PI * 2); p.fill(); }
+  } else if (id === "pebbles") {
+    for (let i = 0; i < 9; i++) { const x = S * 0.15 + rnd.next() * S * 0.7, y = S * 0.15 + rnd.next() * S * 0.7, r = S * (0.04 + rnd.next() * 0.06), k = 0.75 + rnd.next() * 0.5; p.fillStyle = `rgb(${Math.round(120 * k)},${Math.round(114 * k)},${Math.round(104 * k)})`; p.beginPath(); p.ellipse(x, y, r * 1.3, r, rnd.next() * 3, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(255,255,255,0.18)"; p.beginPath(); p.ellipse(x - r * 0.3, y - r * 0.3, r * 0.5, r * 0.35, 0, 0, Math.PI * 2); p.fill(); }
+  } else if (id === "rock") {
+    p.fillStyle = "#6E6860"; p.beginPath(); p.moveTo(S * 0.08, S - 2); p.lineTo(S * 0.16, S * 0.45); p.lineTo(S * 0.42, S * 0.2); p.lineTo(S * 0.74, S * 0.3); p.lineTo(S * 0.92, S * 0.6); p.lineTo(S * 0.94, S - 2); p.closePath(); p.fill();
+    p.fillStyle = "#8A847A"; p.beginPath(); p.moveTo(S * 0.16, S * 0.45); p.lineTo(S * 0.42, S * 0.2); p.lineTo(S * 0.74, S * 0.3); p.lineTo(S * 0.5, S * 0.5); p.closePath(); p.fill();
+    p.fillStyle = "#4E4A44"; p.beginPath(); p.moveTo(S * 0.74, S * 0.3); p.lineTo(S * 0.92, S * 0.6); p.lineTo(S * 0.94, S - 2); p.lineTo(S * 0.6, S - 2); p.lineTo(S * 0.5, S * 0.5); p.closePath(); p.fill();
+  } else if (id === "bones") {
+    p.lineCap = "round";
+    for (let i = 0; i < 4; i++) { const x = S * 0.2 + rnd.next() * S * 0.6, y = S * 0.2 + rnd.next() * S * 0.6, a = rnd.next() * Math.PI, l = S * (0.15 + rnd.next() * 0.18); p.strokeStyle = "#D8D0B8"; p.lineWidth = 6; p.beginPath(); p.moveTo(x - Math.cos(a) * l, y - Math.sin(a) * l); p.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); p.stroke(); p.fillStyle = "#E4DCC4"; for (const s of [-1, 1]) { p.beginPath(); p.arc(x + s * Math.cos(a) * l, y + s * Math.sin(a) * l, 5, 0, Math.PI * 2); p.fill(); } }
+  } else if (id === "skull") {
+    p.fillStyle = "#E0D8C0"; p.beginPath(); p.arc(S / 2, S * 0.48, S * 0.34, Math.PI, 0); p.lineTo(S * 0.8, S * 0.7); p.lineTo(S * 0.66, S * 0.94); p.lineTo(S * 0.34, S * 0.94); p.lineTo(S * 0.2, S * 0.7); p.closePath(); p.fill();
+    p.fillStyle = "#2A2420"; p.beginPath(); p.ellipse(S * 0.36, S * 0.56, S * 0.09, S * 0.11, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.ellipse(S * 0.64, S * 0.56, S * 0.09, S * 0.11, 0, 0, Math.PI * 2); p.fill();
+    p.beginPath(); p.moveTo(S / 2, S * 0.66); p.lineTo(S * 0.45, S * 0.76); p.lineTo(S * 0.55, S * 0.76); p.closePath(); p.fill();
+    for (let i = 0; i < 4; i++) p.fillRect(S * (0.38 + i * 0.07), S * 0.84, 4, S * 0.08);
+  }
+  return c;
+};
+// the props, four to a layer: `add(name, canvas)` as the set builders have it; `make(id)` paints one at half the layer's
+// size. Returns `sub`: { "prop:<id>": [layer name, u0, v0, u1, v1] } for the renderer to find each one's corner.
+CM.art.packProps = function (add, size, make) {
+  const sub = {}, ids = Object.keys(CM.PROPS || {}), half = size / 2;
+  for (let i = 0; i < ids.length; i += 4) {
+    const c = artCanvas(size), p = c.getContext("2d"), name = `props:${i / 4}`;
+    ids.slice(i, i + 4).forEach((id, j) => {
+      const qx = (j % 2) * half, qy = Math.floor(j / 2) * half, pad = Math.max(1, size / 128);
+      p.drawImage(make(id), qx + pad, qy + pad, half - 2 * pad, half - 2 * pad);
+      sub[`prop:${id}`] = [name, (qx + pad) / size, (qy + pad) / size, (qx + half - pad) / size, (qy + half - pad) / size];
+    });
+    add(name, c);
+  }
+  return sub;
+};
+
 // ---- the whole set for a depth, as texture-array layers (the Drawn theme) ----------------------------------------------
 CM.art.buildDrawn = function (theme) {
   const layers = [], index = {};
@@ -6378,7 +6506,8 @@ CM.art.buildDrawn = function (theme) {
   add("fx:leaf", CM.art.fxLeaf()); add("fx:ring", CM.art.fxRing());
   for (let f = 0; f < 3; f++) { add(`torch${f}`, CM.art.torch(f)); add(`water${f}`, CM.art.water(f)); }
   for (const [name, c] of Object.entries(CM.art.surfaceLayers())) add(name, c);
-  return { layers, index, size: ART_SIZE, crisp: false };
+  const sub = CM.art.packProps(add, ART_SIZE, (id) => CM.art.prop(id));
+  return { layers, index, size: ART_SIZE, crisp: false, sub };
 };
 
 // ---- 35-packs.js ----
@@ -6501,7 +6630,8 @@ CM.art.buildPixel = function (theme) {
   for (let f = 0; f < 3; f++) { add(`torch${f}`, tileOr(`torch${f}`, () => CM.art.torch(f))); add(`water${f}`, tileOr(`water${f}`, () => CM.art.water(f))); }
   const ground = (key, drawn) => (CM.packs.pixel.index[key] ? tiled(key, 2) : CM.art.pixelate(drawn()));              // (the ground and the walls repeat the tile; the trees stand alone)
   for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key.startsWith("sign") || key.startsWith("far.") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
-  return { layers, index, size: S, crisp: true };
+  const sub = CM.art.packProps(add, S, (id) => CM.art.pixelate(CM.art.prop(id), 24));   // (the props in pixels, like the rest of the set)
+  return { layers, index, size: S, crisp: true, sub };
 };
 
 // ---- the Stone theme: photographs on the stone, the drawn art on everything else ---------------------------------------
@@ -6553,7 +6683,7 @@ CM.art.buildStone = function (theme) {
     c.getContext("2d").drawImage(drawn.layers[i], 0, 0, S, S);
     add(name, c);
   }
-  return { layers, index, size: S, crisp: false };
+  return { layers, index, size: S, crisp: false, sub: drawn.sub };          // (the props' layers came across with the rest, by name)
 };
 
 // the whole set for a depth, in the look asked for (the drawn one when a pack isn't there)
@@ -6815,6 +6945,8 @@ CM.Renderer = class {
     this.bob = 0;
     this.light = 1;                    // how far the torch reaches, as a share of the depth's reach (1: a good torch)
     this.sky = null;                   // on the surface: CM.sky(game) this frame (the colours, the light, the sun and the moon); null below
+    this.seed = ""; this.density = CM.DETAIL.medium; this.sub = {};   // the props: the run's seed and how many (the Detail setting), and where each sits in its layer
+    this.standing = [];                // the floor's standing props, for the frame's billboards
     this.lightNow = 1;                 // (eased towards it)
     this.ok = true;
     gl.enable(gl.DEPTH_TEST);
@@ -6854,6 +6986,7 @@ CM.Renderer = class {
     if (this.texture) gl.deleteTexture(this.texture);
     this.texture = gl.createTexture();
     this.index = art.index;
+    this.sub = art.sub || {};
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, art.size, art.size, art.layers.length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     art.layers.forEach((layer, i) => gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, art.size, art.size, 1, gl.RGBA, gl.UNSIGNED_BYTE, layer));
@@ -6870,8 +7003,10 @@ CM.Renderer = class {
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
   setFloor(floor, theme) {
     this.theme = theme;
-    const mesh = CM.floorMesh(floor, theme, this.index);
-    this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees };
+    const props = CM.scatter(floor, this.seed, this.density);
+    this.standing = props.filter((p) => p.how === "stand");
+    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub });
+    this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.data), gl.STATIC_DRAW);
@@ -6947,11 +7082,11 @@ CM.Renderer = class {
   _spriteMesh() {
     const out = [], right = [Math.cos(this.yaw), 0, Math.sin(this.yaw)];
     for (const s of this.sprites) {
-      const layer = this.index[s.layer];
+      const sb = this.sub[s.layer], layer = sb ? this.index[sb[0]] : this.index[s.layer];   // (a prop: one corner of a shared layer)
       if (layer === undefined) continue;
       const cx = s.x + 0.5 + (s.dx || 0), cz = s.y + 0.5 + (s.dz || 0), w = s.w || 0.7, h = s.h || 0.7;
       const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1, glow = s.glow || 0;
-      const uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
+      const uv = sb ? [[sb[1], sb[4]], [sb[3], sb[4]], [sb[3], sb[2]], [sb[1], sb[2]]] : [[0, 1], [1, 1], [1, 0], [0, 0]];
       let corners;
       const lift = s.lift || 0;
       if (s.flat) {
@@ -7626,7 +7761,7 @@ CM.Game = class {
     this.vaults = (CM.store.get("vaults", null) || (CM.store.get("vault", null) ? [CM.store.get("vault", null)] : [])).map((it) => CM.normalizeItem(it, "vault"));
     this.compendium = CM.store.get("compendium", {});     // every base ever found: {baseId: {floor, date}}   // the heirlooms left at the camp for the next party (one slot, or three, or five, by the guildhall)
     this.village = Object.assign({ renown: 0, spent: 0, levels: {}, trainers: [] }, CM.store.get("village", {}));   // the surface: renown and the buildings
-    this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "pixel", tapMove: true, skipWalk: false }, CM.store.get("settings", {}));
+    this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "pixel", tapMove: true, skipWalk: false, detail: "medium" }, CM.store.get("settings", {}));
     this.settings.keys = Object.assign({}, CM.DEFAULT_KEYS, this.settings.keys || {});
     this.settings.pad = Object.assign({}, CM.DEFAULT_PAD, this.settings.pad || {});
     this.ledger = CM.store.get("ledger", []);        // every expedition that ended, one line each (the statistics; the Hall of Fame keeps ten)
@@ -14118,6 +14253,7 @@ CM.UI = class {
   <div class="row"><label for="set-music-volume">Music volume</label><input type="range" id="set-music-volume" min="0" max="100"></div>
   <div class="row"><label for="set-look">Theme - the look of the dungeon</label><select id="set-look"></select></div>
   <div class="small" id="set-look-note"></div>
+  <div class="row"><label for="set-detail">Detail - the grass, stones and bones on the floors (when frames come late it is lowered first)</label><select id="set-detail"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
@@ -14888,20 +15024,21 @@ CM.UI = class {
     const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap"), skipWalk = this.$("#set-skipwalk");
     const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab"), render = this.$("#set-render"), layout = this.$("#set-layout");
     layout.value = s.layout || "auto";
+    const detail = this.$("#set-detail"); detail.value = CM.DETAIL[s.detail] !== undefined ? s.detail : "medium";
     speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB); render.value = s.render || "auto";
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
-    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false; skipWalk.checked = Boolean(s.skipWalk); this.$("#set-season").value = s.season || ""; this.$("#set-autoland").checked = s.autoLand !== false;
+    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "pixel"; tap.checked = s.tapMove !== false; skipWalk.checked = Boolean(s.skipWalk); this.$("#set-season").value = s.season || ""; this.$("#set-autoland").checked = s.autoLand !== false;
     const note = () => { this.$("#set-look-note").textContent = CM.LOOKS[s.look] ? CM.LOOKS[s.look].what + "." : ""; };
     note();
     const apply = () => {
       s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.season = this.$("#set-season").value || ""; s.autoLand = this.$("#set-autoland").checked; s.tapMove = tap.checked; s.skipWalk = skipWalk.checked;
-      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value; s.layout = layout.value;
+      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value; s.layout = layout.value; s.detail = detail.value;
       g.saveSettings();
       g.emit("settings", s);
     };
     for (const el of [sound, vol, music, mvol, smooth, fps, tap, motion, contrast, swapab]) el.addEventListener("input", apply);
-    for (const el of [speed, text, render, layout]) el.addEventListener("change", apply);
+    for (const el of [speed, text, render, layout, detail]) el.addEventListener("change", apply);
     for (const sel of [look, titleLook]) sel.addEventListener("change", () => { s.look = sel.value; look.value = titleLook.value = s.look; note(); apply(); });
   }
 
@@ -16398,6 +16535,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const demo = CM.makeFloor(1, "title");                                 // the corridor behind the title
   let demoCell = null;
   function showDemo() {
+    renderer.seed = "title";
     useTheme(1);
     renderer.setFloor(demo, CM.THEMES[0]);
     if (!demoCell) {                                                     // a square with a long view down a corridor
@@ -16418,6 +16556,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   game.on("floor", (floor) => {
     if (!renderer.ok) return;
+    renderer.seed = game.seed;
     useTheme(floor.number);
     renderer.setFloor(floor, CM.themeFor(floor.number));
     renderer.setCamera(floor.pos[0], floor.pos[1], floor.facing);
@@ -16463,6 +16602,7 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   const applySettings = (s) => {
     if (lookOn !== null && lookNow() !== lookOn) relook();
+    detailCap = 2; applyDetail();
     renderer.snap = !s.smooth;
     CM.audio.setEnabled(s.sound);
     CM.audio.setVolume(s.volume);
@@ -16481,12 +16621,18 @@ window.addEventListener("DOMContentLoaded", () => {
   };
   let renderAuto = true, slowFor = 0, quickFor = 0;
   const RENDER_STEPS = [1, 0.75, 0.5];
-  function autoScale(dt) {                                               // frames coming late for two seconds: a step down; quick for ten: a step back up
-    if (!renderAuto) return;
+  // the Detail setting, and how far the step-down has lowered it: the props' density, the floor rebuilt when it changes
+  let detailCap = 2;
+  const detailNow = () => Math.min(CM.DETAIL_ORDER.indexOf(game.settings.detail || "medium") < 0 ? 1 : CM.DETAIL_ORDER.indexOf(game.settings.detail || "medium"), detailCap);
+  const applyDetail = () => { const d = CM.DETAIL[CM.DETAIL_ORDER[detailNow()]]; if (d !== renderer.density) { renderer.density = d; if (game.floor && renderer.ok && game.mode !== "title") renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } };
+  function autoScale(dt) {                                               // frames coming late for two seconds: a step down (the Detail first, then the render scale); quick for ten: a step back up
     if (dt > 0.022) { slowFor += dt; quickFor = 0; } else if (dt < 0.013) { quickFor += dt; slowFor = 0; } else { slowFor = 0; quickFor = 0; }
+    if (slowFor > 2 && detailNow() > 0) { detailCap = detailNow() - 1; slowFor = 0; applyDetail(); return; }
+    if (!renderAuto) { if (quickFor > 10 && detailCap < 2) { detailCap += 1; quickFor = 0; applyDetail(); } return; }
     const i = RENDER_STEPS.indexOf(renderer.scale || 1);
     if (slowFor > 2 && i < RENDER_STEPS.length - 1) { renderer.scale = RENDER_STEPS[i + 1]; slowFor = 0; }
     else if (quickFor > 10 && i > 0) { renderer.scale = RENDER_STEPS[i - 1]; quickFor = 0; }
+    else if (quickFor > 10 && detailCap < 2) { detailCap += 1; quickFor = 0; applyDetail(); }
   }
   game.on("settings", applySettings);
   applySettings(game.settings);
@@ -16679,6 +16825,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!fl) return { out, hud };
     const now = performance.now(), right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
+    for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 10) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h });   // (the standing props, near the party)
     if (renderer.sky) {                                                 // the sun and the moon: far off, along their arc from the east over the south to the west
       const S = renderer.sky, eye = renderer.eye;
       for (const [t, layer, size] of [[S.sun, "sun", 6], [S.moon, `moon:${S.phase}`, 4]]) {

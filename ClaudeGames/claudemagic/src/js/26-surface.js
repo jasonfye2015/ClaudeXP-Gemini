@@ -77,7 +77,7 @@ CM.sky = function (game) {
 // count} and what was built, for the tests: ceilings, walls, roofs, trees, and on the surface the squares covered (ground,
 // a top or a roof over every one), the skirt's quads past the edge and the far ring's.
 CM.MESH_STRIDE = 10;
-CM.floorMesh = function (fl, theme, index) {
+CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts: { props (CM.scatter's), sub (where each prop sits in its layer) }
   const grid = fl.grid, size = grid.length, out = [], features = fl.features || {}, sky = Boolean(theme.sky), canopy = new Set(fl.canopy || []);
   const L = (name) => (index[name] !== undefined ? index[name] : index.wall);
   const quad = (a, b, c, d, layer, shade) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
@@ -149,5 +149,22 @@ CM.floorMesh = function (fl, theme, index) {
     quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0);
     quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0);
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, trees: trees.size, covered: covered.size, skirt, ring };
+  let props = 0;                                                                        // the props that lie or grow: flat, and crossed pairs
+  const sub = opts.sub || {};
+  const quadUV = (a, b, c, d, layer, shade, r) => { const uv = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
+  for (const p of opts.props || []) {
+    if (p.how === "stand") continue;
+    const s = sub[p.layer], layer = s ? index[s[0]] : index[p.layer], r = s ? s.slice(1) : [0, 0, 1, 1];
+    if (layer === undefined) continue;
+    const cx = p.x + 0.5 + p.dx, cz = p.y + 0.5 + p.dz, c = Math.cos(p.turn), sn = Math.sin(p.turn), hw = p.w / 2, shade = sky && canopy.has(`${p.x},${p.y}`) ? 0.55 : 0.9;
+    if (p.how === "flat") {
+      const at = (u, v) => [cx + u * c - v * sn, 0.006 + (props % 7) * 0.0006, cz + u * sn + v * c];
+      quadUV(at(-hw, hw), at(hw, hw), at(hw, -hw), at(-hw, -hw), layer, shade, r);
+    } else for (const t of [p.turn, p.turn + Math.PI / 2]) {
+      const ux = Math.cos(t) * hw, uz = Math.sin(t) * hw;
+      quadUV([cx - ux, 0, cz - uz], [cx + ux, 0, cz + uz], [cx + ux, p.h, cz + uz], [cx - ux, p.h, cz - uz], layer, shade, r);
+    }
+    props++;
+  }
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, trees: trees.size, covered: covered.size, skirt, ring, props };
 };
