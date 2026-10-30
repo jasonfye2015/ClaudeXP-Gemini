@@ -1090,6 +1090,20 @@ The home (the seventh big update, phase 1 - v5.3)
   Everything the house does is a logged act, so a run that rested and stashed replays the same.
   Test: "the home".
 
+The tavern, the merchant and the smith (the seventh big update, phase 2 - v5.4)
+  Three doors in town open onto the camps' benches with more behind them (src/js/68-shops.js). The Hanged Lantern:
+  the recruits, the fence and the rumour of a strongbox (the fence drinks in town now, not at the camps), the board
+  (the camps' bounty and the week's contracts), a round for the party (5 gold: morale 90 for the road, once a
+  visit) and the regular's gossip (10 gold, once a run: where the sexton's helm and the Bag of Holding lie on this
+  seed). The Merchant's House: the whole stock, nothing rotated, at the party's level; orders and insurance as at
+  the camps, delivered at the first camp; and at the house's third level a commission - a weapon, armour, a shield
+  or a helm of any base at the party's level, affixed as the floor would, paid now at half again over, waiting at
+  the first camp (CM.gearOfBase). The Smith's forge: everything the camps' smith does, and the forge's own work -
+  a base reforged (a Long Sword into a Bastard Sword: every word, mark, name and history kept, for an essence and
+  100 gold a tier), a second gem set in a relic (the wearer proof against its element, +1), and the apprentice who
+  buys scrap at three quarters. A merchant's table belongs to where it stands: it is fresh on every floor.
+  Test: "the tavern, the merchant and the smith in town".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

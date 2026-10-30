@@ -72,9 +72,18 @@ Object.assign(CM.UI.prototype, {
       box.appendChild(div);
     });
     if (!box.children.length) box.innerHTML = "<div class='small'>The benches are empty tonight.</div>";
-    const fence = this.$("#fence"); fence.innerHTML = `<div class='head'>${this.esc(CM.t("fence.head"))}</div>`;
+    const fence = this.$("#fence"); fence.innerHTML = g.inTown() ? `<div class='head'>${this.esc(CM.t("fence.head"))}</div>` : "";
+    if (g.inTown()) {                                                    // the Hanged Lantern's own: a round, the regular, the board
+      const row = document.createElement("div"); row.className = "small";
+      const d = document.createElement("button"); d.textContent = g.floor.drank ? "A round, drunk" : `A round for the party (${CM.DRINK_PRICE} gold: heart for the road)`; d.disabled = Boolean(g.floor.drank); d.addEventListener("click", () => { this.$("#tavern-note").textContent = g.drink() || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(d);
+      const r = document.createElement("button"); r.textContent = g.gossiped ? "The regular has talked" : `The regular's gossip (${CM.GOSSIP_PRICE} gold)`; r.disabled = Boolean(g.gossiped); r.addEventListener("click", () => { this.$("#tavern-note").textContent = g.gossip() || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(r);
+      const b = document.createElement("button"); b.textContent = g.bounty ? (g.bountyDone() ? "The board: claim the bounty" : `The board: ${g.bountyProgress()} of ${CM.plural(CM.BOUNTY_NEED, g.bounty.kind)}`) : "The board: take a bounty"; b.addEventListener("click", () => { this.$("#tavern-note").textContent = (g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty()) || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(b);
+      const c = document.createElement("div"); c.className = "small"; c.innerHTML = g.contracts().map(({ c: ct, done }) => `${done ? "✓" : "○"} ${this.esc(ct.name)}: ${this.esc(ct.what)} (${ct.renown} renown)`).join("<br>"); row.appendChild(c);
+      fence.appendChild(row);
+    }
+    if (g.inTown())
     g.bag.forEach((it, row) => { if (!it.unknown && !(it.props && it.props.cursed)) return; const b = document.createElement("button"); b.textContent = it.unknown ? CM.t("fence.unknown", { what: CM.baseName(it), n: Math.floor(it.value / 2) }) : CM.t("fence.cursed", { what: it.name }); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fence(row) || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); });
-    { const b = document.createElement("button"); b.textContent = g.rumourBox ? CM.t("fence.rumour.bought", { n: g.rumourBox }) : CM.t("fence.rumour", { n: CM.RUMOUR_PRICE }); b.disabled = Boolean(g.rumourBox); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fenceRumour() || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); }
+    if (g.inTown()) { const b = document.createElement("button"); b.textContent = g.rumourBox ? CM.t("fence.rumour.bought", { n: g.rumourBox }) : CM.t("fence.rumour", { n: CM.RUMOUR_PRICE }); b.disabled = Boolean(g.rumourBox); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fenceRumour() || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); }
     this.$("#tavern-note").textContent = fallen.length ? "" : "The party is whole; the recruits drink to that.";
   },
 
@@ -137,6 +146,16 @@ Object.assign(CM.UI.prototype, {
       const b = document.createElement("button"); b.textContent = "Charge the first wand: a gem and 60 gold"; b.disabled = !g.bag.some((i) => i.kind === "gem") || g.gold < 60;
       b.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("recharge", 0, "weapon") || "Done."; this.renderSmith(); this.refresh(); });
       row.appendChild(b); box.appendChild(row);
+    }
+    if (g.inTown()) {                                                    // the forge's own work: a base reforged, a second gem in a relic, the apprentice's scrap price
+      const title = document.createElement("div"); title.className = "list-title"; title.textContent = "The forge (in town only)"; box.appendChild(title);
+      g.party.forEach((h, hi) => { for (const slot of ["weapon", "armor", "offhand", "helm"]) { const it = h[slot]; if (!it || it.unknown || (it.props && (it.props.unique || it.props.fists))) continue;
+        const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; const t = document.createElement("div"); t.innerHTML = `<b>${this.esc(CM.itemName(it))}</b> <small>${this.esc(h.name)}'s ${CM.SLOT_NAMES[slot].toLowerCase()}</small>`; t.title = CM.itemCard(it); row.appendChild(t);
+        const act = document.createElement("div"); act.className = "hire";
+        if (!(it.props && it.props.relic)) { const sel = document.createElement("select"); const bases = Object.values(CM.BASES).filter((B) => B.kind === it.kind && !["unique", "relic"].includes(B.group) && B.id !== CM.baseIdOf(it)).sort((a, b) => (a.tier || 0) - (b.tier || 0)); sel.innerHTML = `<option value="">Reforge the base (an essence, and 100 gold a tier)...</option>` + bases.map((B) => `<option value="${this.esc(B.id)}">${this.esc(B.id)} - ${100 * ((B.tier || 0) + 1)} gold</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) { this.$("#smith-note").textContent = g.reforgeBase(hi, slot, sel.value) || "Done."; this.renderSmith(); this.refresh(); } }); act.appendChild(sel); }
+        else { const b = document.createElement("button"); b.textContent = it.props.gem2 ? "A second gem is set" : `A second gem (${CM.SMITH.gem * 2} gold and a gem)`; b.disabled = Boolean(it.props.gem2); b.addEventListener("click", () => { this.$("#smith-note").textContent = g.secondGem(hi, slot) || "Done."; this.renderSmith(); this.refresh(); }); act.appendChild(b); }
+        row.appendChild(act); box.appendChild(row); } });
+      const n = g.bag.filter((i) => i.kind === "scrap").length; if (n) { const b = document.createElement("button"); b.textContent = `The apprentice buys the scrap (${n}, at three quarters)`; b.addEventListener("click", () => { this.$("#smith-note").textContent = g.sellScrap() || "Done."; this.renderSmith(); this.refresh(); }); box.appendChild(b); }
     }
     const scrapRows = g.bag.map((it, i) => [it, i]).filter(([it]) => ["weapon", "armor", "shield", "helm"].includes(it.kind) && !(it.props && (it.props.relic || it.props.unique)));
     if (scrapRows.length) {

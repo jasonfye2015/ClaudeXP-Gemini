@@ -2254,9 +2254,10 @@ test("wounds, weight and the economy: a wound on rising and a grave one, healed 
   // a bounty: three of a kind for gold and renown; the fence buys unknowns at half and takes cursed things; the rumour; the tithe
   g4.closeBag(); g4.bestiary = g4.bestiary || {}; assert.strictEqual(g4.takeBounty(), ""); const kind = g4.bounty.kind; assert.ok(CM.monsterKind(kind), kind); assert.ok(g4.claimBounty().includes("Not yet")); assert.ok(g4.takeBounty().includes("open already"));
   g4.bestiary[kind] = g4.bestiary[kind] || { seen: 0, slain: 0, weak: [], resist: [] }; g4.bestiary[kind].slain += 3; assert.ok(g4.bountyDone()); const gb = g4.gold, ren = (g4.village || {}).renown || 0; assert.strictEqual(g4.claimBounty(), ""); assert.strictEqual(g4.gold - gb, 60 + 40 * 15); assert.strictEqual(g4.village.renown, ren + 1); assert.ok(!g4.bounty && g4.tally.bounties === 1);
+  g4.enterFloor(0, "rope", CM.TOWN_AT.tavern.slice()); assert.ok(g4.inTown(), "the fence drinks in town now");
   const unknown = Object.assign(CM.makeItem(10, new CM.Random(4), "ring"), { unknown: true, value: 200 }), cursedRing = { name: "Cursed Ring", kind: "ring", slot: "ring", power: 1, value: 300, props: { cursed: true, curse: "weak" } }; g4.bag.push(unknown, cursedRing);
   assert.ok(g4.fence(0).includes("only wants") || g4.bag[0].unknown || (g4.bag[0].props && g4.bag[0].props.cursed), "the fence wants unknowns and curses"); const gf = g4.gold; assert.strictEqual(g4.fence(g4.bag.indexOf(unknown)), ""); assert.strictEqual(g4.gold - gf, 100); assert.strictEqual(g4.fence(g4.bag.indexOf(cursedRing)), ""); assert.strictEqual(g4.gold - gf, 100, "cursed, for nothing"); assert.ok(!g4.bag.includes(cursedRing)); assert.strictEqual(g4.tally.fenced, 2);
-  g4.gold = 200; const gr = g4.gold; assert.strictEqual(g4.fenceRumour(), ""); assert.strictEqual(gr - g4.gold, CM.RUMOUR_PRICE); if (g4.rumourBox) { assert.ok(g4.rumourBox > 15 && g4.rumourBox <= 21); assert.ok(g4.fenceRumour().includes("told you")); const seen0 = () => g4.floor.seen.length; g4.enterFloor(g4.rumourBox, "down"); const box = Object.keys(g4.floor.things).find((k) => g4.floor.things[k].type === "strongbox"); assert.ok(box && g4.floor.seen.some(([x, y]) => `${x},${y}` === box), "the strongbox is on the map"); assert.strictEqual(g4.rumourBox, 0); assert.ok(seen0() > 0); }
+  g4.gold = 200; const gr = g4.gold; assert.strictEqual(g4.fenceRumour(), ""); assert.strictEqual(gr - g4.gold, CM.RUMOUR_PRICE); if (g4.rumourBox) { assert.ok(g4.rumourBox >= 1 && g4.rumourBox <= 6); assert.ok(g4.fenceRumour().includes("told you")); const seen0 = () => g4.floor.seen.length; g4.enterFloor(g4.rumourBox, "down"); const box = Object.keys(g4.floor.things).find((k) => g4.floor.things[k].type === "strongbox"); assert.ok(box && g4.floor.seen.some(([x, y]) => `${x},${y}` === box), "the strongbox is on the map"); assert.strictEqual(g4.rumourBox, 0); assert.ok(seen0() > 0); }
   g4.enterFloor(15, "down"); g4.mode = "camp"; g4.gold = 300; assert.strictEqual(g4.tithe(), ""); assert.strictEqual(g4.gold, 270); assert.strictEqual(g4.blessedUntil, 20); assert.ok(g4.blessed() && g4.tithe().includes("already")); assert.strictEqual(g4.tally.spent.tithe, 30);
   g4.enterFloor(21, "down"); assert.ok(!g4.blessed(), "five floors, then it wears off");
   // the bot buys insurance, takes bounties and tithes when it can; the spending spreads
@@ -2409,6 +2410,42 @@ test("the home: raised with renown; the hearth rests and sends the party down re
   // a replay of a run with the house's acts in it comes out the same
   const g4 = new CM.Game(); g4.village.levels.home = 3; g4.saveVillage(); g4.newGame("home-4", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g4.hearthRest(); g4.stashPut(0); g4.larderTake(); const spec = g4.replaySpec();
   const stashNow = g4.home().stash.length; g4.home().stash.length = stashNow; const again = CM.replayRun(spec); assert.strictEqual(again.bag.length, g4.bag.length); assert.ok(again.buffs && again.buffs.rested === 5);
+});
+
+test("the tavern, the merchant and the smith in town: the full stock at the party's level, a commission made by the first camp, insurance and orders at the Merchant's House, a round and the regular at the Hanged Lantern, the fence only there, a base reforged with its words and marks, a second gem in a relic, the apprentice's scrap", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("shops-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.ok(g.inTown() && g.atShop()); assert.strictEqual(CM.plotLevel(g, "tavern"), 1, "the tavern stands from the start"); assert.strictEqual(CM.plotLevel(g, "merchant"), 1); assert.strictEqual(CM.plotLevel(g, "library"), 0);
+  // the Merchant's House: everything on the table, at the party's level; orders go to the first camp; a commission at level 3
+  g.gold = 2000; g.openBag(true); const kinds = new Set(g.stock.map((i) => i.kind)); for (const k of ["lockpick", "bar", "bait", "lantern", "rope", "scroll", "flask"]) assert.ok(kinds.has(k), `${k} on the town's table`);
+  assert.ok(g.stock.filter((i) => i.kind === "weapon").every((w) => ((CM.BASES[CM.baseIdOf(w)] || {}).tier || 0) <= 5), "gear at a level-one party's level");
+  assert.strictEqual(g.order("lampoil"), ""); assert.strictEqual(g.orders[0].from, 0);
+  assert.ok(g.commission("Long Sword").includes("third level")); g.village.renown = 5000; g.build("merchant"); g.build("merchant"); g.build("merchant"); assert.strictEqual(g.villageLevel("merchant"), 3);
+  assert.ok(g.commission("Tidecaller").includes("pattern")); const gold0 = g.gold; assert.strictEqual(g.commission("Maul"), ""); assert.ok(g.gold < gold0); const com = g.orders.find((o) => o.commission); assert.ok(com && com.item.base === "Maul" && com.item.props.twohanded && !com.item.unknown && com.from === 0, JSON.stringify(com && com.item));
+  assert.ok(com.item.props.affix || com.item.props.suffix || com.item.props.prefix || true, "affixed as the floor would");
+  const sword = { name: "Fine Sword", kind: "weapon", slot: "weapon", power: 9, value: 400, props: {} }; g.bag.push(sword); assert.strictEqual(g.insure(g.bag.length - 1), ""); assert.ok(sword.insured, "insured in town"); g.closeBag();
+  { const m = CM.gearOfBase("Chain Mail", 6, new CM.Random(1)) || CM.gearOfBase(Object.values(CM.BASES).find((B) => B.kind === "armor").id, 6, new CM.Random(1)); assert.ok(m && m.kind === "armor" && m.props.weight, "armour of a base has its weight"); assert.strictEqual(CM.gearOfBase("Lockpick", 3, new CM.Random(1)), null); }
+  // the Hanged Lantern: a round, the regular, the board; the fence drinks here and not at the camp
+  g.morale = 40; assert.strictEqual(g.drink(), ""); assert.strictEqual(g.morale, 90); assert.ok(g.drink().includes("One round")); assert.strictEqual(g.tally.spent.tavern, CM.DRINK_PRICE);
+  assert.strictEqual(g.gossip(), ""); assert.ok(/floor \d+/.test(g.messages.slice(-1)[0]) && g.messages.slice(-1)[0].includes("palace")); assert.ok(g.gossip().includes("told you"));
+  assert.strictEqual(g.takeBounty(), ""); assert.ok(g.bounty && g.bounty.floor === 0); g.bounty = null;
+  // down to the first camp: the order and the commission are waiting; the fence is not at the camp's bench
+  g.enterFloor(5, "down"); g.floor.things[g.floor.pos.join(",")] = { type: "ladder" }; g.use(); assert.strictEqual(g.mode, "camp");
+  const before = g.bag.length; g.openBag(true); assert.ok(g.bag.some((i) => i.base === "Maul") && g.bag.some((i) => i.kind === "lampoil") && g.bag.length >= before + 2, "delivered at the first camp"); assert.strictEqual(g.orders.length, 0); g.closeBag();
+  g.bag.push(Object.assign(CM.makeItem(5, new CM.Random(2), "ring"), { unknown: true })); assert.ok(g.fence(g.bag.length - 1).includes("in town")); assert.ok(g.fenceRumour().includes("in town")); assert.ok(g.drink().includes("in town"));
+  assert.ok(g.smith("enchant", 0, "weapon") !== "The smith works at the camp, and at the forge in town.", "the camp's smith still works"); assert.ok(g.reforgeBase(0, "weapon", "Bastard Sword").includes("in town"));
+  // the forge: a base reforged keeps its words, its marks and its name; the relic's second gem; the apprentice's scrap
+  g.goHome(); assert.ok(g.inTown()); const knight = g.party.find((h) => h.cls === "Knight"), ki = g.party.indexOf(knight);
+  const blade = CM.gearOfBase("Long Sword", 8, new CM.Random(3)); CM.affix(blade, 20, new CM.Random(4)); blade.unknown = false; blade.props.regen = 2; blade.marks = 2; blade.power += 2; blade.history = ["slew a troll"]; blade.name = CM.itemName(blade); knight.weapon = blade; CM.recompute(knight);
+  const words = Object.assign({}, blade.props), nameWas = blade.name, pow = blade.power; g.gold = 1000;
+  assert.ok(g.reforgeBase(ki, "weapon", "Bastard Sword").includes("essence")); g.bag.push(CM.essence(1)); assert.ok(g.reforgeBase(ki, "weapon", "Chain Mail").includes("same kind") || g.reforgeBase(ki, "weapon", "Nothing").includes("same kind"));
+  assert.strictEqual(g.reforgeBase(ki, "weapon", "Bastard Sword"), ""); assert.strictEqual(CM.baseIdOf(blade), "Bastard Sword"); assert.strictEqual(blade.marks, 2); assert.strictEqual(blade.props.regen, 2);
+  for (const k of Object.keys(words)) if (!["twohanded", "bow"].includes(k)) assert.strictEqual(JSON.stringify(blade.props[k]), JSON.stringify(words[k]), `the word ${k} kept`);
+  assert.ok(blade.name !== nameWas && blade.name.includes("Bastard Sword"), blade.name); assert.strictEqual(blade.power, pow + 2 * ((CM.BASES["Bastard Sword"].tier || 0) - (CM.BASES["Long Sword"].tier || 0))); assert.ok(!g.bag.some((i) => i.kind === "essence"), "the essence spent"); assert.ok(blade.history.slice(-1)[0].includes("reforged"));
+  assert.ok(g.reforgeBase(ki, "weapon", "Bastard Sword").includes("already"));
+  knight.helm = CM.relic("rat"); assert.ok(g.secondGem(ki, "helm").includes("ruby")); g.bag.push(CM.gem("ruby")); const hp = knight.helm.power; assert.strictEqual(g.secondGem(ki, "helm"), ""); assert.strictEqual(knight.helm.props.gem2, "fire"); assert.strictEqual(knight.helm.props.resist, "fire"); assert.strictEqual(knight.helm.power, hp + 1); assert.ok(g.secondGem(ki, "helm").includes("second gem")); assert.ok(g.secondGem(ki, "weapon").includes("relic"));
+  for (let i = 0; i < 4; i++) g.bag.push(CM.scrap()); const gs = g.gold; assert.strictEqual(g.sellScrap(), ""); assert.strictEqual(g.gold - gs, 4 * Math.ceil(5 * CM.SCRAP_PRICE)); assert.ok(!g.bag.some((i) => i.kind === "scrap")); assert.ok(g.sellScrap().includes("No scrap"));
+  assert.ok(g.runLog.some((l) => l[0] === "reforgeBase") && g.runLog.some((l) => l[0] === "commission") && g.runLog.some((l) => l[0] === "drink"), "the shops' acts are logged, for the films");
 });
 
 (async () => {

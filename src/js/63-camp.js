@@ -9,7 +9,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.peddling) this.logAct("openBag", shop ? 1 : 0);
     this.shopping = shop;
     if (shop && !this.stock) {
-      const rnd = this.rnd, depth = this.floor.number + 3;
+      const rnd = this.rnd, depth = this.floor.number === 0 ? Math.max(3, this.partyLevel() + 1) : this.floor.number + 3;
       this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor", "shield", "helm"].map((k) => { const it = CM.makeItem(depth, rnd, k); it.unknown = false; return it; });
       const heal = CM.healPotion(depth); if (heal.kind === "greaterheal" && this.asc("nogreater")) { heal.kind = "heal"; heal.name = "Healing Potion"; heal.power = 20 + depth * 3; heal.value = 20; }
       this.stock.push(heal, CM.manaPotion(depth), CM.lesserFeather(),
@@ -20,7 +20,7 @@ Object.assign(CM.Game.prototype, {
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       if (depth >= 14) this.stock.push(CM.lockpick(true));
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
-      this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);
+      if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);   // (the Merchant's House in town carries it all)
       for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
       this.deliverOrders();
       if (depth >= 13 && !this.bag.some((i) => i.kind === "kit")) this.stock.push(CM.fieldKit());
@@ -521,7 +521,7 @@ Object.assign(CM.Game.prototype, {
   // ---- the merchant's orders and insurance ----
   // an order: a thing from the merchant's list, paid now at a tenth over, delivered at the next camp
   order(what) {
-    if (this.mode !== "camp" || !this.shopping) return "Orders are placed with the merchant.";
+    if (!this.atShop() || !this.shopping) return "Orders are placed with the merchant.";
     const make = CM.ORDERABLE[what]; if (!make) return "The merchant has never heard of it.";
     const item = make(this.floor.number + 3), price = Math.ceil(CM.priceAt(item.value, this.floor.number) * CM.ORDER_OVER);
     if (this.gold < price) return `An order for ${item.name} is ${price} gold, paid now.`;
@@ -542,7 +542,7 @@ Object.assign(CM.Game.prototype, {
   },
   // insurance: a tenth of a thing's value, and if the party falls it goes to the vault for the next
   insure(row, slot) {                                                   // (row: a bag row; with a slot, row is the hero whose worn thing it is)
-    if (this.mode !== "camp") return "Insurance is bought at a camp.";
+    if (!this.atShop()) return "Insurance is bought from the merchant.";
     const item = slot ? (this.party[row] || {})[slot] : this.bag[row]; if (!item) return "Pick something from your pack.";
     if (item.insured) return `${item.name} is insured already.`;
     if (!item.value || ["torch", "ration", "key", "boxkey", "bones", "rope"].includes(item.kind)) return "The merchant won't insure that.";
@@ -570,7 +570,7 @@ Object.assign(CM.Game.prototype, {
     return pool[CM.hashSeed(`${this.seed}:bounty:${n}`) % pool.length].name;
   },
   takeBounty() {
-    if (this.mode !== "camp") return "The bounty board is at the camp.";
+    if (!this.atShop()) return "The bounty board is at the camp, and at the Hanged Lantern.";
     if (this.bounty) return this.bountyDone() ? "The bounty is earned: claim it." : `A bounty is open already: ${CM.plural(CM.BOUNTY_NEED, this.bounty.kind)} (${this.bountyProgress()} so far).`;
     const kind = this.bountyKind(); this.logAct("takeBounty");
     this.bounty = { kind, from: ((this.bestiary || {})[kind] || {}).slain || 0, floor: this.floor.number, reward: 60 + 40 * this.floor.number, renown: 1 };
@@ -581,7 +581,7 @@ Object.assign(CM.Game.prototype, {
   bountyProgress() { return this.bounty ? Math.min(CM.BOUNTY_NEED, (((this.bestiary || {})[this.bounty.kind] || {}).slain || 0) - this.bounty.from) : 0; },
   bountyDone() { return Boolean(this.bounty) && this.bountyProgress() >= CM.BOUNTY_NEED; },
   claimBounty() {
-    if (this.mode !== "camp") return "Bounties are paid at the camp.";
+    if (!this.atShop()) return "Bounties are paid at the camp, and at the Hanged Lantern.";
     if (!this.bounty) return "No bounty is open.";
     if (!this.bountyDone()) return `Not yet: ${this.bountyProgress()} of ${CM.plural(CM.BOUNTY_NEED, this.bounty.kind)}.`;
     this.logAct("claimBounty");
@@ -594,7 +594,7 @@ Object.assign(CM.Game.prototype, {
   },
   // ---- the fence, at the tavern: unknowns at half, cursed things taken for nothing, and rumours of strongboxes sold ----
   fence(row) {
-    if (this.mode !== "camp") return "The fence drinks at the camp's tavern.";
+    if (!this.inTown()) return "The fence drinks at the Hanged Lantern, in town.";
     const item = this.bag[row]; if (!item) return "Pick something from your pack.";
     const cursed = item.props && item.props.cursed;
     if (!item.unknown && !cursed) return "The fence only wants what the merchant won't take: what no one can name, and what is cursed.";
@@ -607,7 +607,7 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
   fenceRumour() {
-    if (this.mode !== "camp") return "The fence drinks at the camp's tavern.";
+    if (!this.inTown()) return "The fence drinks at the Hanged Lantern, in town.";
     if (this.gold < CM.RUMOUR_PRICE) return `A rumour is ${CM.RUMOUR_PRICE} gold.`;
     if (this.rumourBox) return `The fence has told you what he knows: floor ${this.rumourBox}.`;
     let found = 0;
@@ -703,7 +703,7 @@ Object.assign(CM.Game.prototype, {
   // the camp's smith: a diamond and gold put +1 on a piece of gear (up to +3 of his work); a ruby, sapphire or sunstone
   // and gold put fire, frost or holiness into a weapon. "" when it worked, else why not.
   smith(service, heroIndex, slot) {
-    if (this.mode !== "camp") return "The smith works at the camp.";
+    if (!this.atShop()) return "The smith works at the camp, and at the forge in town.";
     this.logAct("smith", service, heroIndex, slot);
     const hero = this.party[heroIndex], item = hero && hero[slot];
     if (service !== "recharge" && (!item || !["weapon", "armor", "offhand", "helm"].includes(slot))) return "Pick a weapon, armour, a shield or a helm.";
@@ -812,7 +812,7 @@ Object.assign(CM.Game.prototype, {
 
   // a piece of gear from the pack goes into the smith's fire for scrap (one each; five stand in for a diamond)
   salvage(row) {
-    if (this.mode !== "camp") return "The smith works at the camp.";
+    if (!this.atShop()) return "The smith works at the camp, and at the forge in town.";
     this.logAct("salvage", row);
     const item = this.bag[row];
     if (!item || !["weapon", "armor", "shield", "helm"].includes(item.kind)) return "The smith breaks down a weapon, armour, a shield or a helm.";

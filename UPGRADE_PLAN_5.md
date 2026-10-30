@@ -71,7 +71,7 @@ Size: M. Risk: every "floor.number" comparison in the rules that assumes 1 or mo
 
 Size: M.
 
-## Phase 2 - The tavern, the merchant and the smith - v5.4
+## Phase 2 - The tavern, the merchant and the smith - v5.4 - DONE
 
 - **The Hanged Lantern (tavern)**, in town: the recruits (three, plus the rescued and the remembered), the
   fence, the rumours, the bounty board (the week's three contracts and the camps' bounties on one board), and

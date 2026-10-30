@@ -422,7 +422,7 @@ CM.Game = class {
   enterFloor(number, how = "down", at = null) {
     const fresh = !this.floors[number] && !this.deltas[number];
     const fl = this.floorAt(number);
-    if (fl !== this.floor) this.leaveFloor();
+    if (fl !== this.floor) { this.leaveFloor(); this.stock = null; this.recruits = null; }   // (a merchant's table and a tavern's bench belong to where they are)
     this.floor = fl;
     if (this.songEpic !== number) { this.song = 0; this.songEpic = 0; }  // (a song that lasts the floor ends with it)
     if (how === "down") {
