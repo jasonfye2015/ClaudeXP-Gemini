@@ -89,7 +89,7 @@ Size: M.
 
 Size: M.
 
-## Phase 3 - The library, the temple and the guildhall - v5.5
+## Phase 3 - The library, the temple and the guildhall - v5.5 - DONE
 
 - **The Library**: the codex, the compendium, the bestiary, the combos and the item cards at a reading desk
   (one screen with tabs, the journal's boards moved here; the journal in the dungeon keeps only what the run has

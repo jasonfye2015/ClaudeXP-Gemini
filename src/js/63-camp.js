@@ -494,7 +494,7 @@ Object.assign(CM.Game.prototype, {
     return true;
   },
   templeWounds() {
-    const who = this.party.filter((h) => h.wound), cost = CM.WOUND_HEAL * who.length * (this.asc("costlytemple") ? 2 : 1);
+    const who = this.party.filter((h) => h.wound), cost = this.townPrice(CM.WOUND_HEAL * who.length * (this.asc("costlytemple") ? 2 : 1));
     if (!who.length) { this.say("No one here carries a wound."); return false; }
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold to close ${who.length === 1 ? "the wound" : "the wounds"}.`); return false; }
     this.logAct("temple", "wounds");
@@ -506,7 +506,7 @@ Object.assign(CM.Game.prototype, {
   },
   // a tithe: a tenth of the purse for a blessing on the band (+1 defence, blows land a twentieth more, five floors)
   tithe() {
-    if (this.mode !== "camp") return "The tithe is given at the temple.";
+    if (!this.atShop()) return "The tithe is given at the temple.";
     const cost = Math.max(10, Math.floor(this.gold / 10));
     if (this.gold < cost) return "The priest wants at least ten gold for the candles.";
     if (this.blessed()) return "The band is blessed already. The priest says once is enough.";
@@ -624,7 +624,7 @@ Object.assign(CM.Game.prototype, {
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
     if (service === "wounds") return this.templeWounds();
-    const cost = Math.ceil({ cure: 30, uncurse: 60, unstone: 150 }[service] * (this.asc("costlytemple") ? 2 : 1) * (this.party.some((h) => h.quirk === "pious" && h.hp > 0) ? 0.5 : 1));
+    const cost = this.townPrice(Math.ceil({ cure: 30, uncurse: 60, unstone: 150 }[service] * (this.asc("costlytemple") ? 2 : 1) * (this.party.some((h) => h.quirk === "pious" && h.hp > 0) ? 0.5 : 1)));
     const which = service === "cure" ? CM.CURABLE : service === "uncurse" ? ["curse"] : ["stone"];
     const cursedGear = service === "uncurse" ? this.party.flatMap((h) => CM.equipped(h).filter((it) => it.props && it.props.cursed)) : [];
     const who = this.party.filter((h) => which.some((s) => (h.status || {})[s]));
@@ -792,7 +792,7 @@ Object.assign(CM.Game.prototype, {
 
   // the guildhall at a camp: a hero at twenty takes a second calling, for renown - its first two spells or skills
   secondCalling(heroIndex, cls) {
-    if (this.mode !== "camp") return "The guild's letter is read at a camp.";
+    if (!this.atShop()) return "The guild's letter is read at a camp, or at the guildhall in town.";
     const h = this.party[heroIndex];
     if (!h || h.hp <= 0) return "Only a hero standing.";
     if (this.villageLevel("guildhall") < 2) return "The guildhall must be of the second level.";
@@ -895,7 +895,7 @@ Object.assign(CM.Game.prototype, {
   raiseDead() {
     const fallen = this.party.filter((m) => m.hp <= 0);
     if (!fallen.length) { this.say("No one needs raising."); return; }
-    const hero = fallen[0], cost = 100 * hero.level * (this.asc("costlytemple") ? 2 : 1);
+    const hero = fallen[0], cost = this.townPrice(100 * hero.level * (this.asc("costlytemple") ? 2 : 1));
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold to raise the ${hero.cls}.`); return; }
     this.logAct("raiseDead");
     this.gold -= cost; this.spend("temple", cost);

@@ -143,6 +143,12 @@ CM.UI = class {
 <div class="dialog" id="dlg-home"><div class="box journalbox"><h2>Your house</h2>
   <p class="small" id="home-what"></p><div id="home-rooms"></div><div class="small" id="home-note"></div>
   <div class="end"><button id="btn-home-build">Build</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-library"><div class="box journalbox"><h2>The Library</h2>
+  <p class="small" id="library-what"></p><div id="library-rooms"></div><div class="small" id="library-note"></div>
+  <div class="end"><button id="btn-library-build">Build</button><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-guild"><div class="box journalbox"><h2>The Guildhall</h2>
+  <p class="small" id="guild-what"></p><div id="guild-rooms"></div><div class="small" id="guild-note"></div>
+  <div class="end"><button id="btn-guild-build">Build</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-building"><div class="box"><h2 id="building-title">A door</h2>
   <p class="small" id="building-what"></p><div class="small" id="building-levels"></div><div class="small" id="building-note"></div>
   <div class="end"><button id="btn-building-build">Build</button><button class="close">Close</button></div></div></div>
@@ -277,7 +283,9 @@ CM.UI = class {
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
     game.on("choice", (c) => this.askChoice(c));
-    game.on("building", (id) => { if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else this.openBuilding(id); });
+    game.on("building", (id) => { if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else this.openBuilding(id); });
+    this.$("#btn-library-build").addEventListener("click", () => { this.$("#library-note").textContent = game.build("library") || "The library rises a level."; this.openLibrary(true); });
+    this.$("#btn-guild-build").addEventListener("click", () => { this.$("#guild-note").textContent = game.build("guildhall") || "The guildhall rises a level."; this.openGuild(true); });
     this.$("#btn-home-build").addEventListener("click", () => { this.$("#home-note").textContent = game.build("home") || "The house rises a level."; this.openHome(true); });
     this.$("#btn-building-build").addEventListener("click", () => { const P = CM.TOWN_PLOTS[this.buildingId] || {}; if (P.village) { this.$("#building-note").textContent = game.build(P.village) || `${P.name} rises a level.`; this.openBuilding(this.buildingId, true); } });
     game.on("teleported", () => this.flash(".blink", 60));
@@ -461,6 +469,48 @@ CM.UI = class {
   }
   // ---- the village ----
   openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
+  // the library: the desk (the journal's boards), Wren's copying, the tomes, the shelved pages, the gazetteer
+  openLibrary(keepNote) {
+    const g = this.game, V = CM.VILLAGE.library, lvl = g.villageLevel("library"), L = g.libraryState(), box = this.$("#library-rooms"), note = this.$("#library-note");
+    const say = (t) => { note.textContent = t || "Done."; this.openLibrary(true); this.refresh(); };
+    this.$("#library-what").textContent = `Level ${lvl} of ${V.costs.length}. ${lvl ? V.levels.slice(0, lvl).join("; ") + "." : ""}` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
+    const bb = this.$("#btn-library-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { bb.textContent = `Build, ${V.costs[lvl]} renown`; bb.disabled = g.renown() < V.costs[lvl]; }
+    if (!keepNote) note.textContent = "";
+    box.innerHTML = "";
+    const room = (title) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
+    const btn = (parent, text, fn) => { const b = document.createElement("button"); b.textContent = text; b.addEventListener("click", fn); parent.appendChild(b); return b; };
+    { const r = room("The reading desk"); for (const [page, label] of [["codex", "The codex"], ["things", "The compendium of things"], ["journal", "This run's journal, bestiary and combos"]]) btn(r, label, () => { this.journalPage = page; this.openJournal(); }); }
+    { const r = room("Wren, the chronicler"); const W = CM.VILLAGERS.chronicler; r.innerHTML = `<div class="small">${this.esc(W.greet.join(" "))}</div>`; btn(r, "Read the Book of Caer Duin", () => { this.bookOpen = true; this.openVillage(); }); }
+    { const r = room(`The tomes (one out at a time${L.lent ? `: ${this.esc(CM.TOMES[L.lent.tome] || "a tome")} is out with this party` : ""})`); Object.keys(CM.TOMES).forEach((id) => { const b = btn(r, `Borrow the ${CM.TOMES[id]}`, () => say(g.borrowTome(id))); b.disabled = Boolean(L.lent); }); }
+    { const r = room("The shelf of lost pages"); r.innerHTML = `<div class="small">${L.pages ? `${CM.plural(L.pages, "lost page")} found and copied here: fire, frost or lightning on every foe, once each, torn from tomes no one has whole.` : "Empty. The Lost Page scrolls found below are copied here."}</div>`; }
+    if (lvl >= 5) { const r = room("The gazetteer"); r.innerHTML = `<div class="small">The first ${CM.GAZETTEER_FLOORS} floors of any seed, mapped: on a new run their walls are on the map before the party is on them.</div>`; }
+    this.openDialog("#dlg-library");
+  }
+  // the temple in town: the camp's temple dialog, at town prices, with the shrine's candles, the history and the vigil beneath
+  openTemple() {
+    const g = this.game, root = this.$("#dlg-temple .box"), old = root.querySelector("#temple-town"); if (old) old.remove();
+    const extra = document.createElement("div"); extra.id = "temple-town";
+    const P = CM.VILLAGERS.priest, lvl = g.villageLevel("shrine");
+    extra.innerHTML = `<div class="list-title">Father Osric</div><div class="small">${this.esc(P.greet.join(" "))} <i>${this.esc(CM.PATRIARCH_HISTORY[Math.min(4, lvl)])}</i> Prices in town are a tenth less.</div>`;
+    const candles = document.createElement("div"); (g.memorial || []).slice(0, 8).forEach((m, i) => { const b = document.createElement("button"); b.textContent = m.candle ? `${m.name}: a candle burns` : `A candle for ${m.name} (${CM.CANDLE_COST[lvl >= 2 ? 1 : 0]} renown)`; b.disabled = Boolean(m.candle); b.addEventListener("click", () => { const n = g.lightCandle(i); if (n) g.say(n); this.openTemple(); this.refresh(); }); candles.appendChild(b); }); extra.appendChild(candles);
+    if (lvl >= 5) { const v = document.createElement("div"); v.innerHTML = `<div class="list-title">The vigil (once a hero)</div>`; g.party.forEach((h, hi) => { if (h.hp <= 0 || h.vigil || !(h.scars || []).length) return; for (const s of h.scars) { const keep = document.createElement("button"); keep.textContent = `${h.name} keeps ${CM.SCARS[s].name}`; keep.addEventListener("click", () => { const n = g.vigil(hi, s, true); if (n) g.say(n); this.openTemple(); this.refresh(); }); const fade = document.createElement("button"); fade.textContent = `${h.name} lets ${CM.SCARS[s].name} fade`; fade.addEventListener("click", () => { const n = g.vigil(hi, s, false); if (n) g.say(n); this.openTemple(); this.refresh(); }); v.appendChild(keep); v.appendChild(fade); } }); extra.appendChild(v); }
+    root.insertBefore(extra, root.querySelector(".end"));
+    this.openDialog("#dlg-temple");
+  }
+  // the guildhall: the trainers, the second calling, the contracts, the roster and the muster
+  openGuild(keepNote) {
+    const g = this.game, V = CM.VILLAGE.guildhall, lvl = g.villageLevel("guildhall"), box = this.$("#guild-rooms"), note = this.$("#guild-note");
+    this.$("#guild-what").textContent = `Level ${lvl} of ${V.costs.length}. ${lvl ? V.levels.slice(0, lvl).join("; ") + "." : ""}` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
+    const bb = this.$("#btn-guild-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { bb.textContent = `Build, ${V.costs[lvl]} renown`; bb.disabled = g.renown() < V.costs[lvl]; }
+    if (!keepNote) note.textContent = "";
+    box.innerHTML = "";
+    const room = (title) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
+    { const r = room("Dunmore, and the trainers"); const K = CM.VILLAGERS.keeper, trainers = g.village.trainers || []; r.innerHTML = `<div class="small">${this.esc(K.greet.join(" "))} ${trainers.length ? trainers.map((t) => `<b>${this.esc(t.name)}</b> the ${t.cls} (level ${t.level})`).join(", ") : "No trainer has come home yet."}</div>`; g.party.forEach((h, hi) => { if (h.hp > 0 && (h.boons || []).length) { const b = document.createElement("button"); b.textContent = `${h.name} retires as a trainer`; b.addEventListener("click", () => { note.textContent = g.retire(hi) || "Retired."; this.openGuild(true); this.refresh(); }); r.appendChild(b); } }); }
+    { const r = room("The second calling"); const b = document.createElement("button"); b.textContent = "The guild's letter (a hero at twenty takes a second calling)"; b.addEventListener("click", () => this.openSecond()); r.appendChild(b); }
+    { const r = room("The week's contracts"); r.innerHTML = `<div class="small">${g.contracts().map(({ c, done }) => `${done ? "✓" : "○"} <b>${this.esc(c.name)}</b>: ${this.esc(c.what)} (${c.renown} renown)`).join("<br>")}</div>`; }
+    { const r = room("The roster"); const roster = g.roster(); if (!roster.length) r.innerHTML = "<div class='small'>No party has set out from this browser yet; the first that does is written here.</div>"; roster.forEach((e) => { const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; row.innerHTML = `<div><b>${e.party.map((p) => this.esc(p.name)).join(", ")}</b> <small>${e.party.map((p) => p.cls).join(" / ")} - ${e.won ? "crowned" : e.home ? "came home" : `fell on floor ${e.floor}`}, ${this.esc(e.date)}</small></div>`; const b = document.createElement("button"); b.textContent = "Set out again as them"; b.addEventListener("click", () => { this.musterParty = e.party; this.closeDialogs(); this.openCreate(); }); row.appendChild(b); r.appendChild(row); }); const m = g.muster(); if (m) { const b = document.createElement("button"); b.textContent = `Muster: the last party that came home (${m.party.map((p) => p.name).join(", ")})`; b.addEventListener("click", () => { this.musterParty = m.party; this.closeDialogs(); this.openCreate(); }); r.appendChild(b); } }
+    this.openDialog("#dlg-guild");
+  }
   // the party's own house: its rooms, by the level the house has been raised to
   openHome(keepNote) {
     const g = this.game, lvl = g.homeLevel(), H = g.home(), V = CM.VILLAGE.home, box = this.$("#home-rooms"), note = this.$("#home-note");

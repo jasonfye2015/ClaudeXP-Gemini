@@ -1104,6 +1104,21 @@ The tavern, the merchant and the smith (the seventh big update, phase 2 - v5.4)
   buys scrap at three quarters. A merchant's table belongs to where it stands: it is fresh on every floor.
   Test: "the tavern, the merchant and the smith in town".
 
+The library, the temple and the guildhall (the seventh big update, phase 3 - v5.5)
+  The village's three buildings are doors in town (src/js/69-halls.js). The Library: a reading desk with the
+  journal's boards (the codex, the compendium of things, the run's journal, bestiary and combos), Wren and the
+  Book of Caer Duin, the tomes - one borrowed a run for nothing, back on the shelf when the run ends, read or not -
+  the shelf where every Lost Page found is copied, and at a new fifth level (1500 renown) the gazetteer: a new
+  run has the first five floors' walls on its map before the party is on them (the walls, not the things). The
+  Temple: the camps' temple at a tenth less (cure, a curse lifted, stone to flesh, the raising of the fallen, the
+  wounds closed, the scribe), Father Osric's candles and the Patriarch's history, the tithe, and at a new fifth
+  level the vigil: a hero's scar kept or let fade, once a hero. The Guildhall: Dunmore and the trainers (a hero
+  retires there), the guild's letter (the second calling, read in town as at a camp), the week's contracts, and
+  the roster - every party this browser set out with, kept as a preset (twelve, newest first; the same four under
+  the same names are one line), each with "Set out again as them", and a muster that fills the creation screen
+  with the last party that came home.
+  Test: "the library, the temple and the guildhall".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

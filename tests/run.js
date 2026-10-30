@@ -2448,6 +2448,37 @@ test("the tavern, the merchant and the smith in town: the full stock at the part
   assert.ok(g.runLog.some((l) => l[0] === "reforgeBase") && g.runLog.some((l) => l[0] === "commission") && g.runLog.some((l) => l[0] === "drink"), "the shops' acts are logged, for the films");
 });
 
+test("the library, the temple and the guildhall: a tome borrowed for a run and back on the shelf after; the lost pages shelved; the gazetteer maps the first floors' walls; the temple a tenth cheaper in town, the vigil over a scar; the guild's letter in town; the roster keeps every party and the muster finds the last that came home", () => {
+  const CM = load();
+  assert.strictEqual(CM.VILLAGE.library.costs.length, 5); assert.strictEqual(CM.VILLAGE.shrine.costs.length, 5);
+  const g = new CM.Game(); g.newGame("halls-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.ok(g.borrowTome("frost").includes("roof")); g.village.renown = 9000; g.build("library"); assert.strictEqual(g.villageLevel("library"), 1);
+  assert.ok(g.borrowTome("nothing").includes("No such")); const n0 = g.bag.length; assert.strictEqual(g.borrowTome("frost"), ""); assert.strictEqual(g.bag.length, n0 + 1); assert.ok(g.bag[n0].borrowed && g.bag[n0].spell === "frost" && g.bag[n0].value === 0); assert.ok(g.borrowTome("fireball").includes("out already"));
+  assert.strictEqual(CM.store.get("village", {}).library.lent.tome, "frost");
+  g.gain([CM.scroll("lostpage")], "test"); assert.strictEqual(g.libraryState().pages, 1, "a lost page shelved");
+  // the run ends: the tome goes back on the shelf (unread, it leaves the pack); the roster remembers the party
+  g.enterFloor(2, "down"); const names = g.party.map((h) => h.name); for (const h of g.party) h.hp = 0; g.endRun(false);
+  assert.strictEqual(CM.store.get("village", {}).library.lent, null, "back on the shelf"); const roster = CM.store.get("village", {}).roster; assert.ok(roster && roster.length === 1 && roster[0].party.map((p) => p.name).join() === names.join() && !roster[0].home, "the roster: a party that fell");
+  // the gazetteer at the fifth level: floors 1 to 5 have their walls on the map on a new run, floor 6 does not
+  const g2 = new CM.Game(); g2.village.renown = 9000; while (g2.villageLevel("library") < 5) g2.build("library"); g2.newGame("halls-2", fixedParty(CM));
+  const all = (fl) => fl.seen.length >= fl.grid.length * fl.grid.length; assert.ok(all(g2.floor), "floor 1 mapped"); g2.enterFloor(5, "down"); assert.ok(all(g2.floor)); g2.enterFloor(6, "down"); assert.ok(!all(g2.floor), "floor 6 is dark as ever");
+  assert.ok(g2.muster() === null, "no party has come home yet");
+  // the temple in town: a tenth less; the vigil at the shrine's fifth level
+  const g3 = new CM.Game(); g3.village.renown = 9000; while (g3.villageLevel("shrine") < 5) g3.build("shrine"); g3.newGame("halls-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const k = g3.party.find((h) => h.cls === "Knight"), ki = g3.party.indexOf(k); g3.gold = 1000; k.status = { poison: 3 }; const gt = g3.gold; assert.ok(g3.temple("cure")); assert.strictEqual(gt - g3.gold, 27, "30 gold, a tenth less in town");
+  k.hp = 0; const gr = g3.gold; g3.raiseDead(); assert.strictEqual(gr - g3.gold, 90); assert.ok(k.wound); const gw = g3.gold; assert.ok(g3.temple("wounds")); assert.strictEqual(gw - g3.gold, 36);
+  k.scars = ["limp", "thickskin"]; assert.ok(g3.vigil(ki, "burnedhand", false).includes("no such")); assert.strictEqual(g3.vigil(ki, "limp", false), ""); assert.ok(!k.scars.includes("limp") && k.scars.includes("thickskin") && k.vigil); assert.ok(g3.vigil(ki, "thickskin", false).includes("already"));
+  const mage = g3.party.find((h) => h.cls === "Mage"), mi = g3.party.indexOf(mage); mage.scars = ["hardhead"]; assert.strictEqual(g3.vigil(mi, "hardhead", true), ""); assert.ok(mage.scars.includes("hardhead") && mage.vigil, "kept, and the vigil spent");
+  assert.strictEqual(g3.tithe(), "", "the tithe is given in town too"); assert.ok(g3.blessedUntil === 5);
+  g3.enterFloor(3, "down"); k.status = { poison: 3 }; const gc = g3.gold; g3.mode = "camp"; assert.ok(g3.temple("cure")); assert.strictEqual(gc - g3.gold, 30, "full price at the camp"); g3.mode = "explore";
+  // the guild's letter is read in town; the roster: a party that came home is the muster
+  const g4 = new CM.Game(); g4.village.renown = 9000; g4.build("guildhall"); g4.build("guildhall"); g4.newGame("halls-4", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.ok(!g4.secondCalling(0, "Mage").includes("at a camp"), g4.secondCalling(0, "Mage"));
+  g4.enterFloor(20, "down"); g4.crowned = true; g4.endRun(true); const r = CM.store.get("village", {}).roster; assert.ok(r[0].home && r[0].won, "the crowned party came home"); assert.strictEqual(r.length, 1, "the same four, the same names: one line in the roster, the newest");
+  const g5 = new CM.Game(); assert.ok(g5.muster() && g5.muster().party.map((p) => p.cls).join() === fixedParty(CM).map((p) => p.cls).join(), "the muster is the last party that came home");
+  for (let i = 0; i < 14; i++) { const gx = new CM.Game(); gx.newGame(`halls-roster-${i}`, fixedParty(CM, `p${i}`)); gx.enterFloor(2, "down"); for (const h of gx.party) h.hp = 0; gx.endRun(false); } assert.strictEqual(new CM.Game().roster().length, CM.ROSTER_MAX, "twelve, and no more");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

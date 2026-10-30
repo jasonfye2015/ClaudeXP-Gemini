@@ -86,6 +86,7 @@ CM.Game = class {
   // things gained: tagged with where, noted in the compendium, counted, and into the pack
   gain(items, how) {
     const list = (Array.isArray(items) ? items : [items]).filter(Boolean), floor = this.floor ? this.floor.number : 0;
+    if (list.some((it) => it.kind === "scroll" && it.spell === "lostpage") && this.shelvePage) this.shelvePage();   // (the library shelves a copy of every lost page found)
     CM.tagFound(list, floor, how);
     this.tally.found = this.tally.found || {};
     for (const it of list) {
@@ -457,6 +458,10 @@ CM.Game = class {
     }
     if (fresh && number % 1 === 0) {
       this.trail = (this.trail || []).concat([[number, this.tally.steps || 0]]);
+      if (number >= 1 && number <= CM.GAZETTEER_FLOORS && this.villageLevel("library") >= 5) {   // the gazetteer: the walls, not the things
+        for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) if (!fl.seen.some(([sx, sy]) => sx === x && sy === y)) fl.seen.push([x, y]);
+        if (number === 1) this.say("The library's gazetteer: the first floors are mapped before you are on them. What stands in the rooms is another matter.");
+      }
       const ghost = this.ghostTrail(), g = ghost && ghost.find(([n]) => n === number);
       if (g && number > 1) { const d = (this.tally.steps || 0) - g[1]; this.say(`The ghost of your best run on this seed took this stair at step ${g[1].toLocaleString()}: you are ${d > 0 ? `${d} steps behind` : d < 0 ? `${-d} steps ahead` : "level with it"}.`); }
     }

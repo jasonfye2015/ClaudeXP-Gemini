@@ -52,6 +52,7 @@ Object.assign(CM.UI.prototype, {
     const g = this.game;
     if (g.canContinue() && !window.confirm(`A run is waiting in expedition slot ${g.slot}. Start a new expedition there and let it go? (The other slots keep theirs.)`)) return;
     for (const sel of this.root.querySelectorAll("#slots select.cls")) sel.innerHTML = g.classesAvailable().map((c) => `<option value="${c}">${c}</option>`).join("");   // (the callings earned)
+    if (this.musterParty) { const g2 = this.game; this.slots = this.musterParty.map((p) => (g2.classUnlocked(p.cls) ? Object.assign({}, p, { stats: Object.assign({}, p.stats) }) : Object.assign({}, p, { cls: "Knight", stats: CM.rollStats("Knight") }))); this.musterParty = null; }   // (the guildhall's roster: the party as it was)
     const code = CM.parseRunCode(this.$("#seed").value);
     if (code) {                                                          // a run code: the seed, the party, the difficulty and the kit as they were
       this.$("#seed").value = code.seed;
