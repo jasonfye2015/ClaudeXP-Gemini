@@ -115,7 +115,7 @@ test("a save from v1.0 (whole floors) still loads, with the floors as they were 
     same(now.seen.slice().sort(), fl.seen.slice().sort());
   }
   game.saveRun();
-  assert.ok(CM.storage.getItem("claudemagic.run").length < raw.length / 2, "saved again, it should be much smaller");
+  assert.ok(CM.storage.getItem("claudemagic.run").length < raw.length * 0.8, "saved again, it should be smaller (an old save's chests predate the affixes, so they all differ from the fresh floor)");
   assert.ok(!game.messages.some((m) => m.includes("shifted")), "nothing should have drifted");
 });
 
@@ -410,6 +410,104 @@ test("the Forge-Warden's heat sears whoever strikes it (and a blade that fears i
   assert.ok(knight.hp < hp, "the heat sears the striker");
   assert.ok(game.messages.some((m) => m.includes("sears")));
   assert.ok(game.messages.some((m) => m.includes("does little to it")), game.messages.join(" | "));
+});
+
+test("the hoard: affixes by the seed, a unique a band, and what the words mean", () => {
+  const CM = load();
+  const a = JSON.stringify(CM.makeFloor(12, "hoard")), b = JSON.stringify(CM.makeFloor(12, "hoard"));
+  assert.strictEqual(a, b, "the same seed, the same affixes");
+  let fine = 0, rare = 0, uniques = {};
+  for (let f = 1; f <= 50; f++) for (const t of Object.values(CM.makeFloor(f, "hoard").things)) if (t.type === "chest") for (const it of t.items) {
+    const r = (it.props || {}).rarity; if (r === "fine") fine++; if (r === "rare") rare++;
+    if (it.props && it.props.unique) uniques[it.props.unique] = f;
+  }
+  assert.ok(fine > 60 && rare > 15, `fine ${fine}, rare ${rare}`);
+  assert.strictEqual(Object.keys(uniques).length, 10, "one unique in every band: " + JSON.stringify(uniques));
+  for (const [id, f] of Object.entries(uniques)) assert.strictEqual(CM.themeIndex(f), CM.UNIQUES[id].band, `${id} lies in its own band`);
+  const sword = { name: "Long Sword", base: "Long Sword", kind: "weapon", slot: "weapon", power: 8, value: 100, props: {} };
+  CM.affix(sword, 30, new CM.Random(4));
+  if (sword.props.rarity) { assert.ok(sword.name !== "Long Sword"); assert.ok(CM.itemLabel(sword).length > 10); assert.strictEqual(CM.baseName(sword), "Long Sword"); }
+  const u = CM.makeUnique("tidecaller");
+  assert.strictEqual(CM.rarityOf(u), "unique");
+  assert.ok(CM.itemLabel(u).includes("sleep") && CM.itemLabel(u).includes("tide"));
+});
+
+test("gear that does more: stats, weak spots, mending, thorns, the blade that drinks, the relics worn together", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("gear-1", fixedParty(CM));
+  const knight = game.party.find((h) => h.cls === "Knight"), str = CM.heroStat(knight, "str"), crit = game.critChance(knight);
+  knight.helm = { name: "Cap of the Bear", base: "Cap", kind: "helm", slot: "helm", power: 1, value: 10, props: { stats: { str: 2 }, crit: 0.1, regen: 2, thorns: 3 } };
+  assert.strictEqual(CM.heroStat(knight, "str"), str + 2);
+  assert.ok(game.critChance(knight) > crit + 0.09);
+  const rnd = new CM.Random(3), orc = CM.makeMonster(CM.monsterKind("Orc"), 3, rnd); orc.max = orc.hp = 500;
+  game.floor.things["2,2"] = { type: "monsters", group: [orc] };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  knight.hp = 10; const foeHp = orc.hp;
+  game.hurt(knight, 3, orc);
+  assert.strictEqual(orc.hp, foeHp - 3, "the spikes tear the striker");
+  const was = knight.hp;
+  game.endRound();
+  assert.ok(knight.hp >= Math.min(knight.max, was + 2) || knight.hp === knight.max, "mending gear mends a round");
+  knight.weapon.props.lifesteal = true; knight.weapon.unknown = false; knight.hp = 5;
+  game.strike(knight, orc, "", { sure: true });
+  assert.ok(knight.hp > 5, "the blade drinks");
+  knight.helm = CM.relic("rat"); knight.offhand = CM.relic("knight"); knight.helm.unknown = knight.offhand.unknown = false;
+  const atk = knight.atk; CM.recompute(knight);
+  assert.ok(CM.relicsWorn(knight) === 2 && knight.atk >= atk + 2 - 1, "two relics: the set's attack");
+});
+
+test("the alchemist: ingredients drop, recipes brew, an oil burns for three fights, a firepot bursts, an elixir stays", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("alch-1", fixedParty(CM));
+  assert.strictEqual(game.brew("oilfire"), "The alchemist is at the camp.");
+  game.enterFloor(5, "down"); game.setMode("camp"); game.reachCamp(5);
+  assert.match(game.recipeLacks("oilfire"), /wants/);
+  game.bag.push(CM.ingredient("forgesoot")); game.gold = 500;
+  assert.strictEqual(game.brew("oilfire"), "");
+  const oil = game.bag.find((i) => i.kind === "oil");
+  assert.ok(oil && oil.element === "fire");
+  const knight = game.party.find((h) => h.cls === "Knight");
+  assert.strictEqual(game.give(game.bag.indexOf(oil), game.party.indexOf(knight)), "");
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(knight.oil)), { element: "fire", fights: 3 });
+  game.setMode("explore");
+  const rnd = new CM.Random(5), troll = CM.makeMonster(CM.monsterKind("Troll"), 3, rnd); troll.max = troll.hp = 400;
+  game.floor.things["2,2"] = { type: "monsters", group: [troll] };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  game.messages = [];
+  game.strike(knight, troll, "", { sure: true });
+  assert.ok(game.messages.some((m) => m.includes("fire bites deep")), game.messages.join(" | "));
+  game.bag.push(CM.bomb());
+  const row = game.bag.findIndex((i) => i.kind === "bomb"), hp = troll.hp;
+  game.combat.waiting = knight;
+  assert.ok(game.act("item", { row }));
+  assert.ok(troll.hp < hp && !game.bag.some((i) => i.kind === "bomb"));
+  troll.hp = 0; game.afterBlows();
+  assert.strictEqual(game.mode, "explore");
+  assert.strictEqual(knight.oil.fights, 2, "the oil wears a fight");
+  game.setMode("camp");
+  game.bag.push(CM.ingredient("rootsap"));
+  const who = game.alive().reduce((a, b) => (a.stats.con <= b.stats.con ? a : b)), con = who.stats.con;
+  assert.strictEqual(game.brew("vigour"), "");
+  assert.strictEqual(who.stats.con, con + 1);
+  assert.ok(game.achievements.distilled);
+});
+
+test("the smith, extended: salvage to scrap, five scrap for a diamond, a suffix reworked", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("smith-1", fixedParty(CM));
+  game.enterFloor(5, "down"); game.setMode("camp"); game.reachCamp(5); game.gold = 1000;
+  for (let i = 0; i < 5; i++) game.bag.push({ name: "Mace", base: "Mace", kind: "weapon", slot: "weapon", power: 4, value: 60, props: {} });
+  for (let i = 0; i < 5; i++) assert.strictEqual(game.salvage(game.bag.findIndex((it) => it.kind === "weapon")), "");
+  assert.strictEqual(game.bag.filter((i) => i.kind === "scrap").length, 5);
+  const knight = game.party.find((h) => h.cls === "Knight"), power = knight.weapon.power;
+  assert.strictEqual(game.smith("enchant", game.party.indexOf(knight), "weapon"), "");
+  assert.strictEqual(knight.weapon.power, power + 1);
+  assert.strictEqual(game.bag.filter((i) => i.kind === "scrap").length, 0);
+  assert.match(game.smith("reroll", game.party.indexOf(knight), "weapon"), /gem/);
+  game.bag.push(CM.gem("ruby"));
+  assert.strictEqual(game.smith("reroll", game.party.indexOf(knight), "weapon"), "");
+  assert.ok(knight.weapon.props.affixes.length >= 1 && knight.weapon.name.includes(" of "), knight.weapon.name);
+  assert.match(game.salvage(game.bag.push(CM.makeUnique("tidecaller")) - 1), /won't/);
 });
 
 let failed = 0;

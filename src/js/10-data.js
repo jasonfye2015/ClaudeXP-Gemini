@@ -211,6 +211,55 @@ CM.COMBOS = {
   consecrated: { name: "Consecrated strike", what: "Smite under a Blessing: half again." },
   thunderclap: { name: "Thunderclap", what: "Lightning on a foe chilled by frost: the ice carries it, double." },
 };
+// ---- the hoard, deeper: affixes, uniques, ingredients and recipes ----
+// A found weapon or piece of armour may be fine (one affix) or rare (two): a prefix, a suffix, or both, from the pools
+// below - deeper floors draw from the deeper pools too. Each affix is a bundle of props the rules already read:
+// power (on the item), crit, stats {str: 2}, df (warding), regen (health a round), lifesteal, sleep (a blow may put
+// the foe to sleep), stun, thorns (whoever strikes the wearer is hurt), element. An item's rarity colours its name.
+CM.RARITY = { common: { name: "common", colour: "" }, fine: { name: "fine", colour: "#8FD08F" }, rare: { name: "rare", colour: "#80B8FF" }, relic: { name: "relic", colour: "#E8C870" }, unique: { name: "unique", colour: "#FF9F5A" } };
+CM.AFFIXES = {
+  prefix: {
+    weapon: { Keen: { crit: 0.1 }, Heavy: { power: 2 }, Vicious: { power: 3, stats: { dex: -1 } }, Swift: { stats: { dex: 2 } }, Jolting: { stun: 0.25 }, Thirsting: { lifesteal: true, deep: true },
+      Lulling: { sleep: 0.2, deep: true }, Cruel: { power: 4, crit: 0.05, deep: true } },
+    armor: { Sturdy: { power: 1 }, Warding: { df: 2 }, Spiked: { thorns: 2 }, Quiet: { stats: { dex: 1 } }, Hallowed: { df: 3, deep: true }, Barbed: { thorns: 4, deep: true } },
+  },
+  suffix: { "of the Bear": { stats: { str: 2 } }, "of the Fox": { stats: { dex: 2 } }, "of the Oak": { stats: { con: 2 } }, "of the Owl": { stats: { int: 2 } }, "of the Saint": { stats: { wis: 2 } },
+    "of Fortune": { stats: { luck: 2 } }, "of Mending": { regen: 1 }, "of Warding": { df: 1 }, "of Embers": { element: "fire", weapon: true }, "of Rime": { element: "frost", weapon: true },
+    "of the Deep": { stats: { con: 3 }, regen: 1, deep: true }, "of the Root": { stats: { str: 3, con: 3 }, deep: true }, "of the Dreamer": { stats: { int: 3, wis: 3 }, deep: true }, "of the Dark": { crit: 0.1, lifesteal: true, deep: true } },
+};
+// One unique in every band of five floors, in a chest somewhere on one of them (by the seed), each with a line of its
+// story and a way of its own - made of the same props, so the rules need nothing new to read.
+CM.UNIQUES = {
+  gravewarden: { band: 0, name: "Gravewarden", kind: "helm", slot: "helm", power: 3, value: 700, props: { df: 2, regen: 1, resist: "curse" }, lore: "The sexton's own helm. He buried a thousand and was buried by none." },
+  tidecaller: { band: 1, name: "Tidecaller", kind: "weapon", slot: "weapon", power: 11, value: 900, props: { element: "frost", sleep: 0.3 }, lore: "A blade of the lower town's watch. Whatever it cuts hears the tide, and sleeps." },
+  anvilheart: { band: 2, name: "Anvilheart", kind: "armor", slot: "armor", power: 8, value: 1100, props: { weight: "heavy", thorns: 3, stats: { con: 2 } }, lore: "Forged by the dwarves for a king who never came to collect it." },
+  courtiersmask: { band: 3, name: "The Courtier's Mask", kind: "helm", slot: "helm", power: 2, value: 1200, props: { stats: { luck: 3, int: 2 }, crit: 0.1 }, lore: "The last courtier wore it to the king's table every night, and smiled under it, and lived." },
+  queensgrief: { band: 4, name: "The Queen's Grief", kind: "amulet", slot: "amulet", power: 3, value: 1400, props: { df: 3, resist: "sleep", regen: 1 }, lore: "Pearl, and something under the pearl that is not. She wept it." },
+  sporemothersfinger: { band: 5, name: "The Sporemother's Finger", kind: "weapon", slot: "weapon", power: 16, value: 1600, props: { lifesteal: true, resist: "poison" }, lore: "Not a weapon. A finger, still growing. It feeds you what it feeds on." },
+  prismshard: { band: 6, name: "Prismshard", kind: "shield", slot: "offhand", power: 7, value: 1800, props: { df: 2, thorns: 5, resist: "blind" }, lore: "A shard of the Tyrant's first body. Light goes into it and comes out wrong." },
+  foundrymastersgauntlet: { band: 7, name: "The Foundry Master's Gauntlet", kind: "weapon", slot: "weapon", power: 20, value: 2000, props: { element: "fire", stun: 0.3, stats: { str: 3 } }, lore: "It was a hand once. The forge improved it." },
+  reliquarykey: { band: 8, name: "The Reliquary Key", kind: "ring", slot: "ring", power: 3, value: 2200, props: { stat: "wis", regen: 2, resist: "curse" }, lore: "The Patriarch locked his death in a box, and wore the key, and forgot which was which." },
+  firstroot: { band: 9, name: "First Root", kind: "weapon", slot: "weapon", power: 24, value: 2600, props: { twohanded: true, stats: { str: 4, con: 4 }, regen: 2, crit: 0.1 }, lore: "The oldest wood in the world, and still wet at the cut end." },
+};
+// what the monsters of each band drop for the alchemist, now and then (CM.THEMES by index), and what she makes of it
+CM.INGREDIENTS = {
+  gravemoss: { name: "Grave Moss", band: 0 }, drownedweed: { name: "Drowned Weed", band: 1 }, forgesoot: { name: "Forge Soot", band: 2 }, bonedust: { name: "Bone Dust", band: 3 },
+  saltweed: { name: "Salt Weed", band: 4 }, sporecap: { name: "Spore Cap", band: 5 }, crystaldust: { name: "Crystal Dust", band: 6 }, slag: { name: "Foundry Slag", band: 7 },
+  gravesalt: { name: "Grave Salt", band: 8 }, rootsap: { name: "Root Sap", band: 9 },
+};
+CM.RECIPES = {
+  greaterheal: { name: "Greater Healing Potion", gold: 30, needs: { ingredient: ["gravemoss", "saltweed", "sporecap"], kind: ["heal"] }, makes: "greaterheal", what: "a healing potion twice the merchant's: the moss, a healing potion and 30 gold" },
+  oilfire: { name: "Oil of Fire", gold: 40, needs: { ingredient: ["forgesoot", "slag"] }, makes: "oil:fire", what: "a weapon burns for the next three fights: soot or slag, and 40 gold" },
+  oilfrost: { name: "Oil of Rime", gold: 40, needs: { ingredient: ["drownedweed", "crystaldust"] }, makes: "oil:frost", what: "a weapon freezes for the next three fights: weed or crystal dust, and 40 gold" },
+  oilholy: { name: "Oil of Saints", gold: 40, needs: { ingredient: ["bonedust", "gravesalt"] }, makes: "oil:holy", what: "a weapon is blessed for the next three fights: bone dust or grave salt, and 40 gold" },
+  bomb: { name: "Firepot", gold: 60, needs: { ingredient: ["slag", "forgesoot"], ingredient2: ["crystaldust", "bonedust"] }, makes: "bomb", what: "thrown in a fight, fire on every foe: slag or soot, dust, and 60 gold" },
+  antivenom: { name: "Antivenom, two draughts", gold: 20, needs: { ingredient: ["sporecap", "gravemoss"] }, makes: "antidote2", what: "two antidotes: a spore cap or grave moss, and 20 gold" },
+  vigour: { name: "Elixir of Vigour", gold: 200, needs: { ingredient: ["rootsap"] }, makes: "elixir:con", what: "+1 Constitution, for good: root sap and 200 gold" },
+  fortune: { name: "Elixir of Fortune", gold: 200, needs: { ingredient: ["gravesalt", "crystaldust"], ingredient2: ["gravesalt", "crystaldust"] }, makes: "elixir:luck", what: "+1 Luck, for good: two of grave salt or crystal dust, and 200 gold" },
+};
+CM.OIL_FIGHTS = 3;
+// a set of relics: the guardians' things worn together are more than themselves
+CM.RELIC_SET = { two: { atk: 2, df: 2, what: "two relics worn: +2 attack, +2 defence" }, three: { regen: 2, what: "three or more: and the party's wearer mends 2 a round" } };
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
 CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
@@ -428,6 +477,7 @@ CM.ACHIEVEMENTS = {
   beyond: { name: "Beyond the Dream", what: "Reach floor 100 in an Endless expedition", title: "Beyond the Dream" },
   bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the fiftieth floor", title: "of the Bottom" },
   crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
+  distilled: { name: "Distilled", what: "Brew an elixir at the camp's still", title: "the Distilled" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
   swift: { name: "Swift", what: "Slay the Lich King in under 1,500 steps", title: "the Swift" },

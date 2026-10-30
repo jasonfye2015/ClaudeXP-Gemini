@@ -191,6 +191,11 @@ CM.art.itemKey = function (item) {
     case "bones": return "i.bones";
     case "tome": return "i.tome";
     case "gem": return `i.gem_${item.gem}`;
+    case "greaterheal": return "i.greaterheal";
+    case "oil": return "i.oil";
+    case "bomb": return "i.bomb";
+    case "ingredient": return "i.ingredient";
+    case "scrap": return "i.scrap";
     case "weapon":
       if (item.props && item.props.bow) return has("Short Bow", "Hunting Bow") ? "i.bow" : "i.longbow";
       if (has("Dagger")) return "i.dagger";
@@ -235,6 +240,11 @@ CM.art.glyph = function (item, size = 24) {
     case "mana": potion("#3060E0"); break;
     case "revive": potion("#F0C040"); break;
     case "antidote": potion("#40B050"); break;
+    case "greaterheal": potion("#FF6060"); p.fillStyle = "#FFF0F0"; p.fillRect(10, 11, 4, 1.5); p.fillRect(11.2, 9.8, 1.6, 4); break;
+    case "oil": potion("#E0A030"); break;
+    case "bomb": outlined(p, () => { p.arc(12, 14, 7, 0, Math.PI * 2); }, "#3A3430", "#1A1410", 1.5); line("#C8A040", 1.5); p.beginPath(); p.moveTo(12, 7); p.lineTo(15, 3); p.stroke(); p.fillStyle = "#FF9030"; p.beginPath(); p.arc(15, 3, 1.6, 0, Math.PI * 2); p.fill(); break;
+    case "ingredient": line("#1A1410", 4); p.beginPath(); p.moveTo(6, 20); p.quadraticCurveTo(12, 4, 19, 6); p.stroke(); line("#6A9A40", 2); p.beginPath(); p.moveTo(6, 20); p.quadraticCurveTo(12, 4, 19, 6); p.stroke(); outlined(p, () => { p.ellipse(13, 12, 4, 7, -0.7, 0, Math.PI * 2); }, "#80B050", "#1A1410", 1.2); break;
+    case "scrap": outlined(p, () => { p.moveTo(5, 16); p.lineTo(10, 7); p.lineTo(14, 12); p.lineTo(19, 9); p.lineTo(18, 19); p.lineTo(7, 20); }, "#8A8A90", "#1A1410", 1.5); break;
     case "scroll": outlined(p, () => { p.rect(5, 4, 14, 16); }, "#E8DCC0", "#5A4A2A", 1.5); line("#8A6A3A", 1); for (let y = 8; y <= 16; y += 3) { p.beginPath(); p.moveTo(8, y); p.lineTo(16, y); p.stroke(); } p.fillStyle = "#B03030"; p.fillRect(5, 17, 14, 2); break;
     case "wand": line("#1A1410", 5); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); line("#8A6A30", 3); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); p.fillStyle = "#F0E060"; p.beginPath(); p.arc(18, 6, 3, 0, Math.PI * 2); p.fill(); break;
     case "torch": line("#1A1410", 5); p.beginPath(); p.moveTo(10, 21); p.lineTo(13, 11); p.stroke(); line("#7A5A30", 3); p.beginPath(); p.moveTo(10, 21); p.lineTo(13, 11); p.stroke(); outlined(p, () => { p.moveTo(13, 2); p.lineTo(18, 9); p.lineTo(13, 12); p.lineTo(8, 9); }, "#F0A030", "#A04010", 1.5); break;

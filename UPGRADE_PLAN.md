@@ -101,7 +101,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 3 - The hoard, deeper
+## Phase 3 - The hoard, deeper - DONE in v1.1
 
 - **Affixes.** Prefixes and suffixes on found gear ("Keen", "of the Bear", "of Warding") drawn from a table by band;
   identifying reveals them. Rarity colours: common, fine, rare, relic.

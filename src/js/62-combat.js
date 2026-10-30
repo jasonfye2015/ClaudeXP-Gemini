@@ -152,6 +152,10 @@ Object.assign(CM.Game.prototype, {
       if (m.warded > 0) m.warded -= 1;
     }
     for (const h of this.alive()) if (CM.trait(h, "wellspring") && h.mp < h.maxmp) h.mp = Math.min(h.maxmp, h.mp + 2);
+    for (const h of this.alive()) {                                      // gear that mends (of Mending, a unique, three relics worn)
+      const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0);
+      if (mend > 0 && h.hp < h.max) h.hp = Math.min(h.max, h.hp + mend);
+    }
     if (this.alive().some((h) => CM.trait(h, "evergreen"))) for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 3);
     c.surprise = false;
     this.afterBlows();
@@ -295,7 +299,7 @@ Object.assign(CM.Game.prototype, {
   hitChance(h) {
     return CM.clamp(0.8 + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0), 0.25, 0.97);
   },
-  critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01, 0.02, 0.6); },
+  critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01 + CM.gearProp(h, "crit"), 0.02, 0.7); },
   resistChance(h) {
     return CM.clamp((this.stat(h, "luck") - 10) * 0.02 + (this.stat(h, "wis") - 10) * 0.01 + ((h.boons || []).includes("thickblood") ? 0.2 : 0), 0, 0.6);
   },
@@ -351,6 +355,8 @@ Object.assign(CM.Game.prototype, {
     dmg = Math.max(1, dmg);
     h.hp -= dmg;
     if ((h.status || {}).sleep) delete h.status.sleep;                   // (a blow wakes)
+    const thorns = CM.gearProp(h, "thorns");
+    if (thorns > 0 && by && by.hp > 0 && !opts.noTouch && by.ability !== "ranged") { by.hp -= thorns; this.say(`${CM.The(by)} is torn on ${h.name}'s spikes (-${thorns}).`); this.emit("fx", { kind: "hit", foe: by, amount: thorns }); }
     this.sound(h.hp <= 0 ? "fallen" : "hurt");
     this.emit("fx", { kind: "hurt", hero: h, amount: dmg, foe: by });
     this.say(`${CM.The(by)} hits ${h.name} for ${dmg}${opts.how || ""}.` + (h.hp <= 0 ? `  ${h.name} falls!` : ""));
@@ -625,7 +631,7 @@ Object.assign(CM.Game.prototype, {
     else if (back && !reaches) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
     if (target.row === "back" && !bow && this.living().some((f) => f !== target && f.row !== "back")) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += ", reaching past the front"; }   // (their back row, as yours)
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
-    const props = (hero.weapon && hero.weapon.props) || {}, el = props.element && !hero.weapon.unknown ? props.element : null;
+    const props = (hero.weapon && hero.weapon.props) || {}, el = (props.element && !hero.weapon.unknown ? props.element : null) || (hero.oil && hero.oil.fights > 0 ? hero.oil.element : null);
     const G = target.guardian ? CM.GUARDIANS[target.guardian] : null;   // (its heat, its shards: below)
     if (el) {                                                            // a flaming, frost or blessed blade
       const r = CM.resistance(target, el);
@@ -648,6 +654,8 @@ Object.assign(CM.Game.prototype, {
     this.emit("fx", { kind: "hit", foe: target, amount: dmg });
     this.sound("hit");
     if (props.stun && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.stun)) { target.held = Math.max(target.held || 0, 1); this.say(`${CM.The(target)} reels from the blow.`); }
+    if (props.sleep && !hero.weapon.unknown && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.sleep)) { target.asleep = 2; this.say(`${CM.The(target)} hears the tide in the blade, and sleeps.`); }
+    if (props.lifesteal && !hero.weapon.unknown && hero.hp > 0 && hero.hp < hero.max) { const back = Math.max(1, Math.ceil(dmg / 4)); hero.hp = Math.min(hero.max, hero.hp + back); this.say(`${hero.name}'s blade drinks: +${back}.`); }
     if ((CM.guardianHas(target, "heat") || CM.guardianHas(target, "glass")) && !props.bow && hero.hp > 0) {   // its heat, or its shards: whoever strikes it pays
       const burn = 2 + Math.floor((this.floor ? this.floor.number : 15) / 5);
       hero.hp = Math.max(1, hero.hp - burn);
@@ -922,7 +930,18 @@ Object.assign(CM.Game.prototype, {
     if (arg && typeof arg === "object" && arg.row !== undefined) {
       const item = this.bag[arg.row];
       if (item && (item.kind === "scroll" || item.kind === "wand")) return this.useMagicInBattle(h, arg.row, arg.who);
-      if (!item || !["heal", "mana", "antidote", "revive"].includes(item.kind)) { this.say("Not now."); return false; }
+      if (item && item.kind === "bomb") {                                 // a firepot: fire on every foe
+        const foes = this.living(), dmg = 25 + 3 * (this.floor ? this.floor.number : 1);
+        this.bag.splice(arg.row, 1);
+        this.sound("spell");
+        this.emit("fx", { kind: "cast", id: "fire", hero: h, item: "bomb", foes });
+        this.casting = h;
+        for (const m of foes) this.spellHit(m, dmg, "", "fire");
+        this.casting = null;
+        this.say(`${h.name} hurls the firepot: it bursts over every foe, ${dmg} each.`);
+        return true;
+      }
+      if (!item || !["heal", "mana", "antidote", "revive", "greaterheal"].includes(item.kind)) { this.say("Not now."); return false; }
       const who = arg.who !== undefined ? arg.who : this.party.indexOf(this.allyAt(null, item.kind === "revive"));
       if (who < 0) return false;
       const note = this.give(arg.row, who);
@@ -934,14 +953,14 @@ Object.assign(CM.Game.prototype, {
   },
 
   potionInBattle() {
-    const potion = this.bag.find((i) => i.kind === "heal");
+    const potion = this.bag.find((i) => i.kind === "heal") || this.bag.find((i) => i.kind === "greaterheal");
     if (!potion) { this.say("No healing potions left!"); return false; }
     const target = this.alive().reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b));
     this.bag.splice(this.bag.indexOf(potion), 1);
     target.hp = Math.min(target.max, target.hp + potion.power);
     this.sound("heal");
     this.emit("fx", { kind: "potion", who: this.party.indexOf(target), item: "heal" });
-    this.say(`${target.name} drinks a Healing Potion (+${potion.power}).`);
+    this.say(`${target.name} drinks a ${potion.name} (+${potion.power}).`);
     return true;
   },
 
@@ -967,15 +986,18 @@ Object.assign(CM.Game.prototype, {
     this.gold += gold;
     if (this.gold >= 2000) this.achieve("hoarder");
     if (slain.some((m) => m.name === "Minotaur of the Labyrinth")) this.achieve("labyrinth");
-    const loot = rnd.chance(0.45) ? [CM.makeItem(this.floor.number, rnd)] : [];
+    const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
+    const band = CM.themeIndex(this.floor.number), ing = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band);
+    if (ing && rnd.chance(0.3)) loot.push(CM.ingredient(ing));           // (what the alchemist wants: the band's own stuff)
     this.bag.push(...loot);
+    for (const h of this.party) if (h.oil && h.oil.fights > 0) { h.oil.fights -= 1; if (!h.oil.fights) { this.say(`The oil on ${h.name}'s weapon has worn off.`); h.oil = null; } }
     const boss = this.foes.some((m) => m.boss), guardian = this.foes.find((m) => m.guardian), fought = this.floor.things[this.foeKey];
     if (fought && fought.vengeance) { this.floor.avenged = (this.floor.avenged || []).concat(fought.vengeance); this.say("Somewhere on this floor, something lets out a long breath it has held a long time."); }
     delete this.floor.things[this.foeKey];
     if (guardian) this.floor.things[this.foeKey] = { type: "ladder" };   // (the shaft it stood over)
     this.combat = null;
     this.sound("coin");
-    this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and a ${loot[0].name}.` : "."));
+    this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and ${loot.map((i) => (i.kind === "ingredient" ? "some " : "a ") + (i.unknown ? CM.baseName(i) + " (unknown)" : i.name)).join(" and ")}.` : "."));
     for (const hero of this.alive()) {
       hero.xp += Math.floor(xp / 2);                                      // everyone standing learns from the fight
       while (hero.xp >= CM.xpForLevel(hero.level + 1)) {

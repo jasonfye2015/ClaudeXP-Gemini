@@ -419,6 +419,35 @@ The fight, deeper (the third big update, phase 2)
   about level 20 on floor 20 and the middle thirties at the bottom - the monsters' own level. Heroes already past that
   keep their levels.
 
+The hoard, deeper (the third big update, phase 3)
+  Affixes. A found weapon or piece of armour may be fine (one affix, green) or rare (two, blue), from the third and
+  eighth floors down: a prefix - Keen, Heavy, Vicious, Swift, Jolting on a weapon; Sturdy, Warding, Spiked, Quiet on
+  armour - and a suffix: of the Bear, the Fox, the Oak, the Owl, the Saint, of Fortune (+2 to a stat), of Mending
+  (a health a round), of Warding, of Embers, of Rime; below the Lich King the deeper pools open (Thirsting, Lulling,
+  Cruel, Hallowed, Barbed; of the Deep, of the Root, of the Dreamer, of the Dark). An unknown thing shows only its base
+  name until it is known. The affixes come from a hash of the seed, the floor and the chest (CM.affix), so the floors
+  already laid out stay as they were.
+  One unique in every band of five floors, in a chest on one of them (the seed says which), orange, each with a line
+  of its story: Gravewarden, Tidecaller (whatever it cuts sleeps), Anvilheart, the Courtier's Mask, the Queen's Grief,
+  the Sporemother's Finger (it feeds you), Prismshard, the Foundry Master's Gauntlet, the Reliquary Key, First Root.
+  CM.UNIQUES; they are made of the same props as the affixes - crit, stats, regen, lifesteal, sleep, thorns, element.
+  Relic sets: two of the guardians' relics worn by one hero give +2 attack and +2 defence; three or more, and they mend
+  2 a round (CM.RELIC_SET; the sheet says so).
+  The alchemist, at the camp. The monsters of each depth now and then drop something she wants - Grave Moss, Drowned
+  Weed, Forge Soot, Bone Dust, Salt Weed, Spore Cap, Crystal Dust, Foundry Slag, Grave Salt, Root Sap (CM.INGREDIENTS)
+  - and she makes things of it for gold (CM.RECIPES): a Greater Healing Potion (twice the merchant's), Oils of Fire,
+  Rime and Saints (rubbed on a hero's weapon from the pack: the element for three fights), a Firepot (thrown in a fight
+  - Item - fire on every foe), two Antidotes, and the Elixirs of Vigour and Fortune: +1 Constitution or Luck for good,
+  to whoever has least (the Distilled achievement).
+  The smith, extended: Salvage puts a weapon or piece of armour from the pack into the fire for scrap (two from a rare
+  one), and five pieces of scrap stand in for a diamond; Rework the suffix strikes a piece of gear's suffix off and
+  works another in, for a gem of any kind and 100 gold.
+  In code: CM.affix, CM.makeUnique, CM.rarityOf, CM.heroStat (props.stats), CM.gearProp, CM.relicsWorn (20-world.js);
+  the hooks in critChance, endRound, hurt (thorns), strike (an oil, the blade that drinks, the blow that lulls),
+  useItemInBattle (the firepot), wonFight (the band's ingredient, the oil wearing) (62-combat.js); recipeLacks / brew,
+  salvage, smith("reroll"), give (an oil) (63-camp.js); the Alchemist dialog, the smith's new rows, the rarity colours
+  (70-ui.js); the new glyphs (36-looks.js).
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

@@ -211,6 +211,12 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #actions .menu button.on { border-color: var(--gold); color: var(--gold); background: #4A321A; }
 #actions button.pick small i { color: var(--gold); font-style: normal; }
 #bag .give button .cmp { font-style: normal; font-size: 11px; color: var(--dim); margin-left: 4px; }
+.rarity-fine { color: #8FD08F; }
+.rarity-rare { color: #80B8FF; }
+.rarity-relic { color: var(--gold); }
+.rarity-unique { color: #FF9F5A; text-shadow: 0 0 6px rgba(255,159,90,0.35); }
+.gear-list b.rarity-common { color: var(--gold); }
+#sheet-left .facts .gold { color: var(--gold); }
 #bag .give button .cmp.good { color: #8FD08F; }
 #bag .give button .cmp.bad { color: #E08080; }
 #view canvas#hud { cursor: crosshair; }

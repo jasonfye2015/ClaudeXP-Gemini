@@ -26,7 +26,7 @@ Object.assign(CM.Game.prototype, {
   describe(item) {
     const plain = { heal: "heals", mana: "restores magic", revive: "raises the fallen", torch: "light, for a while", lantern: "light that lasts",
       key: "opens a locked door", antidote: "cures poison, sleep, paralysis and blindness", rope: "down a pit without the fall, and back up again",
-      bones: "someone's, gathered up for a ghost who asked" }[item.kind];
+      bones: "someone's, gathered up for a ghost who asked", greaterheal: "heals, twice over", bomb: "thrown in a fight: fire on every foe" }[item.kind];
     return plain || CM.itemLabel(item);
   },
 
@@ -178,6 +178,19 @@ Object.assign(CM.Game.prototype, {
     if (item.kind === "rope") return "The rope is for a pit: walk into one with it in the pack.";
     if (item.kind === "tome") return this.readTome(row, hero);
     if (item.kind === "gem") return "A gem is for the camp's smith: he sets it into gear, for gold.";
+    if (item.kind === "ingredient") return "The camp's alchemist wants that. Keep it for her.";
+    if (item.kind === "scrap") return "Scrap is for the camp's smith: five stand in for a diamond.";
+    if (item.kind === "bomb") return "A firepot is for a fight: Item, then throw it.";
+    if (item.kind === "oil") {
+      if (hero.hp <= 0) return `${hero.name} has fallen.`;
+      if (!hero.weapon) return `${hero.name} has nothing to rub it on.`;
+      this.bag.splice(row, 1);
+      hero.oil = { element: item.element, fights: CM.OIL_FIGHTS };
+      this.sound("spell");
+      this.say(`${hero.name} rubs the ${item.name} into the ${CM.baseName(hero.weapon)}: it ${item.element === "fire" ? "smokes" : item.element === "frost" ? "frosts over" : "gleams"}. For the next ${CM.OIL_FIGHTS} fights, ${CM.ELEMENT_NAMES[item.element]}.`);
+      this.emit("change");
+      return "";
+    }
     if (item.kind === "bones") return "They're not yours to use. Someone on this floor wants them back.";
     if (item.kind === "scroll" || item.kind === "wand") return this.useMagicOutside(row, n);
     if (item.kind === "torch") {
@@ -213,7 +226,7 @@ Object.assign(CM.Game.prototype, {
       this.sound("heal");
     } else if (hero.hp <= 0) {
       return `${hero.name} has fallen. Raise them first.`;
-    } else if (item.kind === "heal") {
+    } else if (item.kind === "heal" || item.kind === "greaterheal") {
       hero.hp = Math.min(hero.max, hero.hp + item.power);
       this.bag.splice(row, 1);
       this.sound("heal");
@@ -337,11 +350,12 @@ Object.assign(CM.Game.prototype, {
     const p = item.props = item.props || {};
     if (service === "enchant") {
       const n = p.enchant || 0, cost = CM.SMITH.enchant * (n + 1), gem = this.bag.findIndex((i) => i.kind === "gem" && i.gem === "diamond");
+      const scrap = this.bag.map((i, idx) => (i.kind === "scrap" ? idx : -1)).filter((idx) => idx >= 0);
       if (n >= CM.SMITH.most) return `${item.name} has had all the smith's work it can take.`;
-      if (gem < 0) return "The smith wants a diamond for the work.";
+      if (gem < 0 && scrap.length < 5) return "The smith wants a diamond for the work (or five pieces of scrap).";
       if (this.gold < cost) return `The smith wants ${cost} gold, and the diamond.`;
       this.gold -= cost;
-      this.bag.splice(gem, 1);
+      if (gem >= 0) this.bag.splice(gem, 1); else for (const idx of scrap.slice(0, 5).reverse()) this.bag.splice(idx, 1);
       p.enchant = n + 1;
       p.bonus = (p.bonus || 0) + 1;
       item.power += 1;
@@ -364,7 +378,42 @@ Object.assign(CM.Game.prototype, {
       item.name = `${CM.ELEMENTS[el].prefix} ${CM.baseName(item)}${p.bonus ? ` +${p.bonus}` : ""}`;
       this.sound("lever");
       this.say(`The smith sets the ${name.toLowerCase()} into ${hero.name}'s blade, and it takes: ${item.name}.`);
+    } else if (service === "reroll") {                                  // a gem of any kind and gold: the suffix is struck off and another worked in
+      if (!["weapon", "armor", "offhand", "helm"].includes(slot)) return "The smith reworks a weapon, armour, a shield or a helm.";
+      const gem = this.bag.findIndex((i) => i.kind === "gem"), cost = 100;
+      if (gem < 0) return "The smith wants a gem of any kind to rework an affix.";
+      if (this.gold < cost) return `The smith wants ${cost} gold, and a gem.`;
+      this.gold -= cost;
+      this.bag.splice(gem, 1);
+      const rnd = this.rnd, deep = this.floor.number > CM.LAST_FLOOR;
+      const old = (p.affixes || []).find((w) => w.startsWith("of ")), prefix = (p.affixes || []).find((w) => !w.startsWith("of "));
+      if (old) { const a = CM.AFFIXES.suffix[old]; if (a) for (const [k, v] of Object.entries(a)) { if (k === "stats") for (const [st, d] of Object.entries(v)) { p.stats[st] -= d; if (!p.stats[st]) delete p.stats[st]; } else if (k === "element") delete p.element; else if (k !== "deep" && k !== "weapon") delete p[k]; } }
+      const choices = Object.entries(CM.AFFIXES.suffix).filter(([w, a]) => w !== old && (!a.deep || deep) && (!a.weapon || item.kind === "weapon") && !(a.element && p.element));
+      const [word, a] = rnd.pick(choices);
+      for (const [k, v] of Object.entries(a)) { if (k === "deep" || k === "weapon") continue; if (k === "stats") { p.stats = p.stats || {}; for (const [st, d] of Object.entries(v)) p.stats[st] = (p.stats[st] || 0) + d; } else if (k === "element") p.element = v; else p[k] = v; }
+      p.affixes = [prefix, word].filter(Boolean); p.rarity = p.affixes.length === 2 ? "rare" : "fine";
+      item.base = item.base || CM.baseName(item);
+      item.name = `${prefix ? prefix + " " : ""}${p.element ? CM.ELEMENTS[p.element].prefix + " " : ""}${item.base} ${word}${p.bonus ? ` +${p.bonus}` : ""}`;
+      CM.recompute(hero);
+      this.sound("lever");
+      this.say(`The smith strikes the old work off ${hero.name}'s ${item.base} and works the gem in: ${item.name}.`);
     } else return "The smith doesn't do that.";
+    this.saveRun();
+    this.emit("change");
+    return "";
+  },
+
+  // a piece of gear from the pack goes into the smith's fire for scrap (one each; five stand in for a diamond)
+  salvage(row) {
+    if (this.mode !== "camp") return "The smith works at the camp.";
+    const item = this.bag[row];
+    if (!item || !["weapon", "armor", "shield", "helm"].includes(item.kind)) return "The smith breaks down a weapon, armour, a shield or a helm.";
+    if (item.props && (item.props.relic || item.props.unique)) return "The smith won't put that in the fire. Nor should you.";
+    this.bag.splice(row, 1);
+    const n = 1 + (item.props && item.props.rarity === "rare" ? 1 : 0);
+    for (let i = 0; i < n; i++) this.bag.push(CM.scrap());
+    this.sound("lever");
+    this.say(`The ${item.unknown ? CM.baseName(item) : item.name} goes into the fire and comes out as ${CM.plural(n, "piece")} of scrap.`);
     this.saveRun();
     this.emit("change");
     return "";
@@ -484,6 +533,55 @@ Object.assign(CM.Game.prototype, {
     this.bag.sort((a, b) => (RANK[a.kind] === undefined ? 99 : RANK[a.kind]) - (RANK[b.kind] === undefined ? 99 : RANK[b.kind]) || (b.power || 0) - (a.power || 0) || String(a.name).localeCompare(String(b.name)));
     this.dirty = true;
     this.emit("change");
+  },
+});
+}
+
+// ---- the alchemist: a woman with a copper still by the camp fire, who makes things of what the monsters drop ----
+{
+Object.assign(CM.Game.prototype, {
+  // what a recipe needs that the pack hasn't: "" when it can be brewed
+  recipeLacks(id) {
+    const r = CM.RECIPES[id];
+    if (!r) return "No such recipe.";
+    const have = (kinds, used) => this.bag.findIndex((i, idx) => !used.includes(idx) && (i.kind === "ingredient" ? kinds.includes(i.ingredient) : kinds.includes(i.kind)));
+    const used = [];
+    for (const key of ["ingredient", "ingredient2", "kind"]) {
+      if (!r.needs[key]) continue;
+      const idx = have(r.needs[key], used);
+      if (idx < 0) return `She wants ${r.needs[key].map((k) => (CM.INGREDIENTS[k] ? CM.INGREDIENTS[k].name : { heal: "a Healing Potion" }[k] || k)).join(" or ")}.`;
+      used.push(idx);
+    }
+    if (this.gold < r.gold) return `She asks ${r.gold} gold for the ${r.name}.`;
+    return "";
+  },
+  brew(id) {
+    if (this.mode !== "camp") return "The alchemist is at the camp.";
+    const lacks = this.recipeLacks(id);
+    if (lacks) return lacks;
+    const r = CM.RECIPES[id], used = [];
+    const take = (kinds) => { const idx = this.bag.findIndex((i, j) => !used.includes(j) && (i.kind === "ingredient" ? kinds.includes(i.ingredient) : kinds.includes(i.kind))); used.push(idx); return idx; };
+    for (const key of ["ingredient", "ingredient2", "kind"]) if (r.needs[key]) take(r.needs[key]);
+    for (const idx of used.sort((a, b) => b - a)) this.bag.splice(idx, 1);
+    this.gold -= r.gold;
+    const fl = this.floor ? this.floor.number : 1;
+    let made;
+    if (r.makes === "greaterheal") { made = { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + fl * 3), value: 60 }; this.bag.push(made); }
+    else if (r.makes.startsWith("oil:")) { made = CM.oil(r.makes.slice(4)); this.bag.push(made); }
+    else if (r.makes === "bomb") { made = CM.bomb(); this.bag.push(made); }
+    else if (r.makes === "antidote2") { this.bag.push(CM.antidote(), CM.antidote()); made = { name: "two Antidotes" }; }
+    else if (r.makes.startsWith("elixir:")) {
+      const stat = r.makes.slice(7), h = this.alive().reduce((a, b) => (a.stats[stat] <= b.stats[stat] ? a : b));   // (whoever has least of it)
+      h.stats[stat] = Math.min(25, h.stats[stat] + 1);
+      CM.recompute(h);
+      made = { name: `${r.name}: ${h.name} has +1 ${CM.STAT_NAMES[stat]}, for good` };
+    }
+    this.sound("spell");
+    this.say(`The alchemist's still bubbles and runs clear: ${made.name}.`);
+    if (r.makes.startsWith("elixir:")) this.achieve("distilled");
+    this.saveRun();
+    this.emit("change");
+    return "";
   },
 });
 }

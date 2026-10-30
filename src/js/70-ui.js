@@ -120,6 +120,10 @@ CM.UI = class {
   <div class="list-title">In the vault</div><div class="recruit" id="vault-held"></div>
   <div class="list-title">Leave something</div><div id="vault-list"></div><div class="small" id="vault-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-alchemist"><div class="box journalbox"><h2>The Alchemist</h2>
+  <p class="small">A woman with a copper still by the camp fire. The monsters of each depth drop something she wants - moss, weed, soot, dust, slag, salt, sap - and she makes potions, oils and worse of it, for gold.</p>
+  <div class="small" id="alchemist-have"></div><div id="alchemist-list"></div><div class="small" id="alchemist-note"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-waystone"><div class="box"><h2>The Waystones</h2>
   <p class="small">A mark chalked by every camp fire the party has reached. From one camp, the old road leads to another: the floors between stay as you left them.</p>
   <div id="waystone-list"></div><div class="small" id="waystone-note"></div>
@@ -254,7 +258,8 @@ CM.UI = class {
       <div class="rowpick"><span>Row:</span><button data-row="front" class="${h.row === "front" ? "on" : ""}">Front</button><button data-row="back" class="${h.row === "back" ? "on" : ""}">Back</button>
         <small>${g.mode === "combat" ? "not in a fight" : h.row === "front" ? "takes the blows" : h.cls === "Rogue" || h.cls === "Ranger" ? "strikes from safety" : "safer, hits for half"}</small></div>
       <div class="list-title">Gear</div>
-      <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span><span class="icon-slot" data-slot="${slot}"></span> ${it ? `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
+      ${CM.relicsWorn(h) >= 2 ? `<div class="gold">The guardians' things, worn together: ${CM.RELIC_SET.two.what}${CM.relicsWorn(h) >= 3 ? "; " + CM.RELIC_SET.three.what : ""}.</div>` : ""}${h.oil && h.oil.fights > 0 ? `<div>Oiled: ${CM.ELEMENT_NAMES[h.oil.element]} on the weapon for ${CM.plural(h.oil.fights, "more fight")}.</div>` : ""}
+      <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span><span class="icon-slot" data-slot="${slot}"></span> ${it ? `<b class="rarity-${CM.rarityOf(it)}">${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
     for (const span of facts.querySelectorAll(".icon-slot")) { const it = h[span.dataset.slot]; if (it) span.appendChild(this.icon(it, 20)); }
     for (const b of facts.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { if (g.setRow(h, b.dataset.row)) this.renderSheet(); });
     for (const b of facts.querySelectorAll("button[data-off]")) b.addEventListener("click", () => { const note = g.takeOff(this.sheetOf, b.dataset.off); if (note) g.say(note); this.renderSheet(); });
@@ -757,7 +762,7 @@ CM.UI = class {
         ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
-        ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
+        ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
         ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
     const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
@@ -926,7 +931,7 @@ CM.UI = class {
   }
 
   combatMenu(kind, data) { this.cmenu = Object.assign({ kind }, data || {}); this.renderCombat(); }
-  usableRows() { return this.game.bag.map((it, i) => (["heal", "mana", "antidote", "revive"].includes(it.kind) ? i : -1)).filter((i) => i >= 0); }
+  usableRows() { return this.game.bag.map((it, i) => (["heal", "greaterheal", "mana", "antidote", "revive", "bomb"].includes(it.kind) ? i : -1)).filter((i) => i >= 0); }
 
   castPick(id) {
     const g = this.game, a = CM.ABILITIES[id];
@@ -935,7 +940,7 @@ CM.UI = class {
     this.refresh();
   }
 
-  itemPick(row) { this.combatMenu("ally", { row, fallen: this.game.bag[row].kind === "revive" }); }
+  itemPick(row) { if (this.game.bag[row].kind === "bomb") { this.game.act("item", { row }); this.refresh(); return; } this.combatMenu("ally", { row, fallen: this.game.bag[row].kind === "revive" }); }
 
   allyPick(i) {
     const cm = this.cmenu || {};
@@ -1205,8 +1210,9 @@ CM.UI = class {
   renderSmith() {
     const g = this.game, box = this.$("#smith-list");
     const diamonds = g.bag.filter((i) => i.kind === "gem" && i.gem === "diamond").length;
-    const gems = g.bag.filter((i) => i.kind === "gem" && CM.GEMS[i.gem].element).map((i) => i.name);
-    this.$("#smith-gems").textContent = `In the pack: ${diamonds ? CM.plural(diamonds, "diamond") : "no diamond"}${gems.length ? ", " + gems.join(", ") : ""}. Gold: ${g.gold.toLocaleString()}.`;
+    const gems = g.bag.filter((i) => i.kind === "gem" && CM.GEMS[i.gem].element).map((i) => i.name), anyGem = g.bag.some((i) => i.kind === "gem");
+    const scrap = g.bag.filter((i) => i.kind === "scrap").length;
+    this.$("#smith-gems").textContent = `In the pack: ${diamonds ? CM.plural(diamonds, "diamond") : "no diamond"}${gems.length ? ", " + gems.join(", ") : ""}${scrap ? `, ${CM.plural(scrap, "piece")} of scrap` : ""}. Gold: ${g.gold.toLocaleString()}.`;
     box.innerHTML = "";
     g.party.forEach((h, hi) => {
       for (const slot of ["weapon", "armor", "offhand", "helm"]) {
@@ -1223,7 +1229,7 @@ CM.UI = class {
         act.className = "hire";
         const b = document.createElement("button");
         b.textContent = n >= CM.SMITH.most ? "Worked to the limit" : `+1 for ${CM.SMITH.enchant * (n + 1)} gold and a diamond`;
-        b.disabled = n >= CM.SMITH.most || !diamonds || g.gold < CM.SMITH.enchant * (n + 1) || it.unknown;
+        b.disabled = n >= CM.SMITH.most || (!diamonds && scrap < 5) || g.gold < CM.SMITH.enchant * (n + 1) || it.unknown;
         b.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("enchant", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
         act.appendChild(b);
         if (slot === "weapon") {
@@ -1234,10 +1240,61 @@ CM.UI = class {
           s.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("gem", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
           act.appendChild(s);
         }
+        if (!(it.props && (it.props.relic || it.props.unique))) {
+          const r = document.createElement("button");
+          r.textContent = "Rework the suffix: a gem and 100 gold";
+          r.disabled = !anyGem || g.gold < 100 || it.unknown;
+          r.title = "The suffix is struck off and another worked in, from the dice";
+          r.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("reroll", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
+          act.appendChild(r);
+        }
         row.appendChild(act);
         box.appendChild(row);
       }
     });
+    const scrapRows = g.bag.map((it, i) => [it, i]).filter(([it]) => ["weapon", "armor", "shield", "helm"].includes(it.kind) && !(it.props && (it.props.relic || it.props.unique)));
+    if (scrapRows.length) {
+      const title = document.createElement("div");
+      title.className = "list-title";
+      title.textContent = `Into the fire for scrap (${g.bag.filter((i) => i.kind === "scrap").length} in the pack; five stand in for a diamond)`;
+      box.appendChild(title);
+      for (const [it, i] of scrapRows) {
+        const row = document.createElement("div");
+        row.className = "recruit";
+        row.appendChild(this.icon(it, 22));
+        const text = document.createElement("div");
+        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`;
+        row.appendChild(text);
+        const act = document.createElement("div");
+        act.className = "hire";
+        const b = document.createElement("button");
+        b.textContent = "Salvage";
+        b.addEventListener("click", () => { this.$("#smith-note").textContent = g.salvage(i) || "Done."; this.renderSmith(); this.refresh(); });
+        act.appendChild(b);
+        row.appendChild(act);
+        box.appendChild(row);
+      }
+    }
+  }
+  openAlchemist() { this.renderAlchemist(); this.openDialog("#dlg-alchemist"); }
+  renderAlchemist() {
+    const g = this.game, box = this.$("#alchemist-list");
+    const have = g.bag.filter((i) => i.kind === "ingredient").map((i) => i.name);
+    this.$("#alchemist-have").textContent = `In the pack: ${have.length ? have.join(", ") : "nothing she wants yet"}. Gold: ${g.gold.toLocaleString()}.`;
+    box.innerHTML = "";
+    for (const [id, r] of Object.entries(CM.RECIPES)) {
+      const row = document.createElement("div");
+      row.className = "recruit";
+      row.style.gridTemplateColumns = "1fr auto";
+      const lacks = g.recipeLacks(id);
+      row.innerHTML = `<div><b>${this.esc(r.name)}</b><small>${this.esc(r.what)}${lacks ? ` <i>- ${this.esc(lacks)}</i>` : ""}</small></div>`;
+      const b = document.createElement("button");
+      b.textContent = `Brew, ${r.gold} gold`;
+      b.disabled = Boolean(lacks);
+      b.addEventListener("click", () => { this.$("#alchemist-note").textContent = g.brew(id) || "Done."; this.renderAlchemist(); this.refresh(); });
+      row.appendChild(b);
+      box.appendChild(row);
+    }
   }
   openVault() { this.renderVault(); this.openDialog("#dlg-vault"); }
   renderVault() {
@@ -1390,7 +1447,7 @@ CM.UI = class {
         row.className = "item" + (i === selected ? " sel" : "");
         row.appendChild(this.icon(item));
         const text = document.createElement("span");
-        text.innerHTML = `${this.esc(item.unknown ? CM.baseName(item) : item.name)} <span class="what">${describe(item)}</span>`;
+        text.innerHTML = `<span class="rarity-${CM.rarityOf(item)}">${this.esc(item.unknown ? CM.baseName(item) : item.name)}</span> <span class="what">${describe(item)}</span>`;
         row.appendChild(text);
         row.addEventListener("click", () => { onPick(i); this.fillBag(); });
         el.appendChild(row);
@@ -1402,7 +1459,7 @@ CM.UI = class {
     if (shop) list(this.$("#shop-list"), "The merchant's wares", g.stock || [], this.shopRow,
       (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
     const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
-    const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" || picked.kind === "tome" ? "Read" : picked.kind === "wand" ? "Use on" : "Give to";
+    const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" || picked.kind === "tome" ? "Read" : picked.kind === "wand" ? "Use on" : picked.kind === "oil" ? "Rub on the weapon of" : "Give to";
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
       const m = g.party[i], cmp = picked ? g.compare(m, picked) : null;
       b.innerHTML = `${verb} ${this.esc(m.name)}` + (m.hp <= 0 ? " (fallen)" : "") + (cmp ? ` <i class="cmp ${cmp.cls}">${this.esc(cmp.text)}</i>` : "");

@@ -33,10 +33,57 @@ CM.makeGear = function (kind, floor, rnd) {
   }
   if ((kind === "weapon" || kind === "armor" || kind === "shield" || kind === "helm") && rnd.chance(0.15)) { props.bonus = 1; power += 2; value += 40; }
   if (floor >= 4 && (kind === "weapon" || kind === "armor") && rnd.chance(0.08)) { props.cursed = true; power = Math.max(1, power - 3); value = Math.floor(value / 3); }
-  const item = { name, kind: slot === "offhand" ? "shield" : kind, slot, power, value, props };
+  const item = { name, base: name, kind: slot === "offhand" ? "shield" : kind, slot, power, value, props };
   if (floor >= 2 && rnd.chance(0.5)) item.unknown = true;
   return item;
 };
+
+// an affix or two on a weapon or a piece of armour, by the floor: fine (one) from the third floor, rare (two) from the
+// eighth; the deeper pools open below the Lich King. Drawn from its own dice (a hash, in the generator) so the floors
+// stay as they were. Returns the item.
+CM.affix = function (item, floor, rnd) {
+  if (!["weapon", "armor", "shield", "helm"].includes(item.kind) || (item.props || {}).relic || (item.props || {}).unique) return item;
+  const fine = floor >= 3 ? 0.18 + Math.min(0.17, floor * 0.005) : 0, rare = floor >= 8 ? 0.05 + Math.min(0.15, (floor - 8) * 0.004) : 0;
+  const roll = rnd.next();
+  const n = roll < rare ? 2 : roll < rare + fine ? 1 : 0;
+  if (!n) return item;
+  const deep = floor > CM.LAST_FLOOR, p = item.props = item.props || {};
+  const pool = (table) => Object.entries(table).filter(([, a]) => (!a.deep || deep) && (!a.weapon || item.kind === "weapon") && !(a.element && p.element));
+  const kinds = n === 2 ? ["prefix", "suffix"] : [rnd.chance(0.5) ? "prefix" : "suffix"];
+  const words = [];
+  for (const where of kinds) {
+    const table = where === "prefix" ? CM.AFFIXES.prefix[item.kind === "weapon" ? "weapon" : "armor"] : CM.AFFIXES.suffix;
+    const choices = pool(table);
+    if (!choices.length) continue;
+    const [word, a] = rnd.pick(choices);
+    words.push([where, word]);
+    for (const [k, v] of Object.entries(a)) {
+      if (k === "deep" || k === "weapon") continue;
+      if (k === "power") { item.power += v; }
+      else if (k === "stats") { p.stats = p.stats || {}; for (const [st, d] of Object.entries(v)) p.stats[st] = (p.stats[st] || 0) + d; }
+      else if (k === "element") { p.element = v; }
+      else p[k] = v;
+    }
+    item.value += where === "prefix" ? 60 : 90;
+  }
+  if (!words.length) return item;
+  p.rarity = words.length === 2 ? "rare" : "fine";
+  p.affixes = words.map(([, w]) => w);
+  const prefix = words.find(([w]) => w === "prefix"), suffix = words.find(([w]) => w === "suffix");
+  item.name = `${p.element && !CM.ELEMENTS[p.element] ? "" : ""}${prefix ? prefix[1] + " " : ""}${p.element ? CM.ELEMENTS[p.element].prefix + " " : ""}${item.base || CM.baseName(item)}${suffix ? " " + suffix[1] : ""}${p.bonus ? ` +${p.bonus}` : ""}`;
+  return item;
+};
+CM.makeUnique = function (id) {
+  const u = CM.UNIQUES[id];
+  const item = { name: u.name, base: u.name, kind: u.kind, slot: u.slot, power: u.power, value: u.value, props: Object.assign({ unique: id, rarity: "unique" }, JSON.parse(JSON.stringify(u.props))) };
+  return item;
+};
+CM.ingredient = (id) => ({ name: CM.INGREDIENTS[id].name, kind: "ingredient", ingredient: id, power: 0, value: 25 });
+CM.oil = (element) => ({ name: { fire: "Oil of Fire", frost: "Oil of Rime", holy: "Oil of Saints" }[element], kind: "oil", element, power: 0, value: 60 });
+CM.bomb = () => ({ name: "Firepot", kind: "bomb", power: 0, value: 80 });
+CM.scrap = () => ({ name: "Scrap", kind: "scrap", power: 0, value: 5 });
+// the rarity of a thing, for its colour: common, fine, rare, relic, unique
+CM.rarityOf = (item) => (item && item.props && !item.unknown ? (item.props.unique ? "unique" : item.props.relic ? "relic" : item.props.rarity || "common") : "common");
 
 CM.scroll = (id) => ({ name: CM.SCROLLS[id].name, kind: "scroll", spell: id, power: 0, value: 40 });
 CM.wand = (id, charges) => ({ name: CM.WANDS[id].name, kind: "wand", spell: id, power: 0, charges, value: 90 });
@@ -59,6 +106,7 @@ CM.makeItem = function (floor, rnd, kind) {
 
 // the base of a thing's name, as it looks before it's known: no prefix, no plus
 CM.baseName = function (item) {
+  if (item.base) return item.base;
   let n = item.name.replace(/ \+\d+$/, "");
   for (const e of Object.values(CM.ELEMENTS)) if (n.startsWith(e.prefix + " ")) n = n.slice(e.prefix.length + 1);
   return n;
@@ -78,13 +126,25 @@ CM.itemLabel = function (item) {
   else if (item.kind === "wand") bits.push(`${CM.WANDS[item.spell].what} ${CM.plural(item.charges, "charge")}.`);
   else if (item.kind === "tome") bits.push(`teaches ${CM.ABILITIES[item.spell].name} to a caster who reads it: ${CM.ABILITIES[item.spell].what}`);
   else if (item.kind === "gem") bits.push(CM.GEMS[item.gem].element ? `for the camp's smith: ${CM.GEMS[item.gem].element} set into a weapon` : "for the camp's smith: +1 on a piece of gear");
+  else if (item.kind === "ingredient") bits.push(`for the camp's alchemist`);
+  else if (item.kind === "oil") bits.push(`rubbed on a hero's weapon: ${CM.ELEMENT_NAMES[item.element] || item.element} for ${CM.OIL_FIGHTS} fights`);
+  else if (item.kind === "bomb") bits.push("thrown in a fight: fire on every foe");
+  else if (item.kind === "scrap") bits.push("for the camp's smith: five stand in for a diamond");
+  else if (item.kind === "greaterheal") bits.push(`heals ${item.power}`);
   if (p.stat && item.kind !== "ring") bits.push(`+${item.power} ${CM.STAT_NAMES[p.stat]}`);
+  if (p.stats) for (const [st, d] of Object.entries(p.stats)) bits.push(`${d > 0 ? "+" : ""}${d} ${CM.STAT_NAMES[st]}`);
   if (p.resist && item.kind !== "amulet") bits.push(`proof against ${p.resist}`);
   if (p.df && item.kind !== "amulet") bits.push(`warding +${p.df}`);
   if (p.element) bits.push(p.element);
+  if (p.crit) bits.push(`weak spots found ${Math.round(p.crit * 100)}% more`);
+  if (p.regen) bits.push(`mends ${p.regen} a round`);
+  if (p.lifesteal) bits.push("feeds on every blow");
+  if (p.sleep) bits.push("a blow may put the foe to sleep");
+  if (p.thorns) bits.push(`whoever strikes the wearer takes ${p.thorns}`);
   if (p.stun) bits.push("a blow may leave the foe reeling");
   if (p.twohanded) bits.push("two-handed");
   if (p.relic) bits.push("a guardian's relic");
+  if (p.unique) bits.push("unique: " + CM.UNIQUES[p.unique].lore);
   if (p.bow) bits.push("a bow: the Ranger's");
   if (p.cursed) bits.push("CURSED");
   return bits.filter(Boolean).join(", ");
@@ -240,8 +300,9 @@ CM.recompute = function (h) {
   h.max = Math.max(1, c.hp + (s.con - 10) + L * (c.grow + CM.mod(s.con, 3)));
   h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : 0;
   const hitStat = c.key === "dex" ? s.dex : s.str;
-  h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow + (CM.trait(h, "mighty") ? 3 : 0));
-  h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0) + (CM.trait(h, "stonewall") ? 3 : 0));
+  const relics = CM.relicsWorn(h), set = relics >= 2 ? CM.RELIC_SET.two : null;   // (the guardians' things, worn together)
+  h.atk = Math.max(1, c.atk + CM.mod(hitStat) + L * c.atkGrow + (CM.trait(h, "mighty") ? 3 : 0) + (set ? set.atk : 0));
+  h.df = Math.max(0, c.df + CM.mod(s.dex, 3) + Math.floor(L / 2) + (boons.includes("ironskin") ? 2 : 0) + (CM.trait(h, "stonewall") ? 3 : 0) + (set ? set.df : 0));
   h.hp = Math.min(h.hp, h.max);
   h.mp = Math.min(h.mp, h.maxmp);
   return h;
@@ -280,9 +341,16 @@ CM.equipped = (h) => CM.SLOTS.map((s) => h[s]).filter(Boolean);
 // a stat as it stands, rings and all
 CM.heroStat = function (h, s) {
   let v = h.stats && h.stats[s] !== undefined ? h.stats[s] : 10;
-  for (const it of CM.equipped(h)) if (it.props && it.props.stat === s && !it.unknown) v += it.power;
+  for (const it of CM.equipped(h)) {
+    if (!it.props || it.unknown) continue;
+    if (it.props.stat === s) v += it.power;
+    if (it.props.stats && it.props.stats[s]) v += it.props.stats[s];
+  }
   return v;
 };
+// what the gear gives besides: weak spots, mending a round, thorns - summed over what's worn and known
+CM.gearProp = (h, prop) => CM.equipped(h).reduce((n, it) => n + ((it.props && !it.unknown && typeof it.props[prop] === "number") ? it.props[prop] : 0), 0);
+CM.relicsWorn = (h) => CM.equipped(h).filter((it) => it.props && it.props.relic && !it.unknown).length;
 
 // what the gear keeps off: armour and shield count double, a helm and a warding amulet once
 CM.gearDefence = (h) => (h.armor ? h.armor.power : 0) * 2 + (h.offhand ? h.offhand.power * 2 : 0) + (h.helm ? h.helm.power : 0)
@@ -920,6 +988,20 @@ CM.makeFloor = function (number, seed) {
     const h = CM.hashSeed(`${seed}:craft:${number}:${k}`);
     if (h % 100 < 12) t.items.push(CM.gem(["diamond", "diamond", "ruby", "sapphire", "sunstone"][(h >>> 8) % 5]));
     else if (h % 100 < 21 && number >= 4) { const ids = Object.keys(CM.TOMES); t.items.push(CM.tome(ids[(h >>> 8) % ids.length])); }
+  }
+  // the hoard, deeper: an affix or two on the chests' gear, and one unique a band, in a chest on one of its floors
+  for (const [k, t] of Object.entries(floor.things)) {
+    if (t.type !== "chest") continue;
+    t.items.forEach((it, i) => CM.affix(it, number, new CM.Random(CM.hashSeed(`${seed}:affix:${number}:${k}:${i}`))));
+  }
+  const band = CM.themeIndex(number), uniqueId = Object.keys(CM.UNIQUES).find((id) => CM.UNIQUES[id].band === band);
+  if (uniqueId && number <= CM.BOTTOM && !CM.guardianFor(number)) {
+    const first = band === 0 ? 2 : band * 5 + 1, floorsOfBand = [];
+    for (let n = first; n <= band * 5 + 5; n++) if (!CM.guardianFor(n)) floorsOfBand.push(n);
+    if (floorsOfBand[CM.hashSeed(`${seed}:unique:${band}`) % floorsOfBand.length] === number) {
+      const chests = Object.keys(floor.things).filter((k) => floor.things[k].type === "chest").sort();
+      if (chests.length) floor.things[chests[CM.hashSeed(`${seed}:unique:${band}:chest`) % chests.length]].items.push(CM.makeUnique(uniqueId));
+    }
   }
   floor.rooms = rooms.map((r) => ({ x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, name: r.template ? r.template.name : "" }));
   return floor;
