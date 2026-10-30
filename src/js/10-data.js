@@ -109,8 +109,8 @@ CM.ELEMENTS = { fire: { prefix: "Flaming", weak: ["Troll", "Zombie"] }, frost: {
 CM.ARMOR_WEIGHT = (tier) => (tier <= 3 ? "light" : tier <= 7 ? "medium" : "heavy");
 CM.BEARS = { Knight: "heavy", Paladin: "heavy", Rogue: "medium", Ranger: "medium", Cleric: "medium", Druid: "medium", Bard: "medium", Mage: "light", Monk: "light", Necromancer: "light", Artificer: "medium" };
 CM.SHIELD_BEARERS = ["Knight", "Paladin", "Cleric", "Rogue", "Druid", "Bard", "Artificer"];
-CM.SLOTS = ["weapon", "offhand", "armor", "helm", "ring", "amulet", "boots", "cloak"];
-CM.SLOT_NAMES = { weapon: "Weapon", offhand: "Off hand", armor: "Armour", helm: "Helm", ring: "Ring", amulet: "Amulet", boots: "Boots", cloak: "Cloak" };
+CM.SLOTS = ["weapon", "offhand", "armor", "helm", "ring", "amulet", "boots", "cloak", "trinket"];
+CM.SLOT_NAMES = { weapon: "Weapon", offhand: "Off hand", armor: "Armour", helm: "Helm", ring: "Ring", amulet: "Amulet", boots: "Boots", cloak: "Cloak", trinket: "Trinket" };
 // boots: speed (and some, silence or dry feet); cloaks: warding (and some, a hood against the dark's surprises)
 CM.BOOTS = [{ name: "Sandals", power: 1 }, { name: "Soft Boots", power: 1, silence: true }, { name: "Hobnailed Boots", power: 2 }, { name: "Marsh Boots", power: 2, waterwalk: true },
   { name: "Boots of Silence", power: 3, silence: true }, { name: "Wayfarer's Boots", power: 3, waterwalk: true }, { name: "Boots of the Fox", power: 4, silence: true }];

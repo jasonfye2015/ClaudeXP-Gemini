@@ -462,7 +462,7 @@ Object.assign(CM.Game.prototype, {
       this.achieve("laidtorest");
     }
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:ghost:${fl.number}`));
-    const gift = CM.makeGear(rnd.pick(["ring", "amulet", "amulet"]), fl.number + 4, rnd);
+    const gift = rnd.chance(0.3) ? CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))) : CM.makeGear(rnd.pick(["ring", "amulet", "amulet"]), fl.number + 4, rnd);
     gift.unknown = false;
     this.gain([gift], "ghost");
     const xp = 30 * fl.number;

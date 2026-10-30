@@ -106,7 +106,7 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
   vaultCapacity() { const g = this.villageLevel("guildhall"); return g >= 4 ? 5 : g >= 2 ? 3 : 1; },
-  vaultRoom() { return (this.vaults || []).length < this.vaultCapacity(); },
+  vaultRoom() { return (this.vaults || []).filter((it) => !it.named).length < this.vaultCapacity(); },   // (a named weapon is kept for nothing: it takes no slot)
   // the week's contracts, and which are done
   contracts() {
     const week = CM.weeklySeed(), v = this.village;

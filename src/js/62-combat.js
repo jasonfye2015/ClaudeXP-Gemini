@@ -53,8 +53,11 @@ Object.assign(CM.Game.prototype, {
       + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
-    const wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
+    let wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
     const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
+    const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
+    if (ratproof) wary = true;
+    for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
     if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance(loud ? 0.65 : 0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
@@ -117,7 +120,7 @@ Object.assign(CM.Game.prototype, {
     c.round += 1;
     c.reached = 0;
     const order = [];
-    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + CM.gearProp(h, "init") + (this.buffs && this.buffs.haste === h.name ? 12 : 0) + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
+    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + CM.gearProp(h, "init") + (this.buffs && this.buffs.haste === h.name ? 12 : 0) + (c.round === 1 && CM.gearProp(h, "hourglass") ? 3 : 0) + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
     if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
     order.sort((a, b) => b.init - a.init);
     for (const h of this.alive()) if (h.familiar === "skull" && c.round > 0) { const foe = this.attackable()[0]; if (foe) this.spellHit(foe, Math.max(1, 2 + Math.floor(h.level / 2)), `${h.name}'s skull bites:`); }
@@ -277,6 +280,8 @@ Object.assign(CM.Game.prototype, {
         this.emit("change");
         return true;
       }
+    } else if (action === "power") {
+      if (!this.relicPower(h, arg)) return false;
     } else if (action === "defend") {
       h.defending = true;
       this.say(`${h.name} raises a guard.`);
@@ -444,6 +449,7 @@ Object.assign(CM.Game.prototype, {
     if (by && by.blinded > 0) { by.blinded--; dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + " - blind, it strikes wide" }); }
     dmg -= CM.partyProp(this.party, "auraDf");
     if (this.buffs && this.buffs.stoneskin !== undefined && h.stoneskin) dmg -= 3;
+    if (h.prism > 0) { h.prism = 0; dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + " - the light goes wrong" }); }
     if (!opts.aoe && !opts.noBlock) {                                   // a shield turns the blow: the hero's own, or a tower shield in the front row for one behind
       const own = h.offhand && h.offhand.kind === "shield" ? CM.blockChance(h.offhand) : 0;
       const tower = !own && h.row === "back" ? this.alive().filter((p) => p.row === "front" && CM.isTower(p.offhand) && !p.offhand.unknown).map((p) => CM.blockChance(p.offhand) / 2)[0] || 0 : 0;
@@ -591,7 +597,7 @@ Object.assign(CM.Game.prototype, {
     const every = m.quick ? 2 : 3;                                        // (the flooded Knight comes faster)
     if (m.hidden) { const up = this.foes.filter((f) => f.summoned && f.hp > 0 && !f.fled).length; if (up < 4) this.summonFor(m, moves[0], Math.min(2, 4 - up)); else this.say("The heap seethes."); return; }
     const telegraph = () => {                                             // next turn is one of its moves: it shows, so the party can brace
-      if ((m.turns + 1) % every === 0 && moves.length && !m.broken) { const next = moves[(Math.floor((m.turns + 1) / every) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); this.emit("fx", { kind: "intent", foe: m }); }
+      if ((m.turns + 1) % every === 0 && moves.length && !m.broken) { const next = moves[(Math.floor((m.turns + 1) / every) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); this.emit("fx", { kind: "intent", foe: m }); if (CM.partyProp(this.party, "belltongue")) this.emit("motif", "bell"); }
     };
     if (m.turns % every === 0 && moves.length && !m.broken) {
       const mv = moves[(Math.floor(m.turns / every) - 1) % moves.length];
@@ -703,6 +709,7 @@ Object.assign(CM.Game.prototype, {
 
   // a guardian falls: its relic into the pack, a trophy kept between runs, and the shaft it stood over is open
   slayGuardian(m) {
+    if (m.lastWeapon && !m.echo) this.markWeapon(m.lastWeapon, `slew ${CM.GUARDIANS[m.guardian].name}`);
     const id = m.guardian, G = CM.GUARDIANS[id], relic = G.relic && !m.echo ? CM.relic(id) : null;
     this.tally.guardians = (this.tally.guardians || []).concat(id);
     if (!m.echo) this.trophy(id);
@@ -722,6 +729,60 @@ Object.assign(CM.Game.prototype, {
     CM.store.set("trophies", this.trophies);
   },
 
+  // a relic's power, once a floor: what the wearer's relic (or First Root) does, in a fight or on the floor
+  readyPower(h) {
+    const floor = this.floor ? this.floor.number : 0;
+    for (const it of CM.equipped(h)) { const P = CM.powerOf(it); if (P && it.poweredFloor !== floor && (P.where === "both" || P.where === (this.mode === "combat" ? "fight" : "floor"))) return { item: it, power: P }; }
+    return null;
+  },
+  relicPower(h, arg) {
+    const ready = this.readyPower(h);
+    if (!ready) { this.say(`${h.name} wears no relic with a power to spend here, or it is spent for this floor.`); return false; }
+    const { item, power } = ready, L = this.floor ? this.floor.number : 1, foes = this.living ? this.living() : [];
+    const target = this.mode === "combat" ? this.foeAt(arg && arg.who !== undefined ? arg.who : undefined) : null;
+    switch (power.id) {
+      case "swarm": for (const m of foes) this.spellHit(m, 3 + Math.floor(L / 3), "", null); this.say(`${h.name} lifts the crown, and the rats come for the other side.`); break;
+      case "tide": if (this.combat) this.combat.flooded = true; for (const m of foes) m.chilled = Math.max(m.chilled || 0, 2); this.say(`${h.name} grounds the shield, and the water comes up to the knee: cold, for everyone but you.`); break;
+      case "break": if (!target) return false; target.df = Math.floor(target.df / 2); this.say(`${h.name} brings the hammer down: ${CM.the(target)}'s armour splits (defence halved).`); break;
+      case "lull": { let n = 0; for (const m of foes) if (!CM.unmoved(m) && this.rnd.chance(0.5)) { m.asleep = 2; n++; } this.say(`${h.name} turns the ring, and the queen's song comes out of it: ${n ? CM.plural(n, "foe") + " sleep" : "no one sleeps"}.`); break; }
+      case "still": if (!target) return false; target.held = Math.max(target.held || 0, 2); this.say(`${h.name} thinks, through the cap, and ${CM.the(target)} stands quite still.`); break;
+      case "prism": for (const p of this.alive()) p.prism = 1; this.say(`${h.name} turns the prism, and the light goes wrong around the party: the next blow on each does half.`); break;
+      case "reforge": if (!h.weapon || (h.weapon.props || {}).fists) return false; h.weapon.sharpUntil = L; this.say(`${h.name}'s mail glows like a forge, and the weapon takes an edge (+2, the floor).`); break;
+      case "unlock": {
+        const fl = this.floor, locked = Object.entries(fl.features).filter(([, f]) => (f.type === "door" && f.locked && !f.open) || (f.type === "gate" && !f.open));
+        if (!locked.length) { this.say("Nothing on this floor is locked against you."); return false; }
+        const dist = CM.distances(fl.grid, fl.pos), near = locked.sort((a, b) => (dist.get(a[0]) || 999) - (dist.get(b[0]) || 999))[0][1];
+        if (near.type === "door") near.locked = false; near.open = true;
+        this.say(`${h.name} holds up the reliquary, and somewhere on the floor a lock gives.`); break;
+      }
+      case "regrow": { const fallen = this.party.find((p) => p.hp <= 0); if (!fallen) { this.say("No one has fallen."); return false; } fallen.hp = 1; this.say(`The root wakes in ${h.name}'s hands, and ${fallen.name} draws breath.`); break; }
+      default: return false;
+    }
+    item.poweredFloor = L; this.countUse("power");
+    this.sound("spell"); this.emit("fx", { kind: "cast", id: "turn", hero: h, item: "relic", foes });
+    if (this.mode !== "combat") { this.logAct("usePower", this.party.indexOf(h)); this.saveRun(); this.emit("change"); }
+    return true;
+  },
+  usePower(heroIndex) { const h = this.party[heroIndex]; if (!h || h.hp <= 0 || this.mode === "combat") return false; return this.relicPower(h, null); },
+  // a weapon that grows: a mark for a guardian slain with it, and one for every hundred of anything; at three, a name
+  markWeapon(w, why) {
+    if (!w || (w.props || {}).fists) return;
+    w.marks = (w.marks || 0) + 1; w.power += 1; w.history = (w.history || []).concat(`${why} (floor ${this.floor ? this.floor.number : 0})`);
+    this.say(`${w.named || w.name} takes a mark: ${why}.${w.marks === CM.MARKS_TO_NAME && !w.named ? " It has earned a name - give it one from the sheet." : ""}`);
+  },
+  nameWeapon(heroIndex, name) {
+    const h = this.party[heroIndex], w = h && h.weapon, clean = String(name || "").trim().slice(0, 24);
+    if (!w || (w.marks || 0) < CM.MARKS_TO_NAME) return "A weapon is named at its third mark.";
+    if (w.named) return `It is ${w.named} already.`;
+    if (!clean) return "A name, then.";
+    this.logAct("nameWeapon", heroIndex, clean);
+    w.named = clean; w.name = clean; w.value += 200;
+    this.compendium.named = (this.compendium.named || []).concat({ name: clean, base: CM.baseIdOf(w), history: (w.history || []).slice(), date: CM.today(), bearer: h.name }).slice(-30);
+    CM.store.set("compendium", this.compendium);
+    this.say(`${h.name} names the ${CM.baseIdOf(w)}: ${clean}. The compendium keeps it.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
   // a wand's charge spent: on the last, one wand in four breaks (never with an Artificer in the party); the rest wait for the smith
   spendWand(item, row) {
     item.charges -= 1;
@@ -776,7 +837,7 @@ Object.assign(CM.Game.prototype, {
     }
     let df = bow && CM.trait(hero, "piercing") ? Math.floor(target.df / 2) : target.df;
     if (home && wclass === "blunt" && (["bone", "shell", "plate"].includes(hide) || target.undead)) df = Math.floor(df * 2 / 3);   // (a mace cares nothing for a shell)
-    let dmg = this.damage(this.effective(hero).atk, weapon.power + (weapon.sharpUntil !== undefined && this.floor && weapon.sharpUntil === this.floor.number ? 2 : 0), df), how = "";
+    let dmg = this.damage(this.effective(hero).atk, weapon.power + CM.gearProp(hero, "power1") + (weapon.sharpUntil !== undefined && this.floor && weapon.sharpUntil === this.floor.number ? 2 : 0), df), how = "";
     const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger" || (home && wclass === "polearm");
     let critMult = CM.trait(hero, "deadly") ? 3 : 2;
     if (home && wclass === "dagger") { critMult += 1; dmg = Math.max(1, Math.ceil(dmg * 2 / 3)); }
@@ -820,6 +881,7 @@ Object.assign(CM.Game.prototype, {
     if (this.has("glass")) dmg *= 2;
     dmg = Math.ceil(dmg * this.scholarship(target));
     target.hp -= dmg;
+    target.lastWeapon = weapon;
     this.splitIfHurt(target);
     if (target.asleep > 0) { target.asleep = 0; how += " - it wakes"; }
     this.say(`${hero.name} hits ${CM.the(target)}${note} for ${dmg}${how}.`);
@@ -1274,6 +1336,7 @@ Object.assign(CM.Game.prototype, {
     const slain = this.foes.filter((m) => !m.fled);
     this.count("kills", slain.length);
     for (const m of slain) this.noteFoe(m, "slain");
+    for (const m of slain) if (m.lastWeapon && !m.summoned) { const w = m.lastWeapon; w.kills = (w.kills || 0) + 1; if (w.kills % CM.MARK_KILLS === 0) this.markWeapon(w, `${w.kills} slain`); }   // (the weapon that struck it last remembers)
     if (this.bestiaryDirty) { CM.store.set("bestiary", this.bestiary); this.bestiaryDirty = false; }
     const xp = this.has("pilgrim") ? 0 : slain.reduce((s, m) => s + m.xp, 0);
     let gold = slain.reduce((s, m) => s + m.gold, 0);

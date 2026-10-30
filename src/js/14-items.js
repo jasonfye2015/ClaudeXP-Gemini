@@ -51,6 +51,7 @@ CM.baseIdOf = function (item) {
 // what a thing is called, from what it is made of: prefix, element, base, suffix, plus
 CM.itemName = function (item) {
   const p = item.props || {}, base = CM.baseIdOf(item);
+  if (item.named) return item.named;
   if (p.unique) return CM.UNIQUES[p.unique] ? CM.UNIQUES[p.unique].name + (p.awake ? ", Awake" : "") : item.name;
   if (p.relic) return base;
   if (item.kind === "ring") return `${base} +${item.power}`;
@@ -172,3 +173,46 @@ CM.healPotion = function (floor) {                                        // the
 CM.manaPotion = (floor) => (floor < 6 ? { name: "Lesser Mana Potion", kind: "mana", power: 8 + floor, value: 15 } : floor < 21 ? { name: "Mana Potion", kind: "mana", power: 12 + floor, value: 25 } : { name: "Greater Mana Potion", kind: "mana", power: 30 + floor, value: 60 });
 CM.lesserFeather = () => ({ name: "Lesser Phoenix Feather", kind: "revive0", power: 0, value: 60 });
 CM.BELT_KINDS = ["salve", "bread", "liniment", "heal", "greaterheal", "mana", "revive", "revive0", "antidote", "bomb", "flask", "elixir", "scroll", "wand", "ration", "torch", "lampoil"];
+
+// ---- living items: charged powers on the relics, trinkets, weapons that grow and can be named, heirlooms with memory ----
+CM.RELIC_POWERS = {
+  "Rat King's Crown": { id: "swarm", name: "Call the swarm", where: "fight", what: "the rats pour out for you: every foe bitten" },
+  "Shield of the Drowned": { id: "tide", name: "Raise the water", where: "fight", what: "the hall floods: water underfoot, and every foe chilled" },
+  "Forge-Warden's Hammer": { id: "break", name: "Break the armour", where: "fight", what: "the chosen foe's defence is halved" },
+  "The Queen's Ring": { id: "lull", name: "Her song", where: "fight", what: "half the room sleeps" },
+  "Sporecap Helm": { id: "still", name: "Think it still", where: "fight", what: "the chosen foe is held two turns" },
+  "Prism Amulet": { id: "prism", name: "Turn the light", where: "fight", what: "the next blow on each hero does half" },
+  "Ember Mail": { id: "reforge", name: "Reforge on the spot", where: "both", what: "the wearer's weapon takes an edge for the floor (+2)" },
+  "Patriarch's Reliquary": { id: "unlock", name: "The key that is not", where: "floor", what: "the nearest locked door on the floor opens" },
+  "First Root": { id: "regrow", name: "Regrow", where: "both", what: "a fallen hero rises, to one health" },
+};
+CM.powerOf = (item) => (item && !item.unknown ? CM.RELIC_POWERS[CM.baseIdOf(item)] || null : null);
+// twenty small strange things, one passive oddity each (most through props the rules already read)
+CM.TRINKETS = {
+  rattooth: { name: "A rat's tooth", what: "never ambushed by rats", props: { ratproof: true } },
+  belltongue: { name: "The bell's tongue", what: "the last bell's note when a guardian gathers itself", props: { belltongue: true } },
+  spoon: { name: "A cook's spoon", what: "a ration feeds a hundred steps further", props: { spoon: true } },
+  tallystick: { name: "Tamsin's tally stick", what: "5% more experience", props: { xpBonus: 0.05 } },
+  chalk: { name: "A child's chalk", what: "the floor's carving marked on the map as you arrive", props: { chalk: true } },
+  lodestone: { name: "A lodestone", what: "the way down marked on the map as you arrive", props: { lodestone: true } },
+  dowsingtwig: { name: "A dowsing twig", what: "the floor's gathering marked on the map as you arrive", props: { dowsing: true } },
+  knucklebones: { name: "Knucklebones", what: "+1 Luck", props: { stats: { luck: 1 } } },
+  hourglass: { name: "A cracked hourglass", what: "+3 to the first round's order", props: { hourglass: true } },
+  mirrorshard: { name: "A mirror shard", what: "the first blow on the wearer each fight does half", props: { mirror: true } },
+  thimble: { name: "A thimble", what: "a chest's trap never springs on the wearer", props: { thimble: true } },
+  whetstone: { name: "A whetstone", what: "+1 to the wearer's blows", props: { power1: 1 } },
+  bootlace: { name: "A lucky bootlace", what: "+1 to the round's order", props: { init: 1 } },
+  emberstone: { name: "An ember stone", what: "proof against fire", props: { resist: "fire" } },
+  coldcoin: { name: "A cold coin", what: "10% more gold from a fight", props: { killGold: 0.1 } },
+  sewingkit: { name: "A sewing kit", what: "mends 1 a round in fights", props: { regen: 1 } },
+  steadyhand: { name: "A steady-hand charm", what: "blows land 5% more", props: { hitBonus: 0.05 } },
+  hearthstone: { name: "A hearth stone", what: "the whole party +1 defence", props: { auraDf: 1 } },
+  wick: { name: "A long wick", what: "the torch burns slower", props: { torchSave: true } },
+  sharpeye: { name: "A hawk's eye", what: "weak spots found 5% more", props: { crit: 0.05 } },
+};
+CM.trinket = (id) => ({ name: CM.TRINKETS[id].name, kind: "trinket", slot: "trinket", trinket: id, power: 0, value: 150, props: Object.assign({ rarity: "fine" }, JSON.parse(JSON.stringify(CM.TRINKETS[id].props))) });
+Object.entries(CM.TRINKETS).forEach(([id, t], i) => { CM.BASES[t.name] = { id: t.name, kind: "trinket", slot: "trinket", tier: i, group: "trinket", trinket: id }; });
+CM.GROUP_NAMES.trinket = "Trinkets";
+// a weapon's marks: a guardian slain, or a hundred of anything; at three it may be named
+CM.MARK_KILLS = 100;
+CM.MARKS_TO_NAME = 3;

@@ -544,7 +544,7 @@ test("the dungeon, stranger: choices, a strongbox two floors below its key, a pe
   // the peddler's cloth, and buying from it
   fl.things["5,5"] = { type: "peddler", stock: null }; fl.pos = [5, 5];
   game.use();
-  assert.ok(game.shopping && game.stock && game.stock.length === 5 && game.peddling);
+  assert.ok(game.shopping && game.stock && game.stock.length === 6 && game.peddling);
   game.gold = 1000;
   const want = game.stock.findIndex((i) => i.kind === "greaterheal");
   assert.strictEqual(game.buy(want), "");
@@ -1998,6 +1998,68 @@ test("gathering, the field kit and the kitchen: nodes by hash on ordinary floors
   const g3 = new CM.Game(); g3.newGame("node-3", fixedParty(CM)); playRun(CM, g3, { maxFloor: 3 });
   assert.ok((g3.tally.gathered || 0) > 0 || g3.mode === "title", `the bot gathered ${g3.tally.gathered || 0}`);
   assert.ok(CM.BASES["Field Kit"] && CM.BASES["Orc meat"] && CM.BASES["Grave Lily"] === undefined || true);
+});
+
+test("living items: a relic's power once a floor, a trinket's oddity, a weapon's marks and its name kept through save, vault and a later party, an heirloom's third bearer", () => {
+  const CM = load();
+  assert.strictEqual(Object.keys(CM.TRINKETS).length, 20); assert.strictEqual(Object.keys(CM.RELIC_POWERS).length, 9); assert.ok(CM.SLOTS.includes("trinket"));
+  for (const id of Object.keys(CM.GUARDIANS)) if (CM.GUARDIANS[id].relic) assert.ok(CM.powerOf(CM.relic(id)), `${id}'s relic has a power`);
+  assert.ok(CM.powerOf(CM.makeUnique("firstroot")) && CM.powerOf(CM.makeUnique("firstroot")).id === "regrow");
+  const game = new CM.Game(); game.newGame("living-1", fixedParty(CM));
+  const knight = game.party.find((h) => h.cls === "Knight"), rogue = game.party.find((h) => h.cls === "Rogue");
+  const foe = (df) => ({ name: "Orc", kind: "Orc", hp: 200, max: 200, atk: 1, df, row: "front", xp: 10, gold: 5 });
+  const fight = () => { game.foes = [foe(8), foe(8)]; game.combat = { foes: game.foes, round: 1, order: [], index: 0 }; game.mode = "combat"; game.rnd = new CM.Random(5); };
+  // the crown calls the swarm: every foe bitten, once a floor and not twice
+  fight(); knight.helm = CM.relic("rat"); assert.ok(game.readyPower(knight) && game.readyPower(knight).power.id === "swarm");
+  assert.ok(game.relicPower(knight, null)); assert.ok(game.foes.every((m) => m.hp < 200), "every foe bitten");
+  assert.ok(!game.readyPower(knight)); assert.ok(!game.relicPower(knight, null), "spent for the floor"); assert.strictEqual(knight.helm.poweredFloor, game.floor.number);
+  // the hammer breaks the chosen foe's armour; the prism halves the next blow on each hero; the cap holds; the ring lulls
+  fight(); knight.helm = null; knight.weapon = Object.assign(CM.relic("forge"), { base: "Forge-Warden's Hammer" }); game.target = 1; assert.ok(game.relicPower(knight, { who: 1 })); assert.strictEqual(game.foes[1].df, 4); assert.strictEqual(game.foes[0].df, 8);
+  fight(); knight.weapon = null; knight.amulet = CM.relic("tyrant"); assert.ok(game.relicPower(knight, null)); assert.ok(game.alive().every((p) => p.prism === 1));
+  const hp0 = rogue.hp; game.hurt(rogue, 10, game.foes[0], {}); assert.strictEqual(hp0 - rogue.hp, 5, "the light goes wrong: half"); assert.strictEqual(rogue.prism, 0); rogue.hp = hp0;
+  fight(); knight.amulet = null; knight.helm = CM.relic("mind"); assert.ok(game.relicPower(knight, { who: 0 })); assert.strictEqual(game.foes[0].held, 2);
+  fight(); knight.helm = null; knight.ring = CM.relic("queen"); let slept = 0; for (let i = 0; i < 20 && !slept; i++) { game.rnd = new CM.Random(i); knight.ring.poweredFloor = -1; assert.ok(game.relicPower(knight, null)); slept = game.foes.filter((m) => m.asleep).length; game.foes.forEach((m) => { m.asleep = 0; }); } assert.ok(slept > 0, "someone sleeps");
+  // outside a fight: the reliquary opens the nearest lock; the root regrows a fallen hero; a fight-only power can't be spent on the floor
+  game.mode = "explore"; game.combat = null; game.foes = []; knight.ring = null; knight.amulet = CM.relic("patriarch");
+  const fl = game.floor, [px, py] = fl.pos, dk = `${px + 1},${py}`; fl.features[dk] = { type: "door", open: false, locked: true };
+  assert.ok(game.usePower(game.party.indexOf(knight))); assert.ok(fl.features[dk].open && !fl.features[dk].locked, "the lock gives"); assert.ok(!game.usePower(game.party.indexOf(knight)), "once a floor");
+  knight.amulet = null; knight.helm = CM.relic("rat"); knight.helm.poweredFloor = -1; assert.ok(!game.usePower(game.party.indexOf(knight)), "the swarm is for a fight"); knight.helm = null;
+  rogue.hp = 0; knight.weapon = CM.makeUnique("firstroot"); assert.ok(game.usePower(game.party.indexOf(knight))); assert.strictEqual(rogue.hp, 1, "regrown"); knight.weapon = null;
+  assert.ok((game.tally.used || {}).power >= 7, `powers counted: ${JSON.stringify(game.tally.used)}`);
+  // a trinket in the ninth slot: the child's chalk marks the carving on the map as the party arrives; a lodestone the way down
+  game.bag.push(CM.trinket("chalk")); assert.strictEqual(game.equip(rogue, game.bag.length - 1), ""); assert.strictEqual(rogue.trinket.trinket, "chalk"); assert.ok(CM.partyProp(game.party, "chalk"));
+  game.bag.push(CM.trinket("lodestone")); assert.strictEqual(game.equip(knight, game.bag.length - 1), ""); assert.ok(CM.partyProp(game.party, "lodestone"));
+  game.enterFloor(2, "down"); const f2 = game.floor, carved = Object.keys(f2.features).find((k) => f2.features[k].type === "carving"), goal = CM.goalOf(f2);
+  if (carved) assert.ok(f2.seen.some(([x, y]) => `${x},${y}` === carved), "the carving is on the map"); assert.ok(goal && f2.seen.some(([x, y]) => `${x},${y}` === goal), "and the way down");
+  assert.ok(CM.itemLabel(rogue.trinket).toLowerCase().includes("carving"), CM.itemLabel(rogue.trinket)); assert.ok(CM.itemCard(rogue.trinket));
+  const stick = CM.trinket("tallystick"); game.bag.push(stick); game.equip(rogue, game.bag.length - 1); assert.ok(CM.gearProp(rogue, "xpBonus") >= 0.05 && game.bag.some((i) => i.trinket === "chalk"), "the old trinket back in the pack");
+  // a weapon that grows: the hundredth kill is a mark; a guardian slain is a mark; at three it is named, and the name is the item's
+  const sword = { name: "Long Sword", base: "Long Sword", kind: "weapon", slot: "weapon", power: 8, value: 50, props: {} }; knight.weapon = sword;
+  fight(); game.foes[0].hp = 1; sword.kills = CM.MARK_KILLS - 1; game.strike(knight, game.foes[0], "", { sure: true }); assert.strictEqual(game.foes[0].lastWeapon, sword); game.foes[1].hp = 0; game.foes[1].lastWeapon = null;
+  game.wonFight(); assert.strictEqual(sword.marks, 1); assert.strictEqual(sword.power, 9); assert.ok(sword.history.length === 1 && sword.history[0].includes("100 slain"), sword.history.join("|")); game.mode = "explore"; game.combat = null;
+  assert.ok(game.nameWeapon(game.party.indexOf(knight), "Gnasher").includes("third"));
+  const rat = { name: "The Rat King", kind: "Rat King", guardian: "rat", boss: false, hp: 0, max: 1, lastWeapon: sword }; game.slayGuardian(rat); assert.strictEqual(sword.marks, 2); assert.ok(sword.history[1].includes("Rat King"));
+  game.markWeapon(sword, "the test's third mark"); assert.strictEqual(sword.marks, 3); assert.strictEqual(sword.power, 11); assert.ok(game.messages.slice(-1)[0].includes("earned a name"), game.messages.slice(-1)[0]);
+  assert.strictEqual(game.nameWeapon(game.party.indexOf(knight), "  Gnasher  "), ""); assert.strictEqual(sword.named, "Gnasher"); assert.strictEqual(CM.itemName(sword), "Gnasher"); assert.ok(CM.itemLabel(sword).includes("3 marks"));
+  assert.ok(game.nameWeapon(game.party.indexOf(knight), "Other").includes("already"));
+  assert.ok(game.compendium.named && game.compendium.named[0].name === "Gnasher" && game.compendium.named[0].base === "Long Sword" && game.compendium.named[0].history.length === 3);
+  assert.ok(game.runLog.some((l) => l[0] === "nameWeapon" && l[2] === "Gnasher") && game.runLog.some((l) => l[0] === "usePower"), "logged, for the film");
+  // kept through save and load, into the vault for nothing, and found again by a later party
+  game.saveRun(); const g2 = new CM.Game(); g2.continueRun(); const k2 = g2.party.find((h) => h.cls === "Knight"); assert.strictEqual(k2.weapon.named, "Gnasher"); assert.strictEqual(k2.weapon.marks, 3); assert.strictEqual(CM.itemName(k2.weapon), "Gnasher");
+  g2.mode = "camp"; g2.vaults = [{ name: "Old Ring", kind: "ring", slot: "ring", power: 1, value: 10, props: {} }]; assert.strictEqual(g2.vaultCapacity(), 1); assert.ok(!g2.vaultRoom());
+  k2.weapon = { name: "Fists", kind: "weapon", slot: "weapon", power: 1, value: 0, props: { fists: true } }; g2.bag.push(Object.assign({}, k2.weapon, { fists: false })); const named = g2.bag.push(Object.assign({}, JSON.parse(JSON.stringify(g2.party.find((h) => h.cls === "Knight").weapon)), { named: "Gnasher", name: "Gnasher", marks: 3, base: "Long Sword", props: {} })) - 1;
+  assert.strictEqual(g2.leaveHeirloom(named), ""); assert.strictEqual(g2.vaults.length, 2, "a named weapon takes no slot, and bumps nothing"); assert.ok(!g2.vaultRoom(), "the one slot is still the ring's");
+  const g3 = new CM.Game(); assert.strictEqual(CM.namedWeapons.length, 1);
+  let found = null; for (let n = 4; n <= 40 && !found; n++) for (const seed of ["living-2", "living-3", "living-4"]) { const f = CM.makeFloor(n, seed, 2); for (const t of Object.values(f.things)) if (t.type === "chest" && (t.items || []).some((i) => i.named === "Gnasher")) { found = t.items.find((i) => i.named === "Gnasher"); break; } if (found) break; }
+  assert.ok(found, "a later party finds the named sword"); assert.strictEqual(found.base, "Long Sword"); assert.strictEqual(found.marks, 3); assert.strictEqual(found.power, (CM.BASES["Long Sword"].tier + 1) * 3 + 3); assert.ok(found.history.slice(-1)[0].includes("found again") && found.props.legend);
+  assert.strictEqual(CM.itemName(found), "Gnasher"); assert.ok(CM.itemLabel(found).includes("Rat King"), "its story comes with it");
+  // an heirloom with memory: the third bearer wears it as a relic, and the set of relics counts it
+  const g4 = new CM.Game(); g4.newGame("living-5", fixedParty(CM)); const m4 = g4.party.find((h) => h.cls === "Mage");
+  const ring = { name: "Plain Ring", base: "Ring", kind: "ring", slot: "ring", power: 1, value: 10, props: {}, bearers: ["Aldous", "Tamsin"] }; g4.bag.push(ring);
+  assert.strictEqual(CM.relicsWorn(m4), 0); assert.strictEqual(g4.equip(m4, g4.bag.length - 1), ""); assert.ok(ring.props.heirloom && ring.bearers.length === 3, JSON.stringify(ring.bearers)); assert.strictEqual(CM.relicsWorn(m4), 1);
+  assert.ok(CM.itemLabel(ring).includes("heirloom") && CM.itemLabel(ring).includes("Aldous"));
+  // the bot still finishes a run with all of this in it
+  const g5 = new CM.Game(); g5.newGame("living-6", fixedParty(CM)); playRun(CM, g5, { maxFloor: 6 }); assert.ok(g5.mode === "title" || g5.floor.number >= 5 || g5.party.every((h) => h.hp <= 0), `bot: ${g5.mode} floor ${g5.floor && g5.floor.number}`);
 });
 
 (async () => {

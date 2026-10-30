@@ -179,6 +179,13 @@ CM.itemLabel = function (item) {
   if (p.stun) bits.push("a blow may leave the foe reeling");
   if (p.twohanded) bits.push("two-handed");
   if (p.relic) bits.push("a guardian's relic");
+  if (p.heirloom) bits.push("an heirloom thrice borne: worn as a relic");
+  if (item.bearers && item.bearers.length) bits.push(`borne by ${item.bearers.join(", ")}`);
+  if (CM.powerOf(item)) bits.push(`a power, once a floor: ${CM.powerOf(item).name} - ${CM.powerOf(item).what}`);
+  if (item.kind === "trinket" && CM.TRINKETS[item.trinket]) bits.push(CM.TRINKETS[item.trinket].what);
+  if (item.marks) bits.push(`${CM.plural(item.marks, "mark")}${item.named ? "" : item.marks >= CM.MARKS_TO_NAME ? " - it may be named" : ""}`);
+  if (item.history && item.history.length) bits.push(item.history.join("; "));
+  if (p.power1) bits.push(`+${p.power1} to blows`);
   if (p.unique) bits.push("unique: " + CM.UNIQUES[p.unique].lore.replace(/\.$/, ""));
   if (p.bow) bits.push("a bow: the Ranger's");
   if (p.cursed) bits.push(`CURSED${p.curse && CM.CURSES[p.curse] ? ` (${CM.CURSES[p.curse].name}: ${CM.CURSES[p.curse].what})` : ""}`);
@@ -330,6 +337,14 @@ CM.guardianGroup = function (id, floor, rnd) {
   for (const name of CM.GUARDIANS[id].escorts || []) group.push(CM.makeMonster(CM.monsterKind(name), level, rnd));
   return group;
 };
+// a named weapon from the compendium, made again for a later party: its base, its marks, and its story so far
+CM.namedWeapons = CM.namedWeapons || [];
+CM.legendWeapon = function (e, floor) {
+  const B = CM.BASES[e.base] || CM.BASES["Short Sword"], marks = Math.max(1, (e.history || []).length), props = { rarity: "fine", legend: true };
+  if (B.bow) { props.bow = true; props.twohanded = true; } else if (B.twohanded) props.twohanded = true;
+  return { name: e.name, named: e.name, base: B.id, kind: "weapon", slot: "weapon", power: (B.tier + 1) * 3 + marks, value: 300 + marks * 100, props, marks,
+    history: (e.history || []).concat(`lost by ${e.bearer || "a party before"}, and found again on floor ${floor}`), unknown: false };
+};
 CM.relic = function (id) {
   const r = CM.GUARDIANS[id].relic;
   return { name: r.name, kind: r.kind, slot: r.slot, power: r.power, value: r.value, props: Object.assign({}, r.props), unknown: false };
@@ -371,7 +386,7 @@ CM.makeHero = function (cls, name, stats, row, quirk, origin) {
     stats: Object.assign({}, stats || CM.rollStats(cls)), row: row || c.row, status: {}, boons: [], pending: 0, offer: null, path: null, learned: [], quirk: CM.QUIRKS[quirk] ? quirk : null,
     weapon: { name: c.weapon, kind: "weapon", slot: "weapon", power: 1, value: 5, props: c.weapon === "Short Bow" ? { bow: true, twohanded: true } : c.weapon === "Wrapped Fists" ? { fists: true, twohanded: true } : {} },
     armor: { name: c.armor, kind: "armor", slot: "armor", power: 0, value: 5, props: { weight: "light" } },
-    offhand: null, helm: null, ring: null, amulet: null, boots: null, cloak: null };
+    offhand: null, helm: null, ring: null, amulet: null, boots: null, cloak: null, trinket: null };
   if (h.quirk) for (const [st, d] of Object.entries(CM.QUIRKS[h.quirk].stats)) h.stats[st] = CM.clamp(h.stats[st] + d, 3, 25);
   h.origin = CM.ORIGINS[origin] ? origin : null;
   if (h.origin === "nobody") h.stats.luck = CM.clamp(h.stats.luck + 1, 3, 25);
@@ -391,7 +406,7 @@ CM.upgradeHero = function (h) {
   h.offer = h.offer || null;
   h.path = h.path || null;
   h.learned = h.learned || [];
-  for (const slot of ["offhand", "helm", "ring", "amulet", "boots", "cloak"]) if (h[slot] === undefined) h[slot] = null;
+  for (const slot of ["offhand", "helm", "ring", "amulet", "boots", "cloak", "trinket"]) if (h[slot] === undefined) h[slot] = null;
   for (const slot of ["weapon", "armor"]) if (h[slot]) { h[slot].props = h[slot].props || {}; h[slot].slot = slot; }
   return h;
 };
@@ -412,8 +427,8 @@ CM.heroStat = function (h, s) {
   return v;
 };
 // what the gear gives besides: weak spots, mending a round, thorns - summed over what's worn and known
-CM.gearProp = (h, prop) => CM.equipped(h).reduce((n, it) => n + ((it.props && !it.unknown && typeof it.props[prop] === "number") ? it.props[prop] : 0), 0);
-CM.relicsWorn = (h) => CM.equipped(h).filter((it) => it.props && it.props.relic && !it.unknown).length;
+CM.gearProp = (h, prop) => CM.equipped(h).reduce((n, it) => n + (it.props && !it.unknown ? (typeof it.props[prop] === "number" ? it.props[prop] : it.props[prop] === true ? 1 : 0) : 0), 0);   // (a flag counts one: the trinkets' oddities)
+CM.relicsWorn = (h) => CM.equipped(h).filter((it) => it.props && (it.props.relic || it.props.heirloom) && !it.unknown).length;   // (an heirloom worn by its third bearer counts)
 
 // what the gear keeps off: armour and shield count double, a helm and a warding amulet once
 CM.gearDefence = (h) => (h.armor ? h.armor.power : 0) * 2 + (h.offhand ? h.offhand.power * 2 : 0) + (h.helm ? h.helm.power : 0) + (h.cloak && h.cloak.unknown ? h.cloak.power : 0)
@@ -773,6 +788,10 @@ CM.furnish = function (floor, seed, gen) {
     if (number <= 3 && CM.legends.length && h("legend") % 100 < 50) {
       const k = pickCell("legend", (c) => !roomCells.has(c)) || pickCell("legend");
       if (k) floor.things[k] = { type: "ghost", legend: h("legend:which") % CM.legends.length, asked: false };
+    }
+    if (number >= 4 && (CM.namedWeapons || []).length && h("named") % 100 < 12) {   // a weapon a party of this browser's named, found again, in a chest
+      const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items).sort();
+      if (chests.length) floor.things[chests[h("named:chest") % chests.length]].items.push(CM.legendWeapon(CM.namedWeapons[h("named:which") % CM.namedWeapons.length], number));
     }
     CM.COURT.forEach((c, i) => {                                        // the seated dead of the palace, and the physician's page in one of its chests
       if (c.floor !== number) return;

@@ -29,6 +29,7 @@ Object.assign(CM.UI.prototype, {
       btn("<kbd>F</kbd>Fight", () => g.act("fight", g.target));
       btn("<kbd>C</kbd>Cast / Skill", () => this.combatMenu("cast"), !CM.abilitiesFor(h).length);
       btn("<kbd>P</kbd>Item", () => this.combatMenu("item"));
+      { const ready = g.readyPower(h); if (ready || CM.equipped(h).some((it) => CM.powerOf(it))) btn(`<kbd>L</kbd>${ready ? ready.power.name : "Relic (spent)"}<small>${ready ? ready.power.what : "its power is spent for this floor"}</small>`, () => g.act("power", { who: g.target }), !ready); }
       btn("<kbd>D</kbd>Defend", () => g.act("defend"));
       btn("<kbd>R</kbd>Run", () => g.act("run"));
       btn(`<kbd>A</kbd>${c.auto ? "Stop auto" : "Auto"}`, () => g.autoFight(!c.auto), false, c.auto ? "on" : "");

@@ -166,7 +166,7 @@ Size: M.
 
 Size: M.
 
-## Phase 5 - Living items: charged relics, trinkets, and weapons that grow - v4.6
+## Phase 5 - Living items: charged relics, trinkets, and weapons that grow - v4.6 - DONE
 
 - **Charged powers on the relics**: each guardian's relic gains a power, once a floor (the Rat King's Crown calls
   the swarm *for* you; the Shield of the Drowned raises the water; the Forge-Warden's Hammer breaks a foe's armour;

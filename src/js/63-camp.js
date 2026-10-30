@@ -224,6 +224,7 @@ Object.assign(CM.Game.prototype, {
       this.say(`${hero.name} slings the shield: the ${CM.baseName(item)} takes both hands.`);
       hero.offhand = null;
     }
+    if (item.bearers && !item.bearers.includes(hero.name)) { item.bearers.push(hero.name); if (item.bearers.length >= 3 && !(item.props || {}).relic && !(item.props || {}).unique) { item.props = item.props || {}; item.props.heirloom = true; this.say(`${item.name} has been borne by three now: it is an heirloom, and counts among the relics.`); } }
     const learned = this.reveal(item);
     const ratio = hero.hp / hero.max;
     CM.recompute(hero);
@@ -250,7 +251,7 @@ Object.assign(CM.Game.prototype, {
     if (item.kind === "boxkey") return `That key is for the strongbox on floor ${item.box}. Walk up to the box and use it.`;
     if (item.kind === "ration") {
       this.bag.splice(row, 1); this.countUse("ration");
-      this.fed = 0;
+      this.fed = CM.partyProp(this.party, "spoon") ? -100 : 0;
       this.cheer(2);
       this.sound("heal");
       this.say(`The party eats. ${hero.name} hands the last of it round.`);
@@ -644,7 +645,7 @@ Object.assign(CM.Game.prototype, {
     if (!item) return "Pick something from your pack.";
     if (["key", "bones", "rope", "torch"].includes(item.kind)) return "The merchant won't keep that. Something worth the keeping.";
     this.vaults = this.vaults || [];
-    const old = this.vaultRoom() ? null : this.vaults.shift();
+    const old = this.vaultRoom() || item.named ? null : this.vaults.splice(this.vaults.findIndex((it) => !it.named), 1)[0];
     this.bag.splice(row, 1);
     this.vaults.push(item);
     CM.store.set("vaults", this.vaults);
@@ -662,6 +663,7 @@ Object.assign(CM.Game.prototype, {
     const item = this.vaults.splice(Math.min(i, this.vaults.length - 1), 1)[0];
     CM.store.set("vaults", this.vaults);
     CM.store.remove("vault");
+    item.bearers = item.bearers || [];                                   // (an heirloom remembers who wore it; the third bearer wears it as a relic)
     this.gain([item], "vault");
     this.sound("chest");
     this.say(`The merchant unlocks the vault: ${item.name}, left by a party before you.`);
@@ -741,12 +743,12 @@ const RANK = { weapon: 0, armor: 1, shield: 2, helm: 3, ring: 4, amulet: 5, heal
 Object.assign(CM.Game.prototype, {
   // {text, cls, why} for the bag's buttons: "+2" against what the hero wears, "can't" with the reason, nothing for a potion
   compare(h, item) {
-    if (!item || !["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(item.kind)) return null;
+    if (!item || !["weapon", "armor", "shield", "helm", "ring", "amulet", "trinket", "boots", "cloak"].includes(item.kind)) return null;
     const why = CM.cantWear(h, item);
     if (why) return { text: "can't", cls: "bad", why };
     if (item.unknown) return { text: "?", cls: "", why: "Unknown until worn, read with a scroll, or shown to the scribe" };
     const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind), old = h[slot];
-    if (item.kind === "ring" || item.kind === "amulet") {
+    if (item.kind === "ring" || item.kind === "amulet" || item.kind === "trinket") {
       const same = old && !old.unknown && CM.itemLabel(old) === CM.itemLabel(item);
       return { text: same ? "same" : old ? "swap" : "new", cls: same ? "" : "good", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (${CM.itemLabel(old)})` : "Nothing there now" };
     }

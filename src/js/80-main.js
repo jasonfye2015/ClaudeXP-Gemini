@@ -485,6 +485,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (e.code === K.cast) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "cast" ? "main" : "cast");
       else if (e.code === K.item) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "item" ? "main" : "item");
       else if (e.code === K.defend) game.act("defend");
+      else if (e.code === "KeyL" && game.readyPower(game.combat.waiting)) game.act("power", { who: game.target });
       else if (e.code === K.run) game.act("run");
       else if (e.code === K.auto) game.autoFight(!game.combat.auto);
       return;

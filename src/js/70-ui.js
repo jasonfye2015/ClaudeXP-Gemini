@@ -329,6 +329,9 @@ CM.UI = class {
     for (const b of facts.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { if (g.setRow(h, b.dataset.row)) this.renderSheet(); });
     for (const b of facts.querySelectorAll("button[data-formation]")) b.addEventListener("click", () => { if (g.setFormation(b.dataset.formation)) this.renderSheet(); });
     for (const b of facts.querySelectorAll("button[data-off]")) b.addEventListener("click", () => { const note = g.takeOff(this.sheetOf, b.dataset.off); if (note) g.say(note); this.renderSheet(); });
+    { const ready = g.mode !== "combat" && g.readyPower(h), spent = !ready && CM.equipped(h).some((it) => CM.powerOf(it));   // a relic's power, from the sheet, out of a fight
+      if (ready || spent) { const b = document.createElement("button"); b.textContent = ready ? `${ready.power.name}: ${ready.power.what}` : "The relic's power is spent for this floor"; b.disabled = !ready || g.mode === "combat"; b.addEventListener("click", () => { g.usePower(this.sheetOf); this.renderSheet(); this.refresh(); }); facts.appendChild(b); }
+      if (h.weapon && (h.weapon.marks || 0) >= CM.MARKS_TO_NAME && !h.weapon.named) { const b = document.createElement("button"); b.textContent = `Name the ${CM.baseIdOf(h.weapon)} (${CM.plural(h.weapon.marks, "mark")})`; b.addEventListener("click", () => { const name = window.prompt("A name for it:", ""); if (name) { const note = g.nameWeapon(this.sheetOf, name); if (note) g.say(note); } this.renderSheet(); this.refresh(); }); facts.appendChild(b); } }
     left.appendChild(facts);
     const right = this.$("#sheet-right");
     right.innerHTML = `<table class="stats">${CM.STATS.map((s) => `<tr class="${s === c.key ? "key" : ""}"><td>${CM.STAT_NAMES[s]}</td><td class="v">${g.stat(h, s)}</td><td class="hint">${s === c.key ? "their calling's stat" : CM.STAT_HINTS[s]}</td></tr>`).join("")}</table>
@@ -902,6 +905,8 @@ CM.UI = class {
     const groups = CM.compendium(this.game.compendium), esc = (x) => this.esc(x);
     const seen = groups.reduce((n, g) => n + g.seen, 0), total = groups.reduce((n, g) => n + g.total, 0);
     let html = `<div class="small">${seen} of ${total} kinds of thing found, ever. An unknown thing counts once it is named.</div>`;
+    const named = (this.game.compendium || {}).named || [];
+    if (named.length) html += `<div class="list-title">Named weapons <small>${named.length}</small></div>` + named.map((w) => `<div class="entry"><small>${esc(w.base)}, ${esc(w.bearer)}'s, ${esc(w.date)}</small><p><b>${esc(w.name)}</b>${w.history.length ? ` - ${esc(w.history.join("; "))}` : ""}</p></div>`).join("");
     for (const g of groups) html += `<div class="list-title">${esc(g.name)} <small>${g.seen} of ${g.total}</small></div><div class="things">${g.list.map((b) => `<span class="thing ${b.seen ? "seen" : "unseen"}" title="${b.seen ? `first found on floor ${b.when.floor}, ${esc(b.when.date)}` : "not yet found"}">${b.seen ? esc(b.id) : "?".repeat(Math.min(12, b.id.length))}</span>`).join("")}</div>`;
     return html;
   }

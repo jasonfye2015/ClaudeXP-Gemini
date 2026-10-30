@@ -57,6 +57,7 @@ CM.Game = class {
     this.fallen = CM.store.get("fallen", []);             // where parties fell, by seed: a later run on that seed finds their remains
     CM.activeRumours = (this.village.rumours || []).filter((r) => r.seed);   // (what the chronicler promised, for CM.furnish)
     CM.legends = this.fame.filter((e) => e.won);
+    CM.namedWeapons = (this.compendium.named || []).slice();            // (a named weapon of an earlier party may be found again: CM.furnish)
     if (!this.ledger.length && (this.fame.length || this.fameEndless.length)) {   // (the runs that ended before the ledger was kept: read back from the boards)
       this.ledger = this.fame.concat(this.fameEndless).map(CM.ledgerFromFame);
       CM.store.set("ledger", this.ledger);
@@ -458,6 +459,12 @@ CM.Game = class {
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
     if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
+    if (fresh) {                                                         // the trinkets that mark the map: the carving, the way down, the gathering
+      const mark = (k) => { const [x, y] = k.split(",").map(Number); if (!fl.seen.some(([sx, sy]) => sx === x && sy === y)) fl.seen.push([x, y]); };
+      if (CM.partyProp(this.party, "chalk")) for (const [k, f] of Object.entries(fl.features)) if (f.type === "carving") mark(k);
+      if (CM.partyProp(this.party, "lodestone")) { const goal = CM.goalOf(fl); if (goal) mark(goal); }
+      if (CM.partyProp(this.party, "dowsing")) for (const [k, t] of Object.entries(fl.things)) if (t.type === "node") mark(k);
+    }
     if (fresh && this.meal && this.meal.floor < number) { this.meal = null; this.say("The meal has worn off."); for (const h of this.party) { h.mealLuck = 0; CM.recompute(h); } }
     if (fresh && this.buffs) { for (const k of ["stoneskin", "night", "sharpen", "salve"]) if (this.buffs[k] !== undefined && this.buffs[k] < number) delete this.buffs[k]; if (this.buffs.owleyes) { this.buffs.owleyes -= 1; if (this.buffs.owleyes <= 0) { delete this.buffs.owleyes; this.say("The owl's eyes close: the dark is the dark again."); } } }
     if (fresh) for (const h of this.alive()) if (CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "haunted")) this.afflict(h, "curse", "the haunted thing");

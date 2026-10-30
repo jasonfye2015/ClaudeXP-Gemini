@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v4.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v4.6 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -424,7 +424,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "4.5", built: "2026-10-30" };
+const CM = window.CM = { version: "4.6", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -594,8 +594,8 @@ CM.ELEMENTS = { fire: { prefix: "Flaming", weak: ["Troll", "Zombie"] }, frost: {
 CM.ARMOR_WEIGHT = (tier) => (tier <= 3 ? "light" : tier <= 7 ? "medium" : "heavy");
 CM.BEARS = { Knight: "heavy", Paladin: "heavy", Rogue: "medium", Ranger: "medium", Cleric: "medium", Druid: "medium", Bard: "medium", Mage: "light", Monk: "light", Necromancer: "light", Artificer: "medium" };
 CM.SHIELD_BEARERS = ["Knight", "Paladin", "Cleric", "Rogue", "Druid", "Bard", "Artificer"];
-CM.SLOTS = ["weapon", "offhand", "armor", "helm", "ring", "amulet", "boots", "cloak"];
-CM.SLOT_NAMES = { weapon: "Weapon", offhand: "Off hand", armor: "Armour", helm: "Helm", ring: "Ring", amulet: "Amulet", boots: "Boots", cloak: "Cloak" };
+CM.SLOTS = ["weapon", "offhand", "armor", "helm", "ring", "amulet", "boots", "cloak", "trinket"];
+CM.SLOT_NAMES = { weapon: "Weapon", offhand: "Off hand", armor: "Armour", helm: "Helm", ring: "Ring", amulet: "Amulet", boots: "Boots", cloak: "Cloak", trinket: "Trinket" };
 // boots: speed (and some, silence or dry feet); cloaks: warding (and some, a hood against the dark's surprises)
 CM.BOOTS = [{ name: "Sandals", power: 1 }, { name: "Soft Boots", power: 1, silence: true }, { name: "Hobnailed Boots", power: 2 }, { name: "Marsh Boots", power: 2, waterwalk: true },
   { name: "Boots of Silence", power: 3, silence: true }, { name: "Wayfarer's Boots", power: 3, waterwalk: true }, { name: "Boots of the Fox", power: 4, silence: true }];
@@ -2240,6 +2240,7 @@ CM.baseIdOf = function (item) {
 // what a thing is called, from what it is made of: prefix, element, base, suffix, plus
 CM.itemName = function (item) {
   const p = item.props || {}, base = CM.baseIdOf(item);
+  if (item.named) return item.named;
   if (p.unique) return CM.UNIQUES[p.unique] ? CM.UNIQUES[p.unique].name + (p.awake ? ", Awake" : "") : item.name;
   if (p.relic) return base;
   if (item.kind === "ring") return `${base} +${item.power}`;
@@ -2361,6 +2362,49 @@ CM.healPotion = function (floor) {                                        // the
 CM.manaPotion = (floor) => (floor < 6 ? { name: "Lesser Mana Potion", kind: "mana", power: 8 + floor, value: 15 } : floor < 21 ? { name: "Mana Potion", kind: "mana", power: 12 + floor, value: 25 } : { name: "Greater Mana Potion", kind: "mana", power: 30 + floor, value: 60 });
 CM.lesserFeather = () => ({ name: "Lesser Phoenix Feather", kind: "revive0", power: 0, value: 60 });
 CM.BELT_KINDS = ["salve", "bread", "liniment", "heal", "greaterheal", "mana", "revive", "revive0", "antidote", "bomb", "flask", "elixir", "scroll", "wand", "ration", "torch", "lampoil"];
+
+// ---- living items: charged powers on the relics, trinkets, weapons that grow and can be named, heirlooms with memory ----
+CM.RELIC_POWERS = {
+  "Rat King's Crown": { id: "swarm", name: "Call the swarm", where: "fight", what: "the rats pour out for you: every foe bitten" },
+  "Shield of the Drowned": { id: "tide", name: "Raise the water", where: "fight", what: "the hall floods: water underfoot, and every foe chilled" },
+  "Forge-Warden's Hammer": { id: "break", name: "Break the armour", where: "fight", what: "the chosen foe's defence is halved" },
+  "The Queen's Ring": { id: "lull", name: "Her song", where: "fight", what: "half the room sleeps" },
+  "Sporecap Helm": { id: "still", name: "Think it still", where: "fight", what: "the chosen foe is held two turns" },
+  "Prism Amulet": { id: "prism", name: "Turn the light", where: "fight", what: "the next blow on each hero does half" },
+  "Ember Mail": { id: "reforge", name: "Reforge on the spot", where: "both", what: "the wearer's weapon takes an edge for the floor (+2)" },
+  "Patriarch's Reliquary": { id: "unlock", name: "The key that is not", where: "floor", what: "the nearest locked door on the floor opens" },
+  "First Root": { id: "regrow", name: "Regrow", where: "both", what: "a fallen hero rises, to one health" },
+};
+CM.powerOf = (item) => (item && !item.unknown ? CM.RELIC_POWERS[CM.baseIdOf(item)] || null : null);
+// twenty small strange things, one passive oddity each (most through props the rules already read)
+CM.TRINKETS = {
+  rattooth: { name: "A rat's tooth", what: "never ambushed by rats", props: { ratproof: true } },
+  belltongue: { name: "The bell's tongue", what: "the last bell's note when a guardian gathers itself", props: { belltongue: true } },
+  spoon: { name: "A cook's spoon", what: "a ration feeds a hundred steps further", props: { spoon: true } },
+  tallystick: { name: "Tamsin's tally stick", what: "5% more experience", props: { xpBonus: 0.05 } },
+  chalk: { name: "A child's chalk", what: "the floor's carving marked on the map as you arrive", props: { chalk: true } },
+  lodestone: { name: "A lodestone", what: "the way down marked on the map as you arrive", props: { lodestone: true } },
+  dowsingtwig: { name: "A dowsing twig", what: "the floor's gathering marked on the map as you arrive", props: { dowsing: true } },
+  knucklebones: { name: "Knucklebones", what: "+1 Luck", props: { stats: { luck: 1 } } },
+  hourglass: { name: "A cracked hourglass", what: "+3 to the first round's order", props: { hourglass: true } },
+  mirrorshard: { name: "A mirror shard", what: "the first blow on the wearer each fight does half", props: { mirror: true } },
+  thimble: { name: "A thimble", what: "a chest's trap never springs on the wearer", props: { thimble: true } },
+  whetstone: { name: "A whetstone", what: "+1 to the wearer's blows", props: { power1: 1 } },
+  bootlace: { name: "A lucky bootlace", what: "+1 to the round's order", props: { init: 1 } },
+  emberstone: { name: "An ember stone", what: "proof against fire", props: { resist: "fire" } },
+  coldcoin: { name: "A cold coin", what: "10% more gold from a fight", props: { killGold: 0.1 } },
+  sewingkit: { name: "A sewing kit", what: "mends 1 a round in fights", props: { regen: 1 } },
+  steadyhand: { name: "A steady-hand charm", what: "blows land 5% more", props: { hitBonus: 0.05 } },
+  hearthstone: { name: "A hearth stone", what: "the whole party +1 defence", props: { auraDf: 1 } },
+  wick: { name: "A long wick", what: "the torch burns slower", props: { torchSave: true } },
+  sharpeye: { name: "A hawk's eye", what: "weak spots found 5% more", props: { crit: 0.05 } },
+};
+CM.trinket = (id) => ({ name: CM.TRINKETS[id].name, kind: "trinket", slot: "trinket", trinket: id, power: 0, value: 150, props: Object.assign({ rarity: "fine" }, JSON.parse(JSON.stringify(CM.TRINKETS[id].props))) });
+Object.entries(CM.TRINKETS).forEach(([id, t], i) => { CM.BASES[t.name] = { id: t.name, kind: "trinket", slot: "trinket", tier: i, group: "trinket", trinket: id }; });
+CM.GROUP_NAMES.trinket = "Trinkets";
+// a weapon's marks: a guardian slain, or a hundred of anything; at three it may be named
+CM.MARK_KILLS = 100;
+CM.MARKS_TO_NAME = 3;
 
 // ---- 20-world.js ----
 "use strict";
@@ -2544,6 +2588,13 @@ CM.itemLabel = function (item) {
   if (p.stun) bits.push("a blow may leave the foe reeling");
   if (p.twohanded) bits.push("two-handed");
   if (p.relic) bits.push("a guardian's relic");
+  if (p.heirloom) bits.push("an heirloom thrice borne: worn as a relic");
+  if (item.bearers && item.bearers.length) bits.push(`borne by ${item.bearers.join(", ")}`);
+  if (CM.powerOf(item)) bits.push(`a power, once a floor: ${CM.powerOf(item).name} - ${CM.powerOf(item).what}`);
+  if (item.kind === "trinket" && CM.TRINKETS[item.trinket]) bits.push(CM.TRINKETS[item.trinket].what);
+  if (item.marks) bits.push(`${CM.plural(item.marks, "mark")}${item.named ? "" : item.marks >= CM.MARKS_TO_NAME ? " - it may be named" : ""}`);
+  if (item.history && item.history.length) bits.push(item.history.join("; "));
+  if (p.power1) bits.push(`+${p.power1} to blows`);
   if (p.unique) bits.push("unique: " + CM.UNIQUES[p.unique].lore.replace(/\.$/, ""));
   if (p.bow) bits.push("a bow: the Ranger's");
   if (p.cursed) bits.push(`CURSED${p.curse && CM.CURSES[p.curse] ? ` (${CM.CURSES[p.curse].name}: ${CM.CURSES[p.curse].what})` : ""}`);
@@ -2695,6 +2746,14 @@ CM.guardianGroup = function (id, floor, rnd) {
   for (const name of CM.GUARDIANS[id].escorts || []) group.push(CM.makeMonster(CM.monsterKind(name), level, rnd));
   return group;
 };
+// a named weapon from the compendium, made again for a later party: its base, its marks, and its story so far
+CM.namedWeapons = CM.namedWeapons || [];
+CM.legendWeapon = function (e, floor) {
+  const B = CM.BASES[e.base] || CM.BASES["Short Sword"], marks = Math.max(1, (e.history || []).length), props = { rarity: "fine", legend: true };
+  if (B.bow) { props.bow = true; props.twohanded = true; } else if (B.twohanded) props.twohanded = true;
+  return { name: e.name, named: e.name, base: B.id, kind: "weapon", slot: "weapon", power: (B.tier + 1) * 3 + marks, value: 300 + marks * 100, props, marks,
+    history: (e.history || []).concat(`lost by ${e.bearer || "a party before"}, and found again on floor ${floor}`), unknown: false };
+};
 CM.relic = function (id) {
   const r = CM.GUARDIANS[id].relic;
   return { name: r.name, kind: r.kind, slot: r.slot, power: r.power, value: r.value, props: Object.assign({}, r.props), unknown: false };
@@ -2736,7 +2795,7 @@ CM.makeHero = function (cls, name, stats, row, quirk, origin) {
     stats: Object.assign({}, stats || CM.rollStats(cls)), row: row || c.row, status: {}, boons: [], pending: 0, offer: null, path: null, learned: [], quirk: CM.QUIRKS[quirk] ? quirk : null,
     weapon: { name: c.weapon, kind: "weapon", slot: "weapon", power: 1, value: 5, props: c.weapon === "Short Bow" ? { bow: true, twohanded: true } : c.weapon === "Wrapped Fists" ? { fists: true, twohanded: true } : {} },
     armor: { name: c.armor, kind: "armor", slot: "armor", power: 0, value: 5, props: { weight: "light" } },
-    offhand: null, helm: null, ring: null, amulet: null, boots: null, cloak: null };
+    offhand: null, helm: null, ring: null, amulet: null, boots: null, cloak: null, trinket: null };
   if (h.quirk) for (const [st, d] of Object.entries(CM.QUIRKS[h.quirk].stats)) h.stats[st] = CM.clamp(h.stats[st] + d, 3, 25);
   h.origin = CM.ORIGINS[origin] ? origin : null;
   if (h.origin === "nobody") h.stats.luck = CM.clamp(h.stats.luck + 1, 3, 25);
@@ -2756,7 +2815,7 @@ CM.upgradeHero = function (h) {
   h.offer = h.offer || null;
   h.path = h.path || null;
   h.learned = h.learned || [];
-  for (const slot of ["offhand", "helm", "ring", "amulet", "boots", "cloak"]) if (h[slot] === undefined) h[slot] = null;
+  for (const slot of ["offhand", "helm", "ring", "amulet", "boots", "cloak", "trinket"]) if (h[slot] === undefined) h[slot] = null;
   for (const slot of ["weapon", "armor"]) if (h[slot]) { h[slot].props = h[slot].props || {}; h[slot].slot = slot; }
   return h;
 };
@@ -2777,8 +2836,8 @@ CM.heroStat = function (h, s) {
   return v;
 };
 // what the gear gives besides: weak spots, mending a round, thorns - summed over what's worn and known
-CM.gearProp = (h, prop) => CM.equipped(h).reduce((n, it) => n + ((it.props && !it.unknown && typeof it.props[prop] === "number") ? it.props[prop] : 0), 0);
-CM.relicsWorn = (h) => CM.equipped(h).filter((it) => it.props && it.props.relic && !it.unknown).length;
+CM.gearProp = (h, prop) => CM.equipped(h).reduce((n, it) => n + (it.props && !it.unknown ? (typeof it.props[prop] === "number" ? it.props[prop] : it.props[prop] === true ? 1 : 0) : 0), 0);   // (a flag counts one: the trinkets' oddities)
+CM.relicsWorn = (h) => CM.equipped(h).filter((it) => it.props && (it.props.relic || it.props.heirloom) && !it.unknown).length;   // (an heirloom worn by its third bearer counts)
 
 // what the gear keeps off: armour and shield count double, a helm and a warding amulet once
 CM.gearDefence = (h) => (h.armor ? h.armor.power : 0) * 2 + (h.offhand ? h.offhand.power * 2 : 0) + (h.helm ? h.helm.power : 0) + (h.cloak && h.cloak.unknown ? h.cloak.power : 0)
@@ -3138,6 +3197,10 @@ CM.furnish = function (floor, seed, gen) {
     if (number <= 3 && CM.legends.length && h("legend") % 100 < 50) {
       const k = pickCell("legend", (c) => !roomCells.has(c)) || pickCell("legend");
       if (k) floor.things[k] = { type: "ghost", legend: h("legend:which") % CM.legends.length, asked: false };
+    }
+    if (number >= 4 && (CM.namedWeapons || []).length && h("named") % 100 < 12) {   // a weapon a party of this browser's named, found again, in a chest
+      const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items).sort();
+      if (chests.length) floor.things[chests[h("named:chest") % chests.length]].items.push(CM.legendWeapon(CM.namedWeapons[h("named:which") % CM.namedWeapons.length], number));
     }
     CM.COURT.forEach((c, i) => {                                        // the seated dead of the palace, and the physician's page in one of its chests
       if (c.floor !== number) return;
@@ -6494,6 +6557,7 @@ CM.Game = class {
     this.fallen = CM.store.get("fallen", []);             // where parties fell, by seed: a later run on that seed finds their remains
     CM.activeRumours = (this.village.rumours || []).filter((r) => r.seed);   // (what the chronicler promised, for CM.furnish)
     CM.legends = this.fame.filter((e) => e.won);
+    CM.namedWeapons = (this.compendium.named || []).slice();            // (a named weapon of an earlier party may be found again: CM.furnish)
     if (!this.ledger.length && (this.fame.length || this.fameEndless.length)) {   // (the runs that ended before the ledger was kept: read back from the boards)
       this.ledger = this.fame.concat(this.fameEndless).map(CM.ledgerFromFame);
       CM.store.set("ledger", this.ledger);
@@ -6895,6 +6959,12 @@ CM.Game = class {
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
     if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
+    if (fresh) {                                                         // the trinkets that mark the map: the carving, the way down, the gathering
+      const mark = (k) => { const [x, y] = k.split(",").map(Number); if (!fl.seen.some(([sx, sy]) => sx === x && sy === y)) fl.seen.push([x, y]); };
+      if (CM.partyProp(this.party, "chalk")) for (const [k, f] of Object.entries(fl.features)) if (f.type === "carving") mark(k);
+      if (CM.partyProp(this.party, "lodestone")) { const goal = CM.goalOf(fl); if (goal) mark(goal); }
+      if (CM.partyProp(this.party, "dowsing")) for (const [k, t] of Object.entries(fl.things)) if (t.type === "node") mark(k);
+    }
     if (fresh && this.meal && this.meal.floor < number) { this.meal = null; this.say("The meal has worn off."); for (const h of this.party) { h.mealLuck = 0; CM.recompute(h); } }
     if (fresh && this.buffs) { for (const k of ["stoneskin", "night", "sharpen", "salve"]) if (this.buffs[k] !== undefined && this.buffs[k] < number) delete this.buffs[k]; if (this.buffs.owleyes) { this.buffs.owleyes -= 1; if (this.buffs.owleyes <= 0) { delete this.buffs.owleyes; this.say("The owl's eyes close: the dark is the dark again."); } } }
     if (fresh) for (const h of this.alive()) if (CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "haunted")) this.afflict(h, "curse", "the haunted thing");
@@ -7319,6 +7389,7 @@ Object.assign(CM.Game.prototype, {
       return;
     }
     if (thing && thing.type === "chest") {
+      if (thing.trap && CM.partyProp(this.party, "thimble")) { this.say("The lid was trapped; the thimble turns the needle."); thing.trap = null; }
       if (thing.trap) {                                                   // a trapped lid: the Rogue may see to it (unless the opener is greedy)
         const rogue = this.alive().find((p) => p.cls === "Rogue" && this.canAct(p) && !(this.alive()[0] && this.alive()[0].quirk === "greedy"));
         if (rogue && this.rnd.chance(CM.clamp(0.5 + rogue.level * 0.05 + CM.mod(this.stat(rogue, "dex")) * 0.1, 0.2, 0.95))) {
@@ -7774,7 +7845,7 @@ Object.assign(CM.Game.prototype, {
     this.bag.splice(row, 1);
     thing.opened = true;
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:strongbox:${this.floor.number}`)), gold = 60 * this.floor.number;
-    const it = CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);
+    const it = rnd.chance(0.4) ? CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))) : CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);
     it.unknown = false;
     this.gold += gold; this.count("goldFound", gold); this.gain([it], "strongbox");
     this.sound("chest");
@@ -7789,7 +7860,7 @@ Object.assign(CM.Game.prototype, {
     if (!thing.stock) {
       const rnd = new CM.Random(CM.hashSeed(`${this.seed}:peddler:${this.floor.number}`)), L = this.floor.number;
       const gear = CM.affix(CM.makeItem(L + 4, rnd, rnd.pick(["weapon", "armor"])), 99, rnd); gear.unknown = false; gear.value = Math.floor(gear.value * 1.5) + 100;
-      thing.stock = [gear, { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + L * 3), value: 90 }, CM.oil(rnd.pick(["fire", "frost", "holy"])), CM.scroll("mapping"), CM.ingredient(rnd.pick(Object.keys(CM.INGREDIENTS)))];
+      thing.stock = [gear, { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + L * 3), value: 90 }, CM.oil(rnd.pick(["fire", "frost", "holy"])), CM.scroll("mapping"), CM.ingredient(rnd.pick(Object.keys(CM.INGREDIENTS))), Object.assign(CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))), { value: 220 })];
       thing.stock[3].value = 60;
       if (this.asc("nogreater")) thing.stock = thing.stock.filter((i) => i.kind !== "greaterheal");
     }
@@ -7888,8 +7959,11 @@ Object.assign(CM.Game.prototype, {
       + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
-    const wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
+    let wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
     const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
+    const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
+    if (ratproof) wary = true;
+    for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
     if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance(loud ? 0.65 : 0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
@@ -7952,7 +8026,7 @@ Object.assign(CM.Game.prototype, {
     c.round += 1;
     c.reached = 0;
     const order = [];
-    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + CM.gearProp(h, "init") + (this.buffs && this.buffs.haste === h.name ? 12 : 0) + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
+    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + CM.gearProp(h, "init") + (this.buffs && this.buffs.haste === h.name ? 12 : 0) + (c.round === 1 && CM.gearProp(h, "hourglass") ? 3 : 0) + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
     if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
     order.sort((a, b) => b.init - a.init);
     for (const h of this.alive()) if (h.familiar === "skull" && c.round > 0) { const foe = this.attackable()[0]; if (foe) this.spellHit(foe, Math.max(1, 2 + Math.floor(h.level / 2)), `${h.name}'s skull bites:`); }
@@ -8112,6 +8186,8 @@ Object.assign(CM.Game.prototype, {
         this.emit("change");
         return true;
       }
+    } else if (action === "power") {
+      if (!this.relicPower(h, arg)) return false;
     } else if (action === "defend") {
       h.defending = true;
       this.say(`${h.name} raises a guard.`);
@@ -8279,6 +8355,7 @@ Object.assign(CM.Game.prototype, {
     if (by && by.blinded > 0) { by.blinded--; dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + " - blind, it strikes wide" }); }
     dmg -= CM.partyProp(this.party, "auraDf");
     if (this.buffs && this.buffs.stoneskin !== undefined && h.stoneskin) dmg -= 3;
+    if (h.prism > 0) { h.prism = 0; dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + " - the light goes wrong" }); }
     if (!opts.aoe && !opts.noBlock) {                                   // a shield turns the blow: the hero's own, or a tower shield in the front row for one behind
       const own = h.offhand && h.offhand.kind === "shield" ? CM.blockChance(h.offhand) : 0;
       const tower = !own && h.row === "back" ? this.alive().filter((p) => p.row === "front" && CM.isTower(p.offhand) && !p.offhand.unknown).map((p) => CM.blockChance(p.offhand) / 2)[0] || 0 : 0;
@@ -8426,7 +8503,7 @@ Object.assign(CM.Game.prototype, {
     const every = m.quick ? 2 : 3;                                        // (the flooded Knight comes faster)
     if (m.hidden) { const up = this.foes.filter((f) => f.summoned && f.hp > 0 && !f.fled).length; if (up < 4) this.summonFor(m, moves[0], Math.min(2, 4 - up)); else this.say("The heap seethes."); return; }
     const telegraph = () => {                                             // next turn is one of its moves: it shows, so the party can brace
-      if ((m.turns + 1) % every === 0 && moves.length && !m.broken) { const next = moves[(Math.floor((m.turns + 1) / every) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); this.emit("fx", { kind: "intent", foe: m }); }
+      if ((m.turns + 1) % every === 0 && moves.length && !m.broken) { const next = moves[(Math.floor((m.turns + 1) / every) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); this.emit("fx", { kind: "intent", foe: m }); if (CM.partyProp(this.party, "belltongue")) this.emit("motif", "bell"); }
     };
     if (m.turns % every === 0 && moves.length && !m.broken) {
       const mv = moves[(Math.floor(m.turns / every) - 1) % moves.length];
@@ -8538,6 +8615,7 @@ Object.assign(CM.Game.prototype, {
 
   // a guardian falls: its relic into the pack, a trophy kept between runs, and the shaft it stood over is open
   slayGuardian(m) {
+    if (m.lastWeapon && !m.echo) this.markWeapon(m.lastWeapon, `slew ${CM.GUARDIANS[m.guardian].name}`);
     const id = m.guardian, G = CM.GUARDIANS[id], relic = G.relic && !m.echo ? CM.relic(id) : null;
     this.tally.guardians = (this.tally.guardians || []).concat(id);
     if (!m.echo) this.trophy(id);
@@ -8557,6 +8635,60 @@ Object.assign(CM.Game.prototype, {
     CM.store.set("trophies", this.trophies);
   },
 
+  // a relic's power, once a floor: what the wearer's relic (or First Root) does, in a fight or on the floor
+  readyPower(h) {
+    const floor = this.floor ? this.floor.number : 0;
+    for (const it of CM.equipped(h)) { const P = CM.powerOf(it); if (P && it.poweredFloor !== floor && (P.where === "both" || P.where === (this.mode === "combat" ? "fight" : "floor"))) return { item: it, power: P }; }
+    return null;
+  },
+  relicPower(h, arg) {
+    const ready = this.readyPower(h);
+    if (!ready) { this.say(`${h.name} wears no relic with a power to spend here, or it is spent for this floor.`); return false; }
+    const { item, power } = ready, L = this.floor ? this.floor.number : 1, foes = this.living ? this.living() : [];
+    const target = this.mode === "combat" ? this.foeAt(arg && arg.who !== undefined ? arg.who : undefined) : null;
+    switch (power.id) {
+      case "swarm": for (const m of foes) this.spellHit(m, 3 + Math.floor(L / 3), "", null); this.say(`${h.name} lifts the crown, and the rats come for the other side.`); break;
+      case "tide": if (this.combat) this.combat.flooded = true; for (const m of foes) m.chilled = Math.max(m.chilled || 0, 2); this.say(`${h.name} grounds the shield, and the water comes up to the knee: cold, for everyone but you.`); break;
+      case "break": if (!target) return false; target.df = Math.floor(target.df / 2); this.say(`${h.name} brings the hammer down: ${CM.the(target)}'s armour splits (defence halved).`); break;
+      case "lull": { let n = 0; for (const m of foes) if (!CM.unmoved(m) && this.rnd.chance(0.5)) { m.asleep = 2; n++; } this.say(`${h.name} turns the ring, and the queen's song comes out of it: ${n ? CM.plural(n, "foe") + " sleep" : "no one sleeps"}.`); break; }
+      case "still": if (!target) return false; target.held = Math.max(target.held || 0, 2); this.say(`${h.name} thinks, through the cap, and ${CM.the(target)} stands quite still.`); break;
+      case "prism": for (const p of this.alive()) p.prism = 1; this.say(`${h.name} turns the prism, and the light goes wrong around the party: the next blow on each does half.`); break;
+      case "reforge": if (!h.weapon || (h.weapon.props || {}).fists) return false; h.weapon.sharpUntil = L; this.say(`${h.name}'s mail glows like a forge, and the weapon takes an edge (+2, the floor).`); break;
+      case "unlock": {
+        const fl = this.floor, locked = Object.entries(fl.features).filter(([, f]) => (f.type === "door" && f.locked && !f.open) || (f.type === "gate" && !f.open));
+        if (!locked.length) { this.say("Nothing on this floor is locked against you."); return false; }
+        const dist = CM.distances(fl.grid, fl.pos), near = locked.sort((a, b) => (dist.get(a[0]) || 999) - (dist.get(b[0]) || 999))[0][1];
+        if (near.type === "door") near.locked = false; near.open = true;
+        this.say(`${h.name} holds up the reliquary, and somewhere on the floor a lock gives.`); break;
+      }
+      case "regrow": { const fallen = this.party.find((p) => p.hp <= 0); if (!fallen) { this.say("No one has fallen."); return false; } fallen.hp = 1; this.say(`The root wakes in ${h.name}'s hands, and ${fallen.name} draws breath.`); break; }
+      default: return false;
+    }
+    item.poweredFloor = L; this.countUse("power");
+    this.sound("spell"); this.emit("fx", { kind: "cast", id: "turn", hero: h, item: "relic", foes });
+    if (this.mode !== "combat") { this.logAct("usePower", this.party.indexOf(h)); this.saveRun(); this.emit("change"); }
+    return true;
+  },
+  usePower(heroIndex) { const h = this.party[heroIndex]; if (!h || h.hp <= 0 || this.mode === "combat") return false; return this.relicPower(h, null); },
+  // a weapon that grows: a mark for a guardian slain with it, and one for every hundred of anything; at three, a name
+  markWeapon(w, why) {
+    if (!w || (w.props || {}).fists) return;
+    w.marks = (w.marks || 0) + 1; w.power += 1; w.history = (w.history || []).concat(`${why} (floor ${this.floor ? this.floor.number : 0})`);
+    this.say(`${w.named || w.name} takes a mark: ${why}.${w.marks === CM.MARKS_TO_NAME && !w.named ? " It has earned a name - give it one from the sheet." : ""}`);
+  },
+  nameWeapon(heroIndex, name) {
+    const h = this.party[heroIndex], w = h && h.weapon, clean = String(name || "").trim().slice(0, 24);
+    if (!w || (w.marks || 0) < CM.MARKS_TO_NAME) return "A weapon is named at its third mark.";
+    if (w.named) return `It is ${w.named} already.`;
+    if (!clean) return "A name, then.";
+    this.logAct("nameWeapon", heroIndex, clean);
+    w.named = clean; w.name = clean; w.value += 200;
+    this.compendium.named = (this.compendium.named || []).concat({ name: clean, base: CM.baseIdOf(w), history: (w.history || []).slice(), date: CM.today(), bearer: h.name }).slice(-30);
+    CM.store.set("compendium", this.compendium);
+    this.say(`${h.name} names the ${CM.baseIdOf(w)}: ${clean}. The compendium keeps it.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
   // a wand's charge spent: on the last, one wand in four breaks (never with an Artificer in the party); the rest wait for the smith
   spendWand(item, row) {
     item.charges -= 1;
@@ -8611,7 +8743,7 @@ Object.assign(CM.Game.prototype, {
     }
     let df = bow && CM.trait(hero, "piercing") ? Math.floor(target.df / 2) : target.df;
     if (home && wclass === "blunt" && (["bone", "shell", "plate"].includes(hide) || target.undead)) df = Math.floor(df * 2 / 3);   // (a mace cares nothing for a shell)
-    let dmg = this.damage(this.effective(hero).atk, weapon.power + (weapon.sharpUntil !== undefined && this.floor && weapon.sharpUntil === this.floor.number ? 2 : 0), df), how = "";
+    let dmg = this.damage(this.effective(hero).atk, weapon.power + CM.gearProp(hero, "power1") + (weapon.sharpUntil !== undefined && this.floor && weapon.sharpUntil === this.floor.number ? 2 : 0), df), how = "";
     const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger" || (home && wclass === "polearm");
     let critMult = CM.trait(hero, "deadly") ? 3 : 2;
     if (home && wclass === "dagger") { critMult += 1; dmg = Math.max(1, Math.ceil(dmg * 2 / 3)); }
@@ -8655,6 +8787,7 @@ Object.assign(CM.Game.prototype, {
     if (this.has("glass")) dmg *= 2;
     dmg = Math.ceil(dmg * this.scholarship(target));
     target.hp -= dmg;
+    target.lastWeapon = weapon;
     this.splitIfHurt(target);
     if (target.asleep > 0) { target.asleep = 0; how += " - it wakes"; }
     this.say(`${hero.name} hits ${CM.the(target)}${note} for ${dmg}${how}.`);
@@ -9109,6 +9242,7 @@ Object.assign(CM.Game.prototype, {
     const slain = this.foes.filter((m) => !m.fled);
     this.count("kills", slain.length);
     for (const m of slain) this.noteFoe(m, "slain");
+    for (const m of slain) if (m.lastWeapon && !m.summoned) { const w = m.lastWeapon; w.kills = (w.kills || 0) + 1; if (w.kills % CM.MARK_KILLS === 0) this.markWeapon(w, `${w.kills} slain`); }   // (the weapon that struck it last remembers)
     if (this.bestiaryDirty) { CM.store.set("bestiary", this.bestiary); this.bestiaryDirty = false; }
     const xp = this.has("pilgrim") ? 0 : slain.reduce((s, m) => s + m.xp, 0);
     let gold = slain.reduce((s, m) => s + m.gold, 0);
@@ -9538,6 +9672,7 @@ Object.assign(CM.Game.prototype, {
       this.say(`${hero.name} slings the shield: the ${CM.baseName(item)} takes both hands.`);
       hero.offhand = null;
     }
+    if (item.bearers && !item.bearers.includes(hero.name)) { item.bearers.push(hero.name); if (item.bearers.length >= 3 && !(item.props || {}).relic && !(item.props || {}).unique) { item.props = item.props || {}; item.props.heirloom = true; this.say(`${item.name} has been borne by three now: it is an heirloom, and counts among the relics.`); } }
     const learned = this.reveal(item);
     const ratio = hero.hp / hero.max;
     CM.recompute(hero);
@@ -9564,7 +9699,7 @@ Object.assign(CM.Game.prototype, {
     if (item.kind === "boxkey") return `That key is for the strongbox on floor ${item.box}. Walk up to the box and use it.`;
     if (item.kind === "ration") {
       this.bag.splice(row, 1); this.countUse("ration");
-      this.fed = 0;
+      this.fed = CM.partyProp(this.party, "spoon") ? -100 : 0;
       this.cheer(2);
       this.sound("heal");
       this.say(`The party eats. ${hero.name} hands the last of it round.`);
@@ -9958,7 +10093,7 @@ Object.assign(CM.Game.prototype, {
     if (!item) return "Pick something from your pack.";
     if (["key", "bones", "rope", "torch"].includes(item.kind)) return "The merchant won't keep that. Something worth the keeping.";
     this.vaults = this.vaults || [];
-    const old = this.vaultRoom() ? null : this.vaults.shift();
+    const old = this.vaultRoom() || item.named ? null : this.vaults.splice(this.vaults.findIndex((it) => !it.named), 1)[0];
     this.bag.splice(row, 1);
     this.vaults.push(item);
     CM.store.set("vaults", this.vaults);
@@ -9976,6 +10111,7 @@ Object.assign(CM.Game.prototype, {
     const item = this.vaults.splice(Math.min(i, this.vaults.length - 1), 1)[0];
     CM.store.set("vaults", this.vaults);
     CM.store.remove("vault");
+    item.bearers = item.bearers || [];                                   // (an heirloom remembers who wore it; the third bearer wears it as a relic)
     this.gain([item], "vault");
     this.sound("chest");
     this.say(`The merchant unlocks the vault: ${item.name}, left by a party before you.`);
@@ -10055,12 +10191,12 @@ const RANK = { weapon: 0, armor: 1, shield: 2, helm: 3, ring: 4, amulet: 5, heal
 Object.assign(CM.Game.prototype, {
   // {text, cls, why} for the bag's buttons: "+2" against what the hero wears, "can't" with the reason, nothing for a potion
   compare(h, item) {
-    if (!item || !["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(item.kind)) return null;
+    if (!item || !["weapon", "armor", "shield", "helm", "ring", "amulet", "trinket", "boots", "cloak"].includes(item.kind)) return null;
     const why = CM.cantWear(h, item);
     if (why) return { text: "can't", cls: "bad", why };
     if (item.unknown) return { text: "?", cls: "", why: "Unknown until worn, read with a scroll, or shown to the scribe" };
     const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind), old = h[slot];
-    if (item.kind === "ring" || item.kind === "amulet") {
+    if (item.kind === "ring" || item.kind === "amulet" || item.kind === "trinket") {
       const same = old && !old.unknown && CM.itemLabel(old) === CM.itemLabel(item);
       return { text: same ? "same" : old ? "swap" : "new", cls: same ? "" : "good", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (${CM.itemLabel(old)})` : "Nothing there now" };
     }
@@ -10611,7 +10747,7 @@ Object.assign(CM.Game.prototype, {
       this.achieve("laidtorest");
     }
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:ghost:${fl.number}`));
-    const gift = CM.makeGear(rnd.pick(["ring", "amulet", "amulet"]), fl.number + 4, rnd);
+    const gift = rnd.chance(0.3) ? CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))) : CM.makeGear(rnd.pick(["ring", "amulet", "amulet"]), fl.number + 4, rnd);
     gift.unknown = false;
     this.gain([gift], "ghost");
     const xp = 30 * fl.number;
@@ -11033,7 +11169,7 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
   vaultCapacity() { const g = this.villageLevel("guildhall"); return g >= 4 ? 5 : g >= 2 ? 3 : 1; },
-  vaultRoom() { return (this.vaults || []).length < this.vaultCapacity(); },
+  vaultRoom() { return (this.vaults || []).filter((it) => !it.named).length < this.vaultCapacity(); },   // (a named weapon is kept for nothing: it takes no slot)
   // the week's contracts, and which are done
   contracts() {
     const week = CM.weeklySeed(), v = this.village;
@@ -11398,6 +11534,9 @@ CM.UI = class {
     for (const b of facts.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { if (g.setRow(h, b.dataset.row)) this.renderSheet(); });
     for (const b of facts.querySelectorAll("button[data-formation]")) b.addEventListener("click", () => { if (g.setFormation(b.dataset.formation)) this.renderSheet(); });
     for (const b of facts.querySelectorAll("button[data-off]")) b.addEventListener("click", () => { const note = g.takeOff(this.sheetOf, b.dataset.off); if (note) g.say(note); this.renderSheet(); });
+    { const ready = g.mode !== "combat" && g.readyPower(h), spent = !ready && CM.equipped(h).some((it) => CM.powerOf(it));   // a relic's power, from the sheet, out of a fight
+      if (ready || spent) { const b = document.createElement("button"); b.textContent = ready ? `${ready.power.name}: ${ready.power.what}` : "The relic's power is spent for this floor"; b.disabled = !ready || g.mode === "combat"; b.addEventListener("click", () => { g.usePower(this.sheetOf); this.renderSheet(); this.refresh(); }); facts.appendChild(b); }
+      if (h.weapon && (h.weapon.marks || 0) >= CM.MARKS_TO_NAME && !h.weapon.named) { const b = document.createElement("button"); b.textContent = `Name the ${CM.baseIdOf(h.weapon)} (${CM.plural(h.weapon.marks, "mark")})`; b.addEventListener("click", () => { const name = window.prompt("A name for it:", ""); if (name) { const note = g.nameWeapon(this.sheetOf, name); if (note) g.say(note); } this.renderSheet(); this.refresh(); }); facts.appendChild(b); } }
     left.appendChild(facts);
     const right = this.$("#sheet-right");
     right.innerHTML = `<table class="stats">${CM.STATS.map((s) => `<tr class="${s === c.key ? "key" : ""}"><td>${CM.STAT_NAMES[s]}</td><td class="v">${g.stat(h, s)}</td><td class="hint">${s === c.key ? "their calling's stat" : CM.STAT_HINTS[s]}</td></tr>`).join("")}</table>
@@ -11971,6 +12110,8 @@ CM.UI = class {
     const groups = CM.compendium(this.game.compendium), esc = (x) => this.esc(x);
     const seen = groups.reduce((n, g) => n + g.seen, 0), total = groups.reduce((n, g) => n + g.total, 0);
     let html = `<div class="small">${seen} of ${total} kinds of thing found, ever. An unknown thing counts once it is named.</div>`;
+    const named = (this.game.compendium || {}).named || [];
+    if (named.length) html += `<div class="list-title">Named weapons <small>${named.length}</small></div>` + named.map((w) => `<div class="entry"><small>${esc(w.base)}, ${esc(w.bearer)}'s, ${esc(w.date)}</small><p><b>${esc(w.name)}</b>${w.history.length ? ` - ${esc(w.history.join("; "))}` : ""}</p></div>`).join("");
     for (const g of groups) html += `<div class="list-title">${esc(g.name)} <small>${g.seen} of ${g.total}</small></div><div class="things">${g.list.map((b) => `<span class="thing ${b.seen ? "seen" : "unseen"}" title="${b.seen ? `first found on floor ${b.when.floor}, ${esc(b.when.date)}` : "not yet found"}">${b.seen ? esc(b.id) : "?".repeat(Math.min(12, b.id.length))}</span>`).join("")}</div>`;
     return html;
   }
@@ -12707,6 +12848,7 @@ Object.assign(CM.UI.prototype, {
       btn("<kbd>F</kbd>Fight", () => g.act("fight", g.target));
       btn("<kbd>C</kbd>Cast / Skill", () => this.combatMenu("cast"), !CM.abilitiesFor(h).length);
       btn("<kbd>P</kbd>Item", () => this.combatMenu("item"));
+      { const ready = g.readyPower(h); if (ready || CM.equipped(h).some((it) => CM.powerOf(it))) btn(`<kbd>L</kbd>${ready ? ready.power.name : "Relic (spent)"}<small>${ready ? ready.power.what : "its power is spent for this floor"}</small>`, () => g.act("power", { who: g.target }), !ready); }
       btn("<kbd>D</kbd>Defend", () => g.act("defend"));
       btn("<kbd>R</kbd>Run", () => g.act("run"));
       btn(`<kbd>A</kbd>${c.auto ? "Stop auto" : "Auto"}`, () => g.autoFight(!c.auto), false, c.auto ? "on" : "");
@@ -12853,7 +12995,7 @@ Object.assign(CM.UI.prototype, {
     const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
     const knife = picked && picked.kind === "weapon" && CM.weaponClass(picked) === "dagger";
     if (picked && picked.kind === "kit") { const b = document.createElement("button"); b.textContent = "Open the field kit (the alchemist's list)"; b.addEventListener("click", () => { g.closeBag(); this.openAlchemist(); }); beltBox.appendChild(b); }
-    const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" || picked.kind === "tome" ? "Read" : picked.kind === "wand" ? "Use on" : picked.kind === "oil" ? "Rub on the weapon of" : "Give to";
+    const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet", "trinket", "boots", "cloak"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" || picked.kind === "tome" ? "Read" : picked.kind === "wand" ? "Use on" : picked.kind === "oil" ? "Rub on the weapon of" : "Give to";
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
       const m = g.party[i], cmp = picked ? g.compare(m, picked) : null;
       b.innerHTML = `${verb} ${this.esc(m.name)}` + (m.hp <= 0 ? " (fallen)" : "") + (cmp ? ` <i class="cmp ${cmp.cls}">${this.esc(cmp.text)}</i>` : "");
@@ -13595,6 +13737,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (e.code === K.cast) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "cast" ? "main" : "cast");
       else if (e.code === K.item) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "item" ? "main" : "item");
       else if (e.code === K.defend) game.act("defend");
+      else if (e.code === "KeyL" && game.readyPower(game.combat.waiting)) game.act("power", { who: game.target });
       else if (e.code === K.run) game.act("run");
       else if (e.code === K.auto) game.autoFight(!game.combat.auto);
       return;

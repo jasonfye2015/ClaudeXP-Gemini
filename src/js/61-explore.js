@@ -360,6 +360,7 @@ Object.assign(CM.Game.prototype, {
       return;
     }
     if (thing && thing.type === "chest") {
+      if (thing.trap && CM.partyProp(this.party, "thimble")) { this.say("The lid was trapped; the thimble turns the needle."); thing.trap = null; }
       if (thing.trap) {                                                   // a trapped lid: the Rogue may see to it (unless the opener is greedy)
         const rogue = this.alive().find((p) => p.cls === "Rogue" && this.canAct(p) && !(this.alive()[0] && this.alive()[0].quirk === "greedy"));
         if (rogue && this.rnd.chance(CM.clamp(0.5 + rogue.level * 0.05 + CM.mod(this.stat(rogue, "dex")) * 0.1, 0.2, 0.95))) {
@@ -815,7 +816,7 @@ Object.assign(CM.Game.prototype, {
     this.bag.splice(row, 1);
     thing.opened = true;
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:strongbox:${this.floor.number}`)), gold = 60 * this.floor.number;
-    const it = CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);
+    const it = rnd.chance(0.4) ? CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))) : CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);
     it.unknown = false;
     this.gold += gold; this.count("goldFound", gold); this.gain([it], "strongbox");
     this.sound("chest");
@@ -830,7 +831,7 @@ Object.assign(CM.Game.prototype, {
     if (!thing.stock) {
       const rnd = new CM.Random(CM.hashSeed(`${this.seed}:peddler:${this.floor.number}`)), L = this.floor.number;
       const gear = CM.affix(CM.makeItem(L + 4, rnd, rnd.pick(["weapon", "armor"])), 99, rnd); gear.unknown = false; gear.value = Math.floor(gear.value * 1.5) + 100;
-      thing.stock = [gear, { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + L * 3), value: 90 }, CM.oil(rnd.pick(["fire", "frost", "holy"])), CM.scroll("mapping"), CM.ingredient(rnd.pick(Object.keys(CM.INGREDIENTS)))];
+      thing.stock = [gear, { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + L * 3), value: 90 }, CM.oil(rnd.pick(["fire", "frost", "holy"])), CM.scroll("mapping"), CM.ingredient(rnd.pick(Object.keys(CM.INGREDIENTS))), Object.assign(CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))), { value: 220 })];
       thing.stock[3].value = 60;
       if (this.asc("nogreater")) thing.stock = thing.stock.filter((i) => i.kind !== "greaterheal");
     }

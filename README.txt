@@ -910,6 +910,33 @@ Gathering, the field kit and the kitchen (the sixth big update, phase 4 - v4.5)
   floor (+1 attack, +1 defence, the torch slower, mending in fights, +1 Luck). The alchemist asks for three of the
   band's ingredient at every camp: bring them, and the next brew is free. The bot gathers what it passes.
 
+Living items: charged relics, trinkets, and weapons that grow (the sixth big update, phase 5 - v4.6)
+  Every guardian's relic, and First Root, has a power spent once a floor (CM.RELIC_POWERS, CM.powerOf): the Rat
+  King's Crown calls the swarm for you; the Shield of the Drowned floods the hall and chills every foe; the
+  Forge-Warden's Hammer halves the chosen foe's defence; the Queen's Ring puts half the room to sleep; the Sporecap
+  Helm holds a foe two turns; the Prism Amulet halves the next blow on each hero; Ember Mail reforges the wearer's
+  weapon (+2, the floor); the Patriarch's Reliquary opens the nearest lock on the floor; First Root regrows a fallen
+  hero to one health. In a fight it is the Relic button (L), on the floor the hero's sheet; a film replays it.
+  A ninth slot, the trinket (CM.TRINKETS: twenty, one passive oddity each): a rat's tooth (never ambushed by rats),
+  the bell's tongue (the last bell's note when a guardian gathers itself), a cook's spoon, Tamsin's tally stick,
+  a child's chalk (the floor's carving on the map as you arrive), a lodestone (the way down), a dowsing twig (the
+  gathering), knucklebones, a cracked hourglass, a mirror shard, a thimble (a chest's trap never springs on the
+  wearer), a whetstone, a lucky bootlace, an ember stone, a cold coin, a sewing kit, a steady-hand charm, a hearth
+  stone, a long wick, a hawk's eye. Found in strongboxes (two in five), from grateful ghosts, and on the peddler's
+  cloth. (A flag on worn gear now counts as one through CM.gearProp, so the oddities are read everywhere.)
+  Weapons that grow: the weapon that struck a foe last remembers it (lastWeapon); a hundred slain is a mark, a
+  guardian slain is a mark (+1 to the weapon and a line of history); at three marks the sheet offers a name
+  (nameWeapon, 24 letters). A named weapon is the name everywhere (CM.itemName), is kept in the compendium's Named
+  list with its story, takes no slot in the vault and is never the thing the merchant hands back, and may be found
+  again by a later party of this browser: on floors 4 and below, one chest in eight carries a named weapon of the
+  compendium made again (CM.legendWeapon: its base, its marks, its story so far, and a line about who lost it).
+  Heirlooms with memory: a thing taken from the vault remembers its bearers; the third wears it as a relic
+  (props.heirloom), and CM.relicsWorn counts it for the relic set.
+  Test: "living items" - every power once a floor and not twice, the swarm bites all, the hammer halves one, the
+  prism halves the next blow, the reliquary opens the nearest lock, the root regrows; the chalk and the lodestone
+  mark the map on arrival; the hundredth kill and the Rat King mark a sword, its third mark names it, and the name
+  survives save, the vault's one slot, and turns up in a later seed's chest with its story; a ring's third bearer.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
