@@ -90,7 +90,7 @@ Object.assign(CM.UI.prototype, {
       const n = Number(b.dataset.slot), r = (g.runs || [])[n - 1];
       b.classList.toggle("on", n === g.slot);
       b.textContent = `${n}: ${r && CM.runFloor(r) !== null ? (CM.runFloor(r) === 0 ? "the town" : `floor ${CM.runFloor(r)}`) : "empty"}`;
-      b.title = r && r.floor ? `${r.gold.toLocaleString()} gold${r.saved ? ", saved " + new Date(r.saved).toLocaleString() : ""}` : "An empty slot for a new expedition";
+      b.title = r && CM.runFloor(r) !== null ? `${r.gold.toLocaleString()} gold${r.saved ? ", saved " + new Date(r.saved).toLocaleString() : ""}` : "An empty slot for a new expedition";
     }
     const title = CM.titleFor(g.achievements), got = Object.keys(CM.ACHIEVEMENTS).filter((id) => g.achievements[id]);
     this.$("#honours").textContent = got.length ? `${CM.playerName || "Adventurer"} ${title} - ${got.length} of ${Object.keys(CM.ACHIEVEMENTS).length} achievements` : "";
