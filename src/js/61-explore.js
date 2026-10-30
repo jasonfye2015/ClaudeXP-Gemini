@@ -74,6 +74,11 @@ Object.assign(CM.Game.prototype, {
     this.dirty = true;
     this.steps = (this.steps || 0) + 1;
     this.count("steps");
+    if (fl.hazard === "tide" && this.steps % CM.TIDE_STEPS === 0) {       // the Drowned Town's tide turns
+      fl.tide = !fl.tide;
+      this.dirty = true;
+      this.say(fl.tide ? "The water rises in the streets, cold and quick: high tide. The torch hisses, and things move in the water." : "The water drains away down the streets: low tide.");
+    }
     if (this.steps % 5 === 0) {                                          // poison walks with you
       for (const h of this.alive()) {
         const st = h.status || {};
@@ -96,12 +101,19 @@ Object.assign(CM.Game.prototype, {
         this.bag.push(CM.bones(thing.ghost));
         this.sound("coin");
         this.say("Bones, gnawed and scattered - someone's. You gather them up.");
+      } else if (thing.type === "boxkey") {
+        delete fl.things[k];
+        this.bag.push({ name: `Strongbox Key (floor ${thing.box})`, kind: "boxkey", box: thing.box, power: 0, value: 0 });
+        this.sound("coin");
+        this.say(`A heavy key, stamped with a number: ${thing.box}. A strongbox waits for it two floors down.`);
       } else {
         this.say({ chest: "A chest sits here. (Space to open it)", ladder: "A ladder leads down into the dark. (Space to climb down)",
           stairs_up: "The stairs you came down. (Space to climb back up)",
           phylactery: "A plain box, cold to look at. Something in it beats, slowly. (Space to smash it)",
           ghost: "A pale shape hangs in the air here, waiting. (Space to speak to it)", hermit: "A hermit crouches in a nest of rags. (Space to speak to him)",
-          adventurer: "Someone sits bound against the wall. (Space to cut them loose)", rope: "A rope hangs down from the floor above. (Space to climb it)" }[thing.type]);
+          adventurer: "Someone sits bound against the wall. (Space to cut them loose)", rope: "A rope hangs down from the floor above. (Space to climb it)",
+          event: `${(CM.EVENTS[thing.event] || {}).title || "Something"}. (Space to look closer)`, strongbox: thing.opened ? "An iron strongbox, open and empty." : `An iron strongbox, bolted to the floor, with a keyhole. (The key is on floor ${thing.from}.)`,
+          peddler: "A peddler sits on his pack, with a lantern and a smile. (Space to see his wares)", rivals: "Four adventurers, armed, look you over. (Space to speak to them)" }[thing.type]);
       }
     }
     if (f) this.arrive(f, k);
@@ -155,6 +167,36 @@ Object.assign(CM.Game.prototype, {
         this.say(`A stone sinks under your boot: ${CM.TRAPS[f.trap]}!`);
         this.springTrap(f.trap, k);
       }
+    } else if (f.type === "spores") {
+      f.known = true;
+      this.sound("ailment");
+      this.emit("fx", { kind: "trap", trap: "gas" });
+      const front = this.alive().filter((h) => h.row === "front");
+      let took = 0;
+      for (const h of (front.length ? front : this.alive())) if (this.rnd.chance(0.5) && this.afflict(h, "poison", "the spores")) took++;
+      this.say(`You walk through a hanging cloud of spores${took ? "" : ", holding your breath"}.`);
+    } else if (f.type === "vents") {
+      f.known = true;
+      this.steps = this.steps || 0;
+      if (this.steps % 3 === 0) {
+        this.sound("trap");
+        this.emit("fx", { kind: "trap", trap: "blade" });
+        for (const h of this.alive()) h.hp = Math.max(1, h.hp - Math.max(2, Math.floor(h.max * 0.1)));
+        this.say("The vent under your boots breathes fire! Everyone is scorched.");
+      } else this.say("A vent in the floor, hot. It breathes on a beat: move on.");
+    } else if (f.type === "bonepiles") {
+      if (!f.spent) {
+        f.spent = true; f.known = true;
+        if (this.rnd.chance(0.6)) {
+          const n = 2 + this.rnd.int(0, 1), group = [];
+          for (let i = 0; i < n; i++) group.push(this.tune(CM.makeMonster(CM.monsterKind("Skeleton"), CM.monsterLevel(fl.number), this.rnd)));
+          this.say("The bones heaped beside you rattle, and stand up!");
+          this.foes = group;
+          this.startCombat(k, { group }, true);
+          return;
+        }
+        this.say("A heap of bones, higher than a man. It does not move. This time.");
+      }
     } else if (f.type === "fountain") {
       this.say(f.used ? "A dry fountain." : "A fountain, running. (Space to drink)");
     } else if (f.type === "altar") {
@@ -181,7 +223,7 @@ Object.assign(CM.Game.prototype, {
     const l = this.light;
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    l.left -= (this.floor && this.floor.special === "wading") || this.has("gloom") ? 2 : 1;
+    l.left -= (this.floor && (this.floor.special === "wading" || this.floor.tide)) || this.has("gloom") ? 2 : 1;
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
     const spare = this.bag.findIndex((i) => i.kind === "torch");
@@ -263,6 +305,10 @@ Object.assign(CM.Game.prototype, {
       return;
     }
     if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.talk(thing, k); return; }
+    if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
+    if (thing && thing.type === "strongbox") { this.openStrongbox(thing, k); return; }
+    if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
+    if (thing && thing.type === "rivals") { this.meetRivals(thing, k); return; }
     if (thing && thing.type === "rope") {
       this.sound("stairs");
       this.enterFloor(fl.number - 1, "rope", thing.up);
@@ -449,8 +495,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope"];
-const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above" };
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals"];
+const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
+  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -461,7 +508,7 @@ Object.assign(CM.Game.prototype, {
       if (!seen.has(k) || !CM.isOpen(fl, cx, cy)) return false;
       const f = fl.features[k];
       if (f && f.type === "pit" && !f.roped) return false;                                       // (never into a pit by itself: walk there yourself, rope or no)
-      if (f && ["trapdoor", "teleporter", "spinner"].includes(f.type) && f.known) return false;
+      if (f && ["trapdoor", "teleporter", "spinner", "spores", "vents", "bonepiles"].includes(f.type) && f.known) return false;
       if (f && f.type === "gate" && !f.open) return false;
       if (f && f.type === "door" && !f.open && (f.riddle !== undefined || (f.locked && !key && !picks))) return false;
       return true;                                                                                // (a band of monsters on the way: the walk stops three squares short of it)
@@ -554,7 +601,7 @@ Object.assign(CM.Game.prototype, {
     const t = this.travel, fl = this.floor, k = keyOf(fl.pos[0], fl.pos[1]), thing = fl.things[k], f = fl.features[k];
     const stop = (why) => { this.travel = null; if (why) this.say(why); this.emit("change"); return false; };
     if (!this.hasLight()) return stop("The dark. You stop, and feel for the wall.");
-    if (thing && !["key", "bones"].includes(thing.type)) return stop(null);
+    if (thing && !["key", "bones", "boxkey"].includes(thing.type)) return stop(null);
     if (f && ((f.type === "fountain" && !f.used) || (f.type === "altar" && !f.used) || (f.type === "lever" && !f.pulled) || (f.type === "carving" && !f.read))) return stop(null);
     if (this.monstersNear(3)) return stop("Something is close. You stop.");
     const now = this.thingsInView();
@@ -571,6 +618,109 @@ Object.assign(CM.Game.prototype, {
     if (!Object.keys(fl.notes).length) delete fl.notes;
     this.dirty = true;
     this.emit("change");
+    return true;
+  },
+});
+}
+
+// ---- the dungeon's strangers: a choice on the floor, a strongbox and its key, a peddler, a rival party ----
+{
+Object.assign(CM.Game.prototype, {
+  hazardsSeen(id) { this.hazardsMet = this.hazardsMet || []; if (this.hazardsMet.includes(id)) return true; this.hazardsMet.push(id); return false; },
+  askEvent(thing, k) {
+    const E = CM.EVENTS[thing.event];
+    if (!E) return;
+    if (thing.done) { this.say(thing.after || "Nothing more here."); return; }
+    this.emit("choice", { k, title: E.title, text: E.text, options: E.options.map((o) => o.label) });
+  },
+  // the player chose: the option's effect, with the run's dice
+  choose(k, i) {
+    const fl = this.floor, thing = fl.things[k], E = thing && CM.EVENTS[thing.event], opt = E && E.options[i];
+    if (!opt || thing.done) return false;
+    const rnd = this.rnd, L = fl.number, front = this.alive().find((h) => h.row === "front") || this.alive()[0];
+    const finish = (text, keep) => { thing.done = true; thing.after = keep || "Nothing more here."; this.say(text); if (!keep) delete fl.things[k]; this.saveRun(); this.emit("change"); };
+    switch (opt.effect) {
+      case "leave": this.say("You walk on."); return true;
+      case "blood": { const cost = Math.max(1, Math.floor(front.hp / 5)); front.hp -= cost; front.stats.str = Math.min(25, front.stats.str + 1); CM.recompute(front); this.emit("fx", { kind: "hurt", hero: front, amount: cost, foe: { name: "The knife" } }); finish(`${front.name} opens a palm over the altar. The stone drinks, and something comes back up the arm: +1 Strength, for good (-${cost} health).`, "The altar is sated."); return true; }
+      case "prisoner": {
+        if (rnd.chance(0.5)) { const h = CM.makeRecruit(Math.max(1, Math.floor(L / 2)), rnd); h.price = 0; this.rescued = (this.rescued || []).concat(h); this.achieve("friend"); finish(`The hood comes off: ${h.name} the ${h.cls}, three days chained and still breathing. They make for the camp, owing you their life; the tavern will have them, free.`); }
+        else { finish("The hood comes off, and under it is a face that has been dead a while, and is hungry."); const g = [this.tune(CM.makeMonster(CM.monsterKind("Ghoul"), CM.monsterLevel(L), rnd))]; this.foes = g; this.startCombat(k, { group: g }, true); }
+        return true;
+      }
+      case "gamble": { if (this.gold < 100) { this.say("You haven't a hundred gold. The dealer shrugs."); return true; } this.gold -= 100; if (rnd.chance(0.45)) { this.gold += 250; this.sound("coin"); finish("Three sixes. The dealer counts out 250 gold without a word, and the lantern goes out.", "The table is empty, and the dealer gone."); } else { finish("Two and a one. The dealer sweeps the gold away, and the lantern goes out.", "The table is empty, and the dealer gone."); } return true; }
+      case "blackwater": { const h = rnd.pick(this.alive()), st = rnd.pick(CM.STATS); h.stats[st] = Math.min(25, h.stats[st] + 2); CM.recompute(h); h.status = h.status || {}; h.status.curse = 999; this.sound("ailment"); finish(`${h.name} drinks. +2 ${CM.STAT_NAMES[st]}, for good - and a curse, until the temple lifts it.`, "The fountain runs black, and you have drunk."); return true; }
+      case "campfire": { for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + Math.ceil(h.max / 3)); this.sound("heal"); if (rnd.chance(0.4)) { finish("You rest by the warm ashes, and mend - until something comes to the light."); const g = CM.monsterGroup(L, rnd).map((m) => this.tune(m)); this.foes = g; this.startCombat(k, { group: g }, true); } else finish("You rest by the warm ashes, and mend. Nothing comes."); return true; }
+      case "purse": { const gold = 30 * L; this.gold += gold; this.sound("coin"); if (rnd.chance(0.4)) { this.afflict(front, "poison", "the needle"); finish(`${gold} gold, and a needle in the lining of the purse.`); } else finish(`${gold} gold. He will not need it.`); return true; }
+      case "bury": { const xp = 20 * L; for (const h of this.alive()) h.xp += xp; this.achieve("kind"); this.checkLevels(); finish(`You heap stones over him and say what you can. ${xp} experience each, and the floor feels quieter.`); return true; }
+      case "whisper": { fl.seen = []; for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]); for (const f of Object.values(fl.features)) if ("known" in f) f.known = true; const h = rnd.pick(this.alive()); if (rnd.chance(0.3)) { h.status = h.status || {}; h.status.curse = 999; this.sound("ailment"); finish(`The box whispers the floor into your ear, every turn of it - and something else into ${h.name}'s: a curse.`); } else finish("The box whispers the floor into your ear, every turn of it, and falls silent."); return true; }
+      case "burnnest": { const t = this.bag.findIndex((i) => i.kind === "torch"); if (t < 0) { this.say("No spare torch to burn it with."); return true; } this.bag.splice(t, 1); const gold = 15 * L; this.gold += gold; this.sound("coin"); finish(`The nest goes up like paper. In the ashes, ${gold} gold.`); return true; }
+      case "rummage": { const gold = 20 * L; this.gold += gold; this.sound("coin"); for (const h of this.alive().slice(0, 2)) if (rnd.chance(0.5)) this.afflict(h, "poison", "the rats"); finish(`${gold} gold, and small teeth.`); return true; }
+      case "pray": { this.blessedNext = true; this.sound("heal"); finish("You pray. The stone hand is warm for a moment. The next fight begins under a blessing.", "The saint's hand is cold again."); return true; }
+      case "touch": { if (rnd.chance(0.3) && this.afflict(front, "stone", "the statue")) finish(`${front.name} touches the hand, and the stone looks back.`, "The saint's hand is cold again."); else { front.pending = (front.pending || 0) + 1; this.sound("level"); finish(`${front.name} touches the hand, and something is given: a boon to choose (press ${this.party.indexOf(front) + 1}).`, "The saint's hand is cold again."); } return true; }
+      case "pack": { if (rnd.chance(0.6)) { const it = CM.affix(CM.makeItem(L + 2, rnd, rnd.pick(["weapon", "armor", "helm", "shield"])), L + 8, rnd); it.unknown = false; this.bag.push(it); this.sound("chest"); finish(`In the pack: ${it.name} (${CM.itemLabel(it)}).`); } else { this.sound("trap"); this.springTrap(rnd.pick(["gas", "blade", "needle"]), k); finish("The straps were cut for a reason."); } return true; }
+      case "bathe": { for (const h of this.alive()) { this.cure(h, "all"); h.hp = Math.min(h.max, h.hp + Math.ceil(h.max / 4)); } this.sound("heal"); if (rnd.chance(0.25)) { finish("The water takes every ache with it - and something takes hold of an ankle."); const g = [this.tune(CM.makeMonster(CM.monsterKind("Drowned"), CM.monsterLevel(L), rnd)), this.tune(CM.makeMonster(CM.monsterKind("Drowned"), CM.monsterLevel(L), rnd))]; this.foes = g; this.startCombat(k, { group: g }, true); } else finish("The water takes every ache with it. On the bottom, a face, smiling."); return true; }
+      case "dig": { if (rnd.chance(0.5)) { const ids = Object.keys(CM.TOMES), it = CM.tome(ids[rnd.int(0, ids.length - 1)]); this.bag.push(it); this.sound("chest"); finish(`Under the cairn, wrapped in oilcloth: the ${it.name}.`); } else { finish("Under the cairn, the hermit - and he is not pleased."); const g = [this.tune(CM.makeMonster(CM.monsterKind("Wraith"), CM.monsterLevel(L), rnd))]; this.foes = g; this.startCombat(k, { group: g }, true); } return true; }
+      default: return false;
+    }
+  },
+  openStrongbox(thing, k) {
+    if (thing.opened) { this.say("The strongbox is open, and empty."); return; }
+    const row = this.bag.findIndex((i) => i.kind === "boxkey" && i.box === this.floor.number);
+    if (row < 0) { this.sound("bump"); this.say(`The strongbox is bolted to the floor and locked. Its key lies on floor ${thing.from}${this.bag.some((i) => i.kind === "boxkey") ? " - not the one you carry" : ""}.`); return; }
+    this.bag.splice(row, 1);
+    thing.opened = true;
+    const rnd = new CM.Random(CM.hashSeed(`${this.seed}:strongbox:${this.floor.number}`)), gold = 60 * this.floor.number;
+    const it = CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);
+    it.unknown = false;
+    this.gold += gold; this.bag.push(it);
+    this.sound("chest");
+    this.achieve("strongbox");
+    this.emit("fx", { kind: "sparkle", at: k.split(",").map(Number) });
+    this.say(`The key turns twice, and the lid comes up: ${gold} gold, and ${it.name} (${CM.itemLabel(it)}).`);
+    this.saveRun();
+    this.emit("change");
+  },
+  // a peddler: a few odd things, dear, from the seed (what you buy stays bought)
+  peddle(thing, k) {
+    if (!thing.stock) {
+      const rnd = new CM.Random(CM.hashSeed(`${this.seed}:peddler:${this.floor.number}`)), L = this.floor.number;
+      const gear = CM.affix(CM.makeItem(L + 4, rnd, rnd.pick(["weapon", "armor"])), 99, rnd); gear.unknown = false; gear.value = Math.floor(gear.value * 1.5) + 100;
+      thing.stock = [gear, { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + L * 3), value: 90 }, CM.oil(rnd.pick(["fire", "frost", "holy"])), CM.scroll("mapping"), CM.ingredient(rnd.pick(Object.keys(CM.INGREDIENTS)))];
+      thing.stock[3].value = 60;
+    }
+    this.stock = thing.stock; this.peddling = k;
+    this.say("The peddler spreads a cloth and lays out what he has. His prices are what you'd expect, down here.");
+    this.openBag(true);
+  },
+  meetRivals(thing, k) {
+    if (thing.met) { this.say("The rivals are gone, one way or the other."); return; }
+    this.emit("choice", { k, title: "A rival party", text: "Four adventurers, as deep as you and as tired, with their hands near their hilts. \"This floor's ours,\" says the one in front, not unkindly. \"Trade, if you like. Or go round.\"", rivals: true,
+      options: ["Trade: their map of the floor, for 40 gold", "Challenge them for the floor (a fight; their purse and their best thing)", "Let them be"] });
+  },
+  chooseRivals(k, i) {
+    const fl = this.floor, thing = fl.things[k];
+    if (!thing || thing.type !== "rivals" || thing.met) return false;
+    if (i === 0) {
+      if (this.gold < 40) { this.say("You haven't forty gold. They shrug."); return true; }
+      this.gold -= 40; thing.met = true;
+      fl.seen = []; for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) fl.seen.push([x, y]);
+      delete fl.things[k];
+      this.sound("coin");
+      this.say("Their map is good: the whole floor, in a careful hand. They go up the stairs, and you don't see them again.");
+    } else if (i === 1) {
+      thing.met = true;
+      const L = CM.monsterLevel(fl.number), rnd = this.rnd, group = [];
+      for (const kind of ["Sellsword", "Sellsword", "Hedge Wizard"]) group.push(this.tune(CM.makeMonster(CM.monsterKind(kind), L, rnd)));
+      for (const m of group) { m.gold = 20 * fl.number; m.xp = Math.round(m.xp * 1.5); }
+      thing.group = group; thing.type = "monsters"; thing.rivalsFight = true;
+      this.say("\"Then it's like that,\" says the one in front, and draws.");
+      this.startCombat(k, thing);
+    } else {
+      thing.met = true; delete fl.things[k];
+      if (this.rnd.chance(0.5)) { this.bag.push({ name: "Healing Potion", kind: "heal", power: 20 + fl.number * 3, value: 20 }); this.say("They nod, and go round you, and the last of them leaves a potion on the floor as they pass. \"For the road.\""); }
+      else this.say("They nod, and go round you, and the dark takes them.");
+    }
+    this.saveRun(); this.emit("change");
     return true;
   },
 });

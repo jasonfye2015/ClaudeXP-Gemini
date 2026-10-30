@@ -18,6 +18,7 @@ Object.assign(CM.Game.prototype, {
   },
 
   closeBag() {
+    if (this.peddling) { this.stock = null; this.peddling = null; this.say("The peddler folds the cloth over what's left, and waits for whoever comes next."); }
     this.emit("bag", false);
     this.saveRun();
     this.emit("change");
@@ -178,6 +179,7 @@ Object.assign(CM.Game.prototype, {
     if (item.kind === "rope") return "The rope is for a pit: walk into one with it in the pack.";
     if (item.kind === "tome") return this.readTome(row, hero);
     if (item.kind === "gem") return "A gem is for the camp's smith: he sets it into gear, for gold.";
+    if (item.kind === "boxkey") return `That key is for the strongbox on floor ${item.box}. Walk up to the box and use it.`;
     if (item.kind === "ingredient") return "The camp's alchemist wants that. Keep it for her.";
     if (item.kind === "scrap") return "Scrap is for the camp's smith: five stand in for a diamond.";
     if (item.kind === "bomb") return "A firepot is for a fight: Item, then throw it.";
@@ -248,7 +250,7 @@ Object.assign(CM.Game.prototype, {
     if (this.gold < item.value) return "You can't afford that.";
     this.gold -= item.value;
     this.bag.push(Object.assign({}, item, item.props ? { props: Object.assign({}, item.props) } : {}));
-    if (["weapon", "armor", "shield", "helm", "lantern"].includes(item.kind)) this.stock.splice(row, 1);
+    if (this.peddling || ["weapon", "armor", "shield", "helm", "lantern"].includes(item.kind)) this.stock.splice(row, 1);   // (the merchant's potions never run out; a peddler's cloth does)
     this.sound("coin");
     this.emit("change");
     return "";

@@ -12,7 +12,7 @@ CM.GEN = 1;
 CM.SCHEMA = 2;                                      // the run's save format (1: whole floors, before v1.1)
 
 // the parts of a floor that never change once it is made (everything else is diffed against the fresh floor)
-CM.FLOOR_FIXED = ["number", "grid", "dark", "rooms", "decor", "special"];
+CM.FLOOR_FIXED = ["number", "grid", "dark", "rooms", "decor", "special", "hazard"];
 
 // a seen-list ([x, y] pairs) as a bitset, base64 - and back
 CM.packSeen = function (seen, size) {
@@ -36,8 +36,11 @@ const textOf = (map) => { const out = {}; for (const k of Object.keys(map || {})
 CM.snapshot = function (fl) {
   return { things: textOf(fl.things), features: textOf(fl.features), grid: fl.grid.map((row) => row.join("")), fp: CM.floorPrint(fl) };
 };
-CM.floorPrint = function (fl) {                      // the fresh floor's fingerprint: the walls, and where the furniture stands
-  return CM.hashSeed(fl.grid.map((r) => r.join("")).join("|") + "#" + Object.keys(fl.things).sort().join(",") + "#" + Object.keys(fl.features).sort().join(","));
+// the fresh floor's fingerprint: the walls, the furniture and the way down - not the chests and the monsters, which a
+// later version may add to by its own hashes without the floor having moved
+CM.floorPrint = function (fl) {
+  const fixed = Object.keys(fl.things).filter((k) => ["ladder", "stairs_up", "boss", "guardian", "phylactery"].includes(fl.things[k].type)).sort();
+  return CM.hashSeed(fl.grid.map((r) => r.join("")).join("|") + "#" + fixed.join(",") + "#" + Object.keys(fl.features).sort().join(","));
 };
 
 // what the party did to a floor, against the snapshot of the fresh one

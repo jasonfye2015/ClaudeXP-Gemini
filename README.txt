@@ -448,6 +448,33 @@ The hoard, deeper (the third big update, phase 3)
   salvage, smith("reroll"), give (an oil) (63-camp.js); the Alchemist dialog, the smith's new rows, the rarity colours
   (70-ui.js); the new glyphs (36-looks.js).
 
+The dungeon, stranger (the third big update, phase 5)
+  Choices on the floor. A third of the floors have something to decide on (CM.EVENTS, placed by the seed): a shrine
+  that wants blood (+1 Strength for a fifth of the front hero's health), someone in chains (a rescued adventurer, or a
+  ghoul), a dice table, a fountain that runs black (+2 to a stat, and a curse), an old camp fire (a third of everyone's
+  health, and perhaps company), a dead merchant (his purse, or his burial), a whispering box (the whole floor, perhaps
+  a curse), a rats' nest (burn it with a torch, or rummage), a statue (a blessing on the next fight, or its hand - a
+  boon, or the stone's gaze), a dropped pack (something fine, or a trap), a still pool (every ailment washed off; the
+  Deep's pools have something in them), a hermit's grave (a tome, or the hermit). Space asks; 1-3 answer.
+  The Deep's bands have their hazards (CM.HAZARDS): the Drowned Town's tide turns every thirty steps - at high tide
+  torches burn double and the Drowned are quick; spore clouds in the Fungal Deep's ways poison the front row as often
+  as not; in the Crystal Caverns the mirror walls throw a Magic Missile, a fire bolt or lightning onto a second foe
+  for half; the Foundry's vents breathe fire on every third step; the Ossuary's bone piles stand up as you pass. A
+  hazard is named when its band is first entered, and drawn on the automap once met; the party walking by itself
+  goes round the known ones.
+  Strongboxes: a heavy key on one floor (stamped with a number) opens an iron strongbox bolted to the floor two floors
+  down - its gold and a rare thing (the Keyholder achievement). The box never lacks its key, nor the key its box.
+  A peddler, now and then, on a floor: Space, and he lays out a cloth - a rare weapon or armour, a Greater Healing
+  Potion, an oil, a Scroll of Mapping, an ingredient - at a peddler's prices. What you buy stays bought.
+  A rival party, now and then: trade for their map of the floor (40 gold), challenge them for the floor (two
+  Sellswords and a Hedge Wizard, at the depth's level; win, and their purse and their best thing are yours - the
+  Unrivalled achievement), or let them be (they may leave a potion for the road).
+  In code: the placing at the end of makeFloor by hashes of the seed (20-world.js); askEvent / choose, openStrongbox,
+  peddle, meetRivals / chooseRivals, the hazards in arrive and the tide in move (61-explore.js); rebound, the blessing
+  prayed for, the rivals' purse (62-combat.js); the choice dialog (70-ui.js). The floor's fingerprint (CM.floorPrint)
+  no longer counts the chests and monsters, so a later version may add to a floor by its own hashes without a saved
+  run noticing. New set pieces are left for a generator version: they would move the floors already laid out.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

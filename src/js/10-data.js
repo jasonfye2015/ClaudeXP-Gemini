@@ -168,6 +168,9 @@ CM.MONSTERS = [
   { name: "Grave Priest", colour: "#4A3A5A", body: "tall", head: "skull", eyes: "#C080FF", extras: ["staff", "robe"], speed: 9, undead: true, ability: "drain", touch: { status: "curse", chance: 0.25 }, deep: 8 },
   { name: "Rootling", colour: "#6A3A2A", body: "small", head: "ears", eyes: "#FF4040", extras: ["claws"], speed: 12, ability: "savage", touch: { status: "paralysis", chance: 0.15 }, deep: 9 },
   { name: "Hollow One", colour: "#3A1A1A", body: "ghost", head: "hood", eyes: "#FF3030", extras: [], speed: 11, undead: true, ability: "lifesteal", touch: { status: "curse", chance: 0.2 }, deep: 9 },
+  // a rival party's people (never among a floor's own bands: they come only with the rivals)
+  { name: "Sellsword", colour: "#7A6A50", body: "tall", head: "helm", eyes: "#E0D0B0", extras: ["sword", "shield"], speed: 11, ability: "savage", rival: true },
+  { name: "Hedge Wizard", colour: "#5A4A7A", body: "thin", head: "hood", eyes: "#E0C0FF", extras: ["staff", "robe"], speed: 12, ability: "ranged", row: "back", rival: true },
 ];
 // Each kind's shape - health, blows, armour, as a share of the straight line of its level (a rat is frail and quick, a
 // troll a wall of meat, a gargoyle all armour) - and what it fears and shrugs off (1.5 bites deep, 0.5 does little;
@@ -186,6 +189,7 @@ CM.MONSTER_SHAPES = {
   "Iron Hound": { shape: [1.0, 1.2, 1.3], resist: { fire: 0.5, storm: 1.5 } }, "Foundry Imp": { shape: [0.7, 1.0, 0.8], row: "back", resist: { fire: 0.5, frost: 1.5 } },
   "Bone Colossus": { shape: [1.8, 1.3, 1.2], resist: { frost: 0.5 } }, "Grave Priest": { shape: [0.8, 1.0, 0.9], row: "back" },
   Rootling: { shape: [0.7, 1.1, 0.7], resist: { fire: 1.5 } }, "Hollow One": { shape: [0.9, 1.0, 1.0], resist: { holy: 1.5, fire: 0.5 } },
+  Sellsword: { shape: [1.2, 1.1, 1.2] }, "Hedge Wizard": { shape: [0.7, 1.2, 0.7], row: "back" },
 };
 for (const m of CM.MONSTERS) Object.assign(m, CM.MONSTER_SHAPES[m.name] || {});
 // what each way of a monster's is, in words (the bestiary, the journal)
@@ -260,6 +264,44 @@ CM.RECIPES = {
 CM.OIL_FIGHTS = 3;
 // a set of relics: the guardians' things worn together are more than themselves
 CM.RELIC_SET = { two: { atk: 2, df: 2, what: "two relics worn: +2 attack, +2 defence" }, three: { regen: 2, what: "three or more: and the party's wearer mends 2 a round" } };
+// ---- the dungeon, stranger: choices on the floor, the bands' hazards, strongboxes, a peddler, rivals ----
+// A choice event stands on a floor now and then (by the seed): Space, and the party is asked. Each option names what
+// the game does (game.resolveEvent, 61-explore.js) and what the dice may make of it.
+CM.EVENTS = {
+  bloodshrine: { title: "A shrine that wants blood", look: "altar", text: "A low altar, black with old offerings, and a knife on it that is clean. Whoever gives it blood, it gives something back - the carvings around it say so, in a hand that shook.",
+    options: [{ label: "Give it blood (the front hero bleeds a fifth of their health; +1 Strength, for good)", effect: "blood" }, { label: "Walk on", effect: "leave" }] },
+  prisoner: { title: "Someone in chains", look: "npc:adventurer", text: "Chained to the wall, hooded, still. It breathes. It might be someone who went down before you. It might not.",
+    options: [{ label: "Cut them loose (a lost adventurer joins your rescued, or it is a ghoul)", effect: "prisoner" }, { label: "Leave them", effect: "leave" }] },
+  gamble: { title: "A dice table", look: "chest", text: "A table, a lantern, three dice, and a dealer who is not quite a kobold and not quite a man. \"A hundred gold,\" he says. \"Double or nothing. The house is honest down here. There is no one to be dishonest for.\"",
+    options: [{ label: "Stake 100 gold (a little less than even to win 250)", effect: "gamble" }, { label: "Walk on", effect: "leave" }] },
+  cursedfountain: { title: "A fountain that runs black", look: "fountain", text: "The water is black and does not reflect the torch. It smells of iron and something sweeter. Things that drink here grow strong, the hermits say, and wrong.",
+    options: [{ label: "Drink (a random hero: +2 to a random stat for good, and a curse)", effect: "blackwater" }, { label: "Leave it", effect: "leave" }] },
+  oldcampfire: { title: "An old camp fire", look: "ember", text: "The ashes are still warm, and someone has left a bedroll. Nothing is here now. Nothing is here now.",
+    options: [{ label: "Rest a while (the party mends a third; something may come to the light)", effect: "campfire" }, { label: "Leave it", effect: "leave" }] },
+  merchantcorpse: { title: "A dead merchant", look: "bones", text: "He got this far with a purse and a mule's worth of hope. The purse is still on him.",
+    options: [{ label: "Take the purse (gold - and perhaps a needle in the lining)", effect: "purse" }, { label: "Bury him (experience, and a quieter floor)", effect: "bury" }] },
+  whisperingdoor: { title: "A whispering box", look: "phylactery", text: "A box that whispers. Put your ear to it and it tells you the floor - every turn of it. It wants something for that, and it does not say what.",
+    options: [{ label: "Listen (the whole floor on the automap; one hero may be cursed)", effect: "whisper" }, { label: "Don't", effect: "leave" }] },
+  ratnest: { title: "A rats' nest", look: "nest", text: "A heap of rags and bones with coins glinting in it, and small eyes.",
+    options: [{ label: "Burn it out (a torch from the pack: the coins, and no bites)", effect: "burnnest" }, { label: "Rummage (the coins, and the bites)", effect: "rummage" }, { label: "Leave it", effect: "leave" }] },
+  statue: { title: "A statue with its eyes closed", look: "throne", text: "A saint, or a king, in stone, with a hand out. The stone of the hand is worn smooth by other hands.",
+    options: [{ label: "Pray (a blessing on the next fight)", effect: "pray" }, { label: "Touch the hand (a boon, or the stone's gaze)", effect: "touch" }, { label: "Walk on", effect: "leave" }] },
+  lostpack: { title: "A pack, dropped", look: "chest", text: "Someone's pack, dropped and not come back for. The straps are cut.",
+    options: [{ label: "Open it (something fine, or a trap)", effect: "pack" }, { label: "Leave it", effect: "leave" }] },
+  pool: { title: "A still pool", look: "water1", text: "Clear water, cold, in a basin cut from the floor. You can see the bottom. You can see something on the bottom.",
+    options: [{ label: "Bathe (every ailment washed off, and a quarter of everyone's health back; the water may have something in it)", effect: "bathe" }, { label: "Leave it", effect: "leave" }] },
+  hermitgrave: { title: "A hermit's grave", look: "bones", text: "A cairn, and a staff set in it, and a name scratched on the staff that the damp has taken. Hermits bury their books with them.",
+    options: [{ label: "Dig (a tome, or what guards it)", effect: "dig" }, { label: "Leave it", effect: "leave" }] },
+};
+// what each band of the Deep does to the party besides its monsters (game.hazards, 61-explore.js)
+CM.HAZARDS = {
+  4: { id: "tide", name: "the tide", note: "The water in the streets rises and falls with a tide no moon pulls. At high tide torches burn fast and the Drowned are quick." },
+  5: { id: "spores", name: "spore clouds", note: "Spore clouds hang in some of the ways. Walking through one is a lungful of poison, as often as not." },
+  6: { id: "mirror", name: "the mirror walls", note: "The crystal throws every bolt back: a Magic Missile, a fire bolt or lightning aimed at one foe rebounds onto another, for half." },
+  7: { id: "vents", name: "the vents", note: "Vents in the floor breathe fire on a beat. Stand on one at the wrong moment and everyone is scorched." },
+  8: { id: "bonepiles", name: "the bone piles", note: "The bones are heaped higher than a man. Some of them stand up when you pass." },
+};
+CM.TIDE_STEPS = 30;
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
 CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
@@ -478,6 +520,8 @@ CM.ACHIEVEMENTS = {
   bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the fiftieth floor", title: "of the Bottom" },
   crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
   distilled: { name: "Distilled", what: "Brew an elixir at the camp's still", title: "the Distilled" },
+  rivals: { name: "No Rivals", what: "Best a rival party for the floor", title: "the Unrivalled" },
+  strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
   swift: { name: "Swift", what: "Slay the Lich King in under 1,500 steps", title: "the Swift" },

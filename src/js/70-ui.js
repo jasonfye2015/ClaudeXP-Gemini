@@ -124,6 +124,8 @@ CM.UI = class {
   <p class="small">A woman with a copper still by the camp fire. The monsters of each depth drop something she wants - moss, weed, soot, dust, slag, salt, sap - and she makes potions, oils and worse of it, for gold.</p>
   <div class="small" id="alchemist-have"></div><div id="alchemist-list"></div><div class="small" id="alchemist-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-choice"><div class="box"><h2 id="choice-title"></h2><p id="choice-text" class="lore"></p><div id="choice-options" class="answers"></div>
+  <div class="end"><button class="close">Step back</button></div></div></div>
 <div class="dialog" id="dlg-waystone"><div class="box"><h2>The Waystones</h2>
   <p class="small">A mark chalked by every camp fire the party has reached. From one camp, the old road leads to another: the floors between stay as you left them.</p>
   <div id="waystone-list"></div><div class="small" id="waystone-note"></div>
@@ -204,6 +206,7 @@ CM.UI = class {
     game.on("lore", (text) => { this.$("#lore-text").textContent = text; this.openDialog("#dlg-lore"); });
     game.on("talk", ({ title, text }) => { this.$("#talk-title").textContent = title; this.$("#talk-text").textContent = text; this.openDialog("#dlg-talk"); });
     game.on("riddle", (k) => this.askRiddle(k));
+    game.on("choice", (c) => this.askChoice(c));
     game.on("teleported", () => this.flash(".blink", 60));
     game.on("fell", () => this.flash(".fall", 350));
     this.show("title");
@@ -693,8 +696,12 @@ CM.UI = class {
       else if (f && f.type === "carving" && f.face === fl.facing) text = "Runes carved into the wall. Space reads them.";
       else if (thing) text = { chest: "A chest. Space opens it.", ladder: "A ladder down. Space climbs it.", stairs_up: "The stairs up. Space climbs them.",
         phylactery: "A cold box with a slow beat inside it. Space smashes it.", ghost: "A ghost. Space speaks to it.", hermit: "A hermit. Space speaks to him.",
-        adventurer: "Someone bound. Space cuts them loose.", rope: "A rope from above. Space climbs it." }[thing.type] || "";
+        adventurer: "Someone bound. Space cuts them loose.", rope: "A rope from above. Space climbs it.", event: `${(CM.EVENTS[thing.event] || {}).title || "Something strange"}. Space looks closer.`,
+        strongbox: thing.opened ? "An empty strongbox." : "A strongbox. Space tries the key.", peddler: "A peddler. Space sees his wares.", rivals: "A rival party. Space speaks to them." }[thing.type] || "";
       else if (f && f.type === "plate" && (f.gate || f.known)) text = f.gate ? (f.pressed ? "A pressure plate, sunk." : "A pressure plate.") : "A plate that was a trap.";
+      else if (f && f.type === "spores" && f.known) text = "A hanging cloud of spores.";
+      else if (f && f.type === "vents" && f.known) text = "A vent in the floor. It breathes fire on a beat.";
+      else if (f && f.type === "bonepiles" && f.known) text = "A heap of bones, higher than a man.";
       else if (f && f.type === "fountain") text = f.used ? "A dry fountain." : "A fountain. Space drinks.";
       else if (f && f.type === "altar") text = f.used ? "A quiet altar." : "An altar. Space kneels.";
       else if (ahead && ahead.type === "door" && !ahead.open) text = ahead.riddle !== undefined ? "A door written over with runes. Walk into it, and answer." : ahead.locked ? "A locked door. Walk into it with a key." : "A door. Walk into it to open it.";
@@ -975,7 +982,7 @@ CM.UI = class {
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
     const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040" };
+      ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
@@ -1029,6 +1036,8 @@ CM.UI = class {
       p.fillStyle = "#101010"; p.beginPath(); p.arc(cx, cy, cell * 0.32, 0, Math.PI * 2); p.fill();
     } else if (f.type === "plate" && (f.gate || f.known)) {
       p.strokeStyle = f.gate ? (f.pressed ? "#80A060" : "#E08030") : "#C03030"; p.lineWidth = Math.max(1.5, cell * 0.12); p.strokeRect(cx - cell * 0.26, cy - cell * 0.26, cell * 0.52, cell * 0.52);
+    } else if (["spores", "vents", "bonepiles"].includes(f.type) && f.known) {
+      p.fillStyle = f.type === "spores" ? "#A0C040" : f.type === "vents" ? "#E06020" : "#D8D0B8"; p.beginPath(); p.arc(cx, cy, cell * 0.22, 0, Math.PI * 2); p.fill();
     } else if (f.type === "teleporter" && f.known) {
       p.strokeStyle = "#8040E0"; p.lineWidth = Math.max(1.5, cell * 0.12); p.beginPath(); p.arc(cx, cy, cell * 0.3, 0, Math.PI * 2); p.stroke();
     } else if (f.type === "spinner" && f.known) {
@@ -1354,6 +1363,29 @@ CM.UI = class {
     this.closeDialogs();
     this.game.answerRiddle(r.k, r.answers[n - 1]);
     this.riddle = null;
+    this.refresh();
+  }
+  // a choice on the floor: the options as buttons (1-3 pick them too)
+  askChoice(c) {
+    this.choice = c;
+    this.$("#choice-title").textContent = c.title;
+    this.$("#choice-text").textContent = c.text;
+    const box = this.$("#choice-options");
+    box.innerHTML = "";
+    c.options.forEach((label, i) => {
+      const b = document.createElement("button");
+      b.innerHTML = `<kbd>${i + 1}</kbd>${this.esc(label)}`;
+      b.addEventListener("click", () => this.pickChoice(i + 1));
+      box.appendChild(b);
+    });
+    this.openDialog("#dlg-choice");
+  }
+  pickChoice(n) {
+    const c = this.choice;
+    if (!c || !c.options[n - 1]) return;
+    this.closeDialogs();
+    this.choice = null;
+    if (c.rivals) this.game.chooseRivals(c.k, n - 1); else this.game.choose(c.k, n - 1);
     this.refresh();
   }
   openJournal() {

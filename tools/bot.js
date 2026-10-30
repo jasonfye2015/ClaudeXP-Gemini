@@ -58,10 +58,14 @@ function playRun(CM, game, opts = {}) {
   // one walk out from the party's square each move: where it can get to, and the way there (a teleporter is a jump)
   let paths = null;
   const walk = (fl) => {
-    const start = `${fl.pos[0]},${fl.pos[1]}`, parent = new Map([[start, null]]), queue = [fl.pos];
+    const start = `${fl.pos[0]},${fl.pos[1]}`, parent = new Map([[start, null]]), queue = [fl.pos], landed = new Set();
     for (let i = 0; i < queue.length; i++) {
       const [x, y] = queue[i], k = `${x},${y}`, f = fl.features[k];
-      if (f && f.type === "teleporter" && k !== start) { const tk = `${f.to[0]},${f.to[1]}`; if (!parent.has(tk)) { parent.set(tk, k); queue.push(f.to); } continue; }
+      if (f && f.type === "teleporter" && k !== start && !landed.has(k)) {   // (stepping onto one is a jump; landing on its twin is not another)
+        const tk = `${f.to[0]},${f.to[1]}`;
+        if (!parent.has(tk)) { parent.set(tk, k); landed.add(tk); queue.push(f.to); }
+        continue;
+      }
       for (const [dx, dy] of CM.DIRS) {
         const nx = x + dx, ny = y + dy, nk = `${nx},${ny}`;
         if (parent.has(nk) || !walkOK(fl, nx, ny)) continue;

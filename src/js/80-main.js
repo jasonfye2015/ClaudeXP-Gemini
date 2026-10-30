@@ -306,6 +306,11 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "adventurer") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
       else if (thing.type === "bones") out.push({ x, y, layer: "bones", w: 0.6, h: 0.42 });
       else if (thing.type === "rope") out.push({ x, y, layer: "rope", w: 0.5, h: 1.0 });
+      else if (thing.type === "event") { const look = (CM.EVENTS[thing.event] || {}).look || "chest"; const flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.95 : 0.8, h: 0.8, flat, glow: 0.3 }); }
+      else if (thing.type === "strongbox") out.push({ x, y, layer: "chest", w: 0.7, h: 0.6, glow: thing.opened ? 0 : 0.4, shade: 0.7 });
+      else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
+      else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
+      else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });
       else if ((thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian") && !(game.mode === "combat" && key === game.foeKey)) {
         const m = thing.group.find((f) => f.hp > 0 && !f.fled) || thing.group[0];
         if (thing.anim) {                                               // on the move: it slides from where it was
@@ -328,6 +333,9 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (f.type === "pit") out.push({ x, y, layer: "pit", flat: true, w: 0.96 });
       else if (f.type === "trapdoor" && f.known) out.push({ x, y, layer: "trapdoor", flat: true, w: 0.96 });
       else if (f.type === "teleporter") out.push({ x, y, layer: "teleporter", flat: true, w: 0.9, glow: 0.85 });
+      else if (f.type === "spores") out.push({ x, y, layer: "fungus", flat: true, w: 0.9, glow: 0.5 + 0.2 * Math.sin(now / 600 + x), alpha: 0.8 });
+      else if (f.type === "vents") out.push({ x, y, layer: "ember", flat: true, w: 0.9, glow: (Math.floor(now / 700) % 3 === 0 ? 1 : 0.35) });
+      else if (f.type === "bonepiles") out.push({ x, y, layer: f.spent ? "bones" : "nest", w: f.spent ? 0.6 : 0.9, h: f.spent ? 0.42 : 0.75 });
       else if (f.type === "fountain") out.push({ x, y, layer: f.used ? "fountain_dry" : "fountain", w: 0.9, h: 0.9 });
       else if (f.type === "altar") out.push({ x, y, layer: "altar", w: 0.9, h: 0.9 });
       else if (f.type === "lever") out.push({ x, y, layer: f.pulled ? "lever_pulled" : "lever", face: f.face, w: 0.34, h: 0.34 });
@@ -402,6 +410,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const ending = ui.$("#dlg-over").classList.contains("on");
       if (e.code === "Escape" || (e.code === K.map && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
       else if (ui.$("#dlg-riddle").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickRiddle(Number(e.code.slice(-1)));
+      else if (ui.$("#dlg-choice").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickChoice(Number(e.code.slice(-1)));
       else if (e.code === K.journal && ui.$("#dlg-journal").classList.contains("on")) ui.closeDialogs();
       return;
     }

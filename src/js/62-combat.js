@@ -25,7 +25,9 @@ Object.assign(CM.Game.prototype, {
     for (const h of this.party) { h.cried = false; h.winded = false; h.defending = false; h.guardedBy = null; h.guarding = null; h.used = {}; h.struck = false; }
     for (const m of this.foes) { m.held = 0; m.asleep = 0; m.blind = 0; m.marked = false; m.charged = false; m.fled = false; m.dead = m.hp <= 0; m.chilled = 0; m.warded = 0; m.intent = null; if (!m.row) m.row = (CM.monsterKind(m.kind || m.name) || {}).row || "front"; this.noteFoe(m, "seen"); }
     this.target = 0;
-    this.combat = { foes: this.foes, round: 0, order: [], index: 0, waiting: null, surprise: false, taunter: null, tauntUntil: 0, bless: false, protect: false, reached: 0 };
+    this.combat = { foes: this.foes, round: 0, order: [], index: 0, waiting: null, surprise: false, taunter: null, tauntUntil: 0, bless: Boolean(this.blessedNext), protect: false, reached: 0 };
+    if (this.blessedNext) { this.blessedNext = false; this.say("The saint's blessing is on the party for this fight."); }
+    if (this.floor && this.floor.tide) for (const m of this.foes) m.speed = (m.speed || 10) + 3;   // (high tide: the Drowned are quick)
     this.setMode("combat");
     this.count("fights");
     this.sound(CM.roarFor((this.foes[0] || {}).kind || (this.foes[0] || {}).name));
@@ -685,6 +687,14 @@ Object.assign(CM.Game.prototype, {
     return dmg;
   },
 
+  // the Crystal Caverns' mirror walls: a bolt at one foe rebounds onto another, for half
+  rebound(foe, dmg, element) {
+    if (!this.floor || this.floor.hazard !== "mirror") return;
+    const other = this.living().find((m) => m !== foe);
+    if (!other) return;
+    this.spellHit(other, Math.max(1, Math.ceil(dmg / 2)), "The bolt rebounds off the crystal:", element);
+  },
+
   // a Spore Beast badly hurt tears in two: the other half takes its place beside it, once
   splitIfHurt(m) {
     if (m.ability !== "splitter" || m.split || m.hp <= 0 || m.hp > m.max / 2 || this.mode !== "combat") return;
@@ -783,9 +793,9 @@ Object.assign(CM.Game.prototype, {
     const rnd = this.rnd, L = h.level, mod = this.spellMod(h), c = this.combat || {};
     const healAll = (n, text) => { for (const p of this.alive()) p.hp = Math.min(p.max, p.hp + n); this.say(text); this.sound("heal"); };
     switch (id) {
-      case "missile": this.spellHit(foe, Math.max(1, 6 + 2 * L + mod), `${h.name}'s bolt of force strikes:`); break;
-      case "firebolt": this.spellHit(foe, Math.max(1, 10 + 3 * L + mod), `${h.name}'s fire bolt:`, "fire"); break;
-      case "lightning": this.spellHit(foe, Math.max(1, 20 + 5 * L + mod), `${h.name} calls down lightning!`, "storm"); if (CM.trait(h, "tempest") && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.5)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels, smoking.`); } break;
+      case "missile": this.spellHit(foe, Math.max(1, 6 + 2 * L + mod), `${h.name}'s bolt of force strikes:`); this.rebound(foe, Math.max(1, 6 + 2 * L + mod), null); break;
+      case "firebolt": this.spellHit(foe, Math.max(1, 10 + 3 * L + mod), `${h.name}'s fire bolt:`, "fire"); this.rebound(foe, Math.max(1, 10 + 3 * L + mod), "fire"); break;
+      case "lightning": this.spellHit(foe, Math.max(1, 20 + 5 * L + mod), `${h.name} calls down lightning!`, "storm"); this.rebound(foe, Math.max(1, 20 + 5 * L + mod), "storm"); if (CM.trait(h, "tempest") && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.5)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels, smoking.`); } break;
       case "calllightning": {
         const dmg = Math.max(1, 18 + 4 * L + mod), struck = CM.trait(h, "stormcall") ? foes : [foe];
         for (const m of struck) { this.spellHit(m, m === foe ? dmg : Math.ceil(dmg * 0.6), m === foe ? `${h.name} calls down lightning!` : "The storm reaches on:", "storm"); if (CM.trait(h, "tempest") && m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.5)) { m.held = Math.max(m.held || 0, 1); this.say(`${CM.The(m)} reels, smoking.`); } }
@@ -986,6 +996,13 @@ Object.assign(CM.Game.prototype, {
     this.gold += gold;
     if (this.gold >= 2000) this.achieve("hoarder");
     if (slain.some((m) => m.name === "Minotaur of the Labyrinth")) this.achieve("labyrinth");
+    const fought0 = this.floor.things[this.foeKey];
+    if (fought0 && fought0.rivalsFight) {                                 // the rivals' best thing, and their purse, on top
+      const rnd0 = new CM.Random(CM.hashSeed(`${this.seed}:rivals:${this.floor.number}`)), best = CM.affix(CM.makeItem(this.floor.number + 3, rnd0, rnd0.pick(["weapon", "armor", "helm"])), 99, rnd0);
+      best.unknown = false; this.bag.push(best); gold += 30 * this.floor.number;
+      this.achieve("rivals");
+      this.say(`The rivals are beaten, and the one in front yields: their purse, and ${best.name} (${CM.itemLabel(best)}).`);
+    }
     const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
     const band = CM.themeIndex(this.floor.number), ing = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band);
     if (ing && rnd.chance(0.3)) loot.push(CM.ingredient(ing));           // (what the alchemist wants: the band's own stuff)

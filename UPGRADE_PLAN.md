@@ -131,7 +131,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 5 - The dungeon, stranger
+## Phase 5 - The dungeon, stranger - DONE in v1.1 (set pieces deferred: they would move existing floors)
 
 - **Choice events** on the floor (a shrine that wants blood, a chained prisoner who might be a monster, a gamble
   table, a cursed fountain that grants a boon) - small risk/reward dialogs, a dozen to start, data in `CM.EVENTS`.

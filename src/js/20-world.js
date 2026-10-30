@@ -144,7 +144,7 @@ CM.itemLabel = function (item) {
   if (p.stun) bits.push("a blow may leave the foe reeling");
   if (p.twohanded) bits.push("two-handed");
   if (p.relic) bits.push("a guardian's relic");
-  if (p.unique) bits.push("unique: " + CM.UNIQUES[p.unique].lore);
+  if (p.unique) bits.push("unique: " + CM.UNIQUES[p.unique].lore.replace(/\.$/, ""));
   if (p.bow) bits.push("a bow: the Ranger's");
   if (p.cursed) bits.push("CURSED");
   return bits.filter(Boolean).join(", ");
@@ -1001,6 +1001,50 @@ CM.makeFloor = function (number, seed) {
     if (floorsOfBand[CM.hashSeed(`${seed}:unique:${band}`) % floorsOfBand.length] === number) {
       const chests = Object.keys(floor.things).filter((k) => floor.things[k].type === "chest").sort();
       if (chests.length) floor.things[chests[CM.hashSeed(`${seed}:unique:${band}:chest`) % chests.length]].items.push(CM.makeUnique(uniqueId));
+    }
+  }
+  // the dungeon, stranger: a choice now and then, a strongbox two floors below its key, a peddler, rivals, and the
+  // band's hazards - each by its own hash, on cells chosen the same way every time, so the floors stay as they were
+  const openCells = () => {
+    const out = [];
+    for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) {
+      const k = key(x, y);
+      if (grid[y][x] !== 0 || floor.features[k] || floor.things[k] || inTemplate(x, y) || (dist.get(k) || 0) < 3) continue;
+      out.push(k);
+    }
+    return out;
+  };
+  const pickCell = (what, filter) => { const cells = openCells().filter(filter || (() => true)); return cells.length ? cells[CM.hashSeed(`${seed}:${what}:${number}`) % cells.length] : null; };
+  const h = (what) => CM.hashSeed(`${seed}:${what}:${number}`);
+  const ordinary = number >= 2 && number < CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR && special !== "maze";
+  if (ordinary && h("event") % 100 < 35) {
+    const ids = Object.keys(CM.EVENTS).filter((id) => number > CM.LAST_FLOOR || !["pool"].includes(id)), id = ids[h("event:which") % ids.length];
+    const k = pickCell("event", (c) => roomCells.has(c));
+    if (k) floor.things[k] = { type: "event", event: id, done: false };
+  }
+  if (ordinary && number >= 4 && number + 2 < CM.BOTTOM && h("boxkey") % 100 < 30) {        // the key here, the box two floors down
+    const k = pickCell("boxkey", (c) => !roomCells.has(c));
+    if (k) floor.things[k] = { type: "boxkey", box: number + 2 };
+  }
+  if (number >= 6 && number < CM.BOTTOM && CM.hashSeed(`${seed}:boxkey:${number - 2}`) % 100 < 30 && (number - 2 >= 2 && !CM.guardianFor(number - 2) && number - 2 !== CM.LAST_FLOOR && CM.specialFor(number - 2, seed) !== "maze")) {
+    const k = pickCell("strongbox", (c) => roomCells.has(c));
+    if (k) floor.things[k] = { type: "strongbox", from: number - 2, opened: false };
+  }
+  if (ordinary && number >= 3 && h("peddler") % 100 < 8) {
+    const k = pickCell("peddler", (c) => roomCells.has(c));
+    if (k) floor.things[k] = { type: "peddler", stock: null };
+  }
+  if (ordinary && number >= 4 && h("rivals") % 100 < 10) {
+    const k = pickCell("rivals", (c) => roomCells.has(c));
+    if (k) floor.things[k] = { type: "rivals", met: false };
+  }
+  const hazard = CM.HAZARDS[CM.themeIndex(number)];
+  if (hazard && !CM.guardianFor(number)) {
+    floor.hazard = hazard.id;
+    const n = { spores: 4, vents: 4, bonepiles: 3 }[hazard.id] || 0;
+    for (let i = 0; i < n; i++) {
+      const k = pickCell(`${hazard.id}:${i}`, (c) => !roomCells.has(c) && !floor.features[c]);
+      if (k) floor.features[k] = { type: hazard.id, known: false, spent: false };
     }
   }
   floor.rooms = rooms.map((r) => ({ x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, name: r.template ? r.template.name : "" }));

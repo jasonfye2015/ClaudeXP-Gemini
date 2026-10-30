@@ -510,6 +510,110 @@ test("the smith, extended: salvage to scrap, five scrap for a diamond, a suffix 
   assert.match(game.salvage(game.bag.push(CM.makeUnique("tidecaller")) - 1), /won't/);
 });
 
+test("the dungeon, stranger: choices, a strongbox two floors below its key, a peddler, rivals - by the seed", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("strange", fixedParty(CM));
+  const counts = {}, keys = [], boxes = [];
+  for (let f = 1; f <= 50; f++) { const fl = CM.makeFloor(f, "strange"); assert.ok(CM.solvable(fl), "floor " + f); for (const [k, t] of Object.entries(fl.things)) { counts[t.type] = (counts[t.type] || 0) + 1; if (t.type === "boxkey") keys.push(t.box); if (t.type === "strongbox") boxes.push(f); } }
+  assert.ok(counts.event >= 8 && counts.strongbox >= 5 && counts.rivals >= 2, JSON.stringify(counts));
+  assert.deepStrictEqual(keys.sort((a, b) => a - b), boxes.sort((a, b) => a - b), "every key has its box two floors down, and no box lacks its key");
+  // a choice: the shrine, then the saint's prayer blesses the next fight
+  const fl = game.floor;
+  fl.things["2,2"] = { type: "event", event: "bloodshrine", done: false }; fl.pos = [2, 2];
+  let asked = null; game.on("choice", (c) => { asked = c; });
+  game.use();
+  assert.ok(asked && asked.options.length === 2);
+  const front = game.alive().find((h) => h.row === "front"), str = front.stats.str;
+  assert.ok(game.choose("2,2", 0));
+  assert.strictEqual(front.stats.str, str + 1); assert.ok(fl.things["2,2"].done);
+  fl.things["3,3"] = { type: "event", event: "statue", done: false }; fl.pos = [3, 3];
+  game.choose("3,3", 0);
+  assert.ok(game.blessedNext);
+  const mk = Object.keys(fl.things).find((k) => fl.things[k].type === "monsters");
+  game.startCombat(mk, fl.things[mk]);
+  assert.ok(game.combat.bless && !game.blessedNext);
+  autoplayFight(CM, game);
+  // the strongbox wants its own key
+  game.setMode("explore");
+  fl.things["4,4"] = { type: "strongbox", from: 2, opened: false }; fl.pos = [4, 4];
+  game.use(); assert.ok(!fl.things["4,4"].opened);
+  game.bag.push({ name: "Strongbox Key (floor 1)", kind: "boxkey", box: 1, power: 0, value: 0 });
+  const gold = game.gold, n = game.bag.length;
+  game.use();
+  assert.ok(fl.things["4,4"].opened && game.gold === gold + 60 && game.bag.length === n && game.achievements.strongbox, "the key opens it: gold and a rare thing");
+  // the peddler's cloth, and buying from it
+  fl.things["5,5"] = { type: "peddler", stock: null }; fl.pos = [5, 5];
+  game.use();
+  assert.ok(game.shopping && game.stock && game.stock.length === 5 && game.peddling);
+  game.gold = 1000;
+  const want = game.stock.findIndex((i) => i.kind === "greaterheal");
+  assert.strictEqual(game.buy(want), "");
+  assert.ok(game.bag.some((i) => i.kind === "greaterheal"));
+  game.closeBag();
+  assert.strictEqual(game.stock, null); assert.strictEqual(game.mode, "explore");
+  assert.ok(fl.things["5,5"].stock.every((i) => i.kind !== "greaterheal"), "what you buy stays bought");
+  // the rivals: a trade, and a fight
+  fl.things["6,6"] = { type: "rivals", met: false }; fl.pos = [6, 6];
+  game.use();
+  assert.ok(asked && asked.rivals);
+  game.gold = 100;
+  assert.ok(game.chooseRivals("6,6", 0));
+  assert.strictEqual(game.gold, 60); assert.ok(!fl.things["6,6"]);
+  fl.things["7,7"] = { type: "rivals", met: false }; fl.pos = [7, 7];
+  game.chooseRivals("7,7", 1);
+  assert.strictEqual(game.mode, "combat");
+  assert.ok(game.foes.some((m) => m.kind === "Sellsword") && game.foes.some((m) => m.row === "back"));
+  for (const m of game.foes) m.hp = 0;
+  game.afterBlows();
+  assert.ok(game.achievements.rivals, "their purse and their best thing");
+  game.saveRun();
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game();
+  g2.continueRun();
+  assert.ok(g2.floor.things["4,4"].opened && g2.floor.things["2,2"].done);
+});
+
+test("the bands' hazards: spores, vents, bone piles, the tide, the mirror walls", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("hazard-1", fixedParty(CM));
+  for (const h of game.party) { h.max = 500; h.hp = 500; }
+  const bands = { 21: "tide", 26: "spores", 31: "mirror", 36: "vents", 41: "bonepiles" };
+  for (const [f, id] of Object.entries(bands)) { const fl = CM.makeFloor(Number(f), "hazard-1"); assert.strictEqual(fl.hazard, id, "floor " + f); }
+  game.enterFloor(26, "down");
+  assert.ok(game.messages.some((m) => m.includes("Spore clouds")), "the hazard is named on arrival");
+  const fl = game.floor, k = Object.keys(fl.features).find((x) => fl.features[x].type === "spores");
+  assert.ok(k);
+  game.rnd = new CM.Random(1);
+  game.arrive(fl.features[k], k);
+  assert.ok(fl.features[k].known);
+  game.enterFloor(36, "down");
+  const vk = Object.keys(game.floor.features).find((x) => game.floor.features[x].type === "vents");
+  game.steps = 3; const hp = game.party[0].hp;
+  game.arrive(game.floor.features[vk], vk);
+  assert.ok(game.party[0].hp < hp, "the vent breathes on the beat");
+  game.enterFloor(41, "down");
+  const bk = Object.keys(game.floor.features).find((x) => game.floor.features[x].type === "bonepiles");
+  game.rnd = new CM.Random(2);
+  let fights = 0;
+  for (let i = 0; i < 1; i++) { game.floor.features[bk].spent = false; game.arrive(game.floor.features[bk], bk); if (game.mode === "combat") { fights++; for (const m of game.foes) m.hp = 0; game.afterBlows(); } }
+  assert.ok(game.floor.features[bk].spent);
+  game.enterFloor(21, "down");
+  const tideFloor = game.floor; game.steps = CM.TIDE_STEPS - 1;
+  const open = CM.DIRS.findIndex(([dx, dy]) => CM.passable(tideFloor, tideFloor.pos[0] + dx, tideFloor.pos[1] + dy));
+  tideFloor.facing = open; game.light = { kind: "torch", left: 100 };
+  game.move(0);
+  assert.strictEqual(tideFloor.tide, true, "the tide turns on the thirtieth step");
+  game.move(2);
+  assert.ok(game.light.left <= 96, "at high tide the torch burns double");
+  game.enterFloor(31, "down");
+  const rnd = new CM.Random(3), a = CM.makeMonster(CM.monsterKind("Crystal Golem"), 25, rnd), b = CM.makeMonster(CM.monsterKind("Shard Wisp"), 25, rnd);
+  game.floor.things["2,2"] = { type: "monsters", group: [a, b] };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  const mage = game.party.find((h) => h.cls === "Mage"); mage.mp = 50; game.combat.waiting = mage;
+  const bHp = b.hp;
+  game.useAbility(mage, "missile", a);
+  assert.ok(b.hp < bHp && game.messages.some((m) => m.includes("rebounds")), "the bolt rebounds onto the other");
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();
