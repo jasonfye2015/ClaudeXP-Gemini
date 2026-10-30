@@ -454,6 +454,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
     if (game.film) { if (e.code === "Escape") { e.preventDefault(); game.stopFilm(); } else if (e.code === "Space") { e.preventDefault(); game.film.playing = !game.film.playing; ui.filmBar(); } return; }   // (a film: watch, or stop)
     if (game.travel && !ui.dialogOpen()) { game.stopTravel(); if (MOVES[e.code] || e.code === K.explore) { e.preventDefault(); return; } }   // (any key stops a walk; a move key only stops it)
+    if (game.autoOn() && !ui.dialogOpen() && e.code !== K.autoPlay && (MOVES[e.code] || [K.use, K.explore, K.fight, K.auto, K.item, K.defend, K.run].includes(e.code))) { game.autoPlay(false); ui.refresh(); }   // (the reins: a move or a fight key takes them back)
     if (game.mode === "combat" && game.combat && game.combat.auto && e.code !== K.auto && !ui.dialogOpen()) game.autoFight(false);
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) {
       if (e.code === "Enter" && e.target.id === "seed") ui.startNew();
@@ -498,6 +499,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (["Digit1", "Digit2", "Digit3", "Digit4"].includes(e.code) && game.mode !== "title") { ui.openSheet(Number(e.code.slice(-1)) - 1); return; }
     if (/^Digit[5-8]$/.test(e.code) && (game.mode === "explore" || game.mode === "camp")) { const note = game.useBelt(Number(e.code.slice(-1)) - 5); if (note) game.say(note); ui.refresh(); return; }
     if (e.code === "Escape") { e.preventDefault(); ui.openDialog("#dlg-pause"); return; }
+    if (e.code === K.autoPlay && game.mode !== "title" && !ui.dialogOpen()) { e.preventDefault(); game.autoPlay(); ui.refresh(); return; }
     if (e.code === K.map || e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
     if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
     if (e.code === K.journal && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
@@ -587,7 +589,7 @@ window.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("pointerdown", () => CM.audio.unlock(), { once: false });
 
   // ---- the frame loop ----
-  let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0;
+  let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0, lastAutoStep = 0;
   function frame(now) {
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
@@ -609,6 +611,14 @@ window.addEventListener("DOMContentLoaded", () => {
         if (game.film && game.film.playing && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - game.film.last > 260 / game.film.speed) { game.film.last = now; game.filmStep(); }   // the film plays
         if (game.travel && game.mode === "explore" && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
         if (game.mode === "combat" && game.combat && game.combat.auto && game.combat.waiting && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAuto > 420 / (CM.fxSpeed || 1)) { lastAuto = now; game.autoTurn(); }
+        if (game.autoOn() && (ui.screen === "play" || ui.screen === "bag") && !renderer.busy && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAutoStep > (game.mode === "camp" ? 900 : game.settings.smooth ? 150 : 240)) {   // Automatic: a step a tick
+          lastAutoStep = now;
+          if (ui.screen === "bag") ui.show("play");
+          const did = game.auto.step();
+          for (const id of ["#dlg-talk", "#dlg-choice", "#dlg-riddle", "#dlg-lore", "#dlg-card"]) if (ui.$(id).classList.contains("on")) ui.closeDialogs();   // (what it read and answered, out of the way)
+          if (ui.screen === "bag") ui.show("play");
+          if (!did || game.mode === "camp") ui.refresh();
+        }
         renderer.light = game.lightFactor();
         const { out, hud } = sprites();
         renderer.setSprites(out);

@@ -2291,6 +2291,45 @@ test("around the things: the pad's belt button, rarity marked by shape as well a
   const out = execFileSync("node", [path.join(__dirname, "..", "tools", "words.js")], { encoding: "utf8" }); assert.ok(out.includes("The things' words") && /the trinkets \(CM.TRINKETS\)\s+\d+/.test(out), out.slice(0, 200));
 });
 
+test("automatic: the game's own autopilot plays a step a tick, wears, drinks and trades; it is a toggle; it stops by itself when lost or at the Root's choice rather than cheating; the bot drives the same class; its run films the same", () => {
+  const CM = load();
+  assert.ok(CM.Autopilot && CM.DEFAULT_KEYS.autoPlay === "KeyZ" && CM.KEY_ACTIONS.some(([id]) => id === "autoPlay"));
+  // the toggle, step by step, in the game's own shape (no warping, no waking): a few floors, gear worn, potions drunk
+  const game = new CM.Game(); game.newGame("auto-1", fixedParty(CM));
+  assert.ok(!game.autoOn()); assert.strictEqual(game.autoPlay(true), true); assert.ok(game.autoOn() && game.auto instanceof CM.Autopilot && game.auto.opts.warp === false && game.auto.opts.sync === false);
+  assert.ok(game.messages.slice(-1)[0].startsWith("Automatic:"));
+  let steps = 0, fights = 0, did = {}; const before = game.tally.steps || 0;
+  while (game.autoOn() && steps < 6000 && game.floor.number < 4) {
+    const r = game.auto.step(); steps++; if (r) did[r] = (did[r] || 0) + 1;
+    if (game.mode === "combat") { fights++; assert.strictEqual(game.auto.step(), "fighting"); assert.ok(game.combat.auto, "in a fight it hands the fight's Auto the reins"); autoplayFight(CM, game); }   // (the frame loop plays the fight in the browser; here the harness does)
+  }
+  assert.ok(game.floor.number >= 4 || game.mode === "title", `got down: floor ${game.floor.number}, ${steps} steps, ${JSON.stringify(did)} ${game.auto.why}`);
+  assert.ok((game.tally.steps || 0) > before + 20 && did.moved > 20 && (did.used || 0) > 0, JSON.stringify(did));
+  assert.ok(game.party.every((h) => h.weapon && h.armor), "wearing something");
+  assert.ok(game.autoOn(), "still on");
+  assert.strictEqual(game.autoPlay(false), true); assert.ok(!game.autoOn() && game.auto === null); assert.ok(game.messages.slice(-1)[0].startsWith("Automatic off"));
+  assert.strictEqual(game.auto, null); assert.ok(game.autoPlay() && game.autoOn(), "the bare toggle turns it on again"); game.autoPlay();
+  assert.ok(!game.autoOn());
+  // the camp: one step does the business, the next goes deeper
+  const g2 = new CM.Game(); g2.newGame("auto-2", fixedParty(CM)); g2.enterFloor(5, "down"); g2.gold = 500; g2.mode = "camp"; g2.autoPlay(true);
+  const k = g2.party.find((h) => h.cls === "Knight"); k.hp = 5;
+  assert.strictEqual(g2.auto.step(), "camp"); assert.strictEqual(g2.mode, "camp"); assert.strictEqual(k.hp, k.max, "rested"); assert.ok(g2.bag.filter((i) => i.kind === "heal" || i.kind === "greaterheal").length >= 1 || g2.gold < 40, "bought potions");
+  assert.strictEqual(g2.auto.step(), "deeper"); assert.strictEqual(g2.mode, "explore"); assert.strictEqual(g2.floor.number, 6); g2.autoPlay(false);
+  // lost: in the game it stops and says so (no warp); the simulator's bot warps on
+  const g3 = new CM.Game(); g3.newGame("auto-3", fixedParty(CM)); g3.autoPlay(true); g3.auto.opts.perFloor = 2; const fl3 = g3.floor.number;
+  let r3; for (let i = 0; i < 10 && g3.autoOn(); i++) r3 = g3.auto.step(); assert.ok(!g3.autoOn() && g3.floor.number === fl3, "stopped, and did not warp"); assert.ok(g3.messages.slice(-1)[0].includes("Automatic stops"), g3.messages.slice(-1)[0]);
+  assert.strictEqual(g3.auto.step(), false, "a stopped autopilot does nothing more");
+  const g4 = new CM.Game(); g4.newGame("auto-3", fixedParty(CM)); const bot = new CM.Autopilot(g4, { warp: true, wake: true, sync: true, perFloor: 2 }); for (let i = 0; i < 10 && bot.on; i++) bot.step(); assert.ok(g4.floor.number > 1 && bot.stuck >= 1, "the bot warps past a lost floor");
+  // the Root's choice is the player's
+  const g5 = new CM.Game(); g5.newGame("auto-5", fixedParty(CM)); g5.autoPlay(true); g5.rootPending = true; assert.strictEqual(g5.auto.step(), false); assert.ok(g5.messages.slice(-1)[0].includes("bottom of the world")); g5.rootPending = false; g5.autoPlay(false);
+  // a fight begun while it is on: the fight's Auto is set; turning it off hands the fight back
+  const g6 = new CM.Game(); g6.newGame("auto-6", fixedParty(CM)); const spot = Object.keys(g6.floor.things).find((c) => g6.floor.things[c].type === "monsters");
+  if (spot) { g6.floor.pos = spot.split(",").map(Number); g6.startCombat(spot, g6.floor.things[spot], false); if (g6.mode === "combat") { g6.autoPlay(true); assert.ok(g6.combat.auto); assert.strictEqual(g6.auto.step(), "fighting"); g6.autoPlay(false); assert.ok(!g6.combat.auto, "the reins back"); } }
+  // the bot is the same class, and an autopiloted run films the same (every act it takes is logged)
+  const g7 = new CM.Game(); g7.newGame("auto-7", fixedParty(CM)); const r = playRun(CM, g7, { maxFloor: 3 }); assert.ok(r.log && typeof r.moves === "number" && r.tools && typeof r.stuck === "number");
+  const again = CM.replayRun(g7.replaySpec()); assert.strictEqual(again.floor.number, g7.floor.number); assert.strictEqual(again.gold, g7.gold); assert.strictEqual(again.messages.slice(-1)[0], g7.messages.slice(-1)[0]);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

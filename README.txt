@@ -1033,6 +1033,24 @@ Around the things (the sixth big update, phase 9 - v5.0)
   uniques: about two thousand words beside the story's).
   Test: "around the things". The sixth big update is complete: nine phases, v4.1 to v5.0, and 75 tests.
 
+Automatic (v5.1)
+  A toggle that plays the game for you: Z, or the Automatic button in the explore and camp menus. On, the party
+  walks a step a tick (slower at the camp, so the business can be read): it opens the chests on the way, gathers,
+  finds the key before the locked door and the lever before the gate, reads the walls and listens to the dead,
+  answers riddles and the strangers' choices the careful way, drinks from fountains when hurt, sets traps and bars
+  doors when it has them, and fights what it walks into with the fight's own Auto hand. It wears what compares
+  better as it comes (every slot, the trinket too), drinks a potion under two fifths, eats when hungry, takes an
+  antidote when ailing, and at the camp rests, raises and heals, brews, buys potions and torches, closes wounds,
+  takes and claims bounties, tithes, insures its best worn things, orders what the stock lacks, sells heavy things
+  when over the line, fences unknowns and curses, and buys a weapon upgrade with the gold left - then goes deeper.
+  The HUD says "automatic" while it is on. Any move or fight key, or Z again, takes the reins back (the fight's
+  Auto too). It pauses while a dialog is open (Escape), and stops by itself, saying why, when it is lost on a floor
+  or when the choice is yours (the bottom of the world). Everything it does goes through the game's own logged
+  acts, so a film of an automatic run plays back the same, and the run saves as any other.
+  Under the hood it is CM.Autopilot (src/js/66-auto.js): the simulator's bot (tools/bot.js) is now the same class,
+  driven in one loop with warping past a lost floor and the waking of the Root allowed, so the bot and the toggle
+  can never drift apart. Test: "automatic".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

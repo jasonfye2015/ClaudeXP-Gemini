@@ -35,6 +35,7 @@ CM.TEXT = {
   "hud.heavy": "Heavy-laden",
   "hud.overloaded": "Overloaded",
   "hud.blessed": "blessed",
+  "hud.automatic": "automatic",
   "bag.weight": "Weight: {n}/{cap}",
   "bag.title.shop": "The Merchant",
   "bag.title.pack": "Inventory",
