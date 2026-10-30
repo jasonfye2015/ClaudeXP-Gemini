@@ -30,6 +30,13 @@ CM.makeGear = function (kind, floor, rnd) {
     const a = rnd.pick(CM.AMULETS); name = a.name; power = 0; value = 140;
     if (a.resist) props.resist = a.resist;
     if (a.df) { props.df = a.df; power = a.df; }
+  } else if (kind === "boots") {
+    const b = CM.BOOTS[Math.min(CM.BOOTS.length - 1, Math.floor(tier / 1.7))]; name = b.name; power = b.power; value = 40 * (power + 1) * (power + 1);
+    if (b.silence) props.silence = true;
+    if (b.waterwalk) props.waterwalk = true;
+  } else if (kind === "cloak") {
+    const c = CM.CLOAKS[Math.min(CM.CLOAKS.length - 1, Math.floor(tier / 1.7))]; name = c.name; power = c.df; props.df = c.df; value = 40 * (power + 1) * (power + 1);
+    if (c.hood) props.hood = true;
   }
   if ((kind === "weapon" || kind === "armor" || kind === "shield" || kind === "helm") && rnd.chance(0.15)) { props.bonus = 1; power += 2; value += 40; }
   if (floor >= 4 && (kind === "weapon" || kind === "armor") && rnd.chance(0.08)) { props.cursed = true; power = Math.max(1, power - 3); value = Math.floor(value / 3); }
@@ -79,6 +86,7 @@ CM.makeUnique = function (id, awake) {
   if (awake) { item.name = u.name + ", Awake"; item.props.awake = true; item.props.regen = (item.props.regen || 0) + 1; item.props.crit = (item.props.crit || 0) + 0.05; item.power += 2; item.value *= 2; }   // (an Awakened run: a second power in each)
   return item;
 };
+CM.ration = () => ({ name: "Ration", kind: "ration", power: 0, value: 15 });
 CM.ingredient = (id) => ({ name: CM.INGREDIENTS[id].name, kind: "ingredient", ingredient: id, power: 0, value: 25 });
 CM.oil = (element) => ({ name: { fire: "Oil of Fire", frost: "Oil of Rime", holy: "Oil of Saints" }[element], kind: "oil", element, power: 0, value: 60 });
 CM.bomb = () => ({ name: "Firepot", kind: "bomb", power: 0, value: 80 });
@@ -89,8 +97,9 @@ CM.rarityOf = (item) => (item && item.props && !item.unknown ? (item.props.uniqu
 CM.scroll = (id) => ({ name: CM.SCROLLS[id].name, kind: "scroll", spell: id, power: 0, value: 40 });
 CM.wand = (id, charges) => ({ name: CM.WANDS[id].name, kind: "wand", spell: id, power: 0, charges, value: 90 });
 
-CM.makeItem = function (floor, rnd, kind) {
-  kind = kind || rnd.pick(["weapon", "weapon", "weapon", "armor", "armor", "armor", "potion", "potion", "potion", "potion", "potion",
+CM.makeItem = function (floor, rnd, kind, gen) {
+  kind = kind || rnd.pick(gen >= 2 ? ["weapon", "weapon", "weapon", "armor", "armor", "armor", "potion", "potion", "potion", "potion", "potion",
+    "shield", "helm", "ring", "amulet", "scroll", "scroll", "wand", "boots", "cloak"] : ["weapon", "weapon", "weapon", "armor", "armor", "armor", "potion", "potion", "potion", "potion", "potion",
     "shield", "helm", "ring", "amulet", "scroll", "scroll", "wand"]);
   if (kind === "potion") {
     const roll = rnd.next();
@@ -123,6 +132,9 @@ CM.itemLabel = function (item) {
   else if (item.kind === "helm") bits.push(`helm +${item.power}`);
   else if (item.kind === "ring") bits.push(`+${item.power} ${CM.STAT_NAMES[p.stat]}`);
   else if (item.kind === "amulet") bits.push(p.resist ? `proof against ${p.resist}` : `warding +${p.df}`);
+  else if (item.kind === "boots") bits.push(`speed +${item.power}`, p.silence ? "silent: the party is never surprised" : "", p.waterwalk ? "dry feet: water costs the torch nothing" : "");
+  else if (item.kind === "cloak") bits.push(`warding +${p.df}`, p.hood ? "a hood: no surprise in the dark" : "");
+  else if (item.kind === "ration") bits.push("a meal: the party eats, and is not hungry for a while");
   else if (item.kind === "scroll") bits.push(CM.SCROLLS[item.spell].what);
   else if (item.kind === "wand") bits.push(`${CM.WANDS[item.spell].what} ${CM.plural(item.charges, "charge")}.`);
   else if (item.kind === "tome") bits.push(`teaches ${CM.ABILITIES[item.spell].name} to a caster who reads it: ${CM.ABILITIES[item.spell].what}`);
@@ -300,7 +312,7 @@ CM.recompute = function (h) {
   for (const st of CM.STATS) s[st] = CM.heroStat(h, st);                 // (rings count)
   const boons = h.boons || [];
   h.max = Math.max(1, c.hp + (s.con - 10) + L * (c.grow + CM.mod(s.con, 3)));
-  h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : 0;
+  h.maxmp = c.mp ? Math.max(0, c.mp + (s[c.key] - 10) + L * 3) : h.second && CM.CLASSES[h.second].mp ? 6 + Math.floor(L / 4) : 0;
   const hitStat = c.key === "dex" ? s.dex : s.str;
   const relics = CM.relicsWorn(h), set = relics >= 2 ? CM.RELIC_SET.two : null;   // (the guardians' things, worn together)
   if (h.cls === "Monk" && h.weapon && h.weapon.props && h.weapon.props.fists) h.weapon.power = 3 + Math.floor(h.level / 2) + 2 * (h.weapon.props.bonus || 0) + (CM.trait(h, "ironfists") ? Math.ceil((3 + Math.floor(h.level / 2)) / 2) : 0);   // (the hands grow; the smith's work and the Heir's kit count double on them)
@@ -311,13 +323,14 @@ CM.recompute = function (h) {
   return h;
 };
 
-CM.makeHero = function (cls, name, stats, row) {
+CM.makeHero = function (cls, name, stats, row, quirk) {
   const c = CM.CLASSES[cls];
   const h = { name: (name || "").trim() || cls, cls, level: 1, xp: 0, hp: 1, max: 1, mp: 0, maxmp: 0, atk: 1, df: 0,
-    stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null, path: null, learned: [],
+    stats: stats || CM.rollStats(cls), row: row || c.row, status: {}, boons: [], pending: 0, offer: null, path: null, learned: [], quirk: CM.QUIRKS[quirk] ? quirk : null,
     weapon: { name: c.weapon, kind: "weapon", slot: "weapon", power: 1, value: 5, props: c.weapon === "Short Bow" ? { bow: true, twohanded: true } : c.weapon === "Wrapped Fists" ? { fists: true, twohanded: true } : {} },
     armor: { name: c.armor, kind: "armor", slot: "armor", power: 0, value: 5, props: { weight: "light" } },
-    offhand: null, helm: null, ring: null, amulet: null };
+    offhand: null, helm: null, ring: null, amulet: null, boots: null, cloak: null };
+  if (h.quirk) for (const [st, d] of Object.entries(CM.QUIRKS[h.quirk].stats)) h.stats[st] = CM.clamp(h.stats[st] + d, 3, 25);
   CM.recompute(h);
   h.hp = h.max; h.mp = h.maxmp;
   return h;
@@ -334,7 +347,7 @@ CM.upgradeHero = function (h) {
   h.offer = h.offer || null;
   h.path = h.path || null;
   h.learned = h.learned || [];
-  for (const slot of ["offhand", "helm", "ring", "amulet"]) if (h[slot] === undefined) h[slot] = null;
+  for (const slot of ["offhand", "helm", "ring", "amulet", "boots", "cloak"]) if (h[slot] === undefined) h[slot] = null;
   for (const slot of ["weapon", "armor"]) if (h[slot]) { h[slot].props = h[slot].props || {}; h[slot].slot = slot; }
   return h;
 };
@@ -356,7 +369,7 @@ CM.gearProp = (h, prop) => CM.equipped(h).reduce((n, it) => n + ((it.props && !i
 CM.relicsWorn = (h) => CM.equipped(h).filter((it) => it.props && it.props.relic && !it.unknown).length;
 
 // what the gear keeps off: armour and shield count double, a helm and a warding amulet once
-CM.gearDefence = (h) => (h.armor ? h.armor.power : 0) * 2 + (h.offhand ? h.offhand.power * 2 : 0) + (h.helm ? h.helm.power : 0)
+CM.gearDefence = (h) => (h.armor ? h.armor.power : 0) * 2 + (h.offhand ? h.offhand.power * 2 : 0) + (h.helm ? h.helm.power : 0) + (h.cloak && h.cloak.unknown ? h.cloak.power : 0)
   + CM.equipped(h).reduce((s, it) => s + ((it.props || {}).df || 0), 0);
 
 // may this hero wear or wield it? "" when they may, else why not
@@ -377,7 +390,7 @@ CM.cantWear = function (h, item) {
 };
 
 CM.newParty = function (chosen) {                                         // chosen: [{cls, name, stats, row}] - else the classic four
-  return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row));
+  return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row, p.quirk));
 };
 
 // someone to hire at the camp: a calling, a name, a roll, a level a step behind the party's

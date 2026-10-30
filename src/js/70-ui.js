@@ -54,7 +54,7 @@ CM.UI = class {
 <div id="play" class="screen">
   <div class="top">
     <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div></div>
-    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div></div>
+    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div></div>
   </div>
   <div id="party"></div>
   <div id="log" role="log" aria-live="polite"></div>
@@ -137,6 +137,10 @@ CM.UI = class {
   <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-choice"><div class="box"><h2 id="choice-title"></h2><p id="choice-text" class="lore"></p><div id="choice-options" class="answers"></div>
   <div class="end"><button class="close">Step back</button></div></div></div>
+<div class="dialog" id="dlg-second"><div class="box"><h2>The Guild's Letter</h2>
+  <p class="small">With a guildhall of the second level, a hero at twenty may take a second calling at a camp, for 200 renown: its first two spells or skills are theirs for good.</p>
+  <div id="second-list"></div><div class="small" id="second-note"></div>
+  <div class="end"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-waystone"><div class="box"><h2>The Waystones</h2>
   <p class="small">A mark chalked by every camp fire the party has reached. From one camp, the old road leads to another: the floors between stay as you left them.</p>
   <div id="waystone-list"></div><div class="small" id="waystone-note"></div>
@@ -301,6 +305,8 @@ CM.UI = class {
     right.innerHTML = `<table class="stats">${CM.STATS.map((s) => `<tr class="${s === c.key ? "key" : ""}"><td>${CM.STAT_NAMES[s]}</td><td class="v">${g.stat(h, s)}</td><td class="hint">${s === c.key ? "their calling's stat" : CM.STAT_HINTS[s]}</td></tr>`).join("")}</table>
       <div class="list-title">Boons</div><div class="boons">${(h.boons || []).length ? h.boons.map((id) => `<div><b>${CM.BOONS[id].name}</b> - ${CM.BOONS[id].what}</div>`).join("") : "<div class='small'>None yet. Each level earned offers one.</div>"}</div>
       <div class="list-title">Path</div><div class="boons">${h.path && CM.PATHS[h.cls] && CM.PATHS[h.cls][h.path] ? (() => { const P = CM.PATHS[h.cls][h.path]; return `<div><b>${P.name}</b> - ${P.blurb}</div><div><b>${P.t1.name}</b> - ${P.t1.what}</div><div><b>${P.t2.name}</b> - ${h.level >= CM.PATH_AT[1] ? P.t2.what : `at level ${CM.PATH_AT[1]}: ${P.t2.what.charAt(0).toLowerCase() + P.t2.what.slice(1)}`}</div>${P.t3 ? `<div><b>${P.t3.name}</b> - ${h.level >= CM.PATH_AT[2] ? P.t3.what : `at level ${CM.PATH_AT[2]}: ${P.t3.what.charAt(0).toLowerCase() + P.t3.what.slice(1)}`}</div>` : ""}`; })() : `<div class='small'>${CM.needsPath(h) ? "A path waits to be chosen, below." : `Chosen at level ${CM.PATH_AT[0]}: two ways for a ${h.cls} to grow.`}</div>`}</div>
+      ${h.quirk ? `<div class="list-title">Quirk</div><div class="boons"><div><b>${CM.QUIRKS[h.quirk].name}</b> - ${CM.QUIRKS[h.quirk].what}</div></div>` : ""}
+      ${h.second ? `<div class="list-title">Second calling</div><div class="boons"><div><b>${h.second}</b> - its first two spells or skills are theirs</div></div>` : ""}
       ${h.familiar ? `<div class="list-title">Familiar</div><div class="boons"><div><b>${CM.FAMILIARS[h.familiar].name}</b> - ${CM.FAMILIARS[h.familiar].what}</div></div>` : ""}
       ${Object.keys(h.spellLevels || {}).length ? `<div class="list-title">Spells deepened</div><div class="boons">${Object.entries(h.spellLevels).map(([id, l]) => `<div><b>${CM.ABILITIES[id].name}</b> - level ${l}</div>`).join("")}</div>` : ""}
       ${(() => { const f = g.bondOf(h); return f ? `<div class="list-title">Bond</div><div class="boons"><div><b>Old friends</b> - with ${this.esc(f.name)}: +1 attack and defence, heals between them half again as kind, and a fall avenged with a doubled blow.</div></div>` : ""; })()}

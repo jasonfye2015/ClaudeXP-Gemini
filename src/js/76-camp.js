@@ -3,6 +3,19 @@
 Object.assign(CM.UI.prototype, {
   // ---- the waystones ----
   openWaystone() { this.renderWaystone(); this.openDialog("#dlg-waystone"); },
+  openSecond() {
+    const g = this.game, box = this.$("#second-list");
+    box.innerHTML = "";
+    g.party.forEach((h, i) => {
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      const can = h.hp > 0 && h.level >= CM.SECOND_AT && !h.second;
+      row.innerHTML = `<div><b>${this.esc(h.name)}</b> <small>${h.cls}, level ${h.level}${h.second ? ` - and ${h.second}` : can ? "" : h.level < CM.SECOND_AT ? ` - at ${CM.SECOND_AT}` : ""}</small></div>`;
+      if (can) { const sel = document.createElement("select"); sel.innerHTML = ["<option value=''>Choose...</option>"].concat(g.classesAvailable().filter((c) => c !== h.cls).map((c) => `<option value="${c}">${c}, ${CM.SECOND_COST} renown</option>`)).join(""); sel.addEventListener("change", () => { if (!sel.value) return; this.$("#second-note").textContent = g.secondCalling(i, sel.value) || "Done."; this.openSecond(); }); row.appendChild(sel); }
+      box.appendChild(row);
+    });
+    this.$("#second-note").textContent = `Renown: ${g.renown()}. ${g.villageLevel("guildhall") < 2 ? "The guildhall must be of the second level." : ""}`;
+    this.openDialog("#dlg-second");
+  },
   renderWaystone() {
     const g = this.game, box = this.$("#waystone-list"), camps = g.camps || [];
     box.innerHTML = "";

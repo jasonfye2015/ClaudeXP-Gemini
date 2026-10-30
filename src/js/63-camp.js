@@ -13,9 +13,9 @@ Object.assign(CM.Game.prototype, {
       this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor", "shield", "helm"].map((k) => { const it = CM.makeItem(depth, rnd, k); it.unknown = false; return it; });
       this.stock.push({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 },
         { name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 },
-        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"), CM.rope());
+        { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.scroll("identify"), CM.scroll("mapping"), CM.rope(), CM.ration());
       const house = this.villageLevel("merchant");                       // (the village's merchant's house: what the camps' merchant has learned to carry)
-      if (house >= 1 && !this.asc(9)) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
+      if (house >= 1 && !this.asc("nogreater")) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
       if (house >= 2) for (const el of ["fire", "frost", "holy"]) this.stock.push(CM.oil(el));
       if (house >= 3) { const r2 = new CM.Random(CM.hashSeed(`${this.seed}:house:${this.floor.number}`)), rare = CM.affix(CM.makeItem(depth + 2, r2, r2.pick(["weapon", "armor", "helm", "shield"])), 99, r2); rare.unknown = false; rare.value = Math.floor(rare.value * 1.4); this.stock.push(rare); }
       if (house >= 4) for (const it of this.stock) it.value = Math.max(1, Math.floor(it.value * 0.8));
@@ -191,6 +191,15 @@ Object.assign(CM.Game.prototype, {
     if (item.kind === "tome") return this.readTome(row, hero);
     if (item.kind === "gem") return "A gem is for the camp's smith: he sets it into gear, for gold.";
     if (item.kind === "boxkey") return `That key is for the strongbox on floor ${item.box}. Walk up to the box and use it.`;
+    if (item.kind === "ration") {
+      this.bag.splice(row, 1);
+      this.fed = 0;
+      this.cheer(2);
+      this.sound("heal");
+      this.say(`The party eats. ${hero.name} hands the last of it round.`);
+      this.emit("change");
+      return "";
+    }
     if (item.kind === "ingredient") return "The camp's alchemist wants that. Keep it for her.";
     if (item.kind === "scrap") return "Scrap is for the camp's smith: five stand in for a diamond.";
     if (item.kind === "bomb") return "A firepot is for a fight: Item, then throw it.";
@@ -234,7 +243,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (item.kind === "revive") {
       if (hero.hp > 0) return "The Phoenix Feather is for the fallen.";
-      if (this.asc(15) && this.mode === "combat") return "Ironbound: the fallen rise only at the temple.";
+      if (this.asc("ironbound") && this.mode === "combat") return "Ironbound: the fallen rise only at the temple.";
       hero.hp = Math.floor(hero.max / 2);
       this.bag.splice(row, 1);
       this.sound("heal");
@@ -282,13 +291,14 @@ Object.assign(CM.Game.prototype, {
   },
 
   rest() {
-    const bed = this.asc(1) ? 40 : 20;
+    const bed = this.asc("leancamps") ? 40 : 20;
     if (this.gold < bed) { this.say(`The merchant wants ${bed} gold for a bedroll by the fire.`); return; }
     this.logAct("rest");
     this.gold -= bed; this.spend("rest", bed);
     for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
+    this.fed = 0; if ((this.morale || 0) < 80) this.morale = 80;
     this.sound("heal");
-    this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass.");
+    this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass. Everyone eats.");
     const bond = (this.bonds || [])[Math.floor((this.tally.fights || 0) / 7) % Math.max(1, (this.bonds || []).length)];
     if (bond) this.say(CM.BANTER[(this.tally.fights || 0) % CM.BANTER.length].replace("{a}", bond[0]).replace("{b}", bond[1]));
     this.saveRun();
@@ -296,7 +306,7 @@ Object.assign(CM.Game.prototype, {
 
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
-    const cost = { cure: 30, uncurse: 60, unstone: 150 }[service] * (this.asc(12) ? 2 : 1);
+    const cost = Math.ceil({ cure: 30, uncurse: 60, unstone: 150 }[service] * (this.asc("costlytemple") ? 2 : 1) * (this.party.some((h) => h.quirk === "pious" && h.hp > 0) ? 0.5 : 1));
     const which = service === "cure" ? CM.CURABLE : service === "uncurse" ? ["curse"] : ["stone"];
     const cursedGear = service === "uncurse" ? this.party.flatMap((h) => CM.equipped(h).filter((it) => it.props && it.props.cursed)) : [];
     const who = this.party.filter((h) => which.some((s) => (h.status || {})[s]));
@@ -436,6 +446,26 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
 
+  // the guildhall at a camp: a hero at twenty takes a second calling, for renown - its first two spells or skills
+  secondCalling(heroIndex, cls) {
+    if (this.mode !== "camp") return "The guild's letter is read at a camp.";
+    const h = this.party[heroIndex];
+    if (!h || h.hp <= 0) return "Only a hero standing.";
+    if (this.villageLevel("guildhall") < 2) return "The guildhall must be of the second level.";
+    if (h.level < CM.SECOND_AT) return `${h.name} must be level ${CM.SECOND_AT}.`;
+    if (h.second) return `${h.name} is a ${h.second} already, besides.`;
+    if (!CM.CLASSES[cls] || cls === h.cls || !this.classUnlocked(cls)) return "Not that calling.";
+    if (this.renown() < CM.SECOND_COST) return `The guild asks ${CM.SECOND_COST} renown.`;
+    this.logAct("secondCalling", heroIndex, cls);
+    this.village.spent = (this.village.spent || 0) + CM.SECOND_COST; this.saveVillage();
+    h.second = cls;
+    if (CM.CLASSES[cls].mp && !h.maxmp) { h.maxmp = 6; h.mp = 6; }
+    this.sound("level");
+    this.say(`${h.name} reads the guild's letter, and is a ${cls} too: ${CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].cls[cls] !== undefined && CM.ABILITIES[id].cls[cls] <= 2).map((id) => CM.ABILITIES[id].name).join(", ")}.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+
   // a piece of gear from the pack goes into the smith's fire for scrap (one each; five stand in for a diamond)
   salvage(row) {
     if (this.mode !== "camp") return "The smith works at the camp.";
@@ -490,7 +520,7 @@ Object.assign(CM.Game.prototype, {
   raiseDead() {
     const fallen = this.party.filter((m) => m.hp <= 0);
     if (!fallen.length) { this.say("No one needs raising."); return; }
-    const hero = fallen[0], cost = 100 * hero.level * (this.asc(12) ? 2 : 1);
+    const hero = fallen[0], cost = 100 * hero.level * (this.asc("costlytemple") ? 2 : 1);
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold to raise the ${hero.cls}.`); return; }
     this.logAct("raiseDead");
     this.gold -= cost; this.spend("temple", cost);
@@ -595,7 +625,7 @@ Object.assign(CM.Game.prototype, {
       used.push(idx);
     }
     if (this.gold < r.gold) return `She asks ${r.gold} gold for the ${r.name}.`;
-    if (r.makes === "greaterheal" && this.asc(9)) return "No greater potions, this high on the ladder.";
+    if (r.makes === "greaterheal" && this.asc("nogreater")) return "No greater potions, this high on the ladder.";
     return "";
   },
   brew(id) {
@@ -614,6 +644,7 @@ Object.assign(CM.Game.prototype, {
     else if (r.makes.startsWith("oil:")) { made = CM.oil(r.makes.slice(4)); this.bag.push(made); }
     else if (r.makes === "bomb") { made = CM.bomb(); this.bag.push(made); }
     else if (r.makes === "antidote2") { this.bag.push(CM.antidote(), CM.antidote()); made = { name: "two Antidotes" }; }
+    else if (r.makes === "ration3") { this.bag.push(CM.ration(), CM.ration(), CM.ration()); made = { name: "three rations" }; }
     else if (r.makes.startsWith("elixir:")) {
       const stat = r.makes.slice(7), h = this.alive().reduce((a, b) => (a.stats[stat] <= b.stats[stat] ? a : b));   // (whoever has least of it)
       h.stats[stat] = Math.min(25, h.stats[stat] + 1);

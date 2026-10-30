@@ -21,6 +21,7 @@ function playRun(CM, game, opts = {}) {
     }
   };
   const potions = () => {
+    if ((game.fed || 0) >= CM.HUNGER.hungry) { const row = game.bag.findIndex((i) => i.kind === "ration"); if (row >= 0) game.give(row, game.party.indexOf(alive()[0])); }
     for (const h of alive()) {
       if (h.hp < h.max * 0.4) { const row = game.bag.findIndex((i) => i.kind === "heal"); if (row >= 0) game.give(row, game.party.indexOf(h)); }
       if (h.maxmp && h.mp < h.maxmp * 0.2) { const row = game.bag.findIndex((i) => i.kind === "mana"); if (row >= 0) game.give(row, game.party.indexOf(h)); }
@@ -44,7 +45,7 @@ function playRun(CM, game, opts = {}) {
     if (game.party.some((h) => h.hp <= 0)) { const who = game.tavern(); if (who.length) game.hire(0); }
     game.openBag(true);
     const want = (kind, n) => { let guard = 0; while (game.bag.filter((i) => i.kind === kind).length < n && guard++ < 10) { const row = game.stock.findIndex((i) => i.kind === kind); if (row < 0 || game.buy(row)) break; } };
-    want("heal", 4); want("torch", 2);
+    want("heal", 4); want("torch", 2); want("ration", 2);
     if (game.gold > 150) want("mana", 2);
     if (game.gold > 250) want("revive", 1);
     // better weapons for the gold left: the cheapest upgrade in the merchant's wares, if any

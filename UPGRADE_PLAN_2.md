@@ -161,7 +161,7 @@ uses every v2.0 system in the sim's report, and a replayed log reproduces a run 
 
 ---
 
-## Phase 6 - Expanded systems in play
+## Phase 6 - Expanded systems in play - DONE (v2.7)
 
 - **Morale.** A party value (0-100) the fight reads: high morale, blows land a little more often; low, heroes may
   freeze a turn. Up with victories, bonds, the camp fire, a Bard's song; down with a hero falling, fleeing, a curse,

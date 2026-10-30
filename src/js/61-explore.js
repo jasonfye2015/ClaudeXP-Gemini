@@ -77,6 +77,10 @@ Object.assign(CM.Game.prototype, {
     this.steps = (this.steps || 0) + 1;
     this.count("steps");
     if (this.steps % 150 === 0 && this.gen >= 2) this.changeBehind();        // (the dungeon is not still behind you)
+    this.fed = (this.fed || 0) + 1;                                       // the stomachs: hungry past three hundred steps, weary past six
+    if (this.fed === CM.HUNGER.hungry) this.say("The party is hungry. A ration would be welcome.");
+    if (this.fed === CM.HUNGER.weary) this.say("The party is weary with hunger: every blow does less until they eat.");
+    if (this.fed > CM.HUNGER.hungry && this.fed % 50 === 0) this.cheer(-1);
     if (fl.hazard === "tide" && this.steps % CM.TIDE_STEPS === 0) {       // the Drowned Town's tide turns
       fl.tide = !fl.tide;
       this.dirty = true;
@@ -229,7 +233,8 @@ Object.assign(CM.Game.prototype, {
     const l = this.light;
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    l.left -= ((this.floor && (this.floor.special === "wading" || this.floor.tide)) || this.has("gloom") ? 2 : 1) + (this.asc(5) && (this.steps || 0) % 2 === 0 ? 1 : 0);
+    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown);
+    l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
     const spare = this.bag.findIndex((i) => i.kind === "torch");
@@ -263,6 +268,7 @@ Object.assign(CM.Game.prototype, {
     const [x, y] = fl.pos;
     seen.add(keyOf(x, y));
     const spell = this.spellLight > 0 || this.alive().some((h) => h.familiar === "owl");   // (a conjured light - or an owl - sees through a magical dark)
+    if (this.inDark() && !spell && this.alive().some((h) => h.quirk === "nightsighted")) for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) seen.add(keyOf(x + dx, y + dy));   // (the nightsighted: a step further)
     if (!this.inDark() || spell) {
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) seen.add(keyOf(x + dx, y + dy));
       if (this.hasLight()) {
@@ -329,8 +335,8 @@ Object.assign(CM.Game.prototype, {
       return;
     }
     if (thing && thing.type === "chest") {
-      if (thing.trap) {                                                   // a trapped lid: the Rogue may see to it
-        const rogue = this.alive().find((p) => p.cls === "Rogue" && this.canAct(p));
+      if (thing.trap) {                                                   // a trapped lid: the Rogue may see to it (unless the opener is greedy)
+        const rogue = this.alive().find((p) => p.cls === "Rogue" && this.canAct(p) && !(this.alive()[0] && this.alive()[0].quirk === "greedy"));
         if (rogue && this.rnd.chance(CM.clamp(0.5 + rogue.level * 0.05 + CM.mod(this.stat(rogue, "dex")) * 0.1, 0.2, 0.95))) {
           this.say(`${rogue.name} finds ${CM.TRAPS[thing.trap]} on the lid, and sees to it.`);
           thing.trap = null;
@@ -343,7 +349,8 @@ Object.assign(CM.Game.prototype, {
         }
       }
       delete fl.things[k];
-      const gold = Math.floor(thing.gold * (this.has("rich") ? 2 : 1) * (this.asc(7) ? 0.8 : 1));
+      const gold = Math.floor(thing.gold * (this.has("rich") ? 2 : 1) * (this.asc("poorveins") ? 0.8 : 1) * (this.alive().some((h) => h.quirk === "greedy") ? 1.1 : 1));
+      this.cheer(1);
       this.gold += gold;
       this.bag.push(...thing.items);
       this.sound("chest");
@@ -433,7 +440,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.inUse) this.logAct("drink");
     f.used = true; f.known = true;
     if (this.has("drought")) { this.say("The basin is dry to the bottom, cracked. A drought lies on the dungeon today."); this.saveRun(); this.emit("change"); return; }
-    if (this.asc(2) && CM.hashSeed(`${this.seed}:dryrung:${this.floor.number}:${CM.keyOf(...this.floor.pos)}`) % 2 === 0) { this.say("Dry. Half the fountains are, this high on the ladder."); this.saveRun(); this.emit("change"); return; }
+    if (this.asc("dryfountains") && CM.hashSeed(`${this.seed}:dryrung:${this.floor.number}:${CM.keyOf(...this.floor.pos)}`) % 2 === 0) { this.say("Dry. Half the fountains are, this high on the ladder."); this.saveRun(); this.emit("change"); return; }
     this.tally.drank = (this.tally.drank || 0) + 1;
     if (f.kind === "heal") {
       for (const m of this.alive()) { m.hp = m.max; this.cure(m, [...CM.CURABLE, "curse"]); }
@@ -774,7 +781,7 @@ Object.assign(CM.Game.prototype, {
       const gear = CM.affix(CM.makeItem(L + 4, rnd, rnd.pick(["weapon", "armor"])), 99, rnd); gear.unknown = false; gear.value = Math.floor(gear.value * 1.5) + 100;
       thing.stock = [gear, { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + L * 3), value: 90 }, CM.oil(rnd.pick(["fire", "frost", "holy"])), CM.scroll("mapping"), CM.ingredient(rnd.pick(Object.keys(CM.INGREDIENTS)))];
       thing.stock[3].value = 60;
-      if (this.asc(9)) thing.stock = thing.stock.filter((i) => i.kind !== "greaterheal");
+      if (this.asc("nogreater")) thing.stock = thing.stock.filter((i) => i.kind !== "greaterheal");
     }
     this.stock = thing.stock; this.peddling = k;
     this.say("The peddler spreads a cloth and lays out what he has. His prices are what you'd expect, down here.");

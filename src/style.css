@@ -187,6 +187,9 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 @keyframes glow-blue { 0% { box-shadow: 0 0 0 rgba(120,170,255,0); } 25% { box-shadow: 0 0 18px 4px rgba(120,170,255,0.85); } 100% { box-shadow: 0 0 0 rgba(120,170,255,0); } }
 #side .light { font: 12px var(--serif); color: var(--dim); text-align: center; }
 #side .light.dark { color: #E06060; font-weight: bold; }
+#side .temper { font: italic 12px var(--serif); color: var(--dim); text-align: center; }
+#side .temper.low { color: #E0A060; }
+.slot .who select.quirk { grid-column: 1 / -1; }
 #side { width: 296px; flex: 0 0 296px; display: flex; flex-direction: column; gap: 8px; }
 #automap { width: 290px; height: 290px; border: 3px solid var(--edge); background: var(--paper); }
 #side .where { font: bold 13px var(--serif); color: var(--gold); text-align: center; }

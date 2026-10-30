@@ -109,8 +109,13 @@ CM.ELEMENTS = { fire: { prefix: "Flaming", weak: ["Troll", "Zombie"] }, frost: {
 CM.ARMOR_WEIGHT = (tier) => (tier <= 3 ? "light" : tier <= 7 ? "medium" : "heavy");
 CM.BEARS = { Knight: "heavy", Paladin: "heavy", Rogue: "medium", Ranger: "medium", Cleric: "medium", Druid: "medium", Bard: "medium", Mage: "light", Monk: "light", Necromancer: "light", Artificer: "medium" };
 CM.SHIELD_BEARERS = ["Knight", "Paladin", "Cleric", "Rogue", "Druid", "Bard", "Artificer"];
-CM.SLOTS = ["weapon", "offhand", "armor", "helm", "ring", "amulet"];
-CM.SLOT_NAMES = { weapon: "Weapon", offhand: "Off hand", armor: "Armour", helm: "Helm", ring: "Ring", amulet: "Amulet" };
+CM.SLOTS = ["weapon", "offhand", "armor", "helm", "ring", "amulet", "boots", "cloak"];
+CM.SLOT_NAMES = { weapon: "Weapon", offhand: "Off hand", armor: "Armour", helm: "Helm", ring: "Ring", amulet: "Amulet", boots: "Boots", cloak: "Cloak" };
+// boots: speed (and some, silence or dry feet); cloaks: warding (and some, a hood against the dark's surprises)
+CM.BOOTS = [{ name: "Sandals", power: 1 }, { name: "Soft Boots", power: 1, silence: true }, { name: "Hobnailed Boots", power: 2 }, { name: "Marsh Boots", power: 2, waterwalk: true },
+  { name: "Boots of Silence", power: 3, silence: true }, { name: "Wayfarer's Boots", power: 3, waterwalk: true }, { name: "Boots of the Fox", power: 4, silence: true }];
+CM.CLOAKS = [{ name: "Travel Cloak", df: 1 }, { name: "Hooded Cloak", df: 1, hood: true }, { name: "Warded Cloak", df: 2 }, { name: "Grey Cloak", df: 2, hood: true },
+  { name: "Cloak of Wards", df: 3 }, { name: "Shadow Cloak", df: 3, hood: true }, { name: "Cloak of the Deep", df: 4, hood: true }];
 
 // scrolls (one reading) and wands (a few charges; anyone can wave one)
 CM.SCROLLS = {
@@ -268,6 +273,7 @@ CM.RECIPES = {
   oilfrost: { name: "Oil of Rime", gold: 40, needs: { ingredient: ["drownedweed", "crystaldust"] }, makes: "oil:frost", what: "a weapon freezes for the next three fights: weed or crystal dust, and 40 gold" },
   oilholy: { name: "Oil of Saints", gold: 40, needs: { ingredient: ["bonedust", "gravesalt"] }, makes: "oil:holy", what: "a weapon is blessed for the next three fights: bone dust or grave salt, and 40 gold" },
   bomb: { name: "Firepot", gold: 60, needs: { ingredient: ["slag", "forgesoot"], ingredient2: ["crystaldust", "bonedust"] }, makes: "bomb", what: "thrown in a fight, fire on every foe: slag or soot, dust, and 60 gold" },
+  trailbread: { name: "Trail bread, three rations", gold: 10, needs: { ingredient: ["gravemoss", "saltweed", "rootsap"] }, makes: "ration3", what: "three rations: moss, weed or sap, and 10 gold" },
   antivenom: { name: "Antivenom, two draughts", gold: 20, needs: { ingredient: ["sporecap", "gravemoss"] }, makes: "antidote2", what: "two antidotes: a spore cap or grave moss, and 20 gold" },
   vigour: { name: "Elixir of Vigour", gold: 200, needs: { ingredient: ["rootsap"] }, makes: "elixir:con", what: "+1 Constitution, for good: root sap and 200 gold" },
   fortune: { name: "Elixir of Fortune", gold: 200, needs: { ingredient: ["gravesalt", "crystaldust"], ingredient2: ["gravesalt", "crystaldust"] }, makes: "elixir:luck", what: "+1 Luck, for good: two of grave salt or crystal dust, and 200 gold" },
@@ -372,6 +378,23 @@ CM.TEMPLATES2 = [
   { name: "Crystal Gallery", min: 12, rows: ["#########", "#..#C#..#", "#.......#", "#..#M#..#", "#.......#", "###S#####"] },
 ];
 CM.AWAKENED = { hp: 1.25, atk: 1.2, what: "every floor the mirror of itself, the monsters a band deeper, the uniques awake" };
+// ---- the party's temper, its stomachs, its quirks, a second calling ----
+CM.MORALE = { start: 70, words: [[10, "Broken"], [30, "Shaken"], [50, "Uneasy"], [79, "Steady"], [100, "High"]],
+  what: "High: blows land a little more often. Shaken or Broken: a hero may freeze a turn. Victories, bonds, the camp fire and a song lift it; a fall, a flight, a curse and hunger wear it down." };
+CM.moraleWord = (m) => (CM.MORALE.words.find(([top]) => m <= top) || CM.MORALE.words[4])[1];
+CM.HUNGER = { hungry: 300, weary: 600, what: "A ration every three hundred steps or so; past that the party's morale wears, and past six hundred they are Weary: every blow does less. No one starves." };
+CM.QUIRKS = {
+  nightsighted: { name: "Nightsighted", what: "sees a step further in a magical dark; -1 Constitution", stats: { con: -1 } },
+  greedy: { name: "Greedy", what: "a tenth more gold from chests; a trapped chest can't be disarmed by them", stats: {} },
+  pious: { name: "Pious", what: "the temple charges them half; -1 Strength", stats: { str: -1 } },
+  stubborn: { name: "Stubborn", what: "never knocked flat nor held; -1 Dexterity", stats: { dex: -1 } },
+  lucky: { name: "Lucky", what: "+2 Luck; -1 Wisdom", stats: { luck: 2, wis: -1 } },
+  sickly: { name: "Sickly", what: "-2 Constitution; +3 Intelligence", stats: { con: -2, int: 3 } },
+  hardy: { name: "Hardy", what: "+2 Constitution; -2 Intelligence", stats: { con: 2, int: -2 } },
+  quiet: { name: "Quiet", what: "+1 Dexterity, and the party is never surprised while they stand; -1 Strength", stats: { dex: 1, str: -1 } },
+};
+CM.SECOND_AT = 20;
+CM.SECOND_COST = 200;                                                  // renown, at a camp, with a guildhall of level 2
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
 CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
@@ -515,7 +538,9 @@ CM.ADVENTURER = {
 CM.abilitiesFor = (hero) => Object.keys(CM.ABILITIES).filter((id) => {
   if ((hero.learned || []).includes(id)) return true;                  // (from a tome)
   const at = CM.ABILITIES[id].cls[hero.cls];
-  return at !== undefined && hero.level >= at;
+  if (at !== undefined && hero.level >= at) return true;
+  const second = hero.second && CM.ABILITIES[id].cls[hero.second];     // (a second calling, at twenty: its first two)
+  return second !== undefined && second <= 2;
 });
 
 // ---- growth: a path for each calling, chosen at level 5, deepening at level 10 ----------------------------------------
@@ -624,13 +649,13 @@ CM.ASCENSION = [
   { id: "hardened", name: "Hardened", what: "monsters have 5% more health" },
   { id: "leaders", name: "Leaders", what: "every band from the third floor down has a leader" },
   { id: "hungrydark", name: "Hungry dark", what: "torches burn half again as fast" },
-  { id: "nomercy", name: "No mercy", what: "the guardians' second forms from the first blow" },
+  { id: "costlytemple", name: "Costly temple", what: "the temple's prices are doubled" },
   { id: "poorveins", name: "Poor veins", what: "a fifth less gold, from chests and the fallen" },
-  { id: "keenblades", name: "Keen blades", what: "monsters hit 10% harder" },
+  { id: "deeperhurts", name: "Deeper hurts", what: "poison bites double" },
   { id: "nogreater", name: "No greater potions", what: "no merchant, peddler or alchemist has a Greater Healing Potion" },
   { id: "watchful", name: "Watchful", what: "the party never has the drop on them" },
-  { id: "deeperhurts", name: "Deeper hurts", what: "poison bites double" },
-  { id: "costlytemple", name: "Costly temple", what: "the temple's prices are doubled" },
+  { id: "keenblades", name: "Keen blades", what: "monsters hit 10% harder" },
+  { id: "nomercy", name: "No mercy", what: "the guardians' second forms from the first blow" },
   { id: "thickskins", name: "Thick skins", what: "monsters have 10% more health again" },
   { id: "kingsguard", name: "The king's guard", what: "the Lich King begins with two skeletons up" },
   { id: "ironbound", name: "Ironbound", what: "a fallen hero rises only at the temple: no feather, no Raise Dead in a fight" },
@@ -658,14 +683,14 @@ CM.mutatorsFor = function (seed) {
 };
 // a run, as a code to hand to a friend: the seed, the difficulty, the expedition, the kit and the party (CM.parseRunCode reads one back)
 CM.runCode = function (seed, difficulty, mode, kit, party, opts) {
-  const who = (party || []).map((h) => [h.cls, (h.name || "").replace(/[;:,|]/g, " ").trim(), ...CM.STATS.map((s) => (h.stats || {})[s] || 10), h.row || CM.CLASSES[h.cls].row].join(",")).join(";");
+  const who = (party || []).map((h) => [h.cls, (h.name || "").replace(/[;:,|]/g, " ").trim(), ...CM.STATS.map((s) => (h.stats || {})[s] || 10), h.row || CM.CLASSES[h.cls].row, h.quirk || ""].join(",")).join(";");
   const tail = opts && (opts.ascension || opts.iron) ? `:A${opts.ascension || 0}${opts.iron ? "i" : ""}` : "";
   return `CM1:${seed}:${difficulty || "fair"}:${mode || "dungeon"}:${kit || "pauper"}:${who}${tail}`;
 };
 CM.parseRunCode = function (text) {
   const m = /^\s*CM1:([^:]+):([^:]*):([^:]*):([^:]*):([^:]*)(?::A(\d+)(i?))?\s*$/.exec(String(text || ""));
   if (!m) return null;
-  const party = m[5] ? m[5].split(";").map((p) => { const f = p.split(","); if (!CM.CLASSES[f[0]]) return null; const stats = {}; CM.STATS.forEach((s, i) => { stats[s] = CM.clamp(Number(f[2 + i]) || 10, 3, 25); }); return { cls: f[0], name: f[1] || f[0], stats, row: f[8] === "back" ? "back" : f[8] === "front" ? "front" : CM.CLASSES[f[0]].row }; }).filter(Boolean) : [];
+  const party = m[5] ? m[5].split(";").map((p) => { const f = p.split(","); if (!CM.CLASSES[f[0]]) return null; const stats = {}; CM.STATS.forEach((s, i) => { stats[s] = CM.clamp(Number(f[2 + i]) || 10, 3, 25); }); return { cls: f[0], name: f[1] || f[0], stats, row: f[8] === "back" ? "back" : f[8] === "front" ? "front" : CM.CLASSES[f[0]].row, quirk: CM.QUIRKS[f[9]] ? f[9] : null }; }).filter(Boolean) : [];
   return { seed: m[1], difficulty: CM.DIFFICULTIES[m[2]] ? m[2] : "fair", mode: m[3] === "endless" ? "endless" : "dungeon", kit: m[4] || "pauper", party: party.length === 4 ? party : null, ascension: CM.clamp(Number(m[6]) || 0, 0, CM.ASCENSION.length), iron: m[7] === "i" };
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen

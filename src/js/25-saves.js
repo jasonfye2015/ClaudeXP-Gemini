@@ -162,6 +162,7 @@ CM.replayRun = function (spec, upTo) {
       case "setRow": game.setRow(game.party[args[0]], args[1]); break;
       case "equip": game.equip(game.party[args[0]], args[1]); break;
       case "chooseFamiliar": game.chooseFamiliar(game.party[args[0]], args[1]); break;
+      case "secondCalling": game.secondCalling(args[0], args[1]); break;
       case "talk": { const t = game.floor.things[args[0]]; if (t) game.talk(t, args[0]); break; }
       case "drink": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; if (f) game.drink(f); break; }
       case "kneel": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; if (f) game.kneel(f); break; }

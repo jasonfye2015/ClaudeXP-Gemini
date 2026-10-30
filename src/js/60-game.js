@@ -82,6 +82,16 @@ CM.Game = class {
   replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.endless ? "endless" : "dungeon", ascension: this.ascension || 0, iron: Boolean(this.iron), log: (this.runLog || []).slice() }; }
   // down the stairs by hand (the simulator's bot, when it has lost its way): logged, so a replay follows
   warp(number) { this.logAct("warp", number); this.enterFloor(number, "down"); }
+  // the party's temper: a number from 0 to 100, said as a word (CM.moraleWord); what the fight reads
+  cheer(n, why) {
+    const was = this.morale === undefined ? CM.MORALE.start : this.morale;
+    this.morale = CM.clamp(was + n, 0, 100);
+    const w1 = CM.moraleWord(was), w2 = CM.moraleWord(this.morale);
+    if (w1 !== w2) this.say(`The party is ${w2.toLowerCase()}${why ? ` (${why})` : ""}.`);
+    this.dirty = true;
+  }
+  moraleWord() { return CM.moraleWord(this.morale === undefined ? CM.MORALE.start : this.morale); }
+  hungerWord() { return (this.fed || 0) >= CM.HUNGER.weary ? "Weary" : (this.fed || 0) >= CM.HUNGER.hungry ? "Hungry" : ""; }
   // what a tally counts besides steps and kills: gold by where it went, and how often each spell or skill was used
   spend(where, gold) { this.tally.spent = this.tally.spent || {}; this.tally.spent[where] = (this.tally.spent[where] || 0) + gold; }
 
@@ -148,7 +158,8 @@ CM.Game = class {
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), behind: this.behind || 0 };
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), behind: this.behind || 0,
+      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0 };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -194,6 +205,7 @@ CM.Game = class {
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
     this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
     this.awakened = Boolean(d.awakened); this.behind = d.behind || 0;
+    this.morale = d.morale === undefined ? CM.MORALE.start : d.morale; this.fed = d.fed || 0;
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -204,7 +216,7 @@ CM.Game = class {
 
   // ---- starting, and the stairs between floors ----
   // the rung of the ladder this run is on: at k, every rule to k applies (CM.ASCENSION)
-  asc(k) { return (this.ascension || 0) >= k; }
+  asc(k) { const rung = typeof k === "string" ? CM.ASCENSION.findIndex((r) => r.id === k) + 1 : k; return rung > 0 && (this.ascension || 0) >= rung; }
   ascensionMax() { return CM.clamp(CM.store.get("ascension", 0) || 0, 0, CM.ASCENSION.length); }
 
   newGame(seed, chosen, kit, difficulty, mutators, mode, opts) {         // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned; mode: "endless" for no bottom; opts: {ascension, iron}
@@ -234,8 +246,9 @@ CM.Game = class {
     this.everFell = false; this.fightFell = false; this.earned = [];
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
     this.awakened = mode === "awakened" && Boolean(this.achievements.bottom); this.behind = 0;
+    this.morale = CM.MORALE.start; this.fed = 0;
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
-    this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row }));
+    this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row, quirk: h.quirk || null }));
     this.startMutators = this.mutators.slice(); this.runLog = []; this.formation = "line";
     this.ascension = CM.clamp(Number((opts || {}).ascension) || 0, 0, Math.min(CM.ASCENSION.length, this.ascensionMax())); this.iron = Boolean((opts || {}).iron);
     this.ironAllow = true;                                               // (the first save of an Iron run, at the top of the stair)

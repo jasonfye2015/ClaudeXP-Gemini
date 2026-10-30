@@ -16,7 +16,7 @@ Object.assign(CM.Game.prototype, {
       const kind = CM.monsterKind(this.foes[0].kind || this.foes[0].name);
       if (kind) this.foes.push(CM.makeMonster(kind, CM.monsterLevel(this.floor ? this.floor.number : 1), this.rnd));
     }
-    if (this.asc(4) && this.floor && this.floor.number >= 3 && !thing.ascended && this.foes.length && !this.foes.some((m) => m.elite || m.boss || m.guardian)) { thing.ascended = true; CM.makeElite(this.foes, this.rnd, this.gen); }   // (Leaders)
+    if (this.asc("leaders") && this.floor && this.floor.number >= 3 && !thing.ascended && this.foes.length && !this.foes.some((m) => m.elite || m.boss || m.guardian)) { thing.ascended = true; CM.makeElite(this.foes, this.rnd, this.gen); }   // (Leaders)
     for (const m of this.foes) this.tune(m);
     if (this.villageLevel("library") >= 4) for (const m of this.foes) for (const el of Object.keys(CM.ELEMENT_NAMES)) this.learnResist(m, el, CM.resistance(m, el));   // (the library knows)
     thing.group = this.foes;
@@ -46,16 +46,17 @@ Object.assign(CM.Game.prototype, {
       + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
-    if ((theyCame || this.inDark()) && !this.alive().some((h) => CM.trait(h, "slippery")) && this.rnd.chance(0.5)) {   // surprise: they're on you before you can draw...
+    const wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
+    if ((theyCame || this.inDark()) && !wary && this.rnd.chance(0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
       if (this.mode !== "combat") return;
-    } else if (!theyCame && !this.asc(10) && (this.rnd.chance(sneaky ? 0.35 : 0.2) || this.alive().some((h) => CM.trait(h, "foresight")))) {     // ...or you have the drop on them (never, past the tenth rung)
+    } else if (!theyCame && !this.asc("watchful") && (this.rnd.chance(sneaky ? 0.35 : 0.2) || this.alive().some((h) => CM.trait(h, "foresight")))) {     // ...or you have the drop on them (never, past the tenth rung)
       this.say("You have the drop on them: a free round!");
       this.combat.surprise = true;
     }
-    if (this.asc(14) && this.foes.some((m) => m.boss)) this.summonSkeletons(2);   // (the king's guard)
+    if (this.asc("kingsguard") && this.foes.some((m) => m.boss)) this.summonSkeletons(2);   // (the king's guard)
     this.beginRound();
   },
 
@@ -108,7 +109,7 @@ Object.assign(CM.Game.prototype, {
     c.round += 1;
     c.reached = 0;
     const order = [];
-    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + (c.oiled ? 3 : 0) + this.rnd.int(1, 6) + 0.5 });
+    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
     if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
     order.sort((a, b) => b.init - a.init);
     for (const h of this.alive()) if (h.familiar === "skull" && c.round > 0) { const foe = this.attackable()[0]; if (foe) this.spellHit(foe, Math.max(1, 2 + Math.floor(h.level / 2)), `${h.name}'s skull bites:`); }
@@ -137,6 +138,8 @@ Object.assign(CM.Game.prototype, {
         const st = h.status || {};
         if (!this.canAct(h)) { if (!st.stone) this.say(`${h.name} is ${st.sleep ? "asleep" : "paralysed"} and can't act.`); continue; }
         if (!this.living().length) continue;
+        const m = this.morale === undefined ? CM.MORALE.start : this.morale;
+        if (m <= 30 && this.rnd.chance(m <= 10 ? 0.3 : 0.15)) { this.say(`${h.name} freezes: the party is ${this.moraleWord().toLowerCase()}.`); continue; }
         c.waiting = h;
         this.emit("turn", h);
         this.emit("change");
@@ -155,7 +158,7 @@ Object.assign(CM.Game.prototype, {
     for (const h of this.alive()) {
       const st = h.status || {};
       if (st.poison) {
-        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05) * (this.asc(11) ? 2 : 1)));
+        const bite = Math.max(1, Math.floor(h.max * ((h.boons || []).includes("thickblood") ? 0.025 : 0.05) * (this.asc("deeperhurts") ? 2 : 1)));
         h.hp = Math.max(1, h.hp - bite);
         this.say(`${h.name} suffers from the poison (-${bite}).`);
       }
@@ -215,7 +218,7 @@ Object.assign(CM.Game.prototype, {
     }
     for (const m of this.foes) {                                         // a second form, at a third of its strength (the shallow guardians)
       const G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
-      if (!G || !G.form2 || m.form2 || m.hp <= 0 || m.hp > m.max * (this.asc(6) ? 1.01 : 0.34) || m.echo) continue;
+      if (!G || !G.form2 || m.form2 || m.hp <= 0 || m.hp > m.max * (this.asc("nomercy") ? 1.01 : 0.34) || m.echo) continue;
       m.form2 = true;
       this.say(G.form2.text);
       this.emit("fx", { kind: "rise", foe: m });
@@ -329,6 +332,7 @@ Object.assign(CM.Game.prototype, {
     }
     this.say(sure ? "The world folds, and the party is elsewhere." : "The party flees back the way it came!");
     this.count("fled");
+    if (!sure) this.cheer(-10, "a flight");
     this.combat = null;
     this.setMode("explore");
     this.look();
@@ -347,7 +351,7 @@ Object.assign(CM.Game.prototype, {
   },
   stat(h, s) { return CM.heroStat(h, s); },
   hitChance(h) {
-    return CM.clamp(0.8 + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0), 0.25, 0.97);
+    return CM.clamp(0.8 + (this.stat(h, "dex") - 10) * 0.01 + ((h.boons || []).includes("keeneye") ? 0.1 : 0) - ((h.status || {}).blind ? 0.4 : 0) + ((this.morale === undefined ? CM.MORALE.start : this.morale) >= 80 ? 0.05 : 0), 0.25, 0.97);
   },
   critChance(h) { return CM.clamp((h.cls === "Rogue" ? 0.25 : 0.05) + (this.stat(h, "luck") - 10) * 0.01 + CM.gearProp(h, "crit"), 0.02, 0.7); },
   resistChance(h) {
@@ -359,7 +363,8 @@ Object.assign(CM.Game.prototype, {
   afflict(h, status, by) {
     if (!CM.STATUSES[status] || (h.status || {})[status]) return false;
     if (h.thrall) return false;
-    if ((status === "paralysis" && CM.trait(h, "immovable")) || ((status === "poison" || status === "paralysis") && CM.trait(h, "diamondbody"))) { this.say(`${h.name} does not so much as flinch.`); return false; }
+    if ((status === "paralysis" && (CM.trait(h, "immovable") || h.quirk === "stubborn")) || ((status === "poison" || status === "paralysis") && CM.trait(h, "diamondbody"))) { this.say(`${h.name} does not so much as flinch.`); return false; }
+    if (status === "curse") this.cheer(-5, "a curse");
     const charm = CM.equipped(h).find((it) => it.props && it.props.resist === status && !it.unknown);
     if (charm) { this.say(`${h.name}'s ${CM.baseName(charm)} grows warm: the ${status === "stone" ? "gaze" : "touch"} finds no purchase.`); return false; }
     if (this.rnd.chance(this.resistChance(h))) { this.say(`${h.name} shrugs off ${CM.the(by)}'s ${status === "stone" ? "gaze" : "touch"}.`); return false; }
@@ -426,7 +431,7 @@ Object.assign(CM.Game.prototype, {
     this.sound(h.hp <= 0 ? "fallen" : "hurt");
     this.emit("fx", { kind: "hurt", hero: h, amount: dmg, foe: by });
     this.say(`${CM.The(by)} hits ${h.name} for ${dmg}${opts.how || ""}.` + (h.hp <= 0 ? `  ${h.name} falls!` : ""));
-    if (h.hp <= 0) { this.fightFell = true; this.everFell = true; }
+    if (h.hp <= 0) { this.fightFell = true; this.everFell = true; this.cheer(-15, `${h.name} fell`); }
     if (h.hp > 0) {
       if (!opts.noTouch && by.touch && this.rnd.chance(by.touch.chance)) this.afflict(h, by.touch.status, by.name);
       if ((h.boons || []).includes("secondwind") && !h.winded && h.hp < h.max / 4) {
@@ -498,7 +503,7 @@ Object.assign(CM.Game.prototype, {
       if (m.ability === "charge" && !m.charged) { m.charged = true; dmg *= 2; how = " - it charges"; }
       const dealt = this.hurt(target, dmg, m, { how });
       if (target.hp > 0) {
-        if (m.ability === "stun" && rnd.chance(0.25) && !target.thrall && !(target.status || {}).paralysis && !CM.trait(target, "immovable")) { target.status.paralysis = 1; this.say(`${target.name} is knocked flat!`); }
+        if (m.ability === "stun" && rnd.chance(0.25) && !target.thrall && !(target.status || {}).paralysis && !CM.trait(target, "immovable") && target.quirk !== "stubborn") { target.status.paralysis = 1; this.say(`${target.name} is knocked flat!`); }
         if (m.ability === "drain" && target.xp > 0) {
           const lost = Math.min(target.xp, Math.max(5, Math.floor(CM.xpForLevel(target.level + 1) * 0.15)));
           target.xp -= lost;
@@ -701,6 +706,7 @@ Object.assign(CM.Game.prototype, {
     else if (ambush || rnd.chance(this.critChance(hero))) { dmg *= critMult; how = " - a weak spot"; }
     else if (back && !reaches && !(this.formation === "wedge" && this.point() !== hero)) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
     if (this.formation === "loose") dmg = Math.max(1, Math.ceil(dmg * 0.85));
+    if ((this.fed || 0) >= CM.HUNGER.weary) dmg = Math.max(1, Math.ceil(dmg * 0.85));
     if (target.row === "back" && !bow && this.living().some((f) => f !== target && f.row !== "back")) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += ", reaching past the front"; }   // (their back row, as yours)
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
     const props = (hero.weapon && hero.weapon.props) || {}, el = (props.element && !hero.weapon.unknown ? props.element : null) || (hero.oil && hero.oil.fights > 0 ? hero.oil.element : null);
@@ -752,6 +758,7 @@ Object.assign(CM.Game.prototype, {
     else if (r < 1) { dmg = Math.max(1, Math.ceil(dmg * r)); how = ` - the ${CM.ELEMENT_NAMES[element] || element} does little to it`; }
     if (foe.marked) dmg = Math.ceil(dmg * 1.25);
     if (element === "fire" && this.terrain().includes("water")) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the fire sputters on the water"; }
+    if ((this.fed || 0) >= CM.HUNGER.weary) dmg = Math.max(1, Math.ceil(dmg * 0.9));
     if (foe.elite === "mirrored") { dmg = Math.max(1, Math.ceil(dmg / 2)); const back = Math.max(1, Math.ceil(dmg / 2)); if (this.casting && this.casting.hp > 0) { this.casting.hp = Math.max(1, this.casting.hp - back); this.say(`The spell comes back off ${CM.the(foe)}'s mirror onto ${this.casting.name} (-${back}).`); } }
     if (element === "fire" && foe.held > 0) { dmg = Math.ceil(dmg * 1.5); how += " - the vines burn"; this.combo("kindling"); }
     if (element === "storm" && foe.chilled > 0) { dmg *= 2; how += " - the ice carries it"; this.combo("thunderclap"); foe.chilled = 0; }
@@ -1050,6 +1057,7 @@ Object.assign(CM.Game.prototype, {
         for (const p of this.alive()) { p.hp = Math.min(p.max, p.hp + 4); if ((p.status || {}).sleep) delete p.status.sleep; }
         this.sound("heal");
         this.say(`${h.name} sings. Hearts lift: the party hits harder this fight, and hurts a little less.`);
+        this.cheer(5);
         break;
       }
       case "turn": {
@@ -1067,7 +1075,7 @@ Object.assign(CM.Game.prototype, {
         break;
       }
       case "raise": {
-        if (this.asc(15)) { this.say("Ironbound: the fallen rise only at the temple. The prayer goes unanswered."); break; }
+        if (this.asc("ironbound")) { this.say("Ironbound: the fallen rise only at the temple. The prayer goes unanswered."); break; }
         ally.hp = CM.trait(h, "miracle") ? ally.max : Math.max(1, Math.floor(ally.max / 3));
         this.sound("heal");
         this.say(`${h.name} calls ${ally.name} back from the dark!`);
@@ -1161,7 +1169,7 @@ Object.assign(CM.Game.prototype, {
     let gold = slain.reduce((s, m) => s + m.gold, 0);
     if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
     if (this.alive().some((h) => CM.trait(h, "pickpocket"))) gold = Math.floor(gold * 1.1);
-    if (this.asc(7)) gold = Math.floor(gold * 0.8);
+    if (this.asc("poorveins")) gold = Math.floor(gold * 0.8);
     if (this.alive().some((h) => CM.trait(h, "avenger")) && slain.some((m) => m.undead)) { const n = slain.filter((m) => m.undead).length * 5; for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + n); this.say(`The unholy are laid low, and the party mends ${n}.`); }
     this.foughtTogether();
     gold = Math.floor(gold * (CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair).gold);
@@ -1186,6 +1194,7 @@ Object.assign(CM.Game.prototype, {
     if (guardian) this.floor.things[this.foeKey] = { type: "ladder" };   // (the shaft it stood over)
     this.combat = null;
     this.sound("coin");
+    this.cheer(guardian ? 10 : 3);
     this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and ${loot.map((i) => (i.kind === "ingredient" ? "some " : "a ") + (i.unknown ? CM.baseName(i) + " (unknown)" : i.name)).join(" and ")}.` : "."));
     for (const hero of this.alive()) {
       hero.xp += Math.floor(xp / 2);                                      // everyone standing learns from the fight
@@ -1334,6 +1343,7 @@ Object.assign(CM.Game.prototype, {
         this.bonds = (this.bonds || []).concat([k.split("|")]);
         this.say(`${up[i].name} and ${up[j].name} have fought ${CM.BOND_FIGHTS} fights side by side: old friends now. Each is a little stronger for the other, mends the other better, and avenges the other's fall.`);
         this.sound("level");
+        this.cheer(10);
         this.achieve("bonded");
       }
     }

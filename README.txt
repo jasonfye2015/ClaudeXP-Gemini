@@ -627,10 +627,10 @@ The difficulty ladder (the fourth big update, phase 5 - v2.5)
   Ascension. Slay the Lich King on Fair or above and the next run may carry one rule more; each crown opens the next
   rung, to fifteen (CM.ASCENSION; the creation screen's Ascension select; the run's start and its Hall of Fame row
   name the rung): Lean camps (a bedroll costs 40), Dry fountains (half are dry), Hardened (+5% health), Leaders
-  (every band from the third floor down has one), Hungry dark (torches half again as fast), No mercy (the guardians'
-  second forms from the first blow), Poor veins (a fifth less gold), Keen blades (+10% attack), No greater potions,
-  Watchful (the party never has the drop on them), Deeper hurts (poison bites double), Costly temple (prices
-  doubled), Thick skins (+10% health again), The king's guard (the Lich King begins with two skeletons up), Ironbound
+  (every band from the third floor down has one), Hungry dark (torches half again as fast), Costly temple (prices
+  doubled), Poor veins (a fifth less gold), Deeper hurts (poison bites double), No greater potions, Watchful (the
+  party never has the drop on them), Keen blades (+10% attack), No mercy (the guardians' second forms from the first
+  blow), Thick skins (+10% health again), The king's guard (the Lich King begins with two skeletons up), Ironbound
   (a fallen hero rises only at the temple). A run code carries the rung (:A7). The Ascended achievement at rung 5.
   Iron: a run saved only at the camps (and at the top of the stair) - a closed window between them loses the floors
   since. The Hall of Fame marks it; the Iron Will achievement for a crown on Iron. A run code carries it (:A0i).
@@ -654,6 +654,26 @@ The dungeon, branched (the fourth big update, phase 4 - v2.6; generator 2, so ru
   every floor is the mirror of itself (CM.mirrorFloor), the monsters a band deeper (CM.AWAKENED), the uniques awake
   (a second power in each: ", Awake"). The Hall of Fame marks it; the Awakened achievement for its crown. The tenth
   band under the Root is left for a later version: a band is a band's worth of art and lore.
+
+Expanded systems in play (the fourth big update, phase 6 - v2.7)
+  Morale: the party's temper, from 0 to 100, said as a word under the automap (CM.MORALE: Broken, Shaken, Uneasy,
+  Steady, High). High, blows land a little more often; Shaken or Broken, a hero may freeze a turn. A victory lifts it
+  (a guardian's more), a bond, the camp fire, a Bard's song, a chest; a hero falling, a flight, a curse and hunger
+  wear it down. Saved with the run.
+  Two slots more: boots (speed in the fight's order; some are silent - the party is never surprised - or keep dry feet
+  in the water) and cloaks (warding; some hooded against the dark's surprises). Generator 2's chests hold them. The
+  sheet has the slots.
+  Quirks at creation (CM.QUIRKS; a select under each hero's calling): Nightsighted, Greedy, Pious, Stubborn, Lucky,
+  Sickly, Hardy, Quiet - a small, honest trade-off each, carried in run codes. The week's party has none.
+  Hunger, lightly (CM.HUNGER): three hundred steps without a ration and the party is hungry (morale wears), six
+  hundred and Weary (every blow does less). Rations: the merchant sells them, the alchemist makes three of moss, weed
+  or sap; the camp fire feeds everyone; any hero eats from the pack for all. No one starves.
+  A second calling: with a guildhall of the second level, a hero at level twenty takes a second calling at a camp
+  (Guild, at the camp) for 200 renown: its first two spells or skills are theirs for good, and a little magic with
+  them if the calling casts. The sheet names it.
+  The ladder, measured (10 seeds, Fair, the bot): A0 and A5 much alike (half the parties take the crown), A10 a wall at
+  the Lich King - so the rungs were reordered: the costly temple and deeper hurts come before keen blades and the
+  guardians' second forms, which now sit at 11 and 12.
 
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.

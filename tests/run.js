@@ -1149,6 +1149,56 @@ test("an Awakened expedition: the floors mirrored, the monsters deeper, the uniq
   same(g2.floor.grid, game.floor.grid);
 });
 
+test("morale: the party's temper, lifted and worn, read by the fight; hunger, lightly", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("temper-1", fixedParty(CM));
+  assert.strictEqual(game.morale, 70); assert.strictEqual(game.moraleWord(), "Steady");
+  game.cheer(15); assert.strictEqual(game.moraleWord(), "High");
+  const h = game.party[0], hit = game.hitChance(h); game.cheer(-20); assert.ok(game.hitChance(h) < hit, "high morale: blows land more often");
+  game.morale = 20;
+  const rnd = new CM.Random(2), orc = CM.makeMonster(CM.monsterKind("Orc"), 2, rnd); orc.max = orc.hp = 900;
+  game.floor.things["2,2"] = { type: "monsters", group: [orc] }; game.startCombat("2,2", game.floor.things["2,2"]);
+  let froze = 0; game.rnd = new CM.Random(7);
+  for (let i = 0; i < 30; i++) { game.messages = []; game.combat.index = 0; game.combat.waiting = null; game.advance(); if (game.messages.some((m) => m.includes("freezes"))) froze++; if (game.combat.waiting) game.act("defend"); }
+  assert.ok(froze > 0, "shaken: a hero may freeze a turn");
+  for (const m of game.foes) m.hp = 0; game.afterBlows();
+  assert.strictEqual(game.morale, 23, "a victory lifts it three");
+  game.fed = CM.HUNGER.weary;
+  assert.strictEqual(game.hungerWord(), "Weary");
+  game.bag.push(CM.ration());
+  assert.strictEqual(game.give(game.bag.length - 1, 0), "");
+  assert.strictEqual(game.fed, 0); assert.strictEqual(game.hungerWord(), "");
+  game.saveRun();
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game(); g2.continueRun();
+  assert.strictEqual(g2.morale, game.morale); assert.strictEqual(g2.fed, 0);
+});
+
+test("boots and cloaks, quirks at creation, a second calling at twenty", () => {
+  const CM = load(), rnd = new CM.Random(3);
+  const boots = CM.makeGear("boots", 12, rnd), cloak = CM.makeGear("cloak", 12, rnd);
+  assert.ok(boots.kind === "boots" && boots.power >= 1 && CM.itemLabel(Object.assign({}, boots, { unknown: false })).includes("speed"));
+  assert.ok(cloak.kind === "cloak" && cloak.props.df >= 1);
+  let found = 0; for (let f = 1; f <= 50; f++) for (const t of Object.values(CM.makeFloor(f, "boots-1", 2).things)) if (t.type === "chest") for (const it of t.items) if (it.kind === "boots" || it.kind === "cloak") found++;
+  assert.ok(found > 5, "generator 2's chests hold them: " + found);
+  const party = fixedParty(CM); party[0].quirk = "hardy"; party[1].quirk = "quiet";
+  const game = new CM.Game(); game.newGame("quirk-1", party);
+  const knight = game.party[0], rogue = game.party[1];
+  assert.strictEqual(knight.quirk, "hardy"); assert.strictEqual(knight.stats.con, Math.min(25, party[0].stats.con + 2));
+  const code = CM.runCode("s", "fair", "dungeon", "pauper", game.party); assert.strictEqual(CM.parseRunCode(code).party[0].quirk, "hardy");
+  boots.unknown = false; cloak.unknown = false;
+  assert.strictEqual(game.equip(knight, game.bag.push(boots) - 1), "");
+  assert.strictEqual(knight.boots.kind, "boots");
+  assert.strictEqual(game.equip(rogue, game.bag.push(cloak) - 1), "");
+  assert.ok(CM.gearDefence(rogue) >= cloak.props.df);
+  knight.level = 20; game.village.levels.guildhall = 2; game.village.renown = 500;
+  assert.match(game.secondCalling(0, "Cleric"), /camp/);
+  game.enterFloor(5, "down"); game.setMode("camp"); game.reachCamp(5);
+  assert.strictEqual(game.secondCalling(0, "Cleric"), "");
+  assert.ok(knight.second === "Cleric" && CM.abilitiesFor(knight).includes("heal") && !CM.abilitiesFor(knight).includes("raise"));
+  assert.ok(knight.maxmp > 0, "a second calling with magic brings a little");
+  assert.strictEqual(game.renown(), 300);
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

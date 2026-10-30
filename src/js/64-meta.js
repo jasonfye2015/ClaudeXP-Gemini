@@ -323,9 +323,9 @@ Object.assign(CM.Game.prototype, {
     const d = CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair;
     let hp = d.hp, atk = d.atk;
     if (this.has("brittle")) { hp *= 0.5; atk *= 1.5; }
-    if (this.asc(3)) hp *= 1.05;
-    if (this.asc(8)) atk *= 1.1;
-    if (this.asc(13)) hp *= 1.1;
+    if (this.asc("hardened")) hp *= 1.05;
+    if (this.asc("keenblades")) atk *= 1.1;
+    if (this.asc("thickskins")) hp *= 1.1;
     if (this.awakened) { hp *= CM.AWAKENED.hp; atk *= CM.AWAKENED.atk; }
     m.max = Math.max(1, Math.round(m.max * hp));
     m.hp = Math.max(1, Math.round(m.hp * hp));
