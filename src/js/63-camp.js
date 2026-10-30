@@ -320,6 +320,7 @@ Object.assign(CM.Game.prototype, {
     if (item.kind === "scroll" || item.kind === "wand") return this.useMagicOutside(row, n);
     if (item.kind === "torch") {
       this.bag.splice(row, 1);
+      if (this.light && this.light.kind === "torch" && this.floor && this.mode === "explore") this.trace("stub", ...this.floor.pos);   // (the old one, dropped)
       this.light = { kind: "torch", left: CM.TORCH_STEPS };
       this.sound("spell");
       this.say(`${hero.name} lights a fresh torch.`);
@@ -394,11 +395,13 @@ Object.assign(CM.Game.prototype, {
       hero.hp = Math.min(hero.max, hero.hp + item.power);
       this.bag.splice(row, 1);
       this.sound("heal");
+      if (this.floor && this.mode === "explore") this.trace(this.bottleFor(item.kind), ...this.floor.pos);
     } else if (item.kind === "mana") {
       if (!hero.maxmp) return `${hero.name} has no magic to restore.`;
       hero.mp = Math.min(hero.maxmp, hero.mp + item.power);
       this.bag.splice(row, 1);
       this.sound("heal");
+      if (this.floor && this.mode === "explore") this.trace("bottle_blue", ...this.floor.pos);
     } else {
       this.inGive = true;
       try { return this.equip(hero, row); } finally { this.inGive = false; }

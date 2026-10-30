@@ -267,6 +267,7 @@ Object.assign(CM.Game.prototype, {
     const spare = this.bag.findIndex((i) => i.kind === "torch");
     if (spare >= 0) {
       this.bag.splice(spare, 1);
+      this.trace("stub", ...this.floor.pos);
       this.light = { kind: "torch", left: CM.TORCH_STEPS };
       this.say("Your torch gutters out. You light a fresh one.");
     } else {
@@ -448,6 +449,7 @@ Object.assign(CM.Game.prototype, {
       this.phylactery = true;
       this.sound("shatter");
       this.say("You lift the box from the east and dash it on the stone. Something inside screams - and far below, something else does.");
+      this.trace("glass", x, y);                                               // (the box's shards)
       this.emit("fx", { kind: "shatter" });
       this.saveRun();
       this.emit("change");
@@ -637,7 +639,7 @@ Object.assign(CM.Game.prototype, {
     const chance = (h) => CM.clamp(0.5 + CM.mod(this.stat(h, "dex")) * 0.1 + (CM.newMoon(this) ? 0.1 : 0) + (CM.festivalIs(this, "bells") ? 0.1 : 0), 0.1, 0.95);   // (a new moon: dark work goes better)
     if (rogue) {
       if (!this.rnd.chance(chance(rogue))) return `${rogue.name} works at ${G.name}... it won't give. Not yet.`;
-      this.sound("unlock"); this.say(`${rogue.name} picks ${G.name}, and the ${what} gives.`); return "";
+      this.sound("unlock"); this.say(`${rogue.name} picks ${G.name}, and the ${what} gives.`); this.trace("pin", ...k.split(",").map(Number)); return "";
     }
     let row = this.bag.findIndex((i) => i.kind === "lockpick" && i.master);
     if (row < 0 && !G.master) row = this.bag.findIndex((i) => i.kind === "lockpick");
@@ -645,7 +647,7 @@ Object.assign(CM.Game.prototype, {
     const pick = this.bag[row], p = pick.master ? chance(dexter) : chance(dexter) / 3;
     this.countUse("lockpick");
     if (!this.rnd.chance(p)) { this.bag.splice(row, 1); this.tally.picksBroken = (this.tally.picksBroken || 0) + 1; return `${dexter.name} tries ${G.name} with the ${pick.name.toLowerCase()}... and it snaps in the keyhole.`; }
-    this.sound("unlock"); this.say(`${dexter.name} tries ${G.name} with the ${pick.name.toLowerCase()}, and feels it turn.`); return "";
+    this.sound("unlock"); this.say(`${dexter.name} tries ${G.name} with the ${pick.name.toLowerCase()}, and feels it turn.`); this.trace("pin", ...k.split(",").map(Number)); return "";
   },
   // a band of monsters walks onto a trap the party set: it takes the trap, and the party hears it
   trapGroup(t, f, k) {

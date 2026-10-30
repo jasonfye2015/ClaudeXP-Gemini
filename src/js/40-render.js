@@ -150,7 +150,7 @@ CM.Renderer = class {
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
   setFloor(floor, theme) {
     this.theme = theme;
-    const props = CM.scatter(floor, this.seed, this.density, { season: this.season });
+    const props = CM.scatter(floor, this.seed, this.density, { season: this.season }).concat(CM.traceProps(floor));   // (and what the party left)
     this.standing = props.filter((p) => p.how === "stand");
     const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub });
     this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };

@@ -234,6 +234,20 @@ CM.Game = class {
     CM.store.set("memorial", this.memorial);
   }
 
+  // a trace: something the party left on this floor (a bottle, remains, a scorch, a stub), saved with the floor, at
+  // most CM.TRACES_MOST of them; the floor's mesh is made again to show it
+  trace(id, x, y) {
+    const fl = this.floor;
+    if (!fl || !CM.PROPS[id] || this.mode === "camp" || x === undefined) return;
+    fl.tracesMade = (fl.tracesMade || 0) + 1;
+    const rnd = new CM.Random(CM.hashSeed(`${this.seed}:trace:${fl.number}:${fl.tracesMade}`));
+    const r2 = (v) => Math.round(v * 100) / 100 + 0;                      // (two places, and never a -0 that a save would turn to 0)
+    fl.traces = (fl.traces || []).concat({ id, x, y, dx: r2((rnd.next() - 0.5) * 0.5), dz: r2((rnd.next() - 0.5) * 0.5), turn: r2(rnd.next() * 3.14), s: r2(rnd.next()) });
+    if (fl.traces.length > CM.TRACES_MOST) fl.traces = fl.traces.slice(-CM.TRACES_MOST);
+    this.emit("mesh");
+  }
+  bottleFor(kind) { return kind === "mana" ? "bottle_blue" : kind === "heal" || kind === "greaterheal" ? "bottle_red" : "bottle_green"; }
+
   // a floor made from the seed, and remembered as it was fresh (so the save can keep only what changes)
   freshFloor(number) {
     const fl = CM.makeFloor(number, this.seed, this.gen || CM.GEN);

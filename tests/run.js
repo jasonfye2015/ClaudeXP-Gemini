@@ -3061,6 +3061,41 @@ test("the dungeon's debris: each band its own palette and not another's; the nam
   for (const id of ["candle", "candelabra", "fungi", "shard"]) assert.ok(CM.PROPS[id].glow > 0, `${id} glows`);
 });
 
+test("traces: a drunk potion leaves its bottle where it was drunk, a fight its remains by the kind and a scorch after fire, a spent torch its stub; the floor keeps forty, through a save; and they are drawn", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("trace-1", fixedParty(CM));
+  const fl = g.floor, at = () => fl.pos.join(",");
+  // a potion drunk on the way: a red bottle where the party stands; a mana potion, a blue one
+  g.party[0].hp = 1; g.bag.push({ name: "Healing Potion", kind: "heal", power: 20, value: 20 }); assert.strictEqual(g.give(g.bag.length - 1, 0), "");
+  let last = fl.traces[fl.traces.length - 1]; assert.strictEqual(last.id, "bottle_red"); assert.strictEqual(`${last.x},${last.y}`, at());
+  const caster = g.party.findIndex((h) => h.maxmp); g.party[caster].mp = 0; g.bag.push({ name: "Mana Potion", kind: "mana", power: 12, value: 25 }); assert.strictEqual(g.give(g.bag.length - 1, caster), "");
+  assert.strictEqual(fl.traces[fl.traces.length - 1].id, "bottle_blue");
+  // a fight: remains by the kind, and after fire a scorch and ash
+  const fight = (kind, fire) => {
+    const k = "1,1"; fl.things[k] = { type: "monsters", group: [CM.makeMonster(CM.monsterKind(kind), 2, new CM.Random(1))] };
+    g.foes = fl.things[k].group; g.foeKey = k; g.combat = { round: 1, order: [], index: 0, burned: Boolean(fire) }; g.mode = "combat"; for (const m of g.foes) m.hp = 0;
+    const n = (fl.traces || []).length; g.wonFight(); return fl.traces.slice(n).map((t) => `${t.id}@${t.x},${t.y}`);
+  };
+  assert.ok(fight("Skeleton").includes("bones@1,1"), "the dead leave bones");
+  assert.ok(fight("Orc").includes("stain@1,1"), "the living a stain");
+  const burnt = fight("Orc", true); assert.ok(burnt.includes("ash@1,1") && burnt.includes("scorch@1,1"), `fire leaves ash and a scorch: ${burnt}`);
+  // a torch burnt out and a fresh one lit: the stub
+  g.mode = "explore"; g.bag.push(CM.torch()); g.light = { kind: "torch", left: 1 }; const n0 = fl.traces.length; g.burnLight ? g.burnLight() : null;
+  for (let i = 0; i < 3 && fl.traces.length === n0; i++) { g.light = { kind: "torch", left: 1 }; g.bag.push(CM.torch()); g.move(0); g.move(2); }
+  assert.ok(fl.traces.slice(n0).some((t) => t.id === "stub"), "a stub where the torch went out");
+  // through a save, and back
+  g.saveRun(); const g2 = new CM.Game(); g2.continueRun(); assert.strictEqual(JSON.stringify(g2.floor.traces), JSON.stringify(fl.traces), "the traces come back");
+  // forty at most, the oldest first to go
+  for (let i = 0; i < 60; i++) g.trace("stain", 2, 2);
+  assert.strictEqual(fl.traces.length, CM.TRACES_MOST); assert.ok(fl.traces.every((t) => t.id === "stain"), "the oldest went first");
+  g.saveRun(); const size = JSON.stringify(g.lastRun).length; assert.ok(size < 400000, `the save stays small: ${size}`);
+  // drawn: as props, at every Detail
+  const tp = CM.traceProps(fl); assert.strictEqual(tp.length, CM.TRACES_MOST); assert.ok(tp.every((p) => p.trace && p.how === "flat" && p.layer === "prop:stain"));
+  assert.strictEqual(CM.remainsOf({ kind: "Imp" }), "ash"); assert.strictEqual(CM.remainsOf({ kind: "Zombie", undead: true }), "bones");
+  // nothing traced at the camp
+  g.mode = "camp"; const before = fl.traces.length; g.trace("stub", 1, 1); assert.strictEqual(fl.traces.length, before);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
