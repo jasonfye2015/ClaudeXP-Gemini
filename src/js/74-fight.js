@@ -34,10 +34,17 @@ Object.assign(CM.UI.prototype, {
       btn(`<kbd>A</kbd>${c.auto ? "Stop auto" : "Auto"}`, () => g.autoFight(!c.auto), false, c.auto ? "on" : "");
     } else if (h && cm.kind === "cast") {
       CM.abilitiesFor(h).forEach((id, i) => {
-        const a = CM.ABILITIES[id], used = a.once && h.used && h.used[id], poor = h.mp < a.mp, est = g.spellEstimate(h, id);
-        const b = btn(`<kbd>${i + 1}</kbd>${a.name}<small>${a.mp ? a.mp + " MP - " : ""}${used ? "used this fight" : a.what}${est ? ` <i>(${est})</i>` : ""}</small>`, () => this.castPick(id), used || poor, "pick");
+        const a = CM.ABILITIES[id], used = a.once && h.used && h.used[id], cost = g.spellCost(h, Object.assign({ id }, a), 1), poor = h.mp < cost, est = g.spellEstimate(h, id), lvl = (h.spellLevels || {})[id] || 1;
+        const b = btn(`<kbd>${i + 1}</kbd>${a.name}${lvl > 1 ? ` <small>lv ${lvl}</small>` : ""}<small>${a.mp ? cost + " MP - " : ""}${used ? "used this fight" : a.what}${est ? ` <i>(${est})</i>` : ""}</small>`, () => this.castPick(id), used || poor, "pick");
         const ic = CM.art.spellIcon(id, 18, g.settings.look);
         if (ic) { ic.className = "icon"; b.insertBefore(ic, b.firstChild.nextSibling); }
+        if (a.mp && !used) {                                            // overcast: more magic in for more out; a reagent from the pack
+          const wrap = document.createElement("span"); wrap.className = "overcast";
+          for (const p of [2, 3]) { const c2 = g.spellCost(h, Object.assign({ id }, a), p); const o = document.createElement("button"); o.textContent = `x${p} (${c2})`; o.title = `${CM.OVERCAST[p].mult * 100 - 100}% more, for ${c2} MP${p === 3 ? "; it may bite back" : ""}`; o.disabled = h.mp < c2; o.addEventListener("click", () => this.castPick(id, p)); wrap.appendChild(o); }
+          const rg = g.reagentFor(id);
+          if (rg) { const o = document.createElement("button"); o.textContent = `+ ${CM.INGREDIENTS[rg.id].name}`; o.title = CM.REAGENTS[rg.id].what; o.disabled = poor; o.addEventListener("click", () => this.castPick(id, 1, rg.row)); wrap.appendChild(o); }
+          menu.appendChild(wrap);
+        }
       });
       btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
     } else if (h && cm.kind === "item") {
@@ -70,10 +77,10 @@ Object.assign(CM.UI.prototype, {
   combatMenu(kind, data) { this.cmenu = Object.assign({ kind }, data || {}); this.renderCombat(); },
   usableRows() { return this.game.bag.map((it, i) => (["heal", "greaterheal", "mana", "antidote", "revive", "bomb"].includes(it.kind) ? i : -1)).filter((i) => i >= 0); },
 
-  castPick(id) {
+  castPick(id, power = 1, reagent) {
     const g = this.game, a = CM.ABILITIES[id];
-    if (a.target === "ally" || a.target === "fallen") { this.combatMenu("ally", { id, fallen: a.target === "fallen" }); return; }
-    g.act("cast", a.target === "foe" ? { id, target: g.target } : { id });
+    if (a.target === "ally" || a.target === "fallen") { this.combatMenu("ally", { id, power, reagent, fallen: a.target === "fallen" }); return; }
+    g.act("cast", Object.assign(a.target === "foe" ? { id, target: g.target } : { id }, power > 1 ? { power } : {}, reagent !== undefined ? { reagent } : {}));
     this.refresh();
   },
 
@@ -82,7 +89,7 @@ Object.assign(CM.UI.prototype, {
   allyPick(i) {
     const cm = this.cmenu || {};
     if (cm.row !== undefined) this.game.act("item", { row: cm.row, who: i });
-    else this.game.act("cast", { id: cm.id, target: i });
+    else this.game.act("cast", Object.assign({ id: cm.id, target: i }, cm.power > 1 ? { power: cm.power } : {}, cm.reagent !== undefined ? { reagent: cm.reagent } : {}));
     this.refresh();
   },
 

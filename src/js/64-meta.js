@@ -72,7 +72,7 @@ Object.assign(CM.Game.prototype, {
 
   exportText() {
     return JSON.stringify({ game: "Claude and Magic", version: CM.version, built: CM.built, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
-      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, memorial: this.memorial, fallen: this.fallen });
+      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos, weaves: this.weaves, memorial: this.memorial, fallen: this.fallen });
   },
 
   importText(text) {
@@ -89,6 +89,7 @@ Object.assign(CM.Game.prototype, {
     if (data.vault && typeof data.vault === "object" && data.vault.name) { this.vault = data.vault; CM.store.set("vault", this.vault); }
     if (data.bestiary && typeof data.bestiary === "object") { this.bestiary = Object.assign({}, this.bestiary, data.bestiary); CM.store.set("bestiary", this.bestiary); }
     if (data.combos && typeof data.combos === "object") { this.combos = Object.assign({}, this.combos, data.combos); CM.store.set("combos", this.combos); }
+    if (data.weaves && typeof data.weaves === "object") { this.weaves = Object.assign({}, this.weaves, data.weaves); CM.store.set("weaves", this.weaves); }
     if (Array.isArray(data.memorial)) { this.memorial = data.memorial.concat(this.memorial || []).slice(0, 30); CM.store.set("memorial", this.memorial); }
     if (Array.isArray(data.fallen)) { const have = new Set((this.fallen || []).map((f) => f.id)); this.fallen = (this.fallen || []).concat(data.fallen.filter((f) => f && f.id && !have.has(f.id))).slice(-40); CM.store.set("fallen", this.fallen); }
     this.emit("change");
@@ -281,7 +282,18 @@ Object.assign(CM.Game.prototype, {
   readTome(row, hero) {                                                 // "" when learned, else why not (through give: logged there)
     const item = this.bag[row], id = item.spell;
     if (!CM.isCaster(hero)) return `${hero.name} turns the pages and can't make head or tail of them: a tome is for a caster.`;
-    if (CM.abilitiesFor(hero).includes(id)) return `${hero.name} knows ${CM.ABILITIES[id].name} already.`;
+    if (CM.abilitiesFor(hero).includes(id)) {                            // known: the tome raises it a level
+      hero.spellLevels = hero.spellLevels || {};
+      const lvl = hero.spellLevels[id] || 1;
+      if (lvl >= CM.SPELL_LEVELS) return `${hero.name} knows ${CM.ABILITIES[id].name} as well as it can be known.`;
+      hero.spellLevels[id] = lvl + 1;
+      this.bag.splice(row, 1);
+      this.sound("spell");
+      this.say(`${hero.name} reads the ${item.name} again, deeper: ${CM.ABILITIES[id].name} is level ${lvl + 1} now - a quarter more, and one less to cast.`);
+      this.emit("fx", { kind: "levelup", hero });
+      this.saveRun(); this.emit("change");
+      return "";
+    }
     hero.learned = (hero.learned || []).concat(id);
     this.bag.splice(row, 1);
     this.sound("spell");

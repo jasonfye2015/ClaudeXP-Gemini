@@ -108,6 +108,7 @@ Object.assign(CM.Game.prototype, {
     for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + (c.oiled ? 3 : 0) + this.rnd.int(1, 6) + 0.5 });
     if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
     order.sort((a, b) => b.init - a.init);
+    for (const h of this.alive()) if (h.familiar === "skull" && c.round > 0) { const foe = this.attackable()[0]; if (foe) this.spellHit(foe, Math.max(1, 2 + Math.floor(h.level / 2)), `${h.name}'s skull bites:`); }
     c.order = order;
     c.index = 0;
     c.waiting = null;
@@ -248,7 +249,7 @@ Object.assign(CM.Game.prototype, {
       if (CM.trait(h, "flurry") && t.hp > 0 && !t.fled) this.strike(h, t, " again", { mult: 0.5 });
     } else if (action === "cast") {
       const id = arg && arg.id !== undefined ? arg.id : this.defaultAbility(h);
-      if (!this.useAbility(h, id, arg && arg.target !== undefined ? arg.target : null)) return false;
+      if (!this.useAbility(h, id, arg && arg.target !== undefined ? arg.target : null, arg && arg.power, arg && arg.reagent)) return false;
     } else if (action === "item") {
       if (!this.useItemInBattle(h, arg)) return false;
     } else if (action === "defend") {
@@ -807,6 +808,19 @@ Object.assign(CM.Game.prototype, {
     if (!list.includes(element)) { list.push(element); this.bestiaryDirty = true; }
   },
 
+  // a familiar chosen at level 6 (the Mage's: a cat, an owl, a toad; the Necromancer's skull comes by itself)
+  chooseFamiliar(hero, id) {
+    const F = CM.FAMILIARS[id];
+    if (!F || !F.cls.includes(hero.cls) || hero.familiar || hero.level < CM.FAMILIAR_AT || hero.hp <= 0) return false;
+    this.logAct("chooseFamiliar", this.party.indexOf(hero), id);
+    hero.familiar = id;
+    this.sound("level");
+    this.say(`${hero.name} is joined by ${F.name}: ${F.what}.`);
+    this.saveRun(); this.emit("change");
+    return true;
+  },
+  needsFamiliar(h) { return Boolean(h && h.hp > 0 && !h.familiar && h.level >= CM.FAMILIAR_AT && Object.values(CM.FAMILIARS).some((F) => F.cls.includes(h.cls))); },
+
   // what a hero reaches for when told only "cast": their calling's own thing, if they can afford it
   defaultAbility(h) {
     const can = CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].mp <= h.mp && !(CM.ABILITIES[id].once && h.used && h.used[id]));
@@ -824,7 +838,27 @@ Object.assign(CM.Game.prototype, {
   },
 
   // a spell or skill, if the hero knows it, can afford it and has someone to aim it at
-  useAbility(h, id, target) {
+  // the cost of a spell for this hero: its level (a tome read twice), the path, the formation
+  spellCost(h, a, power = 1) {
+    if (!a.mp) return 0;
+    const lvl = (h.spellLevels || {})[a.id] || 1;
+    let cost = Math.max(1, a.mp - (lvl - 1));
+    if (CM.trait(h, "thrifty")) cost = Math.max(1, cost - 1);
+    if (this.formation === "loose") cost += 1;
+    return cost * (CM.OVERCAST[power] || CM.OVERCAST[1]).cost;
+  },
+  // what a spell's numbers are multiplied by right now: its level, the overcast, a reagent
+  spellMult(h, id) {
+    const lvl = (h && h.spellLevels || {})[id] || 1;
+    return (1 + 0.25 * (lvl - 1)) * (this.castMult || 1);
+  },
+  pow(n) { return Math.max(1, Math.ceil(n * (this.castScale || 1))); },
+  // the reagent in the pack that goes with a spell, if any: {row, id}
+  reagentFor(id) {
+    for (let row = 0; row < this.bag.length; row++) { const it = this.bag[row]; if (it.kind === "ingredient" && CM.REAGENTS[it.ingredient] && CM.REAGENTS[it.ingredient].spells.includes(id)) return { row, id: it.ingredient }; }
+    return null;
+  },
+  useAbility(h, id, target, power, reagentRow) {
     this.tally.abilities = this.tally.abilities || {};
     if (id) this.tally.abilities[id] = (this.tally.abilities[id] || 0) + 1;
     if (!id) {
@@ -837,8 +871,11 @@ Object.assign(CM.Game.prototype, {
     const a = CM.ABILITIES[id];
     if (!a || !CM.abilitiesFor(h).includes(id)) { this.say(`${h.name} doesn't know that.`); return false; }
     if (a.once && h.used && h.used[id]) { this.say(`${h.name} has used ${a.name} this fight.`); return false; }
-    const cost = (a.mp && CM.trait(h, "thrifty") ? Math.max(1, a.mp - 1) : a.mp) + (a.mp && this.formation === "loose" ? 1 : 0);
-    if (h.mp < cost) { this.say(`${h.name} hasn't the magic for ${a.name}.`); return false; }
+    power = a.mp && CM.OVERCAST[power] ? power : 1;
+    const cost = this.spellCost(h, Object.assign({ id }, a), power);
+    if (h.mp < cost) { this.say(`${h.name} hasn't the magic for ${a.name}${power > 1 ? " at that strength" : ""}.`); return false; }
+    let reagent = null;
+    if (reagentRow !== undefined && reagentRow !== null && this.bag[reagentRow] && this.bag[reagentRow].kind === "ingredient" && (CM.REAGENTS[this.bag[reagentRow].ingredient] || {}).spells.includes(id)) reagent = this.bag[reagentRow].ingredient;
     if (this.mode !== "combat" && !a.outside) { this.say(`${a.name} is for a fight.`); return false; }
     const foes = this.attackable();
     let foe = null, ally = null;
@@ -855,50 +892,83 @@ Object.assign(CM.Game.prototype, {
     if (a.target === "fallen") { ally = this.allyAt(target, true); if (!ally) { this.say("No one has fallen."); return false; } }
     h.mp -= cost;
     if (a.once) { h.used = h.used || {}; h.used[id] = true; }
+    if (reagent) { this.bag.splice(reagentRow, 1); this.say(`${h.name} crumbles ${CM.INGREDIENTS[reagent].name.toLowerCase()} into the casting: ${CM.REAGENTS[reagent].what}.`); }
+    if (power > 1) this.say(`${h.name} pours more into it: ${a.name} at ${power === 2 ? "half again" : "double"} the strength.`);
     this.sound(a.mp ? "spell" : "hit");
-    this.emit("fx", { kind: "cast", id, hero: h, foe, ally, foes });
-    this.casting = h;
+    this.emit("fx", { kind: "cast", id, hero: h, foe, ally, foes, power });
+    this.casting = h; this.castMult = (CM.OVERCAST[power] || CM.OVERCAST[1]).mult; this.castScale = this.spellMult(h, id); this.reagent = reagent;
     this.doAbility(h, id, a, foe, ally, foes);
-    this.casting = null;
+    this.weave(h, id, foes);
+    this.casting = null; this.castMult = 1; this.castScale = 1; this.reagent = null;
+    if (power === 3 && CM.OVERCAST[3].backlash && this.rnd.chance(CM.OVERCAST[3].backlash) && h.hp > 1) { const burn = Math.max(1, Math.floor(h.max / 10)); h.hp = Math.max(1, h.hp - burn); this.say(`The magic bites back: ${h.name} burns for ${burn}.`); this.emit("fx", { kind: "sear", hero: h, amount: burn, foe: { name: "The spell" } }); }
     this.emit("change");
     return true;
+  },
+
+  // two casters in one round: the first holds, the second matches, and the weave is more than both (CM.WEAVES)
+  weave(h, id, foes) {
+    const c = this.combat;
+    if (!c || this.mode !== "combat" || !CM.ABILITIES[id].mp) return;
+    const held = c.held;
+    c.held = { id, hero: h, round: c.round };
+    if (!held || held.round !== c.round || held.hero === h) return;
+    const key = [held.id, id].sort().join("+"), W = CM.WEAVES[key];
+    if (!W) return;
+    const L = Math.max(h.level, held.hero.level), mod = Math.max(this.spellMod(h), this.spellMod(held.hero)), living = this.attackable();
+    this.weaves = this.weaves || {};
+    const first = !this.weaves[key];
+    this.weaves[key] = (this.weaves[key] || 0) + 1;
+    CM.store.set("weaves", this.weaves);
+    this.say(`Weave - ${W.name}! ${held.hero.name} and ${h.name} make one spell of two.`);
+    this.emit("fx", { kind: "combo", id: key });
+    switch (W.name) {
+      case "Steam": for (const m of living) { m.blind = Math.max(m.blind || 0, 2); this.spellHit(m, Math.max(1, 6 + 2 * L + mod), "The steam scalds:"); } break;
+      case "Firestorm": for (const m of living) { this.spellHit(m, Math.max(1, 8 + 4 * L + mod), "The firestorm:", "fire"); if (m.hp > 0) { m.burning = Math.max(m.burning || 0, 2); m.burnDmg = Math.max(m.burnDmg || 0, 5 + L); } } break;
+      case "Sanctuary": for (const m of living) if (!CM.unmoved(m)) m.held = Math.max(m.held || 0, 1); for (const p of this.alive()) p.hp = Math.min(p.max, p.hp + 6 + L); this.sound("heal"); break;
+      case "Nightmare": for (const m of living) if (m.asleep > 0) this.spellHit(m, Math.max(1, 15 + 3 * L + mod), "Its dream tears at it:"); break;
+      case "Barrage": for (let i = 0; i < 2; i++) { const m = living[i % living.length]; if (m) this.spellHit(m, Math.max(1, 6 + 2 * L + mod), "The barrage:"); } break;
+      case "Bramble": for (const m of living) if (!CM.unmoved(m)) m.held = Math.max(m.held || 0, 2); break;
+      default: break;
+    }
+    if (first) this.achieve("weaver");
+    c.held = null;
   },
 
   doAbility(h, id, a, foe, ally, foes) {
     const rnd = this.rnd, L = h.level, mod = this.spellMod(h), c = this.combat || {};
     const healAll = (n, text) => { for (const p of this.alive()) p.hp = Math.min(p.max, p.hp + n); this.say(text); this.sound("heal"); };
     switch (id) {
-      case "missile": this.spellHit(foe, Math.max(1, 6 + 2 * L + mod), `${h.name}'s bolt of force strikes:`); this.rebound(foe, Math.max(1, 6 + 2 * L + mod), null); break;
-      case "firebolt": this.spellHit(foe, Math.max(1, 10 + 3 * L + mod), `${h.name}'s fire bolt:`, "fire"); this.rebound(foe, Math.max(1, 10 + 3 * L + mod), "fire"); break;
-      case "lightning": this.spellHit(foe, Math.max(1, 20 + 5 * L + mod), `${h.name} calls down lightning!`, "storm"); this.rebound(foe, Math.max(1, 20 + 5 * L + mod), "storm"); if (CM.trait(h, "tempest") && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.5)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels, smoking.`); } break;
+      case "missile": { const d = this.pow(6 + 2 * L + mod); this.spellHit(foe, d, `${h.name}'s bolt of force strikes:`); this.rebound(foe, d, null); if (this.reagent === "crystaldust") { const other = this.attackable().find((m) => m !== foe); if (other) this.spellHit(other, d, "The bolt splits:"); } break; }
+      case "firebolt": { const d = this.pow((10 + 3 * L + mod) * (["forgesoot", "slag"].includes(this.reagent) ? 1.5 : 1)); this.spellHit(foe, d, `${h.name}'s fire bolt:`, "fire"); this.rebound(foe, d, "fire"); break; }
+      case "lightning": this.spellHit(foe, this.pow(20 + 5 * L + mod), `${h.name} calls down lightning!`, "storm"); this.rebound(foe, this.pow(20 + 5 * L + mod), "storm"); if (CM.trait(h, "tempest") && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.5)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels, smoking.`); } break;
       case "calllightning": {
-        const dmg = Math.max(1, 18 + 4 * L + mod), struck = CM.trait(h, "stormcall") ? foes : [foe];
+        const dmg = this.pow(18 + 4 * L + mod), struck = CM.trait(h, "stormcall") ? foes : [foe];
         for (const m of struck) { this.spellHit(m, m === foe ? dmg : Math.ceil(dmg * 0.6), m === foe ? `${h.name} calls down lightning!` : "The storm reaches on:", "storm"); if (CM.trait(h, "tempest") && m.hp > 0 && !CM.unmoved(m) && (CM.trait(h, "hurricane") || rnd.chance(0.5))) { m.held = Math.max(m.held || 0, 1); this.say(`${CM.The(m)} reels, smoking.`); } }
         break;
       }
       case "smite": {
-        let dmg = Math.max(1, 12 + 3 * L + Math.floor(mod / 2));
+        let dmg = this.pow((12 + 3 * L + Math.floor(mod / 2)) * (this.reagent === "bonedust" ? 2 : 1));
         if (c.bless) { dmg = Math.ceil(dmg * 1.5); this.combo("consecrated"); }
         if (CM.trait(h, "radiance") && foes.some((m) => m.undead)) { for (const m of foes) if (m.undead) this.spellHit(m, dmg * 2, `${h.name}'s radiance falls on the unholy:`, "holy"); }
         else this.spellHit(foe, dmg * (foe.undead ? 2 : 1), `${h.name} smites${foe.undead ? " the unholy thing" : ""}:`, "holy");
         break;
       }
       case "fireball": {
-        const dmg = Math.max(1, 8 + 4 * L + mod);
+        const dmg = this.pow((8 + 4 * L + mod) * (["forgesoot", "slag"].includes(this.reagent) ? 1.5 : 1));
         for (const m of foes) { this.spellHit(m, dmg, "", "fire"); if (CM.trait(h, "inferno") && m.hp > 0) { m.burning = CM.trait(h, "immolation") ? 4 : 2; m.burnDmg = (5 + L) * (CM.trait(h, "immolation") ? 2 : 1); } }
         this.say(`${h.name} hurls a fireball! ${dmg} damage to every foe${CM.trait(h, "inferno") ? ", and they burn" : ""}.`);
         break;
       }
       case "frost": {
-        const dmg = Math.max(1, 6 + 2 * L + mod);
+        const dmg = this.pow(6 + 2 * L + mod), weed = ["drownedweed", "saltweed"].includes(this.reagent);
         let held = 0;
-        for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0) m.chilled = 2; if (m.hp > 0 && !CM.unmoved(m) && (this.terrain().includes("water") || rnd.chance(0.3))) { m.held = Math.max(m.held || 0, 1); held++; } }
+        for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0) m.chilled = 2; if (m.hp > 0 && !CM.unmoved(m) && (weed || this.terrain().includes("water") || rnd.chance(0.3))) { m.held = Math.max(m.held || 0, 1); held++; } }
         this.say(`${h.name} breathes frost over every foe: ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}. The ice clings.`);
         break;
       }
       case "sleep": case "lullaby": {
         let asleep = 0;
-        for (const m of foes) if (!CM.unmoved(m) && ((id === "lullaby" && CM.trait(h, "lull")) || rnd.chance(0.5 + mod * 0.03))) { m.asleep = 3; asleep++; }
+        for (const m of foes) if (!CM.unmoved(m) && ((id === "lullaby" && CM.trait(h, "lull")) || rnd.chance(0.5 + mod * 0.03))) { m.asleep = this.reagent === "sporecap" ? 99 : 3; asleep++; }
         this.say(id === "sleep" ? `${h.name} weaves a sleep: ${asleep ? CM.plural(asleep, "foe") + " slump where they stand" : "none of them so much as yawns"}.`
           : `${h.name} sings a lullaby: ${asleep ? CM.plural(asleep, "foe") + " nod off" : "none of them so much as yawns"}.`);
         break;
@@ -906,7 +976,7 @@ Object.assign(CM.Game.prototype, {
       case "blink": this.flee(true); break;
       case "light": this.spellLight = CM.LIGHT_STEPS; this.say(`${h.name} calls up a light. It will last ${CM.LIGHT_STEPS} steps.`); break;
       case "heal": case "mend": {
-        let n = Math.max(1, (id === "heal" ? 12 + 4 * L : 10 + 3 * L) + mod);
+        let n = this.pow(((id === "heal" ? 12 + 4 * L : 10 + 3 * L) + mod) * (this.reagent === "gravemoss" ? 1.5 : 1));
         if (id === "heal" && CM.trait(h, "blessedhands")) n = Math.ceil(n * 1.5);
         if (this.bondOf(h) === ally) n = Math.ceil(n * 1.25);
         ally.hp = Math.min(ally.max, ally.hp + n);
@@ -918,14 +988,14 @@ Object.assign(CM.Game.prototype, {
       case "blows": { this.strike(h, foe, "", { mult: 0.6 }); if (foe.hp > 0 && !foe.fled) this.strike(h, foe, " again", { mult: 0.6 }); break; }
       case "palm": { if (this.strike(h, foe, " with the iron palm") > 0 && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.4)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels.`); } break; }
       case "meditate": { const back = Math.ceil(h.max / 4); h.hp = Math.min(h.max, h.hp + back); const cured = this.cure(h, CM.CURABLE); this.sound("heal"); this.say(`${h.name} breathes once, slowly: +${back}${cured.length ? ", and the ailments pass" : ""}.`); break; }
-      case "drain": { const dmg = Math.max(1, 8 + 2 * L + mod), dealt = this.spellHit(foe, dmg, `${h.name} pulls the life out of ${CM.the(foe)}:`); const back = CM.trait(h, "deepdrain") ? dealt : Math.ceil(dealt / 2); h.hp = Math.min(h.max, h.hp + back); this.say(`${h.name} keeps ${back} of it.`); break; }
+      case "drain": { const dmg = this.pow(8 + 2 * L + mod), dealt = this.spellHit(foe, dmg, `${h.name} pulls the life out of ${CM.the(foe)}:`); const back = CM.trait(h, "deepdrain") ? dealt : Math.ceil(dealt / 2); h.hp = Math.min(h.max, h.hp + back); this.say(`${h.name} keeps ${back} of it.`); break; }
       case "hex": { const struck = CM.trait(h, "contagion") ? foes : [foe]; for (const m of struck) { m.marked = true; m.blind = Math.max(m.blind || 0, 2); if (CM.trait(h, "hexhold") && !CM.unmoved(m)) m.held = Math.max(m.held || 0, 1); } this.say(`${h.name} speaks a hex over ${struck.length > 1 ? "every foe" : CM.the(foe)}: marked, and half-blind${CM.trait(h, "hexhold") ? ", and held" : ""}.`); break; }
       case "thrall": { const dead = this.foes.filter((m) => m.hp <= 0 && !m.fled).pop(); if (!dead) { this.say("Nothing has died here yet to raise."); h.mp += CM.ABILITIES.thrall.mp; delete h.used.thrall; break; } c.thrall = { thrall: true, name: `the ${dead.name} thrall`, hp: Math.max(10, Math.floor(dead.max * 0.6)), max: Math.max(10, Math.floor(dead.max * 0.6)), atk: Math.max(2, Math.floor(dead.atk / 2)), by: h }; this.sound("roar_undead"); this.say(`${h.name} speaks, and ${dead.name} stands up again with empty eyes, between the party and the foes.`); this.emit("fx", { kind: "summon", layer: "fx:shard" }); break; }
-      case "deathpact": { const dmg = Math.max(1, 10 + 3 * L + mod), own = Math.max(1, Math.floor(h.max / 10)); for (const m of foes) this.spellHit(m, dmg, ""); h.hp = Math.max(1, h.hp - own); this.say(`${h.name} opens a vein and speaks the pact: every foe withers for ${dmg}; the Necromancer bleeds ${own}.`); break; }
+      case "deathpact": { const dmg = this.pow(10 + 3 * L + mod), own = Math.max(1, Math.floor(h.max / 10)); for (const m of foes) this.spellHit(m, dmg, ""); h.hp = Math.max(1, h.hp - own); this.say(`${h.name} opens a vein and speaks the pact: every foe withers for ${dmg}; the Necromancer bleeds ${own}.`); break; }
       case "turret": { c.turret = { by: h, dmg: Math.max(1, 5 + 2 * L + Math.floor(mod / 2)) * (CM.trait(h, "twinturret") ? 2 : 1) }; this.sound("lever"); this.say(`${h.name} winds the brass turret and sets it ticking. It will shoot every round.`); break; }
       case "wardengine": { c.protect = true; c.protectMore = CM.trait(h, "bulwarkengine") ? 2 : 0; this.say(`${h.name}'s ward engine hums: every blow on the party does less, this fight.`); break; }
       case "oilgears": { c.oiled = true; this.say(`${h.name} oils the gears: the party moves first from here on.`); break; }
-      case "firework": { const dmg = Math.max(1, 7 + 3 * L + mod); for (const m of foes) this.spellHit(m, dmg, "", "fire"); this.say(`${h.name}'s firework bursts over every foe: ${dmg} each.`); break; }
+      case "firework": { const dmg = this.pow((7 + 3 * L + mod) * (["forgesoot", "slag"].includes(this.reagent) ? 1.5 : 1)); for (const m of foes) this.spellHit(m, dmg, "", "fire"); this.say(`${h.name}'s firework bursts over every foe: ${dmg} each.`); break; }
       case "lay": {
         if (ally.hp <= 0) {                                              // (Last Rites)
           h.used = h.used || {}; h.used.lastrites = true;
@@ -934,7 +1004,7 @@ Object.assign(CM.Game.prototype, {
           this.say(`${h.name} lays hands on ${ally.name}, and says the last rites backwards. ${ally.name} breathes.`);
           break;
         }
-        let n = Math.max(1, 8 + 3 * L + Math.floor(mod / 2));
+        let n = this.pow((8 + 3 * L + Math.floor(mod / 2)) * (this.reagent === "gravemoss" ? 1.5 : 1));
         const gentle = CM.trait(h, "gentlehands");
         if (gentle) n = Math.ceil(n * 1.5);
         if (this.bondOf(h) === ally) n = Math.ceil(n * 1.25);
@@ -965,7 +1035,7 @@ Object.assign(CM.Game.prototype, {
         this.say(`${h.name} rallies the party: a little mended${n ? `, and ${CM.plural(n, "ailment")} shaken off` : ""}.`);
         break;
       }
-      case "regrowth": healAll(Math.max(1, 6 + 2 * L + Math.floor(mod / 2)), `${h.name} calls green growth through the party: everyone mends.`); break;
+      case "regrowth": healAll(this.pow((6 + 2 * L + Math.floor(mod / 2)) * (this.reagent === "rootsap" ? 2 : 1)), `${h.name} calls green growth through the party: everyone mends.`); break;
       case "bless": c.bless = true; if (CM.trait(h, "consecrate")) c.protect = true; this.say(`${h.name} blesses the party: blows land harder and glance off, this fight${CM.trait(h, "consecrate") ? ", and every blow on the party does less" : ""}.`); break;
       case "protection": c.protect = true; this.say(`${h.name} prays for protection: every blow on the party does less, this fight.`); break;
       case "song": {
@@ -978,9 +1048,9 @@ Object.assign(CM.Game.prototype, {
         break;
       }
       case "turn": {
-        const dmg = Math.max(1, 10 + 4 * L + mod);
+        const dmg = this.pow(10 + 4 * L + mod);
         let burned = 0, fled = 0;
-        for (const m of foes) if (m.undead) { burned++; this.spellHit(m, CM.trait(h, "holyfire") ? dmg * 2 : dmg, "", "holy"); if (m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.4)) { m.fled = true; fled++; this.emit("fx", { kind: "die", foe: m }); } }
+        for (const m of foes) if (m.undead) { burned++; this.spellHit(m, CM.trait(h, "holyfire") ? dmg * 2 : dmg, "", "holy"); if (m.hp > 0 && !CM.unmoved(m) && (this.reagent === "gravesalt" || rnd.chance(0.4))) { m.fled = true; fled++; this.emit("fx", { kind: "die", foe: m }); } }
         if (CM.trait(h, "purifier")) for (const m of foes) if (!m.undead && m.hp > 0) this.spellHit(m, Math.ceil(dmg / 2), "The light scorches:", "holy");
         this.say(burned ? `${h.name} raises the holy symbol: the undead burn (${dmg})${fled ? `, and ${CM.plural(fled, "one")} flee` : ""}.` : `${h.name} raises the holy symbol, but nothing here is undead.`);
         break;
@@ -998,10 +1068,10 @@ Object.assign(CM.Game.prototype, {
         break;
       }
       case "thorns": {
-        const dmg = Math.max(1, 6 + 3 * L + Math.floor(mod / 2));
+        const dmg = this.pow(6 + 3 * L + Math.floor(mod / 2));
         let held = 0;
         for (const m of foes) { this.spellHit(m, dmg); if (m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.3 + mod * 0.02)) { m.held = Math.max(m.held || 0, 1); held++; } }
-        for (const p of this.alive()) { p.hp = Math.min(p.max, p.hp + (3 + Math.floor(L / 2)) * (CM.trait(h, "deeproots") ? 3 : 1)); if (CM.trait(h, "oldgrowth")) this.cure(p, ["poison"]); }
+        for (const p of this.alive()) { p.hp = Math.min(p.max, p.hp + this.pow((3 + Math.floor(L / 2)) * (CM.trait(h, "deeproots") ? 3 : 1) * (this.reagent === "rootsap" ? 2 : 1))); if (CM.trait(h, "oldgrowth")) this.cure(p, ["poison"]); }
         this.say(`${h.name} calls thorns up through the stone: ${dmg} to every foe${held ? `, ${CM.plural(held, "foe")} held fast` : ""}; the party mends a little.`);
         break;
       }

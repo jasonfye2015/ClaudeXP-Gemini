@@ -921,6 +921,77 @@ test("the three callings, native: tomes, the Heir's fists, recruits of their kin
   assert.ok(!Array.from({ length: 60 }, (_, i) => CM.makeRecruit(3, new CM.Random(i)).cls).includes("Artificer"), "but never by itself");
 });
 
+test("magic with decisions: overcasting costs and pays, a tome deepens a known spell, a reagent bends it", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("magic-1", fixedParty(CM));
+  const mage = game.party.find((h) => h.cls === "Mage"); mage.level = 8; mage.mp = mage.maxmp = 99;
+  const rnd = new CM.Random(2), orcs = [1, 2].map(() => CM.makeMonster(CM.monsterKind("Orc"), 5, rnd)); for (const o of orcs) o.max = o.hp = 2000;
+  game.floor.things["2,2"] = { type: "monsters", group: orcs }; game.startCombat("2,2", game.floor.things["2,2"]);
+  const a = Object.assign({ id: "missile" }, CM.ABILITIES.missile);
+  assert.strictEqual(game.spellCost(mage, a, 1), 2); assert.strictEqual(game.spellCost(mage, a, 2), 4); assert.strictEqual(game.spellCost(mage, a, 3), 6);
+  game.combat.waiting = mage; game.rnd = new CM.Random(9);
+  const h1 = orcs[0].hp; game.useAbility(mage, "missile", orcs[0], 1); const d1 = h1 - orcs[0].hp;
+  const h2 = orcs[0].hp; game.useAbility(mage, "missile", orcs[0], 2); const d2 = h2 - orcs[0].hp;
+  assert.strictEqual(d2, Math.ceil(d1 * 1.5), `half again: ${d1} -> ${d2}`);
+  assert.strictEqual(mage.mp, 99 - 2 - 4);
+  let bit = false; mage.hp = mage.max;
+  for (let i = 0; i < 12 && !bit; i++) { mage.mp = 99; game.useAbility(mage, "missile", orcs[0], 3); bit = mage.hp < mage.max; }
+  assert.ok(bit, "a triple cast may bite back");
+  game.bag.push(CM.tome("missile")); mage.mp = 99;
+  assert.strictEqual(game.give(game.bag.length - 1, game.party.indexOf(mage)), "");
+  assert.strictEqual(mage.spellLevels.missile, 2);
+  assert.strictEqual(game.spellCost(mage, a, 1), 1, "one less to cast");
+  const h3 = orcs[0].hp; game.useAbility(mage, "missile", orcs[0], 1);
+  assert.strictEqual(h3 - orcs[0].hp, Math.ceil(d1 * 1.25), "a quarter more");
+  game.bag.push(CM.ingredient("crystaldust"));
+  const row = game.bag.length - 1, h4 = orcs[1].hp;
+  assert.ok(game.reagentFor("missile") && game.reagentFor("missile").row === row);
+  game.useAbility(mage, "missile", orcs[0], 1, row);
+  assert.ok(orcs[1].hp < h4 && !game.bag.some((i) => i.kind === "ingredient"), "the bolt splits, and the dust is spent");
+});
+
+test("weaving: two casters in one round make one spell", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("weave-1", fixedParty(CM));
+  const mage = game.party.find((h) => h.cls === "Mage"), cleric = game.party.find((h) => h.cls === "Cleric");
+  mage.level = 10; cleric.level = 10; mage.mp = mage.maxmp = 99; cleric.mp = cleric.maxmp = 99; cleric.learned = ["frost"];
+  const rnd = new CM.Random(3), orcs = [1, 2, 3].map(() => CM.makeMonster(CM.monsterKind("Orc"), 5, rnd)); for (const o of orcs) o.max = o.hp = 2000;
+  game.floor.things["2,2"] = { type: "monsters", group: orcs }; game.startCombat("2,2", game.floor.things["2,2"]);
+  game.combat.waiting = mage; game.useAbility(mage, "firebolt", orcs[0]);
+  assert.ok(game.combat.held && game.combat.held.id === "firebolt");
+  game.combat.waiting = cleric; game.messages = [];
+  game.useAbility(cleric, "frost", null);
+  assert.ok(game.messages.some((m) => m.includes("Weave - Steam")), game.messages.join(" | "));
+  assert.ok(orcs.every((o) => o.blind >= 2), "the steam blinds every foe");
+  assert.strictEqual(game.weaves["firebolt+frost"], 1); assert.ok(game.achievements.weaver);
+  assert.strictEqual(game.combat.held, null);
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game();
+  assert.strictEqual(g2.weaves["firebolt+frost"], 1, "kept between runs");
+});
+
+test("familiars: the Mage's cat, owl and toad; the Necromancer's skull by itself", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("fam-1", fixedParty(CM));
+  const mage = game.party.find((h) => h.cls === "Mage");
+  assert.ok(!game.needsFamiliar(mage));
+  mage.level = 6;
+  assert.ok(game.needsFamiliar(mage));
+  assert.ok(!game.chooseFamiliar(mage, "skull") && game.chooseFamiliar(mage, "owl"));
+  assert.ok(!game.needsFamiliar(mage) && mage.familiar === "owl");
+  const fl = game.floor; fl.dark.push(CM.keyOf(fl.pos[0], fl.pos[1])); const before = fl.seen.length; fl.seen = []; game.look();
+  assert.ok(fl.seen.length > 1, "the owl sees in the dark");
+  mage.familiar = "toad"; game.party[0].status.poison = 5;
+  game.enterFloor(2, "down");
+  assert.ok(!game.party[0].status.poison, "the toad eats an ailment on a new floor");
+  const necro = CM.makeHero("Necromancer", "N", CM.rollStats("Necromancer", new CM.Random(1))); necro.level = 6; game.party[3] = necro;
+  game.enterFloor(3, "down");
+  assert.strictEqual(necro.familiar, "skull");
+  const rnd = new CM.Random(4), orc = CM.makeMonster(CM.monsterKind("Orc"), 3, rnd); orc.max = orc.hp = 500;
+  game.floor.things["2,2"] = { type: "monsters", group: [orc] }; game.startCombat("2,2", game.floor.things["2,2"]);
+  const hp = orc.hp; game.endRound(); if (game.mode === "combat" && game.combat.round >= 1) game.beginRound();
+  assert.ok(orc.hp < hp, "the skull bites at a round's start");
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

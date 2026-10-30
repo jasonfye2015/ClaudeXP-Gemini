@@ -259,7 +259,7 @@ Object.assign(CM.Game.prototype, {
     const seen = new Set(fl.seen.map(([x, y]) => keyOf(x, y)));
     const [x, y] = fl.pos;
     seen.add(keyOf(x, y));
-    const spell = this.spellLight > 0;                               // (a conjured light sees through a magical dark)
+    const spell = this.spellLight > 0 || this.alive().some((h) => h.familiar === "owl");   // (a conjured light - or an owl - sees through a magical dark)
     if (!this.inDark() || spell) {
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) seen.add(keyOf(x + dx, y + dy));
       if (this.hasLight()) {
@@ -272,6 +272,8 @@ Object.assign(CM.Game.prototype, {
         }
       }
     }
+    const cat = this.alive().find((h) => h.familiar === "cat");
+    if (cat) for (const [k, f] of Object.entries(fl.features)) { const [tx, ty] = k.split(",").map(Number); if (Math.abs(tx - x) + Math.abs(ty - y) <= 1 && f.type === "secret" && !f.found) { f.found = true; fl.grid[ty][tx] = 0; this.say(`${cat.name}'s cat scratches at the wall - and a hidden door gives.`); this.emit("mesh"); } }
     const warden = this.alive().find((h) => CM.trait(h, "wardeneye"));
     if (warden) {                                                        // the Warden's eye: a trap two steps off is seen, a hidden door beside you found
       for (const [k, f] of Object.entries(fl.features)) {

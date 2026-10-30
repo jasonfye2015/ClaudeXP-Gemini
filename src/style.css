@@ -219,6 +219,8 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #actions .targets button .odds { display: block; color: var(--dim); font-style: normal; font-size: 10px; }
 #actions .targets button .odds.intent { color: #E0A040; font-style: italic; }
 #actions .menu button.on { border-color: var(--gold); color: var(--gold); background: #4A321A; }
+#actions .menu .overcast { display: inline-flex; flex-direction: column; gap: 2px; }
+#actions .menu .overcast button { padding: 1px 6px; font-size: 10px; font-weight: normal; }
 #actions button.pick small i { color: var(--gold); font-style: normal; }
 #bag .give button .cmp { font-style: normal; font-size: 11px; color: var(--dim); margin-left: 4px; }
 .rarity-fine { color: #8FD08F; }

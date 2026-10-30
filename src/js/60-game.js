@@ -52,6 +52,7 @@ CM.Game = class {
     this.memorial = CM.store.get("memorial", []);         // the heroes laid to rest, ever: {name, cls, level, floor, seed, date}
     this.fallen = CM.store.get("fallen", []);             // where parties fell, by seed: a later run on that seed finds their remains
     this.combos = CM.store.get("combos", {});             // the combos found, ever
+    this.weaves = CM.store.get("weaves", {});             // the weaves found, ever
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
 
@@ -275,6 +276,8 @@ CM.Game = class {
       if (best) fl.pos = best;
     }
     if (fresh) this.layRemains(fl);
+    if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }
+    for (const h of this.alive()) if (h.cls === "Necromancer" && !h.familiar && h.level >= CM.FAMILIAR_AT) { h.familiar = "skull"; this.say(`A skull on ${h.name}'s belt opens its jaws: ${CM.FAMILIARS.skull.what}.`); }
     if (fresh && this.has("pilgrim")) { const xp = 60 * number; for (const h of this.alive()) h.xp += xp; this.say(`Pilgrim: ${xp} experience each, for the floor itself.`); }
     this.setMode("explore");
     this.look();

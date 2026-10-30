@@ -292,6 +292,8 @@ CM.UI = class {
     right.innerHTML = `<table class="stats">${CM.STATS.map((s) => `<tr class="${s === c.key ? "key" : ""}"><td>${CM.STAT_NAMES[s]}</td><td class="v">${g.stat(h, s)}</td><td class="hint">${s === c.key ? "their calling's stat" : CM.STAT_HINTS[s]}</td></tr>`).join("")}</table>
       <div class="list-title">Boons</div><div class="boons">${(h.boons || []).length ? h.boons.map((id) => `<div><b>${CM.BOONS[id].name}</b> - ${CM.BOONS[id].what}</div>`).join("") : "<div class='small'>None yet. Each level earned offers one.</div>"}</div>
       <div class="list-title">Path</div><div class="boons">${h.path && CM.PATHS[h.cls] && CM.PATHS[h.cls][h.path] ? (() => { const P = CM.PATHS[h.cls][h.path]; return `<div><b>${P.name}</b> - ${P.blurb}</div><div><b>${P.t1.name}</b> - ${P.t1.what}</div><div><b>${P.t2.name}</b> - ${h.level >= CM.PATH_AT[1] ? P.t2.what : `at level ${CM.PATH_AT[1]}: ${P.t2.what.charAt(0).toLowerCase() + P.t2.what.slice(1)}`}</div>${P.t3 ? `<div><b>${P.t3.name}</b> - ${h.level >= CM.PATH_AT[2] ? P.t3.what : `at level ${CM.PATH_AT[2]}: ${P.t3.what.charAt(0).toLowerCase() + P.t3.what.slice(1)}`}</div>` : ""}`; })() : `<div class='small'>${CM.needsPath(h) ? "A path waits to be chosen, below." : `Chosen at level ${CM.PATH_AT[0]}: two ways for a ${h.cls} to grow.`}</div>`}</div>
+      ${h.familiar ? `<div class="list-title">Familiar</div><div class="boons"><div><b>${CM.FAMILIARS[h.familiar].name}</b> - ${CM.FAMILIARS[h.familiar].what}</div></div>` : ""}
+      ${Object.keys(h.spellLevels || {}).length ? `<div class="list-title">Spells deepened</div><div class="boons">${Object.entries(h.spellLevels).map(([id, l]) => `<div><b>${CM.ABILITIES[id].name}</b> - level ${l}</div>`).join("")}</div>` : ""}
       ${(() => { const f = g.bondOf(h); return f ? `<div class="list-title">Bond</div><div class="boons"><div><b>Old friends</b> - with ${this.esc(f.name)}: +1 attack and defence, heals between them half again as kind, and a fall avenged with a doubled blow.</div></div>` : ""; })()}
       ${(h.learned || []).length ? `<div class="list-title">Learned from tomes</div><div class="boons">${h.learned.map((id) => `<div><b>${CM.ABILITIES[id].name}</b> - ${CM.ABILITIES[id].what}</div>`).join("")}</div>` : ""}
       <div class="list-title">Ailments</div><div class="ails">${Object.keys(st).length ? Object.keys(st).map((s) => `<div><b>${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}</b> - ${CM.STATUSES[s].hint}${st[s] < 900 ? ` (${st[s]} more rounds)` : ""}</div>`).join("") : "<div class='small'>None.</div>"}</div>`;
@@ -306,6 +308,22 @@ CM.UI = class {
         const b = document.createElement("button");
         b.innerHTML = `<b>${CM.BOONS[id].name}</b><small>${CM.BOONS[id].what}</small>`;
         b.addEventListener("click", () => { g.chooseBoon(h, id); this.renderSheet(); });
+        row.appendChild(b);
+      }
+      boon.appendChild(row);
+    }
+    if (g.needsFamiliar(h)) {
+      const title = document.createElement("div");
+      title.className = "list-title gold";
+      title.textContent = `Level ${CM.FAMILIAR_AT}: a familiar for ${h.name}`;
+      boon.appendChild(title);
+      const row = document.createElement("div");
+      row.className = "offer";
+      for (const [id, F] of Object.entries(CM.FAMILIARS)) {
+        if (!F.cls.includes(h.cls)) continue;
+        const b = document.createElement("button");
+        b.innerHTML = `<b>${F.name.replace(/^(a|an) /, (m) => m.toUpperCase())}</b><small>${F.what}</small>`;
+        b.addEventListener("click", () => { g.chooseFamiliar(h, id); this.renderSheet(); });
         row.appendChild(b);
       }
       boon.appendChild(row);
@@ -608,6 +626,8 @@ CM.UI = class {
   combosHtml() {
     const found = Object.keys(CM.COMBOS).filter((id) => (this.game.combos || {})[id]);
     const rows = Object.entries(CM.COMBOS).map(([id, c]) => `<div class="entry"><p>${found.includes(id) ? `<b>${c.name}</b> - ${this.esc(c.what)} <small>(done ${this.game.combos[id]} ${this.game.combos[id] === 1 ? "time" : "times"})</small>` : `<b>?</b> <small>A combo not yet found.</small>`}</p></div>`);
-    return `<div class="list-title">Combos (${found.length} of ${Object.keys(CM.COMBOS).length} found)</div>` + rows.join("");
+    const woven = Object.keys(CM.WEAVES).filter((id) => (this.game.weaves || {})[id]);
+    const wrows = Object.entries(CM.WEAVES).map(([id, w]) => `<div class="entry"><p>${woven.includes(id) ? `<b>${w.name}</b> - ${this.esc(w.what)}` : `<b>?</b> <small>A weave not yet found: two casters, one round.</small>`}</p></div>`);
+    return `<div class="list-title">Combos (${found.length} of ${Object.keys(CM.COMBOS).length} found)</div>` + rows.join("") + `<div class="list-title">Weaves (${woven.length} of ${Object.keys(CM.WEAVES).length} found)</div>` + wrows.join("");
   }
 };

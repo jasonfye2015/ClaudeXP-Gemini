@@ -82,7 +82,7 @@ uses every v2.0 system in the sim's report, and a replayed log reproduces a run 
 
 ---
 
-## Phase 2 - Magic with decisions in it
+## Phase 2 - Magic with decisions in it - DONE (v2.3)
 
 **Goal:** casting is a choice of *how*, not only *what*.
 

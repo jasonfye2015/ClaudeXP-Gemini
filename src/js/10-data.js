@@ -316,6 +316,38 @@ CM.TIDE_STEPS = 30;
 CM.BOND_FIGHTS = 40;
 CM.BANTER = ["{a} and {b} share the last of the wine, and say nothing, which is enough.", "{b} is asleep against {a}'s shoulder before the fire is properly lit.",
   "{a} tells the story of the floor again. {b} corrects the numbers.", "{a} and {b} argue, low, about the way down, and agree, as they always do."];                                                   // fights won side by side before two heroes are old friends
+// ---- magic with decisions in it: overcasting, weaving, reagents, spell levels, familiars ----
+CM.OVERCAST = { 1: { cost: 1, mult: 1 }, 2: { cost: 2, mult: 1.5 }, 3: { cost: 3, mult: 2, backlash: 0.5 } };   // power: the cost's multiple, the effect's, and the chance the caster burns for it
+// two casters in one round make one spell: the first holds, the second matches (either order)
+CM.WEAVES = {
+  "firebolt+frost": { name: "Steam", what: "Fire Bolt and Frost in one round: a scalding cloud - every foe blinded, and hurt again for the lesser of the two" },
+  "fireball+lightning": { name: "Firestorm", what: "Fireball and Lightning in one round: the fire is driven through every foe again, and they burn" },
+  "heal+bless": { name: "Sanctuary", what: "Heal and Bless in one round: every foe is held a round, and the whole party mends a little" },
+  "sleep+hex": { name: "Nightmare", what: "Sleep and Hex in one round: every sleeping foe is torn by its dream" },
+  "missile+missile": { name: "Barrage", what: "Two Magic Missiles in one round: both strike again" },
+  "thorns+entangle": { name: "Bramble", what: "Thorns and Entangle in one round: every foe held two rounds" },
+};
+// the alchemist's ingredients have a second use: one with a spell, from the pack, for a turn of the spell's own
+CM.REAGENTS = {
+  sporecap: { spells: ["sleep", "lullaby"], what: "the sleep lasts the whole fight" },
+  crystaldust: { spells: ["missile"], what: "the bolt splits: a second foe takes it whole" },
+  gravesalt: { spells: ["turn"], what: "every undead foe is routed" },
+  forgesoot: { spells: ["firebolt", "fireball", "firework"], what: "the fire does half again" },
+  slag: { spells: ["firebolt", "fireball", "firework"], what: "the fire does half again" },
+  drownedweed: { spells: ["frost"], what: "the frost holds every foe" },
+  saltweed: { spells: ["frost"], what: "the frost holds every foe" },
+  bonedust: { spells: ["smite"], what: "the smite does double" },
+  gravemoss: { spells: ["heal", "mend", "lay"], what: "the mending does half again" },
+  rootsap: { spells: ["thorns", "regrowth"], what: "the party mends double" },
+};
+CM.SPELL_LEVELS = 3;                                                   // a tome of a spell known raises it: +25% and one less to cast a level, to three
+CM.FAMILIAR_AT = 6;
+CM.FAMILIARS = {
+  cat: { name: "a cat", cls: ["Mage"], what: "finds a hidden door beside you as you pass" },
+  owl: { name: "an owl", cls: ["Mage"], what: "sees in a magical dark: the automap fills there as anywhere" },
+  toad: { name: "a toad", cls: ["Mage"], what: "eats one ailment off the party on every new floor" },
+  skull: { name: "a skull that bites", cls: ["Necromancer"], what: "bites a foe at the start of every round" },
+};
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
 CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
@@ -599,6 +631,7 @@ CM.ACHIEVEMENTS = {
   distilled: { name: "Distilled", what: "Brew an elixir at the camp's still", title: "the Distilled" },
   rivals: { name: "No Rivals", what: "Best a rival party for the floor", title: "the Unrivalled" },
   bonded: { name: "Old Friends", what: "Two heroes fight forty fights side by side", title: "the Steadfast" },
+  weaver: { name: "Weaver", what: "Two casters weave their spells into one", title: "the Weaver" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },

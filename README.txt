@@ -579,6 +579,26 @@ The eleven finished, and the ground of a fight (the fourth big update, phase 1 -
   every round), Mirrored (a spell on it does half, and a quarter comes back on the caster), Spectral (half of every
   blow passes through it).
 
+Magic with decisions in it (the fourth big update, phase 2 - v2.3)
+  Overcasting: every spell on the casting menu has x2 and x3 beside it - twice the cost for half again the effect,
+  three times for double, and a triple cast may bite back (the caster burns a tenth of their health, one time in
+  two). CM.OVERCAST; act("cast", {id, target, power}).
+  Weaving (CM.WEAVES; the journal keeps them): two casters in one round make one spell. Fire Bolt and Frost are
+  Steam (every foe blinded and scalded); Fireball and Lightning a Firestorm (the fire through every foe again, and
+  they burn); Heal and Bless a Sanctuary (every foe held a round, the party mended); Sleep and Hex a Nightmare (every
+  sleeping foe torn by its dream); two Magic Missiles a Barrage; Thorns and Entangle a Bramble (every foe held two
+  rounds). The first holds, the second matches, either order; the Weaver achievement.
+  Reagents (CM.REAGENTS): the alchemist's ingredients have a second use, one with a spell, from the pack - a spore
+  cap with Sleep lasts the fight, crystal dust splits a Magic Missile onto a second foe, grave salt with Turn Undead
+  routs them all, soot or slag puts half again into fire, weed into Frost holds every foe, bone dust doubles a Smite,
+  grave moss puts half again into a mending, root sap doubles the party's mending from Thorns or Regrowth. The
+  casting menu shows "+ reagent" when one is in the pack.
+  Spell levels: a tome of a spell the reader already knows is not refused - it raises the spell a level (a quarter
+  more, one less to cast), to three (CM.SPELL_LEVELS). The sheet lists the spells deepened.
+  Familiars (CM.FAMILIARS): at level 6 a Mage's sheet offers a cat (finds a hidden door beside you as you pass), an
+  owl (sees in a magical dark) or a toad (eats one ailment off the party on every new floor); a Necromancer's skull
+  comes by itself and bites a foe at the start of every round.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
