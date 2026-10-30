@@ -198,7 +198,7 @@ Object.assign(CM.Game.prototype, {
     }
     const gold = Math.floor((m.gold || G.gold || 0) / 2);
     this.gold += gold;
-    if (G.relic && !m.echo) { const relic = CM.relic(id); this.bag.push(relic); this.emit("fx", { kind: "relic", item: relic }); }
+    if (G.relic && !m.echo) { const relic = CM.relic(id); this.gain([relic], "relic"); this.emit("fx", { kind: "relic", item: relic }); }
     this.tally.spoken = (this.tally.spoken || []).concat(id);
     this.story.spoken = (this.story.spoken || []).concat(id);
     if (this.story.spoken.length >= 3) this.achieve("softspoken");
@@ -464,7 +464,7 @@ Object.assign(CM.Game.prototype, {
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:ghost:${fl.number}`));
     const gift = CM.makeGear(rnd.pick(["ring", "amulet", "amulet"]), fl.number + 4, rnd);
     gift.unknown = false;
-    this.bag.push(gift);
+    this.gain([gift], "ghost");
     const xp = 30 * fl.number;
     for (const h of this.alive()) h.xp += xp;
     delete fl.things[k];

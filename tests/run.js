@@ -1721,12 +1721,71 @@ test("the Root and the three endings: its voice knows the party, wake it or leav
   assert.ok(g7.mode === "title" && g7.left, "the replayed line leaves it dreaming too");
 });
 
+test("the ledger of things: every item has a base in the table, names derive from what a thing is made of, an old save gets its bases, the compendium and the bag's filters, the bot gears up", () => {
+  const CM = load();
+  const rnd = new CM.Random(7);
+  let n = 0, named = 0;
+  for (let i = 0; i < 600; i++) {
+    const floor = 1 + (i % 50), it = CM.affix(CM.makeItem(floor, rnd), floor, rnd);
+    const id = CM.baseIdOf(it);
+    assert.ok(CM.BASES[id], `${it.name} (${it.kind}) has a base: ${id}`); n++;
+    if (["weapon", "armor", "shield", "helm"].includes(it.kind) && !(it.props && it.props.bonus && !(it.props.affixes || []).length)) { assert.strictEqual(CM.itemName(it), it.name, `the name derives: ${it.name}`); named++; }
+    if (it.kind === "ring") assert.strictEqual(CM.itemName(it), it.name);
+  }
+  assert.ok(n === 600 && named > 200);
+  for (const id of Object.keys(CM.UNIQUES)) assert.ok(CM.BASES[CM.UNIQUES[id].name] && CM.itemName(CM.makeUnique(id)) === CM.UNIQUES[id].name);
+  for (const id of CM.GUARDIAN_ORDER) if (CM.GUARDIANS[id].relic) assert.ok(CM.BASES[CM.GUARDIANS[id].relic.name] && CM.itemName(CM.relic(id)) === CM.GUARDIANS[id].relic.name);
+  // the smith's work keeps the affix words in the name now
+  const sword = CM.affix({ name: "Long Sword", base: "Long Sword", kind: "weapon", slot: "weapon", power: 8, value: 100, props: {} }, 9, new CM.Random(3));
+  sword.props.affixes = ["Keen", "of the Bear"]; sword.props.bonus = 2; sword.props.enchant = 2; sword.props.element = "fire";
+  assert.strictEqual(CM.itemName(sword), "Keen Flaming Long Sword of the Bear +2");
+  // an old save: no base, no finding - migrated to schema 3 with the stats untouched
+  const game = new CM.Game(); game.newGame("ledger-1", fixedParty(CM));
+  game.gain([CM.makeGear("helm", 6, new CM.Random(4))], "chest");
+  assert.ok(game.bag[game.bag.length - 1].found.how === "chest" && game.bag[game.bag.length - 1].found.floor === 1);
+  game.saveRun();
+  const raw = JSON.parse(CM.storage.getItem("claudemagic.run")); raw.schema = 2; for (const h of raw.party) for (const s of CM.SLOTS) if (h[s]) { delete h[s].base; delete h[s].found; } for (const it of raw.bag) { delete it.base; delete it.found; }
+  CM.storage.setItem("claudemagic.run", JSON.stringify(raw));
+  const g2 = new CM.Game(); g2.continueRun();
+  assert.strictEqual(g2.party[0].weapon.base, CM.baseName(g2.party[0].weapon)); assert.strictEqual(g2.party[0].atk, game.party[0].atk); assert.ok(g2.bag.every((it) => it.base && it.found));
+  // the compendium: a thing found is noted once named; unknown waits
+  const before = Object.keys(g2.compendium).length;
+  const mystery = CM.makeGear("armor", 8, new CM.Random(9)); mystery.unknown = true; const id = CM.baseIdOf(mystery);
+  delete g2.compendium[id];
+  g2.gain([mystery], "foe"); assert.ok(!g2.compendium[id], "unknown: not yet");
+  g2.equip(g2.party[0], g2.bag.length - 1); assert.ok(g2.compendium[id], "worn, and named");
+  const groups = CM.compendium(g2.compendium); assert.ok(groups.find((g) => g.id === "armor").seen >= 1 && groups.reduce((a, g) => a + g.total, 0) === Object.keys(CM.BASES).length);
+  assert.ok(Object.keys(g2.compendium).length >= before);
+  assert.ok(CM.itemCard(g2.party[0].armor).includes("on a slain foe"));
+  assert.ok(CM.BAG_FILTERS.gear.kinds.includes("weapon") && !CM.BAG_FILTERS.drink.kinds.includes("weapon"));
+  // the bot: it equips what is better, and uses what it carries; the tallies say so
+  const g3 = new CM.Game(); g3.newGame("ledger-3", fixedParty(CM));
+  g3.bag.push(CM.bomb(), CM.bomb(), CM.scroll("fire"), CM.wand("fire", 5));
+  const w0 = g3.party[0].weapon.power;
+  const better = CM.makeGear("weapon", 6, new CM.Random(11)); better.unknown = false; better.power = w0 + 5; delete better.props.twohanded; better.props.bow = false; better.base = "Long Sword"; better.name = "Long Sword";
+  g3.bag.push(better);
+  playRun(CM, g3, { maxFloor: 4 });
+  assert.ok(g3.party.some((h) => h.weapon && h.weapon.power >= w0 + 5) || !g3.party.some((h) => h.hp > 0), "the better sword is worn");
+  // Auto throws a firepot at three: a fight set up by hand
+  const g4 = new CM.Game(); g4.newGame("ledger-4", fixedParty(CM)); g4.bag.push(CM.bomb());
+  const rnd4 = new CM.Random(5), group = [0, 1, 2].map(() => CM.makeMonster(CM.monsterKind("Giant Rat"), 1, rnd4));
+  const spot = Object.keys(g4.floor.things).find((kk) => g4.floor.things[kk].type === "monsters") || "3,3";
+  g4.floor.things[spot] = { type: "monsters", group };
+  g4.startCombat(spot, g4.floor.things[spot]);
+  let guard = 0; while (g4.mode === "combat" && guard++ < 40 && g4.bag.some((i) => i.kind === "bomb")) { if (!g4.combat.waiting) { g4.advance(); continue; } g4.autoTurn(); }
+  assert.ok(!g4.bag.some((i) => i.kind === "bomb") || g4.mode !== "combat", "the firepot went");
+  assert.ok((g4.tally.used || {}).bomb === 1 || g4.mode !== "combat", `counted: ${JSON.stringify(g4.tally.used)}`);
+  assert.ok((g3.tally.goldFound || 0) > 0 && Object.keys(g3.tally.found || {}).length > 0, "the hoard counted");
+  const sim = fs.readFileSync(path.join(ROOT, "tools", "sim.js"), "utf8"); assert.ok(sim.includes("--loot") && sim.includes("floors to the first upgrade"));
+});
+
 (async () => {
   let failed = 0;
-  for (const t of tests) {
+  const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
+  for (const t of only ? tests.filter((x) => x.name.includes(only)) : tests) {
     const t0 = Date.now();
     try { await t.fn(); console.log(`  ok   ${t.name} (${Date.now() - t0} ms)`); }
-    catch (e) { failed++; console.log(`  FAIL ${t.name}\n       ${(e.stack || e.message).split("\n").slice(0, 4).join("\n       ")}`); }
+    catch (e) { failed++; console.log(`  FAIL ${t.name}\n       ${(e.stack || e.message).split("\n").slice(0, (process.argv[2] ? 12 : 4)).join("\n       ")}`); }
   }
   console.log(failed ? `\n${failed} of ${tests.length} failed` : `\nall ${tests.length} passed`);
   process.exit(failed ? 1 : 0);

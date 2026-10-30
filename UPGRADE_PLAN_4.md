@@ -52,7 +52,7 @@ yet tell us what a consumable is worth - which is the first thing to fix.
 
 ---
 
-## Phase 0 - The ledger of things (do first) - v4.1
+## Phase 0 - The ledger of things (do first) - v4.1 - DONE
 
 - **Item identity**: every item gets `base` (an id into a new `CM.BASES` table that holds the old lists' names,
   tiers and kinds) and `mods` (the affix ids, the enchant, the gem, the element); `name` is derived by

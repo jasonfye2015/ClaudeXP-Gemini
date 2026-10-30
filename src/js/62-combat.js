@@ -682,7 +682,7 @@ Object.assign(CM.Game.prototype, {
     const id = m.guardian, G = CM.GUARDIANS[id], relic = G.relic && !m.echo ? CM.relic(id) : null;
     this.tally.guardians = (this.tally.guardians || []).concat(id);
     if (!m.echo) this.trophy(id);
-    if (relic) this.bag.push(relic);
+    if (relic) this.gain([relic], "relic");
     this.sound("toll");
     this.say(G.fall);
     { const P = CM.PARLEY[id], fought = this.floor && this.floor.things[this.foeKey]; if (P && !m.echo) this.say(fought && fought.spoke ? P.deathSpoken : P.death); }
@@ -1129,7 +1129,7 @@ Object.assign(CM.Game.prototype, {
       if (item && (item.kind === "scroll" || item.kind === "wand")) return this.useMagicInBattle(h, arg.row, arg.who);
       if (item && item.kind === "bomb") {                                 // a firepot: fire on every foe
         const foes = this.living(), dmg = 25 + 3 * (this.floor ? this.floor.number : 1);
-        this.bag.splice(arg.row, 1);
+        this.bag.splice(arg.row, 1); this.countUse("bomb");
         this.sound("spell");
         this.emit("fx", { kind: "cast", id: "fire", hero: h, item: "bomb", foes });
         this.casting = h;
@@ -1191,14 +1191,14 @@ Object.assign(CM.Game.prototype, {
     const fought0 = this.floor.things[this.foeKey];
     if (fought0 && fought0.rivalsFight) {                                 // the rivals' best thing, and their purse, on top
       const rnd0 = new CM.Random(CM.hashSeed(`${this.seed}:rivals:${this.floor.number}`)), best = CM.affix(CM.makeItem(this.floor.number + 3, rnd0, rnd0.pick(["weapon", "armor", "helm"])), 99, rnd0);
-      best.unknown = false; this.bag.push(best); gold += 30 * this.floor.number;
+      best.unknown = false; this.gain([best], "rivals"); gold += 30 * this.floor.number;
       this.achieve("rivals");
       this.say(`The rivals are beaten, and the one in front yields: their purse, and ${best.name} (${CM.itemLabel(best)}).`);
     }
     const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
     const band = CM.themeIndex(this.floor.number), ing = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band);
     if (ing && rnd.chance(0.3)) loot.push(CM.ingredient(ing));           // (what the alchemist wants: the band's own stuff)
-    this.bag.push(...loot);
+    this.gain(loot, "foe"); this.count("goldFound", gold);
     for (const h of this.party) if (h.oil && h.oil.fights > 0) { h.oil.fights -= 1; if (!h.oil.fights) { this.say(`The oil on ${h.name}'s weapon has worn off.`); h.oil = null; } }
     const boss = this.foes.some((m) => m.boss), guardian = this.foes.find((m) => m.guardian), fought = this.floor.things[this.foeKey];
     if (fought && fought.vengeance) { this.floor.avenged = (this.floor.avenged || []).concat(fought.vengeance); this.say("Somewhere on this floor, something lets out a long breath it has held a long time."); }
@@ -1266,6 +1266,9 @@ Object.assign(CM.Game.prototype, {
     else if (hurt.length && can.includes("lay")) done = this.act("cast", { id: "lay", target: this.party.indexOf(hurt[0]) });
     else if (hurt.length && hurt.includes(h) && this.bag.some((i) => i.kind === "heal")) done = this.act("item", null);
     else if (foes.length >= 3 && can.includes("fireball")) done = this.act("cast", { id: "fireball" });
+    else if (foes.length >= 3 && this.bag.some((i) => i.kind === "bomb" || (i.kind === "scroll" && ["fire", "frost"].includes(i.spell)))) done = this.act("item", { row: this.bag.findIndex((i) => i.kind === "bomb" || (i.kind === "scroll" && ["fire", "frost"].includes(i.spell))) });
+    else if (foes.some((m) => m.elite || m.guardian || m.boss) && this.bag.some((i) => i.kind === "wand" && i.spell === "fire")) done = this.act("item", { row: this.bag.findIndex((i) => i.kind === "wand" && i.spell === "fire"), who: foes.indexOf(foes.find((m) => m.elite || m.guardian || m.boss)) });
+    else if (foes.length >= 3 && this.bag.some((i) => i.kind === "wand" && i.spell === "sleep")) done = this.act("item", { row: this.bag.findIndex((i) => i.kind === "wand" && i.spell === "sleep") });
     else if (foes.length >= 2 && can.includes("thorns")) done = this.act("cast", { id: "thorns" });
     else if (can.includes("song") && !this.song) done = this.act("cast", { id: "song" });
     else if (can.includes("volley") && foes.length >= 2) done = this.act("cast", { id: "volley" });

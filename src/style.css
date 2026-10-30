@@ -389,3 +389,10 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 #over-page p { font: 13.5px/1.45 var(--serif); color: var(--ink); margin: 4px 0; }
 #over-page p.blank { color: var(--faint); }
 #over-page p.blank span { display: inline-block; min-width: 180px; border-bottom: 1px dotted var(--faint); font-size: 11px; vertical-align: baseline; }
+/* ---- the bag's filters, and the compendium ---- */
+#bag .filters { display: flex; gap: 4px; margin-bottom: 6px; }
+#bag .filters button { padding: 4px 10px; font-size: 12px; opacity: 0.75; }
+#bag .filters button.on { opacity: 1; border-color: var(--gold); color: var(--gold); }
+.things { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 6px; }
+.things .thing { font: 12.5px var(--serif); color: var(--ink); }
+.things .thing.unseen { color: var(--faint); letter-spacing: 1px; }

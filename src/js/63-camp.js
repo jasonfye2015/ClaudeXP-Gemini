@@ -57,6 +57,7 @@ Object.assign(CM.Game.prototype, {
   reveal(item) {
     if (!item.unknown) return false;
     item.unknown = false;
+    this.noteKnown(item);
     return true;
   },
 
@@ -147,6 +148,7 @@ Object.assign(CM.Game.prototype, {
       ally.hp = Math.min(ally.max, ally.hp + n2);
       this.say(`${h.name} touches ${ally.name} with the wand: +${n2}.`);
     } else return false;
+    this.countUse(item.kind);
     if (item.kind === "scroll") this.bag.splice(row, 1);
     else { item.charges -= 1; if (item.charges <= 0) { this.bag.splice(row, 1); this.say(`The ${item.name} is spent, and crumbles.`); } }
     this.emit("change");
@@ -162,6 +164,7 @@ Object.assign(CM.Game.prototype, {
     const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind);
     const old = hero[slot];
     if (old && old.props && old.props.cursed) return `${hero.name}'s ${old.name} is cursed and won't come off. The camp's temple can lift it.`;
+    if (!old || (item.power || 0) > (old.power || 0)) { this.tally.firstUpgrade = this.tally.firstUpgrade || {}; if (this.tally.firstUpgrade[slot] === undefined && old) this.tally.firstUpgrade[slot] = this.floor ? this.floor.number : 0; }   // (for the simulator: floors to the first better thing in each slot)
     hero[slot] = item;
     this.bag.splice(row, 1);
     if (old) this.bag.push(old);
@@ -189,10 +192,11 @@ Object.assign(CM.Game.prototype, {
     if (item.kind === "key") return "Keys turn in locks, not in hands. Walk into the locked door.";
     if (item.kind === "rope") return "The rope is for a pit: walk into one with it in the pack.";
     if (item.kind === "tome") return this.readTome(row, hero);
+    if (["heal", "greaterheal", "mana", "revive", "antidote", "oil"].includes(item.kind)) this.countUse(item.kind);
     if (item.kind === "gem") return "A gem is for the camp's smith: he sets it into gear, for gold.";
     if (item.kind === "boxkey") return `That key is for the strongbox on floor ${item.box}. Walk up to the box and use it.`;
     if (item.kind === "ration") {
-      this.bag.splice(row, 1);
+      this.bag.splice(row, 1); this.countUse("ration");
       this.fed = 0;
       this.cheer(2);
       this.sound("heal");
@@ -274,7 +278,7 @@ Object.assign(CM.Game.prototype, {
     if (this.gold < item.value) return "You can't afford that.";
     this.gold -= item.value;
     this.spend(this.peddling ? "peddler" : "merchant", item.value);
-    this.bag.push(Object.assign({}, item, item.props ? { props: Object.assign({}, item.props) } : {}));
+    this.gain([Object.assign({}, item, item.props ? { props: Object.assign({}, item.props) } : {})], this.peddling ? "peddler" : "merchant");
     if (this.peddling || ["weapon", "armor", "shield", "helm", "lantern"].includes(item.kind)) this.stock.splice(row, 1);   // (the merchant's potions never run out; a peddler's cloth does)
     this.sound("coin");
     this.emit("change");
@@ -406,7 +410,7 @@ Object.assign(CM.Game.prototype, {
       p.bonus = (p.bonus || 0) + 1;
       item.power += 1;
       item.value += 60;
-      item.name = `${p.element ? CM.ELEMENTS[p.element].prefix + " " : ""}${CM.baseName(item)} +${p.bonus}`;
+      item.name = CM.itemName(item);
       CM.recompute(hero);
       this.sound("lever");
       this.say(`The smith works ${hero.name}'s ${CM.baseName(item)} by the fire, and sets the diamond in it: ${item.name}.`);
@@ -421,7 +425,7 @@ Object.assign(CM.Game.prototype, {
       this.bag.splice(gem, 1);
       p.element = el;
       item.value += 80;
-      item.name = `${CM.ELEMENTS[el].prefix} ${CM.baseName(item)}${p.bonus ? ` +${p.bonus}` : ""}`;
+      item.name = CM.itemName(item);
       this.sound("lever");
       this.say(`The smith sets the ${name.toLowerCase()} into ${hero.name}'s blade, and it takes: ${item.name}.`);
     } else if (service === "reroll") {                                  // a gem of any kind and gold: the suffix is struck off and another worked in
@@ -512,7 +516,7 @@ Object.assign(CM.Game.prototype, {
     const item = this.vaults.splice(Math.min(i, this.vaults.length - 1), 1)[0];
     CM.store.set("vaults", this.vaults);
     CM.store.remove("vault");
-    this.bag.push(item);
+    this.gain([item], "vault");
     this.sound("chest");
     this.say(`The merchant unlocks the vault: ${item.name}, left by a party before you.`);
     this.saveRun();

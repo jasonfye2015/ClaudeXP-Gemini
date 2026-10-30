@@ -14,6 +14,8 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
     this.$("#btn-sort").addEventListener("click", () => { g.sortBag(); this.bagRow = -1; this.fillBag(); });
     this.$("#btn-bag-done").addEventListener("click", () => g.closeBag());
+    const filters = this.$("#bag-filters");
+    for (const [id, F] of Object.entries(CM.BAG_FILTERS)) { const b = document.createElement("button"); b.textContent = F.name; b.dataset.filter = id; b.addEventListener("click", () => { this.bagFilter = id; this.bagRow = -1; this.fillBag(); }); filters.appendChild(b); }
   },
 
   note(text) { this.$("#bag-note").textContent = text || this.$("#bag-note").dataset.base; },
@@ -43,9 +45,11 @@ Object.assign(CM.UI.prototype, {
         el.appendChild(row);
       });
     };
-    list(this.$("#bag-list"), g.identifying ? "Your pack - pick the unknown thing to identify" : "Your pack", g.bag, this.bagRow,
+    const F = CM.BAG_FILTERS[this.bagFilter || "all"], rows = g.bag.map((it, i) => i).filter((i) => !F.kinds || F.kinds.includes(g.bag[i].kind));
+    for (const b of this.$("#bag-filters").querySelectorAll("button")) b.classList.toggle("on", b.dataset.filter === (this.bagFilter || "all"));
+    list(this.$("#bag-list"), g.identifying ? "Your pack - pick the unknown thing to identify" : `Your pack${rows.length !== g.bag.length ? ` (${rows.length} of ${g.bag.length})` : ""}`, rows.map((i) => g.bag[i]), rows.indexOf(this.bagRow),
       (i) => `(${g.describe(i)}, worth ${i.unknown ? 10 : Math.floor(i.value / 2)} gold)`,
-      (i) => { if (g.identifying) this.note(g.identify(i)); else this.bagRow = i; });
+      (i) => { if (g.identifying) this.note(g.identify(rows[i])); else this.bagRow = rows[i]; });
     if (shop) list(this.$("#shop-list"), "The merchant's wares", g.stock || [], this.shopRow,
       (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
     const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
@@ -55,7 +59,8 @@ Object.assign(CM.UI.prototype, {
       b.innerHTML = `${verb} ${this.esc(m.name)}` + (m.hp <= 0 ? " (fallen)" : "") + (cmp ? ` <i class="cmp ${cmp.cls}">${this.esc(cmp.text)}</i>` : "");
       b.title = cmp && cmp.why ? cmp.why : "";
     });
-    const base = "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
+    const base = picked ? CM.itemCard(picked) : "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
+    if (picked) this.$("#bag-note").textContent = base;
     this.$("#bag-note").dataset.base = base;
     if (!this.$("#bag-note").textContent) this.$("#bag-note").textContent = base;
   },

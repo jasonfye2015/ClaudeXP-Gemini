@@ -35,8 +35,17 @@ function playRun(CM, game, opts = {}) {
   const alchemy = () => {
     for (const id of ["greaterheal", "antivenom", "oilfire", "oilholy", "oilfrost", "vigour", "fortune"]) { let guard = 0; while (!game.recipeLacks(id) && guard++ < 3 && (id === "greaterheal" ? game.bag.filter((i) => i.kind === "greaterheal").length < 3 : true)) game.brew(id); }
   };
+  // better gear, as it comes: for each hero, the best thing in the pack for each slot that compares well
+  const gearUp = () => {
+    for (const h of alive()) for (let guard = 0; guard < 6; guard++) {
+      let best = -1, bestGain = 0;
+      game.bag.forEach((it, row) => { if (!["weapon", "armor", "shield", "helm", "ring", "amulet", "boots", "cloak"].includes(it.kind) || it.unknown) return; const c = game.compare(h, it); const gain = c && c.cls === "good" ? Number(c.text) || 1 : 0; if (gain > bestGain) { bestGain = gain; best = row; } });
+      if (best < 0) break;
+      if (game.equip(h, best)) break;
+    }
+  };
   const camp = () => {
-    needs();
+    needs(); gearUp();
     alchemy();
     while (game.party.some((h) => h.hp <= 0) && game.gold >= 100 * game.party.find((h) => h.hp <= 0).level) game.raiseDead();
     if (game.party.some((h) => (h.status || {}).stone) && game.gold >= 150) game.temple("unstone");
@@ -127,6 +136,7 @@ function playRun(CM, game, opts = {}) {
     if (game.mode === "camp") { camp(); continue; }
     if (game.mode !== "explore") break;
     needs(); potions();
+    if (moves % 25 === 0) gearUp();
     if (game.floor.number > maxFloor) { log.push("deep enough"); break; }
     if (game.floor.number !== onFloor) { onFloor = game.floor.number; floorMoves = 0; }
     if (++floorMoves > perFloor) {                                       // lost on this floor: give it up (counted, so the sim can say)

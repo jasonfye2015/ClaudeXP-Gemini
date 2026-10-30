@@ -366,8 +366,8 @@ Object.assign(CM.Game.prototype, {
       delete fl.things[k];
       const gold = Math.floor(thing.gold * (this.has("rich") ? 2 : 1) * (this.asc("poorveins") ? 0.8 : 1) * (this.alive().some((h) => h.quirk === "greedy") ? 1.1 : 1));
       this.cheer(1);
-      this.gold += gold;
-      this.bag.push(...thing.items);
+      this.gold += gold; this.count("goldFound", gold);
+      this.gain(thing.items, "chest");
       this.sound("chest");
       this.count("chests");
       this.emit("fx", { kind: "sparkle", at: [x, y] });
@@ -738,7 +738,7 @@ Object.assign(CM.Game.prototype, {
   takeRemains(thing, k) {
     this.remainsFound = (this.remainsFound || []).concat(thing.id);
     delete this.floor.things[k];
-    if (thing.item) this.bag.push(thing.item);
+    if (thing.item) this.gain([thing.item], "remains");
     this.sound("coin");
     this.say(`${thing.names.join(", ").replace(/, ([^,]*)$/, " and $1")} fell here, ${thing.date}. The dark did not take everything${thing.item ? `: ${thing.item.name} is still with them, and now with you` : ""}.`);
     this.emit("talk", { title: "The remains of a party", text: `Four of them, where they fell: ${thing.names.join(", ")}. You know the names from the Hall of Fame. ${thing.item ? `Among the bones, ${thing.item.name}. They would want it used.` : "There is nothing left to take but the warning."}` });
@@ -792,7 +792,7 @@ Object.assign(CM.Game.prototype, {
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:strongbox:${this.floor.number}`)), gold = 60 * this.floor.number;
     const it = CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);
     it.unknown = false;
-    this.gold += gold; this.bag.push(it);
+    this.gold += gold; this.count("goldFound", gold); this.gain([it], "strongbox");
     this.sound("chest");
     this.achieve("strongbox");
     this.emit("fx", { kind: "sparkle", at: k.split(",").map(Number) });

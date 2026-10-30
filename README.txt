@@ -831,6 +831,20 @@ The Root, and the three endings (the fifth big update, phase 4 - v4.0)
   Awakened numbers - and the walls say what Caer Duin might have been (CM.DREAM: fifty lines, ten band names, the
   guardians as they were in life: Captain Aldred, Queen Aelith, the First Father), in warmer stone.
 
+The ledger of things (the sixth big update, phase 0 - v4.1)
+  14-items.js: every base a thing can be, by id (CM.BASES - the old lists' names, which were already ids), and a
+  name derived from what a thing is made of (CM.itemName: prefix, element, base, suffix, plus; the smith's work
+  keeps the affix words now). Saves are schema 3: every item carries its base and where it was found
+  (item.found: the floor and how - a chest, a slain foe, a strongbox, a ghost, the vault, the merchant...), and
+  the bag's card says so (CM.itemCard). The journal's third page is the compendium: every kind of thing, by group,
+  the unseen as outlines; an unknown thing counts once it is named; all of them is the Collector. The bag has
+  filters (All, Gear, Drink, Read, Stuff). The game's own Auto - and so the bot - uses the pack in a fight: a
+  firepot or a scroll of fire on a crowd, a wand of fire on a leader, a wand of sleep on three; the bot equips the
+  better thing as it is found. node tools/sim.js --loot reports gold found and spent, things by rarity, what was
+  used and the floors to the first upgrade of each slot. Measured (four seeds, Fair, to floor 20): about 60,000
+  gold found a run and 9,000 spent; 260 common things found, 15 fine, 3 rare; the first better weapon by floor 2,
+  armour by 4, a shield by 12; wands and scrolls now used in every run. The numbers Phase 8 will be judged against.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

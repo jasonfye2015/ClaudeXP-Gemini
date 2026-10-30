@@ -36,7 +36,8 @@ CM.Game = class {
     this.saveWarned = false;
     this.fame = CM.store.get("fame", []);
     this.trophies = CM.store.get("trophies", {});     // the guardians slain, ever: {id: {date, name, seed}}
-    this.vaults = CM.store.get("vaults", null) || (CM.store.get("vault", null) ? [CM.store.get("vault", null)] : []);   // the heirlooms left at the camp for the next party (one slot, or three, or five, by the guildhall)
+    this.vaults = (CM.store.get("vaults", null) || (CM.store.get("vault", null) ? [CM.store.get("vault", null)] : [])).map((it) => CM.normalizeItem(it, "vault"));
+    this.compendium = CM.store.get("compendium", {});     // every base ever found: {baseId: {floor, date}}   // the heirlooms left at the camp for the next party (one slot, or three, or five, by the guildhall)
     this.village = Object.assign({ renown: 0, spent: 0, levels: {}, trainers: [] }, CM.store.get("village", {}));   // the surface: renown and the buildings
     this.settings = Object.assign({ sound: true, volume: 0.6, music: true, musicVolume: 0.5, smooth: true, fps: false, look: "drawn", tapMove: true }, CM.store.get("settings", {}));
     this.settings.keys = Object.assign({}, CM.DEFAULT_KEYS, this.settings.keys || {});
@@ -81,6 +82,25 @@ CM.Game = class {
   sound(name) { this.emit("sound", name); }
 
   freshTally() { return { steps: 0, kills: 0, chests: 0, fights: 0, fled: 0, guardians: [] }; }
+  // things gained: tagged with where, noted in the compendium, counted, and into the pack
+  gain(items, how) {
+    const list = (Array.isArray(items) ? items : [items]).filter(Boolean), floor = this.floor ? this.floor.number : 0;
+    CM.tagFound(list, floor, how);
+    this.tally.found = this.tally.found || {};
+    for (const it of list) {
+      const r = it.unknown ? "unknown" : CM.rarityOf(it);
+      this.tally.found[r] = (this.tally.found[r] || 0) + 1;
+      const id = CM.baseIdOf(it);
+      if (CM.BASES[id] && !this.compendium[id] && !it.unknown) { this.compendium[id] = { floor, date: CM.today() }; CM.store.set("compendium", this.compendium); if (Object.keys(this.compendium).filter((k) => CM.BASES[k]).length >= Object.keys(CM.BASES).length) this.achieve("collector"); }
+    }
+    this.bag.push(...list);
+    return list;
+  }
+  noteKnown(item) {                                                      // an unknown thing, named: the compendium learns it
+    const id = CM.baseIdOf(item);
+    if (CM.BASES[id] && !this.compendium[id]) { this.compendium[id] = { floor: this.floor ? this.floor.number : 0, date: CM.today() }; CM.store.set("compendium", this.compendium); }
+  }
+  countUse(kind) { this.tally.used = this.tally.used || {}; this.tally.used[kind] = (this.tally.used[kind] || 0) + 1; }
   count(what, n = 1) { if (!this.tally) this.tally = this.freshTally(); this.tally[what] = (this.tally[what] || 0) + n; }
 
   setMode(mode) { if (mode !== "explore") this.travel = null; this.mode = mode; this.emit("mode", mode); this.emit("change"); }
@@ -296,7 +316,7 @@ CM.Game = class {
     this.kit = CM.unlocked(this.allFame).includes(kit) ? kit : "pauper";
     this.recruits = null;
     this.identifying = false;
-    this.bag = CM.startingBag(this.seed);
+    this.bag = CM.tagFound(CM.startingBag(this.seed), 1, "start");
     this.gold = 30;
     this.floors = {};
     this.light = { kind: "torch", left: CM.TORCH_STEPS };
