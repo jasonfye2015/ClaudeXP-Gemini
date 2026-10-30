@@ -16,7 +16,14 @@ CM.makeGear = function (kind, floor, rnd) {
   let name, power, value, slot = kind;
   if (kind === "weapon") {
     if (rnd.chance(0.12)) { const bt = Math.min(CM.BOWS.length - 1, Math.floor(tier / 2.5)); name = CM.BOWS[bt]; props.bow = true; props.twohanded = true; power = (bt + 1) * 3 + 1 + rnd.int(0, 2); value = 20 * (bt + 1) * (bt + 1); }
-    else { name = CM.WEAPONS[tier]; power = (tier + 1) * 2 + rnd.int(0, 2); value = 15 * (tier + 1) * (tier + 1); if (CM.TWO_HANDED.includes(name)) props.twohanded = true; }
+    else {
+      const roll = rnd.int(0, 2);                                        // (the one draw the old list made: the generators' dice must not move)
+      const other = (tier * 7 + roll * 5 + floor) % 3 === 0;             // an arm of another class, a third of the time, by the draws already made
+      if (other) {
+        const classes = Object.keys(CM.ARMS_MORE), cls = classes[(tier * 3 + roll + floor) % classes.length], list = CM.ARMS_MORE[cls], pick = list.reduce((best, x) => (Math.abs(x[1] - tier) < Math.abs(best[1] - tier) ? x : best), list[0]);
+        name = pick[0]; const t2 = pick[1]; power = (t2 + 1) * 2 + roll; value = 15 * (t2 + 1) * (t2 + 1); if (["Maul", "Halberd", "Glaive"].includes(name)) props.twohanded = true;
+      } else { name = CM.WEAPONS[tier]; power = (tier + 1) * 2 + roll; value = 15 * (tier + 1) * (tier + 1); if (CM.TWO_HANDED.includes(name)) props.twohanded = true; }
+    }
     props.base0 = name;                                                  // (the base, before the element's prefix goes on the name)
     if (floor >= 3 && rnd.chance(0.2)) { props.element = rnd.pick(Object.keys(CM.ELEMENTS)); name = `${CM.ELEMENTS[props.element].prefix} ${name}`; value += 60; }
   } else if (kind === "armor") {
@@ -128,9 +135,9 @@ CM.baseName = function (item) {
 CM.itemLabel = function (item) {
   if (item.unknown) return "unknown: wear it, read a Scroll of Identify, or ask the camp's scribe";
   const p = item.props || {}, bits = [];
-  if (item.kind === "weapon") bits.push(`weapon +${item.power}`);
+  if (item.kind === "weapon") bits.push(`weapon +${item.power}`, p.bow || p.fists ? "" : `${CM.WEAPON_CLASSES[CM.weaponClass(item)].name}: ${CM.WEAPON_CLASSES[CM.weaponClass(item)].what}`);
   else if (item.kind === "armor") bits.push(`armour +${item.power}`, p.weight || "");
-  else if (item.kind === "shield") bits.push(`shield +${item.power}`);
+  else if (item.kind === "shield") bits.push(`shield +${item.power}`, `blocks ${Math.round(CM.blockChance(Object.assign({}, item, { unknown: false })) * 100)}% of blows for half${CM.isTower(item) ? ", and for the row behind" : ""}`);
   else if (item.kind === "helm") bits.push(`helm +${item.power}`);
   else if (item.kind === "ring") bits.push(`+${item.power} ${CM.STAT_NAMES[p.stat]}`);
   else if (item.kind === "amulet") bits.push(p.resist ? `proof against ${p.resist}` : `warding +${p.df}`);
@@ -389,9 +396,14 @@ CM.cantWear = function (h, item) {
   if (item.kind === "shield") {
     if (!CM.SHIELD_BEARERS.includes(h.cls)) return `${h.cls}s don't carry shields.`;
     if (h.weapon && h.weapon.props && h.weapon.props.twohanded) return `${h.name}'s ${CM.baseName(h.weapon)} takes both hands.`;
+    if (h.offhand && h.offhand.kind === "weapon") return `${h.name}'s other hand holds a knife already.`;
   }
   return "";
 };
+// a second knife, in the off hand: the Rogue's and the Ranger's, when the main hand holds a dagger too
+CM.canDualWield = (h, item) => ["Rogue", "Ranger"].includes(h.cls) && item && item.kind === "weapon" && CM.weaponClass(item) === "dagger" && h.weapon && CM.weaponClass(h.weapon) === "dagger" && !(h.weapon.props || {}).twohanded;
+CM.offhandWeapon = (h) => (h.offhand && h.offhand.kind === "weapon" && !h.offhand.unknown ? h.offhand : null);
+
 
 CM.newParty = function (chosen) {                                         // chosen: [{cls, name, stats, row}] - else the classic four
   return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row, p.quirk, p.origin));

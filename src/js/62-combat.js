@@ -54,7 +54,8 @@ Object.assign(CM.Game.prototype, {
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
     const wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
-    if ((theyCame || this.inDark()) && !wary && this.rnd.chance(0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
+    const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
+    if ((theyCame || this.inDark()) && !wary && this.rnd.chance(loud ? 0.65 : 0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
@@ -116,7 +117,7 @@ Object.assign(CM.Game.prototype, {
     c.round += 1;
     c.reached = 0;
     const order = [];
-    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
+    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
     if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
     order.sort((a, b) => b.init - a.init);
     for (const h of this.alive()) if (h.familiar === "skull" && c.round > 0) { const foe = this.attackable()[0]; if (foe) this.spellHit(foe, Math.max(1, 2 + Math.floor(h.level / 2)), `${h.name}'s skull bites:`); }
@@ -426,6 +427,11 @@ Object.assign(CM.Game.prototype, {
       h = h.guardedBy;
     }
     if (h.defending) dmg = Math.ceil(dmg / 2);
+    if (!opts.aoe && !opts.noBlock) {                                   // a shield turns the blow: the hero's own, or a tower shield in the front row for one behind
+      const own = h.offhand && h.offhand.kind === "shield" ? CM.blockChance(h.offhand) : 0;
+      const tower = !own && h.row === "back" ? this.alive().filter((p) => p.row === "front" && CM.isTower(p.offhand) && !p.offhand.unknown).map((p) => CM.blockChance(p.offhand) / 2)[0] || 0 : 0;
+      if ((own || tower) && this.rnd.chance(own || tower)) { dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + (own ? " - turned on the shield" : " - the tower shield takes it") }); this.combat.blocks = (this.combat.blocks || 0) + 1; }
+    }
     if (this.song) dmg -= this.song;
     if (c.protect) dmg -= 3 + (c.protectMore || 0);
     if (this.has("glass")) dmg *= 2;
@@ -704,24 +710,32 @@ Object.assign(CM.Game.prototype, {
     this.emit("fx", { kind: "swing", hero, foe: target });
     const bow = Boolean(hero.weapon && hero.weapon.props && hero.weapon.props.bow), ambush = CM.trait(hero, "ambush") && !hero.struck;
     const dark = this.terrain().includes("dark");
-    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero) * (dark ? 0.85 : 1))) {
+    const weapon = opts.weapon || hero.weapon, wclass = CM.weaponClass(weapon), home = CM.atHome(hero, weapon) || (weapon.props || {}).fists, hide = CM.hideOf(target);
+    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero) * (dark ? 0.85 : 1) * (home ? 1 : CM.CLUMSY))) {
       this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
       this.sound("miss");
       this.emit("fx", { kind: "miss", foe: target });
       return 0;
     }
-    let dmg = this.damage(this.effective(hero).atk, hero.weapon.power, bow && CM.trait(hero, "piercing") ? Math.floor(target.df / 2) : target.df), how = "";
-    const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger";
-    const critMult = CM.trait(hero, "deadly") ? 3 : 2;
+    let df = bow && CM.trait(hero, "piercing") ? Math.floor(target.df / 2) : target.df;
+    if (home && wclass === "blunt" && (["bone", "shell", "plate"].includes(hide) || target.undead)) df = Math.floor(df * 2 / 3);   // (a mace cares nothing for a shell)
+    let dmg = this.damage(this.effective(hero).atk, weapon.power, df), how = "";
+    const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger" || (home && wclass === "polearm");
+    let critMult = CM.trait(hero, "deadly") ? 3 : 2;
+    if (home && wclass === "dagger") { critMult += 1; dmg = Math.max(1, Math.ceil(dmg * 2 / 3)); }
+    if (home && wclass === "staff") dmg = Math.max(1, Math.ceil(dmg / 2));
+    if (home && wclass === "polearm" && !back) { dmg = Math.max(1, Math.ceil(dmg * 0.75)); how = ", cramped in the front"; }
+    if (home && wclass === "blade" && hide === "flesh") { dmg = Math.ceil(dmg * 1.15); how = " - the edge finds flesh"; }
+    if (home && wclass === "axe" && hide === "hide") { dmg = Math.ceil(dmg * 1.15); how = " - the axe bites hide"; }
     if (target.elite === "spectral" && rnd.chance(0.5)) { this.say(`${hero.name}'s blow passes through ${CM.the(target)}.`); this.emit("fx", { kind: "miss", foe: target }); return 0; }
     if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
-    else if (ambush || rnd.chance(this.critChance(hero))) { dmg *= critMult; how = " - a weak spot"; }
+    else if (!(home && wclass === "blunt") && (ambush || rnd.chance(this.critChance(hero) + (home && wclass === "dagger" ? 0.1 : 0)))) { dmg *= critMult; how = " - a weak spot"; }
     else if (back && !reaches && !(this.formation === "wedge" && this.point() !== hero)) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
     if (this.formation === "loose") dmg = Math.max(1, Math.ceil(dmg * 0.85));
     if ((this.fed || 0) >= CM.HUNGER.weary) dmg = Math.max(1, Math.ceil(dmg * 0.85));
     if (target.row === "back" && !bow && this.living().some((f) => f !== target && f.row !== "back")) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += ", reaching past the front"; }   // (their back row, as yours)
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
-    const props = (hero.weapon && hero.weapon.props) || {}, el = (props.element && !hero.weapon.unknown ? props.element : null) || (hero.oil && hero.oil.fights > 0 ? hero.oil.element : null);
+    const props = (weapon && weapon.props) || {}, el = (props.element && !weapon.unknown ? props.element : null) || (hero.oil && hero.oil.fights > 0 ? hero.oil.element : null);
     const G = target.guardian ? CM.GUARDIANS[target.guardian] : null;   // (its heat, its shards: below)
     if (el) {                                                            // a flaming, frost or blessed blade
       const r = CM.resistance(target, el);
@@ -749,14 +763,20 @@ Object.assign(CM.Game.prototype, {
     this.emit("fx", { kind: "hit", foe: target, amount: dmg });
     this.sound("hit");
     if (props.stun && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.stun)) { target.held = Math.max(target.held || 0, 1); this.say(`${CM.The(target)} reels from the blow.`); }
-    if (props.sleep && !hero.weapon.unknown && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.sleep)) { target.asleep = 2; this.say(`${CM.The(target)} hears the tide in the blade, and sleeps.`); }
-    if (props.lifesteal && !hero.weapon.unknown && hero.hp > 0 && hero.hp < hero.max) { const back = Math.max(1, Math.ceil(dmg / 4)); hero.hp = Math.min(hero.max, hero.hp + back); this.say(`${hero.name}'s blade drinks: +${back}.`); }
+    if (props.sleep && !weapon.unknown && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.sleep)) { target.asleep = 2; this.say(`${CM.The(target)} hears the tide in the blade, and sleeps.`); }
+    if (props.lifesteal && !weapon.unknown && hero.hp > 0 && hero.hp < hero.max) { const back = Math.max(1, Math.ceil(dmg / 4)); hero.hp = Math.min(hero.max, hero.hp + back); this.say(`${hero.name}'s blade drinks: +${back}.`); }
     if ((CM.guardianHas(target, "heat") || CM.guardianHas(target, "glass")) && !props.bow && hero.hp > 0) {   // its heat, or its shards: whoever strikes it pays
       const burn = (2 + Math.floor((this.floor ? this.floor.number : 15) / 5)) * (target.broken ? 2 : 1);
       hero.hp = Math.max(1, hero.hp - burn);
       this.say((G.sear || "The heat of " + CM.the(target) + " sears {who} (-{n}).").replace("{who}", hero.name).replace("{n}", burn));
       this.emit("fx", { kind: "sear", hero, amount: burn, foe: target });
     }
+    if (home && wclass === "axe" && !opts.cleave) {                      // the axe cleaves: a second foe in the same row takes half
+      const next = this.attackable().find((m) => m !== target && m.row === target.row && m.hp > 0);
+      if (next) { this.say(`The axe carries on into ${CM.the(next)}.`); this.strike(hero, next, note, Object.assign({}, opts, { sure: true, cleave: true, mult: (opts.mult || 1) * 0.5 })); }
+    }
+    const second = !opts.second && !opts.cleave && CM.offhandWeapon(hero);   // a second knife: another blow at half
+    if (second && target.hp > 0 && this.mode === "combat") { this.say(`${hero.name}'s other hand follows.`); this.strike(hero, target, " with the second knife", Object.assign({}, opts, { second: true, weapon: second, mult: (opts.mult || 1) * 0.5 })); }
     return dmg;
   },
 
@@ -876,7 +896,7 @@ Object.assign(CM.Game.prototype, {
     const lvl = (h && h.spellLevels || {})[id] || 1;
     return (1 + 0.25 * (lvl - 1)) * (this.castMult || 1);
   },
-  pow(n) { return Math.max(1, Math.ceil(n * (this.castScale || 1))); },
+  pow(n) { const h = this.casting, staff = h && h.weapon && CM.weaponClass(h.weapon) === "staff" && CM.atHome(h, h.weapon) && !h.weapon.unknown ? 1 + Math.floor(Math.max(0, (CM.BASES[CM.baseIdOf(h.weapon)] || { tier: 0 }).tier) / 4) : 0; return Math.max(1, Math.ceil(n * (this.castScale || 1)) + staff); },   // (a staff: +1 a spell, and one more every four tiers)
   // the reagent in the pack that goes with a spell, if any: {row, id}
   reagentFor(id) {
     for (let row = 0; row < this.bag.length; row++) { const it = this.bag[row]; if (it.kind === "ingredient" && CM.REAGENTS[it.ingredient] && CM.REAGENTS[it.ingredient].spells.includes(id)) return { row, id: it.ingredient }; }

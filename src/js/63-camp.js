@@ -161,10 +161,11 @@ Object.assign(CM.Game.prototype, {
     if (!this.inGive) this.logAct("equip", this.party.indexOf(hero), row);
     const why = CM.cantWear(hero, item);
     if (why) return why;
-    const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind);
+    const slot = this.offhandWanted && CM.canDualWield(hero, item) ? "offhand" : item.slot || (item.kind === "shield" ? "offhand" : item.kind);
     const old = hero[slot];
     if (old && old.props && old.props.cursed) return `${hero.name}'s ${old.name} is cursed and won't come off. The camp's temple can lift it.`;
     if (!old || (item.power || 0) > (old.power || 0)) { this.tally.firstUpgrade = this.tally.firstUpgrade || {}; if (this.tally.firstUpgrade[slot] === undefined && old) this.tally.firstUpgrade[slot] = this.floor ? this.floor.number : 0; }   // (for the simulator: floors to the first better thing in each slot)
+    if (slot === "weapon" && hero.offhand && hero.offhand.kind === "weapon" && CM.weaponClass(item) !== "dagger") { this.bag.push(hero.offhand); this.say(`${hero.name} sheathes the second knife.`); hero.offhand = null; }
     hero[slot] = item;
     this.bag.splice(row, 1);
     if (old) this.bag.push(old);
@@ -181,9 +182,12 @@ Object.assign(CM.Game.prototype, {
     this.sound("chest");
     if (item.props && item.props.cursed) this.say(`${hero.name} takes up the ${CM.baseName(item)} - and it clings! It's cursed.`);
     else if (learned) this.say(`${hero.name} tries the ${CM.baseName(item)}: it's ${item.name} (${CM.itemLabel(item)}).`);
+    if (item.kind === "weapon" && !(item.props || {}).fists && !CM.atHome(hero, item)) this.say(`${hero.name} is not at home with a ${CM.WEAPON_CLASSES[CM.weaponClass(item)].name}: blows land less often, and the ${CM.WEAPON_CLASSES[CM.weaponClass(item)].name}'s own trick is lost.`);
     this.emit("change");
     return "";
   },
+  // a second knife to the off hand (the bag's second button for a Rogue or a Ranger)
+  equipOffhand(hero, row) { this.offhandWanted = true; try { return this.equip(hero, row); } finally { this.offhandWanted = false; } },
 
   give(row, n) {                                                        // returns a note for the bag screen, "" when it worked
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack first.";
@@ -605,6 +609,7 @@ Object.assign(CM.Game.prototype, {
       return { text: same ? "same" : old ? "swap" : "new", cls: same ? "" : "good", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (${CM.itemLabel(old)})` : "Nothing there now" };
     }
     const d = item.power - (old ? old.power : 0);
+    if (item.kind === "weapon" && !(item.props || {}).fists && !CM.atHome(h, item)) return { text: d > 0 ? `+${d}?` : String(d), cls: d > 0 ? "" : "bad", why: `${h.cls}s are not at home with a ${CM.WEAPON_CLASSES[CM.weaponClass(item)].name}: blows land less often${old ? `; wears ${old.unknown ? CM.baseName(old) : old.name} (+${old.power})` : ""}` };
     return { text: d > 0 ? `+${d}` : d < 0 ? String(d) : "same", cls: d > 0 ? "good" : d < 0 ? "bad" : "", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (+${old.power})` : "Nothing there now" };
   },
   sortBag() {

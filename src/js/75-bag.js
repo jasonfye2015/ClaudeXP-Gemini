@@ -53,11 +53,13 @@ Object.assign(CM.UI.prototype, {
     if (shop) list(this.$("#shop-list"), "The merchant's wares", g.stock || [], this.shopRow,
       (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
     const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
+    const knife = picked && picked.kind === "weapon" && CM.weaponClass(picked) === "dagger";
     const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" || picked.kind === "tome" ? "Read" : picked.kind === "wand" ? "Use on" : picked.kind === "oil" ? "Rub on the weapon of" : "Give to";
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
       const m = g.party[i], cmp = picked ? g.compare(m, picked) : null;
       b.innerHTML = `${verb} ${this.esc(m.name)}` + (m.hp <= 0 ? " (fallen)" : "") + (cmp ? ` <i class="cmp ${cmp.cls}">${this.esc(cmp.text)}</i>` : "");
       b.title = cmp && cmp.why ? cmp.why : "";
+      if (knife && CM.canDualWield(m, picked)) { const o = document.createElement("i"); o.className = "offhand"; o.textContent = " (or the other hand)"; o.title = "A second knife in the off hand: another blow at half, every blow"; o.addEventListener("click", (e) => { e.stopPropagation(); this.note(g.equipOffhand(m, this.bagRow)); this.fillBag(); }); b.appendChild(o); }
     });
     const base = picked ? CM.itemCard(picked) : "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     if (picked) this.$("#bag-note").textContent = base;

@@ -74,7 +74,7 @@ yet tell us what a consumable is worth - which is the first thing to fix.
 
 Size: M. The measuring stick for everything after.
 
-## Phase 1 - Weapons and armour with character - v4.2
+## Phase 1 - Weapons and armour with character - v4.2 - DONE
 
 - **Weapon classes**, one rule each, read in `strike`: *blade* (as now: the standard), *blunt* (ignores a third
   of armoured and undead defence; no crit), *axe* (cleaves: a second foe in the same row takes half), *polearm*

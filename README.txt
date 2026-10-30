@@ -845,6 +845,25 @@ The ledger of things (the sixth big update, phase 0 - v4.1)
   gold found a run and 9,000 spent; 260 common things found, 15 fine, 3 rare; the first better weapon by floor 2,
   armour by 4, a shield by 12; wands and scrolls now used in every run. The numbers Phase 8 will be judged against.
 
+Weapons and armour with character (the sixth big update, phase 1 - v4.2)
+  Every weapon has a class with one rule (CM.WEAPON_CLASSES, read in strike): blades a sixth more against flesh;
+  blunt arms ignore a third of bone, shell, plate and the undead's defence and never find a weak spot; axes cleave
+  into a second foe of the row for half, and bite hide; polearms strike at full from the back row and are cramped
+  in the front; daggers are two steps quicker, find weak spots a tenth more and strike them for three times, at
+  two thirds of a blow; staves are half a blow and +1 to every spell (one more every four tiers); bows and fists as
+  they were. Eleven arms more (a Stiletto, a Spear, a Maul, a Halberd...) come up a third of the time, by the
+  draws the generators already made, so no floor moved. Every calling is at home with two or three classes
+  (CM.ARMS_AT_HOME; a second calling adds its own) and clumsy with the rest: blows land 15% less often and the
+  class's trick is lost; the bag says so. Shields block (CM.blockChance: 8% a buckler to 38% mithril) for half,
+  and a tower shield in the front row takes some of the back row's blows. Heavy armour is a step late in the
+  round and loud (surprised 65% not 50%); light a step early; mithril plate neither. The Rogue and the Ranger may
+  put a second dagger in the off hand (the bag's "or the other hand"): another blow at half, every blow. Every
+  monster is made of something (CM.HIDE: flesh, hide, bone, shell, plate, none) that the rules read.
+  Measured on twenty seeds, Fair, to floor 25, v4.1 against v4.2 side by side: 18 crowns against 19 - within the
+  five points the plan allows before Phase 9 tunes on purpose (six seeds swung from two to six crowns between
+  tweaks: the reseeded dice make six seeds noise). The flesh and hide bonuses were trimmed from a quarter to a
+  sixth on the way.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v4.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v4.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -418,7 +418,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "4.1", built: "2026-10-30" };
+const CM = window.CM = { version: "4.2", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -2125,6 +2125,7 @@ CM.BASES = {};
   const add = (id, kind, slot, tier, group, more) => { CM.BASES[id] = Object.assign({ id, kind, slot, tier, group }, more || {}); };
   CM.WEAPONS.forEach((n, i) => add(n, "weapon", "weapon", i, "weapon", { twohanded: CM.TWO_HANDED.includes(n) }));
   CM.BOWS.forEach((n, i) => add(n, "weapon", "weapon", Math.min(11, Math.round(i * 2.5)), "bow", { bow: true, twohanded: true }));
+  [["Stiletto", 3], ["Kris", 7], ["Morning Star", 4], ["Maul", 8], ["Hand Axe", 1], ["Broad Axe", 5], ["Spear", 2], ["Glaive", 6], ["Halberd", 9], ["Ashwood Staff", 2], ["Runed Staff", 7]].forEach(([n, t]) => add(n, "weapon", "weapon", t, "weapon", { twohanded: ["Maul", "Halberd", "Glaive"].includes(n) }));
   CM.ARMORS.forEach((n, i) => add(n, "armor", "armor", i, "armor", { weight: CM.ARMOR_WEIGHT(i) }));
   CM.SHIELDS.forEach((n, i) => add(n, "shield", "offhand", i * 2, "shield"));
   CM.HELMS.forEach((n, i) => add(n, "helm", "helm", i * 2, "helm"));
@@ -2191,6 +2192,41 @@ CM.itemCard = function (item) {
 CM.BAG_FILTERS = { all: { name: "All", kinds: null }, gear: { name: "Gear", kinds: ["weapon", "armor", "shield", "helm", "ring", "amulet", "boots", "cloak"] }, drink: { name: "Drink", kinds: ["heal", "greaterheal", "mana", "revive", "antidote", "ration"] },
   read: { name: "Read", kinds: ["scroll", "wand", "tome"] }, stuff: { name: "Stuff", kinds: ["gem", "ingredient", "oil", "bomb", "torch", "lantern", "rope", "key", "boxkey", "bones", "scrap", "page", "bell"] } };
 
+// ---- weapons with character: a class for every weapon, one rule each; who is at home with what; what a monster is
+// made of, which the rules read ----
+CM.WEAPON_CLASSES = {
+  blade: { name: "blade", what: "the standard: a sixth more against flesh" },
+  blunt: { name: "blunt", what: "ignores a third of bone, shell and plate, and of the undead's defence; never finds a weak spot" },
+  axe: { name: "axe", what: "cleaves: a second foe in the same row takes half; a sixth more against hide" },
+  polearm: { name: "polearm", what: "strikes at full strength from the back row; cramped in the front, three quarters" },
+  dagger: { name: "dagger", what: "quick: two steps earlier in the round, weak spots found a tenth more and struck for three times; two thirds of a blow" },
+  bow: { name: "bow", what: "shoots over the front line at full strength; a Ranger's" },
+  staff: { name: "staff", what: "half a blow; +1 to every spell a tier (a caster's)" },
+  fist: { name: "fists", what: "the Monk's hands" },
+};
+CM.WEAPON_CLASS_OF = { Dagger: "dagger", Knife: "dagger", Stiletto: "dagger", Kris: "dagger", "Short Sword": "blade", "Long Sword": "blade", "Bastard Sword": "blade", "Rune Blade": "blade", "Mithril Sword": "blade", Claudebrand: "blade",
+  Club: "blunt", Mace: "blunt", "War Hammer": "blunt", "Morning Star": "blunt", Maul: "blunt", "Battle Axe": "axe", Flamberge: "axe", Dragonslayer: "axe", "Hand Axe": "axe", "Broad Axe": "axe",
+  Spear: "polearm", Glaive: "polearm", Halberd: "polearm", Staff: "staff", "Ashwood Staff": "staff", "Runed Staff": "staff", "Wrapped Fists": "fist" };
+// the other arms, by class and tier (CM.makeGear reaches for them a third of the time; the old list keeps its tiers)
+CM.ARMS_MORE = { dagger: [["Stiletto", 3], ["Kris", 7]], blunt: [["Morning Star", 4], ["Maul", 8]], axe: [["Hand Axe", 1], ["Broad Axe", 5]], polearm: [["Spear", 2], ["Glaive", 6], ["Halberd", 9]], staff: [["Ashwood Staff", 2], ["Runed Staff", 7]] };
+CM.weaponClass = (item) => { if (!item) return "fist"; const p = item.props || {}; if (p.bow) return "bow"; if (p.fists) return "fist"; if (p.wclass) return p.wclass; return CM.WEAPON_CLASS_OF[CM.baseIdOf(item)] || "blade"; };
+// who is at home with what (a second calling adds its arms); the Monk's hands are the Monk's
+CM.ARMS_AT_HOME = { Knight: ["blade", "blunt", "axe", "polearm"], Paladin: ["blade", "blunt"], Rogue: ["dagger", "blade"], Ranger: ["bow", "dagger", "blade"], Cleric: ["blunt", "staff"], Mage: ["staff", "dagger"], Druid: ["staff", "blunt"],
+  Bard: ["blade", "dagger"], Monk: ["fist"], Necromancer: ["staff", "dagger"], Artificer: ["blunt", "axe", "polearm"] };
+CM.atHome = (hero, item) => { const c = CM.weaponClass(item); return (CM.ARMS_AT_HOME[hero.cls] || []).includes(c) || (hero.second && (CM.ARMS_AT_HOME[hero.second] || []).includes(c)); };
+CM.CLUMSY = 0.85;                                                        // to hit, with an arm one is not at home with (and no class rule)
+// what a monster is made of: flesh, hide, bone, shell, plate, none (the rules read it)
+CM.HIDE = { "Giant Rat": "hide", Kobold: "hide", Skeleton: "bone", Goblin: "flesh", Zombie: "flesh", Orc: "flesh", Ghoul: "flesh", "Dark Elf": "flesh", Troll: "hide", Wraith: "none", Ogre: "hide", Minotaur: "hide", Gargoyle: "shell", Vampire: "flesh",
+  Demon: "plate", Wyvern: "shell", Drowned: "flesh", "Weed Hag": "flesh", "Fungal Horror": "hide", "Spore Beast": "hide", "Crystal Golem": "shell", "Shard Wisp": "none", "Iron Hound": "plate", "Foundry Imp": "plate", "Bone Colossus": "bone", "Grave Priest": "bone",
+  Rootling: "hide", "Hollow One": "none", Sellsword: "plate", "Hedge Wizard": "flesh" };
+CM.GUARDIAN_HIDE = { rat: "hide", knight: "plate", forge: "plate", queen: "flesh", mind: "hide", tyrant: "shell", master: "plate", patriarch: "bone", root: "hide" };
+CM.hideOf = (m) => (m.guardian ? CM.GUARDIAN_HIDE[m.guardian] : m.boss ? "bone" : CM.HIDE[m.kind || m.name] || "flesh");
+// shields block: a chance by tier that a blow does half; a tower shield blocks for a back-row hero as well
+CM.blockChance = (shield) => (!shield || shield.unknown ? 0 : 0.08 + 0.06 * Math.max(0, CM.SHIELDS.indexOf(CM.baseIdOf(shield))) + (shield.props && shield.props.block ? shield.props.block : 0));
+CM.isTower = (shield) => Boolean(shield) && CM.baseIdOf(shield) === "Tower Shield";
+// armour weight: the heavy are a step late and loud; the light a step early
+CM.weightInit = (h) => { const w = h.armor && h.armor.props && h.armor.props.weight; return w === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate" ? -1 : w === "light" ? 1 : 0; };
+
 // ---- 20-world.js ----
 "use strict";
 // The world: items, monster groups, a new party - and a floor: rooms joined by corridors (Nystrom's rooms-and-mazes),
@@ -2210,7 +2246,14 @@ CM.makeGear = function (kind, floor, rnd) {
   let name, power, value, slot = kind;
   if (kind === "weapon") {
     if (rnd.chance(0.12)) { const bt = Math.min(CM.BOWS.length - 1, Math.floor(tier / 2.5)); name = CM.BOWS[bt]; props.bow = true; props.twohanded = true; power = (bt + 1) * 3 + 1 + rnd.int(0, 2); value = 20 * (bt + 1) * (bt + 1); }
-    else { name = CM.WEAPONS[tier]; power = (tier + 1) * 2 + rnd.int(0, 2); value = 15 * (tier + 1) * (tier + 1); if (CM.TWO_HANDED.includes(name)) props.twohanded = true; }
+    else {
+      const roll = rnd.int(0, 2);                                        // (the one draw the old list made: the generators' dice must not move)
+      const other = (tier * 7 + roll * 5 + floor) % 3 === 0;             // an arm of another class, a third of the time, by the draws already made
+      if (other) {
+        const classes = Object.keys(CM.ARMS_MORE), cls = classes[(tier * 3 + roll + floor) % classes.length], list = CM.ARMS_MORE[cls], pick = list.reduce((best, x) => (Math.abs(x[1] - tier) < Math.abs(best[1] - tier) ? x : best), list[0]);
+        name = pick[0]; const t2 = pick[1]; power = (t2 + 1) * 2 + roll; value = 15 * (t2 + 1) * (t2 + 1); if (["Maul", "Halberd", "Glaive"].includes(name)) props.twohanded = true;
+      } else { name = CM.WEAPONS[tier]; power = (tier + 1) * 2 + roll; value = 15 * (tier + 1) * (tier + 1); if (CM.TWO_HANDED.includes(name)) props.twohanded = true; }
+    }
     props.base0 = name;                                                  // (the base, before the element's prefix goes on the name)
     if (floor >= 3 && rnd.chance(0.2)) { props.element = rnd.pick(Object.keys(CM.ELEMENTS)); name = `${CM.ELEMENTS[props.element].prefix} ${name}`; value += 60; }
   } else if (kind === "armor") {
@@ -2322,9 +2365,9 @@ CM.baseName = function (item) {
 CM.itemLabel = function (item) {
   if (item.unknown) return "unknown: wear it, read a Scroll of Identify, or ask the camp's scribe";
   const p = item.props || {}, bits = [];
-  if (item.kind === "weapon") bits.push(`weapon +${item.power}`);
+  if (item.kind === "weapon") bits.push(`weapon +${item.power}`, p.bow || p.fists ? "" : `${CM.WEAPON_CLASSES[CM.weaponClass(item)].name}: ${CM.WEAPON_CLASSES[CM.weaponClass(item)].what}`);
   else if (item.kind === "armor") bits.push(`armour +${item.power}`, p.weight || "");
-  else if (item.kind === "shield") bits.push(`shield +${item.power}`);
+  else if (item.kind === "shield") bits.push(`shield +${item.power}`, `blocks ${Math.round(CM.blockChance(Object.assign({}, item, { unknown: false })) * 100)}% of blows for half${CM.isTower(item) ? ", and for the row behind" : ""}`);
   else if (item.kind === "helm") bits.push(`helm +${item.power}`);
   else if (item.kind === "ring") bits.push(`+${item.power} ${CM.STAT_NAMES[p.stat]}`);
   else if (item.kind === "amulet") bits.push(p.resist ? `proof against ${p.resist}` : `warding +${p.df}`);
@@ -2583,9 +2626,14 @@ CM.cantWear = function (h, item) {
   if (item.kind === "shield") {
     if (!CM.SHIELD_BEARERS.includes(h.cls)) return `${h.cls}s don't carry shields.`;
     if (h.weapon && h.weapon.props && h.weapon.props.twohanded) return `${h.name}'s ${CM.baseName(h.weapon)} takes both hands.`;
+    if (h.offhand && h.offhand.kind === "weapon") return `${h.name}'s other hand holds a knife already.`;
   }
   return "";
 };
+// a second knife, in the off hand: the Rogue's and the Ranger's, when the main hand holds a dagger too
+CM.canDualWield = (h, item) => ["Rogue", "Ranger"].includes(h.cls) && item && item.kind === "weapon" && CM.weaponClass(item) === "dagger" && h.weapon && CM.weaponClass(h.weapon) === "dagger" && !(h.weapon.props || {}).twohanded;
+CM.offhandWeapon = (h) => (h.offhand && h.offhand.kind === "weapon" && !h.offhand.unknown ? h.offhand : null);
+
 
 CM.newParty = function (chosen) {                                         // chosen: [{cls, name, stats, row}] - else the classic four
   return (chosen || CM.CLASSIC.map((cls) => ({ cls }))).map((p) => CM.makeHero(p.cls, p.name, p.stats, p.row, p.quirk, p.origin));
@@ -7586,7 +7634,8 @@ Object.assign(CM.Game.prototype, {
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
     const wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
-    if ((theyCame || this.inDark()) && !wary && this.rnd.chance(0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
+    const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
+    if ((theyCame || this.inDark()) && !wary && this.rnd.chance(loud ? 0.65 : 0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
@@ -7648,7 +7697,7 @@ Object.assign(CM.Game.prototype, {
     c.round += 1;
     c.reached = 0;
     const order = [];
-    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
+    for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
     if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
     order.sort((a, b) => b.init - a.init);
     for (const h of this.alive()) if (h.familiar === "skull" && c.round > 0) { const foe = this.attackable()[0]; if (foe) this.spellHit(foe, Math.max(1, 2 + Math.floor(h.level / 2)), `${h.name}'s skull bites:`); }
@@ -7958,6 +8007,11 @@ Object.assign(CM.Game.prototype, {
       h = h.guardedBy;
     }
     if (h.defending) dmg = Math.ceil(dmg / 2);
+    if (!opts.aoe && !opts.noBlock) {                                   // a shield turns the blow: the hero's own, or a tower shield in the front row for one behind
+      const own = h.offhand && h.offhand.kind === "shield" ? CM.blockChance(h.offhand) : 0;
+      const tower = !own && h.row === "back" ? this.alive().filter((p) => p.row === "front" && CM.isTower(p.offhand) && !p.offhand.unknown).map((p) => CM.blockChance(p.offhand) / 2)[0] || 0 : 0;
+      if ((own || tower) && this.rnd.chance(own || tower)) { dmg = Math.ceil(dmg / 2); opts = Object.assign({}, opts, { how: (opts.how || "") + (own ? " - turned on the shield" : " - the tower shield takes it") }); this.combat.blocks = (this.combat.blocks || 0) + 1; }
+    }
     if (this.song) dmg -= this.song;
     if (c.protect) dmg -= 3 + (c.protectMore || 0);
     if (this.has("glass")) dmg *= 2;
@@ -8236,24 +8290,32 @@ Object.assign(CM.Game.prototype, {
     this.emit("fx", { kind: "swing", hero, foe: target });
     const bow = Boolean(hero.weapon && hero.weapon.props && hero.weapon.props.bow), ambush = CM.trait(hero, "ambush") && !hero.struck;
     const dark = this.terrain().includes("dark");
-    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero) * (dark ? 0.85 : 1))) {
+    const weapon = opts.weapon || hero.weapon, wclass = CM.weaponClass(weapon), home = CM.atHome(hero, weapon) || (weapon.props || {}).fists, hide = CM.hideOf(target);
+    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero) * (dark ? 0.85 : 1) * (home ? 1 : CM.CLUMSY))) {
       this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
       this.sound("miss");
       this.emit("fx", { kind: "miss", foe: target });
       return 0;
     }
-    let dmg = this.damage(this.effective(hero).atk, hero.weapon.power, bow && CM.trait(hero, "piercing") ? Math.floor(target.df / 2) : target.df), how = "";
-    const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger";
-    const critMult = CM.trait(hero, "deadly") ? 3 : 2;
+    let df = bow && CM.trait(hero, "piercing") ? Math.floor(target.df / 2) : target.df;
+    if (home && wclass === "blunt" && (["bone", "shell", "plate"].includes(hide) || target.undead)) df = Math.floor(df * 2 / 3);   // (a mace cares nothing for a shell)
+    let dmg = this.damage(this.effective(hero).atk, weapon.power, df), how = "";
+    const back = hero.row === "back", reaches = hero.cls === "Rogue" || hero.cls === "Ranger" || (home && wclass === "polearm");
+    let critMult = CM.trait(hero, "deadly") ? 3 : 2;
+    if (home && wclass === "dagger") { critMult += 1; dmg = Math.max(1, Math.ceil(dmg * 2 / 3)); }
+    if (home && wclass === "staff") dmg = Math.max(1, Math.ceil(dmg / 2));
+    if (home && wclass === "polearm" && !back) { dmg = Math.max(1, Math.ceil(dmg * 0.75)); how = ", cramped in the front"; }
+    if (home && wclass === "blade" && hide === "flesh") { dmg = Math.ceil(dmg * 1.15); how = " - the edge finds flesh"; }
+    if (home && wclass === "axe" && hide === "hide") { dmg = Math.ceil(dmg * 1.15); how = " - the axe bites hide"; }
     if (target.elite === "spectral" && rnd.chance(0.5)) { this.say(`${hero.name}'s blow passes through ${CM.the(target)}.`); this.emit("fx", { kind: "miss", foe: target }); return 0; }
     if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
-    else if (ambush || rnd.chance(this.critChance(hero))) { dmg *= critMult; how = " - a weak spot"; }
+    else if (!(home && wclass === "blunt") && (ambush || rnd.chance(this.critChance(hero) + (home && wclass === "dagger" ? 0.1 : 0)))) { dmg *= critMult; how = " - a weak spot"; }
     else if (back && !reaches && !(this.formation === "wedge" && this.point() !== hero)) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
     if (this.formation === "loose") dmg = Math.max(1, Math.ceil(dmg * 0.85));
     if ((this.fed || 0) >= CM.HUNGER.weary) dmg = Math.max(1, Math.ceil(dmg * 0.85));
     if (target.row === "back" && !bow && this.living().some((f) => f !== target && f.row !== "back")) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += ", reaching past the front"; }   // (their back row, as yours)
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
-    const props = (hero.weapon && hero.weapon.props) || {}, el = (props.element && !hero.weapon.unknown ? props.element : null) || (hero.oil && hero.oil.fights > 0 ? hero.oil.element : null);
+    const props = (weapon && weapon.props) || {}, el = (props.element && !weapon.unknown ? props.element : null) || (hero.oil && hero.oil.fights > 0 ? hero.oil.element : null);
     const G = target.guardian ? CM.GUARDIANS[target.guardian] : null;   // (its heat, its shards: below)
     if (el) {                                                            // a flaming, frost or blessed blade
       const r = CM.resistance(target, el);
@@ -8281,14 +8343,20 @@ Object.assign(CM.Game.prototype, {
     this.emit("fx", { kind: "hit", foe: target, amount: dmg });
     this.sound("hit");
     if (props.stun && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.stun)) { target.held = Math.max(target.held || 0, 1); this.say(`${CM.The(target)} reels from the blow.`); }
-    if (props.sleep && !hero.weapon.unknown && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.sleep)) { target.asleep = 2; this.say(`${CM.The(target)} hears the tide in the blade, and sleeps.`); }
-    if (props.lifesteal && !hero.weapon.unknown && hero.hp > 0 && hero.hp < hero.max) { const back = Math.max(1, Math.ceil(dmg / 4)); hero.hp = Math.min(hero.max, hero.hp + back); this.say(`${hero.name}'s blade drinks: +${back}.`); }
+    if (props.sleep && !weapon.unknown && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.sleep)) { target.asleep = 2; this.say(`${CM.The(target)} hears the tide in the blade, and sleeps.`); }
+    if (props.lifesteal && !weapon.unknown && hero.hp > 0 && hero.hp < hero.max) { const back = Math.max(1, Math.ceil(dmg / 4)); hero.hp = Math.min(hero.max, hero.hp + back); this.say(`${hero.name}'s blade drinks: +${back}.`); }
     if ((CM.guardianHas(target, "heat") || CM.guardianHas(target, "glass")) && !props.bow && hero.hp > 0) {   // its heat, or its shards: whoever strikes it pays
       const burn = (2 + Math.floor((this.floor ? this.floor.number : 15) / 5)) * (target.broken ? 2 : 1);
       hero.hp = Math.max(1, hero.hp - burn);
       this.say((G.sear || "The heat of " + CM.the(target) + " sears {who} (-{n}).").replace("{who}", hero.name).replace("{n}", burn));
       this.emit("fx", { kind: "sear", hero, amount: burn, foe: target });
     }
+    if (home && wclass === "axe" && !opts.cleave) {                      // the axe cleaves: a second foe in the same row takes half
+      const next = this.attackable().find((m) => m !== target && m.row === target.row && m.hp > 0);
+      if (next) { this.say(`The axe carries on into ${CM.the(next)}.`); this.strike(hero, next, note, Object.assign({}, opts, { sure: true, cleave: true, mult: (opts.mult || 1) * 0.5 })); }
+    }
+    const second = !opts.second && !opts.cleave && CM.offhandWeapon(hero);   // a second knife: another blow at half
+    if (second && target.hp > 0 && this.mode === "combat") { this.say(`${hero.name}'s other hand follows.`); this.strike(hero, target, " with the second knife", Object.assign({}, opts, { second: true, weapon: second, mult: (opts.mult || 1) * 0.5 })); }
     return dmg;
   },
 
@@ -8408,7 +8476,7 @@ Object.assign(CM.Game.prototype, {
     const lvl = (h && h.spellLevels || {})[id] || 1;
     return (1 + 0.25 * (lvl - 1)) * (this.castMult || 1);
   },
-  pow(n) { return Math.max(1, Math.ceil(n * (this.castScale || 1))); },
+  pow(n) { const h = this.casting, staff = h && h.weapon && CM.weaponClass(h.weapon) === "staff" && CM.atHome(h, h.weapon) && !h.weapon.unknown ? 1 + Math.floor(Math.max(0, (CM.BASES[CM.baseIdOf(h.weapon)] || { tier: 0 }).tier) / 4) : 0; return Math.max(1, Math.ceil(n * (this.castScale || 1)) + staff); },   // (a staff: +1 a spell, and one more every four tiers)
   // the reagent in the pack that goes with a spell, if any: {row, id}
   reagentFor(id) {
     for (let row = 0; row < this.bag.length; row++) { const it = this.bag[row]; if (it.kind === "ingredient" && CM.REAGENTS[it.ingredient] && CM.REAGENTS[it.ingredient].spells.includes(id)) return { row, id: it.ingredient }; }
@@ -9069,10 +9137,11 @@ Object.assign(CM.Game.prototype, {
     if (!this.inGive) this.logAct("equip", this.party.indexOf(hero), row);
     const why = CM.cantWear(hero, item);
     if (why) return why;
-    const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind);
+    const slot = this.offhandWanted && CM.canDualWield(hero, item) ? "offhand" : item.slot || (item.kind === "shield" ? "offhand" : item.kind);
     const old = hero[slot];
     if (old && old.props && old.props.cursed) return `${hero.name}'s ${old.name} is cursed and won't come off. The camp's temple can lift it.`;
     if (!old || (item.power || 0) > (old.power || 0)) { this.tally.firstUpgrade = this.tally.firstUpgrade || {}; if (this.tally.firstUpgrade[slot] === undefined && old) this.tally.firstUpgrade[slot] = this.floor ? this.floor.number : 0; }   // (for the simulator: floors to the first better thing in each slot)
+    if (slot === "weapon" && hero.offhand && hero.offhand.kind === "weapon" && CM.weaponClass(item) !== "dagger") { this.bag.push(hero.offhand); this.say(`${hero.name} sheathes the second knife.`); hero.offhand = null; }
     hero[slot] = item;
     this.bag.splice(row, 1);
     if (old) this.bag.push(old);
@@ -9089,9 +9158,12 @@ Object.assign(CM.Game.prototype, {
     this.sound("chest");
     if (item.props && item.props.cursed) this.say(`${hero.name} takes up the ${CM.baseName(item)} - and it clings! It's cursed.`);
     else if (learned) this.say(`${hero.name} tries the ${CM.baseName(item)}: it's ${item.name} (${CM.itemLabel(item)}).`);
+    if (item.kind === "weapon" && !(item.props || {}).fists && !CM.atHome(hero, item)) this.say(`${hero.name} is not at home with a ${CM.WEAPON_CLASSES[CM.weaponClass(item)].name}: blows land less often, and the ${CM.WEAPON_CLASSES[CM.weaponClass(item)].name}'s own trick is lost.`);
     this.emit("change");
     return "";
   },
+  // a second knife to the off hand (the bag's second button for a Rogue or a Ranger)
+  equipOffhand(hero, row) { this.offhandWanted = true; try { return this.equip(hero, row); } finally { this.offhandWanted = false; } },
 
   give(row, n) {                                                        // returns a note for the bag screen, "" when it worked
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack first.";
@@ -9513,6 +9585,7 @@ Object.assign(CM.Game.prototype, {
       return { text: same ? "same" : old ? "swap" : "new", cls: same ? "" : "good", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (${CM.itemLabel(old)})` : "Nothing there now" };
     }
     const d = item.power - (old ? old.power : 0);
+    if (item.kind === "weapon" && !(item.props || {}).fists && !CM.atHome(h, item)) return { text: d > 0 ? `+${d}?` : String(d), cls: d > 0 ? "" : "bad", why: `${h.cls}s are not at home with a ${CM.WEAPON_CLASSES[CM.weaponClass(item)].name}: blows land less often${old ? `; wears ${old.unknown ? CM.baseName(old) : old.name} (+${old.power})` : ""}` };
     return { text: d > 0 ? `+${d}` : d < 0 ? String(d) : "same", cls: d > 0 ? "good" : d < 0 ? "bad" : "", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (+${old.power})` : "Nothing there now" };
   },
   sortBag() {
@@ -12249,11 +12322,13 @@ Object.assign(CM.UI.prototype, {
     if (shop) list(this.$("#shop-list"), "The merchant's wares", g.stock || [], this.shopRow,
       (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
     const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
+    const knife = picked && picked.kind === "weapon" && CM.weaponClass(picked) === "dagger";
     const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" || picked.kind === "tome" ? "Read" : picked.kind === "wand" ? "Use on" : picked.kind === "oil" ? "Rub on the weapon of" : "Give to";
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
       const m = g.party[i], cmp = picked ? g.compare(m, picked) : null;
       b.innerHTML = `${verb} ${this.esc(m.name)}` + (m.hp <= 0 ? " (fallen)" : "") + (cmp ? ` <i class="cmp ${cmp.cls}">${this.esc(cmp.text)}</i>` : "");
       b.title = cmp && cmp.why ? cmp.why : "";
+      if (knife && CM.canDualWield(m, picked)) { const o = document.createElement("i"); o.className = "offhand"; o.textContent = " (or the other hand)"; o.title = "A second knife in the off hand: another blow at half, every blow"; o.addEventListener("click", (e) => { e.stopPropagation(); this.note(g.equipOffhand(m, this.bagRow)); this.fillBag(); }); b.appendChild(o); }
     });
     const base = picked ? CM.itemCard(picked) : "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     if (picked) this.$("#bag-note").textContent = base;

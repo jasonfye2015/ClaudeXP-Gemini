@@ -1779,6 +1779,62 @@ test("the ledger of things: every item has a base in the table, names derive fro
   const sim = fs.readFileSync(path.join(ROOT, "tools", "sim.js"), "utf8"); assert.ok(sim.includes("--loot") && sim.includes("floors to the first upgrade"));
 });
 
+test("weapons with character: a class and a rule each, at home or clumsy, shields that block, heavy armour late and loud, a second knife, what a monster is made of", () => {
+  const CM = load();
+  for (const n of CM.WEAPONS) assert.ok(CM.WEAPON_CLASSES[CM.WEAPON_CLASS_OF[n]], `${n} has a class`);
+  for (const cls of Object.keys(CM.CLASSES)) assert.ok((CM.ARMS_AT_HOME[cls] || []).length, `${cls} is at home with something`);
+  for (const m of CM.MONSTERS) assert.ok(["flesh", "hide", "bone", "shell", "plate", "none"].includes(CM.hideOf({ kind: m.name })), m.name);
+  const rnd = new CM.Random(3); let other = 0; for (let i = 0; i < 300; i++) { const w = CM.makeGear("weapon", 10, rnd); if (CM.ARMS_MORE[CM.weaponClass(w)] && CM.ARMS_MORE[CM.weaponClass(w)].some(([n]) => n === CM.baseIdOf(w))) other++; assert.ok(CM.BASES[CM.baseIdOf(w)], w.name); }
+  assert.ok(other > 40 && other < 200, `the other arms come up: ${other} of 300`);
+  // a fixed fight: the same blow with a blade, a mace, an axe, a dagger, a polearm and a staff
+  const game = new CM.Game(); game.newGame("arms-1", fixedParty(CM));
+  const knight = game.party.find((h) => h.cls === "Knight"), rogue = game.party.find((h) => h.cls === "Rogue"), mage = game.party.find((h) => h.cls === "Mage");
+  const mk = (name, power) => ({ name, base: name, kind: "weapon", slot: "weapon", power, value: 1, props: {} });
+  const foe = (hide, df, undead) => ({ name: hide, kind: hide, hp: 1000, max: 1000, atk: 1, df, row: "front", undead: Boolean(undead) });
+  game.foes = [foe("Skeleton", 12, true), foe("Skeleton", 12, true)]; game.combat = { foes: game.foes, round: 1, order: [], index: 0 }; game.mode = "combat";
+  const blow = (hero, weapon, target, n = 60) => { hero.weapon = weapon; let sum = 0; for (let i = 0; i < n; i++) { target.hp = 1000; game.rnd = new CM.Random(i); sum += game.strike(hero, target, "", { sure: true }); } return sum / n; };
+  const blade = blow(knight, mk("Long Sword", 8), game.foes[0]), mace = blow(knight, mk("Mace", 8), game.foes[0]);
+  assert.ok(mace > blade, `a mace against bone: ${mace} > ${blade}`);
+  game.foes = [foe("Orc", 4), foe("Orc", 4)]; game.combat.foes = game.foes;
+  const sword = blow(knight, mk("Long Sword", 8), game.foes[0]), club = blow(knight, mk("Mace", 8), game.foes[0]);
+  assert.ok(sword > club, `a blade against flesh: ${sword} > ${club}`);
+  game.foes[1].hp = 1000; game.rnd = new CM.Random(1); knight.weapon = mk("Battle Axe", 8); knight.weapon.props.twohanded = true; game.strike(knight, game.foes[0], "", { sure: true });
+  assert.ok(game.foes[1].hp < 1000, "the axe cleaves into the second");
+  game.foes = [foe("Troll", 4), foe("Troll", 4)]; game.combat.foes = game.foes;   // (hide: neither a blade's nor a polearm's bonus)
+  knight.row = "back"; const spearBack = blow(knight, mk("Spear", 8), game.foes[0]), swordBack = blow(knight, mk("Long Sword", 8), game.foes[0]); knight.row = "front";
+  assert.ok(spearBack > swordBack * 1.5, `a polearm from the back row at full: ${spearBack} vs ${swordBack}`);
+  game.foes = [foe("Orc", 4), foe("Orc", 4)]; game.combat.foes = game.foes;
+  const staff = blow(mage, mk("Ashwood Staff", 8), game.foes[0]), knife = blow(mage, mk("Dagger", 8), game.foes[0]); assert.ok(staff < knife, "a staff is half a blow");
+  game.casting = mage; mage.weapon = mk("Ashwood Staff", 8); assert.strictEqual(game.pow(10), 11); mage.weapon = mk("Dagger", 8); assert.strictEqual(game.pow(10), 10); game.casting = null;
+  // clumsy: the Mage with an axe lands less often (the dice over many blows), and gets no cleave
+  let hits = 0, hitsHome = 0; for (let i = 0; i < 200; i++) { game.rnd = new CM.Random(i); mage.weapon = mk("Battle Axe", 4); game.foes[0].hp = 1000; if (game.strike(mage, game.foes[0])) hits++; game.rnd = new CM.Random(i); mage.weapon = mk("Ashwood Staff", 4); game.foes[0].hp = 1000; if (game.strike(mage, game.foes[0])) hitsHome++; }
+  assert.ok(hits < hitsHome, `clumsy with an axe: ${hits} hits of 200 against ${hitsHome}`);
+  assert.ok(!CM.atHome(mage, mk("Battle Axe", 4)) && CM.atHome(knight, mk("Battle Axe", 4)) && game.compare(mage, mk("Battle Axe", 20)).text.endsWith("?"));
+  // the dagger is quick in the round; heavy armour is late
+  const initOf = (h) => { game.combat.oiled = false; game.rnd = new CM.Random(9); game.beginRound(); return game.combat.order.find((o) => o.hero === h).init; };
+  rogue.weapon = mk("Dagger", 3); const quick = initOf(rogue); rogue.weapon = mk("Short Sword", 3); const slow = initOf(rogue); assert.strictEqual(quick - slow, 2);
+  knight.armor = { name: "Plate Mail", base: "Plate Mail", kind: "armor", slot: "armor", power: 8, value: 1, props: { weight: "heavy" } }; const heavy = initOf(knight);
+  knight.armor = { name: "Padded Vest", base: "Padded Vest", kind: "armor", slot: "armor", power: 1, value: 1, props: { weight: "light" } }; const light = initOf(knight); assert.strictEqual(light - heavy, 2);
+  // a shield blocks half the blows it says it does, roughly; a tower shield covers the row behind
+  knight.offhand = { name: "Iron Shield", base: "Iron Shield", kind: "shield", slot: "offhand", power: 3, value: 1, props: {} };
+  assert.ok(Math.abs(CM.blockChance(knight.offhand) - 0.2) < 0.001);
+  const taken = (h) => { let sum = 0; for (let i = 0; i < 200; i++) { game.rnd = new CM.Random(i); h.hp = 500; h.max = 500; game.hurt(h, 20, game.foes[0], {}); sum += 500 - h.hp; } return sum / 200; };
+  const withShield = taken(knight); knight.offhand = null; const bare = taken(knight);
+  assert.ok(withShield < bare && withShield > bare * 0.8, `a fifth of blows for half: ${withShield} vs ${bare}`);
+  knight.offhand = { name: "Tower Shield", base: "Tower Shield", kind: "shield", slot: "offhand", power: 5, value: 1, props: {} }; mage.row = "back"; mage.offhand = null;
+  const covered = taken(mage); knight.offhand = null; const uncovered = taken(mage); assert.ok(covered < uncovered, "the tower shield takes some of the back row's blows");
+  // a second knife: the Rogue's off hand follows every blow at half
+  rogue.weapon = mk("Dagger", 6); const second = mk("Stiletto", 6);
+  assert.ok(CM.canDualWield(rogue, second) && !CM.canDualWield(knight, second));
+  game.bag.push(second); const row = game.bag.length - 1; assert.strictEqual(game.equipOffhand(rogue, row), ""); assert.strictEqual(rogue.offhand.name, "Stiletto");
+  game.foes[0].hp = 1000; game.rnd = new CM.Random(4); game.strike(rogue, game.foes[0], "", { sure: true });
+  assert.ok(game.messages.slice(-4).some((m) => m.includes("other hand follows")), "the second knife");
+  assert.ok(CM.cantWear(rogue, { name: "Buckler", base: "Buckler", kind: "shield", slot: "offhand", power: 1, props: {} }).includes("knife"));
+  game.bag.push(mk("Long Sword", 9)); game.equip(rogue, game.bag.length - 1); assert.ok(!rogue.offhand, "a sword in the main hand sheathes the knife");
+  assert.ok(CM.itemLabel(mk("Mace", 3)).includes("blunt") && CM.itemLabel({ name: "Kite Shield", base: "Kite Shield", kind: "shield", slot: "offhand", power: 4, props: {} }).includes("blocks"));
+  game.mode = "explore"; game.combat = null;
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

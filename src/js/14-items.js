@@ -12,6 +12,7 @@ CM.BASES = {};
   const add = (id, kind, slot, tier, group, more) => { CM.BASES[id] = Object.assign({ id, kind, slot, tier, group }, more || {}); };
   CM.WEAPONS.forEach((n, i) => add(n, "weapon", "weapon", i, "weapon", { twohanded: CM.TWO_HANDED.includes(n) }));
   CM.BOWS.forEach((n, i) => add(n, "weapon", "weapon", Math.min(11, Math.round(i * 2.5)), "bow", { bow: true, twohanded: true }));
+  [["Stiletto", 3], ["Kris", 7], ["Morning Star", 4], ["Maul", 8], ["Hand Axe", 1], ["Broad Axe", 5], ["Spear", 2], ["Glaive", 6], ["Halberd", 9], ["Ashwood Staff", 2], ["Runed Staff", 7]].forEach(([n, t]) => add(n, "weapon", "weapon", t, "weapon", { twohanded: ["Maul", "Halberd", "Glaive"].includes(n) }));
   CM.ARMORS.forEach((n, i) => add(n, "armor", "armor", i, "armor", { weight: CM.ARMOR_WEIGHT(i) }));
   CM.SHIELDS.forEach((n, i) => add(n, "shield", "offhand", i * 2, "shield"));
   CM.HELMS.forEach((n, i) => add(n, "helm", "helm", i * 2, "helm"));
@@ -77,3 +78,38 @@ CM.itemCard = function (item) {
 // the bag's filters
 CM.BAG_FILTERS = { all: { name: "All", kinds: null }, gear: { name: "Gear", kinds: ["weapon", "armor", "shield", "helm", "ring", "amulet", "boots", "cloak"] }, drink: { name: "Drink", kinds: ["heal", "greaterheal", "mana", "revive", "antidote", "ration"] },
   read: { name: "Read", kinds: ["scroll", "wand", "tome"] }, stuff: { name: "Stuff", kinds: ["gem", "ingredient", "oil", "bomb", "torch", "lantern", "rope", "key", "boxkey", "bones", "scrap", "page", "bell"] } };
+
+// ---- weapons with character: a class for every weapon, one rule each; who is at home with what; what a monster is
+// made of, which the rules read ----
+CM.WEAPON_CLASSES = {
+  blade: { name: "blade", what: "the standard: a sixth more against flesh" },
+  blunt: { name: "blunt", what: "ignores a third of bone, shell and plate, and of the undead's defence; never finds a weak spot" },
+  axe: { name: "axe", what: "cleaves: a second foe in the same row takes half; a sixth more against hide" },
+  polearm: { name: "polearm", what: "strikes at full strength from the back row; cramped in the front, three quarters" },
+  dagger: { name: "dagger", what: "quick: two steps earlier in the round, weak spots found a tenth more and struck for three times; two thirds of a blow" },
+  bow: { name: "bow", what: "shoots over the front line at full strength; a Ranger's" },
+  staff: { name: "staff", what: "half a blow; +1 to every spell a tier (a caster's)" },
+  fist: { name: "fists", what: "the Monk's hands" },
+};
+CM.WEAPON_CLASS_OF = { Dagger: "dagger", Knife: "dagger", Stiletto: "dagger", Kris: "dagger", "Short Sword": "blade", "Long Sword": "blade", "Bastard Sword": "blade", "Rune Blade": "blade", "Mithril Sword": "blade", Claudebrand: "blade",
+  Club: "blunt", Mace: "blunt", "War Hammer": "blunt", "Morning Star": "blunt", Maul: "blunt", "Battle Axe": "axe", Flamberge: "axe", Dragonslayer: "axe", "Hand Axe": "axe", "Broad Axe": "axe",
+  Spear: "polearm", Glaive: "polearm", Halberd: "polearm", Staff: "staff", "Ashwood Staff": "staff", "Runed Staff": "staff", "Wrapped Fists": "fist" };
+// the other arms, by class and tier (CM.makeGear reaches for them a third of the time; the old list keeps its tiers)
+CM.ARMS_MORE = { dagger: [["Stiletto", 3], ["Kris", 7]], blunt: [["Morning Star", 4], ["Maul", 8]], axe: [["Hand Axe", 1], ["Broad Axe", 5]], polearm: [["Spear", 2], ["Glaive", 6], ["Halberd", 9]], staff: [["Ashwood Staff", 2], ["Runed Staff", 7]] };
+CM.weaponClass = (item) => { if (!item) return "fist"; const p = item.props || {}; if (p.bow) return "bow"; if (p.fists) return "fist"; if (p.wclass) return p.wclass; return CM.WEAPON_CLASS_OF[CM.baseIdOf(item)] || "blade"; };
+// who is at home with what (a second calling adds its arms); the Monk's hands are the Monk's
+CM.ARMS_AT_HOME = { Knight: ["blade", "blunt", "axe", "polearm"], Paladin: ["blade", "blunt"], Rogue: ["dagger", "blade"], Ranger: ["bow", "dagger", "blade"], Cleric: ["blunt", "staff"], Mage: ["staff", "dagger"], Druid: ["staff", "blunt"],
+  Bard: ["blade", "dagger"], Monk: ["fist"], Necromancer: ["staff", "dagger"], Artificer: ["blunt", "axe", "polearm"] };
+CM.atHome = (hero, item) => { const c = CM.weaponClass(item); return (CM.ARMS_AT_HOME[hero.cls] || []).includes(c) || (hero.second && (CM.ARMS_AT_HOME[hero.second] || []).includes(c)); };
+CM.CLUMSY = 0.85;                                                        // to hit, with an arm one is not at home with (and no class rule)
+// what a monster is made of: flesh, hide, bone, shell, plate, none (the rules read it)
+CM.HIDE = { "Giant Rat": "hide", Kobold: "hide", Skeleton: "bone", Goblin: "flesh", Zombie: "flesh", Orc: "flesh", Ghoul: "flesh", "Dark Elf": "flesh", Troll: "hide", Wraith: "none", Ogre: "hide", Minotaur: "hide", Gargoyle: "shell", Vampire: "flesh",
+  Demon: "plate", Wyvern: "shell", Drowned: "flesh", "Weed Hag": "flesh", "Fungal Horror": "hide", "Spore Beast": "hide", "Crystal Golem": "shell", "Shard Wisp": "none", "Iron Hound": "plate", "Foundry Imp": "plate", "Bone Colossus": "bone", "Grave Priest": "bone",
+  Rootling: "hide", "Hollow One": "none", Sellsword: "plate", "Hedge Wizard": "flesh" };
+CM.GUARDIAN_HIDE = { rat: "hide", knight: "plate", forge: "plate", queen: "flesh", mind: "hide", tyrant: "shell", master: "plate", patriarch: "bone", root: "hide" };
+CM.hideOf = (m) => (m.guardian ? CM.GUARDIAN_HIDE[m.guardian] : m.boss ? "bone" : CM.HIDE[m.kind || m.name] || "flesh");
+// shields block: a chance by tier that a blow does half; a tower shield blocks for a back-row hero as well
+CM.blockChance = (shield) => (!shield || shield.unknown ? 0 : 0.08 + 0.06 * Math.max(0, CM.SHIELDS.indexOf(CM.baseIdOf(shield))) + (shield.props && shield.props.block ? shield.props.block : 0));
+CM.isTower = (shield) => Boolean(shield) && CM.baseIdOf(shield) === "Tower Shield";
+// armour weight: the heavy are a step late and loud; the light a step early
+CM.weightInit = (h) => { const w = h.armor && h.armor.props && h.armor.props.weight; return w === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate" ? -1 : w === "light" ? 1 : 0; };
