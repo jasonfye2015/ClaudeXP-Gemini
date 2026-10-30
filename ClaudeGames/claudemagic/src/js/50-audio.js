@@ -103,6 +103,7 @@ CM.audio = {
       step_hall: () => this._mix(N(0.07, 0.26, 0.08, 3), this._after(0.11, N(0.07, 0.1, 0.08, 3)), this._after(0.22, N(0.07, 0.04, 0.08, 3))),
       step_cold: () => N(0.05, 0.3, 0.2, 3),
       bump: () => T([[70, 0.12]], "square", 0.2),
+      elite: () => this._mix(T([[196, 0.18], [233, 0.18], [294, 0.3]], "sawtooth", 0.09), this._after(0.02, N(0.12, 0.3, 0.5, 41)), this._after(0.36, N(0.2, 0.25, 0.5, 43))),   // a leader among them: two brass notes and a drum
       chest: () => T([[392, 0.07], [523, 0.07], [659, 0.12]]),
       door: () => this._mix(this._sweep(220, 90, 0.5, "square", 0.05), N(0.5, 0.12, 0.03, 17), this._after(0.45, T([[60, 0.1]], "square", 0.15))),
       unlock: () => this._mix(T([[1400, 0.02]], "square", 0.12), this._after(0.12, T([[900, 0.03]], "square", 0.15)), this._after(0.3, T([[180, 0.08]], "square", 0.12))),
@@ -170,22 +171,26 @@ CM.audio = {
     return b;
   },
 
-  play(name, volume = 1) {
+  play(name, volume = 1, pan = 0, rate = 1) {
     if (!this.ctx || !this.enabled || !this.buffers[name]) return;
     const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
     src.buffer = this.buffers[name];
+    if (rate !== 1) src.playbackRate.value = rate;
     g.gain.value = CM.clamp(volume, 0, 1);
     src.connect(g);
-    g.connect(this.master);
+    if (pan && this.ctx.createStereoPanner) { const p = this.ctx.createStereoPanner(); p.pan.value = CM.clamp(pan, -1, 1); g.connect(p); p.connect(this.master); }
+    else g.connect(this.master);
     src.start();
   },
 
-  // something is coming: its kind's call, louder the nearer it is, not too often
-  near(kind, strength) {
+  // a bark: a kind's call, short and shifted - high and quick for a blow taken, low and slow for its death
+  bark(kind, what) { if (!this.ctx || !this.enabled) return; const now = performance.now(); if (now - (this.lastBark || 0) < 180) return; this.lastBark = now; this.play(CM.roarFor(kind), what === "die" ? 0.5 : 0.22, 0, what === "die" ? 0.7 : 1.5); },
+  // something is coming: its kind's call, louder the nearer it is, not too often - and from the side it is on (pan -1..1)
+  near(kind, strength, pan = 0) {
     const now = performance.now();
     if (now - this.lastNear < 2500) return;
     this.lastNear = now;
-    this.play(CM.roarFor(kind), CM.clamp(strength, 0.1, 0.8));
+    this.play(CM.roarFor(kind), CM.clamp(strength, 0.1, 0.8), pan);
   },
 
   _startAmbient() {

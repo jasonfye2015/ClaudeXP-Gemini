@@ -22,7 +22,7 @@ The dungeon (phase 2 of the big update)
 
 The party (phase 3)
   New Expedition opens the creation screen: four heroes, each named (or given a name by the dice), with one of
-  eight callings - Knight, Paladin, Rogue, Ranger, Cleric, Mage, Druid, Bard - six stats rolled on three dice plus
+  eight callings (eleven, with the three earned - see The party, wider) - Knight, Paladin, Rogue, Ranger, Cleric, Mage, Druid, Bard - six stats rolled on three dice plus
   what the calling brings (Strength, Dexterity, Constitution, Intelligence, Wisdom, Luck; each calling has the stat
   that matters most to it), and a row. Advice on the right says what the party lacks (no one up front, no healer,
   nothing that hits every foe, a low stat worth a reroll); Suggest a party fills in the classic four.
@@ -327,6 +327,995 @@ Endless (phase 8)
   deepen / deepened, fameEndless / sortFameEndless / allFame, endRun's board, slayGuardian's echo (60-game.js); the
   Expedition select, the two boards, the ending (70-ui.js); echoes drawn through (80-main.js); the card (30-art.js).
 
+Foundations (the third big update, phase 0)
+  The save is small. A floor was kept whole - every wall of every floor walked - and a deep run could outgrow what a
+  browser keeps (about 5 MB for everything) without a word. Now a floor is saved as what the party did to it: the doors
+  opened, the chests taken, the monsters moved or slain, the squares seen (as a bitset), and the floor is made again
+  from the seed and the changes laid back over it (25-saves.js: CM.snapshot, CM.floorDelta, CM.restoreFloor). A run
+  a hundred floors deep is a few hundred kilobytes where it was megabytes. Saves carry a schema number (CM.SCHEMA)
+  and a chain of migrations (CM.MIGRATIONS) lifts an older one: a v1.0 save, whole floors and all, loads as it was.
+  If the browser will not keep a save, the game says so in the log, once, and Settings shows how much is saved there.
+  This asks one thing of the generator, kept from here on: a seed makes the same floor in every version. Anything a
+  later version adds to a floor takes its dice from a hash of its own (as the gems, riddles and plates already do),
+  never from the floor's own random. A floor whose fingerprint has changed still loads, with a note in the log.
+  The dice are the seed's. A run's random is seeded from the seed, saved with the run, and reseeded at the start of
+  every fight from the seed, the floor, the fight's number and the step: the same fight, fought the same way, goes the
+  same way - so Today's dungeon is the same dungeon for everyone all the way down, and a reload never re-rolls a fight.
+  (Heroes made on the creation screen still roll their stats on real dice.)
+  The rules are five files instead of one: 60-game.js keeps the class, the events, saving and the stairs; 61-explore.js
+  moving, looking and using; 62-combat.js the fight; 63-camp.js the bag and the camp; 64-meta.js the dungeon's people,
+  growth, achievements, the Hall of Fame and Export / Import. Each adds its methods to CM.Game.prototype.
+  Tests, in the repository: tools/headless.js loads the rules into Node with no screen; tests/run.js checks the build
+  is current, that every floor of many seeds can be finished (to 100, Endless), that a floor and a run survive save
+  and load, that the v1.0 fixtures in tests/fixtures still load, that a full browser is noticed, and that the dice are
+  the seed's; tests/smoke.js opens the built file in Playwright's Chromium, plays, reloads and continues. `npm test`
+  runs both; .github/workflows/test.yml runs them on every push. pack.py --check compares the atlas pixel by pixel
+  now (Pillow's PNG encoder differs between versions).
+  The balance simulator: tools/bot.js is a party that plays by itself - the chests on the way, the key before the
+  door, the lever before the gate, fountains when hurt, fights (healing under a third, casting at a crowd), the
+  class's own stat at every level, the camp's rest and potions, the phylactery on 19 - and tools/sim.js sends it
+  down many seeds at every difficulty and reports where parties fall, how far they get and their level at each camp
+  (node tools/sim.js --seeds 30 --to 50). The fight and the hoard don't change without a look at it.
+  F3 and Settings name the build (CM.built, the day build.py ran); Export carries it.
+
+Quality of life (the third big update, phase 1)
+  The party walks by itself. Click a square on the automap (the small one, or the large one on Tab) and the party
+  walks there over the squares it knows, opening doors on the way, and stops when a band of monsters is three steps
+  off, when something is underfoot (a chest, a fountain, a lever, someone to talk to), when something new comes into
+  view, or when the light fails. Explore (X) walks to the nearest square with an unknown one beside it, and on to the
+  next, until the floor is known as far as the light has reached. Any key or click stops a walk. It never walks into
+  a pit, a known trap or a riddle door by itself.
+  Notes: right-click a square on the automap for a word or two ("key?", "come back") - a flag and the words on the
+  map, kept with the floor.
+  A fight, faster: Auto (A) has the party fight on by itself - healing under a third, a fireball for a crowd, the
+  weakest foe for the blows - until the fight ends or someone drops below half; any key takes the reins back. Under
+  each foe, the odds: how likely the hero whose turn it is is to hit, and the range of the blow; in the casting menu,
+  what each spell is likely to do. Settings has a Combat speed: the bolts and sparks fly at normal speed, fast, or as
+  good as instantly.
+  The pack: pick a thing, and each hero's button says what it would change against what they wear (+2, -1, same,
+  can't - with the reason); Sort the pack puts weapons first, then armour, shields, helms, rings and amulets, the best
+  of each first, and the rest after.
+  Waystones: every camp reached is marked, and from any camp the Waystone leads to another the party has reached -
+  back up to the temple and the smith from deep down, and down again. The floors between stay as they were.
+  In code: pathTo / travelTo / travelStep / explore / frontier / setNote (61-explore.js), autoFight / autoTurn /
+  strikeEstimate / spellEstimate (62-combat.js), reachCamp / waystone / compare / sortBag (63-camp.js); the window
+  steps a walk each frame the view is still and takes an Auto turn each time the bolts have landed (80-main.js);
+  CM.fxSpeed (45-fx.js). The simulator's party fights with the game's own Auto hand now.
+
+Everyone can play (the third big update, phase 7)
+  Settings: Text size (normal, large, larger), Reduce motion (no shaking, no flashes, no washes of colour; on by
+  default where the browser asks for it), High contrast (brighter text, sharper edges, a clear focus ring), and
+  Gamepad: swap A and B. The log is a live region for a screen reader; every button shows its focus. On a phone, the
+  view sits on top, the party two by two, the log short and the buttons as a thumb bar (style.css, the 640px rule).
+  An ailment is always its mark and its name, never a colour alone.
+
+The fight, deeper (the third big update, phase 2)
+  Monsters have a shape. Every kind's health, blows and armour are its own share of the straight line of its level
+  (CM.MONSTER_SHAPES, 10-data.js): a rat is frail and quick, a troll a wall of meat, a gargoyle all armour, an ogre
+  hits like a falling roof. Every kind fears something and shrugs something off - fire for trolls, zombies, the fungal
+  and the rooted; frost for demons, wyverns and the foundry's imps; lightning for the crystal, the iron and the dark
+  elves; holiness for the undead (a vampire doubly) - and some do little from what they are made of (fire does little
+  to a demon or an iron hound, frost to crystal and the drowned). CM.resistance(foe, element) says, for monsters and
+  guardians alike; a flaming, frost or blessed blade reads the same table. Lightning is an element now (storm).
+  The monsters have rows too. Goblins, dark elves, weed hags, shard wisps, foundry imps and grave priests keep to the
+  back row, where a blow from the front must reach past their fellows for half - as the party's own back row does;
+  a Ranger's arrows and every spell reach them whole. The target buttons say who is behind.
+  The guardians show their hand. The turn before one of its great moves, a guardian telegraphs it - the Forge-Warden
+  lifts the hammer, the Drowned Knight's gauntlet opens, the Tyrant begins to ring - in the log and on its target
+  button, so the party can Defend, guard, or strike first.
+  Combos: two things done in order that come to more than their sum, found by doing them and kept in the journal
+  (CM.COMBOS): Shatter (frost on a foe, then Shield Bash: double), Twist the knife (a Rogue's blow on a mocked or
+  marked foe: half again), Kindling (fire on a foe held by thorns or roots: half again), Consecrated strike (Smite
+  under a Blessing: half again), Thunderclap (lightning on a chilled foe: double). Frost leaves a foe chilled two rounds.
+  More ways for the monsters: the Weed Hag mends the most hurt of her fellows; the Crystal Golem wards one (the next
+  blows do half); the Spore Beast tears in two when badly hurt; the Foundry Imp snatches a potion, a scroll or a gem
+  from the pack and bolts with it. Each foe's statuses are on its button with the turns left (asleep 2, held 1, chilled,
+  warded, burning, blinded).
+  The bestiary, in the journal: every kind met and slain, what it does, and what it has been seen to fear or shrug off
+  - learned by hitting it with the element - kept between runs and carried by Export / Import (CM.store "bestiary").
+  The level curve is measured now. The old curve (60 * (L-1)^1.6) was the twenty-floor game's: with fifty floors it
+  ran to level 100 and more by the bottom, and the simulator's parties reached the Root at level 120 without trying.
+  The new one (20 * (L-1) + 8 * (L-1)^2.6) is fitted to the experience a party actually earns fighting its way down:
+  about level 20 on floor 20 and the middle thirties at the bottom - the monsters' own level. Heroes already past that
+  keep their levels.
+
+The hoard, deeper (the third big update, phase 3)
+  Affixes. A found weapon or piece of armour may be fine (one affix, green) or rare (two, blue), from the third and
+  eighth floors down: a prefix - Keen, Heavy, Vicious, Swift, Jolting on a weapon; Sturdy, Warding, Spiked, Quiet on
+  armour - and a suffix: of the Bear, the Fox, the Oak, the Owl, the Saint, of Fortune (+2 to a stat), of Mending
+  (a health a round), of Warding, of Embers, of Rime; below the Lich King the deeper pools open (Thirsting, Lulling,
+  Cruel, Hallowed, Barbed; of the Deep, of the Root, of the Dreamer, of the Dark). An unknown thing shows only its base
+  name until it is known. The affixes come from a hash of the seed, the floor and the chest (CM.affix), so the floors
+  already laid out stay as they were.
+  One unique in every band of five floors, in a chest on one of them (the seed says which), orange, each with a line
+  of its story: Gravewarden, Tidecaller (whatever it cuts sleeps), Anvilheart, the Courtier's Mask, the Queen's Grief,
+  the Sporemother's Finger (it feeds you), Prismshard, the Foundry Master's Gauntlet, the Reliquary Key, First Root.
+  CM.UNIQUES; they are made of the same props as the affixes - crit, stats, regen, lifesteal, sleep, thorns, element.
+  Relic sets: two of the guardians' relics worn by one hero give +2 attack and +2 defence; three or more, and they mend
+  2 a round (CM.RELIC_SET; the sheet says so).
+  The alchemist, at the camp. The monsters of each depth now and then drop something she wants - Grave Moss, Drowned
+  Weed, Forge Soot, Bone Dust, Salt Weed, Spore Cap, Crystal Dust, Foundry Slag, Grave Salt, Root Sap (CM.INGREDIENTS)
+  - and she makes things of it for gold (CM.RECIPES): a Greater Healing Potion (twice the merchant's), Oils of Fire,
+  Rime and Saints (rubbed on a hero's weapon from the pack: the element for three fights), a Firepot (thrown in a fight
+  - Item - fire on every foe), two Antidotes, and the Elixirs of Vigour and Fortune: +1 Constitution or Luck for good,
+  to whoever has least (the Distilled achievement).
+  The smith, extended: Salvage puts a weapon or piece of armour from the pack into the fire for scrap (two from a rare
+  one), and five pieces of scrap stand in for a diamond; Rework the suffix strikes a piece of gear's suffix off and
+  works another in, for a gem of any kind and 100 gold.
+  In code: CM.affix, CM.makeUnique, CM.rarityOf, CM.heroStat (props.stats), CM.gearProp, CM.relicsWorn (20-world.js);
+  the hooks in critChance, endRound, hurt (thorns), strike (an oil, the blade that drinks, the blow that lulls),
+  useItemInBattle (the firepot), wonFight (the band's ingredient, the oil wearing) (62-combat.js); recipeLacks / brew,
+  salvage, smith("reroll"), give (an oil) (63-camp.js); the Alchemist dialog, the smith's new rows, the rarity colours
+  (70-ui.js); the new glyphs (36-looks.js).
+
+The dungeon, stranger (the third big update, phase 5)
+  Choices on the floor. A third of the floors have something to decide on (CM.EVENTS, placed by the seed): a shrine
+  that wants blood (+1 Strength for a fifth of the front hero's health), someone in chains (a rescued adventurer, or a
+  ghoul), a dice table, a fountain that runs black (+2 to a stat, and a curse), an old camp fire (a third of everyone's
+  health, and perhaps company), a dead merchant (his purse, or his burial), a whispering box (the whole floor, perhaps
+  a curse), a rats' nest (burn it with a torch, or rummage), a statue (a blessing on the next fight, or its hand - a
+  boon, or the stone's gaze), a dropped pack (something fine, or a trap), a still pool (every ailment washed off; the
+  Deep's pools have something in them), a hermit's grave (a tome, or the hermit). Space asks; 1-3 answer.
+  The Deep's bands have their hazards (CM.HAZARDS): the Drowned Town's tide turns every thirty steps - at high tide
+  torches burn double and the Drowned are quick; spore clouds in the Fungal Deep's ways poison the front row as often
+  as not; in the Crystal Caverns the mirror walls throw a Magic Missile, a fire bolt or lightning onto a second foe
+  for half; the Foundry's vents breathe fire on every third step; the Ossuary's bone piles stand up as you pass. A
+  hazard is named when its band is first entered, and drawn on the automap once met; the party walking by itself
+  goes round the known ones.
+  Strongboxes: a heavy key on one floor (stamped with a number) opens an iron strongbox bolted to the floor two floors
+  down - its gold and a rare thing (the Keyholder achievement). The box never lacks its key, nor the key its box.
+  A peddler, now and then, on a floor: Space, and he lays out a cloth - a rare weapon or armour, a Greater Healing
+  Potion, an oil, a Scroll of Mapping, an ingredient - at a peddler's prices. What you buy stays bought.
+  A rival party, now and then: trade for their map of the floor (40 gold), challenge them for the floor (two
+  Sellswords and a Hedge Wizard, at the depth's level; win, and their purse and their best thing are yours - the
+  Unrivalled achievement), or let them be (they may leave a potion for the road).
+  In code: the placing at the end of makeFloor by hashes of the seed (20-world.js); askEvent / choose, openStrongbox,
+  peddle, meetRivals / chooseRivals, the hazards in arrive and the tide in move (61-explore.js); rebound, the blessing
+  prayed for, the rivals' purse (62-combat.js); the choice dialog (70-ui.js). The floor's fingerprint (CM.floorPrint)
+  no longer counts the chests and monsters, so a later version may add to a floor by its own hashes without a saved
+  run noticing. New set pieces are left for a generator version: they would move the floors already laid out.
+
+The party, wider (the third big update, phase 4)
+  Three callings more, earned (the title's list shows them greyed with what earns them; the creation screen offers
+  them once they are; the recruits and the rescued are still the eight):
+    Monk         earned by Unfallen (the Lich King slain with no hero ever fallen). Fights with bare hands that grow
+                 with every level (a Monk wears no weapon and no shield), is quick, and hard to hit. Flurry of Blows
+                 (two blows at three fifths), Iron Palm (a blow that may leave the foe reeling), Still Mind (a quarter
+                 of their health back and the small ailments gone, once a fight). Paths: Drunken Master (Sway, Counter,
+                 Untouchable) and Iron Body (Iron Body, Iron Fists, Diamond Body).
+    Necromancer  earned by slaying the Bone Patriarch. Drain (the life pulled out of a foe, half of it kept), Hex
+                 (marked and half-blind), Raise Thrall (the last thing slain stands up on your side: it takes three
+                 blows in four meant for the party and claws back each round), Death Pact (every foe withers, the
+                 Necromancer bleeds). Paths: Lich-touched (Deep Drain, Thrall Unbound, Undying) and Hexer (Binding Hex,
+                 Open Wound, Contagion).
+    Artificer    earned by slaying the Foundry Master. Clockwork Turret (shoots a foe every round, once a fight), Ward
+                 Engine (Protection), Oil the Gears (+3 speed for everyone), Firework (fire on every foe). Paths:
+                 Siege Engineer (Scattershot, Twin Barrels, Bombard) and Tinkerer (Bulwark Engine, Medic Engine,
+                 Overclock).
+  The third tier: every path has a capstone at level 15 (CM.PATH_AT = [5, 10, 15]). Immovable, Executioner, Avenger,
+  Sanctified, Shadowstep, Light Fingers, Piercing, Foresight, Benediction, Holy Fire, Immolation, Mana Well, Old Growth,
+  Hurricane, Anthem, Last Laugh - and the new callings' own. The sheet says what each is and when it comes.
+  Bonds: two heroes who have won forty fights side by side (CM.BOND_FIGHTS) are old friends: +1 attack and +1 defence
+  each, heals between them a quarter kinder, and when one falls the other's next blow is doubled. One bond a hero;
+  the sheet names it; the Old Friends achievement. At the camp's fire, old friends have a word for each other now and
+  then (CM.BANTER). A bond ends at the grave.
+  The memorial: a hero laid to rest at a camp fire (the tavern's recruit, or a rescued adventurer, taking their place)
+  is written into the title's In memoriam - name, calling, level, floor, seed, date - kept between runs and carried by
+  Export / Import (CM.store "memorial").
+  In code: CM.CLASSES (three more), CM.ALL_CLASSES / CM.NEW_CLASSES / CM.CLASS_UNLOCK, the abilities, the paths and
+  every t3 (10-data.js); game.classUnlocked / classesAvailable / remember2 (60-game.js); dodgeOf, enginesAct (the
+  turret and the thrall at the round's end), bondOf / foughtTogether / applyBonds and the capstones' hooks through
+  the fight (62-combat.js); the fists in CM.recompute and CM.cantWear (20-world.js); the portraits and paper dolls
+  (30-art.js, 36-looks.js).
+
+The look, and the sound (the third big update, phase 6)
+  Render scale, in Settings: Full, Three quarters, Half - or Auto, which steps down a notch when frames have come late
+  for two seconds and back up when they have come quick for ten (renderer.scale, 40-render.js; autoScale, 80-main.js).
+  The monsters breathe where they stand, on the floor and in a fight (not with Reduce motion on). A guardian rises
+  under its name: a title card across the view - the Forge-Warden, in The Forge - with a push of the camera. A leader
+  among a band of monsters gets a stinger as the fight begins (the "elite" sound). The depth's tune gains a voice past
+  the middle of its band - an echo an octave up - and a fifth under the melody on the band's last floor
+  (CM.music.setDepth). A monster's call comes from the side it is on: the game says which way, and the sound is panned
+  (StereoPanner, 50-audio.js).
+  Left for a generator version: per-pixel lit stone wants ambientCG's normal and roughness maps, and only the colour
+  maps were gathered into src/art - pack.py --gather on the machine with the full sets is the first step.
+
+Around the game (the third big update, phase 8)
+  Run codes: a run's end writes a code - CM1:seed:difficulty:expedition:kit:party - into its Hall of Fame entry and
+  onto the summary card. Paste one into the seed box and New Expedition sets out with that seed, that party (names,
+  stats and rows), that difficulty and that kit; Play this run, in a Hall of Fame entry's details, does the same.
+  This week's challenge: the button beside Today's sets this week's seed (weekly-YYYY-WW, by the ISO week): one seed
+  for everyone all week, three mutators from it, and a party the seed rolls - the creation screen locks the four. The
+  Hall of Fame has a This week board: every run on the week's seed, from both boards.
+  Three mutators more: Glass Cannon (every blow does double, theirs and yours), Pilgrim (no experience from fights;
+  every floor first set foot on gives 60 experience a floor), Hunted (every band of monsters knows where you are).
+  The remains of a fallen party: when a party falls, where it fell on which floor of which seed is kept (CM.store
+  "fallen", through Export / Import); a later run on that seed finds their bones there - the names, the date, and one
+  thing they carried, to take up. The dungeon remembers.
+  Backup: Export / Import has Download (the export as a .json file) and takes a dropped file.
+
+Balance, as measured (tools/sim.js, 20 seeds a difficulty, the classic four, the Pauper's kit, the bot's hand)
+  Gentle: 17 of 20 parties reach the bottom; Fair: half the parties take the crown, 4 of 20 reach the bottom, most
+  of the rest fall in the Palace (floors 16-20: the demons' breath) or the Ossuary; Grim: no party past floor 20 -
+  the Lich King ends them all. Party level at the camps tracks the floor (6 at 5, 11 at 10, 25 at 25, 38 at 45).
+  Run it after any change to the fight or the hoard.
+
+A generator that can grow (the fourth big update, phase 0 - v2.1)
+  Generator versions. The floors of every run begun before v2.1 come from generator 1 (21-gen1.js), frozen: the file
+  is never edited again, and tests/fixtures/gen1.json holds the fingerprints of twenty-eight seeds' floors for the
+  tests to check. New runs come from generator 2 (22-gen2.js), which carves as the first did but decides what a floor
+  holds first, as a plan (CM.planFloor: the set pieces and their order, the plain rooms to try) - the door for new
+  rooms and wings. A run keeps the generator it began with (run.gen; CM.makeFloor(number, seed, gen)); what every
+  generator's floor gets afterwards, by hashes - gems, affixes, uniques, events, strongboxes, the peddler, rivals,
+  hazards - is CM.furnish, shared.
+  The log. Every choice the player makes - a step, a turn, Space, a fight's command, a purchase, a brew, an answer -
+  goes down as a line (game.logAct), with the moments the monsters move (a tick), and is saved with the run packed
+  (CM.packLog: a character a step). CM.replayRun(spec) plays a run again from its seed and its log and comes out the
+  same, step for step; the tests prove it on the bot's runs. The viewer that watches one is phase 7's.
+  The window is seven files now: 70-ui.js (the frame, the dialogs, the sheet), 71-title.js, 72-create.js,
+  73-play.js, 74-fight.js, 75-bag.js, 76-camp.js, each adding to CM.UI.prototype.
+  The bot plays the whole game: the safe answer at every event, strongboxes with their keys, the peddler, the
+  alchemist's oils and greater potions, oils on the front line before a guardian. The simulator reports where the
+  gold went and which spells the bot never used (a mechanic nobody uses is a mechanic to cut or fix); the tally
+  counts both (tally.spent, tally.abilities).
+
+The eleven finished, and the ground of a fight (the fourth big update, phase 1 - v2.2)
+  The three earned callings, native: a fists icon for the Monk; the Heir's kit and the smith's work count double on
+  the fists; tomes of Hexes and of Engines for any caster; the tavern's recruits may be of an earned calling; the
+  advice knows an Artificer or a Necromancer hits every foe. (Pixel dolls of their own want the full Crawl set:
+  pack.py --gather on the machine with it.)
+  The ground of a fight (CM.TERRAIN; a line under the round counter says which): knee-deep in water (the Vaults' and
+  the Drowned Town's floors, a flooded floor, high tide, the Drowned Hall) frost holds every foe it touches and fire
+  does half; over a vent the heat sears the back row every round; among a lair's pillars only two foes can come at
+  you at once; in a magical dark every blow, theirs and yours, may go wide.
+  Formations (CM.FORMATIONS; on any hero's sheet, out of a fight): Line, as ever; Wedge - one hero at the point takes
+  every blow that isn't a shot, with +2 defence, and everyone else hits for full from wherever they stand; Loose - a
+  breath, a slam or a cold on everyone does half, blows do a little less, spells cost one more. Saved with the run.
+  Second forms for the shallow guardians, at a third of their strength (form2 in CM.GUARDIANS): the Rat King hides in
+  the heap and the swarm is the fight until it thins; the Drowned Knight floods the whole hall (water underfoot for
+  the rest of the fight) and comes every other turn; the Forge-Warden's hammer breaks, its heat doubles and so does
+  its fury. (An echo of a guardian has no second form.)
+  Leaders with affixes of their own, for runs begun from v2.2 (CM.ELITES_MORE, generator 2 only): Shielded (warded
+  every round), Mirrored (a spell on it does half, and a quarter comes back on the caster), Spectral (half of every
+  blow passes through it).
+
+Magic with decisions in it (the fourth big update, phase 2 - v2.3)
+  Overcasting: every spell on the casting menu has x2 and x3 beside it - twice the cost for half again the effect,
+  three times for double, and a triple cast may bite back (the caster burns a tenth of their health, one time in
+  two). CM.OVERCAST; act("cast", {id, target, power}).
+  Weaving (CM.WEAVES; the journal keeps them): two casters in one round make one spell. Fire Bolt and Frost are
+  Steam (every foe blinded and scalded); Fireball and Lightning a Firestorm (the fire through every foe again, and
+  they burn); Heal and Bless a Sanctuary (every foe held a round, the party mended); Sleep and Hex a Nightmare (every
+  sleeping foe torn by its dream); two Magic Missiles a Barrage; Thorns and Entangle a Bramble (every foe held two
+  rounds). The first holds, the second matches, either order; the Weaver achievement.
+  Reagents (CM.REAGENTS): the alchemist's ingredients have a second use, one with a spell, from the pack - a spore
+  cap with Sleep lasts the fight, crystal dust splits a Magic Missile onto a second foe, grave salt with Turn Undead
+  routs them all, soot or slag puts half again into fire, weed into Frost holds every foe, bone dust doubles a Smite,
+  grave moss puts half again into a mending, root sap doubles the party's mending from Thorns or Regrowth. The
+  casting menu shows "+ reagent" when one is in the pack.
+  Spell levels: a tome of a spell the reader already knows is not refused - it raises the spell a level (a quarter
+  more, one less to cast), to three (CM.SPELL_LEVELS). The sheet lists the spells deepened.
+  Familiars (CM.FAMILIARS): at level 6 a Mage's sheet offers a cat (finds a hidden door beside you as you pass), an
+  owl (sees in a magical dark) or a toad (eats one ailment off the party on every new floor); a Necromancer's skull
+  comes by itself and bites a foe at the start of every round.
+
+The surface (the fourth big update, phase 3 - v2.4)
+  Renown. Every run brings some home - its floors (to fifty), five a guardian, fifty for the crown, a hundred for the
+  bottom, twenty a title earned, thirty on the week's seed; half again on Grim, a little less on Gentle (CM.renownFor;
+  the ending says). Renown never buys a blow in the dungeon.
+  The Village (the title's button): four buildings, four levels each, bought with renown (CM.VILLAGE, 65-village.js):
+    The Guildhall       a hero who comes home may retire at the run's end as a trainer (one a calling, one a run): every
+                        new hero of that calling sets out with the trainer's first boon. Level 2: the vault holds three;
+                        3: the tavern's third recruit is someone the party rescued in a run before; 4: the vault holds five.
+    The Merchant's House  the camps' merchant stocks Greater Healing Potions; 2: an oil of each kind; 3: one rare
+                        thing a camp; 4: everything a fifth cheaper.
+    The Library         scholarship: every kind fully learned (met and slain three times, a weakness found) takes 1%
+                        more from every blow, then 2%, then 3%; 4: the library knows every kind's weakness the moment it
+                        is met.
+    The Shrine of the Fallen  light a candle for a hero on the memorial (10 renown; 5 at level 2): what they were
+                        buried with - the better of their weapon and armour - comes up to the vault; 3: the memorial
+                        keeps sixty names; 4: a hero remembered may come back to the tavern as a recruit, once, free.
+  Contracts: three a week from the week's seed (CM.CONTRACTS), checked at a run's end, renown each: steel alone (the
+  Forge-Warden with no healer), the grim dozen, the alchemist's errand, no time to lose, dry, unbroken, the hoard, old
+  friends deep down, three weaves, empty hands.
+  The vault is slots now (game.vaults; an old single vault carries over): leave more than it holds and the oldest
+  comes back to the pack.
+
+The difficulty ladder (the fourth big update, phase 5 - v2.5)
+  Hard, between Fair and Grim: monsters a sixth tougher and a little harder-hitting. On Grim the Lich King's deathly
+  cold comes every third turn, not every second: a wall with a door in it.
+  Ascension. Slay the Lich King on Fair or above and the next run may carry one rule more; each crown opens the next
+  rung, to fifteen (CM.ASCENSION; the creation screen's Ascension select; the run's start and its Hall of Fame row
+  name the rung): Lean camps (a bedroll costs 40), Dry fountains (half are dry), Hardened (+5% health), Leaders
+  (every band from the third floor down has one), Hungry dark (torches half again as fast), Costly temple (prices
+  doubled), Poor veins (a fifth less gold), Deeper hurts (poison bites double), No greater potions, Watchful (the
+  party never has the drop on them), Keen blades (+10% attack), No mercy (the guardians' second forms from the first
+  blow), Thick skins (+10% health again), The king's guard (the Lich King begins with two skeletons up), Ironbound
+  (a fallen hero rises only at the temple). A run code carries the rung (:A7). The Ascended achievement at rung 5.
+  Iron: a run saved only at the camps (and at the top of the stair) - a closed window between them loses the floors
+  since. The Hall of Fame marks it; the Iron Will achievement for a crown on Iron. A run code carries it (:A0i).
+  The simulator's ladder report: node tools/sim.js --difficulty fair --ascension 0,5,10,15 runs each rung and reports
+  survival by it, so each rung is a measured step and not a cliff.
+
+The dungeon, branched (the fourth big update, phase 4 - v2.6; generator 2, so runs begun from v2.1)
+  Wings. One floor a band has a second stair, narrower, into a short floor of the band's own (CM.WINGS): the Sewers
+  under the Catacombs, the Cistern, the Mines, the Crypts, the Drowned Market, the Spore Cellars, the Crystal Seam,
+  the Slag Pits, the Charnel Pit, the Root Cellar - a smell at the top of the stair says which. A wing has its own
+  hazard, chests a third richer, no people and no way on but its last stair, which comes out on the main stair a
+  floor below; the wing stair goes back up. Floors are numbered beside their floor (7.5) and saved like any.
+  Secret stairs. Once a band, a wall beside a corridor hides a stair (search it: Space before the wall) to a hidden
+  floor, richer still - the Sexton's Cellar, the Dwarves' Vault, the Lich King's Wine Cellar, the Dreamer's Bed...:
+  one band of monsters, every chest two and a half times the gold and a rare thing in each. Two achievements.
+  New set pieces, through the planner (CM.TEMPLATES2): a Great Hall with pillars and a band that waits, a Drowned
+  Chapel, a Charnel Pit of pits and dark, a Crystal Gallery behind a secret door. Generator 1's floors are untouched.
+  The dungeon changes behind you: every hundred and fifty steps, now and then, a door you left shut on a floor
+  above swings open - or, once a run, a peddler sets up by a fountain there. The log says so.
+  Awakened. Once the bottom has been reached, the creation screen's Expedition offers an Awakened run on any seed:
+  every floor is the mirror of itself (CM.mirrorFloor), the monsters a band deeper (CM.AWAKENED), the uniques awake
+  (a second power in each: ", Awake"). The Hall of Fame marks it; the Awakened achievement for its crown. The tenth
+  band under the Root is left for a later version: a band is a band's worth of art and lore.
+
+Expanded systems in play (the fourth big update, phase 6 - v2.7)
+  Morale: the party's temper, from 0 to 100, said as a word under the automap (CM.MORALE: Broken, Shaken, Uneasy,
+  Steady, High). High, blows land a little more often; Shaken or Broken, a hero may freeze a turn. A victory lifts it
+  (a guardian's more), a bond, the camp fire, a Bard's song, a chest; a hero falling, a flight, a curse and hunger
+  wear it down. Saved with the run.
+  Two slots more: boots (speed in the fight's order; some are silent - the party is never surprised - or keep dry feet
+  in the water) and cloaks (warding; some hooded against the dark's surprises). Generator 2's chests hold them. The
+  sheet has the slots.
+  Quirks at creation (CM.QUIRKS; a select under each hero's calling): Nightsighted, Greedy, Pious, Stubborn, Lucky,
+  Sickly, Hardy, Quiet - a small, honest trade-off each, carried in run codes. The week's party has none.
+  Hunger, lightly (CM.HUNGER): three hundred steps without a ration and the party is hungry (morale wears), six
+  hundred and Weary (every blow does less). Rations: the merchant sells them, the alchemist makes three of moss, weed
+  or sap; the camp fire feeds everyone; any hero eats from the pack for all. No one starves.
+  A second calling: with a guildhall of the second level, a hero at level twenty takes a second calling at a camp
+  (Guild, at the camp) for 200 renown: its first two spells or skills are theirs for good, and a little magic with
+  them if the calling casts. The sheet names it.
+  The ladder, measured (10 seeds, Fair, the bot): A0 and A5 much alike (half the parties take the crown), A10 a wall at
+  the Lich King - so the rungs were reordered: the costly temple and deeper hurts come before keen blades and the
+  guardians' second forms, which now sit at 11 and 12.
+
+Replays, ghosts and the film of a run (the fourth big update, phase 7 - v2.8)
+  Films. Every run's end keeps its film - the seed, the party, the rung and the log - the last six (CM.store "films").
+  Films, on the title, lists them: Watch plays one in the real view, on the game itself - the walk, the fights, the
+  choices - with a bar over the view: Pause, 1x / 4x / 16x, Next fight, Next floor, Stop (Esc; Space pauses). Nothing
+  of a film is saved; the player's own runs are where they were when it stops. A Hall of Fame entry's details offer
+  Watch the film while the film is kept.
+  Share a run as a film code: CM2: and the run (Copy the code, in Films; the summary card carries it too). Paste one
+  into Films and Watch plays anyone's run - the same dungeon, the same dice, the same choices (CM.filmCode,
+  CM.parseFilm; the log packed, a character a step).
+  Racing a ghost: a run leaves a trail - each floor and the step it was first set foot on - in its Hall of Fame entry.
+  A later run on the same seed hears, at every stair, when the best run on that seed took it, and whether it is ahead
+  or behind. The weekly's seed is everyone's, so the week's board is a race.
+  Clips: Record a clip, in the pause menu, saves ten seconds of the view as a .webm, where the browser can (the
+  canvas's stream and MediaRecorder).
+
+Sound and sight, again (the fourth big update, phase 8 - v2.9)
+  Two frames more for every monster of the Drawn theme, painted in code from the same picture under a different hand
+  (CM.art.monster(m, big, pose)): the weight on the other foot as it breathes, and a lean-in as it strikes. The Pixel
+  theme's tiles stand still, as tiles do.
+  The battle tune in layers, by danger (CM.music.setDanger): drums and the pad while the party is whole, the lead
+  joins when someone is under half, the pad drops out when a hero has fallen; a guardian's second form shifts the
+  tune up three semitones (CM.music.shift) until the fight ends.
+  Barks (CM.audio.bark): a monster's call, short and high when it is struck, low and slow when it dies.
+  A camera pass (40-render.js: zoomTo, rollTo): a push-in when a guardian telegraphs its move, a pull-back on the
+  crown, a slow tilt on the ending when the party has fallen. Not with Reduce motion on.
+  Lit stone is deferred again: ambientCG's normal and roughness maps are not in src/art (pack.py --gather on the
+  machine with the full sets is the first step).
+  The ladder, measured again at ten seeds a rung (Fair): too few seeds to rank the middle rungs - the dice of every
+  run change with any rule, and five crowns against three is noise - but Ascension 15 is plainly the hardest (one
+  crown in ten). Thirty seeds a rung is the number to decide by; node tools/sim.js --seeds 30 --ascension 0,5,10,15.
+
+Around the game, again (the fourth big update, phase 9 - v3.0)
+  Install as an app: build.py writes manifest.webmanifest, sw.js and icon.svg beside the game's file. Served by any
+  web server (python -m http.server in game\ will do), the page offers Install on the title's foot; installed, it
+  opens from its own icon and plays without the network (the worker keeps the file). Opened from disk nothing of
+  this is asked for; the file alone is still the whole game.
+  A save as a link (Export / Import > Link; Films > Link): the export deflated and written after #save= (a film
+  after #film=), stored nowhere but in the link. Opening such a link asks before importing or watching
+  (CM.toLink, CM.fromLink, CM.linkPayload).
+  The gamepad, remappable (Keys > Gamepad): every button but the d-pad and the stick can be set, the way the keys
+  are (settings.pad, CM.DEFAULT_PAD, CM.PAD_ACTIONS); Swap A and B still works on top. A handheld layout (Settings;
+  Auto picks it on a Steam Deck's shape, 1280 by 800 with a touch screen): thumb-sized buttons and larger text.
+  Statistics (the title's foot): every expedition that ended is one short line in a ledger (CM.ledgerLine, up to
+  600; the runs from before are read back from the Hall of Fame, without their numbers) and CM.statistics sums
+  them - where parties fell by band, the callings and how they fared, gold and where it went, by difficulty. The
+  ledger rides in Export / Import and merges without doubling.
+  Text as data, begun: 12-text.js holds CM.TEXT and CM.t(key, vars); the new screens are written through it. The
+  older strings move as they are touched; no translation is shipped.
+
+The spine of the story (the fifth big update, phase 0 - v3.1)
+  LORE.md is the canon: the timeline of Caer Duin, its people, the lies the upper carvings tell and where the
+  truth is cut. 13-lore.js holds every line of story keyed and in chapters (CM.LORE_TEXT, CM.CHAPTERS); the old
+  arrays are views over it, so the generators and the riddles read what they read. Each of the fifty carvings has
+  two tellings - the same fact in another hand - and a seed picks one (CM.telling). A run keeps what it has read by
+  key (game.story, saved; an older save is read back from its journal), and the journal's second page is the codex:
+  chapter by chapter, the unread as blank lines, a lie struck through once the deeper line that corrects it is read.
+  The bot reads the walls it passes. Reading every band's chapter in one run is the Chronicler.
+
+The people of Caer Duin (the fifth big update, phase 1 - v3.2)
+  Twelve ghosts (CM.PEOPLE: the six, and Marguerite the fishwife, Brokk who wrote GO ROUND, Hesta of the forges,
+  Lady Maren who still sits, Master Hollis the physician, Orrin Vale who was not from the east), each met three
+  times going down - a word, a word more, and at the third a request: bones, vengeance, a story read to them, the
+  bell (dropped on the fourth floor; Brother Cael rings it on the forty-first, and something far below moves), or a
+  witness (read the deeper wall that concerns them and come back). Met in an earlier run, they remember. Placed by
+  hash on their floors (never a guardian's), last in CM.furnish so nothing older moves.
+  Your own dead: on a seed where a party of yours fell, the hero with the most levels stands over the remains, says
+  one of a dozen lines, and wants their bones; laid to rest, a candle burns for them at the shrine for nothing.
+  The hermit tells a chapter back once all but one of its lines is read - the epigraph, then the truth under it
+  (CM.CHAPTER_TRUTH) - and the codex counts the chapter whole; with nothing to name, he points at the unread wall.
+  The lost adventurer may be a hero of yours who fell shallower on any seed, found alive after all (the name only).
+  Talk dialogs can run to a second line (More). Titles: Bell-ringer, the Witness, the Faithful.
+
+The guardians speak (the fifth big update, phase 2 - v3.3)
+  Every guardian speaks first at the door of its lair (CM.PARLEY): Fight; Speak - three exchanges, two answers each,
+  and the fight comes on the party's terms (all three right: its company goes and it is shaken; none: enraged); or,
+  when the party holds what it wants, a way through without a blow - rations for the Rat King, the dwarves' word
+  for the Forge-Warden, Marguerite's testimony for the Queen, the dwarf's warning for the Mind, GO ROUND for the
+  Tyrant, Hesta's name for the Forge Master, a holy thing for the Patriarch, and for the Drowned Knight the truth
+  from the town below him (a return). The Root wants nothing you have, yet. Passed by speech a guardian is not
+  slain: no trophy, no experience, half the gold, but its relic is left behind and the shaft is open; three of them
+  make the Soft-Spoken, and renown counts them. A death speech each, another if it was spoken to. The lair after:
+  the water drains, the embers go out, and its carving speaks in the past tense (ga:<id>). Every word is logged
+  (game.parley), so films carry the talk. The bot takes an open gate, else it fights. game.mapAll is a second
+  logged cheat for the tests, beside warp.
+
+The court of the Lich King (the fifth big update, phase 3 - v3.4)
+  The seated dead of floors 16-19 (CM.COURT: the Chancellor, the Master Mason, the Captain's Widow, a Lady-in-
+  Waiting, the Physician's Body) speak when stood before; each is a line of the Palace's chapter. The heart hunt:
+  the Chancellor's word, the wall on the eighteenth floor and the physician's page (in one of the palace's chests;
+  read it from the pack) together mark the phylactery on the map of the floor above the throne room before it is
+  seen (CM.HEART_CLUES).
+  The quiet ending: with the Palace's five carvings read and the heart smashed, the king's door offers Remind him -
+  five things he has forgotten (CM.REMIND: her name, the bells, the twelfth year, the box, the heart), each wanting
+  a line the party has read; any gap and he draws. All five, and Mordeth sets the crown down himself: crowned
+  without a blow, the Merciful, and the Deep still open below (entry.reminded; the ending and the summary say so).
+
+The village has people (the fifth big update, phase 5 - v3.5)
+  Three villagers (CM.VILLAGERS), each in a building once it stands: Wren the chronicler at the library shows the
+  codex, pays renown at a run's end for every chapter completed - twenty, forty for the Deep's, once each - and
+  sells rumours (CM.RUMOURS, 15 renown) that bind to the next seed begun and that CM.furnish keeps: a ghost who
+  wants its bones, a hermit, the other telling of a floor's carving. Father Osric at the shrine says three names
+  of the memorial a visit, with their epitaphs, and tells the Patriarch's history in five parts as the shrine is
+  built. Dunmore the keeper's trainers say how they came home, one line a calling.
+  The Book of Caer Duin (CM.chronicle): every crowned party of this browser's as a chronicle entry, in the
+  carvings' voice; and the dungeon writes it back - near the surface, a legend of one of your own parties, carved
+  in a newer hand (CM.legends). The village's own chapter of the codex opens a line at a time as renown is spent.
+
+Heroes with pasts (the fifth big update, phase 6 - v3.6)
+  Six origins at creation (CM.ORIGINS): of Caer Duin (the Catacombs' first line known at the stair), dwarf-friend
+  (a dwarves' mark read gives the way down too), from the east (twenty gold), of the Patriarch's order (no curse
+  takes hold), of the lower town (the party wades dry-shod), nobody from nowhere (+1 Luck). Each speaks at the
+  walls that concern it, once a run, and the word goes in the journal (game.originLines).
+  Banter by situation (CM.BANTER2, forty lines: the camp, after a guardian, at a carving, on a flooded floor, with
+  a hero down), for the bonded pair or two who stand, never in a fight; a long bond's running joke (CM.JOKES).
+  Last words (CM.lastWords: by origin, by calling, by the band) for every hero laid to rest when the party falls -
+  they all are, now, so the memorial and your own dead agree; an epitaph (the shrine, sixty characters) that the
+  priest and the hero's ghost repeat. A trainer's word to every new hero of their calling at the stair.
+
+The telling (the fifth big update, phase 7 - v3.7)
+  A wall read opens a reading view: the carving large, in the hand that cut it (CM.handOf: a chisel, dwarf runes,
+  a child's chalk, a priest's small capitals, a scratch - four hands and the plain one, as CSS), a word at a time
+  at reading speed; Space shows it all; Reduce motion (or instant combat speed) shows it at once. Chapter cards:
+  the band's epigraph on its first floor, and on its last a word that the walls below will differ. The camp fire
+  tells the day: at a rest one hero tells a wall read this band and another answers (game.campTale). The ending as
+  a page: the chapters the party completed are its paragraphs, the rest blank lines, under the ending's text,
+  and Save the page (PNG) draws it (CM.endingPage). Three leitmotifs in code (CM.music.motif): the bell, the
+  queen's song, the Root's one note, played when a line that concerns them is read or heard (CM.MOTIFS).
+
+Around the story (the fifth big update, phase 8 - v3.8)
+  The Scholar's kit (floor 8 reached): the Catacombs' chapter known at the stair and a tome in the pack. Four
+  contracts with story in them (the bell on Grim, the Drowned Knight passed by speech, one of your own laid to
+  rest, three chapters in a run). The titles of the update, together: the Chronicler, the Soft-Spoken, the
+  Merciful, the Witness, Bell-ringer, the Faithful. node tools/sim.js --story reports lines read a run, chapters
+  completed, guardians spoken past, the bell rung and the king reminded, by difficulty; node tools/words.js prints
+  the story's budget by chapter and counts the long strings still in the code. The film bar names the scene
+  (a parley, a word with someone, a choice).
+  Measured (six seeds, Fair, to floor 25, --story): the bot reads about fifty lines a run, completes the Catacombs
+  and the Vaults every time and the Halls most times, and passes the Forge-Warden by the dwarves' word in five of
+  six runs - the gates are open to a party that reads, as meant; it never rings the bell (it does not carry one
+  thing forty floors for a ghost), so that gate is a player's.
+
+The Root, and the three endings (the fifth big update, phase 4 - v4.0)
+  Below the Ossuary the carvings are the Root's own voice, and it knows the party: a line is added to each from the
+  names, the dead, the origins and the ledger (CM.rootAddress; the journal keeps the wall's own words). An
+  Awakened party hears one thing more.
+  Three endings at the bottom. The Root beaten, the party chooses (logged: game.ending): wake it and end it - what
+  always happened; or leave it to dream - the village prospers (100 renown, the merchants a fifth cheaper for
+  good), the codex gains a chapter (The dream, again), and the king is on his throne when the next party comes:
+  this is what Awakened was, named and chosen. The third is at the Root's door, not after a fight: with the crown,
+  the Root's five carvings read and the Merciful earned on some run before, give it the crown - and the Other
+  Dream opens. The Hall of Fame marks all three as the bottom (entry.left, entry.dreamed); the titles are the
+  Forbearing and the Dreamer; a window closed over the beaten Root asks again when the run is continued.
+  The Other Dream (a mode, once the Dreamer is earned): the same seed and the same floors, not mirrored, with the
+  Awakened numbers - and the walls say what Caer Duin might have been (CM.DREAM: fifty lines, ten band names, the
+  guardians as they were in life: Captain Aldred, Queen Aelith, the First Father), in warmer stone.
+
+The ledger of things (the sixth big update, phase 0 - v4.1)
+  14-items.js: every base a thing can be, by id (CM.BASES - the old lists' names, which were already ids), and a
+  name derived from what a thing is made of (CM.itemName: prefix, element, base, suffix, plus; the smith's work
+  keeps the affix words now). Saves are schema 3: every item carries its base and where it was found
+  (item.found: the floor and how - a chest, a slain foe, a strongbox, a ghost, the vault, the merchant...), and
+  the bag's card says so (CM.itemCard). The journal's third page is the compendium: every kind of thing, by group,
+  the unseen as outlines; an unknown thing counts once it is named; all of them is the Collector. The bag has
+  filters (All, Gear, Drink, Read, Stuff). The game's own Auto - and so the bot - uses the pack in a fight: a
+  firepot or a scroll of fire on a crowd, a wand of fire on a leader, a wand of sleep on three; the bot equips the
+  better thing as it is found. node tools/sim.js --loot reports gold found and spent, things by rarity, what was
+  used and the floors to the first upgrade of each slot. Measured (four seeds, Fair, to floor 20): about 60,000
+  gold found a run and 9,000 spent; 260 common things found, 15 fine, 3 rare; the first better weapon by floor 2,
+  armour by 4, a shield by 12; wands and scrolls now used in every run. The numbers Phase 8 will be judged against.
+
+Weapons and armour with character (the sixth big update, phase 1 - v4.2)
+  Every weapon has a class with one rule (CM.WEAPON_CLASSES, read in strike): blades a sixth more against flesh;
+  blunt arms ignore a third of bone, shell, plate and the undead's defence and never find a weak spot; axes cleave
+  into a second foe of the row for half, and bite hide; polearms strike at full from the back row and are cramped
+  in the front; daggers are two steps quicker, find weak spots a tenth more and strike them for three times, at
+  two thirds of a blow; staves are half a blow and +1 to every spell (one more every four tiers); bows and fists as
+  they were. Eleven arms more (a Stiletto, a Spear, a Maul, a Halberd...) come up a third of the time, by the
+  draws the generators already made, so no floor moved. Every calling is at home with two or three classes
+  (CM.ARMS_AT_HOME; a second calling adds its own) and clumsy with the rest: blows land 15% less often and the
+  class's trick is lost; the bag says so. Shields block (CM.blockChance: 8% a buckler to 38% mithril) for half,
+  and a tower shield in the front row takes some of the back row's blows. Heavy armour is a step late in the
+  round and loud (surprised 65% not 50%); light a step early; mithril plate neither. The Rogue and the Ranger may
+  put a second dagger in the off hand (the bag's "or the other hand"): another blow at half, every blow. Every
+  monster is made of something (CM.HIDE: flesh, hide, bone, shell, plate, none) that the rules read.
+  Measured on twenty seeds, Fair, to floor 25, v4.1 against v4.2 side by side: 18 crowns against 19 - within the
+  five points the plan allows before Phase 9 tunes on purpose (six seeds swung from two to six crowns between
+  tweaks: the reseeded dice make six seeds noise). The flesh and hide bonuses were trimmed from a quarter to a
+  sixth on the way.
+
+Affixes that grow, sets, curses, and the smith's second trade (the sixth big update, phase 2 - v4.3)
+  Every affix has three tiers (CM.affixTier: I from floor 3, II from 16, III from 31): the word stays, the number
+  grows by half and then double (CM.scaledAffix; item.props.tier). Seventeen words more: on a hit (Bleeding,
+  Chilling, Blinding), on a kill (of Plunder, of the Leech, of the Font), by the foe (Undead-bane, Hunting,
+  Desperate), for the party (of the Hearth, Sheltering: +1 defence to everyone while worn; of the Lantern: every
+  third step free of the torch), and the small ones (Sure, Weighted, Steadfast, Fleet, of Haste, of Stone, of the
+  Scholar). Implicits (CM.IMPLICITS): a base's own small property before any word - a Dagger's edge, a Buckler's
+  quickness, the Dragon Scale's proof against fire; older things learn theirs when they are named. Cursed gear is
+  a fourth rarity: hidden among the unknown, a tier-III word and a cost (CM.CURSES: hungering, dark, weakening,
+  haunted) that will not come off until the temple lifts it - the cost goes, the word stays. Three sets of three
+  (CM.SETS: the Watch's, the Masons', the Order's), dropped in their bands by hash, fine alone and a rule together.
+  The smith's second trade: a prefix moved from a worded thing in the pack to the worn one (150 gold; the pack's
+  thing is scrap), and essence from the fire (salvage: one from a fine thing, two from a rare or a cursed one;
+  three essence stand in for a gem at the rework). Enchantment stays at +3; a tier-III word is the ceiling.
+
+The belt, and things to drink, read and throw (the sixth big update, phase 3 - v4.4)
+  The belt: four slots under the automap (keys 5 to 8; the bag's "To the belt"), and in a fight the first thing
+  used from it in a round costs no turn (game.toBelt, useBelt; act("item", {belt})). Flasks, thrown from any row
+  (CM.FLASKS): oil (fire on a foe and the one behind; on water it spreads to every foe for half), acid (three off
+  a foe's defence), holy water (the undead burn, some cower), smoke (away, for certain) - brewed by the alchemist,
+  sold at the camps. Potions by depth (CM.healPotion: lesser, healing, greater, full; mana likewise) and a Lesser
+  Phoenix Feather (half health, once a floor), so the full one is a decision. Elixirs with a time to them
+  (CM.ELIXIRS): stoneskin (three off every blow, the floor), haste (first in every round of the next fight), owl's
+  eyes (no dark, three floors), the night's draught (no sleep, no surprise, the floor). Six scrolls more: recall
+  (to the last camp, and back to the square by the same scroll), knowledge (the floor's carving from here),
+  banishing (a called thing sent back), sharpening (+2 for the floor), silence (no spell, no breath, the fight),
+  the lost page (fire, frost or lightning on every foe, once). Wands are spent, not crumbled, on their last charge
+  (one in four breaks; never with an Artificer standing) and the smith charges them (a gem and 60 gold for three).
+  Light as a thing: the lantern wants oil (CM.LANTERN_OIL steps, burned one in two; lamp oil from the merchant,
+  poured by hand or from the pack as it gutters; an older save's lantern gets a flask), and glow stones from the
+  Crystal Caverns' chests never go out and do not reach far.
+
+Gathering, the field kit and the kitchen (the sixth big update, phase 4 - v4.5)
+  Gathering nodes (CM.NODES: a moss bed, a weed pool, a vein of ore, a fungus shelf, a crystal growth, a bone pile,
+  a root knot...), two or three on every ordinary floor by hash - placed last of all in CM.furnish, so no older
+  hash's cell moves - give the band's ingredient and, one time in five, its rarer one (ten rarer things:
+  CM.INGREDIENTS with rare: a grave lily, a cave pearl, silver vein, ghost cap, prism dust, foundry gold, a saint's
+  bone, heartwood...). The Druid and the Ranger take two; the Artificer two of ore. The field kit (the merchant's,
+  from the third camp, or the bag's own button) brews anywhere at a fifth over the camp's price. Twenty-two
+  recipes now: salve (the party mends as it walks, the floor), dwarven bread (a ration that mends twenty),
+  liniment (a wound closed, the small ailments with it), blade poison (a weapon's wounds fester, three fights),
+  transmutation (three of one band's ingredient into one of the band below's). The kitchen: the kinds that have
+  meat drop it (CM.MEALS); cooked at a camp, or on the floor for a torch, a meal feeds the party and lasts the next
+  floor (+1 attack, +1 defence, the torch slower, mending in fights, +1 Luck). The alchemist asks for three of the
+  band's ingredient at every camp: bring them, and the next brew is free. The bot gathers what it passes.
+
+Living items: charged relics, trinkets, and weapons that grow (the sixth big update, phase 5 - v4.6)
+  Every guardian's relic, and First Root, has a power spent once a floor (CM.RELIC_POWERS, CM.powerOf): the Rat
+  King's Crown calls the swarm for you; the Shield of the Drowned floods the hall and chills every foe; the
+  Forge-Warden's Hammer halves the chosen foe's defence; the Queen's Ring puts half the room to sleep; the Sporecap
+  Helm holds a foe two turns; the Prism Amulet halves the next blow on each hero; Ember Mail reforges the wearer's
+  weapon (+2, the floor); the Patriarch's Reliquary opens the nearest lock on the floor; First Root regrows a fallen
+  hero to one health. In a fight it is the Relic button (L), on the floor the hero's sheet; a film replays it.
+  A ninth slot, the trinket (CM.TRINKETS: twenty, one passive oddity each): a rat's tooth (never ambushed by rats),
+  the bell's tongue (the last bell's note when a guardian gathers itself), a cook's spoon, Tamsin's tally stick,
+  a child's chalk (the floor's carving on the map as you arrive), a lodestone (the way down), a dowsing twig (the
+  gathering), knucklebones, a cracked hourglass, a mirror shard, a thimble (a chest's trap never springs on the
+  wearer), a whetstone, a lucky bootlace, an ember stone, a cold coin, a sewing kit, a steady-hand charm, a hearth
+  stone, a long wick, a hawk's eye. Found in strongboxes (two in five), from grateful ghosts, and on the peddler's
+  cloth. (A flag on worn gear now counts as one through CM.gearProp, so the oddities are read everywhere.)
+  Weapons that grow: the weapon that struck a foe last remembers it (lastWeapon); a hundred slain is a mark, a
+  guardian slain is a mark (+1 to the weapon and a line of history); at three marks the sheet offers a name
+  (nameWeapon, 24 letters). A named weapon is the name everywhere (CM.itemName), is kept in the compendium's Named
+  list with its story, takes no slot in the vault and is never the thing the merchant hands back, and may be found
+  again by a later party of this browser: on floors 4 and below, one chest in eight carries a named weapon of the
+  compendium made again (CM.legendWeapon: its base, its marks, its story so far, and a line about who lost it).
+  Heirlooms with memory: a thing taken from the vault remembers its bearers; the third wears it as a relic
+  (props.heirloom), and CM.relicsWorn counts it for the relic set.
+  Test: "living items" - every power once a floor and not twice, the swarm bites all, the hammer halves one, the
+  prism halves the next blow, the reliquary opens the nearest lock, the root regrows; the chalk and the lodestone
+  mark the map on arrival; the hundredth kill and the Rat King mark a sword, its third mark names it, and the name
+  survives save, the vault's one slot, and turns up in a later seed's chest with its story; a ring's third bearer.
+
+Tools, traps, locks and doors (the sixth big update, phase 6 - v4.7)
+  Locks have grades (CM.LOCKS, by the seed and the door: common above floor 6; iron two in five below; dwarven one
+  in four from the palace down). A key opens any; a Rogue picks a lock of her level (2 for common, 4 for iron); a
+  Lockpick lets anyone try at a third of the Rogue's chance, and breaks on a miss; a Master Pick tries at the full
+  chance and is the only pick for a dwarven lock; the Patriarch's Reliquary or the Forge-Warden's Hammer, worn,
+  opens anything (CM.OPENS_ANYTHING). A strongbox without its key is picked the same way (tryLock). The merchant
+  sells two picks a camp, a master pick from depth 14.
+  Traps as tools: six traps now (a volley of darts, a floor that gives way). A Trap Kit (the Artificer starts with
+  one; the merchant sells one from depth 7) takes a found plate apart for its parts - the Artificer never fails, a
+  Rogue or a steady hand may, and a failure springs it - and Trap Parts are set on the square behind the party; a
+  band of monsters that walks onto a set plate takes the trap (trapGroup: darts a quarter of each, gas a fifth,
+  the blade half of the first, the needle bleeding, the alarm makes them hunters, the floor takes them down a level;
+  a band finished by a trap is a kill).
+  A Door Bar (merchant, and one chest in ten from floor 3) shuts and holds the open door beside the party for the
+  floor; walking into it lifts the bar. Used again at a barred door the party rests there: a third of the camp's
+  rest, once a floor, for a ration. With the Hordes mutator a band beside a barred door breaks it in three turns.
+  Bait (a ration, dropped where the party stands) draws the nearest wanderers for ten steps instead of the party;
+  a band that reaches it stops to eat for ten steps; Poisoned Bait (a new recipe: a ration, a ghost cap or spore
+  cap, 10 gold) takes two fifths of each and leaves them bleeding. Bait goes stale after ten steps.
+  A Grapnel (kept; merchant from depth 6) climbs the party back up the pit it fell down, to the floor and square it
+  fell from (fellFrom, saved). A Dwarven Pick (in the dwarves' halls' chests, one floor in three) opens the nearest
+  hidden door or stair on the floor without searching, and breaks.
+  The bot: walks through locks with a pick in the pack, sets a trap when it has parts and a kit, disarms a found
+  plate, and bars a door and rests at it when the party is worn; playRun returns what it did (tools).
+  Test: "tools, traps, locks and doors".
+
+Monsters' things, and six elements (the sixth big update, phase 7 - v4.8)
+  Six elements: fire, frost, holiness, and now storm, venom and shadow (CM.ELEMENTS, CM.ELEMENT_NAMES), on gear
+  (Storm, Venomed, Shadowed prefixes), on oils (Oil of Storms, of Venom, of Shadow) and on every kind: CM.ELEMENT_MORE
+  lays venom and shadow over CM.MONSTER_SHAPES' table, and CM.elementMatrix() reads the whole thing out. The undead
+  shrug venom off and fear holiness; the fleshy fear venom; the things of the dark shrug shadow. Storm leaps to a
+  second foe for half when the party fights in water; venom is the poison with teeth (the number, and a four-round
+  bleed); shadow blinds one time in three, and is the Necromancer's (Drain and Death Pact carry it).
+  Loadouts: an elite leader and a rival's people come armed (CM.LOADOUTS, CM.armMonster - by a hash of the monster,
+  so no dice of the floor's move): the fight says what they carry, and reads it - a maul cares little for armour,
+  an axe bites one time in seven, a knife finds a gap, a spear reaches the back row, a shield takes one blow in
+  four for half - and what they carried drops when they fall: the first loot seen before it is won.
+  Parts that break (CM.PARTS): a dozen kinds and the Lich King carry a part with its own health (a share of the
+  whole: the Troll's arm, the Wyvern's wing, the Golem's arm, the Priest's staff, the King's staff); every blow on
+  the kind wears it too; broken, the kind loses the ability named for the fight (the mending, the breath, the cold)
+  and the part drops as the band's ingredient or a trinket. The fight screen shows the part's health.
+  Eight monster abilities: shieldwall (Skeletons: two or more in front and their back row can't be reached), howl
+  (the party's morale falls six), web (a blow that holds), burrow (under the floor every third turn, up hard),
+  mimic (a chest that isn't: one chest in twelve on generator 2's floors from 4 down, with the hoard in it),
+  carryoff (a hero dragged into the front row until the fight ends) - with thief and splitter from the Deep making
+  the eight. Four new elite kinds carry the new ones (Howling, Web-spinning, Burrowing, Dragging).
+  Test: "monsters' things, and six elements".
+
+Wounds, weight and the economy (the sixth big update, phase 8 - v4.9)
+  Wounds: a hero who falls and rises (a feather, the lesser feather, the temple, First Root) carries a wound - one
+  stat down by one (CM.heroStat reads it) until the temple's new service (40 gold a hero) or a liniment; a second
+  wound before the first heals is a grave wound (two stats). The third wound healed leaves a scar (CM.SCARS): a
+  limp (leading, never trips a plate one time in two), a burned hand (fire does half), a hard head (shrugs a stun
+  or a sleep one time in two), a thick skin (+1 defence). The memorial keeps the scars.
+  Weight: the pack has a weight (CM.weightOf: heavy armour 8, a two-hander 5, a shield 4, potions nothing) against
+  the party's strength summed (CM.carryCap). Over the line the torch burns and hunger comes half again as fast and
+  the HUD says Heavy-laden; half again over it there is no travel (Overloaded). The Bag of Holding, a unique in a
+  palace chest by the seed, worn in the trinket slot, doubles the line. The bag screen shows weight against the line.
+  The economy: prices climb a tenth a band (CM.priceAt); the merchant's stock rotates - a third of the things
+  beyond the staples are not on the table at a given camp, by the seed; orders (a thing from CM.ORDERABLE paid now
+  at a tenth over, delivered at the next camp, saved); insurance (a tenth of a thing's value, for a bag row or a
+  hero's worn thing: if the party falls, it goes to the vault for the next - payInsurance); a bounty board at every
+  camp (three of the band's kind, 60 gold + 40 a floor, and a renown for the village; counted against the bestiary);
+  the fence at the tavern (buys unknowns at half, takes cursed things for nothing, sells a rumour of the next
+  strongbox within six floors for 30 gold - it is marked on the map on arrival); a tithe at the temple (a tenth of
+  the purse: +1 defence and blows land a twentieth surer for five floors). The sim's --loot report shows the spread:
+  with the bot, the merchant's share of spending fell from 92% to 62-69% (tithe 16-22%, alchemist 8%, insurance 6%).
+  The bot closes wounds, takes and claims bounties, tithes, insures its best worn things, orders what the stock
+  lacks, sells heavy things when over the line, and fences unknowns and curses.
+  Test: "wounds, weight and the economy".
+
+Around the things (the sixth big update, phase 9 - v5.0)
+  The balance pass, with the bot (node tools/sim.js --seeds 20 --to 20 --difficulty <d> --loot), twenty seeds a
+  difficulty to floor 20:
+    Gentle: median floor 21, 16 of 20 crowned, 3 fell (all in the palace, 16-20)
+    Fair:   median floor 21, 15 of 20 crowned, 3 fell; the merchant 66% of spending, tithe 19%, alchemist 8%,
+            insurance 6%, peddler 1%; 55,500 gold found a run and 11,400 spent; wands used 44 times a run, brews
+            27, rations 5, scrolls 4; the first weapon upgrade by floor 1.4, armour 1.9, helm 5.6, off hand 9.5
+    Hard:   median floor 21, 15 of 20 crowned, 3 fell; merchant 63%, tithe 21%
+    Grim:   median floor 21, 15 of 20 crowned, 4 fell; merchant 64%, tithe 20%
+  The crown rate on Fair with the bot is 75% (it was about 90% at v4.1, before the wounds, the weight, the
+  loadouts and the eight abilities): the median floor is unchanged and every fall is in the palace, so nothing
+  was tuned down for v5.0; the ladder's gold rungs were re-read (costly temple now doubles the wounds' price
+  too; poor veins and no greater potions stand as they were).
+  The item card (CM.itemCard) is on every row that names a thing - the pack and the merchant's wares, the smith's
+  and the vault's lists, the hero's sheet (hover for it) - and the chest's line carries each thing's label.
+  Rarity is marked by a shape before the name as well as a colour (a diamond for fine, a star for rare, a
+  four-point star for a relic, a flower for a unique, a skull for the cursed), for eyes that don't tell the greens
+  from the blues. The gamepad has a belt button (LT by default: the first thing on the belt; rebind it in the
+  Gamepad settings), and the belt's buttons in the HUD take a tap. The belt's use, and a flask thrown from it in
+  a fight, are logged and play back in a film. The HUD's and the camps' new words (Heavy-laden, Overloaded,
+  blessed, the bag's weight and gold, insurance, orders, the bounty board, the fence) go through 12-text.js, and
+  tools/words.js counts the things' words too (the bases, affixes, trinkets, powers, scars, recipes, leaders and
+  uniques: about two thousand words beside the story's).
+  Test: "around the things". The sixth big update is complete: nine phases, v4.1 to v5.0, and 75 tests.
+
+Automatic (v5.1)
+  A toggle that plays the game for you: Z, or the Automatic button in the explore and camp menus. On, the party
+  walks a step a tick (slower at the camp, so the business can be read): it opens the chests on the way, gathers,
+  finds the key before the locked door and the lever before the gate, reads the walls and listens to the dead,
+  answers riddles and the strangers' choices the careful way, drinks from fountains when hurt, sets traps and bars
+  doors when it has them, and fights what it walks into with the fight's own Auto hand. It wears what compares
+  better as it comes (every slot, the trinket too), drinks a potion under two fifths, eats when hungry, takes an
+  antidote when ailing, and at the camp rests, raises and heals, brews, buys potions and torches, closes wounds,
+  takes and claims bounties, tithes, insures its best worn things, orders what the stock lacks, sells heavy things
+  when over the line, fences unknowns and curses, and buys a weapon upgrade with the gold left - then goes deeper.
+  The HUD says "automatic" while it is on. Any move or fight key, or Z again, takes the reins back (the fight's
+  Auto too). It pauses while a dialog is open (Escape), and stops by itself, saying why, when it is lost on a floor
+  or when the choice is yours (the bottom of the world). Everything it does goes through the game's own logged
+  acts, so a film of an automatic run plays back the same, and the run saves as any other.
+  Under the hood it is CM.Autopilot (src/js/66-auto.js): the simulator's bot (tools/bot.js) is now the same class,
+  driven in one loop with warping past a lost floor and the waking of the Root allowed, so the bot and the toggle
+  can never drift apart. Test: "automatic".
+
+The ground of the town (the seventh big update, phase 0 - v5.2)
+  Floor 0 is the town above, Caer Duin: hand-laid in src/js/23-town.js (CM.makeTown - no generator, so nothing
+  frozen moves), a nineteen-square map with a square and a well, a main lane from the party's own door at the
+  west end to the shaft's mouth at the east, a north and a south lane, and nine plots on them (your house, the
+  Hanged Lantern, the Merchant's House, the Smith's forge, the Alchemist's Garden, the Library, the Temple, the
+  Guildhall, the Chronicler's House - CM.TOWN_PLOTS, CM.TOWN_AT). A plot is a door: walk up to it and Space opens
+  the building's screen - in this phase, the plot's name, what stands there, the levels the village has raised
+  and the village's own Build button; a plot the village does not raise yet is a foundation with two posts.
+  The town is a floor to the engine: drawn by the renderer in its own daylight theme (CM.TOWN_THEME: limewash,
+  a sky-coloured ceiling, a long reach), saved and restored as a delta like any floor, on the automap in full
+  from the first step, with its own title card, compass word and arrival line. Nothing wanders it, no torch burns
+  on it, no one grows hungry on it (a Rogue of the party may still pick nothing: there is nothing to pick).
+  A new run begins at the party's door facing down the lane (Settings: Skip the walk puts the party at the shaft
+  instead; the tests and the simulator start at the shaft, and node tools/sim.js --town starts at home). From any
+  camp, Back to town climbs to the shaft's mouth; from the town the shaft goes down to the deepest camp the run has
+  reached, so the town is never a trap, and to floor 1 before any camp. Saves on floor 0 continue (a run on floor
+  0 was "no run" to the old save check), a film of a run that began at home begins at home, and an old film
+  begins at the shaft as it did. Automatic and the bot walk the lane to the shaft and go down.
+  Test: "the town above".
+
+The home (the seventh big update, phase 1 - v5.3)
+  Your house, at the west end of the main lane, is raised like any building (CM.VILLAGE.home: 50, 150, 400, 800,
+  1500 renown) and opens from its door into its rooms (src/js/67-home.js; the village store keeps village.home):
+  - The hearth (level 1): once a visit to the town the party rests for nothing - health, magic, the small
+    ailments, hunger - and goes down rested: +5% to hit on floors 1 to 5 (buffs.rested, gone at six).
+  - The stash (6 things at level 1; 12 at 2; 20 at 3; 40 at 5): the party's own storage between runs, apart
+    from the camps' vault. Anything but a floor's key may be left; taking is free; nothing in it is ever bumped
+    or insured, and a fallen party's pack does not come to it - only what the party walked home is there.
+  - The trophy wall (level 2): the guardians' trophies, the named weapons, the uniques found, the crowns and the
+    stones from the bottom of the world.
+  - The kitchen (level 3): meat brought home is cooked for a meal that lasts the first two floors; the larder
+    keeps three rations from run to run.
+  - The door-plate (level 4): the memorial's names on the door, with their scars; a candle lit at home (the
+    shrine's price) sends what they were buried with to the stash instead of the vault.
+  - The study (level 5): a hero retires home (home for good, without teaching), and a will may be written: one
+    thing from the stash, copied into the pack of every later run from this house (no relics or uniques).
+  Everything the house does is a logged act, so a run that rested and stashed replays the same.
+  Test: "the home".
+
+The tavern, the merchant and the smith (the seventh big update, phase 2 - v5.4)
+  Three doors in town open onto the camps' benches with more behind them (src/js/68-shops.js). The Hanged Lantern:
+  the recruits, the fence and the rumour of a strongbox (the fence drinks in town now, not at the camps), the board
+  (the camps' bounty and the week's contracts), a round for the party (5 gold: morale 90 for the road, once a
+  visit) and the regular's gossip (10 gold, once a run: where the sexton's helm and the Bag of Holding lie on this
+  seed). The Merchant's House: the whole stock, nothing rotated, at the party's level; orders and insurance as at
+  the camps, delivered at the first camp; and at the house's third level a commission - a weapon, armour, a shield
+  or a helm of any base at the party's level, affixed as the floor would, paid now at half again over, waiting at
+  the first camp (CM.gearOfBase). The Smith's forge: everything the camps' smith does, and the forge's own work -
+  a base reforged (a Long Sword into a Bastard Sword: every word, mark, name and history kept, for an essence and
+  100 gold a tier), a second gem set in a relic (the wearer proof against its element, +1), and the apprentice who
+  buys scrap at three quarters. A merchant's table belongs to where it stands: it is fresh on every floor.
+  Test: "the tavern, the merchant and the smith in town".
+
+The library, the temple and the guildhall (the seventh big update, phase 3 - v5.5)
+  The village's three buildings are doors in town (src/js/69-halls.js). The Library: a reading desk with the
+  journal's boards (the codex, the compendium of things, the run's journal, bestiary and combos), Wren and the
+  Book of Caer Duin, the tomes - one borrowed a run for nothing, back on the shelf when the run ends, read or not -
+  the shelf where every Lost Page found is copied, and at a new fifth level (1500 renown) the gazetteer: a new
+  run has the first five floors' walls on its map before the party is on them (the walls, not the things). The
+  Temple: the camps' temple at a tenth less (cure, a curse lifted, stone to flesh, the raising of the fallen, the
+  wounds closed, the scribe), Father Osric's candles and the Patriarch's history, the tithe, and at a new fifth
+  level the vigil: a hero's scar kept or let fade, once a hero. The Guildhall: Dunmore and the trainers (a hero
+  retires there), the guild's letter (the second calling, read in town as at a camp), the week's contracts, and
+  the roster - every party this browser set out with, kept as a preset (twelve, newest first; the same four under
+  the same names are one line), each with "Set out again as them", and a muster that fills the creation screen
+  with the last party that came home.
+  Test: "the library, the temple and the guildhall".
+
+The garden, the chronicler and the square (the seventh big update, phase 4 - v5.6)
+  The Alchemist's Garden (CM.VILLAGE.garden: 100, 300, 700 renown): one, two, three beds - an ingredient from the
+  pack planted in a bed grows one more every run that ends, up to five, and is harvested whole - the alchemist's
+  brewing bench at the camp's price (no field kit's fifth in town), and at three beds the alchemist's request may
+  be delivered here. The Chronicler's House (100 renown): the films, the statistics, the Hall of Fame, the ledger
+  and the memorial's book under Wren's roof; the title keeps its boards too. The square: the well, with the notice
+  board beside it (the week's seed, the day's, and market day), a drink when it runs (after the first crown), and
+  a coin thrown for the town once a visit (1 gold, 1 renown); market day on the week's seed, a peddler's cloth in
+  the square; three townsfolk on the lanes, where the seed puts them, each with a line a day from the hill's own
+  story (Marget's granddaughter, the bell-founder's boy, the sexton's widow: CM.TOWNSFOLK); and the lanterns lit
+  when the clock says night (CM.clockHour: the town is dimmer, and the title card says so). Everything in the
+  square is a thing on the floor, so the town's fingerprint never changes and a save of it never drifts.
+  Test: "the garden, the chronicler and the square".
+
+Growth, and the town as a thing that remembers (the seventh big update, phase 5 - v5.7)
+  A building is drawn by its level (CM.houseStage): a foundation with two posts, then a frame, a roofed house, a
+  house with its sign, a house with a lit window - the stage is the level against the building's most, so the
+  square fills in over many runs. Every building is raised at its own door (a Raise line at the foot of its screen;
+  the title's village dialog still works). Nine buildings now, the tavern and the smith with levels of their own
+  (a better cellar: the round fills the heart and the gossip is free; a better bench: the recruits a level higher;
+  the apprentice pays scrap in full; a reforging at half), and renown re-tuned for nine: the town costs about
+  3,800 renown in all (the home first at 15, the chronicler's house late at 120), and a run brings three renown for
+  every door opened before the descent, up to nine. Measured with the bot: a run brings about 85 renown on average
+  to floor 20 (about 110 with every door opened), so a careful player raises the whole town over some thirty-five
+  runs, the first buildings in the first three or four. What the runs brought back is on the walls: the trophies
+  at home, the first named weapon on the smith's sign, the best run painted on the tavern's wall, the chapters
+  copied and the lost pages on the library's shelf, the names on the door. The hill's own chapter (the village's
+  lore, unlocked as renown is spent) is carved on the well's stones and read there, in order.
+  Test: "growth".
+
+Around the town (the seventh big update, phase 6 - v6.0)
+  Automatic in town runs the errands at their doors in a sensible order - home (the hearth, rations from the
+  larder), the Merchant's House (the shopping the camps know), the Temple when someone is wounded or fallen or the
+  purse is heavy (the raising, the wounds, the tithe), the Hanged Lantern when there is gold for a round (the round,
+  the board) - each door opened and counted, then the shaft; node tools/sim.js --town measures a run that walks the
+  town, and the bot's crown rate on Fair is the same from home as from the shaft (14 and 13 of 20, within noise).
+  The gamepad walks the lanes with the stick and opens a door with Use, and every building's screen takes the pad's
+  list focus like any dialog. A film of a run that began at home begins at home (spec.town). The town's words go
+  through 12-text.js (the title card, the arrival and opening lines, the compass, Back to town, a foundation, a
+  door), and tools/words.js counts the town's words (the plots, the townsfolk, the buildings' levels: about eight
+  hundred). The balance pass: the rested buff, the gazetteer, the will and the commission are all the village's
+  (a bot with no village feels none), and the sims to floor 20 on Fair hold the crown rate where v5.0 left it.
+  Test: "around the town". The seventh big update is complete: seven phases, v5.2 to v6.0, and 83 tests.
+
+The clock, the sun and the moon (the eighth big update, phase 0 - v6.1)
+  The clock is the game's, not the wall's (src/js/24-clock.js): a step is a minute, a stair an hour, a round of a
+  fight a minute, and a rest - the camp's or the hearth's - sleeps until the next dawn (a whole day if it is dawn
+  already). A run begins at six in the morning; the hour is saved with the run and a film keeps it. CM.hourOf,
+  CM.isNight (nine to five), CM.hourWord (dawn, morning, noon, afternoon, dusk, evening, night, the small hours),
+  CM.dayOf, and a twenty-nine day moon (CM.moonPhase: new at the first day, full at the fifteenth; CM.moonWord).
+  The HUD has a sky bar over the view's corner: the sun and the moon on their arc by the hour, the moon drawn in its
+  phase, the hour in words beneath (and "above" when the party is below ground, where no sky changes anything); a
+  tap says the hour, the day of the run and the moon. What the clock does: the town's lanterns and the townsfolk
+  (indoors by night) go by it now; a new moon makes a lock a tenth easier and a night ambush on the first five floors
+  a little likelier; a full moon makes the undead a tenth tougher on floors 1 to 5 - and nothing below the fifth
+  floor sees the moon. The wall clock keeps only the title screen.
+  Test: "the clock".
+
+Scrolls of Homecoming (the eighth big update, phase 1 - v6.2)
+  A Scroll of Homecoming (CM.SCROLLS.homecoming) read on any floor below - not in a fight - brings the party to its
+  own door; the climb is the night, so it arrives at dawn and the clock says so, and the floors behind it move on
+  while it is away (the drifting that a hundred steps would bring). The scroll remembers the square it was read on:
+  read again in town it takes the party back to that very square, and crumbles. One chest in twenty from floor 3
+  carries one (by the seed), the dead drop one in forty and an elite one in ten, and the Merchant's House sells one
+  at a price that climbs with the deepest floor the run has reached (60, and 10 a floor; never the camps, whose
+  merchant sells Recall). A hero who was fallen stays fallen until the temple. Automatic reads it when the party is
+  out of potions below floor 10 with gold in the purse, runs its errands, and reads it again to go back; the sim
+  counts the trips, and the crown rate on Fair with the scroll in play is 16 of 20, where v6.0 left it.
+  Test: "scrolls of Homecoming".
+
+The Deep Wood (the eighth big update, phase 2 - v6.3)
+  A west gate at the end of the town's main lane opens on floor -1, the Deep Wood (src/js/23b-wood.js, CM.makeWood):
+  a thirty-one-square forest made by the seed from the forest's own rules - never the dungeon's generators, whose
+  fifty floors do not change by a cell - with glades joined by winding paths through the trees (a tree is a wall
+  the renderer draws as a trunk and a crown: CM.art.treeWall, the Wood's own theme of green, grass and sky), a river
+  crossed at one ford (a fight there is a fight in water), a hermit's hut, a ruined shrine whose wall carries the
+  hill's older page into the journal, a charcoal burner's mound, eight foraging nodes (Wood Mushrooms, Bramble
+  Berries, Wild Herbs, Deadwood and, one time in five, Wild Honey: the kitchen's and the forge's things to come) and
+  three cave mouths. The first glade, just inside the gate, is safe at any hour.
+  By day the Wood is lit by the sky, no torch burns, and deer and boar run from the party (hunted by walking into
+  them: meat four times in five, and hides); by night the torch burns, the dark has eyes, and wolves, a bear or
+  bandits hunt the party - under a full moon the Great Wolf among them - while the hermit's door and the burner's
+  eyes are shut. The beasts change at dusk, dawn and every new day, by the seed. They give no renown and a quarter
+  of the gold: hides, meat and the night's danger. The trek makes the party hungry as any floor does.
+  The caves (one open a day, by the day of the run) are short floors of the first bands' kinds, carved as any floor
+  of their own key and made caves of: the way out where the stair was, no stair down, nothing to fall through, and
+  under the third the Troll under the Hill, whose hide is worth a cloak. A Scroll of Homecoming works from the Wood
+  and its caves. The floors behind the party are never the town's or the Wood's.
+  Test: "the Deep Wood".
+
+Mining and the ore (the eighth big update, phase 3 - v6.4)
+  Five ores (CM.ORES: copper on floors 1-10, iron 6-20, silver 11-25, gold 21-40, star-iron 36-50) lie in veins
+  beside the rock - things placed last of all in CM.furnish by hash, so no older cell moves and no fingerprint
+  changes; the gen-1 fixtures stand - and in the Wood's caves (copper in the first, iron in the second, gold at the
+  deepest). A pick mines a vein with Space: a chunk a swing, three swings a vein and it is worked out for the run;
+  silver in the Dwarven Halls gives two a swing and the Artificer one more; a swing is five minutes, and it is loud:
+  the nearest band comes a square closer. Picks have grades (CM.PICKS: a copper pick mines copper and iron, an iron
+  pick silver too, a steel pick everything), wear a point a swing, and are whetted at the forge for 20 gold; the
+  dwarves' pick is an iron pick that is kept now, and opens a hidden door for ten points. The Merchant's House sells
+  a copper pick, and an iron one once the forge has its second level. Chunks weigh 2 and bars 3: a mining trip is a
+  choice about what to carry back. The smelter at the forge (the smith's second level) makes a bar of three chunks
+  and a charcoal; two bars of a kind and one of the kind above make an alloy (bronze, steel, electrum, star-steel:
+  the upgrading's coin, next phase); the apprentice buys bars at their worth. Charcoal is the Wood's burner's, by
+  day: deadwood in, two charcoal out, or one for 15 gold. The bot mines a vein it has a pick for, on its way.
+  Test: "mining".
+
+Upgrading and tempering (the eighth big update, phase 5 - v6.5; shipped before the farm)
+  Every weapon, armour, shield and helm has a grade (item.grade, 0 to 5), written as stars in the name's tail ("Long
+  Sword ★★★") and never in the base id. The forge in town raises a grade for bars of the base's metal (CM.GRADE_METAL:
+  copper for tiers 0-2, bronze 3-4, iron 5-6, steel 7-8, electrum above, and star-steel for the fourth and fifth grade
+  of the highest tiers), one bar a grade and 60 gold a grade; each grade is +1 power, and at the third and fifth the
+  metal remembers it (+1 to blows on a weapon, +1 warding on the rest). The grade is kept through reforging, the vault
+  and a replay; a relic and a unique thing are what they are. The ceiling: a thing may not be both of the fifth grade
+  and enchanted +3 - the smith says why, either way round. Tempering is the smith's third level (CM.VILLAGE.smith has
+  three now: 60, 140, 260 renown): one word from the land worked in for 40 gold, kept for the run and gone at its end
+  (never into the stash or the vault) - oak from deadwood (weighs one less), beeswax from wild honey (the water costs
+  the torch nothing), wolf-fat from a Wolf hide (the party is not surprised), bear's bile from a Bear hide (a blow in
+  four bleeds; blades only), star-dust from a star-iron chunk (+1 to blows); one temper on a thing at a time. The
+  hermit of the Deep Wood is a leatherworker by day (CM.TANNING, 20 gold a piece): two hides make a Travel Cloak or
+  Soft Boots, three a Buckler or a Quiver (a bow shoots a second arrow from it once a fight), a Bear hide a Hooded
+  Cloak, the Troll's hide a Cloak of Wards. The item card shows the grade and the temper; "Five Stars" is an
+  achievement. Test: "upgrading and tempering".
+
+The farm (the eighth big update, phase 4 - v6.6)
+  A farm stands in the Deep Wood's First Glade, just inside the gate (a thing placed last, by no die, so the Wood
+  stands as it was), raised at the town's board with renown like a building (CM.VILLAGE.farm, five levels: a field of
+  four rows, an orchard, a mill and a farmhand, hens and two more rows, a cow and a byre) and kept in the village
+  store (village.farm) from run to run. The town's beds stay the alchemist's. Six crops (CM.CROPS: wheat and barley
+  in spring, beans and cabbage in spring and autumn, turnip in any season but winter, hops in summer) are sown from
+  seed - the Merchant's House sells the season's packets once the farm has a field, and every cut gives one back -
+  and a row grows a stage every dawn the party sees (the run's clock: a run that sleeps at the camps grows the field,
+  a Homecoming and a night at the hearth grow it too; a stair is an hour; the farm sees the run's last dawns when it
+  ends), is cut at the fourth stage for the crop's yield, and rots three dawns past ripe. Nothing grows in winter.
+  Crows take a ripe row in ten (by the seed and the day) unless a scarecrow stands: a deadwood and an old tunic (any
+  light armour). The orchard drops apples and pears on autumn dawns; the mill grinds a sack of wheat or barley in the
+  store into flour or malt a dawn; the hens lay an egg a dawn each (three); the cow gives milk a dawn for a week on a
+  cabbage; the byre gives two of venison every forty-five dawns. The store holds it all until the party takes it, and
+  the farm's food is ingredients (CM.FOODS) - eggs and milk keep a week, in the store or the pack, and then go off;
+  grain, flour and malt keep. The farmhand (the mill's level, 30 gold a season) cuts what ripens into the store and
+  sows what he is told from the seed chest, so a deep run comes home to a harvest. The season is pinned to the run
+  from the real date (CM.season; the calendar's phase makes more of it). Automatic walks out to the farm by day when
+  there is something to cut, take or sow, and comes back by the gate. Test: "the farm:".
+
+Cooking as a trade (the eighth big update, phase 6 - v6.7)
+  CM.DISHES is thirty-two dishes from the farm's, the Wood's and the beasts' things (src/js/69d-cook.js): bread,
+  porridge, an omelette, stew, meat pie, apple cake, roast venison, honey cakes, posset, beer, cheese, the hunter's
+  breakfast, the miner's pasty, the fisherman's soup (a new river node in the Wood gives fish), the dwarves' bread
+  remade, the Queen's cake, and the dungeon's own - rat on a stick, kobold stew, spore-cap fry, troll's heart - among
+  others. A dish is made at the home's kitchen (its third level), at a camp's fire, or on the floor by a cook of the
+  third level for a torch, from things in the pack (CM.canCook names the rows), and it travels: a thing in the pack
+  that keeps two days (stale ones are thrown out at a fresh floor), eaten by anyone from the bag ("Eat, served by").
+  Eating feeds the party and does the dish's thing for its floors - +1 or +2 to attack or defence, blows that land
+  more often, mending a round, a stat raised one, Luck, the torch burning slower, the heart lifted, an ailment that
+  finds no purchase, a second wind (at a quarter health a hero mends a quarter, once a fight) - the better dishes two
+  things; one dish at a time, and eating another replaces it (the old meat meals go through the same door:
+  CM.mealOf). A hero may take the apron (h.cook): a level every five dishes made, up to five; a cook's dishes last a
+  floor longer a level; "The Apron" is an achievement. Every class and origin has a favourite (CM.FAVOURITES): eating
+  it lifts the heart two more and the hero says a line. The tavern's round now feeds the party and comes with bean
+  pottage for the first floor; the Merchant's House in town sells bread and porridge. Automatic eats a dish it
+  carries when hungry, or at a floor's start with no meal on. Test: "cooking as a trade".
+
+The calendar, the seasons and the festivals (the eighth big update, phase 7 - v6.8)
+  Four seasons by the real date (CM.seasonOfDate), or one pinned in Settings for every new run, written into the run
+  at its start and kept through a save (src/js/24b-calendar.js). The season sets the day's length (CM.DAYLIGHT:
+  summer's night falls at ten and dawn is at four, winter's night at six and dawn at seven), the Wood's gifts
+  (summer's hive and brambles give one more), the farm (nothing grows in winter; the seasons' sowing rule), the
+  Drowned Town's tide (quicker in autumn's mist), frost near the surface (a tenth harder in winter) and the daily
+  dungeon's colour (a winter daily carries Gloom more often, a summer one Swift). The weather is by the seed, the
+  day of the run and the season (CM.weatherOf: clear, rain, mist, wind, snow - snow only in winter) and holds a day:
+  rain wets the party at the Wood's ford and gives the farm a stage more that dawn; mist hides the Wood's hunters and
+  the party from each other (no surprise either way, and the light reaches less); wind takes the party's smell from
+  the deer and boar, which do not run; snow freezes the river (crossed anywhere) and the town's well. Twelve
+  festivals, one a month in the week around the fifteenth (CM.FESTIVALS; the lore bible's calendar table has them
+  all): Midwinter (the hearth gives two rests; the Lich King's court a tenth tougher), the Sexton's Day (a candle for
+  nothing), the Sowing (seed at half), the Dwarves' Letter (picks whetted free and sold at half), the Greening (the
+  Wood's nodes give one more), Midsummer (the round free; the townsfolk out at night), the Forge Fire (the smith's
+  gold at half: an enchantment, a grade, a tempering), the Reaping (the farm grows two stages a dawn), the Harvest
+  Fair (a peddler's cloth in the square all week; the farm's yield doubled), the Feast of the Dead (the memorial's
+  names read at the well; a candle free; the Ossuary's priests a tenth gentler), the Night of Bells (the
+  bell-founder's boy hears one; the regular's gossip free; locks a tenth easier), the Wassail (the round sets the
+  heart to full and comes with beer). The sky bar says the season, the festival and the weather under the hour; the
+  well's board says the day; the chronicler's house keeps the year's calendar with the runs marked on it.
+  Test: "the calendar:".
+
+Around the land (the eighth big update, phase 8 - v7.0)
+  The update closes with the land in the loop. Automatic takes a day in the land in the game (a Settings checkbox,
+  on by default; the simulator with --land): out by the west gate by day, the Wood's nodes foraged, the open cave gone down with a pick and its
+  veins mined, the farm tended when it wants it, then home by the gate; at the door the kitchen makes what the pack's
+  things will (up to six dishes), at the forge the bars grade the worn things and the scrap is sold; and in the small
+  hours below, with the pack heavy or the party worn, a Scroll of Homecoming brings it home to sleep and back down by
+  the same scroll. The simulator prints a line for the land (foraged, mined, farm visits, cooked, dishes eaten,
+  grades, nights home). tools/words.js counts the land's words (the Wood's lines, the ores, the crops and foods, the
+  dishes, the tempers, the hermit's patterns, the festivals and the favourites' lines), and the farm's and the hut's
+  headers go through CM.t. The lore bible gains the Wood's page beside the calendar's table. The gamepad walks the new
+  dialogs' buttons as it walks the old; the sky bar's tap tells the hour and the date; a film turns the sky as the run
+  did. The balance pass is written up in UPGRADE_PLAN_6.md. Test: "around the land".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
@@ -346,7 +1335,10 @@ The source
   src\index.html, src\style.css and src\js\*.js (read in name order):
     00-util.js    CM, the version, a seeded random (the same seed, the same dungeon), saving in the browser
     10-data.js    the classes, gear, monsters (the Deep's too), the nine guardians, riddles and people, paths, tomes and gems, difficulties, mutators, achievements, keys, the ten depths
-    20-world.js   items, a floor's maze with its chests, monsters and ladder, monster groups, a new party
+    20-world.js   items, CM.furnish and CM.makeFloor, monster groups, a new party
+    21-gen1.js    generator 1: the floors of runs begun before v2.1 - frozen
+    22-gen2.js    generator 2: the plan, then the carving - where new rooms go
+    25-saves.js   a floor as what changed since the seed made it, the save's schema and its migrations
     30-art.js     every picture of the Drawn theme, painted in code: stone, chests, hatches, monsters, portraits
     35-packs.js   GENERATED by pack.py from src\art: the Pixel theme's atlas and the Stone theme's textures
     36-looks.js   the three themes: each one's set for a depth, the paper-doll portraits, the item and spell icons
@@ -354,17 +1346,24 @@ The source
     45-fx.js      what flies, bursts, rings and rains: the effects, advanced each frame into sprites
     50-audio.js   the sounds, each depth's ambience and the monsters' calls, synthesised
     55-music.js   the music, written from a seed and played as it goes
-    60-game.js    the rules: moving, fighting, loot, the camp, saving, the Hall of Fame - no screen in it
-    70-ui.js      the title, the party and log, the automap, the bag and merchant, the dialogs
+    60-game.js    the rules, with no screen in them: the class, its events, saving and loading, the stairs
+    61-explore.js moving, looking, using: doors, traps, fountains, the monsters moving about the floor; walking by itself
+    62-combat.js  the fight: turns, blows, spells, the monsters' ways, the Lich King and the guardians; Auto, the odds
+    63-camp.js    the bag, the merchant, the temple, the tavern, the smith, the vault, the waystones
+    64-meta.js    the dungeon's people, riddles, paths and boons, achievements, the Hall of Fame, Export / Import
+    65-village.js the surface: renown, the buildings, trainers, candles, contracts
+    70-ui.js      the window's frame, the dialogs, a hero's sheet, the ending
+    71-76         the title, the creation screen, the dungeon screen, the fight, the bag, the camp's doors
     80-main.js    wiring, keys, the frame loop
   src\art\pixel\*.png and src\art\stone\*.jpg are the chosen tiles and textures (pack.py --gather puts them there).
   python build.py writes game\Claude and Magic v<VERSION>.html from them (and removes an older version's file);
   python build.py --check says whether the built file is current. Bump VERSION in build.py for a new file name.
-  Tests\test_claudemagic.py drives the built game in Qt WebEngine offscreen (on a scratch profile).
+  tests/run.js and tests/smoke.js are the tests (npm test); tools/sim.js the balance simulator; tools/headless.js loads
+  the rules into Node for both. Tests\test_claudemagic.py, in the Timeline, drives the built game in Qt WebEngine.
 
 Keys
   W/Up forward, S/Down back, A/Left and D/Right turn, Q/E sidestep, Space use (a chest, the ladder or stairs, a
   fountain, an altar, a lever or carving on the wall you face - or search that wall), C cast between fights, I
-  inventory, 1-4 a hero's sheet, Tab the automap large, Esc the menu. In a fight: F fight the chosen foe, C cast or
-  a skill, P an item, D defend, R run, Tab or 1-9 or a click to choose the foe, Esc back. Enter or Space closes the
-  ending. F3 shows frames per second.
+  inventory, 1-4 a hero's sheet, Tab the automap large (click a square to walk there, right-click for a note), X explore,
+  Esc the menu. In a fight: F fight the chosen foe, C cast or a skill, P an item, D defend, R run, A auto, Tab or 1-9
+  or a click to choose the foe, Esc back. Enter or Space closes the ending. F3 shows frames per second.

@@ -23,6 +23,9 @@ CM.music = {
     lament: { scale: [0, 2, 3, 5, 7, 8, 10], root: 45, tempo: 44, rest: 0.45, voice: "pad" },         // Aeolian, slow: the party fell
   },
   playing: null,
+  depth: 0,                                        // how far into its band the party is (0..1): the tune gains a voice past the middle, and a fifth near the end
+  danger: 0,                                       // the battle tune in layers: 0 drums and pad while the party is whole, 0.6 the lead joins under half, 1 the pad drops out when a hero has fallen
+  shiftBy: 0,                                      // semitones the tune is shifted (a guardian's second form changes the key)
   enabled: true,
   volume: 0.5,
   master: null,
@@ -54,6 +57,10 @@ CM.music = {
   },
 
   midi(tune, degree, octave = 0) {
+    if (this.shiftBy) return this.midi0(tune, degree, octave) + this.shiftBy;
+    return this.midi0(tune, degree, octave);
+  },
+  midi0(tune, degree, octave = 0) {
     const n = tune.scale.length, d = ((degree % n) + n) % n, o = Math.floor(degree / n) + octave;
     return tune.root + tune.scale[d] + 12 * o;
   },
@@ -120,10 +127,10 @@ CM.music = {
     if (!this.enabled) { this.nextAt = Math.max(this.nextAt, ctx.currentTime + 0.1); return; }   // (off: nothing to play, nothing piles up)
     while (this.nextAt < ctx.currentTime + 1.5) {                        // (a second and a half ahead: a hidden tab's timers come once a second)
       const i = this.step % 64, chord = t.chords[Math.floor((i % 32) / 8)];
-      if (i % 8 === 0) this._pad(t, chord, this.nextAt, stepLen * 8);
+      if (i % 8 === 0 && !(t.drums && this.danger >= 1)) this._pad(t, chord, this.nextAt, stepLen * 8);
       if (t.drums) this._drums(i, this.nextAt, stepLen);
       const deg = t.melody[i];
-      if (deg !== null && deg !== undefined) this._note(t, deg, this.nextAt, stepLen * (t.melody[(i + 1) % 64] === null ? 2 : 1));
+      if (deg !== null && deg !== undefined && !(t.drums && this.danger < 0.6)) this._note(t, deg, this.nextAt, stepLen * (t.melody[(i + 1) % 64] === null ? 2 : 1));
       this.nextAt += stepLen;
       this.step += 1;
     }
@@ -141,8 +148,23 @@ CM.music = {
     return o;
   },
 
+  // a leitmotif: the bell (three tolls, falling), the queen's song (five notes, minor, unsteady), the Root's one note
+  motif(name) {
+    if (!this.enabled || !this._ensure()) return false;
+    const ctx = CM.audio.ctx, at = ctx.currentTime + 0.05, dest = this.master;
+    if (name === "bell") { [[440, 0], [330, 1.1], [220, 2.3]].forEach(([hz, dt]) => { this._osc("sine", hz, at + dt, at + dt + 2.2, 0.16, 3000, dest); this._osc("sine", hz * 2.76, at + dt, at + dt + 0.5, 0.05, 6000, dest); }); }
+    else if (name === "queen") { [0, 3, 2, 3, -2].forEach((semi, i) => { const hz = 392 * Math.pow(2, semi / 12) * (1 + (i % 2 ? 0.004 : -0.003)); this._osc("triangle", hz, at + i * 0.42, at + i * 0.42 + 0.5, 0.11, 2200, dest); }); }
+    else if (name === "root") { this._osc("sine", 41.2, at, at + 3.2, 0.3, 300, dest); this._osc("triangle", 41.2 * 1.5, at + 0.4, at + 3.0, 0.05, 400, dest); }
+    else return false;
+    return true;
+  },
+  setDepth(k) { this.depth = CM.clamp(k || 0, 0, 1); },
+  setDanger(k) { this.danger = CM.clamp(k || 0, 0, 1); },
+  shift(semitones) { this.shiftBy = semitones || 0; },
   _note(t, deg, at, len) {
     const hz = this.hz(this.midi(t, deg, 1));
+    if (this.depth >= 0.5 && !t.drums && this.bus) this._osc("sine", hz * 2, at + 0.02, at + len * 0.7, 0.03 + 0.03 * this.depth, 2400);   // deeper in: an echo an octave up
+    if (this.depth >= 0.9 && !t.drums && this.bus) this._osc("triangle", this.hz(this.midi(t, deg + 4, 0)), at, at + len * 0.9, 0.04, 1200);   // at the band's end: a fifth under it
     if (t.voice === "pluck") {                                           // a lute: bright, quick to fade
       const ctx = CM.audio.ctx, o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
       o.type = "triangle"; o.frequency.value = hz; f.type = "lowpass"; f.frequency.value = 2400;

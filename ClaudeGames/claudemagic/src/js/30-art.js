@@ -185,13 +185,17 @@ function shaded(p, hex, k) {                                            // a col
 // a monster, from its row in CM.MONSTERS: a body shape, a head, what it holds, its colour and eyes - and the finish:
 // a sheen where the torch catches it, fur or scales or a hide and belt, its skin (stone cracks, warts, rot), brows
 // drawn down and a grim mouth with teeth or fangs
-CM.art.monster = function (m, big = false) {
+// pose: "idle" (as drawn), "idle2" (the weight on the other foot: a breath, a shift), "attack" (leaning in, the
+// weapon arm up) - the Drawn theme's frames, the same picture under a different hand (36-looks.js keeps the layers)
+CM.art.monster = function (m, big = false, pose = "idle") {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14, rndm = new CM.Random(CM.hashSeed(m.name));
   const col = m.colour, dark = shaded(p, col, 0.65), light = shaded(p, col, 1.3);
   const bodies = { beast: [150, 70], small: [66, 76], biped: [84, 100], thin: [58, 100], wide: [130, 112], tall: [78, 140], ghost: [90, 140] };
   const [bw, bh] = bodies[m.body] || bodies.biped;
   const scale = big === true ? 1.12 : typeof big === "number" ? big : 1;
   p.translate(cx, ground); p.scale(scale, scale); p.translate(-cx, -ground);
+  if (pose === "idle2") { p.translate(cx, ground); p.transform(1, 0, -0.04, 0.97, 0, 0); p.translate(-cx, -ground); }      // (a shift of the weight, a breath out)
+  else if (pose === "attack") { p.translate(cx, ground); p.transform(1.06, 0, 0.18, 1.0, 0, 6); p.translate(-cx, -ground); }   // (leaning in)
   const bodyTop = ground - (m.body === "beast" ? 24 : 36) - bh, bodyBottom = bodyTop + bh;
   const headR = m.body === "small" ? 30 : m.body === "wide" ? 28 : m.body === "beast" ? 26 : 24;
   const headY = m.body === "beast" ? bodyTop + 4 : bodyTop - headR + 8;
@@ -487,6 +491,58 @@ CM.art.teleporter = function () {                                         // a r
   return c;
 };
 
+// the town's things: a house front with a door and a sign, a foundation of low stones, the square's well
+CM.art.treeWall = function (theme, seed) {                               // the Wood's wall: a trunk and its crown against the dark of the trees behind
+  const c = artCanvas(), p = c.getContext("2d"), rnd = new CM.Random(seed), S = ART_SIZE;
+  p.fillStyle = rgb(theme.mortar); p.fillRect(0, 0, S, S);
+  for (let i = 0; i < 60; i++) { p.fillStyle = `rgba(${theme.stone[0] + rnd.int(-20, 20)},${theme.stone[1] + rnd.int(-20, 20)},${theme.stone[2] + rnd.int(-10, 10)},0.7)`; p.beginPath(); p.arc(rnd.int(0, S), rnd.int(0, S * 0.7), rnd.int(14, 30), 0, Math.PI * 2); p.fill(); }
+  const tx = S / 2 + rnd.int(-20, 20), tw = 34 + rnd.int(0, 12);
+  p.fillStyle = "#4A3220"; p.fillRect(tx - tw / 2, S * 0.3, tw, S * 0.7);
+  p.fillStyle = "#3A2614"; for (let y = S * 0.3; y < S; y += 14) p.fillRect(tx - tw / 2 + rnd.int(0, 6), y, tw - rnd.int(4, 12), 3);
+  p.fillStyle = `rgba(${theme.moss[0]},${theme.moss[1]},${theme.moss[2]},0.85)`; for (let i = 0; i < 14; i++) { p.beginPath(); p.arc(tx + rnd.int(-60, 60), S * 0.18 + rnd.int(-30, 30), rnd.int(20, 40), 0, Math.PI * 2); p.fill(); }
+  return c;
+};
+CM.art.vein = function (colour) {                                        // ore in the rock: a lump of stone with the metal's flecks
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(colour));
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 70, 9, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#6A625A"; p.beginPath(); p.moveTo(60, 236); p.lineTo(70, 150); p.lineTo(128, 120); p.lineTo(190, 150); p.lineTo(200, 236); p.closePath(); p.fill();
+  p.fillStyle = "#4A443E"; p.beginPath(); p.moveTo(60, 236); p.lineTo(70, 150); p.lineTo(110, 236); p.closePath(); p.fill();
+  p.fillStyle = colour; for (let i = 0; i < 26; i++) { p.beginPath(); p.arc(80 + rnd.int(0, 100), 140 + rnd.int(0, 86), rnd.int(3, 7), 0, Math.PI * 2); p.fill(); }
+  return c;
+};
+CM.art.house = function (stage = 4) {                                   // 1 a frame; 2 a roofed house; 3 with its sign; 4 with a lit window
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 100, 9, 0, 0, Math.PI * 2); p.fill();
+  if (stage >= 2) p.fillStyle = "#B89C78", p.fillRect(38, 96, 180, 146);   // the wall, limewashed
+  p.fillStyle = "#6E4A2A"; for (const x of [38, 124, 212]) p.fillRect(x, 96, 6, 146); p.fillRect(38, 150, 180, 6); p.fillRect(38, 96, 180, 6);   // the timbers (a frame alone, at the first stage)
+  if (stage >= 2) { p.fillStyle = "#7A4A2A"; p.beginPath(); p.moveTo(22, 100); p.lineTo(128, 30); p.lineTo(234, 100); p.closePath(); p.fill(); p.fillStyle = "#5A3418"; for (let y = 40; y < 100; y += 12) p.fillRect(22 + (100 - y) * 0.9, y, 212 - (100 - y) * 1.8, 3); }   // the roof
+  else { p.strokeStyle = "#6E4A2A"; p.lineWidth = 6; p.beginPath(); p.moveTo(40, 98); p.lineTo(128, 36); p.lineTo(216, 98); p.stroke(); }   // the roof's beams, bare
+  p.fillStyle = "#4A2E16"; p.fillRect(108, 166, 40, 76);                 // the door
+  p.fillStyle = "#D8B040"; p.beginPath(); p.arc(140, 206, 3, 0, Math.PI * 2); p.fill();
+  if (stage >= 2) { p.fillStyle = stage >= 4 ? "#F0D080" : "#A8C8E0"; p.fillRect(58, 166, 30, 30); p.fillRect(168, 166, 30, 30); p.strokeStyle = "#4A2E16"; p.lineWidth = 3; p.strokeRect(58, 166, 30, 30); p.strokeRect(168, 166, 30, 30); p.beginPath(); p.moveTo(73, 166); p.lineTo(73, 196); p.moveTo(183, 166); p.lineTo(183, 196); p.stroke(); }   // the windows (lit, at the last stage)
+  if (stage >= 3) { p.fillStyle = "#8A6A3A"; p.fillRect(92, 108, 72, 26); p.strokeStyle = "#3A2410"; p.lineWidth = 2; p.strokeRect(92, 108, 72, 26); }   // the sign
+  return c;
+};
+CM.art.foundation = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "rgba(0,0,0,0.25)"; p.beginPath(); p.ellipse(S / 2, S - 14, 100, 9, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#9A8A74"; p.fillRect(40, 196, 176, 46);
+  p.fillStyle = "#7A6A56"; for (let i = 0; i < 6; i++) p.fillRect(44 + i * 29, 200 + (i % 2) * 20, 24, 18);
+  p.strokeStyle = "#5A4A3A"; p.lineWidth = 2; p.strokeRect(40, 196, 176, 46);
+  p.fillStyle = "#6E4A2A"; p.fillRect(60, 150, 6, 50); p.fillRect(190, 150, 6, 50);   // two posts, waiting for a roof
+  return c;
+};
+CM.art.well = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 70, 9, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#8A8070"; p.fillRect(72, 176, 112, 60);                  // the ring
+  p.fillStyle = "#6A6054"; for (let i = 0; i < 4; i++) p.fillRect(76 + i * 28, 182 + (i % 2) * 24, 22, 18);
+  p.fillStyle = "#1A2030"; p.beginPath(); p.ellipse(S / 2, 176, 54, 12, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "#6E4A2A"; p.fillRect(80, 90, 8, 90); p.fillRect(168, 90, 8, 90); p.fillRect(74, 84, 108, 8);   // the posts and the beam
+  p.fillStyle = "#7A4A2A"; p.beginPath(); p.moveTo(64, 92); p.lineTo(128, 50); p.lineTo(192, 92); p.closePath(); p.fill();   // the little roof
+  p.fillStyle = "#4A2E16"; p.fillRect(124, 92, 6, 60); p.fillStyle = "#8A7A5A"; p.fillRect(112, 150, 30, 22);   // the rope and the bucket
+  return c;
+};
 CM.art.fountain = function (dry) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14;
   p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(cx, ground - 2, 100, 10, 0, 0, Math.PI * 2); p.fill();
@@ -611,11 +667,11 @@ CM.art.portraitDrawn = function (cls, size = 56) {
   const c = artCanvas(size), p = c.getContext("2d"), s = size / 56;
   p.scale(s, s);
   p.fillStyle = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A", Paladin: "#4A3A2A", Ranger: "#2A3A2E",
-    Druid: "#3A4A2A", Bard: "#4A2A3A" }[cls] || "#333";
+    Druid: "#3A4A2A", Bard: "#4A2A3A", Monk: "#4A3A20", Necromancer: "#2A1A3A", Artificer: "#3A3A2A" }[cls] || "#333";
   p.fillRect(0, 0, 56, 56);
   const skin = "#E0B890";
   p.fillStyle = { Knight: "#8A9098", Rogue: "#3A4A30", Cleric: "#E8E0D0", Mage: "#4A3A8A", Paladin: "#C8C0A0", Ranger: "#4A6A3A",
-    Druid: "#6A7A3A", Bard: "#8A3A5A" }[cls] || "#555";
+    Druid: "#6A7A3A", Bard: "#8A3A5A", Monk: "#C08040", Necromancer: "#3A2A5A", Artificer: "#7A5A30" }[cls] || "#555";
   p.fillRect(8, 36, 40, 24);                                            // shoulders
   if (cls === "Paladin") {
     outlined(p, () => { p.roundRect(14, 8, 28, 32, 6); }, "#D8D0B8", "#5A5040", 2);   // a helm with a gold cross
@@ -638,6 +694,25 @@ CM.art.portraitDrawn = function (cls, size = 56) {
     p.strokeStyle = "#E8E0A0"; p.lineWidth = 2; p.beginPath(); p.moveTo(40, 10); p.quadraticCurveTo(50, 2, 52, 10); p.stroke();
     p.fillStyle = "#3A2A1A"; p.fillRect(22, 24, 3, 3); p.fillRect(31, 24, 3, 3);
     p.fillStyle = "#E8C040"; p.fillRect(36, 40, 10, 12); p.fillStyle = "#6A4A20"; p.fillRect(38, 34, 2, 10);   // a lute
+  } else if (cls === "Monk") {
+    outlined(p, () => { p.arc(28, 24, 14, 0, Math.PI * 2); }, skin, "#5A3A20", 2);     // a shaven head, a red headband
+    p.fillStyle = "#C03030"; p.fillRect(14, 16, 28, 5);
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 24, 3, 3); p.fillRect(31, 24, 3, 3);
+    p.fillStyle = "#E0B890"; p.fillRect(10, 40, 10, 10); p.fillRect(36, 40, 10, 10);   // the fists, wrapped
+    p.fillStyle = "#D8D0B8"; p.fillRect(10, 44, 10, 2); p.fillRect(36, 44, 10, 2);
+  } else if (cls === "Necromancer") {
+    outlined(p, () => { p.moveTo(28, 2); p.lineTo(46, 30); p.lineTo(46, 42); p.lineTo(10, 42); p.lineTo(10, 30); }, "#2A1A3A", "#100818", 2);   // a deep hood
+    p.fillStyle = "#E8E0D0"; p.fillRect(20, 22, 16, 14);                 // a face gone pale
+    p.fillStyle = "#8040E0"; p.fillRect(22, 26, 4, 4); p.fillRect(30, 26, 4, 4);   // eyes that glow
+    p.fillStyle = "#1A1020"; p.fillRect(26, 32, 4, 3);
+    p.fillStyle = "#A080E0"; p.fillRect(40, 36, 3, 18);                  // a bone staff
+  } else if (cls === "Artificer") {
+    outlined(p, () => { p.arc(28, 26, 13, 0, Math.PI * 2); }, skin, "#5A3A20", 2);
+    outlined(p, () => { p.moveTo(12, 16); p.lineTo(44, 16); p.lineTo(40, 8); p.lineTo(16, 8); }, "#5A4A30", "#2A2010", 2);   // a leather cap
+    p.fillStyle = "#C8A040"; p.beginPath(); p.arc(22, 20, 5, 0, Math.PI * 2); p.arc(34, 20, 5, 0, Math.PI * 2); p.fill();   // goggles
+    p.fillStyle = "#4A7A8A"; p.beginPath(); p.arc(22, 20, 3, 0, Math.PI * 2); p.arc(34, 20, 3, 0, Math.PI * 2); p.fill();
+    p.fillStyle = "#3A2A1A"; p.fillRect(22, 30, 3, 3); p.fillRect(31, 30, 3, 3);
+    p.fillStyle = "#B8A040"; p.fillRect(38, 40, 10, 6); p.fillRect(41, 46, 4, 8);   // a wrench
   } else if (cls === "Knight") {
     outlined(p, () => { p.roundRect(14, 8, 28, 32, 8); }, "#B8BEC8", "#2A2E36", 2);
     p.fillStyle = "#1A1C22"; p.fillRect(16, 22, 24, 5);                 // the visor's slit
@@ -965,9 +1040,9 @@ CM.art.buildDrawn = function (theme) {
   const layers = [], index = {};
   const add = (name, canvas) => { index[name] = layers.length; layers.push(canvas); };
   const seed = CM.hashSeed(theme.name);
-  add("wall", CM.art.wall(theme, seed + 1, false));
-  add("wall2", CM.art.wall(theme, seed + 2, false));
-  add("wallbones", CM.art.wall(theme, seed + 3, true));
+  add("wall", theme.tree ? CM.art.treeWall(theme, seed + 1) : CM.art.wall(theme, seed + 1, false));
+  add("wall2", theme.tree ? CM.art.treeWall(theme, seed + 2) : CM.art.wall(theme, seed + 2, false));
+  add("wallbones", theme.tree ? CM.art.treeWall(theme, seed + 3) : CM.art.wall(theme, seed + 3, true));
   add("floor", CM.art.floor(theme, seed + 4));
   add("ceiling", CM.art.ceiling(theme, seed + 5));
   add("wallsecret", CM.art.secretWall(theme, seed + 6));
@@ -990,11 +1065,13 @@ CM.art.buildDrawn = function (theme) {
   add("stairs_up", CM.art.stairsUp(theme));
   add("key", CM.art.key());
   add("phylactery", CM.art.phylactery());
-  for (const m of CM.MONSTERS) add(`monster:${m.name}`, CM.art.monster(m));
-  add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
-  for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, CM.art.monster(G, G.size >= 1 ? 1.12 : 1.04));
+  for (const m of CM.MONSTERS) { add(`monster:${m.name}`, CM.art.monster(m)); add(`monster:${m.name}:idle2`, CM.art.monster(m, false, "idle2")); add(`monster:${m.name}:attack`, CM.art.monster(m, false, "attack")); }
+  add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true)); add(`monster:${CM.BOSS.name}:idle2`, CM.art.monster(CM.BOSS, true, "idle2")); add(`monster:${CM.BOSS.name}:attack`, CM.art.monster(CM.BOSS, true, "attack"));
+  for (const G of Object.values(CM.GUARDIANS)) { const k = G.size >= 1 ? 1.12 : 1.04; add(`monster:${G.name}`, CM.art.monster(G, k)); add(`monster:${G.name}:idle2`, CM.art.monster(G, k, "idle2")); add(`monster:${G.name}:attack`, CM.art.monster(G, k, "attack")); }
   add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, CM.art.monster(row));
+  for (const [id, O] of Object.entries(CM.ORES)) add(`vein:${id}`, CM.art.vein(O.colour));
+  add("house", CM.art.house(4)); for (let s = 1; s <= 4; s++) add(`house${s}`, CM.art.house(s)); add("foundation", CM.art.foundation()); add("well", CM.art.well());
   add("bones", CM.art.bones()); add("rope", CM.art.rope()); add("plate", CM.art.plate(false)); add("plate_pressed", CM.art.plate(true)); add("door_riddle", CM.art.door("riddle"));
   add("fungus", CM.art.fungus()); add("crystal", CM.art.crystal()); add("root", CM.art.root());
   add("fx:spark", CM.art.fxSpark()); add("fx:shard", CM.art.fxShard()); add("fx:fire", CM.art.fxFire()); add("fx:frost", CM.art.fxFrost());

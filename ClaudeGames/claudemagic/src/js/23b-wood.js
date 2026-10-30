@@ -1,0 +1,86 @@
+"use strict";
+// The Deep Wood: a second surface floor (-1) west of the town through a gate at the end of the main lane, made by the
+// seed from the forest's own rules - glades joined by paths through the trees (a tree is a wall the renderer draws as
+// a trunk and a crown), a river with one ford, a hermit's hut, a ruined shrine, a charcoal burner's clearing and three
+// cave mouths (one open a day, by the day of the run; each a short floor of the first bands' kinds, and a troll under
+// the third). By day the Wood is foraging (mushrooms, berries, herbs, deadwood, a beehive) and deer and boar that run;
+// by night wolves, a bear and bandits come to the party, and under a full moon a wolf that is more. The Wood's beasts
+// give no renown and little gold: hides and meat, and the night's danger. The dungeon's floors do not change by a cell.
+CM.WOOD_THEME = { name: "The Deep Wood", floors: [-1, -1], stone: [58, 84, 46], mortar: [34, 52, 28], floor: [78, 104, 52], ceiling: [140, 170, 205],
+  moss: [120, 160, 70], fog: [0.01, 0.014, 0.008], torch: [1.0, 0.95, 0.85], reach: 7.0, bones: 0, tree: true };
+CM.WOOD_SIZE = 31;
+CM.WOOD_GATE = [29, 15];                                                 // the Wood's end of the gate; the town's end is CM.TOWN_AT.woodgate
+CM.TOWN_AT.woodgate = [0, 9];
+CM.WOOD_NODES = [["a patch of mushrooms", "fungus"], ["a bramble of berries", "nest"], ["herbs by the path", "nest"], ["a stand of deadwood", "ember"], ["a beehive in a hollow oak", "nest"]];
+CM.CAVE_OF = (number) => Math.round((-number - 1.5) * 10);              // -1.5 -> 0, -1.6 -> 1, -1.7 -> 2
+CM.caveNumber = (n) => -(1.5 + n / 10);
+CM.WOOD_LINES = {
+  hut: ["The hermit of the Wood opens the door a hand's width. \"Hides I'll take, by daylight. Trouble I won't.\" The door shuts.", "The hut is shuttered for the night, and something inside is awake and not opening."],
+  shrine: "A shrine with its roof in the grass. Cut into the one standing wall, older than the town's oldest stone: THE ORDER KEPT THE DEAD IN THE TREES BEFORE IT KEPT THEM IN THE HILL. THE TREES DID NOT ASK TO BE FED EITHER.",
+  burner: ["The charcoal burner sits by a smoking mound. \"Deadwood in, charcoal out. Come back when the forge wants it.\"", "The charcoal burner's mound glows in the dark; the man himself is a shape asleep against a tree."],
+  caveShut: "The cave's mouth is choked with fallen rock today. The Wood opens one a day, the hermit says, and never says which.",
+};
+CM.woodCache = {};
+CM.makeWood = function (seed) {
+  if (CM.woodCache[seed]) return JSON.parse(CM.woodCache[seed]);
+  const size = CM.WOOD_SIZE, rnd = new CM.Random(CM.hashSeed(`${seed}:wood`)), grid = [];
+  for (let y = 0; y < size; y++) grid.push(new Array(size).fill(1));
+  const open = (x, y) => { if (x > 0 && y > 0 && x < size - 1 && y < size - 1) grid[y][x] = 0; };
+  const carve = (cx, cy, rx, ry) => { for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++) if (((x - cx) / (rx + 0.5)) ** 2 + ((y - cy) / (ry + 0.5)) ** 2 <= 1) open(x, y); };
+  const path = (a, b) => { let [x, y] = a; while (x !== b[0] || y !== b[1]) { open(x, y); if (x !== b[0] && (y === b[1] || rnd.chance(0.6))) x += Math.sign(b[0] - x); else y += Math.sign(b[1] - y); } open(x, y); };
+  const glades = [[26, 15]];                                             // the first glade, just inside the gate: safe at any hour
+  let guard = 0; while (glades.length < 8 && guard++ < 400) { const c = [rnd.int(4, 24), rnd.int(4, 26)]; if (glades.every((g) => Math.abs(g[0] - c[0]) + Math.abs(g[1] - c[1]) >= 7)) glades.push(c); }
+  glades.forEach((g, i) => carve(g[0], g[1], i === 0 ? 3 : rnd.int(2, 4), i === 0 ? 2 : rnd.int(2, 3)));
+  for (let i = 1; i < glades.length; i++) path(glades[i - 1], glades[i]);
+  const fordY = glades[Math.min(2, glades.length - 1)][1];               // the river, and its one ford on the third glade's row
+  path([4, fordY], [26, fordY]);
+  path(glades[0], CM.WOOD_GATE); open(CM.WOOD_GATE[0], CM.WOOD_GATE[1]);
+  const features = {}, decor = [], things = {};
+  for (let y = 1; y < size - 1; y++) { const rx = 11 + Math.round(Math.sin(y / 4) * 2); open(rx, y); decor.push({ kind: "water", x: rx, y }); if (y !== fordY) features[`${rx},${y}`] = { type: "river" }; }
+  const cells = []; for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !features[`${x},${y}`]) cells.push([x, y]);
+  const farFromGate = (c) => Math.abs(c[0] - CM.WOOD_GATE[0]) + Math.abs(c[1] - CM.WOOD_GATE[1]) >= 8;
+  const take = (ok) => { for (let g = 0; g < 200; g++) { const c = cells[rnd.int(0, cells.length - 1)], k = `${c[0]},${c[1]}`; if (!things[k] && (!ok || ok(c))) { return k; } } return null; };
+  things[`${CM.WOOD_GATE[0]},${CM.WOOD_GATE[1]}`] = { type: "woodgate" };
+  for (let n = 0; n < 3; n++) { const k = take(farFromGate); if (k) things[k] = { type: "cave", n }; }
+  for (const type of ["hut", "shrine", "burner"]) { const k = take(farFromGate); if (k) things[k] = { type }; }
+  for (let i = 0; i < 8; i++) { const k = take(); if (k) things[k] = { type: "node", band: -1, forage: i % CM.WOOD_NODES.length }; }
+  const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen: [], rooms: glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), decor, special: "wood", glades, ford: [11 + Math.round(Math.sin(fordY / 4) * 2), fordY] };
+  CM.woodCache[seed] = JSON.stringify(fl);
+  return JSON.parse(CM.woodCache[seed]);
+};
+CM.woodCaveAt = (seed, n) => { const fl = CM.makeWood(seed); return Object.keys(fl.things).find((k) => fl.things[k].type === "cave" && fl.things[k].n === n) || CM.WOOD_GATE.join(","); };
+// a cave: a short floor of the first bands' kinds, carved as any floor of its own key, with the way out where the stair was;
+// the third cave has a troll under the hill at its far end
+CM.makeCave = function (number, seed, gen) {
+  const n = CM.CAVE_OF(number), fl = CM.makeFloor(3 + n * 3, `${seed}:cave:${n}`, 2);
+  fl.number = number; fl.special = "cave"; fl.cave = n; delete fl.wing;
+  for (const [k, t] of Object.entries(fl.things)) {
+    if (t.type === "stairs_up") fl.things[k] = { type: "caveexit" };
+    else if (t.type === "ladder" && n === 2) { const troll = CM.makeMonster(CM.monsterKind("Troll"), 6, new CM.Random(CM.hashSeed(`${seed}:cavelord`))); troll.name = "The Troll under the Hill"; troll.elite = "hulking"; troll.max = Math.round(troll.max * 1.6); troll.hp = troll.max; troll.atk += 3; troll.xp *= 3; troll.gold = 60; fl.things[k] = { type: "monsters", group: [troll], still: true, caveLord: true }; }
+    else if (!["chest", "monsters", "key", "node"].includes(t.type)) delete fl.things[k];
+  }
+  for (const [k, f] of Object.entries(fl.features)) if (["carving", "teleporter", "spinner", "trapdoor", "pit"].includes(f.type)) delete fl.features[k];
+  if (!Object.values(fl.things).some((t) => t.type === "caveexit")) fl.things[CM.keyOf(fl.pos[0], fl.pos[1])] = { type: "caveexit" };
+  const ores = [["copper", "copper"], ["iron", "iron"], ["gold", "iron"]][n], cells = [];   // the cave's own veins: copper in the first, iron in the second, gold at the deepest
+  for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = CM.keyOf(x, y); if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && CM.DIRS.some(([dx, dy]) => fl.grid[y + dy][x + dx] === 1)) cells.push(k); }
+  ores.forEach((ore, i) => { if (cells.length) { const k = cells[CM.hashSeed(`${seed}:cavevein:${n}:${i}`) % cells.length]; fl.things[k] = { type: "vein", ore, left: CM.VEIN_SWINGS }; } });
+  return fl;
+};
+// the Wood's own kinds: never among a floor's bands
+CM.WOOD_KINDS = [
+  { name: "Deer", colour: "#A07A50", body: "beast", head: "snout", eyes: "#302010", extras: ["tail"], speed: 16, shape: [0.7, 0.4, 0.4], wood: true, flees: true },
+  { name: "Boar", colour: "#5A4A3A", body: "beast", head: "tusks", eyes: "#FF5040", extras: ["tail"], speed: 11, ability: "charge", shape: [1.1, 1.0, 0.8], wood: true, flees: true },
+  { name: "Wolf", colour: "#707478", body: "beast", head: "snout", eyes: "#FFE040", extras: ["tail"], speed: 14, ability: "savage", shape: [0.9, 1.1, 0.6], wood: true },
+  { name: "Bear", colour: "#4A3A2A", body: "wide", head: "round", eyes: "#FFE040", extras: ["claws"], speed: 8, ability: "stun", shape: [1.8, 1.3, 0.9], wood: true },
+];
+for (const k of CM.WOOD_KINDS) CM.MONSTERS.push(k);
+Object.assign(CM.MEALS, { Deer: { name: "venison", what: "+1 defence", df: 1 }, Boar: { name: "roast boar", what: "+1 attack", atk: 1 }, Wolf: { name: "wolf, stewed long", what: "+1 Luck", luck: 1 }, Bear: { name: "bear's flank", what: "mends 1 a round in fights", regen: 1 } });
+CM.HIDES = { Deer: 30, Boar: 35, Wolf: 40, Bear: 90, Troll: 160 };
+CM.hide = (kind) => ({ name: `${kind} hide`, kind: "hide", hide: kind, power: 0, value: CM.HIDES[kind] || 30 });
+for (const kind of Object.keys(CM.HIDES)) CM.BASES[`${kind} hide`] = { id: `${kind} hide`, kind: "hide", slot: null, tier: 0, group: "ingredient" };
+Object.assign(CM.INGREDIENTS, {
+  mushroom: { band: -1, name: "Wood Mushroom" }, berries: { band: -1, name: "Bramble Berries" }, woodherb: { band: -1, name: "Wild Herbs" }, deadwood: { band: -1, name: "Deadwood" }, honey: { band: -1, name: "Wild Honey", rare: true },
+});
+for (const id of ["mushroom", "berries", "woodherb", "deadwood", "honey"]) CM.BASES[CM.INGREDIENTS[id].name] = { id: CM.INGREDIENTS[id].name, kind: "ingredient", slot: null, tier: 0, group: "ingredient" };
+// the Wood's bands, by day and by night (and the moon): what walks there now
+CM.woodBands = (night, fullMoon) => (night ? [["Wolf", "Wolf", "Wolf"], ["Bear"], ["Sellsword", "Sellsword"], fullMoon ? ["Wolf", "Wolf", "Wolf", "Wolf"] : ["Wolf", "Wolf"]] : [["Deer", "Deer"], ["Boar"], ["Deer"], ["Boar", "Boar"]]);

@@ -208,13 +208,27 @@ def build_text():
     return "\n".join(lines)
 
 
+def same_pack(have, want):
+    """Two packs are the same when they hold the same pictures: Pillow's PNG encoder differs from version to version, so
+    the atlas is compared pixel by pixel, the rest as text."""
+    import re
+    from PIL import Image
+    pat = r'atlas: "data:image/png;base64,([A-Za-z0-9+/=]+)"'
+    a, b = re.search(pat, have), re.search(pat, want)
+    if not a or not b or re.sub(pat, "", have) != re.sub(pat, "", want):
+        return False
+    img_a = Image.open(io.BytesIO(base64.b64decode(a.group(1)))).convert("RGBA")
+    img_b = Image.open(io.BytesIO(base64.b64decode(b.group(1)))).convert("RGBA")
+    return img_a.size == img_b.size and img_a.tobytes() == img_b.tobytes()
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if "--gather" in argv:
         return gather()
     text = build_text()
     if "--check" in argv:
-        same = OUT.exists() and OUT.read_text(encoding="utf-8") == text
+        same = OUT.exists() and same_pack(OUT.read_text(encoding="utf-8"), text)
         print("up to date" if same else "out of date: run  python pack.py  in ClaudeGames/claudemagic")
         return 0 if same else 1
     OUT.write_text(text, encoding="utf-8")

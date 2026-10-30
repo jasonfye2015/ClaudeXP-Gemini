@@ -4,6 +4,8 @@
 // expired fall off. A projectile can carry a `then` - its burst, its flash - for the moment it lands, and while one is
 // in flight the window holds the damage it will do until it gets there (holdUntil). The recipes - which effect each
 // event of the game gets - are in 80-main.js, where the camera and the foes' places are known.
+CM.fxSpeed = 1;                                   // Settings > Combat speed: 1, 2 (fast) or 6 (as good as instant) - every effect's ms is divided by it
+CM.reducedMotion = false;                         // Settings > Reduce motion: no shaking, no flashes, no washes of colour
 CM.Effects = class {
   constructor() { this.list = []; this.holdUntil = 0; }
   get count() { return this.list.length; }
@@ -13,6 +15,7 @@ CM.Effects = class {
   // a thing flying from one point to another (world x, height, z) over `ms`, trailing sparks; `then` runs when it lands
   projectile(o) {
     const e = Object.assign({ type: "projectile", t0: this.now(), ms: 320, size: 0.22, layer: "fx:fire", trail: "fx:spark", arc: 0.12, glow: 1 }, o);
+    e.ms /= CM.fxSpeed || 1;
     this.list.push(e);
     this.holdUntil = Math.max(this.holdUntil, e.t0 + e.ms);
     return e.ms;
@@ -20,6 +23,7 @@ CM.Effects = class {
   // sparks or shards from a point: n of them flung out, falling under gravity, fading
   burst(o) {
     const e = Object.assign({ type: "burst", t0: this.now(), ms: 650, n: 14, speed: 1.4, up: 1.6, gravity: 3.2, size: 0.07, layer: "fx:spark", glow: 1, seed: 1 }, o);
+    e.ms /= CM.fxSpeed || 1;
     const rnd = new CM.Random(e.seed + Math.floor(e.t0 % 1000));
     e.parts = [];
     for (let i = 0; i < e.n; i++) {
@@ -30,12 +34,13 @@ CM.Effects = class {
     this.list.push(e);
   }
   // a ring on the floor, spreading out from a point
-  ring(o) { this.list.push(Object.assign({ type: "ring", t0: this.now(), ms: 800, at: [0, 0, 0], to: 2.4, layer: "fx:ring", glow: 1 }, o)); }
+  ring(o) { const e = Object.assign({ type: "ring", t0: this.now(), ms: 800, at: [0, 0, 0], to: 2.4, layer: "fx:ring", glow: 1 }, o); e.ms /= CM.fxSpeed || 1; this.list.push(e); }
   // something hanging in the air for a moment (lightning over a foe, a holy light): a billboard that grows and fades
-  flare(o) { this.list.push(Object.assign({ type: "flare", t0: this.now(), ms: 260, size: 0.6, layer: "fx:bolt", glow: 1, rise: 0, grow: 0.3 }, o)); }
+  flare(o) { const e = Object.assign({ type: "flare", t0: this.now(), ms: 260, size: 0.6, layer: "fx:bolt", glow: 1, rise: 0, grow: 0.3 }, o); e.ms /= CM.fxSpeed || 1; this.list.push(e); }
   // things falling onto a point from above (shards of ice)
   rain(o) {
     const e = Object.assign({ type: "rain", t0: this.now(), ms: 520, n: 8, layer: "fx:frost", size: 0.12, glow: 1, spread: 0.4, seed: 2 }, o);
+    e.ms /= CM.fxSpeed || 1;
     const rnd = new CM.Random(e.seed + Math.floor(e.t0 % 1000));
     e.parts = [];
     for (let i = 0; i < e.n; i++) e.parts.push({ dx: (rnd.next() - 0.5) * e.spread, dz: (rnd.next() - 0.5) * e.spread, delay: rnd.next() * 0.4, size: e.size * (0.7 + rnd.next() * 0.6) });
@@ -44,6 +49,7 @@ CM.Effects = class {
   // motes drifting up from a point (sleep, a blessing)
   drift(o) {
     const e = Object.assign({ type: "drift", t0: this.now(), ms: 900, n: 6, layer: "fx:spark", size: 0.06, glow: 1, spread: 0.5, rise: 0.5, seed: 3 }, o);
+    e.ms /= CM.fxSpeed || 1;
     const rnd = new CM.Random(e.seed + Math.floor(e.t0 % 1000));
     e.parts = [];
     for (let i = 0; i < e.n; i++) e.parts.push({ dx: (rnd.next() - 0.5) * e.spread, dz: (rnd.next() - 0.5) * e.spread, delay: rnd.next() * 0.5, size: e.size * (0.6 + rnd.next() * 0.8) });

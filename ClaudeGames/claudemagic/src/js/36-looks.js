@@ -86,9 +86,9 @@ CM.art.buildPixel = function (theme) {
   CM.art.tileOnto(pp, "phylactery", S * 0.15, S * 0.15, S * 0.7, S * 0.7);
   add("phylactery", phy);
   const tileOr = (key, drawn) => (CM.packs.pixel.index[key] ? sprite(key) : CM.art.pixelate(drawn()));   // (the set's tile, or the drawn one made of pixels)
-  for (const m of CM.MONSTERS) add(`monster:${m.name}`, tileOr(`m.${m.name}`, () => CM.art.monster(m)));
-  add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`));
-  for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12)));
+  for (const m of CM.MONSTERS) { add(`monster:${m.name}`, tileOr(`m.${m.name}`, () => CM.art.monster(m))); add(`monster:${m.name}:idle2`, tileOr(`m.${m.name}`, () => CM.art.monster(m, false, "idle2"))); add(`monster:${m.name}:attack`, tileOr(`m.${m.name}`, () => CM.art.monster(m, false, "attack"))); }
+  add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`)); add(`monster:${CM.BOSS.name}:idle2`, sprite(`m.${CM.BOSS.name}`)); add(`monster:${CM.BOSS.name}:attack`, sprite(`m.${CM.BOSS.name}`));
+  for (const G of Object.values(CM.GUARDIANS)) { add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12))); add(`monster:${G.name}:idle2`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12, "idle2"))); add(`monster:${G.name}:attack`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12, "attack"))); }
   add("nest", CM.art.pixelate(CM.art.nest())); add("throne", CM.art.pixelate(CM.art.throne())); add("anvil", CM.art.pixelate(CM.art.anvil()));
   add("ember", tileOr("ember", CM.art.ember));
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, tileOr(`npc.${who}`, () => CM.art.monster(row)));
@@ -166,8 +166,11 @@ CM.art.DOLLS = {
   Mage: ["human_male", "boots.short", "body.robe_blue", "beard.long_white", "head.wizard_blue", "left.book", "right.staff_mage"],
   Druid: ["human_female", "boots.brown", "body.robe_green", "hair.long_red", "head.hood_green_2", "right.staff_organic"],
   Bard: ["human_male", "boots.short", "legs.blue", "body.vest", "cloak.red", "hair.short_black", "head.feather_red", "right.horn"],
+  Monk: ["human_male", "boots.short", "legs.black", "body.vest", "hair.short_black"],
+  Necromancer: ["human_female", "boots.short", "body.robe_blue", "cloak.black", "head.hood_black", "left.book", "right.staff_mage"],
+  Artificer: ["human_male", "boots.brown", "legs.blue", "body.leather", "hair.short_black", "left.shield_round", "right.mace"],
 };
-CM.art.PORTRAIT_BG = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A", Paladin: "#4A3A2A", Ranger: "#2A3A2E", Druid: "#3A4A2A", Bard: "#4A2A3A" };
+CM.art.PORTRAIT_BG = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A", Paladin: "#4A3A2A", Ranger: "#2A3A2E", Druid: "#3A4A2A", Bard: "#4A2A3A", Monk: "#4A3A20", Necromancer: "#2A1A3A", Artificer: "#3A3A2A" };
 CM.art.portrait = function (cls, size = 56, look = "drawn") {
   if (look !== "pixel" || !CM.art.hasLook("pixel")) return CM.art.portraitDrawn(cls, size);
   const c = artCanvas(size), p = c.getContext("2d");
@@ -189,8 +192,14 @@ CM.art.itemKey = function (item) {
     case "key": return "i.key";
     case "rope": return "i.rope";
     case "bones": return "i.bones";
+    case "page": return "i.scroll";
     case "tome": return "i.tome";
     case "gem": return `i.gem_${item.gem}`;
+    case "greaterheal": return "i.greaterheal";
+    case "oil": return "i.oil";
+    case "bomb": return "i.bomb";
+    case "ingredient": return "i.ingredient";
+    case "scrap": return "i.scrap";
     case "weapon":
       if (item.props && item.props.bow) return has("Short Bow", "Hunting Bow") ? "i.bow" : "i.longbow";
       if (has("Dagger")) return "i.dagger";
@@ -201,6 +210,7 @@ CM.art.itemKey = function (item) {
       if (has("Hammer")) return "i.hammer";
       if (has("Flamberge", "Dragonslayer")) return "i.great_sword";
       if (has("Club")) return "i.club";
+      if (has("Fists")) return "i.fists";
       if (has("Staff")) return "i.staff";
       if (has("Spear")) return "i.spear";
       return "i.long_sword";
@@ -214,6 +224,9 @@ CM.art.itemKey = function (item) {
     case "shield": return has("Buckler") ? "i.buckler" : has("Tower") ? "i.tower" : "i.shield";
     case "helm": return has("Cap", "Coif") ? "i.cap" : has("Great") ? "i.great_helm" : "i.helm";
     case "ring": return "i.ring";
+    case "boots": return "i.boots";
+    case "cloak": return "i.cloak";
+    case "ration": return "i.ration";
     case "amulet": return "i.amulet";
     default: return "i.unknown";
   }
@@ -235,6 +248,15 @@ CM.art.glyph = function (item, size = 24) {
     case "mana": potion("#3060E0"); break;
     case "revive": potion("#F0C040"); break;
     case "antidote": potion("#40B050"); break;
+    case "greaterheal": potion("#FF6060"); p.fillStyle = "#FFF0F0"; p.fillRect(10, 11, 4, 1.5); p.fillRect(11.2, 9.8, 1.6, 4); break;
+    case "oil": potion("#E0A030"); break;
+    case "bomb": outlined(p, () => { p.arc(12, 14, 7, 0, Math.PI * 2); }, "#3A3430", "#1A1410", 1.5); line("#C8A040", 1.5); p.beginPath(); p.moveTo(12, 7); p.lineTo(15, 3); p.stroke(); p.fillStyle = "#FF9030"; p.beginPath(); p.arc(15, 3, 1.6, 0, Math.PI * 2); p.fill(); break;
+    case "ingredient": line("#1A1410", 4); p.beginPath(); p.moveTo(6, 20); p.quadraticCurveTo(12, 4, 19, 6); p.stroke(); line("#6A9A40", 2); p.beginPath(); p.moveTo(6, 20); p.quadraticCurveTo(12, 4, 19, 6); p.stroke(); outlined(p, () => { p.ellipse(13, 12, 4, 7, -0.7, 0, Math.PI * 2); }, "#80B050", "#1A1410", 1.2); break;
+    case "boots": outlined(p, () => { p.moveTo(6, 6); p.lineTo(12, 6); p.lineTo(12, 15); p.lineTo(19, 17); p.lineTo(19, 20); p.lineTo(6, 20); }, "#6A4A2A", "#1A1410", 1.5); p.fillStyle = "#3A2A1A"; p.fillRect(6, 18, 13, 2); break;
+    case "cloak": outlined(p, () => { p.moveTo(12, 3); p.lineTo(20, 9); p.lineTo(18, 21); p.lineTo(6, 21); p.lineTo(4, 9); }, "#4A3A6A", "#1A1410", 1.5); p.fillStyle = "#E8C040"; p.beginPath(); p.arc(12, 7, 1.8, 0, Math.PI * 2); p.fill(); break;
+    case "ration": outlined(p, () => { p.roundRect(5, 8, 14, 10, 2); }, "#C8A060", "#1A1410", 1.5); p.fillStyle = "#8A6A3A"; p.fillRect(7, 10, 10, 2); p.fillRect(7, 14, 10, 2); break;
+    case "fists": for (const x of [4, 13]) { outlined(p, () => { p.roundRect(x, 8, 8, 9, 2); }, "#E0B890", "#1A1410", 1.5); p.fillStyle = "#D8D0B8"; p.fillRect(x, 12, 8, 2); p.fillStyle = "#1A1410"; for (let i = 0; i < 3; i++) p.fillRect(x + 1 + i * 2.5, 8, 1, 2); } break;
+    case "scrap": outlined(p, () => { p.moveTo(5, 16); p.lineTo(10, 7); p.lineTo(14, 12); p.lineTo(19, 9); p.lineTo(18, 19); p.lineTo(7, 20); }, "#8A8A90", "#1A1410", 1.5); break;
     case "scroll": outlined(p, () => { p.rect(5, 4, 14, 16); }, "#E8DCC0", "#5A4A2A", 1.5); line("#8A6A3A", 1); for (let y = 8; y <= 16; y += 3) { p.beginPath(); p.moveTo(8, y); p.lineTo(16, y); p.stroke(); } p.fillStyle = "#B03030"; p.fillRect(5, 17, 14, 2); break;
     case "wand": line("#1A1410", 5); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); line("#8A6A30", 3); p.beginPath(); p.moveTo(5, 19); p.lineTo(17, 7); p.stroke(); p.fillStyle = "#F0E060"; p.beginPath(); p.arc(18, 6, 3, 0, Math.PI * 2); p.fill(); break;
     case "torch": line("#1A1410", 5); p.beginPath(); p.moveTo(10, 21); p.lineTo(13, 11); p.stroke(); line("#7A5A30", 3); p.beginPath(); p.moveTo(10, 21); p.lineTo(13, 11); p.stroke(); outlined(p, () => { p.moveTo(13, 2); p.lineTo(18, 9); p.lineTo(13, 12); p.lineTo(8, 9); }, "#F0A030", "#A04010", 1.5); break;

@@ -50,6 +50,8 @@ kbd { font: 11px var(--mono); background: #2A2018; border: 1px solid var(--edge)
 #classes { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; }
 .calling { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: center; padding: 2px 4px; border-radius: 3px; }
 .calling:hover { background: rgba(42,32,24,0.6); }
+.calling.locked { opacity: 0.55; }
+.calling.locked canvas { filter: grayscale(1); }
 .calling canvas { width: 30px; height: 30px; border: 1px solid var(--edge); border-radius: 3px; }
 .calling b { color: var(--ink); font-size: 12.5px; }
 .calling small { color: var(--dim); font-size: 11px; line-height: 1.3; }
@@ -85,6 +87,7 @@ table.stats tr.key td.hint { color: var(--gold); }
 #advice.sound h2 { color: #8FD08F; }
 #create .foot { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
 #create .foot label { color: var(--dim); font-size: 13px; margin-left: 10px; }
+#create .foot label#iron-label { display: inline-flex; align-items: center; gap: 4px; }
 #create .foot input { width: 170px; }
 
 /* ---- a hero's sheet ---- */
@@ -157,6 +160,13 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #view .vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px 30px rgba(0,0,0,0.55); }
 #view .compass { position: absolute; top: 6px; left: 0; right: 0; text-align: center; font: bold 15px var(--serif); color: #E8D8A0; text-shadow: 0 1px 2px #000, 0 0 8px rgba(0,0,0,0.8); pointer-events: none; }
+#view .sky { position: absolute; top: 4px; right: 10px; width: 120px; height: 52px; opacity: 0.9; cursor: pointer; }
+#view .sky svg { width: 120px; height: 40px; display: block; }
+#view .sky .arc { fill: none; stroke: rgba(232,216,160,0.45); stroke-width: 1; stroke-dasharray: 2 3; }
+#view .sky .sun { fill: #F6D36A; filter: drop-shadow(0 0 3px #F6D36A); }
+#view .sky .moon .disc { fill: #E8ECF4; } #view .sky .moon .shade { fill: #1A1C28; opacity: 0.92; }
+#view .sky .hour { display: block; text-align: center; font: 11px var(--serif); color: #E8D8A0; text-shadow: 0 1px 2px #000; margin-top: -4px; }
+#view .sky.underground { opacity: 0.55; }
 #view .fps { position: absolute; top: 6px; right: 8px; font: 11px var(--mono); color: #9F9; text-shadow: 0 1px 1px #000; display: none; }
 #view .fps.on { display: block; }
 #view .hint { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font: 14px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000; pointer-events: none; }
@@ -167,6 +177,17 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view .fall { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; transition: opacity 0.6s; }
 #view .fall.on { opacity: 1; transition: opacity 0.12s; }
 #view .tint { position: absolute; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: screen; }
+#view .filmbar { position: absolute; left: 0; right: 0; bottom: 34px; display: none; gap: 6px; justify-content: center; align-items: center; }
+#view .filmbar.on { display: flex; }
+#view .filmbar button { padding: 3px 9px; font-size: 12px; }
+#view .filmbar span { color: var(--ink); text-shadow: 0 1px 2px #000; }
+#view .titlecard { position: absolute; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none; opacity: 0; }
+#view .titlecard b { display: block; font: bold 38px var(--serif); color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 24px rgba(232,200,112,0.6), 0 2px 0 #000, 0 0 8px #000; }
+#view .titlecard small { display: block; font: italic 16px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000, 0 0 8px #000; margin-top: 4px; }
+#view .titlecard.on { animation: titlecard 2.6s ease-out forwards; }
+@keyframes titlecard { 0% { opacity: 0; transform: scale(0.9); } 15% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { #view .titlecard.on { animation: titlecard-still 2.6s linear forwards; } }
+@keyframes titlecard-still { 0% { opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
 .member.jolt { animation: jolt 0.45s ease-out; }
 @keyframes jolt { 0% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } 100% { transform: translateX(0); } }
 .member.glow-green { animation: glow-green 0.9s ease-out; }
@@ -177,6 +198,9 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 @keyframes glow-blue { 0% { box-shadow: 0 0 0 rgba(120,170,255,0); } 25% { box-shadow: 0 0 18px 4px rgba(120,170,255,0.85); } 100% { box-shadow: 0 0 0 rgba(120,170,255,0); } }
 #side .light { font: 12px var(--serif); color: var(--dim); text-align: center; }
 #side .light.dark { color: #E06060; font-weight: bold; }
+#side .temper { font: italic 12px var(--serif); color: var(--dim); text-align: center; }
+#side .temper.low { color: #E0A060; }
+.slot .who select.quirk { grid-column: 1 / -1; }
 #side { width: 296px; flex: 0 0 296px; display: flex; flex-direction: column; gap: 8px; }
 #automap { width: 290px; height: 290px; border: 3px solid var(--edge); background: var(--paper); }
 #side .where { font: bold 13px var(--serif); color: var(--gold); text-align: center; }
@@ -200,12 +224,28 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #actions.combat { flex-direction: column; align-items: center; gap: 5px; }
 #actions .turn { font: bold 13px var(--serif); color: var(--gold); }
 #actions .turn small { color: var(--dim); font-weight: normal; }
+#actions .ground { font: italic 12px var(--serif); color: #B0C8D8; }
 #actions .menu, #actions .targets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 #actions .targets button { font-weight: normal; }
 #actions .targets button.chosen { border-color: var(--gold); color: var(--gold); background: #4A321A; }
 #actions button.pick small { display: block; color: var(--dim); font-weight: normal; font-size: 10.5px; }
 #actions button:disabled small { color: var(--faint); }
 #actions button kbd { margin-right: 4px; }
+#actions .targets button .odds { display: block; color: var(--dim); font-style: normal; font-size: 10px; }
+#actions .targets button .odds.intent { color: #E0A040; font-style: italic; }
+#actions .menu button.on { border-color: var(--gold); color: var(--gold); background: #4A321A; }
+#actions .menu .overcast { display: inline-flex; flex-direction: column; gap: 2px; }
+#actions .menu .overcast button { padding: 1px 6px; font-size: 10px; font-weight: normal; }
+#actions button.pick small i { color: var(--gold); font-style: normal; }
+#bag .give button .cmp { font-style: normal; font-size: 11px; color: var(--dim); margin-left: 4px; }
+.rarity-fine { color: #8FD08F; }
+.rarity-rare { color: #80B8FF; }
+.rarity-relic { color: var(--gold); }
+.rarity-unique { color: #FF9F5A; text-shadow: 0 0 6px rgba(255,159,90,0.35); }
+.gear-list b.rarity-common { color: var(--gold); }
+#sheet-left .facts .gold { color: var(--gold); }
+#bag .give button .cmp.good { color: #8FD08F; }
+#bag .give button .cmp.bad { color: #E08080; }
 #view canvas#hud { cursor: crosshair; }
 
 /* ---- the bag and the merchant ---- */
@@ -276,6 +316,17 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 .float.miss { color: #B0B0B0; font-style: italic; font-size: 14px; }
 @keyframes rise { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -48px; } }
 
+/* ---- high contrast (Settings): brighter text, sharper edges ---- */
+body.contrast { --ink: #FFFFFF; --dim: #E0E0E0; --faint: #B0B0B0; --gold: #FFE080; --edge: #D0B070; --wood: #2A2A2A; --wood-light: #444; --night: #000; --pit: #000; }
+body.contrast #log div { color: #E0E0E0; }
+body.contrast #log div:last-child { color: #fff; }
+body.contrast .bar span { font-size: 10px; }
+body.contrast .bar i { background: #FF4040; }
+body.contrast .bar.mp i { background: #4080FF; }
+body.contrast button { border-width: 2px; }
+body.contrast button:focus-visible, body.contrast input:focus-visible, body.contrast select:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
 @media (max-width: 900px) {
   #classes { grid-template-columns: 1fr; }
   #create .sheet { grid-template-columns: 1fr; }
@@ -291,3 +342,76 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
   .roll { grid-template-columns: repeat(2, 1fr); }
   .tally { grid-template-columns: 1fr; }
 }
+/* ---- a phone in hand: the view on top, the party two by two, a shorter log, the buttons as a thumb bar ---- */
+@media (max-width: 640px) {
+  #play { padding: 4px; gap: 4px; }
+  #view { min-width: 0; min-height: 200px; border-width: 2px; }
+  #side { gap: 6px; }
+  #automap { width: 110px; height: 110px; border-width: 2px; }
+  #side .where, #side .purse, #side .light { font-size: 11px; }
+  .member { min-height: 58px; grid-template-columns: 34px 1fr; padding: 3px; }
+  .member canvas { width: 34px; height: 34px; }
+  .member .name { font-size: 12px; }
+  #log { height: 64px; flex: 0 0 64px; font: 11px/14px var(--mono); }
+  #actions { gap: 4px; }
+  #actions button { padding: 8px 9px; font-size: 12px; }
+  .dialog .box { min-width: 0; width: 96vw; padding: 12px; }
+  .journalbox { min-width: 0; }
+  #bag { padding: 8px; gap: 6px; }
+  #bag .lists { flex-direction: column; }
+  #bag .give button, #bag .act button { padding: 8px 9px; }
+  #title h1 { font-size: 30px; }
+  #create .foot label { margin-left: 0; }
+}
+
+/* ---- the statistics: a bar beside each number ---- */
+table.stats { border-collapse: collapse; width: 100%; margin-bottom: 8px; }
+table.stats td { padding: 3px 8px 3px 0; vertical-align: middle; white-space: nowrap; }
+table.stats td:nth-child(2) { width: 40%; }
+table.stats .bar { display: block; height: 10px; background: rgba(255,255,255,0.08); border: 1px solid var(--edge); border-radius: 2px; overflow: hidden; }
+table.stats .bar i { display: block; height: 100%; background: var(--gold, #C9A24A); }
+.statsbox h3 { margin: 12px 0 4px; font-size: 15px; }
+/* ---- a handheld (a Steam Deck's 1280 by 800, a thumb on each side): the buttons grow, the text with them ---- */
+body.handheld #actions button, body.handheld .dialog .box button, body.handheld #bag .give button, body.handheld #bag .act button { padding: 12px 14px; font-size: 15px; min-height: 44px; }
+body.handheld #log { font-size: 13px; line-height: 17px; }
+body.handheld .member .name, body.handheld #side .where, body.handheld #side .purse, body.handheld #side .light { font-size: 14px; }
+body.handheld .dialog .box { font-size: 15px; }
+body.handheld #title .foot button, body.handheld #create .foot button { padding: 10px 14px; min-height: 44px; }
+/* ---- the codex: blanks for the unread, a lie struck through over its truth ---- */
+.entry p.epigraph { color: var(--dim); font-style: italic; }
+.entry.unread p.blank { border-bottom: 1px dotted var(--faint); max-width: 420px; height: 14px; margin-top: 6px; }
+.entry p.struck { text-decoration: line-through; color: var(--dim); }
+.entry p.truth { color: var(--gold); margin-top: 4px; }
+.recruit input.epitaph { width: 100%; max-width: 360px; margin-top: 4px; font: italic 12px var(--serif); background: rgba(0,0,0,0.25); color: var(--ink); border: 1px solid var(--edge); padding: 3px 6px; }
+/* ---- the reading view: four hands, cut into the stone ---- */
+.readbox { max-width: min(680px, 94vw); }
+#lore-text.hand { font-size: 19px; line-height: 1.55; min-height: 3em; text-shadow: 0 1px 0 rgba(255,255,255,0.08), 0 -1px 0 rgba(0,0,0,0.6); }
+#lore-text.hand-chisel { font-family: var(--serif); letter-spacing: 0.5px; }
+#lore-text.hand-dwarf { font-family: var(--mono); text-transform: uppercase; letter-spacing: 2px; font-size: 16px; line-height: 1.7; }
+#lore-text.hand-child { font-family: var(--serif); font-style: normal; transform: rotate(-1.2deg); letter-spacing: 1px; word-spacing: 4px; color: #D8CCB0; }
+#lore-text.hand-priest { font-family: var(--serif); font-variant: small-caps; letter-spacing: 1px; color: var(--gold); }
+#lore-text.hand-scratch { font-family: var(--mono); font-style: italic; transform: skewX(-6deg); letter-spacing: -0.3px; color: #C8B890; }
+/* ---- the ending as a page ---- */
+#over-page { margin-top: 10px; max-height: 24vh; overflow: auto; }
+#over-page p { font: 13.5px/1.45 var(--serif); color: var(--ink); margin: 4px 0; }
+#over-page p.blank { color: var(--faint); }
+#over-page p.blank span { display: inline-block; min-width: 180px; border-bottom: 1px dotted var(--faint); font-size: 11px; vertical-align: baseline; }
+/* ---- the bag's filters, and the compendium ---- */
+#bag .filters { display: flex; gap: 4px; margin-bottom: 6px; }
+#bag .filters button { padding: 4px 10px; font-size: 12px; opacity: 0.75; }
+#bag .filters button.on { opacity: 1; border-color: var(--gold); color: var(--gold); }
+.things { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 6px; }
+.things .thing { font: 12.5px var(--serif); color: var(--ink); }
+.things .thing.unseen { color: var(--faint); letter-spacing: 1px; }
+.rarity-cursed { color: #D070D0; }
+/* colour-blind marks for rarity: a shape before the name, not only a colour */
+.rarity-fine::before { content: "\25C6\00A0"; font-size: 0.8em; }
+.rarity-rare::before { content: "\2605\00A0"; font-size: 0.8em; }
+.rarity-relic::before { content: "\2726\00A0"; font-size: 0.8em; }
+.rarity-unique::before { content: "\2756\00A0"; font-size: 0.8em; }
+.rarity-cursed::before { content: "\2620\00A0"; font-size: 0.8em; }
+/* ---- the belt ---- */
+#belt { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 4px; }
+#belt button.slot { padding: 3px 4px; font: 11px var(--serif); min-height: 30px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#belt button.slot kbd { margin-right: 3px; }
+#belt button.empty { opacity: 0.45; }

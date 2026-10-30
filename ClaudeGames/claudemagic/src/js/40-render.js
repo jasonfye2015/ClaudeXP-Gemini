@@ -112,7 +112,7 @@ CM.Renderer = class {
   }
 
   resize() {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(2, window.devicePixelRatio || 1) * (this.scale || 1);   // (Settings > Render scale, or the automatic step-down when frames come late)
     const w = Math.max(1, Math.round(this.canvas.clientWidth * dpr)), h = Math.max(1, Math.round(this.canvas.clientHeight * dpr));
     if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; }
     this.gl.viewport(0, 0, w, h);
@@ -198,8 +198,11 @@ CM.Renderer = class {
   }
 
   get busy() { return this.move !== null || this.turn !== null; }
-  shake(strength) { this.shakeT = Math.max(this.shakeT || 0, Math.min(1, strength)); }   // the view judders, and settles
-  punch() { this.punchT = 1; }                                                            // the party leans into a blow
+  // the camera's own moves: a push-in or a pull-back (zoom: the field of view's share, for ms), a tilt (roll, radians, for ms)
+  zoomTo(k, ms = 500) { if (CM.reducedMotion) return; this.zoomAnim = { from: this.zoomNow || 1, to: k, t: 0, ms, back: true }; }
+  rollTo(r, ms = 800) { if (CM.reducedMotion) return; this.rollAnim = { from: this.rollNow || 0, to: r, t: 0, ms }; }
+  shake(strength) { if (CM.reducedMotion) return; this.shakeT = Math.max(this.shakeT || 0, Math.min(1, strength)); }   // the view judders, and settles
+  punch() { if (CM.reducedMotion) return; this.punchT = 1; }                                                            // the party leans into a blow
 
   // where the camera is in grid terms (the cell it's heading for, while it steps)
   setSprites(list) { this.sprites = list; }
@@ -286,8 +289,11 @@ CM.Renderer = class {
     this.punchT = Math.max(0, (this.punchT || 0) - dt / 0.22);
     const jx = Math.sin(this.time * 61) * this.shakeT * 0.06, jy = Math.sin(this.time * 47 + 1) * this.shakeT * 0.045, pk = Math.sin(this.punchT * Math.PI) * 0.1;
     const eye = [this.eye[0] + right[0] * jx + fwd[0] * pk, this.eye[1] + this.bob + jy, this.eye[2] + right[2] * jx + fwd[2] * pk];
-    const view = mat4LookAt(eye, [eye[0] + fwd[0], eye[1], eye[2] + fwd[2]], [0, 1, 0]);
-    const proj = mat4Perspective(Math.PI / 3, aspect, 0.05, 80);
+    if (this.zoomAnim) { const z = this.zoomAnim; z.t += dt * 1000 / z.ms; const k = CM.ease(Math.min(1, z.t)); this.zoomNow = z.back ? CM.lerp(z.from, z.to, Math.sin(k * Math.PI)) : CM.lerp(z.from, z.to, k); if (z.t >= 1) { this.zoomNow = z.back ? z.from : z.to; this.zoomAnim = null; } }
+    if (this.rollAnim) { const r = this.rollAnim; r.t += dt * 1000 / r.ms; this.rollNow = CM.lerp(r.from, r.to, CM.ease(Math.min(1, r.t))); if (r.t >= 1) this.rollAnim = null; }
+    const roll = this.rollNow || 0, up = [Math.sin(roll) * right[0], Math.cos(roll), Math.sin(roll) * right[2]];
+    const view = mat4LookAt(eye, [eye[0] + fwd[0], eye[1], eye[2] + fwd[2]], up);
+    const proj = mat4Perspective(Math.PI / 3 * (this.zoomNow || 1), aspect, 0.05, 80);
     this.viewProj = mat4Mul(proj, view);
     const t = this.theme;
     gl.clearColor(t.fog[0], t.fog[1], t.fog[2], 1);

@@ -10,6 +10,22 @@ window.addEventListener("DOMContentLoaded", () => {
   document.head.appendChild(link);
   CM.game = game; CM.ui = ui; CM.renderer = renderer;                 // (for the tests, and for curiosity)
 
+  // ---- around the game: a save or a film in the link; the app's manifest and its worker, where a server serves the file ----
+  const linkIn = () => {
+    const payload = CM.linkPayload(location.hash);
+    if (!payload) return;
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* the hash stays */ }
+    setTimeout(() => ui.offerLink(payload), 50);
+  };
+  linkIn();
+  window.addEventListener("hashchange", linkIn);                         // (a link pasted into an open page's address)
+  if (/^https?:$/.test(location.protocol)) {
+    const m = document.createElement("link"); m.rel = "manifest"; m.href = "manifest.webmanifest"; document.head.appendChild(m);
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { /* no worker: the page still plays */ });
+  }
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); ui.installPrompt = e; ui.showInstall(true); });
+  window.addEventListener("appinstalled", () => { ui.installPrompt = null; ui.showInstall(false); game.titleNote = CM.t("install.note"); ui.refreshTitle(); });
+
   if (!renderer.ok) {
     const warn = document.createElement("div");
     warn.style.cssText = "position:fixed;left:0;right:0;top:0;padding:10px;background:#5A1010;color:#fff;font:14px Georgia;text-align:center;z-index:50";
@@ -19,19 +35,19 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---- textures by depth and by theme, the floor's mesh, the camera ----
   let artCache = {}, cacheOrder = [];
-  let themeOn = -1, lookOn = null;
+  let themeOn = -1, lookOn = null, dreamOn = false;
   const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
-    if ((i === themeOn && look === lookOn) || !renderer.ok) return;
-    const key = `${look}:${i}`;
+    if (((number === 0 ? -2 : number === -1 ? -3 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : null, key = special ? `${look}:${special.name}` : `${look}:${i}${game.dream ? ":dream" : ""}`;
     if (!artCache[key]) {
-      artCache[key] = CM.art.build(CM.THEMES[i], look);
+      artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
       while (cacheOrder.length > 3) delete artCache[cacheOrder.shift()];      // (the stone's textures are large: a few depths at a time)
     }
     renderer.setTextures(artCache[key]);
-    themeOn = i; lookOn = look;
+    themeOn = number === 0 ? -2 : number === -1 ? -3 : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -89,7 +105,18 @@ window.addEventListener("DOMContentLoaded", () => {
   const STEPS = ["step", "step_water", "step_hall", "step_cold"];        // a footfall for each depth (the Deep's bands borrow one)
   const soundBand = (n) => CM.AMBIENCE_OF[CM.themeIndex(n)] || 0;
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
-  game.on("near", (kind, d) => CM.audio.near(kind, 1 - d / 8));          // something is coming: louder the nearer
+  game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));   // something is coming: louder the nearer, from the side it is on
+  game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
+  game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
+    if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
+    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.t(CM.isNight(game) ? "town.card.night" : "town.card")); return; }
+    if (fl.number === -1) { ui.titleCard(CM.WOOD_THEME.name, CM.isNight(game) ? "The trees close over the path, and the dark has eyes." : "Green light, birdsong, and three cave mouths somewhere under the roots."); return; }
+    if (fl.number < 0) return;
+    const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
+    if (!ch) return;
+    if ((fl.number - 1) % 5 === 0) ui.titleCard(CM.bandName(game, fl.number), game.dream ? "What Caer Duin might have been." : ch.epigraph);
+    else if (fl.number % 5 === 0 && Object.values(CM.LORE_TEXT).some((l) => l.contradicts && CM.LORE_TEXT[l.contradicts].chapter === Object.keys(CM.CHAPTERS).find((k) => CM.CHAPTERS[k] === ch))) ui.titleCard(ch.name, "Below, the walls will say otherwise.");
+  });
   game.on("mode", (mode) => {
     if (mode === "title") showDemo();
     else if (game.floor && renderer.ok) {
@@ -106,7 +133,25 @@ window.addEventListener("DOMContentLoaded", () => {
     CM.music.setEnabled(s.music !== false);
     CM.music.setVolume(s.musicVolume === undefined ? 0.5 : s.musicVolume);
     ui.$("#view .fps").classList.toggle("on", s.fps);
+    CM.fxSpeed = { normal: 1, fast: 2, instant: 6 }[s.speed] || 1;
+    CM.reducedMotion = s.motion === undefined ? Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) : Boolean(s.motion);
+    document.getElementById("app").style.zoom = { normal: "", large: "1.15", larger: "1.32" }[s.text] || "";
+    document.body.classList.toggle("contrast", Boolean(s.contrast));
+    const deckShaped = window.matchMedia && window.matchMedia("(max-width: 1300px) and (max-height: 840px) and (pointer: coarse)").matches;
+    document.body.classList.toggle("handheld", s.layout === "on" || (s.layout !== "off" && deckShaped));
+    renderAuto = !s.render || s.render === "auto";
+    if (!renderAuto) renderer.scale = { full: 1, three: 0.75, half: 0.5 }[s.render] || 1;
+    else if (!renderer.scale) renderer.scale = 1;
   };
+  let renderAuto = true, slowFor = 0, quickFor = 0;
+  const RENDER_STEPS = [1, 0.75, 0.5];
+  function autoScale(dt) {                                               // frames coming late for two seconds: a step down; quick for ten: a step back up
+    if (!renderAuto) return;
+    if (dt > 0.022) { slowFor += dt; quickFor = 0; } else if (dt < 0.013) { quickFor += dt; slowFor = 0; } else { slowFor = 0; quickFor = 0; }
+    const i = RENDER_STEPS.indexOf(renderer.scale || 1);
+    if (slowFor > 2 && i < RENDER_STEPS.length - 1) { renderer.scale = RENDER_STEPS[i + 1]; slowFor = 0; }
+    else if (quickFor > 10 && i > 0) { renderer.scale = RENDER_STEPS[i - 1]; quickFor = 0; }
+  }
   game.on("settings", applySettings);
   applySettings(game.settings);
   CM.audio.unlock();                                                     // (where the page may: the Timeline's window; a browser waits for a click or key)
@@ -174,10 +219,12 @@ window.addEventListener("DOMContentLoaded", () => {
   function spectacle(fx) {
     const now = performance.now();
     switch (fx.kind) {
-      case "hit": flashes.set(fx.foe, 1); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
+      case "intent": renderer.zoomTo(0.9, 600); break;
+      case "hit": flashes.set(fx.foe, 1); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
       case "miss": later(() => floatAt(fx.foe, "miss", "miss")); break;
       case "die": {
         dying.set(fx.foe, now);
+        if (fx.foe && !fx.foe.fled) CM.audio.bark(fx.foe.kind || fx.foe.name, "die");
         const at = atFoe(fx.foe, 0.4);
         if (!at) break;
         fxs.burst({ at, layer: fx.foe.undead ? "fx:shard" : "fx:spark", n: CM.unmoved(fx.foe) ? 40 : 14, size: fx.foe.undead ? 0.1 : 0.06, speed: 1.6, up: 1.8 });
@@ -208,6 +255,7 @@ window.addEventListener("DOMContentLoaded", () => {
       case "sear": ui.tint("rgba(255,120,30,0.3)", 220); fxs.burst({ at: beforeParty(0.3), layer: "fx:fire", n: 6, size: 0.06, speed: 0.8, up: 1.2, ms: 400 }); break;
       case "relic": ui.tint("rgba(255,230,150,0.45)", 900); fxs.drift({ at: beforeParty(0.6), n: 12, size: 0.06, spread: 1.0, rise: 0.7, ms: 1400 }); break;
       case "rise": {
+        if (fx.form2) CM.music.shift(3);
         const at = atFoe(fx.foe, 0.05);
         if (at) { fxs.ring({ at: [at[0], 0, at[2]], to: 3.2, ms: 900 }); fxs.burst({ at: [at[0], 0.5, at[2]], layer: "fx:shard", n: 24, size: 0.1, speed: 1.8, up: 2.6 }); }
         ui.tint("rgba(120,240,255,0.4)", 700); renderer.shake(0.8);
@@ -215,11 +263,18 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       case "shatter": ui.tint("rgba(120,240,255,0.5)", 500); fxs.burst({ at: beforeParty(0.6), layer: "fx:shard", n: 20, size: 0.08, speed: 2, up: 2 }); renderer.shake(0.5); break;
       case "sparkle": fxs.burst({ at: [fx.at[0] + 0.5, 0.35, fx.at[1] + 0.5], n: 16, size: 0.05, speed: 0.8, up: 1.6, gravity: 2 }); break;
+      case "mend": { const at = atFoe(fx.foe, 0.3); if (at) fxs.drift({ at, layer: "fx:leaf", n: 8, size: 0.06, rise: 0.5, ms: 900 }); break; }
+      case "ward": { const at = atFoe(fx.foe, 0.5); if (at) fxs.flare({ at, layer: "fx:frost", size: 0.9, ms: 500, grow: 0.3 }); break; }
+      case "combo": ui.tint("rgba(255,230,150,0.35)", 500); break;
+      case "intro": { const G = fx.foe.guardian ? CM.GUARDIANS[fx.foe.guardian] : null; ui.titleCard(fx.foe.name, G ? (fx.foe.echo ? "an echo, in " : "in ") + G.lair.name : "in his palace"); renderer.shake(0.35); renderer.punch(); break; }
       default: break;
     }
   }
   game.on("fx", spectacle);
   game.on("fell", () => renderer.shake(0.6));
+  game.on("crowned", () => renderer.zoomTo(1.15, 1600));
+  game.on("mode", (mode) => { if (mode !== "combat") { CM.music.shift(0); CM.music.setDanger(0); } });
+  game.on("over", (won) => { if (!won && renderer.ok) { renderer.rollNow = 0; renderer.rollTo(0.12, 1200); setTimeout(() => renderer.rollTo(0, 2500), 1600); } });
   game.on("floor", () => fxs.clear());
   game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); lunges.clear(); } if (mode === "title") fxs.clear(); });
   // a click on a foe in the view chooses it
@@ -237,11 +292,11 @@ window.addEventListener("DOMContentLoaded", () => {
   function foePlace(foe) {
     if (game.mode !== "combat" || !game.foeKey) return null;
     const [x, y] = game.foeKey.split(",").map(Number);
-    const shown = game.foes.filter((f) => f.hp > 0 || dying.has(f)), i = shown.indexOf(foe), n = shown.length;
+    const shown = game.foes.filter((f) => (f.hp > 0 && !f.hidden) || dying.has(f)), i = shown.indexOf(foe), n = shown.length;
     if (i < 0) return null;
     const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * (n > 4 ? 0.22 : 0.32), -0.46, 0.46);
-    let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : foe.guardian ? 0.22 : 0);     // (the Lich King keeps his distance)
+    let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : foe.guardian ? 0.22 : 0) + (foe.row === "back" ? 0.28 : 0);     // (the Lich King keeps his distance; the back row stands back)
     const lunge = lunges.get(foe);
     if (lunge !== undefined) {                                           // it lunges at the party, and draws back
       const t = (performance.now() - lunge) / 340;
@@ -281,6 +336,8 @@ window.addEventListener("DOMContentLoaded", () => {
     return decor;
   }
 
+  // a frame of a monster's picture, where the theme has it (the Drawn frames; the Pixel tiles stand still)
+  const frameOf = (layer, pose) => (pose && renderer.index && renderer.index[`${layer}:${pose}`] !== undefined ? `${layer}:${pose}` : layer);
   function sprites() {
     const fl = game.floor, out = [], hud = [];
     if (!fl) return { out, hud };
@@ -299,6 +356,25 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "adventurer") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
       else if (thing.type === "bones") out.push({ x, y, layer: "bones", w: 0.6, h: 0.42 });
       else if (thing.type === "rope") out.push({ x, y, layer: "rope", w: 0.5, h: 1.0 });
+      else if (thing.type === "event") { const look = (CM.EVENTS[thing.event] || {}).look || "chest"; const flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.95 : 0.8, h: 0.8, flat, glow: 0.3 }); }
+      else if (thing.type === "strongbox") out.push({ x, y, layer: "chest", w: 0.7, h: 0.6, glow: thing.opened ? 0 : 0.4, shade: 0.7 });
+      else if (thing.type === "node") { const look = (CM.NODES[thing.band] || CM.NODES[0])[1], flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.9 : 0.6, h: flat ? 0.9 : 0.5, flat, glow: look === "crystal" ? 0.3 : 0 }); }
+      else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
+      else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
+      else if (thing.type === "building") { const P = CM.TOWN_PLOTS[thing.id] || {}, V = P.village ? CM.VILLAGE[P.village] : null, lvl = CM.plotLevel(game, thing.id), stage = P.always && !V ? 4 : CM.houseStage(lvl, V ? V.costs.length : 1); out.push({ x, y, layer: stage ? `house${stage}` : "foundation", w: 1.0, h: 1.0 }); }
+      else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
+      else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
+      else if (thing.type === "woodgate") out.push({ x, y, layer: "gate_open", w: 1.0, h: 1.0 });
+      else if (thing.type === "cave") out.push({ x, y, layer: thing.n === CM.dayOf(game) % 3 ? "hatch" : "bones", w: 0.9, flat: thing.n === CM.dayOf(game) % 3, h: 0.5, shade: 0.6 });
+      else if (thing.type === "caveexit") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
+      else if (thing.type === "vein") out.push({ x, y, layer: `vein:${thing.ore}`, w: 0.7, h: 0.6 });
+      else if (thing.type === "hut") out.push({ x, y, layer: "house2", w: 1.0, h: 1.0 });
+      else if (thing.type === "farm") out.push({ x, y, layer: "house1", w: 1.0, h: 1.0 });
+      else if (thing.type === "shrine") out.push({ x, y, layer: "altar", w: 0.8, h: 0.7 });
+      else if (thing.type === "burner") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85 });
+      else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });
+      else if (thing.type === "wingstair" || thing.type === "wingexit") out.push({ x, y, layer: "hatch", w: 0.8, flat: true, shade: 0.75 });
+      else if (thing.type === "wingstair_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if ((thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian") && !(game.mode === "combat" && key === game.foeKey)) {
         const m = thing.group.find((f) => f.hp > 0 && !f.fled) || thing.group[0];
         if (thing.anim) {                                               // on the move: it slides from where it was
@@ -307,7 +383,8 @@ window.addEventListener("DOMContentLoaded", () => {
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
         const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
-        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: m.boss ? 0.98 : G ? 0.92 * G.size : 0.85, shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
+        const breath = CM.reducedMotion ? 0 : Math.sin(now / 820 + x * 2.1 + y * 1.3) * 0.02;   // (alive: it breathes)
+        out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: (m.boss ? 0.95 : G ? 0.9 * G.size : 0.85) * (1 + breath), h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * (1 + breath * 0.6), shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
           lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
       }
     }
@@ -321,6 +398,9 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (f.type === "pit") out.push({ x, y, layer: "pit", flat: true, w: 0.96 });
       else if (f.type === "trapdoor" && f.known) out.push({ x, y, layer: "trapdoor", flat: true, w: 0.96 });
       else if (f.type === "teleporter") out.push({ x, y, layer: "teleporter", flat: true, w: 0.9, glow: 0.85 });
+      else if (f.type === "spores") out.push({ x, y, layer: "fungus", flat: true, w: 0.9, glow: 0.5 + 0.2 * Math.sin(now / 600 + x), alpha: 0.8 });
+      else if (f.type === "vents") out.push({ x, y, layer: "ember", flat: true, w: 0.9, glow: (Math.floor(now / 700) % 3 === 0 ? 1 : 0.35) });
+      else if (f.type === "bonepiles") out.push({ x, y, layer: f.spent ? "bones" : "nest", w: f.spent ? 0.6 : 0.9, h: f.spent ? 0.42 : 0.75 });
       else if (f.type === "fountain") out.push({ x, y, layer: f.used ? "fountain_dry" : "fountain", w: 0.9, h: 0.9 });
       else if (f.type === "altar") out.push({ x, y, layer: "altar", w: 0.9, h: 0.9 });
       else if (f.type === "lever") out.push({ x, y, layer: f.pulled ? "lever_pulled" : "lever", face: f.face, w: 0.34, h: 0.34 });
@@ -340,9 +420,9 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
     for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, flat: true, w: 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75 });
     if (game.mode === "combat") {
-      const living = game.living();
+      const living = game.attackable();
       for (const m of game.foes) {
-        if (m.fled) continue;
+        if (m.fled || (m.hidden && m.hp > 0)) continue;
         const place = foePlace(m);
         if (!place) continue;
         const solid = place.echo ? 0.78 : 1;                             // (an echo of a guardian is drawn a little through)
@@ -356,7 +436,9 @@ window.addEventListener("DOMContentLoaded", () => {
         const flash = flashes.get(m) || 0;
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
         const flinch = flash > 0 ? Math.sin(now / 22) * flash * 0.025 : 0;   // struck: it shudders
-        out.push(Object.assign({}, place, { flash: flash * 0.8, alpha, lift, dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
+        const breath = CM.reducedMotion || m.hp <= 0 ? 0 : Math.sin(now / 760 + place.dx * 7) * 0.018;   // (and breathes)
+        const pose = m.hp > 0 && lunges.has(m) ? "attack" : m.hp > 0 && Math.floor(now / 640 + place.dx * 5) % 2 ? "idle2" : "";
+        out.push(Object.assign({}, place, { layer: frameOf(place.layer, pose), flash: flash * 0.8, alpha, lift, w: place.w * (1 + breath), h: place.h * (1 + breath * 0.6), dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
       }
     }
     out.push(...fxs.sprites(now));                                      // what flies and bursts, this frame
@@ -384,6 +466,10 @@ window.addEventListener("DOMContentLoaded", () => {
     const K = game.settings.keys || CM.DEFAULT_KEYS;
     if (ui.rebinding) { e.preventDefault(); ui.rebind(ui.rebinding, e.code); return; }   // (Settings > Keys: the next key pressed is the one)
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
+    if (game.film) { if (e.code === "Escape") { e.preventDefault(); game.stopFilm(); } else if (e.code === "Space") { e.preventDefault(); game.film.playing = !game.film.playing; ui.filmBar(); } return; }   // (a film: watch, or stop)
+    if (game.travel && !ui.dialogOpen()) { game.stopTravel(); if (MOVES[e.code] || e.code === K.explore) { e.preventDefault(); return; } }   // (any key stops a walk; a move key only stops it)
+    if (game.autoOn() && !ui.dialogOpen() && e.code !== K.autoPlay && (MOVES[e.code] || [K.use, K.explore, K.fight, K.auto, K.item, K.defend, K.run].includes(e.code))) { game.autoPlay(false); ui.refresh(); }   // (the reins: a move or a fight key takes them back)
+    if (game.mode === "combat" && game.combat && game.combat.auto && e.code !== K.auto && !ui.dialogOpen()) game.autoFight(false);
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) {
       if (e.code === "Enter" && e.target.id === "seed") ui.startNew();
       if (e.code === "Escape" && ui.screen === "create") ui.show("title");
@@ -392,7 +478,9 @@ window.addEventListener("DOMContentLoaded", () => {
     if (ui.dialogOpen()) {
       const ending = ui.$("#dlg-over").classList.contains("on");
       if (e.code === "Escape" || (e.code === K.map && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
+      else if (ui.$("#dlg-lore").classList.contains("on") && e.code === "Space") { e.preventDefault(); ui.finishRead(); }
       else if (ui.$("#dlg-riddle").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickRiddle(Number(e.code.slice(-1)));
+      else if (ui.$("#dlg-choice").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickChoice(Number(e.code.slice(-1)));
       else if (e.code === K.journal && ui.$("#dlg-journal").classList.contains("on")) ui.closeDialogs();
       return;
     }
@@ -405,13 +493,16 @@ window.addEventListener("DOMContentLoaded", () => {
     if (game.mode === "combat") {                                        // a fight: the keys are the fight's
       if (e.code === "Tab" || e.code === K.map) { e.preventDefault(); game.setTarget((game.target || 0) + 1); return; }
       if (e.code === "Escape") { e.preventDefault(); if (ui.cmenu && ui.cmenu.kind !== "main") ui.combatMenu("main"); else ui.openDialog("#dlg-pause"); return; }
+      if (/^Digit[5-8]$/.test(e.code) && game.combat && game.combat.waiting && (!ui.cmenu || ui.cmenu.kind === "main") && (game.belt || [])[Number(e.code.slice(-1)) - 5]) { ui.beltPick(Number(e.code.slice(-1)) - 5); return; }
       if (/^Digit[1-9]$/.test(e.code)) { ui.pick(Number(e.code.slice(-1))); return; }
       if (!(game.combat && game.combat.waiting)) return;
       if (e.code === K.fight) game.act("fight", game.target);
       else if (e.code === K.cast) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "cast" ? "main" : "cast");
       else if (e.code === K.item) ui.combatMenu(ui.cmenu && ui.cmenu.kind === "item" ? "main" : "item");
       else if (e.code === K.defend) game.act("defend");
+      else if (e.code === "KeyL" && game.readyPower(game.combat.waiting)) game.act("power", { who: game.target });
       else if (e.code === K.run) game.act("run");
+      else if (e.code === K.auto) game.autoFight(!game.combat.auto);
       return;
     }
     if (ui.xmenu) {                                                      // a list open between fights
@@ -420,7 +511,9 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
     if (["Digit1", "Digit2", "Digit3", "Digit4"].includes(e.code) && game.mode !== "title") { ui.openSheet(Number(e.code.slice(-1)) - 1); return; }
+    if (/^Digit[5-8]$/.test(e.code) && (game.mode === "explore" || game.mode === "camp")) { const note = game.useBelt(Number(e.code.slice(-1)) - 5); if (note) game.say(note); ui.refresh(); return; }
     if (e.code === "Escape") { e.preventDefault(); ui.openDialog("#dlg-pause"); return; }
+    if (e.code === K.autoPlay && game.mode !== "title" && !ui.dialogOpen()) { e.preventDefault(); game.autoPlay(); ui.refresh(); return; }
     if (e.code === K.map || e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
     if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
     if (e.code === K.journal && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
@@ -428,6 +521,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
       if (e.code === K.use) { e.preventDefault(); game.use(); }
       else if (e.code === K.inventory) game.openBag();
+      else if (e.code === K.explore) game.explore();
     } else if (game.mode === "camp") {
       if (e.code === K.inventory) game.openBag();
     }
@@ -437,26 +531,36 @@ window.addEventListener("DOMContentLoaded", () => {
   // pick the target, Start pauses, Select the map; in a list or a dialog the pad moves a highlight and A presses ----
   const padWas = {}, padHeld = {};
   const padKey = (code) => window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true, cancelable: true }));
+  function padRole(i) {                                                 // what button i stands for, by Settings > Keys > Gamepad
+    const P = game.settings.pad || CM.DEFAULT_PAD;
+    let r = i >= 12 ? ["up", "down", "left", "right"][i - 12] + "Pad" : null;
+    if (!r) for (const k of Object.keys(P)) if (P[k] === i) { r = k; break; }
+    if (game.settings.swapAB && (r === "use" || r === "back")) r = r === "use" ? "back" : "use";   // (Settings: confirm with B, back with A)
+    return r;
+  }
   function padButton(i, now) {                                           // what button i does right now
     const K = game.settings.keys || CM.DEFAULT_KEYS, inFight = game.mode === "combat", listOpen = ui.padTargets().length > 0;
-    if (ui.screen === "title") { if (i === 0 || i === 9) padKey("Enter"); return; }
-    if (ui.screen === "create") { if (i === 0) padKey("Enter"); else if (i === 1) padKey("Escape"); return; }
-    if (ui.screen === "bag") { if (i === 1 || i === 2) padKey("Escape"); return; }
+    const r = padRole(i);
+    if (!r) return;
+    if (game.travel) game.stopTravel();
+    if (ui.screen === "title") { if (r === "use" || r === "pause") padKey("Enter"); return; }
+    if (ui.screen === "create") { if (r === "use") padKey("Enter"); else if (r === "back") padKey("Escape"); return; }
+    if (ui.screen === "bag") { if (r === "back" || r === "bag") padKey("Escape"); return; }
     if (listOpen) {
-      if (i === 0) ui.padPress();
-      else if (i === 1 || i === 9) padKey("Escape");
-      else if (i === 12 || i === 14 || i === 4) ui.padFocus(-1);
-      else if (i === 13 || i === 15 || i === 5) ui.padFocus(1);
+      if (r === "use") ui.padPress();
+      else if (r === "back" || r === "pause") padKey("Escape");
+      else if (r === "upPad" || r === "leftPad" || r === "left") ui.padFocus(-1);
+      else if (r === "downPad" || r === "rightPad" || r === "right") ui.padFocus(1);
       return;
     }
     if (inFight) {
-      if (i === 0) padKey(K.fight); else if (i === 1) padKey(K.defend); else if (i === 2) padKey(K.item); else if (i === 3) padKey(K.cast);
-      else if (i === 5 || i === 4) padKey("Tab"); else if (i === 9) padKey("Escape"); else if (i === 7) padKey(K.run);
+      if (r === "use") padKey(K.fight); else if (r === "back") padKey(K.defend); else if (r === "bag") padKey(K.item); else if (r === "cast") padKey(K.cast);
+      else if (r === "left" || r === "right") padKey("Tab"); else if (r === "pause") padKey("Escape"); else if (r === "run") padKey(K.run); else if (r === "belt") padKey("Digit5");
       return;
     }
-    if (i === 0) padKey(K.use); else if (i === 1 || i === 9) padKey("Escape"); else if (i === 2) padKey(K.inventory); else if (i === 3) padKey(K.cast);
-    else if (i === 8) padKey(K.map); else if (i === 4) act(K.strafeLeft || "KeyQ"); else if (i === 5) act(K.strafeRight || "KeyE");
-    else if (i === 12) act("ArrowUp"); else if (i === 13) act("ArrowDown"); else if (i === 14) act("ArrowLeft"); else if (i === 15) act("ArrowRight");
+    if (r === "use") padKey(K.use); else if (r === "back" || r === "pause") padKey("Escape"); else if (r === "bag") padKey(K.inventory); else if (r === "cast") padKey(K.cast);
+    else if (r === "map") padKey(K.map); else if (r === "left") act(K.strafeLeft || "KeyQ"); else if (r === "right") act(K.strafeRight || "KeyE"); else if (r === "belt") padKey("Digit5");
+    else if (r === "upPad") act("ArrowUp"); else if (r === "downPad") act("ArrowDown"); else if (r === "leftPad") act("ArrowLeft"); else if (r === "rightPad") act("ArrowRight");
   }
   function pollGamepad(now) {
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -468,17 +572,23 @@ window.addEventListener("DOMContentLoaded", () => {
       for (const d of [12, 13, 14, 15]) if (d !== dir) pressed[d] = pressed[d] || false;
       pressed[dir] = true;
     }
+    if (ui.rebindingPad) {                                               // (Settings > Keys > Gamepad: the next button pressed is the one)
+      const i = pressed.findIndex((down, j) => down && !padWas[j] && j < 12);
+      if (i >= 0) ui.rebindPad(ui.rebindingPad, i);
+      pressed.forEach((down, j) => { padWas[j] = down; });
+      return;
+    }
     pressed.forEach((down, i) => {
       if (down && !padWas[i]) { padButton(i, now); padHeld[i] = now; }
       else if (down && [12, 13, 14, 15].includes(i) && game.mode === "explore" && !ui.dialogOpen() && now - padHeld[i] > 260 && !renderer.busy) { padButton(i, now); padHeld[i] = now - 100; }   // (walking while held)
       padWas[i] = down;
     });
   }
-  CM.pad = { button: (i) => padButton(i, performance.now()), poll: pollGamepad };   // (for the tests, and for curiosity)
+  CM.pad = { button: (i) => padButton(i, performance.now()), poll: pollGamepad, role: padRole };   // (for the tests, and for curiosity)
   // a tap or a click on the view walks, out of a fight (in one, a click picks a foe)
   const view = ui.$("#view");
   let tapStart = null;
-  view.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; tapStart = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  view.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; if (game.travel) game.stopTravel(); tapStart = { x: e.clientX, y: e.clientY, t: performance.now() }; });
   view.addEventListener("pointerup", (e) => {
     if (!tapStart || e.target.closest("button")) return;
     const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y), quick = performance.now() - tapStart.t < 600;
@@ -493,22 +603,36 @@ window.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("pointerdown", () => CM.audio.unlock(), { once: false });
 
   // ---- the frame loop ----
-  let last = performance.now(), fpsTime = 0, frames = 0, fps = 0;
+  let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0, lastAutoStep = 0;
   function frame(now) {
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
     if (renderer.ok) {
+      if (game.mode !== "title" && document.visibilityState !== "hidden") autoScale(dt);
       renderer.resize();
       if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1;
         renderer.setSprites([]);
+        if (ui.rebindingPad) pollGamepad(now);
       } else {
         pollGamepad(now);
         if (game.mode === "explore" && !renderer.busy && held.size) {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
         if (ui.screen === "play" && !ui.dialogOpen()) game.tick(dt);    // the monsters move (not while you read a sheet or the pack); the run saves now and then
+        if (game.mode === "combat") { const up = game.party.filter((h) => h.hp > 0); const worst = up.length ? Math.min(...up.map((h) => h.hp / h.max)) : 0; CM.music.setDanger(up.length < game.party.length ? 1 : worst < 0.5 ? 0.6 : 0); }   // the battle tune in layers
+        if (game.film && game.film.playing && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - game.film.last > 260 / game.film.speed) { game.film.last = now; game.filmStep(); }   // the film plays
+        if (game.travel && game.mode === "explore" && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
+        if (game.mode === "combat" && game.combat && game.combat.auto && game.combat.waiting && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAuto > 420 / (CM.fxSpeed || 1)) { lastAuto = now; game.autoTurn(); }
+        if (game.autoOn() && (ui.screen === "play" || ui.screen === "bag") && !renderer.busy && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAutoStep > (game.mode === "camp" ? 900 : game.settings.smooth ? 150 : 240)) {   // Automatic: a step a tick
+          lastAutoStep = now;
+          if (ui.screen === "bag") ui.show("play");
+          const did = game.auto.step();
+          if (ui.dialogOpen() && !ui.$("#dlg-over").classList.contains("on")) ui.closeDialogs();   // (what it read, answered, or opened in the town: out of the way)
+          if (ui.screen === "bag") ui.show("play");
+          if (!did || game.mode === "camp") ui.refresh();
+        }
         renderer.light = game.lightFactor();
         const { out, hud } = sprites();
         renderer.setSprites(out);
@@ -519,7 +643,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (game.mode === "title") renderer.frame(dt);
     }
     frames++; fpsTime += dt;
-    if (fpsTime >= 0.5) { fps = Math.round(frames / fpsTime); frames = 0; fpsTime = 0; ui.$("#view .fps").textContent = `${fps} fps`; }
+    if (fpsTime >= 0.5) { fps = Math.round(frames / fpsTime); frames = 0; fpsTime = 0; ui.$("#view .fps").textContent = `${fps} fps - v${CM.version} ${CM.built}`; }
     requestAnimationFrame(frame);
   }
   showDemo();
