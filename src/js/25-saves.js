@@ -151,6 +151,16 @@ CM.replayRun = function (spec, upTo) {
   game.gen = spec.gen || 1;
   const lines = upTo === undefined ? spec.log : spec.log.slice(0, upTo);
   for (const line of lines) {
+    CM.replayStep(game, line);
+    if (game.mode === "title") break;
+  }
+  game.replaying = 0;
+  return game;
+};
+
+// one line of a log, played on a game
+CM.replayStep = function (game, line) {
+  {
     const [name, ...args] = line;
     switch (name) {
       case "tick": game.wanderMonsters(); break;
@@ -173,8 +183,13 @@ CM.replayRun = function (spec, upTo) {
       case "castOutside": game.castOutside(args[0], args[1], args[2] === null ? undefined : args[2]); break;
       default: if (typeof game[name] === "function") game[name](...args); break;
     }
-    if (game.mode === "title") break;
   }
-  game.replaying = 0;
-  return game;
+};
+
+// a film: a run's spec with its packed log, as a code to hand on ("CM2:" and JSON); CM.parseFilm reads one back
+CM.filmCode = function (spec) { return "CM2:" + JSON.stringify(Object.assign({}, spec, { log: CM.packLog(spec.log) })); };
+CM.parseFilm = function (text) {
+  const t = String(text || "").trim();
+  if (!t.startsWith("CM2:")) return null;
+  try { const spec = JSON.parse(t.slice(4)); if (!spec.seed || spec.log === undefined) return null; spec.log = CM.unpackLog(spec.log); return spec; } catch (e) { return null; }
 };

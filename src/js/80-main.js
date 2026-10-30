@@ -417,6 +417,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const K = game.settings.keys || CM.DEFAULT_KEYS;
     if (ui.rebinding) { e.preventDefault(); ui.rebind(ui.rebinding, e.code); return; }   // (Settings > Keys: the next key pressed is the one)
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
+    if (game.film) { if (e.code === "Escape") { e.preventDefault(); game.stopFilm(); } else if (e.code === "Space") { e.preventDefault(); game.film.playing = !game.film.playing; ui.filmBar(); } return; }   // (a film: watch, or stop)
     if (game.travel && !ui.dialogOpen()) { game.stopTravel(); if (MOVES[e.code] || e.code === K.explore) { e.preventDefault(); return; } }   // (any key stops a walk; a move key only stops it)
     if (game.mode === "combat" && game.combat && game.combat.auto && e.code !== K.auto && !ui.dialogOpen()) game.autoFight(false);
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) {
@@ -550,6 +551,7 @@ window.addEventListener("DOMContentLoaded", () => {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
         if (ui.screen === "play" && !ui.dialogOpen()) game.tick(dt);    // the monsters move (not while you read a sheet or the pack); the run saves now and then
+        if (game.film && game.film.playing && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - game.film.last > 260 / game.film.speed) { game.film.last = now; game.filmStep(); }   // the film plays
         if (game.travel && game.mode === "explore" && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
         if (game.mode === "combat" && game.combat && game.combat.auto && game.combat.waiting && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAuto > 420 / (CM.fxSpeed || 1)) { lastAuto = now; game.autoTurn(); }
         renderer.light = game.lightFactor();

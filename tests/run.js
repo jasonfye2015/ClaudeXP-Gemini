@@ -1200,6 +1200,42 @@ test("boots and cloaks, quirks at creation, a second calling at twenty", () => {
   assert.strictEqual(game.renown(), 300);
 });
 
+test("films: a run's end keeps one; it plays on the live game line by line, skips to a fight or a floor, and nothing of it is saved", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("film-1", fixedParty(CM));
+  playRun(CM, game, { maxFloor: 3 });
+  const spec = game.replaySpec();
+  assert.ok(spec.trail.length >= 2 && spec.trail[0][0] === 1, "the trail: each floor and its step");
+  for (const h of game.party) h.hp = 0;
+  game.endRun(false);
+  const films = CM.store.get("films", []);
+  assert.strictEqual(films.length, 1); assert.strictEqual(game.fame[0].film, films[0].key);
+  const code = CM.filmCode(Object.assign({}, films[0].spec, { log: CM.unpackLog(films[0].spec.log) }));
+  assert.ok(code.startsWith("CM2:"));
+  const back = CM.parseFilm(code);
+  assert.strictEqual(back.log.length, spec.log.length); assert.strictEqual(CM.parseFilm("CM1:x"), null);
+  // a second game watches it
+  const g2 = new CM.Game();
+  g2.newGame("own-1", fixedParty(CM)); g2.saveRun();
+  const own = CM.storage.getItem("claudemagic.run");
+  assert.ok(g2.startFilm(back) && g2.film && g2.mode === "explore" && g2.seed === "film-1");
+  for (let n = 0; n < 50 && g2.filmStep(); n++);
+  assert.strictEqual(g2.film.at, 50);
+  g2.filmSkip("floor");
+  assert.ok(g2.floor.number >= 2 || g2.film.at === back.log.length);
+  g2.filmSkip("fight");
+  assert.strictEqual(CM.storage.getItem("claudemagic.run"), own, "nothing of the film is saved");
+  g2.stopFilm();
+  assert.strictEqual(g2.mode, "title"); assert.ok(!g2.film);
+  assert.ok(g2.canContinue() && g2.continueRun() && g2.seed === "own-1", "the player's own run is where it was");
+  // the ghost: a later run on the seed hears when the best run took each stair
+  const g3 = new CM.Game();
+  g3.newGame("film-1", fixedParty(CM));
+  assert.ok(g3.ghostTrail(), "the fallen run left a trail to race");
+  g3.enterFloor(2, "down");
+  assert.ok(g3.messages.some((m) => m.includes("ghost of your best run")), g3.messages.slice(-3).join(" | "));
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

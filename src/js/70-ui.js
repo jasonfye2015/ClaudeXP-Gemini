@@ -30,7 +30,7 @@ CM.UI = class {
       <p id="start-with"></p>
     </div>
     <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button><button data-board="weekly" title="This week's challenge: the runs on this week's seed">This week</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
-    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-village">The Village</button><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
+    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-village">The Village</button><button id="btn-film">Films</button><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-credits">Credits</button></div>
     <div class="version"></div>
   </div>
 </div>
@@ -53,7 +53,7 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div></div>
   </div>
   <div id="party"></div>
@@ -95,7 +95,7 @@ CM.UI = class {
   <div class="end"><button id="btn-copy">Copy</button><button id="btn-download">Download</button><button id="btn-import">Import</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-pause"><div class="box"><h2>Paused</h2>
   <p class="small">The run is saved as you go.</p>
-  <div class="end"><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
+  <div class="end"><button id="btn-pause-clip" title="Ten seconds of the view, saved as a .webm">Record a clip</button><button id="btn-pause-settings">Settings</button><button id="btn-pause-title">Back to the title</button><button class="close primary">Carry on</button></div></div></div>
 <div class="dialog" id="dlg-sheet"><div class="box sheetbox">
   <h2 id="sheet-title"></h2>
   <div class="sheet-grid"><div id="sheet-left"></div><div id="sheet-right"></div></div>
@@ -124,6 +124,12 @@ CM.UI = class {
   <div class="list-title">In the vault</div><div class="recruit" id="vault-held"></div>
   <div class="list-title">Leave something</div><div id="vault-list"></div><div class="small" id="vault-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
+<div class="dialog" id="dlg-film"><div class="box"><h2>Watch a film</h2>
+  <p class="small">A run, watched in the real view - the walk, the fights, the choices - from its seed and its log. The Hall of Fame keeps the last six runs' films; a film code (CM2:...) from a summary card plays anyone's.</p>
+  <div id="film-list"></div>
+  <textarea id="film-text" spellcheck="false" placeholder="Paste a film code here, CM2:..."></textarea>
+  <div class="small" id="film-note"></div>
+  <div class="end"><button id="btn-film-play">Watch</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-village"><div class="box journalbox"><h2>The Village</h2>
   <p class="small">The surface, between runs. Every run brings home renown - floors, guardians, the crown, titles earned, the week's seed - and the village grows with it. Renown never buys a blow in the dungeon.</p>
   <div class="small" id="village-renown"></div><div id="village-buildings"></div>
@@ -194,6 +200,18 @@ CM.UI = class {
       f.text().then((t) => { drop.value = t; this.$("#transfer-note").textContent = `${f.name} read in. Import brings it back.`; });
     });
     this.$("#btn-pause-settings").addEventListener("click", () => { this.closeDialogs(); this.openDialog("#dlg-settings"); });
+    this.$("#btn-film").addEventListener("click", () => this.openFilms());
+    this.$("#btn-film-play").addEventListener("click", () => { const spec = CM.parseFilm(this.$("#film-text").value); if (!spec) { this.$("#film-note").textContent = "That isn't a film code (CM2:...)."; return; } this.closeDialogs(); this.watch(spec); });
+    for (const b of this.root.querySelectorAll("#view .filmbar button")) b.addEventListener("click", () => {
+      const f = game.film; if (!f) return;
+      const what = b.dataset.film;
+      if (what === "toggle") f.playing = !f.playing; else if (what === "speed") f.speed = f.speed === 1 ? 4 : f.speed === 4 ? 16 : 1;
+      else if (what === "fight" || what === "floor") { f.playing = false; game.filmSkip(what); } else if (what === "stop") game.stopFilm();
+      this.filmBar();
+    });
+    game.on("film", (on) => { this.filmBar(); if (!on) this.show("title"); });
+    game.on("change", () => { if (game.film) this.filmBar(); });
+    this.$("#btn-pause-clip").addEventListener("click", () => { this.closeDialogs(); this.recordClip(); });
     this.$("#btn-pause-title").addEventListener("click", () => { this.closeDialogs(); game.saveRun(); game.setMode("title"); });
     this.renderKeys();
     this.$("#btn-keys-reset").addEventListener("click", () => this.resetKeys());
@@ -361,6 +379,56 @@ CM.UI = class {
   }
 
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
+  // ---- films: a run watched in the real view ----
+  openFilms() {
+    const g = this.game, box = this.$("#film-list"), films = CM.store.get("films", []);
+    box.innerHTML = films.length ? "" : `<div class="unlock"><small>No film yet: every run's end keeps one, the last six.</small></div>`;
+    for (const f of films) {
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto auto";
+      row.innerHTML = `<div><b>${this.esc(f.name)}</b> <small>${this.esc(f.seed)}, ${f.won ? "crowned" : "floor " + f.floor}, ${this.esc(f.date)}</small></div>`;
+      const w = document.createElement("button"); w.textContent = "Watch"; w.addEventListener("click", () => { this.closeDialogs(); this.watch(Object.assign({}, f.spec, { log: CM.unpackLog(f.spec.log) })); });
+      const c = document.createElement("button"); c.textContent = "Copy the code"; c.addEventListener("click", () => this.copyText(CM.filmCode(Object.assign({}, f.spec, { log: CM.unpackLog(f.spec.log) })), this.$("#film-note")));
+      row.appendChild(w); row.appendChild(c); box.appendChild(row);
+    }
+    this.$("#film-note").textContent = "";
+    this.openDialog("#dlg-film");
+  }
+  watch(spec) {
+    const g = this.game;
+    if (!g.startFilm(spec)) { this.$("#film-note").textContent = "That isn't a film."; return; }
+    this.show("play");
+    this.filmBar();
+  }
+  filmBar() {
+    const g = this.game, bar = this.$("#view .filmbar"), f = g.film;
+    bar.classList.toggle("on", Boolean(f));
+    if (!f) return;
+    bar.querySelector("[data-film=toggle]").textContent = f.playing ? "Pause" : "Play";
+    bar.querySelector("[data-film=speed]").textContent = `${f.speed}x`;
+    bar.querySelector("span").textContent = `${f.at} of ${f.spec.log.length}`;
+  }
+  // ten seconds of the view, recorded (the canvas's stream, where the browser can) and saved as a .webm
+  recordClip() {
+    const g = this.game;
+    if (!this.canvas.captureStream || typeof MediaRecorder === "undefined") { g.say("This browser can't record the view."); return; }
+    if (this.recorder) return;
+    const stream = this.canvas.captureStream(30), chunks = [];
+    let rec;
+    try { rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm" }); } catch (e) { g.say("This browser can't record the view."); return; }
+    this.recorder = rec;
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = () => {
+      this.recorder = null;
+      const blob = new Blob(chunks, { type: "video/webm" }), a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = `Claude and Magic - ${g.seed || "clip"}.webm`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      g.say("The clip is saved, where the browser puts downloads.");
+    };
+    rec.start();
+    g.say("Recording ten seconds of the view...");
+    setTimeout(() => { if (rec.state !== "inactive") rec.stop(); }, 10000);
+  }
   // ---- the village ----
   openVillage() { this.renderVillage(); this.openDialog("#dlg-village"); }
   renderVillage() {

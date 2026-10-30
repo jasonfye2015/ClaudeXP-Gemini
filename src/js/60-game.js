@@ -79,7 +79,50 @@ CM.Game = class {
 
   // ---- the log: every choice the player makes, as a line, so a run can be played again from its seed (CM.replayRun) ----
   logAct(name, ...args) { if (this.replaying) return; this.runLog = this.runLog || []; this.runLog.push(args.length ? [name, ...args] : [name]); }
-  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.endless ? "endless" : "dungeon", ascension: this.ascension || 0, iron: Boolean(this.iron), log: (this.runLog || []).slice() }; }
+  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.awakened ? "awakened" : this.endless ? "endless" : "dungeon", ascension: this.ascension || 0, iron: Boolean(this.iron), trail: (this.trail || []).slice(), log: (this.runLog || []).slice() }; }
+
+  // ---- the film: a run watched in the real view, line by line, on this very game (nothing is saved while it plays) ----
+  startFilm(spec) {
+    if (!spec || !Array.isArray(spec.log)) return false;
+    this.film = { spec, at: 0, playing: true, speed: 1, last: 0 };
+    this.replaying = 1;
+    const gen = CM.GEN, maxWas = CM.store.get("ascension", 0);
+    if ((spec.ascension || 0) > (maxWas || 0)) CM.store.set("ascension", spec.ascension);
+    const bottomWas = this.achievements.bottom;
+    if (spec.mode === "awakened" && !bottomWas) this.achievements.bottom = { date: "film" };
+    CM.GEN = spec.gen || 1;
+    try { this.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode, { ascension: spec.ascension || 0, iron: spec.iron }); }
+    finally { CM.GEN = gen; CM.store.set("ascension", maxWas || 0); if (!bottomWas) delete this.achievements.bottom; }
+    this.gen = spec.gen || 1;
+    this.replaying = 0;                                                  // (the film's lines log nothing: filmStep says so itself)
+    this.say(`A film: ${spec.party ? spec.party.map((p) => p.name).join(", ") : "a party"} on ${spec.seed}, ${spec.log.length} moves. Esc stops it.`);
+    this.emit("film", true);
+    return true;
+  }
+  filmStep() {
+    const f = this.film;
+    if (!f || f.at >= f.spec.log.length || this.mode === "title") { if (f) { f.playing = false; if (f.at >= f.spec.log.length) this.say("The film ends here."); } return false; }
+    this.replaying = 1;
+    try { CM.replayStep(this, f.spec.log[f.at++]); } finally { this.replaying = 0; }
+    return true;
+  }
+  // on to the next fight, or the next floor, without the walk between
+  filmSkip(what) {
+    const f = this.film;
+    if (!f) return;
+    const floor = this.floor ? this.floor.number : 0, fights = this.tally.fights || 0;
+    let guard = 0;
+    while (this.filmStep() && guard++ < 20000) { if (what === "fight" && (this.tally.fights || 0) > fights) break; if (what === "floor" && this.floor && this.floor.number !== floor) break; }
+    this.emit("change");
+  }
+  stopFilm() {
+    if (!this.film) return;
+    this.film = null; this.replaying = 0;
+    this.combat = null; this.foes = [];
+    this.runs = [1, 2, 3].map((n) => CM.migrateRun(CM.store.get(this.runKey(n), null)));   // (the player's own runs, as they were)
+    this.setMode("title");
+    this.emit("film", false);
+  }
   // down the stairs by hand (the simulator's bot, when it has lost its way): logged, so a replay follows
   warp(number) { this.logAct("warp", number); this.enterFloor(number, "down"); }
   // the party's temper: a number from 0 to 100, said as a word (CM.moraleWord); what the fight reads
@@ -151,6 +194,7 @@ CM.Game = class {
   }
 
   saveRun() {
+    if (this.replaying || this.film) return;                             // (a film plays on the live game; nothing of it is kept)
     if (!["explore", "camp"].includes(this.mode)) return;
     if (this.iron && this.mode !== "camp" && !this.ironAllow) { this.dirty = false; this.sinceSave = 0; return; }   // (Iron: the camps only)
     const data = { schema: CM.SCHEMA, gen: this.gen || 1, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
@@ -159,7 +203,7 @@ CM.Game = class {
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
       startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), behind: this.behind || 0,
-      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0 };
+      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [] };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -205,7 +249,7 @@ CM.Game = class {
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
     this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
     this.awakened = Boolean(d.awakened); this.behind = d.behind || 0;
-    this.morale = d.morale === undefined ? CM.MORALE.start : d.morale; this.fed = d.fed || 0;
+    this.morale = d.morale === undefined ? CM.MORALE.start : d.morale; this.fed = d.fed || 0; this.trail = d.trail || [];
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -215,6 +259,12 @@ CM.Game = class {
   }
 
   // ---- starting, and the stairs between floors ----
+  // the best earlier run on this seed that left a trail (its floors and the step each was reached): a ghost to race
+  ghostTrail() {
+    if (this.film) return null;
+    const runs = this.fame.concat(this.fameEndless || []).filter((e) => e.seed === this.seed && Array.isArray(e.trail) && e.trail.length > 1).sort((a, b) => b.floor - a.floor);
+    return runs.length ? runs[0].trail : null;
+  }
   // the rung of the ladder this run is on: at k, every rule to k applies (CM.ASCENSION)
   asc(k) { const rung = typeof k === "string" ? CM.ASCENSION.findIndex((r) => r.id === k) + 1 : k; return rung > 0 && (this.ascension || 0) >= rung; }
   ascensionMax() { return CM.clamp(CM.store.get("ascension", 0) || 0, 0, CM.ASCENSION.length); }
@@ -246,7 +296,7 @@ CM.Game = class {
     this.everFell = false; this.fightFell = false; this.earned = [];
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
     this.awakened = mode === "awakened" && Boolean(this.achievements.bottom); this.behind = 0;
-    this.morale = CM.MORALE.start; this.fed = 0;
+    this.morale = CM.MORALE.start; this.fed = 0; this.trail = [];
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
     this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row, quirk: h.quirk || null }));
     this.startMutators = this.mutators.slice(); this.runLog = []; this.formation = "line";
@@ -311,6 +361,11 @@ CM.Game = class {
         if (d < bd) { bd = d; best = [x, y]; }
       }
       if (best) fl.pos = best;
+    }
+    if (fresh && number % 1 === 0) {
+      this.trail = (this.trail || []).concat([[number, this.tally.steps || 0]]);
+      const ghost = this.ghostTrail(), g = ghost && ghost.find(([n]) => n === number);
+      if (g && number > 1) { const d = (this.tally.steps || 0) - g[1]; this.say(`The ghost of your best run on this seed took this stair at step ${g[1].toLocaleString()}: you are ${d > 0 ? `${d} steps behind` : d < 0 ? `${-d} steps ahead` : "level with it"}.`); }
     }
     if (fresh) this.layRemains(fl);
     if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }

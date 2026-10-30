@@ -18,6 +18,13 @@ Object.assign(CM.Game.prototype, {
     if (this.bottom) this.achieve("bottom");
     if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); if (this.iron) this.achieve("ironwill"); if ((this.ascension || 0) >= 5) this.achieve("ascended"); }
     entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened);
+    entry.trail = (this.trail || []).slice();
+    if (!this.film) {                                                    // the film of this run, kept for a while (the last six)
+      const films = CM.store.get("films", []), key = `${this.seed}:${Date.now()}`;
+      films.unshift({ key, seed: this.seed, date: entry.date, floor: entry.floor, won, name: entry.name, spec: Object.assign({}, this.replaySpec(), { log: CM.packLog(this.runLog || []) }) });
+      entry.film = key;
+      if (!CM.store.set("films", films.slice(0, 6))) CM.store.set("films", films.slice(0, 2));
+    }
     if (won && this.awakened) this.achieve("awakened");
     if (won && !this.endless && ["fair", "hard", "grim"].includes(this.difficulty)) {   // the ladder: a crown on Fair or above opens the next rung
       const next = Math.min(CM.ASCENSION.length, (this.ascension || 0) + 1);

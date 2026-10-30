@@ -170,6 +170,10 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view .fall { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0; transition: opacity 0.6s; }
 #view .fall.on { opacity: 1; transition: opacity 0.12s; }
 #view .tint { position: absolute; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: screen; }
+#view .filmbar { position: absolute; left: 0; right: 0; bottom: 34px; display: none; gap: 6px; justify-content: center; align-items: center; }
+#view .filmbar.on { display: flex; }
+#view .filmbar button { padding: 3px 9px; font-size: 12px; }
+#view .filmbar span { color: var(--ink); text-shadow: 0 1px 2px #000; }
 #view .titlecard { position: absolute; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none; opacity: 0; }
 #view .titlecard b { display: block; font: bold 38px var(--serif); color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 24px rgba(232,200,112,0.6), 0 2px 0 #000, 0 0 8px #000; }
 #view .titlecard small { display: block; font: italic 16px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000, 0 0 8px #000; margin-top: 4px; }

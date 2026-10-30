@@ -9,7 +9,7 @@ import re
 import sys
 from pathlib import Path
 
-VERSION = "2.7"
+VERSION = "2.8"
 HERE = Path(__file__).resolve().parent
 SRC = HERE / "src"
 GAME = HERE / "game"

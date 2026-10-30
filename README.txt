@@ -675,6 +675,21 @@ Expanded systems in play (the fourth big update, phase 6 - v2.7)
   the Lich King - so the rungs were reordered: the costly temple and deeper hurts come before keen blades and the
   guardians' second forms, which now sit at 11 and 12.
 
+Replays, ghosts and the film of a run (the fourth big update, phase 7 - v2.8)
+  Films. Every run's end keeps its film - the seed, the party, the rung and the log - the last six (CM.store "films").
+  Films, on the title, lists them: Watch plays one in the real view, on the game itself - the walk, the fights, the
+  choices - with a bar over the view: Pause, 1x / 4x / 16x, Next fight, Next floor, Stop (Esc; Space pauses). Nothing
+  of a film is saved; the player's own runs are where they were when it stops. A Hall of Fame entry's details offer
+  Watch the film while the film is kept.
+  Share a run as a film code: CM2: and the run (Copy the code, in Films; the summary card carries it too). Paste one
+  into Films and Watch plays anyone's run - the same dungeon, the same dice, the same choices (CM.filmCode,
+  CM.parseFilm; the log packed, a character a step).
+  Racing a ghost: a run leaves a trail - each floor and the step it was first set foot on - in its Hall of Fame entry.
+  A later run on the same seed hears, at every stair, when the best run on that seed took it, and whether it is ahead
+  or behind. The weekly's seed is everyone's, so the week's board is a race.
+  Clips: Record a clip, in the pause menu, saves ten seconds of the view as a .webm, where the browser can (the
+  canvas's stream and MediaRecorder).
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

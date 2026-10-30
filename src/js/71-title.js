@@ -35,6 +35,8 @@ Object.assign(CM.UI.prototype, {
     this.$("#fame table").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-seed]");
       if (b) { this.$("#seed").value = b.dataset.seed; this.refreshTitle(); return; }
+      const fb = e.target.closest("button[data-film]");
+      if (fb) { const f = (CM.store.get("films", []) || []).find((x) => x.key === fb.dataset.film); if (f) this.watch(Object.assign({}, f.spec, { log: CM.unpackLog(f.spec.log) })); return; }
       const c = e.target.closest("button[data-card]");
       if (c) { const b = this.fameBoard === "weekly" ? g.fame.concat(g.fameEndless || []).filter((x) => x.seed === CM.weeklySeed()) : this.fameBoard === "endless" ? g.fameEndless : g.fame; this.openCard(b[Number(c.dataset.card)]); return; }
       const tr = e.target.closest("tr.row");
@@ -109,7 +111,7 @@ Object.assign(CM.UI.prototype, {
           + (t && t.guardians && t.guardians.length ? `<div>Guardians slain: ${this.esc(this.guardianNames(t.guardians))}.</div>` : "")
           + (e.mutators && e.mutators.length ? `<div>${e.endless ? "The dark deepened" : "Today's dungeon"}: ${this.esc(e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(", "))}.</div>` : "")
           + (e.titles && e.titles.length ? `<div>Earned: ${this.esc(e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", "))}.</div>` : "")
-          + `<div><button data-card="${i}">Summary card</button></div>`
+          + `<div><button data-card="${i}">Summary card</button>${e.film && (CM.store.get("films", []) || []).some((f) => f.key === e.film) ? ` <button data-film="${this.esc(e.film)}">Watch the film</button>` : ""}${e.trail && e.trail.length > 1 ? ` <small>a ghost to race: Play this seed</small>` : ""}</div>`
           + "</td></tr>";
       }
       return rows;
@@ -141,7 +143,8 @@ Object.assign(CM.UI.prototype, {
     const slot = this.$("#card-slot");
     slot.innerHTML = "";
     slot.appendChild(CM.art.summaryCard(e, CM.titleFor(g.achievements)));
-    this.$("#card-text").value = CM.summaryText(e) + (e.code ? `\nRun code (paste it in the seed box): ${e.code}` : "");
+    const film = e.film && (CM.store.get("films", []) || []).find((f) => f.key === e.film);
+    this.$("#card-text").value = CM.summaryText(e) + (e.code ? `\nRun code (paste it in the seed box): ${e.code}` : "") + (film ? `\nFilm code (Films, on the title, plays it): ${CM.filmCode(Object.assign({}, film.spec, { log: CM.unpackLog(film.spec.log) }))}` : "");
     this.$("#card-note").textContent = "";
     this.openDialog("#dlg-card");
   },

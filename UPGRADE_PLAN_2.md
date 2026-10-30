@@ -178,7 +178,7 @@ uses every v2.0 system in the sim's report, and a replayed log reproduces a run 
 
 ---
 
-## Phase 7 - Replays, ghosts and the film of a run
+## Phase 7 - Replays, ghosts and the film of a run - DONE (v2.8)
 
 **Goal:** a run can be watched, shared and raced.
 
