@@ -21,6 +21,32 @@ The upper carvings were cut by people who believed what they were told; the lowe
 upper carvings **lie** - not from malice, from distance - and the lower ones correct them. The codex shows the lie
 struck through once the truth is read.
 
+## The calendar
+
+The town keeps a year of twelve festivals, one a month, in the week around the fifteenth (the game reads the real
+date, or a season pinned in Settings; `CM.FESTIVALS` in `src/js/24b-calendar.js`). Four are the hill's own; the
+rest the city's, kept after the city. Each has its line, said at the well.
+
+| Month | Season | Festival | What it does | The line |
+|-------|--------|----------|--------------|----------|
+| January | winter | Midwinter | the hearth gives two rests; the king's court sits a floor higher | The longest night. The king's court sat late, they say, and sits later. |
+| February | winter | the Sexton's Day | a candle at the memorial costs no renown | The sexton buried the city's dead for forty years and asked no coin of the poor. |
+| March | spring | the Sowing | seed at half price | What goes into the ground in the Sowing comes up. |
+| April | spring | the Dwarves' Letter | picks whetted free, and sold at half | "We are well. Do not come." The town keeps the day it came. |
+| May | spring | the Greening (the hill's) | the Wood's nodes give one more | The first week the Wood is green to the top. |
+| June | summer | Midsummer | the round free; the townsfolk out at night | The shortest night, and nobody sleeps through it. |
+| July | summer | the Forge Fire (the hill's) | the smith's gold at half | The week the forge is never let go out. |
+| August | summer | the Reaping (the hill's) | the farm grows two stages a dawn | Everyone cuts, even the chronicler. |
+| September | autumn | the Harvest Fair | market day all week; the farm yields double | The fair came up from the lower town once a year, and stayed. |
+| October | autumn | the Feast of the Dead | the names read at the well; a candle free; the priests gentle | The names are read at the well, oldest first. |
+| November | autumn | the Night of Bells | the boy hears one; gossip free; locks a tenth easier | One night a year the whole town listens anyway. |
+| December | winter | the Wassail (the hill's) | the round sets the heart to full, with beer | The year goes out singing. |
+
+The seasons set the day's length (summer's night falls at ten, winter's at six), the weather's odds (spring rain,
+autumn mist, winter snow), the Wood's gifts (summer's honey and berries), the farm (nothing grows in winter) and the
+dungeon's edges (autumn's quick tide in the Drowned Town; winter's frost a tenth harder near the surface; winter
+dailies carry Gloom more often, summer dailies Swift).
+
 ## The timeline
 
 | When | What | Who knows |

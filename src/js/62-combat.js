@@ -59,6 +59,7 @@ Object.assign(CM.Game.prototype, {
     const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
     const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
     if (ratproof) wary = true;
+    if (this.floor && this.floor.number === -1 && CM.weather(this) === "mist") wary = true;   // (mist: nobody is on anybody before they can draw)
     for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
     if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance((loud ? 0.65 : 0.5) + (CM.newMoon(this) && CM.isNight(this) && this.floor && this.floor.number <= 5 ? 0.1 : 0))) {   // (a moonless night near the surface: they come quieter)   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
@@ -1181,7 +1182,7 @@ Object.assign(CM.Game.prototype, {
         break;
       }
       case "frost": {
-        const dmg = this.pow(6 + 2 * L + mod), weed = ["drownedweed", "saltweed"].includes(this.reagent);
+        const dmg = Math.round(this.pow(6 + 2 * L + mod) * (CM.season(this) === "winter" && this.floor && this.floor.number >= 1 && this.floor.number <= 5 ? 1.1 : 1)), weed = ["drownedweed", "saltweed"].includes(this.reagent);   // (winter: frost bites a tenth harder near the surface)
         let held = 0;
         for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0) m.chilled = 2; if (m.hp > 0 && !CM.unmoved(m) && (weed || this.terrain().includes("water") || rnd.chance(0.3))) { m.held = Math.max(m.held || 0, 1); held++; } }
         this.say(`${h.name} breathes frost over every foe: ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}. The ice clings.`);

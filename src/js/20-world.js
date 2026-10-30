@@ -614,7 +614,7 @@ CM.passable = function (floor, x, y) {
   if (!CM.isOpen(floor, x, y)) return false;
   const f = floor.features[key(x, y)];
   if (f && (f.type === "door" || f.type === "gate") && !f.open) return false;
-  if (f && f.type === "river") return false;                             // (the Wood's river: crossed at the ford, not here)
+  if (f && f.type === "river" && !floor.frozen) return false;             // (the Wood's river: crossed at the ford, not here - unless it is frozen)
   return true;
 };
 

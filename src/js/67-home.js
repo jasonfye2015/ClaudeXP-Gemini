@@ -25,9 +25,9 @@ Object.assign(CM.Game.prototype, {
   hearthRest() {
     if (!this.inTown()) return "The hearth is at home.";
     if (this.homeLevel() < 1) return "The house has no roof yet.";
-    if (this.floor.hearthUsed) return "The fire is banked: the party has rested here already. The next run, or the next time home.";
+    if ((this.floor.hearthUsed || 0) >= (CM.festivalIs(this, "midwinter") ? 2 : 1)) return "The fire is banked: the party has rested here already. The next run, or the next time home.";
     this.logAct("hearthRest");
-    this.floor.hearthUsed = true; this.sleepTillDawn();
+    this.floor.hearthUsed = (this.floor.hearthUsed || 0) + 1; this.sleepTillDawn();
     for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.fed = 0; if ((this.morale || 0) < 85) this.morale = 85;
     this.buffs = this.buffs || {}; this.buffs.rested = CM.RESTED_FLOORS;

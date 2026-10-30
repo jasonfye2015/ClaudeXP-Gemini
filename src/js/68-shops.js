@@ -48,10 +48,11 @@ Object.assign(CM.Game.prototype, {
   drink() {
     if (!this.inTown()) return "The Hanged Lantern is in town.";
     if (this.floor.drank) return "One round is enough before a descent.";
-    if (this.gold < CM.DRINK_PRICE) return `A round is ${CM.DRINK_PRICE} gold.`;
+    const price = CM.festivalIs(this, "midsummer") ? 0 : CM.DRINK_PRICE; if (this.gold < price) return `A round is ${CM.DRINK_PRICE} gold.`;
     this.logAct("drink");
-    this.gold -= CM.DRINK_PRICE; this.spend("tavern", CM.DRINK_PRICE); this.floor.drank = true;
-    const heart = this.villageLevel("tavern") >= 1 ? 100 : 90; if ((this.morale || CM.MORALE.start) < heart) this.morale = heart;
+    this.gold -= price; this.spend("tavern", price); this.floor.drank = true;
+    if (CM.festivalIs(this, "wassail")) { this.gain([CM.dish("beer")], "tavern"); this.say("The Wassail: the cellar is open, and a jug of beer goes into the pack."); }
+    const heart = this.villageLevel("tavern") >= 1 || CM.festivalIs(this, "wassail") ? 100 : 90; if ((this.morale || CM.MORALE.start) < heart) this.morale = heart;
     this.fed = 0; if (!this.meal) { this.meal = { kind: "pottage", dish: true, floor: 1 }; for (const h of this.party) { h.mealLuck = 0; h.mealStat = "str"; CM.recompute(h); } this.say("The round comes with the pot: bean pottage, for the first floor."); }   // (the round is a meal)
     this.sound("coin"); this.say(`A round at the Hanged Lantern, and the party is ${this.moraleWord().toLowerCase()}.`);
     this.saveRun(); this.emit("change");
@@ -60,7 +61,7 @@ Object.assign(CM.Game.prototype, {
   gossip() {
     if (!this.inTown()) return "The regular drinks at the Hanged Lantern.";
     if (this.gossiped) return "The regular has told you what he knows this run.";
-    const fee = this.villageLevel("tavern") >= 1 ? 0 : CM.GOSSIP_PRICE;
+    const fee = this.villageLevel("tavern") >= 1 || CM.festivalIs(this, "bells") ? 0 : CM.GOSSIP_PRICE;
     if (this.gold < fee) return `The regular talks for ${CM.GOSSIP_PRICE} gold.`;
     this.logAct("gossip");
     this.gold -= fee; if (fee) this.spend("tavern", fee); this.gossiped = true;
@@ -143,7 +144,7 @@ Object.assign(CM.Game.prototype, {
   whetPicks() {
     if (!this.inTown()) return "The picks are whetted at the forge in town.";
     const picks = this.bag.filter((i) => i.kind === "pick" && i.points !== undefined && i.points < CM.PICKS[i.pick].points); if (!picks.length) return "Every pick in the pack has its point.";
-    const cost = 20 * picks.length; if (this.gold < cost) return `The smith wants ${cost} gold to put a point back on ${CM.plural(picks.length, "pick")}.`;
+    const cost = CM.festivalIs(this, "letter") ? 0 : 20 * picks.length; if (this.gold < cost) return `The smith wants ${cost} gold to put a point back on ${CM.plural(picks.length, "pick")}.`;
     this.logAct("whetPicks");
     this.gold -= cost; this.spend("smith", cost); for (const p of picks) p.points = CM.PICKS[p.pick].points;
     this.sound("lever"); this.say(`${CM.plural(picks.length, "pick")} on the grindstone: as new.`);

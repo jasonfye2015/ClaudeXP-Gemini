@@ -278,7 +278,7 @@ CM.Game = class {
       tally: this.tally || this.freshTally(), journal: this.journal || [], story: this.story || { read: {} }, rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), clock: this.clock || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0, season: this.season || null, farmDay: this.farmDay || 0,
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), clock: this.clock || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0, season: this.season || null, farmDay: this.farmDay || 0, festival: this.festival || null,
       morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [] };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
@@ -327,7 +327,7 @@ CM.Game = class {
     this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
     this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
-    this.awakened = Boolean(d.awakened); this.dream = Boolean(d.dream); this.rootPending = Boolean(d.rootPending); this.behind = d.behind || 0; this.startedInTown = Boolean(d.startedInTown); this.clock = d.clock || 0; this.fellFrom = d.fellFrom || null; this.orders = d.orders || []; this.bounty = d.bounty || null; this.blessedUntil = d.blessedUntil || 0; this.rumourBox = d.rumourBox || 0; this.season = d.season || CM.seasonOfDate(); this.farmDay = d.farmDay || 0;
+    this.awakened = Boolean(d.awakened); this.dream = Boolean(d.dream); this.rootPending = Boolean(d.rootPending); this.behind = d.behind || 0; this.startedInTown = Boolean(d.startedInTown); this.clock = d.clock || 0; this.fellFrom = d.fellFrom || null; this.orders = d.orders || []; this.bounty = d.bounty || null; this.blessedUntil = d.blessedUntil || 0; this.rumourBox = d.rumourBox || 0; this.season = d.season || CM.seasonOfDate(); this.farmDay = d.farmDay || 0; this.festival = d.festival || null;
     this.morale = d.morale === undefined ? CM.MORALE.start : d.morale; this.fed = d.fed || 0; this.trail = d.trail || [];
     this.applyBonds();
     this.messages = [];
@@ -396,7 +396,8 @@ CM.Game = class {
     else if (this.kit === "abyss") { this.gold += 150; this.bag.push(CM.rope(), CM.gem("diamond"), CM.scroll("mapping")); for (const h of this.party) { h.level = 3; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }
     for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
     this.retiredThisRun = false; this.clock = 0;                          // (dawn, six in the morning)
-    this.season = CM.seasonOfDate(); this.farmDay = 0;                   // (the season, pinned to the run from the real date; the farm's last dawn seen)
+    this.season = CM.SEASONS.includes(this.settings.season) ? this.settings.season : CM.seasonOfDate(); this.farmDay = 0;   // (the season, pinned to the run from the real date or Settings; the farm's last dawn seen)
+    this.festival = this.settings.festival && CM.FESTIVALS[this.settings.festival] ? this.settings.festival : CM.festivalOfDate();   // (the festival, if the run begins in its week)
     const town = (opts || {}).town !== undefined ? Boolean((opts || {}).town) : !this.settings.skipWalk;   // (a run begins at the party's door, or at the shaft: Settings)
     this.startedInTown = town;
     this.enterFloor(town ? 0 : 1, "down");                                // (the town's own start is the party's door, facing down the lane)
@@ -470,6 +471,7 @@ CM.Game = class {
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
     if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
+    if (number === 0 && CM.festivalIs(this, "harvest") && !fl.things["8,10"]) fl.things["8,10"] = { type: "peddler", stock: null };   // (the Harvest Fair: market day all week)
     if (fresh) {                                                         // the trinkets that mark the map: the carving, the way down, the gathering
       const mark = (k) => { const [x, y] = k.split(",").map(Number); if (!fl.seen.some(([sx, sy]) => sx === x && sy === y)) fl.seen.push([x, y]); };
       if (CM.partyProp(this.party, "chalk")) for (const [k, f] of Object.entries(fl.features)) if (f.type === "carving") mark(k);

@@ -80,7 +80,7 @@ Object.assign(CM.Game.prototype, {
     if (this.fed === CM.HUNGER.hungry) this.say("The party is hungry. A ration would be welcome.");
     if (this.fed === CM.HUNGER.weary) this.say("The party is weary with hunger: every blow does less until they eat.");
     if (this.fed > CM.HUNGER.hungry && this.fed % 50 === 0) this.cheer(-1);
-    if (fl.hazard === "tide" && this.steps % CM.TIDE_STEPS === 0) {       // the Drowned Town's tide turns
+    if (fl.hazard === "tide" && this.steps % (CM.season(this) === "autumn" ? Math.round(CM.TIDE_STEPS * 0.75) : CM.TIDE_STEPS) === 0) {   // (autumn: mist on the Drowned Town, the tide quicker)       // the Drowned Town's tide turns
       fl.tide = !fl.tide;
       this.dirty = true;
       this.say(fl.tide ? "The water rises in the streets, cold and quick: high tide. The torch hisses, and things move in the water." : "The water drains away down the streets: low tide.");
@@ -257,7 +257,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.waterwalk) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
+    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide || (this.floor.number === -1 && CM.weather(this) === "rain" && this.floor.ford && this.floor.pos.join(",") === this.floor.ford.join(","))) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.waterwalk) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
     if ((CM.partyProp(this.party, "torchSave") || (CM.mealOf(this).torch)) && (this.steps || 0) % 3 === 0) return;   // (of the Lantern, or a meal that lasts: every third step is free)
     l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0) + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "dark")) ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
@@ -278,7 +278,7 @@ Object.assign(CM.Game.prototype, {
   // how far the party can see, as a share of the depth's reach
   lightFactor() {
     if (this.floor && this.floor.number === 0) return CM.isNight(this) ? 0.8 : 1.3;   // (daylight, or the lanterns)
-    if (this.floor && this.floor.number === -1) return CM.isNight(this) ? (this.light.kind ? 0.55 : 0.35) : 1.2;   // (the Wood: daylight under the leaves, or a torch in the dark)
+    if (this.floor && this.floor.number === -1) return (CM.isNight(this) ? (this.light.kind ? 0.55 : 0.35) : 1.2) * (CM.weather(this) === "mist" ? 0.8 : 1);   // (the Wood: daylight under the leaves, or a torch in the dark)
     const l = this.light, spell = this.spellLight > 0;
     if (this.inDark()) return spell ? 0.7 : l.kind === "lantern" ? 0.45 : 0.25;
     let f = l.kind === "lantern" ? 1.15 : l.kind === "glow" ? 0.6 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
@@ -591,7 +591,7 @@ Object.assign(CM.Game.prototype, {
       const d = dist.get(k), bd = baitDist ? baitDist.get(k) : undefined;
       let step = null;
       const options = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([nx, ny]) => walk(nx, ny) && !fl.things[keyOf(nx, ny)]);
-      if (t.flees) {                                                       // a deer, a boar: it runs from the party, and is hunted by walking into it
+      if (t.flees && !(fl.number === -1 && CM.weather(this) === "wind")) {   // a deer, a boar: it runs from the party, and is hunted by walking into it (not in a wind: it does not smell them)
         if (d !== undefined && d <= 6) { const away = options.filter(([nx, ny]) => (dist.get(keyOf(nx, ny)) || 99) > d); if (away.length) { const [sx, sy] = this.rnd.pick(away); delete fl.things[k]; t.anim = { from: [x, y], at: performance.now() }; fl.things[keyOf(sx, sy)] = t; this.dirty = true; } }
         continue;
       }
@@ -603,7 +603,7 @@ Object.assign(CM.Game.prototype, {
         const nearer = options.filter(([nx, ny]) => baitDist.get(keyOf(nx, ny)) === bd - 1 && !(nx === px && ny === py));
         if (nearer.length) step = this.rnd.pick(nearer);
         if (!step && bd === 1) step = fl.bait.at.split(",").map(Number);
-      } else if (d !== undefined && (d <= 7 || t.hunter || this.has("hunted"))) {
+      } else if (d !== undefined && (d <= 7 || t.hunter || this.has("hunted")) && !(fl.number === -1 && CM.weather(this) === "mist" && d > 2)) {   // (mist in the Wood: the hunters find the party late)
         const nearer = options.filter(([nx, ny]) => dist.get(keyOf(nx, ny)) === d - 1 && !(nx === px && ny === py));
         if (nearer.length) step = this.rnd.pick(nearer);
       } else if (this.rnd.chance(0.3) && options.length) {
@@ -630,7 +630,7 @@ Object.assign(CM.Game.prototype, {
     if (relic) { this.sound("unlock"); this.say(`${CM.itemName(relic)} is held to ${G.name}, and the lock forgets itself.`); return ""; }
     const rogue = this.alive().find((h) => h.cls === "Rogue" && h.level >= G.rogue && this.canAct(h));
     const dexter = this.alive().filter((h) => this.canAct(h)).sort((a, b) => this.stat(b, "dex") - this.stat(a, "dex"))[0];
-    const chance = (h) => CM.clamp(0.5 + CM.mod(this.stat(h, "dex")) * 0.1 + (CM.newMoon(this) ? 0.1 : 0), 0.1, 0.95);   // (a new moon: dark work goes better)
+    const chance = (h) => CM.clamp(0.5 + CM.mod(this.stat(h, "dex")) * 0.1 + (CM.newMoon(this) ? 0.1 : 0) + (CM.festivalIs(this, "bells") ? 0.1 : 0), 0.1, 0.95);   // (a new moon: dark work goes better)
     if (rogue) {
       if (!this.rnd.chance(chance(rogue))) return `${rogue.name} works at ${G.name}... it won't give. Not yet.`;
       this.sound("unlock"); this.say(`${rogue.name} picks ${G.name}, and the ${what} gives.`); return "";
@@ -710,6 +710,7 @@ Object.assign(CM.Game.prototype, {
   refreshWood() {
     const fl = this.floor; if (!fl || fl.number !== -1) return;
     const night = CM.isNight(this), newDay = fl.woodDay !== CM.dayOf(this); fl.nightWas = night; fl.woodDay = CM.dayOf(this);
+    fl.frozen = CM.weather(this) === "snow"; if (fl.frozen && newDay) this.say("Snow in the Wood: the river is frozen hard enough to cross anywhere, and the beasts have left tracks.");
     for (const [k, t] of Object.entries(fl.things)) if (t.type === "monsters" && t.wood && (newDay || t.wood !== (night ? "night" : "day"))) delete fl.things[k];   // (a new day, or the other half of it: other beasts)
     const have = Object.values(fl.things).filter((t) => t.type === "monsters" && t.wood).length;
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:woodbands:${CM.dayOf(this)}:${night ? 1 : 0}`)), bands = CM.woodBands(night, CM.fullMoon(this));
@@ -922,6 +923,8 @@ Object.assign(CM.Game.prototype, {
     const common = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band && !CM.INGREDIENTS[id].rare), rare = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band && CM.INGREDIENTS[id].rare);
     const hs = CM.hashSeed(`${this.seed}:gather:${this.floor.number}:${k}`), id = rare && hs % 5 === 0 ? rare : common;
     let n = 1;
+    if (band === -1 && CM.festivalIs(this, "greening")) n += 1;             // (the Greening: the Wood green to the top)
+    if (band === -1 && CM.season(this) === "summer" && (id === "honey" || id === "berries")) n += 1;   // (summer: the hive full, the brambles heavy)
     if (this.alive().some((h) => h.cls === "Druid" || h.cls === "Ranger")) n += 1;
     if (CM.ORE_BANDS.includes(band) && this.alive().some((h) => h.cls === "Artificer")) n += 1;
     const got = []; for (let i = 0; i < n; i++) got.push(CM.ingredient(id));

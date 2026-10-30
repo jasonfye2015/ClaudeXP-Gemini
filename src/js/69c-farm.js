@@ -58,7 +58,7 @@ Object.assign(CM.Game.prototype, {
     const rows = this.farmRows(); while (F.rows.length < rows) F.rows.push(null); if (F.rows.length > rows) F.rows.length = rows;
     F.rows.forEach((r, i) => {
       if (!r) return;
-      if (r.stage < CM.FARM.stages) { if (season !== "winter") r.stage += 1; if (r.stage >= CM.FARM.stages && !F.scarecrow && roll(`crows:${i}`, CM.FARM.crows) === 0) { F.rows[i] = null; notes.push(`crows took the ${CM.CROPS[r.crop].name.toLowerCase()} in row ${i + 1}`); } }
+      if (r.stage < CM.FARM.stages) { if (season !== "winter") r.stage = Math.min(CM.FARM.stages, r.stage + 1 + (CM.festivalIs(this, "reaping") ? 1 : 0) + (CM.weatherOf(this.seed, CM.dayOf(this), season) === "rain" ? 1 : 0)); /* (the Reaping, and a day of rain: a stage more) */ if (r.stage >= CM.FARM.stages && !F.scarecrow && roll(`crows:${i}`, CM.FARM.crows) === 0) { F.rows[i] = null; notes.push(`crows took the ${CM.CROPS[r.crop].name.toLowerCase()} in row ${i + 1}`); } }
       else { r.ripeFor = (r.ripeFor || 0) + 1; if (r.ripeFor > CM.FARM.rotAfter) { F.rows[i] = null; notes.push(`the ${CM.CROPS[r.crop].name.toLowerCase()} in row ${i + 1} rotted in the field`); } }
     });
     if (L >= 2 && season === "autumn" && roll("orchard", 2) === 0) { const id = roll("fruit", 3) === 0 ? "pear" : "apple"; F.store.push({ id, day: F.days }, { id, day: F.days }); notes.push(`the orchard dropped two ${id}s`); }
@@ -68,7 +68,7 @@ Object.assign(CM.Game.prototype, {
     if (L >= 5 && F.cowFed >= F.days) F.store.push({ id: "milk", day: F.days });
     if (L >= 5 && F.days - (F.venison || 0) >= CM.FARM.venisonEvery) { F.venison = F.days; F.store.push({ id: "venison", day: F.days }, { id: "venison", day: F.days }); notes.push("the byre gave two of venison"); }
     if (L >= 3 && F.hand > F.days) {                                     // the farmhand: cuts what is ripe into the store, sows what was ordered
-      F.rows.forEach((r, i) => { if (r && r.stage >= CM.FARM.stages) { for (let k = 0; k < CM.CROPS[r.crop].yields; k++) F.store.push({ id: r.crop, day: F.days }); F.seeds[r.crop] = (F.seeds[r.crop] || 0) + 1; F.rows[i] = null; notes.push(`the farmhand cut the ${CM.CROPS[r.crop].name.toLowerCase()} in row ${i + 1}`); } });
+      F.rows.forEach((r, i) => { if (r && r.stage >= CM.FARM.stages) { for (let k = 0; k < CM.CROPS[r.crop].yields * (CM.festivalIs(this, "harvest") ? 2 : 1); k++) F.store.push({ id: r.crop, day: F.days }); F.seeds[r.crop] = (F.seeds[r.crop] || 0) + 1; F.rows[i] = null; notes.push(`the farmhand cut the ${CM.CROPS[r.crop].name.toLowerCase()} in row ${i + 1}`); } });
       if (F.order && this.canSow(F.order)) F.rows.forEach((r, i) => { if (!r && (F.seeds[F.order] || 0) > 0) { F.seeds[F.order] -= 1; F.rows[i] = { crop: F.order, stage: 0 }; notes.push(`the farmhand sowed ${CM.CROPS[F.order].name.toLowerCase()} in row ${i + 1}`); } });
     }
     if (notes.length) F.notes = F.notes.concat(notes).slice(-12);
@@ -90,7 +90,7 @@ Object.assign(CM.Game.prototype, {
     this.farmDawns(); const F = this.farm(), r = F.rows[i]; if (!r) return "Nothing grows in that row.";
     if (r.stage < CM.FARM.stages) return `The ${CM.CROPS[r.crop].name.toLowerCase()} in row ${i + 1} is ${CM.FARM.stages - r.stage} ${CM.FARM.stages - r.stage === 1 ? "dawn" : "dawns"} from ripe.`;
     this.logAct("cut", i);
-    const got = []; for (let k = 0; k < CM.CROPS[r.crop].yields; k++) got.push(CM.food(r.crop)); got.push(CM.seed(r.crop)); this.gain(got, "farm"); F.rows[i] = null; this.tally.cut = (this.tally.cut || 0) + 1;
+    const got = []; for (let k = 0; k < CM.CROPS[r.crop].yields * (CM.festivalIs(this, "harvest") ? 2 : 1); k++) got.push(CM.food(r.crop)); got.push(CM.seed(r.crop)); this.gain(got, "farm"); F.rows[i] = null; this.tally.cut = (this.tally.cut || 0) + 1;
     this.say(`Row ${i + 1} cut: ${CM.plural(CM.CROPS[r.crop].yields, CM.CROPS[r.crop].name.toLowerCase())}, and seed kept back.`); this.saveVillage(); this.saveRun(); this.emit("change"); return "";
   },
   collectFarm() {

@@ -44,7 +44,9 @@ Object.assign(CM.Game.prototype, {
   // ---- the square ----
   well() {
     const fl = this.floor, won = (this.fame || []).some((e) => e.won);
-    const lines = [won ? `The well runs clear since the crown came up. The party drinks, and is ${this.moraleWord().toLowerCase()}.` : "The well is dry, and has been since the shaft was dug. The old ones say it runs again when a crown comes up."];
+    const lines = [CM.weather(this) === "snow" ? "The well is frozen over; a child has drawn a face in the ice." : won ? `The well runs clear since the crown came up. The party drinks, and is ${this.moraleWord().toLowerCase()}.` : "The well is dry, and has been since the shaft was dug. The old ones say it runs again when a crown comes up."];
+    lines.push(`It is ${CM.dateWords(this)}.${CM.festival(this) ? ` ${CM.FESTIVALS[CM.festival(this)].name.charAt(0).toUpperCase() + CM.FESTIVALS[CM.festival(this)].name.slice(1)}: ${CM.FESTIVALS[CM.festival(this)].what}. ${CM.FESTIVALS[CM.festival(this)].line}` : ""}`);
+    if (CM.festivalIs(this, "dead") && (this.memorial || []).length) lines.push(`The names are read at the well: ${this.memorial.slice(0, 12).map((m) => m.name).join(", ")}${this.memorial.length > 12 ? ", and the rest" : ""}.`);
     lines.push(`The notice board: the week's seed is ${CM.weeklySeed()}; the day's is daily-${CM.today()}.${String(this.seed).startsWith("weekly-") ? " Market day: a peddler's cloth is out in the square." : ""}`);
     const stones = this.wellStones(); if (stones.length) lines.push(`Carved on the well's stones, in an old hand: ${stones.join(" ")}`);
     if (!fl.wished && this.gold >= 1) { this.logAct("wish"); fl.wished = true; this.gold -= 1; this.village = this.village || {}; this.village.renown = (this.village.renown || 0) + 1; this.saveVillage(); lines.push("A coin goes down the well for the town: one renown."); }
@@ -58,5 +60,5 @@ Object.assign(CM.Game.prototype, {
     return out;
   },
   townsfolkLine(who) { const T = CM.TOWNSFOLK[who % CM.TOWNSFOLK.length]; const day = CM.hashSeed(CM.today()) % T.lines.length; return T.lines[(day + who) % T.lines.length]; },
-  talkTownsfolk(thing) { const T = CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length]; if (CM.isNight(this)) { this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)} has gone in: the shutters are closed, and a lamp moves behind them. It is ${CM.hourWord(CM.hourOf(this))}.`); return; } this.emit("talk", { title: T.name, text: this.townsfolkLine(thing.who) }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${this.townsfolkLine(thing.who)}`); },
+  talkTownsfolk(thing) { const T = CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length]; if (CM.festivalIs(this, "bells") && /bell-founder/.test(T.name)) { const line = "\"Listen. There - no. There. You heard it. Tell me you heard it.\" He did, tonight; he does every year."; this.emit("talk", { title: T.name, text: line }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${line}`); return; } if (CM.isNight(this) && !CM.festivalIs(this, "midsummer")) { this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)} has gone in: the shutters are closed, and a lamp moves behind them. It is ${CM.hourWord(CM.hourOf(this))}.`); return; } this.emit("talk", { title: T.name, text: this.townsfolkLine(thing.who) }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${this.townsfolkLine(thing.who)}`); },
 });

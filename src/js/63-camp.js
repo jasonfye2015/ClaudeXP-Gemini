@@ -20,8 +20,9 @@ Object.assign(CM.Game.prototype, {
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       if (depth >= 14) this.stock.push(CM.lockpick(true));
       if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }), CM.pick("copper"));
+      if (this.floor.number === 0 && CM.festivalIs(this, "letter")) for (const it of this.stock) if (it.kind === "pick") it.value = Math.ceil(it.value / 2);   // (the Dwarves' Letter)
       if (this.floor.number === 0 && this.villageLevel("smith") >= 2) this.stock.push(CM.pick("iron"));
-      if (this.floor.number === 0 && this.villageLevel("farm") >= 1) for (const c of Object.keys(CM.CROPS)) if (this.canSow(c)) this.stock.push(CM.seed(c));   // (the season's seed, for the farm)
+      if (this.floor.number === 0 && this.villageLevel("farm") >= 1) for (const c of Object.keys(CM.CROPS)) if (this.canSow(c)) this.stock.push(Object.assign(CM.seed(c), { value: CM.festivalIs(this, "sowing") ? 5 : 10 }));   // (the season's seed, for the farm; half at the Sowing)
       if (this.floor.number === 0) this.stock.push(Object.assign(CM.dish("bread"), { value: 25 }), Object.assign(CM.dish("porridge"), { value: 25 }));   // (the simple dishes, at a price)   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
       if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);   // (the Merchant's House in town carries it all)
@@ -650,6 +651,7 @@ Object.assign(CM.Game.prototype, {
   },
 
   // the night passes: the clock goes to the next dawn (six), a full day if it is dawn already
+  forgeRate() { return CM.festivalIs(this, "forgefire") ? 0.5 : 1; },     // (the Forge Fire: the smith's gold at half)
   sleepTillDawn() { const m = CM.minuteOf(this), to = m < CM.CLOCK.start ? CM.CLOCK.start - m : CM.CLOCK.day - m + CM.CLOCK.start; this.clock = (this.clock || 0) + to; if (this.farmDawns && this.village) this.farmDawns(); return to; },
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
@@ -740,7 +742,7 @@ Object.assign(CM.Game.prototype, {
     if (item && item.unknown && service !== "recharge") return "The smith won't work on a thing nobody can name. Have it identified first.";
     const p = item ? (item.props = item.props || {}) : {};
     if (service === "enchant") {
-      const n = p.enchant || 0, cost = CM.SMITH.enchant * (n + 1), gem = this.bag.findIndex((i) => i.kind === "gem" && i.gem === "diamond");
+      const n = p.enchant || 0, cost = Math.ceil(CM.SMITH.enchant * (n + 1) * this.forgeRate()), gem = this.bag.findIndex((i) => i.kind === "gem" && i.gem === "diamond");
       const scrap = this.bag.map((i, idx) => (i.kind === "scrap" ? idx : -1)).filter((idx) => idx >= 0);
       if (n >= CM.SMITH.most) return `${item.name} has had all the smith's work it can take.`;
       if (n + 1 >= CM.SMITH.most && (item.grade || 0) >= CM.GRADE_MOST) return `The smith shakes his head: a thing of the fifth grade cannot take the third enchantment too. "It would not hold the one and the other."`;

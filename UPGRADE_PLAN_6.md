@@ -194,7 +194,7 @@ Size: M.
 
 Size: M.
 
-## Phase 7 - The calendar, the seasons and their events - v6.8
+## Phase 7 - The calendar, the seasons and their events - v6.8 - DONE
 
 - **Four seasons** by the real date (and a setting to pin one): spring (the Wood's herbs and the farm's sowing; rain
   two days in five), summer (long days: dawn at five, night at nine; the Wood's berries; the beehive full), autumn

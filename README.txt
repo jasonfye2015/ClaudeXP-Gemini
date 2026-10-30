@@ -1280,6 +1280,29 @@ Cooking as a trade (the eighth big update, phase 6 - v6.7)
   pottage for the first floor; the Merchant's House in town sells bread and porridge. Automatic eats a dish it
   carries when hungry, or at a floor's start with no meal on. Test: "cooking as a trade".
 
+The calendar, the seasons and the festivals (the eighth big update, phase 7 - v6.8)
+  Four seasons by the real date (CM.seasonOfDate), or one pinned in Settings for every new run, written into the run
+  at its start and kept through a save (src/js/24b-calendar.js). The season sets the day's length (CM.DAYLIGHT:
+  summer's night falls at ten and dawn is at four, winter's night at six and dawn at seven), the Wood's gifts
+  (summer's hive and brambles give one more), the farm (nothing grows in winter; the seasons' sowing rule), the
+  Drowned Town's tide (quicker in autumn's mist), frost near the surface (a tenth harder in winter) and the daily
+  dungeon's colour (a winter daily carries Gloom more often, a summer one Swift). The weather is by the seed, the
+  day of the run and the season (CM.weatherOf: clear, rain, mist, wind, snow - snow only in winter) and holds a day:
+  rain wets the party at the Wood's ford and gives the farm a stage more that dawn; mist hides the Wood's hunters and
+  the party from each other (no surprise either way, and the light reaches less); wind takes the party's smell from
+  the deer and boar, which do not run; snow freezes the river (crossed anywhere) and the town's well. Twelve
+  festivals, one a month in the week around the fifteenth (CM.FESTIVALS; the lore bible's calendar table has them
+  all): Midwinter (the hearth gives two rests; the Lich King's court a tenth tougher), the Sexton's Day (a candle for
+  nothing), the Sowing (seed at half), the Dwarves' Letter (picks whetted free and sold at half), the Greening (the
+  Wood's nodes give one more), Midsummer (the round free; the townsfolk out at night), the Forge Fire (the smith's
+  gold at half: an enchantment, a grade, a tempering), the Reaping (the farm grows two stages a dawn), the Harvest
+  Fair (a peddler's cloth in the square all week; the farm's yield doubled), the Feast of the Dead (the memorial's
+  names read at the well; a candle free; the Ossuary's priests a tenth gentler), the Night of Bells (the
+  bell-founder's boy hears one; the regular's gossip free; locks a tenth easier), the Wassail (the round sets the
+  heart to full and comes with beer). The sky bar says the season, the festival and the weather under the hour; the
+  well's board says the day; the chronicler's house keeps the year's calendar with the runs marked on it.
+  Test: "the calendar:".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

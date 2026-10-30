@@ -79,6 +79,7 @@ CM.UI = class {
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
   <div class="row"><label for="set-skipwalk">Skip the walk: a new run begins at the shaft's mouth, not at the party's door</label><input type="checkbox" id="set-skipwalk"></div>
+  <div class="row"><label for="set-season">The season: the real date's, or one pinned for every new run</label><select id="set-season"><option value="">By the date</option><option value="spring">Spring</option><option value="summer">Summer</option><option value="autumn">Autumn</option><option value="winter">Winter</option></select></div>
   <div class="row"><label for="set-render">Render scale - fewer pixels on a slow machine (Auto steps down when frames come late)</label><select id="set-render"><option value="auto">Auto</option><option value="full">Full</option><option value="three">Three quarters</option><option value="half">Half</option></select></div>
   <div class="row"><label for="set-speed">Combat speed - how long bolts fly and sparks hang</label><select id="set-speed"><option value="normal">Normal</option><option value="fast">Fast</option><option value="instant">As good as instant</option></select></div>
   <div class="row"><label for="set-text">Text size</label><select id="set-text"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select></div>
@@ -293,7 +294,7 @@ CM.UI = class {
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
     game.on("choice", (c) => this.askChoice(c));
-    this.$("#view .sky").addEventListener("click", () => { if (game.mode !== "title") game.say(`It is ${CM.clockWords(game)}.`); });
+    this.$("#view .sky").addEventListener("click", () => { if (game.mode !== "title") game.say(`It is ${CM.clockWords(game)}; ${CM.dateWords(game)}.`); });
     game.on("building", (id) => { if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else if (id === "garden" && game.villageLevel("garden") >= 1) this.openGarden(); else if (id === "chronicler" && game.villageLevel("chronicler") >= 1) this.openChronicler(); else this.openBuilding(id); });
     this.$("#btn-library-build").addEventListener("click", () => { this.$("#library-note").textContent = game.build("library") || "The library rises a level."; this.openLibrary(true); });
     this.$("#btn-guild-build").addEventListener("click", () => { this.$("#guild-note").textContent = game.build("guildhall") || "The guildhall rises a level."; this.openGuild(true); });
@@ -541,6 +542,7 @@ CM.UI = class {
     const g = this.game, box = this.$("#chronicler-rooms"); box.innerHTML = "";
     const room = (title) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
     { const r = room("The table"); const f = document.createElement("button"); f.textContent = "The films of runs"; f.addEventListener("click", () => this.openFilms()); r.appendChild(f); const s = document.createElement("button"); s.textContent = "The statistics"; s.addEventListener("click", () => this.openStats()); r.appendChild(s); }
+    { const r = room("The calendar"); const cal = CM.calendarOf(g.fame); r.innerHTML = `<div class="small">The year as the town keeps it: a festival a month, in the week around the fifteenth; this run is ${this.esc(CM.dateWords(g))}.</div>` + cal.map((m) => `<div class="small"><b>${m.name}</b> (${m.season}): ${this.esc(m.festivalName)} - ${this.esc(CM.FESTIVALS[m.festival].what)}.${m.runs ? ` ${CM.plural(m.runs, "run")} here${m.crowns ? `, ${m.crowns} crowned` : ""}.` : ""}</div>`).join(""); }
     { const r = room("The Hall of Fame"); const fame = (g.fame || []).slice(0, 10); r.innerHTML = fame.length ? fame.map((e) => `<div class="small"><b>${this.esc(e.name)}</b>: ${e.won ? "crowned" : e.bottom ? "to the bottom of the world" : `fell on floor ${e.floor}`}, ${e.gold.toLocaleString()} gold, ${this.esc(e.date)} (${this.esc(e.party.join(", "))})</div>`).join("") : "<div class='small'>No run has ended yet.</div>"; }
     { const r = room("The ledger"); const led = (g.ledger || []).slice(-10).reverse(); r.innerHTML = led.length ? led.map((l) => `<div class="small">${this.esc(l.d)}: ${this.esc(l.sd)}, floor ${l.f}${l.w ? ", crowned" : ""}${l.b ? ", the bottom" : ""} - ${l.k} slain, ${l.s} steps, ${l.g} gold</div>`).join("") : "<div class='small'>Nothing written yet.</div>"; }
     { const r = room("The memorial's book"); const m = (g.memorial || []).slice(0, 12); r.innerHTML = m.length ? m.map((x) => `<div class="small"><b>${this.esc(x.name)}</b> the ${x.cls}, level ${x.level}, floor ${x.floor}${x.candle ? " - a candle burns" : ""}${x.epitaph ? ` - "${this.esc(x.epitaph)}"` : ""}</div>`).join("") : "<div class='small'>No names. May it stay so.</div>"; }
@@ -843,11 +845,11 @@ CM.UI = class {
     speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB); render.value = s.render || "auto";
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
-    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false; skipWalk.checked = Boolean(s.skipWalk);
+    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "drawn"; tap.checked = s.tapMove !== false; skipWalk.checked = Boolean(s.skipWalk); this.$("#set-season").value = s.season || "";
     const note = () => { this.$("#set-look-note").textContent = CM.LOOKS[s.look] ? CM.LOOKS[s.look].what + "." : ""; };
     note();
     const apply = () => {
-      s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.tapMove = tap.checked; s.skipWalk = skipWalk.checked;
+      s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.season = this.$("#set-season").value || ""; s.tapMove = tap.checked; s.skipWalk = skipWalk.checked;
       s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value; s.layout = layout.value;
       g.saveSettings();
       g.emit("settings", s);

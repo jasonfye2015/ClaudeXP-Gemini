@@ -93,7 +93,7 @@ Object.assign(CM.Game.prototype, {
     if (!m) return "No such name.";
     if (this.villageLevel("shrine") < 1) return "The village has no shrine yet.";
     if (m.candle) return `A candle burns for ${m.name} already.`;
-    const cost = CM.CANDLE_COST[this.villageLevel("shrine") >= 2 ? 1 : 0];
+    const cost = CM.festivalIs(this, "sexton") || CM.festivalIs(this, "dead") ? 0 : CM.CANDLE_COST[this.villageLevel("shrine") >= 2 ? 1 : 0];
     if (this.renown() < cost) return `A candle asks ${cost} renown.`;
     this.village.spent = (this.village.spent || 0) + cost;
     m.candle = CM.today();

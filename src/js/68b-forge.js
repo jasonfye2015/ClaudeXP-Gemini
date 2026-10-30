@@ -13,7 +13,7 @@ CM.GRADE_METAL = (tier) => (tier <= 2 ? "copper" : tier <= 4 ? "bronze" : tier <
 CM.gradeCost = function (item) {
   const B = CM.BASES[CM.baseIdOf(item)] || {}, tier = B.tier || 0, grade = (item.grade || 0) + 1;
   const metal = tier >= 9 && grade >= 4 ? "starsteel" : CM.GRADE_METAL(tier);
-  return { bars: grade, metal, gold: CM.GRADE_GOLD * grade, name: (CM.ALLOYS[metal] || CM.ORES[metal]).name };
+  return { bars: grade, metal, gold: Math.ceil(CM.GRADE_GOLD * grade * (item.forgeRate || 1)), name: (CM.ALLOYS[metal] || CM.ORES[metal]).name };
 };
 CM.stars = (n) => "★".repeat(Math.max(0, n || 0));
 CM.gradable = (item) => Boolean(item && ["weapon", "armor", "shield", "helm"].includes(item.kind) && !(item.props && (item.props.unique || item.props.relic || item.props.fists)));
@@ -65,7 +65,7 @@ Object.assign(CM.Game.prototype, {
     const grade = (item.grade || 0) + 1, p = item.props = item.props || {};
     if (grade > CM.GRADE_MOST) return `${item.name} is at the fifth grade: there is no sixth.`;
     if (grade === CM.GRADE_MOST && (p.enchant || 0) >= CM.SMITH.most) return `The smith shakes his head: a thing enchanted thrice cannot take the fifth grade too. "It would not hold the one and the other."`;
-    const cost = CM.gradeCost(item), bars = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "bar" && it.bar === cost.metal);
+    const cost = CM.gradeCost(Object.assign(Object.create(item), { forgeRate: this.forgeRate() })), bars = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "bar" && it.bar === cost.metal);
     if (bars.length < cost.bars) return `The ${CM.ordinal(grade)} grade of ${item.name} wants ${CM.plural(cost.bars, `${cost.name} bar`)} and ${cost.gold} gold; the pack has ${bars.length}.`;
     if (this.gold < cost.gold) return `The smith wants ${cost.gold} gold for the grade, with the bars.`;
     this.logAct("upgrade", heroIndex, slot);
@@ -94,9 +94,9 @@ Object.assign(CM.Game.prototype, {
     if (item.temper && item.temper.id === id) return `${item.name} is tempered with ${T.name} already.`;
     const src = this.bag.findIndex((it) => Object.entries(T.from).every(([k, v]) => it[k] === v));
     if (src < 0) return `${T.name.charAt(0).toUpperCase() + T.name.slice(1)} wants ${T.from.ingredient ? CM.INGREDIENTS[T.from.ingredient].name : T.from.hide ? T.from.hide + " hide" : CM.ORES[T.from.ore].name + " ore"} in the pack.`;
-    if (this.gold < CM.TEMPER_GOLD) return `The smith wants ${CM.TEMPER_GOLD} gold for a tempering.`;
+    const tg = Math.ceil(CM.TEMPER_GOLD * this.forgeRate()); if (this.gold < tg) return `The smith wants ${tg} gold for a tempering.`;
     this.logAct("temper", heroIndex, slot, id);
-    this.gold -= CM.TEMPER_GOLD; this.spend("smith", CM.TEMPER_GOLD);
+    this.gold -= tg; this.spend("smith", tg);
     if ((this.bag[src].power || 1) > 1 && this.bag[src].kind === "ore") this.bag[src].power -= 1; else this.bag.splice(src, 1);
     CM.untemper(item); CM.applyProps(item, T.props); item.temper = { id, props: Object.assign({}, T.props) };
     this.tally.tempered = (this.tally.tempered || 0) + 1; this.countUse("temper");

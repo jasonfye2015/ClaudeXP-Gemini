@@ -10,7 +10,7 @@ Object.assign(CM.UI.prototype, {
     const sun = sky.querySelector(".sun"), moon = sky.querySelector(".moon");
     if (P.sun !== null) { const [x, y] = at(P.sun); sun.setAttribute("cx", x); sun.setAttribute("cy", y); sun.style.display = ""; } else sun.style.display = "none";
     if (P.moon !== null) { const [x, y] = at(P.moon); moon.setAttribute("transform", `translate(${x} ${y})`); moon.style.display = ""; const shade = moon.querySelector(".shade"), k = P.phase; shade.setAttribute("cx", k === 4 ? 99 : k === 0 ? 0 : (k < 4 ? -1 : 1) * (k % 4) * 1.6); } else moon.style.display = "none";
-    sky.querySelector(".hour").textContent = `${CM.hourWord(CM.hourOf(g))}${below ? " above" : ""}`;
+    sky.querySelector(".hour").textContent = `${CM.hourWord(CM.hourOf(g))}${below ? " above" : ""}, ${CM.season(g)}${CM.festival(g) ? " - " + CM.FESTIVALS[CM.festival(g)].name : ""}${CM.weather(g) !== "clear" ? ", " + CM.weather(g) : ""}`;
   },
   refresh() {
     const g = this.game;
