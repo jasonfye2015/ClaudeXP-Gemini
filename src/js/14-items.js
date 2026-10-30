@@ -28,6 +28,8 @@ CM.BASES = {};
   Object.values(CM.SCROLLS).forEach((s, i) => add(s.name, "scroll", null, i, "scroll"));
   Object.values(CM.FLASKS).forEach((f, i) => add(f.name, "flask", null, i, "stuff"));
   Object.values(CM.ELIXIRS).forEach((e, i) => add(e.name, "elixir", null, i, "stuff"));
+  [["Field Kit", "kit"], ["Salve", "salve"], ["Dwarven Bread", "bread"], ["Liniment", "liniment"], ["Blade Poison", "oil"]].forEach(([n, k], i) => add(n, k, null, 30 + i, "stuff"));
+  Object.keys(CM.MEALS).forEach((kind, i) => add(`${kind} meat`, "meat", null, i, "ingredient"));
   [["Lesser Healing Potion", "heal"], ["Full Healing Potion", "heal"], ["Lesser Mana Potion", "mana"], ["Greater Mana Potion", "mana"], ["Lesser Phoenix Feather", "revive0"], ["Lamp Oil", "lampoil"], ["Glow Stone", "glowstone"], ["Essence", "essence"]].forEach(([n, k], i) => add(n, k, null, 20 + i, "stuff"));
   Object.values(CM.WANDS).forEach((w, i) => add(w.name, "wand", null, i, "wand"));
   Object.values(CM.TOMES).forEach((n, i) => add(n, "tome", null, i, "tome"));
@@ -169,4 +171,4 @@ CM.healPotion = function (floor) {                                        // the
 };
 CM.manaPotion = (floor) => (floor < 6 ? { name: "Lesser Mana Potion", kind: "mana", power: 8 + floor, value: 15 } : floor < 21 ? { name: "Mana Potion", kind: "mana", power: 12 + floor, value: 25 } : { name: "Greater Mana Potion", kind: "mana", power: 30 + floor, value: 60 });
 CM.lesserFeather = () => ({ name: "Lesser Phoenix Feather", kind: "revive0", power: 0, value: 60 });
-CM.BELT_KINDS = ["heal", "greaterheal", "mana", "revive", "revive0", "antidote", "bomb", "flask", "elixir", "scroll", "wand", "ration", "torch", "lampoil"];
+CM.BELT_KINDS = ["salve", "bread", "liniment", "heal", "greaterheal", "mana", "revive", "revive0", "antidote", "bomb", "flask", "elixir", "scroll", "wand", "ration", "torch", "lampoil"];

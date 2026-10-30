@@ -99,7 +99,7 @@ CM.makeUnique = function (id, awake) {
 };
 CM.ration = () => ({ name: "Ration", kind: "ration", power: 0, value: 15 });
 CM.ingredient = (id) => ({ name: CM.INGREDIENTS[id].name, kind: "ingredient", ingredient: id, power: 0, value: 25 });
-CM.oil = (element) => ({ name: { fire: "Oil of Fire", frost: "Oil of Rime", holy: "Oil of Saints" }[element], kind: "oil", element, power: 0, value: 60 });
+CM.oil = (element) => ({ name: { fire: "Oil of Fire", frost: "Oil of Rime", holy: "Oil of Saints", poison: "Blade Poison" }[element], kind: "oil", element, power: 0, value: 60 });
 CM.bomb = () => ({ name: "Firepot", kind: "bomb", power: 0, value: 80 });
 CM.scrap = () => ({ name: "Scrap", kind: "scrap", power: 0, value: 5 });
 // the rarity of a thing, for its colour: common, fine, rare, relic, unique
@@ -155,7 +155,12 @@ CM.itemLabel = function (item) {
   else if (item.kind === "wand") bits.push(`${CM.WANDS[item.spell].what} ${CM.plural(item.charges, "charge")}.`);
   else if (item.kind === "tome") bits.push(`teaches ${CM.ABILITIES[item.spell].name} to a caster who reads it: ${CM.ABILITIES[item.spell].what}`);
   else if (item.kind === "gem") bits.push(CM.GEMS[item.gem].element ? `for the camp's smith: ${CM.GEMS[item.gem].element} set into a weapon` : "for the camp's smith: +1 on a piece of gear");
-  else if (item.kind === "ingredient") bits.push(`for the camp's alchemist`);
+  else if (item.kind === "ingredient") bits.push(CM.INGREDIENTS[item.ingredient] && CM.INGREDIENTS[item.ingredient].rare ? "a rare thing, gathered, for the alchemist's finer work" : `for the camp's alchemist`);
+  else if (item.kind === "meat") bits.push(`cooked at a camp (or on the floor, for a torch): ${CM.MEALS[item.meat] ? CM.MEALS[item.meat].what + ", the next floor" : "a meal"}`);
+  else if (item.kind === "kit") bits.push("the alchemist's work, anywhere: brew on the floor at a fifth over the camp's price");
+  else if (item.kind === "salve") bits.push("rubbed in: the party mends a little every few steps, this floor");
+  else if (item.kind === "bread") bits.push("a meal that also mends twenty");
+  else if (item.kind === "liniment") bits.push("closes a wound and the small ailments, and mends ten");
   else if (item.kind === "oil") bits.push(`rubbed on a hero's weapon: ${CM.ELEMENT_NAMES[item.element] || item.element} for ${CM.OIL_FIGHTS} fights`);
   else if (item.kind === "bomb") bits.push("thrown in a fight: fire on every foe");
   else if (item.kind === "scrap") bits.push("for the camp's smith: five stand in for a diamond");
@@ -398,6 +403,7 @@ CM.equipped = (h) => CM.SLOTS.map((s) => h[s]).filter(Boolean);
 CM.partyProp = (party, prop) => (party || []).filter((h) => h.hp > 0).reduce((n, h) => n + CM.gearProp(h, prop), 0);
 CM.heroStat = function (h, s) {
   let v = h.stats && h.stats[s] !== undefined ? h.stats[s] : 10;
+  if (s === "luck" && h.mealLuck) v += h.mealLuck;                     // (a meal that lasts: rat on a stick, kobold stew)
   for (const it of CM.equipped(h)) {
     if (!it.props || it.unknown) continue;
     if (it.props.stat === s) v += it.power;
@@ -777,6 +783,10 @@ CM.furnish = function (floor, seed, gen) {
       const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest").sort();
       if (chests.length) floor.things[chests[h("page:chest") % chests.length]].items.push(Object.assign({}, CM.PAGE));
     }
+  }
+  if (number >= 1 && number <= CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR && special !== "maze") {   // gathering nodes: two or three a floor, off the rooms' middles (last of all, so no older hash's cell moves)
+    const n = 2 + (h("nodes") % 2);
+    for (let i = 0; i < n; i++) { const k = pickCell(`node:${i}`, (c) => !roomCells.has(c)) || pickCell(`node:${i}`); if (k) floor.things[k] = { type: "node", band: CM.themeIndex(number) }; }
   }
   return floor;
 };

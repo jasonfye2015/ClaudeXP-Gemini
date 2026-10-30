@@ -33,7 +33,7 @@ function playRun(CM, game, opts = {}) {
   let asked = null;
   game.on("choice", (c) => { asked = c; });
   const alchemy = () => {
-    for (const id of ["greaterheal", "antivenom", "oilfire", "oilholy", "oilfrost", "vigour", "fortune"]) { let guard = 0; while (!game.recipeLacks(id) && guard++ < 3 && (id === "greaterheal" ? game.bag.filter((i) => i.kind === "greaterheal").length < 3 : true)) game.brew(id); }
+    for (const id of ["greaterheal", "antivenom", "oilfire", "oilholy", "oilfrost", "flaskoil", "smokeflask", "stoneskin", "vigour", "fortune"]) { let guard = 0; while (!game.recipeLacks(id) && guard++ < 3 && (id === "greaterheal" ? game.bag.filter((i) => i.kind === "greaterheal").length < 3 : true)) game.brew(id); }
   };
   // better gear, as it comes: for each hero, the best thing in the pack for each slot that compares well
   const gearUp = () => {
@@ -116,6 +116,8 @@ function playRun(CM, game, opts = {}) {
     if (box && can(box[0])) return box[0];
     const ev = things.find(([k, t]) => (t.type === "event" && !t.done && !handled.has(fl.number + ":" + k)) || (t.type === "peddler" && !handled.has(fl.number + ":" + k)));
     if (ev && can(ev[0]) && floorMoves < perFloor * 0.6) return ev[0];
+    const nodes = things.filter(([k, t]) => t.type === "node" && can(k)).map(([k]) => k);
+    if (nodes.length && floorMoves < perFloor * 0.5) return nodes[0];
     const chests = things.filter(([, t]) => t.type === "chest").map(([k]) => k).filter(can);
     if (chests.length && floorMoves < perFloor * 0.6) return chests[0];
     const soul = things.find(([k, t]) => t.type === "ghost" && !t.heard && can(k));   // (a word with the dead: the story, and a gift)
@@ -167,7 +169,8 @@ function playRun(CM, game, opts = {}) {
     if (!target) { stuck++; log.push(`no goal on floor ${fl.number}`); if (stuck > 3) break; game.warp(fl.number + 1); continue; }
     const step = stepTo(fl, target);
     if (step === "here") {
-      if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") { stuck++; } }
+      if (t && t.type === "node") { game.use(); }
+      else if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") { stuck++; } }
       else if (t && t.type === "ghost") { game.talk(t, here); if (fl.things[here]) { game.talk(t, here); } if (fl.things[here] && !(t.arc && t.arc < 3)) delete fl.things[here]; else if (fl.things[here]) t.heard = true; }
       else if (f && f.type === "carving" && !f.read) { face(f.face); game.use(); if (!f.read) { stuck++; log.push("a wall that won't be read"); } }
       else if (t && t.type === "bones") { /* picked up by walking on it */ }

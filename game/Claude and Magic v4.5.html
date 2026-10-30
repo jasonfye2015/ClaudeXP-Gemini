@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v4.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v4.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -424,7 +424,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "4.4", built: "2026-10-30" };
+const CM = window.CM = { version: "4.5", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -775,7 +775,25 @@ CM.INGREDIENTS = {
   gravemoss: { name: "Grave Moss", band: 0 }, drownedweed: { name: "Drowned Weed", band: 1 }, forgesoot: { name: "Forge Soot", band: 2 }, bonedust: { name: "Bone Dust", band: 3 },
   saltweed: { name: "Salt Weed", band: 4 }, sporecap: { name: "Spore Cap", band: 5 }, crystaldust: { name: "Crystal Dust", band: 6 }, slag: { name: "Foundry Slag", band: 7 },
   gravesalt: { name: "Grave Salt", band: 8 }, rootsap: { name: "Root Sap", band: 9 },
+  // the rarer things, gathered and never dropped (one in five from a node of the band)
+  gravelily: { name: "Grave Lily", band: 0, rare: true }, cavepearl: { name: "Cave Pearl", band: 1, rare: true }, silvervein: { name: "Silver Vein", band: 2, rare: true }, courtdust: { name: "Court Dust", band: 3, rare: true },
+  drownedsilk: { name: "Drowned Silk", band: 4, rare: true }, ghostcap: { name: "Ghost Cap", band: 5, rare: true }, prismdust: { name: "Prism Dust", band: 6, rare: true }, foundrygold: { name: "Foundry Gold", band: 7, rare: true },
+  saintsbone: { name: "Saint's Bone", band: 8, rare: true }, heartwood: { name: "Heartwood", band: 9, rare: true },
 };
+// gathering nodes: a thing on ordinary floors, two or three a floor by hash, giving the band's ingredient (and one time
+// in five its rarer one); what each looks like, by band
+CM.NODES = [["a moss bed", "nest"], ["a weed pool", "water1"], ["a vein of ore", "ember"], ["a drift of court dust", "bones"], ["a salt pool", "water1"], ["a fungus shelf", "fungus"], ["a crystal growth", "crystal"], ["a slag heap", "ember"], ["a bone pile", "bones"], ["a root knot", "root"]];
+CM.ORE_BANDS = [2, 7];                                                   // (where the Artificer gathers twice)
+// meat, from the kinds that have it, cooked at a camp (or on the floor, for a torch) into a meal that feeds the party
+// and lasts the next floor
+CM.MEALS = {
+  "Giant Rat": { name: "rat on a stick", what: "+1 Luck" , luck: 1 }, Orc: { name: "orc flank", what: "+1 attack", atk: 1 }, Troll: { name: "troll steak", what: "mends 1 a round in fights", regen: 1 }, Ogre: { name: "ogre shank", what: "+1 attack", atk: 1 },
+  Minotaur: { name: "minotaur rib", what: "+2 attack", atk: 2 }, Wyvern: { name: "wyvern tail", what: "+1 defence, and fire does half", df: 1, fire: true }, "Spore Beast": { name: "spore beast haunch", what: "the torch burns slower", torch: true },
+  Rootling: { name: "roast rootling", what: "+1 defence", df: 1 }, Kobold: { name: "kobold stew", what: "+1 Luck", luck: 1 }, Drowned: { name: "cave fish, from the drowned's catch", what: "the torch burns slower", torch: true },
+};
+CM.meat = (kind) => ({ name: `${kind} meat`, kind: "meat", meat: kind, power: 0, value: 10 });
+CM.fieldKit = () => ({ name: "Field Kit", kind: "kit", power: 0, value: 300 });
+CM.KIT_PRICE = 1.2;                                                      // (brewing on the floor: a fifth over)
 CM.RECIPES = {
   greaterheal: { name: "Greater Healing Potion", gold: 30, needs: { ingredient: ["gravemoss", "saltweed", "sporecap"], kind: ["heal"] }, makes: "greaterheal", what: "a healing potion twice the merchant's: the moss, a healing potion and 30 gold" },
   oilfire: { name: "Oil of Fire", gold: 40, needs: { ingredient: ["forgesoot", "slag"] }, makes: "oil:fire", what: "a weapon burns for the next three fights: soot or slag, and 40 gold" },
@@ -789,6 +807,11 @@ CM.RECIPES = {
   haste: { name: "Elixir of Haste", gold: 80, needs: { ingredient: ["drownedweed", "saltweed"] }, makes: "elixir:haste", what: "first in every round of the next fight: weed, and 80 gold" },
   owleyes: { name: "Elixir of Owl's Eyes", gold: 60, needs: { ingredient: ["gravemoss", "sporecap"] }, makes: "elixir:owleyes", what: "no dark holds the party, three floors: moss or a spore cap, and 60 gold" },
   nightdraught: { name: "The Night's Draught", gold: 60, needs: { ingredient: ["bonedust", "gravesalt", "rootsap"] }, makes: "elixir:night", what: "no sleep and no surprise, this floor: bone dust, grave salt or sap, and 60 gold" },
+  salve: { name: "Salve", gold: 30, needs: { ingredient: ["cavepearl", "heartwood", "gravemoss"] }, makes: "salve", what: "rubbed in: the whole party mends a little with every few steps, this floor: a cave pearl, heartwood or moss, and 30 gold" },
+  dwarvenbread: { name: "Dwarven bread", gold: 25, needs: { ingredient: ["silvervein", "forgesoot", "rootsap"] }, makes: "bread", what: "a ration that also mends twenty: silver vein, soot or sap, and 25 gold" },
+  liniment: { name: "Liniment", gold: 50, needs: { ingredient: ["saintsbone", "gravelily"] }, makes: "liniment", what: "rubbed on a wound: it closes, and the small ailments with it; a saint's bone or a grave lily, and 50 gold" },
+  poison: { name: "Blade Poison", gold: 40, needs: { ingredient: ["ghostcap", "sporecap"] }, makes: "oil:poison", what: "a weapon poisons for the next three fights: a ghost cap or a spore cap, and 40 gold" },
+  transmute: { name: "Transmutation", gold: 40, needs: { triple: true }, makes: "transmute", what: "three of one band's ingredient into one of the band below's: any three alike, and 40 gold" },
   bomb: { name: "Firepot", gold: 60, needs: { ingredient: ["slag", "forgesoot"], ingredient2: ["crystaldust", "bonedust"] }, makes: "bomb", what: "thrown in a fight, fire on every foe: slag or soot, dust, and 60 gold" },
   trailbread: { name: "Trail bread, three rations", gold: 10, needs: { ingredient: ["gravemoss", "saltweed", "rootsap"] }, makes: "ration3", what: "three rations: moss, weed or sap, and 10 gold" },
   antivenom: { name: "Antivenom, two draughts", gold: 20, needs: { ingredient: ["sporecap", "gravemoss"] }, makes: "antidote2", what: "two antidotes: a spore cap or grave moss, and 20 gold" },
@@ -2194,6 +2217,8 @@ CM.BASES = {};
   Object.values(CM.SCROLLS).forEach((s, i) => add(s.name, "scroll", null, i, "scroll"));
   Object.values(CM.FLASKS).forEach((f, i) => add(f.name, "flask", null, i, "stuff"));
   Object.values(CM.ELIXIRS).forEach((e, i) => add(e.name, "elixir", null, i, "stuff"));
+  [["Field Kit", "kit"], ["Salve", "salve"], ["Dwarven Bread", "bread"], ["Liniment", "liniment"], ["Blade Poison", "oil"]].forEach(([n, k], i) => add(n, k, null, 30 + i, "stuff"));
+  Object.keys(CM.MEALS).forEach((kind, i) => add(`${kind} meat`, "meat", null, i, "ingredient"));
   [["Lesser Healing Potion", "heal"], ["Full Healing Potion", "heal"], ["Lesser Mana Potion", "mana"], ["Greater Mana Potion", "mana"], ["Lesser Phoenix Feather", "revive0"], ["Lamp Oil", "lampoil"], ["Glow Stone", "glowstone"], ["Essence", "essence"]].forEach(([n, k], i) => add(n, k, null, 20 + i, "stuff"));
   Object.values(CM.WANDS).forEach((w, i) => add(w.name, "wand", null, i, "wand"));
   Object.values(CM.TOMES).forEach((n, i) => add(n, "tome", null, i, "tome"));
@@ -2335,7 +2360,7 @@ CM.healPotion = function (floor) {                                        // the
 };
 CM.manaPotion = (floor) => (floor < 6 ? { name: "Lesser Mana Potion", kind: "mana", power: 8 + floor, value: 15 } : floor < 21 ? { name: "Mana Potion", kind: "mana", power: 12 + floor, value: 25 } : { name: "Greater Mana Potion", kind: "mana", power: 30 + floor, value: 60 });
 CM.lesserFeather = () => ({ name: "Lesser Phoenix Feather", kind: "revive0", power: 0, value: 60 });
-CM.BELT_KINDS = ["heal", "greaterheal", "mana", "revive", "revive0", "antidote", "bomb", "flask", "elixir", "scroll", "wand", "ration", "torch", "lampoil"];
+CM.BELT_KINDS = ["salve", "bread", "liniment", "heal", "greaterheal", "mana", "revive", "revive0", "antidote", "bomb", "flask", "elixir", "scroll", "wand", "ration", "torch", "lampoil"];
 
 // ---- 20-world.js ----
 "use strict";
@@ -2439,7 +2464,7 @@ CM.makeUnique = function (id, awake) {
 };
 CM.ration = () => ({ name: "Ration", kind: "ration", power: 0, value: 15 });
 CM.ingredient = (id) => ({ name: CM.INGREDIENTS[id].name, kind: "ingredient", ingredient: id, power: 0, value: 25 });
-CM.oil = (element) => ({ name: { fire: "Oil of Fire", frost: "Oil of Rime", holy: "Oil of Saints" }[element], kind: "oil", element, power: 0, value: 60 });
+CM.oil = (element) => ({ name: { fire: "Oil of Fire", frost: "Oil of Rime", holy: "Oil of Saints", poison: "Blade Poison" }[element], kind: "oil", element, power: 0, value: 60 });
 CM.bomb = () => ({ name: "Firepot", kind: "bomb", power: 0, value: 80 });
 CM.scrap = () => ({ name: "Scrap", kind: "scrap", power: 0, value: 5 });
 // the rarity of a thing, for its colour: common, fine, rare, relic, unique
@@ -2495,7 +2520,12 @@ CM.itemLabel = function (item) {
   else if (item.kind === "wand") bits.push(`${CM.WANDS[item.spell].what} ${CM.plural(item.charges, "charge")}.`);
   else if (item.kind === "tome") bits.push(`teaches ${CM.ABILITIES[item.spell].name} to a caster who reads it: ${CM.ABILITIES[item.spell].what}`);
   else if (item.kind === "gem") bits.push(CM.GEMS[item.gem].element ? `for the camp's smith: ${CM.GEMS[item.gem].element} set into a weapon` : "for the camp's smith: +1 on a piece of gear");
-  else if (item.kind === "ingredient") bits.push(`for the camp's alchemist`);
+  else if (item.kind === "ingredient") bits.push(CM.INGREDIENTS[item.ingredient] && CM.INGREDIENTS[item.ingredient].rare ? "a rare thing, gathered, for the alchemist's finer work" : `for the camp's alchemist`);
+  else if (item.kind === "meat") bits.push(`cooked at a camp (or on the floor, for a torch): ${CM.MEALS[item.meat] ? CM.MEALS[item.meat].what + ", the next floor" : "a meal"}`);
+  else if (item.kind === "kit") bits.push("the alchemist's work, anywhere: brew on the floor at a fifth over the camp's price");
+  else if (item.kind === "salve") bits.push("rubbed in: the party mends a little every few steps, this floor");
+  else if (item.kind === "bread") bits.push("a meal that also mends twenty");
+  else if (item.kind === "liniment") bits.push("closes a wound and the small ailments, and mends ten");
   else if (item.kind === "oil") bits.push(`rubbed on a hero's weapon: ${CM.ELEMENT_NAMES[item.element] || item.element} for ${CM.OIL_FIGHTS} fights`);
   else if (item.kind === "bomb") bits.push("thrown in a fight: fire on every foe");
   else if (item.kind === "scrap") bits.push("for the camp's smith: five stand in for a diamond");
@@ -2738,6 +2768,7 @@ CM.equipped = (h) => CM.SLOTS.map((s) => h[s]).filter(Boolean);
 CM.partyProp = (party, prop) => (party || []).filter((h) => h.hp > 0).reduce((n, h) => n + CM.gearProp(h, prop), 0);
 CM.heroStat = function (h, s) {
   let v = h.stats && h.stats[s] !== undefined ? h.stats[s] : 10;
+  if (s === "luck" && h.mealLuck) v += h.mealLuck;                     // (a meal that lasts: rat on a stick, kobold stew)
   for (const it of CM.equipped(h)) {
     if (!it.props || it.unknown) continue;
     if (it.props.stat === s) v += it.power;
@@ -3117,6 +3148,10 @@ CM.furnish = function (floor, seed, gen) {
       const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest").sort();
       if (chests.length) floor.things[chests[h("page:chest") % chests.length]].items.push(Object.assign({}, CM.PAGE));
     }
+  }
+  if (number >= 1 && number <= CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR && special !== "maze") {   // gathering nodes: two or three a floor, off the rooms' middles (last of all, so no older hash's cell moves)
+    const n = 2 + (h("nodes") % 2);
+    for (let i = 0; i < n; i++) { const k = pickCell(`node:${i}`, (c) => !roomCells.has(c)) || pickCell(`node:${i}`); if (k) floor.things[k] = { type: "node", band: CM.themeIndex(number) }; }
   }
   return floor;
 };
@@ -6674,7 +6709,7 @@ CM.Game = class {
     if (!["explore", "camp"].includes(this.mode)) return;
     if (this.iron && this.mode !== "camp" && !this.ironAllow) { this.dirty = false; this.sinceSave = 0; return; }   // (Iron: the camps only)
     const data = { schema: CM.SCHEMA, gen: this.gen || 1, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
-      spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), reminded: Boolean(this.reminded), belt: this.belt || [], buffs: this.buffs || {}, lanternHeld: Boolean(this.lanternHeld), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
+      spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), reminded: Boolean(this.reminded), belt: this.belt || [], buffs: this.buffs || {}, lanternHeld: Boolean(this.lanternHeld), meal: this.meal || null, alchemistFree: Boolean(this.alchemistFree), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
       tally: this.tally || this.freshTally(), journal: this.journal || [], story: this.story || { read: {} }, rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
@@ -6707,7 +6742,7 @@ CM.Game = class {
     this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.spellLight = d.spellLight || 0;
     this.phylactery = Boolean(d.phylactery); this.reminded = Boolean(d.reminded);
-    this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld);
+    this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld); this.meal = d.meal || null; this.alchemistFree = Boolean(d.alchemistFree);
     if (this.light && this.light.kind === "lantern" && !this.light.left) this.light.left = CM.LANTERN_OIL;   // (a lantern from before v4.4: a flask of oil in it)
     this.combat = null;
     this.recruits = null;
@@ -6770,7 +6805,7 @@ CM.Game = class {
     this.titleNote = "";
     this.tally = this.freshTally();
     this.journal = []; this.story = { read: {} }; this.reminded = false; this.left = false; this.dreamed = false; this.rootPending = false;
-    this.belt = []; this.buffs = {}; this.lanternHeld = false;
+    this.belt = []; this.buffs = {}; this.lanternHeld = false; this.meal = null; this.alchemistFree = false;
     this.bindRumours();
     this.rescued = [];
     this.difficulty = CM.DIFFICULTIES[difficulty] ? difficulty : "fair";
@@ -6860,7 +6895,8 @@ CM.Game = class {
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
     if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
-    if (fresh && this.buffs) { for (const k of ["stoneskin", "night", "sharpen"]) if (this.buffs[k] !== undefined && this.buffs[k] < number) delete this.buffs[k]; if (this.buffs.owleyes) { this.buffs.owleyes -= 1; if (this.buffs.owleyes <= 0) { delete this.buffs.owleyes; this.say("The owl's eyes close: the dark is the dark again."); } } }
+    if (fresh && this.meal && this.meal.floor < number) { this.meal = null; this.say("The meal has worn off."); for (const h of this.party) { h.mealLuck = 0; CM.recompute(h); } }
+    if (fresh && this.buffs) { for (const k of ["stoneskin", "night", "sharpen", "salve"]) if (this.buffs[k] !== undefined && this.buffs[k] < number) delete this.buffs[k]; if (this.buffs.owleyes) { this.buffs.owleyes -= 1; if (this.buffs.owleyes <= 0) { delete this.buffs.owleyes; this.say("The owl's eyes close: the dark is the dark again."); } } }
     if (fresh) for (const h of this.alive()) if (CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "haunted")) this.afflict(h, "curse", "the haunted thing");
     if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }
     for (const h of this.alive()) if (h.cls === "Necromancer" && !h.familiar && h.level >= CM.FAMILIAR_AT) { h.familiar = "skull"; this.say(`A skull on ${h.name}'s belt opens its jaws: ${CM.FAMILIARS.skull.what}.`); }
@@ -7001,6 +7037,7 @@ Object.assign(CM.Game.prototype, {
     this.steps = (this.steps || 0) + 1;
     this.count("steps");
     if (this.steps % 150 === 0 && this.gen >= 2) this.changeBehind();        // (the dungeon is not still behind you)
+    if (this.buffs && this.buffs.salve !== undefined && (this.steps || 0) % 5 === 0) for (const h of this.alive()) if (h.hp < h.max) h.hp += 1;   // (the salve: a little, every few steps)
     this.fed = (this.fed || 0) + 1 + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "hunger")) ? 1 : 0);   // the stomachs: hungry past three hundred steps, weary past six (a hungering curse: twice as fast)
     if (this.fed === CM.HUNGER.hungry) this.say("The party is hungry. A ration would be welcome.");
     if (this.fed === CM.HUNGER.weary) this.say("The party is weary with hunger: every blow does less until they eat.");
@@ -7053,6 +7090,7 @@ Object.assign(CM.Game.prototype, {
           peddler: "A peddler sits on his pack, with a lantern and a smile. (Space to see his wares)", rivals: "Four adventurers, armed, look you over. (Space to speak to them)",
           remains: "Bones in torn gear, four of them, and a name you know from the Hall of Fame. (Space to see what they left)",
           wingstair: `A second stair goes down here, narrower, into ${(CM.WINGS[thing.wing] || CM.WINGS[0]).name}: ${(CM.WINGS[thing.wing] || CM.WINGS[0]).smell}. (Space to take it; the main stair is still the way on)`,
+          node: `${(CM.NODES[thing.band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[thing.band] || CM.NODES[0])[0].slice(1)}: something the alchemist would want. (Space to gather it)`,
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)" }[thing.type]);
       }
     }
@@ -7170,7 +7208,7 @@ Object.assign(CM.Game.prototype, {
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
     const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
-    if (CM.partyProp(this.party, "torchSave") && (this.steps || 0) % 3 === 0) return;   // (of the Lantern: every third step is free)
+    if ((CM.partyProp(this.party, "torchSave") || (this.meal && CM.MEALS[this.meal.kind] && CM.MEALS[this.meal.kind].torch)) && (this.steps || 0) % 3 === 0) return;   // (of the Lantern, or a meal that lasts: every third step is free)
     l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0) + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "dark")) ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
@@ -7266,6 +7304,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.inUse = true; this.talk(thing, k); this.inUse = false; return; }
     if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
+    if (thing && thing.type === "node") { this.gather(thing, k); return; }
     if (thing && thing.type === "strongbox") { this.openStrongbox(thing, k); return; }
     if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
     if (thing && thing.type === "rivals") { this.meetRivals(thing, k); return; }
@@ -7485,9 +7524,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
+  event: "something strange", node: "something growing", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -7642,6 +7681,21 @@ Object.assign(CM.Game.prototype, {
 {
 Object.assign(CM.Game.prototype, {
   // a party that fell on this floor of this seed, in a run before: their bones, and one thing they carried
+  // a node gathered: the band's ingredient, one time in five its rarer one; the Druid and the Ranger take two, the Artificer two of ore
+  gather(thing, k) {
+    const band = thing.band === undefined ? CM.themeIndex(this.floor.number) : thing.band;
+    const common = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band && !CM.INGREDIENTS[id].rare), rare = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band && CM.INGREDIENTS[id].rare);
+    const hs = CM.hashSeed(`${this.seed}:gather:${this.floor.number}:${k}`), id = rare && hs % 5 === 0 ? rare : common;
+    let n = 1;
+    if (this.alive().some((h) => h.cls === "Druid" || h.cls === "Ranger")) n += 1;
+    if (CM.ORE_BANDS.includes(band) && this.alive().some((h) => h.cls === "Artificer")) n += 1;
+    const got = []; for (let i = 0; i < n; i++) got.push(CM.ingredient(id));
+    delete this.floor.things[k];
+    this.gain(got, "event"); this.count("gathered", n);
+    this.sound("coin");
+    this.say(`${(CM.NODES[band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[band] || CM.NODES[0])[0].slice(1)}: ${n > 1 ? `${n} of ` : ""}${CM.INGREDIENTS[id].name}${CM.INGREDIENTS[id].rare ? " - a rare thing" : ""}.`);
+    this.saveRun(); this.emit("change");
+  },
   layRemains(fl) {
     const past = (this.fallen || []).find((f) => f.seed === this.seed && f.floor === fl.number && !(this.remainsFound || []).includes(f.id));
     if (!past || !past.pos) return;
@@ -7982,7 +8036,7 @@ Object.assign(CM.Game.prototype, {
     for (const m of this.living()) if (m.elite === "shielded") m.warded = Math.max(m.warded || 0, 1);
     for (const m of this.living()) if (m.bleeding > 0) { m.bleeding--; const n = 2 + Math.floor((this.floor ? this.floor.number : 1) / 8); m.hp -= n; this.say(`${CM.The(m)} bleeds (-${n}).`); if (m.hp <= 0 && !m.dead) { m.dead = true; this.emit("fx", { kind: "die", foe: m }); } }
     for (const h of this.alive()) {                                      // gear that mends (of Mending, a unique, three relics worn, the Order's set)
-      const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0) + (CM.setWorn(h) === "order" ? 2 : 0);
+      const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0) + (CM.setWorn(h) === "order" ? 2 : 0) + (this.meal && CM.MEALS[this.meal.kind] && CM.MEALS[this.meal.kind].regen ? 1 : 0);
       if (mend > 0 && h.hp < h.max) h.hp = Math.min(h.max, h.hp + mend);
     }
     if (this.alive().some((h) => CM.trait(h, "evergreen"))) for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 3);
@@ -8147,7 +8201,8 @@ Object.assign(CM.Game.prototype, {
   // a hero's numbers as they stand right now: a curse takes from them, the song and a blessing give
   effective(h) {
     const cursed = (h.status || {}).curse ? 2 : 0, bless = this.combat && this.combat.bless, point = this.point() === h ? 2 : 0;
-    return { atk: Math.max(1, h.atk - cursed + (this.song === 2 ? 4 : this.song ? 2 : 0) + (bless ? 2 : 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0) + point) };
+    const meal = this.meal && CM.MEALS[this.meal.kind] ? CM.MEALS[this.meal.kind] : {};
+    return { atk: Math.max(1, h.atk - cursed + (this.song === 2 ? 4 : this.song ? 2 : 0) + (bless ? 2 : 0) + (meal.atk || 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0) + point + (meal.df || 0)) };
   },
   stat(h, s) { return CM.heroStat(h, s); },
   hitChance(h) {
@@ -8578,7 +8633,9 @@ Object.assign(CM.Game.prototype, {
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
     const props = (weapon && weapon.props) || {}, el = (props.element && !weapon.unknown ? props.element : null) || (hero.oil && hero.oil.fights > 0 ? hero.oil.element : null);
     const G = target.guardian ? CM.GUARDIANS[target.guardian] : null;   // (its heat, its shards: below)
-    if (el) {                                                            // a flaming, frost or blessed blade
+    if (el === "poison") {                                               // a poisoned blade: the wound festers (as a bleed), unless nothing in it bleeds
+      if (!target.undead && hide !== "none" && hide !== "shell") { target.bleeding = Math.max(target.bleeding || 0, 3); how += " - the poison takes"; }
+    } else if (el) {                                                     // a flaming, frost or blessed blade
       const r = CM.resistance(target, el);
       this.learnResist(target, el, r);
       if (r > 1) { dmg = Math.ceil(dmg * r); how += ` - the ${el === "holy" ? "blessing" : el} bites deep`; }
@@ -9077,6 +9134,7 @@ Object.assign(CM.Game.prototype, {
     const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
     const band = CM.themeIndex(this.floor.number), ing = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band);
     if (ing && rnd.chance(0.3)) loot.push(CM.ingredient(ing));           // (what the alchemist wants: the band's own stuff)
+    { const meaty = slain.filter((m) => CM.MEALS[m.kind || m.name] && !m.undead); if (meaty.length && rnd.chance(0.35)) loot.push(CM.meat(meaty[0].kind || meaty[0].name)); }   // (and the kitchen's)
     this.gain(loot, "foe"); this.count("goldFound", gold);
     for (const h of this.party) if (h.oil && h.oil.fights > 0) { h.oil.fights -= 1; if (!h.oil.fights) { this.say(`The oil on ${h.name}'s weapon has worn off.`); h.oil = null; } }
     const boss = this.foes.some((m) => m.boss), guardian = this.foes.find((m) => m.guardian), fought = this.floor.things[this.foeKey];
@@ -9271,6 +9329,7 @@ Object.assign(CM.Game.prototype, {
       this.stock.push(heal, CM.manaPotion(depth), CM.lesserFeather(),
         { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.lampOil(), CM.scroll("identify"), CM.scroll("mapping"), CM.scroll("recall"), CM.rope(), CM.ration(), CM.flask("oil"));
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
+      if (depth >= 13 && !this.bag.some((i) => i.kind === "kit")) this.stock.push(CM.fieldKit());
       const house = this.villageLevel("merchant");                       // (the village's merchant's house: what the camps' merchant has learned to carry)
       if (house >= 1 && !this.asc("nogreater")) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
       if (house >= 2) for (const el of ["fire", "frost", "holy"]) this.stock.push(CM.oil(el));
@@ -9544,6 +9603,11 @@ Object.assign(CM.Game.prototype, {
       this.emit("change");
       return "";
     }
+    if (item.kind === "meat") return this.cook(row);
+    if (item.kind === "kit") return "The field kit works through the alchemist's list: C (cast or use) out of a fight, or the camp's door.";
+    if (item.kind === "salve") { this.bag.splice(row, 1); this.countUse("salve"); this.buffs = this.buffs || {}; this.buffs.salve = this.floor ? this.floor.number : 0; this.sound("heal"); this.say(`${hero.name} rubs the salve into everyone's cuts: they will close as the party walks, this floor.`); this.emit("change"); return ""; }
+    if (item.kind === "bread") { this.bag.splice(row, 1); this.countUse("bread"); this.fed = 0; this.cheer(3); for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 20); this.sound("heal"); this.say("The party eats the dwarven bread, which is hard going and does them good (+20 each)."); this.emit("change"); return ""; }
+    if (item.kind === "liniment") { if (hero.hp <= 0) return `${hero.name} has fallen.`; this.bag.splice(row, 1); this.countUse("liniment"); this.cure(hero, CM.CURABLE); hero.hp = Math.min(hero.max, hero.hp + 10); if (hero.wound) { delete hero.wound; CM.recompute(hero); } this.sound("heal"); this.say(`${hero.name}'s hurts close under the liniment (+10).`); this.emit("change"); return ""; }
     if (item.kind === "lampoil") {
       if (!this.lanternHeld && this.light.kind !== "lantern") return "No lantern to pour it into.";
       this.bag.splice(row, 1); this.countUse("lampoil");
@@ -9858,6 +9922,34 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
 
+  // the kitchen: meat cooked at a camp, or on the floor for a torch, into a meal that feeds the party and lasts the next floor
+  cook(row) {
+    const item = this.bag[row]; if (!item || item.kind !== "meat") return "Nothing to cook.";
+    const M = CM.MEALS[item.meat]; if (!M) return "Nobody would eat that.";
+    if (this.mode !== "camp") { const torch = this.bag.findIndex((i) => i.kind === "torch"); if (torch < 0) return "A fire wants a torch from the pack, down here."; this.bag.splice(torch, 1); if (torch < row) row -= 1; }
+    this.logAct("cook", row);
+    this.bag.splice(row, 1); this.countUse("meal");
+    this.fed = 0; this.cheer(4);
+    this.meal = { kind: item.meat, floor: (this.floor ? this.floor.number : 0) + 1 };
+    for (const h of this.party) { h.mealLuck = M.luck || 0; CM.recompute(h); }
+    this.sound("heal");
+    this.say(`The party eats ${M.name}: ${M.what}, until the floor after next is reached.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  // the alchemist's request: three of the band's ingredient this camp, and the next brew is free
+  alchemistWants() { const band = CM.themeIndex(this.floor ? this.floor.number : 1); return Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band && !CM.INGREDIENTS[id].rare) || "gravemoss"; },
+  deliver() {
+    if (this.mode !== "camp") return "The alchemist is at the camp.";
+    const want = this.alchemistWants(), rows = this.bag.map((i, idx) => (i.kind === "ingredient" && i.ingredient === want ? idx : -1)).filter((i) => i >= 0);
+    if (rows.length < 3) return `She wants three of ${CM.INGREDIENTS[want].name}; the pack has ${rows.length}.`;
+    if (this.alchemistFree) return "The next brew is free already.";
+    this.logAct("deliver");
+    for (const idx of rows.slice(0, 3).reverse()) this.bag.splice(idx, 1);
+    this.alchemistFree = true;
+    this.sound("coin"); this.say(`The alchemist takes the ${CM.INGREDIENTS[want].name} gladly: the next thing she brews is on the house.`); this.saveRun(); this.emit("change");
+    return "";
+  },
   // the vault: one thing left at the camp waits for the next party (saved between runs); what was there comes out
   leaveHeirloom(row) {
     if (this.mode !== "camp") return "The vault is at the camp.";
@@ -9995,25 +10087,37 @@ Object.assign(CM.Game.prototype, {
     const have = (kinds, used) => this.bag.findIndex((i, idx) => !used.includes(idx) && (i.kind === "ingredient" ? kinds.includes(i.ingredient) : kinds.includes(i.kind)));
     const used = [];
     for (const key of ["ingredient", "ingredient2", "kind"]) {
-      if (!r.needs[key]) continue;
+      if (!r.needs[key] || r.needs.triple) continue;
       const idx = have(r.needs[key], used);
       if (idx < 0) return `She wants ${r.needs[key].map((k) => (CM.INGREDIENTS[k] ? CM.INGREDIENTS[k].name : { heal: "a Healing Potion" }[k] || k)).join(" or ")}.`;
       used.push(idx);
     }
-    if (this.gold < r.gold) return `She asks ${r.gold} gold for the ${r.name}.`;
+    if (r.needs.triple) { const count = {}; for (const i of this.bag) if (i.kind === "ingredient" && !CM.INGREDIENTS[i.ingredient].rare) count[i.ingredient] = (count[i.ingredient] || 0) + 1; if (!Object.values(count).some((n) => n >= 3)) return "She wants three of one band's ingredient, alike."; }
+    const price = this.alchemistFree ? 0 : Math.ceil(r.gold * (this.mode !== "camp" ? CM.KIT_PRICE : 1));
+    if (this.gold < price) return `She asks ${price} gold for the ${r.name}.`;
     if (r.makes === "greaterheal" && this.asc("nogreater")) return "No greater potions, this high on the ladder.";
     return "";
   },
   brew(id) {
-    if (this.mode !== "camp") return "The alchemist is at the camp.";
+    const kit = this.bag.some((i) => i.kind === "kit");
+    if (this.mode !== "camp" && !(this.mode === "explore" && kit)) return "The alchemist is at the camp.";
     const lacks = this.recipeLacks(id);
     if (lacks) return lacks;
     this.logAct("brew", id);
-    const r = CM.RECIPES[id], used = [];
+    const r = CM.RECIPES[id], used = [], onFloor = this.mode !== "camp";
+    if (r.needs.triple) {                                                // transmutation: three alike into one of the band below's
+      const count = {}; for (const i of this.bag) if (i.kind === "ingredient" && !CM.INGREDIENTS[i.ingredient].rare) count[i.ingredient] = (count[i.ingredient] || 0) + 1;
+      const from = Object.keys(count).find((k) => count[k] >= 3), band = CM.INGREDIENTS[from].band, to = Object.keys(CM.INGREDIENTS).find((k) => CM.INGREDIENTS[k].band === Math.min(9, band + 1) && !CM.INGREDIENTS[k].rare);
+      let left = 3; for (let i = this.bag.length - 1; i >= 0 && left; i--) if (this.bag[i].kind === "ingredient" && this.bag[i].ingredient === from) { this.bag.splice(i, 1); left--; }
+      const price = this.alchemistFree ? 0 : Math.ceil(r.gold * (onFloor ? CM.KIT_PRICE : 1)); this.gold -= price; this.spend("alchemist", price); this.alchemistFree = false;
+      const made = CM.ingredient(to); this.bag.push(made); this.countUse("brew");
+      this.sound("spell"); this.say(`Three of ${CM.INGREDIENTS[from].name} go into the still and one ${made.name} comes out.`); this.saveRun(); this.emit("change");
+      return "";
+    }
     const take = (kinds) => { const idx = this.bag.findIndex((i, j) => !used.includes(j) && (i.kind === "ingredient" ? kinds.includes(i.ingredient) : kinds.includes(i.kind))); used.push(idx); return idx; };
     for (const key of ["ingredient", "ingredient2", "kind"]) if (r.needs[key]) take(r.needs[key]);
     for (const idx of used.sort((a, b) => b - a)) this.bag.splice(idx, 1);
-    this.gold -= r.gold; this.spend("alchemist", r.gold);
+    const price = this.alchemistFree ? 0 : Math.ceil(r.gold * (onFloor ? CM.KIT_PRICE : 1)); this.gold -= price; this.spend("alchemist", price); this.alchemistFree = false; this.countUse("brew");
     const fl = this.floor ? this.floor.number : 1;
     let made;
     if (r.makes === "greaterheal") { made = { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + fl * 3), value: 60 }; this.bag.push(made); }
@@ -10022,6 +10126,9 @@ Object.assign(CM.Game.prototype, {
     else if (r.makes === "antidote2") { this.bag.push(CM.antidote(), CM.antidote()); made = { name: "two Antidotes" }; }
     else if (r.makes === "ration3") { this.bag.push(CM.ration(), CM.ration(), CM.ration()); made = { name: "three rations" }; }
     else if (r.makes.startsWith("flask:")) { made = CM.flask(r.makes.slice(6)); this.bag.push(made); }
+    else if (r.makes === "salve") { made = { name: "Salve", kind: "salve", power: 0, value: 50 }; this.bag.push(made); }
+    else if (r.makes === "bread") { made = { name: "Dwarven Bread", kind: "bread", power: 20, value: 40 }; this.bag.push(made); }
+    else if (r.makes === "liniment") { made = { name: "Liniment", kind: "liniment", power: 10, value: 80 }; this.bag.push(made); }
     else if (r.makes.startsWith("elixir:") && CM.ELIXIRS[r.makes.slice(7)]) { made = CM.elixir(r.makes.slice(7)); this.bag.push(made); }
     else if (r.makes.startsWith("elixir:")) {
       const stat = r.makes.slice(7), h = this.alive().reduce((a, b) => (a.stats[stat] <= b.stats[stat] ? a : b));   // (whoever has least of it)
@@ -12388,7 +12495,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
     p.stroke();
     const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
+      node: "#8FB06A", ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040", wingstair: "#2090A0", wingexit: "#3060C0", wingstair_up: "#2090A0" };
     const dark = new Set(fl.dark);
     for (const [x, y] of fl.seen) {
       const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
@@ -12745,6 +12852,7 @@ Object.assign(CM.UI.prototype, {
       (i) => (i.kind === "weapon" || i.kind === "armor" ? `(+${i.power})  -  ${i.value} gold` : `-  ${i.value} gold`), (i) => { this.shopRow = i; });
     const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null;
     const knife = picked && picked.kind === "weapon" && CM.weaponClass(picked) === "dagger";
+    if (picked && picked.kind === "kit") { const b = document.createElement("button"); b.textContent = "Open the field kit (the alchemist's list)"; b.addEventListener("click", () => { g.closeBag(); this.openAlchemist(); }); beltBox.appendChild(b); }
     const verb = !picked ? "Give to" : ["weapon", "armor", "shield", "helm", "ring", "amulet"].includes(picked.kind) ? "Equip on" : picked.kind === "scroll" || picked.kind === "tome" ? "Read" : picked.kind === "wand" ? "Use on" : picked.kind === "oil" ? "Rub on the weapon of" : "Give to";
     this.$("#bag-give").querySelectorAll("button").forEach((b, i) => {
       const m = g.party[i], cmp = picked ? g.compare(m, picked) : null;
@@ -12928,8 +13036,23 @@ Object.assign(CM.UI.prototype, {
   renderAlchemist() {
     const g = this.game, box = this.$("#alchemist-list");
     const have = g.bag.filter((i) => i.kind === "ingredient").map((i) => i.name);
-    this.$("#alchemist-have").textContent = `In the pack: ${have.length ? have.join(", ") : "nothing she wants yet"}. Gold: ${g.gold.toLocaleString()}.`;
+    this.$("#alchemist-have").textContent = `In the pack: ${have.length ? have.join(", ") : "nothing she wants yet"}. Gold: ${g.gold.toLocaleString()}.${g.mode !== "camp" ? " (The field kit: a fifth over the camp's prices.)" : ""}`;
     box.innerHTML = "";
+    if (g.mode === "camp") {                                             // her request
+      const want = g.alchemistWants(), row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>She asks for three of ${this.esc(CM.INGREDIENTS[want].name)}</b><small>bring them, and the next brew is free${g.alchemistFree ? " - as it is now" : ""}</small></div>`;
+      const b = document.createElement("button"); b.textContent = "Hand them over"; b.disabled = g.bag.filter((i) => i.kind === "ingredient" && i.ingredient === want).length < 3 || g.alchemistFree;
+      b.addEventListener("click", () => { this.$("#alchemist-note").textContent = g.deliver() || "Done."; this.renderAlchemist(); this.refresh(); });
+      row.appendChild(b); box.appendChild(row);
+    }
+    const meats = g.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "meat");
+    for (const [it, i] of meats) {                                       // the kitchen
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>Cook the ${this.esc(it.name)}</b><small>${this.esc((CM.MEALS[it.meat] || {}).what || "")}, the next floor; everyone eats</small></div>`;
+      const b = document.createElement("button"); b.textContent = g.mode === "camp" ? "Cook" : "Cook, for a torch"; b.disabled = g.mode !== "camp" && !g.bag.some((x) => x.kind === "torch");
+      b.addEventListener("click", () => { this.$("#alchemist-note").textContent = g.cook(i) || "Done."; this.renderAlchemist(); this.refresh(); });
+      row.appendChild(b); box.appendChild(row);
+    }
     for (const [id, r] of Object.entries(CM.RECIPES)) {
       const row = document.createElement("div");
       row.className = "recruit";
@@ -12937,7 +13060,7 @@ Object.assign(CM.UI.prototype, {
       const lacks = g.recipeLacks(id);
       row.innerHTML = `<div><b>${this.esc(r.name)}</b><small>${this.esc(r.what)}${lacks ? ` <i>- ${this.esc(lacks)}</i>` : ""}</small></div>`;
       const b = document.createElement("button");
-      b.textContent = `Brew, ${r.gold} gold`;
+      b.textContent = `Brew, ${g.alchemistFree ? "free" : `${Math.ceil(r.gold * (g.mode !== "camp" ? CM.KIT_PRICE : 1))} gold`}`;
       b.disabled = Boolean(lacks);
       b.addEventListener("click", () => { this.$("#alchemist-note").textContent = g.brew(id) || "Done."; this.renderAlchemist(); this.refresh(); });
       row.appendChild(b);
@@ -13342,6 +13465,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "rope") out.push({ x, y, layer: "rope", w: 0.5, h: 1.0 });
       else if (thing.type === "event") { const look = (CM.EVENTS[thing.event] || {}).look || "chest"; const flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.95 : 0.8, h: 0.8, flat, glow: 0.3 }); }
       else if (thing.type === "strongbox") out.push({ x, y, layer: "chest", w: 0.7, h: 0.6, glow: thing.opened ? 0 : 0.4, shade: 0.7 });
+      else if (thing.type === "node") { const look = (CM.NODES[thing.band] || CM.NODES[0])[1], flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.9 : 0.6, h: flat ? 0.9 : 0.5, flat, glow: look === "crystal" ? 0.3 : 0 }); }
       else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });

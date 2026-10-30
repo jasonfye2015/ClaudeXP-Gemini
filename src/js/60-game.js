@@ -272,7 +272,7 @@ CM.Game = class {
     if (!["explore", "camp"].includes(this.mode)) return;
     if (this.iron && this.mode !== "camp" && !this.ironAllow) { this.dirty = false; this.sinceSave = 0; return; }   // (Iron: the camps only)
     const data = { schema: CM.SCHEMA, gen: this.gen || 1, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
-      spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), reminded: Boolean(this.reminded), belt: this.belt || [], buffs: this.buffs || {}, lanternHeld: Boolean(this.lanternHeld), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
+      spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), reminded: Boolean(this.reminded), belt: this.belt || [], buffs: this.buffs || {}, lanternHeld: Boolean(this.lanternHeld), meal: this.meal || null, alchemistFree: Boolean(this.alchemistFree), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
       tally: this.tally || this.freshTally(), journal: this.journal || [], story: this.story || { read: {} }, rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
@@ -305,7 +305,7 @@ CM.Game = class {
     this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.spellLight = d.spellLight || 0;
     this.phylactery = Boolean(d.phylactery); this.reminded = Boolean(d.reminded);
-    this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld);
+    this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld); this.meal = d.meal || null; this.alchemistFree = Boolean(d.alchemistFree);
     if (this.light && this.light.kind === "lantern" && !this.light.left) this.light.left = CM.LANTERN_OIL;   // (a lantern from before v4.4: a flask of oil in it)
     this.combat = null;
     this.recruits = null;
@@ -368,7 +368,7 @@ CM.Game = class {
     this.titleNote = "";
     this.tally = this.freshTally();
     this.journal = []; this.story = { read: {} }; this.reminded = false; this.left = false; this.dreamed = false; this.rootPending = false;
-    this.belt = []; this.buffs = {}; this.lanternHeld = false;
+    this.belt = []; this.buffs = {}; this.lanternHeld = false; this.meal = null; this.alchemistFree = false;
     this.bindRumours();
     this.rescued = [];
     this.difficulty = CM.DIFFICULTIES[difficulty] ? difficulty : "fair";
@@ -458,7 +458,8 @@ CM.Game = class {
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
     if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
-    if (fresh && this.buffs) { for (const k of ["stoneskin", "night", "sharpen"]) if (this.buffs[k] !== undefined && this.buffs[k] < number) delete this.buffs[k]; if (this.buffs.owleyes) { this.buffs.owleyes -= 1; if (this.buffs.owleyes <= 0) { delete this.buffs.owleyes; this.say("The owl's eyes close: the dark is the dark again."); } } }
+    if (fresh && this.meal && this.meal.floor < number) { this.meal = null; this.say("The meal has worn off."); for (const h of this.party) { h.mealLuck = 0; CM.recompute(h); } }
+    if (fresh && this.buffs) { for (const k of ["stoneskin", "night", "sharpen", "salve"]) if (this.buffs[k] !== undefined && this.buffs[k] < number) delete this.buffs[k]; if (this.buffs.owleyes) { this.buffs.owleyes -= 1; if (this.buffs.owleyes <= 0) { delete this.buffs.owleyes; this.say("The owl's eyes close: the dark is the dark again."); } } }
     if (fresh) for (const h of this.alive()) if (CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "haunted")) this.afflict(h, "curse", "the haunted thing");
     if (fresh) { const toad = this.alive().find((h) => h.familiar === "toad"); if (toad) { const sick = this.alive().find((h) => Object.keys(h.status || {}).some((s) => s !== "stone")); if (sick) { const s = Object.keys(sick.status).find((x) => x !== "stone"); delete sick.status[s]; this.say(`${toad.name}'s toad swallows ${sick.name}'s ${CM.STATUSES[s].name.toLowerCase()} whole.`); } } }
     for (const h of this.alive()) if (h.cls === "Necromancer" && !h.familiar && h.level >= CM.FAMILIAR_AT) { h.familiar = "skull"; this.say(`A skull on ${h.name}'s belt opens its jaws: ${CM.FAMILIARS.skull.what}.`); }

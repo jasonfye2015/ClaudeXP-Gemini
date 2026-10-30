@@ -355,6 +355,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "rope") out.push({ x, y, layer: "rope", w: 0.5, h: 1.0 });
       else if (thing.type === "event") { const look = (CM.EVENTS[thing.event] || {}).look || "chest"; const flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.95 : 0.8, h: 0.8, flat, glow: 0.3 }); }
       else if (thing.type === "strongbox") out.push({ x, y, layer: "chest", w: 0.7, h: 0.6, glow: thing.opened ? 0 : 0.4, shade: 0.7 });
+      else if (thing.type === "node") { const look = (CM.NODES[thing.band] || CM.NODES[0])[1], flat = ["ember", "water1"].includes(look); out.push({ x, y, layer: look, w: flat ? 0.9 : 0.6, h: flat ? 0.9 : 0.5, flat, glow: look === "crystal" ? 0.3 : 0 }); }
       else if (thing.type === "boxkey") out.push({ x, y, layer: "key", w: 0.45, h: 0.45, glow: 0.5 });
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });

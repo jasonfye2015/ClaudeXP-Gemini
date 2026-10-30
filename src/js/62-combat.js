@@ -201,7 +201,7 @@ Object.assign(CM.Game.prototype, {
     for (const m of this.living()) if (m.elite === "shielded") m.warded = Math.max(m.warded || 0, 1);
     for (const m of this.living()) if (m.bleeding > 0) { m.bleeding--; const n = 2 + Math.floor((this.floor ? this.floor.number : 1) / 8); m.hp -= n; this.say(`${CM.The(m)} bleeds (-${n}).`); if (m.hp <= 0 && !m.dead) { m.dead = true; this.emit("fx", { kind: "die", foe: m }); } }
     for (const h of this.alive()) {                                      // gear that mends (of Mending, a unique, three relics worn, the Order's set)
-      const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0) + (CM.setWorn(h) === "order" ? 2 : 0);
+      const mend = CM.gearProp(h, "regen") + (CM.relicsWorn(h) >= 3 ? CM.RELIC_SET.three.regen : 0) + (CM.setWorn(h) === "order" ? 2 : 0) + (this.meal && CM.MEALS[this.meal.kind] && CM.MEALS[this.meal.kind].regen ? 1 : 0);
       if (mend > 0 && h.hp < h.max) h.hp = Math.min(h.max, h.hp + mend);
     }
     if (this.alive().some((h) => CM.trait(h, "evergreen"))) for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 3);
@@ -366,7 +366,8 @@ Object.assign(CM.Game.prototype, {
   // a hero's numbers as they stand right now: a curse takes from them, the song and a blessing give
   effective(h) {
     const cursed = (h.status || {}).curse ? 2 : 0, bless = this.combat && this.combat.bless, point = this.point() === h ? 2 : 0;
-    return { atk: Math.max(1, h.atk - cursed + (this.song === 2 ? 4 : this.song ? 2 : 0) + (bless ? 2 : 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0) + point) };
+    const meal = this.meal && CM.MEALS[this.meal.kind] ? CM.MEALS[this.meal.kind] : {};
+    return { atk: Math.max(1, h.atk - cursed + (this.song === 2 ? 4 : this.song ? 2 : 0) + (bless ? 2 : 0) + (meal.atk || 0)), df: Math.max(0, h.df - cursed + (bless ? 1 : 0) + point + (meal.df || 0)) };
   },
   stat(h, s) { return CM.heroStat(h, s); },
   hitChance(h) {
@@ -797,7 +798,9 @@ Object.assign(CM.Game.prototype, {
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
     const props = (weapon && weapon.props) || {}, el = (props.element && !weapon.unknown ? props.element : null) || (hero.oil && hero.oil.fights > 0 ? hero.oil.element : null);
     const G = target.guardian ? CM.GUARDIANS[target.guardian] : null;   // (its heat, its shards: below)
-    if (el) {                                                            // a flaming, frost or blessed blade
+    if (el === "poison") {                                               // a poisoned blade: the wound festers (as a bleed), unless nothing in it bleeds
+      if (!target.undead && hide !== "none" && hide !== "shell") { target.bleeding = Math.max(target.bleeding || 0, 3); how += " - the poison takes"; }
+    } else if (el) {                                                     // a flaming, frost or blessed blade
       const r = CM.resistance(target, el);
       this.learnResist(target, el, r);
       if (r > 1) { dmg = Math.ceil(dmg * r); how += ` - the ${el === "holy" ? "blessing" : el} bites deep`; }
@@ -1296,6 +1299,7 @@ Object.assign(CM.Game.prototype, {
     const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
     const band = CM.themeIndex(this.floor.number), ing = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band);
     if (ing && rnd.chance(0.3)) loot.push(CM.ingredient(ing));           // (what the alchemist wants: the band's own stuff)
+    { const meaty = slain.filter((m) => CM.MEALS[m.kind || m.name] && !m.undead); if (meaty.length && rnd.chance(0.35)) loot.push(CM.meat(meaty[0].kind || meaty[0].name)); }   // (and the kitchen's)
     this.gain(loot, "foe"); this.count("goldFound", gold);
     for (const h of this.party) if (h.oil && h.oil.fights > 0) { h.oil.fights -= 1; if (!h.oil.fights) { this.say(`The oil on ${h.name}'s weapon has worn off.`); h.oil = null; } }
     const boss = this.foes.some((m) => m.boss), guardian = this.foes.find((m) => m.guardian), fought = this.floor.things[this.foeKey];

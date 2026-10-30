@@ -15,6 +15,7 @@ Object.assign(CM.Game.prototype, {
       this.stock.push(heal, CM.manaPotion(depth), CM.lesserFeather(),
         { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.lampOil(), CM.scroll("identify"), CM.scroll("mapping"), CM.scroll("recall"), CM.rope(), CM.ration(), CM.flask("oil"));
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
+      if (depth >= 13 && !this.bag.some((i) => i.kind === "kit")) this.stock.push(CM.fieldKit());
       const house = this.villageLevel("merchant");                       // (the village's merchant's house: what the camps' merchant has learned to carry)
       if (house >= 1 && !this.asc("nogreater")) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
       if (house >= 2) for (const el of ["fire", "frost", "holy"]) this.stock.push(CM.oil(el));
@@ -288,6 +289,11 @@ Object.assign(CM.Game.prototype, {
       this.emit("change");
       return "";
     }
+    if (item.kind === "meat") return this.cook(row);
+    if (item.kind === "kit") return "The field kit works through the alchemist's list: C (cast or use) out of a fight, or the camp's door.";
+    if (item.kind === "salve") { this.bag.splice(row, 1); this.countUse("salve"); this.buffs = this.buffs || {}; this.buffs.salve = this.floor ? this.floor.number : 0; this.sound("heal"); this.say(`${hero.name} rubs the salve into everyone's cuts: they will close as the party walks, this floor.`); this.emit("change"); return ""; }
+    if (item.kind === "bread") { this.bag.splice(row, 1); this.countUse("bread"); this.fed = 0; this.cheer(3); for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 20); this.sound("heal"); this.say("The party eats the dwarven bread, which is hard going and does them good (+20 each)."); this.emit("change"); return ""; }
+    if (item.kind === "liniment") { if (hero.hp <= 0) return `${hero.name} has fallen.`; this.bag.splice(row, 1); this.countUse("liniment"); this.cure(hero, CM.CURABLE); hero.hp = Math.min(hero.max, hero.hp + 10); if (hero.wound) { delete hero.wound; CM.recompute(hero); } this.sound("heal"); this.say(`${hero.name}'s hurts close under the liniment (+10).`); this.emit("change"); return ""; }
     if (item.kind === "lampoil") {
       if (!this.lanternHeld && this.light.kind !== "lantern") return "No lantern to pour it into.";
       this.bag.splice(row, 1); this.countUse("lampoil");
@@ -602,6 +608,34 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
 
+  // the kitchen: meat cooked at a camp, or on the floor for a torch, into a meal that feeds the party and lasts the next floor
+  cook(row) {
+    const item = this.bag[row]; if (!item || item.kind !== "meat") return "Nothing to cook.";
+    const M = CM.MEALS[item.meat]; if (!M) return "Nobody would eat that.";
+    if (this.mode !== "camp") { const torch = this.bag.findIndex((i) => i.kind === "torch"); if (torch < 0) return "A fire wants a torch from the pack, down here."; this.bag.splice(torch, 1); if (torch < row) row -= 1; }
+    this.logAct("cook", row);
+    this.bag.splice(row, 1); this.countUse("meal");
+    this.fed = 0; this.cheer(4);
+    this.meal = { kind: item.meat, floor: (this.floor ? this.floor.number : 0) + 1 };
+    for (const h of this.party) { h.mealLuck = M.luck || 0; CM.recompute(h); }
+    this.sound("heal");
+    this.say(`The party eats ${M.name}: ${M.what}, until the floor after next is reached.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  // the alchemist's request: three of the band's ingredient this camp, and the next brew is free
+  alchemistWants() { const band = CM.themeIndex(this.floor ? this.floor.number : 1); return Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band && !CM.INGREDIENTS[id].rare) || "gravemoss"; },
+  deliver() {
+    if (this.mode !== "camp") return "The alchemist is at the camp.";
+    const want = this.alchemistWants(), rows = this.bag.map((i, idx) => (i.kind === "ingredient" && i.ingredient === want ? idx : -1)).filter((i) => i >= 0);
+    if (rows.length < 3) return `She wants three of ${CM.INGREDIENTS[want].name}; the pack has ${rows.length}.`;
+    if (this.alchemistFree) return "The next brew is free already.";
+    this.logAct("deliver");
+    for (const idx of rows.slice(0, 3).reverse()) this.bag.splice(idx, 1);
+    this.alchemistFree = true;
+    this.sound("coin"); this.say(`The alchemist takes the ${CM.INGREDIENTS[want].name} gladly: the next thing she brews is on the house.`); this.saveRun(); this.emit("change");
+    return "";
+  },
   // the vault: one thing left at the camp waits for the next party (saved between runs); what was there comes out
   leaveHeirloom(row) {
     if (this.mode !== "camp") return "The vault is at the camp.";
@@ -739,25 +773,37 @@ Object.assign(CM.Game.prototype, {
     const have = (kinds, used) => this.bag.findIndex((i, idx) => !used.includes(idx) && (i.kind === "ingredient" ? kinds.includes(i.ingredient) : kinds.includes(i.kind)));
     const used = [];
     for (const key of ["ingredient", "ingredient2", "kind"]) {
-      if (!r.needs[key]) continue;
+      if (!r.needs[key] || r.needs.triple) continue;
       const idx = have(r.needs[key], used);
       if (idx < 0) return `She wants ${r.needs[key].map((k) => (CM.INGREDIENTS[k] ? CM.INGREDIENTS[k].name : { heal: "a Healing Potion" }[k] || k)).join(" or ")}.`;
       used.push(idx);
     }
-    if (this.gold < r.gold) return `She asks ${r.gold} gold for the ${r.name}.`;
+    if (r.needs.triple) { const count = {}; for (const i of this.bag) if (i.kind === "ingredient" && !CM.INGREDIENTS[i.ingredient].rare) count[i.ingredient] = (count[i.ingredient] || 0) + 1; if (!Object.values(count).some((n) => n >= 3)) return "She wants three of one band's ingredient, alike."; }
+    const price = this.alchemistFree ? 0 : Math.ceil(r.gold * (this.mode !== "camp" ? CM.KIT_PRICE : 1));
+    if (this.gold < price) return `She asks ${price} gold for the ${r.name}.`;
     if (r.makes === "greaterheal" && this.asc("nogreater")) return "No greater potions, this high on the ladder.";
     return "";
   },
   brew(id) {
-    if (this.mode !== "camp") return "The alchemist is at the camp.";
+    const kit = this.bag.some((i) => i.kind === "kit");
+    if (this.mode !== "camp" && !(this.mode === "explore" && kit)) return "The alchemist is at the camp.";
     const lacks = this.recipeLacks(id);
     if (lacks) return lacks;
     this.logAct("brew", id);
-    const r = CM.RECIPES[id], used = [];
+    const r = CM.RECIPES[id], used = [], onFloor = this.mode !== "camp";
+    if (r.needs.triple) {                                                // transmutation: three alike into one of the band below's
+      const count = {}; for (const i of this.bag) if (i.kind === "ingredient" && !CM.INGREDIENTS[i.ingredient].rare) count[i.ingredient] = (count[i.ingredient] || 0) + 1;
+      const from = Object.keys(count).find((k) => count[k] >= 3), band = CM.INGREDIENTS[from].band, to = Object.keys(CM.INGREDIENTS).find((k) => CM.INGREDIENTS[k].band === Math.min(9, band + 1) && !CM.INGREDIENTS[k].rare);
+      let left = 3; for (let i = this.bag.length - 1; i >= 0 && left; i--) if (this.bag[i].kind === "ingredient" && this.bag[i].ingredient === from) { this.bag.splice(i, 1); left--; }
+      const price = this.alchemistFree ? 0 : Math.ceil(r.gold * (onFloor ? CM.KIT_PRICE : 1)); this.gold -= price; this.spend("alchemist", price); this.alchemistFree = false;
+      const made = CM.ingredient(to); this.bag.push(made); this.countUse("brew");
+      this.sound("spell"); this.say(`Three of ${CM.INGREDIENTS[from].name} go into the still and one ${made.name} comes out.`); this.saveRun(); this.emit("change");
+      return "";
+    }
     const take = (kinds) => { const idx = this.bag.findIndex((i, j) => !used.includes(j) && (i.kind === "ingredient" ? kinds.includes(i.ingredient) : kinds.includes(i.kind))); used.push(idx); return idx; };
     for (const key of ["ingredient", "ingredient2", "kind"]) if (r.needs[key]) take(r.needs[key]);
     for (const idx of used.sort((a, b) => b - a)) this.bag.splice(idx, 1);
-    this.gold -= r.gold; this.spend("alchemist", r.gold);
+    const price = this.alchemistFree ? 0 : Math.ceil(r.gold * (onFloor ? CM.KIT_PRICE : 1)); this.gold -= price; this.spend("alchemist", price); this.alchemistFree = false; this.countUse("brew");
     const fl = this.floor ? this.floor.number : 1;
     let made;
     if (r.makes === "greaterheal") { made = { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + fl * 3), value: 60 }; this.bag.push(made); }
@@ -766,6 +812,9 @@ Object.assign(CM.Game.prototype, {
     else if (r.makes === "antidote2") { this.bag.push(CM.antidote(), CM.antidote()); made = { name: "two Antidotes" }; }
     else if (r.makes === "ration3") { this.bag.push(CM.ration(), CM.ration(), CM.ration()); made = { name: "three rations" }; }
     else if (r.makes.startsWith("flask:")) { made = CM.flask(r.makes.slice(6)); this.bag.push(made); }
+    else if (r.makes === "salve") { made = { name: "Salve", kind: "salve", power: 0, value: 50 }; this.bag.push(made); }
+    else if (r.makes === "bread") { made = { name: "Dwarven Bread", kind: "bread", power: 20, value: 40 }; this.bag.push(made); }
+    else if (r.makes === "liniment") { made = { name: "Liniment", kind: "liniment", power: 10, value: 80 }; this.bag.push(made); }
     else if (r.makes.startsWith("elixir:") && CM.ELIXIRS[r.makes.slice(7)]) { made = CM.elixir(r.makes.slice(7)); this.bag.push(made); }
     else if (r.makes.startsWith("elixir:")) {
       const stat = r.makes.slice(7), h = this.alive().reduce((a, b) => (a.stats[stat] <= b.stats[stat] ? a : b));   // (whoever has least of it)

@@ -78,6 +78,7 @@ Object.assign(CM.Game.prototype, {
     this.steps = (this.steps || 0) + 1;
     this.count("steps");
     if (this.steps % 150 === 0 && this.gen >= 2) this.changeBehind();        // (the dungeon is not still behind you)
+    if (this.buffs && this.buffs.salve !== undefined && (this.steps || 0) % 5 === 0) for (const h of this.alive()) if (h.hp < h.max) h.hp += 1;   // (the salve: a little, every few steps)
     this.fed = (this.fed || 0) + 1 + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "hunger")) ? 1 : 0);   // the stomachs: hungry past three hundred steps, weary past six (a hungering curse: twice as fast)
     if (this.fed === CM.HUNGER.hungry) this.say("The party is hungry. A ration would be welcome.");
     if (this.fed === CM.HUNGER.weary) this.say("The party is weary with hunger: every blow does less until they eat.");
@@ -130,6 +131,7 @@ Object.assign(CM.Game.prototype, {
           peddler: "A peddler sits on his pack, with a lantern and a smile. (Space to see his wares)", rivals: "Four adventurers, armed, look you over. (Space to speak to them)",
           remains: "Bones in torn gear, four of them, and a name you know from the Hall of Fame. (Space to see what they left)",
           wingstair: `A second stair goes down here, narrower, into ${(CM.WINGS[thing.wing] || CM.WINGS[0]).name}: ${(CM.WINGS[thing.wing] || CM.WINGS[0]).smell}. (Space to take it; the main stair is still the way on)`,
+          node: `${(CM.NODES[thing.band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[thing.band] || CM.NODES[0])[0].slice(1)}: something the alchemist would want. (Space to gather it)`,
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)" }[thing.type]);
       }
     }
@@ -247,7 +249,7 @@ Object.assign(CM.Game.prototype, {
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
     const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
-    if (CM.partyProp(this.party, "torchSave") && (this.steps || 0) % 3 === 0) return;   // (of the Lantern: every third step is free)
+    if ((CM.partyProp(this.party, "torchSave") || (this.meal && CM.MEALS[this.meal.kind] && CM.MEALS[this.meal.kind].torch)) && (this.steps || 0) % 3 === 0) return;   // (of the Lantern, or a meal that lasts: every third step is free)
     l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0) + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "dark")) ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
     if (l.left > 0) return;
@@ -343,6 +345,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.inUse = true; this.talk(thing, k); this.inUse = false; return; }
     if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
+    if (thing && thing.type === "node") { this.gather(thing, k); return; }
     if (thing && thing.type === "strongbox") { this.openStrongbox(thing, k); return; }
     if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
     if (thing && thing.type === "rivals") { this.meetRivals(thing, k); return; }
@@ -562,9 +565,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
+  event: "something strange", node: "something growing", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -719,6 +722,21 @@ Object.assign(CM.Game.prototype, {
 {
 Object.assign(CM.Game.prototype, {
   // a party that fell on this floor of this seed, in a run before: their bones, and one thing they carried
+  // a node gathered: the band's ingredient, one time in five its rarer one; the Druid and the Ranger take two, the Artificer two of ore
+  gather(thing, k) {
+    const band = thing.band === undefined ? CM.themeIndex(this.floor.number) : thing.band;
+    const common = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band && !CM.INGREDIENTS[id].rare), rare = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band && CM.INGREDIENTS[id].rare);
+    const hs = CM.hashSeed(`${this.seed}:gather:${this.floor.number}:${k}`), id = rare && hs % 5 === 0 ? rare : common;
+    let n = 1;
+    if (this.alive().some((h) => h.cls === "Druid" || h.cls === "Ranger")) n += 1;
+    if (CM.ORE_BANDS.includes(band) && this.alive().some((h) => h.cls === "Artificer")) n += 1;
+    const got = []; for (let i = 0; i < n; i++) got.push(CM.ingredient(id));
+    delete this.floor.things[k];
+    this.gain(got, "event"); this.count("gathered", n);
+    this.sound("coin");
+    this.say(`${(CM.NODES[band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[band] || CM.NODES[0])[0].slice(1)}: ${n > 1 ? `${n} of ` : ""}${CM.INGREDIENTS[id].name}${CM.INGREDIENTS[id].rare ? " - a rare thing" : ""}.`);
+    this.saveRun(); this.emit("change");
+  },
   layRemains(fl) {
     const past = (this.fallen || []).find((f) => f.seed === this.seed && f.floor === fl.number && !(this.remainsFound || []).includes(f.id));
     if (!past || !past.pos) return;

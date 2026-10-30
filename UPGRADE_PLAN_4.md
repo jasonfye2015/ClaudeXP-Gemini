@@ -144,7 +144,7 @@ Size: M.
 
 Size: M.
 
-## Phase 4 - Gathering, the field kit and the kitchen - v4.5
+## Phase 4 - Gathering, the field kit and the kitchen - v4.5 - DONE
 
 - **Gathering nodes**: a thing placed by hash on ordinary floors (like a peddler): a moss bed, a weed pool, a vein
   of ore, a fungus shelf, a crystal growth, a bone pile - three or four a band, each yielding its band's

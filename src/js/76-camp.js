@@ -163,8 +163,23 @@ Object.assign(CM.UI.prototype, {
   renderAlchemist() {
     const g = this.game, box = this.$("#alchemist-list");
     const have = g.bag.filter((i) => i.kind === "ingredient").map((i) => i.name);
-    this.$("#alchemist-have").textContent = `In the pack: ${have.length ? have.join(", ") : "nothing she wants yet"}. Gold: ${g.gold.toLocaleString()}.`;
+    this.$("#alchemist-have").textContent = `In the pack: ${have.length ? have.join(", ") : "nothing she wants yet"}. Gold: ${g.gold.toLocaleString()}.${g.mode !== "camp" ? " (The field kit: a fifth over the camp's prices.)" : ""}`;
     box.innerHTML = "";
+    if (g.mode === "camp") {                                             // her request
+      const want = g.alchemistWants(), row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>She asks for three of ${this.esc(CM.INGREDIENTS[want].name)}</b><small>bring them, and the next brew is free${g.alchemistFree ? " - as it is now" : ""}</small></div>`;
+      const b = document.createElement("button"); b.textContent = "Hand them over"; b.disabled = g.bag.filter((i) => i.kind === "ingredient" && i.ingredient === want).length < 3 || g.alchemistFree;
+      b.addEventListener("click", () => { this.$("#alchemist-note").textContent = g.deliver() || "Done."; this.renderAlchemist(); this.refresh(); });
+      row.appendChild(b); box.appendChild(row);
+    }
+    const meats = g.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "meat");
+    for (const [it, i] of meats) {                                       // the kitchen
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>Cook the ${this.esc(it.name)}</b><small>${this.esc((CM.MEALS[it.meat] || {}).what || "")}, the next floor; everyone eats</small></div>`;
+      const b = document.createElement("button"); b.textContent = g.mode === "camp" ? "Cook" : "Cook, for a torch"; b.disabled = g.mode !== "camp" && !g.bag.some((x) => x.kind === "torch");
+      b.addEventListener("click", () => { this.$("#alchemist-note").textContent = g.cook(i) || "Done."; this.renderAlchemist(); this.refresh(); });
+      row.appendChild(b); box.appendChild(row);
+    }
     for (const [id, r] of Object.entries(CM.RECIPES)) {
       const row = document.createElement("div");
       row.className = "recruit";
@@ -172,7 +187,7 @@ Object.assign(CM.UI.prototype, {
       const lacks = g.recipeLacks(id);
       row.innerHTML = `<div><b>${this.esc(r.name)}</b><small>${this.esc(r.what)}${lacks ? ` <i>- ${this.esc(lacks)}</i>` : ""}</small></div>`;
       const b = document.createElement("button");
-      b.textContent = `Brew, ${r.gold} gold`;
+      b.textContent = `Brew, ${g.alchemistFree ? "free" : `${Math.ceil(r.gold * (g.mode !== "camp" ? CM.KIT_PRICE : 1))} gold`}`;
       b.disabled = Boolean(lacks);
       b.addEventListener("click", () => { this.$("#alchemist-note").textContent = g.brew(id) || "Done."; this.renderAlchemist(); this.refresh(); });
       row.appendChild(b);

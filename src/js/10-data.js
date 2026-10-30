@@ -290,7 +290,25 @@ CM.INGREDIENTS = {
   gravemoss: { name: "Grave Moss", band: 0 }, drownedweed: { name: "Drowned Weed", band: 1 }, forgesoot: { name: "Forge Soot", band: 2 }, bonedust: { name: "Bone Dust", band: 3 },
   saltweed: { name: "Salt Weed", band: 4 }, sporecap: { name: "Spore Cap", band: 5 }, crystaldust: { name: "Crystal Dust", band: 6 }, slag: { name: "Foundry Slag", band: 7 },
   gravesalt: { name: "Grave Salt", band: 8 }, rootsap: { name: "Root Sap", band: 9 },
+  // the rarer things, gathered and never dropped (one in five from a node of the band)
+  gravelily: { name: "Grave Lily", band: 0, rare: true }, cavepearl: { name: "Cave Pearl", band: 1, rare: true }, silvervein: { name: "Silver Vein", band: 2, rare: true }, courtdust: { name: "Court Dust", band: 3, rare: true },
+  drownedsilk: { name: "Drowned Silk", band: 4, rare: true }, ghostcap: { name: "Ghost Cap", band: 5, rare: true }, prismdust: { name: "Prism Dust", band: 6, rare: true }, foundrygold: { name: "Foundry Gold", band: 7, rare: true },
+  saintsbone: { name: "Saint's Bone", band: 8, rare: true }, heartwood: { name: "Heartwood", band: 9, rare: true },
 };
+// gathering nodes: a thing on ordinary floors, two or three a floor by hash, giving the band's ingredient (and one time
+// in five its rarer one); what each looks like, by band
+CM.NODES = [["a moss bed", "nest"], ["a weed pool", "water1"], ["a vein of ore", "ember"], ["a drift of court dust", "bones"], ["a salt pool", "water1"], ["a fungus shelf", "fungus"], ["a crystal growth", "crystal"], ["a slag heap", "ember"], ["a bone pile", "bones"], ["a root knot", "root"]];
+CM.ORE_BANDS = [2, 7];                                                   // (where the Artificer gathers twice)
+// meat, from the kinds that have it, cooked at a camp (or on the floor, for a torch) into a meal that feeds the party
+// and lasts the next floor
+CM.MEALS = {
+  "Giant Rat": { name: "rat on a stick", what: "+1 Luck" , luck: 1 }, Orc: { name: "orc flank", what: "+1 attack", atk: 1 }, Troll: { name: "troll steak", what: "mends 1 a round in fights", regen: 1 }, Ogre: { name: "ogre shank", what: "+1 attack", atk: 1 },
+  Minotaur: { name: "minotaur rib", what: "+2 attack", atk: 2 }, Wyvern: { name: "wyvern tail", what: "+1 defence, and fire does half", df: 1, fire: true }, "Spore Beast": { name: "spore beast haunch", what: "the torch burns slower", torch: true },
+  Rootling: { name: "roast rootling", what: "+1 defence", df: 1 }, Kobold: { name: "kobold stew", what: "+1 Luck", luck: 1 }, Drowned: { name: "cave fish, from the drowned's catch", what: "the torch burns slower", torch: true },
+};
+CM.meat = (kind) => ({ name: `${kind} meat`, kind: "meat", meat: kind, power: 0, value: 10 });
+CM.fieldKit = () => ({ name: "Field Kit", kind: "kit", power: 0, value: 300 });
+CM.KIT_PRICE = 1.2;                                                      // (brewing on the floor: a fifth over)
 CM.RECIPES = {
   greaterheal: { name: "Greater Healing Potion", gold: 30, needs: { ingredient: ["gravemoss", "saltweed", "sporecap"], kind: ["heal"] }, makes: "greaterheal", what: "a healing potion twice the merchant's: the moss, a healing potion and 30 gold" },
   oilfire: { name: "Oil of Fire", gold: 40, needs: { ingredient: ["forgesoot", "slag"] }, makes: "oil:fire", what: "a weapon burns for the next three fights: soot or slag, and 40 gold" },
@@ -304,6 +322,11 @@ CM.RECIPES = {
   haste: { name: "Elixir of Haste", gold: 80, needs: { ingredient: ["drownedweed", "saltweed"] }, makes: "elixir:haste", what: "first in every round of the next fight: weed, and 80 gold" },
   owleyes: { name: "Elixir of Owl's Eyes", gold: 60, needs: { ingredient: ["gravemoss", "sporecap"] }, makes: "elixir:owleyes", what: "no dark holds the party, three floors: moss or a spore cap, and 60 gold" },
   nightdraught: { name: "The Night's Draught", gold: 60, needs: { ingredient: ["bonedust", "gravesalt", "rootsap"] }, makes: "elixir:night", what: "no sleep and no surprise, this floor: bone dust, grave salt or sap, and 60 gold" },
+  salve: { name: "Salve", gold: 30, needs: { ingredient: ["cavepearl", "heartwood", "gravemoss"] }, makes: "salve", what: "rubbed in: the whole party mends a little with every few steps, this floor: a cave pearl, heartwood or moss, and 30 gold" },
+  dwarvenbread: { name: "Dwarven bread", gold: 25, needs: { ingredient: ["silvervein", "forgesoot", "rootsap"] }, makes: "bread", what: "a ration that also mends twenty: silver vein, soot or sap, and 25 gold" },
+  liniment: { name: "Liniment", gold: 50, needs: { ingredient: ["saintsbone", "gravelily"] }, makes: "liniment", what: "rubbed on a wound: it closes, and the small ailments with it; a saint's bone or a grave lily, and 50 gold" },
+  poison: { name: "Blade Poison", gold: 40, needs: { ingredient: ["ghostcap", "sporecap"] }, makes: "oil:poison", what: "a weapon poisons for the next three fights: a ghost cap or a spore cap, and 40 gold" },
+  transmute: { name: "Transmutation", gold: 40, needs: { triple: true }, makes: "transmute", what: "three of one band's ingredient into one of the band below's: any three alike, and 40 gold" },
   bomb: { name: "Firepot", gold: 60, needs: { ingredient: ["slag", "forgesoot"], ingredient2: ["crystaldust", "bonedust"] }, makes: "bomb", what: "thrown in a fight, fire on every foe: slag or soot, dust, and 60 gold" },
   trailbread: { name: "Trail bread, three rations", gold: 10, needs: { ingredient: ["gravemoss", "saltweed", "rootsap"] }, makes: "ration3", what: "three rations: moss, weed or sap, and 10 gold" },
   antivenom: { name: "Antivenom, two draughts", gold: 20, needs: { ingredient: ["sporecap", "gravemoss"] }, makes: "antidote2", what: "two antidotes: a spore cap or grave moss, and 20 gold" },

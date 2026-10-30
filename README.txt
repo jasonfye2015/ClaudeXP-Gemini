@@ -896,6 +896,20 @@ The belt, and things to drink, read and throw (the sixth big update, phase 3 - v
   poured by hand or from the pack as it gutters; an older save's lantern gets a flask), and glow stones from the
   Crystal Caverns' chests never go out and do not reach far.
 
+Gathering, the field kit and the kitchen (the sixth big update, phase 4 - v4.5)
+  Gathering nodes (CM.NODES: a moss bed, a weed pool, a vein of ore, a fungus shelf, a crystal growth, a bone pile,
+  a root knot...), two or three on every ordinary floor by hash - placed last of all in CM.furnish, so no older
+  hash's cell moves - give the band's ingredient and, one time in five, its rarer one (ten rarer things:
+  CM.INGREDIENTS with rare: a grave lily, a cave pearl, silver vein, ghost cap, prism dust, foundry gold, a saint's
+  bone, heartwood...). The Druid and the Ranger take two; the Artificer two of ore. The field kit (the merchant's,
+  from the third camp, or the bag's own button) brews anywhere at a fifth over the camp's price. Twenty-two
+  recipes now: salve (the party mends as it walks, the floor), dwarven bread (a ration that mends twenty),
+  liniment (a wound closed, the small ailments with it), blade poison (a weapon's wounds fester, three fights),
+  transmutation (three of one band's ingredient into one of the band below's). The kitchen: the kinds that have
+  meat drop it (CM.MEALS); cooked at a camp, or on the floor for a torch, a meal feeds the party and lasts the next
+  floor (+1 attack, +1 defence, the torch slower, mending in fights, +1 Luck). The alchemist asks for three of the
+  band's ingredient at every camp: bring them, and the next brew is free. The bot gathers what it passes.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

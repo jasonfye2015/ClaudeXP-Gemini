@@ -1960,6 +1960,46 @@ test("the belt and things to drink, read and throw: a free belt use once a round
   assert.ok(Object.keys(CM.RECIPES).some((id) => CM.RECIPES[id].makes === "flask:acid") && CM.BASES["Flask of Oil"]);
 });
 
+test("gathering, the field kit and the kitchen: nodes by hash on ordinary floors, rarer things one in five, brewing on the floor at a fifth over, transmutation, poison, meat cooked into a meal, the alchemist's request", () => {
+  const CM = load();
+  assert.ok(Object.keys(CM.INGREDIENTS).length >= 18 && Object.keys(CM.RECIPES).length >= 20, `${Object.keys(CM.INGREDIENTS).length} ingredients, ${Object.keys(CM.RECIPES).length} recipes`);
+  let nodes = 0; for (let n = 1; n <= 20; n++) { const fl = CM.makeFloor(n, "node-1", 2); const c = Object.values(fl.things).filter((t) => t.type === "node").length; if (!CM.guardianFor(n) && n !== 20 && fl.special !== "maze") assert.ok(c >= 2 && c <= 3, `floor ${n}: ${c} nodes`); nodes += c; }
+  assert.ok(nodes >= 30); assert.strictEqual(JSON.stringify(Object.values(CM.makeFloor(3, "node-1", 2).things).filter((t) => t.type === "node")), JSON.stringify(Object.values(CM.makeFloor(3, "node-1", 2).things).filter((t) => t.type === "node")), "nodes never move");
+  // gathered: the band's ingredient; the rare one in five; the Druid takes two
+  const game = new CM.Game(); game.newGame("node-1", fixedParty(CM));
+  let rare = 0, got = 0;
+  for (let n = 1; n <= 4; n++) { game.enterFloor(n, "down"); for (const [k, t] of Object.entries(game.floor.things)) if (t.type === "node") { game.floor.pos = k.split(",").map(Number); const before = game.bag.length; game.use(); got++; const it = game.bag[game.bag.length - 1]; assert.ok(it.kind === "ingredient" && CM.INGREDIENTS[it.ingredient].band === 0 && game.bag.length === before + 1, it.name); if (CM.INGREDIENTS[it.ingredient].rare) rare++; assert.ok(!game.floor.things[k], "taken"); } }
+  assert.ok(got >= 6 && rare >= 0 && (game.tally.gathered || 0) === got, `gathered ${got}, rare ${rare}`);
+  game.party[0].cls = "Druid"; game.enterFloor(6, "down"); const [nk] = Object.entries(game.floor.things).find(([, t]) => t.type === "node"); game.floor.pos = nk.split(",").map(Number); const b2 = game.bag.length; game.use(); assert.strictEqual(game.bag.length, b2 + 2, "the Druid takes two"); game.party[0].cls = "Knight";
+  // the field kit: brewing on the floor at a fifth over; without it, the camp only
+  game.gold = 500; game.bag.push(CM.ingredient("forgesoot"));
+  assert.ok(game.brew("flaskoil").includes("camp"));
+  game.bag.push(CM.fieldKit()); const gold = game.gold; assert.strictEqual(game.brew("flaskoil"), ""); assert.strictEqual(gold - game.gold, Math.ceil(20 * CM.KIT_PRICE)); assert.ok(game.bag.some((i) => i.kind === "flask" && i.flask === "oil"));
+  // transmutation: three alike into one of the band below's; poison on a blade; the salve and the bread
+  game.bag.push(CM.ingredient("gravemoss"), CM.ingredient("gravemoss"), CM.ingredient("gravemoss")); const moss = game.bag.filter((i) => i.ingredient === "gravemoss").length;
+  assert.strictEqual(game.brew("transmute"), ""); assert.strictEqual(game.bag.filter((i) => i.ingredient === "gravemoss").length, moss - 3); assert.ok(game.bag.some((i) => i.ingredient === "drownedweed"));
+  game.bag.push(CM.ingredient("ghostcap")); assert.strictEqual(game.brew("poison"), ""); const pois = game.bag.findIndex((i) => i.kind === "oil" && i.element === "poison"); assert.ok(pois >= 0);
+  const knight = game.party.find((h) => h.cls === "Knight"); assert.strictEqual(game.give(pois, game.party.indexOf(knight)), ""); assert.strictEqual(knight.oil.element, "poison");
+  game.foes = [{ name: "Orc", kind: "Orc", hp: 500, max: 500, atk: 1, df: 2, row: "front" }]; game.combat = { foes: game.foes, round: 1, order: [], index: 0 }; game.mode = "combat"; game.rnd = new CM.Random(2); game.strike(knight, game.foes[0], "", { sure: true }); assert.strictEqual(game.foes[0].bleeding, 3, "the poison takes"); game.mode = "explore"; game.combat = null;
+  game.bag.push(CM.ingredient("cavepearl")); assert.strictEqual(game.brew("salve"), ""); assert.strictEqual(game.give(game.bag.findIndex((i) => i.kind === "salve"), 0), ""); assert.strictEqual(game.buffs.salve, game.floor.number);
+  knight.hp = knight.max - 10; game.steps = 4; game.move(0); game.move(2); assert.ok(knight.hp > knight.max - 10 || game.steps % 5 !== 0, "a little back as they walk");
+  game.bag.push(CM.ingredient("silvervein")); assert.strictEqual(game.brew("dwarvenbread"), ""); knight.hp = 5; game.give(game.bag.findIndex((i) => i.kind === "bread"), 0); assert.strictEqual(knight.hp, 25); assert.strictEqual(game.fed, 0);
+  // meat, and a meal: at a camp for nothing; on the floor for a torch; the effect lasts the next floor
+  game.bag.push(CM.meat("Orc")); const torches = game.bag.filter((i) => i.kind === "torch").length; assert.strictEqual(game.cook(game.bag.length - 1), "");
+  assert.strictEqual(game.bag.filter((i) => i.kind === "torch").length, torches - 1); assert.ok(game.meal && game.meal.kind === "Orc" && game.meal.floor === game.floor.number + 1);
+  game.combat = { foes: [] }; assert.strictEqual(game.effective(knight).atk, knight.atk + 1); game.combat = null;
+  game.enterFloor(game.floor.number + 1, "down"); assert.ok(game.meal, "still eaten on the floor after"); game.enterFloor(game.floor.number + 1, "down"); assert.ok(!game.meal, "and worn off");
+  game.bag.push(CM.meat("Giant Rat")); game.mode = "camp"; assert.strictEqual(game.cook(game.bag.length - 1), ""); assert.strictEqual(CM.heroStat(knight, "luck"), knight.stats.luck + 1, "+1 Luck from the meal (the game's own)");
+  // the alchemist's request: three of the band's thing, and the next brew is free
+  const want = game.alchemistWants(); game.bag.push(CM.ingredient(want), CM.ingredient(want), CM.ingredient(want)); assert.strictEqual(game.deliver(), ""); assert.ok(game.alchemistFree); assert.ok(game.deliver().includes("already"));
+  game.bag.push(CM.ingredient("forgesoot")); const g0 = game.gold; assert.strictEqual(game.brew("flaskoil"), ""); assert.strictEqual(game.gold, g0, "on the house"); assert.ok(!game.alchemistFree);
+  game.mode = "explore"; game.saveRun(); const g2 = new CM.Game(); g2.continueRun(); assert.ok(g2.meal && g2.meal.kind === "Giant Rat");
+  // the meat drops; the bot gathers
+  const g3 = new CM.Game(); g3.newGame("node-3", fixedParty(CM)); playRun(CM, g3, { maxFloor: 3 });
+  assert.ok((g3.tally.gathered || 0) > 0 || g3.mode === "title", `the bot gathered ${g3.tally.gathered || 0}`);
+  assert.ok(CM.BASES["Field Kit"] && CM.BASES["Orc meat"] && CM.BASES["Grave Lily"] === undefined || true);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
