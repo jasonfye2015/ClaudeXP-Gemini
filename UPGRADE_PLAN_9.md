@@ -52,7 +52,13 @@ a hireling at your back, and a second, older way into the dark.**
 
 ---
 
-## Phase 0 - Monsters that move - v9.3 (graphics; small to medium; first because every fight shows it)
+## Phase 0 - Monsters that move - v9.3 (graphics; small to medium; first because every fight shows it) - DONE
+
+As built: `28-motion.js` (`CM.motion`, `CM.facesMirror`) gives the pose; the renderer's billboards take `tilt`,
+`skew`, `scale` and `mirror`. Crawl's set has no second frames (only old and new drawings of a kind), so the Pixel look's
+idle2 and attack frames are the same tile leaned about its foot, pixels kept square. The lunge reaches a quarter of a
+square (a third filled the view at arm's length); a fallen monster topples away from the pack's middle. Sleepers and
+champions are drawn from here too (Phase 1 sets the flags).
 
 - **A monster's picture has a state**: idle (a slow breath - the sprite's height scales by two percent on a sine of
   its own phase, so a pack is never in step), lunge (toward the party by a third of a square over 120 ms, then back

@@ -266,7 +266,8 @@ CM.Renderer = class {
 
   // A sprite: {x, y (the cell), layer, w, h} and one of - nothing (a billboard facing the camera, standing on the
   // floor), flat (lying on the floor), axis "ns"/"ew" (standing across the cell's middle: a door), face 0-3 (a decal
-  // on that wall of the cell) - plus dx/dz (an offset in the cell), lift, flash, alpha, glow, shade.
+  // on that wall of the cell) - plus dx/dz (an offset in the cell), lift, flash, alpha, glow, shade; and a billboard's
+  // pose: tilt (radians, toppled about its foot), skew (its top swayed), scale, mirror (28-motion.js)
   _spriteMesh() {
     const out = [], right = [Math.cos(this.yaw), 0, Math.sin(this.yaw)];
     for (const s of this.sprites) {
@@ -289,11 +290,18 @@ CM.Renderer = class {
         const ax = -dz, az = dx;                                         // along the wall
         const y0 = 0.5 - h / 2 + lift, y1 = 0.5 + h / 2 + lift;
         corners = [[px - ax * w / 2, y0, pz - az * w / 2], [px + ax * w / 2, y0, pz + az * w / 2], [px + ax * w / 2, y1, pz + az * w / 2], [px - ax * w / 2, y1, pz - az * w / 2]];
+      } else if (s.tilt || s.skew || s.scale) {                             // a monster's pose (28-motion.js): toppled about its foot, swaying, shrunk
+        const sc = s.scale || 1, W = w * sc, H = h * sc, sk = (s.skew || 0) * H, side = s.mirror ? 1 : -1, t = s.tilt || 0, c = Math.cos(t), sn = Math.sin(t) * side, px = side * W / 2;
+        corners = [[-W / 2, 0], [W / 2, 0], [W / 2 + sk, H], [-W / 2 + sk, H]].map(([u, v]) => {
+          const uu = t ? px + (u - px) * c + v * sn : u, vv = t ? -(u - px) * sn + v * c : v;
+          return [cx + right[0] * uu, lift + Math.max(0.002, vv), cz + right[2] * uu];
+        });
       } else {
         corners = [[cx - right[0] * w / 2, lift, cz - right[2] * w / 2], [cx + right[0] * w / 2, lift, cz + right[2] * w / 2],
           [cx + right[0] * w / 2, lift + h, cz + right[2] * w / 2], [cx - right[0] * w / 2, lift + h, cz - right[2] * w / 2]];
       }
-      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uv[i][0], uv[i][1], layer, shade, flash, alpha, glow);
+      const uvs = s.mirror ? uv.map(([u, v], i) => [uv[i ^ 1][0], v]) : uv;   // (mirrored: it looks the other way)
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uvs[i][0], uvs[i][1], layer, shade, flash, alpha, glow);
     }
     return out;
   }

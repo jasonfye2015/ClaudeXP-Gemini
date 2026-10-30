@@ -1,6 +1,6 @@
 {
   "name": "claude-and-magic",
-  "version": "9.2.0",
+  "version": "9.3.0",
   "private": true,
   "description": "A first-person dungeon crawler for a party of four, in one HTML file. The tests and the balance simulator run in Node.",
   "scripts": {
