@@ -68,7 +68,8 @@ Object.assign(CM.UI.prototype, {
       b.className = i === (g.target || 0) ? "chosen" : "";
       const est = h ? g.strikeEstimate(h, m) : null;
       const marks = [m.asleep > 0 ? `asleep ${m.asleep}` : "", m.held > 0 ? `held ${m.held}` : "", m.marked ? "marked" : "", m.blind > 0 ? `blinded ${m.blind}` : "", m.burning > 0 ? `burning ${m.burning}` : "",
-        m.chilled > 0 ? `chilled ${m.chilled}` : "", m.warded > 0 ? "warded" : ""].filter(Boolean);
+        m.chilled > 0 ? `chilled ${m.chilled}` : "", m.warded > 0 ? "warded" : "", m.part ? (m.part.broken ? `${m.part.name} broken` : `${m.part.name} ${m.part.hp}/${m.part.max}`) : "",
+        m.gear && m.gear.weapon ? `carries ${CM.itemName(m.gear.weapon)}${m.gear.offhand ? " and a shield" : ""}` : "", m.under ? "under the floor" : ""].filter(Boolean);
       const behind = m.row === "back" && g.living().some((f) => f !== m && f.row !== "back");
       b.innerHTML = `${this.esc(m.name)}${behind ? " <small>(behind)</small>" : ""} <small>${Math.max(0, m.hp)}/${m.max}${marks.length ? " - " + marks.join(", ") : ""}</small>${m.intent ? `<i class="odds intent">about to: ${this.esc((m.intent.text || "").split("!")[0].split(",")[0].replace(/^The [A-Za-z- ]+ /, "")) || "something terrible"}</i>` : ""}${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
       b.addEventListener("click", () => g.setTarget(i));

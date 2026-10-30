@@ -208,7 +208,7 @@ Size: M.
 
 Size: M.
 
-## Phase 7 - Monsters' things, and six elements - v4.8
+## Phase 7 - Monsters' things, and six elements - v4.8 - DONE
 
 - **Loadouts**: elites and the rivals' people carry gear (a Hulking Orc its axe, a Sellsword its sword and
   shield) that the fight reads (its weapon class, its shield's block) and that drops when it falls - the first

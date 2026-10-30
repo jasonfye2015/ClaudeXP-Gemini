@@ -104,7 +104,11 @@ CM.AMULETS = [
   { name: "Amulet of Warding", df: 2 }, { name: "Amulet of Waking", resist: "sleep" },
 ];
 // what a weapon may carry, deeper down: fire (trolls and the rotting fear it), frost (demons), holy (the undead)
-CM.ELEMENTS = { fire: { prefix: "Flaming", weak: ["Troll", "Zombie"] }, frost: { prefix: "Frost", weak: ["Demon", "Wyvern"] }, holy: { prefix: "Blessed", weak: null } };
+CM.ELEMENTS = { fire: { prefix: "Flaming", weak: ["Troll", "Zombie"] }, frost: { prefix: "Frost", weak: ["Demon", "Wyvern"] }, holy: { prefix: "Blessed", weak: null },
+  storm: { prefix: "Storm", weak: ["Drowned", "Gargoyle"] }, venom: { prefix: "Venomed", weak: ["Ogre", "Troll"] }, shadow: { prefix: "Shadowed", weak: ["Dark Elf", "Vampire"] } };
+// the six elements, and what each does besides its number: storm chains to a second foe when the party fights in water,
+// venom is the poison with teeth (a bleed on top), shadow blinds (and is the Necromancer's: Drain and Death Pact carry it)
+CM.ELEMENT_WORDS = { fire: "burns", frost: "chills", holy: "sears", storm: "chains in water", venom: "festers", shadow: "blinds" };
 // armour by weight, and who can bear it: tiers 0-3 light, 4-7 medium, 8-11 heavy
 CM.ARMOR_WEIGHT = (tier) => (tier <= 3 ? "light" : tier <= 7 ? "medium" : "heavy");
 CM.BEARS = { Knight: "heavy", Paladin: "heavy", Rogue: "medium", Ranger: "medium", Cleric: "medium", Druid: "medium", Bard: "medium", Mage: "light", Monk: "light", Necromancer: "light", Artificer: "medium" };
@@ -187,10 +191,14 @@ CM.KITS = {
 //   ranged: reaches the back row as easily as the front   coward: bolts with a purse when hurt   savage: double blows
 //   regen: mends each round   drain: steals experience   stun: knocks flat   charge: the first blow is double
 //   lifesteal: feeds on the blow   breath: fire on everyone, every other round   buffet: two struck at once
+//   (the Deep's) healer, warder, thief (steals a thing and runs), splitter (splits when hurt); and the sixth update's:
+//   shieldwall: two or more of the kind in front, and their back row can't be reached   howl: the party's morale falls
+//   web: a sticky blow that holds   burrow: goes under every third turn and comes up hard   mimic: a chest that isn't
+//   carryoff: a hero dragged into the front row (the formation breaks)
 CM.MONSTERS = [
   { name: "Giant Rat", colour: "#8A7058", body: "beast", head: "snout", eyes: "#FF5040", extras: ["tail"], speed: 14, touch: { status: "poison", chance: 0.15 } },
   { name: "Kobold", colour: "#B07040", body: "small", head: "snout", eyes: "#FFE040", extras: ["dagger"], speed: 12, ability: "coward" },
-  { name: "Skeleton", colour: "#E0E0D0", body: "thin", head: "skull", eyes: "#FFE040", extras: ["sword"], speed: 8, undead: true },
+  { name: "Skeleton", colour: "#E0E0D0", body: "thin", head: "skull", eyes: "#FFE040", extras: ["sword"], speed: 8, undead: true, ability: "shieldwall" },
   { name: "Goblin", colour: "#5A9A40", body: "small", head: "ears", eyes: "#FFE040", extras: ["club"], speed: 11, ability: "ranged" },
   { name: "Zombie", colour: "#7A9A70", body: "biped", head: "round", eyes: "#D0FFD0", extras: ["torn"], skin: "rot", speed: 4, undead: true, touch: { status: "poison", chance: 0.12 } },
   { name: "Orc", colour: "#4A7A3A", body: "wide", head: "tusks", eyes: "#FFE040", extras: ["axe"], speed: 9, ability: "savage" },
@@ -241,11 +249,40 @@ CM.MONSTER_SHAPES = {
   Sellsword: { shape: [1.2, 1.1, 1.2] }, "Hedge Wizard": { shape: [0.7, 1.2, 0.7], row: "back" },
 };
 for (const m of CM.MONSTERS) Object.assign(m, CM.MONSTER_SHAPES[m.name] || {});
+CM.ELEMENT_MORE = {                                                      // the sixth update's two: venom and shadow, kind by kind (the rest 1)
+  "Giant Rat": { venom: 0.5, shadow: 1.5 }, Kobold: { venom: 1.5 }, Skeleton: { venom: 0.5, shadow: 0.5 }, Goblin: { venom: 1.5 }, Zombie: { venom: 0.5, shadow: 0.5 },
+  Orc: { venom: 1.5 }, Ghoul: { venom: 0.5 }, "Dark Elf": { shadow: 1.5, venom: 0.5 }, Troll: { venom: 1.5 }, Wraith: { venom: 0.5, shadow: 0.5 }, Ogre: { venom: 1.5 },
+  Minotaur: { venom: 1.5, shadow: 1.5 }, Gargoyle: { venom: 0.5 }, Vampire: { shadow: 1.5, venom: 0.5 }, Demon: { shadow: 0.5 }, Wyvern: { venom: 1.5 },
+  Drowned: { venom: 0.5 }, "Weed Hag": { venom: 1.5, shadow: 0.5 }, "Fungal Horror": { venom: 0.5 }, "Spore Beast": { venom: 0.5, shadow: 1.5 }, "Crystal Golem": { venom: 0.5, shadow: 1.5 },
+  "Shard Wisp": { venom: 0.5, shadow: 1.5 }, "Iron Hound": { venom: 0.5 }, "Foundry Imp": { venom: 1.5 }, "Bone Colossus": { venom: 0.5, shadow: 0.5 }, "Grave Priest": { venom: 0.5, shadow: 0.5 },
+  Rootling: { venom: 1.5 }, "Hollow One": { venom: 0.5, shadow: 0.5 }, Sellsword: { venom: 1.5, shadow: 1.5 }, "Hedge Wizard": { venom: 1.5 }, Mimic: { venom: 0.5, fire: 1.5 },
+};
+for (const m of CM.MONSTERS) if (CM.ELEMENT_MORE[m.name]) m.resist = Object.assign({}, m.resist || {}, CM.ELEMENT_MORE[m.name]);
+CM.elementMatrix = () => { const out = {}; for (const m of CM.MONSTERS) { out[m.name] = {}; for (const el of Object.keys(CM.ELEMENTS)) out[m.name][el] = CM.resistance({ kind: m.name, undead: m.undead }, el); } return out; };
+// parts that break: a dozen kinds carry a part with its own health (a share of the whole); every blow on the kind wears it
+// too, and when it goes the kind loses the ability named, for the fight, and the part drops when the kind falls
+CM.PARTS = {
+  Troll: { name: "arm", share: 0.3, loses: "regen", drop: "ingredient" }, Ogre: { name: "club arm", share: 0.3, loses: "stun", drop: "ingredient" },
+  Minotaur: { name: "horn", share: 0.25, loses: "charge", drop: "trinket" }, Gargoyle: { name: "wing", share: 0.3, loses: "carryoff", drop: "ingredient" },
+  Vampire: { name: "cape", share: 0.2, loses: "lifesteal", drop: "trinket" }, Demon: { name: "horn", share: 0.3, loses: "breath", drop: "trinket" },
+  Wyvern: { name: "wing", share: 0.3, loses: "buffet", drop: "ingredient" }, "Weed Hag": { name: "staff", share: 0.25, loses: "healer", drop: "ingredient" },
+  "Crystal Golem": { name: "arm", share: 0.3, loses: "warder", drop: "ingredient" }, "Iron Hound": { name: "jaw", share: 0.3, loses: "charge", drop: "ingredient" },
+  "Bone Colossus": { name: "club", share: 0.3, loses: "buffet", drop: "ingredient" }, "Grave Priest": { name: "staff", share: 0.25, loses: "drain", drop: "trinket" },
+  "Lich King": { name: "staff", share: 0.2, loses: "cold", drop: "trinket" },
+};
+// loadouts: what an elite or a rival's person carries, read by the fight (its class, its shield) and dropped when it falls
+CM.LOADOUTS = {
+  Orc: { weapon: "Battle Axe" }, Minotaur: { weapon: "Broad Axe" }, Ogre: { weapon: "Maul" }, Skeleton: { weapon: "Short Sword", shield: true },
+  Kobold: { weapon: "Dagger" }, Goblin: { weapon: "Mace" }, Troll: { weapon: "Morning Star" }, "Dark Elf": { weapon: "Stiletto" }, Sellsword: { weapon: "Long Sword", shield: true },
+  "Hedge Wizard": { weapon: "Ashwood Staff" }, "Grave Priest": { weapon: "Runed Staff" }, "Bone Colossus": { weapon: "Maul" }, Drowned: { weapon: "Spear" }, Rootling: { weapon: "Dagger" },
+};
+CM.MIMIC = { name: "Mimic", colour: "#8A6A3A", body: "wide", head: "round", eyes: "#FFE040", extras: ["torn"], speed: 9, ability: "mimic", touch: { status: "paralysis", chance: 0.2 }, shape: [1.4, 1.2, 1.1], resist: { venom: 0.5, fire: 1.5 }, special: true };
+CM.MONSTERS.push(CM.MIMIC);                                              // (after the bands' kinds: no slice of the table moves)
 // what each way of a monster's is, in words (the bestiary, the journal)
 CM.ABILITY_WORDS = { ranged: "shoots over the front row", coward: "bolts with a purse when hurt", savage: "lands savage blows", regen: "knits its wounds every round",
   drain: "drains experience", stun: "knocks heroes flat", charge: "charges: the first blow is double", lifesteal: "feeds on every blow", breath: "breathes fire on everyone, every other turn",
   buffet: "strikes twice", healer: "mends the most hurt of its fellows", warder: "wards a fellow against the next blows", splitter: "tears in two when badly hurt", thief: "snatches something from the pack and bolts" };
-CM.ELEMENT_NAMES = { fire: "fire", frost: "frost", holy: "holiness", storm: "lightning" };
+CM.ELEMENT_NAMES = { fire: "fire", frost: "frost", holy: "holiness", storm: "lightning", venom: "venom", shadow: "shadow" };
 // how much an element does to a foe: 1.5 bites deep, 0.5 does little, 1 as any blow (the guardians say their own; the undead fear holiness)
 CM.resistance = function (m, element) {
   if (!element) return 1;
@@ -496,7 +533,12 @@ CM.ELITES_MORE = {
   shielded: { name: "Shielded", blurb: "warded every round: the first blow on it does half" },
   mirrored: { name: "Mirrored", blurb: "a spell on it does half, and a quarter of it comes back on the caster" },
   spectral: { name: "Spectral", blurb: "half of every blow passes through it" },
+  howling: { name: "Howling", ability: "howl", blurb: "its howl takes the heart out of the party" },
+  webbing: { name: "Web-spinning", ability: "web", blurb: "a sticky blow that holds a hero fast" },
+  burrowing: { name: "Burrowing", ability: "burrow", blurb: "goes under the floor and comes up hard" },
+  dragging: { name: "Dragging", ability: "carryoff", blurb: "drags a hero into the front row" },
 };
+CM.SHIELDWALL_KINDS = ["Skeleton", "Sellsword"];                        // a line of these: two or more in front, and their back row is out of reach
 // ---- the ground of a fight, and the party's formation ----
 CM.TERRAIN = {
   water: { name: "Knee-deep in water", what: "frost holds every foe it touches; fire does half" },

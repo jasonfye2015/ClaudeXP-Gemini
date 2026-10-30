@@ -2152,6 +2152,62 @@ test("tools, traps, locks and doors: lock grades and picks by calling, a strongb
   assert.ok(r.tools && r.tools.traps >= 1, `the bot set ${JSON.stringify(r.tools)}`); assert.ok(g5.mode === "title" || g5.floor.number >= 4 || g5.party.every((h) => h.hp <= 0), `bot: ${g5.mode} floor ${g5.floor && g5.floor.number}`);
 });
 
+test("monsters' things, and six elements: the matrix, venom, shadow and storm in water, loadouts read by the fight and dropped, parts that break and take an ability, the shield wall, the howl, the web, the burrow, the carry-off, the mimic", () => {
+  const CM = load();
+  assert.strictEqual(Object.keys(CM.ELEMENTS).length, 6); assert.strictEqual(Object.keys(CM.ELEMENT_NAMES).length, 6);
+  const M = CM.elementMatrix();
+  for (const m of CM.MONSTERS) for (const el of Object.keys(CM.ELEMENTS)) assert.ok([0.5, 1, 1.5, 2].includes(M[m.name][el]), `${m.name} ${el} ${M[m.name][el]}`);
+  for (const m of CM.MONSTERS) if (m.undead) assert.ok(M[m.name].venom <= 1 && M[m.name].holy >= 1.5, `${m.name}: the undead shrug venom and fear holiness`);
+  assert.strictEqual(M.Troll.venom, 1.5); assert.strictEqual(M.Vampire.shadow, 1.5); assert.strictEqual(M["Dark Elf"].shadow, 1.5); assert.strictEqual(M.Mimic.fire, 1.5); assert.strictEqual(M.Skeleton.shadow, 0.5);
+  for (const m of CM.MONSTERS) for (const el of Object.keys(CM.ELEMENTS)) assert.ok(!((CM.ELEMENTS[el].weak || []).includes(m.name) && M[m.name][el] < 1), `${m.name} can't be weak to and shrug off ${el}`);
+  for (const el of ["storm", "venom", "shadow"]) { const o = CM.oil(el); assert.ok(o.name && CM.itemLabel(o).includes(CM.ELEMENT_NAMES[el]), el); }
+  { const rnd = new CM.Random(7); const els = {}; for (let i = 0; i < 600; i++) { const w = CM.makeGear("weapon", 12, rnd); if (w.props.element) { els[w.props.element] = (els[w.props.element] || 0) + 1; assert.strictEqual(CM.baseIdOf(w), w.props.base0 || CM.baseIdOf(w)); assert.ok(CM.BASES[CM.baseIdOf(w)], w.name); } } assert.ok(els.storm && els.venom && els.shadow, JSON.stringify(els)); }
+  // a fixed fight: venom bleeds longer and bites the fleshy; shadow blinds; storm in water leaps to a second foe
+  const game = new CM.Game(); game.newGame("six-1", fixedParty(CM));
+  const knight = game.party.find((h) => h.cls === "Knight"), mage = game.party.find((h) => h.cls === "Mage"), rogue = game.party.find((h) => h.cls === "Rogue");
+  const foe = (name, hp = 400) => Object.assign(CM.makeMonster(CM.monsterKind(name), 6, new CM.Random(1)), { hp, max: hp });
+  const fight = (...names) => { game.foes = names.map((n) => foe(n)); game.combat = { foes: game.foes, round: 1, order: [], index: 0 }; game.mode = "combat"; game.rnd = new CM.Random(3); return game.foes; };
+  const mk = (name, power, props = {}) => ({ name, base: name, kind: "weapon", slot: "weapon", power, value: 1, props });
+  let [orc, orc2] = fight("Orc", "Orc"); knight.weapon = mk("Long Sword", 8, { element: "venom" }); game.strike(knight, orc, "", { sure: true }); assert.strictEqual(orc.bleeding, 4, "venom festers four rounds"); assert.ok(game.messages.slice(-1)[0].includes("venom bites deep"), game.messages.slice(-1)[0]);
+  let skel = fight("Skeleton", "Skeleton")[0]; game.strike(knight, skel, "", { sure: true }); assert.ok(!skel.bleeding && game.messages.slice(-1)[0].includes("does little"), "the undead shrug venom");
+  [orc, orc2] = fight("Orc", "Orc"); knight.weapon = mk("Long Sword", 8, { element: "shadow" }); let blinded = 0; for (let i = 0; i < 40 && !blinded; i++) { orc.blind = 0; orc.hp = 400; game.rnd = new CM.Random(i); game.strike(knight, orc, "", { sure: true }); if (orc.blind > 0) blinded = 1; } assert.ok(blinded, "the shadow blinds");
+  [orc, orc2] = fight("Orc", "Orc"); game.combat.flooded = true; assert.ok(game.terrain().includes("water")); game.casting = mage; game.spellHit(orc, 40, "A bolt:", "storm"); assert.ok(orc2.hp < 400, "the lightning leaps through the water to the second"); assert.ok(game.messages.slice(-2).some((l) => l.includes("leaps through the water")));
+  [orc, orc2] = fight("Orc", "Orc"); game.spellHit(orc, 40, "A bolt:", "storm"); assert.strictEqual(orc2.hp, 400, "no water, no leap"); game.casting = null;
+  // loadouts: a rival's person and an elite come armed; the fight reads the class (a maul cares little for armour; a shield takes a blow); what they carried drops
+  const sell = CM.makeMonster(CM.monsterKind("Sellsword"), 8, new CM.Random(1)); assert.ok(sell.gear && sell.gear.weapon.base === "Long Sword" && sell.gear.offhand && sell.gear.offhand.kind === "shield" && !sell.gear.weapon.unknown);
+  const sell2 = CM.makeMonster(CM.monsterKind("Sellsword"), 8, new CM.Random(1)); assert.strictEqual(JSON.stringify(sell2.gear), JSON.stringify(sell.gear), "the loadout is the hash's, not the dice's");
+  const band = [CM.makeMonster(CM.monsterKind("Ogre"), 8, new CM.Random(2)), CM.makeMonster(CM.monsterKind("Ogre"), 8, new CM.Random(2))]; CM.makeElite(band, new CM.Random(5), 2); assert.ok(band[0].elite && band[0].gear && band[0].gear.weapon.base === "Maul", `${band[0].name} carries ${band[0].gear && band[0].gear.weapon.name}`); assert.ok(!band[1].gear, "only the leader is armed");
+  knight.armor = { name: "Plate", kind: "armor", slot: "armor", power: 10, value: 1, props: {} }; const hits = (m) => { let sum = 0; for (let i = 0; i < 300; i++) { fight("Ogre"); game.foes[0] = m; game.combat.foes = game.foes; game.rnd = new CM.Random(i); const hp = knight.hp = knight.max; game.monsterAct(m); sum += hp - knight.hp; } return sum / 300; };
+  const armed = Object.assign(foe("Ogre"), { gear: band[0].gear, ability: null }), bare = Object.assign(foe("Ogre"), { ability: null }); armed.atk = bare.atk; const dm = hits(armed), db = hits(bare); assert.ok(dm > db, `the maul against plate: ${dm} > ${db}`);
+  knight.weapon = mk("Long Sword", 8); [skel] = fight("Sellsword"); skel.gear = sell.gear; let onShield = 0; for (let i = 0; i < 60; i++) { skel.hp = 400; game.rnd = new CM.Random(i); game.strike(knight, skel, "", { sure: true }); if (game.messages.slice(-1)[0].includes("on the shield")) onShield++; } assert.ok(onShield > 5 && onShield < 40, `${onShield} of 60 on the shield`);
+  { let dropped = 0; for (let i = 0; i < 20 && !dropped; i++) { const s = fight("Sellsword")[0]; s.gear = JSON.parse(JSON.stringify(sell.gear)); s.hp = 0; game.foeKey = "0,0"; game.rnd = new CM.Random(i); const n = game.bag.length; game.wonFight(); if (game.bag.slice(n).some((it) => it.base === "Long Sword" || it.kind === "shield")) dropped = 1; } assert.ok(dropped, "what it carried drops"); }
+  // parts: the Troll's arm has its own health; the blows wear it; broken, the mending stops, and the part drops; the Lich King's staff holds his cold
+  let troll = fight("Troll")[0]; game.tune(troll); assert.ok(troll.part && troll.part.name === "arm" && troll.part.max === Math.round(troll.max * 0.3) && troll.ability === "regen");
+  knight.weapon = mk("Maul", 10); let blows = 0; while (!troll.part.broken && blows < 30) { game.rnd = new CM.Random(blows); game.strike(knight, troll, "", { sure: true }); blows++; }
+  assert.ok(troll.part.broken && troll.ability === null && troll.hp > 0, `the arm came away after ${blows} blows, the troll still up`); assert.ok(game.messages.some((l) => l.includes("arm comes away")));
+  { troll.hp = 0; game.foeKey = "0,0"; game.rnd = new CM.Random(1); const n = game.bag.length; game.wonFight(); assert.ok(game.bag.slice(n).some((it) => it.kind === "ingredient"), "the part drops as an ingredient"); assert.strictEqual(game.tally.partsBroken, 1); }
+  const lich = { name: "The Lich King", kind: "Lich King", boss: true, hp: 300, max: 300, atk: 20, df: 10, undead: true }; CM.setPart(lich); assert.ok(lich.part && lich.part.loses === "cold" && lich.part.max === 60);
+  fight("Orc"); game.foes[0] = lich; game.combat.foes = game.foes; game.spellHit(lich, 70, "", null); assert.ok(lich.part.broken && game.messages.slice(-1)[0].includes("cold goes out"), game.messages.slice(-1)[0]);
+  // the shield wall: two skeletons in front, and the goblin behind can't be reached until one falls
+  const [s1, s2, gob] = fight("Skeleton", "Skeleton", "Goblin"); assert.strictEqual(gob.row, "back"); assert.ok(game.wallStands()); assert.ok(!game.attackable().includes(gob) && game.attackable().length === 2, "the wall holds the back row");
+  s1.hp = 0; assert.ok(!game.wallStands() && game.attackable().includes(gob), "one down, the wall is open");
+  // the howl, the web, the burrow, the carry-off
+  const howler = Object.assign(foe("Orc"), { ability: "howl" }); fight("Orc"); game.foes[0] = howler; game.combat.foes = game.foes; game.morale = 70; game.monsterAct(howler); assert.strictEqual(game.morale, 64, "the howl takes six");
+  const webber = Object.assign(foe("Orc"), { ability: "web" }); let webbed = 0; for (let i = 0; i < 60 && !webbed; i++) { fight("Orc"); game.foes[0] = webber; game.combat.foes = game.foes; game.rnd = new CM.Random(i); for (const h of game.party) { h.status = {}; h.hp = h.max; } game.monsterAct(webber); if (game.party.some((h) => h.status.paralysis)) webbed = 1; } assert.ok(webbed, "the web holds");
+  const digger = Object.assign(foe("Orc"), { ability: "burrow" }); fight("Orc"); game.foes[0] = digger; game.combat.foes = game.foes; game.monsterAct(digger); assert.ok(digger.under && digger.hidden && !game.attackable().includes(digger), "under the floor"); for (const h of game.party) h.hp = h.max; game.rnd = new CM.Random(4); game.monsterAct(digger); assert.ok(!digger.hidden && digger.surfaced, "and up again");
+  const dragger = Object.assign(foe("Orc"), { ability: "carryoff" }); let dragged = 0; for (let i = 0; i < 80 && !dragged; i++) { fight("Orc"); game.foes[0] = dragger; game.combat.foes = game.foes; game.rnd = new CM.Random(i); mage.row = "back"; mage.hp = mage.max; game.monsterAct(dragger); if (mage.row === "front") dragged = 1; } assert.ok(dragged && mage.rowWas === "back", "the mage dragged forward");
+  dragger.hp = 0; game.foeKey = "0,0"; game.rnd = new CM.Random(1); game.wonFight(); assert.strictEqual(mage.row, "back"); assert.ok(!mage.rowWas, "the formation mended after the fight");
+  assert.strictEqual(Object.keys(CM.ELITES_MORE).length, 7); assert.ok(CM.MONSTERS.slice(-1)[0].name === "Mimic" && CM.MONSTERS.length - 1 >= CM.SHALLOW);
+  // the mimic: a chest until it isn't; its hoard is what a chest would have held
+  let mim = null; for (const seed of ["six-2", "six-3", "six-4", "six-5"]) { for (let n = 4; n <= 20 && !mim; n++) { const f = CM.makeFloor(n, seed, 2); const k = Object.keys(f.things).find((c) => f.things[c].type === "chest" && f.things[c].mimic); if (k) mim = { seed, n, k }; } if (mim) break; }
+  assert.ok(mim, "a mimic on some floor"); const g2 = new CM.Game(); g2.newGame(mim.seed, fixedParty(CM)); g2.enterFloor(mim.n, "down"); const fl = g2.floor, chest = fl.things[mim.k]; assert.ok(chest && chest.mimic && chest.type === "chest", "a chest, to look at");
+  const hoard = chest.gold; fl.pos = mim.k.split(",").map(Number); g2.use(); assert.strictEqual(g2.mode, "combat"); assert.ok(g2.foes.length === 1 && g2.foes[0].kind === "Mimic" && g2.foes[0].touch, "all mouth"); assert.strictEqual(g2.tally.mimics, 1);
+  const gold = g2.gold; g2.foes[0].hp = 0; g2.wonFight(); assert.ok(g2.gold >= gold + hoard, `the hoard: ${g2.gold - gold} of ${hoard}`); assert.ok(!fl.things[mim.k], "and the chest is gone");
+  // saved and loaded mid-fight, a part and a loadout come back; the bot still finishes
+  g2.mode = "explore"; g2.saveRun(); const g3 = new CM.Game(); g3.continueRun(); assert.strictEqual(g3.floor.number, mim.n);
+  const g5 = new CM.Game(); g5.newGame("six-6", fixedParty(CM)); playRun(CM, g5, { maxFloor: 6 }); assert.ok(g5.mode === "title" || g5.floor.number >= 5 || g5.party.every((h) => h.hp <= 0), `bot: ${g5.mode} floor ${g5.floor && g5.floor.number}`);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

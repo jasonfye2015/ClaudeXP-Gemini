@@ -355,6 +355,15 @@ Object.assign(CM.Game.prototype, {
       this.say("Hand over hand, you climb the rope back up to the pit's mouth.");
       return;
     }
+    if (thing && thing.type === "chest" && thing.mimic) {               // a chest that isn't: it has teeth, and the hoard is in it
+      const L = fl.number > CM.LAST_FLOOR ? CM.monsterLevel(fl.number) : fl.number, rnd = new CM.Random(CM.hashSeed(`${this.seed}:mimic:${fl.number}:${k}`));
+      const group = [this.tune(CM.makeMonster(CM.MIMIC, L, rnd))];
+      fl.things[k] = { type: "monsters", group, mimicOf: { gold: thing.gold || 0, items: thing.items || [] }, still: true };
+      this.sound("roar"); this.say("The lid lifts by itself, and the chest is all mouth.");
+      this.tally.mimics = (this.tally.mimics || 0) + 1;
+      this.startCombat(k, fl.things[k], true);
+      return;
+    }
     if (thing && thing.type === "chest") {
       if (thing.trap && CM.partyProp(this.party, "thimble")) { this.say("The lid was trapped; the thimble turns the needle."); thing.trap = null; }
       if (thing.trap) {                                                   // a trapped lid: the Rogue may see to it (unless the opener is greedy)

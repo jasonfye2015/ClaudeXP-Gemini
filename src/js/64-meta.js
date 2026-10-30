@@ -662,6 +662,7 @@ Object.assign(CM.Game.prototype, {
   // a monster made ready for this run: the difficulty's weight, and Brittle's
   tune(m) {
     if (!m || m.tuned) return m;
+    CM.setPart(m);                                                       // (a part with its own health, for the kinds that have one)
     const d = CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair;
     let hp = d.hp, atk = d.atk;
     if (this.has("brittle")) { hp *= 0.5; atk *= 1.5; }

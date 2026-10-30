@@ -99,7 +99,7 @@ CM.makeUnique = function (id, awake) {
 };
 CM.ration = () => ({ name: "Ration", kind: "ration", power: 0, value: 15 });
 CM.ingredient = (id) => ({ name: CM.INGREDIENTS[id].name, kind: "ingredient", ingredient: id, power: 0, value: 25 });
-CM.oil = (element) => ({ name: { fire: "Oil of Fire", frost: "Oil of Rime", holy: "Oil of Saints", poison: "Blade Poison" }[element], kind: "oil", element, power: 0, value: 60 });
+CM.oil = (element) => ({ name: { fire: "Oil of Fire", frost: "Oil of Rime", holy: "Oil of Saints", poison: "Blade Poison", storm: "Oil of Storms", venom: "Oil of Venom", shadow: "Oil of Shadow" }[element], kind: "oil", element, power: 0, value: 60 });
 CM.bomb = () => ({ name: "Firepot", kind: "bomb", power: 0, value: 80 });
 CM.scrap = () => ({ name: "Scrap", kind: "scrap", power: 0, value: 5 });
 // the rarity of a thing, for its colour: common, fine, rare, relic, unique
@@ -180,6 +180,8 @@ CM.itemLabel = function (item) {
   if (p.twohanded) bits.push("two-handed");
   if (p.relic) bits.push("a guardian's relic");
   if (p.heirloom) bits.push("an heirloom thrice borne: worn as a relic");
+  if (p.element && CM.ELEMENT_WORDS[p.element] && ["storm", "venom", "shadow"].includes(p.element)) bits.push(`${CM.ELEMENT_NAMES[p.element]}: ${CM.ELEMENT_WORDS[p.element]}`);
+  if (item.kind === "oil" && ["storm", "venom", "shadow"].includes(item.element)) bits.push(`${CM.ELEMENT_NAMES[item.element]}: ${CM.ELEMENT_WORDS[item.element]}`);
   if (item.kind === "lockpick") bits.push(item.master ? "opens any lock at the Rogue's chance, a dwarven one too; breaks on a miss" : "anyone may try a lock at a third of the Rogue's chance; breaks on a miss");
   if (item.kind === "trapkit") bits.push("disarms a found plate for its parts (the Artificer never fails); with parts in the pack, sets a trap on the square behind the party");
   if (item.kind === "trapparts") bits.push(`${CM.TRAPS[item.trap] || "a trap"}, in parts: set it behind the party with a trap kit, and a band that walks onto it takes it`);
@@ -262,9 +264,28 @@ CM.bones = (ghost) => ({ name: "Someone's bones", kind: "bones", power: 0, value
 // one monster of a kind, at a depth - with what the kind does carried on it, so a save stands alone
 CM.makeMonster = function (kind, level, rnd) {
   const sh = kind.shape || [1, 1, 1], hp = Math.max(1, Math.round((8 + level * 6) * sh[0]));
-  return { name: kind.name, kind: kind.name, colour: kind.colour, hp, max: hp, atk: Math.max(1, Math.round((3 + level * 2) * sh[1])), df: Math.max(0, Math.round(level * sh[2])),
+  const m = { name: kind.name, kind: kind.name, colour: kind.colour, hp, max: hp, atk: Math.max(1, Math.round((3 + level * 2) * sh[1])), df: Math.max(0, Math.round(level * sh[2])),
     xp: 10 + level * 8, gold: rnd.int(2, 8) * level, speed: kind.speed || 10, undead: Boolean(kind.undead), ability: kind.ability || null,
     touch: kind.touch ? Object.assign({}, kind.touch) : null, row: kind.row || "front" };
+  if (kind.rival) CM.armMonster(m, level);                               // (a rival's person comes armed; an elite is armed in makeElite)
+  return m;
+};
+// a loadout, by the kind's table and a hash of the monster (no dice of the floor's are spent): the weapon, and a shield
+CM.armMonster = function (m, level) {
+  const L = CM.LOADOUTS[m.kind || m.name]; if (!L || m.gear) return m;
+  const rnd = new CM.Random(CM.hashSeed(`arms:${m.name}:${level}:${m.max}:${m.gold}`)), floor = Math.max(1, level);
+  const weapon = CM.makeGear("weapon", floor, rnd); const B = CM.BASES[L.weapon];
+  if (B) { weapon.name = L.weapon; weapon.base = L.weapon; weapon.props = Object.assign({}, weapon.props || {}, { twohanded: Boolean(B.twohanded) }); delete weapon.props.element; delete weapon.props.base0; weapon.unknown = false; weapon.power = Math.max(1, Math.round(2 + floor * 0.8)); weapon.value = 20 + floor * 6; }
+  m.gear = { weapon };
+  if (L.shield) { const shield = CM.makeGear("shield", floor, rnd); shield.unknown = false; m.gear.offhand = shield; }
+  m.atk += 1;
+  return m;
+};
+// a part with its own health, for the kinds that have one (CM.PARTS): set when the fight begins (tune), so a save before knows nothing of it
+CM.setPart = function (m) {
+  const P = CM.PARTS[m.boss ? "Lich King" : m.kind || m.name]; if (!P || m.part !== undefined) return m;
+  m.part = { name: P.name, hp: Math.max(1, Math.round(m.max * P.share)), max: Math.max(1, Math.round(m.max * P.share)), loses: P.loses, drop: P.drop, broken: false };
+  return m;
 };
 
 // a monster saved before it knew what it does
@@ -323,6 +344,7 @@ CM.makeElite = function (group, rnd, gen) {
     if (e.ability) m.ability = e.ability;
     m.xp = Math.round(m.xp * (e.xp || 1.5));
     m.gold *= 2;
+    CM.armMonster(m, Math.max(1, Math.round(m.max / 6)));
   }
   return group;
 };
@@ -800,6 +822,10 @@ CM.furnish = function (floor, seed, gen) {
       const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items).sort();
       for (const c of chests) if (h(`bar:${c}`) % 10 === 0) floor.things[c].items.push(CM.bar());
       if (chests.length && CM.themeIndex(number) === 2 && h("dwarfpick") % 3 === 0) floor.things[chests[h("dwarfpick:chest") % chests.length]].items.push(CM.dwarfPick());
+    }
+    if (number >= 4 && gen >= 2) {                                     // a mimic: a chest that isn't, one in twelve, by hash (generator 2's floors)
+      const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items && !floor.things[c].items.some((i) => i.kind === "page" || i.named || i.kind === "pick")).sort();
+      for (const c of chests) if (h(`mimic:${c}`) % 12 === 0) { floor.things[c].mimic = true; break; }
     }
     if (number >= 4 && (CM.namedWeapons || []).length && h("named") % 100 < 12) {   // a weapon a party of this browser's named, found again, in a chest
       const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items).sort();

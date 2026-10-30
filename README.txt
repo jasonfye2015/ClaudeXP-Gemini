@@ -963,6 +963,28 @@ Tools, traps, locks and doors (the sixth big update, phase 6 - v4.7)
   plate, and bars a door and rests at it when the party is worn; playRun returns what it did (tools).
   Test: "tools, traps, locks and doors".
 
+Monsters' things, and six elements (the sixth big update, phase 7 - v4.8)
+  Six elements: fire, frost, holiness, and now storm, venom and shadow (CM.ELEMENTS, CM.ELEMENT_NAMES), on gear
+  (Storm, Venomed, Shadowed prefixes), on oils (Oil of Storms, of Venom, of Shadow) and on every kind: CM.ELEMENT_MORE
+  lays venom and shadow over CM.MONSTER_SHAPES' table, and CM.elementMatrix() reads the whole thing out. The undead
+  shrug venom off and fear holiness; the fleshy fear venom; the things of the dark shrug shadow. Storm leaps to a
+  second foe for half when the party fights in water; venom is the poison with teeth (the number, and a four-round
+  bleed); shadow blinds one time in three, and is the Necromancer's (Drain and Death Pact carry it).
+  Loadouts: an elite leader and a rival's people come armed (CM.LOADOUTS, CM.armMonster - by a hash of the monster,
+  so no dice of the floor's move): the fight says what they carry, and reads it - a maul cares little for armour,
+  an axe bites one time in seven, a knife finds a gap, a spear reaches the back row, a shield takes one blow in
+  four for half - and what they carried drops when they fall: the first loot seen before it is won.
+  Parts that break (CM.PARTS): a dozen kinds and the Lich King carry a part with its own health (a share of the
+  whole: the Troll's arm, the Wyvern's wing, the Golem's arm, the Priest's staff, the King's staff); every blow on
+  the kind wears it too; broken, the kind loses the ability named for the fight (the mending, the breath, the cold)
+  and the part drops as the band's ingredient or a trinket. The fight screen shows the part's health.
+  Eight monster abilities: shieldwall (Skeletons: two or more in front and their back row can't be reached), howl
+  (the party's morale falls six), web (a blow that holds), burrow (under the floor every third turn, up hard),
+  mimic (a chest that isn't: one chest in twelve on generator 2's floors from 4 down, with the hoard in it),
+  carryoff (a hero dragged into the front row until the fight ends) - with thief and splitter from the Deep making
+  the eight. Four new elite kinds carry the new ones (Howling, Web-spinning, Burrowing, Dragging).
+  Test: "monsters' things, and six elements".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
