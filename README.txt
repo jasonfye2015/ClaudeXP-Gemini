@@ -937,6 +937,32 @@ Living items: charged relics, trinkets, and weapons that grow (the sixth big upd
   mark the map on arrival; the hundredth kill and the Rat King mark a sword, its third mark names it, and the name
   survives save, the vault's one slot, and turns up in a later seed's chest with its story; a ring's third bearer.
 
+Tools, traps, locks and doors (the sixth big update, phase 6 - v4.7)
+  Locks have grades (CM.LOCKS, by the seed and the door: common above floor 6; iron two in five below; dwarven one
+  in four from the palace down). A key opens any; a Rogue picks a lock of her level (2 for common, 4 for iron); a
+  Lockpick lets anyone try at a third of the Rogue's chance, and breaks on a miss; a Master Pick tries at the full
+  chance and is the only pick for a dwarven lock; the Patriarch's Reliquary or the Forge-Warden's Hammer, worn,
+  opens anything (CM.OPENS_ANYTHING). A strongbox without its key is picked the same way (tryLock). The merchant
+  sells two picks a camp, a master pick from depth 14.
+  Traps as tools: six traps now (a volley of darts, a floor that gives way). A Trap Kit (the Artificer starts with
+  one; the merchant sells one from depth 7) takes a found plate apart for its parts - the Artificer never fails, a
+  Rogue or a steady hand may, and a failure springs it - and Trap Parts are set on the square behind the party; a
+  band of monsters that walks onto a set plate takes the trap (trapGroup: darts a quarter of each, gas a fifth,
+  the blade half of the first, the needle bleeding, the alarm makes them hunters, the floor takes them down a level;
+  a band finished by a trap is a kill).
+  A Door Bar (merchant, and one chest in ten from floor 3) shuts and holds the open door beside the party for the
+  floor; walking into it lifts the bar. Used again at a barred door the party rests there: a third of the camp's
+  rest, once a floor, for a ration. With the Hordes mutator a band beside a barred door breaks it in three turns.
+  Bait (a ration, dropped where the party stands) draws the nearest wanderers for ten steps instead of the party;
+  a band that reaches it stops to eat for ten steps; Poisoned Bait (a new recipe: a ration, a ghost cap or spore
+  cap, 10 gold) takes two fifths of each and leaves them bleeding. Bait goes stale after ten steps.
+  A Grapnel (kept; merchant from depth 6) climbs the party back up the pit it fell down, to the floor and square it
+  fell from (fellFrom, saved). A Dwarven Pick (in the dwarves' halls' chests, one floor in three) opens the nearest
+  hidden door or stair on the floor without searching, and breaks.
+  The bot: walks through locks with a pick in the pack, sets a trap when it has parts and a kit, disarms a found
+  plate, and bars a door and rests at it when the party is worn; playRun returns what it did (tools).
+  Test: "tools, traps, locks and doors".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

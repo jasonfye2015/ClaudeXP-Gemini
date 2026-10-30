@@ -180,6 +180,13 @@ CM.itemLabel = function (item) {
   if (p.twohanded) bits.push("two-handed");
   if (p.relic) bits.push("a guardian's relic");
   if (p.heirloom) bits.push("an heirloom thrice borne: worn as a relic");
+  if (item.kind === "lockpick") bits.push(item.master ? "opens any lock at the Rogue's chance, a dwarven one too; breaks on a miss" : "anyone may try a lock at a third of the Rogue's chance; breaks on a miss");
+  if (item.kind === "trapkit") bits.push("disarms a found plate for its parts (the Artificer never fails); with parts in the pack, sets a trap on the square behind the party");
+  if (item.kind === "trapparts") bits.push(`${CM.TRAPS[item.trap] || "a trap"}, in parts: set it behind the party with a trap kit, and a band that walks onto it takes it`);
+  if (item.kind === "bar") bits.push("bars the open door beside the party for the floor; used again at a barred door, the party rests there a little (once a floor, a ration)");
+  if (item.kind === "bait") bits.push(item.poisoned ? "dropped where you stand: draws the nearest wanderers ten steps, and poisons what eats it" : "dropped where you stand: draws the nearest wanderers for ten steps, and holds them there");
+  if (item.kind === "grapnel") bits.push("climbs the party back up the pit it fell down; kept");
+  if (item.kind === "pick") bits.push("opens the nearest hidden door or stair on the floor without searching, and breaks");
   if (item.bearers && item.bearers.length) bits.push(`borne by ${item.bearers.join(", ")}`);
   if (CM.powerOf(item)) bits.push(`a power, once a floor: ${CM.powerOf(item).name} - ${CM.powerOf(item).what}`);
   if (item.kind === "trinket" && CM.TRINKETS[item.trinket]) bits.push(CM.TRINKETS[item.trinket].what);
@@ -788,6 +795,11 @@ CM.furnish = function (floor, seed, gen) {
     if (number <= 3 && CM.legends.length && h("legend") % 100 < 50) {
       const k = pickCell("legend", (c) => !roomCells.has(c)) || pickCell("legend");
       if (k) floor.things[k] = { type: "ghost", legend: h("legend:which") % CM.legends.length, asked: false };
+    }
+    if (number >= 3) {                                                 // a bar in one chest in ten; the dwarves' pick in their halls, now and then
+      const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items).sort();
+      for (const c of chests) if (h(`bar:${c}`) % 10 === 0) floor.things[c].items.push(CM.bar());
+      if (chests.length && CM.themeIndex(number) === 2 && h("dwarfpick") % 3 === 0) floor.things[chests[h("dwarfpick:chest") % chests.length]].items.push(CM.dwarfPick());
     }
     if (number >= 4 && (CM.namedWeapons || []).length && h("named") % 100 < 12) {   // a weapon a party of this browser's named, found again, in a chest
       const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items).sort();

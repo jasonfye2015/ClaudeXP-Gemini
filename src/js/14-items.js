@@ -28,7 +28,8 @@ CM.BASES = {};
   Object.values(CM.SCROLLS).forEach((s, i) => add(s.name, "scroll", null, i, "scroll"));
   Object.values(CM.FLASKS).forEach((f, i) => add(f.name, "flask", null, i, "stuff"));
   Object.values(CM.ELIXIRS).forEach((e, i) => add(e.name, "elixir", null, i, "stuff"));
-  [["Field Kit", "kit"], ["Salve", "salve"], ["Dwarven Bread", "bread"], ["Liniment", "liniment"], ["Blade Poison", "oil"]].forEach(([n, k], i) => add(n, k, null, 30 + i, "stuff"));
+  [["Field Kit", "kit"], ["Salve", "salve"], ["Dwarven Bread", "bread"], ["Liniment", "liniment"], ["Blade Poison", "oil"],
+    ["Lockpick", "lockpick"], ["Master Pick", "lockpick"], ["Trap Kit", "trapkit"], ["Trap Parts", "trapparts"], ["Door Bar", "bar"], ["Bait", "bait"], ["Poisoned Bait", "bait"], ["Grapnel", "grapnel"], ["Dwarven Pick", "pick"]].forEach(([n, k], i) => add(n, k, null, 30 + i, "stuff"));
   Object.keys(CM.MEALS).forEach((kind, i) => add(`${kind} meat`, "meat", null, i, "ingredient"));
   [["Lesser Healing Potion", "heal"], ["Full Healing Potion", "heal"], ["Lesser Mana Potion", "mana"], ["Greater Mana Potion", "mana"], ["Lesser Phoenix Feather", "revive0"], ["Lamp Oil", "lampoil"], ["Glow Stone", "glowstone"], ["Essence", "essence"]].forEach(([n, k], i) => add(n, k, null, 20 + i, "stuff"));
   Object.values(CM.WANDS).forEach((w, i) => add(w.name, "wand", null, i, "wand"));
@@ -214,5 +215,15 @@ CM.trinket = (id) => ({ name: CM.TRINKETS[id].name, kind: "trinket", slot: "trin
 Object.entries(CM.TRINKETS).forEach(([id, t], i) => { CM.BASES[t.name] = { id: t.name, kind: "trinket", slot: "trinket", tier: i, group: "trinket", trinket: id }; });
 CM.GROUP_NAMES.trinket = "Trinkets";
 // a weapon's marks: a guardian slain, or a hundred of anything; at three it may be named
+// the tools of the seventh phase: picks for locks, a kit for traps, a bar for a door, bait, a grapnel, the dwarves' pick
+CM.lockpick = (master) => (master ? { name: "Master Pick", kind: "lockpick", master: true, power: 0, value: 150 } : { name: "Lockpick", kind: "lockpick", power: 0, value: 25 });
+CM.trapKit = () => ({ name: "Trap Kit", kind: "trapkit", power: 0, value: 120 });
+CM.trapParts = (trap) => ({ name: "Trap Parts", kind: "trapparts", trap, power: 0, value: 30 });
+CM.bar = () => ({ name: "Door Bar", kind: "bar", power: 0, value: 30 });
+CM.bait = (poisoned) => (poisoned ? { name: "Poisoned Bait", kind: "bait", poisoned: true, power: 0, value: 25 } : { name: "Bait", kind: "bait", power: 0, value: 15 });
+CM.grapnel = () => ({ name: "Grapnel", kind: "grapnel", power: 0, value: 80 });
+CM.dwarfPick = () => ({ name: "Dwarven Pick", kind: "pick", power: 0, value: 150 });
+// a lock's grade, by the seed and where it is: common above floor 6; iron two in five below; dwarven one in four from the palace down
+CM.lockGrade = (seed, floor, k) => { if (floor < 6) return "common"; const r = CM.hashSeed(`${seed}:lock:${floor}:${k}`) % 100; return floor >= 16 && r < 25 ? "dwarven" : r < 65 ? "iron" : "common"; };
 CM.MARK_KILLS = 100;
 CM.MARKS_TO_NAME = 3;

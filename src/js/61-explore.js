@@ -31,18 +31,13 @@ Object.assign(CM.Game.prototype, {
     const f = fl.features[k];
     if (f && f.type === "door" && !f.open) {
       if (f.riddle !== undefined && CM.RIDDLES[f.riddle]) { this.sound("bump"); this.say("Runes crawl across the door, and a question with them."); this.emit("riddle", k); return false; }
-      if (f.locked) {
+      if (f.barred) {
+        f.barred = 0; this.sound("unlock"); this.say("You lift the bar, and leave it: the door is a door again.");
+      } else if (f.locked) {
         const i = this.hasKey();
         if (i < 0) {
-          const rogue = this.alive().find((h) => h.cls === "Rogue" && h.level >= CM.PICK_LOCK_LEVEL && this.canAct(h));
-          if (!rogue) { this.sound("bump"); this.say("The door is locked. It needs a key."); return false; }
-          if (!this.rnd.chance(0.5 + CM.mod(this.stat(rogue, "dex")) * 0.1)) {
-            this.sound("bump");
-            this.say(`${rogue.name} works at the lock... it won't give. Not yet.`);
-            return false;
-          }
-          this.sound("unlock");
-          this.say(`${rogue.name} picks the lock, and the door swings open.`);
+          const note = this.tryLock(f, k);
+          if (note !== "") { this.sound("bump"); if (note) this.say(note); return false; }
         } else {
           this.bag.splice(i, 1);
           this.sound("unlock");
@@ -230,6 +225,7 @@ Object.assign(CM.Game.prototype, {
     this.emit("fell");
     if (n >= CM.BOTTOM && !this.endless) { this.say("You fall into blackness... and land, bruised, on the stone below."); return; }
     this.say(`You fall to floor ${n + 1}, bruised but alive.`);
+    this.fellFrom = { floor: n, at: from.slice() };                       // (a grapnel climbs back to it)
     this.enterFloor(n + 1, "fall", from);
   },
 
@@ -445,6 +441,8 @@ Object.assign(CM.Game.prototype, {
     if (trap === "needle" && opener) this.afflict(opener, "poison", "needle") || this.say(`${opener.name} snatches a hand back in time.`);
     else if (trap === "gas") for (const p of this.alive()) p.hp = Math.max(1, p.hp - Math.max(1, Math.floor(p.max * 0.1)));
     else if (trap === "blade" && opener) { opener.hp = Math.max(1, opener.hp - Math.max(2, Math.floor(opener.max * 0.15))); this.say(`The blade catches ${opener.name}.`); }
+    else if (trap === "darts") { for (const p of this.alive()) p.hp = Math.max(1, p.hp - Math.max(1, Math.floor(p.max * 0.08))); this.say("Darts from every slit in the wall: everyone is stung."); }
+    else if (trap === "floor") { if (this.floor.number < CM.BOTTOM || this.endless) { this.say("The flags tilt and are gone from under you."); this.fall(k.split(",").map(Number)); return; } for (const p of this.alive()) p.hp = Math.max(1, p.hp - Math.max(1, Math.floor(p.max * 0.1))); this.say("The floor drops a hand's breadth and stops: bruises."); }
     else if (trap === "alarm") {
       const fl = this.floor, [x, y] = k.split(",").map(Number);
       const spot = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([nx, ny]) => CM.passable(fl, nx, ny) && !fl.things[keyOf(nx, ny)] && !(nx === fl.pos[0] && ny === fl.pos[1]));
@@ -533,30 +531,125 @@ Object.assign(CM.Game.prototype, {
       const pan = CM.clamp(((mx - px) * -fy + (my - py) * fx) / Math.max(1, Math.abs(mx - px) + Math.abs(my - py)), -1, 1);   // (right of the facing is positive)
       if (m) this.emit("near", m.kind || m.name, nearest.d, pan);
     }
-    const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still);
+    if (fl.bait && (this.steps || 0) > fl.bait.until) { fl.bait = null; this.say("Something small has had the bait while you weren't looking."); }
+    const baitDist = fl.bait ? CM.distances(fl.grid, fl.bait.at.split(",").map(Number), walk) : null;
+    if (this.has("hordes")) for (const [k, t] of Object.entries(fl.things)) {   // hungry: a barred door beside a band is broken in three turns
+      if (t.type !== "monsters") continue;
+      const [x, y] = k.split(",").map(Number);
+      for (const [dx, dy] of CM.DIRS) { const bf = fl.features[keyOf(x + dx, y + dy)]; if (bf && bf.type === "door" && bf.barred) { bf.hits = (bf.hits || 0) + 1; if (bf.hits >= CM.DOOR_BREAK) { bf.barred = 0; bf.open = true; bf.hits = 0; this.sound("grind"); this.say("Wood splinters somewhere close: a barred door has given."); } else this.say("Something heavy throws itself against a barred door."); } }
+    }
+    const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still && !(t.fedUntil > (this.steps || 0)));
     this.rnd.shuffle(movers);
     for (const [k, t] of movers) {
       const [x, y] = k.split(",").map(Number);
-      const d = dist.get(k);
+      const d = dist.get(k), bd = baitDist ? baitDist.get(k) : undefined;
       let step = null;
       const options = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([nx, ny]) => walk(nx, ny) && !fl.things[keyOf(nx, ny)]);
       if (d === 1) {
         this.startCombat(k, t, true);
         return;
       }
-      if (d !== undefined && (d <= 7 || t.hunter || this.has("hunted"))) {
+      if (bd !== undefined && bd <= CM.BAIT_STEPS && bd > 0) {           // the bait: the nearest wanderers come to it, and not to you
+        const nearer = options.filter(([nx, ny]) => baitDist.get(keyOf(nx, ny)) === bd - 1 && !(nx === px && ny === py));
+        if (nearer.length) step = this.rnd.pick(nearer);
+        if (!step && bd === 1) step = fl.bait.at.split(",").map(Number);
+      } else if (d !== undefined && (d <= 7 || t.hunter || this.has("hunted"))) {
         const nearer = options.filter(([nx, ny]) => dist.get(keyOf(nx, ny)) === d - 1 && !(nx === px && ny === py));
         if (nearer.length) step = this.rnd.pick(nearer);
       } else if (this.rnd.chance(0.3) && options.length) {
         step = this.rnd.pick(options.filter(([nx, ny]) => !(nx === px && ny === py)));
       }
       if (!step) continue;
+      if (step[0] === px && step[1] === py) continue;
       delete fl.things[k];
       t.anim = { from: [x, y], at: performance.now() };
-      fl.things[keyOf(step[0], step[1])] = t;
+      const sk = keyOf(step[0], step[1]);
+      fl.things[sk] = t;
       this.dirty = true;
+      if (fl.bait && sk === fl.bait.at) this.takeBait(t, sk);
+      const sf = fl.features[sk];
+      if (sf && sf.type === "plate" && sf.set && !sf.spent) this.trapGroup(t, sf, sk);
     }
     this.emit("change");
+  },
+  // a lock without its key: a relic that opens anything; a Rogue of the grade's level; anyone with a pick, at a third of the
+  // Rogue's chance (a master pick at the full chance, and a dwarven lock only to it); a pick breaks on a miss. "" when it gave.
+  tryLock(f, k, what = "door") {
+    const fl = this.floor, grade = f.grade || (f.grade = CM.lockGrade(this.seed, fl.number, k)), G = CM.LOCKS[grade];
+    const relic = this.alive().flatMap((h) => CM.equipped(h)).find((it) => CM.OPENS_ANYTHING.includes(CM.baseIdOf(it)) && !it.unknown);
+    if (relic) { this.sound("unlock"); this.say(`${CM.itemName(relic)} is held to ${G.name}, and the lock forgets itself.`); return ""; }
+    const rogue = this.alive().find((h) => h.cls === "Rogue" && h.level >= G.rogue && this.canAct(h));
+    const dexter = this.alive().filter((h) => this.canAct(h)).sort((a, b) => this.stat(b, "dex") - this.stat(a, "dex"))[0];
+    const chance = (h) => CM.clamp(0.5 + CM.mod(this.stat(h, "dex")) * 0.1, 0.1, 0.95);
+    if (rogue) {
+      if (!this.rnd.chance(chance(rogue))) return `${rogue.name} works at ${G.name}... it won't give. Not yet.`;
+      this.sound("unlock"); this.say(`${rogue.name} picks ${G.name}, and the ${what} gives.`); return "";
+    }
+    let row = this.bag.findIndex((i) => i.kind === "lockpick" && i.master);
+    if (row < 0 && !G.master) row = this.bag.findIndex((i) => i.kind === "lockpick");
+    if (row < 0 || !dexter) return G.master ? `The ${what} has ${G.name}: its key, a master pick, or a relic that opens anything.` : `The ${what} has ${G.name}. It needs a key, a Rogue of level ${G.rogue}, or a lockpick.`;
+    const pick = this.bag[row], p = pick.master ? chance(dexter) : chance(dexter) / 3;
+    this.countUse("lockpick");
+    if (!this.rnd.chance(p)) { this.bag.splice(row, 1); this.tally.picksBroken = (this.tally.picksBroken || 0) + 1; return `${dexter.name} tries ${G.name} with the ${pick.name.toLowerCase()}... and it snaps in the keyhole.`; }
+    this.sound("unlock"); this.say(`${dexter.name} tries ${G.name} with the ${pick.name.toLowerCase()}, and feels it turn.`); return "";
+  },
+  // a band of monsters walks onto a trap the party set: it takes the trap, and the party hears it
+  trapGroup(t, f, k) {
+    const fl = this.floor, trap = f.trap, live = () => t.group.filter((m) => m.hp > 0);
+    f.spent = true; f.set = false; this.tally.trapped = (this.tally.trapped || 0) + 1; this.sound("trap");
+    const bite = (m, share) => { m.hp = Math.max(0, m.hp - Math.max(1, Math.floor(m.max * share))); };
+    if (trap === "darts") for (const m of live()) bite(m, 0.25);
+    else if (trap === "gas") for (const m of live()) bite(m, 0.2);
+    else if (trap === "blade") { const m = live()[0]; if (m) bite(m, 0.5); }
+    else if (trap === "needle") for (const m of live()) { bite(m, 0.1); m.bleeding = Math.max(m.bleeding || 0, 3); }
+    else if (trap === "alarm") t.hunter = true;
+    else if (trap === "floor") { delete fl.things[k]; this.say("A crash, a long cry, and a quiet: the floor you rigged has taken them down a level."); this.emit("change"); return; }
+    t.group = live();
+    const where = trap === "alarm" ? "A bell rings behind you: they know where you are now." : t.group.length ? `A cry from behind you: ${CM.TRAPS[trap]} has caught a band of ${t.group[0].name}s.` : `A cry from behind you, then nothing: ${CM.TRAPS[trap]} has finished a band of ${t.group.length ? t.group[0].name : "something"}s.`;
+    if (!t.group.length) { delete fl.things[k]; this.count("kills", 1); }
+    this.say(where);
+  },
+  // a band reaches the bait: it eats, and stays with it a while; poisoned, it is the worse for it
+  takeBait(t, k) {
+    const fl = this.floor, bait = fl.bait; fl.bait = null;
+    if (bait.poisoned) { for (const m of t.group) { m.hp = Math.max(0, m.hp - Math.max(1, Math.floor(m.max * 0.4))); m.bleeding = Math.max(m.bleeding || 0, 3); } t.group = t.group.filter((m) => m.hp > 0); this.tally.baited = (this.tally.baited || 0) + 1; if (!t.group.length) { delete fl.things[k]; this.count("kills", 1); this.say("Wet sounds from where you left the bait, and then none: it was poisoned, and they ate it all."); return; } this.say("Retching from where you left the bait: it was poisoned, and they ate it."); return; }
+    t.fedUntil = (this.steps || 0) + CM.BAIT_STEPS; this.tally.baited = (this.tally.baited || 0) + 1;
+    this.say("Snarling over the bait behind you: whatever it is, it has stopped to eat.");
+  },
+  // the party rests at a barred door: a third of the camp's rest, once a floor, for a ration
+  restAtDoor(f) {
+    const fl = this.floor;
+    if (fl.restedAtDoor) return "The party has rested on this floor already; the next door is on the next floor.";
+    const ration = this.bag.findIndex((i) => i.kind === "ration");
+    if (ration < 0) return "A rest at the door takes a ration to share, and there is none.";
+    this.bag.splice(ration, 1); fl.restedAtDoor = true; this.countUse("doorrest");
+    for (const m of this.alive()) { m.hp = Math.min(m.max, m.hp + Math.ceil(m.max / 3)); m.mp = Math.min(m.maxmp, m.mp + Math.ceil(m.maxmp / 3)); }
+    this.fed = Math.min(this.fed || 0, 0); this.sound("heal");
+    this.say("With the door barred the party sits down against it, eats, and sleeps in turns. Not the camp, but something.");
+    return "";
+  },
+  // the dwarves' pick: the nearest hidden door or stair on the floor opens without searching, and the pick breaks
+  usePick(row) {
+    const fl = this.floor, hidden = Object.entries(fl.features).filter(([, f]) => (f.type === "secret" || f.type === "secretstair") && !f.found);
+    if (!hidden.length) return "The pick finds nothing on this floor worth breaking a wall for.";
+    const dist = CM.distances(fl.grid, fl.pos), near = hidden.sort((a, b) => (dist.get(a[0]) || 999) - (dist.get(b[0]) || 999))[0], [k, f] = near, [x, y] = k.split(",").map(Number);
+    f.found = true; f.known = true; fl.grid[y][x] = 0;
+    if (f.type === "secretstair") fl.things[k] = { type: "wingstair", wing: f.wing, secret: true };
+    if (!fl.seen.some(([sx, sy]) => sx === x && sy === y)) fl.seen.push([x, y]);
+    this.bag.splice(row, 1); this.countUse("pick");
+    this.sound("grind"); this.say(`The dwarven pick goes into the wall where the dwarves' marks say, and comes out in two pieces: a hidden ${f.type === "secretstair" ? "stair" : "door"} stands open.`);
+    this.look(); this.emit("mesh"); this.dirty = true; this.emit("change");
+    return "";
+  },
+  // the grapnel: back up the pit the party fell down, to the floor above, where it fell from
+  useGrapnel() {
+    const from = this.fellFrom;
+    if (!from || from.floor !== this.floor.number - 1) return "The grapnel wants a pit above you that you came down. There is none.";
+    this.fellFrom = null; this.countUse("grapnel");
+    this.say("The grapnel bites on the pit's lip above, and the party goes up the rope, hand over hand.");
+    this.enterFloor(from.floor, "rope", from.at);
+    const f = this.floor.features[keyOf(...from.at)]; if (f && f.type === "pit") f.roped = true;
+    return "";
   },
 });
 }
@@ -573,7 +666,7 @@ Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
     const fl = this.floor, seen = new Set(fl.seen.map(([a, b]) => keyOf(a, b))), goal = keyOf(x, y), start = keyOf(fl.pos[0], fl.pos[1]);
-    const picks = this.alive().some((h) => h.cls === "Rogue" && h.level >= CM.PICK_LOCK_LEVEL), key = this.hasKey() >= 0;
+    const picks = this.alive().some((h) => h.cls === "Rogue" && h.level >= CM.PICK_LOCK_LEVEL) || this.bag.some((i) => i.kind === "lockpick"), key = this.hasKey() >= 0;
     const ok = (cx, cy) => {
       const k = keyOf(cx, cy);
       if (!seen.has(k) || !CM.isOpen(fl, cx, cy)) return false;
@@ -693,7 +786,7 @@ Object.assign(CM.Game.prototype, {
     const above = Object.keys(this.floors).map(Number).filter((n) => n < Math.floor(this.floor.number) && n % 1 === 0);
     if (!above.length) return;
     const n = above[this.rnd.int(0, above.length - 1)], fl = this.floors[n];
-    const doors = Object.values(fl.features).filter((f) => f.type === "door" && !f.open && !f.locked && f.riddle === undefined);
+    const doors = Object.values(fl.features).filter((f) => f.type === "door" && !f.open && !f.locked && !f.barred && f.riddle === undefined);
     if (doors.length && this.rnd.chance(0.6)) { this.rnd.pick(doors).open = true; this.say(`Somewhere above, on floor ${n}, a door you left shut swings open.`); }
     else if (!this.behind) {
       const fountain = Object.keys(fl.features).find((k) => fl.features[k].type === "fountain");
@@ -812,8 +905,10 @@ Object.assign(CM.Game.prototype, {
   openStrongbox(thing, k) {
     if (thing.opened) { this.say("The strongbox is open, and empty."); return; }
     const row = this.bag.findIndex((i) => i.kind === "boxkey" && i.box === this.floor.number);
-    if (row < 0) { this.sound("bump"); this.say(`The strongbox is bolted to the floor and locked. Its key lies on floor ${thing.from}${this.bag.some((i) => i.kind === "boxkey") ? " - not the one you carry" : ""}.`); return; }
-    this.bag.splice(row, 1);
+    if (row < 0) {
+      const note = this.tryLock(thing, k, "strongbox");
+      if (note !== "") { this.sound("bump"); this.say(`The strongbox is bolted to the floor and locked. Its key lies on floor ${thing.from}${this.bag.some((i) => i.kind === "boxkey") ? " - not the one you carry" : ""}. ${note || ""}`.trim()); return; }
+    } else this.bag.splice(row, 1);
     thing.opened = true;
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:strongbox:${this.floor.number}`)), gold = 60 * this.floor.number;
     const it = rnd.chance(0.4) ? CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))) : CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);

@@ -157,7 +157,18 @@ CM.WANDS = {
 // what a chest may hold besides treasure
 CM.TRAPS = {
   needle: "a poisoned needle", gas: "a breath of choking gas", blade: "a blade that springs from the lid", alarm: "a bell, and something that heard it",
+  darts: "a volley of darts from the wall", floor: "a floor that gives way",
 };
+// the grades of lock: who may pick it (a Rogue of the level, or a pick at a third of the chance; a dwarven lock takes the
+// key, a master pick, or a relic that opens anything). A lock's grade is the seed's, found when first tried.
+CM.LOCKS = {
+  common: { name: "a common lock", rogue: 2, master: false },
+  iron: { name: "an iron lock", rogue: 4, master: false },
+  dwarven: { name: "a dwarven lock", rogue: 99, master: true },
+};
+CM.OPENS_ANYTHING = ["Patriarch's Reliquary", "Forge-Warden's Hammer"];
+CM.BAIT_STEPS = 10;
+CM.DOOR_BREAK = 3;
 
 // kits earned between runs: what the deepest run so far has unlocked
 CM.KITS = {
@@ -325,6 +336,7 @@ CM.RECIPES = {
   salve: { name: "Salve", gold: 30, needs: { ingredient: ["cavepearl", "heartwood", "gravemoss"] }, makes: "salve", what: "rubbed in: the whole party mends a little with every few steps, this floor: a cave pearl, heartwood or moss, and 30 gold" },
   dwarvenbread: { name: "Dwarven bread", gold: 25, needs: { ingredient: ["silvervein", "forgesoot", "rootsap"] }, makes: "bread", what: "a ration that also mends twenty: silver vein, soot or sap, and 25 gold" },
   liniment: { name: "Liniment", gold: 50, needs: { ingredient: ["saintsbone", "gravelily"] }, makes: "liniment", what: "rubbed on a wound: it closes, and the small ailments with it; a saint's bone or a grave lily, and 50 gold" },
+  poisonbait: { name: "Poisoned Bait", gold: 10, needs: { ingredient: ["ghostcap", "sporecap"], kind: ["ration"] }, makes: "bait:poison", what: "a ration that draws the nearest wanderers, and poisons what eats it: a ration, a ghost cap or a spore cap, and 10 gold" },
   poison: { name: "Blade Poison", gold: 40, needs: { ingredient: ["ghostcap", "sporecap"] }, makes: "oil:poison", what: "a weapon poisons for the next three fights: a ghost cap or a spore cap, and 40 gold" },
   transmute: { name: "Transmutation", gold: 40, needs: { triple: true }, makes: "transmute", what: "three of one band's ingredient into one of the band below's: any three alike, and 40 gold" },
   bomb: { name: "Firepot", gold: 60, needs: { ingredient: ["slag", "forgesoot"], ingredient2: ["crystaldust", "bonedust"] }, makes: "bomb", what: "thrown in a fight, fire on every foe: slag or soot, dust, and 60 gold" },

@@ -44,7 +44,7 @@ Object.assign(CM.UI.prototype, {
       else if (f && f.type === "bonepiles" && f.known) text = "A heap of bones, higher than a man.";
       else if (f && f.type === "fountain") text = f.used ? "A dry fountain." : "A fountain. Space drinks.";
       else if (f && f.type === "altar") text = f.used ? "A quiet altar." : "An altar. Space kneels.";
-      else if (ahead && ahead.type === "door" && !ahead.open) text = ahead.riddle !== undefined ? "A door written over with runes. Walk into it, and answer." : ahead.locked ? "A locked door. Walk into it with a key." : "A door. Walk into it to open it.";
+      else if (ahead && ahead.type === "door" && !ahead.open) text = ahead.riddle !== undefined ? "A door written over with runes. Walk into it, and answer." : ahead.barred ? "A door you barred. Walk into it to lift the bar." : ahead.locked ? `A locked door${ahead.grade ? ` (${CM.LOCKS[ahead.grade].name})` : ""}. Walk into it with a key, a Rogue, or a lockpick.` : "A door. Walk into it to open it.";
       else if (ahead && ahead.type === "gate" && !ahead.open) text = "A portcullis. Find its lever.";
       hint.textContent = text;
     }

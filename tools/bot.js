@@ -71,11 +71,12 @@ function playRun(CM, game, opts = {}) {
     const f = fl.features[k];
     if (f && AVOID.includes(f.type) && f.type !== "teleporter" && !(f.type === "pit" && f.roped)) return false;
     if (f && f.type === "gate" && !f.open) return false;
-    if (f && f.type === "door" && f.locked && !f.open && game.hasKey() < 0 && !alive().some((h) => h.cls === "Rogue" && h.level >= CM.PICK_LOCK_LEVEL)) return false;
+    if (f && f.type === "door" && f.locked && !f.open && game.hasKey() < 0 && !alive().some((h) => h.cls === "Rogue" && h.level >= CM.PICK_LOCK_LEVEL) && !game.bag.some((i) => i.kind === "lockpick")) return false;
     return true;
   };
   // one walk out from the party's square each move: where it can get to, and the way there (a teleporter is a jump)
   let paths = null;
+  const tools = { traps: 0, bars: 0, rests: 0, disarmed: 0 };                 // (what the bot did with the seventh phase's tools)
   const walk = (fl) => {
     const start = `${fl.pos[0]},${fl.pos[1]}`, parent = new Map([[start, null]]), queue = [fl.pos], landed = new Set();
     for (let i = 0; i < queue.length; i++) {
@@ -152,6 +153,16 @@ function playRun(CM, game, opts = {}) {
     const fl = game.floor, here = `${fl.pos[0]},${fl.pos[1]}`, f = fl.features[here], t = fl.things[here];
     if (f && f.type === "fountain" && !f.used && alive().some((h) => h.hp < h.max * 0.5)) { game.drink(f); continue; }
     if (f && f.type === "altar" && !f.used && alive().some((h) => h.hp < h.max * 0.6)) { game.kneel(f); continue; }
+    {                                                                    // the tools: a trap set from parts, a door barred and rested at when the party is worn
+      const kit = game.bag.some((i) => i.kind === "trapkit"), parts = game.bag.findIndex((i) => i.kind === "trapparts");
+      if (kit && parts >= 0 && game.give(parts, 0) === "") { tools.traps++; continue; }
+      const worn = alive().reduce((s, h) => s + h.hp / h.max, 0) / Math.max(1, alive().length) < 0.5, bar = game.bag.findIndex((i) => i.kind === "bar");
+      if (worn && bar >= 0 && !fl.restedAtDoor && game.bag.some((i) => i.kind === "ration") && !(f && f.type === "door")) {
+        const door = CM.DIRS.map(([dx, dy]) => fl.features[`${fl.pos[0] + dx},${fl.pos[1] + dy}`]).find((d) => d && d.type === "door" && d.riddle === undefined && !fl.things[`${fl.pos[0]},${fl.pos[1]}`]);
+        if (door && !door.barred && game.give(bar, 0) === "") { tools.bars++; const again = game.bag.findIndex((i) => i.kind === "bar"); if (again >= 0 && game.give(again, 0) === "") tools.rests++; continue; }
+      }
+      if (f && f.type === "plate" && f.trap && !f.spent && !f.gate && f.known && kit && game.give(game.bag.findIndex((i) => i.kind === "trapkit"), 0) === "") { tools.disarmed++; continue; }
+    }
     walk(fl);
     const target = pick();
     if (t && t.type === "event" && !t.done && !handled.has(fl.number + ":" + here)) {   // (asked once: "walk on" leaves the thing standing)
@@ -197,7 +208,7 @@ function playRun(CM, game, opts = {}) {
       if (nf && nf.type === "door" && nf.locked && !nf.open && game.hasKey() < 0) { if (++stuck > 40) break; }
     }
   }
-  return { log, moves, stuck };
+  return { log, moves, stuck, tools };
 }
 
 module.exports = { playRun };

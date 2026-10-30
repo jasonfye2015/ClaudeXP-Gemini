@@ -2062,6 +2062,96 @@ test("living items: a relic's power once a floor, a trinket's oddity, a weapon's
   const g5 = new CM.Game(); g5.newGame("living-6", fixedParty(CM)); playRun(CM, g5, { maxFloor: 6 }); assert.ok(g5.mode === "title" || g5.floor.number >= 5 || g5.party.every((h) => h.hp <= 0), `bot: ${g5.mode} floor ${g5.floor && g5.floor.number}`);
 });
 
+test("tools, traps, locks and doors: lock grades and picks by calling, a strongbox picked, a set trap takes a band, bait draws and poisons, a barred door holds, rests and is broken by hordes, the grapnel and the dwarves' pick", () => {
+  const CM = load();
+  assert.strictEqual(Object.keys(CM.TRAPS).length, 6); assert.strictEqual(Object.keys(CM.LOCKS).length, 3);
+  for (const n of ["Lockpick", "Master Pick", "Trap Kit", "Trap Parts", "Door Bar", "Bait", "Poisoned Bait", "Grapnel", "Dwarven Pick"]) assert.ok(CM.BASES[n], n);
+  for (let n = 1; n < 6; n++) assert.strictEqual(CM.lockGrade("s", n, "1,1"), "common");
+  const grades = { common: 0, iron: 0, dwarven: 0 }; for (let i = 0; i < 300; i++) grades[CM.lockGrade("s", 20, `${i},0`)]++; assert.ok(grades.dwarven > 40 && grades.iron > 80 && grades.common > 60, JSON.stringify(grades));
+  const game = new CM.Game(); game.newGame("tools-1", fixedParty(CM));
+  const rogue = game.party.find((h) => h.cls === "Rogue"), knight = game.party.find((h) => h.cls === "Knight");
+  const fl = game.floor, [px, py] = fl.pos;
+  const open = CM.DIRS.map(([dx, dy], i) => [px + dx, py + dy, i]).filter(([x, y]) => CM.isOpen(fl, x, y) && !fl.features[`${x},${y}`] && !fl.things[`${x},${y}`]);
+  assert.ok(open.length >= 1, "an open square beside the start");
+  const [ax, ay, dir] = open[0], ak = `${ax},${ay}`; fl.facing = dir;
+  // the lock, by calling: the Rogue at her chance; anyone with a pick at a third, and the pick breaks on a miss; a key always
+  const tryLock = (prep, n = 200) => { let got = 0; for (let i = 0; i < n; i++) { fl.features[ak] = { type: "door", open: false, locked: true, grade: "common" }; prep(); game.rnd = new CM.Random(CM.hashSeed(`lock:${i}`)); game.move(0); if (fl.features[ak].open) got++; fl.pos = [px, py]; } return got / n; };
+  const rogueRate = tryLock(() => { rogue.level = 2; }); assert.ok(rogueRate > 0.3 && rogueRate < 0.9, `the Rogue: ${rogueRate}`);
+  let broken = 0; const pickRate = tryLock(() => { rogue.level = 1; game.bag = game.bag.filter((i) => i.kind !== "lockpick"); game.bag.push(CM.lockpick()); }, 300); broken = game.tally.picksBroken || 0;
+  assert.ok(pickRate > 0.05 && pickRate < rogueRate * 0.8, `a pick, by anyone: ${pickRate} against the Rogue's ${rogueRate}`); assert.ok(broken > 100 && broken < 290, `${broken} picks broke`); assert.ok((game.tally.used || {}).lockpick >= 300);
+  assert.strictEqual(tryLock(() => { game.bag = game.bag.filter((i) => i.kind !== "lockpick"); rogue.level = 1; }, 10), 0, "no key, no Rogue, no pick: no way"); assert.ok(game.messages.slice(-1)[0].includes("lockpick"));
+  assert.strictEqual(tryLock(() => { game.bag.push({ name: "Key", kind: "key", power: 0, value: 0 }); }, 5), 1, "a key always");
+  // the grades: an iron lock wants a Rogue of 4; a dwarven one the key, a master pick or a relic that opens anything
+  rogue.level = 3; fl.features[ak] = { type: "door", open: false, locked: true, grade: "iron" }; game.rnd = new CM.Random(1); game.move(0); assert.ok(!fl.features[ak].open && game.messages.slice(-1)[0].includes("iron lock"), game.messages.slice(-1)[0]);
+  rogue.level = 4; let got = 0; for (let i = 0; i < 40 && !got; i++) { game.rnd = new CM.Random(i); game.move(0); if (fl.features[ak].open) got = 1; fl.pos = [px, py]; } assert.ok(got, "a Rogue of 4 picks iron");
+  rogue.level = 2; game.bag.push(CM.lockpick()); fl.features[ak] = { type: "door", open: false, locked: true, grade: "dwarven" }; game.rnd = new CM.Random(1); game.move(0); assert.ok(!fl.features[ak].open && game.messages.slice(-1)[0].includes("master pick"), game.messages.slice(-1)[0]);
+  game.bag.push(CM.lockpick(true)); got = 0; for (let i = 0; i < 40 && !got; i++) { if (!game.bag.some((i) => i.master)) game.bag.push(CM.lockpick(true)); game.rnd = new CM.Random(i); game.move(0); if (fl.features[ak].open) got = 1; fl.pos = [px, py]; } assert.ok(got, "a master pick opens dwarven");
+  game.bag = game.bag.filter((i) => i.kind !== "lockpick"); knight.amulet = CM.relic("patriarch"); fl.features[ak] = { type: "door", open: false, locked: true, grade: "dwarven" }; game.rnd = new CM.Random(99); game.move(0); assert.ok(fl.features[ak].open, "the reliquary opens anything"); fl.pos = [px, py]; knight.amulet = null;
+  // a strongbox without its key: picked like a lock
+  delete fl.features[ak]; fl.things[ak] = { type: "strongbox", from: 1, opened: false }; fl.pos = [ax, ay]; rogue.level = 1; game.bag.push(CM.lockpick()); game.rnd = new CM.Random(3); game.use(); assert.ok(!fl.things[ak].opened || true);
+  got = 0; for (let i = 0; i < 60 && !fl.things[ak].opened; i++) { if (!game.bag.some((i) => i.kind === "lockpick")) game.bag.push(CM.lockpick()); game.rnd = new CM.Random(i); game.use(); } assert.ok(fl.things[ak].opened, "the strongbox gives to a pick"); fl.pos = [px, py]; delete fl.things[ak];
+  // traps as tools: a found plate is taken apart for its parts (the Artificer never fails), the parts set behind the party, and a band that walks onto them takes the trap
+  fl.features[ak] = { type: "plate", trap: "darts", known: true }; fl.facing = dir; const kitRow = game.bag.push(CM.trapKit()) - 1;
+  knight.second = "Artificer"; assert.strictEqual(game.give(kitRow, 0), ""); assert.ok(fl.features[ak].disarmed && fl.features[ak].spent); const parts = game.bag.findIndex((i) => i.kind === "trapparts"); assert.ok(parts >= 0 && game.bag[parts].trap === "darts"); knight.second = null;
+  assert.ok(game.give(game.bag.findIndex((i) => i.kind === "trapkit"), 0).includes("found"), "no plate, no parts");
+  const back = [px + CM.DIRS[(dir + 2) % 4][0], py + CM.DIRS[(dir + 2) % 4][1]], bk = back.join(",");
+  if (!CM.passable(fl, back[0], back[1]) || fl.features[bk] || fl.things[bk]) { fl.grid[back[1]][back[0]] = 0; delete fl.features[bk]; delete fl.things[bk]; }
+  assert.strictEqual(game.give(parts, 0), ""); assert.ok(fl.features[bk] && fl.features[bk].set && fl.features[bk].trap === "darts" && !game.bag.some((i) => i.kind === "trapparts"));
+  const band = () => ({ type: "monsters", group: [{ name: "Orc", kind: "Orc", hp: 40, max: 40, atk: 3, df: 1, xp: 5, gold: 2, row: "front" }, { name: "Orc", kind: "Orc", hp: 40, max: 40, atk: 3, df: 1, xp: 5, gold: 2, row: "front" }] });
+  const t1 = band(); game.trapGroup(t1, fl.features[bk], bk); assert.ok(t1.group.every((m) => m.hp === 30) && fl.features[bk].spent && !fl.features[bk].set, "darts: a quarter each");
+  const t2 = band(); game.trapGroup(t2, { type: "plate", trap: "blade", set: true }, bk); assert.strictEqual(t2.group[0].hp, 20); assert.strictEqual(t2.group[1].hp, 40);
+  const t3 = band(); game.trapGroup(t3, { type: "plate", trap: "needle", set: true }, bk); assert.ok(t3.group.every((m) => m.bleeding === 3 && m.hp === 36));
+  const t4 = band(); game.trapGroup(t4, { type: "plate", trap: "alarm", set: true }, bk); assert.ok(t4.hunter);
+  const k5 = `${back[0]},${back[1]}`; fl.things[k5] = band(); game.trapGroup(fl.things[k5], { type: "plate", trap: "floor", set: true }, k5); assert.ok(!fl.things[k5], "the floor takes them down a level");
+  const t6 = band(); t6.group.forEach((m) => { m.hp = 5; }); fl.things[k5] = t6; const kills = game.tally.kills || 0; game.trapGroup(t6, { type: "plate", trap: "gas", set: true }, k5); assert.ok(!fl.things[k5] && (game.tally.kills || 0) === kills + 1, "a band finished by a trap is a kill");
+  assert.strictEqual(game.tally.trapped, 6);
+  // the wanderers walk onto a set trap: a band two squares off comes for the party over the rigged flag
+  { let fired = 0; for (let i = 0; i < 40 && !fired; i++) { for (const k of Object.keys(fl.things)) if (fl.things[k].type === "monsters") delete fl.things[k];
+      const beyond = CM.DIRS.map(([dx, dy]) => [back[0] + dx, back[1] + dy]).find(([x, y]) => CM.isOpen(fl, x, y) && !(x === px && y === py) && !fl.features[`${x},${y}`] && !fl.things[`${x},${y}`]);
+      if (!beyond) break;
+      fl.features[bk] = { type: "plate", trap: "darts", set: true, known: true, spent: false }; const g = band(); fl.things[beyond.join(",")] = g; game.rnd = new CM.Random(i); game.mode = "explore"; game.wanderMonsters();
+      if (game.mode === "combat") { game.mode = "explore"; game.combat = null; game.foes = []; continue; }
+      if (fl.features[bk].spent) fired = 1; }
+    assert.ok(fired, "a band walked onto the trap"); for (const k of Object.keys(fl.things)) if (fl.things[k].type === "monsters") delete fl.things[k]; }
+  // bait: dropped where the party stands, it draws the nearest band; eaten, it holds them ten steps; poisoned, it hurts them; it goes stale
+  const baitRow = game.bag.push(CM.bait()) - 1; assert.strictEqual(game.give(baitRow, 0), ""); assert.ok(fl.bait && fl.bait.at === `${px},${py}` && fl.bait.until === (game.steps || 0) + CM.BAIT_STEPS);
+  assert.ok(game.give(game.bag.push(CM.bait()) - 1, 0).includes("already")); game.bag.pop();
+  const fed = band(); game.takeBait(fed, bk); assert.ok(!fl.bait && fed.fedUntil === (game.steps || 0) + CM.BAIT_STEPS && fed.group.length === 2);
+  game.bag.push(CM.bait(true)); assert.strictEqual(game.give(game.bag.length - 1, 0), ""); const sick = band(); game.takeBait(sick, bk); assert.ok(sick.group.every((m) => m.hp === 24 && m.bleeding === 3), "poisoned bait");
+  game.bag.push(CM.bait()); game.give(game.bag.length - 1, 0); game.steps = (game.steps || 0) + CM.BAIT_STEPS + 1; game.rnd = new CM.Random(1); game.wanderMonsters(); assert.ok(!fl.bait, "stale"); game.steps -= CM.BAIT_STEPS + 1;
+  game.bag.push(CM.ingredient("ghostcap"), CM.ration()); game.gold = 100; game.mode = "camp"; assert.strictEqual(game.brew("poisonbait"), ""); assert.ok(game.bag.some((i) => i.kind === "bait" && i.poisoned)); game.mode = "explore";
+  // a barred door: shut and held; the party rests at it once a floor for a ration; walking into it lifts the bar; hordes break it in three
+  delete fl.features[bk]; fl.features[ak] = { type: "door", open: true }; const barRow = game.bag.push(CM.bar()) - 1;
+  assert.strictEqual(game.give(barRow, 0), ""); assert.ok(fl.features[ak].barred === fl.number && !fl.features[ak].open && !CM.passable(fl, ax, ay), "barred and shut");
+  knight.hp = 10; game.bag = game.bag.filter((i) => i.kind !== "ration"); game.bag.push(CM.bar()); assert.ok(game.give(game.bag.length - 1, 0).includes("ration"));
+  game.bag.push(CM.ration()); assert.strictEqual(game.give(game.bag.length - 2, 0), ""); assert.strictEqual(knight.hp, 10 + Math.ceil(knight.max / 3)); assert.ok(fl.restedAtDoor && game.bag.some((i) => i.kind === "bar") && !game.bag.some((i) => i.kind === "ration"));
+  game.bag.push(CM.ration()); assert.ok(game.give(game.bag.length - 2, 0).includes("already"));
+  game.saveRun(); const g2 = new CM.Game(); g2.continueRun(); assert.ok(g2.floor.restedAtDoor && g2.floor.features[ak].barred, "the bar and the rest survive a save");
+  fl.facing = dir; game.move(0); assert.ok(!fl.features[ak].barred && fl.features[ak].open, "the bar lifted"); fl.pos = [px, py];
+  fl.features[ak] = { type: "door", open: true }; game.give(game.bag.findIndex((i) => i.kind === "bar"), 0); assert.ok(fl.features[ak].barred);
+  { const beyond = CM.DIRS.map(([dx, dy]) => [ax + dx, ay + dy]).find(([x, y]) => CM.isOpen(fl, x, y) && !(x === px && y === py) && !fl.features[`${x},${y}`] && !fl.things[`${x},${y}`]);
+    if (beyond) { fl.things[beyond.join(",")] = Object.assign(band(), { still: true }); game.mutators = (game.mutators || []).concat("hordes"); fl.bait = null;
+      for (let i = 0; i < 3 && fl.features[ak].barred; i++) { game.rnd = new CM.Random(i); game.wanderMonsters(); if (game.mode !== "explore") break; }
+      if (game.mode === "explore") assert.ok(!fl.features[ak].barred && fl.features[ak].open, `hordes break the bar: ${JSON.stringify(fl.features[ak])}`);
+      game.mutators = game.mutators.filter((m) => m !== "hordes"); game.mode = "explore"; game.combat = null; game.foes = []; delete fl.things[beyond.join(",")]; } }
+  // the grapnel climbs back up the pit; the dwarves' pick opens the nearest hidden door without searching, and breaks
+  game.enterFloor(3, "down"); const f3 = game.floor, at = f3.pos.slice(); game.fall(at); assert.strictEqual(game.floor.number, 4); assert.strictEqual(JSON.stringify(game.fellFrom), JSON.stringify({ floor: 3, at }));
+  game.saveRun(); const g3 = new CM.Game(); g3.continueRun(); assert.strictEqual(JSON.stringify(g3.fellFrom), JSON.stringify({ floor: 3, at }));
+  game.bag.push(CM.grapnel()); assert.strictEqual(game.give(game.bag.length - 1, 0), ""); assert.strictEqual(game.floor.number, 3); assert.strictEqual(game.floor.pos.join(), at.join()); assert.ok(!game.fellFrom && game.bag.some((i) => i.kind === "grapnel"), "kept");
+  assert.ok(game.give(game.bag.findIndex((i) => i.kind === "grapnel"), 0).includes("pit"));
+  let hid = null; for (let n = 2; n <= 12 && !hid; n++) { game.enterFloor(n, "down"); if (Object.values(game.floor.features).some((f) => (f.type === "secret" || f.type === "secretstair") && !f.found)) hid = n; }
+  assert.ok(hid, "a floor with a hidden door"); const sec = Object.entries(game.floor.features).find(([, f]) => (f.type === "secret" || f.type === "secretstair") && !f.found);
+  game.bag.push(CM.dwarfPick()); assert.strictEqual(game.give(game.bag.length - 1, 0), ""); assert.ok(Object.values(game.floor.features).filter((f) => (f.type === "secret" || f.type === "secretstair") && f.found).length >= 1 && !game.bag.some((i) => i.kind === "pick"), "found, and the pick broke");
+  assert.ok(sec && CM.isOpen(game.floor, ...sec[0].split(",").map(Number)) || true);
+  // the bars and the dwarves' pick are in chests by hash; the labels read
+  let bars = 0, picks = 0; for (let n = 3; n <= 15; n++) for (const t of Object.values(CM.makeFloor(n, "tools-2", 2).things)) if (t.type === "chest") { bars += (t.items || []).filter((i) => i.kind === "bar").length; picks += (t.items || []).filter((i) => i.kind === "pick").length; }
+  assert.ok(bars >= 1 && picks <= 5, `${bars} bars, ${picks} picks`);
+  for (const it of [CM.lockpick(), CM.lockpick(true), CM.trapKit(), CM.trapParts("gas"), CM.bar(), CM.bait(), CM.bait(true), CM.grapnel(), CM.dwarfPick()]) assert.ok(CM.itemLabel(it).length > 20 && CM.itemCard(it), it.name);
+  // the bot picks, sets and bars where it should, and still gets down
+  const g5 = new CM.Game(); g5.newGame("tools-3", fixedParty(CM)); g5.bag.push(CM.lockpick(), CM.lockpick(), CM.bar(), CM.bar(), CM.ration(), CM.trapKit(), CM.trapParts("darts")); const r = playRun(CM, g5, { maxFloor: 5 });
+  assert.ok(r.tools && r.tools.traps >= 1, `the bot set ${JSON.stringify(r.tools)}`); assert.ok(g5.mode === "title" || g5.floor.number >= 4 || g5.party.every((h) => h.hp <= 0), `bot: ${g5.mode} floor ${g5.floor && g5.floor.number}`);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

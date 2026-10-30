@@ -14,7 +14,11 @@ Object.assign(CM.Game.prototype, {
       const heal = CM.healPotion(depth); if (heal.kind === "greaterheal" && this.asc("nogreater")) { heal.kind = "heal"; heal.name = "Healing Potion"; heal.power = 20 + depth * 3; heal.value = 20; }
       this.stock.push(heal, CM.manaPotion(depth), CM.lesserFeather(),
         { name: "Phoenix Feather", kind: "revive", power: 0, value: 120 }, CM.antidote(), CM.torch(), CM.lantern(), CM.lampOil(), CM.scroll("identify"), CM.scroll("mapping"), CM.scroll("recall"), CM.rope(), CM.ration(), CM.flask("oil"));
+      this.stock.push(CM.lockpick(), CM.lockpick(), CM.bar(), CM.bait());
+      if (depth >= 6 && !this.bag.some((i) => i.kind === "grapnel")) this.stock.push(CM.grapnel());
+      if (depth >= 7 && !this.bag.some((i) => i.kind === "trapkit")) this.stock.push(CM.trapKit());
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
+      if (depth >= 14) this.stock.push(CM.lockpick(true));
       if (depth >= 13 && !this.bag.some((i) => i.kind === "kit")) this.stock.push(CM.fieldKit());
       const house = this.villageLevel("merchant");                       // (the village's merchant's house: what the camps' merchant has learned to carry)
       if (house >= 1 && !this.asc("nogreater")) this.stock.push({ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 });
@@ -249,6 +253,14 @@ Object.assign(CM.Game.prototype, {
     if (["heal", "greaterheal", "mana", "revive", "antidote", "oil"].includes(item.kind)) this.countUse(item.kind);
     if (item.kind === "gem") return "A gem is for the camp's smith: he sets it into gear, for gold.";
     if (item.kind === "boxkey") return `That key is for the strongbox on floor ${item.box}. Walk up to the box and use it.`;
+    if (item.kind === "lockpick") return "A pick is tried on a lock: walk into the locked door, or up to the strongbox, with it in the pack.";
+    if (this.mode !== "explore" && ["trapkit", "trapparts", "bar", "bait", "grapnel", "pick"].includes(item.kind)) return "That is a thing for the dungeon's floors.";
+    if (item.kind === "trapkit") return this.disarmPlate(hero);
+    if (item.kind === "trapparts") return this.setTrap(row, hero);
+    if (item.kind === "bar") return this.barDoor(row, hero);
+    if (item.kind === "bait") return this.dropBait(row, hero);
+    if (item.kind === "grapnel") return this.useGrapnel();
+    if (item.kind === "pick") return this.usePick(row);
     if (item.kind === "ration") {
       this.bag.splice(row, 1); this.countUse("ration");
       this.fed = CM.partyProp(this.party, "spoon") ? -100 : 0;
@@ -400,6 +412,59 @@ Object.assign(CM.Game.prototype, {
     else this.banter("camp");
     this.campTale();
     this.saveRun();
+  },
+
+  // ---- the tools of the floor: a plate disarmed for its parts, a trap set behind the party, a door barred, bait dropped ----
+  // the trap kit: the found plate the party stands on or faces is taken apart for its parts. The Artificer never fails; a
+  // Rogue or a steady hand may (half, and Dexterity), and a failure springs it.
+  disarmPlate(hero) {
+    const fl = this.floor, [x, y] = fl.pos, [dx, dy] = CM.DIRS[fl.facing];
+    const spots = [CM.keyOf(x, y), CM.keyOf(x + dx, y + dy)].filter((k) => { const f = fl.features[k]; return f && f.type === "plate" && f.trap && !f.spent && !f.gate && f.known; });
+    if (!spots.length) return "The kit wants a trap plate you have found: stand on it, or face it.";
+    const k = spots[0], f = fl.features[k], who = this.alive().find((h) => h.cls === "Artificer" || h.second === "Artificer") || this.alive().find((h) => h.cls === "Rogue") || hero;
+    const sure = who.cls === "Artificer" || who.second === "Artificer";
+    this.countUse("trapkit");
+    if (!sure && !this.rnd.chance(CM.clamp(0.5 + CM.mod(this.stat(who, "dex")) * 0.1 + (who.cls === "Rogue" ? 0.2 : 0), 0.1, 0.95))) {
+      f.spent = true; this.sound("trap"); this.say(`${who.name} has the plate half up when it goes: ${CM.TRAPS[f.trap]}!`); this.springTrap(f.trap, k); this.emit("change"); return "";
+    }
+    const parts = CM.trapParts(f.trap); f.spent = true; f.disarmed = true; this.bag.push(parts);
+    this.sound("lever"); this.say(`${who.name} lifts the plate and takes the works out of it: ${parts.name} (${CM.TRAPS[f.trap]}).`); this.saveRun(); this.emit("change");
+    return "";
+  },
+  // the parts, set: on the open square behind the party, with a kit in the pack; a band that walks onto it takes it
+  setTrap(row, hero) {
+    if (!this.bag.some((i) => i.kind === "trapkit")) return "Setting a trap takes a trap kit, and there is none in the pack.";
+    const fl = this.floor, [x, y] = fl.pos, [dx, dy] = CM.DIRS[fl.facing], bx = x - dx, by = y - dy, k = CM.keyOf(bx, by);
+    if (!CM.passable(fl, bx, by) || fl.features[k] || fl.things[k]) return "The square behind the party must be open floor, with nothing on it.";
+    const parts = this.bag[row]; this.bag.splice(row, 1);
+    fl.features[k] = { type: "plate", trap: parts.trap, set: true, known: true, spent: false, byParty: true };
+    this.countUse("settrap"); this.sound("lever"); this.say(`${hero.name} sets ${CM.TRAPS[parts.trap]} under a loose flag behind the party. Mind the step.`); this.dirty = true; this.saveRun(); this.emit("change");
+    return "";
+  },
+  // a bar: the open door beside the party is shut and held for the floor (wanderers don't pass; hungry hordes break it in
+  // three turns); at a door already barred, the bar is kept and the party rests there instead
+  barDoor(row, hero) {
+    const fl = this.floor, [x, y] = fl.pos;
+    const here = fl.features[CM.keyOf(x, y)]; if (here && here.type === "door") return "Step out of the doorway first: a bar goes across a door, not a party.";
+    const doors = CM.DIRS.map(([dx, dy]) => CM.keyOf(x + dx, y + dy)).filter((k) => fl.features[k] && fl.features[k].type === "door" && fl.features[k].riddle === undefined);
+    if (!doors.length) return "A bar wants a door beside the party.";
+    const barredHere = doors.find((k) => fl.features[k].barred);
+    if (barredHere) return this.restAtDoor(fl.features[barredHere]);
+    const k = doors.find((d) => fl.features[d].open) || doors[0], f = fl.features[k];
+    if (fl.things[k]) return "Something stands in the doorway.";
+    this.bag.splice(row, 1); f.open = false; f.locked = false; f.barred = fl.number; f.hits = 0;
+    this.countUse("bar"); this.sound("door"); this.say(`${hero.name} swings the door to and drops the bar across it. Nothing comes through that way tonight${this.has("hordes") ? " - unless it is hungry enough" : ""}. (Use another bar here to rest against it.)`);
+    this.dirty = true; this.saveRun(); this.emit("change");
+    return "";
+  },
+  // bait: dropped where the party stands; the nearest wanderers come to it for ten steps and stop to eat
+  dropBait(row, hero) {
+    const fl = this.floor, k = CM.keyOf(...fl.pos);
+    if (fl.bait) return "There is bait down already. Walk away from it.";
+    const it = this.bag[row]; this.bag.splice(row, 1);
+    fl.bait = { at: k, until: (this.steps || 0) + CM.BAIT_STEPS, poisoned: Boolean(it.poisoned) };
+    this.countUse("bait"); this.say(`${hero.name} drops the ${it.poisoned ? "poisoned ration" : "ration"} on the flags and the party moves off. Something has smelt it already.`); this.saveRun(); this.emit("change");
+    return "";
   },
 
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
@@ -811,6 +876,7 @@ Object.assign(CM.Game.prototype, {
     if (r.makes === "greaterheal") { made = { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + fl * 3), value: 60 }; this.bag.push(made); }
     else if (r.makes.startsWith("oil:")) { made = CM.oil(r.makes.slice(4)); this.bag.push(made); }
     else if (r.makes === "bomb") { made = CM.bomb(); this.bag.push(made); }
+    else if (r.makes === "bait:poison") { made = CM.bait(true); this.bag.push(made); }
     else if (r.makes === "antidote2") { this.bag.push(CM.antidote(), CM.antidote()); made = { name: "two Antidotes" }; }
     else if (r.makes === "ration3") { this.bag.push(CM.ration(), CM.ration(), CM.ration()); made = { name: "three rations" }; }
     else if (r.makes.startsWith("flask:")) { made = CM.flask(r.makes.slice(6)); this.bag.push(made); }

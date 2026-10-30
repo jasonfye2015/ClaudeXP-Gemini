@@ -188,7 +188,7 @@ Size: M.
 
 Size: M.
 
-## Phase 6 - Tools, traps, locks and doors - v4.7
+## Phase 6 - Tools, traps, locks and doors - v4.7 - DONE
 
 - **Locks**: a *lockpick* (consumable; anyone may try at a third of the Rogue's chance, and a pick breaks on a
   miss); locks gain *grades* (a common lock, an iron lock a Rogue of level 4, a dwarven lock the Key or a master
