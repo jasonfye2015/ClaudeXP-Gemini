@@ -11,8 +11,9 @@ phases, each shippable, each with tests, each a version (v3.1 ... v3.9, and v4.0
 again pays for the rest.
 
 **Status: shipped.** Phases 0-8 landed as v3.1 through v3.8 and Phase 4 as v4.0, one version a phase, each with
-its tests and a README section. The word budget below was met at about 20,000 words (node tools/words.js counts
-them); the rest of the plan's deferrals are named in the README (the strings still in the code move to 12-text.js
+its tests and a README section. The word budget below was not spent in full: node tools/words.js counts about
+11,600 words of story (every telling), with the Other Dream's table and the Root's addresses on top of that -
+roughly half the 25,000 planned, kept short on purpose, a screen at a time; the rest of the plan's deferrals are named in the README (the strings still in the code move to 12-text.js
 as they are touched; the sim's story report measures the bot, not a reader).
 
 A word budget first, because story work sprawls: the game holds about **6,000 words of lore** today (fifty carvings,
