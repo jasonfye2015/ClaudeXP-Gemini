@@ -673,11 +673,16 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---- the frame loop ----
   let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0, lastAutoStep = 0;
+  // what a frame costs: frames and the time spent in this function (the JavaScript's share), since CM.perf.reset();
+  // CM.perf.hold keeps the step-down still while something is measured
+  CM.perf = { frames: 0, cpu: 0, since: performance.now(), hold: false, reset() { this.frames = 0; this.cpu = 0; this.since = performance.now(); },
+    read() { const s = (performance.now() - this.since) / 1000; return { fps: s > 0 ? Math.round(this.frames / s * 10) / 10 : 0, cpuMs: this.frames ? Math.round(this.cpu / this.frames * 100) / 100 : 0, frames: this.frames, scale: renderer.scale || 1, detail: CM.DETAIL_ORDER[detailNow()] }; } };
   function frame(now) {
+    const t0 = performance.now();
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
     if (renderer.ok) {
-      if (game.mode !== "title" && document.visibilityState !== "hidden") autoScale(dt);
+      if (game.mode !== "title" && document.visibilityState !== "hidden" && !CM.perf.hold) autoScale(dt);
       renderer.resize();
       if (ui.splashOn) { const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []; if (pads.some((p) => p.buttons.some((b) => b.pressed))) ui.leaveSplash(); }   // (a pad button goes on from the title card)
       if (game.mode === "title") {
@@ -715,7 +720,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       if (game.mode === "title") renderer.frame(dt);
     }
-    frames++; fpsTime += dt;
+    frames++; fpsTime += dt; CM.perf.frames++; CM.perf.cpu += performance.now() - t0;
     if (fpsTime >= 0.5) { fps = Math.round(frames / fpsTime); frames = 0; fpsTime = 0; ui.$("#view .fps").textContent = `${fps} fps - v${CM.version} ${CM.built}`; }
     requestAnimationFrame(frame);
   }

@@ -243,7 +243,7 @@ file, since the drawing and window files are not loaded by the Node tests.
 - **Tests**: weather particles only in the weather; nothing under reduced motion; the particle count stays within
   Detail's budget.
 
-## Phase 8 - Around the update - v9.0 (small)
+## Phase 8 - Around the update - v9.0 (small) - DONE
 
 - **Performance**: the smoke test measures frames per second on the land by day at High, on a dungeon floor with ten
   torches in view, and in a fight with a fireball; the numbers go in this plan, and the automatic step-down is tuned so
@@ -251,6 +251,25 @@ file, since the drawing and window files are not loaded by the Node tests.
 - **The file's size**: the new photographs and atlases are budgeted (about 1.5 MB more); props share layers.
 - **Docs**: the README's section, the Timeline's Help and Manual, the Manual's screenshots retaken.
 - **Tests**: all of the above; `npm test`; the Timeline's five.
+
+As measured (v9.0, `tools/perf.js` in a Qt WebEngine window 1180 by 800 on a desktop graphics card, three seconds a
+scene, the step-down held still):
+
+| Look | Detail | Land by day | Room of torches (12 lights) | Fight with fireballs | Script a frame |
+|---|---|---|---|---|---|
+| Pixel | High | 60 fps | 60 fps | 60 fps | 1.2 - 1.6 ms |
+| Pixel | Medium | 60 fps | 60 fps | 60 fps | 1.1 - 1.4 ms |
+| Stone | High | 60 fps | 60 fps | 60 fps | 1.3 - 1.5 ms |
+| Stone | Medium | 60 fps | 60 fps | 60 fps | 1.2 - 1.3 ms |
+
+Sixty is the screen's own rate, so these say the view keeps up rather than how much room is left. A first pass in
+Stone once ran 31 to 41 frames while the machine was busy, and 60 on the next pass. Going onto the land in Stone
+uploads its 45 pictures once (about half a second); a band below uploads about ten. The step-down was left as it
+was: two seconds of frames slower than 45 a second steps the Detail down, then the render scale. The smoke test runs
+the same three scenes in software GL in CI, for errors and a frame count, not for speed.
+
+The file: 3.79 MB at v8.0, 4.70 MB at v8.8 - 0.91 MB for the whole update, within the 1.5 MB budget. The packs are
+3.1 MB of it (the Pixel atlas 250 KB, the Stone and surface photographs the rest); props share layers four to one.
 
 ## Phase 9 - The clock, the calendar, the sun and the moon, made visible - v9.1 (medium; added at the player's word)
 
