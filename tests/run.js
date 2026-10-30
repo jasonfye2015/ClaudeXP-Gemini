@@ -1181,9 +1181,10 @@ test("boots and cloaks, quirks at creation, a second calling at twenty", () => {
   let found = 0; for (let f = 1; f <= 50; f++) for (const t of Object.values(CM.makeFloor(f, "boots-1", 2).things)) if (t.type === "chest") for (const it of t.items) if (it.kind === "boots" || it.kind === "cloak") found++;
   assert.ok(found > 5, "generator 2's chests hold them: " + found);
   const party = fixedParty(CM); party[0].quirk = "hardy"; party[1].quirk = "quiet";
+  const con0 = party[0].stats.con;
   const game = new CM.Game(); game.newGame("quirk-1", party);
   const knight = game.party[0], rogue = game.party[1];
-  assert.strictEqual(knight.quirk, "hardy"); assert.strictEqual(knight.stats.con, Math.min(25, party[0].stats.con + 2));
+  assert.strictEqual(knight.quirk, "hardy"); assert.strictEqual(knight.stats.con, Math.min(25, con0 + 2));
   const code = CM.runCode("s", "fair", "dungeon", "pauper", game.party); assert.strictEqual(CM.parseRunCode(code).party[0].quirk, "hardy");
   boots.unknown = false; cloak.unknown = false;
   assert.strictEqual(game.equip(knight, game.bag.push(boots) - 1), "");
