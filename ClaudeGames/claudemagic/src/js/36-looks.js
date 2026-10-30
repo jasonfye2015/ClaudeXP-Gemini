@@ -105,7 +105,7 @@ CM.art.buildPixel = function (theme) {
   add("fx:ring", tileOr("fx.ring", CM.art.fxRing));
   for (let f = 0; f < 3; f++) { add(`torch${f}`, tileOr(`torch${f}`, () => CM.art.torch(f))); add(`water${f}`, tileOr(`water${f}`, () => CM.art.water(f))); }
   const ground = (key, drawn) => (CM.packs.pixel.index[key] ? tiled(key, 2) : CM.art.pixelate(drawn()));              // (the ground and the walls repeat the tile; the trees stand alone)
-  for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key.startsWith("sign") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
+  for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key.startsWith("sign") || key.startsWith("far.") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
   return { layers, index, size: S, crisp: true };
 };
 
@@ -146,6 +146,7 @@ CM.art.buildStone = function (theme) {
   const surface = CM.art.surfaceLayers((key, drawn) => {                   // the surface: photographs where the set has them, the plaster under the drawn timbers, bark on the trunks
     if (key === "solid.house" || key === "solid.door" || key === "solid.shop") return CM.art.packs.stone["solid.plaster"] ? CM.art.facade(key.slice(6), 1, photo("solid.plaster", false, 0, true)) : drawn();
     if (key.startsWith("tree.")) return CM.art.tree(Number(key.slice(5)), CM.art.packs.stone["solid.bark"] || null);
+    if ((key === "ground.litter" || key === "ground.needles") && CM.art.packs.stone[key]) return CM.art.footShade(photo(key, false, 0, true));   // (the photograph, with the trunk's shade)
     if (key === "solid.roof" && CM.art.packs.stone[key]) { const c = photo(key, false, 0, true), q = c.getContext("2d"); q.fillStyle = "rgba(255,200,150,0.22)"; q.fillRect(0, 0, S, S); return c; }   // (slate, warmed a little)
     return CM.art.packs.stone[key] ? photo(key, false, 0, true) : drawn();
   });

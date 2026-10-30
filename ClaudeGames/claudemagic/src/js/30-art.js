@@ -1063,6 +1063,12 @@ CM.art.ground = function (kind, seed = 1) {
       else { p.fillRect(x + 2, y + 2, w - 4, w - 4); }
     }
     speckle(p, rnd, S, S, 900, rgb(base, 1.3), 0.3, 2);
+  } else if (kind === "litter" || kind === "needles") {
+    const base = kind === "litter" ? [96, 74, 44] : [92, 62, 40];
+    p.fillStyle = rgb(base); p.fillRect(0, 0, S, S);
+    if (kind === "litter") for (let i = 0; i < 320; i++) { const k = 0.7 + rnd.next() * 0.7; p.fillStyle = `rgba(${Math.round(150 * k)},${Math.round(100 * k)},${Math.round(40 * k)},0.85)`; p.beginPath(); p.ellipse(rnd.next() * S, rnd.next() * S, 4 + rnd.next() * 5, 2 + rnd.next() * 3, rnd.next() * 3, 0, Math.PI * 2); p.fill(); }
+    else { p.strokeStyle = rgb(base, 1.4, 0.8); p.lineWidth = 1.5; for (let i = 0; i < 700; i++) { const x = rnd.next() * S, y = rnd.next() * S, a = rnd.next() * Math.PI; p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); p.stroke(); } }
+    CM.art.footShade(c);
   } else if (kind === "planks") {
     const base = [120, 88, 56];
     p.fillStyle = rgb(base, 0.6); p.fillRect(0, 0, S, S);
@@ -1186,6 +1192,37 @@ CM.art.moon = function (phase = 4) {                                            
   return c;
 };
 
+
+// the ground under a tree: needles or leaf litter, darker at the middle where the trunk's shade falls
+CM.art.footShade = function (canvas) {
+  const p = canvas.getContext("2d"), S = canvas.width, g = p.createRadialGradient(S / 2, S / 2, S * 0.05, S / 2, S / 2, S * 0.62);
+  g.addColorStop(0, "rgba(0,0,0,0.55)"); g.addColorStop(0.55, "rgba(0,0,0,0.25)"); g.addColorStop(1, "rgba(0,0,0,0)");
+  p.fillStyle = g; p.fillRect(0, 0, S, S);
+  return canvas;
+};
+// the far ring: a tree-line against the sky, and the town's hill with its wall, roofs and the keep's stump
+CM.art.farTrees = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed("far:trees"));
+  p.fillStyle = "#2A4428";
+  p.fillRect(0, S * 0.72, S, S * 0.28);
+  for (let i = 0; i < 26; i++) {
+    const x = rnd.next() * S, r = S * (0.05 + rnd.next() * 0.06), top = S * (0.32 + rnd.next() * 0.3);
+    if (rnd.chance(0.35)) { p.beginPath(); p.moveTo(x, top - r); p.lineTo(x + r * 0.9, S * 0.8); p.lineTo(x - r * 0.9, S * 0.8); p.closePath(); p.fill(); }
+    else { p.beginPath(); p.arc(x, top + r, r * 1.2, 0, Math.PI * 2); p.fill(); p.fillRect(x - r * 1.2, top + r, r * 2.4, S); }
+  }
+  return c;
+};
+CM.art.farHill = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  p.fillStyle = "#3A4A34";
+  p.beginPath(); p.moveTo(0, S); p.lineTo(0, S * 0.7); p.quadraticCurveTo(S * 0.5, S * 0.32, S, S * 0.7); p.lineTo(S, S); p.closePath(); p.fill();
+  p.fillStyle = "#6A665E"; p.fillRect(S * 0.18, S * 0.46, S * 0.64, S * 0.1);                          // the wall
+  for (let x = S * 0.18; x < S * 0.82; x += S * 0.05) p.fillRect(x, S * 0.43, S * 0.025, S * 0.04);   // its crenels
+  p.fillStyle = "#5A3A2A";
+  for (const [x, w] of [[0.26, 0.09], [0.37, 0.07], [0.5, 0.1], [0.63, 0.08]]) { p.beginPath(); p.moveTo(S * x, S * 0.46); p.lineTo(S * (x + w / 2), S * 0.36); p.lineTo(S * (x + w), S * 0.46); p.closePath(); p.fill(); }
+  p.fillStyle = "#6A665E"; p.fillRect(S * 0.72, S * 0.3, S * 0.06, S * 0.16);                         // the keep's stump
+  return c;
+};
 // a signpost: a post with two boards; and the signs over the doors: a board with the house's mark
 CM.art.signpost = function () {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
@@ -1242,6 +1279,8 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());
   for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v));
   out.canopy = use("canopy", () => CM.art.canopy());
+  out["far:trees"] = use("far.trees", () => CM.art.farTrees());
+  out["far:hill"] = use("far.hill", () => CM.art.farHill());
   out.signpost = use("signpost", () => CM.art.signpost());
   out.cross = use("cross", () => CM.art.cross());
   for (const id of Object.keys(CM.TOWN_PLOTS || {})) out[`sign:${id}`] = use(`sign.${id}`, () => CM.art.sign(id));
