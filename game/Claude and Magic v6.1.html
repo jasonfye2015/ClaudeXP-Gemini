@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v6.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v6.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -173,6 +173,13 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #view .vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px 30px rgba(0,0,0,0.55); }
 #view .compass { position: absolute; top: 6px; left: 0; right: 0; text-align: center; font: bold 15px var(--serif); color: #E8D8A0; text-shadow: 0 1px 2px #000, 0 0 8px rgba(0,0,0,0.8); pointer-events: none; }
+#view .sky { position: absolute; top: 4px; right: 10px; width: 120px; height: 52px; opacity: 0.9; cursor: pointer; }
+#view .sky svg { width: 120px; height: 40px; display: block; }
+#view .sky .arc { fill: none; stroke: rgba(232,216,160,0.45); stroke-width: 1; stroke-dasharray: 2 3; }
+#view .sky .sun { fill: #F6D36A; filter: drop-shadow(0 0 3px #F6D36A); }
+#view .sky .moon .disc { fill: #E8ECF4; } #view .sky .moon .shade { fill: #1A1C28; opacity: 0.92; }
+#view .sky .hour { display: block; text-align: center; font: 11px var(--serif); color: #E8D8A0; text-shadow: 0 1px 2px #000; margin-top: -4px; }
+#view .sky.underground { opacity: 0.55; }
 #view .fps { position: absolute; top: 6px; right: 8px; font: 11px var(--mono); color: #9F9; text-shadow: 0 1px 1px #000; display: none; }
 #view .fps.on { display: block; }
 #view .hint { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font: 14px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000; pointer-events: none; }
@@ -430,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "6.0", built: "2026-10-30" };
+const CM = window.CM = { version: "6.1", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -4277,6 +4284,30 @@ CM.plotLevel = (game, id) => { const P = CM.TOWN_PLOTS[id]; return P && P.villag
 CM.isTown = (fl) => Boolean(fl && fl.number === 0);
 CM.houseStage = (level, most) => (level <= 0 ? 0 : most <= 1 ? 4 : Math.max(1, Math.min(4, Math.ceil(level * 4 / most))));   // a building's drawn stage (1 a frame, 2 a roof, 3 a sign, 4 a lit window), by its level against its most
 
+// ---- 24-clock.js ----
+"use strict";
+// The clock is the game's, not the wall's: a step is a minute, a stair an hour, a round of a fight a minute, and a
+// rest (the camp's, the hearth's) sleeps until the next dawn. A run begins at six in the morning. The hour is saved
+// with the run and plays back the same in a film. The moon turns on a twenty-nine day month from the run's first day.
+// What the hour does happens above ground (the town's lanterns, the townsfolk indoors) and on the first floors (a full
+// moon: the undead a tenth tougher on floors 1 to 5; a new moon: a lock a tenth easier, a night ambush a little likelier).
+CM.CLOCK = { start: 6 * 60, day: 24 * 60, stair: 60, moon: 29 };
+CM.clockOf = (game) => (game && game.clock) || 0;
+CM.minuteOf = (game) => (CM.CLOCK.start + CM.clockOf(game)) % CM.CLOCK.day;
+CM.hourOf = (game) => CM.minuteOf(game) / 60;
+CM.dayOf = (game) => Math.floor((CM.CLOCK.start + CM.clockOf(game)) / CM.CLOCK.day);   // (the run's day, from 0)
+CM.isNight = (game) => { const h = CM.hourOf(game); return h >= 21 || h < 5; };
+CM.hourWord = (h) => (h >= 21 || h < 1 ? "night" : h < 5 ? "the small hours" : h < 7 ? "dawn" : h < 11 ? "morning" : h < 13 ? "noon" : h < 17 ? "afternoon" : h < 19 ? "dusk" : "evening");
+CM.MOON_WORDS = ["a new moon", "a waxing crescent", "the first quarter", "a waxing gibbous", "a full moon", "a waning gibbous", "the last quarter", "a waning crescent"];
+CM.moonPhase = (game) => Math.round(((CM.dayOf(game) % CM.CLOCK.moon) / CM.CLOCK.moon) * 8) % 8;   // 0 new .. 4 full (the fifteenth day)
+CM.moonWord = (game) => CM.MOON_WORDS[CM.moonPhase(game)];
+CM.fullMoon = (game) => CM.moonPhase(game) === 4;
+CM.newMoon = (game) => CM.moonPhase(game) === 0;
+CM.clockWords = (game) => { const m = CM.minuteOf(game), h = Math.floor(m / 60), mm = m % 60; return `${CM.hourWord(CM.hourOf(game))} (${h}:${mm < 10 ? "0" : ""}${mm}), day ${CM.dayOf(game) + 1} of the run, ${CM.moonWord(game)}`; };
+// the sun's and the moon's places on the sky bar's arc: 0 is the left horizon, 1 the right; below the horizon is null
+CM.skyPlaces = (game) => { const h = CM.hourOf(game), sun = (h - 6) / 12, moon = ((h + 12) % 24 - 6) / 12; return { sun: sun >= 0 && sun <= 1 ? sun : null, moon: moon >= 0 && moon <= 1 ? moon : null, phase: CM.moonPhase(game) }; };
+CM.townNight = (hour) => (hour === undefined ? false : hour >= 21 || hour < 5);   // (kept for the title screen's lanterns: the wall clock)
+
 // ---- 25-saves.js ----
 "use strict";
 // Saving, the small way: a floor is CM.makeFloor(number, seed) plus what the party did to it. The run keeps only
@@ -7049,7 +7080,7 @@ CM.Game = class {
       tally: this.tally || this.freshTally(), journal: this.journal || [], story: this.story || { read: {} }, rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
-      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0,
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), clock: this.clock || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0,
       morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [] };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
@@ -7098,7 +7129,7 @@ CM.Game = class {
     this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.formation = CM.FORMATIONS[d.formation] ? d.formation : "line";
     this.ascension = d.ascension || 0; this.iron = Boolean(d.iron); this.ironAllow = false;
-    this.awakened = Boolean(d.awakened); this.dream = Boolean(d.dream); this.rootPending = Boolean(d.rootPending); this.behind = d.behind || 0; this.startedInTown = Boolean(d.startedInTown); this.fellFrom = d.fellFrom || null; this.orders = d.orders || []; this.bounty = d.bounty || null; this.blessedUntil = d.blessedUntil || 0; this.rumourBox = d.rumourBox || 0;
+    this.awakened = Boolean(d.awakened); this.dream = Boolean(d.dream); this.rootPending = Boolean(d.rootPending); this.behind = d.behind || 0; this.startedInTown = Boolean(d.startedInTown); this.clock = d.clock || 0; this.fellFrom = d.fellFrom || null; this.orders = d.orders || []; this.bounty = d.bounty || null; this.blessedUntil = d.blessedUntil || 0; this.rumourBox = d.rumourBox || 0;
     this.morale = d.morale === undefined ? CM.MORALE.start : d.morale; this.fed = d.fed || 0; this.trail = d.trail || [];
     this.applyBonds();
     this.messages = [];
@@ -7166,7 +7197,7 @@ CM.Game = class {
     if (this.kit === "scholar") { for (const k of CM.LORE_KEYS.slice(0, 5)) this.markRead(k); const ids = Object.keys(CM.TOMES); this.bag.push(CM.tome(ids[CM.hashSeed(`${this.seed}:scholar`) % ids.length])); }
     else if (this.kit === "abyss") { this.gold += 150; this.bag.push(CM.rope(), CM.gem("diamond"), CM.scroll("mapping")); for (const h of this.party) { h.level = 3; h.pending = 1; CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }
     for (const h of this.party) { const t = this.trainerFor(h.cls); if (t && CM.BOONS[t.boon] && !CM.BOONS[t.boon].stat && !(h.boons || []).includes(t.boon)) { h.boons = (h.boons || []).concat(t.boon); CM.recompute(h); h.hp = h.max; } else if (t && CM.BOONS[t.boon] && CM.BOONS[t.boon].stat) { h.stats[CM.BOONS[t.boon].stat] = Math.min(25, h.stats[CM.BOONS[t.boon].stat] + 2); CM.recompute(h); h.hp = h.max; h.mp = h.maxmp; } }   // (the guildhall's trainers)
-    this.retiredThisRun = false;
+    this.retiredThisRun = false; this.clock = 0;                          // (dawn, six in the morning)
     const town = (opts || {}).town !== undefined ? Boolean((opts || {}).town) : !this.settings.skipWalk;   // (a run begins at the party's door, or at the shaft: Settings)
     this.startedInTown = town;
     this.enterFloor(town ? 0 : 1, "down");                                // (the town's own start is the party's door, facing down the lane)
@@ -7194,7 +7225,7 @@ CM.Game = class {
   enterFloor(number, how = "down", at = null) {
     const fresh = !this.floors[number] && !this.deltas[number];
     const fl = this.floorAt(number);
-    if (fl !== this.floor) { this.leaveFloor(); this.stock = null; this.recruits = null; }   // (a merchant's table and a tavern's bench belong to where they are)
+    if (fl !== this.floor) { this.leaveFloor(); this.stock = null; this.recruits = null; if (this.floor && number % 1 === 0 && this.floor.number % 1 === 0) this.clock = (this.clock || 0) + CM.CLOCK.stair * Math.max(1, Math.abs(number - this.floor.number)); }   // (a merchant's table and a tavern's bench belong to where they are; a stair is an hour)
     this.floor = fl;
     if (this.songEpic !== number) { this.song = 0; this.songEpic = 0; }  // (a song that lasts the floor ends with it)
     if (how === "down") {
@@ -7375,6 +7406,7 @@ Object.assign(CM.Game.prototype, {
       return false;
     }
     fl.pos = [x, y];
+    this.clock = (this.clock || 0) + 1;                                  // (a step is a minute)
     this.sound("step");
     this.burn();
     { const over = this.overweight(); if (over > 1 && (this.steps || 0) % 2 === 0) { this.burn(); this.fed = (this.fed || 0) + 1; if (!fl.saidHeavy) { fl.saidHeavy = true; this.say("The pack drags: the torch burns faster for it, and the party is hungrier sooner. Something could be left."); } } }
@@ -7581,7 +7613,7 @@ Object.assign(CM.Game.prototype, {
 
   // how far the party can see, as a share of the depth's reach
   lightFactor() {
-    if (this.floor && this.floor.number === 0) return CM.townNight() ? 0.8 : 1.3;   // (daylight, or the lanterns)
+    if (this.floor && this.floor.number === 0) return CM.isNight(this) ? 0.8 : 1.3;   // (daylight, or the lanterns)
     const l = this.light, spell = this.spellLight > 0;
     if (this.inDark()) return spell ? 0.7 : l.kind === "lantern" ? 0.45 : 0.25;
     let f = l.kind === "lantern" ? 1.15 : l.kind === "glow" ? 0.6 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
@@ -7919,7 +7951,7 @@ Object.assign(CM.Game.prototype, {
     if (relic) { this.sound("unlock"); this.say(`${CM.itemName(relic)} is held to ${G.name}, and the lock forgets itself.`); return ""; }
     const rogue = this.alive().find((h) => h.cls === "Rogue" && h.level >= G.rogue && this.canAct(h));
     const dexter = this.alive().filter((h) => this.canAct(h)).sort((a, b) => this.stat(b, "dex") - this.stat(a, "dex"))[0];
-    const chance = (h) => CM.clamp(0.5 + CM.mod(this.stat(h, "dex")) * 0.1, 0.1, 0.95);
+    const chance = (h) => CM.clamp(0.5 + CM.mod(this.stat(h, "dex")) * 0.1 + (CM.newMoon(this) ? 0.1 : 0), 0.1, 0.95);   // (a new moon: dark work goes better)
     if (rogue) {
       if (!this.rnd.chance(chance(rogue))) return `${rogue.name} works at ${G.name}... it won't give. Not yet.`;
       this.sound("unlock"); this.say(`${rogue.name} picks ${G.name}, and the ${what} gives.`); return "";
@@ -8375,7 +8407,7 @@ Object.assign(CM.Game.prototype, {
     const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
     if (ratproof) wary = true;
     for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
-    if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance(loud ? 0.65 : 0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
+    if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance((loud ? 0.65 : 0.5) + (CM.newMoon(this) && CM.isNight(this) && this.floor && this.floor.number <= 5 ? 0.1 : 0))) {   // (a moonless night near the surface: they come quieter)   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
@@ -8484,6 +8516,7 @@ Object.assign(CM.Game.prototype, {
   // the round's end: poison bites, ailments run their course, trolls knit
   endRound() {
     const c = this.combat;
+    this.clock = (this.clock || 0) + 1;                                  // (a round is a minute)
     for (const h of this.alive()) {
       const st = h.status || {};
       if (st.poison) {
@@ -10320,6 +10353,7 @@ Object.assign(CM.Game.prototype, {
     if (this.gold < bed) { this.say(`The merchant wants ${bed} gold for a bedroll by the fire.`); return; }
     this.logAct("rest");
     this.gold -= bed; this.spend("rest", bed);
+    this.sleepTillDawn();
     for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.fed = 0; if ((this.morale || 0) < 80) this.morale = 80;
     this.sound("heal");
@@ -10533,6 +10567,8 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
 
+  // the night passes: the clock goes to the next dawn (six), a full day if it is dawn already
+  sleepTillDawn() { const m = CM.minuteOf(this), to = m < CM.CLOCK.start ? CM.CLOCK.start - m : CM.CLOCK.day - m + CM.CLOCK.start; this.clock = (this.clock || 0) + to; return to; },
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
     if (service === "wounds") return this.templeWounds();
@@ -11654,6 +11690,7 @@ Object.assign(CM.Game.prototype, {
     if (this.asc("keenblades")) atk *= 1.1;
     if (this.asc("thickskins")) hp *= 1.1;
     if (this.awakened || this.dream) { hp *= CM.AWAKENED.hp; atk *= CM.AWAKENED.atk; }
+    if (m.undead && this.floor && this.floor.number >= 1 && this.floor.number <= 5 && CM.fullMoon(this)) hp *= 1.1;   // (a full moon: the dead near the surface are a tenth harder to put down)
     m.max = Math.max(1, Math.round(m.max * hp));
     m.hp = Math.max(1, Math.round(m.hp * hp));
     m.atk = Math.max(1, Math.round(m.atk * atk));
@@ -12226,7 +12263,7 @@ Object.assign(CM.Game.prototype, {
     if (this.homeLevel() < 1) return "The house has no roof yet.";
     if (this.floor.hearthUsed) return "The fire is banked: the party has rested here already. The next run, or the next time home.";
     this.logAct("hearthRest");
-    this.floor.hearthUsed = true;
+    this.floor.hearthUsed = true; this.sleepTillDawn();
     for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.fed = 0; if ((this.morale || 0) < 85) this.morale = 85;
     this.buffs = this.buffs || {}; this.buffs.rested = CM.RESTED_FLOORS;
@@ -12550,7 +12587,6 @@ CM.TOWNSFOLK = [
   { name: "the sexton's widow", who: "a woman in black who sweeps the square", lines: ["\"My husband buried a thousand and was buried by none. His helm is down there in a chest, they tell me, and no one brings it up.\"", "\"The well was dry the morning the shaft was dug. The old ones say it runs again when a crown comes up. I sweep, and I wait.\"", "\"The dwarves' coin was cold. My mother kept one in a box. It is still cold.\"", "\"The Patriarch's order built the first house on this hill. The temple stands on its stones. Mind where you step.\""] },
 ];
 CM.clockHour = () => new Date().getHours();
-CM.townNight = (hour) => { const h = hour === undefined ? CM.clockHour() : hour; return h >= 21 || h < 6; };
 Object.assign(CM.Game.prototype, {
   // ---- the garden ----
   garden() { this.village = this.village || {}; const G = this.village.garden = this.village.garden || { beds: [] }; G.beds = G.beds || []; return G; },
@@ -12594,7 +12630,7 @@ Object.assign(CM.Game.prototype, {
     return out;
   },
   townsfolkLine(who) { const T = CM.TOWNSFOLK[who % CM.TOWNSFOLK.length]; const day = CM.hashSeed(CM.today()) % T.lines.length; return T.lines[(day + who) % T.lines.length]; },
-  talkTownsfolk(thing) { const T = CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length]; this.emit("talk", { title: T.name, text: this.townsfolkLine(thing.who) }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${this.townsfolkLine(thing.who)}`); },
+  talkTownsfolk(thing) { const T = CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length]; if (CM.isNight(this)) { this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)} has gone in: the shutters are closed, and a lamp moves behind them. It is ${CM.hourWord(CM.hourOf(this))}.`); return; } this.emit("talk", { title: T.name, text: this.townsfolkLine(thing.who) }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${this.townsfolkLine(thing.who)}`); },
 });
 
 // ---- 70-ui.js ----
@@ -12653,7 +12689,7 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, and the moon"><svg viewBox="0 0 120 40"><path class="arc" d="M6 36 Q60 -14 114 36"/><circle class="sun" r="4"/><g class="moon"><circle class="disc" r="3.5"/><circle class="shade" r="3.5"/></g></svg><span class="hour"></span></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div><div class="belt" id="belt" title="The belt: four things to hand (keys 5 to 8). In a fight the first used in a round costs no turn."></div></div>
   </div>
   <div id="party"></div>
@@ -12887,6 +12923,7 @@ CM.UI = class {
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
     game.on("choice", (c) => this.askChoice(c));
+    this.$("#view .sky").addEventListener("click", () => { if (game.mode !== "title") game.say(`It is ${CM.clockWords(game)}.`); });
     game.on("building", (id) => { if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else if (id === "garden" && game.villageLevel("garden") >= 1) this.openGarden(); else if (id === "chronicler" && game.villageLevel("chronicler") >= 1) this.openChronicler(); else this.openBuilding(id); });
     this.$("#btn-library-build").addEventListener("click", () => { this.$("#library-note").textContent = game.build("library") || "The library rises a level."; this.openLibrary(true); });
     this.$("#btn-guild-build").addEventListener("click", () => { this.$("#guild-note").textContent = game.build("guildhall") || "The guildhall rises a level."; this.openGuild(true); });
@@ -13981,12 +14018,23 @@ Object.assign(CM.UI.prototype, {
 // The dungeon screen: the party and the log, the actions, the automap, the HUD over the view, and what the window itself shows of an event.
 Object.assign(CM.UI.prototype, {
   // ---- the dungeon screen ----
+  // the sky bar: the sun and the moon on their arc, by the game's clock; the moon's shape by its phase
+  drawSky() {
+    const g = this.game, sky = this.$("#view .sky"); if (!sky) return;
+    const below = g.floor && g.floor.number >= 1; sky.classList.toggle("underground", Boolean(below));
+    const P = CM.skyPlaces(g), at = (t) => { const x = 6 + t * 108, y = 36 - Math.sin(t * Math.PI) * 25; return [x, y]; };
+    const sun = sky.querySelector(".sun"), moon = sky.querySelector(".moon");
+    if (P.sun !== null) { const [x, y] = at(P.sun); sun.setAttribute("cx", x); sun.setAttribute("cy", y); sun.style.display = ""; } else sun.style.display = "none";
+    if (P.moon !== null) { const [x, y] = at(P.moon); moon.setAttribute("transform", `translate(${x} ${y})`); moon.style.display = ""; const shade = moon.querySelector(".shade"), k = P.phase; shade.setAttribute("cx", k === 4 ? 99 : k === 0 ? 0 : (k < 4 ? -1 : 1) * (k % 4) * 1.6); } else moon.style.display = "none";
+    sky.querySelector(".hour").textContent = `${CM.hourWord(CM.hourOf(g))}${below ? " above" : ""}`;
+  },
   refresh() {
     const g = this.game;
     if (this.screen === "title") { this.refreshTitle(); return; }
     if (this.screen !== "play") return;
     const fl = g.floor;
     if (fl) {
+      this.drawSky();
       this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 ? CM.t("town.compass") : "Floor " + fl.number}`;
       this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? CM.t("town.where", { name: CM.TOWN_THEME.name }) : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
@@ -14926,7 +14974,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
   game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
     if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
-    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.t(CM.townNight() ? "town.card.night" : "town.card")); return; }
+    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.t(CM.isNight(game) ? "town.card.night" : "town.card")); return; }
     const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
     if (!ch) return;
     if ((fl.number - 1) % 5 === 0) ui.titleCard(CM.bandName(game, fl.number), game.dream ? "What Caer Duin might have been." : ch.epigraph);

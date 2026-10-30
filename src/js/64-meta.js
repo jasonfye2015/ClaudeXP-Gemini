@@ -671,6 +671,7 @@ Object.assign(CM.Game.prototype, {
     if (this.asc("keenblades")) atk *= 1.1;
     if (this.asc("thickskins")) hp *= 1.1;
     if (this.awakened || this.dream) { hp *= CM.AWAKENED.hp; atk *= CM.AWAKENED.atk; }
+    if (m.undead && this.floor && this.floor.number >= 1 && this.floor.number <= 5 && CM.fullMoon(this)) hp *= 1.1;   // (a full moon: the dead near the surface are a tenth harder to put down)
     m.max = Math.max(1, Math.round(m.max * hp));
     m.hp = Math.max(1, Math.round(m.hp * hp));
     m.atk = Math.max(1, Math.round(m.atk * atk));

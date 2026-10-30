@@ -39,7 +39,7 @@ goes down the shaft with a pack it made - and comes home by a scroll when the ni
 | The town is dim after nine by the wall clock | A day and a night in the game, the sun and the moon in the HUD, the moon's phases, and what each does to the land, the town and the Deep |
 | The week's seed, the daily | A calendar: four seasons, twelve festivals, the land's weather, and the dungeon's own red-letter days |
 
-## Phase 0 - The clock, the sun and the moon - v6.1
+## Phase 0 - The clock, the sun and the moon - v6.1 - DONE
 
 - **Time passes.** `CM.CLOCK = { minute: 1 step, dayLength: 1440 }`; the run keeps `game.clock` (minutes since the
   run began; a new run begins at dawn, 6:00); a camp's rest or the hearth sleeps until the next dawn; a floor's

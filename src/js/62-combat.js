@@ -60,7 +60,7 @@ Object.assign(CM.Game.prototype, {
     const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
     if (ratproof) wary = true;
     for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
-    if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance(loud ? 0.65 : 0.5)) {   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
+    if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance((loud ? 0.65 : 0.5) + (CM.newMoon(this) && CM.isNight(this) && this.floor && this.floor.number <= 5 ? 0.1 : 0))) {   // (a moonless night near the surface: they come quieter)   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
@@ -169,6 +169,7 @@ Object.assign(CM.Game.prototype, {
   // the round's end: poison bites, ailments run their course, trolls knit
   endRound() {
     const c = this.combat;
+    this.clock = (this.clock || 0) + 1;                                  // (a round is a minute)
     for (const h of this.alive()) {
       const st = h.status || {};
       if (st.poison) {

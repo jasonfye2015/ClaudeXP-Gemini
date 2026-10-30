@@ -65,6 +65,7 @@ Object.assign(CM.Game.prototype, {
       return false;
     }
     fl.pos = [x, y];
+    this.clock = (this.clock || 0) + 1;                                  // (a step is a minute)
     this.sound("step");
     this.burn();
     { const over = this.overweight(); if (over > 1 && (this.steps || 0) % 2 === 0) { this.burn(); this.fed = (this.fed || 0) + 1; if (!fl.saidHeavy) { fl.saidHeavy = true; this.say("The pack drags: the torch burns faster for it, and the party is hungrier sooner. Something could be left."); } } }
@@ -271,7 +272,7 @@ Object.assign(CM.Game.prototype, {
 
   // how far the party can see, as a share of the depth's reach
   lightFactor() {
-    if (this.floor && this.floor.number === 0) return CM.townNight() ? 0.8 : 1.3;   // (daylight, or the lanterns)
+    if (this.floor && this.floor.number === 0) return CM.isNight(this) ? 0.8 : 1.3;   // (daylight, or the lanterns)
     const l = this.light, spell = this.spellLight > 0;
     if (this.inDark()) return spell ? 0.7 : l.kind === "lantern" ? 0.45 : 0.25;
     let f = l.kind === "lantern" ? 1.15 : l.kind === "glow" ? 0.6 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
@@ -609,7 +610,7 @@ Object.assign(CM.Game.prototype, {
     if (relic) { this.sound("unlock"); this.say(`${CM.itemName(relic)} is held to ${G.name}, and the lock forgets itself.`); return ""; }
     const rogue = this.alive().find((h) => h.cls === "Rogue" && h.level >= G.rogue && this.canAct(h));
     const dexter = this.alive().filter((h) => this.canAct(h)).sort((a, b) => this.stat(b, "dex") - this.stat(a, "dex"))[0];
-    const chance = (h) => CM.clamp(0.5 + CM.mod(this.stat(h, "dex")) * 0.1, 0.1, 0.95);
+    const chance = (h) => CM.clamp(0.5 + CM.mod(this.stat(h, "dex")) * 0.1 + (CM.newMoon(this) ? 0.1 : 0), 0.1, 0.95);   // (a new moon: dark work goes better)
     if (rogue) {
       if (!this.rnd.chance(chance(rogue))) return `${rogue.name} works at ${G.name}... it won't give. Not yet.`;
       this.sound("unlock"); this.say(`${rogue.name} picks ${G.name}, and the ${what} gives.`); return "";

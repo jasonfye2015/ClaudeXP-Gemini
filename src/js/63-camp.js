@@ -408,6 +408,7 @@ Object.assign(CM.Game.prototype, {
     if (this.gold < bed) { this.say(`The merchant wants ${bed} gold for a bedroll by the fire.`); return; }
     this.logAct("rest");
     this.gold -= bed; this.spend("rest", bed);
+    this.sleepTillDawn();
     for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.fed = 0; if ((this.morale || 0) < 80) this.morale = 80;
     this.sound("heal");
@@ -621,6 +622,8 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
 
+  // the night passes: the clock goes to the next dawn (six), a full day if it is dawn already
+  sleepTillDawn() { const m = CM.minuteOf(this), to = m < CM.CLOCK.start ? CM.CLOCK.start - m : CM.CLOCK.day - m + CM.CLOCK.start; this.clock = (this.clock || 0) + to; return to; },
   // the camp's temple: ailments cured, a curse lifted (from the party, and from what they wear), stone made flesh - for a price
   temple(service) {
     if (service === "wounds") return this.templeWounds();

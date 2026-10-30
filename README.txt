@@ -1163,6 +1163,20 @@ Around the town (the seventh big update, phase 6 - v6.0)
   (a bot with no village feels none), and the sims to floor 20 on Fair hold the crown rate where v5.0 left it.
   Test: "around the town". The seventh big update is complete: seven phases, v5.2 to v6.0, and 83 tests.
 
+The clock, the sun and the moon (the eighth big update, phase 0 - v6.1)
+  The clock is the game's, not the wall's (src/js/24-clock.js): a step is a minute, a stair an hour, a round of a
+  fight a minute, and a rest - the camp's or the hearth's - sleeps until the next dawn (a whole day if it is dawn
+  already). A run begins at six in the morning; the hour is saved with the run and a film keeps it. CM.hourOf,
+  CM.isNight (nine to five), CM.hourWord (dawn, morning, noon, afternoon, dusk, evening, night, the small hours),
+  CM.dayOf, and a twenty-nine day moon (CM.moonPhase: new at the first day, full at the fifteenth; CM.moonWord).
+  The HUD has a sky bar over the view's corner: the sun and the moon on their arc by the hour, the moon drawn in its
+  phase, the hour in words beneath (and "above" when the party is below ground, where no sky changes anything); a
+  tap says the hour, the day of the run and the moon. What the clock does: the town's lanterns and the townsfolk
+  (indoors by night) go by it now; a new moon makes a lock a tenth easier and a night ambush on the first five floors
+  a little likelier; a full moon makes the undead a tenth tougher on floors 1 to 5 - and nothing below the fifth
+  floor sees the moon. The wall clock keeps only the title screen.
+  Test: "the clock".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

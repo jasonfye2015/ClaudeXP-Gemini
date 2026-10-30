@@ -15,7 +15,6 @@ CM.TOWNSFOLK = [
   { name: "the sexton's widow", who: "a woman in black who sweeps the square", lines: ["\"My husband buried a thousand and was buried by none. His helm is down there in a chest, they tell me, and no one brings it up.\"", "\"The well was dry the morning the shaft was dug. The old ones say it runs again when a crown comes up. I sweep, and I wait.\"", "\"The dwarves' coin was cold. My mother kept one in a box. It is still cold.\"", "\"The Patriarch's order built the first house on this hill. The temple stands on its stones. Mind where you step.\""] },
 ];
 CM.clockHour = () => new Date().getHours();
-CM.townNight = (hour) => { const h = hour === undefined ? CM.clockHour() : hour; return h >= 21 || h < 6; };
 Object.assign(CM.Game.prototype, {
   // ---- the garden ----
   garden() { this.village = this.village || {}; const G = this.village.garden = this.village.garden || { beds: [] }; G.beds = G.beds || []; return G; },
@@ -59,5 +58,5 @@ Object.assign(CM.Game.prototype, {
     return out;
   },
   townsfolkLine(who) { const T = CM.TOWNSFOLK[who % CM.TOWNSFOLK.length]; const day = CM.hashSeed(CM.today()) % T.lines.length; return T.lines[(day + who) % T.lines.length]; },
-  talkTownsfolk(thing) { const T = CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length]; this.emit("talk", { title: T.name, text: this.townsfolkLine(thing.who) }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${this.townsfolkLine(thing.who)}`); },
+  talkTownsfolk(thing) { const T = CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length]; if (CM.isNight(this)) { this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)} has gone in: the shutters are closed, and a lamp moves behind them. It is ${CM.hourWord(CM.hourOf(this))}.`); return; } this.emit("talk", { title: T.name, text: this.townsfolkLine(thing.who) }); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)}: ${this.townsfolkLine(thing.who)}`); },
 });

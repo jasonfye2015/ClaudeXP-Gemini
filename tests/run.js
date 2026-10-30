@@ -2500,7 +2500,7 @@ test("the garden, the chronicler and the square: a bed planted grows by one a ru
   g3.floor.pos = folk[0][0].split(",").map(Number); g3.use(); assert.ok(heard && heard.title === CM.TOWNSFOLK[folk[0][1].who].name && CM.TOWNSFOLK[folk[0][1].who].lines.includes(heard.text), "a line a day");
   // the well: the notice board, and a coin for the town once a visit; night by the clock
   const ren = g3.village.renown || 0; g3.gold = 10; g3.floor.pos = CM.TOWN_AT.well.slice(); g3.use(); assert.ok(heard.title === "The square" && heard.text.includes(CM.weeklySeed())); assert.strictEqual(g3.gold, 9); assert.strictEqual(g3.village.renown, ren + 1); g3.use(); assert.strictEqual(g3.gold, 9, "one coin a visit");
-  assert.strictEqual(g3.lightFactor(), 1.3); const was = CM.clockHour; CM.clockHour = () => 23; assert.strictEqual(g3.lightFactor(), 0.8, "the lanterns"); CM.clockHour = was;
+  assert.strictEqual(g3.lightFactor(), 1.3); const clockWas = g3.clock; g3.clock = 17 * 60; assert.strictEqual(g3.lightFactor(), 0.8, "the lanterns"); g3.clock = clockWas;
   // the chronicler's house holds what the title's boards hold
   assert.ok(Array.isArray(CM.store.get("films", [])) && CM.store.get("films", []).length >= 1, "films to watch at the table"); assert.ok((new CM.Game()).ledger.length >= 6 && (new CM.Game()).fame.length >= 6);
 });
@@ -2545,6 +2545,34 @@ test("around the town: Automatic runs the errands at their doors in order and th
   // the simulator's bot from home
   const g6 = new CM.Game(); g6.newGame("around-town-4", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const r = playRun(CM, g6, { maxFloor: 3 }); assert.ok(g6.floor.number >= 3 || g6.mode === "title", r.log.join("|"));
   const out = execFileSync("node", [path.join(__dirname, "..", "tools", "words.js")], { encoding: "utf8" }); assert.ok(/the town \(CM.TOWN_PLOTS, CM.TOWNSFOLK, CM.VILLAGE\)\s+\d+/.test(out));
+});
+
+test("the clock: a step a minute, a stair an hour, a round a minute, a rest to the next dawn; the hour in words and the sky's places; the moon's month; the lanterns and the townsfolk by the game's clock; the new moon's locks and the full moon's dead; the clock saved and filmed", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("clock-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.strictEqual(g.clock, 0); assert.strictEqual(CM.hourOf(g), 6); assert.strictEqual(CM.hourWord(CM.hourOf(g)), "dawn"); assert.strictEqual(CM.dayOf(g), 0); assert.ok(!CM.isNight(g));
+  for (let i = 0; i < 10; i++) g.move(0); assert.ok(g.clock >= 10, `steps are minutes: ${g.clock}`);
+  const c0 = g.clock; g.enterFloor(1, "down"); assert.strictEqual(g.clock, c0 + CM.CLOCK.stair, "a stair is an hour"); g.enterFloor(3, "down"); assert.strictEqual(g.clock, c0 + CM.CLOCK.stair * 3, "two stairs, two hours");
+  g.foes = [{ name: "Orc", kind: "Orc", hp: 50, max: 50, atk: 1, df: 1, row: "front" }]; g.combat = { foes: g.foes, round: 1, order: [], index: 0 }; g.mode = "combat"; const c1 = g.clock; g.endRound(); assert.strictEqual(g.clock, c1 + 1, "a round is a minute"); g.mode = "explore"; g.combat = null; g.foes = [];
+  g.clock = 15 * 60; assert.strictEqual(CM.hourOf(g), 21); assert.ok(CM.isNight(g)); assert.strictEqual(CM.hourWord(21), "night"); assert.strictEqual(CM.hourWord(3), "the small hours"); assert.strictEqual(CM.hourWord(12), "noon"); assert.strictEqual(CM.hourWord(18), "dusk");
+  const P = CM.skyPlaces(Object.assign({}, g, { clock: 6 * 60 })); assert.ok(Math.abs(P.sun - 0.5) < 0.01 && P.moon === null, "noon: the sun overhead, the moon below");
+  const N = CM.skyPlaces(Object.assign({}, g, { clock: 18 * 60 })); assert.ok(N.sun === null && Math.abs(N.moon - 0.5) < 0.01, "midnight: the moon overhead");
+  // a rest sleeps to the next dawn; a rest at dawn, a whole day
+  g.mode = "camp"; g.gold = 100; g.clock = 15 * 60; g.rest(); assert.strictEqual(CM.hourOf(g), 6); assert.strictEqual(CM.dayOf(g), 1, "the next dawn"); g.rest(); assert.strictEqual(CM.dayOf(g), 2, "at dawn already: a whole day"); g.mode = "explore";
+  // the moon: a month of twenty-nine days; full at the fifteenth; words for each phase
+  g.clock = 0; assert.strictEqual(CM.moonPhase(g), 0); assert.ok(CM.newMoon(g)); g.clock = 14 * CM.CLOCK.day + 60; assert.strictEqual(CM.moonPhase(g), 4); assert.ok(CM.fullMoon(g)); assert.strictEqual(CM.moonWord(g), "a full moon"); g.clock = 29 * CM.CLOCK.day; assert.strictEqual(CM.moonPhase(g), 0, "and round again"); assert.ok(CM.clockWords(g).includes("day 30"));
+  // the lanterns and the townsfolk by the game's clock, not the wall's
+  g.enterFloor(0, "rope", CM.TOWN_AT.home.slice()); g.clock = 0; assert.strictEqual(g.lightFactor(), 1.3); g.clock = 17 * 60; assert.strictEqual(g.lightFactor(), 0.8);
+  const folk = Object.entries(g.floor.things).find(([, t]) => t.type === "villager"); let heard = null; g.on("talk", (t) => { heard = t; }); g.floor.pos = folk[0].split(",").map(Number); g.use(); assert.ok(!heard && g.messages.slice(-1)[0].includes("shutters"), "indoors by night"); g.clock = 2 * 60; g.use(); assert.ok(heard, "and out by day");
+  // the new moon: a lock a tenth easier; the full moon: the undead a tenth tougher on the first floors
+  const g2 = new CM.Game(); g2.newGame("clock-2", fixedParty(CM)); const rogue = g2.party.find((h) => h.cls === "Rogue"); rogue.level = 2; const fl = g2.floor, [px, py] = fl.pos, open = CM.DIRS.map(([dx, dy], i) => [px + dx, py + dy, i]).filter(([x, y]) => CM.isOpen(fl, x, y) && !fl.features[`${x},${y}`] && !fl.things[`${x},${y}`])[0]; const ak = `${open[0]},${open[1]}`; fl.facing = open[2];
+  const rate = (clock) => { let got = 0; for (let i = 0; i < 300; i++) { g2.clock = clock; fl.features[ak] = { type: "door", open: false, locked: true, grade: "common" }; g2.rnd = new CM.Random(CM.hashSeed(`moon:${i}`)); g2.move(0); if (fl.features[ak].open) got++; fl.pos = [px, py]; } return got / 300; };
+  const dark = rate(0), bright = rate(14 * CM.CLOCK.day); assert.ok(dark > bright + 0.03, `the new moon's locks: ${dark} > ${bright}`); delete fl.features[ak];
+  const skel = () => { const m = CM.makeMonster(CM.monsterKind("Skeleton"), 3, new CM.Random(1)); return m; }; g2.clock = 14 * CM.CLOCK.day; const full = g2.tune(skel()); g2.clock = 0; const dim = g2.tune(skel()); assert.ok(full.max > dim.max, `the full moon's dead: ${full.max} > ${dim.max}`);
+  g2.enterFloor(8, "down"); g2.clock = 14 * CM.CLOCK.day; assert.strictEqual(g2.tune(skel()).max, dim.max, "below the fifth floor the moon is not seen");
+  // saved, and filmed
+  g2.clock = 777; g2.saveRun(); const g3 = new CM.Game(); g3.continueRun(); assert.strictEqual(g3.clock, 777);
+  const g4 = new CM.Game(); g4.newGame("clock-3", fixedParty(CM)); playRun(CM, g4, { maxFloor: 3 }); assert.ok(g4.clock > 100); const again = CM.replayRun(g4.replaySpec()); assert.strictEqual(again.clock, g4.clock, "a film keeps the hour");
 });
 
 (async () => {

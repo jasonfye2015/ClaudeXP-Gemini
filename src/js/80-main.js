@@ -109,7 +109,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
   game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
     if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
-    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.t(CM.townNight() ? "town.card.night" : "town.card")); return; }
+    if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.t(CM.isNight(game) ? "town.card.night" : "town.card")); return; }
     const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
     if (!ch) return;
     if ((fl.number - 1) % 5 === 0) ui.titleCard(CM.bandName(game, fl.number), game.dream ? "What Caer Duin might have been." : ch.epigraph);
