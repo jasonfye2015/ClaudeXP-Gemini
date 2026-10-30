@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The clock made visible (v9.1)
+  A dial in the view's top-right corner shows the game's clock at a glance: the sky in the hour's colour (day, dawn,
+  dusk, a starry night), the sun and the moon on their arc over a strip of ground - up from the season's dawn to its
+  dusk, the moon opposite - and beside it the hour in figures and words, the day of the run and the season in its
+  colour, the weather with the next three days' as small icons, a festival in its week, and the moon's face in its
+  phase (glowing when full, ringed when new). Below ground it stays as clear, says "above", and its ground turns to
+  stone. A click on the dial, or K, opens the Calendar: the moon's month as eight faces with tonight's marked, the
+  next full and new moons and what they do, a week of weather ahead (the seed decides it, so it is shown), the four
+  seasons' daylight hours, and the year's twelve festivals with this week's marked. The numbers are CM.dialOf,
+  CM.nextMoon and CM.comingWeather in src/js/24b-calendar.js; the drawing is src/js/73b-clock.js.
+
 The pack's weight, and selling in bulk (v8.7.2)
   Over the line of what the party can carry, the party only walks slower - up to three times as slow at twice the
   line and beyond - and never stops: Explore, Where to?, a click on the map and Automatic all walk at that pace. The
@@ -1446,6 +1457,7 @@ The source
     64-meta.js    the dungeon's people, riddles, paths and boons, achievements, the Hall of Fame, Export / Import
     65-village.js the surface: renown, the buildings, trainers, candles, contracts
     70-ui.js      the window's frame, the dialogs, a hero's sheet, the ending
+    73b-clock.js  the dial in the view's corner and the Calendar
     71-76         the title, the creation screen, the dungeon screen, the fight, the bag, the camp's doors
     80-main.js    wiring, keys, the frame loop
   src\art\pixel\*.png and src\art\stone\*.jpg are the chosen tiles and textures (pack.py --gather puts them there).
@@ -1458,6 +1470,6 @@ Keys
   W/Up forward, S/Down back, A/Left and D/Right turn, Q/E sidestep, Space use (a chest, the ladder or stairs, a
   fountain, an altar, a lever or carving on the wall you face - or search that wall), C cast between fights, I
   inventory, 1-4 a hero's sheet, Tab the automap large (click a square to walk there, right-click for a note), X explore, G
-  Where to? on the surface,
+  Where to? on the surface, K the calendar,
   Esc the menu. In a fight: F fight the chosen foe, C cast or a skill, P an item, D defend, R run, A auto, Tab or 1-9
   or a click to choose the foe, Esc back. Enter or Space closes the ending. F3 shows frames per second.

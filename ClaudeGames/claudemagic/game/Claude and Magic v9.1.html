@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v9.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v9.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -173,13 +173,34 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #view .vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px 30px rgba(0,0,0,0.55); }
 #view .compass { position: absolute; top: 6px; left: 0; right: 0; text-align: center; font: bold 15px var(--serif); color: #E8D8A0; text-shadow: 0 1px 2px #000, 0 0 8px rgba(0,0,0,0.8); pointer-events: none; }
-#view .sky { position: absolute; top: 4px; right: 10px; width: 120px; height: 52px; opacity: 0.9; cursor: pointer; }
-#view .sky svg { width: 120px; height: 40px; display: block; }
-#view .sky .arc { fill: none; stroke: rgba(232,216,160,0.45); stroke-width: 1; stroke-dasharray: 2 3; }
-#view .sky .sun { fill: #F6D36A; filter: drop-shadow(0 0 3px #F6D36A); }
-#view .sky .moon .disc { fill: #E8ECF4; } #view .sky .moon .shade { fill: #1A1C28; opacity: 0.92; }
-#view .sky .hour { display: block; text-align: center; font: 11px var(--serif); color: #E8D8A0; text-shadow: 0 1px 2px #000; margin-top: -4px; }
-#view .sky.underground { opacity: 0.55; }
+#view .sky { position: absolute; top: 8px; right: 10px; display: flex; gap: 8px; align-items: center; padding: 6px 10px 6px 6px; background: rgba(14,10,6,0.66); border: 1px solid rgba(232,200,112,0.45); border-radius: 10px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5); z-index: 3; }
+#view .sky:hover { border-color: rgba(246,211,106,0.9); }
+#view .sky .dial { width: 76px; height: 76px; display: block; flex: 0 0 76px; }
+#view .sky .dial .rim { fill: none; stroke: #C8A860; stroke-width: 2; }
+#view .sky .dial .stars { fill: #F4F2E0; transition: opacity 0.6s; }
+#view .sky .dial .arc { fill: none; stroke: rgba(255,255,255,0.35); stroke-width: 0.8; stroke-dasharray: 2 3; }
+#view .sky .dial .sun .disc { fill: #FFD860; } #view .sky .dial .sun .glow { fill: rgba(255,220,110,0.35); }
+#view .sky .dial .moon .dark { fill: #2A3048; stroke: rgba(232,236,244,0.35); stroke-width: 0.6; } #view .sky .dial .moon .lit { fill: #EEF0F6; }
+#view .sky .dial .ground { fill: #3E5A2C; stroke: #24361A; stroke-width: 1; } #view .sky.night .dial .ground { fill: #1C2A16; }
+#view .sky .dial .ground.stone { fill: #4A443C; stroke: #2A2620; }
+#view .sky .clocktext { display: flex; flex-direction: column; gap: 1px; min-width: 112px; font: 12px var(--serif); color: #E8DCB8; text-shadow: 0 1px 2px #000; line-height: 1.25; }
+#view .sky .row1 { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+#view .sky .time { font: bold 20px var(--serif); color: #F6D36A; letter-spacing: 0.5px; }
+#view .sky .hourword { font-style: italic; color: #F0E6C8; }
+#view .sky .date.spring { color: #A8E0A0; } #view .sky .date.summer { color: #F0D070; } #view .sky .date.autumn { color: #E8A060; } #view .sky .date.winter { color: #C8DCF4; }
+#view .sky .wx { display: flex; align-items: center; gap: 4px; } #view .sky .wx .ahead { margin-left: auto; display: flex; gap: 2px; opacity: 0.8; }
+#view .sky .fest { color: #F6D36A; font-weight: bold; font-size: 11px; }
+#view .sky.underground { background: rgba(14,10,6,0.78); }
+.moonface { display: block; } .moonface .dark { fill: #262A3C; } .moonface .lit { fill: #EEF0F6; } .moonface .edge { fill: none; stroke: rgba(232,236,244,0.55); stroke-width: 0.8; }
+.moonface.full { filter: drop-shadow(0 0 4px rgba(238,240,246,0.8)); } .moonface.new .edge { stroke: #C8A860; stroke-width: 1.2; }
+.calbox { min-width: 560px; } .calnow { display: flex; gap: 12px; align-items: center; margin: 6px 0 10px; } .calnow .caltime { font-size: 20px; color: var(--gold); }
+.mfaces { display: flex; gap: 6px; justify-content: space-between; margin: 4px 0; } .mface { display: flex; flex-direction: column; align-items: center; width: 62px; padding: 4px 2px; border-radius: 6px; text-align: center; }
+.mface small { font-size: 10px; color: var(--dim); } .mface.on { background: rgba(232,200,112,0.18); outline: 1px solid var(--gold); } .mface.on small { color: var(--gold); }
+.wdays { display: flex; gap: 6px; margin: 4px 0 8px; flex-wrap: wrap; } .wday { display: flex; flex-direction: column; align-items: center; width: 64px; padding: 4px; border-radius: 6px; background: rgba(0,0,0,0.25); }
+.wday small { color: var(--dim); font-size: 10px; } .wday span { font-size: 11px; } .wday.on { outline: 1px solid var(--gold); }
+.caltable { width: 100%; border-collapse: collapse; font-size: 12px; } .caltable td { padding: 3px 6px; border-bottom: 1px solid rgba(232,200,112,0.15); vertical-align: top; }
+.caltable tr.on td { background: rgba(232,200,112,0.18); } .caltable tr.month td:first-child { color: var(--gold); } .caltable td small { color: var(--dim); }
+.caltable td.spring { color: #A8E0A0; } .caltable td.summer { color: #F0D070; } .caltable td.autumn { color: #E8A060; } .caltable td.winter { color: #C8DCF4; }
 #view .fps { position: absolute; top: 6px; right: 8px; font: 11px var(--mono); color: #9F9; text-shadow: 0 1px 1px #000; display: none; }
 #view .fps.on { display: block; }
 #view .hint { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font: 14px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000; pointer-events: none; }
@@ -494,6 +515,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 @keyframes spFly { 0% { opacity: 0.1; translate: 0 0; } 50% { opacity: 1; } 100% { opacity: 0.2; translate: 34px -24px; } }
 @media (max-width: 760px) { #splash h1 { font-size: 46px; } #splash .lineup { flex-wrap: wrap; width: 92vw; } #splash .tag { font-size: 15px; } }
 @media (prefers-reduced-motion: reduce) { #splash * { animation-duration: 0.01s !important; animation-iteration-count: 1 !important; } }
+@media (max-width: 640px) { #view .sky { padding: 3px 6px 3px 3px; gap: 4px; } #view .sky .dial { width: 52px; height: 52px; flex-basis: 52px; } #view .sky .clocktext { min-width: 0; font-size: 10px; } #view .sky .time { font-size: 15px; } #view .sky .wx .ahead, #view .sky .fest { display: none !important; } .calbox { min-width: 0; } .mfaces { flex-wrap: wrap; } }
 </style>
 </head>
 <body>
@@ -503,7 +525,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "9.0", built: "2026-10-30" };
+const CM = window.CM = { version: "9.1", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1459,10 +1481,10 @@ CM.ACHIEVEMENTS = {
 CM.titleFor = (achievements) => { const id = Object.keys(CM.ACHIEVEMENTS).find((a) => achievements && achievements[a]); return id ? CM.ACHIEVEMENTS[id].title : ""; };
 // the keys, as the player may set them (Settings > Keys); the arrows always move as well
 CM.DEFAULT_KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", strafeLeft: "KeyQ", strafeRight: "KeyE", use: "Space", inventory: "KeyI",
-  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA", autoPlay: "KeyZ", whereTo: "KeyG" };
+  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA", autoPlay: "KeyZ", whereTo: "KeyG", calendar: "KeyK" };
 CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"], ["right", "turn right"], ["strafeLeft", "sidestep left"], ["strafeRight", "sidestep right"],
   ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
-  ["explore", "walk to the nearest unexplored square (any key stops)"], ["whereTo", "Where to?: on the surface, walk to a door or a place by name"], ["autoPlay", "Automatic: the party plays by itself - on and off (a move key stops it too)"],
+  ["explore", "walk to the nearest unexplored square (any key stops)"], ["whereTo", "Where to?: on the surface, walk to a door or a place by name"], ["calendar", "the calendar: the hour, the moon, the weather ahead and the festivals"], ["autoPlay", "Automatic: the party plays by itself - on and off (a move key stops it too)"],
   ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"], ["auto", "in a fight: the party fights on by itself"]];
 // a gamepad's buttons, by the standard mapping, and what each does unless Settings > Keys says otherwise (the stick and
 // the d-pad - 12 to 15 - always move)
@@ -4720,6 +4742,33 @@ CM.dateWords = (game) => { const f = CM.festival(game); return `${CM.season(game
 // the chronicler's calendar: the year's months, their festivals, and the runs that fell in each (the Hall of Fame's dates)
 CM.MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 CM.calendarOf = (fame) => CM.MONTH_NAMES.map((name, month) => { const id = Object.keys(CM.FESTIVALS).find((k) => CM.FESTIVALS[k].month === month); const runs = (fame || []).filter((e) => e.date && Number(String(e.date).split("/")[0]) - 1 === month); return { month, name, season: CM.seasonOfDate(new Date(2000, month, 15)), festival: id, festivalName: CM.FESTIVALS[id].name, runs: runs.length, crowns: runs.filter((e) => e.won).length }; });
+// The clock made visible (the tenth update, phase 9): what the dial in the view's corner and the Calendar (K) show,
+// as plain numbers. Angles are degrees from straight up, clockwise: -90 the eastern horizon on the left, 90 the western
+// on the right, so a body is above the ground while it is between them. The sun is up from the season's dawn to its
+// dusk (the same hours CM.isNight reads), the moon opposite it. The weather ahead is the seed's, so it can be shown.
+CM.phaseOfDay = (day) => Math.round(((day % CM.CLOCK.moon) / CM.CLOCK.moon) * 8) % 8;
+CM.MOON_DOES = { 0: "a lock is a tenth easier, and a night ambush a little likelier", 4: "the undead on floors 1 to 5 are a tenth tougher" };
+CM.dialOf = (game) => {
+  const h = CM.hourOf(game), [dawn, dusk] = (game && game.season && CM.DAYLIGHT[game.season]) || [5, 21], long = dusk - dawn, up = h >= dawn && h < dusk;
+  const norm = (a) => (((a + 180) % 360) + 360) % 360 - 180;
+  const sun = norm(up ? -90 + (180 * (h - dawn)) / long : 90 + (180 * ((h - dusk + 24) % 24)) / (24 - long));
+  return { hour: h, minute: CM.minuteOf(game), dawn, dusk, night: !up, sun, moon: norm(sun + 180), phase: CM.moonPhase(game),
+    sky: !up ? "night" : h - dawn < 1 ? "dawn" : dusk - h < 1 ? "dusk" : "day", day: CM.dayOf(game), moonDay: (CM.dayOf(game) % CM.CLOCK.moon) + 1 };
+};
+CM.timeFigures = (game) => { const m = CM.minuteOf(game), h = Math.floor(m / 60), mm = m % 60; return `${h}:${mm < 10 ? "0" : ""}${mm}`; };
+// days from today to the next night of a phase (0: tonight), within two of the moon's months
+CM.nextMoon = (game, phase) => { const d0 = CM.dayOf(game); for (let k = 0; k <= CM.CLOCK.moon * 2; k++) if (CM.phaseOfDay(d0 + k) === phase) return k; return null; };
+CM.comingWeather = (game, n = 5) => Array.from({ length: n }, (_, k) => ({ day: CM.dayOf(game) + k, weather: CM.weatherOf(game.seed, CM.dayOf(game) + k, CM.season(game)) }));
+// the lit part of a moon of radius r centred on 0,0, as an SVG path ("" at a new moon): a half disc on the lit side,
+// closed by the terminator, an ellipse as wide as the cosine of the moon's age
+CM.moonPath = (phase, r) => {
+  const p = ((phase % 8) + 8) % 8; if (p === 0) return "";
+  const k = Math.cos((2 * Math.PI * p) / 8), rx = Math.abs(k) * r, f = (n) => Math.round(n * 100) / 100, waxing = p < 4 || p === 4;
+  if (p === 4) return `M0 ${f(-r)}A${f(r)} ${f(r)} 0 1 1 0 ${f(r)}A${f(r)} ${f(r)} 0 1 1 0 ${f(-r)}Z`;
+  const edge = waxing ? `A${f(r)} ${f(r)} 0 0 1 0 ${f(r)}` : `A${f(r)} ${f(r)} 0 0 0 0 ${f(r)}`;
+  const sweep = waxing ? (k > 0 ? 0 : 1) : (k > 0 ? 1 : 0);
+  return `M0 ${f(-r)}${edge}A${f(rx)} ${f(r)} 0 0 ${sweep} 0 ${f(-r)}Z`;
+};
 
 // ---- 25-saves.js ----
 "use strict";
@@ -7956,7 +8005,7 @@ CM.Air = class {
       case "leaf": { const [x, z] = around(); return Object.assign(base, { x, z, y: 2.2 + r() * 0.5, vy: -0.35 - r() * 0.2, swayAmp: 0.5, windy: 0.6, life: 9, size: 0.14 + r() * 0.08, top: 3.2 }); }
       case "firefly": { const [x, z] = around(); return Object.assign(base, { x, z, y: 0.2 + r() * 1.0, vx: (r() - 0.5) * 0.15, vz: (r() - 0.5) * 0.15, swayAmp: 0.3, life: 4 + r() * 4, size: 0.055, glow: 2 }); }
       case "rain": { const [x, z] = around(); return Object.assign(base, { x, z, y: 3.0, y: 2.2 + r() * 0.8, vy: -7 - r() * 2, windy: 0.4, life: 0.6, size: 0.03, h: 0.55, glow: 2, alpha: 0.85, top: 3.2 }); }
-      case "snow": { const [x, z] = around(); return Object.assign(base, { x, z, y: 2.8, y: 1.2 + r() * 1.6, vy: -0.5 - r() * 0.3, swayAmp: 0.35, windy: 0.5, life: 7, size: 0.05 + r() * 0.05, glow: 2, top: 3.2 }); }
+      case "snow": { const [x, z] = around(); return Object.assign(base, { x, z, y: 2.8, y: 1.2 + r() * 1.6, vy: -0.5 - r() * 0.3, swayAmp: 0.35, windy: 0.5, life: 7, size: 0.03 + r() * 0.035, glow: 2, top: 3.2 }); }
       case "cloud": { const a = r() * Math.PI * 2, d = 40 + r() * 30; return Object.assign(base, { x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 22 + r() * 10, vx: 0.6, life: 160, size: 9 + r() * 7, h: 0.45, alpha: 0.85, glow: 2, far: true, top: 60 }); }
       case "bird": { const a = r() * Math.PI * 2, d = 35 + r() * 20, s = 3 + r() * 2; return Object.assign(base, { x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 12 + r() * 8, vx: -Math.sin(a) * s, vz: Math.cos(a) * s, life: 25, size: 0.7, far: true, top: 40, flap: true }); }
       case "smoke": { const ch = (env.chimneys || [])[Math.floor(r() * (env.chimneys || []).length)]; if (!ch) return null; return Object.assign(base, { x: ch[0] + (r() - 0.5) * 0.1, z: ch[1] + (r() - 0.5) * 0.1, y: 2.05, vy: 0.35, windy: 0.4, swayAmp: 0.1, life: 6, size: 0.3, grow: 0.18, alpha: 0.8, top: 6 }); }
@@ -15021,7 +15070,7 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, and the moon"><svg viewBox="0 0 120 40"><path class="arc" d="M6 36 Q60 -14 114 36"/><circle class="sun" r="4"/><g class="moon"><circle class="disc" r="3.5"/><circle class="shade" r="3.5"/></g></svg><span class="hour"></span></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, the day and the moon. Click it, or K, for the calendar."><svg class="dial" viewBox="-40 -40 80 80" aria-hidden="true"><defs><clipPath id="cm-dialclip"><circle r="37"/></clipPath><linearGradient id="cm-dialsky" x1="0" y1="0" x2="0" y2="1"><stop class="skytop" offset="0"/><stop class="skylow" offset="0.55"/></linearGradient></defs><g clip-path="url(#cm-dialclip)"><rect x="-40" y="-40" width="80" height="80" fill="url(#cm-dialsky)"/><g class="stars"><circle cx="-22" cy="-18" r="0.9"/><circle cx="-8" cy="-30" r="0.7"/><circle cx="6" cy="-22" r="1"/><circle cx="18" cy="-28" r="0.7"/><circle cx="27" cy="-12" r="0.9"/><circle cx="-30" cy="-6" r="0.7"/><circle cx="12" cy="-9" r="0.6"/><circle cx="-14" cy="-10" r="0.6"/></g><path class="arc" d="M-25 2A25 25 0 0 1 25 2"/><g class="sun"><circle class="glow" r="10"/><circle class="disc" r="5.5"/></g><g class="moon"><circle class="dark" r="6"/><path class="lit"/></g><path class="ground" d="M-40 4C-26 -1 -14 6 0 3S24 -1 40 4L40 40L-40 40Z"/></g><circle class="rim" r="37"/></svg><div class="clocktext"><div class="row1"><b class="time"></b><span class="moonslot"></span></div><div class="hourword"></div><div class="date"></div><div class="wx"></div><div class="fest"></div></div></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div><div class="belt" id="belt" title="The belt: four things to hand (keys 5 to 8). In a fight the first used in a round costs no turn."></div></div>
   </div>
   <div id="party"></div>
@@ -15159,6 +15208,7 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
+<div class="dialog" id="dlg-calendar"><div class="box journalbox calbox"><h2>The Calendar</h2><div id="calendar-body"></div><div class="row"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-whereto"><div class="box journalbox"><h2>Where to?</h2><div class="small">The party walks there by what it knows, and stops for whatever it meets on the way. Any key stops it.</div><div id="whereto-list"></div><div class="row"><button class="close">Back</button></div></div></div>
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button></span></h2><div id="journal-list"></div>
   <div class="end"><button class="close primary">Close</button></div></div></div>
@@ -15265,7 +15315,7 @@ CM.UI = class {
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
     game.on("choice", (c) => this.askChoice(c));
-    this.$("#view .sky").addEventListener("click", () => { if (game.mode !== "title") game.say(`It is ${CM.clockWords(game)}; ${CM.dateWords(game)}.`); });
+    this.$("#view .sky").addEventListener("click", () => { if (game.mode !== "title") this.openCalendar(); });
     game.on("building", (id) => { if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else if (id === "garden" && game.villageLevel("garden") >= 1) this.openGarden(); else if (id === "chronicler" && game.villageLevel("chronicler") >= 1) this.openChronicler(); else this.openBuilding(id); });
     this.$("#btn-library-build").addEventListener("click", () => { this.$("#library-note").textContent = game.build("library") || "The library rises a level."; this.openLibrary(true); });
     this.$("#btn-guild-build").addEventListener("click", () => { this.$("#guild-note").textContent = game.build("guildhall") || "The guildhall rises a level."; this.openGuild(true); });
@@ -16407,16 +16457,7 @@ Object.assign(CM.UI.prototype, {
 // The dungeon screen: the party and the log, the actions, the automap, the HUD over the view, and what the window itself shows of an event.
 Object.assign(CM.UI.prototype, {
   // ---- the dungeon screen ----
-  // the sky bar: the sun and the moon on their arc, by the game's clock; the moon's shape by its phase
-  drawSky() {
-    const g = this.game, sky = this.$("#view .sky"); if (!sky) return;
-    const below = g.floor && g.floor.number >= 1; sky.classList.toggle("underground", Boolean(below));
-    const P = CM.skyPlaces(g), at = (t) => { const x = 6 + t * 108, y = 36 - Math.sin(t * Math.PI) * 25; return [x, y]; };
-    const sun = sky.querySelector(".sun"), moon = sky.querySelector(".moon");
-    if (P.sun !== null) { const [x, y] = at(P.sun); sun.setAttribute("cx", x); sun.setAttribute("cy", y); sun.style.display = ""; } else sun.style.display = "none";
-    if (P.moon !== null) { const [x, y] = at(P.moon); moon.setAttribute("transform", `translate(${x} ${y})`); moon.style.display = ""; const shade = moon.querySelector(".shade"), k = P.phase; shade.setAttribute("cx", k === 4 ? 99 : k === 0 ? 0 : (k < 4 ? -1 : 1) * (k % 4) * 1.6); } else moon.style.display = "none";
-    sky.querySelector(".hour").textContent = `${CM.hourWord(CM.hourOf(g))}${below ? " above" : ""}, ${CM.season(g)}${CM.festival(g) ? " - " + CM.FESTIVALS[CM.festival(g)].name : ""}${CM.weather(g) !== "clear" ? ", " + CM.weather(g) : ""}`;
-  },
+  // (the dial in the view's corner: drawSky, in 73b-clock.js)
   refresh() {
     const g = this.game;
     if (this.screen === "title") { this.refreshTitle(); return; }
@@ -16783,6 +16824,74 @@ Object.assign(CM.UI.prototype, {
     el.style.left = `${x}px`; el.style.top = `${y}px`;
     this.$("#floats").appendChild(el);
     setTimeout(() => el.remove(), 950);
+  },
+});
+
+// ---- 73b-clock.js ----
+"use strict";
+// The clock made visible (the tenth update, phase 9): a dial in the view's top-right corner - the sky's colour of the
+// hour, the sun and the moon on their arc over a strip of ground, the hour in figures and words, the day, the season,
+// the weather with the days ahead, a festival in its week, and the moon's face drawn large - and the Calendar (a click
+// on the dial, or K): the moon's month, the seasons' daylight, the weather ahead and the year's festivals. The numbers
+// are CM.dialOf, CM.nextMoon and CM.comingWeather (24b-calendar.js); this file only draws them.
+CM.SKY_COLOURS = { day: ["#4F8FD0", "#A8D2F2"], dawn: ["#6A78B8", "#F0A060"], dusk: ["#5A5C9C", "#E88A58"], night: ["#0A0F28", "#1E2A58"] };
+CM.MOON_NAMES = ["new moon", "waxing crescent", "first quarter", "waxing gibbous", "full moon", "waning gibbous", "last quarter", "waning crescent"];
+CM.UI.prototype.weatherIcon = function (w, size = 14) {
+  const ray = (a) => { const c = Math.cos((a * Math.PI) / 180), s = Math.sin((a * Math.PI) / 180); return `<line x1="${(8 + c * 5.2).toFixed(1)}" y1="${(8 + s * 5.2).toFixed(1)}" x2="${(8 + c * 7).toFixed(1)}" y2="${(8 + s * 7).toFixed(1)}"/>`; };
+  const body = {
+    clear: `<circle cx="8" cy="8" r="3.4" fill="#F6D060"/><g stroke="#F6D060" stroke-width="1.4" stroke-linecap="round">${[0, 45, 90, 135, 180, 225, 270, 315].map(ray).join("")}</g>`,
+    rain: `<path d="M4 9a3 3 0 0 1 1-5.8A4 4 0 0 1 12.6 5 2.6 2.6 0 0 1 12 9.6H4.6z" fill="#C8D0DC"/><g stroke="#7FB4F0" stroke-width="1.3" stroke-linecap="round"><line x1="5" y1="11.5" x2="4" y2="14.5"/><line x1="8.5" y1="11.5" x2="7.5" y2="14.5"/><line x1="12" y1="11.5" x2="11" y2="14.5"/></g>`,
+    mist: `<g stroke="#C8CCD4" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="5" x2="14" y2="5"/><line x1="4" y1="8.5" x2="13" y2="8.5"/><line x1="2" y1="12" x2="12" y2="12"/></g>`,
+    wind: `<g fill="none" stroke="#D8DCE4" stroke-width="1.4" stroke-linecap="round"><path d="M2 6h8a2 2 0 1 0-2-2"/><path d="M2 9.5h11a2 2 0 1 1-2 2"/><path d="M2 13h5"/></g>`,
+    snow: `<g stroke="#F4F8FF" stroke-width="1.4" stroke-linecap="round"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2.8" y1="5" x2="13.2" y2="11"/><line x1="2.8" y1="11" x2="13.2" y2="5"/></g>`,
+  }[w] || "";
+  return `<svg class="wxi" width="${size}" height="${size}" viewBox="0 0 16 16" aria-hidden="true">${body}</svg>`;
+};
+CM.UI.prototype.moonFace = function (phase, r, cls = "") {
+  return `<svg class="moonface ${cls}" width="${r * 2 + 2}" height="${r * 2 + 2}" viewBox="${-r - 1} ${-r - 1} ${r * 2 + 2} ${r * 2 + 2}" data-phase="${phase}" aria-hidden="true"><circle class="dark" r="${r}"/><path class="lit" d="${CM.moonPath(phase, r)}"/><circle class="edge" r="${r}"/></svg>`;
+};
+Object.assign(CM.UI.prototype, {
+  // the dial, drawn from the game's clock on each refresh
+  drawSky() {
+    const g = this.game, el = this.$("#view .sky"); if (!el || !el.querySelector(".dial")) return;
+    const below = Boolean(g.floor && g.floor.number >= 1), D = CM.dialOf(g), w = CM.weather(g), f = CM.festival(g), season = CM.season(g);
+    el.classList.toggle("underground", below); el.classList.toggle("night", D.night);
+    const [top, low] = CM.SKY_COLOURS[D.sky];
+    el.querySelector(".skytop").setAttribute("stop-color", top); el.querySelector(".skylow").setAttribute("stop-color", low);
+    el.querySelector(".stars").style.opacity = D.sky === "night" ? 1 : D.sky === "day" ? 0 : 0.35;
+    const place = (sel, a) => { const node = el.querySelector(sel), r = (a * Math.PI) / 180; node.setAttribute("transform", `translate(${(Math.sin(r) * 25).toFixed(2)} ${(-Math.cos(r) * 25).toFixed(2)})`); node.style.display = Math.abs(a) <= 100 ? "" : "none"; };
+    place(".sun", D.sun); place(".moon", D.moon);
+    el.querySelector(".moon .lit").setAttribute("d", CM.moonPath(D.phase, 6));
+    el.querySelector(".ground").classList.toggle("stone", below);
+    el.querySelector(".time").textContent = CM.timeFigures(g);
+    el.querySelector(".hourword").textContent = `${CM.hourWord(D.hour)}${below ? ", above" : ""}`;
+    const date = el.querySelector(".date"); date.textContent = `Day ${D.day + 1} - ${season}`; date.className = `date ${season}`;
+    const ahead = CM.comingWeather(g, 4).slice(1);
+    el.querySelector(".wx").innerHTML = `${this.weatherIcon(w, 14)}<span>${w}</span><span class="ahead" title="${this.esc("The days ahead: " + ahead.map((d) => `day ${d.day + 1}, ${d.weather}`).join("; "))}">${ahead.map((d) => this.weatherIcon(d.weather, 11)).join("")}</span>`;
+    const fest = el.querySelector(".fest"); fest.textContent = f ? CM.FESTIVALS[f].name.charAt(0).toUpperCase() + CM.FESTIVALS[f].name.slice(1) : ""; fest.title = f ? CM.FESTIVALS[f].what : ""; fest.style.display = f ? "" : "none";
+    const slot = el.querySelector(".moonslot"); slot.innerHTML = this.moonFace(D.phase, 10, D.phase === 4 ? "full" : D.phase === 0 ? "new" : "");
+    slot.title = `The moon: ${CM.MOON_NAMES[D.phase]}, day ${D.moonDay} of ${CM.CLOCK.moon}${CM.MOON_DOES[D.phase] ? ` - ${CM.MOON_DOES[D.phase]}` : ""}`;
+    el.dataset.phase = D.phase; el.dataset.sky = D.sky;
+  },
+  // the Calendar: the moon's month, the seasons, the weather ahead and the year's festivals
+  openCalendar() {
+    const g = this.game, D = CM.dialOf(g), season = CM.season(g), f = CM.festival(g), month = new Date().getMonth(), today = CM.weather(g);
+    const inDays = (k) => (k === 0 ? "tonight" : k === 1 ? "tomorrow night" : `in ${k} nights`);
+    const faces = CM.MOON_NAMES.map((name, p) => `<div class="mface${p === D.phase ? " on" : ""}">${this.moonFace(p, 13, p === 4 ? "full" : p === 0 ? "new" : "")}<small>${name}</small></div>`).join("");
+    const full = CM.nextMoon(g, 4), fresh = CM.nextMoon(g, 0);
+    const seasons = CM.SEASONS.map((s) => { const [a, b] = CM.DAYLIGHT[s]; return `<tr class="${s === season ? "on" : ""}"><td class="${s}">${s}</td><td>dawn at ${a}, dusk at ${b}</td><td>${b - a} hours of day</td></tr>`; }).join("");
+    const ahead = CM.comingWeather(g, 7).map((d, i) => `<div class="wday${i === 0 ? " on" : ""}">${this.weatherIcon(d.weather, 22)}<small>${i === 0 ? "today" : `day ${d.day + 1}`}</small><span>${d.weather}</span></div>`).join("");
+    const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+    const fests = Object.entries(CM.FESTIVALS).sort((a, b) => a[1].month - b[1].month).map(([id, F]) => `<tr class="${id === f ? "on" : F.month === month ? "month" : ""}"><td>${CM.MONTH_NAMES[F.month]}</td><td><b>${this.esc(cap(F.name))}</b>${id === f ? " <em>- this week</em>" : ""}<br><small>${this.esc(F.what)}</small></td></tr>`).join("");
+    this.$("#calendar-body").innerHTML = `
+      <div class="calnow">${this.moonFace(D.phase, 22, D.phase === 4 ? "full" : D.phase === 0 ? "new" : "")}<div><b class="caltime">${CM.timeFigures(g)}</b>, ${CM.hourWord(D.hour)}${g.floor && g.floor.number >= 1 ? " above" : ""} - day ${D.day + 1} of the run, ${season}${f ? `, ${this.esc(CM.FESTIVALS[f].name)}` : ""}<br>
+        <small>This ${season} the sun rises at ${D.dawn} and sets at ${D.dusk}. Today: ${this.esc(CM.WEATHER_WORDS[today] || today)}.</small></div></div>
+      <div class="list-title">The moon - day ${D.moonDay} of its ${CM.CLOCK.moon}: ${CM.MOON_NAMES[D.phase]}</div><div class="mfaces">${faces}</div>
+      <p class="small">The next full moon: ${inDays(full)} - ${CM.MOON_DOES[4]}.<br>The next new moon: ${inDays(fresh)} - ${CM.MOON_DOES[0]}.</p>
+      <div class="list-title">The weather ahead</div><div class="wdays">${ahead}</div>
+      <div class="list-title">The seasons' daylight</div><table class="caltable">${seasons}</table>
+      <div class="list-title">The year's festivals <small>(the week around the fifteenth)</small></div><table class="caltable fests">${fests}</table>`;
+    this.openDialog("#dlg-calendar");
   },
 });
 
@@ -17939,6 +18048,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.code === K.map || e.code === "Tab") { e.preventDefault(); if (game.mode !== "title") ui.toggleBigMap(); return; }
     if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
     if (e.code === K.journal && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
+    if (e.code === K.calendar && (game.mode === "explore" || game.mode === "camp")) { ui.openCalendar(); return; }
     if (e.code === K.whereTo && game.mode === "explore" && game.floor && game.floor.number <= 0 && game.floor.number % 1 === 0) { ui.openWhereTo(); return; }
     if (game.mode === "explore") {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
