@@ -136,8 +136,8 @@ test("an export from v1.0 imports, and the run in it can be continued", () => {
 test("a run still in the town (floor 0) exports and imports, and its slot isn't empty", () => {
   const CM = load();
   const game = new CM.Game();
-  game.newGame("town-0");
-  assert.strictEqual(CM.runFloor(game.lastRun), 0, "a new expedition should set out from the town");
+  game.newGame("town-0", null, undefined, undefined, undefined, undefined, { town: true });
+  assert.strictEqual(CM.runFloor(game.lastRun), 0, "the expedition should have set out from the town");
   game.gold = 777; game.saveRun();
   const text = game.exportText();
   const CM2 = load(), g2 = new CM2.Game();
