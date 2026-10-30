@@ -22,7 +22,11 @@ const url = "file://" + path.join(ROOT, "game", built);
   await page.goto(url);
   await page.waitForFunction(() => window.CM && CM.game && CM.ui);
   await page.waitForTimeout(800);
-  const title = await page.textContent("h1");
+  assert.ok(await page.$("#splash"), "the title card is up first");
+  assert.match((await page.textContent("#splash h1")) || "", /Claude\s*and\s*Magic/);
+  await page.keyboard.press("Space"); await page.waitForTimeout(800);
+  assert.ok(!(await page.$("#splash")), "a key goes on from the title card");
+  const title = await page.textContent("#title h1");
   assert.match(title || "", /Claude and Magic/);
   const r = await page.evaluate(() => {
     const g = CM.game;

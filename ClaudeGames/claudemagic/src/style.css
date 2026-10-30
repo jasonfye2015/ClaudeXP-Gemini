@@ -415,3 +415,69 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 #belt button.slot { padding: 3px 4px; font: 11px var(--serif); min-height: 30px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #belt button.slot kbd { margin-right: 3px; }
 #belt button.empty { opacity: 0.45; }
+
+/* ---- the title card (77-splash.js) ---- */
+#splash { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;
+  background: radial-gradient(ellipse at center, #2A1D10 0%, #000 75%); transition: opacity 0.55s; }
+#splash.leaving { opacity: 0; pointer-events: none; }
+#splash .splashcard { text-align: center; position: relative; z-index: 1; animation: spIn 1.6s ease-out both; }
+#splash .forge { position: relative; height: 112px; width: 150px; margin: 0 auto; }
+#splash .forge .emblem { position: absolute; left: 50%; top: 0; animation: spStrike 0.85s cubic-bezier(.55,0,.85,.35) 0.2s both; filter: drop-shadow(0 6px 10px #000c); }
+#splash .forge .emblem canvas { display: block; width: 96px; height: 96px; }
+#splash .forge .stone { position: absolute; left: 50%; bottom: 0; width: 126px; height: 24px; transform: translateX(-50%); background: linear-gradient(#8A8478, #4A453E);
+  border-radius: 45% 45% 12px 12px; box-shadow: 0 6px 14px #000a, inset 0 3px 0 #A8A296; opacity: 0; animation: spFade 0.45s 0.25s forwards; z-index: -1; }
+#splash .spk { position: absolute; left: 50%; top: 80%; width: 4px; height: 4px; border-radius: 50%; background: #FFD27A; box-shadow: 0 0 6px 1px #FF9A30; animation: spSpark 0.9s ease-out forwards; pointer-events: none; }
+#splash .shk.cshake { animation: spShake 0.38s; }
+#splash h1 { font: 700 84px Georgia, serif; margin: 0; color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 30px rgba(217,164,65,0.5); white-space: nowrap; }
+#splash h1 span { color: var(--ink); }
+#splash h1 .fl { font-style: normal; display: inline-block; animation: spForge 2.3s var(--d) both, spGlint 7s calc(var(--d) + 3.4s) infinite; }
+#splash .tag { font: italic 20px Georgia, serif; color: #C8BCA8; margin: 6px 0 26px; }
+#splash .credit { color: #9A8E7E; font-size: 14px; line-height: 1.7; margin: 0; }
+#splash .credit b { color: var(--gold); }
+#splash .lineup { display: flex; gap: 12px; justify-content: center; margin: 22px auto 0; opacity: 0; animation: spFade 1s 1.4s forwards; }
+#splash .hero { display: flex; flex-direction: column; align-items: center; animation: spBob 2.4s ease-in-out calc(var(--i) * -0.3s) infinite; }
+#splash .hero canvas { width: 52px; height: 52px; image-rendering: pixelated; border-radius: 4px; box-shadow: 0 6px 8px -4px #000; }
+#splash .hero small { color: #8A7E6E; font: 10px Georgia, serif; margin-top: 3px; }
+#splash .press { margin-top: 30px; color: #E8DFD2; opacity: 0; animation: spPulse 1.6s ease-in-out 1.6s infinite; }
+#splash .marqs { margin: 24px auto 0; width: min(1150px, 94vw); opacity: 0; animation: spFade 1.2s ease-out 1.8s forwards;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); }
+#splash .marq { overflow: hidden; white-space: nowrap; font: 14px Georgia, serif; line-height: 2.1; }
+#splash .marq > div { display: inline-block; animation: spLeft 150s linear infinite; }
+#splash .marq.toright > div { animation-name: spRight; }
+#splash .marq.m1 { color: #D9A441; } #splash .marq.m2 { color: #C8BCA8; } #splash .marq.m3 { color: #9FD0FF; }
+#splash .vstamp { position: absolute; left: 14px; bottom: 10px; font: 12px Georgia, serif; color: #8A7E6E; z-index: 1; }
+#splash .vstamp b { color: #B8A68C; }
+#splash .sp-sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+#splash .sp-sky.night { background-image: radial-gradient(1.5px 1.5px at 12% 18%, #fff9, transparent), radial-gradient(1px 1px at 30% 9%, #fff7, transparent), radial-gradient(1.5px 1.5px at 55% 14%, #fff8, transparent),
+  radial-gradient(1px 1px at 78% 26%, #fff6, transparent), radial-gradient(1.5px 1.5px at 90% 8%, #fff8, transparent), radial-gradient(1px 1px at 8% 40%, #fff5, transparent), radial-gradient(1px 1px at 66% 36%, #fff6, transparent),
+  radial-gradient(1.5px 1.5px at 44% 30%, #fff7, transparent), radial-gradient(1px 1px at 20% 62%, #fff4, transparent), radial-gradient(1px 1px at 86% 58%, #fff5, transparent); }
+#splash .sp-sun { position: absolute; top: 5%; right: 8%; width: 96px; height: 96px; animation: spFade 2s 0.3s both; }
+#splash .sp-sun .disc { position: absolute; inset: 24px; border-radius: 50%; background: radial-gradient(#FFF6C8, #FFD84A 55%, #F4A020); box-shadow: 0 0 44px 14px rgba(255,200,80,0.42); }
+#splash .sp-sun .rays { position: absolute; inset: -70px; border-radius: 50%; background: repeating-conic-gradient(rgba(255,215,120,0.16) 0 6deg, transparent 6deg 18deg); animation: spRot 50s linear infinite;
+  -webkit-mask: radial-gradient(circle, #000 25%, transparent 70%); mask: radial-gradient(circle, #000 25%, transparent 70%); }
+#splash .sp-moon { position: absolute; top: 6%; right: 9%; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; filter: drop-shadow(0 0 22px rgba(220,230,255,0.6)); animation: spFade 2s 0.3s both; }
+#splash .sp-moon .disc { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 40% 38%, #F4F6FC, #C8CEDC 70%); }
+#splash .sp-moon .shade { position: absolute; inset: -2px; border-radius: 50%; background: #0A0C18; transform: translateX(calc(var(--k) * 100%)); opacity: 0.94; }
+#splash .sp-moon[data-phase="4"] .shade { display: none; }
+#splash .sp-fall { position: absolute; top: -40px; opacity: 0.8; border-radius: 50% 0; animation-name: spFall, spSway; animation-timing-function: linear, ease-in-out;
+  animation-iteration-count: infinite, infinite; animation-direction: normal, alternate; }
+#splash .sp-fall.winter { border-radius: 50%; }
+#splash .sp-fly { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #E8FF9A; box-shadow: 0 0 8px 2px #D8FF70; animation: spFly ease-in-out infinite alternate; }
+@keyframes spIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes spFade { to { opacity: 1; } }
+@keyframes spStrike { 0% { opacity: 0; transform: translate(-50%, -190px) rotate(-30deg); } 55% { opacity: 1; } 100% { opacity: 1; transform: translate(-50%, 0) rotate(0); } }
+@keyframes spSpark { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+@keyframes spShake { 0%, 100% { transform: none; } 20% { transform: translate(-6px, 3px); } 40% { transform: translate(5px, -3px); } 60% { transform: translate(-3px, 2px); } 80% { transform: translate(2px, -1px); } }
+@keyframes spForge { 0% { opacity: 0; color: #fff; text-shadow: 0 0 18px #fff, 0 0 34px #FF8A2A; transform: translateY(8px) scale(1.18); } 14% { opacity: 1; color: #FFF4C8; text-shadow: 0 0 24px #FFB040, 0 0 46px #FF5A1A; }
+  55% { color: #FF9A3A; text-shadow: 0 0 16px #FF6A1A, 0 0 30px #A0300A; } 100% { opacity: 1; transform: none; } }
+@keyframes spGlint { 0%, 90%, 100% { filter: none; } 94% { filter: brightness(1.9) drop-shadow(0 0 6px rgba(255,255,255,0.55)); } }
+@keyframes spPulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@keyframes spBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes spLeft { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes spRight { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+@keyframes spRot { to { transform: rotate(360deg); } }
+@keyframes spFall { to { transform: translateY(118vh) rotate(380deg); } }
+@keyframes spSway { from { translate: -24px 0; } to { translate: 24px 0; } }
+@keyframes spFly { 0% { opacity: 0.1; translate: 0 0; } 50% { opacity: 1; } 100% { opacity: 0.2; translate: 34px -24px; } }
+@media (max-width: 760px) { #splash h1 { font-size: 46px; } #splash .lineup { flex-wrap: wrap; width: 92vw; } #splash .tag { font-size: 15px; } }
+@media (prefers-reduced-motion: reduce) { #splash * { animation-duration: 0.01s !important; animation-iteration-count: 1 !important; } }

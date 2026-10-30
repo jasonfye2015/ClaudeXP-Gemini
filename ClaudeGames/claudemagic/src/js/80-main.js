@@ -18,6 +18,7 @@ window.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => ui.offerLink(payload), 50);
   };
   linkIn();
+  if (!CM.linkPayload(location.hash) && !/[?&]nocard\b/.test(location.search)) ui.showSplash();   // the title card, before the first screen (not when a shared link is being opened)
   window.addEventListener("hashchange", linkIn);                         // (a link pasted into an open page's address)
   if (/^https?:$/.test(location.protocol)) {
     const m = document.createElement("link"); m.rel = "manifest"; m.href = "manifest.webmanifest"; document.head.appendChild(m);
@@ -512,6 +513,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   window.addEventListener("keydown", (e) => {
     CM.audio.unlock();
+    if (ui.splashOn) { e.preventDefault(); ui.leaveSplash(); return; }   // (the title card: any key goes on)
     const K = game.settings.keys || CM.DEFAULT_KEYS;
     if (ui.rebinding) { e.preventDefault(); ui.rebind(ui.rebinding, e.code); return; }   // (Settings > Keys: the next key pressed is the one)
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
@@ -660,6 +662,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (renderer.ok) {
       if (game.mode !== "title" && document.visibilityState !== "hidden") autoScale(dt);
       renderer.resize();
+      if (ui.splashOn) { const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []; if (pads.some((p) => p.buttons.some((b) => b.pressed))) ui.leaveSplash(); }   // (a pad button goes on from the title card)
       if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1; renderer.sky = null;
