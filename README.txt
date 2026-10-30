@@ -389,6 +389,36 @@ Everyone can play (the third big update, phase 7)
   view sits on top, the party two by two, the log short and the buttons as a thumb bar (style.css, the 640px rule).
   An ailment is always its mark and its name, never a colour alone.
 
+The fight, deeper (the third big update, phase 2)
+  Monsters have a shape. Every kind's health, blows and armour are its own share of the straight line of its level
+  (CM.MONSTER_SHAPES, 10-data.js): a rat is frail and quick, a troll a wall of meat, a gargoyle all armour, an ogre
+  hits like a falling roof. Every kind fears something and shrugs something off - fire for trolls, zombies, the fungal
+  and the rooted; frost for demons, wyverns and the foundry's imps; lightning for the crystal, the iron and the dark
+  elves; holiness for the undead (a vampire doubly) - and some do little from what they are made of (fire does little
+  to a demon or an iron hound, frost to crystal and the drowned). CM.resistance(foe, element) says, for monsters and
+  guardians alike; a flaming, frost or blessed blade reads the same table. Lightning is an element now (storm).
+  The monsters have rows too. Goblins, dark elves, weed hags, shard wisps, foundry imps and grave priests keep to the
+  back row, where a blow from the front must reach past their fellows for half - as the party's own back row does;
+  a Ranger's arrows and every spell reach them whole. The target buttons say who is behind.
+  The guardians show their hand. The turn before one of its great moves, a guardian telegraphs it - the Forge-Warden
+  lifts the hammer, the Drowned Knight's gauntlet opens, the Tyrant begins to ring - in the log and on its target
+  button, so the party can Defend, guard, or strike first.
+  Combos: two things done in order that come to more than their sum, found by doing them and kept in the journal
+  (CM.COMBOS): Shatter (frost on a foe, then Shield Bash: double), Twist the knife (a Rogue's blow on a mocked or
+  marked foe: half again), Kindling (fire on a foe held by thorns or roots: half again), Consecrated strike (Smite
+  under a Blessing: half again), Thunderclap (lightning on a chilled foe: double). Frost leaves a foe chilled two rounds.
+  More ways for the monsters: the Weed Hag mends the most hurt of her fellows; the Crystal Golem wards one (the next
+  blows do half); the Spore Beast tears in two when badly hurt; the Foundry Imp snatches a potion, a scroll or a gem
+  from the pack and bolts with it. Each foe's statuses are on its button with the turns left (asleep 2, held 1, chilled,
+  warded, burning, blinded).
+  The bestiary, in the journal: every kind met and slain, what it does, and what it has been seen to fear or shrug off
+  - learned by hitting it with the element - kept between runs and carried by Export / Import (CM.store "bestiary").
+  The level curve is measured now. The old curve (60 * (L-1)^1.6) was the twenty-floor game's: with fifty floors it
+  ran to level 100 and more by the bottom, and the simulator's parties reached the Root at level 120 without trying.
+  The new one (20 * (L-1) + 8 * (L-1)^2.6) is fitted to the experience a party actually earns fighting its way down:
+  about level 20 on floor 20 and the middle thirties at the bottom - the monsters' own level. Heroes already past that
+  keep their levels.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

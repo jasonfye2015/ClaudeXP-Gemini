@@ -875,7 +875,10 @@ CM.UI = class {
       const b = document.createElement("button");
       b.className = i === (g.target || 0) ? "chosen" : "";
       const est = h ? g.strikeEstimate(h, m) : null;
-      b.innerHTML = `${this.esc(m.name)} <small>${Math.max(0, m.hp)}/${m.max}${m.asleep > 0 ? " - asleep" : ""}${m.held > 0 ? " - held" : ""}${m.marked ? " - marked" : ""}${m.blind > 0 ? " - blinded" : ""}${m.burning > 0 ? " - burning" : ""}</small>${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
+      const marks = [m.asleep > 0 ? `asleep ${m.asleep}` : "", m.held > 0 ? `held ${m.held}` : "", m.marked ? "marked" : "", m.blind > 0 ? `blinded ${m.blind}` : "", m.burning > 0 ? `burning ${m.burning}` : "",
+        m.chilled > 0 ? `chilled ${m.chilled}` : "", m.warded > 0 ? "warded" : ""].filter(Boolean);
+      const behind = m.row === "back" && g.living().some((f) => f !== m && f.row !== "back");
+      b.innerHTML = `${this.esc(m.name)}${behind ? " <small>(behind)</small>" : ""} <small>${Math.max(0, m.hp)}/${m.max}${marks.length ? " - " + marks.join(", ") : ""}</small>${m.intent ? `<i class="odds intent">about to: ${this.esc((m.intent.text || "").split("!")[0].split(",")[0].replace(/^The [A-Za-z- ]+ /, "")) || "something terrible"}</i>` : ""}${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
       b.addEventListener("click", () => g.setTarget(i));
       targets.appendChild(b);
     });
@@ -1303,9 +1306,24 @@ CM.UI = class {
       if (!list.length) return "";
       return `<div class="list-title">${title}</div>` + list.map((e) => `<div class="entry"><small>${e.floor ? `Floor ${e.floor}` : ""}${e.who ? ` - ${this.esc(e.who)}` : ""}</small><p>${this.esc(e.text)}</p></div>`).join("");
     };
-    const html = part("Carved into the stone", "carving") + part("What the dead said", "ghost") + part("Riddles answered", "riddle");
+    const html = part("Carved into the stone", "carving") + part("What the dead said", "ghost") + part("Riddles answered", "riddle") + this.bestiaryHtml() + this.combosHtml();
     box.innerHTML = html || `<div class="small">Nothing yet. Read the walls (Space before a carving), and listen to whoever you meet; the hermit pays for stories.</div>`;
     this.openDialog("#dlg-journal");
+  }
+
+  // the bestiary: every kind met, in the order of the depths, with what it does and what it has been seen to fear
+  bestiaryHtml() {
+    const g = this.game, b = g.bestiary || {}, kinds = CM.MONSTERS.filter((m) => b[m.name] && b[m.name].seen);
+    if (!kinds.length) return "";
+    const shape = (m) => { const [hp, atk, df] = m.shape || [1, 1, 1]; const w = []; if (hp >= 1.4) w.push("tough"); else if (hp <= 0.7) w.push("frail"); if (atk >= 1.2) w.push("hits hard"); if (df >= 1.3) w.push("armoured"); else if (df <= 0.7) w.push("thin-skinned"); return w.join(", "); };
+    const rows = kinds.map((m) => { const e = b[m.name], words = [shape(m), m.ability ? CM.ABILITY_WORDS[m.ability] : "", m.touch ? `its touch may leave a hero ${CM.STATUSES[m.touch.status].name.toLowerCase()}` : "", m.undead ? "undead" : "", m.row === "back" ? "keeps to the back row" : ""].filter(Boolean);
+      return `<div class="entry"><small>${m.deep ? CM.THEMES[m.deep].name : "The first twenty floors"} - met ${e.seen}, slain ${e.slain}</small><p><b>${this.esc(m.name)}</b> - ${this.esc(words.join("; "))}.${e.weak.length ? ` Fears ${e.weak.map((x) => CM.ELEMENT_NAMES[x] || x).join(" and ")}.` : ""}${e.resist.length ? ` Shrugs off ${e.resist.map((x) => CM.ELEMENT_NAMES[x] || x).join(" and ")}.` : ""}</p></div>`; });
+    return `<div class="list-title">Bestiary</div>` + rows.join("");
+  }
+  combosHtml() {
+    const found = Object.keys(CM.COMBOS).filter((id) => (this.game.combos || {})[id]);
+    const rows = Object.entries(CM.COMBOS).map(([id, c]) => `<div class="entry"><p>${found.includes(id) ? `<b>${c.name}</b> - ${this.esc(c.what)} <small>(done ${this.game.combos[id]} ${this.game.combos[id] === 1 ? "time" : "times"})</small>` : `<b>?</b> <small>A combo not yet found.</small>`}</p></div>`);
+    return `<div class="list-title">Combos (${found.length} of ${Object.keys(CM.COMBOS).length} found)</div>` + rows.join("");
   }
 
   // a wash of colour over the view that fades (a spell's light, a trap's gas)

@@ -32,12 +32,16 @@ function makeStorage(quota = Infinity) {
   };
 }
 
+// the sources, read once: a simulator run stays one version of the game even if the files change under it
+const sources = {};
+const source = (f) => (sources[f] = sources[f] || fs.readFileSync(path.join(SRC, f), "utf8"));
+
 function load(opts = {}) {
   const storage = opts.storage || makeStorage(opts.quota);
   const ctx = { console, performance, localStorage: storage, btoa, atob, setTimeout, clearTimeout, Math, Date, JSON };
   ctx.window = ctx;
   vm.createContext(ctx);
-  for (const f of RULES) vm.runInContext(fs.readFileSync(path.join(SRC, f), "utf8"), ctx, { filename: f });
+  for (const f of RULES) vm.runInContext(source(f), ctx, { filename: f });
   const CM = ctx.CM;
   CM.LOOKS = CM.LOOKS || { drawn: {} };                                 // (the themes live with the art, which isn't loaded here)
   CM.storage = storage;

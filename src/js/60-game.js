@@ -48,6 +48,8 @@ CM.Game = class {
     this.crowned = false; this.bottom = false;       // the Lich King slain this run; the bottom of the world reached
     this.endless = false; this.deepened = [];        // an Endless expedition: the shaft has no bottom; the floors where the dark deepened
     this.fameEndless = CM.store.get("fameEndless", []);   // the Endless board: how deep, ever
+    this.bestiary = CM.store.get("bestiary", {});         // every kind met and slain, and what it fears: kept between runs
+    this.combos = CM.store.get("combos", {});             // the combos found, ever
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
 

@@ -132,9 +132,10 @@ CM.bones = (ghost) => ({ name: "Someone's bones", kind: "bones", power: 0, value
 
 // one monster of a kind, at a depth - with what the kind does carried on it, so a save stands alone
 CM.makeMonster = function (kind, level, rnd) {
-  return { name: kind.name, kind: kind.name, colour: kind.colour, hp: 8 + level * 6, max: 8 + level * 6, atk: 3 + level * 2, df: level,
+  const sh = kind.shape || [1, 1, 1], hp = Math.max(1, Math.round((8 + level * 6) * sh[0]));
+  return { name: kind.name, kind: kind.name, colour: kind.colour, hp, max: hp, atk: Math.max(1, Math.round((3 + level * 2) * sh[1])), df: Math.max(0, Math.round(level * sh[2])),
     xp: 10 + level * 8, gold: rnd.int(2, 8) * level, speed: kind.speed || 10, undead: Boolean(kind.undead), ability: kind.ability || null,
-    touch: kind.touch ? Object.assign({}, kind.touch) : null };
+    touch: kind.touch ? Object.assign({}, kind.touch) : null, row: kind.row || "front" };
 };
 
 // a monster saved before it knew what it does
@@ -142,7 +143,7 @@ CM.upgradeMonster = function (m) {
   if (m.kind) return m;
   const kind = CM.monsterKind(m.name);
   m.kind = kind ? kind.name : m.name;
-  if (kind) { m.speed = kind.speed || 10; m.undead = Boolean(kind.undead); m.ability = kind.ability || null; m.touch = kind.touch ? Object.assign({}, kind.touch) : null; }
+  if (kind) { m.speed = kind.speed || 10; m.undead = Boolean(kind.undead); m.ability = kind.ability || null; m.touch = kind.touch ? Object.assign({}, kind.touch) : null; m.row = kind.row || "front"; }
   else { m.speed = m.speed || (m.boss ? 12 : 10); m.undead = Boolean(m.undead || m.boss); m.ability = m.ability || null; m.touch = m.touch || null; }
   return m;
 };
@@ -227,7 +228,9 @@ CM.rollStats = function (cls, rnd) {                                      // thr
 };
 
 CM.mod = (v, per = 2) => Math.floor((v - 10) / per);                     // how a stat tells: 10 is nothing, 16 is +3 (at 2 a point)
-CM.xpForLevel = (level) => Math.ceil(60 * Math.pow(level - 1, 1.6));     // the experience a level asks for (the old game's curve)
+// the experience a level asks for: measured so a party fighting its way down is about the monsters' level - 20 on floor
+// 20, the middle thirties at the bottom (the old game's 60 * (L-1)^1.6 was for twenty floors, and ran to level 100 by fifty)
+CM.xpForLevel = (level) => Math.ceil(20 * (level - 1) + 8 * Math.pow(level - 1, 2.6));
 
 // the numbers a hero fights with, from class, level, stats and boons (health and magic stay where they were, within the new most)
 CM.recompute = function (h) {

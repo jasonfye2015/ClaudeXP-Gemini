@@ -220,6 +220,7 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #actions button:disabled small { color: var(--faint); }
 #actions button kbd { margin-right: 4px; }
 #actions .targets button .odds { display: block; color: var(--dim); font-style: normal; font-size: 10px; }
+#actions .targets button .odds.intent { color: #E0A040; font-style: italic; }
 #actions .menu button.on { border-color: var(--gold); color: var(--gold); background: #4A321A; }
 #actions button.pick small i { color: var(--gold); font-style: normal; }
 #bag .give button .cmp { font-style: normal; font-size: 11px; color: var(--dim); margin-left: 4px; }
@@ -569,18 +570,60 @@ CM.MONSTERS = [
   { name: "Wyvern", colour: "#407A70", body: "beast", head: "snout", eyes: "#FFE040", extras: ["wings", "tail"], speed: 12, ability: "buffet", touch: { status: "poison", chance: 0.2 } },
   // the Deep's kinds (floors 21-50), by the band they belong to (the theme's index): never seen above the Lich King
   { name: "Drowned", colour: "#3E6A74", body: "biped", head: "pale", eyes: "#80E8D8", extras: ["torn"], skin: "rot", speed: 6, undead: true, ability: "lifesteal", touch: { status: "sleep", chance: 0.15 }, deep: 4 },
-  { name: "Weed Hag", colour: "#2E5A4E", body: "thin", head: "hood", eyes: "#A0FFE0", extras: ["claws"], speed: 11, ability: "ranged", touch: { status: "paralysis", chance: 0.15 }, deep: 4 },
+  { name: "Weed Hag", colour: "#2E5A4E", body: "thin", head: "hood", eyes: "#A0FFE0", extras: ["claws"], speed: 11, ability: "healer", touch: { status: "paralysis", chance: 0.15 }, deep: 4 },
   { name: "Fungal Horror", colour: "#8AA050", body: "wide", head: "round", eyes: "#F0FF80", extras: ["claws"], skin: "warts", speed: 7, ability: "regen", touch: { status: "poison", chance: 0.3 }, deep: 5 },
-  { name: "Spore Beast", colour: "#A0B070", body: "beast", head: "round", eyes: "#E0FF60", extras: ["tail"], speed: 10, ability: "breath", touch: { status: "poison", chance: 0.2 }, deep: 5 },
-  { name: "Crystal Golem", colour: "#B090D0", body: "wide", head: "round", eyes: "#F0E0FF", extras: [], skin: "stone", speed: 6, ability: "stun", deep: 6 },
+  { name: "Spore Beast", colour: "#A0B070", body: "beast", head: "round", eyes: "#E0FF60", extras: ["tail"], speed: 10, ability: "splitter", touch: { status: "poison", chance: 0.2 }, deep: 5 },
+  { name: "Crystal Golem", colour: "#B090D0", body: "wide", head: "round", eyes: "#F0E0FF", extras: [], skin: "stone", speed: 6, ability: "warder", deep: 6 },
   { name: "Shard Wisp", colour: "#D0C0F0", body: "ghost", head: "pale", eyes: "#FFFFFF", extras: [], speed: 14, ability: "ranged", touch: { status: "blind", chance: 0.2 }, deep: 6 },
   { name: "Iron Hound", colour: "#6A5A50", body: "beast", head: "snout", eyes: "#FF8030", extras: ["tail"], skin: "stone", speed: 13, ability: "charge", deep: 7 },
-  { name: "Foundry Imp", colour: "#B04020", body: "small", head: "horns", eyes: "#FFE060", extras: ["wings", "claws"], speed: 12, ability: "breath", touch: { status: "blind", chance: 0.1 }, deep: 7 },
+  { name: "Foundry Imp", colour: "#B04020", body: "small", head: "horns", eyes: "#FFE060", extras: ["wings", "claws"], speed: 12, ability: "thief", touch: { status: "blind", chance: 0.1 }, deep: 7 },
   { name: "Bone Colossus", colour: "#E0D8C0", body: "wide", head: "skull", eyes: "#FF6040", extras: ["club"], speed: 5, undead: true, ability: "buffet", deep: 8 },
   { name: "Grave Priest", colour: "#4A3A5A", body: "tall", head: "skull", eyes: "#C080FF", extras: ["staff", "robe"], speed: 9, undead: true, ability: "drain", touch: { status: "curse", chance: 0.25 }, deep: 8 },
   { name: "Rootling", colour: "#6A3A2A", body: "small", head: "ears", eyes: "#FF4040", extras: ["claws"], speed: 12, ability: "savage", touch: { status: "paralysis", chance: 0.15 }, deep: 9 },
   { name: "Hollow One", colour: "#3A1A1A", body: "ghost", head: "hood", eyes: "#FF3030", extras: [], speed: 11, undead: true, ability: "lifesteal", touch: { status: "curse", chance: 0.2 }, deep: 9 },
 ];
+// Each kind's shape - health, blows, armour, as a share of the straight line of its level (a rat is frail and quick, a
+// troll a wall of meat, a gargoyle all armour) - and what it fears and shrugs off (1.5 bites deep, 0.5 does little;
+// the undead fear holiness unless they say otherwise). A kind that shoots or breathes stands in the back row, where a
+// blow from the front must reach past its fellows for half - as the party's own back row does. (CM.monsterShape)
+CM.MONSTER_SHAPES = {
+  "Giant Rat": { shape: [0.6, 0.8, 0.6] }, Kobold: { shape: [0.7, 0.8, 0.8] }, Skeleton: { shape: [0.9, 0.9, 1.3], resist: { frost: 0.5 } },
+  Goblin: { shape: [0.8, 0.9, 0.8], row: "back" }, Zombie: { shape: [1.5, 0.9, 0.6], resist: { fire: 1.5 } }, Orc: { shape: [1.1, 1.2, 1.0] },
+  Ghoul: { shape: [0.9, 1.0, 0.9] }, "Dark Elf": { shape: [0.8, 1.1, 0.9], row: "back", resist: { storm: 1.5 } }, Troll: { shape: [1.6, 1.1, 0.8], resist: { fire: 1.5 } },
+  Wraith: { shape: [0.8, 1.0, 1.1], resist: { frost: 0.5, holy: 2 } }, Ogre: { shape: [1.7, 1.3, 0.8] }, Minotaur: { shape: [1.3, 1.3, 1.1] },
+  Gargoyle: { shape: [1.0, 0.9, 1.7], resist: { storm: 1.5, fire: 0.5 } }, Vampire: { shape: [1.1, 1.1, 1.1], resist: { holy: 2, fire: 1.5 } },
+  Demon: { shape: [1.3, 1.2, 1.2], resist: { fire: 0.5, frost: 1.5, holy: 1.5 } }, Wyvern: { shape: [1.2, 1.2, 1.0], resist: { frost: 1.5 } },
+  Drowned: { shape: [1.3, 0.9, 0.8], resist: { frost: 0.5, storm: 1.5 } }, "Weed Hag": { shape: [0.8, 1.0, 0.7], row: "back", resist: { fire: 1.5 } },
+  "Fungal Horror": { shape: [1.5, 1.0, 0.7], resist: { fire: 1.5, frost: 0.5 } }, "Spore Beast": { shape: [0.9, 0.9, 0.8], resist: { fire: 1.5 } },
+  "Crystal Golem": { shape: [1.3, 1.0, 1.8], resist: { frost: 0.5, storm: 1.5 } }, "Shard Wisp": { shape: [0.6, 1.1, 0.6], row: "back", resist: { frost: 0.5 } },
+  "Iron Hound": { shape: [1.0, 1.2, 1.3], resist: { fire: 0.5, storm: 1.5 } }, "Foundry Imp": { shape: [0.7, 1.0, 0.8], row: "back", resist: { fire: 0.5, frost: 1.5 } },
+  "Bone Colossus": { shape: [1.8, 1.3, 1.2], resist: { frost: 0.5 } }, "Grave Priest": { shape: [0.8, 1.0, 0.9], row: "back" },
+  Rootling: { shape: [0.7, 1.1, 0.7], resist: { fire: 1.5 } }, "Hollow One": { shape: [0.9, 1.0, 1.0], resist: { holy: 1.5, fire: 0.5 } },
+};
+for (const m of CM.MONSTERS) Object.assign(m, CM.MONSTER_SHAPES[m.name] || {});
+// what each way of a monster's is, in words (the bestiary, the journal)
+CM.ABILITY_WORDS = { ranged: "shoots over the front row", coward: "bolts with a purse when hurt", savage: "lands savage blows", regen: "knits its wounds every round",
+  drain: "drains experience", stun: "knocks heroes flat", charge: "charges: the first blow is double", lifesteal: "feeds on every blow", breath: "breathes fire on everyone, every other turn",
+  buffet: "strikes twice", healer: "mends the most hurt of its fellows", warder: "wards a fellow against the next blows", splitter: "tears in two when badly hurt", thief: "snatches something from the pack and bolts" };
+CM.ELEMENT_NAMES = { fire: "fire", frost: "frost", holy: "holiness", storm: "lightning" };
+// how much an element does to a foe: 1.5 bites deep, 0.5 does little, 1 as any blow (the guardians say their own; the undead fear holiness)
+CM.resistance = function (m, element) {
+  if (!element) return 1;
+  const G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
+  if (G) return G.weak === element ? 1.5 : G.resist === element ? 0.5 : element === "holy" && m.undead ? 1.5 : 1;
+  if (m.boss) return element === "holy" ? 1.5 : element === "frost" ? 0.5 : 1;
+  const kind = CM.monsterKind(m.kind || m.name), table = kind && kind.resist;
+  if (table && table[element] !== undefined) return table[element];
+  return element === "holy" && m.undead ? 1.5 : 1;
+};
+// combos: two things done in order, by two heroes or one, that come to more than the sum - found by doing them
+CM.COMBOS = {
+  shatter: { name: "Shatter", what: "Frost on a foe, then the Knight's Shield Bash: the ice breaks, and the blow does double." },
+  knife: { name: "Twist the knife", what: "A foe mocked by the Bard or marked by the Ranger takes half again from a Rogue's blow." },
+  kindling: { name: "Kindling", what: "Fire on a foe held by thorns or roots burns the vines: half again." },
+  consecrated: { name: "Consecrated strike", what: "Smite under a Blessing: half again." },
+  thunderclap: { name: "Thunderclap", what: "Lightning on a foe chilled by frost: the ice carries it, double." },
+};
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
 CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
@@ -853,7 +896,7 @@ CM.BOSS = { name: "The Lich King", colour: "#A0E0FF", body: "tall", head: "skull
 CM.GUARDIANS = {
   rat: { floor: 5, name: "The Rat King", colour: "#6E5444", body: "beast", head: "snout", eyes: "#FF5040", extras: ["tail", "crown", "swarm"], speed: 13, size: 0.9,
     hp: 150, atk: 15, df: 6, xp: 500, gold: 350, touch: { status: "poison", chance: 0.45 }, weak: "fire", resist: null, undead: false,
-    escorts: ["Giant Rat", "Giant Rat"], tint: "rgba(160,220,80,0.35)",
+    escorts: ["Giant Rat", "Giant Rat"], tint: "rgba(160,220,80,0.35)", warn: "The Rat King's whiskers twitch, and the refuse begins to stir.",
     moves: [{ kind: "summon", what: "Giant Rat", n: 2, max: 4, word: "rat", text: "The Rat King shrieks, and {n} pour out of the refuse!" }], passives: ["plague"],
     abilities: [["Call the swarm", "every third turn, rats pour out of the refuse (four at most)"],
       ["Plague bite", "poisons more often than not, for longer, and bites a poisoned hero half again as hard"]],
@@ -864,7 +907,7 @@ CM.GUARDIANS = {
     relic: { name: "Rat King's Crown", kind: "helm", slot: "helm", power: 3, value: 600, props: { relic: true, resist: "poison", stat: "luck" } },
     lair: { name: "Rat King's Nest", lore: "g:rat", rows: ["####W####", "#n.....n#", "#..n.n..#", "#...B...#", "#.n...n.#", "#n.....n#", "###D#####"] } },
   knight: { floor: 10, name: "The Drowned Knight", colour: "#3E6068", body: "tall", head: "helm", eyes: "#80E8D8", extras: ["sword", "shield", "weed"], speed: 8, size: 1.0,
-    hp: 280, atk: 26, df: 12, xp: 1400, gold: 1000, touch: null, weak: "holy", resist: "frost", undead: true, escorts: [], tint: "rgba(80,180,200,0.4)",
+    hp: 280, atk: 26, df: 12, xp: 1400, gold: 1000, touch: null, weak: "holy", resist: "frost", undead: true, escorts: [], tint: "rgba(80,180,200,0.4)", warn: "The Drowned Knight's gauntlet opens, and the water around it swirls.",
     moves: [{ kind: "grasp", mult: 1.5, status: "paralysis", text: "The Drowned Knight's gauntlet closes on {who} and drags them under!", how: " - held under the water" }], passives: ["rise"],
     riseText: "The Drowned Knight goes down into the water... and the water lifts him up again. He will not stay down. Not yet.",
     abilities: [["Drowning grasp", "every third turn, drags one of the party under: half again the blow, and a round lost gasping"],
@@ -876,7 +919,7 @@ CM.GUARDIANS = {
     relic: { name: "Shield of the Drowned", kind: "shield", slot: "offhand", power: 5, value: 900, props: { relic: true, resist: "paralysis", df: 2 } },
     lair: { name: "Drowned Hall", lore: "g:knight", flood: true, rows: ["#####W#####", "#....t....#", "#.#.....#.#", "#....B....#", "#.#.....#.#", "#.........#", "#####D#####"] } },
   forge: { floor: 15, name: "The Forge-Warden", colour: "#5C5450", body: "wide", head: "round", eyes: "#FFB030", extras: ["hammer", "glow"], skin: "stone", speed: 6, size: 1.08,
-    hp: 440, atk: 36, df: 20, xp: 2600, gold: 1800, touch: null, weak: "frost", resist: "fire", undead: false, escorts: [], tint: "rgba(255,150,40,0.4)",
+    hp: 440, atk: 36, df: 20, xp: 2600, gold: 1800, touch: null, weak: "frost", resist: "fire", undead: false, escorts: [], tint: "rgba(255,150,40,0.4)", warn: "The Forge-Warden lifts the hammer in both hands.",
     moves: [{ kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: true, text: "The Forge-Warden raises the hammer in both hands and brings it down!", how: " - the hammer", flat: "{who} is knocked flat!" }],
     passives: ["heat"], sear: "The heat of the Forge-Warden sears {who} (-{n}).",
     abilities: [["Hammer slam", "every third turn, the hammer comes down on the whole front row, and some are knocked flat"],
@@ -889,7 +932,7 @@ CM.GUARDIANS = {
     lair: { name: "The Forge", lore: "g:forge", rows: ["#####W#####", "#e.v...v.e#", "#e#.....#e#", "#e...B...e#", "#e#.....#e#", "#e.v...v.e#", "#####D#####"] } },
   // the Deep's guardians, one every five floors, and the thing at the bottom
   queen: { floor: 25, name: "The Drowned Queen", colour: "#5A7A8A", body: "tall", head: "pale", eyes: "#A0F0FF", extras: ["crown", "robe", "weed"], speed: 9, size: 1.0,
-    hp: 560, atk: 44, df: 22, xp: 4200, gold: 3000, touch: { status: "sleep", chance: 0.25 }, weak: "holy", resist: "frost", undead: true, escorts: ["Drowned", "Drowned"], tint: "rgba(120,200,220,0.4)",
+    hp: 560, atk: 44, df: 22, xp: 4200, gold: 3000, touch: { status: "sleep", chance: 0.25 }, weak: "holy", resist: "frost", undead: true, escorts: ["Drowned", "Drowned"], tint: "rgba(120,200,220,0.4)", warn: "The Drowned Queen draws a long, long breath.",
     moves: [{ kind: "ailment", status: "sleep", chance: 0.6, text: "The Drowned Queen opens her mouth, and what comes out is the whole drowned town's grief. Eyes close." },
       { kind: "summon", what: "Drowned", n: 2, max: 4, level: "deep", plural: "{n} of the drowned", text: "The Queen lifts a hand, and {n} climb out of the water." }],
     passives: ["rise"], riseText: "The Drowned Queen sinks... and rises again, the water streaming from her crown. The town will not let her go.",
@@ -901,7 +944,7 @@ CM.GUARDIANS = {
     relic: { name: "The Queen's Ring", kind: "ring", slot: "ring", power: 4, value: 1500, props: { relic: true, stat: "wis", resist: "sleep" } },
     lair: { name: "The Queen's Court", lore: "g:queen", flood: true, rows: ["#####W#####", "#....t....#", "#.#.....#.#", "#....B....#", "#.#.....#.#", "#.........#", "#####D#####"] } },
   mind: { floor: 30, name: "The Mycelial Mind", colour: "#9AB060", body: "wide", head: "round", eyes: "#F0FF90", extras: ["claws"], skin: "warts", speed: 5, size: 1.1,
-    hp: 620, atk: 40, df: 20, xp: 5000, gold: 3400, touch: { status: "poison", chance: 0.3 }, weak: "fire", resist: "frost", undead: false, escorts: ["Fungal Horror"], tint: "rgba(180,240,120,0.4)",
+    hp: 620, atk: 40, df: 20, xp: 5000, gold: 3400, touch: { status: "poison", chance: 0.3 }, weak: "fire", resist: "frost", undead: false, escorts: ["Fungal Horror"], tint: "rgba(180,240,120,0.4)", warn: "The Mind swells, and the spores thicken in the air.",
     moves: [{ kind: "ailment", status: "poison", chance: 0.7, text: "The Mind exhales, and the air fills with spores." },
       { kind: "summon", what: "Spore Beast", n: 1, max: 3, level: "deep", word: "spore beast", text: "Something tears loose from the Mind's flank: {n}." }],
     passives: ["regrow"],
@@ -913,7 +956,7 @@ CM.GUARDIANS = {
     relic: { name: "Sporecap Helm", kind: "helm", slot: "helm", power: 5, value: 1500, props: { relic: true, resist: "poison", stat: "con" } },
     lair: { name: "The Spore Grotto", lore: "g:mind", rows: ["#####W#####", "#f.f...f.f#", "#.#.....#.#", "#f...B...f#", "#.#.....#.#", "#f.f...f.f#", "#####D#####"] } },
   tyrant: { floor: 35, name: "The Crystal Tyrant", colour: "#B898E0", body: "wide", head: "horns", eyes: "#FFFFFF", extras: ["crown"], skin: "stone", speed: 7, size: 1.1,
-    hp: 700, atk: 50, df: 30, xp: 6000, gold: 4000, touch: null, weak: "frost", resist: "fire", undead: false, escorts: ["Crystal Golem"], tint: "rgba(220,200,255,0.45)",
+    hp: 700, atk: 50, df: 30, xp: 6000, gold: 4000, touch: null, weak: "frost", resist: "fire", undead: false, escorts: ["Crystal Golem"], tint: "rgba(220,200,255,0.45)", warn: "The Tyrant begins to ring, faint and rising.",
     moves: [{ kind: "slam", frac: 3, status: "blind", chance: 0.35, front: false, text: "The Tyrant rings like a struck bell, and shards fly from it across the cavern!", how: " - flying shards", flat: "{who} is blinded by the glare!" }],
     passives: ["glass"], sear: "A shard of the Crystal Tyrant cuts {who} (-{n}).",
     abilities: [["Shatter", "every third turn, shards fly at everyone, and some are blinded"], ["Glass", "every blow struck on it cuts the striker (arrows don't); frost cracks it, fire does little"]],
@@ -924,7 +967,7 @@ CM.GUARDIANS = {
     relic: { name: "Prism Amulet", kind: "amulet", slot: "amulet", power: 0, value: 1800, props: { relic: true, df: 4, resist: "blind" } },
     lair: { name: "The Crystal Throne", lore: "g:tyrant", rows: ["#####W#####", "#c...t...c#", "#.#.....#.#", "#c...B...c#", "#.#.....#.#", "#c.......c#", "#####D#####"] } },
   master: { floor: 40, name: "The Foundry Master", colour: "#803020", body: "wide", head: "horns", eyes: "#FFD040", extras: ["wings", "hammer"], skin: "stone", speed: 9, size: 1.15,
-    hp: 820, atk: 58, df: 28, xp: 7000, gold: 4800, touch: { status: "blind", chance: 0.15 }, weak: "frost", resist: "fire", undead: false, escorts: ["Foundry Imp", "Foundry Imp"], tint: "rgba(255,140,40,0.45)",
+    hp: 820, atk: 58, df: 28, xp: 7000, gold: 4800, touch: { status: "blind", chance: 0.15 }, weak: "frost", resist: "fire", undead: false, escorts: ["Foundry Imp", "Foundry Imp"], tint: "rgba(255,140,40,0.45)", warn: "The Foundry Master's furnace of a mouth glows white.",
     moves: [{ kind: "breath", frac: 2, text: "The Foundry Master opens its furnace of a mouth, and fire pours over the whole party!" },
       { kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: true, text: "The Master's hammer comes down on the front line!", how: " - the hammer", flat: "{who} is knocked flat!" }],
     passives: ["heat"], sear: "The heat of the Foundry Master sears {who} (-{n}).",
@@ -936,7 +979,7 @@ CM.GUARDIANS = {
     relic: { name: "Ember Mail", kind: "armor", slot: "armor", power: 10, value: 2200, props: { relic: true, df: 2, weight: "medium" } },
     lair: { name: "The Great Foundry", lore: "g:master", rows: ["#####W#####", "#e.v...v.e#", "#e#.....#e#", "#e...B...e#", "#e#.....#e#", "#e.v...v.e#", "#####D#####"] } },
   patriarch: { floor: 45, name: "The Bone Patriarch", colour: "#D8D0B8", body: "tall", head: "skull", eyes: "#80FF80", extras: ["staff", "robe"], speed: 10, size: 1.05,
-    hp: 900, atk: 60, df: 30, xp: 8000, gold: 5600, touch: { status: "curse", chance: 0.3 }, weak: "holy", resist: "frost", undead: true, escorts: ["Bone Colossus"], tint: "rgba(160,255,160,0.4)",
+    hp: 900, atk: 60, df: 30, xp: 8000, gold: 5600, touch: { status: "curse", chance: 0.3 }, weak: "holy", resist: "frost", undead: true, escorts: ["Bone Colossus"], tint: "rgba(160,255,160,0.4)", warn: "The Patriarch raises his staff over the heaps.",
     moves: [{ kind: "summon", what: "Skeleton", n: 2, max: 6, level: "deep", word: "skeleton", text: "The Patriarch raps his staff on the floor, and {n} rise from the heaps." },
       { kind: "ailment", status: "curse", chance: 0.5, text: "The Patriarch speaks a word that was old when the king was young, and a curse settles on the party." }],
     passives: ["drain"],
@@ -948,7 +991,7 @@ CM.GUARDIANS = {
     relic: { name: "Patriarch's Reliquary", kind: "amulet", slot: "amulet", power: 0, value: 2400, props: { relic: true, df: 3, resist: "curse" } },
     lair: { name: "The Ossuary Chapel", lore: "g:patriarch", rows: ["#####W#####", "#n...t...n#", "#.#.....#.#", "#n...B...n#", "#.#.....#.#", "#n.......n#", "#####D#####"] } },
   root: { floor: 50, name: "The Root of the World", colour: "#4A2A2A", body: "wide", head: "round", eyes: "#FF5040", extras: ["claws"], skin: "warts", speed: 8, size: 1.25,
-    hp: 1400, atk: 70, df: 34, xp: 12000, gold: 9000, touch: { status: "paralysis", chance: 0.2 }, weak: "fire", resist: "frost", undead: false, escorts: ["Rootling", "Rootling"], tint: "rgba(255,80,60,0.45)",
+    hp: 1400, atk: 70, df: 34, xp: 12000, gold: 9000, touch: { status: "paralysis", chance: 0.2 }, weak: "fire", resist: "frost", undead: false, escorts: ["Rootling", "Rootling"], tint: "rgba(255,80,60,0.45)", warn: "The Root tenses, and the floor of the world creaks.",
     moves: [{ kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: false, text: "The Root heaves, and the whole floor of the world shakes!", how: " - the quake", flat: "{who} is thrown down!" },
       { kind: "summon", what: "Rootling", n: 2, max: 4, level: "deep", word: "rootling", text: "{n} tear themselves out of the Root's bark." }],
     passives: ["regrow", "rise"], riseText: "The Root splits and sags... and knits, slowly, the sap running black. It is not done.",
@@ -1168,9 +1211,10 @@ CM.bones = (ghost) => ({ name: "Someone's bones", kind: "bones", power: 0, value
 
 // one monster of a kind, at a depth - with what the kind does carried on it, so a save stands alone
 CM.makeMonster = function (kind, level, rnd) {
-  return { name: kind.name, kind: kind.name, colour: kind.colour, hp: 8 + level * 6, max: 8 + level * 6, atk: 3 + level * 2, df: level,
+  const sh = kind.shape || [1, 1, 1], hp = Math.max(1, Math.round((8 + level * 6) * sh[0]));
+  return { name: kind.name, kind: kind.name, colour: kind.colour, hp, max: hp, atk: Math.max(1, Math.round((3 + level * 2) * sh[1])), df: Math.max(0, Math.round(level * sh[2])),
     xp: 10 + level * 8, gold: rnd.int(2, 8) * level, speed: kind.speed || 10, undead: Boolean(kind.undead), ability: kind.ability || null,
-    touch: kind.touch ? Object.assign({}, kind.touch) : null };
+    touch: kind.touch ? Object.assign({}, kind.touch) : null, row: kind.row || "front" };
 };
 
 // a monster saved before it knew what it does
@@ -1178,7 +1222,7 @@ CM.upgradeMonster = function (m) {
   if (m.kind) return m;
   const kind = CM.monsterKind(m.name);
   m.kind = kind ? kind.name : m.name;
-  if (kind) { m.speed = kind.speed || 10; m.undead = Boolean(kind.undead); m.ability = kind.ability || null; m.touch = kind.touch ? Object.assign({}, kind.touch) : null; }
+  if (kind) { m.speed = kind.speed || 10; m.undead = Boolean(kind.undead); m.ability = kind.ability || null; m.touch = kind.touch ? Object.assign({}, kind.touch) : null; m.row = kind.row || "front"; }
   else { m.speed = m.speed || (m.boss ? 12 : 10); m.undead = Boolean(m.undead || m.boss); m.ability = m.ability || null; m.touch = m.touch || null; }
   return m;
 };
@@ -1263,7 +1307,9 @@ CM.rollStats = function (cls, rnd) {                                      // thr
 };
 
 CM.mod = (v, per = 2) => Math.floor((v - 10) / per);                     // how a stat tells: 10 is nothing, 16 is +3 (at 2 a point)
-CM.xpForLevel = (level) => Math.ceil(60 * Math.pow(level - 1, 1.6));     // the experience a level asks for (the old game's curve)
+// the experience a level asks for: measured so a party fighting its way down is about the monsters' level - 20 on floor
+// 20, the middle thirties at the bottom (the old game's 60 * (L-1)^1.6 was for twenty floors, and ran to level 100 by fifty)
+CM.xpForLevel = (level) => Math.ceil(20 * (level - 1) + 8 * Math.pow(level - 1, 2.6));
 
 // the numbers a hero fights with, from class, level, stats and boons (health and magic stay where they were, within the new most)
 CM.recompute = function (h) {
@@ -4258,6 +4304,8 @@ CM.Game = class {
     this.crowned = false; this.bottom = false;       // the Lich King slain this run; the bottom of the world reached
     this.endless = false; this.deepened = [];        // an Endless expedition: the shaft has no bottom; the floors where the dark deepened
     this.fameEndless = CM.store.get("fameEndless", []);   // the Endless board: how deep, ever
+    this.bestiary = CM.store.get("bestiary", {});         // every kind met and slain, and what it fears: kept between runs
+    this.combos = CM.store.get("combos", {});             // the combos found, ever
     this.dirty = false; this.sinceSave = 0; this.wander = 0;
   }
 
@@ -5103,7 +5151,7 @@ Object.assign(CM.Game.prototype, {
     delete thing.anim;
     if (!(this.song && this.songEpic === this.floor.number)) this.song = 0;   // the Bard's song lasts the fight (an Epic one, the floor)
     for (const h of this.party) { h.cried = false; h.winded = false; h.defending = false; h.guardedBy = null; h.guarding = null; h.used = {}; h.struck = false; }
-    for (const m of this.foes) { m.held = 0; m.asleep = 0; m.blind = 0; m.marked = false; m.charged = false; m.fled = false; m.dead = m.hp <= 0; }
+    for (const m of this.foes) { m.held = 0; m.asleep = 0; m.blind = 0; m.marked = false; m.charged = false; m.fled = false; m.dead = m.hp <= 0; m.chilled = 0; m.warded = 0; m.intent = null; if (!m.row) m.row = (CM.monsterKind(m.kind || m.name) || {}).row || "front"; this.noteFoe(m, "seen"); }
     this.target = 0;
     this.combat = { foes: this.foes, round: 0, order: [], index: 0, waiting: null, surprise: false, taunter: null, tauntUntil: 0, bless: false, protect: false, reached: 0 };
     this.setMode("combat");
@@ -5228,6 +5276,8 @@ Object.assign(CM.Game.prototype, {
         m.burning -= 1;
         this.spellHit(m, m.burnDmg || 5, `${CM.The(m)} burns:`, "fire");
       }
+      if (m.chilled > 0) m.chilled -= 1;
+      if (m.warded > 0) m.warded -= 1;
     }
     for (const h of this.alive()) if (CM.trait(h, "wellspring") && h.mp < h.maxmp) h.mp = Math.min(h.maxmp, h.mp + 2);
     if (this.alive().some((h) => CM.trait(h, "evergreen"))) for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + 3);
@@ -5457,6 +5507,24 @@ Object.assign(CM.Game.prototype, {
       const limit = this.reachLimit();
       if (c.reached > limit) { if (c.reached === limit + 1) this.say("The rest crowd behind, unable to reach you in the narrow way."); return; }
     }
+    if (m.ability === "healer") {                                         // it mends the most hurt of its fellows, when one is hurt enough
+      const hurt = this.living().filter((f) => f !== m && f.hp < f.max * 0.6).sort((a, b) => a.hp / a.max - b.hp / b.max)[0];
+      if (hurt) { const back = Math.max(2, Math.floor(hurt.max * 0.2)); hurt.hp = Math.min(hurt.max, hurt.hp + back); this.say(`${CM.The(m)} mutters over ${CM.the(hurt)}: its wounds close (+${back}).`); this.emit("fx", { kind: "mend", foe: hurt }); return; }
+    }
+    if (m.ability === "warder") {                                         // it wards a fellow (or itself) against the next blows
+      const ward = this.living().filter((f) => !f.warded).sort((a, b) => a.hp / a.max - b.hp / b.max)[0];
+      if (ward && rnd.chance(0.6)) { ward.warded = 2; this.say(`${CM.The(m)} hums, and a sheen of crystal closes over ${ward === m ? "it" : CM.the(ward)}: the next blows do half.`); this.emit("fx", { kind: "ward", foe: ward }); return; }
+    }
+    if (m.ability === "thief" && !m.stole) {                              // it snatches something from the pack, and bolts with it
+      const row = this.bag.findIndex((i) => ["heal", "mana", "scroll", "wand", "antidote", "gem"].includes(i.kind));
+      if (row >= 0 && rnd.chance(0.5)) {
+        const item = this.bag.splice(row, 1)[0];
+        m.stole = true; m.fled = true;
+        this.say(`${CM.The(m)} darts in, snatches the ${item.name} from the pack, and is gone up the flue with it!`);
+        this.emit("fx", { kind: "die", foe: m });
+        return;
+      }
+    }
     if (m.ability === "coward" && m.hp < m.max * 0.3) {
       const purse = Math.floor(this.gold * 0.05);
       this.gold -= purse;
@@ -5537,14 +5605,18 @@ Object.assign(CM.Game.prototype, {
   guardianAct(m) {
     const rnd = this.rnd, G = CM.GUARDIANS[m.guardian], moves = G.moves || [];
     m.turns = (m.turns || 0) + 1;
+    m.intent = null;
+    const telegraph = () => {                                             // next turn is one of its moves: it shows, so the party can brace
+      if ((m.turns + 1) % 3 === 0 && moves.length) { const next = moves[(Math.floor((m.turns + 1) / 3) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); }
+    };
     if (m.turns % 3 === 0 && moves.length) {
       const mv = moves[(Math.floor(m.turns / 3) - 1) % moves.length];
-      if (this.guardianMove(m, mv)) return;
+      if (this.guardianMove(m, mv)) { telegraph(); return; }
     }
     const target = this.pickTarget(m);
     if (!target) return;
     this.emit("fx", { kind: "attack", foe: m });
-    if (!rnd.chance(0.85)) { this.say(`${CM.The(m)} misses ${target.name}.`); return; }
+    if (!rnd.chance(0.85)) { this.say(`${CM.The(m)} misses ${target.name}.`); telegraph(); return; }
     let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + CM.gearDefence(target)), how = "";
     if (CM.guardianHas(m, "plague") && (target.status || {}).poison) { dmg = Math.ceil(dmg * 1.5); how = " - the plague bites deep"; }
     this.hurt(target, dmg, m, { how });
@@ -5553,6 +5625,7 @@ Object.assign(CM.Game.prototype, {
       target.xp -= lost;
       this.say(`${target.name} feels ${CM.the(m)} draw out ${lost} experience.`);
     }
+    telegraph();
   },
 
   guardianMove(m, mv) {
@@ -5678,20 +5751,26 @@ Object.assign(CM.Game.prototype, {
     if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
     else if (ambush || rnd.chance(this.critChance(hero))) { dmg *= critMult; how = " - a weak spot"; }
     else if (back && !reaches) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
+    if (target.row === "back" && !bow && this.living().some((f) => f !== target && f.row !== "back")) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += ", reaching past the front"; }   // (their back row, as yours)
     if ((hero.boons || []).includes("warcry") && !hero.cried) { hero.cried = true; dmg *= 2; how += " - a war cry"; }
     const props = (hero.weapon && hero.weapon.props) || {}, el = props.element && !hero.weapon.unknown ? props.element : null;
-    const G = target.guardian ? CM.GUARDIANS[target.guardian] : null;
+    const G = target.guardian ? CM.GUARDIANS[target.guardian] : null;   // (its heat, its shards: below)
     if (el) {                                                            // a flaming, frost or blessed blade
-      const weak = (el === "holy" ? Boolean(target.undead) : (CM.ELEMENTS[el].weak || []).includes(target.kind || target.name)) || Boolean(G && G.weak === el);
-      if (weak) { dmg = Math.ceil(dmg * 1.5); how += ` - the ${el === "holy" ? "blessing" : el} bites deep`; }
-      else if (G && G.resist === el) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += ` - the ${el} does little to it`; }
+      const r = CM.resistance(target, el);
+      this.learnResist(target, el, r);
+      if (r > 1) { dmg = Math.ceil(dmg * r); how += ` - the ${el === "holy" ? "blessing" : el} bites deep`; }
+      else if (r < 1) { dmg = Math.max(1, Math.ceil(dmg * r)); how += ` - the ${el} does little to it`; }
       else dmg += 2;
     }
     else if (target.undead && CM.trait(hero, "holyblade")) { dmg = Math.ceil(dmg * 1.5); how += " - the blessing in the blade bites deep"; }
     hero.struck = true;
     if (opts.mult) dmg = Math.ceil(dmg * opts.mult);
     if (target.marked) dmg = Math.ceil(dmg * 1.25);
+    if (opts.bash && target.chilled > 0) { dmg *= 2; how += " - the ice shatters"; this.combo("shatter"); target.chilled = 0; }
+    if (hero.cls === "Rogue" && target.marked) { dmg = Math.ceil(dmg * 1.5); how += " - the knife finds the mark"; this.combo("knife"); }
+    if (target.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; target.warded -= 1; }
     target.hp -= dmg;
+    this.splitIfHurt(target);
     if (target.asleep > 0) { target.asleep = 0; how += " - it wakes"; }
     this.say(`${hero.name} hits ${CM.the(target)}${note} for ${dmg}${how}.`);
     this.emit("fx", { kind: "hit", foe: target, amount: dmg });
@@ -5708,16 +5787,61 @@ Object.assign(CM.Game.prototype, {
 
   // a spell's blow: it doesn't miss
   spellHit(foe, dmg, what, element) {
-    const G = foe.guardian ? CM.GUARDIANS[foe.guardian] : null;        // (a guardian's weakness, and what it shrugs off)
+    let how = "";
     if (element === "fire" && this.casting && CM.trait(this.casting, "firebrand")) dmg = Math.ceil(dmg * 1.5);
-    if (G && element && G.weak === element) dmg = Math.ceil(dmg * 1.5);
-    else if (G && element && G.resist === element) dmg = Math.max(1, Math.ceil(dmg / 2));
+    const r = CM.resistance(foe, element);                              // (what it fears, and what it shrugs off)
+    if (element) this.learnResist(foe, element, r);
+    if (r > 1) { dmg = Math.ceil(dmg * r); how = ` - the ${CM.ELEMENT_NAMES[element] || element} bites deep`; }
+    else if (r < 1) { dmg = Math.max(1, Math.ceil(dmg * r)); how = ` - the ${CM.ELEMENT_NAMES[element] || element} does little to it`; }
     if (foe.marked) dmg = Math.ceil(dmg * 1.25);
+    if (element === "fire" && foe.held > 0) { dmg = Math.ceil(dmg * 1.5); how += " - the vines burn"; this.combo("kindling"); }
+    if (element === "storm" && foe.chilled > 0) { dmg *= 2; how += " - the ice carries it"; this.combo("thunderclap"); foe.chilled = 0; }
+    if (foe.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; foe.warded -= 1; }
     foe.hp -= dmg;
     if (foe.asleep > 0) foe.asleep = 0;
     this.emit("fx", { kind: "hit", foe, amount: dmg, spell: true });
-    if (what) this.say(`${what} ${foe.name} takes ${dmg}.`);
+    if (what) this.say(`${what} ${foe.name} takes ${dmg}${how}.`);
+    this.splitIfHurt(foe);
     return dmg;
+  },
+
+  // a Spore Beast badly hurt tears in two: the other half takes its place beside it, once
+  splitIfHurt(m) {
+    if (m.ability !== "splitter" || m.split || m.hp <= 0 || m.hp > m.max / 2 || this.mode !== "combat") return;
+    m.split = true;
+    const twin = Object.assign({}, m, { hp: m.hp, max: m.max, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false, chilled: 0, warded: 0, summoned: true, xp: Math.floor(m.xp / 2), gold: 0 });
+    delete twin.anim;
+    this.foes.push(twin);
+    this.say(`${CM.The(m)} tears in two, and both halves come on!`);
+    this.emit("fx", { kind: "summon", layer: "fx:leaf" });
+  },
+
+  // a combo done: named once in the log, and remembered (the journal keeps every one found)
+  combo(id) {
+    const c = CM.COMBOS[id];
+    if (!c) return;
+    this.combos = this.combos || {};
+    const first = !this.combos[id];
+    this.combos[id] = (this.combos[id] || 0) + 1;
+    if (first) { CM.store.set("combos", this.combos); this.say(`Combo - ${c.name}! ${c.what}`); this.emit("fx", { kind: "combo", id }); }
+  },
+
+  // the bestiary: every kind met, slain, and what it has been seen to fear or shrug off (kept between runs)
+  noteFoe(m, what) {
+    if (!m || m.boss || m.guardian) return;
+    const kind = m.kind || m.name;
+    this.bestiary = this.bestiary || {};
+    const e = this.bestiary[kind] = this.bestiary[kind] || { seen: 0, slain: 0, weak: [], resist: [] };
+    e[what] = (e[what] || 0) + 1;
+    this.bestiaryDirty = true;
+  },
+  learnResist(m, element, r) {
+    if (r === 1 || !m || m.boss || m.guardian) return;
+    const kind = m.kind || m.name;
+    this.bestiary = this.bestiary || {};
+    const e = this.bestiary[kind] = this.bestiary[kind] || { seen: 0, slain: 0, weak: [], resist: [] };
+    const list = r > 1 ? e.weak : e.resist;
+    if (!list.includes(element)) { list.push(element); this.bestiaryDirty = true; }
   },
 
   // what a hero reaches for when told only "cast": their calling's own thing, if they can afford it
@@ -5781,14 +5905,15 @@ Object.assign(CM.Game.prototype, {
     switch (id) {
       case "missile": this.spellHit(foe, Math.max(1, 6 + 2 * L + mod), `${h.name}'s bolt of force strikes:`); break;
       case "firebolt": this.spellHit(foe, Math.max(1, 10 + 3 * L + mod), `${h.name}'s fire bolt:`, "fire"); break;
-      case "lightning": this.spellHit(foe, Math.max(1, 20 + 5 * L + mod), `${h.name} calls down lightning!`); if (CM.trait(h, "tempest") && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.5)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels, smoking.`); } break;
+      case "lightning": this.spellHit(foe, Math.max(1, 20 + 5 * L + mod), `${h.name} calls down lightning!`, "storm"); if (CM.trait(h, "tempest") && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.5)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels, smoking.`); } break;
       case "calllightning": {
         const dmg = Math.max(1, 18 + 4 * L + mod), struck = CM.trait(h, "stormcall") ? foes : [foe];
-        for (const m of struck) { this.spellHit(m, m === foe ? dmg : Math.ceil(dmg * 0.6), m === foe ? `${h.name} calls down lightning!` : "The storm reaches on:"); if (CM.trait(h, "tempest") && m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.5)) { m.held = Math.max(m.held || 0, 1); this.say(`${CM.The(m)} reels, smoking.`); } }
+        for (const m of struck) { this.spellHit(m, m === foe ? dmg : Math.ceil(dmg * 0.6), m === foe ? `${h.name} calls down lightning!` : "The storm reaches on:", "storm"); if (CM.trait(h, "tempest") && m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.5)) { m.held = Math.max(m.held || 0, 1); this.say(`${CM.The(m)} reels, smoking.`); } }
         break;
       }
       case "smite": {
-        const dmg = Math.max(1, 12 + 3 * L + Math.floor(mod / 2));
+        let dmg = Math.max(1, 12 + 3 * L + Math.floor(mod / 2));
+        if (c.bless) { dmg = Math.ceil(dmg * 1.5); this.combo("consecrated"); }
         if (CM.trait(h, "radiance") && foes.some((m) => m.undead)) { for (const m of foes) if (m.undead) this.spellHit(m, dmg * 2, `${h.name}'s radiance falls on the unholy:`, "holy"); }
         else this.spellHit(foe, dmg * (foe.undead ? 2 : 1), `${h.name} smites${foe.undead ? " the unholy thing" : ""}:`, "holy");
         break;
@@ -5802,8 +5927,8 @@ Object.assign(CM.Game.prototype, {
       case "frost": {
         const dmg = Math.max(1, 6 + 2 * L + mod);
         let held = 0;
-        for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
-        this.say(`${h.name} breathes frost over every foe: ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}.`);
+        for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0) m.chilled = 2; if (m.hp > 0 && !CM.unmoved(m) && rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
+        this.say(`${h.name} breathes frost over every foe: ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}. The ice clings.`);
         break;
       }
       case "sleep": case "lullaby": {
@@ -5914,7 +6039,7 @@ Object.assign(CM.Game.prototype, {
       case "aimed": this.strike(h, foe, " with an aimed arrow", { sure: true, mult: 1.5 }); break;
       case "guard": h.guarding = ally; ally.guardedBy = h; this.say(`${h.name} stands guard over ${ally.name}.`); break;
       case "taunt": c.taunter = h; c.tauntUntil = c.round + 1; this.say(`${h.name} roars a challenge: every foe turns their way!`); break;
-      case "bash": if (this.strike(h, foe, " with the shield") > 0 && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.5)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels.`); } break;
+      case "bash": if (this.strike(h, foe, " with the shield", { bash: true }) > 0 && foe.hp > 0 && !CM.unmoved(foe) && rnd.chance(0.5)) { foe.held = Math.max(foe.held || 0, 1); this.say(`${CM.The(foe)} reels.`); } break;
       case "trick": foe.blind = 3; if (CM.trait(h, "sand") && !CM.unmoved(foe)) foe.held = Math.max(foe.held || 0, 1); this.say(`${h.name} flings sand in the ${foe.name}'s eyes!${CM.trait(h, "sand") && !CM.unmoved(foe) ? " It stands there clawing at them." : ""}`); break;
       default: break;
     }
@@ -5961,6 +6086,8 @@ Object.assign(CM.Game.prototype, {
     const rnd = this.rnd;
     const slain = this.foes.filter((m) => !m.fled);
     this.count("kills", slain.length);
+    for (const m of slain) this.noteFoe(m, "slain");
+    if (this.bestiaryDirty) { CM.store.set("bestiary", this.bestiary); this.bestiaryDirty = false; }
     const xp = slain.reduce((s, m) => s + m.xp, 0);
     let gold = slain.reduce((s, m) => s + m.gold, 0);
     if (this.alive().some((h) => (h.boons || []).includes("scavenger"))) gold = Math.floor(gold * 1.25);
@@ -6031,7 +6158,9 @@ Object.assign(CM.Game.prototype, {
     else if (can.includes("song") && !this.song) done = this.act("cast", { id: "song" });
     else if (can.includes("volley") && foes.length >= 2) done = this.act("cast", { id: "volley" });
     if (!done && foes.length) {
-      const weakest = foes.reduce((a, b) => (a.hp <= b.hp ? a : b), foes[0]);
+      const bow = Boolean(h.weapon && h.weapon.props && h.weapon.props.bow), front = foes.filter((m) => m.row !== "back");
+      const pool = !bow && front.length ? front : foes;                   // (a blow from the front reaches past the front for half: the front first)
+      const weakest = pool.reduce((a, b) => (a.hp <= b.hp ? a : b), pool[0]);
       done = this.act("fight", weakest);
     }
     if (!done) done = this.act("defend");
@@ -6197,7 +6326,7 @@ Object.assign(CM.Game.prototype, {
     } else if (item.spell === "frost") {
       const dmg = 6 + 2 * L;
       let held = 0;
-      for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0 && !CM.unmoved(m) && this.rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
+      for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0) m.chilled = 2; if (m.hp > 0 && !CM.unmoved(m) && this.rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
       this.say(`${h.name} ${item.kind === "wand" ? "waves the wand" : "reads the scroll"}: cold on every foe, ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}.`);
     } else if (item.spell === "sleep") {
       let asleep = 0;
@@ -6631,7 +6760,7 @@ Object.assign(CM.Game.prototype, {
 
   exportText() {
     return JSON.stringify({ game: "Claude and Magic", version: CM.version, built: CM.built, run: this.runs[0], runs: this.runs, slot: this.slot, fame: this.fame, fameEndless: this.fameEndless, settings: this.settings,
-      trophies: this.trophies, vault: this.vault, achievements: this.achievements });
+      trophies: this.trophies, vault: this.vault, achievements: this.achievements, bestiary: this.bestiary, combos: this.combos });
   },
 
   importText(text) {
@@ -6646,6 +6775,8 @@ Object.assign(CM.Game.prototype, {
     if (data.settings) { Object.assign(this.settings, data.settings); this.saveSettings(); }
     if (data.trophies && typeof data.trophies === "object") { this.trophies = Object.assign({}, this.trophies, data.trophies); CM.store.set("trophies", this.trophies); }
     if (data.vault && typeof data.vault === "object" && data.vault.name) { this.vault = data.vault; CM.store.set("vault", this.vault); }
+    if (data.bestiary && typeof data.bestiary === "object") { this.bestiary = Object.assign({}, this.bestiary, data.bestiary); CM.store.set("bestiary", this.bestiary); }
+    if (data.combos && typeof data.combos === "object") { this.combos = Object.assign({}, this.combos, data.combos); CM.store.set("combos", this.combos); }
     this.emit("change");
     return "";
   },
@@ -7796,7 +7927,10 @@ CM.UI = class {
       const b = document.createElement("button");
       b.className = i === (g.target || 0) ? "chosen" : "";
       const est = h ? g.strikeEstimate(h, m) : null;
-      b.innerHTML = `${this.esc(m.name)} <small>${Math.max(0, m.hp)}/${m.max}${m.asleep > 0 ? " - asleep" : ""}${m.held > 0 ? " - held" : ""}${m.marked ? " - marked" : ""}${m.blind > 0 ? " - blinded" : ""}${m.burning > 0 ? " - burning" : ""}</small>${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
+      const marks = [m.asleep > 0 ? `asleep ${m.asleep}` : "", m.held > 0 ? `held ${m.held}` : "", m.marked ? "marked" : "", m.blind > 0 ? `blinded ${m.blind}` : "", m.burning > 0 ? `burning ${m.burning}` : "",
+        m.chilled > 0 ? `chilled ${m.chilled}` : "", m.warded > 0 ? "warded" : ""].filter(Boolean);
+      const behind = m.row === "back" && g.living().some((f) => f !== m && f.row !== "back");
+      b.innerHTML = `${this.esc(m.name)}${behind ? " <small>(behind)</small>" : ""} <small>${Math.max(0, m.hp)}/${m.max}${marks.length ? " - " + marks.join(", ") : ""}</small>${m.intent ? `<i class="odds intent">about to: ${this.esc((m.intent.text || "").split("!")[0].split(",")[0].replace(/^The [A-Za-z- ]+ /, "")) || "something terrible"}</i>` : ""}${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
       b.addEventListener("click", () => g.setTarget(i));
       targets.appendChild(b);
     });
@@ -8224,9 +8358,24 @@ CM.UI = class {
       if (!list.length) return "";
       return `<div class="list-title">${title}</div>` + list.map((e) => `<div class="entry"><small>${e.floor ? `Floor ${e.floor}` : ""}${e.who ? ` - ${this.esc(e.who)}` : ""}</small><p>${this.esc(e.text)}</p></div>`).join("");
     };
-    const html = part("Carved into the stone", "carving") + part("What the dead said", "ghost") + part("Riddles answered", "riddle");
+    const html = part("Carved into the stone", "carving") + part("What the dead said", "ghost") + part("Riddles answered", "riddle") + this.bestiaryHtml() + this.combosHtml();
     box.innerHTML = html || `<div class="small">Nothing yet. Read the walls (Space before a carving), and listen to whoever you meet; the hermit pays for stories.</div>`;
     this.openDialog("#dlg-journal");
+  }
+
+  // the bestiary: every kind met, in the order of the depths, with what it does and what it has been seen to fear
+  bestiaryHtml() {
+    const g = this.game, b = g.bestiary || {}, kinds = CM.MONSTERS.filter((m) => b[m.name] && b[m.name].seen);
+    if (!kinds.length) return "";
+    const shape = (m) => { const [hp, atk, df] = m.shape || [1, 1, 1]; const w = []; if (hp >= 1.4) w.push("tough"); else if (hp <= 0.7) w.push("frail"); if (atk >= 1.2) w.push("hits hard"); if (df >= 1.3) w.push("armoured"); else if (df <= 0.7) w.push("thin-skinned"); return w.join(", "); };
+    const rows = kinds.map((m) => { const e = b[m.name], words = [shape(m), m.ability ? CM.ABILITY_WORDS[m.ability] : "", m.touch ? `its touch may leave a hero ${CM.STATUSES[m.touch.status].name.toLowerCase()}` : "", m.undead ? "undead" : "", m.row === "back" ? "keeps to the back row" : ""].filter(Boolean);
+      return `<div class="entry"><small>${m.deep ? CM.THEMES[m.deep].name : "The first twenty floors"} - met ${e.seen}, slain ${e.slain}</small><p><b>${this.esc(m.name)}</b> - ${this.esc(words.join("; "))}.${e.weak.length ? ` Fears ${e.weak.map((x) => CM.ELEMENT_NAMES[x] || x).join(" and ")}.` : ""}${e.resist.length ? ` Shrugs off ${e.resist.map((x) => CM.ELEMENT_NAMES[x] || x).join(" and ")}.` : ""}</p></div>`; });
+    return `<div class="list-title">Bestiary</div>` + rows.join("");
+  }
+  combosHtml() {
+    const found = Object.keys(CM.COMBOS).filter((id) => (this.game.combos || {})[id]);
+    const rows = Object.entries(CM.COMBOS).map(([id, c]) => `<div class="entry"><p>${found.includes(id) ? `<b>${c.name}</b> - ${this.esc(c.what)} <small>(done ${this.game.combos[id]} ${this.game.combos[id] === 1 ? "time" : "times"})</small>` : `<b>?</b> <small>A combo not yet found.</small>`}</p></div>`);
+    return `<div class="list-title">Combos (${found.length} of ${Object.keys(CM.COMBOS).length} found)</div>` + rows.join("");
   }
 
   // a wash of colour over the view that fades (a spell's light, a trap's gas)
@@ -8539,6 +8688,9 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       case "shatter": ui.tint("rgba(120,240,255,0.5)", 500); fxs.burst({ at: beforeParty(0.6), layer: "fx:shard", n: 20, size: 0.08, speed: 2, up: 2 }); renderer.shake(0.5); break;
       case "sparkle": fxs.burst({ at: [fx.at[0] + 0.5, 0.35, fx.at[1] + 0.5], n: 16, size: 0.05, speed: 0.8, up: 1.6, gravity: 2 }); break;
+      case "mend": { const at = atFoe(fx.foe, 0.3); if (at) fxs.drift({ at, layer: "fx:leaf", n: 8, size: 0.06, rise: 0.5, ms: 900 }); break; }
+      case "ward": { const at = atFoe(fx.foe, 0.5); if (at) fxs.flare({ at, layer: "fx:frost", size: 0.9, ms: 500, grow: 0.3 }); break; }
+      case "combo": ui.tint("rgba(255,230,150,0.35)", 500); break;
       default: break;
     }
   }
@@ -8565,7 +8717,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (i < 0) return null;
     const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * (n > 4 ? 0.22 : 0.32), -0.46, 0.46);
-    let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : foe.guardian ? 0.22 : 0);     // (the Lich King keeps his distance)
+    let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : foe.guardian ? 0.22 : 0) + (foe.row === "back" ? 0.28 : 0);     // (the Lich King keeps his distance; the back row stands back)
     const lunge = lunges.get(foe);
     if (lunge !== undefined) {                                           // it lunges at the party, and draws back
       const t = (performance.now() - lunge) / 340;

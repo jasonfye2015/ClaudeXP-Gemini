@@ -82,7 +82,7 @@ histogram for Gentle/Fair/Grim.
 
 ---
 
-## Phase 2 - The fight, deeper
+## Phase 2 - The fight, deeper - DONE in v1.1
 
 **Goal:** fights are decided by choices, not by the numbers. Check every change against the sim.
 

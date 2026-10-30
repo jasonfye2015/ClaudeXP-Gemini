@@ -275,6 +275,143 @@ test("the pack: what a thing would change for a hero, and the pack in order", ()
   assert.ok(game.bag.findIndex((i) => i.kind === "torch") > game.bag.findIndex((i) => i.kind === "armor"));
 });
 
+test("monsters have a shape, a row, and what they fear", () => {
+  const CM = load(), rnd = new CM.Random(5);
+  const rat = CM.makeMonster(CM.monsterKind("Giant Rat"), 10, rnd), troll = CM.makeMonster(CM.monsterKind("Troll"), 10, rnd), goblin = CM.makeMonster(CM.monsterKind("Goblin"), 10, rnd);
+  assert.ok(troll.max > rat.max * 2, "a troll is a wall of meat beside a rat");
+  assert.strictEqual(goblin.row, "back"); assert.strictEqual(troll.row, "front");
+  assert.strictEqual(CM.resistance(troll, "fire"), 1.5);
+  assert.strictEqual(CM.resistance(CM.makeMonster(CM.monsterKind("Demon"), 10, rnd), "fire"), 0.5);
+  assert.strictEqual(CM.resistance(CM.makeMonster(CM.monsterKind("Skeleton"), 10, rnd), "holy"), 1.5, "the undead fear holiness");
+  assert.strictEqual(CM.resistance(rat, "holy"), 1);
+  assert.strictEqual(CM.resistance({ guardian: "forge", name: "The Forge-Warden" }, "frost"), 1.5);
+  assert.strictEqual(CM.resistance({ guardian: "forge", name: "The Forge-Warden" }, "fire"), 0.5);
+  for (const m of CM.MONSTERS) assert.ok(m.shape && m.shape.length === 3, m.name + " should have a shape");
+});
+
+test("the level curve: about the monsters' level, floor by floor", () => {
+  const CM = load();
+  assert.ok(CM.xpForLevel(2) > CM.xpForLevel(1) && CM.xpForLevel(20) > CM.xpForLevel(19));
+  assert.ok(CM.xpForLevel(20) > 14000 && CM.xpForLevel(20) < 22000, "about 16k experience by floor 20 is level 20: " + CM.xpForLevel(20));
+  assert.ok(CM.xpForLevel(35) > 60000 && CM.xpForLevel(35) < 100000, "about 70k by the bottom is the middle thirties: " + CM.xpForLevel(35));
+});
+
+test("a foe in the back row is reached past the front for half; a bow reaches it whole", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("rows-1", fixedParty(CM));
+  const rnd = new CM.Random(7), goblin = CM.makeMonster(CM.monsterKind("Goblin"), 1, rnd), orc = CM.makeMonster(CM.monsterKind("Orc"), 1, rnd);
+  game.floor.things["2,2"] = { type: "monsters", group: [orc, goblin] };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  const knight = game.party.find((h) => h.cls === "Knight");
+  let reached = 0;
+  for (let i = 0; i < 20; i++) { goblin.hp = 999; game.messages = []; game.strike(knight, goblin, "", { sure: true }); if (game.messages.some((m) => m.includes("reaching past the front"))) reached++; }
+  assert.strictEqual(reached, 20);
+  orc.hp = 0; orc.dead = true; game.messages = [];
+  game.strike(knight, goblin, "", { sure: true });
+  assert.ok(!game.messages.some((m) => m.includes("reaching past")), "with the front down, the back row is in reach");
+});
+
+test("a guardian says what is coming the turn before", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("intent-1", fixedParty(CM));
+  for (const h of game.party) { h.max = 9000; h.hp = 9000; h.df = 50; }
+  const G = CM.guardianMonster("forge", 15);
+  game.floor.things["3,3"] = { type: "guardian", group: [G] };
+  game.startCombat("3,3", game.floor.things["3,3"]);
+  const warden = game.foes.find((m) => m.guardian);
+  game.messages = [];
+  game.guardianAct(warden); game.guardianAct(warden);                    // turns 1 and 2: after the second, the hammer is lifted
+  assert.ok(warden.intent, "the third turn's move is shown");
+  assert.ok(game.messages.some((m) => m.includes("lifts the hammer")));
+  game.guardianAct(warden);                                               // turn 3: the hammer comes down, and the intent is spent
+  assert.ok(game.messages.some((m) => m.includes("brings it down")));
+  assert.strictEqual(warden.intent, null);
+});
+
+test("combos: frost then the shield, the knife on a marked foe, fire on the held - found once, kept always", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("combo-1", fixedParty(CM));
+  const rnd = new CM.Random(9), orc = CM.makeMonster(CM.monsterKind("Orc"), 3, rnd); orc.max = orc.hp = 5000;
+  game.floor.things["2,2"] = { type: "monsters", group: [orc] };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  const knight = game.party.find((h) => h.cls === "Knight"), rogue = game.party.find((h) => h.cls === "Rogue"), mage = game.party.find((h) => h.cls === "Mage");
+  orc.chilled = 2;
+  game.messages = [];
+  game.strike(knight, orc, " with the shield", { bash: true, sure: true });
+  assert.ok(game.messages.some((m) => m.includes("the ice shatters")), game.messages.join(" | "));
+  assert.strictEqual(game.combos.shatter, 1);
+  assert.strictEqual(orc.chilled, 0);
+  orc.marked = true; game.messages = [];
+  game.strike(rogue, orc, "", { sure: true });
+  assert.ok(game.messages.some((m) => m.includes("the knife finds the mark")));
+  orc.held = 2; game.messages = []; game.casting = mage;
+  game.spellHit(orc, 20, "Fire:", "fire");
+  assert.ok(game.messages.some((m) => m.includes("the vines burn")));
+  assert.strictEqual(CM.storage.getItem("claudemagic.combos") !== null, true);
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game();
+  assert.strictEqual(g2.combos.shatter, 1);
+});
+
+test("the bestiary learns from fighting: kinds met and slain, what they fear", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("beast-1", fixedParty(CM));
+  const rnd = new CM.Random(11), zombie = CM.makeMonster(CM.monsterKind("Zombie"), 1, rnd);
+  game.floor.things["2,2"] = { type: "monsters", group: [zombie] };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  assert.strictEqual(game.bestiary.Zombie.seen, 1);
+  game.casting = game.party[3];
+  game.spellHit(zombie, 500, "Fire:", "fire");
+  assert.deepStrictEqual(Array.from(game.bestiary.Zombie.weak), ["fire"]);
+  game.afterBlows();
+  assert.strictEqual(game.mode, "explore");
+  assert.strictEqual(game.bestiary.Zombie.slain, 1);
+  const exp = JSON.parse(game.exportText());
+  assert.strictEqual(exp.bestiary.Zombie.slain, 1);
+});
+
+test("the monsters' new ways: a healer mends, a warder wards, a splitter tears in two, a thief bolts with a potion", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("ways-2", fixedParty(CM));
+  const rnd = new CM.Random(13);
+  const hag = CM.makeMonster(CM.monsterKind("Weed Hag"), 20, rnd), drowned = CM.makeMonster(CM.monsterKind("Drowned"), 20, rnd);
+  game.floor.things["2,2"] = { type: "monsters", group: [drowned, hag] };
+  game.startCombat("2,2", game.floor.things["2,2"]);
+  drowned.hp = 10; game.messages = [];
+  game.monsterAct(hag);
+  assert.ok(drowned.hp > 10 && game.messages.some((m) => m.includes("wounds close")));
+  const golem = CM.makeMonster(CM.monsterKind("Crystal Golem"), 30, rnd);
+  game.foes.push(golem); game.rnd = new CM.Random(1);
+  let warded = 0;
+  for (let i = 0; i < 10 && !warded; i++) { game.monsterAct(golem); warded = game.living().filter((m) => m.warded > 0).length; }
+  assert.ok(warded > 0, "the golem wards someone");
+  const beast = CM.makeMonster(CM.monsterKind("Spore Beast"), 26, rnd);
+  game.foes.push(beast);
+  const n = game.foes.length;
+  game.spellHit(beast, Math.ceil(beast.max * 0.6), "", "frost");
+  assert.strictEqual(game.foes.length, n + 1, "it tears in two");
+  assert.ok(game.foes[n].summoned && game.foes[n].kind === "Spore Beast");
+  const imp = CM.makeMonster(CM.monsterKind("Foundry Imp"), 36, rnd);
+  game.foes.push(imp); game.bag.push({ name: "Healing Potion", kind: "heal", power: 20, value: 20 });
+  const had = game.bag.length; game.rnd = new CM.Random(2);
+  for (let i = 0; i < 10 && !imp.fled; i++) { imp.stole = false; game.monsterAct(imp); }
+  assert.ok(imp.fled && game.bag.length === had - 1, "the imp bolts with something");
+});
+
+test("the Forge-Warden's heat sears whoever strikes it (and a blade that fears it does little)", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("heat-1", fixedParty(CM));
+  const G = CM.guardianMonster("forge", 15);
+  game.floor.things["3,3"] = { type: "guardian", group: [G] };
+  game.startCombat("3,3", game.floor.things["3,3"]);
+  const warden = game.foes.find((m) => m.guardian), knight = game.party.find((h) => h.cls === "Knight");
+  knight.weapon.props.element = "fire"; knight.weapon.unknown = false;
+  const hp = knight.hp; game.messages = [];
+  game.strike(knight, warden, "", { sure: true });
+  assert.ok(knight.hp < hp, "the heat sears the striker");
+  assert.ok(game.messages.some((m) => m.includes("sears")));
+  assert.ok(game.messages.some((m) => m.includes("does little to it")), game.messages.join(" | "));
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

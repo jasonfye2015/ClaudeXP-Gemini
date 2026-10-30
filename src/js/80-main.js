@@ -219,6 +219,9 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       case "shatter": ui.tint("rgba(120,240,255,0.5)", 500); fxs.burst({ at: beforeParty(0.6), layer: "fx:shard", n: 20, size: 0.08, speed: 2, up: 2 }); renderer.shake(0.5); break;
       case "sparkle": fxs.burst({ at: [fx.at[0] + 0.5, 0.35, fx.at[1] + 0.5], n: 16, size: 0.05, speed: 0.8, up: 1.6, gravity: 2 }); break;
+      case "mend": { const at = atFoe(fx.foe, 0.3); if (at) fxs.drift({ at, layer: "fx:leaf", n: 8, size: 0.06, rise: 0.5, ms: 900 }); break; }
+      case "ward": { const at = atFoe(fx.foe, 0.5); if (at) fxs.flare({ at, layer: "fx:frost", size: 0.9, ms: 500, grow: 0.3 }); break; }
+      case "combo": ui.tint("rgba(255,230,150,0.35)", 500); break;
       default: break;
     }
   }
@@ -245,7 +248,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (i < 0) return null;
     const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * (n > 4 ? 0.22 : 0.32), -0.46, 0.46);
-    let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : foe.guardian ? 0.22 : 0);     // (the Lich King keeps his distance)
+    let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : foe.guardian ? 0.22 : 0) + (foe.row === "back" ? 0.28 : 0);     // (the Lich King keeps his distance; the back row stands back)
     const lunge = lunges.get(foe);
     if (lunge !== undefined) {                                           // it lunges at the party, and draws back
       const t = (performance.now() - lunge) / 340;

@@ -121,7 +121,7 @@ Object.assign(CM.Game.prototype, {
     } else if (item.spell === "frost") {
       const dmg = 6 + 2 * L;
       let held = 0;
-      for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0 && !CM.unmoved(m) && this.rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
+      for (const m of foes) { this.spellHit(m, dmg, "", "frost"); if (m.hp > 0) m.chilled = 2; if (m.hp > 0 && !CM.unmoved(m) && this.rnd.chance(0.3)) { m.held = Math.max(m.held || 0, 1); held++; } }
       this.say(`${h.name} ${item.kind === "wand" ? "waves the wand" : "reads the scroll"}: cold on every foe, ${dmg} each${held ? `, ${CM.plural(held, "foe")} frozen fast` : ""}.`);
     } else if (item.spell === "sleep") {
       let asleep = 0;

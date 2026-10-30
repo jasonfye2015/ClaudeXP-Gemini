@@ -157,18 +157,60 @@ CM.MONSTERS = [
   { name: "Wyvern", colour: "#407A70", body: "beast", head: "snout", eyes: "#FFE040", extras: ["wings", "tail"], speed: 12, ability: "buffet", touch: { status: "poison", chance: 0.2 } },
   // the Deep's kinds (floors 21-50), by the band they belong to (the theme's index): never seen above the Lich King
   { name: "Drowned", colour: "#3E6A74", body: "biped", head: "pale", eyes: "#80E8D8", extras: ["torn"], skin: "rot", speed: 6, undead: true, ability: "lifesteal", touch: { status: "sleep", chance: 0.15 }, deep: 4 },
-  { name: "Weed Hag", colour: "#2E5A4E", body: "thin", head: "hood", eyes: "#A0FFE0", extras: ["claws"], speed: 11, ability: "ranged", touch: { status: "paralysis", chance: 0.15 }, deep: 4 },
+  { name: "Weed Hag", colour: "#2E5A4E", body: "thin", head: "hood", eyes: "#A0FFE0", extras: ["claws"], speed: 11, ability: "healer", touch: { status: "paralysis", chance: 0.15 }, deep: 4 },
   { name: "Fungal Horror", colour: "#8AA050", body: "wide", head: "round", eyes: "#F0FF80", extras: ["claws"], skin: "warts", speed: 7, ability: "regen", touch: { status: "poison", chance: 0.3 }, deep: 5 },
-  { name: "Spore Beast", colour: "#A0B070", body: "beast", head: "round", eyes: "#E0FF60", extras: ["tail"], speed: 10, ability: "breath", touch: { status: "poison", chance: 0.2 }, deep: 5 },
-  { name: "Crystal Golem", colour: "#B090D0", body: "wide", head: "round", eyes: "#F0E0FF", extras: [], skin: "stone", speed: 6, ability: "stun", deep: 6 },
+  { name: "Spore Beast", colour: "#A0B070", body: "beast", head: "round", eyes: "#E0FF60", extras: ["tail"], speed: 10, ability: "splitter", touch: { status: "poison", chance: 0.2 }, deep: 5 },
+  { name: "Crystal Golem", colour: "#B090D0", body: "wide", head: "round", eyes: "#F0E0FF", extras: [], skin: "stone", speed: 6, ability: "warder", deep: 6 },
   { name: "Shard Wisp", colour: "#D0C0F0", body: "ghost", head: "pale", eyes: "#FFFFFF", extras: [], speed: 14, ability: "ranged", touch: { status: "blind", chance: 0.2 }, deep: 6 },
   { name: "Iron Hound", colour: "#6A5A50", body: "beast", head: "snout", eyes: "#FF8030", extras: ["tail"], skin: "stone", speed: 13, ability: "charge", deep: 7 },
-  { name: "Foundry Imp", colour: "#B04020", body: "small", head: "horns", eyes: "#FFE060", extras: ["wings", "claws"], speed: 12, ability: "breath", touch: { status: "blind", chance: 0.1 }, deep: 7 },
+  { name: "Foundry Imp", colour: "#B04020", body: "small", head: "horns", eyes: "#FFE060", extras: ["wings", "claws"], speed: 12, ability: "thief", touch: { status: "blind", chance: 0.1 }, deep: 7 },
   { name: "Bone Colossus", colour: "#E0D8C0", body: "wide", head: "skull", eyes: "#FF6040", extras: ["club"], speed: 5, undead: true, ability: "buffet", deep: 8 },
   { name: "Grave Priest", colour: "#4A3A5A", body: "tall", head: "skull", eyes: "#C080FF", extras: ["staff", "robe"], speed: 9, undead: true, ability: "drain", touch: { status: "curse", chance: 0.25 }, deep: 8 },
   { name: "Rootling", colour: "#6A3A2A", body: "small", head: "ears", eyes: "#FF4040", extras: ["claws"], speed: 12, ability: "savage", touch: { status: "paralysis", chance: 0.15 }, deep: 9 },
   { name: "Hollow One", colour: "#3A1A1A", body: "ghost", head: "hood", eyes: "#FF3030", extras: [], speed: 11, undead: true, ability: "lifesteal", touch: { status: "curse", chance: 0.2 }, deep: 9 },
 ];
+// Each kind's shape - health, blows, armour, as a share of the straight line of its level (a rat is frail and quick, a
+// troll a wall of meat, a gargoyle all armour) - and what it fears and shrugs off (1.5 bites deep, 0.5 does little;
+// the undead fear holiness unless they say otherwise). A kind that shoots or breathes stands in the back row, where a
+// blow from the front must reach past its fellows for half - as the party's own back row does. (CM.monsterShape)
+CM.MONSTER_SHAPES = {
+  "Giant Rat": { shape: [0.6, 0.8, 0.6] }, Kobold: { shape: [0.7, 0.8, 0.8] }, Skeleton: { shape: [0.9, 0.9, 1.3], resist: { frost: 0.5 } },
+  Goblin: { shape: [0.8, 0.9, 0.8], row: "back" }, Zombie: { shape: [1.5, 0.9, 0.6], resist: { fire: 1.5 } }, Orc: { shape: [1.1, 1.2, 1.0] },
+  Ghoul: { shape: [0.9, 1.0, 0.9] }, "Dark Elf": { shape: [0.8, 1.1, 0.9], row: "back", resist: { storm: 1.5 } }, Troll: { shape: [1.6, 1.1, 0.8], resist: { fire: 1.5 } },
+  Wraith: { shape: [0.8, 1.0, 1.1], resist: { frost: 0.5, holy: 2 } }, Ogre: { shape: [1.7, 1.3, 0.8] }, Minotaur: { shape: [1.3, 1.3, 1.1] },
+  Gargoyle: { shape: [1.0, 0.9, 1.7], resist: { storm: 1.5, fire: 0.5 } }, Vampire: { shape: [1.1, 1.1, 1.1], resist: { holy: 2, fire: 1.5 } },
+  Demon: { shape: [1.3, 1.2, 1.2], resist: { fire: 0.5, frost: 1.5, holy: 1.5 } }, Wyvern: { shape: [1.2, 1.2, 1.0], resist: { frost: 1.5 } },
+  Drowned: { shape: [1.3, 0.9, 0.8], resist: { frost: 0.5, storm: 1.5 } }, "Weed Hag": { shape: [0.8, 1.0, 0.7], row: "back", resist: { fire: 1.5 } },
+  "Fungal Horror": { shape: [1.5, 1.0, 0.7], resist: { fire: 1.5, frost: 0.5 } }, "Spore Beast": { shape: [0.9, 0.9, 0.8], resist: { fire: 1.5 } },
+  "Crystal Golem": { shape: [1.3, 1.0, 1.8], resist: { frost: 0.5, storm: 1.5 } }, "Shard Wisp": { shape: [0.6, 1.1, 0.6], row: "back", resist: { frost: 0.5 } },
+  "Iron Hound": { shape: [1.0, 1.2, 1.3], resist: { fire: 0.5, storm: 1.5 } }, "Foundry Imp": { shape: [0.7, 1.0, 0.8], row: "back", resist: { fire: 0.5, frost: 1.5 } },
+  "Bone Colossus": { shape: [1.8, 1.3, 1.2], resist: { frost: 0.5 } }, "Grave Priest": { shape: [0.8, 1.0, 0.9], row: "back" },
+  Rootling: { shape: [0.7, 1.1, 0.7], resist: { fire: 1.5 } }, "Hollow One": { shape: [0.9, 1.0, 1.0], resist: { holy: 1.5, fire: 0.5 } },
+};
+for (const m of CM.MONSTERS) Object.assign(m, CM.MONSTER_SHAPES[m.name] || {});
+// what each way of a monster's is, in words (the bestiary, the journal)
+CM.ABILITY_WORDS = { ranged: "shoots over the front row", coward: "bolts with a purse when hurt", savage: "lands savage blows", regen: "knits its wounds every round",
+  drain: "drains experience", stun: "knocks heroes flat", charge: "charges: the first blow is double", lifesteal: "feeds on every blow", breath: "breathes fire on everyone, every other turn",
+  buffet: "strikes twice", healer: "mends the most hurt of its fellows", warder: "wards a fellow against the next blows", splitter: "tears in two when badly hurt", thief: "snatches something from the pack and bolts" };
+CM.ELEMENT_NAMES = { fire: "fire", frost: "frost", holy: "holiness", storm: "lightning" };
+// how much an element does to a foe: 1.5 bites deep, 0.5 does little, 1 as any blow (the guardians say their own; the undead fear holiness)
+CM.resistance = function (m, element) {
+  if (!element) return 1;
+  const G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
+  if (G) return G.weak === element ? 1.5 : G.resist === element ? 0.5 : element === "holy" && m.undead ? 1.5 : 1;
+  if (m.boss) return element === "holy" ? 1.5 : element === "frost" ? 0.5 : 1;
+  const kind = CM.monsterKind(m.kind || m.name), table = kind && kind.resist;
+  if (table && table[element] !== undefined) return table[element];
+  return element === "holy" && m.undead ? 1.5 : 1;
+};
+// combos: two things done in order, by two heroes or one, that come to more than the sum - found by doing them
+CM.COMBOS = {
+  shatter: { name: "Shatter", what: "Frost on a foe, then the Knight's Shield Bash: the ice breaks, and the blow does double." },
+  knife: { name: "Twist the knife", what: "A foe mocked by the Bard or marked by the Ranger takes half again from a Rogue's blow." },
+  kindling: { name: "Kindling", what: "Fire on a foe held by thorns or roots burns the vines: half again." },
+  consecrated: { name: "Consecrated strike", what: "Smite under a Blessing: half again." },
+  thunderclap: { name: "Thunderclap", what: "Lightning on a foe chilled by frost: the ice carries it, double." },
+};
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
 CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
@@ -441,7 +483,7 @@ CM.BOSS = { name: "The Lich King", colour: "#A0E0FF", body: "tall", head: "skull
 CM.GUARDIANS = {
   rat: { floor: 5, name: "The Rat King", colour: "#6E5444", body: "beast", head: "snout", eyes: "#FF5040", extras: ["tail", "crown", "swarm"], speed: 13, size: 0.9,
     hp: 150, atk: 15, df: 6, xp: 500, gold: 350, touch: { status: "poison", chance: 0.45 }, weak: "fire", resist: null, undead: false,
-    escorts: ["Giant Rat", "Giant Rat"], tint: "rgba(160,220,80,0.35)",
+    escorts: ["Giant Rat", "Giant Rat"], tint: "rgba(160,220,80,0.35)", warn: "The Rat King's whiskers twitch, and the refuse begins to stir.",
     moves: [{ kind: "summon", what: "Giant Rat", n: 2, max: 4, word: "rat", text: "The Rat King shrieks, and {n} pour out of the refuse!" }], passives: ["plague"],
     abilities: [["Call the swarm", "every third turn, rats pour out of the refuse (four at most)"],
       ["Plague bite", "poisons more often than not, for longer, and bites a poisoned hero half again as hard"]],
@@ -452,7 +494,7 @@ CM.GUARDIANS = {
     relic: { name: "Rat King's Crown", kind: "helm", slot: "helm", power: 3, value: 600, props: { relic: true, resist: "poison", stat: "luck" } },
     lair: { name: "Rat King's Nest", lore: "g:rat", rows: ["####W####", "#n.....n#", "#..n.n..#", "#...B...#", "#.n...n.#", "#n.....n#", "###D#####"] } },
   knight: { floor: 10, name: "The Drowned Knight", colour: "#3E6068", body: "tall", head: "helm", eyes: "#80E8D8", extras: ["sword", "shield", "weed"], speed: 8, size: 1.0,
-    hp: 280, atk: 26, df: 12, xp: 1400, gold: 1000, touch: null, weak: "holy", resist: "frost", undead: true, escorts: [], tint: "rgba(80,180,200,0.4)",
+    hp: 280, atk: 26, df: 12, xp: 1400, gold: 1000, touch: null, weak: "holy", resist: "frost", undead: true, escorts: [], tint: "rgba(80,180,200,0.4)", warn: "The Drowned Knight's gauntlet opens, and the water around it swirls.",
     moves: [{ kind: "grasp", mult: 1.5, status: "paralysis", text: "The Drowned Knight's gauntlet closes on {who} and drags them under!", how: " - held under the water" }], passives: ["rise"],
     riseText: "The Drowned Knight goes down into the water... and the water lifts him up again. He will not stay down. Not yet.",
     abilities: [["Drowning grasp", "every third turn, drags one of the party under: half again the blow, and a round lost gasping"],
@@ -464,7 +506,7 @@ CM.GUARDIANS = {
     relic: { name: "Shield of the Drowned", kind: "shield", slot: "offhand", power: 5, value: 900, props: { relic: true, resist: "paralysis", df: 2 } },
     lair: { name: "Drowned Hall", lore: "g:knight", flood: true, rows: ["#####W#####", "#....t....#", "#.#.....#.#", "#....B....#", "#.#.....#.#", "#.........#", "#####D#####"] } },
   forge: { floor: 15, name: "The Forge-Warden", colour: "#5C5450", body: "wide", head: "round", eyes: "#FFB030", extras: ["hammer", "glow"], skin: "stone", speed: 6, size: 1.08,
-    hp: 440, atk: 36, df: 20, xp: 2600, gold: 1800, touch: null, weak: "frost", resist: "fire", undead: false, escorts: [], tint: "rgba(255,150,40,0.4)",
+    hp: 440, atk: 36, df: 20, xp: 2600, gold: 1800, touch: null, weak: "frost", resist: "fire", undead: false, escorts: [], tint: "rgba(255,150,40,0.4)", warn: "The Forge-Warden lifts the hammer in both hands.",
     moves: [{ kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: true, text: "The Forge-Warden raises the hammer in both hands and brings it down!", how: " - the hammer", flat: "{who} is knocked flat!" }],
     passives: ["heat"], sear: "The heat of the Forge-Warden sears {who} (-{n}).",
     abilities: [["Hammer slam", "every third turn, the hammer comes down on the whole front row, and some are knocked flat"],
@@ -477,7 +519,7 @@ CM.GUARDIANS = {
     lair: { name: "The Forge", lore: "g:forge", rows: ["#####W#####", "#e.v...v.e#", "#e#.....#e#", "#e...B...e#", "#e#.....#e#", "#e.v...v.e#", "#####D#####"] } },
   // the Deep's guardians, one every five floors, and the thing at the bottom
   queen: { floor: 25, name: "The Drowned Queen", colour: "#5A7A8A", body: "tall", head: "pale", eyes: "#A0F0FF", extras: ["crown", "robe", "weed"], speed: 9, size: 1.0,
-    hp: 560, atk: 44, df: 22, xp: 4200, gold: 3000, touch: { status: "sleep", chance: 0.25 }, weak: "holy", resist: "frost", undead: true, escorts: ["Drowned", "Drowned"], tint: "rgba(120,200,220,0.4)",
+    hp: 560, atk: 44, df: 22, xp: 4200, gold: 3000, touch: { status: "sleep", chance: 0.25 }, weak: "holy", resist: "frost", undead: true, escorts: ["Drowned", "Drowned"], tint: "rgba(120,200,220,0.4)", warn: "The Drowned Queen draws a long, long breath.",
     moves: [{ kind: "ailment", status: "sleep", chance: 0.6, text: "The Drowned Queen opens her mouth, and what comes out is the whole drowned town's grief. Eyes close." },
       { kind: "summon", what: "Drowned", n: 2, max: 4, level: "deep", plural: "{n} of the drowned", text: "The Queen lifts a hand, and {n} climb out of the water." }],
     passives: ["rise"], riseText: "The Drowned Queen sinks... and rises again, the water streaming from her crown. The town will not let her go.",
@@ -489,7 +531,7 @@ CM.GUARDIANS = {
     relic: { name: "The Queen's Ring", kind: "ring", slot: "ring", power: 4, value: 1500, props: { relic: true, stat: "wis", resist: "sleep" } },
     lair: { name: "The Queen's Court", lore: "g:queen", flood: true, rows: ["#####W#####", "#....t....#", "#.#.....#.#", "#....B....#", "#.#.....#.#", "#.........#", "#####D#####"] } },
   mind: { floor: 30, name: "The Mycelial Mind", colour: "#9AB060", body: "wide", head: "round", eyes: "#F0FF90", extras: ["claws"], skin: "warts", speed: 5, size: 1.1,
-    hp: 620, atk: 40, df: 20, xp: 5000, gold: 3400, touch: { status: "poison", chance: 0.3 }, weak: "fire", resist: "frost", undead: false, escorts: ["Fungal Horror"], tint: "rgba(180,240,120,0.4)",
+    hp: 620, atk: 40, df: 20, xp: 5000, gold: 3400, touch: { status: "poison", chance: 0.3 }, weak: "fire", resist: "frost", undead: false, escorts: ["Fungal Horror"], tint: "rgba(180,240,120,0.4)", warn: "The Mind swells, and the spores thicken in the air.",
     moves: [{ kind: "ailment", status: "poison", chance: 0.7, text: "The Mind exhales, and the air fills with spores." },
       { kind: "summon", what: "Spore Beast", n: 1, max: 3, level: "deep", word: "spore beast", text: "Something tears loose from the Mind's flank: {n}." }],
     passives: ["regrow"],
@@ -501,7 +543,7 @@ CM.GUARDIANS = {
     relic: { name: "Sporecap Helm", kind: "helm", slot: "helm", power: 5, value: 1500, props: { relic: true, resist: "poison", stat: "con" } },
     lair: { name: "The Spore Grotto", lore: "g:mind", rows: ["#####W#####", "#f.f...f.f#", "#.#.....#.#", "#f...B...f#", "#.#.....#.#", "#f.f...f.f#", "#####D#####"] } },
   tyrant: { floor: 35, name: "The Crystal Tyrant", colour: "#B898E0", body: "wide", head: "horns", eyes: "#FFFFFF", extras: ["crown"], skin: "stone", speed: 7, size: 1.1,
-    hp: 700, atk: 50, df: 30, xp: 6000, gold: 4000, touch: null, weak: "frost", resist: "fire", undead: false, escorts: ["Crystal Golem"], tint: "rgba(220,200,255,0.45)",
+    hp: 700, atk: 50, df: 30, xp: 6000, gold: 4000, touch: null, weak: "frost", resist: "fire", undead: false, escorts: ["Crystal Golem"], tint: "rgba(220,200,255,0.45)", warn: "The Tyrant begins to ring, faint and rising.",
     moves: [{ kind: "slam", frac: 3, status: "blind", chance: 0.35, front: false, text: "The Tyrant rings like a struck bell, and shards fly from it across the cavern!", how: " - flying shards", flat: "{who} is blinded by the glare!" }],
     passives: ["glass"], sear: "A shard of the Crystal Tyrant cuts {who} (-{n}).",
     abilities: [["Shatter", "every third turn, shards fly at everyone, and some are blinded"], ["Glass", "every blow struck on it cuts the striker (arrows don't); frost cracks it, fire does little"]],
@@ -512,7 +554,7 @@ CM.GUARDIANS = {
     relic: { name: "Prism Amulet", kind: "amulet", slot: "amulet", power: 0, value: 1800, props: { relic: true, df: 4, resist: "blind" } },
     lair: { name: "The Crystal Throne", lore: "g:tyrant", rows: ["#####W#####", "#c...t...c#", "#.#.....#.#", "#c...B...c#", "#.#.....#.#", "#c.......c#", "#####D#####"] } },
   master: { floor: 40, name: "The Foundry Master", colour: "#803020", body: "wide", head: "horns", eyes: "#FFD040", extras: ["wings", "hammer"], skin: "stone", speed: 9, size: 1.15,
-    hp: 820, atk: 58, df: 28, xp: 7000, gold: 4800, touch: { status: "blind", chance: 0.15 }, weak: "frost", resist: "fire", undead: false, escorts: ["Foundry Imp", "Foundry Imp"], tint: "rgba(255,140,40,0.45)",
+    hp: 820, atk: 58, df: 28, xp: 7000, gold: 4800, touch: { status: "blind", chance: 0.15 }, weak: "frost", resist: "fire", undead: false, escorts: ["Foundry Imp", "Foundry Imp"], tint: "rgba(255,140,40,0.45)", warn: "The Foundry Master's furnace of a mouth glows white.",
     moves: [{ kind: "breath", frac: 2, text: "The Foundry Master opens its furnace of a mouth, and fire pours over the whole party!" },
       { kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: true, text: "The Master's hammer comes down on the front line!", how: " - the hammer", flat: "{who} is knocked flat!" }],
     passives: ["heat"], sear: "The heat of the Foundry Master sears {who} (-{n}).",
@@ -524,7 +566,7 @@ CM.GUARDIANS = {
     relic: { name: "Ember Mail", kind: "armor", slot: "armor", power: 10, value: 2200, props: { relic: true, df: 2, weight: "medium" } },
     lair: { name: "The Great Foundry", lore: "g:master", rows: ["#####W#####", "#e.v...v.e#", "#e#.....#e#", "#e...B...e#", "#e#.....#e#", "#e.v...v.e#", "#####D#####"] } },
   patriarch: { floor: 45, name: "The Bone Patriarch", colour: "#D8D0B8", body: "tall", head: "skull", eyes: "#80FF80", extras: ["staff", "robe"], speed: 10, size: 1.05,
-    hp: 900, atk: 60, df: 30, xp: 8000, gold: 5600, touch: { status: "curse", chance: 0.3 }, weak: "holy", resist: "frost", undead: true, escorts: ["Bone Colossus"], tint: "rgba(160,255,160,0.4)",
+    hp: 900, atk: 60, df: 30, xp: 8000, gold: 5600, touch: { status: "curse", chance: 0.3 }, weak: "holy", resist: "frost", undead: true, escorts: ["Bone Colossus"], tint: "rgba(160,255,160,0.4)", warn: "The Patriarch raises his staff over the heaps.",
     moves: [{ kind: "summon", what: "Skeleton", n: 2, max: 6, level: "deep", word: "skeleton", text: "The Patriarch raps his staff on the floor, and {n} rise from the heaps." },
       { kind: "ailment", status: "curse", chance: 0.5, text: "The Patriarch speaks a word that was old when the king was young, and a curse settles on the party." }],
     passives: ["drain"],
@@ -536,7 +578,7 @@ CM.GUARDIANS = {
     relic: { name: "Patriarch's Reliquary", kind: "amulet", slot: "amulet", power: 0, value: 2400, props: { relic: true, df: 3, resist: "curse" } },
     lair: { name: "The Ossuary Chapel", lore: "g:patriarch", rows: ["#####W#####", "#n...t...n#", "#.#.....#.#", "#n...B...n#", "#.#.....#.#", "#n.......n#", "#####D#####"] } },
   root: { floor: 50, name: "The Root of the World", colour: "#4A2A2A", body: "wide", head: "round", eyes: "#FF5040", extras: ["claws"], skin: "warts", speed: 8, size: 1.25,
-    hp: 1400, atk: 70, df: 34, xp: 12000, gold: 9000, touch: { status: "paralysis", chance: 0.2 }, weak: "fire", resist: "frost", undead: false, escorts: ["Rootling", "Rootling"], tint: "rgba(255,80,60,0.45)",
+    hp: 1400, atk: 70, df: 34, xp: 12000, gold: 9000, touch: { status: "paralysis", chance: 0.2 }, weak: "fire", resist: "frost", undead: false, escorts: ["Rootling", "Rootling"], tint: "rgba(255,80,60,0.45)", warn: "The Root tenses, and the floor of the world creaks.",
     moves: [{ kind: "slam", frac: 2.5, status: "paralysis", chance: 0.3, front: false, text: "The Root heaves, and the whole floor of the world shakes!", how: " - the quake", flat: "{who} is thrown down!" },
       { kind: "summon", what: "Rootling", n: 2, max: 4, level: "deep", word: "rootling", text: "{n} tear themselves out of the Root's bark." }],
     passives: ["regrow", "rise"], riseText: "The Root splits and sags... and knits, slowly, the sap running black. It is not done.",
