@@ -957,6 +957,7 @@ Object.assign(CM.Game.prototype, {
   // a spell's blow: it doesn't miss
   spellHit(foe, dmg, what, element, chained) {
     let how = "";
+    if (element === "fire" && this.combat) this.combat.burned = true;   // (the floor will remember it)
     if (element === "fire" && this.casting && CM.trait(this.casting, "firebrand")) dmg = Math.ceil(dmg * 1.5);
     const r = CM.resistance(foe, element);                              // (what it fears, and what it shrugs off)
     if (element) this.learnResist(foe, element, r);
@@ -1366,6 +1367,7 @@ Object.assign(CM.Game.prototype, {
     this.sound("heal");
     this.emit("fx", { kind: "potion", who: this.party.indexOf(target), item: "heal" });
     this.say(`${target.name} drinks a ${potion.name} (+${potion.power}).`);
+    this.trace(this.bottleFor(potion.kind), ...this.floor.pos);   // (the empty bottle, where the party stands)
     return true;
   },
 
@@ -1429,6 +1431,12 @@ Object.assign(CM.Game.prototype, {
     const boss = this.foes.some((m) => m.boss), guardian = this.foes.find((m) => m.guardian), fought = this.floor.things[this.foeKey];
     if (fought && fought.vengeance) { this.floor.avenged = (this.floor.avenged || []).concat(fought.vengeance); this.say("Somewhere on this floor, something lets out a long breath it has held a long time."); }
     delete this.floor.things[this.foeKey];
+    if (!guardian && !boss && this.foeKey && slain.length) {                // what the fight leaves: remains by the kind, a scorch after fire, the Ranger's broken arrows
+      const [fx, fy] = this.foeKey.split(",").map(Number), burned = this.combat && this.combat.burned;
+      this.trace(burned ? "ash" : CM.remainsOf(slain[0]), fx, fy);
+      if (burned) this.trace("scorch", fx, fy);
+      if (this.alive().some((h) => h.cls === "Ranger") && rnd.chance(0.5)) this.trace("arrows", fx, fy);
+    }
     if (guardian) this.floor.things[this.foeKey] = { type: "ladder" };   // (the shaft it stood over)
     this.combat = null;
     if (this.buffs && this.buffs.haste) delete this.buffs.haste;

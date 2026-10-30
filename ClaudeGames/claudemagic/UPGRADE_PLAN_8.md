@@ -157,7 +157,16 @@ furniture; they get debris that agrees with it.
 - **Tests**: each band's palette appears on its floors and not on others; nothing in a doorway or on a lever's wall;
   cobwebs only in corners; the dungeon's fingerprints unchanged for every seed the tests walk.
 
-## Phase 4 - Traces: the floor remembers - v8.5 (medium)
+## Phase 4 - Traces: the floor remembers - v8.5 (medium) - DONE
+
+Built: `game.trace(id, x, y)` puts a trace on the floor's own list (`fl.traces`, saved with the floor's changes like
+any field the seed does not make; at most `CM.TRACES_MOST` = 40, the oldest going first; never at a camp). A healing,
+mana or other potion drunk on the way or in a fight leaves its bottle (red, blue, green) on the party's square; a won
+fight leaves remains by the kind (`CM.remainsOf`: bones for the dead, ash for the fiery, ooze for the soft, a stain
+for the rest) where the foes stood, a scorch and ash after any fire, and broken arrows if a Ranger fought; a torch
+burnt out or swapped leaves its stub; a picked lock a bent pin; the smashed phylactery its shards. Traces are drawn
+as props at every Detail (`CM.traceProps`). Not done: a raised hero's scuff (the raising happens at the temple, not
+on the floor), and films (they replay the moves, so the traces come back as the moves are made). Test: "traces".
 
 - **What a fight leaves**: where a monster fell, remains by its kind - bones for the dead, a slime puddle, a pile of
   ash for the burned, scales and feathers - and a dark stain; where a hero fell and was raised, a scuff and a dropped

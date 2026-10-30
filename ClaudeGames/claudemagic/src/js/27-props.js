@@ -62,6 +62,17 @@ CM.PROPS = {
   books: { how: "flat", size: [0.35, 0.5] },
   scrolls: { how: "flat", size: [0.3, 0.45] },
   straw: { how: "flat", size: [0.6, 0.9] },
+  // traces: what the party leaves (never scattered; CM.traceProps draws them from the floor's saved list)
+  bottle_red: { how: "stand", size: [0.1, 0.13], h: 1.6 },
+  bottle_blue: { how: "stand", size: [0.1, 0.13], h: 1.6 },
+  bottle_green: { how: "stand", size: [0.1, 0.13], h: 1.6 },
+  stain: { how: "flat", size: [0.45, 0.7] },
+  ash: { how: "flat", size: [0.45, 0.7] },
+  ooze: { how: "flat", size: [0.45, 0.7] },
+  scorch: { how: "flat", size: [0.7, 0.95] },
+  arrows: { how: "flat", size: [0.35, 0.5] },
+  stub: { how: "flat", size: [0.18, 0.24] },
+  pin: { how: "flat", size: [0.12, 0.16] },
 };
 // where they lie: `surface` (the town and the land) or `bands` (the dungeon's, by CM.themeIndex: 0 the Catacombs ... 9
 // the Root); `floors` [0] the town or [-1] the land; `seasons`; `grounds` the ground the square wears; `near` "wall"
@@ -137,6 +148,13 @@ CM.SCATTER = [
   { prop: "skull", where: { bands: [0, 8], near: "corner" }, per: 0.35, most: 1 },
 ];
 CM.DETAIL = { low: 0, medium: 0.6, high: 1 };
+CM.TRACES_MOST = 40;                                                    // a floor keeps this many traces; the oldest go first
+// the floor's traces as props to draw (every Detail shows them: they are the party's own doing)
+CM.traceProps = (fl) => (fl && fl.traces ? fl.traces.filter((t) => CM.PROPS[t.id]).map((t) => { const P = CM.PROPS[t.id], s = P.size[0] + (t.s || 0.5) * (P.size[1] - P.size[0]);
+  return { id: t.id, how: P.how, layer: `prop:${t.id}`, x: t.x, y: t.y, dx: t.dx, dz: t.dz, w: s, h: s * (P.h || 1), turn: t.turn, trace: true }; }) : []);
+// what a fallen foe leaves: bones for the dead, ash for the fiery, ooze for the soft and the sporing, a stain for the rest
+CM.remainsOf = (m) => { const kind = CM.monsterKind(m.kind || m.name) || {}, name = `${m.kind || m.name}`;
+  return kind.undead || m.undead ? "bones" : /Demon|Imp|Hound|Ember|Fire|Salamander|Wyvern/.test(name) ? "ash" : /Slime|Ooze|Fung|Spore|Mold|Jelly/.test(name) ? "ooze" : "stain"; };
 CM.DETAIL_ORDER = ["low", "medium", "high"];
 CM.isSurface = (fl) => Boolean(fl && (fl.number === 0 || fl.number === -1));
 // what lies on each square: [{ id, how, layer, x, y, dx, dz, w, h, turn }]; ctx: { season } (the run's; summer when not said)

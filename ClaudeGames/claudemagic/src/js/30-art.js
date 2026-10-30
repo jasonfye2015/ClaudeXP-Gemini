@@ -1389,7 +1389,7 @@ CM.art.surfaceProp = function (id, S, kit) {
 
 
 // the dungeon's debris: painted at the props' size, for every look
-CM.art.DEBRIS_IDS = ["cobweb", "dust", "coffinlid", "candle", "puddle", "slime", "rotcrate", "rubble", "pick", "rails", "armour", "glass", "urn", "candelabra", "frost", "weed", "shells", "oar", "fungi", "shard", "slag", "chains", "cogs", "bonepile", "roots", "coins", "books", "scrolls", "straw"];
+CM.art.DEBRIS_IDS = ["cobweb", "dust", "coffinlid", "candle", "puddle", "slime", "rotcrate", "rubble", "pick", "rails", "armour", "glass", "urn", "candelabra", "frost", "weed", "shells", "oar", "fungi", "shard", "slag", "chains", "cogs", "bonepile", "roots", "coins", "books", "scrolls", "straw", "bottle_red", "bottle_blue", "bottle_green", "stain", "ash", "ooze", "scorch", "arrows", "stub", "pin"];
 CM.art.debrisProp = function (id, S) {
   const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`debris:${id}`));
   const blob = (x, y, rx, ry, colour) => { p.fillStyle = colour; p.beginPath(); p.ellipse(x, y, rx, ry, rnd.next() * 3, 0, Math.PI * 2); p.fill(); };
@@ -1435,6 +1435,22 @@ CM.art.debrisProp = function (id, S) {
     case "coins": scatter(16, (x, y) => { blob(x, y, 7, 5, "#E8C050"); blob(x - 1, y - 1, 4, 2, "#FFE890"); }); break;
     case "books": for (let i = 0; i < 4; i++) { const x = S * (0.2 + rnd.next() * 0.6), y = S * (0.2 + rnd.next() * 0.6); p.save(); p.translate(x, y); p.rotate(rnd.next() * 3); p.fillStyle = ["#6A2A2A", "#2A4A6A", "#3A5A2A", "#5A3A1A"][i]; p.fillRect(-S * 0.13, -S * 0.09, S * 0.26, S * 0.18); p.fillStyle = "#E8DCC0"; p.fillRect(-S * 0.11, S * 0.07, S * 0.22, 4); p.restore(); } break;
     case "scrolls": for (let i = 0; i < 3; i++) { const x = S * (0.25 + rnd.next() * 0.5), y = S * (0.25 + rnd.next() * 0.5); p.save(); p.translate(x, y); p.rotate(rnd.next() * 3); p.fillStyle = "#E8DCB8"; p.fillRect(-S * 0.18, -S * 0.05, S * 0.36, S * 0.1); p.fillStyle = "#C8B890"; p.beginPath(); p.arc(-S * 0.18, 0, S * 0.05, 0, Math.PI * 2); p.fill(); p.beginPath(); p.arc(S * 0.18, 0, S * 0.05, 0, Math.PI * 2); p.fill(); p.restore(); } break;
+
+    case "bottle_red": case "bottle_blue": case "bottle_green": {
+      const col = id === "bottle_red" ? "#C83030" : id === "bottle_blue" ? "#3060D0" : "#40A050";
+      p.fillStyle = "rgba(200,220,230,0.95)"; p.beginPath(); p.moveTo(S * 0.4, S * 0.05); p.lineTo(S * 0.6, S * 0.05); p.lineTo(S * 0.6, S * 0.35); p.quadraticCurveTo(S * 0.92, S * 0.5, S * 0.85, S * 0.96); p.lineTo(S * 0.15, S * 0.96); p.quadraticCurveTo(S * 0.08, S * 0.5, S * 0.4, S * 0.35); p.closePath(); p.fill();
+      p.fillStyle = col; p.beginPath(); p.moveTo(S * 0.17, S * 0.8); p.quadraticCurveTo(S * 0.5, S * 0.74, S * 0.83, S * 0.8); p.lineTo(S * 0.85, S * 0.96); p.lineTo(S * 0.15, S * 0.96); p.closePath(); p.fill();
+      p.fillStyle = "#8A6A44"; p.fillRect(S * 0.38, S * 0.0, S * 0.24, S * 0.08);
+      p.fillStyle = "rgba(255,255,255,0.6)"; p.fillRect(S * 0.28, S * 0.45, S * 0.06, S * 0.35);
+      break;
+    }
+    case "stain": blob(S / 2, S / 2, S * 0.36, S * 0.26, "#5A1A16"); scatter(6, (x, y) => blob(x, y, 6 + rnd.next() * 8, 4 + rnd.next() * 6, "#6A2018")); break;
+    case "ash": blob(S / 2, S / 2, S * 0.36, S * 0.28, "#3A3634"); scatter(14, (x, y) => blob(x, y, 4 + rnd.next() * 8, 3 + rnd.next() * 6, `rgb(${70 + rnd.int(0, 40)},${66 + rnd.int(0, 40)},${62 + rnd.int(0, 40)})`)); scatter(4, (x, y) => blob(x, y, 3, 2, "#D06020")); break;
+    case "ooze": blob(S / 2, S / 2, S * 0.38, S * 0.26, "#4A7A30"); blob(S * 0.42, S * 0.44, S * 0.14, S * 0.07, "#90C060"); scatter(5, (x, y) => blob(x, y, 7, 5, "#5A8A38")); break;
+    case "scorch": { const g = p.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, S * 0.48); g.addColorStop(0, "rgba(20,14,10,1)"); g.addColorStop(0.7, "rgba(40,28,20,1)"); g.addColorStop(0.71, "rgba(0,0,0,0)"); p.fillStyle = g; p.fillRect(0, 0, S, S); scatter(10, (x, y) => blob(x, y, 5, 3, "#1A1410")); break; }
+    case "arrows": p.lineCap = "round"; for (let i = 0; i < 3; i++) { const x = S * (0.25 + rnd.next() * 0.5), y = S * (0.25 + rnd.next() * 0.5), a = rnd.next() * Math.PI, l = S * 0.2; p.strokeStyle = "#8A6A40"; p.lineWidth = 4; p.beginPath(); p.moveTo(x - Math.cos(a) * l, y - Math.sin(a) * l); p.lineTo(x + Math.cos(a) * l * 0.4, y + Math.sin(a) * l * 0.4); p.stroke(); p.fillStyle = "#D8D0C0"; p.beginPath(); p.moveTo(x - Math.cos(a) * l, y - Math.sin(a) * l); p.lineTo(x - Math.cos(a + 0.4) * l * 0.8, y - Math.sin(a + 0.4) * l * 0.8); p.lineTo(x - Math.cos(a - 0.4) * l * 0.8, y - Math.sin(a - 0.4) * l * 0.8); p.closePath(); p.fill(); } break;
+    case "stub": p.fillStyle = "#4A3220"; p.fillRect(S * 0.2, S * 0.4, S * 0.6, S * 0.2); blob(S * 0.78, S * 0.5, S * 0.12, S * 0.14, "#1A1410"); break;
+    case "pin": p.strokeStyle = "#A0A0A8"; p.lineWidth = 6; p.lineCap = "round"; p.beginPath(); p.moveTo(S * 0.15, S * 0.6); p.lineTo(S * 0.6, S * 0.6); p.lineTo(S * 0.85, S * 0.35); p.stroke(); break;
     case "straw": p.lineWidth = 3; for (let i = 0; i < 90; i++) { const x = S * (0.1 + rnd.next() * 0.8), y = S * (0.1 + rnd.next() * 0.8), a = rnd.next() * Math.PI; p.strokeStyle = `rgb(${190 + rnd.int(0, 40)},${160 + rnd.int(0, 30)},${80 + rnd.int(0, 30)})`; p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * 16, y + Math.sin(a) * 16); p.stroke(); } break;
     default: break;
   }
