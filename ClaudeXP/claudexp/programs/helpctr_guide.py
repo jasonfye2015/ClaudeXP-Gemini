@@ -164,11 +164,14 @@ CATALOG = {
                              "Gate the road runs through the fields and the farm to the river, and over it the Deep Wood: glades, the "
                              "hermit, the charcoal burner, beasts by day and wolves by night, and three caves with ore in them. Down the "
                              "shaft: fifty floors in ten bands, the Lich King on 20 and the Root of the World on 50, a guardian with a "
-                             "relic over every fifth shaft, camps between, and an Endless mode with no bottom. Eight callings and their "
+                             "relic over every fifth shaft, camps between, and an Endless mode with no bottom. Eleven callings and their "
                              "paths, fights turn by turn, gear with affixes, sets and curses, a belt of things to drink and throw, "
                              "cooking, mining and forging, a story told by the carvings and the town's people with three endings, "
                              "difficulties and a ladder, daily and weekly dungeons, achievements, films of a run, and Automatic, "
-                             "where the party plays by itself. Two looks: Crawl's pixel tiles, or photographed stone, grass and plaster. "
+                             "where the party plays by itself. The view is full of small things: grass, flowers and shrubs, bones and "
+                             "rubble by band, the bottles and remains the party leaves behind, torchlight on the walls, and dust, "
+                             "rain, snow, falling leaves and chimney smoke in the air, with a Detail setting to scale them. Two "
+                             "looks: Crawl's pixel tiles, or photographed stone, grass and plaster. "
                              "Music and sound made in code. It plays in a browser too, and on its own from the launcher's APPS."),
     "claudeanoid": ("games", "Claudeanoid: an Arkanoid-style block breaker - 40 rounds, silver and gold blocks, "
                              "Expand/Laser/Catch/Slow/Disruption/Player/Break capsules, and a top-ten high score table."),
