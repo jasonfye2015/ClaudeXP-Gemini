@@ -26,8 +26,17 @@ function playRun(CM, game, opts = {}) {
       if (h.maxmp && h.mp < h.maxmp * 0.2) { const row = game.bag.findIndex((i) => i.kind === "mana"); if (row >= 0) game.give(row, game.party.indexOf(h)); }
     }
   };
+  // the choices a careful player makes at the floor's strange things
+  const SAFE = { bloodshrine: 1, prisoner: 1, gamble: 1, cursedfountain: 1, oldcampfire: 1, merchantcorpse: 1, whisperingdoor: 1, ratnest: 2, statue: 0, lostpack: 0, pool: 0, hermitgrave: 1 };
+  const handled = new Set();
+  let asked = null;
+  game.on("choice", (c) => { asked = c; });
+  const alchemy = () => {
+    for (const id of ["greaterheal", "antivenom", "oilfire", "oilholy", "oilfrost", "vigour", "fortune"]) { let guard = 0; while (!game.recipeLacks(id) && guard++ < 3 && (id === "greaterheal" ? game.bag.filter((i) => i.kind === "greaterheal").length < 3 : true)) game.brew(id); }
+  };
   const camp = () => {
     needs();
+    alchemy();
     while (game.party.some((h) => h.hp <= 0) && game.gold >= 100 * game.party.find((h) => h.hp <= 0).level) game.raiseDead();
     if (game.party.some((h) => (h.status || {}).stone) && game.gold >= 150) game.temple("unstone");
     if (game.party.some((h) => (h.status || {}).curse) && game.gold >= 60) game.temple("uncurse");
@@ -93,6 +102,10 @@ function playRun(CM, game, opts = {}) {
     if (phyl && can(phyl[0])) return phyl[0];
     const keys = things.filter(([k, t]) => t.type === "key" && can(k));
     if (keys.length) return keys[0][0];
+    const box = things.find(([, t]) => t.type === "strongbox" && !t.opened && game.bag.some((i) => i.kind === "boxkey" && i.box === fl.number));
+    if (box && can(box[0])) return box[0];
+    const ev = things.find(([k, t]) => (t.type === "event" && !t.done && !handled.has(fl.number + ":" + k)) || (t.type === "peddler" && !handled.has(fl.number + ":" + k)));
+    if (ev && can(ev[0]) && floorMoves < perFloor * 0.6) return ev[0];
     const chests = things.filter(([, t]) => t.type === "chest").map(([k]) => k).filter(can);
     if (chests.length && floorMoves < perFloor * 0.6) return chests[0];
     if (goal && can(goal)) return goal;
@@ -113,7 +126,7 @@ function playRun(CM, game, opts = {}) {
     if (++floorMoves > perFloor) {                                       // lost on this floor: give it up (counted, so the sim can say)
       stuck++; log.push(`stuck on floor ${game.floor.number}`);
       if (stuck > 3) break;
-      game.enterFloor(game.floor.number + 1, "down");
+      game.warp(game.floor.number + 1);
       continue;
     }
     moves++;
@@ -123,7 +136,19 @@ function playRun(CM, game, opts = {}) {
     if (f && f.type === "altar" && !f.used && alive().some((h) => h.hp < h.max * 0.6)) { game.kneel(f); continue; }
     walk(fl);
     const target = pick();
-    if (!target) { stuck++; log.push(`no goal on floor ${fl.number}`); if (stuck > 3) break; game.enterFloor(fl.number + 1, "down"); continue; }
+    if (t && t.type === "event" && !t.done && !handled.has(fl.number + ":" + here)) {   // (asked once: "walk on" leaves the thing standing)
+      handled.add(fl.number + ":" + here);
+      const E = CM.EVENTS[t.event]; asked = null; game.use();
+      if (asked) game.choose(here, Math.min(SAFE[t.event] === undefined ? E.options.length - 1 : SAFE[t.event], E.options.length - 1));
+      continue;
+    }
+    if (t && t.type === "strongbox" && !t.opened && game.bag.some((i) => i.kind === "boxkey" && i.box === fl.number)) { game.use(); continue; }
+    if (t && t.type === "peddler" && !handled.has(fl.number + ":" + here)) { handled.add(fl.number + ":" + here); game.use(); if (game.shopping) { const row = game.stock.findIndex((i) => i.kind === "greaterheal" && i.value <= game.gold - 100); if (row >= 0) game.buy(row); game.closeBag(); } continue; }
+    if (CM.guardianFor(fl.number) && !fl.oiled) {                        // a guardian's floor: the oils go on the front line
+      fl.oiled = true;
+      for (const h of alive().filter((p) => p.row === "front")) { const row = game.bag.findIndex((i) => i.kind === "oil"); if (row >= 0) game.give(row, game.party.indexOf(h)); }
+    }
+    if (!target) { stuck++; log.push(`no goal on floor ${fl.number}`); if (stuck > 3) break; game.warp(fl.number + 1); continue; }
     const step = stepTo(fl, target);
     if (step === "here") {
       if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") { stuck++; } }
@@ -131,10 +156,11 @@ function playRun(CM, game, opts = {}) {
       else if (t && t.type === "bones") { /* picked up by walking on it */ }
       else if (f && (f.type === "lever" || f.type === "plate")) { if (f.type === "lever") { face(f.face); game.use(); } if ((f.type === "lever" && !f.pulled) || (f.type === "plate" && f.gate && !f.pressed)) { stuck++; log.push("lever won't"); } }
       else if (t && t.type === "key") { /* taken as we stepped on it */ }
-      else { stuck++; log.push(`nothing to do at ${here} on floor ${fl.number}`); if (stuck > 6) break; game.enterFloor(fl.number + 1, "down"); }
+      else if (t && (t.type === "event" || t.type === "peddler" || t.type === "strongbox")) { stuck++; log.push(`${t.type} not taken at ${here}`); t.done = true; t.opened = true; delete fl.things[here]; }
+      else { stuck++; log.push(`nothing to do at ${here} on floor ${fl.number}`); if (stuck > 6) break; game.warp(fl.number + 1); }
       continue;
     }
-    if (step === null) { stuck++; log.push(`no way to ${target} on floor ${fl.number}`); if (stuck > 3) break; game.enterFloor(fl.number + 1, "down"); continue; }
+    if (step === null) { stuck++; log.push(`no way to ${target} on floor ${fl.number}`); if (stuck > 3) break; game.warp(fl.number + 1); continue; }
     face(step);
     const [dx, dy] = CM.DIRS[step], nk = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, nf = fl.features[nk];
     if (nf && nf.type === "door" && !nf.open && nf.riddle !== undefined && CM.RIDDLES[nf.riddle]) { game.answerRiddle(nk, CM.RIDDLES[nf.riddle].a); continue; }

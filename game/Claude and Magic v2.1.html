@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v2.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v2.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -367,7 +367,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "2.0", built: "2026-10-30" };
+const CM = window.CM = { version: "2.1", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1872,7 +1872,100 @@ CM.solvable = function (floor, from) {
 };
 
 // ---- the floor ----------------------------------------------------------------------------------------------------
-CM.makeFloor = function (number, seed) {
+// What every generator's floor gets afterwards, each by a hash of the seed and the floor so the floor itself never
+// moves: gems and tomes in the chests, an affix or two on their gear, one unique a band, a choice event, a strongbox
+// two floors below its key, a peddler, rivals, and the band's hazards.
+CM.furnish = function (floor, seed) {
+  const number = floor.number, grid = floor.grid, size = grid.length, special = floor.special;
+  const dist = CM.distances(grid, floor.pos);
+  const named = floor.rooms.filter((r) => r.name), plain = floor.rooms.filter((r) => !r.name);
+  const inTemplate = (x, y) => named.some((r) => x >= r.x0 - 1 && x <= r.x1 + 1 && y >= r.y0 - 1 && y <= r.y1 + 1);
+  const roomCells = new Set();
+  for (const r of plain) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) roomCells.add(key(x, y));
+  if (number >= 3) for (const [k, t] of Object.entries(floor.things)) {   // deeper down, some chests hold a gem for the smith, or a tome
+    if (t.type !== "chest") continue;
+    const h = CM.hashSeed(`${seed}:craft:${number}:${k}`);
+    if (h % 100 < 12) t.items.push(CM.gem(["diamond", "diamond", "ruby", "sapphire", "sunstone"][(h >>> 8) % 5]));
+    else if (h % 100 < 21 && number >= 4) { const ids = Object.keys(CM.TOMES); t.items.push(CM.tome(ids[(h >>> 8) % ids.length])); }
+  }
+  // the hoard, deeper: an affix or two on the chests' gear, and one unique a band, in a chest on one of its floors
+  for (const [k, t] of Object.entries(floor.things)) {
+    if (t.type !== "chest") continue;
+    t.items.forEach((it, i) => CM.affix(it, number, new CM.Random(CM.hashSeed(`${seed}:affix:${number}:${k}:${i}`))));
+  }
+  const band = CM.themeIndex(number), uniqueId = Object.keys(CM.UNIQUES).find((id) => CM.UNIQUES[id].band === band);
+  if (uniqueId && number <= CM.BOTTOM && !CM.guardianFor(number)) {
+    const first = band === 0 ? 2 : band * 5 + 1, floorsOfBand = [];
+    for (let n = first; n <= band * 5 + 5; n++) if (!CM.guardianFor(n)) floorsOfBand.push(n);
+    if (floorsOfBand[CM.hashSeed(`${seed}:unique:${band}`) % floorsOfBand.length] === number) {
+      const chests = Object.keys(floor.things).filter((k) => floor.things[k].type === "chest").sort();
+      if (chests.length) floor.things[chests[CM.hashSeed(`${seed}:unique:${band}:chest`) % chests.length]].items.push(CM.makeUnique(uniqueId));
+    }
+  }
+  // the dungeon, stranger: a choice now and then, a strongbox two floors below its key, a peddler, rivals, and the
+  // band's hazards - each by its own hash, on cells chosen the same way every time, so the floors stay as they were
+  const openCells = () => {
+    const out = [];
+    for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) {
+      const k = key(x, y);
+      if (grid[y][x] !== 0 || floor.features[k] || floor.things[k] || inTemplate(x, y) || (dist.get(k) || 0) < 3) continue;
+      out.push(k);
+    }
+    return out;
+  };
+  const pickCell = (what, filter) => { const cells = openCells().filter(filter || (() => true)); return cells.length ? cells[CM.hashSeed(`${seed}:${what}:${number}`) % cells.length] : null; };
+  const h = (what) => CM.hashSeed(`${seed}:${what}:${number}`);
+  const ordinary = number >= 2 && number < CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR && special !== "maze";
+  if (ordinary && h("event") % 100 < 35) {
+    const ids = Object.keys(CM.EVENTS).filter((id) => number > CM.LAST_FLOOR || !["pool"].includes(id)), id = ids[h("event:which") % ids.length];
+    const k = pickCell("event", (c) => roomCells.has(c));
+    if (k) floor.things[k] = { type: "event", event: id, done: false };
+  }
+  if (ordinary && number >= 4 && number + 2 < CM.BOTTOM && h("boxkey") % 100 < 30) {        // the key here, the box two floors down
+    const k = pickCell("boxkey", (c) => !roomCells.has(c));
+    if (k) floor.things[k] = { type: "boxkey", box: number + 2 };
+  }
+  if (number >= 6 && number < CM.BOTTOM && CM.hashSeed(`${seed}:boxkey:${number - 2}`) % 100 < 30 && (number - 2 >= 2 && !CM.guardianFor(number - 2) && number - 2 !== CM.LAST_FLOOR && CM.specialFor(number - 2, seed) !== "maze")) {
+    const k = pickCell("strongbox", (c) => roomCells.has(c));
+    if (k) floor.things[k] = { type: "strongbox", from: number - 2, opened: false };
+  }
+  if (ordinary && number >= 3 && h("peddler") % 100 < 8) {
+    const k = pickCell("peddler", (c) => roomCells.has(c));
+    if (k) floor.things[k] = { type: "peddler", stock: null };
+  }
+  if (ordinary && number >= 4 && h("rivals") % 100 < 10) {
+    const k = pickCell("rivals", (c) => roomCells.has(c));
+    if (k) floor.things[k] = { type: "rivals", met: false };
+  }
+  const hazard = CM.HAZARDS[CM.themeIndex(number)];
+  if (hazard && !CM.guardianFor(number)) {
+    floor.hazard = hazard.id;
+    const n = { spores: 4, vents: 4, bonepiles: 3 }[hazard.id] || 0;
+    for (let i = 0; i < n; i++) {
+      const k = pickCell(`${hazard.id}:${i}`, (c) => !roomCells.has(c) && !floor.features[c]);
+      if (k) floor.features[k] = { type: hazard.id, known: false, spent: false };
+    }
+  }
+  return floor;
+};
+
+// a floor: made by the run's generator (CM.GEN for a new run), then furnished
+CM.makeFloor = function (number, seed, gen) {
+  const make = CM.generators[gen || CM.GEN] || CM.generators[1];
+  return CM.furnish(make(number, seed), seed);
+};
+
+// ---- 21-gen1.js ----
+"use strict";
+// Generator 1: the floors of every run begun before v2.1, frozen. A seed must make the same floor in every version,
+// so this file is never edited again (tests/fixtures/gen1.json holds its fingerprints for twenty-eight seeds, and the
+// tests check them). New work goes in 22-gen2.js. The hash-furnished things - affixes, uniques, events, strongboxes,
+// the peddler, rivals, hazards - are laid on afterwards by CM.furnish (20-world.js), for every generator alike.
+{
+const key = (x, y) => `${x},${y}`;
+const unkey = (k) => k.split(",").map(Number);
+CM.generators = CM.generators || {};
+CM.generators[1] = function (number, seed) {
   const rnd = new CM.Random(CM.hashSeed(`${seed}:floor:${number}`));
   const size = Math.min(17 + Math.floor(number / 4) * 2, 27);
   const grid = [];
@@ -2241,73 +2334,400 @@ CM.makeFloor = function (number, seed) {
   }
   if (special === "wading") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0) floor.decor.push({ x, y, kind: "water" });
   if (special === "dark") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !floor.dark.includes(key(x, y))) floor.dark.push(key(x, y));
-  if (number >= 3) for (const [k, t] of Object.entries(floor.things)) {   // deeper down, some chests hold a gem for the smith, or a tome
-    if (t.type !== "chest") continue;
-    const h = CM.hashSeed(`${seed}:craft:${number}:${k}`);
-    if (h % 100 < 12) t.items.push(CM.gem(["diamond", "diamond", "ruby", "sapphire", "sunstone"][(h >>> 8) % 5]));
-    else if (h % 100 < 21 && number >= 4) { const ids = Object.keys(CM.TOMES); t.items.push(CM.tome(ids[(h >>> 8) % ids.length])); }
-  }
-  // the hoard, deeper: an affix or two on the chests' gear, and one unique a band, in a chest on one of its floors
-  for (const [k, t] of Object.entries(floor.things)) {
-    if (t.type !== "chest") continue;
-    t.items.forEach((it, i) => CM.affix(it, number, new CM.Random(CM.hashSeed(`${seed}:affix:${number}:${k}:${i}`))));
-  }
-  const band = CM.themeIndex(number), uniqueId = Object.keys(CM.UNIQUES).find((id) => CM.UNIQUES[id].band === band);
-  if (uniqueId && number <= CM.BOTTOM && !CM.guardianFor(number)) {
-    const first = band === 0 ? 2 : band * 5 + 1, floorsOfBand = [];
-    for (let n = first; n <= band * 5 + 5; n++) if (!CM.guardianFor(n)) floorsOfBand.push(n);
-    if (floorsOfBand[CM.hashSeed(`${seed}:unique:${band}`) % floorsOfBand.length] === number) {
-      const chests = Object.keys(floor.things).filter((k) => floor.things[k].type === "chest").sort();
-      if (chests.length) floor.things[chests[CM.hashSeed(`${seed}:unique:${band}:chest`) % chests.length]].items.push(CM.makeUnique(uniqueId));
-    }
-  }
-  // the dungeon, stranger: a choice now and then, a strongbox two floors below its key, a peddler, rivals, and the
-  // band's hazards - each by its own hash, on cells chosen the same way every time, so the floors stay as they were
-  const openCells = () => {
-    const out = [];
-    for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) {
-      const k = key(x, y);
-      if (grid[y][x] !== 0 || floor.features[k] || floor.things[k] || inTemplate(x, y) || (dist.get(k) || 0) < 3) continue;
-      out.push(k);
-    }
-    return out;
-  };
-  const pickCell = (what, filter) => { const cells = openCells().filter(filter || (() => true)); return cells.length ? cells[CM.hashSeed(`${seed}:${what}:${number}`) % cells.length] : null; };
-  const h = (what) => CM.hashSeed(`${seed}:${what}:${number}`);
-  const ordinary = number >= 2 && number < CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR && special !== "maze";
-  if (ordinary && h("event") % 100 < 35) {
-    const ids = Object.keys(CM.EVENTS).filter((id) => number > CM.LAST_FLOOR || !["pool"].includes(id)), id = ids[h("event:which") % ids.length];
-    const k = pickCell("event", (c) => roomCells.has(c));
-    if (k) floor.things[k] = { type: "event", event: id, done: false };
-  }
-  if (ordinary && number >= 4 && number + 2 < CM.BOTTOM && h("boxkey") % 100 < 30) {        // the key here, the box two floors down
-    const k = pickCell("boxkey", (c) => !roomCells.has(c));
-    if (k) floor.things[k] = { type: "boxkey", box: number + 2 };
-  }
-  if (number >= 6 && number < CM.BOTTOM && CM.hashSeed(`${seed}:boxkey:${number - 2}`) % 100 < 30 && (number - 2 >= 2 && !CM.guardianFor(number - 2) && number - 2 !== CM.LAST_FLOOR && CM.specialFor(number - 2, seed) !== "maze")) {
-    const k = pickCell("strongbox", (c) => roomCells.has(c));
-    if (k) floor.things[k] = { type: "strongbox", from: number - 2, opened: false };
-  }
-  if (ordinary && number >= 3 && h("peddler") % 100 < 8) {
-    const k = pickCell("peddler", (c) => roomCells.has(c));
-    if (k) floor.things[k] = { type: "peddler", stock: null };
-  }
-  if (ordinary && number >= 4 && h("rivals") % 100 < 10) {
-    const k = pickCell("rivals", (c) => roomCells.has(c));
-    if (k) floor.things[k] = { type: "rivals", met: false };
-  }
-  const hazard = CM.HAZARDS[CM.themeIndex(number)];
-  if (hazard && !CM.guardianFor(number)) {
-    floor.hazard = hazard.id;
-    const n = { spores: 4, vents: 4, bonepiles: 3 }[hazard.id] || 0;
-    for (let i = 0; i < n; i++) {
-      const k = pickCell(`${hazard.id}:${i}`, (c) => !roomCells.has(c) && !floor.features[c]);
-      if (k) floor.features[k] = { type: hazard.id, known: false, spent: false };
-    }
-  }
   floor.rooms = rooms.map((r) => ({ x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, name: r.template ? r.template.name : "" }));
   return floor;
 };
+}
+
+// ---- 22-gen2.js ----
+"use strict";
+// Generator 2: the floors of runs begun from v2.1. It carves as generator 1 did, but what goes on a floor is decided
+// first, as a plan (CM.planFloor): the set pieces and their order, the ordinary rooms to try - and, from the fourth
+// big update's dungeon phase on, wings, secret stairs and the new rooms. The plan is data the tests can read without
+// carving. Until the plan grows, generator 2 makes the same floors as generator 1 (the tests say so).
+{
+const key = (x, y) => `${x},${y}`;
+const unkey = (k) => k.split(",").map(Number);
+CM.generators = CM.generators || {};
+// what a floor will hold: the set pieces to try, in order (the guardian's lair first), and how many plain rooms
+CM.planFloor = function (number, seed, rnd, special, lair) {
+  const wanted = CM.TEMPLATES.filter((t) => number >= t.min && !((number === CM.LAST_FLOOR || number === CM.BOTTOM) && t.name === "Pit Room"));
+  rnd.shuffle(wanted);
+  const pieces = special === "maze" ? [] : wanted.slice(0, number >= 6 ? 2 : 1);
+  if (lair) pieces.unshift(lair);                                   // (the guardian's lair first, and away from the top left, where the party starts)
+  return { pieces, roomTries: special === "maze" ? 2 : 14 + number, special };
+};
+CM.generators[2] = function (number, seed) {
+  const rnd = new CM.Random(CM.hashSeed(`${seed}:floor:${number}`));
+  const size = Math.min(17 + Math.floor(number / 4) * 2, 27);
+  const grid = [];
+  for (let y = 0; y < size; y++) grid.push(new Array(size).fill(1));
+  const special = CM.specialFor(number, seed);
+  const floor = { number, grid, pos: [1, 1], facing: 2, things: {}, features: {}, dark: [], seen: [], rooms: [], decor: [], special };
+  const rooms = [];                            // {x0, y0, x1, y1 (interior, inclusive), template?, entrances: [[x,y,kind]]}
+  const taken = (x0, y0, x1, y1) => rooms.some((r) => x0 <= r.x1 + 2 && x1 >= r.x0 - 2 && y0 <= r.y1 + 2 && y1 >= r.y0 - 2);
+  const carve = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) grid[y][x] = 0; };
+
+  // the plan: which set pieces, in which order (CM.planFloor, where a later version adds rooms and wings), then the carving
+  const guardian = CM.guardianFor(number), lair = guardian ? CM.GUARDIANS[guardian].lair : null;
+  const plan = CM.planFloor(number, seed, rnd, special, lair);
+  const chosen = plan.pieces;
+  for (const tpl of chosen) {
+    const h = tpl.rows.length - 2, w = tpl.rows[0].length - 2;
+    const spots = [];
+    if (tpl === lair) {
+      for (let i = 0; i <= Math.floor((size - 6 - w) / 2); i++) for (let j = 0; j <= Math.floor((size - 6 - h) / 2); j++) spots.push([3 + 2 * i, 3 + 2 * j]);
+      const reach = Math.max(...spots.map(([x, y]) => x + y));
+      spots.splice(0, spots.length, ...spots.filter(([x, y]) => x + y >= reach * 0.6));
+    }
+    for (let tries = 0; tries < 40; tries++) {
+      const [x0, y0] = tpl === lair ? rnd.pick(spots) : [3 + 2 * rnd.int(0, Math.floor((size - 6 - w) / 2)), 3 + 2 * rnd.int(0, Math.floor((size - 6 - h) / 2))];
+      const x1 = x0 + w - 1, y1 = y0 + h - 1;
+      if (x1 > size - 4 || y1 > size - 4 || taken(x0, y0, x1, y1)) continue;         // (room for the maze beyond every entrance)
+      const room = { x0, y0, x1, y1, template: tpl, entrances: [], fill: [], pillars: [] };
+      let fits = true;
+      tpl.rows.forEach((row, ry) => [...row].forEach((c, rx) => {
+        const x = x0 - 1 + rx, y = y0 - 1 + ry;
+        const onRing = ry === 0 || ry === tpl.rows.length - 1 || rx === 0 || rx === row.length - 1;
+        if ("DLGS".includes(c)) {
+          const onSide = ry === 0 || ry === tpl.rows.length - 1;
+          if ((onSide && x % 2 === 0) || (!onSide && y % 2 === 0)) fits = false;      // (the maze won't come up to it)
+          room.entrances.push([x, y, c]);
+        } else if (c === "#" && !onRing) room.pillars.push([x, y]);                  // (a pillar inside: on even coordinates, where the maze never goes)
+        else if (c !== "#" && c !== "W") room.fill.push([x, y, c]);
+      }));
+      if (!fits) continue;
+      carve(x0, y0, x1, y1);
+      for (const [px, py] of room.pillars) grid[py][px] = 1;
+      rooms.push(room);
+      break;
+    }
+  }
+  const roomTries = plan.roomTries;
+  for (let i = 0; i < roomTries; i++) {
+    const w = special === "maze" ? 3 : 3 + 2 * rnd.int(0, 1 + Math.floor(number / 7)), h = special === "maze" ? 3 : 3 + 2 * rnd.int(0, 1);
+    const x0 = 1 + 2 * rnd.int(0, Math.floor((size - 2 - w) / 2)), y0 = 1 + 2 * rnd.int(0, Math.floor((size - 2 - h) / 2));
+    const x1 = x0 + w - 1, y1 = y0 + h - 1;
+    if (x1 >= size - 1 || y1 >= size - 1 || taken(x0, y0, x1, y1)) continue;
+    carve(x0, y0, x1, y1);
+    rooms.push({ x0, y0, x1, y1, entrances: [], fill: [] });
+  }
+
+  // the maze between the rooms
+  for (let sy = 1; sy < size - 1; sy += 2) for (let sx = 1; sx < size - 1; sx += 2) {
+    if (grid[sy][sx] !== 1) continue;
+    const stack = [[sx, sy]];
+    grid[sy][sx] = 0;
+    while (stack.length) {
+      const [x, y] = stack[stack.length - 1];
+      const options = CM.DIRS.filter(([dx, dy]) => x + dx * 2 > 0 && x + dx * 2 < size - 1 && y + dy * 2 > 0 && y + dy * 2 < size - 1
+        && grid[y + dy * 2][x + dx * 2] === 1 && grid[y + dy][x + dx] === 1);
+      if (!options.length) { stack.pop(); continue; }
+      const [dx, dy] = rnd.pick(options);
+      grid[y + dy][x + dx] = 0;
+      grid[y + dy * 2][x + dx * 2] = 0;
+      stack.push([x + dx * 2, y + dy * 2]);
+    }
+  }
+
+  // join the regions: one way between each pair, and a few more for the loops
+  const region = new Map();
+  let regions = 0;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    if (grid[y][x] !== 0 || region.has(key(x, y))) continue;
+    const id = regions++, queue = [[x, y]];
+    region.set(key(x, y), id);
+    for (let i = 0; i < queue.length; i++) {
+      for (const [dx, dy] of CM.DIRS) {
+        const nx = queue[i][0] + dx, ny = queue[i][1] + dy;
+        if (ny > 0 && ny < size && nx > 0 && nx < size && grid[ny][nx] === 0 && !region.has(key(nx, ny))) { region.set(key(nx, ny), id); queue.push([nx, ny]); }
+      }
+    }
+  }
+  const templateWall = new Set(), templateDoor = new Map();
+  for (const r of rooms) if (r.template) {
+    for (let y = r.y0 - 1; y <= r.y1 + 1; y++) for (let x = r.x0 - 1; x <= r.x1 + 1; x++) templateWall.add(key(x, y));
+    for (const [x, y, c] of r.entrances) templateDoor.set(key(x, y), c);
+  }
+  let connectors = [];
+  for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) {
+    if (grid[y][x] !== 1) continue;
+    const k = key(x, y);
+    if (templateWall.has(k) && !templateDoor.has(k)) continue;
+    const a = region.get(key(x - 1, y)), b = region.get(key(x + 1, y)), c = region.get(key(x, y - 1)), d = region.get(key(x, y + 1));
+    if (a !== undefined && b !== undefined && a !== b && c === undefined && d === undefined) connectors.push([x, y, a, b]);
+    else if (c !== undefined && d !== undefined && c !== d && a === undefined && b === undefined) connectors.push([x, y, c, d]);
+  }
+  const merged = new Map();
+  const find = (id) => { while (merged.has(id)) id = merged.get(id); return id; };
+  const loops = [], doorways = [];
+  rnd.shuffle(connectors);
+  connectors.sort((p, q) => (templateDoor.has(key(q[0], q[1])) ? 1 : 0) - (templateDoor.has(key(p[0], p[1])) ? 1 : 0));   // (set pieces first)
+  for (const [x, y, a, b] of connectors) {
+    const ra = find(a), rb = find(b);
+    const k = key(x, y);
+    if (ra !== rb) {
+      grid[y][x] = 0;
+      merged.set(rb, ra);
+      doorways.push([x, y]);
+      if (templateDoor.has(k)) floor.features[k] = { type: { D: "door", L: "door", G: "gate", S: "secret" }[templateDoor.get(k)], open: false };
+    } else if (!templateDoor.has(k) && rnd.chance(0.06)
+               && ![...doorways, ...loops].some(([ox, oy]) => Math.abs(ox - x) + Math.abs(oy - y) <= 2)) {
+      loops.push([x, y]);                     // (a second way round: open, or a secret door - not beside another way)
+    }
+  }
+  for (const [x, y] of loops) {
+    if (rnd.chance(0.5) && number >= 2) { floor.features[key(x, y)] = { type: "secret", found: false }; }
+    else { grid[y][x] = 0; doorways.push([x, y]); }
+  }
+  // template entrances: locked, gated, secret - as the template says
+  for (const r of rooms) if (r.template) for (const [x, y, c] of r.entrances) {
+    const f = floor.features[key(x, y)];
+    if (!f) continue;
+    if (c === "L") f.locked = true;
+    if (c === "S") { grid[y][x] = 1; f.found = false; delete f.open; }
+  }
+
+  // trim the dead ends, most of them (a corridor that ends at a secret door isn't one: the door is the point of it)
+  const leadsOn = (x, y) => grid[y][x] === 0 || (floor.features[key(x, y)] || {}).type === "secret";
+  const deadEnds = () => {
+    const out = [];
+    for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) {
+      if (grid[y][x] === 0 && !templateWall.has(key(x, y)) && CM.DIRS.filter(([dx, dy]) => leadsOn(x + dx, y + dy)).length === 1) out.push([x, y]);
+    }
+    return out;
+  };
+  const keepEnds = special === "maze" ? 9999 : 3 + Math.floor(size / 6);
+  for (let pass = 0; pass < 40; pass++) {
+    const ends = deadEnds();
+    if (ends.length <= keepEnds) break;
+    rnd.shuffle(ends);
+    for (const [x, y] of ends.slice(0, Math.max(1, ends.length - keepEnds))) {
+      if (floor.features[key(x, y)]) continue;
+      grid[y][x] = 1;
+    }
+  }
+  // (a secret door with nothing on one side any more is just a wall now)
+  for (const [k, f] of Object.entries(floor.features)) {
+    if (f.type === "secret") {
+      const [x, y] = unkey(k);
+      if (CM.DIRS.filter(([dx, dy]) => grid[y + dy][x + dx] === 0).length < 2) delete floor.features[k];
+    }
+  }
+  // every set piece can be walked to (through its door, or its secret door): a sealed one gets a plain doorway
+  for (const r of rooms) if (r.template) {
+    const walk = CM.distances(grid, [r.x0, r.y0], (x, y) => x >= 0 && y >= 0 && x < size && y < size && leadsOn(x, y));
+    if (walk.size > (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) + 4) continue;
+    for (const [x, y] of r.entrances) {
+      const outside = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([ox, oy]) => grid[oy] && grid[oy][ox] === 0 && !(ox >= r.x0 && ox <= r.x1 && oy >= r.y0 && oy <= r.y1));
+      if (!outside) continue;
+      grid[y][x] = 0;
+      floor.features[key(x, y)] = { type: "door", open: false, locked: false };
+      break;
+    }
+  }
+
+  // where the party arrives and where the ladder goes
+  const plain = rooms.filter((r) => !r.template);
+  const inTemplate = (x, y) => rooms.some((r) => r.template && x >= r.x0 - 1 && x <= r.x1 + 1 && y >= r.y0 - 1 && y <= r.y1 + 1);
+  const startRoom = plain.length ? plain.reduce((a, b) => (a.x0 + a.y0 <= b.x0 + b.y0 ? a : b)) : null;
+  let start = startRoom ? [Math.floor((startRoom.x0 + startRoom.x1) / 2), Math.floor((startRoom.y0 + startRoom.y1) / 2)] : null;
+  if (!start) {                                                   // (no plain room at all: the corridor square nearest the top left)
+    for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !inTemplate(x, y) && (!start || x + y < start[0] + start[1])) start = [x, y];
+    start = start || [1, 1];
+  }
+  if (grid[start[1]][start[0]] !== 0) { grid[start[1]][start[0]] = 0; }
+  floor.pos = start.slice();
+  const dist = CM.distances(grid, start);
+  let far = start, best = -1;
+  for (const [k, d] of dist) {
+    const [x, y] = unkey(k);
+    if (d > best && !inTemplate(x, y) && !floor.features[k]) { best = d; far = [x, y]; }
+  }
+  if (!lair) floor.things[key(far[0], far[1])] = number === CM.LAST_FLOOR ? { type: "boss", group: [CM.bossMonster()] } : { type: "ladder" };
+  if (number > 1) floor.things[key(start[0], start[1])] = { type: "stairs_up" };
+  const open = CM.openNeighbours(floor, start[0], start[1]);
+  floor.facing = open.length ? CM.DIRS.indexOf(open[0]) : 2;
+
+  // what the set pieces hold (a chest may be trapped, from the second floor down)
+  const trap = () => (number >= 2 && rnd.chance(0.3) ? rnd.pick(Object.keys(CM.TRAPS)) : null);
+  const stillGroups = [];
+  for (const r of rooms) if (r.template) for (const [x, y, c] of r.fill) {
+    const k = key(x, y);
+    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd), CM.makeItem(number, rnd)], trap: trap() };
+    else if (c === "M") { const g = CM.monsterGroup(number, rnd); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
+    else if (c === "F") floor.features[k] = { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false };
+    else if (c === "A") floor.features[k] = { type: "altar", used: false };
+    else if (c === "P") floor.features[k] = { type: "pit" };
+    else if (c === "K") floor.things[k] = { type: "key" };
+    else if (c === "X") floor.dark.push(k);
+    else if (c === "B" && guardian) floor.things[k] = { type: "guardian", group: CM.guardianGroup(guardian, number, rnd) };
+    else if ("ntvefcr".includes(c)) floor.decor.push({ x, y, kind: { n: "nest", t: "throne", v: "anvil", e: "ember", f: "fungus", c: "crystal", r: "root" }[c] });
+  }
+  for (const r of rooms) if (r.template && r.template.flood) {                     // a flooded set piece: water on every floor of it
+    for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (grid[y][x] === 0) floor.decor.push({ x, y, kind: "water" });
+  }
+  for (const r of rooms) if (r.template) r.template.rows.forEach((row, ry) => [...row].forEach((c, rx) => {
+    if (c !== "W") return;
+    const x = r.x0 - 1 + rx, y = r.y0 - 1 + ry;
+    const inside = CM.DIRS.map(([dx, dy], d) => [x + dx, y + dy, d]).find(([ix, iy]) => ix >= r.x0 && ix <= r.x1 && iy >= r.y0 && iy <= r.y1);
+    if (inside && !floor.features[key(inside[0], inside[1])]) {
+      floor.features[key(inside[0], inside[1])] = { type: "carving", face: (inside[2] + 2) % 4, text: r.template.lore || -(1 + rnd.int(0, CM.LORE_EXTRA.length - 1)), read: false };
+    }
+  }));
+
+  // doors on the ordinary rooms' doorways
+  const roomCells = new Set();
+  for (const r of plain) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) roomCells.add(key(x, y));
+  for (const [x, y] of doorways) {
+    const k = key(x, y);
+    if (floor.features[k] || !CM.DIRS.some(([dx, dy]) => roomCells.has(key(x + dx, y + dy)))) continue;
+    const ns = grid[y - 1][x] === 0 && grid[y + 1][x] === 0 && grid[y][x - 1] === 1 && grid[y][x + 1] === 1;
+    const ew = grid[y][x - 1] === 0 && grid[y][x + 1] === 0 && grid[y - 1][x] === 1 && grid[y + 1][x] === 1;
+    if (!(ns || ew) || !rnd.chance(0.55)) continue;
+    floor.features[k] = { type: "door", open: false, locked: number >= 2 && rnd.chance(0.12) };
+  }
+
+  // the furniture, each piece checked: the floor must still be finishable
+  const place = (k, feature) => {
+    floor.features[k] = feature;
+    if (CM.solvable(floor)) return true;
+    delete floor.features[k];
+    return false;
+  };
+  const freeCells = (filter) => {
+    const out = [];
+    for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) {
+      const k = key(x, y);
+      if (grid[y][x] !== 0 || floor.features[k] || floor.things[k] || (x === start[0] && y === start[1]) || inTemplate(x, y)) continue;
+      if ((dist.get(k) || 0) < 2 || Math.abs(x - start[0]) + Math.abs(y - start[1]) < 2) continue;
+      if (!filter || filter(x, y, k)) out.push([x, y]);
+    }
+    return rnd.shuffle(out);
+  };
+  const corridor = (x, y, k) => !roomCells.has(k);
+  const wallFace = (x, y) => { const d = CM.DIRS.findIndex(([dx, dy]) => grid[y + dy][x + dx] === 1); return d; };
+  const bottom = number === CM.LAST_FLOOR || number === CM.BOTTOM;   // (nothing to fall into below the Lich King's floor - the Deep has its own stair - nor below the bottom)
+  if (number >= 2 && !bottom) for (const [x, y] of freeCells((x, y, k) => roomCells.has(k)).slice(0, rnd.int(0, 1 + Math.floor(number / 7)))) place(key(x, y), { type: "pit" });
+  if (number >= 3 && !bottom) for (const [x, y] of freeCells(corridor).slice(0, rnd.int(0, 2))) place(key(x, y), { type: "trapdoor", known: false });
+  if (number >= 3 && rnd.chance(0.7)) {
+    const ends = freeCells((x, y) => CM.openNeighbours(floor, x, y).length === 1);
+    if (ends.length >= 2) {
+      const [a, b] = ends;
+      floor.features[key(a[0], a[1])] = { type: "teleporter", to: b, known: false };
+      floor.features[key(b[0], b[1])] = { type: "teleporter", to: a, known: false };
+    }
+  }
+  if (number >= 2 && rnd.chance(0.6)) { const c = freeCells((x, y) => CM.openNeighbours(floor, x, y).length >= 3)[0]; if (c) place(key(c[0], c[1]), { type: "spinner", known: false }); }
+  if (number >= 2 && rnd.chance(0.5)) {
+    const darkRoom = rnd.pick(plain.filter((r) => r !== startRoom));
+    if (darkRoom) for (let y = darkRoom.y0 - 1; y <= darkRoom.y1 + 1; y++) for (let x = darkRoom.x0 - 1; x <= darkRoom.x1 + 1; x++) {
+      if (grid[y][x] === 0 && !(x === start[0] && y === start[1]) && !floor.dark.includes(key(x, y))) floor.dark.push(key(x, y));
+    }
+  }
+  if (rnd.chance(0.6)) { const c = freeCells((x, y, k) => roomCells.has(k))[0]; if (c) place(key(c[0], c[1]), { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false }); }
+  if (number >= 2 && rnd.chance(0.35)) { const c = freeCells((x, y, k) => roomCells.has(k))[0]; if (c) place(key(c[0], c[1]), { type: "altar", used: false }); }
+  // a gate on a doorway, its lever somewhere you can get to first
+  const gated = Object.entries(floor.features).filter(([, f]) => f.type === "gate");
+  if (number >= 4 && rnd.chance(0.4)) {
+    const door = Object.entries(floor.features).find(([, f]) => f.type === "door" && !f.locked);
+    if (door) { floor.features[door[0]] = { type: "gate", open: false }; gated.push([door[0], floor.features[door[0]]]); }
+  }
+  for (const [gk] of gated) {
+    const reach = CM.reachable(floor);
+    const spots = freeCells((x, y, k) => reach.has(k) && wallFace(x, y) >= 0);
+    const spot = spots[0];
+    if (!spot) { floor.features[gk].open = true; continue; }
+    const plate = number >= 4 && CM.hashSeed(`${seed}:plate:${number}:${gk}`) % 5 < 2;
+    floor.features[key(spot[0], spot[1])] = plate ? { type: "plate", gate: gk, pressed: false } : { type: "lever", face: wallFace(spot[0], spot[1]), gate: gk, pulled: false };
+    if (!CM.solvable(floor)) { delete floor.features[key(spot[0], spot[1])]; floor.features[gk].open = true; }
+  }
+  // the carving for this floor, on a wall the party can stand before
+  const carve_at = freeCells((x, y) => wallFace(x, y) >= 0)[0];
+  if (carve_at) floor.features[key(carve_at[0], carve_at[1])] = { type: "carving", face: wallFace(carve_at[0], carve_at[1]),
+    text: number > CM.BOTTOM ? `e:${CM.hashSeed(`${seed}:endless:${number}`) % CM.LORE_ENDLESS.length}` : number - 1, read: false };   // (below the bottom: the dream, still dreaming)
+  // keys: one for every locked door, somewhere before it
+  for (const [dk, f] of Object.entries(floor.features)) {
+    if (f.type !== "door" || !f.locked) continue;
+    const reach = CM.reachable(floor);
+    const spots = freeCells((x, y, k) => reach.has(k) && !roomCells.has(k) || (reach.has(k) && rnd.chance(0.3)));
+    const spot = spots[0];
+    if (spot) floor.things[key(spot[0], spot[1])] = { type: "key" };
+    else f.locked = false;
+  }
+  // chests and monsters
+  const spare = freeCells((x, y, k) => (dist.get(k) || 0) > 3);
+  for (let i = 0; i < Math.min(12, 3 + Math.floor(number / 4)) && spare.length; i++) {
+    const [x, y] = spare.pop();
+    const items = [];
+    const n = rnd.int(1, 2);
+    for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd));
+    floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items, trap: trap() };
+  }
+  for (let i = 0; i < (special === "maze" ? 3 : Math.min(14, 5 + Math.floor(number / 2))) && spare.length; i++) {
+    const [x, y] = spare.pop();
+    floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd) };
+  }
+  if (special === "maze" && spare.length) {                      // the thing in the labyrinth: a great minotaur that hunts the party wherever it goes
+    const [x, y] = spare.pop(), m = CM.makeMonster(CM.monsterKind("Minotaur"), number + 3, rnd);
+    Object.assign(m, { name: "Minotaur of the Labyrinth", elite: "hulking", max: Math.round(m.max * 1.5), atk: m.atk + 3, xp: m.xp * 3, gold: m.gold * 4 });
+    m.hp = m.max;
+    floor.things[key(x, y)] = { type: "monsters", group: [m], hunter: true };
+  }
+  if (!CM.solvable(floor)) {                                     // (it never comes to this, but a floor must be finishable)
+    for (const [k, f] of Object.entries(floor.features)) if (["pit", "trapdoor", "gate"].includes(f.type) || (f.type === "door" && f.locked)) delete floor.features[k];
+  }
+  if (number === CM.LAST_FLOOR - 1) {                             // the Lich King's heart, somewhere the party can get to
+    const reach = CM.reachable(floor), goal = CM.goalOf(floor);
+    const spots = freeCells((x, y, k) => reach.has(k) && k !== goal).sort((a, b) => (dist.get(key(b[0], b[1])) || 0) - (dist.get(key(a[0], a[1])) || 0));
+    const spot = spots[0];
+    if (spot) floor.things[key(spot[0], spot[1])] = { type: "phylactery" };
+  }
+  // a door that asks a riddle from the carvings above (never a locked one, never a set piece's)
+  if (number >= CM.RIDDLE_FROM) {
+    const asks = CM.RIDDLES.map((r, i) => i).filter((i) => CM.RIDDLES[i].lore + 1 < number);
+    const doors = Object.entries(floor.features).filter(([k, f]) => f.type === "door" && !f.locked && !inTemplate(...unkey(k)));
+    const pick = doors.filter(([k]) => CM.hashSeed(`${seed}:riddle:${number}:${k}`) % 10 < 3)[0];
+    if (pick && asks.length) pick[1].riddle = asks[CM.hashSeed(`${seed}:riddle:${number}`) % asks.length];
+  }
+  // plates in the floor that spring a trap, from the third floor down
+  if (number >= 3) for (const [x, y] of freeCells(corridor).slice(0, rnd.int(0, 2))) floor.features[key(x, y)] = { type: "plate", trap: rnd.pick(Object.keys(CM.TRAPS)), known: false, spent: false };
+  // the people: a ghost with a request, a hermit, a lost adventurer - one of them on a floor, now and then
+  if (number >= 2 && number < CM.LAST_FLOOR && !CM.guardianFor(number) && special !== "maze") {
+    const roll = rnd.next(), room = (x, y, k) => roomCells.has(k);
+    if (roll < 0.22) {
+      const spot = freeCells(room)[0];
+      if (spot) {
+        const who = rnd.int(0, CM.GHOSTS.length - 1), gk = key(spot[0], spot[1]);
+        const groups = Object.entries(floor.things).filter(([, t]) => t.type === "monsters" && !t.still && !t.hunter);
+        let request = rnd.pick(["bones", "vengeance", "story"]);
+        if (request === "vengeance" && !groups.length) request = "story";
+        floor.things[gk] = { type: "ghost", who, request, asked: false };
+        if (request === "bones") {
+          const far = freeCells((x, y, k) => Math.abs(x - spot[0]) + Math.abs(y - spot[1]) >= 6)[0] || freeCells()[0];
+          if (far) floor.things[key(far[0], far[1])] = { type: "bones", ghost: gk };
+          else floor.things[gk].request = "story";
+        } else if (request === "vengeance") {
+          const [, t] = rnd.pick(groups);
+          t.vengeance = gk;
+          const m = t.group[0];
+          if (!m.elite) { m.name = `Hulking ${m.name}`; m.elite = "hulking"; m.max = Math.round(m.max * 1.5); m.hp = m.max; m.atk += 2; m.xp = Math.round(m.xp * 1.5); m.gold *= 2; }
+        }
+      }
+    } else if (roll < 0.36 && number >= 3) {
+      const spot = freeCells((x, y) => CM.openNeighbours(floor, x, y).length === 1)[0] || freeCells(room)[0];
+      if (spot) floor.things[key(spot[0], spot[1])] = { type: "hermit", heard: 0, greeted: false };
+    } else if (roll < 0.5 && number >= 3) {
+      const spot = freeCells(room)[0];
+      if (spot) floor.things[key(spot[0], spot[1])] = { type: "adventurer", hero: CM.makeRecruit(Math.max(1, Math.floor(number / 2)), rnd), freed: false };
+    }
+  }
+  if (special === "wading") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0) floor.decor.push({ x, y, kind: "water" });
+  if (special === "dark") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !floor.dark.includes(key(x, y))) floor.dark.push(key(x, y));
+  floor.rooms = rooms.map((r) => ({ x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, name: r.template ? r.template.name : "" }));
+  return floor;
+};
+}
 
 // ---- 25-saves.js ----
 "use strict";
@@ -2320,7 +2740,7 @@ CM.makeFloor = function (number, seed) {
 // gems, the riddles and the plates do), never from the floor's own random, so the floors already laid out stay as
 // they were. CM.GEN says which generator wrote a save; a floor whose fingerprint has changed is still loaded, with
 // a word in the log.
-CM.GEN = 1;
+CM.GEN = 2;                                         // the generator a new run gets (CM.generators); a run keeps the one it began with
 CM.SCHEMA = 2;                                      // the run's save format (1: whole floors, before v1.1)
 
 // the parts of a floor that never change once it is made (everything else is diffed against the fresh floor)
@@ -2373,8 +2793,8 @@ CM.floorDelta = function (fl, base) {
 };
 
 // the floor again, from the seed and the changes; returns {floor, base, drifted}
-CM.restoreFloor = function (d, seed) {
-  const fl = CM.makeFloor(d.n, seed), base = CM.snapshot(fl);
+CM.restoreFloor = function (d, seed, gen) {
+  const fl = CM.makeFloor(d.n, seed, gen || 1), base = CM.snapshot(fl);
   const drifted = d.fp !== undefined && d.fp !== base.fp;
   for (const part of ["things", "features"]) for (const [k, v] of Object.entries(d[part] || {})) { if (v === null) delete fl[part][k]; else fl[part][k] = v; }
   for (const [x, y, v] of d.grid || []) if (fl.grid[y] && x < fl.grid[y].length) fl.grid[y][x] = v;
@@ -2397,10 +2817,10 @@ CM.MIGRATIONS = {
       if (!fl || !fl.grid) continue;
       CM.upgradeFloor(fl);
       for (const t of Object.values(fl.things)) if (t.group) t.group.forEach(CM.upgradeMonster);
-      floors[fl.number] = CM.floorDelta(fl, CM.snapshot(CM.makeFloor(fl.number, seed)));
+      floors[fl.number] = CM.floorDelta(fl, CM.snapshot(CM.makeFloor(fl.number, seed, 1)));
     }
     data.floors = floors;
-    data.gen = CM.GEN;
+    data.gen = 1;
     return data;
   },
 };
@@ -2417,6 +2837,72 @@ CM.store.used = function () {
   let n = 0;
   try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("claudemagic.")) n += (k.length + (localStorage.getItem(k) || "").length) * 2; } } catch (e) { /* no storage */ }
   return n;
+};
+
+// the log, packed for the save: the common lines are one character each (a step, a turn, a tick), runs of the same
+// character are counted, and anything else is JSON between bars
+const SHORT = { "move,0": "f", "move,2": "b", "move,1": "r", "move,3": "l", "turn,1": ">", "turn,-1": "<", tick: ".", use: "u", travelStep: "s", autoTurn: "a", stopTravel: "x", closeBag: "c" };
+const LONG = Object.fromEntries(Object.entries(SHORT).map(([k, v]) => [v, k.split(",").map((x, i) => (i ? Number(x) : x))]));
+CM.packLog = function (log) {
+  let out = "", last = "", run = 0;
+  const flush = () => { if (run) out += run > 2 ? `${run}${last}` : last.repeat(run); run = 0; last = ""; };
+  for (const line of log || []) {
+    const c = SHORT[line.join(",")];
+    if (c) { if (c === last) run++; else { flush(); last = c; run = 1; } }
+    else { flush(); out += "|" + JSON.stringify(line) + "|"; }
+  }
+  flush();
+  return out;
+};
+CM.unpackLog = function (text) {
+  if (Array.isArray(text)) return text;
+  const out = [];
+  let i = 0, n = 0;
+  while (i < (text || "").length) {
+    const ch = text[i];
+    if (ch === "|") { const j = text.indexOf("|", i + 1); out.push(JSON.parse(text.slice(i + 1, j))); i = j + 1; n = 0; }
+    else if (ch >= "0" && ch <= "9") { n = n * 10 + Number(ch); i++; }
+    else { const line = LONG[ch]; for (let k = 0; k < Math.max(1, n); k++) out.push(line.slice()); n = 0; i++; }
+  }
+  return out;
+};
+
+// ---- a run played again from its seed and its log: the same floors, the same dice, the same choices ----
+// spec: {seed, gen, party, kit, difficulty, mutators, mode, log} (game.replaySpec()). Returns the game at the log's
+// end. `upTo` stops after that many lines (the viewer scrubs with it).
+CM.replayRun = function (spec, upTo) {
+  const game = new CM.Game();
+  game.replaying = 1;                                                  // (nothing is logged while it plays itself back)
+  const gen = CM.GEN;
+  CM.GEN = spec.gen || 1;
+  try { game.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode); } finally { CM.GEN = gen; }
+  game.gen = spec.gen || 1;
+  const lines = upTo === undefined ? spec.log : spec.log.slice(0, upTo);
+  for (const line of lines) {
+    const [name, ...args] = line;
+    switch (name) {
+      case "tick": game.wanderMonsters(); break;
+      case "act": game.act(args[0], args[1] === null ? undefined : args[1]); break;
+      case "travelStep": game.travelStep(); break;
+      case "offerBoons": game.offerBoons(game.party[args[0]]); break;
+      case "chooseBoon": game.chooseBoon(game.party[args[0]], args[1]); break;
+      case "choosePath": game.choosePath(game.party[args[0]], args[1]); break;
+      case "setRow": game.setRow(game.party[args[0]], args[1]); break;
+      case "equip": game.equip(game.party[args[0]], args[1]); break;
+      case "talk": { const t = game.floor.things[args[0]]; if (t) game.talk(t, args[0]); break; }
+      case "drink": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; if (f) game.drink(f); break; }
+      case "kneel": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; if (f) game.kneel(f); break; }
+      case "openBag": game.openBag(Boolean(args[0])); break;
+      case "autoFight": game.autoFight(Boolean(args[0])); break;
+      case "travelTo": game.travelTo(args[0], args[1], Boolean(args[2])); break;
+      case "hire": game.hire(args[0], args[1] === null ? undefined : args[1]); break;
+      case "castOutside": game.castOutside(args[0], args[1], args[2] === null ? undefined : args[2]); break;
+      default: if (typeof game[name] === "function") game[name](...args); break;
+    }
+    if (game.mode === "title") break;
+  }
+  game.replaying = 0;
+  return game;
 };
 
 // ---- 30-art.js ----
@@ -4678,6 +5164,14 @@ CM.Game = class {
 
   setMode(mode) { if (mode !== "explore") this.travel = null; this.mode = mode; this.emit("mode", mode); this.emit("change"); }
 
+  // ---- the log: every choice the player makes, as a line, so a run can be played again from its seed (CM.replayRun) ----
+  logAct(name, ...args) { if (this.replaying) return; this.runLog = this.runLog || []; this.runLog.push(args.length ? [name, ...args] : [name]); }
+  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.endless ? "endless" : "dungeon", log: (this.runLog || []).slice() }; }
+  // down the stairs by hand (the simulator's bot, when it has lost its way): logged, so a replay follows
+  warp(number) { this.logAct("warp", number); this.enterFloor(number, "down"); }
+  // what a tally counts besides steps and kills: gold by where it went, and how often each spell or skill was used
+  spend(where, gold) { this.tally.spent = this.tally.spent || {}; this.tally.spent[where] = (this.tally.spent[where] || 0) + gold; }
+
   saveSettings() { CM.store.set("settings", this.settings); }
 
   // ---- saving ----
@@ -4699,7 +5193,7 @@ CM.Game = class {
 
   // a floor made from the seed, and remembered as it was fresh (so the save can keep only what changes)
   freshFloor(number) {
-    const fl = CM.makeFloor(number, this.seed);
+    const fl = CM.makeFloor(number, this.seed, this.gen || CM.GEN);
     this.bases[number] = CM.snapshot(fl);
     this.floors[number] = fl;
     return fl;
@@ -4710,7 +5204,7 @@ CM.Game = class {
     if (this.floors[number]) return this.floors[number];
     const delta = this.deltas[number];
     if (!delta) return this.freshFloor(number);
-    const r = CM.restoreFloor(delta, this.seed);
+    const r = CM.restoreFloor(delta, this.seed, this.gen || 1);
     this.floors[number] = r.floor; this.bases[number] = r.base;
     if (r.drifted) this.say(`(The dungeon has shifted a little since this run was saved: floor ${number} may not be quite as you left it.)`);
     return r.floor;
@@ -4723,7 +5217,7 @@ CM.Game = class {
   floorDeltas() {
     const out = {};
     for (const [n, fl] of Object.entries(this.floors)) {
-      const base = this.bases[n] || (this.bases[n] = CM.snapshot(CM.makeFloor(Number(n), this.seed)));
+      const base = this.bases[n] || (this.bases[n] = CM.snapshot(CM.makeFloor(Number(n), this.seed, this.gen || 1)));
       if (fl === this.floor || !this.deltas[n]) this.deltas[n] = CM.floorDelta(fl, base);
       out[n] = this.deltas[n];
     }
@@ -4733,11 +5227,12 @@ CM.Game = class {
 
   saveRun() {
     if (!["explore", "camp"].includes(this.mode)) return;
-    const data = { schema: CM.SCHEMA, gen: CM.GEN, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
+    const data = { schema: CM.SCHEMA, gen: this.gen || 1, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
-      camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [] };
+      camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []) };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -4755,6 +5250,7 @@ CM.Game = class {
     const d = CM.migrateRun(this.lastRun);
     if (!this.canContinue()) return false;
     this.seed = d.seed || CM.randomSeed();
+    this.gen = d.gen || 1;                                               // (the generator this run began with: its floors stay its floors)
     this.party = d.party.map(CM.upgradeHero); this.bag = d.bag || []; this.gold = d.gold || 0;
     this.floors = {}; this.bases = {}; this.deltas = {};
     for (const delta of Object.values(d.floors || {})) this.deltas[delta.n] = delta;   // (each floor is made again when the party goes back to it)
@@ -4777,6 +5273,7 @@ CM.Game = class {
     this.crowned = Boolean(d.crowned); this.bottom = false; this.endless = Boolean(d.endless); this.deepened = d.deepened || [];
     this.camps = d.camps || []; this.travel = null;
     this.pairFights = d.pairFights || {}; this.bonds = d.bonds || []; this.hazardsMet = d.hazardsMet || []; this.remainsFound = d.remainsFound || [];
+    this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -4789,6 +5286,7 @@ CM.Game = class {
   newGame(seed, chosen, kit, difficulty, mutators, mode) {               // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned; mode: "endless" for no bottom
     this.seed = (seed || "").trim() || CM.randomSeed();
     this.rnd = new CM.Random(CM.hashSeed(`${this.seed}:dice`));          // the run's dice: the same seed, the same fights, given the same choices
+    this.gen = CM.GEN;
     this.bases = {}; this.deltas = {}; this.saveWarned = false;
     this.party = CM.newParty(chosen);
     this.steps = 0;
@@ -4813,6 +5311,7 @@ CM.Game = class {
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
     this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row }));
+    this.startMutators = this.mutators.slice(); this.runLog = [];
     if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
@@ -4879,6 +5378,7 @@ CM.Game = class {
   }
 
   climbUp() {
+    this.logAct("climbUp");
     const n = this.floor.number;
     if (n === 1) { this.say("The way out. Not without the Lich King's crown."); return; }
     this.sound("stairs");
@@ -4928,6 +5428,7 @@ Object.assign(CM.Game.prototype, {
   // ---- moving ----
   turn(way) {
     if (this.mode !== "explore") return false;
+    this.logAct("turn", way);
     this.floor.facing = (this.floor.facing + way + 4) % 4;
     this.look();
     this.emit("turned", this.floor.facing);
@@ -4939,6 +5440,7 @@ Object.assign(CM.Game.prototype, {
 
   move(rel) {
     if (this.mode !== "explore") return false;
+    this.logAct("move", rel);
     const fl = this.floor;
     const [dx, dy] = CM.DIRS[(fl.facing + rel) % 4];
     const x = fl.pos[0] + dx, y = fl.pos[1] + dy, k = keyOf(x, y);
@@ -5046,12 +5548,12 @@ Object.assign(CM.Game.prototype, {
   // what a square does when the party steps onto it
   arrive(f, k) {
     const fl = this.floor;
-    if (f.type === "pit" && f.roped && fl.number < CM.LAST_FLOOR) { this.say("You climb down the rope you left, hand over hand."); this.ropeDown(k); return; }
+    if (f.type === "pit" && f.roped && fl.number < CM.LAST_FLOOR) { this.say("You climb down the rope you left, hand over hand."); this.inUse = true; this.ropeDown(k); this.inUse = false; return; }
     if (f.type === "pit" && this.hasItem("rope") >= 0 && fl.number < CM.LAST_FLOOR) {
       this.bag.splice(this.hasItem("rope"), 1);
       f.roped = true;
       this.say("You make the rope fast and lower the party down the pit, slow and safe.");
-      this.ropeDown(k);
+      this.inUse = true; this.ropeDown(k); this.inUse = false;
       return;
     }
     if (f.type === "pit" || f.type === "trapdoor") {
@@ -5204,6 +5706,7 @@ Object.assign(CM.Game.prototype, {
 
   use() {
     if (this.mode !== "explore") return;
+    this.logAct("use");
     const fl = this.floor, [x, y] = fl.pos, k = keyOf(x, y), here = fl.features[k], thing = fl.things[k];
     const [dx, dy] = CM.DIRS[fl.facing], ak = keyOf(x + dx, y + dy), ahead = fl.features[ak];
     if (here && here.type === "lever" && here.face === fl.facing) {
@@ -5226,7 +5729,7 @@ Object.assign(CM.Game.prototype, {
       this.dirty = true;
       return;
     }
-    if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.talk(thing, k); return; }
+    if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.inUse = true; this.talk(thing, k); this.inUse = false; return; }
     if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
     if (thing && thing.type === "strongbox") { this.openStrongbox(thing, k); return; }
     if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
@@ -5285,9 +5788,9 @@ Object.assign(CM.Game.prototype, {
       this.saveRun();
       this.emit("change");
     } else if (here && here.type === "fountain") {
-      this.drink(here);
+      this.inUse = true; this.drink(here); this.inUse = false;
     } else if (here && here.type === "altar") {
-      this.kneel(here);
+      this.inUse = true; this.kneel(here); this.inUse = false;
     } else if (!CM.isOpen(fl, x + dx, y + dy)) {                       // a wall before you: search it
       if (ahead && ahead.type === "secret" && !ahead.found) {
         ahead.found = true;
@@ -5331,6 +5834,7 @@ Object.assign(CM.Game.prototype, {
 
   drink(f) {
     if (f.used) { this.say("The fountain has run dry."); return; }
+    if (!this.inUse) this.logAct("drink");
     f.used = true; f.known = true;
     if (this.has("drought")) { this.say("The basin is dry to the bottom, cracked. A drought lies on the dungeon today."); this.saveRun(); this.emit("change"); return; }
     if (f.kind === "heal") {
@@ -5352,6 +5856,7 @@ Object.assign(CM.Game.prototype, {
 
   kneel(f) {
     if (f.used) { this.say("You have prayed here already. The candles gutter."); return; }
+    if (!this.inUse) this.logAct("kneel");
     f.used = true;
     let lifted = 0;
     for (const m of this.alive()) { m.hp = Math.min(m.max, m.hp + Math.max(1, Math.floor(m.max * 0.3))); lifted += this.cure(m, ["curse"]).length; }
@@ -5371,6 +5876,13 @@ Object.assign(CM.Game.prototype, {
     this.wander += dt;
     if (this.wander < (this.has("swift") ? 0.7 : 1.1)) return;
     this.wander = 0;
+    this.wanderMonsters();
+  },
+
+  // the monsters' turn to move (one every second or so of real time, logged so a replay moves them at the same moments)
+  wanderMonsters() {
+    if (this.mode !== "explore") return;
+    this.logAct("tick");
     const fl = this.floor, [px, py] = fl.pos;
     const walk = (x, y) => {
       if (!CM.passable(fl, x, y)) return false;
@@ -5484,6 +5996,7 @@ Object.assign(CM.Game.prototype, {
   travelTo(x, y, explore = false) {
     if (this.mode !== "explore" || !this.floor) return false;
     if (x === this.floor.pos[0] && y === this.floor.pos[1]) return false;
+    this.logAct("travelTo", x, y, explore ? 1 : 0);
     const path = this.pathTo(x, y);
     if (!path) { if (!explore) this.say("No known way there."); return false; }
     this.travel = { path, to: [x, y], explore, known: this.thingsInView() };
@@ -5496,11 +6009,17 @@ Object.assign(CM.Game.prototype, {
     if (!next || !this.travelTo(next[0], next[1], true)) { this.say("Nothing more to explore that you can see: the floor is known, as far as the light has reached."); return false; }
     return true;
   },
-  stopTravel() { if (this.travel) { this.travel = null; this.emit("change"); } },
+  stopTravel() { if (this.travel) { this.logAct("stopTravel"); this.travel = null; this.emit("change"); } },
   // one step of the journey; false when it is over
   travelStep() {
     const t = this.travel;
     if (!t || this.mode !== "explore") { this.travel = null; return false; }
+    this.logAct("travelStep");
+    this.replaying = (this.replaying || 0) + 1;                          // (the moves and turns of a step are the step's: not logged twice)
+    try { return this.travelStep2(); } finally { this.replaying -= 1; }
+  },
+  travelStep2() {
+    const t = this.travel;
     const fl = this.floor;
     if (!t.path.length) {
       if (t.explore) {
@@ -5539,6 +6058,7 @@ Object.assign(CM.Game.prototype, {
   },
   // a note pinned to a square of the automap (a word or two; empty takes it off)
   setNote(x, y, text) {
+    this.logAct("setNote", x, y, text);
     const fl = this.floor, k = keyOf(x, y);
     fl.notes = fl.notes || {};
     text = String(text || "").trim().slice(0, 24);
@@ -5588,6 +6108,7 @@ Object.assign(CM.Game.prototype, {
   choose(k, i) {
     const fl = this.floor, thing = fl.things[k], E = thing && CM.EVENTS[thing.event], opt = E && E.options[i];
     if (!opt || thing.done) return false;
+    this.logAct("choose", k, i);
     const rnd = this.rnd, L = fl.number, front = this.alive().find((h) => h.row === "front") || this.alive()[0];
     const finish = (text, keep) => { thing.done = true; thing.after = keep || "Nothing more here."; this.say(text); if (!keep) delete fl.things[k]; this.saveRun(); this.emit("change"); };
     switch (opt.effect) {
@@ -5651,6 +6172,7 @@ Object.assign(CM.Game.prototype, {
   chooseRivals(k, i) {
     const fl = this.floor, thing = fl.things[k];
     if (!thing || thing.type !== "rivals" || thing.met) return false;
+    this.logAct("chooseRivals", k, i);
     if (i === 0) {
       if (this.gold < 40) { this.say("You haven't forty gold. They shrug."); return true; }
       this.gold -= 40; thing.met = true;
@@ -5883,6 +6405,8 @@ Object.assign(CM.Game.prototype, {
   act(action, arg) {
     const c = this.combat, h = c && c.waiting;
     if (!h || this.mode !== "combat") return false;
+    if (!this.inAuto) this.logAct("act", action, arg && typeof arg === "object" ? (arg.hp !== undefined ? { foe: this.living().indexOf(arg) } : arg) : arg === undefined ? null : arg);
+    if (arg && typeof arg === "object" && arg.foe !== undefined && arg.hp === undefined) arg = this.living()[arg.foe] || null;   // (a foe, by its place among the living: how the log keeps it)
     if (action === "fight") {
       const t = this.foeAt(arg);
       if (!t) return false;
@@ -6457,6 +6981,8 @@ Object.assign(CM.Game.prototype, {
 
   // a spell or skill, if the hero knows it, can afford it and has someone to aim it at
   useAbility(h, id, target) {
+    this.tally.abilities = this.tally.abilities || {};
+    if (id) this.tally.abilities[id] = (this.tally.abilities[id] || 0) + 1;
     if (!id) {
       const t = this.foeAt(target);
       if (!t) return false;
@@ -6697,6 +7223,7 @@ Object.assign(CM.Game.prototype, {
 
   // between fights: a healing spell, a cure, Light - from whoever knows it
   castOutside(heroIndex, id, target) {
+    this.logAct("castOutside", heroIndex, id, target === undefined ? null : target);
     const h = this.party[heroIndex];
     if (!h || h.hp <= 0 || !this.canAct(h) || this.mode === "combat") return false;
     const ok = this.useAbility(h, id, target);
@@ -6772,6 +7299,7 @@ Object.assign(CM.Game.prototype, {
 Object.assign(CM.Game.prototype, {
   autoFight(on = true) {
     if (!this.combat || this.mode !== "combat") return false;
+    this.logAct("autoFight", on ? 1 : 0);
     this.combat.auto = on;
     if (on) this.say("The party fights on by itself. (Any key takes the reins back.)");
     this.emit("change");
@@ -6781,6 +7309,12 @@ Object.assign(CM.Game.prototype, {
   autoTurn() {
     const c = this.combat, h = c && c.waiting;
     if (!h || this.mode !== "combat") return false;
+    this.logAct("autoTurn");
+    this.inAuto = true;
+    try { return this.autoTurn2(); } finally { this.inAuto = false; }
+  },
+  autoTurn2() {
+    const c = this.combat, h = c && c.waiting;
     if (c.auto && this.alive().some((p) => p.hp < p.max * 0.5)) { c.auto = false; this.say("Someone is badly hurt: Auto stops, and waits for orders."); this.emit("change"); return false; }
     const hurt = this.alive().filter((p) => p.hp < p.max / 3), foes = this.living();
     const can = CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].mp <= h.mp && !(CM.ABILITIES[id].once && h.used && h.used[id]));
@@ -6901,6 +7435,7 @@ const keyOf = CM.keyOf;
 Object.assign(CM.Game.prototype, {
   // ---- the bag, the merchant, the camp ----
   openBag(shop = false) {
+    if (!this.peddling) this.logAct("openBag", shop ? 1 : 0);
     this.shopping = shop;
     if (shop && !this.stock) {
       const rnd = this.rnd, depth = this.floor.number + 3;
@@ -6913,6 +7448,7 @@ Object.assign(CM.Game.prototype, {
   },
 
   closeBag() {
+    this.logAct("closeBag");
     if (this.peddling) { this.stock = null; this.peddling = null; this.say("The peddler folds the cloth over what's left, and waits for whoever comes next."); }
     this.emit("bag", false);
     this.saveRun();
@@ -6928,6 +7464,7 @@ Object.assign(CM.Game.prototype, {
 
   // what the hero wears in that slot goes back to the pack - unless a curse holds it
   takeOff(n, slot) {
+    this.logAct("takeOff", n, slot);
     const hero = this.party[n], item = hero && hero[slot];
     if (!item) return "Nothing there.";
     if (slot === "weapon" || slot === "armor") return "Swap it for another instead: no one goes bare-handed down here.";
@@ -6948,6 +7485,7 @@ Object.assign(CM.Game.prototype, {
   },
 
   identify(row) {
+    this.logAct("identify", row);
     const item = this.bag[row];
     if (!this.identifying || !item) return "Pick a thing from the pack.";
     if (!item.unknown) return "That one is known already. Pick an unknown thing.";
@@ -7042,6 +7580,7 @@ Object.assign(CM.Game.prototype, {
   // what the party wears: the thing in the slot goes back to the pack; wearing an unknown thing is how you learn it
   equip(hero, row) {
     const item = this.bag[row];
+    if (!this.inGive) this.logAct("equip", this.party.indexOf(hero), row);
     const why = CM.cantWear(hero, item);
     if (why) return why;
     const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind);
@@ -7069,6 +7608,7 @@ Object.assign(CM.Game.prototype, {
 
   give(row, n) {                                                        // returns a note for the bag screen, "" when it worked
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack first.";
+    this.logAct("give", row, n);
     const item = this.bag[row], hero = this.party[n];
     if (item.kind === "key") return "Keys turn in locks, not in hands. Walk into the locked door.";
     if (item.kind === "rope") return "The rope is for a pit: walk into one with it in the pack.";
@@ -7133,7 +7673,8 @@ Object.assign(CM.Game.prototype, {
       this.bag.splice(row, 1);
       this.sound("heal");
     } else {
-      return this.equip(hero, row);
+      this.inGive = true;
+      try { return this.equip(hero, row); } finally { this.inGive = false; }
     }
     this.emit("change");
     return "";
@@ -7141,9 +7682,11 @@ Object.assign(CM.Game.prototype, {
 
   buy(row) {
     if (!this.stock || row < 0 || row >= this.stock.length) return "Pick something from the merchant's wares first.";
+    this.logAct("buy", row);
     const item = this.stock[row];
     if (this.gold < item.value) return "You can't afford that.";
     this.gold -= item.value;
+    this.spend(this.peddling ? "peddler" : "merchant", item.value);
     this.bag.push(Object.assign({}, item, item.props ? { props: Object.assign({}, item.props) } : {}));
     if (this.peddling || ["weapon", "armor", "shield", "helm", "lantern"].includes(item.kind)) this.stock.splice(row, 1);   // (the merchant's potions never run out; a peddler's cloth does)
     this.sound("coin");
@@ -7153,6 +7696,7 @@ Object.assign(CM.Game.prototype, {
 
   sell(row) {
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack to sell.";
+    this.logAct("sell", row);
     const item = this.bag.splice(row, 1)[0];
     this.gold += item.unknown ? 10 : Math.floor(item.value / 2);       // (the merchant pays a pittance for what no one can name)
     this.sound("coin");
@@ -7162,7 +7706,8 @@ Object.assign(CM.Game.prototype, {
 
   rest() {
     if (this.gold < 20) { this.say("The merchant wants 20 gold for a bedroll by the fire."); return; }
-    this.gold -= 20;
+    this.logAct("rest");
+    this.gold -= 20; this.spend("rest", 20);
     for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.sound("heal");
     this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass.");
@@ -7182,7 +7727,8 @@ Object.assign(CM.Game.prototype, {
       return false;
     }
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold for that.`); return false; }
-    this.gold -= cost;
+    this.logAct("temple", service);
+    this.gold -= cost; this.spend("temple", cost);
     for (const h of who) this.cure(h, which);
     for (const it of cursedGear) { it.props.cursed = false; it.power += 3; }
     this.sound("heal");
@@ -7198,7 +7744,8 @@ Object.assign(CM.Game.prototype, {
     const unknown = [...this.bag, ...this.party.flatMap(CM.equipped)].filter((i) => i.unknown);
     if (!unknown.length) { this.say("Nothing you carry is unknown to you."); return false; }
     if (this.gold < 25) { this.say("The scribe asks 25 gold to name what you carry."); return false; }
-    this.gold -= 25;
+    this.logAct("scribe");
+    this.gold -= 25; this.spend("temple", 25);
     for (const it of unknown) this.reveal(it);
     this.sound("spell");
     this.say(`The scribe squints and names them: ${unknown.map((i) => i.name).join(", ")}.`);
@@ -7224,7 +7771,8 @@ Object.assign(CM.Game.prototype, {
     const idx = replace === undefined ? fallen[0] : replace;
     if (!fallen.includes(idx)) return `${this.party[idx].name} is still standing.`;
     if (this.gold < recruit.price) return `${recruit.name} wants ${recruit.price} gold to come along.`;
-    this.gold -= recruit.price;
+    this.logAct("hire", i, replace === undefined ? null : replace);
+    this.gold -= recruit.price; this.spend("tavern", recruit.price);
     const rescued = (this.rescued || []).length;
     const gone = this.party[idx];
     for (const slot of CM.SLOTS) if (gone[slot] && !(slot === "weapon" || slot === "armor")) this.bag.push(gone[slot]);   // (their trinkets stay with the party)
@@ -7246,6 +7794,7 @@ Object.assign(CM.Game.prototype, {
   // and gold put fire, frost or holiness into a weapon. "" when it worked, else why not.
   smith(service, heroIndex, slot) {
     if (this.mode !== "camp") return "The smith works at the camp.";
+    this.logAct("smith", service, heroIndex, slot);
     const hero = this.party[heroIndex], item = hero && hero[slot];
     if (!item || !["weapon", "armor", "offhand", "helm"].includes(slot)) return "Pick a weapon, armour, a shield or a helm.";
     if (item.unknown) return "The smith won't work on a thing nobody can name. Have it identified first.";
@@ -7256,7 +7805,7 @@ Object.assign(CM.Game.prototype, {
       if (n >= CM.SMITH.most) return `${item.name} has had all the smith's work it can take.`;
       if (gem < 0 && scrap.length < 5) return "The smith wants a diamond for the work (or five pieces of scrap).";
       if (this.gold < cost) return `The smith wants ${cost} gold, and the diamond.`;
-      this.gold -= cost;
+      this.gold -= cost; this.spend("smith", cost);
       if (gem >= 0) this.bag.splice(gem, 1); else for (const idx of scrap.slice(0, 5).reverse()) this.bag.splice(idx, 1);
       p.enchant = n + 1;
       p.bonus = (p.bonus || 0) + 1;
@@ -7273,7 +7822,7 @@ Object.assign(CM.Game.prototype, {
       if (gem < 0) return "The smith wants a ruby, a sapphire or a sunstone for a weapon.";
       if (this.gold < CM.SMITH.gem) return `The smith wants ${CM.SMITH.gem} gold to set a gem.`;
       const el = CM.GEMS[this.bag[gem].gem].element, name = this.bag[gem].name;
-      this.gold -= CM.SMITH.gem;
+      this.gold -= CM.SMITH.gem; this.spend("smith", CM.SMITH.gem);
       this.bag.splice(gem, 1);
       p.element = el;
       item.value += 80;
@@ -7285,7 +7834,7 @@ Object.assign(CM.Game.prototype, {
       const gem = this.bag.findIndex((i) => i.kind === "gem"), cost = 100;
       if (gem < 0) return "The smith wants a gem of any kind to rework an affix.";
       if (this.gold < cost) return `The smith wants ${cost} gold, and a gem.`;
-      this.gold -= cost;
+      this.gold -= cost; this.spend("smith", cost);
       this.bag.splice(gem, 1);
       const rnd = this.rnd, deep = this.floor.number > CM.LAST_FLOOR;
       const old = (p.affixes || []).find((w) => w.startsWith("of ")), prefix = (p.affixes || []).find((w) => !w.startsWith("of "));
@@ -7308,6 +7857,7 @@ Object.assign(CM.Game.prototype, {
   // a piece of gear from the pack goes into the smith's fire for scrap (one each; five stand in for a diamond)
   salvage(row) {
     if (this.mode !== "camp") return "The smith works at the camp.";
+    this.logAct("salvage", row);
     const item = this.bag[row];
     if (!item || !["weapon", "armor", "shield", "helm"].includes(item.kind)) return "The smith breaks down a weapon, armour, a shield or a helm.";
     if (item.props && (item.props.relic || item.props.unique)) return "The smith won't put that in the fire. Nor should you.";
@@ -7324,6 +7874,7 @@ Object.assign(CM.Game.prototype, {
   // the vault: one thing left at the camp waits for the next party (saved between runs); what was there comes out
   leaveHeirloom(row) {
     if (this.mode !== "camp") return "The vault is at the camp.";
+    this.logAct("leaveHeirloom", row);
     const item = this.bag[row];
     if (!item) return "Pick something from your pack.";
     if (["key", "bones", "rope", "torch"].includes(item.kind)) return "The merchant won't keep that. Something worth the keeping.";
@@ -7340,6 +7891,7 @@ Object.assign(CM.Game.prototype, {
   },
   takeHeirloom() {
     if (this.mode !== "camp") return "The vault is at the camp.";
+    this.logAct("takeHeirloom");
     if (!this.vault) return "The vault is empty.";
     const item = this.vault;
     this.vault = null;
@@ -7357,7 +7909,8 @@ Object.assign(CM.Game.prototype, {
     if (!fallen.length) { this.say("No one needs raising."); return; }
     const hero = fallen[0], cost = 100 * hero.level;
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold to raise the ${hero.cls}.`); return; }
-    this.gold -= cost;
+    this.logAct("raiseDead");
+    this.gold -= cost; this.spend("temple", cost);
     hero.hp = hero.max;
     this.sound("heal");
     this.say(`For ${cost} gold, the priest raises the ${hero.cls}!`);
@@ -7365,11 +7918,13 @@ Object.assign(CM.Game.prototype, {
   },
 
   leaveCamp() {
+    this.logAct("leaveCamp");
     this.stock = null;
     this.enterFloor(this.floor.number + 1, "down");
   },
 
   backUp() {                                                             // from the camp, back onto the floor above it
+    this.logAct("backUp");
     this.stock = null;
     const ladder = this.cellOf(this.floor, "ladder");
     if (ladder) this.floor.pos = ladder.slice();
@@ -7395,6 +7950,7 @@ Object.assign(CM.Game.prototype, {
   // to the camp below floor n, from a camp
   waystone(n) {
     if (this.mode !== "camp") return "The waystones are at the camps.";
+    this.logAct("waystone", n);
     if (!(this.camps || []).includes(n)) return "No camp there that you have reached.";
     if (this.floor && this.floor.number === n) return "You are there already.";
     this.stock = null; this.recruits = null;
@@ -7432,6 +7988,7 @@ Object.assign(CM.Game.prototype, {
     return { text: d > 0 ? `+${d}` : d < 0 ? String(d) : "same", cls: d > 0 ? "good" : d < 0 ? "bad" : "", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (+${old.power})` : "Nothing there now" };
   },
   sortBag() {
+    this.logAct("sortBag");
     this.bag.sort((a, b) => (RANK[a.kind] === undefined ? 99 : RANK[a.kind]) - (RANK[b.kind] === undefined ? 99 : RANK[b.kind]) || (b.power || 0) - (a.power || 0) || String(a.name).localeCompare(String(b.name)));
     this.dirty = true;
     this.emit("change");
@@ -7461,11 +8018,12 @@ Object.assign(CM.Game.prototype, {
     if (this.mode !== "camp") return "The alchemist is at the camp.";
     const lacks = this.recipeLacks(id);
     if (lacks) return lacks;
+    this.logAct("brew", id);
     const r = CM.RECIPES[id], used = [];
     const take = (kinds) => { const idx = this.bag.findIndex((i, j) => !used.includes(j) && (i.kind === "ingredient" ? kinds.includes(i.ingredient) : kinds.includes(i.kind))); used.push(idx); return idx; };
     for (const key of ["ingredient", "ingredient2", "kind"]) if (r.needs[key]) take(r.needs[key]);
     for (const idx of used.sort((a, b) => b - a)) this.bag.splice(idx, 1);
-    this.gold -= r.gold;
+    this.gold -= r.gold; this.spend("alchemist", r.gold);
     const fl = this.floor ? this.floor.number : 1;
     let made;
     if (r.makes === "greaterheal") { made = { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + fl * 3), value: 60 }; this.bag.push(made); }
@@ -7601,6 +8159,7 @@ Object.assign(CM.Game.prototype, {
 
   // someone to talk to, where the party stands (Space)
   talk(thing, k) {
+    if (!this.inUse) this.logAct("talk", k);
     if (thing.type === "ghost") this.talkGhost(thing, k);
     else if (thing.type === "hermit") this.talkHermit(thing);
     else if (thing.type === "adventurer") this.freeAdventurer(thing, k);
@@ -7699,6 +8258,7 @@ Object.assign(CM.Game.prototype, {
   answerRiddle(k, answer) {
     const f = this.floor.features[k], r = f && CM.RIDDLES[f.riddle];
     if (!r || f.open) return false;
+    this.logAct("answerRiddle", k, answer);
     if (answer === r.a) {
       f.open = true;
       f.locked = false;
@@ -7740,6 +8300,7 @@ Object.assign(CM.Game.prototype, {
   // down a pit on a rope: no fall, and the rope stays tied to climb back by
   ropeDown(k) {
     const fl = this.floor, [x, y] = k.split(",").map(Number), n = fl.number;
+    if (!this.inUse) this.logAct("ropeDown", k);
     this.sound("stairs");
     this.enterFloor(n + 1, "fall", [x, y]);
     const below = this.floor;
@@ -7752,6 +8313,7 @@ Object.assign(CM.Game.prototype, {
   // ---- growth and craft: a path chosen, a tome read, the smith's work, the vault ----
   choosePath(hero, id) {
     if (!CM.needsPath(hero) || !CM.PATHS[hero.cls][id]) return false;
+    this.logAct("choosePath", this.party.indexOf(hero), id);
     hero.path = id;
     const ratio = hero.hp / hero.max, mratio = hero.maxmp ? hero.mp / hero.maxmp : 0;
     CM.recompute(hero);
@@ -7765,7 +8327,7 @@ Object.assign(CM.Game.prototype, {
     return true;
   },
 
-  readTome(row, hero) {                                                 // "" when learned, else why not
+  readTome(row, hero) {                                                 // "" when learned, else why not (through give: logged there)
     const item = this.bag[row], id = item.spell;
     if (!CM.isCaster(hero)) return `${hero.name} turns the pages and can't make head or tail of them: a tome is for a caster.`;
     if (CM.abilitiesFor(hero).includes(id)) return `${hero.name} knows ${CM.ABILITIES[id].name} already.`;
@@ -7820,6 +8382,7 @@ Object.assign(CM.Game.prototype, {
   // ---- a level earned is a boon chosen ----
   offerBoons(hero) {
     if (hero.offer && hero.offer.length === 3) return hero.offer;
+    this.logAct("offerBoons", this.party.indexOf(hero));
     const have = hero.boons || [], c = CM.CLASSES[hero.cls] || CM.CLASSES.Knight;
     const own = Object.keys(CM.BOONS).find((id) => CM.BOONS[id].stat === c.key);       // the class's own stat is always on offer
     const pool = Object.keys(CM.BOONS).filter((id) => id !== own && (CM.BOONS[id].stat || !have.includes(id)));
@@ -7830,6 +8393,7 @@ Object.assign(CM.Game.prototype, {
 
   chooseBoon(hero, id) {
     if (!hero.pending || !(hero.offer || []).includes(id)) return false;
+    this.logAct("chooseBoon", this.party.indexOf(hero), id);
     const b = CM.BOONS[id];
     if (b.stat) hero.stats[b.stat] = Math.min(25, hero.stats[b.stat] + 2);
     else hero.boons.push(id);
@@ -7848,6 +8412,7 @@ Object.assign(CM.Game.prototype, {
 
   setRow(hero, row) {
     if (this.mode === "combat" || !["front", "back"].includes(row)) return false;
+    this.logAct("setRow", this.party.indexOf(hero), row);
     hero.row = row;
     this.dirty = true;
     this.emit("change");
@@ -8184,26 +8749,6 @@ CM.UI = class {
   }
 
   dialogOpen() { return Boolean(this.root.querySelector(".dialog.on")); }
-  // ---- the waystones ----
-  openWaystone() { this.renderWaystone(); this.openDialog("#dlg-waystone"); }
-  renderWaystone() {
-    const g = this.game, box = this.$("#waystone-list"), camps = g.camps || [];
-    box.innerHTML = "";
-    for (const n of camps) {
-      const row = document.createElement("div");
-      row.className = "recruit";
-      row.style.gridTemplateColumns = "1fr auto";
-      row.innerHTML = `<div><b>The camp below floor ${n}</b><small>${this.esc(CM.themeFor(n).name)}${g.floor && g.floor.number === n ? " - you are here" : ""}</small></div>`;
-      const b = document.createElement("button");
-      b.textContent = "Walk the old road";
-      b.disabled = Boolean(g.floor && g.floor.number === n);
-      b.addEventListener("click", () => { const note = g.waystone(n); if (note) this.$("#waystone-note").textContent = note; else this.closeDialogs(); this.refresh(); });
-      row.appendChild(b);
-      box.appendChild(row);
-    }
-    if (!camps.length) box.innerHTML = `<div class="small">No mark yet.</div>`;
-    this.$("#waystone-note").textContent = "";
-  }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); if (sel === "#dlg-settings") this.showStorage(); }
   closeDialogs() {
     const ending = this.$("#dlg-over").classList.contains("on");
@@ -8277,246 +8822,6 @@ CM.UI = class {
     return c;
   }
 
-  // ---- the title ----
-  _title() {
-    const g = this.game;
-    this.$("#seed").value = CM.randomSeed();
-    this.$("#btn-dice").addEventListener("click", () => { this.$("#seed").value = CM.randomSeed(); });
-    this.$("#btn-new").addEventListener("click", () => this.openCreate());
-    this.$("#btn-continue").addEventListener("click", () => g.continueRun());
-    this.$("#btn-settings").addEventListener("click", () => this.openDialog("#dlg-settings"));
-    this.$("#btn-keys").addEventListener("click", () => this.openDialog("#dlg-keys"));
-    this.$("#btn-credits").addEventListener("click", () => {
-      this.$("#credits").innerHTML = CM.art.credits().map(([who, what]) => `<div class="credit"><b>${this.esc(who)}</b><div>${this.esc(what)}</div></div>`).join("")
-        + `<p class="small">A Claude Timeline game. The tile set and the textures are public domain (CC0); the whole sets are kept with the Timeline's media for the updates to come.</p>`;
-      this.openDialog("#dlg-credits");
-    });
-    this.$("#btn-transfer").addEventListener("click", () => {
-      this.$("#transfer-text").value = g.exportText();
-      this.$("#transfer-note").textContent = "";
-      this.openDialog("#dlg-transfer");
-    });
-    this.$("#btn-copy").addEventListener("click", () => {
-      const t = this.$("#transfer-text");
-      t.select();
-      const done = navigator.clipboard ? navigator.clipboard.writeText(t.value).then(() => true, () => false) : Promise.resolve(document.execCommand("copy"));
-      done.then((ok) => { this.$("#transfer-note").textContent = ok ? "Copied." : "Select the text and copy it yourself."; });
-    });
-    this.$("#btn-import").addEventListener("click", () => {
-      const err = g.importText(this.$("#transfer-text").value);
-      this.$("#transfer-note").textContent = err || "Imported.";
-      this.refreshTitle();
-    });
-    this.$("#fame table").addEventListener("click", (e) => {
-      const b = e.target.closest("button[data-seed]");
-      if (b) { this.$("#seed").value = b.dataset.seed; this.refreshTitle(); return; }
-      const c = e.target.closest("button[data-card]");
-      if (c) { const b = this.fameBoard === "weekly" ? g.fame.concat(g.fameEndless || []).filter((x) => x.seed === CM.weeklySeed()) : this.fameBoard === "endless" ? g.fameEndless : g.fame; this.openCard(b[Number(c.dataset.card)]); return; }
-      const tr = e.target.closest("tr.row");
-      if (!tr) return;
-      const i = Number(tr.dataset.i);
-      this.fameOpen = this.fameOpen === i ? -1 : i;
-      this.refreshTitle();
-    });
-    this.renderClasses();
-  }
-
-  renderClasses() {
-    const classes = this.$("#classes"), g = this.game;
-    classes.innerHTML = "";
-    for (const cls of CM.ALL_CLASSES) {
-      const c = CM.CLASSES[cls], div = document.createElement("div"), locked = !g.classUnlocked(cls);
-      div.className = "calling" + (locked ? " locked" : "");
-      div.appendChild(this.portrait(cls, 30));
-      const text = document.createElement("div");
-      text.innerHTML = `<b>${cls}</b> <small>${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}.</small> <small>${locked ? `<i>Earned: ${this.esc(CM.CLASS_UNLOCK[cls].what)}.</i> ` : ""}${c.blurb}</small>`;
-      div.appendChild(text);
-      classes.appendChild(div);
-    }
-  }
-
-  // the theme changed (or its pack arrived): every portrait and icon is drawn again
-  restyle() {
-    this.portraits = {};
-    this.renderClasses();
-    if (this.screen === "create") this.renderCreate();
-    this.$("#party").dataset.signature = "";
-    if (this.screen === "bag") this.fillBag();
-    if (this.$("#dlg-tavern").classList.contains("on")) this.renderTavern();
-    this.refresh();
-  }
-
-  // ---- who goes down: the creation screen ----
-  _create() {
-    const g = this.game;
-    this.slots = [];
-    this.$("#btn-suggest").addEventListener("click", () => { this.fillSlots(CM.CLASSIC); this.renderCreate(); });
-    this.$("#btn-reroll-all").addEventListener("click", () => { for (const s of this.slots) s.stats = CM.rollStats(s.cls); this.renderCreate(); });
-    this.$("#btn-create-back").addEventListener("click", () => this.show("title"));
-    this.$("#btn-setout").addEventListener("click", () => this.setOut());
-    this.$("#create-seed").addEventListener("input", () => { this.$("#seed").value = this.$("#create-seed").value; this.renderCreateNote(); });
-    this.$("#difficulty").innerHTML = Object.entries(CM.DIFFICULTIES).map(([id, d]) => `<option value="${id}">${d.name}</option>`).join("");
-    this.$("#difficulty").value = "fair";
-    this.$("#difficulty").addEventListener("change", () => this.renderCreateNote());
-    this.$("#mode").addEventListener("change", () => this.renderCreateNote());
-    for (const b of this.root.querySelectorAll("#fame .boards button")) b.addEventListener("click", () => { this.fameBoard = b.dataset.board; this.fameOpen = -1; this.refreshTitle(); });
-    const slots = this.$("#slots");
-    for (let i = 0; i < 4; i++) {
-      const div = document.createElement("div");
-      div.className = "slot";
-      div.innerHTML = `<div class="top"><div class="portrait-slot"></div><div class="who"><input class="name" type="text" maxlength="14" spellcheck="false" title="Their name"><button class="dice" title="Another name">&#x2684;</button>
-        <select class="cls" title="Their calling"></select></div></div>
-        <div class="role"></div>
-        <table class="stats"></table>
-        <div class="derived"></div>
-        <div class="rowpick"><span>Row:</span><button data-row="front">Front</button><button data-row="back">Back</button><button class="reroll">Reroll</button></div>`;
-      div.querySelector(".name").addEventListener("input", (e) => { this.slots[i].name = e.target.value; this.renderAdvice(); });
-      div.querySelector(".dice").addEventListener("click", () => { this.slots[i].name = CM.randomName(); this.renderCreate(); });
-      div.querySelector(".cls").addEventListener("change", (e) => {
-        const s = this.slots[i];
-        s.cls = e.target.value; s.stats = CM.rollStats(s.cls); s.row = CM.CLASSES[s.cls].row;
-        this.renderCreate();
-      });
-      div.querySelector(".reroll").addEventListener("click", () => { this.slots[i].stats = CM.rollStats(this.slots[i].cls); this.renderCreate(); });
-      for (const b of div.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { this.slots[i].row = b.dataset.row; this.renderCreate(); });
-      slots.appendChild(div);
-    }
-    g.on("mode", (mode) => { if (mode !== "title") this.closeDialogs(); });
-  }
-
-  fillSlots(classes) {
-    const rnd = new CM.Random(Math.floor(Math.random() * 4294967296));
-    this.slots = classes.map((cls) => ({ cls, name: CM.randomName(rnd), stats: CM.rollStats(cls, rnd), row: CM.CLASSES[cls].row }));
-  }
-
-  openCreate() {
-    const g = this.game;
-    if (g.canContinue() && !window.confirm(`A run is waiting in expedition slot ${g.slot}. Start a new expedition there and let it go? (The other slots keep theirs.)`)) return;
-    for (const sel of this.root.querySelectorAll("#slots select.cls")) sel.innerHTML = g.classesAvailable().map((c) => `<option value="${c}">${c}</option>`).join("");   // (the callings earned)
-    const code = CM.parseRunCode(this.$("#seed").value);
-    if (code) {                                                          // a run code: the seed, the party, the difficulty and the kit as they were
-      this.$("#seed").value = code.seed;
-      if (code.party) this.slots = code.party.filter((p) => g.classUnlocked(p.cls)).length === 4 ? code.party : code.party.map((p) => (g.classUnlocked(p.cls) ? p : Object.assign({}, p, { cls: "Knight", stats: CM.rollStats("Knight") })));
-      this.$("#difficulty").value = code.difficulty; this.$("#mode").value = code.mode; this.chosenKit = code.kit;
-    }
-    const weekly = this.$("#seed").value === CM.weeklySeed();
-    if (weekly) this.slots = CM.weeklyParty(this.$("#seed").value);        // (the week's party, the same for everyone)
-    this.weekly = weekly;
-    if (!this.slots.length) this.fillSlots(CM.CLASSIC);
-    this.$("#create-seed").value = this.$("#seed").value;
-    this.renderCreateNote();
-    this.refreshTitle();                                                 // (the kits on offer)
-    this.show("create");
-    this.renderCreate();
-  }
-
-  renderCreate() {
-    const cards = this.$("#slots").children;
-    this.slots.forEach((s, i) => {
-      const div = cards[i], c = CM.CLASSES[s.cls];
-      const slot = div.querySelector(".portrait-slot");
-      slot.innerHTML = "";
-      slot.appendChild(this.portrait(s.cls, 56));
-      if (div.querySelector(".name").value !== s.name) div.querySelector(".name").value = s.name;
-      div.querySelector(".cls").value = s.cls;
-      div.querySelector(".role").textContent = `${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}. ${c.blurb}`;
-      div.querySelector(".stats").innerHTML = CM.STATS.map((st) => {
-        const v = s.stats[st], key = st === c.key;
-        return `<tr class="${key ? "key" : ""}"><td>${CM.STAT_NAMES[st]}</td><td class="v">${v}</td><td class="hint">${key ? "their calling's stat" : CM.STAT_HINTS[st]}</td></tr>`;
-      }).join("");
-      const h = CM.makeHero(s.cls, s.name, s.stats, s.row);
-      div.querySelector(".derived").textContent = `${h.max} health${h.maxmp ? `, ${h.maxmp} magic` : ""}, attack ${h.atk}, defence ${h.df} - ${h.weapon.name} and ${h.armor.name}`;
-      for (const b of div.querySelectorAll("button[data-row]")) b.classList.toggle("on", b.dataset.row === s.row);
-      for (const el of div.querySelectorAll(".cls, .reroll, .dice")) el.disabled = Boolean(this.weekly);   // (the week's party is the week's)
-    });
-    this.$("#btn-reroll-all").disabled = Boolean(this.weekly); this.$("#btn-suggest").disabled = Boolean(this.weekly);
-    this.renderAdvice();
-  }
-
-  renderAdvice() {
-    const advice = CM.partyAdvice(this.slots), ul = this.$("#advice ul");
-    ul.innerHTML = advice.notes.map((n) => `<li class="${advice.sound && advice.notes.length === 1 ? "good" : ""}">${this.esc(n)}</li>`).join("");
-    this.$("#advice").classList.toggle("sound", advice.sound);
-  }
-
-  setOut() {
-    const g = this.game, seed = this.$("#create-seed").value;
-    this.$("#seed").value = seed;
-    this.chosenKit = this.$("#kit").value || "pauper";
-    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value);
-  }
-
-  startNew() { this.openCreate(); }
-
-  renderCreateNote() {
-    const seed = this.$("#create-seed").value, muts = CM.mutatorsFor(seed), d = CM.DIFFICULTIES[this.$("#difficulty").value] || CM.DIFFICULTIES.fair;
-    this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` ${seed.startsWith("weekly-") ? "This week's challenge" : "Today's dungeon"} comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "") + (seed.startsWith("weekly-") ? " The party is the week's: everyone sets out with these four." : "")
-      + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "");
-  }
-
-  refreshTitle() {
-    const g = this.game;
-    this.$("#title-note").textContent = g.titleNote;
-    const can = g.canContinue();
-    this.$("#btn-continue").disabled = !can;
-    this.$("#continue-note").textContent = can
-      ? `Slot ${g.slot}: floor ${CM.runFloor(g.lastRun)}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}${g.lastRun.difficulty && g.lastRun.difficulty !== "fair" ? ", " + CM.DIFFICULTIES[g.lastRun.difficulty].name : ""}${g.lastRun.endless ? ", Endless" : ""}`
-      : `Slot ${g.slot} is empty: no expedition is under way there.`;
-    for (const b of this.root.querySelectorAll("#slots-row button[data-slot]")) {
-      const n = Number(b.dataset.slot), r = (g.runs || [])[n - 1];
-      b.classList.toggle("on", n === g.slot);
-      b.textContent = `${n}: ${r && r.floor ? `floor ${CM.runFloor(r)}` : "empty"}`;
-      b.title = r && r.floor ? `${r.gold.toLocaleString()} gold${r.saved ? ", saved " + new Date(r.saved).toLocaleString() : ""}` : "An empty slot for a new expedition";
-    }
-    const title = CM.titleFor(g.achievements), got = Object.keys(CM.ACHIEVEMENTS).filter((id) => g.achievements[id]);
-    this.$("#honours").textContent = got.length ? `${CM.playerName || "Adventurer"} ${title} - ${got.length} of ${Object.keys(CM.ACHIEVEMENTS).length} achievements` : "";
-    this.$("#achievements").innerHTML = Object.entries(CM.ACHIEVEMENTS).map(([id, a]) => { const t = g.achievements[id];
-      return `<div class="unlock ${t ? "got" : ""}"><b>${t ? "✓" : "○"} ${a.name}</b> <small>${a.what}${t ? ` - ${this.esc(t.date)}; the title "${a.title}"` : ""}</small></div>`; }).join("");
-    const bag = CM.startingBag(this.$("#seed").value || "x").filter((i) => i.kind !== "torch");
-    this.$("#start-with").textContent = `Four set out with 30 gold, two torches and two potions (${bag.map((i) => i.name).join(" and ")} - the seed decides which). `
-      + "New Expedition lets you name them, choose their callings and roll their stats; chests and fallen monsters give better gear; "
-      + "a merchant's camp with a temple waits below floors 5, 10 and 15 (and every fifth floor of the Deep) - each shaft guarded by something that has made its lair over it, and leaves a relic when it falls. "
-      + "The Lich King waits on floor 20; below him, thirty floors of the Deep go down to the Root of the World - or, in an Endless expedition, to no bottom at all.";
-    const table = this.$("#fame table"), weeklyBoard = this.fameBoard === "weekly", endlessBoard = this.fameBoard === "endless";
-    const board = weeklyBoard ? g.fame.concat(g.fameEndless || []).filter((e) => e.seed === CM.weeklySeed()).sort((a, b) => (b.bottom ? 1 : 0) - (a.bottom ? 1 : 0) || (b.won ? 1 : 0) - (a.won ? 1 : 0) || b.floor - a.floor || b.gold - a.gold) : endlessBoard ? (g.fameEndless || []) : g.fame;
-    for (const b of this.root.querySelectorAll("#fame .boards button")) b.classList.toggle("on", b.dataset.board === (this.fameBoard || "dungeon"));
-    if (!board.length) table.innerHTML = `<tr><td class="empty">${weeklyBoard ? `No run on this week's seed yet (${CM.weeklySeed()}): This week's, on the left, sets it.` : endlessBoard ? "No Endless expedition yet: choose Endless when the party sets out." : "No party has gone down yet."}</td></tr>`;
-    else table.innerHTML = board.map((e, i) => {
-      const open = this.fameOpen === i, t = e.tally;
-      let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
-        + `<td class="${e.won ? "won" : ""}">${endlessBoard ? `floor ${e.floor}${e.won ? " - crowned" : ""}` : e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
-      if (open) {
-        rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
-          + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : e.weekly ? " (a week's challenge)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button>${e.code ? ` <button data-seed="${this.esc(e.code)}" title="The seed, the party, the difficulty and the kit, as they set out">Play this run</button>` : ""}</div>` : "")
-          + (t ? `<div>${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}.</div>` : "")
-          + (t && t.guardians && t.guardians.length ? `<div>Guardians slain: ${this.esc(this.guardianNames(t.guardians))}.</div>` : "")
-          + (e.mutators && e.mutators.length ? `<div>${e.endless ? "The dark deepened" : "Today's dungeon"}: ${this.esc(e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(", "))}.</div>` : "")
-          + (e.titles && e.titles.length ? `<div>Earned: ${this.esc(e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", "))}.</div>` : "")
-          + `<div><button data-card="${i}">Summary card</button></div>`
-          + "</td></tr>";
-      }
-      return rows;
-    }).join("");
-    const have = CM.unlocked(g.allFame), deep = CM.deepest(g.allFame);
-    this.$("#unlocks").innerHTML = Object.entries(CM.KITS).map(([id, k]) => {
-      const got = have.includes(id), need = k.need === 21 ? "slay the Lich King" : `reach floor ${k.need}`;
-      return `<div class="unlock ${got ? "got" : ""}"><b>${got ? "✓" : "○"} ${k.name}</b> <small>${got ? k.what : `${k.what} <i>(${need}${deep.floor ? `; deepest so far: floor ${deep.floor}` : ""})</i>`}</small></div>`;
-    }).join("");
-    const mem = g.memorial || [];
-    this.$("#memorial").innerHTML = mem.length ? mem.slice(0, 8).map((m) => `<div class="unlock got"><b>${this.esc(m.name)}</b> <small>${this.esc(m.cls)}, level ${m.level}, laid to rest on floor ${m.floor} - ${this.esc(m.date)}${m.seed ? `, seed ${this.esc(m.seed)}` : ""}</small></div>`).join("") + (mem.length > 8 ? `<div class="small">...and ${mem.length - 8} more.</div>` : "") : `<div class="unlock"><small>No hero has been laid to rest at a camp fire yet.</small></div>`;
-    const trophies = g.trophies || {};
-    this.$("#trophies").innerHTML = [...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor < CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name]), ["lich", CM.BOSS.name, CM.LAST_FLOOR, "his palace"],
-      ...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor > CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name])].map(([id, name, floor, where]) => {
-      const t = trophies[id];
-      return `<div class="unlock ${t ? "got" : ""}"><b>${t ? "✓" : "○"} ${name}</b> <small>${t ? `slain ${this.esc(t.date)} by ${this.esc(t.name)}'s party` : `<i>floor ${floor}: ${where}</i>`}</small></div>`;
-    }).join("");
-    const kit = this.$("#kit");
-    kit.innerHTML = have.map((id) => `<option value="${id}">${CM.KITS[id].name}</option>`).join("");
-    if (this.chosenKit && have.includes(this.chosenKit)) kit.value = this.chosenKit;
-    const todays = this.$("#seed").value === CM.dailySeed();
-    this.$("#btn-daily").classList.toggle("on", todays);
-  }
-
   icon(item, size = 22) {                                               // a thing's picture, by the theme
     const c = CM.art.itemIcon(item, size, this.game.settings.look);
     c.className = "icon";
@@ -8560,444 +8865,6 @@ CM.UI = class {
     this.game.emit("settings", this.game.settings);
   }
 
-  // ---- the dungeon screen ----
-  refresh() {
-    const g = this.game;
-    if (this.screen === "title") { this.refreshTitle(); return; }
-    if (this.screen !== "play") return;
-    const fl = g.floor;
-    if (fl) {
-      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   Floor ${fl.number}`;
-      this.$("#side .where").textContent = `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
-    }
-    this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
-    const light = this.$("#side .light"), l = g.light || {};
-    let lit = l.kind === "lantern" ? "Lantern lit" : l.kind === "torch" ? (l.left > 40 ? `Torch: ${l.left} steps left` : `Torch burning low: ${l.left}`) : "No light!";
-    if (g.spellLight > 0) lit += ` - conjured light: ${g.spellLight} steps`;
-    if (fl && g.inDark()) lit += " - a magical dark";
-    light.textContent = lit;
-    light.classList.toggle("dark", !g.hasLight() || g.inDark());
-    const hint = this.$("#view .hint");
-    if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper, or back up.";
-    else if (g.mode === "combat") hint.textContent = "";
-    else if (g.travel) hint.textContent = g.travel.explore ? "Exploring... (any key stops)" : "Walking... (any key stops)";
-    else if (fl) {
-      const k = `${fl.pos[0]},${fl.pos[1]}`, thing = fl.things[k], f = fl.features[k];
-      const [dx, dy] = CM.DIRS[fl.facing], ahead = fl.features[`${fl.pos[0] + dx},${fl.pos[1] + dy}`];
-      let text = "";
-      if (f && f.type === "lever" && f.face === fl.facing) text = f.pulled ? "The lever, pulled." : "A lever on the wall. Space pulls it.";
-      else if (f && f.type === "carving" && f.face === fl.facing) text = "Runes carved into the wall. Space reads them.";
-      else if (thing) text = { chest: "A chest. Space opens it.", ladder: "A ladder down. Space climbs it.", stairs_up: "The stairs up. Space climbs them.",
-        phylactery: "A cold box with a slow beat inside it. Space smashes it.", ghost: "A ghost. Space speaks to it.", hermit: "A hermit. Space speaks to him.",
-        adventurer: "Someone bound. Space cuts them loose.", rope: "A rope from above. Space climbs it.", event: `${(CM.EVENTS[thing.event] || {}).title || "Something strange"}. Space looks closer.`,
-        strongbox: thing.opened ? "An empty strongbox." : "A strongbox. Space tries the key.", peddler: "A peddler. Space sees his wares.", rivals: "A rival party. Space speaks to them." }[thing.type] || "";
-      else if (f && f.type === "plate" && (f.gate || f.known)) text = f.gate ? (f.pressed ? "A pressure plate, sunk." : "A pressure plate.") : "A plate that was a trap.";
-      else if (f && f.type === "spores" && f.known) text = "A hanging cloud of spores.";
-      else if (f && f.type === "vents" && f.known) text = "A vent in the floor. It breathes fire on a beat.";
-      else if (f && f.type === "bonepiles" && f.known) text = "A heap of bones, higher than a man.";
-      else if (f && f.type === "fountain") text = f.used ? "A dry fountain." : "A fountain. Space drinks.";
-      else if (f && f.type === "altar") text = f.used ? "A quiet altar." : "An altar. Space kneels.";
-      else if (ahead && ahead.type === "door" && !ahead.open) text = ahead.riddle !== undefined ? "A door written over with runes. Walk into it, and answer." : ahead.locked ? "A locked door. Walk into it with a key." : "A door. Walk into it to open it.";
-      else if (ahead && ahead.type === "gate" && !ahead.open) text = "A portcullis. Find its lever.";
-      hint.textContent = text;
-    }
-    this.renderParty();
-    this.renderLog();
-    this.renderActions();
-    if (this.$("#dlg-sheet").classList.contains("on")) this.renderSheet();
-    this.drawAutomap(this.$("#automap"));
-    if (this.$("#bigmap").classList.contains("on")) this.drawAutomap(this.$("#bigmap-canvas"));
-  }
-
-  renderParty() {
-    const box = this.$("#party");
-    const signature = this.game.party.map((m) => m.cls + m.name).join("|");
-    if (box.dataset.signature !== signature) {
-      box.innerHTML = "";
-      box.dataset.signature = signature;
-      this.game.party.forEach((m, i) => {
-        const div = document.createElement("div");
-        div.className = "member";
-        div.title = `${m.name}'s sheet (${i + 1})`;
-        div.appendChild(this.portrait(m.cls, 44));
-        const text = document.createElement("div");
-        text.innerHTML = `<div class="name"></div><div class="gear"></div><div class="bar hp"><i></i><span></span></div><div class="bar mp"><i></i><span></span></div><div class="ail"></div>`;
-        div.appendChild(text);
-        div.addEventListener("click", () => this.openSheet(i));
-        box.appendChild(div);
-      });
-    }
-    this.game.party.forEach((m, i) => {
-      const div = box.children[i], dead = m.hp <= 0, st = m.status || {};
-      div.classList.toggle("fallen", dead);
-      div.classList.toggle("front", m.row === "front");
-      div.querySelector(".name").innerHTML = `${this.esc(m.name)} <small>${m.cls} ${m.level}${m.row === "front" ? " ▴" : ""}</small>` + (dead ? " <i>(fallen)</i>" : "")
-        + (m.pending ? ` <span class="boon-badge">Boon!</span>` : "") + (CM.needsPath(m) ? ` <span class="boon-badge">Path!</span>` : "");
-      div.querySelector(".gear").textContent = `${m.weapon.name} / ${m.armor.name}`;
-      const ail = div.querySelector(".ail");
-      ail.textContent = Object.keys(st).map((s) => `${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}`).join("  ");
-      ail.style.display = Object.keys(st).length ? "" : "none";
-      const hp = div.querySelector(".bar.hp");
-      hp.querySelector("i").style.width = `${100 * Math.max(0, m.hp) / Math.max(1, m.max)}%`;
-      hp.querySelector("span").textContent = `HP ${Math.max(0, m.hp)}/${m.max}`;
-      const mp = div.querySelector(".bar.mp");
-      mp.style.display = m.maxmp ? "" : "none";
-      mp.querySelector("i").style.width = `${100 * Math.max(0, m.mp) / Math.max(1, m.maxmp)}%`;
-      mp.querySelector("span").textContent = `MP ${m.mp}/${m.maxmp}`;
-    });
-  }
-
-  renderLog() {
-    const log = this.$("#log");
-    const lines = this.game.messages.slice(-7);
-    log.innerHTML = lines.map((l) => `<div>${this.esc(l)}</div>`).join("");
-  }
-
-  renderActions() {
-    const g = this.game, box = this.$("#actions");
-    if (g.mode === "combat") { this.renderCombat(); return; }
-    box.classList.remove("combat");
-    const sets = {
-      explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
-        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
-        ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
-      camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
-        ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
-        ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
-    };
-    const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
-    if (box.dataset.mode === key) return;
-    box.innerHTML = "";
-    box.dataset.mode = key;
-    const btn = (html, fn, disabled, cls) => {
-      const b = document.createElement("button");
-      b.innerHTML = html;
-      b.disabled = Boolean(disabled);
-      if (cls) b.className = cls;
-      b.addEventListener("click", fn);
-      box.appendChild(b);
-      return b;
-    };
-    if (this.xmenu && this.xmenu.kind === "list") {                       // between fights: who casts what
-      const choices = this.outsideChoices();
-      choices.forEach((ch, i) => {
-        const b = btn(`<kbd>${i + 1}</kbd>${this.esc(ch.hero.name)}: ${CM.ABILITIES[ch.id].name}<small>${CM.ABILITIES[ch.id].mp} MP - ${CM.ABILITIES[ch.id].what}</small>`,
-          () => this.outsidePick(ch), false, "pick");
-        const ic = CM.art.spellIcon(ch.id, 18, g.settings.look);
-        if (ic) { ic.className = "icon"; b.insertBefore(ic, b.firstChild.nextSibling); }
-      });
-      if (!choices.length) { const none = document.createElement("span"); none.className = "small"; none.textContent = "No one has a spell for outside a fight, or the magic for it."; box.appendChild(none); }
-      btn("<kbd>Esc</kbd>Back", () => this.closeMenu());
-      return;
-    }
-    if (this.xmenu && this.xmenu.kind === "ally") {
-      g.party.forEach((p, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(p.name)}<small>${p.hp <= 0 ? "fallen" : `${p.hp}/${p.max}`}</small>`,
-        () => this.outsideAlly(i), this.xmenu.fallen ? p.hp > 0 : p.hp <= 0, "pick"));
-      btn("<kbd>Esc</kbd>Back", () => this.closeMenu());
-      return;
-    }
-    for (const [text, slot] of sets[g.mode] || []) btn(text, slot);
-  }
-
-  // ---- between fights: healing, cures and Light, from whoever knows them ----
-  outsideChoices() {
-    const out = [];
-    this.game.party.forEach((hero, hi) => {
-      if (hero.hp <= 0 || !this.game.canAct(hero)) return;
-      for (const id of CM.abilitiesFor(hero)) {
-        const a = CM.ABILITIES[id];
-        if (a.outside && hero.mp >= a.mp) out.push({ hero, hi, id });
-      }
-    });
-    return out;
-  }
-  outsideCast() { this.xmenu = { kind: "list" }; this.refresh(); }
-  outsidePick(ch) {
-    const a = CM.ABILITIES[ch.id];
-    if (a.target === "ally" || a.target === "fallen") { this.xmenu = { kind: "ally", id: ch.id, hero: ch.hi, fallen: a.target === "fallen" }; this.refresh(); return; }
-    this.game.castOutside(ch.hi, ch.id, null);
-    this.closeMenu();
-  }
-  outsideAlly(i) { const m = this.xmenu; this.game.castOutside(m.hero, m.id, i); this.closeMenu(); }
-  closeMenu() { this.xmenu = null; this.refresh(); }
-  pickOutside(n) {
-    const buttons = [...this.$("#actions").querySelectorAll("button.pick")], b = buttons[n - 1];
-    if (b && !b.disabled) { b.click(); return true; }
-    return false;
-  }
-
-  // ---- the fight: whose turn it is, what they'll do, at whom ----
-  renderCombat() {
-    const g = this.game, box = this.$("#actions"), c = g.combat || {}, h = c.waiting;
-    box.classList.add("combat");
-    box.dataset.mode = "combat";
-    box.innerHTML = "";
-    const turn = document.createElement("div");
-    turn.className = "turn";
-    turn.innerHTML = h ? `Round ${c.round || 1} <small>-</small> ${this.esc(h.name)}'s turn` : `Round ${c.round || 1} <small>- the foes move</small>`;
-    box.appendChild(turn);
-    const menu = document.createElement("div");
-    menu.className = "menu";
-    const btn = (html, fn, disabled, cls) => {
-      const b = document.createElement("button");
-      b.innerHTML = html;
-      b.disabled = Boolean(disabled);
-      if (cls) b.className = cls;
-      b.addEventListener("click", fn);
-      menu.appendChild(b);
-      return b;
-    };
-    const cm = this.cmenu || { kind: "main" };
-    if (h && cm.kind === "main") {
-      btn("<kbd>F</kbd>Fight", () => g.act("fight", g.target));
-      btn("<kbd>C</kbd>Cast / Skill", () => this.combatMenu("cast"), !CM.abilitiesFor(h).length);
-      btn("<kbd>P</kbd>Item", () => this.combatMenu("item"));
-      btn("<kbd>D</kbd>Defend", () => g.act("defend"));
-      btn("<kbd>R</kbd>Run", () => g.act("run"));
-      btn(`<kbd>A</kbd>${c.auto ? "Stop auto" : "Auto"}`, () => g.autoFight(!c.auto), false, c.auto ? "on" : "");
-    } else if (h && cm.kind === "cast") {
-      CM.abilitiesFor(h).forEach((id, i) => {
-        const a = CM.ABILITIES[id], used = a.once && h.used && h.used[id], poor = h.mp < a.mp, est = g.spellEstimate(h, id);
-        const b = btn(`<kbd>${i + 1}</kbd>${a.name}<small>${a.mp ? a.mp + " MP - " : ""}${used ? "used this fight" : a.what}${est ? ` <i>(${est})</i>` : ""}</small>`, () => this.castPick(id), used || poor, "pick");
-        const ic = CM.art.spellIcon(id, 18, g.settings.look);
-        if (ic) { ic.className = "icon"; b.insertBefore(ic, b.firstChild.nextSibling); }
-      });
-      btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
-    } else if (h && cm.kind === "item") {
-      const rows = this.usableRows();
-      rows.forEach((row, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(g.bag[row].name)}<small>${g.describe(g.bag[row])}</small>`, () => this.itemPick(row), false, "pick"));
-      if (!rows.length) { const none = document.createElement("span"); none.className = "small"; none.textContent = "Nothing in the pack for a fight."; menu.appendChild(none); }
-      btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
-    } else if (h && cm.kind === "ally") {
-      g.party.forEach((p, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(p.name)}<small>${p.hp <= 0 ? "fallen" : `${p.hp}/${p.max}`}</small>`,
-        () => this.allyPick(i), cm.fallen ? p.hp > 0 : p.hp <= 0, "pick"));
-      btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
-    }
-    box.appendChild(menu);
-    const targets = document.createElement("div");
-    targets.className = "targets";
-    g.living().forEach((m, i) => {
-      const b = document.createElement("button");
-      b.className = i === (g.target || 0) ? "chosen" : "";
-      const est = h ? g.strikeEstimate(h, m) : null;
-      const marks = [m.asleep > 0 ? `asleep ${m.asleep}` : "", m.held > 0 ? `held ${m.held}` : "", m.marked ? "marked" : "", m.blind > 0 ? `blinded ${m.blind}` : "", m.burning > 0 ? `burning ${m.burning}` : "",
-        m.chilled > 0 ? `chilled ${m.chilled}` : "", m.warded > 0 ? "warded" : ""].filter(Boolean);
-      const behind = m.row === "back" && g.living().some((f) => f !== m && f.row !== "back");
-      b.innerHTML = `${this.esc(m.name)}${behind ? " <small>(behind)</small>" : ""} <small>${Math.max(0, m.hp)}/${m.max}${marks.length ? " - " + marks.join(", ") : ""}</small>${m.intent ? `<i class="odds intent">about to: ${this.esc((m.intent.text || "").split("!")[0].split(",")[0].replace(/^The [A-Za-z- ]+ /, "")) || "something terrible"}</i>` : ""}${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
-      b.addEventListener("click", () => g.setTarget(i));
-      targets.appendChild(b);
-    });
-    box.appendChild(targets);
-  }
-
-  // ---- the tavern ----
-  openTavern() {
-    this.renderTavern();
-    this.openDialog("#dlg-tavern");
-  }
-
-  renderTavern() {
-    const g = this.game, box = this.$("#recruits");
-    const fallen = g.party.map((h, i) => i).filter((i) => g.party[i].hp <= 0 || (g.party[i].status || {}).stone);
-    box.innerHTML = "";
-    g.tavern().forEach((r, i) => {
-      const div = document.createElement("div");
-      div.className = "recruit";
-      div.appendChild(this.portrait(r.cls, 40));
-      const text = document.createElement("div");
-      text.innerHTML = `<b>${this.esc(r.name)}</b> the ${r.cls}, level ${r.level} <small>${r.max} health${r.maxmp ? `, ${r.maxmp} magic` : ""}, attack ${r.atk}, defence ${r.df} - ${CM.STATS.map((s) => `${CM.STAT_NAMES[s].slice(0, 3)} ${r.stats[s]}`).join(" ")}</small>`;
-      div.appendChild(text);
-      const hire = document.createElement("div");
-      hire.className = "hire";
-      if (fallen.length <= 1) {
-        const b = document.createElement("button");
-        b.textContent = r.price ? `Hire, ${r.price} gold` : "Hire - owes you their life";
-        b.disabled = !fallen.length;
-        b.addEventListener("click", () => { const note = g.hire(i); this.$("#tavern-note").textContent = note || `${r.name} comes along.`; this.renderTavern(); this.refresh(); });
-        hire.appendChild(b);
-      } else {
-        for (const idx of fallen) {
-          const b = document.createElement("button");
-          b.textContent = r.price ? `For ${g.party[idx].name}, ${r.price} gold` : `For ${g.party[idx].name} - owes you their life`;
-          b.addEventListener("click", () => { const note = g.hire(i, idx); this.$("#tavern-note").textContent = note || `${r.name} comes along.`; this.renderTavern(); this.refresh(); });
-          hire.appendChild(b);
-        }
-      }
-      div.appendChild(hire);
-      box.appendChild(div);
-    });
-    if (!box.children.length) box.innerHTML = "<div class='small'>The benches are empty tonight.</div>";
-    this.$("#tavern-note").textContent = fallen.length ? "" : "The party is whole; the recruits drink to that.";
-  }
-
-  combatMenu(kind, data) { this.cmenu = Object.assign({ kind }, data || {}); this.renderCombat(); }
-  usableRows() { return this.game.bag.map((it, i) => (["heal", "greaterheal", "mana", "antidote", "revive", "bomb"].includes(it.kind) ? i : -1)).filter((i) => i >= 0); }
-
-  castPick(id) {
-    const g = this.game, a = CM.ABILITIES[id];
-    if (a.target === "ally" || a.target === "fallen") { this.combatMenu("ally", { id, fallen: a.target === "fallen" }); return; }
-    g.act("cast", a.target === "foe" ? { id, target: g.target } : { id });
-    this.refresh();
-  }
-
-  itemPick(row) { if (this.game.bag[row].kind === "bomb") { this.game.act("item", { row }); this.refresh(); return; } this.combatMenu("ally", { row, fallen: this.game.bag[row].kind === "revive" }); }
-
-  allyPick(i) {
-    const cm = this.cmenu || {};
-    if (cm.row !== undefined) this.game.act("item", { row: cm.row, who: i });
-    else this.game.act("cast", { id: cm.id, target: i });
-    this.refresh();
-  }
-
-  // a number key in a fight: the chosen foe, or a pick from the open list
-  pick(n) {
-    const g = this.game, cm = this.cmenu || { kind: "main" };
-    if (cm.kind === "main") { g.setTarget(n - 1); return true; }
-    const buttons = [...this.$("#actions .menu").querySelectorAll("button.pick")], b = buttons[n - 1];
-    if (b && !b.disabled) { b.click(); return true; }
-    return false;
-  }
-
-  toggleBigMap() {
-    const d = this.$("#bigmap");
-    if (d.classList.contains("on")) this.closeDialogs();
-    else { this.openDialog("#bigmap"); this.drawAutomap(this.$("#bigmap-canvas")); }
-  }
-
-  drawAutomap(canvas) {
-    const fl = this.game.floor;
-    if (!fl) return;
-    const p = canvas.getContext("2d"), W = canvas.width, size = fl.grid.length, cell = W / size;
-    p.fillStyle = "#E8DCC0";                                              // graph paper
-    p.fillRect(0, 0, W, W);
-    p.strokeStyle = "#C8B898"; p.lineWidth = 1;
-    p.beginPath();
-    for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
-    p.stroke();
-    const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
-      ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040" };
-    const dark = new Set(fl.dark);
-    for (const [x, y] of fl.seen) {
-      const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
-      p.fillStyle = wall ? "#3A3028" : dark.has(k) ? "#8A8070" : "#F8F0DC";
-      p.fillRect(x * cell, y * cell, cell, cell);
-      const cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
-      if (f && !wall) this.drawFeature(p, f, x, y, cell, fl);
-      const thing = fl.things[k];
-      if (thing && !wall) {
-        p.fillStyle = colours[thing.type] || (thing.type === "phylactery" ? "#60D0FF" : "#808080");
-        if (thing.type === "stairs_up") { p.beginPath(); p.moveTo(cx, cy - cell * 0.35); p.lineTo(cx + cell * 0.35, cy + cell * 0.3); p.lineTo(cx - cell * 0.35, cy + cell * 0.3); p.fill(); }
-        else if (thing.type === "ladder") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
-        else { p.beginPath(); p.arc(cx, cy, cell * (thing.type === "key" ? 0.2 : 0.3), 0, Math.PI * 2); p.fill(); }
-      }
-    }
-    for (const [k, text] of Object.entries(fl.notes || {})) {                   // the player's own marks
-      const [nx, ny] = k.split(",").map(Number), ncx = (nx + 0.5) * cell, ncy = (ny + 0.5) * cell;
-      p.fillStyle = "#C02060";
-      p.beginPath(); p.moveTo(ncx - cell * 0.3, ncy + cell * 0.4); p.lineTo(ncx - cell * 0.3, ncy - cell * 0.4); p.lineTo(ncx + cell * 0.35, ncy - cell * 0.2); p.lineTo(ncx - cell * 0.3, ncy); p.fill();
-      if (cell >= 16) {                                                             // (the words beside the flag - to its left near the right edge)
-        const left = ncx < W * 0.7, tx = left ? ncx + cell * 0.45 : ncx - cell * 0.4;
-        p.font = `bold ${Math.max(9, cell * 0.5)}px Georgia`; p.textAlign = left ? "left" : "right";
-        p.fillStyle = "#000"; p.fillText(text, tx, ncy + cell * 0.2); p.fillStyle = "#C02060"; p.fillText(text, tx - 1, ncy + cell * 0.2 - 1);
-      }
-    }
-    if (this.game.travel && this.game.travel.to) {                                  // where the party is walking to
-      const [tx, ty] = this.game.travel.to;
-      p.strokeStyle = "#20A040"; p.lineWidth = Math.max(1.5, cell * 0.12); p.strokeRect(tx * cell + 1, ty * cell + 1, cell - 2, cell - 2);
-    }
-    const [x, y] = fl.pos, [dx, dy] = CM.DIRS[fl.facing], cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
-    p.fillStyle = "#20A040";
-    p.beginPath();
-    p.moveTo(cx + dx * cell * 0.45, cy + dy * cell * 0.45);
-    p.lineTo(cx - dy * cell * 0.35 - dx * cell * 0.3, cy + dx * cell * 0.35 - dy * cell * 0.3);
-    p.lineTo(cx + dy * cell * 0.35 - dx * cell * 0.3, cy - dx * cell * 0.35 - dy * cell * 0.3);
-    p.fill();
-  }
-
-  // the dungeon's furniture on the automap, once seen (a trapdoor, a spinner or a teleporter only once it has had you)
-  drawFeature(p, f, x, y, cell, fl) {
-    const cx = (x + 0.5) * cell, cy = (y + 0.5) * cell, ns = fl.grid[y - 1] && fl.grid[y - 1][x] === 0 && fl.grid[y + 1] && fl.grid[y + 1][x] === 0;
-    p.lineWidth = Math.max(1.5, cell * 0.16);
-    if (f.type === "door" || f.type === "gate" || (f.type === "secret" && f.found)) {
-      p.strokeStyle = f.type === "gate" ? "#607080" : f.locked ? "#D8B040" : f.type === "secret" ? "#A070C0" : f.riddle !== undefined && !f.open ? "#60C0E0" : "#8A5A2A";
-      if (f.type === "gate" && !f.open) p.setLineDash([cell * 0.15, cell * 0.12]);
-      if (f.type === "door" && f.open) p.setLineDash([cell * 0.25, cell * 0.25]);
-      p.beginPath();
-      if (ns) { p.moveTo(cx - cell * 0.42, cy); p.lineTo(cx + cell * 0.42, cy); } else { p.moveTo(cx, cy - cell * 0.42); p.lineTo(cx, cy + cell * 0.42); }
-      p.stroke(); p.setLineDash([]);
-    } else if (f.type === "pit" || (f.type === "trapdoor" && f.known)) {
-      p.fillStyle = "#101010"; p.beginPath(); p.arc(cx, cy, cell * 0.32, 0, Math.PI * 2); p.fill();
-    } else if (f.type === "plate" && (f.gate || f.known)) {
-      p.strokeStyle = f.gate ? (f.pressed ? "#80A060" : "#E08030") : "#C03030"; p.lineWidth = Math.max(1.5, cell * 0.12); p.strokeRect(cx - cell * 0.26, cy - cell * 0.26, cell * 0.52, cell * 0.52);
-    } else if (["spores", "vents", "bonepiles"].includes(f.type) && f.known) {
-      p.fillStyle = f.type === "spores" ? "#A0C040" : f.type === "vents" ? "#E06020" : "#D8D0B8"; p.beginPath(); p.arc(cx, cy, cell * 0.22, 0, Math.PI * 2); p.fill();
-    } else if (f.type === "teleporter" && f.known) {
-      p.strokeStyle = "#8040E0"; p.lineWidth = Math.max(1.5, cell * 0.12); p.beginPath(); p.arc(cx, cy, cell * 0.3, 0, Math.PI * 2); p.stroke();
-    } else if (f.type === "spinner" && f.known) {
-      p.strokeStyle = "#606060"; p.lineWidth = Math.max(1.5, cell * 0.12); p.beginPath(); p.arc(cx, cy, cell * 0.28, 0.6, 5.4); p.stroke();
-    } else if (f.type === "fountain") {
-      p.fillStyle = f.used ? "#9098A0" : "#3090D0"; p.beginPath(); p.arc(cx, cy, cell * 0.26, 0, Math.PI * 2); p.fill();
-    } else if (f.type === "altar") {
-      p.fillStyle = "#E8E0C0"; p.fillRect(cx - cell * 0.08, cy - cell * 0.32, cell * 0.16, cell * 0.64); p.fillRect(cx - cell * 0.28, cy - cell * 0.12, cell * 0.56, cell * 0.16);
-    } else if (f.type === "lever" || f.type === "carving") {
-      const [dx, dy] = CM.DIRS[f.face];
-      p.strokeStyle = f.type === "lever" ? (f.pulled ? "#80A060" : "#E08030") : "#8A6A3A";
-      p.lineWidth = Math.max(2, cell * 0.2);
-      p.beginPath();
-      p.moveTo(cx + dx * cell * 0.4 - dy * cell * 0.3, cy + dy * cell * 0.4 - dx * cell * 0.3);
-      p.lineTo(cx + dx * cell * 0.4 + dy * cell * 0.3, cy + dy * cell * 0.4 + dx * cell * 0.3);
-      p.stroke();
-    }
-  }
-
-  // the names and health of the foes, over the view, where they stand
-  drawHud(foes, project) {
-    const hud = this.$("#hud"), view = this.$("#view");
-    const dpr = Math.min(2, window.devicePixelRatio || 1), w = view.clientWidth, h = view.clientHeight;
-    if (hud.width !== Math.round(w * dpr) || hud.height !== Math.round(h * dpr)) { hud.width = Math.round(w * dpr); hud.height = Math.round(h * dpr); }
-    const p = hud.getContext("2d");
-    p.setTransform(dpr, 0, 0, dpr, 0, 0);
-    p.clearRect(0, 0, w, h);
-    this.lastHud = [];
-    for (const f of foes) {
-      const at = project(f.wx, f.wh, f.wz);
-      if (!at) continue;
-      const [sx, sy, depth] = at, bw = CM.clamp(120 / depth, 40, 110);
-      this.lastHud.push({ sx, sy, index: f.index });
-      p.fillStyle = "#401010"; p.fillRect(sx - bw / 2, sy - 8, bw, 6);
-      p.fillStyle = "#E03030"; p.fillRect(sx - bw / 2, sy - 8, bw * Math.max(0, f.m.hp) / f.m.max, 6);
-      const label = `${f.index !== undefined ? `[${f.index + 1}] ` : ""}${f.m.name}${f.m.asleep > 0 ? " z" : ""}`;
-      p.font = `bold ${CM.clamp(26 / depth, 10, 14)}px Georgia`; p.textAlign = "center";
-      p.fillStyle = "#000"; p.fillText(label, sx + 1, sy - 12);
-      p.fillStyle = f.chosen ? "#F0C040" : "#fff"; p.fillText(label, sx, sy - 13);
-      if (f.chosen) {                                                   // the one your blows are for
-        p.strokeStyle = "#F0C040"; p.lineWidth = 2;
-        p.beginPath(); p.moveTo(sx - bw / 2 - 6, sy - 30); p.lineTo(sx - bw / 2 - 6, sy + 4); p.moveTo(sx + bw / 2 + 6, sy - 30); p.lineTo(sx + bw / 2 + 6, sy + 4); p.stroke();
-      }
-    }
-  }
-
-  // what the window itself shows of an event: the red flash and a jolted card for a blow, a glow for a mending
-  fx(fx) {
-    const g = this.game, hold = CM.fx ? Math.max(0, CM.fx.holdUntil - performance.now()) : 0;
-    const later = (fn) => (hold > 0 ? setTimeout(fn, hold) : fn());                   // (while a bolt is in flight, the blow waits for it)
-    if (fx.kind === "hurt") later(() => { this.flash(".hurt", 60); this.cardFx(g.party.indexOf(fx.hero), "jolt", 500); });
-    else if (fx.kind === "levelup") this.cardFx(g.party.indexOf(fx.hero), "glow-gold", 1200);
-    else if (fx.kind === "sear") this.cardFx(g.party.indexOf(fx.hero), "jolt", 400);
-    else if (fx.kind === "relic") g.party.forEach((h, i) => { if (h.hp > 0) this.cardFx(i, "glow-gold", 1400); });
-    else if (fx.kind === "potion") this.cardFx(fx.who, fx.item === "mana" ? "glow-blue" : fx.item === "revive" ? "glow-gold" : "glow-green", 900);
-    else if (fx.kind === "cast") {
-      const heals = ["heal", "mend", "lay", "cure", "lift", "regrowth", "raise", "healing"], wards = ["bless", "protection", "sanctuary", "song", "rally", "guard", "taunt"];
-      if (heals.includes(fx.id)) {
-        if (fx.ally) this.cardFx(g.party.indexOf(fx.ally), "glow-green", 900);
-        else g.party.forEach((h, i) => { if (h.hp > 0) this.cardFx(i, "glow-green", 900); });
-      } else if (wards.includes(fx.id)) {
-        const who = fx.ally ? [g.party.indexOf(fx.ally)] : fx.id === "taunt" ? [g.party.indexOf(fx.hero)] : g.party.map((h, i) => i);
-        for (const i of who) this.cardFx(i, fx.id === "protection" || fx.id === "sanctuary" ? "glow-blue" : "glow-gold", 900);
-      }
-    }
-  }
-
   guardianNames(ids) { return ids.map((id) => (CM.GUARDIANS[id] || { name: id }).name.replace(/^The /, "the ")).join(", "); }
 
 
@@ -9024,23 +8891,6 @@ CM.UI = class {
     return true;
   }
   resetKeys() { this.game.settings.keys = Object.assign({}, CM.DEFAULT_KEYS); this.rebinding = null; this.game.saveSettings(); this.game.emit("settings", this.game.settings); this.renderKeys(); }
-
-  openCard(entry) {
-    const g = this.game, e = entry || g.fame[0];
-    if (!e) return;
-    this.cardEntry = e;
-    const slot = this.$("#card-slot");
-    slot.innerHTML = "";
-    slot.appendChild(CM.art.summaryCard(e, CM.titleFor(g.achievements)));
-    this.$("#card-text").value = CM.summaryText(e) + (e.code ? `\nRun code (paste it in the seed box): ${e.code}` : "");
-    this.$("#card-note").textContent = "";
-    this.openDialog("#dlg-card");
-  }
-  copyText(text, noteEl) {
-    const done = navigator.clipboard ? navigator.clipboard.writeText(text).then(() => true, () => false) : Promise.resolve(false);
-    done.then((ok) => { if (noteEl) noteEl.textContent = ok ? "Copied." : "Select the text and copy it yourself."; });
-    return done;
-  }
 
   // a gamepad's way through buttons: the focus moves along the visible ones, A presses
   padTargets() {
@@ -9105,132 +8955,6 @@ CM.UI = class {
     this.openDialog("#dlg-over");
     this.ending = "victory";
     if (this.onEnding) this.onEnding();
-  }
-
-  // ---- the camp's smith and vault ----
-  openSmith() { this.renderSmith(); this.openDialog("#dlg-smith"); }
-  renderSmith() {
-    const g = this.game, box = this.$("#smith-list");
-    const diamonds = g.bag.filter((i) => i.kind === "gem" && i.gem === "diamond").length;
-    const gems = g.bag.filter((i) => i.kind === "gem" && CM.GEMS[i.gem].element).map((i) => i.name), anyGem = g.bag.some((i) => i.kind === "gem");
-    const scrap = g.bag.filter((i) => i.kind === "scrap").length;
-    this.$("#smith-gems").textContent = `In the pack: ${diamonds ? CM.plural(diamonds, "diamond") : "no diamond"}${gems.length ? ", " + gems.join(", ") : ""}${scrap ? `, ${CM.plural(scrap, "piece")} of scrap` : ""}. Gold: ${g.gold.toLocaleString()}.`;
-    box.innerHTML = "";
-    g.party.forEach((h, hi) => {
-      for (const slot of ["weapon", "armor", "offhand", "helm"]) {
-        const it = h[slot];
-        if (!it) continue;
-        const row = document.createElement("div");
-        row.className = "recruit";
-        row.appendChild(this.icon(it, 22));
-        const text = document.createElement("div");
-        const n = (it.props || {}).enchant || 0;
-        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(h.name)}'s ${CM.SLOT_NAMES[slot].toLowerCase()} - ${this.esc(CM.itemLabel(it))}${n ? ` - the smith's work: +${n}` : ""}</small>`;
-        row.appendChild(text);
-        const act = document.createElement("div");
-        act.className = "hire";
-        const b = document.createElement("button");
-        b.textContent = n >= CM.SMITH.most ? "Worked to the limit" : `+1 for ${CM.SMITH.enchant * (n + 1)} gold and a diamond`;
-        b.disabled = n >= CM.SMITH.most || (!diamonds && scrap < 5) || g.gold < CM.SMITH.enchant * (n + 1) || it.unknown;
-        b.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("enchant", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
-        act.appendChild(b);
-        if (slot === "weapon") {
-          const s = document.createElement("button");
-          s.textContent = `Set a gem for ${CM.SMITH.gem} gold`;
-          s.disabled = !gems.length || g.gold < CM.SMITH.gem || it.unknown;
-          s.title = "The first ruby, sapphire or sunstone in the pack goes in: fire, frost or holiness";
-          s.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("gem", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
-          act.appendChild(s);
-        }
-        if (!(it.props && (it.props.relic || it.props.unique))) {
-          const r = document.createElement("button");
-          r.textContent = "Rework the suffix: a gem and 100 gold";
-          r.disabled = !anyGem || g.gold < 100 || it.unknown;
-          r.title = "The suffix is struck off and another worked in, from the dice";
-          r.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("reroll", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
-          act.appendChild(r);
-        }
-        row.appendChild(act);
-        box.appendChild(row);
-      }
-    });
-    const scrapRows = g.bag.map((it, i) => [it, i]).filter(([it]) => ["weapon", "armor", "shield", "helm"].includes(it.kind) && !(it.props && (it.props.relic || it.props.unique)));
-    if (scrapRows.length) {
-      const title = document.createElement("div");
-      title.className = "list-title";
-      title.textContent = `Into the fire for scrap (${g.bag.filter((i) => i.kind === "scrap").length} in the pack; five stand in for a diamond)`;
-      box.appendChild(title);
-      for (const [it, i] of scrapRows) {
-        const row = document.createElement("div");
-        row.className = "recruit";
-        row.appendChild(this.icon(it, 22));
-        const text = document.createElement("div");
-        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`;
-        row.appendChild(text);
-        const act = document.createElement("div");
-        act.className = "hire";
-        const b = document.createElement("button");
-        b.textContent = "Salvage";
-        b.addEventListener("click", () => { this.$("#smith-note").textContent = g.salvage(i) || "Done."; this.renderSmith(); this.refresh(); });
-        act.appendChild(b);
-        row.appendChild(act);
-        box.appendChild(row);
-      }
-    }
-  }
-  openAlchemist() { this.renderAlchemist(); this.openDialog("#dlg-alchemist"); }
-  renderAlchemist() {
-    const g = this.game, box = this.$("#alchemist-list");
-    const have = g.bag.filter((i) => i.kind === "ingredient").map((i) => i.name);
-    this.$("#alchemist-have").textContent = `In the pack: ${have.length ? have.join(", ") : "nothing she wants yet"}. Gold: ${g.gold.toLocaleString()}.`;
-    box.innerHTML = "";
-    for (const [id, r] of Object.entries(CM.RECIPES)) {
-      const row = document.createElement("div");
-      row.className = "recruit";
-      row.style.gridTemplateColumns = "1fr auto";
-      const lacks = g.recipeLacks(id);
-      row.innerHTML = `<div><b>${this.esc(r.name)}</b><small>${this.esc(r.what)}${lacks ? ` <i>- ${this.esc(lacks)}</i>` : ""}</small></div>`;
-      const b = document.createElement("button");
-      b.textContent = `Brew, ${r.gold} gold`;
-      b.disabled = Boolean(lacks);
-      b.addEventListener("click", () => { this.$("#alchemist-note").textContent = g.brew(id) || "Done."; this.renderAlchemist(); this.refresh(); });
-      row.appendChild(b);
-      box.appendChild(row);
-    }
-  }
-  openVault() { this.renderVault(); this.openDialog("#dlg-vault"); }
-  renderVault() {
-    const g = this.game, held = this.$("#vault-held"), list = this.$("#vault-list");
-    held.innerHTML = "";
-    if (g.vault) {
-      held.appendChild(this.icon(g.vault, 22));
-      const text = document.createElement("span");
-      text.innerHTML = `<b>${this.esc(g.vault.name)}</b> <small>${this.esc(CM.itemLabel(g.vault))}</small> `;
-      held.appendChild(text);
-      const b = document.createElement("button");
-      b.textContent = "Take it";
-      b.addEventListener("click", () => { this.$("#vault-note").textContent = g.takeHeirloom() || "Taken."; this.renderVault(); this.refresh(); });
-      held.appendChild(b);
-    } else held.innerHTML = `<span class="small">The vault is empty. Leave something here, and the next party to come this way will find it.</span>`;
-    list.innerHTML = "";
-    g.bag.forEach((it, i) => {
-      if (["key", "bones", "rope", "torch"].includes(it.kind)) return;
-      const row = document.createElement("div");
-      row.className = "recruit";
-      row.appendChild(this.icon(it, 22));
-      const text = document.createElement("div");
-      text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`;
-      row.appendChild(text);
-      const act = document.createElement("div");
-      act.className = "hire";
-      const b = document.createElement("button");
-      b.textContent = g.vault ? "Leave it (swap)" : "Leave it";
-      b.addEventListener("click", () => { this.$("#vault-note").textContent = g.leaveHeirloom(i) || "Left for those who come after."; this.renderVault(); this.refresh(); });
-      act.appendChild(b);
-      row.appendChild(act);
-      list.appendChild(row);
-    });
-    if (!list.children.length) list.innerHTML = `<div class="small">Nothing in the pack worth the keeping.</div>`;
   }
 
   // ---- the dungeon's people and puzzles: a word with someone, a riddle at a door, the journal ----
@@ -9307,6 +9031,584 @@ CM.UI = class {
     const rows = Object.entries(CM.COMBOS).map(([id, c]) => `<div class="entry"><p>${found.includes(id) ? `<b>${c.name}</b> - ${this.esc(c.what)} <small>(done ${this.game.combos[id]} ${this.game.combos[id] === 1 ? "time" : "times"})</small>` : `<b>?</b> <small>A combo not yet found.</small>`}</p></div>`);
     return `<div class="list-title">Combos (${found.length} of ${Object.keys(CM.COMBOS).length} found)</div>` + rows.join("");
   }
+};
+
+// ---- 71-title.js ----
+"use strict";
+// The title: what you set out with, the Hall of Fame and its boards, unlocks, trophies, the memorial, the summary card.
+Object.assign(CM.UI.prototype, {
+  // ---- the title ----
+  _title() {
+    const g = this.game;
+    this.$("#seed").value = CM.randomSeed();
+    this.$("#btn-dice").addEventListener("click", () => { this.$("#seed").value = CM.randomSeed(); });
+    this.$("#btn-new").addEventListener("click", () => this.openCreate());
+    this.$("#btn-continue").addEventListener("click", () => g.continueRun());
+    this.$("#btn-settings").addEventListener("click", () => this.openDialog("#dlg-settings"));
+    this.$("#btn-keys").addEventListener("click", () => this.openDialog("#dlg-keys"));
+    this.$("#btn-credits").addEventListener("click", () => {
+      this.$("#credits").innerHTML = CM.art.credits().map(([who, what]) => `<div class="credit"><b>${this.esc(who)}</b><div>${this.esc(what)}</div></div>`).join("")
+        + `<p class="small">A Claude Timeline game. The tile set and the textures are public domain (CC0); the whole sets are kept with the Timeline's media for the updates to come.</p>`;
+      this.openDialog("#dlg-credits");
+    });
+    this.$("#btn-transfer").addEventListener("click", () => {
+      this.$("#transfer-text").value = g.exportText();
+      this.$("#transfer-note").textContent = "";
+      this.openDialog("#dlg-transfer");
+    });
+    this.$("#btn-copy").addEventListener("click", () => {
+      const t = this.$("#transfer-text");
+      t.select();
+      const done = navigator.clipboard ? navigator.clipboard.writeText(t.value).then(() => true, () => false) : Promise.resolve(document.execCommand("copy"));
+      done.then((ok) => { this.$("#transfer-note").textContent = ok ? "Copied." : "Select the text and copy it yourself."; });
+    });
+    this.$("#btn-import").addEventListener("click", () => {
+      const err = g.importText(this.$("#transfer-text").value);
+      this.$("#transfer-note").textContent = err || "Imported.";
+      this.refreshTitle();
+    });
+    this.$("#fame table").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-seed]");
+      if (b) { this.$("#seed").value = b.dataset.seed; this.refreshTitle(); return; }
+      const c = e.target.closest("button[data-card]");
+      if (c) { const b = this.fameBoard === "weekly" ? g.fame.concat(g.fameEndless || []).filter((x) => x.seed === CM.weeklySeed()) : this.fameBoard === "endless" ? g.fameEndless : g.fame; this.openCard(b[Number(c.dataset.card)]); return; }
+      const tr = e.target.closest("tr.row");
+      if (!tr) return;
+      const i = Number(tr.dataset.i);
+      this.fameOpen = this.fameOpen === i ? -1 : i;
+      this.refreshTitle();
+    });
+    this.renderClasses();
+  },
+
+  renderClasses() {
+    const classes = this.$("#classes"), g = this.game;
+    classes.innerHTML = "";
+    for (const cls of CM.ALL_CLASSES) {
+      const c = CM.CLASSES[cls], div = document.createElement("div"), locked = !g.classUnlocked(cls);
+      div.className = "calling" + (locked ? " locked" : "");
+      div.appendChild(this.portrait(cls, 30));
+      const text = document.createElement("div");
+      text.innerHTML = `<b>${cls}</b> <small>${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}.</small> <small>${locked ? `<i>Earned: ${this.esc(CM.CLASS_UNLOCK[cls].what)}.</i> ` : ""}${c.blurb}</small>`;
+      div.appendChild(text);
+      classes.appendChild(div);
+    }
+  },
+
+  // the theme changed (or its pack arrived): every portrait and icon is drawn again
+  restyle() {
+    this.portraits = {};
+    this.renderClasses();
+    if (this.screen === "create") this.renderCreate();
+    this.$("#party").dataset.signature = "";
+    if (this.screen === "bag") this.fillBag();
+    if (this.$("#dlg-tavern").classList.contains("on")) this.renderTavern();
+    this.refresh();
+  },
+
+  refreshTitle() {
+    const g = this.game;
+    this.$("#title-note").textContent = g.titleNote;
+    const can = g.canContinue();
+    this.$("#btn-continue").disabled = !can;
+    this.$("#continue-note").textContent = can
+      ? `Slot ${g.slot}: floor ${CM.runFloor(g.lastRun)}, ${g.lastRun.gold.toLocaleString()} gold${g.lastRun.saved ? ", saved " + new Date(g.lastRun.saved).toLocaleString() : ""}${g.lastRun.difficulty && g.lastRun.difficulty !== "fair" ? ", " + CM.DIFFICULTIES[g.lastRun.difficulty].name : ""}${g.lastRun.endless ? ", Endless" : ""}`
+      : `Slot ${g.slot} is empty: no expedition is under way there.`;
+    for (const b of this.root.querySelectorAll("#slots-row button[data-slot]")) {
+      const n = Number(b.dataset.slot), r = (g.runs || [])[n - 1];
+      b.classList.toggle("on", n === g.slot);
+      b.textContent = `${n}: ${r && r.floor ? `floor ${CM.runFloor(r)}` : "empty"}`;
+      b.title = r && r.floor ? `${r.gold.toLocaleString()} gold${r.saved ? ", saved " + new Date(r.saved).toLocaleString() : ""}` : "An empty slot for a new expedition";
+    }
+    const title = CM.titleFor(g.achievements), got = Object.keys(CM.ACHIEVEMENTS).filter((id) => g.achievements[id]);
+    this.$("#honours").textContent = got.length ? `${CM.playerName || "Adventurer"} ${title} - ${got.length} of ${Object.keys(CM.ACHIEVEMENTS).length} achievements` : "";
+    this.$("#achievements").innerHTML = Object.entries(CM.ACHIEVEMENTS).map(([id, a]) => { const t = g.achievements[id];
+      return `<div class="unlock ${t ? "got" : ""}"><b>${t ? "✓" : "○"} ${a.name}</b> <small>${a.what}${t ? ` - ${this.esc(t.date)}; the title "${a.title}"` : ""}</small></div>`; }).join("");
+    const bag = CM.startingBag(this.$("#seed").value || "x").filter((i) => i.kind !== "torch");
+    this.$("#start-with").textContent = `Four set out with 30 gold, two torches and two potions (${bag.map((i) => i.name).join(" and ")} - the seed decides which). `
+      + "New Expedition lets you name them, choose their callings and roll their stats; chests and fallen monsters give better gear; "
+      + "a merchant's camp with a temple waits below floors 5, 10 and 15 (and every fifth floor of the Deep) - each shaft guarded by something that has made its lair over it, and leaves a relic when it falls. "
+      + "The Lich King waits on floor 20; below him, thirty floors of the Deep go down to the Root of the World - or, in an Endless expedition, to no bottom at all.";
+    const table = this.$("#fame table"), weeklyBoard = this.fameBoard === "weekly", endlessBoard = this.fameBoard === "endless";
+    const board = weeklyBoard ? g.fame.concat(g.fameEndless || []).filter((e) => e.seed === CM.weeklySeed()).sort((a, b) => (b.bottom ? 1 : 0) - (a.bottom ? 1 : 0) || (b.won ? 1 : 0) - (a.won ? 1 : 0) || b.floor - a.floor || b.gold - a.gold) : endlessBoard ? (g.fameEndless || []) : g.fame;
+    for (const b of this.root.querySelectorAll("#fame .boards button")) b.classList.toggle("on", b.dataset.board === (this.fameBoard || "dungeon"));
+    if (!board.length) table.innerHTML = `<tr><td class="empty">${weeklyBoard ? `No run on this week's seed yet (${CM.weeklySeed()}): This week's, on the left, sets it.` : endlessBoard ? "No Endless expedition yet: choose Endless when the party sets out." : "No party has gone down yet."}</td></tr>`;
+    else table.innerHTML = board.map((e, i) => {
+      const open = this.fameOpen === i, t = e.tally;
+      let rows = `<tr class="row${open ? " open" : ""}" data-i="${i}" title="${open ? "" : "Click for the details"}"><td>${i + 1}.</td><td>${this.esc(e.name).slice(0, 14)}</td>`
+        + `<td class="${e.won ? "won" : ""}">${endlessBoard ? `floor ${e.floor}${e.won ? " - crowned" : ""}` : e.bottom ? "TO THE BOTTOM" : e.won ? (e.floor > CM.LAST_FLOOR ? `SLEW THE LICH KING, floor ${e.floor}` : "SLEW THE LICH KING") : "floor " + e.floor}</td><td>${e.gold.toLocaleString()} gold${e.difficulty && e.difficulty !== "fair" && CM.DIFFICULTIES[e.difficulty] ? ` <i class="diff">${CM.DIFFICULTIES[e.difficulty].name}</i>` : ""}</td><td>${this.esc(e.date)}${e.daily ? " ☀" : ""}</td></tr>`;
+      if (open) {
+        rows += `<tr class="details"><td colspan="5"><div>${(e.party || []).length ? this.esc(e.party.join(", ")) : "An old entry: who went wasn't written down."}</div>`
+          + (e.seed ? `<div>Seed <b>${this.esc(e.seed)}</b>${e.daily ? " (today's dungeon)" : e.weekly ? " (a week's challenge)" : ""}${e.kit && e.kit !== "pauper" && CM.KITS[e.kit] ? `, ${CM.KITS[e.kit].name}` : ""} <button data-seed="${this.esc(e.seed)}">Play this seed</button>${e.code ? ` <button data-seed="${this.esc(e.code)}" title="The seed, the party, the difficulty and the kit, as they set out">Play this run</button>` : ""}</div>` : "")
+          + (t ? `<div>${CM.plural(t.kills || 0, "monster")} slain, ${CM.plural(t.chests || 0, "chest")} opened, ${CM.plural(t.steps || 0, "step")}, ${CM.plural(t.fights || 0, "fight")}${t.fled ? ` (${t.fled} fled)` : ""}.</div>` : "")
+          + (t && t.guardians && t.guardians.length ? `<div>Guardians slain: ${this.esc(this.guardianNames(t.guardians))}.</div>` : "")
+          + (e.mutators && e.mutators.length ? `<div>${e.endless ? "The dark deepened" : "Today's dungeon"}: ${this.esc(e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(", "))}.</div>` : "")
+          + (e.titles && e.titles.length ? `<div>Earned: ${this.esc(e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", "))}.</div>` : "")
+          + `<div><button data-card="${i}">Summary card</button></div>`
+          + "</td></tr>";
+      }
+      return rows;
+    }).join("");
+    const have = CM.unlocked(g.allFame), deep = CM.deepest(g.allFame);
+    this.$("#unlocks").innerHTML = Object.entries(CM.KITS).map(([id, k]) => {
+      const got = have.includes(id), need = k.need === 21 ? "slay the Lich King" : `reach floor ${k.need}`;
+      return `<div class="unlock ${got ? "got" : ""}"><b>${got ? "✓" : "○"} ${k.name}</b> <small>${got ? k.what : `${k.what} <i>(${need}${deep.floor ? `; deepest so far: floor ${deep.floor}` : ""})</i>`}</small></div>`;
+    }).join("");
+    const mem = g.memorial || [];
+    this.$("#memorial").innerHTML = mem.length ? mem.slice(0, 8).map((m) => `<div class="unlock got"><b>${this.esc(m.name)}</b> <small>${this.esc(m.cls)}, level ${m.level}, laid to rest on floor ${m.floor} - ${this.esc(m.date)}${m.seed ? `, seed ${this.esc(m.seed)}` : ""}</small></div>`).join("") + (mem.length > 8 ? `<div class="small">...and ${mem.length - 8} more.</div>` : "") : `<div class="unlock"><small>No hero has been laid to rest at a camp fire yet.</small></div>`;
+    const trophies = g.trophies || {};
+    this.$("#trophies").innerHTML = [...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor < CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name]), ["lich", CM.BOSS.name, CM.LAST_FLOOR, "his palace"],
+      ...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor > CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name])].map(([id, name, floor, where]) => {
+      const t = trophies[id];
+      return `<div class="unlock ${t ? "got" : ""}"><b>${t ? "✓" : "○"} ${name}</b> <small>${t ? `slain ${this.esc(t.date)} by ${this.esc(t.name)}'s party` : `<i>floor ${floor}: ${where}</i>`}</small></div>`;
+    }).join("");
+    const kit = this.$("#kit");
+    kit.innerHTML = have.map((id) => `<option value="${id}">${CM.KITS[id].name}</option>`).join("");
+    if (this.chosenKit && have.includes(this.chosenKit)) kit.value = this.chosenKit;
+    const todays = this.$("#seed").value === CM.dailySeed();
+    this.$("#btn-daily").classList.toggle("on", todays);
+  },
+
+  openCard(entry) {
+    const g = this.game, e = entry || g.fame[0];
+    if (!e) return;
+    this.cardEntry = e;
+    const slot = this.$("#card-slot");
+    slot.innerHTML = "";
+    slot.appendChild(CM.art.summaryCard(e, CM.titleFor(g.achievements)));
+    this.$("#card-text").value = CM.summaryText(e) + (e.code ? `\nRun code (paste it in the seed box): ${e.code}` : "");
+    this.$("#card-note").textContent = "";
+    this.openDialog("#dlg-card");
+  },
+  copyText(text, noteEl) {
+    const done = navigator.clipboard ? navigator.clipboard.writeText(text).then(() => true, () => false) : Promise.resolve(false);
+    done.then((ok) => { if (noteEl) noteEl.textContent = ok ? "Copied." : "Select the text and copy it yourself."; });
+    return done;
+  },
+});
+
+// ---- 72-create.js ----
+"use strict";
+// Who goes down: the creation screen.
+Object.assign(CM.UI.prototype, {
+  // ---- who goes down: the creation screen ----
+  _create() {
+    const g = this.game;
+    this.slots = [];
+    this.$("#btn-suggest").addEventListener("click", () => { this.fillSlots(CM.CLASSIC); this.renderCreate(); });
+    this.$("#btn-reroll-all").addEventListener("click", () => { for (const s of this.slots) s.stats = CM.rollStats(s.cls); this.renderCreate(); });
+    this.$("#btn-create-back").addEventListener("click", () => this.show("title"));
+    this.$("#btn-setout").addEventListener("click", () => this.setOut());
+    this.$("#create-seed").addEventListener("input", () => { this.$("#seed").value = this.$("#create-seed").value; this.renderCreateNote(); });
+    this.$("#difficulty").innerHTML = Object.entries(CM.DIFFICULTIES).map(([id, d]) => `<option value="${id}">${d.name}</option>`).join("");
+    this.$("#difficulty").value = "fair";
+    this.$("#difficulty").addEventListener("change", () => this.renderCreateNote());
+    this.$("#mode").addEventListener("change", () => this.renderCreateNote());
+    for (const b of this.root.querySelectorAll("#fame .boards button")) b.addEventListener("click", () => { this.fameBoard = b.dataset.board; this.fameOpen = -1; this.refreshTitle(); });
+    const slots = this.$("#slots");
+    for (let i = 0; i < 4; i++) {
+      const div = document.createElement("div");
+      div.className = "slot";
+      div.innerHTML = `<div class="top"><div class="portrait-slot"></div><div class="who"><input class="name" type="text" maxlength="14" spellcheck="false" title="Their name"><button class="dice" title="Another name">&#x2684;</button>
+        <select class="cls" title="Their calling"></select></div></div>
+        <div class="role"></div>
+        <table class="stats"></table>
+        <div class="derived"></div>
+        <div class="rowpick"><span>Row:</span><button data-row="front">Front</button><button data-row="back">Back</button><button class="reroll">Reroll</button></div>`;
+      div.querySelector(".name").addEventListener("input", (e) => { this.slots[i].name = e.target.value; this.renderAdvice(); });
+      div.querySelector(".dice").addEventListener("click", () => { this.slots[i].name = CM.randomName(); this.renderCreate(); });
+      div.querySelector(".cls").addEventListener("change", (e) => {
+        const s = this.slots[i];
+        s.cls = e.target.value; s.stats = CM.rollStats(s.cls); s.row = CM.CLASSES[s.cls].row;
+        this.renderCreate();
+      });
+      div.querySelector(".reroll").addEventListener("click", () => { this.slots[i].stats = CM.rollStats(this.slots[i].cls); this.renderCreate(); });
+      for (const b of div.querySelectorAll("button[data-row]")) b.addEventListener("click", () => { this.slots[i].row = b.dataset.row; this.renderCreate(); });
+      slots.appendChild(div);
+    }
+    g.on("mode", (mode) => { if (mode !== "title") this.closeDialogs(); });
+  },
+
+  fillSlots(classes) {
+    const rnd = new CM.Random(Math.floor(Math.random() * 4294967296));
+    this.slots = classes.map((cls) => ({ cls, name: CM.randomName(rnd), stats: CM.rollStats(cls, rnd), row: CM.CLASSES[cls].row }));
+  },
+
+  openCreate() {
+    const g = this.game;
+    if (g.canContinue() && !window.confirm(`A run is waiting in expedition slot ${g.slot}. Start a new expedition there and let it go? (The other slots keep theirs.)`)) return;
+    for (const sel of this.root.querySelectorAll("#slots select.cls")) sel.innerHTML = g.classesAvailable().map((c) => `<option value="${c}">${c}</option>`).join("");   // (the callings earned)
+    const code = CM.parseRunCode(this.$("#seed").value);
+    if (code) {                                                          // a run code: the seed, the party, the difficulty and the kit as they were
+      this.$("#seed").value = code.seed;
+      if (code.party) this.slots = code.party.filter((p) => g.classUnlocked(p.cls)).length === 4 ? code.party : code.party.map((p) => (g.classUnlocked(p.cls) ? p : Object.assign({}, p, { cls: "Knight", stats: CM.rollStats("Knight") })));
+      this.$("#difficulty").value = code.difficulty; this.$("#mode").value = code.mode; this.chosenKit = code.kit;
+    }
+    const weekly = this.$("#seed").value === CM.weeklySeed();
+    if (weekly) this.slots = CM.weeklyParty(this.$("#seed").value);        // (the week's party, the same for everyone)
+    this.weekly = weekly;
+    if (!this.slots.length) this.fillSlots(CM.CLASSIC);
+    this.$("#create-seed").value = this.$("#seed").value;
+    this.renderCreateNote();
+    this.refreshTitle();                                                 // (the kits on offer)
+    this.show("create");
+    this.renderCreate();
+  },
+
+  renderCreate() {
+    const cards = this.$("#slots").children;
+    this.slots.forEach((s, i) => {
+      const div = cards[i], c = CM.CLASSES[s.cls];
+      const slot = div.querySelector(".portrait-slot");
+      slot.innerHTML = "";
+      slot.appendChild(this.portrait(s.cls, 56));
+      if (div.querySelector(".name").value !== s.name) div.querySelector(".name").value = s.name;
+      div.querySelector(".cls").value = s.cls;
+      div.querySelector(".role").textContent = `${c.role}${c.cast ? `, casts ${CM.CASTS[c.cast]}` : ""}. ${c.blurb}`;
+      div.querySelector(".stats").innerHTML = CM.STATS.map((st) => {
+        const v = s.stats[st], key = st === c.key;
+        return `<tr class="${key ? "key" : ""}"><td>${CM.STAT_NAMES[st]}</td><td class="v">${v}</td><td class="hint">${key ? "their calling's stat" : CM.STAT_HINTS[st]}</td></tr>`;
+      }).join("");
+      const h = CM.makeHero(s.cls, s.name, s.stats, s.row);
+      div.querySelector(".derived").textContent = `${h.max} health${h.maxmp ? `, ${h.maxmp} magic` : ""}, attack ${h.atk}, defence ${h.df} - ${h.weapon.name} and ${h.armor.name}`;
+      for (const b of div.querySelectorAll("button[data-row]")) b.classList.toggle("on", b.dataset.row === s.row);
+      for (const el of div.querySelectorAll(".cls, .reroll, .dice")) el.disabled = Boolean(this.weekly);   // (the week's party is the week's)
+    });
+    this.$("#btn-reroll-all").disabled = Boolean(this.weekly); this.$("#btn-suggest").disabled = Boolean(this.weekly);
+    this.renderAdvice();
+  },
+
+  renderAdvice() {
+    const advice = CM.partyAdvice(this.slots), ul = this.$("#advice ul");
+    ul.innerHTML = advice.notes.map((n) => `<li class="${advice.sound && advice.notes.length === 1 ? "good" : ""}">${this.esc(n)}</li>`).join("");
+    this.$("#advice").classList.toggle("sound", advice.sound);
+  },
+
+  setOut() {
+    const g = this.game, seed = this.$("#create-seed").value;
+    this.$("#seed").value = seed;
+    this.chosenKit = this.$("#kit").value || "pauper";
+    g.newGame(seed, this.slots.map((s) => ({ cls: s.cls, name: s.name, stats: s.stats, row: s.row })), this.chosenKit, this.$("#difficulty").value, undefined, this.$("#mode").value);
+  },
+
+  startNew() { this.openCreate(); },
+
+  renderCreateNote() {
+    const seed = this.$("#create-seed").value, muts = CM.mutatorsFor(seed), d = CM.DIFFICULTIES[this.$("#difficulty").value] || CM.DIFFICULTIES.fair;
+    this.$("#create-note").textContent = `${d.name}: ${d.what}.` + (muts.length ? ` ${seed.startsWith("weekly-") ? "This week's challenge" : "Today's dungeon"} comes with ${muts.map((m) => `${CM.MUTATORS[m].name} (${CM.MUTATORS[m].what})`).join(" and ")}.` : "") + (seed.startsWith("weekly-") ? " The party is the week's: everyone sets out with these four." : "")
+      + (this.$("#mode").value === "endless" ? " Endless: the fifty floors and the Lich King as ever, and then no bottom - the bands come round again, the guardians return as echoes every ten floors, and the dark deepens. The run goes on the Endless board, by depth." : "");
+  },
+});
+
+// ---- 73-play.js ----
+"use strict";
+// The dungeon screen: the party and the log, the actions, the automap, the HUD over the view, and what the window itself shows of an event.
+Object.assign(CM.UI.prototype, {
+  // ---- the dungeon screen ----
+  refresh() {
+    const g = this.game;
+    if (this.screen === "title") { this.refreshTitle(); return; }
+    if (this.screen !== "play") return;
+    const fl = g.floor;
+    if (fl) {
+      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   Floor ${fl.number}`;
+      this.$("#side .where").textContent = `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
+    }
+    this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
+    const light = this.$("#side .light"), l = g.light || {};
+    let lit = l.kind === "lantern" ? "Lantern lit" : l.kind === "torch" ? (l.left > 40 ? `Torch: ${l.left} steps left` : `Torch burning low: ${l.left}`) : "No light!";
+    if (g.spellLight > 0) lit += ` - conjured light: ${g.spellLight} steps`;
+    if (fl && g.inDark()) lit += " - a magical dark";
+    light.textContent = lit;
+    light.classList.toggle("dark", !g.hasLight() || g.inDark());
+    const hint = this.$("#view .hint");
+    if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper, or back up.";
+    else if (g.mode === "combat") hint.textContent = "";
+    else if (g.travel) hint.textContent = g.travel.explore ? "Exploring... (any key stops)" : "Walking... (any key stops)";
+    else if (fl) {
+      const k = `${fl.pos[0]},${fl.pos[1]}`, thing = fl.things[k], f = fl.features[k];
+      const [dx, dy] = CM.DIRS[fl.facing], ahead = fl.features[`${fl.pos[0] + dx},${fl.pos[1] + dy}`];
+      let text = "";
+      if (f && f.type === "lever" && f.face === fl.facing) text = f.pulled ? "The lever, pulled." : "A lever on the wall. Space pulls it.";
+      else if (f && f.type === "carving" && f.face === fl.facing) text = "Runes carved into the wall. Space reads them.";
+      else if (thing) text = { chest: "A chest. Space opens it.", ladder: "A ladder down. Space climbs it.", stairs_up: "The stairs up. Space climbs them.",
+        phylactery: "A cold box with a slow beat inside it. Space smashes it.", ghost: "A ghost. Space speaks to it.", hermit: "A hermit. Space speaks to him.",
+        adventurer: "Someone bound. Space cuts them loose.", rope: "A rope from above. Space climbs it.", event: `${(CM.EVENTS[thing.event] || {}).title || "Something strange"}. Space looks closer.`,
+        strongbox: thing.opened ? "An empty strongbox." : "A strongbox. Space tries the key.", peddler: "A peddler. Space sees his wares.", rivals: "A rival party. Space speaks to them." }[thing.type] || "";
+      else if (f && f.type === "plate" && (f.gate || f.known)) text = f.gate ? (f.pressed ? "A pressure plate, sunk." : "A pressure plate.") : "A plate that was a trap.";
+      else if (f && f.type === "spores" && f.known) text = "A hanging cloud of spores.";
+      else if (f && f.type === "vents" && f.known) text = "A vent in the floor. It breathes fire on a beat.";
+      else if (f && f.type === "bonepiles" && f.known) text = "A heap of bones, higher than a man.";
+      else if (f && f.type === "fountain") text = f.used ? "A dry fountain." : "A fountain. Space drinks.";
+      else if (f && f.type === "altar") text = f.used ? "A quiet altar." : "An altar. Space kneels.";
+      else if (ahead && ahead.type === "door" && !ahead.open) text = ahead.riddle !== undefined ? "A door written over with runes. Walk into it, and answer." : ahead.locked ? "A locked door. Walk into it with a key." : "A door. Walk into it to open it.";
+      else if (ahead && ahead.type === "gate" && !ahead.open) text = "A portcullis. Find its lever.";
+      hint.textContent = text;
+    }
+    this.renderParty();
+    this.renderLog();
+    this.renderActions();
+    if (this.$("#dlg-sheet").classList.contains("on")) this.renderSheet();
+    this.drawAutomap(this.$("#automap"));
+    if (this.$("#bigmap").classList.contains("on")) this.drawAutomap(this.$("#bigmap-canvas"));
+  },
+
+  renderParty() {
+    const box = this.$("#party");
+    const signature = this.game.party.map((m) => m.cls + m.name).join("|");
+    if (box.dataset.signature !== signature) {
+      box.innerHTML = "";
+      box.dataset.signature = signature;
+      this.game.party.forEach((m, i) => {
+        const div = document.createElement("div");
+        div.className = "member";
+        div.title = `${m.name}'s sheet (${i + 1})`;
+        div.appendChild(this.portrait(m.cls, 44));
+        const text = document.createElement("div");
+        text.innerHTML = `<div class="name"></div><div class="gear"></div><div class="bar hp"><i></i><span></span></div><div class="bar mp"><i></i><span></span></div><div class="ail"></div>`;
+        div.appendChild(text);
+        div.addEventListener("click", () => this.openSheet(i));
+        box.appendChild(div);
+      });
+    }
+    this.game.party.forEach((m, i) => {
+      const div = box.children[i], dead = m.hp <= 0, st = m.status || {};
+      div.classList.toggle("fallen", dead);
+      div.classList.toggle("front", m.row === "front");
+      div.querySelector(".name").innerHTML = `${this.esc(m.name)} <small>${m.cls} ${m.level}${m.row === "front" ? " ▴" : ""}</small>` + (dead ? " <i>(fallen)</i>" : "")
+        + (m.pending ? ` <span class="boon-badge">Boon!</span>` : "") + (CM.needsPath(m) ? ` <span class="boon-badge">Path!</span>` : "");
+      div.querySelector(".gear").textContent = `${m.weapon.name} / ${m.armor.name}`;
+      const ail = div.querySelector(".ail");
+      ail.textContent = Object.keys(st).map((s) => `${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}`).join("  ");
+      ail.style.display = Object.keys(st).length ? "" : "none";
+      const hp = div.querySelector(".bar.hp");
+      hp.querySelector("i").style.width = `${100 * Math.max(0, m.hp) / Math.max(1, m.max)}%`;
+      hp.querySelector("span").textContent = `HP ${Math.max(0, m.hp)}/${m.max}`;
+      const mp = div.querySelector(".bar.mp");
+      mp.style.display = m.maxmp ? "" : "none";
+      mp.querySelector("i").style.width = `${100 * Math.max(0, m.mp) / Math.max(1, m.maxmp)}%`;
+      mp.querySelector("span").textContent = `MP ${m.mp}/${m.maxmp}`;
+    });
+  },
+
+  renderLog() {
+    const log = this.$("#log");
+    const lines = this.game.messages.slice(-7);
+    log.innerHTML = lines.map((l) => `<div>${this.esc(l)}</div>`).join("");
+  },
+
+  renderActions() {
+    const g = this.game, box = this.$("#actions");
+    if (g.mode === "combat") { this.renderCombat(); return; }
+    box.classList.remove("combat");
+    const sets = {
+      explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
+        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
+        ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
+      camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")],
+        ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
+        ["Back up the shaft", () => g.backUp()], ["Go deeper", () => g.leaveCamp()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
+    };
+    const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
+    if (box.dataset.mode === key) return;
+    box.innerHTML = "";
+    box.dataset.mode = key;
+    const btn = (html, fn, disabled, cls) => {
+      const b = document.createElement("button");
+      b.innerHTML = html;
+      b.disabled = Boolean(disabled);
+      if (cls) b.className = cls;
+      b.addEventListener("click", fn);
+      box.appendChild(b);
+      return b;
+    };
+    if (this.xmenu && this.xmenu.kind === "list") {                       // between fights: who casts what
+      const choices = this.outsideChoices();
+      choices.forEach((ch, i) => {
+        const b = btn(`<kbd>${i + 1}</kbd>${this.esc(ch.hero.name)}: ${CM.ABILITIES[ch.id].name}<small>${CM.ABILITIES[ch.id].mp} MP - ${CM.ABILITIES[ch.id].what}</small>`,
+          () => this.outsidePick(ch), false, "pick");
+        const ic = CM.art.spellIcon(ch.id, 18, g.settings.look);
+        if (ic) { ic.className = "icon"; b.insertBefore(ic, b.firstChild.nextSibling); }
+      });
+      if (!choices.length) { const none = document.createElement("span"); none.className = "small"; none.textContent = "No one has a spell for outside a fight, or the magic for it."; box.appendChild(none); }
+      btn("<kbd>Esc</kbd>Back", () => this.closeMenu());
+      return;
+    }
+    if (this.xmenu && this.xmenu.kind === "ally") {
+      g.party.forEach((p, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(p.name)}<small>${p.hp <= 0 ? "fallen" : `${p.hp}/${p.max}`}</small>`,
+        () => this.outsideAlly(i), this.xmenu.fallen ? p.hp > 0 : p.hp <= 0, "pick"));
+      btn("<kbd>Esc</kbd>Back", () => this.closeMenu());
+      return;
+    }
+    for (const [text, slot] of sets[g.mode] || []) btn(text, slot);
+  },
+
+  // ---- between fights: healing, cures and Light, from whoever knows them ----
+  outsideChoices() {
+    const out = [];
+    this.game.party.forEach((hero, hi) => {
+      if (hero.hp <= 0 || !this.game.canAct(hero)) return;
+      for (const id of CM.abilitiesFor(hero)) {
+        const a = CM.ABILITIES[id];
+        if (a.outside && hero.mp >= a.mp) out.push({ hero, hi, id });
+      }
+    });
+    return out;
+  },
+  outsideCast() { this.xmenu = { kind: "list" }; this.refresh(); },
+  outsidePick(ch) {
+    const a = CM.ABILITIES[ch.id];
+    if (a.target === "ally" || a.target === "fallen") { this.xmenu = { kind: "ally", id: ch.id, hero: ch.hi, fallen: a.target === "fallen" }; this.refresh(); return; }
+    this.game.castOutside(ch.hi, ch.id, null);
+    this.closeMenu();
+  },
+  outsideAlly(i) { const m = this.xmenu; this.game.castOutside(m.hero, m.id, i); this.closeMenu(); },
+  closeMenu() { this.xmenu = null; this.refresh(); },
+  pickOutside(n) {
+    const buttons = [...this.$("#actions").querySelectorAll("button.pick")], b = buttons[n - 1];
+    if (b && !b.disabled) { b.click(); return true; }
+    return false;
+  },
+
+  toggleBigMap() {
+    const d = this.$("#bigmap");
+    if (d.classList.contains("on")) this.closeDialogs();
+    else { this.openDialog("#bigmap"); this.drawAutomap(this.$("#bigmap-canvas")); }
+  },
+
+  drawAutomap(canvas) {
+    const fl = this.game.floor;
+    if (!fl) return;
+    const p = canvas.getContext("2d"), W = canvas.width, size = fl.grid.length, cell = W / size;
+    p.fillStyle = "#E8DCC0";                                              // graph paper
+    p.fillRect(0, 0, W, W);
+    p.strokeStyle = "#C8B898"; p.lineWidth = 1;
+    p.beginPath();
+    for (let i = 0; i <= size; i++) { p.moveTo(i * cell, 0); p.lineTo(i * cell, W); p.moveTo(0, i * cell); p.lineTo(W, i * cell); }
+    p.stroke();
+    const colours = { chest: "#C08030", ladder: "#3060C0", monsters: "#C03030", boss: "#8030C0", guardian: "#A02050", key: "#D8B040",
+      ghost: "#A0C8E8", hermit: "#C8A060", adventurer: "#E8C890", bones: "#D8D0B8", rope: "#B08040", event: "#D070E0", strongbox: "#806020", boxkey: "#E0A020", peddler: "#60B0A0", rivals: "#E06040" };
+    const dark = new Set(fl.dark);
+    for (const [x, y] of fl.seen) {
+      const k = `${x},${y}`, f = fl.features[k], wall = fl.grid[y][x] && !(f && f.type === "secret" && f.found);
+      p.fillStyle = wall ? "#3A3028" : dark.has(k) ? "#8A8070" : "#F8F0DC";
+      p.fillRect(x * cell, y * cell, cell, cell);
+      const cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
+      if (f && !wall) this.drawFeature(p, f, x, y, cell, fl);
+      const thing = fl.things[k];
+      if (thing && !wall) {
+        p.fillStyle = colours[thing.type] || (thing.type === "phylactery" ? "#60D0FF" : "#808080");
+        if (thing.type === "stairs_up") { p.beginPath(); p.moveTo(cx, cy - cell * 0.35); p.lineTo(cx + cell * 0.35, cy + cell * 0.3); p.lineTo(cx - cell * 0.35, cy + cell * 0.3); p.fill(); }
+        else if (thing.type === "ladder") p.fillRect(cx - cell * 0.3, cy - cell * 0.3, cell * 0.6, cell * 0.6);
+        else { p.beginPath(); p.arc(cx, cy, cell * (thing.type === "key" ? 0.2 : 0.3), 0, Math.PI * 2); p.fill(); }
+      }
+    }
+    for (const [k, text] of Object.entries(fl.notes || {})) {                   // the player's own marks
+      const [nx, ny] = k.split(",").map(Number), ncx = (nx + 0.5) * cell, ncy = (ny + 0.5) * cell;
+      p.fillStyle = "#C02060";
+      p.beginPath(); p.moveTo(ncx - cell * 0.3, ncy + cell * 0.4); p.lineTo(ncx - cell * 0.3, ncy - cell * 0.4); p.lineTo(ncx + cell * 0.35, ncy - cell * 0.2); p.lineTo(ncx - cell * 0.3, ncy); p.fill();
+      if (cell >= 16) {                                                             // (the words beside the flag - to its left near the right edge)
+        const left = ncx < W * 0.7, tx = left ? ncx + cell * 0.45 : ncx - cell * 0.4;
+        p.font = `bold ${Math.max(9, cell * 0.5)}px Georgia`; p.textAlign = left ? "left" : "right";
+        p.fillStyle = "#000"; p.fillText(text, tx, ncy + cell * 0.2); p.fillStyle = "#C02060"; p.fillText(text, tx - 1, ncy + cell * 0.2 - 1);
+      }
+    }
+    if (this.game.travel && this.game.travel.to) {                                  // where the party is walking to
+      const [tx, ty] = this.game.travel.to;
+      p.strokeStyle = "#20A040"; p.lineWidth = Math.max(1.5, cell * 0.12); p.strokeRect(tx * cell + 1, ty * cell + 1, cell - 2, cell - 2);
+    }
+    const [x, y] = fl.pos, [dx, dy] = CM.DIRS[fl.facing], cx = (x + 0.5) * cell, cy = (y + 0.5) * cell;
+    p.fillStyle = "#20A040";
+    p.beginPath();
+    p.moveTo(cx + dx * cell * 0.45, cy + dy * cell * 0.45);
+    p.lineTo(cx - dy * cell * 0.35 - dx * cell * 0.3, cy + dx * cell * 0.35 - dy * cell * 0.3);
+    p.lineTo(cx + dy * cell * 0.35 - dx * cell * 0.3, cy - dx * cell * 0.35 - dy * cell * 0.3);
+    p.fill();
+  },
+
+  // the dungeon's furniture on the automap, once seen (a trapdoor, a spinner or a teleporter only once it has had you)
+  drawFeature(p, f, x, y, cell, fl) {
+    const cx = (x + 0.5) * cell, cy = (y + 0.5) * cell, ns = fl.grid[y - 1] && fl.grid[y - 1][x] === 0 && fl.grid[y + 1] && fl.grid[y + 1][x] === 0;
+    p.lineWidth = Math.max(1.5, cell * 0.16);
+    if (f.type === "door" || f.type === "gate" || (f.type === "secret" && f.found)) {
+      p.strokeStyle = f.type === "gate" ? "#607080" : f.locked ? "#D8B040" : f.type === "secret" ? "#A070C0" : f.riddle !== undefined && !f.open ? "#60C0E0" : "#8A5A2A";
+      if (f.type === "gate" && !f.open) p.setLineDash([cell * 0.15, cell * 0.12]);
+      if (f.type === "door" && f.open) p.setLineDash([cell * 0.25, cell * 0.25]);
+      p.beginPath();
+      if (ns) { p.moveTo(cx - cell * 0.42, cy); p.lineTo(cx + cell * 0.42, cy); } else { p.moveTo(cx, cy - cell * 0.42); p.lineTo(cx, cy + cell * 0.42); }
+      p.stroke(); p.setLineDash([]);
+    } else if (f.type === "pit" || (f.type === "trapdoor" && f.known)) {
+      p.fillStyle = "#101010"; p.beginPath(); p.arc(cx, cy, cell * 0.32, 0, Math.PI * 2); p.fill();
+    } else if (f.type === "plate" && (f.gate || f.known)) {
+      p.strokeStyle = f.gate ? (f.pressed ? "#80A060" : "#E08030") : "#C03030"; p.lineWidth = Math.max(1.5, cell * 0.12); p.strokeRect(cx - cell * 0.26, cy - cell * 0.26, cell * 0.52, cell * 0.52);
+    } else if (["spores", "vents", "bonepiles"].includes(f.type) && f.known) {
+      p.fillStyle = f.type === "spores" ? "#A0C040" : f.type === "vents" ? "#E06020" : "#D8D0B8"; p.beginPath(); p.arc(cx, cy, cell * 0.22, 0, Math.PI * 2); p.fill();
+    } else if (f.type === "teleporter" && f.known) {
+      p.strokeStyle = "#8040E0"; p.lineWidth = Math.max(1.5, cell * 0.12); p.beginPath(); p.arc(cx, cy, cell * 0.3, 0, Math.PI * 2); p.stroke();
+    } else if (f.type === "spinner" && f.known) {
+      p.strokeStyle = "#606060"; p.lineWidth = Math.max(1.5, cell * 0.12); p.beginPath(); p.arc(cx, cy, cell * 0.28, 0.6, 5.4); p.stroke();
+    } else if (f.type === "fountain") {
+      p.fillStyle = f.used ? "#9098A0" : "#3090D0"; p.beginPath(); p.arc(cx, cy, cell * 0.26, 0, Math.PI * 2); p.fill();
+    } else if (f.type === "altar") {
+      p.fillStyle = "#E8E0C0"; p.fillRect(cx - cell * 0.08, cy - cell * 0.32, cell * 0.16, cell * 0.64); p.fillRect(cx - cell * 0.28, cy - cell * 0.12, cell * 0.56, cell * 0.16);
+    } else if (f.type === "lever" || f.type === "carving") {
+      const [dx, dy] = CM.DIRS[f.face];
+      p.strokeStyle = f.type === "lever" ? (f.pulled ? "#80A060" : "#E08030") : "#8A6A3A";
+      p.lineWidth = Math.max(2, cell * 0.2);
+      p.beginPath();
+      p.moveTo(cx + dx * cell * 0.4 - dy * cell * 0.3, cy + dy * cell * 0.4 - dx * cell * 0.3);
+      p.lineTo(cx + dx * cell * 0.4 + dy * cell * 0.3, cy + dy * cell * 0.4 + dx * cell * 0.3);
+      p.stroke();
+    }
+  },
+
+  // the names and health of the foes, over the view, where they stand
+  drawHud(foes, project) {
+    const hud = this.$("#hud"), view = this.$("#view");
+    const dpr = Math.min(2, window.devicePixelRatio || 1), w = view.clientWidth, h = view.clientHeight;
+    if (hud.width !== Math.round(w * dpr) || hud.height !== Math.round(h * dpr)) { hud.width = Math.round(w * dpr); hud.height = Math.round(h * dpr); }
+    const p = hud.getContext("2d");
+    p.setTransform(dpr, 0, 0, dpr, 0, 0);
+    p.clearRect(0, 0, w, h);
+    this.lastHud = [];
+    for (const f of foes) {
+      const at = project(f.wx, f.wh, f.wz);
+      if (!at) continue;
+      const [sx, sy, depth] = at, bw = CM.clamp(120 / depth, 40, 110);
+      this.lastHud.push({ sx, sy, index: f.index });
+      p.fillStyle = "#401010"; p.fillRect(sx - bw / 2, sy - 8, bw, 6);
+      p.fillStyle = "#E03030"; p.fillRect(sx - bw / 2, sy - 8, bw * Math.max(0, f.m.hp) / f.m.max, 6);
+      const label = `${f.index !== undefined ? `[${f.index + 1}] ` : ""}${f.m.name}${f.m.asleep > 0 ? " z" : ""}`;
+      p.font = `bold ${CM.clamp(26 / depth, 10, 14)}px Georgia`; p.textAlign = "center";
+      p.fillStyle = "#000"; p.fillText(label, sx + 1, sy - 12);
+      p.fillStyle = f.chosen ? "#F0C040" : "#fff"; p.fillText(label, sx, sy - 13);
+      if (f.chosen) {                                                   // the one your blows are for
+        p.strokeStyle = "#F0C040"; p.lineWidth = 2;
+        p.beginPath(); p.moveTo(sx - bw / 2 - 6, sy - 30); p.lineTo(sx - bw / 2 - 6, sy + 4); p.moveTo(sx + bw / 2 + 6, sy - 30); p.lineTo(sx + bw / 2 + 6, sy + 4); p.stroke();
+      }
+    }
+  },
+
+  // what the window itself shows of an event: the red flash and a jolted card for a blow, a glow for a mending
+  fx(fx) {
+    const g = this.game, hold = CM.fx ? Math.max(0, CM.fx.holdUntil - performance.now()) : 0;
+    const later = (fn) => (hold > 0 ? setTimeout(fn, hold) : fn());                   // (while a bolt is in flight, the blow waits for it)
+    if (fx.kind === "hurt") later(() => { this.flash(".hurt", 60); this.cardFx(g.party.indexOf(fx.hero), "jolt", 500); });
+    else if (fx.kind === "levelup") this.cardFx(g.party.indexOf(fx.hero), "glow-gold", 1200);
+    else if (fx.kind === "sear") this.cardFx(g.party.indexOf(fx.hero), "jolt", 400);
+    else if (fx.kind === "relic") g.party.forEach((h, i) => { if (h.hp > 0) this.cardFx(i, "glow-gold", 1400); });
+    else if (fx.kind === "potion") this.cardFx(fx.who, fx.item === "mana" ? "glow-blue" : fx.item === "revive" ? "glow-gold" : "glow-green", 900);
+    else if (fx.kind === "cast") {
+      const heals = ["heal", "mend", "lay", "cure", "lift", "regrowth", "raise", "healing"], wards = ["bless", "protection", "sanctuary", "song", "rally", "guard", "taunt"];
+      if (heals.includes(fx.id)) {
+        if (fx.ally) this.cardFx(g.party.indexOf(fx.ally), "glow-green", 900);
+        else g.party.forEach((h, i) => { if (h.hp > 0) this.cardFx(i, "glow-green", 900); });
+      } else if (wards.includes(fx.id)) {
+        const who = fx.ally ? [g.party.indexOf(fx.ally)] : fx.id === "taunt" ? [g.party.indexOf(fx.hero)] : g.party.map((h, i) => i);
+        for (const i of who) this.cardFx(i, fx.id === "protection" || fx.id === "sanctuary" ? "glow-blue" : "glow-gold", 900);
+      }
+    }
+  },
 
   // a guardian's name across the view, for a moment, as it rises
   titleCard(name, sub) {
@@ -9318,7 +9620,7 @@ CM.UI = class {
     el.classList.add("on");
     clearTimeout(this.cardTimer);
     this.cardTimer = setTimeout(() => el.classList.remove("on"), 2600);
-  }
+  },
 
   // a wash of colour over the view that fades (a spell's light, a trap's gas)
   tint(colour, ms = 260) {
@@ -9327,7 +9629,7 @@ CM.UI = class {
     clearTimeout(this.tintTimer);
     el.style.transition = "none"; el.style.background = colour; el.style.opacity = "1";
     this.tintTimer = setTimeout(() => { el.style.transition = `opacity ${ms}ms ease-out`; el.style.opacity = "0"; }, 40);
-  }
+  },
 
   // a hero's card jolts or glows for a moment
   cardFx(i, cls, ms = 700) {
@@ -9337,7 +9639,7 @@ CM.UI = class {
     void card.offsetWidth;                                               // (so the animation starts again)
     card.classList.add(cls);
     setTimeout(() => card.classList.remove(cls), ms);
-  }
+  },
 
   floatText(x, y, text, cls = "") {
     const el = document.createElement("div");
@@ -9346,8 +9648,110 @@ CM.UI = class {
     el.style.left = `${x}px`; el.style.top = `${y}px`;
     this.$("#floats").appendChild(el);
     setTimeout(() => el.remove(), 950);
-  }
+  },
+});
 
+// ---- 74-fight.js ----
+"use strict";
+// The fight: whose turn it is, what they'll do, at whom.
+Object.assign(CM.UI.prototype, {
+  // ---- the fight: whose turn it is, what they'll do, at whom ----
+  renderCombat() {
+    const g = this.game, box = this.$("#actions"), c = g.combat || {}, h = c.waiting;
+    box.classList.add("combat");
+    box.dataset.mode = "combat";
+    box.innerHTML = "";
+    const turn = document.createElement("div");
+    turn.className = "turn";
+    turn.innerHTML = h ? `Round ${c.round || 1} <small>-</small> ${this.esc(h.name)}'s turn` : `Round ${c.round || 1} <small>- the foes move</small>`;
+    box.appendChild(turn);
+    const menu = document.createElement("div");
+    menu.className = "menu";
+    const btn = (html, fn, disabled, cls) => {
+      const b = document.createElement("button");
+      b.innerHTML = html;
+      b.disabled = Boolean(disabled);
+      if (cls) b.className = cls;
+      b.addEventListener("click", fn);
+      menu.appendChild(b);
+      return b;
+    };
+    const cm = this.cmenu || { kind: "main" };
+    if (h && cm.kind === "main") {
+      btn("<kbd>F</kbd>Fight", () => g.act("fight", g.target));
+      btn("<kbd>C</kbd>Cast / Skill", () => this.combatMenu("cast"), !CM.abilitiesFor(h).length);
+      btn("<kbd>P</kbd>Item", () => this.combatMenu("item"));
+      btn("<kbd>D</kbd>Defend", () => g.act("defend"));
+      btn("<kbd>R</kbd>Run", () => g.act("run"));
+      btn(`<kbd>A</kbd>${c.auto ? "Stop auto" : "Auto"}`, () => g.autoFight(!c.auto), false, c.auto ? "on" : "");
+    } else if (h && cm.kind === "cast") {
+      CM.abilitiesFor(h).forEach((id, i) => {
+        const a = CM.ABILITIES[id], used = a.once && h.used && h.used[id], poor = h.mp < a.mp, est = g.spellEstimate(h, id);
+        const b = btn(`<kbd>${i + 1}</kbd>${a.name}<small>${a.mp ? a.mp + " MP - " : ""}${used ? "used this fight" : a.what}${est ? ` <i>(${est})</i>` : ""}</small>`, () => this.castPick(id), used || poor, "pick");
+        const ic = CM.art.spellIcon(id, 18, g.settings.look);
+        if (ic) { ic.className = "icon"; b.insertBefore(ic, b.firstChild.nextSibling); }
+      });
+      btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
+    } else if (h && cm.kind === "item") {
+      const rows = this.usableRows();
+      rows.forEach((row, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(g.bag[row].name)}<small>${g.describe(g.bag[row])}</small>`, () => this.itemPick(row), false, "pick"));
+      if (!rows.length) { const none = document.createElement("span"); none.className = "small"; none.textContent = "Nothing in the pack for a fight."; menu.appendChild(none); }
+      btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
+    } else if (h && cm.kind === "ally") {
+      g.party.forEach((p, i) => btn(`<kbd>${i + 1}</kbd>${this.esc(p.name)}<small>${p.hp <= 0 ? "fallen" : `${p.hp}/${p.max}`}</small>`,
+        () => this.allyPick(i), cm.fallen ? p.hp > 0 : p.hp <= 0, "pick"));
+      btn("<kbd>Esc</kbd>Back", () => this.combatMenu("main"));
+    }
+    box.appendChild(menu);
+    const targets = document.createElement("div");
+    targets.className = "targets";
+    g.living().forEach((m, i) => {
+      const b = document.createElement("button");
+      b.className = i === (g.target || 0) ? "chosen" : "";
+      const est = h ? g.strikeEstimate(h, m) : null;
+      const marks = [m.asleep > 0 ? `asleep ${m.asleep}` : "", m.held > 0 ? `held ${m.held}` : "", m.marked ? "marked" : "", m.blind > 0 ? `blinded ${m.blind}` : "", m.burning > 0 ? `burning ${m.burning}` : "",
+        m.chilled > 0 ? `chilled ${m.chilled}` : "", m.warded > 0 ? "warded" : ""].filter(Boolean);
+      const behind = m.row === "back" && g.living().some((f) => f !== m && f.row !== "back");
+      b.innerHTML = `${this.esc(m.name)}${behind ? " <small>(behind)</small>" : ""} <small>${Math.max(0, m.hp)}/${m.max}${marks.length ? " - " + marks.join(", ") : ""}</small>${m.intent ? `<i class="odds intent">about to: ${this.esc((m.intent.text || "").split("!")[0].split(",")[0].replace(/^The [A-Za-z- ]+ /, "")) || "something terrible"}</i>` : ""}${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
+      b.addEventListener("click", () => g.setTarget(i));
+      targets.appendChild(b);
+    });
+    box.appendChild(targets);
+  },
+
+  combatMenu(kind, data) { this.cmenu = Object.assign({ kind }, data || {}); this.renderCombat(); },
+  usableRows() { return this.game.bag.map((it, i) => (["heal", "greaterheal", "mana", "antidote", "revive", "bomb"].includes(it.kind) ? i : -1)).filter((i) => i >= 0); },
+
+  castPick(id) {
+    const g = this.game, a = CM.ABILITIES[id];
+    if (a.target === "ally" || a.target === "fallen") { this.combatMenu("ally", { id, fallen: a.target === "fallen" }); return; }
+    g.act("cast", a.target === "foe" ? { id, target: g.target } : { id });
+    this.refresh();
+  },
+
+  itemPick(row) { if (this.game.bag[row].kind === "bomb") { this.game.act("item", { row }); this.refresh(); return; } this.combatMenu("ally", { row, fallen: this.game.bag[row].kind === "revive" }); },
+
+  allyPick(i) {
+    const cm = this.cmenu || {};
+    if (cm.row !== undefined) this.game.act("item", { row: cm.row, who: i });
+    else this.game.act("cast", { id: cm.id, target: i });
+    this.refresh();
+  },
+
+  // a number key in a fight: the chosen foe, or a pick from the open list
+  pick(n) {
+    const g = this.game, cm = this.cmenu || { kind: "main" };
+    if (cm.kind === "main") { g.setTarget(n - 1); return true; }
+    const buttons = [...this.$("#actions .menu").querySelectorAll("button.pick")], b = buttons[n - 1];
+    if (b && !b.disabled) { b.click(); return true; }
+    return false;
+  },
+});
+
+// ---- 75-bag.js ----
+"use strict";
+// The bag and the merchant.
+Object.assign(CM.UI.prototype, {
   // ---- the bag and the merchant ----
   _bag() {
     const g = this.game;
@@ -9361,15 +9765,15 @@ CM.UI = class {
     this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
     this.$("#btn-sort").addEventListener("click", () => { g.sortBag(); this.bagRow = -1; this.fillBag(); });
     this.$("#btn-bag-done").addEventListener("click", () => g.closeBag());
-  }
+  },
 
-  note(text) { this.$("#bag-note").textContent = text || this.$("#bag-note").dataset.base; }
+  note(text) { this.$("#bag-note").textContent = text || this.$("#bag-note").dataset.base; },
 
   openBag() {
     this.bagRow = this.shopRow = -1;
     this.show("bag");
     this.fillBag();
-  }
+  },
 
   fillBag() {
     const g = this.game, shop = g.shopping;
@@ -9405,8 +9809,200 @@ CM.UI = class {
     const base = "Pick something from your pack, then who should equip or use it. A hero's sheet (1-4) takes things off." + (shop ? "  Pick from the merchant's wares (right) to Buy." : "");
     this.$("#bag-note").dataset.base = base;
     if (!this.$("#bag-note").textContent) this.$("#bag-note").textContent = base;
-  }
-};
+  },
+});
+
+// ---- 76-camp.js ----
+"use strict";
+// The camp's doors: the tavern, the smith, the alchemist, the vault, the waystones.
+Object.assign(CM.UI.prototype, {
+  // ---- the waystones ----
+  openWaystone() { this.renderWaystone(); this.openDialog("#dlg-waystone"); },
+  renderWaystone() {
+    const g = this.game, box = this.$("#waystone-list"), camps = g.camps || [];
+    box.innerHTML = "";
+    for (const n of camps) {
+      const row = document.createElement("div");
+      row.className = "recruit";
+      row.style.gridTemplateColumns = "1fr auto";
+      row.innerHTML = `<div><b>The camp below floor ${n}</b><small>${this.esc(CM.themeFor(n).name)}${g.floor && g.floor.number === n ? " - you are here" : ""}</small></div>`;
+      const b = document.createElement("button");
+      b.textContent = "Walk the old road";
+      b.disabled = Boolean(g.floor && g.floor.number === n);
+      b.addEventListener("click", () => { const note = g.waystone(n); if (note) this.$("#waystone-note").textContent = note; else this.closeDialogs(); this.refresh(); });
+      row.appendChild(b);
+      box.appendChild(row);
+    }
+    if (!camps.length) box.innerHTML = `<div class="small">No mark yet.</div>`;
+    this.$("#waystone-note").textContent = "";
+  },
+
+  // ---- the tavern ----
+  openTavern() {
+    this.renderTavern();
+    this.openDialog("#dlg-tavern");
+  },
+
+  renderTavern() {
+    const g = this.game, box = this.$("#recruits");
+    const fallen = g.party.map((h, i) => i).filter((i) => g.party[i].hp <= 0 || (g.party[i].status || {}).stone);
+    box.innerHTML = "";
+    g.tavern().forEach((r, i) => {
+      const div = document.createElement("div");
+      div.className = "recruit";
+      div.appendChild(this.portrait(r.cls, 40));
+      const text = document.createElement("div");
+      text.innerHTML = `<b>${this.esc(r.name)}</b> the ${r.cls}, level ${r.level} <small>${r.max} health${r.maxmp ? `, ${r.maxmp} magic` : ""}, attack ${r.atk}, defence ${r.df} - ${CM.STATS.map((s) => `${CM.STAT_NAMES[s].slice(0, 3)} ${r.stats[s]}`).join(" ")}</small>`;
+      div.appendChild(text);
+      const hire = document.createElement("div");
+      hire.className = "hire";
+      if (fallen.length <= 1) {
+        const b = document.createElement("button");
+        b.textContent = r.price ? `Hire, ${r.price} gold` : "Hire - owes you their life";
+        b.disabled = !fallen.length;
+        b.addEventListener("click", () => { const note = g.hire(i); this.$("#tavern-note").textContent = note || `${r.name} comes along.`; this.renderTavern(); this.refresh(); });
+        hire.appendChild(b);
+      } else {
+        for (const idx of fallen) {
+          const b = document.createElement("button");
+          b.textContent = r.price ? `For ${g.party[idx].name}, ${r.price} gold` : `For ${g.party[idx].name} - owes you their life`;
+          b.addEventListener("click", () => { const note = g.hire(i, idx); this.$("#tavern-note").textContent = note || `${r.name} comes along.`; this.renderTavern(); this.refresh(); });
+          hire.appendChild(b);
+        }
+      }
+      div.appendChild(hire);
+      box.appendChild(div);
+    });
+    if (!box.children.length) box.innerHTML = "<div class='small'>The benches are empty tonight.</div>";
+    this.$("#tavern-note").textContent = fallen.length ? "" : "The party is whole; the recruits drink to that.";
+  },
+
+  // ---- the camp's smith and vault ----
+  openSmith() { this.renderSmith(); this.openDialog("#dlg-smith"); },
+  renderSmith() {
+    const g = this.game, box = this.$("#smith-list");
+    const diamonds = g.bag.filter((i) => i.kind === "gem" && i.gem === "diamond").length;
+    const gems = g.bag.filter((i) => i.kind === "gem" && CM.GEMS[i.gem].element).map((i) => i.name), anyGem = g.bag.some((i) => i.kind === "gem");
+    const scrap = g.bag.filter((i) => i.kind === "scrap").length;
+    this.$("#smith-gems").textContent = `In the pack: ${diamonds ? CM.plural(diamonds, "diamond") : "no diamond"}${gems.length ? ", " + gems.join(", ") : ""}${scrap ? `, ${CM.plural(scrap, "piece")} of scrap` : ""}. Gold: ${g.gold.toLocaleString()}.`;
+    box.innerHTML = "";
+    g.party.forEach((h, hi) => {
+      for (const slot of ["weapon", "armor", "offhand", "helm"]) {
+        const it = h[slot];
+        if (!it) continue;
+        const row = document.createElement("div");
+        row.className = "recruit";
+        row.appendChild(this.icon(it, 22));
+        const text = document.createElement("div");
+        const n = (it.props || {}).enchant || 0;
+        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(h.name)}'s ${CM.SLOT_NAMES[slot].toLowerCase()} - ${this.esc(CM.itemLabel(it))}${n ? ` - the smith's work: +${n}` : ""}</small>`;
+        row.appendChild(text);
+        const act = document.createElement("div");
+        act.className = "hire";
+        const b = document.createElement("button");
+        b.textContent = n >= CM.SMITH.most ? "Worked to the limit" : `+1 for ${CM.SMITH.enchant * (n + 1)} gold and a diamond`;
+        b.disabled = n >= CM.SMITH.most || (!diamonds && scrap < 5) || g.gold < CM.SMITH.enchant * (n + 1) || it.unknown;
+        b.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("enchant", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
+        act.appendChild(b);
+        if (slot === "weapon") {
+          const s = document.createElement("button");
+          s.textContent = `Set a gem for ${CM.SMITH.gem} gold`;
+          s.disabled = !gems.length || g.gold < CM.SMITH.gem || it.unknown;
+          s.title = "The first ruby, sapphire or sunstone in the pack goes in: fire, frost or holiness";
+          s.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("gem", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
+          act.appendChild(s);
+        }
+        if (!(it.props && (it.props.relic || it.props.unique))) {
+          const r = document.createElement("button");
+          r.textContent = "Rework the suffix: a gem and 100 gold";
+          r.disabled = !anyGem || g.gold < 100 || it.unknown;
+          r.title = "The suffix is struck off and another worked in, from the dice";
+          r.addEventListener("click", () => { this.$("#smith-note").textContent = g.smith("reroll", hi, slot) || "Done."; this.renderSmith(); this.refresh(); });
+          act.appendChild(r);
+        }
+        row.appendChild(act);
+        box.appendChild(row);
+      }
+    });
+    const scrapRows = g.bag.map((it, i) => [it, i]).filter(([it]) => ["weapon", "armor", "shield", "helm"].includes(it.kind) && !(it.props && (it.props.relic || it.props.unique)));
+    if (scrapRows.length) {
+      const title = document.createElement("div");
+      title.className = "list-title";
+      title.textContent = `Into the fire for scrap (${g.bag.filter((i) => i.kind === "scrap").length} in the pack; five stand in for a diamond)`;
+      box.appendChild(title);
+      for (const [it, i] of scrapRows) {
+        const row = document.createElement("div");
+        row.className = "recruit";
+        row.appendChild(this.icon(it, 22));
+        const text = document.createElement("div");
+        text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`;
+        row.appendChild(text);
+        const act = document.createElement("div");
+        act.className = "hire";
+        const b = document.createElement("button");
+        b.textContent = "Salvage";
+        b.addEventListener("click", () => { this.$("#smith-note").textContent = g.salvage(i) || "Done."; this.renderSmith(); this.refresh(); });
+        act.appendChild(b);
+        row.appendChild(act);
+        box.appendChild(row);
+      }
+    }
+  },
+  openAlchemist() { this.renderAlchemist(); this.openDialog("#dlg-alchemist"); },
+  renderAlchemist() {
+    const g = this.game, box = this.$("#alchemist-list");
+    const have = g.bag.filter((i) => i.kind === "ingredient").map((i) => i.name);
+    this.$("#alchemist-have").textContent = `In the pack: ${have.length ? have.join(", ") : "nothing she wants yet"}. Gold: ${g.gold.toLocaleString()}.`;
+    box.innerHTML = "";
+    for (const [id, r] of Object.entries(CM.RECIPES)) {
+      const row = document.createElement("div");
+      row.className = "recruit";
+      row.style.gridTemplateColumns = "1fr auto";
+      const lacks = g.recipeLacks(id);
+      row.innerHTML = `<div><b>${this.esc(r.name)}</b><small>${this.esc(r.what)}${lacks ? ` <i>- ${this.esc(lacks)}</i>` : ""}</small></div>`;
+      const b = document.createElement("button");
+      b.textContent = `Brew, ${r.gold} gold`;
+      b.disabled = Boolean(lacks);
+      b.addEventListener("click", () => { this.$("#alchemist-note").textContent = g.brew(id) || "Done."; this.renderAlchemist(); this.refresh(); });
+      row.appendChild(b);
+      box.appendChild(row);
+    }
+  },
+  openVault() { this.renderVault(); this.openDialog("#dlg-vault"); },
+  renderVault() {
+    const g = this.game, held = this.$("#vault-held"), list = this.$("#vault-list");
+    held.innerHTML = "";
+    if (g.vault) {
+      held.appendChild(this.icon(g.vault, 22));
+      const text = document.createElement("span");
+      text.innerHTML = `<b>${this.esc(g.vault.name)}</b> <small>${this.esc(CM.itemLabel(g.vault))}</small> `;
+      held.appendChild(text);
+      const b = document.createElement("button");
+      b.textContent = "Take it";
+      b.addEventListener("click", () => { this.$("#vault-note").textContent = g.takeHeirloom() || "Taken."; this.renderVault(); this.refresh(); });
+      held.appendChild(b);
+    } else held.innerHTML = `<span class="small">The vault is empty. Leave something here, and the next party to come this way will find it.</span>`;
+    list.innerHTML = "";
+    g.bag.forEach((it, i) => {
+      if (["key", "bones", "rope", "torch"].includes(it.kind)) return;
+      const row = document.createElement("div");
+      row.className = "recruit";
+      row.appendChild(this.icon(it, 22));
+      const text = document.createElement("div");
+      text.innerHTML = `<b>${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>`;
+      row.appendChild(text);
+      const act = document.createElement("div");
+      act.className = "hire";
+      const b = document.createElement("button");
+      b.textContent = g.vault ? "Leave it (swap)" : "Leave it";
+      b.addEventListener("click", () => { this.$("#vault-note").textContent = g.leaveHeirloom(i) || "Left for those who come after."; this.renderVault(); this.refresh(); });
+      act.appendChild(b);
+      row.appendChild(act);
+      list.appendChild(row);
+    });
+    if (!list.children.length) list.innerHTML = `<div class="small">Nothing in the pack worth the keeping.</div>`;
+  },
+});
 
 // ---- 80-main.js ----
 "use strict";

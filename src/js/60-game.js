@@ -75,6 +75,14 @@ CM.Game = class {
 
   setMode(mode) { if (mode !== "explore") this.travel = null; this.mode = mode; this.emit("mode", mode); this.emit("change"); }
 
+  // ---- the log: every choice the player makes, as a line, so a run can be played again from its seed (CM.replayRun) ----
+  logAct(name, ...args) { if (this.replaying) return; this.runLog = this.runLog || []; this.runLog.push(args.length ? [name, ...args] : [name]); }
+  replaySpec() { return { seed: this.seed, gen: this.gen || 1, party: this.startParty || null, kit: this.kit || "pauper", difficulty: this.difficulty || "fair", mutators: this.startMutators || this.mutators || [], mode: this.endless ? "endless" : "dungeon", log: (this.runLog || []).slice() }; }
+  // down the stairs by hand (the simulator's bot, when it has lost its way): logged, so a replay follows
+  warp(number) { this.logAct("warp", number); this.enterFloor(number, "down"); }
+  // what a tally counts besides steps and kills: gold by where it went, and how often each spell or skill was used
+  spend(where, gold) { this.tally.spent = this.tally.spent || {}; this.tally.spent[where] = (this.tally.spent[where] || 0) + gold; }
+
   saveSettings() { CM.store.set("settings", this.settings); }
 
   // ---- saving ----
@@ -96,7 +104,7 @@ CM.Game = class {
 
   // a floor made from the seed, and remembered as it was fresh (so the save can keep only what changes)
   freshFloor(number) {
-    const fl = CM.makeFloor(number, this.seed);
+    const fl = CM.makeFloor(number, this.seed, this.gen || CM.GEN);
     this.bases[number] = CM.snapshot(fl);
     this.floors[number] = fl;
     return fl;
@@ -107,7 +115,7 @@ CM.Game = class {
     if (this.floors[number]) return this.floors[number];
     const delta = this.deltas[number];
     if (!delta) return this.freshFloor(number);
-    const r = CM.restoreFloor(delta, this.seed);
+    const r = CM.restoreFloor(delta, this.seed, this.gen || 1);
     this.floors[number] = r.floor; this.bases[number] = r.base;
     if (r.drifted) this.say(`(The dungeon has shifted a little since this run was saved: floor ${number} may not be quite as you left it.)`);
     return r.floor;
@@ -120,7 +128,7 @@ CM.Game = class {
   floorDeltas() {
     const out = {};
     for (const [n, fl] of Object.entries(this.floors)) {
-      const base = this.bases[n] || (this.bases[n] = CM.snapshot(CM.makeFloor(Number(n), this.seed)));
+      const base = this.bases[n] || (this.bases[n] = CM.snapshot(CM.makeFloor(Number(n), this.seed, this.gen || 1)));
       if (fl === this.floor || !this.deltas[n]) this.deltas[n] = CM.floorDelta(fl, base);
       out[n] = this.deltas[n];
     }
@@ -130,11 +138,12 @@ CM.Game = class {
 
   saveRun() {
     if (!["explore", "camp"].includes(this.mode)) return;
-    const data = { schema: CM.SCHEMA, gen: CM.GEN, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
+    const data = { schema: CM.SCHEMA, gen: this.gen || 1, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
       tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
-      camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [] };
+      camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
+      startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []) };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -152,6 +161,7 @@ CM.Game = class {
     const d = CM.migrateRun(this.lastRun);
     if (!this.canContinue()) return false;
     this.seed = d.seed || CM.randomSeed();
+    this.gen = d.gen || 1;                                               // (the generator this run began with: its floors stay its floors)
     this.party = d.party.map(CM.upgradeHero); this.bag = d.bag || []; this.gold = d.gold || 0;
     this.floors = {}; this.bases = {}; this.deltas = {};
     for (const delta of Object.values(d.floors || {})) this.deltas[delta.n] = delta;   // (each floor is made again when the party goes back to it)
@@ -174,6 +184,7 @@ CM.Game = class {
     this.crowned = Boolean(d.crowned); this.bottom = false; this.endless = Boolean(d.endless); this.deepened = d.deepened || [];
     this.camps = d.camps || []; this.travel = null;
     this.pairFights = d.pairFights || {}; this.bonds = d.bonds || []; this.hazardsMet = d.hazardsMet || []; this.remainsFound = d.remainsFound || [];
+    this.startParty = d.startParty || null; this.startMutators = d.startMutators || []; this.runLog = CM.unpackLog(d.log || []);
     this.applyBonds();
     this.messages = [];
     this.setMode(d.mode === "camp" ? "camp" : "explore");
@@ -186,6 +197,7 @@ CM.Game = class {
   newGame(seed, chosen, kit, difficulty, mutators, mode) {               // chosen: the party made on the creation screen (or none: the classic four); kit: what's been earned; mode: "endless" for no bottom
     this.seed = (seed || "").trim() || CM.randomSeed();
     this.rnd = new CM.Random(CM.hashSeed(`${this.seed}:dice`));          // the run's dice: the same seed, the same fights, given the same choices
+    this.gen = CM.GEN;
     this.bases = {}; this.deltas = {}; this.saveWarned = false;
     this.party = CM.newParty(chosen);
     this.steps = 0;
@@ -210,6 +222,7 @@ CM.Game = class {
     this.crowned = false; this.bottom = false; this.endless = mode === "endless"; this.deepened = [];
     this.camps = []; this.travel = null; this.pairFights = {}; this.bonds = []; this.hazardsMet = []; this.remainsFound = [];
     this.startParty = this.party.map((h) => ({ cls: h.cls, name: h.name, stats: Object.assign({}, h.stats), row: h.row }));
+    this.startMutators = this.mutators.slice(); this.runLog = [];
     if (this.has("lean")) { this.bag = this.bag.filter((i) => !["heal", "mana", "revive"].includes(i.kind)); this.gold += 100; }
     if (this.kit === "veteran") { this.gold += 60; this.bag.push(CM.lantern()); }
     else if (this.kit === "delver") this.bag.push(CM.scroll("mapping"), CM.scroll("mapping"), CM.torch(), CM.torch(), CM.torch(), CM.antidote(), CM.antidote());
@@ -276,6 +289,7 @@ CM.Game = class {
   }
 
   climbUp() {
+    this.logAct("climbUp");
     const n = this.floor.number;
     if (n === 1) { this.say("The way out. Not without the Lich King's crown."); return; }
     this.sound("stairs");

@@ -110,6 +110,7 @@ Object.assign(CM.Game.prototype, {
 
   // someone to talk to, where the party stands (Space)
   talk(thing, k) {
+    if (!this.inUse) this.logAct("talk", k);
     if (thing.type === "ghost") this.talkGhost(thing, k);
     else if (thing.type === "hermit") this.talkHermit(thing);
     else if (thing.type === "adventurer") this.freeAdventurer(thing, k);
@@ -208,6 +209,7 @@ Object.assign(CM.Game.prototype, {
   answerRiddle(k, answer) {
     const f = this.floor.features[k], r = f && CM.RIDDLES[f.riddle];
     if (!r || f.open) return false;
+    this.logAct("answerRiddle", k, answer);
     if (answer === r.a) {
       f.open = true;
       f.locked = false;
@@ -249,6 +251,7 @@ Object.assign(CM.Game.prototype, {
   // down a pit on a rope: no fall, and the rope stays tied to climb back by
   ropeDown(k) {
     const fl = this.floor, [x, y] = k.split(",").map(Number), n = fl.number;
+    if (!this.inUse) this.logAct("ropeDown", k);
     this.sound("stairs");
     this.enterFloor(n + 1, "fall", [x, y]);
     const below = this.floor;
@@ -261,6 +264,7 @@ Object.assign(CM.Game.prototype, {
   // ---- growth and craft: a path chosen, a tome read, the smith's work, the vault ----
   choosePath(hero, id) {
     if (!CM.needsPath(hero) || !CM.PATHS[hero.cls][id]) return false;
+    this.logAct("choosePath", this.party.indexOf(hero), id);
     hero.path = id;
     const ratio = hero.hp / hero.max, mratio = hero.maxmp ? hero.mp / hero.maxmp : 0;
     CM.recompute(hero);
@@ -274,7 +278,7 @@ Object.assign(CM.Game.prototype, {
     return true;
   },
 
-  readTome(row, hero) {                                                 // "" when learned, else why not
+  readTome(row, hero) {                                                 // "" when learned, else why not (through give: logged there)
     const item = this.bag[row], id = item.spell;
     if (!CM.isCaster(hero)) return `${hero.name} turns the pages and can't make head or tail of them: a tome is for a caster.`;
     if (CM.abilitiesFor(hero).includes(id)) return `${hero.name} knows ${CM.ABILITIES[id].name} already.`;
@@ -329,6 +333,7 @@ Object.assign(CM.Game.prototype, {
   // ---- a level earned is a boon chosen ----
   offerBoons(hero) {
     if (hero.offer && hero.offer.length === 3) return hero.offer;
+    this.logAct("offerBoons", this.party.indexOf(hero));
     const have = hero.boons || [], c = CM.CLASSES[hero.cls] || CM.CLASSES.Knight;
     const own = Object.keys(CM.BOONS).find((id) => CM.BOONS[id].stat === c.key);       // the class's own stat is always on offer
     const pool = Object.keys(CM.BOONS).filter((id) => id !== own && (CM.BOONS[id].stat || !have.includes(id)));
@@ -339,6 +344,7 @@ Object.assign(CM.Game.prototype, {
 
   chooseBoon(hero, id) {
     if (!hero.pending || !(hero.offer || []).includes(id)) return false;
+    this.logAct("chooseBoon", this.party.indexOf(hero), id);
     const b = CM.BOONS[id];
     if (b.stat) hero.stats[b.stat] = Math.min(25, hero.stats[b.stat] + 2);
     else hero.boons.push(id);
@@ -357,6 +363,7 @@ Object.assign(CM.Game.prototype, {
 
   setRow(hero, row) {
     if (this.mode === "combat" || !["front", "back"].includes(row)) return false;
+    this.logAct("setRow", this.party.indexOf(hero), row);
     hero.row = row;
     this.dirty = true;
     this.emit("change");

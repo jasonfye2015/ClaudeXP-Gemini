@@ -203,6 +203,8 @@ Object.assign(CM.Game.prototype, {
   act(action, arg) {
     const c = this.combat, h = c && c.waiting;
     if (!h || this.mode !== "combat") return false;
+    if (!this.inAuto) this.logAct("act", action, arg && typeof arg === "object" ? (arg.hp !== undefined ? { foe: this.living().indexOf(arg) } : arg) : arg === undefined ? null : arg);
+    if (arg && typeof arg === "object" && arg.foe !== undefined && arg.hp === undefined) arg = this.living()[arg.foe] || null;   // (a foe, by its place among the living: how the log keeps it)
     if (action === "fight") {
       const t = this.foeAt(arg);
       if (!t) return false;
@@ -777,6 +779,8 @@ Object.assign(CM.Game.prototype, {
 
   // a spell or skill, if the hero knows it, can afford it and has someone to aim it at
   useAbility(h, id, target) {
+    this.tally.abilities = this.tally.abilities || {};
+    if (id) this.tally.abilities[id] = (this.tally.abilities[id] || 0) + 1;
     if (!id) {
       const t = this.foeAt(target);
       if (!t) return false;
@@ -1017,6 +1021,7 @@ Object.assign(CM.Game.prototype, {
 
   // between fights: a healing spell, a cure, Light - from whoever knows it
   castOutside(heroIndex, id, target) {
+    this.logAct("castOutside", heroIndex, id, target === undefined ? null : target);
     const h = this.party[heroIndex];
     if (!h || h.hp <= 0 || !this.canAct(h) || this.mode === "combat") return false;
     const ok = this.useAbility(h, id, target);
@@ -1092,6 +1097,7 @@ Object.assign(CM.Game.prototype, {
 Object.assign(CM.Game.prototype, {
   autoFight(on = true) {
     if (!this.combat || this.mode !== "combat") return false;
+    this.logAct("autoFight", on ? 1 : 0);
     this.combat.auto = on;
     if (on) this.say("The party fights on by itself. (Any key takes the reins back.)");
     this.emit("change");
@@ -1101,6 +1107,12 @@ Object.assign(CM.Game.prototype, {
   autoTurn() {
     const c = this.combat, h = c && c.waiting;
     if (!h || this.mode !== "combat") return false;
+    this.logAct("autoTurn");
+    this.inAuto = true;
+    try { return this.autoTurn2(); } finally { this.inAuto = false; }
+  },
+  autoTurn2() {
+    const c = this.combat, h = c && c.waiting;
     if (c.auto && this.alive().some((p) => p.hp < p.max * 0.5)) { c.auto = false; this.say("Someone is badly hurt: Auto stops, and waits for orders."); this.emit("change"); return false; }
     const hurt = this.alive().filter((p) => p.hp < p.max / 3), foes = this.living();
     const can = CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].mp <= h.mp && !(CM.ABILITIES[id].once && h.used && h.used[id]));

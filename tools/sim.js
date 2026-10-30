@@ -29,9 +29,10 @@ function simulate(seed, difficulty) {
   const fl = game.floor ? game.floor.number : 0;
   return { seed, difficulty, floor: fl, died: game.mode === "title" && !game.bottom && !(game.crowned && fl === 20 && game.mode === "title"), crowned: Boolean(game.crowned), bottom: Boolean(game.bottom),
     reached: game.mode === "explore", fights: game.tally.fights, fled: game.tally.fled, steps: game.tally.steps, gold: game.gold, guardians: (game.tally.guardians || []).slice(),
-    levels: game.party.map((h) => h.level), byCamp, stuck: r.stuck, notes: r.log, ms: Date.now() - t0 };
+    levels: game.party.map((h) => h.level), byCamp, stuck: r.stuck, notes: r.log, ms: Date.now() - t0, spent: game.tally.spent || {}, abilities: game.tally.abilities || {}, logLines: (game.runLog || []).length };
 }
 
+function CM_ABILITIES() { return load().ABILITIES; }
 const seeds = [];
 for (let i = 0; i < SEEDS; i++) seeds.push(`sim-${i + 1}`);
 const results = [];
@@ -58,6 +59,12 @@ for (const d of DIFFS) {
   const g = {};
   for (const r of rs) for (const id of r.guardians) g[id] = (g[id] || 0) + 1;
   console.log("  guardians slain: " + (Object.entries(g).map(([id, n]) => `${id} ${n}`).join(", ") || "none"));
+  const spent = {}, used = {};
+  for (const r of rs) { for (const [k, v] of Object.entries(r.spent)) spent[k] = (spent[k] || 0) + v; for (const [k, v] of Object.entries(r.abilities)) used[k] = (used[k] || 0) + v; }
+  const total = Object.values(spent).reduce((a, b) => a + b, 0) || 1;
+  console.log("  where the gold went: " + Object.entries(spent).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${Math.round(100 * v / total)}%`).join(", "));
+  const never = Object.keys(CM_ABILITIES()).filter((id) => !used[id]);
+  console.log("  spells and skills never used by the bot: " + (never.join(", ") || "none") + "; most used: " + Object.entries(used).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k} ${v}`).join(", "));
   const stuck = rs.filter((r) => r.stuck);
   if (stuck.length) console.log(`  the bot got stuck ${stuck.reduce((a, r) => a + r.stuck, 0)} times (${stuck.slice(0, 3).map((r) => r.seed + ": " + r.notes[0]).join("; ")})`);
 }

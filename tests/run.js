@@ -753,6 +753,60 @@ test("around the game: run codes, the week's seed and party, the new mutators, t
   assert.ok(Array.isArray(exp.fallen) && exp.fallen.length === 1);
 });
 
+test("generator 1 is frozen: twenty-eight seeds' fingerprints, and generator 2 still makes the same floors", () => {
+  const CM = load(), fx = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "gen1.json"), "utf8"));
+  let n = 0;
+  for (const [seed, floors] of Object.entries(fx)) for (const [k, print] of Object.entries(floors)) {
+    if (n++ % 7) continue;                                               // (a fifth of them: the whole set takes a minute)
+    assert.strictEqual(CM.floorPrint(CM.makeFloor(Number(k), seed, 1)), print, `gen 1, ${seed} floor ${k}`);
+    assert.strictEqual(CM.floorPrint(CM.makeFloor(Number(k), seed, 2)), print, `gen 2 has not grown yet: ${seed} floor ${k}`);
+  }
+  assert.strictEqual(CM.GEN, 2);
+  assert.ok(typeof CM.generators[1] === "function" && typeof CM.generators[2] === "function" && typeof CM.planFloor === "function");
+  const plan = CM.planFloor(9, "plan", new CM.Random(1), null, null);
+  assert.ok(Array.isArray(plan.pieces) && plan.roomTries === 23);
+});
+
+test("a run keeps the generator it began with; a v2.0 save is a generator-1 run", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("gen-1");
+  assert.strictEqual(game.gen, 2);
+  game.saveRun();
+  assert.strictEqual(JSON.parse(CM.storage.getItem("claudemagic.run")).gen, 2);
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game();
+  g2.continueRun();
+  assert.strictEqual(g2.gen, 2);
+  const CM3 = load();
+  CM3.storage.setItem("claudemagic.run", fs.readFileSync(path.join(__dirname, "fixtures", "run-v1.0.json"), "utf8"));
+  const g3 = new CM3.Game(); g3.continueRun();
+  assert.strictEqual(g3.gen, 1);
+});
+
+test("the log: a bot's run, played again from its seed and its log, comes out the same", () => {
+  const CM = load(), game = new CM.Game();
+  game.newGame("replay-1", fixedParty(CM));
+  playRun(CM, game, { maxFloor: 5 });
+  const spec = game.replaySpec();
+  assert.ok(spec.log.length > 50, "the log has the run in it: " + spec.log.length);
+  assert.ok(spec.party && spec.party.length === 4);
+  const again = CM.replayRun(spec);
+  assert.strictEqual(again.floor.number, game.floor.number);
+  same(again.floor.pos, game.floor.pos);
+  assert.strictEqual(again.gold, game.gold);
+  same(again.party, game.party);
+  assert.strictEqual(again.tally.fights, game.tally.fights);
+  assert.strictEqual(again.messages.slice(-3).join("|"), game.messages.slice(-3).join("|"));
+  const half = CM.replayRun(spec, Math.floor(spec.log.length / 2));
+  assert.ok(half.tally.steps <= game.tally.steps && half.mode !== "title");
+  game.saveRun();
+  const CM2 = load({ storage: CM.storage }), g2 = new CM2.Game();
+  g2.continueRun();
+  assert.strictEqual(g2.runLog.length, spec.log.length, "the log is saved with the run");
+  const mage = game.party.find((h) => h.cls === "Mage"); mage.mp = 20;
+  game.castOutside(game.party.indexOf(mage), "light", null);
+  assert.ok(game.tally.abilities && game.tally.abilities.light === 1, "the tally counts the spells used");
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

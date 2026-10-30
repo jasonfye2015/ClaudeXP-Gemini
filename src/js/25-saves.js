@@ -8,7 +8,7 @@
 // gems, the riddles and the plates do), never from the floor's own random, so the floors already laid out stay as
 // they were. CM.GEN says which generator wrote a save; a floor whose fingerprint has changed is still loaded, with
 // a word in the log.
-CM.GEN = 1;
+CM.GEN = 2;                                         // the generator a new run gets (CM.generators); a run keeps the one it began with
 CM.SCHEMA = 2;                                      // the run's save format (1: whole floors, before v1.1)
 
 // the parts of a floor that never change once it is made (everything else is diffed against the fresh floor)
@@ -61,8 +61,8 @@ CM.floorDelta = function (fl, base) {
 };
 
 // the floor again, from the seed and the changes; returns {floor, base, drifted}
-CM.restoreFloor = function (d, seed) {
-  const fl = CM.makeFloor(d.n, seed), base = CM.snapshot(fl);
+CM.restoreFloor = function (d, seed, gen) {
+  const fl = CM.makeFloor(d.n, seed, gen || 1), base = CM.snapshot(fl);
   const drifted = d.fp !== undefined && d.fp !== base.fp;
   for (const part of ["things", "features"]) for (const [k, v] of Object.entries(d[part] || {})) { if (v === null) delete fl[part][k]; else fl[part][k] = v; }
   for (const [x, y, v] of d.grid || []) if (fl.grid[y] && x < fl.grid[y].length) fl.grid[y][x] = v;
@@ -85,10 +85,10 @@ CM.MIGRATIONS = {
       if (!fl || !fl.grid) continue;
       CM.upgradeFloor(fl);
       for (const t of Object.values(fl.things)) if (t.group) t.group.forEach(CM.upgradeMonster);
-      floors[fl.number] = CM.floorDelta(fl, CM.snapshot(CM.makeFloor(fl.number, seed)));
+      floors[fl.number] = CM.floorDelta(fl, CM.snapshot(CM.makeFloor(fl.number, seed, 1)));
     }
     data.floors = floors;
-    data.gen = CM.GEN;
+    data.gen = 1;
     return data;
   },
 };
@@ -105,4 +105,70 @@ CM.store.used = function () {
   let n = 0;
   try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("claudemagic.")) n += (k.length + (localStorage.getItem(k) || "").length) * 2; } } catch (e) { /* no storage */ }
   return n;
+};
+
+// the log, packed for the save: the common lines are one character each (a step, a turn, a tick), runs of the same
+// character are counted, and anything else is JSON between bars
+const SHORT = { "move,0": "f", "move,2": "b", "move,1": "r", "move,3": "l", "turn,1": ">", "turn,-1": "<", tick: ".", use: "u", travelStep: "s", autoTurn: "a", stopTravel: "x", closeBag: "c" };
+const LONG = Object.fromEntries(Object.entries(SHORT).map(([k, v]) => [v, k.split(",").map((x, i) => (i ? Number(x) : x))]));
+CM.packLog = function (log) {
+  let out = "", last = "", run = 0;
+  const flush = () => { if (run) out += run > 2 ? `${run}${last}` : last.repeat(run); run = 0; last = ""; };
+  for (const line of log || []) {
+    const c = SHORT[line.join(",")];
+    if (c) { if (c === last) run++; else { flush(); last = c; run = 1; } }
+    else { flush(); out += "|" + JSON.stringify(line) + "|"; }
+  }
+  flush();
+  return out;
+};
+CM.unpackLog = function (text) {
+  if (Array.isArray(text)) return text;
+  const out = [];
+  let i = 0, n = 0;
+  while (i < (text || "").length) {
+    const ch = text[i];
+    if (ch === "|") { const j = text.indexOf("|", i + 1); out.push(JSON.parse(text.slice(i + 1, j))); i = j + 1; n = 0; }
+    else if (ch >= "0" && ch <= "9") { n = n * 10 + Number(ch); i++; }
+    else { const line = LONG[ch]; for (let k = 0; k < Math.max(1, n); k++) out.push(line.slice()); n = 0; i++; }
+  }
+  return out;
+};
+
+// ---- a run played again from its seed and its log: the same floors, the same dice, the same choices ----
+// spec: {seed, gen, party, kit, difficulty, mutators, mode, log} (game.replaySpec()). Returns the game at the log's
+// end. `upTo` stops after that many lines (the viewer scrubs with it).
+CM.replayRun = function (spec, upTo) {
+  const game = new CM.Game();
+  game.replaying = 1;                                                  // (nothing is logged while it plays itself back)
+  const gen = CM.GEN;
+  CM.GEN = spec.gen || 1;
+  try { game.newGame(spec.seed, spec.party || null, spec.kit, spec.difficulty, spec.mutators, spec.mode); } finally { CM.GEN = gen; }
+  game.gen = spec.gen || 1;
+  const lines = upTo === undefined ? spec.log : spec.log.slice(0, upTo);
+  for (const line of lines) {
+    const [name, ...args] = line;
+    switch (name) {
+      case "tick": game.wanderMonsters(); break;
+      case "act": game.act(args[0], args[1] === null ? undefined : args[1]); break;
+      case "travelStep": game.travelStep(); break;
+      case "offerBoons": game.offerBoons(game.party[args[0]]); break;
+      case "chooseBoon": game.chooseBoon(game.party[args[0]], args[1]); break;
+      case "choosePath": game.choosePath(game.party[args[0]], args[1]); break;
+      case "setRow": game.setRow(game.party[args[0]], args[1]); break;
+      case "equip": game.equip(game.party[args[0]], args[1]); break;
+      case "talk": { const t = game.floor.things[args[0]]; if (t) game.talk(t, args[0]); break; }
+      case "drink": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; if (f) game.drink(f); break; }
+      case "kneel": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; if (f) game.kneel(f); break; }
+      case "openBag": game.openBag(Boolean(args[0])); break;
+      case "autoFight": game.autoFight(Boolean(args[0])); break;
+      case "travelTo": game.travelTo(args[0], args[1], Boolean(args[2])); break;
+      case "hire": game.hire(args[0], args[1] === null ? undefined : args[1]); break;
+      case "castOutside": game.castOutside(args[0], args[1], args[2] === null ? undefined : args[2]); break;
+      default: if (typeof game[name] === "function") game[name](...args); break;
+    }
+    if (game.mode === "title") break;
+  }
+  game.replaying = 0;
+  return game;
 };

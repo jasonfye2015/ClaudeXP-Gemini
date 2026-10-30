@@ -29,7 +29,7 @@ simulator run. Phase 0 is again the one that pays for the rest.
 
 ---
 
-## Phase 0 - A generator that can grow (do first)
+## Phase 0 - A generator that can grow (do first) - DONE (v2.1)
 
 **Goal:** the floors of new runs can change again, and old runs still play out on the floors they had.
 

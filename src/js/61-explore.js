@@ -7,6 +7,7 @@ Object.assign(CM.Game.prototype, {
   // ---- moving ----
   turn(way) {
     if (this.mode !== "explore") return false;
+    this.logAct("turn", way);
     this.floor.facing = (this.floor.facing + way + 4) % 4;
     this.look();
     this.emit("turned", this.floor.facing);
@@ -18,6 +19,7 @@ Object.assign(CM.Game.prototype, {
 
   move(rel) {
     if (this.mode !== "explore") return false;
+    this.logAct("move", rel);
     const fl = this.floor;
     const [dx, dy] = CM.DIRS[(fl.facing + rel) % 4];
     const x = fl.pos[0] + dx, y = fl.pos[1] + dy, k = keyOf(x, y);
@@ -125,12 +127,12 @@ Object.assign(CM.Game.prototype, {
   // what a square does when the party steps onto it
   arrive(f, k) {
     const fl = this.floor;
-    if (f.type === "pit" && f.roped && fl.number < CM.LAST_FLOOR) { this.say("You climb down the rope you left, hand over hand."); this.ropeDown(k); return; }
+    if (f.type === "pit" && f.roped && fl.number < CM.LAST_FLOOR) { this.say("You climb down the rope you left, hand over hand."); this.inUse = true; this.ropeDown(k); this.inUse = false; return; }
     if (f.type === "pit" && this.hasItem("rope") >= 0 && fl.number < CM.LAST_FLOOR) {
       this.bag.splice(this.hasItem("rope"), 1);
       f.roped = true;
       this.say("You make the rope fast and lower the party down the pit, slow and safe.");
-      this.ropeDown(k);
+      this.inUse = true; this.ropeDown(k); this.inUse = false;
       return;
     }
     if (f.type === "pit" || f.type === "trapdoor") {
@@ -283,6 +285,7 @@ Object.assign(CM.Game.prototype, {
 
   use() {
     if (this.mode !== "explore") return;
+    this.logAct("use");
     const fl = this.floor, [x, y] = fl.pos, k = keyOf(x, y), here = fl.features[k], thing = fl.things[k];
     const [dx, dy] = CM.DIRS[fl.facing], ak = keyOf(x + dx, y + dy), ahead = fl.features[ak];
     if (here && here.type === "lever" && here.face === fl.facing) {
@@ -305,7 +308,7 @@ Object.assign(CM.Game.prototype, {
       this.dirty = true;
       return;
     }
-    if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.talk(thing, k); return; }
+    if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.inUse = true; this.talk(thing, k); this.inUse = false; return; }
     if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
     if (thing && thing.type === "strongbox") { this.openStrongbox(thing, k); return; }
     if (thing && thing.type === "peddler") { this.peddle(thing, k); return; }
@@ -364,9 +367,9 @@ Object.assign(CM.Game.prototype, {
       this.saveRun();
       this.emit("change");
     } else if (here && here.type === "fountain") {
-      this.drink(here);
+      this.inUse = true; this.drink(here); this.inUse = false;
     } else if (here && here.type === "altar") {
-      this.kneel(here);
+      this.inUse = true; this.kneel(here); this.inUse = false;
     } else if (!CM.isOpen(fl, x + dx, y + dy)) {                       // a wall before you: search it
       if (ahead && ahead.type === "secret" && !ahead.found) {
         ahead.found = true;
@@ -410,6 +413,7 @@ Object.assign(CM.Game.prototype, {
 
   drink(f) {
     if (f.used) { this.say("The fountain has run dry."); return; }
+    if (!this.inUse) this.logAct("drink");
     f.used = true; f.known = true;
     if (this.has("drought")) { this.say("The basin is dry to the bottom, cracked. A drought lies on the dungeon today."); this.saveRun(); this.emit("change"); return; }
     if (f.kind === "heal") {
@@ -431,6 +435,7 @@ Object.assign(CM.Game.prototype, {
 
   kneel(f) {
     if (f.used) { this.say("You have prayed here already. The candles gutter."); return; }
+    if (!this.inUse) this.logAct("kneel");
     f.used = true;
     let lifted = 0;
     for (const m of this.alive()) { m.hp = Math.min(m.max, m.hp + Math.max(1, Math.floor(m.max * 0.3))); lifted += this.cure(m, ["curse"]).length; }
@@ -450,6 +455,13 @@ Object.assign(CM.Game.prototype, {
     this.wander += dt;
     if (this.wander < (this.has("swift") ? 0.7 : 1.1)) return;
     this.wander = 0;
+    this.wanderMonsters();
+  },
+
+  // the monsters' turn to move (one every second or so of real time, logged so a replay moves them at the same moments)
+  wanderMonsters() {
+    if (this.mode !== "explore") return;
+    this.logAct("tick");
     const fl = this.floor, [px, py] = fl.pos;
     const walk = (x, y) => {
       if (!CM.passable(fl, x, y)) return false;
@@ -563,6 +575,7 @@ Object.assign(CM.Game.prototype, {
   travelTo(x, y, explore = false) {
     if (this.mode !== "explore" || !this.floor) return false;
     if (x === this.floor.pos[0] && y === this.floor.pos[1]) return false;
+    this.logAct("travelTo", x, y, explore ? 1 : 0);
     const path = this.pathTo(x, y);
     if (!path) { if (!explore) this.say("No known way there."); return false; }
     this.travel = { path, to: [x, y], explore, known: this.thingsInView() };
@@ -575,11 +588,17 @@ Object.assign(CM.Game.prototype, {
     if (!next || !this.travelTo(next[0], next[1], true)) { this.say("Nothing more to explore that you can see: the floor is known, as far as the light has reached."); return false; }
     return true;
   },
-  stopTravel() { if (this.travel) { this.travel = null; this.emit("change"); } },
+  stopTravel() { if (this.travel) { this.logAct("stopTravel"); this.travel = null; this.emit("change"); } },
   // one step of the journey; false when it is over
   travelStep() {
     const t = this.travel;
     if (!t || this.mode !== "explore") { this.travel = null; return false; }
+    this.logAct("travelStep");
+    this.replaying = (this.replaying || 0) + 1;                          // (the moves and turns of a step are the step's: not logged twice)
+    try { return this.travelStep2(); } finally { this.replaying -= 1; }
+  },
+  travelStep2() {
+    const t = this.travel;
     const fl = this.floor;
     if (!t.path.length) {
       if (t.explore) {
@@ -618,6 +637,7 @@ Object.assign(CM.Game.prototype, {
   },
   // a note pinned to a square of the automap (a word or two; empty takes it off)
   setNote(x, y, text) {
+    this.logAct("setNote", x, y, text);
     const fl = this.floor, k = keyOf(x, y);
     fl.notes = fl.notes || {};
     text = String(text || "").trim().slice(0, 24);
@@ -667,6 +687,7 @@ Object.assign(CM.Game.prototype, {
   choose(k, i) {
     const fl = this.floor, thing = fl.things[k], E = thing && CM.EVENTS[thing.event], opt = E && E.options[i];
     if (!opt || thing.done) return false;
+    this.logAct("choose", k, i);
     const rnd = this.rnd, L = fl.number, front = this.alive().find((h) => h.row === "front") || this.alive()[0];
     const finish = (text, keep) => { thing.done = true; thing.after = keep || "Nothing more here."; this.say(text); if (!keep) delete fl.things[k]; this.saveRun(); this.emit("change"); };
     switch (opt.effect) {
@@ -730,6 +751,7 @@ Object.assign(CM.Game.prototype, {
   chooseRivals(k, i) {
     const fl = this.floor, thing = fl.things[k];
     if (!thing || thing.type !== "rivals" || thing.met) return false;
+    this.logAct("chooseRivals", k, i);
     if (i === 0) {
       if (this.gold < 40) { this.say("You haven't forty gold. They shrug."); return true; }
       this.gold -= 40; thing.met = true;

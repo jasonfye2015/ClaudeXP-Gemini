@@ -6,6 +6,7 @@ const keyOf = CM.keyOf;
 Object.assign(CM.Game.prototype, {
   // ---- the bag, the merchant, the camp ----
   openBag(shop = false) {
+    if (!this.peddling) this.logAct("openBag", shop ? 1 : 0);
     this.shopping = shop;
     if (shop && !this.stock) {
       const rnd = this.rnd, depth = this.floor.number + 3;
@@ -18,6 +19,7 @@ Object.assign(CM.Game.prototype, {
   },
 
   closeBag() {
+    this.logAct("closeBag");
     if (this.peddling) { this.stock = null; this.peddling = null; this.say("The peddler folds the cloth over what's left, and waits for whoever comes next."); }
     this.emit("bag", false);
     this.saveRun();
@@ -33,6 +35,7 @@ Object.assign(CM.Game.prototype, {
 
   // what the hero wears in that slot goes back to the pack - unless a curse holds it
   takeOff(n, slot) {
+    this.logAct("takeOff", n, slot);
     const hero = this.party[n], item = hero && hero[slot];
     if (!item) return "Nothing there.";
     if (slot === "weapon" || slot === "armor") return "Swap it for another instead: no one goes bare-handed down here.";
@@ -53,6 +56,7 @@ Object.assign(CM.Game.prototype, {
   },
 
   identify(row) {
+    this.logAct("identify", row);
     const item = this.bag[row];
     if (!this.identifying || !item) return "Pick a thing from the pack.";
     if (!item.unknown) return "That one is known already. Pick an unknown thing.";
@@ -147,6 +151,7 @@ Object.assign(CM.Game.prototype, {
   // what the party wears: the thing in the slot goes back to the pack; wearing an unknown thing is how you learn it
   equip(hero, row) {
     const item = this.bag[row];
+    if (!this.inGive) this.logAct("equip", this.party.indexOf(hero), row);
     const why = CM.cantWear(hero, item);
     if (why) return why;
     const slot = item.slot || (item.kind === "shield" ? "offhand" : item.kind);
@@ -174,6 +179,7 @@ Object.assign(CM.Game.prototype, {
 
   give(row, n) {                                                        // returns a note for the bag screen, "" when it worked
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack first.";
+    this.logAct("give", row, n);
     const item = this.bag[row], hero = this.party[n];
     if (item.kind === "key") return "Keys turn in locks, not in hands. Walk into the locked door.";
     if (item.kind === "rope") return "The rope is for a pit: walk into one with it in the pack.";
@@ -238,7 +244,8 @@ Object.assign(CM.Game.prototype, {
       this.bag.splice(row, 1);
       this.sound("heal");
     } else {
-      return this.equip(hero, row);
+      this.inGive = true;
+      try { return this.equip(hero, row); } finally { this.inGive = false; }
     }
     this.emit("change");
     return "";
@@ -246,9 +253,11 @@ Object.assign(CM.Game.prototype, {
 
   buy(row) {
     if (!this.stock || row < 0 || row >= this.stock.length) return "Pick something from the merchant's wares first.";
+    this.logAct("buy", row);
     const item = this.stock[row];
     if (this.gold < item.value) return "You can't afford that.";
     this.gold -= item.value;
+    this.spend(this.peddling ? "peddler" : "merchant", item.value);
     this.bag.push(Object.assign({}, item, item.props ? { props: Object.assign({}, item.props) } : {}));
     if (this.peddling || ["weapon", "armor", "shield", "helm", "lantern"].includes(item.kind)) this.stock.splice(row, 1);   // (the merchant's potions never run out; a peddler's cloth does)
     this.sound("coin");
@@ -258,6 +267,7 @@ Object.assign(CM.Game.prototype, {
 
   sell(row) {
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack to sell.";
+    this.logAct("sell", row);
     const item = this.bag.splice(row, 1)[0];
     this.gold += item.unknown ? 10 : Math.floor(item.value / 2);       // (the merchant pays a pittance for what no one can name)
     this.sound("coin");
@@ -267,7 +277,8 @@ Object.assign(CM.Game.prototype, {
 
   rest() {
     if (this.gold < 20) { this.say("The merchant wants 20 gold for a bedroll by the fire."); return; }
-    this.gold -= 20;
+    this.logAct("rest");
+    this.gold -= 20; this.spend("rest", 20);
     for (const m of this.alive()) { m.hp = m.max; m.mp = m.maxmp; this.cure(m, CM.CURABLE); }
     this.sound("heal");
     this.say("The party rests by the fire. Wounds close, magic returns, and the small ailments pass.");
@@ -287,7 +298,8 @@ Object.assign(CM.Game.prototype, {
       return false;
     }
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold for that.`); return false; }
-    this.gold -= cost;
+    this.logAct("temple", service);
+    this.gold -= cost; this.spend("temple", cost);
     for (const h of who) this.cure(h, which);
     for (const it of cursedGear) { it.props.cursed = false; it.power += 3; }
     this.sound("heal");
@@ -303,7 +315,8 @@ Object.assign(CM.Game.prototype, {
     const unknown = [...this.bag, ...this.party.flatMap(CM.equipped)].filter((i) => i.unknown);
     if (!unknown.length) { this.say("Nothing you carry is unknown to you."); return false; }
     if (this.gold < 25) { this.say("The scribe asks 25 gold to name what you carry."); return false; }
-    this.gold -= 25;
+    this.logAct("scribe");
+    this.gold -= 25; this.spend("temple", 25);
     for (const it of unknown) this.reveal(it);
     this.sound("spell");
     this.say(`The scribe squints and names them: ${unknown.map((i) => i.name).join(", ")}.`);
@@ -329,7 +342,8 @@ Object.assign(CM.Game.prototype, {
     const idx = replace === undefined ? fallen[0] : replace;
     if (!fallen.includes(idx)) return `${this.party[idx].name} is still standing.`;
     if (this.gold < recruit.price) return `${recruit.name} wants ${recruit.price} gold to come along.`;
-    this.gold -= recruit.price;
+    this.logAct("hire", i, replace === undefined ? null : replace);
+    this.gold -= recruit.price; this.spend("tavern", recruit.price);
     const rescued = (this.rescued || []).length;
     const gone = this.party[idx];
     for (const slot of CM.SLOTS) if (gone[slot] && !(slot === "weapon" || slot === "armor")) this.bag.push(gone[slot]);   // (their trinkets stay with the party)
@@ -351,6 +365,7 @@ Object.assign(CM.Game.prototype, {
   // and gold put fire, frost or holiness into a weapon. "" when it worked, else why not.
   smith(service, heroIndex, slot) {
     if (this.mode !== "camp") return "The smith works at the camp.";
+    this.logAct("smith", service, heroIndex, slot);
     const hero = this.party[heroIndex], item = hero && hero[slot];
     if (!item || !["weapon", "armor", "offhand", "helm"].includes(slot)) return "Pick a weapon, armour, a shield or a helm.";
     if (item.unknown) return "The smith won't work on a thing nobody can name. Have it identified first.";
@@ -361,7 +376,7 @@ Object.assign(CM.Game.prototype, {
       if (n >= CM.SMITH.most) return `${item.name} has had all the smith's work it can take.`;
       if (gem < 0 && scrap.length < 5) return "The smith wants a diamond for the work (or five pieces of scrap).";
       if (this.gold < cost) return `The smith wants ${cost} gold, and the diamond.`;
-      this.gold -= cost;
+      this.gold -= cost; this.spend("smith", cost);
       if (gem >= 0) this.bag.splice(gem, 1); else for (const idx of scrap.slice(0, 5).reverse()) this.bag.splice(idx, 1);
       p.enchant = n + 1;
       p.bonus = (p.bonus || 0) + 1;
@@ -378,7 +393,7 @@ Object.assign(CM.Game.prototype, {
       if (gem < 0) return "The smith wants a ruby, a sapphire or a sunstone for a weapon.";
       if (this.gold < CM.SMITH.gem) return `The smith wants ${CM.SMITH.gem} gold to set a gem.`;
       const el = CM.GEMS[this.bag[gem].gem].element, name = this.bag[gem].name;
-      this.gold -= CM.SMITH.gem;
+      this.gold -= CM.SMITH.gem; this.spend("smith", CM.SMITH.gem);
       this.bag.splice(gem, 1);
       p.element = el;
       item.value += 80;
@@ -390,7 +405,7 @@ Object.assign(CM.Game.prototype, {
       const gem = this.bag.findIndex((i) => i.kind === "gem"), cost = 100;
       if (gem < 0) return "The smith wants a gem of any kind to rework an affix.";
       if (this.gold < cost) return `The smith wants ${cost} gold, and a gem.`;
-      this.gold -= cost;
+      this.gold -= cost; this.spend("smith", cost);
       this.bag.splice(gem, 1);
       const rnd = this.rnd, deep = this.floor.number > CM.LAST_FLOOR;
       const old = (p.affixes || []).find((w) => w.startsWith("of ")), prefix = (p.affixes || []).find((w) => !w.startsWith("of "));
@@ -413,6 +428,7 @@ Object.assign(CM.Game.prototype, {
   // a piece of gear from the pack goes into the smith's fire for scrap (one each; five stand in for a diamond)
   salvage(row) {
     if (this.mode !== "camp") return "The smith works at the camp.";
+    this.logAct("salvage", row);
     const item = this.bag[row];
     if (!item || !["weapon", "armor", "shield", "helm"].includes(item.kind)) return "The smith breaks down a weapon, armour, a shield or a helm.";
     if (item.props && (item.props.relic || item.props.unique)) return "The smith won't put that in the fire. Nor should you.";
@@ -429,6 +445,7 @@ Object.assign(CM.Game.prototype, {
   // the vault: one thing left at the camp waits for the next party (saved between runs); what was there comes out
   leaveHeirloom(row) {
     if (this.mode !== "camp") return "The vault is at the camp.";
+    this.logAct("leaveHeirloom", row);
     const item = this.bag[row];
     if (!item) return "Pick something from your pack.";
     if (["key", "bones", "rope", "torch"].includes(item.kind)) return "The merchant won't keep that. Something worth the keeping.";
@@ -445,6 +462,7 @@ Object.assign(CM.Game.prototype, {
   },
   takeHeirloom() {
     if (this.mode !== "camp") return "The vault is at the camp.";
+    this.logAct("takeHeirloom");
     if (!this.vault) return "The vault is empty.";
     const item = this.vault;
     this.vault = null;
@@ -462,7 +480,8 @@ Object.assign(CM.Game.prototype, {
     if (!fallen.length) { this.say("No one needs raising."); return; }
     const hero = fallen[0], cost = 100 * hero.level;
     if (this.gold < cost) { this.say(`The old priest asks ${cost} gold to raise the ${hero.cls}.`); return; }
-    this.gold -= cost;
+    this.logAct("raiseDead");
+    this.gold -= cost; this.spend("temple", cost);
     hero.hp = hero.max;
     this.sound("heal");
     this.say(`For ${cost} gold, the priest raises the ${hero.cls}!`);
@@ -470,11 +489,13 @@ Object.assign(CM.Game.prototype, {
   },
 
   leaveCamp() {
+    this.logAct("leaveCamp");
     this.stock = null;
     this.enterFloor(this.floor.number + 1, "down");
   },
 
   backUp() {                                                             // from the camp, back onto the floor above it
+    this.logAct("backUp");
     this.stock = null;
     const ladder = this.cellOf(this.floor, "ladder");
     if (ladder) this.floor.pos = ladder.slice();
@@ -500,6 +521,7 @@ Object.assign(CM.Game.prototype, {
   // to the camp below floor n, from a camp
   waystone(n) {
     if (this.mode !== "camp") return "The waystones are at the camps.";
+    this.logAct("waystone", n);
     if (!(this.camps || []).includes(n)) return "No camp there that you have reached.";
     if (this.floor && this.floor.number === n) return "You are there already.";
     this.stock = null; this.recruits = null;
@@ -537,6 +559,7 @@ Object.assign(CM.Game.prototype, {
     return { text: d > 0 ? `+${d}` : d < 0 ? String(d) : "same", cls: d > 0 ? "good" : d < 0 ? "bad" : "", why: old ? `Wears ${old.unknown ? CM.baseName(old) : old.name} (+${old.power})` : "Nothing there now" };
   },
   sortBag() {
+    this.logAct("sortBag");
     this.bag.sort((a, b) => (RANK[a.kind] === undefined ? 99 : RANK[a.kind]) - (RANK[b.kind] === undefined ? 99 : RANK[b.kind]) || (b.power || 0) - (a.power || 0) || String(a.name).localeCompare(String(b.name)));
     this.dirty = true;
     this.emit("change");
@@ -566,11 +589,12 @@ Object.assign(CM.Game.prototype, {
     if (this.mode !== "camp") return "The alchemist is at the camp.";
     const lacks = this.recipeLacks(id);
     if (lacks) return lacks;
+    this.logAct("brew", id);
     const r = CM.RECIPES[id], used = [];
     const take = (kinds) => { const idx = this.bag.findIndex((i, j) => !used.includes(j) && (i.kind === "ingredient" ? kinds.includes(i.ingredient) : kinds.includes(i.kind))); used.push(idx); return idx; };
     for (const key of ["ingredient", "ingredient2", "kind"]) if (r.needs[key]) take(r.needs[key]);
     for (const idx of used.sort((a, b) => b - a)) this.bag.splice(idx, 1);
-    this.gold -= r.gold;
+    this.gold -= r.gold; this.spend("alchemist", r.gold);
     const fl = this.floor ? this.floor.number : 1;
     let made;
     if (r.makes === "greaterheal") { made = { name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + fl * 3), value: 60 }; this.bag.push(made); }
