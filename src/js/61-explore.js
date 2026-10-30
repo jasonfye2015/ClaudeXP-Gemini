@@ -68,7 +68,8 @@ Object.assign(CM.Game.prototype, {
     this.clock = (this.clock || 0) + 1;                                  // (a step is a minute)
     this.sound("step");
     this.burn();
-    { const over = this.overweight(); if (over > 1 && (this.steps || 0) % 2 === 0) { this.burn(); this.fed = (this.fed || 0) + 1; if (!fl.saidHeavy) { fl.saidHeavy = true; this.say("The pack drags: the torch burns faster for it, and the party is hungrier sooner. Something could be left."); } } }
+    this.warnWeight();                                                   // (the pack's weight only slows the party: the frame loop paces the steps)
+    this.lightSpare();
     this.look();
     this.emit("moved", x, y);
     this.dirty = true;
@@ -732,6 +733,30 @@ Object.assign(CM.Game.prototype, {
   },
   // the pack's weight against what the party can carry: 1 is the line; over it costs, half again over it there is no running
   overweight() { return CM.bagWeight(this.bag) / CM.carryCap(this.party); },
+  // nothing burning and a torch in the pack: light it (a torch found after the last went out is lit when it's wanted)
+  lightSpare() {
+    if (this.light && this.light.kind) return false;
+    if (this.floor && (this.floor.number === 0 || (this.floor.number === -1 && !CM.isNight(this)))) return false;   // (daylight: no need)
+    const spare = this.bag.findIndex((i) => i.kind === "torch");
+    if (spare < 0) return false;
+    this.bag.splice(spare, 1);
+    this.light = { kind: "torch", left: CM.TORCH_STEPS };
+    this.say("In the dark, a hand finds a torch in the pack, and lights it.");
+    this.emit("change");
+    return true;
+  },
+  // how much slower the party walks for its pack: 1 at or under the line, up to three times at twice the line and beyond
+  walkPace() { const o = this.overweight(); return o <= 1 ? 1 : Math.min(3, 1 + (o - 1) * 2); },
+  // the warning, once each time the pack goes over the line, with the way out
+  warnWeight() {
+    const o = this.overweight();
+    if (o <= 1) { this.weightWarned = false; return; }
+    if (this.weightWarned) return;
+    this.weightWarned = true;
+    const scroll = this.bag.some((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
+    this.say(`The pack is over what the party can carry (${CM.bagWeight(this.bag)} of ${CM.carryCap(this.party)}): it walks slowly until it is lighter. A merchant buys - at the camps below every fifth floor, and the Merchant's House in town${scroll && this.floor && this.floor.number >= 1 ? "; a Scroll of Homecoming in the pack takes the party home to sell, and back to this square" : ""}.`);
+    this.emit("heavy", o);
+  },
   weightWord() { const o = this.overweight(); return o >= CM.OVERWEIGHT_RUN ? CM.t("hud.overloaded") : o > 1 ? CM.t("hud.heavy") : ""; },
   // the dwarves' pick: the nearest hidden door or stair on the floor opens without searching, and the pick breaks
   usePick(row) {
@@ -829,7 +854,6 @@ Object.assign(CM.Game.prototype, {
     if (this.mode !== "explore" || !this.floor) return false;
     if (x === this.floor.pos[0] && y === this.floor.pos[1]) return false;
     this.logAct("travelTo", x, y, explore ? 1 : 0);
-    if (this.overweight() >= CM.OVERWEIGHT_RUN) { this.say("The pack is too heavy to run with: walk it, or leave something."); return false; }
     const path = this.pathTo(x, y);
     if (!path) { if (!explore) this.say("No known way there."); return false; }
     this.travel = { path, to: [x, y], explore, known: this.thingsInView() };
@@ -880,6 +904,7 @@ Object.assign(CM.Game.prototype, {
   travelCheck() {
     const t = this.travel, fl = this.floor, k = keyOf(fl.pos[0], fl.pos[1]), thing = fl.things[k], f = fl.features[k];
     const stop = (why) => { this.travel = null; if (why) this.say(why); this.emit("change"); return false; };
+    if (!this.hasLight()) this.lightSpare();                            // (a torch in the pack and none burning: light it, and walk on)
     if (!this.hasLight()) return stop("The dark. You stop, and feel for the wall.");
     if (thing && !["key", "bones", "boxkey"].includes(thing.type)) return stop(null);
     if (f && ((f.type === "fountain" && !f.used) || (f.type === "altar" && !f.used) || (f.type === "lever" && !f.pulled) || (f.type === "carving" && !f.read))) return stop(null);

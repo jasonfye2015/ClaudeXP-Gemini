@@ -13,6 +13,15 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-buy").addEventListener("click", () => { this.note(g.buy(this.shopRow)); this.fillBag(); });
     this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
     this.$("#btn-sort").addEventListener("click", () => { g.sortBag(); this.bagRow = -1; this.fillBag(); });
+    for (const [id, which] of [["#btn-sell-shown", () => this.bagFilter || "all"], ["#btn-sell-spare", () => "spare"]]) {
+      this.$(id).addEventListener("click", () => {                         // a first click says what and for how much; a second, within a few seconds, sells
+        const w = which(), { rows, gold } = g.sellable(w);
+        if (!rows.length) { this.note("Nothing of that to sell."); return; }
+        if (this.sellAsked && this.sellAsked.w === w && Date.now() - this.sellAsked.at < 6000) { this.sellAsked = null; this.note(g.sellMany(w)); this.bagRow = -1; this.fillBag(); return; }
+        this.sellAsked = { w, at: Date.now() };
+        this.note(`Sell ${CM.plural(rows.length, "thing")} for ${gold.toLocaleString()} gold? Click again to sell. (Keys, relics and a scroll that remembers a square below are kept.)`);
+      });
+    }
     this.$("#btn-bag-done").addEventListener("click", () => g.closeBag());
     const filters = this.$("#bag-filters");
     for (const [id, F] of Object.entries(CM.BAG_FILTERS)) { const b = document.createElement("button"); b.textContent = F.name; b.dataset.filter = id; b.addEventListener("click", () => { this.bagFilter = id; this.bagRow = -1; this.fillBag(); }); filters.appendChild(b); }
@@ -32,6 +41,8 @@ Object.assign(CM.UI.prototype, {
     this.$("#shop-list").style.display = shop ? "" : "none";
     this.$("#btn-buy").style.display = shop ? "" : "none";
     this.$("#btn-sell").style.display = shop ? "" : "none";
+    for (const id of ["#btn-sell-shown", "#btn-sell-spare"]) this.$(id).style.display = shop ? "" : "none";
+    this.$("#btn-sell-shown").textContent = (this.bagFilter || "all") === "all" ? "Sell everything" : `Sell all ${CM.BAG_FILTERS[this.bagFilter].name.toLowerCase()}`;
     const list = (el, head, items, selected, describe, onPick) => {
       el.innerHTML = `<div class="head">${head}</div>` + (items.length ? "" : `<div class="empty">Nothing here.</div>`);
       items.forEach((item, i) => {

@@ -2260,8 +2260,8 @@ test("wounds, weight and the economy: a wound on rising and a grave one, healed 
   const fl = game.floor, [px, py] = fl.pos, dirs = CM.DIRS.map(([dx, dy], i) => [px + dx, py + dy, i]).filter(([x, y]) => CM.passable(fl, x, y)); fl.facing = dirs[0][2];
   game.light = { kind: "torch", left: 200 }; game.bag.push(CM.torch()); game.fed = 0; game.steps = 0; const burnt = () => 200 - game.light.left;
   game.move(0); fl.facing = (fl.facing + 2) % 4; game.move(0); const over = burnt(), fedOver = game.fed; const lightBag = game.bag.filter((i) => CM.weightOf(i) === 0); game.bag = lightBag; game.light = { kind: "torch", left: 200 }; game.fed = 0; game.steps = 0; game.move(0); fl.facing = (fl.facing + 2) % 4; game.move(0);
-  assert.ok(over > burnt() && fedOver > game.fed, `heavy: ${over} torch, ${fedOver} hunger; light: ${burnt()}, ${game.fed}`);
-  while (game.overweight() < CM.OVERWEIGHT_RUN) game.bag.push(heavy()); assert.strictEqual(game.weightWord(), "Overloaded"); const goal = CM.goalOf(fl).split(",").map(Number); assert.strictEqual(game.travelTo(goal[0], goal[1]), false); assert.ok(game.messages.slice(-1)[0].includes("too heavy to run"));
+  assert.ok(over === burnt() && fedOver === game.fed, `the weight only slows - no torch or hunger for it: heavy ${over}, ${fedOver}; light ${burnt()}, ${game.fed}`);
+  while (game.overweight() < CM.OVERWEIGHT_RUN) game.bag.push(heavy()); assert.strictEqual(game.weightWord(), "Overloaded"); const goal = CM.goalOf(fl).split(",").map(Number); game.travelTo(goal[0], goal[1]); assert.ok(!game.messages.some((x) => x.includes("too heavy to run")), "overloaded, the party still walks (slowly)"); game.travel = null;
   mage.trinket = CM.makeUnique("holding"); assert.strictEqual(CM.carryCap(game.party), cap * 2); assert.ok(game.overweight() < 1, "the bag of holding carries it"); mage.trinket = null; game.bag = lightBag;
   let holdingAt = 0; for (let n = 16; n <= 20; n++) for (const t of Object.values(CM.makeFloor(n, "econ-1", 2).things)) if (t.type === "chest" && (t.items || []).some((i) => i.props && i.props.unique === "holding")) holdingAt = n; assert.ok(holdingAt, "the Bag of Holding lies in the palace");
   // the economy: prices a tenth more a band; the stock rotates by the camp; an order delivered at the next camp; insurance paid to the vault
@@ -3145,6 +3145,40 @@ test("light and shadow: every band has a slight grade; the glowing props are lig
   const src = fs.readFileSync(path.join(ROOT, "src", "js", "40-render.js"), "utf8");
   assert.ok(/uLightPos\[12\]/.test(src) && /uLightCol\[12\]/.test(src) && /uSun\b/.test(src) && /uGrade\b/.test(src), "the shader's lights, sun and grade");
   assert.ok(/slice\(0, 12\)/.test(fs.readFileSync(path.join(ROOT, "src", "js", "80-main.js"), "utf8")), "no more than twelve lights a frame");
+});
+
+test("the pack's weight only slows: walking, Explore and Where to? work at any weight; a warning once when the pack goes over; bulk selling at the merchant keeps what a run needs; Automatic goes home by Homecoming to sell, and back", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("weight-1", fixedParty(CM));
+  const heavy = () => { for (let i = 0; i < 40; i++) g.bag.push({ name: "Plate Armour", kind: "armor", slot: "armor", power: 6, value: 200, weight: 8 }); };
+  heavy(); assert.ok(g.overweight() > 2, `over: ${g.overweight()}`);
+  assert.ok(g.walkPace() > 1 && g.walkPace() <= 3); assert.strictEqual(new CM.Game().walkPace ? 1 : 1, 1);
+  const n0 = g.messages.length, torch0 = g.light.left; const o = CM.openNeighbours(g.floor, ...g.floor.pos)[0]; g.floor.facing = CM.DIRS.findIndex(([dx, dy]) => dx === o[0] && dy === o[1]);
+  assert.ok(g.move(0), "the party still walks"); assert.ok(g.messages.slice(n0).some((m) => m.includes("walks slowly")), "the warning");
+  assert.strictEqual(torch0 - g.light.left, 1, "no extra torch for the weight");
+  const n1 = g.messages.length; g.move(2); assert.ok(!g.messages.slice(n1).some((m) => m.includes("walks slowly")), "only once");
+  assert.ok(g.explore() !== false || g.messages.slice(-1)[0].includes("Nothing more"), "Explore is not refused for the weight");
+  assert.ok(!g.messages.some((m) => m.includes("too heavy to run")));
+  // bulk selling: spare gear, a filter's worth; keys, relics and a remembering scroll kept
+  g.bag.push(CM.scroll("homecoming")); g.bag[g.bag.length - 1].back = { floor: 3, pos: [1, 1] }; g.bag.push({ name: "Iron Key", kind: "key", power: 0, value: 0 }); g.bag.push({ name: "Crown of Old", kind: "helm", slot: "helm", power: 2, value: 500, props: { relic: true } });
+  g.openBag(true); const gold0 = g.gold, spare = g.sellable("spare");
+  assert.ok(spare.rows.length >= 40 && spare.gold >= 40 * 100);
+  assert.strictEqual(g.sellMany("spare"), ""); assert.strictEqual(g.gold, gold0 + spare.gold);
+  assert.ok(g.bag.some((i) => i.kind === "key") && g.bag.some((i) => i.props && i.props.relic) && g.bag.some((i) => i.back), "kept");
+  assert.ok(g.overweight() <= 1); const all = g.sellable("all"); assert.ok(!all.rows.some((r) => g.bag[r].kind === "key" || g.bag[r].back));
+  g.closeBag();
+  // Automatic: over the line below, with a scroll, it goes home, sells, and comes back down by the scroll
+  const g2 = new CM.Game(); g2.newGame("weight-2", fixedParty(CM)); g2.enterFloor(4, "down"); const back = [g2.floor.number, g2.floor.pos.join()];
+  for (let i = 0; i < 40; i++) g2.bag.push({ name: "Plate Armour", kind: "armor", slot: "armor", power: 6, value: 200, weight: 8 });
+  g2.bag.push(CM.scroll("homecoming")); g2.clock = 2 * 60;
+  const auto = new CM.Autopilot(g2, { warp: true, wake: true, sync: true, land: false }); let n = 0, home = false;
+  while (n++ < 3000) { auto.step(); if (g2.floor.number === 0) home = true; if (home && g2.floor.number === back[0]) break; if (g2.mode === "title") break; }
+  assert.ok(home, "home by the scroll"); assert.ok(g2.overweight() <= 1, `sold: ${g2.overweight()}`); assert.strictEqual(g2.floor.number, back[0], "and back to the floor it left");
+  assert.ok((auto.tools.weightTrips || 0) >= 1);
+  // a torch picked up after the last one went out is lit when the party walks, and walking by itself goes on
+  const g3 = new CM.Game(); g3.newGame("weight-3", fixedParty(CM)); g3.light = { kind: null, left: 0 }; g3.bag = g3.bag.filter((i) => i.kind !== "torch"); g3.bag.push(CM.torch());
+  const o3 = CM.openNeighbours(g3.floor, ...g3.floor.pos)[0]; g3.floor.facing = CM.DIRS.findIndex(([dx, dy]) => dx === o3[0] && dy === o3[1]); g3.move(0);
+  assert.strictEqual(g3.light.kind, "torch", "lit on the next step"); assert.ok(!g3.bag.some((i) => i.kind === "torch"));
 });
 
 (async () => {

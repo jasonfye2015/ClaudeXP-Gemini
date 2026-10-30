@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v8.7.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v8.7.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -437,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "8.7.1", built: "2026-10-30" };
+const CM = window.CM = { version: "8.7.2", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -8872,7 +8872,8 @@ Object.assign(CM.Game.prototype, {
     this.clock = (this.clock || 0) + 1;                                  // (a step is a minute)
     this.sound("step");
     this.burn();
-    { const over = this.overweight(); if (over > 1 && (this.steps || 0) % 2 === 0) { this.burn(); this.fed = (this.fed || 0) + 1; if (!fl.saidHeavy) { fl.saidHeavy = true; this.say("The pack drags: the torch burns faster for it, and the party is hungrier sooner. Something could be left."); } } }
+    this.warnWeight();                                                   // (the pack's weight only slows the party: the frame loop paces the steps)
+    this.lightSpare();
     this.look();
     this.emit("moved", x, y);
     this.dirty = true;
@@ -9536,6 +9537,30 @@ Object.assign(CM.Game.prototype, {
   },
   // the pack's weight against what the party can carry: 1 is the line; over it costs, half again over it there is no running
   overweight() { return CM.bagWeight(this.bag) / CM.carryCap(this.party); },
+  // nothing burning and a torch in the pack: light it (a torch found after the last went out is lit when it's wanted)
+  lightSpare() {
+    if (this.light && this.light.kind) return false;
+    if (this.floor && (this.floor.number === 0 || (this.floor.number === -1 && !CM.isNight(this)))) return false;   // (daylight: no need)
+    const spare = this.bag.findIndex((i) => i.kind === "torch");
+    if (spare < 0) return false;
+    this.bag.splice(spare, 1);
+    this.light = { kind: "torch", left: CM.TORCH_STEPS };
+    this.say("In the dark, a hand finds a torch in the pack, and lights it.");
+    this.emit("change");
+    return true;
+  },
+  // how much slower the party walks for its pack: 1 at or under the line, up to three times at twice the line and beyond
+  walkPace() { const o = this.overweight(); return o <= 1 ? 1 : Math.min(3, 1 + (o - 1) * 2); },
+  // the warning, once each time the pack goes over the line, with the way out
+  warnWeight() {
+    const o = this.overweight();
+    if (o <= 1) { this.weightWarned = false; return; }
+    if (this.weightWarned) return;
+    this.weightWarned = true;
+    const scroll = this.bag.some((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
+    this.say(`The pack is over what the party can carry (${CM.bagWeight(this.bag)} of ${CM.carryCap(this.party)}): it walks slowly until it is lighter. A merchant buys - at the camps below every fifth floor, and the Merchant's House in town${scroll && this.floor && this.floor.number >= 1 ? "; a Scroll of Homecoming in the pack takes the party home to sell, and back to this square" : ""}.`);
+    this.emit("heavy", o);
+  },
   weightWord() { const o = this.overweight(); return o >= CM.OVERWEIGHT_RUN ? CM.t("hud.overloaded") : o > 1 ? CM.t("hud.heavy") : ""; },
   // the dwarves' pick: the nearest hidden door or stair on the floor opens without searching, and the pick breaks
   usePick(row) {
@@ -9633,7 +9658,6 @@ Object.assign(CM.Game.prototype, {
     if (this.mode !== "explore" || !this.floor) return false;
     if (x === this.floor.pos[0] && y === this.floor.pos[1]) return false;
     this.logAct("travelTo", x, y, explore ? 1 : 0);
-    if (this.overweight() >= CM.OVERWEIGHT_RUN) { this.say("The pack is too heavy to run with: walk it, or leave something."); return false; }
     const path = this.pathTo(x, y);
     if (!path) { if (!explore) this.say("No known way there."); return false; }
     this.travel = { path, to: [x, y], explore, known: this.thingsInView() };
@@ -9684,6 +9708,7 @@ Object.assign(CM.Game.prototype, {
   travelCheck() {
     const t = this.travel, fl = this.floor, k = keyOf(fl.pos[0], fl.pos[1]), thing = fl.things[k], f = fl.features[k];
     const stop = (why) => { this.travel = null; if (why) this.say(why); this.emit("change"); return false; };
+    if (!this.hasLight()) this.lightSpare();                            // (a torch in the pack and none burning: light it, and walk on)
     if (!this.hasLight()) return stop("The dark. You stop, and feel for the wall.");
     if (thing && !["key", "bones", "boxkey"].includes(thing.type)) return stop(null);
     if (f && ((f.type === "fountain" && !f.used) || (f.type === "altar" && !f.used) || (f.type === "lever" && !f.pulled) || (f.type === "carving" && !f.read))) return stop(null);
@@ -11922,6 +11947,33 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
 
+  // what the merchant would take in one go, and what for: `which` is a bag filter's id (everything it shows), or
+  // "spare" (gear nobody wears, known and not cursed). Never the things a run needs to keep: keys, bones, pages, the
+  // field kit, relics, a Scroll of Homecoming that remembers a square below.
+  sellable(which) {
+    const F = CM.BAG_FILTERS[which], gear = ["weapon", "armor", "shield", "helm", "ring", "amulet", "boots", "cloak", "trinket"];
+    const keep = (it) => ["key", "boxkey", "bones", "page", "kit", "bell"].includes(it.kind) || (it.props && (it.props.relic || it.props.heirloom)) || (it.kind === "scroll" && it.back) || !(it.value > 0 || it.unknown);
+    const rows = [];
+    this.bag.forEach((it, i) => {
+      if (keep(it)) return;
+      if (which === "spare" ? gear.includes(it.kind) && !it.unknown && !(it.props && it.props.cursed) : !F || !F.kinds || F.kinds.includes(it.kind)) rows.push(i);
+    });
+    return { rows, gold: rows.reduce((s, i) => s + (this.bag[i].unknown ? 10 : Math.floor(this.bag[i].value / 2)), 0) };
+  },
+  sellMany(which) {
+    if (!this.shopping) return "Only at a merchant's table.";
+    const { rows, gold } = this.sellable(which);
+    if (!rows.length) return "Nothing of that to sell.";
+    this.logAct("sellMany", which);
+    for (const i of rows.slice().sort((a, b) => b - a)) this.bag.splice(i, 1);
+    this.gold += gold;
+    this.sound("coin");
+    this.say(`The merchant takes ${CM.plural(rows.length, "thing")} for ${gold.toLocaleString()} gold.`);
+    this.warnWeight();
+    this.emit("change");
+    return "";
+  },
+
   sell(row) {
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack to sell.";
     this.logAct("sell", row);
@@ -13635,7 +13687,8 @@ CM.Autopilot = class {
     want("heal", 4); want("torch", 2); want("ration", 2);
     if (game.gold > 150) for (const h of alive()) { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 100 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (worn && game.gold > 150) game.insure(game.party.indexOf(h), CM.SLOTS.find((s) => h[s] === worn)); }
     if (game.gold > 200 && (game.orders || []).length < 2) { if (!game.stock.some((i) => i.kind === "revive") && !game.bag.some((i) => i.kind === "revive")) game.order("revive"); if (!game.stock.some((i) => i.kind === "mana") && game.bag.filter((i) => i.kind === "mana").length < 2) game.order("mana"); if (!game.bag.some((i) => i.kind === "lampoil") && game.light && game.light.kind === "lantern") game.order("lampoil"); }
-    if (game.overweight() > 1) { let guard = 0; while (game.overweight() > 1 && guard++ < 10) { const row = game.bag.map((it, i) => [it, i]).filter(([it]) => CM.weightOf(it) >= 3 && it.kind !== "torch").sort((a, b) => a[0].value - b[0].value)[0]; if (!row) break; game.sell(row[1]); } }
+    if (game.overweight() > 0.8 && game.sellable("spare").rows.length) game.sellMany("spare");   // (the gear nobody wears, first)
+    if (game.overweight() > 1) { let guard = 0; while (game.overweight() > 1 && guard++ < 40) { const row = game.bag.map((it, i) => [it, i]).filter(([it]) => CM.weightOf(it) >= 3 && it.kind !== "torch").sort((a, b) => a[0].value - b[0].value)[0]; if (!row) break; game.sell(row[1]); } }
     if (game.inTown()) for (let i = game.bag.length - 1; i >= 0; i--) if (game.bag[i].unknown || (game.bag[i].props && game.bag[i].props.cursed)) game.fence(i);
     if (game.gold > 150) want("mana", 2);
     if (game.gold > 250) want("revive", 1);
@@ -13811,6 +13864,10 @@ CM.Autopilot = class {
     if (fl.number >= 1 && CM.isNight(game) && CM.hourOf(game) < 5 && (game.overweight() > 1 || alive.reduce((s, h) => s + h.hp / h.max, 0) / alive.length < 0.5) && this.nightHomeDay !== CM.dayOf(game)) {   // the small hours, and the party heavy or worn: home by the scroll to sleep, and back down by the same
       const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
       if (row >= 0) { this.nightHomeDay = CM.dayOf(game); if (game.give(row, game.party.indexOf(alive[0])) === "") { this.tools.nightHome = (this.tools.nightHome || 0) + 1; return "home for the night"; } }
+    }
+    if (fl.number >= 1 && game.overweight() > 1 && (game.tally.steps || 0) - (this.weightTripAt === undefined ? -1e9 : this.weightTripAt) > 400) {   // the pack over the line: home by the scroll to sell, and back by it
+      const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
+      if (row >= 0 && game.give(row, game.party.indexOf(alive[0])) === "") { this.weightTripAt = game.tally.steps || 0; this.tools.weightTrips = (this.tools.weightTrips || 0) + 1; return "home to sell"; }
     }
     if (fl.number >= 10 && !game.bag.some((i) => i.kind === "heal" || i.kind === "greaterheal") && game.gold >= 150) {   // out of potions and not of gold: home by the scroll, and back
       const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
@@ -14795,7 +14852,7 @@ CM.UI = class {
   <div class="lists"><div class="list" id="bag-list"></div><div class="list" id="shop-list"></div></div>
   <div class="note" id="bag-note"></div>
   <div class="give" id="bag-give"></div><div class="give" id="bag-belt"></div>
-  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-bag-done" class="primary">Done</button></div>
+  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sell-shown" title="Everything the filter shows (keys, relics and a Homecoming scroll that remembers a square are kept)">Sell all shown</button><button id="btn-sell-spare" title="Gear nobody wears, known and not cursed">Sell spare gear</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-bag-done" class="primary">Done</button></div>
 </div>
 <div class="dialog" id="dlg-settings"><div class="box"><h2>Settings</h2>
   <div class="row"><label for="set-sound">Sound</label><input type="checkbox" id="set-sound"></div>
@@ -16685,6 +16742,15 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-buy").addEventListener("click", () => { this.note(g.buy(this.shopRow)); this.fillBag(); });
     this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
     this.$("#btn-sort").addEventListener("click", () => { g.sortBag(); this.bagRow = -1; this.fillBag(); });
+    for (const [id, which] of [["#btn-sell-shown", () => this.bagFilter || "all"], ["#btn-sell-spare", () => "spare"]]) {
+      this.$(id).addEventListener("click", () => {                         // a first click says what and for how much; a second, within a few seconds, sells
+        const w = which(), { rows, gold } = g.sellable(w);
+        if (!rows.length) { this.note("Nothing of that to sell."); return; }
+        if (this.sellAsked && this.sellAsked.w === w && Date.now() - this.sellAsked.at < 6000) { this.sellAsked = null; this.note(g.sellMany(w)); this.bagRow = -1; this.fillBag(); return; }
+        this.sellAsked = { w, at: Date.now() };
+        this.note(`Sell ${CM.plural(rows.length, "thing")} for ${gold.toLocaleString()} gold? Click again to sell. (Keys, relics and a scroll that remembers a square below are kept.)`);
+      });
+    }
     this.$("#btn-bag-done").addEventListener("click", () => g.closeBag());
     const filters = this.$("#bag-filters");
     for (const [id, F] of Object.entries(CM.BAG_FILTERS)) { const b = document.createElement("button"); b.textContent = F.name; b.dataset.filter = id; b.addEventListener("click", () => { this.bagFilter = id; this.bagRow = -1; this.fillBag(); }); filters.appendChild(b); }
@@ -16704,6 +16770,8 @@ Object.assign(CM.UI.prototype, {
     this.$("#shop-list").style.display = shop ? "" : "none";
     this.$("#btn-buy").style.display = shop ? "" : "none";
     this.$("#btn-sell").style.display = shop ? "" : "none";
+    for (const id of ["#btn-sell-shown", "#btn-sell-spare"]) this.$(id).style.display = shop ? "" : "none";
+    this.$("#btn-sell-shown").textContent = (this.bagFilter || "all") === "all" ? "Sell everything" : `Sell all ${CM.BAG_FILTERS[this.bagFilter].name.toLowerCase()}`;
     const list = (el, head, items, selected, describe, onPick) => {
       el.innerHTML = `<div class="head">${head}</div>` + (items.length ? "" : `<div class="empty">Nothing here.</div>`);
       items.forEach((item, i) => {
@@ -17112,7 +17180,8 @@ window.addEventListener("DOMContentLoaded", () => {
     renderer.setFloor(floor, CM.themeFor(floor.number));
     renderer.setCamera(floor.pos[0], floor.pos[1], floor.facing);
   });
-  game.on("moved", (x, y) => renderer.moveTo(x, y, game.settings.smooth ? 180 : 0));
+  let walkReady = 0;                                                    // (a heavy pack: the next step waits)
+  game.on("moved", (x, y) => { const pace = game.walkPace ? game.walkPace() : 1; renderer.moveTo(x, y, game.settings.smooth ? 180 * pace : 0); walkReady = performance.now() + (pace - 1) * 220; });
   game.on("turned", (facing) => renderer.turnTo(facing, game.settings.smooth ? 160 : 0));
   game.on("mesh", () => { if (renderer.ok && game.floor) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); });
   game.on("teleported", (x, y) => renderer.setCamera(x, y, game.floor.facing));
@@ -17690,15 +17759,15 @@ window.addEventListener("DOMContentLoaded", () => {
         if (ui.rebindingPad) pollGamepad(now);
       } else {
         pollGamepad(now);
-        if (game.mode === "explore" && !renderer.busy && held.size) {
+        if (game.mode === "explore" && !renderer.busy && now >= walkReady && held.size) {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
         if (ui.screen === "play" && !ui.dialogOpen()) game.tick(dt);    // the monsters move (not while you read a sheet or the pack); the run saves now and then
         if (game.mode === "combat") { const up = game.party.filter((h) => h.hp > 0); const worst = up.length ? Math.min(...up.map((h) => h.hp / h.max)) : 0; CM.music.setDanger(up.length < game.party.length ? 1 : worst < 0.5 ? 0.6 : 0); }   // the battle tune in layers
         if (game.film && game.film.playing && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - game.film.last > 260 / game.film.speed) { game.film.last = now; game.filmStep(); }   // the film plays
-        if (game.travel && game.mode === "explore" && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
+        if (game.travel && game.mode === "explore" && !renderer.busy && now >= walkReady && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
         if (game.mode === "combat" && game.combat && game.combat.auto && game.combat.waiting && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAuto > 420 / (CM.fxSpeed || 1)) { lastAuto = now; game.autoTurn(); }
-        if (game.autoOn() && (ui.screen === "play" || ui.screen === "bag") && !renderer.busy && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAutoStep > (game.mode === "camp" ? 900 : game.settings.smooth ? 150 : 240)) {   // Automatic: a step a tick
+        if (game.autoOn() && (ui.screen === "play" || ui.screen === "bag") && !renderer.busy && now >= walkReady && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAutoStep > (game.mode === "camp" ? 900 : game.settings.smooth ? 150 : 240)) {   // Automatic: a step a tick
           lastAutoStep = now;
           if (ui.screen === "bag") ui.show("play");
           const did = game.auto.step();

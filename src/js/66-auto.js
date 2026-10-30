@@ -102,7 +102,8 @@ CM.Autopilot = class {
     want("heal", 4); want("torch", 2); want("ration", 2);
     if (game.gold > 150) for (const h of alive()) { const worn = CM.equipped(h).filter((it) => !it.insured && (it.value || 0) >= 100 && !(it.props && it.props.fists)).sort((a, b) => (b.value || 0) - (a.value || 0))[0]; if (worn && game.gold > 150) game.insure(game.party.indexOf(h), CM.SLOTS.find((s) => h[s] === worn)); }
     if (game.gold > 200 && (game.orders || []).length < 2) { if (!game.stock.some((i) => i.kind === "revive") && !game.bag.some((i) => i.kind === "revive")) game.order("revive"); if (!game.stock.some((i) => i.kind === "mana") && game.bag.filter((i) => i.kind === "mana").length < 2) game.order("mana"); if (!game.bag.some((i) => i.kind === "lampoil") && game.light && game.light.kind === "lantern") game.order("lampoil"); }
-    if (game.overweight() > 1) { let guard = 0; while (game.overweight() > 1 && guard++ < 10) { const row = game.bag.map((it, i) => [it, i]).filter(([it]) => CM.weightOf(it) >= 3 && it.kind !== "torch").sort((a, b) => a[0].value - b[0].value)[0]; if (!row) break; game.sell(row[1]); } }
+    if (game.overweight() > 0.8 && game.sellable("spare").rows.length) game.sellMany("spare");   // (the gear nobody wears, first)
+    if (game.overweight() > 1) { let guard = 0; while (game.overweight() > 1 && guard++ < 40) { const row = game.bag.map((it, i) => [it, i]).filter(([it]) => CM.weightOf(it) >= 3 && it.kind !== "torch").sort((a, b) => a[0].value - b[0].value)[0]; if (!row) break; game.sell(row[1]); } }
     if (game.inTown()) for (let i = game.bag.length - 1; i >= 0; i--) if (game.bag[i].unknown || (game.bag[i].props && game.bag[i].props.cursed)) game.fence(i);
     if (game.gold > 150) want("mana", 2);
     if (game.gold > 250) want("revive", 1);
@@ -278,6 +279,10 @@ CM.Autopilot = class {
     if (fl.number >= 1 && CM.isNight(game) && CM.hourOf(game) < 5 && (game.overweight() > 1 || alive.reduce((s, h) => s + h.hp / h.max, 0) / alive.length < 0.5) && this.nightHomeDay !== CM.dayOf(game)) {   // the small hours, and the party heavy or worn: home by the scroll to sleep, and back down by the same
       const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
       if (row >= 0) { this.nightHomeDay = CM.dayOf(game); if (game.give(row, game.party.indexOf(alive[0])) === "") { this.tools.nightHome = (this.tools.nightHome || 0) + 1; return "home for the night"; } }
+    }
+    if (fl.number >= 1 && game.overweight() > 1 && (game.tally.steps || 0) - (this.weightTripAt === undefined ? -1e9 : this.weightTripAt) > 400) {   // the pack over the line: home by the scroll to sell, and back by it
+      const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);
+      if (row >= 0 && game.give(row, game.party.indexOf(alive[0])) === "") { this.weightTripAt = game.tally.steps || 0; this.tools.weightTrips = (this.tools.weightTrips || 0) + 1; return "home to sell"; }
     }
     if (fl.number >= 10 && !game.bag.some((i) => i.kind === "heal" || i.kind === "greaterheal") && game.gold >= 150) {   // out of potions and not of gold: home by the scroll, and back
       const row = game.bag.findIndex((i) => i.kind === "scroll" && i.spell === "homecoming" && !i.back);

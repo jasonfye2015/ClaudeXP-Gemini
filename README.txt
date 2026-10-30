@@ -1362,6 +1362,18 @@ The surface, under the sky (the ninth big update - v7.1 to v8.0)
   simulator's land line is unchanged from v7.0's); UPGRADE_PLAN_7.md says what each phase did and what waits (the east
   postern). Tests: "the surface", "finding the way", and the town's and the Wood's tests on the new ground.
 
+The pack's weight, and selling in bulk (v8.7.2)
+  Over the line of what the party can carry, the party only walks slower - up to three times as slow at twice the
+  line and beyond - and never stops: Explore, Where to?, a click on the map and Automatic all walk at that pace. The
+  torch and hunger cost nothing more for it. Once each time the pack goes over, the log says so and names the way out:
+  a merchant at a camp or the Merchant's House, and a Scroll of Homecoming if the pack holds one. At a merchant's
+  table two buttons sell in bulk - "Sell all shown" (everything the bag's filter shows) and "Sell spare gear" (worn by
+  nobody, known, not cursed); the first click says how many things and for how much, the second sells. Keys, bones,
+  pages, the field kit, relics and a Homecoming scroll that remembers a square below are never sold. Automatic, with
+  the pack over the line below ground and a Scroll of Homecoming, reads it, sells at the Merchant's House (the spare
+  gear first, then the heaviest of the rest) and comes back to the square it left by the same scroll. And a torch
+  found after the last one went out is lit as soon as the party walks in the dark.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it
