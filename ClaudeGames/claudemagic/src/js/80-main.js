@@ -175,6 +175,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const dying = new Map();                                               // foe -> when it fell
   const flashes = new Map();                                             // foe -> flash left
   const lunges = new Map();                                              // foe -> when it lunged at the party
+  const hits = new Map(), fledAt = new Map(), rising = new Map();       // foe -> when it was struck, when it ran, when it rose into its title (28-motion.js)
   const fwdV = () => [Math.sin(renderer.yaw), 0, -Math.cos(renderer.yaw)], rightV = () => [Math.cos(renderer.yaw), 0, Math.sin(renderer.yaw)];
   const fromParty = (side = 0) => { const e = renderer.eye, f = fwdV(), r = rightV(); return [e[0] + f[0] * 0.3 + r[0] * side * 0.2, 0.4, e[2] + f[2] * 0.3 + r[2] * side * 0.2]; };
   const beforeParty = (d = 0.3) => { const e = renderer.eye, f = fwdV(); return [e[0] + f[0] * d, 0.45, e[2] + f[2] * d]; };
@@ -231,7 +232,8 @@ window.addEventListener("DOMContentLoaded", () => {
     const now = performance.now();
     switch (fx.kind) {
       case "intent": renderer.zoomTo(0.9, 600); break;
-      case "hit": flashes.set(fx.foe, 1); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
+      case "intro": if (fx.foe) rising.set(fx.foe, now); break;
+      case "hit": flashes.set(fx.foe, 1); hits.set(fx.foe, now); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
       case "miss": later(() => floatAt(fx.foe, "miss", "miss")); break;
       case "die": {
         dying.set(fx.foe, now);
@@ -287,7 +289,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("mode", (mode) => { if (mode !== "combat") { CM.music.shift(0); CM.music.setDanger(0); } });
   game.on("over", (won) => { if (!won && renderer.ok) { renderer.rollNow = 0; renderer.rollTo(0.12, 1200); setTimeout(() => renderer.rollTo(0, 2500), 1600); } });
   game.on("floor", () => fxs.clear());
-  game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); lunges.clear(); } if (mode === "title") fxs.clear(); });
+  game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); lunges.clear(); hits.clear(); fledAt.clear(); rising.clear(); } if (mode === "title") fxs.clear(); });
   // a click on a foe in the view chooses it
   ui.$("#hud").addEventListener("click", (e) => {
     if (game.mode !== "combat") return;
@@ -308,11 +310,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * (n > 4 ? 0.22 : 0.32), -0.46, 0.46);
     let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : foe.guardian ? 0.22 : 0) + (foe.row === "back" ? 0.28 : 0);     // (the Lich King keeps his distance; the back row stands back)
-    const lunge = lunges.get(foe);
-    if (lunge !== undefined) {                                           // it lunges at the party, and draws back
-      const t = (performance.now() - lunge) / 340;
-      if (t >= 1) lunges.delete(foe); else back -= Math.sin(Math.PI * t) * 0.3;
-    }
     const fwd = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
     const dx = right[0] * off + fwd[0] * back, dz = right[1] * off + fwd[1] * back;
     const G = foe.guardian ? CM.GUARDIANS[foe.guardian] : null;
@@ -449,9 +446,11 @@ window.addEventListener("DOMContentLoaded", () => {
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
         const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
-        const breath = CM.reducedMotion ? 0 : Math.sin(now / 820 + x * 2.1 + y * 1.3) * 0.02;   // (alive: it breathes)
-        out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: (m.boss ? 0.95 : G ? 0.9 * G.size : 0.85) * (1 + breath), h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * (1 + breath * 0.6), shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
-          lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
+        const M = CM.motion({ now, phase: x * 2.1 + y * 1.3, sleeping: Boolean(thing.asleep), sway: Boolean(m.boss), reduced: CM.reducedMotion });   // (alive: it breathes; asleep, it lies)
+        const side = (x + 0.5 - renderer.eye[0]) * right[0] + (y + 0.5 - renderer.eye[2]) * right[1];
+        out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, !thing.asleep && Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * M.scaleY, shade: (m.elite || thing.champion ? 1.2 : 1) * (thing.asleep ? 0.85 : 1), alpha: m.echo ? 0.78 : 1,
+          tilt: M.tilt, skew: M.skew, mirror: CM.facesMirror(side), flash: thing.champion && !CM.reducedMotion ? 0.12 + 0.08 * Math.sin(now / 300) : 0,
+          lift: thing.asleep ? 0 : Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (awake: it sways; a ghost floats; a champion glints)
       }
     }
     for (const [key, f] of Object.entries(fl.features)) {
@@ -487,25 +486,27 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, flat: true, w: 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75 });
     if (game.mode === "combat") {
       const living = game.attackable();
-      for (const m of game.foes) {
-        if (m.fled || (m.hidden && m.hp > 0)) continue;
+      const fwdv = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
+      game.foes.forEach((m, i) => {
+        if (m.fled && m.hp > 0 && !fledAt.has(m)) fledAt.set(m, now);   // (it has just run: seen running)
+        if ((m.fled && !fledAt.has(m)) || (m.hidden && m.hp > 0)) return;
         const place = foePlace(m);
-        if (!place) continue;
+        if (!place) return;
+        if (m.hp <= 0 && !dying.has(m)) dying.set(m, now);
+        const lunge = lunges.get(m); if (lunge !== undefined && now - lunge > 400) lunges.delete(m);
+        const M = CM.motion({ now, phase: place.dx * 7 + i * 1.9, lungeAt: lunges.get(m), hitAt: hits.get(m), fellAt: m.hp <= 0 ? dying.get(m) : undefined, fledAt: m.fled ? fledAt.get(m) : undefined,
+          roseAt: rising.get(m), ghost: place.ghost, sway: Boolean(m.boss), reduced: CM.reducedMotion });
+        if (M.done) { dying.delete(m); return; }
         const solid = place.echo ? 0.78 : 1;                             // (an echo of a guardian is drawn a little through)
-        let alpha = solid, lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0);
-        if (m.hp <= 0) {                                                 // fallen: it fades, and sinks into the floor (a ghost rises)
-          const t = (now - (dying.get(m) || now)) / 700;
-          if (t >= 1) { dying.delete(m); continue; }
-          alpha = solid * (1 - t);
-          lift += place.ghost ? t * 0.6 : -t * 0.55;
-        } else { place.index = living.indexOf(m); place.chosen = place.index === (game.target || 0); hud.push(place); }
+        const lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0) + M.lift;
+        if (m.hp > 0 && !m.fled) { place.index = living.indexOf(m); place.chosen = place.index === (game.target || 0); hud.push(place); }
         const flash = flashes.get(m) || 0;
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
-        const flinch = flash > 0 ? Math.sin(now / 22) * flash * 0.025 : 0;   // struck: it shudders
-        const breath = CM.reducedMotion || m.hp <= 0 ? 0 : Math.sin(now / 760 + place.dx * 7) * 0.018;   // (and breathes)
         const pose = m.hp > 0 && lunges.has(m) ? "attack" : m.hp > 0 && Math.floor(now / 640 + place.dx * 5) % 2 ? "idle2" : "";
-        out.push(Object.assign({}, place, { layer: frameOf(place.layer, pose), flash: flash * 0.8, alpha, lift, w: place.w * (1 + breath), h: place.h * (1 + breath * 0.6), dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
-      }
+        const off = place.dx * right[0] + place.dz * right[1], away = M.back - M.forward;
+        out.push(Object.assign({}, place, { layer: frameOf(place.layer, pose), flash: Math.max(flash * 0.8, M.flash), alpha: solid * M.alpha, lift, w: place.w, h: place.h * M.scaleY,
+          dx: place.dx + fwdv[0] * away, dz: place.dz + fwdv[1] * away, tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: CM.facesMirror(off) }));
+      });
     }
     out.push(...fxs.sprites(now));                                      // what flies and bursts, this frame
     out.push(...air.sprites(now / 1000));                               // what drifts in the air

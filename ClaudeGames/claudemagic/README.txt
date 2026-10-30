@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A world that moves (the eleventh big update - v9.3 to v10.0)
+  UPGRADE_PLAN_9.md says what each phase does.
+  Monsters that move (v9.3): a monster's pose is worked out from what happened to it and when (CM.motion in
+  src/js/28-motion.js): it breathes in its own time, lunges a quarter of a square at the party when it strikes,
+  flinches back white when struck (a blow mid-lunge breaks the lunge off), topples away from the pack and fades when it
+  dies (a ghost rises away), runs and shrinks down the corridor when it flees; a guardian rises from the floor into its
+  title, and the Lich King's robe stirs. Pictures face the party from either side. Under reduced motion only the flash
+  and the fade are left.
+
 The town's buildings, rebuilt (v9.2)
   The houses were walls only where a street faced them, under a fringe of half-square slopes: the sky showed through the
   middle of every block, and a house beside a hedge, a fence or a tree was open on that side. Now CM.buildingsOf

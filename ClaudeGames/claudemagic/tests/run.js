@@ -3277,6 +3277,28 @@ test("the buildings: every house cell in one rectangle under one gabled roof; wa
   CM.setSolid(fl, 13, 18, "house"); fl.grid[18][13] = 1; assert.ok(CM.buildingsOf(fl).some((b) => b.x0 <= 13 && b.x1 >= 13 && b.y0 <= 18 && b.y1 >= 18), "a house raised is roofed at once");
 });
 
+test("monsters that move: a breath of its own; a lunge out and back; a flinch that breaks a lunge; a fall that topples and fades; a flight that runs and shrinks; a sleeper lies; reduced motion keeps only the flash and the fade", () => {
+  const CM = load(), M = CM.MOTION, at = (o) => CM.motion(Object.assign({ now: 10000, phase: 0 }, o));
+  const a = at({ phase: 0 }).scaleY, b = at({ phase: 2 }).scaleY; assert.notStrictEqual(a, b, "a pack breathes out of step"); assert.ok(Math.abs(a - 1) <= M.breath + 1e-9);
+  const peak = at({ lungeAt: 10000 - M.lungeIn }); assert.ok(Math.abs(peak.forward - M.lungeReach) < 1e-9, "the lunge reaches a quarter of a square");
+  assert.ok(at({ lungeAt: 10000 - 60 }).forward > 0 && at({ lungeAt: 10000 - 60 }).forward < M.lungeReach);
+  assert.strictEqual(at({ lungeAt: 10000 - M.lungeIn - M.lungeOut - 1 }).forward, 0, "and comes back to rest");
+  const broken = at({ lungeAt: 10000 - 100, hitAt: 10000 - 20 }); assert.strictEqual(broken.forward, 0, "struck mid-lunge, the lunge is broken off"); assert.ok(broken.back > 0 && broken.flash > 0, "it flinches back, white");
+  assert.strictEqual(at({ hitAt: 10000 - M.flinchMs - 1 }).back, 0); assert.strictEqual(at({ hitAt: 10000 - M.flashMs - 1 }).flash, 0);
+  const falling = at({ fellAt: 10000 - M.fallMs }); assert.ok(Math.abs(falling.tilt - M.fallTilt) < 1e-9 && falling.alpha === 1, "toppled, then fading");
+  const gone = at({ fellAt: 10000 - M.fallMs - M.fadeMs }); assert.ok(gone.done && gone.alpha === 0);
+  const ghost = at({ fellAt: 10000 - 300, ghost: true }); assert.strictEqual(ghost.tilt, 0); assert.ok(ghost.lift > 0, "a ghost rises away");
+  const run = at({ fledAt: 10000 - M.fleeMs / 2 }); assert.ok(run.back > 0 && run.scale < 1 && run.alpha < 1, "running down the corridor, smaller"); assert.ok(at({ fledAt: 10000 - M.fleeMs }).done);
+  const sleep = at({ sleeping: true }); assert.ok(sleep.tilt > 1.2 && sleep.forward === 0 && sleep.flash === 0, "a sleeper lies on its side");
+  const rising = at({ roseAt: 10000 - 100 }); assert.ok(rising.lift < 0, "a guardian rises from the floor"); assert.strictEqual(at({ roseAt: 10000 - M.riseMs }).lift, 0);
+  assert.ok(at({ sway: true }).skew !== 0 && at({}).skew === 0, "the Lich King's robe stirs");
+  const R = (o) => at(Object.assign({ reduced: true }, o));
+  assert.strictEqual(R({}).scaleY, 1); assert.strictEqual(R({ lungeAt: 10000 - M.lungeIn }).forward, 0); assert.strictEqual(R({ hitAt: 10000 - 50 }).back, 0); assert.ok(R({ hitAt: 10000 - 20 }).flash > 0, "the flash stays");
+  const rf = R({ fellAt: 10000 - M.fallMs }); assert.strictEqual(rf.tilt, 0); assert.ok(rf.alpha < 1 && rf.alpha > 0, "reduced: it only fades");
+  assert.ok(CM.facesMirror(0.3) && !CM.facesMirror(-0.3) && !CM.facesMirror(0), "faces the party from either side");
+  const src = fs.readFileSync(path.join(ROOT, "src", "js", "40-render.js"), "utf8"); assert.ok(src.includes("s.tilt") && src.includes("s.mirror"), "the renderer draws the pose");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

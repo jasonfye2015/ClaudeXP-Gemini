@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v9.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v9.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -525,7 +525,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "9.2", built: "2026-10-30" };
+const CM = window.CM = { version: "9.3", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5612,6 +5612,72 @@ CM.scatter = function (fl, seed, density = CM.DETAIL.medium, ctx = {}) {
   return out;
 };
 
+// ---- 28-motion.js ----
+"use strict";
+// Monsters that move (the eleventh update, phase 0): a monster's pose as a pure function of what happened to it and
+// when, so the Node tests can drive it and the frame loop only reads it. Times are milliseconds on one clock (the
+// page's performance.now()). Nothing here touches the rules.
+//
+//   CM.motion({ now, phase, lungeAt, hitAt, fellAt, fledAt, roseAt, ghost, sleeping, sway, reduced })
+//     -> { forward, back, lift, tilt, scaleY, scale, flash, alpha, skew, done }
+//
+// forward: toward the party (a lunge), back: away (a flinch, a flight) - both in squares; lift in squares; tilt in
+// radians about its foot (a fall: it topples to one side); scaleY a breath; scale the whole picture (a flight
+// shrinks down the corridor); flash a white flash, 0 to 1; alpha; skew a sway of its top (the Lich King's robe);
+// done: the pose has finished (a fall faded, a flight gone) and the sprite can be dropped.
+CM.MOTION = {
+  breath: 0.02, breathMs: 820,
+  lungeIn: 120, lungeOut: 200, lungeReach: 0.24,
+  flinchMs: 220, flinchBack: 0.17, flashMs: 90,
+  fallMs: 400, fadeMs: 300, fallTilt: (80 * Math.PI) / 180,
+  fleeMs: 650, fleeBack: 1.4,
+  riseMs: 1000,
+};
+CM.motion = function (s) {
+  const M = CM.MOTION, now = s.now, out = { forward: 0, back: 0, lift: 0, tilt: 0, scaleY: 1, scale: 1, flash: 0, alpha: 1, skew: 0, done: false };
+  const since = (t) => (t === undefined || t === null ? Infinity : now - t);
+  const phase = s.phase || 0;
+  if (s.sleeping) {                                                       // lying where it sleeps: no breath to see but a slow rise of its side
+    out.tilt = M.fallTilt * 0.95;
+    if (!s.reduced) out.scaleY = 1 + Math.sin(now / 1700 + phase) * 0.012;
+    return out;
+  }
+  const fell = since(s.fellAt);
+  if (fell !== Infinity) {                                                // falling: it topples, then fades
+    if (s.reduced) { out.alpha = Math.max(0, 1 - fell / (M.fallMs + M.fadeMs)); out.done = fell >= M.fallMs + M.fadeMs; return out; }
+    const k = Math.min(1, fell / M.fallMs);
+    out.tilt = M.fallTilt * (1 - Math.pow(1 - k, 2)) * (s.ghost ? 0 : 1);
+    if (s.ghost) out.lift = (fell / (M.fallMs + M.fadeMs)) * 0.6;        // (a ghost rises away instead)
+    out.alpha = fell <= M.fallMs ? 1 : Math.max(0, 1 - (fell - M.fallMs) / M.fadeMs);
+    out.done = fell >= M.fallMs + M.fadeMs;
+    return out;
+  }
+  const fled = since(s.fledAt);
+  if (fled !== Infinity) {                                                // running: away down the corridor, smaller, then gone
+    const k = Math.min(1, fled / M.fleeMs);
+    if (s.reduced) { out.alpha = 1 - k; out.done = k >= 1; return out; }
+    out.back = M.fleeBack * k * k; out.scale = 1 - 0.45 * k; out.alpha = 1 - k * k; out.lift = Math.abs(Math.sin(fled / 70)) * 0.03 * (1 - k);
+    out.done = k >= 1;
+    return out;
+  }
+  if (!s.reduced) {
+    out.scaleY = 1 + Math.sin(now / M.breathMs + phase) * M.breath;     // breathing, each in its own time
+    const rose = since(s.roseAt);
+    if (rose < M.riseMs) { const k = rose / M.riseMs; out.lift = -(1 - k) * (1 - k) * 1.0; }   // (a guardian rises from the floor into its title)
+    const lunge = since(s.lungeAt), hit = since(s.hitAt);
+    const lunging = lunge < M.lungeIn + M.lungeOut && !(hit < lunge);     // (struck mid-lunge: the lunge is broken off)
+    if (lunging) out.forward = lunge < M.lungeIn ? M.lungeReach * (lunge / M.lungeIn) : M.lungeReach * (1 - (lunge - M.lungeIn) / M.lungeOut);
+    if (hit < M.flinchMs) out.back = M.flinchBack * Math.sin((Math.PI * hit) / M.flinchMs);
+    if (s.sway) out.skew = Math.sin(now / 900 + phase) * 0.045 + Math.sin(now / 370 + phase * 2) * 0.012;
+  }
+  const hit = since(s.hitAt);
+  if (hit < M.flashMs) out.flash = 1 - hit / M.flashMs;                    // (the flash, even with motion reduced)
+  return out;
+};
+// which way a monster's picture faces: toward the party's line of sight. side > 0: it stands to the right of the
+// line, so it is mirrored to look left, at the party
+CM.facesMirror = (side) => side > 0.04;
+
 // ---- 30-art.js ----
 "use strict";
 // Everything the game shows in its Drawn theme is painted here in code - the stone of each depth, the chests and
@@ -7314,9 +7380,20 @@ CM.art.buildPixel = function (theme) {
   CM.art.tileOnto(pp, "phylactery", S * 0.15, S * 0.15, S * 0.7, S * 0.7);
   add("phylactery", phy);
   const tileOr = (key, drawn) => (CM.packs.pixel.index[key] ? sprite(key) : CM.art.pixelate(drawn()));   // (the set's tile, or the drawn one made of pixels)
-  for (const m of CM.MONSTERS) { add(`monster:${m.name}`, tileOr(`m.${m.name}`, () => CM.art.monster(m))); add(`monster:${m.name}:idle2`, tileOr(`m.${m.name}`, () => CM.art.monster(m, false, "idle2"))); add(`monster:${m.name}:attack`, tileOr(`m.${m.name}`, () => CM.art.monster(m, false, "attack"))); }
-  add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`)); add(`monster:${CM.BOSS.name}:idle2`, sprite(`m.${CM.BOSS.name}`)); add(`monster:${CM.BOSS.name}:attack`, sprite(`m.${CM.BOSS.name}`));
-  for (const G of Object.values(CM.GUARDIANS)) { add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12))); add(`monster:${G.name}:idle2`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12, "idle2"))); add(`monster:${G.name}:attack`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12, "attack"))); }
+  // a Crawl tile has one frame: its poses are the same pixels leaned - the weight shifted (idle2), or pitched forward
+  // and up at the party (attack), about its foot, the pixels kept square
+  const posed = (key, pose, drawn) => {
+    if (!CM.packs.pixel.index[key]) return CM.art.pixelate(drawn());
+    const src = sprite(key); if (!pose) return src;
+    const c = artCanvas(src.width), p = c.getContext("2d"), W = src.width, foot = W * 0.94;
+    p.imageSmoothingEnabled = false; p.translate(W / 2, foot);
+    if (pose === "idle2") p.transform(1, 0, -0.035, 0.97, 0, 0); else p.transform(1.08, 0, -0.16, 1.06, 0, 0);
+    p.drawImage(src, -W / 2, -foot);
+    return c;
+  };
+  for (const m of CM.MONSTERS) for (const pose of ["", "idle2", "attack"]) add(`monster:${m.name}${pose ? ":" + pose : ""}`, posed(`m.${m.name}`, pose, () => CM.art.monster(m, false, pose || undefined)));
+  for (const pose of ["", "idle2", "attack"]) add(`monster:${CM.BOSS.name}${pose ? ":" + pose : ""}`, posed(`m.${CM.BOSS.name}`, pose, () => CM.art.monster(CM.BOSS, true, pose || undefined)));
+  for (const G of Object.values(CM.GUARDIANS)) for (const pose of ["", "idle2", "attack"]) add(`monster:${G.name}${pose ? ":" + pose : ""}`, posed(`m.${G.name}`, pose, () => CM.art.monster(G, 1.12, pose || undefined)));
   add("nest", CM.art.pixelate(CM.art.nest())); add("throne", CM.art.pixelate(CM.art.throne())); add("anvil", CM.art.pixelate(CM.art.anvil()));
   add("ember", tileOr("ember", CM.art.ember));
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, tileOr(`npc.${who}`, () => CM.art.monster(row)));
@@ -7849,7 +7926,8 @@ CM.Renderer = class {
 
   // A sprite: {x, y (the cell), layer, w, h} and one of - nothing (a billboard facing the camera, standing on the
   // floor), flat (lying on the floor), axis "ns"/"ew" (standing across the cell's middle: a door), face 0-3 (a decal
-  // on that wall of the cell) - plus dx/dz (an offset in the cell), lift, flash, alpha, glow, shade.
+  // on that wall of the cell) - plus dx/dz (an offset in the cell), lift, flash, alpha, glow, shade; and a billboard's
+  // pose: tilt (radians, toppled about its foot), skew (its top swayed), scale, mirror (28-motion.js)
   _spriteMesh() {
     const out = [], right = [Math.cos(this.yaw), 0, Math.sin(this.yaw)];
     for (const s of this.sprites) {
@@ -7872,11 +7950,18 @@ CM.Renderer = class {
         const ax = -dz, az = dx;                                         // along the wall
         const y0 = 0.5 - h / 2 + lift, y1 = 0.5 + h / 2 + lift;
         corners = [[px - ax * w / 2, y0, pz - az * w / 2], [px + ax * w / 2, y0, pz + az * w / 2], [px + ax * w / 2, y1, pz + az * w / 2], [px - ax * w / 2, y1, pz - az * w / 2]];
+      } else if (s.tilt || s.skew || s.scale) {                             // a monster's pose (28-motion.js): toppled about its foot, swaying, shrunk
+        const sc = s.scale || 1, W = w * sc, H = h * sc, sk = (s.skew || 0) * H, side = s.mirror ? 1 : -1, t = s.tilt || 0, c = Math.cos(t), sn = Math.sin(t) * side, px = side * W / 2;
+        corners = [[-W / 2, 0], [W / 2, 0], [W / 2 + sk, H], [-W / 2 + sk, H]].map(([u, v]) => {
+          const uu = t ? px + (u - px) * c + v * sn : u, vv = t ? -(u - px) * sn + v * c : v;
+          return [cx + right[0] * uu, lift + Math.max(0.002, vv), cz + right[2] * uu];
+        });
       } else {
         corners = [[cx - right[0] * w / 2, lift, cz - right[2] * w / 2], [cx + right[0] * w / 2, lift, cz + right[2] * w / 2],
           [cx + right[0] * w / 2, lift + h, cz + right[2] * w / 2], [cx - right[0] * w / 2, lift + h, cz - right[2] * w / 2]];
       }
-      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uv[i][0], uv[i][1], layer, shade, flash, alpha, glow);
+      const uvs = s.mirror ? uv.map(([u, v], i) => [uv[i ^ 1][0], v]) : uv;   // (mirrored: it looks the other way)
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uvs[i][0], uvs[i][1], layer, shade, flash, alpha, glow);
     }
     return out;
   }
@@ -17751,6 +17836,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const dying = new Map();                                               // foe -> when it fell
   const flashes = new Map();                                             // foe -> flash left
   const lunges = new Map();                                              // foe -> when it lunged at the party
+  const hits = new Map(), fledAt = new Map(), rising = new Map();       // foe -> when it was struck, when it ran, when it rose into its title (28-motion.js)
   const fwdV = () => [Math.sin(renderer.yaw), 0, -Math.cos(renderer.yaw)], rightV = () => [Math.cos(renderer.yaw), 0, Math.sin(renderer.yaw)];
   const fromParty = (side = 0) => { const e = renderer.eye, f = fwdV(), r = rightV(); return [e[0] + f[0] * 0.3 + r[0] * side * 0.2, 0.4, e[2] + f[2] * 0.3 + r[2] * side * 0.2]; };
   const beforeParty = (d = 0.3) => { const e = renderer.eye, f = fwdV(); return [e[0] + f[0] * d, 0.45, e[2] + f[2] * d]; };
@@ -17807,7 +17893,8 @@ window.addEventListener("DOMContentLoaded", () => {
     const now = performance.now();
     switch (fx.kind) {
       case "intent": renderer.zoomTo(0.9, 600); break;
-      case "hit": flashes.set(fx.foe, 1); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
+      case "intro": if (fx.foe) rising.set(fx.foe, now); break;
+      case "hit": flashes.set(fx.foe, 1); hits.set(fx.foe, now); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
       case "miss": later(() => floatAt(fx.foe, "miss", "miss")); break;
       case "die": {
         dying.set(fx.foe, now);
@@ -17863,7 +17950,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("mode", (mode) => { if (mode !== "combat") { CM.music.shift(0); CM.music.setDanger(0); } });
   game.on("over", (won) => { if (!won && renderer.ok) { renderer.rollNow = 0; renderer.rollTo(0.12, 1200); setTimeout(() => renderer.rollTo(0, 2500), 1600); } });
   game.on("floor", () => fxs.clear());
-  game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); lunges.clear(); } if (mode === "title") fxs.clear(); });
+  game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); lunges.clear(); hits.clear(); fledAt.clear(); rising.clear(); } if (mode === "title") fxs.clear(); });
   // a click on a foe in the view chooses it
   ui.$("#hud").addEventListener("click", (e) => {
     if (game.mode !== "combat") return;
@@ -17884,11 +17971,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const off = n === 1 ? 0 : CM.clamp((i - (n - 1) / 2) * (n > 4 ? 0.22 : 0.32), -0.46, 0.46);
     let back = (i % 2) * 0.14 + (foe.summoned ? 0.3 : 0) + (foe.boss ? 0.34 : foe.guardian ? 0.22 : 0) + (foe.row === "back" ? 0.28 : 0);     // (the Lich King keeps his distance; the back row stands back)
-    const lunge = lunges.get(foe);
-    if (lunge !== undefined) {                                           // it lunges at the party, and draws back
-      const t = (performance.now() - lunge) / 340;
-      if (t >= 1) lunges.delete(foe); else back -= Math.sin(Math.PI * t) * 0.3;
-    }
     const fwd = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
     const dx = right[0] * off + fwd[0] * back, dz = right[1] * off + fwd[1] * back;
     const G = foe.guardian ? CM.GUARDIANS[foe.guardian] : null;
@@ -18025,9 +18107,11 @@ window.addEventListener("DOMContentLoaded", () => {
           else { const e = CM.ease(k); x = CM.lerp(thing.anim.from[0], x, e); y = CM.lerp(thing.anim.from[1], y, e); }
         }
         const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
-        const breath = CM.reducedMotion ? 0 : Math.sin(now / 820 + x * 2.1 + y * 1.3) * 0.02;   // (alive: it breathes)
-        out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: (m.boss ? 0.95 : G ? 0.9 * G.size : 0.85) * (1 + breath), h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * (1 + breath * 0.6), shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
-          lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
+        const M = CM.motion({ now, phase: x * 2.1 + y * 1.3, sleeping: Boolean(thing.asleep), sway: Boolean(m.boss), reduced: CM.reducedMotion });   // (alive: it breathes; asleep, it lies)
+        const side = (x + 0.5 - renderer.eye[0]) * right[0] + (y + 0.5 - renderer.eye[2]) * right[1];
+        out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, !thing.asleep && Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * M.scaleY, shade: (m.elite || thing.champion ? 1.2 : 1) * (thing.asleep ? 0.85 : 1), alpha: m.echo ? 0.78 : 1,
+          tilt: M.tilt, skew: M.skew, mirror: CM.facesMirror(side), flash: thing.champion && !CM.reducedMotion ? 0.12 + 0.08 * Math.sin(now / 300) : 0,
+          lift: thing.asleep ? 0 : Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (awake: it sways; a ghost floats; a champion glints)
       }
     }
     for (const [key, f] of Object.entries(fl.features)) {
@@ -18063,25 +18147,27 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, flat: true, w: 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75 });
     if (game.mode === "combat") {
       const living = game.attackable();
-      for (const m of game.foes) {
-        if (m.fled || (m.hidden && m.hp > 0)) continue;
+      const fwdv = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
+      game.foes.forEach((m, i) => {
+        if (m.fled && m.hp > 0 && !fledAt.has(m)) fledAt.set(m, now);   // (it has just run: seen running)
+        if ((m.fled && !fledAt.has(m)) || (m.hidden && m.hp > 0)) return;
         const place = foePlace(m);
-        if (!place) continue;
+        if (!place) return;
+        if (m.hp <= 0 && !dying.has(m)) dying.set(m, now);
+        const lunge = lunges.get(m); if (lunge !== undefined && now - lunge > 400) lunges.delete(m);
+        const M = CM.motion({ now, phase: place.dx * 7 + i * 1.9, lungeAt: lunges.get(m), hitAt: hits.get(m), fellAt: m.hp <= 0 ? dying.get(m) : undefined, fledAt: m.fled ? fledAt.get(m) : undefined,
+          roseAt: rising.get(m), ghost: place.ghost, sway: Boolean(m.boss), reduced: CM.reducedMotion });
+        if (M.done) { dying.delete(m); return; }
         const solid = place.echo ? 0.78 : 1;                             // (an echo of a guardian is drawn a little through)
-        let alpha = solid, lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0);
-        if (m.hp <= 0) {                                                 // fallen: it fades, and sinks into the floor (a ghost rises)
-          const t = (now - (dying.get(m) || now)) / 700;
-          if (t >= 1) { dying.delete(m); continue; }
-          alpha = solid * (1 - t);
-          lift += place.ghost ? t * 0.6 : -t * 0.55;
-        } else { place.index = living.indexOf(m); place.chosen = place.index === (game.target || 0); hud.push(place); }
+        const lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0) + M.lift;
+        if (m.hp > 0 && !m.fled) { place.index = living.indexOf(m); place.chosen = place.index === (game.target || 0); hud.push(place); }
         const flash = flashes.get(m) || 0;
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
-        const flinch = flash > 0 ? Math.sin(now / 22) * flash * 0.025 : 0;   // struck: it shudders
-        const breath = CM.reducedMotion || m.hp <= 0 ? 0 : Math.sin(now / 760 + place.dx * 7) * 0.018;   // (and breathes)
         const pose = m.hp > 0 && lunges.has(m) ? "attack" : m.hp > 0 && Math.floor(now / 640 + place.dx * 5) % 2 ? "idle2" : "";
-        out.push(Object.assign({}, place, { layer: frameOf(place.layer, pose), flash: flash * 0.8, alpha, lift, w: place.w * (1 + breath), h: place.h * (1 + breath * 0.6), dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
-      }
+        const off = place.dx * right[0] + place.dz * right[1], away = M.back - M.forward;
+        out.push(Object.assign({}, place, { layer: frameOf(place.layer, pose), flash: Math.max(flash * 0.8, M.flash), alpha: solid * M.alpha, lift, w: place.w, h: place.h * M.scaleY,
+          dx: place.dx + fwdv[0] * away, dz: place.dz + fwdv[1] * away, tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: CM.facesMirror(off) }));
+      });
     }
     out.push(...fxs.sprites(now));                                      // what flies and bursts, this frame
     out.push(...air.sprites(now / 1000));                               // what drifts in the air

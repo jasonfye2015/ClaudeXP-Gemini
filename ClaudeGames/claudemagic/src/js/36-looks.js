@@ -86,9 +86,20 @@ CM.art.buildPixel = function (theme) {
   CM.art.tileOnto(pp, "phylactery", S * 0.15, S * 0.15, S * 0.7, S * 0.7);
   add("phylactery", phy);
   const tileOr = (key, drawn) => (CM.packs.pixel.index[key] ? sprite(key) : CM.art.pixelate(drawn()));   // (the set's tile, or the drawn one made of pixels)
-  for (const m of CM.MONSTERS) { add(`monster:${m.name}`, tileOr(`m.${m.name}`, () => CM.art.monster(m))); add(`monster:${m.name}:idle2`, tileOr(`m.${m.name}`, () => CM.art.monster(m, false, "idle2"))); add(`monster:${m.name}:attack`, tileOr(`m.${m.name}`, () => CM.art.monster(m, false, "attack"))); }
-  add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`)); add(`monster:${CM.BOSS.name}:idle2`, sprite(`m.${CM.BOSS.name}`)); add(`monster:${CM.BOSS.name}:attack`, sprite(`m.${CM.BOSS.name}`));
-  for (const G of Object.values(CM.GUARDIANS)) { add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12))); add(`monster:${G.name}:idle2`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12, "idle2"))); add(`monster:${G.name}:attack`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12, "attack"))); }
+  // a Crawl tile has one frame: its poses are the same pixels leaned - the weight shifted (idle2), or pitched forward
+  // and up at the party (attack), about its foot, the pixels kept square
+  const posed = (key, pose, drawn) => {
+    if (!CM.packs.pixel.index[key]) return CM.art.pixelate(drawn());
+    const src = sprite(key); if (!pose) return src;
+    const c = artCanvas(src.width), p = c.getContext("2d"), W = src.width, foot = W * 0.94;
+    p.imageSmoothingEnabled = false; p.translate(W / 2, foot);
+    if (pose === "idle2") p.transform(1, 0, -0.035, 0.97, 0, 0); else p.transform(1.08, 0, -0.16, 1.06, 0, 0);
+    p.drawImage(src, -W / 2, -foot);
+    return c;
+  };
+  for (const m of CM.MONSTERS) for (const pose of ["", "idle2", "attack"]) add(`monster:${m.name}${pose ? ":" + pose : ""}`, posed(`m.${m.name}`, pose, () => CM.art.monster(m, false, pose || undefined)));
+  for (const pose of ["", "idle2", "attack"]) add(`monster:${CM.BOSS.name}${pose ? ":" + pose : ""}`, posed(`m.${CM.BOSS.name}`, pose, () => CM.art.monster(CM.BOSS, true, pose || undefined)));
+  for (const G of Object.values(CM.GUARDIANS)) for (const pose of ["", "idle2", "attack"]) add(`monster:${G.name}${pose ? ":" + pose : ""}`, posed(`m.${G.name}`, pose, () => CM.art.monster(G, 1.12, pose || undefined)));
   add("nest", CM.art.pixelate(CM.art.nest())); add("throne", CM.art.pixelate(CM.art.throne())); add("anvil", CM.art.pixelate(CM.art.anvil()));
   add("ember", tileOr("ember", CM.art.ember));
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, tileOr(`npc.${who}`, () => CM.art.monster(row)));
