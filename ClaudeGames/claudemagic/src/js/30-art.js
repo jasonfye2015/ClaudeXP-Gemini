@@ -1085,6 +1085,7 @@ CM.art.facade = function (what, seed = 1, base = null) {                  // bas
   else { p.fillStyle = "#D8CCB0"; p.fillRect(0, 0, S, S); speckle(p, rnd, S, S, 1600, "#B8A890", 0.35, 3); speckle(p, rnd, S, S, 500, "#F0E8D8", 0.3, 3); }
   p.fillStyle = "#5A4028";                                                                  // the timbers
   p.fillRect(0, 0, 12, S); p.fillRect(S - 12, 0, 12, S); p.fillRect(0, 0, S, 10); p.fillRect(0, S - 14, S, 14);
+  if (what === "gable") { p.fillRect(S / 2 - 5, 0, 10, S); p.beginPath(); p.moveTo(12, S * 0.62); p.lineTo(S / 2 - 5, S * 0.18); p.lineTo(S / 2 - 5, S * 0.3); p.lineTo(22, S * 0.68); p.closePath(); p.fill(); p.beginPath(); p.moveTo(S - 12, S * 0.62); p.lineTo(S / 2 + 5, S * 0.18); p.lineTo(S / 2 + 5, S * 0.3); p.lineTo(S - 22, S * 0.68); p.closePath(); p.fill(); }
   if (what === "house" || what === "frame") { p.fillRect(S / 2 - 6, 0, 12, S); p.beginPath(); p.moveTo(12, S * 0.55); p.lineTo(S / 2 - 6, 10); p.lineTo(S / 2 - 6, 26); p.lineTo(26, S * 0.6); p.closePath(); p.fill(); }
   const window = (x, y, w, h) => {
     p.fillStyle = "#5A4028"; p.fillRect(x - 5, y - 5, w + 10, h + 10);
@@ -1270,6 +1271,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:house"] = use("solid.house", () => CM.art.facade("house"));
   out["solid:door"] = use("solid.door", () => CM.art.facade("door"));
   out["solid:shop"] = use("solid.shop", () => CM.art.facade("shop"));
+  out["solid:gable"] = use("solid.gable", () => CM.art.facade("gable"));
   out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
   out["solid:townwall"] = use("solid.townwall", () => CM.art.townWall(false));
   out["solid:townwall:top"] = use("solid.townwall.top", () => CM.art.townWall(true));

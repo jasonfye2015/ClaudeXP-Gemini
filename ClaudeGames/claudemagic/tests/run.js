@@ -3244,6 +3244,39 @@ test("the clock made visible: the dial's sun and moon follow the clock and the s
   assert.ok(!src("73-play.js").includes("drawSky() {"), "one drawSky");
 });
 
+test("the buildings: every house cell in one rectangle under one gabled roof; walls on every outside face, whatever stands beside; the ridge and eaves where they should be; chimneys on the roofs; none below ground", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("bld-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const fl = g.floor; assert.strictEqual(fl.number, 0);
+  const B = CM.buildingsOf(fl), cells = new Map();
+  for (const b of B) {
+    assert.ok(b.x1 >= b.x0 && b.y1 >= b.y0 && b.rise >= CM.ROOF.minRise && b.rise <= CM.ROOF.maxRise);
+    const span = b.along === "x" ? b.y1 - b.y0 + 1 : b.x1 - b.x0 + 1, len = b.along === "x" ? b.x1 - b.x0 + 1 : b.y1 - b.y0 + 1; assert.ok(len >= span, "the ridge runs along the longer side");
+    for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++) { assert.ok(CM.isBuilding(fl, x, y), `${x},${y} is a house cell`); assert.ok(!cells.has(`${x},${y}`), "in one rectangle only"); cells.set(`${x},${y}`, b); }
+    const X0 = b.x0, X1 = b.x1 + 1, Z0 = b.y0, Z1 = b.y1 + 1, cx = (X0 + X1) / 2, cz = (Z0 + Z1) / 2;
+    assert.ok(Math.abs(CM.roofAt(b, cx, cz) - (b.h + b.rise)) < 1e-9, "the ridge over the middle");
+    const edge = b.along === "x" ? CM.roofAt(b, cx, Z0) : CM.roofAt(b, X0, cz); assert.ok(Math.abs(edge - b.h) < 1e-9, "the roof meets the walls' top at the wall line");
+    assert.strictEqual(b.along === "x" ? CM.roofAt(b, cx, Z0 - 1) : CM.roofAt(b, X0 - 1, cz), null, "nothing past the eaves");
+  }
+  const all = Object.entries(fl.kinds).filter(([, k]) => CM.BUILDING_KINDS.includes(k)).length; assert.strictEqual(cells.size, all, "every house cell roofed");
+  assert.ok(B.some((b) => (b.x1 - b.x0 + 1) * (b.y1 - b.y0 + 1) >= 9), "the blocks stay whole: one roof over a 3x3 or more");
+  let faces = 0, besideSolid = 0;
+  for (const key of cells.keys()) { const [x, y] = key.split(",").map(Number); for (const [dx, dy] of [[0, -1], [0, 1], [1, 0], [-1, 0]]) if (!CM.isBuilding(fl, x + dx, y + dy)) { faces++; if (!CM.isOpen(fl, x + dx, y + dy)) besideSolid++; } }
+  assert.ok(besideSolid > 0, "some houses stand against a hedge, a fence, a tree or the wall");
+  const index = {}; ["wall", "solid:house", "solid:door", "solid:shop", "solid:roof", "solid:gable", "solid:townwall", "solid:townwall:top", "ground:grass"].forEach((k, i) => { index[k] = i; });
+  const m = CM.floorMesh(fl, CM.themeFor(0), index, { props: [] });
+  assert.strictEqual(m.buildings, B.length);
+  assert.ok(m.walls >= faces, `a wall on every outside face, those against a hedge or a tree too (${m.walls} of ${faces})`);
+  assert.ok(m.roofs >= B.length * 2, "two slopes a building");
+  const C = CM.chimneysOf(fl); assert.strictEqual(m.chimneys, C.length); assert.ok(C.length >= 3, "chimneys in the town");
+  for (const c of C) { const b = cells.get(`${Math.floor(c.x)},${Math.floor(c.z)}`); assert.ok(b, "a chimney stands on a building"); assert.ok(c.top > b.h + b.rise && c.base < CM.roofAt(b, c.x, c.z), "through the roof, and over the ridge"); }
+  // the faces seen from inside a building are never drawn: every wall vertex lies on a building's outline
+  const d = m.data, S = CM.MESH_STRIDE;
+  for (let i = 0; i < d.length; i += S) { const layer = d[i + 5]; if (layer !== index["solid:house"]) continue; const x = d[i], z = d[i + 2]; assert.ok(Math.abs(x - Math.round(x)) < 1e-6 || Math.abs(z - Math.round(z)) < 1e-6, "on the grid lines"); }
+  const deep = new CM.Game(); deep.newGame("bld-2", fixedParty(CM)); deep.enterFloor(3, "down"); assert.strictEqual(CM.buildingsOf(deep.floor).length, 0, "no buildings below ground");
+  CM.setSolid(fl, 13, 18, "house"); fl.grid[18][13] = 1; assert.ok(CM.buildingsOf(fl).some((b) => b.x0 <= 13 && b.x1 >= 13 && b.y0 <= 18 && b.y1 >= 18), "a house raised is roofed at once");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

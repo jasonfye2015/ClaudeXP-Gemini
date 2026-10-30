@@ -148,7 +148,7 @@ CM.art.buildStone = function (theme) {
   add("wallsecret", secret);
   const fit = (canvas) => { if (canvas.width === S) return canvas; const c = artCanvas(S); c.getContext("2d").drawImage(canvas, 0, 0, S, S); return c; };
   const surface = CM.art.surfaceLayers((key, drawn) => {                   // the surface: photographs where the set has them, the plaster under the drawn timbers, bark on the trunks
-    if (key === "solid.house" || key === "solid.door" || key === "solid.shop") return CM.art.packs.stone["solid.plaster"] ? CM.art.facade(key.slice(6), 1, photo("solid.plaster", false, 0, true)) : drawn();
+    if (key === "solid.house" || key === "solid.door" || key === "solid.shop" || key === "solid.gable") return CM.art.packs.stone["solid.plaster"] ? CM.art.facade(key.slice(6), 1, photo("solid.plaster", false, 0, true)) : drawn();
     if (key.startsWith("tree.")) return CM.art.tree(Number(key.slice(5)), CM.art.packs.stone["solid.bark"] || null);
     if ((key === "ground.litter" || key === "ground.needles") && CM.art.packs.stone[key]) return CM.art.footShade(photo(key, false, 0, true));   // (the photograph, with the trunk's shade)
     if (key === "solid.roof" && CM.art.packs.stone[key]) { const c = photo(key, false, 0, true), q = c.getContext("2d"); q.fillStyle = "rgba(255,200,150,0.22)"; q.fillRect(0, 0, S, S); return c; }   // (slate, warmed a little)
