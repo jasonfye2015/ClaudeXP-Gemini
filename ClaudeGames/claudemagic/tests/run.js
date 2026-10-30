@@ -2912,7 +2912,9 @@ test("the surface: the sky by the clock and the moon, the solid kinds, and a mes
   const d = CM.floorDelta(game.floor, CM.snapshot(CM.makeTown(game.seed)));
   assert.ok(!d.x || !("kinds" in d.x || "canopy" in d.x), "the town's dress isn't in the save");
   // Pixel is the look to start with
-  assert.strictEqual(Object.keys(CM.LOOKS)[0], "pixel"); assert.strictEqual(new CM.Game().settings.look, "pixel");
+  assert.deepStrictEqual(Object.keys(CM.LOOKS), ["pixel", "stone"], "two looks, Pixel first"); assert.strictEqual(new CM.Game().settings.look, "pixel");
+  { const g2 = new CM.Game(); g2.settings.look = "drawn"; CM.store.set("settings", g2.settings); const g3 = new CM.Game(); assert.strictEqual(g3.settings.look, "pixel", "a save that says Drawn opens in Pixel"); CM.store.remove("settings"); }
+  const town2 = CM.makeTown("sky-1"); assert.strictEqual(town2.things[CM.TOWN_AT.cross.join(",")].type, "cross"); assert.strictEqual(CM.groundAt(town2, ...CM.TOWN_AT.cross), "cobbles");
 });
 
 test("finding the way: signposts at the junctions that Use reads, the places under the party's feet by name, and Where to? that walks to every door and known place", () => {

@@ -110,7 +110,7 @@ CM.floorMesh = function (fl, theme, index) {
       quad([a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]], layer, shade); walls++;
       if (K.roof && index[K.roof] !== undefined) {                                    // the eaves: a slope from the wall's top back over the house
         const ix = dx * 0.5, iz = dy * 0.5;
-        quad([a[0], h, a[1]], [b[0], h, b[1]], [b[0] + ix, h + 0.45, b[1] + iz], [a[0] + ix, h + 0.45, a[1] + iz], index[K.roof], shade * 0.8); roofs++;
+        quad([a[0], h, a[1]], [b[0], h, b[1]], [b[0] + ix, h + 0.45, b[1] + iz], [a[0] + ix, h + 0.45, a[1] + iz], index[K.roof], Math.min(1.1, shade * 1.1)); roofs++;   // (the eaves catch the sky)
       }
       if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });

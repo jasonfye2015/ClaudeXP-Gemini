@@ -1,6 +1,7 @@
 "use strict";
-// The look of the dungeon: three themes the player chooses between, on the title and in Settings, at any time.
-//   drawn  everything painted in code (30-art.js) - the game's own art
+// The look of the dungeon: two themes the player chooses between, on the title and in Settings, at any time. (A
+// third, Drawn - everything painted in code, 30-art.js - was the first; it is no longer offered, but its painters are
+// what the other two fall back on for anything their sets lack, and `drawn` still builds.)
 //   pixel  Dungeon Crawl Stone Soup's 32-pixel tiles (CC0), crisp and chunky: the stone of each depth, the furniture,
 //          the monsters, the things in the pack, the spells, and the heroes as paper dolls
 //   stone  photographed stone (ambientCG, CC0) on the walls, floors and ceilings, with the drawn furniture and monsters
@@ -8,8 +9,7 @@
 // CM.art.load(); until then, and wherever a pack has no tile for something, the drawn art stands in.
 CM.LOOKS = {
   pixel: { name: "Pixel tiles", what: "Dungeon Crawl Stone Soup's pixel tiles, crisp and chunky" },
-  drawn: { name: "Drawn", what: "painted in code: the game's own art" },
-  stone: { name: "Stone", what: "photographed stone on the walls and floors, with the drawn monsters" },
+  stone: { name: "Stone", what: "photographed stone, grass, plaster and bark on the walls and the ground, with the drawn monsters" },
 };
 CM.art.packs = { ready: false, atlas: null, stone: {}, loading: null };
 
@@ -113,13 +113,14 @@ CM.art.buildPixel = function (theme) {
 CM.art.buildStone = function (theme) {
   const t = theme.photos || `t${Math.max(0, CM.THEMES.indexOf(theme))}`, S = (CM.packs && CM.packs.stone.size) || 512, layers = [], index = {};
   const add = (name, canvas) => { index[name] = layers.length; layers.push(canvas); };
-  const photo = (key, flip = false, darken = 0) => {
+  const photo = (key, flip = false, darken = 0, plain = false) => {         // plain: as photographed, without the depth's colour over it (the surface's)
     const c = artCanvas(S), p = c.getContext("2d"), im = CM.art.packs.stone[key];
     if (im) {
       if (flip) { p.translate(S, 0); p.scale(-1, 1); }
       p.drawImage(im, 0, 0, S, S);
       p.setTransform(1, 0, 0, 1, 0, 0);
     } else { p.fillStyle = rgb(theme.stone); p.fillRect(0, 0, S, S); }
+    if (plain) return c;
     p.globalCompositeOperation = "overlay";                                 // a breath of the depth's own colour
     p.globalAlpha = 0.3;
     p.fillStyle = rgb(theme.stone, 1.5);
@@ -141,6 +142,14 @@ CM.art.buildStone = function (theme) {
   sp.strokeStyle = "rgba(0,0,0,0.4)"; sp.lineWidth = S / 128;
   sp.beginPath(); sp.moveTo(S * 0.2, S); sp.lineTo(S * 0.2, S * 0.12); sp.lineTo(S * 0.8, S * 0.12); sp.lineTo(S * 0.8, S); sp.stroke();
   add("wallsecret", secret);
+  const fit = (canvas) => { if (canvas.width === S) return canvas; const c = artCanvas(S); c.getContext("2d").drawImage(canvas, 0, 0, S, S); return c; };
+  const surface = CM.art.surfaceLayers((key, drawn) => {                   // the surface: photographs where the set has them, the plaster under the drawn timbers, bark on the trunks
+    if (key === "solid.house" || key === "solid.door" || key === "solid.shop") return CM.art.packs.stone["solid.plaster"] ? CM.art.facade(key.slice(6), 1, photo("solid.plaster", false, 0, true)) : drawn();
+    if (key.startsWith("tree.")) return CM.art.tree(Number(key.slice(5)), CM.art.packs.stone["solid.bark"] || null);
+    if (key === "solid.roof" && CM.art.packs.stone[key]) { const c = photo(key, false, 0, true), q = c.getContext("2d"); q.fillStyle = "rgba(255,200,150,0.22)"; q.fillRect(0, 0, S, S); return c; }   // (slate, warmed a little)
+    return CM.art.packs.stone[key] ? photo(key, false, 0, true) : drawn();
+  });
+  for (const [name, c] of Object.entries(surface)) add(name, fit(c));
   const drawn = CM.art.buildDrawn(theme);                                   // the rest, as drawn, at the stone's size
   for (const [name, i] of Object.entries(drawn.index)) {
     if (name in index) continue;
