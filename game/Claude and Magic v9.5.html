@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v9.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v9.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -525,7 +525,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "9.4", built: "2026-10-30" };
+const CM = window.CM = { version: "9.5", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5216,7 +5216,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });
   }
-  let buildings = 0, chimneys = 0;
+  let buildings = 0, chimneys = 0, litWindows = 0;
   if (sky) {                                                                             // the buildings: walled all round, and roofed
     const poly = (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
     const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofL = L("solid:roof");
@@ -5234,6 +5234,13 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         const b = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
         const layer = d === front ? L(K.face) : L("solid:house"), h = K.h;
         poly([[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], [[0, 1], [1, 1], [1, 0], [0, 0]], layer, shade);
+        if (opts.night && index["window:lit"] !== undefined && (kind === "house" || d !== front || kind === "door") && CM.hashSeed(`${fl.number}:lit:${x},${y}:${d}`) % 10 < 7) {   // a window lit for the night
+          const win = d === front ? (kind === "door" ? [0.74, 0.36, 0.9, 0.56] : null) : [0.62, 0.3, 0.84, 0.56];
+          if (win) { const ax0 = a[0] + (b[0] - a[0]) * win[0], az0 = a[1] + (b[1] - a[1]) * win[0], ax1 = a[0] + (b[0] - a[0]) * win[2], az1 = a[1] + (b[1] - a[1]) * win[2], y0 = h * (1 - win[3]), y1 = h * (1 - win[1]), q = 0.012;
+            const P = [[ax0 + dx * q, y0, az0 + dy * q], [ax1 + dx * q, y0, az1 + dy * q], [ax1 + dx * q, y1, az1 + dy * q], [ax0 + dx * q, y1, az0 + dy * q]], uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
+            for (const i of [0, 1, 2, 0, 2, 3]) out.push(...P[i], uv[i][0], uv[i][1], index["window:lit"], 1, 0, 1, 1);
+            litWindows++; }
+        }
         const o = 0.035, ox = dx * o, oz = dy * o, ft = 0.16;                        // the footing: a course of stone, standing a little proud
         poly([[a[0] + ox, 0, a[1] + oz], [b[0] + ox, 0, b[1] + oz], [b[0] + ox, ft, b[1] + oz], [a[0] + ox, ft, a[1] + oz]], [[0, 1], [1, 1], [1, 1 - ft], [0, 1 - ft]], stone, shade * 0.8);
         poly([[a[0] + ox, ft, a[1] + oz], [b[0] + ox, ft, b[1] + oz], [b[0], ft, b[1]], [a[0], ft, a[1]]], [[0, 0.1], [1, 0.1], [1, 0], [0, 0]], stone, shade * 0.95);
@@ -5358,7 +5365,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
 };
 
 // ---- 27-props.js ----
@@ -5436,6 +5443,7 @@ CM.PROPS = {
   scorch: { how: "flat", size: [0.7, 0.95] },
   arrows: { how: "flat", size: [0.35, 0.5] },
   stub: { how: "flat", size: [0.18, 0.24] },
+  chest_open: { how: "stand", size: [0.62, 0.7], h: 1 },              // a chest the party emptied: it stays open where it stood
   pin: { how: "flat", size: [0.12, 0.16] },
 };
 // where they lie: `surface` (the town and the land) or `bands` (the dungeon's, by CM.themeIndex: 0 the Catacombs ... 9
@@ -5679,6 +5687,13 @@ CM.motion = function (s) {
   const hit = since(s.hitAt);
   if (hit < M.flashMs) out.flash = 1 - hit / M.flashMs;                    // (the flash, even with motion reduced)
   return out;
+};
+// things that move between two states (phase 2): a door swung open on its hinge, a portcullis lifted, a lever thrown.
+// CM.swing(open, at, now, ms): 0 shut .. 1 open, eased; `at` is when it last changed (null: it was found that way)
+CM.SWING = { doorMs: 350, doorAngle: Math.PI / 2, gateMs: 600, gateLift: 0.92, leverMs: 250 };
+CM.swing = (open, at, now, ms) => {
+  const k = at === undefined || at === null ? 1 : Math.min(1, Math.max(0, (now - at) / ms)), e = k * k * (3 - 2 * k);
+  return open ? e : 1 - e;
 };
 // which way a monster's picture faces: toward the party's line of sight. side > 0: it stands to the right of the
 // line, so it is mirrored to look left, at the party
@@ -6796,6 +6811,13 @@ CM.art.facade = function (what, seed = 1, base = null) {                  // bas
   }
   return c;
 };
+// a window at night: the warm light behind the glass and the timbers across it (laid over the wall's own window)
+CM.art.litWindow = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, g = p.createRadialGradient(S / 2, S / 2, S * 0.05, S / 2, S / 2, S * 0.7);
+  g.addColorStop(0, "#FFE6A0"); g.addColorStop(1, "#E08A30"); p.fillStyle = "#5A4028"; p.fillRect(0, 0, S, S); p.fillStyle = g; p.fillRect(S * 0.1, S * 0.1, S * 0.8, S * 0.8);
+  p.fillStyle = "#5A4028"; p.fillRect(S / 2 - S * 0.04, 0, S * 0.08, S); p.fillRect(0, S / 2 - S * 0.04, S, S * 0.08);
+  return c;
+};
 CM.art.townWall = function (top = false, seed = 1) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`townwall:${top}:${seed}`)), base = top ? [120, 116, 108] : [104, 100, 94];
   p.fillStyle = rgb(base, 0.55); p.fillRect(0, 0, S, S);
@@ -6959,6 +6981,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:door"] = use("solid.door", () => CM.art.facade("door"));
   out["solid:shop"] = use("solid.shop", () => CM.art.facade("shop"));
   out["solid:gable"] = use("solid.gable", () => CM.art.facade("gable"));
+  out["window:lit"] = use("window.lit", () => CM.art.litWindow());
   out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
   out["solid:townwall"] = use("solid.townwall", () => CM.art.townWall(false));
   out["solid:townwall:top"] = use("solid.townwall.top", () => CM.art.townWall(true));
@@ -7078,7 +7101,7 @@ CM.art.surfaceProp = function (id, S, kit) {
 
 
 // the dungeon's debris: painted at the props' size, for every look
-CM.art.DEBRIS_IDS = ["cobweb", "dust", "coffinlid", "candle", "puddle", "slime", "rotcrate", "rubble", "pick", "rails", "armour", "glass", "urn", "candelabra", "frost", "weed", "shells", "oar", "fungi", "shard", "slag", "chains", "cogs", "bonepile", "roots", "coins", "books", "scrolls", "straw", "bottle_red", "bottle_blue", "bottle_green", "stain", "ash", "ooze", "scorch", "arrows", "stub", "pin"];
+CM.art.DEBRIS_IDS = ["cobweb", "dust", "coffinlid", "candle", "puddle", "slime", "rotcrate", "rubble", "pick", "rails", "armour", "glass", "urn", "candelabra", "frost", "weed", "shells", "oar", "fungi", "shard", "slag", "chains", "cogs", "bonepile", "roots", "coins", "books", "scrolls", "straw", "bottle_red", "bottle_blue", "bottle_green", "stain", "ash", "ooze", "scorch", "arrows", "stub", "pin", "chest_open"];
 CM.art.debrisProp = function (id, S) {
   const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`debris:${id}`));
   const blob = (x, y, rx, ry, colour) => { p.fillStyle = colour; p.beginPath(); p.ellipse(x, y, rx, ry, rnd.next() * 3, 0, Math.PI * 2); p.fill(); };
@@ -7138,6 +7161,10 @@ CM.art.debrisProp = function (id, S) {
     case "ooze": blob(S / 2, S / 2, S * 0.38, S * 0.26, "#4A7A30"); blob(S * 0.42, S * 0.44, S * 0.14, S * 0.07, "#90C060"); scatter(5, (x, y) => blob(x, y, 7, 5, "#5A8A38")); break;
     case "scorch": { const g = p.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, S * 0.48); g.addColorStop(0, "rgba(20,14,10,1)"); g.addColorStop(0.7, "rgba(40,28,20,1)"); g.addColorStop(0.71, "rgba(0,0,0,0)"); p.fillStyle = g; p.fillRect(0, 0, S, S); scatter(10, (x, y) => blob(x, y, 5, 3, "#1A1410")); break; }
     case "arrows": p.lineCap = "round"; for (let i = 0; i < 3; i++) { const x = S * (0.25 + rnd.next() * 0.5), y = S * (0.25 + rnd.next() * 0.5), a = rnd.next() * Math.PI, l = S * 0.2; p.strokeStyle = "#8A6A40"; p.lineWidth = 4; p.beginPath(); p.moveTo(x - Math.cos(a) * l, y - Math.sin(a) * l); p.lineTo(x + Math.cos(a) * l * 0.4, y + Math.sin(a) * l * 0.4); p.stroke(); p.fillStyle = "#D8D0C0"; p.beginPath(); p.moveTo(x - Math.cos(a) * l, y - Math.sin(a) * l); p.lineTo(x - Math.cos(a + 0.4) * l * 0.8, y - Math.sin(a + 0.4) * l * 0.8); p.lineTo(x - Math.cos(a - 0.4) * l * 0.8, y - Math.sin(a - 0.4) * l * 0.8); p.closePath(); p.fill(); } break;
+    case "chest_open": { const W = S * 0.8, x0 = S * 0.1, y0 = S * 0.5; p.fillStyle = "#3A2414"; p.fillRect(x0, y0, W, S * 0.42); p.fillStyle = "#7A4A22"; p.fillRect(x0 + 3, y0 + 3, W - 6, S * 0.42 - 6);   // an open chest: the box, its dark inside, the lid thrown back
+      p.fillStyle = "#C8A040"; p.fillRect(x0, y0 + S * 0.08, W, S * 0.05); p.fillStyle = "#1A100A"; p.fillRect(x0 + 6, y0 - 2, W - 12, S * 0.07);
+      p.fillStyle = "#6A3E1C"; p.beginPath(); p.moveTo(x0, y0); p.lineTo(x0 + W, y0); p.lineTo(x0 + W - S * 0.04, y0 - S * 0.34); p.lineTo(x0 + S * 0.04, y0 - S * 0.34); p.closePath(); p.fill();
+      p.fillStyle = "#C8A040"; p.fillRect(x0 + S * 0.03, y0 - S * 0.2, W - S * 0.06, S * 0.04); break; }
     case "stub": p.fillStyle = "#4A3220"; p.fillRect(S * 0.2, S * 0.4, S * 0.6, S * 0.2); blob(S * 0.78, S * 0.5, S * 0.12, S * 0.14, "#1A1410"); break;
     case "pin": p.strokeStyle = "#A0A0A8"; p.lineWidth = 6; p.lineCap = "round"; p.beginPath(); p.moveTo(S * 0.15, S * 0.6); p.lineTo(S * 0.6, S * 0.6); p.lineTo(S * 0.85, S * 0.35); p.stroke(); break;
     case "straw": p.lineWidth = 3; for (let i = 0; i < 90; i++) { const x = S * (0.1 + rnd.next() * 0.8), y = S * (0.1 + rnd.next() * 0.8), a = rnd.next() * Math.PI; p.strokeStyle = `rgb(${190 + rnd.int(0, 40)},${160 + rnd.int(0, 30)},${80 + rnd.int(0, 30)})`; p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * 16, y + Math.sin(a) * 16); p.stroke(); } break;
@@ -7686,15 +7713,29 @@ uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
 uniform int uLights; uniform vec4 uLightPos[12]; uniform vec3 uLightCol[12];   // the lights about the party: xyz, reach in w; colour
 uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
+uniform float uTime; uniform float uWet;                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 void main() {
   bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
   vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0)));
   vec4 t = shared ? ts : tt;
-  if (vFx.z > 2.5) { fragColor = vec4(mix(uHorizon, uZenith, t.r), 1.0); return; }
+  if (vFx.z > 2.5 && vFx.z < 3.5) { fragColor = vec4(mix(uHorizon, uZenith, t.r), 1.0); return; }
   if (t.a < 0.5) discard;
-  if (vFx.z > 1.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
+  if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
   float d = distance(vWorld, uEye);
+  if (vFx.z > 3.5) {                                                          // water (glow 4): it ripples, shows the sky (or the torch) by the angle, and glints
+    vec2 p = vWorld.xz; float tm = uTime;
+    vec3 wn = normalize(vec3(0.14 * sin(p.x * 6.3 + tm * 1.7) + 0.08 * sin((p.x + p.y) * 11.0 - tm * 2.3), 1.0, 0.14 * cos(p.y * 5.7 - tm * 1.3) + 0.08 * cos((p.x - p.y) * 9.0 + tm * 1.9)));
+    vec3 v = normalize(uEye - vWorld), r = reflect(-v, wn);
+    float fr = 0.12 + 0.5 * pow(1.0 - max(dot(v, wn), 0.0), 3.0);
+    float r2w = uReach * uReach, lw = uAmbient + uFlicker * r2w / (r2w + 2.2 * d * d + 0.4 * d);
+    vec3 base = t.rgb * vec3(0.3, 0.46, 0.55) * vShade * uTorch * lw * uGrade;   // (deep water: dark, a little green)
+    vec3 seen = uSunK > 0.0 ? mix(uHorizon, uZenith, clamp(r.y * 1.4, 0.0, 1.0)) * 0.75 * vec3(0.8, 0.92, 1.0) : uTorch * lw * 0.55;
+    float glint = uSunK > 0.0 ? pow(max(dot(r, uSun), 0.0), 90.0) * 1.6 * uSunK : pow(max(dot(wn, v), 0.0), 160.0) * 0.9 * lw;
+    vec3 wc = mix(base, seen, fr) + glint * vec3(1.0, 0.95, 0.82);
+    wc = mix(wc, uFog, smoothstep(uReach * 0.55, uReach * 1.7, d));
+    fragColor = vec4(wc, 0.86 * vFx.y); return;
+  }
   float r2 = uReach * uReach;
   float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d);
   vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));                      // the surface's facing, from the triangle itself
@@ -7709,6 +7750,10 @@ void main() {
     extra += uLightCol[i] * fall * face;
   }
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
+  if (uWet > 0.0 && n.y > 0.7) {                                            // the rain on the ground: darker, and the sky in it at a low angle
+    vec3 v = normalize(uEye - vWorld); float fw = pow(1.0 - max(v.y, 0.0), 4.0);
+    col = col * (1.0 - 0.28 * uWet) + uWet * fw * mix(uHorizon, uZenith, 0.4) * 0.45;
+  }
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
   col = mix(col, uFog, fog);
   col = mix(col, t.rgb, vFx.z * (1.0 - fog * 0.7));
@@ -7755,7 +7800,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade", "uTime", "uWet"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -7859,7 +7904,7 @@ CM.Renderer = class {
     this.theme = theme;
     const props = CM.scatter(floor, this.seed, this.density, { season: this.season }).concat(CM.traceProps(floor));   // (and what the party left)
     this.standing = props.filter((p) => p.how === "stand");
-    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub });
+    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: Boolean(this.night) });   // (at night the town's windows are lit)
     this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
@@ -7946,10 +7991,14 @@ CM.Renderer = class {
       const lift = s.lift || 0;
       if (s.flat) {
         corners = [[cx - w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz - w / 2], [cx - w / 2, 0.003, cz - w / 2]];
+      } else if (s.axis && s.swing) {                                    // a door swung on its hinge (28-motion.js): toward the side away from the party
+        const L = 0.94, sd = s.swingSide || 1, sw = s.swing, top = 0.97;
+        const [hx, hz, ex, ez] = s.axis === "ns" ? [cx - 0.47, cz, cx - 0.47 + Math.cos(sw) * L, cz + Math.sin(sw) * L * sd] : [cx, cz + 0.47, cx + Math.sin(sw) * L * sd, cz + 0.47 - Math.cos(sw) * L];
+        corners = [[hx, 0, hz], [ex, 0, ez], [ex, top, ez], [hx, top, hz]];
       } else if (s.axis) {
-        corners = s.axis === "ns"                                        // a door across a corridor running north-south
-          ? [[cx - 0.5, 0, cz], [cx + 0.5, 0, cz], [cx + 0.5, 1, cz], [cx - 0.5, 1, cz]]
-          : [[cx, 0, cz + 0.5], [cx, 0, cz - 0.5], [cx, 1, cz - 0.5], [cx, 1, cz + 0.5]];
+        corners = s.axis === "ns"                                        // a door across a corridor running north-south (a portcullis lifted by `lift`)
+          ? [[cx - 0.5, lift, cz], [cx + 0.5, lift, cz], [cx + 0.5, 1 + lift, cz], [cx - 0.5, 1 + lift, cz]]
+          : [[cx, lift, cz + 0.5], [cx, lift, cz - 0.5], [cx, 1 + lift, cz - 0.5], [cx, 1 + lift, cz + 0.5]];
       } else if (s.face !== undefined) {
         const [dx, dz] = CM.DIRS[s.face], inset = 0.012;                // flush with that wall, a hair into the room
         const px = s.x + 0.5 + dx * (0.5 - inset), pz = s.y + 0.5 + dz * (0.5 - inset);
@@ -7968,7 +8017,7 @@ CM.Renderer = class {
           [cx + right[0] * w / 2, lift + h, cz + right[2] * w / 2], [cx - right[0] * w / 2, lift + h, cz - right[2] * w / 2]];
       }
       const uvs = s.mirror ? uv.map(([u, v], i) => [uv[i ^ 1][0], v]) : uv;   // (mirrored: it looks the other way)
-      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uvs[i][0], uvs[i][1], layer, shade, flash, alpha, glow);
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(...corners[i], uvs[i][0], uvs[i][1], layer, shade, flash, alpha, s.water ? 4 : glow);   // (water: the shader's own)
     }
     return out;
   }
@@ -8038,6 +8087,7 @@ CM.Renderer = class {
       gl.uniform3fv(this.loc.uSun, v.map((c) => c / m)); gl.uniform1f(this.loc.uSunK, sky.sun !== null && sky.light > 0.15 ? 0.9 : 0.4);
     } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
     gl.uniform3fv(this.loc.uGrade, t.grade || [1, 1, 1]);
+    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);
@@ -9657,7 +9707,7 @@ Object.assign(CM.Game.prototype, {
           if (this.mode !== "explore") return;                           // (an alarm: the fight is on, the chest waits)
         }
       }
-      delete fl.things[k];
+      delete fl.things[k]; this.trace("chest_open", ...k.split(",").map(Number));
       const gold = Math.floor(thing.gold * (this.has("rich") ? 2 : 1) * (this.asc("poorveins") ? 0.8 : 1) * (this.alive().some((h) => h.quirk === "greedy") ? 1.1 : 1));
       this.cheer(1);
       this.gold += gold; this.count("goldFound", gold);
@@ -18224,7 +18274,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // flooded vaults, water on some floors - the same ones each time, from the seed
   let decor = { key: null, torches: [], water: [] };
   function decorations(fl) {
-    const key = `${game.seed}:${fl.number}:${fl.grid.length}`;
+    const rain = (fl.number === 0 || fl.number === -1) && CM.weather(game) === "rain", key = `${game.seed}:${fl.number}:${fl.grid.length}:${rain ? CM.dayOf(game) : ""}`;
     if (decor.key === key) return decor;
     const torches = [], water = [], size = fl.grid.length, wet = CM.themeIndex(fl.number) === 1;
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
@@ -18241,11 +18291,24 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       if (wet && !here && CM.hashSeed(`${game.seed}:water:${x}:${y}`) % 3 === 0) water.push({ x, y, phase: CM.hashSeed(`${game.seed}:ripple:${x}:${y}`) % 3 });
     }
+    if (rain) for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {   // puddles in the rain, on the roads and the paths
+      const g = CM.groundAt(fl, x, y), h = CM.hashSeed(`${game.seed}:puddle:${CM.dayOf(game)}:${x}:${y}`);
+      if (fl.grid[y][x] === 0 && !fl.things[`${x},${y}`] && ["dirt", "cobbles", "flags"].includes(g) && h % 4 === 0) water.push({ x, y, phase: h % 3, w: 0.35 + (h % 7) * 0.04, dx: ((h >> 4) % 40 - 20) / 100, dz: ((h >> 9) % 40 - 20) / 100 });
+    }
     for (const dc of fl.decor || []) if (dc.kind === "water" && !water.some((w) => w.x === dc.x && w.y === dc.y)) water.push({ x: dc.x, y: dc.y, phase: CM.hashSeed(`${game.seed}:ripple:${dc.x}:${dc.y}`) % 3 });
     decor = { key, torches, water };
     return decor;
   }
 
+  // the things that move between two states: when each was seen to change, and which way a door swings (away from
+  // whoever opened it); a thing first seen is as it was found (no swing)
+  const movers = new Map();
+  function changed(id, state, sideOf) {
+    let st = movers.get(id);
+    if (!st) { st = { state, at: null, side: sideOf ? sideOf() : 1 }; movers.set(id, st); }
+    else if (st.state !== state) { st.state = state; st.at = performance.now(); if (sideOf) st.side = sideOf(); }
+    return st;
+  }
   // a frame of a monster's picture, where the theme has it (the Drawn frames; the Pixel tiles stand still)
   const frameOf = (layer, pose) => (pose && renderer.index && renderer.index[`${layer}:${pose}`] !== undefined ? `${layer}:${pose}` : layer);
   function sprites() {
@@ -18326,9 +18389,14 @@ window.addEventListener("DOMContentLoaded", () => {
       const [x, y] = key.split(",").map(Number);
       if (!near(x, y)) continue;
       const ns = fl.grid[y - 1] && fl.grid[y - 1][x] === 0 && fl.grid[y + 1] && fl.grid[y + 1][x] === 0;   // (the corridor runs north-south)
-      if (f.type === "door") out.push({ x, y, layer: f.open ? "door_open" : f.locked ? "door_locked" : f.riddle !== undefined ? "door_riddle" : "door", axis: ns ? "ns" : "ew", glow: !f.open && f.riddle !== undefined ? 0.35 : 0 });
+      if (f.type === "door") {                                         // a door swings on its hinge, away from the party (28-motion.js)
+        const st = changed(`door:${fl.number}:${key}`, Boolean(f.open), () => (ns ? (fl.pos[1] < y ? 1 : -1) : (fl.pos[0] < x ? 1 : -1))), k = CM.reducedMotion ? (f.open ? 1 : 0) : CM.swing(Boolean(f.open), st.at, now, CM.SWING.doorMs);
+        const pic = f.locked ? "door_locked" : f.riddle !== undefined ? "door_riddle" : "door";
+        if (k <= 0.001) out.push({ x, y, layer: pic, axis: ns ? "ns" : "ew", glow: f.riddle !== undefined ? 0.35 : 0 });
+        else out.push({ x, y, layer: pic, axis: ns ? "ns" : "ew", swing: k * CM.SWING.doorAngle, swingSide: st.side });
+      }
       else if (f.type === "plate" && (f.gate || f.known)) out.push({ x, y, layer: f.gate && !f.pressed ? "plate" : "plate_pressed", flat: true, w: 0.62 });
-      else if (f.type === "gate") out.push({ x, y, layer: f.open ? "gate_open" : "gate", axis: ns ? "ns" : "ew" });
+      else if (f.type === "gate") { const st = changed(`gate:${fl.number}:${key}`, Boolean(f.open)), k = CM.reducedMotion ? (f.open ? 1 : 0) : CM.swing(Boolean(f.open), st.at, now, CM.SWING.gateMs); out.push({ x, y, layer: "gate", axis: ns ? "ns" : "ew", lift: k * CM.SWING.gateLift }); }   // (a portcullis lifts into the lintel)
       else if (f.type === "pit") out.push({ x, y, layer: "pit", flat: true, w: 0.96 });
       else if (f.type === "trapdoor" && f.known) out.push({ x, y, layer: "trapdoor", flat: true, w: 0.96 });
       else if (f.type === "teleporter") out.push({ x, y, layer: "teleporter", flat: true, w: 0.9, glow: 0.85 });
@@ -18337,7 +18405,8 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (f.type === "bonepiles") out.push({ x, y, layer: f.spent ? "bones" : "nest", w: f.spent ? 0.6 : 0.9, h: f.spent ? 0.42 : 0.75 });
       else if (f.type === "fountain") out.push({ x, y, layer: f.used ? "fountain_dry" : "fountain", w: 0.9, h: 0.9 });
       else if (f.type === "altar") out.push({ x, y, layer: "altar", w: 0.9, h: 0.9 });
-      else if (f.type === "lever") out.push({ x, y, layer: f.pulled ? "lever_pulled" : "lever", face: f.face, w: 0.34, h: 0.34 });
+      else if (f.type === "lever") { const st = changed(`lever:${fl.number}:${key}`, Boolean(f.pulled)), k = CM.reducedMotion ? (f.pulled ? 1 : 0) : CM.swing(Boolean(f.pulled), st.at, now, CM.SWING.leverMs);   // (thrown: one picture into the other)
+        if (k < 1) out.push({ x, y, layer: "lever", face: f.face, w: 0.34, h: 0.34, alpha: 1 - k }); if (k > 0) out.push({ x, y, layer: "lever_pulled", face: f.face, w: 0.34, h: 0.34, alpha: k }); }
       else if (f.type === "carving") out.push({ x, y, layer: "carving", face: f.face, w: 0.62, h: 0.5 });
     }
     for (const dc of fl.decor || []) {                                   // a lair's furniture: the heaps of the nest, the throne, the anvils, the embers
@@ -18352,7 +18421,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
-    for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, flat: true, w: 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75 });
+    for (const w of d.water) if (near(w.x, w.y)) out.push({ x: w.x, y: w.y, dx: w.dx || 0, dz: w.dz || 0, flat: true, w: w.w || 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75, water: true });   // (the water shader: 40-render.js)
     if (game.mode === "combat") {
       const living = game.attackable();
       const fwdv = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
@@ -18582,6 +18651,9 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
+        renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
+        { const night = Boolean(renderer.sky && renderer.sky.night) && game.floor.number === 0;   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
+          if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && game.floor.number === 0) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
         renderer.lights = lightsNear(game.floor);
         stepAir(dt);
         const { out, hud } = sprites();

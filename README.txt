@@ -1417,6 +1417,12 @@ A world that moves (the eleventh big update - v9.3 to v10.0)
   drops a thing of its own; five in a run is an achievement. Automatic shades the light near a sleeper when a quiet
   one leads, and lights it again past it.
 
+  Things that move (v9.5): a door swings open on its hinge, away from whoever opened it; a portcullis lifts into its
+  lintel; a lever is thrown (CM.swing in src/js/28-motion.js). A chest the party empties stays standing open where it
+  was. Water - the river, the ford, the Flooded Vaults' pools - ripples, shows the sky (or below ground the torch) by
+  the angle you see it at, and glints in the sun. In rain the ground darkens and shines, and puddles lie on the roads.
+  At night seven windows in ten are lit in the town.
+
 The town's buildings, rebuilt (v9.2)
   The houses were walls only where a street faced them, under a fringe of half-square slopes: the sky showed through the
   middle of every block, and a house beside a hedge, a fence or a tree was open on that side. Now CM.buildingsOf

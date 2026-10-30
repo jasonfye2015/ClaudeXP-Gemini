@@ -415,7 +415,7 @@ Object.assign(CM.Game.prototype, {
           if (this.mode !== "explore") return;                           // (an alarm: the fight is on, the chest waits)
         }
       }
-      delete fl.things[k];
+      delete fl.things[k]; this.trace("chest_open", ...k.split(",").map(Number));
       const gold = Math.floor(thing.gold * (this.has("rich") ? 2 : 1) * (this.asc("poorveins") ? 0.8 : 1) * (this.alive().some((h) => h.quirk === "greedy") ? 1.1 : 1));
       this.cheer(1);
       this.gold += gold; this.count("goldFound", gold);

@@ -59,6 +59,13 @@ CM.motion = function (s) {
   if (hit < M.flashMs) out.flash = 1 - hit / M.flashMs;                    // (the flash, even with motion reduced)
   return out;
 };
+// things that move between two states (phase 2): a door swung open on its hinge, a portcullis lifted, a lever thrown.
+// CM.swing(open, at, now, ms): 0 shut .. 1 open, eased; `at` is when it last changed (null: it was found that way)
+CM.SWING = { doorMs: 350, doorAngle: Math.PI / 2, gateMs: 600, gateLift: 0.92, leverMs: 250 };
+CM.swing = (open, at, now, ms) => {
+  const k = at === undefined || at === null ? 1 : Math.min(1, Math.max(0, (now - at) / ms)), e = k * k * (3 - 2 * k);
+  return open ? e : 1 - e;
+};
 // which way a monster's picture faces: toward the party's line of sight. side > 0: it stands to the right of the
 // line, so it is mirrored to look left, at the party
 CM.facesMirror = (side) => side > 0.04;
