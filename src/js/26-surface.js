@@ -157,6 +157,12 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     const s = sub[p.layer], layer = s ? index[s[0]] : index[p.layer], r = s ? s.slice(1) : [0, 0, 1, 1];
     if (layer === undefined) continue;
     const cx = p.x + 0.5 + p.dx, cz = p.y + 0.5 + p.dz, c = Math.cos(p.turn), sn = Math.sin(p.turn), hw = p.w / 2, shade = sky && canopy.has(`${p.x},${p.y}`) ? 0.55 : 0.9;
+    if (p.how === "corner") {                                                       // across an upper corner, from one wall to the other, under the ceiling
+      const [sx, sz] = p.corner, kx = p.x + 0.5 + sx * 0.5, kz = p.y + 0.5 + sz * 0.5, top = 1 - 0.01, bottom = top - p.h * 0.6;
+      const A = [kx - sx * p.w, kz], B = [kx, kz - sz * p.w];
+      quadUV([A[0], bottom, A[1]], [B[0], bottom, B[1]], [B[0], top, B[1]], [A[0], top, A[1]], layer, 0.85, r);
+      props++; continue;
+    }
     if (p.how === "flat") {
       const at = (u, v) => [cx + u * c - v * sn, 0.006 + (props % 7) * 0.0006, cz + u * sn + v * c];
       quadUV(at(-hw, hw), at(hw, hw), at(hw, -hw), at(-hw, -hw), layer, shade, r);

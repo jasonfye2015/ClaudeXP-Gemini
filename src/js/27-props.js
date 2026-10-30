@@ -32,6 +32,36 @@ CM.PROPS = {
   stall: { how: "stand", size: [0.75, 0.85], h: 1.0 },
   bones: { how: "flat", size: [0.4, 0.6] },
   skull: { how: "stand", size: [0.15, 0.2], h: 0.9 },
+  // the dungeon's: `corner` spans an upper corner of the room, from wall to wall under the ceiling; `glow` shines unlit
+  cobweb: { how: "corner", size: [0.35, 0.5], h: 0.8 },
+  dust: { how: "flat", size: [0.5, 0.8] },
+  coffinlid: { how: "flat", size: [0.55, 0.7] },
+  candle: { how: "stand", size: [0.14, 0.2], h: 1.4, glow: 0.7 },
+  puddle: { how: "flat", size: [0.45, 0.75] },
+  slime: { how: "flat", size: [0.45, 0.7] },
+  rotcrate: { how: "stand", size: [0.3, 0.38], h: 0.8 },
+  rubble: { how: "stand", size: [0.35, 0.55], h: 0.5 },
+  pick: { how: "flat", size: [0.4, 0.5] },
+  rails: { how: "flat", size: [0.6, 0.8] },
+  armour: { how: "flat", size: [0.4, 0.55] },
+  glass: { how: "flat", size: [0.35, 0.55] },
+  urn: { how: "stand", size: [0.22, 0.3], h: 1.3 },
+  candelabra: { how: "stand", size: [0.25, 0.3], h: 2.0, glow: 0.7 },
+  frost: { how: "flat", size: [0.55, 0.9] },
+  weed: { how: "flat", size: [0.45, 0.7] },
+  shells: { how: "flat", size: [0.3, 0.45] },
+  oar: { how: "flat", size: [0.6, 0.75] },
+  fungi: { how: "stand", size: [0.2, 0.32], h: 0.85, glow: 0.45 },
+  shard: { how: "stand", size: [0.18, 0.3], h: 1.3, glow: 0.35 },
+  slag: { how: "stand", size: [0.35, 0.5], h: 0.5, glow: 0.25 },
+  chains: { how: "flat", size: [0.4, 0.6] },
+  cogs: { how: "flat", size: [0.3, 0.45] },
+  bonepile: { how: "stand", size: [0.4, 0.55], h: 0.6 },
+  roots: { how: "flat", size: [0.6, 0.9] },
+  coins: { how: "flat", size: [0.3, 0.45] },
+  books: { how: "flat", size: [0.35, 0.5] },
+  scrolls: { how: "flat", size: [0.3, 0.45] },
+  straw: { how: "flat", size: [0.6, 0.9] },
 };
 // where they lie: `surface` (the town and the land) or `bands` (the dungeon's, by CM.themeIndex: 0 the Catacombs ... 9
 // the Root); `floors` [0] the town or [-1] the land; `seasons`; `grounds` the ground the square wears; `near` "wall"
@@ -65,6 +95,43 @@ CM.SCATTER = [
   { prop: "cart", where: { floors: [0], grounds: ["dirt"], near: "wall" }, per: 0.01, most: 1 },
   { prop: "stall", where: { floors: [0], market: true }, per: 0.3, most: 1 },
   { prop: "pebbles", where: { bands: "all", near: "wall" }, per: 0.14, most: 1 },
+  { prop: "cobweb", where: { bands: [0, 3, 8], near: "corner" }, per: 0.4, most: 1 },
+  { prop: "cobweb", where: { bands: [1, 2, 4, 5, 7, 9], near: "corner" }, per: 0.12, most: 1 },
+  // the bands: 0 Catacombs, 1 Flooded Vaults, 2 Dwarven Halls, 3 the Palace, 4 Drowned Town, 5 Fungal Deep, 6 Crystal Caverns, 7 Foundry, 8 Ossuary, 9 Root
+  { prop: "dust", where: { bands: [0, 3], near: "wall" }, per: 0.1, most: 1 },
+  { prop: "coffinlid", where: { bands: [0] }, per: 0.012, most: 1 },
+  { prop: "candle", where: { bands: [0, 3], near: "corner" }, per: 0.15, most: 1 },
+  { prop: "puddle", where: { bands: [1, 4] }, per: 0.08, most: 1 },
+  { prop: "slime", where: { bands: [1, 5], near: "wall" }, per: 0.1, most: 1 },
+  { prop: "rotcrate", where: { bands: [1], near: "wall" }, per: 0.03, most: 1 },
+  { prop: "rubble", where: { bands: [2, 9], near: "wall" }, per: 0.1, most: 1 },
+  { prop: "pick", where: { bands: [2] }, per: 0.012, most: 1 },
+  { prop: "rails", where: { bands: [2] }, per: 0.02, most: 1 },
+  { prop: "armour", where: { bands: [2, 3], near: "wall" }, per: 0.025, most: 1 },
+  { prop: "glass", where: { bands: [3] }, per: 0.04, most: 1 },
+  { prop: "urn", where: { bands: [3], near: "wall" }, per: 0.035, most: 1 },
+  { prop: "candelabra", where: { bands: [3], near: "corner" }, per: 0.2, most: 1 },
+  { prop: "frost", where: { bands: [3], near: "wall" }, per: 0.1, most: 1 },
+  { prop: "weed", where: { bands: [1, 4] }, per: 0.08, most: 1 },
+  { prop: "shells", where: { bands: [4] }, per: 0.05, most: 1 },
+  { prop: "oar", where: { bands: [4], near: "wall" }, per: 0.015, most: 1 },
+  { prop: "fungi", where: { bands: [5], near: "wall" }, per: 0.2, most: 2 },
+  { prop: "shard", where: { bands: [6], near: "wall" }, per: 0.18, most: 2 },
+  { prop: "slag", where: { bands: [7], near: "wall" }, per: 0.08, most: 1 },
+  { prop: "chains", where: { bands: [7, 8] }, per: 0.03, most: 1 },
+  { prop: "cogs", where: { bands: [7] }, per: 0.04, most: 1 },
+  { prop: "bonepile", where: { bands: [8], near: "corner" }, per: 0.4, most: 1 },
+  { prop: "roots", where: { bands: [9] }, per: 0.12, most: 1 },
+  // the named rooms, in any band
+  { prop: "coins", where: { bands: "all", rooms: ["Treasure Vault"] }, per: 0.35, most: 2 },
+  { prop: "books", where: { bands: "all", rooms: ["Library"] }, per: 0.3, most: 1 },
+  { prop: "scrolls", where: { bands: "all", rooms: ["Library"] }, per: 0.2, most: 1 },
+  { prop: "urn", where: { bands: "all", rooms: ["Crypt", "Charnel Pit"], near: "wall" }, per: 0.25, most: 1 },
+  { prop: "coffinlid", where: { bands: "all", rooms: ["Crypt"] }, per: 0.12, most: 1 },
+  { prop: "straw", where: { bands: "all", rooms: ["Den"] }, per: 0.45, most: 1 },
+  { prop: "bones", where: { bands: "all", rooms: ["Den", "Charnel Pit"] }, per: 0.2, most: 1 },
+  { prop: "candle", where: { bands: "all", rooms: ["Shrine", "Drowned Chapel"], near: "wall" }, per: 0.3, most: 1 },
+  { prop: "puddle", where: { bands: "all", rooms: ["Fountain Hall"] }, per: 0.15, most: 1 },
   { prop: "rock", where: { bands: [2, 6, 9], near: "wall" }, per: 0.08, most: 1 },
   { prop: "bones", where: { bands: [0, 3, 8], near: "wall" }, per: 0.07, most: 1 },
   { prop: "skull", where: { bands: [0, 8], near: "corner" }, per: 0.35, most: 1 },
@@ -86,6 +153,7 @@ CM.scatter = function (fl, seed, density = CM.DETAIL.medium, ctx = {}) {
     return !(w.market && !market); });
   const canopy = new Set(fl.canopy || []), tree = (x, y) => CM.isSurface(fl) && x >= 0 && y >= 0 && x < size && y < size && grid[y][x] !== 0 && CM.solidAt(fl, x, y) === "tree";
   const F = CM.FIELDS, S = CM.TOWN_SQUARE;
+  const roomOf = new Map(); for (const r of fl.rooms || []) if (r.name) for (let ry = r.y0; ry <= r.y1; ry++) for (let rx = r.x0; rx <= r.x1; rx++) roomOf.set(`${rx},${ry}`, r.name);
   if (!rules.length) return out;
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     if (grid[y][x] !== 0) continue;
@@ -107,6 +175,7 @@ CM.scatter = function (fl, seed, density = CM.DETAIL.medium, ctx = {}) {
       if (w.area === "fields" && !(F && x >= F[0] && x <= F[2] && y >= F[1] && y <= F[3])) continue;
       if (w.area === "forest" && F && x >= F[0]) continue;
       if (w.market && !(S && fl.number === 0 && x >= S[0] && x <= S[2] && y >= S[1] && y <= S[3])) continue;
+      if (w.rooms && !w.rooms.includes(roomOf.get(k))) continue;
       let toward = null;
       if (w.near === "wall") { const sides = [0, 1, 2, 3].filter((d) => walls[d]); if (!sides.length) continue; toward = [sides[rnd.int(0, sides.length - 1)]]; }
       if (w.near === "corner") { const c = [[0, 1], [1, 2], [2, 3], [3, 0]].filter(([a, b]) => walls[a] && walls[b]); if (!c.length) continue; toward = c[rnd.int(0, c.length - 1)]; }
@@ -115,7 +184,9 @@ CM.scatter = function (fl, seed, density = CM.DETAIL.medium, ctx = {}) {
         const P = CM.PROPS[r.prop], s = P.size[0] + rnd.next() * (P.size[1] - P.size[0]);
         let dx = (rnd.next() - 0.5) * (r.where.water ? 0 : 0.6), dz = (rnd.next() - 0.5) * (r.where.water ? 0 : 0.6);
         if (toward) { dx = 0; dz = 0; for (const d of toward) { dx += CM.DIRS[d][0] * (0.5 - s / 2 - 0.04); dz += CM.DIRS[d][1] * (0.5 - s / 2 - 0.04); } dx += (rnd.next() - 0.5) * (toward.length === 1 ? 0.4 : 0.05); }
-        out.push({ id: r.prop, how: P.how, layer: `prop:${r.prop}`, x, y, dx, dz, w: s, h: s * (P.h || 1), turn: rnd.next() * Math.PI });
+        const item = { id: r.prop, how: P.how, layer: `prop:${r.prop}`, x, y, dx, dz, w: s, h: s * (P.h || 1), turn: rnd.next() * Math.PI };
+        if (P.how === "corner") { if (!toward || toward.length !== 2) continue; item.corner = [CM.DIRS[toward[0]][0] + CM.DIRS[toward[1]][0], CM.DIRS[toward[0]][1] + CM.DIRS[toward[1]][1]]; }
+        out.push(item);
       }
     }
   }

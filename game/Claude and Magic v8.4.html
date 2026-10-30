@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v8.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v8.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -437,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "8.3", built: "2026-10-30" };
+const CM = window.CM = { version: "8.4", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5046,6 +5046,12 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     const s = sub[p.layer], layer = s ? index[s[0]] : index[p.layer], r = s ? s.slice(1) : [0, 0, 1, 1];
     if (layer === undefined) continue;
     const cx = p.x + 0.5 + p.dx, cz = p.y + 0.5 + p.dz, c = Math.cos(p.turn), sn = Math.sin(p.turn), hw = p.w / 2, shade = sky && canopy.has(`${p.x},${p.y}`) ? 0.55 : 0.9;
+    if (p.how === "corner") {                                                       // across an upper corner, from one wall to the other, under the ceiling
+      const [sx, sz] = p.corner, kx = p.x + 0.5 + sx * 0.5, kz = p.y + 0.5 + sz * 0.5, top = 1 - 0.01, bottom = top - p.h * 0.6;
+      const A = [kx - sx * p.w, kz], B = [kx, kz - sz * p.w];
+      quadUV([A[0], bottom, A[1]], [B[0], bottom, B[1]], [B[0], top, B[1]], [A[0], top, A[1]], layer, 0.85, r);
+      props++; continue;
+    }
     if (p.how === "flat") {
       const at = (u, v) => [cx + u * c - v * sn, 0.006 + (props % 7) * 0.0006, cz + u * sn + v * c];
       quadUV(at(-hw, hw), at(hw, hw), at(hw, -hw), at(-hw, -hw), layer, shade, r);
@@ -5093,6 +5099,36 @@ CM.PROPS = {
   stall: { how: "stand", size: [0.75, 0.85], h: 1.0 },
   bones: { how: "flat", size: [0.4, 0.6] },
   skull: { how: "stand", size: [0.15, 0.2], h: 0.9 },
+  // the dungeon's: `corner` spans an upper corner of the room, from wall to wall under the ceiling; `glow` shines unlit
+  cobweb: { how: "corner", size: [0.35, 0.5], h: 0.8 },
+  dust: { how: "flat", size: [0.5, 0.8] },
+  coffinlid: { how: "flat", size: [0.55, 0.7] },
+  candle: { how: "stand", size: [0.14, 0.2], h: 1.4, glow: 0.7 },
+  puddle: { how: "flat", size: [0.45, 0.75] },
+  slime: { how: "flat", size: [0.45, 0.7] },
+  rotcrate: { how: "stand", size: [0.3, 0.38], h: 0.8 },
+  rubble: { how: "stand", size: [0.35, 0.55], h: 0.5 },
+  pick: { how: "flat", size: [0.4, 0.5] },
+  rails: { how: "flat", size: [0.6, 0.8] },
+  armour: { how: "flat", size: [0.4, 0.55] },
+  glass: { how: "flat", size: [0.35, 0.55] },
+  urn: { how: "stand", size: [0.22, 0.3], h: 1.3 },
+  candelabra: { how: "stand", size: [0.25, 0.3], h: 2.0, glow: 0.7 },
+  frost: { how: "flat", size: [0.55, 0.9] },
+  weed: { how: "flat", size: [0.45, 0.7] },
+  shells: { how: "flat", size: [0.3, 0.45] },
+  oar: { how: "flat", size: [0.6, 0.75] },
+  fungi: { how: "stand", size: [0.2, 0.32], h: 0.85, glow: 0.45 },
+  shard: { how: "stand", size: [0.18, 0.3], h: 1.3, glow: 0.35 },
+  slag: { how: "stand", size: [0.35, 0.5], h: 0.5, glow: 0.25 },
+  chains: { how: "flat", size: [0.4, 0.6] },
+  cogs: { how: "flat", size: [0.3, 0.45] },
+  bonepile: { how: "stand", size: [0.4, 0.55], h: 0.6 },
+  roots: { how: "flat", size: [0.6, 0.9] },
+  coins: { how: "flat", size: [0.3, 0.45] },
+  books: { how: "flat", size: [0.35, 0.5] },
+  scrolls: { how: "flat", size: [0.3, 0.45] },
+  straw: { how: "flat", size: [0.6, 0.9] },
 };
 // where they lie: `surface` (the town and the land) or `bands` (the dungeon's, by CM.themeIndex: 0 the Catacombs ... 9
 // the Root); `floors` [0] the town or [-1] the land; `seasons`; `grounds` the ground the square wears; `near` "wall"
@@ -5126,6 +5162,43 @@ CM.SCATTER = [
   { prop: "cart", where: { floors: [0], grounds: ["dirt"], near: "wall" }, per: 0.01, most: 1 },
   { prop: "stall", where: { floors: [0], market: true }, per: 0.3, most: 1 },
   { prop: "pebbles", where: { bands: "all", near: "wall" }, per: 0.14, most: 1 },
+  { prop: "cobweb", where: { bands: [0, 3, 8], near: "corner" }, per: 0.4, most: 1 },
+  { prop: "cobweb", where: { bands: [1, 2, 4, 5, 7, 9], near: "corner" }, per: 0.12, most: 1 },
+  // the bands: 0 Catacombs, 1 Flooded Vaults, 2 Dwarven Halls, 3 the Palace, 4 Drowned Town, 5 Fungal Deep, 6 Crystal Caverns, 7 Foundry, 8 Ossuary, 9 Root
+  { prop: "dust", where: { bands: [0, 3], near: "wall" }, per: 0.1, most: 1 },
+  { prop: "coffinlid", where: { bands: [0] }, per: 0.012, most: 1 },
+  { prop: "candle", where: { bands: [0, 3], near: "corner" }, per: 0.15, most: 1 },
+  { prop: "puddle", where: { bands: [1, 4] }, per: 0.08, most: 1 },
+  { prop: "slime", where: { bands: [1, 5], near: "wall" }, per: 0.1, most: 1 },
+  { prop: "rotcrate", where: { bands: [1], near: "wall" }, per: 0.03, most: 1 },
+  { prop: "rubble", where: { bands: [2, 9], near: "wall" }, per: 0.1, most: 1 },
+  { prop: "pick", where: { bands: [2] }, per: 0.012, most: 1 },
+  { prop: "rails", where: { bands: [2] }, per: 0.02, most: 1 },
+  { prop: "armour", where: { bands: [2, 3], near: "wall" }, per: 0.025, most: 1 },
+  { prop: "glass", where: { bands: [3] }, per: 0.04, most: 1 },
+  { prop: "urn", where: { bands: [3], near: "wall" }, per: 0.035, most: 1 },
+  { prop: "candelabra", where: { bands: [3], near: "corner" }, per: 0.2, most: 1 },
+  { prop: "frost", where: { bands: [3], near: "wall" }, per: 0.1, most: 1 },
+  { prop: "weed", where: { bands: [1, 4] }, per: 0.08, most: 1 },
+  { prop: "shells", where: { bands: [4] }, per: 0.05, most: 1 },
+  { prop: "oar", where: { bands: [4], near: "wall" }, per: 0.015, most: 1 },
+  { prop: "fungi", where: { bands: [5], near: "wall" }, per: 0.2, most: 2 },
+  { prop: "shard", where: { bands: [6], near: "wall" }, per: 0.18, most: 2 },
+  { prop: "slag", where: { bands: [7], near: "wall" }, per: 0.08, most: 1 },
+  { prop: "chains", where: { bands: [7, 8] }, per: 0.03, most: 1 },
+  { prop: "cogs", where: { bands: [7] }, per: 0.04, most: 1 },
+  { prop: "bonepile", where: { bands: [8], near: "corner" }, per: 0.4, most: 1 },
+  { prop: "roots", where: { bands: [9] }, per: 0.12, most: 1 },
+  // the named rooms, in any band
+  { prop: "coins", where: { bands: "all", rooms: ["Treasure Vault"] }, per: 0.35, most: 2 },
+  { prop: "books", where: { bands: "all", rooms: ["Library"] }, per: 0.3, most: 1 },
+  { prop: "scrolls", where: { bands: "all", rooms: ["Library"] }, per: 0.2, most: 1 },
+  { prop: "urn", where: { bands: "all", rooms: ["Crypt", "Charnel Pit"], near: "wall" }, per: 0.25, most: 1 },
+  { prop: "coffinlid", where: { bands: "all", rooms: ["Crypt"] }, per: 0.12, most: 1 },
+  { prop: "straw", where: { bands: "all", rooms: ["Den"] }, per: 0.45, most: 1 },
+  { prop: "bones", where: { bands: "all", rooms: ["Den", "Charnel Pit"] }, per: 0.2, most: 1 },
+  { prop: "candle", where: { bands: "all", rooms: ["Shrine", "Drowned Chapel"], near: "wall" }, per: 0.3, most: 1 },
+  { prop: "puddle", where: { bands: "all", rooms: ["Fountain Hall"] }, per: 0.15, most: 1 },
   { prop: "rock", where: { bands: [2, 6, 9], near: "wall" }, per: 0.08, most: 1 },
   { prop: "bones", where: { bands: [0, 3, 8], near: "wall" }, per: 0.07, most: 1 },
   { prop: "skull", where: { bands: [0, 8], near: "corner" }, per: 0.35, most: 1 },
@@ -5147,6 +5220,7 @@ CM.scatter = function (fl, seed, density = CM.DETAIL.medium, ctx = {}) {
     return !(w.market && !market); });
   const canopy = new Set(fl.canopy || []), tree = (x, y) => CM.isSurface(fl) && x >= 0 && y >= 0 && x < size && y < size && grid[y][x] !== 0 && CM.solidAt(fl, x, y) === "tree";
   const F = CM.FIELDS, S = CM.TOWN_SQUARE;
+  const roomOf = new Map(); for (const r of fl.rooms || []) if (r.name) for (let ry = r.y0; ry <= r.y1; ry++) for (let rx = r.x0; rx <= r.x1; rx++) roomOf.set(`${rx},${ry}`, r.name);
   if (!rules.length) return out;
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     if (grid[y][x] !== 0) continue;
@@ -5168,6 +5242,7 @@ CM.scatter = function (fl, seed, density = CM.DETAIL.medium, ctx = {}) {
       if (w.area === "fields" && !(F && x >= F[0] && x <= F[2] && y >= F[1] && y <= F[3])) continue;
       if (w.area === "forest" && F && x >= F[0]) continue;
       if (w.market && !(S && fl.number === 0 && x >= S[0] && x <= S[2] && y >= S[1] && y <= S[3])) continue;
+      if (w.rooms && !w.rooms.includes(roomOf.get(k))) continue;
       let toward = null;
       if (w.near === "wall") { const sides = [0, 1, 2, 3].filter((d) => walls[d]); if (!sides.length) continue; toward = [sides[rnd.int(0, sides.length - 1)]]; }
       if (w.near === "corner") { const c = [[0, 1], [1, 2], [2, 3], [3, 0]].filter(([a, b]) => walls[a] && walls[b]); if (!c.length) continue; toward = c[rnd.int(0, c.length - 1)]; }
@@ -5176,7 +5251,9 @@ CM.scatter = function (fl, seed, density = CM.DETAIL.medium, ctx = {}) {
         const P = CM.PROPS[r.prop], s = P.size[0] + rnd.next() * (P.size[1] - P.size[0]);
         let dx = (rnd.next() - 0.5) * (r.where.water ? 0 : 0.6), dz = (rnd.next() - 0.5) * (r.where.water ? 0 : 0.6);
         if (toward) { dx = 0; dz = 0; for (const d of toward) { dx += CM.DIRS[d][0] * (0.5 - s / 2 - 0.04); dz += CM.DIRS[d][1] * (0.5 - s / 2 - 0.04); } dx += (rnd.next() - 0.5) * (toward.length === 1 ? 0.4 : 0.05); }
-        out.push({ id: r.prop, how: P.how, layer: `prop:${r.prop}`, x, y, dx, dz, w: s, h: s * (P.h || 1), turn: rnd.next() * Math.PI });
+        const item = { id: r.prop, how: P.how, layer: `prop:${r.prop}`, x, y, dx, dz, w: s, h: s * (P.h || 1), turn: rnd.next() * Math.PI };
+        if (P.how === "corner") { if (!toward || toward.length !== 2) continue; item.corner = [CM.DIRS[toward[0]][0] + CM.DIRS[toward[1]][0], CM.DIRS[toward[0]][1] + CM.DIRS[toward[1]][1]]; }
+        out.push(item);
       }
     }
   }
@@ -6573,9 +6650,64 @@ CM.art.surfaceProp = function (id, S, kit) {
   return c;
 };
 
+
+// the dungeon's debris: painted at the props' size, for every look
+CM.art.DEBRIS_IDS = ["cobweb", "dust", "coffinlid", "candle", "puddle", "slime", "rotcrate", "rubble", "pick", "rails", "armour", "glass", "urn", "candelabra", "frost", "weed", "shells", "oar", "fungi", "shard", "slag", "chains", "cogs", "bonepile", "roots", "coins", "books", "scrolls", "straw"];
+CM.art.debrisProp = function (id, S) {
+  const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`debris:${id}`));
+  const blob = (x, y, rx, ry, colour) => { p.fillStyle = colour; p.beginPath(); p.ellipse(x, y, rx, ry, rnd.next() * 3, 0, Math.PI * 2); p.fill(); };
+  const scatter = (n, f) => { for (let i = 0; i < n; i++) f(S * 0.12 + rnd.next() * S * 0.76, S * 0.12 + rnd.next() * S * 0.76, i); };
+  const stone = (k) => `rgb(${Math.round(110 * k)},${Math.round(104 * k)},${Math.round(96 * k)})`;
+  switch (id) {
+    case "cobweb": {
+      p.strokeStyle = "rgba(230,230,235,0.95)"; p.lineWidth = 2;
+      const ax = 2, bx = S - 2, top = 2, cx = S / 2, cy = S * 0.85;
+      for (let i = 0; i <= 6; i++) { const t = i / 6, x = ax + (bx - ax) * t; p.beginPath(); p.moveTo(x, top); p.lineTo(cx + (x - cx) * 0.1, cy); p.stroke(); }
+      for (let r = 1; r <= 5; r++) { const k = r / 5.5; p.beginPath(); for (let i = 0; i <= 6; i++) { const t = i / 6, x = ax + (bx - ax) * t, px = x + (cx - x) * k, py = top + (cy - top) * k + Math.sin(t * Math.PI) * 6; if (i) p.lineTo(px, py); else p.moveTo(px, py); } p.stroke(); }
+      break;
+    }
+    case "dust": scatter(60, (x, y) => blob(x, y, 4 + rnd.next() * 8, 3 + rnd.next() * 5, `rgba(${170 + rnd.int(0, 30)},${160 + rnd.int(0, 30)},${140 + rnd.int(0, 20)},1)`)); break;
+    case "coffinlid": p.fillStyle = "#5A4030"; p.beginPath(); p.moveTo(S * 0.3, S * 0.05); p.lineTo(S * 0.7, S * 0.05); p.lineTo(S * 0.85, S * 0.3); p.lineTo(S * 0.72, S * 0.95); p.lineTo(S * 0.28, S * 0.95); p.lineTo(S * 0.15, S * 0.3); p.closePath(); p.fill(); p.fillStyle = "#3A2A20"; p.fillRect(S * 0.47, S * 0.2, S * 0.06, S * 0.5); p.fillRect(S * 0.35, S * 0.32, S * 0.3, S * 0.06); break;
+    case "candle": for (const [x, h] of [[0.35, 0.55], [0.6, 0.75], [0.48, 0.4]]) { p.fillStyle = "#E8DCC0"; p.fillRect(S * x - S * 0.06, S * (1 - h * 0.7), S * 0.12, S * h * 0.7); p.fillStyle = "#F0C040"; p.beginPath(); p.ellipse(S * x, S * (1 - h * 0.7) - S * 0.07, S * 0.04, S * 0.08, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFF0B0"; p.beginPath(); p.ellipse(S * x, S * (1 - h * 0.7) - S * 0.05, S * 0.02, S * 0.04, 0, 0, Math.PI * 2); p.fill(); } break;
+    case "puddle": blob(S / 2, S / 2, S * 0.4, S * 0.28, "rgba(40,60,80,1)"); blob(S * 0.42, S * 0.42, S * 0.16, S * 0.06, "rgba(150,180,210,1)"); break;
+    case "slime": scatter(10, (x, y) => blob(x, y, 10 + rnd.next() * 14, 6 + rnd.next() * 8, `rgb(${60 + rnd.int(0, 30)},${110 + rnd.int(0, 40)},${40 + rnd.int(0, 20)})`)); break;
+    case "rotcrate": p.fillStyle = "#5A4630"; p.fillRect(S * 0.08, S * 0.2, S * 0.84, S * 0.8); p.strokeStyle = "#3A2C1C"; p.lineWidth = 6; p.strokeRect(S * 0.12, S * 0.24, S * 0.76, S * 0.72); p.fillStyle = "#1A1410"; p.beginPath(); p.moveTo(S * 0.5, S * 0.2); p.lineTo(S * 0.7, S * 0.2); p.lineTo(S * 0.6, S * 0.45); p.closePath(); p.fill(); p.fillStyle = "rgba(70,110,60,0.8)"; p.fillRect(S * 0.08, S * 0.86, S * 0.84, S * 0.14); break;
+    case "rubble": case "bonepile": case "slag": {
+      const col = id === "rubble" ? stone : id === "bonepile" ? (k) => `rgb(${Math.round(216 * k)},${Math.round(206 * k)},${Math.round(180 * k)})` : (k) => `rgb(${Math.round(60 * k)},${Math.round(52 * k)},${Math.round(48 * k)})`;
+      for (let i = 0; i < 18; i++) { const t = i / 18, x = S * (0.15 + rnd.next() * 0.7), y = S * (0.98 - Math.sin(rnd.next() * Math.PI) * 0.55 * (1 - Math.abs(x / S - 0.5))); blob(x, Math.min(S * 0.92, y), S * (0.06 + rnd.next() * 0.07), S * (0.05 + rnd.next() * 0.05), col(0.7 + rnd.next() * 0.5)); }
+      p.fillStyle = col(0.6); p.fillRect(S * 0.08, S * 0.9, S * 0.84, S * 0.1);
+      if (id === "bonepile") { blob(S * 0.5, S * 0.42, S * 0.11, S * 0.1, "#E4DCC4"); blob(S * 0.46, S * 0.43, S * 0.025, S * 0.03, "#2A2420"); blob(S * 0.55, S * 0.43, S * 0.025, S * 0.03, "#2A2420"); }
+      if (id === "slag") scatter(8, (x, y) => blob(x, S * 0.6 + y * 0.35, 4, 3, "#F08030"));
+      break;
+    }
+    case "pick": p.strokeStyle = "#6A4A28"; p.lineWidth = 8; p.beginPath(); p.moveTo(S * 0.15, S * 0.85); p.lineTo(S * 0.75, S * 0.25); p.stroke(); p.strokeStyle = "#7A7A80"; p.lineWidth = 10; p.beginPath(); p.moveTo(S * 0.5, S * 0.1); p.quadraticCurveTo(S * 0.82, S * 0.18, S * 0.9, S * 0.5); p.stroke(); break;
+    case "rails": p.fillStyle = "#5A3E26"; for (let i = 0; i < 5; i++) p.fillRect(S * 0.1, S * (0.12 + i * 0.18), S * 0.8, S * 0.07); p.fillStyle = "#6A6A70"; p.fillRect(S * 0.25, S * 0.04, S * 0.06, S * 0.92); p.fillRect(S * 0.69, S * 0.04, S * 0.06, S * 0.92); break;
+    case "armour": blob(S * 0.4, S * 0.45, S * 0.22, S * 0.28, "#7A5A3A"); blob(S * 0.4, S * 0.42, S * 0.16, S * 0.2, "#8A6A48"); blob(S * 0.72, S * 0.7, S * 0.14, S * 0.1, "#6A5038"); p.fillStyle = "#3A2A1A"; p.fillRect(S * 0.32, S * 0.4, S * 0.16, 4); break;
+    case "glass": scatter(14, (x, y) => { p.fillStyle = `rgba(${170 + rnd.int(0, 60)},${200 + rnd.int(0, 40)},${220 + rnd.int(0, 30)},1)`; p.beginPath(); p.moveTo(x, y); p.lineTo(x + 6 + rnd.next() * 10, y + rnd.next() * 8); p.lineTo(x + rnd.next() * 6, y + 6 + rnd.next() * 10); p.closePath(); p.fill(); }); break;
+    case "urn": p.fillStyle = "#7A5A44"; p.beginPath(); p.moveTo(S * 0.38, S * 0.08); p.lineTo(S * 0.62, S * 0.08); p.lineTo(S * 0.58, S * 0.2); p.quadraticCurveTo(S * 0.92, S * 0.45, S * 0.66, S * 0.94); p.lineTo(S * 0.34, S * 0.94); p.quadraticCurveTo(S * 0.08, S * 0.45, S * 0.42, S * 0.2); p.closePath(); p.fill(); p.fillStyle = "#A07A5A"; p.fillRect(S * 0.24, S * 0.5, S * 0.52, 5); break;
+    case "candelabra": p.fillStyle = "#8A7440"; p.fillRect(S * 0.46, S * 0.3, S * 0.08, S * 0.66); p.fillRect(S * 0.3, S * 0.94, S * 0.4, S * 0.06); p.fillRect(S * 0.2, S * 0.3, S * 0.6, S * 0.04); for (const x of [0.22, 0.5, 0.78]) { p.fillStyle = "#E8DCC0"; p.fillRect(S * x - 5, S * 0.18, 10, S * 0.12); p.fillStyle = "#F0C040"; p.beginPath(); p.ellipse(S * x, S * 0.13, 5, 9, 0, 0, Math.PI * 2); p.fill(); } break;
+    case "frost": scatter(30, (x, y) => blob(x, y, 6 + rnd.next() * 10, 4 + rnd.next() * 6, `rgb(${200 + rnd.int(0, 40)},${220 + rnd.int(0, 30)},255)`)); break;
+    case "weed": p.lineWidth = 4; p.lineCap = "round"; for (let i = 0; i < 9; i++) { const x = S * (0.15 + rnd.next() * 0.7), y = S * (0.15 + rnd.next() * 0.7), a = rnd.next() * Math.PI * 2; p.strokeStyle = `rgb(${60 + rnd.int(0, 40)},${80 + rnd.int(0, 40)},${40 + rnd.int(0, 20)})`; p.beginPath(); p.moveTo(x, y); p.bezierCurveTo(x + Math.cos(a) * 30, y + Math.sin(a) * 10, x + Math.cos(a) * 10, y + Math.sin(a) * 40, x + Math.cos(a + 1) * 40, y + Math.sin(a + 1) * 40); p.stroke(); } break;
+    case "shells": scatter(8, (x, y) => { blob(x, y, 7, 5, "#E8D8C0"); p.strokeStyle = "#B8A080"; p.lineWidth = 1; p.beginPath(); p.moveTo(x - 6, y); p.lineTo(x + 6, y); p.stroke(); }); break;
+    case "oar": p.strokeStyle = "#6A5038"; p.lineWidth = 7; p.beginPath(); p.moveTo(S * 0.1, S * 0.85); p.lineTo(S * 0.68, S * 0.32); p.stroke(); blob(S * 0.78, S * 0.22, S * 0.16, S * 0.08, "#5A4430"); break;
+    case "fungi": for (const [x, s] of [[0.3, 0.7], [0.55, 1], [0.75, 0.55]]) { p.fillStyle = "#C8D8B0"; p.fillRect(S * x - S * 0.035 * s, S * (1 - 0.5 * s), S * 0.07 * s, S * 0.5 * s); p.fillStyle = "#90E0B0"; p.beginPath(); p.ellipse(S * x, S * (1 - 0.5 * s), S * 0.17 * s, S * 0.1 * s, 0, Math.PI, 0); p.fill(); } break;
+    case "shard": for (const [x, h, a] of [[0.4, 0.95, -0.2], [0.58, 0.7, 0.25], [0.28, 0.5, -0.4]]) { p.save(); p.translate(S * x, S); p.rotate(a); p.fillStyle = "#B0E0F8"; p.beginPath(); p.moveTo(-S * 0.07, 0); p.lineTo(0, -S * h); p.lineTo(S * 0.07, 0); p.closePath(); p.fill(); p.fillStyle = "#E8F8FF"; p.beginPath(); p.moveTo(0, 0); p.lineTo(0, -S * h); p.lineTo(S * 0.07, 0); p.closePath(); p.fill(); p.restore(); } break;
+    case "chains": p.strokeStyle = "#5A5A60"; p.lineWidth = 5; for (let i = 0; i < 9; i++) { const x = S * (0.15 + i * 0.085), y = S * (0.3 + Math.sin(i * 0.8) * 0.2); p.beginPath(); p.ellipse(x, y, 9, 6, i % 2 ? 0 : Math.PI / 2, 0, Math.PI * 2); p.stroke(); } break;
+    case "cogs": for (const [x, y, r] of [[0.4, 0.45, 0.22], [0.7, 0.68, 0.14]]) { p.fillStyle = "#6E6A64"; for (let t = 0; t < 10; t++) { const a = t * Math.PI / 5; p.fillRect(S * x + Math.cos(a) * S * r - 5, S * y + Math.sin(a) * S * r - 5, 10, 10); } blob(S * x, S * y, S * r * 0.9, S * r * 0.9, "#7E7A72"); blob(S * x, S * y, S * r * 0.3, S * r * 0.3, "#3A3834"); } break;
+    case "roots": p.lineCap = "round"; for (let i = 0; i < 5; i++) { const y = S * (0.15 + rnd.next() * 0.7); p.strokeStyle = "#5A3424"; p.lineWidth = 8 - i; p.beginPath(); p.moveTo(0, y); p.bezierCurveTo(S * 0.3, y + (rnd.next() - 0.5) * 60, S * 0.6, y + (rnd.next() - 0.5) * 60, S, y + (rnd.next() - 0.5) * 40); p.stroke(); } break;
+    case "coins": scatter(16, (x, y) => { blob(x, y, 7, 5, "#E8C050"); blob(x - 1, y - 1, 4, 2, "#FFE890"); }); break;
+    case "books": for (let i = 0; i < 4; i++) { const x = S * (0.2 + rnd.next() * 0.6), y = S * (0.2 + rnd.next() * 0.6); p.save(); p.translate(x, y); p.rotate(rnd.next() * 3); p.fillStyle = ["#6A2A2A", "#2A4A6A", "#3A5A2A", "#5A3A1A"][i]; p.fillRect(-S * 0.13, -S * 0.09, S * 0.26, S * 0.18); p.fillStyle = "#E8DCC0"; p.fillRect(-S * 0.11, S * 0.07, S * 0.22, 4); p.restore(); } break;
+    case "scrolls": for (let i = 0; i < 3; i++) { const x = S * (0.25 + rnd.next() * 0.5), y = S * (0.25 + rnd.next() * 0.5); p.save(); p.translate(x, y); p.rotate(rnd.next() * 3); p.fillStyle = "#E8DCB8"; p.fillRect(-S * 0.18, -S * 0.05, S * 0.36, S * 0.1); p.fillStyle = "#C8B890"; p.beginPath(); p.arc(-S * 0.18, 0, S * 0.05, 0, Math.PI * 2); p.fill(); p.beginPath(); p.arc(S * 0.18, 0, S * 0.05, 0, Math.PI * 2); p.fill(); p.restore(); } break;
+    case "straw": p.lineWidth = 3; for (let i = 0; i < 90; i++) { const x = S * (0.1 + rnd.next() * 0.8), y = S * (0.1 + rnd.next() * 0.8), a = rnd.next() * Math.PI; p.strokeStyle = `rgb(${190 + rnd.int(0, 40)},${160 + rnd.int(0, 30)},${80 + rnd.int(0, 30)})`; p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * 16, y + Math.sin(a) * 16); p.stroke(); } break;
+    default: break;
+  }
+  return c;
+};
+
 // ---- props: the small things on the floors, painted at half size and packed four to a layer --------------------------
 CM.art.prop = function (id, kit = null) {
   const S = ART_SIZE / 2, c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`prop:${id}`));
+  if (CM.art.DEBRIS_IDS.includes(id)) return CM.art.debrisProp(id, S);
   if (!["tuft", "flowers", "pebbles", "rock", "bones", "skull"].includes(id) || (kit && id === "tuft")) return CM.art.surfaceProp(id, kit ? S * 2 : S, kit);   // (the surface's own, and with a kit the photographed tuft, at full size for the blades' detail)
   if (id === "tuft" || id === "flowers") {
     for (let i = 0; i < (id === "tuft" ? 26 : 14); i++) {
@@ -16984,7 +17116,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const now = performance.now(), right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
     const lit = CM.isNight(game);
-    for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: lit && CM.PROPS[p.id].night ? 0.9 : 0 });   // (the standing props, near the party; lamps lit at night)
+    for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: CM.PROPS[p.id].glow || (lit && CM.PROPS[p.id].night ? 0.9 : 0) });   // (the standing props, near the party; lamps lit at night)
     if (renderer.sky) {                                                 // the sun and the moon: far off, along their arc from the east over the south to the west
       const S = renderer.sky, eye = renderer.eye;
       for (const [t, layer, size] of [[S.sun, "sun", 6], [S.moon, `moon:${S.phase}`, 4]]) {

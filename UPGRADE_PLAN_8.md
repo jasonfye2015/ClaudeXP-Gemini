@@ -121,7 +121,16 @@ today), chimney smoke (Phase 7's particles), festival banners, the farm's rows s
 - **Tests**: the props of the land and the town follow the season and the hour; nothing on the road blocks the way
   (props never block, but the road stays readable: no shrub on a road square); market-day stalls only on market day.
 
-## Phase 3 - The dungeon's debris - v8.4 (large)
+## Phase 3 - The dungeon's debris - v8.4 (large) - DONE
+
+Built as the table says, with twenty-nine more props, all painted in code for both looks (no tile or photograph
+fitted at this size): cobwebs (a new way of drawing, `corner`: a quad across an upper corner from wall to wall, under
+the ceiling), dust, a coffin lid and candles in the Catacombs; puddles, slime, weed and rotted crates in the wet
+bands; rubble, a pick, mine rails and rusted armour in the Halls; shattered glass, urns, frost and candelabra in the
+Palace; shells and an oar in the Drowned Town; glowing fungi, crystal shards, slag, chains, cogs, bone heaps and roots
+by band; coins in a Treasure Vault, books and scrolls in a Library, urns and a lid in a Crypt, straw and bones in a
+Den, candles in a Shrine, puddles in a Fountain Hall. Candles, candelabra, fungi, shards and slag glow. Waiting for
+later phases: torn banners and sconces (wall decals, Phase 5). Test: "the dungeon's debris".
 
 Each band has its own palette, placed by the rules - corners and wall feet first, corridors sparser than rooms:
 
