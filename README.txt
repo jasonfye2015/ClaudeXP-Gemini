@@ -724,6 +724,15 @@ Around the game, again (the fourth big update, phase 9 - v3.0)
   Text as data, begun: 12-text.js holds CM.TEXT and CM.t(key, vars); the new screens are written through it. The
   older strings move as they are touched; no translation is shipped.
 
+The spine of the story (the fifth big update, phase 0 - v3.1)
+  LORE.md is the canon: the timeline of Caer Duin, its people, the lies the upper carvings tell and where the
+  truth is cut. 13-lore.js holds every line of story keyed and in chapters (CM.LORE_TEXT, CM.CHAPTERS); the old
+  arrays are views over it, so the generators and the riddles read what they read. Each of the fifty carvings has
+  two tellings - the same fact in another hand - and a seed picks one (CM.telling). A run keeps what it has read by
+  key (game.story, saved; an older save is read back from its journal), and the journal's second page is the codex:
+  chapter by chapter, the unread as blank lines, a lie struck through once the deeper line that corrects it is read.
+  The bot reads the walls it passes. Reading every band's chapter in one run is the Chronicler.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

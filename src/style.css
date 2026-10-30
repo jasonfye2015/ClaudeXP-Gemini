@@ -370,3 +370,8 @@ body.handheld #log { font-size: 13px; line-height: 17px; }
 body.handheld .member .name, body.handheld #side .where, body.handheld #side .purse, body.handheld #side .light { font-size: 14px; }
 body.handheld .dialog .box { font-size: 15px; }
 body.handheld #title .foot button, body.handheld #create .foot button { padding: 10px 14px; min-height: 44px; }
+/* ---- the codex: blanks for the unread, a lie struck through over its truth ---- */
+.entry p.epigraph { color: var(--dim); font-style: italic; }
+.entry.unread p.blank { border-bottom: 1px dotted var(--faint); max-width: 420px; height: 14px; margin-top: 6px; }
+.entry p.struck { text-decoration: line-through; color: var(--dim); }
+.entry p.truth { color: var(--gold); margin-top: 4px; }

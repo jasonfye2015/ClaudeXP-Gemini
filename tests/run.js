@@ -1296,6 +1296,50 @@ test("around the game, again: the ledger and the statistics, a save as a link, t
   assert.ok(fs.existsSync(path.join(ROOT, "game", "icon.svg")));
 });
 
+test("the spine of the story: fifty carvings in ten chapters, each on a wall the party can reach, tellings by seed, the codex and the lies struck through", () => {
+  const CM = load();
+  assert.strictEqual(CM.LORE.length, 50); assert.strictEqual(CM.LORE_EXTRA.length, 8); assert.strictEqual(CM.LORE_ENDLESS.length, 8);
+  for (const l of Object.values(CM.LORE_TEXT)) {
+    assert.ok(CM.CHAPTERS[l.chapter], `${l.key}: chapter ${l.chapter}`);
+    if (l.contradicts) { assert.ok(CM.LORE_TEXT[l.contradicts], `${l.key} contradicts ${l.contradicts}`); assert.ok(CM.LORE_TEXT[l.contradicts].floor < l.floor, "the truth lies deeper than the lie"); }
+  }
+  for (let s = 0; s < 12; s++) for (let n = 1; n <= 50; n++) {
+    const fl = CM.makeFloor(n, `spine-${s}`, s % 2 ? 2 : 1), reach = CM.distances(fl.grid, fl.pos);   // (the walls' own ways: a riddle door or a gate is still a way)
+    const walls = Object.entries(fl.features).filter(([, f]) => f.type === "carving" && CM.loreKey(f.text) === CM.LORE_KEYS[n - 1]);
+    assert.ok(walls.length === 1 && reach.has(walls[0][0]), `floor ${n} of spine-${s}: the floor's carving, once, where the party can stand`);
+    assert.strictEqual(CM.LORE_TEXT[CM.LORE_KEYS[n - 1]].chapter, Object.keys(CM.CHAPTERS)[Math.floor((n - 1) / 5)]);
+  }
+  assert.strictEqual(CM.loreKey("g:rat"), "guardian.rat"); assert.strictEqual(CM.loreKey("e:9"), "endless.2"); assert.strictEqual(CM.loreKey(-3), "odd.3");
+  const a = CM.loreText(4, "seed-a"), b = CM.loreText(4, "seed-b"), c = CM.loreText(4, "seed-a");
+  assert.strictEqual(a, c, "a seed's telling is its own"); assert.ok(CM.LORE_TEXT["carving.catacombs.5"].tellings.includes(a) && CM.LORE_TEXT["carving.catacombs.5"].tellings.includes(b));
+  assert.ok(Object.values(CM.LORE_TEXT).filter((l) => l.floor && l.floor <= 50 && !l.guardian).every((l) => l.tellings.length >= 2), "two tellings a carving");
+  assert.ok([..."abcdefgh"].some((x) => CM.loreText(4, `s-${x}`) !== CM.LORE[4]), "the other telling comes up");
+  // a party reads a wall: the story knows the key, the journal keeps the telling, the save keeps both
+  const game = new CM.Game();
+  game.newGame("spine-read", fixedParty(CM));
+  const fl = game.floor, [k, f] = Object.entries(fl.features).find(([, x]) => x.type === "carving" && x.text === 0);
+  fl.pos = k.split(",").map(Number); fl.facing = f.face; game.use();
+  assert.strictEqual(game.story.read["carving.catacombs.1"], 1); assert.strictEqual(game.journal[0].key, "carving.catacombs.1"); assert.strictEqual(game.journal[0].text, CM.loreText(0, "spine-read"));
+  game.saveRun();
+  const g2 = new CM.Game(); g2.continueRun();
+  assert.strictEqual(g2.story.read["carving.catacombs.1"], 1);
+  const saved = JSON.parse(CM.storage.getItem("claudemagic.run")); delete saved.story; CM.storage.setItem("claudemagic.run", JSON.stringify(saved));
+  const g3 = new CM.Game(); g3.continueRun();
+  assert.strictEqual(g3.story.read["carving.catacombs.1"], 1, "an older save: the story read back from the journal");
+  // the codex: blanks, then the lie struck through when the Drowned Town's truth is read
+  let codex = CM.codex(g3);
+  assert.strictEqual(codex[0].done, 1); assert.strictEqual(codex[0].total, 6); assert.strictEqual(codex[0].lines[4].read, false); assert.strictEqual(codex.length, Object.keys(CM.CHAPTERS).length);
+  g3.markRead("carving.catacombs.5"); g3.markRead("carving.drowned.2");
+  codex = CM.codex(g3);
+  assert.strictEqual(codex[0].lines[4].struck, "carving.drowned.2"); assert.ok(codex[0].lines[4].truth.length > 10 && codex[4].lines[1].read);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(CM.storyFromJournal([{ text: CM.LORE_TEXT["carving.vaults.1"].tellings[1], floor: 6 }]))), { read: { "carving.vaults.1": 6 } });
+  console.log(`       (the story: ${CM.loreWords().toLocaleString()} words)`);
+  // the bot reads the walls it passes
+  const g4 = new CM.Game(); g4.newGame("spine-bot", fixedParty(CM));
+  playRun(CM, g4, { maxFloor: 4 });
+  assert.ok(Object.keys(g4.story.read).length >= 2, `the bot read ${Object.keys(g4.story.read).join(", ")}`);
+});
+
 (async () => {
   let failed = 0;
   for (const t of tests) {

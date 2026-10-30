@@ -205,7 +205,7 @@ CM.Game = class {
     if (this.iron && this.mode !== "camp" && !this.ironAllow) { this.dirty = false; this.sinceSave = 0; return; }   // (Iron: the camps only)
     const data = { schema: CM.SCHEMA, gen: this.gen || 1, version: CM.version, party: this.party, bag: this.bag, gold: this.gold, floor: this.floor.number, floors: this.floorDeltas(), light: this.light,
       spellLight: this.spellLight || 0, phylactery: Boolean(this.phylactery), kit: this.kit || "pauper", mode: this.mode, seed: this.seed, rng: this.rnd.s,
-      tally: this.tally || this.freshTally(), journal: this.journal || [], rescued: this.rescued || [], saved: new Date().toISOString(),
+      tally: this.tally || this.freshTally(), journal: this.journal || [], story: this.story || { read: {} }, rescued: this.rescued || [], saved: new Date().toISOString(),
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
       startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), behind: this.behind || 0,
@@ -244,6 +244,7 @@ CM.Game = class {
     this.tally = Object.assign(this.freshTally(), d.tally || {});
     this.steps = this.tally.steps || 0;
     this.journal = d.journal || [];
+    this.story = d.story || CM.storyFromJournal(this.journal);          // (a save from before the codex: what was read is in the journal)
     this.rescued = d.rescued || [];
     this.difficulty = CM.DIFFICULTIES[d.difficulty] ? d.difficulty : "fair";
     this.mutators = d.mutators || CM.mutatorsFor(d.seed || "");
@@ -295,7 +296,7 @@ CM.Game = class {
     this.messages = [];
     this.titleNote = "";
     this.tally = this.freshTally();
-    this.journal = [];
+    this.journal = []; this.story = { read: {} };
     this.rescued = [];
     this.difficulty = CM.DIFFICULTIES[difficulty] ? difficulty : "fair";
     this.mutators = Array.isArray(mutators) ? mutators.filter((m) => CM.MUTATORS[m]) : CM.mutatorsFor(this.seed);

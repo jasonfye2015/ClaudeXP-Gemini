@@ -73,7 +73,7 @@ the bottom; it does not know the player's own history; it is the same fifty line
 
 ---
 
-## Phase 0 - The spine (do first) - v3.1
+## Phase 0 - The spine (do first) - v3.1 - DONE
 
 The writing needs a canon and the code needs a shelf.
 

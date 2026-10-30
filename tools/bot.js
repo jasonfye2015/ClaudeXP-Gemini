@@ -109,6 +109,8 @@ function playRun(CM, game, opts = {}) {
     if (ev && can(ev[0]) && floorMoves < perFloor * 0.6) return ev[0];
     const chests = things.filter(([, t]) => t.type === "chest").map(([k]) => k).filter(can);
     if (chests.length && floorMoves < perFloor * 0.6) return chests[0];
+    const wall = feats.find(([k, f]) => f.type === "carving" && !f.read && can(k));   // (the walls: the story, and the hermit's price)
+    if (wall && floorMoves < perFloor * 0.7) return wall[0];
     if (goal && can(goal)) return goal;
     const lever = feats.find(([, f]) => (f.type === "lever" && !f.pulled) || (f.type === "plate" && f.gate && !f.pressed));
     if (lever && can(lever[0])) return lever[0];
@@ -154,6 +156,7 @@ function playRun(CM, game, opts = {}) {
     if (step === "here") {
       if (t && ["chest", "ladder", "phylactery", "stairs_up"].includes(t.type)) { const before = game.floor.number + ":" + game.mode; game.use(); if (game.floor.number + ":" + game.mode === before && t.type === "ladder") { stuck++; } }
       else if (t && t.type === "ghost") { game.talk(t, here); if (fl.things[here]) { game.talk(t, here); } if (fl.things[here]) delete fl.things[here]; }
+      else if (f && f.type === "carving" && !f.read) { face(f.face); game.use(); if (!f.read) { stuck++; log.push("a wall that won't be read"); } }
       else if (t && t.type === "bones") { /* picked up by walking on it */ }
       else if (f && (f.type === "lever" || f.type === "plate")) { if (f.type === "lever") { face(f.face); game.use(); } if ((f.type === "lever" && !f.pulled) || (f.type === "plate" && f.gate && !f.pressed)) { stuck++; log.push("lever won't"); } }
       else if (t && t.type === "key") { /* taken as we stepped on it */ }

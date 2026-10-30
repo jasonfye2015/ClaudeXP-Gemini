@@ -30,6 +30,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-link").addEventListener("click", () => this.makeLink("save", g.exportText(), this.$("#transfer-text"), this.$("#transfer-note")));
     this.$("#btn-film-link").addEventListener("click", () => { const t = this.$("#film-text"); if (!CM.parseFilm(t.value)) { this.$("#film-note").textContent = "That isn't a film code (CM2:...)."; return; } this.makeLink("film", t.value.trim(), t, this.$("#film-note")); });
     this.$("#btn-stats").addEventListener("click", () => this.openStats());
+    for (const b of this.root.querySelectorAll("#dlg-journal .boards button")) b.addEventListener("click", () => { this.journalPage = b.dataset.page; this.openJournal(); });
     this.$("#btn-install").addEventListener("click", () => { const p = this.installPrompt; if (!p) return; this.installPrompt = null; this.showInstall(false); p.prompt(); });
     this.$("#btn-import").addEventListener("click", () => {
       const err = g.importText(this.$("#transfer-text").value);

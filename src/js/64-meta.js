@@ -129,6 +129,16 @@ Object.assign(CM.Game.prototype, {
     if (this.journal.length >= 10) this.achieve("scholar");
     return true;
   },
+  // the story: every line of lore read or heard this run, by key (CM.codex reads it)
+  markRead(key) {
+    if (!key) return false;
+    this.story = this.story || { read: {} };
+    if (this.story.read[key] !== undefined) return false;
+    this.story.read[key] = this.floor ? this.floor.number : 0;
+    const codex = CM.codex(this);
+    if (codex.filter((c) => c.band !== undefined).every((c) => c.complete)) this.achieve("chronicler");
+    return true;
+  },
   hasItem(kind) { return this.bag.findIndex((i) => i.kind === kind); },
 
   // someone to talk to, where the party stands (Space)
@@ -160,7 +170,8 @@ Object.assign(CM.Game.prototype, {
     const xp = 30 * fl.number;
     for (const h of this.alive()) h.xp += xp;
     delete fl.things[k];
-    this.remember("ghost", G.tale, { who: G.name });
+    this.markRead(`ghost.${CM.GHOSTS.indexOf(G) + 1}`);
+    this.remember("ghost", G.tale, { who: G.name, key: `ghost.${CM.GHOSTS.indexOf(G) + 1}` });
     this.achieve("restful");
     this.sound("heal");
     this.say(`${G.name} is at rest. ${gift.name} (${CM.itemLabel(gift)}) and ${xp} experience each.`);

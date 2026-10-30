@@ -162,7 +162,7 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
-<div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal</h2><div id="journal-list"></div>
+<div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button></span></h2><div id="journal-list"></div>
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
   <div class="roll" id="over-party"></div><div class="small" id="over-retire"></div><div class="tally" id="over-tally"></div>
@@ -809,8 +809,24 @@ CM.UI = class {
       return `<div class="list-title">${title}</div>` + list.map((e) => `<div class="entry"><small>${e.floor ? `Floor ${e.floor}` : ""}${e.who ? ` - ${this.esc(e.who)}` : ""}</small><p>${this.esc(e.text)}</p></div>`).join("");
     };
     const html = part("Carved into the stone", "carving") + part("What the dead said", "ghost") + part("Riddles answered", "riddle") + this.bestiaryHtml() + this.combosHtml();
+    for (const b of this.root.querySelectorAll("#dlg-journal .boards button")) b.classList.toggle("on", b.dataset.page === (this.journalPage || "journal"));
+    if (this.journalPage === "codex") { box.innerHTML = this.codexHtml(); this.openDialog("#dlg-journal"); return; }
     box.innerHTML = html || `<div class="small">Nothing yet. Read the walls (Space before a carving), and listen to whoever you meet; the hermit pays for stories.</div>`;
     this.openDialog("#dlg-journal");
+  }
+  // the codex: the story in chapters, the unread as blank lines, a lie struck through once the truth below it is read
+  codexHtml() {
+    const chapters = CM.codex(this.game), esc = (x) => this.esc(x);
+    const readAll = chapters.reduce((n, c) => n + c.done, 0), total = chapters.reduce((n, c) => n + c.total, 0);
+    let html = `<div class="small">${readAll} of ${total} lines of the story of Caer Duin. Each band's five carvings and its guardian's make a chapter; a line read deeper that gives the lie to one above strikes it through.</div>`;
+    for (const c of chapters) {
+      html += `<div class="list-title">${esc(c.name)} <small>${c.done} of ${c.total}${c.complete ? " - complete" : ""}</small></div><div class="entry"><p class="epigraph">${esc(c.epigraph)}</p></div>`;
+      for (const l of c.lines) {
+        if (!l.read) { html += `<div class="entry unread"><small>${l.floor ? `Floor ${l.floor}` : l.who ? esc(l.who) : ""}</small><p class="blank">&nbsp;</p></div>`; continue; }
+        html += `<div class="entry"><small>${l.floor ? `Floor ${l.floor}` : ""}${l.who ? ` ${esc(l.who)}` : ""}</small><p${l.struck ? ' class="struck"' : ""}>${esc(l.text)}</p>${l.struck ? `<p class="truth">${esc(l.truth)}</p>` : ""}</div>`;
+      }
+    }
+    return html;
   }
 
   // the bestiary: every kind met, in the order of the depths, with what it does and what it has been seen to fear

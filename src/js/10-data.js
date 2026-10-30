@@ -707,6 +707,7 @@ CM.ACHIEVEMENTS = {
   wings: { name: "Off the Stair", what: "Go down a wing stair", title: "the Wayward" },
   secretfloor: { name: "Behind the Wall", what: "Find a secret stair", title: "the Curious" },
   awakened: { name: "Awakened", what: "Slay the Lich King in an Awakened expedition", title: "the Awakened" },
+  chronicler: { name: "The Chronicler", what: "Read every carving of every band, in one expedition", title: "the Chronicler" },
   strongbox: { name: "Keyholder", what: "Open a strongbox with the key from the floor above", title: "the Keyholder" },
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
@@ -889,20 +890,6 @@ CM.guardianFor = (floor) => (floor > CM.BOTTOM ? (CM.echoOf(floor) ? CM.GUARDIAN
 CM.guardianHas = (m, passive) => Boolean(m && m.guardian && CM.GUARDIANS[m.guardian] && (CM.GUARDIANS[m.guardian].passives || []).includes(passive));
 CM.unmoved = (m) => Boolean(m && (m.boss || m.guardian));          // the Lich King and the guardians: not held, not put to sleep, not routed
 // below the bottom (Endless) the carvings are not the story any more: they are the dream, still dreaming
-CM.LORE_ENDLESS = [
-  "There is no floor below this one, the carving says. You are standing on the floor below this one.",
-  "The same hand, the same words, the same king. The dream did not end when the dreamer did.",
-  "A mark you made yourself, you would swear, on a floor you have never been to.",
-  "Here lie the first dead of Caer Duin, again. They are not tired of it. You will be.",
-  "The water rose and never fell, the carving says, as it said forty floors up. It is drier here. It is lying.",
-  "Turn back, in six languages. The seventh says: there is no back. There is only further.",
-  "The dwarves' word for this place has no end. Neither does the place.",
-  "Someone has started counting the floors here, and given up, and started again.",
-];
-// what a carving says: the floor's part of the story, an odd one, a guardian's (text "g:<guardian>") or the endless dark's ("e:<n>")
-CM.loreText = (text) => (typeof text === "string" && text.startsWith("g:") ? (CM.GUARDIANS[text.slice(2)] || {}).lore || ""
-  : typeof text === "string" && text.startsWith("e:") ? CM.LORE_ENDLESS[Number(text.slice(2)) % CM.LORE_ENDLESS.length]
-  : text >= 0 ? CM.LORE[text] || CM.LORE[CM.LORE.length - 1] : CM.LORE_EXTRA[-text - 1] || CM.LORE_EXTRA[0]);
 
 // what a monster sounds like, by kind (the sounds are cooked in 50-audio.js)
 CM.roarFor = function (kind) {
