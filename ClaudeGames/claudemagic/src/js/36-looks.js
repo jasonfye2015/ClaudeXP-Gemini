@@ -159,6 +159,8 @@ CM.art.buildStone = function (theme) {
     c.getContext("2d").drawImage(drawn.layers[i], 0, 0, S, S);
     add(name, c);
   }
+  const kit = CM.art.cutKit(CM.art.packs.stone);                          // (the Stone look's own props: real blades and leaves, stamped)
+  if (kit) { const own = CM.art.packProps((name, canvas) => { index[name] = layers.indexOf(layers[index[name]]); layers[index[name]] = canvas; }, S, (id) => CM.art.prop(id, kit)); return { layers, index, size: S, crisp: false, sub: own }; }
   return { layers, index, size: S, crisp: false, sub: drawn.sub };          // (the props' layers came across with the rest, by name)
 };
 

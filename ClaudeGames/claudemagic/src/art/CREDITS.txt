@@ -4,5 +4,5 @@ pixel/  Dungeon Crawl Stone Soup tiles (CC0) - by the Crawl Stone Soup team and 
         The whole set, with its LICENSE.txt (CC0) and README.txt of contributors, is kept in
         Local Storage\Dungeon Crawl - Sprites.
 
-stone/  ambientCG textures (CC0) - Bricks089, PavingStones141, Rock035, Rock037, Rock020, Bricks058, Bricks100, PavingStones128, Planks039, Marble006, Tiles074, Onyx013, Grass001, Grass005, Ground110, Ground103, Plaster001, RoofingTiles013A, Bark007, Bricks097, Ground077, ScatteredLeaves001; https://ambientcg.com
+stone/  ambientCG textures (CC0) - Bricks089, PavingStones141, Rock035, Rock037, Rock020, Bricks058, Bricks100, PavingStones128, Planks039, Marble006, Tiles074, Onyx013, Grass001, Grass005, Ground110, Ground103, Plaster001, RoofingTiles013A, Bark007, Bricks097, Ground077, ScatteredLeaves001; cut-outs Foliage001, Foliage006, LeafSet027, LeafSet024; https://ambientcg.com
         Each set (all its maps) is kept in Local Storage\ambientCG - Textures.

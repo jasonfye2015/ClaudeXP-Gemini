@@ -93,6 +93,7 @@ CM.Renderer = class {
     this.sky = null;                   // on the surface: CM.sky(game) this frame (the colours, the light, the sun and the moon); null below
     this.seed = ""; this.density = CM.DETAIL.medium; this.sub = {};   // the props: the run's seed and how many (the Detail setting), and where each sits in its layer
     this.standing = [];                // the floor's standing props, for the frame's billboards
+    this.season = "summer";           // the run's season, for what grows
     this.lightNow = 1;                 // (eased towards it)
     this.ok = true;
     gl.enable(gl.DEPTH_TEST);
@@ -149,7 +150,7 @@ CM.Renderer = class {
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
   setFloor(floor, theme) {
     this.theme = theme;
-    const props = CM.scatter(floor, this.seed, this.density);
+    const props = CM.scatter(floor, this.seed, this.density, { season: this.season });
     this.standing = props.filter((p) => p.how === "stand");
     const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub });
     this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };

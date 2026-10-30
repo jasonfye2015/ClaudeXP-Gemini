@@ -83,7 +83,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   game.on("floor", (floor) => {
     if (!renderer.ok) return;
-    renderer.seed = game.seed;
+    renderer.seed = game.seed; renderer.season = CM.season ? CM.season(game) : "summer";
     useTheme(floor.number);
     renderer.setFloor(floor, CM.themeFor(floor.number));
     renderer.setCamera(floor.pos[0], floor.pos[1], floor.facing);
@@ -352,7 +352,8 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!fl) return { out, hud };
     const now = performance.now(), right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
-    for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 10) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h });   // (the standing props, near the party)
+    const lit = CM.isNight(game);
+    for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: lit && CM.PROPS[p.id].night ? 0.9 : 0 });   // (the standing props, near the party; lamps lit at night)
     if (renderer.sky) {                                                 // the sun and the moon: far off, along their arc from the east over the south to the west
       const S = renderer.sky, eye = renderer.eye;
       for (const [t, layer, size] of [[S.sun, "sun", 6], [S.moon, `moon:${S.phase}`, 4]]) {

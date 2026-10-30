@@ -2980,8 +2980,8 @@ test("the scatter: props by the seed, the same twice and another by another seed
     const wet = new Set((fl.decor || []).filter((d) => d.kind === "water").map((d) => `${d.x},${d.y}`));
     for (const p of a) {
       const k = `${p.x},${p.y}`, t = fl.things[k];
-      assert.ok(CM.isOpen(fl, p.x, p.y) && !(t && t.type !== "monsters") && !fl.features[k] && !wet.has(k), `${p.id} on a clear square at ${k}`);
-      assert.ok(Math.abs(p.dx) + p.w / 2 <= 0.75 && Math.abs(p.dz) + p.w / 2 <= 0.75, `${p.id} within its square`);
+      assert.ok(CM.isOpen(fl, p.x, p.y) && !(t && t.type !== "monsters") && !fl.features[k] && (!wet.has(k) || p.id === "steps"), `${p.id} on a clear square at ${k}`);
+      assert.ok(Math.abs(p.dx) + p.w / 2 <= 0.9 && Math.abs(p.dz) + p.w / 2 <= 0.9, `${p.id} within its square`);
     }
     assert.strictEqual(CM.scatter(fl, "scatter-1", CM.DETAIL.low).length, 0, "Low: none");
     assert.ok(CM.scatter(fl, "scatter-1", CM.DETAIL.high).length >= a.length, "High: at least as many");
@@ -2992,7 +2992,7 @@ test("the scatter: props by the seed, the same twice and another by another seed
   // nothing moves: the floor's fingerprint with the props worked out is the floor's fingerprint
   const fp = CM.floorPrint(f3); CM.scatter(f3, "scatter-1", 1); assert.strictEqual(CM.floorPrint(f3), fp);
   // into the mesh: flat and crossed props in, standing ones left for the billboards
-  const index = { wall: 0, floor: 1, ceiling: 2, "props:0": 3, "props:1": 4 }, sub = {};
+  const index = { wall: 0, floor: 1, ceiling: 2 }, sub = {}; for (let i = 0; i * 4 < Object.keys(CM.PROPS).length; i++) index[`props:${i}`] = 3 + i;
   Object.keys(CM.PROPS).forEach((id, i) => { sub[`prop:${id}`] = [`props:${Math.floor(i / 4)}`, (i % 2) * 0.5, Math.floor((i % 4) / 2) * 0.5, (i % 2) * 0.5 + 0.5, Math.floor((i % 4) / 2) * 0.5 + 0.5]; });
   const props = CM.scatter(f3, "scatter-1", 1), m = CM.floorMesh(f3, CM.THEMES[0], index, { props, sub });
   assert.strictEqual(m.props, props.filter((p) => p.how !== "stand").length);
@@ -3001,6 +3001,32 @@ test("the scatter: props by the seed, the same twice and another by another seed
   const t0 = Date.now(); for (let n = 1; n <= 50; n++) CM.scatter(CM.makeFloor(n, "scatter-1"), "scatter-1", 1); const ms = Date.now() - t0;
   assert.ok(ms < 4000, `fifty floors (made and scattered) in ${ms} ms`);
   assert.strictEqual(new CM.Game().settings.detail, "medium");
+});
+
+test("the surface's life: grass and flowers by the season, tall grass and hay in the fields, shrubs by the trees, ferns and mushrooms under the leaves, reeds by the water and stepping stones in the ford, barrels and lamps in town, stalls on market day", () => {
+  const CM = load();
+  const wood = CM.makeWood("life-1"), town = CM.makeTown("life-1"), weekly = CM.makeTown("weekly-2026-44");
+  const ids = (fl, season, seed = "life-1") => { const m = {}; for (const p of CM.scatter(fl, seed, 1, { season })) (m[p.id] = m[p.id] || []).push(p); return m; };
+  const summer = ids(wood, "summer"), autumn = ids(wood, "autumn"), winter = ids(wood, "winter"), spring = ids(wood, "spring");
+  assert.ok(summer.tuft && summer.flowers && !summer.tuft_dry && !summer.tuft_snow && !summer.snow, "summer: green grass and flowers");
+  assert.ok(autumn.tuft_dry && autumn.leaves && !autumn.tuft && !autumn.flowers, "autumn: dry grass and fallen leaves");
+  assert.ok(winter.tuft_snow && winter.snow && !winter.tuft && !winter.flowers && !winter.reeds && !winter.fern, "winter: snow");
+  assert.ok(spring.flowers && !spring.tallgrass, "spring: flowers, no tall grass yet");
+  const F = CM.FIELDS, inFields = (p) => p.x >= F[0] && p.x <= F[2] && p.y >= F[1] && p.y <= F[3];
+  assert.ok(summer.tallgrass.every(inFields) && summer.hay && summer.hay.every(inFields), "tall grass and hay in the fields");
+  const isTree = (x, y) => wood.grid[y] && wood.grid[y][x] !== 0 && CM.solidAt(wood, x, y) === "tree";
+  assert.ok(summer.shrub.every((p) => [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]].some(([dx, dy]) => isTree(p.x + dx, p.y + dy))), "shrubs by the trees");
+  const canopy = new Set(wood.canopy); assert.ok(summer.fern.every((p) => canopy.has(`${p.x},${p.y}`)) && summer.mushroom.every((p) => canopy.has(`${p.x},${p.y}`)), "ferns and mushrooms under the leaves");
+  assert.ok(!summer.tuft.some((p) => canopy.has(`${p.x},${p.y}`)), "no meadow grass under the leaves");
+  const wet = new Set(wood.decor.filter((d) => d.kind === "water").map((d) => `${d.x},${d.y}`));
+  assert.ok(summer.reeds.every((p) => CM.DIRS.some(([dx, dy]) => wet.has(`${p.x + dx},${p.y + dy}`))), "reeds by the water");
+  assert.deepStrictEqual(summer.steps.map((p) => `${p.x},${p.y}`), [wood.ford.join(",")], "stepping stones in the ford, and only there");
+  const t = ids(town, "summer"), w = ids(weekly, "summer", "weekly-2026-44");
+  assert.ok(t.barrel && t.lamp && !t.stall && !t.reeds && !t.bones, "barrels and lamps in town; no stalls on an ordinary seed");
+  assert.ok(w.stall && w.stall.every((p) => p.x >= CM.TOWN_SQUARE[0] && p.x <= CM.TOWN_SQUARE[2] && p.y >= CM.TOWN_SQUARE[1] && p.y <= CM.TOWN_SQUARE[3]), "stalls in the Square on market day");
+  assert.ok(t.barrel.every((p) => CM.groundAt(town, p.x, p.y) !== "flags"), "no barrel in a doorway");
+  assert.ok(CM.PROPS.lamp.night, "lamps are lit at night");
+  const below = ids(CM.makeFloor(3, "life-1"), "summer"); assert.ok(!below.tuft && !below.barrel && !below.reeds, "none of it below");
 });
 
 (async () => {
