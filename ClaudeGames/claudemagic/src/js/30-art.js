@@ -1387,9 +1387,64 @@ CM.art.surfaceProp = function (id, S, kit) {
   return c;
 };
 
+
+// the dungeon's debris: painted at the props' size, for every look
+CM.art.DEBRIS_IDS = ["cobweb", "dust", "coffinlid", "candle", "puddle", "slime", "rotcrate", "rubble", "pick", "rails", "armour", "glass", "urn", "candelabra", "frost", "weed", "shells", "oar", "fungi", "shard", "slag", "chains", "cogs", "bonepile", "roots", "coins", "books", "scrolls", "straw"];
+CM.art.debrisProp = function (id, S) {
+  const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`debris:${id}`));
+  const blob = (x, y, rx, ry, colour) => { p.fillStyle = colour; p.beginPath(); p.ellipse(x, y, rx, ry, rnd.next() * 3, 0, Math.PI * 2); p.fill(); };
+  const scatter = (n, f) => { for (let i = 0; i < n; i++) f(S * 0.12 + rnd.next() * S * 0.76, S * 0.12 + rnd.next() * S * 0.76, i); };
+  const stone = (k) => `rgb(${Math.round(110 * k)},${Math.round(104 * k)},${Math.round(96 * k)})`;
+  switch (id) {
+    case "cobweb": {
+      p.strokeStyle = "rgba(230,230,235,0.95)"; p.lineWidth = 2;
+      const ax = 2, bx = S - 2, top = 2, cx = S / 2, cy = S * 0.85;
+      for (let i = 0; i <= 6; i++) { const t = i / 6, x = ax + (bx - ax) * t; p.beginPath(); p.moveTo(x, top); p.lineTo(cx + (x - cx) * 0.1, cy); p.stroke(); }
+      for (let r = 1; r <= 5; r++) { const k = r / 5.5; p.beginPath(); for (let i = 0; i <= 6; i++) { const t = i / 6, x = ax + (bx - ax) * t, px = x + (cx - x) * k, py = top + (cy - top) * k + Math.sin(t * Math.PI) * 6; if (i) p.lineTo(px, py); else p.moveTo(px, py); } p.stroke(); }
+      break;
+    }
+    case "dust": scatter(60, (x, y) => blob(x, y, 4 + rnd.next() * 8, 3 + rnd.next() * 5, `rgba(${170 + rnd.int(0, 30)},${160 + rnd.int(0, 30)},${140 + rnd.int(0, 20)},1)`)); break;
+    case "coffinlid": p.fillStyle = "#5A4030"; p.beginPath(); p.moveTo(S * 0.3, S * 0.05); p.lineTo(S * 0.7, S * 0.05); p.lineTo(S * 0.85, S * 0.3); p.lineTo(S * 0.72, S * 0.95); p.lineTo(S * 0.28, S * 0.95); p.lineTo(S * 0.15, S * 0.3); p.closePath(); p.fill(); p.fillStyle = "#3A2A20"; p.fillRect(S * 0.47, S * 0.2, S * 0.06, S * 0.5); p.fillRect(S * 0.35, S * 0.32, S * 0.3, S * 0.06); break;
+    case "candle": for (const [x, h] of [[0.35, 0.55], [0.6, 0.75], [0.48, 0.4]]) { p.fillStyle = "#E8DCC0"; p.fillRect(S * x - S * 0.06, S * (1 - h * 0.7), S * 0.12, S * h * 0.7); p.fillStyle = "#F0C040"; p.beginPath(); p.ellipse(S * x, S * (1 - h * 0.7) - S * 0.07, S * 0.04, S * 0.08, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFF0B0"; p.beginPath(); p.ellipse(S * x, S * (1 - h * 0.7) - S * 0.05, S * 0.02, S * 0.04, 0, 0, Math.PI * 2); p.fill(); } break;
+    case "puddle": blob(S / 2, S / 2, S * 0.4, S * 0.28, "rgba(40,60,80,1)"); blob(S * 0.42, S * 0.42, S * 0.16, S * 0.06, "rgba(150,180,210,1)"); break;
+    case "slime": scatter(10, (x, y) => blob(x, y, 10 + rnd.next() * 14, 6 + rnd.next() * 8, `rgb(${60 + rnd.int(0, 30)},${110 + rnd.int(0, 40)},${40 + rnd.int(0, 20)})`)); break;
+    case "rotcrate": p.fillStyle = "#5A4630"; p.fillRect(S * 0.08, S * 0.2, S * 0.84, S * 0.8); p.strokeStyle = "#3A2C1C"; p.lineWidth = 6; p.strokeRect(S * 0.12, S * 0.24, S * 0.76, S * 0.72); p.fillStyle = "#1A1410"; p.beginPath(); p.moveTo(S * 0.5, S * 0.2); p.lineTo(S * 0.7, S * 0.2); p.lineTo(S * 0.6, S * 0.45); p.closePath(); p.fill(); p.fillStyle = "rgba(70,110,60,0.8)"; p.fillRect(S * 0.08, S * 0.86, S * 0.84, S * 0.14); break;
+    case "rubble": case "bonepile": case "slag": {
+      const col = id === "rubble" ? stone : id === "bonepile" ? (k) => `rgb(${Math.round(216 * k)},${Math.round(206 * k)},${Math.round(180 * k)})` : (k) => `rgb(${Math.round(60 * k)},${Math.round(52 * k)},${Math.round(48 * k)})`;
+      for (let i = 0; i < 18; i++) { const t = i / 18, x = S * (0.15 + rnd.next() * 0.7), y = S * (0.98 - Math.sin(rnd.next() * Math.PI) * 0.55 * (1 - Math.abs(x / S - 0.5))); blob(x, Math.min(S * 0.92, y), S * (0.06 + rnd.next() * 0.07), S * (0.05 + rnd.next() * 0.05), col(0.7 + rnd.next() * 0.5)); }
+      p.fillStyle = col(0.6); p.fillRect(S * 0.08, S * 0.9, S * 0.84, S * 0.1);
+      if (id === "bonepile") { blob(S * 0.5, S * 0.42, S * 0.11, S * 0.1, "#E4DCC4"); blob(S * 0.46, S * 0.43, S * 0.025, S * 0.03, "#2A2420"); blob(S * 0.55, S * 0.43, S * 0.025, S * 0.03, "#2A2420"); }
+      if (id === "slag") scatter(8, (x, y) => blob(x, S * 0.6 + y * 0.35, 4, 3, "#F08030"));
+      break;
+    }
+    case "pick": p.strokeStyle = "#6A4A28"; p.lineWidth = 8; p.beginPath(); p.moveTo(S * 0.15, S * 0.85); p.lineTo(S * 0.75, S * 0.25); p.stroke(); p.strokeStyle = "#7A7A80"; p.lineWidth = 10; p.beginPath(); p.moveTo(S * 0.5, S * 0.1); p.quadraticCurveTo(S * 0.82, S * 0.18, S * 0.9, S * 0.5); p.stroke(); break;
+    case "rails": p.fillStyle = "#5A3E26"; for (let i = 0; i < 5; i++) p.fillRect(S * 0.1, S * (0.12 + i * 0.18), S * 0.8, S * 0.07); p.fillStyle = "#6A6A70"; p.fillRect(S * 0.25, S * 0.04, S * 0.06, S * 0.92); p.fillRect(S * 0.69, S * 0.04, S * 0.06, S * 0.92); break;
+    case "armour": blob(S * 0.4, S * 0.45, S * 0.22, S * 0.28, "#7A5A3A"); blob(S * 0.4, S * 0.42, S * 0.16, S * 0.2, "#8A6A48"); blob(S * 0.72, S * 0.7, S * 0.14, S * 0.1, "#6A5038"); p.fillStyle = "#3A2A1A"; p.fillRect(S * 0.32, S * 0.4, S * 0.16, 4); break;
+    case "glass": scatter(14, (x, y) => { p.fillStyle = `rgba(${170 + rnd.int(0, 60)},${200 + rnd.int(0, 40)},${220 + rnd.int(0, 30)},1)`; p.beginPath(); p.moveTo(x, y); p.lineTo(x + 6 + rnd.next() * 10, y + rnd.next() * 8); p.lineTo(x + rnd.next() * 6, y + 6 + rnd.next() * 10); p.closePath(); p.fill(); }); break;
+    case "urn": p.fillStyle = "#7A5A44"; p.beginPath(); p.moveTo(S * 0.38, S * 0.08); p.lineTo(S * 0.62, S * 0.08); p.lineTo(S * 0.58, S * 0.2); p.quadraticCurveTo(S * 0.92, S * 0.45, S * 0.66, S * 0.94); p.lineTo(S * 0.34, S * 0.94); p.quadraticCurveTo(S * 0.08, S * 0.45, S * 0.42, S * 0.2); p.closePath(); p.fill(); p.fillStyle = "#A07A5A"; p.fillRect(S * 0.24, S * 0.5, S * 0.52, 5); break;
+    case "candelabra": p.fillStyle = "#8A7440"; p.fillRect(S * 0.46, S * 0.3, S * 0.08, S * 0.66); p.fillRect(S * 0.3, S * 0.94, S * 0.4, S * 0.06); p.fillRect(S * 0.2, S * 0.3, S * 0.6, S * 0.04); for (const x of [0.22, 0.5, 0.78]) { p.fillStyle = "#E8DCC0"; p.fillRect(S * x - 5, S * 0.18, 10, S * 0.12); p.fillStyle = "#F0C040"; p.beginPath(); p.ellipse(S * x, S * 0.13, 5, 9, 0, 0, Math.PI * 2); p.fill(); } break;
+    case "frost": scatter(30, (x, y) => blob(x, y, 6 + rnd.next() * 10, 4 + rnd.next() * 6, `rgb(${200 + rnd.int(0, 40)},${220 + rnd.int(0, 30)},255)`)); break;
+    case "weed": p.lineWidth = 4; p.lineCap = "round"; for (let i = 0; i < 9; i++) { const x = S * (0.15 + rnd.next() * 0.7), y = S * (0.15 + rnd.next() * 0.7), a = rnd.next() * Math.PI * 2; p.strokeStyle = `rgb(${60 + rnd.int(0, 40)},${80 + rnd.int(0, 40)},${40 + rnd.int(0, 20)})`; p.beginPath(); p.moveTo(x, y); p.bezierCurveTo(x + Math.cos(a) * 30, y + Math.sin(a) * 10, x + Math.cos(a) * 10, y + Math.sin(a) * 40, x + Math.cos(a + 1) * 40, y + Math.sin(a + 1) * 40); p.stroke(); } break;
+    case "shells": scatter(8, (x, y) => { blob(x, y, 7, 5, "#E8D8C0"); p.strokeStyle = "#B8A080"; p.lineWidth = 1; p.beginPath(); p.moveTo(x - 6, y); p.lineTo(x + 6, y); p.stroke(); }); break;
+    case "oar": p.strokeStyle = "#6A5038"; p.lineWidth = 7; p.beginPath(); p.moveTo(S * 0.1, S * 0.85); p.lineTo(S * 0.68, S * 0.32); p.stroke(); blob(S * 0.78, S * 0.22, S * 0.16, S * 0.08, "#5A4430"); break;
+    case "fungi": for (const [x, s] of [[0.3, 0.7], [0.55, 1], [0.75, 0.55]]) { p.fillStyle = "#C8D8B0"; p.fillRect(S * x - S * 0.035 * s, S * (1 - 0.5 * s), S * 0.07 * s, S * 0.5 * s); p.fillStyle = "#90E0B0"; p.beginPath(); p.ellipse(S * x, S * (1 - 0.5 * s), S * 0.17 * s, S * 0.1 * s, 0, Math.PI, 0); p.fill(); } break;
+    case "shard": for (const [x, h, a] of [[0.4, 0.95, -0.2], [0.58, 0.7, 0.25], [0.28, 0.5, -0.4]]) { p.save(); p.translate(S * x, S); p.rotate(a); p.fillStyle = "#B0E0F8"; p.beginPath(); p.moveTo(-S * 0.07, 0); p.lineTo(0, -S * h); p.lineTo(S * 0.07, 0); p.closePath(); p.fill(); p.fillStyle = "#E8F8FF"; p.beginPath(); p.moveTo(0, 0); p.lineTo(0, -S * h); p.lineTo(S * 0.07, 0); p.closePath(); p.fill(); p.restore(); } break;
+    case "chains": p.strokeStyle = "#5A5A60"; p.lineWidth = 5; for (let i = 0; i < 9; i++) { const x = S * (0.15 + i * 0.085), y = S * (0.3 + Math.sin(i * 0.8) * 0.2); p.beginPath(); p.ellipse(x, y, 9, 6, i % 2 ? 0 : Math.PI / 2, 0, Math.PI * 2); p.stroke(); } break;
+    case "cogs": for (const [x, y, r] of [[0.4, 0.45, 0.22], [0.7, 0.68, 0.14]]) { p.fillStyle = "#6E6A64"; for (let t = 0; t < 10; t++) { const a = t * Math.PI / 5; p.fillRect(S * x + Math.cos(a) * S * r - 5, S * y + Math.sin(a) * S * r - 5, 10, 10); } blob(S * x, S * y, S * r * 0.9, S * r * 0.9, "#7E7A72"); blob(S * x, S * y, S * r * 0.3, S * r * 0.3, "#3A3834"); } break;
+    case "roots": p.lineCap = "round"; for (let i = 0; i < 5; i++) { const y = S * (0.15 + rnd.next() * 0.7); p.strokeStyle = "#5A3424"; p.lineWidth = 8 - i; p.beginPath(); p.moveTo(0, y); p.bezierCurveTo(S * 0.3, y + (rnd.next() - 0.5) * 60, S * 0.6, y + (rnd.next() - 0.5) * 60, S, y + (rnd.next() - 0.5) * 40); p.stroke(); } break;
+    case "coins": scatter(16, (x, y) => { blob(x, y, 7, 5, "#E8C050"); blob(x - 1, y - 1, 4, 2, "#FFE890"); }); break;
+    case "books": for (let i = 0; i < 4; i++) { const x = S * (0.2 + rnd.next() * 0.6), y = S * (0.2 + rnd.next() * 0.6); p.save(); p.translate(x, y); p.rotate(rnd.next() * 3); p.fillStyle = ["#6A2A2A", "#2A4A6A", "#3A5A2A", "#5A3A1A"][i]; p.fillRect(-S * 0.13, -S * 0.09, S * 0.26, S * 0.18); p.fillStyle = "#E8DCC0"; p.fillRect(-S * 0.11, S * 0.07, S * 0.22, 4); p.restore(); } break;
+    case "scrolls": for (let i = 0; i < 3; i++) { const x = S * (0.25 + rnd.next() * 0.5), y = S * (0.25 + rnd.next() * 0.5); p.save(); p.translate(x, y); p.rotate(rnd.next() * 3); p.fillStyle = "#E8DCB8"; p.fillRect(-S * 0.18, -S * 0.05, S * 0.36, S * 0.1); p.fillStyle = "#C8B890"; p.beginPath(); p.arc(-S * 0.18, 0, S * 0.05, 0, Math.PI * 2); p.fill(); p.beginPath(); p.arc(S * 0.18, 0, S * 0.05, 0, Math.PI * 2); p.fill(); p.restore(); } break;
+    case "straw": p.lineWidth = 3; for (let i = 0; i < 90; i++) { const x = S * (0.1 + rnd.next() * 0.8), y = S * (0.1 + rnd.next() * 0.8), a = rnd.next() * Math.PI; p.strokeStyle = `rgb(${190 + rnd.int(0, 40)},${160 + rnd.int(0, 30)},${80 + rnd.int(0, 30)})`; p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * 16, y + Math.sin(a) * 16); p.stroke(); } break;
+    default: break;
+  }
+  return c;
+};
+
 // ---- props: the small things on the floors, painted at half size and packed four to a layer --------------------------
 CM.art.prop = function (id, kit = null) {
   const S = ART_SIZE / 2, c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`prop:${id}`));
+  if (CM.art.DEBRIS_IDS.includes(id)) return CM.art.debrisProp(id, S);
   if (!["tuft", "flowers", "pebbles", "rock", "bones", "skull"].includes(id) || (kit && id === "tuft")) return CM.art.surfaceProp(id, kit ? S * 2 : S, kit);   // (the surface's own, and with a kit the photographed tuft, at full size for the blades' detail)
   if (id === "tuft" || id === "flowers") {
     for (let i = 0; i < (id === "tuft" ? 26 : 14); i++) {

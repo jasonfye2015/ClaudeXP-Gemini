@@ -2971,7 +2971,7 @@ test("ground everywhere: on the surface every square has ground, a top or a roof
 
 test("the scatter: props by the seed, the same twice and another by another seed; never on a thing, a feature or the water; by the Detail; no floor's fingerprint moves; into the mesh, and quick", () => {
   const CM = load();
-  for (const [id, P] of Object.entries(CM.PROPS)) { assert.ok(["flat", "cross", "stand"].includes(P.how), id); assert.ok(P.size[0] > 0 && P.size[1] >= P.size[0] && P.size[1] < 1, id); }
+  for (const [id, P] of Object.entries(CM.PROPS)) { assert.ok(["flat", "cross", "stand", "corner"].includes(P.how), id); assert.ok(P.size[0] > 0 && P.size[1] >= P.size[0] && P.size[1] < 1, id); }
   for (const r of CM.SCATTER) assert.ok(CM.PROPS[r.prop] && r.per > 0 && r.per <= 1, r.prop);
   const town = CM.makeTown("scatter-1"), wood = CM.makeWood("scatter-1"), f3 = CM.makeFloor(3, "scatter-1"), f43 = CM.makeFloor(43, "scatter-1");
   for (const fl of [town, wood, f3, f43]) {
@@ -3027,6 +3027,38 @@ test("the surface's life: grass and flowers by the season, tall grass and hay in
   assert.ok(t.barrel.every((p) => CM.groundAt(town, p.x, p.y) !== "flags"), "no barrel in a doorway");
   assert.ok(CM.PROPS.lamp.night, "lamps are lit at night");
   const below = ids(CM.makeFloor(3, "life-1"), "summer"); assert.ok(!below.tuft && !below.barrel && !below.reeds, "none of it below");
+});
+
+test("the dungeon's debris: each band its own palette and not another's; the named rooms their clutter; cobwebs across the corners under the ceiling; nothing in a doorway; the fingerprints as they were", () => {
+  const CM = load();
+  const PALETTE = { 0: ["coffinlid", "candle", "dust"], 1: ["puddle", "slime"], 2: ["rubble", "rails"], 3: ["candelabra", "frost", "glass"], 4: ["shells", "weed"], 5: ["fungi"], 6: ["shard"], 7: ["slag", "cogs"], 8: ["bonepile"], 9: ["roots"] };
+  const OWN = { coffinlid: [0], candelabra: [3], frost: [3], shells: [4], fungi: [5], shard: [6], slag: [7], cogs: [7], bonepile: [8], roots: [9], rails: [2] };
+  const seen = {};
+  for (let n = 1; n <= 50; n++) for (const seed of ["debris-1", "debris-2"]) {
+    const fl = CM.makeFloor(n, seed), band = CM.themeIndex(n), fp = CM.floorPrint(fl);
+    for (const p of CM.scatter(fl, seed, 1)) {
+      (seen[band] = seen[band] || new Set()).add(p.id);
+      const f = fl.features[`${p.x},${p.y}`]; assert.ok(!f, `${p.id} on a ${f && f.type} at ${p.x},${p.y}`);
+      if (OWN[p.id] && !(p.id === "coffinlid" && (fl.rooms || []).some((r) => r.name === "Crypt" && p.x >= r.x0 && p.x <= r.x1 && p.y >= r.y0 && p.y <= r.y1))) assert.ok(OWN[p.id].includes(band), `${p.id} in band ${band} (floor ${n})`);
+      if (p.how === "corner") { assert.ok(p.corner && Math.abs(p.corner[0]) === 1 && Math.abs(p.corner[1]) === 1, "a corner"); assert.ok(!CM.isOpen(fl, p.x + p.corner[0], p.y) && !CM.isOpen(fl, p.x, p.y + p.corner[1]), `${p.id} in a real corner`); }
+    }
+    assert.strictEqual(CM.floorPrint(fl), fp);
+  }
+  for (const [band, ids] of Object.entries(PALETTE)) for (const id of ids) assert.ok(seen[band] && seen[band].has(id), `${id} in band ${band}`);
+  // the named rooms
+  let rooms = {};
+  for (let n = 1; n <= 50; n++) for (const seed of ["debris-1", "debris-2", "debris-3"]) {
+    const fl = CM.makeFloor(n, seed), inRoom = (p, name) => (fl.rooms || []).some((r) => r.name === name && p.x >= r.x0 && p.x <= r.x1 && p.y >= r.y0 && p.y <= r.y1);
+    for (const p of CM.scatter(fl, seed, 1)) for (const [id, name] of [["coins", "Treasure Vault"], ["books", "Library"], ["scrolls", "Library"], ["straw", "Den"]]) if (p.id === id) { assert.ok(inRoom(p, name), `${id} outside a ${name}`); rooms[id] = true; }
+  }
+  assert.ok(rooms.coins && rooms.books && rooms.straw, JSON.stringify(rooms));
+  // the cobweb's mesh: a quad under the ceiling
+  const fl = CM.makeFloor(2, "debris-1"), webs = CM.scatter(fl, "debris-1", 1).filter((p) => p.id === "cobweb");
+  assert.ok(webs.length > 0);
+  const index = { wall: 0, floor: 1, ceiling: 2, "prop:cobweb": 3 }, m = CM.floorMesh(fl, CM.THEMES[0], index, { props: webs, sub: {} });
+  let low = 1; for (let i = 0; i < m.data.length; i += CM.MESH_STRIDE) if (m.data[i + 5] === 3) low = Math.min(low, m.data[i + 1]);
+  assert.ok(low > 0.5 && low < 1, `the webs hang under the ceiling (lowest ${low})`);
+  for (const id of ["candle", "candelabra", "fungi", "shard"]) assert.ok(CM.PROPS[id].glow > 0, `${id} glows`);
 });
 
 (async () => {
