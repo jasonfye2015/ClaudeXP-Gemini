@@ -107,6 +107,7 @@ CM.art.buildPixel = function (theme) {
   const ground = (key, drawn) => (CM.packs.pixel.index[key] ? tiled(key, 2) : CM.art.pixelate(drawn()));              // (the ground and the walls repeat the tile; the trees stand alone)
   for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key.startsWith("sign") || key.startsWith("far.") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
   CM.art.decalLayers(add, (id) => CM.art.pixelate(CM.art.decal(id), 32));   // (what is on the walls and overhead, in pixels)
+  add("shadow", CM.art.pixelate(CM.art.shadow(), 32));
   const sub = CM.art.packProps(add, S, (id) => CM.art.pixelate(CM.art.prop(id), 24));   // (the props in pixels, like the rest of the set)
   return { layers, index, size: S, crisp: true, sub };
 };
@@ -153,12 +154,10 @@ CM.art.buildStone = function (theme) {
     return CM.art.packs.stone[key] ? photo(key, false, 0, true) : drawn();
   });
   for (const [name, c] of Object.entries(surface)) add(name, fit(c));
-  const drawn = CM.art.buildDrawn(theme);                                   // the rest, as drawn, at the stone's size
+  const drawn = CM.art.buildDrawn(theme);                                   // the rest, as drawn (the renderer scales what it must as it uploads)
   for (const [name, i] of Object.entries(drawn.index)) {
     if (name in index) continue;
-    const c = artCanvas(S);
-    c.getContext("2d").drawImage(drawn.layers[i], 0, 0, S, S);
-    add(name, c);
+    add(name, drawn.layers[i]);
   }
   const kit = CM.art.cutKit(CM.art.packs.stone);                          // (the Stone look's own props: real blades and leaves, stamped)
   if (kit) { const own = CM.art.packProps((name, canvas) => { index[name] = layers.indexOf(layers[index[name]]); layers[index[name]] = canvas; }, S, (id) => CM.art.prop(id, kit)); return { layers, index, size: S, crisp: false, sub: own }; }
@@ -167,10 +166,32 @@ CM.art.buildStone = function (theme) {
 
 // the whole set for a depth, in the look asked for (the drawn one when a pack isn't there)
 CM.art.build = function (theme, look = "drawn") {
-  if (look === "pixel" && CM.art.hasLook("pixel")) return CM.art.buildPixel(theme);
-  if (look === "stone" && CM.art.hasLook("stone")) return CM.art.buildStone(theme);
-  return CM.art.buildDrawn(theme);
+  const set = look === "pixel" && CM.art.hasLook("pixel") ? CM.art.buildPixel(theme) : look === "stone" && CM.art.hasLook("stone") ? CM.art.buildStone(theme) : CM.art.buildDrawn(theme);
+  return Object.assign(set, { theme, sharedKey: `${look}:${CM.art.hasLook(look) ? look : "drawn"}` });
 };
+// which of a set's pictures are the band's own (uploaded with each band) and which are shared (uploaded once a look)
+CM.SHARED_SIZE = 256;
+CM.art.THEME_LAYERS = new Set(["wall", "wall2", "wallbones", "wallsecret", "floor", "ceiling", "hatch", "pit", "trapdoor", "stairs_up"]);
+CM.art.isSurfaceLayer = (name) => /^(ground:|solid:|tree:|far:|canopy$|skygrad$|sun$|moon:)/.test(name);   // (the outdoors: only the town and the land use these)
+CM.art.isThemeLayer = (name, theme) => CM.art.THEME_LAYERS.has(name) || Boolean(theme && theme.sky && CM.art.isSurfaceLayer(name));
+// the painters that take no theme draw the same thing every time: keep what they drew, so a band's set is quick to
+// make again (the canvases are only read: by the uploads, and by the looks that copy or pixelate them)
+{
+  const plain = (a) => a === undefined || a === null || ["string", "number", "boolean"].includes(typeof a);
+  const memo = (name, keyOf) => { const f = CM.art[name], cache = new Map(); if (!f) return; CM.art[name] = function (...args) { const k = keyOf(args); if (k === null) return f.apply(this, args); if (!cache.has(k)) cache.set(k, f.apply(this, args)); return cache.get(k); }; };
+  const byArgs = (args) => (args.every(plain) ? JSON.stringify(args) : null);
+  for (const name of ["chest", "door", "gate", "teleporter", "vein", "house", "foundation", "well", "fountain", "altar", "lever", "carving", "key", "phylactery",
+    "fxSpark", "fxShard", "fxFire", "fxFrost", "fxBolt", "fxForce", "fxHoly", "fxArrow", "fxLeaf", "fxRing", "torch", "water", "nest", "throne", "anvil", "ember", "bones", "rope", "plate",
+    "fungus", "crystal", "root", "ground", "townWall", "hedge", "fence", "cliff", "roof", "canopy", "skyGradient", "sun", "moon", "farTrees", "farHill", "signpost", "cross", "sign",
+    "debrisProp", "shadow", "decal"]) memo(name, byArgs);
+  memo("monster", (args) => JSON.stringify([args[0] && args[0].name, args[0] && args[0].colour, args[1], args[2]]));
+  memo("facade", (args) => (args[2] ? null : byArgs(args)));                     // (over a photograph: drawn afresh)
+  memo("tree", (args) => (args[1] ? `bark:${args[0]}` : byArgs(args)));           // (the Stone look's bark is one picture)
+  memo("prop", (args) => `${args[0]}|${args[1] ? "kit" : ""}`);
+  memo("surfaceProp", (args) => `${args[0]}|${args[1]}|${args[2] ? "kit" : ""}`);
+  const px = new WeakMap(), pixelate = CM.art.pixelate;                       // (a picture made of pixels: the same picture, the same pixels)
+  CM.art.pixelate = function (canvas, cells = 32) { let m = px.get(canvas); if (!m) px.set(canvas, (m = {})); return m[cells] || (m[cells] = pixelate(canvas, cells)); };
+}
 
 // ---- the heroes, in the Pixel theme: paper dolls, part laid on part ------------------------------------------------------
 CM.art.DOLLS = {

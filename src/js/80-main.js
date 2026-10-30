@@ -44,7 +44,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
-      while (cacheOrder.length > 3) delete artCache[cacheOrder.shift()];      // (the stone's textures are large: a few depths at a time)
+      while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
     }
     renderer.setTextures(artCache[key]);
     themeOn = number === 0 ? -2 : number === -1 ? -3 : i; lookOn = look; dreamOn = Boolean(game.dream);
@@ -319,6 +319,23 @@ window.addEventListener("DOMContentLoaded", () => {
       layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost", echo: Boolean(foe.echo) };
   }
 
+  // the lights about the party: the wall torches, the lair's embers, crystals and fungus, the props that glow, and the
+  // town's lamps at night - nearest first, twelve at most (the shader's limit)
+  const LIGHT = { torch: { colour: [0.95, 0.55, 0.22], reach: 3.2, z: 0.62, flicker: true }, ember: { colour: [1.0, 0.42, 0.12], reach: 2.2, z: 0.1, flicker: true },
+    crystal: { colour: [0.35, 0.7, 1.0], reach: 2.4, z: 0.5 }, fungus: { colour: [0.35, 0.9, 0.55], reach: 2.0, z: 0.15 }, candle: { colour: [0.9, 0.6, 0.25], reach: 2.0, z: 0.25, flicker: true },
+    candelabra: { colour: [0.95, 0.65, 0.28], reach: 2.6, z: 0.5, flicker: true }, fungi: { colour: [0.35, 0.85, 0.6], reach: 1.6, z: 0.2 }, shard: { colour: [0.4, 0.75, 1.0], reach: 1.6, z: 0.3 },
+    slag: { colour: [1.0, 0.45, 0.15], reach: 1.6, z: 0.1, flicker: true }, lamp: { colour: [1.0, 0.75, 0.4], reach: 4.0, z: 1.2 } };
+  function lightsNear(fl) {
+    if (!fl || !renderer.ok) return [];
+    const out = [], [px, py] = fl.pos, push = (kind, x, z, y, k = 1) => { const L = LIGHT[kind]; if (L) out.push({ x, y: L.z, z, reach: L.reach, colour: L.colour.map((c) => c * k), flicker: L.flicker, d: Math.abs(x - px - 0.5) + Math.abs(z - py - 0.5) }); };
+    // (the wall torches: below always, on the surface after dark)
+    if (!CM.themeFor(fl.number).sky || CM.isNight(game)) for (const t of decorations(fl).torches) { if (Math.abs(t.x - px) + Math.abs(t.y - py) > 10) continue; const [dx, dy] = CM.DIRS[t.face]; push("torch", t.x + 0.5 + dx * 0.4, t.y + 0.5 + dy * 0.4); }
+    for (const dc of fl.decor || []) if (LIGHT[dc.kind] && Math.abs(dc.x - px) + Math.abs(dc.y - py) <= 10) push(dc.kind, dc.x + 0.5, dc.y + 0.5);
+    const night = CM.isNight(game);
+    for (const p of renderer.standing) { const P = CM.PROPS[p.id] || {}; if (LIGHT[p.id] && (P.glow || (P.night && night)) && Math.abs(p.x - px) + Math.abs(p.y - py) <= 10) push(p.id, p.x + 0.5 + p.dx, p.y + 0.5 + p.dz); }
+    return out.sort((a, b) => a.d - b.d).slice(0, 12);
+  }
+
   // the living dungeon: torches on some walls (never over a lever or carving, never on a secret door) and, in the
   // flooded vaults, water on some floors - the same ones each time, from the seed
   let decor = { key: null, torches: [], water: [] };
@@ -353,6 +370,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const now = performance.now(), right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
     const lit = CM.isNight(game);
+    if (renderer.index.shadow !== undefined) {                          // a soft shadow under whatever stands on the floor
+      const under = (x, y, w, dx = 0, dz = 0) => out.push({ x, y, dx, dz, layer: "shadow", flat: true, w: w * 1.1, alpha: 0.9 });
+      for (const [key, thing] of Object.entries(fl.things)) { const [x, y] = key.split(",").map(Number); if (!near(x, y)) continue; if (["monsters", "boss", "guardian", "chest", "hermit", "adventurer", "villager", "peddler", "burner", "rivals", "strongbox"].includes(thing.type) && !(game.mode === "combat" && key === game.foeKey)) under(x, y, 0.75); }
+      for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) under(p.x, p.y, p.w, p.dx, p.dz);
+    }
     for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: CM.PROPS[p.id].glow || (lit && CM.PROPS[p.id].night ? 0.9 : 0) });   // (the standing props, near the party; lamps lit at night)
     if (renderer.sky) {                                                 // the sun and the moon: far off, along their arc from the east over the south to the west
       const S = renderer.sky, eye = renderer.eye;
@@ -662,6 +684,7 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
+        renderer.lights = lightsNear(game.floor);
         const { out, hud } = sprites();
         renderer.setSprites(out);
         renderer.frame(dt);

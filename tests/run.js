@@ -7,6 +7,7 @@
 const assert = require("assert");
 const { execFileSync } = require("child_process");
 const fs = require("fs");
+const vm = require("vm");
 const path = require("path");
 const { load, autoplayFight, fixedParty } = require("../tools/headless");
 const { playRun } = require("../tools/bot");
@@ -17,6 +18,12 @@ const test = (name, fn) => tests.push({ name, fn });
 // (things from the game's own realm have their own Object and Array: compare them as plain JSON, without the animations)
 const strip = (fl) => JSON.parse(JSON.stringify(fl, (k, v) => (k === "anim" ? undefined : k === "seen" && Array.isArray(v) ? v.slice().sort((a, b) => a[1] - b[1] || a[0] - b[0]) : v)));
 const same = (a, b, msg) => assert.deepStrictEqual(strip(a), strip(b), msg);
+
+test("every source file parses (the rules' files are loaded here; the drawing and the window's are not, so they are checked)", () => {
+  for (const f of fs.readdirSync(path.join(ROOT, "src", "js")).filter((f) => f.endsWith(".js"))) {
+    try { new vm.Script(fs.readFileSync(path.join(ROOT, "src", "js", f), "utf8"), { filename: f }); } catch (e) { assert.fail(`${f}: ${e.message}`); }
+  }
+});
 
 test("the built file is current (python build.py --check)", () => {
   const out = execFileSync("python3", [path.join(ROOT, "build.py"), "--check"], { encoding: "utf8" });
@@ -3127,6 +3134,17 @@ test("walls, floors and ceilings with variation: squares turned by hash, corners
   const town = CM.makeTown("vary-1"), mt = CM.floorMesh(town, CM.TOWN_THEME, index); assert.strictEqual(mt.decals, 0); assert.strictEqual(mt.overhead, 0);
   // the floor is the seed's: the same twice
   assert.deepStrictEqual(CM.floorMesh(CM.makeFloor(13, "vary-1"), CM.THEMES[2], index).data, CM.floorMesh(CM.makeFloor(13, "vary-1"), CM.THEMES[2], index).data);
+});
+
+test("light and shadow: every band has a slight grade; the glowing props are lights; the shader takes twelve lights and the sun's direction", () => {
+  const CM = load();
+  for (let i = 0; i < CM.THEMES.length; i++) { const g = CM.THEMES[i].grade; assert.ok(g && g.length === 3 && g.every((c) => c > 0.85 && c < 1.15), `band ${i}: ${g}`); }
+  assert.ok(!CM.TOWN_THEME.grade && !CM.WOOD_THEME.grade, "the surface ungraded");
+  for (const id of ["candle", "candelabra", "fungi", "shard", "slag"]) assert.ok(CM.PROPS[id].glow, id);
+  assert.ok(CM.PROPS.lamp.night);
+  const src = fs.readFileSync(path.join(ROOT, "src", "js", "40-render.js"), "utf8");
+  assert.ok(/uLightPos\[12\]/.test(src) && /uLightCol\[12\]/.test(src) && /uSun\b/.test(src) && /uGrade\b/.test(src), "the shader's lights, sun and grade");
+  assert.ok(/slice\(0, 12\)/.test(fs.readFileSync(path.join(ROOT, "src", "js", "80-main.js"), "utf8")), "no more than twelve lights a frame");
 });
 
 (async () => {

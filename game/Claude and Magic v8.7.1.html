@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v8.6 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v8.7.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -437,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "8.6", built: "2026-10-30" };
+const CM = window.CM = { version: "8.7.1", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1595,6 +1595,8 @@ CM.THEMES = [
 CM.AMBIENCE_OF = [0, 1, 2, 3, 1, 0, 3, 2, 0, 3];                      // which of the four ambiences (and footfalls) each band uses
 CM.themeFor = (number) => (number === 0 && CM.TOWN_THEME ? CM.TOWN_THEME : number < 0 ? (number % 1 === 0 && CM.WOOD_THEME ? CM.WOOD_THEME : CM.THEMES[0]) : number > CM.BOTTOM ? CM.THEMES[Math.floor((number - CM.BOTTOM - 1) / 5) % CM.THEMES.length]      // (Endless: below the bottom the bands come round again, five floors each)
   : CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1]);
+// a slight colour grade per band, multiplied into the view (1, 1, 1 is none)
+CM.GRADES = [[1.0, 0.98, 0.95], [0.94, 0.98, 1.02], [1.03, 0.99, 0.94], [0.95, 0.97, 1.05], [0.94, 1.0, 1.02], [0.95, 1.04, 0.95], [0.97, 0.99, 1.06], [1.06, 0.97, 0.9], [1.0, 0.98, 0.96], [1.04, 0.95, 0.94]];
 CM.themeIndex = (number) => Math.max(0, CM.THEMES.indexOf(CM.themeFor(number)));
 
 CM.KEYS_HELP = [
@@ -1605,6 +1607,9 @@ CM.KEYS_HELP = [
   ["D", "defend: half the blows until their next turn"], ["R", "run"], ["A", "auto: the party fights on by itself, until someone is badly hurt"], ["Tab / click a foe", "choose the foe"],
   ["1 - 9", "pick from a list"], ["F3", "frames per second"],
 ];
+
+// the bands wear their grades (the town and the land none)
+for (const [i, t] of CM.THEMES.entries()) if (CM.GRADES[i]) t.grade = CM.GRADES[i];
 
 // ---- 12-text.js ----
 "use strict";
@@ -6815,6 +6820,20 @@ CM.art.debrisProp = function (id, S) {
 };
 
 
+
+// a soft shadow: dark at the middle, gone at the edge (alpha kept above the shader's cut for the middle, the edge dithered)
+CM.art.shadow = function (S = ART_SIZE) {
+  const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(7);
+  const img = p.createImageData(S, S);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const d = Math.hypot(x - S / 2, (y - S / 2) * 1.2) / (S / 2), k = Math.max(0, 1 - d), i = (y * S + x) * 4;
+    const keep = k > 0.5 || rnd.next() < k * 2;                                            // (the shader cuts below half alpha: a dithered edge reads as soft)
+    img.data[i] = 0; img.data[i + 1] = 0; img.data[i + 2] = 0; img.data[i + 3] = keep && k > 0 ? 255 : 0;
+  }
+  p.putImageData(img, 0, 0);
+  return c;
+};
+
 // ---- on the walls and overhead (the dungeon's): transparent but for the thing itself, drawn over any wall -------------
 CM.art.decal = function (id, S = ART_SIZE) {
   const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`decal:${id}`));
@@ -6934,6 +6953,7 @@ CM.art.buildDrawn = function (theme) {
   for (let f = 0; f < 3; f++) { add(`torch${f}`, CM.art.torch(f)); add(`water${f}`, CM.art.water(f)); }
   for (const [name, c] of Object.entries(CM.art.surfaceLayers())) add(name, c);
   CM.art.decalLayers(add, (id) => CM.art.decal(id));
+  add("shadow", CM.art.shadow());
   const sub = CM.art.packProps(add, ART_SIZE, (id) => CM.art.prop(id));
   return { layers, index, size: ART_SIZE, crisp: false, sub };
 };
@@ -7059,6 +7079,7 @@ CM.art.buildPixel = function (theme) {
   const ground = (key, drawn) => (CM.packs.pixel.index[key] ? tiled(key, 2) : CM.art.pixelate(drawn()));              // (the ground and the walls repeat the tile; the trees stand alone)
   for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key.startsWith("sign") || key.startsWith("far.") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
   CM.art.decalLayers(add, (id) => CM.art.pixelate(CM.art.decal(id), 32));   // (what is on the walls and overhead, in pixels)
+  add("shadow", CM.art.pixelate(CM.art.shadow(), 32));
   const sub = CM.art.packProps(add, S, (id) => CM.art.pixelate(CM.art.prop(id), 24));   // (the props in pixels, like the rest of the set)
   return { layers, index, size: S, crisp: true, sub };
 };
@@ -7105,12 +7126,10 @@ CM.art.buildStone = function (theme) {
     return CM.art.packs.stone[key] ? photo(key, false, 0, true) : drawn();
   });
   for (const [name, c] of Object.entries(surface)) add(name, fit(c));
-  const drawn = CM.art.buildDrawn(theme);                                   // the rest, as drawn, at the stone's size
+  const drawn = CM.art.buildDrawn(theme);                                   // the rest, as drawn (the renderer scales what it must as it uploads)
   for (const [name, i] of Object.entries(drawn.index)) {
     if (name in index) continue;
-    const c = artCanvas(S);
-    c.getContext("2d").drawImage(drawn.layers[i], 0, 0, S, S);
-    add(name, c);
+    add(name, drawn.layers[i]);
   }
   const kit = CM.art.cutKit(CM.art.packs.stone);                          // (the Stone look's own props: real blades and leaves, stamped)
   if (kit) { const own = CM.art.packProps((name, canvas) => { index[name] = layers.indexOf(layers[index[name]]); layers[index[name]] = canvas; }, S, (id) => CM.art.prop(id, kit)); return { layers, index, size: S, crisp: false, sub: own }; }
@@ -7119,10 +7138,32 @@ CM.art.buildStone = function (theme) {
 
 // the whole set for a depth, in the look asked for (the drawn one when a pack isn't there)
 CM.art.build = function (theme, look = "drawn") {
-  if (look === "pixel" && CM.art.hasLook("pixel")) return CM.art.buildPixel(theme);
-  if (look === "stone" && CM.art.hasLook("stone")) return CM.art.buildStone(theme);
-  return CM.art.buildDrawn(theme);
+  const set = look === "pixel" && CM.art.hasLook("pixel") ? CM.art.buildPixel(theme) : look === "stone" && CM.art.hasLook("stone") ? CM.art.buildStone(theme) : CM.art.buildDrawn(theme);
+  return Object.assign(set, { theme, sharedKey: `${look}:${CM.art.hasLook(look) ? look : "drawn"}` });
 };
+// which of a set's pictures are the band's own (uploaded with each band) and which are shared (uploaded once a look)
+CM.SHARED_SIZE = 256;
+CM.art.THEME_LAYERS = new Set(["wall", "wall2", "wallbones", "wallsecret", "floor", "ceiling", "hatch", "pit", "trapdoor", "stairs_up"]);
+CM.art.isSurfaceLayer = (name) => /^(ground:|solid:|tree:|far:|canopy$|skygrad$|sun$|moon:)/.test(name);   // (the outdoors: only the town and the land use these)
+CM.art.isThemeLayer = (name, theme) => CM.art.THEME_LAYERS.has(name) || Boolean(theme && theme.sky && CM.art.isSurfaceLayer(name));
+// the painters that take no theme draw the same thing every time: keep what they drew, so a band's set is quick to
+// make again (the canvases are only read: by the uploads, and by the looks that copy or pixelate them)
+{
+  const plain = (a) => a === undefined || a === null || ["string", "number", "boolean"].includes(typeof a);
+  const memo = (name, keyOf) => { const f = CM.art[name], cache = new Map(); if (!f) return; CM.art[name] = function (...args) { const k = keyOf(args); if (k === null) return f.apply(this, args); if (!cache.has(k)) cache.set(k, f.apply(this, args)); return cache.get(k); }; };
+  const byArgs = (args) => (args.every(plain) ? JSON.stringify(args) : null);
+  for (const name of ["chest", "door", "gate", "teleporter", "vein", "house", "foundation", "well", "fountain", "altar", "lever", "carving", "key", "phylactery",
+    "fxSpark", "fxShard", "fxFire", "fxFrost", "fxBolt", "fxForce", "fxHoly", "fxArrow", "fxLeaf", "fxRing", "torch", "water", "nest", "throne", "anvil", "ember", "bones", "rope", "plate",
+    "fungus", "crystal", "root", "ground", "townWall", "hedge", "fence", "cliff", "roof", "canopy", "skyGradient", "sun", "moon", "farTrees", "farHill", "signpost", "cross", "sign",
+    "debrisProp", "shadow", "decal"]) memo(name, byArgs);
+  memo("monster", (args) => JSON.stringify([args[0] && args[0].name, args[0] && args[0].colour, args[1], args[2]]));
+  memo("facade", (args) => (args[2] ? null : byArgs(args)));                     // (over a photograph: drawn afresh)
+  memo("tree", (args) => (args[1] ? `bark:${args[0]}` : byArgs(args)));           // (the Stone look's bark is one picture)
+  memo("prop", (args) => `${args[0]}|${args[1] ? "kit" : ""}`);
+  memo("surfaceProp", (args) => `${args[0]}|${args[1]}|${args[2] ? "kit" : ""}`);
+  const px = new WeakMap(), pixelate = CM.art.pixelate;                       // (a picture made of pixels: the same picture, the same pixels)
+  CM.art.pixelate = function (canvas, cells = 32) { let m = px.get(canvas); if (!m) px.set(canvas, (m = {})); return m[cells] || (m[cells] = pixelate(canvas, cells)); };
+}
 
 // ---- the heroes, in the Pixel theme: paper dolls, part laid on part ------------------------------------------------------
 CM.art.DOLLS = {
@@ -7300,19 +7341,34 @@ void main() { vWorld = aPos; vUV = aUV; vShade = aShade; vFx = aFx; gl_Position 
 const FRAG = `#version 300 es
 precision highp float; precision highp sampler2DArray;
 in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
-uniform sampler2DArray uTex; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
+uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
+uniform int uLights; uniform vec4 uLightPos[12]; uniform vec3 uLightCol[12];   // the lights about the party: xyz, reach in w; colour
+uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
 out vec4 fragColor;
 void main() {
-  vec4 t = texture(uTex, vUV);
+  bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
+  vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0)));
+  vec4 t = shared ? ts : tt;
   if (vFx.z > 2.5) { fragColor = vec4(mix(uHorizon, uZenith, t.r), 1.0); return; }
   if (t.a < 0.5) discard;
   if (vFx.z > 1.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
   float d = distance(vWorld, uEye);
   float r2 = uReach * uReach;
   float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d);
-  vec3 col = t.rgb * vShade * uTorch * light;
+  vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));                      // the surface's facing, from the triangle itself
+  if (dot(n, uEye - vWorld) < 0.0) n = -n;
+  if (uSunK > 0.0) light *= mix(1.0, 0.62 + 0.55 * max(dot(n, uSun), 0.0), uSunK * step(abs(n.y), 0.7));   // walls facing the sun lit, the others in shade
+  vec3 extra = vec3(0.0);
+  for (int i = 0; i < 12; i++) {
+    if (i >= uLights) break;
+    vec3 L = uLightPos[i].xyz - vWorld; float ld = length(L), reach = uLightPos[i].w;
+    float fall = max(0.0, 1.0 - ld / reach); fall *= fall;
+    float face = 0.35 + 0.65 * max(dot(n, L / max(ld, 0.001)), 0.0);
+    extra += uLightCol[i] * fall * face;
+  }
+  vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
   col = mix(col, uFog, fog);
   col = mix(col, t.rgb, vFx.z * (1.0 - fog * 0.7));
@@ -7359,7 +7415,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -7378,6 +7434,7 @@ CM.Renderer = class {
     this.sky = null;                   // on the surface: CM.sky(game) this frame (the colours, the light, the sun and the moon); null below
     this.seed = ""; this.density = CM.DETAIL.medium; this.sub = {};   // the props: the run's seed and how many (the Detail setting), and where each sits in its layer
     this.standing = [];                // the floor's standing props, for the frame's billboards
+    this.lights = [];                  // [{x, y, z, reach, colour [r, g, b], flicker}]: what lights the walls about the party this frame (12 at most)
     this.season = "summer";           // the run's season, for what grows
     this.lightNow = 1;                 // (eased towards it)
     this.ok = true;
@@ -7413,23 +7470,48 @@ CM.Renderer = class {
   }
 
   // ---- the textures ----
-  setTextures(art) {
+  // a set's pictures go two ways: the band's own (CM.art.isThemeLayer) into the band's texture at the set's size, and
+  // the rest into the shared texture at CM.SHARED_SIZE - uploaded only when the shared ones are not already there
+  // (art.sharedKey: the look). A layer of another size is scaled as it goes up.
+  _upload(tex, layers, size, crisp) {
     const gl = this.gl;
-    if (this.texture) gl.deleteTexture(this.texture);
-    this.texture = gl.createTexture();
-    this.index = art.index;
-    this.sub = art.sub || {};
-    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
-    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, art.size, art.size, art.layers.length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    art.layers.forEach((layer, i) => gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, art.size, art.size, 1, gl.RGBA, gl.UNSIGNED_BYTE, layer));
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
+    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, size, size, Math.max(1, layers.length), 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    let scratch = null;
+    layers.forEach((layer, i) => {
+      let src = layer;
+      if (layer.width !== size) { scratch = scratch || Object.assign(document.createElement("canvas"), { width: size, height: size }); const p = scratch.getContext("2d"); p.clearRect(0, 0, size, size); p.imageSmoothingEnabled = !crisp; p.drawImage(layer, 0, 0, size, size); src = scratch; }
+      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, size, size, 1, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    });
     gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
-    this.crisp = Boolean(art.crisp);                                     // pixel tiles stay pixels when they come close
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, art.crisp ? gl.NEAREST : gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, crisp ? gl.NEAREST : gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     const aniso = gl.getExtension("EXT_texture_filter_anisotropic");
     if (aniso) gl.texParameterf(gl.TEXTURE_2D_ARRAY, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+  }
+
+  setTextures(art) {
+    const gl = this.gl, names = Object.keys(art.index), own = [], rest = [];
+    for (const name of names) { if (CM.art.isThemeLayer(name, art.theme)) own.push(name); else if (!CM.art.isSurfaceLayer(name)) rest.push(name); }   // (the outdoors below ground: not needed, not uploaded - so the shared set is the same for every band)
+    const index = {};
+    own.forEach((name, i) => { index[name] = i; });
+    rest.forEach((name, i) => { index[name] = 1000 + i; });
+    const sharedKey = `${art.sharedKey || ""}:${rest.join("|").length}:${rest.length}`;
+    if (!this.shared || this.sharedKey !== sharedKey) {
+      if (this.shared) gl.deleteTexture(this.shared);
+      this.shared = gl.createTexture(); this.sharedKey = sharedKey;
+      this._upload(this.shared, rest.map((name) => art.layers[art.index[name]]), CM.SHARED_SIZE, Boolean(art.crisp));
+      this.uploads = (this.uploads || 0) + rest.length;
+    }
+    if (this.texture) gl.deleteTexture(this.texture);
+    this.texture = gl.createTexture();
+    this._upload(this.texture, own.map((name) => art.layers[art.index[name]]), art.size, Boolean(art.crisp));
+    this.uploads = (this.uploads || 0) + own.length;
+    this.index = index;
+    this.sub = art.sub || {};
+    this.crisp = Boolean(art.crisp);                                     // pixel tiles stay pixels when they come close
   }
 
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
@@ -7598,9 +7680,19 @@ CM.Renderer = class {
     gl.uniform1f(this.loc.uAmbient, sky ? 0.04 + 0.98 * sky.light : 0.06 * Math.min(1, this.lightNow * 2));
     gl.uniform3fv(this.loc.uZenith, clear);
     gl.uniform3fv(this.loc.uHorizon, fogc);
+    const lights = this.lights.slice(0, 12), pos = new Float32Array(48), col = new Float32Array(36);
+    lights.forEach((l, i) => { const f = l.flicker ? 0.85 + 0.15 * Math.sin(this.time * (6 + i) + i * 1.7) : 1; pos.set([l.x, l.y, l.z, l.reach], i * 4); col.set(l.colour.map((c) => c * f), i * 3); });
+    gl.uniform1i(this.loc.uLights, lights.length); gl.uniform4fv(this.loc.uLightPos, pos); gl.uniform3fv(this.loc.uLightCol, col);
+    if (sky && (sky.sun !== null || sky.moon !== null)) {                // the light's direction: where the sun is on its arc (or, at night, the moon)
+      const t = sky.sun !== null && sky.light > 0.15 ? sky.sun : sky.moon !== null ? sky.moon : 0.5, a = Math.PI * t, el = Math.sin(a) * 0.5;
+      const v = [Math.cos(a) * Math.cos(el), Math.sin(el), Math.sin(a) * Math.cos(el)], m = Math.hypot(...v);
+      gl.uniform3fv(this.loc.uSun, v.map((c) => c / m)); gl.uniform1f(this.loc.uSunK, sky.sun !== null && sky.light > 0.15 ? 0.9 : 0.4);
+    } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
+    gl.uniform3fv(this.loc.uGrade, t.grade || [1, 1, 1]);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.shared || this.texture); gl.uniform1i(this.loc.uShared, 1); gl.activeTexture(gl.TEXTURE0);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     this._attributes();
     gl.drawArrays(gl.TRIANGLES, 0, this.staticCount);
@@ -16976,7 +17068,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
-      while (cacheOrder.length > 3) delete artCache[cacheOrder.shift()];      // (the stone's textures are large: a few depths at a time)
+      while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
     }
     renderer.setTextures(artCache[key]);
     themeOn = number === 0 ? -2 : number === -1 ? -3 : i; lookOn = look; dreamOn = Boolean(game.dream);
@@ -17251,6 +17343,23 @@ window.addEventListener("DOMContentLoaded", () => {
       layer: `monster:${foe.kind || foe.name}`, ghost: (CM.monsterKind(foe.kind || foe.name) || {}).body === "ghost", echo: Boolean(foe.echo) };
   }
 
+  // the lights about the party: the wall torches, the lair's embers, crystals and fungus, the props that glow, and the
+  // town's lamps at night - nearest first, twelve at most (the shader's limit)
+  const LIGHT = { torch: { colour: [0.95, 0.55, 0.22], reach: 3.2, z: 0.62, flicker: true }, ember: { colour: [1.0, 0.42, 0.12], reach: 2.2, z: 0.1, flicker: true },
+    crystal: { colour: [0.35, 0.7, 1.0], reach: 2.4, z: 0.5 }, fungus: { colour: [0.35, 0.9, 0.55], reach: 2.0, z: 0.15 }, candle: { colour: [0.9, 0.6, 0.25], reach: 2.0, z: 0.25, flicker: true },
+    candelabra: { colour: [0.95, 0.65, 0.28], reach: 2.6, z: 0.5, flicker: true }, fungi: { colour: [0.35, 0.85, 0.6], reach: 1.6, z: 0.2 }, shard: { colour: [0.4, 0.75, 1.0], reach: 1.6, z: 0.3 },
+    slag: { colour: [1.0, 0.45, 0.15], reach: 1.6, z: 0.1, flicker: true }, lamp: { colour: [1.0, 0.75, 0.4], reach: 4.0, z: 1.2 } };
+  function lightsNear(fl) {
+    if (!fl || !renderer.ok) return [];
+    const out = [], [px, py] = fl.pos, push = (kind, x, z, y, k = 1) => { const L = LIGHT[kind]; if (L) out.push({ x, y: L.z, z, reach: L.reach, colour: L.colour.map((c) => c * k), flicker: L.flicker, d: Math.abs(x - px - 0.5) + Math.abs(z - py - 0.5) }); };
+    // (the wall torches: below always, on the surface after dark)
+    if (!CM.themeFor(fl.number).sky || CM.isNight(game)) for (const t of decorations(fl).torches) { if (Math.abs(t.x - px) + Math.abs(t.y - py) > 10) continue; const [dx, dy] = CM.DIRS[t.face]; push("torch", t.x + 0.5 + dx * 0.4, t.y + 0.5 + dy * 0.4); }
+    for (const dc of fl.decor || []) if (LIGHT[dc.kind] && Math.abs(dc.x - px) + Math.abs(dc.y - py) <= 10) push(dc.kind, dc.x + 0.5, dc.y + 0.5);
+    const night = CM.isNight(game);
+    for (const p of renderer.standing) { const P = CM.PROPS[p.id] || {}; if (LIGHT[p.id] && (P.glow || (P.night && night)) && Math.abs(p.x - px) + Math.abs(p.y - py) <= 10) push(p.id, p.x + 0.5 + p.dx, p.y + 0.5 + p.dz); }
+    return out.sort((a, b) => a.d - b.d).slice(0, 12);
+  }
+
   // the living dungeon: torches on some walls (never over a lever or carving, never on a secret door) and, in the
   // flooded vaults, water on some floors - the same ones each time, from the seed
   let decor = { key: null, torches: [], water: [] };
@@ -17285,6 +17394,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const now = performance.now(), right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
     const lit = CM.isNight(game);
+    if (renderer.index.shadow !== undefined) {                          // a soft shadow under whatever stands on the floor
+      const under = (x, y, w, dx = 0, dz = 0) => out.push({ x, y, dx, dz, layer: "shadow", flat: true, w: w * 1.1, alpha: 0.9 });
+      for (const [key, thing] of Object.entries(fl.things)) { const [x, y] = key.split(",").map(Number); if (!near(x, y)) continue; if (["monsters", "boss", "guardian", "chest", "hermit", "adventurer", "villager", "peddler", "burner", "rivals", "strongbox"].includes(thing.type) && !(game.mode === "combat" && key === game.foeKey)) under(x, y, 0.75); }
+      for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) under(p.x, p.y, p.w, p.dx, p.dz);
+    }
     for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: CM.PROPS[p.id].glow || (lit && CM.PROPS[p.id].night ? 0.9 : 0) });   // (the standing props, near the party; lamps lit at night)
     if (renderer.sky) {                                                 // the sun and the moon: far off, along their arc from the east over the south to the west
       const S = renderer.sky, eye = renderer.eye;
@@ -17594,6 +17708,7 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
+        renderer.lights = lightsNear(game.floor);
         const { out, hud } = sprites();
         renderer.setSprites(out);
         renderer.frame(dt);

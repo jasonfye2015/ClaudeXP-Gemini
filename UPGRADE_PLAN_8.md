@@ -202,7 +202,22 @@ and tile variants from the sets (the turns did the work). Test: "walls, floors a
 - **Tests**: the variant and the turn of a square are the seed's; the darkening is only where a wall is; decals never on
   a secret door's wall (they would give it away), nor on a lever's or a carving's.
 
-## Phase 6 - Light and shadow - v8.7 (medium to large)
+## Phase 6 - Light and shadow - v8.7 (medium to large) - DONE (v8.7.1)
+
+Built: up to twelve point lights in the shader (the wall torches below ground, and on the surface after dark; the
+lairs' embers, crystals and fungus; candles, candelabra, fungi, shards and slag; the town's lamps at night), each
+with its colour, reach and flicker, lighting a face by how it turns to the light (the face's direction from the
+triangle's derivatives); a soft shadow (dithered, since the shader cuts below half alpha) under monsters, people,
+chests and standing props; on the surface the sun or the moon lights the walls that face it; a slight colour grade
+per band (`CM.GRADES`).
+
+The halt (found while building this phase, reported by the player): since v8.2 every change of band re-uploaded
+all ~270 pictures to the graphics card - 1.5 s a band change, nearly 4 s in Stone, and ~370 MB of video memory in
+Stone. Now the pictures that never change (monsters, things, props, decals, effects) go into a shared texture at 256,
+uploaded once a look; a band uploads only its walls, floors, ceilings, hatch, pit and stairs (and on the surface its
+ground and solids); the outdoor art is never uploaded below ground; painters that take no theme are memoised; the
+art cache holds six bands. Band changes: 0.1-0.4 s in Pixel, 0.2-0.75 s in Stone. A test now parses every source
+file, since the drawing and window files are not loaded by the Node tests.
 
 - **The wall torches light**: the nearest eight torches on the floor become point lights in the shader, each lighting
   the walls and floor about it with its own flicker; the party's torch stays the strongest. Glowing things (embers,

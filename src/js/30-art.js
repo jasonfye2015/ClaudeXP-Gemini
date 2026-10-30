@@ -1458,6 +1458,20 @@ CM.art.debrisProp = function (id, S) {
 };
 
 
+
+// a soft shadow: dark at the middle, gone at the edge (alpha kept above the shader's cut for the middle, the edge dithered)
+CM.art.shadow = function (S = ART_SIZE) {
+  const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(7);
+  const img = p.createImageData(S, S);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const d = Math.hypot(x - S / 2, (y - S / 2) * 1.2) / (S / 2), k = Math.max(0, 1 - d), i = (y * S + x) * 4;
+    const keep = k > 0.5 || rnd.next() < k * 2;                                            // (the shader cuts below half alpha: a dithered edge reads as soft)
+    img.data[i] = 0; img.data[i + 1] = 0; img.data[i + 2] = 0; img.data[i + 3] = keep && k > 0 ? 255 : 0;
+  }
+  p.putImageData(img, 0, 0);
+  return c;
+};
+
 // ---- on the walls and overhead (the dungeon's): transparent but for the thing itself, drawn over any wall -------------
 CM.art.decal = function (id, S = ART_SIZE) {
   const c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`decal:${id}`));
@@ -1577,6 +1591,7 @@ CM.art.buildDrawn = function (theme) {
   for (let f = 0; f < 3; f++) { add(`torch${f}`, CM.art.torch(f)); add(`water${f}`, CM.art.water(f)); }
   for (const [name, c] of Object.entries(CM.art.surfaceLayers())) add(name, c);
   CM.art.decalLayers(add, (id) => CM.art.decal(id));
+  add("shadow", CM.art.shadow());
   const sub = CM.art.packProps(add, ART_SIZE, (id) => CM.art.prop(id));
   return { layers, index, size: ART_SIZE, crisp: false, sub };
 };
