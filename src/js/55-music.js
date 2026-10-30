@@ -148,6 +148,16 @@ CM.music = {
     return o;
   },
 
+  // a leitmotif: the bell (three tolls, falling), the queen's song (five notes, minor, unsteady), the Root's one note
+  motif(name) {
+    if (!this.enabled || !this._ensure()) return false;
+    const ctx = CM.audio.ctx, at = ctx.currentTime + 0.05, dest = this.master;
+    if (name === "bell") { [[440, 0], [330, 1.1], [220, 2.3]].forEach(([hz, dt]) => { this._osc("sine", hz, at + dt, at + dt + 2.2, 0.16, 3000, dest); this._osc("sine", hz * 2.76, at + dt, at + dt + 0.5, 0.05, 6000, dest); }); }
+    else if (name === "queen") { [0, 3, 2, 3, -2].forEach((semi, i) => { const hz = 392 * Math.pow(2, semi / 12) * (1 + (i % 2 ? 0.004 : -0.003)); this._osc("triangle", hz, at + i * 0.42, at + i * 0.42 + 0.5, 0.11, 2200, dest); }); }
+    else if (name === "root") { this._osc("sine", 41.2, at, at + 3.2, 0.3, 300, dest); this._osc("triangle", 41.2 * 1.5, at + 0.4, at + 3.0, 0.05, 400, dest); }
+    else return false;
+    return true;
+  },
   setDepth(k) { this.depth = CM.clamp(k || 0, 0, 1); },
   setDanger(k) { this.danger = CM.clamp(k || 0, 0, 1); },
   shift(semitones) { this.shiftBy = semitones || 0; },

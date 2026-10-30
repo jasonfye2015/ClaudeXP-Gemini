@@ -246,7 +246,7 @@ Size: M (writing: ~3,000 words).
 
 Size: M (writing: ~3,500 words).
 
-## Phase 7 - The telling - v3.7
+## Phase 7 - The telling - v3.7 - DONE
 
 How the story is shown; no new words.
 

@@ -468,6 +468,22 @@ CM.lastWords = function (hero, floor) {
   return (pick === 0 && o) || (pick <= 1 && c) || CM.LAST_WORDS.band[Math.min(9, Math.floor(Math.max(0, floor - 1) / 5))] || c || o || "...";
 };
 
+// ---- the telling: the hand a carving was cut in, the leitmotifs a line calls up, and the ending as a page ----
+CM.handOf = function (text) {
+  const t = String(text || "");
+  if (/^(Dwarf runes|A dwarf's)/i.test(t) || /RUNES/.test(t)) return "dwarf";
+  if (/^(A child's|Low on the wall|Carved very small|At knee height)/i.test(t) || /^[a-z]/.test(t.replace(/^A .*?: /, "")) && /chalk/.test(t)) return "child";
+  if (/^(A priest's|In the old letters|In the oldest hand|A monk's|A prayer)/i.test(t)) return "priest";
+  if (/^(Scratched|A scratch|A hasty scratch|Cut deep|A soldier's scratch|A watchman's|Tally marks|A fishwife's|The same rough)/i.test(t)) return "scratch";
+  return "chisel";
+};
+CM.MOTIFS = { bell: ["carving.catacombs.3", "people.3.1", "people.3.2", "ghost.3", "thing.bell"], queen: ["carving.drowned.4", "carving.drowned.5", "guardian.queen", "court.4"], root: ["carving.root.1", "carving.root.2", "carving.root.3", "carving.root.4", "carving.root.5", "guardian.root"] };
+CM.motifFor = (key) => Object.keys(CM.MOTIFS).find((m) => CM.MOTIFS[m].includes(key)) || null;
+// the ending as a page: the chapters the party completed are its paragraphs, in order; the ones it missed are blank
+CM.endingPage = function (game) {
+  return CM.codex(game).filter((c) => c.band !== undefined).map((c) => ({ id: c.id, name: c.name, text: c.complete ? c.epigraph + " " + (CM.CHAPTER_TRUTH[c.id] || "").replace(/^"|"$/g, "").replace(/\s*The hermit is quiet.*$/, "") : null, done: c.done, total: c.total }));
+};
+
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)
 CM.LORE_KEYS = [];
 for (let n = 1; n <= 50; n++) CM.LORE_KEYS.push(`carving.${["catacombs", "vaults", "halls", "palace", "drowned", "fungal", "crystal", "foundry", "ossuary", "root"][Math.floor((n - 1) / 5)]}.${((n - 1) % 5) + 1}`);

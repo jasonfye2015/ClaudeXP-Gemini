@@ -793,6 +793,16 @@ Heroes with pasts (the fifth big update, phase 6 - v3.6)
   they all are, now, so the memorial and your own dead agree; an epitaph (the shrine, sixty characters) that the
   priest and the hero's ghost repeat. A trainer's word to every new hero of their calling at the stair.
 
+The telling (the fifth big update, phase 7 - v3.7)
+  A wall read opens a reading view: the carving large, in the hand that cut it (CM.handOf: a chisel, dwarf runes,
+  a child's chalk, a priest's small capitals, a scratch - four hands and the plain one, as CSS), a word at a time
+  at reading speed; Space shows it all; Reduce motion (or instant combat speed) shows it at once. Chapter cards:
+  the band's epigraph on its first floor, and on its last a word that the walls below will differ. The camp fire
+  tells the day: at a rest one hero tells a wall read this band and another answers (game.campTale). The ending as
+  a page: the chapters the party completed are its paragraphs, the rest blank lines, under the ending's text,
+  and Save the page (PNG) draws it (CM.endingPage). Three leitmotifs in code (CM.music.motif): the bell, the
+  queen's song, the Root's one note, played when a line that concerns them is read or heard (CM.MOTIFS).
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

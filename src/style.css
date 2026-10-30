@@ -376,3 +376,16 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 .entry p.struck { text-decoration: line-through; color: var(--dim); }
 .entry p.truth { color: var(--gold); margin-top: 4px; }
 .recruit input.epitaph { width: 100%; max-width: 360px; margin-top: 4px; font: italic 12px var(--serif); background: rgba(0,0,0,0.25); color: var(--ink); border: 1px solid var(--edge); padding: 3px 6px; }
+/* ---- the reading view: four hands, cut into the stone ---- */
+.readbox { max-width: min(680px, 94vw); }
+#lore-text.hand { font-size: 19px; line-height: 1.55; min-height: 3em; text-shadow: 0 1px 0 rgba(255,255,255,0.08), 0 -1px 0 rgba(0,0,0,0.6); }
+#lore-text.hand-chisel { font-family: var(--serif); letter-spacing: 0.5px; }
+#lore-text.hand-dwarf { font-family: var(--mono); text-transform: uppercase; letter-spacing: 2px; font-size: 16px; line-height: 1.7; }
+#lore-text.hand-child { font-family: var(--serif); font-style: normal; transform: rotate(-1.2deg); letter-spacing: 1px; word-spacing: 4px; color: #D8CCB0; }
+#lore-text.hand-priest { font-family: var(--serif); font-variant: small-caps; letter-spacing: 1px; color: var(--gold); }
+#lore-text.hand-scratch { font-family: var(--mono); font-style: italic; transform: skewX(-6deg); letter-spacing: -0.3px; color: #C8B890; }
+/* ---- the ending as a page ---- */
+#over-page { margin-top: 10px; max-height: 24vh; overflow: auto; }
+#over-page p { font: 13.5px/1.45 var(--serif); color: var(--ink); margin: 4px 0; }
+#over-page p.blank { color: var(--faint); }
+#over-page p.blank span { display: inline-block; min-width: 180px; border-bottom: 1px dotted var(--faint); font-size: 11px; vertical-align: baseline; }

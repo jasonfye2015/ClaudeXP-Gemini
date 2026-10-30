@@ -1625,6 +1625,31 @@ test("heroes with pasts: six origins with their touches and their words at the w
   const g4 = new CM.Game(); g4.newGame("origin-3", fixedParty(CM)); g4.floor.special = "wading"; g4.light = { kind: "torch", left: 100 }; g4.burn(); assert.strictEqual(g4.light.left, 98);
 });
 
+test("the telling: four hands, the motifs a line calls up, the camp fire's tale, and the ending as a page of exactly the chapters completed", () => {
+  const CM = load();
+  assert.strictEqual(CM.handOf("Dwarf runes: WE SEAL FROM WITHIN."), "dwarf"); assert.strictEqual(CM.handOf("A child's letters, large and careful: A MAN CAME."), "child");
+  assert.strictEqual(CM.handOf("A priest's hand, in the old letters: forgive us."), "priest"); assert.strictEqual(CM.handOf("Scratched with a nail: the queen is dead."), "scratch"); assert.strictEqual(CM.handOf(CM.LORE[0]), "chisel");
+  const hands = {}; for (const l of Object.values(CM.LORE_TEXT)) for (const t of l.tellings) hands[CM.handOf(t)] = (hands[CM.handOf(t)] || 0) + 1;
+  assert.ok(["dwarf", "child", "priest", "scratch", "chisel"].every((h) => hands[h] > 0), JSON.stringify(hands));
+  for (const keys of Object.values(CM.MOTIFS)) for (const k of keys) assert.ok(CM.LORE_TEXT[k] || k === "thing.bell", k);
+  const music = fs.readFileSync(path.join(__dirname, "..", "src", "js", "55-music.js"), "utf8");
+  assert.ok(music.includes("motif(name)") && music.includes('name === "bell"') && music.includes('name === "queen"') && music.includes('name === "root"'), "three motifs, in code");
+  const game = new CM.Game(); game.newGame("telling-1", fixedParty(CM));
+  const heard = []; game.on("motif", (m) => heard.push(m));
+  game.markRead("carving.catacombs.3"); game.markRead("carving.catacombs.4"); game.markRead("carving.drowned.4");
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(heard)), ["bell", "queen"]);
+  // the ending page: only the completed chapters have words
+  let page = CM.endingPage(game);
+  assert.strictEqual(page.length, 10); assert.ok(page.every((p) => p.text === null));
+  for (const k of ["carving.catacombs.1", "carving.catacombs.2", "carving.catacombs.5", "guardian.rat"]) game.markRead(k);
+  page = CM.endingPage(game);
+  assert.ok(page[0].text && page[0].text.startsWith(CM.CHAPTERS.catacombs.epigraph) && page.slice(1).every((p) => p.text === null), "the Catacombs, and blank lines");
+  game.story.told = { vaults: true }; assert.ok(CM.endingPage(game)[1].text, "a chapter the hermit told counts");
+  // the camp fire tells what was read this band
+  game.journal.push({ kind: "carving", text: CM.LORE[0], floor: 1, key: "carving.catacombs.1" });
+  const tale = game.campTale(); assert.ok(tale.includes("tells it over the fire") && tale.includes(CM.LORE[0]));
+});
+
 (async () => {
   let failed = 0;
   for (const t of tests) {

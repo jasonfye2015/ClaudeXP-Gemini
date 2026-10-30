@@ -157,7 +157,7 @@ CM.UI = class {
   <p class="small">A mark chalked by every camp fire the party has reached. From one camp, the old road leads to another: the floors between stay as you left them.</p>
   <div id="waystone-list"></div><div class="small" id="waystone-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
-<div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
+<div class="dialog" id="dlg-lore"><div class="box readbox"><h2>Carved into the stone</h2><p id="lore-text" class="lore hand"></p><div class="small" id="lore-hint">Space shows it all.</div>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-talk"><div class="box"><h2 id="talk-title"></h2><p id="talk-text" class="lore"></p>
   <div class="end"><button id="talk-more" hidden>More</button><button class="close primary">Walk on</button></div></div></div>
@@ -166,8 +166,8 @@ CM.UI = class {
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button></span></h2><div id="journal-list"></div>
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
-  <div class="roll" id="over-party"></div><div class="small" id="over-retire"></div><div class="tally" id="over-tally"></div>
-  <div class="end"><button id="btn-over-card" class="ended">Summary card</button><button class="close primary ended">To the title</button>
+  <div class="roll" id="over-party"></div><div class="small" id="over-retire"></div><div class="tally" id="over-tally"></div><div class="page ended" id="over-page"></div>
+  <div class="end"><button id="btn-over-card" class="ended">Summary card</button><button id="btn-over-page" class="ended" title="The ending as an illuminated page: the chapters the party completed, and blank lines for the rest">Save the page (PNG)</button><button class="close primary ended">To the title</button>
     <button id="btn-over-daylight" class="crown">Into the daylight</button><button id="btn-over-deep" class="crown primary">Into the Deep</button></div></div></div>
 <div class="dialog" id="dlg-card"><div class="box cardbox"><h2>The expedition, in a card</h2><div id="card-slot"></div>
   <textarea id="card-text" spellcheck="false" readonly></textarea><div class="small" id="card-note"></div>
@@ -225,6 +225,7 @@ CM.UI = class {
     this.$("#btn-over-daylight").addEventListener("click", () => { this.closeDialogs(); game.endRun(true); });
     this.$("#btn-over-deep").addEventListener("click", () => { this.closeDialogs(); game.say("You leave the crown where it fell, and go down."); this.refresh(); });
     this.$("#btn-card-copy").addEventListener("click", () => this.copyText(this.$("#card-text").value, this.$("#card-note")));
+    this.$("#btn-over-page").addEventListener("click", () => this.savePage());
     this.$("#btn-card-save").addEventListener("click", () => {
       const c = this.$("#card-slot canvas");
       if (!c) return;
@@ -258,7 +259,8 @@ CM.UI = class {
     game.on("fx", (fx) => this.fx(fx));
     game.on("turn", () => { this.cmenu = { kind: "main" }; });
     game.on("mode", (mode) => { if (mode !== "combat") this.cmenu = { kind: "main" }; this.xmenu = null; });
-    game.on("lore", (text) => { this.$("#lore-text").textContent = text; this.openDialog("#dlg-lore"); });
+    game.on("lore", (text) => this.readWall(text));
+    game.on("motif", (name) => { if (CM.music && CM.music.motif) CM.music.motif(name); });
     game.on("talk", ({ title, text, lines }) => { this.$("#talk-title").textContent = title; this.$("#talk-text").textContent = text; this.talkMore = (lines || []).slice(); this.$("#talk-more").hidden = !this.talkMore.length; this.openDialog("#dlg-talk"); });
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
@@ -491,6 +493,45 @@ CM.UI = class {
     const K = CM.VILLAGERS.keeper, trainers = g.village.trainers || [];
     card(K, `<small>${K.greet.map(esc).join(" ")}</small>${trainers.map((t) => `<small><b>${esc(t.name)}</b> the ${t.cls}${t.how ? `, home ${t.how === "bottom" ? "from the bottom of the world" : t.how === "reminded" ? "having talked the king down" : t.how === "crowned" ? "with the crown" : `alive from floor ${t.floor || "?"}`}` : ""}: ${esc(CM.TRAINER_LINES[t.cls] || "\"I came back. That's the story.\"")}</small>`).join("")}`, []);
   }
+  // a wall, read: the carving large, in the hand that cut it, a word at a time at reading speed; Space shows it all
+  readWall(text) {
+    const el = this.$("#lore-text"), hand = CM.handOf(text);
+    el.className = `lore hand hand-${hand}`;
+    clearInterval(this.readTimer);
+    this.readFull = text;
+    if (CM.reducedMotion || this.game.settings.speed === "instant") { el.textContent = text; this.$("#lore-hint").hidden = true; this.openDialog("#dlg-lore"); return; }
+    const words = text.split(" "); let n = 0;
+    el.textContent = ""; this.$("#lore-hint").hidden = false;
+    this.readTimer = setInterval(() => { n++; el.textContent = words.slice(0, n).join(" "); if (n >= words.length) { clearInterval(this.readTimer); this.$("#lore-hint").hidden = true; } }, 90);
+    this.openDialog("#dlg-lore");
+  }
+  finishRead() { clearInterval(this.readTimer); if (this.readFull !== undefined) this.$("#lore-text").textContent = this.readFull; this.$("#lore-hint").hidden = true; }
+  // the ending as a page: the chapters completed, in order, as paragraphs; the rest as blank lines
+  renderPage(entry, fate) {
+    const g = this.game, page = CM.endingPage(g), box = this.$("#over-page");
+    this.pageText = { entry, fate, page };
+    box.innerHTML = `<div class="list-title">The story, as this party read it</div>` + page.map((p) => p.text ? `<p><b>${this.esc(p.name)}.</b> ${this.esc(p.text)}</p>` : `<p class="blank"><b>${this.esc(p.name)}.</b> <span>${p.done} of ${p.total}</span></p>`).join("");
+  }
+  savePage() {
+    const { entry, fate, page } = this.pageText || {};
+    if (!entry) return;
+    const W = 760, pad = 40, c = document.createElement("canvas"), p = c.getContext("2d");
+    const wrap = (text, font, x, y, width, lh) => { p.font = font; const words = text.split(" "); let line = "", yy = y; for (const w of words) { const t = line ? `${line} ${w}` : w; if (p.measureText(t).width > width && line) { p.fillText(line, x, yy); line = w; yy += lh; } else line = t; } if (line) { p.fillText(line, x, yy); yy += lh; } return yy; };
+    const measure = () => { let y = pad + 40; const q = document.createElement("canvas").getContext("2d"); const count = (text, font, lh) => { q.font = font; const words = text.split(" "); let line = "", n = 1; for (const w of words) { const t = line ? `${line} ${w}` : w; if (q.measureText(t).width > W - pad * 2 && line) { line = w; n++; } else line = t; } return n * lh; }; y += count(fate, "italic 15px Georgia", 21) + 20; for (const ch of page) y += ch.text ? count(`${ch.name}. ${ch.text}`, "14px Georgia", 20) + 10 : 26; return y + pad; };
+    c.width = W; c.height = measure();
+    p.fillStyle = "#E8DCC0"; p.fillRect(0, 0, c.width, c.height);
+    p.strokeStyle = "#8A6A3A"; p.lineWidth = 3; p.strokeRect(12, 12, c.width - 24, c.height - 24);
+    p.fillStyle = "#3A2C1C"; p.font = "bold 26px Georgia"; p.fillText(this.$("#over-title").textContent, pad, pad + 20);
+    let y = pad + 56;
+    p.fillStyle = "#4A3A28"; y = wrap(fate, "italic 15px Georgia", pad, y, W - pad * 2, 21) + 20;
+    for (const ch of page) {
+      if (ch.text) { p.fillStyle = "#2A2016"; y = wrap(`${ch.name}. ${ch.text}`, "14px Georgia", pad, y, W - pad * 2, 20) + 10; }
+      else { p.fillStyle = "#8A7A60"; p.font = "italic 13px Georgia"; p.fillText(`${ch.name}.`, pad, y); p.strokeStyle = "#B0A080"; p.lineWidth = 1; p.setLineDash([2, 4]); p.beginPath(); p.moveTo(pad + 160, y - 4); p.lineTo(W - pad, y - 4); p.stroke(); p.setLineDash([]); y += 26; }
+    }
+    const a = document.createElement("a");
+    a.href = c.toDataURL("image/png"); a.download = `Claude and Magic - the page of ${entry.seed || "an expedition"}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); if (sel === "#dlg-settings") this.showStorage(); }
   closeDialogs() {
     const ending = this.$("#dlg-over").classList.contains("on");
@@ -555,6 +596,7 @@ CM.UI = class {
     if (entry.titles && entry.titles.length) facts.push(["Earned", entry.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", ")]);
     this.$("#over-tally").innerHTML = facts.map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
     this.renderRetire();
+    this.renderPage(entry, text);
     this.openDialog("#dlg-over");                                      // (opening closes whatever was open - an ending too - so the kind is set after)
     this.ending = won ? "victory" : "lament";
     if (this.onEnding) this.onEnding();

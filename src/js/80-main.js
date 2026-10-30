@@ -107,6 +107,13 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));   // something is coming: louder the nearer, from the side it is on
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
+  game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
+    if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
+    const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
+    if (!ch) return;
+    if ((fl.number - 1) % 5 === 0) ui.titleCard(ch.name, ch.epigraph);
+    else if (fl.number % 5 === 0 && Object.values(CM.LORE_TEXT).some((l) => l.contradicts && CM.LORE_TEXT[l.contradicts].chapter === Object.keys(CM.CHAPTERS).find((k) => CM.CHAPTERS[k] === ch))) ui.titleCard(ch.name, "Below, the walls will say otherwise.");
+  });
   game.on("mode", (mode) => {
     if (mode === "title") showDemo();
     else if (game.floor && renderer.ok) {
@@ -455,6 +462,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (ui.dialogOpen()) {
       const ending = ui.$("#dlg-over").classList.contains("on");
       if (e.code === "Escape" || (e.code === K.map && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
+      else if (ui.$("#dlg-lore").classList.contains("on") && e.code === "Space") { e.preventDefault(); ui.finishRead(); }
       else if (ui.$("#dlg-riddle").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickRiddle(Number(e.code.slice(-1)));
       else if (ui.$("#dlg-choice").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickChoice(Number(e.code.slice(-1)));
       else if (e.code === K.journal && ui.$("#dlg-journal").classList.contains("on")) ui.closeDialogs();

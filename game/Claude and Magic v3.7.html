@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v3.6 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v3.7 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -389,6 +389,19 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 .entry p.struck { text-decoration: line-through; color: var(--dim); }
 .entry p.truth { color: var(--gold); margin-top: 4px; }
 .recruit input.epitaph { width: 100%; max-width: 360px; margin-top: 4px; font: italic 12px var(--serif); background: rgba(0,0,0,0.25); color: var(--ink); border: 1px solid var(--edge); padding: 3px 6px; }
+/* ---- the reading view: four hands, cut into the stone ---- */
+.readbox { max-width: min(680px, 94vw); }
+#lore-text.hand { font-size: 19px; line-height: 1.55; min-height: 3em; text-shadow: 0 1px 0 rgba(255,255,255,0.08), 0 -1px 0 rgba(0,0,0,0.6); }
+#lore-text.hand-chisel { font-family: var(--serif); letter-spacing: 0.5px; }
+#lore-text.hand-dwarf { font-family: var(--mono); text-transform: uppercase; letter-spacing: 2px; font-size: 16px; line-height: 1.7; }
+#lore-text.hand-child { font-family: var(--serif); font-style: normal; transform: rotate(-1.2deg); letter-spacing: 1px; word-spacing: 4px; color: #D8CCB0; }
+#lore-text.hand-priest { font-family: var(--serif); font-variant: small-caps; letter-spacing: 1px; color: var(--gold); }
+#lore-text.hand-scratch { font-family: var(--mono); font-style: italic; transform: skewX(-6deg); letter-spacing: -0.3px; color: #C8B890; }
+/* ---- the ending as a page ---- */
+#over-page { margin-top: 10px; max-height: 24vh; overflow: auto; }
+#over-page p { font: 13.5px/1.45 var(--serif); color: var(--ink); margin: 4px 0; }
+#over-page p.blank { color: var(--faint); }
+#over-page p.blank span { display: inline-block; min-width: 180px; border-bottom: 1px dotted var(--faint); font-size: 11px; vertical-align: baseline; }
 </style>
 </head>
 <body>
@@ -398,7 +411,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "3.6", built: "2026-10-30" };
+const CM = window.CM = { version: "3.7", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1918,6 +1931,22 @@ CM.lastWords = function (hero, floor) {
   const o = hero.origin && CM.LAST_WORDS.origin[hero.origin], c = CM.LAST_WORDS.cls[hero.cls];
   const pick = CM.hashSeed(`${hero.name}:${floor}`) % 3;
   return (pick === 0 && o) || (pick <= 1 && c) || CM.LAST_WORDS.band[Math.min(9, Math.floor(Math.max(0, floor - 1) / 5))] || c || o || "...";
+};
+
+// ---- the telling: the hand a carving was cut in, the leitmotifs a line calls up, and the ending as a page ----
+CM.handOf = function (text) {
+  const t = String(text || "");
+  if (/^(Dwarf runes|A dwarf's)/i.test(t) || /RUNES/.test(t)) return "dwarf";
+  if (/^(A child's|Low on the wall|Carved very small|At knee height)/i.test(t) || /^[a-z]/.test(t.replace(/^A .*?: /, "")) && /chalk/.test(t)) return "child";
+  if (/^(A priest's|In the old letters|In the oldest hand|A monk's|A prayer)/i.test(t)) return "priest";
+  if (/^(Scratched|A scratch|A hasty scratch|Cut deep|A soldier's scratch|A watchman's|Tally marks|A fishwife's|The same rough)/i.test(t)) return "scratch";
+  return "chisel";
+};
+CM.MOTIFS = { bell: ["carving.catacombs.3", "people.3.1", "people.3.2", "ghost.3", "thing.bell"], queen: ["carving.drowned.4", "carving.drowned.5", "guardian.queen", "court.4"], root: ["carving.root.1", "carving.root.2", "carving.root.3", "carving.root.4", "carving.root.5", "guardian.root"] };
+CM.motifFor = (key) => Object.keys(CM.MOTIFS).find((m) => CM.MOTIFS[m].includes(key)) || null;
+// the ending as a page: the chapters the party completed are its paragraphs, in order; the ones it missed are blank
+CM.endingPage = function (game) {
+  return CM.codex(game).filter((c) => c.band !== undefined).map((c) => ({ id: c.id, name: c.name, text: c.complete ? c.epigraph + " " + (CM.CHAPTER_TRUTH[c.id] || "").replace(/^"|"$/g, "").replace(/\s*The hermit is quiet.*$/, "") : null, done: c.done, total: c.total }));
 };
 
 // the arrays the generators and the riddles still read (views over the table; same order, same lengths)
@@ -5921,6 +5950,16 @@ CM.music = {
     return o;
   },
 
+  // a leitmotif: the bell (three tolls, falling), the queen's song (five notes, minor, unsteady), the Root's one note
+  motif(name) {
+    if (!this.enabled || !this._ensure()) return false;
+    const ctx = CM.audio.ctx, at = ctx.currentTime + 0.05, dest = this.master;
+    if (name === "bell") { [[440, 0], [330, 1.1], [220, 2.3]].forEach(([hz, dt]) => { this._osc("sine", hz, at + dt, at + dt + 2.2, 0.16, 3000, dest); this._osc("sine", hz * 2.76, at + dt, at + dt + 0.5, 0.05, 6000, dest); }); }
+    else if (name === "queen") { [0, 3, 2, 3, -2].forEach((semi, i) => { const hz = 392 * Math.pow(2, semi / 12) * (1 + (i % 2 ? 0.004 : -0.003)); this._osc("triangle", hz, at + i * 0.42, at + i * 0.42 + 0.5, 0.11, 2200, dest); }); }
+    else if (name === "root") { this._osc("sine", 41.2, at, at + 3.2, 0.3, 300, dest); this._osc("triangle", 41.2 * 1.5, at + 0.4, at + 3.0, 0.05, 400, dest); }
+    else return false;
+    return true;
+  },
   setDepth(k) { this.depth = CM.clamp(k || 0, 0, 1); },
   setDanger(k) { this.danger = CM.clamp(k || 0, 0, 1); },
   shift(semitones) { this.shiftBy = semitones || 0; },
@@ -8945,6 +8984,7 @@ Object.assign(CM.Game.prototype, {
     const bond = (this.bonds || [])[Math.floor((this.tally.fights || 0) / 7) % Math.max(1, (this.bonds || []).length)];
     if (bond && (this.tally.fights || 0) % 3 === 0) this.say(CM.BANTER[(this.tally.fights || 0) % CM.BANTER.length].replace("{a}", bond[0]).replace("{b}", bond[1]));
     else this.banter("camp");
+    this.campTale();
     this.saveRun();
   },
 
@@ -9445,6 +9485,7 @@ Object.assign(CM.Game.prototype, {
     this.story = this.story || { read: {} };
     if (this.story.read[key] !== undefined) return false;
     this.story.read[key] = this.floor ? this.floor.number : 0;
+    const motif = CM.motifFor(key); if (motif) this.emit("motif", motif);
     this.checkHeart();
     const codex = CM.codex(this);
     if (codex.filter((c) => c.band !== undefined).every((c) => c.complete)) this.achieve("chronicler");
@@ -9663,6 +9704,17 @@ Object.assign(CM.Game.prototype, {
     if (a === b) return "";
     const key = `${a}|${b}`, joke = bond && (this.pairFights || {})[key] >= CM.BOND_FIGHTS * 3 && kind === "camp" && (this.tally.fights || 0) % 2 === 0;
     const text = (joke ? CM.JOKES[(this.tally.fights || 0) % CM.JOKES.length] : lines[((this.tally.fights || 0) + (this.tally.steps || 0)) % lines.length]).replace(/\{a\}/g, a).replace(/\{b\}/g, b);
+    this.say(text);
+    return text;
+  },
+  // the camp fire: what was read this band, told over it in two voices
+  campTale() {
+    const alive = this.alive(); if (alive.length < 2 || !this.floor) return "";
+    const band = CM.themeIndex(this.floor.number), read = (this.journal || []).filter((e) => e.kind === "carving" && e.floor && CM.themeIndex(e.floor) === band && e.key && e.key.startsWith("carving."));
+    if (!read.length) return "";
+    const e = read[(this.tally.fights || 0) % read.length], a = alive[(this.tally.fights || 0) % alive.length], b = alive[((this.tally.fights || 0) + 1) % alive.length];
+    const lines = CM.BANTER2.carving, reply = lines[(this.tally.steps || 0) % lines.length].replace(/\{a\}/g, a.name).replace(/\{b\}/g, b.name);
+    const text = `${a.name} tells it over the fire, the wall on floor ${e.floor}: "${e.text}" ${reply}`;
     this.say(text);
     return text;
   },
@@ -10339,7 +10391,7 @@ CM.UI = class {
   <p class="small">A mark chalked by every camp fire the party has reached. From one camp, the old road leads to another: the floors between stay as you left them.</p>
   <div id="waystone-list"></div><div class="small" id="waystone-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
-<div class="dialog" id="dlg-lore"><div class="box"><h2>Carved into the stone</h2><p id="lore-text" class="lore"></p>
+<div class="dialog" id="dlg-lore"><div class="box readbox"><h2>Carved into the stone</h2><p id="lore-text" class="lore hand"></p><div class="small" id="lore-hint">Space shows it all.</div>
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-talk"><div class="box"><h2 id="talk-title"></h2><p id="talk-text" class="lore"></p>
   <div class="end"><button id="talk-more" hidden>More</button><button class="close primary">Walk on</button></div></div></div>
@@ -10348,8 +10400,8 @@ CM.UI = class {
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button></span></h2><div id="journal-list"></div>
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
-  <div class="roll" id="over-party"></div><div class="small" id="over-retire"></div><div class="tally" id="over-tally"></div>
-  <div class="end"><button id="btn-over-card" class="ended">Summary card</button><button class="close primary ended">To the title</button>
+  <div class="roll" id="over-party"></div><div class="small" id="over-retire"></div><div class="tally" id="over-tally"></div><div class="page ended" id="over-page"></div>
+  <div class="end"><button id="btn-over-card" class="ended">Summary card</button><button id="btn-over-page" class="ended" title="The ending as an illuminated page: the chapters the party completed, and blank lines for the rest">Save the page (PNG)</button><button class="close primary ended">To the title</button>
     <button id="btn-over-daylight" class="crown">Into the daylight</button><button id="btn-over-deep" class="crown primary">Into the Deep</button></div></div></div>
 <div class="dialog" id="dlg-card"><div class="box cardbox"><h2>The expedition, in a card</h2><div id="card-slot"></div>
   <textarea id="card-text" spellcheck="false" readonly></textarea><div class="small" id="card-note"></div>
@@ -10407,6 +10459,7 @@ CM.UI = class {
     this.$("#btn-over-daylight").addEventListener("click", () => { this.closeDialogs(); game.endRun(true); });
     this.$("#btn-over-deep").addEventListener("click", () => { this.closeDialogs(); game.say("You leave the crown where it fell, and go down."); this.refresh(); });
     this.$("#btn-card-copy").addEventListener("click", () => this.copyText(this.$("#card-text").value, this.$("#card-note")));
+    this.$("#btn-over-page").addEventListener("click", () => this.savePage());
     this.$("#btn-card-save").addEventListener("click", () => {
       const c = this.$("#card-slot canvas");
       if (!c) return;
@@ -10440,7 +10493,8 @@ CM.UI = class {
     game.on("fx", (fx) => this.fx(fx));
     game.on("turn", () => { this.cmenu = { kind: "main" }; });
     game.on("mode", (mode) => { if (mode !== "combat") this.cmenu = { kind: "main" }; this.xmenu = null; });
-    game.on("lore", (text) => { this.$("#lore-text").textContent = text; this.openDialog("#dlg-lore"); });
+    game.on("lore", (text) => this.readWall(text));
+    game.on("motif", (name) => { if (CM.music && CM.music.motif) CM.music.motif(name); });
     game.on("talk", ({ title, text, lines }) => { this.$("#talk-title").textContent = title; this.$("#talk-text").textContent = text; this.talkMore = (lines || []).slice(); this.$("#talk-more").hidden = !this.talkMore.length; this.openDialog("#dlg-talk"); });
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
@@ -10673,6 +10727,45 @@ CM.UI = class {
     const K = CM.VILLAGERS.keeper, trainers = g.village.trainers || [];
     card(K, `<small>${K.greet.map(esc).join(" ")}</small>${trainers.map((t) => `<small><b>${esc(t.name)}</b> the ${t.cls}${t.how ? `, home ${t.how === "bottom" ? "from the bottom of the world" : t.how === "reminded" ? "having talked the king down" : t.how === "crowned" ? "with the crown" : `alive from floor ${t.floor || "?"}`}` : ""}: ${esc(CM.TRAINER_LINES[t.cls] || "\"I came back. That's the story.\"")}</small>`).join("")}`, []);
   }
+  // a wall, read: the carving large, in the hand that cut it, a word at a time at reading speed; Space shows it all
+  readWall(text) {
+    const el = this.$("#lore-text"), hand = CM.handOf(text);
+    el.className = `lore hand hand-${hand}`;
+    clearInterval(this.readTimer);
+    this.readFull = text;
+    if (CM.reducedMotion || this.game.settings.speed === "instant") { el.textContent = text; this.$("#lore-hint").hidden = true; this.openDialog("#dlg-lore"); return; }
+    const words = text.split(" "); let n = 0;
+    el.textContent = ""; this.$("#lore-hint").hidden = false;
+    this.readTimer = setInterval(() => { n++; el.textContent = words.slice(0, n).join(" "); if (n >= words.length) { clearInterval(this.readTimer); this.$("#lore-hint").hidden = true; } }, 90);
+    this.openDialog("#dlg-lore");
+  }
+  finishRead() { clearInterval(this.readTimer); if (this.readFull !== undefined) this.$("#lore-text").textContent = this.readFull; this.$("#lore-hint").hidden = true; }
+  // the ending as a page: the chapters completed, in order, as paragraphs; the rest as blank lines
+  renderPage(entry, fate) {
+    const g = this.game, page = CM.endingPage(g), box = this.$("#over-page");
+    this.pageText = { entry, fate, page };
+    box.innerHTML = `<div class="list-title">The story, as this party read it</div>` + page.map((p) => p.text ? `<p><b>${this.esc(p.name)}.</b> ${this.esc(p.text)}</p>` : `<p class="blank"><b>${this.esc(p.name)}.</b> <span>${p.done} of ${p.total}</span></p>`).join("");
+  }
+  savePage() {
+    const { entry, fate, page } = this.pageText || {};
+    if (!entry) return;
+    const W = 760, pad = 40, c = document.createElement("canvas"), p = c.getContext("2d");
+    const wrap = (text, font, x, y, width, lh) => { p.font = font; const words = text.split(" "); let line = "", yy = y; for (const w of words) { const t = line ? `${line} ${w}` : w; if (p.measureText(t).width > width && line) { p.fillText(line, x, yy); line = w; yy += lh; } else line = t; } if (line) { p.fillText(line, x, yy); yy += lh; } return yy; };
+    const measure = () => { let y = pad + 40; const q = document.createElement("canvas").getContext("2d"); const count = (text, font, lh) => { q.font = font; const words = text.split(" "); let line = "", n = 1; for (const w of words) { const t = line ? `${line} ${w}` : w; if (q.measureText(t).width > W - pad * 2 && line) { line = w; n++; } else line = t; } return n * lh; }; y += count(fate, "italic 15px Georgia", 21) + 20; for (const ch of page) y += ch.text ? count(`${ch.name}. ${ch.text}`, "14px Georgia", 20) + 10 : 26; return y + pad; };
+    c.width = W; c.height = measure();
+    p.fillStyle = "#E8DCC0"; p.fillRect(0, 0, c.width, c.height);
+    p.strokeStyle = "#8A6A3A"; p.lineWidth = 3; p.strokeRect(12, 12, c.width - 24, c.height - 24);
+    p.fillStyle = "#3A2C1C"; p.font = "bold 26px Georgia"; p.fillText(this.$("#over-title").textContent, pad, pad + 20);
+    let y = pad + 56;
+    p.fillStyle = "#4A3A28"; y = wrap(fate, "italic 15px Georgia", pad, y, W - pad * 2, 21) + 20;
+    for (const ch of page) {
+      if (ch.text) { p.fillStyle = "#2A2016"; y = wrap(`${ch.name}. ${ch.text}`, "14px Georgia", pad, y, W - pad * 2, 20) + 10; }
+      else { p.fillStyle = "#8A7A60"; p.font = "italic 13px Georgia"; p.fillText(`${ch.name}.`, pad, y); p.strokeStyle = "#B0A080"; p.lineWidth = 1; p.setLineDash([2, 4]); p.beginPath(); p.moveTo(pad + 160, y - 4); p.lineTo(W - pad, y - 4); p.stroke(); p.setLineDash([]); y += 26; }
+    }
+    const a = document.createElement("a");
+    a.href = c.toDataURL("image/png"); a.download = `Claude and Magic - the page of ${entry.seed || "an expedition"}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
   openDialog(sel) { this.closeDialogs(); this.$(sel).classList.add("on"); if (sel === "#dlg-settings") this.showStorage(); }
   closeDialogs() {
     const ending = this.$("#dlg-over").classList.contains("on");
@@ -10737,6 +10830,7 @@ CM.UI = class {
     if (entry.titles && entry.titles.length) facts.push(["Earned", entry.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", ")]);
     this.$("#over-tally").innerHTML = facts.map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
     this.renderRetire();
+    this.renderPage(entry, text);
     this.openDialog("#dlg-over");                                      // (opening closes whatever was open - an ending too - so the kind is set after)
     this.ending = won ? "victory" : "lament";
     if (this.onEnding) this.onEnding();
@@ -12197,6 +12291,13 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));   // something is coming: louder the nearer, from the side it is on
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
+  game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
+    if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
+    const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
+    if (!ch) return;
+    if ((fl.number - 1) % 5 === 0) ui.titleCard(ch.name, ch.epigraph);
+    else if (fl.number % 5 === 0 && Object.values(CM.LORE_TEXT).some((l) => l.contradicts && CM.LORE_TEXT[l.contradicts].chapter === Object.keys(CM.CHAPTERS).find((k) => CM.CHAPTERS[k] === ch))) ui.titleCard(ch.name, "Below, the walls will say otherwise.");
+  });
   game.on("mode", (mode) => {
     if (mode === "title") showDemo();
     else if (game.floor && renderer.ok) {
@@ -12545,6 +12646,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (ui.dialogOpen()) {
       const ending = ui.$("#dlg-over").classList.contains("on");
       if (e.code === "Escape" || (e.code === K.map && ui.$("#bigmap").classList.contains("on")) || (ending && (e.code === "Enter" || e.code === "Space"))) { e.preventDefault(); ui.closeDialogs(); }
+      else if (ui.$("#dlg-lore").classList.contains("on") && e.code === "Space") { e.preventDefault(); ui.finishRead(); }
       else if (ui.$("#dlg-riddle").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickRiddle(Number(e.code.slice(-1)));
       else if (ui.$("#dlg-choice").classList.contains("on") && /^Digit[1-3]$/.test(e.code)) ui.pickChoice(Number(e.code.slice(-1)));
       else if (e.code === K.journal && ui.$("#dlg-journal").classList.contains("on")) ui.closeDialogs();

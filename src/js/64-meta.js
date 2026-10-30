@@ -137,6 +137,7 @@ Object.assign(CM.Game.prototype, {
     this.story = this.story || { read: {} };
     if (this.story.read[key] !== undefined) return false;
     this.story.read[key] = this.floor ? this.floor.number : 0;
+    const motif = CM.motifFor(key); if (motif) this.emit("motif", motif);
     this.checkHeart();
     const codex = CM.codex(this);
     if (codex.filter((c) => c.band !== undefined).every((c) => c.complete)) this.achieve("chronicler");
@@ -355,6 +356,17 @@ Object.assign(CM.Game.prototype, {
     if (a === b) return "";
     const key = `${a}|${b}`, joke = bond && (this.pairFights || {})[key] >= CM.BOND_FIGHTS * 3 && kind === "camp" && (this.tally.fights || 0) % 2 === 0;
     const text = (joke ? CM.JOKES[(this.tally.fights || 0) % CM.JOKES.length] : lines[((this.tally.fights || 0) + (this.tally.steps || 0)) % lines.length]).replace(/\{a\}/g, a).replace(/\{b\}/g, b);
+    this.say(text);
+    return text;
+  },
+  // the camp fire: what was read this band, told over it in two voices
+  campTale() {
+    const alive = this.alive(); if (alive.length < 2 || !this.floor) return "";
+    const band = CM.themeIndex(this.floor.number), read = (this.journal || []).filter((e) => e.kind === "carving" && e.floor && CM.themeIndex(e.floor) === band && e.key && e.key.startsWith("carving."));
+    if (!read.length) return "";
+    const e = read[(this.tally.fights || 0) % read.length], a = alive[(this.tally.fights || 0) % alive.length], b = alive[((this.tally.fights || 0) + 1) % alive.length];
+    const lines = CM.BANTER2.carving, reply = lines[(this.tally.steps || 0) % lines.length].replace(/\{a\}/g, a.name).replace(/\{b\}/g, b.name);
+    const text = `${a.name} tells it over the fire, the wall on floor ${e.floor}: "${e.text}" ${reply}`;
     this.say(text);
     return text;
   },
