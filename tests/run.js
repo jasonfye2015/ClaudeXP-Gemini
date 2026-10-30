@@ -2969,6 +2969,40 @@ test("ground everywhere: on the surface every square has ground, a top or a roof
   assert.ok(!layersOf(m1).has(index["ground:litter"]) && !layersOf(m1).has(index["far:trees"]));
 });
 
+test("the scatter: props by the seed, the same twice and another by another seed; never on a thing, a feature or the water; by the Detail; no floor's fingerprint moves; into the mesh, and quick", () => {
+  const CM = load();
+  for (const [id, P] of Object.entries(CM.PROPS)) { assert.ok(["flat", "cross", "stand"].includes(P.how), id); assert.ok(P.size[0] > 0 && P.size[1] >= P.size[0] && P.size[1] < 1, id); }
+  for (const r of CM.SCATTER) assert.ok(CM.PROPS[r.prop] && r.per > 0 && r.per <= 1, r.prop);
+  const town = CM.makeTown("scatter-1"), wood = CM.makeWood("scatter-1"), f3 = CM.makeFloor(3, "scatter-1"), f43 = CM.makeFloor(43, "scatter-1");
+  for (const fl of [town, wood, f3, f43]) {
+    const a = CM.scatter(fl, "scatter-1"), b = CM.scatter(fl, "scatter-1"), c = CM.scatter(fl, "scatter-2");
+    assert.ok(a.length > 0, `floor ${fl.number} has props`); assert.deepStrictEqual(a, b, "the same twice"); assert.notDeepStrictEqual(a, c, "another seed, other props");
+    const wet = new Set((fl.decor || []).filter((d) => d.kind === "water").map((d) => `${d.x},${d.y}`));
+    for (const p of a) {
+      const k = `${p.x},${p.y}`, t = fl.things[k];
+      assert.ok(CM.isOpen(fl, p.x, p.y) && !(t && t.type !== "monsters") && !fl.features[k] && !wet.has(k), `${p.id} on a clear square at ${k}`);
+      assert.ok(Math.abs(p.dx) + p.w / 2 <= 0.75 && Math.abs(p.dz) + p.w / 2 <= 0.75, `${p.id} within its square`);
+    }
+    assert.strictEqual(CM.scatter(fl, "scatter-1", CM.DETAIL.low).length, 0, "Low: none");
+    assert.ok(CM.scatter(fl, "scatter-1", CM.DETAIL.high).length >= a.length, "High: at least as many");
+  }
+  const ids = (fl) => new Set(CM.scatter(fl, "scatter-1", 1).map((p) => p.id));
+  assert.ok(ids(town).has("tuft") && !ids(town).has("bones"), "grass in town, no bones"); assert.ok(ids(f3).has("bones") && !ids(f3).has("tuft"), "bones in the Catacombs, no grass");
+  for (const p of CM.scatter(town, "scatter-1", 1)) if (p.id === "tuft") assert.strictEqual(CM.groundAt(town, p.x, p.y), "grass", "tufts only on grass");
+  // nothing moves: the floor's fingerprint with the props worked out is the floor's fingerprint
+  const fp = CM.floorPrint(f3); CM.scatter(f3, "scatter-1", 1); assert.strictEqual(CM.floorPrint(f3), fp);
+  // into the mesh: flat and crossed props in, standing ones left for the billboards
+  const index = { wall: 0, floor: 1, ceiling: 2, "props:0": 3, "props:1": 4 }, sub = {};
+  Object.keys(CM.PROPS).forEach((id, i) => { sub[`prop:${id}`] = [`props:${Math.floor(i / 4)}`, (i % 2) * 0.5, Math.floor((i % 4) / 2) * 0.5, (i % 2) * 0.5 + 0.5, Math.floor((i % 4) / 2) * 0.5 + 0.5]; });
+  const props = CM.scatter(f3, "scatter-1", 1), m = CM.floorMesh(f3, CM.THEMES[0], index, { props, sub });
+  assert.strictEqual(m.props, props.filter((p) => p.how !== "stand").length);
+  const plain = CM.floorMesh(f3, CM.THEMES[0], index); assert.strictEqual(plain.props, 0); assert.ok(m.count > plain.count);
+  // quick: fifty floors' props in well under a second
+  const t0 = Date.now(); for (let n = 1; n <= 50; n++) CM.scatter(CM.makeFloor(n, "scatter-1"), "scatter-1", 1); const ms = Date.now() - t0;
+  assert.ok(ms < 4000, `fifty floors (made and scattered) in ${ms} ms`);
+  assert.strictEqual(new CM.Game().settings.detail, "medium");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

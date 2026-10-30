@@ -91,6 +91,8 @@ CM.Renderer = class {
     this.bob = 0;
     this.light = 1;                    // how far the torch reaches, as a share of the depth's reach (1: a good torch)
     this.sky = null;                   // on the surface: CM.sky(game) this frame (the colours, the light, the sun and the moon); null below
+    this.seed = ""; this.density = CM.DETAIL.medium; this.sub = {};   // the props: the run's seed and how many (the Detail setting), and where each sits in its layer
+    this.standing = [];                // the floor's standing props, for the frame's billboards
     this.lightNow = 1;                 // (eased towards it)
     this.ok = true;
     gl.enable(gl.DEPTH_TEST);
@@ -130,6 +132,7 @@ CM.Renderer = class {
     if (this.texture) gl.deleteTexture(this.texture);
     this.texture = gl.createTexture();
     this.index = art.index;
+    this.sub = art.sub || {};
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, art.size, art.size, art.layers.length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     art.layers.forEach((layer, i) => gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, art.size, art.size, 1, gl.RGBA, gl.UNSIGNED_BYTE, layer));
@@ -146,8 +149,10 @@ CM.Renderer = class {
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
   setFloor(floor, theme) {
     this.theme = theme;
-    const mesh = CM.floorMesh(floor, theme, this.index);
-    this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees };
+    const props = CM.scatter(floor, this.seed, this.density);
+    this.standing = props.filter((p) => p.how === "stand");
+    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub });
+    this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.data), gl.STATIC_DRAW);
@@ -223,11 +228,11 @@ CM.Renderer = class {
   _spriteMesh() {
     const out = [], right = [Math.cos(this.yaw), 0, Math.sin(this.yaw)];
     for (const s of this.sprites) {
-      const layer = this.index[s.layer];
+      const sb = this.sub[s.layer], layer = sb ? this.index[sb[0]] : this.index[s.layer];   // (a prop: one corner of a shared layer)
       if (layer === undefined) continue;
       const cx = s.x + 0.5 + (s.dx || 0), cz = s.y + 0.5 + (s.dz || 0), w = s.w || 0.7, h = s.h || 0.7;
       const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1, glow = s.glow || 0;
-      const uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
+      const uv = sb ? [[sb[1], sb[4]], [sb[3], sb[4]], [sb[3], sb[2]], [sb[1], sb[2]]] : [[0, 1], [1, 1], [1, 0], [0, 0]];
       let corners;
       const lift = s.lift || 0;
       if (s.flat) {

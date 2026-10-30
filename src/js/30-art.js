@@ -1290,6 +1290,50 @@ CM.art.surfaceLayers = function (pick) {
   return out;
 };
 
+
+// ---- props: the small things on the floors, painted at half size and packed four to a layer --------------------------
+CM.art.prop = function (id) {
+  const S = ART_SIZE / 2, c = artCanvas(S), p = c.getContext("2d"), rnd = new CM.Random(CM.hashSeed(`prop:${id}`));
+  if (id === "tuft" || id === "flowers") {
+    for (let i = 0; i < (id === "tuft" ? 26 : 14); i++) {
+      const x = S * 0.15 + rnd.next() * S * 0.7, h = S * (0.35 + rnd.next() * 0.55), lean = (rnd.next() - 0.5) * S * 0.3, k = 0.7 + rnd.next() * 0.6;
+      p.strokeStyle = `rgb(${Math.round(70 * k)},${Math.round(120 * k)},${Math.round(44 * k)})`; p.lineWidth = 3 + rnd.next() * 2; p.lineCap = "round";
+      p.beginPath(); p.moveTo(x, S - 2); p.quadraticCurveTo(x + lean * 0.3, S - h * 0.6, x + lean, S - h); p.stroke();
+    }
+    if (id === "flowers") for (let i = 0; i < 5; i++) { const x = S * 0.2 + rnd.next() * S * 0.6, y = S * (0.25 + rnd.next() * 0.3); p.fillStyle = ["#F0E060", "#E8E8F0", "#C080E0", "#E06070"][rnd.int(0, 3)]; for (let a = 0; a < 5; a++) { p.beginPath(); p.arc(x + Math.cos(a * 1.26) * 5, y + Math.sin(a * 1.26) * 5, 4, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#E0A020"; p.beginPath(); p.arc(x, y, 3, 0, Math.PI * 2); p.fill(); }
+  } else if (id === "pebbles") {
+    for (let i = 0; i < 9; i++) { const x = S * 0.15 + rnd.next() * S * 0.7, y = S * 0.15 + rnd.next() * S * 0.7, r = S * (0.04 + rnd.next() * 0.06), k = 0.75 + rnd.next() * 0.5; p.fillStyle = `rgb(${Math.round(120 * k)},${Math.round(114 * k)},${Math.round(104 * k)})`; p.beginPath(); p.ellipse(x, y, r * 1.3, r, rnd.next() * 3, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(255,255,255,0.18)"; p.beginPath(); p.ellipse(x - r * 0.3, y - r * 0.3, r * 0.5, r * 0.35, 0, 0, Math.PI * 2); p.fill(); }
+  } else if (id === "rock") {
+    p.fillStyle = "#6E6860"; p.beginPath(); p.moveTo(S * 0.08, S - 2); p.lineTo(S * 0.16, S * 0.45); p.lineTo(S * 0.42, S * 0.2); p.lineTo(S * 0.74, S * 0.3); p.lineTo(S * 0.92, S * 0.6); p.lineTo(S * 0.94, S - 2); p.closePath(); p.fill();
+    p.fillStyle = "#8A847A"; p.beginPath(); p.moveTo(S * 0.16, S * 0.45); p.lineTo(S * 0.42, S * 0.2); p.lineTo(S * 0.74, S * 0.3); p.lineTo(S * 0.5, S * 0.5); p.closePath(); p.fill();
+    p.fillStyle = "#4E4A44"; p.beginPath(); p.moveTo(S * 0.74, S * 0.3); p.lineTo(S * 0.92, S * 0.6); p.lineTo(S * 0.94, S - 2); p.lineTo(S * 0.6, S - 2); p.lineTo(S * 0.5, S * 0.5); p.closePath(); p.fill();
+  } else if (id === "bones") {
+    p.lineCap = "round";
+    for (let i = 0; i < 4; i++) { const x = S * 0.2 + rnd.next() * S * 0.6, y = S * 0.2 + rnd.next() * S * 0.6, a = rnd.next() * Math.PI, l = S * (0.15 + rnd.next() * 0.18); p.strokeStyle = "#D8D0B8"; p.lineWidth = 6; p.beginPath(); p.moveTo(x - Math.cos(a) * l, y - Math.sin(a) * l); p.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); p.stroke(); p.fillStyle = "#E4DCC4"; for (const s of [-1, 1]) { p.beginPath(); p.arc(x + s * Math.cos(a) * l, y + s * Math.sin(a) * l, 5, 0, Math.PI * 2); p.fill(); } }
+  } else if (id === "skull") {
+    p.fillStyle = "#E0D8C0"; p.beginPath(); p.arc(S / 2, S * 0.48, S * 0.34, Math.PI, 0); p.lineTo(S * 0.8, S * 0.7); p.lineTo(S * 0.66, S * 0.94); p.lineTo(S * 0.34, S * 0.94); p.lineTo(S * 0.2, S * 0.7); p.closePath(); p.fill();
+    p.fillStyle = "#2A2420"; p.beginPath(); p.ellipse(S * 0.36, S * 0.56, S * 0.09, S * 0.11, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.ellipse(S * 0.64, S * 0.56, S * 0.09, S * 0.11, 0, 0, Math.PI * 2); p.fill();
+    p.beginPath(); p.moveTo(S / 2, S * 0.66); p.lineTo(S * 0.45, S * 0.76); p.lineTo(S * 0.55, S * 0.76); p.closePath(); p.fill();
+    for (let i = 0; i < 4; i++) p.fillRect(S * (0.38 + i * 0.07), S * 0.84, 4, S * 0.08);
+  }
+  return c;
+};
+// the props, four to a layer: `add(name, canvas)` as the set builders have it; `make(id)` paints one at half the layer's
+// size. Returns `sub`: { "prop:<id>": [layer name, u0, v0, u1, v1] } for the renderer to find each one's corner.
+CM.art.packProps = function (add, size, make) {
+  const sub = {}, ids = Object.keys(CM.PROPS || {}), half = size / 2;
+  for (let i = 0; i < ids.length; i += 4) {
+    const c = artCanvas(size), p = c.getContext("2d"), name = `props:${i / 4}`;
+    ids.slice(i, i + 4).forEach((id, j) => {
+      const qx = (j % 2) * half, qy = Math.floor(j / 2) * half, pad = Math.max(1, size / 128);
+      p.drawImage(make(id), qx + pad, qy + pad, half - 2 * pad, half - 2 * pad);
+      sub[`prop:${id}`] = [name, (qx + pad) / size, (qy + pad) / size, (qx + half - pad) / size, (qy + half - pad) / size];
+    });
+    add(name, c);
+  }
+  return sub;
+};
+
 // ---- the whole set for a depth, as texture-array layers (the Drawn theme) ----------------------------------------------
 CM.art.buildDrawn = function (theme) {
   const layers = [], index = {};
@@ -1334,5 +1378,6 @@ CM.art.buildDrawn = function (theme) {
   add("fx:leaf", CM.art.fxLeaf()); add("fx:ring", CM.art.fxRing());
   for (let f = 0; f < 3; f++) { add(`torch${f}`, CM.art.torch(f)); add(`water${f}`, CM.art.water(f)); }
   for (const [name, c] of Object.entries(CM.art.surfaceLayers())) add(name, c);
-  return { layers, index, size: ART_SIZE, crisp: false };
+  const sub = CM.art.packProps(add, ART_SIZE, (id) => CM.art.prop(id));
+  return { layers, index, size: ART_SIZE, crisp: false, sub };
 };

@@ -106,7 +106,8 @@ CM.art.buildPixel = function (theme) {
   for (let f = 0; f < 3; f++) { add(`torch${f}`, tileOr(`torch${f}`, () => CM.art.torch(f))); add(`water${f}`, tileOr(`water${f}`, () => CM.art.water(f))); }
   const ground = (key, drawn) => (CM.packs.pixel.index[key] ? tiled(key, 2) : CM.art.pixelate(drawn()));              // (the ground and the walls repeat the tile; the trees stand alone)
   for (const [name, c] of Object.entries(CM.art.surfaceLayers((key, drawn) => (key.startsWith("tree.") || key.startsWith("sign") || key.startsWith("far.") || key === "canopy" ? CM.art.pixelate(drawn()) : ground(key, drawn))))) add(name, c);
-  return { layers, index, size: S, crisp: true };
+  const sub = CM.art.packProps(add, S, (id) => CM.art.pixelate(CM.art.prop(id), 24));   // (the props in pixels, like the rest of the set)
+  return { layers, index, size: S, crisp: true, sub };
 };
 
 // ---- the Stone theme: photographs on the stone, the drawn art on everything else ---------------------------------------
@@ -158,7 +159,7 @@ CM.art.buildStone = function (theme) {
     c.getContext("2d").drawImage(drawn.layers[i], 0, 0, S, S);
     add(name, c);
   }
-  return { layers, index, size: S, crisp: false };
+  return { layers, index, size: S, crisp: false, sub: drawn.sub };          // (the props' layers came across with the rest, by name)
 };
 
 // the whole set for a depth, in the look asked for (the drawn one when a pack isn't there)
