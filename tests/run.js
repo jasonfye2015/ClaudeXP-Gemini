@@ -3299,6 +3299,94 @@ test("monsters that move: a breath of its own; a lunge out and back; a flinch th
   const src = fs.readFileSync(path.join(ROOT, "src", "js", "40-render.js"), "utf8"); assert.ok(src.includes("s.tilt") && src.includes("s.mirror"), "the renderer draws the pose");
 });
 
+test("the living dungeon: lairs by the seed, the floor unmoved; a sleeper stays put; the light down a corridor wakes it, a shaded light does not; noise through a door is quieter; a quiet step; a sleeper struck gives a free round that always lands", () => {
+  const CM = load();
+  // the lairs: the same every time, about three packs in five, and the floor's walls and way down where they were
+  let packs = 0, sleeping = 0, champions = 0;
+  for (const seed of ["lair-1", "lair-2", "lair-3"]) for (let n = 1; n <= 20; n++) {
+    const a = CM.makeFloor(n, seed, 2), b = CM.makeFloor(n, seed, 2);
+    assert.strictEqual(JSON.stringify(a.things), JSON.stringify(b.things), "the lairs are the seed's");
+    for (const t of Object.values(a.things)) if (t.type === "monsters" && !t.still && !t.hunter) { packs++; if (t.asleep) sleeping++; if (t.champion) { champions++; assert.ok(n >= CM.CHAMPION_FROM); assert.ok(CM.CHAMPIONS[t.group[0].champion] && t.group[0].name.startsWith(CM.CHAMPIONS[t.champion].name)); } }
+  }
+  assert.ok(sleeping / packs > 0.45 && sleeping / packs < 0.75, `about three in five sleep (${sleeping} of ${packs})`);
+  assert.ok(champions > 5, `champions lead some packs (${champions})`);
+  for (const t of Object.values(CM.makeFloor(3, "lair-1", 2).things)) assert.ok(!t.champion, "no champion above floor six");
+  // a floor to play with: one pack asleep, straight down the corridor from the party
+  const g = new CM.Game(); g.newGame("lair-4", fixedParty(CM)); g.enterFloor(2, "down");
+  const fl = g.floor, size = fl.grid.length;
+  for (const k of Object.keys(fl.things)) if (fl.things[k].type === "monsters") delete fl.things[k];
+  const row = fl.pos[1]; let far = null;
+  for (let x = fl.pos[0] + 1; x < size && CM.isOpen(fl, x, row) && !fl.features[`${x},${row}`]; x++) far = x;
+  if (far === null || far - fl.pos[0] < 3) { for (let x = 1; x < size - 1; x++) fl.grid[row][x] = 0; far = Math.min(size - 2, fl.pos[0] + 6); for (let x = fl.pos[0] + 1; x <= far; x++) delete fl.features[`${x},${row}`]; }
+  const k = `${far},${row}`, pack = { type: "monsters", group: [CM.makeMonster(CM.monsterKind("Goblin"), 2, new CM.Random(1))], asleep: true };
+  fl.things[k] = pack; g.mode = "explore";
+  g.light = { kind: "torch", left: 300 }; g.lightOut = true; g.noiseLevel = 0;
+  for (let i = 0; i < 6; i++) g.wanderMonsters();
+  assert.ok(fl.things[k] === pack && pack.asleep, "a shaded light, a quiet party: it sleeps where it lies");
+  assert.strictEqual(g.lightReach(), 0); assert.ok(!g.hasLight(), "shaded: no light to see by"); assert.ok(g.lightFactor() < 0.3);
+  g.lightOut = false; assert.ok(g.lightReach() >= CM.LIGHT_REACH.low && g.hasLight());
+  if (far - fl.pos[0] <= g.lightReach()) { g.wanderMonsters(); assert.ok(!pack.asleep && pack.hunting > 0, "the torch down the corridor wakes it, and it hunts"); }
+  // noise: a closed door costs four squares of it; and what a step makes
+  const open = new CM.Game(); open.newGame("lair-5", fixedParty(CM)); open.enterFloor(3, "down");
+  const of = open.floor, door = Object.entries(of.features).find(([, f]) => f.type === "door");
+  if (door) { const [dx, dy] = door[0].split(",").map(Number); const shut = CM.noiseDistances(of, of.pos).get(door[0]); door[1].open = true; const wide = CM.noiseDistances(of, of.pos).get(door[0]); if (shut !== undefined && wide !== undefined) assert.strictEqual(shut - wide, CM.LAIR.doorCost - 1, "a shut door muffles"); assert.ok(dx >= 0 && dy >= 0); }
+  const loud = open.stepNoise(); open.lightOut = true; const hushed = open.stepNoise(); assert.ok(hushed < loud, "shaded, the party is quieter");
+  open.party.unshift(open.party.splice(open.party.findIndex((h) => h.cls === "Rogue"), 1)[0]); assert.ok(open.stepNoise() <= hushed, "a Rogue in front, quieter still");
+  // the light is lit again on the surface; shading needs a light
+  open.lightOut = false; open.light = { kind: null, left: 0 }; open.mode = "explore"; assert.strictEqual(open.douse(), false, "nothing to shade");
+  // a sleeping pack walked into: a free round, every blow lands
+  const s = new CM.Game(); s.newGame("lair-6", fixedParty(CM)); s.enterFloor(2, "down");
+  const sf = s.floor; for (const kk of Object.keys(sf.things)) if (sf.things[kk].type === "monsters") delete sf.things[kk];
+  const ahead = CM.DIRS.map(([dx, dy], d) => [d, sf.pos[0] + dx, sf.pos[1] + dy]).find(([, x, y]) => CM.isOpen(sf, x, y) && !sf.features[`${x},${y}`] && !sf.things[`${x},${y}`]);
+  sf.facing = ahead[0]; sf.things[`${ahead[1]},${ahead[2]}`] = { type: "monsters", group: [CM.makeMonster(CM.monsterKind("Orc"), 2, new CM.Random(2)), CM.makeMonster(CM.monsterKind("Orc"), 2, new CM.Random(3))], asleep: true };
+  s.move(0);
+  assert.strictEqual(s.mode, "combat"); assert.ok(s.combat.surprise && s.combat.sure, "they are struck asleep"); assert.ok(s.tally.sleepersStruck >= 1);
+  assert.ok(s.combat.order.every((o) => o.hero), "no monster acts in the first round");
+});
+
+test("champions: each word does what it says - a ward drinks a spell, stone turns a blow, the fleet and the frenzied act twice, a shriek wakes the floor, a shadow hides from all but a Rogue, a vampire feeds, a hoarder pays", () => {
+  const CM = load();
+  const fight = (id, opts = {}) => {
+    const g = new CM.Game(); g.newGame(`champ-${id}`, fixedParty(CM)); g.enterFloor(8, "down");
+    const fl = g.floor; for (const kk of Object.keys(fl.things)) if (fl.things[kk].type === "monsters") delete fl.things[kk];
+    if (opts.noRogue) g.party = g.party.filter((h) => h.cls !== "Rogue");
+    const t = { type: "monsters", group: [CM.makeMonster(CM.monsterKind("Orc"), 8, new CM.Random(5)), CM.makeMonster(CM.monsterKind("Orc"), 8, new CM.Random(6))] };
+    CM.makeChampion(t, id);
+    const k = `${fl.pos[0]},${fl.pos[1]}`; fl.things[`${fl.pos[0] + 50},0`] = undefined; delete fl.things[`${fl.pos[0] + 50},0`];
+    g.foes = t.group; g.startCombat(k, t);
+    return { g, m: t.group[0], t };
+  };
+  for (const id of Object.keys(CM.CHAMPIONS)) { const { m } = fight(id); assert.strictEqual(m.champion, id); assert.ok(m.name.startsWith(CM.CHAMPIONS[id].name)); }
+  { const { g, m } = fight("warded"); g.casting = g.party.find((h) => h.cls === "Mage"); const hp = m.hp; assert.strictEqual(g.spellHit(m, 10, "a test"), 0); assert.strictEqual(m.hp, hp, "the ward drinks the first spell"); g.spellHit(m, 10, "a test"); assert.ok(m.hp < hp, "the second lands"); }
+  { const { g, m } = fight("fleet"); g.combat.surprise = false; g.beginRound(); assert.strictEqual(g.combat.order.filter((o) => o.foe === m).length + (m.hp > 0 ? 0 : 2), 2, "the fleet acts twice"); }
+  { const { g, m } = fight("frenzied"); m.hp = Math.floor(m.max / 3); g.combat.surprise = false; g.beginRound(); assert.ok(g.combat.order.filter((o) => o.foe === m).length === 2 || m.hp <= 0, "under half, the frenzied twice"); }
+  { const { g, m } = fight("stonehide"); g.combat.surprise = false; g.beginRound(); assert.strictEqual(m.stone, m.hp > 0 ? 1 : m.stone); }
+  { const { g } = fight("shadowed", { noRogue: true }); assert.ok(g.foes[0].hidden, "unseen without a Rogue"); }
+  { const { g } = fight("shadowed"); assert.ok(!g.foes[0].hidden, "a Rogue sees it"); }
+  { const { g, m } = fight("shrieking"); const fl = g.floor; const spot = Object.keys(fl.things).length; fl.things["1,1"] = { type: "monsters", group: [CM.makeMonster(CM.monsterKind("Goblin"), 8, new CM.Random(9))], asleep: true };
+    g.monsterAct(m); assert.ok(m.shrieked && !fl.things["1,1"].asleep && fl.things["1,1"].hunting > 0, "the shriek wakes the floor"); assert.ok(spot >= 0); }
+  { const { m } = fight("hoarder"), { m: plain } = fight("vampiric"); assert.ok(m.gold > plain.gold, "a hoarder carries more"); }
+  const src = fs.readFileSync(path.join(ROOT, "src", "js", "62-combat.js"), "utf8"); assert.ok(src.includes('m.champion === "vampiric"'), "a vampire feeds");
+});
+
+test("the living dungeon is kept: the shaded light and the noise in the save; a run saved before them migrates; two games on one seed, played the same, wake the same packs; Automatic shades the light near a sleeper with a Rogue in front", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("keep-1", fixedParty(CM)); g.enterFloor(2, "down"); g.mode = "explore";
+  g.lightOut = true; g.noiseLevel = 3; g.saveRun();
+  const g2 = new CM.Game(); assert.ok(g2.continueRun()); assert.strictEqual(g2.lightOut, true); assert.strictEqual(g2.noiseLevel, 3);
+  const old = JSON.parse(JSON.stringify(g.lastRun)); old.schema = 3; delete old.lightOut; delete old.noiseLevel;
+  const m = CM.migrateRun(old); assert.strictEqual(m.schema, CM.SCHEMA); assert.strictEqual(m.lightOut, false); assert.strictEqual(m.noiseLevel, 0);
+  const play = () => { const p = new CM.Game(); p.newGame("keep-2", fixedParty(CM)); p.enterFloor(4, "down"); p.mode = "explore"; for (let i = 0; i < 40; i++) { if (p.mode !== "explore") break; if (!p.move(0)) p.turn(1); p.wanderMonsters(); }
+    return JSON.stringify(Object.entries(p.floor.things).filter(([, t]) => t.type === "monsters").map(([k, t]) => [k, Boolean(t.asleep), t.hunting || 0])) + p.mode; };
+  assert.strictEqual(play(), play(), "the same steps, the same lairs woken");
+  const a = new CM.Game(); a.newGame("keep-3", fixedParty(CM)); a.enterFloor(3, "down"); a.mode = "explore";
+  a.party.unshift(a.party.splice(a.party.findIndex((h) => h.cls === "Rogue"), 1)[0]);
+  const fl = a.floor; for (const kk of Object.keys(fl.things)) if (fl.things[kk].type === "monsters") delete fl.things[kk];
+  fl.things[`${fl.pos[0]},${Math.max(0, fl.pos[1] - 3)}`] = { type: "monsters", group: [CM.makeMonster(CM.monsterKind("Goblin"), 3, new CM.Random(4))], asleep: true };
+  const auto = new CM.Autopilot(a, { warp: true, sync: true }); auto.stealth(fl); assert.ok(a.lightOut, "Automatic shades the light");
+  delete fl.things[`${fl.pos[0]},${Math.max(0, fl.pos[1] - 3)}`]; auto.stealth(fl); assert.ok(!a.lightOut, "and lights it again past the sleeper");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

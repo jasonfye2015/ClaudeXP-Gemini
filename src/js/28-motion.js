@@ -23,7 +23,7 @@ CM.motion = function (s) {
   const since = (t) => (t === undefined || t === null ? Infinity : now - t);
   const phase = s.phase || 0;
   if (s.sleeping) {                                                       // lying where it sleeps: no breath to see but a slow rise of its side
-    out.tilt = M.fallTilt * 0.95;
+    out.tilt = Math.PI / 2; out.scale = 0.78;                           // (on its side, low)
     if (!s.reduced) out.scaleY = 1 + Math.sin(now / 1700 + phase) * 0.012;
     return out;
   }

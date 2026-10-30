@@ -887,7 +887,7 @@ CM.makeFloor = function (number, seed, gen) {
   if (number < 0) return number % 1 === 0 ? CM.makeWood(seed) : CM.makeCave(number, seed, gen);   // (the Deep Wood and its caves, 23b-wood.js)
   if (number % 1 !== 0) return CM.makeWing(number, seed, gen);
   const make = CM.generators[gen || CM.GEN] || CM.generators[1];
-  return CM.furnish(make(number, seed), seed, gen || CM.GEN);
+  return CM.makeLairs(CM.furnish(make(number, seed), seed, gen || CM.GEN), seed);   // (the lairs and champions: 61b-lairs.js, by a hash of their own)
 };
 
 // a wing: the band's short floor beside floor n (number n + 0.5), carved as any floor of the seed's own key, then made
@@ -911,7 +911,7 @@ CM.makeWing = function (number, seed, gen) {
   fl.hazard = W.hazard;
   if (W.hazard !== "tide" && W.hazard !== "mirror") { const cells = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = CM.keyOf(x, y); if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && !(x === fl.pos[0] && y === fl.pos[1])) cells.push(k); } for (let i = 0; i < 3 && cells.length; i++) fl.features[cells[CM.hashSeed(`${seed}:winghazard:${n}:${i}`) % cells.length]] = { type: W.hazard, known: false, spent: false }; }
   for (const t of Object.values(fl.things)) if (t.type === "chest") t.items.forEach((it, i) => CM.affix(it, n, new CM.Random(CM.hashSeed(`${seed}:wingaffix:${n}:${i}`))));
-  return fl;
+  return CM.makeLairs(fl, `${seed}:wing:${n}`);
 };
 
 // an Awakened run: every floor the mirror of itself (x across the middle), done to a floor already made

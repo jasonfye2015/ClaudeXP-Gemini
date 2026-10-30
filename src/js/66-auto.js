@@ -223,6 +223,14 @@ CM.Autopilot = class {
     return "warped";
   }
   // one step: what it did, or false when it has stopped
+  // the light shaded near a sleeper when a Rogue, Ranger or Monk leads; lit again when nothing sleeps close
+  stealth(fl) {
+    const game = this.game; if (!fl || fl.number < 1 || !(game.light && game.light.kind)) return;
+    const lead = game.party.find((h) => h.hp > 0), quiet = lead && ["Rogue", "Ranger", "Monk"].includes(lead.cls), [px, py] = fl.pos;
+    const near = Object.entries(fl.things).some(([k, t]) => { if (t.type !== "monsters" || !t.asleep) return false; const [x, y] = k.split(",").map(Number); return Math.abs(x - px) + Math.abs(y - py) <= 7; });
+    if (quiet && near && !game.lightOut) { game.douse(); this.tools.doused = (this.tools.doused || 0) + 1; }
+    else if (game.lightOut && !(quiet && near)) game.douse();
+  }
   step() {
     const game = this.game;
     if (!this.on) return false;
@@ -261,6 +269,7 @@ CM.Autopilot = class {
       }
       if (f && f.type === "plate" && f.trap && !f.spent && !f.gate && f.known && kit && game.give(game.bag.findIndex((i) => i.kind === "trapkit"), 0) === "") { this.tools.disarmed++; return "disarmed"; }
     }
+    this.stealth(fl);
     this.walk(fl);
     const target = this.pick();
     if (t && t.type === "event" && !t.done && !this.handled.has(fl.number + ":" + here)) {   // (asked once: "walk on" leaves the thing standing)

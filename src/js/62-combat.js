@@ -55,13 +55,23 @@ Object.assign(CM.Game.prototype, {
       + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
+    const sleepers = Boolean(this.strikeSleepers); this.strikeSleepers = false;
+    for (const m of this.foes) if (m.champion && m.hp > 0) {                    // (a champion's word: 61b-lairs.js)
+      if (m.champion === "warded") m.spellWard = 1;
+      if (m.champion === "shadowed" && !this.alive().some((h) => h.cls === "Rogue")) m.hidden = true;
+      if (m.champion === "shadowed" && !m.hidden) this.say(`${this.alive().find((h) => h.cls === "Rogue").name} sees ${CM.the(m)} in the shadows.`);
+    }
+    if (this.foes.some((m) => m.champion)) this.say(`A champion leads them: ${this.foes.filter((m) => m.champion).map((m) => `${m.name} (${CM.CHAMPIONS[m.champion].blurb})`).join("; ")}.`);
     let wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.silence) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
     const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
     const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
     if (ratproof) wary = true;
     if (this.floor && this.floor.number === -1 && CM.weather(this) === "mist") wary = true;   // (mist: nobody is on anybody before they can draw)
     for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
-    if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance((loud ? 0.65 : 0.5) + (CM.newMoon(this) && CM.isNight(this) && this.floor && this.floor.number <= 5 ? 0.1 : 0))) {   // (a moonless night near the surface: they come quieter)   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
+    if (sleepers) {                                                      // asleep: the party's blows fall before they are awake, and all of them land
+      this.say("They are asleep. The party's blows fall before they wake.");
+      this.combat.surprise = true; this.combat.sure = true; this.tally.sleepersStruck = (this.tally.sleepersStruck || 0) + 1;
+    } else if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance((loud ? 0.65 : 0.5) + (CM.newMoon(this) && CM.isNight(this) && this.floor && this.floor.number <= 5 ? 0.1 : 0))) {   // (a moonless night near the surface: they come quieter)   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
@@ -125,7 +135,11 @@ Object.assign(CM.Game.prototype, {
     c.reached = 0;
     const order = [];
     for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + CM.gearProp(h, "init") + (this.buffs && this.buffs.haste === h.name ? 12 : 0) + (c.round === 1 && CM.gearProp(h, "hourglass") ? 3 : 0) + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
-    if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
+    if (!c.surprise) for (const m of this.living()) {
+      order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
+      if (m.champion === "fleet" || (m.champion === "frenzied" && m.hp < m.max / 2)) order.push({ foe: m, init: (m.speed || 10) - 4 });   // (a champion: a second turn)
+      if (m.champion === "stonehide") m.stone = 1;
+    }
     order.sort((a, b) => b.init - a.init);
     for (const h of this.alive()) if (h.familiar === "skull" && c.round > 0) { const foe = this.attackable()[0]; if (foe) this.spellHit(foe, Math.max(1, 2 + Math.floor(h.level / 2)), `${h.name}'s skull bites:`); }
     c.order = order;
@@ -498,6 +512,8 @@ Object.assign(CM.Game.prototype, {
     const c = this.combat || {}, rnd = this.rnd;
     if (m.asleep > 0) { m.asleep--; if (m.asleep === 0) this.say(`The ${m.name} stirs.`); return; }
     if (m.held > 0) { m.held--; this.say(`The ${m.name} is held fast.`); return; }
+    if (m.champion === "shadowed" && m.hidden) { m.hidden = false; this.say(`${CM.The(m)} comes out of the shadows!`); }
+    if (m.champion === "shrieking" && !m.shrieked) { m.shrieked = true; const n = this.wakeFloor(); this.say(`${CM.The(m)} shrieks${n ? " - and all down the floor, things wake and come" : ""}.`); this.sound("elite"); }
     if (m.boss) { this.lichAct(m); return; }
     if (m.guardian) { this.guardianAct(m); return; }
     if (m.ability === "breath" && c.silence) { this.say(`${CM.The(m)} draws breath, and nothing comes.`); return; }
@@ -573,7 +589,7 @@ Object.assign(CM.Game.prototype, {
       }
       if (target.hp > 0 && m.ability === "web" && rnd.chance(0.3) && !target.thrall) { if (this.afflict(target, "paralysis", "the web")) this.say(`${target.name} is wrapped to the knees in web.`); }
       if (target.hp > 0 && m.ability === "carryoff" && target.row === "back" && !target.thrall && rnd.chance(0.3)) { target.rowWas = target.rowWas || "back"; target.row = "front"; this.say(`${CM.The(m)} gets hold of ${target.name} and drags ${target.name} into the front: the formation is broken.`); this.dirty = true; }
-      if (m.ability === "lifesteal") { const back = Math.ceil(dealt / 2); m.hp = Math.min(m.max, m.hp + back); this.say(`The ${m.name} feeds: +${back}.`); }
+      if (m.ability === "lifesteal" || m.champion === "vampiric") { const back = Math.ceil(dealt / 2); m.hp = Math.min(m.max, m.hp + back); this.say(`The ${m.name} feeds: +${back}.`); }
     }
     if (m.blind > 0) m.blind--;
   },
@@ -865,7 +881,7 @@ Object.assign(CM.Game.prototype, {
     const bow = Boolean(hero.weapon && hero.weapon.props && hero.weapon.props.bow), ambush = CM.trait(hero, "ambush") && !hero.struck;
     const dark = this.terrain().includes("dark");
     const weapon = opts.weapon || hero.weapon, wclass = CM.weaponClass(weapon), home = CM.atHome(hero, weapon) || (weapon.props || {}).fists, hide = CM.hideOf(target);
-    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero) * (dark ? 0.85 : 1) * (home ? 1 : CM.CLUMSY))) {
+    if (!opts.sure && !ambush && !(this.combat && this.combat.sure && this.combat.round === 1) && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero) * (dark ? 0.85 : 1) * (home ? 1 : CM.CLUMSY))) {
       this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
       this.sound("miss");
       this.emit("fx", { kind: "miss", foe: target });
@@ -917,6 +933,7 @@ Object.assign(CM.Game.prototype, {
     if (friend && friend.hp <= 0 && !hero.avenged) { hero.avenged = true; dmg *= 2; how += ` - for ${friend.name}`; }
     if (opts.bash && target.chilled > 0) { dmg *= 2; how += " - the ice shatters"; this.combo("shatter"); target.chilled = 0; }
     if (hero.cls === "Rogue" && target.marked) { dmg = Math.ceil(dmg * 1.5); how += " - the knife finds the mark"; this.combo("knife"); }
+    if (target.champion === "stonehide" && target.stone > 0) { target.stone -= 1; this.say(`${hero.name}'s blow glances off ${CM.the(target)}'s stony hide.`); this.emit("fx", { kind: "miss", foe: target }); return 0; }
     if (target.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; target.warded -= 1; }
     if (target.gear && target.gear.offhand && !bow && rnd.chance(0.25)) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - taken on the shield"; }
     if (this.has("glass")) dmg *= 2;
@@ -969,6 +986,7 @@ Object.assign(CM.Game.prototype, {
     if (foe.elite === "mirrored") { dmg = Math.max(1, Math.ceil(dmg / 2)); const back = Math.max(1, Math.ceil(dmg / 2)); if (this.casting && this.casting.hp > 0) { this.casting.hp = Math.max(1, this.casting.hp - back); this.say(`The spell comes back off ${CM.the(foe)}'s mirror onto ${this.casting.name} (-${back}).`); } }
     if (element === "fire" && foe.held > 0) { dmg = Math.ceil(dmg * 1.5); how += " - the vines burn"; this.combo("kindling"); }
     if (element === "storm" && foe.chilled > 0) { dmg *= 2; how += " - the ice carries it"; this.combo("thunderclap"); foe.chilled = 0; }
+    if (foe.spellWard > 0) { foe.spellWard -= 1; this.say(`The ward on ${CM.the(foe)} drinks the spell.`); this.emit("fx", { kind: "miss", foe }); return 0; }
     if (foe.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; foe.warded -= 1; }
     if (this.has("glass")) dmg *= 2;
     dmg = Math.ceil(dmg * this.scholarship(foe));
@@ -1377,7 +1395,7 @@ Object.assign(CM.Game.prototype, {
     const h = this.party[heroIndex];
     if (!h || h.hp <= 0 || !this.canAct(h) || this.mode === "combat") return false;
     const ok = this.useAbility(h, id, target);
-    if (ok) this.saveRun();
+    if (ok) { this.makeNoise(CM.NOISE.spell); this.saveRun(); }
     return ok;
   },
 
@@ -1410,6 +1428,13 @@ Object.assign(CM.Game.prototype, {
       this.say(`The rivals are beaten, and the one in front yields: their purse, and ${best.name} (${CM.itemLabel(best)}).`);
     }
     const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
+    for (const m of slain) if (m.champion && !m.summoned) {               // a champion: its own thing, a hoarder its hoard; counted for the card
+      loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd));
+      if (m.champion === "hoarder") loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd), CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd));
+      this.tally.champions = (this.tally.champions || 0) + 1;
+      if (this.tally.champions >= 5) this.achieve("champions");
+    }
+    this.makeNoise(CM.NOISE.fight);
     if (this.floor.number >= 1 && slain.length && rnd.chance(slain.some((m) => m.elite) ? 1 / CM.HOMECOMING.elite : 1 / CM.HOMECOMING.drop)) loot.push(CM.scroll("homecoming"));   // (the dead carry the way home now and then)
     for (const m of slain) {                                             // what they carried, seen before it was won; and a part that broke
       if (m.gear && m.gear.weapon && rnd.chance(0.6)) loot.push(m.gear.weapon);

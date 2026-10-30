@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v9.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v9.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -525,7 +525,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "9.3", built: "2026-10-30" };
+const CM = window.CM = { version: "9.4", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1439,6 +1439,7 @@ CM.parseRunCode = function (text) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  champions: { name: "Champion-breaker", what: "Slay five champions in one expedition", title: "the Champion-breaker" },
   beyond: { name: "Beyond the Dream", what: "Reach floor 100 in an Endless expedition", title: "Beyond the Dream" },
   bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the fiftieth floor", title: "of the Bottom" },
   crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
@@ -1481,10 +1482,10 @@ CM.ACHIEVEMENTS = {
 CM.titleFor = (achievements) => { const id = Object.keys(CM.ACHIEVEMENTS).find((a) => achievements && achievements[a]); return id ? CM.ACHIEVEMENTS[id].title : ""; };
 // the keys, as the player may set them (Settings > Keys); the arrows always move as well
 CM.DEFAULT_KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", strafeLeft: "KeyQ", strafeRight: "KeyE", use: "Space", inventory: "KeyI",
-  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA", autoPlay: "KeyZ", whereTo: "KeyG", calendar: "KeyK" };
+  cast: "KeyC", journal: "KeyJ", map: "Tab", fight: "KeyF", item: "KeyP", defend: "KeyD", run: "KeyR", explore: "KeyX", auto: "KeyA", autoPlay: "KeyZ", whereTo: "KeyG", calendar: "KeyK", douse: "KeyT" };
 CM.KEY_ACTIONS = [["forward", "forward"], ["back", "back"], ["left", "turn left"], ["right", "turn right"], ["strafeLeft", "sidestep left"], ["strafeRight", "sidestep right"],
   ["use", "use / talk / search"], ["inventory", "inventory"], ["journal", "journal"], ["map", "the automap, large"], ["cast", "cast or use a skill"],
-  ["explore", "walk to the nearest unexplored square (any key stops)"], ["whereTo", "Where to?: on the surface, walk to a door or a place by name"], ["calendar", "the calendar: the hour, the moon, the weather ahead and the festivals"], ["autoPlay", "Automatic: the party plays by itself - on and off (a move key stops it too)"],
+  ["explore", "walk to the nearest unexplored square (any key stops)"], ["whereTo", "Where to?: on the surface, walk to a door or a place by name"], ["calendar", "the calendar: the hour, the moon, the weather ahead and the festivals"], ["douse", "shade the light, or light it again: creep past what sleeps (below ground)"], ["autoPlay", "Automatic: the party plays by itself - on and off (a move key stops it too)"],
   ["fight", "in a fight: fight the chosen foe"], ["item", "in a fight: an item"], ["defend", "in a fight: defend"], ["run", "in a fight: run"], ["auto", "in a fight: the party fights on by itself"]];
 // a gamepad's buttons, by the standard mapping, and what each does unless Settings > Keys says otherwise (the stick and
 // the d-pad - 12 to 15 - always move)
@@ -3533,7 +3534,7 @@ CM.makeFloor = function (number, seed, gen) {
   if (number < 0) return number % 1 === 0 ? CM.makeWood(seed) : CM.makeCave(number, seed, gen);   // (the Deep Wood and its caves, 23b-wood.js)
   if (number % 1 !== 0) return CM.makeWing(number, seed, gen);
   const make = CM.generators[gen || CM.GEN] || CM.generators[1];
-  return CM.furnish(make(number, seed), seed, gen || CM.GEN);
+  return CM.makeLairs(CM.furnish(make(number, seed), seed, gen || CM.GEN), seed);   // (the lairs and champions: 61b-lairs.js, by a hash of their own)
 };
 
 // a wing: the band's short floor beside floor n (number n + 0.5), carved as any floor of the seed's own key, then made
@@ -3557,7 +3558,7 @@ CM.makeWing = function (number, seed, gen) {
   fl.hazard = W.hazard;
   if (W.hazard !== "tide" && W.hazard !== "mirror") { const cells = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = CM.keyOf(x, y); if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && !(x === fl.pos[0] && y === fl.pos[1])) cells.push(k); } for (let i = 0; i < 3 && cells.length; i++) fl.features[cells[CM.hashSeed(`${seed}:winghazard:${n}:${i}`) % cells.length]] = { type: W.hazard, known: false, spent: false }; }
   for (const t of Object.values(fl.things)) if (t.type === "chest") t.items.forEach((it, i) => CM.affix(it, n, new CM.Random(CM.hashSeed(`${seed}:wingaffix:${n}:${i}`))));
-  return fl;
+  return CM.makeLairs(fl, `${seed}:wing:${n}`);
 };
 
 // an Awakened run: every floor the mirror of itself (x across the middle), done to a floor already made
@@ -4782,7 +4783,7 @@ CM.moonPath = (phase, r) => {
 // they were. CM.GEN says which generator wrote a save; a floor whose fingerprint has changed is still loaded, with
 // a word in the log.
 CM.GEN = 2;                                         // the generator a new run gets (CM.generators); a run keeps the one it began with
-CM.SCHEMA = 3;                                      // the run's save format (1: whole floors, before v1.1; 2: floor deltas; 3: items with a base and a finding)
+CM.SCHEMA = 4;                                      // the run's save format (1: whole floors, before v1.1; 2: floor deltas; 3: items with a base and a finding; 4: the light shaded, the noise, a follower and errands - v9.4)
 
 // the parts of a floor that never change once it is made (everything else is diffed against the fresh floor)
 CM.FLOOR_FIXED = ["number", "grid", "dark", "rooms", "decor", "special", "hazard", "kinds", "ground", "canopy", "solidDefault", "glades", "ford"];
@@ -4870,6 +4871,11 @@ CM.MIGRATIONS = {
   3(data) {
     for (const h of data.party || []) for (const slot of CM.SLOTS) if (h && h[slot]) CM.normalizeItem(h[slot]);
     for (const it of data.bag || []) CM.normalizeItem(it);
+    return data;
+  },
+  // 3 -> 4: the light lit and the halls quiet (a run saved before the lairs); the floors' sleepers come from the seed
+  4(data) {
+    data.lightOut = false; data.noiseLevel = 0;
     return data;
   },
 };
@@ -5638,7 +5644,7 @@ CM.motion = function (s) {
   const since = (t) => (t === undefined || t === null ? Infinity : now - t);
   const phase = s.phase || 0;
   if (s.sleeping) {                                                       // lying where it sleeps: no breath to see but a slow rise of its side
-    out.tilt = M.fallTilt * 0.95;
+    out.tilt = Math.PI / 2; out.scale = 0.78;                           // (on its side, low)
     if (!s.reduced) out.scaleY = 1 + Math.sin(now / 1700 + phase) * 0.012;
     return out;
   }
@@ -7951,11 +7957,12 @@ CM.Renderer = class {
         const y0 = 0.5 - h / 2 + lift, y1 = 0.5 + h / 2 + lift;
         corners = [[px - ax * w / 2, y0, pz - az * w / 2], [px + ax * w / 2, y0, pz + az * w / 2], [px + ax * w / 2, y1, pz + az * w / 2], [px - ax * w / 2, y1, pz - az * w / 2]];
       } else if (s.tilt || s.skew || s.scale) {                             // a monster's pose (28-motion.js): toppled about its foot, swaying, shrunk
-        const sc = s.scale || 1, W = w * sc, H = h * sc, sk = (s.skew || 0) * H, side = s.mirror ? 1 : -1, t = s.tilt || 0, c = Math.cos(t), sn = Math.sin(t) * side, px = side * W / 2;
-        corners = [[-W / 2, 0], [W / 2, 0], [W / 2 + sk, H], [-W / 2 + sk, H]].map(([u, v]) => {
-          const uu = t ? px + (u - px) * c + v * sn : u, vv = t ? -(u - px) * sn + v * c : v;
-          return [cx + right[0] * uu, lift + Math.max(0.002, vv), cz + right[2] * uu];
-        });
+        // toppled about the middle of its foot, then let down onto the floor: the picture's clear margin (a fifth of its
+        // width a side) sinks under the floor, so what lies there lies on it
+        const sc = s.scale || 1, W = w * sc, H = h * sc, sk = (s.skew || 0) * H, side = s.mirror ? 1 : -1, t = s.tilt || 0, c = Math.cos(t), sn = Math.sin(t) * side;
+        const P = [[-W / 2, 0], [W / 2, 0], [W / 2 + sk, H], [-W / 2 + sk, H]].map(([u, v]) => (t ? [u * c + v * sn, -u * sn + v * c] : [u, v]));
+        const drop = t ? -Math.min(...P.map((p) => p[1])) - 0.2 * W * Math.abs(Math.sin(t)) : 0, shift = t ? side * 0.15 * W * Math.abs(Math.sin(t)) : 0;
+        corners = P.map(([uu, vv]) => [cx + right[0] * (uu + shift), lift + vv + drop, cz + right[2] * (uu + shift)]);
       } else {
         corners = [[cx - right[0] * w / 2, lift, cz - right[2] * w / 2], [cx + right[0] * w / 2, lift, cz + right[2] * w / 2],
           [cx + right[0] * w / 2, lift + h, cz + right[2] * w / 2], [cx - right[0] * w / 2, lift + h, cz - right[2] * w / 2]];
@@ -8968,7 +8975,7 @@ CM.Game = class {
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
       startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), clock: this.clock || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0, season: this.season || null, farmDay: this.farmDay || 0, festival: this.festival || null,
-      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [] };
+      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [], lightOut: Boolean(this.lightOut), noiseLevel: this.noiseLevel || 0 };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -8995,6 +9002,7 @@ CM.Game = class {
     this.rnd = new CM.Random(typeof d.rng === "number" ? d.rng : CM.hashSeed(`${this.seed}:dice`));
     this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.spellLight = d.spellLight || 0;
+    this.lightOut = Boolean(d.lightOut); this.noiseLevel = d.noiseLevel || 0;   // (the eleventh update's light and noise)
     this.phylactery = Boolean(d.phylactery); this.reminded = Boolean(d.reminded);
     this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld); this.meal = d.meal || null; this.alchemistFree = Boolean(d.alchemistFree);
     if (this.light && this.light.kind === "lantern" && !this.light.left) this.light.left = CM.LANTERN_OIL;   // (a lantern from before v4.4: a flask of oil in it)
@@ -9052,7 +9060,7 @@ CM.Game = class {
     this.gold = 30;
     this.floors = {};
     this.light = { kind: "torch", left: CM.TORCH_STEPS };
-    this.spellLight = 0;
+    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0;
     this.phylactery = false;
     this.combat = null;
     this.messages = [];
@@ -9112,6 +9120,7 @@ CM.Game = class {
 
   // how: "down" (by the stairs, arriving at the top), "up" (arriving at the ladder), "fall" (through the floor at `at`)
   enterFloor(number, how = "down", at = null) {
+    if (number < 1) this.lightOut = false;                               // (above ground: nothing to creep past)
     const fresh = !this.floors[number] && !this.deltas[number];
     const fl = this.floorAt(number);
     if (fl !== this.floor) { this.leaveFloor(); this.stock = null; this.recruits = null; if (this.floor && number % 1 === 0 && this.floor.number % 1 === 0) this.clock = (this.clock || 0) + CM.CLOCK.stair * Math.max(1, Math.abs(number - this.floor.number)); if (this.farmDawns && this.village) this.farmDawns(); }   // (a merchant's table and a tavern's bench belong to where they are; a stair is an hour)
@@ -9281,6 +9290,7 @@ Object.assign(CM.Game.prototype, {
         this.say("The door creaks open.");
       }
       f.open = true;
+      this.makeNoise(CM.NOISE.door);
       this.sound("door");
       this.dirty = true;
       this.emit("change");
@@ -9294,10 +9304,12 @@ Object.assign(CM.Game.prototype, {
     const thing = fl.things[k];
     if (thing && (thing.type === "guardian" || thing.type === "boss") && !thing.parleyed && !thing.group[0].echo && this.openParley(k, thing)) return false;   // (it speaks first)
     if (thing && (thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian")) {
+      if (thing.asleep) { thing.asleep = false; this.strikeSleepers = true; }   // (asleep: the party's blows fall first, and every one lands)
       this.startCombat(k, thing);
       return false;
     }
     fl.pos = [x, y];
+    if (fl.number >= 1) this.makeNoise(this.stepNoise());              // (the step's noise: 61b-lairs.js)
     this.clock = (this.clock || 0) + 1;                                  // (a step is a minute)
     this.sound("step");
     this.burn();
@@ -9484,6 +9496,7 @@ Object.assign(CM.Game.prototype, {
       this.spellLight -= 1;
       if (this.spellLight === 0) this.say("The conjured light fades.");
     }
+    if (this.lightOut) return;                                           // (a shaded light does not burn down)
     const l = this.light;
     if (l.kind === "lantern") {                                          // a lantern burns one step in two, and a flask of oil at a time
       if ((this.steps || 0) % 2 === 0) l.left -= 1;
@@ -9516,14 +9529,14 @@ Object.assign(CM.Game.prototype, {
   lightFactor() {
     if (this.floor && this.floor.number === 0) return CM.isNight(this) ? 0.8 : 1.3;   // (daylight, or the lanterns)
     if (this.floor && this.floor.number === -1) return (CM.isNight(this) ? (this.light.kind ? 0.55 : 0.35) : 1.2) * (CM.weather(this) === "mist" ? 0.8 : 1);   // (the Wood: daylight under the leaves, or a torch in the dark)
-    const l = this.light, spell = this.spellLight > 0;
+    const l = this.lightOut && !(this.spellLight > 0) ? {} : this.light, spell = this.spellLight > 0;   // (doused: as dark as no light at all)
     if (this.inDark()) return spell ? 0.7 : l.kind === "lantern" ? 0.45 : 0.25;
     let f = l.kind === "lantern" ? 1.15 : l.kind === "glow" ? 0.6 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
     if (spell) f = Math.max(f, 1.1);
     return f;
   },
 
-  hasLight() { return Boolean(this.light.kind) || this.spellLight > 0 || Boolean(this.floor && this.floor.number === -1 && !CM.isNight(this)); },   // (the Wood by day is lit by the sky)
+  hasLight() { return (Boolean(this.light.kind) && !(this.lightOut && this.floor && this.floor.number >= 1)) || this.spellLight > 0 || Boolean(this.floor && this.floor.number === -1 && !CM.isNight(this)); },   // (the Wood by day is lit by the sky)
 
   // what the party can see goes on the automap: around them, and along the corridor they face - by torchlight
   look() {
@@ -9650,7 +9663,7 @@ Object.assign(CM.Game.prototype, {
       this.gold += gold; this.count("goldFound", gold);
       if (fl.number >= 3 && CM.hashSeed(`${this.seed}:homecoming:${fl.number}:${k}`) % CM.HOMECOMING.chest === 0) thing.items.push(CM.scroll("homecoming"));   // (one chest in twenty carries the way home)
       this.gain(thing.items, "chest");
-      this.sound("chest");
+      this.sound("chest"); this.makeNoise(CM.NOISE.chest);
       this.count("chests");
       this.emit("fx", { kind: "sparkle", at: [x, y] });
       const found = thing.items.map((i) => (i.unknown ? `${CM.baseName(i)} (unknown)` : `${i.name} (${CM.itemLabel(i)})`)).join(", ");
@@ -9824,7 +9837,8 @@ Object.assign(CM.Game.prototype, {
       const [x, y] = k.split(",").map(Number);
       for (const [dx, dy] of CM.DIRS) { const bf = fl.features[keyOf(x + dx, y + dy)]; if (bf && bf.type === "door" && bf.barred) { bf.hits = (bf.hits || 0) + 1; if (bf.hits >= CM.DOOR_BREAK) { bf.barred = 0; bf.open = true; bf.hits = 0; this.sound("grind"); this.say("Wood splinters somewhere close: a barred door has given."); } else this.say("Something heavy throws itself against a barred door."); } }
     }
-    const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still && !(t.fedUntil > (this.steps || 0)));
+    this.wakeSleepers();                                                 // (the light and the noise reach the lairs: 61b-lairs.js)
+    const movers = Object.entries(fl.things).filter(([, t]) => t.type === "monsters" && !t.still && !t.asleep && !(t.fedUntil > (this.steps || 0)));
     this.rnd.shuffle(movers);
     for (const [k, t] of movers) {
       const [x, y] = k.split(",").map(Number);
@@ -9843,7 +9857,7 @@ Object.assign(CM.Game.prototype, {
         const nearer = options.filter(([nx, ny]) => baitDist.get(keyOf(nx, ny)) === bd - 1 && !(nx === px && ny === py));
         if (nearer.length) step = this.rnd.pick(nearer);
         if (!step && bd === 1) step = fl.bait.at.split(",").map(Number);
-      } else if (d !== undefined && (d <= 7 || t.hunter || this.has("hunted")) && !(fl.number === -1 && CM.weather(this) === "mist" && d > 2)) {   // (mist in the Wood: the hunters find the party late)
+      } else if (d !== undefined && (d <= 7 || t.hunter || t.hunting > 0 || this.has("hunted")) && !(fl.number === -1 && CM.weather(this) === "mist" && d > 2)) {   // (mist in the Wood: the hunters find the party late)
         const nearer = options.filter(([nx, ny]) => dist.get(keyOf(nx, ny)) === d - 1 && !(nx === px && ny === py));
         if (nearer.length) step = this.rnd.pick(nearer);
       } else if (this.rnd.chance(0.3) && options.length) {
@@ -9929,7 +9943,7 @@ Object.assign(CM.Game.prototype, {
     const got = []; for (let i = 0; i < n; i++) got.push(CM.oreChunk(ore)); this.gain(got, "vein"); this.tally.mined = (this.tally.mined || 0) + n; this.countUse("mine");
     thing.left -= 1; if (thing.left <= 0) delete fl.things[k];
     this.sound("grind"); this.say(`${pick.name} into the rock: ${CM.plural(n, CM.ORES[ore].name + " chunk")}${thing.left > 0 ? `, and more in the vein (${thing.left} swing${thing.left === 1 ? "" : "s"})` : ", and the vein is worked out"}.${pick.points <= 0 ? ` The ${pick.name} is blunt.` : ""}`);
-    this.noise(); this.dirty = true; this.saveRun(); this.emit("change");
+    this.noise(); this.makeNoise(CM.NOISE.mine); this.dirty = true; this.saveRun(); this.emit("change");
   },
   noise() {                                                              // a swing rings down the halls: the nearest band comes a square closer
     const fl = this.floor, dist = CM.distances(fl.grid, fl.pos, (x, y) => CM.passable(fl, x, y)); let nearest = null;
@@ -9968,6 +9982,7 @@ Object.assign(CM.Game.prototype, {
   overweight() { return CM.bagWeight(this.bag) / CM.carryCap(this.party); },
   // nothing burning and a torch in the pack: light it (a torch found after the last went out is lit when it's wanted)
   lightSpare() {
+    if (this.lightOut) return;                                           // (shaded on purpose: not lit behind the party's back)
     if (this.light && this.light.kind) return false;
     if (this.floor && (this.floor.number === 0 || (this.floor.number === -1 && !CM.isNight(this)))) return false;   // (daylight: no need)
     const spare = this.bag.findIndex((i) => i.kind === "torch");
@@ -10338,6 +10353,164 @@ Object.assign(CM.Game.prototype, {
 });
 }
 
+// ---- 61b-lairs.js ----
+"use strict";
+// The living dungeon (the eleventh update, phase 1): lairs and sleepers, the party's light and noise, sneaking, and
+// champions. Laid over a floor after it is made (CM.makeLairs, from a hash of its own - the floor's walls, chests and
+// way down never move, and its fingerprint is the same), and read by the monsters' turn (wanderMonsters), the step
+// (move) and the fight.
+//
+//   a pack asleep (thing.asleep) lies where it is and does not wander; the party's light seen down a straight line
+//   wakes it at once, the party's noise (this.noiseLevel, squares of reach through open floor, a closed door costing
+//   four) may wake it each turn; a woken pack hunts (thing.hunting, turns) - it comes for the party from anywhere
+//   on the floor. Walking into a sleeping pack gives a free round in which every blow lands.
+//   the torch doused (this.lightOut): no light to be seen by, half the noise, and two squares of sight; a Rogue,
+//   Ranger or Monk in front halves the noise again.
+//   champions: a leader with a word (CM.CHAMPIONS), from floor CM.CHAMPION_FROM, a quarter of the packs.
+CM.LAIR = { share: 0.6, wakeChance: 0.5, noiseDecay: 0.5, doorCost: 4, hunt: 24, lairReach: 3, fromStair: 5 };
+CM.LIGHT_REACH = { torch: 8, lantern: 10, glow: 5, spell: 8, low: 6 };
+CM.NOISE = { step: 2, heavy: 2, run: 1, door: 4, chest: 4, fight: 9, spell: 4, mine: 8 };
+CM.CHAMPION_FROM = 6;
+CM.CHAMPION_SHARE = 0.25;
+CM.CHAMPIONS = {
+  warded: { name: "Warded", blurb: "a ward that drinks the first spell cast at it" },
+  frenzied: { name: "Frenzied", blurb: "under half its strength, it strikes twice a round" },
+  shrieking: { name: "Shrieking", blurb: "its first cry wakes every lair on the floor" },
+  shadowed: { name: "Shadowed", blurb: "unseen until it strikes - a Rogue sees it" },
+  stonehide: { name: "Stonehide", blurb: "the first blow a round glances off" },
+  vampiric: { name: "Vampiric", blurb: "its blows feed it" },
+  hoarder: { name: "Hoarder", blurb: "carries a chest's worth" },
+  fleet: { name: "Fleet", blurb: "acts twice a round" },
+};
+
+// a champion: the pack's leader, named for its word, tougher, worth more
+CM.makeChampion = function (t, id) {
+  const C = CM.CHAMPIONS[id], m = t.group[0];
+  if (!C || !m || m.elite || m.champion) return t;
+  m.champion = id; m.name = `${C.name} ${m.name}`;
+  m.max = Math.round(m.max * 1.4); m.hp = m.max; m.xp = Math.round(m.xp * 2); m.gold = Math.round(m.gold * (id === "hoarder" ? 6 : 2));
+  if (id === "fleet") m.speed = (m.speed || 10) + 4;
+  t.champion = id;
+  return t;
+};
+
+// the lairs, laid over a fresh floor: three packs in five asleep, a sleeper drawn into the nearest dead end within
+// three squares (if one is free and not by the stair); a quarter of the packs below CM.CHAMPION_FROM led by a champion
+CM.makeLairs = function (fl, seed) {
+  if (!fl || !(fl.number >= 1) || !fl.things) return fl;
+  const start = fl.pos || [1, 1], open = (x, y) => CM.isOpen(fl, x, y), fromStart = CM.distances(fl.grid, start, open);
+  const deadEnd = (x, y) => CM.openNeighbours(fl, x, y).length === 1;
+  for (const k of Object.keys(fl.things).sort()) {
+    const t = fl.things[k];
+    if (!t || t.type !== "monsters" || t.still || t.hunter || t.wood || t.mimicOf || !t.group || !t.group.length) continue;
+    const h = CM.hashSeed(`${seed}:lair:${fl.number}:${k}`), roll = (n) => (Math.floor(h / n) % 1000) / 1000;
+    if (fl.number >= CM.CHAMPION_FROM && roll(1) < CM.CHAMPION_SHARE) { const ids = Object.keys(CM.CHAMPIONS); CM.makeChampion(t, ids[Math.floor(h / 7) % ids.length]); }
+    if (roll(1000) >= CM.LAIR.share) continue;
+    t.asleep = true;
+    const [x, y] = k.split(",").map(Number);
+    if (deadEnd(x, y)) continue;
+    const near = CM.distances(fl.grid, [x, y], open), spots = [];
+    for (const [nk, d] of near) {
+      if (d < 1 || d > CM.LAIR.lairReach || fl.things[nk] || fl.features[nk]) continue;
+      const [nx, ny] = nk.split(",").map(Number);
+      if (deadEnd(nx, ny) && (fromStart.get(nk) || 0) > CM.LAIR.fromStair) spots.push([d, nk]);
+    }
+    spots.sort((a, b) => a[0] - b[0] || (a[1] < b[1] ? -1 : 1));
+    if (spots.length) { delete fl.things[k]; fl.things[spots[0][1]] = t; }
+  }
+  return fl;
+};
+
+// how far noise carries: open floor a square a square, a closed door CM.LAIR.doorCost; walls stop it
+CM.noiseDistances = function (fl, from) {
+  const size = fl.grid.length, out = new Map([[`${from[0]},${from[1]}`, 0]]), queue = [[from[0], from[1], 0]];
+  while (queue.length) {
+    queue.sort((a, b) => a[2] - b[2]);
+    const [x, y, d] = queue.shift();
+    for (const [dx, dy] of CM.DIRS) {
+      const nx = x + dx, ny = y + dy, nk = `${nx},${ny}`;
+      if (nx < 0 || ny < 0 || nx >= size || ny >= size || fl.grid[ny][nx] !== 0) continue;
+      const f = fl.features[nk], cost = f && (f.type === "door" || f.type === "gate") && !f.open ? CM.LAIR.doorCost : 1;
+      if (out.has(nk) && out.get(nk) <= d + cost) continue;
+      out.set(nk, d + cost); queue.push([nx, ny, d + cost]);
+    }
+  }
+  return out;
+};
+
+Object.assign(CM.Game.prototype, {
+  // the reach of the party's light, in squares: what a sleeper down a straight corridor sees of it
+  lightReach() {
+    const fl = this.floor;
+    if (!fl || fl.number < 1 || this.inDark()) return 0;
+    if (this.spellLight > 0) return CM.LIGHT_REACH.spell;
+    if (this.lightOut) return 0;
+    const l = this.light || {};
+    if (l.kind === "torch") return l.left > 40 ? CM.LIGHT_REACH.torch : CM.LIGHT_REACH.low;
+    return CM.LIGHT_REACH[l.kind] || 0;
+  },
+  // a sleeper at k sees the light: on the party's row or column, within the reach, nothing shut between
+  seesLight(k, reach) {
+    const fl = this.floor, [x, y] = k.split(",").map(Number), [px, py] = fl.pos;
+    if (x !== px && y !== py) return false;
+    const d = Math.abs(x - px) + Math.abs(y - py);
+    if (d > reach || d === 0) return false;
+    const sx = Math.sign(x - px), sy = Math.sign(y - py);
+    for (let i = 1; i < d; i++) {
+      const cx = px + sx * i, cy = py + sy * i, f = fl.features[`${cx},${cy}`];
+      if (!CM.isOpen(fl, cx, cy) || (f && (f.type === "door" || f.type === "gate") && !f.open) || fl.dark.includes(`${cx},${cy}`)) return false;
+    }
+    return true;
+  },
+  makeNoise(n) { this.noiseLevel = Math.max(this.noiseLevel || 0, n); },
+  // a step's noise: heavy armour rings, a walk by itself hurries; doused, half; a quiet one in front, half again
+  stepNoise() {
+    const alive = this.alive(), lead = this.party.find((h) => h.hp > 0);
+    let n = CM.NOISE.step;
+    if (alive.some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate")) n += CM.NOISE.heavy;
+    if (this.travel) n += CM.NOISE.run;
+    if (this.lightOut) n /= 2;
+    if (lead && ["Rogue", "Ranger", "Monk"].includes(lead.cls)) n /= 2;
+    return Math.max(1, Math.round(n));
+  },
+  // the torch: doused to creep past what sleeps, or lit again (below ground only; nothing to douse, nothing done)
+  douse() {
+    if (this.mode !== "explore" || !this.floor || this.floor.number < 1) return false;
+    if (!this.lightOut && !(this.light && this.light.kind)) { this.say("There is no light to douse."); return false; }
+    this.logAct("douse");
+    this.lightOut = !this.lightOut;
+    if (this.lightOut) this.say(`You shade the ${this.light.kind === "lantern" ? "lantern" : this.light.kind === "glow" ? "glow stone" : "torch"}. The dark comes close - two squares - and the party goes quiet.`);
+    else this.say("The light again: the walls come back.");
+    this.look(); this.dirty = true; this.emit("change");
+    return true;
+  },
+  // every sleeper on the floor wakes, and hunts
+  wakeFloor() {
+    const fl = this.floor; let n = 0;
+    for (const t of Object.values(fl.things)) if (t.type === "monsters" && t.asleep) { t.asleep = false; t.hunting = CM.LAIR.hunt; n++; }
+    if (n) this.dirty = true;
+    return n;
+  },
+  // the monsters' turn, first: the light and the noise reach the sleepers; then the noise dies away
+  wakeSleepers() {
+    const fl = this.floor;
+    if (!fl || fl.number < 1) return;
+    const reach = this.lightReach(), noise = this.noiseLevel || 0, heard = noise ? CM.noiseDistances(fl, fl.pos) : null;
+    let byLight = 0, byNoise = 0;
+    for (const k of Object.keys(fl.things).sort()) {
+      const t = fl.things[k];
+      if (t.type !== "monsters") continue;
+      if (t.hunting > 0) t.hunting -= 1;
+      if (!t.asleep) continue;
+      if (reach && this.seesLight(k, reach)) { t.asleep = false; t.hunting = CM.LAIR.hunt; byLight++; continue; }
+      const d = heard ? heard.get(k) : undefined;
+      if (d !== undefined && d <= noise && this.rnd.chance(CM.LAIR.wakeChance)) { t.asleep = false; t.hunting = CM.LAIR.hunt; byNoise++; }
+    }
+    if (byLight || byNoise) { this.dirty = true; this.tally.woken = (this.tally.woken || 0) + byLight + byNoise; this.say(byLight ? "Down the corridor, something lifts its head into your light." : "Somewhere close, something wakes at the noise."); }
+    this.noiseLevel = Math.floor(noise * CM.LAIR.noiseDecay);
+  },
+});
+
 // ---- 62-combat.js ----
 "use strict";
 // The fight: turn by turn in order of speed, the heroes' blows, spells and skills, the monsters' ways, the Lich King
@@ -10396,13 +10569,23 @@ Object.assign(CM.Game.prototype, {
       + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
+    const sleepers = Boolean(this.strikeSleepers); this.strikeSleepers = false;
+    for (const m of this.foes) if (m.champion && m.hp > 0) {                    // (a champion's word: 61b-lairs.js)
+      if (m.champion === "warded") m.spellWard = 1;
+      if (m.champion === "shadowed" && !this.alive().some((h) => h.cls === "Rogue")) m.hidden = true;
+      if (m.champion === "shadowed" && !m.hidden) this.say(`${this.alive().find((h) => h.cls === "Rogue").name} sees ${CM.the(m)} in the shadows.`);
+    }
+    if (this.foes.some((m) => m.champion)) this.say(`A champion leads them: ${this.foes.filter((m) => m.champion).map((m) => `${m.name} (${CM.CHAMPIONS[m.champion].blurb})`).join("; ")}.`);
     let wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.silence) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
     const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
     const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
     if (ratproof) wary = true;
     if (this.floor && this.floor.number === -1 && CM.weather(this) === "mist") wary = true;   // (mist: nobody is on anybody before they can draw)
     for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
-    if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance((loud ? 0.65 : 0.5) + (CM.newMoon(this) && CM.isNight(this) && this.floor && this.floor.number <= 5 ? 0.1 : 0))) {   // (a moonless night near the surface: they come quieter)   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
+    if (sleepers) {                                                      // asleep: the party's blows fall before they are awake, and all of them land
+      this.say("They are asleep. The party's blows fall before they wake.");
+      this.combat.surprise = true; this.combat.sure = true; this.tally.sleepersStruck = (this.tally.sleepersStruck || 0) + 1;
+    } else if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance((loud ? 0.65 : 0.5) + (CM.newMoon(this) && CM.isNight(this) && this.floor && this.floor.number <= 5 ? 0.1 : 0))) {   // (a moonless night near the surface: they come quieter)   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
@@ -10466,7 +10649,11 @@ Object.assign(CM.Game.prototype, {
     c.reached = 0;
     const order = [];
     for (const h of this.party) if (h.hp > 0) order.push({ hero: h, init: this.stat(h, "dex") + (["Rogue", "Ranger", "Monk"].includes(h.cls) ? 2 : 0) + CM.weightInit(h) + CM.gearProp(h, "init") + (this.buffs && this.buffs.haste === h.name ? 12 : 0) + (c.round === 1 && CM.gearProp(h, "hourglass") ? 3 : 0) + (CM.weaponClass(h.weapon) === "dagger" && CM.atHome(h, h.weapon) ? 2 : 0) + (c.oiled ? 3 : 0) + (h.boots && !h.boots.unknown ? h.boots.power : 0) + this.rnd.int(1, 6) + 0.5 });
-    if (!c.surprise) for (const m of this.living()) order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
+    if (!c.surprise) for (const m of this.living()) {
+      order.push({ foe: m, init: (m.speed || 10) + this.rnd.int(1, 6) });
+      if (m.champion === "fleet" || (m.champion === "frenzied" && m.hp < m.max / 2)) order.push({ foe: m, init: (m.speed || 10) - 4 });   // (a champion: a second turn)
+      if (m.champion === "stonehide") m.stone = 1;
+    }
     order.sort((a, b) => b.init - a.init);
     for (const h of this.alive()) if (h.familiar === "skull" && c.round > 0) { const foe = this.attackable()[0]; if (foe) this.spellHit(foe, Math.max(1, 2 + Math.floor(h.level / 2)), `${h.name}'s skull bites:`); }
     c.order = order;
@@ -10839,6 +11026,8 @@ Object.assign(CM.Game.prototype, {
     const c = this.combat || {}, rnd = this.rnd;
     if (m.asleep > 0) { m.asleep--; if (m.asleep === 0) this.say(`The ${m.name} stirs.`); return; }
     if (m.held > 0) { m.held--; this.say(`The ${m.name} is held fast.`); return; }
+    if (m.champion === "shadowed" && m.hidden) { m.hidden = false; this.say(`${CM.The(m)} comes out of the shadows!`); }
+    if (m.champion === "shrieking" && !m.shrieked) { m.shrieked = true; const n = this.wakeFloor(); this.say(`${CM.The(m)} shrieks${n ? " - and all down the floor, things wake and come" : ""}.`); this.sound("elite"); }
     if (m.boss) { this.lichAct(m); return; }
     if (m.guardian) { this.guardianAct(m); return; }
     if (m.ability === "breath" && c.silence) { this.say(`${CM.The(m)} draws breath, and nothing comes.`); return; }
@@ -10914,7 +11103,7 @@ Object.assign(CM.Game.prototype, {
       }
       if (target.hp > 0 && m.ability === "web" && rnd.chance(0.3) && !target.thrall) { if (this.afflict(target, "paralysis", "the web")) this.say(`${target.name} is wrapped to the knees in web.`); }
       if (target.hp > 0 && m.ability === "carryoff" && target.row === "back" && !target.thrall && rnd.chance(0.3)) { target.rowWas = target.rowWas || "back"; target.row = "front"; this.say(`${CM.The(m)} gets hold of ${target.name} and drags ${target.name} into the front: the formation is broken.`); this.dirty = true; }
-      if (m.ability === "lifesteal") { const back = Math.ceil(dealt / 2); m.hp = Math.min(m.max, m.hp + back); this.say(`The ${m.name} feeds: +${back}.`); }
+      if (m.ability === "lifesteal" || m.champion === "vampiric") { const back = Math.ceil(dealt / 2); m.hp = Math.min(m.max, m.hp + back); this.say(`The ${m.name} feeds: +${back}.`); }
     }
     if (m.blind > 0) m.blind--;
   },
@@ -11206,7 +11395,7 @@ Object.assign(CM.Game.prototype, {
     const bow = Boolean(hero.weapon && hero.weapon.props && hero.weapon.props.bow), ambush = CM.trait(hero, "ambush") && !hero.struck;
     const dark = this.terrain().includes("dark");
     const weapon = opts.weapon || hero.weapon, wclass = CM.weaponClass(weapon), home = CM.atHome(hero, weapon) || (weapon.props || {}).fists, hide = CM.hideOf(target);
-    if (!opts.sure && !ambush && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero) * (dark ? 0.85 : 1) * (home ? 1 : CM.CLUMSY))) {
+    if (!opts.sure && !ambush && !(this.combat && this.combat.sure && this.combat.round === 1) && !(bow && CM.trait(hero, "truearrow")) && !rnd.chance(this.hitChance(hero) * (dark ? 0.85 : 1) * (home ? 1 : CM.CLUMSY))) {
       this.say(`${hero.name} misses${note ? " with" + note : ""}.`);
       this.sound("miss");
       this.emit("fx", { kind: "miss", foe: target });
@@ -11258,6 +11447,7 @@ Object.assign(CM.Game.prototype, {
     if (friend && friend.hp <= 0 && !hero.avenged) { hero.avenged = true; dmg *= 2; how += ` - for ${friend.name}`; }
     if (opts.bash && target.chilled > 0) { dmg *= 2; how += " - the ice shatters"; this.combo("shatter"); target.chilled = 0; }
     if (hero.cls === "Rogue" && target.marked) { dmg = Math.ceil(dmg * 1.5); how += " - the knife finds the mark"; this.combo("knife"); }
+    if (target.champion === "stonehide" && target.stone > 0) { target.stone -= 1; this.say(`${hero.name}'s blow glances off ${CM.the(target)}'s stony hide.`); this.emit("fx", { kind: "miss", foe: target }); return 0; }
     if (target.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; target.warded -= 1; }
     if (target.gear && target.gear.offhand && !bow && rnd.chance(0.25)) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - taken on the shield"; }
     if (this.has("glass")) dmg *= 2;
@@ -11310,6 +11500,7 @@ Object.assign(CM.Game.prototype, {
     if (foe.elite === "mirrored") { dmg = Math.max(1, Math.ceil(dmg / 2)); const back = Math.max(1, Math.ceil(dmg / 2)); if (this.casting && this.casting.hp > 0) { this.casting.hp = Math.max(1, this.casting.hp - back); this.say(`The spell comes back off ${CM.the(foe)}'s mirror onto ${this.casting.name} (-${back}).`); } }
     if (element === "fire" && foe.held > 0) { dmg = Math.ceil(dmg * 1.5); how += " - the vines burn"; this.combo("kindling"); }
     if (element === "storm" && foe.chilled > 0) { dmg *= 2; how += " - the ice carries it"; this.combo("thunderclap"); foe.chilled = 0; }
+    if (foe.spellWard > 0) { foe.spellWard -= 1; this.say(`The ward on ${CM.the(foe)} drinks the spell.`); this.emit("fx", { kind: "miss", foe }); return 0; }
     if (foe.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; foe.warded -= 1; }
     if (this.has("glass")) dmg *= 2;
     dmg = Math.ceil(dmg * this.scholarship(foe));
@@ -11718,7 +11909,7 @@ Object.assign(CM.Game.prototype, {
     const h = this.party[heroIndex];
     if (!h || h.hp <= 0 || !this.canAct(h) || this.mode === "combat") return false;
     const ok = this.useAbility(h, id, target);
-    if (ok) this.saveRun();
+    if (ok) { this.makeNoise(CM.NOISE.spell); this.saveRun(); }
     return ok;
   },
 
@@ -11751,6 +11942,13 @@ Object.assign(CM.Game.prototype, {
       this.say(`The rivals are beaten, and the one in front yields: their purse, and ${best.name} (${CM.itemLabel(best)}).`);
     }
     const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
+    for (const m of slain) if (m.champion && !m.summoned) {               // a champion: its own thing, a hoarder its hoard; counted for the card
+      loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd));
+      if (m.champion === "hoarder") loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd), CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd));
+      this.tally.champions = (this.tally.champions || 0) + 1;
+      if (this.tally.champions >= 5) this.achieve("champions");
+    }
+    this.makeNoise(CM.NOISE.fight);
     if (this.floor.number >= 1 && slain.length && rnd.chance(slain.some((m) => m.elite) ? 1 / CM.HOMECOMING.elite : 1 / CM.HOMECOMING.drop)) loot.push(CM.scroll("homecoming"));   // (the dead carry the way home now and then)
     for (const m of slain) {                                             // what they carried, seen before it was won; and a part that broke
       if (m.gear && m.gear.weapon && rnd.chance(0.6)) loot.push(m.gear.weapon);
@@ -14237,6 +14435,14 @@ CM.Autopilot = class {
     return "warped";
   }
   // one step: what it did, or false when it has stopped
+  // the light shaded near a sleeper when a Rogue, Ranger or Monk leads; lit again when nothing sleeps close
+  stealth(fl) {
+    const game = this.game; if (!fl || fl.number < 1 || !(game.light && game.light.kind)) return;
+    const lead = game.party.find((h) => h.hp > 0), quiet = lead && ["Rogue", "Ranger", "Monk"].includes(lead.cls), [px, py] = fl.pos;
+    const near = Object.entries(fl.things).some(([k, t]) => { if (t.type !== "monsters" || !t.asleep) return false; const [x, y] = k.split(",").map(Number); return Math.abs(x - px) + Math.abs(y - py) <= 7; });
+    if (quiet && near && !game.lightOut) { game.douse(); this.tools.doused = (this.tools.doused || 0) + 1; }
+    else if (game.lightOut && !(quiet && near)) game.douse();
+  }
   step() {
     const game = this.game;
     if (!this.on) return false;
@@ -14275,6 +14481,7 @@ CM.Autopilot = class {
       }
       if (f && f.type === "plate" && f.trap && !f.spent && !f.gate && f.known && kit && game.give(game.bag.findIndex((i) => i.kind === "trapkit"), 0) === "") { this.tools.disarmed++; return "disarmed"; }
     }
+    this.stealth(fl);
     this.walk(fl);
     const target = this.pick();
     if (t && t.type === "event" && !t.done && !this.handled.has(fl.number + ":" + here)) {   // (asked once: "walk on" leaves the thing standing)
@@ -16669,6 +16876,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
     let lit = l.kind === "lantern" ? (l.left > 60 ? `Lantern: ${l.left} steps of oil` : `Lantern burning low: ${l.left}`) : l.kind === "glow" ? "Glow stone: a cold light that lasts" : l.kind === "torch" ? (l.left > 40 ? `Torch: ${l.left} steps left` : `Torch burning low: ${l.left}`) : "No light!";
+    if (g.lightOut && fl && fl.number >= 1) lit = `${l.kind === "lantern" ? "Lantern" : l.kind === "glow" ? "Glow stone" : "Torch"} shaded: creeping in the dark (T)`;
     if (g.spellLight > 0) lit += ` - conjured light: ${g.spellLight} steps`;
     if (fl && g.inDark()) lit += " - a magical dark";
     light.textContent = lit;
@@ -16761,13 +16969,13 @@ Object.assign(CM.UI.prototype, {
     box.classList.remove("combat");
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
-        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 ? [["Where to? (G)", () => this.openWhereTo()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
+        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 ? [["Where to? (G)", () => this.openWhereTo()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ...(g.floor && g.floor.number >= 1 && (g.light.kind || g.lightOut) ? [[g.lightOut ? "Light (T)" : "Douse (T)", () => { g.douse(); this.refresh(); }]] : []), ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")], [CM.t("camp.bounty"), () => { const note = g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty(); if (note) g.say(note); this.refresh(); }],
         ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Guild", () => this.openSecond()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
         ["Back up the shaft", () => g.backUp()], [CM.t("town.home"), () => { const note = g.goHome(); if (note) g.say(note); }], ["Go deeper", () => g.leaveCamp()], [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
-    const key = g.mode + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
+    const key = g.mode + ":" + (g.floor ? (g.floor.number <= 0 && g.floor.number % 1 === 0 ? "s" : "d") : "") + (g.lightOut ? "o" : "") + (g.light && g.light.kind ? "l" : "") + (g.autoOn && g.autoOn() ? "a" : "") + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
     if (box.dataset.mode === key) return;
     box.innerHTML = "";
     box.dataset.mode = key;
@@ -18110,7 +18318,7 @@ window.addEventListener("DOMContentLoaded", () => {
         const M = CM.motion({ now, phase: x * 2.1 + y * 1.3, sleeping: Boolean(thing.asleep), sway: Boolean(m.boss), reduced: CM.reducedMotion });   // (alive: it breathes; asleep, it lies)
         const side = (x + 0.5 - renderer.eye[0]) * right[0] + (y + 0.5 - renderer.eye[2]) * right[1];
         out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, !thing.asleep && Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * M.scaleY, shade: (m.elite || thing.champion ? 1.2 : 1) * (thing.asleep ? 0.85 : 1), alpha: m.echo ? 0.78 : 1,
-          tilt: M.tilt, skew: M.skew, mirror: CM.facesMirror(side), flash: thing.champion && !CM.reducedMotion ? 0.12 + 0.08 * Math.sin(now / 300) : 0,
+          tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: CM.facesMirror(side), flash: thing.champion && !CM.reducedMotion ? 0.12 + 0.08 * Math.sin(now / 300) : 0,
           lift: thing.asleep ? 0 : Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (awake: it sways; a ghost floats; a champion glints)
       }
     }
@@ -18248,6 +18456,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
     if (e.code === K.journal && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
     if (e.code === K.calendar && (game.mode === "explore" || game.mode === "camp")) { ui.openCalendar(); return; }
+    if (e.code === K.douse && game.mode === "explore" && game.floor && game.floor.number >= 1) { game.douse(); ui.refresh(); return; }
     if (e.code === K.whereTo && game.mode === "explore" && game.floor && game.floor.number <= 0 && game.floor.number % 1 === 0) { ui.openWhereTo(); return; }
     if (game.mode === "explore") {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }

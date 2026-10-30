@@ -291,11 +291,12 @@ CM.Renderer = class {
         const y0 = 0.5 - h / 2 + lift, y1 = 0.5 + h / 2 + lift;
         corners = [[px - ax * w / 2, y0, pz - az * w / 2], [px + ax * w / 2, y0, pz + az * w / 2], [px + ax * w / 2, y1, pz + az * w / 2], [px - ax * w / 2, y1, pz - az * w / 2]];
       } else if (s.tilt || s.skew || s.scale) {                             // a monster's pose (28-motion.js): toppled about its foot, swaying, shrunk
-        const sc = s.scale || 1, W = w * sc, H = h * sc, sk = (s.skew || 0) * H, side = s.mirror ? 1 : -1, t = s.tilt || 0, c = Math.cos(t), sn = Math.sin(t) * side, px = side * W / 2;
-        corners = [[-W / 2, 0], [W / 2, 0], [W / 2 + sk, H], [-W / 2 + sk, H]].map(([u, v]) => {
-          const uu = t ? px + (u - px) * c + v * sn : u, vv = t ? -(u - px) * sn + v * c : v;
-          return [cx + right[0] * uu, lift + Math.max(0.002, vv), cz + right[2] * uu];
-        });
+        // toppled about the middle of its foot, then let down onto the floor: the picture's clear margin (a fifth of its
+        // width a side) sinks under the floor, so what lies there lies on it
+        const sc = s.scale || 1, W = w * sc, H = h * sc, sk = (s.skew || 0) * H, side = s.mirror ? 1 : -1, t = s.tilt || 0, c = Math.cos(t), sn = Math.sin(t) * side;
+        const P = [[-W / 2, 0], [W / 2, 0], [W / 2 + sk, H], [-W / 2 + sk, H]].map(([u, v]) => (t ? [u * c + v * sn, -u * sn + v * c] : [u, v]));
+        const drop = t ? -Math.min(...P.map((p) => p[1])) - 0.2 * W * Math.abs(Math.sin(t)) : 0, shift = t ? side * 0.15 * W * Math.abs(Math.sin(t)) : 0;
+        corners = P.map(([uu, vv]) => [cx + right[0] * (uu + shift), lift + vv + drop, cz + right[2] * (uu + shift)]);
       } else {
         corners = [[cx - right[0] * w / 2, lift, cz - right[2] * w / 2], [cx + right[0] * w / 2, lift, cz + right[2] * w / 2],
           [cx + right[0] * w / 2, lift + h, cz + right[2] * w / 2], [cx - right[0] * w / 2, lift + h, cz - right[2] * w / 2]];
