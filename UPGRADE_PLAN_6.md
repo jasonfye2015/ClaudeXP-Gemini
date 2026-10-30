@@ -226,7 +226,11 @@ Size: M-L.
 **The balance pass (v7.0, 20 seeds on Fair to floor 20, `tools/sim.js --seeds 20 --difficulty fair`)**: plain (the
 shaft, no land): median floor 21, 16 of 20 crowned, 3 fell; the bot mined 13.1 chunks a run from the dungeon's veins
 and went home by the scroll in the small hours 6.2 times a run. The same seeds with `--town --land` (a day in the
-land first) are reported in the line below it when that run finishes; the crown rate is to stay within five points.
+land first): median floor 21, 14 of 20 crowned, 4 fell; foraged 8.0 nodes a run, mined 13.4, 6.2 nights home. The
+farm, the kitchen and the forge show 0 in the simulator because its village is fresh (no field, no kitchen, no
+bars at the start); the tests cover them with a built village. Two crowns in twenty is outside the five-point
+target but inside this sample's noise; the land day costs the party the morning's hunger and nothing else measured.
+Gold goes where it went in v6.0 (merchant 75%, insurance 11%, tithe 10%). Not tuned here: noted for the next pass.
 
 
 - **The balance pass**: fifty seeds on Fair with `--home`, `--wood` and `--farm` (the bot forages a day, mines a
