@@ -424,6 +424,33 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
 
+  // what the merchant would take in one go, and what for: `which` is a bag filter's id (everything it shows), or
+  // "spare" (gear nobody wears, known and not cursed). Never the things a run needs to keep: keys, bones, pages, the
+  // field kit, relics, a Scroll of Homecoming that remembers a square below.
+  sellable(which) {
+    const F = CM.BAG_FILTERS[which], gear = ["weapon", "armor", "shield", "helm", "ring", "amulet", "boots", "cloak", "trinket"];
+    const keep = (it) => ["key", "boxkey", "bones", "page", "kit", "bell"].includes(it.kind) || (it.props && (it.props.relic || it.props.heirloom)) || (it.kind === "scroll" && it.back) || !(it.value > 0 || it.unknown);
+    const rows = [];
+    this.bag.forEach((it, i) => {
+      if (keep(it)) return;
+      if (which === "spare" ? gear.includes(it.kind) && !it.unknown && !(it.props && it.props.cursed) : !F || !F.kinds || F.kinds.includes(it.kind)) rows.push(i);
+    });
+    return { rows, gold: rows.reduce((s, i) => s + (this.bag[i].unknown ? 10 : Math.floor(this.bag[i].value / 2)), 0) };
+  },
+  sellMany(which) {
+    if (!this.shopping) return "Only at a merchant's table.";
+    const { rows, gold } = this.sellable(which);
+    if (!rows.length) return "Nothing of that to sell.";
+    this.logAct("sellMany", which);
+    for (const i of rows.slice().sort((a, b) => b - a)) this.bag.splice(i, 1);
+    this.gold += gold;
+    this.sound("coin");
+    this.say(`The merchant takes ${CM.plural(rows.length, "thing")} for ${gold.toLocaleString()} gold.`);
+    this.warnWeight();
+    this.emit("change");
+    return "";
+  },
+
   sell(row) {
     if (row < 0 || row >= this.bag.length) return "Pick something from your pack to sell.";
     this.logAct("sell", row);

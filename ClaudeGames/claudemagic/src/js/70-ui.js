@@ -66,7 +66,7 @@ CM.UI = class {
   <div class="lists"><div class="list" id="bag-list"></div><div class="list" id="shop-list"></div></div>
   <div class="note" id="bag-note"></div>
   <div class="give" id="bag-give"></div><div class="give" id="bag-belt"></div>
-  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-bag-done" class="primary">Done</button></div>
+  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sell-shown" title="Everything the filter shows (keys, relics and a Homecoming scroll that remembers a square are kept)">Sell all shown</button><button id="btn-sell-spare" title="Gear nobody wears, known and not cursed">Sell spare gear</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-bag-done" class="primary">Done</button></div>
 </div>
 <div class="dialog" id="dlg-settings"><div class="box"><h2>Settings</h2>
   <div class="row"><label for="set-sound">Sound</label><input type="checkbox" id="set-sound"></div>

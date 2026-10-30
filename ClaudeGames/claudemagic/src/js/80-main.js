@@ -88,7 +88,8 @@ window.addEventListener("DOMContentLoaded", () => {
     renderer.setFloor(floor, CM.themeFor(floor.number));
     renderer.setCamera(floor.pos[0], floor.pos[1], floor.facing);
   });
-  game.on("moved", (x, y) => renderer.moveTo(x, y, game.settings.smooth ? 180 : 0));
+  let walkReady = 0;                                                    // (a heavy pack: the next step waits)
+  game.on("moved", (x, y) => { const pace = game.walkPace ? game.walkPace() : 1; renderer.moveTo(x, y, game.settings.smooth ? 180 * pace : 0); walkReady = performance.now() + (pace - 1) * 220; });
   game.on("turned", (facing) => renderer.turnTo(facing, game.settings.smooth ? 160 : 0));
   game.on("mesh", () => { if (renderer.ok && game.floor) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); });
   game.on("teleported", (x, y) => renderer.setCamera(x, y, game.floor.facing));
@@ -666,15 +667,15 @@ window.addEventListener("DOMContentLoaded", () => {
         if (ui.rebindingPad) pollGamepad(now);
       } else {
         pollGamepad(now);
-        if (game.mode === "explore" && !renderer.busy && held.size) {
+        if (game.mode === "explore" && !renderer.busy && now >= walkReady && held.size) {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
         if (ui.screen === "play" && !ui.dialogOpen()) game.tick(dt);    // the monsters move (not while you read a sheet or the pack); the run saves now and then
         if (game.mode === "combat") { const up = game.party.filter((h) => h.hp > 0); const worst = up.length ? Math.min(...up.map((h) => h.hp / h.max)) : 0; CM.music.setDanger(up.length < game.party.length ? 1 : worst < 0.5 ? 0.6 : 0); }   // the battle tune in layers
         if (game.film && game.film.playing && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - game.film.last > 260 / game.film.speed) { game.film.last = now; game.filmStep(); }   // the film plays
-        if (game.travel && game.mode === "explore" && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
+        if (game.travel && game.mode === "explore" && !renderer.busy && now >= walkReady && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
         if (game.mode === "combat" && game.combat && game.combat.auto && game.combat.waiting && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAuto > 420 / (CM.fxSpeed || 1)) { lastAuto = now; game.autoTurn(); }
-        if (game.autoOn() && (ui.screen === "play" || ui.screen === "bag") && !renderer.busy && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAutoStep > (game.mode === "camp" ? 900 : game.settings.smooth ? 150 : 240)) {   // Automatic: a step a tick
+        if (game.autoOn() && (ui.screen === "play" || ui.screen === "bag") && !renderer.busy && now >= walkReady && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAutoStep > (game.mode === "camp" ? 900 : game.settings.smooth ? 150 : 240)) {   // Automatic: a step a tick
           lastAutoStep = now;
           if (ui.screen === "bag") ui.show("play");
           const did = game.auto.step();
