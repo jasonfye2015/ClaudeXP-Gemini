@@ -127,7 +127,7 @@ Size: L.
 
 Size: M.
 
-## Phase 4 - The farm - v6.5
+## Phase 4 - The farm - v6.6
 
 - **The garden becomes a farm**, in the Wood's first glade past the gate (the beds in town stay as the herb garden
   for the alchemist): raised with renown like a building (`CM.VILLAGE.farm`, five levels): a field (level 1: four
@@ -151,7 +151,7 @@ Size: M.
 
 Size: L.
 
-## Phase 5 - Upgrading and tempering gear - v6.6
+## Phase 5 - Upgrading and tempering gear - v6.5 - DONE (shipped before the farm, as the order below says)
 
 - **Upgrading, with a ceiling.** Every weapon, armour, shield and helm has a *grade* (0 to 5, `item.grade`), shown
   as stars on the card and in the name's tail ("Long Sword ★★"). The smith raises a grade for bars of the base's

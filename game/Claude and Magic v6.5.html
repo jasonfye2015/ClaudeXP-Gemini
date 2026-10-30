@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v6.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v6.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -437,7 +437,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "6.4", built: "2026-10-30" };
+const CM = window.CM = { version: "6.5", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -2363,6 +2363,7 @@ CM.baseIdOf = function (item) {
   if (!item) return null;
   let b = item.base || CM.baseName(item);
   if (item.kind === "ring") b = b.replace(/ \+\d+$/, "");
+  b = b.replace(/ ★+$/, "");                                              // (the grade's stars, written in the name's tail)
   for (const e of Object.values(CM.ELEMENTS)) if (b.startsWith(e.prefix + " ")) b = b.slice(e.prefix.length + 1);   // (a base written down with its element's prefix, before v4.1)
   return b;
 };
@@ -2375,7 +2376,7 @@ CM.itemName = function (item) {
   if (item.kind === "ring") return `${base} +${item.power}`;
   if (!["weapon", "armor", "shield", "helm"].includes(item.kind)) return base;
   const words = p.affixes || [], prefix = words.find((w) => !w.startsWith("of ")), suffix = words.find((w) => w.startsWith("of "));
-  return `${prefix ? prefix + " " : ""}${p.element && CM.ELEMENTS[p.element] ? CM.ELEMENTS[p.element].prefix + " " : ""}${base}${suffix ? " " + suffix : ""}${p.bonus && (words.length || p.enchant) ? ` +${p.bonus}` : ""}`;
+  return `${prefix ? prefix + " " : ""}${p.element && CM.ELEMENTS[p.element] ? CM.ELEMENTS[p.element].prefix + " " : ""}${base}${suffix ? " " + suffix : ""}${p.bonus && (words.length || p.enchant) ? ` +${p.bonus}` : ""}${item.grade ? " " + "★".repeat(item.grade) : ""}`;
 };
 // a thing from an older save: its base set, its finding unknown
 CM.normalizeItem = function (item, how) {
@@ -2754,6 +2755,10 @@ CM.itemLabel = function (item) {
   if (item.kind === "ore") bits.push(`a chunk of ${CM.ORES[item.ore].name}: three and a charcoal make a bar at the forge; heavy`);
   if (item.kind === "bar") bits.push(CM.ALLOYS[item.bar] ? `an alloy bar: the upgrading's coin` : `a bar: two and one of the kind above make an alloy; the upgrading's coin`);
   if (item.kind === "charcoal") bits.push("the smelter eats one a bar; the Wood's burner makes it from deadwood");
+  if (item.kind === "quiver") bits.push("in the pack: a bow shoots a second arrow once a fight");
+  if (item.kind === "hide") bits.push("for the hermit of the Deep Wood by day: a cloak, boots, a buckler, a quiver; or the forge's tempers");
+  if (item.grade) bits.push(`grade ${"★".repeat(item.grade)} of ${"★".repeat(CM.GRADE_MOST || 5)}: the forge's bars`);
+  if (item.temper && CM.TEMPERS && CM.TEMPERS[item.temper.id]) bits.push(`tempered for the run: ${CM.TEMPERS[item.temper.id].what}`);
   if (item.bearers && item.bearers.length) bits.push(`borne by ${item.bearers.join(", ")}`);
   if (CM.powerOf(item)) bits.push(`a power, once a floor: ${CM.powerOf(item).name} - ${CM.powerOf(item).what}`);
   if (item.kind === "trinket" && CM.TRINKETS[item.trinket]) bits.push(CM.TRINKETS[item.trinket].what);
@@ -7754,7 +7759,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
+    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.waterwalk) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
     if ((CM.partyProp(this.party, "torchSave") || (this.meal && CM.MEALS[this.meal.kind] && CM.MEALS[this.meal.kind].torch)) && (this.steps || 0) % 3 === 0) return;   // (of the Lantern, or a meal that lasts: every third step is free)
     l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0) + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "dark")) ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
@@ -7857,7 +7862,7 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "woodgate") { if (fl.number === 0) { this.sound("door"); this.enterFloor(-1, "rope", CM.WOOD_GATE.slice()); this.say(`The west gate, and the Deep Wood beyond it: ${CM.hourWord(CM.hourOf(this))}, and ${CM.isNight(this) ? "the trees are a wall of dark" : "the light comes green through the leaves"}. The first glade is safe at any hour; the Wood is not.`); } else { this.sound("door"); this.enterFloor(0, "rope", CM.TOWN_AT.woodgate.slice()); this.say("Back through the gate: the lane, and the town."); } return; }
     if (thing && thing.type === "cave") { if (thing.n !== CM.dayOf(this) % 3) { this.say(CM.WOOD_LINES.caveShut); return; } this.sound("stairs"); this.enterFloor(CM.caveNumber(thing.n), "down"); this.say(`Down into the cave: ${["a short way under the roots", "deeper, and colder", "the hill's own dark, and something breathing at the end of it"][thing.n]}.`); return; }
     if (thing && thing.type === "caveexit") { this.sound("stairs"); this.enterFloor(-1, "rope", CM.woodCaveAt(this.seed, fl.cave).split(",").map(Number)); this.say("Up out of the cave, into the Wood."); return; }
-    if (thing && thing.type === "hut") { this.emit("talk", { title: "The hermit's hut", text: CM.WOOD_LINES.hut[CM.isNight(this) ? 1 : 0] }); this.say(CM.WOOD_LINES.hut[CM.isNight(this) ? 1 : 0]); return; }
+    if (thing && thing.type === "hut") { if (CM.isNight(this)) { this.emit("talk", { title: "The hermit's hut", text: CM.WOOD_LINES.hut[1] }); this.say(CM.WOOD_LINES.hut[1]); return; } this.emit("hut", {}); this.say(CM.WOOD_LINES.hut[0]); return; }
     if (thing && thing.type === "burner") { this.burner(); return; }
     if (thing && thing.type === "shrine") { this.emit("talk", { title: "The ruined shrine", text: CM.WOOD_LINES.shrine }); this.say(CM.WOOD_LINES.shrine); if (!thing.read) { thing.read = true; this.remember("carving", CM.WOOD_LINES.shrine, { key: "wood.shrine" }); this.saveRun(); } return; }
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
@@ -8623,7 +8628,7 @@ Object.assign(CM.Game.prototype, {
       + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
-    let wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
+    let wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.silence) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
     const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
     const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
     if (ratproof) wary = true;
@@ -8839,6 +8844,7 @@ Object.assign(CM.Game.prototype, {
       if (!t) return false;
       this.strike(h, t);
       if (CM.trait(h, "flurry") && t.hp > 0 && !t.fled) this.strike(h, t, " again", { mult: 0.5 });
+      if (h.weapon && h.weapon.props && h.weapon.props.bow && !h.used.quiver && this.hasQuiver && this.hasQuiver()) { h.used.quiver = true; const t2 = t.hp > 0 && !t.fled ? t : this.living()[0]; if (t2) this.strike(h, t2, " with a second arrow from the quiver"); }   // (the hermit's quiver: once a fight)
     } else if (action === "cast" && c.silence) {
       this.say("No word comes: the fight is silenced."); return false;
     } else if (action === "cast") {
@@ -10750,7 +10756,7 @@ Object.assign(CM.Game.prototype, {
   payInsurance() {
     const worn = this.party.flatMap((h) => CM.equipped(h)), all = this.bag.concat(worn).filter((it) => it && it.insured);
     if (!all.length) return 0;
-    this.vaults = (this.vaults || []).concat(all.map((it) => Object.assign({}, it, { insured: false, bearers: it.bearers || [] })));
+    this.vaults = (this.vaults || []).concat(all.map((it) => CM.untemper(Object.assign({}, it, { props: Object.assign({}, it.props || {}), insured: false, bearers: it.bearers || [] }))));
     CM.store.set("vaults", this.vaults); CM.store.remove("vault");
     this.say(`The merchant's word is good: ${all.map((it) => it.name).join(", ")} ${all.length === 1 ? "goes" : "go"} to the vault for whoever comes after.`);
     this.tally.insured = (this.tally.insured || 0) + all.length;
@@ -10908,6 +10914,7 @@ Object.assign(CM.Game.prototype, {
       const n = p.enchant || 0, cost = CM.SMITH.enchant * (n + 1), gem = this.bag.findIndex((i) => i.kind === "gem" && i.gem === "diamond");
       const scrap = this.bag.map((i, idx) => (i.kind === "scrap" ? idx : -1)).filter((idx) => idx >= 0);
       if (n >= CM.SMITH.most) return `${item.name} has had all the smith's work it can take.`;
+      if (n + 1 >= CM.SMITH.most && (item.grade || 0) >= CM.GRADE_MOST) return `The smith shakes his head: a thing of the fifth grade cannot take the third enchantment too. "It would not hold the one and the other."`;
       if (gem < 0 && scrap.length < 5) return "The smith wants a diamond for the work (or five pieces of scrap).";
       if (this.gold < cost) return `The smith wants ${cost} gold, and the diamond.`;
       this.gold -= cost; this.spend("smith", cost);
@@ -11272,6 +11279,7 @@ const keyOf = CM.keyOf;
 Object.assign(CM.Game.prototype, {
   endRun(won) {
     won = Boolean(won || this.crowned);
+    if (this.stripTempers) this.stripTempers();                           // (the tempers last the run, no longer)
     const entry = { name: CM.playerName || "Adventurer", floor: this.floor.number, gold: this.gold, won, bottom: Boolean(this.bottom), date: CM.today(), seed: this.seed,
       daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`),
       kit: this.kit || "pauper", tally: Object.assign(this.freshTally(), this.tally || {}), difficulty: this.difficulty || "fair", mutators: this.mutators || [] };
@@ -12537,7 +12545,7 @@ Object.assign(CM.Game.prototype, {
     if (["key", "boxkey"].includes(item.kind)) return "A key belongs to its floor.";
     if (this.stashRoom() <= 0) return `The stash is full (${CM.HOME_STASH[Math.min(this.homeLevel(), CM.HOME_STASH.length - 1)]} things). Raise the house, or take something out.`;
     this.logAct("stashPut", row);
-    this.bag.splice(row, 1); this.home().stash.push(item); this.saveVillage();
+    this.bag.splice(row, 1); CM.untemper(item); this.home().stash.push(item); this.saveVillage();
     this.sound("chest"); this.say(`${CM.itemName(item)} goes into the stash.`);
     this.saveRun(); this.emit("change");
     return "";
@@ -12641,7 +12649,7 @@ Object.assign(CM.Game.prototype, {
 // apprentice buys scrap at three quarters). The camps keep their benches; the camps' tavern keeps the recruits only.
 CM.TOWN_PLOTS.tavern.always = true; CM.TOWN_PLOTS.smith.always = true; CM.TOWN_PLOTS.merchant.always = true;
 CM.VILLAGE.tavern = { name: "The Hanged Lantern", costs: [60, 140], levels: ["A better cellar: the round sets the party's heart to full, and the regular's gossip is on the house", "A better bench: the recruits come a level higher"] };
-CM.VILLAGE.smith = { name: "The Smith's forge", costs: [60, 140], levels: ["The apprentice buys scrap at its full value", "A reforging costs half"] };
+CM.VILLAGE.smith = { name: "The Smith's forge", costs: [60, 140, 260], levels: ["The apprentice buys scrap at its full value", "A reforging costs half, and the smelter is lit", "The smith tempers: a word from the land worked in for the run"] };
 CM.TOWN_PLOTS.tavern.village = "tavern"; CM.TOWN_PLOTS.smith.village = "smith";
 CM.plotLevel = (game, id) => { const P = CM.TOWN_PLOTS[id]; if (!P) return 0; const v = P.village && game ? game.villageLevel(P.village) : 0; return P.always ? Math.max(1, v) : v; };
 CM.COMMISSION_OVER = 1.5;
@@ -12806,6 +12814,142 @@ Object.assign(CM.Game.prototype, {
     return "";
   },
 });
+
+// ---- 68b-forge.js ----
+"use strict";
+// The forge's upgrading and tempering, and the Wood's leatherworker (the eighth big update, phase 5).
+//
+//   item.grade (0..5)                 -> stars in the name's tail; +1 power a grade, and at 3 and 5 an implicit word better
+//   CM.gradeCost(item)                -> { bars, metal, gold } for the next grade: bars of the base's metal tier, and gold
+//   game.upgrade(heroIndex, slot)     -> a grade, at the forge in town (the ceiling: not both grade 5 and enchanted +3)
+//   CM.TEMPERS                        -> oak, beeswax, wolf-fat, bear's bile, star-dust: one word from the land, for the run
+//   game.temper(heroIndex, slot, id)  -> at the smith's third level; gone at the run's end (stripTempers)
+//   game.tan(kind)                    -> the hermit by day: hides into a cloak, boots, a buckler, a quiver
+CM.GRADE_MOST = 5;
+CM.GRADE_GOLD = 60;                                                      // gold a grade, times the grade
+CM.GRADE_METAL = (tier) => (tier <= 2 ? "copper" : tier <= 4 ? "bronze" : tier <= 6 ? "iron" : tier <= 8 ? "steel" : "electrum");
+CM.gradeCost = function (item) {
+  const B = CM.BASES[CM.baseIdOf(item)] || {}, tier = B.tier || 0, grade = (item.grade || 0) + 1;
+  const metal = tier >= 9 && grade >= 4 ? "starsteel" : CM.GRADE_METAL(tier);
+  return { bars: grade, metal, gold: CM.GRADE_GOLD * grade, name: (CM.ALLOYS[metal] || CM.ORES[metal]).name };
+};
+CM.stars = (n) => "★".repeat(Math.max(0, n || 0));
+CM.gradable = (item) => Boolean(item && ["weapon", "armor", "shield", "helm"].includes(item.kind) && !(item.props && (item.props.unique || item.props.relic || item.props.fists)));
+// the tempers: what the land gives, worked in for one run
+CM.TEMPERS = {
+  oak: { name: "oak", from: { kind: "ingredient", ingredient: "deadwood" }, what: "oak-hafted: weighs one less", props: {} },
+  beeswax: { name: "beeswax", from: { kind: "ingredient", ingredient: "honey" }, what: "waxed: the water costs the torch nothing", props: { waterwalk: true } },
+  wolffat: { name: "wolf-fat", from: { kind: "hide", hide: "Wolf" }, what: "greased with wolf-fat: the party is not surprised", props: { silence: true } },
+  bearbile: { name: "bear's bile", from: { kind: "hide", hide: "Bear" }, what: "bear's bile on the edge: a blow in four bleeds", props: { bleed: 0.25 }, weapon: true },
+  stardust: { name: "star-dust", from: { kind: "ore", ore: "stariron" }, what: "star-dust in the steel: +1 to blows", props: { power1: 1 } },
+};
+CM.TEMPER_GOLD = 40;
+CM.temperWord = (item) => (item && item.temper && CM.TEMPERS[item.temper.id] ? CM.TEMPERS[item.temper.id].what : "");
+CM.untemper = function (item) {                                          // the temper's props off again (numbers subtracted, flags cleared)
+  if (!item || !item.temper) return item;
+  const p = item.props || {};
+  for (const [k, v] of Object.entries(item.temper.props || {})) { if (typeof v === "number") { p[k] = (p[k] || 0) - v; if (!p[k]) delete p[k]; } else delete p[k]; }
+  delete item.temper; return item;
+};
+{ const w0 = CM.weightOf; CM.weightOf = (item) => Math.max(0, w0(item) - (item && item.temper && item.temper.id === "oak" ? 1 : 0)); }
+// the leatherworker's patterns: hides in, gear out (by day, at the hermit's hut)
+CM.quiver = () => ({ name: "Quiver", kind: "quiver", power: 0, value: 60 });
+CM.BASES.Quiver = { id: "Quiver", kind: "quiver", slot: null, tier: 31, group: "stuff" };
+CM.WEIGHTS.quiver = 1;
+CM.TANNING = {
+  cloak: { name: "Travel Cloak", hides: 2, any: true, what: "a cloak of hides" },
+  hood: { name: "Hooded Cloak", hides: 1, of: "Bear", what: "a bear's hide for a hood" },
+  wards: { name: "Cloak of Wards", hides: 1, of: "Troll", what: "the Troll's hide, which turns a blow" },
+  boots: { name: "Soft Boots", hides: 2, any: true, what: "soft boots, silent" },
+  buckler: { name: "Buckler", hides: 3, any: true, what: "a buckler of boiled hide" },
+  quiver: { name: "Quiver", hides: 3, any: true, what: "a quiver: a bow shoots a second arrow once a fight" },
+};
+CM.TAN_GOLD = 20;
+CM.tanned = function (kind, floor, rnd) {
+  const T = CM.TANNING[kind]; if (!T) return null;
+  if (kind === "quiver") return CM.quiver();
+  const B = CM.BASES[T.name], item = B.kind === "shield" ? CM.gearOfBase(T.name, floor, rnd) : CM.makeGear(B.kind, floor, rnd);
+  if (B.kind !== "shield") { const row = (B.kind === "boots" ? CM.BOOTS : CM.CLOAKS).find((x) => x.name === T.name); item.name = T.name; item.base = T.name; item.props = {}; if (B.kind === "boots") { item.power = row.power; if (row.silence) item.props.silence = true; if (row.waterwalk) item.props.waterwalk = true; } else { item.power = row.df; item.props.df = row.df; if (row.hood) item.props.hood = true; } item.value = 40 * (item.power + 1) * (item.power + 1); }
+  item.unknown = false; return item;
+};
+Object.assign(CM.Game.prototype, {
+  // a grade: bars of the metal and gold; +1 power; at 3 and 5 an implicit word better; the ceiling
+  upgrade(heroIndex, slot) {
+    if (!this.inTown()) return "Only the forge in town raises a grade.";
+    const hero = this.party[heroIndex], item = hero && hero[slot];
+    if (!item || !["weapon", "armor", "offhand", "helm"].includes(slot)) return "Pick a weapon, armour, a shield or a helm.";
+    if (item.unknown) return "The smith won't grade what nobody can name.";
+    if (!CM.gradable(item)) return "A relic or a unique thing is what it is.";
+    const grade = (item.grade || 0) + 1, p = item.props = item.props || {};
+    if (grade > CM.GRADE_MOST) return `${item.name} is at the fifth grade: there is no sixth.`;
+    if (grade === CM.GRADE_MOST && (p.enchant || 0) >= CM.SMITH.most) return `The smith shakes his head: a thing enchanted thrice cannot take the fifth grade too. "It would not hold the one and the other."`;
+    const cost = CM.gradeCost(item), bars = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "bar" && it.bar === cost.metal);
+    if (bars.length < cost.bars) return `The ${CM.ordinal(grade)} grade of ${item.name} wants ${CM.plural(cost.bars, `${cost.name} bar`)} and ${cost.gold} gold; the pack has ${bars.length}.`;
+    if (this.gold < cost.gold) return `The smith wants ${cost.gold} gold for the grade, with the bars.`;
+    this.logAct("upgrade", heroIndex, slot);
+    this.gold -= cost.gold; this.spend("smith", cost.gold);
+    for (const [, i] of bars.slice(0, cost.bars).reverse()) this.bag.splice(i, 1);
+    item.grade = grade; item.power += 1; item.value += 40 * grade;
+    if (grade === 3 || grade === 5) { if (item.kind === "weapon") p.power1 = (p.power1 || 0) + 1; else p.df = (p.df || 0) + 1; }
+    item.name = CM.itemName(item);
+    item.history = (item.history || []).concat(`graded ${CM.stars(grade)} at the forge in town`);
+    this.tally.graded = (this.tally.graded || 0) + 1; this.countUse("upgrade");
+    CM.recompute(hero);
+    this.sound("lever"); this.say(`${cost.name.charAt(0).toUpperCase() + cost.name.slice(1)} into the fire, and the hammer: ${item.name}${grade === 3 || grade === 5 ? ", and the metal remembers it" : ""}.`);
+    if (grade === CM.GRADE_MOST) this.achieve("graded");
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  // a temper: one word from the land, for the run (the smith's third level)
+  temper(heroIndex, slot, id) {
+    if (!this.inTown()) return "Only the forge in town tempers.";
+    if (this.villageLevel("smith") < 3) return "The forge tempers at the smith's third level.";
+    const hero = this.party[heroIndex], item = hero && hero[slot], T = CM.TEMPERS[id];
+    if (!item || !["weapon", "armor", "offhand", "helm"].includes(slot)) return "Pick a weapon, armour, a shield or a helm.";
+    if (item.unknown) return "The smith won't temper what nobody can name.";
+    if (!T) return "No such temper.";
+    if (T.weapon && item.kind !== "weapon") return `${T.name.charAt(0).toUpperCase() + T.name.slice(1)} goes on a blade.`;
+    if (item.temper && item.temper.id === id) return `${item.name} is tempered with ${T.name} already.`;
+    const src = this.bag.findIndex((it) => Object.entries(T.from).every(([k, v]) => it[k] === v));
+    if (src < 0) return `${T.name.charAt(0).toUpperCase() + T.name.slice(1)} wants ${T.from.ingredient ? CM.INGREDIENTS[T.from.ingredient].name : T.from.hide ? T.from.hide + " hide" : CM.ORES[T.from.ore].name + " ore"} in the pack.`;
+    if (this.gold < CM.TEMPER_GOLD) return `The smith wants ${CM.TEMPER_GOLD} gold for a tempering.`;
+    this.logAct("temper", heroIndex, slot, id);
+    this.gold -= CM.TEMPER_GOLD; this.spend("smith", CM.TEMPER_GOLD);
+    if ((this.bag[src].power || 1) > 1 && this.bag[src].kind === "ore") this.bag[src].power -= 1; else this.bag.splice(src, 1);
+    CM.untemper(item); CM.applyProps(item, T.props); item.temper = { id, props: Object.assign({}, T.props) };
+    this.tally.tempered = (this.tally.tempered || 0) + 1; this.countUse("temper");
+    CM.recompute(hero);
+    this.sound("lever"); this.say(`${T.name.charAt(0).toUpperCase() + T.name.slice(1)} worked into ${item.name} while it is hot: ${T.what}. It will last the run.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  stripTempers() {                                                       // at a run's end: the tempers are gone (the bag, what is worn, the vault's and the stash's never had one)
+    for (const it of this.bag.concat(this.party.flatMap((h) => CM.equipped(h)))) if (it && it.temper) CM.untemper(it);
+    for (const h of this.party) CM.recompute(h);
+  },
+  // the leatherworker: hides into gear, by day, at the hut
+  tan(kind) {
+    const fl = this.floor, here = fl && fl.things[fl.pos.join(",")];
+    if (!here || here.type !== "hut") return "The hermit tans at the hut in the Deep Wood.";
+    if (CM.isNight(this)) return "The hut is shuttered for the night.";
+    const T = CM.TANNING[kind]; if (!T) return "The hermit has no such pattern.";
+    const rows = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "hide" && (T.any ? true : it.hide === T.of));
+    if (rows.length < T.hides) return `${T.name} wants ${T.any ? CM.plural(T.hides, "hide") : `a ${T.of} hide`}; the pack has ${rows.length}.`;
+    if (this.gold < CM.TAN_GOLD) return `The hermit wants ${CM.TAN_GOLD} gold for the work.`;
+    this.logAct("tan", kind);
+    this.gold -= CM.TAN_GOLD; this.spend("hermit", CM.TAN_GOLD);
+    const used = rows.slice(0, T.hides); for (const [, i] of used.reverse()) this.bag.splice(i, 1);
+    const item = CM.tanned(kind, Math.max(1, this.partyLevel()), this.rnd);
+    item.history = [`tanned by the hermit of the Deep Wood from ${used.map(([it]) => it.name.toLowerCase()).join(", ")}`];
+    this.gain([item], "hermit"); this.tally.tanned = (this.tally.tanned || 0) + 1; this.countUse("tan");
+    this.sound("coin"); this.say(`The hermit scrapes, soaks and stitches, and hands over ${/^[aeiou]/i.test(item.name) ? "an" : "a"} ${item.name}: ${T.what}.`);
+    this.saveRun(); this.emit("change");
+    return "";
+  },
+  hasQuiver() { return this.bag.some((it) => it.kind === "quiver"); },
+});
+CM.HOW_FOUND.hermit = "the hermit's work";
+CM.ACHIEVEMENTS.graded = { name: "Five Stars", what: "Raise a thing to the fifth grade at the forge", title: "the Starred" };
 
 // ---- 69-halls.js ----
 "use strict";
@@ -13121,6 +13265,8 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-talk"><div class="box"><h2 id="talk-title"></h2><p id="talk-text" class="lore"></p>
   <div class="end"><button id="talk-more" hidden>More</button><button class="close primary">Walk on</button></div></div></div>
+<div class="dialog" id="dlg-hut"><div class="box"><h2>The hermit's hut</h2><p class="lore">"Hides I'll take, by daylight. Trouble I won't." The hermit tans and stitches for 20 gold a piece.</p><div id="hut-list"></div><p id="hut-note" class="small"></p>
+  <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button></span></h2><div id="journal-list"></div>
@@ -13222,6 +13368,7 @@ CM.UI = class {
     game.on("mode", (mode) => { if (mode !== "combat") this.cmenu = { kind: "main" }; this.xmenu = null; });
     game.on("lore", (text) => this.readWall(text));
     game.on("motif", (name) => { if (CM.music && CM.music.motif) CM.music.motif(name); });
+    game.on("hut", () => this.openHut());
     game.on("talk", ({ title, text, lines }) => { this.$("#talk-title").textContent = title; this.$("#talk-text").textContent = text; this.talkMore = (lines || []).slice(); this.$("#talk-more").hidden = !this.talkMore.length; this.openDialog("#dlg-talk"); });
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
@@ -13423,6 +13570,12 @@ CM.UI = class {
     root.insertBefore(d, root.querySelector(".end"));
   }
   // the garden: the beds above the alchemist's bench
+  openHut() {
+    const g = this.game, box = this.$("#hut-list"); box.innerHTML = "";
+    const hides = g.bag.filter((i) => i.kind === "hide"); const sm = document.createElement("div"); sm.className = "small"; sm.textContent = `Hides in the pack: ${hides.length ? hides.map((h) => h.name.toLowerCase()).join(", ") : "none"}.`; box.appendChild(sm);
+    for (const [id, T] of Object.entries(CM.TANNING)) { const b = document.createElement("button"); b.textContent = `${T.name} (${T.any ? CM.plural(T.hides, "hide") : "a " + T.of + " hide"}): ${T.what}`; b.disabled = hides.filter((h) => T.any || h.hide === T.of).length < T.hides; b.addEventListener("click", () => { this.$("#hut-note").textContent = g.tan(id) || "Done."; this.openHut(); this.refresh(); }); box.appendChild(b); }
+    this.openDialog("#dlg-hut");
+  }
   openGarden() {
     const g = this.game, root = this.$("#dlg-alchemist .box"), old = root.querySelector("#garden-town"); if (old) old.remove();
     const G = g.garden(), beds = g.bedsOf(), extra = document.createElement("div"); extra.id = "garden-town";
@@ -15063,6 +15216,8 @@ Object.assign(CM.UI.prototype, {
         const act = document.createElement("div"); act.className = "hire";
         if (!(it.props && it.props.relic)) { const sel = document.createElement("select"); const bases = Object.values(CM.BASES).filter((B) => B.kind === it.kind && !["unique", "relic"].includes(B.group) && B.id !== CM.baseIdOf(it)).sort((a, b) => (a.tier || 0) - (b.tier || 0)); sel.innerHTML = `<option value="">Reforge the base (an essence, and 100 gold a tier)...</option>` + bases.map((B) => `<option value="${this.esc(B.id)}">${this.esc(B.id)} - ${100 * ((B.tier || 0) + 1)} gold</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) { this.$("#smith-note").textContent = g.reforgeBase(hi, slot, sel.value) || "Done."; this.renderSmith(); this.refresh(); } }); act.appendChild(sel); }
         else { const b = document.createElement("button"); b.textContent = it.props.gem2 ? "A second gem is set" : `A second gem (${CM.SMITH.gem * 2} gold and a gem)`; b.disabled = Boolean(it.props.gem2); b.addEventListener("click", () => { this.$("#smith-note").textContent = g.secondGem(hi, slot) || "Done."; this.renderSmith(); this.refresh(); }); act.appendChild(b); }
+        if (CM.gradable(it)) { const c = CM.gradeCost(it), have = g.bag.filter((i) => i.kind === "bar" && i.bar === c.metal).length; const b = document.createElement("button"); b.textContent = (it.grade || 0) >= CM.GRADE_MOST ? `Grade ${CM.stars(it.grade)}: the fifth` : `Grade ${CM.stars((it.grade || 0) + 1)} (${CM.plural(c.bars, c.name + " bar")}, ${c.gold} gold; ${have} in the pack)`; b.disabled = (it.grade || 0) >= CM.GRADE_MOST; b.addEventListener("click", () => { this.$("#smith-note").textContent = g.upgrade(hi, slot) || "Done."; this.renderSmith(); this.refresh(); }); act.appendChild(b); }
+        if (g.villageLevel("smith") >= 3) { const sel = document.createElement("select"); sel.innerHTML = `<option value="">${it.temper ? "Tempered: " + CM.TEMPERS[it.temper.id].name : "Temper (" + CM.TEMPER_GOLD + " gold, for the run)"}...</option>` + Object.entries(CM.TEMPERS).filter(([, T]) => !T.weapon || it.kind === "weapon").map(([id, T]) => `<option value="${id}">${this.esc(T.name)}: ${this.esc(T.what)}</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) { this.$("#smith-note").textContent = g.temper(hi, slot, sel.value) || "Done."; this.renderSmith(); this.refresh(); } }); act.appendChild(sel); }
         row.appendChild(act); box.appendChild(row); } });
       { const sm = document.createElement("div"); sm.className = "small"; const ores = CM.ORE_ORDER.map((o) => `${CM.ORES[o].name} ${g.bag.filter((i) => i.kind === "ore" && i.ore === o).length}`).join(", "), bars = g.bag.filter((i) => i.kind === "bar").map((i) => i.name).join(", ");
         sm.textContent = `The smelter${g.villageLevel("smith") >= 2 ? "" : " (the forge's second level)"}: chunks in the pack - ${ores}; charcoal ${g.bag.filter((i) => i.kind === "charcoal").length}; bars - ${bars || "none"}.`; box.appendChild(sm);

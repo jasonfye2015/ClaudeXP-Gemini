@@ -204,6 +204,10 @@ CM.itemLabel = function (item) {
   if (item.kind === "ore") bits.push(`a chunk of ${CM.ORES[item.ore].name}: three and a charcoal make a bar at the forge; heavy`);
   if (item.kind === "bar") bits.push(CM.ALLOYS[item.bar] ? `an alloy bar: the upgrading's coin` : `a bar: two and one of the kind above make an alloy; the upgrading's coin`);
   if (item.kind === "charcoal") bits.push("the smelter eats one a bar; the Wood's burner makes it from deadwood");
+  if (item.kind === "quiver") bits.push("in the pack: a bow shoots a second arrow once a fight");
+  if (item.kind === "hide") bits.push("for the hermit of the Deep Wood by day: a cloak, boots, a buckler, a quiver; or the forge's tempers");
+  if (item.grade) bits.push(`grade ${"★".repeat(item.grade)} of ${"★".repeat(CM.GRADE_MOST || 5)}: the forge's bars`);
+  if (item.temper && CM.TEMPERS && CM.TEMPERS[item.temper.id]) bits.push(`tempered for the run: ${CM.TEMPERS[item.temper.id].what}`);
   if (item.bearers && item.bearers.length) bits.push(`borne by ${item.bearers.join(", ")}`);
   if (CM.powerOf(item)) bits.push(`a power, once a floor: ${CM.powerOf(item).name} - ${CM.powerOf(item).what}`);
   if (item.kind === "trinket" && CM.TRINKETS[item.trinket]) bits.push(CM.TRINKETS[item.trinket].what);

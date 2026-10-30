@@ -182,6 +182,8 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-talk"><div class="box"><h2 id="talk-title"></h2><p id="talk-text" class="lore"></p>
   <div class="end"><button id="talk-more" hidden>More</button><button class="close primary">Walk on</button></div></div></div>
+<div class="dialog" id="dlg-hut"><div class="box"><h2>The hermit's hut</h2><p class="lore">"Hides I'll take, by daylight. Trouble I won't." The hermit tans and stitches for 20 gold a piece.</p><div id="hut-list"></div><p id="hut-note" class="small"></p>
+  <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button></span></h2><div id="journal-list"></div>
@@ -283,6 +285,7 @@ CM.UI = class {
     game.on("mode", (mode) => { if (mode !== "combat") this.cmenu = { kind: "main" }; this.xmenu = null; });
     game.on("lore", (text) => this.readWall(text));
     game.on("motif", (name) => { if (CM.music && CM.music.motif) CM.music.motif(name); });
+    game.on("hut", () => this.openHut());
     game.on("talk", ({ title, text, lines }) => { this.$("#talk-title").textContent = title; this.$("#talk-text").textContent = text; this.talkMore = (lines || []).slice(); this.$("#talk-more").hidden = !this.talkMore.length; this.openDialog("#dlg-talk"); });
     this.$("#talk-more").addEventListener("click", () => { const next = (this.talkMore || []).shift(); if (next !== undefined) this.$("#talk-text").textContent = next; this.$("#talk-more").hidden = !(this.talkMore || []).length; });
     game.on("riddle", (k) => this.askRiddle(k));
@@ -484,6 +487,12 @@ CM.UI = class {
     root.insertBefore(d, root.querySelector(".end"));
   }
   // the garden: the beds above the alchemist's bench
+  openHut() {
+    const g = this.game, box = this.$("#hut-list"); box.innerHTML = "";
+    const hides = g.bag.filter((i) => i.kind === "hide"); const sm = document.createElement("div"); sm.className = "small"; sm.textContent = `Hides in the pack: ${hides.length ? hides.map((h) => h.name.toLowerCase()).join(", ") : "none"}.`; box.appendChild(sm);
+    for (const [id, T] of Object.entries(CM.TANNING)) { const b = document.createElement("button"); b.textContent = `${T.name} (${T.any ? CM.plural(T.hides, "hide") : "a " + T.of + " hide"}): ${T.what}`; b.disabled = hides.filter((h) => T.any || h.hide === T.of).length < T.hides; b.addEventListener("click", () => { this.$("#hut-note").textContent = g.tan(id) || "Done."; this.openHut(); this.refresh(); }); box.appendChild(b); }
+    this.openDialog("#dlg-hut");
+  }
   openGarden() {
     const g = this.game, root = this.$("#dlg-alchemist .box"), old = root.querySelector("#garden-town"); if (old) old.remove();
     const G = g.garden(), beds = g.bedsOf(), extra = document.createElement("div"); extra.id = "garden-town";

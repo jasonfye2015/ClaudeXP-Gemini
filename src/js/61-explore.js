@@ -256,7 +256,7 @@ Object.assign(CM.Game.prototype, {
     }
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
-    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
+    const wet = this.floor && (this.floor.special === "wading" || this.floor.tide) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.waterwalk) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
     if ((CM.partyProp(this.party, "torchSave") || (this.meal && CM.MEALS[this.meal.kind] && CM.MEALS[this.meal.kind].torch)) && (this.steps || 0) % 3 === 0) return;   // (of the Lantern, or a meal that lasts: every third step is free)
     l.left -= (wet || this.has("gloom") ? 2 : 1) + (this.asc("hungrydark") && (this.steps || 0) % 2 === 0 ? 1 : 0) + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "dark")) ? 1 : 0);
     if (l.left === 40) this.say("Your torch is burning low.");
@@ -359,7 +359,7 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "woodgate") { if (fl.number === 0) { this.sound("door"); this.enterFloor(-1, "rope", CM.WOOD_GATE.slice()); this.say(`The west gate, and the Deep Wood beyond it: ${CM.hourWord(CM.hourOf(this))}, and ${CM.isNight(this) ? "the trees are a wall of dark" : "the light comes green through the leaves"}. The first glade is safe at any hour; the Wood is not.`); } else { this.sound("door"); this.enterFloor(0, "rope", CM.TOWN_AT.woodgate.slice()); this.say("Back through the gate: the lane, and the town."); } return; }
     if (thing && thing.type === "cave") { if (thing.n !== CM.dayOf(this) % 3) { this.say(CM.WOOD_LINES.caveShut); return; } this.sound("stairs"); this.enterFloor(CM.caveNumber(thing.n), "down"); this.say(`Down into the cave: ${["a short way under the roots", "deeper, and colder", "the hill's own dark, and something breathing at the end of it"][thing.n]}.`); return; }
     if (thing && thing.type === "caveexit") { this.sound("stairs"); this.enterFloor(-1, "rope", CM.woodCaveAt(this.seed, fl.cave).split(",").map(Number)); this.say("Up out of the cave, into the Wood."); return; }
-    if (thing && thing.type === "hut") { this.emit("talk", { title: "The hermit's hut", text: CM.WOOD_LINES.hut[CM.isNight(this) ? 1 : 0] }); this.say(CM.WOOD_LINES.hut[CM.isNight(this) ? 1 : 0]); return; }
+    if (thing && thing.type === "hut") { if (CM.isNight(this)) { this.emit("talk", { title: "The hermit's hut", text: CM.WOOD_LINES.hut[1] }); this.say(CM.WOOD_LINES.hut[1]); return; } this.emit("hut", {}); this.say(CM.WOOD_LINES.hut[0]); return; }
     if (thing && thing.type === "burner") { this.burner(); return; }
     if (thing && thing.type === "shrine") { this.emit("talk", { title: "The ruined shrine", text: CM.WOOD_LINES.shrine }); this.say(CM.WOOD_LINES.shrine); if (!thing.read) { thing.read = true; this.remember("carving", CM.WOOD_LINES.shrine, { key: "wood.shrine" }); this.saveRun(); } return; }
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }

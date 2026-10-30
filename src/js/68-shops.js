@@ -6,7 +6,7 @@
 // apprentice buys scrap at three quarters). The camps keep their benches; the camps' tavern keeps the recruits only.
 CM.TOWN_PLOTS.tavern.always = true; CM.TOWN_PLOTS.smith.always = true; CM.TOWN_PLOTS.merchant.always = true;
 CM.VILLAGE.tavern = { name: "The Hanged Lantern", costs: [60, 140], levels: ["A better cellar: the round sets the party's heart to full, and the regular's gossip is on the house", "A better bench: the recruits come a level higher"] };
-CM.VILLAGE.smith = { name: "The Smith's forge", costs: [60, 140], levels: ["The apprentice buys scrap at its full value", "A reforging costs half"] };
+CM.VILLAGE.smith = { name: "The Smith's forge", costs: [60, 140, 260], levels: ["The apprentice buys scrap at its full value", "A reforging costs half, and the smelter is lit", "The smith tempers: a word from the land worked in for the run"] };
 CM.TOWN_PLOTS.tavern.village = "tavern"; CM.TOWN_PLOTS.smith.village = "smith";
 CM.plotLevel = (game, id) => { const P = CM.TOWN_PLOTS[id]; if (!P) return 0; const v = P.village && game ? game.villageLevel(P.village) : 0; return P.always ? Math.max(1, v) : v; };
 CM.COMMISSION_OVER = 1.5;

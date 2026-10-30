@@ -2677,6 +2677,43 @@ test("mining: veins by the ore's floors, placed last by hash (no fingerprint mov
   const g5 = new CM.Game(); g5.newGame("ore-5", fixedParty(CM)); g5.bag.push(CM.pick("copper")); playRun(CM, g5, { maxFloor: 4 }); assert.ok((g5.tally.mined || 0) >= 1, `the bot mined ${g5.tally.mined || 0}`);
 });
 
+test("upgrading and tempering: a grade for bars of the base's metal and gold (+1 power; at 3 and 5 an implicit word better; the stars in the name, not the base id); the ceiling with the third enchantment; a temper at the smith's third level, for the run and gone after (and never into the stash or the vault); the hermit tans hides by day; the quiver's second arrow; a replay keeps the grades", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("forge-1", fixedParty(CM)); g.enterFloor(0, "rope", CM.TOWN_AT.smith.slice()); g.gold = 5000;
+  const h = g.party[0]; h.weapon = CM.gearOfBase("Long Sword", 3, new CM.Random(3)); h.weapon.found = { floor: 0, how: "start" }; const sw = h.weapon, p0 = sw.power;
+  assert.strictEqual(CM.gradeCost(sw).metal, CM.GRADE_METAL(CM.BASES["Long Sword"].tier)); assert.ok(g.upgrade(0, "weapon").includes("wants 1"));
+  for (let i = 0; i < 15; i++) g.bag.push(CM.metalBar(CM.gradeCost(sw).metal));
+  assert.strictEqual(g.upgrade(0, "weapon"), ""); assert.strictEqual(sw.grade, 1); assert.strictEqual(sw.power, p0 + 1); assert.ok(sw.name.endsWith(" ★"), sw.name); assert.strictEqual(CM.baseIdOf(sw), "Long Sword"); assert.strictEqual(CM.itemName(sw), sw.name);
+  assert.strictEqual(g.upgrade(0, "weapon"), ""); assert.strictEqual(g.upgrade(0, "weapon"), ""); assert.strictEqual(sw.grade, 3); assert.strictEqual(sw.props.power1, 1, "at 3 an implicit word better"); assert.strictEqual(g.bag.filter((i) => i.kind === "bar").length, 15 - 6);
+  assert.ok(CM.itemLabel(sw).includes("grade ★★★")); assert.ok(CM.itemCard(sw).includes("★★★"));
+  // the ceiling: enchanted thrice, no fifth grade (and the other way about)
+  sw.props.enchant = 3; assert.strictEqual(g.upgrade(0, "weapon"), ""); assert.strictEqual(sw.grade, 4); assert.ok(g.upgrade(0, "weapon").includes("cannot take the fifth grade")); sw.props.enchant = 0;
+  assert.strictEqual(g.upgrade(0, "weapon"), ""); assert.strictEqual(sw.grade, 5); assert.strictEqual(sw.props.power1, 2); assert.ok(g.achievements.graded); assert.ok(g.upgrade(0, "weapon").includes("no sixth"));
+  sw.props.enchant = 2; g.bag.push({ name: "Diamond", kind: "gem", gem: "diamond", power: 0, value: 100 }); assert.ok(g.smith("enchant", 0, "weapon").includes("cannot take the third enchantment"), "the ceiling the other way");
+  { const arm = h.armor; const d0 = (arm.props || {}).df || 0, metal = CM.gradeCost(arm).metal; for (let i = 0; i < 6; i++) g.bag.push(CM.metalBar(metal)); g.upgrade(0, "armor"); g.upgrade(0, "armor"); g.upgrade(0, "armor"); assert.strictEqual(arm.grade, 3); assert.strictEqual(arm.props.df, d0 + 1, "armour's word is warding"); }
+  { const u = CM.makeUnique("firstroot"); const was = h.helm; h.helm = u; assert.ok(g.upgrade(0, "helm").includes("what it is") || g.upgrade(0, "helm").includes("Pick")); h.helm = was; }
+  // the tempers: the smith's third level; a word from the land, for the run
+  g.bag.push(CM.hide("Wolf"), CM.hide("Bear"), CM.ingredient("deadwood")); assert.ok(g.temper(0, "weapon", "bearbile").includes("third level")); g.village.renown = 9000; g.build("smith"); g.build("smith"); g.build("smith"); assert.strictEqual(g.villageLevel("smith"), 3);
+  assert.ok(g.temper(0, "armor", "bearbile").includes("blade")); assert.ok(g.temper(0, "weapon", "stardust").includes("in the pack"));
+  assert.strictEqual(g.temper(0, "weapon", "bearbile"), ""); assert.strictEqual(sw.props.bleed, 0.25); assert.strictEqual(sw.temper.id, "bearbile"); assert.ok(!g.bag.some((i) => i.kind === "hide" && i.hide === "Bear")); assert.ok(CM.itemLabel(sw).includes("tempered for the run"));
+  assert.strictEqual(g.temper(0, "armor", "wolffat"), ""); assert.ok(h.armor.props.silence); g.enterFloor(3, "down"); g.floor.special = "dark"; assert.ok(g.alive().some((x) => CM.equipped(x).some((it) => it.temper && it.props.silence)));
+  const w0 = CM.weightOf(h.armor); g.enterFloor(0, "rope", CM.TOWN_AT.smith.slice()); assert.strictEqual(g.temper(0, "armor", "oak"), ""); assert.strictEqual(CM.weightOf(h.armor), Math.max(0, w0 - 1)); assert.ok(!h.armor.props.silence, "one temper at a time"); assert.strictEqual(h.armor.temper.id, "oak");
+  { const v = CM.gearOfBase("Buckler", 2, new CM.Random(4)); v.name = CM.itemName(v); g.bag.push(v); g.openBag(true); const row = g.bag.indexOf(v); assert.strictEqual(g.insure(row), ""); g.closeBag(); h.offhand = g.bag.splice(row, 1)[0]; g.bag.push(CM.hide("Wolf")); assert.strictEqual(g.temper(0, "offhand", "wolffat"), ""); g.payInsurance(); const kept = g.vaults[g.vaults.length - 1]; assert.ok(!kept.temper && !kept.props.silence, "the vault never holds a temper"); }
+  g.enterFloor(2, "down"); g.endRun(false); assert.ok(!sw.temper && !sw.props.bleed, "the temper is gone at the run's end"); assert.strictEqual(sw.grade, 5, "the grade stays");
+  // the hermit tans by day: hides in, gear out; the quiver's second arrow
+  const g2 = new CM.Game(); g2.newGame("forge-2", fixedParty(CM)); g2.enterFloor(0, "rope", CM.TOWN_AT.woodgate.slice()); g2.use(); const hk = Object.keys(g2.floor.things).find((k) => g2.floor.things[k].type === "hut"); g2.floor.pos = hk.split(",").map(Number); g2.gold = 500;
+  let huts = 0; g2.on("hut", () => huts++); g2.clock = 2 * 60; g2.use(); assert.strictEqual(huts, 1, "the hut opens by day"); g2.clock = 16 * 60; g2.use(); assert.strictEqual(huts, 1, "shuttered by night"); assert.ok(g2.tan("cloak").includes("shuttered")); g2.clock = 2 * 60;
+  assert.ok(g2.tan("cloak").includes("wants 2 hides")); g2.bag.push(CM.hide("Deer"), CM.hide("Boar"), CM.hide("Wolf"), CM.hide("Wolf"), CM.hide("Wolf"), CM.hide("Troll")); assert.strictEqual(g2.tan("cloak"), ""); const cl = g2.bag.find((i) => i.kind === "cloak"); assert.ok(cl && cl.name === "Travel Cloak" && cl.props.df === 1 && !cl.unknown && cl.found.how === "hermit", JSON.stringify(cl));
+  assert.strictEqual(g2.tan("wards"), ""); assert.ok(g2.bag.some((i) => i.kind === "cloak" && i.name === "Cloak of Wards" && i.props.df === 3)); assert.ok(g2.tan("hood").includes("Bear hide"));
+  assert.strictEqual(g2.tan("quiver"), ""); assert.ok(g2.hasQuiver()); assert.ok(!g2.bag.some((i) => i.kind === "hide")); assert.strictEqual(g2.tally.tanned, 3); assert.strictEqual(CM.weightOf(CM.quiver()), 1); assert.ok(CM.BASES.Quiver);
+  { const r = g2.party[0]; r.cls = "Ranger"; r.weapon = CM.gearOfBase("Short Bow", 2, new CM.Random(5)); g2.enterFloor(2, "down"); const k = Object.keys(g2.floor.things).find((kk) => g2.floor.things[kk].type === "monsters"); const t = g2.floor.things[k]; t.group = [CM.makeMonster(CM.monsterKind("Orc"), 2, new CM.Random(2))]; t.group[0].hp = t.group[0].max = 500;
+    g2.startCombat(k, t); const n0 = g2.messages.length; g2.act("fight"); assert.ok(g2.messages.slice(n0).some((m) => m.includes("second arrow from the quiver")), "the quiver's arrow"); assert.ok(r.used.quiver); }
+  // a replay keeps the grades
+  const g3 = new CM.Game(); g3.newGame("forge-3", fixedParty(CM)); g3.enterFloor(0, "rope", CM.TOWN_AT.smith.slice()); g3.gold = 1000; for (let i = 0; i < 3; i++) g3.bag.push(CM.metalBar(CM.gradeCost(g3.party[0].weapon).metal)); assert.strictEqual(g3.upgrade(0, "weapon"), ""); assert.strictEqual(g3.upgrade(0, "weapon"), ""); assert.strictEqual(g3.party[0].weapon.grade, 2);
+  assert.ok((g3.runLog || []).filter((l) => l[0] === "upgrade").length === 2, "logged");
+  const spec = Object.assign({}, g3.replaySpec(), { log: g3.runLog.slice() }); const g4 = new CM.Game(); g4.newGame(spec.seed, fixedParty(CM)); g4.enterFloor(0, "rope", CM.TOWN_AT.smith.slice()); g4.gold = 1000; for (let i = 0; i < 3; i++) g4.bag.push(CM.metalBar(CM.gradeCost(g4.party[0].weapon).metal)); g4.replaying = 1; for (const line of spec.log.filter((l) => l[0] === "upgrade")) CM.replayStep(g4, line); g4.replaying = 0; assert.strictEqual(g4.party[0].weapon.grade, 2); assert.strictEqual(g4.party[0].weapon.name, g3.party[0].weapon.name);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

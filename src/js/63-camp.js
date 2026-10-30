@@ -582,7 +582,7 @@ Object.assign(CM.Game.prototype, {
   payInsurance() {
     const worn = this.party.flatMap((h) => CM.equipped(h)), all = this.bag.concat(worn).filter((it) => it && it.insured);
     if (!all.length) return 0;
-    this.vaults = (this.vaults || []).concat(all.map((it) => Object.assign({}, it, { insured: false, bearers: it.bearers || [] })));
+    this.vaults = (this.vaults || []).concat(all.map((it) => CM.untemper(Object.assign({}, it, { props: Object.assign({}, it.props || {}), insured: false, bearers: it.bearers || [] }))));
     CM.store.set("vaults", this.vaults); CM.store.remove("vault");
     this.say(`The merchant's word is good: ${all.map((it) => it.name).join(", ")} ${all.length === 1 ? "goes" : "go"} to the vault for whoever comes after.`);
     this.tally.insured = (this.tally.insured || 0) + all.length;
@@ -740,6 +740,7 @@ Object.assign(CM.Game.prototype, {
       const n = p.enchant || 0, cost = CM.SMITH.enchant * (n + 1), gem = this.bag.findIndex((i) => i.kind === "gem" && i.gem === "diamond");
       const scrap = this.bag.map((i, idx) => (i.kind === "scrap" ? idx : -1)).filter((idx) => idx >= 0);
       if (n >= CM.SMITH.most) return `${item.name} has had all the smith's work it can take.`;
+      if (n + 1 >= CM.SMITH.most && (item.grade || 0) >= CM.GRADE_MOST) return `The smith shakes his head: a thing of the fifth grade cannot take the third enchantment too. "It would not hold the one and the other."`;
       if (gem < 0 && scrap.length < 5) return "The smith wants a diamond for the work (or five pieces of scrap).";
       if (this.gold < cost) return `The smith wants ${cost} gold, and the diamond.`;
       this.gold -= cost; this.spend("smith", cost);

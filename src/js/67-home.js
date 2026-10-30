@@ -45,7 +45,7 @@ Object.assign(CM.Game.prototype, {
     if (["key", "boxkey"].includes(item.kind)) return "A key belongs to its floor.";
     if (this.stashRoom() <= 0) return `The stash is full (${CM.HOME_STASH[Math.min(this.homeLevel(), CM.HOME_STASH.length - 1)]} things). Raise the house, or take something out.`;
     this.logAct("stashPut", row);
-    this.bag.splice(row, 1); this.home().stash.push(item); this.saveVillage();
+    this.bag.splice(row, 1); CM.untemper(item); this.home().stash.push(item); this.saveVillage();
     this.sound("chest"); this.say(`${CM.itemName(item)} goes into the stash.`);
     this.saveRun(); this.emit("change");
     return "";

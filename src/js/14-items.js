@@ -46,6 +46,7 @@ CM.baseIdOf = function (item) {
   if (!item) return null;
   let b = item.base || CM.baseName(item);
   if (item.kind === "ring") b = b.replace(/ \+\d+$/, "");
+  b = b.replace(/ ★+$/, "");                                              // (the grade's stars, written in the name's tail)
   for (const e of Object.values(CM.ELEMENTS)) if (b.startsWith(e.prefix + " ")) b = b.slice(e.prefix.length + 1);   // (a base written down with its element's prefix, before v4.1)
   return b;
 };
@@ -58,7 +59,7 @@ CM.itemName = function (item) {
   if (item.kind === "ring") return `${base} +${item.power}`;
   if (!["weapon", "armor", "shield", "helm"].includes(item.kind)) return base;
   const words = p.affixes || [], prefix = words.find((w) => !w.startsWith("of ")), suffix = words.find((w) => w.startsWith("of "));
-  return `${prefix ? prefix + " " : ""}${p.element && CM.ELEMENTS[p.element] ? CM.ELEMENTS[p.element].prefix + " " : ""}${base}${suffix ? " " + suffix : ""}${p.bonus && (words.length || p.enchant) ? ` +${p.bonus}` : ""}`;
+  return `${prefix ? prefix + " " : ""}${p.element && CM.ELEMENTS[p.element] ? CM.ELEMENTS[p.element].prefix + " " : ""}${base}${suffix ? " " + suffix : ""}${p.bonus && (words.length || p.enchant) ? ` +${p.bonus}` : ""}${item.grade ? " " + "★".repeat(item.grade) : ""}`;
 };
 // a thing from an older save: its base set, its finding unknown
 CM.normalizeItem = function (item, how) {

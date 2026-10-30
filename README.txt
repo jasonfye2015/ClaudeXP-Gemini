@@ -1225,6 +1225,23 @@ Mining and the ore (the eighth big update, phase 3 - v6.4)
   day: deadwood in, two charcoal out, or one for 15 gold. The bot mines a vein it has a pick for, on its way.
   Test: "mining".
 
+Upgrading and tempering (the eighth big update, phase 5 - v6.5; shipped before the farm)
+  Every weapon, armour, shield and helm has a grade (item.grade, 0 to 5), written as stars in the name's tail ("Long
+  Sword ★★★") and never in the base id. The forge in town raises a grade for bars of the base's metal (CM.GRADE_METAL:
+  copper for tiers 0-2, bronze 3-4, iron 5-6, steel 7-8, electrum above, and star-steel for the fourth and fifth grade
+  of the highest tiers), one bar a grade and 60 gold a grade; each grade is +1 power, and at the third and fifth the
+  metal remembers it (+1 to blows on a weapon, +1 warding on the rest). The grade is kept through reforging, the vault
+  and a replay; a relic and a unique thing are what they are. The ceiling: a thing may not be both of the fifth grade
+  and enchanted +3 - the smith says why, either way round. Tempering is the smith's third level (CM.VILLAGE.smith has
+  three now: 60, 140, 260 renown): one word from the land worked in for 40 gold, kept for the run and gone at its end
+  (never into the stash or the vault) - oak from deadwood (weighs one less), beeswax from wild honey (the water costs
+  the torch nothing), wolf-fat from a Wolf hide (the party is not surprised), bear's bile from a Bear hide (a blow in
+  four bleeds; blades only), star-dust from a star-iron chunk (+1 to blows); one temper on a thing at a time. The
+  hermit of the Deep Wood is a leatherworker by day (CM.TANNING, 20 gold a piece): two hides make a Travel Cloak or
+  Soft Boots, three a Buckler or a Quiver (a bow shoots a second arrow from it once a fight), a Bear hide a Hooded
+  Cloak, the Troll's hide a Cloak of Wards. The item card shows the grade and the temper; "Five Stars" is an
+  achievement. Test: "upgrading and tempering".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

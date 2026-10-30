@@ -55,7 +55,7 @@ Object.assign(CM.Game.prototype, {
       + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
-    let wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
+    let wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.silence) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
     const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
     const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
     if (ratproof) wary = true;
@@ -271,6 +271,7 @@ Object.assign(CM.Game.prototype, {
       if (!t) return false;
       this.strike(h, t);
       if (CM.trait(h, "flurry") && t.hp > 0 && !t.fled) this.strike(h, t, " again", { mult: 0.5 });
+      if (h.weapon && h.weapon.props && h.weapon.props.bow && !h.used.quiver && this.hasQuiver && this.hasQuiver()) { h.used.quiver = true; const t2 = t.hp > 0 && !t.fled ? t : this.living()[0]; if (t2) this.strike(h, t2, " with a second arrow from the quiver"); }   // (the hermit's quiver: once a fight)
     } else if (action === "cast" && c.silence) {
       this.say("No word comes: the fight is silenced."); return false;
     } else if (action === "cast") {
