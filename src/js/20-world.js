@@ -603,6 +603,7 @@ CM.passable = function (floor, x, y) {
   if (!CM.isOpen(floor, x, y)) return false;
   const f = floor.features[key(x, y)];
   if (f && (f.type === "door" || f.type === "gate") && !f.open) return false;
+  if (f && f.type === "river") return false;                             // (the Wood's river: crossed at the ford, not here)
   return true;
 };
 
@@ -868,6 +869,7 @@ CM.furnish = function (floor, seed, gen) {
 // a floor: made by the run's generator (CM.GEN for a new run), then furnished; a wing (number + 0.5) is made its own way
 CM.makeFloor = function (number, seed, gen) {
   if (number === 0) return CM.makeTown(seed);                            // (the town above: hand-laid, 23-town.js)
+  if (number < 0) return number % 1 === 0 ? CM.makeWood(seed) : CM.makeCave(number, seed, gen);   // (the Deep Wood and its caves, 23b-wood.js)
   if (number % 1 !== 0) return CM.makeWing(number, seed, gen);
   const make = CM.generators[gen || CM.GEN] || CM.generators[1];
   return CM.furnish(make(number, seed), seed, gen || CM.GEN);

@@ -1189,6 +1189,26 @@ Scrolls of Homecoming (the eighth big update, phase 1 - v6.2)
   counts the trips, and the crown rate on Fair with the scroll in play is 16 of 20, where v6.0 left it.
   Test: "scrolls of Homecoming".
 
+The Deep Wood (the eighth big update, phase 2 - v6.3)
+  A west gate at the end of the town's main lane opens on floor -1, the Deep Wood (src/js/23b-wood.js, CM.makeWood):
+  a thirty-one-square forest made by the seed from the forest's own rules - never the dungeon's generators, whose
+  fifty floors do not change by a cell - with glades joined by winding paths through the trees (a tree is a wall
+  the renderer draws as a trunk and a crown: CM.art.treeWall, the Wood's own theme of green, grass and sky), a river
+  crossed at one ford (a fight there is a fight in water), a hermit's hut, a ruined shrine whose wall carries the
+  hill's older page into the journal, a charcoal burner's mound, eight foraging nodes (Wood Mushrooms, Bramble
+  Berries, Wild Herbs, Deadwood and, one time in five, Wild Honey: the kitchen's and the forge's things to come) and
+  three cave mouths. The first glade, just inside the gate, is safe at any hour.
+  By day the Wood is lit by the sky, no torch burns, and deer and boar run from the party (hunted by walking into
+  them: meat four times in five, and hides); by night the torch burns, the dark has eyes, and wolves, a bear or
+  bandits hunt the party - under a full moon the Great Wolf among them - while the hermit's door and the burner's
+  eyes are shut. The beasts change at dusk, dawn and every new day, by the seed. They give no renown and a quarter
+  of the gold: hides, meat and the night's danger. The trek makes the party hungry as any floor does.
+  The caves (one open a day, by the day of the run) are short floors of the first bands' kinds, carved as any floor
+  of their own key and made caves of: the way out where the stair was, no stair down, nothing to fall through, and
+  under the third the Troll under the Hill, whose hide is worth a cloak. A Scroll of Homecoming works from the Wood
+  and its caves. The floors behind the party are never the town's or the Wood's.
+  Test: "the Deep Wood".
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

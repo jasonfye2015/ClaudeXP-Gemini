@@ -76,7 +76,7 @@ Object.assign(CM.Game.prototype, {
     this.count("steps");
     if (this.steps % 150 === 0 && this.gen >= 2) this.changeBehind();        // (the dungeon is not still behind you)
     if (this.buffs && this.buffs.salve !== undefined && (this.steps || 0) % 5 === 0) for (const h of this.alive()) if (h.hp < h.max) h.hp += 1;   // (the salve: a little, every few steps)
-    if (fl.number > 0) this.fed = (this.fed || 0) + 1 + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "hunger")) ? 1 : 0);   // the stomachs: hungry past three hundred steps, weary past six (a hungering curse: twice as fast)
+    if (fl.number !== 0) this.fed = (this.fed || 0) + 1 + (this.alive().some((h) => CM.equipped(h).some((it) => it.props && it.props.cursed && it.props.curse === "hunger")) ? 1 : 0);   // the stomachs: hungry past three hundred steps, weary past six (a hungering curse: twice as fast)
     if (this.fed === CM.HUNGER.hungry) this.say("The party is hungry. A ration would be welcome.");
     if (this.fed === CM.HUNGER.weary) this.say("The party is weary with hunger: every blow does less until they eat.");
     if (this.fed > CM.HUNGER.hungry && this.fed % 50 === 0) this.cheer(-1);
@@ -132,6 +132,9 @@ Object.assign(CM.Game.prototype, {
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)",
           building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - " + CM.t("town.foundation")}. ${CM.t("town.door")}` : "",
           well: "The square's well, under its little roof, and the notice board beside it. (Space to look down it)",
+          woodgate: fl.number === 0 ? "The west gate, and the trees beyond it. (Space to go out into the Deep Wood)" : "The gate back to the town. (Space to go through)",
+          cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
+          caveexit: "The way out of the cave. (Space to climb out)", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
           villager: thing.type === "villager" ? `${(CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length] || {}).who || "someone"}. (Space to pass the time of day)` : "" }[thing.type]);
       }
     }
@@ -239,6 +242,7 @@ Object.assign(CM.Game.prototype, {
   // ---- light ----
   burn() {
     if (this.floor && this.floor.number === 0) return;                   // (daylight: nothing burns in the town)
+    if (this.floor && this.floor.number === -1 && !CM.isNight(this)) return;   // (nor in the Wood by day)
     if (this.spellLight > 0) {
       this.spellLight -= 1;
       if (this.spellLight === 0) this.say("The conjured light fades.");
@@ -273,6 +277,7 @@ Object.assign(CM.Game.prototype, {
   // how far the party can see, as a share of the depth's reach
   lightFactor() {
     if (this.floor && this.floor.number === 0) return CM.isNight(this) ? 0.8 : 1.3;   // (daylight, or the lanterns)
+    if (this.floor && this.floor.number === -1) return CM.isNight(this) ? (this.light.kind ? 0.55 : 0.35) : 1.2;   // (the Wood: daylight under the leaves, or a torch in the dark)
     const l = this.light, spell = this.spellLight > 0;
     if (this.inDark()) return spell ? 0.7 : l.kind === "lantern" ? 0.45 : 0.25;
     let f = l.kind === "lantern" ? 1.15 : l.kind === "glow" ? 0.6 : l.kind === "torch" ? (l.left > 40 ? 1 : 0.6) : 0.22;
@@ -280,7 +285,7 @@ Object.assign(CM.Game.prototype, {
     return f;
   },
 
-  hasLight() { return Boolean(this.light.kind) || this.spellLight > 0; },
+  hasLight() { return Boolean(this.light.kind) || this.spellLight > 0 || Boolean(this.floor && this.floor.number === -1 && !CM.isNight(this)); },   // (the Wood by day is lit by the sky)
 
   // what the party can see goes on the automap: around them, and along the corridor they face - by torchlight
   look() {
@@ -350,6 +355,12 @@ Object.assign(CM.Game.prototype, {
     }
     if (thing && ["ghost", "hermit", "adventurer"].includes(thing.type)) { this.inUse = true; this.talk(thing, k); this.inUse = false; return; }
     if (thing && thing.type === "event") { this.askEvent(thing, k); return; }
+    if (thing && thing.type === "woodgate") { if (fl.number === 0) { this.sound("door"); this.enterFloor(-1, "rope", CM.WOOD_GATE.slice()); this.say(`The west gate, and the Deep Wood beyond it: ${CM.hourWord(CM.hourOf(this))}, and ${CM.isNight(this) ? "the trees are a wall of dark" : "the light comes green through the leaves"}. The first glade is safe at any hour; the Wood is not.`); } else { this.sound("door"); this.enterFloor(0, "rope", CM.TOWN_AT.woodgate.slice()); this.say("Back through the gate: the lane, and the town."); } return; }
+    if (thing && thing.type === "cave") { if (thing.n !== CM.dayOf(this) % 3) { this.say(CM.WOOD_LINES.caveShut); return; } this.sound("stairs"); this.enterFloor(CM.caveNumber(thing.n), "down"); this.say(`Down into the cave: ${["a short way under the roots", "deeper, and colder", "the hill's own dark, and something breathing at the end of it"][thing.n]}.`); return; }
+    if (thing && thing.type === "caveexit") { this.sound("stairs"); this.enterFloor(-1, "rope", CM.woodCaveAt(this.seed, fl.cave).split(",").map(Number)); this.say("Up out of the cave, into the Wood."); return; }
+    if (thing && thing.type === "hut") { this.emit("talk", { title: "The hermit's hut", text: CM.WOOD_LINES.hut[CM.isNight(this) ? 1 : 0] }); this.say(CM.WOOD_LINES.hut[CM.isNight(this) ? 1 : 0]); return; }
+    if (thing && thing.type === "burner") { this.emit("talk", { title: "The charcoal burner", text: CM.WOOD_LINES.burner[CM.isNight(this) ? 1 : 0] }); this.say(CM.WOOD_LINES.burner[CM.isNight(this) ? 1 : 0]); return; }
+    if (thing && thing.type === "shrine") { this.emit("talk", { title: "The ruined shrine", text: CM.WOOD_LINES.shrine }); this.say(CM.WOOD_LINES.shrine); if (!thing.read) { thing.read = true; this.remember("carving", CM.WOOD_LINES.shrine, { key: "wood.shrine" }); this.saveRun(); } return; }
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
     if (thing && thing.type === "well") { this.well(); return; }
     if (thing && thing.type === "villager") { this.talkTownsfolk(thing); return; }
@@ -543,6 +554,7 @@ Object.assign(CM.Game.prototype, {
     if (this.mode !== "explore") return;
     this.logAct("tick");
     if (this.floor.number === 0) return;                                 // (nothing wanders the town)
+    if (this.floor.number === -1 && this.floor.nightWas !== CM.isNight(this)) this.refreshWood();   // (the Wood changes hands at dusk and dawn)
     const fl = this.floor, [px, py] = fl.pos;
     const walk = (x, y) => {
       if (!CM.passable(fl, x, y)) return false;
@@ -576,6 +588,10 @@ Object.assign(CM.Game.prototype, {
       const d = dist.get(k), bd = baitDist ? baitDist.get(k) : undefined;
       let step = null;
       const options = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([nx, ny]) => walk(nx, ny) && !fl.things[keyOf(nx, ny)]);
+      if (t.flees) {                                                       // a deer, a boar: it runs from the party, and is hunted by walking into it
+        if (d !== undefined && d <= 6) { const away = options.filter(([nx, ny]) => (dist.get(keyOf(nx, ny)) || 99) > d); if (away.length) { const [sx, sy] = this.rnd.pick(away); delete fl.things[k]; t.anim = { from: [x, y], at: performance.now() }; fl.things[keyOf(sx, sy)] = t; this.dirty = true; } }
+        continue;
+      }
       if (d === 1) {
         this.startCombat(k, t, true);
         return;
@@ -659,6 +675,23 @@ Object.assign(CM.Game.prototype, {
     this.say("With the door barred the party sits down against it, eats, and sleeps in turns. Not the camp, but something.");
     return "";
   },
+  // the Wood changes hands at dusk and dawn: the day's deer and boar go in, the night's wolves, bear and bandits come out (by the seed, the day and the hour)
+  refreshWood() {
+    const fl = this.floor; if (!fl || fl.number !== -1) return;
+    const night = CM.isNight(this), newDay = fl.woodDay !== CM.dayOf(this); fl.nightWas = night; fl.woodDay = CM.dayOf(this);
+    for (const [k, t] of Object.entries(fl.things)) if (t.type === "monsters" && t.wood && (newDay || t.wood !== (night ? "night" : "day"))) delete fl.things[k];   // (a new day, or the other half of it: other beasts)
+    const have = Object.values(fl.things).filter((t) => t.type === "monsters" && t.wood).length;
+    const rnd = new CM.Random(CM.hashSeed(`${this.seed}:woodbands:${CM.dayOf(this)}:${night ? 1 : 0}`)), bands = CM.woodBands(night, CM.fullMoon(this));
+    const cells = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = `${x},${y}`; if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && Math.abs(x - CM.WOOD_GATE[0]) + Math.abs(y - CM.WOOD_GATE[1]) >= 9 && !(Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 3)) cells.push(k); }
+    for (let i = have; i < 4 && cells.length; i++) {
+      const kinds = bands[rnd.int(0, bands.length - 1)], level = night ? 5 : 3, group = kinds.map((n) => this.tune(CM.makeMonster(CM.monsterKind(n), level, rnd)));
+      for (const m of group) m.gold = Math.floor(m.gold / 4);
+      if (night && CM.fullMoon(this) && kinds.length === 4) { group[0].name = "The Great Wolf"; group[0].elite = "hulking"; group[0].max = Math.round(group[0].max * 1.6); group[0].hp = group[0].max; group[0].atk += 3; }
+      const k = cells.splice(rnd.int(0, cells.length - 1), 1)[0];
+      fl.things[k] = { type: "monsters", group, wood: night ? "night" : "day", flees: Boolean(CM.monsterKind(kinds[0]).flees), hunter: night };
+    }
+    this.dirty = true;
+  },
   // the pack's weight against what the party can carry: 1 is the line; over it costs, half again over it there is no running
   overweight() { return CM.bagWeight(this.bag) / CM.carryCap(this.party); },
   weightWord() { const o = this.overweight(); return o >= CM.OVERWEIGHT_RUN ? CM.t("hud.overloaded") : o > 1 ? CM.t("hud.heavy") : ""; },
@@ -693,9 +726,9 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager"];
+const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner"];
 const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
-  event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
+  event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", woodgate: "the gate", cave: "a cave mouth", caveexit: "the way out", hut: "a hut", shrine: "a ruined shrine", burner: "a smoking mound", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
   pathTo(x, y) {
@@ -818,7 +851,7 @@ Object.assign(CM.Game.prototype, {
   // the dungeon behind you shifts, now and then: a door you left shut opens on a floor above, or a peddler sets up by a
   // fountain there, once a run (never the floor you are on; the floor's save is worked out afresh)
   changeBehind() {
-    const above = Object.keys(this.floors).map(Number).filter((n) => n < Math.floor(this.floor.number) && n % 1 === 0);
+    const above = Object.keys(this.floors).map(Number).filter((n) => n >= 1 && n < Math.floor(this.floor.number) && n % 1 === 0);
     if (!above.length) return;
     const n = above[this.rnd.int(0, above.length - 1)], fl = this.floors[n];
     const doors = Object.values(fl.features).filter((f) => f.type === "door" && !f.open && !f.locked && !f.barred && f.riddle === undefined);

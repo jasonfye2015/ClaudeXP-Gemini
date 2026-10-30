@@ -130,7 +130,7 @@ Object.assign(CM.Game.prototype, {
         this.say("The scroll crumbles, and the party stands below again where it stood, the lane's light still in its eyes.");
         return "";
       }
-      if (this.mode !== "explore" || fl.number < 1) return "Read it below, to be brought home from there.";
+      if (this.mode !== "explore" || fl.number === 0) return "Read it below, or out in the Wood, to be brought home from there.";
       item.back = { floor: fl.number, pos: fl.pos.slice() }; this.countUse("homecoming"); this.tally.homecomings = (this.tally.homecomings || 0) + 1;
       this.changeBehind(); this.changeBehind();                          // (the floors behind move on while the party is away)
       this.sleepTillDawn();                                              // (the climb is the night: the party is at its door at dawn)

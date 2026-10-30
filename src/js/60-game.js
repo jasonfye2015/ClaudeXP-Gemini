@@ -465,6 +465,7 @@ CM.Game = class {
       const ghost = this.ghostTrail(), g = ghost && ghost.find(([n]) => n === number);
       if (g && number > 1) { const d = (this.tally.steps || 0) - g[1]; this.say(`The ghost of your best run on this seed took this stair at step ${g[1].toLocaleString()}: you are ${d > 0 ? `${d} steps behind` : d < 0 ? `${-d} steps ahead` : "level with it"}.`); }
     }
+    if (number === -1) this.refreshWood();
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
     if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
@@ -487,7 +488,7 @@ CM.Game = class {
     this.saveRun();
     if (fresh && this.has("pilgrim")) this.checkLevels();
     if (fl.wing !== undefined) { if (fresh) this.say(`${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)}: ${CM.WINGS[fl.wing].smell}. The only way on is the way down to the main stair.`); if (fresh && fl.secretWing) this.achieve("secretfloor"); else if (fresh) this.achieve("wings"); }
-    else if (fresh || how !== "fall") this.say(number === 0 ? CM.t("town.arrive", { name: CM.TOWN_THEME.name }) : `Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
+    else if (fresh || how !== "fall") this.say(number === 0 ? CM.t("town.arrive", { name: CM.TOWN_THEME.name }) : number === -1 ? `${CM.WOOD_THEME.name}: ${CM.hourWord(CM.hourOf(this))} under the trees.` : number < 0 ? "A cave under the Wood: roots in the roof, and the first bands' kinds in the dark." : `Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && fl.hazard && CM.HAZARDS[CM.themeIndex(number)] && !this.hazardsSeen(fl.hazard)) this.say(CM.HAZARDS[CM.themeIndex(number)].note);
     if (fresh && number === CM.LAST_FLOOR + 1) this.say("The stair goes on below the palace, cut by no mason. The air is wet and old. The Deep begins here, and the carvings above never spoke of it.");

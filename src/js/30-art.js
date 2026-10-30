@@ -492,6 +492,16 @@ CM.art.teleporter = function () {                                         // a r
 };
 
 // the town's things: a house front with a door and a sign, a foundation of low stones, the square's well
+CM.art.treeWall = function (theme, seed) {                               // the Wood's wall: a trunk and its crown against the dark of the trees behind
+  const c = artCanvas(), p = c.getContext("2d"), rnd = new CM.Random(seed), S = ART_SIZE;
+  p.fillStyle = rgb(theme.mortar); p.fillRect(0, 0, S, S);
+  for (let i = 0; i < 60; i++) { p.fillStyle = `rgba(${theme.stone[0] + rnd.int(-20, 20)},${theme.stone[1] + rnd.int(-20, 20)},${theme.stone[2] + rnd.int(-10, 10)},0.7)`; p.beginPath(); p.arc(rnd.int(0, S), rnd.int(0, S * 0.7), rnd.int(14, 30), 0, Math.PI * 2); p.fill(); }
+  const tx = S / 2 + rnd.int(-20, 20), tw = 34 + rnd.int(0, 12);
+  p.fillStyle = "#4A3220"; p.fillRect(tx - tw / 2, S * 0.3, tw, S * 0.7);
+  p.fillStyle = "#3A2614"; for (let y = S * 0.3; y < S; y += 14) p.fillRect(tx - tw / 2 + rnd.int(0, 6), y, tw - rnd.int(4, 12), 3);
+  p.fillStyle = `rgba(${theme.moss[0]},${theme.moss[1]},${theme.moss[2]},0.85)`; for (let i = 0; i < 14; i++) { p.beginPath(); p.arc(tx + rnd.int(-60, 60), S * 0.18 + rnd.int(-30, 30), rnd.int(20, 40), 0, Math.PI * 2); p.fill(); }
+  return c;
+};
 CM.art.house = function (stage = 4) {                                   // 1 a frame; 2 a roofed house; 3 with its sign; 4 with a lit window
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
   p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(S / 2, S - 14, 100, 9, 0, 0, Math.PI * 2); p.fill();
@@ -1022,9 +1032,9 @@ CM.art.buildDrawn = function (theme) {
   const layers = [], index = {};
   const add = (name, canvas) => { index[name] = layers.length; layers.push(canvas); };
   const seed = CM.hashSeed(theme.name);
-  add("wall", CM.art.wall(theme, seed + 1, false));
-  add("wall2", CM.art.wall(theme, seed + 2, false));
-  add("wallbones", CM.art.wall(theme, seed + 3, true));
+  add("wall", theme.tree ? CM.art.treeWall(theme, seed + 1) : CM.art.wall(theme, seed + 1, false));
+  add("wall2", theme.tree ? CM.art.treeWall(theme, seed + 2) : CM.art.wall(theme, seed + 2, false));
+  add("wallbones", theme.tree ? CM.art.treeWall(theme, seed + 3) : CM.art.wall(theme, seed + 3, true));
   add("floor", CM.art.floor(theme, seed + 4));
   add("ceiling", CM.art.ceiling(theme, seed + 5));
   add("wallsecret", CM.art.secretWall(theme, seed + 6));

@@ -30,8 +30,9 @@ CM.makeTown = function (seed) {
   for (let y = 11; y <= 15; y++) open(9, y);                              // the south lane
   const things = {}, features = {};
   for (const [id, [x, y]] of Object.entries(CM.TOWN_AT)) {
-    open(x, y);
+    grid[y][x] = 0;
     if (id === "shaft") things[`${x},${y}`] = { type: "ladder" };
+    else if (id === "woodgate") things[`${x},${y}`] = { type: "woodgate" };
     else if (id === "well") things[`${x},${y}`] = { type: "well" };
     else things[`${x},${y}`] = { type: "building", id };
   }

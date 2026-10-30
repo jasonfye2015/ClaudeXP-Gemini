@@ -1419,7 +1419,8 @@ Object.assign(CM.Game.prototype, {
     { const fought = this.floor.things[this.foeKey]; if (fought && fought.mimicOf) { const hoard = fought.mimicOf.gold || 0; this.gold += hoard; gold += hoard; loot.push(...(fought.mimicOf.items || [])); this.say("Inside what was pretending to be a chest: what a chest would have held."); } }
     const band = CM.themeIndex(this.floor.number), ing = Object.keys(CM.INGREDIENTS).find((id) => CM.INGREDIENTS[id].band === band);
     if (ing && rnd.chance(0.3)) loot.push(CM.ingredient(ing));           // (what the alchemist wants: the band's own stuff)
-    { const meaty = slain.filter((m) => CM.MEALS[m.kind || m.name] && !m.undead); if (meaty.length && rnd.chance(0.35)) loot.push(CM.meat(meaty[0].kind || meaty[0].name)); }   // (and the kitchen's)
+    { const meaty = slain.filter((m) => CM.MEALS[m.kind || m.name] && !m.undead); if (meaty.length && rnd.chance(this.floor.number < 0 ? 0.8 : 0.35)) loot.push(CM.meat(meaty[0].kind || meaty[0].name)); }   // (and the kitchen
+    for (const m of slain) if (CM.HIDES[m.kind || m.name] && rnd.chance(m.name === "The Troll under the Hill" ? 1 : 0.6)) loot.push(CM.hide(m.kind || m.name));   // (the Wood's beasts: hides for the hermit)'s)
     this.gain(loot, "foe"); this.count("goldFound", gold);
     for (const h of this.party) if (h.oil && h.oil.fights > 0) { h.oil.fights -= 1; if (!h.oil.fights) { this.say(`The oil on ${h.name}'s weapon has worn off.`); h.oil = null; } }
     const boss = this.foes.some((m) => m.boss), guardian = this.foes.find((m) => m.guardian), fought = this.floor.things[this.foeKey];

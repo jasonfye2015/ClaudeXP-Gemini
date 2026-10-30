@@ -39,15 +39,15 @@ window.addEventListener("DOMContentLoaded", () => {
   const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
-    if (((number === 0 ? -2 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn) || !renderer.ok) return;
-    const town = number === 0, key = town ? `${look}:town` : `${look}:${i}${game.dream ? ":dream" : ""}`;
+    if (((number === 0 ? -2 : number === -1 ? -3 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : null, key = special ? `${look}:${special.name}` : `${look}:${i}${game.dream ? ":dream" : ""}`;
     if (!artCache[key]) {
-      artCache[key] = CM.art.build(town ? CM.TOWN_THEME : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
+      artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
       while (cacheOrder.length > 3) delete artCache[cacheOrder.shift()];      // (the stone's textures are large: a few depths at a time)
     }
     renderer.setTextures(artCache[key]);
-    themeOn = number === 0 ? -2 : i; lookOn = look; dreamOn = Boolean(game.dream);
+    themeOn = number === 0 ? -2 : number === -1 ? -3 : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -110,6 +110,8 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
     if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
     if (fl.number === 0) { ui.titleCard(CM.TOWN_THEME.name, CM.t(CM.isNight(game) ? "town.card.night" : "town.card")); return; }
+    if (fl.number === -1) { ui.titleCard(CM.WOOD_THEME.name, CM.isNight(game) ? "The trees close over the path, and the dark has eyes." : "Green light, birdsong, and three cave mouths somewhere under the roots."); return; }
+    if (fl.number < 0) return;
     const ch = Object.values(CM.CHAPTERS).find((c) => c.band === CM.themeIndex(fl.number));
     if (!ch) return;
     if ((fl.number - 1) % 5 === 0) ui.titleCard(CM.bandName(game, fl.number), game.dream ? "What Caer Duin might have been." : ch.epigraph);
@@ -362,6 +364,12 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "building") { const P = CM.TOWN_PLOTS[thing.id] || {}, V = P.village ? CM.VILLAGE[P.village] : null, lvl = CM.plotLevel(game, thing.id), stage = P.always && !V ? 4 : CM.houseStage(lvl, V ? V.costs.length : 1); out.push({ x, y, layer: stage ? `house${stage}` : "foundation", w: 1.0, h: 1.0 }); }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
       else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
+      else if (thing.type === "woodgate") out.push({ x, y, layer: "gate_open", w: 1.0, h: 1.0 });
+      else if (thing.type === "cave") out.push({ x, y, layer: thing.n === CM.dayOf(game) % 3 ? "hatch" : "bones", w: 0.9, flat: thing.n === CM.dayOf(game) % 3, h: 0.5, shade: 0.6 });
+      else if (thing.type === "caveexit") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
+      else if (thing.type === "hut") out.push({ x, y, layer: "house2", w: 1.0, h: 1.0 });
+      else if (thing.type === "shrine") out.push({ x, y, layer: "altar", w: 0.8, h: 0.7 });
+      else if (thing.type === "burner") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });
       else if (thing.type === "wingstair" || thing.type === "wingexit") out.push({ x, y, layer: "hatch", w: 0.8, flat: true, shade: 0.75 });
       else if (thing.type === "wingstair_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
