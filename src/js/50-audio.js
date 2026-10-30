@@ -171,10 +171,11 @@ CM.audio = {
     return b;
   },
 
-  play(name, volume = 1, pan = 0) {
+  play(name, volume = 1, pan = 0, rate = 1) {
     if (!this.ctx || !this.enabled || !this.buffers[name]) return;
     const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
     src.buffer = this.buffers[name];
+    if (rate !== 1) src.playbackRate.value = rate;
     g.gain.value = CM.clamp(volume, 0, 1);
     src.connect(g);
     if (pan && this.ctx.createStereoPanner) { const p = this.ctx.createStereoPanner(); p.pan.value = CM.clamp(pan, -1, 1); g.connect(p); p.connect(this.master); }
@@ -182,6 +183,8 @@ CM.audio = {
     src.start();
   },
 
+  // a bark: a kind's call, short and shifted - high and quick for a blow taken, low and slow for its death
+  bark(kind, what) { if (!this.ctx || !this.enabled) return; const now = performance.now(); if (now - (this.lastBark || 0) < 180) return; this.lastBark = now; this.play(CM.roarFor(kind), what === "die" ? 0.5 : 0.22, 0, what === "die" ? 0.7 : 1.5); },
   // something is coming: its kind's call, louder the nearer it is, not too often - and from the side it is on (pan -1..1)
   near(kind, strength, pan = 0) {
     const now = performance.now();

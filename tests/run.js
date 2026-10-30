@@ -1236,6 +1236,20 @@ test("films: a run's end keeps one; it plays on the live game line by line, skip
   assert.ok(g3.messages.some((m) => m.includes("ghost of your best run")), g3.messages.slice(-3).join(" | "));
 });
 
+test("sound and sight, again: the battle tune's layers and key, a monster's frames by pose", () => {
+  const CM = load();
+  // (the music and the art live with the window; what can be read without a browser is read)
+  const src = fs.readFileSync(path.join(__dirname, "..", "src", "js", "55-music.js"), "utf8");
+  assert.ok(src.includes("setDanger") && src.includes("shiftBy") && src.includes("this.danger < 0.6"), "the lead joins under half, the pad drops when a hero has fallen");
+  const art = fs.readFileSync(path.join(__dirname, "..", "src", "js", "30-art.js"), "utf8");
+  assert.ok(art.includes('pose === "idle2"') && art.includes('pose === "attack"') && art.includes("monster:${m.name}:attack"), "two frames more, painted in code");
+  const audio = fs.readFileSync(path.join(__dirname, "..", "src", "js", "50-audio.js"), "utf8");
+  assert.ok(audio.includes("bark(kind, what)") && audio.includes("playbackRate"), "barks: a call shifted");
+  const render = fs.readFileSync(path.join(__dirname, "..", "src", "js", "40-render.js"), "utf8");
+  assert.ok(render.includes("zoomTo(k, ms") && render.includes("rollTo(r, ms"), "the camera pushes, pulls and tilts");
+  void CM;
+});
+
 let failed = 0;
 for (const t of tests) {
   const t0 = Date.now();

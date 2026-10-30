@@ -86,9 +86,9 @@ CM.art.buildPixel = function (theme) {
   CM.art.tileOnto(pp, "phylactery", S * 0.15, S * 0.15, S * 0.7, S * 0.7);
   add("phylactery", phy);
   const tileOr = (key, drawn) => (CM.packs.pixel.index[key] ? sprite(key) : CM.art.pixelate(drawn()));   // (the set's tile, or the drawn one made of pixels)
-  for (const m of CM.MONSTERS) add(`monster:${m.name}`, tileOr(`m.${m.name}`, () => CM.art.monster(m)));
-  add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`));
-  for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12)));
+  for (const m of CM.MONSTERS) { add(`monster:${m.name}`, tileOr(`m.${m.name}`, () => CM.art.monster(m))); add(`monster:${m.name}:idle2`, tileOr(`m.${m.name}`, () => CM.art.monster(m, false, "idle2"))); add(`monster:${m.name}:attack`, tileOr(`m.${m.name}`, () => CM.art.monster(m, false, "attack"))); }
+  add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`)); add(`monster:${CM.BOSS.name}:idle2`, sprite(`m.${CM.BOSS.name}`)); add(`monster:${CM.BOSS.name}:attack`, sprite(`m.${CM.BOSS.name}`));
+  for (const G of Object.values(CM.GUARDIANS)) { add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12))); add(`monster:${G.name}:idle2`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12, "idle2"))); add(`monster:${G.name}:attack`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12, "attack"))); }
   add("nest", CM.art.pixelate(CM.art.nest())); add("throne", CM.art.pixelate(CM.art.throne())); add("anvil", CM.art.pixelate(CM.art.anvil()));
   add("ember", tileOr("ember", CM.art.ember));
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, tileOr(`npc.${who}`, () => CM.art.monster(row)));

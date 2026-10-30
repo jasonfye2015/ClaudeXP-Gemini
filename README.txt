@@ -690,6 +690,22 @@ Replays, ghosts and the film of a run (the fourth big update, phase 7 - v2.8)
   Clips: Record a clip, in the pause menu, saves ten seconds of the view as a .webm, where the browser can (the
   canvas's stream and MediaRecorder).
 
+Sound and sight, again (the fourth big update, phase 8 - v2.9)
+  Two frames more for every monster of the Drawn theme, painted in code from the same picture under a different hand
+  (CM.art.monster(m, big, pose)): the weight on the other foot as it breathes, and a lean-in as it strikes. The Pixel
+  theme's tiles stand still, as tiles do.
+  The battle tune in layers, by danger (CM.music.setDanger): drums and the pad while the party is whole, the lead
+  joins when someone is under half, the pad drops out when a hero has fallen; a guardian's second form shifts the
+  tune up three semitones (CM.music.shift) until the fight ends.
+  Barks (CM.audio.bark): a monster's call, short and high when it is struck, low and slow when it dies.
+  A camera pass (40-render.js: zoomTo, rollTo): a push-in when a guardian telegraphs its move, a pull-back on the
+  crown, a slow tilt on the ending when the party has fallen. Not with Reduce motion on.
+  Lit stone is deferred again: ambientCG's normal and roughness maps are not in src/art (pack.py --gather on the
+  machine with the full sets is the first step).
+  The ladder, measured again at ten seeds a rung (Fair): too few seeds to rank the middle rungs - the dice of every
+  run change with any rule, and five crowns against three is noise - but Ascension 15 is plainly the hardest (one
+  crown in ten). Thirty seeds a rung is the number to decide by; node tools/sim.js --seeds 30 --ascension 0,5,10,15.
+
 The game is one HTML file
   game\Claude and Magic v<version>.html is the whole game: open it in a browser (Chrome, Edge, Firefox) and play.
   It draws with WebGL 2 and makes its sounds and music with Web Audio, in code; the two art packs ride inside it

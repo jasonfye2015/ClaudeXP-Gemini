@@ -185,13 +185,17 @@ function shaded(p, hex, k) {                                            // a col
 // a monster, from its row in CM.MONSTERS: a body shape, a head, what it holds, its colour and eyes - and the finish:
 // a sheen where the torch catches it, fur or scales or a hide and belt, its skin (stone cracks, warts, rot), brows
 // drawn down and a grim mouth with teeth or fangs
-CM.art.monster = function (m, big = false) {
+// pose: "idle" (as drawn), "idle2" (the weight on the other foot: a breath, a shift), "attack" (leaning in, the
+// weapon arm up) - the Drawn theme's frames, the same picture under a different hand (36-looks.js keeps the layers)
+CM.art.monster = function (m, big = false, pose = "idle") {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14, rndm = new CM.Random(CM.hashSeed(m.name));
   const col = m.colour, dark = shaded(p, col, 0.65), light = shaded(p, col, 1.3);
   const bodies = { beast: [150, 70], small: [66, 76], biped: [84, 100], thin: [58, 100], wide: [130, 112], tall: [78, 140], ghost: [90, 140] };
   const [bw, bh] = bodies[m.body] || bodies.biped;
   const scale = big === true ? 1.12 : typeof big === "number" ? big : 1;
   p.translate(cx, ground); p.scale(scale, scale); p.translate(-cx, -ground);
+  if (pose === "idle2") { p.translate(cx, ground); p.transform(1, 0, -0.04, 0.97, 0, 0); p.translate(-cx, -ground); }      // (a shift of the weight, a breath out)
+  else if (pose === "attack") { p.translate(cx, ground); p.transform(1.06, 0, 0.18, 1.0, 0, 6); p.translate(-cx, -ground); }   // (leaning in)
   const bodyTop = ground - (m.body === "beast" ? 24 : 36) - bh, bodyBottom = bodyTop + bh;
   const headR = m.body === "small" ? 30 : m.body === "wide" ? 28 : m.body === "beast" ? 26 : 24;
   const headY = m.body === "beast" ? bodyTop + 4 : bodyTop - headR + 8;
@@ -1009,9 +1013,9 @@ CM.art.buildDrawn = function (theme) {
   add("stairs_up", CM.art.stairsUp(theme));
   add("key", CM.art.key());
   add("phylactery", CM.art.phylactery());
-  for (const m of CM.MONSTERS) add(`monster:${m.name}`, CM.art.monster(m));
-  add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
-  for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, CM.art.monster(G, G.size >= 1 ? 1.12 : 1.04));
+  for (const m of CM.MONSTERS) { add(`monster:${m.name}`, CM.art.monster(m)); add(`monster:${m.name}:idle2`, CM.art.monster(m, false, "idle2")); add(`monster:${m.name}:attack`, CM.art.monster(m, false, "attack")); }
+  add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true)); add(`monster:${CM.BOSS.name}:idle2`, CM.art.monster(CM.BOSS, true, "idle2")); add(`monster:${CM.BOSS.name}:attack`, CM.art.monster(CM.BOSS, true, "attack"));
+  for (const G of Object.values(CM.GUARDIANS)) { const k = G.size >= 1 ? 1.12 : 1.04; add(`monster:${G.name}`, CM.art.monster(G, k)); add(`monster:${G.name}:idle2`, CM.art.monster(G, k, "idle2")); add(`monster:${G.name}:attack`, CM.art.monster(G, k, "attack")); }
   add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, CM.art.monster(row));
   add("bones", CM.art.bones()); add("rope", CM.art.rope()); add("plate", CM.art.plate(false)); add("plate_pressed", CM.art.plate(true)); add("door_riddle", CM.art.door("riddle"));

@@ -221,7 +221,7 @@ Object.assign(CM.Game.prototype, {
       if (!G || !G.form2 || m.form2 || m.hp <= 0 || m.hp > m.max * (this.asc("nomercy") ? 1.01 : 0.34) || m.echo) continue;
       m.form2 = true;
       this.say(G.form2.text);
-      this.emit("fx", { kind: "rise", foe: m });
+      this.emit("fx", { kind: "rise", foe: m, form2: true });
       if (G.form2.kind === "hide") { m.hidden = true; this.summonFor(m, G.moves[0], 2); }
       else if (G.form2.kind === "flood") { this.combat.flooded = true; m.quick = true; }
       else if (G.form2.kind === "heat") { m.broken = true; m.atk = Math.round(m.atk * 1.3); }
@@ -559,7 +559,7 @@ Object.assign(CM.Game.prototype, {
     const every = m.quick ? 2 : 3;                                        // (the flooded Knight comes faster)
     if (m.hidden) { const up = this.foes.filter((f) => f.summoned && f.hp > 0 && !f.fled).length; if (up < 4) this.summonFor(m, moves[0], Math.min(2, 4 - up)); else this.say("The heap seethes."); return; }
     const telegraph = () => {                                             // next turn is one of its moves: it shows, so the party can brace
-      if ((m.turns + 1) % every === 0 && moves.length && !m.broken) { const next = moves[(Math.floor((m.turns + 1) / every) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); }
+      if ((m.turns + 1) % every === 0 && moves.length && !m.broken) { const next = moves[(Math.floor((m.turns + 1) / every) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); this.emit("fx", { kind: "intent", foe: m }); }
     };
     if (m.turns % every === 0 && moves.length && !m.broken) {
       const mv = moves[(Math.floor(m.turns / every) - 1) % moves.length];

@@ -24,6 +24,8 @@ CM.music = {
   },
   playing: null,
   depth: 0,                                        // how far into its band the party is (0..1): the tune gains a voice past the middle, and a fifth near the end
+  danger: 0,                                       // the battle tune in layers: 0 drums and pad while the party is whole, 0.6 the lead joins under half, 1 the pad drops out when a hero has fallen
+  shiftBy: 0,                                      // semitones the tune is shifted (a guardian's second form changes the key)
   enabled: true,
   volume: 0.5,
   master: null,
@@ -55,6 +57,10 @@ CM.music = {
   },
 
   midi(tune, degree, octave = 0) {
+    if (this.shiftBy) return this.midi0(tune, degree, octave) + this.shiftBy;
+    return this.midi0(tune, degree, octave);
+  },
+  midi0(tune, degree, octave = 0) {
     const n = tune.scale.length, d = ((degree % n) + n) % n, o = Math.floor(degree / n) + octave;
     return tune.root + tune.scale[d] + 12 * o;
   },
@@ -121,10 +127,10 @@ CM.music = {
     if (!this.enabled) { this.nextAt = Math.max(this.nextAt, ctx.currentTime + 0.1); return; }   // (off: nothing to play, nothing piles up)
     while (this.nextAt < ctx.currentTime + 1.5) {                        // (a second and a half ahead: a hidden tab's timers come once a second)
       const i = this.step % 64, chord = t.chords[Math.floor((i % 32) / 8)];
-      if (i % 8 === 0) this._pad(t, chord, this.nextAt, stepLen * 8);
+      if (i % 8 === 0 && !(t.drums && this.danger >= 1)) this._pad(t, chord, this.nextAt, stepLen * 8);
       if (t.drums) this._drums(i, this.nextAt, stepLen);
       const deg = t.melody[i];
-      if (deg !== null && deg !== undefined) this._note(t, deg, this.nextAt, stepLen * (t.melody[(i + 1) % 64] === null ? 2 : 1));
+      if (deg !== null && deg !== undefined && !(t.drums && this.danger < 0.6)) this._note(t, deg, this.nextAt, stepLen * (t.melody[(i + 1) % 64] === null ? 2 : 1));
       this.nextAt += stepLen;
       this.step += 1;
     }
@@ -143,6 +149,8 @@ CM.music = {
   },
 
   setDepth(k) { this.depth = CM.clamp(k || 0, 0, 1); },
+  setDanger(k) { this.danger = CM.clamp(k || 0, 0, 1); },
+  shift(semitones) { this.shiftBy = semitones || 0; },
   _note(t, deg, at, len) {
     const hz = this.hz(this.midi(t, deg, 1));
     if (this.depth >= 0.5 && !t.drums && this.bus) this._osc("sine", hz * 2, at + 0.02, at + len * 0.7, 0.03 + 0.03 * this.depth, 2400);   // deeper in: an echo an octave up

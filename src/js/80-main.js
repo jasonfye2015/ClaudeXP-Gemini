@@ -191,10 +191,12 @@ window.addEventListener("DOMContentLoaded", () => {
   function spectacle(fx) {
     const now = performance.now();
     switch (fx.kind) {
-      case "hit": flashes.set(fx.foe, 1); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
+      case "intent": renderer.zoomTo(0.9, 600); break;
+      case "hit": flashes.set(fx.foe, 1); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
       case "miss": later(() => floatAt(fx.foe, "miss", "miss")); break;
       case "die": {
         dying.set(fx.foe, now);
+        if (fx.foe && !fx.foe.fled) CM.audio.bark(fx.foe.kind || fx.foe.name, "die");
         const at = atFoe(fx.foe, 0.4);
         if (!at) break;
         fxs.burst({ at, layer: fx.foe.undead ? "fx:shard" : "fx:spark", n: CM.unmoved(fx.foe) ? 40 : 14, size: fx.foe.undead ? 0.1 : 0.06, speed: 1.6, up: 1.8 });
@@ -225,6 +227,7 @@ window.addEventListener("DOMContentLoaded", () => {
       case "sear": ui.tint("rgba(255,120,30,0.3)", 220); fxs.burst({ at: beforeParty(0.3), layer: "fx:fire", n: 6, size: 0.06, speed: 0.8, up: 1.2, ms: 400 }); break;
       case "relic": ui.tint("rgba(255,230,150,0.45)", 900); fxs.drift({ at: beforeParty(0.6), n: 12, size: 0.06, spread: 1.0, rise: 0.7, ms: 1400 }); break;
       case "rise": {
+        if (fx.form2) CM.music.shift(3);
         const at = atFoe(fx.foe, 0.05);
         if (at) { fxs.ring({ at: [at[0], 0, at[2]], to: 3.2, ms: 900 }); fxs.burst({ at: [at[0], 0.5, at[2]], layer: "fx:shard", n: 24, size: 0.1, speed: 1.8, up: 2.6 }); }
         ui.tint("rgba(120,240,255,0.4)", 700); renderer.shake(0.8);
@@ -241,6 +244,9 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   game.on("fx", spectacle);
   game.on("fell", () => renderer.shake(0.6));
+  game.on("crowned", () => renderer.zoomTo(1.15, 1600));
+  game.on("mode", (mode) => { if (mode !== "combat") { CM.music.shift(0); CM.music.setDanger(0); } });
+  game.on("over", (won) => { if (!won && renderer.ok) { renderer.rollNow = 0; renderer.rollTo(0.12, 1200); setTimeout(() => renderer.rollTo(0, 2500), 1600); } });
   game.on("floor", () => fxs.clear());
   game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); lunges.clear(); } if (mode === "title") fxs.clear(); });
   // a click on a foe in the view chooses it
@@ -302,6 +308,8 @@ window.addEventListener("DOMContentLoaded", () => {
     return decor;
   }
 
+  // a frame of a monster's picture, where the theme has it (the Drawn frames; the Pixel tiles stand still)
+  const frameOf = (layer, pose) => (pose && renderer.index && renderer.index[`${layer}:${pose}`] !== undefined ? `${layer}:${pose}` : layer);
   function sprites() {
     const fl = game.floor, out = [], hud = [];
     if (!fl) return { out, hud };
@@ -336,7 +344,7 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
         const breath = CM.reducedMotion ? 0 : Math.sin(now / 820 + x * 2.1 + y * 1.3) * 0.02;   // (alive: it breathes)
-        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: (m.boss ? 0.95 : G ? 0.9 * G.size : 0.85) * (1 + breath), h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * (1 + breath * 0.6), shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
+        out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: (m.boss ? 0.95 : G ? 0.9 * G.size : 0.85) * (1 + breath), h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * (1 + breath * 0.6), shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
           lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
       }
     }
@@ -389,7 +397,8 @@ window.addEventListener("DOMContentLoaded", () => {
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
         const flinch = flash > 0 ? Math.sin(now / 22) * flash * 0.025 : 0;   // struck: it shudders
         const breath = CM.reducedMotion || m.hp <= 0 ? 0 : Math.sin(now / 760 + place.dx * 7) * 0.018;   // (and breathes)
-        out.push(Object.assign({}, place, { flash: flash * 0.8, alpha, lift, w: place.w * (1 + breath), h: place.h * (1 + breath * 0.6), dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
+        const pose = m.hp > 0 && lunges.has(m) ? "attack" : m.hp > 0 && Math.floor(now / 640 + place.dx * 5) % 2 ? "idle2" : "";
+        out.push(Object.assign({}, place, { layer: frameOf(place.layer, pose), flash: flash * 0.8, alpha, lift, w: place.w * (1 + breath), h: place.h * (1 + breath * 0.6), dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
       }
     }
     out.push(...fxs.sprites(now));                                      // what flies and bursts, this frame
@@ -551,6 +560,7 @@ window.addEventListener("DOMContentLoaded", () => {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
         if (ui.screen === "play" && !ui.dialogOpen()) game.tick(dt);    // the monsters move (not while you read a sheet or the pack); the run saves now and then
+        if (game.mode === "combat") { const up = game.party.filter((h) => h.hp > 0); const worst = up.length ? Math.min(...up.map((h) => h.hp / h.max)) : 0; CM.music.setDanger(up.length < game.party.length ? 1 : worst < 0.5 ? 0.6 : 0); }   // the battle tune in layers
         if (game.film && game.film.playing && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - game.film.last > 260 / game.film.speed) { game.film.last = now; game.filmStep(); }   // the film plays
         if (game.travel && game.mode === "explore" && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
         if (game.mode === "combat" && game.combat && game.combat.auto && game.combat.waiting && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAuto > 420 / (CM.fxSpeed || 1)) { lastAuto = now; game.autoTurn(); }

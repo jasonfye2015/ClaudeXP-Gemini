@@ -193,7 +193,7 @@ uses every v2.0 system in the sim's report, and a replayed log reproduces a run 
 
 ---
 
-## Phase 8 - Sound and sight, again
+## Phase 8 - Sound and sight, again - DONE (v2.9; lit stone deferred: the maps aren't in the repo)
 
 - **Lit stone** (deferred last time): `pack.py --gather` with ambientCG's normal and roughness maps, a second
   texture array, per-pixel torch lighting with specular on wet stone. Budget: the built file under 6 MB.

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v2.8 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v2.9 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -378,7 +378,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "2.8", built: "2026-10-30" };
+const CM = window.CM = { version: "2.9", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -3330,13 +3330,17 @@ function shaded(p, hex, k) {                                            // a col
 // a monster, from its row in CM.MONSTERS: a body shape, a head, what it holds, its colour and eyes - and the finish:
 // a sheen where the torch catches it, fur or scales or a hide and belt, its skin (stone cracks, warts, rot), brows
 // drawn down and a grim mouth with teeth or fangs
-CM.art.monster = function (m, big = false) {
+// pose: "idle" (as drawn), "idle2" (the weight on the other foot: a breath, a shift), "attack" (leaning in, the
+// weapon arm up) - the Drawn theme's frames, the same picture under a different hand (36-looks.js keeps the layers)
+CM.art.monster = function (m, big = false, pose = "idle") {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, cx = S / 2, ground = S - 14, rndm = new CM.Random(CM.hashSeed(m.name));
   const col = m.colour, dark = shaded(p, col, 0.65), light = shaded(p, col, 1.3);
   const bodies = { beast: [150, 70], small: [66, 76], biped: [84, 100], thin: [58, 100], wide: [130, 112], tall: [78, 140], ghost: [90, 140] };
   const [bw, bh] = bodies[m.body] || bodies.biped;
   const scale = big === true ? 1.12 : typeof big === "number" ? big : 1;
   p.translate(cx, ground); p.scale(scale, scale); p.translate(-cx, -ground);
+  if (pose === "idle2") { p.translate(cx, ground); p.transform(1, 0, -0.04, 0.97, 0, 0); p.translate(-cx, -ground); }      // (a shift of the weight, a breath out)
+  else if (pose === "attack") { p.translate(cx, ground); p.transform(1.06, 0, 0.18, 1.0, 0, 6); p.translate(-cx, -ground); }   // (leaning in)
   const bodyTop = ground - (m.body === "beast" ? 24 : 36) - bh, bodyBottom = bodyTop + bh;
   const headR = m.body === "small" ? 30 : m.body === "wide" ? 28 : m.body === "beast" ? 26 : 24;
   const headY = m.body === "beast" ? bodyTop + 4 : bodyTop - headR + 8;
@@ -4154,9 +4158,9 @@ CM.art.buildDrawn = function (theme) {
   add("stairs_up", CM.art.stairsUp(theme));
   add("key", CM.art.key());
   add("phylactery", CM.art.phylactery());
-  for (const m of CM.MONSTERS) add(`monster:${m.name}`, CM.art.monster(m));
-  add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true));
-  for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, CM.art.monster(G, G.size >= 1 ? 1.12 : 1.04));
+  for (const m of CM.MONSTERS) { add(`monster:${m.name}`, CM.art.monster(m)); add(`monster:${m.name}:idle2`, CM.art.monster(m, false, "idle2")); add(`monster:${m.name}:attack`, CM.art.monster(m, false, "attack")); }
+  add(`monster:${CM.BOSS.name}`, CM.art.monster(CM.BOSS, true)); add(`monster:${CM.BOSS.name}:idle2`, CM.art.monster(CM.BOSS, true, "idle2")); add(`monster:${CM.BOSS.name}:attack`, CM.art.monster(CM.BOSS, true, "attack"));
+  for (const G of Object.values(CM.GUARDIANS)) { const k = G.size >= 1 ? 1.12 : 1.04; add(`monster:${G.name}`, CM.art.monster(G, k)); add(`monster:${G.name}:idle2`, CM.art.monster(G, k, "idle2")); add(`monster:${G.name}:attack`, CM.art.monster(G, k, "attack")); }
   add("nest", CM.art.nest()); add("throne", CM.art.throne()); add("anvil", CM.art.anvil()); add("ember", CM.art.ember());
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, CM.art.monster(row));
   add("bones", CM.art.bones()); add("rope", CM.art.rope()); add("plate", CM.art.plate(false)); add("plate_pressed", CM.art.plate(true)); add("door_riddle", CM.art.door("riddle"));
@@ -4268,9 +4272,9 @@ CM.art.buildPixel = function (theme) {
   CM.art.tileOnto(pp, "phylactery", S * 0.15, S * 0.15, S * 0.7, S * 0.7);
   add("phylactery", phy);
   const tileOr = (key, drawn) => (CM.packs.pixel.index[key] ? sprite(key) : CM.art.pixelate(drawn()));   // (the set's tile, or the drawn one made of pixels)
-  for (const m of CM.MONSTERS) add(`monster:${m.name}`, tileOr(`m.${m.name}`, () => CM.art.monster(m)));
-  add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`));
-  for (const G of Object.values(CM.GUARDIANS)) add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12)));
+  for (const m of CM.MONSTERS) { add(`monster:${m.name}`, tileOr(`m.${m.name}`, () => CM.art.monster(m))); add(`monster:${m.name}:idle2`, tileOr(`m.${m.name}`, () => CM.art.monster(m, false, "idle2"))); add(`monster:${m.name}:attack`, tileOr(`m.${m.name}`, () => CM.art.monster(m, false, "attack"))); }
+  add(`monster:${CM.BOSS.name}`, sprite(`m.${CM.BOSS.name}`)); add(`monster:${CM.BOSS.name}:idle2`, sprite(`m.${CM.BOSS.name}`)); add(`monster:${CM.BOSS.name}:attack`, sprite(`m.${CM.BOSS.name}`));
+  for (const G of Object.values(CM.GUARDIANS)) { add(`monster:${G.name}`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12))); add(`monster:${G.name}:idle2`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12, "idle2"))); add(`monster:${G.name}:attack`, tileOr(`m.${G.name}`, () => CM.art.monster(G, 1.12, "attack"))); }
   add("nest", CM.art.pixelate(CM.art.nest())); add("throne", CM.art.pixelate(CM.art.throne())); add("anvil", CM.art.pixelate(CM.art.anvil()));
   add("ember", tileOr("ember", CM.art.ember));
   for (const [who, row] of Object.entries(CM.art.PEOPLE)) add(`npc:${who}`, tileOr(`npc.${who}`, () => CM.art.monster(row)));
@@ -4696,6 +4700,9 @@ CM.Renderer = class {
   }
 
   get busy() { return this.move !== null || this.turn !== null; }
+  // the camera's own moves: a push-in or a pull-back (zoom: the field of view's share, for ms), a tilt (roll, radians, for ms)
+  zoomTo(k, ms = 500) { if (CM.reducedMotion) return; this.zoomAnim = { from: this.zoomNow || 1, to: k, t: 0, ms, back: true }; }
+  rollTo(r, ms = 800) { if (CM.reducedMotion) return; this.rollAnim = { from: this.rollNow || 0, to: r, t: 0, ms }; }
   shake(strength) { if (CM.reducedMotion) return; this.shakeT = Math.max(this.shakeT || 0, Math.min(1, strength)); }   // the view judders, and settles
   punch() { if (CM.reducedMotion) return; this.punchT = 1; }                                                            // the party leans into a blow
 
@@ -4784,8 +4791,11 @@ CM.Renderer = class {
     this.punchT = Math.max(0, (this.punchT || 0) - dt / 0.22);
     const jx = Math.sin(this.time * 61) * this.shakeT * 0.06, jy = Math.sin(this.time * 47 + 1) * this.shakeT * 0.045, pk = Math.sin(this.punchT * Math.PI) * 0.1;
     const eye = [this.eye[0] + right[0] * jx + fwd[0] * pk, this.eye[1] + this.bob + jy, this.eye[2] + right[2] * jx + fwd[2] * pk];
-    const view = mat4LookAt(eye, [eye[0] + fwd[0], eye[1], eye[2] + fwd[2]], [0, 1, 0]);
-    const proj = mat4Perspective(Math.PI / 3, aspect, 0.05, 80);
+    if (this.zoomAnim) { const z = this.zoomAnim; z.t += dt * 1000 / z.ms; const k = CM.ease(Math.min(1, z.t)); this.zoomNow = z.back ? CM.lerp(z.from, z.to, Math.sin(k * Math.PI)) : CM.lerp(z.from, z.to, k); if (z.t >= 1) { this.zoomNow = z.back ? z.from : z.to; this.zoomAnim = null; } }
+    if (this.rollAnim) { const r = this.rollAnim; r.t += dt * 1000 / r.ms; this.rollNow = CM.lerp(r.from, r.to, CM.ease(Math.min(1, r.t))); if (r.t >= 1) this.rollAnim = null; }
+    const roll = this.rollNow || 0, up = [Math.sin(roll) * right[0], Math.cos(roll), Math.sin(roll) * right[2]];
+    const view = mat4LookAt(eye, [eye[0] + fwd[0], eye[1], eye[2] + fwd[2]], up);
+    const proj = mat4Perspective(Math.PI / 3 * (this.zoomNow || 1), aspect, 0.05, 80);
     this.viewProj = mat4Mul(proj, view);
     const t = this.theme;
     gl.clearColor(t.fog[0], t.fog[1], t.fog[2], 1);
@@ -5099,10 +5109,11 @@ CM.audio = {
     return b;
   },
 
-  play(name, volume = 1, pan = 0) {
+  play(name, volume = 1, pan = 0, rate = 1) {
     if (!this.ctx || !this.enabled || !this.buffers[name]) return;
     const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
     src.buffer = this.buffers[name];
+    if (rate !== 1) src.playbackRate.value = rate;
     g.gain.value = CM.clamp(volume, 0, 1);
     src.connect(g);
     if (pan && this.ctx.createStereoPanner) { const p = this.ctx.createStereoPanner(); p.pan.value = CM.clamp(pan, -1, 1); g.connect(p); p.connect(this.master); }
@@ -5110,6 +5121,8 @@ CM.audio = {
     src.start();
   },
 
+  // a bark: a kind's call, short and shifted - high and quick for a blow taken, low and slow for its death
+  bark(kind, what) { if (!this.ctx || !this.enabled) return; const now = performance.now(); if (now - (this.lastBark || 0) < 180) return; this.lastBark = now; this.play(CM.roarFor(kind), what === "die" ? 0.5 : 0.22, 0, what === "die" ? 0.7 : 1.5); },
   // something is coming: its kind's call, louder the nearer it is, not too often - and from the side it is on (pan -1..1)
   near(kind, strength, pan = 0) {
     const now = performance.now();
@@ -5166,6 +5179,8 @@ CM.music = {
   },
   playing: null,
   depth: 0,                                        // how far into its band the party is (0..1): the tune gains a voice past the middle, and a fifth near the end
+  danger: 0,                                       // the battle tune in layers: 0 drums and pad while the party is whole, 0.6 the lead joins under half, 1 the pad drops out when a hero has fallen
+  shiftBy: 0,                                      // semitones the tune is shifted (a guardian's second form changes the key)
   enabled: true,
   volume: 0.5,
   master: null,
@@ -5197,6 +5212,10 @@ CM.music = {
   },
 
   midi(tune, degree, octave = 0) {
+    if (this.shiftBy) return this.midi0(tune, degree, octave) + this.shiftBy;
+    return this.midi0(tune, degree, octave);
+  },
+  midi0(tune, degree, octave = 0) {
     const n = tune.scale.length, d = ((degree % n) + n) % n, o = Math.floor(degree / n) + octave;
     return tune.root + tune.scale[d] + 12 * o;
   },
@@ -5263,10 +5282,10 @@ CM.music = {
     if (!this.enabled) { this.nextAt = Math.max(this.nextAt, ctx.currentTime + 0.1); return; }   // (off: nothing to play, nothing piles up)
     while (this.nextAt < ctx.currentTime + 1.5) {                        // (a second and a half ahead: a hidden tab's timers come once a second)
       const i = this.step % 64, chord = t.chords[Math.floor((i % 32) / 8)];
-      if (i % 8 === 0) this._pad(t, chord, this.nextAt, stepLen * 8);
+      if (i % 8 === 0 && !(t.drums && this.danger >= 1)) this._pad(t, chord, this.nextAt, stepLen * 8);
       if (t.drums) this._drums(i, this.nextAt, stepLen);
       const deg = t.melody[i];
-      if (deg !== null && deg !== undefined) this._note(t, deg, this.nextAt, stepLen * (t.melody[(i + 1) % 64] === null ? 2 : 1));
+      if (deg !== null && deg !== undefined && !(t.drums && this.danger < 0.6)) this._note(t, deg, this.nextAt, stepLen * (t.melody[(i + 1) % 64] === null ? 2 : 1));
       this.nextAt += stepLen;
       this.step += 1;
     }
@@ -5285,6 +5304,8 @@ CM.music = {
   },
 
   setDepth(k) { this.depth = CM.clamp(k || 0, 0, 1); },
+  setDanger(k) { this.danger = CM.clamp(k || 0, 0, 1); },
+  shift(semitones) { this.shiftBy = semitones || 0; },
   _note(t, deg, at, len) {
     const hz = this.hz(this.midi(t, deg, 1));
     if (this.depth >= 0.5 && !t.drums && this.bus) this._osc("sine", hz * 2, at + 0.02, at + len * 0.7, 0.03 + 0.03 * this.depth, 2400);   // deeper in: an echo an octave up
@@ -6808,7 +6829,7 @@ Object.assign(CM.Game.prototype, {
       if (!G || !G.form2 || m.form2 || m.hp <= 0 || m.hp > m.max * (this.asc("nomercy") ? 1.01 : 0.34) || m.echo) continue;
       m.form2 = true;
       this.say(G.form2.text);
-      this.emit("fx", { kind: "rise", foe: m });
+      this.emit("fx", { kind: "rise", foe: m, form2: true });
       if (G.form2.kind === "hide") { m.hidden = true; this.summonFor(m, G.moves[0], 2); }
       else if (G.form2.kind === "flood") { this.combat.flooded = true; m.quick = true; }
       else if (G.form2.kind === "heat") { m.broken = true; m.atk = Math.round(m.atk * 1.3); }
@@ -7146,7 +7167,7 @@ Object.assign(CM.Game.prototype, {
     const every = m.quick ? 2 : 3;                                        // (the flooded Knight comes faster)
     if (m.hidden) { const up = this.foes.filter((f) => f.summoned && f.hp > 0 && !f.fled).length; if (up < 4) this.summonFor(m, moves[0], Math.min(2, 4 - up)); else this.say("The heap seethes."); return; }
     const telegraph = () => {                                             // next turn is one of its moves: it shows, so the party can brace
-      if ((m.turns + 1) % every === 0 && moves.length && !m.broken) { const next = moves[(Math.floor((m.turns + 1) / every) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); }
+      if ((m.turns + 1) % every === 0 && moves.length && !m.broken) { const next = moves[(Math.floor((m.turns + 1) / every) - 1) % moves.length]; m.intent = next; this.say(next.warn || G.warn || `${CM.The(m)} gathers itself for something terrible.`); this.emit("fx", { kind: "intent", foe: m }); }
     };
     if (m.turns % every === 0 && moves.length && !m.broken) {
       const mv = moves[(Math.floor(m.turns / every) - 1) % moves.length];
@@ -11137,10 +11158,12 @@ window.addEventListener("DOMContentLoaded", () => {
   function spectacle(fx) {
     const now = performance.now();
     switch (fx.kind) {
-      case "hit": flashes.set(fx.foe, 1); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
+      case "intent": renderer.zoomTo(0.9, 600); break;
+      case "hit": flashes.set(fx.foe, 1); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
       case "miss": later(() => floatAt(fx.foe, "miss", "miss")); break;
       case "die": {
         dying.set(fx.foe, now);
+        if (fx.foe && !fx.foe.fled) CM.audio.bark(fx.foe.kind || fx.foe.name, "die");
         const at = atFoe(fx.foe, 0.4);
         if (!at) break;
         fxs.burst({ at, layer: fx.foe.undead ? "fx:shard" : "fx:spark", n: CM.unmoved(fx.foe) ? 40 : 14, size: fx.foe.undead ? 0.1 : 0.06, speed: 1.6, up: 1.8 });
@@ -11171,6 +11194,7 @@ window.addEventListener("DOMContentLoaded", () => {
       case "sear": ui.tint("rgba(255,120,30,0.3)", 220); fxs.burst({ at: beforeParty(0.3), layer: "fx:fire", n: 6, size: 0.06, speed: 0.8, up: 1.2, ms: 400 }); break;
       case "relic": ui.tint("rgba(255,230,150,0.45)", 900); fxs.drift({ at: beforeParty(0.6), n: 12, size: 0.06, spread: 1.0, rise: 0.7, ms: 1400 }); break;
       case "rise": {
+        if (fx.form2) CM.music.shift(3);
         const at = atFoe(fx.foe, 0.05);
         if (at) { fxs.ring({ at: [at[0], 0, at[2]], to: 3.2, ms: 900 }); fxs.burst({ at: [at[0], 0.5, at[2]], layer: "fx:shard", n: 24, size: 0.1, speed: 1.8, up: 2.6 }); }
         ui.tint("rgba(120,240,255,0.4)", 700); renderer.shake(0.8);
@@ -11187,6 +11211,9 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   game.on("fx", spectacle);
   game.on("fell", () => renderer.shake(0.6));
+  game.on("crowned", () => renderer.zoomTo(1.15, 1600));
+  game.on("mode", (mode) => { if (mode !== "combat") { CM.music.shift(0); CM.music.setDanger(0); } });
+  game.on("over", (won) => { if (!won && renderer.ok) { renderer.rollNow = 0; renderer.rollTo(0.12, 1200); setTimeout(() => renderer.rollTo(0, 2500), 1600); } });
   game.on("floor", () => fxs.clear());
   game.on("mode", (mode) => { if (mode !== "combat") { dying.clear(); flashes.clear(); lunges.clear(); } if (mode === "title") fxs.clear(); });
   // a click on a foe in the view chooses it
@@ -11248,6 +11275,8 @@ window.addEventListener("DOMContentLoaded", () => {
     return decor;
   }
 
+  // a frame of a monster's picture, where the theme has it (the Drawn frames; the Pixel tiles stand still)
+  const frameOf = (layer, pose) => (pose && renderer.index && renderer.index[`${layer}:${pose}`] !== undefined ? `${layer}:${pose}` : layer);
   function sprites() {
     const fl = game.floor, out = [], hud = [];
     if (!fl) return { out, hud };
@@ -11282,7 +11311,7 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
         const breath = CM.reducedMotion ? 0 : Math.sin(now / 820 + x * 2.1 + y * 1.3) * 0.02;   // (alive: it breathes)
-        out.push({ x, y, layer: `monster:${m.kind || m.name}`, w: (m.boss ? 0.95 : G ? 0.9 * G.size : 0.85) * (1 + breath), h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * (1 + breath * 0.6), shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
+        out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: (m.boss ? 0.95 : G ? 0.9 * G.size : 0.85) * (1 + breath), h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * (1 + breath * 0.6), shade: m.elite ? 1.2 : 1, alpha: m.echo ? 0.78 : 1,
           lift: Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (alive: it sways; a ghost floats)
       }
     }
@@ -11335,7 +11364,8 @@ window.addEventListener("DOMContentLoaded", () => {
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
         const flinch = flash > 0 ? Math.sin(now / 22) * flash * 0.025 : 0;   // struck: it shudders
         const breath = CM.reducedMotion || m.hp <= 0 ? 0 : Math.sin(now / 760 + place.dx * 7) * 0.018;   // (and breathes)
-        out.push(Object.assign({}, place, { flash: flash * 0.8, alpha, lift, w: place.w * (1 + breath), h: place.h * (1 + breath * 0.6), dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
+        const pose = m.hp > 0 && lunges.has(m) ? "attack" : m.hp > 0 && Math.floor(now / 640 + place.dx * 5) % 2 ? "idle2" : "";
+        out.push(Object.assign({}, place, { layer: frameOf(place.layer, pose), flash: flash * 0.8, alpha, lift, w: place.w * (1 + breath), h: place.h * (1 + breath * 0.6), dx: place.dx + flinch * right[0], dz: place.dz + flinch * right[1] }));
       }
     }
     out.push(...fxs.sprites(now));                                      // what flies and bursts, this frame
@@ -11497,6 +11527,7 @@ window.addEventListener("DOMContentLoaded", () => {
           for (const code of held) if (act(code)) break;                  // walking while the key is held
         }
         if (ui.screen === "play" && !ui.dialogOpen()) game.tick(dt);    // the monsters move (not while you read a sheet or the pack); the run saves now and then
+        if (game.mode === "combat") { const up = game.party.filter((h) => h.hp > 0); const worst = up.length ? Math.min(...up.map((h) => h.hp / h.max)) : 0; CM.music.setDanger(up.length < game.party.length ? 1 : worst < 0.5 ? 0.6 : 0); }   // the battle tune in layers
         if (game.film && game.film.playing && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - game.film.last > 260 / game.film.speed) { game.film.last = now; game.filmStep(); }   // the film plays
         if (game.travel && game.mode === "explore" && !renderer.busy && ui.screen === "play" && !ui.dialogOpen() && now - lastStep > (game.settings.smooth ? 30 : 120)) { lastStep = now; game.travelStep(); }   // the party walks by itself
         if (game.mode === "combat" && game.combat && game.combat.auto && game.combat.waiting && ui.screen === "play" && !ui.dialogOpen() && now >= fxs.holdUntil && now - lastAuto > 420 / (CM.fxSpeed || 1)) { lastAuto = now; game.autoTurn(); }
