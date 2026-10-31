@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Moatleap (the thirty-fourth big update - v14.4)
+  A crossing game on the Gilded Joker's floor (src/js/64zk-moat.js; 76za-moat.js): a toad hops square by square across
+  five lanes of market road - handcarts, hay wagons, galloping riders, ox-trains - to the verge, then across five
+  lanes of castle moat on drifting logs and lily-turtles (from level 2 some dive) to the five lily-bays under the wall.
+  Fill all five for the next level; thirty seconds a toad; a firefly in a bay for a bonus, from level 3 a pike lurking
+  in one. Three lives, one more at 10,000. One stake a play: each level cleared pays gold, more each level, every play;
+  and a Claudescryption card the first time ever each third level is cleared (3 common, 6 and 9 a stronger common, rare
+  from 12).
+
 Starstone Drift (the thirty-third big update - v14.3)
   A drifter on the Gilded Joker's floor (src/js/64zj-drift.js; 76z-drift.js): through a scrying glass a wand-ship
   floats in a void whose edges fold round. It turns, thrusts and drifts on, fires sparks (four at once) and blinks to
