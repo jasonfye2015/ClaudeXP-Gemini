@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Gloomwing Swarm (v14.0)
+
+The Joker's lights draw things out of the night sky the way a lamp draws moths, and the Gloomwings are the worst of
+them: they come in swarms, settle over the roof in ranks, and dive at anything that glows. The house keeps a
+lantern-skiff on a rail up there to thin them. The Wardens that lead them have learned to take lanterns home with them -
+and a lantern taken can be taken back.
+
 ## The Glimmer Maze (v13.9)
 
 The Joker's back garden was a hedge maze long before it was a casino's, and the lanterns hung along its paths have
