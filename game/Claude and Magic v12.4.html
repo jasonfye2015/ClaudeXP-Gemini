@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v12.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v12.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -716,7 +716,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "12.3", built: "2026-10-31" };
+const CM = window.CM = { version: "12.4", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -19458,6 +19458,75 @@ Object.assign(CM.Game.prototype, {
 });
 }
 
+// ---- 65c-crafthome.js ----
+"use strict";
+// The island and home (the nineteenth update, phase 4 - v12.4). What comes home through the Neather Gate is the main
+// game's own: ore chunks, bars and charcoal into the bag for the Smith (61k-gate.js), meat for the cook, the island's
+// gold into the purse and its finds into the bag (64o-craftlife.js). What stays is the island's: blocks, its tools,
+// torches - in the hero's satchel for the next visit. The satchel's building stuff has a use at home too: the merchant
+// buys timber and stone by the stack, and the Guildhall's builders take blocks towards the village's next build (the
+// village builds with renown, so a hundred blocks count as ten renown off it). Into the island the party's bag goes
+// with the hero: their picks and lantern work there, a healing potion is drunk (Q), and a ration or the island's meat
+// is eaten (G) for a little mending.
+CM.CH = { stack: 16, stackGold: 1, builderBlocks: 100, builderRenown: 10, ration: 0.15, meat: 0.08 };
+CM.CC.TIMBER = new Set([CM.CC.B.LOG, CM.CC.B.PLANKS]);
+CM.CC.STONEWORK = new Set([CM.CC.B.STONE, CM.CC.B.COBBLE, CM.CC.B.BRICK]);
+CM.CC.BUILDING = new Set([1, 2, 3, 4, 5, 7, 8, 10, 11, 13, 14]);           // (plain building blocks the builders take)
+
+Object.assign(CM.Game.prototype, {
+  // what the heroes' satchels hold of a kind of block (the satchels come home with their heroes)
+  islandStock(set) { const K = this.craftStore(); let n = 0; for (const S of Object.values(K.satchels)) for (const s of S || []) if (s && set.has(s.b)) n += s.n; return n; },
+  islandTake(set, n) {
+    const K = this.craftStore();
+    for (const key of Object.keys(K.satchels)) { const S = K.satchels[key] || []; for (let i = S.length - 1; i >= 0 && n > 0; i--) { const s = S[i]; if (!s || !set.has(s.b)) continue; const k = Math.min(n, s.n); s.n -= k; n -= k; if (!s.n) S[i] = null; } }
+    this.saveVillage && this.saveVillage(); return n === 0;
+  },
+  // the merchant: timber and stone by the stack of sixteen
+  islandSellable() { const both = new Set([...CM.CC.TIMBER, ...CM.CC.STONEWORK]), n = this.islandStock(both), stacks = Math.floor(n / CM.CH.stack); return { n, stacks, gold: stacks * CM.CH.stackGold, set: both }; },
+  sellIslandStone() {
+    const o = this.islandSellable(); if (!o.stacks) return `The merchant buys island timber and stone by the stack of ${CM.CH.stack}; the satchels hold ${o.n}.`;
+    this.islandTake(o.set, o.stacks * CM.CH.stack); this.gold += o.gold; this.tally.islandSold = (this.tally.islandSold || 0) + o.stacks;
+    this.emit("change"); return `The merchant takes ${o.stacks * CM.CH.stack} blocks of island timber and stone for ${o.gold} gold. "Good square stuff. Odd, but good."`;
+  },
+  // the Guildhall's builders: every hundred blocks are ten renown off the next build
+  builderCredit() { return (this.village && this.village.buildCredit) || 0; },
+  giveBuilders() {
+    const n = this.islandStock(CM.CC.BUILDING), lots = Math.floor(n / CM.CH.builderBlocks);
+    if (!lots) return `The builders take island blocks a hundred at a time; the satchels hold ${n}.`;
+    this.islandTake(CM.CC.BUILDING, lots * CM.CH.builderBlocks); this.village.buildCredit = this.builderCredit() + lots * CM.CH.builderRenown; this.saveVillage();
+    this.emit("change"); return `The builders cart off ${lots * CM.CH.builderBlocks} blocks from the island: ${lots * CM.CH.builderRenown} renown off the village's next build (${this.village.buildCredit} in hand).`;
+  },
+  // on the island: a healing potion from the bag (the smallest that will do), or a mana potion for a caster at full health
+  craftDrink() {
+    const cr = this.craft; if (!cr) return ""; const h = cr.hero, lack = h.max - h.hp;
+    const heals = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "heal" || it.kind === "greaterheal").sort((a, b) => (a[0].power || 0) - (b[0].power || 0));
+    if (lack > 0 && heals.length) { const [it, i] = heals.find(([x]) => (x.power || 0) >= lack) || heals[heals.length - 1]; this.bag.splice(i, 1); const got = Math.min(lack, it.power || 0); h.hp += got; this.craftSay(`${h.name} drinks a ${it.name.toLowerCase()}: +${got}.`); (this.craftLife().events = this.craftLife().events || []).push({ kind: "drink" }); return "heal"; }
+    const mana = this.bag.findIndex((it) => it.kind === "mana");
+    if (h.maxmp && h.mp < h.maxmp && mana >= 0) { const it = this.bag.splice(mana, 1)[0], got = Math.min(h.maxmp - h.mp, it.power || 0); h.mp += got; this.craftSay(`${h.name} drinks a mana potion: +${got} magic.`); (this.craftLife().events = this.craftLife().events || []).push({ kind: "drink" }); return "mana"; }
+    this.craftSay(lack > 0 ? "No healing potion in the bag." : `${h.name} is not hurt.`); return "";
+  },
+  // a ration from the bag, or the island's own meat from the satchel: a little mending
+  craftEat() {
+    const cr = this.craft; if (!cr) return ""; const h = cr.hero; if (h.hp >= h.max) { this.craftSay(`${h.name} is not hungry enough to eat now.`); return ""; }
+    const r = this.bag.findIndex((it) => it.kind === "ration");
+    if (r >= 0) { this.bag.splice(r, 1); const got = Math.min(h.max - h.hp, Math.max(1, Math.round(h.max * CM.CH.ration))); h.hp += got; this.craftSay(`${h.name} eats a ration: +${got}.`); return "ration"; }
+    const S = cr.satchel, slot = S.slots.findIndex((s) => s && CM.CC.ITEM[s.b] && CM.CC.ITEM[s.b].meat);
+    if (slot >= 0) { const b = S.slots[slot].b; S.take(slot); const got = Math.min(h.max - h.hp, Math.max(1, Math.round(h.max * CM.CH.meat))); h.hp += got; this.craftSay(`${h.name} roasts a little ${CM.CC.NAMES[b].toLowerCase()} over a torch and eats it: +${got}.`); return "meat"; }
+    this.craftSay("Nothing to eat: a ration from the bag, or meat from the island's deer and boar."); return "";
+  },
+});
+// the village's builds take the builders' credit first
+{ const build0 = CM.Game.prototype.build, renown0 = CM.Game.prototype.renown;
+  CM.Game.prototype.build = function (id) {
+    const credit = this.builderCredit(); if (!credit) return build0.call(this, id);
+    const B = CM.VILLAGE[id], lvl = this.villageLevel(id); if (!B || lvl >= B.costs.length) return build0.call(this, id);
+    const cost = B.costs[lvl], used = Math.min(credit, cost);
+    this.village.spent = (this.village.spent || 0) - used; const why = build0.call(this, id);   // (the credit stands in for that much renown)
+    if (why) { this.village.spent += used; return why; }
+    this.village.buildCredit = credit - used; this.saveVillage(); return "";
+  };
+  void renown0; }
+
 // ---- 66-auto.js ----
 "use strict";
 // Automatic: the party plays by itself, the way a sensible player would on a first run - it opens the chests on the
@@ -20747,7 +20816,7 @@ CM.UI = class {
   <div class="lists"><div class="list" id="bag-list"></div><div class="list" id="shop-list"></div></div>
   <div class="note" id="bag-note"></div>
   <div class="give" id="bag-give"></div><div class="give" id="bag-belt"></div>
-  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sell-shown" title="Everything the filter shows (keys, relics and a Homecoming scroll that remembers a square are kept)">Sell all shown</button><button id="btn-sell-spare" title="Gear nobody wears, known and not cursed">Sell spare gear</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-bag-done" class="primary">Done</button></div>
+  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sell-shown" title="Everything the filter shows (keys, relics and a Homecoming scroll that remembers a square are kept)">Sell all shown</button><button id="btn-sell-spare" title="Gear nobody wears, known and not cursed">Sell spare gear</button><button id="btn-sell-island" title="Timber and stone from the heroes' Claudecraft satchels, by the stack of sixteen">Sell island timber and stone</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-bag-done" class="primary">Done</button></div>
 </div>
 <div class="dialog" id="dlg-settings"><div class="box"><h2>Settings</h2>
   <div class="row"><label for="set-sound">Sound</label><input type="checkbox" id="set-sound"></div>
@@ -21284,11 +21353,12 @@ CM.UI = class {
   openGuild(keepNote) {
     const g = this.game, V = CM.VILLAGE.guildhall, lvl = g.villageLevel("guildhall"), box = this.$("#guild-rooms"), note = this.$("#guild-note");
     this.$("#guild-what").textContent = `Level ${lvl} of ${V.costs.length}. ${lvl ? V.levels.slice(0, lvl).join("; ") + "." : ""}` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
-    const bb = this.$("#btn-guild-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { bb.textContent = `Build, ${V.costs[lvl]} renown`; bb.disabled = g.renown() < V.costs[lvl]; }
+    const bb = this.$("#btn-guild-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { const cr0 = Math.min(g.builderCredit ? g.builderCredit() : 0, V.costs[lvl]); bb.textContent = `Build, ${V.costs[lvl] - cr0} renown${cr0 ? ` (and ${cr0} of the builders' credit)` : ""}`; bb.disabled = g.renown() < V.costs[lvl] - cr0; }
     if (!keepNote) note.textContent = "";
     box.innerHTML = "";
     const room = (title) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
     { const r = room("Dunmore, and the trainers"); const K = CM.VILLAGERS.keeper, trainers = g.village.trainers || []; r.innerHTML = `<div class="small">${this.esc(K.greet.join(" "))} ${trainers.length ? trainers.map((t) => `<b>${this.esc(t.name)}</b> the ${t.cls} (level ${t.level})`).join(", ") : "No trainer has come home yet."}</div>`; g.party.forEach((h, hi) => { if (h.hp > 0 && (h.boons || []).length) { const b = document.createElement("button"); b.textContent = `${h.name} retires as a trainer`; b.addEventListener("click", () => { note.textContent = g.retire(hi) || "Retired."; this.openGuild(true); this.refresh(); }); r.appendChild(b); } }); }
+    { const r = room("The builders (blocks from the Claudecraft island)"); const n = g.islandStock(CM.CC.BUILDING); r.innerHTML = `<div class="small">Dunmore's builders take square blocks from the island a hundred at a time: ten renown off the village's next build for each hundred. The satchels hold ${n}; ${g.builderCredit()} renown in hand.</div>`; const b = document.createElement("button"); b.textContent = "Give the builders the island's blocks"; b.disabled = n < CM.CH.builderBlocks; b.addEventListener("click", () => { note.textContent = g.giveBuilders(); this.openGuild(true); }); r.appendChild(b); }
     { const r = room("The second calling"); const b = document.createElement("button"); b.textContent = "The guild's letter (a hero at twenty takes a second calling)"; b.addEventListener("click", () => this.openSecond()); r.appendChild(b); }
     { const r = room("The week's contracts"); r.innerHTML = `<div class="small">${g.contracts().map(({ c, done }) => `${done ? "✓" : "○"} <b>${this.esc(c.name)}</b>: ${this.esc(c.what)} (${c.renown} renown)`).join("<br>")}</div>`; }
     { const r = room("The roster"); const roster = g.roster(); if (!roster.length) r.innerHTML = "<div class='small'>No party has set out from this browser yet; the first that does is written here.</div>"; roster.forEach((e) => { const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; row.innerHTML = `<div><b>${e.party.map((p) => this.esc(p.name)).join(", ")}</b> <small>${e.party.map((p) => p.cls).join(" / ")} - ${e.won ? "crowned" : e.home ? "came home" : `fell on floor ${e.floor}`}, ${this.esc(e.date)}</small></div>`; const b = document.createElement("button"); b.textContent = "Set out again as them"; b.addEventListener("click", () => { this.musterParty = e.party; this.closeDialogs(); this.openCreate(); }); row.appendChild(b); r.appendChild(row); }); const m = g.muster(); if (m) { const b = document.createElement("button"); b.textContent = `Muster: the last party that came home (${m.party.map((p) => p.name).join(", ")})`; b.addEventListener("click", () => { this.musterParty = m.party; this.closeDialogs(); this.openCreate(); }); r.appendChild(b); } }
@@ -22803,6 +22873,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-buy").addEventListener("click", () => { this.note(g.buy(this.shopRow)); this.fillBag(); });
     this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
     this.$("#btn-sort").addEventListener("click", () => { g.sortBag(); this.bagRow = -1; this.fillBag(); });
+    this.$("#btn-sell-island").addEventListener("click", () => { this.note(g.sellIslandStone()); this.fillBag(); });
     for (const [id, which] of [["#btn-sell-shown", () => this.bagFilter || "all"], ["#btn-sell-spare", () => "spare"]]) {
       this.$(id).addEventListener("click", () => {                         // a first click says what and for how much; a second, within a few seconds, sells
         const w = which(), { rows, gold } = g.sellable(w);
@@ -22832,6 +22903,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-buy").style.display = shop ? "" : "none";
     this.$("#btn-sell").style.display = shop ? "" : "none";
     for (const id of ["#btn-sell-shown", "#btn-sell-spare"]) this.$(id).style.display = shop ? "" : "none";
+    { const o = g.islandSellable ? g.islandSellable() : { stacks: 0 }, b = this.$("#btn-sell-island"); b.style.display = shop && o.stacks ? "" : "none"; b.textContent = `Sell island timber and stone (${o.stacks * CM.CH.stack} for ${o.gold} gold)`; }
     this.$("#btn-sell-shown").textContent = (this.bagFilter || "all") === "all" ? "Sell everything" : `Sell all ${CM.BAG_FILTERS[this.bagFilter].name.toLowerCase()}`;
     const list = (el, head, items, selected, describe, onPick) => {
       el.innerHTML = `<div class="head">${head}</div>` + (items.length ? "" : `<div class="empty">Nothing here.</div>`);
@@ -24640,7 +24712,7 @@ Object.assign(CM.UI.prototype, {
     let clock = ""; try { const m = CM.minuteOf(this.game), hh = Math.floor(m / 60), mm = m % 60; clock = `${hh}:${mm < 10 ? "0" : ""}${mm}, ${CM.hourWord(CM.hourOf(this.game))}`; } catch (er) { /* */ }
     const L = cr.life; p.font = "11px Tahoma, sans-serif"; p.fillText(`${clock}  -  level ${hero.level}${L && (L.gold || L.loot.length) ? `  -  ${L.gold} gold${L.loot.length ? `, ${L.loot.length} found` : ""}` : ""}`, px + 62, py + 56);
     p.font = "11px Tahoma, sans-serif"; p.fillStyle = "rgba(255,255,255,0.9)"; p.textAlign = "right"; p.fillText(`XYZ ${w.pos[0].toFixed(0)} / ${w.pos[1].toFixed(0)} / ${w.pos[2].toFixed(0)}   broken ${cr.broken || 0}, placed ${cr.placed || 0}${cr.bundles.length ? `   bundles on the island: ${cr.bundles.length}` : ""}`, W - 8, 16);
-    p.fillText("WASD walk - mouse look - Space jump - Shift sprint", W - 8, 32); p.fillText("hold left: break (or strike) - F: shoot / strike - right: place / use - I: satchel", W - 8, 46); p.fillText("walk into the gate's light to go home", W - 8, 60); p.textAlign = "left";
+    p.fillText("WASD walk - mouse look - Space jump - Shift sprint", W - 8, 32); p.fillText("hold left: break (or strike) - F: shoot / strike - right: place / use - I: satchel", W - 8, 46); p.fillText(`Q drink (${this.game.potionCount ? this.game.potionCount() : 0} potions) - G eat - the gate's light: home`, W - 8, 60); p.textAlign = "left";
     if (this.ccSatchelOpen) { this.ccWindow(p, atlas, cr, W, H);
     } else if (document.pointerLockElement !== this.$("#craftcanvas")) { p.font = "bold 15px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "center"; p.fillText("Click to play", W / 2, H / 2 + 34); p.textAlign = "left"; }
     const recent = (cr.says || []).filter(([t]) => now - t < 4000).slice(-3);
@@ -25332,6 +25404,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (e.code === "KeyI" || e.code === "KeyE") { e.preventDefault(); if (ui.ccSatchelOpen) ui.ccCloseWindow(); else ui.ccToggleSatchel(); craftIn = {}; craftDig = false; return; }
       if (e.code === "Escape" && ui.ccSatchelOpen) { e.preventDefault(); ui.ccCloseWindow(); return; }
       if (e.code === "KeyF") { e.preventDefault(); if (document.pointerLockElement === ui.$("#craftcanvas")) game.craftAttack(true); return; }
+      if (e.code === "KeyQ") { e.preventDefault(); if (game.craftDrink()) { try { CM.audio.play("heal", 0.5); } catch (er) { /* */ } } return; }
+      if (e.code === "KeyG") { e.preventDefault(); if (game.craftEat()) { try { CM.audio.play("heal", 0.35, 0, 0.8); } catch (er) { /* */ } } return; }
       if (e.code !== "Escape") { e.preventDefault(); return; }
     }
     if (game.mode === "bros" && game.brosRun && !ui.dialogOpen()) {     // Super Claude Bros

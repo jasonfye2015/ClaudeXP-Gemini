@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claudecraft phase 4, v12.4: the way home, and what comes with it
+  Out through the gate, what has a meaning at home comes home as the main game's own: ore chunks, bars and charcoal
+  into the bag (for the Smith), deer and boar meat (for the cook), the island's gold into the purse and its finds into
+  the bag. What is the island's stays in the satchel for the next visit: blocks, the island's tools, torches. Building
+  stuff has a use at home too: the merchant buys island timber and stone at a gold the stack of sixteen (a button at
+  any shop), and the Guildhall's builders take blocks a hundred at a time for ten renown off the village's next build
+  (the village builds with renown). Into the island the bag goes with the hero: picks and lantern work there, Q drinks
+  a healing potion (the smallest that will do; a mana potion for a caster who is not hurt), G eats a ration or a bit
+  of the island's meat for a little mending.
+
 Claudecraft phase 3, v12.3: day, night, and the island's creatures
   The island keeps the game's own clock while a hero is there, a minute a second: day, a gold dusk, night (dark but
   for a little moonlight), dawn; the sun and moon cross the sky. A torch's light is not dimmed by the night. By day deer

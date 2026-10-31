@@ -74,7 +74,7 @@ Principles, kept throughout:
   satchel's contents are left in a bundle where they fell (a glowing chest, there until fetched); experience kept.
 - Tests: spawning only in the dark and away from light; the clock's night; kills pay the share; the bundle.
 
-## Phase 4 (v12.4): the way home, and what comes with it
+## Phase 4 (v12.4): the way home, and what comes with it - done
 - **Out through the gate**, everything in the satchel that has a meaning at home comes home:
   - ore chunks, bars and charcoal → the bag (the Smith smelts and forges them: picks, alloys, his work);
   - meat → the cook's ingredients;

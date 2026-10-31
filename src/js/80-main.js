@@ -601,6 +601,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (e.code === "KeyI" || e.code === "KeyE") { e.preventDefault(); if (ui.ccSatchelOpen) ui.ccCloseWindow(); else ui.ccToggleSatchel(); craftIn = {}; craftDig = false; return; }
       if (e.code === "Escape" && ui.ccSatchelOpen) { e.preventDefault(); ui.ccCloseWindow(); return; }
       if (e.code === "KeyF") { e.preventDefault(); if (document.pointerLockElement === ui.$("#craftcanvas")) game.craftAttack(true); return; }
+      if (e.code === "KeyQ") { e.preventDefault(); if (game.craftDrink()) { try { CM.audio.play("heal", 0.5); } catch (er) { /* */ } } return; }
+      if (e.code === "KeyG") { e.preventDefault(); if (game.craftEat()) { try { CM.audio.play("heal", 0.35, 0, 0.8); } catch (er) { /* */ } } return; }
       if (e.code !== "Escape") { e.preventDefault(); return; }
     }
     if (game.mode === "bros" && game.brosRun && !ui.dialogOpen()) {     // Super Claude Bros
