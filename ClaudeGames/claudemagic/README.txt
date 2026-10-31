@@ -1415,6 +1415,11 @@ The Mage Tower (the twelfth big update - v10.1 to v11.0)
   guarded by its boss - one of the floor's kinds, larger, glowing, with a champion's word and far more health - which
   waits in its room. Its fall frees the ladder and leaves something good.
 
+  The ladder, out and back (v10.5): when the boss falls, E at the ladder climbs to the next floor and L goes out of the
+  doors with the floor counted; each floor's experience, gold and things go to the party as it is cleared. Out of the
+  tower the party can go home by the portal, sell, rest, and come back: the doors take the hero to the floor after the
+  last one cleared. A fall puts the hero outside at one health, and the floor is lost.
+
 A world that moves (the eleventh big update - v9.3 to v10.0)
   UPGRADE_PLAN_9.md says what each phase does.
   Monsters that move (v9.3): a monster's pose is worked out from what happened to it and when (CM.motion in

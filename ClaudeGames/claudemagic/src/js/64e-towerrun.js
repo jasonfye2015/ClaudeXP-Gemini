@@ -167,6 +167,8 @@ CM.TowerRun = class {
       this.events.push({ kind: "pickup", item: it.kind });
     }
   }
+  // at the ladder: within a square of it, the boss down
+  atLadder() { const L = this.fl.ladder; return Boolean(L && this.ladderOpen && this.ladderOpen() && Math.hypot(L[0] + 0.5 - this.x, L[1] + 0.5 - this.z) < 1.0); }
   // ---- what the renderer draws ----
   sprites(now) {
     const out = [], cell = (x, z) => ({ x: Math.floor(x), y: Math.floor(z), dx: x - Math.floor(x) - 0.5, dz: z - Math.floor(z) - 0.5 });
@@ -180,7 +182,7 @@ CM.TowerRun = class {
     }
     for (const b of this.bolts) out.push(Object.assign(cell(b.x, b.z), { layer: b.layer, w: b.size || 0.22, h: b.size || 0.22, lift: 0.4, glow: 2, alpha: 1 }));
     for (const it of this.items) if (!it.taken) out.push({ x: it.x, y: it.y, layer: it.kind === "quiver" ? "fx:arrow" : "fx:holy", w: 0.45, h: 0.45, lift: 0.1, glow: 0.6 + 0.3 * Math.sin(now / 300 + it.x) });
-    if (this.fl.ladder) out.push({ x: this.fl.ladder[0], y: this.fl.ladder[1], layer: "hatch", flat: true, w: 0.9, glow: this.ladderOpen && this.ladderOpen() ? 0.6 : 0 });
+    if (this.fl.ladder) out.push({ x: this.fl.ladder[0], y: this.fl.ladder[1], layer: "stairs_up", w: 0.6, h: 1.0, glow: this.ladderOpen && this.ladderOpen() ? 0.5 : 0, shade: this.ladderOpen && this.ladderOpen() ? 1 : 0.6 });   // (the ladder up: dim while it is guarded)
     return out;
   }
   // the view's lights: the hero's own glow, and the bolts in flight
@@ -192,11 +194,13 @@ CM.TowerRun = class {
 };
 
 Object.assign(CM.Game.prototype, {
+  towerUse() { const run = this.towerRun; if (!run) return ""; if (run.atLadder()) return this.towerClimb(false); const L = run.fl.ladder; if (L && Math.hypot(L[0] + 0.5 - run.x, L[1] + 0.5 - run.z) < 1.2) { this.say("The ladder up - and the floor's boss stands between you and it."); } return ""; },
   // in at the doors: the floor after the last cleared, the hero alone (the others wait at the foot)
   enterMageTower(i) {
     const h = this.party[i], why = CM.towerWhyNot(h);
     if (why) return why;
     if (this.mode !== "explore" || !this.floor || this.floor.number !== -1) return "The doors are in the Wood.";
+    if (this.tower && this.tower.cleared >= CM.TOWER_FLOORS) return "The tower is quiet now. Its King is gone, and nothing on its forty floors is waiting for anyone.";
     this.tower = this.tower || { cleared: 0, best: 0 };
     const n = Math.min(CM.TOWER_FLOORS, (this.tower.cleared || 0) + 1);
     this.logAct("enterMageTower", i);
@@ -206,17 +210,44 @@ Object.assign(CM.Game.prototype, {
     this.emit("towerfloor", this.towerRun);
     return "";
   },
-  // out of the tower: what was won is the party's; a floor not finished is not counted
+  // what a floor won goes to the party as it is cleared (a fall later loses only the floor it happened on)
+  bankTower(run) {
+    const h = run.hero;
+    if (run.xp) { h.xp += run.xp; this.checkLevels(); }
+    if (run.gold) this.gold += run.gold;
+    if (run.loot.length) this.gain(run.loot, "tower");
+    const won = { xp: run.xp, gold: run.gold, things: run.loot.length }; run.xp = 0; run.gold = 0; run.loot = [];
+    return won;
+  },
+  // the floor's ladder: the floor is counted cleared; up to the next, or out of the doors ("leave")
+  towerClimb(leave = false) {
+    const run = this.towerRun;
+    if (!run || !run.atLadder()) return "The ladder is in the boss's room, and it is guarded until the boss falls.";
+    this.logAct("towerClimb", leave);
+    this.tower = this.tower || { cleared: 0, best: 0 };
+    this.tower.cleared = Math.max(this.tower.cleared || 0, run.n); this.tower.best = Math.max(this.tower.best || 0, run.n);
+    this.tally.towerBest = Math.max(this.tally.towerBest || 0, run.n);
+    this.clock = (this.clock || 0) + CM.CLOCK.stair;                    // (an hour a floor, by the tower's own reckoning)
+    const won = this.bankTower(run);
+    this.say(`Floor ${run.n} of the Mage Tower cleared${won.xp || won.gold ? `: ${won.xp} experience, ${won.gold} gold${won.things ? `, ${CM.plural(won.things, "thing")}` : ""}` : ""}.`);
+    if (run.n === 10) this.achieve("tower10");
+    if (leave || run.n >= CM.TOWER_FLOORS) return this.leaveMageTower("cleared") ? "" : "";
+    const next = new CM.TowerRun(this, run.heroIndex, run.n + 1);
+    next.arrows = run.arrows; this.towerRun = next;
+    this.say(`Up the ladder: ${CM.towerFloorName(next.n)}.`);
+    this.emit("towerfloor", next);
+    return "";
+  },
+  // out of the tower: what was won is the party's (but a fall loses the floor's gold and things); a floor not finished is not counted
   leaveMageTower(how = "left") {
     const run = this.towerRun;
     if (!run) return false;
     const h = run.hero;
-    if (how === "fell") h.hp = 1;
-    if (run.xp) { h.xp += run.xp; this.checkLevels(); }
-    if (run.gold) this.gold += run.gold;
-    if (run.loot.length) this.gain(run.loot, "tower");
+    if (how === "fell") { h.hp = 1; run.gold = 0; run.loot = []; this.tally.towerFalls = (this.tally.towerFalls || 0) + 1; }
+    const won = this.bankTower(run);
     this.say(how === "fell" ? `The tower puts ${h.name} out of its doors, barely breathing: the floor is lost.` : how === "cleared" ? `${h.name} comes out of the tower: floor ${run.n} cleared.` : `${h.name} comes back out of the doors.`);
-    if (run.xp || run.gold) this.say(`From the tower: ${run.xp} experience and ${run.gold} gold.`);
+    if (how !== "cleared" && (won.xp || won.gold)) this.say(`From the tower: ${won.xp} experience and ${won.gold} gold.`);
+    if (this.tower && this.tower.cleared) this.say(`The tower will have you back at floor ${Math.min(CM.TOWER_FLOORS, this.tower.cleared + 1)}.`);
     this.towerRun = null;
     this.setMode("explore");
     this.floor.pos = CM.MAGE_DOOR.slice(); this.floor.facing = 2;

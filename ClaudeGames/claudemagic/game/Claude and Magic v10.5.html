@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v10.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v10.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -539,7 +539,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "10.4", built: "2026-10-31" };
+const CM = window.CM = { version: "10.5", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1453,6 +1453,7 @@ CM.parseRunCode = function (text) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  tower10: { name: "Ten Stories Up", what: "Clear the tenth floor of the Mage Tower", title: "of the Tower" },
   tower: { name: "The View from the Tower", what: "Watch the sun go down from a gate tower", title: "the Watchful" },
   champions: { name: "Champion-breaker", what: "Slay five champions in one expedition", title: "the Champion-breaker" },
   beyond: { name: "Beyond the Dream", what: "Reach floor 100 in an Endless expedition", title: "Beyond the Dream" },
@@ -15082,6 +15083,8 @@ CM.TowerRun = class {
       this.events.push({ kind: "pickup", item: it.kind });
     }
   }
+  // at the ladder: within a square of it, the boss down
+  atLadder() { const L = this.fl.ladder; return Boolean(L && this.ladderOpen && this.ladderOpen() && Math.hypot(L[0] + 0.5 - this.x, L[1] + 0.5 - this.z) < 1.0); }
   // ---- what the renderer draws ----
   sprites(now) {
     const out = [], cell = (x, z) => ({ x: Math.floor(x), y: Math.floor(z), dx: x - Math.floor(x) - 0.5, dz: z - Math.floor(z) - 0.5 });
@@ -15095,7 +15098,7 @@ CM.TowerRun = class {
     }
     for (const b of this.bolts) out.push(Object.assign(cell(b.x, b.z), { layer: b.layer, w: b.size || 0.22, h: b.size || 0.22, lift: 0.4, glow: 2, alpha: 1 }));
     for (const it of this.items) if (!it.taken) out.push({ x: it.x, y: it.y, layer: it.kind === "quiver" ? "fx:arrow" : "fx:holy", w: 0.45, h: 0.45, lift: 0.1, glow: 0.6 + 0.3 * Math.sin(now / 300 + it.x) });
-    if (this.fl.ladder) out.push({ x: this.fl.ladder[0], y: this.fl.ladder[1], layer: "hatch", flat: true, w: 0.9, glow: this.ladderOpen && this.ladderOpen() ? 0.6 : 0 });
+    if (this.fl.ladder) out.push({ x: this.fl.ladder[0], y: this.fl.ladder[1], layer: "stairs_up", w: 0.6, h: 1.0, glow: this.ladderOpen && this.ladderOpen() ? 0.5 : 0, shade: this.ladderOpen && this.ladderOpen() ? 1 : 0.6 });   // (the ladder up: dim while it is guarded)
     return out;
   }
   // the view's lights: the hero's own glow, and the bolts in flight
@@ -15107,11 +15110,13 @@ CM.TowerRun = class {
 };
 
 Object.assign(CM.Game.prototype, {
+  towerUse() { const run = this.towerRun; if (!run) return ""; if (run.atLadder()) return this.towerClimb(false); const L = run.fl.ladder; if (L && Math.hypot(L[0] + 0.5 - run.x, L[1] + 0.5 - run.z) < 1.2) { this.say("The ladder up - and the floor's boss stands between you and it."); } return ""; },
   // in at the doors: the floor after the last cleared, the hero alone (the others wait at the foot)
   enterMageTower(i) {
     const h = this.party[i], why = CM.towerWhyNot(h);
     if (why) return why;
     if (this.mode !== "explore" || !this.floor || this.floor.number !== -1) return "The doors are in the Wood.";
+    if (this.tower && this.tower.cleared >= CM.TOWER_FLOORS) return "The tower is quiet now. Its King is gone, and nothing on its forty floors is waiting for anyone.";
     this.tower = this.tower || { cleared: 0, best: 0 };
     const n = Math.min(CM.TOWER_FLOORS, (this.tower.cleared || 0) + 1);
     this.logAct("enterMageTower", i);
@@ -15121,17 +15126,44 @@ Object.assign(CM.Game.prototype, {
     this.emit("towerfloor", this.towerRun);
     return "";
   },
-  // out of the tower: what was won is the party's; a floor not finished is not counted
+  // what a floor won goes to the party as it is cleared (a fall later loses only the floor it happened on)
+  bankTower(run) {
+    const h = run.hero;
+    if (run.xp) { h.xp += run.xp; this.checkLevels(); }
+    if (run.gold) this.gold += run.gold;
+    if (run.loot.length) this.gain(run.loot, "tower");
+    const won = { xp: run.xp, gold: run.gold, things: run.loot.length }; run.xp = 0; run.gold = 0; run.loot = [];
+    return won;
+  },
+  // the floor's ladder: the floor is counted cleared; up to the next, or out of the doors ("leave")
+  towerClimb(leave = false) {
+    const run = this.towerRun;
+    if (!run || !run.atLadder()) return "The ladder is in the boss's room, and it is guarded until the boss falls.";
+    this.logAct("towerClimb", leave);
+    this.tower = this.tower || { cleared: 0, best: 0 };
+    this.tower.cleared = Math.max(this.tower.cleared || 0, run.n); this.tower.best = Math.max(this.tower.best || 0, run.n);
+    this.tally.towerBest = Math.max(this.tally.towerBest || 0, run.n);
+    this.clock = (this.clock || 0) + CM.CLOCK.stair;                    // (an hour a floor, by the tower's own reckoning)
+    const won = this.bankTower(run);
+    this.say(`Floor ${run.n} of the Mage Tower cleared${won.xp || won.gold ? `: ${won.xp} experience, ${won.gold} gold${won.things ? `, ${CM.plural(won.things, "thing")}` : ""}` : ""}.`);
+    if (run.n === 10) this.achieve("tower10");
+    if (leave || run.n >= CM.TOWER_FLOORS) return this.leaveMageTower("cleared") ? "" : "";
+    const next = new CM.TowerRun(this, run.heroIndex, run.n + 1);
+    next.arrows = run.arrows; this.towerRun = next;
+    this.say(`Up the ladder: ${CM.towerFloorName(next.n)}.`);
+    this.emit("towerfloor", next);
+    return "";
+  },
+  // out of the tower: what was won is the party's (but a fall loses the floor's gold and things); a floor not finished is not counted
   leaveMageTower(how = "left") {
     const run = this.towerRun;
     if (!run) return false;
     const h = run.hero;
-    if (how === "fell") h.hp = 1;
-    if (run.xp) { h.xp += run.xp; this.checkLevels(); }
-    if (run.gold) this.gold += run.gold;
-    if (run.loot.length) this.gain(run.loot, "tower");
+    if (how === "fell") { h.hp = 1; run.gold = 0; run.loot = []; this.tally.towerFalls = (this.tally.towerFalls || 0) + 1; }
+    const won = this.bankTower(run);
     this.say(how === "fell" ? `The tower puts ${h.name} out of its doors, barely breathing: the floor is lost.` : how === "cleared" ? `${h.name} comes out of the tower: floor ${run.n} cleared.` : `${h.name} comes back out of the doors.`);
-    if (run.xp || run.gold) this.say(`From the tower: ${run.xp} experience and ${run.gold} gold.`);
+    if (how !== "cleared" && (won.xp || won.gold)) this.say(`From the tower: ${won.xp} experience and ${won.gold} gold.`);
+    if (this.tower && this.tower.cleared) this.say(`The tower will have you back at floor ${Math.min(CM.TOWER_FLOORS, this.tower.cleared + 1)}.`);
     this.towerRun = null;
     this.setMode("explore");
     this.floor.pos = CM.MAGE_DOOR.slice(); this.floor.facing = 2;
@@ -17633,7 +17665,7 @@ CM.UI = class {
     }
     const t = g.tally || {};
     this.$("#over-tally").innerHTML = [["Floors", `${CM.LAST_FLOOR} of ${CM.LAST_FLOOR} - and ${g.endless ? "no bottom" : (CM.BOTTOM - CM.LAST_FLOOR) + " more"} below`], ["Gold", g.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
-      ["Steps walked", (t.steps || 0).toLocaleString()], ["Guardians slain", (t.guardians || []).length ? this.guardianNames(t.guardians) : "none"]].map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
+      ...(t.towerBest ? [["Mage Tower", `floor ${t.towerBest} of ${CM.TOWER_FLOORS}`]] : []), ["Steps walked", (t.steps || 0).toLocaleString()], ["Guardians slain", (t.guardians || []).length ? this.guardianNames(t.guardians) : "none"]].map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
     this.openDialog("#dlg-over");
     this.ending = "victory";
     if (this.onEnding) this.onEnding();
@@ -18189,7 +18221,13 @@ Object.assign(CM.UI.prototype, {
     const g = this.game, box = this.$("#actions");
     if (g.mode === "combat") { this.renderCombat(); return; }
     box.classList.remove("combat");
-    if (g.mode === "tower") { if (box.dataset.mode === "tower") return; box.dataset.mode = "tower"; box.innerHTML = ""; const b = document.createElement("button"); b.textContent = "Leave the tower (this floor is lost)"; b.addEventListener("click", () => { g.leaveMageTower("left"); this.refresh(); }); box.appendChild(b); return; }
+    if (g.mode === "tower") {                                            // the Mage Tower: at the ladder, up or out; else out, the floor lost
+      const run = g.towerRun, at = run && run.atLadder(), key = `tower:${at}:${run && run.n}`; if (box.dataset.mode === key) return; box.dataset.mode = key; box.innerHTML = "";
+      const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.refresh(); }); box.appendChild(b); };
+      if (at) { if (run.n < CM.TOWER_FLOORS) add(`Climb to floor ${run.n + 1} (E)`, () => g.towerClimb(false), "primary"); add(`Leave the tower - floor ${run.n} counted (L)`, () => g.towerClimb(true)); }
+      else add("Leave the tower (this floor is lost)", () => g.leaveMageTower("left"));
+      return;
+    }
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
         ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 && !CM.isUndercroft(g.floor.number) ? [["Where to? (G)", () => this.openWhereTo()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ...(g.floor && CM.isDeep(g.floor.number) && (g.light.kind || g.lightOut) ? [[g.lightOut ? "Light (T)" : "Douse (T)", () => { g.douse(); this.refresh(); }]] : []), ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
@@ -18510,6 +18548,7 @@ Object.assign(CM.UI.prototype, {
     bar(".thp", h.hp, h.max); bar(".tmp", h.mp || 0, A.arrows ? 0 : h.maxmp);
     el.querySelector(".tarrows").textContent = A.arrows ? `Arrows: ${run.arrows}` : `${A.word}: ${A.cost} magic`;
     const boss = run.bossInSight ? run.bossInSight() : null, bb = el.querySelector(".tboss"); bb.style.display = boss ? "" : "none";
+    const tip = run.atLadder() ? (run.n < CM.TOWER_FLOORS ? `E: climb to floor ${run.n + 1} - L: leave, floor ${run.n} counted` : "") : ""; el.querySelector(".tname").textContent += tip ? `   |   ${tip}` : "";
     if (boss) { bb.querySelector("b").textContent = boss.name; bb.querySelector("i").style.width = `${Math.max(0, (boss.m.hp / boss.m.max) * 100)}%`; }
   },
   // the Mage Tower's doors: the heroes, who may go in and who may not (and why)
@@ -19689,6 +19728,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (game.mode === "tower" && game.towerRun && !ui.dialogOpen()) {   // the Mage Tower: real time (64e-towerrun.js)
       const f = TOWER_KEYS[e.code]; if (f) { e.preventDefault(); towerIn[f] = true; return; }
       if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
+      if (e.code === "KeyL" && game.towerRun.atLadder()) { e.preventDefault(); game.towerClimb(true); ui.refresh(); return; }
       if (e.code !== "Escape") return;
     }
     if (game.film) { if (e.code === "Escape") { e.preventDefault(); game.stopFilm(); } else if (e.code === "Space") { e.preventDefault(); game.film.playing = !game.film.playing; ui.filmBar(); } return; }   // (a film: watch, or stop)
@@ -19862,7 +19902,7 @@ window.addEventListener("DOMContentLoaded", () => {
     renderer.setSprites(run.sprites(now).concat(fxs.sprites(now)));
     renderer.frame(dt);
     ui.drawTowerHud(run);
-    if ((towerMapT += dt) > 0.25) { towerMapT = 0; ui.drawAutomap(ui.$("#automap")); }
+    if ((towerMapT += dt) > 0.25) { towerMapT = 0; ui.drawAutomap(ui.$("#automap")); ui.renderActions(); }   // (and the ladder's buttons, when the hero comes to it)
   }
   // ---- the frame loop ----
   let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0, lastAutoStep = 0;

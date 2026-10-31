@@ -578,6 +578,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (game.mode === "tower" && game.towerRun && !ui.dialogOpen()) {   // the Mage Tower: real time (64e-towerrun.js)
       const f = TOWER_KEYS[e.code]; if (f) { e.preventDefault(); towerIn[f] = true; return; }
       if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
+      if (e.code === "KeyL" && game.towerRun.atLadder()) { e.preventDefault(); game.towerClimb(true); ui.refresh(); return; }
       if (e.code !== "Escape") return;
     }
     if (game.film) { if (e.code === "Escape") { e.preventDefault(); game.stopFilm(); } else if (e.code === "Space") { e.preventDefault(); game.film.playing = !game.film.playing; ui.filmBar(); } return; }   // (a film: watch, or stop)
@@ -751,7 +752,7 @@ window.addEventListener("DOMContentLoaded", () => {
     renderer.setSprites(run.sprites(now).concat(fxs.sprites(now)));
     renderer.frame(dt);
     ui.drawTowerHud(run);
-    if ((towerMapT += dt) > 0.25) { towerMapT = 0; ui.drawAutomap(ui.$("#automap")); }
+    if ((towerMapT += dt) > 0.25) { towerMapT = 0; ui.drawAutomap(ui.$("#automap")); ui.renderActions(); }   // (and the ladder's buttons, when the hero comes to it)
   }
   // ---- the frame loop ----
   let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0, lastAutoStep = 0;

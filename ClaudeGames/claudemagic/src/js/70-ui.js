@@ -1024,7 +1024,7 @@ CM.UI = class {
     }
     const t = g.tally || {};
     this.$("#over-tally").innerHTML = [["Floors", `${CM.LAST_FLOOR} of ${CM.LAST_FLOOR} - and ${g.endless ? "no bottom" : (CM.BOTTOM - CM.LAST_FLOOR) + " more"} below`], ["Gold", g.gold.toLocaleString()], ["Monsters slain", t.kills || 0],
-      ["Steps walked", (t.steps || 0).toLocaleString()], ["Guardians slain", (t.guardians || []).length ? this.guardianNames(t.guardians) : "none"]].map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
+      ...(t.towerBest ? [["Mage Tower", `floor ${t.towerBest} of ${CM.TOWER_FLOORS}`]] : []), ["Steps walked", (t.steps || 0).toLocaleString()], ["Guardians slain", (t.guardians || []).length ? this.guardianNames(t.guardians) : "none"]].map(([k, v]) => `<div><span>${k}</span><b>${this.esc(v)}</b></div>`).join("");
     this.openDialog("#dlg-over");
     this.ending = "victory";
     if (this.onEnding) this.onEnding();

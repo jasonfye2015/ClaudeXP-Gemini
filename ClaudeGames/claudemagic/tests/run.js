@@ -3683,6 +3683,28 @@ test("the Mage Tower's monsters: they see only down a clear line, hear a shot, c
   assert.ok(b.m.hp <= 0 && r.ladderOpen(), "it falls and the ladder is free"); assert.ok(r.loot.length === 1 && !r.loot[0].unknown, "and leaves a thing");
 });
 
+test("the Mage Tower's ladder: shut while the boss stands; up to the next floor with what was won banked; out with the floor counted, and back in at the next; a fall carries the hero out at one health and the floor is lost; kept through a save; on the card", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("ladder-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); g.mode = "explore";
+  const mi = g.party.findIndex((h) => h.cls === "Mage"); g.enterMageTower(mi); let r = g.towerRun; r.hero.hp = r.hero.max = 9999;
+  const toLadder = (run) => { const [lx, ly] = run.fl.ladder; run.x = lx + 0.5; run.z = ly + 0.5; };
+  toLadder(r); assert.ok(!r.atLadder(), "shut while the boss stands"); assert.ok(g.towerClimb(false), "the boss first");
+  r.boss.m.hp = 0; r.gold = 40; r.xp = 25; const gold = g.gold, xp = r.hero.xp, c0 = g.clock || 0;
+  assert.ok(r.atLadder()); assert.strictEqual(g.towerClimb(false), ""); assert.strictEqual(g.towerRun.n, 2, "up to floor two");
+  assert.strictEqual(g.gold, gold + 40); assert.ok(r.hero.xp >= xp + 25 || r.hero.level > 1, "banked as it was cleared"); assert.strictEqual(g.tower.cleared, 1); assert.strictEqual(g.clock, c0 + CM.CLOCK.stair, "an hour a floor");
+  r = g.towerRun; toLadder(r); r.boss.m.hp = 0; assert.strictEqual(g.towerClimb(true), ""); assert.strictEqual(g.mode, "explore"); assert.strictEqual(g.tower.cleared, 2, "out, the floor counted"); assert.deepStrictEqual(g.floor.pos, CM.MAGE_DOOR);
+  assert.strictEqual(g.tally.towerBest, 2);
+  g.saveRun(); const g2 = new CM.Game(); assert.ok(g2.continueRun()); assert.strictEqual(g2.tower.cleared, 2, "kept through a save");
+  g2.mode = "explore"; g2.enterMageTower(mi); assert.strictEqual(g2.towerRun.n, 3, "back in at the next floor");
+  // a fall: out at one health, the floor's gold lost, the floor not counted
+  const f = g2.towerRun; f.gold = 99; const before = g2.gold; f.hero.hp = 0; f.update(1 / 60, {}); assert.strictEqual(f.over, "fell");
+  g2.leaveMageTower("fell"); assert.strictEqual(f.hero.hp, 1); assert.strictEqual(g2.gold, before, "the floor's gold lost"); assert.strictEqual(g2.tower.cleared, 2, "the floor not counted"); assert.strictEqual(g2.mode, "explore");
+  // leaving mid-floor keeps what was won, and counts nothing
+  g2.enterMageTower(mi); g2.towerRun.gold = 7; const b2 = g2.gold; g2.leaveMageTower("left"); assert.strictEqual(g2.gold, b2 + 7); assert.strictEqual(g2.tower.cleared, 2);
+  g2.tower.cleared = CM.TOWER_FLOORS; assert.ok(g2.enterMageTower(mi).includes("quiet"), "a tower whose King is gone");
+  assert.ok(fs.readFileSync(path.join(ROOT, "src", "js", "70-ui.js"), "utf8").includes("\"Mage Tower\", `floor ${t.towerBest}"), "on the card");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
