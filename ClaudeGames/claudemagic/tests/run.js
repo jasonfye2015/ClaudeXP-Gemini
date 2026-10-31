@@ -4439,6 +4439,53 @@ test("Claudecraft (v12.8): measured - a simple hand's few island minutes (tools/
   assert.strictEqual(CM.CRAFT_BUNDLES_MAX, 12);
 });
 
+test("the Gilded Joker's floor is fair: the reels return 97.1%, every roulette bet 97.3% (36 in 37), Jacks or Better pays the full 9/6 table and names every hand; a run of each game keeps the purse honest", () => {
+  const CM = load(), CG = CM.CG;
+  assert.ok(Math.abs(CG.slotReturn() - 0.9712) < 0.0005, `the reels ${CG.slotReturn()}`); assert.strictEqual(CG.REEL.length, 26);
+  for (const [type, n] of [["straight", 0], ["straight", 17], ["red"], ["black"], ["odd"], ["even"], ["low"], ["high"], ["dozen", 2], ["column", 3]]) assert.ok(Math.abs(CG.rouletteReturn(type, n) - 36 / 37) < 1e-9, type);
+  assert.strictEqual(JSON.stringify(CG.VP_PAY.map((x) => x[1])), JSON.stringify([800, 50, 25, 9, 6, 4, 3, 2, 1]), "9/6");
+  const H = (str) => str.split(" ").map((x) => ({ r: { A: 14, K: 13, Q: 12, J: 11, T: 10 }[x[0]] || Number(x[0]), s: x[1] }));
+  const names = [["TS JS QS KS AS", 0], ["9H TH JH QH KH", 1], ["AS 2S 3S 4S 5S", 1], ["7C 7D 7H 7S 2C", 2], ["3C 3D 3H 9S 9C", 3], ["2H 7H 9H JH KH", 4], ["AS 2D 3C 4H 5S", 5], ["9C TD JH QS KC", 5], ["5C 5D 5H 9S KC", 6], ["4C 4D 9H 9S KC", 7], ["JC JD 2H 5S 9C", 8], ["TC TD 2H 5S 9C", -1], ["2C 4D 6H 8S TC", -1]];
+  for (const [hand, k] of names) assert.strictEqual(CG.vpRank(H(hand)), k, hand);
+  // the purse: a hundred spins of the reels move the gold by exactly what was paid less what was staked
+  const g = new CM.Game(); g.newGame("floor-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 100000;
+  let staked = 0, back = 0; for (let k = 0; k < 2000; k++) { const r = g.slotSpin(5); assert.ok(!r.error); staked += 5; back += r.won; assert.strictEqual(r.won, CG.slotLine(...r.symbols).pay * 5); }
+  assert.strictEqual(g.gold, 100000 - staked + back); assert.ok(back / staked > 0.75 && back / staked < 1.25, `two thousand pulls returned ${(back / staked).toFixed(3)}`);
+  assert.strictEqual(g.cgStore().wagered.slots, staked); assert.strictEqual(g.cgStore().paid.slots, back);
+  assert.ok(g.slotSpin(0).error && g.slotSpin(CG.max + 1).error, "a bet within the house's limit"); g.gold = 3; assert.ok(g.slotSpin(5).error, "and the purse");
+  // roulette: the same seed and count give the same number; the board settles as the rules say
+  const a = new CM.Game(); a.newGame("floor-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const b = new CM.Game(); b.newGame("floor-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); a.gold = b.gold = 10000;
+  const bets = [{ type: "straight", n: 17, amount: 10 }, { type: "red", amount: 20 }, { type: "dozen", n: 1, amount: 15 }, { type: "column", n: 2, amount: 5 }];
+  for (let k = 0; k < 50; k++) { const ra = a.rouletteSpin(bets), rb = b.rouletteSpin(bets); assert.strictEqual(ra.n, rb.n); const exp = bets.reduce((t, x) => t + (CG.rouletteWins(x, ra.n) ? x.amount * (CG.RBET[x.type] + 1) : 0), 0); assert.strictEqual(ra.back, exp); }
+});
+
+test("the Gilded Joker's floor: blackjack deals, hits, stands, doubles and splits as a casino does (a natural pays 3 to 2, the dealer stands on soft 17) and returns near all with simple good play; Jacks or Better holds and draws; the jackpots - three Jokers, a royal flush, the black jack, the zero - bring Claudescryption cards to Leshy's box", () => {
+  const CM = load(), CG = CM.CG, g = new CM.Game(); g.newGame("floor-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000000;
+  const C = (r, s = "H") => ({ r, s, id: Math.random() });
+  // a stacked shoe: a natural pays three to two
+  const stack = (cards) => { const F = g.cgStore(); F.shoe = Array(100).fill(0).map(() => C(5, "C")).concat(cards.slice().reverse()); };
+  stack([C(14, "D"), C(9), C(13, "D"), C(7)]); let B = g.bjDeal(10); assert.strictEqual(B.stage, "done"); assert.strictEqual(B.results[0].r, "blackjack"); assert.strictEqual(B.back, 25);
+  // the dealer stands on a soft seventeen
+  stack([C(10), C(14), C(8), C(6)]); B = g.bjDeal(10); assert.strictEqual(B.stage, "play"); B = g.bjStand(); assert.strictEqual(B.dealer.length, 2, "stands on A-6"); assert.strictEqual(B.results[0].r, "win"); assert.strictEqual(B.back, 20);
+  // a bust loses; a double doubles; a split makes two hands
+  stack([C(10), C(9), C(6), C(8), C(10)]); g.bjDeal(10); B = g.bjHit(); assert.strictEqual(B.results[0].r, "bust"); assert.strictEqual(B.back, 0);
+  stack([C(6), C(10), C(5), C(7), C(10), C(10)]); g.bjDeal(10); const gd = g.gold; B = g.bjDouble(); assert.ok(B.hands[0].doubled && B.hands[0].bet === 20); assert.strictEqual(g.gold - gd, -10 + B.back);
+  stack([C(8, "S"), C(10), C(8, "C"), C(7), C(3), C(2), C(10), C(10)]); g.bjDeal(10); assert.ok(g.bjCanSplit()); B = g.bjSplit(); assert.strictEqual(B.hands.length, 2); assert.strictEqual(B.hands[0].cards.length, 2); g.bjStand(); B = g.bjStand(); assert.strictEqual(B.stage, "done"); assert.strictEqual(B.results.length, 2);
+  // simple good play over many hands: near all comes back
+  const basic = (H, up) => { const v = CG.bjValue(H.cards), u = Math.min(10, up.r === 14 ? 11 : up.r); if (v.soft) return v.total >= 19 || (v.total === 18 && u <= 8) ? "stand" : "hit"; if (v.total >= 17) return "stand"; if (v.total >= 13 && u <= 6) return "stand"; if (v.total === 12 && u >= 4 && u <= 6) return "stand"; if (v.total === 11 || (v.total === 10 && u <= 9)) return H.cards.length === 2 ? "double" : "hit"; return "hit"; };
+  g.cgStore().shoe = null; let st = 0, bk = 0; for (let k = 0; k < 6000; k++) { const g0 = g.gold; B = g.bjDeal(10); let guard = 0; while (B.stage === "play" && guard++ < 20) { const H = B.hands[B.active], a = basic(H, B.dealer[0]); B = a === "double" && g.bjCanDouble() ? g.bjDouble() : a === "stand" ? g.bjStand() : g.bjHit(); } st += 10; bk += g.gold - g0 + 10; }
+  assert.ok(bk / st > 0.93 && bk / st < 1.05, `blackjack returned ${(bk / st).toFixed(3)}`);
+  // jacks or better: deal, hold, draw; the purse moves by the table
+  const V = g.vpDeal(5); assert.strictEqual(V.cards.length, 5); g.vpHold(0); g.vpHold(1); const keep = [V.cards[0].id, V.cards[1].id], gv = g.gold; const D = g.vpDraw(); assert.ok(keep.every((id, i) => D.cards[i].id === id), "the held stay"); assert.strictEqual(g.gold - gv, D.rank >= 0 ? 5 * CG.VP_PAY[D.rank][1] : 0);
+  // the jackpots: cards to the box
+  const floorCards0 = g.cgStore().cards.length, owned = () => Object.values(g.cards().owned).reduce((a, b) => a + b, 0), fixed = (n) => ({ int: (lo, hi) => Math.min(hi, Math.max(lo, n)), next: () => 0, chance: () => false, pick: (l) => l[0] });
+  let o0 = owned(); const jk = CG.REEL.indexOf("joker"); g.cgRnd = () => fixed(jk); const S = g.slotSpin(2); assert.ok(S.jackpot && S.won === 2000 && CM.CARD_RARES.includes(S.card), "three Jokers"); assert.strictEqual(owned(), o0 + 1);
+  delete g.cgRnd; o0 = owned(); g.cgRnd = () => fixed(0); const Rz = g.rouletteSpin([{ type: "straight", n: 0, amount: 5 }]); assert.strictEqual(Rz.n, 0); assert.strictEqual(Rz.back, 180); assert.ok(CM.CARD_COMMONS.includes(Rz.card)); assert.strictEqual(owned(), o0 + 1); delete g.cgRnd;
+  o0 = owned(); g.vpDeal(5); const VV = g.vpState(); VV.cards = [C(10, "S"), C(11, "S"), C(12, "S"), C(13, "S"), C(2, "D")]; VV.rest[0] = C(14, "S"); for (let i = 0; i < 4; i++) g.vpHold(i); const RF = g.vpDraw(); assert.strictEqual(RF.rank, 0); assert.strictEqual(RF.back, 4000); assert.ok(CM.CARD_RARES.includes(RF.card)); assert.strictEqual(owned(), o0 + 1);
+  o0 = owned(); stack([C(14, "S"), C(9), C(11, "S"), C(7)]); B = g.bjDeal(10); assert.strictEqual(B.results[0].r, "blackjack"); assert.ok(B.card, "the black jack"); assert.strictEqual(owned(), o0 + 1);
+  assert.strictEqual(g.cgStore().cards.length, floorCards0 + 4);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

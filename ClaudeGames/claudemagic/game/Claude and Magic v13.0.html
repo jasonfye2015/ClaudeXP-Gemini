@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v12.8 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v13.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -707,6 +707,56 @@ body.inbros #broscanvas { display: block; } body.inbros #view .sky, body.inbros 
 #craftcanvas, #crafthud { display: none; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; }
 #crafthud { z-index: 7; pointer-events: none; } #craftcanvas { background: #86B6F5; cursor: crosshair; }
 body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incraft #view .sky, body.incraft #view .compass, body.incraft #view .hint { display: none; }
+
+/* The Gilded Joker's floor (76i-casinofloor.js): the tables' row, the reels, the wheel and its board, the felt for the
+   cards, chips, the coins that fall for a win and the light round a jackpot */
+.cgnav { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: -4px 0 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(200,160,64,0.4); }
+.cgnav .cggold { margin-left: auto; color: #F0D070; font-weight: bold; }
+.cgtable { position: relative; overflow: hidden; } .cgtable h3 { margin: 0 0 2px; color: #F0D070; } .cgnote { min-height: 1.3em; margin: 6px 0; color: #F8E8B8; font-weight: bold; }
+.cgbet { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; } .cgbet .lbl { margin-right: 6px; }
+.chip { width: 44px; height: 44px; border-radius: 50%; font-weight: bold; border: 4px dashed rgba(255,255,255,0.75); color: #FFF; box-shadow: 0 2px 4px rgba(0,0,0,0.5); padding: 0; }
+.chip.c1 { background: #8A8A90; } .chip.c5 { background: #B02828; } .chip.c25 { background: #1E7A3A; } .chip.c100 { background: #1A1A1A; } .chip.c500 { background: #6A2A9A; }
+.chip:hover:not(:disabled) { transform: translateY(-3px); }
+.cgcoin { position: absolute; top: -20px; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF2A0, #E0A820 60%, #8A6010); box-shadow: 0 0 4px rgba(255,220,120,0.8); animation: cgfall 1.5s ease-in forwards; pointer-events: none; z-index: 5; }
+@keyframes cgfall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(520px) rotate(540deg); opacity: 0; } }
+.cgprize { display: flex; gap: 10px; align-items: center; margin: 6px 0; padding: 8px 12px; border: 2px solid #F0D070; border-radius: 8px; background: rgba(60,40,10,0.7); animation: cgglow 1.2s ease-in-out 3; }
+.cgprize .em { font-size: 32px; } .cgprize small { display: block; color: #E8D8B0; }
+@keyframes cgglow { 50% { box-shadow: 0 0 24px #F0D070; } }
+.paytable { border-collapse: collapse; font-size: 13px; background: rgba(0,0,0,0.25); } .paytable td { padding: 2px 10px; border-bottom: 1px solid rgba(200,160,64,0.25); } .paytable td:last-child { text-align: right; color: #F0D070; }
+.paytable tr.won td { background: rgba(240,208,112,0.35); color: #FFF; font-weight: bold; }
+.cgstats { margin-top: 6px; opacity: 0.85; }
+/* the reels */
+.slots .slotwrap { display: flex; gap: 24px; align-items: flex-start; margin: 8px 0; }
+.slots .reels { position: relative; display: flex; gap: 8px; padding: 12px; border-radius: 14px; background: linear-gradient(#C8A040, #7A5A18); box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 10px rgba(0,0,0,0.5); }
+.slots .reel { width: 84px; height: 192px; overflow: hidden; border-radius: 8px; background: linear-gradient(#DDD5C0, #FFFDF5 30%, #FFFDF5 70%, #DDD5C0); box-shadow: inset 0 6px 10px rgba(0,0,0,0.45), inset 0 -6px 10px rgba(0,0,0,0.45); }
+.slots .sym { height: 64px; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #1A1A1A; font-weight: bold; }
+.slots .sym.s-seven { color: #C02020; font-family: Georgia, serif; font-size: 48px; } .slots .sym.s-bar { color: #303030; font-size: 46px; }
+.slots .payline { position: absolute; left: 6px; right: 6px; top: calc(50% - 1px); height: 2px; background: rgba(200,30,30,0.8); box-shadow: 0 0 6px rgba(255,60,60,0.8); pointer-events: none; }
+.slots .slotwrap.win .reels { animation: cgglow 0.6s ease-in-out 3; } .slots .slotwrap.jackpot .reels { animation: cgjack 0.25s linear 12; }
+@keyframes cgjack { 50% { box-shadow: 0 0 40px #FFF0A0, inset 0 0 12px rgba(0,0,0,0.6); filter: brightness(1.4); } }
+/* the wheel and the board */
+.roulette .rwrap { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin: 6px 0; } .roulette .rwheel { width: 300px; height: 300px; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6)); }
+.roulette .rboard { display: grid; grid-template-columns: 40px auto; grid-template-rows: auto auto; gap: 2px; } .roulette .rzero { grid-row: 1; } .roulette .rzero .rc { height: 100%; }
+.roulette .rgrid { display: grid; grid-template-columns: repeat(13, 34px); gap: 2px; } .roulette .routs { grid-column: 2; display: grid; grid-template-columns: repeat(12, 34px); gap: 2px; }
+.roulette .rc { position: relative; height: 34px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #FFF; cursor: pointer; border: 1px solid rgba(255,255,255,0.35); border-radius: 3px; font-size: 13px; user-select: none; }
+.roulette .rc.r { background: #A82020; } .roulette .rc.b { background: #1A1A1A; } .roulette .rc.g { background: #1E7A3A; } .roulette .rc.o { background: rgba(0,0,0,0.25); font-size: 11px; }
+.roulette .rc.w4 { grid-column: span 4; } .roulette .rc.w2 { grid-column: span 2; } .roulette .rc:hover { outline: 2px solid #F0D070; }
+.roulette .rc.hit { animation: cgglow 0.7s ease-in-out 4; outline: 3px solid #F0D070; }
+.roulette .bchip { position: absolute; right: -4px; top: -6px; min-width: 18px; height: 18px; border-radius: 9px; background: #F0D070; color: #2A1A08; font-style: normal; font-size: 10px; line-height: 18px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.6); z-index: 2; }
+.roulette .rlast { display: inline-block; min-width: 26px; padding: 2px 6px; border-radius: 13px; text-align: center; color: #FFF; } .roulette .rlast.red { background: #A82020; } .roulette .rlast.black { background: #1A1A1A; } .roulette .rlast.green { background: #1E7A3A; }
+/* the felt for the cards */
+.bjtable { position: relative; min-height: 250px; padding: 12px; border-radius: 120px 120px 16px 16px; background: radial-gradient(ellipse at 50% 30%, #2A7A50, #144A30); box-shadow: inset 0 0 0 6px #6A4A20, inset 0 0 30px rgba(0,0,0,0.5); }
+.bjtable .shoe { position: absolute; right: 22px; top: 18px; width: 56px; height: 70px; border-radius: 6px; background: linear-gradient(#6A4A20, #3A2410); box-shadow: 0 3px 6px rgba(0,0,0,0.6); }
+.bjtable .cards, .vphand { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; min-height: 86px; } .bjdealer { text-align: center; margin-bottom: 16px; } .bjtable .lbl { color: #F0E0B0; margin-bottom: 4px; }
+.bjplayer { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; } .bjhand { text-align: center; padding: 6px; border-radius: 8px; } .bjhand.now { background: rgba(240,208,112,0.18); outline: 2px solid rgba(240,208,112,0.6); }
+.bjv { margin-top: 4px; color: #F8F0D8; } .bjv .res { margin-left: 6px; } .res.blackjack, .res.win { color: #FFE070; } .res.push { color: #D0D0D0; } .res.lose, .res.bust { color: #FF9080; }
+.pc.cgback { background: repeating-linear-gradient(45deg, #7A1A1A 0 6px, #9A2A2A 6px 12px); border-color: #C8A040; }
+.pc.deal { animation: cgdeal 0.45s cubic-bezier(.2,.7,.3,1) both; } .pc.flip { animation: cgflip 0.5s ease-out both; }
+@keyframes cgdeal { from { transform: translate(260px, -140px) rotate(25deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes cgflip { 0% { transform: rotateY(90deg); } 100% { transform: rotateY(0); } }
+/* jacks or better */
+.poker .paytable.vp { float: right; margin: 0 0 8px 12px; } .vphand { margin: 18px 0 6px; clear: none; } .vpslot { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+.vpslot .tag { height: 18px; margin-top: 4px; font-weight: bold; color: #F0D070; font-size: 12px; } .vpslot.held .pc { outline: 3px solid #F0D070; transform: translateY(-8px); }
 </style>
 </head>
 <body>
@@ -716,7 +766,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "12.8", built: "2026-10-31" };
+const CM = window.CM = { version: "13.0", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -19584,6 +19634,166 @@ Object.assign(CM.ERRANDS, {
   });
 }
 
+// ---- 64s-casinogames.js ----
+"use strict";
+// The Gilded Joker's floor (the twentieth big update - v13.0): beside the Claudeatro table, four of a casino's own
+// games, played for the party's gold at fair odds - the house keeps a little and no more, and every game's return is
+// what the tests say it is:
+//   - the Gilded Reels, three reels and one line, 97.1% back (and three Jokers: a thousand times the bet and a rare
+//     Claudescryption card for Leshy's box);
+//   - Roulette, a single zero, the usual payouts, 97.3% back (a winning straight bet on the zero: a common card too);
+//   - Blackjack, six decks, a natural pays 3 to 2, the dealer stands on soft 17, double any two, split once - about
+//     99.5% back with good play (a natural of the Ace and Jack of Spades, the black jack: a common card besides);
+//   - Jacks or Better, the full 9/6 pay table, 99.5% back with good play (a royal flush: a rare card besides).
+// Every turn of the dice is the run's seed and the house's count, so a game plays back the same. The window is
+// 76i-casinofloor.js; the Claudeatro table is 64k-claudeatro.js.
+CM.CG = {
+  chips: [1, 5, 25, 100, 500], max: 500,
+  REEL: ["cherry", "lemon", "bell", "lemon", "bar", "cherry", "lemon", "seven", "bell", "lemon", "cherry", "bar", "lemon", "bell", "joker", "cherry", "lemon", "bell", "bar", "lemon", "seven", "cherry", "bell", "lemon", "bar", "bell"],   // (5 cherries, 8 lemons, 6 bells, 4 bars, 2 sevens, a Joker)
+  SLOT_PAY: { joker: 1000, seven: 100, bar: 20, bell: 9, lemon: 5, cherry: 10, mix: 2, twoCherry: 2, oneCherry: 1 },
+  SLOT_ART: { cherry: "🍒", lemon: "🍋", bell: "🔔", bar: "▬", seven: "7", joker: "🃏" },
+  RED: new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]),
+  WHEEL: [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26],
+  RBET: { straight: 35, red: 1, black: 1, odd: 1, even: 1, low: 1, high: 1, dozen: 2, column: 2 },
+  VP_PAY: [["Royal Flush", 800], ["Straight Flush", 50], ["Four of a Kind", 25], ["Full House", 9], ["Flush", 6], ["Straight", 4], ["Three of a Kind", 3], ["Two Pair", 2], ["Jacks or Better", 1]],
+  DECKS: 6,
+};
+const CG = CM.CG;
+// ---- the reels: a line's pay, as a multiple of the bet ----
+CG.slotLine = (a, b, c) => {
+  const P = CG.SLOT_PAY;
+  if (a === b && b === c) return { pay: P[a], what: `Three ${a === "joker" ? "Jokers" : a === "cherry" ? "cherries" : a + "s"}`, jackpot: a === "joker" };
+  if ([a, b, c].every((x) => x === "bar" || x === "seven" || x === "bell")) return { pay: P.mix, what: "Any three of bars, bells and sevens" };
+  const ch = [a, b, c].filter((x) => x === "cherry").length;
+  if (ch === 2) return { pay: P.twoCherry, what: "Two cherries" };
+  if (ch === 1 && a === "cherry") return { pay: P.oneCherry, what: "A cherry on the first reel" };
+  return { pay: 0, what: "" };
+};
+CG.slotReturn = () => { const R = CG.REEL; let t = 0; for (const a of R) for (const b of R) for (const c of R) t += CG.slotLine(a, b, c).pay; return t / R.length ** 3; };
+// ---- roulette: what a bet on a number returns (stake and winnings), 0 when it loses ----
+CG.rouletteWins = (bet, n) => {
+  if (bet.type === "straight") return bet.n === n;
+  if (n === 0) return false;
+  switch (bet.type) {
+    case "red": return CG.RED.has(n); case "black": return !CG.RED.has(n); case "odd": return n % 2 === 1; case "even": return n % 2 === 0;
+    case "low": return n <= 18; case "high": return n >= 19; case "dozen": return Math.ceil(n / 12) === bet.n; case "column": return ((n - 1) % 3) + 1 === bet.n;
+    default: return false;
+  }
+};
+CG.rouletteReturn = (type, n = 1) => { let t = 0; for (let k = 0; k <= 36; k++) if (CG.rouletteWins({ type, n }, k)) t += CG.RBET[type] + 1; return t / 37; };
+// ---- cards: the Claudeatro table's own (r 2-14, an Ace 14; s S H D C) ----
+CG.deck = (n = 1) => { const out = []; let id = 1; for (let d = 0; d < n; d++) for (const s of "SHDC") for (let r = 2; r <= 14; r++) out.push({ r, s, id: id++ }); return out; };
+CG.shuffle = (cards, rnd) => { for (let i = cards.length - 1; i > 0; i--) { const j = rnd.int(0, i); [cards[i], cards[j]] = [cards[j], cards[i]]; } return cards; };
+CG.bjValue = (cards) => { let t = 0, aces = 0; for (const c of cards) { if (c.down) continue; if (c.r === 14) { aces++; t += 11; } else t += Math.min(10, c.r); } while (t > 21 && aces) { t -= 10; aces--; } return { total: t, soft: aces > 0 }; };
+CG.bjNatural = (cards) => cards.length === 2 && CG.bjValue(cards).total === 21;
+// ---- video poker: the hand's name and pay ----
+CG.vpRank = (cards) => {
+  const rs = cards.map((c) => c.r).sort((a, b) => a - b), flush = cards.every((c) => c.s === cards[0].s), counts = {};
+  for (const r of rs) counts[r] = (counts[r] || 0) + 1;
+  const groups = Object.values(counts).sort((a, b) => b - a), uniq = Object.keys(counts).length;
+  const wheel = rs.join(",") === "2,3,4,5,14", straight = uniq === 5 && (rs[4] - rs[0] === 4 || wheel);
+  if (straight && flush) return rs[0] === 10 ? 0 : 1;
+  if (groups[0] === 4) return 2; if (groups[0] === 3 && groups[1] === 2) return 3; if (flush) return 4; if (straight) return 5; if (groups[0] === 3) return 6;
+  if (groups[0] === 2 && groups[1] === 2) return 7;
+  if (groups[0] === 2) { const pair = Number(Object.keys(counts).find((r) => counts[r] === 2)); if (pair >= 11) return 8; }
+  return -1;
+};
+
+Object.assign(CM.Game.prototype, {
+  cgStore() { const K = this.casino(); const F = K.floor = K.floor || {}; F.n = F.n || 0; F.wagered = F.wagered || {}; F.paid = F.paid || {}; F.played = F.played || {}; F.cards = F.cards || []; return F; },
+  cgRnd(what) { const F = this.cgStore(); F.n += 1; return new CM.Random(CM.hashSeed(`${this.seed}:gildedfloor:${what}:${F.n}`)); },
+  // a stake on the table: a whole number of gold, within the house's limit and the party's purse
+  cgStake(game, bet) {
+    bet = Math.floor(Number(bet) || 0); if (bet < 1) return "Put a chip down first.";
+    if (bet > CG.max) return `The house takes no more than ${CG.max} gold a bet.`; if (bet > this.gold) return `The party has ${this.gold} gold.`;
+    const F = this.cgStore(); this.gold -= bet; F.wagered[game] = (F.wagered[game] || 0) + bet; F.played[game] = (F.played[game] || 0) + 1; return "";
+  },
+  cgPay(game, amount) { if (amount <= 0) return 0; const F = this.cgStore(); this.gold += amount; F.paid[game] = (F.paid[game] || 0) + amount; return amount; },
+  // a jackpot's card: into the box at Leshy's cabin
+  cgCard(rare, why, rnd) { const pool = rare ? CM.CARD_RARES : CM.CARD_COMMONS; if (!pool || !pool.length) return null; const name = pool[rnd.int(0, pool.length - 1)]; this.addCard(name, why); this.cgStore().cards.push(name); this.tally.casinoCards = (this.tally.casinoCards || 0) + 1; return name; },
+  // ---- the Gilded Reels ----
+  slotSpin(bet) {
+    const why = this.cgStake("slots", bet); if (why) return { error: why };
+    const R = this.cgRnd("slots"), stops = [0, 1, 2].map(() => R.int(0, CG.REEL.length - 1)), [a, b, c] = stops.map((s) => CG.REEL[s]), line = CG.slotLine(a, b, c);
+    const won = this.cgPay("slots", line.pay * bet), card = line.jackpot ? this.cgCard(true, "The Gilded Reels pay their jackpot!", R) : null;
+    if (line.jackpot) this.cgStore().jackpots = (this.cgStore().jackpots || 0) + 1;
+    this.saveCasino && this.saveCasino(); this.emit("change");
+    return { stops, symbols: [a, b, c], won, what: line.what, jackpot: !!line.jackpot, card };
+  },
+  // ---- Roulette: bets of {type, n, amount}; the wheel's number, and what came back ----
+  rouletteSpin(bets) {
+    bets = (bets || []).filter((b) => b && b.amount >= 1 && CG.RBET[b.type] !== undefined); const total = bets.reduce((t, b) => t + Math.floor(b.amount), 0);
+    if (!total) return { error: "Place a bet on the board first." }; if (total > CG.max * 4) return { error: `The house takes no more than ${CG.max * 4} gold on a spin.` };
+    const why = this.cgStake("roulette", total); if (why) return { error: why };
+    const R = this.cgRnd("roulette"), n = R.int(0, 36); let back = 0; const winners = [];
+    for (const b of bets) if (CG.rouletteWins(b, n)) { const r = Math.floor(b.amount) * (CG.RBET[b.type] + 1); back += r; winners.push(b); }
+    this.cgPay("roulette", back);
+    const card = n === 0 && bets.some((b) => b.type === "straight" && b.n === 0 && b.amount >= 5) ? this.cgCard(false, "The zero comes up for you!", R) : null;
+    this.saveCasino && this.saveCasino(); this.emit("change");
+    return { n, colour: n === 0 ? "green" : CG.RED.has(n) ? "red" : "black", staked: total, back, winners, card };
+  },
+  // ---- Blackjack: a hand kept on the table until it is settled (it waits if you leave) ----
+  bjState() { return this.cgStore().bj || null; },
+  bjShoe() { const F = this.cgStore(); if (!F.shoe || F.shoe.length < 78) { F.shoe = CG.shuffle(CG.deck(CG.DECKS), this.cgRnd("shoe")); F.shuffled = true; } return F.shoe; },
+  bjDraw(down) { const c = Object.assign({}, this.bjShoe().pop()); if (down) c.down = true; return c; },
+  bjDeal(bet) {
+    if (this.bjState() && this.bjState().stage === "play") return { error: "A hand is on the table." };
+    const why = this.cgStake("blackjack", bet); if (why) return { error: why };
+    const F = this.cgStore(); F.shuffled = false; this.bjShoe(); const shuffled = F.shuffled;
+    const p = [this.bjDraw(), null], d = [this.bjDraw(), null]; p[1] = this.bjDraw(); d[1] = this.bjDraw(true);
+    F.bj = { stage: "play", hands: [{ cards: p, bet: Math.floor(bet), done: false }], active: 0, dealer: d, shuffled };
+    const peek = Object.assign({}, d[1]); delete peek.down;
+    if (CG.bjNatural(p) || ((d[0].r === 14 || Math.min(10, d[0].r) === 10) && CG.bjNatural([d[0], peek]))) return this.bjSettle();
+    this.saveCasino && this.saveCasino(); return F.bj;
+  },
+  bjHand() { const B = this.bjState(); return B && B.stage === "play" ? B.hands[B.active] : null; },
+  bjHit() { const H = this.bjHand(); if (!H) return { error: "No hand." }; H.cards.push(this.bjDraw()); if (CG.bjValue(H.cards).total >= 21) return this.bjNext(); this.saveCasino && this.saveCasino(); return this.bjState(); },
+  bjStand() { if (!this.bjHand()) return { error: "No hand." }; return this.bjNext(); },
+  bjCanDouble() { const H = this.bjHand(); return !!(H && H.cards.length === 2 && !H.splitAces && this.gold >= H.bet); },
+  bjDouble() { const H = this.bjHand(); if (!this.bjCanDouble()) return { error: "Not now." }; const why = this.cgStake("blackjack", H.bet); if (why) return { error: why }; this.cgStore().played.blackjack -= 1; H.bet *= 2; H.doubled = true; H.cards.push(this.bjDraw()); return this.bjNext(); },
+  bjCanSplit() { const B = this.bjState(), H = this.bjHand(); return !!(H && B.hands.length === 1 && H.cards.length === 2 && Math.min(10, H.cards[0].r) === Math.min(10, H.cards[1].r) && this.gold >= H.bet); },
+  bjSplit() {
+    const B = this.bjState(), H = this.bjHand(); if (!this.bjCanSplit()) return { error: "Not now." }; const why = this.cgStake("blackjack", H.bet); if (why) return { error: why }; this.cgStore().played.blackjack -= 1;
+    const aces = H.cards[0].r === 14, two = { cards: [H.cards.pop(), this.bjDraw()], bet: H.bet, done: false, split: true, splitAces: aces }; H.cards.push(this.bjDraw()); H.split = true; H.splitAces = aces; B.hands.push(two);
+    if (aces) { B.active = B.hands.length - 1; return this.bjSettle(); }             // (split aces: one card each, and done)
+    this.saveCasino && this.saveCasino(); return B;
+  },
+  bjNext() { const B = this.bjState(); B.hands[B.active].done = true; if (B.active < B.hands.length - 1) { B.active += 1; this.saveCasino && this.saveCasino(); return B; } return this.bjSettle(); },
+  // the dealer turns the hole card and draws to seventeen (stands on a soft seventeen); each hand paid
+  bjSettle() {
+    const B = this.bjState(), d = B.dealer; d[1].down = false; const playerNatural = B.hands.length === 1 && CG.bjNatural(B.hands[0].cards) && !B.hands[0].split, dealerNatural = CG.bjNatural(d);
+    const live = B.hands.some((H) => CG.bjValue(H.cards).total <= 21);
+    if (!playerNatural && !dealerNatural && live) while (CG.bjValue(d).total < 17) d.push(this.bjDraw());
+    const dv = CG.bjValue(d).total; let back = 0;
+    B.results = B.hands.map((H) => {
+      const v = CG.bjValue(H.cards).total, nat = playerNatural;
+      let r, pay = 0;
+      if (nat && dealerNatural) { r = "push"; pay = H.bet; } else if (nat) { r = "blackjack"; pay = H.bet + Math.ceil(H.bet * 1.5); } else if (dealerNatural) r = "lose";
+      else if (v > 21) r = "bust"; else if (dv > 21 || v > dv) { r = "win"; pay = H.bet * 2; } else if (v === dv) { r = "push"; pay = H.bet; } else r = "lose";
+      back += pay; return { r, pay };
+    });
+    this.cgPay("blackjack", back); B.back = back; B.stage = "done";
+    const H0 = B.hands[0].cards; B.card = playerNatural && H0.some((c) => c.r === 14 && c.s === "S") && H0.some((c) => c.r === 11 && c.s === "S") ? this.cgCard(false, "The black jack itself!", this.cgRnd("bjcard")) : null;
+    this.saveCasino && this.saveCasino(); this.emit("change"); return B;
+  },
+  // ---- Jacks or Better: deal five, hold what you will, draw ----
+  vpState() { return this.cgStore().vp || null; },
+  vpDeal(bet) {
+    if (this.vpState() && this.vpState().stage === "hold") return { error: "Draw first." };
+    const why = this.cgStake("poker", bet); if (why) return { error: why };
+    const deck = CG.shuffle(CG.deck(1), this.cgRnd("poker")); this.cgStore().vp = { stage: "hold", bet: Math.floor(bet), cards: deck.splice(0, 5), held: [false, false, false, false, false], rest: deck };
+    this.saveCasino && this.saveCasino(); return this.vpState();
+  },
+  vpHold(i) { const V = this.vpState(); if (!V || V.stage !== "hold") return false; V.held[i] = !V.held[i]; return true; },
+  vpDraw() {
+    const V = this.vpState(); if (!V || V.stage !== "hold") return { error: "Deal first." };
+    V.drawn = []; V.cards = V.cards.map((c, i) => { if (V.held[i]) return c; V.drawn.push(i); return V.rest.shift(); });
+    const k = CG.vpRank(V.cards); V.rank = k; V.stage = "done"; V.back = this.cgPay("poker", k >= 0 ? V.bet * CG.VP_PAY[k][1] : 0) || 0; V.what = k >= 0 ? CG.VP_PAY[k][0] : "";
+    V.card = k === 0 ? this.cgCard(true, "A royal flush!", this.cgRnd("vpcard")) : null; delete V.rest;
+    this.saveCasino && this.saveCasino(); this.emit("change"); return V;
+  },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -25038,6 +25248,156 @@ Object.assign(CM.UI.prototype, {
     recent.forEach(([t, msg], k) => { p.font = "bold 14px Tahoma, sans-serif"; p.textAlign = "center"; p.fillStyle = "rgba(0,0,0,0.6)"; p.fillText(msg, W / 2 + 1, H * 0.22 + k * 20 + 1); p.fillStyle = `rgba(255,240,200,${Math.min(1, (4000 - (now - t)) / 800)})`; p.fillText(msg, W / 2, H * 0.22 + k * 20); p.textAlign = "left"; });
   },
 });
+
+// ---- 76i-casinofloor.js ----
+"use strict";
+// The Gilded Joker's floor, the window's side (the twentieth big update): a row of tables across the top of the
+// casino's dialog - Claudeatro (76e-casino.js) and four of the floor's own games (64s-casinogames.js) - each drawn
+// and moved: the reels spin and stop one by one, the wheel turns against its ball, the cards are dealt across the
+// felt and the hole card turns over, held cards stay while the rest flip; chips clink, coins fall, and a jackpot rings.
+CM.CG_TABLES = [["claudeatro", "Claudeatro"], ["slots", "The Gilded Reels"], ["roulette", "Roulette"], ["blackjack", "Blackjack"], ["poker", "Jacks or Better"]];
+{ const r0 = CM.UI.prototype.renderCasino, open0 = CM.UI.prototype.openCasino;
+  Object.assign(CM.UI.prototype, {
+    openCasino() { this.cgView = this.cgView || "claudeatro"; open0.call(this); },
+    renderCasino() {
+      const box = this.$("#casino-body");
+      if (this.cgView && this.cgView !== "claudeatro") this.renderFloor(box); else r0.call(this);
+      this.cgNav(box);
+    },
+    cgNav(box) {
+      const nav = document.createElement("div"); nav.className = "cgnav";
+      nav.innerHTML = CM.CG_TABLES.map(([id, name]) => `<button data-cgv="${id}" class="${(this.cgView || "claudeatro") === id ? "primary" : ""}">${name}</button>`).join("") + `<span class="cggold">${this.game.gold} gold</span>`;
+      box.prepend(nav);
+      nav.querySelectorAll("[data-cgv]").forEach((b) => b.addEventListener("click", () => { if (this.cgBusy) return; this.cgView = b.dataset.cgv; this.cgNote = ""; this.caSfx("cardplace", 0.3); this.renderCasino(); }));
+    },
+    cgSfx(name, vol = 0.4, rate = 1) { try { CM.audio.play(name, vol, 0, rate); } catch (e) { /* quiet */ } },
+    // the bet: chips added up, cleared, within the purse and the house's limit
+    cgBetRow(label = "The bet") {
+      const b = this.cgBet === undefined ? 5 : this.cgBet;
+      return `<div class="cgbet"><span class="lbl">${label}: <b>${b}</b> gold</span>${CM.CG.chips.map((c) => `<button class="chip c${c}" data-chip="${c}" ${c > this.game.gold ? "disabled" : ""}>${c}</button>`).join("")}<button data-chipclear>Clear</button></div>`;
+    },
+    cgWireBet(box) {
+      box.querySelectorAll("[data-chip]").forEach((el) => el.addEventListener("click", () => { if (this.cgBusy) return; this.cgBet = Math.min(CM.CG.max, this.game.gold, (this.cgBet === undefined ? 0 : this.cgBet) + Number(el.dataset.chip)); this.cgSfx("coin", 0.18, 1.4); this.renderCasino(); }));
+      const c = box.querySelector("[data-chipclear]"); if (c) c.addEventListener("click", () => { if (this.cgBusy) return; this.cgBet = 0; this.renderCasino(); });
+    },
+    cgStats(game) { const F = this.game.cgStore(), w = F.wagered[game] || 0, p = F.paid[game] || 0; return `<div class="small cgstats">Played ${F.played[game] || 0}; wagered ${w} gold, paid back ${p}${w ? ` (${Math.round((100 * p) / w)}%)` : ""}.${F.cards.length ? ` Cards won on the floor: ${F.cards.length}.` : ""}</div>`; },
+    // coins tumbling down the felt for a win; a ring of light and the card for a jackpot
+    cgCoins(box, n) { const host = box.querySelector(".cgtable") || box; for (let i = 0; i < Math.min(40, n); i++) { const c = document.createElement("span"); c.className = "cgcoin"; c.style.left = `${10 + Math.random() * 80}%`; c.style.animationDelay = `${Math.random() * 0.5}s`; host.appendChild(c); setTimeout(() => c.remove(), 1800); } },
+    cgCardWon(name) { if (!name || !CM.CARDS[name]) return ""; const C = CM.CARDS[name]; return `<div class="cgprize"><span class="em">${C[0]}</span><div><b>${this.esc(name)}</b><small>A Claudescryption card - off to the box in Leshy's cabin</small></div></div>`; },
+    renderFloor(box) {
+      const v = this.cgView; if (v === "slots") this.cgSlots(box); else if (v === "roulette") this.cgRoulette(box); else if (v === "blackjack") this.cgBlackjack(box); else this.cgPoker(box);
+    },
+    // ---- the Gilded Reels ----
+    cgSlots(box) {
+      const CG = CM.CG, P = CG.SLOT_PAY, A = CG.SLOT_ART, last = this.cgSlotLast, stops = last ? last.stops : [0, 9, 17], N = CG.REEL.length;
+      const strip = [].concat(...Array(6).fill(CG.REEL)).map((s) => `<div class="sym s-${s}">${A[s]}</div>`).join("");
+      const row = (k, txt) => `<tr><td>${txt}</td><td>${P[k]} x</td></tr>`;
+      box.innerHTML = `<div class="cgtable slots"><h3>The Gilded Reels</h3><p class="lore">A tall brass machine with a gilded Joker on its crown, humming faintly. "One line, three reels," says the attendant. "Fair as a coin."</p>
+        <div class="slotwrap"><div class="reels">${[0, 1, 2].map((i) => `<div class="reel"><div class="strip" data-reel="${i}" style="transform: translateY(${-(N + stops[i] - 1) * 64}px)">${strip}</div></div>`).join("")}<div class="payline"></div></div>
+        <table class="paytable">${row("joker", "🃏🃏🃏 + a rare card")}${row("seven", "7 7 7")}${row("bar", "▬ ▬ ▬")}${row("cherry", "🍒🍒🍒")}${row("bell", "🔔🔔🔔")}${row("lemon", "🍋🍋🍋")}${row("mix", "any three of ▬ 🔔 7")}${row("twoCherry", "any two 🍒")}${row("oneCherry", "🍒 on the first reel")}<tr><td colspan="2" class="small">The machine returns 97.1% of what is put in it.</td></tr></table></div>
+        ${this.cgBetRow()}<div class="cgnote">${this.cgNote || ""}</div>${last && last.card ? this.cgCardWon(last.card) : ""}
+        <div class="row"><button class="primary" data-spin>Pull the lever</button><button data-leave>Leave</button></div>${this.cgStats("slots")}</div>`;
+      this.cgWireBet(box); box.querySelector("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      box.querySelector("[data-spin]").addEventListener("click", () => {
+        if (this.cgBusy) return; const r = this.game.slotSpin(this.cgBet === undefined ? 5 : this.cgBet); if (r.error) { this.cgNote = r.error; this.cgSfx("miss", 0.3); this.renderCasino(); return; }
+        this.cgBusy = true; this.cgSfx("hinge", 0.5); const strips = [...box.querySelectorAll("[data-reel]")]; let ticks = 0;
+        const tick = setInterval(() => { this.cgSfx("card", 0.1, 1.6 + Math.random() * 0.4); if (++ticks > 40) clearInterval(tick); }, 60);
+        strips.forEach((el, i) => {
+          const from = -(N + stops[i] - 1) * 64, to = -((2 + i) * N + r.stops[i] - 1) * 64;   // (round two to four times, on to the stop; the strip repeats, so the rest is the same picture)
+          el.animate([{ transform: `translateY(${from}px)` }, { transform: `translateY(${to}px)` }], { duration: 1000 + i * 500, easing: "cubic-bezier(.15,.55,.25,1)" }).onfinish = () => {
+            el.style.transform = `translateY(${-(N + r.stops[i] - 1) * 64}px)`; this.cgSfx("cardplace", 0.45, 0.8);
+            if (i === 2) { clearInterval(tick); this.cgBusy = false; this.cgSlotLast = r; this.cgNote = r.won ? `${r.what}: ${r.won} gold!` : "Nothing on the line."; this.renderCasino(); const b2 = this.$("#casino-body");
+              if (r.jackpot) { this.cgSfx("victory", 0.7); this.cgSfx("cardwin", 0.6); b2.querySelector(".slotwrap").classList.add("jackpot"); this.cgCoins(b2, 40); }
+              else if (r.won >= (this.cgBet || 5) * 9) { this.cgSfx("victory", 0.45); this.cgCoins(b2, 18); }
+              else if (r.won) { this.cgSfx("coin", 0.5); this.cgCoins(b2, 5); }
+              if (r.won) b2.querySelector(".slotwrap").classList.add("win"); }
+          };
+        });
+      });
+    },
+    // ---- Roulette ----
+    cgRoulette(box) {
+      const CG = CM.CG, bets = this.cgRBets = this.cgRBets || {}, last = this.cgRLast, staked = Object.values(bets).reduce((t, b) => t + b.amount, 0);
+      const key = (type, n) => `${type}:${n || 0}`, chipOn = (type, n) => { const b = bets[key(type, n)]; return b ? `<i class="bchip">${b.amount}</i>` : ""; };
+      const cell = (n) => `<div class="rc ${n === 0 ? "g" : CG.RED.has(n) ? "r" : "b"}${last && last.n === n ? " hit" : ""}" data-rb="straight:${n}">${n}${chipOn("straight", n)}</div>`;
+      let grid = ""; for (let row = 3; row >= 1; row--) { for (let col = 0; col < 12; col++) grid += cell(col * 3 + row); grid += `<div class="rc o" data-rb="column:${row}">2:1${chipOn("column", row)}</div>`; }
+      const out = [["dozen:1", "1st 12"], ["dozen:2", "2nd 12"], ["dozen:3", "3rd 12"]].map(([k, t]) => `<div class="rc o w4" data-rb="${k}">${t}${chipOn(...k.split(":").map((x, i) => (i ? Number(x) : x)))}</div>`).join("")
+        + [["low", "1-18"], ["even", "Even"], ["red", "Red"], ["black", "Black"], ["odd", "Odd"], ["high", "19-36"]].map(([k, t]) => `<div class="rc o w2 ${k === "red" ? "r" : k === "black" ? "b" : ""}" data-rb="${k}:0">${t}${chipOn(k, 0)}</div>`).join("");
+      box.innerHTML = `<div class="cgtable roulette"><h3>Roulette</h3><p class="lore">A wheel of polished walnut with a single green zero. The croupier spins it with two fingers. "Place your bets."</p>
+        <div class="rwrap"><canvas class="rwheel" width="300" height="300"></canvas><div class="rboard"><div class="rzero">${cell(0)}</div><div class="rgrid">${grid}</div><div class="routs">${out}</div></div></div>
+        ${this.cgBetRow("The chip")}<div class="cgnote">${this.cgNote || ""}${last ? ` <span class="rlast ${last.colour}">${last.n}</span>` : ""}</div>${last && last.card ? this.cgCardWon(last.card) : ""}
+        <div class="row"><button class="primary" data-rspin ${staked ? "" : "disabled"}>Spin (${staked} gold on the board)</button><button data-rclear>Clear the board</button><button data-leave>Leave</button></div>
+        <div class="small">A number pays 35 to 1, a dozen or a column 2 to 1, red, black, odd, even, 1-18 and 19-36 even money; the zero takes the outside bets. The wheel returns 97.3%; a straight bet of five or more that wins on the zero brings a Claudescryption card besides.</div>${this.cgStats("roulette")}</div>`;
+      this.cgWireBet(box); box.querySelector("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      this.cgDrawWheel(box.querySelector(".rwheel"), this.cgWheelA || 0, this.cgBallA === undefined ? null : this.cgBallA);
+      box.querySelectorAll("[data-rb]").forEach((el) => el.addEventListener("click", () => {
+        if (this.cgBusy) return; const [type, n] = el.dataset.rb.split(":"), k = key(type, Number(n)), chip = this.cgBet || 0, total = staked + chip;
+        if (!chip) { this.cgNote = "Choose a chip first."; this.renderCasino(); return; } if (total > this.game.gold || total > CG.max * 4) { this.cgNote = "That is more than the party has, or the house takes."; this.renderCasino(); return; }
+        bets[k] = { type, n: Number(n), amount: (bets[k] ? bets[k].amount : 0) + chip }; this.cgSfx("coin", 0.22, 1.3); this.cgNote = ""; this.renderCasino();
+      }));
+      box.querySelector("[data-rclear]").addEventListener("click", () => { if (this.cgBusy) return; this.cgRBets = {}; this.renderCasino(); });
+      box.querySelector("[data-rspin]").addEventListener("click", () => {
+        if (this.cgBusy) return; const r = this.game.rouletteSpin(Object.values(bets)); if (r.error) { this.cgNote = r.error; this.renderCasino(); return; }
+        this.cgBusy = true; const cv = box.querySelector(".rwheel"), a0 = this.cgWheelA || 0, idx = CG.WHEEL.indexOf(r.n), slot = (Math.PI * 2) / 37, t0 = performance.now(), dur = 4800;
+        const wheelEnd = a0 + Math.PI * 2 * 3 + 0.7, pocketA = wheelEnd + idx * slot + slot / 2, ball0 = -Math.PI / 2, ballEnd = pocketA - Math.PI * 2 * (Math.ceil((pocketA - ball0) / (Math.PI * 2)) + 5); let lastPocket = -1;
+        this.cgSfx("hinge", 0.4, 1.4);
+        const step = (now) => {
+          const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3), wa = a0 + (wheelEnd - a0) * e, ba = ball0 + (ballEnd - ball0) * e;
+          const rad = 118 - Math.min(1, Math.max(0, (k - 0.55) / 0.4)) * 16;   
+          this.cgDrawWheel(cv, wa, ba, rad); const pocket = Math.floor((((ba - wa) % (Math.PI * 2)) + Math.PI * 4) % (Math.PI * 2) / slot); if (pocket !== lastPocket && k > 0.15) { lastPocket = pocket; this.cgSfx("card", 0.06 + 0.1 * k, 2.2 - k); }
+          if (k < 1) { requestAnimationFrame(step); return; }
+          this.cgWheelA = wa % (Math.PI * 2); this.cgBallA = this.cgWheelA + idx * slot + slot / 2; this.cgBallR = rad; this.cgBusy = false; this.cgRLast = r; this.cgSfx("cardplace", 0.6, 0.7);
+          this.cgNote = `${r.n} ${r.colour}. ${r.back ? `The board pays ${r.back} gold.` : "The house takes the board."}`; if (!r.back) this.cgRBets = {};
+          this.renderCasino(); const b2 = this.$("#casino-body"); if (r.back) { this.cgSfx(r.back >= r.staked * 5 ? "victory" : "coin", 0.55); this.cgCoins(b2, Math.min(30, 4 + Math.round(r.back / Math.max(1, r.staked)) * 2)); } if (r.card) this.cgSfx("cardwin", 0.6);
+        };
+        requestAnimationFrame(step);
+      });
+    },
+    cgDrawWheel(cv, wa, ba, rad) {
+      if (!cv) return; const p = cv.getContext("2d"), CG = CM.CG, c = 150, slot = (Math.PI * 2) / 37; p.clearRect(0, 0, 300, 300);
+      p.fillStyle = "#4A2A14"; p.beginPath(); p.arc(c, c, 146, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C8A040"; p.beginPath(); p.arc(c, c, 138, 0, Math.PI * 2); p.fill();
+      CG.WHEEL.forEach((n, i) => { const a = wa + i * slot; p.fillStyle = n === 0 ? "#1E8A3A" : CG.RED.has(n) ? "#B02020" : "#1A1A1A"; p.beginPath(); p.moveTo(c, c); p.arc(c, c, 132, a, a + slot); p.closePath(); p.fill();
+        p.save(); p.translate(c, c); p.rotate(a + slot / 2 + Math.PI / 2); p.fillStyle = "#F0E8D0"; p.font = "bold 10px Georgia, serif"; p.textAlign = "center"; p.fillText(String(n), 0, -118); p.restore(); });
+      p.fillStyle = "#3A2210"; p.beginPath(); p.arc(c, c, 92, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#C8A040"; p.lineWidth = 3; p.beginPath(); p.arc(c, c, 92, 0, Math.PI * 2); p.stroke();
+      p.save(); p.translate(c, c); p.rotate(wa); p.fillStyle = "#E0C060"; for (let k = 0; k < 4; k++) { p.rotate(Math.PI / 2); p.fillRect(-4, -60, 8, 56); } p.beginPath(); p.arc(0, 0, 14, 0, Math.PI * 2); p.fill(); p.restore();
+      if (ba !== null && ba !== undefined) { const r = rad || this.cgBallR || 106; p.fillStyle = "#FFFFFF"; p.beginPath(); p.arc(c + Math.cos(ba) * r, c + Math.sin(ba) * r, 6, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(0,0,0,0.35)"; p.lineWidth = 1; p.stroke(); }
+    },
+    // ---- Blackjack ----
+    cgBlackjack(box) {
+      const g = this.game, B = g.bjState(), CG = CM.CG, play = B && B.stage === "play", seen = this.cgSeen = this.cgSeen || new Set();
+      const card = (c) => { const fresh = !seen.has(`${c.id}:${c.down ? 1 : 0}`); seen.add(`${c.id}:${c.down ? 1 : 0}`); return c.down ? `<div class="pc cgback${fresh ? " deal" : ""}"></div>` : this.caCard(c, { cls: fresh ? (seen.has(`${c.id}:1`) ? "flip" : "deal") : "" }); };
+      const dv = B ? CG.bjValue(B.dealer).total : 0;
+      const hands = B ? B.hands.map((H, i) => { const v = CG.bjValue(H.cards), res = B.results ? B.results[i] : null; return `<div class="bjhand${play && B.active === i ? " now" : ""}"><div class="cards">${H.cards.map(card).join("")}</div><div class="bjv">${v.total}${v.soft && v.total < 21 ? " (soft)" : ""} - ${H.bet} gold${H.doubled ? " (doubled)" : ""}${res ? ` <b class="res ${res.r}">${{ blackjack: "Blackjack!", win: "Win", push: "Push", lose: "Lose", bust: "Bust" }[res.r]}${res.pay ? ` +${res.pay}` : ""}</b>` : ""}</div></div>`; }).join("") : "";
+      box.innerHTML = `<div class="cgtable blackjack"><h3>Blackjack</h3><p class="lore">Six decks in a brass shoe. The dealer smiles without showing her teeth. "Blackjack pays three to two. I stand on all seventeens."</p>
+        <div class="bjtable"><div class="shoe" title="The shoe"></div><div class="bjdealer"><div class="lbl">The dealer${B ? ` - ${B.stage === "done" ? dv : CG.bjValue([B.dealer[0]]).total}` : ""}</div><div class="cards">${B ? B.dealer.map(card).join("") : ""}</div></div><div class="bjplayer">${hands || `<div class="small">Place a bet and deal.</div>`}</div></div>
+        ${play ? "" : this.cgBetRow()}<div class="cgnote">${this.cgNote || ""}</div>${B && B.card ? this.cgCardWon(B.card) : ""}
+        <div class="row">${play ? `<button class="primary" data-bj="hit">Hit</button><button data-bj="stand">Stand</button><button data-bj="double" ${g.bjCanDouble() ? "" : "disabled"}>Double</button><button data-bj="split" ${g.bjCanSplit() ? "" : "disabled"}>Split</button>` : `<button class="primary" data-bjdeal>Deal</button>`}<button data-leave>Leave</button></div>
+        <div class="small">Six decks, shuffled when a quarter is left; the dealer peeks for blackjack and stands on soft 17; double on any two cards, split a pair once (split aces take one card each). About 99.5% back with good play. A blackjack of the Ace and Jack of Spades brings a Claudescryption card besides.</div>${this.cgStats("blackjack")}</div>`;
+      this.cgWireBet(box); box.querySelector("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      box.querySelectorAll(".pc.deal").forEach((el, i) => { el.style.animationDelay = `${i * 0.18}s`; setTimeout(() => this.cgSfx("card", 0.4, 0.9 + Math.random() * 0.3), i * 180); });
+      box.querySelectorAll(".pc.flip").forEach(() => this.cgSfx("cardplace", 0.5));
+      const after = (r) => { if (r && r.error) { this.cgNote = r.error; this.renderCasino(); return; } const S = g.bjState(); this.cgNote = S.stage === "done" ? (S.back ? `${S.back} gold back.` : "The house takes it.") : ""; this.renderCasino();
+        if (S.stage === "done") { const b2 = this.$("#casino-body"), best = (S.results || []).map((x) => x.r); setTimeout(() => { if (best.includes("blackjack")) { this.cgSfx("cardwin", 0.6); this.cgCoins(b2, 16); } else if (best.includes("win")) { this.cgSfx("coin", 0.55); this.cgCoins(b2, 6); } else if (best.every((x) => x === "bust" || x === "lose")) this.cgSfx("miss", 0.35); if (S.card) this.cgSfx("victory", 0.5); }, 500); } };
+      const dl = box.querySelector("[data-bjdeal]"); if (dl) dl.addEventListener("click", () => { const r = g.bjDeal(this.cgBet === undefined ? 5 : this.cgBet); if (r && r.shuffled) this.cgSfx("chain", 0.3); after(r); });
+      box.querySelectorAll("[data-bj]").forEach((b) => b.addEventListener("click", () => { const a = b.dataset.bj; after(a === "hit" ? g.bjHit() : a === "stand" ? g.bjStand() : a === "double" ? g.bjDouble() : g.bjSplit()); }));
+    },
+    // ---- Jacks or Better ----
+    cgPoker(box) {
+      const g = this.game, V = g.vpState(), CG = CM.CG, hold = V && V.stage === "hold", bet = V ? V.bet : (this.cgBet === undefined ? 5 : this.cgBet), seen = this.cgSeen = this.cgSeen || new Set();
+      const cards = V ? V.cards.map((c, i) => { const fresh = !seen.has(`vp${c.id}:${V.stage}`) && (V.stage === "hold" || (V.drawn || []).includes(i)); seen.add(`vp${c.id}:${V.stage}`); return `<div class="vpslot${V.held[i] ? " held" : ""}" data-vh="${i}">${this.caCard(c, { cls: fresh ? (V.stage === "hold" ? "deal" : "flip") : "" })}<span class="tag">${V.held[i] ? "HELD" : hold ? "hold?" : ""}</span></div>`; }).join("") : [0, 1, 2, 3, 4].map(() => `<div class="vpslot"><div class="pc cgback"></div></div>`).join("");
+      box.innerHTML = `<div class="cgtable poker"><h3>Jacks or Better</h3><p class="lore">A cabinet of brass and green glass that deals itself. Five cards; keep what you like; draw once.</p>
+        <table class="paytable vp">${CG.VP_PAY.map(([n, m], i) => `<tr class="${V && V.stage === "done" && V.rank === i ? "won" : ""}"><td>${n}${i === 0 ? " <small>+ a rare card</small>" : ""}</td><td>${m * bet}</td></tr>`).join("")}<tr><td colspan="2" class="small">The full 9/6 table: 99.5% back with good play.</td></tr></table>
+        <div class="vphand">${cards}</div>${hold ? "" : this.cgBetRow()}<div class="cgnote">${this.cgNote || ""}</div>${V && V.card ? this.cgCardWon(V.card) : ""}
+        <div class="row">${hold ? `<button class="primary" data-vpdraw>Draw</button>` : `<button class="primary" data-vpdeal>Deal</button>`}<button data-leave>Leave</button></div>${this.cgStats("poker")}</div>`;
+      this.cgWireBet(box); box.querySelector("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      box.querySelectorAll(".pc.deal, .pc.flip").forEach((el, i) => { el.style.animationDelay = `${i * 0.12}s`; setTimeout(() => this.cgSfx("card", 0.35, 1 + Math.random() * 0.3), i * 120); });
+      box.querySelectorAll("[data-vh]").forEach((el) => el.addEventListener("click", () => { if (!hold) return; g.vpHold(Number(el.dataset.vh)); this.cgSfx("cardplace", 0.3, 1.3); this.renderCasino(); }));
+      const dl = box.querySelector("[data-vpdeal]"); if (dl) dl.addEventListener("click", () => { const r = g.vpDeal(bet); this.cgNote = r.error || "Click the cards to keep, then draw."; this.renderCasino(); });
+      const dr = box.querySelector("[data-vpdraw]"); if (dr) dr.addEventListener("click", () => { const r = g.vpDraw(); this.cgNote = r.error || (r.back ? `${r.what}: ${r.back} gold!` : "Nothing this time."); this.renderCasino(); const b2 = this.$("#casino-body");
+        setTimeout(() => { if (r.card) { this.cgSfx("victory", 0.7); this.cgSfx("cardwin", 0.6); this.cgCoins(b2, 40); } else if (r.back >= r.bet * 9) { this.cgSfx("cardwin", 0.55); this.cgCoins(b2, 18); } else if (r.back) { this.cgSfx("coin", 0.5); this.cgCoins(b2, 5); } }, 450); });
+    },
+  });
+}
 
 // ---- 77-splash.js ----
 "use strict";
