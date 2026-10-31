@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Runestep Pyramid (v14.5)
+
+The pyramid in the back room was a temple's once, small enough to be carried off in a cart - every cube carved with a
+rune that lights when something with a little magic in it stands on it. The glimmerkins that live in the Joker's lamps
+love to hop it. The serpent that hatches from the violet eggs the pyramid lays now and then does not love glimmerkins.
+
 ## Moatleap (v14.4)
 
 The old castle across the market road has stood empty for a lifetime, but its moat has not: lily-turtles nest in it,
