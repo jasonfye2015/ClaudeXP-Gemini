@@ -30,7 +30,7 @@ CM.CG_TABLES.push(["hexwand", "The Hexed Wand"]);
     // after a move: the events played out, then the dealer's turns a beat apart, then the end of the round
     hwAfter() {
       const g = this.game, D = g.hwDuel(); if (!D) return; this.hwBusy = true; const ev = D.events.splice(0); let delay = 0;
-      for (const e of ev) { setTimeout(() => this.hwShow(e), delay); delay += e.kind === "fire" ? 900 : e.kind === "load" ? 1400 : 600; }
+      for (const e of ev) { setTimeout(() => this.hwShow(e), delay); delay += e.kind === "fire" ? 1900 : e.kind === "load" ? 1400 : 600; }
       setTimeout(() => {
         this.hwBusy = false;
         if (D.stage !== "play") { const r = g.hwSettle(); this.cgNote = r.won ? (g.hwState().stage === "done" ? `The last round! ${r.pot} gold.` : `Round ${r.round} won: the pot is ${r.pot} gold. Collect, or play on.`) : `Your last candle is out. ${r.lost ? `The pot of ${r.lost} is lost.` : "The stake is the house's."}`; if (r.won) { this.cgSfx("victory", 0.55); if (r.card) this.cgSfx("cardwin", 0.5); } else this.cgSfx("cardlose", 0.5); this.renderCasino(); return; }
@@ -40,15 +40,16 @@ CM.CG_TABLES.push(["hexwand", "The Hexed Wand"]);
       this.renderCasino();
     },
     hwShow(e) {
-      const now = performance.now(); (this.hwFx = this.hwFx || []).push(Object.assign({ at: now }, e));
-      if (e.kind === "fire") { this.cgSfx("hinge", 0.3, 1.5); setTimeout(() => { if (e.live) { this.cgSfx("zap", 0.7); this.cgSfx(e.at === "you" ? "hurt" : "fallen", 0.5); } else this.cgSfx("miss", 0.45, 0.7); }, 420); }
+      const now = performance.now(); (this.hwFx = this.hwFx || []).push(Object.assign({}, e, { t0: now }));
+      if (e.kind === "fire") { this.cgSfx("hinge", 0.3, 1.5); setTimeout(() => this.cgSfx("spell", 0.25, 1.6), 320);
+        setTimeout(() => { if (e.live) { this.cgSfx("wandboom", 0.8); this.cgSfx("zap", 0.6, 0.8); setTimeout(() => this.cgSfx(e.at === "you" ? "hurt" : "fallen", 0.55), 150); } else { this.cgSfx("miss", 0.45, 0.6); [0, 70, 150, 260].forEach((d, k) => setTimeout(() => this.cgSfx("card", 0.18, 2.4 - k * 0.3), d)); } }, 600); }
       else if (e.kind === "charm") this.cgSfx(e.c === "glass" ? "card" : e.c === "tallow" ? "heal" : e.c === "cord" ? "chain" : e.c === "whet" ? "grind" : "cardplace", 0.45);
       else if (e.kind === "load") this.cgSfx("chain", 0.4); else if (e.kind === "bound") this.cgSfx("chain", 0.3, 0.8);
       if (e.kind === "charm" && e.who === "dealer") this.cgNote = `The dealer uses ${CM.HW.CHARMS[e.c][0].toLowerCase()}${e.c === "unload" ? ` - ${e.seen ? "a live hex" : "a dud"} falls out` : ""}.`;
       if (e.kind === "fire" && e.who === "dealer") this.cgNote = `The dealer points the wand at ${e.at === "dealer" ? "itself" : "you"}...`;
     },
     hwFrame(now) {
-      const g = this.game, D = g.hwDuel(), cv = this.hwCanvas, p = cv.getContext("2d"), W = 620, H = 420, fx = (this.hwFx || []).filter((f) => now - f.at < 2000); this.hwFx = fx;
+      const g = this.game, D = g.hwDuel(), cv = this.hwCanvas, p = cv.getContext("2d"), W = 620, H = 420, fx = (this.hwFx || []).filter((f) => now - f.t0 < 2000); this.hwFx = fx;
       const bg = p.createRadialGradient(W / 2, 120, 20, W / 2, 200, 420); bg.addColorStop(0, "#3A2A1C"); bg.addColorStop(1, "#050404"); p.fillStyle = bg; p.fillRect(0, 0, W, H);
       p.fillStyle = "#FFE6A0"; p.beginPath(); p.moveTo(W / 2 - 30, 0); p.lineTo(W / 2 + 30, 0); p.lineTo(W / 2 + 14, 30); p.lineTo(W / 2 - 14, 30); p.fill(); p.fillStyle = "rgba(255,230,160,0.06)"; p.beginPath(); p.moveTo(W / 2 - 14, 30); p.lineTo(W / 2 + 14, 30); p.lineTo(W - 40, H); p.lineTo(40, H); p.fill();
       // the dealer
@@ -64,16 +65,48 @@ CM.CG_TABLES.push(["hexwand", "The Hexed Wand"]);
       // the dealer's charms, face down; the loaded charges shown, then turned over
       for (let i = 0; i < D.dealer.charms.length; i++) { p.fillStyle = "#6A1A2A"; p.fillRect(W / 2 + 110 + i * 18, 262, 14, 20); p.strokeStyle = "#C8A040"; p.strokeRect(W / 2 + 110 + i * 18 + 0.5, 262.5, 13, 19); }
       const load = [...fx].reverse().find((f) => f.kind === "load"), lastFire = [...fx].reverse().find((f) => f.kind === "fire");
-      if (load && now - load.at < 1400 && !(lastFire && lastFire.at > load.at)) { const n = load.live + load.dud; for (let i = 0; i < n; i++) { const x = W / 2 - (n - 1) * 14 + i * 28, live = i < load.live; p.fillStyle = live ? "#C82020" : "#8A8A8A"; p.beginPath(); p.arc(x, 300, 10, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#000"; p.stroke(); } p.fillStyle = "#FFF"; p.font = "bold 14px Georgia, serif"; p.textAlign = "center"; p.fillText(`${load.live} live, ${load.dud} dud`, W / 2, 335); p.textAlign = "left"; }
-      else { p.fillStyle = "#E0D8C0"; p.font = "12px Georgia, serif"; p.textAlign = "center"; p.fillText(`${D.charges.length} in the wand - ${D.liveLeft} live, ${D.dudLeft} dud${D.known !== null ? ` - the next is ${D.known ? "LIVE" : "a dud"}` : ""}${D.whet ? " - whetted" : ""}`, W / 2, 352); p.textAlign = "left"; }
-      // the wand: lying between you, or swung to its mark
-      const shot = [...fx].reverse().find((f) => f.kind === "fire"), k = shot ? Math.min(1, (now - shot.at) / 400) : 0, aimUp = shot && shot.at === "dealer";
-      const rest = -0.15, ang = shot ? rest + (aimUp ? -1.45 : 1.45) * Math.min(1, k * 1.4) * (now - shot.at < 1400 ? 1 : Math.max(0, 1 - (now - shot.at - 1400) / 400)) : rest;
-      p.save(); p.translate(W / 2, 300); p.rotate(ang); p.fillStyle = "#1A1210"; p.fillRect(-70, -4, 140, 8); p.fillStyle = "#C8A040"; p.fillRect(-70, -5, 14, 10); p.fillStyle = "#A060FF"; p.beginPath(); p.arc(70, 0, 5, 0, Math.PI * 2); p.fill(); p.restore();
-      if (shot && now - shot.at > 400 && now - shot.at < 900) { const t = (now - shot.at - 400) / 500, ty = aimUp ? 130 : 395; if (shot.live) { p.strokeStyle = `rgba(255,${80 + 100 * (1 - t)},60,${1 - t})`; p.lineWidth = 4; p.beginPath(); p.moveTo(W / 2, 300); for (let s = 1; s <= 6; s++) p.lineTo(W / 2 + (Math.random() - 0.5) * 40, 300 + ((ty - 300) * s) / 6); p.stroke(); p.fillStyle = `rgba(255,60,40,${0.35 * (1 - t)})`; p.fillRect(0, 0, W, H); }
-        else { p.fillStyle = `rgba(180,180,180,${0.6 * (1 - t)})`; for (let s = 0; s < 6; s++) { p.beginPath(); p.arc(W / 2 + Math.cos(s) * 30 * t + (aimUp ? 0 : 0), 300 + (aimUp ? -1 : 1) * 60 * t + Math.sin(s * 2) * 10, 8 + 10 * t, 0, Math.PI * 2); p.fill(); } } }
-      if (shot && shot.live && now - shot.at > 800 && now - shot.at < 1800) { const t = (now - shot.at - 800) / 1000, y0 = shot.at === "dealer" ? 210 : 360; p.fillStyle = `rgba(120,120,120,${0.5 * (1 - t)})`; for (let s = 0; s < 4; s++) { p.beginPath(); p.arc(W / 2 + Math.sin(now / 200 + s) * 20, y0 - t * 60 - s * 8, 6 + s * 2, 0, Math.PI * 2); p.fill(); } }
-      p.fillStyle = D.turn === "you" ? "#FFE070" : "#C8B8A0"; p.font = "bold 15px Georgia, serif"; p.textAlign = "center"; p.fillText(D.stage !== "play" ? (D.stage === "won" ? "The dealer's last candle goes out." : "Your last candle goes out.") : D.turn === "you" ? "Your turn" : "The dealer's turn", W / 2, 24 + 380 * 0 + 380); p.textAlign = "left";
+      if (load && now - load.t0 < 1400 && !(lastFire && lastFire.t0 > load.t0)) { const n = load.live + load.dud; for (let i = 0; i < n; i++) { const x = W / 2 - (n - 1) * 14 + i * 28, live = i < load.live; p.fillStyle = live ? "#C82020" : "#8A8A8A"; p.beginPath(); p.arc(x, 300, 10, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#000"; p.stroke(); } p.fillStyle = "#FFF"; p.font = "bold 14px Georgia, serif"; p.textAlign = "center"; p.fillText(`${load.live} live, ${load.dud} dud`, W / 2, 335); p.textAlign = "left"; }
+      else if (!fx.some((f) => f.kind === "fire" && now - f.t0 < 1900)) { p.fillStyle = "#E0D8C0"; p.font = "12px Georgia, serif"; p.textAlign = "center"; p.fillText(`${D.charges.length} in the wand - ${D.liveLeft} live, ${D.dudLeft} dud${D.known !== null ? ` - the next is ${D.known ? "LIVE" : "a dud"}` : ""}${D.whet ? " - whetted" : ""}`, W / 2, 352); p.textAlign = "left"; }
+      // (v13.5) the wand: it rises from the table into the shooter's hand, turns on its mark and draws closer, the tip
+      // gathering light; then a blast - a white flash, a bolt, rings and sparks, the room shaking - or a fizzle: the tip
+      // sputters, a few sparks drop and a curl of grey smoke goes up; then it is laid down again
+      const shot = [...fx].reverse().find((f) => f.kind === "fire"), T0 = shot ? now - shot.t0 : 9999, REL = 600;
+      const face = { dealer: [W / 2, 128], you: [W / 2 + 10, 450] }, hand = { dealer: [W / 2 - 50, 228], you: [W / 2 + 80, 335] }, rest = [W / 2, 300];
+      let base = rest, tipDir = [-Math.cos(0.15), -Math.sin(0.15)], len = 140, lift = 0;
+      if (shot && T0 < 1900) {
+        const H = hand[shot.who], Tg = face[shot.at], self = shot.who === shot.at, go = Math.min(1, T0 / 450), back = T0 > 1450 ? Math.min(1, (T0 - 1450) / 450) : 0, e = (x) => x * x * (3 - 2 * x), m = e(go) * (1 - e(back));
+        const near = [H[0] + (Tg[0] - H[0]) * (self ? 0.12 : 0.28), H[1] + (Tg[1] - H[1]) * (self ? 0.12 : 0.28)];
+        base = [rest[0] + (near[0] - rest[0]) * m, rest[1] + (near[1] - rest[1]) * m];
+        const dx = Tg[0] - near[0], dy = Tg[1] - near[1], n = Math.hypot(dx, dy) || 1, aim = [dx / n, dy / n];
+        tipDir = [tipDir[0] + (aim[0] - tipDir[0]) * m, tipDir[1] + (aim[1] - tipDir[1]) * m]; const tn = Math.hypot(...tipDir) || 1; tipDir = [tipDir[0] / tn, tipDir[1] / tn];
+        len = 140 - (self && shot.who === "you" ? 70 : self ? 30 : 10) * m; lift = m;
+        if (T0 > 450 && T0 < REL) { base = [base[0] + (Math.random() - 0.5) * 3, base[1] + (Math.random() - 0.5) * 3]; }
+        if (T0 >= REL && T0 < REL + 180 && shot.live) { base = [base[0] - tipDir[0] * 14 * (1 - (T0 - REL) / 180), base[1] - tipDir[1] * 14 * (1 - (T0 - REL) / 180)]; }   // (the kick)
+      }
+      const tip = [base[0] + tipDir[0] * len / 2, base[1] + tipDir[1] * len / 2], butt = [base[0] - tipDir[0] * len / 2, base[1] - tipDir[1] * len / 2];
+      if (lift) { p.fillStyle = `rgba(0,0,0,${0.35 * (1 - lift)})`; p.beginPath(); p.ellipse(rest[0], rest[1] + 6, 70, 8, 0, 0, Math.PI * 2); p.fill(); }
+      p.lineCap = "round"; p.strokeStyle = "#0E0A08"; p.lineWidth = 10 + lift * 2; p.beginPath(); p.moveTo(...butt); p.lineTo(...tip); p.stroke(); p.strokeStyle = "#3A2A20"; p.lineWidth = 3; p.beginPath(); p.moveTo(butt[0] + tipDir[1] * 2, butt[1] - tipDir[0] * 2); p.lineTo(tip[0] + tipDir[1] * 2, tip[1] - tipDir[0] * 2); p.stroke();
+      p.strokeStyle = "#C8A040"; p.lineWidth = 12 + lift * 2; p.beginPath(); p.moveTo(...butt); p.lineTo(butt[0] + tipDir[0] * 16, butt[1] + tipDir[1] * 16); p.stroke(); p.lineCap = "butt";
+      const charge = shot && T0 > 300 && T0 < REL ? (T0 - 300) / (REL - 300) : 0, glowR = 5 + charge * 9 + Math.sin(now / 120) * 1.2;
+      p.save(); p.shadowColor = shot && shot.live && charge ? "#FF5030" : "#A060FF"; p.shadowBlur = 10 + charge * 26; p.fillStyle = charge ? `rgb(255,${Math.round(200 - charge * 120)},${Math.round(255 - charge * 200)})` : "#A060FF"; p.beginPath(); p.arc(tip[0], tip[1], glowR, 0, Math.PI * 2); p.fill(); p.restore();
+      if (shot && T0 >= REL && T0 < REL + 900) {
+        const t = (T0 - REL) / 900, Tg = face[shot.at];
+        if (shot.live) {
+          if (T0 < REL + 90) { p.fillStyle = `rgba(255,250,235,${0.85 * (1 - (T0 - REL) / 90)})`; p.fillRect(0, 0, W, H); }
+          if (t < 0.45) { const k2 = t / 0.45; for (const [col, wdt] of [["rgba(255,90,40,0.85)", 9], ["rgba(255,240,200,1)", 3]]) { p.strokeStyle = col; p.lineWidth = wdt * (1 - k2 * 0.6); p.beginPath(); p.moveTo(...tip); const segs = 8; for (let k = 1; k <= segs; k++) { const f = k / segs, j2 = k === segs ? 0 : (Math.sin(now / 13 + k * 7.3) * 16) * (1 - f * 0.4); p.lineTo(tip[0] + (Tg[0] - tip[0]) * f - tipDir[1] * j2, tip[1] + (Tg[1] - tip[1]) * f + tipDir[0] * j2); } p.stroke(); } }
+          for (let r = 0; r < 3; r++) { const rt = t - r * 0.12; if (rt <= 0) continue; p.strokeStyle = `rgba(255,${120 + r * 50},60,${Math.max(0, 0.8 - rt)})`; p.lineWidth = 4 - r; p.beginPath(); p.arc(Tg[0], Tg[1] - (shot.at === "you" ? 110 : 0), rt * 170, 0, Math.PI * 2); p.stroke(); }
+          for (let k = 0; k < 26; k++) { const a = k * 2.399 + shot.at.length, sp = 120 + (k * 37) % 160, r = sp * t, cy = Tg[1] - (shot.at === "you" ? 110 : 0); p.fillStyle = k % 3 ? `rgba(255,${150 + (k * 13) % 100},60,${1 - t})` : `rgba(255,255,220,${1 - t})`; p.fillRect(Tg[0] + Math.cos(a) * r, cy + Math.sin(a) * r + t * t * 60, 3, 3); }
+          p.fillStyle = `rgba(255,40,20,${0.28 * (1 - t)})`; p.fillRect(0, 0, W, H);
+        } else {
+          for (let k = 0; k < 9; k++) { const kt = t * 1.6 - k * 0.06; if (kt <= 0 || kt > 1) continue; const a = -Math.PI / 2 + Math.sin(k * 5.1) * 1.2; p.fillStyle = `rgba(255,${200 - k * 10},120,${1 - kt})`; p.fillRect(tip[0] + Math.cos(a) * 18 * kt, tip[1] + Math.sin(a) * 10 * kt + kt * kt * 40, 2, 2); }
+          if (t < 0.35 && Math.floor(now / 45) % 2) { p.fillStyle = "rgba(255,230,180,0.9)"; p.beginPath(); p.arc(tip[0], tip[1], 4, 0, Math.PI * 2); p.fill(); }
+          for (let k = 0; k < 7; k++) { const kt = t - k * 0.06; if (kt <= 0) continue; p.fillStyle = `rgba(150,150,150,${0.45 * (1 - kt)})`; p.beginPath(); p.arc(tip[0] + Math.sin(kt * 6 + k) * 10 * kt, tip[1] - kt * 70 - k * 4, 5 + kt * 14, 0, Math.PI * 2); p.fill(); }
+          if (t < 0.7) { p.save(); p.globalAlpha = 1 - t / 0.7; p.fillStyle = "#D8D0C0"; p.font = "italic bold 18px Georgia, serif"; p.textAlign = "center"; p.fillText("fzzt...", tip[0] + 40, tip[1] - 20 - t * 20); p.restore(); }
+        }
+      }
+      { const sh = shot && shot.live && T0 >= REL && T0 < REL + 350 ? (1 - (T0 - REL) / 350) * 7 : 0; cv.style.transform = sh ? `translate(${(Math.random() - 0.5) * sh}px, ${(Math.random() - 0.5) * sh}px)` : ""; }
+      if (shot && shot.live && now - shot.t0 > 800 && now - shot.t0 < 1800) { const t = (now - shot.t0 - 800) / 1000, y0 = shot.at === "dealer" ? 210 : 360; p.fillStyle = `rgba(120,120,120,${0.5 * (1 - t)})`; for (let s = 0; s < 4; s++) { p.beginPath(); p.arc(W / 2 + Math.sin(now / 200 + s) * 20, y0 - t * 60 - s * 8, 6 + s * 2, 0, Math.PI * 2); p.fill(); } }
+      if (T0 < 1900) { cv.style.cursor = "wait"; } else cv.style.cursor = ""; if (T0 >= 1900) { p.fillStyle = D.turn === "you" ? "#FFE070" : "#C8B8A0"; p.font = "bold 15px Georgia, serif"; p.textAlign = "center"; p.fillText(D.stage !== "play" ? (D.stage === "won" ? "The dealer's last candle goes out." : "Your last candle goes out.") : D.turn === "you" ? "Your turn" : "The dealer's turn", W / 2, 24 + 380 * 0 + 380); p.textAlign = "left"; }
       p.fillStyle = "#C8B8A0"; p.font = "12px Georgia, serif"; p.fillText(`Round ${D.round}`, 12, 20);
     },
   });

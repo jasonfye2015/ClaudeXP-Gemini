@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Runestack and the Gilded Cascade (v13.5)
+
+By the wall of the Joker stands a tall glass case of black water, and rune-stones sink through it by themselves; fill a
+row and the water takes it, and the attendant pays for every ten. Across from it a cabinet of brass and glass rattles
+day and night, its pusher never still: the town's children stand at the glass to watch the coins tip over the edge,
+and swear they have seen a card fall with them.
+
 ## The Hexed Wand and the Gilded Pit (v13.4)
 
 The Joker's dealer has a second table, a round one under a single lamp, and a second face to go with it, under a hood.

@@ -1392,6 +1392,26 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Runestack, the Gilded Cascade, and the Hexed Wand's new shots (the twenty-fifth big update - v13.5)
+  - Runestack (src/js/64y-runestack.js; the window 76o-runestack.js): rune-stones of seven shapes sink through a glass
+    case of black water; move, turn (the stones kick off the walls), sink and drop them so rows fill - a full row
+    flashes and bursts into chips - with a ghost where the stone will land and the next three shown. Ten rows a level,
+    faster each level. One stake a play: every level cleared pays gold back, more for each (a fifth of the stake and a
+    tenth more each level: level three cleared and the stake is back), every play; and a Claudescryption card for each
+    level the first time it is ever cleared - a common card for levels one to four, a stronger common for five to
+    nine, a rare one from ten on. Arrows or W A S D, Up/X/Z to turn, Space to drop, P to pause.
+  - The Gilded Cascade (64z-cascade.js; 76p-cascade.js): a coin pusher in a glass-and-brass cabinet with chasing
+    lamps. Buy a cup of twenty coins (1, 5 or 25 gold each), click over the shelf to drop one where you choose (hold to
+    keep dropping); the brass pusher shoves the bed, and what goes over the front edge tumbles into your tray at its
+    worth - what slips into the side gutters is the house's. Now and then a prize comes down with a coin: a gold nugget
+    (ten coins), a Claudescryption card token, or a sealed item token (a real piece of gear by the party's depth). The
+    shelf is kept between visits; the cup can be cashed in. About nine in ten comes back over the edge, more with the
+    prizes and a good eye for where to drop.
+  - The Hexed Wand looks the part now: the wand rises from the table into the shooter's hand and comes closer to its
+    mark - across to the dealer, or turned back toward the player - its tip gathering light; a live hex is a blast (a
+    white flash, a forked red bolt, rings and sparks, the table shaking), a dud a fizzle (the tip sputters, a few sparks
+    drop, a curl of grey smoke, "fzzt..."), each with its own sounds.
+
 The Hexed Wand and the Gilded Pit (the twenty-fourth big update - v13.4)
   Two more of the Gilded Joker's games (src/js/64w-hexwand.js and 64x-gildedpit.js; the windows 76m-hexwand.js and
   76n-gildedpit.js):

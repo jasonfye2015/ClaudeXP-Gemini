@@ -4630,6 +4630,59 @@ test("the Gilded Pit: the Old Lucky's lines, columns, diagonals and full grid, t
   assert.ok(!g.pitStart(0, 100).error); R = g.pitRun(); const c0 = R.coins; out = g.pitSpin(); assert.strictEqual(g.pitRun().coins, c0 - out.cost + out.won); assert.strictEqual(out.won, PT.score(out.grid, [])[0] * out.cost);
 });
 
+test("Runestack: stones in bags of seven from the seed; they move, turn (kicking off the walls), sink and drop; a full row is cut after its flash and the rest fall; ten rows a level, faster; each level cleared pays more every play, and its card - common to four, a stronger common five to nine, rare from ten - only the first time ever; the well filling ends the play", () => {
+  const CM = load(), RS = CM.RS, a = new RS.Well(5), b = new RS.Well(5);
+  assert.strictEqual(a.next.join() + a.cur.k, b.next.join() + b.cur.k, "the seed's");
+  const seen = new Set([a.cur.k]); for (let k = 0; k < 6; k++) { a.cur = null; a.spawn(); seen.add(a.cur.k); } assert.strictEqual(seen.size, 7, "a bag of seven");
+  // moving and turning
+  const W = new RS.Well(9); W.cur = { k: "T", rot: 0, x: 3, y: 0 }; assert.ok(W.move(-1)); assert.strictEqual(W.cur.x, 2); for (let k = 0; k < 10; k++) W.move(-1); assert.strictEqual(W.cur.x, 0, "the wall stops it");
+  W.cur = { k: "I", rot: 1, x: -2, y: 4 }; assert.ok(W.fits("I", 1, -2, 4)); assert.ok(W.rotate(1), "kicked off the wall"); assert.ok(W.fits(W.cur.k, W.cur.rot, W.cur.x, W.cur.y));
+  // a row cut
+  const C = new RS.Well(3); for (let x = 0; x < RS.W; x++) if (x < 6 || x > 9) C.grid[RS.H - 1][x] = "Z"; for (let x = 0; x < 6; x++) C.grid[RS.H - 1][x] = "S";
+  C.grid[RS.H - 2][0] = "J"; C.cur = { k: "I", rot: 0, x: 6, y: RS.H - 2 }; C.lock(); assert.ok(C.clearing && C.clearing.rows.length === 1); C.update(RS.clearTime + 0.01);
+  assert.strictEqual(C.lines, 1); assert.strictEqual(C.grid[RS.H - 1][0], "J", "the rest fell"); assert.strictEqual(C.score, RS.SCORE[1]);
+  // falling: faster by level; a stone locks after its delay
+  assert.ok(RS.fallTime(1) > RS.fallTime(5) && RS.fallTime(5) > RS.fallTime(10)); const F = new RS.Well(4); const y0 = F.cur.y; F.update(RS.fallTime(1) * 3 + 0.001); assert.strictEqual(F.cur.y, y0 + 3);
+  const d = F.hard(); assert.ok(d > 10); assert.strictEqual(F.pieces, 2, "dropped and locked, the next in");
+  // the money and the cards
+  const g = new CM.Game(); g.newGame("rs-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0);
+  assert.ok(!g.rsStart(100).error); assert.strictEqual(g.gold, 900); let Wl = g.rsWell(); const o0 = owned();
+  Wl.lines = 12; Wl.level = 2; let out = g.rsCheck(); assert.strictEqual(out.length, 1); assert.strictEqual(out[0].pay, Math.round(100 * RS.pay(1))); assert.ok(CM.CARD_COMMONS.includes(out[0].card)); assert.strictEqual(owned(), o0 + 1);
+  Wl.lines = 61; Wl.level = 7; out = g.rsCheck(); assert.strictEqual(out.length, 5, "levels 2 to 6"); assert.ok(CM.CARD_BETTER.includes(out[4].card), "level 6: a stronger card"); assert.ok(out.every((o, i) => o.pay === Math.round(100 * RS.pay(i + 2))), "more each level");
+  Wl.lines = 105; Wl.level = 11; out = g.rsCheck(); assert.ok(CM.CARD_RARES.includes(out[out.length - 1].card), "level 10: rare");
+  const paid = g.gold; Wl.stage = "over"; out = g.rsCheck(); assert.ok(out.some((o) => o.over)); assert.strictEqual(g.rsState().stage, "done"); assert.strictEqual(g.gold, paid);
+  // again: gold every play, the cards not twice
+  const o1 = owned(); assert.ok(!g.rsStart(100).error); Wl = g.rsWell(); Wl.lines = 25; Wl.level = 3; out = g.rsCheck(); assert.strictEqual(out.length, 2); assert.ok(out.every((o) => !o.card), "no card twice"); assert.strictEqual(owned(), o1); assert.strictEqual(out[0].pay, Math.round(100 * RS.pay(1)), "but the gold again");
+  assert.ok(CM.CARD_BETTER.length >= 1 && CM.CARD_BETTER.every((n) => CM.CARD_COMMONS.includes(n)));
+  // a play left when the window closed is over, its winnings kept
+  g.rsLive = null; assert.strictEqual(g.rsWell(), null); assert.strictEqual(g.rsState().stage, "done");
+});
+
+test("the Gilded Cascade: a shelf of coins from the seed, kept between visits; a cup bought for gold; a coin dropped lands before the pusher, which shoves the bed; over the front edge pays its worth, a gutter is the house's; a nugget pays ten coins, a card token a Claudescryption card, an item token a thing; about nine in ten comes back", () => {
+  const CM = load(), CS = CM.CS, a = new CS.Bed(7), b = new CS.Bed(7);
+  assert.strictEqual(JSON.stringify(a.toJSON()), JSON.stringify(b.toJSON()), "the seed's"); assert.ok(a.discs.length > 100);
+  for (const d of a.discs) for (const e of a.discs) if (d !== e) assert.ok(Math.hypot(d.x - e.x, d.y - e.y) > 2 * CS.R - 3, "settled, not overlapping");
+  const kept = new CS.Bed(1, JSON.parse(JSON.stringify(a.toJSON()))); assert.strictEqual(kept.discs.length, a.discs.length, "kept");
+  // a drop lands just before the pusher's face
+  const d = a.drop(150, 5); assert.ok(d.y >= a.face() + CS.R && d.y < a.face() + 40); assert.strictEqual(d.v, 5);
+  // a coin at the front edge is pushed over and paid; one by a gutter is lost
+  const E = new CS.Bed(3); E.discs = [{ id: 1, x: 150, y: CS.D - 2, v: 5, k: "coin" }, { id: 2, x: 150, y: CS.D - 2 - 2 * CS.R + 10, v: 5, k: "coin" }, { id: 3, x: 2, y: CS.D - 20, v: 5, k: "coin" }, { id: 4, x: 12, y: CS.D - 20, v: 5, k: "coin" }];
+  E.dirty = true; const off = E.update(0.05); assert.ok(off.some((o) => o.where === "front" && o.d.id === 1), "over the edge"); assert.ok(off.some((o) => o.where === "gutter"), "into the gutter");
+  // the pusher shoves: a coin against its face moves as it comes forward
+  const P = new CS.Bed(4); P.discs = [{ id: 1, x: 150, y: CS.faceMin + CS.R + 1, v: 1, k: "coin" }]; P.t = 0; P.update(CS.period / 2); assert.ok(P.discs[0].y >= CS.faceMax + CS.R - 0.01, "shoved forward");
+  // money: a cup, a drop, collected
+  const g = new CM.Game(); g.newGame("cs-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000;
+  const r = g.csBuy(1); assert.strictEqual(r.n, 20); assert.strictEqual(g.gold, 900); assert.strictEqual(g.csStore().coins.length, 20);
+  assert.ok(g.csDrop(150)); assert.strictEqual(g.csStore().coins.length, 19);
+  const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned(), bag0 = g.bag.length, gold0 = g.gold;
+  const won = g.csCollect([{ where: "front", d: { k: "coin", v: 5 } }, { where: "front", d: { k: "nugget", v: 50 } }, { where: "gutter", d: { k: "coin", v: 25 } }, { where: "front", d: { k: "card", id: 77 } }, { where: "front", d: { k: "item", id: 78 } }]);
+  assert.strictEqual(won.gold, 55); assert.strictEqual(g.gold, gold0 + 55); assert.strictEqual(owned(), o0 + 1, "a card"); assert.strictEqual(g.bag.length, bag0 + 1, "a thing");
+  assert.strictEqual(g.csCashCup(), 19 * 5); assert.strictEqual(g.csStore().coins.length, 0);
+  // about nine in ten back, over a long run of sensible drops
+  const B = new CS.Bed(11); let into = 0, back = 0; for (let i = 0; i < 300; i++) { B.rnd = new CM.Random(5000 + i); B.drop(40 + (i * 37) % 220, 1); into++; for (const o of B.update(1.2)) if (o.where === "front" && (o.d.k === "coin" || o.d.k === "nugget")) back += o.d.v; }
+  assert.ok(back / into > 0.75 && back / into < 1.3, `returned ${(back / into).toFixed(2)}`);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
