@@ -1392,6 +1392,23 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Gilded Joker's arcade (the twenty-first big update - v13.1)
+  Two games of skill join the floor (src/js/64t-casinoarcade.js; the window 76j-casinoarcade.js):
+  - Runefall: a slate board of rune-stones under a wizard's staff. Aim with the mouse (a guide shows the first of the
+    path) and loose an orb; it falls and bounces, ringing higher with every rune it strikes, and the lit runes crumble
+    to dust when it is gone. Break every ember rune (orange) before ten orbs are spent; a mana rune (green) makes the
+    next orb a fireball that burns straight through; the purple rune pays a bonus; the Well sliding along the bottom
+    gives a caught orb back. Five boards in a run, by the dungeon's bands - the Cellar, the Goblin Warrens, the
+    Drowned Halls, the Foundry, the Lich's Throne - for one stake: each board cleared pays 0.6, 0.8, 1.0, 1.4 and 2.4
+    of it (6.2 for a whole run), with a common Claudescryption card from boards 2 and 4 and a rare one from 5; a lost
+    board pays back a little for the ember runes broken.
+  - Lantern Lane Dash: a cabinet of the old sort - a pixel lane under scanlines, a lit marquee and red readouts. Hop
+    the hero (arrow keys, W A S D or the pad) across grass with lamp-posts in the way, roads of carts, rivers of
+    floating logs and the mine-cart rail (its bell rings before the train), to the gate at the top; dawdle and the
+    Night Watch's crow comes. Each level cleared raises the pot up a ladder - 1.2, 1.7, 2.6, 4 and 6.5 times the stake
+    - and you collect it or press on and risk it; a common card at level 3 and a rare one at level 5.
+  Measured with bots, a careful player comes out about even on both and a good one ahead.
+
 The Gilded Joker's floor (the twentieth big update - v13.0)
   The Gilded Joker now has a floor beside its Claudeatro table: a row of tables across the top of its dialog, four
   of a casino's own games played for the party's gold, at fair odds - the house keeps a little and no more, and the

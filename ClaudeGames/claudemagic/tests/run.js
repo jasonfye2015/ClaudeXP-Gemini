@@ -4486,6 +4486,51 @@ test("the Gilded Joker's floor: blackjack deals, hits, stands, doubles and split
   assert.strictEqual(g.cgStore().cards.length, floorCards0 + 4);
 });
 
+test("Runefall: five boards of rune-stones, the seed's, each with its embers, two mana runes and a gold rune; an orb falls, bounces, lights what it strikes and the lit crumble when it is gone; the Well gives an orb back; a mana rune makes a fireball that burns through; a run pays each board's share of the stake, cards from boards 2, 4 and 5, and a little back for a lost board", () => {
+  const CM = load(), PG = CM.PG;
+  for (let n = 1; n <= 5; n++) { const a = new PG.Board(n, 77), b = new PG.Board(n, 77), k = (B, t) => B.pegs.filter((q) => q.kind === t).length;
+    assert.strictEqual(JSON.stringify(a.pegs), JSON.stringify(b.pegs), "the seed's"); assert.ok(a.pegs.length >= 50 && k(a, "ember") >= 10 && k(a, "mana") === 2 && k(a, "gold") === 1, `board ${n}: ${a.pegs.length} runes, ${k(a, "ember")} embers`);
+    assert.ok(a.pegs.every((q) => q.x > 20 && q.x < PG.W - 20 && q.y > 120 && q.y < 650)); }
+  const B = new PG.Board(1, 5), fly = (Bd) => { let t = 0; while (Bd.stage === "flying" && t < 40) { Bd.update(1 / 60); t += 1 / 60; } };
+  B.well.speed = 0; B.well.x = 40; assert.ok(B.shoot(0)); assert.strictEqual(B.orbs, PG.orbs - 1); fly(B); assert.notStrictEqual(B.stage, "flying");
+  const gone = B.pegs.filter((q) => q.gone).length; assert.ok(gone >= 2, `struck ${gone}`); assert.ok(B.pegs.every((q) => !q.hit || q.gone), "the lit crumble"); assert.ok(B.score > 0);
+  // the Well
+  const W = new PG.Board(2, 9); W.pegs = []; W.well.speed = 0; W.well.x = PG.launcher[0]; W.pegs.push({ x: 500, y: 600, kind: "ember", hit: false, gone: false }); W.shoot(0); fly(W); assert.strictEqual(W.orbs, PG.orbs, "caught: the orb back");
+  // a fireball burns through
+  const F = new PG.Board(1, 3); F.pegs = [{ x: 300, y: 300, kind: "blue", hit: false, gone: false }, { x: 300, y: 340, kind: "blue", hit: false, gone: false }, { x: 100, y: 600, kind: "ember", hit: false, gone: false }]; F.fire = 1; F.well.x = 40; F.well.speed = 0; F.shoot(0);
+  let bounced = false; let t = 0; while (F.stage === "flying" && t < 10) { F.update(1 / 60); t += 1 / 60; if (F.ball && F.ball.vy < 0) bounced = true; } assert.ok(F.pegs[0].gone && F.pegs[1].gone, "both burned"); assert.ok(!bounced, "straight through");
+  // clearing and losing
+  const C = new PG.Board(3, 4); for (const q of C.pegs) if (q.kind === "ember") q.gone = true; C.endShot(); assert.strictEqual(C.stage, "won");
+  const L = new PG.Board(3, 4); L.orbs = 0; L.endShot(); assert.strictEqual(L.stage, "lost");
+  // the run's money and cards
+  const g = new CM.Game(); g.newGame("arcade-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 10000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  assert.ok(!g.pgStart(100).error); assert.strictEqual(g.gold, 9900); let paid = 0;
+  for (let n = 1; n <= 5; n++) { const Bd = g.pgBoard(); assert.strictEqual(Bd.n, n); for (const q of Bd.pegs) if (q.kind === "ember") q.gone = true; Bd.endShot(); const r = g.pgSettle(); assert.ok(r.won); assert.strictEqual(r.pay, Math.round(100 * PG.PAY[n - 1])); paid += r.pay; assert.strictEqual(!!r.card, !!PG.CARD[n], `board ${n}'s card`); }
+  assert.strictEqual(g.gold, 9900 + paid); assert.strictEqual(g.pgState().stage, "done"); assert.ok(g.pgState().cleared); assert.strictEqual(owned(), o0 + 3, "three cards to the box"); assert.ok(CM.CARD_RARES.includes(g.pgState().cards[2]));
+  assert.ok(!g.pgStart(50).error); const Bd = g.pgBoard(), half = Bd.embersTotal() >> 1; let k2 = 0; for (const q of Bd.pegs) if (q.kind === "ember" && k2++ < half) q.gone = true; Bd.orbs = 0; Bd.endShot(); const lost = g.pgSettle(); assert.ok(!lost.won); assert.strictEqual(lost.pay, Math.round(50 * PG.consolation * half / Bd.embersTotal())); assert.strictEqual(g.pgState().stage, "done");
+});
+
+test("Lantern Lane Dash: levels of lanes from the seed (grass, road, river, rail, the gate at the top); a hop is blocked by a lamp-post; a cart, the river, a log carried off the edge, the mine train and the Night Watch's crow each end it; the gate clears it; the pot climbs the ladder - collect it, or press on and lose it all - with cards at levels 3 and 5", () => {
+  const CM = load(), CR = CM.CR, a = new CR.Level(2, 31), b = new CR.Level(2, 31);
+  assert.strictEqual(JSON.stringify(a.rows), JSON.stringify(b.rows)); assert.strictEqual(a.rows.length, CR.rowsFor(2) + 1); assert.strictEqual(a.rows[a.rows.length - 1].kind, "gate"); assert.strictEqual(a.rows[0].kind, "grass");
+  for (const R of a.rows) { if (R.kind === "grass") assert.ok(!R.posts.includes(4) && R.posts.length < CR.COLS); if (R.kind === "river") assert.ok(R.things.length >= 2); }
+  const mk = (rows) => { const L = new CR.Level(1, 1); L.rows = [{ kind: "grass", posts: [] }].concat(rows, [{ kind: "gate", posts: [] }]); L.hero = { c: 4, y: 0, fx: 4 }; L.stage = "play"; L.events = []; L.idleT = 0; L.best = 0; return L; };
+  let L = mk([{ kind: "grass", posts: [4] }]); assert.ok(!L.hop("up"), "a lamp-post"); assert.ok(L.hop("left") && L.hop("up") && L.hop("up")); assert.strictEqual(L.stage, "won", "the gate");
+  L = mk([{ kind: "road", dir: 1, speed: 2, things: [{ x: 3.6, len: 1 }] }]); L.hop("up"); assert.strictEqual(L.stage, "lost"); assert.strictEqual(L.why, "cart");
+  L = mk([{ kind: "river", dir: 1, speed: 1, things: [{ x: 7, len: 2 }] }]); L.hop("up"); assert.strictEqual(L.why, "water");
+  L = mk([{ kind: "river", dir: 1, speed: 2, things: [{ x: 3.5, len: 3 }] }]); L.hop("up"); assert.strictEqual(L.stage, "play", "on a log"); const fx = L.hero.fx; L.update(0.5); assert.ok(L.hero.fx > fx + 0.8, "carried"); L.update(3); assert.strictEqual(L.why, "swept");
+  L = mk([{ kind: "rail", train: { x: 1, t: 0, every: 5, len: 6, speed: 18 } }]); L.hop("up"); assert.strictEqual(L.why, "train");
+  L = mk([{ kind: "grass", posts: [] }]); L.update(CR.idle + 0.5); assert.strictEqual(L.why, "watch", "the crow");
+  // the money: the ladder, collect or press on
+  const g = new CM.Game(); g.newGame("arcade-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 5000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  const win = () => { const Lv = g.crLevel(); Lv.stage = "won"; return g.crSettle(); };
+  assert.ok(!g.crStart(100).error); assert.strictEqual(g.gold, 4900); let r = win(); assert.strictEqual(r.pot, Math.round(100 * CR.LADDER[0])); assert.strictEqual(g.crState().stage, "between");
+  assert.ok(g.crOn()); r = win(); assert.strictEqual(r.pot, Math.round(100 * CR.LADDER[1])); assert.ok(g.crOn()); r = win(); assert.ok(r.card, "a card at level 3"); assert.strictEqual(owned(), o0 + 1);
+  const pot = g.crState().pot; assert.strictEqual(g.crCollect(), pot); assert.strictEqual(g.gold, 4900 + pot); assert.strictEqual(g.crState().stage, "done");
+  assert.ok(!g.crStart(100).error); win(); g.crOn(); const Lv = g.crLevel(); Lv.die("cart"); r = g.crSettle(); assert.ok(!r.won); assert.strictEqual(r.lost, Math.round(100 * CR.LADDER[0])); assert.strictEqual(g.gold, 4900 + pot - 100, "pressed on, and lost the pot");
+  assert.ok(!g.crStart(10).error); for (let n = 1; n <= 5; n++) { r = win(); if (n < 5) g.crOn(); } assert.strictEqual(g.crState().stage, "done"); assert.strictEqual(g.crState().paid, Math.round(10 * CR.LADDER[4]), "the last gate pays out"); assert.ok(CM.CARD_RARES.includes(r.card), "a rare card at 5");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

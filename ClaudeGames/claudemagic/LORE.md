@@ -140,6 +140,15 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Gilded Joker's arcade (v13.1)
+
+In the back corner, under the stairs, two machines nobody in Caer Duin admits to having built. One is a slate board
+studded with rune-stones and a staff on a swivel that a Library apprentice swears is a real one, borrowed and never
+returned; the other a cabinet with a little lamp-lit lane on its glass, which the town's children play until the
+dealer sends them home. The cabinet's lane is Lantern Street, a little wrong: there is a river where the well should
+be, and the mine rail runs where no rail has ever run. The crow at the end of it is the Night Watch's, and everybody
+knows which crow that is.
+
 ## The Gilded Joker's floor (v13.0)
 
 The house on Gilded Row has opened its back rooms: a brass machine with a Joker on its crown, a walnut wheel with a
