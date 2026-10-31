@@ -16,7 +16,7 @@
 // island's own tools (stone, copper and iron: picks, axes, swords, which stay on the island) and bars from the kiln,
 // the same as the Smith smelts, which go home lighter than the ore.
 CM.PORTAL_YARD.gate = [37, 20];                                            // the Neather Gate, on the yard's east side
-CM.CRAFT_EDITS_MAX = 20000;
+CM.CRAFT_EDITS_MAX = 20000; CM.CRAFT_BUNDLES_MAX = 12;
 CM.craftKey = (h) => `${h.name}:${h.cls}`;
 Object.assign(CM.Game.prototype, {
   craftStore() { this.village = this.village || {}; const K = this.village.craft = this.village.craft || {}; K.seed = K.seed || (CM.hashSeed(`${this.seed}:claudecraft`) % 2147483000) + 1; K.edits = K.edits || {}; K.visits = K.visits || 0; K.satchels = K.satchels || {}; K.bundles = K.bundles || []; K.places = K.places || {}; K.chests = K.chests || {}; return K; },
@@ -129,11 +129,12 @@ Object.assign(CM.Game.prototype, {
   },
   // a hurt on the island (for now a fall): against the hero's own health; a death leaves the satchel in a bundle
   craftHurt(dmg, why) {
-    const cr = this.craft; if (!cr || dmg <= 0) return false; const h = cr.hero;
+    const cr = this.craft; if (!cr || dmg <= 0) return false; const h = cr.hero; if (cr.life) cr.life.hurtAt = cr.life.t;
     h.hp -= Math.max(1, Math.round(dmg));
     if (h.hp > 0) { this.craftSay(`${why}: -${Math.round(dmg)}`); return false; }
     const items = cr.satchel.empty(), w = cr.walker, g = cr.world.gate, L = cr.life, gold = L ? L.gold : 0, loot = L ? L.loot.splice(0) : [];   // (the island's gold and things go in the bundle too)
     if (L) { L.gold = 0; L.mobs = []; L.shots = []; }
+    if (cr.bundles.length >= CM.CRAFT_BUNDLES_MAX) { cr.bundles.shift(); this.craftSay("The oldest bundle on the island has crumbled away."); }   // (the save stays small)
     if (items.length || gold || loot.length) cr.bundles.push({ x: Math.floor(w.pos[0]) + 0.5, y: Math.floor(w.pos[1]) + 0.2, z: Math.floor(w.pos[2]) + 0.5, items, gold, loot, hero: CM.craftKey(h) });
     h.hp = Math.max(1, Math.round(h.max * 0.1)); w.pos = [g.x + 1.5, g.y, g.z + 2.5]; w.vel = [0, 0, 0]; w.yaw = 180; w.pitch = -8; w.fallFrom = null;
     this.craftSay(`${h.name} wakes by the gate, barely standing.${items.length || gold || loot.length ? " What they carried lies in a bundle where they fell." : ""}`);

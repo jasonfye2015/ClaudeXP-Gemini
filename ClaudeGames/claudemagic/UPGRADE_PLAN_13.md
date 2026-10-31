@@ -114,7 +114,7 @@ Principles, kept throughout:
 - Achievements: the first star-iron, the vault's guardian, a homestead.
 - Tests: the vault's place by seed; the guardian's mending; each errand's turn-in.
 
-## Phase 8 (v12.8): measure, tune, and tell
+## Phase 8 (v12.8): measure, tune, and tell - done
 - **A bot** (tools/craftbot.js) that goes in with a given party and pick, mines, crafts, fights at night and comes
   home: the gold, experience and ore an hour of play brings, against an hour in the shaft at the same level - the
   island should pay about as well as the dungeon, a little less in gold and more in ore.
@@ -135,6 +135,19 @@ Principles, kept throughout:
 | Timber / stone at the merchant | 1 gold a stack of 16 |
 | Builders' credit | 100 blocks = 50 gold off the next village build |
 | Gems | garnet 40, sapphire 80, emerald 120 gold |
+
+## The numbers as tuned (v12.8, tools/craftbot.js)
+| | |
+|---|---|
+| Ore per block | 1 chunk (2 for star-iron seams); gems are the main game's own (ruby, sapphire, sunstone, diamond) |
+| Kill experience | a third of the rules' |
+| Monster level | the hero's, -2 up top / +0 in caves / +2 deep, +1 a two nights; bounds 1-8, 3-20, 8-30 |
+| Mending | after 4 s unhurt, 2% of health and magic a second |
+| Gold | Kobolds and Goblins drop 1.2 of their purse; old chests 20 + 6 a depth |
+| Falling | a tenth of their health, at the gate or the camp's bed; bundles capped at 12 |
+| Timber / stone at the merchant | 1 gold a stack of 16 |
+| Builders' credit | 100 blocks = 10 renown off the next village build (the village builds with renown) |
+| An hour, measured (3 seeds) | Knight 5: 530-870 xp (shaft 530); Knight 12: 1320-1600 (shaft 2270); Mage 400-880 |
 
 ## Decided (2026-10-31)
 1. **One hero goes in**, chosen at the gate, as in the other places; the rest wait in the Keep-yard. (Phase 0 is

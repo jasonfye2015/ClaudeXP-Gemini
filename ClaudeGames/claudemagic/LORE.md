@@ -140,6 +140,26 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The island through the gate (v12.0 - v12.8)
+
+The island remembers everything done to it, and it turns out it remembered a great deal before anyone from Caer Duin
+stepped onto it. Under its hills the stone is veined with the same copper and iron the shaft gives up, and deeper with
+silver, gold and - just above the bedrock, in seams no thicker than a hand - star-iron, which the Smith had only ever
+seen in pieces fallen from the sky. Its deep caverns are lined with rubies and sapphires the jewellers swear are the
+same as the dungeon's. Someone has been here before: there are chests sunk in its sea, and ruins on its hills of a
+square-cut stone that the island itself makes, and every chest holds a scrap of the same map.
+
+The map leads under the highest hill, to a vault of rune-cut stone that does not belong to the island at all. The
+Library's oldest hand is in its runes. Its keeper is the Hollow Mason, a thing of the island's own blocks set to
+guard the vault and to mend it, which it does by tearing the vault's walls apart to mend itself - the Library thinks
+whoever made it did not think that through. The Mason's Plumb, which it carried where a heart would be, still hangs
+true however it is held.
+
+The island keeps the town's own hours; at night its dark is full of the same things as the shaft's, and they come
+only where there is no light. The heroes who stay build: a bedroll in a room with a roof, a chest, a forge of their
+own, and a signpost or two so the next one through can find it. The Guildhall has started counting the island's
+square stone as part of the town wall.
+
 ## The Neather Gate (v11.9)
 
 The masons who rebuilt the Keep-yard swear the basalt was not there when they started work, and that the runes cut
