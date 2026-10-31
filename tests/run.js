@@ -4429,6 +4429,16 @@ test("Claudecraft (v12.7): the island's errands - the Smith's iron (a bar counts
   assert.ok(CM.ACHIEVEMENTS.homestead && CM.ACHIEVEMENTS.mason);
 });
 
+test("Claudecraft (v12.8): measured - a simple hand's few island minutes (tools/craftbot.js) dig, fight and come home with experience; the island makes and meshes quickly; its save stays small (edits only, bundles capped); monster levels follow the hero's", () => {
+  const { islandHour } = require("../tools/craftbot.js"), r = islandHour(1, "Knight", 8, "iron", 0.2);
+  assert.ok(r && r.dug > 10 && (r.xp > 0 || r.oreValue > 0 || Object.keys(r.ore).length), `the bot dug ${r && r.dug}, earned ${r && r.xp} and found ${r && JSON.stringify(r.ore)}`); assert.ok(r.save < 120000, `save ${r.save}`);
+  const CM = load(), CC = CM.CC; let t = Date.now(); const w = new CC.World(31337).generate(); const gen = Date.now() - t;
+  t = Date.now(); let faces = 0; for (let cx = 0; cx < CC.CHUNKS; cx++) for (let cz = 0; cz < CC.CHUNKS; cz++) { const [op, wa] = w.meshChunk(cx, cz); faces += (op.length + wa.length) / 42; } const mesh = Date.now() - t;
+  assert.ok(gen < 2500 && mesh < 4000, `generate ${gen} ms, mesh ${mesh} ms (${faces} faces)`);
+  assert.strictEqual(CM.CL.levelFor("top", 10), 8); assert.strictEqual(CM.CL.levelFor("cave", 10), 10); assert.strictEqual(CM.CL.levelFor("deep", 10), 12); assert.strictEqual(CM.CL.levelFor("deep", 1), 8, "the deep's floor"); assert.strictEqual(CM.CL.levelFor("top", 40), 8, "and the band's top");
+  assert.strictEqual(CM.CRAFT_BUNDLES_MAX, 12);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

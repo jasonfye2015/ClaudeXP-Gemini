@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claudecraft phase 8, v12.8: measured, tuned and told - the island plan complete
+  tools/craftbot.js sends a simple hand through the gate for an hour of the island in real time (a staircase down, a
+  tunnel along, every ore and gem beside it, fighting what comes, a potion when hurt) and sets it beside an hour in the
+  shaft (the balance simulator's run, at 1800 steps an hour, one hero's share). Tuned from it: monster levels now
+  follow the hero's (a little under up top, level in the caves, two over in the deep, a night counted for every two,
+  inside each band's bounds), a hero mends while calm (as in the Mage Tower), Kobolds and Goblins drop a little more,
+  island shots strike harder, and bundles are capped at twelve. As measured over three seeds: a fighter's hour pays
+  about what the shaft's does in experience at level 5 (530-870 against 530) and two thirds of it at level 12
+  (1320-1600 against 2270), with less coin and more ore; a caster fares worse with the simple hand (400-880),
+  as in the Fortress against the Tower. The island makes in about a third of a second and keeps its save small
+  (edits only). The nineteenth big update (UPGRADE_PLAN_13.md) is complete.
+
 Claudecraft phase 7, v12.7: the vault under the island, and errands
   Under the island's highest hill (the map of four scraps marks it) lies a sealed vault of rune-cut stone, reached
   only by digging down; its stone wants a pick that would take silver, and breaks into rune-cut stone. Three rooms in a

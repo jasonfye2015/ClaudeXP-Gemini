@@ -10,9 +10,9 @@
 // draws the creatures (in their own pictures, as billboards) and the sky; 80-main.js steps it all.
 CM.CL = {
   minute: 1, xpShare: 0.33, hit: 0.55, reach: 3.2, swingCd: 0.45, shotCd: 0.55, shotSpeed: 22, shotLife: 1.4, monReach: 1.35, monCd: 1.15,
-  spawnEvery: 1.6, capWild: 6, capFoe: 10, near: 14, far: 30, gone: 44, lootChance: 1 / 12, wildMeat: 1,
+  calmAfter: 4, calmHeal: 0.02, goldShare: 1.2, shotMult: 1.5, spawnEvery: 1.6, capWild: 6, capFoe: 10, near: 14, far: 30, gone: 44, lootChance: 1 / 12, wildMeat: 1,
   WILD: ["Deer", "Deer", "Boar"], TOP: ["Giant Rat", "Kobold", "Giant Rat"], CAVE: ["Skeleton", "Goblin", "Kobold", "Giant Rat"], DEEP: ["Wraith", "Gargoyle", "Skeleton"],
-  BANDS: { top: [1, 5], cave: [5, 15], deep: [15, 30] }, GOLD: ["Kobold", "Goblin"],
+  BANDS: { top: [1, 8], cave: [3, 20], deep: [8, 30] }, OFFSET: { top: -2, cave: 0, deep: 2 }, GOLD: ["Kobold", "Goblin"],   
   SIZE: { beast: [0.45, 1.0], small: [0.35, 1.1], biped: [0.35, 1.8], thin: [0.32, 1.8], wide: [0.55, 1.7], tall: [0.4, 2.2], ghost: [0.4, 1.9] },
 };
 CM.CC.ITEM[108] = { meat: "Deer" }; CM.CC.ITEM[109] = { meat: "Boar" }; CM.CC.NAMES[108] = "Deer meat"; CM.CC.NAMES[109] = "Boar meat"; CM.CC.ITEM_TILE[108] = "meat_deer"; CM.CC.ITEM_TILE[109] = "meat_boar";
@@ -20,6 +20,9 @@ CM.CC.TILE.meat_deer = 53; CM.CC.TILE.meat_boar = 54;
 { const goes = CM.CC.goesHome, home = CM.CC.toHome; CM.CC.goesHome = (b) => goes(b) || !!(CM.CC.ITEM[b] && CM.CC.ITEM[b].meat); CM.CC.toHome = (b) => (CM.CC.ITEM[b] && CM.CC.ITEM[b].meat ? CM.meat(CM.CC.ITEM[b].meat) : home(b)); }
 // the day's light: full by day, falling at dusk, a little moonlight at night
 CM.CL.daylight = (game) => { const h = CM.hourOf(game), [dawn, dusk] = CM.daylightOf ? CM.daylightOf(game) : [5, 21]; if (h >= dawn + 1.5 && h <= dusk - 1.5) return 1; if (h < dawn || h > dusk) return 0.12; return h < 12 ? 0.12 + 0.88 * (h - dawn) / 1.5 : 0.12 + 0.88 * (dusk - h) / 1.5; };
+// (v12.8, tuned by tools/craftbot.js) a monster's level follows the hero's: a little under it up top, at it in the caves,
+// over it in the deep, a night counted for every two, inside the band's bounds
+CM.CL.levelFor = (band, heroLevel, nights = 0) => { const [lo, hi] = CM.CL.BANDS[band]; return Math.max(lo, Math.min(hi, (heroLevel || 1) + CM.CL.OFFSET[band] + Math.floor(nights / 2))); };
 CM.CL.band = (world, x, y, z) => (y < 12 ? "deep" : world.skyOwn(x, y, z) > 0 ? "top" : "cave");
 
 Object.assign(CM.Game.prototype, {
@@ -52,7 +55,7 @@ Object.assign(CM.Game.prototype, {
       if (!under && day && wild < CM.CL.capWild && W.get(Math.floor(x), top, Math.floor(z)) === CM.CC.B.GRASS && Math.hypot(p[0] - x, p[2] - z) > 10) { L.mobs.push(this.craftMakeMob(R.pick(CM.CL.WILD), x, y + 0.01, z, 1 + Math.min(4, nights))); return true; }
       if (foes >= CM.CL.capFoe || !this.craftSpawnOk(x, y, z)) continue;
       const band = CM.CL.band(W, Math.floor(x), y, Math.floor(z)), [lo, hi] = CM.CL.BANDS[band], list = band === "deep" ? CM.CL.DEEP : band === "cave" ? CM.CL.CAVE : CM.CL.TOP;
-      L.mobs.push(this.craftMakeMob(R.pick(list), x, y + 0.01, z, Math.min(hi, lo + nights))); return true;
+      L.mobs.push(this.craftMakeMob(R.pick(list), x, y + 0.01, z, CM.CL.levelFor(band, cr.hero.level, nights))); return true;
     }
     return false;
   },
@@ -81,7 +84,7 @@ Object.assign(CM.Game.prototype, {
     if (sw) this.craftWear(sw[0]);
     return Math.max(1, Math.round(this.damage(eff.atk, power, o.m.df) * (h.cls === "Rogue" && this.craftLife().rnd.chance(0.25) ? 2 : 1)));
   },
-  craftShotPower() { const h = this.craft.hero, A = CM.towerArms ? CM.towerArms(h) : null, st = A ? this.stat(h, A.stat) : 10; return (A && A.arrows ? (h.weapon ? h.weapon.power : 2) : 2) + Math.floor(h.level * 1.3) + Math.max(0, CM.mod(st) * 2); },
+  craftShotPower() { const h = this.craft.hero, A = CM.towerArms ? CM.towerArms(h) : null, st = A ? this.stat(h, A.stat) : 10; return Math.round(((A && A.arrows ? (h.weapon ? h.weapon.power : 2) : 2) + Math.floor(h.level * 1.3) + Math.max(0, CM.mod(st) * 2)) * CM.CL.shotMult); },
   craftStrike(o, dmg) {
     const L = this.craftLife(); o.m.hp -= dmg; o.hitAt = L.t; (L.events = L.events || []).push({ kind: "hit", mob: o, amount: dmg });
     if (o.wild) { o.flee = 4; if (o.kind === "Boar") { o.wild = false; o.hostile = true; } }
@@ -93,7 +96,7 @@ Object.assign(CM.Game.prototype, {
     const cr = this.craft, L = this.craftLife(), h = cr.hero; o.fellAt = L.t; L.kills += 1; this.tally.craftKills = (this.tally.craftKills || 0) + 1;
     const xp = Math.max(1, Math.round(o.m.xp * CM.CL.xpShare)); h.xp += xp; L.xp += xp; this.checkLevels && this.checkLevels();
     const bits = [`+${xp} experience`];
-    if (CM.CL.GOLD.includes(o.kind)) { const gold = Math.max(1, Math.round(o.m.gold * 0.5)); L.gold += gold; bits.push(`${gold} gold`); }
+    if (CM.CL.GOLD.includes(o.kind)) { const gold = Math.max(1, Math.round(o.m.gold * CM.CL.goldShare)); L.gold += gold; bits.push(`${gold} gold`); }
     if (o.K.flees || o.kind === "Boar") { const meat = o.kind === "Boar" ? 109 : 108; if (cr.satchel.add(meat, CM.CL.wildMeat)) bits.push(CM.CC.NAMES[meat].toLowerCase()); }
     else if (L.rnd.chance(CM.CL.lootChance)) { const depth = Math.max(1, Math.min(CM.BOTTOM || 50, Math.round(o.level * 1.5))), it = CM.makeItem(depth, L.rnd); L.loot.push(it); bits.push(`${it.unknown ? "something" : it.name}!`); }
     this.craftSay(`${o.kind}: ${bits.join(", ")}`); L.events.push({ kind: "die", mob: o });
@@ -112,6 +115,7 @@ Object.assign(CM.Game.prototype, {
     L.minutes = (L.minutes || 0) + dt * CM.CL.minute; const whole = Math.floor(L.minutes); if (whole) { L.minutes -= whole; this.clock = (this.clock || 0) + whole; }   // (a minute a second, the game's own clock, in whole minutes)
     const night = CM.isNight(this); if (night && !L.night) { K.nights = (K.nights || 0) + 1; this.craftSay("Night falls on the island. Things stir in the dark."); } if (!night && L.night) this.craftSay("Dawn: the island's monsters go back into the dark."); L.night = night;
     if ((L.spawnT -= dt) <= 0) { L.spawnT = CM.CL.spawnEvery; this.craftSpawn(); }
+    { const h = cr.hero; if (L.t - (L.hurtAt === undefined ? -99 : L.hurtAt) > CM.CL.calmAfter && (h.hp < h.max || h.mp < h.maxmp)) { L.mend = (L.mend || 0) + dt * CM.CL.calmHeal; const k = Math.floor(L.mend * 100); if (k) { L.mend -= k / 100; h.hp = Math.min(h.max, h.hp + Math.max(1, Math.round(h.max * k / 100))); h.mp = Math.min(h.maxmp, h.mp + Math.round(h.maxmp * k / 100)); } } }   // (calm, the hero mends: as in the Mage Tower)
     this.craftLairs(dt);
     for (const o of L.mobs) this.craftStepMob(o, dt);
     L.mobs = L.mobs.filter((o) => !(o.fellAt !== null && L.t - o.fellAt > 0.8) && Math.hypot(o.w.pos[0] - p[0], o.w.pos[2] - p[2]) < CM.CL.gone && o.w.pos[1] > -5 && !(o.hostile && !o.wild && o.dawnGone));
@@ -145,7 +149,7 @@ Object.assign(CM.Game.prototype, {
       if (f.kind !== "lair" || W.get(f.x, f.y, f.z) !== CM.CC.B.LAIR || Math.hypot(f.x + 0.5 - p[0], f.y - p[1], f.z + 0.5 - p[2]) > 14) continue;
       f.t = (f.t === undefined ? 1 : f.t) - dt; if (f.t > 0) continue; f.t = 4;
       const key = `${f.x},${f.y},${f.z}`; if (L.mobs.filter((o) => o.lair === key && o.fellAt === null).length >= 4) continue;
-      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = f.x + dx, z = f.z + dz; if (W.get(x, f.y, z) || W.get(x, f.y + 1, z)) continue; const o = this.craftMakeMob(L.rnd.pick(CM.CL.DEEP), x + 0.5, f.y + 0.01, z + 0.5, Math.min(30, 15 + nights)); o.lair = key; o.m.xp = Math.ceil(o.m.xp / 2); L.mobs.push(o); (L.events = L.events || []).push({ kind: "spawn" }); break; }
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = f.x + dx, z = f.z + dz; if (W.get(x, f.y, z) || W.get(x, f.y + 1, z)) continue; const o = this.craftMakeMob(L.rnd.pick(CM.CL.DEEP), x + 0.5, f.y + 0.01, z + 0.5, Math.min(30, CM.CL.levelFor("deep", cr.hero.level, nights) + 1)); o.lair = key; o.m.xp = Math.ceil(o.m.xp / 2); L.mobs.push(o); (L.events = L.events || []).push({ kind: "spawn" }); break; }
     }
   },
   // (v12.5) an old chest opened: gold and a thing by its depth, a map fragment from the sunken ones and the ruins; it
