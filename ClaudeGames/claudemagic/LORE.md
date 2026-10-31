@@ -140,6 +140,14 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Tilewright's Table (v13.3)
+
+At a low lacquered table in the Joker's quietest corner, an old woman sets out ivory tiles in a stack she calls the
+Keep, and another she calls the Tower, and lets anyone take them away in pairs. The tiles are older than the town:
+coins, runes and blades, the winds, the elements, and potions and seasons that match only their own kind. She says
+every stack she lays can be cleared - "I lay them backwards, from the last pair to the first" - and that most people
+who fail to clear one simply took the wrong pair early, which she says is true of most things.
+
 ## The Gemcutter's Tray (v13.2)
 
 The jeweller from Gilded Row comes into the Joker most evenings with a velvet tray of stones she has not finished

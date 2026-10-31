@@ -768,3 +768,8 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .gemtray .gtside { flex: 1; min-width: 260px; } .gemtray .gtinfo { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); line-height: 1.7; }
 .gemtray .gtbar { position: relative; height: 18px; border-radius: 9px; background: #200C14; overflow: hidden; border: 1px solid #C8A040; } .gemtray .gtbar span { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #C02848, #F0C040); transition: width 0.25s ease-out; }
 .gemtray .gtbar em { position: relative; display: block; text-align: center; font-style: normal; font-size: 12px; line-height: 18px; color: #FFF; text-shadow: 0 1px 2px #000; }
+
+/* The Tilewright's Table (76l-mahjong.js) */
+.mahjong .mjwrap { display: flex; gap: 16px; align-items: flex-start; } .mahjong .mjcanvas { width: 620px; height: 520px; border-radius: 10px; border: 5px solid #3A2414; box-shadow: 0 8px 18px rgba(0,0,0,0.65); cursor: pointer; }
+.mahjong .mjside { flex: 1; min-width: 240px; } .mahjong .mjinfo { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); line-height: 1.8; }
+.mahjong .paytable tr.now td { background: rgba(240,208,112,0.3); color: #FFF; }

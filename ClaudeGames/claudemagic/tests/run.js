@@ -4562,6 +4562,29 @@ test("the Gemcutter's Tray: a tray of seven kinds with no line to start and a mo
   const Tp = new GT.Tray(2, 99); let guard = 0; while (Tp.stage === "play" && guard++ < 60) { const h = Tp.hint(); assert.ok(h); Tp.swap(...h); } assert.notStrictEqual(Tp.stage, "play");
 });
 
+test("the Tilewright's Table: 144 tiles of the game's own (suits of coins, runes and blades, the winds, the elements, potions and seasons) stacked in the Keep or the Tower; a tile is free with nothing on it and a side open; pairs (any potion with any potion, any season with any season) taken; every deal can be cleared; shuffles keep it clearable; a table left mid-way comes back as it was; the pay falls with each shuffle used, cards for none or one", () => {
+  const CM = load(), MJ = CM.MJ;
+  assert.strictEqual(MJ.faces().length, 144); for (const k of Object.keys(MJ.LAYOUTS)) assert.strictEqual(MJ.LAYOUTS[k].length, 144, k);
+  const groups = {}; for (const f of MJ.faces()) groups[f.g] = (groups[f.g] || 0) + 1; assert.ok(Object.values(groups).every((n) => n % 2 === 0)); assert.strictEqual(groups.potion, 4); assert.strictEqual(groups.season, 4);
+  // free: a covered tile is not; a tile hemmed in on both sides is not
+  const T = new MJ.Table("keep", 3), byPos = (x, y, z) => T.tiles.find((t) => t.x === x && t.y === y && t.z === z);
+  assert.ok(T.isFree(byPos(0, 0, 0)), "an end"); assert.ok(!T.isFree(byPos(2, 0, 0)), "hemmed in"); assert.ok(!T.isFree(byPos(10, 4, 1)), "covered from above"); assert.ok(T.isFree(byPos(10, 5, 3)) || T.isFree(byPos(12, 5, 3)), "the top");
+  // every deal can be cleared: the tiles are matched by group, and following the right order clears all
+  for (const lay of ["keep", "tower"]) for (let s = 0; s < 4; s++) { const D = new MJ.Table(lay, 50 + s); assert.ok(D.tiles.every((t) => t.f)); let guard = 0; while (D.stage === "play" && guard++ < 400) { const ps = D.pairsOpen(); if (!ps.length) { assert.ok(D.shuffle(), "stuck with shuffles gone"); continue; } D.take(...ps[0]); } assert.strictEqual(D.stage, "won", `${lay} ${s}`); }
+  // potions with potions
+  const P = new MJ.Table("tower", 9), pots = P.tiles.filter((t) => t.g === "potion"); assert.ok(P.match(pots[0], pots[1]) && pots[0].f !== pots[1].f || pots[0].f === pots[1].f);
+  const notTwin = P.tiles.find((t) => t.g !== pots[0].g); assert.ok(!P.match(pots[0], notTwin)); assert.ok(!P.take(byPos(2, 0, 0) || P.tiles[0], P.tiles[0]), "not a tile with itself");
+  // a shuffle deals what is left again, still clearable, and costs one
+  const Sh = new MJ.Table("keep", 11); for (let k = 0; k < 20; k++) { const ps = Sh.pairsOpen(); if (ps.length) Sh.take(...ps[0]); } const left = Sh.live().map((t) => t.g).sort().join(); assert.ok(Sh.shuffle()); assert.strictEqual(Sh.shuffles, MJ.shuffles - 1); assert.strictEqual(Sh.live().map((t) => t.g).sort().join(), left, "the same tiles");
+  // the money, and a table kept mid-way
+  const g = new CM.Game(); g.newGame("mj-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0);
+  assert.ok(!g.mjStart(100, "keep").error); assert.strictEqual(g.gold, 900); const M = g.mjTable(); const p1 = M.pairsOpen()[0]; assert.ok(g.mjTake(p1[0].i, p1[1].i)); g.mjShuffle();
+  g.mjLive = null; const M2 = g.mjTable(); assert.strictEqual(M2.live().length, 142, "kept"); assert.strictEqual(M2.shuffles, MJ.shuffles - 1); assert.strictEqual(M2.tiles.map((t) => t.f).join(), M.tiles.map((t) => t.f).join(), "the shuffled faces too");
+  let o0 = owned(); M2.tiles.forEach((t) => { t.gone = true; }); M2.stage = "won"; let r = g.mjSettle(); assert.strictEqual(r.pay, Math.round(100 * MJ.PAY.keep[1])); assert.ok(r.card && CM.CARD_COMMONS.includes(r.card)); assert.strictEqual(owned(), o0 + 1);
+  assert.ok(!g.mjStart(100, "tower").error); o0 = owned(); let M3 = g.mjTable(); M3.tiles.forEach((t) => { t.gone = true; }); M3.stage = "won"; r = g.mjSettle(); assert.strictEqual(r.pay, Math.round(100 * MJ.PAY.tower[0])); assert.ok(CM.CARD_RARES.includes(r.card), "a clean table: a rare card");
+  assert.ok(!g.mjStart(100, "keep").error); M3 = g.mjTable(); for (let k = 0; k < 36; k++) M3.tiles[k].gone = true; M3.removed = 36; r = g.mjSettle(); assert.ok(!r.won); assert.strictEqual(r.pay, Math.round(100 * MJ.partial * 0.25 * 0.25)); assert.ok(!r.card);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

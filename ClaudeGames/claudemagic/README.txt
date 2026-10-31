@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Tilewright's Table (the twenty-third big update - v13.3)
+  Tile-matching solitaire on the Gilded Joker's floor (src/js/64v-mahjong.js; the window 76l-mahjong.js), with
+  ivory tiles of the game's own: three suits of nine - Coins, Runes and Blades - the four winds of the compass, the
+  three elements (Fire, Frost, Holy), four potions and the four seasons, a hundred and forty-four in all, stacked in
+  the Keep or the Tower. Take away pairs of matching free tiles (any potion with any potion, any season with any
+  season) - a tile is free when nothing lies on it and its left or right side is open; the free tiles show bright, a
+  picked one lifts in gold, a taken pair flies together and is gone in a glint. Every deal is built backwards from a
+  way to clear it, so every table can be cleared; a hint shows an open pair, and three shuffles deal the tiles left
+  again (still clearable) when no pair is open. One stake a table: cleared without a shuffle it pays 1.6 times the
+  stake (the Tower, an easier stack, 1.4) and a rare Claudescryption card; with one shuffle 0.9 (0.8) and a common
+  card; with two 0.5; with three 0.3; a table given up or stuck pays back a little by how much was cleared. Measured,
+  a player who takes open pairs at random comes out about even, and a careful one ahead. A table left mid-way waits.
+
 The Gemcutter's Tray (the twenty-second big update - v13.2)
   A third game of skill on the Gilded Joker's floor (src/js/64u-gemtray.js; the window 76k-gemtray.js): an eight by
   eight tray of cut stones under a jeweller's lamp - rubies, sapphires, sunstones and diamonds (the game's own gems),
