@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Glimmer Maze (the twenty-ninth big update - v13.9)
+  A maze-chase on the Gilded Joker's floor (src/js/64zf-glimmer.js; 76v-glimmer.js): a glimmerslime eats its way round
+  a hedge maze of glimmer motes while four Lantern Haunts hunt it, each its own way - Ember straight at it, Bramble at
+  where it is going, Frost from the far side of Ember, Moth close and then shy - drifting off to their corners now and
+  then. The four Hex Runes turn them pale and slow: eat them for 200, 400, 800 and 1600 and they go home as a pair of
+  eyes. Tunnels wrap at the sides; a lucky chip shows twice a level. Three lives, one more at 10,000; each level the
+  haunts are quicker and the runes shorter. One stake a play: each level cleared pays gold, more each level, every
+  play; and a card the first time each level is ever cleared (common to 4, a stronger common to 9, rare from 10).
+
 Mana-Mine (the twenty-eighth big update - v13.8)
   An arcade game under the Gilded Joker (src/js/64ze-manamine.js; 76u-manamine.js): a miner with a lamp-helmet digs
   down through four bands of earth. Mudlings wait in their hollows and drift through the earth as a pair of eyes when

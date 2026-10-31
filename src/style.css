@@ -835,3 +835,4 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .shelter .shroom { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid #C8A040; } .shelter .shstaff { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; } .shelter .shstaff span { padding: 2px 6px; border-radius: 8px; background: rgba(240,208,112,0.15); } .shelter .shstaff button { padding: 0 5px; margin-left: 3px; }
 .shelter .shbuild, .shelter .shidle { display: flex; flex-wrap: wrap; gap: 4px; } .shelter .shbuild button, .shelter .shidle button { font-size: 12px; padding: 3px 7px; }
 .manamine .mmcanvas { width: 448px; height: 540px; image-rendering: pixelated; border-radius: 6px; border: 6px solid #3A2A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
+.glimmer .gzcanvas { width: 456px; height: 532px; border-radius: 6px; border: 6px solid #2A3A20; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
