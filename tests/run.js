@@ -4083,6 +4083,32 @@ test("the pipe in the Square: any one of the party climbs in; a banner reached g
   h.hp = h.max; g.floor.pos = CM.TOWN_PIPE.slice(); g.enterBros(i); for (let li = 0; li < 3; li++) { g.brosRun.cleared = true; g.brosNext(); } assert.strictEqual(g.brosRun.L.id, "1-4"); g.brosRun.coins = 10; g.brosRun.cleared = true; const won = g.brosNext(); assert.strictEqual(won.how, "won"); assert.strictEqual(g.mode, "explore");
 });
 
+test("Claudecraft through the Neather Gate: the island the seed's, with bedrock under it, sea round it, trees on it and the gate of basalt by the spawn; chunks meshed to the faces that can be seen; the eye's ray finds a block; a walker falls to the ground, walks, jumps and flies", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, a = new CC.World(1234).generate(), b = new CC.World(1234).generate();
+  assert.ok(a.blocks.every((v, i) => v === b.blocks[i]), "the seed's island"); assert.strictEqual(a.get(80, 0, 80), B.BEDROCK); assert.strictEqual(a.get(1, CC.SEA, 1), B.WATER, "the sea at the edge");
+  let logs = 0; for (let i = 0; i < a.blocks.length; i++) if (a.blocks[i] === B.LOG) logs++; assert.ok(logs > 200, "trees");
+  const g = a.gate; assert.strictEqual(a.get(g.x, g.y, g.z), B.BASALT); assert.strictEqual(a.get(g.x + 1, g.y + 2, g.z), B.GATE, "the gate's light in its frame");
+  const [op, wa] = a.meshChunk(5, 5); assert.ok(op.length > 0 && op.length % 36 === 0, "faces, six vertices of six floats each");
+  const [hit] = a.raycast([80.5, CC.HEIGHT - 1, 80.5], [0, -1, 0], 80); assert.ok(hit && hit[1] === a.top(80, 80) || (hit && a.get(...hit) !== B.AIR), "the ray finds the ground");
+  const w = new CC.Walker(a, [g.x + 1.5, g.y + 8, g.z + 3.5]); for (let k = 0; k < 180; k++) w.update(1 / 60, {}); assert.ok(w.onGround, "falls to the ground");
+  const x0 = w.pos[0], z0 = w.pos[2]; for (let k = 0; k < 30; k++) w.update(1 / 60, { fwd: true }); assert.ok(Math.hypot(w.pos[0] - x0, w.pos[2] - z0) > 0.5, "walks");
+  w.update(1 / 60, { jump: true }); assert.ok(w.vel[1] > 0 || w.pos[1] > g.y, "jumps"); w.t = 1; w.pressJump(); w.t = 1.1; w.pressJump(); assert.ok(w.flying, "Space twice: flies");
+});
+
+test("the Neather Gate: in the Keep-yard; the whole party steps through to the island; a block broken and one placed (never bedrock, never the gate, never where you stand); the changes kept for the next visit; the gate's light brings them home", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("craft-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.village.craft = undefined;
+  assert.strictEqual(g.floor.things[CM.PORTAL_YARD.gate.join(",")].to, "claudecraft"); g.floor.pos = CM.PORTAL_YARD.gate.slice(); g.use(); assert.strictEqual(g.mode, "craft", "through the gate");
+  const cr = g.craft, w = cr.walker, B = CM.CC.B; for (let k = 0; k < 120; k++) w.update(1 / 60, {});
+  w.pitch = -89; cr.target = cr.world.raycast(w.eye(), w.look()); const under = cr.target[0]; assert.ok(under);
+  const was = cr.world.get(...under); assert.ok(g.craftBreak() === was && cr.world.get(...under) === B.AIR, "broken");
+  const gt = cr.world.gate; cr.target = [[gt.x, gt.y, gt.z], null]; assert.ok(!g.craftBreak(), "not the gate's stone");
+  w.pitch = 0; w.yaw = 0; const t2 = cr.world.raycast(w.eye(), w.look(), 6); cr.target = [[0, 0, 0], [Math.floor(w.pos[0]) + 3, Math.floor(w.pos[1]) + 4, Math.floor(w.pos[2])]]; w.slot = 2; assert.ok(g.craftPlace(), "placed"); assert.strictEqual(cr.world.get(Math.floor(w.pos[0]) + 3, Math.floor(w.pos[1]) + 4, Math.floor(w.pos[2])), B.STONE);
+  cr.target = [[0, 0, 0], [Math.floor(w.pos[0]), Math.floor(w.pos[1]), Math.floor(w.pos[2])]]; assert.ok(!g.craftPlace(), "not where the party stands");
+  const out = g.leaveCraft(); assert.strictEqual(g.mode, "explore"); assert.strictEqual(out.broken, 1);
+  g.floor.pos = CM.PORTAL_YARD.gate.slice(); g.use(); assert.strictEqual(g.craft.world.get(...under), B.AIR, "the island keeps its changes");
+  const c2 = g.craft, gate = c2.world.gate; c2.walker.pos = [gate.x + 1.5, gate.y + 1, gate.z + 0.5]; assert.ok(c2.walker.inGate()); g.leaveCraft(); assert.strictEqual(g.mode, "explore", "the gate's light is the way home");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

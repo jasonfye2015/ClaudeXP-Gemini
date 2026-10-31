@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Neather Gate (v11.9)
+
+The masons who rebuilt the Keep-yard swear the basalt was not there when they started work, and that the runes cut
+into it are in no hand any of them knows. Through it is an island made of blocks - every hill, tree and grain of sand
+a square block - which can be taken apart and built up again with bare hands, and which remembers. The Library has a
+theory that it is a world that has not been finished yet. The children of Caer Duin have built a castle there.
+
 ## The red portal (v11.6)
 
 Nobody built the red portal. It was simply standing in the Keep-yard one morning, turning, and the guards who went to

@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Neather Gate: Claudecraft (the eighteenth big update - v11.9), a tech demo for now
+  On the Keep-yard's east side stands a gate of dark basalt blocks, violet runes cut into them, a slow violet shimmer
+  inside. The whole party steps through onto the Timeline's Claudecraft island (src/js/64n-claudecraft.js, with its own
+  WebGL in src/js/76h-claudecraft.js): 160 by 160 blocks and 64 high, hills, beaches, a sea, snow on the peaks and
+  trees, drawn a chunk at a time with fog and an outline round the block under the eye. Walk, look, jump, swim, fly
+  (Space twice), break blocks and trees with the left button, place blocks from the hotbar with the right (1-9 or the
+  wheel). Bedrock and the gate's stone do not break. Every change is kept with the village (src/js/61k-gate.js), and
+  the same gate stands on the island near the spawn: walk into its light to come home.
+
 The pipe in the Square: Super Claude Bros (the seventeenth big update - v11.7), for fun
   A great bronze pipe, green with age, stands up out of the cobbles at the Square's east corner. Any one of the party
   climbs in and comes out in a side-on world of four levels (src/js/64m-claudebros.js; the window's side
