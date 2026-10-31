@@ -68,6 +68,7 @@ Object.assign(CM.Game.prototype, {
     if (ratproof) wary = true;
     if (this.floor && this.floor.number === -1 && CM.weather(this) === "mist") wary = true;   // (mist: nobody is on anybody before they can draw)
     for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
+    if (theyCame && this.followerIs && this.followerIs("dog") && !sleepers) { wary = true; this.say(`${this.follower.name} growls low before they're in sight: no one is caught napping.`); }
     if (sleepers) {                                                      // asleep: the party's blows fall before they are awake, and all of them land
       this.say("They are asleep. The party's blows fall before they wake.");
       this.combat.surprise = true; this.combat.sure = true; this.tally.sleepersStruck = (this.tally.sleepersStruck || 0) + 1;
@@ -571,7 +572,7 @@ Object.assign(CM.Game.prototype, {
       const target = this.pickTarget(m);
       if (!target) break;
       if (m.marked && !target.thrall && rnd.chance(0.3) && this.alive().some((h) => CM.trait(h, "lastlaugh"))) { const own = Math.max(1, Math.floor(m.atk / 3)); m.hp -= own; this.say(`${CM.The(m)}, mocked past bearing, strikes at nothing and catches itself (-${own}).`); continue; }
-      if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1) * this.dodgeOf(target) * (this.terrain().includes("dark") ? 0.85 : 1))) { this.say(`${CM.The(m)} misses ${target.name}.`); if (!target.thrall && CM.trait(target, "counter") && this.canAct(target)) { this.say(`${target.name} answers.`); this.strike(target, m, " in answer"); } continue; }
+      if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1) * this.dodgeOf(target) * (this.terrain().includes("dark") ? 0.85 : 1))) { this.say(`${CM.The(m)} misses ${target.name}.`); if (target.row === "back" && this.followerTakes) this.followerTakes(m); if (!target.thrall && CM.trait(target, "counter") && this.canAct(target)) { this.say(`${target.name} answers.`); this.strike(target, m, " in answer"); } continue; }
       let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + (wc === "blunt" ? Math.floor(CM.gearDefence(target) * 2 / 3) : CM.gearDefence(target))), how = wc === "blunt" ? " - the maul cares little for armour" : "";
       if (wc === "axe" && rnd.chance(0.15)) { dmg = Math.ceil(dmg * 1.5); how = " - the axe bites"; }
       if (wc === "dagger" && rnd.chance(0.15)) { dmg = Math.ceil(dmg * 1.5); how = " - the knife finds a gap"; }
@@ -1435,6 +1436,7 @@ Object.assign(CM.Game.prototype, {
       if (this.tally.champions >= 5) this.achieve("champions");
     }
     this.makeNoise(CM.NOISE.fight);
+    if (this.followerAfterFight) this.followerAfterFight();
     if (this.floor.number >= 1 && slain.length && rnd.chance(slain.some((m) => m.elite) ? 1 / CM.HOMECOMING.elite : 1 / CM.HOMECOMING.drop)) loot.push(CM.scroll("homecoming"));   // (the dead carry the way home now and then)
     for (const m of slain) {                                             // what they carried, seen before it was won; and a part that broke
       if (m.gear && m.gear.weapon && rnd.chance(0.6)) loot.push(m.gear.weapon);

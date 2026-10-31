@@ -81,6 +81,7 @@ Object.assign(CM.UI.prototype, {
       const b = document.createElement("button"); b.textContent = g.bounty ? (g.bountyDone() ? "The board: claim the bounty" : `The board: ${g.bountyProgress()} of ${CM.plural(CM.BOUNTY_NEED, g.bounty.kind)}`) : "The board: take a bounty"; b.addEventListener("click", () => { this.$("#tavern-note").textContent = (g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty()) || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(b);
       const c = document.createElement("div"); c.className = "small"; c.innerHTML = `<i>${this.esc(this.brought("tavern"))}</i><br>` + g.contracts().map(({ c: ct, done }) => `${done ? "✓" : "○"} ${this.esc(ct.name)}: ${this.esc(ct.what)} (${ct.renown} renown)`).join("<br>"); row.appendChild(c);
       fence.appendChild(row);
+      this.hireRow(fence, ["porter", "torchbearer"], () => this.renderTavern());   // (a follower: 64b-people.js)
     }
     if (g.inTown())
     g.bag.forEach((it, row) => { if (!it.unknown && !(it.props && it.props.cursed)) return; const b = document.createElement("button"); b.textContent = it.unknown ? CM.t("fence.unknown", { what: CM.baseName(it), n: Math.floor(it.value / 2) }) : CM.t("fence.cursed", { what: it.name }); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fence(row) || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); });

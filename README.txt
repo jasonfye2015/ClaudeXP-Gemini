@@ -1434,6 +1434,16 @@ A world that moves (the eleventh big update - v9.3 to v10.0)
   an achievement. Once a party has been to floor five, the postern - a small iron door in the Keep-yard's north-east
   corner - opens onto a path down the cliffs' foot to the fields: the short way from the shaft to the land, and back.
 
+  The people's part (v9.8): one follower walks behind the party (src/js/64b-people.js) - a porter (the tavern, 30 gold:
+  carries forty more), a torchbearer (the tavern, 20 gold: the torch burns at half the rate and is seen a square
+  further), the farm's dog (once there's a cow: smells an ambush, won't go below the tenth floor), a hedge-wizard (the
+  library at level three, 40 gold: a Light on each new floor, a Mend after a fight once a floor), or the adventurer you
+  cut loose (picks the first lock of each floor, tells her story over three floors, and goes her way at a camp with a
+  gift). A blow that misses a hero in the back row may catch the follower; one that falls is on the memorial, and the
+  tavern won't hire to the party again that run. Six of the townsfolk have errands (the Journal's Errands page, in
+  the town): a ring, a crate and a sickle to find on their floors, a carving to read, a champion to slay, iron ore to
+  bring; three at a time, one from each a season, each paid in gold, renown, a thing or a favour that lasts.
+
 The town's buildings, rebuilt (v9.2)
   The houses were walls only where a street faced them, under a fringe of half-square slopes: the sky showed through the
   middle of every block, and a house beside a hedge, a fence or a tree was open on that side. Now CM.buildingsOf
@@ -1498,6 +1508,7 @@ The source
     27-props.js   the props: what the scatter lays on each square, the traces, the wall decals, what drifts in the air
     40-render.js  the WebGL 2 view: the mesh, the sky, billboards, torchlight and fog, smooth steps and turns, shakes
     45-fx.js      what flies, bursts, rings and rains: the effects, advanced each frame into sprites
+    64b-people.js the followers and the townsfolk's errands
     61c-tower.js  the gate towers and their lookout, the east postern and the cliff path
     61b-lairs.js  the lairs and sleepers, the light's reach and the noise, shading the torch, the champions
     46-air.js     the air: dust, drips, embers, spores, rain, snow, leaves, birds, clouds and smoke about the party

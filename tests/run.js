@@ -3462,6 +3462,71 @@ test("the gate towers and the postern: two towers drawn by the gate with their s
   const fresh = new CM.Game(); fresh.newGame("tower-4", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); assert.ok(CM.posternOpen(fresh), "open for the next run");
 });
 
+test("a fifth place: each follower's trade (the porter carries, the torchbearer's light lasts and reaches, the dog smells an ambush and stops at the tenth, the hedge-wizard lights and mends, the rescued adventurer picks a lock a floor and tells her story); a follower can fall, and the tavern remembers", () => {
+  const CM = load();
+  const mk = (seed) => { const g = new CM.Game(); g.newGame(seed, fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 500; g.mode = "explore"; return g; };
+  const g = mk("follow-1");
+  assert.ok(g.canHire("dog"), "no dog before the farm has a cow"); assert.ok(g.canHire("wizard"), "no hedge-wizard before the library grows");
+  const before = g.overweight(); assert.strictEqual(g.hireFollower("porter"), ""); assert.ok(g.overweight() < before || before === 0, "a porter carries more"); assert.strictEqual(g.gold, 470);
+  assert.ok(g.canHire("torchbearer").includes("one follower at a time"));
+  g.bag.push(...Array.from({ length: 30 }, () => ({ name: "Brick", kind: "junk", weight: 3, value: 1 }))); const heavy = g.overweight(); g.dismissFollower(); assert.ok(g.overweight() > heavy, "let go, the pack is heavier again");
+  // the torchbearer
+  g.hireFollower("torchbearer"); g.enterFloor(2, "down"); g.light = { kind: "torch", left: 200 }; g.lightOut = false;
+  assert.strictEqual(g.lightReach(), CM.LIGHT_REACH.torch + 1, "held high: a square further");
+  for (let i = 0; i < 10; i++) { g.steps = i; g.burn(); } assert.strictEqual(g.light.left, 195, "half the rate");
+  // the dog: stops at the tenth, and smells them coming
+  const d = mk("follow-2"); d.village.perks = { dog: true }; assert.strictEqual(d.hireFollower("dog"), "");
+  d.enterFloor(11, "down"); assert.ok(d.follower.away && !d.followerIs("dog"), "he waits above the tenth"); d.enterFloor(3, "down"); assert.ok(d.followerIs("dog"), "and comes back");
+  const fl = d.floor, group = [CM.makeMonster(CM.monsterKind("Goblin"), 3, new CM.Random(1))]; d.foes = group; d.rnd.chance = () => true;
+  d.startCombat(`${fl.pos[0]},${fl.pos[1]}`, { group }, true); assert.ok(d.messages.some((m) => m.includes("growls")), "the dog growls"); assert.ok(!d.messages.some((m) => m.includes("on you before you can draw")), "no one is caught napping");
+  // the hedge-wizard
+  const w = mk("follow-3"); w.village.levels = Object.assign(w.village.levels || {}, { library: 3 }); assert.strictEqual(w.hireFollower("wizard"), ""); w.spellLight = 0; w.enterFloor(4, "down"); assert.strictEqual(w.spellLight, 60, "a Light on a new floor");
+  w.party[0].hp = 1; w.followerAfterFight(); assert.ok(w.party[0].hp > 1, "a Mend after a fight"); const hp = w.party[0].hp; w.party[0].hp = 1; w.followerAfterFight(); assert.strictEqual(w.party[0].hp, 1, "once a floor");
+  // the rescued adventurer
+  const a = mk("follow-4"); a.enterFloor(5, "down"); const ak = `${a.floor.pos[0]},${a.floor.pos[1]}`;
+  a.freeAdventurer({ type: "adventurer", hero: CM.makeRecruit(3, new CM.Random(2)), freed: false }, ak); assert.strictEqual(a.follower && a.follower.id, "adventurer", "she asks to come");
+  const door = { type: "door", locked: true }; assert.strictEqual(a.tryLock(door, ak), "", "the first lock of a floor");
+  for (let n = 6; n <= 8; n++) a.enterFloor(n, "down"); assert.ok(a.follower.leaving, "her story told over three floors");
+  const bag = a.bag.length; a.setMode("camp"); assert.ok(!a.follower && a.bag.length === bag + 1, "she leaves at the camp, with a gift"); assert.ok((a.village.followerTales || []).length, "and the chronicler has her");
+  // a follower falls
+  const f = mk("follow-5"); f.hireFollower("porter"); f.enterFloor(3, "down"); f.rnd.chance = () => true; const ogre = CM.makeMonster(CM.monsterKind("Ogre"), 30, new CM.Random(3));
+  for (let i = 0; i < 10 && f.follower; i++) f.followerTakes(ogre);
+  assert.ok(!f.follower, "struck down"); assert.ok(f.memorial.some((m) => m.follower), "a name on the memorial"); assert.ok(f.tavernBarred && f.canHire("porter").includes("won't hire"), "and the tavern won't hire again this run");
+  // kept with the run
+  const s = mk("follow-6"); s.hireFollower("torchbearer"); s.enterFloor(2, "down"); s.saveRun(); const s2 = new CM.Game(); assert.ok(s2.continueRun()); assert.strictEqual(s2.follower.id, "torchbearer");
+  const old = JSON.parse(JSON.stringify(s.lastRun)); old.schema = 3; delete old.follower; assert.strictEqual(CM.migrateRun(old).follower, null);
+});
+
+test("errands: six givers, three at a time, one each a season; a fetch errand's thing lies on its floor once and comes up in the pack; a reading, a champion, a load of ore; handed in in the town for the giver's own pay and a favour that lasts", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("errand-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.village.errands = { taken: {}, done: {} };
+  assert.strictEqual(Object.keys(CM.ERRANDS).length, 6);
+  for (const id of ["merchant", "tavern", "temple"]) assert.strictEqual(g.takeErrand(id), "");
+  assert.ok(!g.errandOffered("library"), "three at a time"); assert.ok(g.takeErrand("library").includes("isn't to be had"));
+  const t = g.errands().taken.merchant; assert.ok(t.floor >= CM.ERRANDS.merchant.floors[0] && t.floor <= CM.ERRANDS.merchant.floors[1]);
+  assert.strictEqual(t.floor, CM.errandFloor("merchant", CM.errandSeason()), "the floor is the giver's and the season's");
+  g.enterFloor(t.floor, "down");
+  const lying = Object.entries(g.floor.things).filter(([, x]) => x.type === "errand" && x.giver === "merchant"); assert.strictEqual(lying.length, 1, "the crate lies on its floor");
+  g.layErrand(g.floor); assert.strictEqual(Object.values(g.floor.things).filter((x) => x.type === "errand").length, Object.keys(g.errands().taken).filter((id) => CM.ERRANDS[id].kind === "fetch" && g.errands().taken[id].floor === t.floor).length, "laid once");
+  g.floor.pos = lying[0][0].split(",").map(Number); g.use(); assert.ok(g.bag.some((i) => i.kind === "errand" && i.giver === "merchant"), "into the pack"); assert.strictEqual(g.errandLeft("merchant"), "");
+  assert.ok(g.sellable("all").rows.every((row) => g.bag[row].kind !== "errand"), "never sold by mistake");
+  assert.ok(g.handInErrand("merchant").includes("in the town"), "handed in in the town");
+  g.enterFloor(0, "rope", CM.TOWN_AT.home.slice()); const gold = g.gold, renown = g.village.renown || 0;
+  assert.strictEqual(g.handInErrand("merchant"), ""); assert.ok(g.gold > gold && (g.village.renown || 0) > renown, "paid"); assert.ok(g.village.perks.merchant, "a tenth off, for good");
+  assert.ok(!g.errandOffered("merchant"), "one a season"); assert.ok(g.errandOffered("library"), "a place free again");
+  assert.ok(g.errandLeft("temple").includes("champion")); g.tally.champions = (g.tally.champions || 0) + 1; assert.strictEqual(g.errandLeft("temple"), "", "a champion slain after taking it");
+  const tomes = g.bag.length; assert.strictEqual(g.handInErrand("temple"), ""); assert.ok(g.bag.length >= tomes + 2, "the priest's blessed draughts");
+  g.takeErrand("library"); const lt = g.errands().taken.library; g.errandRead(lt.floor + 1); assert.ok(!lt.read, "another floor's carving"); g.errandRead(lt.floor); assert.ok(lt.read, "the right one, read");
+  g.takeErrand("smith"); assert.ok(g.errandLeft("smith").includes("0 of 4")); for (let i = 0; i < 4; i++) g.bag.push(CM.oreChunk("iron")); const items = g.bag.length; assert.strictEqual(g.handInErrand("smith"), ""); assert.strictEqual(g.bag.length, items - 4 + 1, "four ore for a blade");
+  assert.strictEqual(g.village.perks.tavern, undefined);
+  // the drink at half price with the tavern's favour; the merchant's tenth
+  const h = new CM.Game(); h.newGame("errand-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); assert.ok(h.village.perks && h.village.perks.merchant, "kept in the village");
+  // Automatic takes and hands in
+  const b = new CM.Game(); b.newGame("errand-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); b.village.errands = { taken: {}, done: {} }; b.gold = 400; b.mode = "explore";
+  const auto = new CM.Autopilot(b, { warp: true, sync: true }); auto.people(b.floor);
+  assert.ok(Object.keys(b.errands().taken).length >= 1, "Automatic takes the errands on its way"); assert.ok(b.follower, "and takes on a follower");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

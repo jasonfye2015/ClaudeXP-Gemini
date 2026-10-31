@@ -90,8 +90,9 @@ Object.assign(CM.Game.prototype, {
     if (this.spellLight > 0) return CM.LIGHT_REACH.spell;
     if (this.lightOut) return 0;
     const l = this.light || {};
-    if (l.kind === "torch") return l.left > 40 ? CM.LIGHT_REACH.torch : CM.LIGHT_REACH.low;
-    return CM.LIGHT_REACH[l.kind] || 0;
+    const held = this.followerIs && this.followerIs("torchbearer") ? 1 : 0;   // (a torchbearer holds it high)
+    if (l.kind === "torch") return (l.left > 40 ? CM.LIGHT_REACH.torch : CM.LIGHT_REACH.low) + held;
+    return (CM.LIGHT_REACH[l.kind] || 0) + (CM.LIGHT_REACH[l.kind] ? held : 0);
   },
   // a sleeper at k sees the light: on the party's row or column, within the reach, nothing shut between
   seesLight(k, reach) {
