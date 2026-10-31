@@ -1392,6 +1392,24 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Gilded Joker's floor (the twentieth big update - v13.0)
+  The Gilded Joker now has a floor beside its Claudeatro table: a row of tables across the top of its dialog, four
+  of a casino's own games played for the party's gold, at fair odds - the house keeps a little and no more, and the
+  tests check each game's return (src/js/64s-casinogames.js; the window 76i-casinofloor.js):
+  - The Gilded Reels: three reels and one line, 97.1% back; three Jokers pay a thousand times the bet and a rare
+    Claudescryption card. The reels spin and stop one by one with a ticking and a clunk, coins fall for a win and the
+    machine flashes for a jackpot.
+  - Roulette: a single zero and the usual payouts (35 to 1 down to even money), 97.3% back; chips are laid on a board
+    and the walnut wheel turns against its ball, which clicks over the pockets and drops; a straight bet of five or
+    more that wins on the zero brings a common card besides.
+  - Blackjack: six decks in a shoe, a natural pays 3 to 2, the dealer peeks and stands on soft 17, double any two,
+    split a pair once - about 99.5% back with good play; the cards slide out of the shoe and the hole card turns. A
+    natural of the Ace and Jack of Spades - the black jack - brings a common card.
+  - Jacks or Better: the full 9/6 pay table, 99.5% back with good play; hold what you like and draw once; a royal
+    flush pays 800 times the bet and a rare card.
+  Chips of 1, 5, 25, 100 and 500 gold make the bet (500 a hand, 2,000 on a roulette spin); a hand left on the table
+  waits for you; each table keeps what you have wagered and what it has paid back, and the cards go to Leshy's box.
+
 Claudecraft phase 8, v12.8: measured, tuned and told - the island plan complete
   tools/craftbot.js sends a simple hand through the gate for an hour of the island in real time (a staircase down, a
   tunnel along, every ore and gem beside it, fighting what comes, a potion when hurt) and sets it beside an hour in the

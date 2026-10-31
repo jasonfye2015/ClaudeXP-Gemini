@@ -140,6 +140,14 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Gilded Joker's floor (v13.0)
+
+The house on Gilded Row has opened its back rooms: a brass machine with a Joker on its crown, a walnut wheel with a
+single green zero, a shoe of six decks and a glass cabinet that deals itself. The dealer in the gold waistcoat keeps
+the house honest, and says so to anyone who asks - "the house keeps a little, and no more; I have to live" - and the
+town believes her, because she pays out in the Claudescryption cards Leshy won't sell, and nobody knows where she gets
+them.
+
 ## The island through the gate (v12.0 - v12.8)
 
 The island remembers everything done to it, and it turns out it remembered a great deal before anyone from Caer Duin
