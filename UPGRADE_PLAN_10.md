@@ -123,7 +123,13 @@ the ladder and leaves a thing two floors deeper's worth. The HUD shows its bar w
 - **Tests**: a monster sees the hero only with a clear line; chases by the shortest way; strikes on its cooldown;
   ranged kinds shoot; the boss is larger, has its word, keeps its room, and drops its things.
 
-## Phase 4 - The ladder, leaving and coming back - v10.5 (mechanics; medium)
+## Phase 4 - The ladder, leaving and coming back - v10.5 (mechanics; medium) - DONE
+
+As built: at the ladder, once the boss is down, E climbs (or the button) and L leaves with the floor counted; the
+floor's winnings are banked to the party as it is cleared, and an hour passes. Leaving mid-floor keeps what was won and
+counts nothing; a fall carries the hero out at one health and loses that floor's gold and things (the experience is
+kept). `game.tower` (cleared, best) is saved with the run; the card shows the best floor; the tenth floor is an
+achievement. After the fortieth, the doors stay shut.
 
 - **The ladder**: once the boss has fallen, Space at the ladder offers "Climb to floor n+1" or "Leave the tower". The
   floor is counted cleared either way.

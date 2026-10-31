@@ -111,7 +111,13 @@ Object.assign(CM.UI.prototype, {
     const g = this.game, box = this.$("#actions");
     if (g.mode === "combat") { this.renderCombat(); return; }
     box.classList.remove("combat");
-    if (g.mode === "tower") { if (box.dataset.mode === "tower") return; box.dataset.mode = "tower"; box.innerHTML = ""; const b = document.createElement("button"); b.textContent = "Leave the tower (this floor is lost)"; b.addEventListener("click", () => { g.leaveMageTower("left"); this.refresh(); }); box.appendChild(b); return; }
+    if (g.mode === "tower") {                                            // the Mage Tower: at the ladder, up or out; else out, the floor lost
+      const run = g.towerRun, at = run && run.atLadder(), key = `tower:${at}:${run && run.n}`; if (box.dataset.mode === key) return; box.dataset.mode = key; box.innerHTML = "";
+      const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.refresh(); }); box.appendChild(b); };
+      if (at) { if (run.n < CM.TOWER_FLOORS) add(`Climb to floor ${run.n + 1} (E)`, () => g.towerClimb(false), "primary"); add(`Leave the tower - floor ${run.n} counted (L)`, () => g.towerClimb(true)); }
+      else add("Leave the tower (this floor is lost)", () => g.leaveMageTower("left"));
+      return;
+    }
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
         ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 && !CM.isUndercroft(g.floor.number) ? [["Where to? (G)", () => this.openWhereTo()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ...(g.floor && CM.isDeep(g.floor.number) && (g.light.kind || g.lightOut) ? [[g.lightOut ? "Light (T)" : "Douse (T)", () => { g.douse(); this.refresh(); }]] : []), ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],

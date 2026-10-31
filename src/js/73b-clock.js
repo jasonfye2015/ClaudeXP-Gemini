@@ -51,6 +51,7 @@ Object.assign(CM.UI.prototype, {
     bar(".thp", h.hp, h.max); bar(".tmp", h.mp || 0, A.arrows ? 0 : h.maxmp);
     el.querySelector(".tarrows").textContent = A.arrows ? `Arrows: ${run.arrows}` : `${A.word}: ${A.cost} magic`;
     const boss = run.bossInSight ? run.bossInSight() : null, bb = el.querySelector(".tboss"); bb.style.display = boss ? "" : "none";
+    const tip = run.atLadder() ? (run.n < CM.TOWER_FLOORS ? `E: climb to floor ${run.n + 1} - L: leave, floor ${run.n} counted` : "") : ""; el.querySelector(".tname").textContent += tip ? `   |   ${tip}` : "";
     if (boss) { bb.querySelector("b").textContent = boss.name; bb.querySelector("i").style.width = `${Math.max(0, (boss.m.hp / boss.m.max) * 100)}%`; }
   },
   // the Mage Tower's doors: the heroes, who may go in and who may not (and why)
