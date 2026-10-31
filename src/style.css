@@ -603,3 +603,6 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 body.incave #cavecanvas { display: block; } body.incave #view .sky, body.incave #view .compass, body.incave #view .hint { display: none; }
 .crack { display: flex; flex-direction: column; gap: 3px; max-height: 180px; overflow-y: auto; margin: 4px 0; }
 .cwand { display: flex; align-items: center; gap: 6px; cursor: pointer; } .cwand .wdot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; } .cwand small { opacity: 0.75; }
+/* the Fortress (76d-fortress.js): its canvas over the view */
+#fortcanvas { display: none; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; cursor: crosshair; background: #000; }
+body.infort #fortcanvas { display: block; } body.infort #view .sky, body.infort #view .compass, body.infort #view .hint { display: none; }

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v11.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v11.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -616,6 +616,9 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 body.incave #cavecanvas { display: block; } body.incave #view .sky, body.incave #view .compass, body.incave #view .hint { display: none; }
 .crack { display: flex; flex-direction: column; gap: 3px; max-height: 180px; overflow-y: auto; margin: 4px 0; }
 .cwand { display: flex; align-items: center; gap: 6px; cursor: pointer; } .cwand .wdot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; } .cwand small { opacity: 0.75; }
+/* the Fortress (76d-fortress.js): its canvas over the view */
+#fortcanvas { display: none; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; cursor: crosshair; background: #000; }
+body.infort #fortcanvas { display: block; } body.infort #view .sky, body.infort #view .compass, body.infort #view .hint { display: none; }
 </style>
 </head>
 <body>
@@ -625,7 +628,7 @@ body.incave #cavecanvas { display: block; } body.incave #view .sky, body.incave 
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "11.3", built: "2026-10-31" };
+const CM = window.CM = { version: "11.4", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1539,6 +1542,7 @@ CM.parseRunCode = function (text) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  marshal: { name: "Twenty Floors Down", what: "Fell the Iron Marshal at the bottom of the Fortress", title: "of the Gauntlet" },
   unmaker: { name: "Undone", what: "Undo the Unmaker at the bottom of Claudeita's cave", title: "the Wandwright" },
   moon: { name: "Beneath the Moon", what: "Beat Leshy at his own table, Moon and all", title: "the Card Master" },
   towerking: { name: "The Tower Falls Silent", what: "Defeat the King of the Tower", title: "Kingslayer of the Tower" },
@@ -4680,7 +4684,8 @@ CM.makeWood = function (seed) {
     rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };
   if (CM.layMageTower) CM.layMageTower(fl);
   if (CM.layCabin) CM.layCabin(fl);
-  if (CM.layClaudeita) CM.layClaudeita(fl);                              // Claudeita's cave mouth (61g-cavemouth.js; laid last)                                      // Leshy's cabin (61f-cabin.js; laid last)                              // the Mage Tower's clearing (61d-magetower.js; laid last, so nothing the seed placed moves)
+  if (CM.layClaudeita) CM.layClaudeita(fl);
+  if (CM.layFortress) CM.layFortress(fl);                                // the Fortress (61h-fortress.js; laid last)                              // Claudeita's cave mouth (61g-cavemouth.js; laid last)                                      // Leshy's cabin (61f-cabin.js; laid last)                              // the Mage Tower's clearing (61d-magetower.js; laid last, so nothing the seed placed moves)
   CM.markCanopy(fl);
   CM.woodCache[seed] = JSON.stringify(fl);
   return JSON.parse(CM.woodCache[seed]);
@@ -4695,6 +4700,7 @@ CM.woodPlace = function (fl, x, y) {
   if (fl.ford && x === fl.ford[0] && y === fl.ford[1]) return "the ford";
   if (fl.bridge && x === fl.bridge[0] && y === fl.bridge[1]) return "the bridge";
   if (CM.LAND_ROAD.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1)) return "the road";
+  if (CM.FORTRESS && x === CM.FORTRESS.path[0] && y > CM.FORTRESS.clearing[3] && y <= CM.FORTRESS.path[3]) return "the Fortress road";
   if (CM.CLAUDEITA && x === CM.CLAUDEITA.path[0] && y >= CM.CLAUDEITA.path[1] && y <= CM.CLAUDEITA.path[3] && !(CM.LAND_ROAD || []).some(([a, b, c, d]) => x >= a && x <= c && y >= b && y <= d) && y > 42) return "the cave path";
   if (CM.CABIN && x === CM.CABIN.path[0] && y >= CM.CABIN.path[1] && y <= CM.CABIN.path[3]) return "the cabin path";
   if (CM.POSTERN_PATH && x === CM.POSTERN_PATH[0] && y >= CM.POSTERN_PATH[1] && y <= CM.POSTERN_PATH[3]) return "the cliff path";
@@ -4715,7 +4721,7 @@ CM.wayPlaces = function (game) {
     add("The well", ...CM.TOWN_AT.well, true); add("The shaft", ...CM.TOWN_AT.shaft, true); add("The West Gate", ...CM.TOWN_AT.woodgate, true);
     add("The portal yard", ...CM.PORTAL_YARD.tower, true); add("The gate tower's stair", ...Object.keys(CM.TOWER_STAIRS)[0].split(",").map(Number), true); if (CM.posternOpen(game)) add("The postern", ...CM.TOWN_POSTERN, true);
   } else {
-    add("The West Gate", ...CM.WOOD_GATE, true); if (CM.posternOpen(game)) add("The postern", ...CM.POSTERN_LAND, true); add("The Mage Tower", ...CM.MAGE_DOOR, true); add("Leshy's cabin", ...CM.CABIN.front, true); add("Claudeita's cave", ...CM.CLAUDEITA.front, true);
+    add("The West Gate", ...CM.WOOD_GATE, true); if (CM.posternOpen(game)) add("The postern", ...CM.POSTERN_LAND, true); add("The Mage Tower", ...CM.MAGE_DOOR, true); add("Leshy's cabin", ...CM.CABIN.front, true); add("Claudeita's cave", ...CM.CLAUDEITA.front, true); add("The Fortress", ...CM.FORTRESS.front, true);
     const farm = Object.keys(fl.things).find((k) => fl.things[k].type === "farm");
     if (farm) add("The farm", ...farm.split(",").map(Number), true);
     add("The ford", ...fl.ford, true); if (fl.bridge) add("The bridge", ...fl.bridge, true); add("The First Glade", ...fl.glades[0], true);
@@ -4723,7 +4729,7 @@ CM.wayPlaces = function (game) {
   }
   return out;
 };
-CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "the cliff path", "the Mage Tower", "Leshy's cabin", "the cabin path", "Claudeita's cave", "the cave path", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
+CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "the cliff path", "the Mage Tower", "Leshy's cabin", "the cabin path", "Claudeita's cave", "the cave path", "the Fortress", "the Fortress road", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
 CM.woodCaveAt = (seed, n) => { const fl = CM.makeWood(seed); return Object.keys(fl.things).find((k) => fl.things[k].type === "cave" && fl.things[k].n === n) || CM.WOOD_GATE.join(","); };
 // a cave: a short floor of the first bands' kinds, carved as any floor of its own key, with the way out where the stair was;
 // the third cave has a troll under the hill at its far end
@@ -5160,6 +5166,9 @@ CM.SOLID = {
   crag: { face: "solid:crag", h: 1.9, top: "ground:grass" },                     // Claudeita's crag in the Wood (61g-cavemouth.js), and its mouth
   cavemouth: { face: "solid:cavemouth", h: 1.9, top: "ground:grass" },
   cragtall: { face: "solid:crag", h: 2.7, top: "ground:grass" }, craglow: { face: "solid:crag", h: 1.15, top: "ground:grass" },   // (the crag rises behind its mouth, and falls away at its ends)
+  fortwall: { face: "solid:fortwall", h: 2.9, top: "solid:townwall:top" },      // the Fortress (61h-fortress.js): black walls, a tower at each corner and by the doors
+  forttower: { face: "solid:fortwall", h: 3.9, top: "solid:townwall:top" },
+  fortdoorL: { face: "solid:fortdoorL", h: 2.9, top: "solid:townwall:top" }, fortdoorR: { face: "solid:fortdoorR", h: 2.9, top: "solid:townwall:top" },
   hedge: { face: "solid:hedge", h: 0.55, top: "solid:hedge", see: true },         // seen over
   fence: { face: "solid:fence", h: 0.5, see: true },                              // seen through
   cliff: { face: "solid:cliff", h: 2.2, top: "ground:grass" },                    // the hill's side
@@ -5215,7 +5224,7 @@ CM.chimneysOf = function (fl) {
   }
   return out;
 };
-CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", cabin: "#6A4A2A", cabindoor: "#7A5432", crag: "#5A5650", cragtall: "#5A5650", craglow: "#5A5650", cavemouth: "#1A1410", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
+CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", cabin: "#6A4A2A", cabindoor: "#7A5432", crag: "#5A5650", fortwall: "#2A2624", forttower: "#2A2624", fortdoorL: "#4A2C16", fortdoorR: "#4A2C16", cragtall: "#5A5650", craglow: "#5A5650", cavemouth: "#1A1410", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
 CM.UNDER = ["tree", "hedge", "fence", "frame", "tower", "magetower"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
@@ -7094,6 +7103,31 @@ CM.art.cliff = function (seed = 1) {
   return c;
 };
 // Claudeita's crag: grey rock in ledges, moss on its brow; the mouth's face a low dark arch with a forge-glow far down
+// the Fortress: black ashlar in long courses (the face is stretched three times its width up a wall, so the courses are
+// drawn short), and its doors - each half of a great arched pair of dark brown planks with iron bands and studs
+CM.art.fortWall = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed("fortwall")), base = [58, 54, 52];
+  p.fillStyle = "#141210"; p.fillRect(0, 0, S, S);
+  const rows = 14, h = S / rows;
+  for (let j = 0; j < rows; j++) { let x = -(j % 2) * 40; while (x < S) { const w = 60 + rnd.next() * 60; p.fillStyle = rgb(base, 0.7 + rnd.next() * 0.55); p.fillRect(x + 1.5, j * h + 1, w - 3, h - 2); p.fillStyle = "rgba(255,255,255,0.06)"; p.fillRect(x + 1.5, j * h + 1, w - 3, 1.5); x += w; } }
+  speckle(p, rnd, S, S, 1600, rgb(base, 0.4), 0.3, 2); for (let i = 0; i < 4; i++) crack(p, rnd, rnd.next() * S, rnd.next() * S, 40 + rnd.next() * 50, "rgba(0,0,0,0.5)");
+  p.fillStyle = "#0A0806"; p.fillRect(S * 0.47, S * 0.28, S * 0.06, S * 0.14);   // (an arrow slit)
+  return c;
+};
+CM.art.fortDoor = function (side) {
+  const c = CM.art.fortWall(), p = c.getContext("2d"), S = ART_SIZE, inner = side ? 0 : S, outer = side ? S * 0.86 : S * 0.14, top = S * 0.3;
+  p.fillStyle = "#0E0A08"; p.fillRect(0, 0, 0, 0);
+  const arch = (pad) => { p.beginPath(); p.moveTo(outer + (side ? pad : -pad), S); p.lineTo(outer + (side ? pad : -pad), top + S * 0.12); p.quadraticCurveTo(outer + (side ? pad : -pad), top - pad, inner, top - pad); p.lineTo(inner, S); p.closePath(); };
+  p.fillStyle = "#1A1612"; arch(10); p.fill();   // (the arch's stones)
+  p.save(); arch(0); p.clip();
+  const g = p.createLinearGradient(0, top, 0, S); g.addColorStop(0, "#4A2C16"); g.addColorStop(1, "#34200F"); p.fillStyle = g; p.fillRect(0, 0, S, S);
+  for (let x = Math.min(inner, outer); x < Math.max(inner, outer); x += S * 0.1) { p.fillStyle = "rgba(0,0,0,0.45)"; p.fillRect(x, top - 20, 2.5, S); p.fillStyle = "rgba(255,200,140,0.06)"; p.fillRect(x + 3, top - 20, 3, S); }
+  for (const y of [0.42, 0.62, 0.84]) { p.fillStyle = "#1C1C20"; p.fillRect(0, S * y, S, S * 0.035); p.fillStyle = "#5A5A64"; for (let x = Math.min(inner, outer) + 8; x < Math.max(inner, outer); x += 22) { p.beginPath(); p.arc(x, S * y + S * 0.0175, 2.6, 0, Math.PI * 2); p.fill(); } }
+  p.restore();
+  p.strokeStyle = "#8A7A50"; p.lineWidth = 3; p.beginPath(); p.arc(side ? S * 0.12 : S * 0.88, S * 0.66, 9, 0, Math.PI * 2); p.stroke();   // (the ring to pull)
+  p.fillStyle = "#0A0806"; p.fillRect(side ? 0 : S - 3, top - 10, 3, S);   // (the seam between the leaves)
+  return c;
+};
 CM.art.crag = function (mouth) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`crag:${mouth ? 2 : 1}`)), base = [104, 102, 98];
   p.fillStyle = rgb(base, 0.65); p.fillRect(0, 0, S, S);
@@ -7265,6 +7299,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:hedge"] = use("solid.hedge", () => CM.art.hedge());
   out["solid:fence"] = use("solid.fence", () => CM.art.fence());
   out["solid:cliff"] = use("solid.cliff", () => CM.art.cliff());
+  out["solid:fortwall"] = use("solid.fortwall", () => CM.art.fortWall()); out["solid:fortdoorL"] = use("solid.fortdoorL", () => CM.art.fortDoor(0)); out["solid:fortdoorR"] = use("solid.fortdoorR", () => CM.art.fortDoor(1));   // (the Fortress: 61h-fortress.js)
   out["solid:crag"] = use("solid.crag", () => CM.art.crag(false)); out["solid:cavemouth"] = use("solid.cavemouth", () => CM.art.crag(true));   // (Claudeita's cave: 61g-cavemouth.js)
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());
   for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v, null, CM.art.season || "autumn"));   // (the run's season: CM.art.season, set before a set is built)
@@ -9332,7 +9367,7 @@ CM.Game = class {
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
       startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), clock: this.clock || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0, season: this.season || null, farmDay: this.farmDay || 0, festival: this.festival || null,
-      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [], lightOut: Boolean(this.lightOut), noiseLevel: this.noiseLevel || 0, follower: this.follower || null, tavernBarred: Boolean(this.tavernBarred), tower: this.tower || null };
+      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [], lightOut: Boolean(this.lightOut), noiseLevel: this.noiseLevel || 0, follower: this.follower || null, tavernBarred: Boolean(this.tavernBarred), tower: this.tower || null, fort: this.fort || null };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -9360,7 +9395,7 @@ CM.Game = class {
     this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.spellLight = d.spellLight || 0;
     this.lightOut = Boolean(d.lightOut); this.noiseLevel = d.noiseLevel || 0;   // (the eleventh update's light and noise)
-    this.follower = d.follower || null; this.tavernBarred = Boolean(d.tavernBarred); this.tower = d.tower || null; this.towerRun = null; this.caveRun = null;   // (the Mage Tower: how far climbed)   // (a follower, and a tavern that won't hire after one died)
+    this.follower = d.follower || null; this.tavernBarred = Boolean(d.tavernBarred); this.tower = d.tower || null; this.towerRun = null; this.caveRun = null; this.fort = d.fort || null; this.fortRun = null;   // (the Mage Tower: how far climbed)   // (a follower, and a tavern that won't hire after one died)
     this.phylactery = Boolean(d.phylactery); this.reminded = Boolean(d.reminded);
     this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld); this.meal = d.meal || null; this.alchemistFree = Boolean(d.alchemistFree);
     if (this.light && this.light.kind === "lantern" && !this.light.left) this.light.left = CM.LANTERN_OIL;   // (a lantern from before v4.4: a flask of oil in it)
@@ -9418,7 +9453,7 @@ CM.Game = class {
     this.gold = 30;
     this.floors = {};
     this.light = { kind: "torch", left: CM.TORCH_STEPS };
-    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0; this.follower = null; this.tavernBarred = false; this.tower = null; this.towerRun = null; this.caveRun = null;
+    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0; this.follower = null; this.tavernBarred = false; this.tower = null; this.towerRun = null; this.caveRun = null; this.fort = null; this.fortRun = null;
     this.phylactery = false;
     this.combat = null;
     this.messages = [];
@@ -9744,8 +9779,8 @@ Object.assign(CM.Game.prototype, {
           farm: this.villageLevel("farm") >= 1 ? "The farm's gate, and the rows beyond it. (Space to work the farm)" : "A fallow field, fenced long ago. (Space to look it over)",
           woodgate: fl.number === 0 ? "The west gate, and the trees beyond it. (Space to go out into the Deep Wood)" : "The gate back to the town. (Space to go through)",
           cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
-          caveexit: "The way out of the cave. (Space to climb out)", portal: thing.to === "magetower" ? "A portal: an arch of stone with light turning in it. (Space: to the Mage Tower)" : thing.to === "cabin" ? "A portal, its light the colour of candle flame. (Space: to Leshy's cabin in the Wood)" : thing.to === "claudeita" ? "A portal, its light the colour of embers. (Space: to Claudeita's cave in the Wood)" : "The portal home, to the Keep-yard. (Space)", plinth: "A dark plinth. (Space to look)",
-          magedoor: "The Mage Tower's doors, dark and tall. One goes in alone. (Space)", cabin: "The cabin's door, and a candle behind the window. (Space: sit at Leshy's table)", claudeita: "The cave's mouth, low and dark, and a glow far down. One caster goes in. (Space)", ucstair: thing.hidden ? "" : "A stair of old cut stone, going down into cold and water. (Space to go down)", ucdown: "Steps down, deeper into the Undercroft. (Space)", ucup: "Steps up, toward the cave. (Space)",
+          caveexit: "The way out of the cave. (Space to climb out)", portal: thing.to === "magetower" ? "A portal: an arch of stone with light turning in it. (Space: to the Mage Tower)" : thing.to === "cabin" ? "A portal, its light the colour of candle flame. (Space: to Leshy's cabin in the Wood)" : thing.to === "claudeita" ? "A portal, its light the colour of embers. (Space: to Claudeita's cave in the Wood)" : thing.to === "fortress" ? "A portal, its light the grey of iron. (Space: to the Fortress in the Wood)" : "The portal home, to the Keep-yard. (Space)", plinth: "A dark plinth. (Space to look)",
+          magedoor: "The Mage Tower's doors, dark and tall. One goes in alone. (Space)", cabin: "The cabin's door, and a candle behind the window. (Space: sit at Leshy's table)", claudeita: "The cave's mouth, low and dark, and a glow far down. One caster goes in. (Space)", fortress: "The Fortress doors, dark wood bound in iron, three men high. One fighter goes in. (Space)", ucstair: thing.hidden ? "" : "A stair of old cut stone, going down into cold and water. (Space to go down)", ucdown: "Steps down, deeper into the Undercroft. (Space)", ucup: "Steps up, toward the cave. (Space)",
           ucdoor: "A door of black oak in the bell-yard's wall. (Space)", ucback: "A flooded stair going down, and a black door at the bottom of it: the Undercroft. (Space)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
           signpost: "A signpost, its boards weathered. (Space to read it)",
           cross: "The market cross, on its three steps: the Square's oldest stone. (Space to read what is cut in it)",
@@ -9947,6 +9982,7 @@ Object.assign(CM.Game.prototype, {
       if (t0 && t0.type === "portal") { this.usePortal(t0); return; }   // (the Mage Tower: 61d-magetower.js)
       if (t0 && t0.type === "magedoor") { this.emit("magetower"); return; }
       if (t0 && t0.type === "cabin") { this.say(CM.LESHY_LINES.greet); this.emit("cabin"); return; }
+      if (t0 && t0.type === "fortress") { this.say(CM.FORT_LINES.doors); this.emit("fortress"); return; }   // (the Fortress: 61h-fortress.js)
       if (t0 && t0.type === "claudeita") { this.say(CM.CAVE_LINES.mouth); this.emit("claudeita"); return; }   // (Claudeita's cave: 61g-cavemouth.js)   // (Leshy's table: 61f-cabin.js)
       if (t0 && t0.type === "plinth") { this.say("A plinth of dark stone with a rune cut in it, unlit. Something will stand here one day."); return; }
       if (t0 && t0.type === "errand") { this.pickUpErrand(t0, keyOf(this.floor.pos[0], this.floor.pos[1])); return; }
@@ -10997,6 +11033,7 @@ CM.layMageTower = function (fl) {
 CM.layPortalYard = function (fl) {
   const P = CM.PORTAL_YARD, key = (x, y) => `${x},${y}`;
   if (!fl.things[key(...P.tower)]) fl.things[key(...P.tower)] = { type: "portal", to: "magetower" };
+  if (P.fortress && (!fl.things[key(...P.fortress)] || fl.things[key(...P.fortress)].type !== "portal")) fl.things[key(...P.fortress)] = { type: "portal", to: "fortress" };   // (the Fortress: 61h-fortress.js)
   for (const p of P.plinths) { const was = fl.things[key(...p)], lit = P.cabin && p === P.cabin ? "cabin" : P.claudeita && p === P.claudeita ? "claudeita" : null; if (!was || (lit && was.type === "plinth")) fl.things[key(...p)] = lit ? { type: "portal", to: lit } : { type: "plinth" }; }   // (the plinths lit: Leshy's cabin, Claudeita's cave)   // (the first plinth lit: to Leshy's cabin)
   return fl;
 };
@@ -11007,8 +11044,9 @@ Object.assign(CM.Game.prototype, {
     this.sound("spell");
     if (t.to === "magetower") { this.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); this.floor.facing = 0; this.say("The portal takes you in a breath of cold light: the Deep Wood, a clearing in fog, and over you the Mage Tower, black against the sky."); return true; }
     if (t.to === "cabin") { this.enterFloor(-1, "rope", CM.CABIN.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing among the pines. A log cabin, smoke from its chimney, a light in its window."); return true; }
+    if (t.to === "fortress") { this.enterFloor(-1, "rope", CM.FORTRESS.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing of trampled earth. Over you the Fortress: black stone, four towers, and two great doors of dark wood."); return true; }
     if (t.to === "claudeita") { this.enterFloor(-1, "rope", CM.CLAUDEITA.front.slice()); this.floor.facing = 2; this.say("The portal leaves you among the trees south of the fields, before a crag of grey rock with a dark mouth in it. Warm air breathes out of the dark."); return true; }
-    if (t.to === "town") { const near = (q) => this.floor && this.floor.number === -1 && Math.abs(this.floor.pos[0] - q[0]) + Math.abs(this.floor.pos[1] - q[1]) <= 1; this.enterFloor(0, "rope", (near(CM.CABIN.portal) ? CM.PORTAL_YARD.cabin : CM.CLAUDEITA && near(CM.CLAUDEITA.portal) ? CM.PORTAL_YARD.claudeita : CM.PORTAL_YARD.tower).slice()); this.say("Light, and the Keep-yard: the portal yard by the shaft."); return true; }
+    if (t.to === "town") { const near = (q) => this.floor && this.floor.number === -1 && Math.abs(this.floor.pos[0] - q[0]) + Math.abs(this.floor.pos[1] - q[1]) <= 1; this.enterFloor(0, "rope", (near(CM.CABIN.portal) ? CM.PORTAL_YARD.cabin : CM.CLAUDEITA && near(CM.CLAUDEITA.portal) ? CM.PORTAL_YARD.claudeita : CM.FORTRESS && near(CM.FORTRESS.portal) ? CM.PORTAL_YARD.fortress : CM.PORTAL_YARD.tower).slice()); this.say("Light, and the Keep-yard: the portal yard by the shaft."); return true; }
     return false;
   },
   // the tower's doors: the choice of who goes in (the dialog is the window's); the rules say who may
@@ -11324,6 +11362,107 @@ Object.assign(CM.Game.prototype, {
     this.saveVillage && this.saveVillage(); this.saveRun();
     this.emit("floor", this.floor);
     return { how, xp, gold, things, wands, spells };
+  },
+});
+
+// ---- 61h-fortress.js ----
+"use strict";
+// The Fortress (the fourteenth update): a black keep in the north of the Wood, twelve squares of wall with a tower at
+// each corner and two great dark-brown doors in its front; a path down to Leshy's clearing, a portal home beside the
+// doors, and a portal to it in the town's portal yard. One fighter goes in (CM.fortWhyNot), and the floors below are a
+// gauntlet (64j-fortress.js). What a floor gives is carried; it is the party's when the fighter comes out by the stairs.
+//   Death: back with the party at the doors with a tenth of their health, and none of the carried gold or things.
+//   Out by the stairs: everything carried is the party's, and the next time in is the floor after.
+//   Out mid-floor: the floor is lost (what it gave with it), what was carried before it kept.
+// Experience is the fighter's whichever way it ends.
+CM.FORTRESS = { walls: [30, 1, 41, 3], doors: [[35, 3], [36, 3]], front: [35, 4], portal: [32, 6], path: [35, 4, 35, 12], clearing: [27, 1, 44, 9], centre: [35.5, 2] };
+CM.PORTAL_YARD.fortress = [35, 22];                                       // a third portal in the yard, between the other two
+CM.isFortCell = (x, y) => { const [x0, y0, x1, y1] = CM.FORTRESS.walls; return x >= x0 && x <= x1 && y >= y0 && y <= y1; };
+CM.FORT_LINES = {
+  doors: "The Fortress: black stone, a tower at each corner, and doors of dark wood bound in iron, three men high. Behind them the floors go down twenty deep, a maze each, with keys to be found and the stairs somewhere in the dark. One goes in, and fights.",
+  dead: (name) => `${name} is found at the Fortress doors at dawn, barely alive. Whatever they carried is still somewhere inside.`,
+  out: (name, n) => `${name} comes up out of the Fortress by the stairs from floor ${n}, carrying everything.`,
+  fled: (name) => `${name} turns back and finds the way up - without what this floor gave.`,
+  done: (name) => `${name} comes out of the Fortress with the Iron Marshal's fall behind them. Twenty floors, and the keep is quiet.`,
+};
+
+// laid on the land after everything else: the keep's cells, its doors, the ground before it, the portal, the path
+CM.layFortress = function (fl) {
+  const F = CM.FORTRESS, [x0, y0, x1, y1] = F.clearing, key = (x, y) => `${x},${y}`, [wx0, wy0, wx1, wy1] = F.walls;
+  const open = (x, y, g) => { fl.grid[y][x] = 0; if (fl.kinds) delete fl.kinds[key(x, y)]; (fl.ground = fl.ground || {})[key(x, y)] = g; delete fl.things[key(x, y)]; };
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!CM.isFortCell(x, y) && ((x - 35.5) / 9) ** 2 + ((y - 3) / 6.5) ** 2 <= 1) open(x, y, (x + 2 * y) % 5 ? "dirt" : "grass");
+  for (let y = wy0; y <= wy1; y++) for (let x = wx0; x <= wx1; x++) {
+    fl.grid[y][x] = 1; if (fl.ground) delete fl.ground[key(x, y)]; delete fl.things[key(x, y)];
+    const corner = (x === wx0 || x === wx1) && (y === wy0 || y === wy1), door = F.doors.findIndex(([dx, dy]) => dx === x && dy === y);
+    (fl.kinds = fl.kinds || {})[key(x, y)] = door >= 0 ? (door ? "fortdoorR" : "fortdoorL") : corner || x === wx0 || x === wx1 ? "forttower" : (x === F.doors[0][0] - 1 || x === F.doors[1][0] + 1) && y === wy1 ? "forttower" : "fortwall";
+  }
+  const [px, py0, , py1] = F.path; for (let y = py0; y <= py1; y++) if (fl.grid[y][px] !== 0 || y <= y1) { if (CM.isCabinCell && CM.isCabinCell(px, y)) break; open(px, y, "dirt"); }
+  fl.things[key(...F.front)] = { type: "fortress" }; fl.things[key(F.front[0] + 1, F.front[1])] = { type: "fortress" };
+  fl.things[key(...F.portal)] = { type: "portal", to: "town" };
+  fl.decor = (fl.decor || []).filter((d) => !(d.x >= x0 && d.x <= x1 && d.y >= y0 && d.y <= y1));
+  fl.rooms = (fl.rooms || []).concat({ x0, y0, x1, y1, name: "the Fortress" });
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!(fl.seen || []).some(([sx, sy]) => sx === x && sy === y)) (fl.seen = fl.seen || []).push([x, y]);
+  for (let y = py0; y <= py1; y++) if (!fl.seen.some(([sx, sy]) => sx === px && sy === y)) fl.seen.push([px, y]);
+  return fl;
+};
+
+Object.assign(CM.Game.prototype, {
+  fortChoices() { return this.party.map((h, i) => ({ i, name: h.name, cls: h.cls, why: CM.fortWhyNot(h) })); },
+  // in at the doors: the floor after the last one counted, the fighter alone
+  enterFortress(i) {
+    const h = this.party[i], why = CM.fortWhyNot(h);
+    if (why) return why;
+    if (this.mode !== "explore" || !this.floor || this.floor.number !== -1) return "The doors are in the Wood.";
+    this.fort = this.fort || { cleared: 0, best: 0 };
+    if (this.fort.cleared >= CM.FORT_FLOORS) return "The Fortress is quiet. The Iron Marshal is gone, and its twenty floors keep nothing for anyone now.";
+    const n = Math.min(CM.FORT_FLOORS, this.fort.cleared + 1);
+    this.logAct && this.logAct("enterFortress", i);
+    this.fortRun = new CM.FortRun(this, i, n);
+    this.say(`${h.name} goes in alone, and the great doors shut behind them. ${CM.fortFloorName(n)}.`);
+    this.setMode("fortress");
+    this.emit("fortfloor", this.fortRun);
+    return "";
+  },
+  // the stairs: the floor counted, and down to the next (what was carried goes too), or out with it all
+  fortStairs(leave = false) {
+    const run = this.fortRun;
+    if (!run || !run.atStairs()) return "The stairs are at the far end of the floor.";
+    this.logAct && this.logAct("fortStairs", leave);
+    this.fort = this.fort || { cleared: 0, best: 0 };
+    this.fort.cleared = Math.max(this.fort.cleared, run.n); this.fort.best = Math.max(this.fort.best || 0, run.n);
+    this.tally.fortBest = Math.max(this.tally.fortBest || 0, run.n);
+    if (run.n >= CM.FORT_FLOORS) { this.achieve && this.achieve("marshal"); return this.leaveFortress("done"); }
+    if (leave) return this.leaveFortress("out");
+    const next = new CM.FortRun(this, run.heroIndex, run.n + 1);
+    for (const k of ["gold", "loot", "xp", "kills", "keys", "flasks"]) next[k] = run[k];   // (carried down: the gold, the things, the keys and flasks)
+    this.fortRun = next;
+    this.say(`Down the stairs: ${CM.fortFloorName(next.n)}.`);
+    this.emit("fortfloor", next);
+    return "";
+  },
+  // out of the Fortress: "out"/"done" by the stairs (everything kept), "fled" mid-floor (the floor's finds lost),
+  // "dead" (a tenth of their health; nothing carried kept). Experience always.
+  leaveFortress(how) {
+    const run = this.fortRun; if (!run) return null;
+    const h = run.hero, xp = Math.round(run.xp * CM.FT.xpShare);
+    if (xp) { h.xp += xp; this.checkLevels(); }
+    let gold = 0, things = [];
+    if (how === "out" || how === "done") { gold = run.gold; things = run.loot; }
+    else if (how === "fled") { gold = run.gold - run.floorGold; things = run.loot.filter((it) => !run.floorLoot.includes(it)); }
+    if (gold) this.gold += gold;
+    if (things.length) this.gain(things, "fortress");
+    if (how === "dead") { h.hp = Math.max(1, Math.round(h.max * 0.1)); this.tally.fortFalls = (this.tally.fortFalls || 0) + 1; }
+    else h.hp = Math.max(1, h.hp);
+    this.say(how === "dead" ? CM.FORT_LINES.dead(h.name) : how === "done" ? CM.FORT_LINES.done(h.name) : how === "out" ? CM.FORT_LINES.out(h.name, run.n) : CM.FORT_LINES.fled(h.name));
+    const bits = [xp ? `${xp} experience` : "", gold ? `${gold} gold` : "", things.length ? things.map((t) => t.name).join(", ") : ""].filter(Boolean);
+    if (bits.length) this.say(`From the Fortress: ${bits.join("; ")}.`);
+    if (this.fort && this.fort.cleared && this.fort.cleared < CM.FORT_FLOORS) this.say(`The Fortress will have you back at floor ${this.fort.cleared + 1}.`);
+    this.fortRun = null;
+    this.setMode("explore");
+    this.floor.pos = CM.FORTRESS.front.slice(); this.floor.facing = 2;
+    this.saveRun();
+    this.emit("floor", this.floor);
+    return { how, xp, gold, things };
   },
 });
 
@@ -16621,6 +16760,277 @@ CM.CaveRun = class {
   depth() { return Math.max(0, Math.floor((this.player.y - CM.CV.SURFACE) / 2)); }
 };
 
+// ---- 64j-fortress.js ----
+"use strict";
+// The Fortress (the fourteenth update): twenty floors of maze under a black keep in the Wood, for one fighter, played as
+// a gauntlet - seen from above, in real time: walls of keyed doors that open with a key carried, lairs that keep sending
+// their monsters until they are broken, draughts and gold on the floors, and the stairs down somewhere in the maze. On
+// the twentieth floor the Iron Marshal holds the way out. 61h-fortress.js says who goes in and what is kept; the window
+// draws it (76d-fortress.js). CM.FortRun steps on a fixed clock, so the same inputs give the same run.
+//
+//   run.update(dt, input)   input: { up, down, left, right, attack, aim (radians or null), bomb (pressed once) }
+//   run.events              what happened, for the window's sounds (emptied by the window)
+//
+// Positions are in tiles (x east, y south); a tile is 0 (floor), 1 (wall) or 2 (a door).
+CM.FORT_FLOORS = 20;
+CM.FT = {
+  step: 1 / 60, speed: 4.3, radius: 0.3, reach: 1.3, arc: 2.1, swingCd: 0.38, monR: 0.34, monReach: 0.78, monCd: 1.15,
+  xpShare: 0.4, bombReach: 6.5, genHp: 14, genPer: 5, genEvery: 4.2, genNear: 10, genCap: 3, hit: 0.55, draught: 0.4, level: 1, levelPer: 1.0,
+};
+CM.FORT_FIGHTERS = ["Knight", "Paladin", "Rogue", "Monk"];
+CM.FORT_MARSHAL = { name: "The Iron Marshal", colour: "#3A3A46", body: "tall", head: "helm", eyes: "#FF4020", extras: ["sword", "shield"], speed: 9, ability: "charge" };
+CM.fortDepth = (n) => Math.min(CM.BOTTOM || 50, Math.max(1, Math.round(n * 2)));
+CM.fortFloorName = (n) => (n === CM.FORT_FLOORS ? "The Fortress, the Marshal's hall" : `The Fortress, floor ${n}`);
+// who may go in: a fighter (Knight, Paladin, Rogue, Monk), or a Ranger with a blade instead of a bow
+CM.fortWhyNot = (h) => {
+  if (!h) return "No one.";
+  if (h.hp <= 0) return `${h.name} has fallen.`;
+  const bow = h.weapon && h.weapon.props && h.weapon.props.bow;
+  if (CM.FORT_FIGHTERS.includes(h.cls) || (h.cls === "Ranger" && !bow)) return "";
+  return `${h.name} the ${h.cls} is no one to send into a gauntlet: the Fortress is for those who fight hand to hand.`;
+};
+
+// ---- a floor: a maze of two-wide halls on a coarse grid, some opened into rooms; doors across the way down, a key for
+// each somewhere before it; closets of treasure behind doors of their own (with a key of their own); lairs, monsters,
+// draughts, gold, a chest now and then, the stairs at the far end ----
+CM.makeFortFloor = function (n, seed) {
+  const rnd = new CM.Random(CM.hashSeed(`${seed}:fortress:${n}`)), cs = Math.min(17, 10 + Math.floor(n / 3)), size = cs * 3 + 1;
+  const grid = []; for (let y = 0; y < size; y++) grid.push(new Array(size).fill(1));
+  const cellTiles = (i, j) => [[1 + 3 * i, 1 + 3 * j], [2 + 3 * i, 1 + 3 * j], [1 + 3 * i, 2 + 3 * j], [2 + 3 * i, 2 + 3 * j]];
+  const passage = (i, j, di, dj) => (di ? [[3 + 3 * Math.min(i, i + di), 1 + 3 * j], [3 + 3 * Math.min(i, i + di), 2 + 3 * j]] : [[1 + 3 * i, 3 + 3 * Math.min(j, j + dj)], [2 + 3 * i, 3 + 3 * Math.min(j, j + dj)]]);
+  for (let j = 0; j < cs; j++) for (let i = 0; i < cs; i++) for (const [x, y] of cellTiles(i, j)) grid[y][x] = 0;
+  // the maze: a walk that never crosses itself
+  const seen = new Set(["0,0"]), stack = [[0, 0]], D = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  while (stack.length) {
+    const [i, j] = stack[stack.length - 1], next = rnd.shuffle(D.slice()).filter(([di, dj]) => i + di >= 0 && i + di < cs && j + dj >= 0 && j + dj < cs && !seen.has(`${i + di},${j + dj}`));
+    if (!next.length) { stack.pop(); continue; }
+    const [di, dj] = next[0]; for (const [x, y] of passage(i, j, di, dj)) grid[y][x] = 0;
+    seen.add(`${i + di},${j + dj}`); stack.push([i + di, j + dj]);
+  }
+  // rooms: blocks of cells opened into halls (the gauntlet's open floors), and a few more ways through
+  const rooms = [];
+  for (let k = 0; k < 3 + Math.floor(n / 4); k++) {
+    const w = rnd.int(2, 3), h = rnd.int(2, 3), i0 = rnd.int(0, cs - w), j0 = rnd.int(0, cs - h);
+    for (let y = 1 + 3 * j0; y <= 3 * (j0 + h) - 1; y++) for (let x = 1 + 3 * i0; x <= 3 * (i0 + w) - 1; x++) grid[y][x] = 0;
+    rooms.push({ x0: 1 + 3 * i0, y0: 1 + 3 * j0, x1: 3 * (i0 + w) - 1, y1: 3 * (j0 + h) - 1 });
+  }
+  for (let k = 0; k < Math.floor(cs * 0.8); k++) { const i = rnd.int(0, cs - 2), j = rnd.int(0, cs - 1), [di, dj] = rnd.chance(0.5) ? [1, 0] : [0, 1]; if (j + dj < cs) for (const [x, y] of passage(i, j, di, dj)) grid[y][x] = 0; }
+  const fl = { n, size, grid, items: [], lairs: [], spawns: [], doors: [], rooms, start: [1.5, 1.5] };
+  const open = (x, y) => grid[y] && grid[y][x] === 0;
+  const dist = (from, blocked) => { const d = new Map([[`${from[0]},${from[1]}`, 0]]), q = [from]; while (q.length) { const [x, y] = q.shift(), k = d.get(`${x},${y}`); for (const [dx, dy] of D) { const nx = x + dx, ny = y + dy, key = `${nx},${ny}`; if (!open(nx, ny) || d.has(key) || (blocked && blocked.has(key))) continue; d.set(key, k + 1); q.push([nx, ny]); } } return d; };
+  const d0 = dist([1, 1]);
+  let far = [1, 1], farD = -1; for (const [k, v] of d0) { const [x, y] = k.split(",").map(Number), score = v + (x + y - 2) * 1.5; if (x % 3 && y % 3 && score > farD) { farD = score; far = [x, y]; } }   // (far by the walk, and across the floor)
+  fl.stairs = far;
+  // the way down, and doors across it where the way must go through them
+  const path = []; { let cur = far; const dS = d0; while (cur[0] !== 1 || cur[1] !== 1) { path.push(cur); const k = dS.get(`${cur[0]},${cur[1]}`); const nb = D.map(([dx, dy]) => [cur[0] + dx, cur[1] + dy]).find(([x, y]) => dS.get(`${x},${y}`) === k - 1); if (!nb) break; cur = nb; } path.reverse(); }
+  const isPassage = (x, y) => (x % 3 === 0) !== (y % 3 === 0);    // (a tile in a wall line, opened: where a door can stand)
+  const groupAt = (x, y) => { const out = [[x, y]]; for (const [dx, dy] of D) { const nx = x + dx, ny = y + dy; if (open(nx, ny) && isPassage(nx, ny) && (nx % 3 === 0) === (x % 3 === 0) && (ny % 3 === 0) === (y % 3 === 0)) out.push([nx, ny]); } return out; };
+  const want = Math.min(4, 1 + Math.floor(n / 5)), blocked = new Set(), doorKeys = [];
+  for (let k = 1; k <= want; k++) {
+    const target = Math.floor((path.length * k) / (want + 1));
+    for (let t = target; t < path.length - 4; t++) {
+      const [x, y] = path[t]; if (!isPassage(x, y) || blocked.has(`${x},${y}`)) continue;
+      const g = groupAt(x, y), trial = new Set(blocked); for (const [gx, gy] of g) trial.add(`${gx},${gy}`);
+      if (dist([1, 1], trial).has(`${far[0]},${far[1]}`)) continue;     // (not a door the way must go through)
+      for (const [gx, gy] of g) { blocked.add(`${gx},${gy}`); grid[gy][gx] = 2; }
+      fl.doors.push(g); doorKeys.push(g); break;
+    }
+  }
+  // a key for each door, in the part of the maze open before it (with the doors after it still shut)
+  const taken = new Set([`1,1`, `${far[0]},${far[1]}`]);
+  const place = (cands, kind, extra) => { const pool = cands.filter(([x, y]) => !taken.has(`${x},${y}`) && !isPassage(x, y)); if (!pool.length) return null; const [x, y] = pool[Math.floor(rnd.next() * pool.length)]; taken.add(`${x},${y}`); const it = Object.assign({ x, y, kind }, extra || {}); fl.items.push(it); return it; };
+  for (let k = 0; k < doorKeys.length; k++) {
+    const shut = new Set(); for (let m = k; m < doorKeys.length; m++) for (const [x, y] of doorKeys[m]) shut.add(`${x},${y}`);
+    for (let m = 0; m < k; m++) for (const [x, y] of doorKeys[m]) grid[y][x] = 0;   // (the earlier doors open, for the reckoning)
+    const reach = [...dist([1, 1], shut)].filter(([, v]) => v > 8).sort((a, b) => b[1] - a[1]), half = reach.slice(0, Math.max(1, Math.ceil(reach.length * 0.5)));
+    place(half.map(([key]) => key.split(",").map(Number)), "key");
+    for (let m = 0; m < k; m++) for (const [x, y] of doorKeys[m]) grid[y][x] = 2;
+  }
+  // closets of treasure: a dead end shut behind a door of its own, its key loose somewhere before it
+  const deadEnds = []; for (let j = 0; j < cs; j++) for (let i = 0; i < cs; i++) { const ways = D.filter(([di, dj]) => { if (i + di < 0 || i + di >= cs || j + dj < 0 || j + dj >= cs) return false; return passage(i, j, di, dj).every(([x, y]) => grid[y][x] !== 1); }); if (ways.length === 1 && (i || j) && !(Math.floor(far[0] / 3) === i && Math.floor(far[1] / 3) === j)) deadEnds.push([i, j, ways[0]]); }
+  rnd.shuffle(deadEnds);
+  for (const [i, j, [di, dj]] of deadEnds.slice(0, 1 + Math.floor(n / 7))) {
+    const g = passage(i, j, di, dj); if (g.some(([x, y]) => grid[y][x] !== 0) || cellTiles(i, j).some(([x, y]) => taken.has(`${x},${y}`))) continue;
+    const shut = new Set(blocked); for (const [x, y] of g) shut.add(`${x},${y}`);
+    const before = [...dist([1, 1], shut)].filter(([, v]) => v > 6).map(([key]) => key.split(",").map(Number));
+    if (!before.length) continue;
+    for (const [x, y] of g) grid[y][x] = 2; fl.doors.push(g);
+    place(before, "key"); const [tx, ty] = cellTiles(i, j)[rnd.int(0, 3)]; taken.add(`${tx},${ty}`); fl.items.push({ x: tx, y: ty, kind: "chest" });
+    for (const [x, y] of cellTiles(i, j)) if (!taken.has(`${x},${y}`) && rnd.chance(0.5)) { taken.add(`${x},${y}`); fl.items.push({ x, y, kind: "gold", big: true }); }
+  }
+  // the rest: draughts, gold, a fire flask now and then, a chest on some floors; lairs and monsters away from the start
+  const all = []; for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (open(x, y)) all.push([x, y]);
+  const away = all.filter(([x, y]) => Math.abs(x - 1) + Math.abs(y - 1) > 10);
+  for (let k = 0; k < 3 + Math.floor(cs / 4); k++) place(away, "draught");
+  for (let k = 0; k < 6 + Math.floor(n / 2); k++) place(away, "gold");
+  if (n % 2 === 1 || rnd.chance(0.4)) place(away, "flask");
+  if (n % 5 === 0 || rnd.chance(0.25)) place(away, "chest");
+  const depth = CM.fortDepth(n), pick = (r) => { const g = depth > 20 ? CM.deepGroup(depth, r, 2) : CM.monsterGroup(depth, r, 2); return (g[0] && (g[0].kind || g[0].name)) || "Goblin"; };
+  for (let k = 0; k < 3 + Math.floor(n / 2); k++) { const it = place(away, "lair"); if (it) { fl.items.pop(); fl.lairs.push({ x: it.x, y: it.y, kind: pick(rnd) }); } }
+  for (let k = 0; k < 6 + n; k++) { const it = place(away, "mon"); if (it) { fl.items.pop(); fl.spawns.push({ x: it.x, y: it.y, kind: pick(rnd) }); } }
+  if (n % 5 === 0 && n < CM.FORT_FLOORS) fl.warden = { x: far[0], y: far[1], kind: pick(rnd) };   // (a champion at the stairs, every fifth floor)
+  if (n === CM.FORT_FLOORS) fl.marshal = { x: far[0], y: far[1] };
+  return fl;
+};
+
+// ---- the run: one fighter on one floor ----
+CM.FortRun = class {
+  constructor(game, heroIndex, n) {
+    this.game = game; this.heroIndex = heroIndex; this.hero = game.party[heroIndex]; this.n = n;
+    this.fl = CM.makeFortFloor(n, game.seed); this.grid = this.fl.grid;
+    this.x = this.fl.start[0]; this.y = this.fl.start[1]; this.face = 0; this.t = 0; this.acc = 0; this.cool = 0; this.swingAt = -9; this.events = [];
+    this.keys = 0; this.flasks = 0; this.gold = 0; this.loot = []; this.xp = 0; this.kills = 0; this.over = null; this.ids = 0; this.doorsOpened = 0; this.lastHurt = -9;
+    this.level = Math.max(1, Math.round(CM.FT.level + n * CM.FT.levelPer)); this.rnd = new CM.Random(CM.hashSeed(`${game.seed}:fortrun:${n}`));
+    this.items = this.fl.items.map((it) => Object.assign({ taken: false }, it));
+    this.mons = this.fl.spawns.map((s) => this.makeMon(s.kind, s.x + 0.5, s.y + 0.5));
+    this.lairs = this.fl.lairs.map((L) => ({ id: ++this.ids, x: L.x + 0.5, y: L.y + 0.5, kind: L.kind, hp: CM.FT.genHp + n * CM.FT.genPer, max: CM.FT.genHp + n * CM.FT.genPer, t: this.rnd.next() * CM.FT.genEvery, children: 0, hitAt: -9 }));
+    if (this.fl.warden) { const o = this.makeMon(this.fl.warden.kind, this.fl.warden.x + 0.5, this.fl.warden.y + 0.5); o.m.max = o.m.hp = o.m.max * 4; o.m.atk = Math.round(o.m.atk * 1.4); o.m.xp *= 4; o.m.gold *= 4; o.scale = 1.45; o.boss = "warden"; o.name = `the Warden of floor ${n}`; this.mons.push(o); }
+    if (this.fl.marshal) { const m = CM.makeMonster(CM.FORT_MARSHAL, this.level + 4, this.rnd); m.max = m.hp = m.max * 12; m.atk = Math.round(m.atk * 1.6); m.xp *= 12; m.gold *= 10; const o = { id: ++this.ids, m, kind: CM.FORT_MARSHAL.name, x: this.fl.marshal.x + 0.5, y: this.fl.marshal.y + 0.5, cd: 1, hitAt: -9, lungeAt: -9, fellAt: null, scale: 2, boss: "marshal", name: "the Iron Marshal", charge: 0, slamT: 6 }; this.mons.push(o); this.marshal = o; }
+    this.floorGold = 0; this.floorLoot = [];
+    this.flow = null; this.flowT = 0;
+  }
+  makeMon(kind, x, y) { const K = CM.monsterKind(kind) || CM.monsterKind("Goblin"), m = CM.makeMonster(K, this.level, this.rnd); return { id: ++this.ids, m, kind: K.name, x, y, cd: 0.5 + this.rnd.next(), hitAt: -9, lungeAt: -9, fellAt: null, ranged: K.ability === "ranged", shotT: 1 + this.rnd.next() * 2 }; }
+  living() { return this.mons.filter((o) => o.m.hp > 0); }
+  tile(x, y) { const r = this.grid[Math.floor(y)]; return r === undefined ? 1 : r[Math.floor(x)] === undefined ? 1 : r[Math.floor(x)]; }
+  free(x, y, r) { return this.tile(x - r, y - r) === 0 && this.tile(x + r, y - r) === 0 && this.tile(x - r, y + r) === 0 && this.tile(x + r, y + r) === 0; }
+  clear(x0, y0, x1, y1) { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 3); for (let i = 1; i < n; i++) if (this.tile(x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n) !== 0) return false; return true; }
+  // the way to the hero from every tile, kept fresh a few times a second: the monsters follow it down
+  flowField() {
+    const hx = Math.floor(this.x), hy = Math.floor(this.y), key = `${hx},${hy}`;
+    if (this.flow && this.flow.key === key && this.t - this.flowT < 0.5) return this.flow;
+    const S = this.fl.size, d = new Int16Array(S * S).fill(-1), q = [hx + hy * S]; d[q[0]] = 0;
+    for (let h = 0; h < q.length; h++) { const i = q[h], x = i % S, y = (i - x) / S; if (d[i] > 40) continue; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, j = nx + ny * S; if (nx < 0 || ny < 0 || nx >= S || ny >= S || d[j] >= 0 || this.grid[ny][nx] !== 0) continue; d[j] = d[i] + 1; q.push(j); } }
+    this.flowT = this.t; return (this.flow = { key, d, S });
+  }
+  // ---- the clock ----
+  update(dt, input = {}) {
+    if (this.over) return;
+    this.acc += Math.min(0.25, dt); if (input.bomb) this.bombWanted = true;
+    while (this.acc >= CM.FT.step) { this.acc -= CM.FT.step; this.tick(CM.FT.step, input); if (this.over) break; }
+  }
+  tick(dt, input) {
+    const T = CM.FT, h = this.hero; this.t += dt; this.cool = Math.max(0, this.cool - dt);
+    let mx = (input.right ? 1 : 0) - (input.left ? 1 : 0), my = (input.down ? 1 : 0) - (input.up ? 1 : 0);
+    if (mx || my) { const k = Math.hypot(mx, my); mx /= k; my /= k; if (input.aim === null || input.aim === undefined) this.face = Math.atan2(my, mx); }
+    if (input.aim !== null && input.aim !== undefined) this.face = input.aim;
+    const sp = T.speed * dt, nx = this.x + mx * sp, ny = this.y + my * sp, R = T.radius;
+    if (this.free(nx, this.y, R)) this.x = nx; else this.bump(nx, this.y);
+    if (this.free(this.x, ny, R)) this.y = ny; else this.bump(this.x, ny);
+    if (input.attack && this.cool <= 0) this.swing();
+    if (this.bombWanted) { this.bombWanted = false; this.throwFlask(); }
+    this.pickUp();
+    for (const o of this.mons) if (o.m.hp > 0) this.stepMon(o, dt);
+    for (const L of this.lairs) if (L.hp > 0) this.stepLair(L, dt);
+    if (this.bolts) { for (const b of this.bolts) { b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; if (this.tile(b.x, b.y) !== 0) b.life = 0; else if (Math.hypot(b.x - this.x, b.y - this.y) < 0.4) { b.life = 0; this.hurt(b.from, this.game.damage(Math.floor(b.from.m.atk / 2), 0, this.heroDf()) * 0.8); } } this.bolts = this.bolts.filter((b) => b.life > 0); }
+    if (h.hp <= 0) { h.hp = 0; this.over = "dead"; this.events.push({ kind: "dead" }); }
+  }
+  // walked into a door: a key opens it, and the whole of it
+  bump(x, y) {
+    const r = CM.FT.radius;
+    for (const [cx, cy] of [[x - r, y - r], [x + r, y - r], [x - r, y + r], [x + r, y + r]].map(([a, b]) => [Math.floor(a), Math.floor(b)])) {
+      if (!this.grid[cy] || this.grid[cy][cx] !== 2) continue;
+      if (!this.keys) { if (this.t - (this.lockedSaid || -9) > 2) { this.lockedSaid = this.t; this.events.push({ kind: "locked" }); } return; }
+      const door = this.fl.doors.find((g) => g.some(([gx, gy]) => gx === cx && gy === cy)) || [[cx, cy]];
+      for (const [gx, gy] of door) this.grid[gy][gx] = 0;
+      this.keys -= 1; this.doorsOpened += 1; this.flow = null; this.events.push({ kind: "door", at: [cx, cy] }); return;
+    }
+  }
+  heroDf() { return this.game.effective(this.hero).df + (CM.gearDefence ? CM.gearDefence(this.hero) : 0); }
+  // the swing: everything in the arc in front, within reach, struck
+  swing() {
+    const T = CM.FT, g = this.game, h = this.hero, eff = g.effective(h), power = h.weapon ? h.weapon.power || 1 : 1;
+    this.cool = T.swingCd; this.swingAt = this.t; let hit = 0;
+    const inArc = (x, y, r) => { const d = Math.hypot(x - this.x, y - this.y); if (d > T.reach + r) return false; let a = Math.atan2(y - this.y, x - this.x) - this.face; a = Math.atan2(Math.sin(a), Math.cos(a)); return Math.abs(a) <= T.arc / 2 || d < 0.45; };
+    for (const o of this.living()) if (inArc(o.x, o.y, T.monR * (o.scale || 1))) {
+      const dmg = Math.max(1, Math.round(g.damage(eff.atk, power, o.m.df) * (h.cls === "Rogue" && this.rnd.chance(0.25) ? 2 : 1)));
+      o.m.hp -= dmg; o.hitAt = this.t; hit++;
+      const k = Math.hypot(o.x - this.x, o.y - this.y) || 1, push = o.boss ? 0.05 : 0.22; if (this.free(o.x + ((o.x - this.x) / k) * push, o.y + ((o.y - this.y) / k) * push, T.monR)) { o.x += ((o.x - this.x) / k) * push; o.y += ((o.y - this.y) / k) * push; }   // (a blow knocks it back)
+      this.events.push({ kind: "hit", at: [o.x, o.y], amount: dmg, mon: o });
+      if (o.m.hp <= 0) this.fall(o);
+    }
+    for (const L of this.lairs) if (L.hp > 0 && inArc(L.x, L.y, 0.4)) { const dmg = Math.max(1, Math.round(g.damage(eff.atk, power, 0) * 0.6)); L.hp -= dmg; L.hitAt = this.t; hit++; this.events.push({ kind: "lairhit", at: [L.x, L.y], amount: dmg }); if (L.hp <= 0) { this.xp += 12 + this.n * 4; this.events.push({ kind: "lairdown", at: [L.x, L.y] }); } }
+    this.events.push({ kind: "swing", hit });
+  }
+  fall(o) {
+    o.fellAt = this.t; this.kills += 1; this.xp += o.m.xp; const gold = Math.round(o.m.gold * 0.5); this.gold += gold; this.floorGold += gold;
+    this.events.push({ kind: "die", at: [o.x, o.y], mon: o });
+    if (o.lair) o.lair.children = Math.max(0, o.lair.children - 1);
+    if (o.boss) {
+      const rnd = new CM.Random(CM.hashSeed(`${this.game.seed}:fortboss:${this.n}`)), depth = CM.fortDepth(this.n) + (o.boss === "marshal" ? 6 : 2), item = CM.affix(CM.makeItem(depth, rnd), depth + 2, rnd); item.unknown = false;
+      this.loot.push(item); this.floorLoot.push(item); this.events.push({ kind: "bossdown", mon: o, item });
+    }
+  }
+  // the monsters: down the flow toward the hero, a blow when close, a bolt for those who shoot
+  stepMon(o, dt) {
+    const T = CM.FT, d = Math.hypot(this.x - o.x, this.y - o.y), R = T.monR * Math.min(1.4, o.scale || 1);
+    o.cd = Math.max(0, o.cd - dt);
+    if (d > 16 && !o.boss) return;                                      // (asleep, far off)
+    if (o.boss === "marshal") this.marshalAct(o, dt, d);
+    const reach = T.monReach + (o.scale ? (o.scale - 1) * 0.35 : 0);
+    if (d < reach) { if (o.cd <= 0) { o.cd = T.monCd * (o.boss ? 0.8 : 1); o.lungeAt = this.t; this.hurt(o, this.game.damage(Math.floor(o.m.atk / 2), 0, this.heroDf())); } return; }
+    if (o.ranged && d < 7 && this.clear(o.x, o.y, this.x, this.y)) { o.shotT -= dt; if (o.shotT <= 0) { o.shotT = 2.4; const a = Math.atan2(this.y - o.y, this.x - o.x); (this.bolts = this.bolts || []).push({ x: o.x, y: o.y, vx: Math.cos(a) * 6, vy: Math.sin(a) * 6, life: 2, from: o }); this.events.push({ kind: "monshoot", mon: o }); } if (d < 4) return; }
+    const F = this.flowField(), S = F.S, here = F.d[Math.floor(o.x) + Math.floor(o.y) * S];
+    let tx = this.x, ty = this.y;
+    if (!(d < 1.6 && this.clear(o.x, o.y, this.x, this.y)) && here > 0) {
+      let best = here, bx = null, by = null; const cx = Math.floor(o.x), cy = Math.floor(o.y);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const v = F.d[cx + dx + (cy + dy) * S]; if (v >= 0 && v < best) { best = v; bx = cx + dx + 0.5; by = cy + dy + 0.5; } }
+      if (bx !== null) { tx = bx; ty = by; }
+    } else if (here < 0 && !(d < 2)) return;                            // (no way to the hero from here)
+    const a = Math.atan2(ty - o.y, tx - o.x), sp = (1.2 + (o.m.speed || 10) * 0.12) * (o.charging ? 2.6 : 1) * dt, nx = o.x + Math.cos(a) * sp, ny = o.y + Math.sin(a) * sp;
+    const ok = (x, y) => this.free(x, y, R * 0.9) && Math.hypot(x - this.x, y - this.y) > T.radius + R * 0.8 && !this.mons.some((q) => q !== o && q.m.hp > 0 && Math.hypot(q.x - x, q.y - y) < R * 1.5 && Math.hypot(q.x - this.x, q.y - this.y) < Math.hypot(o.x - this.x, o.y - this.y));
+    if (ok(nx, o.y)) o.x = nx;
+    if (ok(o.x, ny)) o.y = ny;
+  }
+  // the Iron Marshal: he charges across his hall, and when he strikes the floor the ring of it hurts
+  marshalAct(o, dt, d) {
+    o.slamT -= dt;
+    if (o.charging) { o.charging -= dt; if (o.charging <= 0) o.charging = 0; }
+    else if (d > 3 && d < 9 && o.cd <= 0 && this.rnd.chance(dt * 0.6)) { o.charging = 0.9; this.events.push({ kind: "charge", mon: o }); }
+    if (o.slamT <= 0) {
+      o.slamT = o.m.hp < o.m.max / 2 ? 4 : 6; this.events.push({ kind: "slam", at: [o.x, o.y] });
+      if (d < 3.2) this.hurt(o, this.game.damage(Math.floor(o.m.atk / 2), 0, this.heroDf()) * 1.3);
+      if (o.m.hp < o.m.max / 2) for (let k = 0; k < 2; k++) { const m = this.makeMon(this.fl.lairs[0] ? this.fl.lairs[0].kind : "Skeleton", o.x + (k ? 1 : -1), o.y); if (this.free(m.x, m.y, CM.FT.monR)) this.mons.push(m); }
+    }
+  }
+  hurt(o, dmg) {
+    const h = this.hero; dmg = Math.max(1, Math.round(dmg * CM.FT.hit * Math.pow(Math.min(2, Math.max(0.3, this.level / Math.max(1, h.level))), 0.6)));
+    h.hp -= dmg; this.lastHurt = this.t; this.events.push({ kind: "hurt", amount: dmg, mon: o });
+  }
+  // a lair sends out its kind while the hero is near and its brood is small
+  stepLair(L, dt) {
+    if (Math.hypot(this.x - L.x, this.y - L.y) > CM.FT.genNear) return;
+    L.t -= dt; if (L.t > 0) return;
+    L.t = Math.max(1.6, CM.FT.genEvery - this.n * 0.08);
+    if (L.children >= CM.FT.genCap + Math.floor(this.n / 7)) return;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = L.x + dx * 0.8, y = L.y + dy * 0.8; if (this.free(x, y, CM.FT.monR)) { const o = this.makeMon(L.kind, x, y); o.lair = L; o.m.xp = Math.ceil(o.m.xp / 2); o.m.gold = Math.ceil(o.m.gold / 3); L.children++; this.mons.push(o); this.events.push({ kind: "spawn", at: [x, y] }); return; } }
+  }
+  // a fire flask thrown: everything near takes the fire
+  throwFlask() {
+    if (!this.flasks) return; this.flasks -= 1; const g = this.game, eff = g.effective(this.hero);
+    this.events.push({ kind: "flask", at: [this.x, this.y] });
+    for (const o of this.living()) if (Math.hypot(o.x - this.x, o.y - this.y) < CM.FT.bombReach && this.clear(this.x, this.y, o.x, o.y)) { const dmg = Math.round((eff.atk * 2 + 8 + this.n * 3) * (o.boss ? 0.5 : 1)); o.m.hp -= dmg; o.hitAt = this.t; this.events.push({ kind: "hit", at: [o.x, o.y], amount: dmg, mon: o }); if (o.m.hp <= 0) this.fall(o); }
+    for (const L of this.lairs) if (L.hp > 0 && Math.hypot(L.x - this.x, L.y - this.y) < CM.FT.bombReach) { L.hp -= 20 + this.n * 3; L.hitAt = this.t; if (L.hp <= 0) { this.xp += 12 + this.n * 4; this.events.push({ kind: "lairdown", at: [L.x, L.y] }); } }
+  }
+  // walked over: taken
+  pickUp() {
+    const h = this.hero;
+    for (const it of this.items) {
+      if (it.taken || Math.hypot(it.x + 0.5 - this.x, it.y + 0.5 - this.y) > 0.6) continue;
+      it.taken = true;
+      if (it.kind === "key") this.keys += 1;
+      else if (it.kind === "draught") h.hp = Math.min(h.max, h.hp + Math.ceil(h.max * CM.FT.draught));
+      else if (it.kind === "flask") this.flasks += 1;
+      else if (it.kind === "gold") { const v = Math.round((it.big ? 30 : 10) * (1 + this.n * 0.35) * (0.7 + this.rnd.next() * 0.6)); this.gold += v; this.floorGold += v; it.value = v; }
+      else if (it.kind === "chest") { const rnd = new CM.Random(CM.hashSeed(`${this.game.seed}:fortchest:${this.n}:${it.x},${it.y}`)), depth = CM.fortDepth(this.n), item = CM.affix(CM.makeItem(depth, rnd), depth + 1, rnd); item.unknown = false; this.loot.push(item); this.floorLoot.push(item); it.item = item; }
+      this.events.push({ kind: "pickup", item: it });
+    }
+  }
+  // the stairs: at them, and on the last floor the Marshal down
+  stairsOpen() { return !this.marshal || this.marshal.m.hp <= 0; }
+  atStairs() { const S = this.fl.stairs; return this.stairsOpen() && Math.hypot(S[0] + 0.5 - this.x, S[1] + 0.5 - this.y) < 0.9; }
+  bossInSight() { return this.living().find((o) => o.boss && Math.hypot(o.x - this.x, o.y - this.y) < 9) || null; }
+};
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -18178,6 +18588,7 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
+<div class="dialog" id="dlg-fortress"><div class="box"><h2>The Fortress</h2><p class="lore">The doors are dark wood bound in iron, three men high, and they open for one at a time. Below are twenty floors of maze; at the bottom, the Iron Marshal.</p><div id="fortress-who"></div><div class="small" id="fortress-note"></div><div class="row"><button class="close">Not now</button></div></div></div>
 <div class="dialog" id="dlg-claudeita"><div class="box"><h2>Claudeita's cave</h2><p class="lore">The mouth breathes warm air that smells of wet stone and smoke. Whoever goes in goes alone, with a wand: a caster, who knows what a wand is for.</p><div id="claudeita-who"></div><div class="small" id="claudeita-note"></div><div class="row"><button class="close">Not now</button></div></div></div>
 <div class="dialog" id="dlg-magetower"><div class="box"><h2>The Mage Tower</h2><p class="lore">The doors are taller than three men, and warm to the touch. Whoever goes in, goes in alone: a caster, or someone with a bow.</p><div id="magetower-who"></div><div class="small" id="magetower-note"></div><div class="row"><button class="close">Not now</button></div></div></div>
 <div class="dialog" id="dlg-cabin"><div class="box cabinbox"><div id="cabin-body"></div></div></div>
@@ -19464,7 +19875,8 @@ Object.assign(CM.UI.prototype, {
   refresh() {
     const g = this.game;
     document.body.classList.toggle("intower", g.mode === "tower");   // (the Mage Tower's own HUD)
-    document.body.classList.toggle("incave", g.mode === "cave");     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
+    document.body.classList.toggle("incave", g.mode === "cave");
+    document.body.classList.toggle("infort", g.mode === "fortress");  // (the Fortress: its canvas over the view, 76d-fortress.js)     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
     if (this.screen === "title") { this.refreshTitle(); return; }
     if (this.screen !== "play") return;
     const fl = g.floor;
@@ -19486,6 +19898,7 @@ Object.assign(CM.UI.prototype, {
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}${g.autoOn() ? ", " + CM.t("hud.automatic") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
     if (g.towerRun) { this.$("#side .where").textContent = CM.towerFloorName(g.towerRun.n); }
+    if (g.fortRun) this.$("#side .where").textContent = CM.fortFloorName(g.fortRun.n);
     if (g.caveRun) { const pl = g.caveRun.player; this.$("#side .where").textContent = `Claudeita's cave - ${pl.y > CM.CV.SURFACE ? CM.CV_BIOMES[CM.cvBiomeAt(Math.floor(pl.y))].name : "the mouth"}, ${g.caveRun.depth()} m`; }
     if (fl && CM.isUndercroft(fl.number)) { this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   The Undercroft`; this.$("#side .where").textContent = `${CM.UNDERCROFT_NAMES[-fl.number - 2].charAt(0).toUpperCase() + CM.UNDERCROFT_NAMES[-fl.number - 2].slice(1)}`; }
     { const fo = this.$("#side .follower"), f = g.follower; if (fo) { fo.textContent = f ? `Behind: ${g.followerName()}${f.away ? " (waiting above)" : ` (${Math.max(0, f.hp)}/${f.max})`}` : ""; fo.title = f ? CM.FOLLOWERS[f.id].what : ""; } }
@@ -19576,6 +19989,13 @@ Object.assign(CM.UI.prototype, {
       const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.refresh(); }); box.appendChild(b); };
       if (at) { if (run.n < CM.TOWER_FLOORS) add(`Climb to floor ${run.n + 1} (E)`, () => g.towerClimb(false), "primary"); add(`Leave the tower - floor ${run.n} counted (L)`, () => g.towerClimb(true)); }
       else add("Leave the tower (this floor is lost)", () => g.leaveMageTower("left"));
+      return;
+    }
+    if (g.mode === "fortress") {                                         // the Fortress: at the stairs, down or out; else out, the floor lost
+      const run = g.fortRun, at = run && run.atStairs(), key = `fort:${at}:${run && run.n}`; if (box.dataset.mode === key) return; box.dataset.mode = key; box.innerHTML = "";
+      const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.refresh(); }); box.appendChild(b); };
+      if (at) { add(run.n < CM.FORT_FLOORS ? `Down to floor ${run.n + 1} (E)` : "Out into the daylight (E)", () => g.fortStairs(false), "primary"); if (run.n < CM.FORT_FLOORS) add(`Out, with everything (L)`, () => g.fortStairs(true)); }
+      else add("Turn back (this floor's finds are lost)", () => { if (g.fortRun && !g.fortRun.over) g.leaveFortress("fled"); });
       return;
     }
     if (g.mode === "cave") {                                             // Claudeita's cave: out, empty-handed
@@ -20781,6 +21201,132 @@ Object.assign(CM.UI.prototype, {
   },
 });
 
+// ---- 76d-fortress.js ----
+"use strict";
+// The Fortress, the window's side (the fourteenth update): the doors' dialog (who goes in), and the floors drawn from
+// above on a canvas laid over the view, as a gauntlet is - the maze in the depth's own stone (its walls with their faces
+// to the south, the doors of dark wood, the stairs), the keys, draughts, gold, flasks and chests, the lairs, the
+// monsters in the game's own pictures, the fighter as a token with their portrait and the swing of their blade, the
+// dark around, and the HUD. The run is 64j-fortress.js; the rules 61h-fortress.js; the frame loop 80-main.js.
+const FORT_TILE = 32;
+Object.assign(CM.UI.prototype, {
+  openFortress() {
+    const g = this.game, box = this.$("#fortress-who"), note = this.$("#fortress-note"), F = g.fort || { cleared: 0 };
+    box.innerHTML = `<div class="list-title">Who goes in (floor ${Math.min(CM.FORT_FLOORS, (F.cleared || 0) + 1)} of ${CM.FORT_FLOORS})</div>${g.fortChoices().map((c) => `<div class="recruit" style="grid-template-columns: 1fr auto"><div><b>${this.esc(c.name)}</b> the ${this.esc(c.cls)}${c.why ? `<br><small>${this.esc(c.why)}</small>` : ""}</div><div class="hire"><button data-fort-hero="${c.i}" ${c.why ? "disabled" : ""}>Go in</button></div></div>`).join("")}
+      <p class="small">Keys open the doors (all of a door at once). Lairs send monsters until they are broken. Draughts mend; a fire flask (Q) burns everything near. At the stairs, go on down or come out with everything you carry. Die, and you wake at these doors with a tenth of your health and none of it - but the experience is yours.</p>`;
+    for (const b of box.querySelectorAll("[data-fort-hero]")) b.addEventListener("click", () => { const why = g.enterFortress(Number(b.dataset.fortHero)); note.textContent = why || ""; if (!why) { this.closeDialogs(); this.refresh(); } });
+    note.textContent = "";
+    this.openDialog("#dlg-fortress");
+  },
+  fortCanvas() {
+    let c = this.$("#fortcanvas");
+    if (!c) { c = document.createElement("canvas"); c.id = "fortcanvas"; this.$("#view").appendChild(c); }
+    const r = c.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1), w = Math.max(320, Math.round(r.width * dpr)), h = Math.max(200, Math.round(r.height * dpr));
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    return c;
+  },
+  fortArt(key, make) { this.fortPics = this.fortPics || {}; if (!this.fortPics[key]) { try { this.fortPics[key] = make(); } catch (e) { this.fortPics[key] = null; } } return this.fortPics[key]; },
+  monPic(kind) { return this.fortArt(`mon:${kind}`, () => CM.art.monster(kind === CM.FORT_MARSHAL.name ? CM.FORT_MARSHAL : CM.monsterKind(kind) || CM.monsterKind("Goblin"), kind === CM.FORT_MARSHAL.name)); },
+  // the floor drawn once (again when a door opens): stone underfoot, the walls with their south faces, doors, the stairs
+  fortBackground(run) {
+    const key = `${run.n}:${run.doorsOpened}:${this.game.seed}`; if (this.fortBg && this.fortBg.key === key) return this.fortBg.canvas;
+    const S = run.fl.size, T = FORT_TILE, c = (this.fortBg && this.fortBg.canvas) || document.createElement("canvas"); c.width = c.height = S * T;
+    const p = c.getContext("2d"), G = run.grid, rnd = new CM.Random(CM.hashSeed(`fortbg:${run.n}`)), hatch = this.fortArt(`hatch:${run.n}`, () => CM.art.hatch(CM.themeFor(CM.fortDepth(run.n))));
+    const PAL = [["#3A3530", "#7A7068", "#4A423A"], ["#3A2E2A", "#7A5E52", "#4E3A32"], ["#2E3238", "#66707E", "#3A4048"], ["#2E3428", "#62705A", "#3A4434"]][Math.floor((run.n - 1) / 5) % 4];   // (floor, wall top, wall face: a stone for every five floors)
+    const shade = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = (v) => Math.max(0, Math.min(255, Math.round(v * k))); return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`; };
+    p.fillStyle = "#000"; p.fillRect(0, 0, c.width, c.height);
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const v = G[y][x], X = x * T, Y = y * T;
+      if (v !== 1) {                                                       // flagstones, two or four to a tile, and their mortar
+        p.fillStyle = shade(PAL[0], 0.85 + rnd.next() * 0.3); p.fillRect(X, Y, T, T);
+        p.strokeStyle = "rgba(0,0,0,0.45)"; p.lineWidth = 1.5; const split = rnd.next() < 0.5; p.strokeRect(X + 0.75, Y + 0.75, T - 1.5, T - 1.5); p.beginPath(); if (split) { p.moveTo(X, Y + T / 2); p.lineTo(X + T, Y + T / 2); } else { p.moveTo(X + T / 2, Y); p.lineTo(X + T / 2, Y + T); } p.stroke();
+        for (let k = 0; k < 5; k++) { p.fillStyle = `rgba(${rnd.next() < 0.5 ? "0,0,0" : "255,255,255"},0.06)`; p.fillRect(X + rnd.next() * T, Y + rnd.next() * T, 3, 2); }
+        if (G[y - 1] && G[y - 1][x] === 1) { const g = p.createLinearGradient(0, Y, 0, Y + T * 0.45); g.addColorStop(0, "rgba(0,0,0,0.55)"); g.addColorStop(1, "rgba(0,0,0,0)"); p.fillStyle = g; p.fillRect(X, Y, T, T * 0.45); }   // (the wall's shadow)
+        if (G[y][x - 1] === 1) { p.fillStyle = "rgba(0,0,0,0.25)"; p.fillRect(X, Y, T * 0.15, T); }
+      }
+      if (v === 1) {                                                       // the wall: its top in light courses, and where it faces the south, its face
+        const face = G[y + 1] && G[y + 1][x] !== 1, top = face ? T * 0.55 : T;
+        p.fillStyle = shade(PAL[1], 0.9 + rnd.next() * 0.2); p.fillRect(X, Y, T, top);
+        p.strokeStyle = "rgba(0,0,0,0.35)"; p.lineWidth = 1; for (let j = 0; j < 2; j++) { const yy = Y + (top / 2) * j; p.strokeRect(X + (j ? T / 2 : 0) + 0.5, yy + 0.5, T - 1, top / 2 - 1); }
+        p.fillStyle = "rgba(255,255,255,0.12)"; if (!(G[y - 1] && G[y - 1][x] === 1)) p.fillRect(X, Y, T, 2);
+        if (face) { p.fillStyle = shade(PAL[2], 0.9 + rnd.next() * 0.15); p.fillRect(X, Y + top, T, T - top); p.strokeStyle = "rgba(0,0,0,0.4)"; for (let j = 0; j < 2; j++) p.strokeRect(X + (j ? -T / 3 : T / 6) + 0.5, Y + top + j * (T - top) / 2 + 0.5, T * 0.66, (T - top) / 2 - 1); p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(X, Y + T - 2, T, 2); }
+      } else if (v === 2) {                                                // a door: dark planks, iron bands, a gold rim (a key opens it)
+        p.fillStyle = "#4A2C16"; p.fillRect(X + 2, Y + 2, T - 4, T - 4); p.fillStyle = "rgba(0,0,0,0.4)"; for (let k = 1; k < 4; k++) p.fillRect(X + 2 + k * (T - 4) / 4, Y + 2, 1.5, T - 4);
+        p.fillStyle = "#26262C"; p.fillRect(X + 2, Y + T * 0.28, T - 4, 3); p.fillRect(X + 2, Y + T * 0.68, T - 4, 3); p.strokeStyle = "#E8C050"; p.lineWidth = 2; p.strokeRect(X + 1, Y + 1, T - 2, T - 2);
+        p.fillStyle = "#E8C050"; p.beginPath(); p.arc(X + T / 2, Y + T / 2, 3, 0, Math.PI * 2); p.fill(); p.fillRect(X + T / 2 - 1, Y + T / 2, 2, 6);   // (a keyhole)
+      }
+    }
+    const [sx, sy] = run.fl.stairs; if (hatch) p.drawImage(hatch, sx * T - T * 0.1, sy * T - T * 0.1, T * 1.2, T * 1.2); else { p.fillStyle = "#111"; p.fillRect(sx * T, sy * T, T, T); }
+    this.fortBg = { key, canvas: c };
+    return c;
+  },
+  drawFortress(run, now) {
+    const c = this.fortCanvas(), p = c.getContext("2d"), T = Math.max(26, Math.round(c.height / 15)), k = T / FORT_TILE, bg = this.fortBackground(run);
+    const ox = run.x * T - c.width / 2, oy = run.y * T - c.height / 2, X = (x) => x * T - ox, Y = (y) => y * T - oy;
+    this.fortView = { ox, oy, T };
+    p.setTransform(1, 0, 0, 1, 0, 0); p.imageSmoothingEnabled = true; p.fillStyle = "#000"; p.fillRect(0, 0, c.width, c.height);
+    p.drawImage(bg, -ox, -oy, bg.width * k, bg.height * k);
+    const t = run.t, pics = { key: () => CM.art.key(), chest: () => CM.art.chest() }, near = (x, y) => Math.abs(x * T - ox - c.width / 2) < c.width && Math.abs(y * T - oy - c.height / 2) < c.height;
+    // the lairs and the things on the floor
+    for (const L of run.lairs) { if (!near(L.x, L.y)) continue; const pic = this.fortArt("nest", () => CM.art.nest()); p.globalAlpha = L.hp > 0 ? 1 : 0.35; if (pic) p.drawImage(pic, X(L.x) - T * 0.6, Y(L.y) - T * 0.6, T * 1.2, T * 1.2); if (L.hp > 0) { p.fillStyle = `rgba(200,40,255,${0.25 + 0.15 * Math.sin(t * 4 + L.id)})`; p.beginPath(); p.arc(X(L.x), Y(L.y), T * 0.5, 0, Math.PI * 2); p.fill(); if (t - L.hitAt < 0.15) { p.fillStyle = "rgba(255,255,255,0.5)"; p.fill(); } } p.globalAlpha = 1; }
+    for (const it of run.items) {
+      if (it.taken || !near(it.x, it.y)) continue; const cx = X(it.x + 0.5), cy = Y(it.y + 0.5), bob = Math.sin(t * 3 + it.x) * T * 0.04;
+      if (it.kind === "key" || it.kind === "chest") { const pic = this.fortArt(it.kind, pics[it.kind]); if (pic) p.drawImage(pic, cx - T * 0.4, cy - T * 0.45 + bob, T * 0.8, T * 0.8); if (it.kind === "key") { p.fillStyle = "rgba(255,220,90,0.25)"; p.beginPath(); p.arc(cx, cy, T * 0.45, 0, Math.PI * 2); p.fill(); } }
+      else if (it.kind === "gold") { p.fillStyle = "#8A6A1A"; for (let j = 0; j < (it.big ? 7 : 4); j++) { const a = j * 2.4, r = T * 0.12 * Math.sqrt(j); p.beginPath(); p.ellipse(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.6 + T * 0.1, T * 0.13, T * 0.08, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = j % 2 ? "#F2C230" : "#E0A820"; } }
+      else { const red = it.kind === "draught"; p.fillStyle = red ? "#C0283A" : "#E87A20"; p.beginPath(); p.arc(cx, cy + T * 0.05 + bob, T * 0.18, 0, Math.PI * 2); p.fill(); p.fillRect(cx - T * 0.05, cy - T * 0.25 + bob, T * 0.1, T * 0.16); p.fillStyle = "#D8C8A0"; p.fillRect(cx - T * 0.06, cy - T * 0.3 + bob, T * 0.12, T * 0.06); p.fillStyle = "rgba(255,255,255,0.5)"; p.beginPath(); p.arc(cx - T * 0.06, cy + bob, T * 0.05, 0, Math.PI * 2); p.fill(); }
+    }
+    // the monsters, back to front
+    const order = run.mons.filter((o) => (o.m.hp > 0 || (o.fellAt !== null && t - o.fellAt < 0.6)) && near(o.x, o.y)).sort((a, b) => a.y - b.y);
+    for (const o of order) {
+      const pic = this.monPic(o.kind), sc = (o.scale || 1) * T * 1.15, dead = o.fellAt !== null ? (t - o.fellAt) / 0.6 : 0;
+      let lx = 0, ly = 0; if (t - o.lungeAt < 0.25) { const a = Math.atan2(run.y - o.y, run.x - o.x), s = Math.sin(((t - o.lungeAt) / 0.25) * Math.PI) * T * 0.25; lx = Math.cos(a) * s; ly = Math.sin(a) * s; }
+      const cx = X(o.x) + lx, cy = Y(o.y) + ly;
+      p.fillStyle = "rgba(0,0,0,0.4)"; p.beginPath(); p.ellipse(cx, cy + T * 0.3 * (o.scale || 1), sc * 0.32, sc * 0.12, 0, 0, Math.PI * 2); p.fill();
+      if (o.boss) { p.strokeStyle = `rgba(255,${o.boss === "marshal" ? 60 : 160},40,${0.5 + 0.3 * Math.sin(t * 5)})`; p.lineWidth = 3; p.beginPath(); p.ellipse(cx, cy + T * 0.3 * o.scale, sc * 0.4, sc * 0.16, 0, 0, Math.PI * 2); p.stroke(); }
+      p.globalAlpha = 1 - dead; if (t - o.hitAt < 0.12) p.filter = "brightness(2.2) sepia(1) hue-rotate(-30deg) saturate(4)";
+      if (o.charging) p.filter = "brightness(1.4) saturate(2)";
+      if (pic) p.drawImage(pic, cx - sc / 2, cy + T * 0.35 * (o.scale || 1) - sc - dead * T * 0.2, sc, sc * (1 - dead * 0.4)); else { p.fillStyle = o.m.colour || "#888"; p.beginPath(); p.arc(cx, cy, T * 0.35, 0, Math.PI * 2); p.fill(); }
+      p.filter = "none"; p.globalAlpha = 1;
+      if (o.m.hp > 0 && o.m.hp < o.m.max) { const w = T * 0.8 * (o.scale || 1); p.fillStyle = "rgba(30,0,0,0.8)"; p.fillRect(cx - w / 2, cy - sc * 0.75, w, 4); p.fillStyle = "#E53935"; p.fillRect(cx - w / 2, cy - sc * 0.75, w * o.m.hp / o.m.max, 4); }
+    }
+    for (const b of run.bolts || []) { p.fillStyle = "#FF7040"; p.beginPath(); p.arc(X(b.x), Y(b.y), T * 0.12, 0, Math.PI * 2); p.fill(); }
+    // the fighter: a token with their portrait, and the blade's sweep
+    const hx = X(run.x), hy = Y(run.y), hero = run.hero, por = this.fortArt(`por:${hero.cls}`, () => CM.art.portraitDrawn(hero.cls, 64)), hurt = t - run.lastHurt < 0.25;
+    p.fillStyle = "rgba(0,0,0,0.45)"; p.beginPath(); p.ellipse(hx, hy + T * 0.32, T * 0.38, T * 0.14, 0, 0, Math.PI * 2); p.fill();
+    p.save(); p.beginPath(); p.arc(hx, hy, T * 0.36, 0, Math.PI * 2); p.closePath(); p.fillStyle = "#2A2018"; p.fill(); p.clip(); if (por) p.drawImage(por, hx - T * 0.38, hy - T * 0.38, T * 0.76, T * 0.76); p.restore();
+    p.strokeStyle = hurt ? "#FF3A2A" : "#E8C050"; p.lineWidth = 3; p.beginPath(); p.arc(hx, hy, T * 0.36, 0, Math.PI * 2); p.stroke();
+    p.fillStyle = "#E8C050"; p.beginPath(); p.moveTo(hx + Math.cos(run.face) * T * 0.5, hy + Math.sin(run.face) * T * 0.5); p.lineTo(hx + Math.cos(run.face + 0.35) * T * 0.38, hy + Math.sin(run.face + 0.35) * T * 0.38); p.lineTo(hx + Math.cos(run.face - 0.35) * T * 0.38, hy + Math.sin(run.face - 0.35) * T * 0.38); p.fill();   // (which way they face)
+    const sw = (t - run.swingAt) / 0.18;
+    if (sw >= 0 && sw <= 1) { const a0 = run.face - CM.FT.arc / 2, a = a0 + CM.FT.arc * sw; p.strokeStyle = `rgba(255,250,230,${0.85 * (1 - sw * 0.5)})`; p.lineWidth = T * 0.12; p.lineCap = "round"; p.beginPath(); p.arc(hx, hy, T * CM.FT.reach * 0.85, a0, a); p.stroke(); p.strokeStyle = "#D8D8E0"; p.lineWidth = 4; p.beginPath(); p.moveTo(hx + Math.cos(a) * T * 0.35, hy + Math.sin(a) * T * 0.35); p.lineTo(hx + Math.cos(a) * T * CM.FT.reach, hy + Math.sin(a) * T * CM.FT.reach); p.stroke(); p.lineCap = "butt"; }
+    // the dark, and a torch's reach
+    const lg = p.createRadialGradient(hx, hy, T * 2, hx, hy, T * 8.5); lg.addColorStop(0, "rgba(0,0,0,0)"); lg.addColorStop(1, "rgba(0,0,0,0.88)"); p.fillStyle = lg; p.fillRect(0, 0, c.width, c.height);
+    if (this.fortFlashAt && now - this.fortFlashAt < 350) { p.fillStyle = `rgba(255,140,40,${0.45 * (1 - (now - this.fortFlashAt) / 350)})`; p.fillRect(0, 0, c.width, c.height); }
+    // the floating numbers
+    this.fortFloats = (this.fortFloats || []).filter((f) => now - f.at < 800);
+    p.font = `bold ${Math.round(T * 0.45)}px Georgia, serif`; p.textAlign = "center";
+    for (const f of this.fortFloats) { const a = (now - f.at) / 800; p.fillStyle = f.colour.replace("A", `${1 - a}`); p.fillText(f.text, X(f.x), Y(f.y) - T * 0.6 - a * T * 0.8); }
+    p.textAlign = "left";
+    this.fortHud(p, c, run);
+  },
+  fortFloat(x, y, text, colour) { (this.fortFloats = this.fortFloats || []).push({ x, y, text, colour, at: performance.now() }); },
+  fortHud(p, c, run) {
+    const u = Math.max(1, c.width / 960), h = run.hero, F = (px, b) => `${b ? "bold " : ""}${Math.round(px * u)}px Georgia, serif`;
+    p.save(); p.scale(u, u); const W = c.width / u, H = c.height / u;
+    p.fillStyle = "rgba(0,0,0,0.55)"; p.fillRect(10, 10, 250, 64); p.strokeStyle = "#8A6A3A"; p.strokeRect(10, 10, 250, 64);
+    p.fillStyle = "#E8DCB8"; p.font = F(13, true); p.fillText(`${h.name} the ${h.cls}`, 18, 28);
+    p.fillStyle = "rgba(60,0,0,0.9)"; p.fillRect(18, 34, 234, 12); p.fillStyle = "#C83A3A"; p.fillRect(18, 34, 234 * Math.max(0, h.hp) / h.max, 12); p.fillStyle = "#fff"; p.font = F(10, true); p.fillText(`${Math.max(0, Math.ceil(h.hp))} / ${h.max}`, 22, 44);
+    p.font = F(13); p.fillStyle = "#F2C230"; p.fillText(`🗝 ${run.keys}   🔥 ${run.flasks}   ${run.gold} gold   ${run.loot.length ? `${run.loot.length} thing${run.loot.length > 1 ? "s" : ""}` : ""}`, 18, 66);
+    p.textAlign = "center"; p.fillStyle = "#E8C890"; p.font = F(15, true); p.fillText(CM.fortFloorName(run.n), W / 2, 26);
+    const boss = run.bossInSight(); if (boss) { const bw = W * 0.4; p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(W / 2 - bw / 2, 36, bw, 12); p.fillStyle = "#B03020"; p.fillRect(W / 2 - bw / 2, 36, bw * Math.max(0, boss.m.hp) / boss.m.max, 12); p.fillStyle = "#fff"; p.font = F(12, true); p.fillText(boss.name.charAt(0).toUpperCase() + boss.name.slice(1), W / 2, 64); }
+    if (run.atStairs()) { p.fillStyle = "#FFF0C0"; p.font = F(16, true); p.fillText(run.n < CM.FORT_FLOORS ? `The stairs: E to go down to floor ${run.n + 1} - L to come out with everything` : "The way out: E to come up into the daylight", W / 2, H * 0.7); }
+    else if (run.fl.marshal && run.marshal && run.marshal.m.hp > 0 && Math.hypot(run.fl.stairs[0] - run.x, run.fl.stairs[1] - run.y) < 2) { p.fillStyle = "#FFB0A0"; p.font = F(15, true); p.fillText("The Iron Marshal holds the way out", W / 2, H * 0.7); }
+    p.textAlign = "right"; p.fillStyle = "rgba(230,220,200,0.6)"; p.font = F(11); p.fillText(`experience ${Math.round(run.xp * CM.FT.xpShare)}   kills ${run.kills}`, W - 12, 24);
+    p.fillText("W A S D move - Space, J or the mouse strikes (the mouse aims) - Q a fire flask - E at the stairs - Esc the menu", W - 12, H - 10);
+    p.restore();
+    if (run.over === "dead") { p.fillStyle = "rgba(60,0,0,0.6)"; p.fillRect(0, 0, c.width, c.height); p.fillStyle = "#F2E6C8"; p.textAlign = "center"; p.font = `${Math.round(40 * u)}px Georgia, serif`; p.fillText(`${h.name} falls`, c.width / 2, c.height * 0.42); p.font = `${Math.round(15 * u)}px Georgia, serif`; p.fillText("Everything carried is lost. The experience is theirs.", c.width / 2, c.height * 0.42 + 36 * u); p.textAlign = "left"; }
+  },
+});
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -20979,7 +21525,9 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
   game.on("magetower", () => ui.openMageTower());
   game.on("cabin", () => ui.openCabin());
-  game.on("claudeita", () => ui.openClaudeita());                      // (Claudeita's cave: 76c-cave.js)
+  game.on("claudeita", () => ui.openClaudeita());
+  game.on("fortress", () => ui.openFortress());                         // (the Fortress: 76d-fortress.js)
+  game.on("fortfloor", () => { fortIn = {}; ui.fortBg = null; ui.refresh(); });                      // (Claudeita's cave: 76c-cave.js)
   game.on("cave", () => { caveIn = {}; caveFire = false; caveAcc = 0; ui.caveStart(); ui.refresh(); });                                // (Leshy's table: 76b-cabin.js)
   game.on("mode", (mode) => { if (mode !== "tower") { towerIn = {}; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); } });   // (out of the tower: the mouse is free)
   game.on("towerfloor", (run) => { if (!renderer.ok) return; useTheme(run.fl.number); renderer.setFloor(run.fl, CM.TOWER_THEME); renderer.setCamera(run.fl.start[0], run.fl.start[1], 0); towerIn = {}; ui.refresh(); });                       // (the tower's doors: who goes in)
@@ -21319,7 +21867,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
       else if (thing.type === "portal") out.push({ x, y, layer: "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
       else if (thing.type === "plinth") out.push({ x, y, layer: "solid:plinth", w: 0.7, h: 0.6 });
-      else if (thing.type === "magedoor" || thing.type === "claudeita") { /* the doors are the tower's own, the cave's mouth the crag's: in the mesh */ }
+      else if (thing.type === "magedoor" || thing.type === "claudeita" || thing.type === "fortress") { /* the doors are the tower's own, the cave's mouth the crag's: in the mesh */ }
       else if (thing.type === "errand") out.push({ x, y, layer: "key", w: 0.4, h: 0.4, glow: 0.6 + 0.3 * Math.sin(now / 400 + x) });   // (an errand's thing: it catches the light)
       else if (thing.type === "towerstair") { out.push({ x, y, layer: "stairs_up", w: 0.55, h: 0.9, shade: 0.8 }); const T = CM.TOWER_STAIRS[key]; if (T && !(game.perch && game.perch.from === key)) out.push({ x: T[0], y: T[1], dx: 0.3, dz: -0.25, layer: "npc:adventurer", w: 0.5, h: 0.55, lift: CM.TOWER.h }); }   // (the stair, and the watchman on the tower's top)
       else if (thing.type === "postern") out.push({ x, y, layer: CM.posternOpen(game) ? "door" : "door_locked", face: fl.number === 0 ? 0 : 1, w: 0.62, h: 0.86, lift: 0.07 });   // (a small door in the wall, or in the cliff)
@@ -21446,6 +21994,13 @@ window.addEventListener("DOMContentLoaded", () => {
       const f = TOWER_KEYS[e.code]; if (f) { e.preventDefault(); towerIn[f] = true; return; }
       if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
       if (e.code === "KeyL" && game.towerRun.atLadder()) { e.preventDefault(); game.towerClimb(true); ui.refresh(); return; }
+      if (e.code !== "Escape") return;
+    }
+    if (game.mode === "fortress" && game.fortRun && !ui.dialogOpen()) { // the Fortress: real time (64j-fortress.js)
+      const f = FORT_KEYS[e.code], run = game.fortRun; if (f) { e.preventDefault(); fortIn[f] = true; if (f !== "attack") fortMouse = false; return; }
+      if (e.code === "KeyQ") { e.preventDefault(); fortIn.bomb = true; return; }
+      if ((e.code === "KeyE" || e.code === K.use) && run.atStairs()) { e.preventDefault(); game.fortStairs(false); ui.refresh(); return; }
+      if (e.code === "KeyL" && run.atStairs() && run.n < CM.FORT_FLOORS) { e.preventDefault(); game.fortStairs(true); ui.refresh(); return; }
       if (e.code !== "Escape") return;
     }
     if (game.mode === "cave" && game.caveRun && !ui.dialogOpen()) {     // Claudeita's cave: real time (64i-claudeita.js)
@@ -21590,8 +22145,14 @@ window.addEventListener("DOMContentLoaded", () => {
     const r = view.getBoundingClientRect();
     if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; });
+  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; const q = FORT_KEYS[e.code]; if (q) fortIn[q] = false; });
+  // ---- the Fortress's hands and feet: the mouse over its canvas aims the blade, and its button strikes ----
+  view.addEventListener("mousedown", (e) => { if (game.mode !== "fortress" || !e.target.closest("#fortcanvas")) return; e.preventDefault(); fortMouse = true; fortAt = caveXY2(e, "#fortcanvas"); if (e.button === 0) fortIn.attack = true; else if (e.button === 2) fortIn.bomb = true; });
+  window.addEventListener("mouseup", (e) => { if (e.button === 0 && game.mode === "fortress") fortIn.attack = false; });
+  window.addEventListener("mousemove", (e) => { if (game.mode === "fortress" && ui.$("#fortcanvas") && e.target.closest && e.target.closest("#fortcanvas")) { fortAt = caveXY2(e, "#fortcanvas"); fortMouse = true; } });
+  view.addEventListener("contextmenu", (e) => { if (game.mode === "fortress") e.preventDefault(); });
   // ---- Claudeita's cave's hands and feet: the mouse on its canvas aims and casts, and works the wand editor ----
+  const caveXY2 = (e, sel) => { const c = ui.$(sel), r = c.getBoundingClientRect(); return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)]; };
   const caveXY = (e) => { const c = ui.$("#cavecanvas"), r = c.getBoundingClientRect(); return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)]; };
   view.addEventListener("mousedown", (e) => { if (game.mode !== "cave" || !game.caveRun || !e.target.closest("#cavecanvas")) return; e.preventDefault(); const at = ui.caveMouse = caveXY(e); if (ui.caveEdit) ui.caveEditorClick(game.caveRun, at[0], at[1], e.button === 2); else if (e.button === 0) caveFire = true; });
   window.addEventListener("mouseup", (e) => { if (e.button === 0) caveFire = false; });
@@ -21611,6 +22172,39 @@ window.addEventListener("DOMContentLoaded", () => {
   let towerIn = {}, towerMapT = 0;
   const CAVE_KEYS = { KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", KeyW: "jump", ArrowUp: "jump", Space: "jump" };
   let caveIn = {}, caveFire = false, caveAcc = 0, caveSfx = {};
+  const FORT_KEYS = { KeyW: "up", ArrowUp: "up", KeyS: "down", ArrowDown: "down", KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "attack", KeyJ: "attack", KeyF: "attack" };
+  let fortIn = {}, fortMouse = false, fortAt = null, fortT = 0;
+  // a frame in the Fortress: the run steps by real time, its events become sounds and numbers, the canvas is drawn; a
+  // fall is shown a moment, then the fighter is outside
+  function fortFrame(now, dt) {
+    const run = game.fortRun; if (!run) return;
+    const still = ui.dialogOpen() || ui.screen !== "play";
+    let aim = null; if (fortMouse && fortAt && ui.fortView) { const V = ui.fortView, c = ui.$("#fortcanvas"); aim = Math.atan2(fortAt[1] - c.height / 2, fortAt[0] - c.width / 2); }
+    if (!still) run.update(dt, Object.assign({}, fortIn, { aim })); fortIn.bomb = false;
+    const sfx = (name, vol, gap = 0.05, rate = 1) => { if (now - (caveSfx[name] || 0) < gap * 1000) return; caveSfx[name] = now; try { CM.audio.play(name, vol, 0, rate); } catch (er) { /* quiet */ } };
+    for (const ev of run.events) {
+      if (ev.kind === "swing") sfx(ev.hit ? "hit" : "miss", ev.hit ? 0.35 : 0.18, 0.08);
+      else if (ev.kind === "hit") ui.fortFloat(ev.at[0], ev.at[1], `${ev.amount}`, "rgba(255,230,120,A)");
+      else if (ev.kind === "die") { try { CM.audio.bark(ev.mon.kind, "die"); } catch (er) { /* */ } }
+      else if (ev.kind === "hurt") { sfx("hurt", 0.4, 0.15); ui.tint("rgba(200,30,20,0.3)", 200); ui.fortFloat(run.x, run.y, `-${ev.amount}`, "rgba(255,80,60,A)"); }
+      else if (ev.kind === "door") sfx("unlock", 0.6, 0.3);
+      else if (ev.kind === "locked") { sfx("bump", 0.4, 0.5); ui.fortFloat(run.x, run.y, "Locked: a key opens it", "rgba(255,220,160,A)"); }
+      else if (ev.kind === "pickup") { const k = ev.item.kind; sfx(k === "gold" ? "coin" : k === "draught" ? "heal" : k === "chest" ? "chest" : k === "key" ? "unlock" : "step", 0.45, 0.1); ui.fortFloat(run.x, run.y, k === "gold" ? `+${ev.item.value} gold` : k === "key" ? "A key" : k === "draught" ? "A draught" : k === "flask" ? "A fire flask (Q)" : k === "chest" ? ev.item.item.name : "", "rgba(250,220,120,A)"); }
+      else if (ev.kind === "lairhit") sfx("grind", 0.25, 0.1);
+      else if (ev.kind === "lairdown") sfx("shatter", 0.6, 0.2);
+      else if (ev.kind === "flask") { sfx("wandboom", 0.7, 0.2); ui.fortFlashAt = now; }
+      else if (ev.kind === "bossdown") { game.say(`${ev.mon.name.charAt(0).toUpperCase() + ev.mon.name.slice(1)} falls, and leaves ${ev.item.name} (${CM.itemLabel(ev.item)}).`); sfx("toll", 0.7, 1); ui.renderLog(); }
+      else if (ev.kind === "slam") { sfx("slam", 0.6, 0.3); ui.fortFlashAt = now; }
+      else if (ev.kind === "charge") sfx("elite", 0.5, 0.5);
+      else if (ev.kind === "monshoot") sfx("miss", 0.15, 0.15);
+      else if (ev.kind === "dead") sfx("death", 0.7, 1);
+    }
+    run.events.length = 0;
+    if (run.over && !run.endAt) run.endAt = now + 2200;
+    if (run.over && now >= run.endAt) { fortIn = {}; game.leaveFortress("dead"); ui.refresh(); return; }
+    ui.drawFortress(run, now);
+    if ((fortT += dt) > 0.3) { fortT = 0; ui.refresh(); ui.renderActions(); }
+  }
   // a frame in Claudeita's cave: the run takes its steps by real time (30 a second, however often the frame comes), its
   // events become sounds, the canvas is drawn; when it is over, a moment to read the end, and out
   function caveFrame(now, dt) {
@@ -21690,6 +22284,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (ui.splashOn) { const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []; if (pads.some((p) => p.buttons.some((b) => b.pressed))) ui.leaveSplash(); }   // (a pad button goes on from the title card)
       if (game.mode === "tower") towerFrame(now, dt);
       else if (game.mode === "cave") caveFrame(now, dt);
+      else if (game.mode === "fortress") fortFrame(now, dt);
       else if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1; renderer.sky = null;

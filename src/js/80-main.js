@@ -115,7 +115,9 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
   game.on("magetower", () => ui.openMageTower());
   game.on("cabin", () => ui.openCabin());
-  game.on("claudeita", () => ui.openClaudeita());                      // (Claudeita's cave: 76c-cave.js)
+  game.on("claudeita", () => ui.openClaudeita());
+  game.on("fortress", () => ui.openFortress());                         // (the Fortress: 76d-fortress.js)
+  game.on("fortfloor", () => { fortIn = {}; ui.fortBg = null; ui.refresh(); });                      // (Claudeita's cave: 76c-cave.js)
   game.on("cave", () => { caveIn = {}; caveFire = false; caveAcc = 0; ui.caveStart(); ui.refresh(); });                                // (Leshy's table: 76b-cabin.js)
   game.on("mode", (mode) => { if (mode !== "tower") { towerIn = {}; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); } });   // (out of the tower: the mouse is free)
   game.on("towerfloor", (run) => { if (!renderer.ok) return; useTheme(run.fl.number); renderer.setFloor(run.fl, CM.TOWER_THEME); renderer.setCamera(run.fl.start[0], run.fl.start[1], 0); towerIn = {}; ui.refresh(); });                       // (the tower's doors: who goes in)
@@ -455,7 +457,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
       else if (thing.type === "portal") out.push({ x, y, layer: "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
       else if (thing.type === "plinth") out.push({ x, y, layer: "solid:plinth", w: 0.7, h: 0.6 });
-      else if (thing.type === "magedoor" || thing.type === "claudeita") { /* the doors are the tower's own, the cave's mouth the crag's: in the mesh */ }
+      else if (thing.type === "magedoor" || thing.type === "claudeita" || thing.type === "fortress") { /* the doors are the tower's own, the cave's mouth the crag's: in the mesh */ }
       else if (thing.type === "errand") out.push({ x, y, layer: "key", w: 0.4, h: 0.4, glow: 0.6 + 0.3 * Math.sin(now / 400 + x) });   // (an errand's thing: it catches the light)
       else if (thing.type === "towerstair") { out.push({ x, y, layer: "stairs_up", w: 0.55, h: 0.9, shade: 0.8 }); const T = CM.TOWER_STAIRS[key]; if (T && !(game.perch && game.perch.from === key)) out.push({ x: T[0], y: T[1], dx: 0.3, dz: -0.25, layer: "npc:adventurer", w: 0.5, h: 0.55, lift: CM.TOWER.h }); }   // (the stair, and the watchman on the tower's top)
       else if (thing.type === "postern") out.push({ x, y, layer: CM.posternOpen(game) ? "door" : "door_locked", face: fl.number === 0 ? 0 : 1, w: 0.62, h: 0.86, lift: 0.07 });   // (a small door in the wall, or in the cliff)
@@ -582,6 +584,13 @@ window.addEventListener("DOMContentLoaded", () => {
       const f = TOWER_KEYS[e.code]; if (f) { e.preventDefault(); towerIn[f] = true; return; }
       if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
       if (e.code === "KeyL" && game.towerRun.atLadder()) { e.preventDefault(); game.towerClimb(true); ui.refresh(); return; }
+      if (e.code !== "Escape") return;
+    }
+    if (game.mode === "fortress" && game.fortRun && !ui.dialogOpen()) { // the Fortress: real time (64j-fortress.js)
+      const f = FORT_KEYS[e.code], run = game.fortRun; if (f) { e.preventDefault(); fortIn[f] = true; if (f !== "attack") fortMouse = false; return; }
+      if (e.code === "KeyQ") { e.preventDefault(); fortIn.bomb = true; return; }
+      if ((e.code === "KeyE" || e.code === K.use) && run.atStairs()) { e.preventDefault(); game.fortStairs(false); ui.refresh(); return; }
+      if (e.code === "KeyL" && run.atStairs() && run.n < CM.FORT_FLOORS) { e.preventDefault(); game.fortStairs(true); ui.refresh(); return; }
       if (e.code !== "Escape") return;
     }
     if (game.mode === "cave" && game.caveRun && !ui.dialogOpen()) {     // Claudeita's cave: real time (64i-claudeita.js)
@@ -726,8 +735,14 @@ window.addEventListener("DOMContentLoaded", () => {
     const r = view.getBoundingClientRect();
     if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; });
+  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; const q = FORT_KEYS[e.code]; if (q) fortIn[q] = false; });
+  // ---- the Fortress's hands and feet: the mouse over its canvas aims the blade, and its button strikes ----
+  view.addEventListener("mousedown", (e) => { if (game.mode !== "fortress" || !e.target.closest("#fortcanvas")) return; e.preventDefault(); fortMouse = true; fortAt = caveXY2(e, "#fortcanvas"); if (e.button === 0) fortIn.attack = true; else if (e.button === 2) fortIn.bomb = true; });
+  window.addEventListener("mouseup", (e) => { if (e.button === 0 && game.mode === "fortress") fortIn.attack = false; });
+  window.addEventListener("mousemove", (e) => { if (game.mode === "fortress" && ui.$("#fortcanvas") && e.target.closest && e.target.closest("#fortcanvas")) { fortAt = caveXY2(e, "#fortcanvas"); fortMouse = true; } });
+  view.addEventListener("contextmenu", (e) => { if (game.mode === "fortress") e.preventDefault(); });
   // ---- Claudeita's cave's hands and feet: the mouse on its canvas aims and casts, and works the wand editor ----
+  const caveXY2 = (e, sel) => { const c = ui.$(sel), r = c.getBoundingClientRect(); return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)]; };
   const caveXY = (e) => { const c = ui.$("#cavecanvas"), r = c.getBoundingClientRect(); return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)]; };
   view.addEventListener("mousedown", (e) => { if (game.mode !== "cave" || !game.caveRun || !e.target.closest("#cavecanvas")) return; e.preventDefault(); const at = ui.caveMouse = caveXY(e); if (ui.caveEdit) ui.caveEditorClick(game.caveRun, at[0], at[1], e.button === 2); else if (e.button === 0) caveFire = true; });
   window.addEventListener("mouseup", (e) => { if (e.button === 0) caveFire = false; });
@@ -747,6 +762,39 @@ window.addEventListener("DOMContentLoaded", () => {
   let towerIn = {}, towerMapT = 0;
   const CAVE_KEYS = { KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", KeyW: "jump", ArrowUp: "jump", Space: "jump" };
   let caveIn = {}, caveFire = false, caveAcc = 0, caveSfx = {};
+  const FORT_KEYS = { KeyW: "up", ArrowUp: "up", KeyS: "down", ArrowDown: "down", KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "attack", KeyJ: "attack", KeyF: "attack" };
+  let fortIn = {}, fortMouse = false, fortAt = null, fortT = 0;
+  // a frame in the Fortress: the run steps by real time, its events become sounds and numbers, the canvas is drawn; a
+  // fall is shown a moment, then the fighter is outside
+  function fortFrame(now, dt) {
+    const run = game.fortRun; if (!run) return;
+    const still = ui.dialogOpen() || ui.screen !== "play";
+    let aim = null; if (fortMouse && fortAt && ui.fortView) { const V = ui.fortView, c = ui.$("#fortcanvas"); aim = Math.atan2(fortAt[1] - c.height / 2, fortAt[0] - c.width / 2); }
+    if (!still) run.update(dt, Object.assign({}, fortIn, { aim })); fortIn.bomb = false;
+    const sfx = (name, vol, gap = 0.05, rate = 1) => { if (now - (caveSfx[name] || 0) < gap * 1000) return; caveSfx[name] = now; try { CM.audio.play(name, vol, 0, rate); } catch (er) { /* quiet */ } };
+    for (const ev of run.events) {
+      if (ev.kind === "swing") sfx(ev.hit ? "hit" : "miss", ev.hit ? 0.35 : 0.18, 0.08);
+      else if (ev.kind === "hit") ui.fortFloat(ev.at[0], ev.at[1], `${ev.amount}`, "rgba(255,230,120,A)");
+      else if (ev.kind === "die") { try { CM.audio.bark(ev.mon.kind, "die"); } catch (er) { /* */ } }
+      else if (ev.kind === "hurt") { sfx("hurt", 0.4, 0.15); ui.tint("rgba(200,30,20,0.3)", 200); ui.fortFloat(run.x, run.y, `-${ev.amount}`, "rgba(255,80,60,A)"); }
+      else if (ev.kind === "door") sfx("unlock", 0.6, 0.3);
+      else if (ev.kind === "locked") { sfx("bump", 0.4, 0.5); ui.fortFloat(run.x, run.y, "Locked: a key opens it", "rgba(255,220,160,A)"); }
+      else if (ev.kind === "pickup") { const k = ev.item.kind; sfx(k === "gold" ? "coin" : k === "draught" ? "heal" : k === "chest" ? "chest" : k === "key" ? "unlock" : "step", 0.45, 0.1); ui.fortFloat(run.x, run.y, k === "gold" ? `+${ev.item.value} gold` : k === "key" ? "A key" : k === "draught" ? "A draught" : k === "flask" ? "A fire flask (Q)" : k === "chest" ? ev.item.item.name : "", "rgba(250,220,120,A)"); }
+      else if (ev.kind === "lairhit") sfx("grind", 0.25, 0.1);
+      else if (ev.kind === "lairdown") sfx("shatter", 0.6, 0.2);
+      else if (ev.kind === "flask") { sfx("wandboom", 0.7, 0.2); ui.fortFlashAt = now; }
+      else if (ev.kind === "bossdown") { game.say(`${ev.mon.name.charAt(0).toUpperCase() + ev.mon.name.slice(1)} falls, and leaves ${ev.item.name} (${CM.itemLabel(ev.item)}).`); sfx("toll", 0.7, 1); ui.renderLog(); }
+      else if (ev.kind === "slam") { sfx("slam", 0.6, 0.3); ui.fortFlashAt = now; }
+      else if (ev.kind === "charge") sfx("elite", 0.5, 0.5);
+      else if (ev.kind === "monshoot") sfx("miss", 0.15, 0.15);
+      else if (ev.kind === "dead") sfx("death", 0.7, 1);
+    }
+    run.events.length = 0;
+    if (run.over && !run.endAt) run.endAt = now + 2200;
+    if (run.over && now >= run.endAt) { fortIn = {}; game.leaveFortress("dead"); ui.refresh(); return; }
+    ui.drawFortress(run, now);
+    if ((fortT += dt) > 0.3) { fortT = 0; ui.refresh(); ui.renderActions(); }
+  }
   // a frame in Claudeita's cave: the run takes its steps by real time (30 a second, however often the frame comes), its
   // events become sounds, the canvas is drawn; when it is over, a moment to read the end, and out
   function caveFrame(now, dt) {
@@ -826,6 +874,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (ui.splashOn) { const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []; if (pads.some((p) => p.buttons.some((b) => b.pressed))) ui.leaveSplash(); }   // (a pad button goes on from the title card)
       if (game.mode === "tower") towerFrame(now, dt);
       else if (game.mode === "cave") caveFrame(now, dt);
+      else if (game.mode === "fortress") fortFrame(now, dt);
       else if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1; renderer.sky = null;

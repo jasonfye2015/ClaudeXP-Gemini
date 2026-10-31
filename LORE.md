@@ -140,6 +140,15 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Fortress (v11.4)
+
+The keep north of the cabin was the queen's, before the city was moved up the hill: a muster-house for the men who
+held the Wood, and under it twenty floors of storerooms and cells cut down into the rock, each locked from the one
+above. When the queen's men were called in, the Marshal of the keep would not go. He locked the floors behind him and
+kept the keys, and he keeps them still - though there is nothing left to guard but the dark and what has bred in it.
+The woodcutters call him the Iron Marshal because nobody has seen his face. He is not of the Lich King's story, and
+does not know the king is dead.
+
 ## Claudeita's cave (v11.3)
 
 The crag south of the fields was always there; the mouth in it was not. The farm's people say it opened the winter the
