@@ -652,3 +652,40 @@ body.inablo #ablocanvas { display: block; } body.inablo #view .sky, body.inablo 
 /* Super Claude Bros down the pipe (76g-claudebros.js): its canvas over the view */
 #broscanvas { display: none; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; background: #000; }
 body.inbros #broscanvas { display: block; } body.inbros #view .sky, body.inbros #view .compass, body.inbros #view .hint { display: none; }
+
+/* the Gilded Joker's cards, finer (v11.8): pips and court cards, the piles, and each enhancement's own life */
+.pc { perspective: 600px; transform-style: preserve-3d; background: linear-gradient(160deg, #FFFDF6, #EFE6D0 60%, #E2D6BA); }
+.pc .pr { top: 3px; left: 4px; display: flex; flex-direction: column; align-items: center; line-height: 1; font-size: 14px; } .pc .pr small, .pc .pr2 small { font-size: 10px; }
+.pc .pr2 { bottom: 3px; right: 4px; display: flex; flex-direction: column; align-items: center; line-height: 1; font-size: 11px; }
+.pc .pips { position: absolute; inset: 14px 12px; display: grid; grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; align-items: center; justify-items: center; font-size: 11px; line-height: 1; }
+.pc .pips.n2, .pc .pips.n3 { grid-template-columns: 1fr; } .pc .pips.n9, .pc .pips.n10 { grid-template-columns: repeat(3, 1fr); font-size: 9px; }
+.pc .ace { font-size: 36px; text-shadow: 0 2px 2px rgba(0,0,0,0.25); }
+.pc .pcourt { position: absolute; inset: 14px 9px; border: 1px solid currentColor; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(rgba(232,192,80,0.25), rgba(232,192,80,0.05)); }
+.pc .pcourt i { font-style: normal; font-size: 24px; line-height: 1; } .pc .pcourt b { font-size: 13px; }
+.pc .pstone { position: absolute; inset: 4px; border-radius: 4px; background: radial-gradient(circle at 30% 30%, #A8A296 0 8%, transparent 9%), radial-gradient(circle at 70% 60%, #8A8478 0 12%, transparent 13%), radial-gradient(circle at 40% 75%, #9A9488 0 7%, transparent 8%), #7A7468; }
+.pc .ptag { position: absolute; left: 0; right: 0; bottom: -1px; text-align: center; font: bold 8px var(--serif); letter-spacing: 0.5px; text-transform: uppercase; color: #FFF; background: rgba(0,0,0,0.45); border-radius: 0 0 4px 4px; }
+.pc .pbonus { position: absolute; top: 2px; right: 3px; font: bold 9px var(--serif); color: #2F78C4; }
+.pc.e-bonus { box-shadow: 0 3px 6px rgba(0,0,0,0.5), 0 0 10px rgba(47,120,196,0.6); animation: ca-glow-b 2.2s ease-in-out infinite; }
+.pc.e-mult { box-shadow: 0 3px 6px rgba(0,0,0,0.5), 0 0 10px rgba(217,71,60,0.6); animation: ca-glow-m 2.2s ease-in-out infinite; }
+.pc.e-wild { animation: ca-wild 3s linear infinite; }
+.pc.e-glass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.8) 48%, transparent 60%); background-size: 250% 100%; animation: ca-sheen 3.2s ease-in-out infinite; pointer-events: none; }
+.pc.e-steel::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0 2px, rgba(0,0,0,0.05) 2px 4px); pointer-events: none; }
+.pc.e-gold::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(115deg, transparent 40%, rgba(255,250,210,0.95) 50%, transparent 60%); background-size: 300% 100%; animation: ca-sheen 2.4s linear infinite; pointer-events: none; }
+.pc.e-lucky::before { content: "🍀"; position: absolute; top: 14px; left: 4px; font-size: 10px; animation: ca-twinkle 1.6s ease-in-out infinite; }
+.pc.sel { box-shadow: 0 14px 18px rgba(0,0,0,0.55), 0 0 0 3px #F0D070; }
+.carow.hand .pc:not(.sel):hover { transform: translateY(-6px) rotate(-2deg); }
+.caburst { position: absolute; inset: -12px; border-radius: 12px; pointer-events: none; background: radial-gradient(circle, rgba(255,240,170,0.9), rgba(255,200,80,0.3) 45%, transparent 70%); animation: ca-burst 0.75s ease-out forwards; }
+.cahandrow { display: flex; align-items: flex-end; justify-content: center; gap: 14px; }
+.capile { position: relative; width: 52px; height: 74px; flex: none; border-radius: 6px; border: 1px dashed rgba(232,192,80,0.35); margin-bottom: 4px; }
+.capile .cback { position: absolute; inset: 0; border-radius: 6px; border: 2px solid #C8A040; background: repeating-linear-gradient(45deg, #7A1A1A 0 5px, #5A1010 5px 10px); box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.capile .cback:nth-child(2) { transform: translate(-2px, -2px); } .capile .cback:nth-child(3) { transform: translate(-4px, -4px); }
+.capile .cback::after { content: "◆"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #E8C050; font-size: 20px; }
+.capile em { position: absolute; bottom: -16px; left: 0; right: 0; text-align: center; font: bold 11px var(--serif); color: #F0D070; font-style: normal; }
+.cadiscard .cback { transform: rotate(-12deg); } .cadiscard .cback:nth-child(2) { transform: rotate(9deg); }
+@keyframes ca-glow-b { 50% { box-shadow: 0 3px 6px rgba(0,0,0,0.5), 0 0 18px rgba(80,150,255,0.9); } }
+@keyframes ca-glow-m { 50% { box-shadow: 0 3px 6px rgba(0,0,0,0.5), 0 0 18px rgba(255,90,70,0.9); } }
+@keyframes ca-wild { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+@keyframes ca-twinkle { 50% { transform: scale(1.4) rotate(15deg); opacity: 0.6; } }
+@keyframes ca-burst { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pc, .pc::before, .jk::after { animation: none !important; } }
+.capile .cback { width: auto; height: auto; display: block; line-height: normal; }
