@@ -140,6 +140,17 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Hexed Wand and the Gilded Pit (v13.4)
+
+The Joker's dealer has a second table, a round one under a single lamp, and a second face to go with it, under a hood.
+It plays the wand game against anyone with the stake: hexes and duds, the counts told, the order not. It has never
+been known to cheat, which the regulars find more unnerving than if it did.
+
+And behind the bar a stair goes down to a room the house lends out - green paper, one bulb, an old machine it calls
+the Old Lucky, and a telephone that rings when a debt is paid. Nobody knows who is on the other end. What everybody
+knows is the trapdoor under the stool, and that the house always gets its coins back, one way or another: those who
+fall through it come up again in the alley behind the Joker, bruised, with nothing in their pockets.
+
 ## The Tilewright's Table (v13.3)
 
 At a low lacquered table in the Joker's quietest corner, an old woman sets out ivory tiles in a stack she calls the

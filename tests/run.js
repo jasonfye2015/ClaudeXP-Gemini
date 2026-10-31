@@ -4585,6 +4585,51 @@ test("the Tilewright's Table: 144 tiles of the game's own (suits of coins, runes
   assert.ok(!g.mjStart(100, "keep").error); M3 = g.mjTable(); for (let k = 0; k < 36; k++) M3.tiles[k].gone = true; M3.removed = 36; r = g.mjSettle(); assert.ok(!r.won); assert.strictEqual(r.pay, Math.round(100 * MJ.partial * 0.25 * 0.25)); assert.ok(!r.card);
 });
 
+test("the Hexed Wand: charges loaded with the counts told; a live hex snuffs a candle of whoever it points at, a dud does nothing and keeps the turn of one who aimed at themself; the charms do what they say; the dealer plays fair (only the counts and its own glass); the ladder climbs, collect or lose it, cards at rounds 2 and 3; a fair hand wins about half", () => {
+  const CM = load(), HW = CM.HW, D = new HW.Duel(2, 7);
+  assert.ok(D.charges.length >= 2 && D.liveLeft >= 1 && D.dudLeft >= 1); assert.strictEqual(D.liveLeft + D.dudLeft, D.charges.length); assert.strictEqual(D.you.charms.length, 2); assert.strictEqual(D.turn, "you");
+  D.charges = [0, 1, 1]; D.liveLeft = 2; D.dudLeft = 1; D.fire("you", "you"); assert.strictEqual(D.turn, "you", "the turn stays"); assert.strictEqual(D.you.candles, D.max);
+  D.fire("you", "dealer"); assert.strictEqual(D.dealer.candles, D.max - 1); assert.strictEqual(D.turn, "dealer");
+  const E = new HW.Duel(3, 8); E.charges = [1, 0, 1, 0]; E.liveLeft = 2; E.dudLeft = 2;
+  E.you.charms = ["glass", "whet", "cord", "unload", "tallow"]; assert.strictEqual(E.use("you", 0).seen, 1); assert.strictEqual(E.known, 1);
+  E.use("you", 0); assert.ok(E.whet); E.use("you", 0); assert.ok(E.bound.dealer); E.fire("you", "dealer"); assert.strictEqual(E.dealer.candles, E.max - 2, "whetted"); assert.strictEqual(E.turn, "you", "the dealer bound, the turn comes back");
+  const u = E.use("you", 0); assert.strictEqual(u.seen, 0, "unloaded a dud"); assert.strictEqual(E.charges.length, 2); E.you.candles = 2; E.use("you", 0); assert.strictEqual(E.you.candles, 3, "tallow");
+  const F = new HW.Duel(1, 9); F.turn = "dealer"; F.charges = [0, 1]; F.liveLeft = 1; F.dudLeft = 1; F.dealerKnows = 0; F.dealer.charms = []; F.dealerAct(); assert.strictEqual(F.you.candles, F.max); assert.strictEqual(F.turn, "dealer", "a dud at itself, and again");
+  F.dealerKnows = null; F.dealerAct(); assert.strictEqual(F.you.candles, F.max - 1, "the last charge is live: at you");
+  let won = 0; for (let s = 0; s < 800; s++) { const G = new HW.Duel(1, 100 + s); let k = 0; while (G.stage === "play" && k++ < 400) { if (G.turn === "dealer") G.dealerAct(); else { const [a2, b2] = HW.fairMove(G); if (a2 === "use") { if (!G.use("you", b2)) G.fire("you", "dealer"); } else G.fire("you", b2); } } if (G.stage === "won") won++; }
+  assert.ok(won / 800 > 0.42 && won / 800 < 0.68, `round one ${won / 800}`);
+  const g = new CM.Game(); g.newGame("hw-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  const win = () => { g.hwDuel().stage = "won"; return g.hwSettle(); };
+  assert.ok(!g.hwStart(100).error); let r = win(); assert.strictEqual(r.pot, Math.round(100 * HW.LADDER[0])); assert.ok(g.hwOn()); r = win(); assert.ok(r.card); assert.strictEqual(owned(), o0 + 1); assert.strictEqual(g.hwCollect(), Math.round(100 * HW.LADDER[1])); assert.strictEqual(g.gold, 900 + Math.round(100 * HW.LADDER[1]));
+  assert.ok(!g.hwStart(50).error); win(); g.hwOn(); g.hwDuel().stage = "lost"; r = g.hwSettle(); assert.ok(!r.won && r.lost === Math.round(50 * HW.LADDER[0])); assert.strictEqual(g.hwState().stage, "done");
+  assert.ok(!g.hwStart(10).error); win(); g.hwOn(); win(); g.hwOn(); r = win(); assert.ok(CM.CARD_RARES.includes(r.card)); assert.strictEqual(g.hwState().paid, Math.round(10 * HW.LADDER[2]));
+});
+
+test("the Gilded Pit: the Old Lucky's lines, columns, diagonals and full grid, the Pit's eyes; charms that bend the odds; a debt each deadline - paid for tickets and the telephone's charms, or missed and the trapdoor drops the hero to a tenth of their health; stepping out with the coins; charms unlocked for good by deeper deadlines; cards at 3 and 5", () => {
+  const CM = load(), PT = CM.PT, row = (a) => a.split(" ");
+  const [m1, L1] = PT.score([row("lemon lemon lemon cherry bell"), row("bell clover cherry seven chest"), row("chest bell clover cherry diamond")], []); assert.strictEqual(m1, 2); assert.strictEqual(L1[0].kind, "row");
+  assert.strictEqual(PT.score([row("seven seven seven seven seven"), row("bell clover cherry lemon chest"), row("chest bell clover cherry diamond")], [])[0], 7 * 3, "five of a kind");
+  assert.strictEqual(PT.score([row("bell clover cherry lemon chest"), row("bell lemon chest seven diamond"), row("bell chest clover cherry diamond")], [])[0], 3, "a column");
+  assert.strictEqual(PT.score([row("diamond clover cherry lemon chest"), row("bell diamond chest seven bell"), row("lemon chest diamond cherry clover")], [])[0], 5, "a diagonal");
+  assert.strictEqual(PT.score([row("diamond clover cherry lemon chest"), row("bell diamond chest seven bell"), row("lemon chest diamond cherry clover")], ["mirror"])[0], 10, "a mirror doubles it");
+  assert.strictEqual(PT.score([row("eye eye lemon lemon lemon"), row("eye clover cherry seven chest"), row("chest bell clover cherry diamond")], [])[0], 0, "three eyes spoil it");
+  assert.strictEqual(PT.score(Array(3).fill(row("bell bell bell bell bell")), [])[1][0].kind, "grid");
+  assert.ok(PT.score([row("clover clover clover cherry bell"), row("bell lemon cherry seven chest"), row("chest bell lemon cherry diamond")], ["fourleaf"])[0] === 6, "a four-leaf clover");
+  assert.strictEqual(PT.table(["amulet"]).w.eye, 0); assert.ok(PT.table(["horseshoe"]).w.clover > PT.SYMS.clover[0]);
+  const g = new CM.Game(); g.newGame("pit-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 2000; const h = g.party[1];
+  assert.ok(!g.pitStart(1, 100).error); assert.strictEqual(g.gold, 1900); let R = g.pitRun(); assert.strictEqual(R.coins, 100); assert.strictEqual(R.debt(), 20); assert.strictEqual(R.cost(), 10);
+  R.coins = 3; R.spinsLeft = 1; g.pitKeep(); let out = g.pitSpin(); assert.ok(out.dropped, "too poor to spin, and short of the debt: the trapdoor");
+  assert.strictEqual(h.hp, Math.max(1, Math.round(h.max * 0.1)), "a tenth"); assert.strictEqual(g.pitStore().run, null); assert.strictEqual(g.pitStore().last.how, "dropped");
+  h.hp = h.max; assert.ok(!g.pitStart(1, 100).error); R = g.pitRun(); R.coins = 12; R.spinsLeft = 1; g.pitKeep(); out = g.pitSpin(); if (!out.dropped) assert.ok(g.pitRun().coins >= 20, "safe only with the debt in hand"); else assert.strictEqual(h.hp, Math.max(1, Math.round(h.max * 0.1)));
+  if (g.pitStore().run) g.pitEnd("dropped");
+  h.hp = h.max; const P = g.pitStore(), u0 = P.unlocked.length; assert.ok(!g.pitStart(1, 100).error); R = g.pitRun(); R.coins = 300; R.spinsLeft = 7; g.pitKeep(); let pay = g.pitPay(); assert.ok(pay); R = g.pitRun(); assert.strictEqual(R.stage, "paid"); assert.strictEqual(R.coins, 280); assert.ok(R.tickets >= 3, "early: more tickets"); assert.strictEqual(R.offers.length, 3); assert.ok(P.unlocked.length > u0, "a charm unlocked for good");
+  const c = R.offers.find((x) => CM.PT.CHARMS[x][2] <= R.tickets); assert.ok(g.pitBuy(c)); assert.ok(g.pitRun().charms.includes(c)); assert.ok(g.pitNext()); R = g.pitRun(); assert.strictEqual(R.deadline, 2); assert.strictEqual(R.debt(), 45);
+  R.coins = 500; g.pitKeep(); g.pitPay(); g.pitNext(); R = g.pitRun(); R.coins = 600; g.pitKeep(); const o3 = Object.values(g.cards().owned).reduce((x, y) => x + y, 0); pay = g.pitPay(); assert.ok(pay.card && CM.CARD_COMMONS.includes(pay.card), "a card at the third");
+  const before = g.gold, left = g.pitRun().coins, end = g.pitEnd("leave"); assert.strictEqual(end.pay, left); assert.strictEqual(g.gold, before + left, "stepped out with the coins"); assert.ok(Object.values(g.cards().owned).reduce((x, y) => x + y, 0) > o3);
+  assert.ok(!g.pitStart(0, 50).error); R = g.pitRun(); R.deadline = 5; R.coins = 999; g.pitKeep(); pay = g.pitPay(); assert.ok(pay.end && pay.end.how === "free"); assert.ok(CM.CARD_RARES.includes(pay.card));
+  assert.ok(!g.pitStart(0, 100).error); R = g.pitRun(); const c0 = R.coins; out = g.pitSpin(); assert.strictEqual(g.pitRun().coins, c0 - out.cost + out.won); assert.strictEqual(out.won, PT.score(out.grid, [])[0] * out.cost);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

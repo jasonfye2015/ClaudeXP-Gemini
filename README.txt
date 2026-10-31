@@ -1392,6 +1392,31 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Hexed Wand and the Gilded Pit (the twenty-fourth big update - v13.4)
+  Two more of the Gilded Joker's games (src/js/64w-hexwand.js and 64x-gildedpit.js; the windows 76m-hexwand.js and
+  76n-gildedpit.js):
+  - The Hexed Wand: a duel across a round table with the house's hooded dealer. A wand of black wood is loaded with
+    live hexes and duds - the counts shown, then turned face down. On your turn point it at the dealer or at yourself:
+    a live hex cracks across in red and snuffs one of the target's candles; a dud only puffs - and if you aimed it at
+    yourself, the turn stays yours. Charms are dealt with each loading: a seeing-glass (the next charge), an unloading
+    (throw the next one out), a whetstone (the next hex snuffs two), tallow (a candle lit again) and a binding cord
+    (the other side loses a turn). The dealer plays fair - only the counts and its own glass. Three rounds, of two,
+    four and five candles; the stake climbs a ladder (1.75, 3.6 and 8.8 times) - collect between rounds, or play on and
+    risk the pot - with a common Claudescryption card for the second round and a rare one for the third. Set from
+    thousands of measured duels so a careful player comes out about even.
+  - The Gilded Pit: one hero of the party goes down a stair behind the bar into a locked room under the Joker, drawn
+    in 3D - green papered walls, a bare bulb flickering on its cord, the Old Lucky (a five-reel slot machine) on the far
+    wall with its lever, the house's deposit box and a chalk board of what is owed on the left, a black telephone on
+    the right, the door behind, and a trapdoor under the stool. Drag to look about; click the lever, the box, the
+    telephone, the door. The stake goes down as coins; five deadlines, each a debt to pay into the box within seven
+    spins. The reels pay for rows of three, four and five, columns, diagonals and ten times a full grid; three of the
+    Pit's eyes spoil a spin. Pay early for more tickets, and the telephone rings with lucky charms to buy (a horseshoe,
+    a four-leaf clover, a pocket watch, a lodestone, a hand mirror, a piggy bank...); then step out with the coins, or
+    stay for a bigger debt. Miss a deadline and the floor drops away: the hero comes back up to the party with a tenth
+    of their health, and the coins stay below. Eight more charms unlock for good as deeper deadlines are reached;
+    Claudescryption cards at the third and fifth deadlines and for a full grid. Measured, it returns about what is put
+    in, at a deeper risk the longer one stays.
+
 The Tilewright's Table (the twenty-third big update - v13.3)
   Tile-matching solitaire on the Gilded Joker's floor (src/js/64v-mahjong.js; the window 76l-mahjong.js), with
   ivory tiles of the game's own: three suits of nine - Coins, Runes and Blades - the four winds of the compass, the

@@ -773,3 +773,17 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .mahjong .mjwrap { display: flex; gap: 16px; align-items: flex-start; } .mahjong .mjcanvas { width: 620px; height: 520px; border-radius: 10px; border: 5px solid #3A2414; box-shadow: 0 8px 18px rgba(0,0,0,0.65); cursor: pointer; }
 .mahjong .mjside { flex: 1; min-width: 240px; } .mahjong .mjinfo { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); line-height: 1.8; }
 .mahjong .paytable tr.now td { background: rgba(240,208,112,0.3); color: #FFF; }
+
+/* The Hexed Wand (76m-hexwand.js) */
+.hexwand .hwwrap { display: flex; gap: 16px; align-items: flex-start; } .hexwand .hwcanvas { width: 620px; height: 420px; border-radius: 10px; border: 5px solid #2A1A10; box-shadow: 0 8px 18px rgba(0,0,0,0.7); }
+.hexwand .hwcharms { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; } .hexwand .hwcharm { background: #4A1424; color: #F0D8A0; border: 2px solid #C8A040; border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+/* The Gilded Pit (76n-gildedpit.js): the lobby, and the room with its overlay */
+.pitlobby .pitwho { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; } .pitlobby .pitbook { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; } .pitlobby .pitbook span { padding: 3px 8px; border-radius: 10px; background: rgba(240,208,112,0.2); border: 1px solid #C8A040; font-size: 12px; } .pitlobby .pitbook span.locked { opacity: 0.4; border-style: dashed; }
+.pitroom .pitstage { position: relative; width: min(960px, 100%, calc((94vh - 290px) * 16 / 9)); margin: 0 auto; } .pitroom .pitcanvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 8px; border: 4px solid #1A1008; cursor: grab; background: #000; transition: filter 0.2s; }
+.pitroom .pithud { position: absolute; left: 10px; right: 10px; color: #F0E0B0; text-shadow: 0 1px 3px #000; pointer-events: none; } .pitroom .pithud button { pointer-events: auto; }
+.pitroom .pithud.top { top: 10px; font-size: 14px; } .pitroom .pithud.top .pitmsg { display: block; margin-top: 4px; color: #FFE8A0; font-style: italic; }
+.pitroom .pithud.charms { top: 54px; display: flex; flex-wrap: wrap; gap: 4px; } .pitroom .pithud.charms span { padding: 2px 8px; border-radius: 10px; background: rgba(40,20,10,0.75); border: 1px solid #C8A040; font-size: 11px; }
+.pitroom .pithud.bar { position: static; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.pitroom .pitshop { position: absolute; right: 18px; top: 70px; width: 300px; padding: 12px; border-radius: 10px; background: rgba(16,10,6,0.94); border: 2px solid #C8A040; color: #F0E0B0; box-shadow: 0 8px 18px rgba(0,0,0,0.8); }
+.pitroom .pitshop h4 { margin: 0 0 6px; color: #FFE070; } .pitroom .pitshop .offer { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(200,160,64,0.3); } .pitroom .pitshop .offer small { grid-column: 1; opacity: 0.85; } .pitroom .pitshop .offer button { grid-row: 1 / span 2; grid-column: 2; }
+.cgtable.pitroom { overflow: visible; } .pitroom .pithud.bar { overflow: visible; min-height: 34px; background: none; margin-bottom: 6px; }
