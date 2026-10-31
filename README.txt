@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Lexicon Engine and the Mana Conduit (the twenty-sixth big update - v13.6)
+  Two free games of skill on the Gilded Joker's floor, ten levels each; each level pays gold and a Claudescryption card
+  the first time it is done (common to level four, a stronger common to nine, rare at ten), and never again:
+  - The Lexicon Engine (src/js/64za-lexicon.js; 76q-lexicon.js): an artificer's terminal with a green glass screen -
+    glow, scanlines, a rolling band, flicker, the header typed out. Its memory is rows of symbols with words hidden in
+    them; choose one and the engine answers its likeness to the password (letters in the same places). Four tries
+    (three from level seven); a pair of brackets with only symbols between them takes out a dud or gives the tries
+    back. The words grow from five letters to ten, and from eight to twenty of them.
+  - The Mana Conduit (64zb-conduit.js; 76r-conduit.js): a slate with a font of mana and a rack of brass conduit -
+    straights, bends and crossings - laid by clicking before the font opens (a dry piece can be swapped); then the mana
+    runs, glowing, through each piece and must pass as many as the level asks before it spills from an open end. A
+    crossing run both ways counts twice; from level six a drain to finish in pays a fifth more. Each level gives less
+    time, faster mana, a longer run and more rubble.
+
 Runestack, the Gilded Cascade, and the Hexed Wand's new shots (the twenty-fifth big update - v13.5)
   - Runestack (src/js/64y-runestack.js; the window 76o-runestack.js): rune-stones of seven shapes sink through a glass
     case of black water; move, turn (the stones kick off the walls), sink and drop them so rows fill - a full row
