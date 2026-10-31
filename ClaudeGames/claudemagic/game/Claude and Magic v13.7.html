@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v13.6 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v13.7 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -827,6 +827,26 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 /* The Mana Conduit (76r-conduit.js) */
 .conduit .lxlevels { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 6px 0 10px; } .conduit .lxlevels button { min-width: 38px; }
 .conduit .cdwrap { display: flex; justify-content: center; } .conduit .cdcanvas { max-width: 100%; max-height: calc(94vh - 330px); border-radius: 8px; border: 5px solid #4A3420; box-shadow: 0 8px 18px rgba(0,0,0,0.7); cursor: pointer; }
+
+/* The Gilded Mint (76s-mint.js) */
+.mint .mnwrap { position: relative; display: flex; gap: 18px; align-items: flex-start; } .mint .mnleft { position: relative; width: 300px; text-align: center; }
+.mint .mndust b { display: block; font-size: 26px; color: #FFE070; text-shadow: 0 0 8px rgba(255,200,60,0.6); } .mint .mndust small { display: block; opacity: 0.85; } .mint .mndust em { color: #FF9050; font-weight: bold; }
+.mint .mnpress { position: relative; width: 200px; height: 200px; margin: 12px auto 6px; display: block; border-radius: 50%; border: 6px solid #8A6420; background: radial-gradient(circle at 40% 35%, #FFF0A0, #E0B030 45%, #8A6010 80%); box-shadow: 0 8px 18px rgba(0,0,0,0.6), inset 0 -6px 12px rgba(0,0,0,0.35); cursor: pointer; }
+.mint .mnpress::after { content: "✦"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 70px; color: rgba(120,80,10,0.7); }
+.mint .mnpress.hit { animation: mnthump 0.18s ease-out; } @keyframes mnthump { 40% { transform: scale(0.93) translateY(4px); box-shadow: 0 3px 6px rgba(0,0,0,0.6), inset 0 -2px 6px rgba(0,0,0,0.35); } }
+.mint .mnfloat { position: absolute; pointer-events: none; color: #FFE070; font-weight: bold; text-shadow: 0 1px 3px #000; animation: mnfloat 0.9s ease-out forwards; } @keyframes mnfloat { to { transform: translateY(-60px); opacity: 0; } }
+.mint .mnseal { margin-top: 10px; } .mint .mnshop { flex: 1; } .mint .mnkind { display: grid; grid-template-columns: 1fr auto; width: 100%; text-align: left; margin: 3px 0; opacity: 0.6; } .mint .mnkind small { grid-column: 1; opacity: 0.85; } .mint .mnkind em { grid-row: 1 / span 2; grid-column: 2; align-self: center; color: #FFE070; font-style: normal; }
+.mint .mnkind.can, .mint .mnups button.can { opacity: 1; box-shadow: 0 0 0 2px #C8A040; } .mint .mnups { display: flex; flex-wrap: wrap; gap: 4px; } .mint .mnups button { opacity: 0.6; } .mint .mnups em { color: #FFE070; font-style: normal; margin-left: 4px; }
+.mint .mnmarks { display: flex; flex-wrap: wrap; gap: 6px; } .mint .mnmarks span { padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(200,160,64,0.5); font-size: 12px; } .mint .mnmarks span.got { background: rgba(120,200,100,0.25); }
+.mint .mnlucky { position: absolute; width: 44px; height: 44px; border-radius: 50%; border: 3px solid #FFF6C0; background: radial-gradient(circle at 35% 35%, #FFFFFF, #FFD040 50%, #B07010); box-shadow: 0 0 22px #FFE060; animation: mnglint 0.8s ease-in-out infinite alternate; cursor: pointer; z-index: 5; } @keyframes mnglint { to { transform: scale(1.15) rotate(20deg); box-shadow: 0 0 34px #FFF0A0; } }
+
+/* Mana Shelter (76t-shelter.js) */
+.shelter .shwrap { display: flex; gap: 14px; align-items: flex-start; } .shelter .shview { max-height: calc(94vh - 240px); overflow-y: auto; border-radius: 8px; border: 4px solid #3A2A18; flex: 0 0 auto; }
+.shelter .shcanvas { display: block; width: 560px; cursor: pointer; } .shelter .shside { flex: 1; min-width: 300px; font-size: 13px; }
+.shelter .shbar { position: relative; height: 18px; margin: 4px 0; border-radius: 9px; background: #1A1410; overflow: hidden; border: 1px solid #6A5A3A; } .shelter .shbar span { position: absolute; left: 0; top: 0; bottom: 0; transition: width 0.4s; } .shelter .shbar span.mana { background: #4A7AD0; } .shelter .shbar span.bread { background: #C08A3A; } .shelter .shbar span.water { background: #3AA0C8; } .shelter .shbar em { position: relative; display: block; text-align: center; font-style: normal; font-size: 12px; line-height: 18px; color: #FFF; text-shadow: 0 1px 2px #000; }
+.shelter .shnums { margin: 6px 0; } .shelter .shnums b { color: #FFE070; } .shelter .shnums em { color: #FF9070; }
+.shelter .shroom { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid #C8A040; } .shelter .shstaff { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; } .shelter .shstaff span { padding: 2px 6px; border-radius: 8px; background: rgba(240,208,112,0.15); } .shelter .shstaff button { padding: 0 5px; margin-left: 3px; }
+.shelter .shbuild, .shelter .shidle { display: flex; flex-wrap: wrap; gap: 4px; } .shelter .shbuild button, .shelter .shidle button { font-size: 12px; padding: 3px 7px; }
 </style>
 </head>
 <body>
@@ -836,7 +856,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "13.6", built: "2026-10-31" };
+const CM = window.CM = { version: "13.7", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -20765,6 +20785,166 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 64zc-mint.js ----
+"use strict";
+// The Gilded Mint (the twenty-seventh big update - v13.7): an idle game on the Gilded Joker's floor. Strike the coin
+// press for gold dust; spend the dust on those who mint it for you - apprentices, bellows, presses, alchemists, kilns,
+// golems, star-forges and a dragon's hoard - each dearer than the last (a seventh again for each one owned); upgrades
+// double a kind at 10, 25, 50 and 100 owned, and better hammers strike harder. Now and then a lucky coin glints: catch
+// it for a burst. When the mint has made a million in all, it can be melted down for Gilded Seals (a twentieth more
+// dust each, for good). It keeps minting while you are away (half as fast, up to eight hours). The real reward: gold
+// and a Claudescryption card the first time the dust minted in all passes each mark (a hundred, a thousand ... a
+// trillion) - common, then stronger, then rare. It costs nothing. The window is 76s-mint.js.
+CM.MN = {
+  KINDS: [["apprentice", "Apprentice", 15, 0.1], ["bellows", "Bellows", 100, 1], ["press", "Coin Press", 1100, 8], ["alchemist", "Alchemist", 12e3, 47], ["kiln", "Philosopher's Kiln", 13e4, 260],
+    ["golem", "Gilded Golem", 1.4e6, 1400], ["forge", "Star-Forge", 2e7, 7800], ["hoard", "Dragon's Hoard", 3.3e8, 44000]],
+  growth: 1.15, TIERS: [10, 25, 50, 100], HAMMERS: [[100, 2], [5e3, 4], [5e5, 8], [5e7, 16], [5e9, 32]], sealAt: 1e6, sealBonus: 0.05, away: 8 * 3600, awayRate: 0.5,
+  MARKS: [1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12], gold: (i) => 20 + i * 18,
+  luckyEvery: [60, 150], luckyFor: 30, luckyMult: 7,
+};
+const MN = CM.MN;
+MN.fmt = (n) => { if (n < 1e3) return n < 10 ? (Math.floor(n * 10) / 10).toString() : Math.floor(n).toString(); const u = ["", "thousand", "million", "billion", "trillion", "quadrillion", "quintillion"], k = Math.min(u.length - 1, Math.floor(Math.log10(n) / 3)); return `${(n / Math.pow(1000, k)).toFixed(2)} ${u[k]}`; };
+MN.cost = (k, owned) => Math.ceil(MN.KINDS[k][2] * Math.pow(MN.growth, owned));
+MN.upCost = (k, tier) => MN.KINDS[k][2] * [10, 50, 500, 5000][tier];
+MN.Mint = class {
+  constructor(s) { Object.assign(this, { dust: 0, total: 0, allTime: 0, owned: MN.KINDS.map(() => 0), ups: MN.KINDS.map(() => 0), hammer: 0, seals: 0, clicks: 0, lucky: null, luckyUntil: 0, nextLucky: 90, t: 0, marks: 0 }, s || {}); }
+  mult(k) { return Math.pow(2, this.ups[k]) * (1 + this.seals * MN.sealBonus) * (this.t < this.luckyUntil ? MN.luckyMult : 1); }
+  rate() { return MN.KINDS.reduce((s, K, k) => s + this.owned[k] * K[3] * this.mult(k), 0); }
+  baseRate() { return MN.KINDS.reduce((s, K, k) => s + this.owned[k] * K[3] * Math.pow(2, this.ups[k]) * (1 + this.seals * MN.sealBonus), 0); }
+  perClick() { const hm = this.hammer ? MN.HAMMERS[this.hammer - 1][1] : 1; return (hm + this.baseRate() * 0.01 * this.hammer) * (this.t < this.luckyUntil ? MN.luckyMult : 1); }
+  gain(n) { this.dust += n; this.total += n; this.allTime += n; }
+  strike() { this.clicks += 1; const n = this.perClick(); this.gain(n); return n; }
+  buy(k) { const c = MN.cost(k, this.owned[k]); if (this.dust < c) return false; this.dust -= c; this.owned[k] += 1; return true; }
+  // upgrades open as the kind is owned: the next tier, while there is one
+  upOpen(k) { const t = this.ups[k]; return t < MN.TIERS.length && this.owned[k] >= MN.TIERS[t]; }
+  upgrade(k) { if (!this.upOpen(k)) return false; const c = MN.upCost(k, this.ups[k]); if (this.dust < c) return false; this.dust -= c; this.ups[k] += 1; return true; }
+  hammerOpen() { return this.hammer < MN.HAMMERS.length; }
+  buyHammer() { const H = MN.HAMMERS[this.hammer]; if (!H || this.dust < H[0]) return false; this.dust -= H[0]; this.hammer += 1; return true; }
+  // time passes: the minting; a lucky coin glints now and then (and fades if not caught)
+  update(dt, rnd) {
+    this.t += dt; this.gain(this.rate() * dt);
+    if (this.lucky && this.t > this.lucky.until) this.lucky = null;
+    if (!this.lucky && this.t >= this.nextLucky) { this.lucky = { x: 0.15 + rnd.next() * 0.7, y: 0.15 + rnd.next() * 0.6, until: this.t + 12 }; this.nextLucky = this.t + MN.luckyEvery[0] + rnd.next() * (MN.luckyEvery[1] - MN.luckyEvery[0]); return "lucky"; }
+    return null;
+  }
+  // a lucky coin caught: seven times everything for half a minute, or a lump of a quarter-hour's minting
+  catchLucky(rnd) { if (!this.lucky) return null; this.lucky = null; if (rnd.chance(0.5)) { this.luckyUntil = this.t + MN.luckyFor; return { kind: "frenzy" }; } const n = Math.max(13, this.baseRate() * 900, this.dust * 0.1); this.gain(n); return { kind: "lump", n }; }
+  sealsIfMelted() { return this.total >= MN.sealAt ? Math.floor(Math.sqrt(this.total / MN.sealAt)) : 0; }
+  melt() { const s = this.sealsIfMelted(); if (!s) return 0; this.seals += s; Object.assign(this, { dust: 0, total: 0, owned: MN.KINDS.map(() => 0), ups: MN.KINDS.map(() => 0), hammer: 0, luckyUntil: 0 }); return s; }
+  toJSON() { const o = {}; for (const k of ["dust", "total", "allTime", "owned", "ups", "hammer", "seals", "clicks", "nextLucky", "t", "marks", "luckyUntil"]) o[k] = this[k]; return o; }
+};
+Object.assign(CM.Game.prototype, {
+  mnStore() { const F = this.cgStore(); F.mint = F.mint || {}; return F.mint; },
+  mnLive() { const S = this.mnStore(); if (!this.mnMint) { this.mnMint = new MN.Mint(S.state); this.mnRnd = new CM.Random(CM.hashSeed(`${this.seed}:mint:${S.opens = (S.opens || 0) + 1}`)); } return this.mnMint; },
+  // back again: what was minted while away (half as fast, at most eight hours)
+  mnAway(nowMs) { const S = this.mnStore(), M = this.mnLive(); if (!S.at) { S.at = nowMs; return 0; } const secs = Math.max(0, Math.min(MN.away, (nowMs - S.at) / 1000)); S.at = nowMs; const n = M.baseRate() * secs * MN.awayRate; if (n > 0) M.gain(n); return n; },
+  mnKeep(nowMs) { const S = this.mnStore(); if (this.mnMint) S.state = this.mnMint.toJSON(); if (nowMs) S.at = nowMs; this.saveCasino && this.saveCasino(); },
+  // the marks passed: gold and a card the first time for each
+  mnMarks() {
+    const M = this.mnLive(), out = [];
+    while (M.marks < MN.MARKS.length && M.allTime >= MN.MARKS[M.marks]) {
+      const i = M.marks++, n = i + 1, gold = MN.gold(i); this.gold += gold; const F = this.cgStore(); F.paid.mint = (F.paid.mint || 0) + gold;
+      const tier = n >= 10 ? "rare" : n >= 5 ? "better" : "common", card = this.cgTierCard(tier, `The Gilded Mint has made ${MN.fmt(MN.MARKS[i])} dust!`, new CM.Random(CM.hashSeed(`${this.seed}:mint:card:${i}`)));
+      out.push({ mark: MN.MARKS[i], gold, card, tier });
+    }
+    if (out.length) { this.mnKeep(); this.emit("change"); }
+    return out;
+  },
+});
+
+// ---- 64zd-shelter.js ----
+"use strict";
+// Mana Shelter (the twenty-seventh big update - v13.7): a warren dug under the Gilded Joker, run in real time. Rooms
+// are built on its floors, a stair down one side: a Mana Well (whose mana keeps the other rooms going), a Kitchen
+// (bread), a Spring (water), Living Quarters (room for more, and where two who share them raise a child), Storerooms,
+// a Beacon that draws wanderers in, and a Training Hall. Residents work the rooms; each has Might, Grace and Wit, and a
+// room goes faster for the one its work wants (the Well might, the Kitchen grace, the Spring and the Beacon wit). A
+// room's work waits in it until it is gathered (a click), and gathering pays Marks to build and dig with. Everyone eats
+// and drinks; with bread or water gone, work goes at half pace. It goes on while you are away (four hours at most).
+// The real reward: gold and a Claudescryption card the first time the warren holds 6, 10, 15, 20, 25, 30, 40 and 50.
+// It costs nothing. The window is 76t-shelter.js.
+CM.SHL = {
+  SLOTS: 4, FLOORS: 10, away: 4 * 3600, eat: 0.03, drink: 0.03, burn: 0.02, child: 220, grow: 150, wander: 160, train: 120,
+  ROOMS: {
+    well: { name: "Mana Well", res: "mana", stat: "might", cycle: 30, amount: 12, cost: 100, colour: "#3A5AA0" },
+    kitchen: { name: "Kitchen", res: "bread", stat: "grace", cycle: 30, amount: 12, cost: 100, colour: "#A0602A" },
+    spring: { name: "Spring", res: "water", stat: "wit", cycle: 30, amount: 12, cost: 100, colour: "#2A8AA0" },
+    quarters: { name: "Living Quarters", cost: 120, colour: "#8A4A6A", cap: 8 },
+    store: { name: "Storeroom", cost: 80, colour: "#6A5A3A", store: 60, noStaff: true },
+    beacon: { name: "Beacon", stat: "wit", cost: 300, colour: "#A08A2A" },
+    hall: { name: "Training Hall", cost: 400, colour: "#5A3A2A" },
+  },
+  STATS: ["might", "grace", "wit"], ICON: { mana: "🔷", bread: "🍞", water: "💧" }, MARKS: [6, 10, 15, 20, 25, 30, 40, 50],
+  gold: (i) => 25 + i * 15, digCost: (f) => 200 * f, upCost: (lvl) => 220 * lvl,
+  NAMES: "Ada Bram Cael Dora Edda Finn Gwen Hal Ida Jory Kit Lark Mira Ned Oda Pell Quin Rhea Sol Tam Una Vale Wren Yew Zara Bryn Cora Dell Esme Fen Gil Hett Ivo Juno Kell Lio Moss Nell Orrin Pip Rook Sage Tilda Ulf Vix Wynn".split(" "),
+};
+const SHL = CM.SHL;
+SHL.staffMax = (lvl) => 1 + lvl;
+SHL.Warren = class {
+  constructor(seed, saved) {
+    Object.assign(this, { t: 0, n: 0, floors: 1, marks: 150, stock: { mana: 40, bread: 40, water: 40 }, rooms: [], folk: [], ids: 0, events: [], best: 0, paid: 0 }, saved || {});
+    this.seed = seed;
+    if (!saved) { const R = this.rnd(); [["quarters", 0, 0], ["well", 0, 1], ["kitchen", 0, 2], ["spring", 0, 3]].forEach(([k, f, s]) => this.rooms.push({ id: ++this.ids, k, f, s, lvl: 1, prog: 0, ready: 0, timer: 0 }));
+      for (let i = 0; i < 5; i++) this.folk.push(this.newFolk(R)); [1, 2, 3, 0, 0].forEach((ri, i) => { this.folk[i].room = this.rooms[ri].id; }); this.best = 5; }   // (one at each work, two sharing the quarters)
+  }
+  rnd() { return new CM.Random(CM.hashSeed(`${this.seed}:${this.n++}`)); }
+  newFolk(R, parents) {
+    const st = {}; for (const k of SHL.STATS) st[k] = parents ? Math.max(1, Math.min(10, Math.round((parents[0].st[k] + parents[1].st[k]) / 2) + R.int(-1, 1))) : R.int(1, 5);
+    return { id: ++this.ids, name: SHL.NAMES[R.int(0, SHL.NAMES.length - 1)], st, room: null, age: parents ? 0 : SHL.grow, trainT: 0 };
+  }
+  room(id) { return this.rooms.find((r) => r.id === id); }
+  at(f, s) { return this.rooms.find((r) => r.f === f && r.s === s); }
+  staff(r) { return this.folk.filter((p) => p.room === r.id && p.age >= SHL.grow); }
+  pop() { return this.folk.length; }
+  cap() { return this.rooms.filter((r) => r.k === "quarters").reduce((t, r) => t + SHL.ROOMS.quarters.cap * r.lvl, 0); }
+  storeCap() { return 60 + this.rooms.filter((r) => r.k === "store").reduce((t, r) => t + SHL.ROOMS.store.store * r.lvl, 0) + this.rooms.filter((r) => SHL.ROOMS[r.k].res).length * 15; }
+  weary() { return this.stock.bread <= 0 || this.stock.water <= 0; }
+  cost(k) { return Math.round(SHL.ROOMS[k].cost * Math.pow(1.25, this.rooms.filter((r) => r.k === k).length)); }
+  // a room built on an empty place of a dug floor
+  build(k, f, s) { if (!SHL.ROOMS[k] || f >= this.floors || s < 0 || s >= SHL.SLOTS || this.at(f, s)) return "There is no room there."; const c = this.cost(k); if (this.marks < c) return `That wants ${c} marks.`; this.marks -= c; const r = { id: ++this.ids, k, f, s, lvl: 1, prog: 0, ready: 0, timer: 0 }; this.rooms.push(r); this.events.push({ kind: "build", r }); return ""; }
+  dig() { if (this.floors >= SHL.FLOORS) return "As deep as the warren goes."; const c = SHL.digCost(this.floors); if (this.marks < c) return `Digging deeper wants ${c} marks.`; this.marks -= c; this.floors += 1; this.events.push({ kind: "dig" }); return ""; }
+  upgrade(id) { const r = this.room(id); if (!r || r.lvl >= 3) return "As grand as it can be."; const c = SHL.upCost(r.lvl); if (this.marks < c) return `That wants ${c} marks.`; this.marks -= c; r.lvl += 1; this.events.push({ kind: "upgrade", r }); return ""; }
+  assign(pid, rid) { const p = this.folk.find((x) => x.id === pid), r = rid ? this.room(rid) : null; if (!p || p.age < SHL.grow) return false; if (r && (SHL.ROOMS[r.k].noStaff || this.staff(r).length >= SHL.staffMax(r.lvl))) return false; p.room = r ? r.id : null; return true; }
+  // the best idle resident for a room's work
+  bestIdle(r) { const st = SHL.ROOMS[r.k].stat; return this.folk.filter((p) => !p.room && p.age >= SHL.grow).sort((a, b) => (st ? b.st[st] - a.st[st] : 0))[0] || null; }
+  speed(r) { const R = SHL.ROOMS[r.k], st = this.staff(r); if (!st.length) return 0; const sum = R.stat ? st.reduce((t, p) => t + p.st[R.stat], 0) : st.length * 3; return (1 + sum / 8) * (this.weary() ? 0.5 : 1) * (r.k !== "well" && this.stock.mana <= 0 ? 0 : 1); }
+  // what is waiting in a room, gathered: into the stores (to their limit), and marks for it
+  collect(id) { const r = this.room(id); if (!r || !r.ready) return 0; const res = SHL.ROOMS[r.k].res, n = r.ready, room = Math.max(0, this.storeCap() - this.stock[res]), got = Math.min(n, room); this.stock[res] += got; r.ready = 0; this.marks += Math.ceil(n / 2); this.events.push({ kind: "collect", r, res, n: got }); return got; }
+  update(dt, away = false) {
+    this.t += dt; const P = this.pop(), k = away ? 0.5 : 1;
+    this.stock.bread = Math.max(0, this.stock.bread - P * SHL.eat * dt * k); this.stock.water = Math.max(0, this.stock.water - P * SHL.drink * dt * k);
+    this.stock.mana = Math.max(0, this.stock.mana - this.rooms.filter((r) => r.k !== "well" && r.k !== "store" && this.staff(r).length).length * SHL.burn * dt * k);
+    for (const p of this.folk) if (p.age < SHL.grow) { p.age += dt; if (p.age >= SHL.grow) this.events.push({ kind: "grown", p }); }
+    for (const r of this.rooms) {
+      const R = SHL.ROOMS[r.k], sp = this.speed(r);
+      if (R.res) { if (r.ready || !sp) continue; r.prog += (dt * sp) / R.cycle; if (r.prog >= 1) { r.prog = 0; r.ready = R.amount * r.lvl; this.events.push({ kind: "ready", r }); } }
+      else if (r.k === "quarters" && this.staff(r).length >= 2 && this.pop() < this.cap()) { r.timer += dt * (this.weary() ? 0.5 : 1); if (r.timer >= SHL.child) { r.timer = 0; const st = this.staff(r), c = this.newFolk(this.rnd(), [st[0], st[1]]); this.folk.push(c); this.events.push({ kind: "born", p: c }); } }
+      else if (r.k === "beacon" && sp && this.pop() < this.cap()) { r.timer += dt * sp; if (r.timer >= SHL.wander) { r.timer = 0; const c = this.newFolk(this.rnd()); this.folk.push(c); this.events.push({ kind: "wanderer", p: c }); } }
+      else if (r.k === "hall") for (const p of this.staff(r)) { p.trainT += dt * (this.weary() ? 0.5 : 1); if (p.trainT >= SHL.train / r.lvl) { p.trainT = 0; const lo = SHL.STATS.slice().sort((a, b) => p.st[a] - p.st[b])[0]; if (p.st[lo] < 10) { p.st[lo] += 1; this.events.push({ kind: "trained", p, stat: lo }); } } }
+    }
+    this.best = Math.max(this.best, this.pop());
+  }
+  toJSON() { const o = {}; for (const k of ["t", "n", "floors", "marks", "stock", "rooms", "folk", "ids", "best", "paid"]) o[k] = this[k]; return JSON.parse(JSON.stringify(o)); }
+};
+Object.assign(CM.Game.prototype, {
+  shStore() { const F = this.cgStore(); F.shelter = F.shelter || {}; return F.shelter; },
+  shLive() { const S = this.shStore(); if (!this.shWarren) this.shWarren = new SHL.Warren(`${this.seed}:shelter`, S.state); return this.shWarren; },
+  // back again: the warren's time while away, a second at a time (four hours at most)
+  shAway(nowMs) { const S = this.shStore(), W = this.shLive(); if (!S.at) { S.at = nowMs; return 0; } const secs = Math.floor(Math.max(0, Math.min(SHL.away, (nowMs - S.at) / 1000))); S.at = nowMs; for (let i = 0; i < secs; i++) W.update(1, true); W.events = []; return secs; },
+  shKeep(nowMs) { const S = this.shStore(); if (this.shWarren) S.state = this.shWarren.toJSON(); if (nowMs) S.at = nowMs; this.saveCasino && this.saveCasino(); },
+  // the warren's numbers passed: gold and a card the first time for each
+  shMarks() {
+    const W = this.shLive(), out = [];
+    while (W.paid < SHL.MARKS.length && W.best >= SHL.MARKS[W.paid]) {
+      const i = W.paid++, gold = SHL.gold(i); this.gold += gold; const F = this.cgStore(); F.paid.shelter = (F.paid.shelter || 0) + gold;
+      const tier = i >= 6 ? "rare" : i >= 3 ? "better" : "common", card = this.cgTierCard(tier, `Mana Shelter houses ${SHL.MARKS[i]}!`, new CM.Random(CM.hashSeed(`${this.seed}:shelter:card:${i}`)));
+      out.push({ mark: SHL.MARKS[i], gold, card, tier });
+    }
+    if (out.length) { this.shKeep(); this.emit("change"); }
+    return out;
+  },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -27317,6 +27497,171 @@ CM.CG_TABLES.push(["conduit", "The Mana Conduit"]);
       const from = c.entry, to = open.find((d) => d !== from), A = arm(from), Z = arm(to);
       if (frac <= 0.5) { const f = frac * 2; glow([A, [A[0] + (cx - A[0]) * f, A[1] + (cy - A[1]) * f]]); } else { const f = (frac - 0.5) * 2; glow([A, [cx, cy], [cx + (Z[0] - cx) * f, cy + (Z[1] - cy) * f]]); }
       void now;
+    },
+  });
+}
+
+// ---- 76s-mint.js ----
+"use strict";
+// The Gilded Mint, the window's side (the twenty-seventh big update): the great coin press to strike (it thumps down,
+// and dust puffs up with the count floating off it), the dust and the rate, the workshop list of those who mint for you
+// (lit when you can afford the next), their upgrades and the hammers, the marks and what they paid, the lucky coin that
+// glints across the counter now and then, and the melt. The rules are 64zc-mint.js.
+CM.CG_TABLES.push(["mint", "The Gilded Mint"]);
+{ const floor0 = CM.UI.prototype.renderFloor;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "mint") return this.cgMint(box); return floor0.call(this, box); },
+    cgMint(box) {
+      const g = this.game, MN = CM.MN, M = g.mnLive(), f = MN.fmt;
+      if (!this.mnOpened) { this.mnOpened = true; const away = g.mnAway(Date.now()); if (away > 1) this.cgNote = `While you were away the mint made ${f(away)} dust.`; }
+      const marks = MN.MARKS.map((m, i) => `<span class="${M.marks > i ? "got" : ""}" title="${f(m)} dust minted in all: ${MN.gold(i)} gold and a ${i >= 9 ? "rare" : i >= 4 ? "stronger common" : "common"} card">${M.marks > i ? "✓" : "○"} ${f(m)}</span>`).join("");
+      box.innerHTML = `<div class="cgtable mint"><h3>The Gilded Mint</h3><div class="mnwrap">
+        <div class="mnleft"><div class="mndust"><b data-mn="dust">${f(M.dust)}</b> gold dust<small><span data-mn="rate">${f(M.rate())}</span> a second${M.t < M.luckyUntil ? " - <em>lucky!</em>" : ""}</small></div>
+          <button class="mnpress" data-mnpress title="Strike the press"><span class="die"></span><span class="anvil"></span></button><div class="mnclick">A strike: <b data-mn="click">${f(M.perClick())}</b></div>
+          <div class="mnseal">${M.seals ? `Gilded Seals: <b>${M.seals}</b> (+${Math.round(M.seals * MN.sealBonus * 100)}%)` : ""}${M.sealsIfMelted() ? `<button data-mnmelt title="Start again from nothing, for good seals">Melt the mint for ${M.sealsIfMelted()} seal${M.sealsIfMelted() > 1 ? "s" : ""}</button>` : `<small>At ${f(MN.sealAt)} dust this run, the mint can be melted down for Gilded Seals.</small>`}</div></div>
+        <div class="mnshop"><div class="list-title">The workshop</div>${MN.KINDS.map((K, k) => `<button class="mnkind" data-mnbuy="${k}"><b>${K[1]}</b><small>${M.owned[k]} owned - ${f(K[3] * M.mult(k))} each a second</small><em>${f(MN.cost(k, M.owned[k]))}</em></button>`).join("")}
+          <div class="list-title">Upgrades</div><div class="mnups">${M.hammerOpen() ? `<button data-mnhammer>A better hammer: strikes ×${MN.HAMMERS[M.hammer][1]} <em>${f(MN.HAMMERS[M.hammer][0])}</em></button>` : ""}${MN.KINDS.map((K, k) => (M.upOpen(k) ? `<button data-mnup="${k}">${K[1]}s ×2 <em>${f(MN.upCost(k, M.ups[k]))}</em></button>` : "")).join("")}</div></div></div>
+        <div class="cgnote">${this.cgNote || ""}</div>${(this.mnWins || []).slice(-2).map((w) => this.cgCardWon(w.card)).join("")}
+        <div class="list-title">The marks (dust minted in all, ${f(M.allTime)}) - gold and a card the first time each is passed</div><div class="mnmarks">${marks}</div>
+        <div class="row"><button data-leave>Leave</button></div>
+        <div class="small">Strike the press for dust; buy those who mint it for you. The mint keeps going while you are away (half as fast, up to eight hours). Catch the lucky coin when it glints. It costs nothing to play.</div></div>`;
+      const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => { g.mnKeep(Date.now()); this.closeDialogs(); });
+      const press = q("[data-mnpress]");
+      press.addEventListener("mousedown", (e) => { const n = M.strike(); press.classList.remove("hit"); void press.offsetWidth; press.classList.add("hit"); this.cgSfx("bump", 0.25, 1.4 + Math.random() * 0.3); const fl = document.createElement("span"); fl.className = "mnfloat"; fl.textContent = `+${f(n)}`; const r = press.getBoundingClientRect(), pr = press.parentElement.getBoundingClientRect(); fl.style.left = `${e.clientX - pr.left}px`; fl.style.top = `${e.clientY - pr.top - 10}px`; press.parentElement.appendChild(fl); setTimeout(() => fl.remove(), 900); void r; });
+      box.querySelectorAll("[data-mnbuy]").forEach((b) => b.addEventListener("click", () => { if (M.buy(Number(b.dataset.mnbuy))) { this.cgSfx("coin", 0.4, 0.9); this.renderCasino(); } else this.cgSfx("miss", 0.2); }));
+      box.querySelectorAll("[data-mnup]").forEach((b) => b.addEventListener("click", () => { if (M.upgrade(Number(b.dataset.mnup))) { this.cgSfx("level", 0.4); this.renderCasino(); } }));
+      if (q("[data-mnhammer]")) q("[data-mnhammer]").addEventListener("click", () => { if (M.buyHammer()) { this.cgSfx("grind", 0.5); this.renderCasino(); } });
+      if (q("[data-mnmelt]")) q("[data-mnmelt]").addEventListener("click", () => { if (!this.mnAsk || performance.now() - this.mnAsk > 4000) { this.mnAsk = performance.now(); this.cgNote = "Melt the mint down? Everything goes but the seals (and the marks already passed). Click again."; this.renderCasino(); return; } const s = M.melt(); this.cgNote = `The mint is melted down: ${s} Gilded Seal${s > 1 ? "s" : ""}. Every dust from now on comes ${Math.round(M.seals * MN.sealBonus * 100)}% faster.`; this.cgSfx("victory", 0.5); g.mnKeep(Date.now()); this.renderCasino(); });
+      this.mnBox = box;
+      if (!this.mnLoop) { let prev = performance.now(), keepT = 0, reT = 0; const loop = (now) => { if (!this.mnBox || !this.mnBox.isConnected || this.cgView !== "mint") { this.mnLoop = null; this.mnOpened = false; g.mnKeep(Date.now()); return; } const dt = Math.min(1, (now - prev) / 1000); prev = now; this.mnFrame(dt); if ((keepT += dt) > 5) { keepT = 0; g.mnKeep(Date.now()); } if ((reT += dt) > 1) { reT = 0; this.mnRefresh(); } this.mnLoop = requestAnimationFrame(loop); }; this.mnLoop = requestAnimationFrame(loop); }
+    },
+    mnFrame(dt) {
+      const g = this.game, M = g.mnLive(), f = CM.MN.fmt, b = this.mnBox, ev = M.update(dt, g.mnRnd);
+      const set = (k, v) => { const e = b.querySelector(`[data-mn="${k}"]`); if (e) e.textContent = v; }; set("dust", f(M.dust)); set("rate", f(M.rate())); set("click", f(M.perClick()));
+      if (ev === "lucky") { this.cgSfx("spell", 0.3, 1.6); const c = document.createElement("button"); c.className = "mnlucky"; c.title = "A lucky coin!"; c.style.left = `${M.lucky.x * 100}%`; c.style.top = `${M.lucky.y * 100}%`; b.querySelector(".mnwrap").appendChild(c);
+        c.addEventListener("click", () => { const r = M.catchLucky(g.mnRnd); c.remove(); if (!r) return; this.cgSfx("victory", 0.5); this.cgNote = r.kind === "frenzy" ? "A lucky coin! Everything mints seven times over for half a minute." : `A lucky coin! ${f(r.n)} dust at once.`; this.renderCasino(); }); setTimeout(() => c.remove(), 12000); }
+      const won = g.mnMarks(); if (won.length) { this.mnWins = (this.mnWins || []).concat(won); this.cgSfx("cardwin", 0.5); this.cgNote = won.map((w) => `${f(w.mark)} dust minted: ${w.gold} gold and a card - ${w.card}.`).join(" "); this.renderCasino(); this.cgCoins(this.$("#casino-body"), 12); }
+    },
+    // the buttons lit as they come within reach
+    mnRefresh() { const M = this.game.mnLive(), MN = CM.MN, b = this.mnBox; b.querySelectorAll("[data-mnbuy]").forEach((e) => { const k = Number(e.dataset.mnbuy); e.classList.toggle("can", M.dust >= MN.cost(k, M.owned[k])); });
+      b.querySelectorAll("[data-mnup]").forEach((e) => { const k = Number(e.dataset.mnup); e.classList.toggle("can", M.dust >= MN.upCost(k, M.ups[k])); }); const h = b.querySelector("[data-mnhammer]"); if (h) h.classList.toggle("can", M.hammerOpen() && M.dust >= MN.HAMMERS[M.hammer][0]);
+      const newUp = MN.KINDS.some((K, k) => M.upOpen(k) && !b.querySelector(`[data-mnup="${k}"]`)) || (M.sealsIfMelted() && !b.querySelector("[data-mnmelt]")); if (newUp) this.renderCasino(); },
+  });
+}
+
+// ---- 76t-shelter.js ----
+"use strict";
+// Mana Shelter, the window's side (the twenty-seventh big update): the warren in cross-section on a canvas - packed earth
+// and rock, a stair down the left with its lanterns, each floor's rooms with their own furnishings (the well's blue
+// glow, the kitchen's hearth, the spring's pool, beds in the quarters, crates, the beacon's lamp, the hall's dummies),
+// the residents walking about their work, a bar for each room's work, a bubble bobbing over a room whose work waits to
+// be gathered, floating counts as it is, hearts at a birth; beside it the stores, the marks, who lives there, and what
+// can be built. Click a room to gather or choose it; choose a room to build and click an empty place. Rules: 64zd-shelter.js.
+CM.CG_TABLES.push(["shelter", "Mana Shelter"]);
+{ const floor0 = CM.UI.prototype.renderFloor, SHAFT = 70, SW = 150, FH = 92;
+  const tint = (id) => ["#C83A3A", "#3A7AC8", "#3AA05A", "#C8A03A", "#8A4AC8", "#C86A3A", "#3AA0A0", "#A03A7A"][id % 8];
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "shelter") return this.cgShelter(box); return floor0.call(this, box); },
+    cgShelter(box) {
+      const g = this.game, SHL = CM.SHL, W = g.shLive();
+      if (!this.shOpened) { this.shOpened = true; const secs = g.shAway(Date.now()); if (secs > 60) this.cgNote = `While you were away (${Math.round(secs / 60)} minutes) the warren carried on without you.`; }
+      const r = this.shSel ? W.room(this.shSel) : null, bar = (k) => `<div class="shbar"><span class="${k}" style="width:${Math.min(100, (100 * W.stock[k]) / W.storeCap())}%"></span><em>${{ mana: "Mana", bread: "Bread", water: "Water" }[k]} ${Math.floor(W.stock[k])} / ${W.storeCap()}</em></div>`;
+      const idle = W.folk.filter((p) => !p.room), stat = (p) => `M${p.st.might} G${p.st.grace} W${p.st.wit}`;
+      let panel = "";
+      if (r) { const R = SHL.ROOMS[r.k], st = W.staff(r); panel = `<div class="shroom"><b>${R.name}</b> <small>level ${r.lvl}${R.stat ? ` - wants ${R.stat}` : ""}</small>
+        ${R.noStaff ? `<div class="small">Holds ${R.store * r.lvl} more of each store.</div>` : `<div class="small">${r.k === "quarters" ? `Room for ${R.cap * r.lvl}. Two who share it raise a child.` : r.k === "beacon" ? "Draws a wanderer in now and then." : r.k === "hall" ? "Trains each one's weakest strength." : `Makes ${R.amount * r.lvl} ${R.res} a time.`}</div>
+        <div class="shstaff">${st.map((p) => `<span>${this.esc(p.name)} <small>${stat(p)}</small><button data-shout="${p.id}" title="Send out">×</button></span>`).join("") || "<small>No one works here.</small>"}</div>
+        ${st.length < SHL.staffMax(r.lvl) ? `<button data-shadd ${W.bestIdle(r) ? "" : "disabled"}>Add the best idle hand</button>` : ""}`}
+        ${r.lvl < 3 ? `<button data-shup>Improve (${SHL.upCost(r.lvl)} marks)</button>` : ""}</div>`; }
+      box.innerHTML = `<div class="cgtable shelter"><h3>Mana Shelter</h3><div class="shwrap"><div class="shview"><canvas class="shcanvas" width="${SHAFT + SW * SHL.SLOTS}" height="${FH * Math.max(SHL.FLOORS, W.floors) + 30}"></canvas></div>
+        <div class="shside"><p class="lore">Below the Joker's cellars the house has let you dig. "Keep them fed and watered and the mana flowing," says the attendant, "and they'll keep you."</p>
+          ${bar("mana")}${bar("bread")}${bar("water")}<div class="shnums">Marks <b data-sh="marks">${Math.floor(W.marks)}</b> - residents <b>${W.pop()}</b> / ${W.cap()}${W.weary() ? ` - <em>hungry or thirsty: work is slow</em>` : ""}</div>
+          ${panel}
+          <div class="list-title">Build${this.shBuild ? ` - click an empty place (<a href="#" data-shcancel>cancel</a>)` : ""}</div><div class="shbuild">${Object.entries(SHL.ROOMS).map(([k, R]) => `<button data-shb="${k}" class="${this.shBuild === k ? "primary" : ""}" ${W.marks >= W.cost(k) ? "" : "disabled"}>${R.name} <small>${W.cost(k)}</small></button>`).join("")}<button data-shdig ${W.floors < SHL.FLOORS && W.marks >= SHL.digCost(W.floors) ? "" : "disabled"}>Dig deeper <small>${W.floors < SHL.FLOORS ? SHL.digCost(W.floors) : "-"}</small></button></div>
+          <div class="list-title">Idle (${idle.length})</div><div class="shidle">${idle.map((p) => `<button data-shpick="${p.id}" class="${this.shPick === p.id ? "primary" : ""}" ${p.age < SHL.grow ? "disabled title=\"still a child\"" : ""}>${this.esc(p.name)} <small>${p.age < SHL.grow ? "child" : stat(p)}</small></button>`).join("") || "<small>Everyone is at work.</small>"}</div>
+          <div class="cgnote">${this.cgNote || ""}</div>${(this.shWins || []).slice(-2).map((w) => this.cgCardWon(w.card)).join("")}
+          <div class="list-title">The house's rewards (first time the warren holds...)</div><div class="mnmarks">${SHL.MARKS.map((m, i) => `<span class="${W.paid > i ? "got" : ""}" title="${SHL.gold(i)} gold and a ${i >= 6 ? "rare" : i >= 3 ? "stronger common" : "common"} card">${W.paid > i ? "✓" : "○"} ${m}</span>`).join("")}</div>
+          <div class="row"><button data-leave>Leave</button></div></div></div>
+        <div class="small">Click a room to gather what waits in it, or to choose it; pick an idle resident and click a room to set them to work. Might suits the well, grace the kitchen, wit the spring and the beacon. It runs on while you are away (four hours at most). Free to play.</div></div>`;
+      const q = (s) => box.querySelector(s), keep = () => g.shKeep(Date.now()); q("[data-leave]").addEventListener("click", () => { keep(); this.closeDialogs(); });
+      box.querySelectorAll("[data-shb]").forEach((b) => b.addEventListener("click", () => { this.shBuild = this.shBuild === b.dataset.shb ? null : b.dataset.shb; this.shPick = null; this.renderCasino(); }));
+      if (q("[data-shcancel]")) q("[data-shcancel]").addEventListener("click", (e) => { e.preventDefault(); this.shBuild = null; this.renderCasino(); });
+      if (q("[data-shdig]")) q("[data-shdig]").addEventListener("click", () => { const why = W.dig(); this.cgNote = why || "The diggers break through to a new floor."; if (!why) this.cgSfx("grind", 0.6, 0.7); keep(); this.renderCasino(); });
+      box.querySelectorAll("[data-shpick]").forEach((b) => b.addEventListener("click", () => { const id = Number(b.dataset.shpick); this.shPick = this.shPick === id ? null : id; this.shBuild = null; this.renderCasino(); }));
+      box.querySelectorAll("[data-shout]").forEach((b) => b.addEventListener("click", () => { W.assign(Number(b.dataset.shout), null); keep(); this.renderCasino(); }));
+      if (q("[data-shadd]")) q("[data-shadd]").addEventListener("click", () => { const p = W.bestIdle(r); if (p) W.assign(p.id, r.id); this.cgSfx("step", 0.3); keep(); this.renderCasino(); });
+      if (q("[data-shup]")) q("[data-shup]").addEventListener("click", () => { const why = W.upgrade(r.id); this.cgNote = why || `The ${SHL.ROOMS[r.k].name} is improved.`; if (!why) this.cgSfx("level", 0.5); keep(); this.renderCasino(); });
+      const cv = q(".shcanvas"); this.shCanvas = cv;
+      cv.addEventListener("click", (e) => { const rc = cv.getBoundingClientRect(), x = ((e.clientX - rc.left) * cv.width) / rc.width, y = ((e.clientY - rc.top) * cv.height) / rc.height - 30, f = Math.floor(y / FH), s = Math.floor((x - SHAFT) / SW); this.shClick(f, s); });
+      if (!this.shLoop) { let prev = performance.now(), keepT = 0, reT = 0; const loop = (now) => { if (!this.shCanvas || !this.shCanvas.isConnected || this.cgView !== "shelter") { this.shLoop = null; this.shOpened = false; g.shKeep(Date.now()); return; } const dt = Math.min(1, (now - prev) / 1000); prev = now; this.shFrame(dt, now); if ((keepT += dt) > 5) { keepT = 0; g.shKeep(Date.now()); } if ((reT += dt) > 2) { reT = 0; this.shSide(); } this.shLoop = requestAnimationFrame(loop); }; this.shLoop = requestAnimationFrame(loop); }
+    },
+    shClick(f, s) {
+      const g = this.game, SHL = CM.SHL, W = g.shLive(); if (f < 0 || s < 0 || s >= SHL.SLOTS) return; const r = W.at(f, s);
+      if (this.shBuild) { const why = W.build(this.shBuild, f, s); this.cgNote = why || `A ${SHL.ROOMS[this.shBuild].name} is built.`; if (!why) { this.cgSfx("grind", 0.5); this.shSel = W.at(f, s).id; this.shBuild = null; } else this.cgSfx("miss", 0.3); g.shKeep(Date.now()); this.renderCasino(); return; }
+      if (!r) { this.shSel = null; this.renderCasino(); return; }
+      if (this.shPick) { const ok = W.assign(this.shPick, r.id); this.cgNote = ok ? "" : "No room there for another hand."; this.cgSfx(ok ? "step" : "miss", 0.3); if (ok) this.shPick = null; g.shKeep(Date.now()); this.renderCasino(); return; }
+      if (r.ready) { const n = W.collect(r.id); (this.shFloats = this.shFloats || []).push({ x: SHAFT + r.s * SW + SW / 2, y: 30 + r.f * FH + 20, text: `+${n} ${SHL.ROOMS[r.k].res}`, at: performance.now() }); this.cgSfx("coin", 0.4, 1.1); g.shKeep(Date.now()); }
+      this.shSel = r.id; this.renderCasino();
+    },
+    // the side's numbers, kept fresh (a fuller redraw only when something there changes)
+    shSide() { const W = this.game.shLive(), key = `${W.pop()}:${W.folk.filter((p) => !p.room).length}:${Math.floor(W.marks / 20)}:${W.weary()}:${W.rooms.map((r) => r.ready ? 1 : 0).join("")}:${W.folk.filter((p) => p.age < CM.SHL.grow).length}`; if (key !== this.shKey) { this.shKey = key; const sc = this.shCanvas && this.shCanvas.parentElement.scrollTop; this.renderCasino(); const v = this.$("#casino-body .shview"); if (v && sc) v.scrollTop = sc; } },
+    shFrame(dt, now) {
+      const g = this.game, SHL = CM.SHL, W = g.shLive(), cv = this.shCanvas, p = cv.getContext("2d");
+      W.update(dt);
+      for (const e of W.events.splice(0)) {
+        if (e.kind === "ready") this.cgSfx("card", 0.15, 2);
+        else if (e.kind === "born") { this.cgSfx("heal", 0.5); this.cgNote = `A child is born in the quarters: ${e.p.name}.`; const r = W.rooms.find((x) => x.k === "quarters" && W.staff(x).length >= 2); if (r) (this.shFloats = this.shFloats || []).push({ x: SHAFT + r.s * SW + SW / 2, y: 30 + r.f * FH + 30, text: "♥", at: now, heart: true }); }
+        else if (e.kind === "wanderer") { this.cgSfx("door", 0.5); this.cgNote = `A wanderer follows the beacon down: ${e.p.name}.`; }
+        else if (e.kind === "grown") this.cgNote = `${e.p.name} is grown, and ready to work.`;
+        else if (e.kind === "trained") this.cgSfx("level", 0.25, 1.4);
+      }
+      const won = g.shMarks(); if (won.length) { this.shWins = (this.shWins || []).concat(won); this.cgSfx("victory", 0.55); this.cgSfx("cardwin", 0.5); this.cgNote = won.map((w) => `The warren houses ${w.mark}: ${w.gold} gold and a card - ${w.card}.`).join(" "); this.renderCasino(); this.cgCoins(this.$("#casino-body"), 14); return; }
+      // the earth and the stair
+      const H = cv.height; p.fillStyle = "#3A2A1C"; p.fillRect(0, 0, cv.width, H); p.fillStyle = "#6A8A3A"; p.fillRect(0, 0, cv.width, 8); p.fillStyle = "#4A3424"; p.fillRect(0, 8, cv.width, 22);
+      for (let k = 0; k < 160; k++) { const x = (k * 97) % cv.width, y = 30 + ((k * 53) % (H - 30)); p.fillStyle = k % 3 ? "rgba(0,0,0,0.18)" : "rgba(255,240,200,0.06)"; p.fillRect(x, y, 4 + (k % 5), 3); }
+      const dark = W.stock.mana <= 0 ? 0.35 + 0.15 * Math.sin(now / 90) : 0;
+      for (let f = 0; f < W.floors; f++) { const y = 30 + f * FH; p.fillStyle = "#2A2420"; p.fillRect(0, y + 4, SHAFT, FH - 8); p.strokeStyle = "#6A5A3A"; for (let k = 0; k < 6; k++) { p.beginPath(); p.moveTo(10 + k * 9, y + FH - 6 - k * 13); p.lineTo(60, y + FH - 6 - k * 13); p.stroke(); } p.fillStyle = "#FFD070"; p.beginPath(); p.arc(SHAFT - 10, y + 16, 3, 0, Math.PI * 2); p.fill();
+        for (let s = 0; s < SHL.SLOTS; s++) { const X = SHAFT + s * SW; if (!W.at(f, s)) { p.fillStyle = this.shBuild ? `rgba(240,208,112,${0.18 + 0.1 * Math.sin(now / 200)})` : "rgba(0,0,0,0.15)"; p.fillRect(X + 3, y + 4, SW - 6, FH - 8); if (this.shBuild) { p.strokeStyle = "#F0D070"; p.setLineDash([5, 4]); p.strokeRect(X + 3.5, y + 4.5, SW - 7, FH - 9); p.setLineDash([]); } } } }
+      for (let f = W.floors; f < SHL.FLOORS; f++) { p.fillStyle = "rgba(0,0,0,0.25)"; p.fillRect(0, 30 + f * FH, cv.width, FH); }
+      for (const r of W.rooms) this.shRoom(p, r, now, W);
+      p.fillStyle = `rgba(0,0,30,${dark})`; p.fillRect(0, 30, cv.width, H - 30);
+      // the folk: the staff about their rooms, the idle on the stairs
+      for (const pp of W.folk) { let x, y; const r = pp.room ? W.room(pp.room) : null, ph = (pp.id * 1.7 + now / (1400 + (pp.id % 5) * 300)) % (Math.PI * 2);
+        if (r) { x = SHAFT + r.s * SW + 22 + (SW - 44) * (0.5 + 0.5 * Math.sin(ph)); y = 30 + r.f * FH + FH - 10; } else { const fi = pp.id % W.floors; x = 14 + 42 * (0.5 + 0.5 * Math.sin(ph)); y = 30 + fi * FH + FH - 10; }
+        this.shPerson(p, x, y, pp, Math.cos(ph) > 0 ? 1 : -1, now); }
+      // floats
+      this.shFloats = (this.shFloats || []).filter((fl) => now - fl.at < 1200); for (const fl of this.shFloats) { const t = (now - fl.at) / 1200; p.globalAlpha = 1 - t; p.fillStyle = fl.heart ? "#FF7090" : "#FFE070"; p.font = `bold ${fl.heart ? 26 : 16}px Georgia, serif`; p.textAlign = "center"; p.fillText(fl.text, fl.x, fl.y - t * 40); p.textAlign = "left"; p.globalAlpha = 1; }
+      const mk = this.$("#casino-body [data-sh=marks]"); if (mk) mk.textContent = Math.floor(W.marks);
+    },
+    shRoom(p, r, now, W) {
+      const SHL = CM.SHL, R = SHL.ROOMS[r.k], X = SHAFT + r.s * SW, Y = 30 + r.f * FH, w = SW - 6, h = FH - 8, x = X + 3, y = Y + 4;
+      const bg = p.createLinearGradient(0, y, 0, y + h); bg.addColorStop(0, R.colour); bg.addColorStop(1, "#1A1410"); p.fillStyle = bg; p.fillRect(x, y, w, h); p.fillStyle = "#5A4A3A"; p.fillRect(x, y + h - 6, w, 6);
+      p.strokeStyle = this.shSel === r.id ? "#FFE070" : "#8A7050"; p.lineWidth = this.shSel === r.id ? 3 : 1.5; p.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); p.lineWidth = 1;
+      // furnishings
+      const cx = x + w / 2, fy = y + h - 6;
+      if (r.k === "well") { p.save(); p.shadowColor = "#60A0FF"; p.shadowBlur = 14 + 4 * Math.sin(now / 300); p.fillStyle = "#70B0FF"; p.beginPath(); p.ellipse(cx, fy - 8, 22, 7, 0, 0, Math.PI * 2); p.fill(); p.restore(); p.fillStyle = "#6A6A72"; p.fillRect(cx - 26, fy - 8, 52, 8); }
+      else if (r.k === "kitchen") { p.fillStyle = "#3A3030"; p.fillRect(x + 12, fy - 30, 34, 30); p.fillStyle = `rgba(255,${120 + 60 * Math.sin(now / 140)},40,0.9)`; p.fillRect(x + 18, fy - 14, 22, 10); p.fillStyle = "#8A6A40"; p.fillRect(x + w - 50, fy - 16, 40, 4); }
+      else if (r.k === "spring") { p.fillStyle = "#3A70A0"; p.beginPath(); p.ellipse(cx, fy - 4, 34, 6, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(200,240,255,0.6)"; p.beginPath(); p.ellipse(cx + Math.sin(now / 400) * 6, fy - 4, 10 + 6 * ((now / 600) % 1), 2, 0, 0, Math.PI * 2); p.stroke(); }
+      else if (r.k === "quarters") { for (let k = 0; k < r.lvl + 1; k++) { p.fillStyle = "#6A4A30"; p.fillRect(x + 8 + k * 34, fy - 10, 28, 10); p.fillStyle = "#D8D0C0"; p.fillRect(x + 9 + k * 34, fy - 13, 10, 4); p.fillStyle = "#8A3A4A"; p.fillRect(x + 18 + k * 34, fy - 12, 17, 5); } }
+      else if (r.k === "store") { for (let k = 0; k < 2 + r.lvl * 2; k++) { p.fillStyle = k % 2 ? "#8A6A3A" : "#7A5A2A"; p.fillRect(x + 10 + (k % 4) * 30, fy - 16 - Math.floor(k / 4) * 16, 26, 16); p.strokeStyle = "#4A3418"; p.strokeRect(x + 10.5 + (k % 4) * 30, fy - 15.5 - Math.floor(k / 4) * 16, 25, 15); } }
+      else if (r.k === "beacon") { p.fillStyle = "#4A3A2A"; p.fillRect(cx - 3, y + 14, 6, fy - y - 14); p.save(); p.shadowColor = "#FFE080"; p.shadowBlur = 20 + 10 * Math.sin(now / 250); p.fillStyle = "#FFE080"; p.beginPath(); p.arc(cx, y + 16, 7, 0, Math.PI * 2); p.fill(); p.restore(); }
+      else if (r.k === "hall") { for (const k of [0.25, 0.75]) { p.fillStyle = "#8A6A40"; p.fillRect(x + w * k - 2, fy - 30, 4, 30); p.fillStyle = "#C8A870"; p.beginPath(); p.arc(x + w * k, fy - 32, 7, 0, Math.PI * 2); p.fill(); p.fillRect(x + w * k - 10, fy - 24, 20, 4); } }
+      p.fillStyle = "rgba(255,240,200,0.85)"; p.font = "bold 10px Georgia, serif"; p.fillText(`${R.name}${r.lvl > 1 ? ` ${"I".repeat(r.lvl)}` : ""}`, x + 5, y + 12);
+      // the work's bar and a bubble over finished work
+      if (R.res) { p.fillStyle = "#1A1410"; p.fillRect(x + 5, y + 16, w - 10, 4); p.fillStyle = "#C8E070"; p.fillRect(x + 5, y + 16, (w - 10) * (r.ready ? 1 : r.prog), 4); }
+      else if (r.k === "quarters" || r.k === "beacon") { const T = r.k === "quarters" ? SHL.child : SHL.wander; if (r.timer) { p.fillStyle = "#1A1410"; p.fillRect(x + 5, y + 16, w - 10, 4); p.fillStyle = r.k === "quarters" ? "#FF90B0" : "#FFE080"; p.fillRect(x + 5, y + 16, (w - 10) * Math.min(1, r.timer / T), 4); } }
+      if (r.ready) { const by = y + 34 + Math.sin(now / 250 + r.id) * 4; p.fillStyle = "rgba(255,255,255,0.92)"; p.beginPath(); p.arc(cx, by, 15, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#C8A040"; p.lineWidth = 2; p.stroke(); p.lineWidth = 1; this.shIcon(p, R.res, cx, by); }
+    },
+    // the stores' marks, drawn: a blue crystal, a loaf, a drop
+    shIcon(p, res, x, y) {
+      if (res === "mana") { p.fillStyle = "#4A7AD0"; p.beginPath(); p.moveTo(x, y - 9); p.lineTo(x + 7, y); p.lineTo(x, y + 9); p.lineTo(x - 7, y); p.closePath(); p.fill(); p.fillStyle = "#B0D0FF"; p.beginPath(); p.moveTo(x, y - 9); p.lineTo(x + 3, y - 1); p.lineTo(x - 3, y - 1); p.closePath(); p.fill(); }
+      else if (res === "bread") { p.fillStyle = "#C88A3A"; p.beginPath(); p.ellipse(x, y + 1, 10, 6, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#7A4A18"; p.lineWidth = 1.5; for (const k of [-4, 0, 4]) { p.beginPath(); p.moveTo(x + k - 2, y - 3); p.lineTo(x + k + 2, y + 2); p.stroke(); } p.lineWidth = 1; }
+      else { p.fillStyle = "#3AA0D8"; p.beginPath(); p.moveTo(x, y - 9); p.quadraticCurveTo(x + 8, y + 2, x, y + 8); p.quadraticCurveTo(x - 8, y + 2, x, y - 9); p.fill(); p.fillStyle = "rgba(255,255,255,0.6)"; p.fillRect(x - 3, y, 2, 3); }
+    },
+    shPerson(p, x, y, pp, dir, now) {
+      const child = pp.age < CM.SHL.grow, s = child ? 0.65 : 1, step = Math.sin(now / 120 + pp.id) * 2;
+      p.save(); p.translate(x, y); p.scale(dir * s, s); p.fillStyle = "#2A2420"; p.fillRect(-4, -8, 3, 8 + (step > 0 ? 0 : -1)); p.fillRect(1, -8, 3, 8 + (step > 0 ? -1 : 0));
+      p.fillStyle = tint(pp.id); p.fillRect(-6, -24, 12, 16); p.fillStyle = "#E8C8A0"; p.beginPath(); p.arc(0, -29, 5, 0, Math.PI * 2); p.fill(); p.fillStyle = ["#3A2A1A", "#8A6A3A", "#C8A060", "#1A1A1A"][pp.id % 4]; p.fillRect(-5, -35, 10, 4); p.restore();
     },
   });
 }

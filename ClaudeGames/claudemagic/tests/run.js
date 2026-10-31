@@ -4728,6 +4728,43 @@ test("the Mana Conduit: a level's slate from the seed with the font, rubble and 
   L = g.cdStart(2); L.stage = "done"; L.won = true; L.drained = true; r = g.cdDone(); assert.strictEqual(r.gold, Math.round(CD.gold(2) * 1.2), "a fifth more for the drain");
 });
 
+test("the Gilded Mint: a strike mints dust; workers cost a seventh more each and mint by the second; upgrades double a kind; a better hammer strikes harder; a lucky coin; melting for seals keeps the marks; away it mints at half pace for eight hours at most; each mark of dust minted in all pays gold and a card once", () => {
+  const CM = load(), MN = CM.MN, M = new MN.Mint();
+  assert.strictEqual(M.strike(), 1); assert.strictEqual(M.dust, 1); M.dust = 100;
+  assert.ok(M.buy(0)); assert.strictEqual(M.owned[0], 1); assert.strictEqual(MN.cost(0, 1), Math.ceil(15 * 1.15)); assert.strictEqual(M.dust, 85);
+  M.owned[1] = 10; const r0 = M.rate(); assert.ok(M.upOpen(1)); M.dust = 1e9; assert.ok(M.upgrade(1)); assert.ok(Math.abs(M.rate() - r0 - 10 * 1) < 1e-9, "the bellows doubled");
+  const c0 = M.perClick(); assert.ok(M.buyHammer()); assert.ok(M.perClick() > c0); const d0 = M.dust, R = new CM.Random(3); M.update(10, R); assert.ok(Math.abs(M.dust - d0 - M.rate() * 10) < 1e-6, "minted by the second");
+  M.lucky = { x: 0.5, y: 0.5, until: M.t + 10 }; const L = M.catchLucky(new CM.Random(5)); assert.ok(L && (L.kind === "frenzy" ? M.t < M.luckyUntil : L.n > 0));
+  M.total = 4e6; M.allTime = 4e6; assert.strictEqual(M.sealsIfMelted(), 2); assert.strictEqual(M.melt(), 2); assert.strictEqual(M.dust, 0); assert.strictEqual(M.owned[1], 0); assert.strictEqual(M.allTime, 4e6, "the marks' count kept"); assert.ok(M.mult(0) > 1, "seals");
+  const g = new CM.Game(); g.newGame("mint-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned(), gold0 = g.gold;
+  const Mg = g.mnLive(); Mg.allTime = 2e4; let won = g.mnMarks(); assert.strictEqual(won.length, 3, "a hundred, a thousand, ten thousand"); assert.strictEqual(g.gold - gold0, MN.gold(0) + MN.gold(1) + MN.gold(2)); assert.strictEqual(owned(), o0 + 3);
+  assert.strictEqual(g.mnMarks().length, 0, "once"); Mg.allTime = 1e12; won = g.mnMarks(); assert.ok(CM.CARD_RARES.includes(won[won.length - 1].card));
+  // away: half pace, eight hours at most
+  Mg.owned = MN.KINDS.map(() => 0); Mg.owned[1] = 10; Mg.ups = MN.KINDS.map(() => 0); g.mnKeep(1000); const before = Mg.dust, n = g.mnAway(1000 + 20 * 3600 * 1000); assert.ok(Math.abs(n - Mg.baseRate() * 8 * 3600 * 0.5) < 1e-6); assert.ok(Math.abs(Mg.dust - before - n) < 1e-6);
+  g.mnKeep(5); g.mnMint = null; assert.strictEqual(g.mnLive().owned[1], 10, "kept");
+});
+
+test("Mana Shelter: the warren starts with five and four rooms; rooms work faster for the strength they want, and wait to be gathered; gathering fills the stores and pays marks; everyone eats and drinks, and with a store empty work is slow; two who share the quarters raise a child, a beacon draws wanderers, the hall trains; building, digging, improving; time away runs on; the house pays gold and a card once at each number housed", () => {
+  const CM = load(), SHL = CM.SHL, W = new SHL.Warren("t1");
+  assert.strictEqual(W.pop(), 5); assert.strictEqual(W.rooms.length, 4); assert.strictEqual(W.staff(W.rooms[0]).length, 2, "two in the quarters"); assert.strictEqual(W.cap(), 8);
+  const well = W.rooms.find((r) => r.k === "well"), p = W.staff(well)[0]; p.st.might = 1; const slow = W.speed(well); p.st.might = 9; assert.ok(W.speed(well) > slow, "might suits the well");
+  W.update(200); assert.ok(well.ready > 0, "work waits"); const m0 = W.marks, s0 = W.stock.mana; assert.ok(W.collect(well.id) > 0); assert.ok(W.stock.mana > s0 && W.marks > m0); assert.strictEqual(well.ready, 0);
+  const b0 = W.stock.bread; W.rooms.forEach((r) => { r.ready = 1; }); W.update(10); assert.ok(W.stock.bread < b0, "they eat");
+  W.stock.bread = 0; assert.ok(W.weary()); const sp = W.speed(well); W.stock.bread = 50; assert.ok(W.speed(well) > sp, "slow when hungry");
+  // a child, grown up; a wanderer
+  const n0 = W.pop(); W.rooms.forEach((r) => { r.ready = 0; r.timer = 0; }); W.stock.bread = W.stock.water = W.stock.mana = 999; for (let k = 0; k < SHL.child + 2; k++) W.update(1); assert.strictEqual(W.pop(), n0 + 1, "a child"); const kid = W.folk[W.folk.length - 1]; assert.ok(kid.age < SHL.grow && !W.assign(kid.id, well.id), "a child cannot work");
+  for (let k = 0; k < SHL.grow + 2; k++) { W.stock.bread = W.stock.water = W.stock.mana = 999; W.update(1); } assert.ok(kid.age >= SHL.grow);
+  W.marks = 5000; assert.strictEqual(W.build("beacon", 0, 0), "There is no room there."); assert.strictEqual(W.dig(), ""); assert.strictEqual(W.floors, 2); assert.strictEqual(W.build("beacon", 1, 0), ""); const bc = W.at(1, 0); assert.ok(W.assign(kid.id, bc.id));
+  W.build("quarters", 1, 1); const n1 = W.pop(); for (let k = 0; k < SHL.wander * 2; k++) { W.stock.bread = W.stock.water = W.stock.mana = 999; W.update(1); } assert.ok(W.pop() > n1, "a wanderer");
+  assert.strictEqual(W.upgrade(well.id), ""); assert.strictEqual(well.lvl, 2); assert.strictEqual(SHL.staffMax(2), 3);
+  // time away, and the rewards
+  const g = new CM.Game(); g.newGame("sh-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned(), gold0 = g.gold;
+  const Wg = g.shLive(); g.shKeep(1000); const t0 = Wg.t; assert.strictEqual(g.shAway(1000 + 10 * 3600 * 1000), SHL.away, "four hours at most"); assert.strictEqual(Wg.t - t0, SHL.away);
+  Wg.best = 16; const won = g.shMarks(); assert.strictEqual(won.length, 3, "6, 10 and 15"); assert.strictEqual(g.gold - gold0, SHL.gold(0) + SHL.gold(1) + SHL.gold(2)); assert.strictEqual(owned(), o0 + 3); assert.strictEqual(g.shMarks().length, 0, "once");
+  Wg.best = 50; const w2 = g.shMarks(); assert.ok(CM.CARD_RARES.includes(w2[w2.length - 1].card));
+  g.shKeep(5); g.shWarren = null; assert.strictEqual(g.shLive().floors, Wg.floors, "kept");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
