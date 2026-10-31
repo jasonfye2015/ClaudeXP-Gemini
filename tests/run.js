@@ -4903,6 +4903,33 @@ test("Shatterpane: windows by the level (lead from 5); the orb waits for a launc
   assert.strictEqual(owned(), o0 + 2);
 });
 
+test("Starstone Drift: stones start clear of the ship; the edges fold; thrust carries on; a spark splits a great stone in two and a small one is gone; a guarded ship is safe, then a stone costs a life; a blink moves it; a wraith shoots and is worth points; each wave pays gold every play, every third wave a card only the first time", () => {
+  const CM = load(), SD = CM.SD, L = new SD.Level(2, 3); assert.strictEqual(L.stones.length, 5); assert.ok(L.stones.every((s) => Math.hypot(s.x - SD.W / 2, s.y - SD.H / 2) >= 9));
+  const o = { x: SD.W - 0.1, y: -0.2 }; SD.wrap(o); assert.ok(o.x < SD.W && o.y > SD.H - 1); assert.ok(SD.dist({ x: 0.5, y: 5 }, { x: SD.W - 0.5, y: 5 }) < 1.01);
+  // thrust and drift
+  const M = new SD.Level(1, 4); M.wraithT = 1e9; M.stones = M.stones.slice(0, 1); Object.assign(M.stones[0], { x: 2, y: 2, vx: 0, vy: 0 }); M.ship.a = 0; M.input(0, true, false, false); M.update(0.5); const v = M.ship.vx; assert.ok(v > 7); M.input(0, false, false, false); M.update(0.5); assert.ok(M.ship.vx > v * 0.8, "drifts on");
+  // sparks split stones
+  const N = new SD.Level(1, 5); N.stones = []; N.wraithT = 1e9; N.addStone(3, N.ship.x + 6, N.ship.y); N.stones[0].vx = N.stones[0].vy = 0; N.ship.a = 0; N.input(0, false, true, false); for (let k = 0; k < 60 && N.stones.length === 1; k++) N.tick(SD.step); assert.strictEqual(N.stones.length, 2); assert.ok(N.stones.every((s) => s.size === 2)); assert.strictEqual(N.score, 20);
+  N.stones = []; N.addStone(1, 5, 5); N.split(N.stones[0], 0); assert.strictEqual(N.stones.length, 0);
+  // guard, then a life
+  const G = new SD.Level(1, 6); G.wraithT = 1e9; G.stones = []; G.addStone(3, G.ship.x, G.ship.y); G.stones[0].vx = G.stones[0].vy = 0; G.tick(SD.step); assert.strictEqual(G.lives, 3, "guarded"); G.ship.guard = 0; G.tick(SD.step); assert.strictEqual(G.lives, 2); assert.ok(G.ship.dead > 0);
+  // a blink
+  const B = new SD.Level(1, 7); const x0 = B.ship.x, y0 = B.ship.y; B.input(0, false, false, true); B.tick(SD.step); assert.ok(B.ship.x !== x0 || B.ship.y !== y0); B.input(0, false, false, true); const x1 = B.ship.x; B.tick(SD.step); assert.strictEqual(B.ship.x, x1, "not again so soon");
+  // a wraith
+  const W = new SD.Level(5, 8); W.wraithT = 0; W.tick(SD.step); assert.ok(W.wraith); W.stones = W.stones.slice(0, 1); Object.assign(W.stones[0], { x: W.wraith.x + SD.W / 2, y: W.wraith.y + SD.H / 2, vx: 0, vy: 0 }); W.ship.guard = 99; W.wraith.fireT = 0; W.tick(SD.step); assert.ok(W.shots.length >= 1); const sc = W.score; W.bolts.push({ x: W.wraith.x, y: W.wraith.y, vx: 0, vy: 0, life: 1 }); W.tick(SD.step); assert.ok(!W.wraith && W.score - sc >= 200);
+  // the end: no lives
+  const E = new SD.Level(1, 9); E.lives = 1; E.ship.guard = 0; E.stones = []; E.addStone(2, E.ship.x, E.ship.y); E.stones[0].vx = E.stones[0].vy = 0; E.tick(SD.step); assert.strictEqual(E.stage, "over");
+  // the house's side
+  const g = new CM.Game(); g.newGame("sd-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  for (let play = 0; play < 2; play++) {
+    assert.ok(!g.sdStart(100).error); const gold0 = g.gold; let cards = 0;
+    for (let n = 1; n <= 6; n++) { const Lv = g.sdLevel(); assert.strictEqual(Lv.n, n); Lv.stage = "clear"; const out = g.sdCheck(); assert.strictEqual(out.pay, Math.round(100 * SD.pay(n))); if (out.card) { cards++; assert.strictEqual(n % 3, 0); } }
+    assert.strictEqual(cards, play === 0 ? 2 : 0, "waves 3 and 6, the first time only"); assert.strictEqual(g.gold - gold0, [1, 2, 3, 4, 5, 6].reduce((t, n) => t + Math.round(100 * SD.pay(n)), 0));
+    g.sdLevel().stage = "over"; assert.ok(g.sdCheck().over); assert.strictEqual(g.sdLevel(), null);
+  }
+  assert.strictEqual(owned(), o0 + 2);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
