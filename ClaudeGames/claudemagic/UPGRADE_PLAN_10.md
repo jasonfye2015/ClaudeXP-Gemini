@@ -101,7 +101,15 @@ rules' clock); the tower's run is not saved mid-floor (a floor is entered fresh)
 - **Tests**: the step moves and slides; walls stop; a bolt flies and strikes the first thing; magic is spent and comes
   back; arrows are counted; the same inputs at the same step give the same run.
 
-## Phase 3 - Monsters in real time, and the floor bosses - v10.4 (mechanics; large)
+## Phase 3 - Monsters in real time, and the floor bosses - v10.4 (mechanics; large) - DONE
+
+As built (`64f-towerfoes.js`): a monster idles until it sees the hero down a clear line (eight squares; the boss ten)
+or hears a shot within seven; then it chases by the shortest walk and strikes within reach on a cooldown (a dodge one
+time in eight); kinds that shoot or breathe keep four squares off and send a bolt. The boss is the floor's kind at two
+levels more, 2.6 times the health, a third more attack, half again as large with an aura, and a champion's word that
+works here (Warded halves the first three blows, Frenzied and Fleet are quicker, Shrieking wakes the floor, Shadowed is
+dim until it strikes, Vampiric feeds); it waits in its room until the hero comes in and never leaves it. Its fall opens
+the ladder and leaves a thing two floors deeper's worth. The HUD shows its bar while it is in sight.
 
 - **The tower's own monsters**, from the game's kinds by the floor (the first bands' low, the Deep's high), at a level
   from the hero's and the floor's. Each has a state: idle (it stands, or walks a short beat), alert (it has seen the

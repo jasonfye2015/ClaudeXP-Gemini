@@ -737,6 +737,10 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (ev.kind === "shoot") { try { CM.audio.play(ev.arrow ? "miss" : "spell", 0.25); } catch (er) { /* */ } }
       else if (ev.kind === "spell") { try { CM.audio.play("spell", 0.5); } catch (er) { /* */ } }
       else if (ev.kind === "hurt") { ui.tint("rgba(200,30,20,0.35)", 250); renderer.shake(0.25); }
+      else if (ev.kind === "alert") CM.audio.bark(ev.mon.kind, "hit");
+      else if (ev.kind === "monshoot") { try { CM.audio.play("miss", 0.3); } catch (er) { /* */ } }
+      else if (ev.kind === "dodge") { try { CM.audio.play("miss", 0.2); } catch (er) { /* */ } }
+      else if (ev.kind === "bossdown") { game.say(`${ev.mon.name} falls. The ladder up is free - and it left ${ev.item.name} (${CM.itemLabel(ev.item)}).`); renderer.shake(0.6); try { CM.audio.play("toll", 0.6); } catch (er) { /* */ } ui.refresh(); }
       else if (ev.kind === "pickup") { try { CM.audio.play("coin", 0.4); } catch (er) { /* */ } }
       else if (ev.kind === "fell") { setTimeout(() => { if (game.towerRun === run) { game.leaveMageTower("fell"); ui.refresh(); } }, 900); }
     }

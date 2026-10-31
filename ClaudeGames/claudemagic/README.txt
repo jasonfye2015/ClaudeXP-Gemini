@@ -1410,6 +1410,11 @@ The Mage Tower (the twelfth big update - v10.1 to v11.0)
   Lullaby, Firework, or the archer's Volley) for magic that comes back slowly. Draughts on the floors mend. The HUD has
   a crosshair, the hero's bars and the floor's name; "Leave the tower" gives up the floor, and what was won is kept.
 
+  Monsters and bosses (v10.4): the tower's monsters stand until they see the hero or hear a shot, then hunt by the
+  shortest way and strike when close; some shoot from a distance (src/js/64f-towerfoes.js). Each floor's ladder is
+  guarded by its boss - one of the floor's kinds, larger, glowing, with a champion's word and far more health - which
+  waits in its room. Its fall frees the ladder and leaves something good.
+
 A world that moves (the eleventh big update - v9.3 to v10.0)
   UPGRADE_PLAN_9.md says what each phase does.
   Monsters that move (v9.3): a monster's pose is worked out from what happened to it and when (CM.motion in
@@ -1547,6 +1552,7 @@ The source
     64d-bestiary.js the Deep's ten more kinds, the Spore Mother's spawning and the Grave Lantern's light
     64c-undercroft.js the Undercroft: its floors, kinds, carvings, the Bell-Founder's Boy and the black door
     64b-people.js the followers and the townsfolk's errands
+    64f-towerfoes.js the Mage Tower's monsters in real time, and the floor bosses
     64e-towerrun.js the Mage Tower inside: the real-time hero, bolts, spells, monsters and bosses
     61e-towerfloor.js the Mage Tower's forty floors
     61d-magetower.js the Mage Tower outside: the portal yard, the tower in the Wood, who may go in

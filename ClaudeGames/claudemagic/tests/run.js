@@ -3629,13 +3629,15 @@ test("inside the Mage Tower: one hero in real time - a fixed step, moving and sl
   const g = make(), mage = g.party.findIndex((h) => h.cls === "Mage"), knight = g.party.findIndex((h) => h.cls === "Knight");
   assert.ok(g.enterMageTower(knight), "a Knight may not go in"); assert.strictEqual(g.enterMageTower(mage), ""); assert.strictEqual(g.mode, "tower");
   const r = g.towerRun; assert.strictEqual(r.n, 1); assert.strictEqual(r.arms, CM.TOWER_ARMS.Mage);
+  r.hero.hp = r.hero.max = 9999;                                             // (the floor's monsters bite while the hero walks)
   const x0 = r.x, z0 = r.z; r.update(0.25, { fwd: true }); assert.ok(Math.hypot(r.x - x0, r.z - z0) > 0.7, "it walks (a frame of a quarter second at most)");
   for (let i = 0; i < 300; i++) r.update(1 / 30, { fwd: true }); assert.ok(r.free(r.x, r.z), "never into a wall"); assert.ok(!r.solidAt(r.x, r.z));
   const y0 = r.yaw; r.update(0.2, { turnR: true }); assert.ok(r.yaw > y0, "it turns"); r.update(1 / 60, { look: 0.3 }); 
   // a bolt toward a monster in a clear line strikes it; toward a wall, it stops
   const o = r.mons[0]; let spot = null; for (let dz = -4; dz <= 4 && !spot; dz++) for (let dx = -4; dx <= 4 && !spot; dx++) { const x = o.x + dx, z = o.z + dz, d = Math.hypot(dx, dz); if (d >= 2 && r.free(x, z) && r.clear(x, z, o.x, o.z) && !r.mons.some((q) => q !== o && Math.hypot(q.x - x, q.z - z) < 1.2)) spot = [x, z]; }
   assert.ok(spot, "a place to shoot from"); for (const q of r.mons) if (q !== o) q.m.hp = 0; r.x = spot[0]; r.z = spot[1];
-  r.yaw = Math.atan2(o.x - r.x, -(o.z - r.z)); const hp = o.m.hp; o.m.hp = o.m.max = 9999; r.update(1 / 60, { fire: true }); assert.strictEqual(r.bolts.length, 1);
+  o.stunned = 99; r.yaw = Math.atan2(o.x - r.x, -(o.z - r.z)); const hp = o.m.hp; o.m.hp = o.m.max = 9999;   // (held still: a bolt is aimed where it is)
+  r.update(1 / 60, { fire: true }); assert.strictEqual(r.bolts.length, 1);
   for (let i = 0; i < 120 && r.bolts.length; i++) r.update(1 / 60, {}); assert.ok(o.m.hp < 9999, "the bolt strikes"); assert.ok(hp > 0);
   o.m.hp = 1; r.cool = 0; r.update(1 / 60, { fire: true }); for (let i = 0; i < 120 && r.bolts.length; i++) r.update(1 / 60, {}); assert.ok(o.fellAt !== null && r.kills === 1 && r.xp >= o.m.xp, "it falls, and is counted");
   const mp = r.hero.mp = r.hero.maxmp; r.spellCool = 0; r.update(1 / 60, { spell: true }); assert.strictEqual(r.hero.mp, mp - r.arms.cost, "the great spell costs magic");
@@ -3649,6 +3651,36 @@ test("inside the Mage Tower: one hero in real time - a fixed step, moving and sl
   assert.strictEqual(play(), play());
   // out again: what was won is the party's, and the view goes back to the Wood
   const gold = g.gold, xp = g.party[mage].xp; g.leaveMageTower("left"); assert.strictEqual(g.mode, "explore"); assert.strictEqual(g.floor.number, -1); assert.ok(g.gold >= gold && g.party[mage].xp >= xp + 1, "the kills are the party's"); assert.ok(!g.towerRun);
+});
+
+test("the Mage Tower's monsters: they see only down a clear line, hear a shot, chase by the shortest walk, strike on a cooldown, shooters stand off and shoot; the floor's boss is larger with its word, keeps its room until the hero comes in, and its fall opens the ladder and leaves a thing", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("foes-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); g.mode = "explore";
+  const mi = g.party.findIndex((h) => h.cls === "Mage"); g.enterMageTower(mi); const r = g.towerRun, h = r.hero; h.hp = h.max = 5000;
+  const b = r.boss; assert.ok(b && b.boss && b.aura && b.scale > 1.3 && CM.CHAMPIONS[b.word] && b.m.max > 2 * r.mons[0].m.max, "a boss, larger, with its word");
+  assert.ok(!r.ladderOpen(), "the ladder shut while it stands");
+  // one plain monster, the rest gone: it does not see the hero round a corner
+  const o = r.mons.find((q) => !q.boss && !CM.towerShoots(q.kind)) || r.mons.find((q) => !q.boss); for (const q of r.mons) if (q !== o && !q.boss) q.m.hp = 0;
+  o.kind = "Orc"; let hidden = null;
+  for (const [x, z] of r.fl.rooms.flatMap((rm) => [[rm.x0 + 0.5, rm.y0 + 0.5], [rm.x1 + 0.5, rm.y1 + 0.5]])) if (r.free(x, z) && !r.clear(x, z, o.x, o.z) && Math.hypot(x - o.x, z - o.z) < 7 && !r.inRoom(b.room, x, z)) { hidden = [x, z]; break; }
+  if (hidden) { r.x = hidden[0]; r.z = hidden[1]; r.update(0.25, {}); assert.ok(!o.seen, "not seen round a corner"); r.update(1 / 60, { fire: true }); r.update(1 / 30, {}); if (Math.hypot(r.x - o.x, r.z - o.z) < CM.TF.hear) assert.ok(o.seen, "a shot is heard"); }
+  // in the open it sees, chases and strikes
+  o.seen = true; let spot = null; for (let dz = -6; dz <= 6 && !spot; dz++) for (let dx = -6; dx <= 6 && !spot; dx++) { const x = o.x + dx, z = o.z + dz; if (Math.hypot(dx, dz) > 3 && r.free(x, z) && !r.inRoom(b.room, x, z)) spot = [x, z]; }
+  r.x = spot[0]; r.z = spot[1]; const d0 = Math.hypot(r.x - o.x, r.z - o.z), hp0 = h.hp;
+  for (let i = 0; i < 40; i++) r.update(0.1, {}); assert.ok(Math.hypot(r.x - o.x, r.z - o.z) < d0, "it comes");
+  for (let i = 0; i < 120; i++) r.update(0.1, {}); assert.ok(h.hp < hp0, "and strikes"); assert.ok(Math.hypot(r.x - o.x, r.z - o.z) >= CM.TR.radius + CM.TR.monRadius * 0.8 - 0.01, "never inside the hero");
+  // a shooter stands off and sends bolts
+  o.m.hp = 0; const s = r.makeMon("Dark Elf", o.x, o.z, r.level, new CM.Random(4), { seen: true }); r.mons.push(s); s.x = spot[0]; s.z = spot[1]; r.x = spot[0] + 0; r.z = spot[1];
+  let sx = null; for (let dz = -5; dz <= 5 && !sx; dz++) for (let dx = -5; dx <= 5 && !sx; dx++) { const x = spot[0] + dx, z = spot[1] + dz; if (Math.hypot(dx, dz) > 3 && Math.hypot(dx, dz) < 5 && r.free(x, z) && r.clear(x, z, spot[0], spot[1]) && !r.inRoom(b.room, x, z)) sx = [x, z]; }
+  r.x = sx[0]; r.z = sx[1]; let shots = 0; for (let i = 0; i < 60; i++) { r.update(0.1, {}); shots += r.bolts.filter((q) => q.from === "mon").length ? 1 : 0; } assert.ok(shots > 0, "the shooter shoots");
+  assert.ok(CM.towerShoots("Dark Elf") && !CM.towerShoots("Orc"));
+  // the boss keeps its room until the hero is in it
+  s.m.hp = 0; const bx = b.x, bz = b.z; for (let i = 0; i < 30; i++) r.update(0.1, {}); assert.ok(!b.seen && b.x === bx && b.z === bz, "it waits");
+  const [lx, ly] = r.fl.ladder; r.x = lx + 0.5; r.z = ly + 0.5; for (let i = 0; i < 20; i++) r.update(0.1, {}); assert.ok(b.seen, "the hero comes in: it wakes");
+  for (let i = 0; i < 100; i++) { r.update(0.1, {}); assert.ok(r.inRoom(b.room, b.x, b.z), "never out of its room"); }
+  assert.ok(r.bossInSight() === b);
+  b.m.hp = 1; b.ward = 0; r.yaw = Math.atan2(b.x - r.x, -(b.z - r.z)); r.cool = 0; for (let i = 0; i < 90 && b.m.hp > 0; i++) { r.yaw = Math.atan2(b.x - r.x, -(b.z - r.z)); r.update(1 / 30, { fire: true }); }
+  assert.ok(b.m.hp <= 0 && r.ladderOpen(), "it falls and the ladder is free"); assert.ok(r.loot.length === 1 && !r.loot[0].unknown, "and leaves a thing");
 });
 
 (async () => {
