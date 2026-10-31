@@ -5,7 +5,7 @@
 // that shoots or casts, keeps its distance and sends a bolt of its own. The floor's boss is one of the floor's kinds
 // made more: larger, an aura, a champion's word that works here as it does below, far more health; it keeps its room
 // until the hero comes in, and when it falls the ladder is open and it leaves something worth having.
-CM.TF = { eyes: 8, bossEyes: 10, hear: 7, reach: 0.9, meleeCd: 1.25, rangedCd: 2.2, keep: 4, dodge: 0.12, bossScale: 1.45, bossHp: 2.6, bossAtk: 1.3, boltSpeed: 6.5 };
+CM.TF = { eyes: 8, bossEyes: 10, hear: 7, reach: 0.9, meleeCd: 1.25, rangedCd: 2.8, rangedHit: 0.7, rush: 1.9, rushRange: 7, hit: 0.7, edge: 1.5, keep: 4, dodge: 0.12, bossScale: 1.45, bossHp: 2.6, bossAtk: 1.3, boltSpeed: 6.5 };
 CM.TOWER_SHOOTERS = ["Goblin", "Dark Elf", "Shard Wisp", "Weed Hag", "Grave Priest", "Hedge Wizard", "Foundry Imp", "Bellows Imp", "Thorn Lotus", "Eel", "Demon", "Wyvern", "Spore Beast", "Prism Sentinel", "Grave Lantern"];
 CM.towerShoots = (kind) => { const K = CM.monsterKind(kind) || {}; return CM.TOWER_SHOOTERS.includes(K.name) || K.ability === "ranged" || K.ability === "breath"; };
 
@@ -36,7 +36,7 @@ Object.assign(CM.TowerRun.prototype, {
       if (!o.seen) {                                                     // idle: it has to see the hero, or hear a shot
         const sees = d < (o.boss ? T.bossEyes : T.eyes) && this.clear(o.x, o.z, this.x, this.z), hears = shot && d < T.hear;
         if (o.boss && !this.inRoom(o.room, this.x, this.z)) continue;   // (the boss waits in its room)
-        if (sees || hears) { o.seen = true; this.events.push({ kind: "alert", mon: o }); if (o.word === "shrieking") for (const q of this.living()) q.seen = true; }
+        if (sees || hears) { o.seen = true; this.events.push({ kind: "alert", mon: o }); for (const q of this.living()) if (!q.boss && Math.hypot(q.x - o.x, q.z - o.z) < 5) q.seen = true; if (o.word === "shrieking") for (const q of this.living()) q.seen = true; }   // (a room wakes together)
         else continue;
       }
       const shoots = CM.towerShoots(o.kind), sees = this.clear(o.x, o.z, this.x, this.z);
@@ -54,7 +54,8 @@ Object.assign(CM.TowerRun.prototype, {
       if (way !== null) this.monMove(o, way, dt);
     }
   },
-  monSpeed(o) { return Math.min(2.6, 1.0 + (o.m.speed || 10) * 0.1) * (o.word === "fleet" ? 1.4 : 1) * (o.boss ? 0.9 : 1); },
+  monSpeed(o) { const rush = o.seen && !CM.towerShoots(o.kind) && Math.hypot(this.x - o.x, this.z - o.z) < CM.TF.rushRange ? CM.TF.rush : 1;   // (a close fighter that has seen the hero rushes the last stretch)
+    return rush * Math.min(2.9, 1.3 + (o.m.speed || 10) * 0.11) * (o.word === "fleet" ? 1.4 : 1) * (o.boss ? 0.9 : 1); },
   monMove(o, yaw, dt) {
     const sp = this.monSpeed(o) * dt, nx = o.x + Math.sin(yaw) * sp, nz = o.z - Math.cos(yaw) * sp, R = CM.TR.monRadius * (o.scale || 1) * 0.8;
     const ok = (x, z) => this.free(x, z, R) && Math.hypot(x - this.x, z - this.z) > CM.TR.radius + R && !this.living().some((q) => q !== o && Math.hypot(q.x - x, q.z - z) < R * 1.6) && (!o.room || this.inRoom(o.room, x, z));
@@ -65,7 +66,8 @@ Object.assign(CM.TowerRun.prototype, {
   heroDf() { const g = this.game; return g.effective(this.hero).df + CM.gearDefence(this.hero); },
   hurtHero(o, dmg) {
     const h = this.hero;
-    h.hp -= dmg; this.events.push({ kind: "hurt", amount: dmg, mon: o });
+    dmg = Math.max(1, Math.round(dmg * CM.TF.hit * Math.pow(Math.min(2, Math.max(0.25, this.level / Math.max(1, h.level))), CM.TF.edge)));   // (a blow from below the hero's level lands softer; from above, harder)
+    h.hp -= dmg; this.lastHurt = this.t; this.events.push({ kind: "hurt", amount: dmg, mon: o });
     if (o.word === "vampiric") o.m.hp = Math.min(o.m.max, o.m.hp + Math.ceil(dmg / 2));
     if (o.blink) o.blink = false;                                        // (a shadowed one is seen once it strikes)
   },
@@ -83,7 +85,7 @@ Object.assign(CM.TowerRun.prototype, {
     if (Math.hypot(b.x - this.x, b.z - this.z) > CM.TR.radius + 0.12) return false;
     b.life = 0; const o = b.mon;
     if (this.game.rnd.chance(CM.TF.dodge)) { this.events.push({ kind: "dodge", mon: o }); return true; }
-    this.hurtHero(o, Math.max(1, Math.round(this.game.damage(Math.floor(o.m.atk / 2), 0, this.heroDf()) * 0.85)));
+    this.hurtHero(o, Math.max(1, Math.round(this.game.damage(Math.floor(o.m.atk / 2), 0, this.heroDf()) * (o.king ? 0.85 : CM.TF.rangedHit))));
     return true;
   },
   // when one falls: the boss's things, and the ladder open

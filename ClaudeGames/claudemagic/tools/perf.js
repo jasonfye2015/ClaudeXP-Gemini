@@ -27,6 +27,12 @@
       clearInterval(boom);
       if (g.mode === "combat") { g.mode = "explore"; g.combat = null; g.foes = []; }
       if (g.floorAt && CM.TOWER_STAIRS) await measure("tower", () => { g.clock = 16 * 60; g.enterFloor(0, "rope", Object.keys(CM.TOWER_STAIRS)[0].split(",").map(Number)); g.floor.facing = 1; g.perch = null; g.climbTower(Object.keys(CM.TOWER_STAIRS)[0]); });
+      if (g.enterMageTower) {                                             // the fifth: a tower floor, the room awake and bolts in the air
+        g.perch = null; g.mode = "explore"; g.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); g.mode = "explore";
+        const i = g.party.findIndex((h) => CM.TOWER_CASTERS.includes(h.cls));
+        if (i >= 0 && !g.enterMageTower(i)) await measure("magetower", () => { const r = g.towerRun; r.hero.hp = r.hero.max = 1e6; for (const o of r.mons) o.seen = true; });
+        if (g.towerRun) g.leaveMageTower("left");
+      }
     } finally { g.startCombat = keep; CM.perf.hold = false; }
     return out;
   };

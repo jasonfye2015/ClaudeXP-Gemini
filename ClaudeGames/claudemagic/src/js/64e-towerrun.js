@@ -11,8 +11,8 @@
 // Positions are in squares (x east, z south), the facing a yaw as the renderer's: 0 looks north (-z).
 CM.TR = {
   step: 1 / 60, speed: 3.3, back: 0.7, strafe: 0.85, turn: 2.6, radius: 0.24, eye: 0.5,
-  bolt: 9, arrow: 12, boltLife: 2.2, fireCd: 0.38, arrowCd: 0.55, spellCd: 1.2,
-  regen: 0.4, arrowsStart: 40, quiver: 10, monRadius: 0.32,
+  bolt: 9, arrow: 12, boltLife: 2.2, fireCd: 0.42, arrowCd: 0.5, spellCd: 1.2,
+  regen: 0.4, arrowsStart: 90, quiver: 20, monRadius: 0.32, monHp: 1.5, levelBase: 2, levelPer: 1.0, calmAfter: 4, calmHeal: 0.03, powerPer: 1.4, xpShare: 0.33,
 };
 // each calling's bolt and great spell: { bolt: the layer and the stat its power follows; spell: what the right hand does }
 CM.TOWER_ARMS = {
@@ -36,9 +36,11 @@ CM.TowerRun = class {
     this.t = 0; this.acc = 0; this.cool = 0; this.spellCool = 0; this.regenT = 0; this.bolts = []; this.events = [];
     this.xp = 0; this.gold = 0; this.loot = []; this.kills = 0; this.over = null; this.ids = 0;
     this.items = this.fl.items.map((it) => Object.assign({ taken: false }, it));
-    const depth = CM.towerDepth(n), level = Math.max(1, Math.round(CM.monsterLevel(depth) * 0.85)), rnd = new CM.Random(CM.hashSeed(`${game.seed}:towerrun:${n}`));
+    const depth = CM.towerDepth(n), level = Math.max(1, Math.round(CM.TR.levelBase + n * CM.TR.levelPer)),   // (the tower's own strength, floor by floor: the kinds are the band's, the level the floor's)
+       rnd = new CM.Random(CM.hashSeed(`${game.seed}:towerrun:${n}`));
     this.level = level;
     this.mons = this.fl.spawns.map((s) => this.makeMon(s.kind, s.x + 0.5, s.y + 0.5, level, rnd));
+    for (const o of this.mons) { o.m.max = o.m.hp = Math.round(o.m.max * CM.TR.monHp); }   // (the tower's own are hardier than the shaft's)
     if (this.addBoss) this.addBoss(rnd);                                 // (the floor's boss: phase 3)
   }
   makeMon(kind, x, z, level, rnd, extra) {
@@ -49,7 +51,17 @@ CM.TowerRun = class {
   solidAt(x, z) { const g = this.fl.grid, cx = Math.floor(x), cz = Math.floor(z); return !g[cz] || g[cz][cx] !== 0; }
   free(x, z, r = CM.TR.radius) { return !this.solidAt(x - r, z - r) && !this.solidAt(x + r, z - r) && !this.solidAt(x - r, z + r) && !this.solidAt(x + r, z + r); }
   // a clear line between two points (no wall square on it): the eyes' and the bolts' rule
-  clear(x0, z0, x1, z1) { const d = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(d / 0.2); for (let i = 1; i < n; i++) { const k = i / n; if (this.solidAt(x0 + (x1 - x0) * k, z0 + (z1 - z0) * k)) return false; } return true; }
+  clear(x0, z0, x1, z1) {                                               // (every square the line passes through, exactly: no corner skipped)
+    let cx = Math.floor(x0), cz = Math.floor(z0); const ex = Math.floor(x1), ez = Math.floor(z1), dx = x1 - x0, dz = z1 - z0, sx = Math.sign(dx), sz = Math.sign(dz);
+    const tdx = dx ? Math.abs(1 / dx) : Infinity, tdz = dz ? Math.abs(1 / dz) : Infinity;
+    let tx = dx ? (sx > 0 ? cx + 1 - x0 : x0 - cx) * tdx : Infinity, tz = dz ? (sz > 0 ? cz + 1 - z0 : z0 - cz) * tdz : Infinity;
+    for (let guard = 0; guard < 200 && !(cx === ex && cz === ez); guard++) {
+      if (tx < tz) { tx += tdx; cx += sx; } else { tz += tdz; cz += sz; }
+      if (cx === ex && cz === ez) break;
+      const g = this.fl.grid; if (!g[cz] || g[cz][cx] !== 0) return false;
+    }
+    return true;
+  }
   living() { return this.mons.filter((o) => o.m.hp > 0); }
   // the way to a point, square by square: the yaw from (x, z) toward the next square on the shortest walk (the monsters'
   // chase, and the balance bot's); null when it is there or there is no way. The walk's map is kept per target square.
@@ -88,7 +100,9 @@ CM.TowerRun = class {
     if (inp.fire && this.cool <= 0) this.fire();
     if (inp.spell && this.spellCool <= 0) this.cast();
     // magic comes back, slowly
-    this.regenT += dt; if (this.regenT >= 1) { this.regenT -= 1; if (h.maxmp) h.mp = Math.min(h.maxmp, h.mp + Math.max(1, Math.round(h.maxmp * 0.04 * (1 + (this.regenBonus || 0))))); }
+    this.regenT += dt; if (this.regenT >= 1) { this.regenT -= 1;
+      if (this.t - (this.lastHurt === undefined ? -99 : this.lastHurt) > CM.TR.calmAfter && !this.living().some((o) => o.seen && this.clear(o.x, o.z, this.x, this.z))) h.hp = Math.min(h.max, h.hp + Math.max(1, Math.round(h.max * CM.TR.calmHeal)));   // (out of the fight a while: the hero gets breath back)
+      if (h.maxmp) h.mp = Math.min(h.maxmp, h.mp + Math.max(1, Math.round(h.maxmp * 0.04 * (1 + (this.regenBonus || 0))))); }
     this.stepBolts(dt);
     if (this.monsterStep) this.monsterStep(dt);                           // (the monsters' minds: phase 3)
     this.pickUp();
@@ -98,8 +112,8 @@ CM.TowerRun = class {
   // the bolt's (or the arrow's) power: the hero's level and their calling's stat, or the bow
   power() {
     const h = this.hero, g = this.game, A = this.arms, st = g.stat(h, A.stat);
-    if (A.arrows) return (h.weapon ? h.weapon.power : 2) + Math.max(0, CM.mod(st));
-    return 3 + Math.floor(h.level * 0.9) + Math.max(0, CM.mod(st) * 2);
+    if (A.arrows) return (h.weapon ? h.weapon.power : 2) + Math.floor(h.level * CM.TR.powerPer * 0.9) + Math.max(0, CM.mod(st) * 2);
+    return 2 + Math.floor(h.level * CM.TR.powerPer) + Math.max(0, CM.mod(st) * 2);
   }
   shoot(yaw, o = {}) {
     const A = this.arms, sp = A.arrows ? CM.TR.arrow : CM.TR.bolt;
@@ -214,10 +228,11 @@ Object.assign(CM.Game.prototype, {
   // what a floor won goes to the party as it is cleared (a fall later loses only the floor it happened on)
   bankTower(run) {
     const h = run.hero;
-    if (run.xp) { h.xp += run.xp; this.checkLevels(); }
+    const xp = Math.round(run.xp * CM.TR.xpShare);                      // (one hero, every kill: a third of it, or a climb is a ladder of levels)
+    if (xp) { h.xp += xp; this.checkLevels(); }
     if (run.gold) this.gold += run.gold;
     if (run.loot.length) this.gain(run.loot, "tower");
-    const won = { xp: run.xp, gold: run.gold, things: run.loot.length }; run.xp = 0; run.gold = 0; run.loot = [];
+    const won = { xp, gold: run.gold, things: run.loot.length }; run.xp = 0; run.gold = 0; run.loot = [];
     return won;
   },
   // the floor's ladder: the floor is counted cleared; up to the next, or out of the doors ("leave")
@@ -235,7 +250,7 @@ Object.assign(CM.Game.prototype, {
     if (run.n >= CM.TOWER_FLOORS) { this.achieve("towerking"); this.remember && this.remember("tower", CM.TOWER_KING_LINES.fall, { floor: 0 }); }
     if (leave || run.n >= CM.TOWER_FLOORS) return this.leaveMageTower("cleared") ? "" : "";
     const next = new CM.TowerRun(this, run.heroIndex, run.n + 1);
-    next.arrows = run.arrows; this.towerRun = next;
+    this.towerRun = next;                                                // (a full quiver on every floor: the tower's racks hold arrows)
     this.say(`Up the ladder: ${CM.towerFloorName(next.n)}.`);
     this.emit("towerfloor", next);
     return "";
