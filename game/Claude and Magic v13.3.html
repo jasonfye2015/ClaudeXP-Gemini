@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v13.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v13.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -781,6 +781,11 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .gemtray .gtside { flex: 1; min-width: 260px; } .gemtray .gtinfo { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); line-height: 1.7; }
 .gemtray .gtbar { position: relative; height: 18px; border-radius: 9px; background: #200C14; overflow: hidden; border: 1px solid #C8A040; } .gemtray .gtbar span { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #C02848, #F0C040); transition: width 0.25s ease-out; }
 .gemtray .gtbar em { position: relative; display: block; text-align: center; font-style: normal; font-size: 12px; line-height: 18px; color: #FFF; text-shadow: 0 1px 2px #000; }
+
+/* The Tilewright's Table (76l-mahjong.js) */
+.mahjong .mjwrap { display: flex; gap: 16px; align-items: flex-start; } .mahjong .mjcanvas { width: 620px; height: 520px; border-radius: 10px; border: 5px solid #3A2414; box-shadow: 0 8px 18px rgba(0,0,0,0.65); cursor: pointer; }
+.mahjong .mjside { flex: 1; min-width: 240px; } .mahjong .mjinfo { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); line-height: 1.8; }
+.mahjong .paytable tr.now td { background: rgba(240,208,112,0.3); color: #FFF; }
 </style>
 </head>
 <body>
@@ -790,7 +795,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "13.2", built: "2026-10-31" };
+const CM = window.CM = { version: "13.3", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -20101,6 +20106,101 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 64v-mahjong.js ----
+"use strict";
+// The Tilewright's Table (the twenty-third big update - v13.3): tile-matching solitaire on the Gilded Joker's floor,
+// with tiles of the game's own - three suits of nine (Coins, Runes, Blades), the four winds of the compass, the three
+// elements (Fire, Frost, Holy), four potions and the four seasons (any potion matches any potion, any season any
+// season): a hundred and forty-four, stacked in the Keep or the Tower. Take away matching pairs of free tiles - a tile
+// is free when nothing lies on it and its left or its right side is open. Every deal is built backwards from a way to
+// clear it, so a whole table can always be cleared; three shuffles help out of a dead end. One stake a table: a table
+// cleared without a shuffle pays 1.6 times it (the Tower, an easier stack, 1.4) and a rare Claudescryption card, with one
+// shuffle 0.9 (0.8) and a common card, with two 0.5, with three 0.3 - about even for a player who picks pairs at random; a table left pays back a little by how much was cleared. The window is 76l-mahjong.js.
+CM.MJ = {
+  SUITS: [["coins", "Coins"], ["runes", "Runes"], ["blades", "Blades"]], WINDS: ["N", "E", "S", "W"], ELEMENTS: ["fire", "frost", "holy"],
+  POTIONS: ["heal", "mana", "luck", "haste"], SEASONS: ["spring", "summer", "autumn", "winter"],
+  shuffles: 3, PAY: { keep: [1.6, 0.9, 0.5, 0.3], tower: [1.4, 0.8, 0.5, 0.3] }, partial: 0.5,   
+};
+const MJ = CM.MJ;
+// the faces: 34 kinds four times over, the potions and seasons once each (each matching its own group)
+MJ.faces = () => {
+  const out = [];
+  for (const [s] of MJ.SUITS) for (let n = 1; n <= 9; n++) for (let k = 0; k < 4; k++) out.push({ f: `${s}${n}`, g: `${s}${n}` });
+  for (const w of MJ.WINDS) for (let k = 0; k < 4; k++) out.push({ f: `wind${w}`, g: `wind${w}` });
+  for (const e of MJ.ELEMENTS) for (let k = 0; k < 4; k++) out.push({ f: e, g: e });
+  for (const p of MJ.POTIONS) out.push({ f: `potion_${p}`, g: "potion" });
+  for (const s of MJ.SEASONS) out.push({ f: `season_${s}`, g: "season" });
+  return out;
+};
+// the layouts, in half-tile steps: [x, y, z] for each tile
+MJ.LAYOUTS = {
+  keep: (() => { const t = []; for (let y = 0; y <= 12; y += 2) for (let x = 0; x <= 22; x += 2) t.push([x, y, 0]); for (let y = 2; y <= 10; y += 2) for (let x = 2; x <= 20; x += 2) t.push([x, y, 1]); for (let y = 4; y <= 6; y += 2) for (let x = 8; x <= 14; x += 2) t.push([x, y, 2]); t.push([10, 5, 3], [12, 5, 3]); return t; })(),
+  tower: (() => { const t = []; for (let y = 0; y <= 14; y += 2) for (let x = 0; x <= 14; x += 2) t.push([x, y, 0]); for (let y = 2; y <= 12; y += 2) t.push([-2, y, 0], [16, y, 0]); for (let x = 4; x <= 10; x += 2) t.push([x, -2, 0], [x, 16, 0]); t.push([-4, 7, 0], [18, 7, 0]);
+    for (let y = 2; y <= 12; y += 2) for (let x = 2; x <= 12; x += 2) t.push([x, y, 1]); for (let y = 4; y <= 10; y += 2) for (let x = 4; x <= 10; x += 2) t.push([x, y, 2]); for (const y of [6, 8]) for (const x of [6, 8]) t.push([x, y, 3]); t.push([7, 6, 4], [7, 8, 4]); return t; })(),
+};
+MJ.NAMES = { keep: "The Keep", tower: "The Tower" };
+MJ.Table = class {
+  constructor(layout, seed) {
+    this.layout = layout; this.rnd = new CM.Random(seed); this.shuffles = MJ.shuffles; this.removed = 0; this.stage = "play"; this.moves = [];
+    this.tiles = MJ.LAYOUTS[layout].map(([x, y, z], i) => ({ i, x, y, z, f: null, g: null, gone: false }));
+    this.deal();
+  }
+  live() { return this.tiles.filter((t) => !t.gone); }
+  // free: nothing on it, and its left or right open
+  isFree(t, set) {
+    const L = set || this.live(); if (t.gone) return false;
+    for (const o of L) { if (o === t) continue; if (o.z === t.z + 1 && Math.abs(o.x - t.x) < 2 && Math.abs(o.y - t.y) < 2) return false; }
+    let left = false, right = false; for (const o of L) { if (o === t || o.z !== t.z || Math.abs(o.y - t.y) >= 2) continue; if (o.x === t.x - 2) left = true; if (o.x === t.x + 2) right = true; }
+    return !(left && right);
+  }
+  free() { const L = this.live(); return L.filter((t) => this.isFree(t, L)); }
+  // a deal built backwards: take away two free places at a time from the full table, giving each pair a face pair
+  deal(onlyLive) {
+    const places = onlyLive ? this.live() : this.tiles, faces = MJ.faces().filter(() => true);
+    const pool = onlyLive ? this.live().map((t) => ({ f: t.f, g: t.g })) : faces;
+    const pairs = []; const byG = {}; for (const p of pool) (byG[p.g] = byG[p.g] || []).push(p); for (const g of Object.keys(byG)) { const l = byG[g]; for (let k = 0; k + 1 < l.length; k += 2) pairs.push([l[k], l[k + 1]]); }
+    for (let tries = 0; tries < 400; tries++) {
+      const order = pairs.slice(); for (let i = order.length - 1; i > 0; i--) { const j = this.rnd.int(0, i); [order[i], order[j]] = [order[j], order[i]]; }
+      let rest = places.slice(), ok = true; const plan = [];
+      for (const pr of order) { const fr = rest.filter((t) => this.isFree(t, rest)); if (fr.length < 2) { ok = false; break; } const a = fr[this.rnd.int(0, fr.length - 1)]; let b; do b = fr[this.rnd.int(0, fr.length - 1)]; while (b === a); plan.push([a, pr[0]], [b, pr[1]]); rest = rest.filter((t) => t !== a && t !== b); }
+      if (ok) { for (const [t, p] of plan) { t.f = p.f; t.g = p.g; } return true; }
+    }
+    return false;
+  }
+  match(a, b) { return a !== b && !a.gone && !b.gone && a.g === b.g; }
+  take(a, b) {
+    if (this.stage !== "play" || !this.match(a, b) || !this.isFree(a) || !this.isFree(b)) return false;
+    a.gone = b.gone = true; this.removed += 2; this.moves.push([a.i, b.i]);
+    if (!this.live().length) this.stage = "won"; return true;
+  }
+  pairsOpen() { const fr = this.free(), out = []; for (let i = 0; i < fr.length; i++) for (let j = i + 1; j < fr.length; j++) if (fr[i].g === fr[j].g) out.push([fr[i], fr[j]]); return out; }
+  stuck() { return this.stage === "play" && !this.pairsOpen().length; }
+  // a shuffle: the faces left dealt again, still clearable
+  shuffle() { if (this.shuffles <= 0 || this.stage !== "play") return false; this.shuffles -= 1; this.deal(true); return true; }
+};
+Object.assign(CM.Game.prototype, {
+  mjState() { return this.cgStore().mj || null; },
+  mjTable() { const S = this.mjState(); if (!S || S.stage !== "play") return null; if (!this.mjLive || this.mjLive.key !== S.seed) { this.mjLive = new MJ.Table(S.layout, CM.hashSeed(S.seed)); this.mjLive.key = S.seed; if (S.saved) { const T = this.mjLive; S.saved.forEach(([f, g2, gone], i) => Object.assign(T.tiles[i], { f, g: g2, gone: !!gone })); T.shuffles = MJ.shuffles - (S.shuffled || 0); T.removed = T.tiles.filter((t) => t.gone).length; } } return this.mjLive; },
+  mjSave() { const S = this.mjState(), T = this.mjLive; if (!S || !T) return; S.saved = T.tiles.map((t) => [t.f, t.g, t.gone ? 1 : 0]); S.shuffled = MJ.shuffles - T.shuffles; this.saveCasino && this.saveCasino(); },
+  mjStart(bet, layout) {
+    const S0 = this.mjState(); if (S0 && S0.stage === "play") return { error: "A table is laid out." };
+    if (!MJ.LAYOUTS[layout]) layout = "keep"; const why = this.cgStake("mahjong", bet); if (why) return { error: why };
+    const F = this.cgStore(); F.n += 1; F.mj = { stage: "play", bet: Math.floor(bet), layout, seed: `${this.seed}:mahjong:${F.n}` }; this.mjLive = null;
+    this.saveCasino && this.saveCasino(); return F.mj;
+  },
+  // a pair taken (kept, so a table left mid-way comes back as it was)
+  mjTake(i, j) { const T = this.mjTable(), S = this.mjState(); if (!T) return false; const ok = T.take(T.tiles[i], T.tiles[j]); if (ok) this.mjSave(); return ok; },
+  mjShuffle() { const T = this.mjTable(), S = this.mjState(); if (!T || !T.shuffle()) return false; this.mjSave(); return true; },
+  // the table ended - cleared, or left: what comes back
+  mjSettle() {
+    const S = this.mjState(), T = this.mjLive; if (!S || !T || S.stage !== "play") return null; let pay, card = null; const used = MJ.shuffles - T.shuffles, clean = used === 0;
+    if (T.stage === "won") { pay = Math.round(S.bet * MJ.PAY[S.layout][used]); if (used <= 1) card = this.cgCard(clean, `The Tilewright's Table, cleared${clean ? " without a shuffle" : " with one shuffle"}!`, new CM.Random(CM.hashSeed(`${S.seed}:card`))); }
+    else { const f = T.removed / T.tiles.length; pay = Math.round(S.bet * MJ.partial * f * f); }
+    S.stage = "done"; S.last = { won: T.stage === "won", pay, card, removed: T.removed, clean, used }; this.cgPay("mahjong", pay); this.mjLive = null;
+    this.saveCasino && this.saveCasino(); this.emit("change"); return S.last;
+  },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -25923,6 +26023,103 @@ CM.GT_ART = { ruby: ["#E02838", "#FF90A0", "hex"], sapphire: ["#2850E0", "#A0C0F
       if (shape !== "round" && shape !== "pearl") { p.strokeStyle = "rgba(255,255,255,0.22)"; p.beginPath(); p.moveTo(-s * 0.4, 0); p.lineTo(0, -s * 0.4); p.lineTo(s * 0.4, 0); p.lineTo(0, s * 0.4); p.closePath(); p.stroke(); }
       if (d.sp === "rune") { p.rotate(now / 900); p.strokeStyle = "#F0C040"; p.lineWidth = 3; p.shadowColor = "#FFE080"; p.shadowBlur = 10; p.beginPath(); p.arc(0, 0, s * 1.05, 0, Math.PI * 2); p.stroke(); p.fillStyle = "#FFE080"; for (let k = 0; k < 4; k++) { p.rotate(Math.PI / 2); p.fillRect(-2, -s * 1.12, 4, 6); } }
       p.restore();
+    },
+  });
+}
+
+// ---- 76l-mahjong.js ----
+"use strict";
+// The Tilewright's Table, the window's side (the twenty-third big update): ivory tiles stacked with their depth on a
+// canvas, each face painted in code - coins, runes and blades, the winds, the elements, potions and seasons - the
+// free ones bright and the covered a shade darker; a picked tile lifts in gold, a pair taken flies together and is
+// gone in a glint; a hint, the shuffles, the pay by how many were used. The rules are 64v-mahjong.js.
+CM.CG_TABLES.push(["mahjong", "The Tilewright's Table"]);
+CM.MJ_ART = { TW: 44, TH: 56, DX: 5, DY: 6 };
+{ const floor0 = CM.UI.prototype.renderFloor;
+  // the layout's bounds, for centring: [minX, maxX, minY, maxY, maxZ]
+  const MJ_bounds = (T) => { if (T.bounds) return T.bounds; const ts = T.tiles; T.bounds = [Math.min(...ts.map((t) => t.x)), Math.max(...ts.map((t) => t.x)), Math.min(...ts.map((t) => t.y)), Math.max(...ts.map((t) => t.y)), Math.max(...ts.map((t) => t.z))]; return T.bounds; };
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "mahjong") return this.cgMahjong(box); return floor0.call(this, box); },
+    cgMahjong(box) {
+      const g = this.game, MJ = CM.MJ, S = g.mjState(), T = g.mjTable(), live = S && S.stage === "play", bet = live ? S.bet : (this.cgBet === undefined ? 5 : this.cgBet), last = S && S.last;
+      this.mjLayout = this.mjLayout || "keep";
+      const pays = MJ.PAY[T ? T.layout : this.mjLayout].map((m, i) => `<tr class="${live && T && MJ.shuffles - T.shuffles === i ? "now" : ""}"><td>Cleared with ${i ? `${i} shuffle${i > 1 ? "s" : ""}` : "no shuffle"}</td><td>${Math.round(bet * m)}${i === 0 ? " <small>+ rare card</small>" : i === 1 ? " <small>+ common card</small>" : ""}</td></tr>`).join("");
+      box.innerHTML = `<div class="cgtable mahjong"><h3>The Tilewright's Table</h3><div class="mjwrap"><canvas class="mjcanvas" width="620" height="520"></canvas><div class="mjside">
+        <p class="lore">A low table of black lacquer, and an old tilewright setting out ivory tiles in a stack. "Pairs," she says. "Only the free ones - nothing on top, and a side open."</p>
+        <div class="mjinfo">${T ? `<b>${MJ.NAMES[T.layout]}</b><div>Tiles left <b class="mjleft">${T.live().length}</b> - open pairs <b class="mjopen">${T.pairsOpen().length}</b> - shuffles <b class="mjsh">${T.shuffles}</b></div>` : `<div>Choose a table: ${Object.keys(MJ.LAYOUTS).map((k) => `<button data-mjl="${k}" class="${this.mjLayout === k ? "primary" : ""}">${MJ.NAMES[k]}</button>`).join(" ")}</div>`}</div>
+        <table class="paytable">${pays}<tr><td colspan="2" class="small">A table left or stuck pays back a little by how much of it was cleared. Every table can be cleared.</td></tr></table>
+        ${live ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${last && last.card ? this.cgCardWon(last.card) : ""}
+        <div class="row">${live ? `<button data-mjhint>A hint</button><button data-mjshuf ${T && T.shuffles ? "" : "disabled"}>Shuffle (${T ? T.shuffles : 0})</button><button data-mjleave title="Leave the table as it is: a little back for what was cleared">Give up the table</button>` : `<button class="primary" data-mjstart>Lay out the tiles</button>`}<button data-leave>Leave</button></div>
+        <div class="small">Any potion matches any potion and any season any season; every other tile its twin.</div>${this.cgStats("mahjong")}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      box.querySelectorAll("[data-mjl]").forEach((b) => b.addEventListener("click", () => { this.mjLayout = b.dataset.mjl; this.cgSfx("card", 0.3); this.renderCasino(); }));
+      if (q("[data-mjstart]")) q("[data-mjstart]").addEventListener("click", () => { const r = g.mjStart(bet, this.mjLayout); this.cgNote = r.error || "Find the pairs."; this.mjSel = null; this.mjFx = []; this.cgSfx(r.error ? "miss" : "chain", 0.45); this.renderCasino(); });
+      if (q("[data-mjhint]")) q("[data-mjhint]").addEventListener("click", () => { const Tb = g.mjTable(), ps = Tb && Tb.pairsOpen(); this.mjHint = ps && ps.length ? [ps[0][0].i, ps[0][1].i] : null; this.mjHintAt = performance.now(); this.cgSfx("card", 0.3, 1.4); if (!this.mjHint) { this.cgNote = "No pair is open: shuffle."; this.renderCasino(); } });
+      if (q("[data-mjshuf]")) q("[data-mjshuf]").addEventListener("click", () => { if (g.mjShuffle()) { this.mjSel = null; this.mjShufAt = performance.now(); this.cgNote = "The tiles left are turned and laid again."; this.cgSfx("chain", 0.5); this.renderCasino(); } });
+      if (q("[data-mjleave]")) q("[data-mjleave]").addEventListener("click", () => { if (!this.mjAsk || performance.now() - this.mjAsk > 4000) { this.mjAsk = performance.now(); this.cgNote = "Give up this table? Click again: a little back for what was cleared."; this.renderCasino(); return; } this.mjAsk = 0; this.mjEnd(); });
+      const cv = q(".mjcanvas"); this.mjCanvas = cv;
+      cv.addEventListener("click", (e) => { const r = cv.getBoundingClientRect(), Tb = g.mjTable(), k = Tb ? this.mjK(Tb) : 1; this.mjClick(310 + ((e.clientX - r.left) * (620 / r.width) - 310) / k, 260 + ((e.clientY - r.top) * (520 / r.height) - 260) / k); });
+      if (!this.mjLoop) { const loop = (now) => { if (!this.mjCanvas || !this.mjCanvas.isConnected || this.cgView !== "mahjong") { this.mjLoop = null; return; } this.mjFrame(now); this.mjLoop = requestAnimationFrame(loop); }; this.mjLoop = requestAnimationFrame(loop); }
+    },
+    mjEnd() { const r = this.game.mjSettle(); if (!r) return; this.cgNote = r.won ? `Cleared${r.clean ? " without a shuffle" : ` with ${r.used} shuffle${r.used > 1 ? "s" : ""}`}: ${r.pay} gold.` : `${r.removed} of 144 cleared: ${r.pay} gold back.`; if (r.won) { this.cgSfx("victory", 0.6); if (r.card) this.cgSfx("cardwin", 0.5); } else this.cgSfx("cardlose", 0.4); this.renderCasino(); if (r.won) this.cgCoins(this.$("#casino-body"), 18); },
+    // where a tile is drawn: centred, each layer up and to the left
+    mjPos(T, t) { const A = CM.MJ_ART, L = MJ_bounds(T); return [310 - ((L[1] - L[0]) / 2 + 2) * (A.TW / 2) + (t.x - L[0]) * (A.TW / 2) - t.z * A.DX + L[4] * A.DX / 2, 270 - ((L[3] - L[2]) / 2 + 2) * (A.TH / 2) + (t.y - L[2]) * (A.TH / 2) - t.z * A.DY + L[4] * A.DY / 2]; },
+    // the stack scaled to fit the table, about its middle
+    mjK(T) { const A = CM.MJ_ART, L = MJ_bounds(T); return Math.min(1, 590 / ((L[1] - L[0] + 2) * (A.TW / 2) + L[4] * A.DX + 8), 490 / ((L[3] - L[2] + 2) * (A.TH / 2) + L[4] * A.DY + 8)); },
+    mjOrder(T) { return T.tiles.slice().sort((a, b) => a.z - b.z || a.y - b.y || b.x - a.x); },
+    mjClick(px, py) {
+      const g = this.game, T = g.mjTable(); if (!T || T.stage !== "play") return; const A = CM.MJ_ART;
+      const hit = this.mjOrder(T).reverse().find((t) => { if (t.gone) return false; const [x, y] = this.mjPos(T, t); return px >= x && px < x + A.TW && py >= y && py < y + A.TH; }); if (!hit) { this.mjSel = null; return; }
+      if (!T.isFree(hit)) { this.mjShake = { i: hit.i, at: performance.now() }; this.cgSfx("step", 0.3, 1.6); return; }
+      const sel = this.mjSel !== null && this.mjSel !== undefined ? T.tiles[this.mjSel] : null;
+      if (!sel || sel === hit) { this.mjSel = sel === hit ? null : hit.i; this.cgSfx("card", 0.35, 1.2); return; }
+      if (T.match(sel, hit)) {
+        const pa = this.mjPos(T, sel), pb = this.mjPos(T, hit); g.mjTake(sel.i, hit.i); this.mjSel = null; this.mjHint = null;
+        (this.mjFx = this.mjFx || []).push({ a: sel, b: hit, pa, pb, at: performance.now() }); this.cgSfx("cardplace", 0.5, 1.1); this.cgSfx("coin", 0.3, 1.3 + Math.random() * 0.3);
+        if (T.stage === "won") setTimeout(() => this.mjEnd(), 700);
+        else if (T.stuck()) { this.cgNote = T.shuffles ? "No pair is open: shuffle the tiles left." : "No pair is open, and no shuffle left."; this.renderCasino(); if (!T.shuffles) setTimeout(() => this.mjEnd(), 900); }
+        else this.mjRefreshInfo(T);
+      } else { this.mjSel = hit.i; this.cgSfx("miss", 0.25); }
+    },
+    mjRefreshInfo(T) { const b = this.mjCanvas && this.mjCanvas.parentElement; if (!b) return; const q = (s) => b.querySelector(s); if (q(".mjleft")) q(".mjleft").textContent = T.live().length; if (q(".mjopen")) q(".mjopen").textContent = T.pairsOpen().length; },
+    mjFrame(now) {
+      const g = this.game, T = g.mjTable(), cv = this.mjCanvas, p = cv.getContext("2d"), A = CM.MJ_ART;
+      const bg = p.createRadialGradient(310, 240, 60, 310, 260, 420); bg.addColorStop(0, "#2A1A12"); bg.addColorStop(1, "#0C0806"); p.fillStyle = bg; p.fillRect(0, 0, 620, 520);
+      if (!T) { p.fillStyle = "rgba(255,240,200,0.85)"; p.font = "bold 28px Georgia, serif"; p.textAlign = "center"; const S = g.mjState(); p.fillText(S && S.stage === "done" ? (S.last && S.last.won ? "The table is cleared!" : "The table is put away") : "The Tilewright's Table", 310, 250); p.textAlign = "left"; return; }
+      const k0 = this.mjK(T); p.save(); p.translate(310, 260); p.scale(k0, k0); p.translate(-310, -260);
+      const order = this.mjOrder(T), live = T.live(), hint = this.mjHint && now - this.mjHintAt < 2500 ? this.mjHint : null, fresh = this.mjShufAt && now - this.mjShufAt < 500;
+      for (const t of order) {
+        if (t.gone) continue; let [x, y] = this.mjPos(T, t); if (this.mjShake && this.mjShake.i === t.i && now - this.mjShake.at < 260) x += Math.sin((now - this.mjShake.at) / 20) * 3;
+        const sel = this.mjSel === t.i, lit = hint && hint.includes(t.i), free = T.isFree(t, live); if (sel) y -= 4;
+        p.fillStyle = "#6A5A40"; p.fillRect(x + A.DX, y + A.DY, A.TW, A.TH); p.fillStyle = "#B8A880"; p.fillRect(x + 2, y + 2, A.TW, A.TH);
+        p.fillStyle = free ? "#FBF6E6" : "#D8D0BC"; p.fillRect(x, y, A.TW - 2, A.TH - 2); p.strokeStyle = sel ? "#F0B020" : lit ? "#40E0A0" : "rgba(80,60,30,0.6)"; p.lineWidth = sel || lit ? 3 : 1; p.strokeRect(x + 0.5, y + 0.5, A.TW - 3, A.TH - 3);
+        if (fresh) p.globalAlpha = Math.min(1, (now - this.mjShufAt) / 500); p.drawImage(this.mjFace(t.f), x + 3, y + 3); p.globalAlpha = 1;
+        if (!free) { p.fillStyle = "rgba(40,30,20,0.18)"; p.fillRect(x, y, A.TW - 2, A.TH - 2); }
+      }
+      // a pair taken: lifted together, turning to light
+      this.mjFx = (this.mjFx || []).filter((f) => now - f.at < 450); for (const f of this.mjFx) { const k = (now - f.at) / 450, mx = (f.pa[0] + f.pb[0]) / 2, my = (f.pa[1] + f.pb[1]) / 2 - 30;
+        for (const [t, pp] of [[f.a, f.pa], [f.b, f.pb]]) { const x = pp[0] + (mx - pp[0]) * k, y = pp[1] + (my - pp[1]) * k - k * 20; p.globalAlpha = 1 - k; p.fillStyle = "#FFF8E0"; p.fillRect(x, y, A.TW - 2, A.TH - 2); p.drawImage(this.mjFace(t.f), x + 3, y + 3); }
+        p.globalAlpha = 1 - k; p.fillStyle = "#FFE080"; for (let s = 0; s < 8; s++) { const a = s * 0.785 + k * 2; p.fillRect(mx + A.TW / 2 + Math.cos(a) * 40 * k, my + A.TH / 2 + Math.sin(a) * 40 * k, 3, 3); } p.globalAlpha = 1; }
+      p.restore();
+    },
+    // a tile's face, painted once
+    mjFace(f) {
+      this.mjFaces = this.mjFaces || {}; if (this.mjFaces[f]) return this.mjFaces[f];
+      const c = document.createElement("canvas"); c.width = CM.MJ_ART.TW - 8; c.height = CM.MJ_ART.TH - 8; const p = c.getContext("2d"), W = c.width, H = c.height;
+      const n = Number(f.replace(/\D/g, "")) || 0, pips = (draw) => { const spots = { 1: [[0.5, 0.5]], 2: [[0.5, 0.28], [0.5, 0.72]], 3: [[0.5, 0.2], [0.5, 0.5], [0.5, 0.8]], 4: [[0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]], 5: [[0.3, 0.25], [0.7, 0.25], [0.5, 0.5], [0.3, 0.75], [0.7, 0.75]], 6: [[0.3, 0.2], [0.7, 0.2], [0.3, 0.5], [0.7, 0.5], [0.3, 0.8], [0.7, 0.8]], 7: [[0.3, 0.17], [0.7, 0.17], [0.5, 0.36], [0.3, 0.56], [0.7, 0.56], [0.3, 0.83], [0.7, 0.83]], 8: [[0.3, 0.15], [0.7, 0.15], [0.3, 0.38], [0.7, 0.38], [0.3, 0.62], [0.7, 0.62], [0.3, 0.85], [0.7, 0.85]], 9: [[0.2, 0.18], [0.5, 0.18], [0.8, 0.18], [0.2, 0.5], [0.5, 0.5], [0.8, 0.5], [0.2, 0.82], [0.5, 0.82], [0.8, 0.82]] }[n]; for (const [sx, sy] of spots) draw(sx * W, sy * H); };
+      const num = (col) => { p.fillStyle = col; p.font = "bold 9px Georgia, serif"; p.fillText(String(n), 1, 9); };
+      if (f.startsWith("coins")) { pips((x, y) => { const r = n > 6 ? 4.2 : 5.2; const gr = p.createRadialGradient(x - 1, y - 1, 1, x, y, r); gr.addColorStop(0, "#FFF0A0"); gr.addColorStop(1, "#B07A10"); p.fillStyle = gr; p.beginPath(); p.arc(x, y, r, 0, Math.PI * 2); p.fill(); p.fillStyle = "#7A5208"; p.fillRect(x - 1, y - 1, 2, 2); }); num("#8A6010"); }
+      else if (f.startsWith("runes")) { pips((x, y) => { p.strokeStyle = "#2A50B0"; p.lineWidth = 1.6; p.beginPath(); p.moveTo(x - 2, y - 4); p.lineTo(x - 2, y + 4); p.moveTo(x - 2, y - 4); p.lineTo(x + 3, y - 1); p.lineTo(x - 2, y + 1); p.stroke(); }); num("#2A50B0"); }
+      else if (f.startsWith("blades")) { pips((x, y) => { p.strokeStyle = "#5A6A7A"; p.lineWidth = 2; p.beginPath(); p.moveTo(x, y - 5); p.lineTo(x, y + 3); p.stroke(); p.strokeStyle = "#8A5A20"; p.beginPath(); p.moveTo(x - 3, y + 2); p.lineTo(x + 3, y + 2); p.moveTo(x, y + 2); p.lineTo(x, y + 6); p.stroke(); }); num("#3A4A5A"); }
+      else if (f.startsWith("wind")) { const w = f.slice(4); p.strokeStyle = "rgba(60,40,20,0.35)"; p.beginPath(); p.arc(W / 2, H / 2, 14, 0, Math.PI * 2); p.stroke(); p.fillStyle = "#2A1A10"; p.font = "bold 24px Georgia, serif"; p.textAlign = "center"; p.fillText(w, W / 2, H / 2 + 8); p.textAlign = "left"; }
+      else if (f === "fire") { p.fillStyle = "#D03010"; p.beginPath(); p.moveTo(W / 2, 6); p.quadraticCurveTo(W - 6, H / 2, W / 2, H - 6); p.quadraticCurveTo(6, H / 2, W / 2, 6); p.fill(); p.fillStyle = "#FFB030"; p.beginPath(); p.moveTo(W / 2, H / 2 - 4); p.quadraticCurveTo(W / 2 + 7, H / 2 + 8, W / 2, H - 9); p.quadraticCurveTo(W / 2 - 7, H / 2 + 8, W / 2, H / 2 - 4); p.fill(); }
+      else if (f === "frost" || f === "season_winter") { p.strokeStyle = f === "frost" ? "#2A70D0" : "#6AA0E0"; p.lineWidth = 2; for (let k = 0; k < 3; k++) { const a = (k * Math.PI) / 3; p.beginPath(); p.moveTo(W / 2 - Math.cos(a) * 13, H / 2 - Math.sin(a) * 13); p.lineTo(W / 2 + Math.cos(a) * 13, H / 2 + Math.sin(a) * 13); p.stroke(); } }
+      else if (f === "holy" || f === "season_summer") { p.fillStyle = f === "holy" ? "#E0A820" : "#F09020"; p.beginPath(); p.arc(W / 2, H / 2, 8, 0, Math.PI * 2); p.fill(); p.strokeStyle = p.fillStyle; p.lineWidth = 2; for (let k = 0; k < 8; k++) { const a = (k * Math.PI) / 4; p.beginPath(); p.moveTo(W / 2 + Math.cos(a) * 11, H / 2 + Math.sin(a) * 11); p.lineTo(W / 2 + Math.cos(a) * 15, H / 2 + Math.sin(a) * 15); p.stroke(); } }
+      else if (f.startsWith("potion_")) { const col = { heal: "#D02838", mana: "#2850D0", luck: "#20A050", haste: "#E0B020" }[f.slice(7)]; p.fillStyle = "rgba(200,220,230,0.8)"; p.fillRect(W / 2 - 3, 8, 6, 8); p.fillStyle = "#8A5A20"; p.fillRect(W / 2 - 3, 5, 6, 4); p.fillStyle = col; p.beginPath(); p.arc(W / 2, H / 2 + 6, 11, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(255,255,255,0.5)"; p.fillRect(W / 2 - 6, H / 2 + 1, 3, 5); }
+      else if (f === "season_spring") { p.fillStyle = "#F0A0C0"; for (let k = 0; k < 5; k++) { const a = (k * 2 * Math.PI) / 5; p.beginPath(); p.arc(W / 2 + Math.cos(a) * 7, H / 2 + Math.sin(a) * 7, 5.5, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#F0D040"; p.beginPath(); p.arc(W / 2, H / 2, 3.5, 0, Math.PI * 2); p.fill(); }
+      else if (f === "season_autumn") { p.fillStyle = "#D06818"; p.beginPath(); p.moveTo(W / 2, 8); p.quadraticCurveTo(W - 4, H / 2, W / 2, H - 10); p.quadraticCurveTo(4, H / 2, W / 2, 8); p.fill(); p.strokeStyle = "#7A3A08"; p.beginPath(); p.moveTo(W / 2, 10); p.lineTo(W / 2, H - 4); p.stroke(); }
+      if (f.startsWith("season_")) { p.fillStyle = "#6A4A20"; p.font = "8px Georgia, serif"; p.fillText(f.slice(7, 8).toUpperCase(), 2, 9); }
+      this.mjFaces[f] = c; return c;
     },
   });
 }
