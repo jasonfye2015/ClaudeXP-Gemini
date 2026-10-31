@@ -140,6 +140,14 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Gemcutter's Tray (v13.2)
+
+The jeweller from Gilded Row comes into the Joker most evenings with a velvet tray of stones she has not finished
+cutting, and lets whoever pays the house's stake line them up for her. She cuts what they line up with a loupe on a
+chain, and says she has never seen anyone take the Crown Jeweller's tray but once. The star-stones, she says, are not
+hers; they turn up in the tray by themselves when five of a kind lie together, and she would very much like to know
+why.
+
 ## The Gilded Joker's arcade (v13.1)
 
 In the back corner, under the stairs, two machines nobody in Caer Duin admits to having built. One is a slate board

@@ -762,3 +762,9 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .dash .dashside { flex: 1; min-width: 260px; } .dash .ladder { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .dash .rung { display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; border-radius: 4px; background: rgba(0,0,0,0.35); font: 13px monospace; } .dash .rung b { color: #FFE070; } .dash .rung i { color: #F0A0FF; font-style: normal; }
 .dash .rung.now { background: rgba(255,80,40,0.35); outline: 2px solid #FF6040; } .dash .rung.done { background: rgba(80,200,80,0.25); }
+
+/* The Gemcutter's Tray (76k-gemtray.js) */
+.gemtray .gtwrap { display: flex; gap: 16px; align-items: flex-start; } .gemtray .gtcanvas { width: 480px; height: 480px; border-radius: 10px; border: 6px solid #8A6A2A; box-shadow: 0 8px 18px rgba(0,0,0,0.65), inset 0 0 0 2px #E0C060; cursor: pointer; }
+.gemtray .gtside { flex: 1; min-width: 260px; } .gemtray .gtinfo { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); line-height: 1.7; }
+.gemtray .gtbar { position: relative; height: 18px; border-radius: 9px; background: #200C14; overflow: hidden; border: 1px solid #C8A040; } .gemtray .gtbar span { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #C02848, #F0C040); transition: width 0.25s ease-out; }
+.gemtray .gtbar em { position: relative; display: block; text-align: center; font-style: normal; font-size: 12px; line-height: 18px; color: #FFF; text-shadow: 0 1px 2px #000; }

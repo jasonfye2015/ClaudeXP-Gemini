@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Gemcutter's Tray (the twenty-second big update - v13.2)
+  A third game of skill on the Gilded Joker's floor (src/js/64u-gemtray.js; the window 76k-gemtray.js): an eight by
+  eight tray of cut stones under a jeweller's lamp - rubies, sapphires, sunstones and diamonds (the game's own gems),
+  with jade, amethyst and pearl. Swap two neighbours to make a line of three or more of a kind: they flash and burst
+  into sparks, the stones above fall into place and new ones drop in, and whatever lines up as they settle goes too,
+  the cascade called out as it climbs (each step rings a little higher). Four in a line, or an L or a T, leaves a
+  rune-stone ringed in gold that bursts its square of nine when it goes; five in a line leaves a star-stone that,
+  swapped with any stone, takes every one of that kind. A tray with no move left is shaken up; a hint is a click away.
+  Five trays a run for one stake, each with a mark to reach in its moves (2,000 in 22 up to 6,200 in 26); each tray
+  done pays 0.6, 0.8, 1.0, 1.4 and 2.4 of the stake, with a common Claudescryption card from trays 2 and 4 and a rare
+  one from 5; a tray left short pays back a little for the score made. Measured with a greedy hand, the trays are
+  done 98%, 78%, 60%, 35% and 15% of the time.
+
 The Gilded Joker's arcade (the twenty-first big update - v13.1)
   Two games of skill join the floor (src/js/64t-casinoarcade.js; the window 76j-casinoarcade.js):
   - Runefall: a slate board of rune-stones under a wizard's staff. Aim with the mouse (a guide shows the first of the

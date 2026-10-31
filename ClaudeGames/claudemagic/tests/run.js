@@ -4531,6 +4531,37 @@ test("Lantern Lane Dash: levels of lanes from the seed (grass, road, river, rail
   assert.ok(!g.crStart(10).error); for (let n = 1; n <= 5; n++) { r = win(); if (n < 5) g.crOn(); } assert.strictEqual(g.crState().stage, "done"); assert.strictEqual(g.crState().paid, Math.round(10 * CR.LADDER[4]), "the last gate pays out"); assert.ok(CM.CARD_RARES.includes(r.card), "a rare card at 5");
 });
 
+test("the Gemcutter's Tray: a tray of seven kinds with no line to start and a move to make; a swap that makes no line goes back and costs nothing; a line is cut, the stones fall and new ones drop, cascades counted; four leave a rune-stone that bursts its nine, five a star-stone that takes a whole kind; a tray with no move is shaken; a run pays each tray's share, cards from trays 2, 4 and 5, a little for one left short", () => {
+  const CM = load(), GT = CM.GT, a = new GT.Tray(1, 41), b = new GT.Tray(1, 41);
+  assert.strictEqual(JSON.stringify(a.snapshot()), JSON.stringify(b.snapshot()), "the seed's"); assert.strictEqual(a.runs().length, 0, "no line to start"); assert.ok(a.hasMove());
+  const set = (T, rows) => { const K = { R: 0, S: 1, U: 2, D: 3, J: 4, A: 5, P: 6 }; T.grid = rows.map((r) => r.split("").map((c) => T.gem(K[c]))); };
+  // a dull swap goes back
+  const T = new GT.Tray(1, 5); set(T, ["RSUDJAPR", "SUDJAPRS", "UDJAPRSU", "DJAPRSUD", "JAPRSUDJ", "APRSUDJA", "PRSUDJAP", "RSUDJAPR"]); const before = JSON.stringify(T.snapshot());
+  assert.strictEqual(T.swap(0, 0, 1, 0), false); assert.strictEqual(T.moves, GT.TRAYS[0][1]); assert.strictEqual(JSON.stringify(T.snapshot()), before);
+  // a line of three: cut, fallen, filled
+  set(T, ["RSUDJAPR", "SUDJAPRS", "UDJAPRSU", "DJAPRSUD", "JAPRSUDJ", "APRSUDJA", "RRSRDJAP", "SUDJAPRS"]); const s0 = T.score, ph = T.swap(2, 6, 3, 6);
+  assert.ok(ph && ph.length >= 2); assert.strictEqual(ph[1].cut.length, 3, "three cut"); assert.ok(ph[1].falls.some((f) => f.fresh), "new ones drop"); assert.strictEqual(T.moves, GT.TRAYS[0][1] - 1); assert.ok(T.score > s0);
+  assert.ok(T.grid.every((r) => r.every(Boolean)), "the tray is full again");
+  // four in a line: a rune-stone, which bursts its nine
+  set(T, ["RSUDJAPR", "SUDJAPRS", "UDJAPRSU", "DJAPRSUD", "JAPRSUDJ", "APRSUDJA", "RRSRDJAP", "SUDJAPRS"]); let P = T.swap(2, 6, 2, 5); assert.ok(P[1].placed.some((m) => m.sp === "rune"), "a rune-stone made");
+  const T2 = new GT.Tray(1, 6); set(T2, ["RSUDJAPR", "SUDJAPRS", "UDJAPRSU", "DJAPRSUD", "JAPRSUDJ", "APRSUDJA", "RRSRDJAP", "SUDJAPRS"]); T2.grid[6][1].sp = "rune"; P = T2.swap(2, 6, 3, 6); assert.ok(P[1].burst >= 1 && P[1].cut.length >= 9, `burst its square (${P[1].cut.length})`);
+  // five: a star-stone; swapped, it takes a whole kind
+  set(T, ["RSUDJAPR", "SUDJAPRS", "UDJAPRSU", "DJAPRSUD", "JAPRSUDJ", "APRSUDJA", "RRSRRJAP", "SUDJAPRS"]); T.grid[5][2] = T.gem(0); T.grid[6][2] = T.gem(1); P = T.swap(2, 5, 2, 6);
+  assert.ok(P[1].placed.some((m) => m.sp === "star"), "a star-stone made");
+  const T3 = new GT.Tray(1, 7); set(T3, ["RSUDJAPR", "SUDJAPRS", "UDJAPRSU", "DJAPRSUD", "JAPRSUDJ", "APRSUDJA", "PRSUDJAP", "RSUDJAPR"]); T3.grid[0][0].sp = "star"; const rubies = T3.grid.flat().filter((g2) => g2.k === 1).length; P = T3.swap(0, 0, 1, 0);
+  assert.strictEqual(P[1].kind, "star"); assert.strictEqual(P[1].cut.length, rubies + 1, "every sapphire and the star");
+  // no move: shaken
+  const T4 = new GT.Tray(1, 8); T4.shake(); assert.ok(T4.hasMove() && !T4.runs().length);
+  // the run's money
+  const g = new CM.Game(); g.newGame("gemtray-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 5000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  assert.ok(!g.gtStart(100).error); assert.strictEqual(g.gold, 4900); let paid = 0;
+  for (let n = 1; n <= 5; n++) { const Tr = g.gtTray(); assert.strictEqual(Tr.n, n); Tr.stage = "won"; const r = g.gtSettle(); assert.ok(r.won); assert.strictEqual(r.pay, Math.round(100 * GT.PAY[n - 1])); assert.strictEqual(!!r.card, !!GT.CARD[n]); paid += r.pay; }
+  assert.strictEqual(g.gold, 4900 + paid); assert.strictEqual(owned(), o0 + 3); assert.ok(g.gtState().cleared);
+  assert.ok(!g.gtStart(50).error); const Tr = g.gtTray(); Tr.score = Tr.target / 2; Tr.stage = "lost"; const lost = g.gtSettle(); assert.strictEqual(lost.pay, Math.round(50 * GT.consolation * 0.5)); assert.strictEqual(g.gtState().stage, "done");
+  // a simple hand that takes the first move it sees still plays a whole tray out
+  const Tp = new GT.Tray(2, 99); let guard = 0; while (Tp.stage === "play" && guard++ < 60) { const h = Tp.hint(); assert.ok(h); Tp.swap(...h); } assert.notStrictEqual(Tp.stage, "play");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
